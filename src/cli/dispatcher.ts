@@ -1,6 +1,8 @@
-import { buildProgram } from './parser.js';
+// stub: implementado en issue #32
+export async function runBuild(): Promise<void> {}
 
-export async function dispatch(argv: string[]): Promise<void> {
-  const program = buildProgram();
-  await program.parseAsync(argv);
-}
+// stub: implementado en issue #60
+export async function runClean(): Promise<void> {}
+
+// stub: implementado en issue #60
+export async function runInfo(): Promise<void> {}

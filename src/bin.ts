@@ -1,4 +1,4 @@
 #!/usr/bin/env bun
-import { dispatch } from './cli/dispatcher.js';
+import { buildProgram } from './cli/parser.js';
 
-await dispatch(process.argv);
+await buildProgram().parseAsync(process.argv);
