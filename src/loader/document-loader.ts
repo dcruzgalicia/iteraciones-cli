@@ -8,7 +8,7 @@ export interface SourceDocument {
   frontmatter: Frontmatter;
   body: string;
   sourceHash: string;
-  mtime: number;
+  mtimeMs: number;
 }
 
 export async function loadDocuments(cwd: string): Promise<SourceDocument[]> {
@@ -34,7 +34,7 @@ export async function loadDocuments(cwd: string): Promise<SourceDocument[]> {
       try {
         [raw, stat] = await Promise.all([file.text(), file.stat()]);
       } catch (err) {
-        throw new Error(`Error al leer "${relativePath}": ${String(err)}`);
+        throw new Error(`Error al leer "${relativePath}": ${String(err)}`, { cause: err });
       }
 
       const { frontmatter, body } = parseFrontmatter(raw);
@@ -43,7 +43,7 @@ export async function loadDocuments(cwd: string): Promise<SourceDocument[]> {
       hasher.update(raw);
       const sourceHash = hasher.digest('hex');
 
-      return { filePath, relativePath, frontmatter, body, sourceHash, mtime: stat.mtime.getTime() };
+      return { filePath, relativePath, frontmatter, body, sourceHash, mtimeMs: stat.mtime.getTime() };
     }),
   );
 }
