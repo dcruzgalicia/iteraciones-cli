@@ -14,7 +14,11 @@ export interface SourceDocument {
 export async function loadDocuments(cwd: string): Promise<SourceDocument[]> {
   const relativePaths: string[] = [];
 
+  const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', '.iteraciones']);
+
   for await (const rel of new Bun.Glob('**/*.md').scan({ cwd })) {
+    const topSegment = rel.split('/')[0];
+    if (topSegment && IGNORED_DIRS.has(topSegment)) continue;
     relativePaths.push(rel);
   }
 
@@ -24,7 +28,15 @@ export async function loadDocuments(cwd: string): Promise<SourceDocument[]> {
     relativePaths.map(async (relativePath) => {
       const filePath = join(cwd, relativePath);
       const file = Bun.file(filePath);
-      const [raw, stat] = await Promise.all([file.text(), file.stat()]);
+
+      let raw: string;
+      let stat: Awaited<ReturnType<typeof file.stat>>;
+      try {
+        [raw, stat] = await Promise.all([file.text(), file.stat()]);
+      } catch (err) {
+        throw new Error(`Error al leer "${relativePath}": ${String(err)}`);
+      }
+
       const { frontmatter, body } = parseFrontmatter(raw);
 
       const hasher = new Bun.CryptoHasher('sha256');
