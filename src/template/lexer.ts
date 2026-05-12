@@ -11,8 +11,8 @@ import { type Token, TokenType } from './token-types.js';
  *   $for(k)$       → FOR       (value = clave del array)
  *   $sep$          → SEP
  *   $endfor$       → ENDFOR
- *   $$             → ESCAPE    (representa un `$` literal)
- *   texto plano    → TEXT      (value = texto, con `$$` ya sin resolver)
+ *   $$             → ESCAPE    (representa un `$` literal; nunca aparece dentro de TEXT)
+ *   texto plano    → TEXT      (value = texto literal entre tokens)
  */
 export function tokenize(template: string): Token[] {
   const tokens: Token[] = [];
