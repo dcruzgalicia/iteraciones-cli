@@ -1,2 +1,2 @@
 #!/usr/bin/env bun
-// stub: implementado en issue #8
+// TODO: implementar entrypoint (parser + dispatcher)
