@@ -1,2 +1,4 @@
 #!/usr/bin/env bun
-// TODO: implementar entrypoint (parser + dispatcher)
+import { dispatch } from './cli/dispatcher.js';
+
+await dispatch(process.argv);
