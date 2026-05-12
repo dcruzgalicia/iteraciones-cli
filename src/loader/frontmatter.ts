@@ -24,7 +24,11 @@ export function parseFrontmatter(raw: string): ParsedFile {
   let data: Record<string, unknown> = {};
   try {
     const parsed = Bun.YAML.parse(match[1] ?? '');
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) data = parsed as Record<string, unknown>;
+    if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed) && Object.getPrototypeOf(parsed) === Object.prototype) {
+      data = parsed as Record<string, unknown>;
+    } else {
+      return { frontmatter: emptyFrontmatter(), body: raw };
+    }
   } catch {
     return { frontmatter: emptyFrontmatter(), body: raw };
   }
