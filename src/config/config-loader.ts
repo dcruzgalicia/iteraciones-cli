@@ -8,7 +8,7 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
   const configPath = join(cwd, CONFIG_FILE);
   const file = Bun.file(configPath);
 
-  if (!(await file.exists())) return { ...DEFAULT_SITE_CONFIG };
+  if (!(await file.exists())) return { ...DEFAULT_SITE_CONFIG, plugins: [...DEFAULT_SITE_CONFIG.plugins] };
 
   let raw: string;
   try {
@@ -24,24 +24,24 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
     throw new ConfigError(`Error de sintaxis en ${CONFIG_FILE}: ${String(err)}`, configPath);
   }
 
-  if (!parsed || typeof parsed !== 'object') return { ...DEFAULT_SITE_CONFIG };
+  if (!parsed || typeof parsed !== 'object') return { ...DEFAULT_SITE_CONFIG, plugins: [...DEFAULT_SITE_CONFIG.plugins] };
 
   const root = parsed as Record<string, unknown>;
-  const site = root.site;
+  const site = root.site && typeof root.site === 'object' ? (root.site as Record<string, unknown>) : {};
+  const listItems = site['list-items'] && typeof site['list-items'] === 'object' ? (site['list-items'] as Record<string, unknown>) : {};
 
-  if (!site || typeof site !== 'object') return { ...DEFAULT_SITE_CONFIG };
+  const plugins = Array.isArray(root.plugins) ? root.plugins.filter((p): p is string => typeof p === 'string') : [...DEFAULT_SITE_CONFIG.plugins];
 
-  const s = site as Record<string, unknown>;
-  const listItems = s['list-items'] && typeof s['list-items'] === 'object' ? (s['list-items'] as Record<string, unknown>) : {};
-
-  const plugins = Array.isArray(root.plugins) ? root.plugins.filter((p): p is string => typeof p === 'string') : DEFAULT_SITE_CONFIG.plugins;
+  const rawLimit = listItems.limit;
+  const listItemsLimit =
+    typeof rawLimit === 'number' && Number.isFinite(rawLimit) && rawLimit > 0 ? Math.floor(rawLimit) : DEFAULT_SITE_CONFIG.listItemsLimit;
 
   return {
-    title: typeof s.title === 'string' ? s.title : DEFAULT_SITE_CONFIG.title,
-    tagline: typeof s.tagline === 'string' ? s.tagline : DEFAULT_SITE_CONFIG.tagline,
-    lang: typeof s.lang === 'string' ? s.lang : DEFAULT_SITE_CONFIG.lang,
-    logo: typeof s.logo === 'string' ? s.logo : DEFAULT_SITE_CONFIG.logo,
-    listItemsLimit: typeof listItems.limit === 'number' ? listItems.limit : DEFAULT_SITE_CONFIG.listItemsLimit,
+    title: typeof site.title === 'string' ? site.title : DEFAULT_SITE_CONFIG.title,
+    tagline: typeof site.tagline === 'string' ? site.tagline : DEFAULT_SITE_CONFIG.tagline,
+    lang: typeof site.lang === 'string' ? site.lang : DEFAULT_SITE_CONFIG.lang,
+    logo: typeof site.logo === 'string' ? site.logo : DEFAULT_SITE_CONFIG.logo,
+    listItemsLimit,
     plugins,
     theme: typeof root.theme === 'string' ? root.theme : DEFAULT_SITE_CONFIG.theme,
   };
