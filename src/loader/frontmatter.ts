@@ -24,9 +24,9 @@ export function parseFrontmatter(raw: string): ParsedFile {
   let data: Record<string, unknown> = {};
   try {
     const parsed = Bun.YAML.parse(match[1] ?? '');
-    if (parsed && typeof parsed === 'object') data = parsed as Record<string, unknown>;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) data = parsed as Record<string, unknown>;
   } catch {
-    // frontmatter inválido → tratar como sin frontmatter
+    return { frontmatter: emptyFrontmatter(), body: raw };
   }
 
   const body = raw.slice(match[0].length);
@@ -40,7 +40,6 @@ function emptyFrontmatter(): Frontmatter {
 
 function normalizeFrontmatter(data: Record<string, unknown>): Frontmatter {
   return {
-    ...data,
     title: typeof data.title === 'string' ? data.title : '',
     date: typeof data.date === 'string' ? data.date : data.date instanceof Date ? data.date.toISOString().slice(0, 10) : '',
     author: typeof data.author === 'string' ? data.author : '',
