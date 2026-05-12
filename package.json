@@ -1,0 +1,15 @@
+{
+  "name": "iteraciones-cli",
+  "description": "escribir, compartir, re-existir",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "iteraciones": "src/bin.ts"
+  },
+  "scripts": {
+    "typecheck": "bunx tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.13"
+  }
+}
