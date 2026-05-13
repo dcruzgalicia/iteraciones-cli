@@ -9,7 +9,7 @@ export async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (i
   async function worker(): Promise<void> {
     while (nextIndex < items.length) {
       const index = nextIndex++;
-      results[index] = await fn(items[index] as T);
+      results[index] = await fn(items[index]!);
     }
   }
 
