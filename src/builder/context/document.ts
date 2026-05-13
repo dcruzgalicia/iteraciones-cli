@@ -7,6 +7,7 @@ import type { BuildDocument } from '../types.js';
  *
  * Variables producidas:
  *   title     → frontmatter.title
+ *   pagetitle → frontmatter.title (para el <title> del documento HTML)
  *   date      → frontmatter.date
  *   author    → frontmatter.author
  *   keywords  → frontmatter.keywords (array, puede ser vacío)
@@ -15,6 +16,7 @@ import type { BuildDocument } from '../types.js';
 export function buildDocumentContext(doc: BuildDocument, renderedHtml: string): TemplateContext {
   return {
     title: doc.frontmatter.title,
+    pagetitle: doc.frontmatter.title,
     date: doc.frontmatter.date,
     author: doc.frontmatter.author,
     keywords: doc.frontmatter.keywords,
