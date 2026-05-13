@@ -16,6 +16,9 @@ export async function composeDocuments(docs: BuildDocument[], ctx: BuildContext)
   if (!layoutTemplate.includes('$body$')) {
     throw new Error(`El layout en "${LAYOUT_PATH}" no contiene el marcador $body$`);
   }
+  if (!pandocTemplate.includes('$body$')) {
+    throw new Error(`El pandoc template en "${PANDOC_TEMPLATE_PATH}" no contiene el marcador $body$`);
+  }
 
   // Pre-parsear ambos templates una sola vez.
   const layoutAst = parse(tokenize(layoutTemplate));
