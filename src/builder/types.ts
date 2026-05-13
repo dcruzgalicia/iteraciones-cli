@@ -23,7 +23,8 @@ export interface SourceDocument {
 
 /**
  * Documento que acumula datos a través del pipeline.
- * Nace en classify y recibe htmlFragment, templateContext y outputPath en pasos sucesivos.
+ * Nace en classify (type, kind, templatePath) y recibe htmlFragment en render,
+ * templateContext en context, outputHtml en compose y outputPath en write.
  */
 export interface BuildDocument extends SourceDocument {
   // Asignado en classify
@@ -48,5 +49,6 @@ export interface BuildContext {
   cwd: string;
   outputDir: string;
   cssPath: string;
-  concurrency: number;
+  /** Máximo de invocaciones pandoc simultáneas. Default: 4. */
+  concurrency?: number;
 }
