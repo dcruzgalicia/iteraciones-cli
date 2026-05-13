@@ -13,7 +13,7 @@ export function resolveValue(context: TemplateContext, name: string): unknown {
 
   let current: unknown = context;
   for (const segment of path) {
-    if (!current || typeof current !== 'object' || !(segment in (current as Record<string, unknown>))) return undefined;
+    if (!current || typeof current !== 'object' || !Object.hasOwn(current as object, segment)) return undefined;
     current = (current as Record<string, unknown>)[segment];
   }
   return current;
@@ -38,6 +38,7 @@ export function isTruthy(value: unknown): boolean {
   if (Array.isArray(value)) return value.length > 0;
   if (typeof value === 'string') return value.length > 0;
   if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return Number.isFinite(value) && value !== 0;
   if (value && typeof value === 'object') return true;
   return false;
 }

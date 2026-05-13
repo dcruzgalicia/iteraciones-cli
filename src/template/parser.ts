@@ -1,6 +1,6 @@
 import type { AstNode, ForNode, IfNode, TextNode, VariableNode } from './ast.js';
 import { tokenize } from './lexer.js';
-import { renderAst } from './render/renderer.js';
+import { renderAst, type TemplateContext } from './render/renderer.js';
 import { type Token, TokenType } from './token-types.js';
 
 /**
@@ -9,7 +9,8 @@ import { type Token, TokenType } from './token-types.js';
  * Los tokens IF y FOR consumen sus cuerpos de forma recursiva.
  */
 export function parse(tokens: Token[]): AstNode[] {
-  const { nodes } = parseNodes(tokens, 0, null);
+  const { nodes, stop } = parseNodes(tokens, 0, null);
+  if (stop !== null) throw new Error(`Token de cierre inesperado en nivel raíz: $${stop}$`);
   return nodes;
 }
 
@@ -101,6 +102,6 @@ function parseNodes(tokens: Token[], start: number, stopAt: StopReason): { nodes
  * Encadena tokenize → parse → renderAst.
  * stub: la implementación completa se termina en el issue #29.
  */
-export function render(template: string, context: Record<string, unknown>): string {
+export function render(template: string, context: TemplateContext): string {
   return renderAst(parse(tokenize(template)), context);
 }
