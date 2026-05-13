@@ -16,7 +16,9 @@ export async function runBuild(cwd: string): Promise<void> {
     } else {
       process.stderr.write('Error desconocido durante el build.\n');
     }
-    process.exit(1);
+    // Asignar exitCode en lugar de llamar process.exit() directamente permite
+    // que el event loop drene los streams antes de que el proceso termine.
+    process.exitCode = 1;
   }
 }
 
