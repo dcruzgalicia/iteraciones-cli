@@ -7,7 +7,10 @@ export function buildProgram(): Command {
 
   program.name(packageJson.name.replace(/-cli$/, '')).description(packageJson.description).version(packageJson.version);
 
-  program.command('build').description('construye el sitio a partir de los archivos Markdown').action(runBuild);
+  program
+    .command('build')
+    .description('construye el sitio a partir de los archivos Markdown')
+    .action(() => runBuild(process.cwd()));
 
   program.command('clean').description('elimina el directorio de salida y la caché').action(runClean);
 
