@@ -16,7 +16,9 @@ const FONTS_SRC = join(PKG_ROOT, 'fonts');
  */
 export async function buildAssets(outputDir: string, cwd: string, siteConfig: SiteConfig): Promise<string> {
   await Promise.all([generateCss(outputDir, cwd), copyFonts(outputDir), copyLogo(outputDir, cwd, siteConfig)]);
-  return 'css/styles.css';
+  // Ruta absoluta desde la raíz del sitio para que funcione en páginas anidadas
+  // (p.ej. posts/a.html necesita /css/styles.css, no css/styles.css).
+  return '/css/styles.css';
 }
 
 async function generateCss(outputDir: string, cwd: string): Promise<void> {
@@ -41,8 +43,10 @@ async function generateCss(outputDir: string, cwd: string): Promise<void> {
 
 async function copyFonts(outputDir: string): Promise<void> {
   const target = join(outputDir, 'fonts');
-  // No falla si el directorio de fonts no existe en el paquete.
-  await cp(FONTS_SRC, target, { recursive: true }).catch(() => undefined);
+  // Solo silencia ENOENT (fonts no empaquetadas). Otros errores (permisos, disco) se propagan.
+  await cp(FONTS_SRC, target, { recursive: true }).catch((err: NodeJS.ErrnoException) => {
+    if (err.code !== 'ENOENT') throw err;
+  });
 }
 
 async function copyLogo(outputDir: string, cwd: string, siteConfig: SiteConfig): Promise<void> {
