@@ -6,7 +6,8 @@ export async function runBuild(cwd: string): Promise<void> {
     await build(cwd);
   } catch (err) {
     if (err instanceof PandocError) {
-      process.stderr.write(`Error de pandoc en "${err.sourcePath}": ${err.message}\n`);
+      const location = err.sourcePath ? ` en "${err.sourcePath}"` : '';
+      process.stderr.write(`Error de pandoc${location}: ${err.message}\n`);
       if (err.stderr) process.stderr.write(`${err.stderr}\n`);
     } else if (err instanceof ConfigError) {
       process.stderr.write(`Error de configuración en "${err.configPath}": ${err.message}\n`);
