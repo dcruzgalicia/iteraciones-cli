@@ -30,10 +30,10 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     concurrency: options.concurrency ?? 4,
   };
 
-  // Limpia outputDir y genera CSS/assets antes de conocer el cssPath definitivo.
+  // Limpia outputDir y genera CSS/assets antes de construir el contexto del sitio.
   await clean(ctx.outputDir);
-  const cssPath = await buildAssets(ctx.outputDir, ctx.cwd, siteConfig);
-  const siteCtx = buildSiteContext(siteConfig, cssPath);
+  ctx.cssPath = await buildAssets(ctx.outputDir, ctx.cwd, siteConfig);
+  const siteCtx = buildSiteContext(siteConfig, ctx.cssPath);
 
   // MVP: solo documentos de tipo 'file'. Sin caché ni plugins.
   const sourceDocs = await discover(cwd);
