@@ -27,7 +27,10 @@ export function renderAst(nodes: AstNode[], context: TemplateContext): string {
     }
     if (node.kind === 'for') {
       parts.push(renderFor(node, context, renderAst));
+      continue;
     }
+    // Si se llega aquí, el parser emitió un nodo de tipo desconocido.
+    throw new Error(`Tipo de nodo no soportado: "${(node as AstNode).kind}"`);
   }
 
   return parts.join('');
