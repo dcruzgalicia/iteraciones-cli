@@ -1,6 +1,8 @@
 import { join } from 'node:path';
 import { loadSiteConfig } from '../config/config-loader.js';
+import { clean } from '../output/writer.js';
 import { checkPandoc } from '../services/pandoc-runner.js';
+import { buildAssets } from './assets.js';
 import { buildSiteContext } from './context/site.js';
 import { classifyDocuments } from './pipeline/classify.js';
 import { composeDocuments } from './pipeline/compose.js';
@@ -28,7 +30,10 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     concurrency: options.concurrency ?? 4,
   };
 
-  const siteCtx = buildSiteContext(siteConfig, ctx.cssPath);
+  // Limpia outputDir y genera CSS/assets antes de conocer el cssPath definitivo.
+  await clean(ctx.outputDir);
+  const cssPath = await buildAssets(ctx.outputDir, ctx.cwd, siteConfig);
+  const siteCtx = buildSiteContext(siteConfig, cssPath);
 
   // MVP: solo documentos de tipo 'file'. Sin caché ni plugins.
   const sourceDocs = await discover(cwd);
