@@ -4,6 +4,9 @@ import { buildDocumentContext } from './document.js';
 import { mergeContexts } from './merge.js';
 
 export function buildContext(doc: BuildDocument, siteCtx: TemplateContext): TemplateContext {
-  const docCtx = buildDocumentContext(doc, doc.htmlFragment ?? '');
+  if (doc.htmlFragment === undefined) {
+    throw new Error(`buildContext: htmlFragment no está definido en "${doc.relativePath}". ¿Se ejecutó el paso de render?`);
+  }
+  const docCtx = buildDocumentContext(doc, doc.htmlFragment);
   return mergeContexts(siteCtx, docCtx);
 }
