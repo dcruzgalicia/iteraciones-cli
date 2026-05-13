@@ -8,8 +8,8 @@ import { resolveValue } from './context.js';
  * e inserta los nodos de `separator` entre iteraciones.
  *
  * Si el valor no es iterable (o está vacío), retorna cadena vacía.
- * Acceso anidado en loops: dentro del body, `$item.key$` resuelve
- * desde el item actual primero y luego desde el contexto padre.
+ * Si el item es un objeto plano, sus propiedades se mezclan al contexto raíz,
+ * de modo que dentro del body se accede con `$key$` o `$a.b$` directamente.
  */
 export function renderFor(node: ForNode, context: TemplateContext, renderNodes: (nodes: AstNode[], ctx: TemplateContext) => string): string {
   const raw = resolveValue(context, node.key);
@@ -40,7 +40,7 @@ function toIterable(value: unknown): unknown[] {
  * sobre el contexto padre para resolución de claves.
  */
 function mergeContext(parent: TemplateContext, item: unknown): TemplateContext {
-  if (item !== null && typeof item === 'object' && !Array.isArray(item)) {
+  if (item !== null && typeof item === 'object' && Object.getPrototypeOf(item) === Object.prototype) {
     return { ...parent, ...(item as TemplateContext) };
   }
   return parent;
