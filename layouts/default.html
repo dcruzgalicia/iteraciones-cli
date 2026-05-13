@@ -1,0 +1,134 @@
+<header
+  class="sticky top-0 z-10 border-b border-zinc-100 bg-white/95 backdrop-blur-sm">
+  <div
+    class="max-w-8xl mx-auto flex items-center justify-between px-4 py-3 md:px-8">
+    <a href="index.html" class="flex items-center gap-3 no-underline">
+      $if(site-logo)$
+      <img
+        src="$site-logo$"
+        alt="$site-title$"
+        class="h-7 w-7 shrink-0 object-contain" />
+      $endif$
+      <div>
+        <div class="leading-tight font-bold text-zinc-900">$site-title$</div>
+        <div class="font-mono text-xs leading-tight text-zinc-400">
+          $site-tagline$
+        </div>
+      </div>
+    </a>
+    <nav class="flex shrink-0 items-center gap-3 md:gap-6">
+      $if(menu)$ $menu$ $endif$
+    </nav>
+  </div>
+</header>
+
+<main class="grow">
+  <div class="max-w-8xl mx-auto px-4 py-10 md:px-8 md:py-12">
+    <div class="flex flex-col gap-10 lg:flex-row lg:items-start">
+      <div class="min-w-0 flex-1">
+        $if(content-before)$
+        <div class="mb-8">$content-before$</div>
+        $endif$ $body$ $if(content-after)$
+        <div class="mt-8">$content-after$</div>
+        $endif$
+      </div>
+
+      <aside class="w-full shrink-0 lg:w-72 xl:w-80">
+        $if(event-details)$
+        <div
+          class="relative mt-4 mb-8 rounded-xl border border-zinc-100 bg-zinc-50 p-5">
+          <div
+            class="mb-4 font-mono text-xs font-bold tracking-widest text-zinc-400 uppercase">
+            Detalles
+          </div>
+          <div class="space-y-3">
+            $for(event-details)$
+            <div>
+              <div class="font-mono text-[11px] tracking-widest text-zinc-400 uppercase">
+                $event-details.label$
+              </div>
+              $if(event-details.href)$
+              <a
+                href="$event-details.href$"
+                class="mt-1 block w-full break-anywhere break-all whitespace-normal text-sm font-semibold text-zinc-900 no-underline transition-colors hover:text-zinc-600">
+                $event-details.value$
+              </a>
+              $else$
+              <div class="mt-1 text-sm font-semibold text-zinc-900">
+                $event-details.value$
+              </div>
+              $endif$
+            </div>
+            $endfor$
+          </div>
+        </div>
+        $endif$
+        $if(authors)$
+        <div class="mb-8">
+          <div
+            class="mb-3 font-mono text-xs font-bold tracking-widest text-zinc-400 uppercase">
+            Autores
+          </div>
+          <div class="space-y-3">
+            $for(authors)$
+            <div class="rounded-xl border border-zinc-100 bg-zinc-50 p-4">
+              $if(authors.href)$
+              <a
+                href="$authors.href$"
+                class="font-semibold text-zinc-900 no-underline hover:text-zinc-600">
+                $authors.title$
+              </a>
+              $else$
+              <div class="font-semibold text-zinc-500">
+                $authors.title$
+              </div>
+              $endif$
+              $if(authors.date)$
+              <div class="mt-0.5 font-mono text-xs text-zinc-400">
+                $authors.date$
+              </div>
+              $endif$
+              $if(authors.body)$
+              <div class="prose prose-sm mt-2 max-w-none">$authors.body$</div>
+              $endif$
+            </div>
+            $endfor$
+          </div>
+        </div>
+        $endif$ $sidebar-primary$
+      </aside>
+
+      <aside class="w-full shrink-0 lg:w-64 xl:w-72">$sidebar-secondary$</aside>
+    </div>
+  </div>
+</main>
+
+<footer class="mt-auto border-t border-zinc-100">
+  <div
+    class="max-w-8xl mx-auto grid grid-cols-1 gap-8 px-4 py-10 md:grid-cols-3 md:px-8 md:py-12">
+    <div>$footer-left$</div>
+    <div>$footer-center$</div>
+    <div>$footer-right$</div>
+  </div>
+  <div class="border-t border-zinc-100">
+    <div
+      class="max-w-8xl mx-auto flex items-center justify-between px-4 py-3 md:px-8">
+      $if(site-logo)$
+      <a href="index.html" class="flex items-center gap-2 no-underline">
+        <img
+          src="$site-logo$"
+          alt="$site-title$"
+          class="h-4 w-4 shrink-0 object-contain opacity-50" />
+        <span class="font-mono text-xs text-zinc-400">$site-title$</span>
+      </a>
+      $else$
+      <a
+        href="index.html"
+        class="font-mono text-xs text-zinc-400 hover:text-zinc-600">
+        $site-title$
+      </a>
+      $endif$
+      <div class="font-mono text-xs text-zinc-300">Creado con iteraciones</div>
+    </div>
+  </div>
+</footer>
