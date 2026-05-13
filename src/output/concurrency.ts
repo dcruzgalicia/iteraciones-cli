@@ -3,6 +3,9 @@
  * Preserva el orden del array de resultados.
  */
 export async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  if (!Number.isInteger(limit) || limit < 1) {
+    throw new Error(`mapWithConcurrency: limit debe ser un entero >= 1, recibido: ${limit}`);
+  }
   const results: R[] = new Array(items.length);
   let nextIndex = 0;
 
