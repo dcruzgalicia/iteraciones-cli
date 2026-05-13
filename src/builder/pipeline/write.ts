@@ -12,7 +12,8 @@ function resolveOutputPath(relativePath: string, outputDir: string): string {
 }
 
 /**
- * Limpia `ctx.outputDir`, luego escribe el HTML compuesto de cada documento.
+ * Escribe el HTML compuesto de cada documento en `ctx.outputDir`.
+ * La limpieza del directorio es responsabilidad del orchestrator.
  * Retorna los documentos con `outputPath` asignado.
  */
 export async function writeDocuments(docs: BuildDocument[], ctx: BuildContext): Promise<BuildDocument[]> {
