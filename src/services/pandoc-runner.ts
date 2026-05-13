@@ -10,3 +10,11 @@ export async function checkPandoc(): Promise<void> {
   }
   if (result.exitCode !== 0) throw new PandocError('pandoc no está disponible en PATH', '', result.stderr);
 }
+
+export async function convertFragment(filePath: string): Promise<string> {
+  const result = await run('pandoc', ['--from', 'markdown', '--to', 'html5', filePath]);
+  if (result.exitCode !== 0) {
+    throw new PandocError(`pandoc falló al convertir ${filePath}`, filePath, result.stderr);
+  }
+  return result.stdout;
+}
