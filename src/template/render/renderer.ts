@@ -22,7 +22,7 @@ export function renderAst(nodes: AstNode[], context: TemplateContext): string {
       continue;
     }
     if (node.kind === 'if') {
-      parts.push(renderIf(node, context));
+      parts.push(renderIf(node, context, renderAst));
       continue;
     }
     // stub: ForNode → issue #29
