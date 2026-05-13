@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { clean, writeFile } from '../../output/writer.js';
+import { writeFile } from '../../output/writer.js';
 import type { BuildContext, BuildDocument } from '../types.js';
 
 /**
@@ -16,8 +16,6 @@ function resolveOutputPath(relativePath: string, outputDir: string): string {
  * Retorna los documentos con `outputPath` asignado.
  */
 export async function writeDocuments(docs: BuildDocument[], ctx: BuildContext): Promise<BuildDocument[]> {
-  await clean(ctx.outputDir);
-
   return Promise.all(
     docs.map(async (doc) => {
       if (doc.outputHtml === undefined) {
