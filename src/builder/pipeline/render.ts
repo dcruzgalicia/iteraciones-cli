@@ -7,7 +7,7 @@ import type { BuildDocument } from '../types.js';
 
 export async function renderDocuments(docs: BuildDocument[], concurrency: number): Promise<BuildDocument[]> {
   return mapWithConcurrency(docs, concurrency, async (doc) => {
-    const tmpPath = join(tmpdir(), `iteraciones-${doc.sourceHash}.md`);
+    const tmpPath = join(tmpdir(), `iteraciones-${doc.sourceHash}-${crypto.randomUUID()}.md`);
     try {
       await writeFile(tmpPath, doc.body, 'utf8');
       const htmlFragment = await convertFragment(tmpPath);
