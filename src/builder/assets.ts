@@ -7,6 +7,8 @@ import { run } from '../services/run.js';
 const PKG_ROOT = join(import.meta.dir, '../..');
 const CSS_SRC = join(PKG_ROOT, 'css', 'styles.css');
 const FONTS_SRC = join(PKG_ROOT, 'fonts');
+/** Binario local de @tailwindcss/cli instalado como dependencia del paquete. */
+const TAILWIND_BIN = join(PKG_ROOT, 'node_modules', '.bin', 'tailwindcss');
 
 /**
  * Genera el CSS con Tailwind y copia fonts y logo al directorio de salida.
@@ -32,7 +34,7 @@ async function generateCss(outputDir: string, cwd: string): Promise<void> {
   await writeFile(tempInputPath, `@import "${CSS_SRC}";\n@source "${PKG_ROOT}";\n@source "${cwd}";\n`, 'utf8');
 
   try {
-    const result = await run('bun', ['x', '@tailwindcss/cli', '-i', tempInputPath, '-o', targetCssPath, '--minify']);
+    const result = await run(TAILWIND_BIN, ['-i', tempInputPath, '-o', targetCssPath, '--minify']);
     if (result.exitCode !== 0) {
       throw new Error(`Tailwind CSS falló:\n${result.stderr}`);
     }
