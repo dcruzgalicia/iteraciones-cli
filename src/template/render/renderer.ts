@@ -1,5 +1,6 @@
 import type { AstNode } from '../ast.js';
 import type { TemplateContext } from './context.js';
+import { renderIf } from './if.js';
 import { renderVariable } from './variables.js';
 
 export type { TemplateContext };
@@ -20,8 +21,12 @@ export function renderAst(nodes: AstNode[], context: TemplateContext): string {
       parts.push(renderVariable(node, context));
       continue;
     }
-    // stub: IfNode → issue #28, ForNode → issue #29
-    throw new Error(`Tipo de nodo no soportado en este stub: "${node.kind}" (se implementa en los issues #28 y #29)`);
+    if (node.kind === 'if') {
+      parts.push(renderIf(node, context));
+      continue;
+    }
+    // stub: ForNode → issue #29
+    throw new Error(`Tipo de nodo no soportado en este stub: "${node.kind}" (se implementa en el issue #29)`);
   }
 
   return parts.join('');
