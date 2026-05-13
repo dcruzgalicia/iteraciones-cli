@@ -100,7 +100,7 @@ function parseNodes(tokens: Token[], start: number, stopAt: StopReason): { nodes
 
 /**
  * Encadena tokenize → parse → renderAst.
- * stub: la implementación completa se termina en el issue #29.
+ * Soporta variables, condicionales y loops.
  */
 export function render(template: string, context: TemplateContext): string {
   return renderAst(parse(tokenize(template)), context);

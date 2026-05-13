@@ -1,5 +1,6 @@
 import type { AstNode } from '../ast.js';
 import type { TemplateContext } from './context.js';
+import { renderFor } from './for.js';
 import { renderIf } from './if.js';
 import { renderVariable } from './variables.js';
 
@@ -7,7 +8,6 @@ export type { TemplateContext };
 
 /**
  * Camina `AstNode[]` y despacha cada nodo al render correspondiente.
- * stub: if y for se agregan en los issues #28 y #29.
  */
 export function renderAst(nodes: AstNode[], context: TemplateContext): string {
   const parts: string[] = [];
@@ -25,8 +25,9 @@ export function renderAst(nodes: AstNode[], context: TemplateContext): string {
       parts.push(renderIf(node, context, renderAst));
       continue;
     }
-    // stub: ForNode → issue #29
-    throw new Error(`Tipo de nodo no soportado en este stub: "${node.kind}" (se implementa en el issue #29)`);
+    if (node.kind === 'for') {
+      parts.push(renderFor(node, context, renderAst));
+    }
   }
 
   return parts.join('');
