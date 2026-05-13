@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+@plugin "@tailwindcss/typography";
+
+@font-face {
+  font-family: "Exo 2";
+  src: url("../fonts/Exo2-VariableFont_wght.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "Exo 2";
+  src: url("../fonts/Exo2-Italic-VariableFont_wght.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "Space Mono";
+  src: url("../fonts/SpaceMono-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "Space Mono";
+  src: url("../fonts/SpaceMono-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "Space Mono";
+  src: url("../fonts/SpaceMono-Italic.ttf") format("truetype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "Space Mono";
+  src: url("../fonts/SpaceMono-BoldItalic.ttf") format("truetype");
+  font-weight: 700;
+  font-style: italic;
+  font-display: block;
+}
+
+@theme {
+  --font-sans: "Exo 2", sans-serif;
+  --font-mono: "Space Mono", monospace;
+}
+
+@utility max-w-8xl {
+  max-width: 96rem;
+}
+
+@utility break-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+@utility bg-grid-emerald {
+  background-image:
+    linear-gradient(rgb(52 211 153 / 0.035) 1px, transparent 1px), linear-gradient(90deg, rgb(52 211 153 / 0.035) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
