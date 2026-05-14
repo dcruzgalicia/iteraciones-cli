@@ -12,6 +12,7 @@ import { buildCardPipelineContext } from './pipeline/context/card.js';
 import { buildCollectionPipelineContext } from './pipeline/context/collection.js';
 import { buildEventPipelineContext, buildEventsPipelineContext } from './pipeline/context/event.js';
 import { buildContext } from './pipeline/context/index.js';
+import { buildListPipelineContext } from './pipeline/context/list.js';
 import { buildMenuPipelineContext } from './pipeline/context/menu.js';
 import { discover } from './pipeline/discover.js';
 import { renderDocuments } from './pipeline/render.js';
@@ -114,6 +115,15 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     templateContext: buildCardPipelineContext(doc, siteCtx),
   }));
 
+  // Documentos tipo 'list': renderizado opcional del cuerpo MD + contexto de lista automática.
+  // Usa el índice (docs tipo 'file' ya ordenados/paginados por collectByType).
+  const listDocs = allDocs.filter((doc) => doc.type === 'list');
+  const renderedListDocs = await renderDocuments(listDocs, ctx.concurrency ?? 4);
+  const contextListDocs = renderedListDocs.map((doc) => ({
+    ...doc,
+    templateContext: buildListPipelineContext(doc, siteCtx, index),
+  }));
+
   const composedDocs = await composeDocuments(
     [
       ...contextFileDocs,
@@ -124,6 +134,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       ...contextEventsDocs,
       ...contextMenuDocs,
       ...contextCardDocs,
+      ...contextListDocs,
     ],
     ctx,
   );
