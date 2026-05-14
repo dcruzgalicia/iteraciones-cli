@@ -23,6 +23,7 @@ export function buildCollectionContext(doc: BuildDocument, items: BuildDocument[
 
   return {
     title: doc.frontmatter.title,
+    pagetitle: doc.frontmatter.title,
     author: doc.frontmatter.author,
     body: doc.htmlFragment ?? '',
     'list-items': listItems,
