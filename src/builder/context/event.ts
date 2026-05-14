@@ -10,17 +10,25 @@ import type { BuildDocument } from '../types.js';
  */
 function normalizeSpeakers(raw: unknown): Array<{ title: string; href?: string; body?: string }> {
   if (!Array.isArray(raw)) return [];
-  return raw.map((item) => {
-    if (typeof item === 'string') return { title: item };
+  return raw.flatMap((item) => {
+    if (typeof item === 'string') {
+      const title = item.trim();
+      return title ? [{ title }] : [];
+    }
     if (item !== null && typeof item === 'object') {
       const obj = item as Record<string, unknown>;
-      return {
-        title: typeof obj.title === 'string' ? obj.title : '',
-        ...(typeof obj.href === 'string' && { href: obj.href }),
-        ...(typeof obj.body === 'string' && { body: obj.body }),
-      };
+      const title = typeof obj.title === 'string' ? obj.title.trim() : '';
+      if (!title) return [];
+      return [
+        {
+          title,
+          ...(typeof obj.href === 'string' && { href: obj.href }),
+          ...(typeof obj.body === 'string' && { body: obj.body }),
+        },
+      ];
     }
-    return { title: String(item) };
+    const title = String(item).trim();
+    return title ? [{ title }] : [];
   });
 }
 
