@@ -9,6 +9,7 @@ import { classifyDocuments } from './pipeline/classify.js';
 import { composeDocuments } from './pipeline/compose.js';
 import { buildAuthorPipelineContext, buildAuthorsPipelineContext } from './pipeline/context/authors.js';
 import { buildCollectionPipelineContext } from './pipeline/context/collection.js';
+import { buildEventPipelineContext, buildEventsPipelineContext } from './pipeline/context/event.js';
 import { buildContext } from './pipeline/context/index.js';
 import { discover } from './pipeline/discover.js';
 import { renderDocuments } from './pipeline/render.js';
@@ -75,6 +76,27 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     templateContext: buildAuthorsPipelineContext(doc, siteCtx, renderedAuthorDocs),
   }));
 
-  const composedDocs = await composeDocuments([...contextFileDocs, ...contextCollectionDocs, ...contextAuthorDocs, ...contextAuthorsDocs], ctx);
+  // Documentos tipo 'event': renderizado del cuerpo MD + contexto de evento individual.
+  // Los speakers provienen del frontmatter, no de otros documentos.
+  const eventDocs = allDocs.filter((doc) => doc.type === 'event');
+  const renderedEventDocs = await renderDocuments(eventDocs, ctx.concurrency ?? 4);
+  const contextEventDocs = renderedEventDocs.map((doc) => ({
+    ...doc,
+    templateContext: buildEventPipelineContext(doc, siteCtx),
+  }));
+
+  // Documentos tipo 'events': renderizado opcional + contexto de índice de eventos.
+  // Usa renderedEventDocs para exponer date, time, location, modality de cada evento.
+  const eventsDocs = allDocs.filter((doc) => doc.type === 'events');
+  const renderedEventsDocs = await renderDocuments(eventsDocs, ctx.concurrency ?? 4);
+  const contextEventsDocs = renderedEventsDocs.map((doc) => ({
+    ...doc,
+    templateContext: buildEventsPipelineContext(doc, siteCtx, renderedEventDocs),
+  }));
+
+  const composedDocs = await composeDocuments(
+    [...contextFileDocs, ...contextCollectionDocs, ...contextAuthorDocs, ...contextAuthorsDocs, ...contextEventDocs, ...contextEventsDocs],
+    ctx,
+  );
   await writeDocuments(composedDocs, ctx);
 }
