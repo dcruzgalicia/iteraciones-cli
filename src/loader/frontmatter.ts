@@ -44,6 +44,7 @@ function emptyFrontmatter(): Frontmatter {
 
 function normalizeFrontmatter(data: Record<string, unknown>): Frontmatter {
   return {
+    ...data,
     title: typeof data.title === 'string' ? data.title : '',
     date: typeof data.date === 'string' ? data.date : data.date instanceof Date ? data.date.toISOString().slice(0, 10) : '',
     author: typeof data.author === 'string' ? data.author : '',
