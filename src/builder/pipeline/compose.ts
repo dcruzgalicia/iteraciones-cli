@@ -7,6 +7,16 @@ import { parse } from '../../template/parser.js';
 import { renderAst } from '../../template/render/renderer.js';
 import type { BuildContext, BuildDocument } from '../types.js';
 
+const VALID_REGIONS = new Set([
+  'content-before',
+  'content-after',
+  'sidebar-primary',
+  'sidebar-secondary',
+  'footer-left',
+  'footer-center',
+  'footer-right',
+]);
+
 const LAYOUT_PATH = join(import.meta.dir, '../../../layouts/default.html');
 const PANDOC_TEMPLATE_PATH = join(import.meta.dir, '../../../pandoc/template.html');
 
@@ -57,4 +67,41 @@ export async function composeDocuments(docs: BuildDocument[], ctx: BuildContext)
 
     return { ...doc, outputHtml };
   });
+}
+
+/**
+ * Renderiza los documentos de tipo bloque (`kind === 'block'`) usando solo su
+ * template de tipo (sin layout ni pandoc wrapper), agrupa el HTML resultante
+ * por región y devuelve un mapa { región → HTML concatenado }.
+ *
+ * El resultado se inyecta en el siteCtx compartido para que los region slots
+ * del layout (`$content-before$`, `$footer-left$`, etc.) se rellenen en todas
+ * las páginas del sitio.
+ *
+ * Precondición: cada doc debe tener `templateContext` y `htmlFragment` ya
+ * asignados, y `frontmatter.region` debe ser un Region válido.
+ */
+export async function renderBlocksToRegions(blockDocs: BuildDocument[]): Promise<Record<string, string>> {
+  if (blockDocs.length === 0) return {};
+
+  const uniqueTemplatePaths = [...new Set(blockDocs.map((d) => d.templatePath).filter((p): p is string => !!p))];
+  const templateAstMap = new Map<string, AstNode[]>(
+    await Promise.all(uniqueTemplatePaths.map(async (p) => [p, await readAndParseTemplate(p)] as const)),
+  );
+
+  const regionMap = new Map<string, string[]>();
+
+  for (const doc of blockDocs) {
+    const region = doc.frontmatter.region;
+    if (!region || !VALID_REGIONS.has(region) || !doc.templateContext || doc.htmlFragment === undefined) continue;
+
+    const typeAst = doc.templatePath ? templateAstMap.get(doc.templatePath) : undefined;
+    const innerHtml = typeAst ? renderAst(typeAst, doc.templateContext) : ((doc.templateContext.body as string) ?? '');
+
+    const parts = regionMap.get(region) ?? [];
+    parts.push(innerHtml);
+    regionMap.set(region, parts);
+  }
+
+  return Object.fromEntries([...regionMap.entries()].map(([region, parts]) => [region, parts.join('\n')]));
 }
