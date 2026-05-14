@@ -1,0 +1,84 @@
+<div class="space-y-8 py-6">
+  $if(title)$
+  <header class="mb-6">
+    <div class="mb-2 font-mono text-xs tracking-widest text-zinc-400 uppercase">
+      // agenda
+    </div>
+    <h1 class="text-4xl font-bold tracking-tight text-zinc-900">$title$</h1>
+    $if(author)$
+    <div class="mt-3 font-mono text-sm text-zinc-500">↳ $author$</div>
+    $endif$
+  </header>
+  $endif$ $if(body)$
+  <div class="prose prose-zinc lg:prose-lg max-w-none">$body$</div>
+  $endif$ $if(list-items)$
+  <div class="space-y-4">
+    $for(list-items)$
+    <a
+      href="$href$"
+      class="block rounded-2xl border border-zinc-100 bg-zinc-50 p-5 no-underline transition-colors hover:border-zinc-300 hover:bg-white">
+      <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div class="min-w-0 flex-1">
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="text-xl font-semibold tracking-tight text-zinc-900">
+              $title$
+            </div>
+          </div>
+          <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-mono text-xs text-zinc-400">
+            <span>$date$</span>
+            $if(time)$
+            <span>$time$</span>
+            $endif$ $if(location)$
+            <span>$location$</span>
+            $endif$ $if(modality)$
+            <span>$modality$</span>
+            $endif$
+          </div>
+          $if(author)$
+          <div class="mt-2 font-mono text-xs text-zinc-500">↳ $author$</div>
+          $endif$
+        </div>
+      </div>
+    </a>
+    $endfor$
+  </div>
+  $else$
+  <div
+    class="rounded-xl border border-dashed border-zinc-200 px-5 py-8 text-center font-mono text-sm text-zinc-400">
+    No hay eventos para mostrar.
+  </div>
+  $endif$ $if(has-pagination)$
+  <nav
+    class="flex flex-col gap-4 border-t border-zinc-100 pt-6 sm:flex-row sm:items-center sm:justify-between"
+    aria-label="Paginación de eventos">
+    <div class="font-mono text-xs tracking-[0.18em] text-zinc-400 uppercase">
+      Página $page-number$ de $page-count$ · $total-items$ eventos
+    </div>
+    <div class="flex items-center gap-3">
+      $if(page-previous)$
+      <a
+        href="$page-previous.href$"
+        class="rounded-full border border-zinc-200 px-4 py-2 font-mono text-xs font-semibold tracking-[0.18em] text-zinc-600 no-underline transition-colors hover:border-zinc-900 hover:text-zinc-900 uppercase">
+        Anterior
+      </a>
+      $else$
+      <span
+        class="rounded-full border border-zinc-100 px-4 py-2 font-mono text-xs font-semibold tracking-[0.18em] text-zinc-300 uppercase">
+        Anterior
+      </span>
+      $endif$ $if(page-next)$
+      <a
+        href="$page-next.href$"
+        class="rounded-full border border-zinc-200 px-4 py-2 font-mono text-xs font-semibold tracking-[0.18em] text-zinc-600 no-underline transition-colors hover:border-zinc-900 hover:text-zinc-900 uppercase">
+        Siguiente
+      </a>
+      $else$
+      <span
+        class="rounded-full border border-zinc-100 px-4 py-2 font-mono text-xs font-semibold tracking-[0.18em] text-zinc-300 uppercase">
+        Siguiente
+      </span>
+      $endif$
+    </div>
+  </nav>
+  $endif$
+</div>
