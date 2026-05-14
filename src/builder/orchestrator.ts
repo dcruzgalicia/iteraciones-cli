@@ -18,7 +18,7 @@ import { buildMenuPipelineContext } from './pipeline/context/menu.js';
 import { discover } from './pipeline/discover.js';
 import { renderDocuments } from './pipeline/render.js';
 import { writeDocuments } from './pipeline/write.js';
-import type { BuildContext } from './types.js';
+import type { BuildContext, DocumentType } from './types.js';
 
 export interface BuildOptions {
   outputDir?: string;
@@ -30,24 +30,31 @@ function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-function buildBlockTypeContext(doc: Parameters<typeof buildContext>[0], siteCtx: TemplateContext): TemplateContext {
+function buildBlockTypeContext(
+  doc: Parameters<typeof buildContext>[0],
+  siteCtx: TemplateContext,
+  index: Map<DocumentType, Parameters<typeof buildCollectionPipelineContext>[0][]>,
+  renderedFileDocs: Parameters<typeof buildAuthorPipelineContext>[2],
+  renderedAuthorDocs: Parameters<typeof buildAuthorsPipelineContext>[2],
+  renderedEventDocs: Parameters<typeof buildEventsPipelineContext>[2],
+): TemplateContext {
   switch (doc.type) {
     case 'collection':
-      return buildCollectionPipelineContext(doc, siteCtx, new Map());
+      return buildCollectionPipelineContext(doc, siteCtx, index);
     case 'author':
-      return buildAuthorPipelineContext(doc, siteCtx, []);
+      return buildAuthorPipelineContext(doc, siteCtx, renderedFileDocs);
     case 'authors':
-      return buildAuthorsPipelineContext(doc, siteCtx, []);
+      return buildAuthorsPipelineContext(doc, siteCtx, renderedAuthorDocs);
     case 'event':
       return buildEventPipelineContext(doc, siteCtx);
     case 'events':
-      return buildEventsPipelineContext(doc, siteCtx, []);
+      return buildEventsPipelineContext(doc, siteCtx, renderedEventDocs);
     case 'menu':
       return buildMenuPipelineContext(doc, siteCtx);
     case 'card':
       return buildCardPipelineContext(doc, siteCtx);
     case 'list':
-      return buildListPipelineContext(doc, siteCtx, []);
+      return buildListPipelineContext(doc, siteCtx, renderedFileDocs);
     case 'file':
     default:
       return buildContext(doc, siteCtx);
@@ -91,24 +98,34 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       }
     : siteCtx;
 
+  // Renderizado Pandoc previo de los tipos que los bloques pueden necesitar como datos
+  // relacionados (file, author, event). Se hace antes del pre-paso de bloques para que
+  // buildBlockTypeContext reciba datos reales en lugar de arrays vacíos.
+  const fileDocs = allDocs.filter((doc) => doc.type === 'file' && doc.kind !== 'block');
+  const renderedFileDocs = await renderDocuments(fileDocs, ctx.concurrency ?? 4);
+
+  const authorDocs = allDocs.filter((doc) => doc.type === 'author' && doc.kind !== 'block');
+  const renderedAuthorDocs = await renderDocuments(authorDocs, ctx.concurrency ?? 4);
+
+  const eventDocs = allDocs.filter((doc) => doc.type === 'event' && doc.kind !== 'block');
+  const renderedEventDocs = await renderDocuments(eventDocs, ctx.concurrency ?? 4);
+
   // Pre-paso de bloques: renderizar todos los docs con kind === 'block', construir
-  // sus contextos de tipo, aplicar sus templates para obtener innerHtml y agrupar
-  // por región. El resultado se inyecta en finalSiteCtx para que los region slots
-  // del layout ($content-before$, $footer-left$, etc.) se rellenen en todas las
-  // páginas. Los bloques NO generan su propio archivo HTML de salida.
+  // sus contextos de tipo con los datos reales de página, aplicar sus templates
+  // para obtener innerHtml y agrupar por región. El resultado se inyecta en
+  // finalSiteCtx para que los region slots del layout se rellenen en todas las páginas.
+  // Los bloques NO generan su propio archivo HTML de salida.
   const allBlockDocs = allDocs.filter((doc) => doc.kind === 'block');
   const renderedBlockDocs = await renderDocuments(allBlockDocs, ctx.concurrency ?? 4);
   const contextBlockDocs = renderedBlockDocs.map((doc) => ({
     ...doc,
-    templateContext: buildBlockTypeContext(doc, enrichedSiteCtx),
+    templateContext: buildBlockTypeContext(doc, enrichedSiteCtx, index, renderedFileDocs, renderedAuthorDocs, renderedEventDocs),
   }));
   const regionBlocks = await renderBlocksToRegions(contextBlockDocs);
   const finalSiteCtx: TemplateContext = { ...enrichedSiteCtx, ...regionBlocks };
 
-  // Documentos tipo 'file': renderizado Pandoc + contexto de documento.
-  // Solo se procesan documentos de tipo 'page' (kind !== 'block').
-  const fileDocs = allDocs.filter((doc) => doc.type === 'file' && doc.kind !== 'block');
-  const renderedFileDocs = await renderDocuments(fileDocs, ctx.concurrency ?? 4);
+  // Contextos para los docs ya renderizados (file, author, event).
+  // Se construyen ahora para que usen finalSiteCtx con los region slots rellenos.
   const contextFileDocs = renderedFileDocs.map((doc) => ({ ...doc, templateContext: buildContext(doc, finalSiteCtx) }));
 
   // Documentos tipo 'collection': renderizado opcional del cuerpo MD + contexto de colección.
@@ -119,11 +136,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     templateContext: buildCollectionPipelineContext(doc, finalSiteCtx, index),
   }));
 
-  // Documentos tipo 'author': renderizado de bio + contexto de autor (publicaciones).
+  // Documentos tipo 'author': contexto de autor (bio + publicaciones relacionadas).
   // Usa renderedFileDocs completos (sin límite de listItemsLimit) para no truncar
   // las publicaciones del autor si hay más docs que el top-N global.
-  const authorDocs = allDocs.filter((doc) => doc.type === 'author' && doc.kind !== 'block');
-  const renderedAuthorDocs = await renderDocuments(authorDocs, ctx.concurrency ?? 4);
   const contextAuthorDocs = renderedAuthorDocs.map((doc) => ({
     ...doc,
     templateContext: buildAuthorPipelineContext(doc, finalSiteCtx, renderedFileDocs),
@@ -138,10 +153,8 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     templateContext: buildAuthorsPipelineContext(doc, finalSiteCtx, renderedAuthorDocs),
   }));
 
-  // Documentos tipo 'event': renderizado del cuerpo MD + contexto de evento individual.
+  // Documentos tipo 'event': contexto de evento individual.
   // Los speakers provienen del frontmatter, no de otros documentos.
-  const eventDocs = allDocs.filter((doc) => doc.type === 'event' && doc.kind !== 'block');
-  const renderedEventDocs = await renderDocuments(eventDocs, ctx.concurrency ?? 4);
   const contextEventDocs = renderedEventDocs.map((doc) => ({
     ...doc,
     templateContext: buildEventPipelineContext(doc, finalSiteCtx),
