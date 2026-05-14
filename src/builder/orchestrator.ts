@@ -11,6 +11,7 @@ import { buildAuthorPipelineContext, buildAuthorsPipelineContext } from './pipel
 import { buildCollectionPipelineContext } from './pipeline/context/collection.js';
 import { buildEventPipelineContext, buildEventsPipelineContext } from './pipeline/context/event.js';
 import { buildContext } from './pipeline/context/index.js';
+import { buildMenuPipelineContext } from './pipeline/context/menu.js';
 import { discover } from './pipeline/discover.js';
 import { renderDocuments } from './pipeline/render.js';
 import { writeDocuments } from './pipeline/write.js';
@@ -94,8 +95,25 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     templateContext: buildEventsPipelineContext(doc, siteCtx, renderedEventDocs),
   }));
 
+  // Documentos tipo 'menu': renderizado opcional del cuerpo MD + contexto de navegación.
+  // Los items provienen del frontmatter.nav del propio documento.
+  const menuDocs = allDocs.filter((doc) => doc.type === 'menu');
+  const renderedMenuDocs = await renderDocuments(menuDocs, ctx.concurrency ?? 4);
+  const contextMenuDocs = renderedMenuDocs.map((doc) => ({
+    ...doc,
+    templateContext: buildMenuPipelineContext(doc, siteCtx),
+  }));
+
   const composedDocs = await composeDocuments(
-    [...contextFileDocs, ...contextCollectionDocs, ...contextAuthorDocs, ...contextAuthorsDocs, ...contextEventDocs, ...contextEventsDocs],
+    [
+      ...contextFileDocs,
+      ...contextCollectionDocs,
+      ...contextAuthorDocs,
+      ...contextAuthorsDocs,
+      ...contextEventDocs,
+      ...contextEventsDocs,
+      ...contextMenuDocs,
+    ],
     ctx,
   );
   await writeDocuments(composedDocs, ctx);
