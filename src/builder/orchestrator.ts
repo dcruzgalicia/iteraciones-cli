@@ -116,12 +116,12 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   }));
 
   // Documentos tipo 'list': renderizado opcional del cuerpo MD + contexto de lista automática.
-  // Usa el índice (docs tipo 'file' ya ordenados/paginados por collectByType).
+  // Usa renderedFileDocs para que htmlFragment esté disponible en cada item del listado.
   const listDocs = allDocs.filter((doc) => doc.type === 'list');
-  const renderedListDocs = await renderDocuments(listDocs, ctx.concurrency ?? 4);
+  const renderedListDocs = await renderDocuments(listDocs, ctx.concurrency);
   const contextListDocs = renderedListDocs.map((doc) => ({
     ...doc,
-    templateContext: buildListPipelineContext(doc, siteCtx, index),
+    templateContext: buildListPipelineContext(doc, siteCtx, renderedFileDocs),
   }));
 
   const composedDocs = await composeDocuments(
