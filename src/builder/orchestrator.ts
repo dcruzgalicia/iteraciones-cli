@@ -74,12 +74,15 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // MVP: sin caché ni plugins.
   const sourceDocs = await discover(cwd);
   const allDocs = classifyDocuments(sourceDocs);
-  const index = collectByType(allDocs, siteConfig);
+  const index = collectByType(
+    allDocs.filter((doc) => doc.kind !== 'block'),
+    siteConfig,
+  );
 
   // Detectar el documento primario de menú para inyectar menuHref/menuTitle en
   // el siteCtx compartido por todas las páginas. Debe hacerse antes de construir
   // cualquier templateContext para que el botón de menú aparezca en el layout.
-  const primaryMenuDoc = allDocs.find((doc) => doc.type === 'menu');
+  const primaryMenuDoc = allDocs.find((doc) => doc.type === 'menu' && doc.kind !== 'block');
   const enrichedSiteCtx = primaryMenuDoc
     ? {
         ...siteCtx,
