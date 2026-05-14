@@ -56,20 +56,23 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     templateContext: buildCollectionPipelineContext(doc, siteCtx, index),
   }));
 
-  // Documentos tipo 'author': renderizado de bio + contexto de autor (publica.)
+  // Documentos tipo 'author': renderizado de bio + contexto de autor (publicaciones).
+  // Usa renderedFileDocs completos (sin límite de listItemsLimit) para no truncar
+  // las publicaciones del autor si hay más docs que el top-N global.
   const authorDocs = allDocs.filter((doc) => doc.type === 'author');
   const renderedAuthorDocs = await renderDocuments(authorDocs, ctx.concurrency ?? 4);
   const contextAuthorDocs = renderedAuthorDocs.map((doc) => ({
     ...doc,
-    templateContext: buildAuthorPipelineContext(doc, siteCtx, index),
+    templateContext: buildAuthorPipelineContext(doc, siteCtx, renderedFileDocs),
   }));
 
   // Documentos tipo 'authors': renderizado opcional + contexto de índice de autores.
+  // Usa renderedAuthorDocs para que htmlFragment (bio) esté disponible en el listado.
   const authorsDocs = allDocs.filter((doc) => doc.type === 'authors');
   const renderedAuthorsDocs = await renderDocuments(authorsDocs, ctx.concurrency ?? 4);
   const contextAuthorsDocs = renderedAuthorsDocs.map((doc) => ({
     ...doc,
-    templateContext: buildAuthorsPipelineContext(doc, siteCtx, index),
+    templateContext: buildAuthorsPipelineContext(doc, siteCtx, renderedAuthorDocs),
   }));
 
   const composedDocs = await composeDocuments([...contextFileDocs, ...contextCollectionDocs, ...contextAuthorDocs, ...contextAuthorsDocs], ctx);
