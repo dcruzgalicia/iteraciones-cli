@@ -93,7 +93,17 @@ export async function renderBlocksToRegions(blockDocs: BuildDocument[]): Promise
 
   for (const doc of blockDocs) {
     const region = doc.frontmatter.region;
-    if (!region || !VALID_REGIONS.has(region) || !doc.templateContext || doc.htmlFragment === undefined) continue;
+    if (!region) {
+      console.warn(`[iteraciones] bloque "${doc.relativePath}" no tiene frontmatter.region — se omite.`);
+      continue;
+    }
+    if (!VALID_REGIONS.has(region)) {
+      console.warn(
+        `[iteraciones] bloque "${doc.relativePath}" tiene región inválida "${region}". ` + `Valores permitidos: ${[...VALID_REGIONS].join(', ')}.`,
+      );
+      continue;
+    }
+    if (!doc.templateContext || doc.htmlFragment === undefined) continue;
 
     const typeAst = doc.templatePath ? templateAstMap.get(doc.templatePath) : undefined;
     const innerHtml = typeAst ? renderAst(typeAst, doc.templateContext) : ((doc.templateContext.body as string) ?? '');
