@@ -1,18 +1,17 @@
 import type { TemplateContext } from '../../../template/render/context.js';
 import { buildAuthorContext, buildAuthorsContext } from '../../context/authors.js';
-import type { BuildDocument, DocumentType } from '../../types.js';
+import type { BuildDocument } from '../../types.js';
 import { mergeContexts } from './merge.js';
 
 /**
  * Construye el TemplateContext completo para un documento de tipo `author`,
  * combinando el contexto del sitio con el contexto de autor.
  *
- * `index` es el resultado de `collectByType`: los items de tipo `'file'`
- * se filtran por coincidencia con el nombre del autor.
+ * Recibe todos los docs tipo `file` ya renderizados (sin recortar a listItemsLimit)
+ * para que el filtrado por nombre de autor sea sobre el conjunto completo.
  */
-export function buildAuthorPipelineContext(doc: BuildDocument, siteCtx: TemplateContext, index: Map<DocumentType, BuildDocument[]>): TemplateContext {
-  const fileDocs = index.get('file') ?? [];
-  const authorCtx = buildAuthorContext(doc, fileDocs);
+export function buildAuthorPipelineContext(doc: BuildDocument, siteCtx: TemplateContext, renderedFileDocs: BuildDocument[]): TemplateContext {
+  const authorCtx = buildAuthorContext(doc, renderedFileDocs);
   return mergeContexts(siteCtx, authorCtx);
 }
 
@@ -20,15 +19,10 @@ export function buildAuthorPipelineContext(doc: BuildDocument, siteCtx: Template
  * Construye el TemplateContext completo para un documento de tipo `authors`,
  * combinando el contexto del sitio con el contexto del índice de autores.
  *
- * `index` es el resultado de `collectByType`: los docs de tipo `'author'`
- * se usan para poblar el listado.
+ * Recibe los docs tipo `author` ya renderizados para que `htmlFragment`
+ * (bio del autor) esté disponible al construir el contexto.
  */
-export function buildAuthorsPipelineContext(
-  doc: BuildDocument,
-  siteCtx: TemplateContext,
-  index: Map<DocumentType, BuildDocument[]>,
-): TemplateContext {
-  const authorDocs = index.get('author') ?? [];
-  const authorsCtx = buildAuthorsContext(doc, authorDocs);
+export function buildAuthorsPipelineContext(doc: BuildDocument, siteCtx: TemplateContext, renderedAuthorDocs: BuildDocument[]): TemplateContext {
+  const authorsCtx = buildAuthorsContext(doc, renderedAuthorDocs);
   return mergeContexts(siteCtx, authorsCtx);
 }
