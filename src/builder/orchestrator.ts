@@ -7,6 +7,7 @@ import { collectByType } from './collect.js';
 import { buildSiteContext } from './context/site.js';
 import { classifyDocuments } from './pipeline/classify.js';
 import { composeDocuments } from './pipeline/compose.js';
+import { buildAuthorPipelineContext, buildAuthorsPipelineContext } from './pipeline/context/authors.js';
 import { buildCollectionPipelineContext } from './pipeline/context/collection.js';
 import { buildContext } from './pipeline/context/index.js';
 import { discover } from './pipeline/discover.js';
@@ -55,6 +56,22 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     templateContext: buildCollectionPipelineContext(doc, siteCtx, index),
   }));
 
-  const composedDocs = await composeDocuments([...contextFileDocs, ...contextCollectionDocs], ctx);
+  // Documentos tipo 'author': renderizado de bio + contexto de autor (publica.)
+  const authorDocs = allDocs.filter((doc) => doc.type === 'author');
+  const renderedAuthorDocs = await renderDocuments(authorDocs, ctx.concurrency ?? 4);
+  const contextAuthorDocs = renderedAuthorDocs.map((doc) => ({
+    ...doc,
+    templateContext: buildAuthorPipelineContext(doc, siteCtx, index),
+  }));
+
+  // Documentos tipo 'authors': renderizado opcional + contexto de índice de autores.
+  const authorsDocs = allDocs.filter((doc) => doc.type === 'authors');
+  const renderedAuthorsDocs = await renderDocuments(authorsDocs, ctx.concurrency ?? 4);
+  const contextAuthorsDocs = renderedAuthorsDocs.map((doc) => ({
+    ...doc,
+    templateContext: buildAuthorsPipelineContext(doc, siteCtx, index),
+  }));
+
+  const composedDocs = await composeDocuments([...contextFileDocs, ...contextCollectionDocs, ...contextAuthorDocs, ...contextAuthorsDocs], ctx);
   await writeDocuments(composedDocs, ctx);
 }
