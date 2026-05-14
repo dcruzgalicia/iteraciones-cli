@@ -8,6 +8,7 @@ import { buildSiteContext } from './context/site.js';
 import { classifyDocuments } from './pipeline/classify.js';
 import { composeDocuments } from './pipeline/compose.js';
 import { buildAuthorPipelineContext, buildAuthorsPipelineContext } from './pipeline/context/authors.js';
+import { buildCardPipelineContext } from './pipeline/context/card.js';
 import { buildCollectionPipelineContext } from './pipeline/context/collection.js';
 import { buildEventPipelineContext, buildEventsPipelineContext } from './pipeline/context/event.js';
 import { buildContext } from './pipeline/context/index.js';
@@ -104,6 +105,15 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     templateContext: buildMenuPipelineContext(doc, siteCtx),
   }));
 
+  // Documentos tipo 'card': renderizado del cuerpo MD + contexto de bloque.
+  // El contenido proviene del propio documento, sin docs externos.
+  const cardDocs = allDocs.filter((doc) => doc.type === 'card');
+  const renderedCardDocs = await renderDocuments(cardDocs, ctx.concurrency ?? 4);
+  const contextCardDocs = renderedCardDocs.map((doc) => ({
+    ...doc,
+    templateContext: buildCardPipelineContext(doc, siteCtx),
+  }));
+
   const composedDocs = await composeDocuments(
     [
       ...contextFileDocs,
@@ -113,6 +123,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       ...contextEventDocs,
       ...contextEventsDocs,
       ...contextMenuDocs,
+      ...contextCardDocs,
     ],
     ctx,
   );
