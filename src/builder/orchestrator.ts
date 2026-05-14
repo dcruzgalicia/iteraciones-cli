@@ -25,6 +25,10 @@ export interface BuildOptions {
   concurrency?: number;
 }
 
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 export async function build(cwd: string, options: BuildOptions = {}): Promise<void> {
   await checkPandoc();
   const siteConfig = await loadSiteConfig(cwd);
@@ -55,7 +59,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     ? {
         ...siteCtx,
         menuHref: primaryMenuDoc.relativePath.replace(/\.md$/, '.html'),
-        menuTitle: primaryMenuDoc.frontmatter.title || 'Menú',
+        menuTitle: escapeHtml(primaryMenuDoc.frontmatter.title || 'Menú'),
       }
     : siteCtx;
 
