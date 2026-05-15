@@ -3,6 +3,8 @@ import { CacheManager } from '../cache/cache-manager.js';
 import { hash } from '../cache/hasher.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { clean } from '../output/writer.js';
+import { loadPlugins } from '../plugin/loader.js';
+import { PluginRegistry } from '../plugin/registry.js';
 import { checkPandoc } from '../services/pandoc-runner.js';
 import type { TemplateContext } from '../template/render/context.js';
 import { buildAssets } from './assets.js';
@@ -70,6 +72,10 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const pandocVersion = await checkPandoc();
   const siteConfig = await loadSiteConfig(cwd);
 
+  const plugins = await loadPlugins(siteConfig.plugins, cwd);
+  const registry = new PluginRegistry();
+  for (const plugin of plugins) registry.register(plugin);
+
   const ctx: BuildContext = {
     siteConfig,
     cwd,
@@ -111,17 +117,17 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // relacionados (file, author, event). Se hace antes del pre-paso de bloques para que
   // buildBlockTypeContext reciba datos reales en lugar de arrays vacíos.
   const fileDocs = allDocs.filter((doc) => doc.type === 'file' && doc.kind !== 'block');
-  const renderedFileDocs = await renderDocuments(fileDocs, ctx.concurrency ?? 4, renderCache);
+  const renderedFileDocs = await renderDocuments(fileDocs, ctx.concurrency ?? 4, renderCache, registry);
 
   const authorDocs = allDocs.filter((doc) => doc.type === 'author' && doc.kind !== 'block');
-  const renderedAuthorDocs = await renderDocuments(authorDocs, ctx.concurrency ?? 4, renderCache);
+  const renderedAuthorDocs = await renderDocuments(authorDocs, ctx.concurrency ?? 4, renderCache, registry);
 
   // Índice de autores por título normalizado (lowercase). Se construye aquí para que
   // esté disponible antes del pre-paso de bloques y del paso de contexto de páginas.
   const authorDocumentIndex = createAuthorDocumentIndex(renderedAuthorDocs);
 
   const eventDocs = allDocs.filter((doc) => doc.type === 'event' && doc.kind !== 'block');
-  const renderedEventDocs = await renderDocuments(eventDocs, ctx.concurrency ?? 4, renderCache);
+  const renderedEventDocs = await renderDocuments(eventDocs, ctx.concurrency ?? 4, renderCache, registry);
 
   // Pre-paso de bloques: renderizar todos los docs con kind === 'block', construir
   // sus contextos de tipo con los datos reales de página, aplicar sus templates
@@ -129,7 +135,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // finalSiteCtx para que los region slots del layout se rellenen en todas las páginas.
   // Los bloques NO generan su propio archivo HTML de salida.
   const allBlockDocs = allDocs.filter((doc) => doc.kind === 'block');
-  const renderedBlockDocs = await renderDocuments(allBlockDocs, ctx.concurrency ?? 4, renderCache);
+  const renderedBlockDocs = await renderDocuments(allBlockDocs, ctx.concurrency ?? 4, renderCache, registry);
   const contextBlockDocs = renderedBlockDocs.map((doc) => ({
     ...doc,
     templateContext: buildBlockTypeContext(doc, enrichedSiteCtx, index, renderedFileDocs, renderedAuthorDocs, renderedEventDocs, authorDocumentIndex),
@@ -147,7 +153,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
   // Documentos tipo 'collection': renderizado opcional del cuerpo MD + contexto de colección.
   const collectionDocs = allDocs.filter((doc) => doc.type === 'collection' && doc.kind !== 'block');
-  const renderedCollectionDocs = await renderDocuments(collectionDocs, ctx.concurrency ?? 4, renderCache);
+  const renderedCollectionDocs = await renderDocuments(collectionDocs, ctx.concurrency ?? 4, renderCache, registry);
   const contextCollectionDocs = renderedCollectionDocs.map((doc) => ({
     ...doc,
     templateContext: buildCollectionPipelineContext(doc, finalSiteCtx, index, authorDocumentIndex),
@@ -164,7 +170,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // Documentos tipo 'authors': renderizado opcional + contexto de índice de autores.
   // Usa renderedAuthorDocs para que htmlFragment (bio) esté disponible en el listado.
   const authorsDocs = allDocs.filter((doc) => doc.type === 'authors' && doc.kind !== 'block');
-  const renderedAuthorsDocs = await renderDocuments(authorsDocs, ctx.concurrency ?? 4, renderCache);
+  const renderedAuthorsDocs = await renderDocuments(authorsDocs, ctx.concurrency ?? 4, renderCache, registry);
   const contextAuthorsDocs = renderedAuthorsDocs.map((doc) => ({
     ...doc,
     templateContext: buildAuthorsPipelineContext(doc, finalSiteCtx, renderedAuthorDocs),
@@ -180,7 +186,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // Documentos tipo 'events': renderizado opcional + contexto de índice de eventos.
   // Usa renderedEventDocs para exponer date, time, location, modality de cada evento.
   const eventsDocs = allDocs.filter((doc) => doc.type === 'events' && doc.kind !== 'block');
-  const renderedEventsDocs = await renderDocuments(eventsDocs, ctx.concurrency ?? 4, renderCache);
+  const renderedEventsDocs = await renderDocuments(eventsDocs, ctx.concurrency ?? 4, renderCache, registry);
   const contextEventsDocs = renderedEventsDocs.map((doc) => ({
     ...doc,
     templateContext: buildEventsPipelineContext(doc, finalSiteCtx, renderedEventDocs),
@@ -189,7 +195,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // Documentos tipo 'menu': renderizado opcional del cuerpo MD + contexto de navegación.
   // Los items provienen del frontmatter.nav del propio documento.
   const menuDocs = allDocs.filter((doc) => doc.type === 'menu' && doc.kind !== 'block');
-  const renderedMenuDocs = await renderDocuments(menuDocs, ctx.concurrency ?? 4, renderCache);
+  const renderedMenuDocs = await renderDocuments(menuDocs, ctx.concurrency ?? 4, renderCache, registry);
   const contextMenuDocs = renderedMenuDocs.map((doc) => ({
     ...doc,
     templateContext: buildMenuPipelineContext(doc, finalSiteCtx),
@@ -198,7 +204,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // Documentos tipo 'card': solo se procesan los de kind 'page' (los bloques ya
   // se procesaron en el pre-paso de bloques y no generan archivos de salida propios).
   const cardDocs = allDocs.filter((doc) => doc.type === 'card' && doc.kind !== 'block');
-  const renderedCardDocs = await renderDocuments(cardDocs, ctx.concurrency ?? 4, renderCache);
+  const renderedCardDocs = await renderDocuments(cardDocs, ctx.concurrency ?? 4, renderCache, registry);
   const contextCardDocs = renderedCardDocs.map((doc) => ({
     ...doc,
     templateContext: buildCardPipelineContext(doc, finalSiteCtx),
@@ -207,7 +213,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // Documentos tipo 'list': renderizado opcional del cuerpo MD + contexto de lista automática.
   // Usa renderedFileDocs para que htmlFragment esté disponible en cada item del listado.
   const listDocs = allDocs.filter((doc) => doc.type === 'list' && doc.kind !== 'block');
-  const renderedListDocs = await renderDocuments(listDocs, ctx.concurrency ?? 4, renderCache);
+  const renderedListDocs = await renderDocuments(listDocs, ctx.concurrency ?? 4, renderCache, registry);
   const contextListDocs = renderedListDocs.map((doc) => ({
     ...doc,
     templateContext: buildListPipelineContext(doc, finalSiteCtx, renderedFileDocs, authorDocumentIndex),
@@ -227,8 +233,15 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     ],
     ctx,
     composeCache,
+    registry,
   );
-  await writeDocuments(composedDocs, ctx);
+  const writtenDocs = await writeDocuments(composedDocs, ctx);
+
+  // afterBuild: notifica a los plugins que el build finalizó con las rutas de salida.
+  if (plugins.length > 0) {
+    const outputPaths = writtenDocs.map((doc) => doc.relativePath.replace(/\.md$/, '.html'));
+    await registry.runAfterBuild({ outputDir: ctx.outputDir, outputPaths });
+  }
 
   // Podar entradas obsoletas del scope 'render' usando las claves de todos los
   // documentos procesados en esta ejecución. Se hace al final para no eliminar
