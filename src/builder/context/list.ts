@@ -25,7 +25,7 @@ export function buildListContext(doc: BuildDocument, items: BuildDocument[], aut
       title: item.frontmatter.title,
       author: item.frontmatter.author.join(', '),
       body: item.htmlFragment ?? '',
-      ...(authorHref !== undefined && { 'author-href': authorHref }),
+      'author-href': authorHref,
       date: item.frontmatter.date,
     };
   });
