@@ -93,7 +93,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const enrichedSiteCtx = primaryMenuDoc
     ? {
         ...siteCtx,
-        menuHref: primaryMenuDoc.relativePath.replace(/\.md$/, '.html'),
+        menuHref: `/${primaryMenuDoc.relativePath.replace(/\.md$/, '.html')}`,
         menuTitle: escapeHtml(primaryMenuDoc.frontmatter.title || 'Menú'),
       }
     : siteCtx;
