@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import { CacheManager } from '../cache/cache-manager.js';
+import { hash } from '../cache/hasher.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { clean } from '../output/writer.js';
 import { checkPandoc } from '../services/pandoc-runner.js';
@@ -225,4 +226,22 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     ctx,
   );
   await writeDocuments(composedDocs, ctx);
+
+  // Podar entradas obsoletas del scope 'render' usando las claves de todos los
+  // documentos procesados en esta ejecución. Se hace al final para no eliminar
+  // entradas que aún no han sido escritas por los batches posteriores.
+  const allRenderedDocs = [
+    ...renderedFileDocs,
+    ...renderedAuthorDocs,
+    ...renderedEventDocs,
+    ...renderedBlockDocs,
+    ...renderedCollectionDocs,
+    ...renderedAuthorsDocs,
+    ...renderedEventsDocs,
+    ...renderedMenuDocs,
+    ...renderedCardDocs,
+    ...renderedListDocs,
+  ];
+  const allRenderKeys = new Set(allRenderedDocs.map((doc) => hash(doc.sourceHash, renderCache.cliVersion)));
+  await renderCache.manager.prune('render', allRenderKeys);
 }
