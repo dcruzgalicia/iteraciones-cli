@@ -1,4 +1,5 @@
 import type { TemplateContext } from '../../../template/render/context.js';
+import { buildRelatedAuthorsContext } from '../../context/authors.js';
 import { buildCollectionContext } from '../../context/collection.js';
 import type { AuthorDocumentIndex, BuildDocument, DocumentType } from '../../types.js';
 import { mergeContexts } from './merge.js';
@@ -18,5 +19,6 @@ export function buildCollectionPipelineContext(
 ): TemplateContext {
   const items = index.get('file') ?? [];
   const collectionCtx = buildCollectionContext(doc, items, authorIndex);
-  return mergeContexts(siteCtx, collectionCtx);
+  const relatedAuthorsCtx = authorIndex ? buildRelatedAuthorsContext(doc, authorIndex) : {};
+  return mergeContexts(mergeContexts(siteCtx, relatedAuthorsCtx), collectionCtx);
 }

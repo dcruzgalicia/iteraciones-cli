@@ -144,7 +144,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const renderedCollectionDocs = await renderDocuments(collectionDocs, ctx.concurrency ?? 4);
   const contextCollectionDocs = renderedCollectionDocs.map((doc) => ({
     ...doc,
-    templateContext: buildCollectionPipelineContext(doc, finalSiteCtx, index),
+    templateContext: buildCollectionPipelineContext(doc, finalSiteCtx, index, authorDocumentIndex),
   }));
 
   // Documentos tipo 'author': contexto de autor (bio + publicaciones relacionadas).
@@ -204,7 +204,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const renderedListDocs = await renderDocuments(listDocs, ctx.concurrency ?? 4);
   const contextListDocs = renderedListDocs.map((doc) => ({
     ...doc,
-    templateContext: buildListPipelineContext(doc, finalSiteCtx, renderedFileDocs),
+    templateContext: buildListPipelineContext(doc, finalSiteCtx, renderedFileDocs, authorDocumentIndex),
   }));
 
   const composedDocs = await composeDocuments(
