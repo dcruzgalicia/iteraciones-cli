@@ -18,7 +18,7 @@ export function buildDocumentContext(doc: BuildDocument, renderedHtml: string): 
     title: doc.frontmatter.title,
     pagetitle: doc.frontmatter.title,
     date: doc.frontmatter.date,
-    author: doc.frontmatter.author,
+    author: doc.frontmatter.author.join(', '),
     keywords: doc.frontmatter.keywords,
     body: renderedHtml,
   };

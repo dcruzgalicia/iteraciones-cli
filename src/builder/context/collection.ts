@@ -17,14 +17,14 @@ export function buildCollectionContext(doc: BuildDocument, items: BuildDocument[
   const listItems = items.map((item) => ({
     href: item.relativePath.replace(/\.md$/, '.html'),
     title: item.frontmatter.title,
-    author: item.frontmatter.author,
+    author: item.frontmatter.author.join(', '),
     date: item.frontmatter.date,
   }));
 
   return {
     title: doc.frontmatter.title,
     pagetitle: doc.frontmatter.title,
-    author: doc.frontmatter.author,
+    author: doc.frontmatter.author.join(', '),
     body: doc.htmlFragment ?? '',
     'list-items': listItems,
     count: listItems.length,
