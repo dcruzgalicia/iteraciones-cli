@@ -16,7 +16,7 @@ function resolveSpeakers(
   speakers: SpeakerDefinition[],
   authorIndex: AuthorDocumentIndex,
   docRelativePath: string,
-): Array<{ title: string; href?: string; body?: string }> {
+): Array<{ title: string; href: string | undefined; body: string | undefined }> {
   return speakers
     .map((speaker) => {
       if (typeof speaker === 'string') {
@@ -31,7 +31,7 @@ function resolveSpeakers(
             body: authorDoc.htmlFragment ?? '',
           };
         }
-        return { title: name };
+        return { title: name, href: undefined, body: undefined };
       }
 
       const title = speaker.title.trim();
@@ -46,13 +46,14 @@ function resolveSpeakers(
         body: speaker.body?.trim() || (authorDoc && authorDoc.relativePath !== docRelativePath ? (authorDoc.htmlFragment ?? undefined) : undefined),
       };
     })
-    .filter((speaker): speaker is { title: string; href?: string; body?: string } => speaker !== undefined);
+    .filter((speaker): speaker is { title: string; href: string | undefined; body: string | undefined } => speaker !== undefined);
 }
 
 /**
  * Construye el TemplateContext para un documento de tipo `event`.
  *
- * Variables producidas para `templates/event.html`:
+ * Variables producidas para `templates/event.html` (título, autor, cuerpo)
+ * y `layouts/default.html` (sidebar: speakers como sección "Participan"):
  *   title      → frontmatter.title
  *   pagetitle  → frontmatter.title
  *   author     → frontmatter.author (unido con ', ')
@@ -60,7 +61,9 @@ function resolveSpeakers(
  *   time       → frontmatter.time (string opcional)
  *   location   → frontmatter.location (string opcional)
  *   modality   → frontmatter.modality (string opcional)
- *   speakers   → array de { title, href?, body? } resueltos desde AuthorDocumentIndex
+ *   speakers   → array de { title, href, body } resueltos desde AuthorDocumentIndex
+ *                (siempre incluye href y body, aunque sean undefined, para evitar
+ *                 herencia del contexto padre en el loop $for(speakers)$)
  */
 export function buildEventContext(doc: BuildDocument, authorIndex: AuthorDocumentIndex): TemplateContext {
   const speakers = resolveSpeakers(doc.frontmatter.speakers, authorIndex, doc.relativePath);
