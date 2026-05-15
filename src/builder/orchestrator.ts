@@ -144,7 +144,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
   // Documentos tipo 'collection': renderizado opcional del cuerpo MD + contexto de colección.
   const collectionDocs = allDocs.filter((doc) => doc.type === 'collection' && doc.kind !== 'block');
-  const renderedCollectionDocs = await renderDocuments(collectionDocs, ctx.concurrency ?? 4);
+  const renderedCollectionDocs = await renderDocuments(collectionDocs, ctx.concurrency ?? 4, renderCache);
   const contextCollectionDocs = renderedCollectionDocs.map((doc) => ({
     ...doc,
     templateContext: buildCollectionPipelineContext(doc, finalSiteCtx, index, authorDocumentIndex),
@@ -161,7 +161,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // Documentos tipo 'authors': renderizado opcional + contexto de índice de autores.
   // Usa renderedAuthorDocs para que htmlFragment (bio) esté disponible en el listado.
   const authorsDocs = allDocs.filter((doc) => doc.type === 'authors' && doc.kind !== 'block');
-  const renderedAuthorsDocs = await renderDocuments(authorsDocs, ctx.concurrency ?? 4);
+  const renderedAuthorsDocs = await renderDocuments(authorsDocs, ctx.concurrency ?? 4, renderCache);
   const contextAuthorsDocs = renderedAuthorsDocs.map((doc) => ({
     ...doc,
     templateContext: buildAuthorsPipelineContext(doc, finalSiteCtx, renderedAuthorDocs),
@@ -177,7 +177,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // Documentos tipo 'events': renderizado opcional + contexto de índice de eventos.
   // Usa renderedEventDocs para exponer date, time, location, modality de cada evento.
   const eventsDocs = allDocs.filter((doc) => doc.type === 'events' && doc.kind !== 'block');
-  const renderedEventsDocs = await renderDocuments(eventsDocs, ctx.concurrency ?? 4);
+  const renderedEventsDocs = await renderDocuments(eventsDocs, ctx.concurrency ?? 4, renderCache);
   const contextEventsDocs = renderedEventsDocs.map((doc) => ({
     ...doc,
     templateContext: buildEventsPipelineContext(doc, finalSiteCtx, renderedEventDocs),
@@ -186,7 +186,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // Documentos tipo 'menu': renderizado opcional del cuerpo MD + contexto de navegación.
   // Los items provienen del frontmatter.nav del propio documento.
   const menuDocs = allDocs.filter((doc) => doc.type === 'menu' && doc.kind !== 'block');
-  const renderedMenuDocs = await renderDocuments(menuDocs, ctx.concurrency ?? 4);
+  const renderedMenuDocs = await renderDocuments(menuDocs, ctx.concurrency ?? 4, renderCache);
   const contextMenuDocs = renderedMenuDocs.map((doc) => ({
     ...doc,
     templateContext: buildMenuPipelineContext(doc, finalSiteCtx),
@@ -195,7 +195,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // Documentos tipo 'card': solo se procesan los de kind 'page' (los bloques ya
   // se procesaron en el pre-paso de bloques y no generan archivos de salida propios).
   const cardDocs = allDocs.filter((doc) => doc.type === 'card' && doc.kind !== 'block');
-  const renderedCardDocs = await renderDocuments(cardDocs, ctx.concurrency ?? 4);
+  const renderedCardDocs = await renderDocuments(cardDocs, ctx.concurrency ?? 4, renderCache);
   const contextCardDocs = renderedCardDocs.map((doc) => ({
     ...doc,
     templateContext: buildCardPipelineContext(doc, finalSiteCtx),
@@ -204,7 +204,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // Documentos tipo 'list': renderizado opcional del cuerpo MD + contexto de lista automática.
   // Usa renderedFileDocs para que htmlFragment esté disponible en cada item del listado.
   const listDocs = allDocs.filter((doc) => doc.type === 'list' && doc.kind !== 'block');
-  const renderedListDocs = await renderDocuments(listDocs, ctx.concurrency ?? 4);
+  const renderedListDocs = await renderDocuments(listDocs, ctx.concurrency ?? 4, renderCache);
   const contextListDocs = renderedListDocs.map((doc) => ({
     ...doc,
     templateContext: buildListPipelineContext(doc, finalSiteCtx, renderedFileDocs, authorDocumentIndex),
