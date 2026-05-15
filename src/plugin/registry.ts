@@ -2,8 +2,10 @@ import type { IPlugin, PluginBuildContext, PluginComposeContext, PluginComposeRe
 
 /**
  * Registro de plugins. Ejecuta los hooks de cada plugin registrado en orden
- * de inserción, siguiendo el contrato de retorno explícito: cada hook recibe
- * el contexto y retorna el contexto (posiblemente modificado).
+ * de inserción. Los hooks de transformación (beforeRender, afterRender,
+ * beforeCompose, afterCompose) reciben el contexto y deben retornar el contexto
+ * (posiblemente modificado). El hook afterBuild es de notificación y no retorna
+ * contexto.
  */
 export class PluginRegistry {
   private readonly plugins: IPlugin[] = [];
