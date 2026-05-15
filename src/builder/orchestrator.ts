@@ -136,7 +136,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // con documentos de tipo 'author' en el sitio.
   const contextFileDocs = renderedFileDocs.map((doc) => ({
     ...doc,
-    templateContext: mergeContexts(buildContext(doc, finalSiteCtx), buildRelatedAuthorsContext(doc, authorDocumentIndex)),
+    templateContext: mergeContexts(buildContext(doc, finalSiteCtx, authorDocumentIndex), buildRelatedAuthorsContext(doc, authorDocumentIndex)),
   }));
 
   // Documentos tipo 'collection': renderizado opcional del cuerpo MD + contexto de colección.
