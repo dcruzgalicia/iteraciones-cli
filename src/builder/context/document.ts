@@ -1,5 +1,6 @@
 import type { TemplateContext } from '../../template/render/context.js';
 import type { AuthorDocumentIndex, BuildDocument } from '../types.js';
+import { resolveAuthorHref } from './authors.js';
 
 /**
  * Construye el subconjunto del TemplateContext que proviene del documento.
@@ -16,16 +17,7 @@ import type { AuthorDocumentIndex, BuildDocument } from '../types.js';
  *   body        → HTML renderizado
  */
 export function buildDocumentContext(doc: BuildDocument, renderedHtml: string, authorIndex?: AuthorDocumentIndex): TemplateContext {
-  let authorHref: string | undefined;
-  if (authorIndex) {
-    for (const name of doc.frontmatter.author) {
-      const authorDoc = authorIndex.get(name.trim().toLowerCase());
-      if (authorDoc) {
-        authorHref = `/${authorDoc.relativePath.replace(/\.md$/, '.html')}`;
-        break;
-      }
-    }
-  }
+  const authorHref = resolveAuthorHref(doc.frontmatter.author, authorIndex);
 
   return {
     title: doc.frontmatter.title,

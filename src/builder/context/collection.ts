@@ -1,14 +1,6 @@
 import type { TemplateContext } from '../../template/render/context.js';
 import type { AuthorDocumentIndex, BuildDocument } from '../types.js';
-
-function resolveAuthorHref(authors: string[], index: AuthorDocumentIndex | undefined): string | undefined {
-  if (!index) return undefined;
-  for (const name of authors) {
-    const doc = index.get(name.trim().toLowerCase());
-    if (doc) return `/${doc.relativePath.replace(/\.md$/, '.html')}`;
-  }
-  return undefined;
-}
+import { resolveAuthorHref } from './authors.js';
 
 /**
  * Construye el TemplateContext para un documento de tipo `collection`.
