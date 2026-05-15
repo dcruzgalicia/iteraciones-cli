@@ -1,11 +1,18 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import type { CacheManager } from '../../cache/cache-manager.js';
+import { hash } from '../../cache/hasher.js';
 import { mapWithConcurrency } from '../../output/concurrency.js';
 import type { AstNode } from '../../template/ast.js';
 import { tokenize } from '../../template/lexer.js';
 import { parse } from '../../template/parser.js';
 import { renderAst } from '../../template/render/renderer.js';
 import type { BuildContext, BuildDocument } from '../types.js';
+
+export interface ComposeCache {
+  manager: CacheManager;
+  cliVersion: string;
+}
 
 const VALID_REGIONS = new Set([
   'content-before',
@@ -25,7 +32,7 @@ async function readAndParseTemplate(path: string): Promise<AstNode[]> {
   return parse(tokenize(content));
 }
 
-export async function composeDocuments(docs: BuildDocument[], ctx: BuildContext): Promise<BuildDocument[]> {
+export async function composeDocuments(docs: BuildDocument[], ctx: BuildContext, cache?: ComposeCache): Promise<BuildDocument[]> {
   const layoutTemplate = await readFile(LAYOUT_PATH, 'utf8');
   const pandocTemplate = await readFile(PANDOC_TEMPLATE_PATH, 'utf8');
 
@@ -54,6 +61,14 @@ export async function composeDocuments(docs: BuildDocument[], ctx: BuildContext)
       throw new Error(`composeDocuments: htmlFragment no definido en "${doc.relativePath}"`);
     }
 
+    if (cache) {
+      const key = hash(doc.htmlFragment, JSON.stringify(doc.templateContext), doc.templatePath ?? '', cache.cliVersion);
+      const cached = await cache.manager.read('compose', key);
+      if (cached !== undefined) {
+        return { ...doc, outputHtml: cached };
+      }
+    }
+
     // Paso 1: renderizar el template específico del tipo de documento (templates/{type}.html).
     // El template usa $body$ para el htmlFragment y puede añadir estructura adicional (encabezados, listas).
     const typeAst = doc.templatePath ? templateAstMap.get(doc.templatePath) : undefined;
@@ -64,6 +79,11 @@ export async function composeDocuments(docs: BuildDocument[], ctx: BuildContext)
 
     // Paso 3: envolver el layout en el documento HTML completo (doctype, head, link CSS).
     const outputHtml = renderAst(pandocAst, { ...doc.templateContext, body: layoutHtml });
+
+    if (cache) {
+      const key = hash(doc.htmlFragment, JSON.stringify(doc.templateContext), doc.templatePath ?? '', cache.cliVersion);
+      await cache.manager.write('compose', key, outputHtml);
+    }
 
     return { ...doc, outputHtml };
   });
