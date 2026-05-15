@@ -46,7 +46,7 @@ export type PluginRenderContext = {
   /** Ruta absoluta al archivo markdown fuente. */
   readonly sourcePath: string;
   /** Variables que se pasarán a pandoc como metadatos. */
-  readonly variables: Record<string, string>;
+  readonly variables: Readonly<Record<string, string>>;
 };
 
 /** Contexto disponible para el hook afterRender. */
@@ -62,7 +62,7 @@ export type PluginComposeContext = {
   /** Ruta relativa al archivo HTML de salida (relativa a dist/web). */
   readonly outputRelativePath: string;
   /** Variables de contexto para el template y el layout. */
-  readonly templateContext: Record<string, unknown>;
+  readonly templateContext: Readonly<Record<string, unknown>>;
 };
 
 /** Contexto disponible para el hook afterCompose. */
