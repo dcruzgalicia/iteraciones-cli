@@ -9,6 +9,13 @@ export type DocumentType = 'file' | 'collection' | 'author' | 'authors' | 'event
 export type Region = 'content-before' | 'content-after' | 'sidebar-primary' | 'sidebar-secondary' | 'footer-left' | 'footer-center' | 'footer-right';
 
 /**
+ * Índice de documentos de tipo `author` indexados por su título normalizado
+ * (lowercase, trimmed). Usado para resolución eficiente de autores relacionados
+ * y ponentes de eventos durante la fase de construcción de contexto.
+ */
+export type AuthorDocumentIndex = ReadonlyMap<string, BuildDocument>;
+
+/**
  * Documento fuente tal como sale del paso de discovery.
  * Contiene el contenido Markdown, frontmatter parseado y metadatos de archivo.
  */
