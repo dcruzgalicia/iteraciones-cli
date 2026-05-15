@@ -91,8 +91,12 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
   const pkg = (await Bun.file(join(import.meta.dir, '../../package.json')).json()) as { version: string };
   const cacheManager = new CacheManager(cwd);
-  const renderCache = { manager: cacheManager, cliVersion: pkg.version, pandocVersion };
-  const composeCache: ComposeCache = { manager: cacheManager, cliVersion: pkg.version };
+  // El fingerprint invalida la caché cuando cambia el conjunto de plugins declarados en
+  // _iteraciones.yaml. Nota: no detecta cambios en el código fuente de un plugin si su
+  // ruta no cambia; en ese caso se debe limpiar la caché manualmente.
+  const pluginFingerprint = siteConfig.plugins.length > 0 ? hash(JSON.stringify(siteConfig.plugins)) : undefined;
+  const renderCache = { manager: cacheManager, cliVersion: pkg.version, pandocVersion, pluginFingerprint };
+  const composeCache: ComposeCache = { manager: cacheManager, cliVersion: pkg.version, pluginFingerprint };
 
   const sourceDocs = await discover(cwd);
   const allDocs = classifyDocuments(sourceDocs);

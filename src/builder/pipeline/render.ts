@@ -12,6 +12,8 @@ export interface RenderCache {
   manager: CacheManager;
   cliVersion: string;
   pandocVersion: string;
+  /** Hash de los paths de plugins activos. Invalida la caché si cambia el conjunto de plugins. */
+  pluginFingerprint?: string;
 }
 
 export async function renderDocuments(
@@ -22,7 +24,7 @@ export async function renderDocuments(
 ): Promise<BuildDocument[]> {
   return mapWithConcurrency(docs, concurrency, async (doc) => {
     if (cache) {
-      const key = hash(doc.sourceHash, cache.cliVersion, cache.pandocVersion);
+      const key = hash(doc.sourceHash, cache.cliVersion, cache.pandocVersion, cache.pluginFingerprint ?? '');
       const cached = await cache.manager.read('render', key);
       if (cached !== undefined) {
         return { ...doc, htmlFragment: cached };
@@ -47,7 +49,7 @@ export async function renderDocuments(
       }
 
       if (cache) {
-        const key = hash(doc.sourceHash, cache.cliVersion, cache.pandocVersion);
+        const key = hash(doc.sourceHash, cache.cliVersion, cache.pandocVersion, cache.pluginFingerprint ?? '');
         await cache.manager.write('render', key, htmlFragment);
       }
       return { ...doc, htmlFragment };
