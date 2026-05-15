@@ -49,7 +49,7 @@ function buildBlockTypeContext(
     case 'authors':
       return buildAuthorsPipelineContext(doc, siteCtx, renderedAuthorDocs);
     case 'event':
-      return buildEventPipelineContext(doc, siteCtx);
+      return buildEventPipelineContext(doc, siteCtx, authorDocumentIndex);
     case 'events':
       return buildEventsPipelineContext(doc, siteCtx, renderedEventDocs);
     case 'menu':
@@ -165,10 +165,10 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   }));
 
   // Documentos tipo 'event': contexto de evento individual.
-  // Los speakers provienen del frontmatter, no de otros documentos.
+  // Los speakers se resuelven desde authorDocumentIndex para enriquecer con href y body.
   const contextEventDocs = renderedEventDocs.map((doc) => ({
     ...doc,
-    templateContext: buildEventPipelineContext(doc, finalSiteCtx),
+    templateContext: buildEventPipelineContext(doc, finalSiteCtx, authorDocumentIndex),
   }));
 
   // Documentos tipo 'events': renderizado opcional + contexto de índice de eventos.

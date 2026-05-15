@@ -1,35 +1,33 @@
 import type { TemplateContext } from '../../template/render/context.js';
-import type { BuildDocument } from '../types.js';
+import type { AuthorDocumentIndex, BuildDocument } from '../types.js';
 
 /**
- * Normaliza el campo `speakers` del frontmatter a un array de objetos
- * con las propiedades que expone `templates/event.html`.
+ * Resuelve los ponentes de un evento combinando los nombres del frontmatter
+ * con el AuthorDocumentIndex. Para cada nombre en `frontmatter.speakers`:
+ *   - Si existe un documento de tipo `author` con ese título en el índice,
+ *     devuelve { title, href (root-relative), body } de ese documento.
+ *   - Si no existe, devuelve solo { title: nombre }.
  *
- * Acepta tanto strings simples (nombre) como objetos YAML con campos
- * opcionales `href` y `body`.
+ * El campo `speakers` ya viene normalizado como `string[]` desde parseFrontmatter.
  */
-function normalizeSpeakers(raw: unknown): Array<{ title: string; href?: string; body?: string }> {
-  if (!Array.isArray(raw)) return [];
-  return raw.flatMap((item) => {
-    if (typeof item === 'string') {
-      const title = item.trim();
-      return title ? [{ title }] : [];
-    }
-    if (item !== null && typeof item === 'object') {
-      const obj = item as Record<string, unknown>;
-      const title = typeof obj.title === 'string' ? obj.title.trim() : '';
-      if (!title) return [];
-      return [
-        {
-          title,
-          ...(typeof obj.href === 'string' && { href: obj.href }),
-          ...(typeof obj.body === 'string' && { body: obj.body }),
-        },
-      ];
-    }
-    const title = String(item).trim();
-    return title ? [{ title }] : [];
-  });
+function resolveSpeakers(
+  speakers: string[],
+  authorIndex: AuthorDocumentIndex,
+  docRelativePath: string,
+): Array<{ title: string; href?: string; body?: string }> {
+  return speakers
+    .filter((name) => name.length > 0)
+    .map((name) => {
+      const authorDoc = authorIndex.get(name.trim().toLowerCase());
+      if (authorDoc && authorDoc.relativePath !== docRelativePath) {
+        return {
+          title: authorDoc.frontmatter.title,
+          href: `/${authorDoc.relativePath.replace(/\.md$/, '.html')}`,
+          body: authorDoc.htmlFragment ?? '',
+        };
+      }
+      return { title: name };
+    });
 }
 
 /**
@@ -38,15 +36,15 @@ function normalizeSpeakers(raw: unknown): Array<{ title: string; href?: string; 
  * Variables producidas para `templates/event.html`:
  *   title      → frontmatter.title
  *   pagetitle  → frontmatter.title
- *   author     → frontmatter.author
+ *   author     → frontmatter.author (unido con ', ')
  *   body       → htmlFragment del documento (descripción opcional)
  *   time       → frontmatter.time (string opcional)
  *   location   → frontmatter.location (string opcional)
  *   modality   → frontmatter.modality (string opcional)
- *   speakers   → array normalizado de { title, href?, body? } desde frontmatter.speakers
+ *   speakers   → array de { title, href?, body? } resueltos desde AuthorDocumentIndex
  */
-export function buildEventContext(doc: BuildDocument): TemplateContext {
-  const speakers = normalizeSpeakers(doc.frontmatter.speakers);
+export function buildEventContext(doc: BuildDocument, authorIndex: AuthorDocumentIndex): TemplateContext {
+  const speakers = resolveSpeakers(doc.frontmatter.speakers, authorIndex, doc.relativePath);
 
   return {
     title: doc.frontmatter.title,
