@@ -9,6 +9,19 @@ function normalizeForComparison(value: string): string {
 }
 
 /**
+ * Resuelve el href root-relative del primer autor del array que tenga un documento
+ * en el índice. Devuelve `undefined` si no hay índice o ningún autor tiene página.
+ */
+export function resolveAuthorHref(authors: string[], index: AuthorDocumentIndex | undefined): string | undefined {
+  if (!index) return undefined;
+  for (const name of authors) {
+    const doc = index.get(normalizeForComparison(name));
+    if (doc) return `/${doc.relativePath.replace(/\.md$/, '.html')}`;
+  }
+  return undefined;
+}
+
+/**
  * Construye el TemplateContext para un documento de tipo `author`.
  *
  * Variables producidas para `templates/author.html`:
