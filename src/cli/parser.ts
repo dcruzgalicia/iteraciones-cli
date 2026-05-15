@@ -20,7 +20,15 @@ export function buildProgram(): Command {
     .command('serve')
     .description('arranca un servidor HTTP con livereload automático')
     .option('-p, --port <n>', 'puerto del servidor', '3000')
-    .action((opts: { port: string }) => runServe(process.cwd(), Number(opts.port)));
+    .action((opts: { port: string }) => {
+      const port = Number(opts.port);
+      if (!Number.isInteger(port) || port < 1 || port > 65535) {
+        process.stderr.write(`Error: el puerto debe ser un entero entre 1 y 65535 (recibido: "${opts.port}")\n`);
+        process.exitCode = 1;
+        return;
+      }
+      runServe(process.cwd(), port);
+    });
 
   return program;
 }
