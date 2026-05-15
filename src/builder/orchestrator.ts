@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { CacheManager } from '../cache/cache-manager.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { clean } from '../output/writer.js';
 import { checkPandoc } from '../services/pandoc-runner.js';
@@ -81,7 +82,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   ctx.cssPath = await buildAssets(ctx.outputDir, ctx.cwd, siteConfig);
   const siteCtx = buildSiteContext(siteConfig, ctx.cssPath);
 
-  // MVP: sin caché ni plugins.
+  const pkg = (await Bun.file(join(import.meta.dir, '../../package.json')).json()) as { version: string };
+  const renderCache = { manager: new CacheManager(cwd), cliVersion: pkg.version };
+
   const sourceDocs = await discover(cwd);
   const allDocs = classifyDocuments(sourceDocs);
   const index = collectByType(
@@ -105,17 +108,17 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // relacionados (file, author, event). Se hace antes del pre-paso de bloques para que
   // buildBlockTypeContext reciba datos reales en lugar de arrays vacíos.
   const fileDocs = allDocs.filter((doc) => doc.type === 'file' && doc.kind !== 'block');
-  const renderedFileDocs = await renderDocuments(fileDocs, ctx.concurrency ?? 4);
+  const renderedFileDocs = await renderDocuments(fileDocs, ctx.concurrency ?? 4, renderCache);
 
   const authorDocs = allDocs.filter((doc) => doc.type === 'author' && doc.kind !== 'block');
-  const renderedAuthorDocs = await renderDocuments(authorDocs, ctx.concurrency ?? 4);
+  const renderedAuthorDocs = await renderDocuments(authorDocs, ctx.concurrency ?? 4, renderCache);
 
   // Índice de autores por título normalizado (lowercase). Se construye aquí para que
   // esté disponible antes del pre-paso de bloques y del paso de contexto de páginas.
   const authorDocumentIndex = createAuthorDocumentIndex(renderedAuthorDocs);
 
   const eventDocs = allDocs.filter((doc) => doc.type === 'event' && doc.kind !== 'block');
-  const renderedEventDocs = await renderDocuments(eventDocs, ctx.concurrency ?? 4);
+  const renderedEventDocs = await renderDocuments(eventDocs, ctx.concurrency ?? 4, renderCache);
 
   // Pre-paso de bloques: renderizar todos los docs con kind === 'block', construir
   // sus contextos de tipo con los datos reales de página, aplicar sus templates
@@ -123,7 +126,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // finalSiteCtx para que los region slots del layout se rellenen en todas las páginas.
   // Los bloques NO generan su propio archivo HTML de salida.
   const allBlockDocs = allDocs.filter((doc) => doc.kind === 'block');
-  const renderedBlockDocs = await renderDocuments(allBlockDocs, ctx.concurrency ?? 4);
+  const renderedBlockDocs = await renderDocuments(allBlockDocs, ctx.concurrency ?? 4, renderCache);
   const contextBlockDocs = renderedBlockDocs.map((doc) => ({
     ...doc,
     templateContext: buildBlockTypeContext(doc, enrichedSiteCtx, index, renderedFileDocs, renderedAuthorDocs, renderedEventDocs, authorDocumentIndex),
