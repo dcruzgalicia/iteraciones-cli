@@ -3,12 +3,31 @@ const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
 export interface Frontmatter {
   title: string;
   date: string;
-  author: string;
+  author: string[];
   type: string;
   keywords: string[];
   region: string;
   block: boolean;
   [key: string]: unknown;
+}
+
+/**
+ * Normaliza un valor desconocido a un array de strings no vacíos con trim.
+ * Acepta string (devuelve array de un elemento), string[] (filtra vacíos),
+ * o cualquier otro valor (devuelve []).
+ */
+export function normalizeStringList(value: unknown): string[] {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed ? [trimmed] : [];
+  }
+  if (Array.isArray(value)) {
+    return value
+      .filter((item): item is string => typeof item === 'string')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
 }
 
 export interface ParsedFile {
@@ -39,7 +58,7 @@ export function parseFrontmatter(raw: string): ParsedFile {
 }
 
 function emptyFrontmatter(): Frontmatter {
-  return { title: '', date: '', author: '', type: '', keywords: [], region: '', block: false };
+  return { title: '', date: '', author: [], type: '', keywords: [], region: '', block: false };
 }
 
 function normalizeFrontmatter(data: Record<string, unknown>): Frontmatter {
@@ -47,7 +66,7 @@ function normalizeFrontmatter(data: Record<string, unknown>): Frontmatter {
     ...data,
     title: typeof data.title === 'string' ? data.title : '',
     date: typeof data.date === 'string' ? data.date : data.date instanceof Date ? data.date.toISOString().slice(0, 10) : '',
-    author: typeof data.author === 'string' ? data.author : '',
+    author: normalizeStringList(data.author),
     type: typeof data.type === 'string' ? data.type : '',
     keywords: Array.isArray(data.keywords) ? data.keywords.filter((k): k is string => typeof k === 'string') : [],
     region: typeof data.region === 'string' ? data.region : '',
