@@ -67,7 +67,7 @@ function buildBlockTypeContext(
 }
 
 export async function build(cwd: string, options: BuildOptions = {}): Promise<void> {
-  await checkPandoc();
+  const pandocVersion = await checkPandoc();
   const siteConfig = await loadSiteConfig(cwd);
 
   const ctx: BuildContext = {
@@ -84,7 +84,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const siteCtx = buildSiteContext(siteConfig, ctx.cssPath);
 
   const pkg = (await Bun.file(join(import.meta.dir, '../../package.json')).json()) as { version: string };
-  const renderCache = { manager: new CacheManager(cwd), cliVersion: pkg.version };
+  const renderCache = { manager: new CacheManager(cwd), cliVersion: pkg.version, pandocVersion };
 
   const sourceDocs = await discover(cwd);
   const allDocs = classifyDocuments(sourceDocs);

@@ -10,12 +10,13 @@ import type { BuildDocument } from '../types.js';
 export interface RenderCache {
   manager: CacheManager;
   cliVersion: string;
+  pandocVersion: string;
 }
 
 export async function renderDocuments(docs: BuildDocument[], concurrency: number, cache?: RenderCache): Promise<BuildDocument[]> {
   return mapWithConcurrency(docs, concurrency, async (doc) => {
     if (cache) {
-      const key = hash(doc.sourceHash, cache.cliVersion);
+      const key = hash(doc.sourceHash, cache.cliVersion, cache.pandocVersion);
       const cached = await cache.manager.read('render', key);
       if (cached !== undefined) {
         return { ...doc, htmlFragment: cached };
@@ -27,7 +28,7 @@ export async function renderDocuments(docs: BuildDocument[], concurrency: number
       await writeFile(tmpPath, doc.body, 'utf8');
       const htmlFragment = await convertFragment(tmpPath);
       if (cache) {
-        const key = hash(doc.sourceHash, cache.cliVersion);
+        const key = hash(doc.sourceHash, cache.cliVersion, cache.pandocVersion);
         await cache.manager.write('render', key, htmlFragment);
       }
       return { ...doc, htmlFragment };
