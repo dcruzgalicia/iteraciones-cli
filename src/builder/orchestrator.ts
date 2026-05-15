@@ -10,7 +10,7 @@ import { collectByType } from './collect.js';
 import { buildRelatedAuthorsContext, createAuthorDocumentIndex } from './context/authors.js';
 import { buildSiteContext } from './context/site.js';
 import { classifyDocuments } from './pipeline/classify.js';
-import { composeDocuments, renderBlocksToRegions } from './pipeline/compose.js';
+import { type ComposeCache, composeDocuments, renderBlocksToRegions } from './pipeline/compose.js';
 import { buildAuthorPipelineContext, buildAuthorsPipelineContext } from './pipeline/context/authors.js';
 import { buildCardPipelineContext } from './pipeline/context/card.js';
 import { buildCollectionPipelineContext } from './pipeline/context/collection.js';
@@ -84,7 +84,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const siteCtx = buildSiteContext(siteConfig, ctx.cssPath);
 
   const pkg = (await Bun.file(join(import.meta.dir, '../../package.json')).json()) as { version: string };
-  const renderCache = { manager: new CacheManager(cwd), cliVersion: pkg.version, pandocVersion };
+  const cacheManager = new CacheManager(cwd);
+  const renderCache = { manager: cacheManager, cliVersion: pkg.version, pandocVersion };
+  const composeCache: ComposeCache = { manager: cacheManager, cliVersion: pkg.version };
 
   const sourceDocs = await discover(cwd);
   const allDocs = classifyDocuments(sourceDocs);
@@ -224,6 +226,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       ...contextListDocs,
     ],
     ctx,
+    composeCache,
   );
   await writeDocuments(composedDocs, ctx);
 
@@ -242,6 +245,13 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     ...renderedCardDocs,
     ...renderedListDocs,
   ];
-  const allRenderKeys = new Set(allRenderedDocs.map((doc) => hash(doc.sourceHash, renderCache.cliVersion)));
+  const allRenderKeys = new Set(allRenderedDocs.map((doc) => hash(doc.sourceHash, renderCache.cliVersion, renderCache.pandocVersion)));
   await renderCache.manager.prune('render', allRenderKeys);
+
+  // Podar entradas obsoletas del scope 'compose' usando las claves de todos los
+  // documentos compuestos en esta ejecución.
+  const allComposeKeys = new Set(
+    composedDocs.map((doc) => hash(doc.htmlFragment ?? '', JSON.stringify(doc.templateContext), doc.templatePath ?? '', composeCache.cliVersion)),
+  );
+  await composeCache.manager.prune('compose', allComposeKeys);
 }
