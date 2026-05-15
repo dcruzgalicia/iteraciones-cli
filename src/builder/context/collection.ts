@@ -21,7 +21,7 @@ export function buildCollectionContext(doc: BuildDocument, items: BuildDocument[
       href: `/${item.relativePath.replace(/\.md$/, '.html')}`,
       title: item.frontmatter.title,
       author: item.frontmatter.author.join(', '),
-      ...(authorHref !== undefined && { 'author-href': authorHref }),
+      'author-href': authorHref,
       date: item.frontmatter.date,
     };
   });
