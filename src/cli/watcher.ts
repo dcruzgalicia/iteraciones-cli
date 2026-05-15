@@ -24,7 +24,8 @@ export function startWatcher(srcDir: string, onChange: (filename: string) => Pro
     if (!filename) return;
 
     // Ignorar cambios en directorios de salida para evitar bucles infinitos.
-    if (IGNORED_PREFIXES.some((prefix) => filename.startsWith(prefix))) return;
+    // Se compara el primer segmento para no filtrar archivos como `distilled.md`.
+    if (IGNORED_PREFIXES.some((prefix) => filename === prefix || filename.startsWith(prefix + '/'))) return;
 
     const ext = extname(filename).toLowerCase();
     if (!WATCHED_EXTENSIONS.has(ext)) return;
