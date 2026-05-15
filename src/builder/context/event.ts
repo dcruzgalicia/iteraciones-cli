@@ -10,25 +10,43 @@ import type { AuthorDocumentIndex, BuildDocument } from '../types.js';
  *
  * El campo `speakers` ya viene normalizado como `string[]` desde parseFrontmatter.
  */
+type SpeakerDefinition = string | { title: string; href?: string; body?: string };
+
 function resolveSpeakers(
-  speakers: string[],
+  speakers: Array<string | { title: string; href?: string; body?: string }>,
   authorIndex: AuthorDocumentIndex,
   docRelativePath: string,
 ): Array<{ title: string; href?: string; body?: string }> {
   return speakers
-    .filter((name) => name.length > 0)
-    .map((name) => {
-      const key = name.trim().toLowerCase();
-      const authorDoc = authorIndex.get(key);
-      if (authorDoc && authorDoc.relativePath !== docRelativePath) {
-        return {
-          title: authorDoc.frontmatter.title,
-          href: `/${authorDoc.relativePath.replace(/\.md$/, '.html')}`,
-          body: authorDoc.htmlFragment ?? '',
-        };
+    .map((speaker) => {
+      if (typeof speaker === 'string') {
+        const name = speaker.trim();
+        if (!name) return undefined;
+        const key = name.toLowerCase();
+        const authorDoc = authorIndex.get(key);
+        if (authorDoc && authorDoc.relativePath !== docRelativePath) {
+          return {
+            title: authorDoc.frontmatter.title,
+            href: `/${authorDoc.relativePath.replace(/\.md$/, '.html')}`,
+            body: authorDoc.htmlFragment ?? '',
+          };
+        }
+        return { title: name };
       }
-      return { title: name };
-    });
+
+      const title = speaker.title.trim();
+      if (!title) return undefined;
+      const key = title.toLowerCase();
+      const authorDoc = authorIndex.get(key);
+      return {
+        title,
+        href:
+          speaker.href?.trim() ||
+          (authorDoc && authorDoc.relativePath !== docRelativePath ? `/${authorDoc.relativePath.replace(/\.md$/, '.html')}` : undefined),
+        body: speaker.body?.trim() || (authorDoc && authorDoc.relativePath !== docRelativePath ? (authorDoc.htmlFragment ?? undefined) : undefined),
+      };
+    })
+    .filter((speaker): speaker is { title: string; href?: string; body?: string } => speaker !== undefined);
 }
 
 /**
@@ -55,7 +73,7 @@ export function buildEventContext(doc: BuildDocument, authorIndex: AuthorDocumen
     ...(typeof doc.frontmatter.time === 'string' && { time: doc.frontmatter.time }),
     ...(typeof doc.frontmatter.location === 'string' && { location: doc.frontmatter.location }),
     ...(typeof doc.frontmatter.modality === 'string' && { modality: doc.frontmatter.modality }),
-    ...(speakers.length > 0 && { speakers, authors: speakers }),
+    ...(speakers.length > 0 && { speakers }),
   };
 }
 
