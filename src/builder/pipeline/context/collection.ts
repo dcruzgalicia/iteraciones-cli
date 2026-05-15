@@ -1,6 +1,6 @@
 import type { TemplateContext } from '../../../template/render/context.js';
 import { buildCollectionContext } from '../../context/collection.js';
-import type { BuildDocument, DocumentType } from '../../types.js';
+import type { AuthorDocumentIndex, BuildDocument, DocumentType } from '../../types.js';
 import { mergeContexts } from './merge.js';
 
 /**
@@ -14,8 +14,9 @@ export function buildCollectionPipelineContext(
   doc: BuildDocument,
   siteCtx: TemplateContext,
   index: Map<DocumentType, BuildDocument[]>,
+  authorIndex?: AuthorDocumentIndex,
 ): TemplateContext {
   const items = index.get('file') ?? [];
-  const collectionCtx = buildCollectionContext(doc, items);
+  const collectionCtx = buildCollectionContext(doc, items, authorIndex);
   return mergeContexts(siteCtx, collectionCtx);
 }

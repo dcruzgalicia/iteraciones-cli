@@ -43,7 +43,7 @@ function buildBlockTypeContext(
 ): TemplateContext {
   switch (doc.type) {
     case 'collection':
-      return buildCollectionPipelineContext(doc, siteCtx, index);
+      return buildCollectionPipelineContext(doc, siteCtx, index, authorDocumentIndex);
     case 'author':
       return buildAuthorPipelineContext(doc, siteCtx, renderedFileDocs);
     case 'authors':
@@ -57,10 +57,10 @@ function buildBlockTypeContext(
     case 'card':
       return buildCardPipelineContext(doc, siteCtx);
     case 'list':
-      return buildListPipelineContext(doc, siteCtx, renderedFileDocs);
+      return buildListPipelineContext(doc, siteCtx, renderedFileDocs, authorDocumentIndex);
     case 'file':
     default:
-      return mergeContexts(buildContext(doc, siteCtx), buildRelatedAuthorsContext(doc, authorDocumentIndex));
+      return mergeContexts(buildContext(doc, siteCtx, authorDocumentIndex), buildRelatedAuthorsContext(doc, authorDocumentIndex));
   }
 }
 

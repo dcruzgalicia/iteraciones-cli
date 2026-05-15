@@ -1,6 +1,6 @@
 import type { TemplateContext } from '../../../template/render/context.js';
 import { buildListContext } from '../../context/list.js';
-import type { BuildDocument } from '../../types.js';
+import type { AuthorDocumentIndex, BuildDocument } from '../../types.js';
 import { mergeContexts } from './merge.js';
 
 /**
@@ -10,7 +10,12 @@ import { mergeContexts } from './merge.js';
  * Recibe los docs tipo `file` ya renderizados para que `htmlFragment`
  * (extracto del contenido) esté disponible en cada item del listado.
  */
-export function buildListPipelineContext(doc: BuildDocument, siteCtx: TemplateContext, renderedFileDocs: BuildDocument[]): TemplateContext {
-  const listCtx = buildListContext(doc, renderedFileDocs);
+export function buildListPipelineContext(
+  doc: BuildDocument,
+  siteCtx: TemplateContext,
+  renderedFileDocs: BuildDocument[],
+  authorIndex?: AuthorDocumentIndex,
+): TemplateContext {
+  const listCtx = buildListContext(doc, renderedFileDocs, authorIndex);
   return mergeContexts(siteCtx, listCtx);
 }
