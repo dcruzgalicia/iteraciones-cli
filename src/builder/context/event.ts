@@ -18,7 +18,8 @@ function resolveSpeakers(
   return speakers
     .filter((name) => name.length > 0)
     .map((name) => {
-      const authorDoc = authorIndex.get(name.trim().toLowerCase());
+      const key = name.trim().toLowerCase();
+      const authorDoc = authorIndex.get(key);
       if (authorDoc && authorDoc.relativePath !== docRelativePath) {
         return {
           title: authorDoc.frontmatter.title,
