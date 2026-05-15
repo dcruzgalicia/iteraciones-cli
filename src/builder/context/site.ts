@@ -17,7 +17,7 @@ export function buildSiteContext(config: SiteConfig, cssPath: string): TemplateC
     'site-title': config.title,
     'site-tagline': config.tagline,
     lang: config.lang,
-    'site-logo': config.logo,
+    'site-logo': config.logo ? `/${config.logo.replace(/^\/+/, '')}` : undefined,
     css: cssPath ? [cssPath] : [],
   };
 }
