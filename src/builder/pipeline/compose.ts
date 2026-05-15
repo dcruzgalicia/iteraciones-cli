@@ -3,9 +3,11 @@ import { join } from 'node:path';
 import type { CacheManager } from '../../cache/cache-manager.js';
 import { hash } from '../../cache/hasher.js';
 import { mapWithConcurrency } from '../../output/concurrency.js';
+import type { PluginRegistry } from '../../plugin/registry.js';
 import type { AstNode } from '../../template/ast.js';
 import { tokenize } from '../../template/lexer.js';
 import { parse } from '../../template/parser.js';
+import type { TemplateContext } from '../../template/render/context.js';
 import { renderAst } from '../../template/render/renderer.js';
 import type { BuildContext, BuildDocument } from '../types.js';
 
@@ -32,7 +34,12 @@ async function readAndParseTemplate(path: string): Promise<{ ast: AstNode[]; con
   return { ast: parse(tokenize(content)), contentHash: hash(content) };
 }
 
-export async function composeDocuments(docs: BuildDocument[], ctx: BuildContext, cache?: ComposeCache): Promise<BuildDocument[]> {
+export async function composeDocuments(
+  docs: BuildDocument[],
+  ctx: BuildContext,
+  cache?: ComposeCache,
+  registry?: PluginRegistry,
+): Promise<BuildDocument[]> {
   const layoutTemplate = await readFile(LAYOUT_PATH, 'utf8');
   const pandocTemplate = await readFile(PANDOC_TEMPLATE_PATH, 'utf8');
 
@@ -75,16 +82,34 @@ export async function composeDocuments(docs: BuildDocument[], ctx: BuildContext,
       }
     }
 
+    // beforeCompose: permite al plugin modificar el templateContext antes de renderizar.
+    // La clave de caché se calcula sobre el contexto original; las modificaciones del
+    // plugin se persisten en el resultado cacheado (válido para plugins deterministas).
+    let effectiveTemplateContext: TemplateContext = doc.templateContext;
+    if (registry) {
+      const beforeCtx = await registry.runBeforeCompose({
+        outputRelativePath: doc.relativePath,
+        templateContext: doc.templateContext as Readonly<Record<string, unknown>>,
+      });
+      effectiveTemplateContext = beforeCtx.templateContext as TemplateContext;
+    }
+
     // Paso 1: renderizar el template específico del tipo de documento (templates/{type}.html).
     // El template usa $body$ para el htmlFragment y puede añadir estructura adicional (encabezados, listas).
     const typeAst = doc.templatePath ? templateDataMap.get(doc.templatePath)?.ast : undefined;
-    const innerHtml = typeAst ? renderAst(typeAst, doc.templateContext) : ((doc.templateContext.body as string) ?? '');
+    const innerHtml = typeAst ? renderAst(typeAst, effectiveTemplateContext) : ((effectiveTemplateContext.body as string) ?? '');
 
     // Paso 2: envolver el HTML del tipo en el layout del sitio (header de navegación, main, footer).
-    const layoutHtml = renderAst(layoutAst, { ...doc.templateContext, body: innerHtml });
+    const layoutHtml = renderAst(layoutAst, { ...effectiveTemplateContext, body: innerHtml });
 
     // Paso 3: envolver el layout en el documento HTML completo (doctype, head, link CSS).
-    const outputHtml = renderAst(pandocAst, { ...doc.templateContext, body: layoutHtml });
+    let outputHtml = renderAst(pandocAst, { ...effectiveTemplateContext, body: layoutHtml });
+
+    // afterCompose: permite al plugin postprocesar el HTML final de la página.
+    if (registry) {
+      const afterCtx = await registry.runAfterCompose({ outputRelativePath: doc.relativePath, html: outputHtml });
+      outputHtml = afterCtx.html;
+    }
 
     if (cache) {
       await cache.manager.write('compose', key, outputHtml);
