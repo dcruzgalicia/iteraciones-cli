@@ -4,6 +4,7 @@ export interface Frontmatter {
   title: string;
   date: string;
   author: string[];
+  speakers: string[];
   type: string;
   keywords: string[];
   region: string;
@@ -58,7 +59,7 @@ export function parseFrontmatter(raw: string): ParsedFile {
 }
 
 function emptyFrontmatter(): Frontmatter {
-  return { title: '', date: '', author: [], type: '', keywords: [], region: '', block: false };
+  return { title: '', date: '', author: [], speakers: [], type: '', keywords: [], region: '', block: false };
 }
 
 function normalizeFrontmatter(data: Record<string, unknown>): Frontmatter {
@@ -67,6 +68,7 @@ function normalizeFrontmatter(data: Record<string, unknown>): Frontmatter {
     title: typeof data.title === 'string' ? data.title : '',
     date: typeof data.date === 'string' ? data.date : data.date instanceof Date ? data.date.toISOString().slice(0, 10) : '',
     author: normalizeStringList(data.author),
+    speakers: normalizeStringList(data.speakers),
     type: typeof data.type === 'string' ? data.type : '',
     keywords: Array.isArray(data.keywords) ? data.keywords.filter((k): k is string => typeof k === 'string') : [],
     region: typeof data.region === 'string' ? data.region : '',
