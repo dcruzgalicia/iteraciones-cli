@@ -1,5 +1,5 @@
 import type { TemplateContext } from '../../template/render/context.js';
-import type { BuildDocument } from '../types.js';
+import type { AuthorDocumentIndex, BuildDocument } from '../types.js';
 
 /**
  * Normaliza un string para comparación: minúsculas, sin espacios extra.
@@ -69,4 +69,46 @@ export function buildAuthorsContext(doc: BuildDocument, authorDocs: BuildDocumen
     authors,
     count: authors.length,
   };
+}
+
+/**
+ * Construye un índice de documentos de tipo `author` indexados por su título
+ * normalizado (lowercase, trimmed). Primer documento autor con ese título "gana"
+ * si hubiera duplicados.
+ *
+ * Precondición: `renderedAuthorDocs` solo contiene documentos tipo 'author'
+ * con `kind !== 'block'` ya renderizados (htmlFragment disponible).
+ */
+export function createAuthorDocumentIndex(renderedAuthorDocs: BuildDocument[]): AuthorDocumentIndex {
+  const index = new Map<string, BuildDocument>();
+  for (const doc of renderedAuthorDocs) {
+    const key = normalizeForComparison(doc.frontmatter.title);
+    if (key && !index.has(key)) {
+      index.set(key, doc);
+    }
+  }
+  return index;
+}
+
+/**
+ * Construye el fragmento de contexto `{ authors }` para el slot de autores
+ * relacionados en sidebar-primary. Para cada nombre en `doc.frontmatter.author`,
+ * busca el documento autor en el índice y devuelve tarjetas con href, title y body.
+ *
+ * Devuelve `{}` si el documento no tiene autores o ninguno está en el índice.
+ * El href generado es root-relative (prefijo /).
+ */
+export function buildRelatedAuthorsContext(doc: BuildDocument, authorIndex: AuthorDocumentIndex): TemplateContext {
+  if (doc.frontmatter.author.length === 0) return {};
+
+  const authors = doc.frontmatter.author
+    .map((name) => authorIndex.get(normalizeForComparison(name)))
+    .filter((a): a is BuildDocument => a !== undefined && a.relativePath !== doc.relativePath)
+    .map((authorDoc) => ({
+      href: `/${authorDoc.relativePath.replace(/\.md$/, '.html')}`,
+      title: authorDoc.frontmatter.title,
+      body: authorDoc.htmlFragment ?? '',
+    }));
+
+  return authors.length > 0 ? { authors } : {};
 }
