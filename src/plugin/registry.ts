@@ -21,8 +21,10 @@ export class PluginRegistry {
   async runBeforeRender(context: PluginRenderContext): Promise<PluginRenderContext> {
     let ctx = context;
     for (const plugin of this.plugins) {
-      if (plugin.beforeRender) {
-        ctx = await plugin.beforeRender(ctx);
+      if (typeof plugin.beforeRender === 'function') {
+        const result = await plugin.beforeRender(ctx);
+        if (result == null) throw new Error(`[plugin:${plugin.name}] beforeRender debe retornar el contexto; recibido: ${String(result)}`);
+        ctx = result;
       }
     }
     return ctx;
@@ -31,8 +33,10 @@ export class PluginRegistry {
   async runAfterRender(context: PluginRenderResult): Promise<PluginRenderResult> {
     let ctx = context;
     for (const plugin of this.plugins) {
-      if (plugin.afterRender) {
-        ctx = await plugin.afterRender(ctx);
+      if (typeof plugin.afterRender === 'function') {
+        const result = await plugin.afterRender(ctx);
+        if (result == null) throw new Error(`[plugin:${plugin.name}] afterRender debe retornar el contexto; recibido: ${String(result)}`);
+        ctx = result;
       }
     }
     return ctx;
@@ -41,8 +45,10 @@ export class PluginRegistry {
   async runBeforeCompose(context: PluginComposeContext): Promise<PluginComposeContext> {
     let ctx = context;
     for (const plugin of this.plugins) {
-      if (plugin.beforeCompose) {
-        ctx = await plugin.beforeCompose(ctx);
+      if (typeof plugin.beforeCompose === 'function') {
+        const result = await plugin.beforeCompose(ctx);
+        if (result == null) throw new Error(`[plugin:${plugin.name}] beforeCompose debe retornar el contexto; recibido: ${String(result)}`);
+        ctx = result;
       }
     }
     return ctx;
@@ -51,8 +57,10 @@ export class PluginRegistry {
   async runAfterCompose(context: PluginComposeResult): Promise<PluginComposeResult> {
     let ctx = context;
     for (const plugin of this.plugins) {
-      if (plugin.afterCompose) {
-        ctx = await plugin.afterCompose(ctx);
+      if (typeof plugin.afterCompose === 'function') {
+        const result = await plugin.afterCompose(ctx);
+        if (result == null) throw new Error(`[plugin:${plugin.name}] afterCompose debe retornar el contexto; recibido: ${String(result)}`);
+        ctx = result;
       }
     }
     return ctx;
@@ -60,7 +68,7 @@ export class PluginRegistry {
 
   async runAfterBuild(context: PluginBuildContext): Promise<void> {
     for (const plugin of this.plugins) {
-      if (plugin.afterBuild) {
+      if (typeof plugin.afterBuild === 'function') {
         await plugin.afterBuild(context);
       }
     }
