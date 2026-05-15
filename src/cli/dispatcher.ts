@@ -1,5 +1,6 @@
 import { build } from '../builder/orchestrator.js';
 import { ConfigError, PandocError } from '../errors.js';
+import { runServe as serve } from './serve.js';
 
 export async function runBuild(cwd: string): Promise<void> {
   try {
@@ -27,3 +28,18 @@ export async function runClean(): Promise<void> {}
 
 // stub: implementado en issue #60
 export async function runInfo(): Promise<void> {}
+
+export async function runServe(cwd: string, port: number): Promise<void> {
+  try {
+    await serve(cwd, port);
+    // runServe resuelve cuando el servidor está escuchando; el proceso continúa
+    // hasta recibir SIGINT/SIGTERM para mantener el servidor activo.
+  } catch (err) {
+    if (err instanceof Error) {
+      process.stderr.write(`Error: ${err.message}\n`);
+    } else {
+      process.stderr.write('Error desconocido al arrancar el servidor.\n');
+    }
+    process.exitCode = 1;
+  }
+}
