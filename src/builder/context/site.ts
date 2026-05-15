@@ -9,7 +9,8 @@ import type { TemplateContext } from '../../template/render/context.js';
  *   site-title    → config.title
  *   site-tagline  → config.tagline
  *   lang          → config.lang
- *   site-logo     → config.logo
+ *   site-logo     → `/${config.logo}` normalizado como ruta root-relative,
+ *                   o undefined si config.logo no está definido
  *   css           → [cssPath] si cssPath no está vacío, [] si lo está
  */
 export function buildSiteContext(config: SiteConfig, cssPath: string): TemplateContext {
