@@ -20,10 +20,21 @@ export class CacheManager {
   }
 
   /**
+   * Valida que `key` sea un hash SHA-256 en hexadecimal de 64 caracteres.
+   * Lanza si la clave no cumple el formato para prevenir path traversal.
+   */
+  static #validateKey(key: string): void {
+    if (!/^[0-9a-f]{64}$/.test(key)) {
+      throw new Error(`CacheManager: clave inválida "${key}". Se esperaba SHA-256 hexadecimal de 64 caracteres.`);
+    }
+  }
+
+  /**
    * Lee el valor almacenado para la clave dada en el scope indicado.
    * Retorna `undefined` si la entrada no existe.
    */
   async read(scope: CacheScope, key: string): Promise<string | undefined> {
+    CacheManager.#validateKey(key);
     const file = Bun.file(this.#entryPath(scope, key));
     if (!(await file.exists())) return undefined;
     return file.text();
@@ -34,6 +45,7 @@ export class CacheManager {
    * Crea los directorios intermedios si no existen.
    */
   async write(scope: CacheScope, key: string, value: string): Promise<void> {
+    CacheManager.#validateKey(key);
     const dir = this.#entryDir(scope, key);
     await mkdir(dir, { recursive: true });
     await Bun.write(this.#entryPath(scope, key), value);
