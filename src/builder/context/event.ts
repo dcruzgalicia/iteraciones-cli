@@ -3,17 +3,17 @@ import type { AuthorDocumentIndex, BuildDocument } from '../types.js';
 
 /**
  * Resuelve los ponentes de un evento combinando los nombres del frontmatter
- * con el AuthorDocumentIndex. Para cada nombre en `frontmatter.speakers`:
- *   - Si existe un documento de tipo `author` con ese título en el índice,
- *     devuelve { title, href (root-relative), body } de ese documento.
- *   - Si no existe, devuelve solo { title: nombre }.
- *
- * El campo `speakers` ya viene normalizado como `string[]` desde parseFrontmatter.
+ * con el AuthorDocumentIndex. Para cada entrada en `frontmatter.speakers`:
+ *   - Si es un string y existe un documento de tipo `author` con ese título en
+ *     el índice, devuelve { title, href (root-relative), body } de ese documento.
+ *   - Si es un objeto { title, href?, body? }, utiliza sus campos y enriquece con
+ *     el índice solo cuando el campo correspondiente esté vacío.
+ *   - Si el string no tiene coincidencia en el índice, devuelve solo { title: nombre }.
  */
 type SpeakerDefinition = string | { title: string; href?: string; body?: string };
 
 function resolveSpeakers(
-  speakers: Array<string | { title: string; href?: string; body?: string }>,
+  speakers: SpeakerDefinition[],
   authorIndex: AuthorDocumentIndex,
   docRelativePath: string,
 ): Array<{ title: string; href?: string; body?: string }> {
