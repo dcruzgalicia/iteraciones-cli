@@ -38,10 +38,13 @@ export function buildListContext(doc: BuildDocument, items: BuildDocument[], aut
     };
   });
 
+  const pageAuthorHref = resolveAuthorHref(doc.frontmatter.author, authorIndex);
+
   return {
     title: doc.frontmatter.title,
     pagetitle: doc.frontmatter.title,
     author: doc.frontmatter.author.join(', '),
+    ...(pageAuthorHref !== undefined && { 'author-href': pageAuthorHref }),
     body: doc.htmlFragment ?? '',
     'list-items': listItems,
     count: listItems.length,
