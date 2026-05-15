@@ -33,7 +33,11 @@ export async function runServe(cwd: string, port: number): Promise<() => void> {
     html.includes('</body>') ? html.replace('</body>', `${LIVERELOAD_SCRIPT}</body>`) : html + LIVERELOAD_SCRIPT,
   );
 
-  await new Promise<void>((resolve) => {
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', (err) => {
+      server.close();
+      reject(err);
+    });
     server.listen(port, () => {
       process.stdout.write(`serve: escuchando en http://localhost:${port}\n`);
       resolve();
