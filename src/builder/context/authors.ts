@@ -5,8 +5,8 @@ import type { BuildDocument } from '../types.js';
  * Normaliza un string para comparación: minúsculas, sin espacios extra.
  * Devuelve '' si el valor es undefined o vacío.
  */
-function normalize(value: string | undefined): string {
-  return value?.trim().toLowerCase() ?? '';
+function normalizeForComparison(value: string): string {
+  return value.trim().toLowerCase();
 }
 
 /**
@@ -15,29 +15,30 @@ function normalize(value: string | undefined): string {
  * Variables producidas para `templates/author.html`:
  *   title      → frontmatter.title del documento autor
  *   pagetitle  → frontmatter.title del documento autor
- *   author     → frontmatter.author del documento autor
+ *   author     → frontmatter.author del documento autor (unido con ', ')
  *   body       → htmlFragment del documento autor (bio opcional)
- *   list-items → publicaciones (tipo 'file') cuyo frontmatter.author coincide con el título del autor
+ *   list-items → publicaciones (tipo 'file') cuyo frontmatter.author incluye el título del autor
  *   count      → número de publicaciones
  *
- * La coincidencia es case-insensitive sobre el campo `author` del documento file.
+ * La coincidencia es case-insensitive: se compara cada nombre en el array author
+ * con el título del documento autor.
  */
 export function buildAuthorContext(doc: BuildDocument, fileDocs: BuildDocument[]): TemplateContext {
-  const authorName = normalize(doc.frontmatter.title);
+  const authorName = normalizeForComparison(doc.frontmatter.title);
 
-  const matched = authorName ? fileDocs.filter((file) => normalize(file.frontmatter.author) === authorName) : [];
+  const matched = authorName ? fileDocs.filter((file) => file.frontmatter.author.some((a) => normalizeForComparison(a) === authorName)) : [];
 
   const listItems = matched.map((file) => ({
     href: file.relativePath.replace(/\.md$/, '.html'),
     title: file.frontmatter.title,
-    author: file.frontmatter.author,
+    author: file.frontmatter.author.join(', '),
     date: file.frontmatter.date,
   }));
 
   return {
     title: doc.frontmatter.title,
     pagetitle: doc.frontmatter.title,
-    author: doc.frontmatter.author,
+    author: doc.frontmatter.author.join(', '),
     body: doc.htmlFragment ?? '',
     'list-items': listItems,
     count: listItems.length,

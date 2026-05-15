@@ -51,7 +51,7 @@ export function buildEventContext(doc: BuildDocument): TemplateContext {
   return {
     title: doc.frontmatter.title,
     pagetitle: doc.frontmatter.title,
-    author: doc.frontmatter.author,
+    author: doc.frontmatter.author.join(', '),
     body: doc.htmlFragment ?? '',
     ...(typeof doc.frontmatter.time === 'string' && { time: doc.frontmatter.time }),
     ...(typeof doc.frontmatter.location === 'string' && { location: doc.frontmatter.location }),
@@ -79,13 +79,13 @@ export function buildEventsContext(doc: BuildDocument, eventDocs: BuildDocument[
     ...(typeof event.frontmatter.time === 'string' && { time: event.frontmatter.time }),
     ...(typeof event.frontmatter.location === 'string' && { location: event.frontmatter.location }),
     ...(typeof event.frontmatter.modality === 'string' && { modality: event.frontmatter.modality }),
-    ...(event.frontmatter.author && { author: event.frontmatter.author }),
+    ...(event.frontmatter.author.length > 0 && { author: event.frontmatter.author.join(', ') }),
   }));
 
   return {
     title: doc.frontmatter.title,
     pagetitle: doc.frontmatter.title,
-    author: doc.frontmatter.author,
+    author: doc.frontmatter.author.join(', '),
     body: doc.htmlFragment ?? '',
     'list-items': listItems,
     count: listItems.length,
