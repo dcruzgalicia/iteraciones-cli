@@ -88,7 +88,7 @@ export async function composeDocuments(
     let effectiveTemplateContext: TemplateContext = doc.templateContext;
     if (registry) {
       const beforeCtx = await registry.runBeforeCompose({
-        outputRelativePath: doc.relativePath,
+        outputRelativePath: doc.relativePath.replace(/\.md$/, '.html'),
         templateContext: doc.templateContext as Readonly<Record<string, unknown>>,
       });
       effectiveTemplateContext = beforeCtx.templateContext as TemplateContext;
@@ -107,7 +107,7 @@ export async function composeDocuments(
 
     // afterCompose: permite al plugin postprocesar el HTML final de la página.
     if (registry) {
-      const afterCtx = await registry.runAfterCompose({ outputRelativePath: doc.relativePath, html: outputHtml });
+      const afterCtx = await registry.runAfterCompose({ outputRelativePath: doc.relativePath.replace(/\.md$/, '.html'), html: outputHtml });
       outputHtml = afterCtx.html;
     }
 
