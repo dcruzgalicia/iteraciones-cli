@@ -31,9 +31,14 @@ export async function runInfo(): Promise<void> {}
 
 export async function runServe(cwd: string, port: number): Promise<void> {
   try {
-    await serve(cwd, port);
-    // runServe resuelve cuando el servidor está escuchando; el proceso continúa
-    // hasta recibir SIGINT/SIGTERM para mantener el servidor activo.
+    const stop = await serve(cwd, port);
+    // Mantener el proceso activo hasta recibir señal de terminación.
+    const shutdown = (): void => {
+      stop();
+      process.exitCode = 0;
+    };
+    process.once('SIGINT', shutdown);
+    process.once('SIGTERM', shutdown);
   } catch (err) {
     if (err instanceof Error) {
       process.stderr.write(`Error: ${err.message}\n`);
