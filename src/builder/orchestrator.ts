@@ -247,11 +247,4 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   ];
   const allRenderKeys = new Set(allRenderedDocs.map((doc) => hash(doc.sourceHash, renderCache.cliVersion, renderCache.pandocVersion)));
   await renderCache.manager.prune('render', allRenderKeys);
-
-  // Podar entradas obsoletas del scope 'compose' usando las claves de todos los
-  // documentos compuestos en esta ejecución.
-  const allComposeKeys = new Set(
-    composedDocs.map((doc) => hash(doc.htmlFragment ?? '', JSON.stringify(doc.templateContext), doc.templatePath ?? '', composeCache.cliVersion)),
-  );
-  await composeCache.manager.prune('compose', allComposeKeys);
 }
