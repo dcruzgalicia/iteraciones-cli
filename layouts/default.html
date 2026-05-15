@@ -105,6 +105,34 @@
             $endfor$
           </div>
         </div>
+        $endif$
+        $if(speakers)$
+        <div class="mb-8">
+          <div
+            class="mb-3 font-mono text-xs font-bold tracking-widest text-zinc-400 uppercase">
+            Participan
+          </div>
+          <div class="space-y-3">
+            $for(speakers)$
+            <div class="rounded-xl border border-zinc-100 bg-zinc-50 p-4">
+              $if(href)$
+              <a
+                href="$href$"
+                class="font-semibold text-zinc-900 no-underline hover:text-zinc-600">
+                $title$
+              </a>
+              $else$
+              <div class="font-semibold text-zinc-500">
+                $title$
+              </div>
+              $endif$
+              $if(body)$
+              <div class="prose prose-sm mt-2 max-w-none">$body$</div>
+              $endif$
+            </div>
+            $endfor$
+          </div>
+        </div>
         $endif$ $sidebar-primary$
       </aside>
 
