@@ -10,7 +10,7 @@ import { resolveAuthorHref } from './authors.js';
  *   pagetitle  → frontmatter.title del documento lista
  *   author     → frontmatter.author del documento lista
  *   body       → htmlFragment del documento lista (introducción opcional)
- *   list-items → array de { href, title, author, body, date } para cada item del índice
+ *   list-items → array de { href, title, author, body, date, author-href? } para cada item del índice
  *   count      → número de items
  *
  * Precondición: los `items` ya vienen ordenados y paginados desde `collectByType`.
