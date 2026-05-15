@@ -1,3 +1,4 @@
+import type { Dirent } from 'node:fs';
 import { mkdir, readdir, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -57,32 +58,38 @@ export class CacheManager {
    */
   async prune(scope: CacheScope, activeKeys: Set<string>): Promise<void> {
     const scopeDir = join(this.#baseDir, scope);
-    let buckets: string[];
+    let buckets: Dirent[];
     try {
-      buckets = await readdir(scopeDir);
-    } catch {
-      // El directorio aún no existe; nada que podar.
-      return;
+      buckets = await readdir(scopeDir, { withFileTypes: true });
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') return;
+      throw err;
     }
 
-    await Promise.all(
-      buckets.map(async (bucket) => {
-        const bucketDir = join(scopeDir, bucket);
-        let entries: string[];
-        try {
-          entries = await readdir(bucketDir);
-        } catch {
-          return;
-        }
-        await Promise.all(
-          entries.map(async (entry) => {
-            if (!activeKeys.has(entry)) {
-              await unlink(join(bucketDir, entry));
+    // Procesar buckets secuencialmente para evitar EMFILE con cachés grandes.
+    for (const bucket of buckets) {
+      if (!bucket.isDirectory()) continue;
+      const bucketDir = join(scopeDir, bucket.name);
+      let entries: Dirent[];
+      try {
+        entries = await readdir(bucketDir, { withFileTypes: true });
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === 'ENOENT') continue;
+        throw err;
+      }
+      await Promise.all(
+        entries
+          .filter((e) => e.isFile() && !activeKeys.has(e.name))
+          .map(async (e) => {
+            try {
+              await unlink(join(bucketDir, e.name));
+            } catch (err) {
+              // Ignorar si el archivo fue eliminado concurrentemente.
+              if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
             }
           }),
-        );
-      }),
-    );
+      );
+    }
   }
 
   #entryDir(scope: CacheScope, key: string): string {
