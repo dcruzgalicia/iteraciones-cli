@@ -24,7 +24,7 @@
         </div>
         $if(author)$
         <div class="mt-0.5 font-mono text-xs text-zinc-400">
-          ↳ $author$
+          ↳ $if(author-href)$<a href="$author-href$" class="hover:underline">$author$</a>$else$$author$$endif$
         </div>
         $endif$
       </div>
