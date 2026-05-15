@@ -14,6 +14,8 @@ import type { BuildContext, BuildDocument } from '../types.js';
 export interface ComposeCache {
   manager: CacheManager;
   cliVersion: string;
+  /** Hash de los paths de plugins activos. Invalida la caché si cambia el conjunto de plugins. */
+  pluginFingerprint?: string;
 }
 
 const VALID_REGIONS = new Set([
@@ -72,7 +74,17 @@ export async function composeDocuments(
     }
 
     const typeTemplateHash = doc.templatePath ? (templateDataMap.get(doc.templatePath)?.contentHash ?? '') : '';
-    const key = cache ? hash(doc.htmlFragment, JSON.stringify(doc.templateContext), cache.cliVersion, layoutHash, pandocHash, typeTemplateHash) : '';
+    const key = cache
+      ? hash(
+          doc.htmlFragment,
+          JSON.stringify(doc.templateContext),
+          cache.cliVersion,
+          layoutHash,
+          pandocHash,
+          typeTemplateHash,
+          cache.pluginFingerprint ?? '',
+        )
+      : '';
 
     if (cache) {
       activeComposeKeys!.add(key);
