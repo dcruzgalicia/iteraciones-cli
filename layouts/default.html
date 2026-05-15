@@ -82,24 +82,24 @@
           <div class="space-y-3">
             $for(authors)$
             <div class="rounded-xl border border-zinc-100 bg-zinc-50 p-4">
-              $if(authors.href)$
+              $if(href)$
               <a
-                href="$authors.href$"
+                href="$href$"
                 class="font-semibold text-zinc-900 no-underline hover:text-zinc-600">
-                $authors.title$
+                $title$
               </a>
               $else$
               <div class="font-semibold text-zinc-500">
-                $authors.title$
+                $title$
               </div>
               $endif$
-              $if(authors.date)$
+              $if(date)$
               <div class="mt-0.5 font-mono text-xs text-zinc-400">
-                $authors.date$
+                $date$
               </div>
               $endif$
-              $if(authors.body)$
-              <div class="prose prose-sm mt-2 max-w-none">$authors.body$</div>
+              $if(body)$
+              <div class="prose prose-sm mt-2 max-w-none">$body$</div>
               $endif$
             </div>
             $endfor$
