@@ -5,6 +5,7 @@ import { checkPandoc } from '../services/pandoc-runner.js';
 import type { TemplateContext } from '../template/render/context.js';
 import { buildAssets } from './assets.js';
 import { collectByType } from './collect.js';
+import { buildRelatedAuthorsContext, createAuthorDocumentIndex } from './context/authors.js';
 import { buildSiteContext } from './context/site.js';
 import { classifyDocuments } from './pipeline/classify.js';
 import { composeDocuments, renderBlocksToRegions } from './pipeline/compose.js';
@@ -15,10 +16,11 @@ import { buildEventPipelineContext, buildEventsPipelineContext } from './pipelin
 import { buildContext } from './pipeline/context/index.js';
 import { buildListPipelineContext } from './pipeline/context/list.js';
 import { buildMenuPipelineContext } from './pipeline/context/menu.js';
+import { mergeContexts } from './pipeline/context/merge.js';
 import { discover } from './pipeline/discover.js';
 import { renderDocuments } from './pipeline/render.js';
 import { writeDocuments } from './pipeline/write.js';
-import type { BuildContext, DocumentType } from './types.js';
+import type { AuthorDocumentIndex, BuildContext, DocumentType } from './types.js';
 
 export interface BuildOptions {
   outputDir?: string;
@@ -37,6 +39,7 @@ function buildBlockTypeContext(
   renderedFileDocs: Parameters<typeof buildAuthorPipelineContext>[2],
   renderedAuthorDocs: Parameters<typeof buildAuthorsPipelineContext>[2],
   renderedEventDocs: Parameters<typeof buildEventsPipelineContext>[2],
+  authorDocumentIndex: AuthorDocumentIndex,
 ): TemplateContext {
   switch (doc.type) {
     case 'collection':
@@ -57,7 +60,7 @@ function buildBlockTypeContext(
       return buildListPipelineContext(doc, siteCtx, renderedFileDocs);
     case 'file':
     default:
-      return buildContext(doc, siteCtx);
+      return mergeContexts(buildContext(doc, siteCtx), buildRelatedAuthorsContext(doc, authorDocumentIndex));
   }
 }
 
@@ -107,6 +110,10 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const authorDocs = allDocs.filter((doc) => doc.type === 'author' && doc.kind !== 'block');
   const renderedAuthorDocs = await renderDocuments(authorDocs, ctx.concurrency ?? 4);
 
+  // Índice de autores por título normalizado (lowercase). Se construye aquí para que
+  // esté disponible antes del pre-paso de bloques y del paso de contexto de páginas.
+  const authorDocumentIndex = createAuthorDocumentIndex(renderedAuthorDocs);
+
   const eventDocs = allDocs.filter((doc) => doc.type === 'event' && doc.kind !== 'block');
   const renderedEventDocs = await renderDocuments(eventDocs, ctx.concurrency ?? 4);
 
@@ -119,14 +126,18 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const renderedBlockDocs = await renderDocuments(allBlockDocs, ctx.concurrency ?? 4);
   const contextBlockDocs = renderedBlockDocs.map((doc) => ({
     ...doc,
-    templateContext: buildBlockTypeContext(doc, enrichedSiteCtx, index, renderedFileDocs, renderedAuthorDocs, renderedEventDocs),
+    templateContext: buildBlockTypeContext(doc, enrichedSiteCtx, index, renderedFileDocs, renderedAuthorDocs, renderedEventDocs, authorDocumentIndex),
   }));
   const regionBlocks = await renderBlocksToRegions(contextBlockDocs);
   const finalSiteCtx: TemplateContext = { ...enrichedSiteCtx, ...regionBlocks };
 
-  // Contextos para los docs ya renderizados (file, author, event).
-  // Se construyen ahora para que usen finalSiteCtx con los region slots rellenos.
-  const contextFileDocs = renderedFileDocs.map((doc) => ({ ...doc, templateContext: buildContext(doc, finalSiteCtx) }));
+  // Contextos para los docs ya renderizados (file). Se fusionan con buildRelatedAuthorsContext
+  // para que el slot `authors` del sidebar-primary se rellene si el doc tiene autor(es)
+  // con documentos de tipo 'author' en el sitio.
+  const contextFileDocs = renderedFileDocs.map((doc) => ({
+    ...doc,
+    templateContext: mergeContexts(buildContext(doc, finalSiteCtx), buildRelatedAuthorsContext(doc, authorDocumentIndex)),
+  }));
 
   // Documentos tipo 'collection': renderizado opcional del cuerpo MD + contexto de colección.
   const collectionDocs = allDocs.filter((doc) => doc.type === 'collection' && doc.kind !== 'block');
