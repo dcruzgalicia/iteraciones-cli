@@ -34,58 +34,65 @@ export function createHttpServer(
 ): Server {
   const normalizedDist = resolve(distDir);
 
-  return createServer(async (req, res) => {
-    const url = req.url ?? '/';
+  return createServer((req, res) => {
+    void (async () => {
+      const url = req.url ?? '/';
 
-    if (url === '/__livereload') {
-      handleLivereload(req, res);
-      return;
-    }
-
-    let filePath = join(distDir, url.split('?')[0] ?? '/');
-
-    // Previene path traversal: la ruta resuelta debe estar dentro de distDir.
-    const normalizedFile = resolve(filePath);
-    if (!normalizedFile.startsWith(normalizedDist + sep) && normalizedFile !== normalizedDist) {
-      res.writeHead(400);
-      res.end('Bad Request');
-      return;
-    }
-
-    // Si apunta a un directorio, busca index.html.
-    try {
-      const st = await stat(filePath);
-      if (st.isDirectory()) {
-        filePath = join(filePath, 'index.html');
+      if (url === '/__livereload') {
+        handleLivereload(req, res);
+        return;
       }
-    } catch {
-      // El stat fallará si no existe; se manejará con 404 a continuación.
-    }
 
-    if (!existsSync(filePath)) {
-      res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(`<pre>404 — ${relative(distDir, filePath)} no encontrado</pre>`);
-      return;
-    }
+      let filePath = join(distDir, url.split('?')[0] ?? '/');
 
-    const ext = extname(filePath).toLowerCase();
-    const contentType = MIME[ext] ?? 'application/octet-stream';
+      // Previene path traversal: la ruta resuelta debe estar dentro de distDir.
+      const normalizedFile = resolve(filePath);
+      if (!normalizedFile.startsWith(normalizedDist + sep) && normalizedFile !== normalizedDist) {
+        res.writeHead(400);
+        res.end('Bad Request');
+        return;
+      }
 
-    let content: Buffer;
-    try {
-      content = await readFile(filePath);
-    } catch {
-      res.writeHead(500);
+      // Si apunta a un directorio, busca index.html.
+      try {
+        const st = await stat(filePath);
+        if (st.isDirectory()) {
+          filePath = join(filePath, 'index.html');
+        }
+      } catch {
+        // El stat fallará si no existe; se manejará con 404 a continuación.
+      }
+
+      if (!existsSync(filePath)) {
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end(`404 — ${relative(distDir, filePath)} no encontrado`);
+        return;
+      }
+
+      const ext = extname(filePath).toLowerCase();
+      const contentType = MIME[ext] ?? 'application/octet-stream';
+
+      let content: Buffer;
+      try {
+        content = await readFile(filePath);
+      } catch {
+        res.writeHead(500);
+        res.end('Internal Server Error');
+        return;
+      }
+
+      res.writeHead(200, { 'Content-Type': contentType });
+
+      if (ext === '.html') {
+        res.end(injectHtml(content.toString('utf8')));
+      } else {
+        res.end(content);
+      }
+    })().catch(() => {
+      if (!res.headersSent) {
+        res.writeHead(500);
+      }
       res.end('Internal Server Error');
-      return;
-    }
-
-    res.writeHead(200, { 'Content-Type': contentType });
-
-    if (ext === '.html') {
-      res.end(injectHtml(content.toString('utf8')));
-    } else {
-      res.end(content);
-    }
+    });
   });
 }
