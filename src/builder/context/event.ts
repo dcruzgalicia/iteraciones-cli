@@ -55,7 +55,7 @@ export function buildEventContext(doc: BuildDocument, authorIndex: AuthorDocumen
     ...(typeof doc.frontmatter.time === 'string' && { time: doc.frontmatter.time }),
     ...(typeof doc.frontmatter.location === 'string' && { location: doc.frontmatter.location }),
     ...(typeof doc.frontmatter.modality === 'string' && { modality: doc.frontmatter.modality }),
-    ...(speakers.length > 0 && { speakers }),
+    ...(speakers.length > 0 && { speakers, authors: speakers }),
   };
 }
 

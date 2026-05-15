@@ -1,4 +1,5 @@
 import type { TemplateContext } from '../../../template/render/context.js';
+import { buildRelatedAuthorsContext } from '../../context/authors.js';
 import { buildListContext } from '../../context/list.js';
 import type { AuthorDocumentIndex, BuildDocument } from '../../types.js';
 import { mergeContexts } from './merge.js';
@@ -17,5 +18,6 @@ export function buildListPipelineContext(
   authorIndex?: AuthorDocumentIndex,
 ): TemplateContext {
   const listCtx = buildListContext(doc, renderedFileDocs, authorIndex);
-  return mergeContexts(siteCtx, listCtx);
+  const relatedAuthorsCtx = authorIndex ? buildRelatedAuthorsContext(doc, authorIndex) : {};
+  return mergeContexts(mergeContexts(siteCtx, relatedAuthorsCtx), listCtx);
 }
