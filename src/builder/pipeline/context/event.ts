@@ -1,17 +1,17 @@
 import type { TemplateContext } from '../../../template/render/context.js';
 import { buildEventContext, buildEventsContext } from '../../context/event.js';
-import type { BuildDocument } from '../../types.js';
+import type { AuthorDocumentIndex, BuildDocument } from '../../types.js';
 import { mergeContexts } from './merge.js';
 
 /**
  * Construye el TemplateContext completo para un documento de tipo `event`,
  * combinando el contexto del sitio con el contexto del evento.
  *
- * Los speakers provienen del frontmatter del propio documento, por lo que
- * no se necesitan documentos externos.
+ * Recibe el AuthorDocumentIndex para resolver los ponentes (speakers) del
+ * frontmatter hacia documentos de tipo `author` con href y body.
  */
-export function buildEventPipelineContext(doc: BuildDocument, siteCtx: TemplateContext): TemplateContext {
-  const eventCtx = buildEventContext(doc);
+export function buildEventPipelineContext(doc: BuildDocument, siteCtx: TemplateContext, authorIndex: AuthorDocumentIndex): TemplateContext {
+  const eventCtx = buildEventContext(doc, authorIndex);
   return mergeContexts(siteCtx, eventCtx);
 }
 
