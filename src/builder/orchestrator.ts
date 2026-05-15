@@ -242,9 +242,13 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const writtenDocs = await writeDocuments(composedDocs, ctx);
 
   // afterBuild: notifica a los plugins que el build finalizó con las rutas de salida.
+  // Se incluyen los assets conocidos (CSS y logo si está configurado). Las fuentes
+  // copiadas desde node_modules se omiten porque buildAssets no retorna su lista.
   if (plugins.length > 0) {
-    const outputPaths = writtenDocs.map((doc) => doc.relativePath.replace(/\.md$/, '.html'));
-    await registry.runAfterBuild({ outputDir: ctx.outputDir, outputPaths });
+    const docOutputPaths = writtenDocs.map((doc) => doc.relativePath.replace(/\.md$/, '.html'));
+    const assetPaths: string[] = ['css/styles.css'];
+    if (siteConfig.logo?.trim()) assetPaths.push(siteConfig.logo.trim());
+    await registry.runAfterBuild({ outputDir: ctx.outputDir, outputPaths: [...assetPaths, ...docOutputPaths] });
   }
 
   // Podar entradas obsoletas del scope 'render' usando las claves de todos los
