@@ -3,7 +3,6 @@ import type { AuthorDocumentIndex, BuildDocument } from '../types.js';
 
 /**
  * Normaliza un string para comparación: minúsculas, sin espacios extra.
- * Devuelve '' si el valor es undefined o vacío.
  */
 function normalizeForComparison(value: string): string {
   return value.trim().toLowerCase();
