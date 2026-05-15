@@ -13,10 +13,7 @@ export interface RenderCache {
 }
 
 export async function renderDocuments(docs: BuildDocument[], concurrency: number, cache?: RenderCache): Promise<BuildDocument[]> {
-  // Pre-computar las claves activas para el pruning al final.
-  const activeKeys = cache ? new Set(docs.map((doc) => hash(doc.sourceHash, cache.cliVersion))) : undefined;
-
-  const rendered = await mapWithConcurrency(docs, concurrency, async (doc) => {
+  return mapWithConcurrency(docs, concurrency, async (doc) => {
     if (cache) {
       const key = hash(doc.sourceHash, cache.cliVersion);
       const cached = await cache.manager.read('render', key);
@@ -38,11 +35,4 @@ export async function renderDocuments(docs: BuildDocument[], concurrency: number
       await rm(tmpPath, { force: true });
     }
   });
-
-  // Eliminar entradas obsoletas del scope 'render'.
-  if (cache && activeKeys) {
-    await cache.manager.prune('render', activeKeys);
-  }
-
-  return rendered;
 }
