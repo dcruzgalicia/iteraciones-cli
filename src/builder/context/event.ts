@@ -72,7 +72,8 @@ export function buildEventContext(doc: BuildDocument, authorIndex: AuthorDocumen
  */
 export function buildEventsContext(doc: BuildDocument, eventDocs: BuildDocument[]): TemplateContext {
   const listItems = eventDocs.map((event) => ({
-    href: event.relativePath.replace(/\.md$/, '.html'),
+    href: `/${event.relativePath.replace(/\.md$/, '.html')}`,
+
     title: event.frontmatter.title,
     date: event.frontmatter.date,
     ...(typeof event.frontmatter.time === 'string' && { time: event.frontmatter.time }),

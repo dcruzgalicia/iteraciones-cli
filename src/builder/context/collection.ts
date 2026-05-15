@@ -15,7 +15,7 @@ import type { BuildDocument } from '../types.js';
  */
 export function buildCollectionContext(doc: BuildDocument, items: BuildDocument[]): TemplateContext {
   const listItems = items.map((item) => ({
-    href: item.relativePath.replace(/\.md$/, '.html'),
+    href: `/${item.relativePath.replace(/\.md$/, '.html')}`,
     title: item.frontmatter.title,
     author: item.frontmatter.author.join(', '),
     date: item.frontmatter.date,

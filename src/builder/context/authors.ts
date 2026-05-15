@@ -28,7 +28,7 @@ export function buildAuthorContext(doc: BuildDocument, fileDocs: BuildDocument[]
   const matched = authorName ? fileDocs.filter((file) => file.frontmatter.author.some((a) => normalizeForComparison(a) === authorName)) : [];
 
   const listItems = matched.map((file) => ({
-    href: file.relativePath.replace(/\.md$/, '.html'),
+    href: `/${file.relativePath.replace(/\.md$/, '.html')}`,
     title: file.frontmatter.title,
     author: file.frontmatter.author.join(', '),
     date: file.frontmatter.date,
@@ -56,7 +56,7 @@ export function buildAuthorContext(doc: BuildDocument, fileDocs: BuildDocument[]
  */
 export function buildAuthorsContext(doc: BuildDocument, authorDocs: BuildDocument[]): TemplateContext {
   const authors = authorDocs.map((authorDoc) => ({
-    href: authorDoc.relativePath.replace(/\.md$/, '.html'),
+    href: `/${authorDoc.relativePath.replace(/\.md$/, '.html')}`,
     title: authorDoc.frontmatter.title,
     body: authorDoc.htmlFragment ?? '',
   }));
