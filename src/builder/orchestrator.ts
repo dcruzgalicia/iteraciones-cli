@@ -14,12 +14,12 @@ import { buildSiteContext } from './context/site.js';
 import { escapeHtml } from './html.js';
 import { classifyDocuments } from './pipeline/classify.js';
 import { type ComposeCache, composeDocuments, renderBlocksToRegions } from './pipeline/compose.js';
-import { buildAuthorPipelineContext, buildAuthorsPipelineContext } from './pipeline/context/authors.js';
+import { buildAuthorPipelineContext, buildAuthorsPipelineContext, buildPagedAuthorsPipelineContexts } from './pipeline/context/authors.js';
 import { buildCardPipelineContext } from './pipeline/context/card.js';
 import { buildCollectionPipelineContext } from './pipeline/context/collection.js';
-import { buildEventPipelineContext, buildEventsPipelineContext } from './pipeline/context/event.js';
+import { buildEventPipelineContext, buildEventsPipelineContext, buildPagedEventsPipelineContexts } from './pipeline/context/event.js';
 import { buildContext } from './pipeline/context/index.js';
-import { buildListPipelineContext } from './pipeline/context/list.js';
+import { buildListPipelineContext, buildPagedListPipelineContexts } from './pipeline/context/list.js';
 import { buildMenuPipelineContext } from './pipeline/context/menu.js';
 import { mergeContexts } from './pipeline/context/merge.js';
 import { discover } from './pipeline/discover.js';
@@ -199,14 +199,15 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     templateContext: buildAuthorPipelineContext(doc, finalSiteCtx, renderedFileDocs),
   }));
 
-  // Documentos tipo 'authors': renderizado opcional + contexto de índice de autores.
+  // Documentos tipo 'authors': renderizado opcional + contexto de índice de autores paginado.
   // Usa renderedAuthorDocs para que htmlFragment (bio) esté disponible en el listado.
+  // Genera un BuildDocument derivado por página (página 1 conserva la ruta original;
+  // páginas siguientes usan <base>/N.md → <base>/N.html en la salida).
   const authorsDocs = allDocs.filter((doc) => doc.type === 'authors' && doc.kind !== 'block');
   const renderedAuthorsDocs = await renderDocuments(authorsDocs, ctx.concurrency ?? 4, renderCache, registry);
-  const contextAuthorsDocs = renderedAuthorsDocs.map((doc) => ({
-    ...doc,
-    templateContext: buildAuthorsPipelineContext(doc, finalSiteCtx, renderedAuthorDocs),
-  }));
+  const contextAuthorsDocs = renderedAuthorsDocs.flatMap((doc) =>
+    buildPagedAuthorsPipelineContexts(doc, finalSiteCtx, renderedAuthorDocs, siteConfig.listItemsLimit),
+  );
 
   // Documentos tipo 'event': contexto de evento individual.
   // Los speakers se resuelven desde authorDocumentIndex para enriquecer con href y body.
@@ -215,14 +216,14 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     templateContext: buildEventPipelineContext(doc, finalSiteCtx, authorDocumentIndex),
   }));
 
-  // Documentos tipo 'events': renderizado opcional + contexto de índice de eventos.
+  // Documentos tipo 'events': renderizado opcional + contexto de índice de eventos paginado.
   // Usa renderedEventDocs para exponer date, time, location, modality de cada evento.
+  // Genera un BuildDocument derivado por página (misma lógica que authors y list).
   const eventsDocs = allDocs.filter((doc) => doc.type === 'events' && doc.kind !== 'block');
   const renderedEventsDocs = await renderDocuments(eventsDocs, ctx.concurrency ?? 4, renderCache, registry);
-  const contextEventsDocs = renderedEventsDocs.map((doc) => ({
-    ...doc,
-    templateContext: buildEventsPipelineContext(doc, finalSiteCtx, renderedEventDocs),
-  }));
+  const contextEventsDocs = renderedEventsDocs.flatMap((doc) =>
+    buildPagedEventsPipelineContexts(doc, finalSiteCtx, renderedEventDocs, siteConfig.listItemsLimit),
+  );
 
   // Documentos tipo 'menu': renderizado opcional del cuerpo MD + contexto de navegación.
   // Los items provienen del frontmatter.nav del propio documento.
@@ -242,14 +243,15 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     templateContext: buildCardPipelineContext(doc, finalSiteCtx),
   }));
 
-  // Documentos tipo 'list': renderizado opcional del cuerpo MD + contexto de lista automática.
+  // Documentos tipo 'list': renderizado opcional del cuerpo MD + contexto de lista paginada.
   // Usa renderedFileDocs para que htmlFragment esté disponible en cada item del listado.
+  // Genera un BuildDocument derivado por página (página 1 conserva la ruta original;
+  // páginas siguientes usan <base>/N.md → <base>/N.html en la salida).
   const listDocs = allDocs.filter((doc) => doc.type === 'list' && doc.kind !== 'block');
   const renderedListDocs = await renderDocuments(listDocs, ctx.concurrency ?? 4, renderCache, registry);
-  const contextListDocs = renderedListDocs.map((doc) => ({
-    ...doc,
-    templateContext: buildListPipelineContext(doc, finalSiteCtx, renderedFileDocs, authorDocumentIndex),
-  }));
+  const contextListDocs = renderedListDocs.flatMap((doc) =>
+    buildPagedListPipelineContexts(doc, finalSiteCtx, renderedFileDocs, siteConfig.listItemsLimit, authorDocumentIndex),
+  );
 
   const composedDocs = await composeDocuments(
     [
