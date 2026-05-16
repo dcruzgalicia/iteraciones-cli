@@ -25,6 +25,7 @@ export async function runWatch(cwd: string, options: { verbose?: boolean } = {})
       if (err instanceof PandocError) {
         const location = err.sourcePath ? ` en "${err.sourcePath}"` : '';
         process.stderr.write(`watch: error de pandoc${location}: ${err.message}\n`);
+        if (err.stderr) process.stderr.write(`${err.stderr}\n`);
       } else if (err instanceof ConfigError) {
         process.stderr.write(`watch: error de configuración: ${err.message}\n`);
       } else if (err instanceof Error) {
