@@ -22,7 +22,7 @@ export function renderFor(node: ForNode, context: TemplateContext, renderNodes: 
     if (i > 0 && node.separator.length > 0) {
       parts.push(renderNodes(node.separator, context));
     }
-    const itemContext = mergeContext(context, items[i]);
+    const itemContext = mergeContext(context, items[i], node.key);
     parts.push(renderNodes(node.body, itemContext));
   }
 
@@ -39,9 +39,12 @@ function toIterable(value: unknown): unknown[] {
  * Crea un contexto enriquecido donde el item actual tiene precedencia
  * sobre el contexto padre para resolución de claves.
  */
-function mergeContext(parent: TemplateContext, item: unknown): TemplateContext {
+function mergeContext(parent: TemplateContext, item: unknown, key: string): TemplateContext {
   if (item !== null && typeof item === 'object' && Object.getPrototypeOf(item) === Object.prototype) {
     return { ...parent, ...(item as TemplateContext) };
   }
-  return parent;
+  // Para primitivos (string, número, booleano), el nombre de la variable del loop
+  // debe resolver al item actual, no al array original.
+  // Ej: $for(keywords)$$keywords$$sep$, $endfor$ → "tag1, tag2"
+  return { ...parent, [key]: item };
 }
