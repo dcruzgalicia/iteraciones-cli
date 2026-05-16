@@ -2,7 +2,6 @@ import { rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { BuildOptions } from '../builder/orchestrator.js';
 import { build } from '../builder/orchestrator.js';
-import { discover } from '../builder/pipeline/discover.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { ConfigError, PandocError } from '../errors.js';
 import { checkPandoc } from '../services/pandoc-runner.js';
@@ -57,15 +56,22 @@ export async function runClean(cwd: string): Promise<void> {
 // stub: implementado en issue #60
 export async function runInfo(cwd: string): Promise<void> {
   try {
-    const [siteConfig, pandocVersion, sourceDocs] = await Promise.all([loadSiteConfig(cwd), checkPandoc(), discover(cwd)]);
+    const [siteConfig, pandocVersion] = await Promise.all([loadSiteConfig(cwd), checkPandoc()]);
+    const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', '.iteraciones']);
+    let docCount = 0;
+    for await (const entry of new Bun.Glob('**/*.md').scan({ cwd })) {
+      const first = entry.split('/')[0];
+      if (first && IGNORED_DIRS.has(first)) continue;
+      docCount++;
+    }
     const plugins = siteConfig.plugins.length > 0 ? siteConfig.plugins.join(', ') : 'ninguno';
     process.stdout.write(`Proyecto  : ${cwd}\n`);
     process.stdout.write(`Sitio     : ${siteConfig.title}\n`);
-    process.stdout.write(`Tagline   : ${siteConfig.tagline ?? '(sin tagline)'}\n`);
+    process.stdout.write(`Tagline   : ${siteConfig.tagline}\n`);
     process.stdout.write(`Idioma    : ${siteConfig.lang}\n`);
     process.stdout.write(`Plugins   : ${plugins}\n`);
     process.stdout.write(`Pandoc    : ${pandocVersion}\n`);
-    process.stdout.write(`Documentos: ${sourceDocs.length}\n`);
+    process.stdout.write(`Documentos: ${docCount}\n`);
     process.stdout.write(`Salida    : ${join(cwd, 'dist/web')}\n`);
   } catch (err) {
     if (err instanceof ConfigError) {
