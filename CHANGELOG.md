@@ -1,5 +1,70 @@
 # Changelog
 
+## [0.3.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.2.0...v0.3.0) (2026-05-16)
+
+
+### Features
+
+* **cache:** implementa hasher con Bun.CryptoHasher ([1bf48da](https://github.com/dcruzgalicia/iteraciones-cli/commit/1bf48da08715a20bd39b9639e171174e990ecd50))
+* **cache:** implementa manager de caché con read/write/prune ([7041c49](https://github.com/dcruzgalicia/iteraciones-cli/commit/7041c497a409572aa4a474c1596cce373d7d181e))
+* **cache:** integra caché en fase de composición (HTML→HTML) ([2f0e8a8](https://github.com/dcruzgalicia/iteraciones-cli/commit/2f0e8a8a4622b113617bb4e2d06b30fe59b614b0))
+* **cache:** integra caché en fase de render (MD→HTML) ([3f32b4d](https://github.com/dcruzgalicia/iteraciones-cli/commit/3f32b4d1762959f9c24e1df6ce24a9991e8e4fe0))
+* **cache:** integra composeCache en el orchestrator y corrige prune de render ([78bd662](https://github.com/dcruzgalicia/iteraciones-cli/commit/78bd66210fe9b92743d852cd36fae944deb7e4d4))
+* **cli:** agrega flags completos al comando build en parser y dispatcher ([a991255](https://github.com/dcruzgalicia/iteraciones-cli/commit/a991255e242b9d716f4dcebc0f86f470e815b507))
+* **cli:** implementa --dry-run y --verbose en orchestrator ([f9b682f](https://github.com/dcruzgalicia/iteraciones-cli/commit/f9b682f7119f4217a512d3e68d6aab0270fdd7e4))
+* **cli:** implementa --no-cache y --no-tailwind en orchestrator y assets ([238eb65](https://github.com/dcruzgalicia/iteraciones-cli/commit/238eb65e2e0b5168e5ed1e535e77c3683555f8bb))
+* **cli:** implementa comando doctor (verifica entorno de build) ([8a5cbd9](https://github.com/dcruzgalicia/iteraciones-cli/commit/8a5cbd9dd1ac01e15418a50c2bc3880f7fdc2712))
+* **cli:** implementa comando init (crea archivos de proyecto mínimos) ([4545351](https://github.com/dcruzgalicia/iteraciones-cli/commit/4545351e426c4223c80401e83e2c20dac182249b))
+* **cli:** implementa comando serve con servidor HTTP y livereload ([3cce04e](https://github.com/dcruzgalicia/iteraciones-cli/commit/3cce04e62b12647cc958028ea03d075125732e34))
+* **cli:** implementa comando validate (valida config y frontmatter) ([4b48641](https://github.com/dcruzgalicia/iteraciones-cli/commit/4b48641bb00b8a559ee984153b6acb3b4ad695e8))
+* **cli:** implementa comando watch (watcher sin servidor HTTP) ([2eeeb1e](https://github.com/dcruzgalicia/iteraciones-cli/commit/2eeeb1ef8ad9b15834cdb598853cba3dec4ee69a))
+* **cli:** implementa runClean; elimina dist/web y .iteraciones/cache ([335d1bc](https://github.com/dcruzgalicia/iteraciones-cli/commit/335d1bcafd85cc7f34f15dd319afc0e93e554b7a))
+* **cli:** implementa runInfo; muestra config, pandoc y conteo de documentos ([8e98657](https://github.com/dcruzgalicia/iteraciones-cli/commit/8e9865777b3cba60cc2a822fb0b591f0a0252bf9))
+* **plugin:** define interfaz IPlugin y tipos de contexto de hooks ([969ad14](https://github.com/dcruzgalicia/iteraciones-cli/commit/969ad148b2757ad9346b3c3bd37e0aa2b5f88792))
+* **plugin:** implementa carga dinámica de plugins ([a7b2dbf](https://github.com/dcruzgalicia/iteraciones-cli/commit/a7b2dbf8ccd90355e75eea75a29e8ba06567a84b))
+* **plugin:** implementa registro y ejecución de hooks ([b253443](https://github.com/dcruzgalicia/iteraciones-cli/commit/b2534439199d9c823fd5fea5e6535561fcb59287))
+* **plugin:** integra PluginRegistry en el pipeline de build ([0789af3](https://github.com/dcruzgalicia/iteraciones-cli/commit/0789af3fa9392e0af6b16f60c0a2770371c2dff9))
+
+
+### Bug Fixes
+
+* **cache:** centraliza prune de composición en composeDocuments ([378cd8c](https://github.com/dcruzgalicia/iteraciones-cli/commit/378cd8c2b54a42624546246de0c22e3c8e6a8902))
+* **cache:** centraliza prune de render en el orchestrator tras todos los batches ([01452c6](https://github.com/dcruzgalicia/iteraciones-cli/commit/01452c6fca0d3b25d0af0f8eb74956af385a9c24))
+* **cache:** corrige manejo de errores y concurrencia en prune ([9f69898](https://github.com/dcruzgalicia/iteraciones-cli/commit/9f69898ad60f45ba3370bad34d708e1c9d3a7d07))
+* **cache:** incluye hash del contenido de templates en la clave de composición ([6de0fde](https://github.com/dcruzgalicia/iteraciones-cli/commit/6de0fdeb33b98477a0dbe74d57d9439ca0fb2bf4))
+* **cache:** incluye versión de pandoc en la clave de caché de render ([9a7f3c0](https://github.com/dcruzgalicia/iteraciones-cli/commit/9a7f3c00f3b8b032de66fa2f8d73ce29a572d1cb))
+* **cache:** pasa renderCache a todas las llamadas de renderDocuments ([1bf371d](https://github.com/dcruzgalicia/iteraciones-cli/commit/1bf371d648f891490687b449d76129902075a16e))
+* **cache:** valida formato de clave para prevenir path traversal ([486e5c8](https://github.com/dcruzgalicia/iteraciones-cli/commit/486e5c8d8b9e8c179872064c9ded2cf3c18593da))
+* **cli:** comprueba existencia antes de imprimir en runClean ([5a55f95](https://github.com/dcruzgalicia/iteraciones-cli/commit/5a55f9559e22fae83140b0e939f77697c27e9756))
+* **cli:** corrige checkTemplates para verificar file.html en lugar de page.html ([979f4d1](https://github.com/dcruzgalicia/iteraciones-cli/commit/979f4d1b3c3e7485cd391487008b6a902afa7bb0))
+* **cli:** corrige filtro de prefijos ignorados en el watcher ([99d8742](https://github.com/dcruzgalicia/iteraciones-cli/commit/99d8742368d0aee1ff17d42ba11c521aa0bfb104))
+* **cli:** documenta el propósito de loadSiteConfig en la rama dry-run ([e3b0523](https://github.com/dcruzgalicia/iteraciones-cli/commit/e3b052324aed7ee4e830c46d78971ac0977199f1))
+* **cli:** evita unhandledRejection en handler HTTP y corrige Content-Type del 404 ([92e6c0e](https://github.com/dcruzgalicia/iteraciones-cli/commit/92e6c0e0e130cb843d4076c00925bf8c6807acef))
+* **cli:** expone fixAction de checkTailwind cuando bun x termina con exitCode != 0 ([5f92cad](https://github.com/dcruzgalicia/iteraciones-cli/commit/5f92cad761f7d85209054a92155287af478cfb0e))
+* **cli:** guarda stop() y registra handlers de señal para cierre limpio ([b9c0b4b](https://github.com/dcruzgalicia/iteraciones-cli/commit/b9c0b4b80423f5a783668d32c097c7cc450651f0))
+* **cli:** imprime err.stderr en errores de pandoc durante rebuild de watch ([b9b22c7](https://github.com/dcruzgalicia/iteraciones-cli/commit/b9b22c772eea4516bdc1159497239f656b77b4ee))
+* **cli:** maneja error de server.listen (p. ej. EADDRINUSE) ([4e71fce](https://github.com/dcruzgalicia/iteraciones-cli/commit/4e71fced404ebd9574d2a053541b3bc0fd23a791))
+* **cli:** mueve unlink del probe a finally en checkWritePermissions ([96b4433](https://github.com/dcruzgalicia/iteraciones-cli/commit/96b443398eac7b4cc9a23055209c5ff521811ff8))
+* **cli:** recalcula exitCode en doctor --fix según estado post-corrección ([5cc75d2](https://github.com/dcruzgalicia/iteraciones-cli/commit/5cc75d26bcb9719ed85f735d95a9329f02a6db59))
+* **cli:** retorna cadena vacía de buildAssets cuando --no-tailwind está activo ([fac2f21](https://github.com/dcruzgalicia/iteraciones-cli/commit/fac2f212d1e2c06b4c501d738c36b6da9214f7f7))
+* **cli:** retorna promesa de runBuild desde el callback de .action ([62b9eff](https://github.com/dcruzgalicia/iteraciones-cli/commit/62b9effa7806c0678a05293c68f9f78ab2daacc3))
+* **cli:** usa glob ligero en runInfo y elimina fallback muerto de tagline ([4b63565](https://github.com/dcruzgalicia/iteraciones-cli/commit/4b635653d71325f2c8cf24a1fb42f1048b9d7fa2))
+* **cli:** valida que el puerto sea un entero en rango 1-65535 ([d90e32e](https://github.com/dcruzgalicia/iteraciones-cli/commit/d90e32e568822c1ceceff3d86a1815db926879fb))
+* **css:** especifica directorio fuente en import de Tailwind v4 ([c2d1fb7](https://github.com/dcruzgalicia/iteraciones-cli/commit/c2d1fb7b1d5ab220817c6df80474ca5635bd50b4))
+* **metadata:** corrige metadatos HTML y centraliza escapeHtml ([36434cd](https://github.com/dcruzgalicia/iteraciones-cli/commit/36434cd4b50c55e6dbc74cbb80dbb09d0aedd442)), closes [#163](https://github.com/dcruzgalicia/iteraciones-cli/issues/163)
+* **metadata:** normaliza Date de YAML en date-meta ([18e10e4](https://github.com/dcruzgalicia/iteraciones-cli/commit/18e10e489e13973e2adfb8d1529ac39446eb14fb))
+* **plugin:** corrige JSDoc de PluginRegistry para distinguir hooks de transformación y afterBuild ([914d3e2](https://github.com/dcruzgalicia/iteraciones-cli/commit/914d3e2ccc54a88947093ea24c660c63db0b1625))
+* **plugin:** corrige outputRelativePath en hooks de compose: pasa ruta .html no .md ([e0597da](https://github.com/dcruzgalicia/iteraciones-cli/commit/e0597da02a9eb19091a6711d0e10e31e172b2be7))
+* **plugin:** incluye CSS y logo en outputPaths de afterBuild ([d19026b](https://github.com/dcruzgalicia/iteraciones-cli/commit/d19026b165c0ac45265ab2dc680065cc1846b17e))
+* **plugin:** invalida cach\u00e9 de render y compose cuando cambia el conjunto de plugins ([5c49ec2](https://github.com/dcruzgalicia/iteraciones-cli/commit/5c49ec2ed389736a8d4afea2002cf69f89433df1))
+* **plugin:** usa Readonly&lt;Record&lt;&gt;&gt; para prevenir mutación directa de variables y templateContext ([bd9d90d](https://github.com/dcruzgalicia/iteraciones-cli/commit/bd9d90d4a2e6a6845ae4334c256eff34528d443a))
+* **plugin:** valida que los hooks sean funciones y retornen contexto no nulo ([a3ad6dc](https://github.com/dcruzgalicia/iteraciones-cli/commit/a3ad6dcd93f6b3fb6c5a4509e8928051fa2e94ec))
+* **template:** agrega extracto de contenido en items de tipos avanzados ([88410f8](https://github.com/dcruzgalicia/iteraciones-cli/commit/88410f8c3a6a2ad97b359a3e47cb1202a4e797dd))
+* **template:** cambia wrapper de items de lista a enlace completo ([3482941](https://github.com/dcruzgalicia/iteraciones-cli/commit/3482941c8c2f2c2a00a90cae058af618ce7d5a18))
+* **template:** corrige acceso a items primitivos en bucles for ([6a5b6b7](https://github.com/dcruzgalicia/iteraciones-cli/commit/6a5b6b7e1ffdb1ec34a4481fb8d7ed0ae81e87c8))
+* **template:** elimina enlace de autor anidado en items de lista ([b65133b](https://github.com/dcruzgalicia/iteraciones-cli/commit/b65133b2c48888ee4aeb1d5c61d9955c439bc036))
+* **template:** mueve sección speakers del layout al template event ([befc5ab](https://github.com/dcruzgalicia/iteraciones-cli/commit/befc5ab4f8fa72d9ffcd8e9b3a45546b2b179faa))
+
 ## [0.2.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.1.0...v0.2.0) (2026-05-15)
 
 
