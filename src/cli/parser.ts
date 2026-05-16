@@ -16,14 +16,14 @@ export function buildProgram(): Command {
     .option('--no-tailwind', 'omite la generación de CSS con Tailwind')
     .option('--dry-run', 'muestra los documentos que se procesarían sin generar salida')
     .option('--verbose', 'muestra información adicional de progreso')
-    .action((opts: { concurrency: string; cache: boolean; projectRoot?: string; tailwind: boolean; dryRun?: boolean; verbose?: boolean }) => {
+    .action(async (opts: { concurrency: string; cache: boolean; projectRoot?: string; tailwind: boolean; dryRun?: boolean; verbose?: boolean }) => {
       const concurrency = Number.parseInt(opts.concurrency, 10);
       if (!Number.isInteger(concurrency) || concurrency < 1) {
         process.stderr.write(`Error: --concurrency debe ser un entero positivo (recibido: "${opts.concurrency}")\n`);
         process.exitCode = 1;
         return;
       }
-      runBuild(opts.projectRoot ?? process.cwd(), {
+      await runBuild(opts.projectRoot ?? process.cwd(), {
         concurrency,
         noCache: !opts.cache,
         noTailwind: !opts.tailwind,
