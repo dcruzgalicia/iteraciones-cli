@@ -31,6 +31,12 @@ export async function checkPandoc(): Promise<CheckResult> {
 }
 
 export async function checkTailwind(cwd: string): Promise<CheckResult> {
+  const fixAction = async (): Promise<string> => {
+    const proc = Bun.spawn(['bun', 'add', '-d', '@tailwindcss/cli'], { cwd, stdout: 'pipe', stderr: 'pipe' });
+    await proc.exited;
+    return 'instalado @tailwindcss/cli';
+  };
+
   try {
     const proc = Bun.spawn(['bun', 'x', '--bun', '@tailwindcss/cli', '--help'], {
       cwd,
@@ -38,21 +44,22 @@ export async function checkTailwind(cwd: string): Promise<CheckResult> {
       stderr: 'pipe',
     });
     const exitCode = await proc.exited;
+    if (exitCode === 0) {
+      return { label: '@tailwindcss/cli disponible', ok: true };
+    }
+    // bun x terminó con error: el paquete no está disponible o está roto.
     return {
       label: '@tailwindcss/cli disponible',
-      ok: exitCode === 0,
-      detail: exitCode === 0 ? undefined : '@tailwindcss/cli no ejecutable',
+      ok: false,
+      detail: '@tailwindcss/cli no ejecutable',
+      fixAction,
     };
   } catch {
     return {
       label: '@tailwindcss/cli disponible',
       ok: false,
       detail: '@tailwindcss/cli no encontrado. Instálalo con: bun add -d @tailwindcss/cli',
-      fixAction: async () => {
-        const proc = Bun.spawn(['bun', 'add', '-d', '@tailwindcss/cli'], { cwd, stdout: 'pipe', stderr: 'pipe' });
-        await proc.exited;
-        return 'instalado @tailwindcss/cli';
-      },
+      fixAction,
     };
   }
 }
