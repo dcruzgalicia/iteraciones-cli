@@ -4,6 +4,22 @@ import type { AuthorDocumentIndex, BuildDocument } from '../types.js';
 import { resolveAuthorHref } from './authors.js';
 
 /**
+ * Convierte un valor de frontmatter a string de fecha ISO (YYYY-MM-DD).
+ * Acepta string no vacío o Date válido; devuelve undefined en cualquier otro caso.
+ * Necesario porque Bun.YAML.parse puede producir objetos Date para campos de fecha.
+ */
+function toDateString(value: unknown): string | undefined {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed || undefined;
+  }
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10);
+  }
+  return undefined;
+}
+
+/**
  * Construye el subconjunto del TemplateContext que proviene del documento.
  * Sin I/O ni efectos secundarios.
  *
@@ -29,7 +45,8 @@ export function buildDocumentContext(doc: BuildDocument, renderedHtml: string, a
   const descriptionMeta = typeof rawDescriptionMeta === 'string' && rawDescriptionMeta.trim() ? escapeHtml(rawDescriptionMeta.trim()) : undefined;
 
   const rawDateMeta = doc.frontmatter['date-meta'] ?? doc.frontmatter.date;
-  const dateMeta = typeof rawDateMeta === 'string' && rawDateMeta.trim() ? escapeHtml(rawDateMeta.trim()) : undefined;
+  const dateMetaStr = toDateString(rawDateMeta);
+  const dateMeta = dateMetaStr ? escapeHtml(dateMetaStr) : undefined;
 
   return {
     title: doc.frontmatter.title,
