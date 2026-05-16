@@ -92,7 +92,7 @@ export function buildEventContext(doc: BuildDocument, authorIndex: AuthorDocumen
  *   list-items → array de eventos con { href, title, date, body, time?, location?, modality?, author? }
  *   count      → número de eventos
  */
-export function buildEventsContext(doc: BuildDocument, eventDocs: BuildDocument[]): TemplateContext {
+export function buildEventsContext(doc: BuildDocument, eventDocs: BuildDocument[], paginationCtx?: Record<string, unknown>): TemplateContext {
   const listItems = eventDocs.map((event) => ({
     href: `/${event.relativePath.replace(/\.md$/, '.html')}`,
     title: event.frontmatter.title,
@@ -111,5 +111,6 @@ export function buildEventsContext(doc: BuildDocument, eventDocs: BuildDocument[
     body: doc.htmlFragment ?? '',
     'list-items': listItems,
     count: listItems.length,
+    ...paginationCtx,
   };
 }
