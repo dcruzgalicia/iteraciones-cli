@@ -69,7 +69,7 @@ export function buildAuthorContext(doc: BuildDocument, fileDocs: BuildDocument[]
  *   authors   → array de { href, title, body } por cada documento de tipo 'author'
  *   count     → número de autores
  */
-export function buildAuthorsContext(doc: BuildDocument, authorDocs: BuildDocument[]): TemplateContext {
+export function buildAuthorsContext(doc: BuildDocument, authorDocs: BuildDocument[], paginationCtx?: Record<string, unknown>): TemplateContext {
   const authors = authorDocs.map((authorDoc) => ({
     href: `/${authorDoc.relativePath.replace(/\.md$/, '.html')}`,
     title: authorDoc.frontmatter.title,
@@ -82,6 +82,7 @@ export function buildAuthorsContext(doc: BuildDocument, authorDocs: BuildDocumen
     body: doc.htmlFragment ?? '',
     authors,
     count: authors.length,
+    ...paginationCtx,
   };
 }
 
