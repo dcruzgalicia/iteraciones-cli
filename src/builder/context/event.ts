@@ -88,7 +88,7 @@ export function buildEventContext(doc: BuildDocument, authorIndex: AuthorDocumen
  *   pagetitle  → frontmatter.title
  *   author     → frontmatter.author
  *   body       → htmlFragment del documento (introducción opcional)
- *   list-items → array de eventos con { href, title, date, time?, location?, modality?, author? }
+ *   list-items → array de eventos con { href, title, date, body, time?, location?, modality?, author? }
  *   count      → número de eventos
  */
 export function buildEventsContext(doc: BuildDocument, eventDocs: BuildDocument[]): TemplateContext {
