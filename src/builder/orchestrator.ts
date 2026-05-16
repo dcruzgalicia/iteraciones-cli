@@ -79,7 +79,9 @@ function buildBlockTypeContext(
 export async function build(cwd: string, options: BuildOptions = {}): Promise<void> {
   // --dry-run: solo descubrir y clasificar; mostrar resumen sin generar salida.
   if (options.dryRun) {
-    const siteConfig = await loadSiteConfig(cwd);
+    // Carga la configuración para validar que sea correcta antes de reportar el resumen;
+    // si hay un error de esquema el usuario lo ve incluso en dry-run.
+    await loadSiteConfig(cwd);
     const sourceDocs = await discover(cwd);
     const allDocs = classifyDocuments(sourceDocs);
     const counts = new Map<string, number>();
