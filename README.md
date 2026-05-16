@@ -150,15 +150,6 @@ iteraciones doctor [opciones]
 
 Comprobaciones que realiza: pandoc disponible, configuración válida, plantillas presentes, Tailwind disponible, permisos de lectura y escritura.
 
-## Variables de entorno
-
-| Variable | Descripción | Por defecto |
-|----------|-------------|-------------|
-| `PANDOC_CONCURRENCY` | Número máximo de procesos pandoc en paralelo | `4` |
-| `PANDOC_TELEMETRY` | Activa métricas de tiempo de build (`1` para activar) | — |
-| `PANDOC_TELEMETRY_VERBOSE` | Detalle adicional de telemetría (`1` para activar) | — |
-| `CI` | Desactiva colores ANSI en la salida | — |
-
 ## Licencia
 
 MIT
