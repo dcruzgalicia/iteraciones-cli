@@ -14,8 +14,10 @@ const FONTS_SRC = join(PKG_ROOT, 'fonts');
  *
  * Precondición: outputDir ya existe y está limpio (limpieza a cargo del orchestrator).
  */
-export async function buildAssets(outputDir: string, cwd: string, siteConfig: SiteConfig): Promise<string> {
-  await Promise.all([generateCss(outputDir, cwd), copyFonts(outputDir), copyLogo(outputDir, cwd, siteConfig)]);
+export async function buildAssets(outputDir: string, cwd: string, siteConfig: SiteConfig, options: { noTailwind?: boolean } = {}): Promise<string> {
+  const tasks: Promise<void>[] = [copyFonts(outputDir), copyLogo(outputDir, cwd, siteConfig)];
+  if (!options.noTailwind) tasks.push(generateCss(outputDir, cwd));
+  await Promise.all(tasks);
   // Ruta absoluta desde la raíz del sitio para que funcione en páginas anidadas
   // (p.ej. posts/a.html necesita /css/styles.css, no css/styles.css).
   return '/css/styles.css';
