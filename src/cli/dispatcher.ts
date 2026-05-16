@@ -7,6 +7,7 @@ import { ConfigError, PandocError } from '../errors.js';
 import { checkPandoc } from '../services/pandoc-runner.js';
 import { runInit as init } from './init.js';
 import { runServe as serve } from './serve.js';
+import { runValidate as validate } from './validate.js';
 import { runWatch as watch } from './watch.js';
 
 export async function runBuild(cwd: string, options: BuildOptions = {}): Promise<void> {
@@ -22,29 +23,19 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
     } else if (err instanceof Error) {
       process.stderr.write(`Error: ${err.message}\n`);
     } else {
-      process.stderr.write('Error desconocido durante el build.\n');
+      process.stderr.write('Error desconocido al construir el sitio.\n');
     }
-    // Asignar exitCode en lugar de llamar process.exit() directamente permite
-    // que el event loop drene los streams antes de que el proceso termine.
     process.exitCode = 1;
   }
 }
 
-// stub: implementado en issue #60
 export async function runClean(cwd: string): Promise<void> {
+  const distDir = join(cwd, 'dist', 'web');
+  const cacheDir = join(cwd, '.iteraciones');
   try {
-    const targets = [join(cwd, 'dist/web'), join(cwd, '.iteraciones/cache')];
-    for (const dir of targets) {
-      try {
-        await stat(dir);
-        await rm(dir, { recursive: true, force: true });
-        process.stdout.write(`Eliminado: ${dir}\n`);
-      } catch (statErr: unknown) {
-        // El directorio no existe; no hay nada que limpiar.
-        if ((statErr as NodeJS.ErrnoException).code !== 'ENOENT') throw statErr;
-      }
-    }
-    process.stdout.write('Limpieza completada.\n');
+    await rm(distDir, { recursive: true, force: true });
+    await rm(cacheDir, { recursive: true, force: true });
+    process.stdout.write('clean: eliminados dist/web y .iteraciones\n');
   } catch (err) {
     if (err instanceof Error) {
       process.stderr.write(`Error al limpiar: ${err.message}\n`);
@@ -55,33 +46,23 @@ export async function runClean(cwd: string): Promise<void> {
   }
 }
 
-// stub: implementado en issue #60
 export async function runInfo(cwd: string): Promise<void> {
   try {
-    const [siteConfig, pandocVersion] = await Promise.all([loadSiteConfig(cwd), checkPandoc()]);
-    const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', '.iteraciones']);
-    let docCount = 0;
-    for await (const entry of new Bun.Glob('**/*.md').scan({ cwd })) {
-      const first = entry.split('/')[0];
-      if (first && IGNORED_DIRS.has(first)) continue;
-      docCount++;
-    }
-    const plugins = siteConfig.plugins.length > 0 ? siteConfig.plugins.join(', ') : 'ninguno';
-    process.stdout.write(`Proyecto  : ${cwd}\n`);
-    process.stdout.write(`Sitio     : ${siteConfig.title}\n`);
-    process.stdout.write(`Tagline   : ${siteConfig.tagline}\n`);
-    process.stdout.write(`Idioma    : ${siteConfig.lang}\n`);
-    process.stdout.write(`Plugins   : ${plugins}\n`);
-    process.stdout.write(`Pandoc    : ${pandocVersion}\n`);
-    process.stdout.write(`Documentos: ${docCount}\n`);
-    process.stdout.write(`Salida    : ${join(cwd, 'dist/web')}\n`);
+    const config = await loadSiteConfig(cwd);
+    const pandocOk = await checkPandoc().then(() => true).catch(() => false);
+    const distExists = await stat(join(cwd, 'dist', 'web')).then((s) => s.isDirectory()).catch(() => false);
+
+    process.stdout.write('info:\n');
+    process.stdout.write(`  título:   ${config.title}\n`);
+    process.stdout.write(`  tagline:  ${config.tagline}\n`);
+    process.stdout.write(`  lang:     ${config.lang}\n`);
+    process.stdout.write(`  pandoc:   ${pandocOk ? 'disponible' : 'no disponible'}\n`);
+    process.stdout.write(`  dist:     ${distExists ? 'generado' : 'no generado'}\n`);
   } catch (err) {
     if (err instanceof ConfigError) {
-      process.stderr.write(`Error de configuración en "${err.configPath}": ${err.message}\n`);
-    } else if (err instanceof PandocError) {
-      process.stderr.write(`Error de pandoc: ${err.message}\n`);
+      process.stderr.write(`Error de configuración: ${err.message}\n`);
     } else if (err instanceof Error) {
-      process.stderr.write(`Error: ${err.message}\n`);
+      process.stderr.write(`Error al obtener información: ${err.message}\n`);
     } else {
       process.stderr.write('Error desconocido al obtener información.\n');
     }
@@ -97,6 +78,19 @@ export async function runInit(cwd: string): Promise<void> {
       process.stderr.write(`Error al inicializar: ${err.message}\n`);
     } else {
       process.stderr.write('Error desconocido al inicializar.\n');
+    }
+    process.exitCode = 1;
+  }
+}
+
+export async function runValidate(cwd: string): Promise<void> {
+  try {
+    await validate(cwd);
+  } catch (err) {
+    if (err instanceof Error) {
+      process.stderr.write(`Error al validar: ${err.message}\n`);
+    } else {
+      process.stderr.write('Error desconocido al validar.\n');
     }
     process.exitCode = 1;
   }
@@ -133,7 +127,13 @@ export async function runServe(cwd: string, port: number): Promise<void> {
     process.once('SIGINT', shutdown);
     process.once('SIGTERM', shutdown);
   } catch (err) {
-    if (err instanceof Error) {
+    if (err instanceof PandocError) {
+      const location = err.sourcePath ? ` en "${err.sourcePath}"` : '';
+      process.stderr.write(`Error de pandoc${location}: ${err.message}\n`);
+      if (err.stderr) process.stderr.write(`${err.stderr}\n`);
+    } else if (err instanceof ConfigError) {
+      process.stderr.write(`Error de configuración en "${err.configPath}": ${err.message}\n`);
+    } else if (err instanceof Error) {
       process.stderr.write(`Error: ${err.message}\n`);
     } else {
       process.stderr.write('Error desconocido al arrancar el servidor.\n');

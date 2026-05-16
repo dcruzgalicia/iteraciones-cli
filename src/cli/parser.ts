@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
-import { runBuild, runClean, runInfo, runInit, runServe, runWatch } from './dispatcher.js';
+import { runBuild, runClean, runInfo, runInit, runServe, runValidate, runWatch } from './dispatcher.js';
 
 export function buildProgram(): Command {
   const program = new Command();
@@ -47,6 +47,13 @@ export function buildProgram(): Command {
     .description('crea _iteraciones.yaml y README.md mínimos en el directorio actual')
     .action(async () => {
       await runInit(process.cwd());
+    });
+
+  program
+    .command('validate')
+    .description('valida _iteraciones.yaml y el frontmatter de todos los documentos Markdown')
+    .action(async () => {
+      await runValidate(process.cwd());
     });
 
   program
