@@ -18,9 +18,11 @@ export async function buildAssets(outputDir: string, cwd: string, siteConfig: Si
   const tasks: Promise<void>[] = [copyFonts(outputDir), copyLogo(outputDir, cwd, siteConfig)];
   if (!options.noTailwind) tasks.push(generateCss(outputDir, cwd));
   await Promise.all(tasks);
+  // Cuando noTailwind está activo no se genera styles.css, así que retornamos ''
+  // para que buildSiteContext produzca css:[] y el template omita el <link>.
   // Ruta absoluta desde la raíz del sitio para que funcione en páginas anidadas
   // (p.ej. posts/a.html necesita /css/styles.css, no css/styles.css).
-  return '/css/styles.css';
+  return options.noTailwind ? '' : '/css/styles.css';
 }
 
 async function generateCss(outputDir: string, cwd: string): Promise<void> {
