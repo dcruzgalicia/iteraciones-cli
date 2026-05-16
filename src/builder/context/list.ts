@@ -14,9 +14,9 @@ import { resolveAuthorHref } from './authors.js';
  *   list-items → array de { href, title, author, body, date, author-href? } para cada item del índice
  *   count      → número de items
  *
- * Precondición: los `items` ya vienen ordenados y paginados desde `collectByType`.
- * El campo `body` de cada item proviene de `htmlFragment` (disponible si los docs
- * fueron renderizados antes de construir el índice; de lo contrario queda vacío).
+ * Precondición: los `items` provienen de `renderedFileDocs` (todos los docs de tipo
+ * `file` ya renderizados), por lo que `htmlFragment` está disponible en cada item.
+ * El listado no aplica `listItemsLimit`; incluye todos los documentos de tipo `file`.
  */
 export function buildListContext(doc: BuildDocument, items: BuildDocument[], authorIndex?: AuthorDocumentIndex): TemplateContext {
   const listItems = items.map((item) => {
