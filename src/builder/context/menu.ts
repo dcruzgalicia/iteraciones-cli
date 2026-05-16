@@ -1,4 +1,5 @@
 import type { TemplateContext } from '../../template/render/context.js';
+import { escapeHtml } from '../html.js';
 import type { BuildDocument } from '../types.js';
 
 interface NavItem {
@@ -57,7 +58,7 @@ export function buildMenuContext(doc: BuildDocument): TemplateContext {
 
   return {
     title: doc.frontmatter.title,
-    pagetitle: doc.frontmatter.title,
+    pagetitle: escapeHtml(doc.frontmatter.title),
     body: doc.htmlFragment ?? '',
     'menu-items': menuItems,
     count: menuItems.length,
