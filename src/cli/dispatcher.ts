@@ -1,4 +1,4 @@
-import { rm } from 'node:fs/promises';
+import { rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { BuildOptions } from '../builder/orchestrator.js';
 import { build } from '../builder/orchestrator.js';
@@ -34,8 +34,14 @@ export async function runClean(cwd: string): Promise<void> {
   try {
     const targets = [join(cwd, 'dist/web'), join(cwd, '.iteraciones/cache')];
     for (const dir of targets) {
-      await rm(dir, { recursive: true, force: true });
-      process.stdout.write(`Eliminado: ${dir}\n`);
+      try {
+        await stat(dir);
+        await rm(dir, { recursive: true, force: true });
+        process.stdout.write(`Eliminado: ${dir}\n`);
+      } catch (statErr: unknown) {
+        // El directorio no existe; no hay nada que limpiar.
+        if ((statErr as NodeJS.ErrnoException).code !== 'ENOENT') throw statErr;
+      }
     }
     process.stdout.write('Limpieza completada.\n');
   } catch (err) {
