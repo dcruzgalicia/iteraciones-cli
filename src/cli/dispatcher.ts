@@ -1,3 +1,5 @@
+import { rm } from 'node:fs/promises';
+import { join } from 'node:path';
 import type { BuildOptions } from '../builder/orchestrator.js';
 import { build } from '../builder/orchestrator.js';
 import { ConfigError, PandocError } from '../errors.js';
@@ -25,10 +27,26 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
 }
 
 // stub: implementado en issue #60
-export async function runClean(): Promise<void> {}
+export async function runClean(cwd: string): Promise<void> {
+  try {
+    const targets = [join(cwd, 'dist/web'), join(cwd, '.iteraciones/cache')];
+    for (const dir of targets) {
+      await rm(dir, { recursive: true, force: true });
+      process.stdout.write(`Eliminado: ${dir}\n`);
+    }
+    process.stdout.write('Limpieza completada.\n');
+  } catch (err) {
+    if (err instanceof Error) {
+      process.stderr.write(`Error al limpiar: ${err.message}\n`);
+    } else {
+      process.stderr.write('Error desconocido al limpiar.\n');
+    }
+    process.exitCode = 1;
+  }
+}
 
 // stub: implementado en issue #60
-export async function runInfo(): Promise<void> {}
+export async function runInfo(_cwd: string): Promise<void> {}
 
 export async function runServe(cwd: string, port: number): Promise<void> {
   try {

@@ -32,9 +32,15 @@ export function buildProgram(): Command {
       });
     });
 
-  program.command('clean').description('elimina el directorio de salida y la caché').action(runClean);
+  program
+    .command('clean')
+    .description('elimina el directorio de salida y la caché')
+    .action(() => runClean(process.cwd()));
 
-  program.command('info').description('muestra información del proyecto y configuración').action(runInfo);
+  program
+    .command('info')
+    .description('muestra información del proyecto y configuración')
+    .action(() => runInfo(process.cwd()));
 
   program
     .command('serve')
