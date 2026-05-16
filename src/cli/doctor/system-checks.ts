@@ -75,11 +75,15 @@ export async function checkReadPermissions(cwd: string): Promise<CheckResult> {
 
 export async function checkWritePermissions(cwd: string): Promise<CheckResult> {
   const probe = join(cwd, `.iteraciones-doctor-probe-${Date.now()}`);
+  let canWrite = false;
   try {
     await writeFile(probe, '');
-    await unlink(probe);
-    return { label: 'permisos de escritura en cwd', ok: true };
+    canWrite = true;
   } catch {
     return { label: 'permisos de escritura en cwd', ok: false, detail: `sin permisos de escritura en ${cwd}` };
+  } finally {
+    // Limpiar el archivo probe independientemente de lo que ocurra después.
+    await unlink(probe).catch(() => undefined);
   }
+  return { label: 'permisos de escritura en cwd', ok: canWrite };
 }
