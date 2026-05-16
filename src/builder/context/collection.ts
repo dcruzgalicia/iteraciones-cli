@@ -1,4 +1,5 @@
 import type { TemplateContext } from '../../template/render/context.js';
+import { escapeHtml } from '../html.js';
 import type { AuthorDocumentIndex, BuildDocument } from '../types.js';
 import { resolveAuthorHref } from './authors.js';
 
@@ -29,7 +30,7 @@ export function buildCollectionContext(doc: BuildDocument, items: BuildDocument[
 
   return {
     title: doc.frontmatter.title,
-    pagetitle: doc.frontmatter.title,
+    pagetitle: escapeHtml(doc.frontmatter.title),
     author: doc.frontmatter.author.join(', '),
     body: doc.htmlFragment ?? '',
     'list-items': listItems,

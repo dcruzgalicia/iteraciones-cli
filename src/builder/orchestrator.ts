@@ -11,6 +11,7 @@ import { buildAssets } from './assets.js';
 import { collectByType } from './collect.js';
 import { buildRelatedAuthorsContext, createAuthorDocumentIndex } from './context/authors.js';
 import { buildSiteContext } from './context/site.js';
+import { escapeHtml } from './html.js';
 import { classifyDocuments } from './pipeline/classify.js';
 import { type ComposeCache, composeDocuments, renderBlocksToRegions } from './pipeline/compose.js';
 import { buildAuthorPipelineContext, buildAuthorsPipelineContext } from './pipeline/context/authors.js';
@@ -40,10 +41,6 @@ export interface BuildOptions {
   verbose?: boolean;
 }
 
-function escapeHtml(value: string): string {
-  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-
 function buildBlockTypeContext(
   doc: Parameters<typeof buildContext>[0],
   siteCtx: TemplateContext,
@@ -70,7 +67,6 @@ function buildBlockTypeContext(
       return buildCardPipelineContext(doc, siteCtx);
     case 'list':
       return buildListPipelineContext(doc, siteCtx, renderedFileDocs, authorDocumentIndex);
-    case 'file':
     default:
       return mergeContexts(buildContext(doc, siteCtx, authorDocumentIndex), buildRelatedAuthorsContext(doc, authorDocumentIndex));
   }

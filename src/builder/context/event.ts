@@ -1,4 +1,5 @@
 import type { TemplateContext } from '../../template/render/context.js';
+import { escapeHtml } from '../html.js';
 import type { AuthorDocumentIndex, BuildDocument } from '../types.js';
 
 /**
@@ -70,7 +71,7 @@ export function buildEventContext(doc: BuildDocument, authorIndex: AuthorDocumen
 
   return {
     title: doc.frontmatter.title,
-    pagetitle: doc.frontmatter.title,
+    pagetitle: escapeHtml(doc.frontmatter.title),
     author: doc.frontmatter.author.join(', '),
     body: doc.htmlFragment ?? '',
     ...(typeof doc.frontmatter.time === 'string' && { time: doc.frontmatter.time }),
@@ -105,7 +106,7 @@ export function buildEventsContext(doc: BuildDocument, eventDocs: BuildDocument[
 
   return {
     title: doc.frontmatter.title,
-    pagetitle: doc.frontmatter.title,
+    pagetitle: escapeHtml(doc.frontmatter.title),
     author: doc.frontmatter.author.join(', '),
     body: doc.htmlFragment ?? '',
     'list-items': listItems,

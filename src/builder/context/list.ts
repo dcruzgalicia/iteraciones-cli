@@ -1,4 +1,5 @@
 import type { TemplateContext } from '../../template/render/context.js';
+import { escapeHtml } from '../html.js';
 import type { AuthorDocumentIndex, BuildDocument } from '../types.js';
 import { resolveAuthorHref } from './authors.js';
 
@@ -34,7 +35,7 @@ export function buildListContext(doc: BuildDocument, items: BuildDocument[], aut
 
   return {
     title: doc.frontmatter.title,
-    pagetitle: doc.frontmatter.title,
+    pagetitle: escapeHtml(doc.frontmatter.title),
     author: doc.frontmatter.author.join(', '),
     ...(pageAuthorHref !== undefined && { 'author-href': pageAuthorHref }),
     body: doc.htmlFragment ?? '',

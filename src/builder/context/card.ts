@@ -1,4 +1,5 @@
 import type { TemplateContext } from '../../template/render/context.js';
+import { escapeHtml } from '../html.js';
 import type { BuildDocument } from '../types.js';
 
 /**
@@ -12,7 +13,7 @@ import type { BuildDocument } from '../types.js';
 export function buildCardContext(doc: BuildDocument): TemplateContext {
   return {
     title: doc.frontmatter.title,
-    pagetitle: doc.frontmatter.title,
+    pagetitle: escapeHtml(doc.frontmatter.title),
     body: doc.htmlFragment ?? '',
   };
 }

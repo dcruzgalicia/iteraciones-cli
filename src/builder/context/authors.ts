@@ -1,4 +1,5 @@
 import type { TemplateContext } from '../../template/render/context.js';
+import { escapeHtml } from '../html.js';
 import type { AuthorDocumentIndex, BuildDocument } from '../types.js';
 
 /**
@@ -50,7 +51,7 @@ export function buildAuthorContext(doc: BuildDocument, fileDocs: BuildDocument[]
 
   return {
     title: doc.frontmatter.title,
-    pagetitle: doc.frontmatter.title,
+    pagetitle: escapeHtml(doc.frontmatter.title),
     author: doc.frontmatter.author.join(', '),
     body: doc.htmlFragment ?? '',
     'list-items': listItems,
@@ -77,7 +78,7 @@ export function buildAuthorsContext(doc: BuildDocument, authorDocs: BuildDocumen
 
   return {
     title: doc.frontmatter.title,
-    pagetitle: doc.frontmatter.title,
+    pagetitle: escapeHtml(doc.frontmatter.title),
     body: doc.htmlFragment ?? '',
     authors,
     count: authors.length,
