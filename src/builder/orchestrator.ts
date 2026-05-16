@@ -77,6 +77,25 @@ function buildBlockTypeContext(
 }
 
 export async function build(cwd: string, options: BuildOptions = {}): Promise<void> {
+  // --dry-run: solo descubrir y clasificar; mostrar resumen sin generar salida.
+  if (options.dryRun) {
+    const siteConfig = await loadSiteConfig(cwd);
+    const sourceDocs = await discover(cwd);
+    const allDocs = classifyDocuments(sourceDocs);
+    const counts = new Map<string, number>();
+    for (const doc of allDocs) {
+      const type = doc.type ?? 'unknown';
+      counts.set(type, (counts.get(type) ?? 0) + 1);
+    }
+    process.stdout.write(`[dry-run] Se procesar\u00edan ${allDocs.length} documentos:\n`);
+    for (const [type, count] of [...counts.entries()].sort()) {
+      process.stdout.write(`  ${type.padEnd(12)}: ${count}\n`);
+    }
+    return;
+  }
+
+  const log = options.verbose ? (msg: string) => process.stdout.write(`${msg}\n`) : (_msg: string) => undefined;
+
   const pandocVersion = await checkPandoc();
   const siteConfig = await loadSiteConfig(cwd);
 
@@ -95,6 +114,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // Limpia outputDir y genera CSS/assets antes de construir el contexto del sitio.
   await clean(ctx.outputDir);
   ctx.cssPath = await buildAssets(ctx.outputDir, ctx.cwd, siteConfig, { noTailwind: options.noTailwind });
+  log(`Assets generados en ${ctx.outputDir}`);
   const siteCtx = buildSiteContext(siteConfig, ctx.cssPath);
 
   const pkg = (await Bun.file(join(import.meta.dir, '../../package.json')).json()) as { version: string };
@@ -108,6 +128,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const composeCache: ComposeCache | undefined = options.noCache ? undefined : { manager: cacheManager, cliVersion: pkg.version, pluginFingerprint };
 
   const sourceDocs = await discover(cwd);
+  log(`Descubiertos ${sourceDocs.length} documentos`);
   const allDocs = classifyDocuments(sourceDocs);
   const index = collectByType(
     allDocs.filter((doc) => doc.kind !== 'block'),
@@ -249,6 +270,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     registry,
   );
   const writtenDocs = await writeDocuments(composedDocs, ctx);
+  log(`Escritos ${writtenDocs.length} archivos en ${ctx.outputDir}`);
 
   // afterBuild: notifica a los plugins que el build finalizó con las rutas de salida.
   // Se incluyen los assets conocidos (CSS y logo si está configurado). Las fuentes
