@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
-import { runBuild, runClean, runInfo, runInit, runServe, runValidate, runWatch } from './dispatcher.js';
+import { runBuild, runClean, runDoctor, runInfo, runInit, runServe, runValidate, runWatch } from './dispatcher.js';
 
 export function buildProgram(): Command {
   const program = new Command();
@@ -68,6 +68,14 @@ export function buildProgram(): Command {
       };
       process.once('SIGINT', shutdown);
       process.once('SIGTERM', shutdown);
+    });
+
+  program
+    .command('doctor')
+    .description('verifica el entorno de build y opcionalmente corrige problemas')
+    .option('--fix', 'intenta corregir automáticamente los problemas detectados')
+    .action(async (opts: { fix?: boolean }) => {
+      await runDoctor(process.cwd(), { fix: opts.fix });
     });
 
   program

@@ -5,6 +5,7 @@ import { build } from '../builder/orchestrator.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { ConfigError, PandocError } from '../errors.js';
 import { checkPandoc } from '../services/pandoc-runner.js';
+import { runDoctor as doctor } from './doctor.js';
 import { runInit as init } from './init.js';
 import { runServe as serve } from './serve.js';
 import { runValidate as validate } from './validate.js';
@@ -113,6 +114,19 @@ export async function runWatch(cwd: string, options: { verbose?: boolean } = {})
     }
     process.exitCode = 1;
     return () => undefined;
+  }
+}
+
+export async function runDoctor(cwd: string, options: { fix?: boolean } = {}): Promise<void> {
+  try {
+    await doctor(cwd, options);
+  } catch (err) {
+    if (err instanceof Error) {
+      process.stderr.write(`Error al ejecutar doctor: ${err.message}\n`);
+    } else {
+      process.stderr.write('Error desconocido al ejecutar doctor.\n');
+    }
+    process.exitCode = 1;
   }
 }
 
