@@ -94,9 +94,9 @@ export function buildEventContext(doc: BuildDocument, authorIndex: AuthorDocumen
 export function buildEventsContext(doc: BuildDocument, eventDocs: BuildDocument[]): TemplateContext {
   const listItems = eventDocs.map((event) => ({
     href: `/${event.relativePath.replace(/\.md$/, '.html')}`,
-
     title: event.frontmatter.title,
     date: event.frontmatter.date,
+    body: event.htmlFragment ?? '',
     ...(typeof event.frontmatter.time === 'string' && { time: event.frontmatter.time }),
     ...(typeof event.frontmatter.location === 'string' && { location: event.frontmatter.location }),
     ...(typeof event.frontmatter.modality === 'string' && { modality: event.frontmatter.modality }),
