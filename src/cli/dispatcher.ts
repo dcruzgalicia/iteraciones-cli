@@ -2,7 +2,10 @@ import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { BuildOptions } from '../builder/orchestrator.js';
 import { build } from '../builder/orchestrator.js';
+import { discover } from '../builder/pipeline/discover.js';
+import { loadSiteConfig } from '../config/config-loader.js';
 import { ConfigError, PandocError } from '../errors.js';
+import { checkPandoc } from '../services/pandoc-runner.js';
 import { runServe as serve } from './serve.js';
 
 export async function runBuild(cwd: string, options: BuildOptions = {}): Promise<void> {
@@ -46,7 +49,31 @@ export async function runClean(cwd: string): Promise<void> {
 }
 
 // stub: implementado en issue #60
-export async function runInfo(_cwd: string): Promise<void> {}
+export async function runInfo(cwd: string): Promise<void> {
+  try {
+    const [siteConfig, pandocVersion, sourceDocs] = await Promise.all([loadSiteConfig(cwd), checkPandoc(), discover(cwd)]);
+    const plugins = siteConfig.plugins.length > 0 ? siteConfig.plugins.join(', ') : 'ninguno';
+    process.stdout.write(`Proyecto  : ${cwd}\n`);
+    process.stdout.write(`Sitio     : ${siteConfig.title}\n`);
+    process.stdout.write(`Tagline   : ${siteConfig.tagline ?? '(sin tagline)'}\n`);
+    process.stdout.write(`Idioma    : ${siteConfig.lang}\n`);
+    process.stdout.write(`Plugins   : ${plugins}\n`);
+    process.stdout.write(`Pandoc    : ${pandocVersion}\n`);
+    process.stdout.write(`Documentos: ${sourceDocs.length}\n`);
+    process.stdout.write(`Salida    : ${join(cwd, 'dist/web')}\n`);
+  } catch (err) {
+    if (err instanceof ConfigError) {
+      process.stderr.write(`Error de configuración en "${err.configPath}": ${err.message}\n`);
+    } else if (err instanceof PandocError) {
+      process.stderr.write(`Error de pandoc: ${err.message}\n`);
+    } else if (err instanceof Error) {
+      process.stderr.write(`Error: ${err.message}\n`);
+    } else {
+      process.stderr.write('Error desconocido al obtener información.\n');
+    }
+    process.exitCode = 1;
+  }
+}
 
 export async function runServe(cwd: string, port: number): Promise<void> {
   try {
