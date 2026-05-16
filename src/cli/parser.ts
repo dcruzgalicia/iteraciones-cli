@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
-import { runBuild, runClean, runInfo, runServe } from './dispatcher.js';
+import { runBuild, runClean, runInfo, runServe, runWatch } from './dispatcher.js';
 
 export function buildProgram(): Command {
   const program = new Command();
@@ -41,6 +41,20 @@ export function buildProgram(): Command {
     .command('info')
     .description('muestra información del proyecto y configuración')
     .action(() => runInfo(process.cwd()));
+
+  program
+    .command('watch')
+    .description('observa cambios y reconstruye el sitio sin servidor HTTP')
+    .option('--verbose', 'muestra información adicional de progreso')
+    .action(async (opts: { verbose?: boolean }) => {
+      const stop = await runWatch(process.cwd(), { verbose: opts.verbose });
+      const shutdown = (): void => {
+        stop();
+        process.exitCode = 0;
+      };
+      process.once('SIGINT', shutdown);
+      process.once('SIGTERM', shutdown);
+    });
 
   program
     .command('serve')
