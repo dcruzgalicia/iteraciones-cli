@@ -10,7 +10,27 @@ export function buildProgram(): Command {
   program
     .command('build')
     .description('construye el sitio a partir de los archivos Markdown')
-    .action(() => runBuild(process.cwd()));
+    .option('-c, --concurrency <n>', 'máximo de invocaciones pandoc simultáneas', '4')
+    .option('--no-cache', 'omite la caché incremental; siempre hace build completo')
+    .option('--project-root <path>', 'directorio raíz del proyecto (por defecto: directorio actual)')
+    .option('--no-tailwind', 'omite la generación de CSS con Tailwind')
+    .option('--dry-run', 'muestra los documentos que se procesarían sin generar salida')
+    .option('--verbose', 'muestra información adicional de progreso')
+    .action((opts: { concurrency: string; cache: boolean; projectRoot?: string; tailwind: boolean; dryRun?: boolean; verbose?: boolean }) => {
+      const concurrency = Number.parseInt(opts.concurrency, 10);
+      if (!Number.isInteger(concurrency) || concurrency < 1) {
+        process.stderr.write(`Error: --concurrency debe ser un entero positivo (recibido: "${opts.concurrency}")\n`);
+        process.exitCode = 1;
+        return;
+      }
+      runBuild(opts.projectRoot ?? process.cwd(), {
+        concurrency,
+        noCache: !opts.cache,
+        noTailwind: !opts.tailwind,
+        dryRun: opts.dryRun,
+        verbose: opts.verbose,
+      });
+    });
 
   program.command('clean').description('elimina el directorio de salida y la caché').action(runClean);
 

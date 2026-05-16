@@ -1,10 +1,11 @@
+import type { BuildOptions } from '../builder/orchestrator.js';
 import { build } from '../builder/orchestrator.js';
 import { ConfigError, PandocError } from '../errors.js';
 import { runServe as serve } from './serve.js';
 
-export async function runBuild(cwd: string): Promise<void> {
+export async function runBuild(cwd: string, options: BuildOptions = {}): Promise<void> {
   try {
-    await build(cwd);
+    await build(cwd, options);
   } catch (err) {
     if (err instanceof PandocError) {
       const location = err.sourcePath ? ` en "${err.sourcePath}"` : '';

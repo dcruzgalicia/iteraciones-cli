@@ -30,6 +30,14 @@ export interface BuildOptions {
   outputDir?: string;
   cssPath?: string;
   concurrency?: number;
+  /** Omite lectura y escritura de la caché; siempre hace build completo. */
+  noCache?: boolean;
+  /** Omite la generación de CSS con Tailwind; copia fonts y logo igualmente. */
+  noTailwind?: boolean;
+  /** Muestra los documentos que se procesarían sin generar salida. */
+  dryRun?: boolean;
+  /** Imprime información adicional de progreso durante el build. */
+  verbose?: boolean;
 }
 
 function escapeHtml(value: string): string {
