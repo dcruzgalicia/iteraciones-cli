@@ -94,7 +94,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
   // Limpia outputDir y genera CSS/assets antes de construir el contexto del sitio.
   await clean(ctx.outputDir);
-  ctx.cssPath = await buildAssets(ctx.outputDir, ctx.cwd, siteConfig);
+  ctx.cssPath = await buildAssets(ctx.outputDir, ctx.cwd, siteConfig, { noTailwind: options.noTailwind });
   const siteCtx = buildSiteContext(siteConfig, ctx.cssPath);
 
   const pkg = (await Bun.file(join(import.meta.dir, '../../package.json')).json()) as { version: string };
@@ -103,8 +103,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // _iteraciones.yaml. Nota: no detecta cambios en el código fuente de un plugin si su
   // ruta no cambia; en ese caso se debe limpiar la caché manualmente.
   const pluginFingerprint = siteConfig.plugins.length > 0 ? hash(JSON.stringify(siteConfig.plugins)) : undefined;
-  const renderCache = { manager: cacheManager, cliVersion: pkg.version, pandocVersion, pluginFingerprint };
-  const composeCache: ComposeCache = { manager: cacheManager, cliVersion: pkg.version, pluginFingerprint };
+  // --no-cache: omitir caché completamente (renderDocuments/composeDocuments aceptan undefined).
+  const renderCache = options.noCache ? undefined : { manager: cacheManager, cliVersion: pkg.version, pandocVersion, pluginFingerprint };
+  const composeCache: ComposeCache | undefined = options.noCache ? undefined : { manager: cacheManager, cliVersion: pkg.version, pluginFingerprint };
 
   const sourceDocs = await discover(cwd);
   const allDocs = classifyDocuments(sourceDocs);
@@ -274,6 +275,8 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     ...renderedCardDocs,
     ...renderedListDocs,
   ];
-  const allRenderKeys = new Set(allRenderedDocs.map((doc) => hash(doc.sourceHash, renderCache.cliVersion, renderCache.pandocVersion)));
-  await renderCache.manager.prune('render', allRenderKeys);
+  if (renderCache) {
+    const allRenderKeys = new Set(allRenderedDocs.map((doc) => hash(doc.sourceHash, renderCache.cliVersion, renderCache.pandocVersion)));
+    await renderCache.manager.prune('render', allRenderKeys);
+  }
 }
