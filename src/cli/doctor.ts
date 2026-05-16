@@ -39,12 +39,21 @@ export async function runDoctor(cwd: string, options: { fix?: boolean } = {}): P
   );
   const fixLines = fixResults.map((r) => (r.status === 'fulfilled' ? r.value : '  ✖ error al intentar corrección'));
   const fixSection = fixLines.length > 0 ? `\ncorrecciones:\n${fixLines.join('\n')}\n` : '';
-  const summary = allOk
-    ? 'Todo en orden.\n'
-    : fixLines.length > 0
+
+  // Determinar el estado final: hay problema si algún check no tenía fixAction
+  // o si algún fixAction falló.
+  const unfixable = checks.filter((c) => !c.ok && c.fixAction == null);
+  const fixFailed = fixResults.some((r) => r.status === 'rejected');
+  const stillBroken = unfixable.length > 0 || fixFailed;
+
+  const summary = !stillBroken
+    ? fixLines.length > 0
       ? 'Correcciones aplicadas. Ejecuta doctor de nuevo para verificar.\n'
-      : 'Hay problemas sin corrección automática disponible.\n';
+      : 'Todo en orden.\n'
+    : fixLines.length > 0
+      ? 'Hay problemas sin corrección automática disponible.\n'
+      : 'Hay problemas que corregir.\n';
 
   process.stdout.write(`doctor:\n${lines.join('\n')}\n${fixSection}\n${summary}`);
-  if (!allOk) process.exitCode = 1;
+  if (stillBroken) process.exitCode = 1;
 }
