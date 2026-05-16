@@ -24,11 +24,11 @@ export function checkTemplates(cwd: string): CheckResult {
   const pkgTemplates = join(PKG_ROOT, 'templates');
   const localTemplates = join(cwd, 'templates');
 
-  if (existsSync(join(localTemplates, 'page.html'))) {
+  if (existsSync(join(localTemplates, 'file.html'))) {
     return { label: 'templates/', ok: true, detail: `locales: ${localTemplates}` };
   }
-  if (existsSync(join(pkgTemplates, 'page.html'))) {
+  if (existsSync(join(pkgTemplates, 'file.html'))) {
     return { label: 'templates/', ok: true, detail: `del paquete CLI: ${pkgTemplates}` };
   }
-  return { label: 'templates/', ok: false, detail: 'no se encontró page.html ni en templates/ local ni en el paquete CLI' };
+  return { label: 'templates/', ok: false, detail: 'no se encontró file.html ni en templates/ local ni en el paquete CLI' };
 }
