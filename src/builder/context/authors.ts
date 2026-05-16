@@ -44,6 +44,7 @@ export function buildAuthorContext(doc: BuildDocument, fileDocs: BuildDocument[]
     href: `/${file.relativePath.replace(/\.md$/, '.html')}`,
     title: file.frontmatter.title,
     author: file.frontmatter.author.join(', '),
+    body: file.htmlFragment ?? '',
     date: file.frontmatter.date,
   }));
 

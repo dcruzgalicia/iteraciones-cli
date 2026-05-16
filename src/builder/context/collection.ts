@@ -22,6 +22,7 @@ export function buildCollectionContext(doc: BuildDocument, items: BuildDocument[
       title: item.frontmatter.title,
       author: item.frontmatter.author.join(', '),
       'author-href': authorHref,
+      body: item.htmlFragment ?? '',
       date: item.frontmatter.date,
     };
   });
