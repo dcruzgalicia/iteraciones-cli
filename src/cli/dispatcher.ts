@@ -5,6 +5,7 @@ import { build } from '../builder/orchestrator.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { ConfigError, PandocError } from '../errors.js';
 import { checkPandoc } from '../services/pandoc-runner.js';
+import { runInit as init } from './init.js';
 import { runServe as serve } from './serve.js';
 import { runWatch as watch } from './watch.js';
 
@@ -83,6 +84,19 @@ export async function runInfo(cwd: string): Promise<void> {
       process.stderr.write(`Error: ${err.message}\n`);
     } else {
       process.stderr.write('Error desconocido al obtener información.\n');
+    }
+    process.exitCode = 1;
+  }
+}
+
+export async function runInit(cwd: string): Promise<void> {
+  try {
+    await init(cwd);
+  } catch (err) {
+    if (err instanceof Error) {
+      process.stderr.write(`Error al inicializar: ${err.message}\n`);
+    } else {
+      process.stderr.write('Error desconocido al inicializar.\n');
     }
     process.exitCode = 1;
   }
