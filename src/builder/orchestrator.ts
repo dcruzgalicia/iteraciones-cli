@@ -24,7 +24,7 @@ import { mergeContexts } from './pipeline/context/merge.js';
 import { discover } from './pipeline/discover.js';
 import { renderDocuments } from './pipeline/render.js';
 import { writeDocuments } from './pipeline/write.js';
-import type { AuthorDocumentIndex, BuildContext } from './types.js';
+import type { AuthorDocumentIndex, BuildContext, BuildDocument } from './types.js';
 
 export interface BuildOptions {
   outputDir?: string;
