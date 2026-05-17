@@ -57,9 +57,18 @@ function computeRootPrefix(relativePath: string): string {
 /**
  * Recorre recursivamente un TemplateContext y convierte toda cadena que empiece con '/'
  * en una ruta relativa usando `prefix`. Permite que el sitio funcione con file://.
+ * Los strings HTML (region slots de bloques) se procesan con regex para relativizar
+ * atributos href y src que contengan rutas root-relative embebidas en el marcado.
  */
 function makeRelativeContext(value: unknown, prefix: string): unknown {
-  if (typeof value === 'string') return value.startsWith('/') ? prefix + value.slice(1) : value;
+  if (typeof value === 'string') {
+    if (value.startsWith('/')) return prefix + value.slice(1);
+    if (value.includes('href="/') || value.includes('src="/'))
+      return value
+        .replace(/href="(\/[^"]+)"/g, (_, p) => `href="${prefix}${p.slice(1)}"`)
+        .replace(/src="(\/[^"]+)"/g, (_, p) => `src="${prefix}${p.slice(1)}"`);
+    return value;
+  }
   if (Array.isArray(value)) return value.map((item) => makeRelativeContext(item, prefix));
   if (value !== null && typeof value === 'object')
     return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, makeRelativeContext(v, prefix)]));
