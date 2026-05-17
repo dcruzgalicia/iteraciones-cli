@@ -1,20 +1,12 @@
 import { join } from 'node:path';
-import { type Frontmatter, parseFrontmatter } from './frontmatter.js';
+import type { SourceDocument } from '../builder/types.js';
+import { IGNORED_DIRS } from '../constants.js';
+import { parseFrontmatter } from './frontmatter.js';
 
-// stub: SourceDocument se mueve a src/builder/types.ts en el issue #19
-export interface SourceDocument {
-  filePath: string;
-  relativePath: string;
-  frontmatter: Frontmatter;
-  body: string;
-  sourceHash: string;
-  mtimeMs: number;
-}
+export type { SourceDocument } from '../builder/types.js';
 
 export async function loadDocuments(cwd: string): Promise<SourceDocument[]> {
   const relativePaths: string[] = [];
-
-  const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', '.iteraciones']);
 
   for await (const rel of new Bun.Glob('**/*.md').scan({ cwd })) {
     const topSegment = rel.split('/')[0];

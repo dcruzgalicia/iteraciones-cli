@@ -1,10 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { loadSiteConfig } from '../config/config-loader.js';
+import { IGNORED_DIRS } from '../constants.js';
 import { ConfigError } from '../errors.js';
 import { FRONTMATTER_RE } from '../loader/frontmatter.js';
-
-const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', '.iteraciones']);
 
 type ValidationError = { file: string; message: string };
 
