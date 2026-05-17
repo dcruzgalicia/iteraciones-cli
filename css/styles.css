@@ -64,8 +64,8 @@
   word-break: break-all;
 }
 
-@utility bg-grid-emerald {
+@utility bg-grid-lime {
   background-image:
-    linear-gradient(rgb(52 211 153 / 0.035) 1px, transparent 1px), linear-gradient(90deg, rgb(52 211 153 / 0.035) 1px, transparent 1px);
+    linear-gradient(rgb(163 230 53 / 0.035) 1px, transparent 1px), linear-gradient(90deg, rgb(163 230 53 / 0.035) 1px, transparent 1px);
   background-size: 48px 48px;
 }
