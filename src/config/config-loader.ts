@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { ConfigError } from '../errors.js';
-import { DEFAULT_SITE_CONFIG, type SiteConfig } from './site-config.js';
+import { DEFAULT_SITE_CONFIG, KNOWN_ACCENT_COLORS, type SiteConfig } from './site-config.js';
 
 const CONFIG_FILE = '_iteraciones.yaml';
 
@@ -44,5 +44,15 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
     listItemsLimit,
     plugins,
     theme: typeof root.theme === 'string' ? root.theme : DEFAULT_SITE_CONFIG.theme,
+    accent: resolveAccent(root.accent),
   };
+}
+
+function resolveAccent(value: unknown): string {
+  if (typeof value !== 'string') return DEFAULT_SITE_CONFIG.accent;
+  if (!KNOWN_ACCENT_COLORS.has(value)) {
+    console.warn(`[iteraciones] Color de acento desconocido: "${value}". Usando "${DEFAULT_SITE_CONFIG.accent}" por defecto.`);
+    return DEFAULT_SITE_CONFIG.accent;
+  }
+  return value;
 }
