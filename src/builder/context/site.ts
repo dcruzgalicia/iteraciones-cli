@@ -12,6 +12,7 @@ import type { TemplateContext } from '../../template/render/context.js';
  *   site-logo     → `/${config.logo}` normalizado como ruta root-relative,
  *                   o undefined si config.logo no está definido
  *   css           → [cssPath] si cssPath no está vacío, [] si lo está
+ *   home-href     → '/index.html' (root-relative; se relativiza por documento en el orchestrator)
  */
 export function buildSiteContext(config: SiteConfig, cssPath: string): TemplateContext {
   return {
@@ -20,5 +21,6 @@ export function buildSiteContext(config: SiteConfig, cssPath: string): TemplateC
     lang: config.lang,
     'site-logo': config.logo ? `/${config.logo.replace(/^\/+/, '')}` : undefined,
     css: cssPath ? [cssPath] : [],
+    'home-href': '/index.html',
   };
 }

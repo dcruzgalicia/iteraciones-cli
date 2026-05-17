@@ -45,6 +45,27 @@ function excludeDrafts(docs: BuildDocument[]): BuildDocument[] {
   return docs.filter((doc) => !doc.frontmatter.draft);
 }
 
+/**
+ * Calcula el prefijo relativo para navegar desde `relativePath` hasta la raíz del sitio.
+ * Ejemplos: 'index.md' → './',  'personas/sofia.md' → '../',  'a/b/c.md' → '../../'
+ */
+function computeRootPrefix(relativePath: string): string {
+  const depth = relativePath.split('/').length - 1;
+  return depth === 0 ? './' : '../'.repeat(depth);
+}
+
+/**
+ * Recorre recursivamente un TemplateContext y convierte toda cadena que empiece con '/'
+ * en una ruta relativa usando `prefix`. Permite que el sitio funcione con file://.
+ */
+function makeRelativeContext(value: unknown, prefix: string): unknown {
+  if (typeof value === 'string') return value.startsWith('/') ? prefix + value.slice(1) : value;
+  if (Array.isArray(value)) return value.map((item) => makeRelativeContext(item, prefix));
+  if (value !== null && typeof value === 'object')
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, makeRelativeContext(v, prefix)]));
+  return value;
+}
+
 function buildBlockTypeContext(
   doc: Parameters<typeof buildContext>[0],
   siteCtx: TemplateContext,
@@ -286,22 +307,22 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     buildPagedListPipelineContexts(doc, finalSiteCtx, listCandidatePool, siteConfig.listItemsLimit, authorDocumentIndex),
   );
 
-  const composedDocs = await composeDocuments(
-    [
-      ...contextFileDocs,
-      ...contextCollectionDocs,
-      ...contextAuthorDocs,
-      ...contextAuthorsDocs,
-      ...contextEventDocs,
-      ...contextEventsDocs,
-      ...contextMenuDocs,
-      ...contextCardDocs,
-      ...contextListDocs,
-    ],
-    ctx,
-    composeCache,
-    registry,
-  );
+  const allContextDocs = [
+    ...contextFileDocs,
+    ...contextCollectionDocs,
+    ...contextAuthorDocs,
+    ...contextAuthorsDocs,
+    ...contextEventDocs,
+    ...contextEventsDocs,
+    ...contextMenuDocs,
+    ...contextCardDocs,
+    ...contextListDocs,
+  ];
+  const relativizedDocs = allContextDocs.map((doc) => ({
+    ...doc,
+    templateContext: makeRelativeContext(doc.templateContext, computeRootPrefix(doc.relativePath)) as TemplateContext,
+  }));
+  const composedDocs = await composeDocuments(relativizedDocs, ctx, composeCache, registry);
   const writtenDocs = await writeDocuments(composedDocs, ctx);
   log(`Escritos ${writtenDocs.length} archivos en ${ctx.outputDir}`);
 
