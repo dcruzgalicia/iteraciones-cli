@@ -6,10 +6,16 @@ import { mergeContexts } from './merge.js';
 
 /**
  * Ordena un array de docs de tipo `author` alfabéticamente por `frontmatter.title`
- * (nombre del autor) de forma insensible a mayúsculas y diacríticos.
+ * (nombre del autor) usando el locale `es` para garantizar orden determinístico
+ * independiente del SO. Las comparaciones insensibles a mayúsculas/diacríticos se
+ * desempatan con una comparación exacta para consistencia total.
  */
 function sortByTitleAsc(docs: BuildDocument[]): BuildDocument[] {
-  return [...docs].sort((a, b) => a.frontmatter.title.localeCompare(b.frontmatter.title, undefined, { sensitivity: 'base' }));
+  return [...docs].sort(
+    (a, b) =>
+      a.frontmatter.title.localeCompare(b.frontmatter.title, 'es', { sensitivity: 'base' }) ||
+      a.frontmatter.title.localeCompare(b.frontmatter.title, 'es'),
+  );
 }
 
 /**
