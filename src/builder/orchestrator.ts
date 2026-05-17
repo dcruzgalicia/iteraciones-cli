@@ -78,7 +78,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     // si hay un error de esquema el usuario lo ve incluso en dry-run.
     await loadSiteConfig(cwd);
     const sourceDocs = await discover(cwd);
-    const allDocs = classifyDocuments(sourceDocs);
+    const allDocs = classifyDocuments(sourceDocs).filter((doc) => !doc.frontmatter.draft);
     const counts = new Map<string, number>();
     for (const doc of allDocs) {
       const type = doc.type ?? 'unknown';
@@ -126,7 +126,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
   const sourceDocs = await discover(cwd);
   log(`Descubiertos ${sourceDocs.length} documentos`);
-  const allDocs = classifyDocuments(sourceDocs);
+  const allDocs = classifyDocuments(sourceDocs).filter((doc) => !doc.frontmatter.draft);
 
   // Detectar el documento primario de menú para inyectar menuHref/menuTitle en
   // el siteCtx compartido por todas las páginas. Debe hacerse antes de construir
