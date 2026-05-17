@@ -1,0 +1,6 @@
+site:
+  title: Sitio Paginado
+  tagline: Tests de paginación
+  lang: es
+  list-items:
+    limit: 2
