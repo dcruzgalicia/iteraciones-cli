@@ -70,3 +70,8 @@
     linear-gradient(90deg, color-mix(in srgb, var(--color-accent-400) 3.5%, transparent) 1px, transparent 1px);
   background-size: 48px 48px;
 }
+
+@utility prose-accent {
+  --tw-prose-links: var(--color-accent-600);
+  --tw-prose-invert-links: var(--color-accent-500);
+}
