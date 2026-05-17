@@ -5,6 +5,14 @@ import type { BuildDocument } from '../../types.js';
 import { mergeContexts } from './merge.js';
 
 /**
+ * Ordena un array de docs de tipo `author` alfabéticamente por `frontmatter.title`
+ * (nombre del autor) de forma insensible a mayúsculas y diacríticos.
+ */
+function sortByTitleAsc(docs: BuildDocument[]): BuildDocument[] {
+  return [...docs].sort((a, b) => a.frontmatter.title.localeCompare(b.frontmatter.title, undefined, { sensitivity: 'base' }));
+}
+
+/**
  * Construye el TemplateContext completo para un documento de tipo `author`,
  * combinando el contexto del sitio con el contexto de autor.
  *
@@ -24,7 +32,7 @@ export function buildAuthorPipelineContext(doc: BuildDocument, siteCtx: Template
  * Los bloques no se paginan: reciben todos los `renderedAuthorDocs` como una sola lista.
  */
 export function buildAuthorsPipelineContext(doc: BuildDocument, siteCtx: TemplateContext, renderedAuthorDocs: BuildDocument[]): TemplateContext {
-  const authorsCtx = buildAuthorsContext(doc, renderedAuthorDocs);
+  const authorsCtx = buildAuthorsContext(doc, sortByTitleAsc(renderedAuthorDocs));
   return mergeContexts(siteCtx, authorsCtx);
 }
 
@@ -41,7 +49,8 @@ export function buildPagedAuthorsPipelineContexts(
   renderedAuthorDocs: BuildDocument[],
   limit: number,
 ): BuildDocument[] {
-  const pages = paginateItems(renderedAuthorDocs, limit, doc.relativePath);
+  const sortedDocs = sortByTitleAsc(renderedAuthorDocs);
+  const pages = paginateItems(sortedDocs, limit, doc.relativePath);
   const pageHrefs = buildPageHrefs(doc.relativePath, pages.length);
 
   return pages.map((page) => {
