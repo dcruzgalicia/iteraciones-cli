@@ -83,6 +83,18 @@
   --tw-ring-offset-color: color-mix(in srgb, var(--color-accent-950) 40%, black);
 }
 
+@utility bg-surface-light {
+  background-color: color-mix(in srgb, var(--color-accent-50) 50%, white);
+}
+
+@utility to-surface-light {
+  --tw-gradient-to: color-mix(in srgb, var(--color-accent-50) 50%, white) var(--tw-gradient-to-position);
+}
+
+@utility ring-offset-surface-light {
+  --tw-ring-offset-color: color-mix(in srgb, var(--color-accent-50) 50%, white);
+}
+
 @utility prose-accent {
   --tw-prose-links: var(--color-accent-600);
   --tw-prose-invert-links: var(--color-accent-500);
