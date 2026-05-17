@@ -124,7 +124,7 @@
     <div
       class="max-w-8xl mx-auto flex items-center justify-between px-4 py-3 md:px-8">
       $if(site-logo)$
-      <a href="/index.html" class="flex items-center gap-2 no-underline">
+      <a href="$home-href$" class="flex items-center gap-2 no-underline">
         <img
           src="$site-logo$"
           alt="$site-title$"
@@ -133,7 +133,7 @@
       </a>
       $else$
       <a
-        href="/index.html"
+        href="$home-href$"
         class="font-mono text-xs text-zinc-400 hover:text-zinc-600">
         $site-title$
       </a>
