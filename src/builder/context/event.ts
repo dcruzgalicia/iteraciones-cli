@@ -85,15 +85,28 @@ export function buildEventContext(doc: BuildDocument, authorIndex: AuthorDocumen
  * Construye el TemplateContext para un documento de tipo `events`.
  *
  * Variables producidas para `templates/events.html`:
- *   title      → frontmatter.title
- *   pagetitle  → frontmatter.title
- *   author     → frontmatter.author
- *   body       → htmlFragment del documento (introducción opcional)
- *   list-items → array de eventos con { href, title, date, body, time?, location?, modality?, author? }
- *   count      → número de eventos
+ *   title          → frontmatter.title
+ *   pagetitle      → frontmatter.title
+ *   author         → frontmatter.author
+ *   body           → htmlFragment del documento (introducción opcional)
+ *   list-items     → array de todos los eventos del pool: { href, title, date, body, time?, location?, modality?, author? }
+ *   upcoming-items → subset de eventos con date >= buildDate, ordenados ascendente (próximos primero)
+ *   past-items     → subset de eventos con date < buildDate, ordenados descendente (más recientes primero)
+ *   count          → número de eventos en list-items
+ *   has-pagination → true cuando hay más de una página (desde paginationCtx)
+ *   page-number    → número de página actual, 1-indexed
+ *   page-count     → total de páginas
+ *   total-items    → total de items sin paginar
+ *   page-previous  → { href } de la página anterior, si existe
+ *   page-next      → { href } de la página siguiente, si existe
  */
-export function buildEventsContext(doc: BuildDocument, eventDocs: BuildDocument[], paginationCtx?: Record<string, unknown>): TemplateContext {
-  const listItems = eventDocs.map((event) => ({
+export function buildEventsContext(
+  doc: BuildDocument,
+  eventDocs: BuildDocument[],
+  paginationCtx?: Record<string, unknown>,
+  buildDate?: Date,
+): TemplateContext {
+  const formatItem = (event: BuildDocument) => ({
     href: `/${event.relativePath.replace(/\.md$/, '.html')}`,
     title: event.frontmatter.title,
     date: event.frontmatter.date,
@@ -102,7 +115,37 @@ export function buildEventsContext(doc: BuildDocument, eventDocs: BuildDocument[
     ...(typeof event.frontmatter.location === 'string' && { location: event.frontmatter.location }),
     ...(typeof event.frontmatter.modality === 'string' && { modality: event.frontmatter.modality }),
     ...(event.frontmatter.author.length > 0 && { author: event.frontmatter.author.join(', ') }),
-  }));
+  });
+
+  const listItems = eventDocs.map(formatItem);
+
+  const splitByDate = (docs: BuildDocument[], refDate: Date) => {
+    const ref = new Date(refDate).setHours(0, 0, 0, 0);
+    const upcoming: BuildDocument[] = [];
+    const past: BuildDocument[] = [];
+    for (const d of docs) {
+      const ts = d.frontmatter.date ? new Date(d.frontmatter.date).getTime() : Number.NaN;
+      if (!Number.isNaN(ts) && ts >= ref) upcoming.push(d);
+      else past.push(d);
+    }
+    return { upcoming, past };
+  };
+
+  const upcomingItems =
+    buildDate !== undefined
+      ? (() => {
+          const { upcoming } = splitByDate(eventDocs, buildDate);
+          return upcoming.sort((a, b) => new Date(a.frontmatter.date).getTime() - new Date(b.frontmatter.date).getTime()).map(formatItem);
+        })()
+      : undefined;
+
+  const pastItems =
+    buildDate !== undefined
+      ? (() => {
+          const { past } = splitByDate(eventDocs, buildDate);
+          return past.sort((a, b) => new Date(b.frontmatter.date).getTime() - new Date(a.frontmatter.date).getTime()).map(formatItem);
+        })()
+      : undefined;
 
   return {
     title: doc.frontmatter.title,
@@ -111,6 +154,8 @@ export function buildEventsContext(doc: BuildDocument, eventDocs: BuildDocument[
     body: doc.htmlFragment ?? '',
     'list-items': listItems,
     count: listItems.length,
+    ...(upcomingItems !== undefined && { 'upcoming-items': upcomingItems }),
+    ...(pastItems !== undefined && { 'past-items': pastItems }),
     ...paginationCtx,
   };
 }
