@@ -71,6 +71,14 @@
   background-size: 48px 48px;
 }
 
+@utility bg-surface-dark {
+  background-color: color-mix(in srgb, var(--color-accent-950) 40%, black);
+}
+
+@utility to-surface-dark {
+  --tw-gradient-to: color-mix(in srgb, var(--color-accent-950) 40%, black) var(--tw-gradient-to-position);
+}
+
 @utility prose-accent {
   --tw-prose-links: var(--color-accent-600);
   --tw-prose-invert-links: var(--color-accent-500);
