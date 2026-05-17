@@ -244,13 +244,24 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   }));
 
   // Documentos tipo 'list': renderizado opcional del cuerpo MD + contexto de lista paginada.
-  // Usa renderedFileDocs para que htmlFragment esté disponible en cada item del listado.
+  // Recibe el pool completo de docs renderizados disponibles en este punto del pipeline
+  // para que `filters.type` pueda seleccionar cualquier tipo (file, author, event, etc.).
   // Genera un BuildDocument derivado por página (página 1 conserva la ruta original;
   // páginas siguientes usan <base>/N.md → <base>/N.html en la salida).
+  const listCandidatePool = [
+    ...renderedFileDocs,
+    ...renderedAuthorDocs,
+    ...renderedEventDocs,
+    ...renderedCollectionDocs,
+    ...renderedAuthorsDocs,
+    ...renderedEventsDocs,
+    ...renderedMenuDocs,
+    ...renderedCardDocs,
+  ];
   const listDocs = allDocs.filter((doc) => doc.type === 'list' && doc.kind !== 'block');
   const renderedListDocs = await renderDocuments(listDocs, ctx.concurrency ?? 4, renderCache, registry);
   const contextListDocs = renderedListDocs.flatMap((doc) =>
-    buildPagedListPipelineContexts(doc, finalSiteCtx, renderedFileDocs, siteConfig.listItemsLimit, authorDocumentIndex),
+    buildPagedListPipelineContexts(doc, finalSiteCtx, listCandidatePool, siteConfig.listItemsLimit, authorDocumentIndex),
   );
 
   const composedDocs = await composeDocuments(
