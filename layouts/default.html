@@ -1,5 +1,5 @@
 <header
-  class="sticky top-0 z-10 border-b border-accent-200/60 bg-white/95 shadow-[0_2px_30px_oklch(from_var(--color-accent-600)_l_c_h_/_0.08)] backdrop-blur-sm">
+  class="sticky top-0 z-10 border-b border-accent-200/60 bg-accent-50/95 shadow-[0_2px_30px_oklch(from_var(--color-accent-600)_l_c_h_/_0.08)] backdrop-blur-sm">
   <div
     class="max-w-8xl mx-auto flex items-center justify-between px-4 py-3 md:px-8">
     <a href="$home-href$" class="group flex items-center gap-3 no-underline">
@@ -23,7 +23,7 @@
       $if(menuHref)$
       <a
         href="$menuHref$"
-        class="relative inline-flex h-10 w-10 items-center justify-center rounded border border-accent-400/60 bg-accent-50/80 text-accent-700 no-underline transition-all duration-200 hover:border-accent-600/80 hover:text-accent-600 hover:shadow-[0_0_14px_-3px_oklch(from_var(--color-accent-600)_l_c_h_/_0.3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+        class="relative inline-flex h-10 w-10 items-center justify-center rounded border border-accent-400/60 bg-accent-50/80 text-accent-700 no-underline transition-all duration-200 hover:border-accent-600/80 hover:text-accent-600 hover:shadow-[0_0_14px_-3px_oklch(from_var(--color-accent-600)_l_c_h_/_0.3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400 focus-visible:ring-offset-2 focus-visible:ring-offset-accent-50"
         aria-label="$menuTitle$">
         <span
           class="pointer-events-none absolute top-0 left-0 h-3 w-3 border-t border-l border-accent-400/50"></span>
@@ -57,7 +57,7 @@
       <aside class="w-full shrink-0 lg:w-72 xl:w-80">
         $if(event-details)$
         <div
-          class="relative mt-4 mb-8 border border-accent-200/70 bg-gradient-to-br from-accent-50/60 to-white p-5">
+          class="relative mt-4 mb-8 border border-accent-200/70 bg-gradient-to-br from-accent-100/60 to-accent-50 p-5">
           <span
             class="pointer-events-none absolute top-0 left-0 h-3 w-3 border-t border-l border-accent-400/50"></span>
           <span
@@ -101,7 +101,7 @@
           <div class="space-y-3">
             $for(authors)$
             <div
-              class="relative border-l-2 border-accent-400/60 bg-gradient-to-r from-accent-50/60 to-white p-4 transition-all hover:border-accent-600/80 hover:shadow-[0_0_15px_-3px_oklch(from_var(--color-accent-600)_l_c_h_/_0.15)]">
+              class="relative border-l-2 border-accent-400/60 bg-gradient-to-r from-accent-100/60 to-accent-50 p-4 transition-all hover:border-accent-600/80 hover:shadow-[0_0_15px_-3px_oklch(from_var(--color-accent-600)_l_c_h_/_0.15)]">
               $if(href)$
               <a
                 href="$href$"
