@@ -1,5 +1,57 @@
 # Changelog
 
+## [0.4.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.3.0...v0.4.0) (2026-05-17)
+
+
+### Features
+
+* **builder:** agrega resolveEffectivePaths con prioridad de tres niveles ([0ce5d72](https://github.com/dcruzgalicia/iteraciones-cli/commit/0ce5d7277c1b7c3aae5edb8e851727186397e69d))
+* **builder:** añade [@source](https://github.com/source) themes/ al scan de Tailwind CSS ([608cae2](https://github.com/dcruzgalicia/iteraciones-cli/commit/608cae2ba17cf2fadb9f09d39c86eb6feaf512ec))
+* **builder:** implementa theme-resolver e integra selección de tema ([211cdfe](https://github.com/dcruzgalicia/iteraciones-cli/commit/211cdfea8663b44e63ab7b614052494d12f487ae)), closes [#186](https://github.com/dcruzgalicia/iteraciones-cli/issues/186)
+* **builder:** propaga cwd en el pipeline para soportar overrides de proyecto ([d1d8b73](https://github.com/dcruzgalicia/iteraciones-cli/commit/d1d8b736c6c7b01ab5dde315b6e5e55b488949a1)), closes [#187](https://github.com/dcruzgalicia/iteraciones-cli/issues/187)
+* **collection:** rediseñar context y pipeline para lista curada con paginación ([2447915](https://github.com/dcruzgalicia/iteraciones-cli/commit/24479152d700628051124054c37e254f71cbf5db))
+* **config:** agrega campo accent configurable en _iteraciones.yaml ([d6a24a6](https://github.com/dcruzgalicia/iteraciones-cli/commit/d6a24a6d92ecd8f2eb80f284862d513fd23ec7dd)), closes [#192](https://github.com/dcruzgalicia/iteraciones-cli/issues/192)
+* **css:** genera [@theme](https://github.com/theme) de accent dinámico y renombra utilidad bg-grid ([0d4dd00](https://github.com/dcruzgalicia/iteraciones-cli/commit/0d4dd0081ce981d8d3c4fe6c21f4c7f48073223b))
+* **css:** renombra bg-grid-emerald a bg-grid-lime y actualiza color ([6a037e9](https://github.com/dcruzgalicia/iteraciones-cli/commit/6a037e96dfc70deb4c823e9685272db4c178275b))
+* **events:** separar eventos en próximos y pasados con upcoming-items y past-items ([2326a33](https://github.com/dcruzgalicia/iteraciones-cli/commit/2326a33e36a5acdd04a410460635b912a6a00223))
+* **frontmatter:** añadir campo draft:boolean para excluir borradores ([50a5d1a](https://github.com/dcruzgalicia/iteraciones-cli/commit/50a5d1a6abd53697f5157359f59fd3bbcbddd0f7))
+* **frontmatter:** añadir campo items[] para type:collection curada ([070355c](https://github.com/dcruzgalicia/iteraciones-cli/commit/070355c30109230f940c078a23a680da5f830d44))
+* **list:** añadir campo filters al frontmatter de type:list ([982dc9c](https://github.com/dcruzgalicia/iteraciones-cli/commit/982dc9cc8a6363c3f170e6cb01c2a3902044247a))
+* **list:** aplicar filtros y ordenamiento en buildPagedListPipelineContexts ([cdf525e](https://github.com/dcruzgalicia/iteraciones-cli/commit/cdf525efdbfd700f4a0d8f2dd88d340ccdd9c67d))
+* **list:** pasar pool completo de docs renderizados a buildPagedListPipelineContexts ([00d403c](https://github.com/dcruzgalicia/iteraciones-cli/commit/00d403ca4c0d20617c56f80b6889ae74edf31bf9))
+* **orchestrator:** excluir docs con draft:true antes de que entren al pipeline ([4f2dd34](https://github.com/dcruzgalicia/iteraciones-cli/commit/4f2dd34aea2e0f1a9737d2a22aaac41dd5d16d58))
+* **orchestrator:** integrar collection curada; eliminar collectByType ([920a9f0](https://github.com/dcruzgalicia/iteraciones-cli/commit/920a9f0a17c38beb9274c804aabe3fd3bc8147e7))
+* **orchestrator:** reportar cuántos borradores se excluyeron del build ([f03a880](https://github.com/dcruzgalicia/iteraciones-cli/commit/f03a88055ed68db9d91f25b17145399ca669d9c9))
+* **pagination:** añadir paginationCtx opcional a los tres contextos de índice ([9d2939e](https://github.com/dcruzgalicia/iteraciones-cli/commit/9d2939e7de18a37cc628b2030d52f52e55d8c4a6))
+* **pagination:** añadir utilidades de paginación paginateItems y buildPaginationContext ([d1977de](https://github.com/dcruzgalicia/iteraciones-cli/commit/d1977de415f39ecaee85c3c07e8bd34a178ad705))
+* **pagination:** generar múltiples HTML por documento de tipo list, authors y events ([7bb0522](https://github.com/dcruzgalicia/iteraciones-cli/commit/7bb05227b7232cc58b38f1aec1261aa2c3014992))
+* soportar apertura del sitio con protocolo file:// ([48fa4b3](https://github.com/dcruzgalicia/iteraciones-cli/commit/48fa4b34231ef8ca0f2a896241233d26cd796fe2)), closes [#182](https://github.com/dcruzgalicia/iteraciones-cli/issues/182)
+* **template:** agrega tema oscuro built-in en themes/dark/ ([2e62652](https://github.com/dcruzgalicia/iteraciones-cli/commit/2e626526e8669efdfdd77cbcdabd2e529b3618f9))
+* **theme:** actualiza templates a clases accent-* genéricas ([7f90d35](https://github.com/dcruzgalicia/iteraciones-cli/commit/7f90d35f002e3cea616ed76296f309bef7ea5c55))
+* **theme:** cambia paleta del tema dark de emerald a lime ([e5338ae](https://github.com/dcruzgalicia/iteraciones-cli/commit/e5338aee81b69527533f89d527755502abd73448))
+* **theme:** cambia paleta del tema light de emerald a lime ([5460a46](https://github.com/dcruzgalicia/iteraciones-cli/commit/5460a467356d323290143836a7f37f385ce8396c))
+
+
+### Bug Fixes
+
+* **authors:** ordenar autores alfabéticamente por nombre en el índice authors ([994fb3f](https://github.com/dcruzgalicia/iteraciones-cli/commit/994fb3ff1533d21d063933c735391aba7faee6c7))
+* **authors:** usar locale es y tie-breaker determinístico en sortByTitleAsc ([d7e454a](https://github.com/dcruzgalicia/iteraciones-cli/commit/d7e454a7322105f1040de045a16c1c5a2ee9675c))
+* **builder:** avisa al usuario cuando el tema configurado es desconocido ([a9aeca1](https://github.com/dcruzgalicia/iteraciones-cli/commit/a9aeca1c642a8aa6a21163e99830aa0f0caf6322))
+* **builder:** corrige referencia a PANDOC_TEMPLATE_PATH en mensaje de error ([c3f911f](https://github.com/dcruzgalicia/iteraciones-cli/commit/c3f911f2a29538871c897154e14764413d71266e))
+* **config:** lee accent desde site.accent en lugar de la raíz del YAML ([b6c37e3](https://github.com/dcruzgalicia/iteraciones-cli/commit/b6c37e3c190171e2917a7f51ba8cb91a27e0b0f8))
+* **list:** incluir renderedListDocs en el pool para que filters.type:[list] funcione ([e2f0792](https://github.com/dcruzgalicia/iteraciones-cli/commit/e2f07929163aeeef7de4146472fc343aee9fd4d4))
+* marcar src/bin.ts como ejecutable (modo 100755) ([bfeeb60](https://github.com/dcruzgalicia/iteraciones-cli/commit/bfeeb60179d1f7a9acfa210bd684c141a616d346)), closes [#184](https://github.com/dcruzgalicia/iteraciones-cli/issues/184)
+* **orchestrator:** importar BuildDocument explícitamente en types.js ([ed3424c](https://github.com/dcruzgalicia/iteraciones-cli/commit/ed3424c829a09ea8aa319c8f436f423e5d8d6ae0))
+* reemplazar hrefs hardcodeados en footer del layout con $home-href$ ([ffa7613](https://github.com/dcruzgalicia/iteraciones-cli/commit/ffa76137ae1acf2b6cd14dd8198632c58532890d))
+* relativizar hrefs en HTML strings de region slots de bloques ([31c78ef](https://github.com/dcruzgalicia/iteraciones-cli/commit/31c78ef9a53dfa62bef0c8a071ed6f386fa7d8b7))
+* **template:** agrega newline al final de event.html y events.html ([d29150c](https://github.com/dcruzgalicia/iteraciones-cli/commit/d29150c008ad8ca5eb13c79a4583b470f64b3583))
+* **theme:** alinea ring-offset del botón dark con el fondo bg-surface-dark ([571d956](https://github.com/dcruzgalicia/iteraciones-cli/commit/571d9562e84c58607893fbafed56efa82534fd11))
+* **theme:** cambia fondo del tema light de blanco a accent-50 ([96156f1](https://github.com/dcruzgalicia/iteraciones-cli/commit/96156f11afcc003b03f369b6b5856f63725a9e11))
+* **theme:** corrige bg-grid-lime que no fue renombrado a bg-grid-accent ([227d46a](https://github.com/dcruzgalicia/iteraciones-cli/commit/227d46a055f58dd6a6d43228cdff2a545324a526))
+* **theme:** oscurece fondo del tema dark y agrega profundidad a gradientes ([3fe95bd](https://github.com/dcruzgalicia/iteraciones-cli/commit/3fe95bd8804fb2792e2d38abbdbea902da2d9bcc))
+* **theme:** reemplaza fondos green-950 y [#050](https://github.com/dcruzgalicia/iteraciones-cli/issues/050)e08 por accent-950 en dark ([53747be](https://github.com/dcruzgalicia/iteraciones-cli/commit/53747bea055e344472766511c6a47ed948d5fcdc))
+* **theme:** reemplaza prose-lime por prose-accent en templates ([76f1ed2](https://github.com/dcruzgalicia/iteraciones-cli/commit/76f1ed260b51238b7d0f0a475ee8df6300ece83c))
+
 ## [0.3.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.2.0...v0.3.0) (2026-05-16)
 
 
