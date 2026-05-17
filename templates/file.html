@@ -1,11 +1,11 @@
 <article class="py-6">
   <header class="mb-10 pb-8">
     <div class="mb-4 flex items-center gap-4">
-      <span class="font-mono text-xs tracking-widest text-emerald-600 uppercase"
+      <span class="font-mono text-xs tracking-widest text-lime-600 uppercase"
         >// archivo</span
       >
       <span
-        class="h-px flex-1 bg-gradient-to-r from-emerald-200/50 to-transparent"></span>
+        class="h-px flex-1 bg-gradient-to-r from-lime-200/50 to-transparent"></span>
     </div>
     $if(title)$
     <h1 class="text-4xl font-bold tracking-tight text-zinc-900 lg:text-5xl">
@@ -13,16 +13,16 @@
     </h1>
     $endif$ $if(author)$
     <div class="mt-4 flex items-center gap-2 font-mono text-sm">
-      <span class="text-emerald-300">↳</span>
+      <span class="text-lime-300">↳</span>
       $if(author-href)$
-      <a href="$author-href$" class="text-emerald-700 no-underline transition-colors hover:text-emerald-600">$author$</a>
+      <a href="$author-href$" class="text-lime-700 no-underline transition-colors hover:text-lime-600">$author$</a>
       $else$
-      <span class="text-emerald-700">$author$</span>
+      <span class="text-lime-700">$author$</span>
       $endif$
     </div>
     $endif$
     <div
-      class="mt-6 h-px bg-gradient-to-r from-emerald-400/40 via-emerald-200/20 to-transparent"></div>
+      class="mt-6 h-px bg-gradient-to-r from-lime-400/40 via-lime-200/20 to-transparent"></div>
   </header>
-  <div class="prose prose-emerald lg:prose-lg max-w-none">$body$</div>
+  <div class="prose prose-lime lg:prose-lg max-w-none">$body$</div>
 </article>

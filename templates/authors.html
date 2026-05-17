@@ -1,38 +1,38 @@
 <div class="space-y-8 py-6">
   <header class="mb-2">
     <div class="mb-4 flex items-center gap-4">
-      <span class="font-mono text-xs tracking-widest text-emerald-600 uppercase"
+      <span class="font-mono text-xs tracking-widest text-lime-600 uppercase"
         >// autores</span
       >
       <span
-        class="h-px flex-1 bg-gradient-to-r from-emerald-200/50 to-transparent"></span>
+        class="h-px flex-1 bg-gradient-to-r from-lime-200/50 to-transparent"></span>
     </div>
     $if(title)$
     <h1 class="text-4xl font-bold tracking-tight text-zinc-900 lg:text-5xl">
       $title$
     </h1>
     <div
-      class="mt-6 h-px bg-gradient-to-r from-emerald-400/40 via-emerald-200/20 to-transparent"></div>
+      class="mt-6 h-px bg-gradient-to-r from-lime-400/40 via-lime-200/20 to-transparent"></div>
     $endif$
   </header>
   $if(body)$
-  <div class="prose prose-emerald lg:prose-lg max-w-none">$body$</div>
+  <div class="prose prose-lime lg:prose-lg max-w-none">$body$</div>
   $endif$ $if(authors)$
   <div class="space-y-0">
     <div
-      class="mb-4 font-mono text-xs font-bold tracking-widest text-emerald-600 uppercase">
+      class="mb-4 font-mono text-xs font-bold tracking-widest text-lime-600 uppercase">
       >> Directorio
     </div>
-    <div class="divide-y divide-emerald-200/50">
+    <div class="divide-y divide-lime-200/50">
       $for(authors)$
       <div class="group flex items-start gap-6 py-4 first:pt-0">
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-2">
-            <span class="font-mono text-emerald-300">▸</span>
+            <span class="font-mono text-lime-300">▸</span>
             $if(href)$
             <a
               href="$href$"
-              class="font-semibold tracking-tight text-zinc-700 no-underline transition-colors hover:text-emerald-700">
+              class="font-semibold tracking-tight text-zinc-700 no-underline transition-colors hover:text-lime-700">
               $title$
             </a>
             $else$
@@ -53,12 +53,12 @@
   </div>
   $else$
   <div
-    class="border border-dashed border-emerald-200/40 px-5 py-8 text-center font-mono text-sm text-zinc-400">
+    class="border border-dashed border-lime-200/40 px-5 py-8 text-center font-mono text-sm text-zinc-400">
     [ Sin autores ]
   </div>
   $endif$ $if(has-pagination)$
   <nav
-    class="flex flex-col gap-4 border-t border-emerald-200/40 pt-6 sm:flex-row sm:items-center sm:justify-between"
+    class="flex flex-col gap-4 border-t border-lime-200/40 pt-6 sm:flex-row sm:items-center sm:justify-between"
     aria-label="Paginación de autores">
     <div class="font-mono text-xs tracking-widest text-zinc-400 uppercase">
       // página $page-number$ de $page-count$ · $total-items$ registros
@@ -67,23 +67,23 @@
       $if(page-previous)$
       <a
         href="$page-previous.href$"
-        class="inline-flex items-center rounded border border-emerald-400/60 bg-emerald-50/70 px-4 py-2 font-mono text-xs font-semibold tracking-widest text-emerald-700 no-underline transition-all duration-200 hover:border-emerald-600/80 hover:text-emerald-600 hover:shadow-[0_0_14px_-3px_rgba(5,150,105,0.25)] uppercase">
+        class="inline-flex items-center rounded border border-lime-400/60 bg-lime-50/70 px-4 py-2 font-mono text-xs font-semibold tracking-widest text-lime-700 no-underline transition-all duration-200 hover:border-lime-600/80 hover:text-lime-600 hover:shadow-[0_0_14px_-3px_rgba(101,163,13,0.25)] uppercase">
         Anterior
       </a>
       $else$
       <span
-        class="inline-flex items-center rounded border border-emerald-100 px-4 py-2 font-mono text-xs font-semibold tracking-widest text-zinc-300 uppercase">
+        class="inline-flex items-center rounded border border-lime-100 px-4 py-2 font-mono text-xs font-semibold tracking-widest text-zinc-300 uppercase">
         Anterior
       </span>
       $endif$ $if(page-next)$
       <a
         href="$page-next.href$"
-        class="inline-flex items-center rounded border border-emerald-400/60 bg-emerald-50/70 px-4 py-2 font-mono text-xs font-semibold tracking-widest text-emerald-700 no-underline transition-all duration-200 hover:border-emerald-600/80 hover:text-emerald-600 hover:shadow-[0_0_14px_-3px_rgba(5,150,105,0.25)] uppercase">
+        class="inline-flex items-center rounded border border-lime-400/60 bg-lime-50/70 px-4 py-2 font-mono text-xs font-semibold tracking-widest text-lime-700 no-underline transition-all duration-200 hover:border-lime-600/80 hover:text-lime-600 hover:shadow-[0_0_14px_-3px_rgba(101,163,13,0.25)] uppercase">
         Siguiente
       </a>
       $else$
       <span
-        class="inline-flex items-center rounded border border-emerald-100 px-4 py-2 font-mono text-xs font-semibold tracking-widest text-zinc-300 uppercase">
+        class="inline-flex items-center rounded border border-lime-100 px-4 py-2 font-mono text-xs font-semibold tracking-widest text-zinc-300 uppercase">
         Siguiente
       </span>
       $endif$
