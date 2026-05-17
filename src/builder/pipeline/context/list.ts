@@ -52,8 +52,11 @@ function sortByDateDesc(docs: BuildDocument[]): BuildDocument[] {
  * combinando el contexto del sitio con el contexto de lista.
  *
  * Usado exclusivamente para documentos con `kind === 'block'` (bloques).
- * Los bloques no se paginan: reciben todos los `renderedFileDocs` como una sola lista.
- * Los filtros declarados en `doc.frontmatter.filters` se aplican sobre `renderedFileDocs`.
+ * Los bloques no se paginan: reciben solo el pool de `renderedFileDocs` disponible en el
+ * pre-paso de bloques (que ocurre antes de renderizar collection, card, menu, etc.).
+ * Por ello, `filters.type` en bloques funciona solo para los tipos presentes en ese pool
+ * (file, author, event). Esta es una limitación arquitectural conocida: el pre-paso de
+ * bloques está diseñado para ejecutarse antes de la mayoría de renders de tipo.
  */
 export function buildListPipelineContext(
   doc: BuildDocument,

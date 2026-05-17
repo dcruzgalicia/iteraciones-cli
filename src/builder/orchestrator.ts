@@ -243,11 +243,13 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     templateContext: buildCardPipelineContext(doc, finalSiteCtx),
   }));
 
-  // Documentos tipo 'list': renderizado opcional del cuerpo MD + contexto de lista paginada.
-  // Recibe el pool completo de docs renderizados disponibles en este punto del pipeline
-  // para que `filters.type` pueda seleccionar cualquier tipo (file, author, event, etc.).
+  // Documentos tipo 'list': el body MD se renderiza primero (antes del pool) para que
+  // los propios docs type:list queden disponibles en el pool y `filters.type: [list]`
+  // pueda devolver resultados. El contexto se construye después con el pool completo.
   // Genera un BuildDocument derivado por página (página 1 conserva la ruta original;
   // páginas siguientes usan <base>/N.md → <base>/N.html en la salida).
+  const listDocs = allDocs.filter((doc) => doc.type === 'list' && doc.kind !== 'block');
+  const renderedListDocs = await renderDocuments(listDocs, ctx.concurrency ?? 4, renderCache, registry);
   const listCandidatePool = [
     ...renderedFileDocs,
     ...renderedAuthorDocs,
@@ -257,9 +259,8 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     ...renderedEventsDocs,
     ...renderedMenuDocs,
     ...renderedCardDocs,
+    ...renderedListDocs,
   ];
-  const listDocs = allDocs.filter((doc) => doc.type === 'list' && doc.kind !== 'block');
-  const renderedListDocs = await renderDocuments(listDocs, ctx.concurrency ?? 4, renderCache, registry);
   const contextListDocs = renderedListDocs.flatMap((doc) =>
     buildPagedListPipelineContexts(doc, finalSiteCtx, listCandidatePool, siteConfig.listItemsLimit, authorDocumentIndex),
   );
