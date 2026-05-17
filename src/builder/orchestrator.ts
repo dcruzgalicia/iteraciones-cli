@@ -22,7 +22,7 @@ import { buildListPipelineContext, buildPagedListPipelineContexts } from './pipe
 import { buildMenuPipelineContext } from './pipeline/context/menu.js';
 import { mergeContexts } from './pipeline/context/merge.js';
 import { discover } from './pipeline/discover.js';
-import { renderDocuments } from './pipeline/render.js';
+import { type RenderCache, renderDocuments } from './pipeline/render.js';
 import { writeDocuments } from './pipeline/write.js';
 import type { AuthorDocumentIndex, BuildContext, BuildDocument } from './types.js';
 
@@ -40,6 +40,39 @@ export interface BuildOptions {
   verbose?: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// Interfaces internas de resultado entre funciones del pipeline
+// ---------------------------------------------------------------------------
+
+interface SetupResult {
+  ctx: BuildContext;
+  renderCache: RenderCache | undefined;
+  composeCache: ComposeCache | undefined;
+  registry: PluginRegistry;
+  hasPlugins: boolean;
+}
+
+interface PrimaryRenderResult {
+  renderedFileDocs: BuildDocument[];
+  renderedAuthorDocs: BuildDocument[];
+  renderedEventDocs: BuildDocument[];
+  authorDocumentIndex: AuthorDocumentIndex;
+}
+
+interface BlocksPrestepResult {
+  finalSiteCtx: TemplateContext;
+  renderedBlockDocs: BuildDocument[];
+}
+
+interface ContextPhaseResult {
+  allContextDocs: BuildDocument[];
+  allRenderedDocs: BuildDocument[];
+}
+
+// ---------------------------------------------------------------------------
+// Helpers puros (sin efectos secundarios)
+// ---------------------------------------------------------------------------
+
 /** Excluye del pool todos los documentos marcados con `draft: true`. */
 function excludeDrafts(docs: BuildDocument[]): BuildDocument[] {
   return docs.filter((doc) => !doc.frontmatter.draft);
@@ -47,7 +80,7 @@ function excludeDrafts(docs: BuildDocument[]): BuildDocument[] {
 
 /**
  * Calcula el prefijo relativo para navegar desde `relativePath` hasta la raíz del sitio.
- * Ejemplos: 'index.md' → './',  'personas/sofia.md' → '../',  'a/b/c.md' → '../../'
+ * Ejemplos: 'index.md' -> './',  'personas/sofia.md' -> '../',  'a/b/c.md' -> '../../'
  */
 function computeRootPrefix(relativePath: string): string {
   const depth = relativePath.split('/').length - 1;
@@ -109,32 +142,15 @@ function buildBlockTypeContext(
   }
 }
 
-export async function build(cwd: string, options: BuildOptions = {}): Promise<void> {
-  // --dry-run: solo descubrir y clasificar; mostrar resumen sin generar salida.
-  if (options.dryRun) {
-    // Carga la configuración para validar que sea correcta antes de reportar el resumen;
-    // si hay un error de esquema el usuario lo ve incluso en dry-run.
-    const dryConfig = await loadSiteConfig(cwd);
-    const sourceDocs = await discover(cwd);
-    const classified = classifyDocuments(sourceDocs, dryConfig.theme, cwd);
-    const allDocs = excludeDrafts(classified);
-    const draftCount = classified.length - allDocs.length;
-    const counts = new Map<string, number>();
-    for (const doc of allDocs) {
-      const type = doc.type ?? 'unknown';
-      counts.set(type, (counts.get(type) ?? 0) + 1);
-    }
-    process.stdout.write(`[dry-run] Se procesarían ${allDocs.length} documentos`);
-    if (draftCount > 0) process.stdout.write(` (${draftCount} omitido${draftCount > 1 ? 's' : ''} por draft:true)`);
-    process.stdout.write(':\n');
-    for (const [type, count] of [...counts.entries()].sort()) {
-      process.stdout.write(`  ${type.padEnd(12)}: ${count}\n`);
-    }
-    return;
-  }
+// ---------------------------------------------------------------------------
+// Funciones del pipeline (Fase 1a)
+// ---------------------------------------------------------------------------
 
-  const log = options.verbose ? (msg: string) => process.stdout.write(`${msg}\n`) : (_msg: string) => undefined;
-
+/**
+ * Prepara el entorno de build: verifica Pandoc, carga config y plugins,
+ * crea el BuildContext, limpia el outputDir, genera assets y construye las caches.
+ */
+async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (msg: string) => void): Promise<SetupResult> {
   const pandocVersion = await checkPandoc();
   const siteConfig = await loadSiteConfig(cwd);
 
@@ -150,11 +166,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     concurrency: options.concurrency ?? 4,
   };
 
-  // Limpia outputDir y genera CSS/assets antes de construir el contexto del sitio.
   await clean(ctx.outputDir);
   ctx.cssPath = await buildAssets(ctx.outputDir, ctx.cwd, siteConfig, { noTailwind: options.noTailwind });
   log(`Assets generados en ${ctx.outputDir}`);
-  const siteCtx = buildSiteContext(siteConfig, ctx.cssPath);
 
   const pkg = (await Bun.file(join(import.meta.dir, '../../package.json')).json()) as { version: string };
   const cacheManager = new CacheManager(cwd);
@@ -163,37 +177,59 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // ruta no cambia; en ese caso se debe limpiar la caché manualmente.
   const pluginFingerprint = siteConfig.plugins.length > 0 ? hash(JSON.stringify(siteConfig.plugins)) : undefined;
   // --no-cache: omitir caché completamente (renderDocuments/composeDocuments aceptan undefined).
-  const renderCache = options.noCache ? undefined : { manager: cacheManager, cliVersion: pkg.version, pandocVersion, pluginFingerprint };
+  const renderCache: RenderCache | undefined = options.noCache
+    ? undefined
+    : { manager: cacheManager, cliVersion: pkg.version, pandocVersion, pluginFingerprint };
   const composeCache: ComposeCache | undefined = options.noCache ? undefined : { manager: cacheManager, cliVersion: pkg.version, pluginFingerprint };
 
+  return { ctx, renderCache, composeCache, registry, hasPlugins: plugins.length > 0 };
+}
+
+/**
+ * Descubre, clasifica y filtra borradores. Retorna el pool de documentos activos.
+ */
+async function runDiscovery(cwd: string, ctx: BuildContext, log: (msg: string) => void): Promise<BuildDocument[]> {
   const sourceDocs = await discover(cwd);
   log(`Descubiertos ${sourceDocs.length} documentos`);
   const classified = classifyDocuments(sourceDocs, ctx.siteConfig.theme, ctx.cwd);
   const allDocs = excludeDrafts(classified);
   const draftCount = classified.length - allDocs.length;
   if (draftCount > 0) log(`Excluidos ${draftCount} borrador${draftCount > 1 ? 'es' : ''} (draft:true)`);
+  return allDocs;
+}
 
-  // Detectar el documento primario de menú para inyectar menuHref/menuTitle en
-  // el siteCtx compartido por todas las páginas. Debe hacerse antes de construir
-  // cualquier templateContext para que el botón de menú aparezca en el layout.
+/**
+ * Construye el siteCtx base e inyecta menuHref/menuTitle si existe un documento
+ * primario de tipo 'menu'. El contexto resultante se comparte por todas las páginas.
+ */
+function buildEnrichedSiteContext(ctx: BuildContext, allDocs: BuildDocument[]): TemplateContext {
+  const siteCtx = buildSiteContext(ctx.siteConfig, ctx.cssPath);
   const primaryMenuDoc = allDocs.find((doc) => doc.type === 'menu' && doc.kind !== 'block');
-  const enrichedSiteCtx = primaryMenuDoc
+  return primaryMenuDoc
     ? {
         ...siteCtx,
         menuHref: `/${primaryMenuDoc.relativePath.replace(/\.md$/, '.html')}`,
         menuTitle: escapeHtml(primaryMenuDoc.frontmatter.title || 'Menú'),
       }
     : siteCtx;
+}
 
-  // Renderizado Pandoc previo de los tipos que los bloques pueden necesitar como datos
-  // relacionados (file, author, event). Se hace antes del pre-paso de bloques para que
-  // buildBlockTypeContext reciba datos reales en lugar de arrays vacíos.
+/**
+ * Renderiza (Pandoc) los tipos primarios: file, author, event.
+ * Construye el authorDocumentIndex a partir de los autores renderizados.
+ * Estos datos son prerequisito para el pre-paso de bloques.
+ */
+async function runPrimaryRender(
+  allDocs: BuildDocument[],
+  ctx: BuildContext,
+  renderCache: RenderCache | undefined,
+  registry: PluginRegistry,
+): Promise<PrimaryRenderResult> {
   const fileDocs = allDocs.filter((doc) => doc.type === 'file' && doc.kind !== 'block');
   const renderedFileDocs = await renderDocuments(fileDocs, ctx.concurrency ?? 4, renderCache, registry);
 
   const authorDocs = allDocs.filter((doc) => doc.type === 'author' && doc.kind !== 'block');
   const renderedAuthorDocs = await renderDocuments(authorDocs, ctx.concurrency ?? 4, renderCache, registry);
-
   // Índice de autores por título normalizado (lowercase). Se construye aquí para que
   // esté disponible antes del pre-paso de bloques y del paso de contexto de páginas.
   const authorDocumentIndex = createAuthorDocumentIndex(renderedAuthorDocs);
@@ -201,11 +237,27 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const eventDocs = allDocs.filter((doc) => doc.type === 'event' && doc.kind !== 'block');
   const renderedEventDocs = await renderDocuments(eventDocs, ctx.concurrency ?? 4, renderCache, registry);
 
-  // Pre-paso de bloques: renderizar todos los docs con kind === 'block', construir
-  // sus contextos de tipo con los datos reales de página, aplicar sus templates
-  // para obtener innerHtml y agrupar por región. El resultado se inyecta en
-  // finalSiteCtx para que los region slots del layout se rellenen en todas las páginas.
-  // Los bloques NO generan su propio archivo HTML de salida.
+  return { renderedFileDocs, renderedAuthorDocs, renderedEventDocs, authorDocumentIndex };
+}
+
+/**
+ * Pre-paso de bloques: renderiza todos los docs con kind === 'block', construye
+ * sus contextos con datos reales, aplica templates para obtener innerHtml y
+ * agrupa por región. El resultado se inyecta en finalSiteCtx para que los
+ * region slots del layout se rellenen en todas las páginas.
+ * Los bloques NO generan su propio archivo HTML de salida.
+ */
+async function runBlocksPrestep(
+  allDocs: BuildDocument[],
+  ctx: BuildContext,
+  renderCache: RenderCache | undefined,
+  registry: PluginRegistry,
+  enrichedSiteCtx: TemplateContext,
+  renderedFileDocs: BuildDocument[],
+  renderedAuthorDocs: BuildDocument[],
+  renderedEventDocs: BuildDocument[],
+  authorDocumentIndex: AuthorDocumentIndex,
+): Promise<BlocksPrestepResult> {
   // El pool para bloques de tipo collection incluye los docs renderizados disponibles
   // en este punto del pipeline (file, author, event).
   const collectionBlockPool = [...renderedFileDocs, ...renderedAuthorDocs, ...renderedEventDocs];
@@ -224,86 +276,88 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     ),
   }));
   const regionBlocks = await renderBlocksToRegions(contextBlockDocs);
-  const finalSiteCtx: TemplateContext = { ...enrichedSiteCtx, ...regionBlocks };
+  return { finalSiteCtx: { ...enrichedSiteCtx, ...regionBlocks }, renderedBlockDocs };
+}
 
-  // Contextos para los docs ya renderizados (file). Se fusionan con buildRelatedAuthorsContext
-  // para que el slot `authors` del sidebar-primary se rellene si el doc tiene autor(es)
-  // con documentos de tipo 'author' en el sitio.
+/**
+ * Fase de contexto: renderiza (Pandoc) los tipos restantes y construye el
+ * templateContext de cada documento. Retorna allContextDocs (listos para compose)
+ * y allRenderedDocs (necesario para la poda de caché al final del build).
+ */
+async function runContextPhase(
+  allDocs: BuildDocument[],
+  ctx: BuildContext,
+  renderCache: RenderCache | undefined,
+  registry: PluginRegistry,
+  finalSiteCtx: TemplateContext,
+  renderedFileDocs: BuildDocument[],
+  renderedAuthorDocs: BuildDocument[],
+  renderedEventDocs: BuildDocument[],
+  renderedBlockDocs: BuildDocument[],
+  authorDocumentIndex: AuthorDocumentIndex,
+): Promise<ContextPhaseResult> {
+  const { listItemsLimit } = ctx.siteConfig;
+  const concurrency = ctx.concurrency ?? 4;
+
+  // file: se fusionan con buildRelatedAuthorsContext para rellenar el slot `authors`.
   const contextFileDocs = renderedFileDocs.map((doc) => ({
     ...doc,
     templateContext: mergeContexts(buildContext(doc, finalSiteCtx, authorDocumentIndex), buildRelatedAuthorsContext(doc, authorDocumentIndex)),
   }));
 
-  // Documentos tipo 'collection': lista curada definida por items: en frontmatter.
-  // Renderiza primero el body de cada collection, luego busca cada ruta de items:
-  // en el pool disponible (file, author, event). Error de build si una ruta no existe.
-  // Genera un BuildDocument derivado por página si items supera listItemsLimit.
+  // collection: lista curada por items: en frontmatter. Genera páginas si supera listItemsLimit.
   const collectionPool = [...renderedFileDocs, ...renderedAuthorDocs, ...renderedEventDocs];
   const collectionDocs = allDocs.filter((doc) => doc.type === 'collection' && doc.kind !== 'block');
-  const renderedCollectionDocs = await renderDocuments(collectionDocs, ctx.concurrency ?? 4, renderCache, registry);
+  const renderedCollectionDocs = await renderDocuments(collectionDocs, concurrency, renderCache, registry);
   const contextCollectionDocs = renderedCollectionDocs.flatMap((doc) =>
-    buildPagedCollectionPipelineContexts(doc, finalSiteCtx, collectionPool, siteConfig.listItemsLimit, authorDocumentIndex),
+    buildPagedCollectionPipelineContexts(doc, finalSiteCtx, collectionPool, listItemsLimit, authorDocumentIndex),
   );
 
-  // Documentos tipo 'author': contexto de autor (bio + publicaciones relacionadas).
-  // Usa renderedFileDocs completos (sin límite de listItemsLimit) para no truncar
-  // las publicaciones del autor si hay más docs que el top-N global.
+  // author: contexto individual con publicaciones relacionadas (sin límite de listItemsLimit).
   const contextAuthorDocs = renderedAuthorDocs.map((doc) => ({
     ...doc,
     templateContext: buildAuthorPipelineContext(doc, finalSiteCtx, renderedFileDocs),
   }));
 
-  // Documentos tipo 'authors': renderizado opcional + contexto de índice de autores paginado.
-  // Usa renderedAuthorDocs para que htmlFragment (bio) esté disponible en el listado.
-  // Genera un BuildDocument derivado por página (página 1 conserva la ruta original;
-  // páginas siguientes usan <base>/N.md → <base>/N.html en la salida).
+  // authors: índice paginado de autores.
   const authorsDocs = allDocs.filter((doc) => doc.type === 'authors' && doc.kind !== 'block');
-  const renderedAuthorsDocs = await renderDocuments(authorsDocs, ctx.concurrency ?? 4, renderCache, registry);
+  const renderedAuthorsDocs = await renderDocuments(authorsDocs, concurrency, renderCache, registry);
   const contextAuthorsDocs = renderedAuthorsDocs.flatMap((doc) =>
-    buildPagedAuthorsPipelineContexts(doc, finalSiteCtx, renderedAuthorDocs, siteConfig.listItemsLimit),
+    buildPagedAuthorsPipelineContexts(doc, finalSiteCtx, renderedAuthorDocs, listItemsLimit),
   );
 
-  // Documentos tipo 'event': contexto de evento individual.
-  // Los speakers se resuelven desde authorDocumentIndex para enriquecer con href y body.
+  // event: contexto individual; speakers resueltos desde authorDocumentIndex.
   const contextEventDocs = renderedEventDocs.map((doc) => ({
     ...doc,
     templateContext: buildEventPipelineContext(doc, finalSiteCtx, authorDocumentIndex),
   }));
 
-  // Documentos tipo 'events': renderizado opcional + contexto de índice de eventos paginado.
-  // Usa renderedEventDocs para exponer date, time, location, modality de cada evento.
-  // Genera un BuildDocument derivado por página (misma lógica que authors y list).
+  // events: índice paginado de eventos.
   const eventsDocs = allDocs.filter((doc) => doc.type === 'events' && doc.kind !== 'block');
-  const renderedEventsDocs = await renderDocuments(eventsDocs, ctx.concurrency ?? 4, renderCache, registry);
+  const renderedEventsDocs = await renderDocuments(eventsDocs, concurrency, renderCache, registry);
   const contextEventsDocs = renderedEventsDocs.flatMap((doc) =>
-    buildPagedEventsPipelineContexts(doc, finalSiteCtx, renderedEventDocs, siteConfig.listItemsLimit),
+    buildPagedEventsPipelineContexts(doc, finalSiteCtx, renderedEventDocs, listItemsLimit),
   );
 
-  // Documentos tipo 'menu': renderizado opcional del cuerpo MD + contexto de navegación.
-  // Los items provienen del frontmatter.nav del propio documento.
+  // menu: renderizado opcional del cuerpo MD + contexto de navegación.
   const menuDocs = allDocs.filter((doc) => doc.type === 'menu' && doc.kind !== 'block');
-  const renderedMenuDocs = await renderDocuments(menuDocs, ctx.concurrency ?? 4, renderCache, registry);
+  const renderedMenuDocs = await renderDocuments(menuDocs, concurrency, renderCache, registry);
   const contextMenuDocs = renderedMenuDocs.map((doc) => ({
     ...doc,
     templateContext: buildMenuPipelineContext(doc, finalSiteCtx),
   }));
 
-  // Documentos tipo 'card': solo se procesan los de kind 'page' (los bloques ya
-  // se procesaron en el pre-paso de bloques y no generan archivos de salida propios).
+  // card: solo kind 'page' (los bloques ya se procesaron en el pre-paso).
   const cardDocs = allDocs.filter((doc) => doc.type === 'card' && doc.kind !== 'block');
-  const renderedCardDocs = await renderDocuments(cardDocs, ctx.concurrency ?? 4, renderCache, registry);
+  const renderedCardDocs = await renderDocuments(cardDocs, concurrency, renderCache, registry);
   const contextCardDocs = renderedCardDocs.map((doc) => ({
     ...doc,
     templateContext: buildCardPipelineContext(doc, finalSiteCtx),
   }));
 
-  // Documentos tipo 'list': el body MD se renderiza primero (antes del pool) para que
-  // los propios docs type:list queden disponibles en el pool y `filters.type: [list]`
-  // pueda devolver resultados. El contexto se construye después con el pool completo.
-  // Genera un BuildDocument derivado por página (página 1 conserva la ruta original;
-  // páginas siguientes usan <base>/N.md → <base>/N.html en la salida).
+  // list: renderiza primero para incluirse en su propio pool (filters.type: [list]).
   const listDocs = allDocs.filter((doc) => doc.type === 'list' && doc.kind !== 'block');
-  const renderedListDocs = await renderDocuments(listDocs, ctx.concurrency ?? 4, renderCache, registry);
+  const renderedListDocs = await renderDocuments(listDocs, concurrency, renderCache, registry);
   const listCandidatePool = [
     ...renderedFileDocs,
     ...renderedAuthorDocs,
@@ -316,7 +370,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     ...renderedListDocs,
   ];
   const contextListDocs = renderedListDocs.flatMap((doc) =>
-    buildPagedListPipelineContexts(doc, finalSiteCtx, listCandidatePool, siteConfig.listItemsLimit, authorDocumentIndex),
+    buildPagedListPipelineContexts(doc, finalSiteCtx, listCandidatePool, listItemsLimit, authorDocumentIndex),
   );
 
   const allContextDocs = [
@@ -330,27 +384,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     ...contextCardDocs,
     ...contextListDocs,
   ];
-  const relativizedDocs = allContextDocs.map((doc) => ({
-    ...doc,
-    templateContext: makeRelativeContext(doc.templateContext, computeRootPrefix(doc.relativePath)) as TemplateContext,
-  }));
-  const composedDocs = await composeDocuments(relativizedDocs, ctx, composeCache, registry);
-  const writtenDocs = await writeDocuments(composedDocs, ctx);
-  log(`Escritos ${writtenDocs.length} archivos en ${ctx.outputDir}`);
-
-  // afterBuild: notifica a los plugins que el build finalizó con las rutas de salida.
-  // Se incluyen los assets conocidos (CSS y logo si está configurado). Las fuentes
-  // copiadas desde node_modules se omiten porque buildAssets no retorna su lista.
-  if (plugins.length > 0) {
-    const docOutputPaths = writtenDocs.map((doc) => doc.relativePath.replace(/\.md$/, '.html'));
-    const assetPaths: string[] = ['css/styles.css'];
-    if (siteConfig.logo?.trim()) assetPaths.push(siteConfig.logo.trim());
-    await registry.runAfterBuild({ outputDir: ctx.outputDir, outputPaths: [...assetPaths, ...docOutputPaths] });
-  }
-
-  // Podar entradas obsoletas del scope 'render' usando las claves de todos los
-  // documentos procesados en esta ejecución. Se hace al final para no eliminar
-  // entradas que aún no han sido escritas por los batches posteriores.
   const allRenderedDocs = [
     ...renderedFileDocs,
     ...renderedAuthorDocs,
@@ -363,8 +396,109 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     ...renderedCardDocs,
     ...renderedListDocs,
   ];
+
+  return { allContextDocs, allRenderedDocs };
+}
+
+/**
+ * Fase final: relativiza contextos, compone HTML, escribe archivos,
+ * ejecuta el hook afterBuild y poda la caché de render.
+ */
+async function runFinalization(
+  allContextDocs: BuildDocument[],
+  allRenderedDocs: BuildDocument[],
+  ctx: BuildContext,
+  composeCache: ComposeCache | undefined,
+  renderCache: RenderCache | undefined,
+  registry: PluginRegistry,
+  hasPlugins: boolean,
+  log: (msg: string) => void,
+): Promise<void> {
+  const relativizedDocs = allContextDocs.map((doc) => ({
+    ...doc,
+    templateContext: makeRelativeContext(doc.templateContext, computeRootPrefix(doc.relativePath)) as TemplateContext,
+  }));
+  const composedDocs = await composeDocuments(relativizedDocs, ctx, composeCache, registry);
+  const writtenDocs = await writeDocuments(composedDocs, ctx);
+  log(`Escritos ${writtenDocs.length} archivos en ${ctx.outputDir}`);
+
+  // afterBuild: notifica a los plugins con las rutas de salida.
+  // Las fuentes copiadas desde node_modules se omiten porque buildAssets no retorna su lista.
+  if (hasPlugins) {
+    const docOutputPaths = writtenDocs.map((doc) => doc.relativePath.replace(/\.md$/, '.html'));
+    const assetPaths: string[] = ['css/styles.css'];
+    if (ctx.siteConfig.logo?.trim()) assetPaths.push(ctx.siteConfig.logo.trim());
+    await registry.runAfterBuild({ outputDir: ctx.outputDir, outputPaths: [...assetPaths, ...docOutputPaths] });
+  }
+
+  // Podar entradas obsoletas del scope 'render' usando las claves de todos los
+  // documentos procesados en esta ejecución. Se hace al final para no eliminar
+  // entradas que aún no han sido escritas por los batches posteriores.
   if (renderCache) {
     const allRenderKeys = new Set(allRenderedDocs.map((doc) => hash(doc.sourceHash, renderCache.cliVersion, renderCache.pandocVersion)));
     await renderCache.manager.prune('render', allRenderKeys);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Punto de entrada público
+// ---------------------------------------------------------------------------
+
+export async function build(cwd: string, options: BuildOptions = {}): Promise<void> {
+  // --dry-run: solo descubrir y clasificar; mostrar resumen sin generar salida.
+  if (options.dryRun) {
+    const dryConfig = await loadSiteConfig(cwd);
+    const sourceDocs = await discover(cwd);
+    const classified = classifyDocuments(sourceDocs, dryConfig.theme, cwd);
+    const allDocs = excludeDrafts(classified);
+    const draftCount = classified.length - allDocs.length;
+    const counts = new Map<string, number>();
+    for (const doc of allDocs) {
+      const type = doc.type ?? 'unknown';
+      counts.set(type, (counts.get(type) ?? 0) + 1);
+    }
+    process.stdout.write(`[dry-run] Se procesarían ${allDocs.length} documentos`);
+    if (draftCount > 0) process.stdout.write(` (${draftCount} omitido${draftCount > 1 ? 'es' : ''} por draft:true)`);
+    process.stdout.write(':\n');
+    for (const [type, count] of [...counts.entries()].sort()) {
+      process.stdout.write(`  ${type.padEnd(12)}: ${count}\n`);
+    }
+    return;
+  }
+
+  const log = options.verbose ? (msg: string) => process.stdout.write(`${msg}\n`) : (_msg: string) => undefined;
+
+  const { ctx, renderCache, composeCache, registry, hasPlugins } = await setupBuildEnvironment(cwd, options, log);
+  const allDocs = await runDiscovery(cwd, ctx, log);
+  const enrichedSiteCtx = buildEnrichedSiteContext(ctx, allDocs);
+  const { renderedFileDocs, renderedAuthorDocs, renderedEventDocs, authorDocumentIndex } = await runPrimaryRender(
+    allDocs,
+    ctx,
+    renderCache,
+    registry,
+  );
+  const { finalSiteCtx, renderedBlockDocs } = await runBlocksPrestep(
+    allDocs,
+    ctx,
+    renderCache,
+    registry,
+    enrichedSiteCtx,
+    renderedFileDocs,
+    renderedAuthorDocs,
+    renderedEventDocs,
+    authorDocumentIndex,
+  );
+  const { allContextDocs, allRenderedDocs } = await runContextPhase(
+    allDocs,
+    ctx,
+    renderCache,
+    registry,
+    finalSiteCtx,
+    renderedFileDocs,
+    renderedAuthorDocs,
+    renderedEventDocs,
+    renderedBlockDocs,
+    authorDocumentIndex,
+  );
+  await runFinalization(allContextDocs, allRenderedDocs, ctx, composeCache, renderCache, registry, hasPlugins, log);
 }
