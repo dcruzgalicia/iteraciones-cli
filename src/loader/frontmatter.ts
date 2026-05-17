@@ -21,6 +21,7 @@ export interface Frontmatter {
   keywords: string[];
   region: string;
   block: boolean;
+  items: string[];
   filters?: FrontmatterFilters;
   [key: string]: unknown;
 }
@@ -107,7 +108,7 @@ export function parseFrontmatter(raw: string): ParsedFile {
 }
 
 function emptyFrontmatter(): Frontmatter {
-  return { title: '', date: '', author: [], speakers: [], type: '', keywords: [], region: '', block: false, filters: undefined };
+  return { title: '', date: '', author: [], speakers: [], type: '', keywords: [], region: '', block: false, items: [], filters: undefined };
 }
 
 function normalizeFilters(value: unknown): FrontmatterFilters | undefined {
@@ -135,6 +136,7 @@ function normalizeFrontmatter(data: Record<string, unknown>): Frontmatter {
     keywords: Array.isArray(data.keywords) ? data.keywords.filter((k): k is string => typeof k === 'string') : [],
     region: typeof data.region === 'string' ? data.region : '',
     block: data.block === true,
+    items: normalizeStringList(data.items),
     filters: normalizeFilters(data.filters),
   };
 }
