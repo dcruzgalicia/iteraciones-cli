@@ -83,13 +83,17 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     // si hay un error de esquema el usuario lo ve incluso en dry-run.
     await loadSiteConfig(cwd);
     const sourceDocs = await discover(cwd);
-    const allDocs = excludeDrafts(classifyDocuments(sourceDocs));
+    const classified = classifyDocuments(sourceDocs);
+    const allDocs = excludeDrafts(classified);
+    const draftCount = classified.length - allDocs.length;
     const counts = new Map<string, number>();
     for (const doc of allDocs) {
       const type = doc.type ?? 'unknown';
       counts.set(type, (counts.get(type) ?? 0) + 1);
     }
-    process.stdout.write(`[dry-run] Se procesar\u00edan ${allDocs.length} documentos:\n`);
+    process.stdout.write(`[dry-run] Se procesarían ${allDocs.length} documentos`);
+    if (draftCount > 0) process.stdout.write(` (${draftCount} omitido${draftCount > 1 ? 's' : ''} por draft:true)`);
+    process.stdout.write(':\n');
     for (const [type, count] of [...counts.entries()].sort()) {
       process.stdout.write(`  ${type.padEnd(12)}: ${count}\n`);
     }
@@ -131,7 +135,10 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
   const sourceDocs = await discover(cwd);
   log(`Descubiertos ${sourceDocs.length} documentos`);
-  const allDocs = excludeDrafts(classifyDocuments(sourceDocs));
+  const classified = classifyDocuments(sourceDocs);
+  const allDocs = excludeDrafts(classified);
+  const draftCount = classified.length - allDocs.length;
+  if (draftCount > 0) log(`Excluidos ${draftCount} borrador${draftCount > 1 ? 'es' : ''} (draft:true)`);
 
   // Detectar el documento primario de menú para inyectar menuHref/menuTitle en
   // el siteCtx compartido por todas las páginas. Debe hacerse antes de construir
