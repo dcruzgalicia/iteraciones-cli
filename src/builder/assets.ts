@@ -16,7 +16,7 @@ const FONTS_SRC = join(PKG_ROOT, 'fonts');
  */
 export async function buildAssets(outputDir: string, cwd: string, siteConfig: SiteConfig, options: { noTailwind?: boolean } = {}): Promise<string> {
   const tasks: Promise<void>[] = [copyFonts(outputDir), copyLogo(outputDir, cwd, siteConfig)];
-  if (!options.noTailwind) tasks.push(generateCss(outputDir, cwd));
+  if (!options.noTailwind) tasks.push(generateCss(outputDir, cwd, siteConfig.accent));
   await Promise.all(tasks);
   // Cuando noTailwind está activo no se genera styles.css, así que retornamos ''
   // para que buildSiteContext produzca css:[] y el template omita el <link>.
@@ -25,15 +25,27 @@ export async function buildAssets(outputDir: string, cwd: string, siteConfig: Si
   return options.noTailwind ? '' : '/css/styles.css';
 }
 
-async function generateCss(outputDir: string, cwd: string): Promise<void> {
+async function generateCss(outputDir: string, cwd: string, accent: string): Promise<void> {
   const targetCssDir = join(outputDir, 'css');
   await mkdir(targetCssDir, { recursive: true });
   const targetCssPath = join(targetCssDir, 'styles.css');
 
+  const shades = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
+  const accentTheme = shades.map((s) => `  --color-accent-${s}: var(--color-${accent}-${s});`).join('\n');
+
   // Archivo temporal con import absoluto para que Tailwind resuelva rutas correctamente
   // y escanee tanto los templates del CLI como el contenido del proyecto del usuario.
   const tempInputPath = join(tmpdir(), `_iteraciones-${crypto.randomUUID()}.css`);
-  await writeFile(tempInputPath, `@import "${CSS_SRC}";\n@source "${PKG_ROOT}";\n@source "${PKG_ROOT}/themes";\n@source "${cwd}";\n`, 'utf8');
+  const tempContent = [
+    `@import "${CSS_SRC}";`,
+    `@source "${PKG_ROOT}";`,
+    `@source "${PKG_ROOT}/themes";`,
+    `@source "${cwd}";`,
+    `@theme {`,
+    accentTheme,
+    `}`,
+  ].join('\n');
+  await writeFile(tempInputPath, tempContent, 'utf8');
 
   try {
     // --bun fuerza el runtime de Bun: no requiere node en PATH.
