@@ -7,13 +7,23 @@ import { resolveAuthorHref } from './authors.js';
  * Construye el TemplateContext para un documento de tipo `collection`.
  *
  * Variables producidas para `templates/collection.html`:
- *   title        → frontmatter.title del documento colección
- *   author       → frontmatter.author del documento colección
- *   body         → htmlFragment del documento colección (introducción opcional)
- *   list-items   → array de { href, title, author, author-href?, body, date } para cada item del índice
- *   count        → número de items
+ *   title         → frontmatter.title del documento colección
+ *   author        → frontmatter.author del documento colección
+ *   body          → htmlFragment del documento colección (introducción opcional)
+ *   list-items    → array de { href, title, author, author-href?, body, date } en el orden editorial de `items:`
+ *   count         → número de items en esta página
  *
- * Precondición: los `items` ya vienen ordenados y paginados desde `collectByType`.
+ * Variables de paginación (presentes si `paginationCtx` se proporciona):
+ *   has-pagination  → true cuando hay más de una página
+ *   page-number     → número de página actual (base 1)
+ *   page-count      → total de páginas
+ *   total-items     → total de items en la colección
+ *   page-previous   → { href } si existe página anterior, undefined si no
+ *   page-next       → { href } si existe página siguiente, undefined si no
+ *
+ * Precondición: `items` ya han sido resueltos por `resolveCollectionItems` (búsqueda
+ * por ruta en el pool) y paginados por `paginateItems`; el orden editorial de `items:`
+ * en el frontmatter se preserva sin reordenar por fecha.
  */
 export function buildCollectionContext(
   doc: BuildDocument,
