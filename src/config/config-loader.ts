@@ -44,7 +44,7 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
     listItemsLimit,
     plugins,
     theme: typeof root.theme === 'string' ? root.theme : DEFAULT_SITE_CONFIG.theme,
-    accent: resolveAccent(root.accent),
+    accent: resolveAccent(site.accent),
   };
 }
 
