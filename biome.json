@@ -7,7 +7,7 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!pandoc", "!layouts", "!templates"]
+    "includes": ["**", "!pandoc", "!layouts", "!templates", "!themes"]
   },
   "formatter": {
     "enabled": true,
