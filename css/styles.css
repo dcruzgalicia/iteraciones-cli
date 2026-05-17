@@ -55,6 +55,11 @@
   --font-mono: "Space Mono", monospace;
 }
 
+:root {
+  --color-surface-light: color-mix(in srgb, var(--color-accent-50) 50%, white);
+  --color-surface-dark: color-mix(in srgb, var(--color-accent-950) 40%, black);
+}
+
 @utility max-w-8xl {
   max-width: 96rem;
 }
@@ -72,27 +77,27 @@
 }
 
 @utility bg-surface-dark {
-  background-color: color-mix(in srgb, var(--color-accent-950) 40%, black);
+  background-color: var(--color-surface-dark);
 }
 
 @utility to-surface-dark {
-  --tw-gradient-to: color-mix(in srgb, var(--color-accent-950) 40%, black) var(--tw-gradient-to-position);
+  --tw-gradient-to: var(--color-surface-dark) var(--tw-gradient-to-position);
 }
 
 @utility ring-offset-surface-dark {
-  --tw-ring-offset-color: color-mix(in srgb, var(--color-accent-950) 40%, black);
+  --tw-ring-offset-color: var(--color-surface-dark);
 }
 
 @utility bg-surface-light {
-  background-color: color-mix(in srgb, var(--color-accent-50) 50%, white);
+  background-color: var(--color-surface-light);
 }
 
 @utility to-surface-light {
-  --tw-gradient-to: color-mix(in srgb, var(--color-accent-50) 50%, white) var(--tw-gradient-to-position);
+  --tw-gradient-to: var(--color-surface-light) var(--tw-gradient-to-position);
 }
 
 @utility ring-offset-surface-light {
-  --tw-ring-offset-color: color-mix(in srgb, var(--color-accent-50) 50%, white);
+  --tw-ring-offset-color: var(--color-surface-light);
 }
 
 @utility prose-accent {
