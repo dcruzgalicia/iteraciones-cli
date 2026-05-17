@@ -22,7 +22,7 @@ export function resolveThemePaths(theme: string | undefined): ThemePaths {
     };
   }
   if (theme !== undefined && !KNOWN_THEMES.has(name)) {
-    console.warn(`[iteraciones] Tema desconocido: "${theme}". Usando el tema claro por defecto.`);
+    process.stderr.write(`[iteraciones] Tema desconocido: "${theme}". Usando el tema claro por defecto.\n`);
   }
   return {
     layoutPath: join(PKG_ROOT, 'layouts/default.html'),
