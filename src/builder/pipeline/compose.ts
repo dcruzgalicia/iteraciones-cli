@@ -8,7 +8,7 @@ import { tokenize } from '../../template/lexer.js';
 import { parse } from '../../template/parser.js';
 import type { TemplateContext } from '../../template/render/context.js';
 import { renderAst } from '../../template/render/renderer.js';
-import { resolveThemePaths } from '../theme-resolver.js';
+import { resolveEffectivePaths } from '../theme-resolver.js';
 import type { BuildContext, BuildDocument } from '../types.js';
 
 export interface ComposeCache {
@@ -39,7 +39,7 @@ export async function composeDocuments(
   cache?: ComposeCache,
   registry?: PluginRegistry,
 ): Promise<BuildDocument[]> {
-  const { layoutPath, pandocTemplatePath } = resolveThemePaths(ctx.siteConfig.theme);
+  const { layoutPath, pandocTemplatePath } = resolveEffectivePaths(ctx.siteConfig.theme, ctx.cwd);
   const layoutTemplate = await readFile(layoutPath, 'utf8');
   const pandocTemplate = await readFile(pandocTemplatePath, 'utf8');
 

@@ -8,9 +8,9 @@ import { resolveTemplatePath } from './resolve-template.js';
  * Los campos del pipeline aún no procesados (htmlFragment, templateContext,
  * outputHtml, outputPath) permanecen undefined hasta sus respectivos pasos.
  */
-export function classify(doc: SourceDocument, theme?: string): BuildDocument {
+export function classify(doc: SourceDocument, theme?: string, cwd?: string): BuildDocument {
   const type = inferType(doc.frontmatter);
   const kind = inferKind(doc.frontmatter);
-  const templatePath = resolveTemplatePath(type, theme);
+  const templatePath = resolveTemplatePath(type, theme, cwd);
   return { ...doc, type, kind, templatePath };
 }
