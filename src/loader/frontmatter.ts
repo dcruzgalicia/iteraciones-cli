@@ -6,6 +6,12 @@ export interface FrontmatterSpeaker {
   body?: string;
 }
 
+export interface FrontmatterFilters {
+  type?: string[];
+  keywords?: string[];
+  author?: string[];
+}
+
 export interface Frontmatter {
   title: string;
   date: string;
@@ -15,6 +21,7 @@ export interface Frontmatter {
   keywords: string[];
   region: string;
   block: boolean;
+  filters?: FrontmatterFilters;
   [key: string]: unknown;
 }
 
@@ -100,7 +107,21 @@ export function parseFrontmatter(raw: string): ParsedFile {
 }
 
 function emptyFrontmatter(): Frontmatter {
-  return { title: '', date: '', author: [], speakers: [], type: '', keywords: [], region: '', block: false };
+  return { title: '', date: '', author: [], speakers: [], type: '', keywords: [], region: '', block: false, filters: undefined };
+}
+
+function normalizeFilters(value: unknown): FrontmatterFilters | undefined {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const f = value as Record<string, unknown>;
+  const type = normalizeStringList(f.type);
+  const keywords = normalizeStringList(f.keywords);
+  const author = normalizeStringList(f.author);
+  if (type.length === 0 && keywords.length === 0 && author.length === 0) return undefined;
+  return {
+    ...(type.length > 0 && { type }),
+    ...(keywords.length > 0 && { keywords }),
+    ...(author.length > 0 && { author }),
+  };
 }
 
 function normalizeFrontmatter(data: Record<string, unknown>): Frontmatter {
@@ -114,5 +135,6 @@ function normalizeFrontmatter(data: Record<string, unknown>): Frontmatter {
     keywords: Array.isArray(data.keywords) ? data.keywords.filter((k): k is string => typeof k === 'string') : [],
     region: typeof data.region === 'string' ? data.region : '',
     block: data.block === true,
+    filters: normalizeFilters(data.filters),
   };
 }
