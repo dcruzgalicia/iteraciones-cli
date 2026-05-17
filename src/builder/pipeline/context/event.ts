@@ -1,6 +1,6 @@
 import type { TemplateContext } from '../../../template/render/context.js';
 import { buildRelatedAuthorsContext } from '../../context/authors.js';
-import { buildEventContext, buildEventsContext } from '../../context/event.js';
+import { buildEventContext, buildEventsContext, splitAndSortEventsByDate } from '../../context/event.js';
 import { buildPageHrefs, buildPaginationContext, paginateItems } from '../../paginate.js';
 import type { AuthorDocumentIndex, BuildDocument } from '../../types.js';
 import { mergeContexts } from './merge.js';
@@ -48,20 +48,7 @@ export function buildPagedEventsPipelineContexts(
   limit: number,
 ): BuildDocument[] {
   const buildDate = new Date();
-  const ref = new Date(buildDate).setHours(0, 0, 0, 0);
-  const upcoming = renderedEventDocs
-    .filter((d) => {
-      const ts = d.frontmatter.date ? new Date(d.frontmatter.date).getTime() : Number.NaN;
-      return !Number.isNaN(ts) && ts >= ref;
-    })
-    .sort((a, b) => new Date(a.frontmatter.date).getTime() - new Date(b.frontmatter.date).getTime());
-  const past = renderedEventDocs
-    .filter((d) => {
-      const ts = d.frontmatter.date ? new Date(d.frontmatter.date).getTime() : Number.NaN;
-      return Number.isNaN(ts) || ts < ref;
-    })
-    .sort((a, b) => new Date(b.frontmatter.date).getTime() - new Date(a.frontmatter.date).getTime());
-  const sortedDocs = [...upcoming, ...past];
+  const { sorted: sortedDocs } = splitAndSortEventsByDate(renderedEventDocs, buildDate);
 
   const pages = paginateItems(sortedDocs, limit, doc.relativePath);
   const pageHrefs = buildPageHrefs(doc.relativePath, pages.length);
