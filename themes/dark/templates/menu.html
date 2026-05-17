@@ -1,7 +1,7 @@
 <div class="space-y-8 py-6">
-  <header class="border-b border-emerald-900/50 pb-8">
+  <header class="border-b border-lime-900/50 pb-8">
     <div
-      class="font-mono text-xs font-bold tracking-widest text-emerald-600 uppercase">
+      class="font-mono text-xs font-bold tracking-widest text-lime-600 uppercase">
       // Índice
     </div>
     $if(title)$
@@ -10,7 +10,7 @@
       $title$
     </h1>
     $endif$ $if(body)$
-    <div class="prose prose-invert prose-emerald lg:prose-lg mt-6 max-w-none">
+    <div class="prose prose-invert prose-lime lg:prose-lg mt-6 max-w-none">
       $body$
     </div>
     $endif$
@@ -19,18 +19,18 @@
   $if(menu-items)$
   <div>
     <div
-      class="mb-5 font-mono text-xs font-bold tracking-widest text-emerald-600 uppercase">
+      class="mb-5 font-mono text-xs font-bold tracking-widest text-lime-600 uppercase">
       >> Navegación
     </div>
-    <div class="divide-y divide-emerald-900/30">
+    <div class="divide-y divide-lime-900/30">
       $for(menu-items)$
       <div class="py-4 first:pt-0">
         $if(link)$
         <a
           href="$link$"
-          class="group flex items-center gap-2 font-mono font-semibold text-emerald-400 no-underline transition-colors hover:text-emerald-300">
+          class="group flex items-center gap-2 font-mono font-semibold text-lime-400 no-underline transition-colors hover:text-lime-300">
           <span
-            class="text-emerald-700 transition-colors group-hover:text-emerald-500"
+            class="text-lime-700 transition-colors group-hover:text-lime-500"
             >▸</span
           >
           $label$
@@ -46,8 +46,8 @@
             $if(link)$
             <a
               href="$link$"
-              class="flex items-center gap-2 no-underline transition-colors hover:text-emerald-400">
-              <span class="text-emerald-900">·</span>
+              class="flex items-center gap-2 no-underline transition-colors hover:text-lime-400">
+              <span class="text-lime-900">·</span>
               $label$
             </a>
             $else$
@@ -63,7 +63,7 @@
   </div>
   $else$
   <div
-    class="border border-dashed border-emerald-900/40 px-5 py-8 text-center font-mono text-sm text-stone-500">
+    class="border border-dashed border-lime-900/40 px-5 py-8 text-center font-mono text-sm text-stone-500">
     [ Sin elementos de navegación ]
   </div>
   $endif$
