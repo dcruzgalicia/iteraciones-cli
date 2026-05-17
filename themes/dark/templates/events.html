@@ -1,21 +1,21 @@
 <div class="space-y-10 py-6">
   <header class="mb-2">
     <div class="mb-4 flex items-center gap-4">
-      <span class="font-mono text-xs tracking-widest text-lime-600 uppercase"
+      <span class="font-mono text-xs tracking-widest text-accent-600 uppercase"
         >// agenda</span
       >
       <span
-        class="h-px flex-1 bg-gradient-to-r from-lime-800/50 to-transparent"></span>
+        class="h-px flex-1 bg-gradient-to-r from-accent-800/50 to-transparent"></span>
     </div>
     $if(title)$
     <h1 class="text-4xl font-bold tracking-tight text-stone-100 lg:text-5xl">
       $title$
     </h1>
     $endif$ $if(author)$
-    <div class="mt-3 font-mono text-sm text-lime-400">↳ $author$</div>
+    <div class="mt-3 font-mono text-sm text-accent-400">↳ $author$</div>
     $endif$
     <div
-      class="mt-6 h-px bg-gradient-to-r from-lime-700/40 via-lime-900/20 to-transparent"></div>
+      class="mt-6 h-px bg-gradient-to-r from-accent-700/40 via-accent-900/20 to-transparent"></div>
   </header>
   $if(body)$
   <div class="prose prose-invert prose-lime lg:prose-lg max-w-none">
@@ -25,36 +25,36 @@
 
   $if(upcoming-items)$
   <section class="space-y-4">
-    <h2 class="font-mono text-xs tracking-widest text-lime-600 uppercase">// próximos eventos</h2>
+    <h2 class="font-mono text-xs tracking-widest text-accent-600 uppercase">// próximos eventos</h2>
     $for(upcoming-items)$
     <a
       href="$href$"
-      class="group relative block overflow-hidden border border-lime-900/50 bg-gradient-to-br from-green-950/70 to-[#050e08] p-5 no-underline transition-all duration-200 hover:border-lime-500/70 hover:shadow-[0_0_24px_-8px_rgba(163,230,53,0.35)]">
+      class="group relative block overflow-hidden border border-accent-900/50 bg-gradient-to-br from-green-950/70 to-[#050e08] p-5 no-underline transition-all duration-200 hover:border-accent-500/70 hover:shadow-[0_0_24px_-8px_oklch(from_var(--color-accent-400)_l_c_h_/_0.35)]">
       <span
-        class="pointer-events-none absolute top-0 left-0 h-3 w-3 border-t border-l border-lime-700/50"></span>
+        class="pointer-events-none absolute top-0 left-0 h-3 w-3 border-t border-l border-accent-700/50"></span>
       <span
-        class="pointer-events-none absolute top-0 right-0 h-3 w-3 border-t border-r border-lime-700/50"></span>
+        class="pointer-events-none absolute top-0 right-0 h-3 w-3 border-t border-r border-accent-700/50"></span>
       <span
-        class="pointer-events-none absolute right-0 bottom-0 h-3 w-3 border-r border-b border-lime-700/50"></span>
+        class="pointer-events-none absolute right-0 bottom-0 h-3 w-3 border-r border-b border-accent-700/50"></span>
       <span
-        class="pointer-events-none absolute bottom-0 left-0 h-3 w-3 border-b border-l border-lime-700/50"></span>
+        class="pointer-events-none absolute bottom-0 left-0 h-3 w-3 border-b border-l border-accent-700/50"></span>
       <div class="grid gap-5 md:grid-cols-[8.5rem_minmax(0,1fr)]">
-        <div class="border-b border-lime-900/40 pb-4 md:border-r md:border-b-0 md:pb-0 md:pr-5">
-          <div class="font-mono text-[11px] tracking-widest text-lime-700 uppercase">
+        <div class="border-b border-accent-900/40 pb-4 md:border-r md:border-b-0 md:pb-0 md:pr-5">
+          <div class="font-mono text-[11px] tracking-widest text-accent-700 uppercase">
             $date$
           </div>
           $if(time)$
-          <div class="mt-2 font-mono text-2xl font-semibold text-lime-300">
+          <div class="mt-2 font-mono text-2xl font-semibold text-accent-300">
             $time$
           </div>
           $endif$
         </div>
         <div class="min-w-0">
           <div
-            class="text-xl font-semibold tracking-tight text-stone-200 transition-colors group-hover:text-lime-300">
+            class="text-xl font-semibold tracking-tight text-stone-200 transition-colors group-hover:text-accent-300">
             $title$
           </div>
-          <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-mono text-xs text-lime-700/80">
+          <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-mono text-xs text-accent-700/80">
             $if(location)$
             <span>$location$</span>
             $endif$ $if(modality)$
@@ -77,21 +77,21 @@
 
   $if(past-items)$
   <section class="space-y-4">
-    <h2 class="font-mono text-xs tracking-widest text-lime-700/70 uppercase">// eventos pasados</h2>
+    <h2 class="font-mono text-xs tracking-widest text-accent-700/70 uppercase">// eventos pasados</h2>
     $for(past-items)$
     <a
       href="$href$"
-      class="group relative block overflow-hidden border border-lime-900/30 bg-gradient-to-br from-green-950/40 to-[#050e08] p-5 no-underline opacity-70 transition-all duration-200 hover:border-lime-700/50 hover:opacity-90">
+      class="group relative block overflow-hidden border border-accent-900/30 bg-gradient-to-br from-green-950/40 to-[#050e08] p-5 no-underline opacity-70 transition-all duration-200 hover:border-accent-700/50 hover:opacity-90">
       <span
-        class="pointer-events-none absolute top-0 left-0 h-3 w-3 border-t border-l border-lime-900/50"></span>
+        class="pointer-events-none absolute top-0 left-0 h-3 w-3 border-t border-l border-accent-900/50"></span>
       <span
-        class="pointer-events-none absolute top-0 right-0 h-3 w-3 border-t border-r border-lime-900/50"></span>
+        class="pointer-events-none absolute top-0 right-0 h-3 w-3 border-t border-r border-accent-900/50"></span>
       <span
-        class="pointer-events-none absolute right-0 bottom-0 h-3 w-3 border-r border-b border-lime-900/50"></span>
+        class="pointer-events-none absolute right-0 bottom-0 h-3 w-3 border-r border-b border-accent-900/50"></span>
       <span
-        class="pointer-events-none absolute bottom-0 left-0 h-3 w-3 border-b border-l border-lime-900/50"></span>
+        class="pointer-events-none absolute bottom-0 left-0 h-3 w-3 border-b border-l border-accent-900/50"></span>
       <div class="grid gap-5 md:grid-cols-[8.5rem_minmax(0,1fr)]">
-        <div class="border-b border-lime-900/30 pb-4 md:border-r md:border-b-0 md:pb-0 md:pr-5">
+        <div class="border-b border-accent-900/30 pb-4 md:border-r md:border-b-0 md:pb-0 md:pr-5">
           <div class="font-mono text-[11px] tracking-widest text-stone-600 uppercase">
             $date$
           </div>
@@ -129,12 +129,12 @@
   $if(count)$
   $else$
   <div
-    class="border border-dashed border-lime-900/40 px-5 py-8 text-center font-mono text-sm text-stone-500">
+    class="border border-dashed border-accent-900/40 px-5 py-8 text-center font-mono text-sm text-stone-500">
     [ Sin eventos ]
   </div>
   $endif$ $if(has-pagination)$
   <nav
-    class="flex flex-col gap-4 border-t border-lime-900/30 pt-6 sm:flex-row sm:items-center sm:justify-between"
+    class="flex flex-col gap-4 border-t border-accent-900/30 pt-6 sm:flex-row sm:items-center sm:justify-between"
     aria-label="Paginación de eventos">
     <div class="font-mono text-xs tracking-widest text-stone-500 uppercase">
       // página $page-number$ de $page-count$ · $total-items$ eventos
@@ -143,23 +143,23 @@
       $if(page-previous)$
       <a
         href="$page-previous.href$"
-        class="inline-flex items-center rounded border border-lime-700/60 bg-lime-950/70 px-4 py-2 font-mono text-xs font-semibold tracking-widest text-lime-400 no-underline transition-all duration-200 hover:border-lime-500/80 hover:text-lime-300 hover:shadow-[0_0_14px_-3px_rgba(163,230,53,0.35)] uppercase">
+        class="inline-flex items-center rounded border border-accent-700/60 bg-accent-950/70 px-4 py-2 font-mono text-xs font-semibold tracking-widest text-accent-400 no-underline transition-all duration-200 hover:border-accent-500/80 hover:text-accent-300 hover:shadow-[0_0_14px_-3px_oklch(from_var(--color-accent-400)_l_c_h_/_0.35)] uppercase">
         Anterior
       </a>
       $else$
       <span
-        class="inline-flex items-center rounded border border-lime-950/70 px-4 py-2 font-mono text-xs font-semibold tracking-widest text-stone-700 uppercase">
+        class="inline-flex items-center rounded border border-accent-950/70 px-4 py-2 font-mono text-xs font-semibold tracking-widest text-stone-700 uppercase">
         Anterior
       </span>
       $endif$ $if(page-next)$
       <a
         href="$page-next.href$"
-        class="inline-flex items-center rounded border border-lime-700/60 bg-lime-950/70 px-4 py-2 font-mono text-xs font-semibold tracking-widest text-lime-400 no-underline transition-all duration-200 hover:border-lime-500/80 hover:text-lime-300 hover:shadow-[0_0_14px_-3px_rgba(163,230,53,0.35)] uppercase">
+        class="inline-flex items-center rounded border border-accent-700/60 bg-accent-950/70 px-4 py-2 font-mono text-xs font-semibold tracking-widest text-accent-400 no-underline transition-all duration-200 hover:border-accent-500/80 hover:text-accent-300 hover:shadow-[0_0_14px_-3px_oklch(from_var(--color-accent-400)_l_c_h_/_0.35)] uppercase">
         Siguiente
       </a>
       $else$
       <span
-        class="inline-flex items-center rounded border border-lime-950/70 px-4 py-2 font-mono text-xs font-semibold tracking-widest text-stone-700 uppercase">
+        class="inline-flex items-center rounded border border-accent-950/70 px-4 py-2 font-mono text-xs font-semibold tracking-widest text-stone-700 uppercase">
         Siguiente
       </span>
       $endif$

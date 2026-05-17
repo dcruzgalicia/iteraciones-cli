@@ -1,18 +1,18 @@
 <div class="space-y-8 py-6">
   <header class="mb-2">
     <div class="mb-4 flex items-center gap-4">
-      <span class="font-mono text-xs tracking-widest text-lime-600 uppercase"
+      <span class="font-mono text-xs tracking-widest text-accent-600 uppercase"
         >// autora/or</span
       >
       <span
-        class="h-px flex-1 bg-gradient-to-r from-lime-200/50 to-transparent"></span>
+        class="h-px flex-1 bg-gradient-to-r from-accent-200/50 to-transparent"></span>
     </div>
     $if(title)$
     <h1 class="text-4xl font-bold tracking-tight text-zinc-900 lg:text-5xl">
       $title$
     </h1>
     <div
-      class="mt-6 h-px bg-gradient-to-r from-lime-400/40 via-lime-200/20 to-transparent"></div>
+      class="mt-6 h-px bg-gradient-to-r from-accent-400/40 via-accent-200/20 to-transparent"></div>
     $endif$
   </header>
   $if(body)$
@@ -22,10 +22,10 @@
   $endif$ $if(list-items)$
   <div class="space-y-0">
     <div
-      class="mb-4 font-mono text-xs font-bold tracking-widest text-lime-600 uppercase">
+      class="mb-4 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase">
       >> Publicaciones
     </div>
-    <div class="divide-y divide-lime-200/50">
+    <div class="divide-y divide-accent-200/50">
       $for(list-items)$
       <a
         href="$href$"
@@ -33,16 +33,16 @@
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-2">
             <span
-              class="font-mono text-lime-300 transition-colors group-hover:text-lime-600"
+              class="font-mono text-accent-300 transition-colors group-hover:text-accent-600"
               >▸</span
             >
             <div
-              class="font-semibold tracking-tight text-zinc-700 transition-colors group-hover:text-lime-700">
+              class="font-semibold tracking-tight text-zinc-700 transition-colors group-hover:text-accent-700">
               $title$
             </div>
           </div>
           $if(author)$
-          <div class="mt-0.5 pl-4 font-mono text-xs text-lime-600/70">
+          <div class="mt-0.5 pl-4 font-mono text-xs text-accent-600/70">
             ↳ $author$
           </div>
           $endif$ $if(body)$
@@ -58,7 +58,7 @@
   </div>
   $else$
   <div
-    class="border border-dashed border-lime-200/40 px-5 py-8 text-center font-mono text-sm text-zinc-400">
+    class="border border-dashed border-accent-200/40 px-5 py-8 text-center font-mono text-sm text-zinc-400">
     [ Sin publicaciones ]
   </div>
   $endif$
