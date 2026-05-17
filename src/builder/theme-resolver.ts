@@ -33,9 +33,12 @@ export function resolveThemePaths(theme: string | undefined): ThemePaths {
 
 /**
  * Resuelve los paths efectivos con prioridad de tres niveles:
- * 1. Proyecto (cwd/layouts/default.html, cwd/pandoc/template.html)
- * 2. Tema built-in (themes/dark/ o raíz del paquete según theme)
- * Los overrides de templates individuales se resuelven en resolveTemplatePath.
+ * 1. Proyecto   — cwd/layouts/default.html, cwd/pandoc/template.html
+ * 2. Tema built-in — themes/{name}/layouts/… (p. ej. dark)
+ * 3. CLI defaults — raíz del paquete (tema light por defecto)
+ *
+ * Los overrides de templates individuales por tipo siguen la misma jerarquía
+ * y se resuelven en resolveTemplatePath (classifier/resolve-template.ts).
  */
 export function resolveEffectivePaths(theme: string | undefined, cwd: string): ThemePaths {
   const base = resolveThemePaths(theme);
