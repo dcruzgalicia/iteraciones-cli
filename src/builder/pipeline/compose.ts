@@ -47,7 +47,7 @@ export async function composeDocuments(
     throw new Error(`El layout en "${layoutPath}" no contiene el marcador $body$`);
   }
   if (!pandocTemplate.includes('$body$')) {
-    throw new Error(`El pandoc template en "${PANDOC_TEMPLATE_PATH}" no contiene el marcador $body$`);
+    throw new Error(`El pandoc template en "${pandocTemplatePath}" no contiene el marcador $body$`);
   }
 
   // Pre-parsear layout y pandoc template una sola vez.
