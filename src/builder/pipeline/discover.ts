@@ -1,8 +1,7 @@
 import { join } from 'node:path';
+import { IGNORED_DIRS } from '../../constants.js';
 import { parseFrontmatter } from '../../loader/frontmatter.js';
 import type { SourceDocument } from '../types.js';
-
-const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', '.iteraciones']);
 
 export async function discover(cwd: string): Promise<SourceDocument[]> {
   const relativePaths: string[] = [];
