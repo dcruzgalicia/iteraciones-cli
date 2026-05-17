@@ -113,7 +113,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     // si hay un error de esquema el usuario lo ve incluso en dry-run.
     const dryConfig = await loadSiteConfig(cwd);
     const sourceDocs = await discover(cwd);
-    const classified = classifyDocuments(sourceDocs, dryConfig.theme);
+    const classified = classifyDocuments(sourceDocs, dryConfig.theme, cwd);
     const allDocs = excludeDrafts(classified);
     const draftCount = classified.length - allDocs.length;
     const counts = new Map<string, number>();
@@ -165,7 +165,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
   const sourceDocs = await discover(cwd);
   log(`Descubiertos ${sourceDocs.length} documentos`);
-  const classified = classifyDocuments(sourceDocs, ctx.siteConfig.theme);
+  const classified = classifyDocuments(sourceDocs, ctx.siteConfig.theme, ctx.cwd);
   const allDocs = excludeDrafts(classified);
   const draftCount = classified.length - allDocs.length;
   if (draftCount > 0) log(`Excluidos ${draftCount} borrador${draftCount > 1 ? 'es' : ''} (draft:true)`);
