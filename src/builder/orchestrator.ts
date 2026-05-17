@@ -8,7 +8,6 @@ import { PluginRegistry } from '../plugin/registry.js';
 import { checkPandoc } from '../services/pandoc-runner.js';
 import type { TemplateContext } from '../template/render/context.js';
 import { buildAssets } from './assets.js';
-import { collectByType } from './collect.js';
 import { buildRelatedAuthorsContext, createAuthorDocumentIndex } from './context/authors.js';
 import { buildSiteContext } from './context/site.js';
 import { escapeHtml } from './html.js';
@@ -16,7 +15,7 @@ import { classifyDocuments } from './pipeline/classify.js';
 import { type ComposeCache, composeDocuments, renderBlocksToRegions } from './pipeline/compose.js';
 import { buildAuthorPipelineContext, buildAuthorsPipelineContext, buildPagedAuthorsPipelineContexts } from './pipeline/context/authors.js';
 import { buildCardPipelineContext } from './pipeline/context/card.js';
-import { buildCollectionPipelineContext } from './pipeline/context/collection.js';
+import { buildCollectionPipelineContext, buildPagedCollectionPipelineContexts } from './pipeline/context/collection.js';
 import { buildEventPipelineContext, buildEventsPipelineContext, buildPagedEventsPipelineContexts } from './pipeline/context/event.js';
 import { buildContext } from './pipeline/context/index.js';
 import { buildListPipelineContext, buildPagedListPipelineContexts } from './pipeline/context/list.js';
@@ -25,7 +24,7 @@ import { mergeContexts } from './pipeline/context/merge.js';
 import { discover } from './pipeline/discover.js';
 import { renderDocuments } from './pipeline/render.js';
 import { writeDocuments } from './pipeline/write.js';
-import type { AuthorDocumentIndex, BuildContext, DocumentType } from './types.js';
+import type { AuthorDocumentIndex, BuildContext } from './types.js';
 
 export interface BuildOptions {
   outputDir?: string;
@@ -44,7 +43,7 @@ export interface BuildOptions {
 function buildBlockTypeContext(
   doc: Parameters<typeof buildContext>[0],
   siteCtx: TemplateContext,
-  index: Map<DocumentType, Parameters<typeof buildCollectionPipelineContext>[0][]>,
+  collectionPool: BuildDocument[],
   renderedFileDocs: Parameters<typeof buildAuthorPipelineContext>[2],
   renderedAuthorDocs: Parameters<typeof buildAuthorsPipelineContext>[2],
   renderedEventDocs: Parameters<typeof buildEventsPipelineContext>[2],
@@ -52,7 +51,7 @@ function buildBlockTypeContext(
 ): TemplateContext {
   switch (doc.type) {
     case 'collection':
-      return buildCollectionPipelineContext(doc, siteCtx, index, authorDocumentIndex);
+      return buildCollectionPipelineContext(doc, siteCtx, collectionPool, authorDocumentIndex);
     case 'author':
       return buildAuthorPipelineContext(doc, siteCtx, renderedFileDocs);
     case 'authors':
@@ -128,10 +127,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const sourceDocs = await discover(cwd);
   log(`Descubiertos ${sourceDocs.length} documentos`);
   const allDocs = classifyDocuments(sourceDocs);
-  const index = collectByType(
-    allDocs.filter((doc) => doc.kind !== 'block'),
-    siteConfig,
-  );
 
   // Detectar el documento primario de menú para inyectar menuHref/menuTitle en
   // el siteCtx compartido por todas las páginas. Debe hacerse antes de construir
@@ -166,11 +161,22 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // para obtener innerHtml y agrupar por región. El resultado se inyecta en
   // finalSiteCtx para que los region slots del layout se rellenen en todas las páginas.
   // Los bloques NO generan su propio archivo HTML de salida.
+  // El pool para bloques de tipo collection incluye los docs renderizados disponibles
+  // en este punto del pipeline (file, author, event).
+  const collectionBlockPool = [...renderedFileDocs, ...renderedAuthorDocs, ...renderedEventDocs];
   const allBlockDocs = allDocs.filter((doc) => doc.kind === 'block');
   const renderedBlockDocs = await renderDocuments(allBlockDocs, ctx.concurrency ?? 4, renderCache, registry);
   const contextBlockDocs = renderedBlockDocs.map((doc) => ({
     ...doc,
-    templateContext: buildBlockTypeContext(doc, enrichedSiteCtx, index, renderedFileDocs, renderedAuthorDocs, renderedEventDocs, authorDocumentIndex),
+    templateContext: buildBlockTypeContext(
+      doc,
+      enrichedSiteCtx,
+      collectionBlockPool,
+      renderedFileDocs,
+      renderedAuthorDocs,
+      renderedEventDocs,
+      authorDocumentIndex,
+    ),
   }));
   const regionBlocks = await renderBlocksToRegions(contextBlockDocs);
   const finalSiteCtx: TemplateContext = { ...enrichedSiteCtx, ...regionBlocks };
@@ -183,13 +189,16 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     templateContext: mergeContexts(buildContext(doc, finalSiteCtx, authorDocumentIndex), buildRelatedAuthorsContext(doc, authorDocumentIndex)),
   }));
 
-  // Documentos tipo 'collection': renderizado opcional del cuerpo MD + contexto de colección.
+  // Documentos tipo 'collection': lista curada definida por items: en frontmatter.
+  // Renderiza primero el body de cada collection, luego busca cada ruta de items:
+  // en el pool disponible (file, author, event). Error de build si una ruta no existe.
+  // Genera un BuildDocument derivado por página si items supera listItemsLimit.
+  const collectionPool = [...renderedFileDocs, ...renderedAuthorDocs, ...renderedEventDocs];
   const collectionDocs = allDocs.filter((doc) => doc.type === 'collection' && doc.kind !== 'block');
   const renderedCollectionDocs = await renderDocuments(collectionDocs, ctx.concurrency ?? 4, renderCache, registry);
-  const contextCollectionDocs = renderedCollectionDocs.map((doc) => ({
-    ...doc,
-    templateContext: buildCollectionPipelineContext(doc, finalSiteCtx, index, authorDocumentIndex),
-  }));
+  const contextCollectionDocs = renderedCollectionDocs.flatMap((doc) =>
+    buildPagedCollectionPipelineContexts(doc, finalSiteCtx, collectionPool, siteConfig.listItemsLimit, authorDocumentIndex),
+  );
 
   // Documentos tipo 'author': contexto de autor (bio + publicaciones relacionadas).
   // Usa renderedFileDocs completos (sin límite de listItemsLimit) para no truncar
