@@ -1,11 +1,11 @@
 <article class="py-6">
   <header class="mb-10 pb-8">
     <div class="mb-4 flex items-center gap-4">
-      <span class="font-mono text-xs tracking-widest text-lime-600 uppercase"
+      <span class="font-mono text-xs tracking-widest text-accent-600 uppercase"
         >// evento</span
       >
       <span
-        class="h-px flex-1 bg-gradient-to-r from-lime-800/50 to-transparent"></span>
+        class="h-px flex-1 bg-gradient-to-r from-accent-800/50 to-transparent"></span>
     </div>
     $if(title)$
     <h1 class="text-4xl font-bold tracking-tight text-stone-100 lg:text-5xl">
@@ -13,12 +13,12 @@
     </h1>
     $endif$ $if(author)$
     <div class="mt-4 flex items-center gap-2 font-mono text-sm">
-      <span class="text-lime-700">↳</span>
-      <span class="text-lime-400">$author$</span>
+      <span class="text-accent-700">↳</span>
+      <span class="text-accent-400">$author$</span>
     </div>
     $endif$
     <div
-      class="mt-6 h-px bg-gradient-to-r from-lime-700/40 via-lime-900/20 to-transparent"></div>
+      class="mt-6 h-px bg-gradient-to-r from-accent-700/40 via-accent-900/20 to-transparent"></div>
   </header>
   $if(body)$
   <div class="prose prose-invert prose-lime lg:prose-lg max-w-none">
@@ -27,19 +27,19 @@
   $endif$ $if(speakers)$
   <div class="mt-10 space-y-0">
     <div
-      class="mb-4 font-mono text-xs font-bold tracking-widest text-lime-600 uppercase">
+      class="mb-4 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase">
       >> Participan
     </div>
-    <div class="divide-y divide-lime-900/30">
+    <div class="divide-y divide-accent-900/30">
       $for(speakers)$
       <div class="group flex items-start gap-6 py-4 first:pt-0">
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-2">
-            <span class="font-mono text-lime-700">▸</span>
+            <span class="font-mono text-accent-700">▸</span>
             $if(href)$
             <a
               href="$href$"
-              class="font-semibold tracking-tight text-stone-200 no-underline transition-colors hover:text-lime-400">
+              class="font-semibold tracking-tight text-stone-200 no-underline transition-colors hover:text-accent-400">
               $title$
             </a>
             $else$
