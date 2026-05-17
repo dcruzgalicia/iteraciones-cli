@@ -79,6 +79,10 @@
   --tw-gradient-to: color-mix(in srgb, var(--color-accent-950) 40%, black) var(--tw-gradient-to-position);
 }
 
+@utility ring-offset-surface-dark {
+  --tw-ring-offset-color: color-mix(in srgb, var(--color-accent-950) 40%, black);
+}
+
 @utility prose-accent {
   --tw-prose-links: var(--color-accent-600);
   --tw-prose-invert-links: var(--color-accent-500);
