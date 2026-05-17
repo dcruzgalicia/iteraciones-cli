@@ -71,8 +71,18 @@ async function copyLogo(outputDir: string, cwd: string, siteConfig: SiteConfig):
   const logo = siteConfig.logo?.trim();
   if (!logo) return;
 
+  // Guardia de seguridad: rechazar rutas que escapen del cwd o sean absolutas.
+  if (logo.includes('..') || logo.startsWith('/')) {
+    process.stderr.write(`[assets] logo: ruta inválida "${logo}" — debe ser relativa al proyecto\n`);
+    process.exitCode = 1;
+    return;
+  }
+
   const src = join(cwd, logo);
   const dest = join(outputDir, logo);
   await mkdir(dirname(dest), { recursive: true });
-  await cp(src, dest).catch(() => undefined);
+  await cp(src, dest).catch((err: NodeJS.ErrnoException) => {
+    process.stderr.write(`[assets] No se pudo copiar el logo "${logo}": ${err.message}\n`);
+    // No abortar el build — el sitio funciona sin logo.
+  });
 }
