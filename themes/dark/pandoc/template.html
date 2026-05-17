@@ -1,0 +1,42 @@
+<!doctype html>
+<html
+  xmlns="http://www.w3.org/1999/xhtml"
+  $if(lang)$
+  lang="$lang$"
+  xml:lang="$lang$"
+  $endif$$if(dir)$
+  dir="$dir$"
+  $endif$>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="generator" content="pandoc" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    $for(author-meta)$
+    <meta name="author" content="$author-meta$" />
+    $endfor$ $if(date-meta)$
+    <meta name="dcterms.date" content="$date-meta$" />
+    $endif$ $if(keywords)$
+    <meta name="keywords" content="$for(keywords)$$keywords$$sep$, $endfor$" />
+    $endif$ $if(description-meta)$
+    <meta name="description" content="$description-meta$" />
+    $else$
+    <meta name="description" content="$site-tagline$" />
+    $endif$
+    <title>
+      $if(title-prefix)$$title-prefix$ | $endif$$pagetitle$ | $site-title$
+    </title>
+    $if(site-logo)$
+    <link rel="icon" href="$site-logo$" type="image/svg+xml" />
+    $endif$ $for(css)$
+    <link rel="stylesheet" href="$css$" />
+    $endfor$ $for(header-includes)$ $header-includes$ $endfor$ $if(math)$ $math$
+    $endif$
+  </head>
+  <body
+    class="flex min-h-svh w-full flex-col bg-[#050e08] font-sans text-stone-100 antialiased">
+    $for(include-before)$ $include-before$ $endfor$ $body$ $for(include-after)$
+    $include-after$ $endfor$
+  </body>
+</html>
