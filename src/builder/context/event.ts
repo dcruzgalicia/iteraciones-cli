@@ -82,6 +82,29 @@ export function buildEventContext(doc: BuildDocument, authorIndex: AuthorDocumen
 }
 
 /**
+ * Separa y ordena `docs` en dos grupos según `buildDate`:
+ *   - `upcoming`: date >= inicio del día de buildDate, orden ascendente (próximos primero)
+ *   - `past`:     date < inicio del día de buildDate o fecha inválida/ausente, orden descendente
+ *   - `sorted`:   upcoming + past concatenados (útil para paginar con orden coherente)
+ */
+export function splitAndSortEventsByDate(
+  docs: BuildDocument[],
+  buildDate: Date,
+): { upcoming: BuildDocument[]; past: BuildDocument[]; sorted: BuildDocument[] } {
+  const ref = new Date(buildDate).setHours(0, 0, 0, 0);
+  const upcoming: BuildDocument[] = [];
+  const past: BuildDocument[] = [];
+  for (const d of docs) {
+    const ts = d.frontmatter.date ? new Date(d.frontmatter.date).getTime() : Number.NaN;
+    if (!Number.isNaN(ts) && ts >= ref) upcoming.push(d);
+    else past.push(d);
+  }
+  upcoming.sort((a, b) => new Date(a.frontmatter.date).getTime() - new Date(b.frontmatter.date).getTime());
+  past.sort((a, b) => new Date(b.frontmatter.date).getTime() - new Date(a.frontmatter.date).getTime());
+  return { upcoming, past, sorted: [...upcoming, ...past] };
+}
+
+/**
  * Construye el TemplateContext para un documento de tipo `events`.
  *
  * Variables producidas para `templates/events.html`:
@@ -119,33 +142,13 @@ export function buildEventsContext(
 
   const listItems = eventDocs.map(formatItem);
 
-  const splitByDate = (docs: BuildDocument[], refDate: Date) => {
-    const ref = new Date(refDate).setHours(0, 0, 0, 0);
-    const upcoming: BuildDocument[] = [];
-    const past: BuildDocument[] = [];
-    for (const d of docs) {
-      const ts = d.frontmatter.date ? new Date(d.frontmatter.date).getTime() : Number.NaN;
-      if (!Number.isNaN(ts) && ts >= ref) upcoming.push(d);
-      else past.push(d);
-    }
-    return { upcoming, past };
-  };
-
-  const upcomingItems =
-    buildDate !== undefined
-      ? (() => {
-          const { upcoming } = splitByDate(eventDocs, buildDate);
-          return upcoming.sort((a, b) => new Date(a.frontmatter.date).getTime() - new Date(b.frontmatter.date).getTime()).map(formatItem);
-        })()
-      : undefined;
-
-  const pastItems =
-    buildDate !== undefined
-      ? (() => {
-          const { past } = splitByDate(eventDocs, buildDate);
-          return past.sort((a, b) => new Date(b.frontmatter.date).getTime() - new Date(a.frontmatter.date).getTime()).map(formatItem);
-        })()
-      : undefined;
+  let upcomingItems: ReturnType<typeof formatItem>[] | undefined;
+  let pastItems: ReturnType<typeof formatItem>[] | undefined;
+  if (buildDate !== undefined) {
+    const { upcoming, past } = splitAndSortEventsByDate(eventDocs, buildDate);
+    upcomingItems = upcoming.map(formatItem);
+    pastItems = past.map(formatItem);
+  }
 
   return {
     title: doc.frontmatter.title,
