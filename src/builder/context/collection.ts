@@ -15,7 +15,12 @@ import { resolveAuthorHref } from './authors.js';
  *
  * Precondición: los `items` ya vienen ordenados y paginados desde `collectByType`.
  */
-export function buildCollectionContext(doc: BuildDocument, items: BuildDocument[], authorIndex?: AuthorDocumentIndex): TemplateContext {
+export function buildCollectionContext(
+  doc: BuildDocument,
+  items: BuildDocument[],
+  authorIndex?: AuthorDocumentIndex,
+  paginationCtx?: Record<string, unknown>,
+): TemplateContext {
   const listItems = items.map((item) => {
     const authorHref = resolveAuthorHref(item.frontmatter.author, authorIndex);
     return {
@@ -35,5 +40,6 @@ export function buildCollectionContext(doc: BuildDocument, items: BuildDocument[
     body: doc.htmlFragment ?? '',
     'list-items': listItems,
     count: listItems.length,
+    ...(paginationCtx ?? {}),
   };
 }
