@@ -1,5 +1,4 @@
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import type { CacheManager } from '../../cache/cache-manager.js';
 import { hash } from '../../cache/hasher.js';
 import { mapWithConcurrency } from '../../output/concurrency.js';
@@ -9,6 +8,7 @@ import { tokenize } from '../../template/lexer.js';
 import { parse } from '../../template/parser.js';
 import type { TemplateContext } from '../../template/render/context.js';
 import { renderAst } from '../../template/render/renderer.js';
+import { resolveThemePaths } from '../theme-resolver.js';
 import type { BuildContext, BuildDocument } from '../types.js';
 
 export interface ComposeCache {
@@ -28,9 +28,6 @@ const VALID_REGIONS = new Set([
   'footer-right',
 ]);
 
-const LAYOUT_PATH = join(import.meta.dir, '../../../layouts/default.html');
-const PANDOC_TEMPLATE_PATH = join(import.meta.dir, '../../../pandoc/template.html');
-
 async function readAndParseTemplate(path: string): Promise<{ ast: AstNode[]; contentHash: string }> {
   const content = await readFile(path, 'utf8');
   return { ast: parse(tokenize(content)), contentHash: hash(content) };
@@ -42,11 +39,12 @@ export async function composeDocuments(
   cache?: ComposeCache,
   registry?: PluginRegistry,
 ): Promise<BuildDocument[]> {
-  const layoutTemplate = await readFile(LAYOUT_PATH, 'utf8');
-  const pandocTemplate = await readFile(PANDOC_TEMPLATE_PATH, 'utf8');
+  const { layoutPath, pandocTemplatePath } = resolveThemePaths(ctx.siteConfig.theme);
+  const layoutTemplate = await readFile(layoutPath, 'utf8');
+  const pandocTemplate = await readFile(pandocTemplatePath, 'utf8');
 
   if (!layoutTemplate.includes('$body$')) {
-    throw new Error(`El layout en "${LAYOUT_PATH}" no contiene el marcador $body$`);
+    throw new Error(`El layout en "${layoutPath}" no contiene el marcador $body$`);
   }
   if (!pandocTemplate.includes('$body$')) {
     throw new Error(`El pandoc template en "${PANDOC_TEMPLATE_PATH}" no contiene el marcador $body$`);
@@ -87,7 +85,7 @@ export async function composeDocuments(
       : '';
 
     if (cache) {
-      activeComposeKeys!.add(key);
+      activeComposeKeys?.add(key);
       const cached = await cache.manager.read('compose', key);
       if (cached !== undefined) {
         return { ...doc, outputHtml: cached };
