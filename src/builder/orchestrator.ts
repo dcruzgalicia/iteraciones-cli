@@ -59,8 +59,11 @@ function computeRootPrefix(relativePath: string): string {
  * en una ruta relativa usando `prefix`. Permite que el sitio funcione con file://.
  * Los strings HTML (region slots de bloques) se procesan con regex para relativizar
  * atributos href y src que contengan rutas root-relative embebidas en el marcado.
+ *
+ * `depth` protege contra objetos circulares emitidos por plugins mal escritos.
  */
-function makeRelativeContext(value: unknown, prefix: string): unknown {
+function makeRelativeContext(value: unknown, prefix: string, depth = 0): unknown {
+  if (depth > 20) throw new Error('makeRelativeContext: profundidad máxima excedida (posible objeto circular en el contexto de un plugin)');
   if (typeof value === 'string') {
     if (value.startsWith('/')) return prefix + value.slice(1);
     if (value.includes('href="/') || value.includes('src="/'))
@@ -69,9 +72,9 @@ function makeRelativeContext(value: unknown, prefix: string): unknown {
         .replace(/src="(\/[^"]+)"/g, (_, p) => `src="${prefix}${p.slice(1)}"`);
     return value;
   }
-  if (Array.isArray(value)) return value.map((item) => makeRelativeContext(item, prefix));
+  if (Array.isArray(value)) return value.map((item) => makeRelativeContext(item, prefix, depth + 1));
   if (value !== null && typeof value === 'object')
-    return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, makeRelativeContext(v, prefix)]));
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, makeRelativeContext(v, prefix, depth + 1)]));
   return value;
 }
 
