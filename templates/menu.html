@@ -1,7 +1,7 @@
 <div class="space-y-8 py-6">
-  <header class="border-b border-lime-200/40 pb-8">
+  <header class="border-b border-accent-200/40 pb-8">
     <div
-      class="font-mono text-xs font-bold tracking-widest text-lime-600 uppercase">
+      class="font-mono text-xs font-bold tracking-widest text-accent-600 uppercase">
       // Índice
     </div>
     $if(title)$
@@ -17,18 +17,18 @@
   $if(menu-items)$
   <div>
     <div
-      class="mb-5 font-mono text-xs font-bold tracking-widest text-lime-600 uppercase">
+      class="mb-5 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase">
       >> Navegación
     </div>
-    <div class="divide-y divide-lime-200/50">
+    <div class="divide-y divide-accent-200/50">
       $for(menu-items)$
       <div class="py-4 first:pt-0">
         $if(link)$
         <a
           href="$link$"
-          class="group flex items-center gap-2 font-mono font-semibold text-lime-700 no-underline transition-colors hover:text-lime-600">
+          class="group flex items-center gap-2 font-mono font-semibold text-accent-700 no-underline transition-colors hover:text-accent-600">
           <span
-            class="text-lime-300 transition-colors group-hover:text-lime-600"
+            class="text-accent-300 transition-colors group-hover:text-accent-600"
             >▸</span
           >
           $label$
@@ -44,8 +44,8 @@
             $if(link)$
             <a
               href="$link$"
-              class="flex items-center gap-2 no-underline transition-colors hover:text-lime-700">
-              <span class="text-lime-200">·</span>
+              class="flex items-center gap-2 no-underline transition-colors hover:text-accent-700">
+              <span class="text-accent-200">·</span>
               $label$
             </a>
             $else$
@@ -61,7 +61,7 @@
   </div>
   $else$
   <div
-    class="border border-dashed border-lime-200/40 px-5 py-8 text-center font-mono text-sm text-zinc-400">
+    class="border border-dashed border-accent-200/40 px-5 py-8 text-center font-mono text-sm text-zinc-400">
     [ Sin elementos de navegación ]
   </div>
   $endif$

@@ -1,5 +1,5 @@
 <header
-  class="sticky top-0 z-10 border-b border-lime-200/60 bg-white/95 shadow-[0_2px_30px_rgba(101,163,13,0.08)] backdrop-blur-sm">
+  class="sticky top-0 z-10 border-b border-accent-200/60 bg-white/95 shadow-[0_2px_30px_oklch(from_var(--color-accent-600)_l_c_h_/_0.08)] backdrop-blur-sm">
   <div
     class="max-w-8xl mx-auto flex items-center justify-between px-4 py-3 md:px-8">
     <a href="$home-href$" class="group flex items-center gap-3 no-underline">
@@ -11,7 +11,7 @@
       $endif$
       <div>
         <div
-          class="font-mono text-base leading-tight font-bold tracking-wider text-lime-700 transition-colors group-hover:text-lime-600">
+          class="font-mono text-base leading-tight font-bold tracking-wider text-accent-700 transition-colors group-hover:text-accent-600">
           $site-title$
         </div>
         <div class="font-mono text-xs leading-tight text-zinc-400">
@@ -23,16 +23,16 @@
       $if(menuHref)$
       <a
         href="$menuHref$"
-        class="relative inline-flex h-10 w-10 items-center justify-center rounded border border-lime-400/60 bg-lime-50/80 text-lime-700 no-underline transition-all duration-200 hover:border-lime-600/80 hover:text-lime-600 hover:shadow-[0_0_14px_-3px_rgba(101,163,13,0.3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+        class="relative inline-flex h-10 w-10 items-center justify-center rounded border border-accent-400/60 bg-accent-50/80 text-accent-700 no-underline transition-all duration-200 hover:border-accent-600/80 hover:text-accent-600 hover:shadow-[0_0_14px_-3px_oklch(from_var(--color-accent-600)_l_c_h_/_0.3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
         aria-label="$menuTitle$">
         <span
-          class="pointer-events-none absolute top-0 left-0 h-3 w-3 border-t border-l border-lime-400/50"></span>
+          class="pointer-events-none absolute top-0 left-0 h-3 w-3 border-t border-l border-accent-400/50"></span>
         <span
-          class="pointer-events-none absolute top-0 right-0 h-3 w-3 border-t border-r border-lime-400/50"></span>
+          class="pointer-events-none absolute top-0 right-0 h-3 w-3 border-t border-r border-accent-400/50"></span>
         <span
-          class="pointer-events-none absolute bottom-0 left-0 h-3 w-3 border-b border-l border-lime-400/50"></span>
+          class="pointer-events-none absolute bottom-0 left-0 h-3 w-3 border-b border-l border-accent-400/50"></span>
         <span
-          class="pointer-events-none absolute bottom-0 right-0 h-3 w-3 border-b border-r border-lime-400/50"></span>
+          class="pointer-events-none absolute bottom-0 right-0 h-3 w-3 border-b border-r border-accent-400/50"></span>
         <span class="sr-only">$menuTitle$</span>
         <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor" aria-hidden="true">
           <path d="M120-240v-80h720v80H120Zm0-200v-80h720v80H120Zm0-200v-80h720v80H120Z"/>
@@ -57,29 +57,29 @@
       <aside class="w-full shrink-0 lg:w-72 xl:w-80">
         $if(event-details)$
         <div
-          class="relative mt-4 mb-8 border border-lime-200/70 bg-gradient-to-br from-lime-50/60 to-white p-5">
+          class="relative mt-4 mb-8 border border-accent-200/70 bg-gradient-to-br from-accent-50/60 to-white p-5">
           <span
-            class="pointer-events-none absolute top-0 left-0 h-3 w-3 border-t border-l border-lime-400/50"></span>
+            class="pointer-events-none absolute top-0 left-0 h-3 w-3 border-t border-l border-accent-400/50"></span>
           <span
-            class="pointer-events-none absolute top-0 right-0 h-3 w-3 border-t border-r border-lime-400/50"></span>
+            class="pointer-events-none absolute top-0 right-0 h-3 w-3 border-t border-r border-accent-400/50"></span>
           <span
-            class="pointer-events-none absolute bottom-0 left-0 h-3 w-3 border-b border-l border-lime-400/50"></span>
+            class="pointer-events-none absolute bottom-0 left-0 h-3 w-3 border-b border-l border-accent-400/50"></span>
           <span
-            class="pointer-events-none absolute right-0 bottom-0 h-3 w-3 border-r border-b border-lime-400/50"></span>
+            class="pointer-events-none absolute right-0 bottom-0 h-3 w-3 border-r border-b border-accent-400/50"></span>
           <div
-            class="mb-4 font-mono text-xs font-bold tracking-widest text-lime-600 uppercase">
+            class="mb-4 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase">
             >> Detalles
           </div>
           <div class="space-y-3">
             $for(event-details)$
             <div>
-              <div class="font-mono text-[11px] tracking-widest text-lime-600/80 uppercase">
+              <div class="font-mono text-[11px] tracking-widest text-accent-600/80 uppercase">
                 $event-details.label$
               </div>
               $if(event-details.href)$
               <a
                 href="$event-details.href$"
-                class="mt-1 block w-full break-anywhere break-all whitespace-normal font-mono text-sm font-semibold text-lime-700 no-underline transition-colors hover:text-lime-600">
+                class="mt-1 block w-full break-anywhere break-all whitespace-normal font-mono text-sm font-semibold text-accent-700 no-underline transition-colors hover:text-accent-600">
                 $event-details.value$
               </a>
               $else$
@@ -95,17 +95,17 @@
         $if(authors)$
         <div class="mb-8">
           <div
-            class="mb-3 font-mono text-xs font-bold tracking-widest text-lime-600 uppercase">
+            class="mb-3 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase">
             // Voces
           </div>
           <div class="space-y-3">
             $for(authors)$
             <div
-              class="relative border-l-2 border-lime-400/60 bg-gradient-to-r from-lime-50/60 to-white p-4 transition-all hover:border-lime-600/80 hover:shadow-[0_0_15px_-3px_rgba(101,163,13,0.15)]">
+              class="relative border-l-2 border-accent-400/60 bg-gradient-to-r from-accent-50/60 to-white p-4 transition-all hover:border-accent-600/80 hover:shadow-[0_0_15px_-3px_oklch(from_var(--color-accent-600)_l_c_h_/_0.15)]">
               $if(href)$
               <a
                 href="$href$"
-                class="font-mono font-semibold text-lime-700 no-underline transition-colors hover:text-lime-600">
+                class="font-mono font-semibold text-accent-700 no-underline transition-colors hover:text-accent-600">
                 $title$
               </a>
               $else$
@@ -136,14 +136,14 @@
 </main>
 
 <footer
-  class="mt-auto border-t border-lime-200/60 bg-gradient-to-b from-transparent to-lime-50/30">
+  class="mt-auto border-t border-accent-200/60 bg-gradient-to-b from-transparent to-accent-50/30">
   <div
     class="max-w-8xl mx-auto grid grid-cols-1 gap-8 px-4 py-10 text-zinc-500 md:grid-cols-3 md:px-8 md:py-12">
     <div>$footer-left$</div>
     <div>$footer-center$</div>
     <div>$footer-right$</div>
   </div>
-  <div class="border-t border-lime-200/20">
+  <div class="border-t border-accent-200/20">
     <div
       class="max-w-8xl mx-auto flex items-center justify-between px-4 py-3 md:px-8">
       $if(site-logo)$
@@ -157,7 +157,7 @@
       $else$
       <a
         href="$home-href$"
-        class="font-mono text-xs text-zinc-400 transition-colors hover:text-lime-600">
+        class="font-mono text-xs text-zinc-400 transition-colors hover:text-accent-600">
         $site-title$
       </a>
       $endif$
