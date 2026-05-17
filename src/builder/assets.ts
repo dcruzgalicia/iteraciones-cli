@@ -33,7 +33,7 @@ async function generateCss(outputDir: string, cwd: string): Promise<void> {
   // Archivo temporal con import absoluto para que Tailwind resuelva rutas correctamente
   // y escanee tanto los templates del CLI como el contenido del proyecto del usuario.
   const tempInputPath = join(tmpdir(), `_iteraciones-${crypto.randomUUID()}.css`);
-  await writeFile(tempInputPath, `@import "${CSS_SRC}";\n@source "${PKG_ROOT}";\n@source "${cwd}";\n`, 'utf8');
+  await writeFile(tempInputPath, `@import "${CSS_SRC}";\n@source "${PKG_ROOT}";\n@source "${PKG_ROOT}/themes";\n@source "${cwd}";\n`, 'utf8');
 
   try {
     // --bun fuerza el runtime de Bun: no requiere node en PATH.
