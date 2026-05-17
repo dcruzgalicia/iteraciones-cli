@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { mapWithConcurrency } from '../../output/concurrency.js';
 import { writeFile } from '../../output/writer.js';
 import type { BuildContext, BuildDocument } from '../types.js';
 
@@ -17,15 +18,13 @@ function resolveOutputPath(relativePath: string, outputDir: string): string {
  * Retorna los documentos con `outputPath` asignado.
  */
 export async function writeDocuments(docs: BuildDocument[], ctx: BuildContext): Promise<BuildDocument[]> {
-  return Promise.all(
-    docs.map(async (doc) => {
-      if (doc.outputHtml === undefined) {
-        throw new Error(`writeDocuments: outputHtml no definido en "${doc.relativePath}"`);
-      }
+  return mapWithConcurrency(docs, ctx.concurrency ?? 4, async (doc) => {
+    if (doc.outputHtml === undefined) {
+      throw new Error(`writeDocuments: outputHtml no definido en "${doc.relativePath}"`);
+    }
 
-      const outputPath = resolveOutputPath(doc.relativePath, ctx.outputDir);
-      await writeFile(outputPath, doc.outputHtml);
-      return { ...doc, outputPath };
-    }),
-  );
+    const outputPath = resolveOutputPath(doc.relativePath, ctx.outputDir);
+    await writeFile(outputPath, doc.outputHtml);
+    return { ...doc, outputPath };
+  });
 }
