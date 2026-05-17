@@ -1,8 +1,8 @@
 <div class="space-y-8 py-6">
-  <header class="border-b border-zinc-100 pb-8">
+  <header class="border-b border-emerald-200/40 pb-8">
     <div
-      class="font-mono text-xs font-bold tracking-widest text-zinc-400 uppercase">
-      Menú
+      class="font-mono text-xs font-bold tracking-widest text-emerald-600 uppercase">
+      // Índice
     </div>
     $if(title)$
     <h1
@@ -10,41 +10,46 @@
       $title$
     </h1>
     $endif$ $if(body)$
-    <div class="prose prose-zinc lg:prose-lg mt-6 max-w-none">$body$</div>
+    <div class="prose prose-emerald lg:prose-lg mt-6 max-w-none">$body$</div>
     $endif$
   </header>
 
   $if(menu-items)$
   <div>
     <div
-      class="mb-5 font-mono text-xs font-bold tracking-widest text-zinc-400 uppercase">
-      Navegación
+      class="mb-5 font-mono text-xs font-bold tracking-widest text-emerald-600 uppercase">
+      >> Navegación
     </div>
-    <div class="divide-y divide-zinc-100">
+    <div class="divide-y divide-emerald-200/50">
       $for(menu-items)$
       <div class="py-4 first:pt-0">
         $if(link)$
         <a
           href="$link$"
-          class="block font-semibold tracking-tight text-zinc-900 no-underline transition-colors hover:text-zinc-600"
-          >$label$</a
-        >
+          class="group flex items-center gap-2 font-mono font-semibold text-emerald-700 no-underline transition-colors hover:text-emerald-600">
+          <span
+            class="text-emerald-300 transition-colors group-hover:text-emerald-600"
+            >▸</span
+          >
+          $label$
+        </a>
         $else$
-        <div class="font-semibold tracking-tight text-zinc-900">
+        <div class="font-mono font-semibold tracking-tight text-zinc-600">
           $label$
         </div>
         $endif$ $if(nav)$
-        <div class="mt-2 space-y-1 pl-4 text-sm text-zinc-500">
+        <div class="mt-2 space-y-1 pl-5 font-mono text-sm text-zinc-400">
           $for(nav)$
           <div>
             $if(link)$
             <a
               href="$link$"
-              class="block no-underline transition-colors hover:text-zinc-600"
-              >$label$</a
-            >
+              class="flex items-center gap-2 no-underline transition-colors hover:text-emerald-700">
+              <span class="text-emerald-200">·</span>
+              $label$
+            </a>
             $else$
-            <div>$label$</div>
+            <div class="text-zinc-400">$label$</div>
             $endif$
           </div>
           $endfor$
@@ -56,8 +61,8 @@
   </div>
   $else$
   <div
-    class="rounded-xl border border-dashed border-zinc-200 px-5 py-8 text-center font-mono text-sm text-zinc-400">
-    No hay elementos de navegación para mostrar.
+    class="border border-dashed border-emerald-200/40 px-5 py-8 text-center font-mono text-sm text-zinc-400">
+    [ Sin elementos de navegación ]
   </div>
   $endif$
 </div>

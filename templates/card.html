@@ -1,7 +1,18 @@
-<div class="my-4 rounded-xl border border-zinc-100 bg-zinc-50 p-5">
+<div
+  class="relative my-4 border border-emerald-200/70 bg-gradient-to-br from-emerald-50/60 to-white p-5 transition-all hover:border-emerald-400/70 hover:shadow-[0_0_20px_-5px_rgba(5,150,105,0.15)]">
+  <span
+    class="pointer-events-none absolute top-0 left-0 h-3 w-3 border-t border-l border-emerald-400/50"></span>
+  <span
+    class="pointer-events-none absolute top-0 right-0 h-3 w-3 border-t border-r border-emerald-400/50"></span>
+  <span
+    class="pointer-events-none absolute bottom-0 left-0 h-3 w-3 border-b border-l border-emerald-400/50"></span>
+  <span
+    class="pointer-events-none absolute right-0 bottom-0 h-3 w-3 border-r border-b border-emerald-400/50"></span>
   <div
-    class="mb-2 font-mono text-xs font-bold tracking-widest text-zinc-400 uppercase">
-    $title$
+    class="mb-2 font-mono text-xs font-bold tracking-widest text-emerald-600 uppercase">
+    >> $title$
   </div>
-  <div class="prose prose-sm max-w-none text-zinc-700">$body$</div>
+  <div class="prose prose-emerald prose-sm max-w-none text-zinc-600">
+    $body$
+  </div>
 </div>
