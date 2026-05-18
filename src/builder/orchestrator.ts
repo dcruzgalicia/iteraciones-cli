@@ -40,6 +40,7 @@ export interface BuildOptions {
 
 interface SetupResult {
   ctx: BuildContext;
+  cacheManager: CacheManager;
   renderCache: RenderCache | undefined;
   composeCache: ComposeCache | undefined;
   registry: PluginRegistry;
@@ -126,8 +127,6 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
 
   await clean(ctx.outputDir);
   const cacheManager = new CacheManager(cwd);
-  ctx.cssPath = await buildAssets(ctx.outputDir, ctx.cwd, siteConfig, { noTailwind: options.noTailwind, cacheManager: options.noCache ? undefined : cacheManager });
-  log(`Assets generados en ${ctx.outputDir}`);
 
   const pkg = (await Bun.file(join(import.meta.dir, '../../package.json')).json()) as { version: string };
   // El fingerprint invalida la caché cuando cambia el conjunto de plugins declarados en
@@ -140,7 +139,7 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
     : { manager: cacheManager, cliVersion: pkg.version, pandocVersion, pluginFingerprint };
   const composeCache: ComposeCache | undefined = options.noCache ? undefined : { manager: cacheManager, cliVersion: pkg.version, pluginFingerprint };
 
-  return { ctx, renderCache, composeCache, registry, hasPlugins: plugins.length > 0 };
+  return { ctx, cacheManager, renderCache, composeCache, registry, hasPlugins: plugins.length > 0 };
 }
 
 /**
@@ -311,8 +310,13 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const renderStats: RenderStats = { total: 0, cacheHits: 0 };
   const composeStats: ComposeStats = { total: 0, cacheHits: 0 };
 
-  const { ctx, renderCache, composeCache, registry, hasPlugins } = await setupBuildEnvironment(cwd, options, log);
-  const allDocs = await runDiscovery(cwd, ctx, log);
+  const { ctx, cacheManager, renderCache, composeCache, registry, hasPlugins } = await setupBuildEnvironment(cwd, options, log);
+  const [allDocs, cssPath] = await Promise.all([
+    runDiscovery(cwd, ctx, log),
+    buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, { noTailwind: options.noTailwind, cacheManager: options.noCache ? undefined : cacheManager }),
+  ]);
+  ctx.cssPath = cssPath;
+  log(`Assets generados en ${ctx.outputDir}`);
   const enrichedSiteCtx = buildEnrichedSiteContext(ctx, allDocs);
   const t1 = performance.now();
   const { renderedFileDocs, renderedAuthorDocs, renderedEventDocs, authorDocumentIndex } = await runPrimaryRender(
