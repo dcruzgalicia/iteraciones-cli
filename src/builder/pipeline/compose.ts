@@ -58,9 +58,10 @@ export async function composeDocuments(
   const uniqueTemplatePaths = [...new Set(docs.map((d) => d.templatePath).filter((p): p is string => !!p))];
   const templateDataMap = new Map(await Promise.all(uniqueTemplatePaths.map(async (p) => [p, await readAndParseTemplate(p)] as const)));
 
-  // Hash del siteConfig: cubre cambios en título, tagline, baseUrl, accent, etc.
-  // Se calcula una sola vez fuera del loop para evitar serializar el objeto completo por cada doc.
-  const siteCtxHash = cache ? hash(JSON.stringify(ctx.siteConfig)) : '';
+  // Hash del contexto de sitio: cubre siteConfig + cssPath + menuHref/menuTitle.
+  // ctx.cssPath puede diferir del siteConfig si --no-tailwind está activo.
+  // Se calcula una sola vez fuera del loop.
+  const siteCtxHash = cache ? hash(JSON.stringify(ctx.siteConfig), ctx.cssPath) : '';
 
   const activeComposeKeys = cache ? new Set<string>() : null;
 
@@ -77,6 +78,7 @@ export async function composeDocuments(
       ? hash(
           doc.htmlFragment,
           doc.sourceHash,
+          doc.relativePath,
           ...(doc.frontmatter.items ?? []),
           siteCtxHash,
           cache.cliVersion,
