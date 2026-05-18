@@ -1,4 +1,5 @@
 import { PandocError } from '../errors.js';
+import type { PandocPool } from './pandoc-pool.js';
 import { type RunResult, run } from './run.js';
 
 export async function checkPandoc(): Promise<string> {
@@ -15,13 +16,16 @@ export async function checkPandoc(): Promise<string> {
 }
 
 /**
- * Convierte contenido Markdown a HTML5 pasándolo por stdin de pandoc.
- * Evita crear y eliminar un archivo temporal por documento.
+ * Convierte contenido Markdown a HTML5.
+ * Si se pasa un `pool`, delega en `pandoc-server` para evitar fork overhead.
+ * En caso contrario, spawnea un proceso pandoc pasando el contenido por stdin.
  *
- * @param content Contenido Markdown a convertir.
+ * @param content    Contenido Markdown a convertir.
  * @param sourcePath Ruta del archivo fuente (solo para mensajes de error).
+ * @param pool       Pool de pandoc-server opcional.
  */
-export async function convertFragment(content: string, sourcePath: string): Promise<string> {
+export async function convertFragment(content: string, sourcePath: string, pool?: PandocPool): Promise<string> {
+  if (pool) return pool.convert(content, sourcePath);
   let proc: ReturnType<typeof Bun.spawn>;
   try {
     proc = Bun.spawn(['pandoc', '--from', 'markdown', '--to', 'html5', '--no-highlight'], {
@@ -46,11 +50,7 @@ export async function convertFragment(content: string, sourcePath: string): Prom
     throw new PandocError('No se pudo leer stderr de pandoc', sourcePath, '');
   }
 
-  const [stdout, stderr, exitCode] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-    proc.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
 
   if (exitCode !== 0) {
     throw new PandocError(`pandoc falló al convertir ${sourcePath}`, sourcePath, stderr);

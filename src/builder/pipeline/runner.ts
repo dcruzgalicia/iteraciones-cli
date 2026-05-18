@@ -1,4 +1,5 @@
 import type { PluginRegistry } from '../../plugin/registry.js';
+import type { PandocPool } from '../../services/pandoc-pool.js';
 import type { TemplateContext } from '../../template/render/context.js';
 import type { AuthorDocumentIndex, BuildContext, BuildDocument, DocumentType } from '../types.js';
 import type { RenderCache, RenderStats } from './render.js';
@@ -38,6 +39,7 @@ export async function runContextPhaseWithTypeGraph(
   primaryRendered: ReadonlyMap<DocumentType, BuildDocument[]>,
   authorIndex: AuthorDocumentIndex,
   renderStats?: RenderStats,
+  pool?: PandocPool,
 ): Promise<ContextPhaseResult> {
   const renderedMap = new Map<DocumentType, BuildDocument[]>(primaryRendered);
   const allContextDocs: BuildDocument[] = [];
@@ -48,16 +50,16 @@ export async function runContextPhaseWithTypeGraph(
     if (spec.phase === 'primary') {
       // Ya renderizados; solo construir contextos de páginas.
       const rendered = renderedMap.get(spec.type) ?? [];
-      const pool = spec.buildPool(renderedMap);
-      const contextDocs = rendered.flatMap((doc) => spec.buildPageContexts(doc, siteCtx, pool, authorIndex, listItemsLimit));
+      const pool2 = spec.buildPool(renderedMap);
+      const contextDocs = rendered.flatMap((doc) => spec.buildPageContexts(doc, siteCtx, pool2, authorIndex, listItemsLimit));
       allContextDocs.push(...contextDocs);
     } else {
       // Fase index: renderizar → registrar en mapa → construir pool → construir contextos.
       const docs = allDocs.filter((d) => d.type === spec.type && d.kind !== 'block');
-      const rendered = await renderDocuments(docs, concurrency, renderCache, registry, renderStats);
+      const rendered = await renderDocuments(docs, concurrency, renderCache, registry, renderStats, pool);
       renderedMap.set(spec.type, rendered);
-      const pool = spec.buildPool(renderedMap);
-      const contextDocs = rendered.flatMap((doc) => spec.buildPageContexts(doc, siteCtx, pool, authorIndex, listItemsLimit));
+      const pool2 = spec.buildPool(renderedMap);
+      const contextDocs = rendered.flatMap((doc) => spec.buildPageContexts(doc, siteCtx, pool2, authorIndex, listItemsLimit));
       allContextDocs.push(...contextDocs);
     }
   }
