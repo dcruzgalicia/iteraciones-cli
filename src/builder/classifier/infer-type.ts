@@ -1,7 +1,6 @@
 import type { Frontmatter } from '../../loader/frontmatter.js';
+import { VALID_TYPES } from '../pipeline/type-graph.js';
 import type { DocumentType } from '../types.js';
-
-const VALID_TYPES = new Set<DocumentType>(['file', 'collection', 'author', 'authors', 'event', 'events', 'menu', 'card', 'list']);
 
 /**
  * Infiere el DocumentType desde el campo `type` del frontmatter.
