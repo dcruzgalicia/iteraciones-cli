@@ -24,7 +24,7 @@ describe('fixture: minimal', () => {
   });
 
   afterAll(() => {
-    rmSync(outputDir, { recursive: true, force: true });
+    if (outputDir) rmSync(outputDir, { recursive: true, force: true });
   });
 
   test('genera index.html', () => {
@@ -55,7 +55,7 @@ describe('fixture: with-author', () => {
   });
 
   afterAll(() => {
-    rmSync(outputDir, { recursive: true, force: true });
+    if (outputDir) rmSync(outputDir, { recursive: true, force: true });
   });
 
   test('genera index.html', () => {
@@ -90,7 +90,7 @@ describe('fixture: with-collection', () => {
   });
 
   afterAll(() => {
-    rmSync(outputDir, { recursive: true, force: true });
+    if (outputDir) rmSync(outputDir, { recursive: true, force: true });
   });
 
   test('genera seleccion.html', () => {
@@ -125,7 +125,7 @@ describe('fixture: with-blocks', () => {
   });
 
   afterAll(() => {
-    rmSync(outputDir, { recursive: true, force: true });
+    if (outputDir) rmSync(outputDir, { recursive: true, force: true });
   });
 
   test('genera index.html (el bloque no genera archivo propio)', () => {
@@ -155,7 +155,7 @@ describe('fixture: with-pagination', () => {
   });
 
   afterAll(() => {
-    rmSync(outputDir, { recursive: true, force: true });
+    if (outputDir) rmSync(outputDir, { recursive: true, force: true });
   });
 
   test('genera lista.html (página 1)', () => {
