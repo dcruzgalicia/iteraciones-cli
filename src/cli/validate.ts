@@ -3,42 +3,17 @@ import { join, relative } from 'node:path';
 import { resolveTemplatePath } from '../builder/classifier/resolve-template.js';
 import { VALID_TYPES } from '../builder/pipeline/type-graph.js';
 import { VALID_REGIONS } from '../builder/types.js';
-import { loadSiteConfig as loadConfig, loadSiteConfig } from '../config/config-loader.js';
+import { loadSiteConfig } from '../config/config-loader.js';
 import { IGNORED_DIRS } from '../constants.js';
 import { ConfigError } from '../errors.js';
 import { FRONTMATTER_RE, parseFrontmatter } from '../loader/frontmatter.js';
 
 type ValidationError = { file: string; message: string };
 
-async function validateConfig(cwd: string): Promise<ValidationError[]> {
+// theme se pasa desde runValidate para evitar que loadSiteConfig se llame dos veces
+// (una en validateConfig + otra aquí), lo que duplicaría los warnings de stderr.
+async function validateFrontmatter(cwd: string, theme: string | undefined): Promise<ValidationError[]> {
   const errors: ValidationError[] = [];
-  try {
-    const config = await loadSiteConfig(cwd);
-    // Advertir sobre accent desconocido está manejado en loadSiteConfig;
-    // aquí reportamos advertencias que antes iban silenciosamente a console.warn.
-    // (loadSiteConfig ya usa process.stderr.write tras Fase 2a)
-    void config;
-  } catch (err) {
-    if (err instanceof ConfigError) {
-      errors.push({ file: relative(cwd, err.configPath), message: err.message });
-    } else {
-      errors.push({ file: '_iteraciones.yaml', message: err instanceof Error ? err.message : String(err) });
-    }
-  }
-  return errors;
-}
-
-async function validateFrontmatter(cwd: string): Promise<ValidationError[]> {
-  const errors: ValidationError[] = [];
-
-  // Cargar la config para obtener el tema (necesario para resolver templates).
-  let theme: string | undefined;
-  try {
-    const config = await loadConfig(cwd);
-    theme = config.theme;
-  } catch {
-    // Si la config falla, se valida sin tema.
-  }
 
   const entries: string[] = [];
   for await (const entry of new Bun.Glob('**/*.md').scan({ cwd })) {
@@ -157,7 +132,22 @@ async function validateFrontmatter(cwd: string): Promise<ValidationError[]> {
  * No ejecuta la compilación completa.
  */
 export async function runValidate(cwd: string): Promise<void> {
-  const [configErrors, frontmatterErrors] = await Promise.all([validateConfig(cwd), validateFrontmatter(cwd)]);
+  // Cargar la configuración una sola vez para evitar que loadSiteConfig emita
+  // advertencias duplicadas (p. ej. "accent desconocido") si se invoca en paralelo
+  // desde validateConfig y validateFrontmatter por separado.
+  let theme: string | undefined;
+  const configErrors: ValidationError[] = [];
+  try {
+    const config = await loadSiteConfig(cwd);
+    theme = config.theme;
+  } catch (err) {
+    if (err instanceof ConfigError) {
+      configErrors.push({ file: relative(cwd, err.configPath), message: err.message });
+    } else {
+      configErrors.push({ file: '_iteraciones.yaml', message: err instanceof Error ? err.message : String(err) });
+    }
+  }
+  const frontmatterErrors = await validateFrontmatter(cwd, theme);
   const errors = [...configErrors, ...frontmatterErrors];
 
   if (errors.length === 0) {
