@@ -108,7 +108,12 @@ export class PandocPool {
       throw new PandocError(`pandoc-server no respondió al convertir "${sourcePath}": ${String(err)}`, sourcePath, '');
     }
 
-    const raw: unknown = await res.json();
+    let raw: unknown;
+    try {
+      raw = await res.json();
+    } catch {
+      throw new PandocError(`pandoc-server: respuesta no JSON (status ${res.status}) al convertir "${sourcePath}"`, sourcePath, '');
+    }
     if (typeof raw !== 'object' || raw === null) {
       throw new PandocError(`pandoc-server: respuesta inválida para "${sourcePath}"`, sourcePath, '');
     }
@@ -121,7 +126,10 @@ export class PandocPool {
       throw new PandocError(`pandoc-server falló al convertir "${sourcePath}": ${errMsg}`, sourcePath, errMsg);
     }
 
-    return typeof output === 'string' ? output : '';
+    if (typeof output !== 'string') {
+      throw new PandocError(`pandoc-server: campo 'output' ausente o inválido al convertir "${sourcePath}"`, sourcePath, '');
+    }
+    return output;
   }
 
   /** Detiene el proceso pandoc-server. */
