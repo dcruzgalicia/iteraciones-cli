@@ -12,8 +12,11 @@ type ValidationError = { file: string; message: string };
 
 // theme se pasa desde runValidate para evitar que loadSiteConfig se llame dos veces
 // (una en validateConfig + otra aquí), lo que duplicaría los warnings de stderr.
-async function validateFrontmatter(cwd: string, theme: string | undefined): Promise<ValidationError[]> {
+type ValidationResult = { errors: ValidationError[]; warnings: ValidationError[] };
+
+async function validateFrontmatter(cwd: string, theme: string | undefined): Promise<ValidationResult> {
   const errors: ValidationError[] = [];
+  const warnings: ValidationError[] = [];
 
   const entries: string[] = [];
   for await (const entry of new Bun.Glob('**/*.md').scan({ cwd })) {
@@ -71,9 +74,9 @@ async function validateFrontmatter(cwd: string, theme: string | undefined): Prom
       });
     }
 
-    // block: true sin region es una advertencia (seguirá funcionando con region vacía)
+    // block: true sin region: el build omite el bloque con un aviso; reportar como advertencia.
     if (fm.block && !fm.region) {
-      errors.push({ file: entry, message: 'block: true pero region: no está definido. El bloque no se insertará en ninguna región del layout' });
+      warnings.push({ file: entry, message: 'block: true pero region: no está definido. El bloque no se insertará en ninguna región del layout' });
     }
 
     // items: en colecciones deben apuntar a archivos existentes
@@ -123,7 +126,7 @@ async function validateFrontmatter(cwd: string, theme: string | undefined): Prom
       }
     }
   }
-  return errors;
+  return { errors, warnings };
 }
 
 /**
@@ -147,8 +150,15 @@ export async function runValidate(cwd: string): Promise<void> {
       configErrors.push({ file: '_iteraciones.yaml', message: err instanceof Error ? err.message : String(err) });
     }
   }
-  const frontmatterErrors = await validateFrontmatter(cwd, theme);
-  const errors = [...configErrors, ...frontmatterErrors];
+  const { errors: fmErrors, warnings } = await validateFrontmatter(cwd, theme);
+  const errors = [...configErrors, ...fmErrors];
+
+  if (warnings.length > 0) {
+    process.stderr.write(`validate: ${warnings.length} advertencia(s):\n`);
+    for (const w of warnings) {
+      process.stderr.write(`  ⚠ ${w.file}: ${w.message}\n`);
+    }
+  }
 
   if (errors.length === 0) {
     process.stdout.write('validate: sin errores.\n');
