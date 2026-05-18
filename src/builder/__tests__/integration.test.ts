@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { build } from '../orchestrator.js';
@@ -183,5 +183,113 @@ describe('fixture: with-pagination', () => {
   test('el HTML de la página 1 contiene el título del doc list', () => {
     const html = readFileSync(join(outputDir, 'lista.html'), 'utf8');
     expect(html).toContain('Todas las notas');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Fixture: with-event-and-index-types — event, events, authors, menu, card
+// ---------------------------------------------------------------------------
+
+describe('fixture: with-event-and-index-types', () => {
+  let outputDir: string;
+
+  beforeAll(async () => {
+    outputDir = makeOutput();
+    await build(join(FIXTURES, 'with-event-and-index-types'), { outputDir, noCache: true, noTailwind: true });
+  });
+
+  afterAll(() => {
+    if (outputDir) rmSync(outputDir, { recursive: true, force: true });
+  });
+
+  test('genera eventos/taller.html (type: event)', () => {
+    expect(existsSync(join(outputDir, 'eventos/taller.html'))).toBe(true);
+  });
+
+  test('genera eventos/index.html (type: events)', () => {
+    expect(existsSync(join(outputDir, 'eventos/index.html'))).toBe(true);
+  });
+
+  test('genera personas/ana.html (type: author)', () => {
+    expect(existsSync(join(outputDir, 'personas/ana.html'))).toBe(true);
+  });
+
+  test('genera personas/index.html (type: authors)', () => {
+    expect(existsSync(join(outputDir, 'personas/index.html'))).toBe(true);
+  });
+
+  test('genera menu.html (type: menu, sin block: true)', () => {
+    expect(existsSync(join(outputDir, 'menu.html'))).toBe(true);
+  });
+
+  test('convocatoria.html no existe (type: card, block: true)', () => {
+    expect(existsSync(join(outputDir, 'convocatoria.html'))).toBe(false);
+  });
+
+  test('events index lista el título del evento', () => {
+    const html = readFileSync(join(outputDir, 'eventos/index.html'), 'utf8');
+    expect(html).toContain('Taller de tipografía práctica');
+  });
+
+  test('authors index lista el nombre del autor', () => {
+    const html = readFileSync(join(outputDir, 'personas/index.html'), 'utf8');
+    expect(html).toContain('Ana Lucía Torres');
+  });
+
+  test('el HTML del evento contiene el título', () => {
+    const html = readFileSync(join(outputDir, 'eventos/taller.html'), 'utf8');
+    expect(html).toContain('Taller de tipografía práctica');
+  });
+
+  test('el HTML del autor contiene su bio', () => {
+    const html = readFileSync(join(outputDir, 'personas/ana.html'), 'utf8');
+    expect(html).toContain('Investigadora especializada');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Caché — segunda build con noCache: false produce output idéntico
+// ---------------------------------------------------------------------------
+
+describe('caché: segunda build produce output idéntico al primero', () => {
+  let tmpCwd: string;
+  let outputDir1: string;
+  let outputDir2: string;
+
+  beforeAll(async () => {
+    // Copiar fixture a directorio temporal para no contaminar el fixture con archivos de caché
+    tmpCwd = mkdtempSync(join(tmpdir(), 'iteraciones-cache-test-'));
+    cpSync(join(FIXTURES, 'with-collection'), tmpCwd, { recursive: true });
+
+    outputDir1 = makeOutput();
+    outputDir2 = makeOutput();
+
+    // Primera build (caché fría) y segunda build (caché caliente)
+    await build(tmpCwd, { outputDir: outputDir1, noCache: false, noTailwind: true });
+    await build(tmpCwd, { outputDir: outputDir2, noCache: false, noTailwind: true });
+  });
+
+  afterAll(() => {
+    if (tmpCwd) rmSync(tmpCwd, { recursive: true, force: true });
+    if (outputDir1) rmSync(outputDir1, { recursive: true, force: true });
+    if (outputDir2) rmSync(outputDir2, { recursive: true, force: true });
+  });
+
+  test('seleccion.html es idéntico en build fría y caliente', () => {
+    const html1 = readFileSync(join(outputDir1, 'seleccion.html'), 'utf8');
+    const html2 = readFileSync(join(outputDir2, 'seleccion.html'), 'utf8');
+    expect(html1).toBe(html2);
+  });
+
+  test('articulos/uno.html es idéntico en build fría y caliente', () => {
+    const html1 = readFileSync(join(outputDir1, 'articulos/uno.html'), 'utf8');
+    const html2 = readFileSync(join(outputDir2, 'articulos/uno.html'), 'utf8');
+    expect(html1).toBe(html2);
+  });
+
+  test('articulos/dos.html es idéntico en build fría y caliente', () => {
+    const html1 = readFileSync(join(outputDir1, 'articulos/dos.html'), 'utf8');
+    const html2 = readFileSync(join(outputDir2, 'articulos/dos.html'), 'utf8');
+    expect(html1).toBe(html2);
   });
 });
