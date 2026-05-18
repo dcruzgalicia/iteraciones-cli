@@ -15,8 +15,9 @@ export async function runWatch(cwd: string, options: { verbose?: boolean } = {})
   await build(cwd, { verbose: options.verbose });
   log('watch: listo — observando cambios…');
 
-  const stopWatcher = startWatcher(cwd, async (filename) => {
-    log(`watch: cambio detectado en "${filename}" — reconstruyendo…`);
+  const stopWatcher = startWatcher(cwd, async (changedFiles) => {
+    const label = [...changedFiles].join(', ');
+    log(`watch: cambio detectado en "${label}" — reconstruyendo…`);
     try {
       await build(cwd, { verbose: options.verbose });
       log('watch: rebuild completado.');
