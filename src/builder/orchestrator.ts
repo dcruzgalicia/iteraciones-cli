@@ -125,11 +125,11 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
   };
 
   await clean(ctx.outputDir);
-  ctx.cssPath = await buildAssets(ctx.outputDir, ctx.cwd, siteConfig, { noTailwind: options.noTailwind });
+  const cacheManager = new CacheManager(cwd);
+  ctx.cssPath = await buildAssets(ctx.outputDir, ctx.cwd, siteConfig, { noTailwind: options.noTailwind, cacheManager: options.noCache ? undefined : cacheManager });
   log(`Assets generados en ${ctx.outputDir}`);
 
   const pkg = (await Bun.file(join(import.meta.dir, '../../package.json')).json()) as { version: string };
-  const cacheManager = new CacheManager(cwd);
   // El fingerprint invalida la caché cuando cambia el conjunto de plugins declarados en
   // _iteraciones.yaml. Nota: no detecta cambios en el código fuente de un plugin si su
   // ruta no cambia; en ese caso se debe limpiar la caché manualmente.

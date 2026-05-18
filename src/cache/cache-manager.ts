@@ -2,7 +2,7 @@ import type { Dirent } from 'node:fs';
 import { mkdir, readdir, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 
-export type CacheScope = 'render' | 'compose';
+export type CacheScope = 'render' | 'compose' | 'css';
 
 /**
  * Gestiona la caché incremental en disco bajo `{cwd}/.iteraciones/cache/`.
