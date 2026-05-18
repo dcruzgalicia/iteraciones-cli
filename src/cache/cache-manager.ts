@@ -38,7 +38,11 @@ export class CacheManager {
     CacheManager.#validateKey(key);
     const file = Bun.file(this.#entryPath(scope, key));
     if (!(await file.exists())) return undefined;
-    return file.text();
+    const content = await file.text();
+    // Una entrada vacía indica una escritura parcial (build interrumpido).
+    // Tratarla como cache-miss para evitar propagar HTML vacío.
+    if (content === '') return undefined;
+    return content;
   }
 
   /**
