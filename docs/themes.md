@@ -52,7 +52,7 @@ Si se declara un nombre no reconocido, se usa `light` con un aviso en `stderr`.
 
 ## Personalizar el layout
 
-El layout principal (`layouts/default.html`) es un template HTML con variables del motor de templates de iteraciones. Las variables se acceden con la sintaxis `{{nombre-variable}}`.
+El layout principal (`layouts/default.html`) es un template HTML con variables del motor de templates de iteraciones. Las variables se acceden con la sintaxis `$nombre-variable$`.
 
 Variables disponibles en el layout:
 
