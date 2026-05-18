@@ -8,17 +8,29 @@ const DEBOUNCE_MS = 300;
 
 /**
  * Observa `srcDir` en busca de cambios en ficheros fuente relevantes.
- * Aplica debounce de 300 ms y evita rebuilds concurrentes mediante un
- * flag de bloqueo: si ya hay un rebuild activo se descarta el evento.
+ * Aplica debounce de 300 ms. Si llega un cambio mientras hay un rebuild
+ * activo, lo acumula en `pendingFiles` y lanza un nuevo rebuild al terminar.
+ * Ningún evento se descarta.
  *
  * @param srcDir Directorio raíz a vigilar (recursivo).
- * @param onChange Callback async que recibe el nombre del fichero cambiado.
- *                 El watcher se bloquea hasta que el callback resuelve.
+ * @param onChange Callback async que recibe el conjunto de ficheros cambiados.
+ *                 El watcher acumula nuevos eventos hasta que el callback resuelve.
  * @returns Función que detiene el watcher y cancela el timer pendiente.
  */
-export function startWatcher(srcDir: string, onChange: (filename: string) => Promise<void>): () => void {
+export function startWatcher(srcDir: string, onChange: (files: Set<string>) => Promise<void>): () => void {
+  let pendingFiles = new Set<string>();
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
-  let running = false;
+  let buildPromise: Promise<void> | null = null;
+
+  const scheduleRebuild = (): void => {
+    if (buildPromise !== null) return; // ya hay un rebuild activo; los pendingFiles se acumulan
+    const files = pendingFiles;
+    pendingFiles = new Set<string>();
+    buildPromise = onChange(files).finally(() => {
+      buildPromise = null;
+      if (pendingFiles.size > 0) scheduleRebuild(); // había cambios mientras corría
+    });
+  };
 
   const watcher = fsWatch(srcDir, { recursive: true }, (_, filename) => {
     if (!filename) return;
@@ -30,14 +42,9 @@ export function startWatcher(srcDir: string, onChange: (filename: string) => Pro
     const ext = extname(filename).toLowerCase();
     if (!WATCHED_EXTENSIONS.has(ext)) return;
 
+    pendingFiles.add(filename);
     clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
-      if (running) return;
-      running = true;
-      onChange(filename).finally(() => {
-        running = false;
-      });
-    }, DEBOUNCE_MS);
+    debounceTimer = setTimeout(scheduleRebuild, DEBOUNCE_MS);
   });
 
   return () => {

@@ -49,8 +49,9 @@ export async function runServe(cwd: string, port: number, options: { concurrency
   });
 
   // ── Watcher con debounce ───────────────────────────────────────────────────
-  const stopWatcher = startWatcher(cwd, async (filename) => {
-    process.stdout.write(`serve: cambio detectado en "${filename}" — reconstruyendo…\n`);
+  const stopWatcher = startWatcher(cwd, async (changedFiles) => {
+    const list = [...changedFiles].join(', ');
+    process.stdout.write(`serve: cambio detectado en ${list} — reconstruyendo…\n`);
     try {
       await build(cwd, buildOpts);
       process.stdout.write('serve: rebuild completado\n');
