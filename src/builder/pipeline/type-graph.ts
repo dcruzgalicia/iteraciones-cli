@@ -144,3 +144,9 @@ export const TYPE_STAGES: TypeStageSpec[] = [
  * Divergir de `DocumentType` union causará un error de compilación.
  */
 export const VALID_TYPES = new Set<DocumentType>(TYPE_STAGES.map((s) => s.type));
+
+/**
+ * Mapa de lookup O(1): DocumentType → TypeStageSpec.
+ * Construido una sola vez al cargar el módulo; preferir sobre `TYPE_STAGES.find()`.
+ */
+export const TYPE_STAGE_MAP: ReadonlyMap<DocumentType, TypeStageSpec> = new Map(TYPE_STAGES.map((s) => [s.type, s]));
