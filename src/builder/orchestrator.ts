@@ -16,7 +16,7 @@ import { type ComposeCache, composeDocuments, renderBlocksToRegions } from './pi
 import { discover } from './pipeline/discover.js';
 import { type RenderCache, renderDocuments } from './pipeline/render.js';
 import { runContextPhaseWithTypeGraph } from './pipeline/runner.js';
-import { TYPE_STAGES } from './pipeline/type-graph.js';
+import { TYPE_STAGE_MAP } from './pipeline/type-graph.js';
 import { writeDocuments } from './pipeline/write.js';
 import type { AuthorDocumentIndex, BuildContext, BuildDocument, DocumentType } from './types.js';
 
@@ -220,7 +220,7 @@ async function runBlocksPrestep(
   const allBlockDocs = allDocs.filter((doc) => doc.kind === 'block');
   const renderedBlockDocs = await renderDocuments(allBlockDocs, ctx.concurrency ?? 4, renderCache, registry);
   const contextBlockDocs = renderedBlockDocs.map((doc) => {
-    const spec = doc.type ? TYPE_STAGES.find((s) => s.type === doc.type) : undefined;
+    const spec = doc.type ? TYPE_STAGE_MAP.get(doc.type) : undefined;
     if (!spec) {
       throw new Error(
         `runBlocksPrestep: tipo de bloque sin spec en el type-graph: "${doc.type ?? 'undefined'}". ¿Falta añadir una TypeStageSpec en type-graph.ts?`,
@@ -334,6 +334,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     primaryRendered,
     authorDocumentIndex,
   );
-  const allRenderedDocs = [...[...renderedMap.values()].flat(), ...renderedBlockDocs];
+  const allRenderedDocs = [...renderedMap.values()].flat().concat(renderedBlockDocs);
   await runFinalization(allContextDocs, allRenderedDocs, ctx, composeCache, renderCache, registry, hasPlugins, log);
 }
