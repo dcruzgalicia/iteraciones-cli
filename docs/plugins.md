@@ -181,4 +181,4 @@ Los plugins se ejecutan en el orden en que se declaran en `plugins:`. Si un hook
 iteraciones doctor
 ```
 
-Verifica que todos los archivos declarados en `plugins:` existan y sean accesibles en disco. **No** carga ni ejecuta los módulos; para detectar errores en los hooks es necesario ejecutar `iteraciones build`.
+Verifica el entorno del proyecto. `iteraciones doctor` comprueba: pandoc instalado y en PATH (>= 3.0), disponibilidad de `@tailwindcss/cli`, parseo correcto de `_iteraciones.yaml`, existencia de templates en `templates/` (locales o del paquete CLI), y permisos de lectura/escritura en el directorio del proyecto. **No** verifica archivos de plugins ni carga los módulos; para detectar errores en los hooks es necesario ejecutar `iteraciones build`.
