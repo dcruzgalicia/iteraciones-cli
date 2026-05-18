@@ -145,8 +145,8 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
 /**
  * Descubre, clasifica y filtra borradores. Retorna el pool de documentos activos.
  */
-async function runDiscovery(cwd: string, ctx: BuildContext, log: (msg: string) => void): Promise<BuildDocument[]> {
-  const sourceDocs = await discover(cwd);
+async function runDiscovery(cwd: string, ctx: BuildContext, log: (msg: string) => void, noCache?: boolean): Promise<BuildDocument[]> {
+  const sourceDocs = await discover(cwd, { noCache });
   log(`Descubiertos ${sourceDocs.length} documentos`);
   const classified = classifyDocuments(sourceDocs, ctx.siteConfig.theme, ctx.cwd);
   const allDocs = excludeDrafts(classified);
@@ -312,7 +312,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
   const { ctx, cacheManager, renderCache, composeCache, registry, hasPlugins } = await setupBuildEnvironment(cwd, options, log);
   const [allDocs, cssPath] = await Promise.all([
-    runDiscovery(cwd, ctx, log),
+    runDiscovery(cwd, ctx, log, options.noCache),
     buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, { noTailwind: options.noTailwind, cacheManager: options.noCache ? undefined : cacheManager }),
   ]);
   ctx.cssPath = cssPath;
