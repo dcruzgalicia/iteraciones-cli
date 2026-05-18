@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.5.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.4.0...v0.5.0) (2026-05-18)
+
+
+### Features
+
+* **cli:** fase 2a — correcciones inmediatas de DX ([37f2bf8](https://github.com/dcruzgalicia/iteraciones-cli/commit/37f2bf84b4cd6df27d21001f7a93d73b3862d59d))
+* **cli:** fase 2b — validación semántica en iteraciones validate ([e90b190](https://github.com/dcruzgalicia/iteraciones-cli/commit/e90b190c03309f61b3add37ae5cf229a447ed379))
+* **cli:** fase 2c — comando iteraciones new ([c125e21](https://github.com/dcruzgalicia/iteraciones-cli/commit/c125e2149ebcb7c489351f78631ec99f29239d1a))
+* **config:** fase 2f — añadir baseUrl a SiteConfig ([46298e1](https://github.com/dcruzgalicia/iteraciones-cli/commit/46298e1b329082667ae0c4ee44d5358e7258fd40))
+* **orchestrator:** añadir estadísticas de compose al reporte verbose ([2f711aa](https://github.com/dcruzgalicia/iteraciones-cli/commit/2f711aa7165fbc5a5f5e6eea88df9ba974a9e88c))
+* **orchestrator:** fase 2d — build report con timing y tasa de caché ([b698b74](https://github.com/dcruzgalicia/iteraciones-cli/commit/b698b742e40a6f478b434538fe00f552da2d3984))
+
+
+### Bug Fixes
+
+* **assets:** corregir validación de logo y consistencia de exit code ([14bff4d](https://github.com/dcruzgalicia/iteraciones-cli/commit/14bff4d9ee039a11580fbcfda2b9f032b4571220))
+* **builder:** reemplazar console.warn por process.stderr.write en theme-resolver ([5ee7b62](https://github.com/dcruzgalicia/iteraciones-cli/commit/5ee7b62582905d42ec309639d722bd2266452870))
+* **cache:** añadir separador \0 en hash() para evitar colisiones ([aaacaad](https://github.com/dcruzgalicia/iteraciones-cli/commit/aaacaad19a77cdf9af42d34348f6d7898044cd5a))
+* **classifier:** tipar VALID_TYPES como Set&lt;DocumentType&gt; ([995448c](https://github.com/dcruzgalicia/iteraciones-cli/commit/995448cbc8a1de53bb318559d5e0af858a1523d7))
+* **cli:** correcciones en iteraciones new ([1e20d09](https://github.com/dcruzgalicia/iteraciones-cli/commit/1e20d09e02d75d3ecf9d03d11cbb7d2292b79ab0))
+* **cli:** evitar doble carga de config en validate para eliminar warnings duplicados ([34abbdd](https://github.com/dcruzgalicia/iteraciones-cli/commit/34abbdd8451107661cb82a08eea3b91f4e18a2aa))
+* **cli:** import sin uso en new.ts; rechazar --output si es ancestro del proyecto ([1f4ef7c](https://github.com/dcruzgalicia/iteraciones-cli/commit/1f4ef7c262e1b5d94c1f3ac1cd73e57584ddbf47))
+* **cli:** rechazar --output con rutas relativas de escalada o raíz absoluta ([1db3fa8](https://github.com/dcruzgalicia/iteraciones-cli/commit/1db3fa8e63fa4e855500ad14e24ebc83807fe3bf))
+* **cli:** validate — block sin region: es advertencia, no error con exit 1 ([f3ce1bc](https://github.com/dcruzgalicia/iteraciones-cli/commit/f3ce1bc80e56f4cb0e5d215d798116a761009622))
+* **cli:** validate — items con .md, eliminar template: muerto, deduplicar warning de tema ([fa5afe3](https://github.com/dcruzgalicia/iteraciones-cli/commit/fa5afe33e762b117dafec5700d0a4bb9e11c5e5f))
+* **docs:** corregir sintaxis de templates, ejemplos de config y precisión de hooks ([7e516e5](https://github.com/dcruzgalicia/iteraciones-cli/commit/7e516e5cf4eb3c2e78f86271146f4ef5e4bbba63))
+* **docs:** corregir sintaxis de variable en themes.md y descripción de doctor en plugins.md ([e43d53d](https://github.com/dcruzgalicia/iteraciones-cli/commit/e43d53d00aa8cce7028d57b587ee05f637b7ba4f))
+* **orchestrator:** añadir guard de profundidad en makeRelativeContext ([38cdcda](https://github.com/dcruzgalicia/iteraciones-cli/commit/38cdcda4a560a56f61acc1b40f64f12062a5679c))
+* **orchestrator:** corregir timing pandocMs para incluir context phase ([5cc8ffe](https://github.com/dcruzgalicia/iteraciones-cli/commit/5cc8ffef14e9d83b2e8cf2e4d8df2bdc3c87dbca))
+* **write:** usar mapWithConcurrency en writeDocuments ([57b98ba](https://github.com/dcruzgalicia/iteraciones-cli/commit/57b98ba723ed5d88faba63209dbabf5690058ff8))
+
 ## [0.4.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.3.0...v0.4.0) (2026-05-17)
 
 
