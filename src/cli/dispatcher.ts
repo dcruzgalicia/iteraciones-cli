@@ -30,8 +30,8 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
   }
 }
 
-export async function runClean(cwd: string): Promise<void> {
-  const distDir = join(cwd, 'dist', 'web');
+export async function runClean(cwd: string, options: { outputDir?: string } = {}): Promise<void> {
+  const distDir = options.outputDir ?? join(cwd, 'dist', 'web');
   const cacheDir = join(cwd, '.iteraciones');
   try {
     await rm(distDir, { recursive: true, force: true });
@@ -50,8 +50,12 @@ export async function runClean(cwd: string): Promise<void> {
 export async function runInfo(cwd: string): Promise<void> {
   try {
     const config = await loadSiteConfig(cwd);
-    const pandocOk = await checkPandoc().then(() => true).catch(() => false);
-    const distExists = await stat(join(cwd, 'dist', 'web')).then((s) => s.isDirectory()).catch(() => false);
+    const pandocOk = await checkPandoc()
+      .then(() => true)
+      .catch(() => false);
+    const distExists = await stat(join(cwd, 'dist', 'web'))
+      .then((s) => s.isDirectory())
+      .catch(() => false);
 
     process.stdout.write('info:\n');
     process.stdout.write(`  título:   ${config.title}\n`);
@@ -130,9 +134,9 @@ export async function runDoctor(cwd: string, options: { fix?: boolean } = {}): P
   }
 }
 
-export async function runServe(cwd: string, port: number): Promise<void> {
+export async function runServe(cwd: string, port: number, options: { concurrency?: number; verbose?: boolean } = {}): Promise<void> {
   try {
-    const stop = await serve(cwd, port);
+    const stop = await serve(cwd, port, options);
     // Mantener el proceso activo hasta recibir señal de terminación.
     const shutdown = (): void => {
       stop();

@@ -13,24 +13,36 @@ export function buildProgram(): Command {
     .option('-c, --concurrency <n>', 'máximo de invocaciones pandoc simultáneas', '4')
     .option('--no-cache', 'omite la caché incremental; siempre hace build completo')
     .option('--project-root <path>', 'directorio raíz del proyecto (por defecto: directorio actual)')
+    .option('--output <path>', 'directorio de salida (por defecto: dist/web dentro del project-root)')
     .option('--no-tailwind', 'omite la generación de CSS con Tailwind')
     .option('--dry-run', 'muestra los documentos que se procesarían sin generar salida')
     .option('--verbose', 'muestra información adicional de progreso')
-    .action(async (opts: { concurrency: string; cache: boolean; projectRoot?: string; tailwind: boolean; dryRun?: boolean; verbose?: boolean }) => {
-      const concurrency = Number.parseInt(opts.concurrency, 10);
-      if (!Number.isInteger(concurrency) || concurrency < 1) {
-        process.stderr.write(`Error: --concurrency debe ser un entero positivo (recibido: "${opts.concurrency}")\n`);
-        process.exitCode = 1;
-        return;
-      }
-      await runBuild(opts.projectRoot ?? process.cwd(), {
-        concurrency,
-        noCache: !opts.cache,
-        noTailwind: !opts.tailwind,
-        dryRun: opts.dryRun,
-        verbose: opts.verbose,
-      });
-    });
+    .action(
+      async (opts: {
+        concurrency: string;
+        cache: boolean;
+        projectRoot?: string;
+        output?: string;
+        tailwind: boolean;
+        dryRun?: boolean;
+        verbose?: boolean;
+      }) => {
+        const concurrency = Number.parseInt(opts.concurrency, 10);
+        if (!Number.isInteger(concurrency) || concurrency < 1) {
+          process.stderr.write(`Error: --concurrency debe ser un entero positivo (recibido: "${opts.concurrency}")\n`);
+          process.exitCode = 1;
+          return;
+        }
+        await runBuild(opts.projectRoot ?? process.cwd(), {
+          concurrency,
+          noCache: !opts.cache,
+          outputDir: opts.output,
+          noTailwind: !opts.tailwind,
+          dryRun: opts.dryRun,
+          verbose: opts.verbose,
+        });
+      },
+    );
 
   program
     .command('clean')
@@ -52,16 +64,18 @@ export function buildProgram(): Command {
   program
     .command('validate')
     .description('valida _iteraciones.yaml y el frontmatter de todos los documentos Markdown')
-    .action(async () => {
-      await runValidate(process.cwd());
+    .option('--project-root <path>', 'directorio raíz del proyecto (por defecto: directorio actual)')
+    .action(async (opts: { projectRoot?: string }) => {
+      await runValidate(opts.projectRoot ?? process.cwd());
     });
 
   program
     .command('watch')
     .description('observa cambios y reconstruye el sitio sin servidor HTTP')
+    .option('--project-root <path>', 'directorio raíz del proyecto (por defecto: directorio actual)')
     .option('--verbose', 'muestra información adicional de progreso')
-    .action(async (opts: { verbose?: boolean }) => {
-      const stop = await runWatch(process.cwd(), { verbose: opts.verbose });
+    .action(async (opts: { projectRoot?: string; verbose?: boolean }) => {
+      const stop = await runWatch(opts.projectRoot ?? process.cwd(), { verbose: opts.verbose });
       const shutdown = (): void => {
         stop();
         process.exitCode = 0;
@@ -82,14 +96,23 @@ export function buildProgram(): Command {
     .command('serve')
     .description('arranca un servidor HTTP con livereload automático')
     .option('-p, --port <n>', 'puerto del servidor', '3000')
-    .action((opts: { port: string }) => {
+    .option('--project-root <path>', 'directorio raíz del proyecto (por defecto: directorio actual)')
+    .option('-c, --concurrency <n>', 'máximo de invocaciones pandoc simultáneas', '4')
+    .option('--verbose', 'muestra información adicional de progreso')
+    .action((opts: { port: string; projectRoot?: string; concurrency: string; verbose?: boolean }) => {
       const port = Number(opts.port);
       if (!Number.isInteger(port) || port < 1 || port > 65535) {
         process.stderr.write(`Error: el puerto debe ser un entero entre 1 y 65535 (recibido: "${opts.port}")\n`);
         process.exitCode = 1;
         return;
       }
-      runServe(process.cwd(), port);
+      const concurrency = Number.parseInt(opts.concurrency, 10);
+      if (!Number.isInteger(concurrency) || concurrency < 1) {
+        process.stderr.write(`Error: --concurrency debe ser un entero positivo (recibido: "${opts.concurrency}")\n`);
+        process.exitCode = 1;
+        return;
+      }
+      runServe(opts.projectRoot ?? process.cwd(), port, { concurrency, verbose: opts.verbose });
     });
 
   return program;
