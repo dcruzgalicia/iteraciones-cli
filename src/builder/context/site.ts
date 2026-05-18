@@ -22,5 +22,6 @@ export function buildSiteContext(config: SiteConfig, cssPath: string): TemplateC
     'site-logo': config.logo ? `/${config.logo.replace(/^\/+/, '')}` : undefined,
     css: cssPath ? [cssPath] : [],
     'home-href': '/index.html',
+    'site-base-url': config.baseUrl,
   };
 }
