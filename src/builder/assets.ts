@@ -2,7 +2,6 @@ import { cp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { CacheManager } from '../cache/cache-manager.js';
-import { hash } from '../cache/hasher.js';
 import type { SiteConfig } from '../config/site-config.js';
 import { run } from '../services/run.js';
 
