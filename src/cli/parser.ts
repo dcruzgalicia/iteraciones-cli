@@ -1,3 +1,4 @@
+import { isAbsolute, normalize } from 'node:path';
 import { Command } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
 import { runBuild, runClean, runDoctor, runInfo, runInit, runNew, runServe, runValidate, runWatch } from './dispatcher.js';
@@ -33,6 +34,17 @@ export function buildProgram(): Command {
           process.exitCode = 1;
           return;
         }
+        if (opts.output !== undefined) {
+          const normalized = normalize(opts.output);
+          // Rechazar rutas relativas con escalada de directorio o la raíz absoluta.
+          // clean() borra el directorio antes del build; un path incorrecto puede
+          // eliminar el proyecto o directorios del sistema.
+          if ((!isAbsolute(normalized) && normalized.startsWith('..')) || normalized === '/') {
+            process.stderr.write(`Error: --output no puede apuntar fuera del proyecto o a la raíz del sistema (recibido: "${opts.output}")\n`);
+            process.exitCode = 1;
+            return;
+          }
+        }
         await runBuild(opts.projectRoot ?? process.cwd(), {
           concurrency,
           noCache: !opts.cache,
@@ -43,11 +55,6 @@ export function buildProgram(): Command {
         });
       },
     );
-
-  program
-    .command('clean')
-    .description('elimina el directorio de salida y la caché')
-    .action(() => runClean(process.cwd()));
 
   program
     .command('info')
