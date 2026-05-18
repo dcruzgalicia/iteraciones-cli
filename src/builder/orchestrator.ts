@@ -372,8 +372,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     // el filtrado y se reprocesa el sitio completo.
     const GLOBAL_CHANGE_PATTERNS = [/\.ya?ml$/, /\.html$/];
     const isGlobalChange =
-      options.changedPaths !== undefined &&
-      [...options.changedPaths].some((p) => GLOBAL_CHANGE_PATTERNS.some((re) => re.test(p)));
+      options.changedPaths !== undefined && [...options.changedPaths].some((p) => GLOBAL_CHANGE_PATTERNS.some((re) => re.test(p)));
     const affectedPaths = options.changedPaths && !isGlobalChange ? computeAffectedDocs(options.changedPaths, allDocs) : null;
     const pipelineDocs = affectedPaths ? allDocs.filter((d) => affectedPaths.has(d.relativePath)) : allDocs;
 
