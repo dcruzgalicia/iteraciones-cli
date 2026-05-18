@@ -14,7 +14,7 @@ import { escapeHtml } from './html.js';
 import { classifyDocuments } from './pipeline/classify.js';
 import { type ComposeCache, composeDocuments, renderBlocksToRegions } from './pipeline/compose.js';
 import { discover } from './pipeline/discover.js';
-import { type RenderCache, renderDocuments } from './pipeline/render.js';
+import { type RenderCache, type RenderStats, renderDocuments } from './pipeline/render.js';
 import { runContextPhaseWithTypeGraph } from './pipeline/runner.js';
 import { TYPE_STAGE_MAP } from './pipeline/type-graph.js';
 import { writeDocuments } from './pipeline/write.js';
@@ -182,18 +182,19 @@ async function runPrimaryRender(
   ctx: BuildContext,
   renderCache: RenderCache | undefined,
   registry: PluginRegistry,
+  stats?: RenderStats,
 ): Promise<PrimaryRenderResult> {
   const fileDocs = allDocs.filter((doc) => doc.type === 'file' && doc.kind !== 'block');
-  const renderedFileDocs = await renderDocuments(fileDocs, ctx.concurrency ?? 4, renderCache, registry);
+  const renderedFileDocs = await renderDocuments(fileDocs, ctx.concurrency ?? 4, renderCache, registry, stats);
 
   const authorDocs = allDocs.filter((doc) => doc.type === 'author' && doc.kind !== 'block');
-  const renderedAuthorDocs = await renderDocuments(authorDocs, ctx.concurrency ?? 4, renderCache, registry);
+  const renderedAuthorDocs = await renderDocuments(authorDocs, ctx.concurrency ?? 4, renderCache, registry, stats);
   // Índice de autores por título normalizado (lowercase). Se construye aquí para que
   // esté disponible antes del pre-paso de bloques y del paso de contexto de páginas.
   const authorDocumentIndex = createAuthorDocumentIndex(renderedAuthorDocs);
 
   const eventDocs = allDocs.filter((doc) => doc.type === 'event' && doc.kind !== 'block');
-  const renderedEventDocs = await renderDocuments(eventDocs, ctx.concurrency ?? 4, renderCache, registry);
+  const renderedEventDocs = await renderDocuments(eventDocs, ctx.concurrency ?? 4, renderCache, registry, stats);
 
   return { renderedFileDocs, renderedAuthorDocs, renderedEventDocs, authorDocumentIndex };
 }
@@ -216,9 +217,10 @@ async function runBlocksPrestep(
   enrichedSiteCtx: TemplateContext,
   primaryRendered: ReadonlyMap<DocumentType, BuildDocument[]>,
   authorDocumentIndex: AuthorDocumentIndex,
+  stats?: RenderStats,
 ): Promise<BlocksPrestepResult> {
   const allBlockDocs = allDocs.filter((doc) => doc.kind === 'block');
-  const renderedBlockDocs = await renderDocuments(allBlockDocs, ctx.concurrency ?? 4, renderCache, registry);
+  const renderedBlockDocs = await renderDocuments(allBlockDocs, ctx.concurrency ?? 4, renderCache, registry, stats);
   const contextBlockDocs = renderedBlockDocs.map((doc) => {
     const spec = doc.type ? TYPE_STAGE_MAP.get(doc.type) : undefined;
     if (!spec) {
@@ -302,14 +304,19 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
   const log = options.verbose ? (msg: string) => process.stdout.write(`${msg}\n`) : (_msg: string) => undefined;
 
+  const t0 = performance.now();
+  const renderStats: RenderStats = { total: 0, cacheHits: 0 };
+
   const { ctx, renderCache, composeCache, registry, hasPlugins } = await setupBuildEnvironment(cwd, options, log);
   const allDocs = await runDiscovery(cwd, ctx, log);
   const enrichedSiteCtx = buildEnrichedSiteContext(ctx, allDocs);
+  const t1 = performance.now();
   const { renderedFileDocs, renderedAuthorDocs, renderedEventDocs, authorDocumentIndex } = await runPrimaryRender(
     allDocs,
     ctx,
     renderCache,
     registry,
+    renderStats,
   );
   const primaryRendered = new Map<DocumentType, BuildDocument[]>([
     ['file', renderedFileDocs],
@@ -324,7 +331,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     enrichedSiteCtx,
     primaryRendered,
     authorDocumentIndex,
+    renderStats,
   );
+  const t2 = performance.now();
   const { allContextDocs, renderedMap } = await runContextPhaseWithTypeGraph(
     allDocs,
     ctx,
@@ -333,7 +342,19 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     finalSiteCtx,
     primaryRendered,
     authorDocumentIndex,
+    renderStats,
   );
   const allRenderedDocs = [...renderedMap.values()].flat().concat(renderedBlockDocs);
   await runFinalization(allContextDocs, allRenderedDocs, ctx, composeCache, renderCache, registry, hasPlugins, log);
+  const t3 = performance.now();
+
+  if (options.verbose) {
+    const pandocMs = ((t2 - t1) / 1000).toFixed(1);
+    const totalS = ((t3 - t0) / 1000).toFixed(1);
+    const pandocReal = renderStats.total - renderStats.cacheHits;
+    process.stdout.write(
+      `build: pandoc — ${pandocReal} conversión${pandocReal !== 1 ? 'es' : ''} en ${pandocMs}s (${renderStats.cacheHits} desde caché)\n`,
+    );
+    process.stdout.write(`build: completado en ${totalS}s\n`);
+  }
 }
