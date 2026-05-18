@@ -7,6 +7,8 @@ export interface SiteConfig {
   plugins: string[];
   theme: string | undefined;
   accent: string;
+  /** URL base del sitio publicado, p. ej. `https://ejemplo.com`. Opcional. */
+  baseUrl: string | undefined;
 }
 
 /**
@@ -47,4 +49,5 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   plugins: [],
   theme: undefined,
   accent: 'lime',
+  baseUrl: undefined,
 };
