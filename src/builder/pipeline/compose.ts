@@ -58,6 +58,10 @@ export async function composeDocuments(
   const uniqueTemplatePaths = [...new Set(docs.map((d) => d.templatePath).filter((p): p is string => !!p))];
   const templateDataMap = new Map(await Promise.all(uniqueTemplatePaths.map(async (p) => [p, await readAndParseTemplate(p)] as const)));
 
+  // Hash del siteConfig: cubre cambios en título, tagline, baseUrl, accent, etc.
+  // Se calcula una sola vez fuera del loop para evitar serializar el objeto completo por cada doc.
+  const siteCtxHash = cache ? hash(JSON.stringify(ctx.siteConfig)) : '';
+
   const activeComposeKeys = cache ? new Set<string>() : null;
 
   const result = await mapWithConcurrency(docs, ctx.concurrency ?? 4, async (doc) => {
@@ -72,7 +76,9 @@ export async function composeDocuments(
     const key = cache
       ? hash(
           doc.htmlFragment,
-          JSON.stringify(doc.templateContext),
+          doc.sourceHash,
+          ...(doc.frontmatter.items ?? []),
+          siteCtxHash,
           cache.cliVersion,
           layoutHash,
           pandocHash,
