@@ -1,9 +1,15 @@
 import { join } from 'node:path';
+import { loadDiscoveryIndex, saveDiscoveryIndex } from '../../cache/discovery-index.js';
 import { IGNORED_DIRS } from '../../constants.js';
 import { parseFrontmatter } from '../../loader/frontmatter.js';
 import type { SourceDocument } from '../types.js';
 
-export async function discover(cwd: string): Promise<SourceDocument[]> {
+export interface DiscoverOptions {
+  /** Si es true, ignora el índice de discovery en disco (siempre lee todos los archivos). */
+  noCache?: boolean;
+}
+
+export async function discover(cwd: string, options: DiscoverOptions = {}): Promise<SourceDocument[]> {
   const relativePaths: string[] = [];
 
   for await (const entry of new Bun.Glob('**/*.md').scan({ cwd })) {
@@ -14,15 +20,33 @@ export async function discover(cwd: string): Promise<SourceDocument[]> {
 
   relativePaths.sort();
 
-  return Promise.all(
+  const useCache = !options.noCache;
+  const cachedIndex = useCache ? await loadDiscoveryIndex(cwd) : new Map();
+  const updatedIndex = new Map(cachedIndex);
+
+  const docs = await Promise.all(
     relativePaths.map(async (relativePath) => {
       const filePath = join(cwd, relativePath);
       const file = Bun.file(filePath);
 
-      let raw: string;
-      let fileStat: Awaited<ReturnType<typeof file.stat>>;
+      let mtimeMs: number;
       try {
-        [raw, fileStat] = await Promise.all([file.text(), file.stat()]);
+        const stat = await file.stat();
+        mtimeMs = stat.mtime.getTime();
+      } catch (err) {
+        throw new Error(`Error al leer "${relativePath}": ${String(err)}`, { cause: err });
+      }
+
+      const cached = cachedIndex.get(relativePath);
+      if (useCache && cached !== undefined && cached.mtimeMs === mtimeMs) {
+        // Caché válida: reusar datos sin leer el archivo.
+        return { filePath, relativePath, frontmatter: cached.frontmatter, body: cached.body, sourceHash: cached.sourceHash, mtimeMs };
+      }
+
+      // Caché inválida o ausente: leer y procesar el archivo.
+      let raw: string;
+      try {
+        raw = await file.text();
       } catch (err) {
         throw new Error(`Error al leer "${relativePath}": ${String(err)}`, { cause: err });
       }
@@ -33,7 +57,19 @@ export async function discover(cwd: string): Promise<SourceDocument[]> {
       hasher.update(raw);
       const sourceHash = hasher.digest('hex');
 
-      return { filePath, relativePath, frontmatter, body, sourceHash, mtimeMs: fileStat.mtime.getTime() };
+      updatedIndex.set(relativePath, { mtimeMs, sourceHash, frontmatter, body });
+
+      return { filePath, relativePath, frontmatter, body, sourceHash, mtimeMs };
     }),
   );
+
+  if (useCache) {
+    // Eliminar entradas del índice que ya no tienen archivo correspondiente.
+    for (const key of updatedIndex.keys()) {
+      if (!relativePaths.includes(key)) updatedIndex.delete(key);
+    }
+    await saveDiscoveryIndex(cwd, updatedIndex);
+  }
+
+  return docs;
 }
