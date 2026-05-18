@@ -1,5 +1,5 @@
 import { mkdir, writeFile } from 'node:fs/promises';
-import { dirname, isAbsolute, join, normalize, relative } from 'node:path';
+import { dirname, isAbsolute, join, normalize } from 'node:path';
 import { VALID_TYPES } from '../builder/pipeline/type-graph.js';
 import type { DocumentType, Region } from '../builder/types.js';
 import { VALID_REGIONS } from '../builder/types.js';
