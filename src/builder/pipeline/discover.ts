@@ -65,8 +65,9 @@ export async function discover(cwd: string, options: DiscoverOptions = {}): Prom
 
   if (useCache) {
     // Eliminar entradas del índice que ya no tienen archivo correspondiente.
+    const relativePathsSet = new Set(relativePaths);
     for (const key of updatedIndex.keys()) {
-      if (!relativePaths.includes(key)) updatedIndex.delete(key);
+      if (!relativePathsSet.has(key)) updatedIndex.delete(key);
     }
     await saveDiscoveryIndex(cwd, updatedIndex);
   }
