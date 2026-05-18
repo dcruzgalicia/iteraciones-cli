@@ -17,8 +17,14 @@ export async function loadOutputManifest(cwd: string): Promise<OutputManifest> {
   if (!exists) return new Map();
   try {
     const raw = await file.text();
-    const entries = JSON.parse(raw) as [string, string][];
-    return new Map(entries);
+    const entries: unknown = JSON.parse(raw);
+    if (
+      !Array.isArray(entries) ||
+      !entries.every((e) => Array.isArray(e) && e.length === 2 && typeof e[0] === 'string' && typeof e[1] === 'string')
+    ) {
+      return new Map();
+    }
+    return new Map(entries as [string, string][]);
   } catch {
     return new Map();
   }
