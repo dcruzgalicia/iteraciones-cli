@@ -54,7 +54,7 @@ export async function runServe(cwd: string, port: number, options: { concurrency
     const list = [...changedFiles].join(', ');
     process.stdout.write(`serve: cambio detectado en ${list} — reconstruyendo…\n`);
     try {
-      await build(cwd, incrementalOpts);
+      await build(cwd, { ...incrementalOpts, changedPaths: changedFiles });
       process.stdout.write('serve: rebuild completado\n');
       broadcaster.notify();
     } catch (err: unknown) {
