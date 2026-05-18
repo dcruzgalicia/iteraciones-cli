@@ -1,7 +1,7 @@
 import type { PluginRegistry } from '../../plugin/registry.js';
 import type { TemplateContext } from '../../template/render/context.js';
 import type { AuthorDocumentIndex, BuildContext, BuildDocument, DocumentType } from '../types.js';
-import type { RenderCache } from './render.js';
+import type { RenderCache, RenderStats } from './render.js';
 import { renderDocuments } from './render.js';
 import { TYPE_STAGES } from './type-graph.js';
 
@@ -37,6 +37,7 @@ export async function runContextPhaseWithTypeGraph(
   siteCtx: TemplateContext,
   primaryRendered: ReadonlyMap<DocumentType, BuildDocument[]>,
   authorIndex: AuthorDocumentIndex,
+  renderStats?: RenderStats,
 ): Promise<ContextPhaseResult> {
   const renderedMap = new Map<DocumentType, BuildDocument[]>(primaryRendered);
   const allContextDocs: BuildDocument[] = [];
@@ -53,7 +54,7 @@ export async function runContextPhaseWithTypeGraph(
     } else {
       // Fase index: renderizar → registrar en mapa → construir pool → construir contextos.
       const docs = allDocs.filter((d) => d.type === spec.type && d.kind !== 'block');
-      const rendered = await renderDocuments(docs, concurrency, renderCache, registry);
+      const rendered = await renderDocuments(docs, concurrency, renderCache, registry, renderStats);
       renderedMap.set(spec.type, rendered);
       const pool = spec.buildPool(renderedMap);
       const contextDocs = rendered.flatMap((doc) => spec.buildPageContexts(doc, siteCtx, pool, authorIndex, listItemsLimit));
