@@ -15,16 +15,16 @@ import { startWatcher } from './watcher.js';
  */
 export async function runServe(cwd: string, port: number, options: { concurrency?: number; verbose?: boolean } = {}): Promise<() => void> {
   const distDir = join(cwd, 'dist/web');
-  const buildOpts: BuildOptions = {
+  const baseOpts: BuildOptions = {
     concurrency: options.concurrency,
     verbose: options.verbose,
-    incremental: true,
   };
+  const incrementalOpts: BuildOptions = { ...baseOpts, incremental: true };
 
-  // ── Build inicial ──────────────────────────────────────────────────────────
+  // ── Build inicial ───────────────────────────────────────────────────────────────────
   process.stdout.write('serve: build inicial…\n');
   try {
-    await build(cwd, buildOpts);
+    await build(cwd, baseOpts);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     throw new Error(`serve: el build inicial falló — el servidor no puede arrancar.\n  ${message}`, { cause: err });
@@ -54,7 +54,7 @@ export async function runServe(cwd: string, port: number, options: { concurrency
     const list = [...changedFiles].join(', ');
     process.stdout.write(`serve: cambio detectado en ${list} — reconstruyendo…\n`);
     try {
-      await build(cwd, buildOpts);
+      await build(cwd, incrementalOpts);
       process.stdout.write('serve: rebuild completado\n');
       broadcaster.notify();
     } catch (err: unknown) {
