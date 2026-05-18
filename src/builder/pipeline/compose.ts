@@ -18,6 +18,12 @@ export interface ComposeCache {
   pluginFingerprint?: string;
 }
 
+/** Contadores acumulativos de la fase de compose; se mutan en lugar de retornar un nuevo objeto. */
+export interface ComposeStats {
+  total: number;
+  cacheHits: number;
+}
+
 async function readAndParseTemplate(path: string): Promise<{ ast: AstNode[]; contentHash: string }> {
   const content = await readFile(path, 'utf8');
   return { ast: parse(tokenize(content)), contentHash: hash(content) };
@@ -28,6 +34,7 @@ export async function composeDocuments(
   ctx: BuildContext,
   cache?: ComposeCache,
   registry?: PluginRegistry,
+  stats?: ComposeStats,
 ): Promise<BuildDocument[]> {
   const { layoutPath, pandocTemplatePath } = resolveEffectivePaths(ctx.siteConfig.theme, ctx.cwd);
   const layoutTemplate = await readFile(layoutPath, 'utf8');
@@ -78,6 +85,10 @@ export async function composeDocuments(
       activeComposeKeys?.add(key);
       const cached = await cache.manager.read('compose', key);
       if (cached !== undefined) {
+        if (stats) {
+          stats.total++;
+          stats.cacheHits++;
+        }
         return { ...doc, outputHtml: cached };
       }
     }
@@ -115,6 +126,7 @@ export async function composeDocuments(
       await cache.manager.write('compose', key, outputHtml);
     }
 
+    if (stats) stats.total++;
     return { ...doc, outputHtml };
   });
 
