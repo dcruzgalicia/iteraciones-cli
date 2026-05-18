@@ -333,7 +333,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     authorDocumentIndex,
     renderStats,
   );
-  const t2 = performance.now();
   const { allContextDocs, renderedMap } = await runContextPhaseWithTypeGraph(
     allDocs,
     ctx,
@@ -344,6 +343,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     authorDocumentIndex,
     renderStats,
   );
+  // t2 se mide después del context phase para que pandocMs cubra todos los pasos
+  // de renderizado: primary, blocks e índices (collection, authors, events, list).
+  const t2 = performance.now();
   const allRenderedDocs = [...renderedMap.values()].flat().concat(renderedBlockDocs);
   await runFinalization(allContextDocs, allRenderedDocs, ctx, composeCache, renderCache, registry, hasPlugins, log);
   const t3 = performance.now();
