@@ -44,6 +44,19 @@ export function buildProgram(): Command {
             process.exitCode = 1;
             return;
           }
+          // Rechazar rutas absolutas que sean igual o ancestro del directorio del proyecto.
+          // clean() borra outputDir antes del build; apuntar a un ancestro del cwd
+          // eliminaría los archivos fuente del proyecto.
+          if (isAbsolute(normalized)) {
+            const projectRoot = normalize(opts.projectRoot ?? process.cwd());
+            if (projectRoot === normalized || projectRoot.startsWith(normalized + '/')) {
+              process.stderr.write(
+                `Error: --output "${opts.output}" es un directorio padre del proyecto; ejecutar clean() borraría los archivos fuente.\n`,
+              );
+              process.exitCode = 1;
+              return;
+            }
+          }
         }
         await runBuild(opts.projectRoot ?? process.cwd(), {
           concurrency,
