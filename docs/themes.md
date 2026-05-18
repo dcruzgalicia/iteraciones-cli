@@ -58,19 +58,19 @@ Variables disponibles en el layout:
 
 | Variable | Descripción |
 |----------|-------------|
-| `{{site-title}}` | Título del sitio (`site.title`) |
-| `{{site-tagline}}` | Tagline del sitio (`site.tagline`) |
-| `{{site-lang}}` | Idioma (`site.lang`) |
-| `{{site-logo}}` | Ruta al logo |
-| `{{page-title}}` | Título del documento actual |
-| `{{body}}` | HTML del contenido del documento |
-| `{{content-before}}` | Slot para bloques de región `content-before` |
-| `{{content-after}}` | Slot para bloques de región `content-after` |
-| `{{sidebar-primary}}` | Slot para bloques de región `sidebar-primary` |
-| `{{sidebar-secondary}}` | Slot para bloques de región `sidebar-secondary` |
-| `{{footer-left}}` | Slot para bloques de región `footer-left` |
-| `{{footer-center}}` | Slot para bloques de región `footer-center` |
-| `{{footer-right}}` | Slot para bloques de región `footer-right` |
+| `$site-title$` | Título del sitio (`site.title`) |
+| `$site-tagline$` | Tagline del sitio (`site.tagline`) |
+| `$site-lang$` | Idioma (`site.lang`) |
+| `$if(site-logo)$$site-logo$$endif$` | Ruta al logo (condicional) |
+| `$page-title$` | Título del documento actual |
+| `$body$` | HTML del contenido del documento |
+| `$content-before$` | Slot para bloques de región `content-before` |
+| `$content-after$` | Slot para bloques de región `content-after` |
+| `$sidebar-primary$` | Slot para bloques de región `sidebar-primary` |
+| `$sidebar-secondary$` | Slot para bloques de región `sidebar-secondary` |
+| `$footer-left$` | Slot para bloques de región `footer-left` |
+| `$footer-center$` | Slot para bloques de región `footer-center` |
+| `$footer-right$` | Slot para bloques de región `footer-right` |
 
 ## Templates por tipo
 
