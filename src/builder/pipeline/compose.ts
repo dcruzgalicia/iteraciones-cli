@@ -9,7 +9,7 @@ import { parse } from '../../template/parser.js';
 import type { TemplateContext } from '../../template/render/context.js';
 import { renderAst } from '../../template/render/renderer.js';
 import { resolveEffectivePaths } from '../theme-resolver.js';
-import type { BuildContext, BuildDocument } from '../types.js';
+import { type BuildContext, type BuildDocument, VALID_REGIONS } from '../types.js';
 
 export interface ComposeCache {
   manager: CacheManager;
@@ -17,16 +17,6 @@ export interface ComposeCache {
   /** Hash de los paths de plugins activos. Invalida la caché si cambia el conjunto de plugins. */
   pluginFingerprint?: string;
 }
-
-const VALID_REGIONS = new Set([
-  'content-before',
-  'content-after',
-  'sidebar-primary',
-  'sidebar-secondary',
-  'footer-left',
-  'footer-center',
-  'footer-right',
-]);
 
 async function readAndParseTemplate(path: string): Promise<{ ast: AstNode[]; contentHash: string }> {
   const content = await readFile(path, 'utf8');
@@ -168,12 +158,12 @@ export async function renderBlocksToRegions(blockDocs: BuildDocument[]): Promise
   for (const doc of blockDocs) {
     const region = doc.frontmatter.region;
     if (!region) {
-      console.warn(`[iteraciones] bloque "${doc.relativePath}" no tiene frontmatter.region — se omite.`);
+      process.stderr.write(`[iteraciones] bloque "${doc.relativePath}" no tiene frontmatter.region — se omite.\n`);
       continue;
     }
-    if (!VALID_REGIONS.has(region)) {
-      console.warn(
-        `[iteraciones] bloque "${doc.relativePath}" tiene región inválida "${region}". ` + `Valores permitidos: ${[...VALID_REGIONS].join(', ')}.`,
+    if (!VALID_REGIONS.has(region as Parameters<typeof VALID_REGIONS.has>[0])) {
+      process.stderr.write(
+        `[iteraciones] bloque "${doc.relativePath}" tiene región inválida "${region}". Valores permitidos: ${[...VALID_REGIONS].join(', ')}.\n`,
       );
       continue;
     }

@@ -8,6 +8,17 @@ export type DocumentType = 'file' | 'collection' | 'author' | 'authors' | 'event
 
 export type Region = 'content-before' | 'content-after' | 'sidebar-primary' | 'sidebar-secondary' | 'footer-left' | 'footer-center' | 'footer-right';
 
+/** Set de todos los valores válidos de `region:` en documentos de tipo bloque. Fuente única de verdad. */
+export const VALID_REGIONS = new Set<Region>([
+  'content-before',
+  'content-after',
+  'sidebar-primary',
+  'sidebar-secondary',
+  'footer-left',
+  'footer-center',
+  'footer-right',
+]);
+
 /**
  * Índice de documentos de tipo `author` indexados por su título normalizado
  * (lowercase, trimmed). Usado para resolución eficiente de autores relacionados
