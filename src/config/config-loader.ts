@@ -51,7 +51,7 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
 function resolveAccent(value: unknown): string {
   if (typeof value !== 'string') return DEFAULT_SITE_CONFIG.accent;
   if (!KNOWN_ACCENT_COLORS.has(value)) {
-    console.warn(`[iteraciones] Color de acento desconocido: "${value}". Usando "${DEFAULT_SITE_CONFIG.accent}" por defecto.`);
+    process.stderr.write(`[iteraciones] color de acento desconocido: "${value}". Usando "${DEFAULT_SITE_CONFIG.accent}" por defecto.\n`);
     return DEFAULT_SITE_CONFIG.accent;
   }
   return value;
