@@ -368,7 +368,13 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
     // Filtrado incremental: cuando se conocen los archivos modificados, limitar
     // el procesamiento de bloques y del context-phase a los docs afectados.
-    const affectedPaths = options.changedPaths ? computeAffectedDocs(options.changedPaths, allDocs) : null;
+    // Si algún archivo global cambia (YAML de config, plantillas HTML) se omite
+    // el filtrado y se reprocesa el sitio completo.
+    const GLOBAL_CHANGE_PATTERNS = [/\.ya?ml$/, /\.html$/];
+    const isGlobalChange =
+      options.changedPaths !== undefined &&
+      [...options.changedPaths].some((p) => GLOBAL_CHANGE_PATTERNS.some((re) => re.test(p)));
+    const affectedPaths = options.changedPaths && !isGlobalChange ? computeAffectedDocs(options.changedPaths, allDocs) : null;
     const pipelineDocs = affectedPaths ? allDocs.filter((d) => affectedPaths.has(d.relativePath)) : allDocs;
 
     const { finalSiteCtx, renderedBlockDocs } = await runBlocksPrestep(
