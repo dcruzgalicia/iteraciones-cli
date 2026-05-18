@@ -7,6 +7,7 @@ import { ConfigError, PandocError } from '../errors.js';
 import { checkPandoc } from '../services/pandoc-runner.js';
 import { runDoctor as doctor } from './doctor.js';
 import { runInit as init } from './init.js';
+import { runNew as newDoc } from './new.js';
 import { runServe as serve } from './serve.js';
 import { runValidate as validate } from './validate.js';
 import { runWatch as watch } from './watch.js';
@@ -155,6 +156,19 @@ export async function runServe(cwd: string, port: number, options: { concurrency
       process.stderr.write(`Error: ${err.message}\n`);
     } else {
       process.stderr.write('Error desconocido al arrancar el servidor.\n');
+    }
+    process.exitCode = 1;
+  }
+}
+
+export async function runNew(cwd: string, type: string, path: string, opts: { region?: string } = {}): Promise<void> {
+  try {
+    await newDoc(cwd, type, path, opts);
+  } catch (err) {
+    if (err instanceof Error) {
+      process.stderr.write(`Error al crear documento: ${err.message}\n`);
+    } else {
+      process.stderr.write('Error desconocido al crear documento.\n');
     }
     process.exitCode = 1;
   }

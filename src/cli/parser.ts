@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
-import { runBuild, runClean, runDoctor, runInfo, runInit, runServe, runValidate, runWatch } from './dispatcher.js';
+import { runBuild, runClean, runDoctor, runInfo, runInit, runNew, runServe, runValidate, runWatch } from './dispatcher.js';
 
 export function buildProgram(): Command {
   const program = new Command();
@@ -113,6 +113,14 @@ export function buildProgram(): Command {
         return;
       }
       runServe(opts.projectRoot ?? process.cwd(), port, { concurrency, verbose: opts.verbose });
+    });
+
+  program
+    .command('new <type> <path>')
+    .description('crea un archivo Markdown con el frontmatter mínimo para el tipo indicado')
+    .option('--region <region>', 'región del bloque (solo para documentos de tipo bloque)')
+    .action(async (type: string, path: string, opts: { region?: string }) => {
+      await runNew(process.cwd(), type, path, { region: opts.region });
     });
 
   return program;
