@@ -216,4 +216,4 @@ Las rutas se validan con `iteraciones validate`.
 
 ## Campos personalizados
 
-El frontmatter acepta campos arbitrarios (`[key: string]: unknown`). Los campos no reconocidos se ignoran en el procesamiento estándar pero quedan disponibles para plugins vía el hook `beforeRender`.
+El frontmatter acepta campos arbitrarios (`[key: string]: unknown`). Los campos no reconocidos se ignoran en el procesamiento estándar. En la implementación actual, los hooks de plugin (`beforeRender`, `afterRender`) no reciben el frontmatter completo; `beforeRender` solo expone `sourcePath` y un objeto `variables` vacío.

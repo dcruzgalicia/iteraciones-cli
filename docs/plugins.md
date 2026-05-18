@@ -19,7 +19,7 @@ Los módulos se cargan dinámicamente con `import()` en tiempo de build.
 Un plugin es un módulo ESM con un `export default` que implementa la interfaz `IPlugin`:
 
 ```javascript
-/** @type {import('iteraciones-cli').IPlugin} */
+// Plugin mínimo — implementa solo los hooks que necesites
 export default {
   name: 'mi-plugin',
 
@@ -181,4 +181,4 @@ Los plugins se ejecutan en el orden en que se declaran en `plugins:`. Si un hook
 iteraciones doctor
 ```
 
-Verifica que todos los archivos declarados en `plugins:` sean accesibles y tengan un `export default` con campo `name`.
+Verifica que todos los archivos declarados en `plugins:` existan y sean accesibles en disco. **No** carga ni ejecuta los módulos; para detectar errores en los hooks es necesario ejecutar `iteraciones build`.
