@@ -11,12 +11,13 @@ site:
   lang: 'es'
   logo: ''
   accent: 'lime'
+  base-url: ''
   list-items:
     limit: 10
 
 plugins: []
 
-theme: ''
+theme: 'light'
 ```
 
 ## Campos
@@ -83,19 +84,27 @@ plugins:
   - plugins/otro-plugin.js
 ```
 
+### `site.base-url`
+
+**Tipo:** `string`  
+**Por defecto:** `''` (sin prefijo)
+
+URL base del sitio, usada para construir enlaces absolutos (sitemap, feeds). Debe incluir el protocolo y no terminar en `/`.
+
+```yaml
+site:
+  base-url: 'https://ejemplo.com'
+```
+
 ### `theme`
 
 **Tipo:** `string | undefined`  
 **Por defecto:** tema integrado
 
-Nombre del tema integrado o ruta relativa a un directorio de tema. Ver [docs/themes.md](themes.md).
+Nombre del tema integrado. Valores disponibles: `light`, `dark`. Ver [docs/themes.md](themes.md).
 
 ```yaml
-# Tema integrado por nombre:
-theme: 'default'
-
-# Tema personalizado por ruta:
-theme: 'mi-tema/'
+theme: 'light'
 ```
 
 ## Ejemplo mínimo
