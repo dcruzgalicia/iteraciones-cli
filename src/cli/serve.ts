@@ -18,6 +18,7 @@ export async function runServe(cwd: string, port: number, options: { concurrency
   const buildOpts: BuildOptions = {
     concurrency: options.concurrency,
     verbose: options.verbose,
+    incremental: true,
   };
 
   // ── Build inicial ──────────────────────────────────────────────────────────

@@ -1,6 +1,8 @@
+import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { CacheManager } from '../cache/cache-manager.js';
 import { hash } from '../cache/hasher.js';
+import { loadOutputManifest, saveOutputManifest } from '../cache/output-manifest.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { clean } from '../output/writer.js';
 import { loadPlugins } from '../plugin/loader.js';
@@ -33,6 +35,8 @@ export interface BuildOptions {
   dryRun?: boolean;
   /** Imprime información adicional de progreso durante el build. */
   verbose?: boolean;
+  /** Omite clean() del outputDir; solo escribe archivos nuevos o modificados. */
+  incremental?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -127,7 +131,7 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
     concurrency: options.concurrency ?? 4,
   };
 
-  await clean(ctx.outputDir);
+  if (!options.incremental) await clean(ctx.outputDir);
   const cacheManager = new CacheManager(cwd);
 
   const pkg = (await Bun.file(join(import.meta.dir, '../../package.json')).json()) as { version: string };
@@ -257,6 +261,8 @@ async function runFinalization(
   log: (msg: string) => void,
   composeStats: ComposeStats,
   pandocPool?: PandocPool,
+  cwd?: string,
+  incremental?: boolean,
 ): Promise<number> {
   const relativizedDocs = allContextDocs.map((doc) => ({
     ...doc,
@@ -274,6 +280,18 @@ async function runFinalization(
     if (ctx.siteConfig.logo?.trim()) assetPaths.push(ctx.siteConfig.logo.trim());
     await registry.runAfterBuild({ outputDir: ctx.outputDir, outputPaths: [...assetPaths, ...docOutputPaths] });
   }
+
+  // Actualizar manifiesto de salida y eliminar archivos huérfanos en modo incremental.
+  const currentManifest = new Map(writtenDocs.map((doc) => [doc.relativePath, doc.outputPath ?? '']));
+  if (incremental && cwd) {
+    const prevManifest = await loadOutputManifest(cwd);
+    for (const [relPath, outputPath] of prevManifest) {
+      if (!currentManifest.has(relPath) && outputPath) {
+        await rm(outputPath, { force: true });
+      }
+    }
+  }
+  if (cwd) await saveOutputManifest(cwd, currentManifest);
 
   // Podar entradas obsoletas del scope 'render' usando las claves de todos los
   // documentos procesados en esta ejecución. Se hace al final para no eliminar
@@ -381,6 +399,8 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       log,
       composeStats,
       pandocPool,
+      cwd,
+      options.incremental === true,
     );
     const t3 = performance.now();
 
