@@ -16,17 +16,28 @@ export interface RenderCache {
   pluginFingerprint?: string;
 }
 
+/** Contadores acumulativos de la fase de render; se mutan en lugar de retornar un nuevo objeto. */
+export interface RenderStats {
+  total: number;
+  cacheHits: number;
+}
+
 export async function renderDocuments(
   docs: BuildDocument[],
   concurrency: number,
   cache?: RenderCache,
   registry?: PluginRegistry,
+  stats?: RenderStats,
 ): Promise<BuildDocument[]> {
   return mapWithConcurrency(docs, concurrency, async (doc) => {
     if (cache) {
       const key = hash(doc.sourceHash, cache.cliVersion, cache.pandocVersion, cache.pluginFingerprint ?? '');
       const cached = await cache.manager.read('render', key);
       if (cached !== undefined) {
+        if (stats) {
+          stats.total++;
+          stats.cacheHits++;
+        }
         return { ...doc, htmlFragment: cached };
       }
     }
@@ -52,6 +63,7 @@ export async function renderDocuments(
         const key = hash(doc.sourceHash, cache.cliVersion, cache.pandocVersion, cache.pluginFingerprint ?? '');
         await cache.manager.write('render', key, htmlFragment);
       }
+      if (stats) stats.total++;
       return { ...doc, htmlFragment };
     } finally {
       await rm(tmpPath, { force: true });
