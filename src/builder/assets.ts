@@ -1,6 +1,8 @@
 import { cp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import type { CacheManager } from '../cache/cache-manager.js';
+import { hash } from '../cache/hasher.js';
 import type { SiteConfig } from '../config/site-config.js';
 import { run } from '../services/run.js';
 
@@ -14,9 +16,9 @@ const FONTS_SRC = join(PKG_ROOT, 'fonts');
  *
  * Precondición: outputDir ya existe y está limpio (limpieza a cargo del orchestrator).
  */
-export async function buildAssets(outputDir: string, cwd: string, siteConfig: SiteConfig, options: { noTailwind?: boolean } = {}): Promise<string> {
+export async function buildAssets(outputDir: string, cwd: string, siteConfig: SiteConfig, options: { noTailwind?: boolean; cacheManager?: CacheManager } = {}): Promise<string> {
   const tasks: Promise<void>[] = [copyFonts(outputDir), copyLogo(outputDir, cwd, siteConfig)];
-  if (!options.noTailwind) tasks.push(generateCss(outputDir, cwd, siteConfig.accent));
+  if (!options.noTailwind) tasks.push(generateCss(outputDir, cwd, siteConfig.accent, options.cacheManager));
   await Promise.all(tasks);
   // Cuando noTailwind está activo no se genera styles.css, así que retornamos ''
   // para que buildSiteContext produzca css:[] y el template omita el <link>.
@@ -25,7 +27,7 @@ export async function buildAssets(outputDir: string, cwd: string, siteConfig: Si
   return options.noTailwind ? '' : '/css/styles.css';
 }
 
-async function generateCss(outputDir: string, cwd: string, accent: string): Promise<void> {
+async function generateCss(outputDir: string, cwd: string, accent: string, cacheManager?: CacheManager): Promise<void> {
   const targetCssDir = join(outputDir, 'css');
   await mkdir(targetCssDir, { recursive: true });
   const targetCssPath = join(targetCssDir, 'styles.css');
@@ -33,6 +35,40 @@ async function generateCss(outputDir: string, cwd: string, accent: string): Prom
   const shades = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
   const accentTheme = shades.map((s) => `  --color-accent-${s}: var(--color-${accent}-${s});`).join('\n');
 
+  if (cacheManager) {
+    // Clave de caché: hash de todos los templates HTML del CLI + styles.css + accent.
+    // Si ninguno de estos inputs cambia, el CSS generado es idéntico.
+    const hasher = new Bun.CryptoHasher('sha256');
+    const htmlGlob = new Bun.Glob('**/*.html');
+    for await (const relPath of htmlGlob.scan({ cwd: PKG_ROOT })) {
+      const content = await Bun.file(join(PKG_ROOT, relPath)).text();
+      hasher.update(relPath);
+      hasher.update('\0');
+      hasher.update(content);
+      hasher.update('\0');
+    }
+    const cssSource = await Bun.file(CSS_SRC).text();
+    hasher.update(cssSource);
+    hasher.update('\0');
+    hasher.update(accent);
+    hasher.update('\0');
+    const cssKey = hasher.digest('hex');
+
+    const cached = await cacheManager.read('css', cssKey);
+    if (cached !== undefined) {
+      await Bun.write(targetCssPath, cached);
+      return;
+    }
+
+    const generated = await buildCssWithTailwind(targetCssPath, cwd, accentTheme);
+    await cacheManager.write('css', cssKey, generated);
+    return;
+  }
+
+  await buildCssWithTailwind(targetCssPath, cwd, accentTheme);
+}
+
+async function buildCssWithTailwind(targetCssPath: string, cwd: string, accentTheme: string): Promise<string> {
   // Archivo temporal con import absoluto para que Tailwind resuelva rutas correctamente
   // y escanee tanto los templates del CLI como el contenido del proyecto del usuario.
   const tempInputPath = join(tmpdir(), `_iteraciones-${crypto.randomUUID()}.css`);
@@ -57,6 +93,7 @@ async function generateCss(outputDir: string, cwd: string, accent: string): Prom
   } finally {
     await rm(tempInputPath, { force: true });
   }
+  return Bun.file(targetCssPath).text();
 }
 
 async function copyFonts(outputDir: string): Promise<void> {
