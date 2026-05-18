@@ -24,6 +24,9 @@ export function startWatcher(srcDir: string, onChange: (files: Set<string>) => P
 
   const scheduleRebuild = (): void => {
     if (buildPromise !== null) return; // ya hay un rebuild activo; los pendingFiles se acumulan
+    if (pendingFiles.size === 0) return; // timer de debounce obsoleto; el finally ya despachó el rebuild
+    clearTimeout(debounceTimer);
+    debounceTimer = undefined;
     const files = pendingFiles;
     pendingFiles = new Set<string>();
     buildPromise = onChange(files).finally(() => {
