@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { build } from '../orchestrator.js';
@@ -222,6 +222,13 @@ describe('fixture: with-event-and-index-types', () => {
     expect(existsSync(join(outputDir, 'menu.html'))).toBe(true);
   });
 
+  test('menu.html contiene los labels del nav del frontmatter', () => {
+    const html = readFileSync(join(outputDir, 'menu.html'), 'utf8');
+    expect(html).toContain('Inicio');
+    expect(html).toContain('Eventos');
+    expect(html).toContain('Personas');
+  });
+
   test('convocatoria.html no existe (type: card, block: true)', () => {
     expect(existsSync(join(outputDir, 'convocatoria.html'))).toBe(false);
   });
@@ -291,5 +298,15 @@ describe('caché: segunda build produce output idéntico al primero', () => {
     const html1 = readFileSync(join(outputDir1, 'articulos/dos.html'), 'utf8');
     const html2 = readFileSync(join(outputDir2, 'articulos/dos.html'), 'utf8');
     expect(html1).toBe(html2);
+  });
+
+  test('la build fría escribe entradas en la caché de render', () => {
+    // Prueba indirecta de que la caché fue usada en la segunda build:
+    // la caché de render debe existir y tener al menos un subdirectorio (prefijo hex)
+    // tras la primera build, lo que confirma que las entradas fueron escritas.
+    const renderCacheDir = join(tmpCwd, '.iteraciones', 'cache', 'render');
+    expect(existsSync(renderCacheDir)).toBe(true);
+    const prefixDirs = readdirSync(renderCacheDir);
+    expect(prefixDirs.length).toBeGreaterThan(0);
   });
 });
