@@ -8,23 +8,17 @@ import { PluginRegistry } from '../plugin/registry.js';
 import { checkPandoc } from '../services/pandoc-runner.js';
 import type { TemplateContext } from '../template/render/context.js';
 import { buildAssets } from './assets.js';
-import { buildRelatedAuthorsContext, createAuthorDocumentIndex } from './context/authors.js';
+import { createAuthorDocumentIndex } from './context/authors.js';
 import { buildSiteContext } from './context/site.js';
 import { escapeHtml } from './html.js';
 import { classifyDocuments } from './pipeline/classify.js';
 import { type ComposeCache, composeDocuments, renderBlocksToRegions } from './pipeline/compose.js';
-import { buildAuthorPipelineContext, buildAuthorsPipelineContext, buildPagedAuthorsPipelineContexts } from './pipeline/context/authors.js';
-import { buildCardPipelineContext } from './pipeline/context/card.js';
-import { buildCollectionPipelineContext, buildPagedCollectionPipelineContexts } from './pipeline/context/collection.js';
-import { buildEventPipelineContext, buildEventsPipelineContext, buildPagedEventsPipelineContexts } from './pipeline/context/event.js';
-import { buildContext } from './pipeline/context/index.js';
-import { buildListPipelineContext, buildPagedListPipelineContexts } from './pipeline/context/list.js';
-import { buildMenuPipelineContext } from './pipeline/context/menu.js';
-import { mergeContexts } from './pipeline/context/merge.js';
 import { discover } from './pipeline/discover.js';
 import { type RenderCache, renderDocuments } from './pipeline/render.js';
+import { runContextPhaseWithTypeGraph } from './pipeline/runner.js';
+import { TYPE_STAGES } from './pipeline/type-graph.js';
 import { writeDocuments } from './pipeline/write.js';
-import type { AuthorDocumentIndex, BuildContext, BuildDocument } from './types.js';
+import type { AuthorDocumentIndex, BuildContext, BuildDocument, DocumentType } from './types.js';
 
 export interface BuildOptions {
   outputDir?: string;
@@ -62,11 +56,6 @@ interface PrimaryRenderResult {
 interface BlocksPrestepResult {
   finalSiteCtx: TemplateContext;
   renderedBlockDocs: BuildDocument[];
-}
-
-interface ContextPhaseResult {
-  allContextDocs: BuildDocument[];
-  allRenderedDocs: BuildDocument[];
 }
 
 // ---------------------------------------------------------------------------
@@ -109,37 +98,6 @@ function makeRelativeContext(value: unknown, prefix: string, depth = 0): unknown
   if (value !== null && typeof value === 'object')
     return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, makeRelativeContext(v, prefix, depth + 1)]));
   return value;
-}
-
-function buildBlockTypeContext(
-  doc: Parameters<typeof buildContext>[0],
-  siteCtx: TemplateContext,
-  collectionPool: BuildDocument[],
-  renderedFileDocs: Parameters<typeof buildAuthorPipelineContext>[2],
-  renderedAuthorDocs: Parameters<typeof buildAuthorsPipelineContext>[2],
-  renderedEventDocs: Parameters<typeof buildEventsPipelineContext>[2],
-  authorDocumentIndex: AuthorDocumentIndex,
-): TemplateContext {
-  switch (doc.type) {
-    case 'collection':
-      return buildCollectionPipelineContext(doc, siteCtx, collectionPool, authorDocumentIndex);
-    case 'author':
-      return buildAuthorPipelineContext(doc, siteCtx, renderedFileDocs);
-    case 'authors':
-      return buildAuthorsPipelineContext(doc, siteCtx, renderedAuthorDocs);
-    case 'event':
-      return buildEventPipelineContext(doc, siteCtx, authorDocumentIndex);
-    case 'events':
-      return buildEventsPipelineContext(doc, siteCtx, renderedEventDocs);
-    case 'menu':
-      return buildMenuPipelineContext(doc, siteCtx);
-    case 'card':
-      return buildCardPipelineContext(doc, siteCtx);
-    case 'list':
-      return buildListPipelineContext(doc, siteCtx, renderedFileDocs, authorDocumentIndex);
-    default:
-      return mergeContexts(buildContext(doc, siteCtx, authorDocumentIndex), buildRelatedAuthorsContext(doc, authorDocumentIndex));
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -246,6 +204,9 @@ async function runPrimaryRender(
  * agrupa por región. El resultado se inyecta en finalSiteCtx para que los
  * region slots del layout se rellenen en todas las páginas.
  * Los bloques NO generan su propio archivo HTML de salida.
+ *
+ * Usa el type-graph para construir el contexto de cada bloque sin un switch hardcoded.
+ * Si un tipo no tiene spec registrada en TYPE_STAGES, falla explícitamente.
  */
 async function runBlocksPrestep(
   allDocs: BuildDocument[],
@@ -253,153 +214,26 @@ async function runBlocksPrestep(
   renderCache: RenderCache | undefined,
   registry: PluginRegistry,
   enrichedSiteCtx: TemplateContext,
-  renderedFileDocs: BuildDocument[],
-  renderedAuthorDocs: BuildDocument[],
-  renderedEventDocs: BuildDocument[],
+  primaryRendered: ReadonlyMap<DocumentType, BuildDocument[]>,
   authorDocumentIndex: AuthorDocumentIndex,
 ): Promise<BlocksPrestepResult> {
-  // El pool para bloques de tipo collection incluye los docs renderizados disponibles
-  // en este punto del pipeline (file, author, event).
-  const collectionBlockPool = [...renderedFileDocs, ...renderedAuthorDocs, ...renderedEventDocs];
   const allBlockDocs = allDocs.filter((doc) => doc.kind === 'block');
   const renderedBlockDocs = await renderDocuments(allBlockDocs, ctx.concurrency ?? 4, renderCache, registry);
-  const contextBlockDocs = renderedBlockDocs.map((doc) => ({
-    ...doc,
-    templateContext: buildBlockTypeContext(
-      doc,
-      enrichedSiteCtx,
-      collectionBlockPool,
-      renderedFileDocs,
-      renderedAuthorDocs,
-      renderedEventDocs,
-      authorDocumentIndex,
-    ),
-  }));
+  const contextBlockDocs = renderedBlockDocs.map((doc) => {
+    const spec = doc.type ? TYPE_STAGES.find((s) => s.type === doc.type) : undefined;
+    if (!spec) {
+      throw new Error(
+        `runBlocksPrestep: tipo de bloque sin spec en el type-graph: "${doc.type ?? 'undefined'}". ¿Falta añadir una TypeStageSpec en type-graph.ts?`,
+      );
+    }
+    return { ...doc, templateContext: spec.buildBlockContext(doc, enrichedSiteCtx, primaryRendered, authorDocumentIndex) };
+  });
   const regionBlocks = await renderBlocksToRegions(contextBlockDocs);
   return { finalSiteCtx: { ...enrichedSiteCtx, ...regionBlocks }, renderedBlockDocs };
 }
 
 /**
  * Fase de contexto: renderiza (Pandoc) los tipos restantes y construye el
- * templateContext de cada documento. Retorna allContextDocs (listos para compose)
- * y allRenderedDocs (necesario para la poda de caché al final del build).
- */
-async function runContextPhase(
-  allDocs: BuildDocument[],
-  ctx: BuildContext,
-  renderCache: RenderCache | undefined,
-  registry: PluginRegistry,
-  finalSiteCtx: TemplateContext,
-  renderedFileDocs: BuildDocument[],
-  renderedAuthorDocs: BuildDocument[],
-  renderedEventDocs: BuildDocument[],
-  renderedBlockDocs: BuildDocument[],
-  authorDocumentIndex: AuthorDocumentIndex,
-): Promise<ContextPhaseResult> {
-  const { listItemsLimit } = ctx.siteConfig;
-  const concurrency = ctx.concurrency ?? 4;
-
-  // file: se fusionan con buildRelatedAuthorsContext para rellenar el slot `authors`.
-  const contextFileDocs = renderedFileDocs.map((doc) => ({
-    ...doc,
-    templateContext: mergeContexts(buildContext(doc, finalSiteCtx, authorDocumentIndex), buildRelatedAuthorsContext(doc, authorDocumentIndex)),
-  }));
-
-  // collection: lista curada por items: en frontmatter. Genera páginas si supera listItemsLimit.
-  const collectionPool = [...renderedFileDocs, ...renderedAuthorDocs, ...renderedEventDocs];
-  const collectionDocs = allDocs.filter((doc) => doc.type === 'collection' && doc.kind !== 'block');
-  const renderedCollectionDocs = await renderDocuments(collectionDocs, concurrency, renderCache, registry);
-  const contextCollectionDocs = renderedCollectionDocs.flatMap((doc) =>
-    buildPagedCollectionPipelineContexts(doc, finalSiteCtx, collectionPool, listItemsLimit, authorDocumentIndex),
-  );
-
-  // author: contexto individual con publicaciones relacionadas (sin límite de listItemsLimit).
-  const contextAuthorDocs = renderedAuthorDocs.map((doc) => ({
-    ...doc,
-    templateContext: buildAuthorPipelineContext(doc, finalSiteCtx, renderedFileDocs),
-  }));
-
-  // authors: índice paginado de autores.
-  const authorsDocs = allDocs.filter((doc) => doc.type === 'authors' && doc.kind !== 'block');
-  const renderedAuthorsDocs = await renderDocuments(authorsDocs, concurrency, renderCache, registry);
-  const contextAuthorsDocs = renderedAuthorsDocs.flatMap((doc) =>
-    buildPagedAuthorsPipelineContexts(doc, finalSiteCtx, renderedAuthorDocs, listItemsLimit),
-  );
-
-  // event: contexto individual; speakers resueltos desde authorDocumentIndex.
-  const contextEventDocs = renderedEventDocs.map((doc) => ({
-    ...doc,
-    templateContext: buildEventPipelineContext(doc, finalSiteCtx, authorDocumentIndex),
-  }));
-
-  // events: índice paginado de eventos.
-  const eventsDocs = allDocs.filter((doc) => doc.type === 'events' && doc.kind !== 'block');
-  const renderedEventsDocs = await renderDocuments(eventsDocs, concurrency, renderCache, registry);
-  const contextEventsDocs = renderedEventsDocs.flatMap((doc) =>
-    buildPagedEventsPipelineContexts(doc, finalSiteCtx, renderedEventDocs, listItemsLimit),
-  );
-
-  // menu: renderizado opcional del cuerpo MD + contexto de navegación.
-  const menuDocs = allDocs.filter((doc) => doc.type === 'menu' && doc.kind !== 'block');
-  const renderedMenuDocs = await renderDocuments(menuDocs, concurrency, renderCache, registry);
-  const contextMenuDocs = renderedMenuDocs.map((doc) => ({
-    ...doc,
-    templateContext: buildMenuPipelineContext(doc, finalSiteCtx),
-  }));
-
-  // card: solo kind 'page' (los bloques ya se procesaron en el pre-paso).
-  const cardDocs = allDocs.filter((doc) => doc.type === 'card' && doc.kind !== 'block');
-  const renderedCardDocs = await renderDocuments(cardDocs, concurrency, renderCache, registry);
-  const contextCardDocs = renderedCardDocs.map((doc) => ({
-    ...doc,
-    templateContext: buildCardPipelineContext(doc, finalSiteCtx),
-  }));
-
-  // list: renderiza primero para incluirse en su propio pool (filters.type: [list]).
-  const listDocs = allDocs.filter((doc) => doc.type === 'list' && doc.kind !== 'block');
-  const renderedListDocs = await renderDocuments(listDocs, concurrency, renderCache, registry);
-  const listCandidatePool = [
-    ...renderedFileDocs,
-    ...renderedAuthorDocs,
-    ...renderedEventDocs,
-    ...renderedCollectionDocs,
-    ...renderedAuthorsDocs,
-    ...renderedEventsDocs,
-    ...renderedMenuDocs,
-    ...renderedCardDocs,
-    ...renderedListDocs,
-  ];
-  const contextListDocs = renderedListDocs.flatMap((doc) =>
-    buildPagedListPipelineContexts(doc, finalSiteCtx, listCandidatePool, listItemsLimit, authorDocumentIndex),
-  );
-
-  const allContextDocs = [
-    ...contextFileDocs,
-    ...contextCollectionDocs,
-    ...contextAuthorDocs,
-    ...contextAuthorsDocs,
-    ...contextEventDocs,
-    ...contextEventsDocs,
-    ...contextMenuDocs,
-    ...contextCardDocs,
-    ...contextListDocs,
-  ];
-  const allRenderedDocs = [
-    ...renderedFileDocs,
-    ...renderedAuthorDocs,
-    ...renderedEventDocs,
-    ...renderedBlockDocs,
-    ...renderedCollectionDocs,
-    ...renderedAuthorsDocs,
-    ...renderedEventsDocs,
-    ...renderedMenuDocs,
-    ...renderedCardDocs,
-    ...renderedListDocs,
-  ];
-
-  return { allContextDocs, allRenderedDocs };
-}
-
 /**
  * Fase final: relativiza contextos, compone HTML, escribe archivos,
  * ejecuta el hook afterBuild y poda la caché de render.
@@ -477,28 +311,29 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     renderCache,
     registry,
   );
+  const primaryRendered = new Map<DocumentType, BuildDocument[]>([
+    ['file', renderedFileDocs],
+    ['author', renderedAuthorDocs],
+    ['event', renderedEventDocs],
+  ]);
   const { finalSiteCtx, renderedBlockDocs } = await runBlocksPrestep(
     allDocs,
     ctx,
     renderCache,
     registry,
     enrichedSiteCtx,
-    renderedFileDocs,
-    renderedAuthorDocs,
-    renderedEventDocs,
+    primaryRendered,
     authorDocumentIndex,
   );
-  const { allContextDocs, allRenderedDocs } = await runContextPhase(
+  const { allContextDocs, renderedMap } = await runContextPhaseWithTypeGraph(
     allDocs,
     ctx,
     renderCache,
     registry,
     finalSiteCtx,
-    renderedFileDocs,
-    renderedAuthorDocs,
-    renderedEventDocs,
-    renderedBlockDocs,
+    primaryRendered,
     authorDocumentIndex,
   );
+  const allRenderedDocs = [...[...renderedMap.values()].flat(), ...renderedBlockDocs];
   await runFinalization(allContextDocs, allRenderedDocs, ctx, composeCache, renderCache, registry, hasPlugins, log);
 }
