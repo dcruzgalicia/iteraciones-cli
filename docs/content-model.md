@@ -1,7 +1,7 @@
 # Modelo de contenido — iteraciones-cli
 
 > Referencia para colaboradores. Describe los tipos de documentos, el ciclo de vida en el pipeline y el grafo de dependencias entre tipos.  
-> Actualizado: mayo 2026 · iteraciones-cli v0.6.0
+> Actualizado: mayo 2026 · iteraciones-cli v0.4.x
 
 ---
 
@@ -136,7 +136,7 @@ Todos los tipos comparten los campos base de `Frontmatter`. Los campos específi
 ### Campos comunes (todos los tipos)
 
 ```yaml
-title: "Título del documento"     # obligatorio
+title: "Título del documento"     # recomendado; ausente o no-string → cadena vacía
 type: file                         # DocumentType; default: file
 draft: false                       # true → excluido del build
 keywords:                          # array de strings; usado en filtros
@@ -219,9 +219,16 @@ Genera un índice paginado de todos los docs `type: event`, separados en próxim
 ```yaml
 type: menu
 title: "Menú principal"
+nav:                          # ítems de navegación leídos por buildMenuContext
+  - label: "Inicio"
+    link: /index.html
+  - label: "Artículos"
+    link: /articulos/index.html
+  - label: "Autores"
+    link: /autores/index.html
 ```
 
-Uno de los docs de este tipo puede ser el menú primario del sitio (detectado automáticamente; se inyecta en todas las páginas vía `menuHref` / `menuTitle`).
+Uno de los docs de este tipo puede ser el menú primario del sitio (detectado automáticamente; se inyecta en todas las páginas vía `menuHref` / `menuTitle`). El campo `nav:` es leído por `buildMenuContext` para generar las variables `menu-items` del template; sin él, el menú no tendrá ítems de navegación.
 
 ### `card` — Tarjeta de contenido
 
@@ -255,12 +262,13 @@ Los filtros aplican AND entre criterios y OR dentro de cada criterio. Si no se d
 Para cada doc, el template HTML se resuelve en este orden de prioridad:
 
 ```
-1. {cwd}/templates/{type}.html          (proyecto — máxima prioridad)
-2. {tema-builtin}/templates/{type}.html (tema seleccionado en config)
-3. {tema-claro}/templates/{type}.html   (tema claro — fallback)
+1. {cwd}/templates/{type}.html     (proyecto — máxima prioridad)
+2. {tema}/templates/{type}.html    (tema seleccionado en config; si el tema
+                                    es desconocido, se usa el tema claro con
+                                    advertencia en stderr)
 ```
 
-Implementado en `src/builder/classifier/resolve-template.ts`.
+Implementado en `src/builder/classifier/resolve-template.ts`. No existe un tercer nivel de fallback por tipo: si el tema activo no tiene el template del tipo solicitado, el build falla con un error de ruta.
 
 Para personalizar el template de un tipo en el proyecto, basta con crear el archivo en `templates/`:
 
@@ -280,15 +288,18 @@ El grafo existe como estructura de datos en `src/builder/pipeline/type-graph.ts`
 ### Diagrama
 
 ```
-file ──────────────────────────┐
-author ─────────────────────── ├─► collection (pool: file+author+event)
-event ──────────────────────── ┤
-                               ├─► authors   (pool: author)
-                               ├─► events    (pool: event)
-                               ├─► menu      (pool: ninguno)
-                               ├─► card      (pool: ninguno)
-                               └─► list      (pool: TODOS los anteriores)
+file ─────────────────────────────────────────────────────────┐
+  │                                                             ├─► collection (pool: file+author+event)
+  └──► author ─────────────────────────────────────────────────├─► authors   (pool: author)
+                                                                │
+event ──────────────────────────────────────────────────────── ┤
+                                                                ├─► events    (pool: event)
+                                                                ├─► menu      (pool: ninguno)
+                                                                ├─► card      (pool: ninguno)
+                                                                └─► list      (pool: TODOS los anteriores)
 ```
+
+> `file` precede a `author` en la fase primary porque el pool de páginas de `author` usa los docs de `file` ya procesados.
 
 ### Tabla de dependencias
 
