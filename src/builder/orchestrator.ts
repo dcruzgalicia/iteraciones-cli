@@ -5,6 +5,7 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import { clean } from '../output/writer.js';
 import { loadPlugins } from '../plugin/loader.js';
 import { PluginRegistry } from '../plugin/registry.js';
+import { PandocPool } from '../services/pandoc-pool.js';
 import { checkPandoc } from '../services/pandoc-runner.js';
 import type { TemplateContext } from '../template/render/context.js';
 import { buildAssets } from './assets.js';
@@ -45,6 +46,7 @@ interface SetupResult {
   composeCache: ComposeCache | undefined;
   registry: PluginRegistry;
   hasPlugins: boolean;
+  pandocPool: PandocPool | undefined;
 }
 
 interface PrimaryRenderResult {
@@ -139,7 +141,10 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
     : { manager: cacheManager, cliVersion: pkg.version, pandocVersion, pluginFingerprint };
   const composeCache: ComposeCache | undefined = options.noCache ? undefined : { manager: cacheManager, cliVersion: pkg.version, pluginFingerprint };
 
-  return { ctx, cacheManager, renderCache, composeCache, registry, hasPlugins: plugins.length > 0 };
+  const pandocPool = (await PandocPool.tryCreate()) ?? undefined;
+  if (pandocPool) log('pandoc-server disponible: usando pool para conversiones');
+
+  return { ctx, cacheManager, renderCache, composeCache, registry, hasPlugins: plugins.length > 0, pandocPool };
 }
 
 /**
@@ -182,18 +187,19 @@ async function runPrimaryRender(
   renderCache: RenderCache | undefined,
   registry: PluginRegistry,
   stats?: RenderStats,
+  pool?: PandocPool,
 ): Promise<PrimaryRenderResult> {
   const fileDocs = allDocs.filter((doc) => doc.type === 'file' && doc.kind !== 'block');
-  const renderedFileDocs = await renderDocuments(fileDocs, ctx.concurrency ?? 4, renderCache, registry, stats);
+  const renderedFileDocs = await renderDocuments(fileDocs, ctx.concurrency ?? 4, renderCache, registry, stats, pool);
 
   const authorDocs = allDocs.filter((doc) => doc.type === 'author' && doc.kind !== 'block');
-  const renderedAuthorDocs = await renderDocuments(authorDocs, ctx.concurrency ?? 4, renderCache, registry, stats);
+  const renderedAuthorDocs = await renderDocuments(authorDocs, ctx.concurrency ?? 4, renderCache, registry, stats, pool);
   // Índice de autores por título normalizado (lowercase). Se construye aquí para que
   // esté disponible antes del pre-paso de bloques y del paso de contexto de páginas.
   const authorDocumentIndex = createAuthorDocumentIndex(renderedAuthorDocs);
 
   const eventDocs = allDocs.filter((doc) => doc.type === 'event' && doc.kind !== 'block');
-  const renderedEventDocs = await renderDocuments(eventDocs, ctx.concurrency ?? 4, renderCache, registry, stats);
+  const renderedEventDocs = await renderDocuments(eventDocs, ctx.concurrency ?? 4, renderCache, registry, stats, pool);
 
   return { renderedFileDocs, renderedAuthorDocs, renderedEventDocs, authorDocumentIndex };
 }
@@ -217,9 +223,10 @@ async function runBlocksPrestep(
   primaryRendered: ReadonlyMap<DocumentType, BuildDocument[]>,
   authorDocumentIndex: AuthorDocumentIndex,
   stats?: RenderStats,
+  pool?: PandocPool,
 ): Promise<BlocksPrestepResult> {
   const allBlockDocs = allDocs.filter((doc) => doc.kind === 'block');
-  const renderedBlockDocs = await renderDocuments(allBlockDocs, ctx.concurrency ?? 4, renderCache, registry, stats);
+  const renderedBlockDocs = await renderDocuments(allBlockDocs, ctx.concurrency ?? 4, renderCache, registry, stats, pool);
   const contextBlockDocs = renderedBlockDocs.map((doc) => {
     const spec = doc.type ? TYPE_STAGE_MAP.get(doc.type) : undefined;
     if (!spec) {
@@ -249,6 +256,7 @@ async function runFinalization(
   hasPlugins: boolean,
   log: (msg: string) => void,
   composeStats: ComposeStats,
+  pandocPool?: PandocPool,
 ): Promise<number> {
   const relativizedDocs = allContextDocs.map((doc) => ({
     ...doc,
@@ -274,6 +282,8 @@ async function runFinalization(
     const allRenderKeys = new Set(allRenderedDocs.map((doc) => hash(doc.sourceHash, renderCache.cliVersion, renderCache.pandocVersion)));
     await renderCache.manager.prune('render', allRenderKeys);
   }
+
+  pandocPool?.dispose();
 
   return composeMs;
 }
@@ -310,7 +320,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const renderStats: RenderStats = { total: 0, cacheHits: 0 };
   const composeStats: ComposeStats = { total: 0, cacheHits: 0 };
 
-  const { ctx, cacheManager, renderCache, composeCache, registry, hasPlugins } = await setupBuildEnvironment(cwd, options, log);
+  const { ctx, cacheManager, renderCache, composeCache, registry, hasPlugins, pandocPool } = await setupBuildEnvironment(cwd, options, log);
   const [allDocs, cssPath] = await Promise.all([
     runDiscovery(cwd, ctx, log, options.noCache),
     buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, { noTailwind: options.noTailwind, cacheManager: options.noCache ? undefined : cacheManager }),
@@ -325,6 +335,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     renderCache,
     registry,
     renderStats,
+    pandocPool,
   );
   const primaryRendered = new Map<DocumentType, BuildDocument[]>([
     ['file', renderedFileDocs],
@@ -340,6 +351,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     primaryRendered,
     authorDocumentIndex,
     renderStats,
+    pandocPool,
   );
   const { allContextDocs, renderedMap } = await runContextPhaseWithTypeGraph(
     allDocs,
@@ -350,12 +362,24 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     primaryRendered,
     authorDocumentIndex,
     renderStats,
+    pandocPool,
   );
   // t2 se mide después del context phase para que pandocMs cubra todos los pasos
   // de renderizado: primary, blocks e índices (collection, authors, events, list).
   const t2 = performance.now();
   const allRenderedDocs = [...renderedMap.values()].flat().concat(renderedBlockDocs);
-  const composeMs = await runFinalization(allContextDocs, allRenderedDocs, ctx, composeCache, renderCache, registry, hasPlugins, log, composeStats);
+  const composeMs = await runFinalization(
+    allContextDocs,
+    allRenderedDocs,
+    ctx,
+    composeCache,
+    renderCache,
+    registry,
+    hasPlugins,
+    log,
+    composeStats,
+    pandocPool,
+  );
   const t3 = performance.now();
 
   if (options.verbose) {

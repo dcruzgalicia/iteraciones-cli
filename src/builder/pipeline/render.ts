@@ -2,6 +2,7 @@ import type { CacheManager } from '../../cache/cache-manager.js';
 import { hash } from '../../cache/hasher.js';
 import { mapWithConcurrency } from '../../output/concurrency.js';
 import type { PluginRegistry } from '../../plugin/registry.js';
+import type { PandocPool } from '../../services/pandoc-pool.js';
 import { convertFragment } from '../../services/pandoc-runner.js';
 import type { BuildDocument } from '../types.js';
 
@@ -25,6 +26,7 @@ export async function renderDocuments(
   cache?: RenderCache,
   registry?: PluginRegistry,
   stats?: RenderStats,
+  pool?: PandocPool,
 ): Promise<BuildDocument[]> {
   return mapWithConcurrency(docs, concurrency, async (doc) => {
     if (cache) {
@@ -46,7 +48,7 @@ export async function renderDocuments(
       await registry.runBeforeRender({ sourcePath: doc.filePath, variables: {} });
     }
 
-    let htmlFragment = await convertFragment(doc.body, doc.filePath);
+    let htmlFragment = await convertFragment(doc.body, doc.filePath, pool);
 
     if (registry) {
       const afterCtx = await registry.runAfterRender({ sourcePath: doc.filePath, html: htmlFragment });
