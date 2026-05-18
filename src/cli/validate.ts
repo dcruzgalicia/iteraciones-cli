@@ -2,6 +2,7 @@ import { access, readFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { resolveTemplatePath } from '../builder/classifier/resolve-template.js';
 import { VALID_TYPES } from '../builder/pipeline/type-graph.js';
+import { resolveThemePaths } from '../builder/theme-resolver.js';
 import { VALID_REGIONS } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { IGNORED_DIRS } from '../constants.js';
@@ -17,6 +18,10 @@ type ValidationResult = { errors: ValidationError[]; warnings: ValidationError[]
 async function validateFrontmatter(cwd: string, theme: string | undefined): Promise<ValidationResult> {
   const errors: ValidationError[] = [];
   const warnings: ValidationError[] = [];
+
+  // Resolver el tema una sola vez antes del loop para evitar emitir el warning
+  // "tema desconocido" una vez por cada archivo tipado del proyecto.
+  const themePaths = resolveThemePaths(theme);
 
   const entries: string[] = [];
   for await (const entry of new Bun.Glob('**/*.md').scan({ cwd })) {
@@ -79,42 +84,26 @@ async function validateFrontmatter(cwd: string, theme: string | undefined): Prom
       warnings.push({ file: entry, message: 'block: true pero region: no está definido. El bloque no se insertará en ninguna región del layout' });
     }
 
-    // items: en colecciones deben apuntar a archivos existentes
+    // items: en colecciones deben apuntar a archivos existentes; el builder siempre
+    // resuelve items por relativePath con extensión .md, por lo que se normaliza aquí.
     const effectiveType = fm.type && VALID_TYPES.has(fm.type as Parameters<typeof VALID_TYPES.has>[0]) ? fm.type : 'file';
     if (effectiveType === 'collection' && fm.items.length > 0) {
       for (const item of fm.items) {
-        const itemPath = join(cwd, item.endsWith('.md') ? item : `${item}.md`);
+        const normalizedItem = item.endsWith('.md') ? item : `${item}.md`;
+        const itemPath = join(cwd, normalizedItem);
         const itemExists = await access(itemPath)
           .then(() => true)
           .catch(() => false);
         if (!itemExists) {
-          // Intentar también sin el .md añadido (puede que el usuario ya lo puso)
-          const itemPathRaw = join(cwd, item);
-          const itemExistsRaw = await access(itemPathRaw)
-            .then(() => true)
-            .catch(() => false);
-          if (!itemExistsRaw) {
-            errors.push({ file: entry, message: `items: "${item}" no existe en el proyecto` });
-          }
+          errors.push({ file: entry, message: `items: "${item}" no existe en el proyecto` });
         }
       }
     }
 
-    // template: si está declarado, debe existir en disco
-    if (typeof parsed.template === 'string' && parsed.template) {
-      const templatePath = join(cwd, parsed.template);
-      const templateExists = await access(templatePath)
-        .then(() => true)
-        .catch(() => false);
-      if (!templateExists) {
-        errors.push({ file: entry, message: `template: "${parsed.template}" no existe en el proyecto` });
-      }
-    }
-
-    // Validar que el template resuelto automáticamente existe
-    // (solo si no hay template explícito)
-    if (!parsed.template && fm.type && VALID_TYPES.has(fm.type as Parameters<typeof VALID_TYPES.has>[0])) {
-      const resolvedTemplate = resolveTemplatePath(fm.type as Parameters<typeof VALID_TYPES.has>[0], theme, cwd);
+    // Validar que el template resuelto automáticamente existe.
+    // El builder nunca lee frontmatter.template; usa siempre resolveTemplatePath(type, theme, cwd).
+    if (fm.type && VALID_TYPES.has(fm.type as Parameters<typeof VALID_TYPES.has>[0])) {
+      const resolvedTemplate = resolveTemplatePath(fm.type as Parameters<typeof VALID_TYPES.has>[0], theme, cwd, themePaths);
       const templateExists = await access(resolvedTemplate)
         .then(() => true)
         .catch(() => false);
