@@ -283,8 +283,6 @@ async function runFinalization(
     await renderCache.manager.prune('render', allRenderKeys);
   }
 
-  pandocPool?.dispose();
-
   return composeMs;
 }
 
@@ -321,78 +319,85 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const composeStats: ComposeStats = { total: 0, cacheHits: 0 };
 
   const { ctx, cacheManager, renderCache, composeCache, registry, hasPlugins, pandocPool } = await setupBuildEnvironment(cwd, options, log);
-  const [allDocs, cssPath] = await Promise.all([
-    runDiscovery(cwd, ctx, log, options.noCache),
-    buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, { noTailwind: options.noTailwind, cacheManager: options.noCache ? undefined : cacheManager }),
-  ]);
-  ctx.cssPath = cssPath;
-  log(`Assets generados en ${ctx.outputDir}`);
-  const enrichedSiteCtx = buildEnrichedSiteContext(ctx, allDocs);
-  const t1 = performance.now();
-  const { renderedFileDocs, renderedAuthorDocs, renderedEventDocs, authorDocumentIndex } = await runPrimaryRender(
-    allDocs,
-    ctx,
-    renderCache,
-    registry,
-    renderStats,
-    pandocPool,
-  );
-  const primaryRendered = new Map<DocumentType, BuildDocument[]>([
-    ['file', renderedFileDocs],
-    ['author', renderedAuthorDocs],
-    ['event', renderedEventDocs],
-  ]);
-  const { finalSiteCtx, renderedBlockDocs } = await runBlocksPrestep(
-    allDocs,
-    ctx,
-    renderCache,
-    registry,
-    enrichedSiteCtx,
-    primaryRendered,
-    authorDocumentIndex,
-    renderStats,
-    pandocPool,
-  );
-  const { allContextDocs, renderedMap } = await runContextPhaseWithTypeGraph(
-    allDocs,
-    ctx,
-    renderCache,
-    registry,
-    finalSiteCtx,
-    primaryRendered,
-    authorDocumentIndex,
-    renderStats,
-    pandocPool,
-  );
-  // t2 se mide después del context phase para que pandocMs cubra todos los pasos
-  // de renderizado: primary, blocks e índices (collection, authors, events, list).
-  const t2 = performance.now();
-  const allRenderedDocs = [...renderedMap.values()].flat().concat(renderedBlockDocs);
-  const composeMs = await runFinalization(
-    allContextDocs,
-    allRenderedDocs,
-    ctx,
-    composeCache,
-    renderCache,
-    registry,
-    hasPlugins,
-    log,
-    composeStats,
-    pandocPool,
-  );
-  const t3 = performance.now();
+  try {
+    const [allDocs, cssPath] = await Promise.all([
+      runDiscovery(cwd, ctx, log, options.noCache),
+      buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, {
+        noTailwind: options.noTailwind,
+        cacheManager: options.noCache ? undefined : cacheManager,
+      }),
+    ]);
+    ctx.cssPath = cssPath;
+    log(`Assets generados en ${ctx.outputDir}`);
+    const enrichedSiteCtx = buildEnrichedSiteContext(ctx, allDocs);
+    const t1 = performance.now();
+    const { renderedFileDocs, renderedAuthorDocs, renderedEventDocs, authorDocumentIndex } = await runPrimaryRender(
+      allDocs,
+      ctx,
+      renderCache,
+      registry,
+      renderStats,
+      pandocPool,
+    );
+    const primaryRendered = new Map<DocumentType, BuildDocument[]>([
+      ['file', renderedFileDocs],
+      ['author', renderedAuthorDocs],
+      ['event', renderedEventDocs],
+    ]);
+    const { finalSiteCtx, renderedBlockDocs } = await runBlocksPrestep(
+      allDocs,
+      ctx,
+      renderCache,
+      registry,
+      enrichedSiteCtx,
+      primaryRendered,
+      authorDocumentIndex,
+      renderStats,
+      pandocPool,
+    );
+    const { allContextDocs, renderedMap } = await runContextPhaseWithTypeGraph(
+      allDocs,
+      ctx,
+      renderCache,
+      registry,
+      finalSiteCtx,
+      primaryRendered,
+      authorDocumentIndex,
+      renderStats,
+      pandocPool,
+    );
+    // t2 se mide después del context phase para que pandocMs cubra todos los pasos
+    // de renderizado: primary, blocks e índices (collection, authors, events, list).
+    const t2 = performance.now();
+    const allRenderedDocs = [...renderedMap.values()].flat().concat(renderedBlockDocs);
+    const composeMs = await runFinalization(
+      allContextDocs,
+      allRenderedDocs,
+      ctx,
+      composeCache,
+      renderCache,
+      registry,
+      hasPlugins,
+      log,
+      composeStats,
+      pandocPool,
+    );
+    const t3 = performance.now();
 
-  if (options.verbose) {
-    const pandocMs = ((t2 - t1) / 1000).toFixed(1);
-    const composeMsStr = (composeMs / 1000).toFixed(1);
-    const totalS = ((t3 - t0) / 1000).toFixed(1);
-    const pandocReal = renderStats.total - renderStats.cacheHits;
-    process.stdout.write(
-      `build: pandoc — ${pandocReal} conversión${pandocReal !== 1 ? 'es' : ''} en ${pandocMs}s (${renderStats.cacheHits} desde caché)\n`,
-    );
-    process.stdout.write(
-      `build: compose — ${composeStats.total} documento${composeStats.total !== 1 ? 's' : ''} en ${composeMsStr}s (${composeStats.cacheHits} desde caché)\n`,
-    );
-    process.stdout.write(`build: completado en ${totalS}s\n`);
+    if (options.verbose) {
+      const pandocMs = ((t2 - t1) / 1000).toFixed(1);
+      const composeMsStr = (composeMs / 1000).toFixed(1);
+      const totalS = ((t3 - t0) / 1000).toFixed(1);
+      const pandocReal = renderStats.total - renderStats.cacheHits;
+      process.stdout.write(
+        `build: pandoc — ${pandocReal} conversión${pandocReal !== 1 ? 'es' : ''} en ${pandocMs}s (${renderStats.cacheHits} desde caché)\n`,
+      );
+      process.stdout.write(
+        `build: compose — ${composeStats.total} documento${composeStats.total !== 1 ? 's' : ''} en ${composeMsStr}s (${composeStats.cacheHits} desde caché)\n`,
+      );
+      process.stdout.write(`build: completado en ${totalS}s\n`);
+    }
+  } finally {
+    pandocPool?.dispose();
   }
 }
