@@ -1,5 +1,5 @@
-import { mkdir } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname, isAbsolute, join, normalize, relative } from 'node:path';
 import { VALID_TYPES } from '../builder/pipeline/type-graph.js';
 import type { DocumentType, Region } from '../builder/types.js';
 import { VALID_REGIONS } from '../builder/types.js';
@@ -11,31 +11,45 @@ import { VALID_REGIONS } from '../builder/types.js';
 function minimalFrontmatter(type: DocumentType, opts: { region?: string } = {}): string {
   const today = new Date().toISOString().slice(0, 10);
 
+  let base: string;
   switch (type) {
     case 'file':
-      return `---\ntitle: ''\ndate: ${today}\n---\n\n`;
+      base = `---\ntitle: ''\ndate: ${today}`;
+      break;
     case 'collection':
-      return `---\ntitle: ''\ntype: collection\nitems: []\n---\n\n`;
+      base = `---\ntitle: ''\ntype: collection\nitems: []`;
+      break;
     case 'author':
-      return `---\ntitle: ''\ntype: author\n---\n\n`;
+      base = `---\ntitle: ''\ntype: author`;
+      break;
     case 'event':
-      return `---\ntitle: ''\ntype: event\ndate: ${today}\n---\n\n`;
+      base = `---\ntitle: ''\ntype: event\ndate: ${today}`;
+      break;
     case 'authors':
-      return `---\ntitle: ''\ntype: authors\n---\n\n`;
+      base = `---\ntitle: ''\ntype: authors`;
+      break;
     case 'events':
-      return `---\ntitle: ''\ntype: events\n---\n\n`;
+      base = `---\ntitle: ''\ntype: events`;
+      break;
     case 'menu':
-      return `---\ntitle: ''\ntype: menu\nnav: []\n---\n\n`;
+      base = `---\ntitle: ''\ntype: menu\nnav: []`;
+      break;
     case 'card':
-      return `---\ntitle: ''\ntype: card\n---\n\n`;
+      base = `---\ntitle: ''\ntype: card`;
+      break;
     case 'list':
-      return `---\ntitle: ''\ntype: list\n---\n\n`;
-    default: {
-      // Bloque con tipo: detectado cuando se pasa --block implícitamente.
-      const region = opts.region ?? 'content-before';
-      return `---\ntitle: ''\ntype: ${type}\nblock: true\nregion: ${region}\n---\n\n`;
-    }
+      base = `---\ntitle: ''\ntype: list`;
+      break;
   }
+
+  // Si se indica region, el documento es un bloque. Se antepone block:true y region:
+  // independientemente del tipo base para que iteraciones new card foo.md --region sidebar-primary
+  // produzca un bloque de tipo card, que es el comportamiento esperado.
+  if (opts.region) {
+    return `${base}\nblock: true\nregion: ${opts.region}\n---\n\n`;
+  }
+
+  return `${base}\n---\n\n`;
 }
 
 /**
@@ -64,6 +78,14 @@ export async function runNew(cwd: string, type: string, path: string, opts: { re
 
   // Normalizar ruta: añadir .md si no lo tiene
   const normalizedPath = path.endsWith('.md') ? path : `${path}.md`;
+
+  // Rechazar rutas absolutas o con escalada de directorio (../../../etc).
+  if (isAbsolute(normalizedPath) || normalize(normalizedPath).startsWith('..')) {
+    process.stderr.write(`Error: la ruta debe ser relativa al directorio del proyecto (recibido: "${path}")\n`);
+    process.exitCode = 1;
+    return;
+  }
+
   const absPath = join(cwd, normalizedPath);
 
   // Crear directorio si no existe
@@ -71,16 +93,16 @@ export async function runNew(cwd: string, type: string, path: string, opts: { re
 
   const content = minimalFrontmatter(type as DocumentType, opts);
 
-  // Crear con flag exclusiva (no sobrescribir)
+  // Crear con bandera exclusiva (wx) para garantizar que no se sobreescribe aunque
+  // otro proceso cree el archivo entre la comprobación y la escritura (TOCTOU).
   try {
-    const file = Bun.file(absPath);
-    if (await file.exists()) {
+    await writeFile(absPath, content, { encoding: 'utf8', flag: 'wx' });
+    process.stdout.write(`new: creado ${normalizedPath} (type: ${type})\n`);
+  } catch (err) {
+    if (err instanceof Error && 'code' in err && err.code === 'EEXIST') {
       process.stdout.write(`new: omitido ${normalizedPath} (ya existe)\n`);
       return;
     }
-    await Bun.write(absPath, content);
-    process.stdout.write(`new: creado ${normalizedPath} (type: ${type})\n`);
-  } catch (err) {
     process.stderr.write(`Error al crear "${normalizedPath}": ${err instanceof Error ? err.message : String(err)}\n`);
     process.exitCode = 1;
   }
