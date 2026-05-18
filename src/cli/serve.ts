@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { build } from '../builder/orchestrator.js';
+import { type BuildOptions, build } from '../builder/orchestrator.js';
 import { createHttpServer } from './http-server.js';
 import { createLivereloadBroadcaster, LIVERELOAD_SCRIPT } from './livereload.js';
 import { startWatcher } from './watcher.js';
@@ -13,13 +13,17 @@ import { startWatcher } from './watcher.js';
  * @param port Puerto en el que escucha el servidor (default 3000).
  * @returns Función que detiene el servidor y el watcher al ser llamada.
  */
-export async function runServe(cwd: string, port: number): Promise<() => void> {
+export async function runServe(cwd: string, port: number, options: { concurrency?: number; verbose?: boolean } = {}): Promise<() => void> {
   const distDir = join(cwd, 'dist/web');
+  const buildOpts: BuildOptions = {
+    concurrency: options.concurrency,
+    verbose: options.verbose,
+  };
 
   // ── Build inicial ──────────────────────────────────────────────────────────
   process.stdout.write('serve: build inicial…\n');
   try {
-    await build(cwd);
+    await build(cwd, buildOpts);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     throw new Error(`serve: el build inicial falló — el servidor no puede arrancar.\n  ${message}`, { cause: err });
@@ -48,11 +52,11 @@ export async function runServe(cwd: string, port: number): Promise<() => void> {
   const stopWatcher = startWatcher(cwd, async (filename) => {
     process.stdout.write(`serve: cambio detectado en "${filename}" — reconstruyendo…\n`);
     try {
-      await build(cwd);
+      await build(cwd, buildOpts);
       process.stdout.write('serve: rebuild completado\n');
       broadcaster.notify();
     } catch (err: unknown) {
-      process.stdout.write(`serve: error en rebuild — ${err instanceof Error ? err.message : String(err)}\n`);
+      process.stderr.write(`serve: error en rebuild — ${err instanceof Error ? err.message : String(err)}\n`);
     }
   });
 
