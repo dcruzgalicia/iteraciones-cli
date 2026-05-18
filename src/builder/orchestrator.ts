@@ -12,7 +12,7 @@ import { createAuthorDocumentIndex } from './context/authors.js';
 import { buildSiteContext } from './context/site.js';
 import { escapeHtml } from './html.js';
 import { classifyDocuments } from './pipeline/classify.js';
-import { type ComposeCache, composeDocuments, renderBlocksToRegions } from './pipeline/compose.js';
+import { type ComposeCache, type ComposeStats, composeDocuments, renderBlocksToRegions } from './pipeline/compose.js';
 import { discover } from './pipeline/discover.js';
 import { type RenderCache, type RenderStats, renderDocuments } from './pipeline/render.js';
 import { runContextPhaseWithTypeGraph } from './pipeline/runner.js';
@@ -249,17 +249,18 @@ async function runFinalization(
   registry: PluginRegistry,
   hasPlugins: boolean,
   log: (msg: string) => void,
-): Promise<void> {
+  composeStats: ComposeStats,
+): Promise<number> {
   const relativizedDocs = allContextDocs.map((doc) => ({
     ...doc,
     templateContext: makeRelativeContext(doc.templateContext, computeRootPrefix(doc.relativePath)) as TemplateContext,
   }));
-  const composedDocs = await composeDocuments(relativizedDocs, ctx, composeCache, registry);
+  const tComposeStart = performance.now();
+  const composedDocs = await composeDocuments(relativizedDocs, ctx, composeCache, registry, composeStats);
+  const composeMs = performance.now() - tComposeStart;
   const writtenDocs = await writeDocuments(composedDocs, ctx);
   log(`Escritos ${writtenDocs.length} archivos en ${ctx.outputDir}`);
 
-  // afterBuild: notifica a los plugins con las rutas de salida.
-  // Las fuentes copiadas desde node_modules se omiten porque buildAssets no retorna su lista.
   if (hasPlugins) {
     const docOutputPaths = writtenDocs.map((doc) => doc.relativePath.replace(/\.md$/, '.html'));
     const assetPaths: string[] = ['css/styles.css'];
@@ -274,6 +275,8 @@ async function runFinalization(
     const allRenderKeys = new Set(allRenderedDocs.map((doc) => hash(doc.sourceHash, renderCache.cliVersion, renderCache.pandocVersion)));
     await renderCache.manager.prune('render', allRenderKeys);
   }
+
+  return composeMs;
 }
 
 // ---------------------------------------------------------------------------
@@ -306,6 +309,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
   const t0 = performance.now();
   const renderStats: RenderStats = { total: 0, cacheHits: 0 };
+  const composeStats: ComposeStats = { total: 0, cacheHits: 0 };
 
   const { ctx, renderCache, composeCache, registry, hasPlugins } = await setupBuildEnvironment(cwd, options, log);
   const allDocs = await runDiscovery(cwd, ctx, log);
@@ -347,15 +351,19 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // de renderizado: primary, blocks e índices (collection, authors, events, list).
   const t2 = performance.now();
   const allRenderedDocs = [...renderedMap.values()].flat().concat(renderedBlockDocs);
-  await runFinalization(allContextDocs, allRenderedDocs, ctx, composeCache, renderCache, registry, hasPlugins, log);
+  const composeMs = await runFinalization(allContextDocs, allRenderedDocs, ctx, composeCache, renderCache, registry, hasPlugins, log, composeStats);
   const t3 = performance.now();
 
   if (options.verbose) {
     const pandocMs = ((t2 - t1) / 1000).toFixed(1);
+    const composeMsStr = (composeMs / 1000).toFixed(1);
     const totalS = ((t3 - t0) / 1000).toFixed(1);
     const pandocReal = renderStats.total - renderStats.cacheHits;
     process.stdout.write(
       `build: pandoc — ${pandocReal} conversión${pandocReal !== 1 ? 'es' : ''} en ${pandocMs}s (${renderStats.cacheHits} desde caché)\n`,
+    );
+    process.stdout.write(
+      `build: compose — ${composeStats.total} documento${composeStats.total !== 1 ? 's' : ''} en ${composeMsStr}s (${composeStats.cacheHits} desde caché)\n`,
     );
     process.stdout.write(`build: completado en ${totalS}s\n`);
   }
