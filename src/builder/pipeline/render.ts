@@ -1,6 +1,3 @@
-import { rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import type { CacheManager } from '../../cache/cache-manager.js';
 import { hash } from '../../cache/hasher.js';
 import { mapWithConcurrency } from '../../output/concurrency.js';
@@ -49,24 +46,18 @@ export async function renderDocuments(
       await registry.runBeforeRender({ sourcePath: doc.filePath, variables: {} });
     }
 
-    const tmpPath = join(tmpdir(), `iteraciones-${doc.sourceHash}-${crypto.randomUUID()}.md`);
-    try {
-      await writeFile(tmpPath, doc.body, 'utf8');
-      let htmlFragment = await convertFragment(tmpPath);
+    let htmlFragment = await convertFragment(doc.body, doc.filePath);
 
-      if (registry) {
-        const afterCtx = await registry.runAfterRender({ sourcePath: doc.filePath, html: htmlFragment });
-        htmlFragment = afterCtx.html;
-      }
-
-      if (cache) {
-        const key = hash(doc.sourceHash, cache.cliVersion, cache.pandocVersion, cache.pluginFingerprint ?? '');
-        await cache.manager.write('render', key, htmlFragment);
-      }
-      if (stats) stats.total++;
-      return { ...doc, htmlFragment };
-    } finally {
-      await rm(tmpPath, { force: true });
+    if (registry) {
+      const afterCtx = await registry.runAfterRender({ sourcePath: doc.filePath, html: htmlFragment });
+      htmlFragment = afterCtx.html;
     }
+
+    if (cache) {
+      const key = hash(doc.sourceHash, cache.cliVersion, cache.pandocVersion, cache.pluginFingerprint ?? '');
+      await cache.manager.write('render', key, htmlFragment);
+    }
+    if (stats) stats.total++;
+    return { ...doc, htmlFragment };
   });
 }
