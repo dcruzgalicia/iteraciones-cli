@@ -286,7 +286,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // --dry-run: solo descubrir y clasificar; mostrar resumen sin generar salida.
   if (options.dryRun) {
     const dryConfig = await loadSiteConfig(cwd);
-    const sourceDocs = await discover(cwd);
+    const sourceDocs = await discover(cwd, { noCache: true });
     const classified = classifyDocuments(sourceDocs, dryConfig.theme, cwd);
     const allDocs = excludeDrafts(classified);
     const draftCount = classified.length - allDocs.length;
