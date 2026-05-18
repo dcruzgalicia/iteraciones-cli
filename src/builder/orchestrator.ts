@@ -16,6 +16,7 @@ import { buildSiteContext } from './context/site.js';
 import { escapeHtml } from './html.js';
 import { classifyDocuments } from './pipeline/classify.js';
 import { type ComposeCache, type ComposeStats, composeDocuments, renderBlocksToRegions } from './pipeline/compose.js';
+import { computeAffectedDocs } from './pipeline/dependency-resolver.js';
 import { discover } from './pipeline/discover.js';
 import { type RenderCache, type RenderStats, renderDocuments } from './pipeline/render.js';
 import { runContextPhaseWithTypeGraph } from './pipeline/runner.js';
@@ -37,6 +38,8 @@ export interface BuildOptions {
   verbose?: boolean;
   /** Omite clean() del outputDir; solo escribe archivos nuevos o modificados. */
   incremental?: boolean;
+  /** Rutas relativas de archivos modificados; limita el pipeline a docs afectados. */
+  changedPaths?: Set<string>;
 }
 
 // ---------------------------------------------------------------------------
@@ -362,8 +365,14 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       ['author', renderedAuthorDocs],
       ['event', renderedEventDocs],
     ]);
+
+    // Filtrado incremental: cuando se conocen los archivos modificados, limitar
+    // el procesamiento de bloques y del context-phase a los docs afectados.
+    const affectedPaths = options.changedPaths ? computeAffectedDocs(options.changedPaths, allDocs) : null;
+    const pipelineDocs = affectedPaths ? allDocs.filter((d) => affectedPaths.has(d.relativePath)) : allDocs;
+
     const { finalSiteCtx, renderedBlockDocs } = await runBlocksPrestep(
-      allDocs,
+      pipelineDocs,
       ctx,
       renderCache,
       registry,
@@ -374,7 +383,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       pandocPool,
     );
     const { allContextDocs, renderedMap } = await runContextPhaseWithTypeGraph(
-      allDocs,
+      pipelineDocs,
       ctx,
       renderCache,
       registry,
@@ -388,8 +397,12 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     // de renderizado: primary, blocks e índices (collection, authors, events, list).
     const t2 = performance.now();
     const allRenderedDocs = [...renderedMap.values()].flat().concat(renderedBlockDocs);
+    // En modo incremental, pasar solo los docs afectados a compose/write para evitar
+    // reprocesar documentos que no cambiaron. allRenderedDocs (completo) se usa solo
+    // para la poda de la caché de render, que requiere todas las claves procesadas.
+    const finalContextDocs = affectedPaths ? allContextDocs.filter((d) => affectedPaths.has(d.relativePath)) : allContextDocs;
     const composeMs = await runFinalization(
-      allContextDocs,
+      finalContextDocs,
       allRenderedDocs,
       ctx,
       composeCache,
