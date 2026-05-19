@@ -53,6 +53,12 @@ export async function runExportDocuments(
   if (exportableDocs.length === 0) return [];
 
   const results = await mapWithConcurrency(exportableDocs, concurrency, async (doc): Promise<ExportResult | null> => {
+    // Respetar export: { skip: true } en el frontmatter del documento.
+    const rawExportField = doc.frontmatter['export'];
+    if (typeof rawExportField === 'object' && rawExportField !== null && (rawExportField as Record<string, unknown>)['skip'] === true) {
+      return null;
+    }
+
     // Resolver items según el tipo del documento
     let items: BuildDocument[] = [];
     if (doc.type === 'collection') {

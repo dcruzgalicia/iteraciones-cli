@@ -280,3 +280,17 @@ export:
 | `pdf-engine` | `'xelatex' \| 'lualatex'` | `xelatex` | Motor LaTeX para PDF. Requiere MacTeX full o TeX Live full. |
 
 Para omitir la exportación en un build puntual (por ejemplo durante desarrollo), usar `iteraciones build --no-export`.
+
+### Omitir exportación para un documento individual
+
+Un documento puede excluirse de la exportación PDF/EPUB mientras sigue apareciendo normalmente como HTML en el sitio:
+
+```yaml
+---
+title: Mi artículo
+export:
+  skip: true
+---
+```
+
+Con `export: { skip: true }` en el frontmatter, el documento no genera ni PDF ni EPUB aunque `export.formats` esté configurado globalmente. El documento continúa siendo renderizado y publicado como HTML.
