@@ -16,6 +16,7 @@ export function buildProgram(): Command {
     .option('--project-root <path>', 'directorio raíz del proyecto (por defecto: directorio actual)')
     .option('--output <path>', 'directorio de salida (por defecto: dist/web dentro del project-root)')
     .option('--no-tailwind', 'omite la generación de CSS con Tailwind')
+    .option('--no-export', 'omite la exportación PDF/EPUB aunque esté configurada')
     .option('--dry-run', 'muestra los documentos que se procesarían sin generar salida')
     .option('--verbose', 'muestra información adicional de progreso')
     .action(
@@ -25,6 +26,7 @@ export function buildProgram(): Command {
         projectRoot?: string;
         output?: string;
         tailwind: boolean;
+        export: boolean;
         dryRun?: boolean;
         verbose?: boolean;
       }) => {
@@ -63,6 +65,7 @@ export function buildProgram(): Command {
           noCache: !opts.cache,
           outputDir: opts.output,
           noTailwind: !opts.tailwind,
+          noExport: !opts.export,
           dryRun: opts.dryRun,
           verbose: opts.verbose,
         });
