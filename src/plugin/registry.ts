@@ -46,7 +46,12 @@ export class PluginRegistry {
       if (typeof plugin.onDocumentDiscovered === 'function') {
         const result = await plugin.onDocumentDiscovered(ctx);
         if (result === null) return null;
-        if (result !== undefined) ctx = result;
+        if (result !== undefined) {
+          if (typeof result !== 'object') {
+            throw new Error(`[plugin:${plugin.name}] onDocumentDiscovered debe retornar un objeto, null o void; recibido: ${typeof result}`);
+          }
+          ctx = result;
+        }
       }
     }
     return ctx;
@@ -58,7 +63,12 @@ export class PluginRegistry {
       if (typeof plugin.onDocumentClassified === 'function') {
         const result = await plugin.onDocumentClassified(ctx);
         if (result === null) return null;
-        if (result !== undefined) ctx = result;
+        if (result !== undefined) {
+          if (typeof result !== 'object') {
+            throw new Error(`[plugin:${plugin.name}] onDocumentClassified debe retornar un objeto, null o void; recibido: ${typeof result}`);
+          }
+          ctx = result;
+        }
       }
     }
     return ctx;
