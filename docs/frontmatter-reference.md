@@ -214,6 +214,73 @@ items:
 
 Las rutas se validan con `iteraciones validate`.
 
+### `editorial` — Metadatos editoriales (tipos exportables)
+
+El bloque `editorial` activa metadatos de publicación en los archivos PDF y EPUB generados por `iteraciones build`. Solo aplica a los tipos exportables: `file`, `event`, `author`, `collection` y `events`. Los campos son opcionales; se pueden combinar libremente.
+
+```yaml
+---
+title: 'Antología de ensayos'
+type: collection
+items:
+  - ensayos/primer-texto.md
+  - ensayos/segundo-texto.md
+editorial:
+  isbn: 978-0-000-00000-0
+  publisher: Editorial Iteraciones
+  edition: Primera edición
+  year: '2026'
+  rights: CC BY-SA 4.0
+  description: Una colección de textos sobre diseño y tecnología.
+  cover: assets/portada.jpg          # ruta relativa al directorio raíz del proyecto
+  bibliography: referencias.bib      # activa --citeproc; ruta relativa al directorio raíz
+  csl: apa.csl                       # estilo de citas CSL; solo tiene efecto si bibliography está definido
+---
+```
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `isbn` | `string` | ISBN del documento. Se incluye en los metadatos del PDF y el EPUB. |
+| `publisher` | `string` | Nombre de la editorial o institución publicadora. |
+| `edition` | `string` | Edición del documento (p. ej. `Primera edición`). |
+| `year` | `string` | Año de publicación. |
+| `rights` | `string` | Licencia o nota de derechos (p. ej. `CC BY-SA 4.0`). |
+| `description` | `string` | Descripción del documento. Visible en el EPUB como metadato de descripción. |
+| `cover` | `string` | Ruta relativa a una imagen de portada. Se usa como portada en el EPUB. |
+| `bibliography` | `string` | Ruta relativa a un archivo `.bib` de BibTeX. Activa el procesador de citas `--citeproc` de pandoc. |
+| `csl` | `string` | Ruta relativa a un archivo de estilo CSL. Controla el formato de las citas cuando hay `bibliography`. |
+
+Las rutas de `cover`, `bibliography` y `csl` se validan con `iteraciones validate` antes del build.
+
+#### Citas bibliográficas
+
+Cuando `editorial.bibliography` está declarado, el build activa el procesador de citas de pandoc. Las citas en el Markdown deben seguir el formato `[@clave]`:
+
+```markdown
+Este fenómeno ha sido ampliamente estudiado [@garcia2023; @mendez2024].
+```
+
+Si no se declara `csl`, pandoc usa el estilo por defecto (Chicago autor-fecha).
+
 ## Campos personalizados
 
 El frontmatter acepta campos arbitrarios (`[key: string]: unknown`). Los campos no reconocidos se ignoran en el procesamiento estándar. En la implementación actual, los hooks de plugin (`beforeRender`, `afterRender`) no reciben el frontmatter completo; `beforeRender` solo expone `sourcePath` y un objeto `variables` vacío.
+
+---
+
+## Configuración de exportación en `_iteraciones.yaml`
+
+La exportación PDF y EPUB se activa globalmente desde el archivo de configuración del proyecto. Si el campo `export:` no existe, no se genera ningún archivo de exportación y el build ignora las dependencias de LaTeX.
+
+```yaml
+export:
+  formats: [pdf, epub]   # qué formatos generar; puede ser solo [pdf] o solo [epub]
+  pdf-engine: xelatex    # xelatex (por defecto) o lualatex
+```
+
+| Campo | Tipo | Por defecto | Descripción |
+|-------|------|-------------|-------------|
+| `formats` | `('pdf' \| 'epub')[]` | — | Formatos a generar. Si el array está vacío o ausente, no se exporta nada. |
+| `pdf-engine` | `'xelatex' \| 'lualatex'` | `xelatex` | Motor LaTeX para PDF. Requiere MacTeX full o TeX Live full. |
+
+Para omitir la exportación en un build puntual (por ejemplo durante desarrollo), usar `iteraciones build --no-export`.
