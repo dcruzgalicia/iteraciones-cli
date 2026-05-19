@@ -121,13 +121,9 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, engi
 
   const [, stderr, exitCode] = await writeAndWait(proc, input, doc.filePath);
   if (exitCode !== 0) {
-    // Filtrar la salida de xelatex para mostrar solo los errores de TeX reales.
-    const texErrors = stderr
-      .split('\n')
-      .filter((line) => line.startsWith('! ') || line.startsWith('l.') || line.includes('Error'))
-      .slice(0, 20)
-      .join('\n');
-    throw new PandocError(`pandoc/LaTeX falló al generar PDF para ${doc.filePath}`, doc.filePath, texErrors || stderr);
+    // Filtrar la salida de xelatex/lualatex para mostrar solo los errores relevantes.
+    const filteredLines = filterLatexStderr(stderr, engine);
+    throw new PandocError(`pandoc/LaTeX falló al generar PDF para ${doc.filePath}`, doc.filePath, filteredLines || stderr);
   }
 }
 
@@ -148,4 +144,56 @@ async function writeAndWait(proc: ReturnType<typeof Bun.spawn>, input: string, s
 
   const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
   return [stdout, stderr, exitCode];
+}
+
+/**
+ * Filtra y mejora la salida stderr de LaTeX para mostrar errores accionables.
+ *
+ * - Detecta paquetes faltantes (`File 'X.sty' not found`) y sugiere `tlmgr install X`
+ * - Extrae errores TeX reales (líneas con `! ` o `l.`)
+ * - Limita la salida a 25 líneas para no saturar la terminal
+ *
+ * @param stderr  Salida stderr completa de pandoc/LaTeX.
+ * @param engine  Motor LaTeX usado, para mensajes contextuales.
+ */
+function filterLatexStderr(stderr: string, engine: 'xelatex' | 'lualatex'): string {
+  const lines = stderr.split('\n');
+  const output: string[] = [];
+
+  // Detectar paquetes faltantes: "! LaTeX Error: File 'paquete.sty' not found."
+  // xelatex imprime esto como un error TeX estándar.
+  const missingPackages = new Set<string>();
+  for (const line of lines) {
+    const match = /File '([^']+)\.sty' not found/.exec(line);
+    if (match) {
+      const pkg = match[1];
+      if (pkg) missingPackages.add(pkg);
+    }
+  }
+
+  if (missingPackages.size > 0) {
+    output.push(`[LaTeX] Paquetes faltantes detectados. Instálalos con:`);
+    for (const pkg of missingPackages) {
+      output.push(`  tlmgr install ${pkg}`);
+    }
+    output.push('');
+  }
+
+  // Extraer errores TeX reales limitando a 25 líneas.
+  const texErrors = lines
+    .filter((line) => line.startsWith('! ') || line.startsWith('l.') || (line.includes('Error') && !line.includes('rerunfilecheck')))
+    .slice(0, 25);
+
+  if (texErrors.length > 0) {
+    output.push(...texErrors);
+  }
+
+  // Si el motor es lualatex, algunos errores tienen formato diferente.
+  if (engine === 'lualatex' && output.length === 0) {
+    // lualatex usa "! " igual que xelatex; si no se encontró nada, retornar vacío
+    // para que el caller use el stderr completo como fallback.
+    return '';
+  }
+
+  return output.join('\n');
 }

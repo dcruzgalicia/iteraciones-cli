@@ -14,7 +14,7 @@ import type { TemplateContext } from '../template/render/context.js';
 import { buildAssets } from './assets.js';
 import { createAuthorDocumentIndex } from './context/authors.js';
 import { buildSiteContext } from './context/site.js';
-import { injectDownloadLinks, runExportDocuments } from './export/runner.js';
+import { type ExportStats, injectDownloadLinks, runExportDocuments } from './export/runner.js';
 import { escapeHtml } from './html.js';
 import { classifyDocuments } from './pipeline/classify.js';
 import { type ComposeCache, type ComposeStats, composeDocuments, renderBlocksToRegions } from './pipeline/compose.js';
@@ -513,6 +513,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     const finalContextDocs = affectedPaths ? allContextDocs.filter((d) => affectedPaths.has(d.relativePath)) : allContextDocs;
 
     // Paso de exportación: genera PDF/EPUB si está configurado y no se pasó --no-export.
+    const exportStats: ExportStats = { totalEpub: 0, totalPdf: 0, cacheHitsEpub: 0, cacheHitsPdf: 0 };
     const exportResults =
       ctx.siteConfig.export && !options.noExport
         ? await runExportDocuments(renderedMap, {
@@ -526,10 +527,20 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
             cacheManager: options.noCache ? undefined : cacheManager,
             registry: hasPlugins ? registry : undefined,
             pluginFingerprint,
+            stats: exportStats,
           })
         : [];
     if (exportResults.length > 0) {
-      log(`Exportados ${exportResults.length} documento${exportResults.length > 1 ? 's' : ''} (PDF/EPUB)`);
+      if (options.verbose) {
+        const epubNew = exportStats.totalEpub - exportStats.cacheHitsEpub;
+        const pdfNew = exportStats.totalPdf - exportStats.cacheHitsPdf;
+        const parts: string[] = [];
+        if (exportStats.totalEpub > 0) parts.push(`EPUB: ${epubNew} generados, ${exportStats.cacheHitsEpub} de caché`);
+        if (exportStats.totalPdf > 0) parts.push(`PDF: ${pdfNew} generados, ${exportStats.cacheHitsPdf} de caché`);
+        log(`Exportación: ${exportResults.length} doc${exportResults.length > 1 ? 's' : ''} — ${parts.join(' | ')}`);
+      } else {
+        log(`Exportados ${exportResults.length} documento${exportResults.length > 1 ? 's' : ''} (PDF/EPUB)`);
+      }
     }
 
     // Inyectar enlaces de descarga en el templateContext de los docs con exportación.
