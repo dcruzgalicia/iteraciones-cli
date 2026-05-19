@@ -4,6 +4,7 @@ import type {
   IPlugin,
   PluginBeforeBuildContext,
   PluginBuildContext,
+  PluginClassifiedDocument,
   PluginComposeContext,
   PluginComposeResult,
   PluginExportContext,
@@ -39,12 +40,28 @@ export class PluginRegistry {
     }
   }
 
-  async runOnDocumentDiscovered(context: PluginSourceDocument): Promise<void> {
+  async runOnDocumentDiscovered(context: PluginSourceDocument): Promise<PluginSourceDocument | null> {
+    let ctx = context;
     for (const plugin of this.plugins) {
       if (typeof plugin.onDocumentDiscovered === 'function') {
-        await plugin.onDocumentDiscovered(context);
+        const result = await plugin.onDocumentDiscovered(ctx);
+        if (result === null) return null;
+        if (result !== undefined) ctx = result;
       }
     }
+    return ctx;
+  }
+
+  async runOnDocumentClassified(context: PluginClassifiedDocument): Promise<PluginClassifiedDocument | null> {
+    let ctx = context;
+    for (const plugin of this.plugins) {
+      if (typeof plugin.onDocumentClassified === 'function') {
+        const result = await plugin.onDocumentClassified(ctx);
+        if (result === null) return null;
+        if (result !== undefined) ctx = result;
+      }
+    }
+    return ctx;
   }
 
   async runBeforeRender(context: PluginRenderContext): Promise<PluginRenderContext> {
