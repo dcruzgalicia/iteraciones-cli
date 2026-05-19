@@ -127,6 +127,54 @@ type PluginComposeResult = {
 
 ---
 
+### `beforeExport(context)`
+
+Se ejecuta antes de que un documento se convierta a PDF o EPUB con pandoc. Permite modificar el cuerpo markdown o los metadatos editoriales antes de la conversión.
+
+> Solo se llama si la exportación está configurada en `_iteraciones.yaml` bajo `export:`.
+
+**Parámetro:**
+
+```typescript
+type PluginExportContext = {
+  readonly sourcePath: string;                          // ruta absoluta al .md fuente
+  readonly body: string;                                // markdown ensamblado del documento
+  readonly metadata: Readonly<Record<string, unknown>>; // metadatos editoriales
+};
+```
+
+Los metadatos editoriales incluyen campos como: `title`, `author[]`, `date`, `lang`, `isbn`, `publisher`, `description`, `rights`, `documentclass`, `toc`.
+
+**Retorno:** `PluginExportContext` (con posibles modificaciones)
+
+Útil para: añadir notas al pie globales, inyectar secciones en el markdown, modificar metadatos como el título o el idioma del PDF/EPUB generado.
+
+---
+
+### `afterExport(context)`
+
+Se ejecuta después de que pandoc genera un archivo PDF o EPUB. Permite post-procesar los bytes del archivo resultante.
+
+> Solo se llama si la exportación está configurada en `_iteraciones.yaml` bajo `export:`.
+
+**Parámetro:**
+
+```typescript
+type PluginExportResult = {
+  readonly sourcePath: string;    // ruta absoluta al .md fuente
+  readonly format: 'pdf' | 'epub'; // formato del archivo generado
+  readonly data: Uint8Array;      // bytes del archivo generado
+};
+```
+
+**Retorno:** `PluginExportResult` (con posibles modificaciones a `data`)
+
+Los bytes retornados se escriben en disco y se almacenan en caché. Builds posteriores con el mismo plugin usan los bytes cacheados.
+
+Útil para: añadir watermarks, comprimir, firmar digitalmente, cifrar archivos generados.
+
+---
+
 ### `generateFiles(context)`
 
 Se ejecuta al término del build para generar archivos adicionales en `dist/web`. Los archivos retornados se escriben en disco antes de ejecutar `afterBuild`, de modo que `afterBuild` recibe sus rutas en `outputPaths`.
