@@ -1,4 +1,4 @@
-import { dirname, isAbsolute, resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import type { BuildDocument, DocumentType } from '../types.js';
 import { EXPORTABLE_TYPES, type ExportDocument, type ExportMetadata, LATEX_CLASS } from './types.js';
 
@@ -12,7 +12,11 @@ import { EXPORTABLE_TYPES, type ExportDocument, type ExportMetadata, LATEX_CLASS
  * @returns Ruta absoluta validada, o undefined si está fuera del proyecto.
  */
 function safeEditorialPath(rawPath: string, cwd: string, fieldName: string): string | undefined {
-  const resolved = isAbsolute(rawPath) ? rawPath : resolve(cwd, rawPath);
+  // resolve() normaliza siempre: elimina '..', resuelve rutas relativas y absolutas.
+  // Para una ruta absoluta como '/project/../etc/passwd', resolve() retorna '/etc/passwd',
+  // que luego falla el startsWith y se descarta. Usando isAbsolute + sin resolve()
+  // esa ruta absoluta con '..' habría pasado la validación.
+  const resolved = resolve(cwd, rawPath);
   // Asegurar que la ruta resuelta esté dentro del cwd del proyecto.
   // Previene que frontmatter con '../../../etc/passwd' acceda a rutas del sistema.
   if (!resolved.startsWith(cwd + '/') && resolved !== cwd) {
