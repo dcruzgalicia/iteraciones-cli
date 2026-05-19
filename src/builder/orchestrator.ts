@@ -125,6 +125,34 @@ function makeRelativeContext(value: unknown, prefix: string, depth = 0): unknown
 // ---------------------------------------------------------------------------
 
 /**
+ * Calcula el fingerprint de los plugins activos para invalidar la caché cuando cambia
+ * el código fuente de un plugin local o el conjunto de plugins declarados.
+ *
+ * Para plugins locales (rutas relativas o absolutas) lee el contenido del archivo
+ * y lo incluye en el hash, de modo que modificar el código de un plugin sin cambiar
+ * su nombre de archivo invalida correctamente la caché.
+ * Para paquetes npm se usa solo el identificador (el contenido no cambia sin
+ * un cambio de versión en package.json, que sí altera el identificador resuelto).
+ */
+async function computePluginFingerprint(plugins: string[], cwd: string): Promise<string | undefined> {
+  if (plugins.length === 0) return undefined;
+  const hasher = new Bun.CryptoHasher('sha256');
+  for (const pluginId of plugins) {
+    hasher.update(pluginId);
+    hasher.update('\0');
+    if (pluginId.startsWith('./') || pluginId.startsWith('../') || pluginId.startsWith('/')) {
+      const pluginPath = pluginId.startsWith('/') ? pluginId : join(cwd, pluginId);
+      const content = await Bun.file(pluginPath)
+        .text()
+        .catch(() => '');
+      hasher.update(content);
+      hasher.update('\0');
+    }
+  }
+  return hasher.digest('hex');
+}
+
+/**
  * Prepara el entorno de build: verifica Pandoc, carga config y plugins,
  * crea el BuildContext, limpia el outputDir, genera assets y construye las caches.
  */
@@ -148,10 +176,10 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
   const cacheManager = new CacheManager(cwd);
 
   const pkg = (await Bun.file(join(import.meta.dir, '../../package.json')).json()) as { version: string };
-  // El fingerprint invalida la caché cuando cambia el conjunto de plugins declarados en
-  // _iteraciones.yaml. Nota: no detecta cambios en el código fuente de un plugin si su
-  // ruta no cambia; en ese caso se debe limpiar la caché manualmente.
-  const pluginFingerprint = siteConfig.plugins.length > 0 ? hash(JSON.stringify(siteConfig.plugins)) : undefined;
+  // El fingerprint invalida la caché cuando cambia el código fuente de plugins locales
+  // o el conjunto de plugins declarados. Para plugins locales se hashea el contenido del
+  // archivo; para paquetes npm basta con el identificador.
+  const pluginFingerprint = await computePluginFingerprint(siteConfig.plugins, cwd);
   // --no-cache: omitir caché completamente (renderDocuments/composeDocuments aceptan undefined).
   const renderCache: RenderCache | undefined = options.noCache
     ? undefined
