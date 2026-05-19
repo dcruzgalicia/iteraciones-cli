@@ -245,18 +245,19 @@ async function runPrimaryRender(
   stats?: RenderStats,
   pool?: PandocPool,
   cwd?: string,
+  collectedKeys?: Set<string>,
 ): Promise<PrimaryRenderResult> {
   const fileDocs = allDocs.filter((doc) => doc.type === 'file' && doc.kind !== 'block');
-  const renderedFileDocs = await renderDocuments(fileDocs, ctx.concurrency ?? 4, renderCache, registry, stats, pool, cwd);
+  const renderedFileDocs = await renderDocuments(fileDocs, ctx.concurrency ?? 4, renderCache, registry, stats, pool, cwd, collectedKeys);
 
   const authorDocs = allDocs.filter((doc) => doc.type === 'author' && doc.kind !== 'block');
-  const renderedAuthorDocs = await renderDocuments(authorDocs, ctx.concurrency ?? 4, renderCache, registry, stats, pool, cwd);
+  const renderedAuthorDocs = await renderDocuments(authorDocs, ctx.concurrency ?? 4, renderCache, registry, stats, pool, cwd, collectedKeys);
   // Índice de autores por título normalizado (lowercase). Se construye aquí para que
   // esté disponible antes del pre-paso de bloques y del paso de contexto de páginas.
   const authorDocumentIndex = createAuthorDocumentIndex(renderedAuthorDocs);
 
   const eventDocs = allDocs.filter((doc) => doc.type === 'event' && doc.kind !== 'block');
-  const renderedEventDocs = await renderDocuments(eventDocs, ctx.concurrency ?? 4, renderCache, registry, stats, pool, cwd);
+  const renderedEventDocs = await renderDocuments(eventDocs, ctx.concurrency ?? 4, renderCache, registry, stats, pool, cwd, collectedKeys);
 
   return { renderedFileDocs, renderedAuthorDocs, renderedEventDocs, authorDocumentIndex };
 }
@@ -282,9 +283,10 @@ async function runBlocksPrestep(
   stats?: RenderStats,
   pool?: PandocPool,
   cwd?: string,
+  collectedKeys?: Set<string>,
 ): Promise<BlocksPrestepResult> {
   const allBlockDocs = allDocs.filter((doc) => doc.kind === 'block');
-  const renderedBlockDocs = await renderDocuments(allBlockDocs, ctx.concurrency ?? 4, renderCache, registry, stats, pool, cwd);
+  const renderedBlockDocs = await renderDocuments(allBlockDocs, ctx.concurrency ?? 4, renderCache, registry, stats, pool, cwd, collectedKeys);
   const contextBlockDocs = renderedBlockDocs.map((doc) => {
     const spec = doc.type ? TYPE_STAGE_MAP.get(doc.type) : undefined;
     if (!spec) {
@@ -318,6 +320,7 @@ async function runFinalization(
   cwd?: string,
   incremental?: boolean,
   itemHashMap?: ReadonlyMap<string, string>,
+  renderUsedKeys?: Set<string>,
 ): Promise<number> {
   const relativizedDocs = allContextDocs.map((doc) => ({
     ...doc,
@@ -378,8 +381,7 @@ async function runFinalization(
   // documentos procesados en esta ejecución. Se hace al final para no eliminar
   // entradas que aún no han sido escritas por los batches posteriores.
   if (renderCache) {
-    const allRenderKeys = new Set(allRenderedDocs.map((doc) => hash(doc.sourceHash, renderCache.cliVersion, renderCache.pandocVersion)));
-    await renderCache.manager.prune('render', allRenderKeys);
+    await renderCache.manager.prune('render', renderUsedKeys ?? new Set());
   }
 
   return composeMs;
@@ -454,6 +456,10 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
     const enrichedSiteCtx = buildEnrichedSiteContext(ctx, allDocs);
     const t1 = performance.now();
+    // Conjunto de claves realmente usadas por renderDocuments (hits + writes).
+    // Se pasa a todas las fases de render para que cada llamada acumule sus claves.
+    // Permite que el prune elimine solo entradas genuinamente obsoletas.
+    const renderUsedKeys = renderCache ? new Set<string>() : undefined;
     const { renderedFileDocs, renderedAuthorDocs, renderedEventDocs, authorDocumentIndex } = await runPrimaryRender(
       allDocs,
       ctx,
@@ -462,6 +468,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       renderStats,
       pandocPool,
       cwd,
+      renderUsedKeys,
     );
     const primaryRendered = new Map<DocumentType, BuildDocument[]>([
       ['file', renderedFileDocs],
@@ -490,6 +497,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       renderStats,
       pandocPool,
       cwd,
+      renderUsedKeys,
     );
     const { allContextDocs, renderedMap } = await runContextPhaseWithTypeGraph(
       pipelineDocs,
@@ -502,6 +510,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       renderStats,
       pandocPool,
       cwd,
+      renderUsedKeys,
     );
     // t2 se mide después del context phase para que pandocMs cubra todos los pasos
     // de renderizado: primary, blocks e índices (collection, authors, events, list).
@@ -569,6 +578,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       cwd,
       options.incremental === true,
       itemHashMap,
+      renderUsedKeys,
     );
     const t3 = performance.now();
 
