@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { type BuildOptions, build } from '../builder/orchestrator.js';
-import { ConfigError, PandocError } from '../errors.js';
+import { reportBuildError } from './build-errors.js';
 import { createHttpServer } from './http-server.js';
 import { createLivereloadBroadcaster, LIVERELOAD_SCRIPT } from './livereload.js';
 import { startWatcher } from './watcher.js';
@@ -59,17 +59,7 @@ export async function runServe(cwd: string, port: number, options: { concurrency
       process.stdout.write('serve: rebuild completado\n');
       broadcaster.notify();
     } catch (err: unknown) {
-      if (err instanceof PandocError) {
-        const location = err.sourcePath ? ` en "${err.sourcePath}"` : '';
-        process.stderr.write(`serve: error de pandoc${location}: ${err.message}\n`);
-        if (err.stderr) process.stderr.write(`${err.stderr}\n`);
-      } else if (err instanceof ConfigError) {
-        process.stderr.write(`serve: error de configuración: ${err.message}\n`);
-      } else if (err instanceof Error) {
-        process.stderr.write(`serve: error en rebuild — ${err.message}\n`);
-      } else {
-        process.stderr.write('serve: error desconocido durante el rebuild.\n');
-      }
+      reportBuildError(err, 'serve');
     }
   });
 
