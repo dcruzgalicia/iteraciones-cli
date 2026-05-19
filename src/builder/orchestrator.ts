@@ -348,7 +348,7 @@ async function runFinalization(
     };
     generatedFiles = await registry.runGenerateFiles(initialContext);
     for (const file of generatedFiles) {
-      await writeFile(join(ctx.outputDir, file.relativePath), file.content);
+      await Bun.write(join(ctx.outputDir, file.relativePath), file.content);
     }
     const generatedPaths = generatedFiles.map((f) => f.relativePath);
 
