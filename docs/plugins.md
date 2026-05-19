@@ -37,6 +37,44 @@ Todos los hooks son opcionales. Implementa solo los que necesites.
 
 ## Hooks disponibles
 
+### `beforeBuild(context)`
+
+Se ejecuta una vez al inicio del build, antes de descubrir o procesar ningún documento. No retorna valor.
+
+**Parámetro:**
+
+```typescript
+type PluginBeforeBuildContext = {
+  readonly cwd: string;                                  // directorio raíz del proyecto
+  readonly outputDir: string;                            // directorio de salida absoluto
+  readonly siteConfig: Readonly<Record<string, unknown>>; // configuración de _iteraciones.yaml
+};
+```
+
+Útil para: conectar servicios externos, validar configuración y fallar rápido, preparar directorios o recursos necesarios durante el build.
+
+---
+
+### `onDocumentDiscovered(context)`
+
+Se ejecuta por cada documento descubierto y clasificado, después de excluir borradores (`draft: true`) y antes de que comience el render con pandoc. No retorna valor.
+
+**Parámetro:**
+
+```typescript
+type PluginSourceDocument = {
+  readonly filePath: string;                            // ruta absoluta al .md fuente
+  readonly relativePath: string;                        // ruta relativa (ej. 'notas/mi-nota.md')
+  readonly type: string;                                // tipo clasificado: 'file', 'event', 'author', etc.
+  readonly frontmatter: Readonly<Record<string, unknown>>;
+  readonly body: string;                                // markdown sin frontmatter
+};
+```
+
+Útil para: construir índices internos con todos los documentos, emitir advertencias de validación, preparar datos que se necesitarán en `beforeRender`.
+
+---
+
 ### `beforeRender(context)`
 
 Se ejecuta antes de que pandoc convierta el Markdown a HTML fragment.
@@ -246,26 +284,23 @@ Se ejecuta una vez al término del build, después de que todos los archivos han
 ## Ejemplo completo — generador de sitemap
 
 ```javascript
-import { writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
-
 export default {
   name: 'sitemap-generator',
 
-  async afterBuild({ outputDir, outputPaths }) {
-    const baseUrl = 'https://mi-sitio.example.com';
-    const htmlPaths = outputPaths.filter((p) => p.endsWith('.html'));
+  generateFiles({ documents, siteConfig }) {
+    const baseUrl = siteConfig['baseUrl'] ?? '';
+    const htmlDocs = documents.filter((d) => d.type === 'file' || d.type === 'event' || d.type === 'author');
 
-    const urls = htmlPaths
-      .map((p) => `  <url><loc>${baseUrl}/${p}</loc></url>`)
+    const urls = htmlDocs
+      .map((d) => `  <url><loc>${baseUrl}/${d.outputPath}</loc></url>`)
       .join('\n');
 
-    const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls}
-</urlset>`;
-
-    await writeFile(join(outputDir, 'sitemap.xml'), sitemap, 'utf8');
+    return [
+      {
+        relativePath: 'sitemap.xml',
+        content: `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>`,
+      },
+    ];
   },
 };
 ```
