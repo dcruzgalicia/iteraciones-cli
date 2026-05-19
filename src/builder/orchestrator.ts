@@ -441,7 +441,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     if (hasPlugins) {
       for (const doc of allDocs) {
         await registry.runOnDocumentDiscovered({
-          filePath: doc.filePath,
+          sourcePath: doc.filePath,
           relativePath: doc.relativePath,
           type: doc.type ?? 'file',
           frontmatter: doc.frontmatter as Record<string, unknown>,

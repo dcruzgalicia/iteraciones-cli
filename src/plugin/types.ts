@@ -181,7 +181,7 @@ export type PluginBeforeBuildContext = {
 /** Contexto disponible para el hook onDocumentDiscovered. */
 export type PluginSourceDocument = {
   /** Ruta absoluta al archivo markdown fuente. */
-  readonly filePath: string;
+  readonly sourcePath: string;
   /** Ruta relativa al archivo markdown fuente (ej. 'notas/mi-nota.md'). */
   readonly relativePath: string;
   /** Tipo de documento clasificado por el SSG (ej. 'file', 'author', 'event'). */
