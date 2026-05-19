@@ -2,7 +2,7 @@
 %% Usado para: collection, events
 %% Requiere: TeX Live / MacTeX full con KOMA-Script, fontspec, microtype, hyperref, babel
 
-\documentclass[$if(fontsize)$$fontsize$,$endif$$if(lang)$$lang$,$endif$,twoside=false]{scrbook}
+\documentclass[$if(fontsize)$$fontsize$,$endif$twoside=false]{scrbook}
 
 % ─── Codificación y fuentes ──────────────────────────────────────────────────
 \usepackage{fontspec}

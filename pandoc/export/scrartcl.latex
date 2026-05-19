@@ -2,7 +2,7 @@
 %% Usado para: file, event, author
 %% Requiere: TeX Live / MacTeX full con KOMA-Script, fontspec, microtype, hyperref, babel
 
-\documentclass[$if(fontsize)$$fontsize$,$endif$$if(lang)$$lang$,$endif$]{scrartcl}
+\documentclass[$if(fontsize)$$fontsize$$endif$]{scrartcl}
 
 % ─── Codificación y fuentes ──────────────────────────────────────────────────
 \usepackage{fontspec}
