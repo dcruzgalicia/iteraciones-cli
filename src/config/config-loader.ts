@@ -79,6 +79,11 @@ function parseExportConfig(raw: unknown): ExportConfig | undefined {
   const rawTemplate = obj.template;
   const template =
     rawTemplate === 'literary' || rawTemplate === 'academic' || rawTemplate === 'anthology' || rawTemplate === 'technical' ? rawTemplate : undefined;
+  if (rawTemplate !== undefined && template === undefined) {
+    process.stderr.write(
+      `[iteraciones] export.template: valor desconocido "${String(rawTemplate)}". Los valores válidos son "literary", "academic", "anthology", "technical".\n`,
+    );
+  }
   return {
     formats,
     pdfEngine,
