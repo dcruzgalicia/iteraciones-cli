@@ -72,6 +72,12 @@ export async function convertToEpub(doc: ExportDocument, outputPath: string): Pr
     args.push('--epub-cover-image', doc.metadata.cover);
   }
 
+  // Activar el procesador de citas cuando hay bibliografía declarada.
+  // Sin --citeproc, las citas [@referencia] quedan sin resolver en el documento final.
+  if (doc.metadata.bibliography) {
+    args.push('--citeproc');
+  }
+
   let proc: ReturnType<typeof Bun.spawn>;
   try {
     proc = Bun.spawn(args, { stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' });
@@ -99,6 +105,12 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, engi
   const templatePath = join(TEMPLATES_DIR, `${doc.metadata.documentclass}.latex`);
   const input = buildYamlHeader(doc) + doc.body;
   const args = ['pandoc', '--from', 'markdown', '--to', 'pdf', '--pdf-engine', engine, `--template=${templatePath}`, '--output', outputPath];
+
+  // Activar el procesador de citas cuando hay bibliografía declarada.
+  // Sin --citeproc, las citas [@referencia] quedan sin resolver en el PDF final.
+  if (doc.metadata.bibliography) {
+    args.push('--citeproc');
+  }
 
   let proc: ReturnType<typeof Bun.spawn>;
   try {
