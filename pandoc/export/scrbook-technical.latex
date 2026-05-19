@@ -49,7 +49,7 @@ $endif$
 % Compatibilidad con el resaltado de Pandoc (fancyvrb/framed)
 \usepackage{fancyvrb}
 \usepackage{framed}
-\newenvironment{Shaded}{\begin{lstlisting}[language={}]}{\end{lstlisting}}
+\newenvironment{Shaded}{}{}
 \newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
 \newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
 \newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.77,0.63,0.00}{#1}}

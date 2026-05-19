@@ -3,7 +3,7 @@
 %% Énfasis en rigor formal: abstract, palabras clave, citas CSL, numeración de secciones
 %% Requiere: TeX Live / MacTeX full con KOMA-Script, fontspec, microtype, hyperref, babel
 
-\documentclass[$if(fontsize)$$fontsize$$endif$, numbers=noendperiod]{scrartcl}
+\documentclass[$if(fontsize)$$fontsize$, $endif$numbers=noendperiod]{scrartcl}
 
 % ─── Codificación y fuentes ──────────────────────────────────────────────────
 \usepackage{fontspec}
