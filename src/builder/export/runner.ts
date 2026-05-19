@@ -13,7 +13,7 @@ import { EXPORTABLE_TYPES } from './types.js';
 export interface ExportRunOptions {
   config: ExportConfig;
   outputDir: string;
-  /** Directorio raíz del proyecto; usado para validar rutas editoriales de bibliography y csl. */
+  /** Directorio raíz del proyecto; usado para validar rutas editoriales (cover, bibliography, csl). */
   cwd: string;
   lang: string;
   /**
