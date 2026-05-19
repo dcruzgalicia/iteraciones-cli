@@ -236,6 +236,10 @@ export async function runExportDocuments(
               stats.totalPdf++;
               stats.cacheHitsPdf++;
             }
+            pdfDone++;
+            if (pdfTotal > 2) {
+              process.stderr.write(`[export] PDF ${pdfDone}/${pdfTotal} — ${exportDoc.relativePath}\n`);
+            }
             return { pdf: outputPath };
           }
           await convertToPdf(exportDoc, outputPath, config.pdfEngine);
