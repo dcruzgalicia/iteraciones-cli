@@ -2,6 +2,7 @@ import { isAbsolute, join, normalize, relative } from 'node:path';
 import type {
   GeneratedFile,
   IPlugin,
+  PluginBeforeBuildContext,
   PluginBuildContext,
   PluginComposeContext,
   PluginComposeResult,
@@ -27,6 +28,14 @@ export class PluginRegistry {
 
   get size(): number {
     return this.plugins.length;
+  }
+
+  async runBeforeBuild(context: PluginBeforeBuildContext): Promise<void> {
+    for (const plugin of this.plugins) {
+      if (typeof plugin.beforeBuild === 'function') {
+        await plugin.beforeBuild(context);
+      }
+    }
   }
 
   async runBeforeRender(context: PluginRenderContext): Promise<PluginRenderContext> {
