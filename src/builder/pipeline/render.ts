@@ -29,6 +29,8 @@ export async function renderDocuments(
   stats?: RenderStats,
   pool?: PandocPool,
   cwd?: string,
+  /** Conjunto mutable donde se acumulan las claves de caché usadas; permite al caller usarlas para prune. */
+  collectedKeys?: Set<string>,
 ): Promise<BuildDocument[]> {
   // Memoiza hashes de archivos para no leerlos más de una vez por llamada.
   // Válido para la duración de esta llamada a renderDocuments(); si se invoca
@@ -89,6 +91,7 @@ export async function renderDocuments(
       const bibHash = bibOptions ? await getBibHash(bibOptions.bibliography) : '';
       const cslHash = bibOptions?.csl ? await getBibHash(bibOptions.csl) : '';
       const key = hash(doc.sourceHash, cache.cliVersion, cache.pandocVersion, cache.pluginFingerprint ?? '', bibHash, cslHash);
+      collectedKeys?.add(key);
       const cached = await cache.manager.read('render', key);
       if (cached !== undefined) {
         if (stats) {
@@ -117,6 +120,7 @@ export async function renderDocuments(
       const bibHash = bibOptions ? await getBibHash(bibOptions.bibliography) : '';
       const cslHash = bibOptions?.csl ? await getBibHash(bibOptions.csl) : '';
       const key = hash(doc.sourceHash, cache.cliVersion, cache.pandocVersion, cache.pluginFingerprint ?? '', bibHash, cslHash);
+      collectedKeys?.add(key);
       await cache.manager.write('render', key, htmlFragment);
     }
     if (stats) stats.total++;
