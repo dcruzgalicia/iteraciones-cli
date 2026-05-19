@@ -14,6 +14,12 @@ export interface ExportRunOptions {
   config: ExportConfig;
   outputDir: string;
   lang: string;
+  /**
+   * Número máximo de documentos que se exportan en paralelo.
+   * Dentro de cada documento, los formatos (PDF/EPUB) se generan simultáneamente
+   * de forma independiente, por lo que el número real de procesos pandoc puede ser
+   * hasta `concurrency × formats.length`.
+   */
   concurrency: number;
   /** Versión del CLI para la clave de caché. */
   cliVersion: string;
@@ -108,7 +114,9 @@ export async function runExportDocuments(
 
     // Generar todos los formatos en paralelo: PDF y EPUB son completamente
     // independientes para el mismo documento y no comparten estado de escritura.
-    const formatResults = await Promise.all(
+    // Promise.allSettled garantiza que ambos formatos terminan (éxito o error)
+    // antes de procesar los resultados, evitando estados parciales en caché.
+    const formatResults = await Promise.allSettled(
       config.formats.map(async (format): Promise<{ epub?: string; pdf?: string }> => {
         const outputPath = `${outputBase}.${format}`;
 
@@ -158,14 +166,23 @@ export async function runExportDocuments(
       }),
     );
 
+    // Recopilar resultados exitosos y acumular errores.
+    // Re-lanzar el primer error si algún formato falló (mantiene el comportamiento
+    // de fallo explícito), pero todos los formatos ya completaron su ejecución.
     const result: ExportResult = {
       filePath: exportDoc.filePath,
       relativePath: exportDoc.relativePath,
     };
+    let firstError: unknown;
     for (const fr of formatResults) {
-      if (fr.epub) result.epubPath = fr.epub;
-      if (fr.pdf) result.pdfPath = fr.pdf;
+      if (fr.status === 'fulfilled') {
+        if (fr.value.epub) result.epubPath = fr.value.epub;
+        if (fr.value.pdf) result.pdfPath = fr.value.pdf;
+      } else if (!firstError) {
+        firstError = fr.reason;
+      }
     }
+    if (firstError) throw firstError;
     return result;
   });
 
