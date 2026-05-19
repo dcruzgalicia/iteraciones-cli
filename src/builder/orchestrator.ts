@@ -4,7 +4,7 @@ import { CacheManager } from '../cache/cache-manager.js';
 import { hash } from '../cache/hasher.js';
 import { loadOutputManifest, saveOutputManifest } from '../cache/output-manifest.js';
 import { loadSiteConfig } from '../config/config-loader.js';
-import { clean } from '../output/writer.js';
+import { clean, writeFile } from '../output/writer.js';
 import { loadPlugins } from '../plugin/loader.js';
 import { PluginRegistry } from '../plugin/registry.js';
 import { PandocPool } from '../services/pandoc-pool.js';
@@ -299,7 +299,16 @@ async function runFinalization(
     const docOutputPaths = writtenDocs.map((doc) => doc.relativePath.replace(/\.md$/, '.html'));
     const assetPaths: string[] = ['css/styles.css'];
     if (ctx.siteConfig.logo?.trim()) assetPaths.push(ctx.siteConfig.logo.trim());
-    await registry.runAfterBuild({ outputDir: ctx.outputDir, outputPaths: [...assetPaths, ...docOutputPaths] });
+
+    // generateFiles: recopilar y escribir archivos adicionales de plugins (sitemap, RSS, etc.)
+    const initialContext = { outputDir: ctx.outputDir, outputPaths: [...assetPaths, ...docOutputPaths] };
+    const generatedFiles = await registry.runGenerateFiles(initialContext);
+    for (const file of generatedFiles) {
+      await writeFile(join(ctx.outputDir, file.relativePath), file.content);
+    }
+    const generatedPaths = generatedFiles.map((f) => f.relativePath);
+
+    await registry.runAfterBuild({ ...initialContext, outputPaths: [...initialContext.outputPaths, ...generatedPaths] });
   }
 
   // Actualizar manifiesto de salida y eliminar archivos huérfanos en modo incremental.

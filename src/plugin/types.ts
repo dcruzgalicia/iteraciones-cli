@@ -48,9 +48,17 @@ export interface IPlugin {
   afterExport?(context: PluginExportResult): Promise<PluginExportResult> | PluginExportResult;
 
   /**
+   * Se ejecuta al término del build para generar archivos adicionales en dist/web.
+   * Los archivos retornados se escriben antes de ejecutar afterBuild, de modo que
+   * afterBuild recibe sus paths en `outputPaths`. Útil para sitemap.xml, feed.json,
+   * índice de búsqueda, etc.
+   */
+  generateFiles?(context: PluginBuildContext): Promise<GeneratedFile[]> | GeneratedFile[];
+
+  /**
    * Se ejecuta una vez al término del build, después de que todos los documentos
-   * han sido escritos en dist/web.
-   * Útil para generación de feeds, sitemaps, reportes, etc.
+   * han sido escritos en dist/web (incluyendo los generados por generateFiles).
+   * Útil para notificaciones, reportes, sincronización con servicios externos.
    */
   afterBuild?(context: PluginBuildContext): Promise<void> | void;
 }
@@ -107,10 +115,24 @@ export type PluginExportResult = {
   readonly data: Uint8Array;
 };
 
-/** Contexto disponible para el hook afterBuild. */
+/** Contexto disponible para los hooks generateFiles y afterBuild. */
 export type PluginBuildContext = {
   /** Directorio de salida absoluto (p. ej. /ruta/proyecto/dist/web). */
   readonly outputDir: string;
   /** Rutas relativas de todos los archivos generados en dist/web en este build. */
   readonly outputPaths: ReadonlyArray<string>;
+};
+
+/**
+ * Archivo adicional que un plugin puede generar al final del build.
+ * Se escribe en `outputDir/relativePath` junto al resto del sitio.
+ */
+export type GeneratedFile = {
+  /**
+   * Ruta relativa al directorio de salida (p. ej. 'sitemap.xml', 'feeds/rss.xml').
+   * No puede ser absoluta ni contener componentes '..'.
+   */
+  relativePath: string;
+  /** Contenido textual del archivo. */
+  content: string;
 };
