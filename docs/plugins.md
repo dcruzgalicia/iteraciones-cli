@@ -55,23 +55,57 @@ type PluginBeforeBuildContext = {
 
 ---
 
+### `onDocumentClassified(context)`
+
+Se ejecuta por cada documento inmediatamente después de la clasificación automática de `type`, `kind` y `templatePath`, antes del render con pandoc. Permite a plugins sobreescribir la clasificación inferida o excluir el documento del pipeline.
+
+- Retornar `null` excluye el documento del pipeline.
+- Retornar un objeto aplica los cambios de `type`, `kind` y `templatePath`.
+- No retornar nada (`void`) preserva la clasificación original.
+
+**Parámetro:**
+
+```typescript
+type PluginClassifiedDocument = {
+  readonly sourcePath: string;       // ruta absoluta al .md fuente
+  readonly relativePath: string;     // ruta relativa (ej. 'eventos/meetup.md')
+  readonly type: string;             // tipo inferido: 'file', 'event', 'author', etc.
+  readonly kind: string;             // 'page' | 'block'
+  readonly templatePath: string | undefined; // ruta absoluta al template resuelto
+  readonly frontmatter: Readonly<Record<string, unknown>>;
+  readonly body: string;
+};
+```
+
+**Retorno:** `PluginClassifiedDocument | null | void`
+
+Útil para: forzar un tipo según el directorio del archivo, asignar un template custom, excluir documentos según criterios de metadatos post-clasificación.
+
+---
+
 ### `onDocumentDiscovered(context)`
 
-Se ejecuta por cada documento descubierto y clasificado, después de excluir borradores (`draft: true`) y antes de que comience el render con pandoc. No retorna valor.
+Se ejecuta por cada documento descubierto, después de excluir borradores (`draft: true`) y después de `onDocumentClassified`. Permite modificar el cuerpo markdown, el frontmatter o la ruta relativa del documento, o excluirlo completamente.
+
+- Retornar `null` excluye el documento del pipeline.
+- Retornar un objeto aplica los cambios de `body`, `frontmatter` y `relativePath`.
+- No retornar nada (`void`) preserva el documento original.
 
 **Parámetro:**
 
 ```typescript
 type PluginSourceDocument = {
-  readonly filePath: string;                            // ruta absoluta al .md fuente
-  readonly relativePath: string;                        // ruta relativa (ej. 'notas/mi-nota.md')
-  readonly type: string;                                // tipo clasificado: 'file', 'event', 'author', etc.
+  readonly sourcePath: string;       // ruta absoluta al .md fuente
+  readonly relativePath: string;     // ruta relativa (ej. 'notas/mi-nota.md')
+  readonly type: string;             // tipo clasificado: 'file', 'event', 'author', etc.
   readonly frontmatter: Readonly<Record<string, unknown>>;
-  readonly body: string;                                // markdown sin frontmatter
+  readonly body: string;             // markdown sin frontmatter
 };
 ```
 
-Útil para: construir índices internos con todos los documentos, emitir advertencias de validación, preparar datos que se necesitarán en `beforeRender`.
+**Retorno:** `PluginSourceDocument | null | void`
+
+Útil para: construir índices internos, emitir advertencias de validación, inyectar contenido en el cuerpo markdown, filtrar documentos según metadatos arbitrarios.
 
 ---
 
@@ -221,10 +255,11 @@ Se ejecuta al término del build para generar archivos adicionales en `dist/web`
 
 ```typescript
 type PluginBuildContext = {
-  readonly outputDir: string;                          // ruta absoluta a dist/web
-  readonly outputPaths: ReadonlyArray<string>;         // rutas relativas de todos los archivos generados
+  readonly outputDir: string;                           // ruta absoluta a dist/web
+  readonly outputPaths: ReadonlyArray<string>;          // rutas relativas de todos los archivos generados
   readonly siteConfig: Readonly<Record<string, unknown>>; // configuración leída de _iteraciones.yaml
   readonly documents: ReadonlyArray<PluginDocumentSummary>; // resumen de todos los documentos construidos
+  readonly graph: PluginDocumentGraph;                  // grafo de dependencias entre documentos
 };
 
 type PluginDocumentSummary = {
@@ -232,6 +267,14 @@ type PluginDocumentSummary = {
   readonly outputPath: string;   // ruta relativa al .html de salida (ej. 'notas/mi-nota.html')
   readonly type: string;         // tipo clasificado: 'file', 'author', 'event', etc.
   readonly frontmatter: Readonly<Record<string, unknown>>;
+};
+
+type PluginDocumentGraph = {
+  edges: ReadonlyArray<{
+    from: string;                    // relativePath del documento que referencia al otro
+    to: string;                      // relativePath del documento referenciado
+    relation: 'contains' | 'authored-by'; // tipo de relación
+  }>;
 };
 ```
 
@@ -243,6 +286,10 @@ type GeneratedFile = {
   content: string | ArrayBuffer; // contenido textual (UTF-8) o binario
 };
 ```
+
+El campo `graph.edges` contiene:
+- **`'contains'`**: un documento `collection` referencia explícitamente al otro via `items:` en su frontmatter.
+- **`'authored-by'`**: un documento con `author:` en su frontmatter apunta a un documento de tipo `author`.
 
 Útil para: generar `sitemap.xml`, feeds RSS/JSON/Atom, índices de búsqueda, manifiestos de PWA, archivos binarios adicionales.
 
@@ -277,33 +324,168 @@ Se ejecuta una vez al término del build, después de que todos los archivos han
 
 **Parámetro:** `PluginBuildContext` (mismo tipo que `generateFiles`, ver arriba)
 
-Útil para: notificaciones, reportes post-build, sincronización con servicios externos.
+Útil para: notificaciones, reportes post-build, sincronización con servicios externos, detección de documentos huérfanos.
 
----
-
-## Ejemplo completo — generador de sitemap
+**Ejemplo — detectar documentos huérfanos:**
 
 ```javascript
 export default {
-  name: 'sitemap-generator',
+  name: 'orphan-detector',
 
-  generateFiles({ documents, siteConfig }) {
-    const baseUrl = siteConfig['baseUrl'] ?? '';
-    const htmlDocs = documents.filter((d) => d.type === 'file' || d.type === 'event' || d.type === 'author');
+  afterBuild({ documents, graph }) {
+    const referenced = new Set(graph.edges.map((e) => e.to));
+    const orphans = documents
+      .filter((d) => d.type === 'file' && !referenced.has(d.relativePath));
 
-    const urls = htmlDocs
-      .map((d) => `  <url><loc>${baseUrl}/${d.outputPath}</loc></url>`)
-      .join('\n');
+    if (orphans.length > 0) {
+      process.stderr.write(`[orphan-detector] ${orphans.length} documento(s) sin colección:\n`);
+      for (const doc of orphans) {
+        process.stderr.write(`  - ${doc.relativePath}\n`);
+      }
+    }
+  },
+};
+```
+
+---
+
+## Plugin de referencia mínimo
+
+El siguiente plugin cubre los tres patrones más comunes: observar, transformar y generar. Puedes usarlo como punto de partida.
+
+```javascript
+// plugins/mi-plugin.js
+export default {
+  name: 'mi-plugin',
+
+  // 1. Inicialización — se ejecuta una vez antes del pipeline
+  beforeBuild({ cwd, siteConfig }) {
+    process.stdout.write(`[mi-plugin] Build desde: ${cwd}\n`);
+  },
+
+  // 2. Filtrado post-clasificación — excluir o reclasificar documentos
+  onDocumentClassified(doc) {
+    // Forzar tipo 'file' para documentos en un directorio específico
+    if (doc.relativePath.startsWith('borradores/')) return null; // excluir
+    return; // preservar clasificación original
+  },
+
+  // 3. Modificación pre-render — enriquecer el frontmatter o el body
+  onDocumentDiscovered(doc) {
+    if (doc.type !== 'file') return;
+    // Añadir una variable al frontmatter
+    return {
+      ...doc,
+      frontmatter: { ...doc.frontmatter, 'mi-variable': 'valor-inyectado' },
+    };
+  },
+
+  // 4. Generación de archivos al final del build
+  generateFiles({ documents, siteConfig, graph }) {
+    const baseUrl = String(siteConfig['baseUrl'] ?? '');
+    const referenced = new Set(graph.edges.map((e) => e.to));
+    const orphans = documents.filter((d) => d.type === 'file' && !referenced.has(d.relativePath));
+
+    const report = {
+      generatedAt: new Date().toISOString(),
+      totalDocuments: documents.length,
+      orphans: orphans.map((d) => d.relativePath),
+    };
 
     return [
-      {
-        relativePath: 'sitemap.xml',
-        content: `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>`,
-      },
+      { relativePath: 'plugin-report.json', content: JSON.stringify(report, null, 2) },
     ];
   },
 };
 ```
+
+---
+
+## Pruebas de plugins
+
+Los plugins son módulos ESM estándar. Para probarlos con `bun test`:
+
+### Estructura recomendada
+
+```
+plugins/
+  mi-plugin.js         ← plugin
+  mi-plugin.test.js    ← pruebas unitarias del plugin
+```
+
+### Patrón de prueba
+
+Cada hook es una función pura o casi-pura; se puede invocar directamente en los tests sin necesidad del CLI:
+
+```javascript
+// plugins/mi-plugin.test.js
+import { describe, expect, it } from 'bun:test';
+import plugin from './mi-plugin.js';
+
+describe('mi-plugin', () => {
+  it('excluye documentos en borradores/', async () => {
+    const doc = {
+      sourcePath: '/proyecto/borradores/draft.md',
+      relativePath: 'borradores/draft.md',
+      type: 'file',
+      kind: 'page',
+      templatePath: undefined,
+      frontmatter: { title: 'Borrador', author: [], keywords: [], date: '', draft: false },
+      body: '# Contenido',
+    };
+    const result = await plugin.onDocumentClassified?.(doc);
+    expect(result).toBeNull();
+  });
+
+  it('inyecta mi-variable en documentos tipo file', async () => {
+    const doc = {
+      sourcePath: '/proyecto/notas/nota.md',
+      relativePath: 'notas/nota.md',
+      type: 'file',
+      frontmatter: { title: 'Mi nota', author: [], keywords: [], date: '' },
+      body: '# Contenido',
+    };
+    const result = await plugin.onDocumentDiscovered?.(doc);
+    expect(result?.frontmatter['mi-variable']).toBe('valor-inyectado');
+  });
+
+  it('genera plugin-report.json con lista de huérfanos', () => {
+    const context = {
+      outputDir: '/proyecto/dist/web',
+      outputPaths: [],
+      siteConfig: { baseUrl: 'https://mi-sitio.com' },
+      documents: [
+        { relativePath: 'notas/huerfana.md', outputPath: 'notas/huerfana.html', type: 'file', frontmatter: {} },
+        { relativePath: 'coleccion.md', outputPath: 'coleccion.html', type: 'collection', frontmatter: { items: [] } },
+      ],
+      graph: { edges: [] },
+    };
+    const files = plugin.generateFiles?.(context);
+    expect(files).toHaveLength(1);
+    const report = JSON.parse(String(files?.[0].content));
+    expect(report.orphans).toContain('notas/huerfana.md');
+  });
+});
+```
+
+Ejecutar las pruebas:
+
+```bash
+bun test plugins/
+```
+
+### Verificar integración end-to-end
+
+Para validar que el plugin se registra y ejecuta correctamente en el pipeline completo:
+
+```bash
+# Registrar el plugin en _iteraciones.yaml y ejecutar un build real
+iteraciones build
+```
+
+Si el hook lanza un error, el build termina con un mensaje que incluye el nombre del plugin (ej. `[plugin:mi-plugin] ...`).
+
+---
 
 ## Orden de ejecución
 
