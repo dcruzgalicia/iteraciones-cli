@@ -1,5 +1,5 @@
 import { build } from '../builder/orchestrator.js';
-import { ConfigError, PandocError } from '../errors.js';
+import { reportBuildError } from './build-errors.js';
 import { startWatcher } from './watcher.js';
 
 /**
@@ -23,17 +23,7 @@ export async function runWatch(cwd: string, options: { verbose?: boolean } = {})
       log('watch: rebuild completado.');
     } catch (err) {
       // Los errores de rebuild se reportan pero no detienen el watcher.
-      if (err instanceof PandocError) {
-        const location = err.sourcePath ? ` en "${err.sourcePath}"` : '';
-        process.stderr.write(`watch: error de pandoc${location}: ${err.message}\n`);
-        if (err.stderr) process.stderr.write(`${err.stderr}\n`);
-      } else if (err instanceof ConfigError) {
-        process.stderr.write(`watch: error de configuración: ${err.message}\n`);
-      } else if (err instanceof Error) {
-        process.stderr.write(`watch: error: ${err.message}\n`);
-      } else {
-        process.stderr.write('watch: error desconocido durante el rebuild.\n');
-      }
+      reportBuildError(err, 'watch');
     }
   });
 
