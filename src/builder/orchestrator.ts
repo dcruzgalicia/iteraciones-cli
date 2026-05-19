@@ -379,8 +379,10 @@ async function runFinalization(
   // Podar entradas obsoletas del scope 'render' usando las claves de todos los
   // documentos procesados en esta ejecución. Se hace al final para no eliminar
   // entradas que aún no han sido escritas por los batches posteriores.
-  if (renderCache) {
-    await renderCache.manager.prune('render', renderUsedKeys ?? new Set());
+  // Si renderUsedKeys no está disponible (undefined), se omite el prune para
+  // evitar borrar la caché entera por error.
+  if (renderCache && renderUsedKeys) {
+    await renderCache.manager.prune('render', renderUsedKeys);
   }
 
   return composeMs;
