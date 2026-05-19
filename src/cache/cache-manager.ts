@@ -1,6 +1,6 @@
 import type { Dirent } from 'node:fs';
 import { mkdir, readdir, unlink } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 export type CacheScope = 'render' | 'compose' | 'css' | 'export';
 
@@ -128,8 +128,8 @@ export class CacheManager {
   async copyBinaryTo(scope: CacheScope, key: string, ext: string, destPath: string): Promise<void> {
     CacheManager.#validateKey(key);
     const data = await Bun.file(this.#binaryPath(scope, key, ext)).arrayBuffer();
-    const destDir = destPath.slice(0, destPath.lastIndexOf('/'));
-    if (destDir) await mkdir(destDir, { recursive: true });
+    const destDir = dirname(destPath);
+    await mkdir(destDir, { recursive: true });
     await Bun.write(destPath, data);
   }
 
