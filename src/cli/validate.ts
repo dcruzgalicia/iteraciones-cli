@@ -1,4 +1,4 @@
-import { access, readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { resolveTemplatePath } from '../builder/classifier/resolve-template.js';
 import { EXPORTABLE_TYPES } from '../builder/export/types.js';
@@ -92,8 +92,8 @@ async function validateFrontmatter(cwd: string, theme: string | undefined): Prom
       for (const item of fm.items) {
         const normalizedItem = item.endsWith('.md') ? item : `${item}.md`;
         const itemPath = join(cwd, normalizedItem);
-        const itemExists = await access(itemPath)
-          .then(() => true)
+        const itemExists = await stat(itemPath)
+          .then((s) => s.isFile())
           .catch(() => false);
         if (!itemExists) {
           errors.push({ file: entry, message: `items: "${item}" no existe en el proyecto` });
@@ -105,8 +105,8 @@ async function validateFrontmatter(cwd: string, theme: string | undefined): Prom
     // El builder nunca lee frontmatter.template; usa siempre resolveTemplatePath(type, theme, cwd).
     if (fm.type && VALID_TYPES.has(fm.type as Parameters<typeof VALID_TYPES.has>[0])) {
       const resolvedTemplate = resolveTemplatePath(fm.type as Parameters<typeof VALID_TYPES.has>[0], theme, cwd, themePaths);
-      const templateExists = await access(resolvedTemplate)
-        .then(() => true)
+      const templateExists = await stat(resolvedTemplate)
+        .then((s) => s.isFile())
         .catch(() => false);
       if (!templateExists) {
         errors.push({
@@ -131,8 +131,8 @@ async function validateFrontmatter(cwd: string, theme: string | undefined): Prom
         for (const [fieldName, fieldValue] of editorialPaths) {
           if (!fieldValue) continue;
           const absFilePath = join(cwd, fieldValue);
-          const fileExists = await access(absFilePath)
-            .then(() => true)
+          const fileExists = await stat(absFilePath)
+            .then((s) => s.isFile())
             .catch(() => false);
           if (!fileExists) {
             errors.push({ file: entry, message: `${fieldName}: "${fieldValue}" no existe en el proyecto` });
