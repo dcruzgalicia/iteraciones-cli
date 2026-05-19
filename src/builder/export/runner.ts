@@ -68,7 +68,7 @@ export async function runExportDocuments(
   // PDF se adquiere un slot antes de invocar xelatex y se libera al terminar — con o
   // sin error. Así el número de documentos en vuelo es `concurrency`, pero las llamadas
   // a xelatex activas simultáneamente se acotan a `pdfConcurrency` (~300-600 MB/proceso).
-  let xelatexSlots = hasPdf ? Math.max(1, config.pdfConcurrency) : 0;
+  let xelatexSlots = hasPdf ? (Number.isInteger(config.pdfConcurrency) && config.pdfConcurrency >= 1 ? config.pdfConcurrency : 1) : 0;
   const xelatexQueue: Array<() => void> = [];
   const acquireXelatex = (): Promise<void> =>
     new Promise<void>((res) => {
