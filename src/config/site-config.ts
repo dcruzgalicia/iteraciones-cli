@@ -1,3 +1,14 @@
+/**
+ * Configuración de exportación editorial (PDF y EPUB) definida en `_iteraciones.yaml`
+ * bajo la clave `export:`.
+ */
+export interface ExportConfig {
+  /** Formatos a generar en cada build. */
+  formats: ReadonlyArray<'pdf' | 'epub'>;
+  /** Motor LaTeX para PDF. Por defecto `xelatex`. */
+  pdfEngine: 'xelatex' | 'lualatex';
+}
+
 export interface SiteConfig {
   title: string;
   tagline: string;
@@ -9,6 +20,8 @@ export interface SiteConfig {
   accent: string;
   /** URL base del sitio publicado, p. ej. `https://ejemplo.com`. Opcional. */
   baseUrl: string | undefined;
+  /** Configuración de exportación PDF/EPUB. `undefined` si no se configuró. */
+  export: ExportConfig | undefined;
 }
 
 /**
@@ -50,4 +63,5 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   theme: undefined,
   accent: 'lime',
   baseUrl: undefined,
+  export: undefined,
 };

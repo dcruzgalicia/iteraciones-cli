@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { ConfigError } from '../errors.js';
-import { DEFAULT_SITE_CONFIG, KNOWN_ACCENT_COLORS, type SiteConfig } from './site-config.js';
+import { DEFAULT_SITE_CONFIG, type ExportConfig, KNOWN_ACCENT_COLORS, type SiteConfig } from './site-config.js';
 
 const CONFIG_FILE = '_iteraciones.yaml';
 
@@ -46,7 +46,18 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
     theme: typeof root.theme === 'string' ? root.theme : DEFAULT_SITE_CONFIG.theme,
     accent: resolveAccent(site.accent),
     baseUrl: typeof site['base-url'] === 'string' && site['base-url'].trim() ? site['base-url'].trim() : DEFAULT_SITE_CONFIG.baseUrl,
+    export: parseExportConfig(root.export),
   };
+}
+
+function parseExportConfig(raw: unknown): ExportConfig | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const obj = raw as Record<string, unknown>;
+  const rawFormats = Array.isArray(obj.formats) ? obj.formats : [];
+  const formats: Array<'pdf' | 'epub'> = rawFormats.filter((f): f is 'pdf' | 'epub' => f === 'pdf' || f === 'epub');
+  if (formats.length === 0) return undefined;
+  const pdfEngine = obj['pdf-engine'] === 'lualatex' ? 'lualatex' : 'xelatex';
+  return { formats, pdfEngine };
 }
 
 function resolveAccent(value: unknown): string {
