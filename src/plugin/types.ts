@@ -149,6 +149,6 @@ export type GeneratedFile = {
    * No puede ser absoluta ni contener componentes '..'.
    */
   relativePath: string;
-  /** Contenido textual del archivo. */
-  content: string;
+  /** Contenido del archivo: string para texto (UTF-8) o ArrayBuffer para datos binarios. */
+  content: string | ArrayBuffer;
 };
