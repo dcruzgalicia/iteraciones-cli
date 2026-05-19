@@ -74,8 +74,9 @@ export async function runExportDocuments(
       const outputPath = `${outputBase}.${format}`;
 
       if (format === 'epub') {
-        // Calcular clave de caché para EPUB
-        const cacheKey = hash(doc.sourceHash, 'epub', cliVersion, pandocVersion);
+        // Para colecciones: incluir hashes de todos los items en la clave (igual que PDF)
+        const itemHashes = items.map((i) => i.sourceHash).join('\0');
+        const cacheKey = hash(doc.sourceHash, itemHashes, 'epub', cliVersion, pandocVersion);
         if (cacheManager && (await cacheManager.hasBinary('export', cacheKey, 'epub'))) {
           await cacheManager.copyBinaryTo('export', cacheKey, 'epub', outputPath);
           result.epubPath = outputPath;
