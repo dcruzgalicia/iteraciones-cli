@@ -23,6 +23,14 @@ export interface IPlugin {
   beforeRender?(context: PluginRenderContext): Promise<PluginRenderContext> | PluginRenderContext;
 
   /**
+   * Se ejecuta una vez por cada documento descubierto, tras la clasificación
+   * del tipo y antes de que pandoc procese el contenido. No se llama para
+   * documentos excluidos por draft:true. Útil para observar el catálogo de
+   * documentos, emitir advertencias o preparar datos indexados.
+   */
+  onDocumentDiscovered?(context: PluginSourceDocument): Promise<void> | void;
+
+  /**
    * Se ejecuta después de que pandoc produce el HTML fragment.
    * Puede reescribir el fragmento HTML resultante.
    */
@@ -168,4 +176,18 @@ export type PluginBeforeBuildContext = {
   readonly outputDir: string;
   /** Configuración del sitio leída de _iteraciones.yaml. */
   readonly siteConfig: Readonly<Record<string, unknown>>;
+};
+
+/** Contexto disponible para el hook onDocumentDiscovered. */
+export type PluginSourceDocument = {
+  /** Ruta absoluta al archivo markdown fuente. */
+  readonly filePath: string;
+  /** Ruta relativa al archivo markdown fuente (ej. 'notas/mi-nota.md'). */
+  readonly relativePath: string;
+  /** Tipo de documento clasificado por el SSG (ej. 'file', 'author', 'event'). */
+  readonly type: string;
+  /** Frontmatter del documento fuente. */
+  readonly frontmatter: Readonly<Record<string, unknown>>;
+  /** Cuerpo markdown del documento (sin frontmatter). */
+  readonly body: string;
 };

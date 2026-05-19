@@ -10,6 +10,7 @@ import type {
   PluginExportResult,
   PluginRenderContext,
   PluginRenderResult,
+  PluginSourceDocument,
 } from './types.js';
 
 /**
@@ -34,6 +35,14 @@ export class PluginRegistry {
     for (const plugin of this.plugins) {
       if (typeof plugin.beforeBuild === 'function') {
         await plugin.beforeBuild(context);
+      }
+    }
+  }
+
+  async runOnDocumentDiscovered(context: PluginSourceDocument): Promise<void> {
+    for (const plugin of this.plugins) {
+      if (typeof plugin.onDocumentDiscovered === 'function') {
+        await plugin.onDocumentDiscovered(context);
       }
     }
   }
