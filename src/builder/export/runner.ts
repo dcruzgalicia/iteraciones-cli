@@ -54,8 +54,16 @@ export async function runExportDocuments(
 
   const results = await mapWithConcurrency(exportableDocs, concurrency, async (doc): Promise<ExportResult | null> => {
     // Respetar export: { skip: true } en el frontmatter del documento.
+    // Se valida que sea un objeto plano (sin arrays ni prototipos no-Object)
+    // siguiendo el patrón del codebase en normalizeSpeaker/parseFrontmatter.
     const rawExportField = doc.frontmatter['export'];
-    if (typeof rawExportField === 'object' && rawExportField !== null && (rawExportField as Record<string, unknown>)['skip'] === true) {
+    if (
+      typeof rawExportField === 'object' &&
+      rawExportField !== null &&
+      !Array.isArray(rawExportField) &&
+      Object.getPrototypeOf(rawExportField) === Object.prototype &&
+      (rawExportField as Record<string, unknown>)['skip'] === true
+    ) {
       return null;
     }
 
