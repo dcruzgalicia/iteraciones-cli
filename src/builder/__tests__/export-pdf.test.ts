@@ -9,30 +9,14 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { convertToPdf } from '../../services/pandoc-exporter.js';
-import { run } from '../../services/run.js';
 import type { ExportDocument } from '../export/types.js';
+import { isPandocAvailable, isXelatexAvailable } from './helpers/tools.js';
 
-// ---------------------------------------------------------------------------
-// Helpers: verificar disponibilidad de herramientas
-// ---------------------------------------------------------------------------
-
-async function isPandocAvailable(): Promise<boolean> {
-  try {
-    const result = await run('pandoc', ['--version']);
-    return result.exitCode === 0;
-  } catch {
-    return false;
-  }
-}
-
-async function isXelatexAvailable(): Promise<boolean> {
-  try {
-    const result = await run('xelatex', ['--version']);
-    return result.exitCode === 0;
-  } catch {
-    return false;
-  }
-}
+// Verificar disponibilidad de pandoc y xelatex en tiempo de inicialización del
+// módulo para poder usar test.skipIf — más preciso que 'return' temprano en el
+// cuerpo del test (que Bun reporta como 'pass' en lugar de 'skip').
+const [pandocReady, xelatexReady] = await Promise.all([isPandocAvailable(), isXelatexAvailable()]);
+const toolsAvailable = pandocReady && xelatexReady;
 
 // ---------------------------------------------------------------------------
 // Fixture mínimo
@@ -60,24 +44,16 @@ function makeMinimalExportDoc(outputDir: string): ExportDocument {
 
 describe('convertToPdf — integración', () => {
   let outputDir: string;
-  let toolsAvailable: boolean;
 
-  beforeAll(async () => {
+  beforeAll(() => {
     outputDir = mkdtempSync(join(tmpdir(), 'iteraciones-pdf-test-'));
-    const [pandoc, xelatex] = await Promise.all([isPandocAvailable(), isXelatexAvailable()]);
-    toolsAvailable = pandoc && xelatex;
-    if (!toolsAvailable) {
-      console.log('  ⚠ pandoc o xelatex no disponibles — tests de PDF omitidos');
-    }
   });
 
   afterAll(() => {
     if (outputDir) rmSync(outputDir, { recursive: true, force: true });
   });
 
-  test('el PDF producido comienza con el header %PDF-', async () => {
-    if (!toolsAvailable) return;
-
+  test.skipIf(!toolsAvailable)('el PDF producido comienza con el header %PDF-', async () => {
     const doc = makeMinimalExportDoc(outputDir);
     const outputPath = join(outputDir, 'articulo.pdf');
 
@@ -92,9 +68,7 @@ describe('convertToPdf — integración', () => {
     expect(header).toBe('%PDF-');
   });
 
-  test('el archivo PDF tiene un tamaño razonable (> 5KB)', async () => {
-    if (!toolsAvailable) return;
-
+  test.skipIf(!toolsAvailable)('el archivo PDF tiene un tamaño razonable (> 5KB)', async () => {
     const doc = makeMinimalExportDoc(outputDir);
     const outputPath = join(outputDir, 'articulo-size.pdf');
 
@@ -105,9 +79,7 @@ describe('convertToPdf — integración', () => {
     expect(size).toBeGreaterThan(5 * 1024);
   });
 
-  test('un documento scrbook con tabla de contenidos genera PDF válido', async () => {
-    if (!toolsAvailable) return;
-
+  test.skipIf(!toolsAvailable)('un documento scrbook con tabla de contenidos genera PDF válido', async () => {
     const doc: ExportDocument = {
       filePath: join(outputDir, 'coleccion.md'),
       relativePath: 'coleccion.md',
