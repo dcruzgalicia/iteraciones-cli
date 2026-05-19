@@ -1,6 +1,26 @@
-import { dirname, resolve } from 'node:path';
+import { dirname, isAbsolute, resolve } from 'node:path';
 import type { BuildDocument, DocumentType } from '../types.js';
 import { EXPORTABLE_TYPES, type ExportDocument, type ExportMetadata, LATEX_CLASS } from './types.js';
+
+/**
+ * Resuelve una ruta de archivo editorial (bibliography, csl, cover) y verifica
+ * que esté dentro del directorio del proyecto para prevenir path traversal.
+ *
+ * @param rawPath  Valor crudo del frontmatter (puede ser relativo o absoluto).
+ * @param cwd      Directorio raíz del proyecto.
+ * @param fieldName  Nombre del campo, solo para el mensaje de warning.
+ * @returns Ruta absoluta validada, o undefined si está fuera del proyecto.
+ */
+function safeEditorialPath(rawPath: string, cwd: string, fieldName: string): string | undefined {
+  const resolved = isAbsolute(rawPath) ? rawPath : resolve(cwd, rawPath);
+  // Asegurar que la ruta resuelta esté dentro del cwd del proyecto.
+  // Previene que frontmatter con '../../../etc/passwd' acceda a rutas del sistema.
+  if (!resolved.startsWith(cwd + '/') && resolved !== cwd) {
+    process.stderr.write(`[export] campo '${fieldName}' con ruta fuera del proyecto ignorado: "${rawPath}"\n`);
+    return undefined;
+  }
+  return resolved;
+}
 
 /**
  * Ensambla un ExportDocument a partir de un BuildDocument.
@@ -12,8 +32,9 @@ import { EXPORTABLE_TYPES, type ExportDocument, type ExportMetadata, LATEX_CLASS
  * @param doc      Documento a exportar.
  * @param items    Items resueltos del documento (solo relevante para collection/events).
  * @param lang     Idioma del sitio para el YAML header.
+ * @param cwd      Directorio raíz del proyecto; usado para validar rutas editoriales.
  */
-export function assembleExportDocument(doc: BuildDocument, items: BuildDocument[], lang: string): ExportDocument | null {
+export function assembleExportDocument(doc: BuildDocument, items: BuildDocument[], lang: string, cwd: string): ExportDocument | null {
   if (!doc.type || !EXPORTABLE_TYPES.has(doc.type)) return null;
 
   const documentclass = LATEX_CLASS[doc.type as keyof typeof LATEX_CLASS];
@@ -33,9 +54,10 @@ export function assembleExportDocument(doc: BuildDocument, items: BuildDocument[
     publisher: typeof rawEditorial['publisher'] === 'string' ? rawEditorial['publisher'] : undefined,
     description: typeof rawEditorial['description'] === 'string' ? rawEditorial['description'] : undefined,
     rights: typeof rawEditorial['rights'] === 'string' ? rawEditorial['rights'] : undefined,
-    cover: typeof rawEditorial['cover'] === 'string' ? rawEditorial['cover'] : undefined,
-    bibliography: typeof rawEditorial['bibliography'] === 'string' ? rawEditorial['bibliography'] : undefined,
-    csl: typeof rawEditorial['csl'] === 'string' ? rawEditorial['csl'] : undefined,
+    cover: typeof rawEditorial['cover'] === 'string' ? safeEditorialPath(rawEditorial['cover'], cwd, 'editorial.cover') : undefined,
+    bibliography:
+      typeof rawEditorial['bibliography'] === 'string' ? safeEditorialPath(rawEditorial['bibliography'], cwd, 'editorial.bibliography') : undefined,
+    csl: typeof rawEditorial['csl'] === 'string' ? safeEditorialPath(rawEditorial['csl'], cwd, 'editorial.csl') : undefined,
     documentclass,
     toc: documentclass === 'scrbook',
   };
