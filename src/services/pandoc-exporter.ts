@@ -45,13 +45,14 @@ function buildYamlHeader(doc: ExportDocument): string {
   return lines.join('\n');
 }
 
-/** Escapa un valor para un campo de cadena en YAML inline. */
+/**
+ * Escapa un valor de cadena para un campo en YAML, siempre entre comillas dobles.
+ * Citar siempre evita falsos positivos con tokens especiales de YAML: `true`,
+ * `false`, `null`, `~`, números, `yes`/`no`, etc., que pandoc reinterpretaría
+ * como booleanos, nulos o enteros en lugar de cadenas.
+ */
 function yamlString(value: string): string {
-  // Si no contiene caracteres especiales, no necesita comillas.
-  if (!/[:"'{}[\],&*#?|\-<>=!%@`\n\\]/.test(value) && value.trim() === value) {
-    return value;
-  }
-  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`;
 }
 
 /**
