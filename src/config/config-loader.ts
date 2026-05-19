@@ -54,7 +54,23 @@ function parseExportConfig(raw: unknown): ExportConfig | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
   const obj = raw as Record<string, unknown>;
   const rawFormats = Array.isArray(obj.formats) ? obj.formats : [];
-  const formats: Array<'pdf' | 'epub'> = rawFormats.filter((f): f is 'pdf' | 'epub' => f === 'pdf' || f === 'epub');
+
+  // Validar cada formato individualmente y advertir sobre valores desconocidos.
+  const formats: Array<'pdf' | 'epub'> = [];
+  const seen = new Set<string>();
+  for (const f of rawFormats) {
+    if (f !== 'pdf' && f !== 'epub') {
+      process.stderr.write(`[iteraciones] export.formats: valor desconocido "${String(f)}". Los valores válidos son "pdf" y "epub".\n`);
+      continue;
+    }
+    if (seen.has(f)) {
+      process.stderr.write(`[iteraciones] export.formats: "${f}" está duplicado; se usará una sola vez.\n`);
+      continue;
+    }
+    seen.add(f);
+    formats.push(f);
+  }
+
   if (formats.length === 0) return undefined;
   const pdfEngine = obj['pdf-engine'] === 'lualatex' ? 'lualatex' : 'xelatex';
   return { formats, pdfEngine };
