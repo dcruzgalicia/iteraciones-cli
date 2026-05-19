@@ -1,4 +1,13 @@
-import type { IPlugin, PluginBuildContext, PluginComposeContext, PluginComposeResult, PluginRenderContext, PluginRenderResult } from './types.js';
+import type {
+  IPlugin,
+  PluginBuildContext,
+  PluginComposeContext,
+  PluginComposeResult,
+  PluginExportContext,
+  PluginExportResult,
+  PluginRenderContext,
+  PluginRenderResult,
+} from './types.js';
 
 /**
  * Registro de plugins. Ejecuta los hooks de cada plugin registrado en orden
@@ -60,6 +69,30 @@ export class PluginRegistry {
       if (typeof plugin.afterCompose === 'function') {
         const result = await plugin.afterCompose(ctx);
         if (result == null) throw new Error(`[plugin:${plugin.name}] afterCompose debe retornar el contexto; recibido: ${String(result)}`);
+        ctx = result;
+      }
+    }
+    return ctx;
+  }
+
+  async runBeforeExport(context: PluginExportContext): Promise<PluginExportContext> {
+    let ctx = context;
+    for (const plugin of this.plugins) {
+      if (typeof plugin.beforeExport === 'function') {
+        const result = await plugin.beforeExport(ctx);
+        if (result == null) throw new Error(`[plugin:${plugin.name}] beforeExport debe retornar el contexto; recibido: ${String(result)}`);
+        ctx = result;
+      }
+    }
+    return ctx;
+  }
+
+  async runAfterExport(context: PluginExportResult): Promise<PluginExportResult> {
+    let ctx = context;
+    for (const plugin of this.plugins) {
+      if (typeof plugin.afterExport === 'function') {
+        const result = await plugin.afterExport(ctx);
+        if (result == null) throw new Error(`[plugin:${plugin.name}] afterExport debe retornar el contexto; recibido: ${String(result)}`);
         ctx = result;
       }
     }
