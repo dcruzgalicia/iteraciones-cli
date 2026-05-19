@@ -513,6 +513,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         ? await runExportDocuments(renderedMap, {
             config: ctx.siteConfig.export,
             outputDir: ctx.outputDir,
+            cwd,
             lang: ctx.siteConfig.lang,
             concurrency: ctx.concurrency ?? 4,
             cliVersion,

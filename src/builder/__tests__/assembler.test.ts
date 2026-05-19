@@ -93,7 +93,7 @@ describe('assembleBookBody — renaming de footnotes', () => {
       body: 'Texto con nota[^1].\n\n[^1]: Definición de nota dos.',
     });
 
-    const exportDoc = assembleExportDocument(collection, [itemA, itemB], 'es');
+    const exportDoc = assembleExportDocument(collection, [itemA, itemB], 'es', '/project');
     expect(exportDoc).not.toBeNull();
     const body = exportDoc!.body;
 
@@ -141,7 +141,7 @@ describe('assembleBookBody — renaming de footnotes', () => {
       body: '[^abc].\n\n[^abc]: Nota.',
     });
 
-    const exportDoc = assembleExportDocument(collection, [docA, docB], 'es');
+    const exportDoc = assembleExportDocument(collection, [docA, docB], 'es', '/project');
     expect(exportDoc).not.toBeNull();
     const body = exportDoc!.body;
 
@@ -196,7 +196,7 @@ describe('assembleBookBody — separadores de capítulo', () => {
       body: 'Cuerpo.',
     });
 
-    const exportDoc = assembleExportDocument(makeCollection(['articulo.md']), [item], 'es');
+    const exportDoc = assembleExportDocument(makeCollection(['articulo.md']), [item], 'es', '/project');
     expect(exportDoc!.body).toContain('# Mi artículo');
   });
 
@@ -220,7 +220,7 @@ describe('assembleBookBody — separadores de capítulo', () => {
       body: 'Texto.',
     });
 
-    const exportDoc = assembleExportDocument(makeCollection(['articulo.md']), [item], 'es');
+    const exportDoc = assembleExportDocument(makeCollection(['articulo.md']), [item], 'es', '/project');
     expect(exportDoc!.body).toContain('*Por Ana Pérez*');
   });
 
@@ -244,7 +244,7 @@ describe('assembleBookBody — separadores de capítulo', () => {
       body: 'Semblanza.',
     });
 
-    const exportDoc = assembleExportDocument(makeCollection(['personas/ana.md']), [item], 'es');
+    const exportDoc = assembleExportDocument(makeCollection(['personas/ana.md']), [item], 'es', '/project');
     const body = exportDoc!.body;
     expect(body).toContain('# Ana Pérez');
     expect(body).not.toContain('*Por Ana Pérez*');
@@ -270,7 +270,7 @@ describe('assembleBookBody — separadores de capítulo', () => {
       body: 'Contenido.',
     });
 
-    const exportDoc = assembleExportDocument(makeCollection(['cap.md']), [item], 'es');
+    const exportDoc = assembleExportDocument(makeCollection(['cap.md']), [item], 'es', '/project');
     expect(exportDoc!.body).toContain('\\newpage');
   });
 });
@@ -319,7 +319,7 @@ describe('assembleBookBody — resolución de rutas de imágenes', () => {
       body: '![logo](./img/logo.png)',
     });
 
-    const exportDoc = assembleExportDocument(collection, [item], 'es');
+    const exportDoc = assembleExportDocument(collection, [item], 'es', '/project');
     expect(exportDoc!.body).toContain('/project/notas/img/logo.png');
     // La ruta relativa original no debe aparecer
     expect(exportDoc!.body).not.toContain('./img/logo.png');
@@ -364,7 +364,7 @@ describe('assembleBookBody — resolución de rutas de imágenes', () => {
       body: '![img](/absolute/path/img.png)',
     });
 
-    const exportDoc = assembleExportDocument(collection, [item], 'es');
+    const exportDoc = assembleExportDocument(collection, [item], 'es', '/project');
     expect(exportDoc!.body).toContain('/absolute/path/img.png');
   });
 
@@ -407,7 +407,7 @@ describe('assembleBookBody — resolución de rutas de imágenes', () => {
       body: '![img](https://example.com/img.png)',
     });
 
-    const exportDoc = assembleExportDocument(collection, [item], 'es');
+    const exportDoc = assembleExportDocument(collection, [item], 'es', '/project');
     expect(exportDoc!.body).toContain('https://example.com/img.png');
   });
 });
@@ -419,7 +419,7 @@ describe('assembleBookBody — resolución de rutas de imágenes', () => {
 describe('assembleExportDocument — tipos scrartcl', () => {
   test('retorna el body sin modificar para type: file', () => {
     const doc = makeDoc({ type: 'file', body: 'Contenido original.' });
-    const exportDoc = assembleExportDocument(doc, [], 'es');
+    const exportDoc = assembleExportDocument(doc, [], 'es', '/project');
     expect(exportDoc).not.toBeNull();
     expect(exportDoc!.body).toBe('Contenido original.');
     expect(exportDoc!.metadata.documentclass).toBe('scrartcl');
@@ -427,13 +427,13 @@ describe('assembleExportDocument — tipos scrartcl', () => {
 
   test('retorna null para un tipo no exportable (block)', () => {
     const doc = makeDoc({ type: undefined });
-    const exportDoc = assembleExportDocument(doc, [], 'es');
+    const exportDoc = assembleExportDocument(doc, [], 'es', '/project');
     expect(exportDoc).toBeNull();
   });
 
   test('usa el lang del sitio en los metadatos', () => {
     const doc = makeDoc({ type: 'file' });
-    const exportDoc = assembleExportDocument(doc, [], 'es-MX');
+    const exportDoc = assembleExportDocument(doc, [], 'es-MX', '/project');
     expect(exportDoc!.metadata.lang).toBe('es-MX');
   });
 
@@ -453,7 +453,7 @@ describe('assembleExportDocument — tipos scrartcl', () => {
         items: [],
       },
     });
-    const exportDoc = assembleExportDocument(collection, [], 'es');
+    const exportDoc = assembleExportDocument(collection, [], 'es', '/project');
     expect(exportDoc!.metadata.documentclass).toBe('scrbook');
     expect(exportDoc!.metadata.toc).toBe(true);
   });
