@@ -125,7 +125,9 @@ export async function runExportDocuments(
         if (registry) {
           const afterCtx = await registry.runAfterExport({ sourcePath: exportDoc.filePath, format: 'epub', data: new Uint8Array(epubData) });
           await Bun.write(outputPath, afterCtx.data);
-          if (cacheManager) await cacheManager.writeBinary('export', cacheKey, 'epub', afterCtx.data.buffer as ArrayBuffer);
+          // .slice() normaliza el buffer: evita que un Uint8Array con byteOffset
+          // o longitud parcial escriba bytes extra o incorrectos en la caché.
+          if (cacheManager) await cacheManager.writeBinary('export', cacheKey, 'epub', afterCtx.data.slice().buffer as ArrayBuffer);
         } else if (cacheManager) {
           await cacheManager.writeBinary('export', cacheKey, 'epub', epubData);
         }
@@ -145,7 +147,9 @@ export async function runExportDocuments(
         if (registry) {
           const afterCtx = await registry.runAfterExport({ sourcePath: exportDoc.filePath, format: 'pdf', data: new Uint8Array(pdfData) });
           await Bun.write(outputPath, afterCtx.data);
-          if (cacheManager) await cacheManager.writeBinary('export', cacheKey, 'pdf', afterCtx.data.buffer as ArrayBuffer);
+          // .slice() normaliza el buffer: evita que un Uint8Array con byteOffset
+          // o longitud parcial escriba bytes extra o incorrectos en la caché.
+          if (cacheManager) await cacheManager.writeBinary('export', cacheKey, 'pdf', afterCtx.data.slice().buffer as ArrayBuffer);
         } else if (cacheManager) {
           await cacheManager.writeBinary('export', cacheKey, 'pdf', pdfData);
         }
