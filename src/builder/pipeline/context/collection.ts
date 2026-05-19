@@ -14,7 +14,20 @@ function resolveCollectionItems(doc: BuildDocument, allDocs: BuildDocument[]): B
   const docsByPath = new Map<string, BuildDocument>(allDocs.map((d) => [d.relativePath, d]));
   return doc.frontmatter.items.map((itemPath) => {
     const found = docsByPath.get(itemPath);
-    if (!found) throw new Error(`collection "${doc.relativePath}": item no encontrado: "${itemPath}"`);
+    if (!found) {
+      const MAX_SUGGESTIONS = 8;
+      const nonBlockPaths = allDocs
+        .filter((d) => d.kind !== 'block')
+        .map((d) => d.relativePath)
+        .sort();
+      const shown = nonBlockPaths
+        .slice(0, MAX_SUGGESTIONS)
+        .map((p) => `  - ${p}`)
+        .join('\n');
+      const moreCount = nonBlockPaths.length - MAX_SUGGESTIONS;
+      const hint = nonBlockPaths.length > 0 ? `\nRutas disponibles:\n${shown}${moreCount > 0 ? `\n  ... (${moreCount} más)` : ''}` : '';
+      throw new Error(`collection "${doc.relativePath}": el item "${itemPath}" no existe. ¿Olvidaste crearlo?${hint}`);
+    }
     return found;
   });
 }
