@@ -517,3 +517,141 @@ describe('resolveItemsForExport', () => {
     expect(resolveItemsForExport(doc, [])).toHaveLength(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// assembleExportDocument — campos template, abstract y keywords
+// ---------------------------------------------------------------------------
+
+describe('assembleExportDocument — template / abstract / keywords', () => {
+  test('editorial.template válido se propaga a metadata.template', () => {
+    const doc = makeDoc({
+      type: 'file',
+      frontmatter: {
+        title: 'Doc',
+        date: '',
+        author: [],
+        speakers: [],
+        type: 'file',
+        keywords: [],
+        region: '',
+        block: false,
+        draft: false,
+        items: [],
+        editorial: { template: 'literary' },
+      },
+    });
+    const result = assembleExportDocument(doc, [], 'es', '/project');
+    expect(result!.metadata.template).toBe('literary');
+  });
+
+  test('editorial.template inválido produce metadata.template === undefined', () => {
+    const doc = makeDoc({
+      type: 'file',
+      frontmatter: {
+        title: 'Doc',
+        date: '',
+        author: [],
+        speakers: [],
+        type: 'file',
+        keywords: [],
+        region: '',
+        block: false,
+        draft: false,
+        items: [],
+        editorial: { template: 'novelita' },
+      },
+    });
+    const result = assembleExportDocument(doc, [], 'es', '/project');
+    expect(result!.metadata.template).toBeUndefined();
+  });
+
+  test('globalTemplate se usa como fallback cuando el frontmatter no define template', () => {
+    const doc = makeDoc({ type: 'file' });
+    const result = assembleExportDocument(doc, [], 'es', '/project', undefined, undefined, 'academic');
+    expect(result!.metadata.template).toBe('academic');
+  });
+
+  test('editorial.template sobreescribe globalTemplate', () => {
+    const doc = makeDoc({
+      type: 'file',
+      frontmatter: {
+        title: 'Doc',
+        date: '',
+        author: [],
+        speakers: [],
+        type: 'file',
+        keywords: [],
+        region: '',
+        block: false,
+        draft: false,
+        items: [],
+        editorial: { template: 'literary' },
+      },
+    });
+    const result = assembleExportDocument(doc, [], 'es', '/project', undefined, undefined, 'academic');
+    expect(result!.metadata.template).toBe('literary');
+  });
+
+  test('editorial.abstract se propaga a metadata.abstract', () => {
+    const doc = makeDoc({
+      type: 'file',
+      frontmatter: {
+        title: 'Doc',
+        date: '',
+        author: [],
+        speakers: [],
+        type: 'file',
+        keywords: [],
+        region: '',
+        block: false,
+        draft: false,
+        items: [],
+        editorial: { abstract: 'Resumen del artículo.' },
+      },
+    });
+    const result = assembleExportDocument(doc, [], 'es', '/project');
+    expect(result!.metadata.abstract).toBe('Resumen del artículo.');
+  });
+
+  test('editorial.keywords se propaga a metadata.keywords', () => {
+    const doc = makeDoc({
+      type: 'file',
+      frontmatter: {
+        title: 'Doc',
+        date: '',
+        author: [],
+        speakers: [],
+        type: 'file',
+        keywords: [],
+        region: '',
+        block: false,
+        draft: false,
+        items: [],
+        editorial: { keywords: ['diseño', 'tipografía'] },
+      },
+    });
+    const result = assembleExportDocument(doc, [], 'es', '/project');
+    expect(result!.metadata.keywords).toEqual(['diseño', 'tipografía']);
+  });
+
+  test('editorial.keywords filtra valores no string', () => {
+    const doc = makeDoc({
+      type: 'file',
+      frontmatter: {
+        title: 'Doc',
+        date: '',
+        author: [],
+        speakers: [],
+        type: 'file',
+        keywords: [],
+        region: '',
+        block: false,
+        draft: false,
+        items: [],
+        editorial: { keywords: ['css', 42, null, 'accesibilidad'] },
+      },
+    });
+    const result = assembleExportDocument(doc, [], 'es', '/project');
+    expect(result!.metadata.keywords).toEqual(['css', 'accesibilidad']);
+  });
+});
