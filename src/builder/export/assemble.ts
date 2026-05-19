@@ -33,12 +33,21 @@ function safeEditorialPath(rawPath: string, cwd: string, fieldName: string): str
  * Para tipos scrbook (collection, events): concatena el body de los items como capítulos,
  * prefijados con `# Título` y (cuando corresponde) `*Por Autor*`.
  *
- * @param doc      Documento a exportar.
- * @param items    Items resueltos del documento (solo relevante para collection/events).
- * @param lang     Idioma del sitio para el YAML header.
- * @param cwd      Directorio raíz del proyecto; usado para validar rutas editoriales.
+ * @param doc                 Documento a exportar.
+ * @param items               Items resueltos del documento (solo relevante para collection/events).
+ * @param lang                Idioma del sitio para el YAML header.
+ * @param cwd                 Directorio raíz del proyecto; usado para validar rutas editoriales.
+ * @param globalBibliography  Ruta absoluta al .bib global del sitio (fallback si el frontmatter no define uno).
+ * @param globalCsl           Ruta absoluta al .csl global del sitio (fallback si el frontmatter no define uno).
  */
-export function assembleExportDocument(doc: BuildDocument, items: BuildDocument[], lang: string, cwd: string): ExportDocument | null {
+export function assembleExportDocument(
+  doc: BuildDocument,
+  items: BuildDocument[],
+  lang: string,
+  cwd: string,
+  globalBibliography?: string,
+  globalCsl?: string,
+): ExportDocument | null {
   if (!doc.type || !EXPORTABLE_TYPES.has(doc.type)) return null;
 
   const documentclass = LATEX_CLASS[doc.type as keyof typeof LATEX_CLASS];
@@ -60,8 +69,10 @@ export function assembleExportDocument(doc: BuildDocument, items: BuildDocument[
     rights: typeof rawEditorial['rights'] === 'string' ? rawEditorial['rights'] : undefined,
     cover: typeof rawEditorial['cover'] === 'string' ? safeEditorialPath(rawEditorial['cover'], cwd, 'editorial.cover') : undefined,
     bibliography:
-      typeof rawEditorial['bibliography'] === 'string' ? safeEditorialPath(rawEditorial['bibliography'], cwd, 'editorial.bibliography') : undefined,
-    csl: typeof rawEditorial['csl'] === 'string' ? safeEditorialPath(rawEditorial['csl'], cwd, 'editorial.csl') : undefined,
+      typeof rawEditorial['bibliography'] === 'string'
+        ? safeEditorialPath(rawEditorial['bibliography'], cwd, 'editorial.bibliography')
+        : globalBibliography,
+    csl: typeof rawEditorial['csl'] === 'string' ? safeEditorialPath(rawEditorial['csl'], cwd, 'editorial.csl') : globalCsl,
     documentclass,
     toc: documentclass === 'scrbook',
   };

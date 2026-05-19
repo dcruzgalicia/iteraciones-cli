@@ -7,6 +7,16 @@ export interface ExportConfig {
   formats: ReadonlyArray<'pdf' | 'epub'>;
   /** Motor LaTeX para PDF. Por defecto `xelatex`. */
   pdfEngine: 'xelatex' | 'lualatex';
+  /**
+   * Ruta al archivo `.bib` global (relativa al cwd del proyecto).
+   * Se usa como fallback cuando el frontmatter de un documento no define `editorial.bibliography`.
+   */
+  bibliography?: string;
+  /**
+   * Ruta al archivo `.csl` global para citas bibliográficas.
+   * Se usa como fallback cuando el frontmatter de un documento no define `editorial.csl`.
+   */
+  csl?: string;
 }
 
 export interface SiteConfig {

@@ -1,4 +1,4 @@
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import type { CacheManager } from '../../cache/cache-manager.js';
 import { hash } from '../../cache/hasher.js';
 import type { ExportConfig } from '../../config/site-config.js';
@@ -13,7 +13,7 @@ import { EXPORTABLE_TYPES } from './types.js';
 export interface ExportRunOptions {
   config: ExportConfig;
   outputDir: string;
-  /** Directorio raíz del proyecto; usado para validar rutas editoriales (cover, bibliography, csl). */
+  /** Directorio raíz del proyecto; usado para validar rutas editoriales (cover, bibliography, csl) y para resolver rutas globales de ExportConfig. */
   cwd: string;
   lang: string;
   /**
@@ -52,6 +52,54 @@ export async function runExportDocuments(
 ): Promise<ExportResult[]> {
   const { config, outputDir, cwd, lang, concurrency, cliVersion, pandocVersion, cacheManager, registry, pluginFingerprint } = options;
 
+  // Resolver y validar rutas globales de bibliography y csl desde ExportConfig.
+  // Las rutas vienen de _iteraciones.yaml (confiables), pero igualmente se verifica
+  // que queden dentro del proyecto para ser consistentes con la validación de frontmatter.
+  // resolve() normaliza siempre: elimina '..', resuelve rutas relativas y absolutas.
+  const resolveGlobalPath = (raw: string | undefined, field: string): string | undefined => {
+    if (!raw) return undefined;
+    const resolved = resolve(cwd, raw);
+    if (!resolved.startsWith(cwd + '/') && resolved !== cwd) {
+      process.stderr.write(`[export] export.${field}: ruta fuera del proyecto ignorada: "${raw}"\n`);
+      return undefined;
+    }
+    return resolved;
+  };
+  const globalBibliography = resolveGlobalPath(config.bibliography, 'bibliography');
+  const globalCsl = resolveGlobalPath(config.csl, 'csl');
+
+  // Hash del archivo .bib global (si existe) para invalidar caché cuando cambia.
+  let bibHash = '';
+  if (globalBibliography) {
+    const bibFile = Bun.file(globalBibliography);
+    if (await bibFile.exists()) {
+      try {
+        const bibText = await bibFile.text();
+        const hasher = new Bun.CryptoHasher('sha256');
+        hasher.update(bibText);
+        bibHash = hasher.digest('hex');
+      } catch {
+        process.stderr.write(`[export] no se pudo leer bibliography "${globalBibliography}": hash vacío\n`);
+      }
+    }
+  }
+
+  // Hash del archivo .csl global (si existe) para invalidar caché cuando cambia.
+  let cslHash = '';
+  if (globalCsl) {
+    const cslFile = Bun.file(globalCsl);
+    if (await cslFile.exists()) {
+      try {
+        const cslText = await cslFile.text();
+        const hasher = new Bun.CryptoHasher('sha256');
+        hasher.update(cslText);
+        cslHash = hasher.digest('hex');
+      } catch {
+        process.stderr.write(`[export] no se pudo leer csl "${globalCsl}": hash vacío\n`);
+      }
+    }
+  }
+
   // Pool de items primarios para resolver colecciones y programas de eventos.
   const itemPool = [...(renderedMap.get('file') ?? []), ...(renderedMap.get('author') ?? []), ...(renderedMap.get('event') ?? [])];
   const eventPool = renderedMap.get('event') ?? [];
@@ -88,7 +136,7 @@ export async function runExportDocuments(
       items = resolveEventsForExport(doc, eventPool);
     }
 
-    const rawExportDoc = assembleExportDocument(doc, items, lang, cwd);
+    const rawExportDoc = assembleExportDocument(doc, items, lang, cwd, globalBibliography, globalCsl);
     if (!rawExportDoc) return null;
 
     // Hook beforeExport: permite a los plugins modificar el body y/o los metadatos
@@ -123,7 +171,7 @@ export async function runExportDocuments(
         const outputPath = `${outputBase}.${format}`;
 
         if (format === 'epub') {
-          const cacheKey = hash(doc.sourceHash, itemHashes, 'epub', cliVersion, pandocVersion, pluginFingerprint ?? '');
+          const cacheKey = hash(doc.sourceHash, itemHashes, 'epub', cliVersion, pandocVersion, pluginFingerprint ?? '', bibHash, cslHash);
           if (cacheManager && (await cacheManager.hasBinary('export', cacheKey, 'epub'))) {
             await cacheManager.copyBinaryTo('export', cacheKey, 'epub', outputPath);
             return { epub: outputPath };
@@ -144,7 +192,7 @@ export async function runExportDocuments(
         }
 
         if (format === 'pdf') {
-          const cacheKey = hash(doc.sourceHash, itemHashes, 'pdf', config.pdfEngine, cliVersion, pandocVersion, pluginFingerprint ?? '');
+          const cacheKey = hash(doc.sourceHash, itemHashes, 'pdf', config.pdfEngine, cliVersion, pandocVersion, pluginFingerprint ?? '', bibHash, cslHash);
           if (cacheManager && (await cacheManager.hasBinary('export', cacheKey, 'pdf'))) {
             await cacheManager.copyBinaryTo('export', cacheKey, 'pdf', outputPath);
             return { pdf: outputPath };
