@@ -1,7 +1,7 @@
 import { isAbsolute, normalize } from 'node:path';
 import { Command } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
-import { runBuild, runClean, runDoctor, runInfo, runInit, runNew, runServe, runValidate, runWatch } from './dispatcher.js';
+import { runBuild, runClean, runDoctor, runGraph, runInfo, runInit, runNew, runServe, runValidate, runWatch } from './dispatcher.js';
 
 export function buildProgram(): Command {
   const program = new Command();
@@ -144,6 +144,15 @@ export function buildProgram(): Command {
     .option('--region <region>', 'región del bloque (solo para documentos de tipo bloque)')
     .action(async (type: string, path: string, opts: { region?: string }) => {
       await runNew(process.cwd(), type, path, { region: opts.region });
+    });
+
+  program
+    .command('graph')
+    .description('emite el grafo de relaciones entre documentos en formato JSON')
+    .option('--output <path>', 'escribe el JSON en este archivo en lugar de stdout')
+    .option('--project-root <path>', 'directorio raíz del proyecto (por defecto: directorio actual)')
+    .action(async (opts: { output?: string; projectRoot?: string }) => {
+      await runGraph(opts.projectRoot ?? process.cwd(), { output: opts.output });
     });
 
   return program;
