@@ -115,12 +115,28 @@ export type PluginExportResult = {
   readonly data: Uint8Array;
 };
 
+/** Resumen ligero de un documento construido, disponible para plugins en generateFiles y afterBuild. */
+export type PluginDocumentSummary = {
+  /** Ruta relativa al archivo markdown fuente (ej. 'notas/mi-nota.md'). */
+  readonly relativePath: string;
+  /** Ruta relativa al archivo HTML de salida (ej. 'notas/mi-nota.html'). */
+  readonly outputPath: string;
+  /** Tipo de documento clasificado por el SSG (ej. 'file', 'author', 'event'). */
+  readonly type: string;
+  /** Frontmatter del documento fuente. */
+  readonly frontmatter: Readonly<Record<string, unknown>>;
+};
+
 /** Contexto disponible para los hooks generateFiles y afterBuild. */
 export type PluginBuildContext = {
   /** Directorio de salida absoluto (p. ej. /ruta/proyecto/dist/web). */
   readonly outputDir: string;
   /** Rutas relativas de todos los archivos generados en dist/web en este build. */
   readonly outputPaths: ReadonlyArray<string>;
+  /** Configuración del sitio leída de _iteraciones.yaml. */
+  readonly siteConfig: Readonly<Record<string, unknown>>;
+  /** Resumen de todos los documentos construidos en este build. */
+  readonly documents: ReadonlyArray<PluginDocumentSummary>;
 };
 
 /**

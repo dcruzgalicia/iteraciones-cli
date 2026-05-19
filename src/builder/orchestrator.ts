@@ -7,7 +7,7 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import { clean, writeFile } from '../output/writer.js';
 import { loadPlugins } from '../plugin/loader.js';
 import { PluginRegistry } from '../plugin/registry.js';
-import type { GeneratedFile } from '../plugin/types.js';
+import type { GeneratedFile, PluginDocumentSummary } from '../plugin/types.js';
 import { PandocPool } from '../services/pandoc-pool.js';
 import { checkPandoc } from '../services/pandoc-runner.js';
 import type { TemplateContext } from '../template/render/context.js';
@@ -334,7 +334,18 @@ async function runFinalization(
     if (ctx.siteConfig.logo?.trim()) assetPaths.push(ctx.siteConfig.logo.trim());
 
     // generateFiles: recopilar y escribir archivos adicionales de plugins (sitemap, RSS, etc.)
-    const initialContext = { outputDir: ctx.outputDir, outputPaths: [...assetPaths, ...docOutputPaths] };
+    const docSummaries: PluginDocumentSummary[] = writtenDocs.map((doc) => ({
+      relativePath: doc.relativePath,
+      outputPath: doc.relativePath.replace(/\.md$/, '.html'),
+      type: doc.type ?? 'file',
+      frontmatter: doc.frontmatter as Record<string, unknown>,
+    }));
+    const initialContext = {
+      outputDir: ctx.outputDir,
+      outputPaths: [...assetPaths, ...docOutputPaths],
+      siteConfig: ctx.siteConfig as unknown as Readonly<Record<string, unknown>>,
+      documents: docSummaries,
+    };
     generatedFiles = await registry.runGenerateFiles(initialContext);
     for (const file of generatedFiles) {
       await writeFile(join(ctx.outputDir, file.relativePath), file.content);
