@@ -96,7 +96,7 @@ function assembleBookBody(doc: BuildDocument, items: BuildDocument[]): string {
  * Ejemplo: [^1] en "notas/articulo.md" → [^notas-articulo-1]
  */
 function renameFootnotes(body: string, slug: string): string {
-  return body.replace(/\[\^(\w+)\]/g, `[^${slug}-$1]`).replace(/\[\^(\w+)\]:/g, `[^${slug}-$1]:`);
+  return body.replace(/\[\^(\w+)\]/g, `[^${slug}-$1]`);
 }
 
 /**
@@ -106,7 +106,7 @@ function renameFootnotes(body: string, slug: string): string {
  */
 function resolveImagePaths(body: string, sourceFilePath: string): string {
   const sourceDir = dirname(sourceFilePath);
-  return body.replace(/!\[([^\]]*)\]\((\.\/[^)]+|[^/)[^)]*)\)/g, (_match, alt: string, path: string) => {
+  return body.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_match, alt: string, path: string) => {
     // Solo resolver rutas relativas (que no comienzan con http:// o /)
     if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('/')) {
       return `![${alt}](${path})`;
