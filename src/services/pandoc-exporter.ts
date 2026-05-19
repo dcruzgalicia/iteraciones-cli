@@ -122,7 +122,7 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, engi
   const [, stderr, exitCode] = await writeAndWait(proc, input, doc.filePath);
   if (exitCode !== 0) {
     // Filtrar la salida de xelatex/lualatex para mostrar solo los errores relevantes.
-    const filteredLines = filterLatexStderr(stderr, engine);
+    const filteredLines = filterLatexStderr(stderr);
     throw new PandocError(`pandoc/LaTeX falló al generar PDF para ${doc.filePath}`, doc.filePath, filteredLines || stderr);
   }
 }
@@ -154,9 +154,8 @@ async function writeAndWait(proc: ReturnType<typeof Bun.spawn>, input: string, s
  * - Extrae errores TeX reales (líneas con `! ` o `l.`) limitados a 25 líneas
  *
  * @param stderr  Salida stderr completa de pandoc/LaTeX.
- * @param engine  Motor LaTeX usado, para mensajes contextuales.
  */
-function filterLatexStderr(stderr: string, engine: 'xelatex' | 'lualatex'): string {
+function filterLatexStderr(stderr: string): string {
   const lines = stderr.split('\n');
   const output: string[] = [];
 
@@ -186,13 +185,6 @@ function filterLatexStderr(stderr: string, engine: 'xelatex' | 'lualatex'): stri
 
   if (texErrors.length > 0) {
     output.push(...texErrors);
-  }
-
-  // Si el motor es lualatex, algunos errores tienen formato diferente.
-  if (engine === 'lualatex' && output.length === 0) {
-    // lualatex usa "! " igual que xelatex; si no se encontró nada, retornar vacío
-    // para que el caller use el stderr completo como fallback.
-    return '';
   }
 
   return output.join('\n');
