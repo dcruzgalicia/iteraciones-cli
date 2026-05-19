@@ -16,14 +16,18 @@ import { startWatcher } from './watcher.js';
  */
 export async function runServe(cwd: string, port: number, options: { concurrency?: number; verbose?: boolean } = {}): Promise<() => void> {
   const distDir = join(cwd, 'dist/web');
+  // La exportación PDF/EPUB se desactiva siempre en modo serve: xelatex tarda
+  // 15–60s por documento, haciendo los rebuilds inutilizables en watch mode.
+  // Para generar exportaciones, usar `iteraciones build` fuera del serve.
   const baseOpts: BuildOptions = {
     concurrency: options.concurrency,
     verbose: options.verbose,
+    noExport: true,
   };
   const incrementalOpts: BuildOptions = { ...baseOpts, incremental: true };
 
   // ── Build inicial ───────────────────────────────────────────────────────────────────
-  process.stdout.write('serve: build inicial…\n');
+  process.stdout.write('serve: build inicial… (exportación PDF/EPUB desactivada en watch mode)\n');
   try {
     await build(cwd, baseOpts);
   } catch (err: unknown) {
