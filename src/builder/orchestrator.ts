@@ -283,13 +283,14 @@ async function runFinalization(
   pandocPool?: PandocPool,
   cwd?: string,
   incremental?: boolean,
+  itemHashMap?: ReadonlyMap<string, string>,
 ): Promise<number> {
   const relativizedDocs = allContextDocs.map((doc) => ({
     ...doc,
     templateContext: makeRelativeContext(doc.templateContext, computeRootPrefix(doc.relativePath)) as TemplateContext,
   }));
   const tComposeStart = performance.now();
-  const composedDocs = await composeDocuments(relativizedDocs, ctx, composeCache, registry, composeStats);
+  const composedDocs = await composeDocuments(relativizedDocs, ctx, composeCache, registry, composeStats, itemHashMap);
   const composeMs = performance.now() - tComposeStart;
   const writtenDocs = await writeDocuments(composedDocs, ctx);
   log(`Escritos ${writtenDocs.length} archivos en ${ctx.outputDir}`);
@@ -448,6 +449,10 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     // Inyectar enlaces de descarga en el templateContext de los docs con exportación.
     const docsWithLinks = injectDownloadLinks(finalContextDocs, exportResults, ctx.outputDir);
 
+    // Mapa de relativePath → sourceHash para todos los docs activos.
+    // Permite que compose detecte cambios en items de colecciones sin serializar su contenido.
+    const itemHashMap = new Map(allDocs.map((d) => [d.relativePath, d.sourceHash]));
+
     const composeMs = await runFinalization(
       docsWithLinks,
       allRenderedDocs,
@@ -461,6 +466,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       pandocPool,
       cwd,
       options.incremental === true,
+      itemHashMap,
     );
     const t3 = performance.now();
 

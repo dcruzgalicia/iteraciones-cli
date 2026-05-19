@@ -35,6 +35,9 @@ export async function composeDocuments(
   cache?: ComposeCache,
   registry?: PluginRegistry,
   stats?: ComposeStats,
+  /** Mapa de relativePath → sourceHash para todos los documentos activos.
+   * Permite detectar cambios en items de colecciones sin serializar su contenido. */
+  itemHashMap?: ReadonlyMap<string, string>,
 ): Promise<BuildDocument[]> {
   const { layoutPath, pandocTemplatePath } = resolveEffectivePaths(ctx.siteConfig.theme, ctx.cwd);
   const layoutTemplate = await readFile(layoutPath, 'utf8');
@@ -79,7 +82,7 @@ export async function composeDocuments(
           doc.htmlFragment,
           doc.sourceHash,
           doc.relativePath,
-          ...(doc.frontmatter.items ?? []),
+          ...(doc.frontmatter.items ?? []).map((itemPath) => itemHashMap?.get(itemPath) ?? itemPath),
           siteCtxHash,
           cache.cliVersion,
           layoutHash,
