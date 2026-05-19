@@ -127,20 +127,71 @@ type PluginComposeResult = {
 
 ---
 
-### `afterBuild(context)`
+### `generateFiles(context)`
 
-Se ejecuta una vez al término del build, después de que todos los archivos han sido escritos en `dist/web`. No retorna valor.
+Se ejecuta al término del build para generar archivos adicionales en `dist/web`. Los archivos retornados se escriben en disco antes de ejecutar `afterBuild`, de modo que `afterBuild` recibe sus rutas en `outputPaths`.
 
 **Parámetro:**
 
 ```typescript
 type PluginBuildContext = {
-  readonly outputDir: string;                  // ruta absoluta a dist/web
-  readonly outputPaths: ReadonlyArray<string>; // rutas relativas de todos los archivos generados
+  readonly outputDir: string;                          // ruta absoluta a dist/web
+  readonly outputPaths: ReadonlyArray<string>;         // rutas relativas de todos los archivos generados
+  readonly siteConfig: Readonly<Record<string, unknown>>; // configuración leída de _iteraciones.yaml
+  readonly documents: ReadonlyArray<PluginDocumentSummary>; // resumen de todos los documentos construidos
+};
+
+type PluginDocumentSummary = {
+  readonly relativePath: string; // ruta relativa al .md fuente (ej. 'notas/mi-nota.md')
+  readonly outputPath: string;   // ruta relativa al .html de salida (ej. 'notas/mi-nota.html')
+  readonly type: string;         // tipo clasificado: 'file', 'author', 'event', etc.
+  readonly frontmatter: Readonly<Record<string, unknown>>;
 };
 ```
 
-Útil para: generar feeds RSS/Atom, crear sitemap.xml, enviar notificaciones, copiar archivos adicionales.
+**Retorno:** `GeneratedFile[]`
+
+```typescript
+type GeneratedFile = {
+  relativePath: string;          // ruta relativa en dist/web (ej. 'sitemap.xml', 'feeds/rss.json')
+  content: string | ArrayBuffer; // contenido textual (UTF-8) o binario
+};
+```
+
+Útil para: generar `sitemap.xml`, feeds RSS/JSON/Atom, índices de búsqueda, manifiestos de PWA, archivos binarios adicionales.
+
+**Ejemplo — generador de sitemap:**
+
+```javascript
+export default {
+  name: 'sitemap',
+
+  generateFiles({ outputDir, documents, siteConfig }) {
+    const baseUrl = siteConfig['baseUrl'] ?? '';
+    const urls = documents
+      .filter((d) => d.type === 'file' || d.type === 'event')
+      .map((d) => `  <url><loc>${baseUrl}/${d.outputPath}</loc></url>`)
+      .join('\n');
+
+    return [
+      {
+        relativePath: 'sitemap.xml',
+        content: `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>`,
+      },
+    ];
+  },
+};
+```
+
+---
+
+### `afterBuild(context)`
+
+Se ejecuta una vez al término del build, después de que todos los archivos han sido escritos en `dist/web` (incluyendo los generados por `generateFiles`). No retorna valor.
+
+**Parámetro:** `PluginBuildContext` (mismo tipo que `generateFiles`, ver arriba)
+
+Útil para: notificaciones, reportes post-build, sincronización con servicios externos.
 
 ---
 
