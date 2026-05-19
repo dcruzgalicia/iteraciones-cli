@@ -58,6 +58,9 @@ export async function runExportDocuments(
   // resolve() normaliza siempre: elimina '..', resuelve rutas relativas y absolutas.
   const resolveGlobalPath = (raw: string | undefined, field: string): string | undefined => {
     if (!raw) return undefined;
+    // resolve() normaliza siempre: elimina '..', maneja rutas relativas y absolutas.
+    // Una ruta absoluta con '..' como '/project/../etc/passwd' queda normalizada a '/etc/passwd',
+    // que luego falla el startsWith y se descarta correctamente.
     const resolved = resolve(cwd, raw);
     if (!resolved.startsWith(cwd + '/') && resolved !== cwd) {
       process.stderr.write(`[export] export.${field}: ruta fuera del proyecto ignorada: "${raw}"\n`);
@@ -78,13 +81,13 @@ export async function runExportDocuments(
         const hasher = new Bun.CryptoHasher('sha256');
         hasher.update(bibText);
         bibHash = hasher.digest('hex');
-      } catch {
-        process.stderr.write(`[export] no se pudo leer bibliography "${globalBibliography}": hash vacío\n`);
+      } catch (err) {
+        process.stderr.write(`[export] no se pudo leer export.bibliography para caché: ${err instanceof Error ? err.message : String(err)}\n`);
       }
     }
   }
 
-  // Hash del archivo .csl global (si existe) para invalidar caché cuando cambia.
+  // Hash del archivo .csl global (si existe) para invalidar caché cuando cambia el estilo.
   let cslHash = '';
   if (globalCsl) {
     const cslFile = Bun.file(globalCsl);
@@ -94,8 +97,8 @@ export async function runExportDocuments(
         const hasher = new Bun.CryptoHasher('sha256');
         hasher.update(cslText);
         cslHash = hasher.digest('hex');
-      } catch {
-        process.stderr.write(`[export] no se pudo leer csl "${globalCsl}": hash vacío\n`);
+      } catch (err) {
+        process.stderr.write(`[export] no se pudo leer export.csl para caché: ${err instanceof Error ? err.message : String(err)}\n`);
       }
     }
   }
