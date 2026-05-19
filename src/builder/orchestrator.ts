@@ -435,6 +435,21 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     ]);
     ctx.cssPath = cssPath;
     log(`Assets generados en ${ctx.outputDir}`);
+
+    // Hook onDocumentDiscovered: notifica a los plugins de cada documento descubierto
+    // y clasificado (excluyendo borradores), antes de que comience la fase de render.
+    if (hasPlugins) {
+      for (const doc of allDocs) {
+        await registry.runOnDocumentDiscovered({
+          filePath: doc.filePath,
+          relativePath: doc.relativePath,
+          type: doc.type ?? 'file',
+          frontmatter: doc.frontmatter as Record<string, unknown>,
+          body: doc.body,
+        });
+      }
+    }
+
     const enrichedSiteCtx = buildEnrichedSiteContext(ctx, allDocs);
     const t1 = performance.now();
     const { renderedFileDocs, renderedAuthorDocs, renderedEventDocs, authorDocumentIndex } = await runPrimaryRender(
