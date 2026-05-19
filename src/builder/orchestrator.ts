@@ -537,7 +537,8 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         const parts: string[] = [];
         if (exportStats.totalEpub > 0) parts.push(`EPUB: ${epubNew} generados, ${exportStats.cacheHitsEpub} de caché`);
         if (exportStats.totalPdf > 0) parts.push(`PDF: ${pdfNew} generados, ${exportStats.cacheHitsPdf} de caché`);
-        log(`Exportación: ${exportResults.length} doc${exportResults.length > 1 ? 's' : ''} — ${parts.join(' | ')}`);
+        const detail = parts.length > 0 ? ` — ${parts.join(' | ')}` : '';
+        log(`Exportación: ${exportResults.length} doc${exportResults.length > 1 ? 's' : ''}${detail}`);
       } else {
         log(`Exportados ${exportResults.length} documento${exportResults.length > 1 ? 's' : ''} (PDF/EPUB)`);
       }
