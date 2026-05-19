@@ -119,7 +119,7 @@ Controla la generación de archivos PDF y EPUB a partir de los documentos export
 #### `export.formats`
 
 **Tipo:** `Array<'pdf' | 'epub'>`  
-**Por defecto:** sin exportación (la sección `export` se omite cuando `formats` está ausente o vacío)
+**Por defecto:** sin exportación (la exportación se considera desactivada cuando `formats` está ausente o vacío)
 
 Lista de formatos a generar. El orden no importa; se generan en paralelo por documento.
 
