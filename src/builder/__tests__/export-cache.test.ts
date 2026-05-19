@@ -88,9 +88,11 @@ describe('export cache — integración', () => {
       cacheManager,
     });
 
-    // Calcular la misma clave que usa runner.ts para EPUB
+    // Calcular la misma clave que usa runner.ts para EPUB.
+    // runner.ts incluye pluginFingerprint ?? '', bibHash y cslHash (strings vacíos
+    // cuando no hay plugins ni bibliography/csl configurados).
     const itemHashes = '';
-    const cacheKey = hash(doc.sourceHash, itemHashes, 'epub', '0.0.0-test', pandocVersion);
+    const cacheKey = hash(doc.sourceHash, itemHashes, 'epub', '0.0.0-test', pandocVersion, '', '', '');
     expect(await cacheManager.hasBinary('export', cacheKey, 'epub')).toBe(true);
   });
 
