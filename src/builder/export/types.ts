@@ -1,4 +1,7 @@
+import type { ExportLatexTemplate } from '../../config/site-config.js';
 import type { DocumentType } from '../types.js';
+
+export type { ExportLatexTemplate } from '../../config/site-config.js';
 
 export type ExportFormat = 'pdf' | 'epub';
 
@@ -21,14 +24,6 @@ export const LATEX_CLASS = {
   collection: 'scrbook',
   events: 'scrbook',
 } as const satisfies Partial<Record<DocumentType, 'scrartcl' | 'scrbook'>>;
-
-/**
- * Variante de template LaTeX especializado.
- * - `literary` / `academic`: para documentclass `scrartcl`.
- * - `anthology` / `technical`: para documentclass `scrbook`.
- * Si la variante no es compatible con el documentclass del documento se ignora.
- */
-export type ExportLatexTemplate = 'literary' | 'academic' | 'anthology' | 'technical';
 
 /** Metadatos editoriales que se inyectan en el YAML header del documento Pandoc. */
 export interface ExportMetadata {
