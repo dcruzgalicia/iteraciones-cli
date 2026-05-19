@@ -16,6 +16,10 @@ export interface ComposeCache {
   cliVersion: string;
   /** Hash de los paths de plugins activos. Invalida la caché si cambia el conjunto de plugins. */
   pluginFingerprint?: string;
+  /** Cuando true, omite la poda de entradas obsoletas al terminar.
+   * Usar en builds incrementales donde solo se procesa un subset de documentos:
+   * podar con un subset eliminaría entradas válidas de los docs no procesados. */
+  skipPrune?: boolean;
 }
 
 /** Contadores acumulativos de la fase de compose; se mutan en lugar de retornar un nuevo objeto. */
@@ -144,7 +148,9 @@ export async function composeDocuments(
   // Podar entradas obsoletas del scope 'compose' al final, una vez que todas las claves
   // activas han sido registradas. Se hace aquí y no en el orchestrator porque la fórmula
   // de la clave depende de los hashes de templates que solo se conocen dentro de esta función.
-  if (cache && activeComposeKeys) {
+  // En builds incrementales (subset de docs) se omite la poda para no eliminar entradas
+  // válidas de documentos que no se procesaron en este batch.
+  if (cache && activeComposeKeys && !cache.skipPrune) {
     await cache.manager.prune('compose', activeComposeKeys);
   }
 
