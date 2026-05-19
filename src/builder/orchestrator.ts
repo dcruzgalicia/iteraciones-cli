@@ -244,18 +244,19 @@ async function runPrimaryRender(
   registry: PluginRegistry,
   stats?: RenderStats,
   pool?: PandocPool,
+  cwd?: string,
 ): Promise<PrimaryRenderResult> {
   const fileDocs = allDocs.filter((doc) => doc.type === 'file' && doc.kind !== 'block');
-  const renderedFileDocs = await renderDocuments(fileDocs, ctx.concurrency ?? 4, renderCache, registry, stats, pool);
+  const renderedFileDocs = await renderDocuments(fileDocs, ctx.concurrency ?? 4, renderCache, registry, stats, pool, cwd);
 
   const authorDocs = allDocs.filter((doc) => doc.type === 'author' && doc.kind !== 'block');
-  const renderedAuthorDocs = await renderDocuments(authorDocs, ctx.concurrency ?? 4, renderCache, registry, stats, pool);
+  const renderedAuthorDocs = await renderDocuments(authorDocs, ctx.concurrency ?? 4, renderCache, registry, stats, pool, cwd);
   // Índice de autores por título normalizado (lowercase). Se construye aquí para que
   // esté disponible antes del pre-paso de bloques y del paso de contexto de páginas.
   const authorDocumentIndex = createAuthorDocumentIndex(renderedAuthorDocs);
 
   const eventDocs = allDocs.filter((doc) => doc.type === 'event' && doc.kind !== 'block');
-  const renderedEventDocs = await renderDocuments(eventDocs, ctx.concurrency ?? 4, renderCache, registry, stats, pool);
+  const renderedEventDocs = await renderDocuments(eventDocs, ctx.concurrency ?? 4, renderCache, registry, stats, pool, cwd);
 
   return { renderedFileDocs, renderedAuthorDocs, renderedEventDocs, authorDocumentIndex };
 }
@@ -280,9 +281,10 @@ async function runBlocksPrestep(
   authorDocumentIndex: AuthorDocumentIndex,
   stats?: RenderStats,
   pool?: PandocPool,
+  cwd?: string,
 ): Promise<BlocksPrestepResult> {
   const allBlockDocs = allDocs.filter((doc) => doc.kind === 'block');
-  const renderedBlockDocs = await renderDocuments(allBlockDocs, ctx.concurrency ?? 4, renderCache, registry, stats, pool);
+  const renderedBlockDocs = await renderDocuments(allBlockDocs, ctx.concurrency ?? 4, renderCache, registry, stats, pool, cwd);
   const contextBlockDocs = renderedBlockDocs.map((doc) => {
     const spec = doc.type ? TYPE_STAGE_MAP.get(doc.type) : undefined;
     if (!spec) {
@@ -459,6 +461,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       registry,
       renderStats,
       pandocPool,
+      cwd,
     );
     const primaryRendered = new Map<DocumentType, BuildDocument[]>([
       ['file', renderedFileDocs],
@@ -486,6 +489,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       authorDocumentIndex,
       renderStats,
       pandocPool,
+      cwd,
     );
     const { allContextDocs, renderedMap } = await runContextPhaseWithTypeGraph(
       pipelineDocs,
@@ -497,6 +501,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       authorDocumentIndex,
       renderStats,
       pandocPool,
+      cwd,
     );
     // t2 se mide después del context phase para que pandocMs cubra todos los pasos
     // de renderizado: primary, blocks e índices (collection, authors, events, list).

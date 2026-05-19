@@ -2,6 +2,13 @@ import { PandocError } from '../errors.js';
 import type { PandocPool } from './pandoc-pool.js';
 import { type RunResult, run } from './run.js';
 
+export interface BibOptions {
+  /** Ruta absoluta al archivo .bib. */
+  bibliography: string;
+  /** Ruta absoluta al archivo .csl. Opcional. */
+  csl?: string;
+}
+
 export async function checkPandoc(): Promise<string> {
   let result: RunResult;
   try {
@@ -20,15 +27,28 @@ export async function checkPandoc(): Promise<string> {
  * Si se pasa un `pool`, delega en `pandoc-server` para evitar fork overhead.
  * En caso contrario, spawnea un proceso pandoc pasando el contenido por stdin.
  *
+ * Cuando se pasa `bibOptions`, siempre se usa un subproceso pandoc con `--citeproc`
+ * (ignorando el pool), ya que pandoc-server no soporta citeproc con archivos .bib externos.
+ *
  * @param content    Contenido Markdown a convertir.
  * @param sourcePath Ruta del archivo fuente (solo para mensajes de error).
  * @param pool       Pool de pandoc-server opcional.
+ * @param bibOptions Opciones de bibliografía para procesar citas con citeproc.
  */
-export async function convertFragment(content: string, sourcePath: string, pool?: PandocPool): Promise<string> {
-  if (pool) return pool.convert(content, sourcePath);
+export async function convertFragment(content: string, sourcePath: string, pool?: PandocPool, bibOptions?: BibOptions): Promise<string> {
+  const args = ['pandoc', '--from', 'markdown', '--to', 'html5', '--no-highlight'];
+
+  if (bibOptions) {
+    // --citeproc requiere subproceso; pandoc-server no soporta bibliografías externas.
+    args.push('--citeproc', '--bibliography', bibOptions.bibliography);
+    if (bibOptions.csl) args.push('--csl', bibOptions.csl);
+  } else if (pool) {
+    return pool.convert(content, sourcePath);
+  }
+
   let proc: ReturnType<typeof Bun.spawn>;
   try {
-    proc = Bun.spawn(['pandoc', '--from', 'markdown', '--to', 'html5', '--no-highlight'], {
+    proc = Bun.spawn(args, {
       stdin: 'pipe',
       stdout: 'pipe',
       stderr: 'pipe',
