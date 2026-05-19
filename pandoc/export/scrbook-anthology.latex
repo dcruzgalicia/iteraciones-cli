@@ -1,0 +1,145 @@
+%% Template KOMA-Script (scrbook) — Antología multi-autor
+%% Usado para: collection, events con editorial.template: anthology
+%% Énfasis en presentación editorial: portada completa, nota de editores, separadores por autor
+%% Requiere: TeX Live / MacTeX full con KOMA-Script, fontspec, microtype, hyperref, babel
+
+\documentclass[$if(fontsize)$$fontsize$,$endif$twoside=false]{scrbook}
+
+% ─── Codificación y fuentes ──────────────────────────────────────────────────
+\usepackage{fontspec}
+\usepackage{microtype}
+
+% ─── Idioma ──────────────────────────────────────────────────────────────────
+$if(lang)$
+\usepackage[babelshorthands=false]{babel}
+\babelprovide[main, import]{$lang$}
+$endif$
+
+% ─── Tipografía editorial ─────────────────────────────────────────────────────
+\usepackage{setspace}
+\setstretch{1.2}
+\setlength{\parindent}{1.5em}
+\setlength{\parskip}{0pt}
+% Capítulos sin numeración explícita (cada capítulo = un texto de la antología)
+\setcounter{secnumdepth}{0}
+% Encabezado de capítulo con línea decorativa
+\addtokomafont{chapter}{\normalfont\Large\bfseries}
+
+% ─── Separadores visuales entre autores ──────────────────────────────────────
+\newcommand{\authorsep}{%
+  \vspace{2\baselineskip}
+  \noindent\rule{\linewidth}{0.4pt}
+  \vspace{2\baselineskip}
+}
+
+% ─── Matemáticas ─────────────────────────────────────────────────────────────
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+% ─── Márgenes ────────────────────────────────────────────────────────────────
+\usepackage[top=2.5cm, bottom=2.5cm, left=3.5cm, right=3.5cm]{geometry}
+
+% ─── Gráficos ────────────────────────────────────────────────────────────────
+\usepackage{graphicx}
+\usepackage{grffile}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\makeatother
+\setkeys{Gin}{width=\maxwidth,keepaspectratio}
+
+% ─── Listas ──────────────────────────────────────────────────────────────────
+\usepackage{enumitem}
+\setlist{nosep}
+
+% ─── Código ──────────────────────────────────────────────────────────────────
+\usepackage{fancyvrb}
+\usepackage{framed}
+\newenvironment{Shaded}{}{}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.77,0.63,0.00}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+
+% ─── Hipervínculos ───────────────────────────────────────────────────────────
+\usepackage[unicode=true, colorlinks=true, linkcolor=black, urlcolor=blue, citecolor=black]{hyperref}
+
+% ─── Bibliografía ────────────────────────────────────────────────────────────
+$if(bibliography)$
+\usepackage[style=authortitle, backend=biber]{biblatex}
+\addbibresource{$bibliography$}
+$endif$
+
+% ─── Metadatos PDF ───────────────────────────────────────────────────────────
+\hypersetup{
+  pdftitle={$title$},
+$if(author)$  pdfauthor={$for(author)$$author$$sep$, $endfor$},$endif$
+$if(lang)$  pdflang={$lang$},$endif$
+}
+
+% ═══════════════════════════════════════════════════════════════════════════════
+\begin{document}
+
+\frontmatter
+
+% ─── Portada ─────────────────────────────────────────────────────────────────
+\title{$title$}
+$if(author)$\author{$for(author)$$author$$sep$ \and $endfor$}$endif$
+$if(date)$\date{$date$}$else$\date{}$endif$
+\maketitle
+
+% ─── Metadatos editoriales ───────────────────────────────────────────────────
+$if(isbn)$
+\vspace*{\fill}
+\begin{center}
+  \small
+  $if(publisher)$\textit{$publisher$}\\[0.3em]$endif$
+  ISBN: $isbn$\\
+  $if(rights)$$rights$$endif$
+\end{center}
+\clearpage
+$endif$
+
+% ─── Tabla de contenidos ─────────────────────────────────────────────────────
+$if(toc)$
+\tableofcontents
+$endif$
+
+\mainmatter
+
+% ─── Contenido ───────────────────────────────────────────────────────────────
+$body$
+
+% ─── Referencias ─────────────────────────────────────────────────────────────
+$if(bibliography)$
+\backmatter
+\printbibliography
+$endif$
+
+\end{document}
