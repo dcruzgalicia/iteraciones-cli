@@ -308,7 +308,6 @@ async function runBlocksPrestep(
  */
 async function runFinalization(
   allContextDocs: BuildDocument[],
-  allRenderedDocs: BuildDocument[],
   ctx: BuildContext,
   composeCache: ComposeCache | undefined,
   renderCache: RenderCache | undefined,
@@ -515,10 +514,8 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     // t2 se mide después del context phase para que pandocMs cubra todos los pasos
     // de renderizado: primary, blocks e índices (collection, authors, events, list).
     const t2 = performance.now();
-    const allRenderedDocs = [...renderedMap.values()].flat().concat(renderedBlockDocs);
     // En modo incremental, pasar solo los docs afectados a compose/write para evitar
-    // reprocesar documentos que no cambiaron. allRenderedDocs (completo) se usa solo
-    // para la poda de la caché de render, que requiere todas las claves procesadas.
+    // reprocesar documentos que no cambiaron.
     const finalContextDocs = affectedPaths ? allContextDocs.filter((d) => affectedPaths.has(d.relativePath)) : allContextDocs;
 
     // Paso de exportación: genera PDF/EPUB si está configurado y no se pasó --no-export.
@@ -566,7 +563,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
     const composeMs = await runFinalization(
       docsWithLinks,
-      allRenderedDocs,
       ctx,
       effectiveComposeCache,
       renderCache,
