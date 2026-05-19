@@ -1,4 +1,5 @@
 import type {
+  GeneratedFile,
   IPlugin,
   PluginBuildContext,
   PluginComposeContext,
@@ -97,6 +98,25 @@ export class PluginRegistry {
       }
     }
     return ctx;
+  }
+
+  async runGenerateFiles(context: PluginBuildContext): Promise<GeneratedFile[]> {
+    const files: GeneratedFile[] = [];
+    for (const plugin of this.plugins) {
+      if (typeof plugin.generateFiles === 'function') {
+        const result = await plugin.generateFiles(context);
+        if (!Array.isArray(result)) {
+          throw new Error(`[plugin:${plugin.name}] generateFiles debe retornar un array; recibido: ${String(result)}`);
+        }
+        for (const file of result) {
+          if (!file.relativePath || file.relativePath.startsWith('/') || file.relativePath.split('/').includes('..')) {
+            throw new Error(`[plugin:${plugin.name}] generateFiles: ruta inválida "${file.relativePath}" — debe ser relativa sin componentes ".."`);
+          }
+          files.push(file);
+        }
+      }
+    }
+    return files;
   }
 
   async runAfterBuild(context: PluginBuildContext): Promise<void> {
