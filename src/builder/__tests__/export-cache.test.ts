@@ -80,6 +80,7 @@ describe('export cache — integración', () => {
     await runExportDocuments(renderedMap as Parameters<typeof runExportDocuments>[0], {
       config: { formats: ['epub'], pdfEngine: 'xelatex' },
       outputDir,
+      cwd: projectDir,
       lang: 'es',
       concurrency: 1,
       cliVersion: '0.0.0-test',
@@ -103,6 +104,7 @@ describe('export cache — integración', () => {
     const options = {
       config: { formats: ['epub'] as ('epub' | 'pdf')[], pdfEngine: 'xelatex' as const },
       outputDir,
+      cwd: projectDir,
       lang: 'es',
       concurrency: 1,
       cliVersion: '0.0.0-test',

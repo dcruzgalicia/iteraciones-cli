@@ -13,6 +13,8 @@ import { EXPORTABLE_TYPES } from './types.js';
 export interface ExportRunOptions {
   config: ExportConfig;
   outputDir: string;
+  /** Directorio raíz del proyecto; usado para validar rutas editoriales de bibliography y csl. */
+  cwd: string;
   lang: string;
   /**
    * Número máximo de documentos que se exportan en paralelo.
@@ -48,7 +50,7 @@ export async function runExportDocuments(
   renderedMap: ReadonlyMap<DocumentType, BuildDocument[]>,
   options: ExportRunOptions,
 ): Promise<ExportResult[]> {
-  const { config, outputDir, lang, concurrency, cliVersion, pandocVersion, cacheManager, registry, pluginFingerprint } = options;
+  const { config, outputDir, cwd, lang, concurrency, cliVersion, pandocVersion, cacheManager, registry, pluginFingerprint } = options;
 
   // Pool de items primarios para resolver colecciones y programas de eventos.
   const itemPool = [...(renderedMap.get('file') ?? []), ...(renderedMap.get('author') ?? []), ...(renderedMap.get('event') ?? [])];
@@ -86,7 +88,7 @@ export async function runExportDocuments(
       items = resolveEventsForExport(doc, eventPool);
     }
 
-    const rawExportDoc = assembleExportDocument(doc, items, lang);
+    const rawExportDoc = assembleExportDocument(doc, items, lang, cwd);
     if (!rawExportDoc) return null;
 
     // Hook beforeExport: permite a los plugins modificar el body y/o los metadatos
