@@ -9,21 +9,13 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { convertToEpub } from '../../services/pandoc-exporter.js';
-import { run } from '../../services/run.js';
 import type { ExportDocument } from '../export/types.js';
+import { isPandocAvailable } from './helpers/tools.js';
 
-// ---------------------------------------------------------------------------
-// Helper: verificar disponibilidad de pandoc
-// ---------------------------------------------------------------------------
-
-async function isPandocAvailable(): Promise<boolean> {
-  try {
-    const result = await run('pandoc', ['--version']);
-    return result.exitCode === 0;
-  } catch {
-    return false;
-  }
-}
+// Verificar disponibilidad de pandoc en tiempo de inicialización del módulo
+// para poder usar test.skipIf — más preciso que 'return' temprano en el cuerpo
+// del test (que Bun reporta como 'pass' en lugar de 'skip').
+const pandocAvailable = await isPandocAvailable();
 
 // ---------------------------------------------------------------------------
 // Fixture mínimo
@@ -51,23 +43,16 @@ function makeMinimalExportDoc(outputDir: string): ExportDocument {
 
 describe('convertToEpub — integración', () => {
   let outputDir: string;
-  let pandocAvailable: boolean;
 
-  beforeAll(async () => {
+  beforeAll(() => {
     outputDir = mkdtempSync(join(tmpdir(), 'iteraciones-epub-test-'));
-    pandocAvailable = await isPandocAvailable();
   });
 
   afterAll(() => {
     if (outputDir) rmSync(outputDir, { recursive: true, force: true });
   });
 
-  test('el EPUB producido es un ZIP válido con mimetype correcto', async () => {
-    if (!pandocAvailable) {
-      console.log('  ⚠ pandoc no disponible — test omitido');
-      return;
-    }
-
+  test.skipIf(!pandocAvailable)('el EPUB producido es un ZIP válido con mimetype correcto', async () => {
     const doc = makeMinimalExportDoc(outputDir);
     const outputPath = join(outputDir, 'articulo.epub');
 
@@ -92,12 +77,7 @@ describe('convertToEpub — integración', () => {
     expect(text).toContain('application/epub+zip');
   });
 
-  test('el archivo EPUB tiene un tamaño razonable (> 1KB)', async () => {
-    if (!pandocAvailable) {
-      console.log('  ⚠ pandoc no disponible — test omitido');
-      return;
-    }
-
+  test.skipIf(!pandocAvailable)('el archivo EPUB tiene un tamaño razonable (> 1KB)', async () => {
     const doc = makeMinimalExportDoc(outputDir);
     const outputPath = join(outputDir, 'articulo-size.epub');
 

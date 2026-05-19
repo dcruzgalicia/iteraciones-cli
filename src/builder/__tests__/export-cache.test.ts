@@ -5,37 +5,20 @@
  * sin cambios usa la caché y produce un archivo idéntico byte a byte.
  * Se omite automáticamente si pandoc no está disponible en el entorno.
  */
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CacheManager } from '../../cache/cache-manager.js';
 import { hash } from '../../cache/hasher.js';
-import { run } from '../../services/run.js';
 import { runExportDocuments } from '../export/runner.js';
 import type { BuildDocument } from '../types.js';
+import { getPandocVersion, isPandocAvailable } from './helpers/tools.js';
 
-// ---------------------------------------------------------------------------
-// Helper: verificar disponibilidad de pandoc
-// ---------------------------------------------------------------------------
-
-async function isPandocAvailable(): Promise<boolean> {
-  try {
-    const result = await run('pandoc', ['--version']);
-    return result.exitCode === 0;
-  } catch {
-    return false;
-  }
-}
-
-async function getPandocVersion(): Promise<string> {
-  try {
-    const result = await run('pandoc', ['--version']);
-    return result.stdout.split('\n')[0]?.trim() ?? 'unknown';
-  } catch {
-    return 'unknown';
-  }
-}
+// Verificar disponibilidad de pandoc en tiempo de inicialización del módulo
+// para poder usar test.skipIf — más preciso que 'return' temprano en el cuerpo
+// del test (que Bun reporta como 'pass' en lugar de 'skip').
+const pandocAvailable = await isPandocAvailable();
 
 // ---------------------------------------------------------------------------
 // Helper: construir BuildDocument mínimo para exportación
@@ -72,25 +55,22 @@ function makeExportableDoc(cwd: string): BuildDocument {
 describe('export cache — integración', () => {
   let projectDir: string;
   let outputDir: string;
-  let pandocAvailable: boolean;
 
-  beforeAll(async () => {
+  // beforeEach crea un projectDir y outputDir nuevos por cada test para que
+  // la caché (`.iteraciones/cache/`) esté completamente aislada entre tests.
+  // Sin esto, el segundo test hereda la caché del primero y su 'primer export'
+  // es en realidad un cache hit, dejando sin probar el escenario de miss.
+  beforeEach(() => {
     projectDir = mkdtempSync(join(tmpdir(), 'iteraciones-cache-test-'));
     outputDir = mkdtempSync(join(tmpdir(), 'iteraciones-cache-output-'));
-    pandocAvailable = await isPandocAvailable();
-    if (!pandocAvailable) {
-      console.log('  ⚠ pandoc no disponible — tests de caché omitidos');
-    }
   });
 
-  afterAll(() => {
+  afterEach(() => {
     if (projectDir) rmSync(projectDir, { recursive: true, force: true });
     if (outputDir) rmSync(outputDir, { recursive: true, force: true });
   });
 
-  test('hasBinary devuelve true después del primer export', async () => {
-    if (!pandocAvailable) return;
-
+  test.skipIf(!pandocAvailable)('hasBinary devuelve true después del primer export', async () => {
     const pandocVersion = await getPandocVersion();
     const cacheManager = new CacheManager(projectDir);
     const doc = makeExportableDoc(projectDir);
@@ -113,9 +93,7 @@ describe('export cache — integración', () => {
     expect(await cacheManager.hasBinary('export', cacheKey, 'epub')).toBe(true);
   });
 
-  test('el segundo export sin cambios usa caché y produce archivo idéntico', async () => {
-    if (!pandocAvailable) return;
-
+  test.skipIf(!pandocAvailable)('el segundo export sin cambios usa caché y produce archivo idéntico', async () => {
     const pandocVersion = await getPandocVersion();
     const cacheManager = new CacheManager(projectDir);
     const doc = makeExportableDoc(projectDir);
