@@ -32,6 +32,16 @@ export interface ExportRunOptions {
   registry?: PluginRegistry;
   /** Hash del contenido de los plugins activos, para incluir en la clave de caché. */
   pluginFingerprint?: string;
+  /** Acumulador de estadísticas de exportación. Se muta durante la ejecución. */
+  stats?: ExportStats;
+}
+
+/** Contadores acumulativos de la fase de exportación; se mutan durante la ejecución. */
+export interface ExportStats {
+  totalEpub: number;
+  totalPdf: number;
+  cacheHitsEpub: number;
+  cacheHitsPdf: number;
 }
 
 /**
@@ -50,7 +60,7 @@ export async function runExportDocuments(
   renderedMap: ReadonlyMap<DocumentType, BuildDocument[]>,
   options: ExportRunOptions,
 ): Promise<ExportResult[]> {
-  const { config, outputDir, cwd, lang, concurrency, cliVersion, pandocVersion, cacheManager, registry, pluginFingerprint } = options;
+  const { config, outputDir, cwd, lang, concurrency, cliVersion, pandocVersion, cacheManager, registry, pluginFingerprint, stats } = options;
 
   // Resolver y validar rutas globales de bibliography y csl desde ExportConfig.
   // Las rutas vienen de _iteraciones.yaml (confiables), pero igualmente se verifica
@@ -177,6 +187,7 @@ export async function runExportDocuments(
           const cacheKey = hash(doc.sourceHash, itemHashes, 'epub', cliVersion, pandocVersion, pluginFingerprint ?? '', bibHash, cslHash);
           if (cacheManager && (await cacheManager.hasBinary('export', cacheKey, 'epub'))) {
             await cacheManager.copyBinaryTo('export', cacheKey, 'epub', outputPath);
+            if (stats) { stats.totalEpub++; stats.cacheHitsEpub++; }
             return { epub: outputPath };
           }
           await convertToEpub(exportDoc, outputPath);
@@ -191,6 +202,7 @@ export async function runExportDocuments(
           } else if (cacheManager) {
             await cacheManager.writeBinary('export', cacheKey, 'epub', epubData);
           }
+          if (stats) stats.totalEpub++;
           return { epub: outputPath };
         }
 
@@ -198,6 +210,7 @@ export async function runExportDocuments(
           const cacheKey = hash(doc.sourceHash, itemHashes, 'pdf', config.pdfEngine, cliVersion, pandocVersion, pluginFingerprint ?? '', bibHash, cslHash);
           if (cacheManager && (await cacheManager.hasBinary('export', cacheKey, 'pdf'))) {
             await cacheManager.copyBinaryTo('export', cacheKey, 'pdf', outputPath);
+            if (stats) { stats.totalPdf++; stats.cacheHitsPdf++; }
             return { pdf: outputPath };
           }
           await convertToPdf(exportDoc, outputPath, config.pdfEngine);
@@ -212,6 +225,7 @@ export async function runExportDocuments(
           } else if (cacheManager) {
             await cacheManager.writeBinary('export', cacheKey, 'pdf', pdfData);
           }
+          if (stats) stats.totalPdf++;
           return { pdf: outputPath };
         }
 
