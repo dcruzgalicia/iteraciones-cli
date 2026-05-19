@@ -85,6 +85,8 @@ export async function runExportDocuments(
 
     // Hook beforeExport: permite a los plugins modificar el body y/o los metadatos
     // del documento antes de que pandoc genere el PDF/EPUB.
+    // Nota: el plugin es responsable de respetar la forma de ExportMetadata al
+    // retornar metadata modificada — campos desconocidos se pasan tal cual a pandoc.
     let exportDoc = rawExportDoc;
     if (registry) {
       const beforeCtx = await registry.runBeforeExport({
@@ -92,13 +94,11 @@ export async function runExportDocuments(
         body: rawExportDoc.body,
         metadata: rawExportDoc.metadata as unknown as Record<string, unknown>,
       });
-      if (beforeCtx.body !== rawExportDoc.body || beforeCtx.metadata !== (rawExportDoc.metadata as unknown)) {
-        exportDoc = {
-          ...rawExportDoc,
-          body: beforeCtx.body,
-          metadata: { ...rawExportDoc.metadata, ...(beforeCtx.metadata as Partial<ExportMetadata>) },
-        };
-      }
+      exportDoc = {
+        ...rawExportDoc,
+        body: beforeCtx.body,
+        metadata: { ...rawExportDoc.metadata, ...(beforeCtx.metadata as Partial<ExportMetadata>) },
+      };
     }
 
     const outputBase = join(outputDir, exportDoc.relativePath.replace(/\.md$/, ''));
