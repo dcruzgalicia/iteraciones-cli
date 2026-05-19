@@ -7,7 +7,7 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import { clean, writeFile } from '../output/writer.js';
 import { loadPlugins } from '../plugin/loader.js';
 import { PluginRegistry } from '../plugin/registry.js';
-import type { GeneratedFile, PluginDocumentSummary } from '../plugin/types.js';
+import type { GeneratedFile, PluginClassifiedDocument, PluginDocumentSummary } from '../plugin/types.js';
 import { PandocPool } from '../services/pandoc-pool.js';
 import { checkPandoc } from '../services/pandoc-runner.js';
 import type { TemplateContext } from '../template/render/context.js';
@@ -431,7 +431,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         siteConfig: ctx.siteConfig as unknown as Readonly<Record<string, unknown>>,
       });
     }
-    const [allDocs, cssPath] = await Promise.all([
+    const [rawDocs, cssPath] = await Promise.all([
       runDiscovery(cwd, ctx, log, options.noCache),
       buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, {
         noTailwind: options.noTailwind,
@@ -441,18 +441,61 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     ctx.cssPath = cssPath;
     log(`Assets generados en ${ctx.outputDir}`);
 
-    // Hook onDocumentDiscovered: notifica a los plugins de cada documento descubierto
-    // y clasificado (excluyendo borradores), antes de que comience la fase de render.
+    // Hook onDocumentClassified: permite a plugins sobreescribir type/kind/templatePath
+    // tras la clasificación automática, antes del render. Retornar null excluye el documento.
+    let allDocs = rawDocs;
     if (hasPlugins) {
-      for (const doc of allDocs) {
-        await registry.runOnDocumentDiscovered({
+      const classified: BuildDocument[] = [];
+      for (const doc of rawDocs) {
+        const result = await registry.runOnDocumentClassified({
           sourcePath: doc.filePath,
           relativePath: doc.relativePath,
           type: doc.type ?? 'file',
-          frontmatter: doc.frontmatter as Record<string, unknown>,
+          kind: doc.kind ?? 'page',
+          templatePath: doc.templatePath,
+          frontmatter: doc.frontmatter as Readonly<Record<string, unknown>>,
+          body: doc.body,
+        } satisfies PluginClassifiedDocument);
+        if (result === null) continue;
+        if (result !== undefined) {
+          classified.push({
+            ...doc,
+            type: result.type as BuildDocument['type'],
+            kind: result.kind as BuildDocument['kind'],
+            templatePath: result.templatePath,
+          });
+        } else {
+          classified.push(doc);
+        }
+      }
+      allDocs = classified;
+    }
+
+    // Hook onDocumentDiscovered: permite a plugins filtrar o modificar el pool de documentos.
+    // Retornar null excluye el documento; retornar un objeto aplica cambios de body/frontmatter/relativePath.
+    if (hasPlugins) {
+      const discovered: BuildDocument[] = [];
+      for (const doc of allDocs) {
+        const result = await registry.runOnDocumentDiscovered({
+          sourcePath: doc.filePath,
+          relativePath: doc.relativePath,
+          type: doc.type ?? 'file',
+          frontmatter: doc.frontmatter as Readonly<Record<string, unknown>>,
           body: doc.body,
         });
+        if (result === null) continue;
+        if (result !== undefined) {
+          discovered.push({
+            ...doc,
+            relativePath: result.relativePath,
+            frontmatter: result.frontmatter as BuildDocument['frontmatter'],
+            body: result.body,
+          });
+        } else {
+          discovered.push(doc);
+        }
       }
+      allDocs = discovered;
     }
 
     const enrichedSiteCtx = buildEnrichedSiteContext(ctx, allDocs);
