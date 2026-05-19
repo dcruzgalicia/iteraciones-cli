@@ -1,4 +1,11 @@
 /**
+ * Variante de template LaTeX especializado para exportación PDF.
+ * - `literary` / `academic`: compatibles con documentclass `scrartcl`.
+ * - `anthology` / `technical`: compatibles con documentclass `scrbook`.
+ */
+export type ExportLatexTemplate = 'literary' | 'academic' | 'anthology' | 'technical';
+
+/**
  * Configuración de exportación editorial (PDF y EPUB) definida en `_iteraciones.yaml`
  * bajo la clave `export:`.
  */
@@ -26,7 +33,7 @@ export interface ExportConfig {
    *
    * Si la variante no es compatible con el `documentclass` del documento se usa el template base.
    */
-  template?: 'literary' | 'academic' | 'anthology' | 'technical';
+  template?: ExportLatexTemplate;
 }
 
 export interface SiteConfig {
