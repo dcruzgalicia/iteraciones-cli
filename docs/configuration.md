@@ -107,6 +107,86 @@ Nombre del tema integrado. Valores disponibles: `light`, `dark`. Ver [docs/theme
 theme: 'light'
 ```
 
+### `export`
+
+Controla la generación de archivos PDF y EPUB a partir de los documentos exportables del sitio (tipos `file`, `event`, `author`, `collection`, `events`). Si la sección `export` no existe o no contiene `formats`, la exportación está desactivada.
+
+#### `export.formats`
+
+**Tipo:** `Array<'pdf' | 'epub'>`  
+**Por defecto:** `[]` (sin exportación)
+
+Lista de formatos a generar. El orden no importa; se generan en paralelo por documento.
+
+```yaml
+export:
+  formats: [pdf, epub]
+```
+
+#### `export.pdf-engine`
+
+**Tipo:** `'xelatex' | 'lualatex'`  
+**Por defecto:** `'xelatex'`
+
+Motor LaTeX utilizado para generar PDF. `xelatex` tiene mayor compatibilidad con fuentes OpenType; `lualatex` ofrece soporte más completo de Unicode y mayor extensibilidad.
+
+#### `export.pdf-concurrency`
+
+**Tipo:** `integer >= 1`  
+**Por defecto:** `2`
+
+Número máximo de documentos que se exportan a PDF en paralelo. xelatex no es multi-thread y consume memoria significativa (~300-600 MB por instancia); un valor alto puede saturar el sistema en sitios con muchos documentos exportables.
+
+Ajustar según la RAM disponible:
+
+| RAM disponible | Valor recomendado |
+|---------------|-------------------|
+| 4 GB           | 1                 |
+| 8 GB           | 2 (por defecto)   |
+| 16 GB+         | 3–4               |
+
+```yaml
+export:
+  formats: [pdf]
+  pdf-concurrency: 3
+```
+
+#### `export.bibliography`
+
+**Tipo:** `string | undefined`  
+**Por defecto:** sin bibliografía global
+
+Ruta relativa al proyecto a un archivo `.bib` de bibliografía BibTeX. Se aplica a todos los documentos exportados, salvo que el frontmatter del documento especifique su propia ruta.
+
+#### `export.csl`
+
+**Tipo:** `string | undefined`  
+**Por defecto:** estilo por defecto de pandoc
+
+Ruta relativa al proyecto a un archivo `.csl` de estilo de citas. Requiere que `bibliography` esté configurado.
+
+#### `export.template`
+
+**Tipo:** `'literary' | 'academic' | 'anthology' | 'technical' | undefined`  
+**Por defecto:** template base según el tipo de documento
+
+Variante de template LaTeX a usar por defecto para todos los documentos exportados. Puede sobreescribirse a nivel de documento mediante `editorial.template` en el frontmatter.
+
+- `literary` / `academic`: para documentos de tipo `scrartcl` (`file`, `event`, `author`).
+- `anthology` / `technical`: para documentos de tipo `scrbook` (`collection`, `events`).
+
+Si la variante no es compatible con el tipo del documento, se usa el template base.
+
+```yaml
+export:
+  formats: [pdf]
+  pdf-engine: xelatex
+  pdf-concurrency: 2
+  template: academic
+  bibliography: referencias.bib
+  csl: apa.csl
+```
+
 ## Ejemplo mínimo
 
 ```yaml
