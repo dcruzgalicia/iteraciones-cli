@@ -24,10 +24,9 @@ El proyecto tiene pipeline completo, caché incremental, sistema de plugins, liv
 **Las condiciones de v1.0 y las Fases 0–4 están completamente resueltas. Los criterios de Fase 6 también están cumplidos (mayo 2026).**
 
 Para seguir madurando hacia v2.0+:
-- Hooks adicionales en el sistema de plugins (`beforeBuild`, `onDocumentDiscovered`) — completa Fase 5
-- Templates LaTeX especializados para libros (E7 — Fase 6.1)
+- Templates LaTeX especializados para libros (E7 — Fase 6.1) ✅ Implementado (PR #302)
 - Site de documentación con dogfooding (Fase 7.2)
-- API de plugins documentada con ejemplos funcionales
+- Plugins oficiales como paquetes externos (`@iteraciones/plugin-sitemap`, etc.)
 
 **Runtime:** Bun es el runtime exclusivo del proyecto por diseño. No se planea migración a Node.js (ver §8 Riesgos).
 
@@ -414,18 +413,20 @@ Añadir `'export'` a `CacheScope` (caché binaria de PDF/EPUB en `.iteraciones/c
 
 ---
 
-### Fase 5 — Ecosistema y plugins (3-5 semanas)
+### Fase 5 — Ecosistema y plugins ✅ COMPLETADA
 
 **Objetivo:** Hacer que el sistema de plugins sea lo suficientemente poderoso para que la comunidad pueda extender el sistema sin modificar el núcleo.
 
-#### 5.1 — Hooks adicionales
+#### 5.1 — Hooks adicionales ✅ IMPLEMENTADO
 
-Los 4 hooks actuales (`beforeRender`, `afterRender`, `beforeCompose`, `afterCompose`) cubren el ciclo de un documento individual. Faltan hooks para:
+Los 8 hooks del ciclo de vida están implementados en `src/plugin/types.ts`, `src/plugin/registry.ts` y `src/builder/orchestrator.ts`:
 
 - `beforeBuild` — se ejecuta antes de empezar el pipeline (útil para generar contenido dinámico)
 - `onDocumentDiscovered` — permite a plugins filtrar o agregar documentos al pool
 - `onDocumentClassified` — permite a plugins sobreescribir el tipo/kind inferido
-- `afterBuild` — ya existe, pero sin acceso al grafo de dependencias
+- `afterBuild` — se ejecuta al final del build con acceso al grafo de dependencias (`PluginDocumentGraph`)
+
+> Implementado en los hooks base (Fase 1–2), `onDocumentClassified` y `onDocumentDiscovered` (PR #300), grafo en `afterBuild` (PR #300).
 
 #### 5.2 — Plugins con capacidad de generar archivos ✅ IMPLEMENTADO
 
@@ -454,35 +455,36 @@ Esto permite plugins externos como:
 >
 > Repositorios planificados: `@iteraciones/plugin-sitemap`, `@iteraciones/plugin-rss`, `@iteraciones/plugin-search-index`, `@iteraciones/plugin-reading-time`.
 
-#### 5.4 — Documentación de la API de plugins con ejemplos
+#### 5.4 — Documentación de la API de plugins con ejemplos ✅ IMPLEMENTADO
 
-El contrato de plugins está bien definido en `src/plugin/types.ts`. Falta:
-- `docs/plugins.md` con la referencia completa
-- Un plugin de ejemplo mínimo en un repositorio dedicado (`@iteraciones/plugin-example`)
-- Guía de pruebas para plugins
+`docs/plugins.md` cubre la referencia completa de todos los hooks, incluye un plugin de referencia mínimo funcional con múltiples patrones (filtrado, transformación, generación de archivos) y una guía de pruebas con `bun test`.
 
-#### Criterios de finalización
+> Implementado en PR #300 (PluginDocumentGraph + docs/plugins.md).
+
+#### Criterios de finalización ✅
 - La API de plugins está documentada con ejemplos funcionales (`docs/plugins.md`)
 - Un plugin externo puede generar archivos adicionales mediante `generateFiles`
 - Los hooks `beforeBuild` y `onDocumentDiscovered` están disponibles
 
 ---
 
-### Fase 6 — Publicación multiplataforma ✅ COMPLETADA (criterios)
+### Fase 6 — Publicación multiplataforma ✅ COMPLETADA
 
 **Objetivo:** Convertir el sistema editorial en una plataforma real de publicación.
 
-> **Mayo 2026.** Los tres criterios de finalización están cumplidos. Pendiente deseable: 6.1 (templates LaTeX especializados para libros — E7).
+> **Mayo 2026.** Todos los ítems de Fase 6 implementados, incluyendo templates LaTeX especializados (PR #302).
 
-#### 6.1 — Templates LaTeX para libros
+#### 6.1 — Templates LaTeX para libros ✅ IMPLEMENTADO
 
-Desarrollar un conjunto de templates Pandoc LaTeX para:
-- Libros de ensayos
-- Documentación técnica
-- Antologías con múltiples autores
-- Artículos académicos (con citas CSL)
+Templates Pandoc LaTeX especializados por género editorial, distribuidos en `pandoc/export/`:
+- `scrartcl-literary.latex` — ensayo literario (márgenes amplios, interlineado 1.5, notas al pie)
+- `scrartcl-academic.latex` — artículo académico (abstract, palabras clave, citas CSL)
+- `scrbook-anthology.latex` — antología multi-autor (portada, separadores por autor)
+- `scrbook-technical.latex` — documentación técnica (índice, numeración de secciones)
 
-Los templates se distribuyen con el CLI y el usuario puede sobreescribirlos.
+La variante se selecciona con `export.template` en `_iteraciones.yaml` o con `editorial.template` en el frontmatter.
+
+> Implementado en PR #302.
 
 #### 6.2 — Soporte de citas bibliográficas (CSL) ✅ IMPLEMENTADO
 
