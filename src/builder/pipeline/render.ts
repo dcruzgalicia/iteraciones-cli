@@ -1,4 +1,4 @@
-import { isAbsolute, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import type { CacheManager } from '../../cache/cache-manager.js';
 import { hash } from '../../cache/hasher.js';
 import { mapWithConcurrency } from '../../output/concurrency.js';
@@ -30,7 +30,9 @@ export async function renderDocuments(
   pool?: PandocPool,
   cwd?: string,
 ): Promise<BuildDocument[]> {
-  // Memoiza hashes de archivos .bib para no leerlos más de una vez por build.
+  // Memoiza hashes de archivos para no leerlos más de una vez por llamada.
+  // Válido para la duración de esta llamada a renderDocuments(); si se invoca
+  // múltiples veces en el mismo build, el mapa se reinicia en cada llamada.
   const bibHashCache = new Map<string, string>();
 
   const getBibHash = async (bibPath: string): Promise<string> => {
@@ -56,13 +58,15 @@ export async function renderDocuments(
           : {};
       const rawBib = typeof rawEditorial['bibliography'] === 'string' ? rawEditorial['bibliography'] : undefined;
       if (rawBib) {
-        const resolvedBib = isAbsolute(rawBib) ? rawBib : resolve(cwd, rawBib);
+        // resolve() normaliza siempre: elimina '..', maneja rutas absolutas y relativas.
+        // Una ruta '/project/../etc/passwd' queda '/etc/passwd', que luego falla startsWith.
+        const resolvedBib = resolve(cwd, rawBib);
         // Validar que la ruta esté dentro del proyecto.
         if (resolvedBib.startsWith(cwd + '/') || resolvedBib === cwd) {
           const rawCsl = typeof rawEditorial['csl'] === 'string' ? rawEditorial['csl'] : undefined;
           let resolvedCsl: string | undefined;
           if (rawCsl) {
-            const cslAbs = isAbsolute(rawCsl) ? rawCsl : resolve(cwd, rawCsl);
+            const cslAbs = resolve(cwd, rawCsl);
             if (cslAbs.startsWith(cwd + '/') || cslAbs === cwd) resolvedCsl = cslAbs;
           }
           bibOptions = { bibliography: resolvedBib, csl: resolvedCsl };
@@ -74,7 +78,8 @@ export async function renderDocuments(
 
     if (cache) {
       const bibHash = bibOptions ? await getBibHash(bibOptions.bibliography) : '';
-      const key = hash(doc.sourceHash, cache.cliVersion, cache.pandocVersion, cache.pluginFingerprint ?? '', bibHash);
+      const cslHash = bibOptions?.csl ? await getBibHash(bibOptions.csl) : '';
+      const key = hash(doc.sourceHash, cache.cliVersion, cache.pandocVersion, cache.pluginFingerprint ?? '', bibHash, cslHash);
       const cached = await cache.manager.read('render', key);
       if (cached !== undefined) {
         if (stats) {
@@ -101,7 +106,8 @@ export async function renderDocuments(
 
     if (cache) {
       const bibHash = bibOptions ? await getBibHash(bibOptions.bibliography) : '';
-      const key = hash(doc.sourceHash, cache.cliVersion, cache.pandocVersion, cache.pluginFingerprint ?? '', bibHash);
+      const cslHash = bibOptions?.csl ? await getBibHash(bibOptions.csl) : '';
+      const key = hash(doc.sourceHash, cache.cliVersion, cache.pandocVersion, cache.pluginFingerprint ?? '', bibHash, cslHash);
       await cache.manager.write('render', key, htmlFragment);
     }
     if (stats) stats.total++;
