@@ -41,7 +41,10 @@ export async function renderDocuments(
     const cached = bibHashCache.get(bibPath);
     if (cached !== undefined) return cached;
     const bibFile = Bun.file(bibPath);
-    if (!(await bibFile.exists())) return '';
+    if (!(await bibFile.exists())) {
+      bibHashCache.set(bibPath, '');
+      return '';
+    }
     try {
       const hasher = new Bun.CryptoHasher('sha256');
       hasher.update(await bibFile.text());
@@ -49,7 +52,8 @@ export async function renderDocuments(
       bibHashCache.set(bibPath, h);
       return h;
     } catch (err) {
-      process.stderr.write(`[render] no se pudo leer archivo para caché: ${err instanceof Error ? err.message : String(err)}\n`);
+      process.stderr.write(`[render] no se pudo leer "${bibPath}" para caché: ${err instanceof Error ? err.message : String(err)}\n`);
+      bibHashCache.set(bibPath, '');
       return '';
     }
   };
