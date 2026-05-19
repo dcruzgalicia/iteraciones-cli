@@ -8,7 +8,7 @@ export interface ExportConfig {
   /** Motor LaTeX para PDF. Por defecto `xelatex`. */
   pdfEngine: 'xelatex' | 'lualatex';
   /**
-   * Ruta al archivo `.bib` global (relativa al cwd del proyecto).
+   * Ruta al archivo `.bib` global (relativa o absoluta; debe quedar dentro del proyecto).
    * Se usa como fallback cuando el frontmatter de un documento no define `editorial.bibliography`.
    */
   bibliography?: string;
