@@ -40,11 +40,16 @@ export async function renderDocuments(
     if (cached !== undefined) return cached;
     const bibFile = Bun.file(bibPath);
     if (!(await bibFile.exists())) return '';
-    const hasher = new Bun.CryptoHasher('sha256');
-    hasher.update(await bibFile.text());
-    const h = hasher.digest('hex');
-    bibHashCache.set(bibPath, h);
-    return h;
+    try {
+      const hasher = new Bun.CryptoHasher('sha256');
+      hasher.update(await bibFile.text());
+      const h = hasher.digest('hex');
+      bibHashCache.set(bibPath, h);
+      return h;
+    } catch (err) {
+      process.stderr.write(`[render] no se pudo leer archivo para caché: ${err instanceof Error ? err.message : String(err)}\n`);
+      return '';
+    }
   };
 
   return mapWithConcurrency(docs, concurrency, async (doc) => {
@@ -67,7 +72,11 @@ export async function renderDocuments(
           let resolvedCsl: string | undefined;
           if (rawCsl) {
             const cslAbs = resolve(cwd, rawCsl);
-            if (cslAbs.startsWith(cwd + '/') || cslAbs === cwd) resolvedCsl = cslAbs;
+            if (cslAbs.startsWith(cwd + '/') || cslAbs === cwd) {
+              resolvedCsl = cslAbs;
+            } else {
+              process.stderr.write(`[render] editorial.csl fuera del proyecto ignorado: "${rawCsl}"\n`);
+            }
           }
           bibOptions = { bibliography: resolvedBib, csl: resolvedCsl };
         } else {
