@@ -194,8 +194,8 @@ export function resolveEventsForExport(_doc: BuildDocument, eventPool: BuildDocu
 
 /**
  * Resuelve la variante de template LaTeX a usar, dando prioridad al valor del
- * frontmatter sobre el global del sitio. Retorna `undefined` si el valor no es
- * una variante válida.
+ * frontmatter sobre el global del sitio. Retorna el fallback global si el valor
+ * del frontmatter no es una variante válida, o `undefined` si tampoco hay fallback.
  */
 function resolveTemplateVariant(raw: unknown, globalFallback: ExportLatexTemplate | undefined): ExportLatexTemplate | undefined {
   if (raw === 'literary' || raw === 'academic' || raw === 'anthology' || raw === 'technical') return raw;
