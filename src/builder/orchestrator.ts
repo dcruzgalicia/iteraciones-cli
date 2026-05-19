@@ -7,6 +7,7 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import { clean, writeFile } from '../output/writer.js';
 import { loadPlugins } from '../plugin/loader.js';
 import { PluginRegistry } from '../plugin/registry.js';
+import type { GeneratedFile } from '../plugin/types.js';
 import { PandocPool } from '../services/pandoc-pool.js';
 import { checkPandoc } from '../services/pandoc-runner.js';
 import type { TemplateContext } from '../template/render/context.js';
@@ -295,6 +296,7 @@ async function runFinalization(
   const writtenDocs = await writeDocuments(composedDocs, ctx);
   log(`Escritos ${writtenDocs.length} archivos en ${ctx.outputDir}`);
 
+  let generatedFiles: GeneratedFile[] = [];
   if (hasPlugins) {
     const docOutputPaths = writtenDocs.map((doc) => doc.relativePath.replace(/\.md$/, '.html'));
     const assetPaths: string[] = ['css/styles.css'];
@@ -302,7 +304,7 @@ async function runFinalization(
 
     // generateFiles: recopilar y escribir archivos adicionales de plugins (sitemap, RSS, etc.)
     const initialContext = { outputDir: ctx.outputDir, outputPaths: [...assetPaths, ...docOutputPaths] };
-    const generatedFiles = await registry.runGenerateFiles(initialContext);
+    generatedFiles = await registry.runGenerateFiles(initialContext);
     for (const file of generatedFiles) {
       await writeFile(join(ctx.outputDir, file.relativePath), file.content);
     }
@@ -312,7 +314,12 @@ async function runFinalization(
   }
 
   // Actualizar manifiesto de salida y eliminar archivos huérfanos en modo incremental.
+  // Se incluyen los archivos generados por plugins para que el purge incremental
+  // los elimine si un plugin deja de generarlos en builds posteriores.
   const currentManifest = new Map(writtenDocs.map((doc) => [doc.relativePath, doc.outputPath ?? '']));
+  for (const file of generatedFiles) {
+    currentManifest.set(file.relativePath, join(ctx.outputDir, file.relativePath));
+  }
   if (incremental && cwd) {
     const prevManifest = await loadOutputManifest(cwd);
     for (const [relPath, outputPath] of prevManifest) {
