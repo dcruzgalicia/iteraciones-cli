@@ -1,11 +1,28 @@
 import { checkSiteConfig, checkTemplates } from './doctor/project-checks.js';
-import { type CheckResult, checkPandoc, checkReadPermissions, checkTailwind, checkWritePermissions } from './doctor/system-checks.js';
+import {
+  type CheckResult,
+  checkLatexEngine,
+  checkPandoc,
+  checkReadPermissions,
+  checkTailwind,
+  checkWritePermissions,
+} from './doctor/system-checks.js';
 
 /**
  * Verifica que el entorno tenga todo lo necesario para correr \`iteraciones build\`.
  * Con \`options.fix = true\` intenta corregir automáticamente los problemas reparables.
  */
 export async function runDoctor(cwd: string, options: { fix?: boolean } = {}): Promise<void> {
+  // Cargar la config para determinar qué motor LaTeX verificar (si el export está habilitado).
+  let latexEngine: 'xelatex' | 'lualatex' = 'xelatex';
+  try {
+    const { loadSiteConfig } = await import('../config/config-loader.js');
+    const cfg = await loadSiteConfig(cwd);
+    if (cfg.export?.pdfEngine) latexEngine = cfg.export.pdfEngine;
+  } catch {
+    // Si no hay config o falla la carga, usar xelatex por defecto.
+  }
+
   const checks = await Promise.all([
     checkPandoc(),
     checkSiteConfig(cwd),
@@ -13,6 +30,7 @@ export async function runDoctor(cwd: string, options: { fix?: boolean } = {}): P
     checkTailwind(cwd),
     checkReadPermissions(cwd),
     checkWritePermissions(cwd),
+    checkLatexEngine(latexEngine),
   ]);
 
   const lines = checks.map((c) => {
