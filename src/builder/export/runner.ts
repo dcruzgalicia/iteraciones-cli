@@ -178,7 +178,9 @@ export async function runExportDocuments(
     // Generar todos los formatos en paralelo: PDF y EPUB son completamente
     // independientes para el mismo documento y no comparten estado de escritura.
     // Promise.allSettled garantiza que ambos formatos terminan (éxito o error)
-    // antes de procesar los resultados, evitando estados parciales en caché.
+    // antes de propagar el primer error, de modo que no quedan promesas en vuelo
+    // cuando la función retorna o lanza. No evita que un formato escriba en caché
+    // aunque el otro falle después.
     const formatResults = await Promise.allSettled(
       config.formats.map(async (format): Promise<{ epub?: string; pdf?: string }> => {
         const outputPath = `${outputBase}.${format}`;
@@ -187,7 +189,10 @@ export async function runExportDocuments(
           const cacheKey = hash(doc.sourceHash, itemHashes, 'epub', cliVersion, pandocVersion, pluginFingerprint ?? '', bibHash, cslHash);
           if (cacheManager && (await cacheManager.hasBinary('export', cacheKey, 'epub'))) {
             await cacheManager.copyBinaryTo('export', cacheKey, 'epub', outputPath);
-            if (stats) { stats.totalEpub++; stats.cacheHitsEpub++; }
+            if (stats) {
+              stats.totalEpub++;
+              stats.cacheHitsEpub++;
+            }
             return { epub: outputPath };
           }
           await convertToEpub(exportDoc, outputPath);
@@ -207,10 +212,23 @@ export async function runExportDocuments(
         }
 
         if (format === 'pdf') {
-          const cacheKey = hash(doc.sourceHash, itemHashes, 'pdf', config.pdfEngine, cliVersion, pandocVersion, pluginFingerprint ?? '', bibHash, cslHash);
+          const cacheKey = hash(
+            doc.sourceHash,
+            itemHashes,
+            'pdf',
+            config.pdfEngine,
+            cliVersion,
+            pandocVersion,
+            pluginFingerprint ?? '',
+            bibHash,
+            cslHash,
+          );
           if (cacheManager && (await cacheManager.hasBinary('export', cacheKey, 'pdf'))) {
             await cacheManager.copyBinaryTo('export', cacheKey, 'pdf', outputPath);
-            if (stats) { stats.totalPdf++; stats.cacheHitsPdf++; }
+            if (stats) {
+              stats.totalPdf++;
+              stats.cacheHitsPdf++;
+            }
             return { pdf: outputPath };
           }
           await convertToPdf(exportDoc, outputPath, config.pdfEngine);
