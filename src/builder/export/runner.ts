@@ -102,61 +102,70 @@ export async function runExportDocuments(
     }
 
     const outputBase = join(outputDir, exportDoc.relativePath.replace(/\.md$/, ''));
+    // Hash de items pre-computado una sola vez: compartido por todos los formatos
+    // del documento. Evita la duplicación del cálculo que había en el loop secuencial.
+    const itemHashes = items.map((i) => i.sourceHash).join('\0');
+
+    // Generar todos los formatos en paralelo: PDF y EPUB son completamente
+    // independientes para el mismo documento y no comparten estado de escritura.
+    const formatResults = await Promise.all(
+      config.formats.map(async (format): Promise<{ epub?: string; pdf?: string }> => {
+        const outputPath = `${outputBase}.${format}`;
+
+        if (format === 'epub') {
+          const cacheKey = hash(doc.sourceHash, itemHashes, 'epub', cliVersion, pandocVersion, pluginFingerprint ?? '');
+          if (cacheManager && (await cacheManager.hasBinary('export', cacheKey, 'epub'))) {
+            await cacheManager.copyBinaryTo('export', cacheKey, 'epub', outputPath);
+            return { epub: outputPath };
+          }
+          await convertToEpub(exportDoc, outputPath);
+          // Hook afterExport: permite post-procesar los bytes del archivo generado.
+          const epubData = await Bun.file(outputPath).arrayBuffer();
+          if (registry) {
+            const afterCtx = await registry.runAfterExport({ sourcePath: exportDoc.filePath, format: 'epub', data: new Uint8Array(epubData) });
+            await Bun.write(outputPath, afterCtx.data);
+            // .slice() normaliza el buffer: evita que un Uint8Array con byteOffset
+            // o longitud parcial escriba bytes extra o incorrectos en la caché.
+            if (cacheManager) await cacheManager.writeBinary('export', cacheKey, 'epub', afterCtx.data.slice().buffer as ArrayBuffer);
+          } else if (cacheManager) {
+            await cacheManager.writeBinary('export', cacheKey, 'epub', epubData);
+          }
+          return { epub: outputPath };
+        }
+
+        if (format === 'pdf') {
+          const cacheKey = hash(doc.sourceHash, itemHashes, 'pdf', config.pdfEngine, cliVersion, pandocVersion, pluginFingerprint ?? '');
+          if (cacheManager && (await cacheManager.hasBinary('export', cacheKey, 'pdf'))) {
+            await cacheManager.copyBinaryTo('export', cacheKey, 'pdf', outputPath);
+            return { pdf: outputPath };
+          }
+          await convertToPdf(exportDoc, outputPath, config.pdfEngine);
+          // Hook afterExport: permite post-procesar los bytes del archivo generado.
+          const pdfData = await Bun.file(outputPath).arrayBuffer();
+          if (registry) {
+            const afterCtx = await registry.runAfterExport({ sourcePath: exportDoc.filePath, format: 'pdf', data: new Uint8Array(pdfData) });
+            await Bun.write(outputPath, afterCtx.data);
+            // .slice() normaliza el buffer: evita que un Uint8Array con byteOffset
+            // o longitud parcial escriba bytes extra o incorrectos en la caché.
+            if (cacheManager) await cacheManager.writeBinary('export', cacheKey, 'pdf', afterCtx.data.slice().buffer as ArrayBuffer);
+          } else if (cacheManager) {
+            await cacheManager.writeBinary('export', cacheKey, 'pdf', pdfData);
+          }
+          return { pdf: outputPath };
+        }
+
+        return {};
+      }),
+    );
+
     const result: ExportResult = {
       filePath: exportDoc.filePath,
       relativePath: exportDoc.relativePath,
     };
-
-    for (const format of config.formats) {
-      const outputPath = `${outputBase}.${format}`;
-
-      if (format === 'epub') {
-        // Para colecciones: incluir hashes de todos los items en la clave (igual que PDF)
-        const itemHashes = items.map((i) => i.sourceHash).join('\0');
-        const cacheKey = hash(doc.sourceHash, itemHashes, 'epub', cliVersion, pandocVersion, pluginFingerprint ?? '');
-        if (cacheManager && (await cacheManager.hasBinary('export', cacheKey, 'epub'))) {
-          await cacheManager.copyBinaryTo('export', cacheKey, 'epub', outputPath);
-          result.epubPath = outputPath;
-          continue;
-        }
-        await convertToEpub(exportDoc, outputPath);
-        // Hook afterExport: permite post-procesar los bytes del archivo generado.
-        const epubData = await Bun.file(outputPath).arrayBuffer();
-        if (registry) {
-          const afterCtx = await registry.runAfterExport({ sourcePath: exportDoc.filePath, format: 'epub', data: new Uint8Array(epubData) });
-          await Bun.write(outputPath, afterCtx.data);
-          // .slice() normaliza el buffer: evita que un Uint8Array con byteOffset
-          // o longitud parcial escriba bytes extra o incorrectos en la caché.
-          if (cacheManager) await cacheManager.writeBinary('export', cacheKey, 'epub', afterCtx.data.slice().buffer as ArrayBuffer);
-        } else if (cacheManager) {
-          await cacheManager.writeBinary('export', cacheKey, 'epub', epubData);
-        }
-        result.epubPath = outputPath;
-      } else if (format === 'pdf') {
-        // Para colecciones: incluir hashes de todos los items en la clave
-        const itemHashes = items.map((i) => i.sourceHash).join('\0');
-        const cacheKey = hash(doc.sourceHash, itemHashes, 'pdf', config.pdfEngine, cliVersion, pandocVersion, pluginFingerprint ?? '');
-        if (cacheManager && (await cacheManager.hasBinary('export', cacheKey, 'pdf'))) {
-          await cacheManager.copyBinaryTo('export', cacheKey, 'pdf', outputPath);
-          result.pdfPath = outputPath;
-          continue;
-        }
-        await convertToPdf(exportDoc, outputPath, config.pdfEngine);
-        // Hook afterExport: permite post-procesar los bytes del archivo generado.
-        const pdfData = await Bun.file(outputPath).arrayBuffer();
-        if (registry) {
-          const afterCtx = await registry.runAfterExport({ sourcePath: exportDoc.filePath, format: 'pdf', data: new Uint8Array(pdfData) });
-          await Bun.write(outputPath, afterCtx.data);
-          // .slice() normaliza el buffer: evita que un Uint8Array con byteOffset
-          // o longitud parcial escriba bytes extra o incorrectos en la caché.
-          if (cacheManager) await cacheManager.writeBinary('export', cacheKey, 'pdf', afterCtx.data.slice().buffer as ArrayBuffer);
-        } else if (cacheManager) {
-          await cacheManager.writeBinary('export', cacheKey, 'pdf', pdfData);
-        }
-        result.pdfPath = outputPath;
-      }
+    for (const fr of formatResults) {
+      if (fr.epub) result.epubPath = fr.epub;
+      if (fr.pdf) result.pdfPath = fr.pdf;
     }
-
     return result;
   });
 
