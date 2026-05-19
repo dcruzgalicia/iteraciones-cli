@@ -418,6 +418,14 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const { ctx, cacheManager, renderCache, composeCache, registry, hasPlugins, pandocPool, cliVersion, pandocVersion, pluginFingerprint } =
     await setupBuildEnvironment(cwd, options, log);
   try {
+    // Hook beforeBuild: ejecutado antes de descubrir o procesar ningún documento.
+    if (hasPlugins) {
+      await registry.runBeforeBuild({
+        cwd,
+        outputDir: ctx.outputDir,
+        siteConfig: ctx.siteConfig as unknown as Readonly<Record<string, unknown>>,
+      });
+    }
     const [allDocs, cssPath] = await Promise.all([
       runDiscovery(cwd, ctx, log, options.noCache),
       buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, {
