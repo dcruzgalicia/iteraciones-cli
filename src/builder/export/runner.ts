@@ -17,8 +17,10 @@ export interface ExportRunOptions {
   cwd: string;
   lang: string;
   /**
-   * Número máximo de documentos que se exportan en paralelo (para formatos sin PDF).
-   * Cuando la exportación incluye PDF, se usa `config.pdfConcurrency` en su lugar.
+   * Número máximo de documentos que se procesan en paralelo en el outer loop.
+   * Cuando la exportación incluye PDF, un semáforo interno limita las instancias
+   * xelatex activas simultáneamente a `config.pdfConcurrency`; `concurrency` sigue
+   * siendo el límite de documentos en vuelo (incluidos los que esperan el semáforo).
    */
   concurrency: number;
   /** Versión del CLI para la clave de caché. */
@@ -66,7 +68,7 @@ export async function runExportDocuments(
   // PDF se adquiere un slot antes de invocar xelatex y se libera al terminar — con o
   // sin error. Así el número de documentos en vuelo es `concurrency`, pero las llamadas
   // a xelatex activas simultáneamente se acotan a `pdfConcurrency` (~300-600 MB/proceso).
-  let xelatexSlots = hasPdf ? config.pdfConcurrency : 0;
+  let xelatexSlots = hasPdf ? Math.max(1, config.pdfConcurrency) : 0;
   const xelatexQueue: Array<() => void> = [];
   const acquireXelatex = (): Promise<void> =>
     new Promise<void>((res) => {
