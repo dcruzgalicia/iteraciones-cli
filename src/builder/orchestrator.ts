@@ -62,6 +62,8 @@ interface SetupResult {
   cliVersion: string;
   /** Versión de pandoc detectada en el entorno, para claves de caché. */
   pandocVersion: string;
+  /** Hash del contenido de los plugins activos para invalidar cachés cuando cambian. */
+  pluginFingerprint: string | undefined;
 }
 
 interface PrimaryRenderResult {
@@ -169,6 +171,7 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
     pandocPool,
     cliVersion: pkg.version,
     pandocVersion,
+    pluginFingerprint,
   };
 }
 
@@ -373,11 +376,8 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const renderStats: RenderStats = { total: 0, cacheHits: 0 };
   const composeStats: ComposeStats = { total: 0, cacheHits: 0 };
 
-  const { ctx, cacheManager, renderCache, composeCache, registry, hasPlugins, pandocPool, cliVersion, pandocVersion } = await setupBuildEnvironment(
-    cwd,
-    options,
-    log,
-  );
+  const { ctx, cacheManager, renderCache, composeCache, registry, hasPlugins, pandocPool, cliVersion, pandocVersion, pluginFingerprint } =
+    await setupBuildEnvironment(cwd, options, log);
   try {
     const [allDocs, cssPath] = await Promise.all([
       runDiscovery(cwd, ctx, log, options.noCache),
@@ -456,6 +456,8 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
             cliVersion,
             pandocVersion,
             cacheManager: options.noCache ? undefined : cacheManager,
+            registry: hasPlugins ? registry : undefined,
+            pluginFingerprint,
           })
         : [];
     if (exportResults.length > 0) {
