@@ -131,7 +131,18 @@ export async function runExportDocuments(
   if (exportableDocs.length === 0) return [];
 
   let pdfDone = 0;
-  const pdfTotal = hasPdf ? exportableDocs.length : 0;
+  const pdfTotal = hasPdf
+    ? exportableDocs.filter((d) => {
+        const raw = d.frontmatter['export'];
+        return !(
+          typeof raw === 'object' &&
+          raw !== null &&
+          !Array.isArray(raw) &&
+          Object.getPrototypeOf(raw) === Object.prototype &&
+          (raw as Record<string, unknown>)['skip'] === true
+        );
+      }).length
+    : 0;
 
   const results = await mapWithConcurrency(exportableDocs, effectiveConcurrency, async (doc): Promise<ExportResult | null> => {
     // Respetar export: { skip: true } en el frontmatter del documento.
