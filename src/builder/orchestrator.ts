@@ -13,6 +13,7 @@ import type { TemplateContext } from '../template/render/context.js';
 import { buildAssets } from './assets.js';
 import { createAuthorDocumentIndex } from './context/authors.js';
 import { buildSiteContext } from './context/site.js';
+import { injectDownloadLinks, runExportDocuments } from './export/runner.js';
 import { escapeHtml } from './html.js';
 import { classifyDocuments } from './pipeline/classify.js';
 import { type ComposeCache, type ComposeStats, composeDocuments, renderBlocksToRegions } from './pipeline/compose.js';
@@ -32,6 +33,8 @@ export interface BuildOptions {
   noCache?: boolean;
   /** Omite la generación de CSS con Tailwind; copia fonts y logo igualmente. */
   noTailwind?: boolean;
+  /** Omite la exportación PDF/EPUB aunque esté configurada en _iteraciones.yaml. */
+  noExport?: boolean;
   /** Muestra los documentos que se procesarían sin generar salida. */
   dryRun?: boolean;
   /** Imprime información adicional de progreso durante el build. */
@@ -54,6 +57,10 @@ interface SetupResult {
   registry: PluginRegistry;
   hasPlugins: boolean;
   pandocPool: PandocPool | undefined;
+  /** Versión del CLI (de package.json), para claves de caché de exportación. */
+  cliVersion: string;
+  /** Versión de pandoc detectada en el entorno, para claves de caché. */
+  pandocVersion: string;
 }
 
 interface PrimaryRenderResult {
@@ -151,7 +158,17 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
   const pandocPool = (await PandocPool.tryCreate()) ?? undefined;
   if (pandocPool) log('pandoc-server disponible: usando pool para conversiones');
 
-  return { ctx, cacheManager, renderCache, composeCache, registry, hasPlugins: plugins.length > 0, pandocPool };
+  return {
+    ctx,
+    cacheManager,
+    renderCache,
+    composeCache,
+    registry,
+    hasPlugins: plugins.length > 0,
+    pandocPool,
+    cliVersion: pkg.version,
+    pandocVersion,
+  };
 }
 
 /**
@@ -339,7 +356,11 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const renderStats: RenderStats = { total: 0, cacheHits: 0 };
   const composeStats: ComposeStats = { total: 0, cacheHits: 0 };
 
-  const { ctx, cacheManager, renderCache, composeCache, registry, hasPlugins, pandocPool } = await setupBuildEnvironment(cwd, options, log);
+  const { ctx, cacheManager, renderCache, composeCache, registry, hasPlugins, pandocPool, cliVersion, pandocVersion } = await setupBuildEnvironment(
+    cwd,
+    options,
+    log,
+  );
   try {
     const [allDocs, cssPath] = await Promise.all([
       runDiscovery(cwd, ctx, log, options.noCache),
@@ -406,8 +427,29 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     // reprocesar documentos que no cambiaron. allRenderedDocs (completo) se usa solo
     // para la poda de la caché de render, que requiere todas las claves procesadas.
     const finalContextDocs = affectedPaths ? allContextDocs.filter((d) => affectedPaths.has(d.relativePath)) : allContextDocs;
+
+    // Paso de exportación: genera PDF/EPUB si está configurado y no se pasó --no-export.
+    const exportResults =
+      ctx.siteConfig.export && !options.noExport
+        ? await runExportDocuments(renderedMap, {
+            config: ctx.siteConfig.export,
+            outputDir: ctx.outputDir,
+            lang: ctx.siteConfig.lang,
+            concurrency: ctx.concurrency ?? 4,
+            cliVersion,
+            pandocVersion,
+            cacheManager: options.noCache ? undefined : cacheManager,
+          })
+        : [];
+    if (exportResults.length > 0) {
+      log(`Exportados ${exportResults.length} documento${exportResults.length > 1 ? 's' : ''} (PDF/EPUB)`);
+    }
+
+    // Inyectar enlaces de descarga en el templateContext de los docs con exportación.
+    const docsWithLinks = injectDownloadLinks(finalContextDocs, exportResults, ctx.outputDir);
+
     const composeMs = await runFinalization(
-      finalContextDocs,
+      docsWithLinks,
       allRenderedDocs,
       ctx,
       composeCache,
