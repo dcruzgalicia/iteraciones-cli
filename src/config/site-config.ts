@@ -34,6 +34,13 @@ export interface ExportConfig {
    * Si la variante no es compatible con el `documentclass` del documento se usa el template base.
    */
   template?: ExportLatexTemplate;
+  /**
+   * Número máximo de documentos que se exportan a PDF en paralelo.
+   * xelatex no es thread-safe y consume memoria significativa (~300-600 MB/instancia);
+   * un valor alto puede saturar el sistema en sitios con muchos documentos exportables.
+   * Por defecto: `2`. Rango recomendado: 1–4.
+   */
+  pdfConcurrency: number;
 }
 
 export interface SiteConfig {

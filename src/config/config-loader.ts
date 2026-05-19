@@ -84,9 +84,18 @@ function parseExportConfig(raw: unknown): ExportConfig | undefined {
       `[iteraciones] export.template: valor desconocido "${String(rawTemplate)}". Los valores válidos son "literary", "academic", "anthology", "technical".\n`,
     );
   }
+  const rawPdfConcurrency = obj['pdf-concurrency'];
+  const pdfConcurrency =
+    typeof rawPdfConcurrency === 'number' && Number.isInteger(rawPdfConcurrency) && rawPdfConcurrency >= 1 ? rawPdfConcurrency : 2;
+  if (rawPdfConcurrency !== undefined && pdfConcurrency === 2 && rawPdfConcurrency !== 2) {
+    process.stderr.write(
+      `[iteraciones] export.pdf-concurrency: valor inválido "${String(rawPdfConcurrency)}". Debe ser un entero >= 1. Usando 2 por defecto.\n`,
+    );
+  }
   return {
     formats,
     pdfEngine,
+    pdfConcurrency,
     ...(bibliography !== undefined ? { bibliography } : {}),
     ...(csl !== undefined ? { csl } : {}),
     ...(template !== undefined ? { template } : {}),

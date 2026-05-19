@@ -78,7 +78,7 @@ describe('export cache — integración', () => {
     const renderedMap = new Map([[doc.type!, [doc]]]) as Map<BuildDocument['type'] & string, BuildDocument[]>;
 
     await runExportDocuments(renderedMap as Parameters<typeof runExportDocuments>[0], {
-      config: { formats: ['epub'], pdfEngine: 'xelatex' },
+      config: { formats: ['epub'], pdfEngine: 'xelatex', pdfConcurrency: 2 },
       outputDir,
       cwd: projectDir,
       lang: 'es',
@@ -102,7 +102,7 @@ describe('export cache — integración', () => {
     const renderedMap = new Map([[doc.type!, [doc]]]) as Map<BuildDocument['type'] & string, BuildDocument[]>;
 
     const options = {
-      config: { formats: ['epub'] as ('epub' | 'pdf')[], pdfEngine: 'xelatex' as const },
+      config: { formats: ['epub'] as ('epub' | 'pdf')[], pdfEngine: 'xelatex' as const, pdfConcurrency: 2 },
       outputDir,
       cwd: projectDir,
       lang: 'es',

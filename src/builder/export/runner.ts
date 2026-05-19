@@ -17,10 +17,8 @@ export interface ExportRunOptions {
   cwd: string;
   lang: string;
   /**
-   * Número máximo de documentos que se exportan en paralelo.
-   * Dentro de cada documento, los formatos (PDF/EPUB) se generan simultáneamente
-   * de forma independiente, por lo que el número real de procesos pandoc puede ser
-   * hasta `concurrency × formats.length`.
+   * Número máximo de documentos que se exportan en paralelo (para formatos sin PDF).
+   * Cuando la exportación incluye PDF, se usa `config.pdfConcurrency` en su lugar.
    */
   concurrency: number;
   /** Versión del CLI para la clave de caché. */
@@ -61,6 +59,12 @@ export async function runExportDocuments(
   options: ExportRunOptions,
 ): Promise<ExportResult[]> {
   const { config, outputDir, cwd, lang, concurrency, cliVersion, pandocVersion, cacheManager, registry, pluginFingerprint, stats } = options;
+
+  // Cuando el formato PDF está activo, usar pdfConcurrency para limitar el número
+  // de instancias xelatex simultáneas. xelatex consume ~300-600 MB por proceso;
+  // un valor alto puede saturar el sistema en sitios con muchos documentos.
+  const hasPdf = config.formats.includes('pdf');
+  const effectiveConcurrency = hasPdf ? config.pdfConcurrency : concurrency;
 
   // Resolver y validar rutas globales de bibliography y csl desde ExportConfig.
   // Las rutas vienen de _iteraciones.yaml (confiables), pero igualmente se verifica
@@ -126,7 +130,10 @@ export async function runExportDocuments(
 
   if (exportableDocs.length === 0) return [];
 
-  const results = await mapWithConcurrency(exportableDocs, concurrency, async (doc): Promise<ExportResult | null> => {
+  let pdfDone = 0;
+  const pdfTotal = hasPdf ? exportableDocs.length : 0;
+
+  const results = await mapWithConcurrency(exportableDocs, effectiveConcurrency, async (doc): Promise<ExportResult | null> => {
     // Respetar export: { skip: true } en el frontmatter del documento.
     // Se valida que sea un objeto plano (sin arrays ni prototipos no-Object)
     // siguiendo el patrón del codebase en normalizeSpeaker/parseFrontmatter.
@@ -244,6 +251,10 @@ export async function runExportDocuments(
             await cacheManager.writeBinary('export', cacheKey, 'pdf', pdfData);
           }
           if (stats) stats.totalPdf++;
+          pdfDone++;
+          if (pdfTotal > 2) {
+            process.stderr.write(`[export] PDF ${pdfDone}/${pdfTotal} — ${exportDoc.relativePath}\n`);
+          }
           return { pdf: outputPath };
         }
 
