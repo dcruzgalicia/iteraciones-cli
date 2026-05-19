@@ -150,8 +150,8 @@ async function writeAndWait(proc: ReturnType<typeof Bun.spawn>, input: string, s
  * Filtra y mejora la salida stderr de LaTeX para mostrar errores accionables.
  *
  * - Detecta paquetes faltantes (`File 'X.sty' not found`) y sugiere `tlmgr install X`
- * - Extrae errores TeX reales (líneas con `! ` o `l.`)
- * - Limita la salida a 25 líneas para no saturar la terminal
+ *   (sin límite de líneas: cada paquete faltante genera una línea de sugerencia)
+ * - Extrae errores TeX reales (líneas con `! ` o `l.`) limitados a 25 líneas
  *
  * @param stderr  Salida stderr completa de pandoc/LaTeX.
  * @param engine  Motor LaTeX usado, para mensajes contextuales.
