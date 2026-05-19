@@ -1,5 +1,5 @@
 import { rm } from 'node:fs/promises';
-import { join } from 'node:path';
+import { isAbsolute, join, resolve } from 'node:path';
 import { CacheManager } from '../cache/cache-manager.js';
 import { hash } from '../cache/hasher.js';
 import { loadOutputManifest, saveOutputManifest } from '../cache/output-manifest.js';
@@ -140,8 +140,8 @@ async function computePluginFingerprint(plugins: string[], cwd: string): Promise
   for (const pluginId of plugins) {
     hasher.update(pluginId);
     hasher.update('\0');
-    if (pluginId.startsWith('./') || pluginId.startsWith('../') || pluginId.startsWith('/')) {
-      const pluginPath = pluginId.startsWith('/') ? pluginId : join(cwd, pluginId);
+    if (isAbsolute(pluginId) || pluginId.startsWith('./') || pluginId.startsWith('../')) {
+      const pluginPath = isAbsolute(pluginId) ? pluginId : resolve(cwd, pluginId);
       const content = await Bun.file(pluginPath)
         .text()
         .catch(() => '');
