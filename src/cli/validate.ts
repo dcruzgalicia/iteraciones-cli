@@ -9,6 +9,7 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import { IGNORED_DIRS } from '../constants.js';
 import { ConfigError } from '../errors.js';
 import { FRONTMATTER_RE, parseFrontmatter } from '../loader/frontmatter.js';
+import { checkLatexEngine } from './doctor/system-checks.js';
 
 type ValidationError = { file: string; message: string };
 
@@ -154,15 +155,30 @@ export async function runValidate(cwd: string): Promise<void> {
   // advertencias duplicadas (p. ej. "accent desconocido") si se invoca en paralelo
   // desde validateConfig y validateFrontmatter por separado.
   let theme: string | undefined;
+  let exportFormats: ReadonlyArray<'pdf' | 'epub'> | undefined;
+  let pdfEngine: 'xelatex' | 'lualatex' = 'xelatex';
   const configErrors: ValidationError[] = [];
   try {
     const config = await loadSiteConfig(cwd);
     theme = config.theme;
+    exportFormats = config.export?.formats;
+    pdfEngine = config.export?.pdfEngine ?? 'xelatex';
   } catch (err) {
     if (err instanceof ConfigError) {
       configErrors.push({ file: relative(cwd, err.configPath), message: err.message });
     } else {
       configErrors.push({ file: '_iteraciones.yaml', message: err instanceof Error ? err.message : String(err) });
+    }
+  }
+
+  // Si export.formats incluye 'pdf', verificar que el motor LaTeX esté disponible.
+  if (exportFormats?.includes('pdf')) {
+    const latexResult = await checkLatexEngine(pdfEngine);
+    if (!latexResult.ok) {
+      configErrors.push({
+        file: '_iteraciones.yaml',
+        message: `export.formats incluye "pdf" pero ${latexResult.detail ?? `${pdfEngine} no está disponible`}`,
+      });
     }
   }
   const { errors: fmErrors, warnings } = await validateFrontmatter(cwd, theme);
