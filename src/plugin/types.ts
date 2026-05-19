@@ -34,6 +34,20 @@ export interface IPlugin {
   afterCompose?(context: PluginComposeResult): Promise<PluginComposeResult> | PluginComposeResult;
 
   /**
+   * Se ejecuta antes de que un documento se convierta a PDF/EPUB.
+   * Puede modificar el body markdown o los metadatos editoriales del documento.
+   * Retorna el contexto modificado (sin mutar el original).
+   */
+  beforeExport?(context: PluginExportContext): Promise<PluginExportContext> | PluginExportContext;
+
+  /**
+   * Se ejecuta después de generar un archivo PDF o EPUB.
+   * Puede post-procesar los bytes del archivo resultante (firma, compresión, etc.).
+   * Retorna el resultado modificado (sin mutar el original).
+   */
+  afterExport?(context: PluginExportResult): Promise<PluginExportResult> | PluginExportResult;
+
+  /**
    * Se ejecuta una vez al término del build, después de que todos los documentos
    * han sido escritos en dist/web.
    * Útil para generación de feeds, sitemaps, reportes, etc.
@@ -71,6 +85,26 @@ export type PluginComposeResult = {
   readonly outputRelativePath: string;
   /** HTML final compuesto (página completa). */
   readonly html: string;
+};
+
+/** Contexto disponible para el hook beforeExport. */
+export type PluginExportContext = {
+  /** Ruta absoluta al archivo markdown fuente. */
+  readonly sourcePath: string;
+  /** Cuerpo markdown ensamblado (puede contener capítulos concatenados para libros). */
+  readonly body: string;
+  /** Metadatos editoriales del documento. */
+  readonly metadata: Readonly<Record<string, unknown>>;
+};
+
+/** Resultado disponible para el hook afterExport. */
+export type PluginExportResult = {
+  /** Ruta absoluta al archivo markdown fuente. */
+  readonly sourcePath: string;
+  /** Formato del archivo generado. */
+  readonly format: 'pdf' | 'epub';
+  /** Bytes del archivo generado. */
+  readonly data: Uint8Array;
 };
 
 /** Contexto disponible para el hook afterBuild. */
