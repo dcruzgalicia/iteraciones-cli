@@ -1,6 +1,7 @@
 import { access, constants, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { checkPandoc as pandocVersion } from '../../services/pandoc-runner.js';
+import { run } from '../../services/run.js';
 
 export type CheckResult = {
   label: string;
@@ -86,4 +87,49 @@ export async function checkWritePermissions(cwd: string): Promise<CheckResult> {
     await unlink(probe).catch(() => undefined);
   }
   return { label: 'permisos de escritura en cwd', ok: canWrite };
+}
+
+/**
+ * Verifica que el motor LaTeX (xelatex por defecto) y la clase KOMA-Script
+ * estén disponibles en el sistema.
+ *
+ * Solo es relevante si se configuró `export.formats` con `pdf` en _iteraciones.yaml.
+ * Se reporta como informacional (no bloquea el build si no está disponible).
+ *
+ * @param engine Motor LaTeX a verificar ('xelatex' o 'lualatex').
+ */
+export async function checkLatexEngine(engine: 'xelatex' | 'lualatex' = 'xelatex'): Promise<CheckResult> {
+  try {
+    const engineResult = await run(engine, ['--version']);
+    if (engineResult.exitCode !== 0) {
+      return {
+        label: `${engine} disponible`,
+        ok: false,
+        detail: `${engine} no encontrado en PATH. Instala MacTeX: https://tug.org/mactex/`,
+      };
+    }
+    // Verificar que KOMA-Script esté instalado (scrartcl.cls).
+    let komaOk = false;
+    try {
+      const komaResult = await run('kpsewhich', ['scrartcl.cls']);
+      komaOk = komaResult.exitCode === 0 && komaResult.stdout.trim().length > 0;
+    } catch {
+      komaOk = false;
+    }
+    if (!komaOk) {
+      return {
+        label: `${engine} disponible`,
+        ok: false,
+        detail: `${engine} encontrado pero KOMA-Script no instalado. Instala MacTeX full: https://tug.org/mactex/`,
+      };
+    }
+    const versionLine = engineResult.stdout.split('\n')[0]?.trim() ?? engine;
+    return { label: `${engine} disponible`, ok: true, detail: versionLine };
+  } catch {
+    return {
+      label: `${engine} disponible`,
+      ok: false,
+      detail: `${engine} no encontrado en PATH. Instala MacTeX: https://tug.org/mactex/`,
+    };
+  }
 }
