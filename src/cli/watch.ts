@@ -19,7 +19,7 @@ export async function runWatch(cwd: string, options: { verbose?: boolean } = {})
     const label = [...changedFiles].join(', ');
     log(`watch: cambio detectado en "${label}" — reconstruyendo…`);
     try {
-      await build(cwd, { verbose: options.verbose });
+      await build(cwd, { verbose: options.verbose, incremental: true, changedPaths: changedFiles });
       log('watch: rebuild completado.');
     } catch (err) {
       // Los errores de rebuild se reportan pero no detienen el watcher.
