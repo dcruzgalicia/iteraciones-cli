@@ -3,10 +3,11 @@ import type { CacheManager } from '../../cache/cache-manager.js';
 import { hash } from '../../cache/hasher.js';
 import type { ExportConfig } from '../../config/site-config.js';
 import { mapWithConcurrency } from '../../output/concurrency.js';
+import type { PluginRegistry } from '../../plugin/registry.js';
 import { convertToEpub, convertToPdf } from '../../services/pandoc-exporter.js';
 import type { BuildDocument, DocumentType } from '../types.js';
 import { assembleExportDocument, resolveEventsForExport, resolveItemsForExport } from './assemble.js';
-import type { ExportResult } from './types.js';
+import type { ExportMetadata, ExportResult } from './types.js';
 import { EXPORTABLE_TYPES } from './types.js';
 
 export interface ExportRunOptions {
@@ -19,6 +20,10 @@ export interface ExportRunOptions {
   /** Versión de pandoc para la clave de caché. */
   pandocVersion: string;
   cacheManager?: CacheManager;
+  /** Registro de plugins para ejecutar los hooks beforeExport/afterExport. */
+  registry?: PluginRegistry;
+  /** Hash del contenido de los plugins activos, para incluir en la clave de caché. */
+  pluginFingerprint?: string;
 }
 
 /**
@@ -37,7 +42,7 @@ export async function runExportDocuments(
   renderedMap: ReadonlyMap<DocumentType, BuildDocument[]>,
   options: ExportRunOptions,
 ): Promise<ExportResult[]> {
-  const { config, outputDir, lang, concurrency, cliVersion, pandocVersion, cacheManager } = options;
+  const { config, outputDir, lang, concurrency, cliVersion, pandocVersion, cacheManager, registry, pluginFingerprint } = options;
 
   // Pool de items primarios para resolver colecciones y programas de eventos.
   const itemPool = [...(renderedMap.get('file') ?? []), ...(renderedMap.get('author') ?? []), ...(renderedMap.get('event') ?? [])];
@@ -75,8 +80,26 @@ export async function runExportDocuments(
       items = resolveEventsForExport(doc, eventPool);
     }
 
-    const exportDoc = assembleExportDocument(doc, items, lang);
-    if (!exportDoc) return null;
+    const rawExportDoc = assembleExportDocument(doc, items, lang);
+    if (!rawExportDoc) return null;
+
+    // Hook beforeExport: permite a los plugins modificar el body y/o los metadatos
+    // del documento antes de que pandoc genere el PDF/EPUB.
+    let exportDoc = rawExportDoc;
+    if (registry) {
+      const beforeCtx = await registry.runBeforeExport({
+        sourcePath: rawExportDoc.filePath,
+        body: rawExportDoc.body,
+        metadata: rawExportDoc.metadata as unknown as Record<string, unknown>,
+      });
+      if (beforeCtx.body !== rawExportDoc.body || beforeCtx.metadata !== (rawExportDoc.metadata as unknown)) {
+        exportDoc = {
+          ...rawExportDoc,
+          body: beforeCtx.body,
+          metadata: { ...rawExportDoc.metadata, ...(beforeCtx.metadata as Partial<ExportMetadata>) },
+        };
+      }
+    }
 
     const outputBase = join(outputDir, exportDoc.relativePath.replace(/\.md$/, ''));
     const result: ExportResult = {
@@ -90,31 +113,41 @@ export async function runExportDocuments(
       if (format === 'epub') {
         // Para colecciones: incluir hashes de todos los items en la clave (igual que PDF)
         const itemHashes = items.map((i) => i.sourceHash).join('\0');
-        const cacheKey = hash(doc.sourceHash, itemHashes, 'epub', cliVersion, pandocVersion);
+        const cacheKey = hash(doc.sourceHash, itemHashes, 'epub', cliVersion, pandocVersion, pluginFingerprint ?? '');
         if (cacheManager && (await cacheManager.hasBinary('export', cacheKey, 'epub'))) {
           await cacheManager.copyBinaryTo('export', cacheKey, 'epub', outputPath);
           result.epubPath = outputPath;
           continue;
         }
         await convertToEpub(exportDoc, outputPath);
-        if (cacheManager) {
-          const data = await Bun.file(outputPath).arrayBuffer();
-          await cacheManager.writeBinary('export', cacheKey, 'epub', data);
+        // Hook afterExport: permite post-procesar los bytes del archivo generado.
+        const epubData = await Bun.file(outputPath).arrayBuffer();
+        if (registry) {
+          const afterCtx = await registry.runAfterExport({ sourcePath: exportDoc.filePath, format: 'epub', data: new Uint8Array(epubData) });
+          await Bun.write(outputPath, afterCtx.data);
+          if (cacheManager) await cacheManager.writeBinary('export', cacheKey, 'epub', afterCtx.data.buffer as ArrayBuffer);
+        } else if (cacheManager) {
+          await cacheManager.writeBinary('export', cacheKey, 'epub', epubData);
         }
         result.epubPath = outputPath;
       } else if (format === 'pdf') {
         // Para colecciones: incluir hashes de todos los items en la clave
         const itemHashes = items.map((i) => i.sourceHash).join('\0');
-        const cacheKey = hash(doc.sourceHash, itemHashes, 'pdf', config.pdfEngine, cliVersion, pandocVersion);
+        const cacheKey = hash(doc.sourceHash, itemHashes, 'pdf', config.pdfEngine, cliVersion, pandocVersion, pluginFingerprint ?? '');
         if (cacheManager && (await cacheManager.hasBinary('export', cacheKey, 'pdf'))) {
           await cacheManager.copyBinaryTo('export', cacheKey, 'pdf', outputPath);
           result.pdfPath = outputPath;
           continue;
         }
         await convertToPdf(exportDoc, outputPath, config.pdfEngine);
-        if (cacheManager) {
-          const data = await Bun.file(outputPath).arrayBuffer();
-          await cacheManager.writeBinary('export', cacheKey, 'pdf', data);
+        // Hook afterExport: permite post-procesar los bytes del archivo generado.
+        const pdfData = await Bun.file(outputPath).arrayBuffer();
+        if (registry) {
+          const afterCtx = await registry.runAfterExport({ sourcePath: exportDoc.filePath, format: 'pdf', data: new Uint8Array(pdfData) });
+          await Bun.write(outputPath, afterCtx.data);
+          if (cacheManager) await cacheManager.writeBinary('export', cacheKey, 'pdf', afterCtx.data.buffer as ArrayBuffer);
+        } else if (cacheManager) {
+          await cacheManager.writeBinary('export', cacheKey, 'pdf', pdfData);
         }
         result.pdfPath = outputPath;
       }
