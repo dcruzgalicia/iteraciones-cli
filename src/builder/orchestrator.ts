@@ -22,9 +22,9 @@ import { computeAffectedDocs } from './pipeline/dependency-resolver.js';
 import { discover } from './pipeline/discover.js';
 import { type RenderCache, type RenderStats, renderDocuments } from './pipeline/render.js';
 import { runContextPhaseWithTypeGraph } from './pipeline/runner.js';
-import { TYPE_STAGE_MAP } from './pipeline/type-graph.js';
+import { TYPE_STAGE_MAP, VALID_TYPES } from './pipeline/type-graph.js';
 import { writeDocuments } from './pipeline/write.js';
-import type { AuthorDocumentIndex, BuildContext, BuildDocument, DocumentType } from './types.js';
+import type { AuthorDocumentIndex, BuildContext, BuildDocument, DocumentKind, DocumentType } from './types.js';
 
 export interface BuildOptions {
   outputDir?: string;
@@ -457,16 +457,18 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
           body: doc.body,
         } satisfies PluginClassifiedDocument);
         if (result === null) continue;
-        if (result !== undefined) {
-          classified.push({
-            ...doc,
-            type: result.type as BuildDocument['type'],
-            kind: result.kind as BuildDocument['kind'],
-            templatePath: result.templatePath,
-          });
-        } else {
-          classified.push(doc);
+        if (!VALID_TYPES.has(result.type as DocumentType)) {
+          throw new Error(`[plugin:onDocumentClassified] tipo inválido "${result.type}"; valores válidos: ${[...VALID_TYPES].join(', ')}`);
         }
+        if (result.kind !== 'page' && result.kind !== 'block') {
+          throw new Error(`[plugin:onDocumentClassified] kind inválido "${result.kind}"; valores válidos: page, block`);
+        }
+        classified.push({
+          ...doc,
+          type: result.type as DocumentType,
+          kind: result.kind as DocumentKind,
+          templatePath: result.templatePath,
+        });
       }
       allDocs = classified;
     }
@@ -484,16 +486,12 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
           body: doc.body,
         });
         if (result === null) continue;
-        if (result !== undefined) {
-          discovered.push({
-            ...doc,
-            relativePath: result.relativePath,
-            frontmatter: result.frontmatter as BuildDocument['frontmatter'],
-            body: result.body,
-          });
-        } else {
-          discovered.push(doc);
-        }
+        discovered.push({
+          ...doc,
+          relativePath: result.relativePath,
+          frontmatter: result.frontmatter as BuildDocument['frontmatter'],
+          body: result.body,
+        });
       }
       allDocs = discovered;
     }
