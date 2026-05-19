@@ -93,8 +93,10 @@ export async function checkWritePermissions(cwd: string): Promise<CheckResult> {
  * Verifica que el motor LaTeX (xelatex por defecto) y la clase KOMA-Script
  * estén disponibles en el sistema.
  *
- * Solo es relevante si se configuró `export.formats` con `pdf` en _iteraciones.yaml.
- * Se reporta como informacional (no bloquea el build si no está disponible).
+ * Función de propósito general: puede usarse tanto en el comando `doctor`
+ * (donde el resultado es informacional y no bloquea el build) como en
+ * `validate` (donde un resultado negativo se trata como error bloqueante).
+ * La semántica de informacional vs. bloqueante la determina cada punto de uso.
  *
  * @param engine Motor LaTeX a verificar ('xelatex' o 'lualatex').
  */
