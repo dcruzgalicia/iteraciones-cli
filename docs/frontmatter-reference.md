@@ -228,8 +228,6 @@ items:
 editorial:
   isbn: 978-0-000-00000-0
   publisher: Editorial Iteraciones
-  edition: Primera edición
-  year: '2026'
   rights: CC BY-SA 4.0
   description: Una colección de textos sobre diseño y tecnología.
   cover: assets/portada.jpg          # ruta relativa al directorio raíz del proyecto
@@ -242,8 +240,6 @@ editorial:
 |-------|------|-------------|
 | `isbn` | `string` | ISBN del documento. Se incluye en los metadatos del PDF y el EPUB. |
 | `publisher` | `string` | Nombre de la editorial o institución publicadora. |
-| `edition` | `string` | Edición del documento (p. ej. `Primera edición`). |
-| `year` | `string` | Año de publicación. |
 | `rights` | `string` | Licencia o nota de derechos (p. ej. `CC BY-SA 4.0`). |
 | `description` | `string` | Descripción del documento. Visible en el EPUB como metadato de descripción. |
 | `cover` | `string` | Ruta relativa a una imagen de portada. Se usa como portada en el EPUB. |
