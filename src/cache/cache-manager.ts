@@ -2,7 +2,7 @@ import type { Dirent } from 'node:fs';
 import { mkdir, readdir, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 
-export type CacheScope = 'render' | 'compose' | 'css';
+export type CacheScope = 'render' | 'compose' | 'css' | 'export';
 
 /**
  * Gestiona la caché incremental en disco bajo `{cwd}/.iteraciones/cache/`.
@@ -102,5 +102,38 @@ export class CacheManager {
 
   #entryPath(scope: CacheScope, key: string): string {
     return join(this.#entryDir(scope, key), key);
+  }
+
+  /** Retorna `true` si existe una entrada binaria con la extensión dada. */
+  async hasBinary(scope: CacheScope, key: string, ext: string): Promise<boolean> {
+    CacheManager.#validateKey(key);
+    return Bun.file(this.#binaryPath(scope, key, ext)).exists();
+  }
+
+  /**
+   * Escribe datos binarios (ArrayBuffer) en la caché con la extensión indicada.
+   * La ruta del archivo es `{scope}/{key[0..1]}/{key}.{ext}`.
+   */
+  async writeBinary(scope: CacheScope, key: string, ext: string, data: ArrayBuffer): Promise<void> {
+    CacheManager.#validateKey(key);
+    const dir = this.#entryDir(scope, key);
+    await mkdir(dir, { recursive: true });
+    await Bun.write(this.#binaryPath(scope, key, ext), data);
+  }
+
+  /**
+   * Copia una entrada binaria desde la caché a la ruta de destino indicada.
+   * Crea los directorios intermedios si no existen.
+   */
+  async copyBinaryTo(scope: CacheScope, key: string, ext: string, destPath: string): Promise<void> {
+    CacheManager.#validateKey(key);
+    const data = await Bun.file(this.#binaryPath(scope, key, ext)).arrayBuffer();
+    const destDir = destPath.slice(0, destPath.lastIndexOf('/'));
+    if (destDir) await mkdir(destDir, { recursive: true });
+    await Bun.write(destPath, data);
+  }
+
+  #binaryPath(scope: CacheScope, key: string, ext: string): string {
+    return `${this.#entryDir(scope, key)}/${key}.${ext}`;
   }
 }
