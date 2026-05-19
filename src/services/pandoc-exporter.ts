@@ -7,6 +7,31 @@ import { PandocError } from '../errors.js';
 const TEMPLATES_DIR = join(import.meta.dir, '../../pandoc/export');
 
 /**
+ * Variantes de template compatibles con cada documentclass.
+ * Si el usuario solicita una variante incompatible con su documentclass se usa el template base.
+ */
+const VARIANT_CLASS: Readonly<Record<string, 'scrartcl' | 'scrbook'>> = {
+  literary: 'scrartcl',
+  academic: 'scrartcl',
+  anthology: 'scrbook',
+  technical: 'scrbook',
+};
+
+/**
+ * Resuelve la ruta al template LaTeX según el documentclass y la variante solicitada.
+ * Si la variante no es compatible con el documentclass, advierte y retorna el template base.
+ */
+function resolveTemplatePath(documentclass: 'scrartcl' | 'scrbook', variant: string | undefined): string {
+  if (variant) {
+    if (VARIANT_CLASS[variant] === documentclass) {
+      return join(TEMPLATES_DIR, `${documentclass}-${variant}.latex`);
+    }
+    process.stderr.write(`[export] variante de template "${variant}" no es compatible con ${documentclass}; usando template base.\n`);
+  }
+  return join(TEMPLATES_DIR, `${documentclass}.latex`);
+}
+
+/**
  * Construye el bloque YAML de metadatos que Pandoc inyectará en el documento.
  * Pandoc acepta un bloque YAML al inicio del documento delimitado por `---`.
  */
@@ -40,6 +65,15 @@ function buildYamlHeader(doc: ExportDocument): string {
   if (metadata.cover) lines.push(`cover-image: ${yamlString(metadata.cover)}`);
   if (metadata.bibliography) lines.push(`bibliography: ${yamlString(metadata.bibliography)}`);
   if (metadata.csl) lines.push(`csl: ${yamlString(metadata.csl)}`);
+
+  // Metadatos académicos opcionales (usados por el template scrartcl-academic)
+  if (metadata.abstract) lines.push(`abstract: ${yamlString(metadata.abstract)}`);
+  if (metadata.keywords && metadata.keywords.length > 0) {
+    lines.push('keywords:');
+    for (const kw of metadata.keywords) {
+      lines.push(`  - ${yamlString(kw)}`);
+    }
+  }
 
   lines.push('---', '');
   return lines.join('\n');
@@ -102,7 +136,7 @@ export async function convertToEpub(doc: ExportDocument, outputPath: string): Pr
 export async function convertToPdf(doc: ExportDocument, outputPath: string, engine: 'xelatex' | 'lualatex'): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
-  const templatePath = join(TEMPLATES_DIR, `${doc.metadata.documentclass}.latex`);
+  const templatePath = resolveTemplatePath(doc.metadata.documentclass, doc.metadata.template);
   const input = buildYamlHeader(doc) + doc.body;
   const args = ['pandoc', '--from', 'markdown', '--to', 'pdf', '--pdf-engine', engine, `--template=${templatePath}`, '--output', outputPath];
 

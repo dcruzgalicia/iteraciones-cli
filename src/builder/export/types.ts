@@ -22,6 +22,14 @@ export const LATEX_CLASS = {
   events: 'scrbook',
 } as const satisfies Partial<Record<DocumentType, 'scrartcl' | 'scrbook'>>;
 
+/**
+ * Variante de template LaTeX especializado.
+ * - `literary` / `academic`: para documentclass `scrartcl`.
+ * - `anthology` / `technical`: para documentclass `scrbook`.
+ * Si la variante no es compatible con el documentclass del documento se ignora.
+ */
+export type ExportLatexTemplate = 'literary' | 'academic' | 'anthology' | 'technical';
+
 /** Metadatos editoriales que se inyectan en el YAML header del documento Pandoc. */
 export interface ExportMetadata {
   title: string;
@@ -41,6 +49,12 @@ export interface ExportMetadata {
   documentclass: 'scrartcl' | 'scrbook';
   /** Si true, incluye tabla de contenidos (solo scrbook). */
   toc: boolean;
+  /** Variante de template LaTeX a usar. Sustituye al template base del documentclass. */
+  template?: ExportLatexTemplate;
+  /** Resumen o abstract del documento (usado por el template `academic`). */
+  abstract?: string;
+  /** Palabras clave del documento (usadas por el template `academic`). */
+  keywords?: string[];
 }
 
 /**

@@ -1,6 +1,6 @@
 import { dirname, resolve } from 'node:path';
 import type { BuildDocument, DocumentType } from '../types.js';
-import { EXPORTABLE_TYPES, type ExportDocument, type ExportMetadata, LATEX_CLASS } from './types.js';
+import { EXPORTABLE_TYPES, type ExportDocument, type ExportLatexTemplate, type ExportMetadata, LATEX_CLASS } from './types.js';
 
 /**
  * Resuelve una ruta de archivo editorial (bibliography, csl, cover) y verifica
@@ -39,6 +39,7 @@ function safeEditorialPath(rawPath: string, cwd: string, fieldName: string): str
  * @param cwd                 Directorio raíz del proyecto; usado para validar rutas editoriales.
  * @param globalBibliography  Ruta absoluta al .bib global del sitio (fallback si el frontmatter no define uno).
  * @param globalCsl           Ruta absoluta al .csl global del sitio (fallback si el frontmatter no define uno).
+ * @param globalTemplate      Variante de template del sitio (fallback si el frontmatter no define `editorial.template`).
  */
 export function assembleExportDocument(
   doc: BuildDocument,
@@ -47,6 +48,7 @@ export function assembleExportDocument(
   cwd: string,
   globalBibliography?: string,
   globalCsl?: string,
+  globalTemplate?: ExportLatexTemplate,
 ): ExportDocument | null {
   if (!doc.type || !EXPORTABLE_TYPES.has(doc.type)) return null;
 
@@ -75,6 +77,11 @@ export function assembleExportDocument(
     csl: typeof rawEditorial['csl'] === 'string' ? safeEditorialPath(rawEditorial['csl'], cwd, 'editorial.csl') : globalCsl,
     documentclass,
     toc: documentclass === 'scrbook',
+    template: resolveTemplateVariant(rawEditorial['template'], globalTemplate),
+    abstract: typeof rawEditorial['abstract'] === 'string' && rawEditorial['abstract'].trim() ? rawEditorial['abstract'].trim() : undefined,
+    keywords: Array.isArray(rawEditorial['keywords'])
+      ? (rawEditorial['keywords'] as unknown[]).filter((k): k is string => typeof k === 'string')
+      : undefined,
   };
 
   const body = documentclass === 'scrartcl' ? doc.body : assembleBookBody(doc, items);
@@ -183,4 +190,14 @@ export function resolveItemsForExport(doc: BuildDocument, pool: BuildDocument[])
  */
 export function resolveEventsForExport(_doc: BuildDocument, eventPool: BuildDocument[]): BuildDocument[] {
   return eventPool;
+}
+
+/**
+ * Resuelve la variante de template LaTeX a usar, dando prioridad al valor del
+ * frontmatter sobre el global del sitio. Retorna `undefined` si el valor no es
+ * una variante válida.
+ */
+function resolveTemplateVariant(raw: unknown, globalFallback: ExportLatexTemplate | undefined): ExportLatexTemplate | undefined {
+  if (raw === 'literary' || raw === 'academic' || raw === 'anthology' || raw === 'technical') return raw;
+  return globalFallback;
 }

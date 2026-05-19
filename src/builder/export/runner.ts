@@ -149,7 +149,7 @@ export async function runExportDocuments(
       items = resolveEventsForExport(doc, eventPool);
     }
 
-    const rawExportDoc = assembleExportDocument(doc, items, lang, cwd, globalBibliography, globalCsl);
+    const rawExportDoc = assembleExportDocument(doc, items, lang, cwd, globalBibliography, globalCsl, config.template);
     if (!rawExportDoc) return null;
 
     // Hook beforeExport: permite a los plugins modificar el body y/o los metadatos
