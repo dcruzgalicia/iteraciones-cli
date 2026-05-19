@@ -23,12 +23,29 @@ export interface IPlugin {
   beforeRender?(context: PluginRenderContext): Promise<PluginRenderContext> | PluginRenderContext;
 
   /**
-   * Se ejecuta una vez por cada documento descubierto, tras la clasificación
-   * del tipo y antes de que pandoc procese el contenido. No se llama para
-   * documentos excluidos por draft:true. Útil para observar el catálogo de
-   * documentos, emitir advertencias o preparar datos indexados.
+   * Se ejecuta por cada documento después de la clasificación automática del tipo,
+   * antes de que comience la fase de render. Permite a plugins sobreescribir
+   * `type`, `kind` o `templatePath` para cualquier documento.
+   *
+   * - Retornar `null` excluye el documento del pipeline.
+   * - Retornar un objeto aplica los cambios de `type`, `kind` y `templatePath`.
+   * - No retornar nada (void) preserva la clasificación original.
    */
-  onDocumentDiscovered?(context: PluginSourceDocument): Promise<void> | void;
+  onDocumentClassified?(context: PluginClassifiedDocument): Promise<PluginClassifiedDocument | null | void> | PluginClassifiedDocument | null | void;
+
+  /**
+   * Se ejecuta una vez por cada documento descubierto y clasificado,
+   * antes de que pandoc procese el contenido. No se llama para documentos
+   * excluidos por draft:true ni por onDocumentClassified.
+   *
+   * - Retornar `null` excluye el documento del pipeline.
+   * - Retornar un objeto aplica los cambios de `body`, `frontmatter` y `relativePath`.
+   * - No retornar nada (void) preserva el documento original.
+   *
+   * Útil para: filtrar documentos según metadatos, construir índices internos,
+   * emitir advertencias de validación, preparar datos que se necesitarán en beforeRender.
+   */
+  onDocumentDiscovered?(context: PluginSourceDocument): Promise<PluginSourceDocument | null | void> | PluginSourceDocument | null | void;
 
   /**
    * Se ejecuta después de que pandoc produce el HTML fragment.
@@ -176,6 +193,24 @@ export type PluginBeforeBuildContext = {
   readonly outputDir: string;
   /** Configuración del sitio leída de _iteraciones.yaml. */
   readonly siteConfig: Readonly<Record<string, unknown>>;
+};
+
+/** Contexto disponible para el hook onDocumentClassified. */
+export type PluginClassifiedDocument = {
+  /** Ruta absoluta al archivo markdown fuente. */
+  readonly sourcePath: string;
+  /** Ruta relativa al archivo markdown fuente (ej. 'notas/mi-nota.md'). */
+  readonly relativePath: string;
+  /** Tipo inferido por el clasificador (ej. 'file', 'author', 'event'). El plugin puede retornar un tipo distinto. */
+  readonly type: string;
+  /** Kind inferido ('page' | 'block'). El plugin puede retornar un kind distinto. */
+  readonly kind: string;
+  /** Ruta absoluta al template HTML resuelto. El plugin puede retornar una ruta distinta. */
+  readonly templatePath: string | undefined;
+  /** Frontmatter del documento fuente. */
+  readonly frontmatter: Readonly<Record<string, unknown>>;
+  /** Cuerpo markdown del documento (sin frontmatter). */
+  readonly body: string;
 };
 
 /** Contexto disponible para el hook onDocumentDiscovered. */
