@@ -159,6 +159,36 @@ export type PluginDocumentSummary = {
   readonly frontmatter: Readonly<Record<string, unknown>>;
 };
 
+/**
+ * Arista dirigida entre dos documentos en el grafo de dependencias.
+ * Disponible en los hooks `generateFiles` y `afterBuild` via `PluginBuildContext.graph`.
+ */
+export type PluginDocumentEdge = {
+  /** relativePath del documento que referencia o contiene al otro. */
+  readonly from: string;
+  /** relativePath del documento referenciado o contenido. */
+  readonly to: string;
+  /**
+   * Tipo de relación:
+   * - `'contains'`: un documento `collection` incluye explícitamente al otro via `items:`.
+   * - `'authored-by'`: un documento con `author:` apunta a un documento de tipo `author`.
+   */
+  readonly relation: 'contains' | 'authored-by';
+};
+
+/**
+ * Grafo de dependencias entre documentos, construido a partir del frontmatter
+ * al final del build. Disponible en los hooks `generateFiles` y `afterBuild`.
+ */
+export type PluginDocumentGraph = {
+  /**
+   * Todas las aristas dirigidas derivadas del frontmatter:
+   * - `contains`: documentos `collection` → cada ruta listada en `items:`.
+   * - `authored-by`: documentos con `author:` → documento `author` correspondiente.
+   */
+  readonly edges: ReadonlyArray<PluginDocumentEdge>;
+};
+
 /** Contexto disponible para los hooks generateFiles y afterBuild. */
 export type PluginBuildContext = {
   /** Directorio de salida absoluto (p. ej. /ruta/proyecto/dist/web). */
@@ -169,6 +199,8 @@ export type PluginBuildContext = {
   readonly siteConfig: Readonly<Record<string, unknown>>;
   /** Resumen de todos los documentos construidos en este build. */
   readonly documents: ReadonlyArray<PluginDocumentSummary>;
+  /** Grafo de dependencias entre documentos derivado del frontmatter. */
+  readonly graph: PluginDocumentGraph;
 };
 
 /**

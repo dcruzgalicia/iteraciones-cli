@@ -7,7 +7,7 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import { clean, writeFile } from '../output/writer.js';
 import { loadPlugins } from '../plugin/loader.js';
 import { PluginRegistry } from '../plugin/registry.js';
-import type { GeneratedFile, PluginClassifiedDocument, PluginDocumentSummary } from '../plugin/types.js';
+import type { GeneratedFile, PluginClassifiedDocument, PluginDocumentEdge, PluginDocumentGraph, PluginDocumentSummary } from '../plugin/types.js';
 import { PandocPool } from '../services/pandoc-pool.js';
 import { checkPandoc } from '../services/pandoc-runner.js';
 import type { TemplateContext } from '../template/render/context.js';
@@ -301,7 +301,48 @@ async function runBlocksPrestep(
 }
 
 /**
- * Fase de contexto: renderiza (Pandoc) los tipos restantes y construye el
+ * Construye el grafo de dependencias entre documentos a partir del frontmatter.
+ * Produce aristas `contains` (collection → items) y `authored-by` (doc → autor).
+ */
+function buildDocumentGraph(docs: PluginDocumentSummary[]): PluginDocumentGraph {
+  const authorByName = new Map<string, string>();
+  for (const doc of docs) {
+    if (doc.type === 'author') {
+      const name = String(doc.frontmatter.title ?? '')
+        .toLowerCase()
+        .trim();
+      if (name) authorByName.set(name, doc.relativePath);
+    }
+  }
+
+  const edges: PluginDocumentEdge[] = [];
+  for (const doc of docs) {
+    if (doc.type === 'collection') {
+      const items = doc.frontmatter.items;
+      if (Array.isArray(items)) {
+        for (const item of items) {
+          if (typeof item === 'string') {
+            edges.push({ from: doc.relativePath, to: item, relation: 'contains' });
+          }
+        }
+      }
+    }
+    const authors = doc.frontmatter.author;
+    if (Array.isArray(authors)) {
+      for (const author of authors) {
+        if (typeof author === 'string') {
+          const authorPath = authorByName.get(author.toLowerCase().trim());
+          if (authorPath) {
+            edges.push({ from: doc.relativePath, to: authorPath, relation: 'authored-by' });
+          }
+        }
+      }
+    }
+  }
+
+  return { edges };
+}
+
 /**
  * Fase final: relativiza contextos, compone HTML, escribe archivos,
  * ejecuta el hook afterBuild y poda la caché de render.
@@ -344,11 +385,13 @@ async function runFinalization(
       type: doc.type ?? 'file',
       frontmatter: doc.frontmatter as Record<string, unknown>,
     }));
+    const graph = buildDocumentGraph(docSummaries);
     const initialContext = {
       outputDir: ctx.outputDir,
       outputPaths: [...assetPaths, ...docOutputPaths],
       siteConfig: ctx.siteConfig as unknown as Readonly<Record<string, unknown>>,
       documents: docSummaries,
+      graph,
     };
     generatedFiles = await registry.runGenerateFiles(initialContext);
     for (const file of generatedFiles) {
