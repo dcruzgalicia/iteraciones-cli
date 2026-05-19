@@ -76,7 +76,16 @@ function parseExportConfig(raw: unknown): ExportConfig | undefined {
   const pdfEngine = obj['pdf-engine'] === 'lualatex' ? 'lualatex' : 'xelatex';
   const bibliography = typeof obj.bibliography === 'string' && obj.bibliography.trim() ? obj.bibliography.trim() : undefined;
   const csl = typeof obj.csl === 'string' && obj.csl.trim() ? obj.csl.trim() : undefined;
-  return { formats, pdfEngine, ...(bibliography !== undefined ? { bibliography } : {}), ...(csl !== undefined ? { csl } : {}) };
+  const rawTemplate = obj.template;
+  const template =
+    rawTemplate === 'literary' || rawTemplate === 'academic' || rawTemplate === 'anthology' || rawTemplate === 'technical' ? rawTemplate : undefined;
+  return {
+    formats,
+    pdfEngine,
+    ...(bibliography !== undefined ? { bibliography } : {}),
+    ...(csl !== undefined ? { csl } : {}),
+    ...(template !== undefined ? { template } : {}),
+  };
 }
 
 function resolveAccent(value: unknown): string {

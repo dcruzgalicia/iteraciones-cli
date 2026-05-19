@@ -17,6 +17,16 @@ export interface ExportConfig {
    * Se usa como fallback cuando el frontmatter de un documento no define `editorial.csl`.
    */
   csl?: string;
+  /**
+   * Variante de template LaTeX a usar por defecto en todos los documentos exportados a PDF.
+   * Puede sobreescribirse a nivel de documento mediante `editorial.template` en el frontmatter.
+   *
+   * - `'literary'` / `'academic'`: para documentos `scrartcl` (file, event, author).
+   * - `'anthology'` / `'technical'`: para documentos `scrbook` (collection, events).
+   *
+   * Si la variante no es compatible con el `documentclass` del documento se usa el template base.
+   */
+  template?: 'literary' | 'academic' | 'anthology' | 'technical';
 }
 
 export interface SiteConfig {
