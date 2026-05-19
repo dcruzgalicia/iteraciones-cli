@@ -73,7 +73,9 @@ function parseExportConfig(raw: unknown): ExportConfig | undefined {
 
   if (formats.length === 0) return undefined;
   const pdfEngine = obj['pdf-engine'] === 'lualatex' ? 'lualatex' : 'xelatex';
-  return { formats, pdfEngine };
+  const bibliography = typeof obj.bibliography === 'string' && obj.bibliography.trim() ? obj.bibliography.trim() : undefined;
+  const csl = typeof obj.csl === 'string' && obj.csl.trim() ? obj.csl.trim() : undefined;
+  return { formats, pdfEngine, ...(bibliography !== undefined ? { bibliography } : {}), ...(csl !== undefined ? { csl } : {}) };
 }
 
 function resolveAccent(value: unknown): string {
