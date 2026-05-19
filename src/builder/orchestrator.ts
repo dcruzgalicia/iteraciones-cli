@@ -547,7 +547,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         if (exportStats.totalEpub > 0) parts.push(`EPUB: ${epubNew} generados, ${exportStats.cacheHitsEpub} de caché`);
         if (exportStats.totalPdf > 0) parts.push(`PDF: ${pdfNew} generados, ${exportStats.cacheHitsPdf} de caché`);
         const detail = parts.length > 0 ? ` — ${parts.join(' | ')}` : '';
-        log(`Exportación: ${exportResults.length} doc${exportResults.length > 1 ? 's' : ''}${detail}`);
+        log(`Exportación: ${exportResults.length} documento${exportResults.length > 1 ? 's' : ''}${detail}`);
       } else {
         log(`Exportados ${exportResults.length} documento${exportResults.length > 1 ? 's' : ''} (PDF/EPUB)`);
       }
