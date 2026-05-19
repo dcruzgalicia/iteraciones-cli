@@ -1,3 +1,4 @@
+import { isAbsolute, join, normalize, relative } from 'node:path';
 import type {
   GeneratedFile,
   IPlugin,
@@ -109,8 +110,13 @@ export class PluginRegistry {
           throw new Error(`[plugin:${plugin.name}] generateFiles debe retornar un array; recibido: ${String(result)}`);
         }
         for (const file of result) {
-          if (!file.relativePath || file.relativePath.startsWith('/') || file.relativePath.split('/').includes('..')) {
-            throw new Error(`[plugin:${plugin.name}] generateFiles: ruta inválida "${file.relativePath}" — debe ser relativa sin componentes ".."`);
+          const rel = file.relativePath;
+          if (!rel || isAbsolute(rel)) {
+            throw new Error(`[plugin:${plugin.name}] generateFiles: ruta inválida "${rel}" — debe ser relativa`);
+          }
+          const resolved = join(context.outputDir, normalize(rel));
+          if (relative(context.outputDir, resolved).startsWith('..')) {
+            throw new Error(`[plugin:${plugin.name}] generateFiles: ruta inválida "${rel}" — el archivo debe estar dentro de outputDir`);
           }
           files.push(file);
         }
