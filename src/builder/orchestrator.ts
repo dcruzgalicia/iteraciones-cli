@@ -311,7 +311,7 @@ function buildDocumentGraph(docs: PluginDocumentSummary[]): PluginDocumentGraph 
       const name = String(doc.frontmatter.title ?? '')
         .toLowerCase()
         .trim();
-      if (name) authorByName.set(name, doc.relativePath);
+      if (name && !authorByName.has(name)) authorByName.set(name, doc.relativePath);
     }
   }
 
