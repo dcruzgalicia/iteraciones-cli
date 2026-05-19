@@ -4,7 +4,7 @@ import { dirname } from 'node:path';
 /**
  * Crea el directorio padre si no existe y escribe `content` en `filePath`.
  */
-export async function writeFile(filePath: string, content: string): Promise<void> {
+export async function writeFile(filePath: string, content: string | ArrayBuffer): Promise<void> {
   await mkdir(dirname(filePath), { recursive: true });
   await Bun.write(filePath, content);
 }
