@@ -10,6 +10,13 @@ export interface IPlugin {
   readonly name: string;
 
   /**
+   * Se ejecuta una vez al inicio del build, antes de que se descubra o procese
+   * ningún documento. Útil para inicializar servicios externos, validar configuración
+   * o preparar recursos que el plugin necesitará durante el build.
+   */
+  beforeBuild?(context: PluginBeforeBuildContext): Promise<void> | void;
+
+  /**
    * Se ejecuta antes de que pandoc convierta el markdown a HTML fragment.
    * Puede modificar las variables que se pasan a pandoc.
    */
@@ -151,4 +158,14 @@ export type GeneratedFile = {
   relativePath: string;
   /** Contenido del archivo: string para texto (UTF-8) o ArrayBuffer para datos binarios. */
   content: string | ArrayBuffer;
+};
+
+/** Contexto disponible para el hook beforeBuild. */
+export type PluginBeforeBuildContext = {
+  /** Directorio raíz del proyecto (donde está _iteraciones.yaml). */
+  readonly cwd: string;
+  /** Directorio de salida absoluto (p. ej. /ruta/proyecto/dist/web). */
+  readonly outputDir: string;
+  /** Configuración del sitio leída de _iteraciones.yaml. */
+  readonly siteConfig: Readonly<Record<string, unknown>>;
 };
