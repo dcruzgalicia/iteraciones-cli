@@ -60,11 +60,31 @@ export async function runExportDocuments(
 ): Promise<ExportResult[]> {
   const { config, outputDir, cwd, lang, concurrency, cliVersion, pandocVersion, cacheManager, registry, pluginFingerprint, stats } = options;
 
-  // Cuando el formato PDF está activo, usar pdfConcurrency para limitar el número
-  // de instancias xelatex simultáneas. xelatex consume ~300-600 MB por proceso;
-  // un valor alto puede saturar el sistema en sitios con muchos documentos.
   const hasPdf = config.formats.includes('pdf');
-  const effectiveConcurrency = hasPdf ? config.pdfConcurrency : concurrency;
+  // Semáforo interno que limita las instancias xelatex concurrentes sin afectar EPUB.
+  // El outer mapWithConcurrency usa el límite general (concurrency); dentro del branch
+  // PDF se adquiere un slot antes de invocar xelatex y se libera al terminar — con o
+  // sin error. Así el número de documentos en vuelo es `concurrency`, pero las llamadas
+  // a xelatex activas simultáneamente se acotan a `pdfConcurrency` (~300-600 MB/proceso).
+  let xelatexSlots = hasPdf ? config.pdfConcurrency : 0;
+  const xelatexQueue: Array<() => void> = [];
+  const acquireXelatex = (): Promise<void> =>
+    new Promise<void>((res) => {
+      if (xelatexSlots > 0) {
+        xelatexSlots--;
+        res();
+      } else {
+        xelatexQueue.push(res);
+      }
+    });
+  const releaseXelatex = (): void => {
+    const next = xelatexQueue.shift();
+    if (next) {
+      next();
+    } else {
+      xelatexSlots++;
+    }
+  };
 
   // Resolver y validar rutas globales de bibliography y csl desde ExportConfig.
   // Las rutas vienen de _iteraciones.yaml (confiables), pero igualmente se verifica
@@ -144,7 +164,7 @@ export async function runExportDocuments(
       }).length
     : 0;
 
-  const results = await mapWithConcurrency(exportableDocs, effectiveConcurrency, async (doc): Promise<ExportResult | null> => {
+  const results = await mapWithConcurrency(exportableDocs, concurrency, async (doc): Promise<ExportResult | null> => {
     // Respetar export: { skip: true } en el frontmatter del documento.
     // Se valida que sea un objeto plano (sin arrays ni prototipos no-Object)
     // siguiendo el patrón del codebase en normalizeSpeaker/parseFrontmatter.
@@ -253,7 +273,12 @@ export async function runExportDocuments(
             }
             return { pdf: outputPath };
           }
-          await convertToPdf(exportDoc, outputPath, config.pdfEngine);
+          await acquireXelatex();
+          try {
+            await convertToPdf(exportDoc, outputPath, config.pdfEngine);
+          } finally {
+            releaseXelatex();
+          }
           // Hook afterExport: permite post-procesar los bytes del archivo generado.
           const pdfData = await Bun.file(outputPath).arrayBuffer();
           if (registry) {
