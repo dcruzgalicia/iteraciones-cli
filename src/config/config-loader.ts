@@ -47,6 +47,7 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
     accent: resolveAccent(site.accent),
     baseUrl: typeof site['base-url'] === 'string' && site['base-url'].trim() ? site['base-url'].trim() : DEFAULT_SITE_CONFIG.baseUrl,
     export: parseExportConfig(root.export),
+    math: site.math === 'katex' || site.math === 'mathjax' ? site.math : DEFAULT_SITE_CONFIG.math,
   };
 }
 

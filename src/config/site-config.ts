@@ -32,6 +32,12 @@ export interface SiteConfig {
   baseUrl: string | undefined;
   /** Configuración de exportación PDF/EPUB. `undefined` si no se configuró. */
   export: ExportConfig | undefined;
+  /**
+   * Motor de matemáticas para la salida HTML. `undefined` si no se configuró.
+   * - `'katex'`: carga KaTeX vía CDN (recomendado, más rápido).
+   * - `'mathjax'`: carga MathJax vía CDN (mayor compatibilidad).
+   */
+  math: 'katex' | 'mathjax' | undefined;
 }
 
 /**
@@ -74,4 +80,5 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   accent: 'lime',
   baseUrl: undefined,
   export: undefined,
+  math: undefined,
 };

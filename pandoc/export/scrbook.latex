@@ -20,6 +20,10 @@ $endif$
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{0.5\baselineskip}
 
+% ─── Matemáticas ─────────────────────────────────────────────────────────────
+\usepackage{amsmath}
+\usepackage{amssymb}
+
 % ─── Márgenes ────────────────────────────────────────────────────────────────
 \usepackage[top=2.5cm, bottom=2.5cm, left=3cm, right=3.5cm]{geometry}
 
