@@ -1,6 +1,7 @@
 import { access, readFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { resolveTemplatePath } from '../builder/classifier/resolve-template.js';
+import { EXPORTABLE_TYPES } from '../builder/export/types.js';
 import { VALID_TYPES } from '../builder/pipeline/type-graph.js';
 import { resolveThemePaths } from '../builder/theme-resolver.js';
 import { VALID_REGIONS } from '../builder/types.js';
@@ -112,6 +113,31 @@ async function validateFrontmatter(cwd: string, theme: string | undefined): Prom
           file: entry,
           message: `no se encontró el template para type: "${fm.type}" (buscado en: ${resolvedTemplate}). Ejecuta "iteraciones doctor" para verificar los templates`,
         });
+      }
+    }
+
+    // Validar rutas de archivos editoriales (editorial.cover, .bibliography, .csl).
+    // Si estos archivos no existen, el build falla con un error críptico de LaTeX/Pandoc.
+    if (EXPORTABLE_TYPES.has(effectiveType as Parameters<typeof EXPORTABLE_TYPES.has>[0])) {
+      const rawEditorial =
+        typeof parsed['editorial'] === 'object' && parsed['editorial'] !== null ? (parsed['editorial'] as Record<string, unknown>) : null;
+
+      if (rawEditorial) {
+        const editorialPaths: Array<[string, string]> = [
+          ['editorial.cover', typeof rawEditorial['cover'] === 'string' ? rawEditorial['cover'] : ''],
+          ['editorial.bibliography', typeof rawEditorial['bibliography'] === 'string' ? rawEditorial['bibliography'] : ''],
+          ['editorial.csl', typeof rawEditorial['csl'] === 'string' ? rawEditorial['csl'] : ''],
+        ];
+        for (const [fieldName, fieldValue] of editorialPaths) {
+          if (!fieldValue) continue;
+          const absFilePath = join(cwd, fieldValue);
+          const fileExists = await access(absFilePath)
+            .then(() => true)
+            .catch(() => false);
+          if (!fileExists) {
+            errors.push({ file: entry, message: `${fieldName}: "${fieldValue}" no existe en el proyecto` });
+          }
+        }
       }
     }
   }
