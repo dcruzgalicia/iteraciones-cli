@@ -1,4 +1,4 @@
-import { join, resolve } from 'node:path';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 import type { CacheManager } from '../../cache/cache-manager.js';
 import { hash } from '../../cache/hasher.js';
 import type { ExportConfig } from '../../config/site-config.js';
@@ -67,10 +67,13 @@ export interface ExportStats {
 function resolveExportGlobalPath(raw: string | undefined, cwd: string, field: string): string | undefined {
   if (!raw) return undefined;
   // resolve() normaliza siempre: elimina '..', maneja rutas relativas y absolutas.
-  // Una ruta absoluta con '..' como '/project/../etc/passwd' queda normalizada a '/etc/passwd',
-  // que luego falla el startsWith y se descarta correctamente.
+  // Una ruta absoluta con '..' como '/project/../etc/passwd' queda normalizada a '/etc/passwd'.
   const resolved = resolve(cwd, raw);
-  if (!resolved.startsWith(cwd + '/') && resolved !== cwd) {
+  // Usar relative() en lugar de startsWith() para una verificación cross-platform:
+  // en Windows, cwd usa '\\' y cwd+'/' no coincide con las rutas resueltas.
+  // relative(cwd, resolved) devuelve '' o una ruta sin '..' inicial si resolved está dentro.
+  const rel = relative(cwd, resolved);
+  if (rel.startsWith('..') || isAbsolute(rel)) {
     process.stderr.write(`[export] export.${field}: ruta fuera del proyecto ignorada: "${raw}"\n`);
     return undefined;
   }
