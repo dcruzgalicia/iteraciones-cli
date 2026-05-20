@@ -77,6 +77,35 @@ function resolveExportGlobalPath(raw: string | undefined, cwd: string, field: st
   return resolved;
 }
 
+// Semáforo module-level compartido entre peticiones on-demand concurrentes.
+// Limita las instancias xelatex lanzadas desde exportSingleDocument cuando el
+// usuario abre múltiples PDFs en simultáneo (pestañas, prefetch, recargas).
+// Se inicializa con el primer valor de pdfConcurrency que recibe; si cambia
+// en recargas posteriores del config, el valor inicial sigue vigente.
+let _onDemandXelatexSlots = -1;
+const _onDemandXelatexQueue: Array<() => void> = [];
+
+function acquireOnDemandXelatex(maxSlots: number): Promise<void> {
+  if (_onDemandXelatexSlots < 0) _onDemandXelatexSlots = maxSlots;
+  return new Promise<void>((res) => {
+    if (_onDemandXelatexSlots > 0) {
+      _onDemandXelatexSlots--;
+      res();
+    } else {
+      _onDemandXelatexQueue.push(res);
+    }
+  });
+}
+
+function releaseOnDemandXelatex(): void {
+  const next = _onDemandXelatexQueue.shift();
+  if (next) {
+    next();
+  } else {
+    _onDemandXelatexSlots++;
+  }
+}
+
 export async function runExportDocuments(
   renderedMap: ReadonlyMap<DocumentType, BuildDocument[]>,
   options: ExportRunOptions,
@@ -449,13 +478,22 @@ export async function exportSingleDocument(
 
   const outputPath = join(outputDir, exportDoc.relativePath.replace(/\.md$/, '.pdf'));
 
+  // Adquirir semáforo antes de invocar xelatex para limitar instancias concurrentes.
+  // Varias peticiones HTTP simultáneas (pestañas, prefetch) podrían saturar CPU/RAM
+  // sin esta limitación.
+  const maxSlots = Number.isInteger(config.pdfConcurrency) && config.pdfConcurrency >= 1 ? config.pdfConcurrency : 1;
+  await acquireOnDemandXelatex(maxSlots);
+  let pdfGenerated = false;
   try {
     await convertToPdf(exportDoc, outputPath, config.pdfEngine);
+    pdfGenerated = true;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     process.stderr.write(`[serve] Error generando PDF bajo demanda ${pdfRelPath}: ${msg}\n`);
-    return null;
+  } finally {
+    releaseOnDemandXelatex();
   }
+  if (!pdfGenerated) return null;
 
   // Hook afterExport.
   if (registry) {
