@@ -4,6 +4,7 @@ import { buildListContext } from '../../context/list.js';
 import { buildPageHrefs, buildPaginationContext, paginateItems } from '../../paginate.js';
 import type { AuthorDocumentIndex, BuildDocument } from '../../types.js';
 import { mergeContexts } from './merge.js';
+import { sortByDateDesc } from './sort.js';
 
 /**
  * Aplica los filtros declarados en `doc.frontmatter.filters` sobre `allDocs`.
@@ -32,19 +33,6 @@ function applyListFilters(doc: BuildDocument, allDocs: BuildDocument[]): BuildDo
   }
 
   return result;
-}
-
-/**
- * Ordena documentos por fecha descendente; los que no tienen fecha quedan al final.
- */
-function sortByDateDesc(docs: BuildDocument[]): BuildDocument[] {
-  return [...docs].sort((a, b) => {
-    const rawA = a.frontmatter.date ? new Date(a.frontmatter.date).getTime() : Number.NEGATIVE_INFINITY;
-    const rawB = b.frontmatter.date ? new Date(b.frontmatter.date).getTime() : Number.NEGATIVE_INFINITY;
-    const da = Number.isNaN(rawA) ? Number.NEGATIVE_INFINITY : rawA;
-    const db = Number.isNaN(rawB) ? Number.NEGATIVE_INFINITY : rawB;
-    return db - da;
-  });
 }
 
 /**

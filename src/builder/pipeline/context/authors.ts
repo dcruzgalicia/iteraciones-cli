@@ -3,6 +3,7 @@ import { buildAuthorContext, buildAuthorsContext } from '../../context/authors.j
 import { buildPageHrefs, buildPaginationContext, paginateItems } from '../../paginate.js';
 import type { BuildDocument } from '../../types.js';
 import { mergeContexts } from './merge.js';
+import { sortByDateDesc } from './sort.js';
 
 /**
  * Ordena un array de docs de tipo `author` alfabéticamente por `frontmatter.title`
@@ -28,19 +29,6 @@ function sortByTitleAsc(docs: BuildDocument[]): BuildDocument[] {
 export function buildAuthorPipelineContext(doc: BuildDocument, siteCtx: TemplateContext, renderedFileDocs: BuildDocument[]): TemplateContext {
   const authorCtx = buildAuthorContext(doc, renderedFileDocs);
   return mergeContexts(siteCtx, authorCtx);
-}
-
-/**
- * Ordena publicaciones por fecha descendente; las que no tienen fecha quedan al final.
- */
-function sortByDateDesc(docs: BuildDocument[]): BuildDocument[] {
-  return [...docs].sort((a, b) => {
-    const rawA = a.frontmatter.date ? new Date(a.frontmatter.date).getTime() : Number.NEGATIVE_INFINITY;
-    const rawB = b.frontmatter.date ? new Date(b.frontmatter.date).getTime() : Number.NEGATIVE_INFINITY;
-    const da = Number.isNaN(rawA) ? Number.NEGATIVE_INFINITY : rawA;
-    const db = Number.isNaN(rawB) ? Number.NEGATIVE_INFINITY : rawB;
-    return db - da;
-  });
 }
 
 /**
