@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { exportSingleDocument } from '../builder/export/runner.js';
 import { type BuildOptions, build, type OnDemandExportState } from '../builder/orchestrator.js';
+import type { BuildDocument, DocumentType } from '../builder/types.js';
 import { reportBuildError } from './build-errors.js';
 import { createHttpServer } from './http-server.js';
 import { createLivereloadBroadcaster, LIVERELOAD_SCRIPT } from './livereload.js';
@@ -24,8 +25,24 @@ export async function runServe(cwd: string, port: number, options: { concurrency
 
   // Estado de exportación del último build: se actualiza tras cada rebuild.
   let currentExportState: OnDemandExportState | null = null;
+  // Pool acumulativo de docs renderizados: se fusiona en cada build/rebuild para
+  // preservar docs de tipos no afectados en builds incrementales. En un build
+  // incremental, renderedMap solo contiene los docs re-renderizados; sin este
+  // pool, una petición on-demand a un PDF no re-renderizado devolvería null.
+  const accumulatedRenderedMap = new Map<DocumentType, BuildDocument[]>();
+
   const onExportStateReady = (state: OnDemandExportState): void => {
-    currentExportState = state;
+    // Fusionar renderedMap del build actual en el pool acumulativo:
+    // - Para cada tipo, reemplazar solo los docs que aparecen en el nuevo mapa
+    //   (por relativePath) y conservar los demás del pool anterior.
+    // - En un build completo, newDocs contiene todos los docs del tipo y el
+    //   resultado es equivalente a un reemplazo total.
+    for (const [type, newDocs] of state.renderedMap) {
+      const existing = accumulatedRenderedMap.get(type) ?? [];
+      const newPaths = new Set(newDocs.map((d) => d.relativePath));
+      accumulatedRenderedMap.set(type, [...existing.filter((d) => !newPaths.has(d.relativePath)), ...newDocs]);
+    }
+    currentExportState = { ...state, renderedMap: accumulatedRenderedMap };
   };
 
   const baseOpts: BuildOptions = {
