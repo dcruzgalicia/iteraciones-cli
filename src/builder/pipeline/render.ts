@@ -31,6 +31,8 @@ export async function renderDocuments(
   cwd?: string,
   /** Conjunto mutable donde se acumulan las claves de caché usadas; permite al caller usarlas para prune. */
   collectedKeys?: Set<string>,
+  /** Rutas absolutas a filtros Pandoc Lua que se aplican durante la conversión. */
+  luaFilters?: readonly string[],
 ): Promise<BuildDocument[]> {
   // Memoiza hashes de archivos para no leerlos más de una vez por llamada.
   // Válido para la duración de esta llamada a renderDocuments(); si se invoca
@@ -113,7 +115,7 @@ export async function renderDocuments(
       await registry.runBeforeRender({ sourcePath: doc.filePath, variables: {} });
     }
 
-    let htmlFragment = await convertFragment(doc.body, doc.filePath, pool, bibOptions);
+    let htmlFragment = await convertFragment(doc.body, doc.filePath, pool, bibOptions, luaFilters);
 
     if (registry) {
       const afterCtx = await registry.runAfterRender({ sourcePath: doc.filePath, html: htmlFragment });

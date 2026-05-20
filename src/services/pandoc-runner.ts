@@ -30,19 +30,38 @@ export async function checkPandoc(): Promise<string> {
  * Cuando se pasa `bibOptions`, siempre se usa un subproceso pandoc con `--citeproc`
  * (ignorando el pool), ya que pandoc-server no soporta citeproc con archivos .bib externos.
  *
+ * Cuando se pasan `luaFilters`, siempre se usa un subproceso pandoc con `--lua-filter`
+ * (ignorando el pool), ya que pandoc-server no soporta filtros Lua con acceso al sistema de archivos.
+ *
  * @param content    Contenido Markdown a convertir.
  * @param sourcePath Ruta del archivo fuente (solo para mensajes de error).
  * @param pool       Pool de pandoc-server opcional.
  * @param bibOptions Opciones de bibliografía para procesar citas con citeproc.
+ * @param luaFilters Rutas absolutas a filtros Lua que se aplican durante la conversión.
  */
-export async function convertFragment(content: string, sourcePath: string, pool?: PandocPool, bibOptions?: BibOptions): Promise<string> {
+export async function convertFragment(
+  content: string,
+  sourcePath: string,
+  pool?: PandocPool,
+  bibOptions?: BibOptions,
+  luaFilters?: readonly string[],
+): Promise<string> {
   const args = ['pandoc', '--from', 'markdown', '--to', 'html5', '--no-highlight'];
 
   if (bibOptions) {
     // --citeproc requiere subproceso; pandoc-server no soporta bibliografías externas.
     args.push('--citeproc', '--bibliography', bibOptions.bibliography);
     if (bibOptions.csl) args.push('--csl', bibOptions.csl);
-  } else if (pool) {
+  }
+
+  if (luaFilters && luaFilters.length > 0) {
+    for (const filter of luaFilters) {
+      args.push('--lua-filter', filter);
+    }
+  }
+
+  // Usar pool solo cuando no hay bibOptions ni luaFilters activos.
+  if (!bibOptions && (!luaFilters || luaFilters.length === 0) && pool) {
     return pool.convert(content, sourcePath);
   }
 

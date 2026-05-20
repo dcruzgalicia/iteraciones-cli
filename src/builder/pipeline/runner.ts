@@ -42,6 +42,7 @@ export async function runContextPhaseWithTypeGraph(
   pool?: PandocPool,
   cwd?: string,
   collectedKeys?: Set<string>,
+  luaFilters?: readonly string[],
 ): Promise<ContextPhaseResult> {
   const renderedMap = new Map<DocumentType, BuildDocument[]>(primaryRendered);
   const allContextDocs: BuildDocument[] = [];
@@ -58,7 +59,7 @@ export async function runContextPhaseWithTypeGraph(
     } else {
       // Fase index: renderizar → registrar en mapa → construir pool → construir contextos.
       const docs = allDocs.filter((d) => d.type === spec.type && d.kind !== 'block');
-      const rendered = await renderDocuments(docs, concurrency, renderCache, registry, renderStats, pool, cwd, collectedKeys);
+      const rendered = await renderDocuments(docs, concurrency, renderCache, registry, renderStats, pool, cwd, collectedKeys, luaFilters);
       renderedMap.set(spec.type, rendered);
       const pool2 = spec.buildPool(renderedMap);
       const contextDocs = rendered.flatMap((doc) => spec.buildPageContexts(doc, siteCtx, pool2, authorIndex, listItemsLimit));
