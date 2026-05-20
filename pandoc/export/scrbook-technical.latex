@@ -11,7 +11,7 @@
 
 % ─── Idioma ──────────────────────────────────────────────────────────────────
 $if(lang)$
-\usepackage[babelshorthands=false]{babel}
+\usepackage{babel}
 \babelprovide[main, import]{$lang$}
 $endif$
 
