@@ -14,7 +14,7 @@ import type { TemplateContext } from '../template/render/context.js';
 import { buildAssets } from './assets.js';
 import { createAuthorDocumentIndex } from './context/authors.js';
 import { buildSiteContext } from './context/site.js';
-import { type ExportStats, injectDownloadLinks, runExportDocuments } from './export/runner.js';
+import { type ExportRunOptions, type ExportStats, injectDownloadLinks, runExportDocuments } from './export/runner.js';
 import { buildDocumentGraph } from './graph-exporter.js';
 import { escapeHtml } from './html.js';
 import { classifyDocuments } from './pipeline/classify.js';
@@ -26,6 +26,15 @@ import { runContextPhaseWithTypeGraph } from './pipeline/runner.js';
 import { TYPE_STAGE_MAP, VALID_TYPES } from './pipeline/type-graph.js';
 import { writeDocuments } from './pipeline/write.js';
 import type { AuthorDocumentIndex, BuildContext, BuildDocument, DocumentKind, DocumentType } from './types.js';
+
+/**
+ * Estado capturado después del build para permitir exportación on-demand en serve mode.
+ * Contiene el renderedMap con todos los documentos procesados y las opciones de exportación.
+ */
+export interface OnDemandExportState {
+  renderedMap: ReadonlyMap<DocumentType, BuildDocument[]>;
+  exportOptions: ExportRunOptions;
+}
 
 export interface BuildOptions {
   outputDir?: string;
@@ -45,6 +54,13 @@ export interface BuildOptions {
   incremental?: boolean;
   /** Rutas relativas de archivos modificados; limita el pipeline a docs afectados. */
   changedPaths?: Set<string>;
+  /**
+   * Callback invocado con el estado necesario para exportación on-demand después de que
+   * renderedMap esté listo. Solo se llama si el proyecto tiene `export` configurado.
+   * Permite a serve.ts capturar el contexto para generar PDFs bajo demanda sin activar
+   * la exportación completa (noExport sigue teniendo efecto).
+   */
+  onExportStateReady?: (state: OnDemandExportState) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -602,6 +618,26 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     // En modo incremental, pasar solo los docs afectados a compose/write para evitar
     // reprocesar documentos que no cambiaron.
     const finalContextDocs = affectedPaths ? allContextDocs.filter((d) => affectedPaths.has(d.relativePath)) : allContextDocs;
+
+    // Notificar el estado de exportación on-demand (sirve a serve.ts para PDF bajo demanda).
+    // Se invoca siempre que haya export configurado, independientemente de noExport.
+    if (options.onExportStateReady && ctx.siteConfig.export) {
+      options.onExportStateReady({
+        renderedMap,
+        exportOptions: {
+          config: ctx.siteConfig.export,
+          outputDir: ctx.outputDir,
+          cwd,
+          lang: ctx.siteConfig.lang,
+          concurrency: ctx.concurrency ?? 4,
+          cliVersion,
+          pandocVersion,
+          cacheManager: options.noCache ? undefined : cacheManager,
+          registry: hasPlugins ? registry : undefined,
+          pluginFingerprint,
+        },
+      });
+    }
 
     // Paso de exportación: genera PDF/EPUB si está configurado y no se pasó --no-export.
     const exportStats: ExportStats = { totalEpub: 0, totalPdf: 0, cacheHitsEpub: 0, cacheHitsPdf: 0 };
