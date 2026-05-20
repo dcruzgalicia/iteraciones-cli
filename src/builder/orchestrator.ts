@@ -143,7 +143,10 @@ async function computePluginFingerprint(plugins: string[], cwd: string): Promise
   for (const pluginId of plugins) {
     hasher.update(pluginId);
     hasher.update('\0');
-    if (isAbsolute(pluginId) || pluginId.startsWith('./') || pluginId.startsWith('../')) {
+    const isLocalPath = isAbsolute(pluginId) || pluginId.startsWith('./') || pluginId.startsWith('../');
+    // Los filtros Lua sin prefijo de ruta también son archivos locales (se resuelven desde cwd en resolveLuaFilter).
+    const isSimpleLua = !isLocalPath && pluginId.endsWith('.lua');
+    if (isLocalPath || isSimpleLua) {
       const pluginPath = isAbsolute(pluginId) ? pluginId : resolve(cwd, pluginId);
       const content = await Bun.file(pluginPath)
         .text()
