@@ -56,6 +56,27 @@ export interface ExportStats {
  * @param renderedMap  Mapa de todos los docs renderizados por tipo (completo, post context-phase).
  * @param options      Configuración de exportación y opciones de runtime.
  */
+
+/**
+ * Resuelve y valida una ruta de configuración global (bibliography, csl) dentro del proyecto.
+ *
+ * Normaliza la ruta con `resolve()` para eliminar `..` y rutas relativas, y verifica que
+ * quede dentro de `cwd`. Emite un aviso por stderr y retorna `undefined` si la ruta es
+ * exterior al proyecto. Compartida entre `runExportDocuments` y `exportSingleDocument`.
+ */
+function resolveExportGlobalPath(raw: string | undefined, cwd: string, field: string): string | undefined {
+  if (!raw) return undefined;
+  // resolve() normaliza siempre: elimina '..', maneja rutas relativas y absolutas.
+  // Una ruta absoluta con '..' como '/project/../etc/passwd' queda normalizada a '/etc/passwd',
+  // que luego falla el startsWith y se descarta correctamente.
+  const resolved = resolve(cwd, raw);
+  if (!resolved.startsWith(cwd + '/') && resolved !== cwd) {
+    process.stderr.write(`[export] export.${field}: ruta fuera del proyecto ignorada: "${raw}"\n`);
+    return undefined;
+  }
+  return resolved;
+}
+
 export async function runExportDocuments(
   renderedMap: ReadonlyMap<DocumentType, BuildDocument[]>,
   options: ExportRunOptions,
@@ -91,21 +112,8 @@ export async function runExportDocuments(
   // Resolver y validar rutas globales de bibliography y csl desde ExportConfig.
   // Las rutas vienen de _iteraciones.yaml (confiables), pero igualmente se verifica
   // que queden dentro del proyecto para ser consistentes con la validación de frontmatter.
-  // resolve() normaliza siempre: elimina '..', resuelve rutas relativas y absolutas.
-  const resolveGlobalPath = (raw: string | undefined, field: string): string | undefined => {
-    if (!raw) return undefined;
-    // resolve() normaliza siempre: elimina '..', maneja rutas relativas y absolutas.
-    // Una ruta absoluta con '..' como '/project/../etc/passwd' queda normalizada a '/etc/passwd',
-    // que luego falla el startsWith y se descarta correctamente.
-    const resolved = resolve(cwd, raw);
-    if (!resolved.startsWith(cwd + '/') && resolved !== cwd) {
-      process.stderr.write(`[export] export.${field}: ruta fuera del proyecto ignorada: "${raw}"\n`);
-      return undefined;
-    }
-    return resolved;
-  };
-  const globalBibliography = resolveGlobalPath(config.bibliography, 'bibliography');
-  const globalCsl = resolveGlobalPath(config.csl, 'csl');
+  const globalBibliography = resolveExportGlobalPath(config.bibliography, cwd, 'bibliography');
+  const globalCsl = resolveExportGlobalPath(config.csl, cwd, 'csl');
 
   // Hash del archivo .bib global (si existe) para invalidar caché cuando cambia.
   let bibHash = '';
@@ -417,14 +425,9 @@ export async function exportSingleDocument(
     items = resolveEventsForExport(targetDoc, eventPool);
   }
 
-  // Resolver rutas globales de bibliography y csl.
-  const resolveGlobalPath = (raw: string | undefined): string | undefined => {
-    if (!raw) return undefined;
-    const resolved = resolve(cwd, raw);
-    return resolved.startsWith(cwd + '/') || resolved === cwd ? resolved : undefined;
-  };
-  const globalBibliography = resolveGlobalPath(config.bibliography);
-  const globalCsl = resolveGlobalPath(config.csl);
+  // Resolver rutas globales de bibliography y csl (reutiliza el helper compartido, con aviso).
+  const globalBibliography = resolveExportGlobalPath(config.bibliography, cwd, 'bibliography');
+  const globalCsl = resolveExportGlobalPath(config.csl, cwd, 'csl');
 
   const rawExportDoc = assembleExportDocument(targetDoc, items, lang, cwd, globalBibliography, globalCsl, config.template);
   if (!rawExportDoc) return null;
