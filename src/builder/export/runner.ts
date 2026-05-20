@@ -360,3 +360,104 @@ export function injectDownloadLinks(docs: BuildDocument[], exportResults: Export
     return { ...doc, templateContext: { ...doc.templateContext, ...extra } };
   });
 }
+
+/**
+ * Exporta un único documento a PDF bajo demanda (serve mode).
+ *
+ * Busca en `renderedMap` el documento cuyo `relativePath` (con extensión `.md`)
+ * coincide con `pdfRelPath` (extensión `.pdf`) y genera el PDF en `outputDir`.
+ *
+ * @param pdfRelPath  Ruta relativa del PDF pedido (ej: `notas/foo.pdf`).
+ * @param renderedMap Mapa de documentos renderizados del último build.
+ * @param options     Opciones de exportación (config, outputDir, cwd, etc.).
+ * @returns           Ruta absoluta del PDF generado, o null si el documento
+ *                    no existe, no es exportable, o la exportación falla.
+ */
+export async function exportSingleDocument(
+  pdfRelPath: string,
+  renderedMap: ReadonlyMap<DocumentType, BuildDocument[]>,
+  options: ExportRunOptions,
+): Promise<string | null> {
+  const { config, outputDir, cwd, lang, registry } = options;
+
+  if (!config.formats.includes('pdf')) return null;
+
+  // Derivar la ruta .md esperada del documento fuente.
+  const expectedRelPath = pdfRelPath.replace(/\.pdf$/, '.md');
+
+  // Buscar el documento en todos los tipos exportables del renderedMap.
+  let targetDoc: BuildDocument | undefined;
+  for (const type of EXPORTABLE_TYPES) {
+    targetDoc = (renderedMap.get(type) ?? []).find((d) => d.kind !== 'block' && d.relativePath === expectedRelPath);
+    if (targetDoc) break;
+  }
+  if (!targetDoc) return null;
+
+  // Respetar export: { skip: true } en el frontmatter del documento.
+  const rawExportField = targetDoc.frontmatter['export'];
+  if (
+    typeof rawExportField === 'object' &&
+    rawExportField !== null &&
+    !Array.isArray(rawExportField) &&
+    Object.getPrototypeOf(rawExportField) === Object.prototype &&
+    (rawExportField as Record<string, unknown>)['skip'] === true
+  ) {
+    return null;
+  }
+
+  // Resolver items para tipos colección/eventos.
+  const itemPool = [...(renderedMap.get('file') ?? []), ...(renderedMap.get('author') ?? []), ...(renderedMap.get('event') ?? [])];
+  const eventPool = renderedMap.get('event') ?? [];
+  let items: BuildDocument[] = [];
+  if (targetDoc.type === 'collection') {
+    items = resolveItemsForExport(targetDoc, itemPool);
+  } else if (targetDoc.type === 'events') {
+    items = resolveEventsForExport(targetDoc, eventPool);
+  }
+
+  // Resolver rutas globales de bibliography y csl.
+  const resolveGlobalPath = (raw: string | undefined): string | undefined => {
+    if (!raw) return undefined;
+    const resolved = resolve(cwd, raw);
+    return resolved.startsWith(cwd + '/') || resolved === cwd ? resolved : undefined;
+  };
+  const globalBibliography = resolveGlobalPath(config.bibliography);
+  const globalCsl = resolveGlobalPath(config.csl);
+
+  const rawExportDoc = assembleExportDocument(targetDoc, items, lang, cwd, globalBibliography, globalCsl, config.template);
+  if (!rawExportDoc) return null;
+
+  // Hook beforeExport.
+  let exportDoc = rawExportDoc;
+  if (registry) {
+    const beforeCtx = await registry.runBeforeExport({
+      sourcePath: rawExportDoc.filePath,
+      body: rawExportDoc.body,
+      metadata: rawExportDoc.metadata as unknown as Record<string, unknown>,
+    });
+    exportDoc = {
+      ...rawExportDoc,
+      body: beforeCtx.body,
+      metadata: { ...rawExportDoc.metadata, ...(beforeCtx.metadata as Partial<ExportMetadata>) },
+    };
+  }
+
+  const outputPath = join(outputDir, exportDoc.relativePath.replace(/\.md$/, '.pdf'));
+
+  try {
+    await convertToPdf(exportDoc, outputPath, config.pdfEngine);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`[serve] Error generando PDF bajo demanda ${pdfRelPath}: ${msg}\n`);
+    return null;
+  }
+
+  // Hook afterExport.
+  if (registry) {
+    const pdfData = await Bun.file(outputPath).arrayBuffer();
+    const afterCtx = await registry.runAfterExport({ sourcePath: exportDoc.filePath, format: 'pdf', data: new Uint8Array(pdfData) });
+    await Bun.write(outputPath, afterCtx.data);
+  }
+
+  return outputPath;
+}

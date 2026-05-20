@@ -1,5 +1,6 @@
 import { join } from 'node:path';
-import { type BuildOptions, build } from '../builder/orchestrator.js';
+import { exportSingleDocument } from '../builder/export/runner.js';
+import { type BuildOptions, build, type OnDemandExportState } from '../builder/orchestrator.js';
 import { reportBuildError } from './build-errors.js';
 import { createHttpServer } from './http-server.js';
 import { createLivereloadBroadcaster, LIVERELOAD_SCRIPT } from './livereload.js';
@@ -18,11 +19,20 @@ export async function runServe(cwd: string, port: number, options: { concurrency
   const distDir = join(cwd, 'dist/web');
   // La exportación PDF/EPUB se desactiva siempre en modo serve: xelatex tarda
   // 15–60s por documento, haciendo los rebuilds inutilizables en watch mode.
-  // Para generar exportaciones, usar `iteraciones build` fuera del serve.
+  // Para generar exportaciones completas, usar `iteraciones build` fuera del serve.
+  // La exportación on-demand individual se activa cuando el usuario navega a un .pdf.
+
+  // Estado de exportación del último build: se actualiza tras cada rebuild.
+  let currentExportState: OnDemandExportState | null = null;
+  const onExportStateReady = (state: OnDemandExportState): void => {
+    currentExportState = state;
+  };
+
   const baseOpts: BuildOptions = {
     concurrency: options.concurrency,
     verbose: options.verbose,
     noExport: true,
+    onExportStateReady,
   };
   const incrementalOpts: BuildOptions = { ...baseOpts, incremental: true };
 
@@ -39,8 +49,14 @@ export async function runServe(cwd: string, port: number, options: { concurrency
   const broadcaster = createLivereloadBroadcaster();
 
   // ── Servidor HTTP ──────────────────────────────────────────────────────────
-  const server = createHttpServer(distDir, broadcaster.handleRequest, (html) =>
-    html.includes('</body>') ? html.replace('</body>', `${LIVERELOAD_SCRIPT}</body>`) : html + LIVERELOAD_SCRIPT,
+  const server = createHttpServer(
+    distDir,
+    broadcaster.handleRequest,
+    (html) => (html.includes('</body>') ? html.replace('</body>', `${LIVERELOAD_SCRIPT}</body>`) : html + LIVERELOAD_SCRIPT),
+    async (pdfRelPath: string): Promise<string | null> => {
+      if (!currentExportState) return null;
+      return exportSingleDocument(pdfRelPath, currentExportState.renderedMap, currentExportState.exportOptions);
+    },
   );
 
   await new Promise<void>((resolve, reject) => {

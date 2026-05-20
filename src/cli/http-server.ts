@@ -12,6 +12,8 @@ const MIME: Record<string, string> = {
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
+  '.pdf': 'application/pdf',
+  '.epub': 'application/epub+zip',
   '.woff2': 'font/woff2',
   '.woff': 'font/woff',
   '.ttf': 'font/ttf',
@@ -24,6 +26,8 @@ const MIME: Record<string, string> = {
  * - Las respuestas HTML pasan por `injectHtml` antes de enviarse al cliente.
  * - Previene path traversal verificando que la ruta resuelta esté dentro
  *   de `distDir` antes de leer cualquier fichero.
+ * - Si `generatePdf` está definida, las peticiones a `.pdf` inexistentes
+ *   disparan la exportación on-demand y sirven el resultado.
  *
  * @returns Instancia de `Server` (aún sin escuchar).
  */
@@ -31,6 +35,7 @@ export function createHttpServer(
   distDir: string,
   handleLivereload: (req: IncomingMessage, res: ServerResponse) => void,
   injectHtml: (html: string) => string,
+  generatePdf?: (pdfRelPath: string) => Promise<string | null>,
 ): Server {
   const normalizedDist = resolve(distDir);
 
@@ -64,6 +69,19 @@ export function createHttpServer(
       }
 
       if (!existsSync(filePath)) {
+        // Exportación PDF bajo demanda: si se pide un .pdf que no existe y hay
+        // un generador disponible, disparar la exportación individual y servirla.
+        if (extname(filePath).toLowerCase() === '.pdf' && generatePdf) {
+          const pdfRelPath = relative(distDir, filePath);
+          process.stdout.write(`serve: generando PDF bajo demanda — ${pdfRelPath}\n`);
+          const generated = await generatePdf(pdfRelPath);
+          if (generated && existsSync(generated)) {
+            const content = await readFile(generated);
+            res.writeHead(200, { 'Content-Type': 'application/pdf' });
+            res.end(content);
+            return;
+          }
+        }
         res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
         res.end(`404 — ${relative(distDir, filePath)} no encontrado`);
         return;
