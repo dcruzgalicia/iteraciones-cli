@@ -36,7 +36,7 @@ export function resolveAuthorHref(authors: string[], index: AuthorDocumentIndex 
  * La coincidencia es case-insensitive: se compara cada nombre en el array author
  * con el título del documento autor.
  */
-export function buildAuthorContext(doc: BuildDocument, fileDocs: BuildDocument[]): TemplateContext {
+export function buildAuthorContext(doc: BuildDocument, fileDocs: BuildDocument[], paginationCtx?: Record<string, unknown>): TemplateContext {
   const authorName = normalizeForComparison(doc.frontmatter.title);
 
   const matched = authorName ? fileDocs.filter((file) => file.frontmatter.author.some((a) => normalizeForComparison(a) === authorName)) : [];
@@ -56,6 +56,7 @@ export function buildAuthorContext(doc: BuildDocument, fileDocs: BuildDocument[]
     body: doc.htmlFragment ?? '',
     'list-items': listItems,
     count: listItems.length,
+    ...paginationCtx,
   };
 }
 
