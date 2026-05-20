@@ -1,6 +1,11 @@
 import { buildRelatedAuthorsContext } from '../context/authors.js';
 import type { DocumentType } from '../types.js';
-import { buildAuthorPipelineContext, buildAuthorsPipelineContext, buildPagedAuthorsPipelineContexts } from './context/authors.js';
+import {
+  buildAuthorPipelineContext,
+  buildAuthorsPipelineContext,
+  buildPagedAuthorPipelineContexts,
+  buildPagedAuthorsPipelineContexts,
+} from './context/authors.js';
 import { buildCardPipelineContext } from './context/card.js';
 import { buildCollectionPipelineContext, buildPagedCollectionPipelineContexts } from './context/collection.js';
 import { buildEventPipelineContext, buildEventsPipelineContext, buildPagedEventsPipelineContexts } from './context/event.js';
@@ -43,10 +48,10 @@ export const TYPE_STAGES: TypeStageSpec[] = [
     type: 'author',
     phase: 'primary',
     canBeBlock: true,
-    paginated: false,
+    paginated: true,
     // Pool de páginas: docs tipo file (para listar publicaciones del autor).
     buildPool: (rendered) => [...(rendered.get('file') ?? [])],
-    buildPageContexts: (doc, siteCtx, pool, _authorIndex) => [{ ...doc, templateContext: buildAuthorPipelineContext(doc, siteCtx, pool) }],
+    buildPageContexts: (doc, siteCtx, pool, _authorIndex, limit) => buildPagedAuthorPipelineContexts(doc, siteCtx, pool, limit),
     buildBlockContext: (doc, siteCtx, primaryRendered, _authorIndex) => buildAuthorPipelineContext(doc, siteCtx, primaryRendered.get('file') ?? []),
   },
 

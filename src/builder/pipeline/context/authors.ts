@@ -31,6 +31,47 @@ export function buildAuthorPipelineContext(doc: BuildDocument, siteCtx: Template
 }
 
 /**
+ * Ordena publicaciones por fecha descendente; las que no tienen fecha quedan al final.
+ */
+function sortByDateDesc(docs: BuildDocument[]): BuildDocument[] {
+  return [...docs].sort((a, b) => {
+    const rawA = a.frontmatter.date ? new Date(a.frontmatter.date).getTime() : Number.NEGATIVE_INFINITY;
+    const rawB = b.frontmatter.date ? new Date(b.frontmatter.date).getTime() : Number.NEGATIVE_INFINITY;
+    const da = Number.isNaN(rawA) ? Number.NEGATIVE_INFINITY : rawA;
+    const db = Number.isNaN(rawB) ? Number.NEGATIVE_INFINITY : rawB;
+    return db - da;
+  });
+}
+
+/**
+ * Genera un `BuildDocument` por página para un documento de tipo `author`.
+ *
+ * Filtra `renderedFileDocs` por el nombre del autor, los ordena por fecha
+ * descendente y los divide en páginas de `limit` items. Por cada página produce
+ * un doc derivado con `relativePath` ajustado y variables de paginación en el
+ * `templateContext`.
+ */
+export function buildPagedAuthorPipelineContexts(
+  doc: BuildDocument,
+  siteCtx: TemplateContext,
+  renderedFileDocs: BuildDocument[],
+  limit: number,
+): BuildDocument[] {
+  const authorName = doc.frontmatter.title.trim().toLowerCase();
+  const matched = authorName ? renderedFileDocs.filter((file) => file.frontmatter.author.some((a) => a.trim().toLowerCase() === authorName)) : [];
+  const sorted = sortByDateDesc(matched);
+  const pages = paginateItems(sorted, limit, doc.relativePath);
+  const pageHrefs = buildPageHrefs(doc.relativePath, pages.length);
+
+  return pages.map((page) => {
+    const paginationCtx = buildPaginationContext(page, pageHrefs);
+    const authorCtx = buildAuthorContext(doc, page.items, paginationCtx);
+    const templateContext = mergeContexts(siteCtx, authorCtx);
+    return { ...doc, relativePath: page.pageRelativePath, templateContext };
+  });
+}
+
+/**
  * Construye el TemplateContext completo para un documento de tipo `authors`,
  * combinando el contexto del sitio con el contexto del índice de autores.
  *
