@@ -65,6 +65,8 @@ interface SetupResult {
   pandocVersion: string;
   /** Hash del contenido de los plugins activos para invalidar cachés cuando cambian. */
   pluginFingerprint: string | undefined;
+  /** Rutas absolutas a filtros Pandoc Lua declarados en la configuración. */
+  luaFilters: string[];
 }
 
 interface PrimaryRenderResult {
@@ -161,7 +163,7 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
   const pandocVersion = await checkPandoc();
   const siteConfig = await loadSiteConfig(cwd);
 
-  const plugins = await loadPlugins(siteConfig.plugins, cwd);
+  const { plugins, luaFilters } = await loadPlugins(siteConfig.plugins, cwd);
   const registry = new PluginRegistry();
   for (const plugin of plugins) registry.register(plugin);
 
@@ -201,6 +203,7 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
     cliVersion: pkg.version,
     pandocVersion,
     pluginFingerprint,
+    luaFilters,
   };
 }
 
@@ -247,18 +250,39 @@ async function runPrimaryRender(
   pool?: PandocPool,
   cwd?: string,
   collectedKeys?: Set<string>,
+  luaFilters?: readonly string[],
 ): Promise<PrimaryRenderResult> {
   const fileDocs = allDocs.filter((doc) => doc.type === 'file' && doc.kind !== 'block');
-  const renderedFileDocs = await renderDocuments(fileDocs, ctx.concurrency ?? 4, renderCache, registry, stats, pool, cwd, collectedKeys);
+  const renderedFileDocs = await renderDocuments(fileDocs, ctx.concurrency ?? 4, renderCache, registry, stats, pool, cwd, collectedKeys, luaFilters);
 
   const authorDocs = allDocs.filter((doc) => doc.type === 'author' && doc.kind !== 'block');
-  const renderedAuthorDocs = await renderDocuments(authorDocs, ctx.concurrency ?? 4, renderCache, registry, stats, pool, cwd, collectedKeys);
+  const renderedAuthorDocs = await renderDocuments(
+    authorDocs,
+    ctx.concurrency ?? 4,
+    renderCache,
+    registry,
+    stats,
+    pool,
+    cwd,
+    collectedKeys,
+    luaFilters,
+  );
   // Índice de autores por título normalizado (lowercase). Se construye aquí para que
   // esté disponible antes del pre-paso de bloques y del paso de contexto de páginas.
   const authorDocumentIndex = createAuthorDocumentIndex(renderedAuthorDocs);
 
   const eventDocs = allDocs.filter((doc) => doc.type === 'event' && doc.kind !== 'block');
-  const renderedEventDocs = await renderDocuments(eventDocs, ctx.concurrency ?? 4, renderCache, registry, stats, pool, cwd, collectedKeys);
+  const renderedEventDocs = await renderDocuments(
+    eventDocs,
+    ctx.concurrency ?? 4,
+    renderCache,
+    registry,
+    stats,
+    pool,
+    cwd,
+    collectedKeys,
+    luaFilters,
+  );
 
   return { renderedFileDocs, renderedAuthorDocs, renderedEventDocs, authorDocumentIndex };
 }
@@ -285,9 +309,20 @@ async function runBlocksPrestep(
   pool?: PandocPool,
   cwd?: string,
   collectedKeys?: Set<string>,
+  luaFilters?: readonly string[],
 ): Promise<BlocksPrestepResult> {
   const allBlockDocs = allDocs.filter((doc) => doc.kind === 'block');
-  const renderedBlockDocs = await renderDocuments(allBlockDocs, ctx.concurrency ?? 4, renderCache, registry, stats, pool, cwd, collectedKeys);
+  const renderedBlockDocs = await renderDocuments(
+    allBlockDocs,
+    ctx.concurrency ?? 4,
+    renderCache,
+    registry,
+    stats,
+    pool,
+    cwd,
+    collectedKeys,
+    luaFilters,
+  );
   const contextBlockDocs = renderedBlockDocs.map((doc) => {
     const spec = doc.type ? TYPE_STAGE_MAP.get(doc.type) : undefined;
     if (!spec) {
@@ -421,7 +456,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const renderStats: RenderStats = { total: 0, cacheHits: 0 };
   const composeStats: ComposeStats = { total: 0, cacheHits: 0 };
 
-  const { ctx, cacheManager, renderCache, composeCache, registry, hasPlugins, pandocPool, cliVersion, pandocVersion, pluginFingerprint } =
+  const { ctx, cacheManager, renderCache, composeCache, registry, hasPlugins, pandocPool, cliVersion, pandocVersion, pluginFingerprint, luaFilters } =
     await setupBuildEnvironment(cwd, options, log);
   try {
     // Hook beforeBuild: ejecutado antes de descubrir o procesar ningún documento.
@@ -512,6 +547,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       pandocPool,
       cwd,
       renderUsedKeys,
+      luaFilters,
     );
     const primaryRendered = new Map<DocumentType, BuildDocument[]>([
       ['file', renderedFileDocs],
@@ -541,6 +577,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       pandocPool,
       cwd,
       renderUsedKeys,
+      luaFilters,
     );
     const { allContextDocs, renderedMap } = await runContextPhaseWithTypeGraph(
       pipelineDocs,
@@ -554,6 +591,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       pandocPool,
       cwd,
       renderUsedKeys,
+      luaFilters,
     );
     // t2 se mide después del context phase para que pandocMs cubra todos los pasos
     // de renderizado: primary, blocks e índices (collection, authors, events, list).
