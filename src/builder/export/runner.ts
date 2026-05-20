@@ -382,8 +382,10 @@ export async function exportSingleDocument(
 
   if (!config.formats.includes('pdf')) return null;
 
-  // Derivar la ruta .md esperada del documento fuente.
-  const expectedRelPath = pdfRelPath.replace(/\.pdf$/, '.md');
+  // Normalizar separadores (forward slashes) y derivar la ruta .md esperada.
+  // El reemplazo es case-insensitive para tolerar URLs con .PDF o .Pdf.
+  const normalizedPdfRelPath = pdfRelPath.replace(/\\/g, '/');
+  const expectedRelPath = normalizedPdfRelPath.replace(/\.pdf$/i, '.md');
 
   // Buscar el documento en todos los tipos exportables del renderedMap.
   let targetDoc: BuildDocument | undefined;
