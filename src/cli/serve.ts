@@ -39,6 +39,7 @@ export async function runServe(cwd: string, port: number, options: { concurrency
   // ── Build inicial ───────────────────────────────────────────────────────────────────
   process.stdout.write('serve: build inicial… (exportación PDF/EPUB desactivada en watch mode)\n');
   try {
+    currentExportState = null;
     await build(cwd, baseOpts);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
@@ -75,6 +76,7 @@ export async function runServe(cwd: string, port: number, options: { concurrency
     const list = [...changedFiles].join(', ');
     process.stdout.write(`serve: cambio detectado en ${list} — reconstruyendo…\n`);
     try {
+      currentExportState = null;
       await build(cwd, { ...incrementalOpts, changedPaths: changedFiles });
       process.stdout.write('serve: rebuild completado\n');
       broadcaster.notify();
