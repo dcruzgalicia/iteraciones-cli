@@ -72,7 +72,9 @@ export function createHttpServer(
         // Exportación PDF bajo demanda: si se pide un .pdf que no existe y hay
         // un generador disponible, disparar la exportación individual y servirla.
         if (extname(filePath).toLowerCase() === '.pdf' && generatePdf) {
-          const pdfRelPath = relative(distDir, filePath);
+          // Normalizar a forward slashes: `relative()` usa '\\' en Windows,
+          // pero BuildDocument.relativePath siempre usa '/'.
+          const pdfRelPath = relative(distDir, filePath).replace(/\\/g, '/');
           process.stdout.write(`serve: generando PDF bajo demanda — ${pdfRelPath}\n`);
           const generated = await generatePdf(pdfRelPath);
           if (generated && existsSync(generated)) {
