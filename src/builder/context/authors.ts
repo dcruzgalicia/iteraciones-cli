@@ -45,8 +45,8 @@ export function buildAuthorContext(doc: BuildDocument, fileDocs: BuildDocument[]
     href: `/${file.relativePath.replace(/\.md$/, '.html')}`,
     title: file.frontmatter.title,
     author: file.frontmatter.author.join(', '),
-    body: file.htmlFragment ?? '',
     date: file.frontmatter.date,
+    ...(file.frontmatter.abstract !== undefined && { abstract: file.frontmatter.abstract }),
   }));
 
   return {
@@ -74,7 +74,7 @@ export function buildAuthorsContext(doc: BuildDocument, authorDocs: BuildDocumen
   const authors = authorDocs.map((authorDoc) => ({
     href: `/${authorDoc.relativePath.replace(/\.md$/, '.html')}`,
     title: authorDoc.frontmatter.title,
-    body: authorDoc.htmlFragment ?? '',
+    ...(authorDoc.frontmatter.abstract !== undefined && { abstract: authorDoc.frontmatter.abstract }),
   }));
 
   return {

@@ -36,9 +36,9 @@ export function buildListContext(
       href: `/${item.relativePath.replace(/\.md$/, '.html')}`,
       title: item.frontmatter.title,
       author: item.frontmatter.author.join(', '),
-      body: item.htmlFragment ?? '',
       'author-href': authorHref,
       date: item.frontmatter.date,
+      ...(item.frontmatter.abstract !== undefined && { abstract: item.frontmatter.abstract }),
     };
   });
 

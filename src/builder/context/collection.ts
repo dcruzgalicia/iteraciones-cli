@@ -38,8 +38,8 @@ export function buildCollectionContext(
       title: item.frontmatter.title,
       author: item.frontmatter.author.join(', '),
       'author-href': authorHref,
-      body: item.htmlFragment ?? '',
       date: item.frontmatter.date,
+      ...(item.frontmatter.abstract !== undefined && { abstract: item.frontmatter.abstract }),
     };
   });
 
