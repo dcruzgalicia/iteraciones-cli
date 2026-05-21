@@ -30,7 +30,7 @@ export function resolveAuthorHref(authors: string[], index: AuthorDocumentIndex 
  *   pagetitle  → frontmatter.title del documento autor
  *   author     → frontmatter.author del documento autor (unido con ', ')
  *   body       → htmlFragment del documento autor (bio opcional)
- *   list-items → publicaciones (tipo 'file') cuyo frontmatter.author incluye el título del autor: { href, title, author, body, date, abstract? }
+ *   list-items → publicaciones (tipo 'file') cuyo frontmatter.author incluye el título del autor: { href, title, author, body: '' (shadow), date, abstract? }
  *   count      → número de publicaciones
  *
  * La coincidencia es case-insensitive: se compara cada nombre en el array author
@@ -45,7 +45,7 @@ export function buildAuthorContext(doc: BuildDocument, fileDocs: BuildDocument[]
     href: `/${file.relativePath.replace(/\.md$/, '.html')}`,
     title: file.frontmatter.title,
     author: file.frontmatter.author.join(', '),
-    body: file.htmlFragment ?? '',
+    body: '',
     date: file.frontmatter.date,
     ...(file.frontmatter.abstract !== undefined && { abstract: file.frontmatter.abstract }),
   }));
