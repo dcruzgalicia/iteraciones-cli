@@ -11,7 +11,7 @@ import { resolveAuthorHref } from './authors.js';
  *   pagetitle      → frontmatter.title del documento lista
  *   author         → frontmatter.author del documento lista
  *   body           → htmlFragment del documento lista (introducción opcional)
- *   list-items     → array de { href, title, author, body, date, author-href? } para cada item de la página
+ *   list-items     → array de { href, title, author, date, author-href?, abstract? } para cada item de la página
  *   count          → número de items en la página actual
  *   has-pagination → true cuando hay más de una página (desde paginationCtx)
  *   page-number    → número de página actual, 1-indexed (desde paginationCtx)
@@ -21,7 +21,7 @@ import { resolveAuthorHref } from './authors.js';
  *   page-next      → { href } de la página siguiente, si existe (desde paginationCtx)
  *
  * Precondición: los `items` provienen de una página de `paginateItems(renderedFileDocs, ...)`;
- * `htmlFragment` está disponible en cada item. `paginationCtx` es el resultado de
+ * `htmlFragment` está disponible en `doc` (para la introducción opcional). `paginationCtx` es el resultado de
  * `buildPaginationContext` y se omite cuando hay una sola página.
  */
 export function buildListContext(

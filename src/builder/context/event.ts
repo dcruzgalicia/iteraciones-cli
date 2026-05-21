@@ -112,7 +112,7 @@ export function splitAndSortEventsByDate(
  *   pagetitle      → frontmatter.title
  *   author         → frontmatter.author
  *   body           → htmlFragment del documento (introducción opcional)
- *   list-items     → array de todos los eventos del pool: { href, title, date, body, time?, location?, modality?, author? }
+ *   list-items     → array de todos los eventos del pool: { href, title, date, time?, location?, modality?, author?, abstract? }
  *   upcoming-items → subset de eventos con date >= buildDate, ordenados ascendente (próximos primero)
  *   past-items     → subset de eventos con date < buildDate, ordenados descendente (más recientes primero)
  *   count          → número de eventos en list-items
