@@ -44,12 +44,14 @@
         $endif$ $if(abstract)$
         <div class="mt-1 pl-4 text-sm leading-relaxed text-zinc-600">
           $abstract$
-        </div>        $endif$ $if(keywords)$
+        </div>
+        $endif$ $if(keywords)$
         <div class="mt-2 pl-4 flex flex-wrap gap-1">
           $for(keywords)$
           <span class="rounded-full border border-accent-300 bg-accent-50 px-2 py-0.5 font-mono text-[10px] text-accent-700">$keywords$</span>
           $endfor$
-        </div>        $endif$
+        </div>
+        $endif$
       </div>
       <div class="shrink-0 font-mono text-xs text-zinc-500">
         $date$
