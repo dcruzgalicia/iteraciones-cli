@@ -135,3 +135,27 @@ export async function checkLatexEngine(engine: 'xelatex' | 'lualatex' = 'xelatex
     };
   }
 }
+
+export async function checkPdftoppm(): Promise<CheckResult> {
+  try {
+    const proc = Bun.spawn(['pdftoppm', '-v'], { stdout: 'pipe', stderr: 'pipe' });
+    const exitCode = await proc.exited;
+    // pdftoppm -v escribe en stderr y sale con código 0 o 99 según la versión
+    if (exitCode === 0 || exitCode === 99) {
+      const stderr = await new Response(proc.stderr).text();
+      const version = stderr.split('\n')[0]?.trim() ?? 'pdftoppm';
+      return { label: 'pdftoppm disponible (portadas)', ok: true, detail: version };
+    }
+    return {
+      label: 'pdftoppm disponible (portadas)',
+      ok: false,
+      detail: 'pdftoppm no ejecutable. Instala poppler-utils: brew install poppler',
+    };
+  } catch {
+    return {
+      label: 'pdftoppm disponible (portadas)',
+      ok: false,
+      detail: 'pdftoppm no encontrado en PATH. Instala poppler-utils: brew install poppler',
+    };
+  }
+}

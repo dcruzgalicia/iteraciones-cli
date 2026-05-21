@@ -3,6 +3,7 @@ import {
   type CheckResult,
   checkLatexEngine,
   checkPandoc,
+  checkPdftoppm,
   checkReadPermissions,
   checkTailwind,
   checkWritePermissions,
@@ -31,6 +32,7 @@ export async function runDoctor(cwd: string, options: { fix?: boolean } = {}): P
     checkReadPermissions(cwd),
     checkWritePermissions(cwd),
     checkLatexEngine(latexEngine),
+    checkPdftoppm(),
   ]);
 
   const lines = checks.map((c) => {

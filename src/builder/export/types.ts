@@ -76,4 +76,6 @@ export interface ExportResult {
   pdfPath?: string;
   /** Ruta absoluta al EPUB generado; undefined si no se generó. */
   epubPath?: string;
+  /** Ruta absoluta a la imagen de portada generada con pdftoppm; undefined si no se generó. */
+  coverPath?: string;
 }
