@@ -104,3 +104,10 @@
   --tw-prose-links: var(--color-accent-600);
   --tw-prose-invert-links: var(--color-accent-500);
 }
+
+/* Reduce la opacidad del grid en tema claro para menor saturación visual */
+[data-theme="light"] .bg-grid-accent {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--color-accent-400) 2%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--color-accent-400) 2%, transparent) 1px, transparent 1px);
+}
