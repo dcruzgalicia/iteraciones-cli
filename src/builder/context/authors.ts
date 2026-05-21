@@ -68,7 +68,7 @@ export function buildAuthorContext(doc: BuildDocument, fileDocs: BuildDocument[]
  *   title     → frontmatter.title del documento índice
  *   pagetitle → frontmatter.title del documento índice
  *   body      → htmlFragment del documento índice (introducción opcional)
- *   authors   → array de { href, title, body, abstract? } por cada documento de tipo 'author'
+ *   authors   → array de { href, title, body, abstract?, keywords? } por cada documento de tipo 'author'
  *   count     → número de autores
  */
 export function buildAuthorsContext(doc: BuildDocument, authorDocs: BuildDocument[], paginationCtx?: Record<string, unknown>): TemplateContext {
@@ -77,6 +77,7 @@ export function buildAuthorsContext(doc: BuildDocument, authorDocs: BuildDocumen
     title: authorDoc.frontmatter.title,
     body: authorDoc.htmlFragment ?? '',
     ...(authorDoc.frontmatter.abstract !== undefined && { abstract: authorDoc.frontmatter.abstract }),
+    ...(authorDoc.frontmatter.keywords.length > 0 && { keywords: authorDoc.frontmatter.keywords }),
   }));
 
   return {

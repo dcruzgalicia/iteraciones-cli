@@ -11,7 +11,7 @@ import { resolveAuthorHref } from './authors.js';
  *   pagetitle      → frontmatter.title del documento lista
  *   author         → frontmatter.author del documento lista
  *   body           → htmlFragment del documento lista (introducción opcional)
- *   list-items     → array de { href, title, author, date, author-href?, abstract? } para cada item de la página
+ *   list-items     → array de { href, title, author, date, author-href?, abstract?, keywords? } para cada item de la página
  *   count          → número de items en la página actual
  *   has-pagination → true cuando hay más de una página (desde paginationCtx)
  *   page-number    → número de página actual, 1-indexed (desde paginationCtx)
@@ -39,6 +39,7 @@ export function buildListContext(
       'author-href': authorHref,
       date: item.frontmatter.date,
       ...(item.frontmatter.abstract !== undefined && { abstract: item.frontmatter.abstract }),
+      ...(item.frontmatter.keywords.length > 0 && { keywords: item.frontmatter.keywords }),
     };
   });
 
