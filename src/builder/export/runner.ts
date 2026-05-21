@@ -1,3 +1,4 @@
+import { stat } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import type { CacheManager } from '../../cache/cache-manager.js';
 import { hash } from '../../cache/hasher.js';
@@ -22,8 +23,9 @@ import { EXPORTABLE_TYPES } from './types.js';
 async function generateCoverImage(pdfPath: string, outputBase: string): Promise<string | undefined> {
   try {
     const coverPath = `${outputBase}.jpg`;
-    // Reutilizar la imagen si ya existe (evita re-ejecutar pdftoppm en builds repetidos).
-    if (await Bun.file(coverPath).exists()) return coverPath;
+    // Reutilizar la imagen si ya existe y es más reciente que el PDF fuente.
+    const [coverStat, pdfStat] = await Promise.all([stat(coverPath).catch(() => null), stat(pdfPath)]);
+    if (coverStat && coverStat.mtimeMs >= pdfStat.mtimeMs) return coverPath;
     const proc = Bun.spawn(['pdftoppm', '-r', '150', '-jpeg', '-singlefile', pdfPath, outputBase], {
       stdout: 'pipe',
       stderr: 'pipe',
