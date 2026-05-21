@@ -470,6 +470,7 @@ export function injectDownloadLinksIntoListItems(docs: BuildDocument[]): BuildDo
     if (!doc.templateContext) return doc;
     const items = doc.templateContext['list-items'];
     if (!Array.isArray(items) || items.length === 0) return doc;
+    let changed = false;
     const updatedItems = items.map((item: unknown) => {
       if (!item || typeof item !== 'object') return item;
       const itemObj = item as Record<string, unknown>;
@@ -477,8 +478,10 @@ export function injectDownloadLinksIntoListItems(docs: BuildDocument[]): BuildDo
       if (typeof href !== 'string') return item;
       const links = linksByHref.get(href);
       if (!links) return item;
+      changed = true;
       return { ...itemObj, ...links };
     });
+    if (!changed) return doc;
     return { ...doc, templateContext: { ...doc.templateContext, 'list-items': updatedItems } };
   });
 }
