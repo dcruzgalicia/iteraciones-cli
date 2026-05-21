@@ -74,6 +74,7 @@ export function buildAuthorsContext(doc: BuildDocument, authorDocs: BuildDocumen
   const authors = authorDocs.map((authorDoc) => ({
     href: `/${authorDoc.relativePath.replace(/\.md$/, '.html')}`,
     title: authorDoc.frontmatter.title,
+    body: '',
     ...(authorDoc.frontmatter.abstract !== undefined && { abstract: authorDoc.frontmatter.abstract }),
   }));
 
