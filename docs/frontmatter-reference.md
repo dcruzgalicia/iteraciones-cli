@@ -149,6 +149,40 @@ type: list
 ---
 ```
 
+### `feed` — Feed acotado
+
+Lista compacta y no paginada. Muestra un número limitado de documentos. Puede usarse como página standalone o como bloque en una región (ver más abajo).
+
+```yaml
+---
+title: 'Últimas publicaciones'
+type: feed
+limit: 5
+filters:
+  keywords:
+    - lectura
+---
+```
+
+Como bloque en una región:
+
+```yaml
+---
+title: 'Recientes'
+type: feed
+block: true
+region: sidebar-primary
+limit: 3
+---
+```
+
+| Campo | Descripción | Default |
+|-------|-------------|---------|
+| `limit` | Número máximo de ítems a mostrar. Entero positivo. | `3` |
+| `filters` | Igual que en `list`: `type`, `keywords`, `author` | — |
+
+> **Nota:** cuando se usa como bloque, el pool de documentos disponibles está limitado a los tipos primarios (`file`, `author`, `event`) — la misma restricción que aplica a `list` en modo bloque.
+
 ## Bloques
 
 Cualquier tipo de documento puede convertirse en **bloque** añadiendo `block: true` y `region:`. Los bloques se inyectan en el layout de todas las páginas; no generan su propio archivo HTML.
@@ -188,7 +222,7 @@ speakers:
     body: 'Investigador en lingüística'
 ```
 
-### `filters` — Filtros de lista (solo `list`, `events`)
+### `filters` — Filtros de lista (solo `list`, `feed`, `events`)
 
 Filtra los documentos que aparecen en el índice.
 
