@@ -14,7 +14,13 @@ import type { TemplateContext } from '../template/render/context.js';
 import { buildAssets } from './assets.js';
 import { createAuthorDocumentIndex } from './context/authors.js';
 import { buildSiteContext } from './context/site.js';
-import { type ExportRunOptions, type ExportStats, injectDownloadLinks, runExportDocuments } from './export/runner.js';
+import {
+  type ExportRunOptions,
+  type ExportStats,
+  injectDownloadLinks,
+  injectDownloadLinksIntoListItems,
+  runExportDocuments,
+} from './export/runner.js';
 import { buildDocumentGraph } from './graph-exporter.js';
 import { escapeHtml } from './html.js';
 import { classifyDocuments } from './pipeline/classify.js';
@@ -672,7 +678,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     }
 
     // Inyectar enlaces de descarga en el templateContext de los docs con exportación.
-    const docsWithLinks = injectDownloadLinks(finalContextDocs, exportResults, ctx.outputDir);
+    const docsWithLinks = injectDownloadLinksIntoListItems(injectDownloadLinks(finalContextDocs, exportResults, ctx.outputDir));
 
     // Mapa de relativePath → sourceHash: solo necesario cuando la caché de compose está activa.
     // Con --no-cache composeCache es undefined y construir el mapa sería trabajo O(n) sin uso.

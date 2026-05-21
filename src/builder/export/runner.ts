@@ -445,6 +445,45 @@ export function injectDownloadLinks(docs: BuildDocument[], exportResults: Export
 }
 
 /**
+ * Propaga los enlaces de descarga (`download-pdf`, `download-epub`) de los documentos
+ * hoja hacia los ítems (`list-items`) de los documentos de tipo lista/colección que los
+ * referencian por `href`.
+ *
+ * Llamar justo después de `injectDownloadLinks` para que el mapa esté poblado.
+ */
+export function injectDownloadLinksIntoListItems(docs: BuildDocument[]): BuildDocument[] {
+  const linksByHref = new Map<string, Record<string, string>>();
+  for (const doc of docs) {
+    if (!doc.templateContext) continue;
+    const pdf = doc.templateContext['download-pdf'];
+    const epub = doc.templateContext['download-epub'];
+    if (typeof pdf !== 'string' && typeof epub !== 'string') continue;
+    const href = `/${doc.relativePath.replace(/\.md$/, '.html')}`;
+    linksByHref.set(href, {
+      ...(typeof pdf === 'string' && { 'download-pdf': pdf }),
+      ...(typeof epub === 'string' && { 'download-epub': epub }),
+    });
+  }
+  if (linksByHref.size === 0) return docs;
+
+  return docs.map((doc) => {
+    if (!doc.templateContext) return doc;
+    const items = doc.templateContext['list-items'];
+    if (!Array.isArray(items) || items.length === 0) return doc;
+    const updatedItems = items.map((item: unknown) => {
+      if (!item || typeof item !== 'object') return item;
+      const itemObj = item as Record<string, unknown>;
+      const href = itemObj['href'];
+      if (typeof href !== 'string') return item;
+      const links = linksByHref.get(href);
+      if (!links) return item;
+      return { ...itemObj, ...links };
+    });
+    return { ...doc, templateContext: { ...doc.templateContext, 'list-items': updatedItems } };
+  });
+}
+
+/**
  * Exporta un único documento a PDF bajo demanda (serve mode).
  *
  * Busca en `renderedMap` el documento cuyo `relativePath` (con extensión `.md`)
