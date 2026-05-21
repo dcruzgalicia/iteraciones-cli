@@ -9,6 +9,7 @@ import {
 import { buildCardPipelineContext } from './context/card.js';
 import { buildCollectionPipelineContext, buildPagedCollectionPipelineContexts } from './context/collection.js';
 import { buildEventPipelineContext, buildEventsPipelineContext, buildPagedEventsPipelineContexts } from './context/event.js';
+import { buildFeedPipelineContext } from './context/feed.js';
 import { buildContext } from './context/index.js';
 import { buildListPipelineContext, buildPagedListPipelineContexts } from './context/list.js';
 import { buildMenuPipelineContext } from './context/menu.js';
@@ -20,8 +21,9 @@ import type { TypeStageSpec } from './stage.js';
  *
  * El orden del array codifica la secuencia de procesamiento dentro de cada fase:
  * - Primarios: file → author → event (en este orden: author necesita file en el pool).
- * - Index: collection → authors → events → menu → card → list
- *   (list debe ir último porque su pool incluye todos los tipos anteriores).
+ * - Index: collection → authors → events → menu → card → feed → list
+ *   (feed y list deben ir al final porque su pool incluye todos los tipos anteriores;
+ *   feed va antes de list para que list pueda incluir docs feed en su pool).
  *
  * @see TypeStageSpec para la descripción de cada campo.
  */
@@ -125,6 +127,22 @@ export const TYPE_STAGES: TypeStageSpec[] = [
     buildPool: () => [],
     buildPageContexts: (doc, siteCtx) => [{ ...doc, templateContext: buildCardPipelineContext(doc, siteCtx) }],
     buildBlockContext: (doc, siteCtx) => buildCardPipelineContext(doc, siteCtx),
+  },
+
+  {
+    type: 'feed',
+    phase: 'index',
+    canBeBlock: true,
+    paginated: false,
+    // Pool de páginas: todos los docs renderizados disponibles hasta este punto.
+    buildPool: (rendered) => [...rendered.values()].flat(),
+    buildPageContexts: (doc, siteCtx, pool, authorIndex) => [{ ...doc, templateContext: buildFeedPipelineContext(doc, siteCtx, pool, authorIndex) }],
+    // Pool de bloques: solo tipos primarios (file, author, event); limitación del
+    // pre-paso de bloques — collection, card, etc. aún no están renderizados.
+    buildBlockContext: (doc, siteCtx, primaryRendered, authorIndex) => {
+      const pool = [...(primaryRendered.get('file') ?? []), ...(primaryRendered.get('author') ?? []), ...(primaryRendered.get('event') ?? [])];
+      return buildFeedPipelineContext(doc, siteCtx, pool, authorIndex);
+    },
   },
 
   {
