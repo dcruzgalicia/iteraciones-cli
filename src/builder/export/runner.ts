@@ -21,13 +21,15 @@ import { EXPORTABLE_TYPES } from './types.js';
  */
 async function generateCoverImage(pdfPath: string, outputBase: string): Promise<string | undefined> {
   try {
+    const coverPath = `${outputBase}.jpg`;
+    // Reutilizar la imagen si ya existe (evita re-ejecutar pdftoppm en builds repetidos).
+    if (await Bun.file(coverPath).exists()) return coverPath;
     const proc = Bun.spawn(['pdftoppm', '-r', '150', '-jpeg', '-singlefile', pdfPath, outputBase], {
       stdout: 'pipe',
       stderr: 'pipe',
     });
     const exitCode = await proc.exited;
     if (exitCode !== 0) return undefined;
-    const coverPath = `${outputBase}.jpg`;
     const exists = await Bun.file(coverPath).exists();
     return exists ? coverPath : undefined;
   } catch {
@@ -406,6 +408,11 @@ export async function runExportDocuments(
  *
  * Las URLs son root-relative (empiezan con '/') para que `makeRelativeContext`
  * las convierta a rutas relativas en el HTML final.
+ *
+ * Variables de template producidas:
+ *   download-pdf   → URL root-relative del PDF exportado
+ *   download-epub  → URL root-relative del EPUB exportado
+ *   cover-image    → URL root-relative de la portada JPG (si se generó con pdftoppm)
  */
 export function injectDownloadLinks(docs: BuildDocument[], exportResults: ExportResult[], outputDir: string): BuildDocument[] {
   if (exportResults.length === 0) return docs;
