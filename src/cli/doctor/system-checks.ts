@@ -139,10 +139,10 @@ export async function checkLatexEngine(engine: 'xelatex' | 'lualatex' = 'xelatex
 export async function checkPdftoppm(): Promise<CheckResult> {
   try {
     const proc = Bun.spawn(['pdftoppm', '-v'], { stdout: 'pipe', stderr: 'pipe' });
-    const exitCode = await proc.exited;
+    // Leer stderr en paralelo con proc.exited para evitar bloqueos si la salida llena el buffer.
+    const [exitCode, stderr] = await Promise.all([proc.exited, new Response(proc.stderr).text()]);
     // pdftoppm -v escribe en stderr y sale con código 0 o 99 según la versión
     if (exitCode === 0 || exitCode === 99) {
-      const stderr = await new Response(proc.stderr).text();
       const version = stderr.split('\n')[0]?.trim() ?? 'pdftoppm';
       return { label: 'pdftoppm disponible (portadas)', ok: true, detail: version };
     }
