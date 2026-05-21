@@ -487,9 +487,10 @@ export function injectDownloadLinksIntoListItems(docs: BuildDocument[]): BuildDo
 
 /**
  * Propaga `cover-image` de los documentos hoja hacia los ítems (`list-items`)
- * de los documentos de tipo lista/colección que los referencian por `href`.
+ * de cualquier documento que los referencie por `href`.
  *
- * Llamar justo después de `injectDownloadLinks` para que el mapa esté poblado.
+ * Llamar después de que `cover-image` esté disponible en el `templateContext`
+ * de cada documento exportado (es decir, tras `injectDownloadLinks`).
  */
 export function injectCoverIntoListItems(docs: BuildDocument[]): BuildDocument[] {
   const coverByHref = new Map<string, string>();
