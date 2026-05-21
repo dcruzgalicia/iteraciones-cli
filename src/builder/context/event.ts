@@ -133,11 +133,11 @@ export function buildEventsContext(
     href: `/${event.relativePath.replace(/\.md$/, '.html')}`,
     title: event.frontmatter.title,
     date: event.frontmatter.date,
-    body: event.htmlFragment ?? '',
     ...(typeof event.frontmatter.time === 'string' && { time: event.frontmatter.time }),
     ...(typeof event.frontmatter.location === 'string' && { location: event.frontmatter.location }),
     ...(typeof event.frontmatter.modality === 'string' && { modality: event.frontmatter.modality }),
     ...(event.frontmatter.author.length > 0 && { author: event.frontmatter.author.join(', ') }),
+    ...(event.frontmatter.abstract !== undefined && { abstract: event.frontmatter.abstract }),
   });
 
   const listItems = eventDocs.map(formatItem);
