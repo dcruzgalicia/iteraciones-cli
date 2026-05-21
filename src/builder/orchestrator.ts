@@ -678,7 +678,8 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     }
 
     // Inyectar enlaces de descarga en el templateContext de los docs con exportación.
-    const docsWithLinks = injectDownloadLinksIntoListItems(injectDownloadLinks(finalContextDocs, exportResults, ctx.outputDir));
+    const docsWithExportLinks = injectDownloadLinks(finalContextDocs, exportResults, ctx.outputDir);
+    const docsWithLinks = injectDownloadLinksIntoListItems(docsWithExportLinks);
 
     // Mapa de relativePath → sourceHash: solo necesario cuando la caché de compose está activa.
     // Con --no-cache composeCache es undefined y construir el mapa sería trabajo O(n) sin uso.
