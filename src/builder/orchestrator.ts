@@ -17,6 +17,7 @@ import { buildSiteContext } from './context/site.js';
 import {
   type ExportRunOptions,
   type ExportStats,
+  injectCoverIntoListItems,
   injectDownloadLinks,
   injectDownloadLinksIntoListItems,
   runExportDocuments,
@@ -677,9 +678,11 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       }
     }
 
-    // Inyectar enlaces de descarga en el templateContext de los docs con exportación.
+    // Inyectar enlaces de descarga en los docs exportables, propagarlos a los ítems
+    // y luego añadir la miniatura `cover-image` a los list-items.
     const docsWithExportLinks = injectDownloadLinks(finalContextDocs, exportResults, ctx.outputDir);
-    const docsWithLinks = injectDownloadLinksIntoListItems(docsWithExportLinks);
+    const docsWithListLinks = injectDownloadLinksIntoListItems(docsWithExportLinks);
+    const docsWithLinks = injectCoverIntoListItems(docsWithListLinks);
 
     // Mapa de relativePath → sourceHash: solo necesario cuando la caché de compose está activa.
     // Con --no-cache composeCache es undefined y construir el mapa sería trabajo O(n) sin uso.

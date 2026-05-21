@@ -465,7 +465,6 @@ export function injectDownloadLinksIntoListItems(docs: BuildDocument[]): BuildDo
     });
   }
   if (linksByHref.size === 0) return docs;
-
   return docs.map((doc) => {
     if (!doc.templateContext) return doc;
     const items = doc.templateContext['list-items'];
@@ -480,6 +479,42 @@ export function injectDownloadLinksIntoListItems(docs: BuildDocument[]): BuildDo
       if (!links) return item;
       changed = true;
       return { ...itemObj, ...links };
+    });
+    if (!changed) return doc;
+    return { ...doc, templateContext: { ...doc.templateContext, 'list-items': updatedItems } };
+  });
+}
+
+/**
+ * Propaga `cover-image` de los documentos hoja hacia los ítems (`list-items`)
+ * de los documentos de tipo lista/colección que los referencian por `href`.
+ *
+ * Llamar justo después de `injectDownloadLinks` para que el mapa esté poblado.
+ */
+export function injectCoverIntoListItems(docs: BuildDocument[]): BuildDocument[] {
+  const coverByHref = new Map<string, string>();
+  for (const doc of docs) {
+    if (!doc.templateContext) continue;
+    const cover = doc.templateContext['cover-image'];
+    if (typeof cover !== 'string') continue;
+    const href = `/${doc.relativePath.replace(/\.md$/, '.html')}`;
+    coverByHref.set(href, cover);
+  }
+  if (coverByHref.size === 0) return docs;
+  return docs.map((doc) => {
+    if (!doc.templateContext) return doc;
+    const items = doc.templateContext['list-items'];
+    if (!Array.isArray(items) || items.length === 0) return doc;
+    let changed = false;
+    const updatedItems = items.map((item: unknown) => {
+      if (!item || typeof item !== 'object') return item;
+      const itemObj = item as Record<string, unknown>;
+      const href = itemObj['href'];
+      if (typeof href !== 'string') return item;
+      const cover = coverByHref.get(href);
+      if (!cover) return item;
+      changed = true;
+      return { ...itemObj, 'cover-image': cover };
     });
     if (!changed) return doc;
     return { ...doc, templateContext: { ...doc.templateContext, 'list-items': updatedItems } };
