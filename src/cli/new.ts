@@ -40,6 +40,9 @@ function minimalFrontmatter(type: DocumentType, opts: { region?: string } = {}):
     case 'list':
       base = `---\ntitle: ''\ntype: list`;
       break;
+    case 'feed':
+      base = `---\ntitle: ''\ntype: feed`;
+      break;
   }
 
   // Si se indica region, el documento es un bloque. Se antepone block:true y region:
