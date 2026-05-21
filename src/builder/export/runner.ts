@@ -446,10 +446,10 @@ export function injectDownloadLinks(docs: BuildDocument[], exportResults: Export
 
 /**
  * Propaga los enlaces de descarga (`download-pdf`, `download-epub`) de los documentos
- * hoja hacia los ítems (`list-items`) de los documentos de tipo lista/colección que los
- * referencian por `href`.
+ * hoja hacia los ítems (`list-items`) de cualquier documento que los referencie por `href`.
  *
- * Llamar justo después de `injectDownloadLinks` para que el mapa esté poblado.
+ * Llamar justo después de `injectDownloadLinks` para que `download-pdf`/`download-epub`
+ * ya estén inyectados en el templateContext de cada documento exportado.
  */
 export function injectDownloadLinksIntoListItems(docs: BuildDocument[]): BuildDocument[] {
   const linksByHref = new Map<string, Record<string, string>>();
