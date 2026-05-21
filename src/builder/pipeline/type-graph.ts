@@ -17,7 +17,7 @@ import { mergeContexts } from './context/merge.js';
 import type { TypeStageSpec } from './stage.js';
 
 /**
- * Grafo de tipos del pipeline: especificaciones de los 9 DocumentType actuales.
+ * Grafo de tipos del pipeline: especificaciones de los 10 DocumentType actuales.
  *
  * El orden del array codifica la secuencia de procesamiento dentro de cada fase:
  * - Primarios: file → author → event (en este orden: author necesita file en el pool).

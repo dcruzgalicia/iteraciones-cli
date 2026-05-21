@@ -41,9 +41,10 @@ function applyFeedFilters(doc: BuildDocument, allDocs: BuildDocument[]): BuildDo
  * `doc.frontmatter.limit` (default 3). No pagina: devuelve siempre un único contexto.
  *
  * Usado tanto para páginas (kind === 'page') como para bloques (kind === 'block').
- * En modo bloque, `pool` contiene solo los tipos primarios disponibles en el
- * pre-paso (file, author, event); `filters.type` con tipos index no producirá
- * resultados — limitación arquitectural conocida compartida con `list`.
+ * En modo bloque, `pool` contiene los tipos primarios disponibles en el pre-paso
+ * (file, author, event); `filters.type` con tipos index no producirá resultados.
+ * A diferencia de `list` en modo bloque (que solo incluye `file`), `feed` también
+ * incluye `author` y `event` en su pool de bloques.
  */
 export function buildFeedPipelineContext(
   doc: BuildDocument,
