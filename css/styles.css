@@ -56,7 +56,7 @@
 }
 
 :root {
-  --color-surface-light: color-mix(in srgb, var(--color-accent-50) 50%, white);
+  --color-surface-light: color-mix(in srgb, var(--color-accent-50) 15%, white);
   --color-surface-dark: color-mix(in srgb, var(--color-accent-950) 40%, black);
 }
 
