@@ -4,7 +4,7 @@ import type { TemplateContext } from '../template/render/context.js';
 
 export type DocumentKind = 'page' | 'block';
 
-export type DocumentType = 'file' | 'collection' | 'author' | 'authors' | 'event' | 'events' | 'menu' | 'card' | 'list';
+export type DocumentType = 'file' | 'collection' | 'author' | 'authors' | 'event' | 'events' | 'menu' | 'card' | 'feed' | 'list';
 
 export type Region = 'content-before' | 'content-after' | 'sidebar-primary' | 'sidebar-secondary' | 'footer-left' | 'footer-center' | 'footer-right';
 

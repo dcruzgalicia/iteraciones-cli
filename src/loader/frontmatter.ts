@@ -24,6 +24,7 @@ export interface Frontmatter {
   draft: boolean;
   items: string[];
   filters?: FrontmatterFilters;
+  limit?: number;
   [key: string]: unknown;
 }
 
@@ -121,6 +122,7 @@ function emptyFrontmatter(): Frontmatter {
     draft: false,
     items: [],
     filters: undefined,
+    limit: undefined,
   };
 }
 
@@ -152,5 +154,6 @@ function normalizeFrontmatter(data: Record<string, unknown>): Frontmatter {
     draft: data.draft === true,
     items: normalizeStringList(data.items),
     filters: normalizeFilters(data.filters),
+    limit: typeof data.limit === 'number' && Number.isFinite(data.limit) && data.limit > 0 ? Math.floor(data.limit) : undefined,
   };
 }
