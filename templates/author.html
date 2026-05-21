@@ -95,18 +95,4 @@
     </div>
   </nav>
   $endif$
-  $if(download-pdf)$
-  <div class="flex flex-wrap gap-3 font-mono text-xs">
-    <a href="$download-pdf$" class="inline-flex items-center gap-1.5 rounded border border-accent-200 bg-accent-50 px-3 py-1.5 text-accent-700 transition-colors hover:bg-accent-100" download>↓ PDF</a>
-    $if(download-epub)$
-    <a href="$download-epub$" class="inline-flex items-center gap-1.5 rounded border border-accent-200 bg-accent-50 px-3 py-1.5 text-accent-700 transition-colors hover:bg-accent-100" download>↓ EPUB</a>
-    $endif$
-  </div>
-  $else$
-  $if(download-epub)$
-  <div class="flex flex-wrap gap-3 font-mono text-xs">
-    <a href="$download-epub$" class="inline-flex items-center gap-1.5 rounded border border-accent-200 bg-accent-50 px-3 py-1.5 text-accent-700 transition-colors hover:bg-accent-100" download>↓ EPUB</a>
-  </div>
-  $endif$
-  $endif$
 </div>
