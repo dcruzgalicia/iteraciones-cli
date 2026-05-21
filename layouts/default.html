@@ -92,6 +92,14 @@
           </div>
         </div>
         $endif$
+        $if(cover-image)$
+        <div class="mb-6">
+          <img
+            src="$cover-image$"
+            alt="Portada de $title$"
+            class="w-full rounded border border-accent-200/60 object-cover shadow-sm" />
+        </div>
+        $endif$
         $if(download-pdf)$
         <div class="mb-6">
           <div
