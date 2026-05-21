@@ -112,7 +112,7 @@ export function splitAndSortEventsByDate(
  *   pagetitle      → frontmatter.title
  *   author         → frontmatter.author
  *   body           → htmlFragment del documento (introducción opcional)
- *   list-items     → array de todos los eventos del pool: { href, title, date, time?, location?, modality?, author?, abstract? }
+ *   list-items     → array de todos los eventos del pool: { href, title, date, time?, location?, modality?, author?, abstract?, keywords? }
  *   upcoming-items → subset de eventos con date >= buildDate, ordenados ascendente (próximos primero)
  *   past-items     → subset de eventos con date < buildDate, ordenados descendente (más recientes primero)
  *   count          → número de eventos en list-items
@@ -138,6 +138,7 @@ export function buildEventsContext(
     ...(typeof event.frontmatter.modality === 'string' && { modality: event.frontmatter.modality }),
     ...(event.frontmatter.author.length > 0 && { author: event.frontmatter.author.join(', ') }),
     ...(event.frontmatter.abstract !== undefined && { abstract: event.frontmatter.abstract }),
+    ...(event.frontmatter.keywords.length > 0 && { keywords: event.frontmatter.keywords }),
   });
 
   const listItems = eventDocs.map(formatItem);

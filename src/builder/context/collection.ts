@@ -10,7 +10,7 @@ import { resolveAuthorHref } from './authors.js';
  *   title         → frontmatter.title del documento colección
  *   author        → frontmatter.author del documento colección
  *   body          → htmlFragment del documento colección (introducción opcional)
- *   list-items    → array de { href, title, author, author-href?, date, abstract? } en el orden editorial de `items:`
+ *   list-items    → array de { href, title, author, author-href?, date, abstract?, keywords? } en el orden editorial de `items:`
  *   count         → número de items en esta página
  *
  * Variables de paginación (presentes si `paginationCtx` se proporciona):
@@ -40,6 +40,7 @@ export function buildCollectionContext(
       'author-href': authorHref,
       date: item.frontmatter.date,
       ...(item.frontmatter.abstract !== undefined && { abstract: item.frontmatter.abstract }),
+      ...(item.frontmatter.keywords.length > 0 && { keywords: item.frontmatter.keywords }),
     };
   });
 
