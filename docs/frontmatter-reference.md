@@ -181,7 +181,7 @@ limit: 3
 | `limit` | Número máximo de ítems a mostrar. Entero positivo. | `3` |
 | `filters` | Igual que en `list`: `type`, `keywords`, `author` | — |
 
-> **Nota:** cuando se usa como bloque, el pool de documentos disponibles está limitado a los tipos primarios (`file`, `author`, `event`) — la misma restricción que aplica a `list` en modo bloque.
+> **Nota:** cuando se usa como bloque, el pool disponible se limita a `file`, `author` y `event` — los tipos primarios renderizados antes del pre-paso de bloques. Los tipos index (`collection`, `feed`, `list`, `menu`, etc.) no están disponibles en ese contexto. A diferencia de `list` en modo bloque, que solo incluye `file`, `feed` también incluye `author` y `event`.
 
 ## Bloques
 
