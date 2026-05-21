@@ -10,6 +10,32 @@ import { assembleExportDocument, resolveEventsForExport, resolveItemsForExport }
 import type { ExportMetadata, ExportResult } from './types.js';
 import { EXPORTABLE_TYPES } from './types.js';
 
+/**
+ * Genera una imagen de portada JPG a partir de la primera página de un PDF.
+ * Usa `pdftoppm` (parte de poppler-utils). Si no está disponible o falla, retorna undefined.
+ *
+ * @param pdfPath   Ruta absoluta al PDF fuente.
+ * @param outputBase Ruta base de salida sin extensión (ej: /dist/web/notas/foo).
+ *                   pdftoppm produce `<outputBase>.jpg`.
+ * @returns Ruta absoluta al JPG generado, o undefined si falló.
+ */
+async function generateCoverImage(pdfPath: string, outputBase: string): Promise<string | undefined> {
+  try {
+    const proc = Bun.spawn(['pdftoppm', '-r', '150', '-jpeg', '-singlefile', pdfPath, outputBase], {
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    const exitCode = await proc.exited;
+    if (exitCode !== 0) return undefined;
+    const coverPath = `${outputBase}.jpg`;
+    const exists = await Bun.file(coverPath).exists();
+    return exists ? coverPath : undefined;
+  } catch {
+    // pdftoppm no instalado o no disponible en PATH — no es error fatal
+    return undefined;
+  }
+}
+
 export interface ExportRunOptions {
   config: ExportConfig;
   outputDir: string;
@@ -361,6 +387,10 @@ export async function runExportDocuments(
       }
     }
     if (firstError) throw firstError;
+    // Generar imagen de portada a partir del PDF si se produjo uno.
+    if (result.pdfPath) {
+      result.coverPath = await generateCoverImage(result.pdfPath, outputBase);
+    }
     return result;
   });
 
@@ -395,6 +425,10 @@ export function injectDownloadLinks(docs: BuildDocument[], exportResults: Export
     if (result.epubPath) {
       const rel = result.epubPath.slice(outputDir.length).replace(/\\/g, '/');
       extra['download-epub'] = rel.startsWith('/') ? rel : `/${rel}`;
+    }
+    if (result.coverPath) {
+      const rel = result.coverPath.slice(outputDir.length).replace(/\\/g, '/');
+      extra['cover-image'] = rel.startsWith('/') ? rel : `/${rel}`;
     }
     if (Object.keys(extra).length === 0) return doc;
     return { ...doc, templateContext: { ...doc.templateContext, ...extra } };
