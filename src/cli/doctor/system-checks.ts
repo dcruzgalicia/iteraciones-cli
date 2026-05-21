@@ -149,13 +149,13 @@ export async function checkPdftoppm(): Promise<CheckResult> {
     return {
       label: 'pdftoppm disponible (portadas)',
       ok: false,
-      detail: 'pdftoppm no ejecutable. Instala poppler-utils: brew install poppler',
+      detail: 'pdftoppm no ejecutable. Instala poppler: macOS → brew install poppler | Debian/Ubuntu → apt install poppler-utils',
     };
   } catch {
     return {
       label: 'pdftoppm disponible (portadas)',
       ok: false,
-      detail: 'pdftoppm no encontrado en PATH. Instala poppler-utils: brew install poppler',
+      detail: 'pdftoppm no encontrado en PATH. Instala poppler: macOS → brew install poppler | Debian/Ubuntu → apt install poppler-utils',
     };
   }
 }
