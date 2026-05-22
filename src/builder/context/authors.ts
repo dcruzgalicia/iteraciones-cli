@@ -55,6 +55,9 @@ export function buildAuthorContext(doc: BuildDocument, fileDocs: BuildDocument[]
   const email = doc.frontmatter.email;
   const links = doc.frontmatter.links;
   const skills = doc.frontmatter.skills;
+  const formacion = doc.frontmatter.formacion;
+  const intereses = doc.frontmatter.intereses;
+  const idiomas = doc.frontmatter.idiomas;
   const hasContact = location !== undefined || email !== undefined || (links !== undefined && links.length > 0);
 
   return {
@@ -69,6 +72,9 @@ export function buildAuthorContext(doc: BuildDocument, fileDocs: BuildDocument[]
     ...(email !== undefined && { email }),
     ...(links !== undefined && { links }),
     ...(skills !== undefined && { skills }),
+    ...(formacion !== undefined && { formacion }),
+    ...(intereses !== undefined && { intereses }),
+    ...(idiomas !== undefined && { idiomas }),
     ...(hasContact && { 'has-contact': true }),
     ...paginationCtx,
   };
