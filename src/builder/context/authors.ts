@@ -1,4 +1,3 @@
-import type { FrontmatterLink } from '../../loader/frontmatter.js';
 import type { TemplateContext } from '../../template/render/context.js';
 import { escapeHtml } from '../html.js';
 import type { AuthorDocumentIndex, BuildDocument } from '../types.js';
@@ -54,7 +53,7 @@ export function buildAuthorContext(doc: BuildDocument, fileDocs: BuildDocument[]
   const tagline = doc.frontmatter.tagline;
   const location = doc.frontmatter.location;
   const email = doc.frontmatter.email;
-  const links = doc.frontmatter.links as FrontmatterLink[] | undefined;
+  const links = doc.frontmatter.links;
   const hasContact = location !== undefined || email !== undefined || (links !== undefined && links.length > 0);
 
   return {
