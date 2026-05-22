@@ -14,15 +14,14 @@ site:
   base-url: ''
   theme: 'light'
   # math: katex     # opcional; omitir desactiva el renderizado matemático
+  # export:         # opcional; omitir desactiva la exportación
+  #   formats: [pdf, epub]
+  #   pdf-engine: xelatex
+  #   pdf-concurrency: 2
   list-items:
     limit: 10
 
 plugins: []
-
-# export: (opcional; omitir desactiva la exportación)
-#   formats: [pdf, epub]
-#   pdf-engine: xelatex
-#   pdf-concurrency: 2
 ```
 
 ## Campos
@@ -125,11 +124,11 @@ site:
   base-url: 'https://ejemplo.com'
 ```
 
-### `export`
+### `site.export`
 
-Controla la generación de archivos PDF y EPUB a partir de los documentos exportables del sitio (tipos `file`, `event`, `author`, `collection`, `events`). Si la sección `export` no existe o no contiene `formats`, la exportación está desactivada.
+Controla la generación de archivos PDF y EPUB a partir de los documentos exportables del sitio (tipos `file`, `event`, `author`, `collection`, `events`). Si la sección `export` no existe dentro de `site:` o no contiene `formats`, la exportación está desactivada.
 
-#### `export.formats`
+#### `site.export.formats`
 
 **Tipo:** `Array<'pdf' | 'epub'>`  
 **Por defecto:** sin exportación (la exportación se considera desactivada cuando `formats` está ausente o vacío)
@@ -137,18 +136,19 @@ Controla la generación de archivos PDF y EPUB a partir de los documentos export
 Lista de formatos a generar. El orden no importa; se generan en paralelo por documento.
 
 ```yaml
-export:
-  formats: [pdf, epub]
+site:
+  export:
+    formats: [pdf, epub]
 ```
 
-#### `export.pdf-engine`
+#### `site.export.pdf-engine`
 
 **Tipo:** `'xelatex' | 'lualatex'`  
 **Por defecto:** `'xelatex'`
 
 Motor LaTeX utilizado para generar PDF. `xelatex` tiene mayor compatibilidad con fuentes OpenType; `lualatex` ofrece soporte más completo de Unicode y mayor extensibilidad.
 
-#### `export.pdf-concurrency`
+#### `site.export.pdf-concurrency`
 
 **Tipo:** `integer >= 1`  
 **Por defecto:** `2`
@@ -164,26 +164,27 @@ Ajustar según la RAM disponible:
 | 16 GB+         | 3–4               |
 
 ```yaml
-export:
-  formats: [pdf]
-  pdf-concurrency: 3
+site:
+  export:
+    formats: [pdf]
+    pdf-concurrency: 3
 ```
 
-#### `export.bibliography`
+#### `site.export.bibliography`
 
 **Tipo:** `string | undefined`  
 **Por defecto:** sin bibliografía global
 
 Ruta relativa al proyecto a un archivo `.bib` de bibliografía BibTeX. Se aplica a todos los documentos exportados, salvo que el frontmatter del documento especifique su propia ruta.
 
-#### `export.csl`
+#### `site.export.csl`
 
 **Tipo:** `string | undefined`  
 **Por defecto:** estilo por defecto de pandoc
 
 Ruta relativa al proyecto a un archivo `.csl` de estilo de citas. Requiere que `bibliography` esté configurado.
 
-#### `export.template`
+#### `site.export.template`
 
 **Tipo:** `'literary' | 'academic' | 'anthology' | 'technical' | undefined`  
 **Por defecto:** template base según el tipo de documento
@@ -196,13 +197,14 @@ Variante de template LaTeX a usar por defecto para todos los documentos exportad
 Si la variante no es compatible con el tipo del documento, se usa el template base.
 
 ```yaml
-export:
-  formats: [pdf]
-  pdf-engine: xelatex
-  pdf-concurrency: 2
-  template: academic
-  bibliography: referencias.bib
-  csl: apa.csl
+site:
+  export:
+    formats: [pdf]
+    pdf-engine: xelatex
+    pdf-concurrency: 2
+    template: academic
+    bibliography: referencias.bib
+    csl: apa.csl
 ```
 
 ## Ejemplo mínimo
