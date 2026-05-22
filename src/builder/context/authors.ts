@@ -1,3 +1,4 @@
+import type { FrontmatterLink } from '../../loader/frontmatter.js';
 import type { TemplateContext } from '../../template/render/context.js';
 import { escapeHtml } from '../html.js';
 import type { AuthorDocumentIndex, BuildDocument } from '../types.js';
@@ -50,6 +51,12 @@ export function buildAuthorContext(doc: BuildDocument, fileDocs: BuildDocument[]
     ...(file.frontmatter.abstract !== undefined && { abstract: file.frontmatter.abstract }),
   }));
 
+  const tagline = doc.frontmatter.tagline;
+  const location = doc.frontmatter.location;
+  const email = doc.frontmatter.email;
+  const links = doc.frontmatter.links as FrontmatterLink[] | undefined;
+  const hasContact = location !== undefined || email !== undefined || (links !== undefined && links.length > 0);
+
   return {
     title: doc.frontmatter.title,
     pagetitle: escapeHtml(doc.frontmatter.title),
@@ -57,6 +64,11 @@ export function buildAuthorContext(doc: BuildDocument, fileDocs: BuildDocument[]
     body: doc.htmlFragment ?? '',
     'list-items': listItems,
     count: listItems.length,
+    ...(tagline !== undefined && { tagline }),
+    ...(location !== undefined && { location }),
+    ...(email !== undefined && { email }),
+    ...(links !== undefined && { links }),
+    ...(hasContact && { 'has-contact': true }),
     ...paginationCtx,
   };
 }

@@ -1,5 +1,10 @@
 export const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
 
+export interface FrontmatterLink {
+  label: string;
+  url: string;
+}
+
 export interface FrontmatterSpeaker {
   title: string;
   href?: string;
@@ -26,6 +31,10 @@ export interface Frontmatter {
   filters?: FrontmatterFilters;
   limit?: number;
   abstract?: string;
+  tagline?: string;
+  location?: string;
+  email?: string;
+  links?: FrontmatterLink[];
   [key: string]: unknown;
 }
 
@@ -125,7 +134,26 @@ function emptyFrontmatter(): Frontmatter {
     filters: undefined,
     limit: undefined,
     abstract: undefined,
+    tagline: undefined,
+    location: undefined,
+    email: undefined,
+    links: undefined,
   };
+}
+
+function normalizeLink(value: unknown): FrontmatterLink | undefined {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const obj = value as Record<string, unknown>;
+  const label = typeof obj.label === 'string' ? obj.label.trim() : '';
+  const url = typeof obj.url === 'string' ? obj.url.trim() : '';
+  if (!label || !url) return undefined;
+  return { label, url };
+}
+
+function normalizeLinks(value: unknown): FrontmatterLink[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const result = value.map(normalizeLink).filter((item): item is FrontmatterLink => item !== undefined);
+  return result.length > 0 ? result : undefined;
 }
 
 function normalizeFilters(value: unknown): FrontmatterFilters | undefined {
@@ -158,5 +186,9 @@ function normalizeFrontmatter(data: Record<string, unknown>): Frontmatter {
     filters: normalizeFilters(data.filters),
     limit: typeof data.limit === 'number' && Number.isFinite(data.limit) && data.limit > 0 ? Math.floor(data.limit) : undefined,
     abstract: typeof data.abstract === 'string' && data.abstract.trim() ? data.abstract.trim() : undefined,
+    tagline: typeof data.tagline === 'string' && data.tagline.trim() ? data.tagline.trim() : undefined,
+    location: typeof data.location === 'string' && data.location.trim() ? data.location.trim() : undefined,
+    email: typeof data.email === 'string' && data.email.trim() ? data.email.trim() : undefined,
+    links: normalizeLinks(data.links),
   };
 }
