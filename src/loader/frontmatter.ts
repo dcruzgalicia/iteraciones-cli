@@ -36,6 +36,9 @@ export interface Frontmatter {
   email?: string;
   links?: FrontmatterLink[];
   skills?: string[];
+  formacion?: string[];
+  intereses?: string[];
+  idiomas?: string[];
   [key: string]: unknown;
 }
 
@@ -140,6 +143,9 @@ function emptyFrontmatter(): Frontmatter {
     email: undefined,
     links: undefined,
     skills: undefined,
+    formacion: undefined,
+    intereses: undefined,
+    idiomas: undefined,
   };
 }
 
@@ -214,6 +220,18 @@ function normalizeFrontmatter(data: Record<string, unknown>): Frontmatter {
     links: normalizeLinks(data.links),
     skills: (() => {
       const arr = normalizeStringList(data.skills);
+      return arr.length > 0 ? arr : undefined;
+    })(),
+    formacion: (() => {
+      const arr = normalizeStringList(data.formacion);
+      return arr.length > 0 ? arr : undefined;
+    })(),
+    intereses: (() => {
+      const arr = normalizeStringList(data.intereses);
+      return arr.length > 0 ? arr : undefined;
+    })(),
+    idiomas: (() => {
+      const arr = normalizeStringList(data.idiomas);
       return arr.length > 0 ? arr : undefined;
     })(),
   };
