@@ -207,6 +207,33 @@ site:
     csl: apa.csl
 ```
 
+## Compatibilidad hacia atrás
+
+Las claves `theme:`, `math:` y `export:` en la raíz del archivo siguen siendo aceptadas temporalmente por el loader para no romper proyectos existentes. Si se detectan en la raíz, se aplican normalmente pero se emite un aviso en `stderr`:
+
+```
+[iteraciones] "theme:" en la raíz está obsoleto; muévelo dentro de "site:". Se seguirá usando por ahora.
+[iteraciones] "math:" en la raíz está obsoleto; muévelo dentro de "site:". Se seguirá usando por ahora.
+[iteraciones] "export:" en la raíz está obsoleto; muévelo dentro de "site:". Se seguirá usando por ahora.
+```
+
+Para migrar, mueve esas claves dentro de `site:`:
+
+```yaml
+# Antes (obsoleto, emite aviso)
+theme: light
+math: katex
+export:
+  formats: [pdf]
+
+# Ahora
+site:
+  theme: light
+  math: katex
+  export:
+    formats: [pdf]
+```
+
 ## Ejemplo mínimo
 
 ```yaml
