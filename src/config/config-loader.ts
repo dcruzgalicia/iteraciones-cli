@@ -43,11 +43,11 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
     logo: typeof site.logo === 'string' ? site.logo : DEFAULT_SITE_CONFIG.logo,
     listItemsLimit,
     plugins,
-    theme: resolveTheme(site.theme, root.theme),
+    theme: resolveTheme(site.theme),
     accent: resolveAccent(site.accent),
     baseUrl: typeof site['base-url'] === 'string' && site['base-url'].trim() ? site['base-url'].trim() : DEFAULT_SITE_CONFIG.baseUrl,
-    export: resolveExport(site.export, root.export),
-    math: resolveMath(site.math, root.math),
+    export: parseExportConfig(site.export),
+    math: resolveMath(site.math),
   };
 }
 
@@ -111,29 +111,10 @@ function resolveAccent(value: unknown): string {
   return value;
 }
 
-function resolveTheme(siteValue: unknown, rootValue: unknown): string | undefined {
-  if (typeof siteValue === 'string') return siteValue;
-  if (typeof rootValue === 'string') {
-    process.stderr.write(`[iteraciones] "theme:" en la raíz está obsoleto; muévelo dentro de "site:". Se seguirá usando por ahora.\n`);
-    return rootValue;
-  }
-  return DEFAULT_SITE_CONFIG.theme;
+function resolveTheme(siteValue: unknown): string | undefined {
+  return typeof siteValue === 'string' ? siteValue : DEFAULT_SITE_CONFIG.theme;
 }
 
-function resolveMath(siteValue: unknown, rootValue: unknown): 'katex' | 'mathjax' | undefined {
-  if (siteValue === 'katex' || siteValue === 'mathjax') return siteValue;
-  if (rootValue === 'katex' || rootValue === 'mathjax') {
-    process.stderr.write(`[iteraciones] "math:" en la raíz está obsoleto; muévelo dentro de "site:". Se seguirá usando por ahora.\n`);
-    return rootValue;
-  }
-  return DEFAULT_SITE_CONFIG.math;
-}
-
-function resolveExport(siteValue: unknown, rootValue: unknown): ExportConfig | undefined {
-  if (siteValue !== undefined && siteValue !== null) return parseExportConfig(siteValue);
-  if (rootValue !== undefined && rootValue !== null) {
-    process.stderr.write(`[iteraciones] "export:" en la raíz está obsoleto; muévelo dentro de "site:". Se seguirá usando por ahora.\n`);
-    return parseExportConfig(rootValue);
-  }
-  return undefined;
+function resolveMath(siteValue: unknown): 'katex' | 'mathjax' | undefined {
+  return siteValue === 'katex' || siteValue === 'mathjax' ? siteValue : DEFAULT_SITE_CONFIG.math;
 }
