@@ -35,6 +35,7 @@ export interface Frontmatter {
   location?: string;
   email?: string;
   links?: FrontmatterLink[];
+  skills?: string[];
   [key: string]: unknown;
 }
 
@@ -138,6 +139,7 @@ function emptyFrontmatter(): Frontmatter {
     location: undefined,
     email: undefined,
     links: undefined,
+    skills: undefined,
   };
 }
 
@@ -210,5 +212,9 @@ function normalizeFrontmatter(data: Record<string, unknown>): Frontmatter {
       return v && isSafeEmail(v) ? v : undefined;
     })(),
     links: normalizeLinks(data.links),
+    skills: (() => {
+      const arr = normalizeStringList(data.skills);
+      return arr.length > 0 ? arr : undefined;
+    })(),
   };
 }
