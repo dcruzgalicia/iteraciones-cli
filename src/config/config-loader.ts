@@ -43,11 +43,11 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
     logo: typeof site.logo === 'string' ? site.logo : DEFAULT_SITE_CONFIG.logo,
     listItemsLimit,
     plugins,
-    theme: typeof site.theme === 'string' ? site.theme : DEFAULT_SITE_CONFIG.theme,
+    theme: resolveTheme(site.theme, root.theme),
     accent: resolveAccent(site.accent),
     baseUrl: typeof site['base-url'] === 'string' && site['base-url'].trim() ? site['base-url'].trim() : DEFAULT_SITE_CONFIG.baseUrl,
     export: parseExportConfig(root.export),
-    math: site.math === 'katex' || site.math === 'mathjax' ? site.math : DEFAULT_SITE_CONFIG.math,
+    math: resolveMath(site.math, root.math),
   };
 }
 
@@ -109,4 +109,22 @@ function resolveAccent(value: unknown): string {
     return DEFAULT_SITE_CONFIG.accent;
   }
   return value;
+}
+
+function resolveTheme(siteValue: unknown, rootValue: unknown): string | undefined {
+  if (typeof siteValue === 'string') return siteValue;
+  if (typeof rootValue === 'string') {
+    process.stderr.write(`[iteraciones] "theme:" en la raíz está obsoleto; muévelo dentro de "site:". Se seguirá usando por ahora.\n`);
+    return rootValue;
+  }
+  return DEFAULT_SITE_CONFIG.theme;
+}
+
+function resolveMath(siteValue: unknown, rootValue: unknown): 'katex' | 'mathjax' | undefined {
+  if (siteValue === 'katex' || siteValue === 'mathjax') return siteValue;
+  if (rootValue === 'katex' || rootValue === 'mathjax') {
+    process.stderr.write(`[iteraciones] "math:" en la raíz está obsoleto; muévelo dentro de "site:". Se seguirá usando por ahora.\n`);
+    return rootValue;
+  }
+  return DEFAULT_SITE_CONFIG.math;
 }
