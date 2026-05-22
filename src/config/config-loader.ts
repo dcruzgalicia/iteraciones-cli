@@ -46,7 +46,7 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
     theme: resolveTheme(site.theme, root.theme),
     accent: resolveAccent(site.accent),
     baseUrl: typeof site['base-url'] === 'string' && site['base-url'].trim() ? site['base-url'].trim() : DEFAULT_SITE_CONFIG.baseUrl,
-    export: parseExportConfig(root.export),
+    export: resolveExport(site.export, root.export),
     math: resolveMath(site.math, root.math),
   };
 }
@@ -127,4 +127,13 @@ function resolveMath(siteValue: unknown, rootValue: unknown): 'katex' | 'mathjax
     return rootValue;
   }
   return DEFAULT_SITE_CONFIG.math;
+}
+
+function resolveExport(siteValue: unknown, rootValue: unknown): ExportConfig | undefined {
+  if (siteValue !== undefined && siteValue !== null) return parseExportConfig(siteValue);
+  if (rootValue !== undefined && rootValue !== null) {
+    process.stderr.write(`[iteraciones] "export:" en la raíz está obsoleto; muévelo dentro de "site:". Se seguirá usando por ahora.\n`);
+    return parseExportConfig(rootValue);
+  }
+  return undefined;
 }
