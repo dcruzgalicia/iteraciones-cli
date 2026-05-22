@@ -12,12 +12,12 @@ site:
   logo: ''
   accent: 'lime'
   base-url: ''
+  theme: 'light'
+  math: katex
   list-items:
     limit: 10
 
 plugins: []
-
-theme: 'light'
 
 # export: (opcional; omitir desactiva la exportación)
 #   formats: [pdf, epub]
@@ -76,6 +76,30 @@ Si se declara un color no reconocido, se usa `'lime'` con un aviso en `stderr`.
 
 Número máximo de elementos por página en las listas paginadas (tipos `list`, `events`, `authors`, `collection`).
 
+### `site.theme`
+
+**Tipo:** `string | undefined`  
+**Por defecto:** tema integrado `light`
+
+Nombre del tema integrado. Valores disponibles: `light`, `dark`. Ver [docs/themes.md](themes.md).
+
+```yaml
+site:
+  theme: 'dark'
+```
+
+### `site.math`
+
+**Tipo:** `'katex' | 'mathjax' | undefined`  
+**Por defecto:** sin renderizado matemático
+
+Motor de renderizado de fórmulas matemáticas. `katex` es más rápido y se carga desde CDN en el cliente; `mathjax` ofrece mayor cobertura de LaTeX pero es más pesado. Si se omite, no se inyecta ningún motor.
+
+```yaml
+site:
+  math: katex
+```
+
 ### `plugins`
 
 **Tipo:** `string[]`  
@@ -99,17 +123,6 @@ URL base del sitio, usada para construir enlaces absolutos (sitemap, feeds). Deb
 ```yaml
 site:
   base-url: 'https://ejemplo.com'
-```
-
-### `theme`
-
-**Tipo:** `string | undefined`  
-**Por defecto:** tema integrado
-
-Nombre del tema integrado. Valores disponibles: `light`, `dark`. Ver [docs/themes.md](themes.md).
-
-```yaml
-theme: 'light'
 ```
 
 ### `export`
