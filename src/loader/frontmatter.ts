@@ -141,12 +141,29 @@ function emptyFrontmatter(): Frontmatter {
   };
 }
 
+const ALLOWED_URL_SCHEMES = ['http:', 'https:'];
+
+function isSafeUrl(url: string): boolean {
+  if (url.startsWith('/')) return true;
+  try {
+    const { protocol } = new URL(url);
+    return ALLOWED_URL_SCHEMES.includes(protocol);
+  } catch {
+    return false;
+  }
+}
+
+function isSafeEmail(email: string): boolean {
+  return /^[^\s"'<>&]+@[^\s"'<>&]+\.[^\s"'<>&]+$/.test(email);
+}
+
 function normalizeLink(value: unknown): FrontmatterLink | undefined {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined;
   const obj = value as Record<string, unknown>;
   const label = typeof obj.label === 'string' ? obj.label.trim() : '';
   const url = typeof obj.url === 'string' ? obj.url.trim() : '';
   if (!label || !url) return undefined;
+  if (!isSafeUrl(url)) return undefined;
   return { label, url };
 }
 
@@ -188,7 +205,10 @@ function normalizeFrontmatter(data: Record<string, unknown>): Frontmatter {
     abstract: typeof data.abstract === 'string' && data.abstract.trim() ? data.abstract.trim() : undefined,
     tagline: typeof data.tagline === 'string' && data.tagline.trim() ? data.tagline.trim() : undefined,
     location: typeof data.location === 'string' && data.location.trim() ? data.location.trim() : undefined,
-    email: typeof data.email === 'string' && data.email.trim() ? data.email.trim() : undefined,
+    email: (() => {
+      const v = typeof data.email === 'string' ? data.email.trim() : undefined;
+      return v && isSafeEmail(v) ? v : undefined;
+    })(),
     links: normalizeLinks(data.links),
   };
 }
