@@ -146,36 +146,36 @@
           </div>
         </div>
         $endif$
-        $if(formacion)$
+        $if(training)$
         <div class="mb-6">
           <div
             class="mb-3 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase">
             // Formación
           </div>
           <div class="space-y-2">
-            $for(formacion)$<div class="rounded border border-accent-200/60 bg-accent-50/50 px-3 py-2 font-mono text-xs leading-relaxed text-zinc-600">$formacion$</div>$endfor$
+            $for(training)$<div class="rounded border border-accent-200/60 bg-accent-50/50 px-3 py-2 font-mono text-xs leading-relaxed text-zinc-600">$training$</div>$endfor$
           </div>
         </div>
         $endif$
-        $if(intereses)$
+        $if(interests)$
         <div class="mb-6">
           <div
             class="mb-3 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase">
             // Intereses
           </div>
           <div class="flex flex-wrap gap-1.5">
-            $for(intereses)$<span class="rounded-full border border-accent-300 bg-accent-50 px-2 py-0.5 font-mono text-[10px] text-accent-700">$intereses$</span>$endfor$
+            $for(interests)$<span class="rounded-full border border-accent-300 bg-accent-50 px-2 py-0.5 font-mono text-[10px] text-accent-700">$interests$</span>$endfor$
           </div>
         </div>
         $endif$
-        $if(idiomas)$
+        $if(languages)$
         <div class="mb-6">
           <div
             class="mb-3 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase">
             // Idiomas
           </div>
           <div class="space-y-2">
-            $for(idiomas)$<div class="rounded border border-accent-200/60 bg-accent-50/50 px-3 py-2 font-mono text-xs text-zinc-600">$idiomas$</div>$endfor$
+            $for(languages)$<div class="rounded border border-accent-200/60 bg-accent-50/50 px-3 py-2 font-mono text-xs text-zinc-600">$languages$</div>$endfor$
           </div>
         </div>
         $endif$

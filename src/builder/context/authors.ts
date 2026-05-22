@@ -32,6 +32,14 @@ export function resolveAuthorHref(authors: string[], index: AuthorDocumentIndex 
  *   body       → htmlFragment del documento autor (bio opcional)
  *   list-items → publicaciones (tipo 'file') cuyo frontmatter.author incluye el título del autor: { href, title, author, body: '' (shadow), date, abstract? }
  *   count      → número de publicaciones
+ *   tagline    → frontmatter.tagline del documento autor
+ *   location   → frontmatter.location del documento autor
+ *   email      → frontmatter.email del documento autor
+ *   links      → frontmatter.links del documento autor
+ *   skills     → frontmatter.skills del documento autor (array de strings)
+ *   training   → frontmatter.training del documento autor (array de strings)
+ *   interests  → frontmatter.interests del documento autor (array de strings)
+ *   languages  → frontmatter.languages del documento autor (array de strings)
  *
  * La coincidencia es case-insensitive: se compara cada nombre en el array author
  * con el título del documento autor.
@@ -55,9 +63,9 @@ export function buildAuthorContext(doc: BuildDocument, fileDocs: BuildDocument[]
   const email = doc.frontmatter.email;
   const links = doc.frontmatter.links;
   const skills = doc.frontmatter.skills;
-  const formacion = doc.frontmatter.formacion;
-  const intereses = doc.frontmatter.intereses;
-  const idiomas = doc.frontmatter.idiomas;
+  const training = doc.frontmatter.training;
+  const interests = doc.frontmatter.interests;
+  const languages = doc.frontmatter.languages;
   const hasContact = location !== undefined || email !== undefined || (links !== undefined && links.length > 0);
 
   return {
@@ -72,9 +80,9 @@ export function buildAuthorContext(doc: BuildDocument, fileDocs: BuildDocument[]
     ...(email !== undefined && { email }),
     ...(links !== undefined && { links }),
     ...(skills !== undefined && { skills }),
-    ...(formacion !== undefined && { formacion }),
-    ...(intereses !== undefined && { intereses }),
-    ...(idiomas !== undefined && { idiomas }),
+    ...(training !== undefined && { training }),
+    ...(interests !== undefined && { interests }),
+    ...(languages !== undefined && { languages }),
     ...(hasContact && { 'has-contact': true }),
     ...paginationCtx,
   };
