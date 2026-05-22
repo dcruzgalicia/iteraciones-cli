@@ -43,7 +43,7 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
     logo: typeof site.logo === 'string' ? site.logo : DEFAULT_SITE_CONFIG.logo,
     listItemsLimit,
     plugins,
-    theme: typeof root.theme === 'string' ? root.theme : DEFAULT_SITE_CONFIG.theme,
+    theme: typeof site.theme === 'string' ? site.theme : DEFAULT_SITE_CONFIG.theme,
     accent: resolveAccent(site.accent),
     baseUrl: typeof site['base-url'] === 'string' && site['base-url'].trim() ? site['base-url'].trim() : DEFAULT_SITE_CONFIG.baseUrl,
     export: parseExportConfig(root.export),
