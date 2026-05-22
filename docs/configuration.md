@@ -13,7 +13,7 @@ site:
   accent: 'lime'
   base-url: ''
   theme: 'light'
-  math: katex
+  # math: katex     # opcional; omitir desactiva el renderizado matemático
   list-items:
     limit: 10
 
