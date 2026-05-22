@@ -67,10 +67,40 @@ items:
 
 Página de perfil de una persona. Los documentos de tipo `file` que declaran `author:` enlazan automáticamente a su página de autor.
 
+Campos adicionales disponibles para perfiles de autor:
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `tagline` | `string` | Subtítulo breve que aparece bajo el nombre. |
+| `location` | `string` | Ubicación geográfica del autor. |
+| `email` | `string` | Correo electrónico (debe ser válido). |
+| `links` | `{ label: string; url: string }[]` | Enlaces externos (GitHub, web personal, etc.). |
+| `skills` | `string \| string[]` | Tecnologías o habilidades técnicas (se renderizan como chips). |
+| `training` | `string \| string[]` | Formación académica o profesional (texto en tarjeta). |
+| `interests` | `string \| string[]` | Áreas de interés (se renderizan como chips). |
+| `languages` | `string \| string[]` | Idiomas (texto en tarjeta). |
+
 ```yaml
 ---
 title: 'Sofia García'
 type: author
+tagline: Escritora y editora digital
+location: Ciudad de México, México
+email: sofia@example.com
+links:
+  - label: GitHub
+    url: https://github.com/sofia
+skills:
+  - Markdown
+  - LaTeX
+training:
+  - 'Letras Hispánicas · UNAM'
+interests:
+  - narrativa breve
+  - edición independiente
+languages:
+  - 'Español — nativo'
+  - 'Inglés — lectura'
 ---
 ```
 
