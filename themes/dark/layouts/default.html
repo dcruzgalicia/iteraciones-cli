@@ -179,6 +179,19 @@
             $endfor$
           </div>
         </div>
+        $endif$
+        $if(keywords)$
+        <div class="mb-6">
+          <div
+            class="mb-3 font-mono text-xs font-bold tracking-widest text-accent-500 uppercase">
+            // Temas
+          </div>
+          <div class="flex flex-wrap gap-1.5">
+            $for(keywords)$
+            <span class="rounded-full border border-accent-700/60 bg-accent-900/40 px-2 py-0.5 font-mono text-[10px] text-accent-300">$keywords$</span>
+            $endfor$
+          </div>
+        </div>
         $endif$ $sidebar-primary$
       </aside>
 
