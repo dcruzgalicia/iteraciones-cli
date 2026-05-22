@@ -22,14 +22,15 @@
       $for(links)$<a href="$url$" class="text-accent-600 no-underline hover:underline">$label$</a>$endfor$
     </div>
     $endif$
+    $if(skills)$
+    <div class="mt-4 flex flex-wrap gap-1.5">
+      $for(skills)$<span class="rounded-full border border-accent-300/70 bg-accent-50 px-2.5 py-0.5 font-mono text-[11px] text-accent-700">$skills$</span>$endfor$
+    </div>
+    $endif$
     <div
       class="mt-6 h-px bg-gradient-to-r from-accent-400/40 via-accent-200/20 to-transparent"></div>
   </header>
-  $if(body)$
-  <div class="prose prose-accent lg:prose-lg max-w-none">
-    $body$
-  </div>
-  $endif$ $if(list-items)$
+  $if(list-items)$
   <div class="space-y-0">
     <div
       class="mb-4 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase">
@@ -104,5 +105,15 @@
       $endif$
     </div>
   </nav>
+  $endif$
+  $if(body)$
+  <div class="border-t border-accent-200/30 pt-8">
+    <div class="mb-5 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase">
+      // Perfil
+    </div>
+    <div class="prose prose-accent lg:prose-lg max-w-none">
+      $body$
+    </div>
+  </div>
   $endif$
 </div>
