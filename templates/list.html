@@ -23,17 +23,15 @@
   $endif$ $if(list-items)$
   <div class="divide-y divide-accent-200/50">
     $for(list-items)$
-    <a
-      href="$href$"
-      class="group flex items-start gap-4 py-5 no-underline transition-colors first:pt-0">
+    <article class="group flex items-start gap-4 py-5 first:pt-0">
       $if(cover-image)$
-      <div class="shrink-0 w-16 sm:w-20">
+      <a href="$href$" class="shrink-0 w-16 sm:w-20 no-underline" tabindex="-1" aria-hidden="true">
         <img
           src="$cover-image$"
           alt=""
           loading="lazy"
-          class="w-full rounded border border-accent-200/60 object-cover shadow-sm aspect-[3/4]" />
-      </div>
+          class="w-full rounded border border-accent-200/60 object-cover shadow-sm aspect-[3/4] transition-opacity group-hover:opacity-90" />
+      </a>
       $endif$
       <div class="min-w-0 flex-1">
         <div class="flex items-start justify-between gap-3">
@@ -42,10 +40,11 @@
               class="shrink-0 font-mono text-accent-300 transition-colors group-hover:text-accent-600"
               >▸</span
             >
-            <div
-              class="font-semibold tracking-tight text-zinc-700 transition-colors group-hover:text-accent-700">
+            <a
+              href="$href$"
+              class="font-semibold tracking-tight text-zinc-700 no-underline transition-colors hover:text-accent-700">
               $title$
-            </div>
+            </a>
           </div>
           <div class="shrink-0 font-mono text-xs text-zinc-400 pt-0.5">
             $date$
@@ -62,20 +61,20 @@
         $endif$
         $if(download-pdf)$
         <div class="mt-2 pl-4 flex flex-wrap gap-1.5">
-          <span class="inline-flex items-center gap-1 rounded border border-zinc-200 bg-zinc-50 px-2 py-0.5 font-mono text-[10px] text-zinc-500">↓ PDF</span>
+          <a href="$download-pdf$" download class="inline-flex items-center gap-1 rounded border border-zinc-200 bg-zinc-50 px-2 py-0.5 font-mono text-[10px] text-zinc-500 no-underline transition-colors hover:bg-zinc-100 hover:border-zinc-300">↓ PDF</a>
           $if(download-epub)$
-          <span class="inline-flex items-center gap-1 rounded border border-zinc-200 bg-zinc-50 px-2 py-0.5 font-mono text-[10px] text-zinc-500">↓ EPUB</span>
+          <a href="$download-epub$" download class="inline-flex items-center gap-1 rounded border border-zinc-200 bg-zinc-50 px-2 py-0.5 font-mono text-[10px] text-zinc-500 no-underline transition-colors hover:bg-zinc-100 hover:border-zinc-300">↓ EPUB</a>
           $endif$
         </div>
         $else$
         $if(download-epub)$
         <div class="mt-2 pl-4">
-          <span class="inline-flex items-center gap-1 rounded border border-zinc-200 bg-zinc-50 px-2 py-0.5 font-mono text-[10px] text-zinc-500">↓ EPUB</span>
+          <a href="$download-epub$" download class="inline-flex items-center gap-1 rounded border border-zinc-200 bg-zinc-50 px-2 py-0.5 font-mono text-[10px] text-zinc-500 no-underline transition-colors hover:bg-zinc-100 hover:border-zinc-300">↓ EPUB</a>
         </div>
         $endif$
         $endif$
       </div>
-    </a>
+    </article>
     $endfor$
   </div>
   $else$
