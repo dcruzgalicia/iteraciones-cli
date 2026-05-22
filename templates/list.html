@@ -60,19 +60,6 @@
           $abstract$
         </div>
         $endif$
-        $if(keywords)$
-        <div class="mt-2 pl-4 flex flex-wrap items-center gap-1.5">
-          $for(keywords)$
-          <span class="rounded-full border border-accent-300 bg-accent-50 px-2 py-0.5 font-mono text-[10px] text-accent-700">$keywords$</span>
-          $endfor$
-          $if(download-pdf)$
-          <span class="inline-flex items-center gap-1 rounded border border-zinc-200 bg-zinc-50 px-2 py-0.5 font-mono text-[10px] text-zinc-500">↓ PDF</span>
-          $endif$
-          $if(download-epub)$
-          <span class="inline-flex items-center gap-1 rounded border border-zinc-200 bg-zinc-50 px-2 py-0.5 font-mono text-[10px] text-zinc-500">↓ EPUB</span>
-          $endif$
-        </div>
-        $else$
         $if(download-pdf)$
         <div class="mt-2 pl-4 flex flex-wrap gap-1.5">
           <span class="inline-flex items-center gap-1 rounded border border-zinc-200 bg-zinc-50 px-2 py-0.5 font-mono text-[10px] text-zinc-500">↓ PDF</span>
@@ -85,7 +72,6 @@
         <div class="mt-2 pl-4">
           <span class="inline-flex items-center gap-1 rounded border border-zinc-200 bg-zinc-50 px-2 py-0.5 font-mono text-[10px] text-zinc-500">↓ EPUB</span>
         </div>
-        $endif$
         $endif$
         $endif$
       </div>
