@@ -135,6 +135,50 @@
         </div>
         $endif$
         $endif$
+        $if(skills)$
+        <div class="mb-6">
+          <div
+            class="mb-3 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase">
+            // Skills
+          </div>
+          <div class="flex flex-wrap gap-1.5">
+            $for(skills)$<span class="rounded-full border border-accent-300/70 bg-accent-50 px-2.5 py-0.5 font-mono text-[11px] text-accent-700">$skills$</span>$endfor$
+          </div>
+        </div>
+        $endif$
+        $if(formacion)$
+        <div class="mb-6">
+          <div
+            class="mb-3 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase">
+            // Formación
+          </div>
+          <div class="space-y-2">
+            $for(formacion)$<div class="font-mono text-xs leading-relaxed text-zinc-600">$formacion$</div>$endfor$
+          </div>
+        </div>
+        $endif$
+        $if(intereses)$
+        <div class="mb-6">
+          <div
+            class="mb-3 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase">
+            // Intereses
+          </div>
+          <div class="flex flex-wrap gap-1.5">
+            $for(intereses)$<span class="rounded-full border border-accent-300 bg-accent-50 px-2 py-0.5 font-mono text-[10px] text-accent-700">$intereses$</span>$endfor$
+          </div>
+        </div>
+        $endif$
+        $if(idiomas)$
+        <div class="mb-6">
+          <div
+            class="mb-3 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase">
+            // Idiomas
+          </div>
+          <div class="space-y-1">
+            $for(idiomas)$<div class="font-mono text-xs text-zinc-600">$idiomas$</div>$endfor$
+          </div>
+        </div>
+        $endif$
         $if(date)$
         <div class="mb-6">
           <div
