@@ -7,8 +7,8 @@ import { mapWithConcurrency } from '../../output/concurrency.js';
 import type { PluginRegistry } from '../../plugin/registry.js';
 import { convertToEpub, convertToPdf } from '../../services/pandoc-exporter.js';
 import type { BuildDocument, DocumentType } from '../types.js';
-import { assembleExportDocument, resolveEventsForExport, resolveItemsForExport } from './assemble.js';
-import type { ExportMetadata, ExportResult } from './types.js';
+import { assembleAuthorExportVariants, assembleExportDocument, resolveEventsForExport, resolveItemsForExport } from './assemble.js';
+import type { ExportDocument, ExportMetadata, ExportResult } from './types.js';
 import { EXPORTABLE_TYPES } from './types.js';
 
 /**
@@ -236,6 +236,96 @@ export async function runExportDocuments(
       }).length
     : 0;
 
+  // Closure que genera los formatos (epub, pdf) para un ExportDocument ya ensamblado.
+  // `sourceHash` es el hash del documento fuente original (para la clave de caché).
+  // `itemHashes` es la cadena de hashes de los ítems incluidos (string vacío para
+  // documentos sin ítems como author).
+  async function generateFormats(
+    exportDoc: ExportDocument,
+    outputBase: string,
+    sourceHash: string,
+    itemHashes: string,
+  ): Promise<Array<PromiseSettledResult<{ epub?: string; pdf?: string }>>> {
+    return Promise.allSettled(
+      config.formats.map(async (format): Promise<{ epub?: string; pdf?: string }> => {
+        const outputPath = `${outputBase}.${format}`;
+
+        if (format === 'epub') {
+          const cacheKey = hash(sourceHash, itemHashes, 'epub', cliVersion, pandocVersion, pluginFingerprint ?? '', bibHash, cslHash);
+          if (cacheManager && (await cacheManager.hasBinary('export', cacheKey, 'epub'))) {
+            await cacheManager.copyBinaryTo('export', cacheKey, 'epub', outputPath);
+            if (stats) {
+              stats.totalEpub++;
+              stats.cacheHitsEpub++;
+            }
+            return { epub: outputPath };
+          }
+          await convertToEpub(exportDoc, outputPath);
+          // Hook afterExport: permite post-procesar los bytes del archivo generado.
+          const epubData = await Bun.file(outputPath).arrayBuffer();
+          if (registry) {
+            const afterCtx = await registry.runAfterExport({ sourcePath: exportDoc.filePath, format: 'epub', data: new Uint8Array(epubData) });
+            await Bun.write(outputPath, afterCtx.data);
+            if (cacheManager) await cacheManager.writeBinary('export', cacheKey, 'epub', afterCtx.data.slice().buffer as ArrayBuffer);
+          } else if (cacheManager) {
+            await cacheManager.writeBinary('export', cacheKey, 'epub', epubData);
+          }
+          if (stats) stats.totalEpub++;
+          return { epub: outputPath };
+        }
+
+        if (format === 'pdf') {
+          const cacheKey = hash(
+            sourceHash,
+            itemHashes,
+            'pdf',
+            config.pdfEngine,
+            cliVersion,
+            pandocVersion,
+            pluginFingerprint ?? '',
+            bibHash,
+            cslHash,
+          );
+          if (cacheManager && (await cacheManager.hasBinary('export', cacheKey, 'pdf'))) {
+            await cacheManager.copyBinaryTo('export', cacheKey, 'pdf', outputPath);
+            if (stats) {
+              stats.totalPdf++;
+              stats.cacheHitsPdf++;
+            }
+            pdfDone++;
+            if (pdfTotal > 2) {
+              process.stderr.write(`[export] PDF ${pdfDone}/${pdfTotal} — ${exportDoc.relativePath}\n`);
+            }
+            return { pdf: outputPath };
+          }
+          await acquireXelatex();
+          try {
+            await convertToPdf(exportDoc, outputPath, config.pdfEngine);
+          } finally {
+            releaseXelatex();
+          }
+          // Hook afterExport: permite post-procesar los bytes del archivo generado.
+          const pdfData = await Bun.file(outputPath).arrayBuffer();
+          if (registry) {
+            const afterCtx = await registry.runAfterExport({ sourcePath: exportDoc.filePath, format: 'pdf', data: new Uint8Array(pdfData) });
+            await Bun.write(outputPath, afterCtx.data);
+            if (cacheManager) await cacheManager.writeBinary('export', cacheKey, 'pdf', afterCtx.data.slice().buffer as ArrayBuffer);
+          } else if (cacheManager) {
+            await cacheManager.writeBinary('export', cacheKey, 'pdf', pdfData);
+          }
+          if (stats) stats.totalPdf++;
+          pdfDone++;
+          if (pdfTotal > 2) {
+            process.stderr.write(`[export] PDF ${pdfDone}/${pdfTotal} — ${exportDoc.relativePath}\n`);
+          }
+          return { pdf: outputPath };
+        }
+
+        return {};
+      }),
+    );
+  }
+
   const results = await mapWithConcurrency(exportableDocs, concurrency, async (doc): Promise<ExportResult | null> => {
     // Respetar export: { skip: true } en el frontmatter del documento.
     // Se valida que sea un objeto plano (sin arrays ni prototipos no-Object)
@@ -252,6 +342,77 @@ export async function runExportDocuments(
     }
 
     // Resolver items según el tipo del documento
+    // Author: exportación especial con dos variantes (perfil y completo)
+    if (doc.type === 'author') {
+      const fileDocs = renderedMap.get('file') ?? [];
+      const { summary: rawSummary, full: rawFull } = assembleAuthorExportVariants(
+        doc,
+        [...fileDocs],
+        lang,
+        cwd,
+        globalBibliography,
+        globalCsl,
+        config.template,
+      );
+
+      let summaryDoc = rawSummary;
+      let fullDoc = rawFull;
+      if (registry) {
+        const [sBefore, fBefore] = await Promise.all([
+          registry.runBeforeExport({
+            sourcePath: rawSummary.filePath,
+            body: rawSummary.body,
+            metadata: rawSummary.metadata as unknown as Record<string, unknown>,
+          }),
+          registry.runBeforeExport({
+            sourcePath: rawFull.filePath,
+            body: rawFull.body,
+            metadata: rawFull.metadata as unknown as Record<string, unknown>,
+          }),
+        ]);
+        summaryDoc = { ...rawSummary, body: sBefore.body, metadata: { ...rawSummary.metadata, ...(sBefore.metadata as Partial<ExportMetadata>) } };
+        fullDoc = { ...rawFull, body: fBefore.body, metadata: { ...rawFull.metadata, ...(fBefore.metadata as Partial<ExportMetadata>) } };
+      }
+
+      const summaryBase = join(outputDir, summaryDoc.relativePath.replace(/\.md$/, ''));
+      const fullBase = join(outputDir, fullDoc.relativePath.replace(/\.md$/, ''));
+
+      // Hashes de obras del autor para la clave de caché
+      const authorName = (doc.frontmatter.title || '').trim().toLowerCase();
+      const authorItemHashes = fileDocs
+        .filter((f) => f.kind !== 'block' && f.frontmatter.author.some((a) => a.trim().toLowerCase() === authorName))
+        .map((f) => f.sourceHash)
+        .join('\0');
+
+      const [summaryResults, fullResults] = await Promise.all([
+        generateFormats(summaryDoc, summaryBase, doc.sourceHash, authorItemHashes),
+        generateFormats(fullDoc, fullBase, doc.sourceHash, `${authorItemHashes}\0full`),
+      ]);
+
+      const result: ExportResult = { filePath: doc.filePath, relativePath: doc.relativePath };
+      let firstError: unknown;
+      for (const fr of summaryResults) {
+        if (fr.status === 'fulfilled') {
+          if (fr.value.epub) result.epubPath = fr.value.epub;
+          if (fr.value.pdf) result.pdfPath = fr.value.pdf;
+        } else if (!firstError) {
+          firstError = fr.reason;
+        }
+      }
+      for (const fr of fullResults) {
+        if (fr.status === 'fulfilled') {
+          if (fr.value.epub) result.epubFullPath = fr.value.epub;
+          if (fr.value.pdf) result.pdfFullPath = fr.value.pdf;
+        } else if (!firstError) {
+          firstError = fr.reason;
+        }
+      }
+      if (firstError) throw firstError;
+      if (result.pdfPath) result.coverPath = await generateCoverImage(result.pdfPath, summaryBase);
+      return result;
+    }
+
+    // Resolver items según el tipo del documento (non-author)
     let items: BuildDocument[] = [];
     if (doc.type === 'collection') {
       items = resolveItemsForExport(doc, itemPool);
@@ -291,88 +452,7 @@ export async function runExportDocuments(
     // antes de propagar el primer error, de modo que no quedan promesas en vuelo
     // cuando la función retorna o lanza. No evita que un formato escriba en caché
     // aunque el otro falle después.
-    const formatResults = await Promise.allSettled(
-      config.formats.map(async (format): Promise<{ epub?: string; pdf?: string }> => {
-        const outputPath = `${outputBase}.${format}`;
-
-        if (format === 'epub') {
-          const cacheKey = hash(doc.sourceHash, itemHashes, 'epub', cliVersion, pandocVersion, pluginFingerprint ?? '', bibHash, cslHash);
-          if (cacheManager && (await cacheManager.hasBinary('export', cacheKey, 'epub'))) {
-            await cacheManager.copyBinaryTo('export', cacheKey, 'epub', outputPath);
-            if (stats) {
-              stats.totalEpub++;
-              stats.cacheHitsEpub++;
-            }
-            return { epub: outputPath };
-          }
-          await convertToEpub(exportDoc, outputPath);
-          // Hook afterExport: permite post-procesar los bytes del archivo generado.
-          const epubData = await Bun.file(outputPath).arrayBuffer();
-          if (registry) {
-            const afterCtx = await registry.runAfterExport({ sourcePath: exportDoc.filePath, format: 'epub', data: new Uint8Array(epubData) });
-            await Bun.write(outputPath, afterCtx.data);
-            // .slice() normaliza el buffer: evita que un Uint8Array con byteOffset
-            // o longitud parcial escriba bytes extra o incorrectos en la caché.
-            if (cacheManager) await cacheManager.writeBinary('export', cacheKey, 'epub', afterCtx.data.slice().buffer as ArrayBuffer);
-          } else if (cacheManager) {
-            await cacheManager.writeBinary('export', cacheKey, 'epub', epubData);
-          }
-          if (stats) stats.totalEpub++;
-          return { epub: outputPath };
-        }
-
-        if (format === 'pdf') {
-          const cacheKey = hash(
-            doc.sourceHash,
-            itemHashes,
-            'pdf',
-            config.pdfEngine,
-            cliVersion,
-            pandocVersion,
-            pluginFingerprint ?? '',
-            bibHash,
-            cslHash,
-          );
-          if (cacheManager && (await cacheManager.hasBinary('export', cacheKey, 'pdf'))) {
-            await cacheManager.copyBinaryTo('export', cacheKey, 'pdf', outputPath);
-            if (stats) {
-              stats.totalPdf++;
-              stats.cacheHitsPdf++;
-            }
-            pdfDone++;
-            if (pdfTotal > 2) {
-              process.stderr.write(`[export] PDF ${pdfDone}/${pdfTotal} — ${exportDoc.relativePath}\n`);
-            }
-            return { pdf: outputPath };
-          }
-          await acquireXelatex();
-          try {
-            await convertToPdf(exportDoc, outputPath, config.pdfEngine);
-          } finally {
-            releaseXelatex();
-          }
-          // Hook afterExport: permite post-procesar los bytes del archivo generado.
-          const pdfData = await Bun.file(outputPath).arrayBuffer();
-          if (registry) {
-            const afterCtx = await registry.runAfterExport({ sourcePath: exportDoc.filePath, format: 'pdf', data: new Uint8Array(pdfData) });
-            await Bun.write(outputPath, afterCtx.data);
-            // .slice() normaliza el buffer: evita que un Uint8Array con byteOffset
-            // o longitud parcial escriba bytes extra o incorrectos en la caché.
-            if (cacheManager) await cacheManager.writeBinary('export', cacheKey, 'pdf', afterCtx.data.slice().buffer as ArrayBuffer);
-          } else if (cacheManager) {
-            await cacheManager.writeBinary('export', cacheKey, 'pdf', pdfData);
-          }
-          if (stats) stats.totalPdf++;
-          pdfDone++;
-          if (pdfTotal > 2) {
-            process.stderr.write(`[export] PDF ${pdfDone}/${pdfTotal} — ${exportDoc.relativePath}\n`);
-          }
-          return { pdf: outputPath };
-        }
-
-        return {};
-      }),
-    );
+    const formatResults = await generateFormats(exportDoc, outputBase, doc.sourceHash, itemHashes);
 
     // Recopilar resultados exitosos y acumular errores.
     // Re-lanzar el primer error si algún formato falló (mantiene el comportamiento
@@ -438,6 +518,14 @@ export function injectDownloadLinks(docs: BuildDocument[], exportResults: Export
     if (result.coverPath) {
       const rel = result.coverPath.slice(outputDir.length).replace(/\\/g, '/');
       extra['cover-image'] = rel.startsWith('/') ? rel : `/${rel}`;
+    }
+    if (result.pdfFullPath) {
+      const rel = result.pdfFullPath.slice(outputDir.length).replace(/\\/g, '/');
+      extra['download-pdf-completo'] = rel.startsWith('/') ? rel : `/${rel}`;
+    }
+    if (result.epubFullPath) {
+      const rel = result.epubFullPath.slice(outputDir.length).replace(/\\/g, '/');
+      extra['download-epub-completo'] = rel.startsWith('/') ? rel : `/${rel}`;
     }
     if (Object.keys(extra).length === 0) return doc;
     return { ...doc, templateContext: { ...doc.templateContext, ...extra } };
