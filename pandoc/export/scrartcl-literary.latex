@@ -43,6 +43,9 @@ $endif$
 \KOMAoptions{numbers=noendperiod}
 \addtokomafont{disposition}{\normalfont\itshape}
 
+% ─── Sin numeración de secciones ─────────────────────────────────────────────
+\setcounter{secnumdepth}{0}
+
 % ─── Matemáticas ─────────────────────────────────────────────────────────────
 \usepackage{amsmath}
 \usepackage{amssymb}
@@ -83,6 +86,15 @@ $endif$
 \usepackage{fancyvrb}
 \usepackage{framed}
 \newenvironment{Shaded}{}{}
+
+% ─── Entorno para el bloque de contacto del autor ────────────────────────────
+\newenvironment{authorcontact}{%
+  \def\FrameCommand{{\color{linkblue!50}\vrule width 3pt}\hspace{10pt}}%
+  \MakeFramed{\advance\hsize-\width\FrameRestore}%
+  \small\color[HTML]{374151}%
+  \setlength{\parskip}{0.15\baselineskip}%
+}{\endMakeFramed\vspace{0.5\baselineskip}}
+
 \newenvironment{Highlighting}[1][]{\VerbatimEnvironment\begin{Verbatim}[commandchars=\\\{\}]}{\end{Verbatim}}
 \newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
 \newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
