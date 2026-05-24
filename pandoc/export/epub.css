@@ -199,3 +199,18 @@ hr {
   font-size: 0.85em;
   color: #4b5563;
 }
+
+/* ─── Bloque de contacto del autor ─────────────────────────────────────── */
+
+.authorcontact {
+  border-left: 3px solid #93b4f0;
+  padding: 0.6em 0 0.6em 0.9em;
+  margin: 0.75em 0 1.25em 0;
+  font-size: 0.9em;
+  color: #374151;
+  line-height: 1.55;
+}
+
+.authorcontact p {
+  margin: 0;
+}

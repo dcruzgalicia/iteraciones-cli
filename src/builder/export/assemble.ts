@@ -232,7 +232,8 @@ function buildAuthorExportBody(doc: BuildDocument, sortedWorks: BuildDocument[],
     }
   }
   if (contactLines.length > 0) {
-    parts.push(contactLines.join('  \n') + '\n\n');
+    parts.push(`::: {.authorcontact}\n${contactLines.join('\\\n')}\n:::`);
+    parts.push('\n\n');
   }
 
   if (fm.skills && fm.skills.length > 0) {
@@ -351,7 +352,7 @@ export function assembleAuthorExportVariants(
       filePath: doc.filePath,
       relativePath: doc.relativePath.replace(/\.md$/, '-completo.md'),
       body: buildAuthorExportBody(doc, authorWorks, 'full'),
-      metadata: { ...metadata, title: `${metadata.title} — Completo` },
+      metadata: { ...metadata, title: metadata.title },
     },
   };
 }
