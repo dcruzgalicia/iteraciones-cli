@@ -1,6 +1,8 @@
 /* ─── Fuentes del sitio embebidas en el EPUB ───────────────────────────────── */
 /* Las fuentes se embeben vía --epub-embed-font en pandoc-exporter.ts.          */
-/* Los nombres de archivo aquí deben coincidir con los argumentos --epub-embed-font. */
+/* El url() en @font-face debe coincidir con el basename del archivo TTF;       */
+/* pandoc usa solo el nombre de archivo al registrar las fuentes en el EPUB,    */
+/* independientemente de si la ruta pasada a --epub-embed-font es absoluta.     */
 
 @font-face {
   font-family: "Exo 2";
