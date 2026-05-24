@@ -223,6 +223,7 @@ function buildAuthorExportBody(doc: BuildDocument, sortedWorks: BuildDocument[],
 
   // Contacto / datos de contexto
   const contactLines: string[] = [];
+  if (fm.tagline) contactLines.push(`*${fm.tagline}*`);
   if (fm.location) contactLines.push(`**Ubicación:** ${fm.location}`);
   if (fm.email) contactLines.push(`**Correo:** ${fm.email}`);
   if (fm.links && fm.links.length > 0) {
