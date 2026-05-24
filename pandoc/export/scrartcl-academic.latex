@@ -3,11 +3,30 @@
 %% Énfasis en rigor formal: abstract, palabras clave, citas CSL, numeración de secciones
 %% Requiere: TeX Live / MacTeX full con KOMA-Script, fontspec, microtype, hyperref, babel
 
-\documentclass[$if(fontsize)$$fontsize$, $endif$numbers=noendperiod]{scrartcl}
+\documentclass[$if(fontsize)$$fontsize$$else$12pt$endif$, numbers=noendperiod]{scrartcl}
 
 % ─── Codificación y fuentes ──────────────────────────────────────────────────
 \usepackage{fontspec}
 \usepackage{microtype}
+
+% ─── Tipografía del sitio: Exo 2 (cuerpo) + Space Mono (código/etiquetas) ────
+$if(fontdir)$
+\setmainfont[
+  Path         = $fontdir$/,
+  UprightFont  = Exo2-VariableFont_wght,
+  ItalicFont   = Exo2-Italic-VariableFont_wght,
+  Extension    = .ttf,
+]{Exo 2}
+\setmonofont[
+  Path           = $fontdir$/,
+  UprightFont    = SpaceMono-Regular,
+  BoldFont       = SpaceMono-Bold,
+  ItalicFont     = SpaceMono-Italic,
+  BoldItalicFont = SpaceMono-BoldItalic,
+  Extension      = .ttf,
+  Scale          = 0.85,
+]{Space Mono}
+$endif$
 
 % ─── Idioma ──────────────────────────────────────────────────────────────────
 $if(lang)$
@@ -96,7 +115,9 @@ $endif$
 \providecommand{\passthrough}[1]{#1}
 
 % ─── Hipervínculos ───────────────────────────────────────────────────────────
-\usepackage[unicode=true, colorlinks=true, linkcolor=black, urlcolor=blue, citecolor=black]{hyperref}
+\usepackage{xcolor}
+\definecolor{linkblue}{HTML}{1D4ED8}   %% blue-700
+\usepackage[unicode=true, colorlinks=true, linkcolor=linkblue, urlcolor=linkblue, citecolor=linkblue]{hyperref}
 
 % Entornos CSL para bibliografías procesadas con pandoc --citeproc
 $if(csl-refs)$
