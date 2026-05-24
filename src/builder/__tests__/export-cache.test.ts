@@ -89,10 +89,24 @@ describe('export cache — integración', () => {
     });
 
     // Calcular la misma clave que usa runner.ts para EPUB.
-    // runner.ts incluye pluginFingerprint ?? '', bibHash y cslHash (strings vacíos
-    // cuando no hay plugins ni bibliography/csl configurados).
+    // runner.ts incluye pluginFingerprint ?? '', bibHash, cslHash y templateHash.
+    const EXPORT_TEMPLATES_DIR = join(import.meta.dir, '../../../pandoc/export');
+    const tplHasher = new Bun.CryptoHasher('sha256');
+    const tplFiles: string[] = [];
+    for await (const f of new Bun.Glob('*.latex').scan({ cwd: EXPORT_TEMPLATES_DIR })) {
+      tplFiles.push(f);
+    }
+    for await (const f of new Bun.Glob('*.css').scan({ cwd: EXPORT_TEMPLATES_DIR })) {
+      tplFiles.push(f);
+    }
+    tplFiles.sort();
+    for (const filename of tplFiles) {
+      tplHasher.update(await Bun.file(join(EXPORT_TEMPLATES_DIR, filename)).text());
+      tplHasher.update('\0');
+    }
+    const templateHash = tplHasher.digest('hex');
     const itemHashes = '';
-    const cacheKey = hash(doc.sourceHash, itemHashes, 'epub', '0.0.0-test', pandocVersion, '', '', '');
+    const cacheKey = hash(doc.sourceHash, itemHashes, 'epub', '0.0.0-test', pandocVersion, '', '', '', templateHash);
     expect(await cacheManager.hasBinary('export', cacheKey, 'epub')).toBe(true);
   });
 
