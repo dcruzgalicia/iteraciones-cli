@@ -727,10 +727,10 @@ describe('assembleAuthorExportVariants', () => {
     expect(full.filePath).toBe(author.filePath);
   });
 
-  test('title de la variante completa lleva "— Completo"', () => {
+  test('el title de la variante completa es igual al title del autor', () => {
     const author = makeAuthorDoc();
-    const { full } = assembleAuthorExportVariants(author, [], 'es', '/project');
-    expect(full.metadata.title).toContain('— Completo');
+    const { full, summary } = assembleAuthorExportVariants(author, [], 'es', '/project');
+    expect(full.metadata.title).toBe(summary.metadata.title);
   });
 
   test('incluye tagline en el body', () => {
