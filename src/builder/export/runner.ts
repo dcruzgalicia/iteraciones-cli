@@ -636,13 +636,21 @@ export async function exportSingleDocument(
   const normalizedPdfRelPath = pdfRelPath.replace(/\\/g, '/');
   const expectedRelPath = normalizedPdfRelPath.replace(/\.pdf$/i, '.md');
 
+  // Detectar petición de variante completa (autor): /personas/nombre-completo.pdf
+  // → buscar el doc base /personas/nombre.md de tipo author y generar la variante full.
+  const isCompleto = /-completo\.md$/.test(expectedRelPath);
+  const lookupRelPath = isCompleto ? expectedRelPath.replace(/-completo\.md$/, '.md') : expectedRelPath;
+
   // Buscar el documento en todos los tipos exportables del renderedMap.
   let targetDoc: BuildDocument | undefined;
   for (const type of EXPORTABLE_TYPES) {
-    targetDoc = (renderedMap.get(type) ?? []).find((d) => d.kind !== 'block' && d.relativePath === expectedRelPath);
+    targetDoc = (renderedMap.get(type) ?? []).find((d) => d.kind !== 'block' && d.relativePath === lookupRelPath);
     if (targetDoc) break;
   }
   if (!targetDoc) return null;
+
+  // La variante completa solo existe para documentos de tipo author.
+  if (isCompleto && targetDoc.type !== 'author') return null;
 
   // Respetar export: { skip: true } en el frontmatter del documento.
   const rawExportField = targetDoc.frontmatter['export'];
@@ -659,18 +667,26 @@ export async function exportSingleDocument(
   // Resolver items para tipos colección/eventos.
   const itemPool = [...(renderedMap.get('file') ?? []), ...(renderedMap.get('author') ?? []), ...(renderedMap.get('event') ?? [])];
   const eventPool = renderedMap.get('event') ?? [];
-  let items: BuildDocument[] = [];
-  if (targetDoc.type === 'collection') {
-    items = resolveItemsForExport(targetDoc, itemPool);
-  } else if (targetDoc.type === 'events') {
-    items = resolveEventsForExport(targetDoc, eventPool);
-  }
 
   // Resolver rutas globales de bibliography y csl (reutiliza el helper compartido, con aviso).
   const globalBibliography = resolveExportGlobalPath(config.bibliography, cwd, 'bibliography');
   const globalCsl = resolveExportGlobalPath(config.csl, cwd, 'csl');
 
-  const rawExportDoc = assembleExportDocument(targetDoc, items, lang, cwd, globalBibliography, globalCsl, config.template);
+  // Para type author con variante completa: usar assembleAuthorExportVariants.
+  let rawExportDoc: ExportDocument | null;
+  if (targetDoc.type === 'author' && isCompleto) {
+    const fileDocs = renderedMap.get('file') ?? [];
+    const { full } = assembleAuthorExportVariants(targetDoc, [...fileDocs], lang, cwd, globalBibliography, globalCsl, config.template);
+    rawExportDoc = full;
+  } else {
+    let items: BuildDocument[] = [];
+    if (targetDoc.type === 'collection') {
+      items = resolveItemsForExport(targetDoc, itemPool);
+    } else if (targetDoc.type === 'events') {
+      items = resolveEventsForExport(targetDoc, eventPool);
+    }
+    rawExportDoc = assembleExportDocument(targetDoc, items, lang, cwd, globalBibliography, globalCsl, config.template);
+  }
   if (!rawExportDoc) return null;
 
   // Hook beforeExport.
