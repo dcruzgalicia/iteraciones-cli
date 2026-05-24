@@ -352,7 +352,7 @@ export function assembleAuthorExportVariants(
       filePath: doc.filePath,
       relativePath: doc.relativePath.replace(/\.md$/, '-completo.md'),
       body: buildAuthorExportBody(doc, authorWorks, 'full'),
-      metadata: { ...metadata, title: metadata.title },
+      metadata,
     },
   };
 }
