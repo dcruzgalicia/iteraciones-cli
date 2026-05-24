@@ -153,10 +153,21 @@
             // Formatos
           </div>
           <div class="flex flex-col gap-2">
+            $if(download-epub-completo)$
+            <a href="$download-epub$" class="inline-flex items-center gap-2 rounded border border-accent-200 bg-accent-50 px-3 py-2 font-mono text-xs text-accent-700 transition-colors hover:bg-accent-100" download>
+              <svg xmlns="http://www.w3.org/2000/svg" height="14px" viewBox="0 -960 960 960" width="14px" fill="currentColor" aria-hidden="true"><path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>
+              EPUB — Perfil
+            </a>
+            <a href="$download-epub-completo$" class="inline-flex items-center gap-2 rounded border border-accent-200 bg-accent-50 px-3 py-2 font-mono text-xs text-accent-700 transition-colors hover:bg-accent-100" download>
+              <svg xmlns="http://www.w3.org/2000/svg" height="14px" viewBox="0 -960 960 960" width="14px" fill="currentColor" aria-hidden="true"><path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>
+              EPUB — Completo
+            </a>
+            $else$
             <a href="$download-epub$" class="inline-flex items-center gap-2 rounded border border-accent-200 bg-accent-50 px-3 py-2 font-mono text-xs text-accent-700 transition-colors hover:bg-accent-100" download>
               <svg xmlns="http://www.w3.org/2000/svg" height="14px" viewBox="0 -960 960 960" width="14px" fill="currentColor" aria-hidden="true"><path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>
               Descargar EPUB
             </a>
+            $endif$
           </div>
         </div>
         $endif$
