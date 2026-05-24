@@ -201,3 +201,156 @@ function resolveTemplateVariant(raw: unknown, globalFallback: ExportLatexTemplat
   if (raw === 'literary' || raw === 'academic' || raw === 'anthology' || raw === 'technical') return raw;
   return globalFallback;
 }
+
+// ─── Helpers para exportación de author ──────────────────────────────────────
+
+function normalizeForComparison(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+/**
+ * Construye el cuerpo markdown para exportación de un documento de tipo `author`.
+ *
+ * Incluye todos los campos del perfil (tagline, contacto, skills, training,
+ * interests, languages, bio) y la sección Trayectoria con el nivel de detalle
+ * definido por `variant`:
+ *   - 'summary': título, fecha y abstract de cada obra
+ *   - 'full': título, fecha, abstract, body completo y keywords de cada obra
+ */
+function buildAuthorExportBody(doc: BuildDocument, sortedWorks: BuildDocument[], variant: 'summary' | 'full'): string {
+  const parts: string[] = [];
+  const fm = doc.frontmatter;
+
+  // Contacto / datos de contexto
+  const contactLines: string[] = [];
+  if (fm.location) contactLines.push(`**Ubicación:** ${fm.location}`);
+  if (fm.email) contactLines.push(`**Correo:** ${fm.email}`);
+  if (fm.links && fm.links.length > 0) {
+    for (const l of fm.links) {
+      contactLines.push(`**${l.label}:** <${l.url}>`);
+    }
+  }
+  if (contactLines.length > 0) {
+    parts.push(contactLines.join('  \n') + '\n\n');
+  }
+
+  if (fm.skills && fm.skills.length > 0) {
+    parts.push(`## Skills\n\n${fm.skills.join(', ')}\n\n`);
+  }
+  if (fm.training && fm.training.length > 0) {
+    parts.push(`## Formación\n\n${fm.training.map((t) => `- ${t}`).join('\n')}\n\n`);
+  }
+  if (fm.interests && fm.interests.length > 0) {
+    parts.push(`## Intereses\n\n${fm.interests.join(', ')}\n\n`);
+  }
+  if (fm.languages && fm.languages.length > 0) {
+    parts.push(`## Idiomas\n\n${fm.languages.map((l) => `- ${l}`).join('\n')}\n\n`);
+  }
+
+  // Bio (perfil)
+  if (doc.body.trim()) {
+    parts.push(`## Perfil\n\n${doc.body.trim()}\n\n`);
+  }
+
+  // Trayectoria
+  if (sortedWorks.length > 0) {
+    parts.push('## Trayectoria\n\n');
+    for (const work of sortedWorks) {
+      const date = work.frontmatter.date ? ` (${work.frontmatter.date})` : '';
+      parts.push(`### ${work.frontmatter.title}${date}\n\n`);
+      if (work.frontmatter.abstract) {
+        const abstract = variant === 'full' ? `*${work.frontmatter.abstract}*` : work.frontmatter.abstract;
+        parts.push(`${abstract}\n\n`);
+      }
+      if (variant === 'full') {
+        if (work.body.trim()) {
+          parts.push(`${work.body.trim()}\n\n`);
+        }
+        if (work.frontmatter.keywords.length > 0) {
+          parts.push(`**Keywords:** ${work.frontmatter.keywords.join(', ')}\n\n`);
+        }
+        parts.push('---\n\n');
+      }
+    }
+  }
+
+  return parts.join('');
+}
+
+/**
+ * Ensambla las dos variantes de exportación para un documento de tipo `author`.
+ *
+ * Variante 'summary' → `nombre.pdf/epub`:
+ *   Perfil completo + trayectoria con título/fecha/abstract.
+ *
+ * Variante 'full' → `nombre-completo.pdf/epub`:
+ *   Perfil completo + trayectoria con body completo y keywords de cada obra.
+ *
+ * @param doc       Documento autor (tipo 'author').
+ * @param fileDocs  Todos los docs tipo 'file' del renderedMap (sin filtrar).
+ * @param lang      Idioma del sitio.
+ * @param cwd       Directorio raíz del proyecto.
+ */
+export function assembleAuthorExportVariants(
+  doc: BuildDocument,
+  fileDocs: BuildDocument[],
+  lang: string,
+  cwd: string,
+  globalBibliography?: string,
+  globalCsl?: string,
+  globalTemplate?: ExportLatexTemplate,
+): { summary: ExportDocument; full: ExportDocument } {
+  const rawEditorial =
+    typeof doc.frontmatter['editorial'] === 'object' && doc.frontmatter['editorial'] !== null
+      ? (doc.frontmatter['editorial'] as Record<string, unknown>)
+      : {};
+
+  const metadata: ExportMetadata = {
+    title: doc.frontmatter.title || 'Sin título',
+    author: doc.frontmatter.author,
+    date: doc.frontmatter.date || undefined,
+    lang,
+    isbn: typeof rawEditorial['isbn'] === 'string' ? rawEditorial['isbn'] : undefined,
+    publisher: typeof rawEditorial['publisher'] === 'string' ? rawEditorial['publisher'] : undefined,
+    description: typeof rawEditorial['description'] === 'string' ? rawEditorial['description'] : undefined,
+    rights: typeof rawEditorial['rights'] === 'string' ? rawEditorial['rights'] : undefined,
+    cover: typeof rawEditorial['cover'] === 'string' ? safeEditorialPath(rawEditorial['cover'], cwd, 'editorial.cover') : undefined,
+    bibliography:
+      typeof rawEditorial['bibliography'] === 'string'
+        ? safeEditorialPath(rawEditorial['bibliography'], cwd, 'editorial.bibliography')
+        : globalBibliography,
+    csl: typeof rawEditorial['csl'] === 'string' ? safeEditorialPath(rawEditorial['csl'], cwd, 'editorial.csl') : globalCsl,
+    documentclass: 'scrartcl',
+    toc: false,
+    template: resolveTemplateVariant(rawEditorial['template'], globalTemplate),
+    abstract: typeof rawEditorial['abstract'] === 'string' && rawEditorial['abstract'].trim() ? rawEditorial['abstract'].trim() : undefined,
+    keywords: undefined,
+  };
+
+  // Resolver y ordenar las obras del autor por fecha descendente
+  const authorName = normalizeForComparison(doc.frontmatter.title);
+  const authorWorks = authorName
+    ? fileDocs
+        .filter((f) => f.kind !== 'block' && f.frontmatter.author.some((a) => normalizeForComparison(a) === authorName))
+        .sort((a, b) => {
+          if (a.frontmatter.date > b.frontmatter.date) return -1;
+          if (a.frontmatter.date < b.frontmatter.date) return 1;
+          return 0;
+        })
+    : [];
+
+  return {
+    summary: {
+      filePath: doc.filePath,
+      relativePath: doc.relativePath,
+      body: buildAuthorExportBody(doc, authorWorks, 'summary'),
+      metadata,
+    },
+    full: {
+      filePath: doc.filePath,
+      relativePath: doc.relativePath.replace(/\.md$/, '-completo.md'),
+      body: buildAuthorExportBody(doc, authorWorks, 'full'),
+      metadata: { ...metadata, title: `${metadata.title} — Completo` },
+    },
+  };
+}
