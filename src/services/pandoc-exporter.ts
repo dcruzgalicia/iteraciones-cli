@@ -6,6 +6,22 @@ import { PandocError } from '../errors.js';
 /** Ruta base al directorio de templates LaTeX de exportación, relativa a este archivo. */
 const TEMPLATES_DIR = join(import.meta.dir, '../../pandoc/export');
 
+/** Ruta absoluta al directorio de fuentes TTF del proyecto. */
+const FONTS_DIR = join(import.meta.dir, '../../fonts');
+
+/** Ruta al stylesheet CSS para EPUB. */
+const EPUB_STYLE_PATH = join(TEMPLATES_DIR, 'epub.css');
+
+/** Archivos de fuente que se embeben en los EPUB generados. */
+const EPUB_EMBED_FONTS: readonly string[] = [
+  join(FONTS_DIR, 'Exo2-VariableFont_wght.ttf'),
+  join(FONTS_DIR, 'Exo2-Italic-VariableFont_wght.ttf'),
+  join(FONTS_DIR, 'SpaceMono-Regular.ttf'),
+  join(FONTS_DIR, 'SpaceMono-Bold.ttf'),
+  join(FONTS_DIR, 'SpaceMono-Italic.ttf'),
+  join(FONTS_DIR, 'SpaceMono-BoldItalic.ttf'),
+];
+
 /**
  * Variantes de template compatibles con cada documentclass.
  * Si el usuario solicita una variante incompatible con su documentclass se usa el template base.
@@ -75,6 +91,9 @@ function buildYamlHeader(doc: ExportDocument): string {
     }
   }
 
+  // Ruta al directorio de fuentes para fontspec (templates LaTeX con $fontdir$).
+  lines.push(`fontdir: ${yamlString(FONTS_DIR)}`);
+
   lines.push('---', '');
   return lines.join('\n');
 }
@@ -101,6 +120,12 @@ export async function convertToEpub(doc: ExportDocument, outputPath: string): Pr
 
   const input = buildYamlHeader(doc) + doc.body;
   const args = ['pandoc', '--from', 'markdown', '--to', 'epub3', '--output', outputPath];
+
+  // Hoja de estilos y fuentes embebidas.
+  args.push('--css', EPUB_STYLE_PATH);
+  for (const fontFile of EPUB_EMBED_FONTS) {
+    args.push('--epub-embed-font', fontFile);
+  }
 
   if (doc.metadata.cover) {
     args.push('--epub-cover-image', doc.metadata.cover);
