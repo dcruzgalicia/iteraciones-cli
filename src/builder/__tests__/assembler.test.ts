@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
-import { assembleExportDocument, resolveItemsForExport } from '../export/assemble.js';
+import { assembleAuthorExportVariants, assembleExportDocument, resolveItemsForExport } from '../export/assemble.js';
 import type { BuildDocument } from '../types.js';
 
 // ---------------------------------------------------------------------------
@@ -653,5 +653,150 @@ describe('assembleExportDocument — template / abstract / keywords', () => {
     });
     const result = assembleExportDocument(doc, [], 'es', '/project');
     expect(result!.metadata.keywords).toEqual(['css', 'accesibilidad']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// assembleAuthorExportVariants
+// ---------------------------------------------------------------------------
+
+describe('assembleAuthorExportVariants', () => {
+  function makeAuthorDoc(overrides: Partial<BuildDocument> = {}): BuildDocument {
+    return makeDoc({
+      type: 'author',
+      filePath: '/project/personas/ana-lopez.md',
+      relativePath: 'personas/ana-lopez.md',
+      frontmatter: {
+        title: 'Ana López',
+        date: '2024-01-01',
+        author: ['Ana López'],
+        speakers: [],
+        type: 'author',
+        keywords: [],
+        region: '',
+        block: false,
+        draft: false,
+        items: [],
+        tagline: 'Escritora y periodista',
+        location: 'Ciudad de México',
+        email: 'ana@example.com',
+        skills: ['Narrativa', 'Crónica'],
+        training: ['Licenciatura en Comunicación'],
+        interests: ['Literatura latinoamericana'],
+        languages: ['Español (nativo)', 'Inglés (B2)'],
+        ...((overrides.frontmatter ?? {}) as object),
+      },
+      body: 'Ana López es escritora con más de diez años de experiencia.',
+      ...overrides,
+    });
+  }
+
+  function makeFileDoc(authorName: string, title: string, date: string, body = '', abstract = ''): BuildDocument {
+    return makeDoc({
+      type: 'file',
+      filePath: `/project/textos/${title.toLowerCase().replace(/ /g, '-')}.md`,
+      relativePath: `textos/${title.toLowerCase().replace(/ /g, '-')}.md`,
+      frontmatter: {
+        title,
+        date,
+        author: [authorName],
+        speakers: [],
+        type: 'file',
+        keywords: ['narrativa', 'ficción'],
+        region: '',
+        block: false,
+        draft: false,
+        items: [],
+        abstract: abstract || `Resumen de ${title}.`,
+      },
+      body: body || `Cuerpo de ${title}.`,
+    });
+  }
+
+  test('genera dos variantes con relativePath correcto', () => {
+    const author = makeAuthorDoc();
+    const { summary, full } = assembleAuthorExportVariants(author, [], 'es', '/project');
+    expect(summary.relativePath).toBe('personas/ana-lopez.md');
+    expect(full.relativePath).toBe('personas/ana-lopez-completo.md');
+  });
+
+  test('filePath es el mismo en ambas variantes', () => {
+    const author = makeAuthorDoc();
+    const { summary, full } = assembleAuthorExportVariants(author, [], 'es', '/project');
+    expect(summary.filePath).toBe(author.filePath);
+    expect(full.filePath).toBe(author.filePath);
+  });
+
+  test('title de la variante completa lleva "— Completo"', () => {
+    const author = makeAuthorDoc();
+    const { full } = assembleAuthorExportVariants(author, [], 'es', '/project');
+    expect(full.metadata.title).toContain('— Completo');
+  });
+
+  test('incluye tagline en el body', () => {
+    const author = makeAuthorDoc();
+    const { summary } = assembleAuthorExportVariants(author, [], 'es', '/project');
+    expect(summary.body).toContain('Escritora y periodista');
+  });
+
+  test('incluye contacto (location, email) en el body', () => {
+    const author = makeAuthorDoc();
+    const { summary } = assembleAuthorExportVariants(author, [], 'es', '/project');
+    expect(summary.body).toContain('Ciudad de México');
+    expect(summary.body).toContain('ana@example.com');
+  });
+
+  test('incluye skills, training, interests y languages en el body', () => {
+    const author = makeAuthorDoc();
+    const { summary } = assembleAuthorExportVariants(author, [], 'es', '/project');
+    expect(summary.body).toContain('Narrativa');
+    expect(summary.body).toContain('Licenciatura en Comunicación');
+    expect(summary.body).toContain('Literatura latinoamericana');
+    expect(summary.body).toContain('Español (nativo)');
+  });
+
+  test('incluye la bio del autor en el body', () => {
+    const author = makeAuthorDoc();
+    const { summary } = assembleAuthorExportVariants(author, [], 'es', '/project');
+    expect(summary.body).toContain('Ana López es escritora con más de diez años de experiencia.');
+  });
+
+  test('incluye obras del autor en la trayectoria (filtrado por nombre)', () => {
+    const author = makeAuthorDoc();
+    const work = makeFileDoc('Ana López', 'El jardín', '2023-06-01');
+    const other = makeFileDoc('Otro Autor', 'Libro ajeno', '2022-01-01');
+    const { summary } = assembleAuthorExportVariants(author, [work, other], 'es', '/project');
+    expect(summary.body).toContain('El jardín');
+    expect(summary.body).not.toContain('Libro ajeno');
+  });
+
+  test('variante summary incluye abstract pero no body de obra', () => {
+    const author = makeAuthorDoc();
+    const work = makeFileDoc('Ana López', 'La crónica', '2023-01-01', 'Body exclusivo de la obra.', 'Abstract de la crónica.');
+    const { summary } = assembleAuthorExportVariants(author, [work], 'es', '/project');
+    expect(summary.body).toContain('Abstract de la crónica.');
+    expect(summary.body).not.toContain('Body exclusivo de la obra.');
+  });
+
+  test('variante full incluye body y keywords de la obra', () => {
+    const author = makeAuthorDoc();
+    const work = makeFileDoc('Ana López', 'La crónica', '2023-01-01', 'Body exclusivo de la obra.', 'Abstract de la crónica.');
+    const { full } = assembleAuthorExportVariants(author, [work], 'es', '/project');
+    expect(full.body).toContain('Body exclusivo de la obra.');
+    expect(full.body).toContain('narrativa');
+  });
+
+  test('ordena obras por fecha descendente', () => {
+    const author = makeAuthorDoc();
+    const old = makeFileDoc('Ana López', 'Obra antigua', '2020-01-01');
+    const recent = makeFileDoc('Ana López', 'Obra reciente', '2024-01-01');
+    const { summary } = assembleAuthorExportVariants(author, [old, recent], 'es', '/project');
+    expect(summary.body.indexOf('Obra reciente')).toBeLessThan(summary.body.indexOf('Obra antigua'));
+  });
+
+  test('body vacío si el autor no tiene obras', () => {
+    const author = makeAuthorDoc();
+    const { summary } = assembleAuthorExportVariants(author, [], 'es', '/project');
+    expect(summary.body).not.toContain('## Trayectoria');
   });
 });
