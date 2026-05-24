@@ -211,25 +211,23 @@ export async function runExportDocuments(
 
   // Hash de los templates de exportación (*.latex, *.css) para invalidar caché
   // cuando se modifica el diseño del PDF o EPUB sin cambiar el contenido fuente.
+  // Se escanea el directorio dinámicamente para incluir cualquier template nuevo
+  // sin necesidad de actualizar una lista manual.
   const EXPORT_TEMPLATES_DIR = join(import.meta.dir, '../../../pandoc/export');
   let templateHash = '';
   try {
-    const templateFiles = [
-      'scrartcl.latex',
-      'scrartcl-literary.latex',
-      'scrartcl-academic.latex',
-      'scrbook.latex',
-      'scrbook-anthology.latex',
-      'scrbook-technical.latex',
-      'epub.css',
-    ];
     const tplHasher = new Bun.CryptoHasher('sha256');
-    for (const filename of templateFiles) {
-      const tplFile = Bun.file(join(EXPORT_TEMPLATES_DIR, filename));
-      if (await tplFile.exists()) {
-        tplHasher.update(await tplFile.text());
-        tplHasher.update('\0');
-      }
+    const tplFiles: string[] = [];
+    for await (const f of new Bun.Glob('*.latex').scan({ cwd: EXPORT_TEMPLATES_DIR })) {
+      tplFiles.push(f);
+    }
+    for await (const f of new Bun.Glob('*.css').scan({ cwd: EXPORT_TEMPLATES_DIR })) {
+      tplFiles.push(f);
+    }
+    tplFiles.sort(); // orden determinístico para un hash estable
+    for (const filename of tplFiles) {
+      tplHasher.update(await Bun.file(join(EXPORT_TEMPLATES_DIR, filename)).text());
+      tplHasher.update('\0');
     }
     templateHash = tplHasher.digest('hex');
   } catch (err) {
