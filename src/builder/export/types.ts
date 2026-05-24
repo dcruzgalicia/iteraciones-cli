@@ -72,10 +72,14 @@ export interface ExportResult {
   filePath: string;
   /** relativePath original del documento fuente (no paginado). */
   relativePath: string;
-  /** Ruta absoluta al PDF generado; undefined si no se generó. */
+  /** Ruta absoluta al PDF generado (variante perfil); undefined si no se generó. */
   pdfPath?: string;
-  /** Ruta absoluta al EPUB generado; undefined si no se generó. */
+  /** Ruta absoluta al PDF completo generado (variante completo, solo type author); undefined si no se generó. */
+  pdfFullPath?: string;
+  /** Ruta absoluta al EPUB generado (variante perfil); undefined si no se generó. */
   epubPath?: string;
+  /** Ruta absoluta al EPUB completo generado (variante completo, solo type author); undefined si no se generó. */
+  epubFullPath?: string;
   /** Ruta absoluta a la imagen de portada generada con pdftoppm; undefined si no se generó. */
   coverPath?: string;
 }
