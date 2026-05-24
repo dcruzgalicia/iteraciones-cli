@@ -51,7 +51,7 @@ function resolveTemplatePath(documentclass: 'scrartcl' | 'scrbook', variant: str
  * Construye el bloque YAML de metadatos que Pandoc inyectará en el documento.
  * Pandoc acepta un bloque YAML al inicio del documento delimitado por `---`.
  */
-function buildYamlHeader(doc: ExportDocument): string {
+function buildYamlHeader(doc: ExportDocument, fontdir?: string): string {
   const { metadata } = doc;
   const lines: string[] = ['---'];
 
@@ -92,7 +92,8 @@ function buildYamlHeader(doc: ExportDocument): string {
   }
 
   // Ruta al directorio de fuentes para fontspec (templates LaTeX con $fontdir$).
-  lines.push(`fontdir: ${yamlString(FONTS_DIR)}`);
+  // Solo se incluye en el flujo de PDF; en EPUB causaría un leak de rutas locales.
+  if (fontdir) lines.push(`fontdir: ${yamlString(fontdir)}`);
 
   lines.push('---', '');
   return lines.join('\n');
@@ -162,7 +163,7 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, engi
   await mkdir(dirname(outputPath), { recursive: true });
 
   const templatePath = resolveTemplatePath(doc.metadata.documentclass, doc.metadata.template);
-  const input = buildYamlHeader(doc) + doc.body;
+  const input = buildYamlHeader(doc, FONTS_DIR) + doc.body;
   const args = ['pandoc', '--from', 'markdown', '--to', 'pdf', '--pdf-engine', engine, `--template=${templatePath}`, '--output', outputPath];
 
   // Activar el procesador de citas cuando hay bibliografía declarada.
