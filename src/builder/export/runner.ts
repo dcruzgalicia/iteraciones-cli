@@ -209,6 +209,33 @@ export async function runExportDocuments(
     }
   }
 
+  // Hash de los templates de exportación (*.latex, *.css) para invalidar caché
+  // cuando se modifica el diseño del PDF o EPUB sin cambiar el contenido fuente.
+  const EXPORT_TEMPLATES_DIR = join(import.meta.dir, '../../../pandoc/export');
+  let templateHash = '';
+  try {
+    const templateFiles = [
+      'scrartcl.latex',
+      'scrartcl-literary.latex',
+      'scrartcl-academic.latex',
+      'scrbook.latex',
+      'scrbook-anthology.latex',
+      'scrbook-technical.latex',
+      'epub.css',
+    ];
+    const tplHasher = new Bun.CryptoHasher('sha256');
+    for (const filename of templateFiles) {
+      const tplFile = Bun.file(join(EXPORT_TEMPLATES_DIR, filename));
+      if (await tplFile.exists()) {
+        tplHasher.update(await tplFile.text());
+        tplHasher.update('\0');
+      }
+    }
+    templateHash = tplHasher.digest('hex');
+  } catch (err) {
+    process.stderr.write(`[export] no se pudo calcular hash de templates: ${err instanceof Error ? err.message : String(err)}\n`);
+  }
+
   // Pool de items primarios para resolver colecciones y programas de eventos.
   const itemPool = [...(renderedMap.get('file') ?? []), ...(renderedMap.get('author') ?? []), ...(renderedMap.get('event') ?? [])];
   const eventPool = renderedMap.get('event') ?? [];
@@ -251,7 +278,7 @@ export async function runExportDocuments(
         const outputPath = `${outputBase}.${format}`;
 
         if (format === 'epub') {
-          const cacheKey = hash(sourceHash, itemHashes, 'epub', cliVersion, pandocVersion, pluginFingerprint ?? '', bibHash, cslHash);
+          const cacheKey = hash(sourceHash, itemHashes, 'epub', cliVersion, pandocVersion, pluginFingerprint ?? '', bibHash, cslHash, templateHash);
           if (cacheManager && (await cacheManager.hasBinary('export', cacheKey, 'epub'))) {
             await cacheManager.copyBinaryTo('export', cacheKey, 'epub', outputPath);
             if (stats) {
@@ -285,6 +312,7 @@ export async function runExportDocuments(
             pluginFingerprint ?? '',
             bibHash,
             cslHash,
+            templateHash,
           );
           if (cacheManager && (await cacheManager.hasBinary('export', cacheKey, 'pdf'))) {
             await cacheManager.copyBinaryTo('export', cacheKey, 'pdf', outputPath);
