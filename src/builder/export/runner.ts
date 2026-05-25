@@ -209,11 +209,13 @@ export async function runExportDocuments(
     }
   }
 
-  // Hash de los templates de exportación (*.latex, *.css) para invalidar caché
-  // cuando se modifica el diseño del PDF o EPUB sin cambiar el contenido fuente.
+  // Hash de los templates de exportación (*.latex, *.css) y fuentes TTF para
+  // invalidar caché cuando se modifica el diseño del PDF/EPUB o las fuentes,
+  // sin cambiar el contenido fuente.
   // Se escanea el directorio dinámicamente para incluir cualquier template nuevo
   // sin necesidad de actualizar una lista manual.
   const EXPORT_TEMPLATES_DIR = join(import.meta.dir, '../../../pandoc/export');
+  const FONTS_DIR = join(import.meta.dir, '../../../fonts');
   let templateHash = '';
   try {
     const tplHasher = new Bun.CryptoHasher('sha256');
@@ -229,9 +231,20 @@ export async function runExportDocuments(
       tplHasher.update(await Bun.file(join(EXPORT_TEMPLATES_DIR, filename)).text());
       tplHasher.update('\0');
     }
+    // Incluir las fuentes TTF: PDF las usa vía fontspec y EPUB las embebe.
+    const fontFiles: string[] = [];
+    for await (const f of new Bun.Glob('*.ttf').scan({ cwd: FONTS_DIR })) {
+      fontFiles.push(f);
+    }
+    fontFiles.sort();
+    for (const filename of fontFiles) {
+      const buf = await Bun.file(join(FONTS_DIR, filename)).arrayBuffer();
+      tplHasher.update(new Uint8Array(buf));
+      tplHasher.update('\0');
+    }
     templateHash = tplHasher.digest('hex');
   } catch (err) {
-    process.stderr.write(`[export] no se pudo calcular hash de templates: ${err instanceof Error ? err.message : String(err)}\n`);
+    process.stderr.write(`[export] no se pudo calcular hash de templates/fuentes: ${err instanceof Error ? err.message : String(err)}\n`);
   }
 
   // Pool de items primarios para resolver colecciones y programas de eventos.
