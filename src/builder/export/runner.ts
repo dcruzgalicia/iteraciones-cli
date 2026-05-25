@@ -261,17 +261,19 @@ export async function runExportDocuments(
   if (exportableDocs.length === 0) return [];
 
   let pdfDone = 0;
+  // Los autores generan 2 PDFs cada uno (summary + full), por eso se cuentan por separado.
   const pdfTotal = hasPdf
-    ? exportableDocs.filter((d) => {
+    ? exportableDocs.reduce((acc, d) => {
         const raw = d.frontmatter['export'];
-        return !(
+        const skipped =
           typeof raw === 'object' &&
           raw !== null &&
           !Array.isArray(raw) &&
           Object.getPrototypeOf(raw) === Object.prototype &&
-          (raw as Record<string, unknown>)['skip'] === true
-        );
-      }).length
+          (raw as Record<string, unknown>)['skip'] === true;
+        if (skipped) return acc;
+        return acc + (d.type === 'author' ? 2 : 1);
+      }, 0)
     : 0;
 
   // Closure que genera los formatos (epub, pdf) para un ExportDocument ya ensamblado.
