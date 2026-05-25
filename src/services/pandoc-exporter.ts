@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { ExportDocument } from '../builder/export/types.js';
@@ -24,7 +25,8 @@ const EPUB_EMBED_FONTS: readonly string[] = [
 
 /**
  * Variantes de template compatibles con cada documentclass.
- * Si el usuario solicita una variante incompatible con su documentclass se usa el template base.
+ * Se usa como fallback cuando no existe un template {type}-{variant}.latex
+ * pero sí existe el {documentclass}-{variant}.latex heredado.
  */
 const VARIANT_CLASS: Readonly<Record<string, 'scrartcl' | 'scrbook'>> = {
   literary: 'scrartcl',
@@ -34,17 +36,72 @@ const VARIANT_CLASS: Readonly<Record<string, 'scrartcl' | 'scrbook'>> = {
 };
 
 /**
- * Resuelve la ruta al template LaTeX según el documentclass y la variante solicitada.
- * Si la variante no es compatible con el documentclass, advierte y retorna el template base.
+ * Resuelve la ruta al template LaTeX usando el tipo del documento como eje primario.
+ *
+ * Cadena de resolución (primera ruta existente):
+ *   1. {cwd}/pandoc/export/{type}-{variant}.latex  — override local con variante
+ *   2. {cwd}/pandoc/export/{type}.latex            — override local base
+ *   3. built-in pandoc/export/{type}-{variant}.latex
+ *   4. built-in pandoc/export/{type}.latex         — template por tipo (primario)
+ *   5. built-in pandoc/export/{documentclass}-{variant}.latex — fallback variante heredada
+ *   6. built-in pandoc/export/{documentclass}.latex           — fallback último recurso
+ *
+ * Los pasos 5 y 6 emiten un aviso por stderr para que sea visible cuándo
+ * el sistema no encontró el template específico del tipo.
  */
-function resolveTemplatePath(documentclass: 'scrartcl' | 'scrbook', variant: string | undefined): string {
-  if (variant) {
-    if (VARIANT_CLASS[variant] === documentclass) {
-      return join(TEMPLATES_DIR, `${documentclass}-${variant}.latex`);
-    }
-    process.stderr.write(`[export] variante de template "${variant}" no es compatible con ${documentclass}; usando template base.\n`);
+function resolveLatexTemplatePath(type: string, documentclass: 'scrartcl' | 'scrbook', variant: string | undefined, cwd?: string): string {
+  // 1-2. Override local (proyecto del usuario)
+  if (cwd && variant) {
+    const p = join(cwd, 'pandoc', 'export', `${type}-${variant}.latex`);
+    if (existsSync(p)) return p;
   }
-  return join(TEMPLATES_DIR, `${documentclass}.latex`);
+  if (cwd) {
+    const p = join(cwd, 'pandoc', 'export', `${type}.latex`);
+    if (existsSync(p)) return p;
+  }
+  // 3. Built-in tipo+variante
+  if (variant) {
+    const p = join(TEMPLATES_DIR, `${type}-${variant}.latex`);
+    if (existsSync(p)) return p;
+  }
+  // 4. Built-in tipo base (ruta normal una vez que existen los templates por tipo)
+  {
+    const p = join(TEMPLATES_DIR, `${type}.latex`);
+    if (existsSync(p)) return p;
+  }
+  // 5. Fallback: built-in clase+variante (compatibilidad con plantillas heredadas)
+  if (variant && VARIANT_CLASS[variant] === documentclass) {
+    const p = join(TEMPLATES_DIR, `${documentclass}-${variant}.latex`);
+    if (existsSync(p)) {
+      process.stderr.write(`[export] template ${type}-${variant}.latex no encontrado; usando fallback ${documentclass}-${variant}.latex\n`);
+      return p;
+    }
+  }
+  // 6. Fallback final: built-in clase base
+  const fallback = join(TEMPLATES_DIR, `${documentclass}.latex`);
+  if (!existsSync(join(TEMPLATES_DIR, `${type}.latex`))) {
+    process.stderr.write(`[export] template ${type}.latex no encontrado; usando fallback ${documentclass}.latex\n`);
+  }
+  return fallback;
+}
+
+/**
+ * Resuelve la hoja de estilos CSS para EPUB usando el tipo del documento como eje primario.
+ *
+ * Cadena de resolución (primera ruta existente):
+ *   1. {cwd}/pandoc/export/{type}.epub.css  — override local por tipo
+ *   2. built-in pandoc/export/{type}.epub.css
+ *   3. built-in pandoc/export/epub.css      — fallback global
+ */
+function resolveEpubCssPath(type: string, cwd?: string): string {
+  const filename = `${type}.epub.css`;
+  if (cwd) {
+    const p = join(cwd, 'pandoc', 'export', filename);
+    if (existsSync(p)) return p;
+  }
+  const builtin = join(TEMPLATES_DIR, filename);
+  if (existsSync(builtin)) return builtin;
+  return EPUB_STYLE_PATH;
 }
 
 /**
@@ -115,15 +172,16 @@ function yamlString(value: string): string {
  *
  * @param doc        Documento ensamblado listo para exportar.
  * @param outputPath Ruta absoluta del archivo EPUB de salida.
+ * @param cwd        Directorio raíz del proyecto; permite buscar templates de override locales.
  */
-export async function convertToEpub(doc: ExportDocument, outputPath: string): Promise<void> {
+export async function convertToEpub(doc: ExportDocument, outputPath: string, cwd?: string): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
   const input = buildYamlHeader(doc) + doc.body;
   const args = ['pandoc', '--from', 'markdown', '--to', 'epub3', '--output', outputPath];
 
-  // Hoja de estilos y fuentes embebidas.
-  args.push('--css', EPUB_STYLE_PATH);
+  // Hoja de estilos resuelta por tipo: {type}.epub.css con fallback a epub.css global.
+  args.push('--css', resolveEpubCssPath(doc.type, cwd));
   for (const fontFile of EPUB_EMBED_FONTS) {
     args.push('--epub-embed-font', fontFile);
   }
@@ -158,11 +216,12 @@ export async function convertToEpub(doc: ExportDocument, outputPath: string): Pr
  * @param doc        Documento ensamblado listo para exportar.
  * @param outputPath Ruta absoluta del archivo PDF de salida.
  * @param engine     Motor LaTeX: 'xelatex' (por defecto) o 'lualatex'.
+ * @param cwd        Directorio raíz del proyecto; permite buscar templates de override locales.
  */
-export async function convertToPdf(doc: ExportDocument, outputPath: string, engine: 'xelatex' | 'lualatex'): Promise<void> {
+export async function convertToPdf(doc: ExportDocument, outputPath: string, engine: 'xelatex' | 'lualatex', cwd?: string): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
-  const templatePath = resolveTemplatePath(doc.metadata.documentclass, doc.metadata.template);
+  const templatePath = resolveLatexTemplatePath(doc.type, doc.metadata.documentclass, doc.metadata.template, cwd);
   const input = buildYamlHeader(doc, FONTS_DIR) + doc.body;
   const args = ['pandoc', '--from', 'markdown', '--to', 'pdf', '--pdf-engine', engine, `--template=${templatePath}`, '--output', outputPath];
 
