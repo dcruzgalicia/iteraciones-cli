@@ -1,0 +1,219 @@
+/* Stylesheet EPUB para type: event — eventos individuales */
+/* ─── Fuentes del sitio embebidas en el EPUB ───────────────────────────────── */
+/* Las fuentes se embeben vía --epub-embed-font en pandoc-exporter.ts.          */
+/* El url() en @font-face debe coincidir con el basename del archivo TTF;       */
+/* pandoc usa solo el nombre de archivo al registrar las fuentes en el EPUB,    */
+/* independientemente de si la ruta pasada a --epub-embed-font es absoluta.     */
+
+@font-face {
+  font-family: "Exo 2";
+  font-weight: 100 900;
+  font-style: normal;
+  src: url("Exo2-VariableFont_wght.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Exo 2";
+  font-weight: 100 900;
+  font-style: italic;
+  src: url("Exo2-Italic-VariableFont_wght.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Space Mono";
+  font-weight: 400;
+  font-style: normal;
+  src: url("SpaceMono-Regular.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Space Mono";
+  font-weight: 700;
+  font-style: normal;
+  src: url("SpaceMono-Bold.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Space Mono";
+  font-weight: 400;
+  font-style: italic;
+  src: url("SpaceMono-Italic.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Space Mono";
+  font-weight: 700;
+  font-style: italic;
+  src: url("SpaceMono-BoldItalic.ttf") format("truetype");
+}
+
+/* ─── Cuerpo ──────────────────────────────────────────────────────────────── */
+
+body {
+  font-family: "Exo 2", "Seravek", "Gill Sans Nova", Calibri, sans-serif;
+  font-size: 1em;
+  line-height: 1.5;
+  margin: 0 auto;
+  max-width: 36em;
+  padding: 1em 1.5em;
+  color: #1a1a1a;
+  background-color: #ffffff;
+}
+
+/* ─── Encabezados ────────────────────────────────────────────────────────── */
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Space Mono", "Courier New", monospace;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  color: #111111;
+}
+
+h1 { font-size: 1.6em; }
+h2 { font-size: 1.25em; }
+h3 { font-size: 1.1em; }
+h4, h5, h6 { font-size: 1em; }
+
+/* ─── Portada del documento ─────────────────────────────────────────────── */
+
+h1.title {
+  font-size: 1.9em;
+  margin-top: 2em;
+  margin-bottom: 0.2em;
+  border-bottom: 2px solid #1d4ed8;
+  padding-bottom: 0.3em;
+}
+
+.author {
+  font-size: 0.95em;
+  margin: 0.3em 0;
+  color: #374151;
+}
+
+.date {
+  font-size: 0.85em;
+  color: #6b7280;
+  margin-bottom: 2em;
+}
+
+/* ─── Párrafos ──────────────────────────────────────────────────────────── */
+
+p {
+  margin-top: 0;
+  margin-bottom: 0.75em;
+}
+
+/* ─── Listas ────────────────────────────────────────────────────────────── */
+
+ul, ol {
+  padding-left: 2em;
+  margin-bottom: 0.75em;
+}
+
+li {
+  margin-bottom: 0.25em;
+}
+
+/* ─── Código ────────────────────────────────────────────────────────────── */
+
+code, kbd, samp {
+  font-family: "Space Mono", "Courier New", monospace;
+  font-size: 0.85em;
+  background-color: #f3f4f6;
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+}
+
+pre {
+  font-family: "Space Mono", "Courier New", monospace;
+  font-size: 0.82em;
+  background-color: #f3f4f6;
+  border-left: 3px solid #1d4ed8;
+  padding: 0.75em 1em;
+  overflow-x: auto;
+  margin: 1em 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+/* ─── Citas ─────────────────────────────────────────────────────────────── */
+
+blockquote {
+  margin: 1em 0;
+  padding: 0.5em 1em;
+  border-left: 3px solid #d1d5db;
+  color: #4b5563;
+}
+
+blockquote p {
+  margin: 0;
+}
+
+/* ─── Hipervínculos ─────────────────────────────────────────────────────── */
+
+a {
+  color: #1d4ed8;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+/* ─── Tablas ────────────────────────────────────────────────────────────── */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+  font-size: 0.9em;
+}
+
+th, td {
+  border: 1px solid #e5e7eb;
+  padding: 0.4em 0.75em;
+  text-align: left;
+}
+
+th {
+  background-color: #f9fafb;
+  font-family: "Space Mono", monospace;
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* ─── Línea horizontal ──────────────────────────────────────────────────── */
+
+hr {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 2em 0;
+}
+
+/* ─── Notas al pie ──────────────────────────────────────────────────────── */
+
+.footnote {
+  font-size: 0.85em;
+  color: #4b5563;
+}
+
+/* ─── Bloque de contacto del autor ─────────────────────────────────────── */
+
+.authorcontact {
+  border-left: 3px solid #93b4f0;
+  padding: 0.6em 0 0.6em 0.9em;
+  margin: 0.75em 0 1.25em 0;
+  font-size: 0.9em;
+  color: #374151;
+  line-height: 1.55;
+}
+
+.authorcontact p {
+  margin: 0;
+}
