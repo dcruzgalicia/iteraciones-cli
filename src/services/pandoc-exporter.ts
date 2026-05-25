@@ -45,6 +45,8 @@ function resolveLatexTemplatePath(type: string, variant: string | undefined, cwd
   if (variant) {
     const p = join(TEMPLATES_DIR, `${type}-${variant}.latex`);
     if (existsSync(p)) return p;
+    // Variante solicitada pero sin template específico; se usa el template base del tipo.
+    process.stderr.write(`[export] template ${type}-${variant}.latex no encontrado; usando ${type}.latex\n`);
   }
   // 4. Built-in tipo base
   const builtin = join(TEMPLATES_DIR, `${type}.latex`);
