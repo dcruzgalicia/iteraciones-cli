@@ -89,8 +89,10 @@ describe('export cache — integración', () => {
     });
 
     // Calcular la misma clave que usa runner.ts para EPUB.
-    // runner.ts incluye pluginFingerprint ?? '', bibHash, cslHash y templateHash.
+    // runner.ts incluye pluginFingerprint ?? '', bibHash, cslHash y templateHash
+    // (que combina templates *.latex/*.css y fuentes *.ttf).
     const EXPORT_TEMPLATES_DIR = join(import.meta.dir, '../../../pandoc/export');
+    const FONTS_DIR = join(import.meta.dir, '../../../fonts');
     const tplHasher = new Bun.CryptoHasher('sha256');
     const tplFiles: string[] = [];
     for await (const f of new Bun.Glob('*.latex').scan({ cwd: EXPORT_TEMPLATES_DIR })) {
@@ -102,6 +104,16 @@ describe('export cache — integración', () => {
     tplFiles.sort();
     for (const filename of tplFiles) {
       tplHasher.update(await Bun.file(join(EXPORT_TEMPLATES_DIR, filename)).text());
+      tplHasher.update('\0');
+    }
+    const fontFiles: string[] = [];
+    for await (const f of new Bun.Glob('*.ttf').scan({ cwd: FONTS_DIR })) {
+      fontFiles.push(f);
+    }
+    fontFiles.sort();
+    for (const filename of fontFiles) {
+      const buf = await Bun.file(join(FONTS_DIR, filename)).arrayBuffer();
+      tplHasher.update(new Uint8Array(buf));
       tplHasher.update('\0');
     }
     const templateHash = tplHasher.digest('hex');
