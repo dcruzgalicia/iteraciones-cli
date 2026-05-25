@@ -26,6 +26,7 @@ function makeMinimalExportDoc(outputDir: string): ExportDocument {
   return {
     filePath: join(outputDir, 'articulo.md'),
     relativePath: 'articulo.md',
+    type: 'file',
     body: '## Introducción\n\nEste es un documento de prueba para verificar la exportación PDF.\n',
     metadata: {
       title: 'Artículo de prueba',
@@ -83,6 +84,7 @@ describe('convertToPdf — integración', () => {
     const doc: ExportDocument = {
       filePath: join(outputDir, 'coleccion.md'),
       relativePath: 'coleccion.md',
+      type: 'collection',
       body: '# Capítulo uno\n\nContenido del primer capítulo.\n\n\\newpage\n\n# Capítulo dos\n\nContenido del segundo capítulo.\n',
       metadata: {
         title: 'Colección de prueba',

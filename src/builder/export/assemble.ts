@@ -1,6 +1,13 @@
 import { dirname, resolve } from 'node:path';
 import type { BuildDocument, DocumentType } from '../types.js';
-import { EXPORTABLE_TYPES, type ExportDocument, type ExportLatexTemplate, type ExportMetadata, LATEX_CLASS } from './types.js';
+import {
+  EXPORTABLE_TYPES,
+  type ExportableDocumentType,
+  type ExportDocument,
+  type ExportLatexTemplate,
+  type ExportMetadata,
+  LATEX_CLASS,
+} from './types.js';
 
 /**
  * Resuelve una ruta de archivo editorial (bibliography, csl, cover) y verifica
@@ -89,6 +96,7 @@ export function assembleExportDocument(
   return {
     filePath: doc.filePath,
     relativePath: doc.relativePath,
+    type: doc.type as ExportableDocumentType,
     body,
     metadata,
   };
@@ -345,12 +353,14 @@ export function assembleAuthorExportVariants(
     summary: {
       filePath: doc.filePath,
       relativePath: doc.relativePath,
+      type: 'author' as const,
       body: buildAuthorExportBody(doc, authorWorks, 'summary'),
       metadata,
     },
     full: {
       filePath: doc.filePath,
       relativePath: doc.relativePath.replace(/\.md$/, '-completo.md'),
+      type: 'author' as const,
       body: buildAuthorExportBody(doc, authorWorks, 'full'),
       metadata,
     },

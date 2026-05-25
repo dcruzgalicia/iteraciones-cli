@@ -5,6 +5,9 @@ export type { ExportLatexTemplate } from '../../config/site-config.js';
 
 export type ExportFormat = 'pdf' | 'epub';
 
+/** Tipos de documento que pueden exportarse (clave de LATEX_CLASS). */
+export type ExportableDocumentType = keyof typeof LATEX_CLASS;
+
 /**
  * Tipos de documento que producen archivos descargables en el build.
  * Los tipos no exportables (authors, menu, card, list) son estructurales del sitio
@@ -62,6 +65,8 @@ export interface ExportDocument {
   filePath: string;
   /** Ruta relativa dentro del contenido (para construir la ruta de salida). */
   relativePath: string;
+  /** Tipo del documento fuente; determina qué template LaTeX/EPUB se resuelve. */
+  type: ExportableDocumentType;
   body: string;
   metadata: ExportMetadata;
 }
