@@ -25,6 +25,7 @@ function makeMinimalExportDoc(outputDir: string): ExportDocument {
   return {
     filePath: join(outputDir, 'articulo.md'),
     relativePath: 'articulo.md',
+    type: 'file',
     body: '## Introducción\n\nEste es un documento de prueba para verificar la exportación EPUB.\n',
     metadata: {
       title: 'Artículo de prueba',
