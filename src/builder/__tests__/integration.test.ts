@@ -1,8 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { build } from '../orchestrator.js';
+import { isPandocAvailable } from './helpers/tools.js';
+
+const pandocAvailable = await isPandocAvailable();
 
 const FIXTURES = join(import.meta.dir, 'fixtures');
 
@@ -310,3 +313,109 @@ describe('caché: segunda build produce output idéntico al primero', () => {
     expect(prefixDirs.length).toBeGreaterThan(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Build incremental con export — solo los archivos modificados deben reescribirse
+// ---------------------------------------------------------------------------
+
+if (pandocAvailable) {
+  describe('build incremental con export usa solo docs afectados', () => {
+    let tmpCwd: string;
+    let outputDir: string;
+    let epubATime: number;
+    let epubBTime: number;
+
+    beforeAll(async () => {
+      tmpCwd = mkdtempSync(join(tmpdir(), 'iteraciones-incremental-export-'));
+      outputDir = mkdtempSync(join(tmpdir(), 'iteraciones-incremental-output-'));
+
+      writeFileSync(
+        join(tmpCwd, '_iteraciones.yaml'),
+        `site:
+  theme: default
+  export:
+    formats:
+      - epub
+`,
+        'utf8',
+      );
+
+      writeFileSync(
+        join(tmpCwd, 'a.md'),
+        `---
+title: Documento A
+author: ['Test']
+keywords: []
+region: ""
+block: false
+draft: false
+items: []
+---
+
+Contenido inicial A.
+`,
+        'utf8',
+      );
+
+      writeFileSync(
+        join(tmpCwd, 'b.md'),
+        `---
+title: Documento B
+author: ['Test']
+keywords: []
+region: ""
+block: false
+draft: false
+items: []
+---
+
+Contenido inicial B.
+`,
+        'utf8',
+      );
+
+      await build(tmpCwd, { outputDir, noCache: false, noTailwind: true });
+
+      epubATime = statSync(join(outputDir, 'a.epub')).mtime.getTime();
+      epubBTime = statSync(join(outputDir, 'b.epub')).mtime.getTime();
+    });
+
+    afterAll(() => {
+      if (tmpCwd) rmSync(tmpCwd, { recursive: true, force: true });
+      if (outputDir) rmSync(outputDir, { recursive: true, force: true });
+    });
+
+    test('solo el EPUB del documento modificado se reescribe en rebuild incremental', async () => {
+      writeFileSync(
+        join(tmpCwd, 'a.md'),
+        `---
+title: Documento A
+author: ['Test']
+keywords: []
+region: ""
+block: false
+draft: false
+items: []
+---
+
+Contenido actualizado A.
+`,
+        'utf8',
+      );
+
+      await build(tmpCwd, {
+        outputDir,
+        noCache: false,
+        noTailwind: true,
+        incremental: true,
+        changedPaths: new Set(['a.md']),
+      });
+
+      const epubANewTime = statSync(join(outputDir, 'a.epub')).mtime.getTime();
+      const epubBNewTime = statSync(join(outputDir, 'b.epub')).mtime.getTime();
+
+      expect(epubANewTime).toBeGreaterThan(epubATime);
+      expect(epubBNewTime).toBe(epubBTime);
+    });
+  });
+}

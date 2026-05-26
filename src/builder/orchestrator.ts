@@ -648,9 +648,14 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
     // Paso de exportación: genera PDF/EPUB si está configurado y no se pasó --no-export.
     const exportStats: ExportStats = { totalEpub: 0, totalPdf: 0, cacheHitsEpub: 0, cacheHitsPdf: 0 };
+    const exportRenderedMap = affectedPaths
+      ? new Map<DocumentType, BuildDocument[]>(
+          [...renderedMap].map(([type, docs]) => [type, docs.filter((doc) => affectedPaths.has(doc.relativePath))]),
+        )
+      : renderedMap;
     const exportResults =
       ctx.siteConfig.export && !options.noExport
-        ? await runExportDocuments(renderedMap, {
+        ? await runExportDocuments(exportRenderedMap, {
             config: ctx.siteConfig.export,
             outputDir: ctx.outputDir,
             cwd,
