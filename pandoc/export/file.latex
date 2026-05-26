@@ -132,7 +132,18 @@
 \renewenvironment{flushleft}{\par\raggedright}{\par}
 
 % ─── Estilo de página ────────────────────────────────────────────────────────
-\pagestyle{empty}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[R]{\normalfont\footnotesize\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+\fancypagestyle{plain}{%
+  \fancyhf{}%
+  \fancyfoot[R]{\normalfont\footnotesize\thepage}%
+  \renewcommand{\headrulewidth}{0pt}%
+  \renewcommand{\footrulewidth}{0pt}%
+}
 
 % ─── eso-pic (para portadas e imágenes a sangre) ─────────────────────────────
 \usepackage{eso-pic}
