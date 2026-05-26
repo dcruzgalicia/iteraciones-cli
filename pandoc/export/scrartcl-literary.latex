@@ -79,7 +79,8 @@ $endif$
 \usepackage{longtable}
 \usepackage{booktabs}
 \usepackage{array}
-% Compatibilidad pandoc + KOMA-Script 3.49+: pandoc genera \def\LTcaptype{none}
+\usepackage{calc}
+\usepackage{xfp}% Compatibilidad pandoc + KOMA-Script 3.49+: pandoc genera \def\LTcaptype{none}
 % para tablas sin caption; KOMA-Script 3.49 intenta usar ese valor como contador.
 \newcounter{none}
 
