@@ -347,16 +347,16 @@ export async function runExportDocuments(
           }
           // Hook afterExport: permite post-procesar los bytes del archivo generado.
           const pdfData = await Bun.file(outputPath).arrayBuffer();
-          pdfDone++;
-          if (pdfTotal > 2) {
-            process.stderr.write(`[export] PDF ${pdfDone}/${pdfTotal} — ${exportDoc.relativePath} (generado)\n`);
-          }
           if (registry) {
             const afterCtx = await registry.runAfterExport({ sourcePath: exportDoc.filePath, format: 'pdf', data: new Uint8Array(pdfData) });
             await Bun.write(outputPath, afterCtx.data);
             if (cacheManager) await cacheManager.writeBinary('export', cacheKey, 'pdf', afterCtx.data.slice().buffer as ArrayBuffer);
           } else if (cacheManager) {
             await cacheManager.writeBinary('export', cacheKey, 'pdf', pdfData);
+          }
+          pdfDone++;
+          if (pdfTotal > 2) {
+            process.stderr.write(`[export] PDF ${pdfDone}/${pdfTotal} — ${exportDoc.relativePath} (generado)\n`);
           }
           if (stats) stats.totalPdf++;
           pdfDone++;
