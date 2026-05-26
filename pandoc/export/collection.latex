@@ -91,11 +91,11 @@
 \pretolerance=200
 \tolerance=400
 \hyphenpenalty=100
-\brokenpenalty=1000000
+\brokenpenalty=10000
 \finalhyphendemerits=1000000
 \doublehyphendemerits=10000000
-\widowpenalty=1000000
-\clubpenalty=1000000
+\widowpenalty=10000
+\clubpenalty=10000
 
 % ─── Fuentes KOMA ────────────────────────────────────────────────────────────
 \setkomafont{title}{\normalsize\bfseries}
