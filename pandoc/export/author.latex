@@ -74,11 +74,6 @@
   footskip=2.2\baselineskip%
 }
 
-% ─── Encabezados y pie de página ─────────────────────────────────────────────
-\usepackage{scrlayer-scrpage}
-\clearpairofpagestyles
-\ofoot*{\pagemark}
-
 % ─── Interlineado ────────────────────────────────────────────────────────────
 \usepackage{setspace}
 \setstretch{1.1}
@@ -155,7 +150,6 @@
 \newcounter{none}
 
 \usepackage{fancyvrb}
-\usepackage{framed}
 \newenvironment{Shaded}{}{}
 \newenvironment{Highlighting}[1][]{\VerbatimEnvironment\begin{Verbatim}[commandchars=\\\{\}]}{\end{Verbatim}}
 \newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
