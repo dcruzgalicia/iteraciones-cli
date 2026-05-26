@@ -61,6 +61,20 @@ $endif$
 % para tablas sin caption; KOMA-Script 3.49 intenta usar ese valor como contador.
 \newcounter{none}
 
+% ─── Estilo de página ────────────────────────────────────────────────────────
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[R]{\normalfont\footnotesize\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+\fancypagestyle{plain}{%
+  \fancyhf{}%
+  \fancyfoot[R]{\normalfont\footnotesize\thepage}%
+  \renewcommand{\headrulewidth}{0pt}%
+  \renewcommand{\footrulewidth}{0pt}%
+}
+
 \usepackage{fancyvrb}
 \usepackage{framed}
 \newenvironment{Shaded}{}{}
