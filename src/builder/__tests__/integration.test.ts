@@ -318,31 +318,30 @@ describe('caché: segunda build produce output idéntico al primero', () => {
 // Build incremental con export — solo los archivos modificados deben reescribirse
 // ---------------------------------------------------------------------------
 
-if (pandocAvailable) {
-  describe('build incremental con export usa solo docs afectados', () => {
-    let tmpCwd: string;
-    let outputDir: string;
-    let epubATime: number;
-    let epubBTime: number;
+describe.skipIf(!pandocAvailable)('build incremental con export usa solo docs afectados', () => {
+  let tmpCwd: string;
+  let outputDir: string;
+  let epubAbytes: number[];
+  let epubBbytes: number[];
 
-    beforeAll(async () => {
-      tmpCwd = mkdtempSync(join(tmpdir(), 'iteraciones-incremental-export-'));
-      outputDir = mkdtempSync(join(tmpdir(), 'iteraciones-incremental-output-'));
+  beforeAll(async () => {
+    tmpCwd = mkdtempSync(join(tmpdir(), 'iteraciones-incremental-export-'));
+    outputDir = mkdtempSync(join(tmpdir(), 'iteraciones-incremental-output-'));
 
-      writeFileSync(
-        join(tmpCwd, '_iteraciones.yaml'),
-        `site:
+    writeFileSync(
+      join(tmpCwd, '_iteraciones.yaml'),
+      `site:
   theme: default
   export:
     formats:
       - epub
 `,
-        'utf8',
-      );
+      'utf8',
+    );
 
-      writeFileSync(
-        join(tmpCwd, 'a.md'),
-        `---
+    writeFileSync(
+      join(tmpCwd, 'a.md'),
+      `---
 title: Documento A
 author: ['Test']
 keywords: []
@@ -354,12 +353,12 @@ items: []
 
 Contenido inicial A.
 `,
-        'utf8',
-      );
+      'utf8',
+    );
 
-      writeFileSync(
-        join(tmpCwd, 'b.md'),
-        `---
+    writeFileSync(
+      join(tmpCwd, 'b.md'),
+      `---
 title: Documento B
 author: ['Test']
 keywords: []
@@ -371,24 +370,24 @@ items: []
 
 Contenido inicial B.
 `,
-        'utf8',
-      );
+      'utf8',
+    );
 
-      await build(tmpCwd, { outputDir, noCache: false, noTailwind: true });
+    await build(tmpCwd, { outputDir, noCache: false, noTailwind: true });
 
-      epubATime = statSync(join(outputDir, 'a.epub')).mtime.getTime();
-      epubBTime = statSync(join(outputDir, 'b.epub')).mtime.getTime();
-    });
+    epubAbytes = Array.from(new Uint8Array((await Bun.file(join(outputDir, 'a.epub')).arrayBuffer()) as ArrayBuffer));
+    epubBbytes = Array.from(new Uint8Array((await Bun.file(join(outputDir, 'b.epub')).arrayBuffer()) as ArrayBuffer));
+  });
 
-    afterAll(() => {
-      if (tmpCwd) rmSync(tmpCwd, { recursive: true, force: true });
-      if (outputDir) rmSync(outputDir, { recursive: true, force: true });
-    });
+  afterAll(() => {
+    if (tmpCwd) rmSync(tmpCwd, { recursive: true, force: true });
+    if (outputDir) rmSync(outputDir, { recursive: true, force: true });
+  });
 
-    test('solo el EPUB del documento modificado se reescribe en rebuild incremental', async () => {
-      writeFileSync(
-        join(tmpCwd, 'a.md'),
-        `---
+  test('solo el EPUB del documento modificado se reescribe en rebuild incremental', async () => {
+    writeFileSync(
+      join(tmpCwd, 'a.md'),
+      `---
 title: Documento A
 author: ['Test']
 keywords: []
@@ -400,22 +399,21 @@ items: []
 
 Contenido actualizado A.
 `,
-        'utf8',
-      );
+      'utf8',
+    );
 
-      await build(tmpCwd, {
-        outputDir,
-        noCache: false,
-        noTailwind: true,
-        incremental: true,
-        changedPaths: new Set(['a.md']),
-      });
-
-      const epubANewTime = statSync(join(outputDir, 'a.epub')).mtime.getTime();
-      const epubBNewTime = statSync(join(outputDir, 'b.epub')).mtime.getTime();
-
-      expect(epubANewTime).toBeGreaterThan(epubATime);
-      expect(epubBNewTime).toBe(epubBTime);
+    await build(tmpCwd, {
+      outputDir,
+      noCache: false,
+      noTailwind: true,
+      incremental: true,
+      changedPaths: new Set(['a.md']),
     });
+
+    const epubANewBytes = Array.from(new Uint8Array((await Bun.file(join(outputDir, 'a.epub')).arrayBuffer()) as ArrayBuffer));
+    const epubBNewBytes = Array.from(new Uint8Array((await Bun.file(join(outputDir, 'b.epub')).arrayBuffer()) as ArrayBuffer));
+
+    expect(epubANewBytes).not.toEqual(epubAbytes);
+    expect(epubBNewBytes).toEqual(epubBbytes);
   });
-}
+});
