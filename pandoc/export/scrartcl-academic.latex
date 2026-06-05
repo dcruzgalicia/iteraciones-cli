@@ -41,6 +41,10 @@ $endif$
 \setlength{\parskip}{0pt}
 % Secciones numeradas
 \setcounter{secnumdepth}{3}
+% ─── Sin sangría en primer párrafo tras sección ──────────────────────────
+\RedeclareSectionCommand[afterindent=false]{section}
+\RedeclareSectionCommand[afterindent=false]{subsection}
+\RedeclareSectionCommand[afterindent=false]{subsubsection}
 
 % ─── Matemáticas ─────────────────────────────────────────────────────────────
 \usepackage{amsmath}

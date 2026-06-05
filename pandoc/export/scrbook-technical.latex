@@ -22,6 +22,11 @@ $endif$
 \setlength{\parskip}{0.5\baselineskip}
 % Secciones y capítulos numerados
 \setcounter{secnumdepth}{3}
+% ─── Sin sangría en primer párrafo tras parte/capítulo/sección ────────────
+\RedeclareSectionCommand[afterindent=false]{part}
+\RedeclareSectionCommand[afterindent=false]{chapter}
+\RedeclareSectionCommand[afterindent=false]{section}
+\RedeclareSectionCommand[afterindent=false]{subsection}
 
 % ─── Matemáticas ─────────────────────────────────────────────────────────────
 \usepackage{amsmath}
