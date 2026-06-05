@@ -1,6 +1,14 @@
 import { join } from 'node:path';
 import { ConfigError } from '../errors.js';
-import { DEFAULT_SITE_CONFIG, type ExportConfig, KNOWN_ACCENT_COLORS, type SiteConfig } from './site-config.js';
+import {
+  DEFAULT_SITE_CONFIG,
+  type ExportConfig,
+  type FormatLayout,
+  KNOWN_ACCENT_COLORS,
+  type LayoutConfig,
+  type PageSize,
+  type SiteConfig,
+} from './site-config.js';
 
 const CONFIG_FILE = '_iteraciones.yaml';
 
@@ -92,6 +100,7 @@ function parseExportConfig(raw: unknown): ExportConfig | undefined {
       `[iteraciones] export.pdf-concurrency: valor inválido "${String(rawPdfConcurrency)}". Debe ser un entero >= 1. Usando 2 por defecto.\n`,
     );
   }
+  const layout = parseLayoutConfig(obj.layout);
   return {
     formats,
     pdfEngine,
@@ -99,7 +108,61 @@ function parseExportConfig(raw: unknown): ExportConfig | undefined {
     ...(bibliography !== undefined ? { bibliography } : {}),
     ...(csl !== undefined ? { csl } : {}),
     ...(template !== undefined ? { template } : {}),
+    ...(layout ? { layout } : {}),
   };
+}
+
+const KNOWN_PAGE_SIZES = new Set<string>(['half-letter', 'letter', 'a4', 'a5', 'pocket']);
+
+function parseFormatLayout(raw: unknown): FormatLayout | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const obj = raw as Record<string, unknown>;
+
+  const pageSize = typeof obj['page-size'] === 'string' && KNOWN_PAGE_SIZES.has(obj['page-size']) ? (obj['page-size'] as PageSize) : undefined;
+  if (obj['page-size'] !== undefined && !pageSize) {
+    process.stderr.write(
+      `[iteraciones] export.layout.pdf.page-size: valor desconocido "${String(obj['page-size'])}". Valores válidos: half-letter, letter, a4, a5, pocket.\n`,
+    );
+  }
+
+  const fontSize = typeof obj['font-size'] === 'string' && /^\d+pt$/.test(obj['font-size']) ? obj['font-size'] : undefined;
+  if (obj['font-size'] !== undefined && !fontSize) {
+    process.stderr.write(`[iteraciones] export.layout.pdf.font-size: debe ser un tamaño LaTeX como "10pt", "11pt" o "12pt".\n`);
+  }
+
+  const fontFamily = typeof obj['font-family'] === 'string' && obj['font-family'].trim() ? obj['font-family'].trim() : undefined;
+
+  const rawMargins = obj.margins;
+  let margins: [string, string, string, string] | undefined;
+  if (
+    Array.isArray(rawMargins) &&
+    rawMargins.length === 4 &&
+    rawMargins.every((m) => typeof m === 'string' && /^\d+(\.\d+)?(cm|mm|in|pt)$/.test(m))
+  ) {
+    margins = rawMargins as [string, string, string, string];
+  } else if (rawMargins !== undefined) {
+    process.stderr.write(
+      `[iteraciones] export.layout.pdf.margins: debe ser un array de 4 strings con unidades (ej: ["2.5cm", "2.5cm", "3cm", "3cm"]).\n`,
+    );
+  }
+
+  const lineSpacing = typeof obj['line-spacing'] === 'number' && obj['line-spacing'] > 0 ? obj['line-spacing'] : undefined;
+  if (obj['line-spacing'] !== undefined && !lineSpacing) {
+    process.stderr.write(`[iteraciones] export.layout.pdf.line-spacing: debe ser un número positivo.\n`);
+  }
+
+  const numbering = typeof obj.numbering === 'boolean' ? obj.numbering : undefined;
+
+  if (!pageSize && !fontSize && !fontFamily && !margins && lineSpacing === undefined && numbering === undefined) return undefined;
+
+  return { pageSize, fontSize, fontFamily, margins, lineSpacing, numbering };
+}
+
+function parseLayoutConfig(raw: unknown): LayoutConfig | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const obj = raw as Record<string, unknown>;
+  const pdf = parseFormatLayout(obj.pdf);
+  return pdf ? { pdf } : undefined;
 }
 
 function resolveAccent(value: unknown): string {
