@@ -7,6 +7,10 @@ export type ExportLatexTemplate = 'literary' | 'academic' | 'anthology' | 'techn
 
 export type PageSize = 'half-letter' | 'letter' | 'a4' | 'a5' | 'pocket';
 
+export type PageNumberPlacement = 'footer-left' | 'footer-center' | 'footer-right' | 'header-left' | 'header-center' | 'header-right';
+
+export type Sides = 'oneside' | 'twoside';
+
 /**
  * Configuración de layout para un formato de exportación (PDF, EPUB, HTML).
  */
@@ -23,6 +27,10 @@ export interface FormatLayout {
   lineSpacing?: number;
   /** Si se muestran números de capítulo/sección. */
   numbering?: boolean;
+  /** Posición del número de página (header/footer + alineación). */
+  pageNumber?: PageNumberPlacement;
+  /** Caras del documento: una cara (oneside) o doble cara (twoside). */
+  sides?: Sides;
 }
 
 export interface LayoutConfig {

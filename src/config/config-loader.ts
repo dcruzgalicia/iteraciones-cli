@@ -6,7 +6,9 @@ import {
   type FormatLayout,
   KNOWN_ACCENT_COLORS,
   type LayoutConfig,
+  type PageNumberPlacement,
   type PageSize,
+  type Sides,
   type SiteConfig,
 } from './site-config.js';
 
@@ -153,9 +155,34 @@ function parseFormatLayout(raw: unknown): FormatLayout | undefined {
 
   const numbering = typeof obj.numbering === 'boolean' ? obj.numbering : undefined;
 
-  if (!pageSize && !fontSize && !fontFamily && !margins && lineSpacing === undefined && numbering === undefined) return undefined;
+  const KNOWN_PAGE_NUMBER_PLACEMENTS = new Set<string>([
+    'footer-left',
+    'footer-center',
+    'footer-right',
+    'header-left',
+    'header-center',
+    'header-right',
+  ]);
+  const pageNumber =
+    typeof obj['page-number'] === 'string' && KNOWN_PAGE_NUMBER_PLACEMENTS.has(obj['page-number'])
+      ? (obj['page-number'] as PageNumberPlacement)
+      : undefined;
+  if (obj['page-number'] !== undefined && !pageNumber) {
+    process.stderr.write(
+      `[iteraciones] export.layout.pdf.page-number: valor desconocido "${String(obj['page-number'])}". Valores válidos: footer-left, footer-center, footer-right, header-left, header-center, header-right.\n`,
+    );
+  }
 
-  return { pageSize, fontSize, fontFamily, margins, lineSpacing, numbering };
+  const KNOWN_SIDES = new Set<string>(['oneside', 'twoside']);
+  const sides = typeof obj.sides === 'string' && KNOWN_SIDES.has(obj.sides) ? (obj.sides as Sides) : undefined;
+  if (obj.sides !== undefined && !sides) {
+    process.stderr.write(`[iteraciones] export.layout.pdf.sides: valor desconocido "${String(obj.sides)}". Valores válidos: oneside, twoside.\n`);
+  }
+
+  if (!pageSize && !fontSize && !fontFamily && !margins && lineSpacing === undefined && numbering === undefined && !pageNumber && !sides)
+    return undefined;
+
+  return { pageSize, fontSize, fontFamily, margins, lineSpacing, numbering, pageNumber, sides };
 }
 
 function parseLayoutConfig(raw: unknown): LayoutConfig | undefined {
