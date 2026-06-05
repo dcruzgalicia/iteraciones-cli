@@ -67,6 +67,9 @@ $endif$
 \setlist[description]{noitemsep,nosep,topsep=\baselineskip}
 
 % ─── Geometría (formato de bolsillo 13.5 × 21 cm) ────────────────────────────
+$if(geometry)$
+\usepackage[$for(geometry)$$geometry$$sep$,$endfor$]{geometry}
+$else$
 $if(papersize)$
 \usepackage[papersize={$papersize$}]{geometry}
 $else$
@@ -81,6 +84,7 @@ $endif$
   headsep=6pt,%
   footskip=2.2\baselineskip%
 }
+$endif$
 
 % ─── Interlineado ────────────────────────────────────────────────────────────
 \usepackage{setspace}
