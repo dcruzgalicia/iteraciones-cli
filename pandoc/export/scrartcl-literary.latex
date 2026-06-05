@@ -216,7 +216,7 @@ $if(date)$\date{$date$}$else$\date{}$endif$
 \maketitle
 
 % ─── Contenido ───────────────────────────────────────────────────────────────
-noindent
+\noindent
 $body$
 
 % ─── Referencias ─────────────────────────────────────────────────────────────
