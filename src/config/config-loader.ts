@@ -114,16 +114,24 @@ function parseExportConfig(raw: unknown): ExportConfig | undefined {
   };
 }
 
-const KNOWN_PAGE_SIZES = new Set<string>(['half-letter', 'letter', 'a4', 'a5', 'pocket']);
+const CUSTOM_PAGE_SIZE_RE = /^\d+(\.\d+)?(cm|mm|in|pt),\d+(\.\d+)?(cm|mm|in|pt)$/;
+
+const KNOWN_PAGE_SIZES = new Set<string>(['half-letter', 'letter', 'legal', 'executive', 'a3', 'a4', 'a5', 'b4', 'b5', 'tabloid', 'pocket']);
 
 function parseFormatLayout(raw: unknown): FormatLayout | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
   const obj = raw as Record<string, unknown>;
 
-  const pageSize = typeof obj['page-size'] === 'string' && KNOWN_PAGE_SIZES.has(obj['page-size']) ? (obj['page-size'] as PageSize) : undefined;
+  const rawPageSize = obj['page-size'];
+  let pageSize: PageSize | undefined;
+  if (typeof rawPageSize === 'string') {
+    if (KNOWN_PAGE_SIZES.has(rawPageSize) || CUSTOM_PAGE_SIZE_RE.test(rawPageSize)) {
+      pageSize = rawPageSize;
+    }
+  }
   if (obj['page-size'] !== undefined && !pageSize) {
     process.stderr.write(
-      `[iteraciones] export.layout.pdf.page-size: valor desconocido "${String(obj['page-size'])}". Valores válidos: half-letter, letter, a4, a5, pocket.\n`,
+      `[iteraciones] export.layout.pdf.page-size: valor desconocido "${String(obj['page-size'])}". Usa un nombre estándar (letter, a4, half-letter, etc.) o un tamaño personalizado "ancho,alto" (ej: "15cm,23cm").\n`,
     );
   }
 
