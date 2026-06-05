@@ -316,7 +316,7 @@ export async function runExportDocuments(
             }
             return { epub: outputPath };
           }
-          await convertToEpub(exportDoc, outputPath, cwd);
+          await convertToEpub(exportDoc, outputPath, cwd, config.layout?.pdf);
           // Hook afterExport: permite post-procesar los bytes del archivo generado.
           const epubData = await Bun.file(outputPath).arrayBuffer();
           if (registry) {
@@ -357,7 +357,7 @@ export async function runExportDocuments(
           }
           await acquireXelatex();
           try {
-            await convertToPdf(exportDoc, outputPath, config.pdfEngine, cwd);
+            await convertToPdf(exportDoc, outputPath, config.pdfEngine, cwd, config.layout?.pdf);
           } finally {
             releaseXelatex();
           }
@@ -773,7 +773,7 @@ export async function exportSingleDocument(
   await acquireOnDemandXelatex(maxSlots);
   let pdfGenerated = false;
   try {
-    await convertToPdf(exportDoc, outputPath, config.pdfEngine, cwd);
+    await convertToPdf(exportDoc, outputPath, config.pdfEngine, cwd, config.layout?.pdf);
     pdfGenerated = true;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
