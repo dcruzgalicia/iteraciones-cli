@@ -1,5 +1,5 @@
 import { stat } from 'node:fs/promises';
-import { isAbsolute, join, relative, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import type { CacheManager } from '../../cache/cache-manager.js';
 import { hash } from '../../cache/hasher.js';
 import type { ExportConfig } from '../../config/site-config.js';
@@ -276,6 +276,22 @@ export async function runExportDocuments(
       }, 0)
     : 0;
 
+  /**
+   * Convierte el primer autor en un slug seguro para nombre de archivo.
+   * Retorna el slug seguido de un guion, o cadena vacía si no hay autores.
+   */
+  function authorSlug(authors: string[]): string {
+    if (authors.length === 0) return '';
+    const name = (authors[0] ?? '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '');
+    return name ? `${name}-` : '';
+  }
+
   // Closure que genera los formatos (epub, pdf) para un ExportDocument ya ensamblado.
   // `sourceHash` es el hash del documento fuente original (para la clave de caché).
   // `itemHashes` es la cadena de hashes de los ítems incluidos (string vacío para
@@ -482,7 +498,10 @@ export async function runExportDocuments(
       };
     }
 
-    const outputBase = join(outputDir, exportDoc.relativePath.replace(/\.md$/, ''));
+    const authorPrefix = authorSlug(exportDoc.metadata.author);
+    const outputBase = authorPrefix
+      ? join(outputDir, dirname(exportDoc.relativePath), `${authorPrefix}${basename(exportDoc.relativePath, '.md')}`)
+      : join(outputDir, exportDoc.relativePath.replace(/\.md$/, ''));
     // Hash de items pre-computado una sola vez: compartido por todos los formatos
     // del documento. Evita la duplicación del cálculo que había en el loop secuencial.
     const itemHashes = items.map((i) => i.sourceHash).join('\0');
