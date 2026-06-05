@@ -79,18 +79,18 @@ $endif$
 \pagestyle{fancy}
 \fancyhf{}
 $if(pageno-head)$
-\fancyhead[$if(pageno-pos)$$pageno-pos$$else$R$endif$]{\normalfont\normalsize\thepage}
+\fancyhead[$if(pageno-fancy)$$pageno-fancy$$else$R$endif$]{\normalfont\normalsize\thepage}
 $else$
-\fancyfoot[$if(pageno-pos)$$pageno-pos$$else$R$endif$]{\normalfont\normalsize\thepage}
+\fancyfoot[$if(pageno-fancy)$$pageno-fancy$$else$R$endif$]{\normalfont\normalsize\thepage}
 $endif$
 \renewcommand{\headrulewidth}{0pt}
 \renewcommand{\footrulewidth}{0pt}
 \fancypagestyle{plain}{%
   \fancyhf{}%
 $if(pageno-head)$
-  \fancyhead[$if(pageno-pos)$$pageno-pos$$else$R$endif$]{\normalfont\normalsize\thepage}%
+  \fancyhead[$if(pageno-fancy)$$pageno-fancy$$else$R$endif$]{\normalfont\normalsize\thepage}%
 $else$
-  \fancyfoot[$if(pageno-pos)$$pageno-pos$$else$R$endif$]{\normalfont\normalsize\thepage}%
+  \fancyfoot[$if(pageno-fancy)$$pageno-fancy$$else$R$endif$]{\normalfont\normalsize\thepage}%
 $endif$
   \renewcommand{\headrulewidth}{0pt}%
   \renewcommand{\footrulewidth}{0pt}%
