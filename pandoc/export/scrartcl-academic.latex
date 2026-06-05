@@ -56,7 +56,7 @@ $endif$
 
 % ─── Márgenes típicos para artículo académico ────────────────────────────────
 $if(geometry)$
-\usepackage[$for(geometry)$$geometry$$sep$,$endfor$,headheight=14pt,headsep=6pt,footskip=2.2\baselineskip]{geometry}
+\usepackage[$for(geometry)$$geometry$$sep$,$endfor$$if(papersize)$,papersize={$papersize$}$endif$,headheight=14pt,headsep=6pt,footskip=2.2\baselineskip]{geometry}
 $else$
 $if(papersize)$
 \usepackage[papersize={$papersize$}]{geometry}
