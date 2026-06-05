@@ -354,14 +354,10 @@ export async function runExportDocuments(
           } else if (cacheManager) {
             await cacheManager.writeBinary('export', cacheKey, 'pdf', pdfData);
           }
-          pdfDone++;
-          if (pdfTotal > 2) {
-            process.stderr.write(`[export] PDF ${pdfDone}/${pdfTotal} — ${exportDoc.relativePath} (generado)\n`);
-          }
           if (stats) stats.totalPdf++;
           pdfDone++;
           if (pdfTotal > 2) {
-            process.stderr.write(`[export] PDF ${pdfDone}/${pdfTotal} — ${exportDoc.relativePath}\n`);
+            process.stderr.write(`[export] PDF ${pdfDone}/${pdfTotal} — ${exportDoc.relativePath} (generado)\n`);
           }
           return { pdf: outputPath };
         }
