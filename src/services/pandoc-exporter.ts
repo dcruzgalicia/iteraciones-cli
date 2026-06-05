@@ -136,6 +136,15 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, layout?: FormatL
       lines.push(`  - bottom=${bottom}`);
       lines.push(`  - left=${left}`);
     }
+    if (layout.pageNumber) {
+      const [placement, align] = layout.pageNumber.split('-') as [string, string];
+      const alignMap: Record<string, string> = { left: 'L', center: 'C', right: 'R' };
+      lines.push(`pageno-head: ${placement === 'header' ? 'true' : 'false'}`);
+      lines.push(`pageno-pos: ${alignMap[align] ?? 'R'}`);
+    }
+    if (layout.sides) {
+      lines.push(`twoside: ${layout.sides === 'twoside' ? 'true' : 'false'}`);
+    }
   }
 
   // Ruta al directorio de fuentes para fontspec (templates LaTeX con $fontdir$).
