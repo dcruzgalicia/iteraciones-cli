@@ -10,6 +10,9 @@
 \usepackage{microtype}
 
 % ─── Tipografía del sitio: Exo 2 (cuerpo) + Space Mono (código/etiquetas) ────
+$if(mainfont)$
+\setmainfont{$mainfont$}
+$else$
 $if(fontdir)$
 \setmainfont[
   Path         = $fontdir$/,
@@ -27,6 +30,7 @@ $if(fontdir)$
   Scale          = 0.85,
 ]{Space Mono}
 $endif$
+$endif$
 
 % ─── Idioma ──────────────────────────────────────────────────────────────────
 $if(lang)$
@@ -36,11 +40,11 @@ $endif$
 
 % ─── Tipografía académica ─────────────────────────────────────────────────────
 \usepackage{setspace}
-\setstretch{1.1}
+\setstretch{$if(linestretch)$$linestretch$$else$1.1$endif$}
 \setlength{\parindent}{1.5em}
 \setlength{\parskip}{0pt}
 % Secciones numeradas
-\setcounter{secnumdepth}{3}
+\setcounter{secnumdepth}{$if(secnumdepth)$$secnumdepth$$else$3$endif$}
 % ─── Sin sangría en primer párrafo tras sección ──────────────────────────
 \RedeclareSectionCommand[afterindent=false]{section}
 \RedeclareSectionCommand[afterindent=false]{subsection}
@@ -51,7 +55,11 @@ $endif$
 \usepackage{amssymb}
 
 % ─── Márgenes típicos para artículo académico ────────────────────────────────
+$if(papersize)$
+\usepackage[papersize={$papersize$}]{geometry}
+$else$
 \usepackage[top=2.5cm, bottom=2.5cm, left=3cm, right=3cm]{geometry}
+$endif$
 
 % ─── Abstract y palabras clave ───────────────────────────────────────────────
 \usepackage{abstract}

@@ -17,11 +17,11 @@ $endif$
 
 % ─── Tipografía editorial ─────────────────────────────────────────────────────
 \usepackage{setspace}
-\setstretch{1.2}
+\setstretch{$if(linestretch)$$linestretch$$else$1.2$endif$}
 \setlength{\parindent}{1.5em}
 \setlength{\parskip}{0pt}
 % Capítulos sin numeración explícita (cada capítulo = un texto de la antología)
-\setcounter{secnumdepth}{0}
+\setcounter{secnumdepth}{$if(secnumdepth)$$secnumdepth$$else$0$endif$}
 % ─── Sin sangría en primer párrafo tras parte/capítulo/sección ────────────
 \RedeclareSectionCommand[afterindent=false]{part}
 \RedeclareSectionCommand[afterindent=false]{chapter}
@@ -42,7 +42,11 @@ $endif$
 \usepackage{amssymb}
 
 % ─── Márgenes ────────────────────────────────────────────────────────────────
+$if(papersize)$
+\usepackage[papersize={$papersize$}]{geometry}
+$else$
 \usepackage[top=2.5cm, bottom=2.5cm, left=3.5cm, right=3.5cm]{geometry}
+$endif$
 
 % ─── Gráficos ────────────────────────────────────────────────────────────────
 \usepackage{graphicx}
