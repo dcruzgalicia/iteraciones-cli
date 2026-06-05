@@ -138,9 +138,17 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, layout?: FormatL
     }
     if (layout.pageNumber) {
       const [placement, align] = layout.pageNumber.split('-') as [string, string];
-      const alignMap: Record<string, string> = { left: 'L', center: 'C', right: 'R' };
       lines.push(`pageno-head: ${placement === 'header' ? 'true' : 'false'}`);
-      lines.push(`pageno-pos: ${alignMap[align] ?? 'R'}`);
+      if (layout.sides === 'twoside') {
+        const twosideMap: Record<string, string> = { left: 'LO,RE', center: 'CE,CO', right: 'LE,RO' };
+        lines.push(`pageno-fancy: ${twosideMap[align] ?? 'LE,RO'}`);
+      } else {
+        const alignMap: Record<string, string> = { left: 'L', center: 'C', right: 'R' };
+        lines.push(`pageno-fancy: ${alignMap[align] ?? 'R'}`);
+      }
+    } else if (layout.sides === 'twoside') {
+      // Sin page-number explícito: footer-right por defecto → LE,RO en twoside
+      lines.push('pageno-fancy: LE,RO');
     }
     if (layout.sides) {
       lines.push(`twoside: ${layout.sides === 'twoside' ? 'true' : 'false'}`);
