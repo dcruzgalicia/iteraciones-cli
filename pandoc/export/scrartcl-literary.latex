@@ -45,6 +45,10 @@ $endif$
 
 % ─── Sin numeración de secciones ─────────────────────────────────────────────
 \setcounter{secnumdepth}{0}
+% ─── Sin sangría en primer párrafo tras sección ──────────────────────────
+\RedeclareSectionCommand[afterindent=false]{section}
+\RedeclareSectionCommand[afterindent=false]{subsection}
+\RedeclareSectionCommand[afterindent=false]{subsubsection}
 
 % ─── Matemáticas ─────────────────────────────────────────────────────────────
 \usepackage{amsmath}

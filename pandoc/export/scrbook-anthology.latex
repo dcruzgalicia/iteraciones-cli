@@ -22,6 +22,11 @@ $endif$
 \setlength{\parskip}{0pt}
 % Capítulos sin numeración explícita (cada capítulo = un texto de la antología)
 \setcounter{secnumdepth}{0}
+% ─── Sin sangría en primer párrafo tras parte/capítulo/sección ────────────
+\RedeclareSectionCommand[afterindent=false]{part}
+\RedeclareSectionCommand[afterindent=false]{chapter}
+\RedeclareSectionCommand[afterindent=false]{section}
+\RedeclareSectionCommand[afterindent=false]{subsection}
 % Encabezado de capítulo con línea decorativa
 \addtokomafont{chapter}{\normalfont\Large\bfseries}
 
