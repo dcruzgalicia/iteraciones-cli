@@ -3,7 +3,7 @@
 %% Énfasis en legibilidad: márgenes amplios, interlineado 1.5, notas al pie destacadas
 %% Requiere: TeX Live / MacTeX full con KOMA-Script, fontspec, microtype, hyperref, babel
 
-\documentclass[$if(fontsize)$$fontsize$$else$12pt$endif$, a4paper]{scrartcl}
+\documentclass[$if(fontsize)$$fontsize$$else$12pt$endif$, a4paper$if(twoside)$,twoside$endif$]{scrartcl}
 
 % ─── Codificación y fuentes ──────────────────────────────────────────────────
 \usepackage{fontspec}
@@ -104,12 +104,20 @@ $endif$
 \usepackage{fancyhdr}
 \pagestyle{fancy}
 \fancyhf{}
-\fancyfoot[R]{\normalfont\footnotesize\thepage}
+$if(pageno-head)$
+\fancyhead[$if(pageno-pos)$$pageno-pos$$else$R$endif$]{\normalfont\footnotesize\thepage}
+$else$
+\fancyfoot[$if(pageno-pos)$$pageno-pos$$else$R$endif$]{\normalfont\footnotesize\thepage}
+$endif$
 \renewcommand{\headrulewidth}{0pt}
 \renewcommand{\footrulewidth}{0pt}
 \fancypagestyle{plain}{%
   \fancyhf{}%
-  \fancyfoot[R]{\normalfont\footnotesize\thepage}%
+$if(pageno-head)$
+  \fancyhead[$if(pageno-pos)$$pageno-pos$$else$R$endif$]{\normalfont\footnotesize\thepage}%
+$else$
+  \fancyfoot[$if(pageno-pos)$$pageno-pos$$else$R$endif$]{\normalfont\footnotesize\thepage}%
+$endif$
   \renewcommand{\headrulewidth}{0pt}%
   \renewcommand{\footrulewidth}{0pt}%
 }

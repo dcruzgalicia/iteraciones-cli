@@ -3,7 +3,7 @@
 %% Énfasis en presentación editorial: portada completa, nota de editores, separadores por autor
 %% Requiere: TeX Live / MacTeX full con KOMA-Script, fontspec, microtype, hyperref, babel
 
-\documentclass[$if(fontsize)$$fontsize$,$endif$twoside=false]{scrbook}
+\documentclass[$if(fontsize)$$fontsize$,$endif$$if(twoside)$twoside$else$twoside=false$endif$]{scrbook}
 
 % ─── Codificación y fuentes ──────────────────────────────────────────────────
 \usepackage{fontspec}
@@ -78,12 +78,20 @@ $endif$
 \usepackage{fancyhdr}
 \pagestyle{fancy}
 \fancyhf{}
-\fancyfoot[R]{\normalfont\footnotesize\thepage}
+$if(pageno-head)$
+\fancyhead[$if(pageno-pos)$$pageno-pos$$else$R$endif$]{\normalfont\footnotesize\thepage}
+$else$
+\fancyfoot[$if(pageno-pos)$$pageno-pos$$else$R$endif$]{\normalfont\footnotesize\thepage}
+$endif$
 \renewcommand{\headrulewidth}{0pt}
 \renewcommand{\footrulewidth}{0pt}
 \fancypagestyle{plain}{%
   \fancyhf{}%
-  \fancyfoot[R]{\normalfont\footnotesize\thepage}%
+$if(pageno-head)$
+  \fancyhead[$if(pageno-pos)$$pageno-pos$$else$R$endif$]{\normalfont\footnotesize\thepage}%
+$else$
+  \fancyfoot[$if(pageno-pos)$$pageno-pos$$else$R$endif$]{\normalfont\footnotesize\thepage}%
+$endif$
   \renewcommand{\headrulewidth}{0pt}%
   \renewcommand{\footrulewidth}{0pt}%
 }
