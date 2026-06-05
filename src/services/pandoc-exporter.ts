@@ -128,6 +128,14 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, layout?: FormatL
     if (layout.fontFamily) lines.push(`mainfont: ${yamlString(layout.fontFamily)}`);
     if (layout.lineSpacing !== undefined) lines.push(`linestretch: ${layout.lineSpacing}`);
     if (layout.numbering !== undefined) lines.push(`secnumdepth: ${layout.numbering ? 3 : 0}`);
+    if (layout.margins) {
+      const [top, right, bottom, left] = layout.margins;
+      lines.push('geometry:');
+      lines.push(`  - top=${top}`);
+      lines.push(`  - right=${right}`);
+      lines.push(`  - bottom=${bottom}`);
+      lines.push(`  - left=${left}`);
+    }
   }
 
   // Ruta al directorio de fuentes para fontspec (templates LaTeX con $fontdir$).
