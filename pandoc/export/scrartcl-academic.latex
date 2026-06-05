@@ -3,7 +3,7 @@
 %% Énfasis en rigor formal: abstract, palabras clave, citas CSL, numeración de secciones
 %% Requiere: TeX Live / MacTeX full con KOMA-Script, fontspec, microtype, hyperref, babel
 
-\documentclass[$if(fontsize)$$fontsize$$else$12pt$endif$, numbers=noendperiod]{scrartcl}
+\documentclass[$if(fontsize)$$fontsize$$else$12pt$endif$, numbers=noendperiod$if(twoside)$,twoside$endif$]{scrartcl}
 
 % ─── Codificación y fuentes ──────────────────────────────────────────────────
 \usepackage{fontspec}
@@ -96,12 +96,20 @@ $endif$
 \usepackage{fancyhdr}
 \pagestyle{fancy}
 \fancyhf{}
-\fancyfoot[R]{\normalfont\footnotesize\thepage}
+$if(pageno-head)$
+\fancyhead[$if(pageno-pos)$$pageno-pos$$else$R$endif$]{\normalfont\footnotesize\thepage}
+$else$
+\fancyfoot[$if(pageno-pos)$$pageno-pos$$else$R$endif$]{\normalfont\footnotesize\thepage}
+$endif$
 \renewcommand{\headrulewidth}{0pt}
 \renewcommand{\footrulewidth}{0pt}
 \fancypagestyle{plain}{%
   \fancyhf{}%
-  \fancyfoot[R]{\normalfont\footnotesize\thepage}%
+$if(pageno-head)$
+  \fancyhead[$if(pageno-pos)$$pageno-pos$$else$R$endif$]{\normalfont\footnotesize\thepage}%
+$else$
+  \fancyfoot[$if(pageno-pos)$$pageno-pos$$else$R$endif$]{\normalfont\footnotesize\thepage}%
+$endif$
   \renewcommand{\headrulewidth}{0pt}%
   \renewcommand{\footrulewidth}{0pt}%
 }
