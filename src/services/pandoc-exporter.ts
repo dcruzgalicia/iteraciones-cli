@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { ExportDocument } from '../builder/export/types.js';
+import type { FormatLayout } from '../config/site-config.js';
 import { ConfigError, PandocError } from '../errors.js';
 
 /** Ruta base al directorio de templates LaTeX de exportación, relativa a este archivo. */
@@ -80,7 +81,7 @@ function resolveEpubCssPath(type: string, cwd?: string): string {
  * Construye el bloque YAML de metadatos que Pandoc inyectará en el documento.
  * Pandoc acepta un bloque YAML al inicio del documento delimitado por `---`.
  */
-function buildYamlHeader(doc: ExportDocument, fontdir?: string): string {
+function buildYamlHeader(doc: ExportDocument, fontdir?: string, layout?: FormatLayout): string {
   const { metadata } = doc;
   const lines: string[] = ['---'];
 
@@ -120,6 +121,15 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string): string {
     }
   }
 
+  // Layout editorial (desde site.export.layout.pdf)
+  if (layout) {
+    if (layout.pageSize) lines.push(`papersize: ${layout.pageSize}`);
+    if (layout.fontSize) lines.push(`fontsize: ${layout.fontSize}`);
+    if (layout.fontFamily) lines.push(`mainfont: ${yamlString(layout.fontFamily)}`);
+    if (layout.lineSpacing !== undefined) lines.push(`linestretch: ${layout.lineSpacing}`);
+    if (layout.numbering !== undefined) lines.push(`secnumdepth: ${layout.numbering ? 3 : 0}`);
+  }
+
   // Ruta al directorio de fuentes para fontspec (templates LaTeX con $fontdir$).
   // Solo se incluye en el flujo de PDF; en EPUB causaría un leak de rutas locales.
   if (fontdir) lines.push(`fontdir: ${yamlString(fontdir)}`);
@@ -146,10 +156,10 @@ function yamlString(value: string): string {
  * @param outputPath Ruta absoluta del archivo EPUB de salida.
  * @param cwd        Directorio raíz del proyecto; permite buscar templates de override locales.
  */
-export async function convertToEpub(doc: ExportDocument, outputPath: string, cwd?: string): Promise<void> {
+export async function convertToEpub(doc: ExportDocument, outputPath: string, cwd?: string, layout?: FormatLayout): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
-  const input = buildYamlHeader(doc) + doc.body;
+  const input = buildYamlHeader(doc, undefined, layout) + doc.body;
   const args = ['pandoc', '--from', 'markdown', '--to', 'epub3', '--output', outputPath];
 
   // Hoja de estilos resuelta por tipo: {type}.epub.css con fallback a epub.css global.
@@ -190,11 +200,17 @@ export async function convertToEpub(doc: ExportDocument, outputPath: string, cwd
  * @param engine     Motor LaTeX: 'xelatex' (por defecto) o 'lualatex'.
  * @param cwd        Directorio raíz del proyecto; permite buscar templates de override locales.
  */
-export async function convertToPdf(doc: ExportDocument, outputPath: string, engine: 'xelatex' | 'lualatex', cwd?: string): Promise<void> {
+export async function convertToPdf(
+  doc: ExportDocument,
+  outputPath: string,
+  engine: 'xelatex' | 'lualatex',
+  cwd?: string,
+  layout?: FormatLayout,
+): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
   const templatePath = resolveLatexTemplatePath(doc.type, doc.metadata.template, cwd);
-  const input = buildYamlHeader(doc, FONTS_DIR) + doc.body;
+  const input = buildYamlHeader(doc, FONTS_DIR, layout) + doc.body;
   const args = ['pandoc', '--from', 'markdown', '--to', 'pdf', '--pdf-engine', engine, `--template=${templatePath}`, '--output', outputPath];
 
   // Activar el procesador de citas cuando hay bibliografía declarada.
