@@ -5,6 +5,32 @@
  */
 export type ExportLatexTemplate = 'literary' | 'academic' | 'anthology' | 'technical';
 
+export type PageSize = 'half-letter' | 'letter' | 'a4' | 'a5' | 'pocket';
+
+/**
+ * Configuración de layout para un formato de exportación (PDF, EPUB, HTML).
+ */
+export interface FormatLayout {
+  /** Tamaño de página (solo PDF). */
+  pageSize?: PageSize;
+  /** Tamaño de fuente base (ej: `11pt`, `12pt`). */
+  fontSize?: string;
+  /** Familia tipográfica (nombre del font como en fontspec). */
+  fontFamily?: string;
+  /** Márgenes como [top, right, bottom, left] en unidades LaTeX (ej: `2.5cm`). */
+  margins?: [string, string, string, string];
+  /** Interlineado (factor pasado a setstretch). */
+  lineSpacing?: number;
+  /** Si se muestran números de capítulo/sección. */
+  numbering?: boolean;
+}
+
+export interface LayoutConfig {
+  pdf?: FormatLayout;
+  html?: Partial<FormatLayout>;
+  epub?: Partial<FormatLayout>;
+}
+
 /**
  * Configuración de exportación editorial (PDF y EPUB) definida en `_iteraciones.yaml`
  * bajo la clave `export:`.
@@ -41,6 +67,8 @@ export interface ExportConfig {
    * Por defecto: `2`. Rango recomendado: 1–4.
    */
   pdfConcurrency: number;
+  /** Configuración de layout editorial por formato. */
+  layout?: LayoutConfig;
 }
 
 export interface SiteConfig {
