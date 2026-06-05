@@ -264,6 +264,7 @@ $if(toc)$
 \clearpage
 $endif$
 
+noindent
 $body$
 
 $if(biblatex)$

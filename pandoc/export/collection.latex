@@ -282,6 +282,7 @@ $endif$
 
 \mainmatter
 
+noindent
 $body$
 
 $if(biblatex)$
