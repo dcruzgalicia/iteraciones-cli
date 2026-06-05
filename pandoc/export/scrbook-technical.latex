@@ -17,11 +17,11 @@ $endif$
 
 % ─── Tipografía técnica ───────────────────────────────────────────────────────
 \usepackage{setspace}
-\setstretch{1.15}
+\setstretch{$if(linestretch)$$linestretch$$else$1.15$endif$}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{0.5\baselineskip}
 % Secciones y capítulos numerados
-\setcounter{secnumdepth}{3}
+\setcounter{secnumdepth}{$if(secnumdepth)$$secnumdepth$$else$3$endif$}
 % ─── Sin sangría en primer párrafo tras parte/capítulo/sección ────────────
 \RedeclareSectionCommand[afterindent=false]{part}
 \RedeclareSectionCommand[afterindent=false]{chapter}
@@ -33,7 +33,11 @@ $endif$
 \usepackage{amssymb}
 
 % ─── Márgenes con margen interior para navegación ────────────────────────────
+$if(papersize)$
+\usepackage[papersize={$papersize$}]{geometry}
+$else$
 \usepackage[top=2.5cm, bottom=2.5cm, left=3cm, right=3.5cm]{geometry}
+$endif$
 
 % ─── Código: listings con monospace legible ───────────────────────────────────
 \usepackage{listings}

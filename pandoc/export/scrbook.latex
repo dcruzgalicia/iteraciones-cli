@@ -6,6 +6,9 @@
 
 % ─── Fuentes (XeLaTeX / LuaLaTeX) ────────────────────────────────────────────
 \usepackage{fontspec}
+$if(mainfont)$
+\setmainfont{$mainfont$}
+$else$
 \setmainfont[
   UprightFont = texgyrepagella-regular.otf,
   BoldFont = texgyrepagella-bold.otf,
@@ -13,6 +16,7 @@
   BoldItalicFont = texgyrepagella-bolditalic.otf,
   Numbers = OldStyle,
 ]{TeX Gyre Pagella}
+$endif$
 \setsansfont[
   UprightFont = texgyreadventor-regular.otf,
   BoldFont = texgyreadventor-bold.otf,
@@ -63,7 +67,11 @@
 \setlist[description]{noitemsep,nosep,topsep=\baselineskip}
 
 % ─── Geometría (formato de bolsillo 13.5 × 21 cm) ────────────────────────────
+$if(papersize)$
+\usepackage[papersize={$papersize$}]{geometry}
+$else$
 \usepackage[paperwidth=13.5cm,paperheight=21cm]{geometry}
+$endif$
 \geometry{%
   tmargin=3.3\baselineskip,%
   bmargin=62pt,%
@@ -76,7 +84,7 @@
 
 % ─── Interlineado ────────────────────────────────────────────────────────────
 \usepackage{setspace}
-\setstretch{1.1}
+\setstretch{$if(linestretch)$$linestretch$$else$1.1$endif$}
 
 % ─── Microtype (XeLaTeX: tracking y kerning; spacing=true no disponible) ─────
 \usepackage[tracking=true]{microtype}
@@ -99,7 +107,7 @@
 \setkomafont{publishers}{\normalsize\normalfont}
 
 % ─── Sin numeración de secciones ─────────────────────────────────────────────
-\setcounter{secnumdepth}{0}
+\setcounter{secnumdepth}{$if(secnumdepth)$$secnumdepth$$else$0$endif$}
 
 % ─── TOC ─────────────────────────────────────────────────────────────────────
 \renewcaptionname{spanish}{\contentsname}{\large\normalfont Índice}
