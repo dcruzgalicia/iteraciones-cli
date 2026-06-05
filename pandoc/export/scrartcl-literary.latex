@@ -60,7 +60,7 @@ $endif$
 
 % ─── Márgenes amplios para ensayo ────────────────────────────────────────────
 $if(geometry)$
-\usepackage[$for(geometry)$$geometry$$sep$,$endfor$]{geometry}
+\usepackage[$for(geometry)$$geometry$$sep$,$endfor$,headheight=14pt,headsep=6pt,footskip=2.2\baselineskip]{geometry}
 $else$
 $if(papersize)$
 \usepackage[papersize={$papersize$}]{geometry}
@@ -105,18 +105,18 @@ $endif$
 \pagestyle{fancy}
 \fancyhf{}
 $if(pageno-head)$
-\fancyhead[$if(pageno-pos)$$pageno-pos$$else$R$endif$]{\normalfont\footnotesize\thepage}
+\fancyhead[$if(pageno-pos)$$pageno-pos$$else$R$endif$]{\normalfont\normalsize\thepage}
 $else$
-\fancyfoot[$if(pageno-pos)$$pageno-pos$$else$R$endif$]{\normalfont\footnotesize\thepage}
+\fancyfoot[$if(pageno-pos)$$pageno-pos$$else$R$endif$]{\normalfont\normalsize\thepage}
 $endif$
 \renewcommand{\headrulewidth}{0pt}
 \renewcommand{\footrulewidth}{0pt}
 \fancypagestyle{plain}{%
   \fancyhf{}%
 $if(pageno-head)$
-  \fancyhead[$if(pageno-pos)$$pageno-pos$$else$R$endif$]{\normalfont\footnotesize\thepage}%
+  \fancyhead[$if(pageno-pos)$$pageno-pos$$else$R$endif$]{\normalfont\normalsize\thepage}%
 $else$
-  \fancyfoot[$if(pageno-pos)$$pageno-pos$$else$R$endif$]{\normalfont\footnotesize\thepage}%
+  \fancyfoot[$if(pageno-pos)$$pageno-pos$$else$R$endif$]{\normalfont\normalsize\thepage}%
 $endif$
   \renewcommand{\headrulewidth}{0pt}%
   \renewcommand{\footrulewidth}{0pt}%
