@@ -59,10 +59,14 @@ $endif$
 \usepackage{amssymb}
 
 % ─── Márgenes amplios para ensayo ────────────────────────────────────────────
+$if(geometry)$
+\usepackage[$for(geometry)$$geometry$$sep$,$endfor$]{geometry}
+$else$
 $if(papersize)$
 \usepackage[papersize={$papersize$}]{geometry}
 $else$
 \usepackage[top=3cm, bottom=3cm, left=4cm, right=4cm]{geometry}
+$endif$
 $endif$
 
 % ─── Notas al pie destacadas ─────────────────────────────────────────────────

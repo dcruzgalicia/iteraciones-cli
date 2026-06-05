@@ -33,10 +33,14 @@ $endif$
 \usepackage{amssymb}
 
 % ─── Márgenes con margen interior para navegación ────────────────────────────
+$if(geometry)$
+\usepackage[$for(geometry)$$geometry$$sep$,$endfor$]{geometry}
+$else$
 $if(papersize)$
 \usepackage[papersize={$papersize$}]{geometry}
 $else$
 \usepackage[top=2.5cm, bottom=2.5cm, left=3cm, right=3.5cm]{geometry}
+$endif$
 $endif$
 
 % ─── Código: listings con monospace legible ───────────────────────────────────

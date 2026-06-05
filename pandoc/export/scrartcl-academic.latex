@@ -55,10 +55,14 @@ $endif$
 \usepackage{amssymb}
 
 % ─── Márgenes típicos para artículo académico ────────────────────────────────
+$if(geometry)$
+\usepackage[$for(geometry)$$geometry$$sep$,$endfor$]{geometry}
+$else$
 $if(papersize)$
 \usepackage[papersize={$papersize$}]{geometry}
 $else$
 \usepackage[top=2.5cm, bottom=2.5cm, left=3cm, right=3cm]{geometry}
+$endif$
 $endif$
 
 % ─── Abstract y palabras clave ───────────────────────────────────────────────
