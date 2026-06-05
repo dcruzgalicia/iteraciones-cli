@@ -359,10 +359,6 @@ export async function runExportDocuments(
             process.stderr.write(`[export] PDF ${pdfDone}/${pdfTotal} — ${exportDoc.relativePath} (generado)\n`);
           }
           if (stats) stats.totalPdf++;
-          pdfDone++;
-          if (pdfTotal > 2) {
-            process.stderr.write(`[export] PDF ${pdfDone}/${pdfTotal} — ${exportDoc.relativePath}\n`);
-          }
           return { pdf: outputPath };
         }
 

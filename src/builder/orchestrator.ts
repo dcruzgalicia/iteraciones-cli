@@ -670,17 +670,13 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
           })
         : [];
     if (exportResults.length > 0) {
-      if (options.verbose) {
-        const epubNew = exportStats.totalEpub - exportStats.cacheHitsEpub;
-        const pdfNew = exportStats.totalPdf - exportStats.cacheHitsPdf;
-        const parts: string[] = [];
-        if (exportStats.totalEpub > 0) parts.push(`EPUB: ${epubNew} generados, ${exportStats.cacheHitsEpub} de caché`);
-        if (exportStats.totalPdf > 0) parts.push(`PDF: ${pdfNew} generados, ${exportStats.cacheHitsPdf} de caché`);
-        const detail = parts.length > 0 ? ` — ${parts.join(' | ')}` : '';
-        log(`Exportación: ${exportResults.length} documento${exportResults.length > 1 ? 's' : ''}${detail}`);
-      } else {
-        log(`Exportados ${exportResults.length} documento${exportResults.length > 1 ? 's' : ''} (PDF/EPUB)`);
-      }
+      const epubNew = exportStats.totalEpub - exportStats.cacheHitsEpub;
+      const pdfNew = exportStats.totalPdf - exportStats.cacheHitsPdf;
+      const parts: string[] = [];
+      if (exportStats.totalEpub > 0) parts.push(`EPUB: ${epubNew}/${exportStats.totalEpub} (${exportStats.cacheHitsEpub} en caché)`);
+      if (exportStats.totalPdf > 0) parts.push(`PDF: ${pdfNew}/${exportStats.totalPdf} (${exportStats.cacheHitsPdf} en caché)`);
+      const detail = parts.length > 0 ? ` — ${parts.join(' | ')}` : '';
+      log(`Exportación: ${exportResults.length} documento${exportResults.length > 1 ? 's' : ''}${detail}`);
     }
 
     // Inyectar enlaces de descarga en los docs exportables, propagarlos a los ítems
