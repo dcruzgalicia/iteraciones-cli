@@ -1,5 +1,5 @@
 import type { ExportLatexTemplate } from '../../config/site-config.js';
-import type { DocumentType } from '../types.js';
+import type { BuildDocument, DocumentType } from '../types.js';
 
 export type { ExportLatexTemplate } from '../../config/site-config.js';
 
@@ -27,6 +27,15 @@ export const LATEX_CLASS = {
   collection: 'scrbook',
   events: 'scrbook',
 } as const satisfies Partial<Record<DocumentType, 'scrartcl' | 'scrbook'>>;
+
+/**
+ * Grupo de items dentro de una colección, correspondiente a los `parts:` del frontmatter.
+ * Cada parte tiene un nombre y una lista de documentos resueltos.
+ */
+export interface ExportCollectionPart {
+  name: string;
+  items: BuildDocument[];
+}
 
 /** Metadatos editoriales que se inyectan en el YAML header del documento Pandoc. */
 export interface ExportMetadata {
