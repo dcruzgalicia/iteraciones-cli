@@ -58,14 +58,14 @@ $endif$
 \usepackage{amsmath}
 \usepackage{amssymb}
 
-% ─── Márgenes amplios para ensayo ────────────────────────────────────────────
+% ─── Geometría (media carta 13.97 × 21.59 cm) ────────────────────────────────
 $if(geometry)$
 \usepackage[$for(geometry)$$geometry$$sep$,$endfor$,headheight=14pt,headsep=6pt,footskip=2.2\baselineskip]{geometry}
 $else$
 $if(paperwidth)$
 \usepackage[paperwidth=$paperwidth$,paperheight=$paperheight$,top=3cm, bottom=3cm, left=4cm, right=4cm]{geometry}
 $else$
-\usepackage[top=3cm, bottom=3cm, left=4cm, right=4cm]{geometry}
+\usepackage[paperwidth=13.97cm,paperheight=21.59cm,top=3cm, bottom=3cm, left=4cm, right=4cm]{geometry}
 $endif$
 $endif$
 
