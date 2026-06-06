@@ -1,4 +1,4 @@
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import type { CacheManager } from '../../cache/cache-manager.js';
 import { hash } from '../../cache/hasher.js';
 import { mapWithConcurrency } from '../../output/concurrency.js';
@@ -85,6 +85,9 @@ export async function renderDocuments(
             } else {
               process.stderr.write(`[render] editorial.csl fuera del proyecto ignorado: "${rawCsl}"\n`);
             }
+          } else {
+            // Default a APA 7 empaquetado si hay bibliografía pero no CSL explícito
+            resolvedCsl = join(import.meta.dir, '../../../pandoc/csl/apa-7.csl');
           }
           bibOptions = { bibliography: resolvedBib, csl: resolvedCsl };
         } else {

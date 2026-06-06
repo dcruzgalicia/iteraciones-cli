@@ -1,4 +1,4 @@
-import { dirname, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import type { BuildDocument, DocumentType } from '../types.js';
 import {
   EXPORTABLE_TYPES,
@@ -69,6 +69,16 @@ export function assembleExportDocument(
       ? (doc.frontmatter['editorial'] as Record<string, unknown>)
       : {};
 
+  // Resolver bibliografía y CSL: editorial.bibliography → export.bibliography → APA 7 por defecto
+  const bibliography =
+    typeof rawEditorial['bibliography'] === 'string'
+      ? safeEditorialPath(rawEditorial['bibliography'], cwd, 'editorial.bibliography')
+      : globalBibliography;
+  const csl =
+    typeof rawEditorial['csl'] === 'string'
+      ? safeEditorialPath(rawEditorial['csl'], cwd, 'editorial.csl')
+      : (globalCsl ?? (bibliography ? join(import.meta.dir, '../../../pandoc/csl/apa-7.csl') : undefined));
+
   const metadata: ExportMetadata = {
     title: doc.frontmatter.title || 'Sin título',
     author: doc.frontmatter.author,
@@ -79,11 +89,8 @@ export function assembleExportDocument(
     description: typeof rawEditorial['description'] === 'string' ? rawEditorial['description'] : undefined,
     rights: typeof rawEditorial['rights'] === 'string' ? rawEditorial['rights'] : undefined,
     cover: typeof rawEditorial['cover'] === 'string' ? safeEditorialPath(rawEditorial['cover'], cwd, 'editorial.cover') : undefined,
-    bibliography:
-      typeof rawEditorial['bibliography'] === 'string'
-        ? safeEditorialPath(rawEditorial['bibliography'], cwd, 'editorial.bibliography')
-        : globalBibliography,
-    csl: typeof rawEditorial['csl'] === 'string' ? safeEditorialPath(rawEditorial['csl'], cwd, 'editorial.csl') : globalCsl,
+    bibliography,
+    csl,
     documentclass,
     toc: documentclass === 'scrbook',
     template: resolveTemplateVariant(rawEditorial['template'], globalTemplate),
@@ -381,6 +388,16 @@ export function assembleAuthorExportVariants(
       ? (doc.frontmatter['editorial'] as Record<string, unknown>)
       : {};
 
+  // Resolver bibliografía y CSL: editorial.bibliography → export.bibliography → APA 7 por defecto
+  const bibliography =
+    typeof rawEditorial['bibliography'] === 'string'
+      ? safeEditorialPath(rawEditorial['bibliography'], cwd, 'editorial.bibliography')
+      : globalBibliography;
+  const csl =
+    typeof rawEditorial['csl'] === 'string'
+      ? safeEditorialPath(rawEditorial['csl'], cwd, 'editorial.csl')
+      : (globalCsl ?? (bibliography ? join(import.meta.dir, '../../../pandoc/csl/apa-7.csl') : undefined));
+
   const metadata: ExportMetadata = {
     title: doc.frontmatter.title || 'Sin título',
     author: doc.frontmatter.author,
@@ -391,11 +408,8 @@ export function assembleAuthorExportVariants(
     description: typeof rawEditorial['description'] === 'string' ? rawEditorial['description'] : undefined,
     rights: typeof rawEditorial['rights'] === 'string' ? rawEditorial['rights'] : undefined,
     cover: typeof rawEditorial['cover'] === 'string' ? safeEditorialPath(rawEditorial['cover'], cwd, 'editorial.cover') : undefined,
-    bibliography:
-      typeof rawEditorial['bibliography'] === 'string'
-        ? safeEditorialPath(rawEditorial['bibliography'], cwd, 'editorial.bibliography')
-        : globalBibliography,
-    csl: typeof rawEditorial['csl'] === 'string' ? safeEditorialPath(rawEditorial['csl'], cwd, 'editorial.csl') : globalCsl,
+    bibliography,
+    csl,
     documentclass: 'scrartcl',
     toc: false,
     template: resolveTemplateVariant(rawEditorial['template'], globalTemplate),
