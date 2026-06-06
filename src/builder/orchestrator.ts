@@ -267,6 +267,19 @@ function buildEnrichedSiteContext(ctx: BuildContext, allDocs: BuildDocument[]): 
  * Construye el authorDocumentIndex a partir de los autores renderizados.
  * Estos datos son prerequisito para el pre-paso de bloques.
  */
+/**
+ * Resuelve rutas globales de bibliography y csl desde la configuración del sitio.
+ */
+function resolveGlobalExportPaths(ctx: BuildContext): { globalBibliography?: string; globalCsl?: string } {
+  const exportCfg = ctx.siteConfig.export;
+  if (!exportCfg) return {};
+  const cwd = ctx.cwd;
+  return {
+    globalBibliography: exportCfg.bibliography ? join(cwd, exportCfg.bibliography) : undefined,
+    globalCsl: exportCfg.csl ? join(cwd, exportCfg.csl) : undefined,
+  };
+}
+
 async function runPrimaryRender(
   allDocs: BuildDocument[],
   ctx: BuildContext,
@@ -278,8 +291,21 @@ async function runPrimaryRender(
   collectedKeys?: Set<string>,
   luaFilters?: readonly string[],
 ): Promise<PrimaryRenderResult> {
+  const { globalBibliography, globalCsl } = resolveGlobalExportPaths(ctx);
   const fileDocs = allDocs.filter((doc) => doc.type === 'file' && doc.kind !== 'block');
-  const renderedFileDocs = await renderDocuments(fileDocs, ctx.concurrency ?? 4, renderCache, registry, stats, pool, cwd, collectedKeys, luaFilters);
+  const renderedFileDocs = await renderDocuments(
+    fileDocs,
+    ctx.concurrency ?? 4,
+    renderCache,
+    registry,
+    stats,
+    pool,
+    cwd,
+    collectedKeys,
+    luaFilters,
+    globalBibliography,
+    globalCsl,
+  );
 
   const authorDocs = allDocs.filter((doc) => doc.type === 'author' && doc.kind !== 'block');
   const renderedAuthorDocs = await renderDocuments(
@@ -292,6 +318,8 @@ async function runPrimaryRender(
     cwd,
     collectedKeys,
     luaFilters,
+    globalBibliography,
+    globalCsl,
   );
   // Índice de autores por título normalizado (lowercase). Se construye aquí para que
   // esté disponible antes del pre-paso de bloques y del paso de contexto de páginas.
@@ -308,6 +336,8 @@ async function runPrimaryRender(
     cwd,
     collectedKeys,
     luaFilters,
+    globalBibliography,
+    globalCsl,
   );
 
   return { renderedFileDocs, renderedAuthorDocs, renderedEventDocs, authorDocumentIndex };
@@ -337,6 +367,7 @@ async function runBlocksPrestep(
   collectedKeys?: Set<string>,
   luaFilters?: readonly string[],
 ): Promise<BlocksPrestepResult> {
+  const { globalBibliography, globalCsl } = resolveGlobalExportPaths(ctx);
   const allBlockDocs = allDocs.filter((doc) => doc.kind === 'block');
   const renderedBlockDocs = await renderDocuments(
     allBlockDocs,
@@ -348,6 +379,8 @@ async function runBlocksPrestep(
     cwd,
     collectedKeys,
     luaFilters,
+    globalBibliography,
+    globalCsl,
   );
   const contextBlockDocs = renderedBlockDocs.map((doc) => {
     const spec = doc.type ? TYPE_STAGE_MAP.get(doc.type) : undefined;

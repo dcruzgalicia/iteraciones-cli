@@ -33,6 +33,10 @@ export async function renderDocuments(
   collectedKeys?: Set<string>,
   /** Rutas absolutas a filtros Pandoc Lua que se aplican durante la conversión. */
   luaFilters?: readonly string[],
+  /** Ruta absoluta al .bib global del sitio (fallback si el frontmatter no define editorial.bibliography). */
+  globalBibliography?: string,
+  /** Ruta absoluta al .csl global del sitio (fallback si el frontmatter no define editorial.csl). */
+  globalCsl?: string,
 ): Promise<BuildDocument[]> {
   // Memoiza hashes de archivos para no leerlos más de una vez por llamada.
   // Válido para la duración de esta llamada a renderDocuments(); si se invoca
@@ -69,21 +73,27 @@ export async function renderDocuments(
         typeof doc.frontmatter['editorial'] === 'object' && doc.frontmatter['editorial'] !== null
           ? (doc.frontmatter['editorial'] as Record<string, unknown>)
           : {};
+
+      // Cadena de resolución: editorial.bibliography → export.bibliography
       const rawBib = typeof rawEditorial['bibliography'] === 'string' ? rawEditorial['bibliography'] : undefined;
-      if (rawBib) {
+      const effectiveBib = rawBib ?? globalBibliography;
+
+      if (effectiveBib) {
         // resolve() normaliza siempre: elimina '..', maneja rutas absolutas y relativas.
         // Una ruta '/project/../etc/passwd' queda '/etc/passwd', que luego falla startsWith.
-        const resolvedBib = resolve(cwd, rawBib);
+        const resolvedBib = resolve(cwd, effectiveBib);
         // Validar que la ruta esté dentro del proyecto.
         if (resolvedBib.startsWith(cwd + '/') || resolvedBib === cwd) {
+          // Cadena de resolución para CSL: editorial.csl → export.csl → APA 7 empaquetado
           const rawCsl = typeof rawEditorial['csl'] === 'string' ? rawEditorial['csl'] : undefined;
+          const effectiveCsl = rawCsl ?? globalCsl;
           let resolvedCsl: string | undefined;
-          if (rawCsl) {
-            const cslAbs = resolve(cwd, rawCsl);
+          if (effectiveCsl) {
+            const cslAbs = resolve(cwd, effectiveCsl);
             if (cslAbs.startsWith(cwd + '/') || cslAbs === cwd) {
               resolvedCsl = cslAbs;
             } else {
-              process.stderr.write(`[render] editorial.csl fuera del proyecto ignorado: "${rawCsl}"\n`);
+              process.stderr.write(`[render] CSL fuera del proyecto ignorado: "${effectiveCsl}"\n`);
             }
           } else {
             // Default a APA 7 empaquetado si hay bibliografía pero no CSL explícito
@@ -91,7 +101,7 @@ export async function renderDocuments(
           }
           bibOptions = { bibliography: resolvedBib, csl: resolvedCsl };
         } else {
-          process.stderr.write(`[render] editorial.bibliography fuera del proyecto ignorado: "${rawBib}"\n`);
+          process.stderr.write(`[render] bibliography fuera del proyecto ignorado: "${effectiveBib}"\n`);
         }
       }
     }
