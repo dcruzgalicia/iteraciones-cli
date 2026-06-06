@@ -3,7 +3,7 @@
 %% Énfasis en presentación editorial: portada completa, nota de editores, separadores por autor
 %% Requiere: TeX Live / MacTeX full con KOMA-Script, fontspec, microtype, hyperref, babel
 
-\documentclass[$if(fontsize)$$fontsize$,$endif$$if(twoside)$twoside$else$twoside=false$endif$]{scrbook}
+\documentclass[$if(fontsize)$$fontsize$,$endif$$for(classoption)$,$classoption$$sep$,$endfor$$if(twoside)$twoside$else$twoside=false$endif$]{scrbook}
 
 % ─── Codificación y fuentes ──────────────────────────────────────────────────
 \usepackage{fontspec}
@@ -43,10 +43,10 @@ $endif$
 
 % ─── Márgenes ────────────────────────────────────────────────────────────────
 $if(geometry)$
-\usepackage[$for(geometry)$$geometry$$sep$,$endfor$$if(papersize)$,papersize={$papersize$}$endif$,headheight=14pt,headsep=6pt,footskip=2.2\baselineskip]{geometry}
+\usepackage[$for(geometry)$$geometry$$sep$,$endfor$,headheight=14pt,headsep=6pt,footskip=2.2\baselineskip]{geometry}
 $else$
-$if(papersize)$
-\usepackage[papersize={$papersize$}]{geometry}
+$if(paperwidth)$
+\usepackage[paperwidth=$paperwidth$,paperheight=$paperheight$,top=2.5cm, bottom=2.5cm, left=3.5cm, right=3.5cm]{geometry}
 $else$
 \usepackage[top=2.5cm, bottom=2.5cm, left=3.5cm, right=3.5cm]{geometry}
 $endif$
