@@ -3,7 +3,7 @@
 %% Énfasis en legibilidad: márgenes amplios, interlineado 1.5, notas al pie destacadas
 %% Requiere: TeX Live / MacTeX full con KOMA-Script, fontspec, microtype, hyperref, babel
 
-\documentclass[$if(fontsize)$$fontsize$$else$12pt$endif$, a4paper$if(twoside)$,twoside$endif$]{scrartcl}
+\documentclass[$if(fontsize)$$fontsize$$else$12pt$endif$, a4paper$if(twoside)$,twoside$endif$$for(classoption)$,$classoption$$sep$,$endfor$]{scrartcl}
 
 % ─── Codificación y fuentes ──────────────────────────────────────────────────
 \usepackage{fontspec}
@@ -60,10 +60,10 @@ $endif$
 
 % ─── Márgenes amplios para ensayo ────────────────────────────────────────────
 $if(geometry)$
-\usepackage[$for(geometry)$$geometry$$sep$,$endfor$$if(papersize)$,papersize={$papersize$}$endif$,headheight=14pt,headsep=6pt,footskip=2.2\baselineskip]{geometry}
+\usepackage[$for(geometry)$$geometry$$sep$,$endfor$,headheight=14pt,headsep=6pt,footskip=2.2\baselineskip]{geometry}
 $else$
-$if(papersize)$
-\usepackage[papersize={$papersize$}]{geometry}
+$if(paperwidth)$
+\usepackage[paperwidth=$paperwidth$,paperheight=$paperheight$,top=3cm, bottom=3cm, left=4cm, right=4cm]{geometry}
 $else$
 \usepackage[top=3cm, bottom=3cm, left=4cm, right=4cm]{geometry}
 $endif$

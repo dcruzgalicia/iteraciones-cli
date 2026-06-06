@@ -2,7 +2,7 @@
 %% Especializado para: antologías, libros con capítulos múltiples
 %% Requiere: TeX Live / MacTeX full con KOMA-Script, fontspec, microtype, hyperref, babel
 
-\documentclass[$if(fontsize)$$fontsize$,$endif$toc=flat,sfdefaults=false$if(twoside)$,twoside$else$,twoside=false$endif$]{scrbook}
+\documentclass[$if(fontsize)$$fontsize$,$endif$toc=flat,sfdefaults=false$if(twoside)$,twoside$else$,twoside=false$endif$$for(classoption)$,$classoption$$sep$,$endfor$]{scrbook}
 
 % ─── Fuentes (XeLaTeX / LuaLaTeX) ────────────────────────────────────────────
 \usepackage{fontspec}
@@ -68,10 +68,10 @@ $endif$
 
 % ─── Geometría (formato de bolsillo 13.5 × 21 cm) ────────────────────────────
 $if(geometry)$
-\usepackage[$for(geometry)$$geometry$$sep$,$endfor$$if(papersize)$,papersize={$papersize$}$endif$,headheight=14pt,headsep=6pt,footskip=2.2\baselineskip]{geometry}
+\usepackage[$for(geometry)$$geometry$$sep$,$endfor$,headheight=14pt,headsep=6pt,footskip=2.2\baselineskip]{geometry}
 $else$
-$if(papersize)$
-\usepackage[papersize={$papersize$}]{geometry}
+$if(paperwidth)$
+\usepackage[paperwidth=$paperwidth$,paperheight=$paperheight$]{geometry}
 $else$
 \usepackage[paperwidth=13.5cm,paperheight=21cm]{geometry}
 $endif$

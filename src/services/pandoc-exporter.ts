@@ -11,6 +11,31 @@ const TEMPLATES_DIR = join(import.meta.dir, '../../pandoc/export');
 /** Ruta absoluta al directorio de fuentes TTF del proyecto. */
 const FONTS_DIR = join(import.meta.dir, '../../fonts');
 
+/**
+ * Mapa de nombres estándar de page-size a opciones de clase KOMA-Script.
+ *
+ * Los sufijos `*paper` (letterpaper, a4paper, …) funcionan en cualquier clase
+ * estándar y en KOMA-Script. Para tamaños sin equivalente directo
+ * (`half-letter`, `pocket`) se usa la sintaxis `paper=ancho:alto` —
+ * KOMA-Script la entiende y aplica las dimensiones correctas.
+ */
+const STANDARD_PAGE_SIZES: Record<string, string> = {
+  'half-letter': 'paper=13.97cm:21.59cm',
+  letter: 'letterpaper',
+  legal: 'legalpaper',
+  executive: 'executivepaper',
+  a3: 'a3paper',
+  a4: 'a4paper',
+  a5: 'a5paper',
+  b4: 'b4paper',
+  b5: 'b5paper',
+  tabloid: 'tabloidpaper',
+  pocket: 'paper=10.5cm:17.6cm',
+};
+
+/** Regex para tamaño de página personalizado: `"ancho,alto"` con unidades LaTeX (cm, mm, in, pt). */
+const CUSTOM_PAGE_SIZE_RE = /^(\d+(?:\.\d+)?(?:cm|mm|in|pt)),(\d+(?:\.\d+)?(?:cm|mm|in|pt))$/;
+
 /** Archivos de fuente que se embeben en los EPUB generados. */
 const EPUB_EMBED_FONTS: readonly string[] = [
   join(FONTS_DIR, 'Exo2-VariableFont_wght.ttf'),
@@ -123,19 +148,51 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, layout?: FormatL
 
   // Layout editorial (desde site.export.layout.pdf)
   if (layout) {
-    if (layout.pageSize) lines.push(`papersize: ${layout.pageSize}`);
-    if (layout.fontSize) lines.push(`fontsize: ${layout.fontSize}`);
-    if (layout.fontFamily) lines.push(`mainfont: ${yamlString(layout.fontFamily)}`);
-    if (layout.lineSpacing !== undefined) lines.push(`linestretch: ${layout.lineSpacing}`);
-    if (layout.numbering !== undefined) lines.push(`secnumdepth: ${layout.numbering ? 3 : 0}`);
-    if (layout.margins) {
-      const [top, right, bottom, left] = layout.margins;
+    // ── Tamaño de página ────────────────────────────────────────────────────
+    let geometryEmitted = false;
+    if (layout.pageSize) {
+      const classOption = STANDARD_PAGE_SIZES[layout.pageSize];
+      if (classOption) {
+        // Tamaño estándar → opción de clase (letterpaper, paper=13.97cm:21.59cm, …)
+        lines.push('classoption:');
+        lines.push(`  - ${classOption}`);
+      } else {
+        const customMatch = CUSTOM_PAGE_SIZE_RE.exec(layout.pageSize);
+        if (customMatch) {
+          const [, pw, ph] = customMatch;
+          if (layout.margins) {
+            // Tamaño personalizado + márgenes → geometry con paperwidth/paperheight
+            lines.push('geometry:');
+            const [top, right, bottom, left] = layout.margins;
+            lines.push(`  - top=${top}`);
+            lines.push(`  - right=${right}`);
+            lines.push(`  - bottom=${bottom}`);
+            lines.push(`  - left=${left}`);
+            lines.push(`  - paperwidth=${pw}`);
+            lines.push(`  - paperheight=${ph}`);
+            geometryEmitted = true;
+          } else {
+            // Tamaño personalizado sin márgenes → vars top-level (template usa $if(paperwidth)$)
+            lines.push(`paperwidth: ${pw}`);
+            lines.push(`paperheight: ${ph}`);
+          }
+        }
+      }
+    }
+    if (layout.margins && !geometryEmitted) {
+      // Márgenes sin page-size o con page-size estándar → geometry con márgenes únicamente
       lines.push('geometry:');
+      const [top, right, bottom, left] = layout.margins;
       lines.push(`  - top=${top}`);
       lines.push(`  - right=${right}`);
       lines.push(`  - bottom=${bottom}`);
       lines.push(`  - left=${left}`);
     }
+
+    if (layout.fontSize) lines.push(`fontsize: ${layout.fontSize}`);
+    if (layout.fontFamily) lines.push(`mainfont: ${yamlString(layout.fontFamily)}`);
+    if (layout.lineSpacing !== undefined) lines.push(`linestretch: ${layout.lineSpacing}`);
+    if (layout.numbering !== undefined) lines.push(`secnumdepth: ${layout.numbering ? 3 : 0}`);
     if (layout.pageNumber) {
       const [placement, align] = layout.pageNumber.split('-') as [string, string];
       lines.push(`pageno-head: ${placement === 'header' ? 'true' : 'false'}`);
