@@ -11,6 +11,11 @@ export interface FrontmatterSpeaker {
   body?: string;
 }
 
+export interface CollectionPart {
+  name: string;
+  items: string[];
+}
+
 export interface FrontmatterFilters {
   type?: string[];
   keywords?: string[];
@@ -28,6 +33,7 @@ export interface Frontmatter {
   block: boolean;
   draft: boolean;
   items: string[];
+  parts?: CollectionPart[];
   filters?: FrontmatterFilters;
   limit?: number;
   abstract?: string;
@@ -135,6 +141,7 @@ function emptyFrontmatter(): Frontmatter {
     block: false,
     draft: false,
     items: [],
+    parts: undefined,
     filters: undefined,
     limit: undefined,
     abstract: undefined,
@@ -181,6 +188,19 @@ function normalizeLinks(value: unknown): FrontmatterLink[] | undefined {
   return result.length > 0 ? result : undefined;
 }
 
+function normalizeParts(value: unknown): CollectionPart[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const parts = value
+    .filter((item): item is Record<string, unknown> => item !== null && typeof item === 'object' && !Array.isArray(item))
+    .map((item) => {
+      const name = typeof item.name === 'string' ? item.name.trim() : '';
+      const items = normalizeStringList(item.items);
+      return name && items.length > 0 ? { name, items } : undefined;
+    })
+    .filter((p): p is CollectionPart => p !== undefined);
+  return parts.length > 0 ? parts : undefined;
+}
+
 function normalizeFilters(value: unknown): FrontmatterFilters | undefined {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined;
   const f = value as Record<string, unknown>;
@@ -208,6 +228,7 @@ function normalizeFrontmatter(data: Record<string, unknown>): Frontmatter {
     block: data.block === true,
     draft: data.draft === true,
     items: normalizeStringList(data.items),
+    parts: normalizeParts(data.parts),
     filters: normalizeFilters(data.filters),
     limit: typeof data.limit === 'number' && Number.isFinite(data.limit) && data.limit > 0 ? Math.floor(data.limit) : undefined,
     abstract: typeof data.abstract === 'string' && data.abstract.trim() ? data.abstract.trim() : undefined,
