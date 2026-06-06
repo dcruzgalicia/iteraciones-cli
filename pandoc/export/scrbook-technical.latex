@@ -32,14 +32,14 @@ $endif$
 \usepackage{amsmath}
 \usepackage{amssymb}
 
-% ─── Márgenes con margen interior para navegación ────────────────────────────
+% ─── Geometría (media carta 13.97 × 21.59 cm) ────────────────────────────────
 $if(geometry)$
 \usepackage[$for(geometry)$$geometry$$sep$,$endfor$,headheight=14pt,headsep=6pt,footskip=2.2\baselineskip]{geometry}
 $else$
 $if(paperwidth)$
 \usepackage[paperwidth=$paperwidth$,paperheight=$paperheight$,top=2.5cm, bottom=2.5cm, left=3cm, right=3.5cm]{geometry}
 $else$
-\usepackage[top=2.5cm, bottom=2.5cm, left=3cm, right=3.5cm]{geometry}
+\usepackage[paperwidth=13.97cm,paperheight=21.59cm,top=2.5cm, bottom=2.5cm, left=3cm, right=3.5cm]{geometry}
 $endif$
 $endif$
 
