@@ -52,7 +52,7 @@ $endif$
 \addtokomafont{disposition}{\normalfont\itshape}
 
 % ─── Sin numeración de secciones ─────────────────────────────────────────────
-\setcounter{secnumdepth}{$if(secnumdepth)$$secnumdepth$$else$0$endif$}
+\setcounter{secnumdepth}{$if(secnumdepth)$$secnumdepth$$else$-2$endif$}
 % ─── Sin sangría en primer párrafo tras sección ──────────────────────────
 \RedeclareSectionCommand[afterindent=false]{section}
 \RedeclareSectionCommand[afterindent=false]{subsection}

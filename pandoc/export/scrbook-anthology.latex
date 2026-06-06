@@ -21,7 +21,7 @@ $endif$
 \setlength{\parindent}{1.5em}
 \setlength{\parskip}{0pt}
 % Capítulos sin numeración explícita (cada capítulo = un texto de la antología)
-\setcounter{secnumdepth}{$if(secnumdepth)$$secnumdepth$$else$0$endif$}
+\setcounter{secnumdepth}{$if(secnumdepth)$$secnumdepth$$else$-2$endif$}
 % ─── Sin sangría en primer párrafo tras parte/capítulo/sección ────────────
 \RedeclareSectionCommand[afterindent=false]{part}
 \RedeclareSectionCommand[afterindent=false]{chapter}
