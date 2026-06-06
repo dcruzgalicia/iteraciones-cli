@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
-import { assembleAuthorExportVariants, assembleExportDocument, resolveItemsForExport } from '../export/assemble.js';
+import { assembleAuthorExportVariants, assembleExportDocument, resolveItemsForExport, resolvePartsForExport } from '../export/assemble.js';
 import type { BuildDocument } from '../types.js';
 
 // ---------------------------------------------------------------------------
@@ -798,5 +798,280 @@ describe('assembleAuthorExportVariants', () => {
     const author = makeAuthorDoc();
     const { summary } = assembleAuthorExportVariants(author, [], 'es', '/project');
     expect(summary.body).not.toContain('## Trayectoria');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveItemsForExport / resolvePartsForExport — partes en colecciones
+// ---------------------------------------------------------------------------
+
+describe('parts en colecciones (exportación)', () => {
+  function makeCollectionWithParts(partItems: Record<string, string[]>, looseItems: string[] = []): BuildDocument {
+    return makeDoc({
+      type: 'collection',
+      filePath: '/project/libro.md',
+      relativePath: 'libro.md',
+      frontmatter: {
+        title: 'Libro',
+        date: '',
+        author: [],
+        speakers: [],
+        type: 'collection',
+        keywords: [],
+        region: '',
+        block: false,
+        draft: false,
+        items: looseItems,
+        parts: Object.entries(partItems).map(([name, items]) => ({ name, items })),
+      },
+      body: '',
+    });
+  }
+
+  test('resolveItemsForExport aplana items de todas las partes', () => {
+    const collection = makeCollectionWithParts({
+      'Primera parte': ['cap1.md', 'cap2.md'],
+      'Segunda parte': ['cap3.md'],
+    });
+
+    const pool = [
+      makeDoc({ type: 'file', relativePath: 'cap1.md' }),
+      makeDoc({ type: 'file', relativePath: 'cap2.md' }),
+      makeDoc({ type: 'file', relativePath: 'cap3.md' }),
+    ];
+
+    const resolved = resolveItemsForExport(collection, pool);
+    expect(resolved).toHaveLength(3);
+    expect(resolved[0]?.relativePath).toBe('cap1.md');
+    expect(resolved[2]?.relativePath).toBe('cap3.md');
+  });
+
+  test('resolveItemsForExport respeta el orden de las partes y sus items', () => {
+    const collection = makeCollectionWithParts({
+      Z: ['b.md', 'a.md'],
+      A: ['d.md', 'c.md'],
+    });
+
+    const pool = [
+      makeDoc({ type: 'file', relativePath: 'a.md' }),
+      makeDoc({ type: 'file', relativePath: 'b.md' }),
+      makeDoc({ type: 'file', relativePath: 'c.md' }),
+      makeDoc({ type: 'file', relativePath: 'd.md' }),
+    ];
+
+    const resolved = resolveItemsForExport(collection, pool);
+    expect(resolved[0]?.relativePath).toBe('b.md');
+    expect(resolved[1]?.relativePath).toBe('a.md');
+    expect(resolved[2]?.relativePath).toBe('d.md');
+    expect(resolved[3]?.relativePath).toBe('c.md');
+  });
+
+  test('resolvePartsForExport retorna grupos con items resueltos', () => {
+    const collection = makeCollectionWithParts({
+      Teoría: ['cap1.md'],
+      Práctica: ['cap2.md', 'cap3.md'],
+    });
+
+    const pool = [
+      makeDoc({ type: 'file', relativePath: 'cap1.md', body: 'Teoría' }),
+      makeDoc({ type: 'file', relativePath: 'cap2.md', body: 'Ejercicio 1' }),
+      makeDoc({ type: 'file', relativePath: 'cap3.md', body: 'Ejercicio 2' }),
+    ];
+
+    const parts = resolvePartsForExport(collection, pool);
+    expect(parts).toHaveLength(2);
+    expect(parts[0]?.name).toBe('Teoría');
+    expect(parts[0]?.items).toHaveLength(1);
+    expect(parts[0]?.items[0]?.body).toBe('Teoría');
+    expect(parts[1]?.name).toBe('Práctica');
+    expect(parts[1]?.items).toHaveLength(2);
+    expect(parts[1]?.items[1]?.body).toBe('Ejercicio 2');
+  });
+
+  test('resolvePartsForExport retorna [] si el doc no tiene parts', () => {
+    const doc = makeDoc({ type: 'collection', frontmatter: { ...makeDoc({ type: 'collection' }).frontmatter, items: [] } });
+    expect(resolvePartsForExport(doc, [])).toHaveLength(0);
+  });
+
+  test('assembleBookBody emite \\part{Name} entre grupos', () => {
+    const collection = makeCollectionWithParts({
+      'Parte I': ['cap1.md'],
+      'Parte II': ['cap2.md'],
+    });
+
+    const pool = [
+      makeDoc({
+        type: 'file',
+        relativePath: 'cap1.md',
+        frontmatter: { ...makeDoc({ type: 'file' }).frontmatter, title: 'Uno', items: [] },
+        body: 'Contenido uno.',
+      }),
+      makeDoc({
+        type: 'file',
+        relativePath: 'cap2.md',
+        frontmatter: { ...makeDoc({ type: 'file' }).frontmatter, title: 'Dos', items: [] },
+        body: 'Contenido dos.',
+      }),
+    ];
+
+    const parts = resolvePartsForExport(collection, pool);
+    const items = resolveItemsForExport(collection, pool);
+    const exportDoc = assembleExportDocument(collection, items, 'es', '/project', undefined, undefined, undefined, parts);
+    expect(exportDoc).not.toBeNull();
+    const body = exportDoc!.body;
+
+    expect(body).toContain('\\part{Parte I}');
+    expect(body).toContain('\\part{Parte II}');
+    expect(body).toContain('# Uno');
+    expect(body).toContain('# Dos');
+    // \part debe aparecer ANTES del primer capítulo de cada grupo
+    expect(body.indexOf('\\part{Parte I}')).toBeLessThan(body.indexOf('# Uno'));
+    expect(body.indexOf('\\part{Parte II}')).toBeLessThan(body.indexOf('# Dos'));
+  });
+
+  test('assembleBookBody con parts omite \\newpage antes de \\part', () => {
+    // Cuando se usan parts, \newpage está al final de cada item, no antes del \part
+    const collection = makeCollectionWithParts({
+      Única: ['cap1.md', 'cap2.md'],
+    });
+
+    const pool = [
+      makeDoc({
+        type: 'file',
+        relativePath: 'cap1.md',
+        frontmatter: { ...makeDoc({ type: 'file' }).frontmatter, title: 'Uno', items: [] },
+        body: 'A',
+      }),
+      makeDoc({
+        type: 'file',
+        relativePath: 'cap2.md',
+        frontmatter: { ...makeDoc({ type: 'file' }).frontmatter, title: 'Dos', items: [] },
+        body: 'B',
+      }),
+    ];
+
+    const parts = resolvePartsForExport(collection, pool);
+    const items = resolveItemsForExport(collection, pool);
+    const exportDoc = assembleExportDocument(collection, items, 'es', '/project', undefined, undefined, undefined, parts);
+    const body = exportDoc!.body;
+
+    // Debe haber \newpage entre items pero no antes de \part
+    expect(body).toContain('\\part{Única}');
+    // Nota: \newpage se emite después del body de cada item; no se espera que
+    // aparezca antes de \part.
+    const partIndex = body.indexOf('\\part{Única}');
+    const firstNewpageAfterPart = body.indexOf('\\newpage', partIndex);
+    expect(firstNewpageAfterPart).toBeGreaterThan(partIndex);
+  });
+
+  test('retrocompat: collection sin parts se comporta igual que antes', () => {
+    const collection = makeDoc({
+      type: 'collection',
+      filePath: '/project/col.md',
+      relativePath: 'col.md',
+      frontmatter: {
+        title: 'Col',
+        date: '',
+        author: [],
+        speakers: [],
+        type: 'collection',
+        keywords: [],
+        region: '',
+        block: false,
+        draft: false,
+        items: ['a.md'],
+      },
+      body: '',
+    });
+
+    const item = makeDoc({
+      type: 'file',
+      filePath: '/project/a.md',
+      relativePath: 'a.md',
+      frontmatter: {
+        title: 'A',
+        date: '',
+        author: ['Autor'],
+        speakers: [],
+        type: 'file',
+        keywords: [],
+        region: '',
+        block: false,
+        draft: false,
+        items: [],
+      },
+      body: 'Body.',
+    });
+
+    const exportDoc = assembleExportDocument(collection, [item], 'es', '/project');
+    expect(exportDoc).not.toBeNull();
+    expect(exportDoc!.body).toContain('# A');
+    expect(exportDoc!.body).toContain('*Por Autor*');
+    expect(exportDoc!.body).not.toContain('\\part{');
+  });
+
+  // ---------------------------------------------------------------------------
+  // Mixed: items sueltos + partes
+  // ---------------------------------------------------------------------------
+
+  test('resolveItemsForExport concatena items sueltos + items de partes', () => {
+    const collection = makeCollectionWithParts({ 'Parte I': ['cap1.md'] }, ['prologo.md']);
+
+    const pool = [makeDoc({ type: 'file', relativePath: 'prologo.md' }), makeDoc({ type: 'file', relativePath: 'cap1.md' })];
+
+    const resolved = resolveItemsForExport(collection, pool);
+    expect(resolved).toHaveLength(2);
+    expect(resolved[0]?.relativePath).toBe('prologo.md');
+    expect(resolved[1]?.relativePath).toBe('cap1.md');
+  });
+
+  test('assembleBookBody emite items sueltos antes de \\part', () => {
+    const collection = makeCollectionWithParts({ 'Parte I': ['cap1.md'] }, ['prologo.md', 'introduccion.md']);
+
+    const pool = [
+      makeDoc({
+        type: 'file',
+        relativePath: 'prologo.md',
+        frontmatter: { ...makeDoc({ type: 'file' }).frontmatter, title: 'Prólogo', items: [] },
+        body: 'Prólogo.',
+      }),
+      makeDoc({
+        type: 'file',
+        relativePath: 'introduccion.md',
+        frontmatter: { ...makeDoc({ type: 'file' }).frontmatter, title: 'Introducción', items: [] },
+        body: 'Introducción.',
+      }),
+      makeDoc({
+        type: 'file',
+        relativePath: 'cap1.md',
+        frontmatter: { ...makeDoc({ type: 'file' }).frontmatter, title: 'Fundamentos', items: [] },
+        body: 'Contenido.',
+      }),
+    ];
+
+    const parts = resolvePartsForExport(collection, pool);
+    const items = resolveItemsForExport(collection, pool);
+    const exportDoc = assembleExportDocument(collection, items, 'es', '/project', undefined, undefined, undefined, parts);
+    const body = exportDoc!.body;
+
+    // Orden: items sueltos → partes
+    const prologoIdx = body.indexOf('# Prólogo');
+    const introIdx = body.indexOf('# Introducción');
+    const partIdx = body.indexOf('\\part{Parte I}');
+    const capIdx = body.indexOf('# Fundamentos');
+
+    expect(prologoIdx).toBeGreaterThan(-1);
+    expect(introIdx).toBeGreaterThan(-1);
+    expect(partIdx).toBeGreaterThan(-1);
+    expect(capIdx).toBeGreaterThan(-1);
+
+    // Items sueltos ANTES de \part
+    expect(prologoIdx).toBeLessThan(partIdx);
+    expect(introIdx).toBeLessThan(partIdx);
+    // \part ANTES de su capítulo
+    expect(partIdx).toBeLessThan(capIdx);
+    // Items sueltos sin \part
+    expect(body).not.toContain('\\part{Prólogo');
+    expect(body).not.toContain('\\part{Introducción');
   });
 });
