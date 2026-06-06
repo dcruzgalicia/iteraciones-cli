@@ -123,30 +123,31 @@ function assembleBookBody(doc: BuildDocument, items: BuildDocument[], parts?: Ex
   }
 
   if (parts && parts.length > 0) {
-    // Items sueltos (prólogo, prefacio, etc.) — antes de cualquier parte
+    // Con partes: item title → \chapter{}, body headings → shift +2
     const byPath = new Map<string, BuildDocument>(items.map((d) => [d.relativePath, d]));
+    // Items sueltos (prólogo, prefacio, etc.) — antes de cualquier parte
     for (const itemPath of doc.frontmatter.items) {
       const item = byPath.get(itemPath);
-      if (item) appendItemBody(item, result);
+      if (item) appendItemBody(item, result, 2);
     }
     // Partes agrupadas
     for (const part of parts) {
       result.push(`\\part{${part.name}}\n\n`);
       for (const item of part.items) {
-        appendItemBody(item, result);
+        appendItemBody(item, result, 2);
       }
     }
   } else {
-    // Sin partes — comportamiento original: todos los items planos
+    // Sin partes: item title → \chapter{}, body headings → shift +1
     for (const item of items) {
-      appendItemBody(item, result);
+      appendItemBody(item, result, 1);
     }
   }
 
   return result.join('');
 }
 
-function appendItemBody(item: BuildDocument, target: string[]): void {
+function appendItemBody(item: BuildDocument, target: string[], headingOffset: number): void {
   const title = item.frontmatter.title || 'Sin título';
   const authors = item.frontmatter.author;
   const slug = pathToSlug(item.relativePath);
@@ -161,7 +162,34 @@ function appendItemBody(item: BuildDocument, target: string[]): void {
 
   const renamedBody = renameFootnotes(item.body, slug);
   const resolvedBody = resolveImagePaths(renamedBody, item.filePath);
-  target.push(resolvedBody.trim(), '\n\n\\newpage\n\n');
+  const shiftedBody = shiftHeadings(resolvedBody, headingOffset);
+  target.push(shiftedBody.trim(), '\n\n\\newpage\n\n');
+}
+
+/**
+ * Desplaza los niveles de encabezados ATX (#, ##, ###) en un bloque de
+ * markdown. No modifica encabezados dentro de bloques de código delimitados
+ * por triple backtick.
+ *
+ * @param body   Texto markdown a modificar.
+ * @param levels Cuántos niveles subir (0 = sin cambios, 1 = # → ##, etc.).
+ * @returns      Markdown con los encabezados desplazados, capados a nivel 6.
+ */
+export function shiftHeadings(body: string, levels: number): string {
+  if (levels === 0) return body;
+
+  // Dividir en segmentos: fuera / dentro de code fence
+  const segments = body.split(/(```[\s\S]*?```)/g);
+  return segments
+    .map((segment, i) => {
+      // Los segmentos impares son bloques de código — no modificarlos
+      if (i % 2 === 1) return segment;
+      return segment.replace(/^(#{1,6})(?=\s|$)/gm, (_match, hashes: string) => {
+        const newLevel = Math.min(hashes.length + levels, 6);
+        return '#'.repeat(newLevel);
+      });
+    })
+    .join('');
 }
 
 /**
