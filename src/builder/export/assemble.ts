@@ -132,7 +132,7 @@ function assembleBookBody(doc: BuildDocument, items: BuildDocument[], parts?: Ex
     }
     // Partes agrupadas
     for (const part of parts) {
-      result.push(`\\part{${part.name}}\n\n`);
+      result.push(`\\addpart{${part.name}}\n\n`);
       for (const item of part.items) {
         appendItemBody(item, result, 2);
       }

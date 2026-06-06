@@ -899,7 +899,7 @@ describe('parts en colecciones (exportación)', () => {
     expect(resolvePartsForExport(doc, [])).toHaveLength(0);
   });
 
-  test('assembleBookBody emite \\part{Name} entre grupos', () => {
+  test('assembleBookBody emite \\addpart{Name} entre grupos', () => {
     const collection = makeCollectionWithParts({
       'Parte I': ['cap1.md'],
       'Parte II': ['cap2.md'],
@@ -926,13 +926,13 @@ describe('parts en colecciones (exportación)', () => {
     expect(exportDoc).not.toBeNull();
     const body = exportDoc!.body;
 
-    expect(body).toContain('\\part{Parte I}');
-    expect(body).toContain('\\part{Parte II}');
+    expect(body).toContain('\\addpart{Parte I}');
+    expect(body).toContain('\\addpart{Parte II}');
     expect(body).toContain('# Uno');
     expect(body).toContain('# Dos');
     // \part debe aparecer ANTES del primer capítulo de cada grupo
-    expect(body.indexOf('\\part{Parte I}')).toBeLessThan(body.indexOf('# Uno'));
-    expect(body.indexOf('\\part{Parte II}')).toBeLessThan(body.indexOf('# Dos'));
+    expect(body.indexOf('\\addpart{Parte I}')).toBeLessThan(body.indexOf('# Uno'));
+    expect(body.indexOf('\\addpart{Parte II}')).toBeLessThan(body.indexOf('# Dos'));
   });
 
   test('assembleBookBody con parts omite \\newpage antes de \\part', () => {
@@ -962,10 +962,10 @@ describe('parts en colecciones (exportación)', () => {
     const body = exportDoc!.body;
 
     // Debe haber \newpage entre items pero no antes de \part
-    expect(body).toContain('\\part{Única}');
+    expect(body).toContain('\\addpart{Única}');
     // Nota: \newpage se emite después del body de cada item; no se espera que
     // aparezca antes de \part.
-    const partIndex = body.indexOf('\\part{Única}');
+    const partIndex = body.indexOf('\\addpart{Única}');
     const firstNewpageAfterPart = body.indexOf('\\newpage', partIndex);
     expect(firstNewpageAfterPart).toBeGreaterThan(partIndex);
   });
@@ -1013,7 +1013,7 @@ describe('parts en colecciones (exportación)', () => {
     expect(exportDoc).not.toBeNull();
     expect(exportDoc!.body).toContain('# A');
     expect(exportDoc!.body).toContain('*Por Autor*');
-    expect(exportDoc!.body).not.toContain('\\part{');
+    expect(exportDoc!.body).not.toContain('\\addpart{');
   });
 
   // ---------------------------------------------------------------------------
@@ -1063,7 +1063,7 @@ describe('parts en colecciones (exportación)', () => {
     // Orden: items sueltos → partes
     const prologoIdx = body.indexOf('# Prólogo');
     const introIdx = body.indexOf('# Introducción');
-    const partIdx = body.indexOf('\\part{Parte I}');
+    const partIdx = body.indexOf('\\addpart{Parte I}');
     const capIdx = body.indexOf('# Fundamentos');
 
     expect(prologoIdx).toBeGreaterThan(-1);
@@ -1077,8 +1077,8 @@ describe('parts en colecciones (exportación)', () => {
     // \part ANTES de su capítulo
     expect(partIdx).toBeLessThan(capIdx);
     // Items sueltos sin \part
-    expect(body).not.toContain('\\part{Prólogo');
-    expect(body).not.toContain('\\part{Introducción');
+    expect(body).not.toContain('\\addpart{Prólogo');
+    expect(body).not.toContain('\\addpart{Introducción');
   });
 });
 
@@ -1241,7 +1241,7 @@ describe('assembleBookBody — heading shift', () => {
     const exportDoc = assembleExportDocument(collection, items, 'es', '/project', undefined, undefined, undefined, parts);
     const body = exportDoc!.body;
 
-    expect(body).toContain('\\part{Parte Única}');
+    expect(body).toContain('\\addpart{Parte Única}');
     // Item title stays as #
     expect(body).toContain('# Capitulo');
     // Body # → ###, ## → ####

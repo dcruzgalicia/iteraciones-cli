@@ -192,7 +192,7 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, layout?: FormatL
     if (layout.fontSize) lines.push(`fontsize: ${layout.fontSize}`);
     if (layout.fontFamily) lines.push(`mainfont: ${yamlString(layout.fontFamily)}`);
     if (layout.lineSpacing !== undefined) lines.push(`linestretch: ${layout.lineSpacing}`);
-    if (layout.numbering !== undefined) lines.push(`secnumdepth: ${layout.numbering ? 3 : 0}`);
+    if (layout.numbering !== undefined) lines.push(`secnumdepth: ${layout.numbering ? 3 : -2}`);
     if (layout.pageNumber) {
       const [placement, align] = layout.pageNumber.split('-') as [string, string];
       lines.push(`pageno-head: ${placement === 'header' ? 'true' : 'false'}`);

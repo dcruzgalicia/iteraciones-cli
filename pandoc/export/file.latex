@@ -115,7 +115,7 @@ $endif$
 \setkomafont{publishers}{\normalsize\normalfont}
 
 % ─── Sin numeración de secciones ─────────────────────────────────────────────
-\setcounter{secnumdepth}{$if(secnumdepth)$$secnumdepth$$else$0$endif$}
+\setcounter{secnumdepth}{$if(secnumdepth)$$secnumdepth$$else$-2$endif$}
 
 % ─── TOC ─────────────────────────────────────────────────────────────────────
 \renewcaptionname{spanish}{\contentsname}{\large\normalfont Índice}
