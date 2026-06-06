@@ -3,6 +3,7 @@ import type { BuildDocument, DocumentType } from '../types.js';
 import {
   EXPORTABLE_TYPES,
   type ExportableDocumentType,
+  type ExportCollectionPart,
   type ExportDocument,
   type ExportLatexTemplate,
   type ExportMetadata,
@@ -56,6 +57,7 @@ export function assembleExportDocument(
   globalBibliography?: string,
   globalCsl?: string,
   globalTemplate?: ExportLatexTemplate,
+  parts?: ExportCollectionPart[],
 ): ExportDocument | null {
   if (!doc.type || !EXPORTABLE_TYPES.has(doc.type)) return null;
 
@@ -91,7 +93,7 @@ export function assembleExportDocument(
       : undefined,
   };
 
-  const body = documentclass === 'scrartcl' ? doc.body : assembleBookBody(doc, items);
+  const body = documentclass === 'scrartcl' ? doc.body : assembleBookBody(doc, items, parts);
 
   return {
     filePath: doc.filePath,
@@ -112,33 +114,54 @@ export function assembleExportDocument(
  *   [body del item con footnotes renombrados e imágenes con rutas absolutas]
  *   \newpage
  */
-function assembleBookBody(doc: BuildDocument, items: BuildDocument[]): string {
-  const parts: string[] = [];
+function assembleBookBody(doc: BuildDocument, items: BuildDocument[], parts?: ExportCollectionPart[]): string {
+  const result: string[] = [];
 
   // Intro opcional de la colección/eventos (body propio del doc index)
   if (doc.body.trim()) {
-    parts.push(doc.body.trim(), '\n\n');
+    result.push(doc.body.trim(), '\n\n');
   }
 
-  for (const item of items) {
-    const title = item.frontmatter.title || 'Sin título';
-    const authors = item.frontmatter.author;
-    const slug = pathToSlug(item.relativePath);
-
-    parts.push(`# ${title}\n\n`);
-
-    // Caso especial: ítems de tipo `author` no llevan línea "Por Autor"
-    // porque el título ya es el nombre del autor — sería redundante.
-    if (item.type !== 'author' && authors.length > 0) {
-      parts.push(`*Por ${authors.join(', ')}*\n\n`);
+  if (parts && parts.length > 0) {
+    // Items sueltos (prólogo, prefacio, etc.) — antes de cualquier parte
+    const byPath = new Map<string, BuildDocument>(items.map((d) => [d.relativePath, d]));
+    for (const itemPath of doc.frontmatter.items) {
+      const item = byPath.get(itemPath);
+      if (item) appendItemBody(item, result);
     }
-
-    const renamedBody = renameFootnotes(item.body, slug);
-    const resolvedBody = resolveImagePaths(renamedBody, item.filePath);
-    parts.push(resolvedBody.trim(), '\n\n\\newpage\n\n');
+    // Partes agrupadas
+    for (const part of parts) {
+      result.push(`\\part{${part.name}}\n\n`);
+      for (const item of part.items) {
+        appendItemBody(item, result);
+      }
+    }
+  } else {
+    // Sin partes — comportamiento original: todos los items planos
+    for (const item of items) {
+      appendItemBody(item, result);
+    }
   }
 
-  return parts.join('');
+  return result.join('');
+}
+
+function appendItemBody(item: BuildDocument, target: string[]): void {
+  const title = item.frontmatter.title || 'Sin título';
+  const authors = item.frontmatter.author;
+  const slug = pathToSlug(item.relativePath);
+
+  target.push(`# ${title}\n\n`);
+
+  // Caso especial: ítems de tipo `author` no llevan línea "Por Autor"
+  // porque el título ya es el nombre del autor — sería redundante.
+  if (item.type !== 'author' && authors.length > 0) {
+    target.push(`*Por ${authors.join(', ')}*\n\n`);
+  }
+
+  const renamedBody = renameFootnotes(item.body, slug);
+  const resolvedBody = resolveImagePaths(renamedBody, item.filePath);
+  target.push(resolvedBody.trim(), '\n\n\\newpage\n\n');
 }
 
 /**
@@ -189,7 +212,22 @@ function pathToSlug(relativePath: string): string {
 export function resolveItemsForExport(doc: BuildDocument, pool: BuildDocument[]): BuildDocument[] {
   if (doc.type !== 'collection') return [];
   const byPath = new Map<string, BuildDocument>(pool.map((d) => [d.relativePath, d]));
-  return doc.frontmatter.items.map((itemPath) => byPath.get(itemPath)).filter((d): d is BuildDocument => d !== undefined);
+  const itemPaths = [...doc.frontmatter.items];
+  if (doc.frontmatter.parts) {
+    for (const part of doc.frontmatter.parts) {
+      itemPaths.push(...part.items);
+    }
+  }
+  return itemPaths.map((itemPath) => byPath.get(itemPath)).filter((d): d is BuildDocument => d !== undefined);
+}
+
+export function resolvePartsForExport(doc: BuildDocument, pool: BuildDocument[]): ExportCollectionPart[] {
+  if (doc.type !== 'collection' || !doc.frontmatter.parts || doc.frontmatter.parts.length === 0) return [];
+  const byPath = new Map<string, BuildDocument>(pool.map((d) => [d.relativePath, d]));
+  return doc.frontmatter.parts.map((part) => ({
+    name: part.name,
+    items: part.items.map((itemPath) => byPath.get(itemPath)).filter((d): d is BuildDocument => d !== undefined),
+  }));
 }
 
 /**

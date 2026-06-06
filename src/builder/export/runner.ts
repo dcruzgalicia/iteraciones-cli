@@ -7,8 +7,14 @@ import { mapWithConcurrency } from '../../output/concurrency.js';
 import type { PluginRegistry } from '../../plugin/registry.js';
 import { convertToEpub, convertToPdf } from '../../services/pandoc-exporter.js';
 import type { BuildDocument, DocumentType } from '../types.js';
-import { assembleAuthorExportVariants, assembleExportDocument, resolveEventsForExport, resolveItemsForExport } from './assemble.js';
-import type { ExportDocument, ExportMetadata, ExportResult } from './types.js';
+import {
+  assembleAuthorExportVariants,
+  assembleExportDocument,
+  resolveEventsForExport,
+  resolveItemsForExport,
+  resolvePartsForExport,
+} from './assemble.js';
+import type { ExportCollectionPart, ExportDocument, ExportMetadata, ExportResult } from './types.js';
 import { EXPORTABLE_TYPES } from './types.js';
 
 /**
@@ -471,13 +477,24 @@ export async function runExportDocuments(
 
     // Resolver items según el tipo del documento (non-author)
     let items: BuildDocument[] = [];
+    let partGroups: ExportCollectionPart[] = [];
     if (doc.type === 'collection') {
       items = resolveItemsForExport(doc, itemPool);
+      partGroups = resolvePartsForExport(doc, itemPool);
     } else if (doc.type === 'events') {
       items = resolveEventsForExport(doc, eventPool);
     }
 
-    const rawExportDoc = assembleExportDocument(doc, items, lang, cwd, globalBibliography, globalCsl, config.template);
+    const rawExportDoc = assembleExportDocument(
+      doc,
+      items,
+      lang,
+      cwd,
+      globalBibliography,
+      globalCsl,
+      config.template,
+      partGroups.length > 0 ? partGroups : undefined,
+    );
     if (!rawExportDoc) return null;
 
     // Hook beforeExport: permite a los plugins modificar el body y/o los metadatos
@@ -740,12 +757,23 @@ export async function exportSingleDocument(
     rawExportDoc = full;
   } else {
     let items: BuildDocument[] = [];
+    let partGroups: ExportCollectionPart[] = [];
     if (targetDoc.type === 'collection') {
       items = resolveItemsForExport(targetDoc, itemPool);
+      partGroups = resolvePartsForExport(targetDoc, itemPool);
     } else if (targetDoc.type === 'events') {
       items = resolveEventsForExport(targetDoc, eventPool);
     }
-    rawExportDoc = assembleExportDocument(targetDoc, items, lang, cwd, globalBibliography, globalCsl, config.template);
+    rawExportDoc = assembleExportDocument(
+      targetDoc,
+      items,
+      lang,
+      cwd,
+      globalBibliography,
+      globalCsl,
+      config.template,
+      partGroups.length > 0 ? partGroups : undefined,
+    );
   }
   if (!rawExportDoc) return null;
 
