@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import type { PluginRegistry } from '../../plugin/registry.js';
 import type { PandocPool } from '../../services/pandoc-pool.js';
 import type { TemplateContext } from '../../template/render/context.js';
@@ -59,7 +60,22 @@ export async function runContextPhaseWithTypeGraph(
     } else {
       // Fase index: renderizar → registrar en mapa → construir pool → construir contextos.
       const docs = allDocs.filter((d) => d.type === spec.type && d.kind !== 'block');
-      const rendered = await renderDocuments(docs, concurrency, renderCache, registry, renderStats, pool, cwd, collectedKeys, luaFilters);
+      // Pasar bibliography/csl global desde export config como fallback para citas en HTML (issue #379/#380)
+      const globalBibliography = ctx.siteConfig.export?.bibliography ? join(ctx.cwd, ctx.siteConfig.export.bibliography) : undefined;
+      const globalCsl = ctx.siteConfig.export?.csl ? join(ctx.cwd, ctx.siteConfig.export.csl) : undefined;
+      const rendered = await renderDocuments(
+        docs,
+        concurrency,
+        renderCache,
+        registry,
+        renderStats,
+        pool,
+        cwd,
+        collectedKeys,
+        luaFilters,
+        globalBibliography,
+        globalCsl,
+      );
       renderedMap.set(spec.type, rendered);
       const pool2 = spec.buildPool(renderedMap);
       const contextDocs = rendered.flatMap((doc) => spec.buildPageContexts(doc, siteCtx, pool2, authorIndex, listItemsLimit));
