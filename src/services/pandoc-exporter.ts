@@ -293,7 +293,19 @@ export async function convertToPdf(
 
   const templatePath = resolveLatexTemplatePath(doc.type, doc.metadata.template, cwd);
   const input = buildYamlHeader(doc, FONTS_DIR, layout) + doc.body;
-  const args = ['pandoc', '--from', 'markdown', '--to', 'pdf', '--pdf-engine', engine, `--template=${templatePath}`, '--output', outputPath];
+  const args = [
+    'pandoc',
+    '--from',
+    'markdown',
+    '--to',
+    'pdf',
+    '--pdf-engine',
+    engine,
+    `--template=${templatePath}`,
+    '--top-level-division=chapter',
+    '--output',
+    outputPath,
+  ];
 
   // Activar el procesador de citas cuando hay bibliografía declarada.
   // Sin --citeproc, las citas [@referencia] quedan sin resolver en el PDF final.
