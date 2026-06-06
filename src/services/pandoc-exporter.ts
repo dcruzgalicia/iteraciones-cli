@@ -135,7 +135,14 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, layout?: FormatL
   if (metadata.rights) lines.push(`rights: ${yamlString(metadata.rights)}`);
   if (metadata.cover) lines.push(`cover-image: ${yamlString(metadata.cover)}`);
   if (metadata.bibliography) lines.push(`bibliography: ${yamlString(metadata.bibliography)}`);
-  if (metadata.csl) lines.push(`csl: ${yamlString(metadata.csl)}`);
+  // Validar existencia del CSL: si el archivo no existe, pandoc fallaría silenciosamente.
+  if (metadata.csl) {
+    if (existsSync(metadata.csl)) {
+      lines.push(`csl: ${yamlString(metadata.csl)}`);
+    } else {
+      process.stderr.write(`[export] archivo CSL no encontrado: "${metadata.csl}"\n`);
+    }
+  }
 
   // Metadatos académicos opcionales (usados por el template scrartcl-academic)
   if (metadata.abstract) lines.push(`abstract: ${yamlString(metadata.abstract)}`);
