@@ -112,6 +112,9 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, layout?: FormatL
   lines.push(`lang: ${metadata.lang}`);
   lines.push(`documentclass: ${metadata.documentclass}`);
   if (metadata.toc) lines.push('toc: true');
+  if (metadata.tocDepth !== undefined && metadata.tocDepth > 0) {
+    lines.push(`toc-depth: ${metadata.tocDepth}`);
+  }
 
   // Hyphenation: permite desactivar guiones en la salida PDF vía configuración
   lines.push(`hyphenation-active: ${hyphenationActive !== false ? 'true' : 'false'}`);

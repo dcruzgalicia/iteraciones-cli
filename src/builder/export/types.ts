@@ -53,6 +53,8 @@ export interface ExportMetadata {
   documentclass: 'scrartcl' | 'scrbook';
   /** Si true, incluye tabla de contenidos (solo scrbook). */
   toc: boolean;
+  /** Profundidad del índice (1-5), undefined para comportamiento por defecto. */
+  tocDepth?: number;
   /** Resumen o abstract del documento. */
   abstract?: string;
   /** Palabras clave del documento. */
