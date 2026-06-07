@@ -294,6 +294,7 @@ $endif$
 \begin{document}
 
 \frontmatter
+\pagenumbering{gobble}
 
 \title{$title$}
 $if(subtitle)$\subtitle{$subtitle$}$endif$
