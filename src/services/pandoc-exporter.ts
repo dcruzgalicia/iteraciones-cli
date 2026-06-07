@@ -144,7 +144,7 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfF
     }
   }
 
-  // Layout editorial (desde site.export.layout.pdf)
+  // Layout editorial (desde format.pdf)
   if (pdfFormat) {
     // ── Tamaño de página ────────────────────────────────────────────────────
     let geometryEmitted = false;
@@ -188,7 +188,14 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfF
     }
 
     if (pdfFormat.fontSize) lines.push(`fontsize: ${pdfFormat.fontSize}`);
-    if (pdfFormat.fontFamily) lines.push(`mainfont: ${yamlString(pdfFormat.fontFamily)}`);
+    if (pdfFormat.fontFamily) {
+      // Si la fuente es la misma que el default del template (TeX Gyre Pagella),
+      // no emitir mainfont para que el template use la rama $else$ con los OTF
+      // embebidos en fonts/. Si es otra fuente, emitir mainfont para system lookup.
+      if (pdfFormat.fontFamily !== 'TeX Gyre Pagella') {
+        lines.push(`mainfont: ${yamlString(pdfFormat.fontFamily)}`);
+      }
+    }
     if (pdfFormat.lineSpacing !== undefined) lines.push(`linestretch: ${pdfFormat.lineSpacing}`);
     if (pdfFormat.numbering !== undefined) lines.push(`secnumdepth: ${pdfFormat.numbering ? 3 : -2}`);
     if (pdfFormat.pageNumber) {
