@@ -93,7 +93,8 @@ export class ProgressTracker {
       this.clearLine();
       process.stdout.write(`\n── ${PHASE_LABELS[phase]} ──\n`);
     } else if (this.tty) {
-      this.render(`  ${PHASE_LABELS[phase]}: pendiente`);
+      const b = this.bar(0, total || 1);
+      this.render(`  ${PHASE_LABELS[phase]}: ${b} 0/${total || '?'}`);
     }
   }
 
