@@ -1,5 +1,5 @@
 import { stat } from 'node:fs/promises';
-import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import type { CacheManager } from '../../cache/cache-manager.js';
 import { hash } from '../../cache/hasher.js';
 import type { ExportConfig } from '../../config/site-config.js';
@@ -163,6 +163,12 @@ function exportOutputBase(exportDoc: ExportDocument, outputDir: string): string 
 
   if (exportDoc.slug) {
     return join(outputDir, dirPart, exportDoc.slug);
+  }
+
+  // index.md siempre conserva su nombre original.
+  const filenameStem = basename(exportDoc.relativePath, '.md');
+  if (filenameStem === 'index') {
+    return join(outputDir, exportDoc.relativePath.replace(/\.md$/, ''));
   }
 
   const computed = computeSlug(exportDoc.metadata);

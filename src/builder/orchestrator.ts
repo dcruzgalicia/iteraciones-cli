@@ -1,5 +1,5 @@
 import { rm } from 'node:fs/promises';
-import { isAbsolute, join, resolve } from 'node:path';
+import { basename, isAbsolute, join, resolve } from 'node:path';
 import { CacheManager } from '../cache/cache-manager.js';
 import { hash } from '../cache/hasher.js';
 import { loadOutputManifest, saveOutputManifest } from '../cache/output-manifest.js';
@@ -605,8 +605,10 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     }
 
     // Compute output-path slugs for all documents.
+    // Los archivos llamados index.md siempre conservan su nombre (index.html).
     for (const doc of allDocs) {
-      doc.slug = computeSlug(doc.frontmatter);
+      const filenameStem = basename(doc.relativePath, '.md');
+      doc.slug = filenameStem === 'index' ? undefined : computeSlug(doc.frontmatter);
     }
 
     const enrichedSiteCtx = buildEnrichedSiteContext(ctx, allDocs);
