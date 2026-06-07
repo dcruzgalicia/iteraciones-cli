@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import type { RenderFileReport } from '../../output/progress.js';
 import type { PluginRegistry } from '../../plugin/registry.js';
 import type { PandocPool } from '../../services/pandoc-pool.js';
 import type { TemplateContext } from '../../template/render/context.js';
@@ -44,6 +45,7 @@ export async function runContextPhaseWithTypeGraph(
   cwd?: string,
   collectedKeys?: Set<string>,
   luaFilters?: readonly string[],
+  onFileProcessed?: (report: RenderFileReport) => void,
 ): Promise<ContextPhaseResult> {
   const renderedMap = new Map<DocumentType, BuildDocument[]>(primaryRendered);
   const allContextDocs: BuildDocument[] = [];
@@ -75,6 +77,7 @@ export async function runContextPhaseWithTypeGraph(
         luaFilters,
         globalBibliography,
         globalCsl,
+        onFileProcessed,
       );
       renderedMap.set(spec.type, rendered);
       const pool2 = spec.buildPool(renderedMap);

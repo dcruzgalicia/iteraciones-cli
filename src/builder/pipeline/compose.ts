@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import type { CacheManager } from '../../cache/cache-manager.js';
 import { hash } from '../../cache/hasher.js';
 import { mapWithConcurrency } from '../../output/concurrency.js';
+import type { RenderFileReport } from '../../output/progress.js';
 import type { PluginRegistry } from '../../plugin/registry.js';
 import type { AstNode } from '../../template/ast.js';
 import { tokenize } from '../../template/lexer.js';
@@ -42,6 +43,8 @@ export async function composeDocuments(
   /** Mapa de relativePath → sourceHash para todos los documentos activos.
    * Permite detectar cambios en items de colecciones sin serializar su contenido. */
   itemHashMap?: ReadonlyMap<string, string>,
+  /** Callback invocado por cada archivo compuesto (para reporte de progreso). */
+  onFileProcessed?: (report: RenderFileReport) => void,
 ): Promise<BuildDocument[]> {
   const { layoutPath, pandocTemplatePath } = resolveEffectivePaths(ctx.siteConfig.theme, ctx.cwd);
   const layoutTemplate = await readFile(layoutPath, 'utf8');
@@ -73,6 +76,7 @@ export async function composeDocuments(
   const activeComposeKeys = cache ? new Set<string>() : null;
 
   const result = await mapWithConcurrency(docs, ctx.concurrency ?? 4, async (doc) => {
+    const tStart = performance.now();
     if (!doc.templateContext) {
       throw new Error(`composeDocuments: templateContext no definido en "${doc.relativePath}"`);
     }
@@ -104,6 +108,7 @@ export async function composeDocuments(
           stats.total++;
           stats.cacheHits++;
         }
+        onFileProcessed?.({ relativePath: doc.relativePath, durationMs: performance.now() - tStart, cacheHit: true, phase: 'compose' });
         return { ...doc, outputHtml: cached };
       }
     }
@@ -142,6 +147,7 @@ export async function composeDocuments(
     }
 
     if (stats) stats.total++;
+    onFileProcessed?.({ relativePath: doc.relativePath, durationMs: performance.now() - tStart, cacheHit: false, phase: 'compose' });
     return { ...doc, outputHtml };
   });
 
