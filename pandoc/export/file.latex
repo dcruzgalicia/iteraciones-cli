@@ -283,6 +283,8 @@ $endif$
 % ═══════════════════════════════════════════════════════════════════════════════
 \begin{document}
 
+\pagenumbering{gobble}
+
 \title{$title$}
 $if(subtitle)$\subtitle{$subtitle$}$endif$
 $if(author)$\author{$for(author)$$author$$sep$ \and $endfor$}$endif$
@@ -294,6 +296,8 @@ $if(toc)$
 \tableofcontents
 \clearpage
 $endif$
+
+\pagenumbering{arabic}
 
 \noindent
 $body$
