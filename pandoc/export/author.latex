@@ -99,9 +99,15 @@ $endif$
 
 % ─── Parámetros tipográficos (viudas, huérfanas, guiones) ────────────────────
 \raggedbottom
+$if(hyphenation-active)$
 \pretolerance=200
 \tolerance=400
 \hyphenpenalty=100
+$else$
+\pretolerance=10000
+\tolerance=9999
+\hyphenpenalty=10000
+$endif$
 \brokenpenalty=10000
 \finalhyphendemerits=1000000
 \doublehyphendemerits=10000000
