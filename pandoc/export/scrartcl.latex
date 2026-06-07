@@ -109,8 +109,8 @@ $endif$
 \clubpenalty=10000
 
 % ─── Fuentes KOMA ────────────────────────────────────────────────────────────
-\setkomafont{title}{\normalsize\bfseries}
-\setkomafont{subtitle}{\normalsize\normalfont\itshape}
+\setkomafont{title}{\normalsize\normalfont}
+\setkomafont{subtitle}{\normalsize\normalfont}
 \setkomafont{author}{\normalsize\normalfont}
 \setkomafont{publishers}{\normalsize\normalfont}
 
@@ -125,16 +125,20 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 
 % ─── Secciones (equivalente a capítulo) ──────────────────────────────────────
 \RedeclareSectionCommand[beforeskip=2\baselineskip,afterskip=\baselineskip,afterindent=false]{section}
-\setkomafont{section}{\normalsize\normalfont\scshape}
+\setkomafont{section}{\normalsize\normalfont}
 \renewcommand{\raggedsection}{\centering}
 
 % ─── Subsecciones ────────────────────────────────────────────────────────────
 \RedeclareSectionCommand[beforeskip=2\baselineskip,afterskip=2\baselineskip,afterindent=false]{subsection}
-\setkomafont{subsection}{\normalsize\bfseries\MakeUppercase}
+\setkomafont{subsection}{\normalsize\normalfont}
 
 % ─── Subsubsecciones ─────────────────────────────────────────────────────────
 \RedeclareSectionCommand[beforeskip=2\baselineskip,afterskip=2\baselineskip,afterindent=false]{subsubsection}
-\setkomafont{subsubsection}{\normalsize\normalfont\itshape}
+\setkomafont{subsubsection}{\normalsize\normalfont}
+
+% ─── Párrafos ──────────────────────────────────────────────────
+\setkomafont{paragraph}{\normalsize\normalfont}
+\setkomafont{subparagraph}{\normalsize\normalfont}
 
 % ─── Dictum (epígrafe KOMA) ──────────────────────────────────────────────────
 \setkomafont{dictum}{\normalsize\normalfont\itshape}
