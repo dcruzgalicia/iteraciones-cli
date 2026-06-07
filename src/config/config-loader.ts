@@ -194,6 +194,8 @@ function parseFormatLayout(raw: unknown): FormatLayout | undefined {
     process.stderr.write(`[iteraciones] export.layout.pdf.sides: valor desconocido "${String(obj.sides)}". Valores válidos: oneside, twoside.\n`);
   }
 
+  const toc = typeof obj.toc === 'boolean' ? obj.toc : undefined;
+
   const rawTocDepth = obj['toc-depth'];
   const tocDepth = typeof rawTocDepth === 'number' && Number.isInteger(rawTocDepth) && rawTocDepth >= 0 && rawTocDepth <= 5 ? rawTocDepth : undefined;
 
@@ -206,11 +208,23 @@ function parseFormatLayout(raw: unknown): FormatLayout | undefined {
     numbering === undefined &&
     !pageNumber &&
     !sides &&
+    toc === undefined &&
     tocDepth === undefined
   )
     return undefined;
 
-  return { pageSize, fontSize, fontFamily, margins, lineSpacing, numbering, pageNumber, sides, ...(tocDepth !== undefined ? { tocDepth } : {}) };
+  return {
+    pageSize,
+    fontSize,
+    fontFamily,
+    margins,
+    lineSpacing,
+    numbering,
+    pageNumber,
+    sides,
+    ...(toc !== undefined ? { toc } : {}),
+    ...(tocDepth !== undefined ? { tocDepth } : {}),
+  };
 }
 
 function parseLayoutConfig(raw: unknown): LayoutConfig | undefined {
