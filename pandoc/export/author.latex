@@ -297,7 +297,7 @@ $if(toc)$
 \clearpage
 $endif$
 
-\pagenumbering{arabic}
+\renewcommand{\thepage}{\arabic{page}}
 
 \noindent
 $body$
