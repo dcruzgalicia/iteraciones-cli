@@ -695,15 +695,17 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
     // Paso de exportación: genera PDF/EPUB si está configurado y no se pasó --no-export.
     const exportStats: ExportStats = { totalEpub: 0, totalPdf: 0, cacheHitsEpub: 0, cacheHitsPdf: 0 };
+    const exportConfig = ctx.siteConfig.export;
+    const hasExport = exportConfig !== undefined && !options.noExport;
     const exportRenderedMap = affectedPaths
       ? new Map<DocumentType, BuildDocument[]>(
           [...renderedMap].map(([type, docs]) => [type, docs.filter((doc) => affectedPaths.has(doc.relativePath))]),
         )
       : renderedMap;
     const exportResults =
-      ctx.siteConfig.export && !options.noExport
+      hasExport && exportConfig
         ? await runExportDocuments(exportRenderedMap, {
-            config: ctx.siteConfig.export,
+            config: exportConfig,
             outputDir: ctx.outputDir,
             cwd,
             lang: ctx.siteConfig.lang,
@@ -714,6 +716,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
             registry: hasPlugins ? registry : undefined,
             pluginFingerprint,
             stats: exportStats,
+            onExportProgress: (relativePath, cacheHit) => progress.reportFile({ relativePath, durationMs: 0, cacheHit, phase: 'export' }),
           })
         : [];
     if (exportResults.length > 0) {
@@ -725,6 +728,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       const detail = parts.length > 0 ? ` — ${parts.join(' | ')}` : '';
       progress.log(`Exportación: ${exportResults.length} documento${exportResults.length > 1 ? 's' : ''}${detail}`);
     }
+    if (hasExport) progress.completePhase(); // fin de export
 
     // Inyectar enlaces de descarga en los docs exportables, propagarlos a los ítems
     // y luego añadir la miniatura `cover-image` a los list-items.
