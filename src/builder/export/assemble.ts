@@ -1,5 +1,5 @@
 import { dirname, join, resolve } from 'node:path';
-import type { FormatLayout } from '../../config/site-config.js';
+import type { PdfFormatConfig } from '../../config/site-config.js';
 import type { BuildDocument, DocumentType } from '../types.js';
 import {
   EXPORTABLE_TYPES,
@@ -56,7 +56,7 @@ export function assembleExportDocument(
   globalBibliography?: string,
   globalCsl?: string,
   parts?: ExportCollectionPart[],
-  layout?: FormatLayout,
+  pdfFormat?: PdfFormatConfig,
 ): ExportDocument | null {
   if (!doc.type || !EXPORTABLE_TYPES.has(doc.type)) return null;
 
@@ -78,8 +78,8 @@ export function assembleExportDocument(
       ? safeEditorialPath(rawEditorial['csl'], cwd, 'editorial.csl')
       : (globalCsl ?? (bibliography ? join(import.meta.dir, '../../../pandoc/csl/apa-7.csl') : undefined));
 
-  const tocDepth = layout?.tocDepth;
-  const toc = layout?.toc ?? (tocDepth !== undefined ? tocDepth > 0 : documentclass === 'scrbook');
+  const tocDepth = pdfFormat?.tocDepth;
+  const toc = pdfFormat?.toc ?? (tocDepth !== undefined ? tocDepth > 0 : documentclass === 'scrbook');
 
   const metadata: ExportMetadata = {
     title: doc.frontmatter.title || 'Sin título',
