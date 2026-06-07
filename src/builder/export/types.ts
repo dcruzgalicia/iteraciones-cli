@@ -1,7 +1,4 @@
-import type { ExportLatexTemplate } from '../../config/site-config.js';
 import type { BuildDocument, DocumentType } from '../types.js';
-
-export type { ExportLatexTemplate } from '../../config/site-config.js';
 
 export type ExportFormat = 'pdf' | 'epub';
 
@@ -56,11 +53,9 @@ export interface ExportMetadata {
   documentclass: 'scrartcl' | 'scrbook';
   /** Si true, incluye tabla de contenidos (solo scrbook). */
   toc: boolean;
-  /** Variante de template LaTeX a usar. Sustituye al template base del documentclass. */
-  template?: ExportLatexTemplate;
-  /** Resumen o abstract del documento (usado por el template `academic`). */
+  /** Resumen o abstract del documento. */
   abstract?: string;
-  /** Palabras clave del documento (usadas por el template `academic`). */
+  /** Palabras clave del documento. */
   keywords?: string[];
 }
 

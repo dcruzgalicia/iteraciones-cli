@@ -5,7 +5,6 @@ import {
   type ExportableDocumentType,
   type ExportCollectionPart,
   type ExportDocument,
-  type ExportLatexTemplate,
   type ExportMetadata,
   LATEX_CLASS,
 } from './types.js';
@@ -47,7 +46,6 @@ function safeEditorialPath(rawPath: string, cwd: string, fieldName: string): str
  * @param cwd                 Directorio raíz del proyecto; usado para validar rutas editoriales.
  * @param globalBibliography  Ruta absoluta al .bib global del sitio (fallback si el frontmatter no define uno).
  * @param globalCsl           Ruta absoluta al .csl global del sitio (fallback si el frontmatter no define uno).
- * @param globalTemplate      Variante de template del sitio (fallback si el frontmatter no define `editorial.template`).
  */
 export function assembleExportDocument(
   doc: BuildDocument,
@@ -56,7 +54,6 @@ export function assembleExportDocument(
   cwd: string,
   globalBibliography?: string,
   globalCsl?: string,
-  globalTemplate?: ExportLatexTemplate,
   parts?: ExportCollectionPart[],
 ): ExportDocument | null {
   if (!doc.type || !EXPORTABLE_TYPES.has(doc.type)) return null;
@@ -93,7 +90,6 @@ export function assembleExportDocument(
     csl,
     documentclass,
     toc: documentclass === 'scrbook',
-    template: resolveTemplateVariant(rawEditorial['template'], globalTemplate),
     abstract: typeof rawEditorial['abstract'] === 'string' && rawEditorial['abstract'].trim() ? rawEditorial['abstract'].trim() : undefined,
     keywords: Array.isArray(rawEditorial['keywords'])
       ? (rawEditorial['keywords'] as unknown[]).filter((k): k is string => typeof k === 'string')
@@ -273,16 +269,6 @@ export function resolveEventsForExport(_doc: BuildDocument, eventPool: BuildDocu
   return eventPool;
 }
 
-/**
- * Resuelve la variante de template LaTeX a usar, dando prioridad al valor del
- * frontmatter sobre el global del sitio. Retorna el fallback global si el valor
- * del frontmatter no es una variante válida, o `undefined` si tampoco hay fallback.
- */
-function resolveTemplateVariant(raw: unknown, globalFallback: ExportLatexTemplate | undefined): ExportLatexTemplate | undefined {
-  if (raw === 'literary' || raw === 'academic' || raw === 'anthology' || raw === 'technical') return raw;
-  return globalFallback;
-}
-
 // ─── Helpers para exportación de author ──────────────────────────────────────
 
 function normalizeForComparison(value: string): string {
@@ -381,7 +367,6 @@ export function assembleAuthorExportVariants(
   cwd: string,
   globalBibliography?: string,
   globalCsl?: string,
-  globalTemplate?: ExportLatexTemplate,
 ): { summary: ExportDocument; full: ExportDocument } {
   const rawEditorial =
     typeof doc.frontmatter['editorial'] === 'object' && doc.frontmatter['editorial'] !== null
@@ -412,7 +397,6 @@ export function assembleAuthorExportVariants(
     csl,
     documentclass: 'scrartcl',
     toc: false,
-    template: resolveTemplateVariant(rawEditorial['template'], globalTemplate),
     abstract: typeof rawEditorial['abstract'] === 'string' && rawEditorial['abstract'].trim() ? rawEditorial['abstract'].trim() : undefined,
     keywords: undefined,
   };
