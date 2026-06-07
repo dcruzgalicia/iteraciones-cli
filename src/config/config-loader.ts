@@ -82,7 +82,7 @@ function buildConfigFromNewSchema(root: Record<string, unknown>): SiteConfig {
   const baseUrl = typeof site['base-url'] === 'string' && site['base-url'].trim() ? site['base-url'].trim() : DEFAULT_SITE_CONFIG.baseUrl;
 
   const pagination = parsePaginationConfig(site.pagination);
-  const format = parseFormatConfig(root.format);
+  const format = parseFormatConfig(root.format) ?? DEFAULT_SITE_CONFIG.format;
 
   // Poblar campos viejos para backward compat durante la migracion
   const listItemsLimit = pagination.limit;
@@ -341,7 +341,7 @@ function buildFormatConfigFromLegacy(
   theme: string | undefined,
   accent: string,
   math: 'katex' | 'mathjax' | undefined,
-): FormatConfig | undefined {
+): FormatConfig {
   const htmlFmt: HtmlFormatConfig = {
     theme,
     accent,
@@ -385,8 +385,6 @@ function buildFormatConfigFromLegacy(
       ...(exportCfg.csl ? { csl: exportCfg.csl } : {}),
     };
   }
-
-  if (!pdf && !epub) return undefined;
 
   return {
     html: htmlFmt,
