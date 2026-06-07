@@ -302,7 +302,9 @@ $if(toc)$
 \clearpage
 $endif$
 
-\mainmatter
+\cleardoublepage
+\makeatletter\@mainmattertrue\makeatother
+\renewcommand{\thepage}{\arabic{page}}
 
 \noindent
 $body$
