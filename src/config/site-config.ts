@@ -4,6 +4,11 @@ export type PageNumberPlacement = 'footer-left' | 'footer-center' | 'footer-righ
 
 export type Sides = 'oneside' | 'twoside';
 
+export interface ExportHyphenationConfig {
+  html: boolean;
+  pdf: boolean;
+}
+
 /**
  * Configuración de layout para un formato de exportación (PDF, EPUB, HTML).
  */
@@ -58,6 +63,8 @@ export interface ExportConfig {
    * Por defecto: `2`. Rango recomendado: 1–4.
    */
   pdfConcurrency: number;
+  /** Control de guiones (hyphenation) para PDF y HTML. */
+  hyphenation?: ExportHyphenationConfig;
   /** Configuración de layout editorial por formato. */
   layout?: LayoutConfig;
 }

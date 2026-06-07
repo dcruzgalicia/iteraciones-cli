@@ -3,6 +3,7 @@ import { ConfigError } from '../errors.js';
 import {
   DEFAULT_SITE_CONFIG,
   type ExportConfig,
+  type ExportHyphenationConfig,
   type FormatLayout,
   KNOWN_ACCENT_COLORS,
   type LayoutConfig,
@@ -94,6 +95,7 @@ function parseExportConfig(raw: unknown): ExportConfig | undefined {
       `[iteraciones] export.pdf-concurrency: valor inválido "${String(rawPdfConcurrency)}". Debe ser un entero >= 1. Usando 2 por defecto.\n`,
     );
   }
+  const hyphenation = parseHyphenationConfig(obj.hyphenation);
   const layout = parseLayoutConfig(obj.layout);
   return {
     formats,
@@ -101,8 +103,18 @@ function parseExportConfig(raw: unknown): ExportConfig | undefined {
     pdfConcurrency,
     ...(bibliography !== undefined ? { bibliography } : {}),
     ...(csl !== undefined ? { csl } : {}),
+    ...(hyphenation ? { hyphenation } : {}),
     ...(layout ? { layout } : {}),
   };
+}
+
+function parseHyphenationConfig(raw: unknown): ExportHyphenationConfig | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const obj = raw as Record<string, unknown>;
+  const html = typeof obj.html === 'boolean' ? obj.html : false;
+  const pdf = typeof obj.pdf === 'boolean' ? obj.pdf : true;
+  if (html === false && pdf === true) return undefined;
+  return { html, pdf };
 }
 
 const CUSTOM_PAGE_SIZE_RE = /^\d+(\.\d+)?(cm|mm|in|pt),\d+(\.\d+)?(cm|mm|in|pt)$/;

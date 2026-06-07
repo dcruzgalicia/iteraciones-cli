@@ -19,14 +19,16 @@ const MATHJAX_CDN =
  * del sitio. Sin I/O ni efectos secundarios.
  *
  * Variables producidas:
- *   site-title    → config.title
- *   site-tagline  → config.tagline
- *   lang          → config.lang
- *   site-logo     → `/${config.logo}` normalizado como ruta root-relative,
- *                   o undefined si config.logo no está definido
- *   css           → [cssPath] si cssPath no está vacío, [] si lo está
- *   home-href     → '/index.html' (root-relative; se relativiza por documento en el orchestrator)
- *   math          → snippet HTML del CDN de KaTeX o MathJax, o undefined si no se configuró
+ *   site-title        → config.title
+ *   site-tagline      → config.tagline
+ *   lang              → config.lang
+ *   site-logo         → `/${config.logo}` normalizado como ruta root-relative,
+ *                       o undefined si config.logo no está definido
+ *   css               → [cssPath] si cssPath no está vacío, [] si lo está
+ *   home-href         → '/index.html' (root-relative; se relativiza por documento en el orchestrator)
+ *   math              → snippet HTML del CDN de KaTeX o MathJax, o undefined si no se configuró
+ *   hyphenation-class → 'hyphens-auto' si export.hyphenation.html es true,
+ *                       undefined en caso contrario
  */
 export function buildSiteContext(config: SiteConfig, cssPath: string): TemplateContext {
   const math = config.math === 'katex' ? KATEX_CDN : config.math === 'mathjax' ? MATHJAX_CDN : undefined;
@@ -39,5 +41,6 @@ export function buildSiteContext(config: SiteConfig, cssPath: string): TemplateC
     'home-href': '/index.html',
     'site-base-url': config.baseUrl,
     math,
+    ...(config.export?.hyphenation?.html ? { 'hyphenation-class': 'hyphens-auto' } : {}),
   };
 }
