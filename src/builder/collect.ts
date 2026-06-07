@@ -4,7 +4,7 @@ import type { BuildDocument, DocumentType } from './types.js';
 /**
  * Agrupa los documentos por tipo, ordena cada grupo por fecha descendente
  * (documentos sin fecha o con fecha inválida quedan al final) y recorta al
- * límite de `listItemsLimit`.
+ * límite de `pagination.limit`.
  *
  * Solo se incluyen documentos que tienen `type` asignado (post-classify).
  * La función agrupa todos los tipos sin filtrar; el consumidor es responsable
@@ -20,7 +20,7 @@ export function collectByType(docs: BuildDocument[], config: SiteConfig): Map<Do
     index.set(doc.type, group);
   }
 
-  const limit = Math.max(1, config.listItemsLimit);
+  const limit = Math.max(1, config.pagination.limit);
 
   for (const [type, group] of index) {
     group.sort((a, b) => {

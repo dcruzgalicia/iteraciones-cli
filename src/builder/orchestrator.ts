@@ -241,7 +241,7 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
  */
 async function runDiscovery(cwd: string, ctx: BuildContext, noCache?: boolean): Promise<BuildDocument[]> {
   const sourceDocs = await discover(cwd, { noCache });
-  const classified = classifyDocuments(sourceDocs, ctx.siteConfig.theme, ctx.cwd);
+  const classified = classifyDocuments(sourceDocs, ctx.siteConfig.format?.html?.theme, ctx.cwd);
   const allDocs = excludeDrafts(classified);
   const draftCount = classified.length - allDocs.length;
   if (draftCount > 0) {

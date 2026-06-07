@@ -49,7 +49,7 @@ export async function runContextPhaseWithTypeGraph(
 ): Promise<ContextPhaseResult> {
   const renderedMap = new Map<DocumentType, BuildDocument[]>(primaryRendered);
   const allContextDocs: BuildDocument[] = [];
-  const { listItemsLimit } = ctx.siteConfig;
+  const listItemsLimit = ctx.siteConfig.pagination.limit;
   const concurrency = ctx.concurrency ?? 4;
 
   for (const spec of TYPE_STAGES) {
