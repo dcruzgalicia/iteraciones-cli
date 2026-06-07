@@ -276,12 +276,12 @@ function buildEnrichedSiteContext(ctx: BuildContext, allDocs: BuildDocument[]): 
  * Resuelve rutas globales de bibliography y csl desde la configuración del sitio.
  */
 function resolveGlobalExportPaths(ctx: BuildContext): { globalBibliography?: string; globalCsl?: string } {
-  const exportCfg = ctx.siteConfig.export;
-  if (!exportCfg) return {};
+  const pdfCfg = ctx.siteConfig.format?.pdf;
+  if (!pdfCfg) return {};
   const cwd = ctx.cwd;
   return {
-    globalBibliography: exportCfg.bibliography ? join(cwd, exportCfg.bibliography) : undefined,
-    globalCsl: exportCfg.csl ? join(cwd, exportCfg.csl) : undefined,
+    globalBibliography: pdfCfg.bibliography ? join(cwd, pdfCfg.bibliography) : undefined,
+    globalCsl: pdfCfg.csl ? join(cwd, pdfCfg.csl) : undefined,
   };
 }
 
@@ -682,13 +682,13 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     // reprocesar documentos que no cambiaron.
     const finalContextDocs = affectedPaths ? allContextDocs.filter((d) => affectedPaths.has(d.relativePath)) : allContextDocs;
 
-    // Notificar el estado de exportación on-demand (sirve a serve.ts para PDF bajo demanda).
+    // Notificar el estado de exportacion on-demand (sirve a serve.ts para PDF bajo demanda).
     // Se invoca siempre que haya export configurado, independientemente de noExport.
-    if (options.onExportStateReady && ctx.siteConfig.export) {
+    if (options.onExportStateReady && ctx.siteConfig.format?.pdf) {
       options.onExportStateReady({
         renderedMap,
         exportOptions: {
-          config: ctx.siteConfig.export,
+          config: ctx.siteConfig.format ?? {},
           outputDir: ctx.outputDir,
           cwd,
           lang: ctx.siteConfig.lang,
@@ -702,14 +702,14 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       });
     }
 
-    // Paso de exportación: genera PDF/EPUB si está configurado y no se pasó --no-export.
+    // Paso de exportacion: genera PDF/EPUB si esta configurado y no se paso --no-export.
     const exportStats: ExportStats = { totalEpub: 0, totalPdf: 0, cacheHitsEpub: 0, cacheHitsPdf: 0 };
-    const exportConfig = ctx.siteConfig.export;
-    const hasExport = exportConfig !== undefined && !options.noExport;
-    if (hasExport) {
-      // Calcular total de PDFs para la barra de progreso (misma lógica que runExportDocuments).
+    const formatCfg = ctx.siteConfig.format;
+    const hasExport = (!!formatCfg?.pdf || !!formatCfg?.epub) && !options.noExport;
+    if (hasExport && formatCfg) {
+      // Calcular total de PDFs para la barra de progreso (misma logica que runExportDocuments).
       let exportTotal = 0;
-      if (exportConfig.formats.includes('pdf')) {
+      if (formatCfg.pdf) {
         for (const type of EXPORTABLE_TYPES) {
           const docs = (renderedMap.get(type) ?? []).filter((d) => d.kind !== 'block');
           for (const d of docs) {
@@ -728,9 +728,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         )
       : renderedMap;
     const exportResults =
-      hasExport && exportConfig
+      hasExport && formatCfg
         ? await runExportDocuments(exportRenderedMap, {
-            config: exportConfig,
+            config: formatCfg,
             outputDir: ctx.outputDir,
             cwd,
             lang: ctx.siteConfig.lang,

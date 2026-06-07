@@ -62,9 +62,9 @@ export async function runContextPhaseWithTypeGraph(
     } else {
       // Fase index: renderizar → registrar en mapa → construir pool → construir contextos.
       const docs = allDocs.filter((d) => d.type === spec.type && d.kind !== 'block');
-      // Pasar bibliography/csl global desde export config como fallback para citas en HTML (issue #379/#380)
-      const globalBibliography = ctx.siteConfig.export?.bibliography ? join(ctx.cwd, ctx.siteConfig.export.bibliography) : undefined;
-      const globalCsl = ctx.siteConfig.export?.csl ? join(ctx.cwd, ctx.siteConfig.export.csl) : undefined;
+      // Pasar bibliography/csl global desde format.pdf como fallback para citas en HTML
+      const globalBibliography = ctx.siteConfig.format?.pdf?.bibliography ? join(ctx.cwd, ctx.siteConfig.format.pdf.bibliography) : undefined;
+      const globalCsl = ctx.siteConfig.format?.pdf?.csl ? join(ctx.cwd, ctx.siteConfig.format.pdf.csl) : undefined;
       const rendered = await renderDocuments(
         docs,
         concurrency,

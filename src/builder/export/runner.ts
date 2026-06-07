@@ -2,7 +2,7 @@ import { stat } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import type { CacheManager } from '../../cache/cache-manager.js';
 import { hash } from '../../cache/hasher.js';
-import type { ExportConfig, PdfFormatConfig } from '../../config/site-config.js';
+import type { EpubFormatConfig, PdfFormatConfig } from '../../config/site-config.js';
 import { mapWithConcurrency } from '../../output/concurrency.js';
 import type { PluginRegistry } from '../../plugin/registry.js';
 import { convertToEpub, convertToPdf } from '../../services/pandoc-exporter.js';
@@ -47,17 +47,22 @@ async function generateCoverImage(pdfPath: string, outputBase: string): Promise<
   }
 }
 
+export interface ExportFormatOptions {
+  pdf?: PdfFormatConfig;
+  epub?: EpubFormatConfig;
+}
+
 export interface ExportRunOptions {
-  config: ExportConfig;
+  config: ExportFormatOptions;
   outputDir: string;
-  /** Directorio raíz del proyecto; usado para validar rutas editoriales (cover, bibliography, csl) y para resolver rutas globales de ExportConfig. */
+  /** Directorio raíz del proyecto; usado para validar rutas editoriales (cover, bibliography, csl) y para resolver rutas globales. */
   cwd: string;
   lang: string;
   /**
-   * Número máximo de documentos que se procesan en paralelo en el outer loop.
-   * Cuando la exportación incluye PDF, un semáforo interno limita las instancias
-   * xelatex activas simultáneamente a `config.pdfConcurrency`; `concurrency` sigue
-   * siendo el límite de documentos en vuelo (incluidos los que esperan el semáforo).
+   * Numero maximo de documentos que se procesan en paralelo en el outer loop.
+   * Cuando la exportacion incluye PDF, un semaforo interno limita las instancias
+   * xelatex activas simultaneamente a `config.pdf.concurrency`; `concurrency` sigue
+   * siendo el limite de documentos en vuelo (incluidos los que esperan el semaforo).
    */
   concurrency: number;
   /** Versión del CLI para la clave de caché. */
@@ -123,28 +128,6 @@ function resolveExportGlobalPath(raw: string | undefined, cwd: string, field: st
   return resolved;
 }
 
-/** Convierte ExportConfig (viejo) a PdfFormatConfig para la transicion al nuevo schema. */
-function toPdfFormatConfig(cfg: ExportConfig): PdfFormatConfig {
-  const layoutPdf = cfg.layout?.pdf;
-  return {
-    engine: cfg.pdfEngine,
-    concurrency: cfg.pdfConcurrency,
-    hyphenation: cfg.hyphenation?.pdf ?? true,
-    toc: layoutPdf?.toc,
-    tocDepth: layoutPdf?.tocDepth,
-    numbering: layoutPdf?.numbering,
-    bibliography: cfg.bibliography,
-    csl: cfg.csl,
-    pageSize: layoutPdf?.pageSize,
-    fontSize: layoutPdf?.fontSize,
-    fontFamily: layoutPdf?.fontFamily,
-    margins: layoutPdf?.margins,
-    lineSpacing: layoutPdf?.lineSpacing,
-    pageNumber: layoutPdf?.pageNumber,
-    sides: layoutPdf?.sides,
-  };
-}
-
 // Semáforo module-level compartido entre peticiones on-demand concurrentes.
 // Limita las instancias xelatex lanzadas desde exportSingleDocument cuando el
 // usuario abre múltiples PDFs en simultáneo (pestañas, prefetch, recargas).
@@ -208,13 +191,13 @@ export async function runExportDocuments(
 ): Promise<ExportResult[]> {
   const { config, outputDir, cwd, lang, concurrency, cliVersion, pandocVersion, cacheManager, registry, pluginFingerprint, stats } = options;
 
-  const hasPdf = config.formats.includes('pdf');
-  // Semáforo interno que limita las instancias xelatex concurrentes sin afectar EPUB.
-  // El outer mapWithConcurrency usa el límite general (concurrency); dentro del branch
+  const hasPdf = !!config.pdf;
+  // Semaforo interno que limita las instancias xelatex concurrentes sin afectar EPUB.
+  // El outer mapWithConcurrency usa el limite general (concurrency); dentro del branch
   // PDF se adquiere un slot antes de invocar xelatex y se libera al terminar — con o
-  // sin error. Así el número de documentos en vuelo es `concurrency`, pero las llamadas
-  // a xelatex activas simultáneamente se acotan a `pdfConcurrency` (~300-600 MB/proceso).
-  let xelatexSlots = hasPdf ? (Number.isInteger(config.pdfConcurrency) && config.pdfConcurrency >= 1 ? config.pdfConcurrency : 1) : 0;
+  // sin error. Asi el numero de documentos en vuelo es `concurrency`, pero las llamadas
+  // a xelatex activas simultaneamente se acotan a `pdfConcurrency` (~300-600 MB/proceso).
+  let xelatexSlots = hasPdf ? (Number.isInteger(config.pdf?.concurrency) && config.pdf!.concurrency! >= 1 ? config.pdf!.concurrency! : 1) : 0;
   const xelatexQueue: Array<() => void> = [];
   const acquireXelatex = (): Promise<void> =>
     new Promise<void>((res) => {
@@ -234,11 +217,9 @@ export async function runExportDocuments(
     }
   };
 
-  // Resolver y validar rutas globales de bibliography y csl desde ExportConfig.
-  // Las rutas vienen de _iteraciones.yaml (confiables), pero igualmente se verifica
-  // que queden dentro del proyecto para ser consistentes con la validación de frontmatter.
-  const globalBibliography = resolveExportGlobalPath(config.bibliography, cwd, 'bibliography');
-  const globalCsl = resolveExportGlobalPath(config.csl, cwd, 'csl');
+  // Resolver y validar rutas globales de bibliography y csl desde config.
+  const globalBibliography = resolveExportGlobalPath(config.pdf?.bibliography, cwd, 'bibliography');
+  const globalCsl = resolveExportGlobalPath(config.pdf?.csl, cwd, 'csl');
 
   // Hash del archivo .bib global (si existe) para invalidar caché cuando cambia.
   let bibHash = '';
@@ -349,12 +330,13 @@ export async function runExportDocuments(
     sourceHash: string,
     itemHashes: string,
   ): Promise<Array<PromiseSettledResult<{ epub?: string; pdf?: string }>>> {
-    return Promise.allSettled(
-      config.formats.map(async (format): Promise<{ epub?: string; pdf?: string }> => {
-        const outputPath = `${outputBase}.${format}`;
+    const tasks: Array<Promise<{ epub?: string; pdf?: string }>> = [];
 
-        if (format === 'epub') {
-          const cacheKey = hash(sourceHash, itemHashes, 'epub', cliVersion, pandocVersion, pluginFingerprint ?? '', bibHash, cslHash, templateHash);
+    if (config.epub) {
+      const outputPath = `${outputBase}.epub`;
+      const cacheKey = hash(sourceHash, itemHashes, 'epub', cliVersion, pandocVersion, pluginFingerprint ?? '', bibHash, cslHash, templateHash);
+      tasks.push(
+        (async () => {
           if (cacheManager && (await cacheManager.hasBinary('export', cacheKey, 'epub'))) {
             await cacheManager.copyBinaryTo('export', cacheKey, 'epub', outputPath);
             if (stats) {
@@ -363,8 +345,7 @@ export async function runExportDocuments(
             }
             return { epub: outputPath };
           }
-          await convertToEpub(exportDoc, outputPath, cwd, toPdfFormatConfig(config));
-          // Hook afterExport: permite post-procesar los bytes del archivo generado.
+          await convertToEpub(exportDoc, outputPath, cwd, config.pdf);
           const epubData = await Bun.file(outputPath).arrayBuffer();
           if (registry) {
             const afterCtx = await registry.runAfterExport({ sourcePath: exportDoc.filePath, format: 'epub', data: new Uint8Array(epubData) });
@@ -375,21 +356,26 @@ export async function runExportDocuments(
           }
           if (stats) stats.totalEpub++;
           return { epub: outputPath };
-        }
+        })(),
+      );
+    }
 
-        if (format === 'pdf') {
-          const cacheKey = hash(
-            sourceHash,
-            itemHashes,
-            'pdf',
-            config.pdfEngine,
-            cliVersion,
-            pandocVersion,
-            pluginFingerprint ?? '',
-            bibHash,
-            cslHash,
-            templateHash,
-          );
+    if (config.pdf) {
+      const outputPath = `${outputBase}.pdf`;
+      const cacheKey = hash(
+        sourceHash,
+        itemHashes,
+        'pdf',
+        config.pdf.engine,
+        cliVersion,
+        pandocVersion,
+        pluginFingerprint ?? '',
+        bibHash,
+        cslHash,
+        templateHash,
+      );
+      tasks.push(
+        (async () => {
           if (cacheManager && (await cacheManager.hasBinary('export', cacheKey, 'pdf'))) {
             await cacheManager.copyBinaryTo('export', cacheKey, 'pdf', outputPath);
             if (stats) {
@@ -402,11 +388,10 @@ export async function runExportDocuments(
           }
           await acquireXelatex();
           try {
-            await convertToPdf(exportDoc, outputPath, cwd, toPdfFormatConfig(config));
+            await convertToPdf(exportDoc, outputPath, cwd, config.pdf);
           } finally {
             releaseXelatex();
           }
-          // Hook afterExport: permite post-procesar los bytes del archivo generado.
           const pdfData = await Bun.file(outputPath).arrayBuffer();
           if (registry) {
             const afterCtx = await registry.runAfterExport({ sourcePath: exportDoc.filePath, format: 'pdf', data: new Uint8Array(pdfData) });
@@ -419,11 +404,11 @@ export async function runExportDocuments(
           pdfDone++;
           options.onExportProgress?.(exportDoc.relativePath, false);
           return { pdf: outputPath };
-        }
+        })(),
+      );
+    }
 
-        return {};
-      }),
-    );
+    return Promise.allSettled(tasks);
   }
 
   const results = await mapWithConcurrency(exportableDocs, concurrency, async (doc): Promise<ExportResult | null> => {
@@ -522,7 +507,7 @@ export async function runExportDocuments(
       globalBibliography,
       globalCsl,
       partGroups.length > 0 ? partGroups : undefined,
-      toPdfFormatConfig(config),
+      config.pdf,
     );
     if (!rawExportDoc) return null;
 
@@ -732,7 +717,7 @@ export async function exportSingleDocument(
 ): Promise<string | null> {
   const { config, outputDir, cwd, lang, registry } = options;
 
-  if (!config.formats.includes('pdf')) return null;
+  if (!config.pdf) return null;
 
   // Normalizar separadores (forward slashes) y derivar la ruta .md esperada.
   // El reemplazo es case-insensitive para tolerar URLs con .PDF o .Pdf.
@@ -772,8 +757,8 @@ export async function exportSingleDocument(
   const eventPool = renderedMap.get('event') ?? [];
 
   // Resolver rutas globales de bibliography y csl (reutiliza el helper compartido, con aviso).
-  const globalBibliography = resolveExportGlobalPath(config.bibliography, cwd, 'bibliography');
-  const globalCsl = resolveExportGlobalPath(config.csl, cwd, 'csl');
+  const globalBibliography = resolveExportGlobalPath(config.pdf?.bibliography, cwd, 'bibliography');
+  const globalCsl = resolveExportGlobalPath(config.pdf?.csl, cwd, 'csl');
 
   // Para type author con variante completa: usar assembleAuthorExportVariants.
   let rawExportDoc: ExportDocument | null;
@@ -798,7 +783,7 @@ export async function exportSingleDocument(
       globalBibliography,
       globalCsl,
       partGroups.length > 0 ? partGroups : undefined,
-      toPdfFormatConfig(config),
+      config.pdf,
     );
   }
   if (!rawExportDoc) return null;
@@ -823,11 +808,11 @@ export async function exportSingleDocument(
   // Adquirir semáforo antes de invocar xelatex para limitar instancias concurrentes.
   // Varias peticiones HTTP simultáneas (pestañas, prefetch) podrían saturar CPU/RAM
   // sin esta limitación.
-  const maxSlots = Number.isInteger(config.pdfConcurrency) && config.pdfConcurrency >= 1 ? config.pdfConcurrency : 1;
+  const maxSlots = Number.isInteger(config.pdf.concurrency) && config.pdf.concurrency >= 1 ? config.pdf.concurrency : 1;
   await acquireOnDemandXelatex(maxSlots);
   let pdfGenerated = false;
   try {
-    await convertToPdf(exportDoc, outputPath, cwd, toPdfFormatConfig(config));
+    await convertToPdf(exportDoc, outputPath, cwd, config.pdf);
     pdfGenerated = true;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
