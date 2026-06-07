@@ -1,11 +1,12 @@
 import { stat } from 'node:fs/promises';
-import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import type { CacheManager } from '../../cache/cache-manager.js';
 import { hash } from '../../cache/hasher.js';
 import type { ExportConfig } from '../../config/site-config.js';
 import { mapWithConcurrency } from '../../output/concurrency.js';
 import type { PluginRegistry } from '../../plugin/registry.js';
 import { convertToEpub, convertToPdf } from '../../services/pandoc-exporter.js';
+import { computeSlug, docHref } from '../slug.js';
 import type { BuildDocument, DocumentType } from '../types.js';
 import {
   assembleAuthorExportVariants,
@@ -151,6 +152,28 @@ function releaseOnDemandXelatex(): void {
   }
 }
 
+/**
+ * Calcula la ruta base de salida para un ExportDocument.
+ * Usa el slug (autor-título) si está disponible, con soporte para la variante
+ * `-completo` de autores. Si no hay slug, usa el nombre del archivo fuente.
+ */
+function exportOutputBase(exportDoc: ExportDocument, outputDir: string): string {
+  const dir = dirname(exportDoc.relativePath);
+  const dirPart = dir === '.' ? '' : dir;
+
+  if (exportDoc.slug) {
+    return join(outputDir, dirPart, exportDoc.slug);
+  }
+
+  const computed = computeSlug(exportDoc.metadata);
+  // Evitar usar el título genérico 'Sin título' para nombrar archivos.
+  if (computed && exportDoc.metadata.title !== 'Sin título') {
+    return join(outputDir, dirPart, computed);
+  }
+
+  return join(outputDir, exportDoc.relativePath.replace(/\.md$/, ''));
+}
+
 export async function runExportDocuments(
   renderedMap: ReadonlyMap<DocumentType, BuildDocument[]>,
   options: ExportRunOptions,
@@ -288,22 +311,6 @@ export async function runExportDocuments(
       }, 0)
     : 0;
 
-  /**
-   * Convierte el primer autor en un slug seguro para nombre de archivo.
-   * Retorna el slug seguido de un guion, o cadena vacía si no hay autores.
-   */
-  function authorSlug(authors: string[]): string {
-    if (authors.length === 0) return '';
-    const name = (authors[0] ?? '')
-      .trim()
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9-]/g, '');
-    return name ? `${name}-` : '';
-  }
-
   // Closure que genera los formatos (epub, pdf) para un ExportDocument ya ensamblado.
   // `sourceHash` es el hash del documento fuente original (para la clave de caché).
   // `itemHashes` es la cadena de hashes de los ítems incluidos (string vacío para
@@ -431,8 +438,8 @@ export async function runExportDocuments(
         fullDoc = { ...rawFull, body: fBefore.body, metadata: { ...rawFull.metadata, ...(fBefore.metadata as Partial<ExportMetadata>) } };
       }
 
-      const summaryBase = join(outputDir, summaryDoc.relativePath.replace(/\.md$/, ''));
-      const fullBase = join(outputDir, fullDoc.relativePath.replace(/\.md$/, ''));
+      const summaryBase = exportOutputBase(summaryDoc, outputDir);
+      const fullBase = exportOutputBase(fullDoc, outputDir);
 
       // Hashes de obras del autor para la clave de caché
       const authorName = (doc.frontmatter.title || '').trim().toLowerCase();
@@ -509,10 +516,7 @@ export async function runExportDocuments(
       };
     }
 
-    const authorPrefix = authorSlug(exportDoc.metadata.author);
-    const outputBase = authorPrefix
-      ? join(outputDir, dirname(exportDoc.relativePath), `${authorPrefix}${basename(exportDoc.relativePath, '.md')}`)
-      : join(outputDir, exportDoc.relativePath.replace(/\.md$/, ''));
+    const outputBase = exportOutputBase(exportDoc, outputDir);
     // Hash de items pre-computado una sola vez: compartido por todos los formatos
     // del documento. Evita la duplicación del cálculo que había en el loop secuencial.
     const itemHashes = items.map((i) => i.sourceHash).join('\0');
@@ -617,7 +621,7 @@ export function injectDownloadLinksIntoListItems(docs: BuildDocument[]): BuildDo
     const pdf = doc.templateContext['download-pdf'];
     const epub = doc.templateContext['download-epub'];
     if (typeof pdf !== 'string' && typeof epub !== 'string') continue;
-    const href = `/${doc.relativePath.replace(/\.md$/, '.html')}`;
+    const href = docHref(doc);
     linksByHref.set(href, {
       ...(typeof pdf === 'string' && { 'download-pdf': pdf }),
       ...(typeof epub === 'string' && { 'download-epub': epub }),
@@ -657,7 +661,7 @@ export function injectCoverIntoListItems(docs: BuildDocument[]): BuildDocument[]
     if (!doc.templateContext) continue;
     const cover = doc.templateContext['cover-image'];
     if (typeof cover !== 'string') continue;
-    const href = `/${doc.relativePath.replace(/\.md$/, '.html')}`;
+    const href = docHref(doc);
     coverByHref.set(href, cover);
   }
   if (coverByHref.size === 0) return docs;
@@ -786,7 +790,7 @@ export async function exportSingleDocument(
     };
   }
 
-  const outputPath = join(outputDir, exportDoc.relativePath.replace(/\.md$/, '.pdf'));
+  const outputPath = `${exportOutputBase(exportDoc, outputDir)}.pdf`;
 
   // Adquirir semáforo antes de invocar xelatex para limitar instancias concurrentes.
   // Varias peticiones HTTP simultáneas (pestañas, prefetch) podrían saturar CPU/RAM

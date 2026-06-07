@@ -110,6 +110,7 @@ export function assembleExportDocument(
     type: doc.type as ExportableDocumentType,
     body,
     metadata,
+    slug: doc.slug,
   };
 }
 
@@ -426,6 +427,7 @@ export function assembleAuthorExportVariants(
       type: 'author' as const,
       body: buildAuthorExportBody(doc, authorWorks, 'summary'),
       metadata,
+      slug: doc.slug,
     },
     full: {
       filePath: doc.filePath,
@@ -433,6 +435,7 @@ export function assembleAuthorExportVariants(
       type: 'author' as const,
       body: buildAuthorExportBody(doc, authorWorks, 'full'),
       metadata,
+      slug: doc.slug ? `${doc.slug}-completo` : undefined,
     },
   };
 }

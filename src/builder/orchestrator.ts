@@ -34,6 +34,7 @@ import { type RenderCache, type RenderStats, renderDocuments } from './pipeline/
 import { runContextPhaseWithTypeGraph } from './pipeline/runner.js';
 import { TYPE_STAGE_MAP, VALID_TYPES } from './pipeline/type-graph.js';
 import { writeDocuments } from './pipeline/write.js';
+import { computeSlug, docHref, docHtmlPath } from './slug.js';
 import type { AuthorDocumentIndex, BuildContext, BuildDocument, DocumentKind, DocumentType } from './types.js';
 
 /**
@@ -260,7 +261,7 @@ function buildEnrichedSiteContext(ctx: BuildContext, allDocs: BuildDocument[]): 
   return primaryMenuDoc
     ? {
         ...siteCtx,
-        menuHref: `/${primaryMenuDoc.relativePath.replace(/\.md$/, '.html')}`,
+        menuHref: docHref(primaryMenuDoc),
         menuTitle: escapeHtml(primaryMenuDoc.frontmatter.title || 'Menú'),
       }
     : siteCtx;
@@ -437,14 +438,14 @@ async function runFinalization(
 
   let generatedFiles: GeneratedFile[] = [];
   if (hasPlugins) {
-    const docOutputPaths = writtenDocs.map((doc) => doc.relativePath.replace(/\.md$/, '.html'));
+    const docOutputPaths = writtenDocs.map((doc) => docHtmlPath(doc));
     const assetPaths: string[] = ['css/styles.css'];
     if (ctx.siteConfig.logo?.trim()) assetPaths.push(ctx.siteConfig.logo.trim());
 
     // generateFiles: recopilar y escribir archivos adicionales de plugins (sitemap, RSS, etc.)
     const docSummaries: PluginDocumentSummary[] = writtenDocs.map((doc) => ({
       relativePath: doc.relativePath,
-      outputPath: doc.relativePath.replace(/\.md$/, '.html'),
+      outputPath: docHtmlPath(doc),
       type: doc.type ?? 'file',
       frontmatter: doc.frontmatter as Record<string, unknown>,
     }));
@@ -601,6 +602,11 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         });
       }
       allDocs = discovered;
+    }
+
+    // Compute output-path slugs for all documents.
+    for (const doc of allDocs) {
+      doc.slug = computeSlug(doc.frontmatter);
     }
 
     const enrichedSiteCtx = buildEnrichedSiteContext(ctx, allDocs);

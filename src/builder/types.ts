@@ -49,6 +49,8 @@ export interface BuildDocument extends SourceDocument {
   type?: DocumentType;
   kind?: DocumentKind;
   templatePath?: string;
+  // Asignado en orchestrator (slug computation)
+  slug?: string;
   // Asignado en render
   htmlFragment?: string;
   // Asignado en context

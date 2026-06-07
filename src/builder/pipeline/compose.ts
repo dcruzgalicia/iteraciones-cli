@@ -9,6 +9,7 @@ import { tokenize } from '../../template/lexer.js';
 import { parse } from '../../template/parser.js';
 import type { TemplateContext } from '../../template/render/context.js';
 import { renderAst } from '../../template/render/renderer.js';
+import { docHtmlPath } from '../slug.js';
 import { resolveEffectivePaths } from '../theme-resolver.js';
 import { type BuildContext, type BuildDocument, VALID_REGIONS } from '../types.js';
 
@@ -119,7 +120,7 @@ export async function composeDocuments(
     let effectiveTemplateContext: TemplateContext = doc.templateContext;
     if (registry) {
       const beforeCtx = await registry.runBeforeCompose({
-        outputRelativePath: doc.relativePath.replace(/\.md$/, '.html'),
+        outputRelativePath: docHtmlPath(doc),
         templateContext: doc.templateContext as Readonly<Record<string, unknown>>,
       });
       effectiveTemplateContext = beforeCtx.templateContext as TemplateContext;
@@ -138,7 +139,7 @@ export async function composeDocuments(
 
     // afterCompose: permite al plugin postprocesar el HTML final de la página.
     if (registry) {
-      const afterCtx = await registry.runAfterCompose({ outputRelativePath: doc.relativePath.replace(/\.md$/, '.html'), html: outputHtml });
+      const afterCtx = await registry.runAfterCompose({ outputRelativePath: docHtmlPath(doc), html: outputHtml });
       outputHtml = afterCtx.html;
     }
 
