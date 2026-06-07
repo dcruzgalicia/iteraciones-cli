@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { ExportDocument } from '../builder/export/types.js';
-import type { FormatLayout } from '../config/site-config.js';
+import type { PdfFormatConfig } from '../config/site-config.js';
 import { ConfigError, PandocError } from '../errors.js';
 
 /** Ruta base al directorio de templates LaTeX de exportación, relativa a este archivo. */
@@ -91,7 +91,7 @@ function resolveEpubCssPath(type: string, cwd?: string): string {
  * Construye el bloque YAML de metadatos que Pandoc inyectará en el documento.
  * Pandoc acepta un bloque YAML al inicio del documento delimitado por `---`.
  */
-function buildYamlHeader(doc: ExportDocument, fontdir?: string, layout?: FormatLayout, hyphenationActive?: boolean): string {
+function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfFormatConfig): string {
   const { metadata } = doc;
   const lines: string[] = ['---'];
 
@@ -117,7 +117,7 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, layout?: FormatL
   }
 
   // Hyphenation: permite desactivar guiones en la salida PDF vía configuración
-  lines.push(`hyphenation-active: ${hyphenationActive !== false ? 'true' : 'false'}`);
+  lines.push(`hyphenation-active: ${pdfFormat?.hyphenation !== false ? 'true' : 'false'}`);
 
   // Metadatos editoriales opcionales
   if (metadata.isbn) lines.push(`isbn: ${yamlString(metadata.isbn)}`);
@@ -145,23 +145,23 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, layout?: FormatL
   }
 
   // Layout editorial (desde site.export.layout.pdf)
-  if (layout) {
+  if (pdfFormat) {
     // ── Tamaño de página ────────────────────────────────────────────────────
     let geometryEmitted = false;
-    if (layout.pageSize) {
-      const classOption = STANDARD_PAGE_SIZES[layout.pageSize];
+    if (pdfFormat.pageSize) {
+      const classOption = STANDARD_PAGE_SIZES[pdfFormat.pageSize];
       if (classOption) {
         // Tamaño estándar → opción de clase (letterpaper, paper=13.97cm:21.59cm, …)
         lines.push('classoption:');
         lines.push(`  - ${classOption}`);
       } else {
-        const customMatch = CUSTOM_PAGE_SIZE_RE.exec(layout.pageSize);
+        const customMatch = CUSTOM_PAGE_SIZE_RE.exec(pdfFormat.pageSize);
         if (customMatch) {
           const [, pw, ph] = customMatch;
-          if (layout.margins) {
+          if (pdfFormat.margins) {
             // Tamaño personalizado + márgenes → geometry con paperwidth/paperheight
             lines.push('geometry:');
-            const [top, right, bottom, left] = layout.margins;
+            const [top, right, bottom, left] = pdfFormat.margins;
             lines.push(`  - top=${top}`);
             lines.push(`  - right=${right}`);
             lines.push(`  - bottom=${bottom}`);
@@ -177,36 +177,36 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, layout?: FormatL
         }
       }
     }
-    if (layout.margins && !geometryEmitted) {
+    if (pdfFormat.margins && !geometryEmitted) {
       // Márgenes sin page-size o con page-size estándar → geometry con márgenes únicamente
       lines.push('geometry:');
-      const [top, right, bottom, left] = layout.margins;
+      const [top, right, bottom, left] = pdfFormat.margins;
       lines.push(`  - top=${top}`);
       lines.push(`  - right=${right}`);
       lines.push(`  - bottom=${bottom}`);
       lines.push(`  - left=${left}`);
     }
 
-    if (layout.fontSize) lines.push(`fontsize: ${layout.fontSize}`);
-    if (layout.fontFamily) lines.push(`mainfont: ${yamlString(layout.fontFamily)}`);
-    if (layout.lineSpacing !== undefined) lines.push(`linestretch: ${layout.lineSpacing}`);
-    if (layout.numbering !== undefined) lines.push(`secnumdepth: ${layout.numbering ? 3 : -2}`);
-    if (layout.pageNumber) {
-      const [placement, align] = layout.pageNumber.split('-') as [string, string];
+    if (pdfFormat.fontSize) lines.push(`fontsize: ${pdfFormat.fontSize}`);
+    if (pdfFormat.fontFamily) lines.push(`mainfont: ${yamlString(pdfFormat.fontFamily)}`);
+    if (pdfFormat.lineSpacing !== undefined) lines.push(`linestretch: ${pdfFormat.lineSpacing}`);
+    if (pdfFormat.numbering !== undefined) lines.push(`secnumdepth: ${pdfFormat.numbering ? 3 : -2}`);
+    if (pdfFormat.pageNumber) {
+      const [placement, align] = pdfFormat.pageNumber.split('-') as [string, string];
       lines.push(`pageno-head: ${placement === 'header' ? 'true' : 'false'}`);
-      if (layout.sides === 'twoside') {
+      if (pdfFormat.sides === 'twoside') {
         const twosideMap: Record<string, string> = { left: 'LO,RE', center: 'CE,CO', right: 'LE,RO' };
         lines.push(`pageno-fancy: ${twosideMap[align] ?? 'LE,RO'}`);
       } else {
         const alignMap: Record<string, string> = { left: 'L', center: 'C', right: 'R' };
         lines.push(`pageno-fancy: ${alignMap[align] ?? 'R'}`);
       }
-    } else if (layout.sides === 'twoside') {
+    } else if (pdfFormat.sides === 'twoside') {
       // Sin page-number explícito: footer-right por defecto → LE,RO en twoside
       lines.push('pageno-fancy: LE,RO');
     }
-    if (layout.sides) {
-      lines.push(`twoside: ${layout.sides === 'twoside' ? 'true' : 'false'}`);
+    if (pdfFormat.sides) {
+      lines.push(`twoside: ${pdfFormat.sides === 'twoside' ? 'true' : 'false'}`);
     }
   }
 
@@ -236,10 +236,10 @@ function yamlString(value: string): string {
  * @param outputPath Ruta absoluta del archivo EPUB de salida.
  * @param cwd        Directorio raíz del proyecto; permite buscar templates de override locales.
  */
-export async function convertToEpub(doc: ExportDocument, outputPath: string, cwd?: string, layout?: FormatLayout): Promise<void> {
+export async function convertToEpub(doc: ExportDocument, outputPath: string, cwd?: string, pdfFormat?: PdfFormatConfig): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
-  const input = buildYamlHeader(doc, undefined, layout) + doc.body;
+  const input = buildYamlHeader(doc, undefined, pdfFormat) + doc.body;
   const args = ['pandoc', '--from', 'markdown', '--to', 'epub3', '--output', outputPath];
 
   // Hoja de estilos resuelta por tipo: {type}.epub.css con fallback a epub.css global.
@@ -280,18 +280,11 @@ export async function convertToEpub(doc: ExportDocument, outputPath: string, cwd
  * @param engine     Motor LaTeX: 'xelatex' (por defecto) o 'lualatex'.
  * @param cwd        Directorio raíz del proyecto; permite buscar templates de override locales.
  */
-export async function convertToPdf(
-  doc: ExportDocument,
-  outputPath: string,
-  engine: 'xelatex' | 'lualatex',
-  cwd?: string,
-  layout?: FormatLayout,
-  hyphenationActive?: boolean,
-): Promise<void> {
+export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?: string, pdfFormat?: PdfFormatConfig): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
   const templatePath = resolveLatexTemplatePath(doc.type, cwd);
-  const input = buildYamlHeader(doc, FONTS_DIR, layout, hyphenationActive) + doc.body;
+  const input = buildYamlHeader(doc, FONTS_DIR, pdfFormat) + doc.body;
   const args = [
     'pandoc',
     '--from',
@@ -299,7 +292,7 @@ export async function convertToPdf(
     '--to',
     'pdf',
     '--pdf-engine',
-    engine,
+    pdfFormat?.engine ?? 'xelatex',
     `--template=${templatePath}`,
     '--top-level-division=chapter',
     '--output',

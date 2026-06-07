@@ -2,7 +2,7 @@ import { stat } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import type { CacheManager } from '../../cache/cache-manager.js';
 import { hash } from '../../cache/hasher.js';
-import type { ExportConfig } from '../../config/site-config.js';
+import type { ExportConfig, PdfFormatConfig } from '../../config/site-config.js';
 import { mapWithConcurrency } from '../../output/concurrency.js';
 import type { PluginRegistry } from '../../plugin/registry.js';
 import { convertToEpub, convertToPdf } from '../../services/pandoc-exporter.js';
@@ -121,6 +121,28 @@ function resolveExportGlobalPath(raw: string | undefined, cwd: string, field: st
     return undefined;
   }
   return resolved;
+}
+
+/** Convierte ExportConfig (viejo) a PdfFormatConfig para la transicion al nuevo schema. */
+function toPdfFormatConfig(cfg: ExportConfig): PdfFormatConfig {
+  const layoutPdf = cfg.layout?.pdf;
+  return {
+    engine: cfg.pdfEngine,
+    concurrency: cfg.pdfConcurrency,
+    hyphenation: cfg.hyphenation?.pdf ?? true,
+    toc: layoutPdf?.toc,
+    tocDepth: layoutPdf?.tocDepth,
+    numbering: layoutPdf?.numbering,
+    bibliography: cfg.bibliography,
+    csl: cfg.csl,
+    pageSize: layoutPdf?.pageSize,
+    fontSize: layoutPdf?.fontSize,
+    fontFamily: layoutPdf?.fontFamily,
+    margins: layoutPdf?.margins,
+    lineSpacing: layoutPdf?.lineSpacing,
+    pageNumber: layoutPdf?.pageNumber,
+    sides: layoutPdf?.sides,
+  };
 }
 
 // Semáforo module-level compartido entre peticiones on-demand concurrentes.
@@ -341,7 +363,7 @@ export async function runExportDocuments(
             }
             return { epub: outputPath };
           }
-          await convertToEpub(exportDoc, outputPath, cwd, config.layout?.pdf);
+          await convertToEpub(exportDoc, outputPath, cwd, toPdfFormatConfig(config));
           // Hook afterExport: permite post-procesar los bytes del archivo generado.
           const epubData = await Bun.file(outputPath).arrayBuffer();
           if (registry) {
@@ -380,7 +402,7 @@ export async function runExportDocuments(
           }
           await acquireXelatex();
           try {
-            await convertToPdf(exportDoc, outputPath, config.pdfEngine, cwd, config.layout?.pdf, config.hyphenation?.pdf);
+            await convertToPdf(exportDoc, outputPath, cwd, toPdfFormatConfig(config));
           } finally {
             releaseXelatex();
           }
@@ -500,7 +522,7 @@ export async function runExportDocuments(
       globalBibliography,
       globalCsl,
       partGroups.length > 0 ? partGroups : undefined,
-      config.layout?.pdf,
+      toPdfFormatConfig(config),
     );
     if (!rawExportDoc) return null;
 
@@ -776,7 +798,7 @@ export async function exportSingleDocument(
       globalBibliography,
       globalCsl,
       partGroups.length > 0 ? partGroups : undefined,
-      config.layout?.pdf,
+      toPdfFormatConfig(config),
     );
   }
   if (!rawExportDoc) return null;
@@ -805,7 +827,7 @@ export async function exportSingleDocument(
   await acquireOnDemandXelatex(maxSlots);
   let pdfGenerated = false;
   try {
-    await convertToPdf(exportDoc, outputPath, config.pdfEngine, cwd, config.layout?.pdf, config.hyphenation?.pdf);
+    await convertToPdf(exportDoc, outputPath, cwd, toPdfFormatConfig(config));
     pdfGenerated = true;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
