@@ -101,8 +101,12 @@ export class ProgressTracker {
   advance(by: number = 1): void {
     this.phaseDone += by;
     if (!this.verbose && this.tty && this.currentPhase) {
-      const b = this.bar(this.phaseDone, this.phaseTotal);
-      this.render(`  ${PHASE_LABELS[this.currentPhase]}: ${b} ${this.phaseDone}/${this.phaseTotal}`);
+      if (this.phaseTotal > 0) {
+        const b = this.bar(this.phaseDone, this.phaseTotal);
+        this.render(`  ${PHASE_LABELS[this.currentPhase]}: ${b} ${this.phaseDone}/${this.phaseTotal}`);
+      } else {
+        this.render(`  ${PHASE_LABELS[this.currentPhase]}: ${this.phaseDone}`);
+      }
     }
   }
 

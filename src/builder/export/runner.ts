@@ -70,6 +70,12 @@ export interface ExportRunOptions {
   pluginFingerprint?: string;
   /** Acumulador de estadísticas de exportación. Se muta durante la ejecución. */
   stats?: ExportStats;
+  /**
+   * Callback invocado por cada formato exportado (PDF/EPUB) para reporte de progreso.
+   * En modo verbose se espera que muestre una línea por archivo;
+   * en modo normal avanza la barra de progreso.
+   */
+  onExportProgress?: (relativePath: string, cacheHit: boolean) => void;
 }
 
 /** Contadores acumulativos de la fase de exportación; se mutan durante la ejecución. */
@@ -356,9 +362,7 @@ export async function runExportDocuments(
               stats.cacheHitsPdf++;
             }
             pdfDone++;
-            if (pdfTotal > 2) {
-              process.stderr.write(`[export] PDF ${pdfDone}/${pdfTotal} — ${exportDoc.relativePath} (cache)\n`);
-            }
+            options.onExportProgress?.(exportDoc.relativePath, true);
             return { pdf: outputPath };
           }
           await acquireXelatex();
@@ -378,9 +382,7 @@ export async function runExportDocuments(
           }
           if (stats) stats.totalPdf++;
           pdfDone++;
-          if (pdfTotal > 2) {
-            process.stderr.write(`[export] PDF ${pdfDone}/${pdfTotal} — ${exportDoc.relativePath} (generado)\n`);
-          }
+          options.onExportProgress?.(exportDoc.relativePath, false);
           return { pdf: outputPath };
         }
 
