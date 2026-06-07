@@ -11,6 +11,7 @@
     <h2 class="text-lg font-bold tracking-tight text-stone-100">$title$</h2>
     $endif$
     $if(body)$
+    $if(table-of-contents)$$table-of-contents$$endif$
     <div class="mt-1 text-sm text-stone-400">$body$</div>
     $endif$
   </header>

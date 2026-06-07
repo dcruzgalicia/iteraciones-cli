@@ -19,6 +19,7 @@
     $endif$
   </header>
   $if(body)$
+  $if(table-of-contents)$$table-of-contents$$endif$
   <div class="prose prose-accent lg:prose-lg max-w-none">$body$</div>
   $endif$ $if(list-items)$
   <div class="divide-y divide-accent-200/50">
