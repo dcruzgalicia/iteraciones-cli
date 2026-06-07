@@ -23,6 +23,7 @@ import {
   injectDownloadLinksIntoListItems,
   runExportDocuments,
 } from './export/runner.js';
+import { EXPORTABLE_TYPES } from './export/types.js';
 import { buildDocumentGraph } from './graph-exporter.js';
 import { escapeHtml } from './html.js';
 import { classifyDocuments } from './pipeline/classify.js';
@@ -697,7 +698,22 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     const exportStats: ExportStats = { totalEpub: 0, totalPdf: 0, cacheHitsEpub: 0, cacheHitsPdf: 0 };
     const exportConfig = ctx.siteConfig.export;
     const hasExport = exportConfig !== undefined && !options.noExport;
-    if (hasExport) progress.startPhase('export');
+    if (hasExport) {
+      // Calcular total de PDFs para la barra de progreso (misma lógica que runExportDocuments).
+      let exportTotal = 0;
+      if (exportConfig.formats.includes('pdf')) {
+        for (const type of EXPORTABLE_TYPES) {
+          const docs = (renderedMap.get(type) ?? []).filter((d) => d.kind !== 'block');
+          for (const d of docs) {
+            const raw = d.frontmatter['export'];
+            const skipped = typeof raw === 'object' && raw !== null && !Array.isArray(raw) && (raw as Record<string, unknown>)['skip'] === true;
+            if (skipped) continue;
+            exportTotal += d.type === 'author' ? 2 : 1;
+          }
+        }
+      }
+      progress.startPhase('export', exportTotal);
+    }
     const exportRenderedMap = affectedPaths
       ? new Map<DocumentType, BuildDocument[]>(
           [...renderedMap].map(([type, docs]) => [type, docs.filter((doc) => affectedPaths.has(doc.relativePath))]),
