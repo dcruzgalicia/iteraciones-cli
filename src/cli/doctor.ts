@@ -19,7 +19,7 @@ export async function runDoctor(cwd: string, options: { fix?: boolean } = {}): P
   try {
     const { loadSiteConfig } = await import('../config/config-loader.js');
     const cfg = await loadSiteConfig(cwd);
-    if (cfg.export?.pdfEngine) latexEngine = cfg.export.pdfEngine;
+    if (cfg.format?.pdf?.engine) latexEngine = cfg.format.pdf.engine;
   } catch {
     // Si no hay config o falla la carga, usar xelatex por defecto.
   }
