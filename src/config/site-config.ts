@@ -209,7 +209,7 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   baseUrl: undefined,
   plugins: [],
   pagination: DEFAULT_PAGINATION,
-  format: undefined,
+  format: { html: DEFAULT_HTML_FORMAT },
   listItemsLimit: 10,
   theme: undefined,
   accent: 'lime',
