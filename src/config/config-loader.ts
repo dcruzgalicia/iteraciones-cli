@@ -86,14 +86,6 @@ function parseExportConfig(raw: unknown): ExportConfig | undefined {
   const pdfEngine = obj['pdf-engine'] === 'lualatex' ? 'lualatex' : 'xelatex';
   const bibliography = typeof obj.bibliography === 'string' && obj.bibliography.trim() ? obj.bibliography.trim() : undefined;
   const csl = typeof obj.csl === 'string' && obj.csl.trim() ? obj.csl.trim() : undefined;
-  const rawTemplate = obj.template;
-  const template =
-    rawTemplate === 'literary' || rawTemplate === 'academic' || rawTemplate === 'anthology' || rawTemplate === 'technical' ? rawTemplate : undefined;
-  if (rawTemplate !== undefined && template === undefined) {
-    process.stderr.write(
-      `[iteraciones] export.template: valor desconocido "${String(rawTemplate)}". Los valores válidos son "literary", "academic", "anthology", "technical".\n`,
-    );
-  }
   const rawPdfConcurrency = obj['pdf-concurrency'];
   const pdfConcurrency =
     typeof rawPdfConcurrency === 'number' && Number.isInteger(rawPdfConcurrency) && rawPdfConcurrency >= 1 ? rawPdfConcurrency : 2;
@@ -109,7 +101,6 @@ function parseExportConfig(raw: unknown): ExportConfig | undefined {
     pdfConcurrency,
     ...(bibliography !== undefined ? { bibliography } : {}),
     ...(csl !== undefined ? { csl } : {}),
-    ...(template !== undefined ? { template } : {}),
     ...(layout ? { layout } : {}),
   };
 }

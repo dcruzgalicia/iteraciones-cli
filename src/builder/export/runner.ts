@@ -410,15 +410,7 @@ export async function runExportDocuments(
     // Author: exportación especial con dos variantes (perfil y completo)
     if (doc.type === 'author') {
       const fileDocs = renderedMap.get('file') ?? [];
-      const { summary: rawSummary, full: rawFull } = assembleAuthorExportVariants(
-        doc,
-        [...fileDocs],
-        lang,
-        cwd,
-        globalBibliography,
-        globalCsl,
-        config.template,
-      );
+      const { summary: rawSummary, full: rawFull } = assembleAuthorExportVariants(doc, [...fileDocs], lang, cwd, globalBibliography, globalCsl);
 
       let summaryDoc = rawSummary;
       let fullDoc = rawFull;
@@ -487,16 +479,7 @@ export async function runExportDocuments(
       items = resolveEventsForExport(doc, eventPool);
     }
 
-    const rawExportDoc = assembleExportDocument(
-      doc,
-      items,
-      lang,
-      cwd,
-      globalBibliography,
-      globalCsl,
-      config.template,
-      partGroups.length > 0 ? partGroups : undefined,
-    );
+    const rawExportDoc = assembleExportDocument(doc, items, lang, cwd, globalBibliography, globalCsl, partGroups.length > 0 ? partGroups : undefined);
     if (!rawExportDoc) return null;
 
     // Hook beforeExport: permite a los plugins modificar el body y/o los metadatos
@@ -755,7 +738,7 @@ export async function exportSingleDocument(
   let rawExportDoc: ExportDocument | null;
   if (targetDoc.type === 'author' && isCompleto) {
     const fileDocs = renderedMap.get('file') ?? [];
-    const { full } = assembleAuthorExportVariants(targetDoc, [...fileDocs], lang, cwd, globalBibliography, globalCsl, config.template);
+    const { full } = assembleAuthorExportVariants(targetDoc, [...fileDocs], lang, cwd, globalBibliography, globalCsl);
     rawExportDoc = full;
   } else {
     let items: BuildDocument[] = [];
@@ -766,16 +749,7 @@ export async function exportSingleDocument(
     } else if (targetDoc.type === 'events') {
       items = resolveEventsForExport(targetDoc, eventPool);
     }
-    rawExportDoc = assembleExportDocument(
-      targetDoc,
-      items,
-      lang,
-      cwd,
-      globalBibliography,
-      globalCsl,
-      config.template,
-      partGroups.length > 0 ? partGroups : undefined,
-    );
+    rawExportDoc = assembleExportDocument(targetDoc, items, lang, cwd, globalBibliography, globalCsl, partGroups.length > 0 ? partGroups : undefined);
   }
   if (!rawExportDoc) return null;
 

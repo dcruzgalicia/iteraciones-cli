@@ -47,34 +47,19 @@ const EPUB_EMBED_FONTS: readonly string[] = [
 ];
 
 /**
- * Resuelve la ruta al template LaTeX usando el tipo del documento como eje primario.
+ * Resuelve la ruta al template LaTeX usando el tipo del documento.
  *
  * Cadena de resolución (primera ruta existente):
- *   1. {cwd}/pandoc/export/{type}-{variant}.latex  — override local con variante
- *   2. {cwd}/pandoc/export/{type}.latex            — override local base
- *   3. built-in pandoc/export/{type}-{variant}.latex
- *   4. built-in pandoc/export/{type}.latex
+ *   1. {cwd}/pandoc/export/{type}.latex  — override local
+ *   2. built-in pandoc/export/{type}.latex
  *
  * Si ninguna ruta existe, lanza ConfigError.
  */
-function resolveLatexTemplatePath(type: string, variant: string | undefined, cwd?: string): string {
-  // 1-2. Override local (proyecto del usuario)
-  if (cwd && variant) {
-    const p = join(cwd, 'pandoc', 'export', `${type}-${variant}.latex`);
-    if (existsSync(p)) return p;
-  }
+function resolveLatexTemplatePath(type: string, cwd?: string): string {
   if (cwd) {
     const p = join(cwd, 'pandoc', 'export', `${type}.latex`);
     if (existsSync(p)) return p;
   }
-  // 3. Built-in tipo+variante
-  if (variant) {
-    const p = join(TEMPLATES_DIR, `${type}-${variant}.latex`);
-    if (existsSync(p)) return p;
-    // Variante solicitada pero sin template específico; se usa el template base del tipo.
-    process.stderr.write(`[export] template ${type}-${variant}.latex no encontrado; usando ${type}.latex\n`);
-  }
-  // 4. Built-in tipo base
   const builtin = join(TEMPLATES_DIR, `${type}.latex`);
   if (existsSync(builtin)) return builtin;
 
@@ -144,7 +129,7 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, layout?: FormatL
     }
   }
 
-  // Metadatos académicos opcionales (usados por el template scrartcl-academic)
+  // Metadatos académicos opcionales
   if (metadata.abstract) lines.push(`abstract: ${yamlString(metadata.abstract)}`);
   if (metadata.keywords && metadata.keywords.length > 0) {
     lines.push('keywords:');
@@ -298,7 +283,7 @@ export async function convertToPdf(
 ): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
-  const templatePath = resolveLatexTemplatePath(doc.type, doc.metadata.template, cwd);
+  const templatePath = resolveLatexTemplatePath(doc.type, cwd);
   const input = buildYamlHeader(doc, FONTS_DIR, layout) + doc.body;
   const args = [
     'pandoc',

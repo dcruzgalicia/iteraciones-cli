@@ -1,10 +1,3 @@
-/**
- * Variante de template LaTeX especializado para exportación PDF.
- * - `literary` / `academic`: compatibles con documentclass `scrartcl`.
- * - `anthology` / `technical`: compatibles con documentclass `scrbook`.
- */
-export type ExportLatexTemplate = 'literary' | 'academic' | 'anthology' | 'technical';
-
 export type PageSize = 'half-letter' | 'letter' | 'legal' | 'executive' | 'a3' | 'a4' | 'a5' | 'b4' | 'b5' | 'tabloid' | 'pocket' | (string & {});
 
 export type PageNumberPlacement = 'footer-left' | 'footer-center' | 'footer-right' | 'header-left' | 'header-center' | 'header-right';
@@ -58,16 +51,6 @@ export interface ExportConfig {
    * Se usa como fallback cuando el frontmatter de un documento no define `editorial.csl`.
    */
   csl?: string;
-  /**
-   * Variante de template LaTeX a usar por defecto en todos los documentos exportados a PDF.
-   * Puede sobreescribirse a nivel de documento mediante `editorial.template` en el frontmatter.
-   *
-   * - `'literary'` / `'academic'`: para documentos `scrartcl` (file, event, author).
-   * - `'anthology'` / `'technical'`: para documentos `scrbook` (collection, events).
-   *
-   * Si la variante no es compatible con el `documentclass` del documento se usa el template base.
-   */
-  template?: ExportLatexTemplate;
   /**
    * Número máximo de documentos que se exportan a PDF en paralelo.
    * xelatex no es thread-safe y consume memoria significativa (~300-600 MB/instancia);

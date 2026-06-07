@@ -525,79 +525,10 @@ describe('resolveItemsForExport', () => {
 });
 
 // ---------------------------------------------------------------------------
-// assembleExportDocument — campos template, abstract y keywords
+// assembleExportDocument — campos abstract y keywords
 // ---------------------------------------------------------------------------
 
-describe('assembleExportDocument — template / abstract / keywords', () => {
-  test('editorial.template válido se propaga a metadata.template', () => {
-    const doc = makeDoc({
-      type: 'file',
-      frontmatter: {
-        title: 'Doc',
-        date: '',
-        author: [],
-        speakers: [],
-        type: 'file',
-        keywords: [],
-        region: '',
-        block: false,
-        draft: false,
-        items: [],
-        editorial: { template: 'literary' },
-      },
-    });
-    const result = assembleExportDocument(doc, [], 'es', '/project');
-    expect(result!.metadata.template).toBe('literary');
-  });
-
-  test('editorial.template inválido produce metadata.template === undefined', () => {
-    const doc = makeDoc({
-      type: 'file',
-      frontmatter: {
-        title: 'Doc',
-        date: '',
-        author: [],
-        speakers: [],
-        type: 'file',
-        keywords: [],
-        region: '',
-        block: false,
-        draft: false,
-        items: [],
-        editorial: { template: 'novelita' },
-      },
-    });
-    const result = assembleExportDocument(doc, [], 'es', '/project');
-    expect(result!.metadata.template).toBeUndefined();
-  });
-
-  test('globalTemplate se usa como fallback cuando el frontmatter no define template', () => {
-    const doc = makeDoc({ type: 'file' });
-    const result = assembleExportDocument(doc, [], 'es', '/project', undefined, undefined, 'academic');
-    expect(result!.metadata.template).toBe('academic');
-  });
-
-  test('editorial.template sobreescribe globalTemplate', () => {
-    const doc = makeDoc({
-      type: 'file',
-      frontmatter: {
-        title: 'Doc',
-        date: '',
-        author: [],
-        speakers: [],
-        type: 'file',
-        keywords: [],
-        region: '',
-        block: false,
-        draft: false,
-        items: [],
-        editorial: { template: 'literary' },
-      },
-    });
-    const result = assembleExportDocument(doc, [], 'es', '/project', undefined, undefined, 'academic');
-    expect(result!.metadata.template).toBe('literary');
-  });
-
+describe('assembleExportDocument — abstract / keywords', () => {
   test('editorial.abstract se propaga a metadata.abstract', () => {
     const doc = makeDoc({
       type: 'file',
@@ -922,7 +853,7 @@ describe('parts en colecciones (exportación)', () => {
 
     const parts = resolvePartsForExport(collection, pool);
     const items = resolveItemsForExport(collection, pool);
-    const exportDoc = assembleExportDocument(collection, items, 'es', '/project', undefined, undefined, undefined, parts);
+    const exportDoc = assembleExportDocument(collection, items, 'es', '/project', undefined, undefined, parts);
     expect(exportDoc).not.toBeNull();
     const body = exportDoc!.body;
 
@@ -958,7 +889,7 @@ describe('parts en colecciones (exportación)', () => {
 
     const parts = resolvePartsForExport(collection, pool);
     const items = resolveItemsForExport(collection, pool);
-    const exportDoc = assembleExportDocument(collection, items, 'es', '/project', undefined, undefined, undefined, parts);
+    const exportDoc = assembleExportDocument(collection, items, 'es', '/project', undefined, undefined, parts);
     const body = exportDoc!.body;
 
     // Debe haber \newpage entre items pero no antes de \part
@@ -1057,7 +988,7 @@ describe('parts en colecciones (exportación)', () => {
 
     const parts = resolvePartsForExport(collection, pool);
     const items = resolveItemsForExport(collection, pool);
-    const exportDoc = assembleExportDocument(collection, items, 'es', '/project', undefined, undefined, undefined, parts);
+    const exportDoc = assembleExportDocument(collection, items, 'es', '/project', undefined, undefined, parts);
     const body = exportDoc!.body;
 
     // Orden: items sueltos → partes
@@ -1238,7 +1169,7 @@ describe('assembleBookBody — heading shift', () => {
     const pool = [item];
     const parts = resolvePartsForExport(collection, pool);
     const items = resolveItemsForExport(collection, pool);
-    const exportDoc = assembleExportDocument(collection, items, 'es', '/project', undefined, undefined, undefined, parts);
+    const exportDoc = assembleExportDocument(collection, items, 'es', '/project', undefined, undefined, parts);
     const body = exportDoc!.body;
 
     expect(body).toContain('\\addpart{Parte Única}');
@@ -1309,7 +1240,7 @@ describe('assembleBookBody — heading shift', () => {
     const pool = [prologo, cap1];
     const parts = resolvePartsForExport(collection, pool);
     const items = resolveItemsForExport(collection, pool);
-    const exportDoc = assembleExportDocument(collection, items, 'es', '/project', undefined, undefined, undefined, parts);
+    const exportDoc = assembleExportDocument(collection, items, 'es', '/project', undefined, undefined, parts);
     const body = exportDoc!.body;
 
     // Loose item body heading shifted +2
