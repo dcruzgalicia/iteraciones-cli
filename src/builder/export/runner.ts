@@ -479,7 +479,16 @@ export async function runExportDocuments(
       items = resolveEventsForExport(doc, eventPool);
     }
 
-    const rawExportDoc = assembleExportDocument(doc, items, lang, cwd, globalBibliography, globalCsl, partGroups.length > 0 ? partGroups : undefined);
+    const rawExportDoc = assembleExportDocument(
+      doc,
+      items,
+      lang,
+      cwd,
+      globalBibliography,
+      globalCsl,
+      partGroups.length > 0 ? partGroups : undefined,
+      config.layout?.pdf,
+    );
     if (!rawExportDoc) return null;
 
     // Hook beforeExport: permite a los plugins modificar el body y/o los metadatos
@@ -749,7 +758,16 @@ export async function exportSingleDocument(
     } else if (targetDoc.type === 'events') {
       items = resolveEventsForExport(targetDoc, eventPool);
     }
-    rawExportDoc = assembleExportDocument(targetDoc, items, lang, cwd, globalBibliography, globalCsl, partGroups.length > 0 ? partGroups : undefined);
+    rawExportDoc = assembleExportDocument(
+      targetDoc,
+      items,
+      lang,
+      cwd,
+      globalBibliography,
+      globalCsl,
+      partGroups.length > 0 ? partGroups : undefined,
+      config.layout?.pdf,
+    );
   }
   if (!rawExportDoc) return null;
 

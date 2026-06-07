@@ -1,4 +1,5 @@
 import { dirname, join, resolve } from 'node:path';
+import type { FormatLayout } from '../../config/site-config.js';
 import type { BuildDocument, DocumentType } from '../types.js';
 import {
   EXPORTABLE_TYPES,
@@ -55,6 +56,7 @@ export function assembleExportDocument(
   globalBibliography?: string,
   globalCsl?: string,
   parts?: ExportCollectionPart[],
+  layout?: FormatLayout,
 ): ExportDocument | null {
   if (!doc.type || !EXPORTABLE_TYPES.has(doc.type)) return null;
 
@@ -76,6 +78,9 @@ export function assembleExportDocument(
       ? safeEditorialPath(rawEditorial['csl'], cwd, 'editorial.csl')
       : (globalCsl ?? (bibliography ? join(import.meta.dir, '../../../pandoc/csl/apa-7.csl') : undefined));
 
+  const tocDepth = layout?.tocDepth;
+  const toc = tocDepth !== undefined ? tocDepth > 0 : documentclass === 'scrbook';
+
   const metadata: ExportMetadata = {
     title: doc.frontmatter.title || 'Sin título',
     author: doc.frontmatter.author,
@@ -89,7 +94,8 @@ export function assembleExportDocument(
     bibliography,
     csl,
     documentclass,
-    toc: documentclass === 'scrbook',
+    toc,
+    tocDepth: tocDepth ?? undefined,
     abstract: typeof rawEditorial['abstract'] === 'string' && rawEditorial['abstract'].trim() ? rawEditorial['abstract'].trim() : undefined,
     keywords: Array.isArray(rawEditorial['keywords'])
       ? (rawEditorial['keywords'] as unknown[]).filter((k): k is string => typeof k === 'string')
