@@ -1,5 +1,6 @@
 import type { TemplateContext } from '../../template/render/context.js';
 import { escapeHtml } from '../html.js';
+import { docHref } from '../slug.js';
 import type { AuthorDocumentIndex, BuildDocument } from '../types.js';
 
 /**
@@ -17,7 +18,7 @@ export function resolveAuthorHref(authors: string[], index: AuthorDocumentIndex 
   if (!index) return undefined;
   for (const name of authors) {
     const doc = index.get(normalizeForComparison(name));
-    if (doc) return `/${doc.relativePath.replace(/\.md$/, '.html')}`;
+    if (doc) return docHref(doc);
   }
   return undefined;
 }
@@ -50,7 +51,7 @@ export function buildAuthorContext(doc: BuildDocument, fileDocs: BuildDocument[]
   const matched = authorName ? fileDocs.filter((file) => file.frontmatter.author.some((a) => normalizeForComparison(a) === authorName)) : [];
 
   const listItems = matched.map((file) => ({
-    href: `/${file.relativePath.replace(/\.md$/, '.html')}`,
+    href: docHref(file),
     title: file.frontmatter.title,
     author: file.frontmatter.author.join(', '),
     body: '',
@@ -100,7 +101,7 @@ export function buildAuthorContext(doc: BuildDocument, fileDocs: BuildDocument[]
  */
 export function buildAuthorsContext(doc: BuildDocument, authorDocs: BuildDocument[], paginationCtx?: Record<string, unknown>): TemplateContext {
   const authors = authorDocs.map((authorDoc) => ({
-    href: `/${authorDoc.relativePath.replace(/\.md$/, '.html')}`,
+    href: docHref(authorDoc),
     title: authorDoc.frontmatter.title,
     body: authorDoc.htmlFragment ?? '',
     ...(authorDoc.frontmatter.abstract !== undefined && { abstract: authorDoc.frontmatter.abstract }),
@@ -151,7 +152,7 @@ export function buildRelatedAuthorsContext(doc: BuildDocument, authorIndex: Auth
     .map((name) => authorIndex.get(normalizeForComparison(name)))
     .filter((a): a is BuildDocument => a !== undefined && a.relativePath !== doc.relativePath)
     .map((authorDoc) => ({
-      href: `/${authorDoc.relativePath.replace(/\.md$/, '.html')}`,
+      href: docHref(authorDoc),
       title: authorDoc.frontmatter.title,
       body: authorDoc.htmlFragment ?? '',
     }));

@@ -1,6 +1,7 @@
 import type { CollectionPart } from '../../loader/frontmatter.js';
 import type { TemplateContext } from '../../template/render/context.js';
 import { escapeHtml } from '../html.js';
+import { docHref } from '../slug.js';
 import type { AuthorDocumentIndex, BuildDocument } from '../types.js';
 import { resolveAuthorHref } from './authors.js';
 
@@ -83,7 +84,7 @@ export function buildCollectionContext(
 function itemToTemplateItem(item: BuildDocument, authorIndex?: AuthorDocumentIndex): PartGroupTemplateItem {
   const authorHref = resolveAuthorHref(item.frontmatter.author, authorIndex);
   return {
-    href: `/${item.relativePath.replace(/\.md$/, '.html')}`,
+    href: docHref(item),
     title: item.frontmatter.title,
     author: item.frontmatter.author.join(', '),
     'author-href': authorHref,

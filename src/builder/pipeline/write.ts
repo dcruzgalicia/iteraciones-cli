@@ -1,16 +1,8 @@
 import { join } from 'node:path';
 import { mapWithConcurrency } from '../../output/concurrency.js';
 import { writeFile } from '../../output/writer.js';
+import { docHtmlPath } from '../slug.js';
 import type { BuildContext, BuildDocument } from '../types.js';
-
-/**
- * Determina la ruta de salida de un documento: reemplaza la extensión `.md`
- * por `.html` y la une con `outputDir`.
- */
-function resolveOutputPath(relativePath: string, outputDir: string): string {
-  const htmlPath = relativePath.replace(/\.md$/, '.html');
-  return join(outputDir, htmlPath);
-}
 
 /**
  * Escribe el HTML compuesto de cada documento en `ctx.outputDir`.
@@ -23,7 +15,7 @@ export async function writeDocuments(docs: BuildDocument[], ctx: BuildContext): 
       throw new Error(`writeDocuments: outputHtml no definido en "${doc.relativePath}"`);
     }
 
-    const outputPath = resolveOutputPath(doc.relativePath, ctx.outputDir);
+    const outputPath = join(ctx.outputDir, docHtmlPath(doc));
     await writeFile(outputPath, doc.outputHtml);
     return { ...doc, outputPath };
   });

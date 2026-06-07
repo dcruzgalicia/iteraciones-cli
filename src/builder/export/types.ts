@@ -75,6 +75,8 @@ export interface ExportDocument {
   type: ExportableDocumentType;
   body: string;
   metadata: ExportMetadata;
+  /** Slug computado del documento fuente, para nombrar archivos de salida. */
+  slug?: string;
 }
 
 /** Resultado de exportar un documento: rutas a los archivos generados. */

@@ -1,5 +1,6 @@
 import type { TemplateContext } from '../../template/render/context.js';
 import { escapeHtml } from '../html.js';
+import { docHref } from '../slug.js';
 import type { AuthorDocumentIndex, BuildDocument } from '../types.js';
 
 /**
@@ -28,7 +29,7 @@ function resolveSpeakers(
         if (authorDoc && authorDoc.relativePath !== docRelativePath) {
           return {
             title: authorDoc.frontmatter.title,
-            href: `/${authorDoc.relativePath.replace(/\.md$/, '.html')}`,
+            href: docHref(authorDoc),
             body: authorDoc.htmlFragment ?? '',
           };
         }
@@ -41,9 +42,7 @@ function resolveSpeakers(
       const authorDoc = authorIndex.get(key);
       return {
         title,
-        href:
-          speaker.href?.trim() ||
-          (authorDoc && authorDoc.relativePath !== docRelativePath ? `/${authorDoc.relativePath.replace(/\.md$/, '.html')}` : undefined),
+        href: speaker.href?.trim() || (authorDoc && authorDoc.relativePath !== docRelativePath ? docHref(authorDoc) : undefined),
         body: speaker.body?.trim() || (authorDoc && authorDoc.relativePath !== docRelativePath ? (authorDoc.htmlFragment ?? undefined) : undefined),
       };
     })
@@ -130,7 +129,7 @@ export function buildEventsContext(
   buildDate?: Date,
 ): TemplateContext {
   const formatItem = (event: BuildDocument) => ({
-    href: `/${event.relativePath.replace(/\.md$/, '.html')}`,
+    href: docHref(event),
     title: event.frontmatter.title,
     date: event.frontmatter.date,
     ...(typeof event.frontmatter.time === 'string' && { time: event.frontmatter.time }),
