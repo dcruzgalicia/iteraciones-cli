@@ -80,26 +80,76 @@ export interface HtmlConfig {
   tocDepth: number;
 }
 
+// ── Nuevo schema `format:` (estilo Quarto) ──
+
+export interface PaginationConfig {
+  limit: number;
+}
+
+export interface HtmlFormatConfig {
+  theme?: string;
+  accent?: string;
+  math?: 'katex' | 'mathjax';
+  toc: boolean;
+  tocDepth: number;
+  hyphenation: boolean;
+}
+
+export interface PdfFormatConfig {
+  engine: 'xelatex' | 'lualatex';
+  concurrency: number;
+  toc?: boolean;
+  tocDepth?: number;
+  numbering?: boolean;
+  hyphenation: boolean;
+  bibliography?: string;
+  csl?: string;
+  pageSize?: string;
+  fontSize?: string;
+  fontFamily?: string;
+  margins?: [string, string, string, string];
+  lineSpacing?: number;
+  pageNumber?: PageNumberPlacement;
+  sides?: Sides;
+}
+
+export interface EpubFormatConfig {
+  toc?: boolean;
+  tocDepth?: number;
+  bibliography?: string;
+  csl?: string;
+}
+
+export interface FormatConfig {
+  html?: HtmlFormatConfig;
+  pdf?: PdfFormatConfig;
+  epub?: EpubFormatConfig;
+}
+
+// ── SiteConfig transicional (campos nuevos + viejos) ──
+
 export interface SiteConfig {
   title: string;
   tagline: string;
   lang: string;
   logo: string;
-  listItemsLimit: number;
-  plugins: string[];
-  theme: string | undefined;
-  accent: string;
-  /** URL base del sitio publicado, p. ej. `https://ejemplo.com`. Opcional. */
   baseUrl: string | undefined;
-  /** Configuración de exportación PDF/EPUB. `undefined` si no se configuró. */
-  export: ExportConfig | undefined;
-  /**
-   * Motor de matemáticas para la salida HTML. `undefined` si no se configuró.
-   * - `'katex'`: carga KaTeX vía CDN (recomendado, más rápido).
-   * - `'mathjax'`: carga MathJax vía CDN (mayor compatibilidad).
-   */
+  plugins: string[];
+  /** Configuración de paginación. */
+  pagination: PaginationConfig;
+  /** Configuración por formato de salida. `undefined` si no se configuró. */
+  format: FormatConfig | undefined;
+  /** @deprecated Usar `pagination.limit`. */
+  listItemsLimit: number;
+  /** @deprecated Usar `format.html.theme`. */
+  theme: string | undefined;
+  /** @deprecated Usar `format.html.accent`. */
+  accent: string;
+  /** @deprecated Usar `format.html.math`. */
   math: 'katex' | 'mathjax' | undefined;
-  /** Configuración de la salida HTML. */
+  /** @deprecated Usar `format`. */
+  export: ExportConfig | undefined;
+  /** @deprecated Usar `format.html`. */
   html: HtmlConfig;
 }
 
@@ -132,17 +182,38 @@ export const KNOWN_ACCENT_COLORS = new Set([
   'rose',
 ]);
 
+export const DEFAULT_PAGINATION: PaginationConfig = { limit: 10 };
+
+export const DEFAULT_HTML_FORMAT: HtmlFormatConfig = {
+  theme: undefined,
+  accent: 'lime',
+  math: undefined,
+  toc: false,
+  tocDepth: 6,
+  hyphenation: false,
+};
+
+export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
+  engine: 'xelatex',
+  concurrency: 2,
+  hyphenation: true,
+};
+
+export const DEFAULT_EPUB_FORMAT: EpubFormatConfig = {};
+
 export const DEFAULT_SITE_CONFIG: SiteConfig = {
   title: 'Iteraciones',
   tagline: 'escribir, compartir, re-existir',
   lang: 'es',
   logo: '',
-  listItemsLimit: 10,
+  baseUrl: undefined,
   plugins: [],
+  pagination: DEFAULT_PAGINATION,
+  format: undefined,
+  listItemsLimit: 10,
   theme: undefined,
   accent: 'lime',
-  baseUrl: undefined,
-  export: undefined,
   math: undefined,
+  export: undefined,
   html: { toc: false, tocDepth: 6 },
 };
