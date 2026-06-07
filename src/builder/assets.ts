@@ -22,7 +22,7 @@ export async function buildAssets(
   options: { noTailwind?: boolean; cacheManager?: CacheManager } = {},
 ): Promise<string> {
   const tasks: Promise<void>[] = [copyFonts(outputDir), copyLogo(outputDir, cwd, siteConfig)];
-  if (!options.noTailwind) tasks.push(generateCss(outputDir, cwd, siteConfig.format?.html?.accent ?? siteConfig.accent, options.cacheManager));
+  if (!options.noTailwind) tasks.push(generateCss(outputDir, cwd, siteConfig.format?.html?.accent ?? 'lime', options.cacheManager));
   await Promise.all(tasks);
   // Cuando noTailwind está activo no se genera styles.css, así que retornamos ''
   // para que buildSiteContext produzca css:[] y el template omita el <link>.

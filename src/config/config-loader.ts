@@ -7,16 +7,10 @@ import {
   DEFAULT_PDF_FORMAT,
   DEFAULT_SITE_CONFIG,
   type EpubFormatConfig,
-  type ExportConfig,
-  type ExportHyphenationConfig,
   type FormatConfig,
-  type FormatLayout,
-  type HtmlConfig,
   type HtmlFormatConfig,
   KNOWN_ACCENT_COLORS,
-  type LayoutConfig,
   type PageNumberPlacement,
-  type PageSize,
   type PaginationConfig,
   type PdfFormatConfig,
   type Sides,
@@ -48,31 +42,8 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
   if (!parsed || typeof parsed !== 'object') return { ...DEFAULT_SITE_CONFIG, plugins: [...DEFAULT_SITE_CONFIG.plugins] };
 
   const root = parsed as Record<string, unknown>;
-
-  // Detectar schema nuevo: clave `format:` a nivel raiz
-  const hasFormat = typeof root.format === 'object' && root.format !== null;
-
-  if (hasFormat) {
-    return buildConfigFromNewSchema(root);
-  }
-
-  // Schema viejo: advertir si se detectan claves antiguas que migraron a `format:`
   const site = root.site && typeof root.site === 'object' ? (root.site as Record<string, unknown>) : {};
-  if (site.export !== undefined || site.html !== undefined || site['list-items'] !== undefined || site.math !== undefined) {
-    process.stderr.write(
-      '[iteraciones] El schema de configuracion en _iteraciones.yaml usa el formato antiguo.\n' +
-        '  Las claves site.export, site.html, site.list-items y site.math seran eliminadas en una version futura.\n' +
-        '  Migra al nuevo schema con la clave "format:" a nivel raiz. Consulta docs/configuration.md.\n',
-    );
-  }
 
-  return buildConfigFromOldSchema(root);
-}
-
-// ── Schema nuevo ──────────────────────────────────────────────────────────
-
-function buildConfigFromNewSchema(root: Record<string, unknown>): SiteConfig {
-  const site = root.site && typeof root.site === 'object' ? (root.site as Record<string, unknown>) : {};
   const plugins = Array.isArray(root.plugins) ? root.plugins.filter((p): p is string => typeof p === 'string') : [...DEFAULT_SITE_CONFIG.plugins];
 
   const title = typeof site.title === 'string' ? site.title : DEFAULT_SITE_CONFIG.title;
@@ -82,19 +53,10 @@ function buildConfigFromNewSchema(root: Record<string, unknown>): SiteConfig {
   const baseUrl = typeof site['base-url'] === 'string' && site['base-url'].trim() ? site['base-url'].trim() : DEFAULT_SITE_CONFIG.baseUrl;
 
   const pagination = parsePaginationConfig(site.pagination);
-  const format = parseFormatConfig(root.format) ?? DEFAULT_SITE_CONFIG.format;
-
-  // Poblar campos viejos para backward compat durante la migracion
-  const listItemsLimit = pagination.limit;
-  const htmlFmt = format?.html;
-  const theme = htmlFmt?.theme;
-  const accent = htmlFmt?.accent ?? DEFAULT_SITE_CONFIG.accent;
-  const math = htmlFmt?.math;
-  const html: HtmlConfig = {
-    toc: htmlFmt?.toc ?? DEFAULT_SITE_CONFIG.html.toc,
-    tocDepth: htmlFmt?.tocDepth ?? DEFAULT_SITE_CONFIG.html.tocDepth,
-  };
-  const exportCfg = buildExportConfigFromFormat(format);
+  const format =
+    typeof root.format === 'object' && root.format !== null
+      ? (parseFormatConfig(root.format as Record<string, unknown>) ?? DEFAULT_SITE_CONFIG.format)
+      : DEFAULT_SITE_CONFIG.format;
 
   return {
     title,
@@ -105,56 +67,10 @@ function buildConfigFromNewSchema(root: Record<string, unknown>): SiteConfig {
     plugins,
     pagination,
     format,
-    listItemsLimit,
-    theme,
-    accent,
-    math,
-    export: exportCfg,
-    html,
   };
 }
 
-// ── Schema viejo ──────────────────────────────────────────────────────────
-
-function buildConfigFromOldSchema(root: Record<string, unknown>): SiteConfig {
-  const site = root.site && typeof root.site === 'object' ? (root.site as Record<string, unknown>) : {};
-  const listItems = site['list-items'] && typeof site['list-items'] === 'object' ? (site['list-items'] as Record<string, unknown>) : {};
-
-  const plugins = Array.isArray(root.plugins) ? root.plugins.filter((p): p is string => typeof p === 'string') : [...DEFAULT_SITE_CONFIG.plugins];
-
-  const rawLimit = listItems.limit;
-  const listItemsLimit =
-    typeof rawLimit === 'number' && Number.isFinite(rawLimit) && rawLimit > 0 ? Math.floor(rawLimit) : DEFAULT_SITE_CONFIG.listItemsLimit;
-
-  const html = parseHtmlConfig(site.html);
-  const exportCfg = parseExportConfig(site.export);
-  const theme = resolveTheme(site.theme);
-  const accent = resolveAccent(site.accent);
-  const math = resolveMath(site.math);
-
-  // Derivar campos nuevos desde los viejos
-  const pagination: PaginationConfig = { limit: listItemsLimit };
-  const format = buildFormatConfigFromLegacy(exportCfg, html, theme, accent, math);
-
-  return {
-    title: typeof site.title === 'string' ? site.title : DEFAULT_SITE_CONFIG.title,
-    tagline: typeof site.tagline === 'string' ? site.tagline : DEFAULT_SITE_CONFIG.tagline,
-    lang: typeof site.lang === 'string' ? site.lang : DEFAULT_SITE_CONFIG.lang,
-    logo: typeof site.logo === 'string' ? site.logo : DEFAULT_SITE_CONFIG.logo,
-    baseUrl: typeof site['base-url'] === 'string' && site['base-url'].trim() ? site['base-url'].trim() : DEFAULT_SITE_CONFIG.baseUrl,
-    plugins,
-    pagination,
-    format,
-    listItemsLimit,
-    theme,
-    accent,
-    math,
-    export: exportCfg,
-    html,
-  };
-}
-
-// ── Nuevos parsers ───────────────────────────────────────────────────────
+// ── Parsers ──────────────────────────────────────────────────────────────
 
 function parsePaginationConfig(raw: unknown): PaginationConfig {
   if (!raw || typeof raw !== 'object') return { ...DEFAULT_PAGINATION };
@@ -164,13 +80,10 @@ function parsePaginationConfig(raw: unknown): PaginationConfig {
   return { limit };
 }
 
-function parseFormatConfig(raw: unknown): FormatConfig | undefined {
-  if (!raw || typeof raw !== 'object') return undefined;
-  const obj = raw as Record<string, unknown>;
-
-  const html = parseHtmlFormatConfig(obj.html);
-  const pdf = parsePdfFormatConfig(obj.pdf);
-  const epub = parseEpubFormatConfig(obj.epub);
+function parseFormatConfig(raw: Record<string, unknown>): FormatConfig | undefined {
+  const html = parseHtmlFormatConfig(raw.html);
+  const pdf = parsePdfFormatConfig(raw.pdf);
+  const epub = parseEpubFormatConfig(raw.epub);
 
   if (!html && !pdf && !epub) return undefined;
 
@@ -332,286 +245,11 @@ function parseEpubFormatConfig(raw: unknown): EpubFormatConfig | undefined {
   };
 }
 
-// ── Conversiones entre schemas ────────────────────────────────────────────
-
-/** Deriva FormatConfig desde los campos del schema viejo (backward compat). */
-function buildFormatConfigFromLegacy(
-  exportCfg: ExportConfig | undefined,
-  html: HtmlConfig,
-  theme: string | undefined,
-  accent: string,
-  math: 'katex' | 'mathjax' | undefined,
-): FormatConfig {
-  const htmlFmt: HtmlFormatConfig = {
-    theme,
-    accent,
-    math,
-    toc: html.toc,
-    tocDepth: html.tocDepth,
-    hyphenation: exportCfg?.hyphenation?.html ?? false,
-  };
-
-  let pdf: PdfFormatConfig | undefined;
-  const hasPdf = exportCfg?.formats.includes('pdf');
-  if (hasPdf && exportCfg) {
-    const layout = exportCfg.layout?.pdf;
-    pdf = {
-      engine: exportCfg.pdfEngine,
-      concurrency: exportCfg.pdfConcurrency,
-      hyphenation: exportCfg.hyphenation?.pdf ?? true,
-      toc: layout?.toc,
-      tocDepth: layout?.tocDepth,
-      numbering: layout?.numbering,
-      bibliography: exportCfg.bibliography,
-      csl: exportCfg.csl,
-      pageSize: layout?.pageSize,
-      fontSize: layout?.fontSize,
-      fontFamily: layout?.fontFamily,
-      margins: layout?.margins,
-      lineSpacing: layout?.lineSpacing,
-      pageNumber: layout?.pageNumber,
-      sides: layout?.sides,
-    };
-  }
-
-  let epub: EpubFormatConfig | undefined;
-  const hasEpub = exportCfg?.formats.includes('epub');
-  if (hasEpub && exportCfg) {
-    const epubDefaults = DEFAULT_EPUB_FORMAT;
-    epub = {
-      ...(epubDefaults.toc !== undefined ? { toc: epubDefaults.toc } : {}),
-      ...(epubDefaults.tocDepth !== undefined ? { tocDepth: epubDefaults.tocDepth } : {}),
-      ...(exportCfg.bibliography ? { bibliography: exportCfg.bibliography } : {}),
-      ...(exportCfg.csl ? { csl: exportCfg.csl } : {}),
-    };
-  }
-
-  return {
-    html: htmlFmt,
-    ...(pdf ? { pdf } : {}),
-    ...(epub ? { epub } : {}),
-  };
-}
-
-/** Deriva ExportConfig (viejo) desde FormatConfig para backward compat. */
-function buildExportConfigFromFormat(format: FormatConfig | undefined): ExportConfig | undefined {
-  if (!format) return undefined;
-
-  const formats: Array<'pdf' | 'epub'> = [];
-  if (format.pdf) formats.push('pdf');
-  if (format.epub) formats.push('epub');
-  if (formats.length === 0) return undefined;
-
-  return {
-    formats,
-    pdfEngine: format.pdf?.engine ?? 'xelatex',
-    pdfConcurrency: format.pdf?.concurrency ?? 2,
-    ...(format.pdf?.bibliography ? { bibliography: format.pdf.bibliography } : {}),
-    ...(format.pdf?.csl ? { csl: format.pdf.csl } : {}),
-    hyphenation: {
-      html: format.html?.hyphenation ?? false,
-      pdf: format.pdf?.hyphenation ?? true,
-    },
-    ...(format.pdf
-      ? {
-          layout: {
-            pdf: {
-              ...(format.pdf.pageSize !== undefined ? { pageSize: format.pdf.pageSize } : {}),
-              ...(format.pdf.fontSize !== undefined ? { fontSize: format.pdf.fontSize } : {}),
-              ...(format.pdf.fontFamily !== undefined ? { fontFamily: format.pdf.fontFamily } : {}),
-              ...(format.pdf.margins !== undefined ? { margins: format.pdf.margins } : {}),
-              ...(format.pdf.lineSpacing !== undefined ? { lineSpacing: format.pdf.lineSpacing } : {}),
-              ...(format.pdf.numbering !== undefined ? { numbering: format.pdf.numbering } : {}),
-              ...(format.pdf.pageNumber !== undefined ? { pageNumber: format.pdf.pageNumber } : {}),
-              ...(format.pdf.sides !== undefined ? { sides: format.pdf.sides } : {}),
-              ...(format.pdf.toc !== undefined ? { toc: format.pdf.toc } : {}),
-              ...(format.pdf.tocDepth !== undefined ? { tocDepth: format.pdf.tocDepth } : {}),
-            },
-          },
-        }
-      : {}),
-  };
-}
-
-// ── Parsers viejos (sin cambios) ─────────────────────────────────────────
-
-function parseExportConfig(raw: unknown): ExportConfig | undefined {
-  if (!raw || typeof raw !== 'object') return undefined;
-  const obj = raw as Record<string, unknown>;
-  const rawFormats = Array.isArray(obj.formats) ? obj.formats : [];
-
-  const formats: Array<'pdf' | 'epub'> = [];
-  const seen = new Set<string>();
-  for (const f of rawFormats) {
-    if (f !== 'pdf' && f !== 'epub') {
-      process.stderr.write(`[iteraciones] export.formats: valor desconocido "${String(f)}". Los valores validos son "pdf" y "epub".\n`);
-      continue;
-    }
-    if (seen.has(f)) {
-      process.stderr.write(`[iteraciones] export.formats: "${f}" esta duplicado; se usara una sola vez.\n`);
-      continue;
-    }
-    seen.add(f);
-    formats.push(f);
-  }
-
-  if (formats.length === 0) return undefined;
-  const pdfEngine = obj['pdf-engine'] === 'lualatex' ? 'lualatex' : 'xelatex';
-  const bibliography = typeof obj.bibliography === 'string' && obj.bibliography.trim() ? obj.bibliography.trim() : undefined;
-  const csl = typeof obj.csl === 'string' && obj.csl.trim() ? obj.csl.trim() : undefined;
-  const rawPdfConcurrency = obj['pdf-concurrency'];
-  const pdfConcurrency =
-    typeof rawPdfConcurrency === 'number' && Number.isInteger(rawPdfConcurrency) && rawPdfConcurrency >= 1 ? rawPdfConcurrency : 2;
-  if (rawPdfConcurrency !== undefined && pdfConcurrency === 2 && rawPdfConcurrency !== 2) {
-    process.stderr.write(
-      `[iteraciones] export.pdf-concurrency: valor invalido "${String(rawPdfConcurrency)}". Debe ser un entero >= 1. Usando 2 por defecto.\n`,
-    );
-  }
-  const hyphenation = parseHyphenationConfig(obj.hyphenation);
-  const layout = parseLayoutConfig(obj.layout);
-  return {
-    formats,
-    pdfEngine,
-    pdfConcurrency,
-    ...(bibliography !== undefined ? { bibliography } : {}),
-    ...(csl !== undefined ? { csl } : {}),
-    ...(hyphenation ? { hyphenation } : {}),
-    ...(layout ? { layout } : {}),
-  };
-}
-
-function parseHyphenationConfig(raw: unknown): ExportHyphenationConfig | undefined {
-  if (!raw || typeof raw !== 'object') return undefined;
-  const obj = raw as Record<string, unknown>;
-  const html = typeof obj.html === 'boolean' ? obj.html : false;
-  const pdf = typeof obj.pdf === 'boolean' ? obj.pdf : true;
-  if (html === false && pdf === true) return undefined;
-  return { html, pdf };
-}
-
-function parseFormatLayout(raw: unknown): FormatLayout | undefined {
-  if (!raw || typeof raw !== 'object') return undefined;
-  const obj = raw as Record<string, unknown>;
-
-  const rawPageSize = obj['page-size'];
-  let pageSize: PageSize | undefined;
-  if (typeof rawPageSize === 'string') {
-    if (KNOWN_PAGE_SIZES.has(rawPageSize) || CUSTOM_PAGE_SIZE_RE.test(rawPageSize)) {
-      pageSize = rawPageSize;
-    }
-  }
-  if (obj['page-size'] !== undefined && !pageSize) {
-    process.stderr.write(
-      `[iteraciones] export.layout.pdf.page-size: valor desconocido "${String(obj['page-size'])}". Usa un nombre estandar (letter, a4, half-letter, etc.) o un tamano personalizado "ancho,alto" (ej: "15cm,23cm").\n`,
-    );
-  }
-
-  const fontSize = typeof obj['font-size'] === 'string' && /^\d+pt$/.test(obj['font-size']) ? obj['font-size'] : undefined;
-  if (obj['font-size'] !== undefined && !fontSize) {
-    process.stderr.write(`[iteraciones] export.layout.pdf.font-size: debe ser un tamano LaTeX como "10pt", "11pt" o "12pt".\n`);
-  }
-
-  const fontFamily = typeof obj['font-family'] === 'string' && obj['font-family'].trim() ? obj['font-family'].trim() : undefined;
-
-  const rawMargins = obj.margins;
-  let margins: [string, string, string, string] | undefined;
-  if (
-    Array.isArray(rawMargins) &&
-    rawMargins.length === 4 &&
-    rawMargins.every((m) => typeof m === 'string' && /^\d+(\.\d+)?(cm|mm|in|pt)$/.test(m))
-  ) {
-    margins = rawMargins as [string, string, string, string];
-  } else if (rawMargins !== undefined) {
-    process.stderr.write(
-      `[iteraciones] export.layout.pdf.margins: debe ser un array de 4 strings con unidades (ej: ["2.5cm", "2.5cm", "3cm", "3cm"]).\n`,
-    );
-  }
-
-  const lineSpacing = typeof obj['line-spacing'] === 'number' && obj['line-spacing'] > 0 ? obj['line-spacing'] : undefined;
-  if (obj['line-spacing'] !== undefined && !lineSpacing) {
-    process.stderr.write(`[iteraciones] export.layout.pdf.line-spacing: debe ser un numero positivo.\n`);
-  }
-
-  const numbering = typeof obj.numbering === 'boolean' ? obj.numbering : undefined;
-
-  const pageNumber =
-    typeof obj['page-number'] === 'string' && KNOWN_PAGE_NUMBER_PLACEMENTS.has(obj['page-number'])
-      ? (obj['page-number'] as PageNumberPlacement)
-      : undefined;
-  if (obj['page-number'] !== undefined && !pageNumber) {
-    process.stderr.write(
-      `[iteraciones] export.layout.pdf.page-number: valor desconocido "${String(obj['page-number'])}". Valores validos: footer-left, footer-center, footer-right, header-left, header-center, header-right.\n`,
-    );
-  }
-
-  const sides = typeof obj.sides === 'string' && KNOWN_SIDES.has(obj.sides) ? (obj.sides as Sides) : undefined;
-  if (obj.sides !== undefined && !sides) {
-    process.stderr.write(`[iteraciones] export.layout.pdf.sides: valor desconocido "${String(obj.sides)}". Valores validos: oneside, twoside.\n`);
-  }
-
-  const toc = typeof obj.toc === 'boolean' ? obj.toc : undefined;
-
-  const rawTocDepth = obj['toc-depth'];
-  const tocDepth = typeof rawTocDepth === 'number' && Number.isInteger(rawTocDepth) && rawTocDepth >= 0 && rawTocDepth <= 5 ? rawTocDepth : undefined;
-
-  if (
-    !pageSize &&
-    !fontSize &&
-    !fontFamily &&
-    !margins &&
-    lineSpacing === undefined &&
-    numbering === undefined &&
-    !pageNumber &&
-    !sides &&
-    toc === undefined &&
-    tocDepth === undefined
-  )
-    return undefined;
-
-  return {
-    pageSize,
-    fontSize,
-    fontFamily,
-    margins,
-    lineSpacing,
-    numbering,
-    pageNumber,
-    sides,
-    ...(toc !== undefined ? { toc } : {}),
-    ...(tocDepth !== undefined ? { tocDepth } : {}),
-  };
-}
-
-function parseLayoutConfig(raw: unknown): LayoutConfig | undefined {
-  if (!raw || typeof raw !== 'object') return undefined;
-  const obj = raw as Record<string, unknown>;
-  const pdf = parseFormatLayout(obj.pdf);
-  return pdf ? { pdf } : undefined;
-}
-
 function resolveAccent(value: unknown): string {
-  if (typeof value !== 'string') return DEFAULT_SITE_CONFIG.accent;
+  if (typeof value !== 'string') return DEFAULT_HTML_FORMAT.accent!;
   if (!KNOWN_ACCENT_COLORS.has(value)) {
-    process.stderr.write(`[iteraciones] color de acento desconocido: "${value}". Usando "${DEFAULT_SITE_CONFIG.accent}" por defecto.\n`);
-    return DEFAULT_SITE_CONFIG.accent;
+    process.stderr.write(`[iteraciones] color de acento desconocido: "${value}". Usando "${DEFAULT_HTML_FORMAT.accent}" por defecto.\n`);
+    return DEFAULT_HTML_FORMAT.accent!;
   }
   return value;
-}
-
-function parseHtmlConfig(raw: unknown): HtmlConfig {
-  if (!raw || typeof raw !== 'object') return { ...DEFAULT_SITE_CONFIG.html };
-  const obj = raw as Record<string, unknown>;
-  const toc = typeof obj.toc === 'boolean' ? obj.toc : DEFAULT_SITE_CONFIG.html.toc;
-  const rawDepth = obj['toc-depth'];
-  const tocDepth =
-    typeof rawDepth === 'number' && Number.isInteger(rawDepth) && rawDepth >= 1 && rawDepth <= 6 ? rawDepth : DEFAULT_SITE_CONFIG.html.tocDepth;
-  return { toc, tocDepth };
-}
-
-function resolveTheme(siteValue: unknown): string | undefined {
-  return typeof siteValue === 'string' ? siteValue : DEFAULT_SITE_CONFIG.theme;
-}
-
-function resolveMath(siteValue: unknown): 'katex' | 'mathjax' | undefined {
-  return siteValue === 'katex' || siteValue === 'mathjax' ? siteValue : DEFAULT_SITE_CONFIG.math;
 }

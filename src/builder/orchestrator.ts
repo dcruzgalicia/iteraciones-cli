@@ -504,7 +504,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   if (options.dryRun) {
     const dryConfig = await loadSiteConfig(cwd);
     const sourceDocs = await discover(cwd, { noCache: true });
-    const classified = classifyDocuments(sourceDocs, dryConfig.theme, cwd);
+    const classified = classifyDocuments(sourceDocs, dryConfig.format?.html?.theme, cwd);
     const allDocs = excludeDrafts(classified);
     const draftCount = classified.length - allDocs.length;
     const counts = new Map<string, number>();
