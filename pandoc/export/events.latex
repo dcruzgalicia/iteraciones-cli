@@ -111,6 +111,7 @@ $endif$
 \clubpenalty=10000
 
 % ─── Fuentes KOMA ────────────────────────────────────────────────────────────
+\setkomafont{disposition}{\normalsize\normalfont}
 \setkomafont{title}{\normalsize\normalfont}
 \setkomafont{subtitle}{\normalsize\normalfont}
 \setkomafont{author}{\normalsize\normalfont}
