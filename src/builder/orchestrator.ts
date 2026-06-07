@@ -697,6 +697,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     const exportStats: ExportStats = { totalEpub: 0, totalPdf: 0, cacheHitsEpub: 0, cacheHitsPdf: 0 };
     const exportConfig = ctx.siteConfig.export;
     const hasExport = exportConfig !== undefined && !options.noExport;
+    if (hasExport) progress.startPhase('export');
     const exportRenderedMap = affectedPaths
       ? new Map<DocumentType, BuildDocument[]>(
           [...renderedMap].map(([type, docs]) => [type, docs.filter((doc) => affectedPaths.has(doc.relativePath))]),
