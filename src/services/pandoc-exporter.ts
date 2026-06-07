@@ -91,7 +91,7 @@ function resolveEpubCssPath(type: string, cwd?: string): string {
  * Construye el bloque YAML de metadatos que Pandoc inyectará en el documento.
  * Pandoc acepta un bloque YAML al inicio del documento delimitado por `---`.
  */
-function buildYamlHeader(doc: ExportDocument, fontdir?: string, layout?: FormatLayout): string {
+function buildYamlHeader(doc: ExportDocument, fontdir?: string, layout?: FormatLayout, hyphenationActive?: boolean): string {
   const { metadata } = doc;
   const lines: string[] = ['---'];
 
@@ -112,6 +112,9 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, layout?: FormatL
   lines.push(`lang: ${metadata.lang}`);
   lines.push(`documentclass: ${metadata.documentclass}`);
   if (metadata.toc) lines.push('toc: true');
+
+  // Hyphenation: permite desactivar guiones en la salida PDF vía configuración
+  if (hyphenationActive === false) lines.push('hyphenation-active: false');
 
   // Metadatos editoriales opcionales
   if (metadata.isbn) lines.push(`isbn: ${yamlString(metadata.isbn)}`);
@@ -280,11 +283,12 @@ export async function convertToPdf(
   engine: 'xelatex' | 'lualatex',
   cwd?: string,
   layout?: FormatLayout,
+  hyphenationActive?: boolean,
 ): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
   const templatePath = resolveLatexTemplatePath(doc.type, cwd);
-  const input = buildYamlHeader(doc, FONTS_DIR, layout) + doc.body;
+  const input = buildYamlHeader(doc, FONTS_DIR, layout, hyphenationActive) + doc.body;
   const args = [
     'pandoc',
     '--from',

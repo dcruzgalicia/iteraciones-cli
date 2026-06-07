@@ -367,7 +367,7 @@ export async function runExportDocuments(
           }
           await acquireXelatex();
           try {
-            await convertToPdf(exportDoc, outputPath, config.pdfEngine, cwd, config.layout?.pdf);
+            await convertToPdf(exportDoc, outputPath, config.pdfEngine, cwd, config.layout?.pdf, config.hyphenation?.pdf);
           } finally {
             releaseXelatex();
           }
@@ -777,7 +777,7 @@ export async function exportSingleDocument(
   await acquireOnDemandXelatex(maxSlots);
   let pdfGenerated = false;
   try {
-    await convertToPdf(exportDoc, outputPath, config.pdfEngine, cwd, config.layout?.pdf);
+    await convertToPdf(exportDoc, outputPath, config.pdfEngine, cwd, config.layout?.pdf, config.hyphenation?.pdf);
     pdfGenerated = true;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
