@@ -48,7 +48,7 @@ export async function composeDocuments(
   /** Callback invocado por cada archivo compuesto (para reporte de progreso). */
   onFileProcessed?: (report: RenderFileReport) => void,
 ): Promise<BuildDocument[]> {
-  const { layoutPath, pandocTemplatePath } = resolveEffectivePaths(ctx.siteConfig.theme, ctx.cwd);
+  const { layoutPath, pandocTemplatePath } = resolveEffectivePaths(ctx.siteConfig.format?.html?.theme, ctx.cwd);
   const layoutTemplate = await readFile(layoutPath, 'utf8');
   const pandocTemplate = await readFile(pandocTemplatePath, 'utf8');
 
@@ -128,10 +128,9 @@ export async function composeDocuments(
     }
 
     // Inyectar índice de contenidos (TOC) si está habilitado en la configuración.
-    // Prioridad: export.layout.html.toc > site.html.toc
-    const exportHtmlLayout = ctx.siteConfig.export?.layout?.html;
-    const showToc = exportHtmlLayout?.toc ?? ctx.siteConfig.html.toc;
-    const tocDepth = exportHtmlLayout?.tocDepth ?? ctx.siteConfig.html.tocDepth;
+    const htmlFormat = ctx.siteConfig.format?.html;
+    const showToc = htmlFormat?.toc ?? false;
+    const tocDepth = htmlFormat?.tocDepth ?? 6;
     if (showToc && doc.htmlFragment) {
       const tocHtml = buildTocHtml(doc.htmlFragment, tocDepth);
       if (tocHtml) {
