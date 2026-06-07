@@ -128,8 +128,12 @@ export async function composeDocuments(
     }
 
     // Inyectar índice de contenidos (TOC) si está habilitado en la configuración.
-    if (ctx.siteConfig.html.toc && doc.htmlFragment) {
-      const tocHtml = buildTocHtml(doc.htmlFragment, ctx.siteConfig.html.tocDepth);
+    // Prioridad: export.layout.html.toc > site.html.toc
+    const exportHtmlLayout = ctx.siteConfig.export?.layout?.html;
+    const showToc = exportHtmlLayout?.toc ?? ctx.siteConfig.html.toc;
+    const tocDepth = exportHtmlLayout?.tocDepth ?? ctx.siteConfig.html.tocDepth;
+    if (showToc && doc.htmlFragment) {
+      const tocHtml = buildTocHtml(doc.htmlFragment, tocDepth);
       if (tocHtml) {
         effectiveTemplateContext = { ...effectiveTemplateContext, 'table-of-contents': tocHtml };
       }
