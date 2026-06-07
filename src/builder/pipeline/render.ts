@@ -2,6 +2,7 @@ import { join, resolve } from 'node:path';
 import type { CacheManager } from '../../cache/cache-manager.js';
 import { hash } from '../../cache/hasher.js';
 import { mapWithConcurrency } from '../../output/concurrency.js';
+import type { RenderFileReport } from '../../output/progress.js';
 import type { PluginRegistry } from '../../plugin/registry.js';
 import type { PandocPool } from '../../services/pandoc-pool.js';
 import { type BibOptions, convertFragment } from '../../services/pandoc-runner.js';
@@ -37,6 +38,8 @@ export async function renderDocuments(
   globalBibliography?: string,
   /** Ruta absoluta al .csl global del sitio (fallback si el frontmatter no define editorial.csl). */
   globalCsl?: string,
+  /** Callback invocado por cada archivo procesado (para reporte de progreso). */
+  onFileProcessed?: (report: RenderFileReport) => void,
 ): Promise<BuildDocument[]> {
   // Memoiza hashes de archivos para no leerlos más de una vez por llamada.
   // Válido para la duración de esta llamada a renderDocuments(); si se invoca
@@ -65,6 +68,7 @@ export async function renderDocuments(
   };
 
   return mapWithConcurrency(docs, concurrency, async (doc) => {
+    const tStart = performance.now();
     // Detectar bibliography en editorial del frontmatter.
     // Solo se activa si hay cwd disponible para resolver la ruta.
     let bibOptions: BibOptions | undefined;
@@ -117,6 +121,7 @@ export async function renderDocuments(
           stats.total++;
           stats.cacheHits++;
         }
+        onFileProcessed?.({ relativePath: doc.relativePath, durationMs: performance.now() - tStart, cacheHit: true, phase: 'render' });
         return { ...doc, htmlFragment: cached };
       }
     }
@@ -143,6 +148,7 @@ export async function renderDocuments(
       await cache.manager.write('render', key, htmlFragment);
     }
     if (stats) stats.total++;
+    onFileProcessed?.({ relativePath: doc.relativePath, durationMs: performance.now() - tStart, cacheHit: false, phase: 'render' });
     return { ...doc, htmlFragment };
   });
 }

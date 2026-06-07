@@ -4,6 +4,7 @@ import { CacheManager } from '../cache/cache-manager.js';
 import { hash } from '../cache/hasher.js';
 import { loadOutputManifest, saveOutputManifest } from '../cache/output-manifest.js';
 import { loadSiteConfig } from '../config/config-loader.js';
+import { ProgressTracker } from '../output/progress.js';
 import { clean, writeFile } from '../output/writer.js';
 import { loadPlugins } from '../plugin/loader.js';
 import { PluginRegistry } from '../plugin/registry.js';
@@ -236,13 +237,15 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
 /**
  * Descubre, clasifica y filtra borradores. Retorna el pool de documentos activos.
  */
-async function runDiscovery(cwd: string, ctx: BuildContext, log: (msg: string) => void, noCache?: boolean): Promise<BuildDocument[]> {
+async function runDiscovery(cwd: string, ctx: BuildContext, noCache?: boolean): Promise<BuildDocument[]> {
   const sourceDocs = await discover(cwd, { noCache });
-  log(`Descubiertos ${sourceDocs.length} documentos`);
   const classified = classifyDocuments(sourceDocs, ctx.siteConfig.theme, ctx.cwd);
   const allDocs = excludeDrafts(classified);
   const draftCount = classified.length - allDocs.length;
-  if (draftCount > 0) log(`Excluidos ${draftCount} borrador${draftCount > 1 ? 'es' : ''} (draft:true)`);
+  if (draftCount > 0) {
+    // Registrar en stderr para que no se pierda ni mezcle con stdout
+    process.stderr.write(`[iteraciones] ${draftCount} borrador${draftCount > 1 ? 'es' : ''} excluido${draftCount > 1 ? 's' : ''} (draft:true)\n`);
+  }
   return allDocs;
 }
 
@@ -290,6 +293,7 @@ async function runPrimaryRender(
   cwd?: string,
   collectedKeys?: Set<string>,
   luaFilters?: readonly string[],
+  onFileProcessed?: (report: import('../output/progress.js').RenderFileReport) => void,
 ): Promise<PrimaryRenderResult> {
   const { globalBibliography, globalCsl } = resolveGlobalExportPaths(ctx);
   const fileDocs = allDocs.filter((doc) => doc.type === 'file' && doc.kind !== 'block');
@@ -305,6 +309,7 @@ async function runPrimaryRender(
     luaFilters,
     globalBibliography,
     globalCsl,
+    onFileProcessed,
   );
 
   const authorDocs = allDocs.filter((doc) => doc.type === 'author' && doc.kind !== 'block');
@@ -320,6 +325,7 @@ async function runPrimaryRender(
     luaFilters,
     globalBibliography,
     globalCsl,
+    onFileProcessed,
   );
   // Índice de autores por título normalizado (lowercase). Se construye aquí para que
   // esté disponible antes del pre-paso de bloques y del paso de contexto de páginas.
@@ -338,6 +344,7 @@ async function runPrimaryRender(
     luaFilters,
     globalBibliography,
     globalCsl,
+    onFileProcessed,
   );
 
   return { renderedFileDocs, renderedAuthorDocs, renderedEventDocs, authorDocumentIndex };
@@ -366,6 +373,7 @@ async function runBlocksPrestep(
   cwd?: string,
   collectedKeys?: Set<string>,
   luaFilters?: readonly string[],
+  onFileProcessed?: (report: import('../output/progress.js').RenderFileReport) => void,
 ): Promise<BlocksPrestepResult> {
   const { globalBibliography, globalCsl } = resolveGlobalExportPaths(ctx);
   const allBlockDocs = allDocs.filter((doc) => doc.kind === 'block');
@@ -381,6 +389,7 @@ async function runBlocksPrestep(
     luaFilters,
     globalBibliography,
     globalCsl,
+    onFileProcessed,
   );
   const contextBlockDocs = renderedBlockDocs.map((doc) => {
     const spec = doc.type ? TYPE_STAGE_MAP.get(doc.type) : undefined;
@@ -413,13 +422,14 @@ async function runFinalization(
   incremental?: boolean,
   itemHashMap?: ReadonlyMap<string, string>,
   renderUsedKeys?: Set<string>,
+  onFileProcessed?: (report: import('../output/progress.js').RenderFileReport) => void,
 ): Promise<number> {
   const relativizedDocs = allContextDocs.map((doc) => ({
     ...doc,
     templateContext: makeRelativeContext(doc.templateContext, computeRootPrefix(doc.relativePath)) as TemplateContext,
   }));
   const tComposeStart = performance.now();
-  const composedDocs = await composeDocuments(relativizedDocs, ctx, composeCache, registry, composeStats, itemHashMap);
+  const composedDocs = await composeDocuments(relativizedDocs, ctx, composeCache, registry, composeStats, itemHashMap, onFileProcessed);
   const composeMs = performance.now() - tComposeStart;
   const writtenDocs = await writeDocuments(composedDocs, ctx);
   log(`Escritos ${writtenDocs.length} archivos en ${ctx.outputDir}`);
@@ -509,9 +519,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     return;
   }
 
-  const log = options.verbose ? (msg: string) => process.stdout.write(`${msg}\n`) : (_msg: string) => undefined;
+  const progress = new ProgressTracker({ verbose: options.verbose ?? false });
+  const log = (msg: string) => progress.log(msg);
 
-  const t0 = performance.now();
   const renderStats: RenderStats = { total: 0, cacheHits: 0 };
   const composeStats: ComposeStats = { total: 0, cacheHits: 0 };
 
@@ -526,15 +536,16 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         siteConfig: ctx.siteConfig as unknown as Readonly<Record<string, unknown>>,
       });
     }
+    progress.startPhase('discovery');
     const [rawDocs, cssPath] = await Promise.all([
-      runDiscovery(cwd, ctx, log, options.noCache),
+      runDiscovery(cwd, ctx, options.noCache),
       buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, {
         noTailwind: options.noTailwind,
         cacheManager: options.noCache ? undefined : cacheManager,
       }),
     ]);
     ctx.cssPath = cssPath;
-    log(`Assets generados en ${ctx.outputDir}`);
+    progress.completePhase();
 
     // Hook onDocumentClassified: permite a plugins sobreescribir type/kind/templatePath
     // tras la clasificación automática, antes del render. Retornar null excluye el documento.
@@ -592,11 +603,12 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     }
 
     const enrichedSiteCtx = buildEnrichedSiteContext(ctx, allDocs);
-    const t1 = performance.now();
+    progress.startPhase('render', allDocs.length);
     // Conjunto de claves realmente usadas por renderDocuments (hits + writes).
     // Se pasa a todas las fases de render para que cada llamada acumule sus claves.
     // Permite que el prune elimine solo entradas genuinamente obsoletas.
     const renderUsedKeys = renderCache ? new Set<string>() : undefined;
+    const onFileProcessed = (report: import('../output/progress.js').RenderFileReport) => progress.reportFile(report);
     const { renderedFileDocs, renderedAuthorDocs, renderedEventDocs, authorDocumentIndex } = await runPrimaryRender(
       allDocs,
       ctx,
@@ -607,6 +619,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       cwd,
       renderUsedKeys,
       luaFilters,
+      onFileProcessed,
     );
     const primaryRendered = new Map<DocumentType, BuildDocument[]>([
       ['file', renderedFileDocs],
@@ -637,6 +650,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       cwd,
       renderUsedKeys,
       luaFilters,
+      onFileProcessed,
     );
     const { allContextDocs, renderedMap } = await runContextPhaseWithTypeGraph(
       pipelineDocs,
@@ -651,10 +665,10 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       cwd,
       renderUsedKeys,
       luaFilters,
+      onFileProcessed,
     );
-    // t2 se mide después del context phase para que pandocMs cubra todos los pasos
-    // de renderizado: primary, blocks e índices (collection, authors, events, list).
-    const t2 = performance.now();
+    progress.completePhase(); // fin de render
+
     // En modo incremental, pasar solo los docs afectados a compose/write para evitar
     // reprocesar documentos que no cambiaron.
     const finalContextDocs = affectedPaths ? allContextDocs.filter((d) => affectedPaths.has(d.relativePath)) : allContextDocs;
@@ -703,17 +717,13 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
           })
         : [];
     if (exportResults.length > 0) {
-      if (options.verbose) {
-        const epubNew = exportStats.totalEpub - exportStats.cacheHitsEpub;
-        const pdfNew = exportStats.totalPdf - exportStats.cacheHitsPdf;
-        const parts: string[] = [];
-        if (exportStats.totalEpub > 0) parts.push(`EPUB: ${epubNew} generados, ${exportStats.cacheHitsEpub} de caché`);
-        if (exportStats.totalPdf > 0) parts.push(`PDF: ${pdfNew} generados, ${exportStats.cacheHitsPdf} de caché`);
-        const detail = parts.length > 0 ? ` — ${parts.join(' | ')}` : '';
-        log(`Exportación: ${exportResults.length} documento${exportResults.length > 1 ? 's' : ''}${detail}`);
-      } else {
-        log(`Exportados ${exportResults.length} documento${exportResults.length > 1 ? 's' : ''} (PDF/EPUB)`);
-      }
+      const epubNew = exportStats.totalEpub - exportStats.cacheHitsEpub;
+      const pdfNew = exportStats.totalPdf - exportStats.cacheHitsPdf;
+      const parts: string[] = [];
+      if (exportStats.totalEpub > 0) parts.push(`EPUB: ${epubNew} generados, ${exportStats.cacheHitsEpub} de caché`);
+      if (exportStats.totalPdf > 0) parts.push(`PDF: ${pdfNew} generados, ${exportStats.cacheHitsPdf} de caché`);
+      const detail = parts.length > 0 ? ` — ${parts.join(' | ')}` : '';
+      progress.log(`Exportación: ${exportResults.length} documento${exportResults.length > 1 ? 's' : ''}${detail}`);
     }
 
     // Inyectar enlaces de descarga en los docs exportables, propagarlos a los ítems
@@ -730,7 +740,8 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     // para no eliminar entradas válidas de documentos que no se procesaron en este batch.
     const effectiveComposeCache = composeCache && affectedPaths ? { ...composeCache, skipPrune: true } : composeCache;
 
-    const composeMs = await runFinalization(
+    progress.startPhase('compose', finalContextDocs.length);
+    await runFinalization(
       docsWithLinks,
       ctx,
       effectiveComposeCache,
@@ -744,22 +755,11 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       options.incremental === true,
       itemHashMap,
       renderUsedKeys,
+      onFileProcessed,
     );
-    const t3 = performance.now();
+    progress.completePhase(); // fin de compose
 
-    if (options.verbose) {
-      const pandocMs = ((t2 - t1) / 1000).toFixed(1);
-      const composeMsStr = (composeMs / 1000).toFixed(1);
-      const totalS = ((t3 - t0) / 1000).toFixed(1);
-      const pandocReal = renderStats.total - renderStats.cacheHits;
-      process.stdout.write(
-        `build: pandoc — ${pandocReal} conversión${pandocReal !== 1 ? 'es' : ''} en ${pandocMs}s (${renderStats.cacheHits} desde caché)\n`,
-      );
-      process.stdout.write(
-        `build: compose — ${composeStats.total} documento${composeStats.total !== 1 ? 's' : ''} en ${composeMsStr}s (${composeStats.cacheHits} desde caché)\n`,
-      );
-      process.stdout.write(`build: completado en ${totalS}s\n`);
-    }
+    progress.finish(allDocs.length);
   } finally {
     pandocPool?.dispose();
   }
