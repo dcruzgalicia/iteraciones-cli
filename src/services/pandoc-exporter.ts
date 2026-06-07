@@ -114,7 +114,7 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, layout?: FormatL
   if (metadata.toc) lines.push('toc: true');
 
   // Hyphenation: permite desactivar guiones en la salida PDF vía configuración
-  if (hyphenationActive === false) lines.push('hyphenation-active: false');
+  lines.push(`hyphenation-active: ${hyphenationActive !== false ? 'true' : 'false'}`);
 
   // Metadatos editoriales opcionales
   if (metadata.isbn) lines.push(`isbn: ${yamlString(metadata.isbn)}`);
