@@ -79,7 +79,7 @@ export function assembleExportDocument(
       : (globalCsl ?? (bibliography ? join(import.meta.dir, '../../../pandoc/csl/apa-7.csl') : undefined));
 
   const tocDepth = layout?.tocDepth;
-  const toc = tocDepth !== undefined ? tocDepth > 0 : documentclass === 'scrbook';
+  const toc = layout?.toc ?? (tocDepth !== undefined ? tocDepth > 0 : documentclass === 'scrbook');
 
   const metadata: ExportMetadata = {
     title: doc.frontmatter.title || 'Sin título',

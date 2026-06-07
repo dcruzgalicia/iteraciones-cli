@@ -29,6 +29,8 @@ export interface FormatLayout {
   pageNumber?: PageNumberPlacement;
   /** Caras del documento: una cara (oneside) o doble cara (twoside). */
   sides?: Sides;
+  /** Incluir índice de contenidos (true/false). Si no se especifica, se deriva de tocDepth o del documentclass. */
+  toc?: boolean;
   /** Profundidad del índice de contenidos (0 = sin índice, 1-5 = niveles). */
   tocDepth?: number;
 }
