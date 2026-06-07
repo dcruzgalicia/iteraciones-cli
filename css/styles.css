@@ -100,6 +100,14 @@
   --tw-ring-offset-color: var(--color-surface-light);
 }
 
+@utility hyphens-auto {
+  hyphens: auto;
+}
+
+@utility hyphens-none {
+  hyphens: none;
+}
+
 @utility prose-accent {
   --tw-prose-links: var(--color-accent-600);
   --tw-prose-invert-links: var(--color-accent-500);
