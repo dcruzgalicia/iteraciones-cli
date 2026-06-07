@@ -102,6 +102,7 @@
 
 @utility hyphens-auto {
   hyphens: auto;
+  -webkit-hyphens: auto;
 }
 
 @utility hyphens-none {
