@@ -71,6 +71,13 @@ export interface ExportConfig {
   layout?: LayoutConfig;
 }
 
+export interface HtmlConfig {
+  /** Si se genera índice de contenidos al inicio del body HTML. */
+  toc: boolean;
+  /** Profundidad máxima de encabezados en el TOC (1-6). */
+  tocDepth: number;
+}
+
 export interface SiteConfig {
   title: string;
   tagline: string;
@@ -90,6 +97,8 @@ export interface SiteConfig {
    * - `'mathjax'`: carga MathJax vía CDN (mayor compatibilidad).
    */
   math: 'katex' | 'mathjax' | undefined;
+  /** Configuración de la salida HTML. */
+  html: HtmlConfig;
 }
 
 /**
@@ -133,4 +142,5 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   baseUrl: undefined,
   export: undefined,
   math: undefined,
+  html: { toc: false, tocDepth: 6 },
 };

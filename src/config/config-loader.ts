@@ -5,6 +5,7 @@ import {
   type ExportConfig,
   type ExportHyphenationConfig,
   type FormatLayout,
+  type HtmlConfig,
   KNOWN_ACCENT_COLORS,
   type LayoutConfig,
   type PageNumberPlacement,
@@ -47,6 +48,8 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
   const listItemsLimit =
     typeof rawLimit === 'number' && Number.isFinite(rawLimit) && rawLimit > 0 ? Math.floor(rawLimit) : DEFAULT_SITE_CONFIG.listItemsLimit;
 
+  const html = parseHtmlConfig(site.html);
+
   return {
     title: typeof site.title === 'string' ? site.title : DEFAULT_SITE_CONFIG.title,
     tagline: typeof site.tagline === 'string' ? site.tagline : DEFAULT_SITE_CONFIG.tagline,
@@ -59,6 +62,7 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
     baseUrl: typeof site['base-url'] === 'string' && site['base-url'].trim() ? site['base-url'].trim() : DEFAULT_SITE_CONFIG.baseUrl,
     export: parseExportConfig(site.export),
     math: resolveMath(site.math),
+    html,
   };
 }
 
@@ -223,6 +227,16 @@ function resolveAccent(value: unknown): string {
     return DEFAULT_SITE_CONFIG.accent;
   }
   return value;
+}
+
+function parseHtmlConfig(raw: unknown): HtmlConfig {
+  if (!raw || typeof raw !== 'object') return { ...DEFAULT_SITE_CONFIG.html };
+  const obj = raw as Record<string, unknown>;
+  const toc = typeof obj.toc === 'boolean' ? obj.toc : DEFAULT_SITE_CONFIG.html.toc;
+  const rawDepth = obj['toc-depth'];
+  const tocDepth =
+    typeof rawDepth === 'number' && Number.isInteger(rawDepth) && rawDepth >= 1 && rawDepth <= 6 ? rawDepth : DEFAULT_SITE_CONFIG.html.tocDepth;
+  return { toc, tocDepth };
 }
 
 function resolveTheme(siteValue: unknown): string | undefined {

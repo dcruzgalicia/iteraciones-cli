@@ -11,6 +11,7 @@ import type { TemplateContext } from '../../template/render/context.js';
 import { renderAst } from '../../template/render/renderer.js';
 import { docHtmlPath } from '../slug.js';
 import { resolveEffectivePaths } from '../theme-resolver.js';
+import { buildTocHtml } from '../toc.js';
 import { type BuildContext, type BuildDocument, VALID_REGIONS } from '../types.js';
 
 export interface ComposeCache {
@@ -124,6 +125,14 @@ export async function composeDocuments(
         templateContext: doc.templateContext as Readonly<Record<string, unknown>>,
       });
       effectiveTemplateContext = beforeCtx.templateContext as TemplateContext;
+    }
+
+    // Inyectar índice de contenidos (TOC) si está habilitado en la configuración.
+    if (ctx.siteConfig.html.toc && doc.htmlFragment) {
+      const tocHtml = buildTocHtml(doc.htmlFragment, ctx.siteConfig.html.tocDepth);
+      if (tocHtml) {
+        effectiveTemplateContext = { ...effectiveTemplateContext, 'table-of-contents': tocHtml };
+      }
     }
 
     // Paso 1: renderizar el template específico del tipo de documento (templates/{type}.html).
