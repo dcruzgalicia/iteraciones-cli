@@ -138,7 +138,9 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \setkomafont{subsubsection}{\normalsize\normalfont}
 
 % ─── Párrafos ──────────────────────────────────────────────────
+\RedeclareSectionCommand[beforeskip=0pt,afterskip=0pt,afterindent=false]{paragraph}
 \setkomafont{paragraph}{\normalsize\normalfont}
+\RedeclareSectionCommand[beforeskip=0pt,afterskip=0pt,afterindent=false]{subparagraph}
 \setkomafont{subparagraph}{\normalsize\normalfont}
 
 % ─── Dictum (epígrafe KOMA) ──────────────────────────────────────────────────
