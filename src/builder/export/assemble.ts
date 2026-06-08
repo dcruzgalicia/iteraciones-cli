@@ -104,6 +104,12 @@ export function assembleExportDocument(
 
   const body = documentclass === 'scrartcl' ? doc.body : assembleBookBody(doc, items, parts);
 
+  // Si el cuerpo no contiene encabezados markdown, desactivar el TOC
+  // para evitar que LaTeX muestre un índice vacío con artefactos.
+  if (toc && !/^#{1,6}\s/m.test(body)) {
+    metadata.toc = false;
+  }
+
   return {
     filePath: doc.filePath,
     relativePath: doc.relativePath,
