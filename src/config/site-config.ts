@@ -117,6 +117,7 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   margins: ['2.54cm', '2.54cm', '2.54cm', '2.54cm'],
   lineSpacing: 1.5,
   pageNumber: 'header-right',
+  sides: 'oneside',
 };
 
 export const DEFAULT_EPUB_FORMAT: EpubFormatConfig = {
