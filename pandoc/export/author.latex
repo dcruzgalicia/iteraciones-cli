@@ -48,7 +48,7 @@ $endif$
     \vskip 0\baselineskip
     {\centering\usekomafont{date}{\@date\par}}%
   \fi
-  \vskip 1\baselineskip
+  \vskip 0\baselineskip
 }
 \makeatother
 
