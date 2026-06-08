@@ -122,32 +122,32 @@ $endif$
 $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 
 % ─── TOC ─────────────────────────────────────────────────────────────────────
-\renewcaptionname{spanish}{\contentsname}{\large\normalfont Índice}
+\renewcaptionname{spanish}{\contentsname}{\normalsize\normalfont Índice}
 \BeforeTOCHead{%
-  \RedeclareSectionCommand[beforeskip=30pt,afterskip=2\baselineskip,afterindent=false]{chapter}%
+  \RedeclareSectionCommand[beforeskip=\baselineskip,afterskip=0pt,afterindent=false]{chapter}%
 }
 \setkomafont{partentry}{\normalsize\normalfont}
-\DeclareTOCStyleEntry[linefill=\TOCLineLeaderFill,beforeskip=2\baselineskip]{tocline}{part}
+\DeclareTOCStyleEntry[linefill=\TOCLineLeaderFill,beforeskip=\baselineskip]{tocline}{part}
 \setkomafont{chapterentry}{\normalsize\normalfont}
 \DeclareTOCStyleEntry[pagenumberbox=\phantom,beforeskip=\baselineskip]{tocline}{chapter}
 \DeclareTOCStyleEntry[entryformat=\normalsize\normalfont]{tocline}{section}
 
 % ─── Partes ──────────────────────────────────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=11\baselineskip,afterskip=\baselineskip,afterindent=false]{part}
+\RedeclareSectionCommand[beforeskip=\baselineskip,afterskip=0pt,afterindent=false]{part}
 \setkomafont{part}{\normalsize\normalfont}
 
 % ─── Capítulos ───────────────────────────────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=2\baselineskip,afterskip=\baselineskip,afterindent=false]{chapter}
+\RedeclareSectionCommand[beforeskip=\baselineskip,afterskip=0pt,afterindent=false]{chapter}
 \setkomafont{chapter}{\normalsize\normalfont}
 \renewcommand{\raggedchapter}{\centering}
 
 % ─── Secciones ───────────────────────────────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=2\baselineskip,afterskip=2\baselineskip,afterindent=false]{section}
+\RedeclareSectionCommand[beforeskip=\baselineskip,afterskip=0pt,afterindent=false]{section}
 \setkomafont{section}{\normalsize\normalfont}
 \renewcommand{\raggedsection}{\centering}
 
 % ─── Subsecciones ────────────────────────────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=2\baselineskip,afterskip=2\baselineskip,afterindent=false]{subsection}
+\RedeclareSectionCommand[beforeskip=\baselineskip,afterskip=0pt,afterindent=false]{subsection}
 \setkomafont{subsection}{\normalsize\normalfont}
 
 % ─── Párrafos ──────────────────────────────────────────────────

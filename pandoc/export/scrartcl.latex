@@ -120,21 +120,21 @@ $endif$
 $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 
 % ─── TOC ─────────────────────────────────────────────────────────────────────
-\renewcaptionname{spanish}{\contentsname}{\large\normalfont Índice}
+\renewcaptionname{spanish}{\contentsname}{\normalsize\normalfont Índice}
 \DeclareTOCStyleEntry[linefill=\TOCLineLeaderFill,beforeskip=\baselineskip]{tocline}{section}
 \DeclareTOCStyleEntry[entryformat=\normalsize\normalfont]{tocline}{subsection}
 
 % ─── Secciones (equivalente a capítulo) ──────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=2\baselineskip,afterskip=\baselineskip,afterindent=false]{section}
+\RedeclareSectionCommand[beforeskip=\baselineskip,afterskip=0pt,afterindent=false]{section}
 \setkomafont{section}{\normalsize\normalfont}
 \renewcommand{\raggedsection}{\centering}
 
 % ─── Subsecciones ────────────────────────────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=2\baselineskip,afterskip=2\baselineskip,afterindent=false]{subsection}
+\RedeclareSectionCommand[beforeskip=\baselineskip,afterskip=0pt,afterindent=false]{subsection}
 \setkomafont{subsection}{\normalsize\normalfont}
 
 % ─── Subsubsecciones ─────────────────────────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=2\baselineskip,afterskip=2\baselineskip,afterindent=false]{subsubsection}
+\RedeclareSectionCommand[beforeskip=\baselineskip,afterskip=0pt,afterindent=false]{subsubsection}
 \setkomafont{subsubsection}{\normalsize\normalfont}
 
 % ─── Párrafos ──────────────────────────────────────────────────
