@@ -680,17 +680,39 @@ export function injectCoverIntoListItems(docs: BuildDocument[]): BuildDocument[]
   if (coverByHref.size === 0) return docs;
   return docs.map((doc) => {
     if (!doc.templateContext) return doc;
-    const items = doc.templateContext['list-items'];
-    if (!Array.isArray(items) || items.length === 0) return doc;
-    const updatedItems = items.map((item: unknown) => {
-      if (!item || typeof item !== 'object') return item;
-      const itemObj = item as Record<string, unknown>;
-      const href = itemObj['href'];
-      if (typeof href !== 'string') return { ...itemObj, 'cover-image': '' };
-      const cover = coverByHref.get(href);
-      return { ...itemObj, 'cover-image': cover ?? '' };
-    });
-    return { ...doc, templateContext: { ...doc.templateContext, 'list-items': updatedItems } };
+    const ctx = doc.templateContext;
+
+    // Helper: inyecta cover-image en un array de items (list-items, loose-items, partes)
+    // Cada item sin match recibe '' para impedir fallback al contexto padre.
+    const injectItems = (items: unknown[]): unknown[] =>
+      items.map((item) => {
+        if (!item || typeof item !== 'object') return item;
+        const itemObj = item as Record<string, unknown>;
+        const href = itemObj['href'];
+        if (typeof href !== 'string') return { ...itemObj, 'cover-image': '' };
+        const cover = coverByHref.get(href);
+        return { ...itemObj, 'cover-image': cover ?? '' };
+      });
+
+    const result: Record<string, unknown> = { ...ctx };
+
+    if (Array.isArray(result['list-items'])) {
+      result['list-items'] = injectItems(result['list-items']);
+    }
+    if (Array.isArray(result['loose-items'])) {
+      result['loose-items'] = injectItems(result['loose-items']);
+    }
+    if (Array.isArray(result['parts'])) {
+      result['parts'] = (result['parts'] as unknown[]).map((part) => {
+        if (!part || typeof part !== 'object') return part;
+        const partObj = part as Record<string, unknown>;
+        const items = partObj['items'];
+        if (!Array.isArray(items)) return part;
+        return { ...partObj, items: injectItems(items) };
+      });
+    }
+
+    return { ...doc, templateContext: result };
   });
 }
 
