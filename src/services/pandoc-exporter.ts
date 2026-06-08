@@ -131,7 +131,7 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfF
     if (existsSync(metadata.csl)) {
       lines.push(`csl: ${yamlString(metadata.csl)}`);
     } else {
-      process.stderr.write(`[export] archivo CSL no encontrado: "${metadata.csl}"\n`);
+      process.stderr.write(`\n[export] archivo CSL no encontrado: "${metadata.csl}"\n`);
     }
   }
 

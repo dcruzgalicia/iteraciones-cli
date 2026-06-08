@@ -126,7 +126,7 @@ async function copyLogo(outputDir: string, cwd: string, siteConfig: SiteConfig):
   await cp(src, dest).catch((err: NodeJS.ErrnoException) => {
     if (err.code === 'ENOENT') {
       // Archivo no encontrado: advertencia leve, el build puede continuar sin logo.
-      process.stderr.write(`[assets] logo no encontrado: "${logo}"\n`);
+      process.stderr.write(`\n[assets] logo no encontrado: "${logo}"\n`);
     } else {
       // Error de sistema (permisos, I/O): señalar fallo al igual que path traversal.
       process.stderr.write(`[assets] No se pudo copiar el logo "${logo}": ${err.message}\n`);
