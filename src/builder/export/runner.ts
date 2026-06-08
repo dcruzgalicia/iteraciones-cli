@@ -682,18 +682,14 @@ export function injectCoverIntoListItems(docs: BuildDocument[]): BuildDocument[]
     if (!doc.templateContext) return doc;
     const items = doc.templateContext['list-items'];
     if (!Array.isArray(items) || items.length === 0) return doc;
-    let changed = false;
     const updatedItems = items.map((item: unknown) => {
       if (!item || typeof item !== 'object') return item;
       const itemObj = item as Record<string, unknown>;
       const href = itemObj['href'];
-      if (typeof href !== 'string') return item;
+      if (typeof href !== 'string') return { ...itemObj, 'cover-image': '' };
       const cover = coverByHref.get(href);
-      if (!cover) return item;
-      changed = true;
-      return { ...itemObj, 'cover-image': cover };
+      return { ...itemObj, 'cover-image': cover ?? '' };
     });
-    if (!changed) return doc;
     return { ...doc, templateContext: { ...doc.templateContext, 'list-items': updatedItems } };
   });
 }
