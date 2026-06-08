@@ -301,7 +301,7 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
     '--pdf-engine',
     pdfFormat?.engine ?? 'xelatex',
     `--template=${templatePath}`,
-    '--top-level-division=chapter',
+    `--top-level-division=${doc.metadata.documentclass === 'scrbook' ? 'chapter' : 'section'}`,
     '--output',
     outputPath,
   ];

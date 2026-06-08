@@ -4,10 +4,6 @@
 
 \documentclass[$if(fontsize)$$fontsize$$else$12pt$endif$,toc=flat,sfdefaults=false,parskip=false$if(twoside)$,twoside$endif$$for(classoption)$,$classoption$$sep$,$endfor$]{scrartcl}
 
-% `#` → \chapter{} (--top-level-division=chapter) se redirige a \section{}
-% en clases scrartcl (que no tienen \chapter nativamente).
-\providecommand{\chapter}[1]{\section{#1}}
-
 % ─── Fuentes (XeLaTeX / LuaLaTeX) ────────────────────────────────────────────
 \usepackage{fontspec}
 $if(mainfont)$
