@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { basename, isAbsolute, join, resolve } from 'node:path';
 import { CacheManager } from '../cache/cache-manager.js';
@@ -279,9 +280,11 @@ function resolveGlobalExportPaths(ctx: BuildContext): { globalBibliography?: str
   const pdfCfg = ctx.siteConfig.format?.pdf;
   if (!pdfCfg) return {};
   const cwd = ctx.cwd;
+  const bibPath = pdfCfg.bibliography ? join(cwd, pdfCfg.bibliography) : undefined;
+  const cslPath = pdfCfg.csl ? join(cwd, pdfCfg.csl) : undefined;
   return {
-    globalBibliography: pdfCfg.bibliography ? join(cwd, pdfCfg.bibliography) : undefined,
-    globalCsl: pdfCfg.csl ? join(cwd, pdfCfg.csl) : undefined,
+    globalBibliography: bibPath && existsSync(bibPath) ? bibPath : undefined,
+    globalCsl: cslPath && existsSync(cslPath) ? cslPath : undefined,
   };
 }
 

@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { RenderFileReport } from '../../output/progress.js';
 import type { PluginRegistry } from '../../plugin/registry.js';
@@ -63,8 +64,10 @@ export async function runContextPhaseWithTypeGraph(
       // Fase index: renderizar → registrar en mapa → construir pool → construir contextos.
       const docs = allDocs.filter((d) => d.type === spec.type && d.kind !== 'block');
       // Pasar bibliography/csl global desde format.pdf como fallback para citas en HTML
-      const globalBibliography = ctx.siteConfig.format?.pdf?.bibliography ? join(ctx.cwd, ctx.siteConfig.format.pdf.bibliography) : undefined;
-      const globalCsl = ctx.siteConfig.format?.pdf?.csl ? join(ctx.cwd, ctx.siteConfig.format.pdf.csl) : undefined;
+      const rawBibPath = ctx.siteConfig.format?.pdf?.bibliography ? join(ctx.cwd, ctx.siteConfig.format.pdf.bibliography) : undefined;
+      const rawCslPath = ctx.siteConfig.format?.pdf?.csl ? join(ctx.cwd, ctx.siteConfig.format.pdf.csl) : undefined;
+      const globalBibliography = rawBibPath && existsSync(rawBibPath) ? rawBibPath : undefined;
+      const globalCsl = rawCslPath && existsSync(rawCslPath) ? rawCslPath : undefined;
       const rendered = await renderDocuments(
         docs,
         concurrency,
