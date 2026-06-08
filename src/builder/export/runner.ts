@@ -170,18 +170,13 @@ function exportOutputBase(exportDoc: ExportDocument, outputDir: string): string 
     return join(outputDir, dirPart, exportDoc.slug);
   }
 
-  // index.md siempre conserva su nombre original.
-  const filenameStem = basename(exportDoc.relativePath, '.md');
-  if (filenameStem === 'index') {
-    return join(outputDir, exportDoc.relativePath.replace(/\.md$/, ''));
-  }
-
   const computed = computeSlug(exportDoc.metadata);
   // Evitar usar el título genérico 'Sin título' para nombrar archivos.
   if (computed && exportDoc.metadata.title !== 'Sin título') {
     return join(outputDir, dirPart, computed);
   }
 
+  // Último recurso: usar el nombre original del archivo.
   return join(outputDir, exportDoc.relativePath.replace(/\.md$/, ''));
 }
 
