@@ -100,6 +100,11 @@
   --tw-ring-offset-color: var(--color-surface-light);
 }
 
+/* ─── Enlaces: permitir división en múltiples líneas ──────────────────────── */
+.prose a {
+  overflow-wrap: anywhere;
+}
+
 @utility hyphens-auto {
   hyphens: auto;
   -webkit-hyphens: auto;
