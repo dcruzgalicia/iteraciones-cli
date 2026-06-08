@@ -225,12 +225,13 @@ export async function runExportDocuments(
     }
   }
 
-  // Si el archivo CSL no existe, usar el CSL empaquetado por defecto.
+  // Si el archivo CSL no existe, no usar CSL. Si bibliography está presente,
+  // assemble.ts resuelve al CSL empaquetado por defecto.
   if (globalCsl) {
     const cslFile = Bun.file(globalCsl);
     if (!(await cslFile.exists())) {
-      process.stderr.write(`[export] archivo CSL no encontrado: "${config.pdf?.csl}". Usando CSL empaquetado.\n`);
-      globalCsl = join(import.meta.dir, '../../../pandoc/csl/apa-7.csl');
+      process.stderr.write(`[export] archivo CSL no encontrado: "${config.pdf?.csl}". Usando CSL empaquetado si hay bibliografía.\n`);
+      globalCsl = undefined;
     }
   }
 
@@ -800,12 +801,12 @@ export async function exportSingleDocument(
     }
   }
 
-  // Si el archivo CSL no existe, usar el empaquetado.
+  // Si el archivo CSL no existe, usar el empaquetado si hay bibliografía.
   if (globalCsl) {
     const cslFile = Bun.file(globalCsl);
     if (!(await cslFile.exists())) {
-      process.stderr.write(`[export] archivo CSL no encontrado: "${config.pdf?.csl}". Usando CSL empaquetado.\n`);
-      globalCsl = join(import.meta.dir, '../../../pandoc/csl/apa-7.csl');
+      process.stderr.write(`[export] archivo CSL no encontrado: "${config.pdf?.csl}". Usando CSL empaquetado si hay bibliografía.\n`);
+      globalCsl = undefined;
     }
   }
 
