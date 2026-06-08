@@ -25,18 +25,28 @@
     $if(loose-items)$
     <div class="divide-y divide-accent-200/50">
       $for(loose-items)$
-      <a
-        href="$href$"
-        class="group flex items-start justify-between gap-6 py-5 no-underline transition-colors first:pt-0">
+      <article class="group flex items-start gap-4 py-5 first:pt-0">
+        $if(cover-image)$
+        <a href="$href$" class="shrink-0 w-16 sm:w-20 no-underline" tabindex="-1" aria-label="$title$">
+          <img src="$cover-image$" alt="" loading="lazy"
+            class="w-full rounded border border-accent-200/60 object-cover shadow-sm aspect-[3/4] transition-opacity group-hover:opacity-90" />
+        </a>
+        $endif$
         <div class="min-w-0 flex-1">
-          <div class="flex items-center gap-2">
-            <span
-              class="font-mono text-accent-300 transition-colors group-hover:text-accent-600"
-              >▸</span
-            >
-            <div
-              class="font-semibold tracking-tight text-zinc-700 transition-colors group-hover:text-accent-700">
-              $title$
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex items-center gap-2 min-w-0">
+              <span
+                class="shrink-0 font-mono text-accent-300 transition-colors group-hover:text-accent-600"
+                >▸</span
+              >
+              <a
+                href="$href$"
+                class="font-semibold tracking-tight text-zinc-700 no-underline transition-colors hover:text-accent-700">
+                $title$
+              </a>
+            </div>
+            <div class="shrink-0 font-mono text-xs text-zinc-500 pt-0.5">
+              $date$
             </div>
           </div>
           $if(author)$
@@ -44,7 +54,7 @@
             ↳ $author$
           </div>
           $endif$ $if(abstract)$
-          <div class="mt-1 pl-4 text-sm leading-relaxed text-zinc-600">
+          <div class="mt-1.5 pl-4 text-sm leading-relaxed text-zinc-600">
             $abstract$
           </div>
           $endif$ $if(keywords)$
@@ -55,10 +65,7 @@
           </div>
           $endif$
         </div>
-        <div class="shrink-0 font-mono text-xs text-zinc-500">
-          $date$
-        </div>
-      </a>
+      </article>
       $endfor$
     </div>
     $endif$
@@ -70,18 +77,28 @@
       </h2>
       <div class="divide-y divide-accent-200/50 border-t border-accent-200/40">
         $for(items)$
-        <a
-          href="$href$"
-          class="group flex items-start justify-between gap-6 py-5 no-underline transition-colors">
+        <article class="group flex items-start gap-4 py-5 no-underline transition-colors">
+          $if(cover-image)$
+          <a href="$href$" class="shrink-0 w-16 sm:w-20 no-underline" tabindex="-1" aria-label="$title$">
+            <img src="$cover-image$" alt="" loading="lazy"
+              class="w-full rounded border border-accent-200/60 object-cover shadow-sm aspect-[3/4] transition-opacity group-hover:opacity-90" />
+          </a>
+          $endif$
           <div class="min-w-0 flex-1">
-            <div class="flex items-center gap-2">
-              <span
-                class="font-mono text-accent-300 transition-colors group-hover:text-accent-600"
-                >▸</span
-              >
-              <div
-                class="font-semibold tracking-tight text-zinc-700 transition-colors group-hover:text-accent-700">
-                $title$
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-center gap-2 min-w-0">
+                <span
+                  class="shrink-0 font-mono text-accent-300 transition-colors group-hover:text-accent-600"
+                  >▸</span
+                >
+                <a
+                  href="$href$"
+                  class="font-semibold tracking-tight text-zinc-700 no-underline transition-colors hover:text-accent-700">
+                  $title$
+                </a>
+              </div>
+              <div class="shrink-0 font-mono text-xs text-zinc-500 pt-0.5">
+                $date$
               </div>
             </div>
             $if(author)$
@@ -89,7 +106,7 @@
               ↳ $author$
             </div>
             $endif$ $if(abstract)$
-            <div class="mt-1 pl-4 text-sm leading-relaxed text-zinc-600">
+            <div class="mt-1.5 pl-4 text-sm leading-relaxed text-zinc-600">
               $abstract$
             </div>
             $endif$ $if(keywords)$
@@ -100,10 +117,7 @@
             </div>
             $endif$
           </div>
-          <div class="shrink-0 font-mono text-xs text-zinc-500">
-            $date$
-          </div>
-        </a>
+        </article>
         $endfor$
       </div>
     </section>
@@ -113,18 +127,28 @@
   $if(list-items)$
   <div class="divide-y divide-accent-200/50">
     $for(list-items)$
-    <a
-      href="$href$"
-      class="group flex items-start justify-between gap-6 py-5 no-underline transition-colors first:pt-0">
+    <article class="group flex items-start gap-4 py-5 no-underline transition-colors first:pt-0">
+      $if(cover-image)$
+      <a href="$href$" class="shrink-0 w-16 sm:w-20 no-underline" tabindex="-1" aria-label="$title$">
+        <img src="$cover-image$" alt="" loading="lazy"
+          class="w-full rounded border border-accent-200/60 object-cover shadow-sm aspect-[3/4] transition-opacity group-hover:opacity-90" />
+      </a>
+      $endif$
       <div class="min-w-0 flex-1">
-        <div class="flex items-center gap-2">
-          <span
-            class="font-mono text-accent-300 transition-colors group-hover:text-accent-600"
-            >▸</span
-          >
-          <div
-            class="font-semibold tracking-tight text-zinc-700 transition-colors group-hover:text-accent-700">
-            $title$
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex items-center gap-2 min-w-0">
+            <span
+              class="shrink-0 font-mono text-accent-300 transition-colors group-hover:text-accent-600"
+              >▸</span
+            >
+            <a
+              href="$href$"
+              class="font-semibold tracking-tight text-zinc-700 no-underline transition-colors hover:text-accent-700">
+              $title$
+            </a>
+          </div>
+          <div class="shrink-0 font-mono text-xs text-zinc-500 pt-0.5">
+            $date$
           </div>
         </div>
         $if(author)$
@@ -132,7 +156,7 @@
           ↳ $author$
         </div>
         $endif$ $if(abstract)$
-        <div class="mt-1 pl-4 text-sm leading-relaxed text-zinc-600">
+        <div class="mt-1.5 pl-4 text-sm leading-relaxed text-zinc-600">
           $abstract$
         </div>
         $endif$ $if(keywords)$
@@ -143,10 +167,7 @@
         </div>
         $endif$
       </div>
-      <div class="shrink-0 font-mono text-xs text-zinc-500">
-        $date$
-      </div>
-    </a>
+    </article>
     $endfor$
   </div>
   $else$
