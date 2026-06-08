@@ -2,7 +2,7 @@
 %% Especializado para: artículos, notas y páginas de contenido
 %% Requiere: TeX Live / MacTeX full con KOMA-Script, fontspec, microtype, hyperref, babel
 
-\documentclass[$if(fontsize)$$fontsize$$else$11pt$endif$,toc=flat,sfdefaults=false$if(twoside)$,twoside$endif$$for(classoption)$,$classoption$$sep$,$endfor$]{scrartcl}
+\documentclass[$if(fontsize)$$fontsize$$else$11pt$endif$,toc=flat,sfdefaults=false,parskip=false$if(twoside)$,twoside$endif$$for(classoption)$,$classoption$$sep$,$endfor$]{scrartcl}
 
 % `#` → \chapter{} (--top-level-division=chapter) se redirige a \section{}
 % en clases scrartcl (que no tienen \chapter nativamente).
