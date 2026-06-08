@@ -2,7 +2,7 @@
 %% Especializado para: artículos, notas y páginas de contenido
 %% Requiere: TeX Live / MacTeX full con KOMA-Script, fontspec, microtype, hyperref, babel
 
-\documentclass[$if(fontsize)$$fontsize$$else$11pt$endif$,toc=flat,sfdefaults=false,parskip=false$if(twoside)$,twoside$endif$$for(classoption)$,$classoption$$sep$,$endfor$]{scrartcl}
+\documentclass[$if(fontsize)$$fontsize$$else$12pt$endif$,toc=flat,sfdefaults=false,parskip=false$if(twoside)$,twoside$endif$$for(classoption)$,$classoption$$sep$,$endfor$]{scrartcl}
 
 % `#` → \chapter{} (--top-level-division=chapter) se redirige a \section{}
 % en clases scrartcl (que no tienen \chapter nativamente).
@@ -11,7 +11,21 @@
 % ─── Fuentes (XeLaTeX / LuaLaTeX) ────────────────────────────────────────────
 \usepackage{fontspec}
 $if(mainfont)$
-\setmainfont{$mainfont$}
+\IfFontExistsTF{$mainfont$}{%
+  \setmainfont{$mainfont$}%
+}{%
+  \IfFontExistsTF{Times New Roman}{%
+    \setmainfont{Times New Roman}%
+  }{%
+    \setmainfont[
+      UprightFont = texgyretermes-regular.otf,
+      BoldFont = texgyretermes-bold.otf,
+      ItalicFont = texgyretermes-italic.otf,
+      BoldItalicFont = texgyretermes-bolditalic.otf,
+      Numbers = OldStyle,
+    ]{TeX Gyre Termes}%
+  }%
+}
 $else$
 \setmainfont[
   UprightFont = texgyrepagella-regular.otf,
@@ -88,7 +102,7 @@ $endif$
 
 % ─── Interlineado ────────────────────────────────────────────────────────────
 \usepackage{setspace}
-\setstretch{$if(linestretch)$$linestretch$$else$1.1$endif$}
+\setstretch{$if(linestretch)$$linestretch$$else$1.5$endif$}
 
 % ─── Microtype (XeLaTeX: tracking y kerning; spacing=true no disponible) ─────
 \usepackage[tracking=true]{microtype}

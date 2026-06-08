@@ -12,7 +12,7 @@ export interface ThemePaths {
 const KNOWN_THEMES = new Set(['light', 'dark']);
 
 export function resolveThemePaths(theme: string | undefined): ThemePaths {
-  const name = theme ?? 'light';
+  const name = theme ?? 'dark';
   if (name === 'dark') {
     const root = join(PKG_ROOT, 'themes/dark');
     return {

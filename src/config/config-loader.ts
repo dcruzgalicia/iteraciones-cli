@@ -55,8 +55,8 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
   const pagination = parsePaginationConfig(site.pagination);
   const format =
     typeof root.format === 'object' && root.format !== null
-      ? (parseFormatConfig(root.format as Record<string, unknown>) ?? DEFAULT_SITE_CONFIG.format)
-      : DEFAULT_SITE_CONFIG.format;
+      ? parseFormatConfig(root.format as Record<string, unknown>)
+      : { ...DEFAULT_SITE_CONFIG.format, html: { ...DEFAULT_HTML_FORMAT }, pdf: { ...DEFAULT_PDF_FORMAT }, epub: { ...DEFAULT_EPUB_FORMAT } };
 
   return {
     title,
@@ -80,17 +80,11 @@ function parsePaginationConfig(raw: unknown): PaginationConfig {
   return { limit };
 }
 
-function parseFormatConfig(raw: Record<string, unknown>): FormatConfig | undefined {
-  const html = parseHtmlFormatConfig(raw.html);
-  const pdf = parsePdfFormatConfig(raw.pdf);
-  const epub = parseEpubFormatConfig(raw.epub);
-
-  if (!html && !pdf && !epub) return undefined;
-
+function parseFormatConfig(raw: Record<string, unknown>): FormatConfig {
   return {
-    ...(html ? { html } : {}),
-    ...(pdf ? { pdf } : {}),
-    ...(epub ? { epub } : {}),
+    html: parseHtmlFormatConfig(raw.html) ?? { ...DEFAULT_HTML_FORMAT },
+    pdf: parsePdfFormatConfig(raw.pdf),
+    epub: parseEpubFormatConfig(raw.epub),
   };
 }
 
@@ -127,8 +121,8 @@ const KNOWN_PAGE_NUMBER_PLACEMENTS = new Set<string>([
 
 const KNOWN_SIDES = new Set<string>(['oneside', 'twoside']);
 
-function parsePdfFormatConfig(raw: unknown): PdfFormatConfig | undefined {
-  if (!raw || typeof raw !== 'object') return undefined;
+function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
+  if (!raw || typeof raw !== 'object') return { ...DEFAULT_PDF_FORMAT };
   const obj = raw as Record<string, unknown>;
 
   const engine = obj.engine === 'lualatex' ? 'lualatex' : DEFAULT_PDF_FORMAT.engine;
@@ -146,9 +140,12 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig | undefined {
   const bibliography = typeof obj.bibliography === 'string' && obj.bibliography.trim() ? obj.bibliography.trim() : undefined;
   const csl = typeof obj.csl === 'string' && obj.csl.trim() ? obj.csl.trim() : undefined;
 
-  const toc = typeof obj.toc === 'boolean' ? obj.toc : undefined;
+  const toc = typeof obj.toc === 'boolean' ? obj.toc : DEFAULT_PDF_FORMAT.toc;
   const rawTocDepth = obj['toc-depth'];
-  const tocDepth = typeof rawTocDepth === 'number' && Number.isInteger(rawTocDepth) && rawTocDepth >= 0 && rawTocDepth <= 5 ? rawTocDepth : undefined;
+  const tocDepth =
+    typeof rawTocDepth === 'number' && Number.isInteger(rawTocDepth) && rawTocDepth >= 0 && rawTocDepth <= 5
+      ? rawTocDepth
+      : DEFAULT_PDF_FORMAT.tocDepth;
 
   const rawPageSize = obj['page-size'];
   let pageSize: string | undefined;
@@ -162,14 +159,16 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig | undefined {
       `[iteraciones] format.pdf.page-size: valor desconocido "${String(obj['page-size'])}". Usa un nombre estandar (letter, a4, half-letter, etc.) o un tamano personalizado "ancho,alto" (ej: "15cm,23cm").\n`,
     );
   }
+  pageSize ??= DEFAULT_PDF_FORMAT.pageSize;
 
   const rawFontSize = obj['font-size'];
-  const fontSize = typeof rawFontSize === 'string' && /^\d+pt$/.test(rawFontSize) ? rawFontSize : undefined;
-  if (rawFontSize !== undefined && !fontSize) {
+  const isFontSizeValid = typeof rawFontSize === 'string' && /^\d+pt$/.test(rawFontSize);
+  const fontSize = isFontSizeValid ? rawFontSize : DEFAULT_PDF_FORMAT.fontSize;
+  if (rawFontSize !== undefined && !isFontSizeValid) {
     process.stderr.write(`[iteraciones] format.pdf.font-size: debe ser un tamano LaTeX como "10pt", "11pt" o "12pt".\n`);
   }
 
-  const fontFamily = typeof obj['font-family'] === 'string' && obj['font-family'].trim() ? obj['font-family'].trim() : undefined;
+  const fontFamily = typeof obj['font-family'] === 'string' && obj['font-family'].trim() ? obj['font-family'].trim() : DEFAULT_PDF_FORMAT.fontFamily;
 
   const rawMargins = obj.margins;
   let margins: [string, string, string, string] | undefined;
@@ -182,27 +181,29 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig | undefined {
   } else if (rawMargins !== undefined) {
     process.stderr.write(`[iteraciones] format.pdf.margins: debe ser un array de 4 strings con unidades (ej: ["2.5cm", "2.5cm", "3cm", "3cm"]).\n`);
   }
+  margins ??= DEFAULT_PDF_FORMAT.margins;
 
   const rawLineSpacing = obj['line-spacing'];
-  const lineSpacing = typeof rawLineSpacing === 'number' && rawLineSpacing > 0 ? rawLineSpacing : undefined;
-  if (rawLineSpacing !== undefined && !lineSpacing) {
+  const lineSpacing = typeof rawLineSpacing === 'number' && rawLineSpacing > 0 ? rawLineSpacing : DEFAULT_PDF_FORMAT.lineSpacing;
+  if (rawLineSpacing !== undefined && !(typeof rawLineSpacing === 'number' && rawLineSpacing > 0)) {
     process.stderr.write(`[iteraciones] format.pdf.line-spacing: debe ser un numero positivo.\n`);
   }
 
-  const numbering = typeof obj.numbering === 'boolean' ? obj.numbering : undefined;
+  const numbering = typeof obj.numbering === 'boolean' ? obj.numbering : DEFAULT_PDF_FORMAT.numbering;
 
   const rawPageNumber = obj['page-number'];
-  const pageNumber =
-    typeof rawPageNumber === 'string' && KNOWN_PAGE_NUMBER_PLACEMENTS.has(rawPageNumber) ? (rawPageNumber as PageNumberPlacement) : undefined;
-  if (rawPageNumber !== undefined && !pageNumber) {
+  const isPageNumberValid = typeof rawPageNumber === 'string' && KNOWN_PAGE_NUMBER_PLACEMENTS.has(rawPageNumber);
+  const pageNumber = isPageNumberValid ? (rawPageNumber as PageNumberPlacement) : DEFAULT_PDF_FORMAT.pageNumber;
+  if (rawPageNumber !== undefined && !isPageNumberValid) {
     process.stderr.write(
       `[iteraciones] format.pdf.page-number: valor desconocido "${String(rawPageNumber)}". Valores validos: footer-left, footer-center, footer-right, header-left, header-center, header-right.\n`,
     );
   }
 
   const rawSides = obj.sides;
-  const sides = typeof rawSides === 'string' && KNOWN_SIDES.has(rawSides) ? (rawSides as Sides) : undefined;
-  if (rawSides !== undefined && !sides) {
+  const isValidSides = typeof rawSides === 'string' && KNOWN_SIDES.has(rawSides);
+  const sides = isValidSides ? (rawSides as Sides) : DEFAULT_PDF_FORMAT.sides;
+  if (rawSides !== undefined && !isValidSides) {
     process.stderr.write(`[iteraciones] format.pdf.sides: valor desconocido "${String(rawSides)}". Valores validos: oneside, twoside.\n`);
   }
 
@@ -225,21 +226,22 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig | undefined {
   };
 }
 
-function parseEpubFormatConfig(raw: unknown): EpubFormatConfig | undefined {
-  if (!raw || typeof raw !== 'object') return undefined;
+function parseEpubFormatConfig(raw: unknown): EpubFormatConfig {
+  if (!raw || typeof raw !== 'object') return { ...DEFAULT_EPUB_FORMAT };
   const obj = raw as Record<string, unknown>;
 
-  const toc = typeof obj.toc === 'boolean' ? obj.toc : undefined;
+  const toc = typeof obj.toc === 'boolean' ? obj.toc : DEFAULT_EPUB_FORMAT.toc;
   const rawTocDepth = obj['toc-depth'];
-  const tocDepth = typeof rawTocDepth === 'number' && Number.isInteger(rawTocDepth) && rawTocDepth >= 0 && rawTocDepth <= 5 ? rawTocDepth : undefined;
+  const tocDepth =
+    typeof rawTocDepth === 'number' && Number.isInteger(rawTocDepth) && rawTocDepth >= 0 && rawTocDepth <= 5
+      ? rawTocDepth
+      : DEFAULT_EPUB_FORMAT.tocDepth;
   const bibliography = typeof obj.bibliography === 'string' && obj.bibliography.trim() ? obj.bibliography.trim() : undefined;
   const csl = typeof obj.csl === 'string' && obj.csl.trim() ? obj.csl.trim() : undefined;
 
-  if (toc === undefined && tocDepth === undefined && !bibliography && !csl) return undefined;
-
   return {
-    ...(toc !== undefined ? { toc } : {}),
-    ...(tocDepth !== undefined ? { tocDepth } : {}),
+    toc,
+    tocDepth,
     ...(bibliography !== undefined ? { bibliography } : {}),
     ...(csl !== undefined ? { csl } : {}),
   };
