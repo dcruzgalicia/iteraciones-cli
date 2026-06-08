@@ -220,7 +220,7 @@ export async function runExportDocuments(
   if (globalBibliography) {
     const bibFile = Bun.file(globalBibliography);
     if (!(await bibFile.exists())) {
-      process.stderr.write(`\n[export] archivo de bibliografía no encontrado: "${config.pdf?.bibliography}". Usando solo el CSL por defecto.\n`);
+      process.stderr.write(`\n⚠ archivo de bibliografía no encontrado: "${config.pdf?.bibliography}". Usando solo el CSL por defecto.\n`);
       globalBibliography = undefined;
     }
   }
@@ -230,7 +230,7 @@ export async function runExportDocuments(
   if (globalCsl) {
     const cslFile = Bun.file(globalCsl);
     if (!(await cslFile.exists())) {
-      process.stderr.write(`\n[export] archivo CSL no encontrado: "${config.pdf?.csl}". Usando CSL empaquetado si hay bibliografía.\n`);
+      process.stderr.write(`⚠ archivo CSL no encontrado: "${config.pdf?.csl}". Usando CSL empaquetado si hay bibliografía.\n`);
       globalCsl = undefined;
     }
   }
@@ -796,16 +796,16 @@ export async function exportSingleDocument(
   if (globalBibliography) {
     const bibFile = Bun.file(globalBibliography);
     if (!(await bibFile.exists())) {
-      process.stderr.write(`\n[export] archivo de bibliografía no encontrado: "${config.pdf?.bibliography}". Usando solo el CSL por defecto.\n`);
+      process.stderr.write(`\n⚠ archivo de bibliografía no encontrado: "${config.pdf?.bibliography}". Usando solo el CSL por defecto.\n`);
       globalBibliography = undefined;
     }
   }
 
-  // Si el archivo CSL no existe, usar el empaquetado si hay bibliografía.
+  // Si el archivo CSL no existe, no usar CSL.
   if (globalCsl) {
     const cslFile = Bun.file(globalCsl);
     if (!(await cslFile.exists())) {
-      process.stderr.write(`\n[export] archivo CSL no encontrado: "${config.pdf?.csl}". Usando CSL empaquetado si hay bibliografía.\n`);
+      process.stderr.write(`⚠ archivo CSL no encontrado: "${config.pdf?.csl}". Usando CSL empaquetado si hay bibliografía.\n`);
       globalCsl = undefined;
     }
   }
