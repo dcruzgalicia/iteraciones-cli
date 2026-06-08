@@ -100,7 +100,7 @@ async function copyLogo(outputDir: string, cwd: string, siteConfig: SiteConfig):
   await mkdir(dirname(dest), { recursive: true });
   await cp(src, dest).catch((err: NodeJS.ErrnoException) => {
     if (err.code === 'ENOENT') {
-      process.stderr.write(`\n⚠ logo no encontrado: "${logo}"\n`);
+      process.stderr.write(`\r\x1b[K⚠ logo no encontrado: "${logo}"\n`);
     } else {
       process.stderr.write(`\n⚠ No se pudo copiar el logo "${logo}": ${err.message}\n`);
       process.exitCode = 1;
