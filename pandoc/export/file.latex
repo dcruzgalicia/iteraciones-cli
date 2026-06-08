@@ -36,7 +36,7 @@ $endif$
 \renewcommand{\maketitle}{%
   \vspace*{0\baselineskip}%
   {\centering\usekomafont{title}{\@title\par}}%
-  \vskip 2\baselineskip
+  \vskip 1\baselineskip
   \ifx\@subtitle\@empty\else
     {\centering\usekomafont{subtitle}{\@subtitle\par}}%
     \vskip 0\baselineskip
@@ -44,7 +44,7 @@ $endif$
   {\centering\usekomafont{author}{\@author\par}}%
   \vskip 0\baselineskip
   {\centering\usekomafont{date}{\@date\par}}%
-  \vskip 2\baselineskip
+  \vskip 1\baselineskip
 }
 \makeatother
 
