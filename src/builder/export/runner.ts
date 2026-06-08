@@ -213,8 +213,17 @@ export async function runExportDocuments(
   };
 
   // Resolver y validar rutas globales de bibliography y csl desde config.
-  const globalBibliography = resolveExportGlobalPath(config.pdf?.bibliography, cwd, 'bibliography');
+  let globalBibliography = resolveExportGlobalPath(config.pdf?.bibliography, cwd, 'bibliography');
   const globalCsl = resolveExportGlobalPath(config.pdf?.csl, cwd, 'csl');
+
+  // Si el archivo de bibliografía no existe, ignorarlo y usar solo el CSL por defecto.
+  if (globalBibliography) {
+    const bibFile = Bun.file(globalBibliography);
+    if (!(await bibFile.exists())) {
+      process.stderr.write(`[export] archivo de bibliografía no encontrado: "${config.pdf?.bibliography}". Usando solo el CSL por defecto.\n`);
+      globalBibliography = undefined;
+    }
+  }
 
   // Hash del archivo .bib global (si existe) para invalidar caché cuando cambia.
   let bibHash = '';
@@ -770,8 +779,17 @@ export async function exportSingleDocument(
   const eventPool = renderedMap.get('event') ?? [];
 
   // Resolver rutas globales de bibliography y csl (reutiliza el helper compartido, con aviso).
-  const globalBibliography = resolveExportGlobalPath(config.pdf?.bibliography, cwd, 'bibliography');
+  let globalBibliography = resolveExportGlobalPath(config.pdf?.bibliography, cwd, 'bibliography');
   const globalCsl = resolveExportGlobalPath(config.pdf?.csl, cwd, 'csl');
+
+  // Si el archivo de bibliografía no existe, ignorarlo.
+  if (globalBibliography) {
+    const bibFile = Bun.file(globalBibliography);
+    if (!(await bibFile.exists())) {
+      process.stderr.write(`[export] archivo de bibliografía no encontrado: "${config.pdf?.bibliography}". Usando solo el CSL por defecto.\n`);
+      globalBibliography = undefined;
+    }
+  }
 
   // Para type author con variante completa: usar assembleAuthorExportVariants.
   let rawExportDoc: ExportDocument | null;

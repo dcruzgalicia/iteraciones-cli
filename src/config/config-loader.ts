@@ -94,7 +94,7 @@ function parseHtmlFormatConfig(raw: unknown): HtmlFormatConfig | undefined {
 
   const theme = typeof obj.theme === 'string' ? obj.theme : undefined;
   const accent = resolveAccent(obj.accent);
-  const math = obj.math === 'katex' || obj.math === 'mathjax' ? obj.math : undefined;
+  const math = obj.math === 'katex' || obj.math === 'mathjax' ? obj.math : 'none';
   const toc = typeof obj.toc === 'boolean' ? obj.toc : DEFAULT_HTML_FORMAT.toc;
   const rawTocDepth = obj['toc-depth'];
   const tocDepth =

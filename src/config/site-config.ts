@@ -13,7 +13,7 @@ export interface PaginationConfig {
 export interface HtmlFormatConfig {
   theme?: string;
   accent?: string;
-  math?: 'katex' | 'mathjax';
+  math?: 'none' | 'katex' | 'mathjax';
   toc: boolean;
   tocDepth: number;
   hyphenation: boolean;
@@ -99,7 +99,7 @@ export const DEFAULT_PAGINATION: PaginationConfig = { limit: 10 };
 export const DEFAULT_HTML_FORMAT: HtmlFormatConfig = {
   theme: undefined,
   accent: 'lime',
-  math: undefined,
+  math: 'none',
   toc: true,
   tocDepth: 6,
   hyphenation: false,
@@ -118,6 +118,7 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   lineSpacing: 1.5,
   pageNumber: 'header-right',
   sides: 'oneside',
+  numbering: false,
 };
 
 export const DEFAULT_EPUB_FORMAT: EpubFormatConfig = {
