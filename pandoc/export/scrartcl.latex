@@ -306,7 +306,7 @@ $if(publisher)$\publishers{$publisher$}$endif$
 
 $if(toc)$
 \tableofcontents
-\clearpage
+\par
 $endif$
 
 \renewcommand{\thepage}{\arabic{page}}
