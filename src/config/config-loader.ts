@@ -137,8 +137,10 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
   }
 
   const hyphenation = typeof obj.hyphenation === 'boolean' ? obj.hyphenation : DEFAULT_PDF_FORMAT.hyphenation;
-  const bibliography = typeof obj.bibliography === 'string' && obj.bibliography.trim() ? obj.bibliography.trim() : undefined;
-  const csl = typeof obj.csl === 'string' && obj.csl.trim() ? obj.csl.trim() : undefined;
+  const rawBib = obj.bibliography;
+  const bibliography = typeof rawBib === 'string' && rawBib.trim() ? rawBib.trim() : rawBib === '' ? undefined : DEFAULT_PDF_FORMAT.bibliography;
+  const rawCsl = obj.csl;
+  const csl = typeof rawCsl === 'string' && rawCsl.trim() ? rawCsl.trim() : rawCsl === '' ? undefined : DEFAULT_PDF_FORMAT.csl;
 
   const toc = typeof obj.toc === 'boolean' ? obj.toc : DEFAULT_PDF_FORMAT.toc;
   const rawTocDepth = obj['toc-depth'];
@@ -236,8 +238,11 @@ function parseEpubFormatConfig(raw: unknown): EpubFormatConfig {
     typeof rawTocDepth === 'number' && Number.isInteger(rawTocDepth) && rawTocDepth >= 0 && rawTocDepth <= 5
       ? rawTocDepth
       : DEFAULT_EPUB_FORMAT.tocDepth;
-  const bibliography = typeof obj.bibliography === 'string' && obj.bibliography.trim() ? obj.bibliography.trim() : undefined;
-  const csl = typeof obj.csl === 'string' && obj.csl.trim() ? obj.csl.trim() : undefined;
+  const rawEpubBib = obj.bibliography;
+  const bibliography =
+    typeof rawEpubBib === 'string' && rawEpubBib.trim() ? rawEpubBib.trim() : rawEpubBib === '' ? undefined : DEFAULT_EPUB_FORMAT.bibliography;
+  const rawEpubCsl = obj.csl;
+  const csl = typeof rawEpubCsl === 'string' && rawEpubCsl.trim() ? rawEpubCsl.trim() : rawEpubCsl === '' ? undefined : DEFAULT_EPUB_FORMAT.csl;
 
   return {
     toc,

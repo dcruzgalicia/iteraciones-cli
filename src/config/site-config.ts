@@ -119,11 +119,15 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   pageNumber: 'header-right',
   sides: 'oneside',
   numbering: false,
+  bibliography: 'bibliography.bib',
+  csl: 'apa.csl',
 };
 
 export const DEFAULT_EPUB_FORMAT: EpubFormatConfig = {
   toc: true,
   tocDepth: 6,
+  bibliography: 'bibliography.bib',
+  csl: 'apa.csl',
 };
 
 export const DEFAULT_SITE_CONFIG: SiteConfig = {

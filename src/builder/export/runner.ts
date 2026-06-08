@@ -214,7 +214,7 @@ export async function runExportDocuments(
 
   // Resolver y validar rutas globales de bibliography y csl desde config.
   let globalBibliography = resolveExportGlobalPath(config.pdf?.bibliography, cwd, 'bibliography');
-  const globalCsl = resolveExportGlobalPath(config.pdf?.csl, cwd, 'csl');
+  let globalCsl = resolveExportGlobalPath(config.pdf?.csl, cwd, 'csl');
 
   // Si el archivo de bibliografía no existe, ignorarlo y usar solo el CSL por defecto.
   if (globalBibliography) {
@@ -222,6 +222,15 @@ export async function runExportDocuments(
     if (!(await bibFile.exists())) {
       process.stderr.write(`[export] archivo de bibliografía no encontrado: "${config.pdf?.bibliography}". Usando solo el CSL por defecto.\n`);
       globalBibliography = undefined;
+    }
+  }
+
+  // Si el archivo CSL no existe, usar el CSL empaquetado por defecto.
+  if (globalCsl) {
+    const cslFile = Bun.file(globalCsl);
+    if (!(await cslFile.exists())) {
+      process.stderr.write(`[export] archivo CSL no encontrado: "${config.pdf?.csl}". Usando CSL empaquetado.\n`);
+      globalCsl = join(import.meta.dir, '../../../pandoc/csl/apa-7.csl');
     }
   }
 
@@ -780,7 +789,7 @@ export async function exportSingleDocument(
 
   // Resolver rutas globales de bibliography y csl (reutiliza el helper compartido, con aviso).
   let globalBibliography = resolveExportGlobalPath(config.pdf?.bibliography, cwd, 'bibliography');
-  const globalCsl = resolveExportGlobalPath(config.pdf?.csl, cwd, 'csl');
+  let globalCsl = resolveExportGlobalPath(config.pdf?.csl, cwd, 'csl');
 
   // Si el archivo de bibliografía no existe, ignorarlo.
   if (globalBibliography) {
@@ -788,6 +797,15 @@ export async function exportSingleDocument(
     if (!(await bibFile.exists())) {
       process.stderr.write(`[export] archivo de bibliografía no encontrado: "${config.pdf?.bibliography}". Usando solo el CSL por defecto.\n`);
       globalBibliography = undefined;
+    }
+  }
+
+  // Si el archivo CSL no existe, usar el empaquetado.
+  if (globalCsl) {
+    const cslFile = Bun.file(globalCsl);
+    if (!(await cslFile.exists())) {
+      process.stderr.write(`[export] archivo CSL no encontrado: "${config.pdf?.csl}". Usando CSL empaquetado.\n`);
+      globalCsl = join(import.meta.dir, '../../../pandoc/csl/apa-7.csl');
     }
   }
 
