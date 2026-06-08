@@ -249,6 +249,7 @@ $endif$
 
 % ─── Hipervínculos ───────────────────────────────────────────────────────────
 \usepackage[hidelinks]{hyperref}
+\usepackage{xurl}
 
 % ─── CSL: bibliografías procesadas con pandoc --citeproc ─────────────────────
 $if(csl-refs)$
