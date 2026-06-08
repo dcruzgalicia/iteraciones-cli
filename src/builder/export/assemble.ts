@@ -102,12 +102,23 @@ export function assembleExportDocument(
       : undefined,
   };
 
-  const body = documentclass === 'scrartcl' ? doc.body : assembleBookBody(doc, items, parts);
+  let body = documentclass === 'scrartcl' ? doc.body : assembleBookBody(doc, items, parts);
 
-  // Si el cuerpo no contiene encabezados markdown, desactivar el TOC
-  // para evitar que LaTeX muestre un índice vacío con artefactos.
-  if (toc && !/^#{1,6}\s/m.test(body)) {
-    metadata.toc = false;
+  // Verificar si el cuerpo contiene texto antes del primer encabezado.
+  // Ese texto (preámbulo) hace que LaTeX genere una entrada fantasma en el
+  // índice con un asterisco, incluso con secnumdepth=-2.
+  // La solución es reubicar ese texto dentro de la primera sección.
+  if (toc) {
+    const headingMatch = body.match(/^#{1,6}\s/m);
+    if (!headingMatch) {
+      // Sin encabezados: desactivar el TOC por completo.
+      metadata.toc = false;
+    } else if (headingMatch.index && headingMatch.index > 0) {
+      // Hay texto antes del primer encabezado: moverlo dentro de la sección.
+      const preamble = body.slice(0, headingMatch.index);
+      const rest = body.slice(headingMatch.index);
+      body = rest + '\n\n' + preamble.trim();
+    }
   }
 
   return {
