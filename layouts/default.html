@@ -94,10 +94,19 @@
         $endif$
         $if(cover-image)$
         <div class="mb-6">
+          $if(download-pdf)$
+          <a href="$download-pdf$" aria-label="Descargar PDF">
+            <img
+              src="$cover-image$"
+              alt="Portada"
+              class="aspect-[3/4] w-full rounded border border-accent-200/60 object-cover shadow-sm transition-opacity hover:opacity-80" />
+          </a>
+          $else$
           <img
             src="$cover-image$"
             alt="Portada"
             class="aspect-[3/4] w-full rounded border border-accent-200/60 object-cover shadow-sm" />
+          $endif$
         </div>
         $endif$
         $if(download-pdf)$
