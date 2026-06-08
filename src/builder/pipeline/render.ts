@@ -78,17 +78,12 @@ export async function renderDocuments(
           ? (doc.frontmatter['editorial'] as Record<string, unknown>)
           : {};
 
-      // Cadena de resolución: editorial.bibliography → export.bibliography
       const rawBib = typeof rawEditorial['bibliography'] === 'string' ? rawEditorial['bibliography'] : undefined;
       const effectiveBib = rawBib ?? globalBibliography;
 
       if (effectiveBib) {
-        // resolve() normaliza siempre: elimina '..', maneja rutas absolutas y relativas.
-        // Una ruta '/project/../etc/passwd' queda '/etc/passwd', que luego falla startsWith.
         const resolvedBib = resolve(cwd, effectiveBib);
-        // Validar que la ruta esté dentro del proyecto.
         if (resolvedBib.startsWith(cwd + '/') || resolvedBib === cwd) {
-          // Cadena de resolución para CSL: editorial.csl → export.csl → APA 7 empaquetado
           const rawCsl = typeof rawEditorial['csl'] === 'string' ? rawEditorial['csl'] : undefined;
           const effectiveCsl = rawCsl ?? globalCsl;
           let resolvedCsl: string | undefined;
@@ -100,7 +95,6 @@ export async function renderDocuments(
               process.stderr.write(`[render] CSL fuera del proyecto ignorado: "${effectiveCsl}"\n`);
             }
           } else {
-            // Default a APA 7 empaquetado si hay bibliografía pero no CSL explícito
             resolvedCsl = join(import.meta.dir, '../../../pandoc/csl/apa-7.csl');
           }
           bibOptions = { bibliography: resolvedBib, csl: resolvedCsl };
