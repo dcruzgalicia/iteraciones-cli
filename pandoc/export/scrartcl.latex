@@ -31,29 +31,21 @@ $endif$
 % ─── Idioma ──────────────────────────────────────────────────────────────────
 \usepackage[spanish,mexico-com,es-notilde,es-noshorthands,es-noindentfirst,es-ucroman]{babel}
 
-% ─── xpatch: personalización de \maketitle ───────────────────────────────────
-\usepackage{xpatch}
+% ─── \maketitle: título, autor y fecha con tamaño normal ──────────────────────
 \makeatletter
-\xpatchcmd{\maketitle}{\usekomafont{title}{\huge \@title\par}}{\usekomafont{title}{\@title\par}}{}{}
-\xpatchcmd{\maketitle}{\null\vfill}{\vspace*{0\baselineskip}}{}{}
-\xpatchcmd{\maketitle}{\vskip 1em}{\vskip 2\baselineskip}{}{}
-\xpatchcmd{\maketitle}{\vskip 2em}{\vskip 0\baselineskip}{}{}
-\xpatchcmd{\maketitle}{\vskip 1.5em}{\vskip 0\baselineskip}{}{}
-\xpatchcmd{\maketitle}{\vskip \z@ \@plus3fill}{\vskip 2\baselineskip}{}{}
-\xpatchcmd{\maketitle}{\vfill\null}{\vskip 0\baselineskip}{}{}
-\xpatchcmd{\maketitle}{%
-        {%
-          \usekomafont{author}{%
-            \lineskip 0.75em
-            \begin{tabular}[t]{c}
-              \@author
-            \end{tabular}\par
-          }%
-        }%
-}%
-{%
-        {\centering\usekomafont{author}{\@author \par}}%
-}{}{}
+\renewcommand{\maketitle}{%
+  \vspace*{0\baselineskip}%
+  {\centering\usekomafont{title}{\@title\par}}%
+  \vskip 2\baselineskip
+  \ifx\@subtitle\@empty\else
+    {\centering\usekomafont{subtitle}{\@subtitle\par}}%
+    \vskip 0\baselineskip
+  \fi
+  {\centering\usekomafont{author}{\@author\par}}%
+  \vskip 0\baselineskip
+  {\centering\usekomafont{date}{\@date\par}}%
+  \vskip 2\baselineskip
+}
 \makeatother
 
 % ─── Gráficos y color ────────────────────────────────────────────────────────
