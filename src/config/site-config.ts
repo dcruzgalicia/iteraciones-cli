@@ -100,7 +100,7 @@ export const DEFAULT_HTML_FORMAT: HtmlFormatConfig = {
   theme: undefined,
   accent: 'lime',
   math: undefined,
-  toc: false,
+  toc: true,
   tocDepth: 6,
   hyphenation: false,
 };
@@ -108,18 +108,29 @@ export const DEFAULT_HTML_FORMAT: HtmlFormatConfig = {
 export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   engine: 'xelatex',
   concurrency: 2,
-  hyphenation: true,
+  hyphenation: false,
+  toc: true,
+  tocDepth: 6,
+  pageSize: 'letter',
+  fontSize: '12pt',
+  fontFamily: 'Exo 2',
+  margins: ['2.54cm', '2.54cm', '2.54cm', '2.54cm'],
+  lineSpacing: 1.5,
+  pageNumber: 'header-right',
 };
 
-export const DEFAULT_EPUB_FORMAT: EpubFormatConfig = {};
+export const DEFAULT_EPUB_FORMAT: EpubFormatConfig = {
+  toc: true,
+  tocDepth: 6,
+};
 
 export const DEFAULT_SITE_CONFIG: SiteConfig = {
-  title: 'Iteraciones',
+  title: 'iteraciones',
   tagline: 'escribir, compartir, re-existir',
-  lang: 'es',
+  lang: 'es-MX',
   logo: '',
   baseUrl: undefined,
   plugins: [],
   pagination: DEFAULT_PAGINATION,
-  format: { html: DEFAULT_HTML_FORMAT },
+  format: { html: DEFAULT_HTML_FORMAT, pdf: DEFAULT_PDF_FORMAT, epub: DEFAULT_EPUB_FORMAT },
 };
