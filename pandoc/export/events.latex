@@ -138,7 +138,10 @@ $endif$
 $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 
 % ─── TOC ─────────────────────────────────────────────────────────────────────
-renewcaptionname{spanish}{\contentsname}{\normalsize\normalfont Índice}
+\renewcaptionname{spanish}{\contentsname}{\normalsize\normalfont Índice}
+\BeforeTOCHead{%
+  \RedeclareSectionCommand[beforeskip=0pt,afterskip=1sp,afterindent=false]{chapter}%
+}
 \makeatletter
 \newcommand*{\TOCLeaderWide}{\leaders\hbox{\kern.15em\hbox{.}\kern.15em}\hfill}
 \newcommand*{\TOCLeaderMedium}{\leaders\hbox{\kern.1em\hbox{.}\kern.1em}\hfill}
@@ -156,11 +159,9 @@ renewcaptionname{spanish}{\contentsname}{\normalsize\normalfont Índice}
 \RedeclareSectionCommand[beforeskip=10\baselineskip,afterskip=2\baselineskip,afterindent=false]{part}
 \setkomafont{part}{\normalsize\bfseries}
 \makeatletter
-\renewcommand*{\partheadformat}{%
-  \partheadstartvskip
-  {\usekomafont{part}{\size@part{\partformat}{\MakeUppercase{\parthead}}\par}}%
-  \partheadendvskip
-}
+\let\scr@part\@part
+\renewcommand*{\@part}[2][]
+  {\scr@part[{#1}]{\MakeUppercase{#2}}}
 \makeatother
 
 % ─── Capítulos ───────────────────────────────────────────────────────────────
