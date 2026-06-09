@@ -336,7 +336,6 @@ $if(toc)$
 \tableofcontents
 \clearpage
 $endif$
-\cleardoublepage
 \makeatletter\@mainmattertrue\makeatother
 \renewcommand{\thepage}{\arabic{page}}
 \noindent
