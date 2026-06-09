@@ -1,5 +1,6 @@
 import { dirname, join, resolve } from 'node:path';
 import type { PdfFormatConfig } from '../../config/site-config.js';
+import type { CollectionItem } from '../../loader/frontmatter.js';
 import type { BuildDocument, DocumentType } from '../types.js';
 import {
   EXPORTABLE_TYPES,
@@ -57,6 +58,7 @@ export function assembleExportDocument(
   globalCsl?: string,
   parts?: ExportCollectionPart[],
   pdfFormat?: PdfFormatConfig,
+  loosePaths?: string[],
 ): ExportDocument | null {
   if (!doc.type || !EXPORTABLE_TYPES.has(doc.type)) return null;
 
@@ -102,7 +104,7 @@ export function assembleExportDocument(
       : undefined,
   };
 
-  let body = documentclass === 'scrartcl' ? doc.body : assembleBookBody(doc, items, parts);
+  let body = documentclass === 'scrartcl' ? doc.body : assembleBookBody(doc, items, parts, loosePaths);
 
   // Verificar si el cuerpo contiene texto antes del primer encabezado.
   // Ese texto (preámbulo) hace que LaTeX genere una entrada fantasma en el
@@ -141,7 +143,7 @@ export function assembleExportDocument(
  *   [body del item con footnotes renombrados e imágenes con rutas absolutas]
  *   \newpage
  */
-function assembleBookBody(doc: BuildDocument, items: BuildDocument[], parts?: ExportCollectionPart[]): string {
+function assembleBookBody(doc: BuildDocument, items: BuildDocument[], parts?: ExportCollectionPart[], loosePaths?: string[]): string {
   const result: string[] = [];
 
   // Intro opcional de la colección/eventos (body propio del doc index)
@@ -150,18 +152,21 @@ function assembleBookBody(doc: BuildDocument, items: BuildDocument[], parts?: Ex
   }
 
   if (parts && parts.length > 0) {
-    // Con partes: item title → \chapter{}, body headings → shift +2
     const byPath = new Map<string, BuildDocument>(items.map((d) => [d.relativePath, d]));
+
     // Items sueltos (prólogo, prefacio, etc.) — antes de cualquier parte
-    for (const itemPath of doc.frontmatter.items) {
-      const item = byPath.get(itemPath);
-      if (item) appendItemBody(item, result, 2);
+    if (loosePaths) {
+      for (const itemPath of loosePaths) {
+        const item = byPath.get(itemPath);
+        if (item) appendItemBody(item, result, 1);
+      }
     }
-    // Partes agrupadas
+
     for (const part of parts) {
-      result.push(`\\addpart{${part.name}}\n\n`);
+      result.push(`\\part{${part.name}}\n\n`);
+      const offset = part.isPartFile ? 0 : 1;
       for (const item of part.items) {
-        appendItemBody(item, result, 2);
+        appendItemBody(item, result, offset);
       }
     }
   } else {
@@ -257,6 +262,33 @@ function pathToSlug(relativePath: string): string {
     .replace(/[^a-z0-9-]/gi, '');
 }
 
+function collectItemPaths(items: CollectionItem[]): string[] {
+  const paths: string[] = [];
+  for (const item of items) {
+    if (typeof item === 'string') {
+      paths.push(item);
+    } else if ('file' in item && typeof item.file === 'string') {
+      paths.push(item.file);
+    } else if ('items' in item) {
+      paths.push(...collectItemPaths(item.items));
+    }
+  }
+  return paths;
+}
+
+export function resolveLooseItemPaths(doc: BuildDocument): string[] {
+  if (doc.type !== 'collection') return [];
+  const paths: string[] = [];
+  for (const item of doc.frontmatter.items) {
+    if (typeof item === 'string') {
+      paths.push(item);
+    } else if ('file' in item && typeof item.file === 'string' && !('items' in item)) {
+      paths.push(item.file);
+    }
+  }
+  return paths;
+}
+
 /**
  * Resuelve los items de un documento `collection` buscando cada ruta de
  * `doc.frontmatter.items` en el pool de docs disponibles.
@@ -267,22 +299,34 @@ function pathToSlug(relativePath: string): string {
 export function resolveItemsForExport(doc: BuildDocument, pool: BuildDocument[]): BuildDocument[] {
   if (doc.type !== 'collection') return [];
   const byPath = new Map<string, BuildDocument>(pool.map((d) => [d.relativePath, d]));
-  const itemPaths = [...doc.frontmatter.items];
-  if (doc.frontmatter.parts) {
-    for (const part of doc.frontmatter.parts) {
-      itemPaths.push(...part.items);
-    }
-  }
+  const itemPaths = collectItemPaths(doc.frontmatter.items);
   return itemPaths.map((itemPath) => byPath.get(itemPath)).filter((d): d is BuildDocument => d !== undefined);
 }
 
 export function resolvePartsForExport(doc: BuildDocument, pool: BuildDocument[]): ExportCollectionPart[] {
-  if (doc.type !== 'collection' || !doc.frontmatter.parts || doc.frontmatter.parts.length === 0) return [];
+  if (doc.type !== 'collection') return [];
   const byPath = new Map<string, BuildDocument>(pool.map((d) => [d.relativePath, d]));
-  return doc.frontmatter.parts.map((part) => ({
-    name: part.name,
-    items: part.items.map((itemPath) => byPath.get(itemPath)).filter((d): d is BuildDocument => d !== undefined),
-  }));
+  const parts: ExportCollectionPart[] = [];
+
+  for (const item of doc.frontmatter.items) {
+    if (typeof item === 'object' && 'title' in item && 'items' in item) {
+      // Part container
+      const resolvedItems = collectItemPaths(item.items)
+        .map((p) => byPath.get(p))
+        .filter((d): d is BuildDocument => d !== undefined);
+      if (resolvedItems.length > 0) {
+        parts.push({ name: item.title, items: resolvedItems });
+      }
+    } else if (typeof item === 'object' && 'file' in item && typeof item.file === 'string' && item.part) {
+      // Standalone part file
+      const doc = byPath.get(item.file);
+      if (doc) {
+        parts.push({ name: doc.frontmatter.title, items: [doc], isPartFile: true });
+      }
+    }
+  }
+
+  return parts;
 }
 
 /**

@@ -13,6 +13,7 @@ import {
   assembleExportDocument,
   resolveEventsForExport,
   resolveItemsForExport,
+  resolveLooseItemPaths,
   resolvePartsForExport,
 } from './assemble.js';
 import type { ExportCollectionPart, ExportDocument, ExportMetadata, ExportResult } from './types.js';
@@ -513,6 +514,8 @@ export async function runExportDocuments(
       items = resolveEventsForExport(doc, eventPool);
     }
 
+    const loosePaths = doc.type === 'collection' ? resolveLooseItemPaths(doc) : undefined;
+
     const rawExportDoc = assembleExportDocument(
       doc,
       items,
@@ -522,6 +525,7 @@ export async function runExportDocuments(
       globalCsl,
       partGroups.length > 0 ? partGroups : undefined,
       config.pdf,
+      loosePaths,
     );
     if (!rawExportDoc) return null;
 
@@ -825,6 +829,7 @@ export async function exportSingleDocument(
     } else if (targetDoc.type === 'events') {
       items = resolveEventsForExport(targetDoc, eventPool);
     }
+    const loosePaths = targetDoc.type === 'collection' ? resolveLooseItemPaths(targetDoc) : undefined;
     rawExportDoc = assembleExportDocument(
       targetDoc,
       items,
@@ -834,6 +839,7 @@ export async function exportSingleDocument(
       globalCsl,
       partGroups.length > 0 ? partGroups : undefined,
       config.pdf,
+      loosePaths,
     );
   }
   if (!rawExportDoc) return null;

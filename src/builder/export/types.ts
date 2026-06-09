@@ -26,12 +26,18 @@ export const LATEX_CLASS = {
 } as const satisfies Partial<Record<DocumentType, 'scrartcl' | 'scrbook'>>;
 
 /**
- * Grupo de items dentro de una colección, correspondiente a los `parts:` del frontmatter.
- * Cada parte tiene un nombre y una lista de documentos resueltos.
+ * Grupo de items dentro de una colección, correspondiente a los elementos
+ * estructurados del frontmatter `items:`.
+ *
+ * - `isPartFile: true` → archivo standalone que se renderiza a nivel `/part{}`,
+ *   su body usa offset 0 (h1 → `\chapter{}`).
+ * - `isPartFile: false` (default) → contenedor part con items anidados,
+ *   cada item usa offset 1 (h1 → `\section{}`).
  */
 export interface ExportCollectionPart {
   name: string;
   items: BuildDocument[];
+  isPartFile?: boolean;
 }
 
 /** Metadatos editoriales que se inyectan en el YAML header del documento Pandoc. */
