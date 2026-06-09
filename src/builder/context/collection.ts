@@ -1,4 +1,4 @@
-import type { CollectionPart } from '../../loader/frontmatter.js';
+import type { CollectionItem } from '../../loader/frontmatter.js';
 import type { TemplateContext } from '../../template/render/context.js';
 import { escapeHtml } from '../html.js';
 import { docHref } from '../slug.js';
@@ -50,23 +50,50 @@ export function buildCollectionContext(
   items: BuildDocument[],
   authorIndex?: AuthorDocumentIndex,
   paginationCtx?: Record<string, unknown>,
-  parts?: CollectionPart[],
+  rawItems?: CollectionItem[],
   allDocs?: BuildDocument[],
 ): TemplateContext {
   const byPath = new Map<string, BuildDocument>(items.map((d) => [d.relativePath, d]));
 
   const listItems = items.map((item) => itemToTemplateItem(item, authorIndex));
 
-  const hasParts = parts && parts.length > 0 && allDocs;
-  const partsData = hasParts ? buildPartsContext(parts!, allDocs!, authorIndex) : undefined;
+  // Construir parts y loose-items desde el nuevo schema unificado
+  const hasParts = rawItems && rawItems.length > 0 && allDocs;
+  let partsData: PartGroupTemplate[] | undefined;
+  let looseItemsData: PartGroupTemplateItem[] | undefined;
 
-  // Items sueltos (de items: plano) solo cuando conviven con partes
-  const looseItems = hasParts
-    ? doc.frontmatter.items
+  if (hasParts) {
+    const { partContainers, standalonePartFiles, looseFilePaths } = extractStructure(rawItems!);
+    const allDocsResolved = allDocs!;
+
+    // Part containers
+    const containerParts = partContainers.map((pc) => {
+      const resolvedItems = collectSubPaths(pc.items)
         .map((p) => byPath.get(p))
         .filter((d): d is BuildDocument => d !== undefined)
-        .map((item) => itemToTemplateItem(item, authorIndex))
-    : undefined;
+        .map((item) => itemToTemplateItem(item, authorIndex));
+      return { name: pc.title, items: resolvedItems };
+    });
+
+    // Standalone part files (también van como entries en `parts` del template)
+    const partFileEntries = standalonePartFiles
+      .map((sf) => {
+        const doc = byPath.get(sf.file);
+        if (!doc) return undefined;
+        return { name: doc.frontmatter.title, items: [itemToTemplateItem(doc, authorIndex)] };
+      })
+      .filter((p): p is PartGroupTemplate => p !== undefined);
+
+    partsData = [...containerParts, ...partFileEntries];
+    if (partsData.length === 0) partsData = undefined;
+
+    // Loose items: solo los que están en la página actual (byPath tiene los paginados)
+    looseItemsData = looseFilePaths
+      .map((p) => byPath.get(p))
+      .filter((d): d is BuildDocument => d !== undefined)
+      .map((item) => itemToTemplateItem(item, authorIndex));
+    if (looseItemsData && looseItemsData.length === 0) looseItemsData = undefined;
+  }
 
   return {
     title: doc.frontmatter.title,
@@ -74,7 +101,7 @@ export function buildCollectionContext(
     author: doc.frontmatter.author.join(', '),
     body: doc.htmlFragment ?? '',
     'list-items': listItems,
-    ...(looseItems !== undefined && { 'loose-items': looseItems }),
+    ...(looseItemsData !== undefined && { 'loose-items': looseItemsData }),
     ...(partsData !== undefined && { parts: partsData }),
     count: listItems.length,
     ...(paginationCtx ?? {}),
@@ -94,13 +121,42 @@ function itemToTemplateItem(item: BuildDocument, authorIndex?: AuthorDocumentInd
   };
 }
 
-function buildPartsContext(rawParts: CollectionPart[], allDocs: BuildDocument[], authorIndex?: AuthorDocumentIndex): PartGroupTemplate[] {
-  const byPath = new Map<string, BuildDocument>(allDocs.map((d) => [d.relativePath, d]));
-  return rawParts.map((part) => ({
-    name: part.name,
-    items: part.items
-      .map((itemPath) => byPath.get(itemPath))
-      .filter((d): d is BuildDocument => d !== undefined)
-      .map((item) => itemToTemplateItem(item, authorIndex)),
-  }));
+interface ExtractedStructure {
+  partContainers: Array<{ title: string; items: CollectionItem[] }>;
+  standalonePartFiles: Array<{ file: string }>;
+  looseFilePaths: string[];
+}
+
+function extractStructure(rawItems: CollectionItem[]): ExtractedStructure {
+  const partContainers: ExtractedStructure['partContainers'] = [];
+  const standalonePartFiles: ExtractedStructure['standalonePartFiles'] = [];
+  const looseFilePaths: string[] = [];
+
+  for (const item of rawItems) {
+    if (typeof item === 'string') {
+      looseFilePaths.push(item);
+    } else if ('title' in item && 'items' in item) {
+      partContainers.push(item);
+    } else if ('file' in item && typeof item.file === 'string' && item.part) {
+      standalonePartFiles.push({ file: item.file });
+    } else if ('file' in item && typeof item.file === 'string') {
+      looseFilePaths.push(item.file);
+    }
+  }
+
+  return { partContainers, standalonePartFiles, looseFilePaths };
+}
+
+function collectSubPaths(items: CollectionItem[]): string[] {
+  const paths: string[] = [];
+  for (const item of items) {
+    if (typeof item === 'string') {
+      paths.push(item);
+    } else if ('file' in item && typeof item.file === 'string') {
+      paths.push(item.file);
+    } else if ('items' in item) {
+      paths.push(...collectSubPaths(item.items));
+    }
+  }
+  return paths;
 }

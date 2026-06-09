@@ -1,3 +1,4 @@
+import type { CollectionItem } from '../../../loader/frontmatter.js';
 import type { TemplateContext } from '../../../template/render/context.js';
 import { buildRelatedAuthorsContext } from '../../context/authors.js';
 import { buildCollectionContext } from '../../context/collection.js';
@@ -6,16 +7,19 @@ import type { AuthorDocumentIndex, BuildDocument } from '../../types.js';
 import { mergeContexts } from './merge.js';
 
 /**
- * Retorna la lista plana de rutas de items, concatenando los items sueltos
- * (`items:`) con los items agrupados en partes (`parts:`).
- * El orden editorial se preserva: items sueltos primero, luego cada parte
- * en orden con sus items. Si no hay nada, retorna [].
+ * Retorna la lista plana de rutas de items recorriendo recursivamente
+ * el nuevo schema unificado `CollectionItem[]`. El orden editorial se
+ * preserva. Si no hay nada, retorna [].
  */
-function resolveItemPaths(doc: BuildDocument): string[] {
-  const paths = [...doc.frontmatter.items];
-  if (doc.frontmatter.parts) {
-    for (const part of doc.frontmatter.parts) {
-      paths.push(...part.items);
+function resolveItemPaths(items: CollectionItem[]): string[] {
+  const paths: string[] = [];
+  for (const item of items) {
+    if (typeof item === 'string') {
+      paths.push(item);
+    } else if ('file' in item && typeof item.file === 'string') {
+      paths.push(item.file);
+    } else if ('items' in item) {
+      paths.push(...resolveItemPaths(item.items));
     }
   }
   return paths;
@@ -23,13 +27,13 @@ function resolveItemPaths(doc: BuildDocument): string[] {
 
 /**
  * Resuelve los items de un doc `collection` buscando cada ruta en `allDocs`.
- * Soporta tanto `items:` plano como `parts:` agrupado.
+ * Soporta el nuevo schema unificado `CollectionItem[]`.
  * Lanza un error de build si alguna ruta declarada no existe.
  * Respeta el orden editorial.
  */
 function resolveCollectionItems(doc: BuildDocument, allDocs: BuildDocument[]): BuildDocument[] {
   const docsByPath = new Map<string, BuildDocument>(allDocs.map((d) => [d.relativePath, d]));
-  const itemPaths = resolveItemPaths(doc);
+  const itemPaths = resolveItemPaths(doc.frontmatter.items);
   return itemPaths.map((itemPath) => {
     const found = docsByPath.get(itemPath);
     if (!found) {
@@ -61,8 +65,8 @@ export function buildCollectionPipelineContext(
   authorIndex?: AuthorDocumentIndex,
 ): TemplateContext {
   const items = resolveCollectionItems(doc, allDocs);
-  const rawParts = doc.frontmatter.parts ?? undefined;
-  const collectionCtx = buildCollectionContext(doc, items, authorIndex, undefined, rawParts, allDocs);
+  const rawItems = doc.frontmatter.items;
+  const collectionCtx = buildCollectionContext(doc, items, authorIndex, undefined, rawItems, allDocs);
   const relatedAuthorsCtx = authorIndex ? buildRelatedAuthorsContext(doc, authorIndex) : {};
   return mergeContexts(mergeContexts(siteCtx, relatedAuthorsCtx), collectionCtx);
 }
@@ -86,11 +90,11 @@ export function buildPagedCollectionPipelineContexts(
   const pageHrefs = buildPageHrefs(doc.relativePath, pages.length);
   const relatedAuthorsCtx = authorIndex ? buildRelatedAuthorsContext(doc, authorIndex) : {};
 
-  const rawParts = doc.frontmatter.parts ?? undefined;
+  const rawItems = doc.frontmatter.items;
 
   return pages.map((page) => {
     const paginationCtx = buildPaginationContext(page, pageHrefs);
-    const collectionCtx = buildCollectionContext(doc, page.items, authorIndex, paginationCtx, rawParts, allDocs);
+    const collectionCtx = buildCollectionContext(doc, page.items, authorIndex, paginationCtx, rawItems, allDocs);
     const templateContext = mergeContexts(mergeContexts(siteCtx, relatedAuthorsCtx), collectionCtx);
     return { ...doc, relativePath: page.pageRelativePath, templateContext };
   });
