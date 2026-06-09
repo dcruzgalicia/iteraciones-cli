@@ -136,6 +136,13 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \DeclareTOCStyleEntry[linefill=\TOCLineLeaderFill,beforeskip=0pt]{tocline}{section}
 \DeclareTOCStyleEntry[entryformat=\normalsize\normalfont]{tocline}{subsection}
 
+$if(has-chapter)$
+% ─── Capítulos (solo cuando se usa scrbook) ───────────────────────────────────
+\RedeclareSectionCommand[beforeskip=0pt,afterskip=1sp,afterindent=false]{chapter}
+\setkomafont{chapter}{\normalsize\normalfont}
+\renewcommand{\raggedchapter}{\centering}
+$endif$
+
 % ─── Secciones (equivalente a capítulo) ──────────────────────────────────────
 \RedeclareSectionCommand[beforeskip=0pt,afterskip=1sp,afterindent=false]{section}
 \setkomafont{section}{\normalsize\normalfont}
