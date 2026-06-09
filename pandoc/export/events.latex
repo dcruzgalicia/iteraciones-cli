@@ -174,17 +174,17 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \renewcommand{\raggedsection}{\centering}
 
 % ─── Subsecciones ────────────────────────────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=1\baselineskip,afterskip=0pt,afterindent=false]{subsection}
+\RedeclareSectionCommand[beforeskip=1\baselineskip,afterskip=1sp,afterindent=false]{subsection}
 \setkomafont{subsection}{\normalsize\normalfont}
 
 % ─── Subsubsecciones ─────────────────────────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=0pt,afterskip=0pt,afterindent=false]{subsubsection}
+\RedeclareSectionCommand[beforeskip=0pt,afterskip=1sp,afterindent=false]{subsubsection}
 \setkomafont{subsubsection}{\normalsize\normalfont}
 
 % ─── Párrafos ──────────────────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=0pt,afterskip=0pt,afterindent=false]{paragraph}
+\RedeclareSectionCommand[beforeskip=0pt,afterskip=1sp,afterindent=false]{paragraph}
 \setkomafont{paragraph}{\normalsize\normalfont}
-\RedeclareSectionCommand[beforeskip=0pt,afterskip=0pt,afterindent=false]{subparagraph}
+\RedeclareSectionCommand[beforeskip=0pt,afterskip=1sp,afterindent=false]{subparagraph}
 \setkomafont{subparagraph}{\normalsize\normalfont}
 
 % ─── Dictum (epígrafe KOMA) ──────────────────────────────────────────────────
