@@ -323,7 +323,6 @@ $endif$
 
 \setlength{\parskip}{0pt}
 
-\frontmatter
 \pagenumbering{gobble}
 
 \title{$title$}
