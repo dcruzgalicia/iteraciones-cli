@@ -137,10 +137,8 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 % ─── TOC ─────────────────────────────────────────────────────────────────────
 \renewcaptionname{spanish}{\contentsname}{\normalsize\normalfont Índice}
 \makeatletter
-\newcommand*{\TOCLeaderTight}{%
-  \hbox to \@pnumwidth{\hfill\kern\@tocrmarg\totocnumwidth{\normalfont\normalcolor\leaders\hbox{\kern.075em\hbox{.}\kern.075em}\hfill}}}
-\newcommand*{\TOCLeaderTighter}{%
-  \hbox to \@pnumwidth{\hfill\kern\@tocrmarg\totocnumwidth{\normalfont\normalcolor\leaders\hbox{\kern.05em\hbox{.}\kern.05em}\hfill}}}
+\newcommand*{\TOCLeaderTight}{\leaders\hbox{\kern.075em\hbox{.}\kern.075em}\hfill}
+\newcommand*{\TOCLeaderTighter}{\leaders\hbox{\kern.05em\hbox{.}\kern.05em}\hfill}
 \makeatother
 \providecommand{\nonumberline}[1]{}
 \DeclareTOCStyleEntry[entryformat=\normalsize\itshape,linefill=\TOCLeaderTight,beforeskip=0pt]{tocline}{section}
