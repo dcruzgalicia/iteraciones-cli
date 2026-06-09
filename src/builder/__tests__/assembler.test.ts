@@ -4,6 +4,7 @@ import {
   assembleAuthorExportVariants,
   assembleExportDocument,
   resolveItemsForExport,
+  resolveLooseItemPaths,
   resolvePartsForExport,
   shiftHeadings,
 } from '../export/assemble.js';
@@ -34,6 +35,46 @@ function makeDoc(overrides: Partial<BuildDocument> & { type: BuildDocument['type
     mtimeMs: 0,
     ...overrides,
   };
+}
+
+/**
+ * Construye un BuildDocument de colección con el nuevo schema unificado
+ * de items (CollectionItem[]). Reemplaza a makeCollectionWithParts.
+ *
+ * @param itemList     Items en formato CollectionItem[] (strings, {file,part?}, {title,items})
+ * @param looseItems   Items sueltos (top-level strings) — opcional, ya incluibles en itemList
+ */
+function makeUnifiedCollection(itemList: unknown[], body = ''): BuildDocument {
+  return makeDoc({
+    type: 'collection',
+    filePath: '/project/libro.md',
+    relativePath: 'libro.md',
+    frontmatter: {
+      title: 'Libro',
+      date: '',
+      author: [],
+      speakers: [],
+      type: 'collection',
+      keywords: [],
+      region: '',
+      block: false,
+      draft: false,
+      items: itemList as never,
+    },
+    body,
+  });
+}
+
+/**
+ * Helper transicional: construye una colección usando el viejo formato
+ * de parts pero emitiéndolo como nuevo schema unificado.
+ */
+function makeCollectionWithParts(partItems: Record<string, string[]>, looseItems: string[] = []): BuildDocument {
+  const items: unknown[] = [...looseItems];
+  for (const [name, subItems] of Object.entries(partItems)) {
+    items.push({ title: name, items: subItems });
+  }
+  return makeUnifiedCollection(items);
 }
 
 // ---------------------------------------------------------------------------
@@ -444,21 +485,7 @@ describe('assembleExportDocument — tipos scrartcl', () => {
   });
 
   test('usa scrbook para type: collection', () => {
-    const collection = makeDoc({
-      type: 'collection',
-      frontmatter: {
-        title: 'Colección',
-        date: '',
-        author: [],
-        speakers: [],
-        type: 'collection',
-        keywords: [],
-        region: '',
-        block: false,
-        draft: false,
-        items: [],
-      },
-    });
+    const collection = makeDoc({ type: 'collection', body: '# Heading\n\nBody.' });
     const exportDoc = assembleExportDocument(collection, [], 'es', '/project');
     expect(exportDoc!.metadata.documentclass).toBe('scrbook');
     expect(exportDoc!.metadata.toc).toBe(true);
@@ -744,6 +771,10 @@ describe('assembleAuthorExportVariants', () => {
 
 describe('parts en colecciones (exportación)', () => {
   function makeCollectionWithParts(partItems: Record<string, string[]>, looseItems: string[] = []): BuildDocument {
+    const items: unknown[] = [...looseItems];
+    for (const [name, subItems] of Object.entries(partItems)) {
+      items.push({ title: name, items: subItems });
+    }
     return makeDoc({
       type: 'collection',
       filePath: '/project/libro.md',
@@ -758,8 +789,7 @@ describe('parts en colecciones (exportación)', () => {
         region: '',
         block: false,
         draft: false,
-        items: looseItems,
-        parts: Object.entries(partItems).map(([name, items]) => ({ name, items })),
+        items: items as never,
       },
       body: '',
     });
@@ -830,7 +860,7 @@ describe('parts en colecciones (exportación)', () => {
     expect(resolvePartsForExport(doc, [])).toHaveLength(0);
   });
 
-  test('assembleBookBody emite \\addpart{Name} entre grupos', () => {
+  test('assembleBookBody emite \\part{Name} entre grupos', () => {
     const collection = makeCollectionWithParts({
       'Parte I': ['cap1.md'],
       'Parte II': ['cap2.md'],
@@ -857,17 +887,18 @@ describe('parts en colecciones (exportación)', () => {
     expect(exportDoc).not.toBeNull();
     const body = exportDoc!.body;
 
-    expect(body).toContain('\\addpart{Parte I}');
-    expect(body).toContain('\\addpart{Parte II}');
+    expect(body).toContain('\\part{Parte I}');
+    expect(body).toContain('\\part{Parte II}');
     expect(body).toContain('# Uno');
     expect(body).toContain('# Dos');
     // \part debe aparecer ANTES del primer capítulo de cada grupo
-    expect(body.indexOf('\\addpart{Parte I}')).toBeLessThan(body.indexOf('# Uno'));
-    expect(body.indexOf('\\addpart{Parte II}')).toBeLessThan(body.indexOf('# Dos'));
+    expect(body.indexOf('\\part{Parte I}')).toBeLessThan(body.indexOf('# Uno'));
+    expect(body.indexOf('\\part{Parte II}')).toBeLessThan(body.indexOf('# Dos'));
   });
 
   test('assembleBookBody con parts omite \\newpage antes de \\part', () => {
     // Cuando se usan parts, \newpage está al final de cada item, no antes del \part
+    // Nota: con el nuevo schema, \part se emite como primer nivel de heading.
     const collection = makeCollectionWithParts({
       Única: ['cap1.md', 'cap2.md'],
     });
@@ -893,10 +924,10 @@ describe('parts en colecciones (exportación)', () => {
     const body = exportDoc!.body;
 
     // Debe haber \newpage entre items pero no antes de \part
-    expect(body).toContain('\\addpart{Única}');
+    expect(body).toContain('\\part{Única}');
     // Nota: \newpage se emite después del body de cada item; no se espera que
     // aparezca antes de \part.
-    const partIndex = body.indexOf('\\addpart{Única}');
+    const partIndex = body.indexOf('\\part{Única}');
     const firstNewpageAfterPart = body.indexOf('\\newpage', partIndex);
     expect(firstNewpageAfterPart).toBeGreaterThan(partIndex);
   });
@@ -944,7 +975,7 @@ describe('parts en colecciones (exportación)', () => {
     expect(exportDoc).not.toBeNull();
     expect(exportDoc!.body).toContain('# A');
     expect(exportDoc!.body).toContain('*Por Autor*');
-    expect(exportDoc!.body).not.toContain('\\addpart{');
+    expect(exportDoc!.body).not.toContain('\\part{');
   });
 
   // ---------------------------------------------------------------------------
@@ -988,13 +1019,14 @@ describe('parts en colecciones (exportación)', () => {
 
     const parts = resolvePartsForExport(collection, pool);
     const items = resolveItemsForExport(collection, pool);
-    const exportDoc = assembleExportDocument(collection, items, 'es', '/project', undefined, undefined, parts);
+    const loosePaths = resolveLooseItemPaths(collection);
+    const exportDoc = assembleExportDocument(collection, items, 'es', '/project', undefined, undefined, parts, undefined, loosePaths);
     const body = exportDoc!.body;
 
     // Orden: items sueltos → partes
     const prologoIdx = body.indexOf('# Prólogo');
     const introIdx = body.indexOf('# Introducción');
-    const partIdx = body.indexOf('\\addpart{Parte I}');
+    const partIdx = body.indexOf('\\part{Parte I}');
     const capIdx = body.indexOf('# Fundamentos');
 
     expect(prologoIdx).toBeGreaterThan(-1);
@@ -1008,8 +1040,8 @@ describe('parts en colecciones (exportación)', () => {
     // \part ANTES de su capítulo
     expect(partIdx).toBeLessThan(capIdx);
     // Items sueltos sin \part
-    expect(body).not.toContain('\\addpart{Prólogo');
-    expect(body).not.toContain('\\addpart{Introducción');
+    expect(body).not.toContain('\\part{Prólogo');
+    expect(body).not.toContain('\\part{Introducción');
   });
 });
 
@@ -1130,8 +1162,11 @@ describe('assembleBookBody — heading shift', () => {
     expect(body).not.toContain('\n## Detalle\n');
   });
 
-  test('con parts: body # se desplaza a ### (\\subsection{})', () => {
-    const collection = makeCollectionDoc({
+  test('con parts: body # se desplaza a ## (\\section{})', () => {
+    const collection = makeDoc({
+      type: 'collection',
+      filePath: '/project/libro.md',
+      relativePath: 'libro.md',
       frontmatter: {
         title: 'Libro',
         date: '',
@@ -1142,9 +1177,9 @@ describe('assembleBookBody — heading shift', () => {
         region: '',
         block: false,
         draft: false,
-        items: [],
-        parts: [{ name: 'Parte Única', items: ['cap.md'] }],
+        items: [{ title: 'Parte Única', items: ['cap.md'] }],
       },
+      body: '',
     });
 
     const item = makeDoc({
@@ -1172,18 +1207,21 @@ describe('assembleBookBody — heading shift', () => {
     const exportDoc = assembleExportDocument(collection, items, 'es', '/project', undefined, undefined, parts);
     const body = exportDoc!.body;
 
-    expect(body).toContain('\\addpart{Parte Única}');
+    expect(body).toContain('\\part{Parte Única}');
     // Item title stays as #
     expect(body).toContain('# Capitulo');
-    // Body # → ###, ## → ####
-    expect(body).toContain('### Introducción');
-    expect(body).toContain('#### Detalle');
+    // Body # → ## (offset +1), ## → ###
+    expect(body).toContain('## Introducción');
+    expect(body).toContain('### Detalle');
     expect(body).not.toContain('\n# Introducción\n');
     expect(body).not.toContain('\n## Detalle\n');
   });
 
-  test('con parts + items sueltos: body headings también se desplazan +2', () => {
-    const collection = makeCollectionDoc({
+  test('con parts + items sueltos: body headings también se desplazan +1', () => {
+    const collection = makeDoc({
+      type: 'collection',
+      filePath: '/project/libro.md',
+      relativePath: 'libro.md',
       frontmatter: {
         title: 'Libro',
         date: '',
@@ -1194,9 +1232,9 @@ describe('assembleBookBody — heading shift', () => {
         region: '',
         block: false,
         draft: false,
-        items: ['prologo.md'],
-        parts: [{ name: 'Parte I', items: ['cap1.md'] }],
+        items: ['prologo.md', { title: 'Parte I', items: ['cap1.md'] }],
       },
+      body: '',
     });
 
     const prologo = makeDoc({
@@ -1240,13 +1278,126 @@ describe('assembleBookBody — heading shift', () => {
     const pool = [prologo, cap1];
     const parts = resolvePartsForExport(collection, pool);
     const items = resolveItemsForExport(collection, pool);
-    const exportDoc = assembleExportDocument(collection, items, 'es', '/project', undefined, undefined, parts);
+    const exportDoc = assembleExportDocument(
+      collection,
+      items,
+      'es',
+      '/project',
+      undefined,
+      undefined,
+      parts,
+      undefined,
+      resolveLooseItemPaths(collection),
+    );
     const body = exportDoc!.body;
 
-    // Loose item body heading shifted +2
-    expect(body).toContain('### Sección en prólogo');
-    // Part item body heading shifted +2
-    expect(body).toContain('### Introducción');
-    expect(body).toContain('#### Detalle');
+    // Loose item body heading shifted +1
+    expect(body).toContain('## Sección en prólogo');
+    // Part item body heading shifted +1
+    expect(body).toContain('## Introducción');
+    expect(body).toContain('### Detalle');
+  });
+
+  test('standalone part file: title a \\part{}, body sin offset (h1 = \\chapter)', () => {
+    const collection = makeDoc({
+      type: 'collection',
+      filePath: '/project/libro.md',
+      relativePath: 'libro.md',
+      frontmatter: {
+        title: 'Libro',
+        date: '',
+        author: [],
+        speakers: [],
+        type: 'collection',
+        keywords: [],
+        region: '',
+        block: false,
+        draft: false,
+        items: [
+          { file: 'introduccion.md', part: true },
+          { title: 'Parte I', items: ['cap1.md'] },
+        ],
+      },
+      body: '',
+    });
+
+    const intro = makeDoc({
+      type: 'file',
+      filePath: '/project/introduccion.md',
+      relativePath: 'introduccion.md',
+      frontmatter: {
+        title: 'Introducción General',
+        date: '',
+        author: [],
+        speakers: [],
+        type: 'file',
+        keywords: [],
+        region: '',
+        block: false,
+        draft: false,
+        items: [],
+      },
+      body: '# Contexto\n\n## Antecedentes\n\nTexto.',
+    });
+
+    const cap1 = makeDoc({
+      type: 'file',
+      filePath: '/project/cap1.md',
+      relativePath: 'cap1.md',
+      frontmatter: {
+        title: 'Fundamentos',
+        date: '',
+        author: [],
+        speakers: [],
+        type: 'file',
+        keywords: [],
+        region: '',
+        block: false,
+        draft: false,
+        items: [],
+      },
+      body: '# Tema central',
+    });
+
+    const pool = [intro, cap1];
+    const parts = resolvePartsForExport(collection, pool);
+    const items = resolveItemsForExport(collection, pool);
+    const exportDoc = assembleExportDocument(
+      collection,
+      items,
+      'es',
+      '/project',
+      undefined,
+      undefined,
+      parts,
+      undefined,
+      resolveLooseItemPaths(collection),
+    );
+    const body = exportDoc!.body;
+
+    // Standalone part file: title as \part
+    expect(body).toContain('\\part{Introducción General}');
+    // Body h1 stays as # (offset 0 = \chapter)
+    expect(body).toContain('# Contexto');
+    // Body h2 stays as ## (offset 0)
+    expect(body).toContain('## Antecedentes');
+    // Part container items still shift +1
+    expect(body).toContain('\\part{Parte I}');
+    expect(body).toContain('# Fundamentos');
+    expect(body).toContain('## Tema central');
+  });
+
+  test('resolvePartsForExport incluye standalone part files como isPartFile', () => {
+    const collection = makeUnifiedCollection([
+      { file: 'intro.md', part: true },
+      { title: 'Parte I', items: ['cap1.md'] },
+    ]);
+
+    const pool = [makeDoc({ type: 'file', relativePath: 'intro.md' }), makeDoc({ type: 'file', relativePath: 'cap1.md' })];
+
+    const parts = resolvePartsForExport(collection, pool);
+    expect(parts).toHaveLength(2);
+    expect(parts[0]?.isPartFile).toBe(true);
+    expect(parts[1]?.isPartFile).toBeUndefined();
   });
 });

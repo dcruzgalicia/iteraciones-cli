@@ -8,6 +8,7 @@ import { VALID_REGIONS } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { IGNORED_DIRS } from '../constants.js';
 import { ConfigError } from '../errors.js';
+import type { CollectionItem } from '../loader/frontmatter.js';
 import { FRONTMATTER_RE, parseFrontmatter } from '../loader/frontmatter.js';
 import { checkLatexEngine } from './doctor/system-checks.js';
 
@@ -88,17 +89,35 @@ async function validateFrontmatter(cwd: string, theme: string | undefined): Prom
 
     // items: en colecciones deben apuntar a archivos existentes; el builder siempre
     // resuelve items por relativePath con extensión .md, por lo que se normaliza aquí.
+    // Soporta el nuevo schema unificado (strings, {file}, {title,items}).
+    async function validateItem(item: CollectionItem): Promise<void> {
+      if (typeof item === 'string') {
+        const normalized = item.endsWith('.md') ? item : `${item}.md`;
+        const itemPath = join(cwd, normalized);
+        const exists = await stat(itemPath)
+          .then((s) => s.isFile())
+          .catch(() => false);
+        if (!exists) errors.push({ file: entry, message: `items: "${item}" no existe en el proyecto` });
+      } else if ('file' in item && typeof item.file === 'string') {
+        // { file, part? }
+        const file = item.file.endsWith('.md') ? item.file : `${item.file}.md`;
+        const itemPath = join(cwd, file);
+        const exists = await stat(itemPath)
+          .then((s) => s.isFile())
+          .catch(() => false);
+        if (!exists) errors.push({ file: entry, message: `items: "${item.file}" no existe en el proyecto` });
+      } else if ('title' in item && 'items' in item) {
+        // { title, items } — part container
+        for (const sub of item.items) {
+          await validateItem(sub);
+        }
+      }
+    }
+
     const effectiveType = fm.type && VALID_TYPES.has(fm.type as Parameters<typeof VALID_TYPES.has>[0]) ? fm.type : 'file';
     if (effectiveType === 'collection' && fm.items.length > 0) {
       for (const item of fm.items) {
-        const normalizedItem = item.endsWith('.md') ? item : `${item}.md`;
-        const itemPath = join(cwd, normalizedItem);
-        const itemExists = await stat(itemPath)
-          .then((s) => s.isFile())
-          .catch(() => false);
-        if (!itemExists) {
-          errors.push({ file: entry, message: `items: "${item}" no existe en el proyecto` });
-        }
+        await validateItem(item);
       }
     }
 

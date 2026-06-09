@@ -110,16 +110,23 @@ export function assembleExportDocument(
   // Ese texto (preámbulo) hace que LaTeX genere una entrada fantasma en el
   // índice con un asterisco, incluso con secnumdepth=-2.
   // La solución es reubicar ese texto dentro de la primera sección.
+  // Comandos LaTeX como \part{} y \addpart{} NO se consideran preámbulo
+  // (son encabezados reales en la salida final).
   if (toc) {
     const headingMatch = body.match(/^#{1,6}\s/m);
+    const partMatch = body.match(/^\\(add)?part\{/m);
     if (!headingMatch) {
       // Sin encabezados: desactivar el TOC por completo.
       metadata.toc = false;
     } else if (headingMatch.index && headingMatch.index > 0) {
-      // Hay texto antes del primer encabezado: moverlo dentro de la sección.
-      const preamble = body.slice(0, headingMatch.index);
-      const rest = body.slice(headingMatch.index);
-      body = rest + '\n\n' + preamble.trim();
+      // Si todo el texto previo al primer # es solo comandos LaTeX
+      // (\part{}, \addpart{}), no moverlo — forma parte de la estructura.
+      const preamble = body.slice(0, headingMatch.index).trim();
+      const preambleIsOnlyLatexCommands = preamble.length === 0 || /^\\(add)?part\{/.test(preamble);
+      if (!preambleIsOnlyLatexCommands) {
+        const rest = body.slice(headingMatch.index);
+        body = rest + '\n\n' + preamble;
+      }
     }
   }
 
@@ -282,7 +289,7 @@ export function resolveLooseItemPaths(doc: BuildDocument): string[] {
   for (const item of doc.frontmatter.items) {
     if (typeof item === 'string') {
       paths.push(item);
-    } else if ('file' in item && typeof item.file === 'string' && !('items' in item)) {
+    } else if ('file' in item && typeof item.file === 'string' && !('title' in item) && !item.part) {
       paths.push(item.file);
     }
   }
