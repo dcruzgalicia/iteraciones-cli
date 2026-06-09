@@ -209,6 +209,12 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     process.stderr.write(`[iteraciones] format.pdf.sides: valor desconocido "${String(rawSides)}". Valores validos: oneside, twoside.\n`);
   }
 
+  const rawDocClass = obj.documentclass;
+  const documentclass = rawDocClass === 'scrartcl' ? 'scrartcl' : rawDocClass === 'scrbook' ? 'scrbook' : undefined;
+  if (rawDocClass !== undefined && rawDocClass !== 'scrartcl' && rawDocClass !== 'scrbook') {
+    process.stderr.write(`[iteraciones] format.pdf.documentclass: valor desconocido "${String(rawDocClass)}". Valores validos: scrartcl, scrbook.\n`);
+  }
+
   return {
     engine,
     concurrency,
@@ -225,6 +231,7 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     lineSpacing,
     pageNumber,
     sides,
+    documentclass,
   };
 }
 

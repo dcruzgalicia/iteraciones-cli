@@ -33,7 +33,7 @@ function makeMinimalExportDoc(outputDir: string): ExportDocument {
       author: ['Autora Test'],
       date: '2025-01-01',
       lang: 'es',
-      documentclass: 'scrartcl',
+      documentclass: 'scrbook',
       toc: false,
     },
   };
