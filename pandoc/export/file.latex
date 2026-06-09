@@ -153,16 +153,16 @@ $if(has-chapter)$
 $endif$
 
 % ─── Secciones (equivalente a capítulo) ──────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=3\baselineskip,afterskip=2\baselineskip,afterindent=false]{section}
+\RedeclareSectionCommand[beforeskip=1\baselineskip,afterskip=1\baselineskip,afterindent=false]{section}
 \setkomafont{section}{\normalsize\itshape}
 \renewcommand{\raggedsection}{\centering}
 
 % ─── Subsecciones ────────────────────────────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=3\baselineskip,afterskip=2\baselineskip,afterindent=false]{subsection}
+\RedeclareSectionCommand[beforeskip=1\baselineskip,afterskip=0pt,afterindent=false]{subsection}
 \setkomafont{subsection}{\normalsize\normalfont}
 
 % ─── Subsubsecciones ─────────────────────────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=1\baselineskip,afterskip=2\baselineskip,afterindent=false]{subsubsection}
+\RedeclareSectionCommand[beforeskip=0pt,afterskip=0pt,afterindent=false]{subsubsection}
 \setkomafont{subsubsection}{\normalsize\normalfont}
 
 % ─── Párrafos ──────────────────────────────────────────────────
