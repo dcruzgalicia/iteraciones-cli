@@ -130,26 +130,33 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 
 % ─── TOC ─────────────────────────────────────────────────────────────────────
 \renewcaptionname{spanish}{\contentsname}{\normalsize\normalfont Índice}
-\DeclareTOCStyleEntry[linefill=\TOCLineLeaderFill,beforeskip=0pt]{tocline}{section}
-\DeclareTOCStyleEntry[entryformat=\normalsize\normalfont]{tocline}{subsection}
+\makeatletter
+\newcommand*{\TOCLeaderTight}{%
+  \hbox to \@pnumwidth{\hfill\kern\@tocrmarg\totocnumwidth{\normalfont\normalcolor\leaders\hbox{\kern.075em\hbox{.}\kern.075em}\hfill}}}
+\newcommand*{\TOCLeaderTighter}{%
+  \hbox to \@pnumwidth{\hfill\kern\@tocrmarg\totocnumwidth{\normalfont\normalcolor\leaders\hbox{\kern.05em\hbox{.}\kern.05em}\hfill}}}
+\makeatother
+\DeclareTOCStyleEntry[entryformat=\normalsize\itshape,linefill=\TOCLeaderTight,beforeskip=0pt]{tocline}{section}
+\DeclareTOCStyleEntry[linefill=\TOCLeaderTight,beforeskip=0pt]{tocline}{subsection}
+\DeclareTOCStyleEntry[linefill=\TOCLeaderTighter,beforeskip=0pt]{tocline}{subsubsection}
 
 % ─── Secciones (equivalente a capítulo) ──────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=0pt,afterskip=1sp,afterindent=false]{section}
-\setkomafont{section}{\normalsize\normalfont}
+\RedeclareSectionCommand[beforeskip=3\baselineskip,afterskip=2\baselineskip,afterindent=false]{section}
+\setkomafont{section}{\normalsize\itshape}
 \renewcommand{\raggedsection}{\centering}
 
 % ─── Subsecciones ────────────────────────────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=0pt,afterskip=1sp,afterindent=false]{subsection}
+\RedeclareSectionCommand[beforeskip=3\baselineskip,afterskip=2\baselineskip,afterindent=false]{subsection}
 \setkomafont{subsection}{\normalsize\normalfont}
 
 % ─── Subsubsecciones ─────────────────────────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=0pt,afterskip=1sp,afterindent=false]{subsubsection}
+\RedeclareSectionCommand[beforeskip=1\baselineskip,afterskip=2\baselineskip,afterindent=false]{subsubsection}
 \setkomafont{subsubsection}{\normalsize\normalfont}
 
 % ─── Párrafos ──────────────────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=0pt,afterskip=1sp,afterindent=false]{paragraph}
+\RedeclareSectionCommand[beforeskip=0pt,afterskip=0pt,afterindent=false]{paragraph}
 \setkomafont{paragraph}{\normalsize\normalfont}
-\RedeclareSectionCommand[beforeskip=0pt,afterskip=1sp,afterindent=false]{subparagraph}
+\RedeclareSectionCommand[beforeskip=0pt,afterskip=0pt,afterindent=false]{subparagraph}
 \setkomafont{subparagraph}{\normalsize\normalfont}
 
 % ─── Dictum (epígrafe KOMA) ──────────────────────────────────────────────────
