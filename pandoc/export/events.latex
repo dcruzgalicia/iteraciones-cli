@@ -46,10 +46,10 @@ $endif$
 \makeatletter
 \xpatchcmd{\maketitle}{\usekomafont{title}{\huge \@title\par}}{\usekomafont{title}{\@title\par}}{}{}
 \xpatchcmd{\maketitle}{\null\vfill}{\vspace*{0\baselineskip}}{}{}
-\xpatchcmd{\maketitle}{\vskip 1em}{\vskip 2\baselineskip}{}{}
+\xpatchcmd{\maketitle}{\vskip 1em}{\vskip 1\baselineskip}{}{}
 \xpatchcmd{\maketitle}{\vskip 2em}{\vskip 0\baselineskip}{}{}
 \xpatchcmd{\maketitle}{\vskip 1.5em}{\vskip 0\baselineskip}{}{}
-\xpatchcmd{\maketitle}{\vskip \z@ \@plus3fill}{\vskip 2\baselineskip}{}{}
+\xpatchcmd{\maketitle}{\vskip \z@ \@plus3fill}{\vskip 1\baselineskip}{}{}
 \xpatchcmd{\maketitle}{\vfill\null}{\vskip 0\baselineskip}{}{}
 \xpatchcmd{\maketitle}{%
         {%
@@ -328,22 +328,17 @@ $if(author)$\author{$for(author)$$author$$sep$ \and $endfor$}$endif$
 $if(publisher)$\publishers{$publisher$}$endif$
 \date{}
 \maketitle
-
 $if(toc)$
 \tableofcontents
 \clearpage
 $endif$
-
 \cleardoublepage
 \makeatletter\@mainmattertrue\makeatother
 \renewcommand{\thepage}{\arabic{page}}
-
 \noindent
 $body$
-
 $if(biblatex)$
 \backmatter
 \printbibliography
 $endif$
-
 \end{document}
