@@ -44,7 +44,7 @@ $endif$
 % ─── \maketitle: título, autor y fecha con tamaño normal ──────────────────────
 \makeatletter
 \renewcommand{\maketitle}{%
-  \vspace*{-\topskip}%
+  \vspace*{-\baselineskip}%
   {\centering\usekomafont{title}{\@title\par}}%
   \ifx\@subtitle\@empty\else
     \vskip 0\baselineskip
@@ -80,7 +80,7 @@ $endif$
 %     refleje el valor estirado en los cálculos de márgenes) ────────────────
 \usepackage{setspace}
 \setstretch{$if(linestretch)$$linestretch$$else$1.5$endif$}
-\setlength{\topskip}{\dimexpr\baselineskip-4pt\relax}
+\setlength{\topskip}{\baselineskip}
 \setlength{\lineskip}{0pt}
 
 % ─── Geometría (media carta 13.97 × 21.59 cm) ────────────────────────────────
