@@ -173,7 +173,7 @@ function assembleBookBody(doc: BuildDocument, items: BuildDocument[], parts?: Ex
       result.push(`\\part{${part.name}}\n\n`);
       const offset = part.isPartFile ? 0 : 1;
       for (const item of part.items) {
-        appendItemBody(item, result, offset);
+        appendItemBody(item, result, offset, part.isPartFile);
       }
     }
   } else {
@@ -186,12 +186,14 @@ function assembleBookBody(doc: BuildDocument, items: BuildDocument[], parts?: Ex
   return result.join('');
 }
 
-function appendItemBody(item: BuildDocument, target: string[], headingOffset: number): void {
-  const title = item.frontmatter.title || 'Sin título';
+function appendItemBody(item: BuildDocument, target: string[], headingOffset: number, skipTitle = false): void {
   const authors = item.frontmatter.author;
   const slug = pathToSlug(item.relativePath);
 
-  target.push(`# ${title}\n\n`);
+  if (!skipTitle) {
+    const title = item.frontmatter.title || 'Sin título';
+    target.push(`# ${title}\n\n`);
+  }
 
   // Caso especial: ítems de tipo `author` no llevan línea "Por Autor"
   // porque el título ya es el nombre del autor — sería redundante.

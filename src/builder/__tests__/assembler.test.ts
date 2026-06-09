@@ -1375,8 +1375,9 @@ describe('assembleBookBody — heading shift', () => {
     );
     const body = exportDoc!.body;
 
-    // Standalone part file: title as \part
+    // Standalone part file: title as \part only (no duplicate # Title)
     expect(body).toContain('\\part{Introducción General}');
+    expect(body).not.toContain('# Introducción General');
     // Body h1 stays as # (offset 0 = \chapter)
     expect(body).toContain('# Contexto');
     // Body h2 stays as ## (offset 0)
