@@ -11,10 +11,12 @@ export interface FrontmatterSpeaker {
   body?: string;
 }
 
-export interface CollectionPart {
-  name: string;
-  items: string[];
+export interface CollectionPartItem {
+  title: string;
+  items: CollectionItem[];
 }
+
+export type CollectionItem = string | { file: string; part?: boolean } | CollectionPartItem;
 
 export interface FrontmatterFilters {
   type?: string[];
@@ -32,8 +34,7 @@ export interface Frontmatter {
   region: string;
   block: boolean;
   draft: boolean;
-  items: string[];
-  parts?: CollectionPart[];
+  items: CollectionItem[];
   filters?: FrontmatterFilters;
   limit?: number;
   abstract?: string;
@@ -141,7 +142,6 @@ function emptyFrontmatter(): Frontmatter {
     block: false,
     draft: false,
     items: [],
-    parts: undefined,
     filters: undefined,
     limit: undefined,
     abstract: undefined,
@@ -188,17 +188,30 @@ function normalizeLinks(value: unknown): FrontmatterLink[] | undefined {
   return result.length > 0 ? result : undefined;
 }
 
-function normalizeParts(value: unknown): CollectionPart[] | undefined {
-  if (!Array.isArray(value)) return undefined;
-  const parts = value
-    .filter((item): item is Record<string, unknown> => item !== null && typeof item === 'object' && !Array.isArray(item))
-    .map((item) => {
-      const name = typeof item.name === 'string' ? item.name.trim() : '';
-      const items = normalizeStringList(item.items);
-      return name && items.length > 0 ? { name, items } : undefined;
-    })
-    .filter((p): p is CollectionPart => p !== undefined);
-  return parts.length > 0 ? parts : undefined;
+function normalizeCollectionItems(value: unknown): CollectionItem[] {
+  if (!Array.isArray(value)) return [];
+  const result: CollectionItem[] = [];
+  for (const item of value) {
+    if (typeof item === 'string') {
+      const trimmed = item.trim();
+      if (trimmed) result.push(trimmed);
+    } else if (item !== null && typeof item === 'object' && !Array.isArray(item)) {
+      const obj = item as Record<string, unknown>;
+      if (typeof obj.title === 'string' && Array.isArray(obj.items)) {
+        const title = obj.title.trim();
+        const subItems = normalizeCollectionItems(obj.items);
+        if (title && subItems.length > 0) {
+          result.push({ title, items: subItems });
+        }
+      } else if (typeof obj.file === 'string') {
+        const file = obj.file.trim();
+        if (file) {
+          result.push({ file, part: obj.part === true });
+        }
+      }
+    }
+  }
+  return result;
 }
 
 function normalizeFilters(value: unknown): FrontmatterFilters | undefined {
@@ -227,8 +240,7 @@ function normalizeFrontmatter(data: Record<string, unknown>): Frontmatter {
     region: typeof data.region === 'string' ? data.region : '',
     block: data.block === true,
     draft: data.draft === true,
-    items: normalizeStringList(data.items),
-    parts: normalizeParts(data.parts),
+    items: normalizeCollectionItems(data.items),
     filters: normalizeFilters(data.filters),
     limit: typeof data.limit === 'number' && Number.isFinite(data.limit) && data.limit > 0 ? Math.floor(data.limit) : undefined,
     abstract: typeof data.abstract === 'string' && data.abstract.trim() ? data.abstract.trim() : undefined,
