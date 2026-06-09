@@ -142,6 +142,7 @@ renewcaptionname{spanish}{\contentsname}{\normalsize\normalfont Índice}
 \newcommand*{\TOCLeaderTighter}{%
   \hbox to \@pnumwidth{\hfill\kern\@tocrmarg\totocnumwidth{\normalfont\normalcolor\leaders\hbox{\kern.05em\hbox{.}\kern.05em}\hfill}}}
 \makeatother
+\providecommand{\nonumberline}[1]{}
 \DeclareTOCStyleEntry[entryformat=\normalsize\itshape,linefill=\TOCLeaderTight,beforeskip=0pt]{tocline}{section}
 \DeclareTOCStyleEntry[linefill=\TOCLeaderTight,beforeskip=0pt]{tocline}{subsection}
 \DeclareTOCStyleEntry[linefill=\TOCLeaderTighter,beforeskip=0pt]{tocline}{subsubsection}
@@ -259,8 +260,8 @@ $endif$
 \newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
 
 % ─── Comandos pandoc ─────────────────────────────────────────────────────────
-\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
-\providecommand{\passthrough}[1]{#1}
+\\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\\providecommand{\passthrough}[1]{#1}
 
 % ─── Hipervínculos ───────────────────────────────────────────────────────────
 \usepackage[hidelinks]{hyperref}
