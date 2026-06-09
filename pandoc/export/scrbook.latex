@@ -133,7 +133,7 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 % ─── TOC ─────────────────────────────────────────────────────────────────────
 \renewcaptionname{spanish}{\contentsname}{\normalsize\bfseries Índice}
 \BeforeTOCHead{%
-  \RedeclareSectionCommand[beforeskip=0pt,afterskip=1sp,afterindent=false]{chapter}%
+  \RedeclareSectionCommand[beforeskip=5\baselineskip,afterskip=1sp,afterindent=false]{chapter}%
 }
 \makeatletter
 \newcommand*{\TOCLeaderWide}{\leaders\hbox{\kern.15em\hbox{.}\kern.15em}\hfill}
@@ -164,7 +164,7 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \renewcommand{\raggedchapter}{\centering}
 
 % ─── Secciones ───────────────────────────────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=1\baselineskip,afterskip=1\baselineskip,afterindent=false]{section}
+\RedeclareSectionCommand[beforeskip=2\baselineskip,afterskip=1\baselineskip,afterindent=false]{section}
 \setkomafont{section}{\normalsize\itshape}
 \renewcommand{\raggedsection}{\centering}
 
