@@ -143,7 +143,8 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
   \hbox to \@pnumwidth{\hfill\kern\@tocrmarg\totocnumwidth{\normalfont\normalcolor\leaders\hbox{\kern.05em\hbox{.}\kern.05em}\hfill}}}
 \makeatother
 \setkomafont{partentry}{\normalsize\normalfont}
-\DeclareTOCStyleEntry[entryformat=\MakeUppercase,linefill=\TOCLeaderWide,beforeskip=1\baselineskip]{tocline}{part}
+\providecommand{\nonumberline}[1]{}
+\DeclareTOCStyleEntry[linefill=\TOCLeaderWide,beforeskip=1\baselineskip]{tocline}{part}
 \setkomafont{chapterentry}{\normalsize\normalfont}
 \DeclareTOCStyleEntry[linefill=\TOCLeaderMedium,beforeskip=0pt]{tocline}{chapter}
 \DeclareTOCStyleEntry[entryformat=\normalsize\itshape,linefill=\TOCLeaderTight,beforeskip=0pt]{tocline}{section}
@@ -275,8 +276,8 @@ $endif$
 
 
 % ─── Comandos pandoc ─────────────────────────────────────────────────────────
-\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
-\providecommand{\passthrough}[1]{#1}
+\\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\\providecommand{\passthrough}[1]{#1}
 
 % ─── Hipervínculos ───────────────────────────────────────────────────────────
 \usepackage[hidelinks]{hyperref}
