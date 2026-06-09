@@ -80,6 +80,7 @@ $endif$
 %     refleje el valor estirado en los cálculos de márgenes) ────────────────
 \usepackage{setspace}
 \setstretch{$if(linestretch)$$linestretch$$else$1.5$endif$}
+\setlength{\topskip}{\baselineskip}
 
 % ─── Geometría (media carta 13.97 × 21.59 cm) ────────────────────────────────
 $if(geometry)$
