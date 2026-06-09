@@ -18,9 +18,9 @@ export const EXPORTABLE_TYPES = new Set<DocumentType>(['file', 'event', 'author'
  * scrbook:  colecciones (libro, programa de actividades).
  */
 export const LATEX_CLASS = {
-  file: 'scrartcl',
-  event: 'scrartcl',
-  author: 'scrartcl',
+  file: 'scrbook',
+  event: 'scrbook',
+  author: 'scrbook',
   collection: 'scrbook',
   events: 'scrbook',
 } as const satisfies Partial<Record<DocumentType, 'scrartcl' | 'scrbook'>>;

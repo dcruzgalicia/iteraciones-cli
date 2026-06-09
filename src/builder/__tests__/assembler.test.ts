@@ -460,16 +460,16 @@ describe('assembleBookBody — resolución de rutas de imágenes', () => {
 });
 
 // ---------------------------------------------------------------------------
-// assembleExportDocument — tipos scrartcl (file, event, author)
+// assembleExportDocument — tipo exportable base
 // ---------------------------------------------------------------------------
 
-describe('assembleExportDocument — tipos scrartcl', () => {
-  test('retorna el body sin modificar para type: file', () => {
+describe('assembleExportDocument', () => {
+  test('retorna el body sin modificar para type: file con scrbook', () => {
     const doc = makeDoc({ type: 'file', body: 'Contenido original.' });
     const exportDoc = assembleExportDocument(doc, [], 'es', '/project');
     expect(exportDoc).not.toBeNull();
-    expect(exportDoc!.body).toBe('Contenido original.');
-    expect(exportDoc!.metadata.documentclass).toBe('scrartcl');
+    expect(exportDoc!.body).toContain('Contenido original.');
+    expect(exportDoc!.metadata.documentclass).toBe('scrbook');
   });
 
   test('retorna null para un tipo no exportable (block)', () => {
@@ -489,6 +489,57 @@ describe('assembleExportDocument — tipos scrartcl', () => {
     const exportDoc = assembleExportDocument(collection, [], 'es', '/project');
     expect(exportDoc!.metadata.documentclass).toBe('scrbook');
     expect(exportDoc!.metadata.toc).toBe(true);
+  });
+
+  test('editorial.documentclass: scrartcl cambia a scrartcl en type file', () => {
+    const doc = makeDoc({
+      type: 'file',
+      frontmatter: {
+        title: 'Test',
+        date: '',
+        author: [],
+        speakers: [],
+        type: 'file',
+        keywords: [],
+        region: '',
+        block: false,
+        draft: false,
+        items: [],
+        editorial: { documentclass: 'scrartcl' },
+      },
+    });
+    const exportDoc = assembleExportDocument(doc, [], 'es', '/project');
+    expect(exportDoc!.metadata.documentclass).toBe('scrartcl');
+  });
+
+  test('editorial.documentclass: scrartcl cambia a scrartcl en type collection', () => {
+    const doc = makeDoc({
+      type: 'collection',
+      frontmatter: {
+        title: 'Col',
+        date: '',
+        author: [],
+        speakers: [],
+        type: 'collection',
+        keywords: [],
+        region: '',
+        block: false,
+        draft: false,
+        items: [],
+        editorial: { documentclass: 'scrartcl' },
+      },
+      body: '# Heading\n\nBody.',
+    });
+    const exportDoc = assembleExportDocument(doc, [], 'es', '/project');
+    expect(exportDoc!.metadata.documentclass).toBe('scrartcl');
+  });
+
+  test('pdfFormat.documentclass: scrartcl cambia a scrartcl', () => {
+    const doc = makeDoc({ type: 'file' });
+    const exportDoc = assembleExportDocument(doc, [], 'es', '/project', undefined, undefined, undefined, {
+      documentclass: 'scrartcl',
+    } as never);
+    expect(exportDoc!.metadata.documentclass).toBe('scrartcl');
   });
 });
 
