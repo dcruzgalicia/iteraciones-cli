@@ -67,7 +67,15 @@ export function assembleExportDocument(
       ? (doc.frontmatter['editorial'] as Record<string, unknown>)
       : {};
 
-  const documentclass = pdfFormat?.documentclass ?? LATEX_CLASS[doc.type as keyof typeof LATEX_CLASS];
+  const rawFormatPdf =
+    typeof doc.frontmatter['format'] === 'object' && doc.frontmatter['format'] !== null
+      ? ((doc.frontmatter['format'] as Record<string, unknown>)['pdf'] as Record<string, unknown> | undefined)
+      : undefined;
+  const perFileDocClass =
+    rawFormatPdf !== undefined && typeof rawFormatPdf['documentclass'] === 'string' && rawFormatPdf['documentclass'] === 'scrartcl'
+      ? 'scrartcl'
+      : undefined;
+  const documentclass = perFileDocClass ?? pdfFormat?.documentclass ?? LATEX_CLASS[doc.type as keyof typeof LATEX_CLASS];
   if (!documentclass) return null;
 
   // Resolver bibliografía y CSL: editorial.bibliography → export.bibliography → APA 7 por defecto
@@ -460,6 +468,15 @@ export function assembleAuthorExportVariants(
       ? safeEditorialPath(rawEditorial['csl'], cwd, 'editorial.csl')
       : (globalCsl ?? (bibliography ? join(import.meta.dir, '../../../pandoc/csl/apa-7.csl') : undefined));
 
+  const rawFormatPdf =
+    typeof doc.frontmatter['format'] === 'object' && doc.frontmatter['format'] !== null
+      ? ((doc.frontmatter['format'] as Record<string, unknown>)['pdf'] as Record<string, unknown> | undefined)
+      : undefined;
+  const perFileDocClass =
+    rawFormatPdf !== undefined && typeof rawFormatPdf['documentclass'] === 'string' && rawFormatPdf['documentclass'] === 'scrartcl'
+      ? 'scrartcl'
+      : undefined;
+
   const metadata: ExportMetadata = {
     title: doc.frontmatter.title || 'Sin título',
     author: doc.frontmatter.author,
@@ -472,7 +489,7 @@ export function assembleAuthorExportVariants(
     cover: typeof rawEditorial['cover'] === 'string' ? safeEditorialPath(rawEditorial['cover'], cwd, 'editorial.cover') : undefined,
     bibliography,
     csl,
-    documentclass: LATEX_CLASS.author,
+    documentclass: perFileDocClass ?? LATEX_CLASS.author,
     toc: false,
     abstract: typeof rawEditorial['abstract'] === 'string' && rawEditorial['abstract'].trim() ? rawEditorial['abstract'].trim() : undefined,
     keywords: undefined,
