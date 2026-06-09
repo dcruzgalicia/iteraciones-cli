@@ -144,7 +144,7 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \setkomafont{partentry}{\normalsize\normalfont}
 \DeclareTOCStyleEntry[linefill=\TOCLeaderWide,beforeskip=1\baselineskip]{tocline}{part}
 \setkomafont{chapterentry}{\normalsize\normalfont}
-\DeclareTOCStyleEntry[linefill=\TOCLeaderMedium,beforeskip=0pt]{tocline}{chapter}
+\DeclareTOCStyleEntry[linefill=\TOCLeaderMedium,beforeskip=0.5\baselineskip]{tocline}{chapter}
 \DeclareTOCStyleEntry[entryformat=\normalsize\itshape,linefill=\TOCLeaderTight,beforeskip=0pt]{tocline}{section}
 \DeclareTOCStyleEntry[linefill=\TOCLeaderTight,beforeskip=0pt]{tocline}{subsection}
 \DeclareTOCStyleEntry[linefill=\TOCLeaderTighter,beforeskip=0pt]{tocline}{subsubsection}
