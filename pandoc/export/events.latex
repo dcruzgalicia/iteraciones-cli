@@ -149,10 +149,9 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \newcommand*{\TOCLeaderTighter}{\leaders\hbox{\kern.05em\hbox{.}\kern.05em}\hfill}
 \makeatother
 \setkomafont{partentry}{\normalsize\normalfont}
-\providecommand{\nonumberline}[1]{}
-\DeclareTOCStyleEntry[linefill=\TOCLeaderWide,beforeskip=1\baselineskip]{tocline}{part}
+\DeclareTOCStyleEntry[pagenumberbox=\phantom,linefill=\TOCLeaderWide,beforeskip=1\baselineskip]{tocline}{part}
 \setkomafont{chapterentry}{\normalsize\normalfont}
-\DeclareTOCStyleEntry[linefill=\TOCLeaderMedium,beforeskip=0pt]{tocline}{chapter}
+\DeclareTOCStyleEntry[linefill=\TOCLeaderMedium,beforeskip=0.5\baselineskip]{tocline}{chapter}
 \DeclareTOCStyleEntry[entryformat=\normalsize\itshape,linefill=\TOCLeaderTight,beforeskip=0pt]{tocline}{section}
 \DeclareTOCStyleEntry[linefill=\TOCLeaderTight,beforeskip=0pt]{tocline}{subsection}
 \DeclareTOCStyleEntry[linefill=\TOCLeaderTighter,beforeskip=0pt]{tocline}{subsubsection}
@@ -161,7 +160,7 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \makeatletter
 \let\scr@part\@part
 \renewcommand*{\@part}[2][]
-  {\scr@part[{#1}]{\MakeUppercase{#2}}}
+  {\scr@part[{\MakeUppercase{#1}}]{\MakeUppercase{#2}}}
 \makeatother
 
 % ─── Capítulos ───────────────────────────────────────────────────────────────
