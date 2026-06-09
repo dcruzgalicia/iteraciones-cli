@@ -137,7 +137,7 @@ $endif$
 $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 
 % ─── TOC ─────────────────────────────────────────────────────────────────────
-\renewcaptionname{spanish}{\contentsname}{\normalsize\normalfont Índice}
+\renewcaptionname{spanish}{\contentsname}{\normalsize\bfseries Índice}
 \BeforeTOCHead{%
   \RedeclareSectionCommand[beforeskip=0pt,afterskip=1sp,afterindent=false]{chapter}%
 }
@@ -147,9 +147,9 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \newcommand*{\TOCLeaderTight}{\leaders\hbox{\kern.075em\hbox{.}\kern.075em}\hfill}
 \newcommand*{\TOCLeaderTighter}{\leaders\hbox{\kern.05em\hbox{.}\kern.05em}\hfill}
 \makeatother
-\setkomafont{partentry}{\normalsize\bfseries}
+\setkomafont{partentry}{\normalsize\normalfont}
 \DeclareTOCStyleEntry[linefill=\TOCLeaderWide,beforeskip=1\baselineskip]{tocline}{part}
-\setkomafont{chapterentry}{\normalsize\bfseries}
+\setkomafont{chapterentry}{\normalsize\normalfont}
 \DeclareTOCStyleEntry[linefill=\TOCLeaderMedium,beforeskip=0pt]{tocline}{chapter}
 \DeclareTOCStyleEntry[entryformat=\normalsize\itshape,linefill=\TOCLeaderTight,beforeskip=0pt]{tocline}{section}
 \DeclareTOCStyleEntry[linefill=\TOCLeaderTight,beforeskip=0pt]{tocline}{subsection}

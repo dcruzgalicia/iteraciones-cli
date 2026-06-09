@@ -129,7 +129,7 @@ $endif$
 $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 
 % ─── TOC ─────────────────────────────────────────────────────────────────────
-\renewcaptionname{spanish}{\contentsname}{\normalsize\normalfont Índice}
+\renewcaptionname{spanish}{\contentsname}{\normalsize\bfseries Índice}
 \makeatletter
 \newcommand*{\TOCLeaderTight}{\leaders\hbox{\kern.075em\hbox{.}\kern.075em}\hfill}
 \newcommand*{\TOCLeaderTighter}{\leaders\hbox{\kern.05em\hbox{.}\kern.05em}\hfill}
