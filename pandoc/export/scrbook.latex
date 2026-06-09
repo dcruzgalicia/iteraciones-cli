@@ -164,7 +164,7 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \renewcommand{\raggedchapter}{\centering}
 
 % ─── Secciones ───────────────────────────────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=2\baselineskip,afterskip=1\baselineskip,afterindent=false]{section}
+\RedeclareSectionCommand[beforeskip=3\baselineskip,afterskip=1\baselineskip,afterindent=false]{section}
 \setkomafont{section}{\normalsize\itshape}
 \renewcommand{\raggedsection}{\centering}
 

@@ -153,7 +153,7 @@ $if(has-chapter)$
 $endif$
 
 % ─── Secciones (equivalente a capítulo) ──────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=2\baselineskip,afterskip=1\baselineskip,afterindent=false]{section}
+\RedeclareSectionCommand[beforeskip=3\baselineskip,afterskip=1\baselineskip,afterindent=false]{section}
 \setkomafont{section}{\normalsize\itshape}
 \renewcommand{\raggedsection}{\centering}
 
