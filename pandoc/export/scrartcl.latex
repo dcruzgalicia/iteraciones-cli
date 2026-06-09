@@ -78,7 +78,7 @@ $endif$
 
 % ─── Geometría (media carta 13.97 × 21.59 cm) ────────────────────────────────
 $if(geometry)$
-\usepackage[$for(geometry)$$geometry$$sep$,$endfor$,headheight=14pt,headsep=6pt,footskip=2.2\baselineskip]{geometry}
+\usepackage[$for(geometry)$$geometry$$sep$,$endfor$,headheight=1\baselineskip,headsep=0pt,footskip=2\baselineskip]{geometry}
 $else$
 $if(paperwidth)$
 \usepackage[paperwidth=$paperwidth$,paperheight=$paperheight$]{geometry}
@@ -86,13 +86,13 @@ $else$
 \usepackage[paperwidth=13.97cm,paperheight=21.59cm]{geometry}
 $endif$
 \geometry{%
-  tmargin=3.3\baselineskip,%
-  bmargin=62pt,%
+  tmargin=3\baselineskip,%
+  bmargin=3\baselineskip,%
   lmargin=4.4\baselineskip,%
   rmargin=3.3\baselineskip,%
-  headheight=14pt,%
-  headsep=6pt,%
-  footskip=2.2\baselineskip%
+  headheight=1\baselineskip,%
+  headsep=0pt,%
+  footskip=2\baselineskip%
 }
 $endif$
 
@@ -104,7 +104,7 @@ $endif$
 \usepackage[tracking=true]{microtype}
 
 % ─── Parámetros tipográficos (viudas, huérfanas, guiones) ────────────────────
-\raggedbottom
+\flushbottom
 \pretolerance=200
 \tolerance=400
 \hyphenpenalty=100
@@ -154,7 +154,7 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \renewcommand*{\dictumwidth}{0.5\textwidth}
 \renewcommand*{\dictumrule}{}
 \setkomafont{dictumauthor}{\normalsize\normalfont}
-\renewcommand*{\dictumauthorformat}[1]{#1\vspace*{32pt}}
+\renewcommand*{\dictumauthorformat}[1]{#1\vspace*{2\baselineskip}}
 
 % ─── Entornos de alineación (pandoc genera estos) ────────────────────────────
 \renewenvironment{center}{\par\centering}{\par}
@@ -290,6 +290,8 @@ $endif$
 
 % ═══════════════════════════════════════════════════════════════════════════════
 \begin{document}
+
+\setlength{\parskip}{0pt}
 
 \pagenumbering{gobble}
 
