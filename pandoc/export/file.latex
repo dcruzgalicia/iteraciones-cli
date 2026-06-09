@@ -83,7 +83,7 @@ $endif$
 
 % ─── Geometría (media carta 13.97 × 21.59 cm) ────────────────────────────────
 $if(geometry)$
-\usepackage[$for(geometry)$$geometry$$sep$,$endfor$,headheight=1\baselineskip,headsep=0pt,footskip=2\baselineskip]{geometry}
+\usepackage[$for(geometry)$$geometry$$sep$,$endfor$,headheight=1\baselineskip,headsep=1\baselineskip,footskip=1\baselineskip]{geometry}
 $else$
 $if(paperwidth)$
 \usepackage[paperwidth=$paperwidth$,paperheight=$paperheight$]{geometry}
@@ -96,8 +96,8 @@ $endif$
   lmargin=4.4\baselineskip,%
   rmargin=3.3\baselineskip,%
   headheight=1\baselineskip,%
-  headsep=0pt,%
-  footskip=2\baselineskip%
+  headsep=1\baselineskip,%
+  footskip=1\baselineskip%
 }
 $endif$
 
