@@ -498,6 +498,27 @@ describe('assembleExportDocument', () => {
     } as never);
     expect(exportDoc!.metadata.documentclass).toBe('scrartcl');
   });
+
+  test('frontmatter format.pdf.documentclass: scrartcl cambia a scrartcl', () => {
+    const doc = makeDoc({
+      type: 'file',
+      frontmatter: {
+        title: 'Test',
+        date: '',
+        author: [],
+        speakers: [],
+        type: 'file',
+        keywords: [],
+        region: '',
+        block: false,
+        draft: false,
+        items: [],
+        format: { pdf: { documentclass: 'scrartcl' } },
+      },
+    });
+    const exportDoc = assembleExportDocument(doc, [], 'es', '/project');
+    expect(exportDoc!.metadata.documentclass).toBe('scrartcl');
+  });
 });
 
 // ---------------------------------------------------------------------------
