@@ -325,7 +325,11 @@ $if(publisher)$\publishers{$publisher$}$endif$
 \date{}
 \maketitle
 $if(toc)$
+\begingroup
+\let\clearpage\relax
+\let\cleardoublepage\relax
 \tableofcontents
+\endgroup
 \clearpage
 $endif$
 \makeatletter\@mainmattertrue\makeatother
@@ -333,7 +337,11 @@ $endif$
 \noindent
 $body$
 $if(biblatex)$
+\begingroup
+\let\clearpage\relax
+\let\cleardoublepage\relax
 \backmatter
+\endgroup
 \printbibliography
 $endif$
 \end{document}
