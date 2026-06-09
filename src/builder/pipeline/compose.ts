@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import type { CacheManager } from '../../cache/cache-manager.js';
 import { hash } from '../../cache/hasher.js';
+import type { CollectionItem } from '../../loader/frontmatter.js';
 import { mapWithConcurrency } from '../../output/concurrency.js';
 import type { RenderFileReport } from '../../output/progress.js';
 import type { PluginRegistry } from '../../plugin/registry.js';
@@ -29,6 +30,13 @@ export interface ComposeCache {
 export interface ComposeStats {
   total: number;
   cacheHits: number;
+}
+
+function flattenCollectionItem(item: CollectionItem): string[] {
+  if (typeof item === 'string') return [item];
+  if ('file' in item && typeof item.file === 'string') return [item.file];
+  if ('items' in item) return item.items.flatMap(flattenCollectionItem);
+  return [];
 }
 
 async function readAndParseTemplate(path: string): Promise<{ ast: AstNode[]; contentHash: string }> {
@@ -87,12 +95,13 @@ export async function composeDocuments(
     }
 
     const typeTemplateHash = doc.templatePath ? (templateDataMap.get(doc.templatePath)?.contentHash ?? '') : '';
+    const itemPaths = doc.frontmatter.items.flatMap(flattenCollectionItem);
     const key = cache
       ? hash(
           doc.htmlFragment,
           doc.sourceHash,
           doc.relativePath,
-          ...(doc.frontmatter.items ?? []).map((itemPath) => itemHashMap?.get(itemPath) ?? itemPath),
+          ...itemPaths.map((itemPath) => itemHashMap?.get(itemPath) ?? itemPath),
           siteCtxHash,
           cache.cliVersion,
           layoutHash,
