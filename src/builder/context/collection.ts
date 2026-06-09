@@ -58,41 +58,39 @@ export function buildCollectionContext(
   const listItems = items.map((item) => itemToTemplateItem(item, authorIndex));
 
   // Construir parts y loose-items desde el nuevo schema unificado
+  // Iteración ordenada única que preserva la intercalación original entre
+  // part containers, standalone part files y loose items.
   const hasParts = rawItems && rawItems.length > 0 && allDocs;
   let partsData: PartGroupTemplate[] | undefined;
   let looseItemsData: PartGroupTemplateItem[] | undefined;
 
   if (hasParts) {
-    const { partContainers, standalonePartFiles, looseFilePaths } = extractStructure(rawItems!);
-    const allDocsResolved = allDocs!;
+    const partsArray: PartGroupTemplate[] = [];
+    const looseArray: PartGroupTemplateItem[] = [];
 
-    // Part containers
-    const containerParts = partContainers.map((pc) => {
-      const resolvedItems = collectSubPaths(pc.items)
-        .map((p) => byPath.get(p))
-        .filter((d): d is BuildDocument => d !== undefined)
-        .map((item) => itemToTemplateItem(item, authorIndex));
-      return { name: pc.title, items: resolvedItems };
-    });
+    for (const item of rawItems!) {
+      if (typeof item === 'string') {
+        const doc = byPath.get(item);
+        if (doc) looseArray.push(itemToTemplateItem(doc, authorIndex));
+      } else if ('title' in item && 'items' in item) {
+        const resolvedItems = collectSubPaths(item.items)
+          .map((p) => byPath.get(p))
+          .filter((d): d is BuildDocument => d !== undefined)
+          .map((doc) => itemToTemplateItem(doc, authorIndex));
+        partsArray.push({ name: item.title, items: resolvedItems });
+      } else if ('file' in item && typeof item.file === 'string' && item.part) {
+        const doc = byPath.get(item.file);
+        if (doc) {
+          partsArray.push({ name: doc.frontmatter.title, items: [itemToTemplateItem(doc, authorIndex)] });
+        }
+      } else if ('file' in item && typeof item.file === 'string') {
+        const doc = byPath.get(item.file);
+        if (doc) looseArray.push(itemToTemplateItem(doc, authorIndex));
+      }
+    }
 
-    // Standalone part files (también van como entries en `parts` del template)
-    const partFileEntries = standalonePartFiles
-      .map((sf) => {
-        const doc = byPath.get(sf.file);
-        if (!doc) return undefined;
-        return { name: doc.frontmatter.title, items: [itemToTemplateItem(doc, authorIndex)] };
-      })
-      .filter((p): p is PartGroupTemplate => p !== undefined);
-
-    partsData = [...containerParts, ...partFileEntries];
-    if (partsData.length === 0) partsData = undefined;
-
-    // Loose items: solo los que están en la página actual (byPath tiene los paginados)
-    looseItemsData = looseFilePaths
-      .map((p) => byPath.get(p))
-      .filter((d): d is BuildDocument => d !== undefined)
-      .map((item) => itemToTemplateItem(item, authorIndex));
-    if (looseItemsData && looseItemsData.length === 0) looseItemsData = undefined;
+    partsData = partsArray.length > 0 ? partsArray : undefined;
+    looseItemsData = looseArray.length > 0 ? looseArray : undefined;
   }
 
   return {
@@ -119,32 +117,6 @@ function itemToTemplateItem(item: BuildDocument, authorIndex?: AuthorDocumentInd
     ...(item.frontmatter.abstract !== undefined && { abstract: item.frontmatter.abstract }),
     ...(item.frontmatter.keywords.length > 0 && { keywords: item.frontmatter.keywords }),
   };
-}
-
-interface ExtractedStructure {
-  partContainers: Array<{ title: string; items: CollectionItem[] }>;
-  standalonePartFiles: Array<{ file: string }>;
-  looseFilePaths: string[];
-}
-
-function extractStructure(rawItems: CollectionItem[]): ExtractedStructure {
-  const partContainers: ExtractedStructure['partContainers'] = [];
-  const standalonePartFiles: ExtractedStructure['standalonePartFiles'] = [];
-  const looseFilePaths: string[] = [];
-
-  for (const item of rawItems) {
-    if (typeof item === 'string') {
-      looseFilePaths.push(item);
-    } else if ('title' in item && 'items' in item) {
-      partContainers.push(item);
-    } else if ('file' in item && typeof item.file === 'string' && item.part) {
-      standalonePartFiles.push({ file: item.file });
-    } else if ('file' in item && typeof item.file === 'string') {
-      looseFilePaths.push(item.file);
-    }
-  }
-
-  return { partContainers, standalonePartFiles, looseFilePaths };
 }
 
 function collectSubPaths(items: CollectionItem[]): string[] {
