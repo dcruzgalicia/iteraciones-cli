@@ -3,6 +3,7 @@ import { mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { ExportDocument } from '../builder/export/types.js';
 import type { PdfFormatConfig } from '../config/site-config.js';
+import { DEFAULT_PDF_FORMAT } from '../config/site-config.js';
 import { ConfigError, PandocError } from '../errors.js';
 
 /** Ruta base al directorio de templates LaTeX de exportación, relativa a este archivo. */
@@ -188,9 +189,9 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfF
     }
 
     if (pdfFormat.fontSize) lines.push(`fontsize: ${pdfFormat.fontSize}`);
-    if (pdfFormat.fontFamily) {
-      // font-family es un paquete LaTeX (mathptmx por defecto).
-      // El template lo carga con \usepackage{$mainfont$}.
+    // Solo emitir mainfont si el usuario eligió un paquete de fuente distinto al default.
+    // El template ya carga mathptmx como fallback vía \usepackage{mathptmx} en $else$.
+    if (pdfFormat.fontFamily && pdfFormat.fontFamily !== DEFAULT_PDF_FORMAT.fontFamily) {
       lines.push(`mainfont: ${yamlString(pdfFormat.fontFamily)}`);
     }
     // PDF/A-1a con el paquete pdfx
@@ -225,9 +226,8 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfF
     }
   }
 
-  // Ruta al directorio de fuentes para fontspec (templates LaTeX con $fontdir$).
-  // Solo se incluye en el flujo de PDF; en EPUB causaría un leak de rutas locales.
-  if (fontdir) lines.push(`fontdir: ${yamlString(fontdir)}`);
+  // fontdir ya no se usa (pdflatex no necesita rutas de fuentes OTF).
+  // Se mantiene el parámetro para compatibilidad de firma pero no se emite.
 
   lines.push('---', '');
   return lines.join('\n');
