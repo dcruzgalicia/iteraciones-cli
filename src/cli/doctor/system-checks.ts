@@ -33,7 +33,11 @@ export async function checkPandoc(): Promise<CheckResult> {
 
 export async function checkTailwind(cwd: string): Promise<CheckResult> {
   const fixAction = async (): Promise<string> => {
-    const proc = Bun.spawn(['bun', 'add', '-d', '@tailwindcss/cli'], { cwd, stdout: 'pipe', stderr: 'pipe' });
+    const proc = Bun.spawn(['bun', 'add', '-d', '@tailwindcss/cli'], {
+      cwd,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
     await proc.exited;
     return 'instalado @tailwindcss/cli';
   };
@@ -70,7 +74,11 @@ export async function checkReadPermissions(cwd: string): Promise<CheckResult> {
     await access(cwd, constants.R_OK);
     return { label: 'permisos de lectura en cwd', ok: true };
   } catch {
-    return { label: 'permisos de lectura en cwd', ok: false, detail: `sin permisos de lectura en ${cwd}` };
+    return {
+      label: 'permisos de lectura en cwd',
+      ok: false,
+      detail: `sin permisos de lectura en ${cwd}`,
+    };
   }
 }
 
@@ -81,7 +89,11 @@ export async function checkWritePermissions(cwd: string): Promise<CheckResult> {
     await writeFile(probe, '');
     canWrite = true;
   } catch {
-    return { label: 'permisos de escritura en cwd', ok: false, detail: `sin permisos de escritura en ${cwd}` };
+    return {
+      label: 'permisos de escritura en cwd',
+      ok: false,
+      detail: `sin permisos de escritura en ${cwd}`,
+    };
   } finally {
     // Limpiar el archivo probe independientemente de lo que ocurra después.
     await unlink(probe).catch(() => undefined);
@@ -90,17 +102,15 @@ export async function checkWritePermissions(cwd: string): Promise<CheckResult> {
 }
 
 /**
- * Verifica que el motor LaTeX (xelatex por defecto) y la clase KOMA-Script
+ * Verifica que el motor LaTeX (pdflatex) y la clase KOMA-Script
  * estén disponibles en el sistema.
  *
  * Función de propósito general: puede usarse tanto en el comando `doctor`
  * (donde el resultado es informacional y no bloquea el build) como en
  * `validate` (donde un resultado negativo se trata como error bloqueante).
  * La semántica de informacional vs. bloqueante la determina cada punto de uso.
- *
- * @param engine Motor LaTeX a verificar ('xelatex' o 'lualatex').
  */
-export async function checkLatexEngine(engine: 'xelatex' | 'lualatex' = 'xelatex'): Promise<CheckResult> {
+export async function checkLatexEngine(engine: 'pdflatex' = 'pdflatex'): Promise<CheckResult> {
   try {
     const engineResult = await run(engine, ['--version']);
     if (engineResult.exitCode !== 0) {
@@ -138,13 +148,20 @@ export async function checkLatexEngine(engine: 'xelatex' | 'lualatex' = 'xelatex
 
 export async function checkPdftoppm(): Promise<CheckResult> {
   try {
-    const proc = Bun.spawn(['pdftoppm', '-v'], { stdout: 'pipe', stderr: 'pipe' });
+    const proc = Bun.spawn(['pdftoppm', '-v'], {
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
     // Leer stderr en paralelo con proc.exited para evitar bloqueos si la salida llena el buffer.
     const [exitCode, stderr] = await Promise.all([proc.exited, new Response(proc.stderr).text()]);
     // pdftoppm -v escribe en stderr y sale con código 0 o 99 según la versión
     if (exitCode === 0 || exitCode === 99) {
       const version = stderr.split('\n')[0]?.trim() ?? 'pdftoppm';
-      return { label: 'pdftoppm disponible (portadas)', ok: true, detail: version };
+      return {
+        label: 'pdftoppm disponible (portadas)',
+        ok: true,
+        detail: version,
+      };
     }
     return {
       label: 'pdftoppm disponible (portadas)',
