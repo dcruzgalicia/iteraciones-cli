@@ -16,7 +16,10 @@ type ValidationError = { file: string; message: string };
 
 // theme se pasa desde runValidate para evitar que loadSiteConfig se llame dos veces
 // (una en validateConfig + otra aquí), lo que duplicaría los warnings de stderr.
-type ValidationResult = { errors: ValidationError[]; warnings: ValidationError[] };
+type ValidationResult = {
+  errors: ValidationError[];
+  warnings: ValidationError[];
+};
 
 async function validateFrontmatter(cwd: string, theme: string | undefined): Promise<ValidationResult> {
   const errors: ValidationError[] = [];
@@ -41,7 +44,10 @@ async function validateFrontmatter(cwd: string, theme: string | undefined): Prom
     try {
       raw = await readFile(absPath, 'utf8');
     } catch (err) {
-      errors.push({ file: entry, message: `no se pudo leer: ${err instanceof Error ? err.message : String(err)}` });
+      errors.push({
+        file: entry,
+        message: `no se pudo leer: ${err instanceof Error ? err.message : String(err)}`,
+      });
       continue;
     }
 
@@ -54,13 +60,19 @@ async function validateFrontmatter(cwd: string, theme: string | undefined): Prom
     try {
       const result = Bun.YAML.parse(match[1] ?? '');
       if (!result || typeof result !== 'object' || Array.isArray(result)) {
-        errors.push({ file: entry, message: 'frontmatter YAML inválido: debe ser un objeto' });
+        errors.push({
+          file: entry,
+          message: 'frontmatter YAML inválido: debe ser un objeto',
+        });
         continue;
       }
       parsed = result as Record<string, unknown>;
       fm = parseFrontmatter(raw).frontmatter;
     } catch (err) {
-      errors.push({ file: entry, message: `frontmatter YAML inválido: ${err instanceof Error ? err.message : String(err)}` });
+      errors.push({
+        file: entry,
+        message: `frontmatter YAML inválido: ${err instanceof Error ? err.message : String(err)}`,
+      });
       continue;
     }
 
@@ -84,7 +96,10 @@ async function validateFrontmatter(cwd: string, theme: string | undefined): Prom
 
     // block: true sin region: el build omite el bloque con un aviso; reportar como advertencia.
     if (fm.block && !fm.region) {
-      warnings.push({ file: entry, message: 'block: true pero region: no está definido. El bloque no se insertará en ninguna región del layout' });
+      warnings.push({
+        file: entry,
+        message: 'block: true pero region: no está definido. El bloque no se insertará en ninguna región del layout',
+      });
     }
 
     // items: en colecciones deben apuntar a archivos existentes; el builder siempre
@@ -97,7 +112,11 @@ async function validateFrontmatter(cwd: string, theme: string | undefined): Prom
         const exists = await stat(itemPath)
           .then((s) => s.isFile())
           .catch(() => false);
-        if (!exists) errors.push({ file: entry, message: `items: "${item}" no existe en el proyecto` });
+        if (!exists)
+          errors.push({
+            file: entry,
+            message: `items: "${item}" no existe en el proyecto`,
+          });
       } else if ('file' in item && typeof item.file === 'string') {
         // { file, part? }
         const file = item.file.endsWith('.md') ? item.file : `${item.file}.md`;
@@ -105,7 +124,11 @@ async function validateFrontmatter(cwd: string, theme: string | undefined): Prom
         const exists = await stat(itemPath)
           .then((s) => s.isFile())
           .catch(() => false);
-        if (!exists) errors.push({ file: entry, message: `items: "${item.file}" no existe en el proyecto` });
+        if (!exists)
+          errors.push({
+            file: entry,
+            message: `items: "${item.file}" no existe en el proyecto`,
+          });
       } else if ('title' in item && 'items' in item) {
         // { title, items } — part container
         for (const sub of item.items) {
@@ -155,7 +178,10 @@ async function validateFrontmatter(cwd: string, theme: string | undefined): Prom
             .then((s) => s.isFile())
             .catch(() => false);
           if (!fileExists) {
-            errors.push({ file: entry, message: `${fieldName}: "${fieldValue}" no existe en el proyecto` });
+            errors.push({
+              file: entry,
+              message: `${fieldName}: "${fieldValue}" no existe en el proyecto`,
+            });
           }
         }
       }
@@ -172,18 +198,24 @@ async function validateFrontmatter(cwd: string, theme: string | undefined): Prom
 export async function runValidate(cwd: string): Promise<void> {
   let theme: string | undefined;
   let hasPdf = false;
-  let pdfEngine: 'xelatex' | 'lualatex' = 'xelatex';
+  let pdfEngine: 'pdflatex' = 'pdflatex';
   const configErrors: ValidationError[] = [];
   try {
     const config = await loadSiteConfig(cwd);
     theme = config.format?.html?.theme;
     hasPdf = !!config.format?.pdf;
-    pdfEngine = config.format?.pdf?.engine ?? 'xelatex';
+    pdfEngine = config.format?.pdf?.engine ?? 'pdflatex';
   } catch (err) {
     if (err instanceof ConfigError) {
-      configErrors.push({ file: relative(cwd, err.configPath), message: err.message });
+      configErrors.push({
+        file: relative(cwd, err.configPath),
+        message: err.message,
+      });
     } else {
-      configErrors.push({ file: '_iteraciones.yaml', message: err instanceof Error ? err.message : String(err) });
+      configErrors.push({
+        file: '_iteraciones.yaml',
+        message: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 

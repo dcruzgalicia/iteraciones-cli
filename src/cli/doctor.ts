@@ -15,13 +15,13 @@ import {
  */
 export async function runDoctor(cwd: string, options: { fix?: boolean } = {}): Promise<void> {
   // Cargar la config para determinar qué motor LaTeX verificar (si el export está habilitado).
-  let latexEngine: 'xelatex' | 'lualatex' = 'xelatex';
+  let latexEngine: 'pdflatex' = 'pdflatex';
   try {
     const { loadSiteConfig } = await import('../config/config-loader.js');
     const cfg = await loadSiteConfig(cwd);
-    if (cfg.format?.pdf?.engine) latexEngine = cfg.format.pdf.engine;
+    if (cfg.format?.pdf?.engine) latexEngine = cfg.format.pdf.engine as 'pdflatex';
   } catch {
-    // Si no hay config o falla la carga, usar xelatex por defecto.
+    // Si no hay config o falla la carga, usar pdflatex por defecto.
   }
 
   const checks = await Promise.all([
