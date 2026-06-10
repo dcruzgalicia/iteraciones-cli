@@ -186,11 +186,11 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 % \containerpart: \part{} con entrada TOC sin número de página
 \newcommand{\gobblethreeargs}[3]{}
 \newcommand{\containerpart}[1]{%
-  \addcontentsline{toc}{partcontainer}{#1}%
   \begingroup
     \let\addcontentsline\gobblethreeargs
     \part{#1}%
   \endgroup
+  \addcontentsline{toc}{partcontainer}{#1}%
 }
 
 % ─── Capítulos ───────────────────────────────────────────────────────────────
