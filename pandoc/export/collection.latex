@@ -44,8 +44,8 @@ $endif$
 % ─── xpatch: personalización de \maketitle ───────────────────────────────────
 \usepackage{xpatch}
 \makeatletter
-\xpatchcmd{\maketitle}{\usekomafont{title}{\huge \@title\par}}{\usekomafont{title}{\@title\par}}{}{}
-\xpatchcmd{\maketitle}{\null\vfill}{\vspace*{-\baselineskip}}{}{}
+\xpatchcmd{\maketitle}{\usekomafont{title}{\huge \@title\par}}{\usekomafont{title}{\MakeUppercase{\@title}\par}}{}{}
+\xpatchcmd{\maketitle}{\null\vfill}{\vspace*{6\baselineskip}}{}{}
 \xpatchcmd{\maketitle}{\vskip 1em}{\vskip 0pt}{}{}
 \xpatchcmd{\maketitle}{\vskip 2em}{\vskip 0pt}{}{}
 \xpatchcmd{\maketitle}{\vfill\null}{\vskip 0\baselineskip}{}{}
@@ -127,7 +127,7 @@ $endif$
 
 % ─── Fuentes KOMA ────────────────────────────────────────────────────────────
 \setkomafont{disposition}{\normalsize\normalfont}
-\setkomafont{title}{\normalsize\normalfont}
+\setkomafont{title}{\normalsize\bfseries}
 \setkomafont{subtitle}{\normalsize\normalfont}
 \setkomafont{author}{\normalsize\normalfont}
 \setkomafont{publishers}{\normalsize\normalfont}

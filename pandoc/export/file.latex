@@ -44,8 +44,8 @@ $endif$
 % ─── \maketitle: título, autor y fecha con tamaño normal ──────────────────────
 \makeatletter
 \renewcommand{\maketitle}{%
-  \vspace*{-\baselineskip}%
-  {\centering\usekomafont{title}{\@title\par}}%
+  \vspace*{6\baselineskip}%
+  {\centering\usekomafont{title}{\MakeUppercase{\@title}\par}}%
   \ifx\@subtitle\@empty\else
     \vskip 0\baselineskip
     {\centering\usekomafont{subtitle}{\@subtitle\par}}%
@@ -125,7 +125,7 @@ $endif$
 
 % ─── Fuentes KOMA ────────────────────────────────────────────────────────────
 \setkomafont{disposition}{\normalsize\normalfont}
-\setkomafont{title}{\normalsize\normalfont}
+\setkomafont{title}{\normalsize\bfseries}
 \setkomafont{subtitle}{\normalsize\normalfont}
 \setkomafont{author}{\normalsize\normalfont}
 \setkomafont{publishers}{\normalsize\normalfont}
