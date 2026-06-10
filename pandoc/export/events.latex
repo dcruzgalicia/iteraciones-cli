@@ -10,12 +10,23 @@ $if(mainfont)$
 \IfFontExistsTF{$mainfont$}{%
   \setmainfont[Ligatures=TeX]{$mainfont$}%
 }{%
-  \setmainfont[Ligatures=TeX,Numbers=OldStyle]{TeX Gyre Pagella}%
+  \setmainfont[Ligatures=TeX,Numbers=OldStyle,%
+    BoldFont=texgyrepagella-bold.otf,%
+    ItalicFont=texgyrepagella-italic.otf,%
+    BoldItalicFont=texgyrepagella-bolditalic.otf,%
+    SmallCapsFont=texgyrepagella-regular-sc.otf]{texgyrepagella-regular.otf}%
 }
 $else$
-\setmainfont[Ligatures=TeX,Numbers=OldStyle]{TeX Gyre Pagella}
+\setmainfont[Ligatures=TeX,Numbers=OldStyle,%
+  BoldFont=texgyrepagella-bold.otf,%
+  ItalicFont=texgyrepagella-italic.otf,%
+  BoldItalicFont=texgyrepagella-bolditalic.otf,%
+  SmallCapsFont=texgyrepagella-regular-sc.otf]{texgyrepagella-regular.otf}
 $endif$
-\setsansfont[Ligatures=TeX]{TeX Gyre Adventor}
+\setsansfont[Ligatures=TeX,%
+  BoldFont=texgyreadventor-bold.otf,%
+  ItalicFont=texgyreadventor-italic.otf,%
+  BoldItalicFont=texgyreadventor-bolditalic.otf]{texgyreadventor-regular.otf}
 
 % ─── Idioma ──────────────────────────────────────────────────────────────────
 \usepackage[spanish,mexico-com,es-notilde,es-noshorthands,es-noindentfirst,es-ucroman]{babel}
