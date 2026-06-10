@@ -189,13 +189,12 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfF
 
     if (pdfFormat.fontSize) lines.push(`fontsize: ${pdfFormat.fontSize}`);
     if (pdfFormat.fontFamily) {
-      // Si la fuente es la misma que el default del template (TeX Gyre Pagella),
-      // no emitir mainfont para que el template use la rama $else$ con los OTF
-      // embebidos en fonts/. Si es otra fuente, emitir mainfont para system lookup.
-      if (pdfFormat.fontFamily !== 'TeX Gyre Pagella') {
-        lines.push(`mainfont: ${yamlString(pdfFormat.fontFamily)}`);
-      }
+      // font-family es un paquete LaTeX (mathptmx por defecto).
+      // El template lo carga con \usepackage{$mainfont$}.
+      lines.push(`mainfont: ${yamlString(pdfFormat.fontFamily)}`);
     }
+    // PDF/A-1a con el paquete pdfx
+    lines.push(`pdfx: ${pdfFormat.pdfx ? 'true' : 'false'}`);
     if (pdfFormat.lineSpacing !== undefined) lines.push(`linestretch: ${pdfFormat.lineSpacing}`);
     if (pdfFormat.numbering !== undefined) lines.push(`secnumdepth: ${pdfFormat.numbering ? 3 : -2}`);
     lines.push(`has-chapter: ${doc.metadata.documentclass === 'scrbook' ? 'true' : 'false'}`);
@@ -203,10 +202,18 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfF
       const [placement, align] = pdfFormat.pageNumber.split('-') as [string, string];
       lines.push(`pageno-head: ${placement === 'header' ? 'true' : 'false'}`);
       if (pdfFormat.sides === 'twoside') {
-        const twosideMap: Record<string, string> = { left: 'LO,RE', center: 'CE,CO', right: 'LE,RO' };
+        const twosideMap: Record<string, string> = {
+          left: 'LO,RE',
+          center: 'CE,CO',
+          right: 'LE,RO',
+        };
         lines.push(`pageno-fancy: ${twosideMap[align] ?? 'LE,RO'}`);
       } else {
-        const alignMap: Record<string, string> = { left: 'L', center: 'C', right: 'R' };
+        const alignMap: Record<string, string> = {
+          left: 'L',
+          center: 'C',
+          right: 'R',
+        };
         lines.push(`pageno-fancy: ${alignMap[align] ?? 'R'}`);
       }
     } else if (pdfFormat.sides === 'twoside') {
@@ -280,19 +287,18 @@ export async function convertToEpub(doc: ExportDocument, outputPath: string, cwd
 }
 
 /**
- * Convierte un ExportDocument a PDF usando pandoc con el motor LaTeX indicado.
+ * Convierte un ExportDocument a PDF usando pandoc con pdflatex.
  * Usa el template KOMA-Script del directorio `pandoc/export/`.
  *
  * @param doc        Documento ensamblado listo para exportar.
  * @param outputPath Ruta absoluta del archivo PDF de salida.
- * @param engine     Motor LaTeX: 'xelatex' (por defecto) o 'lualatex'.
  * @param cwd        Directorio raíz del proyecto; permite buscar templates de override locales.
  */
 export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?: string, pdfFormat?: PdfFormatConfig): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
   const templatePath = resolveLatexTemplatePath(doc.type, cwd);
-  const input = buildYamlHeader(doc, FONTS_DIR, pdfFormat) + doc.body;
+  const input = buildYamlHeader(doc, undefined, pdfFormat) + doc.body;
   const args = [
     'pandoc',
     '--from',
@@ -300,7 +306,7 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
     '--to',
     'pdf',
     '--pdf-engine',
-    pdfFormat?.engine ?? 'xelatex',
+    pdfFormat?.engine ?? 'pdflatex',
     `--template=${templatePath}`,
     `--top-level-division=${doc.metadata.documentclass === 'scrbook' ? 'chapter' : 'section'}`,
     '--output',
@@ -322,7 +328,7 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
 
   const [, stderr, exitCode] = await writeAndWait(proc, input, doc.filePath);
   if (exitCode !== 0) {
-    // Filtrar la salida de xelatex/lualatex para mostrar solo los errores relevantes.
+    // Filtrar la salida de pdflatex para mostrar solo los errores relevantes.
     const filteredLines = filterLatexStderr(stderr);
     throw new PandocError(`pandoc/LaTeX falló al generar PDF para ${doc.filePath}`, doc.filePath, filteredLines || stderr);
   }
