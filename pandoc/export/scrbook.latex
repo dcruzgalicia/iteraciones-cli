@@ -163,6 +163,15 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
   {\scr@part[{\MakeUppercase{#1}}]{\MakeUppercase{#2}}}
 \makeatother
 
+% \standalonepart: \part{} sin page break, autor en versalitas
+\newcommand{\standalonepart}[1]{%
+  {%
+    \let\cleardoublepage\relax
+    \let\clearpage\relax
+    \part{\textsc{#1}}%
+  }%
+}
+
 % ─── Capítulos ───────────────────────────────────────────────────────────────
 \RedeclareSectionCommand[beforeskip=5\baselineskip,afterskip=2\baselineskip,afterindent=false]{chapter}
 \setkomafont{chapter}{\normalsize\bfseries}

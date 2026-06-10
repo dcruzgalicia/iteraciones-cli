@@ -244,57 +244,7 @@ describe('assembleBookBody — separadores de capítulo', () => {
     });
 
     const exportDoc = assembleExportDocument(makeCollection(['articulo.md']), [item], 'es', '/project');
-    expect(exportDoc!.body).toContain('# Mi artículo');
-  });
-
-  test('incluye *Por Autor* para ítems tipo file', () => {
-    const item = makeDoc({
-      type: 'file',
-      filePath: '/project/articulo.md',
-      relativePath: 'articulo.md',
-      frontmatter: {
-        title: 'Artículo',
-        date: '',
-        author: ['Ana Pérez'],
-        speakers: [],
-        type: 'file',
-        keywords: [],
-        region: '',
-        block: false,
-        draft: false,
-        items: [],
-      },
-      body: 'Texto.',
-    });
-
-    const exportDoc = assembleExportDocument(makeCollection(['articulo.md']), [item], 'es', '/project');
-    expect(exportDoc!.body).toContain('*Por Ana Pérez*');
-  });
-
-  test('omite *Por Autor* para ítems de tipo author (sería redundante)', () => {
-    const item = makeDoc({
-      type: 'author',
-      filePath: '/project/personas/ana.md',
-      relativePath: 'personas/ana.md',
-      frontmatter: {
-        title: 'Ana Pérez',
-        date: '',
-        author: ['Ana Pérez'],
-        speakers: [],
-        type: 'author',
-        keywords: [],
-        region: '',
-        block: false,
-        draft: false,
-        items: [],
-      },
-      body: 'Semblanza.',
-    });
-
-    const exportDoc = assembleExportDocument(makeCollection(['personas/ana.md']), [item], 'es', '/project');
-    const body = exportDoc!.body;
-    expect(body).toContain('# Ana Pérez');
-    expect(body).not.toContain('*Por Ana Pérez*');
+    expect(exportDoc!.body).toContain('## Mi artículo');
   });
 
   test('incluye directiva \\newpage al final de cada capítulo', () => {
@@ -318,7 +268,7 @@ describe('assembleBookBody — separadores de capítulo', () => {
     });
 
     const exportDoc = assembleExportDocument(makeCollection(['cap.md']), [item], 'es', '/project');
-    expect(exportDoc!.body).toContain('\\newpage');
+    expect(exportDoc!.body).toContain('\\cleardoublepage');
   });
 });
 
@@ -918,11 +868,11 @@ describe('parts en colecciones (exportación)', () => {
 
     expect(body).toContain('\\part{Parte I}');
     expect(body).toContain('\\part{Parte II}');
-    expect(body).toContain('# Uno');
-    expect(body).toContain('# Dos');
-    // \part debe aparecer ANTES del primer capítulo de cada grupo
-    expect(body.indexOf('\\part{Parte I}')).toBeLessThan(body.indexOf('# Uno'));
-    expect(body.indexOf('\\part{Parte II}')).toBeLessThan(body.indexOf('# Dos'));
+    expect(body).toContain('\\chapter{\\textsc{Autor A}}');
+    expect(body).toContain('## Uno');
+    expect(body).toContain('## Dos');
+    expect(body.indexOf('\\part{Parte I}')).toBeLessThan(body.indexOf('## Uno'));
+    expect(body.indexOf('\\part{Parte II}')).toBeLessThan(body.indexOf('## Dos'));
   });
 
   test('assembleBookBody con parts omite \\newpage antes de \\part', () => {
@@ -952,16 +902,15 @@ describe('parts en colecciones (exportación)', () => {
     const exportDoc = assembleExportDocument(collection, items, 'es', '/project', undefined, undefined, parts);
     const body = exportDoc!.body;
 
-    // Debe haber \newpage entre items pero no antes de \part
+    // Debe haber \\cleardoublepage entre items pero no antes de \\part
     expect(body).toContain('\\part{Única}');
-    // Nota: \newpage se emite después del body de cada item; no se espera que
-    // aparezca antes de \part.
+    // \\cleardoublepage se emite después del body de cada item; no antes de \\part
     const partIndex = body.indexOf('\\part{Única}');
-    const firstNewpageAfterPart = body.indexOf('\\newpage', partIndex);
-    expect(firstNewpageAfterPart).toBeGreaterThan(partIndex);
+    const firstCdAfterPart = body.indexOf('\\cleardoublepage', partIndex);
+    expect(firstCdAfterPart).toBeGreaterThan(partIndex);
   });
 
-  test('retrocompat: collection sin parts se comporta igual que antes', () => {
+  test('collection sin parts: author como \\chapter, title como \\section', () => {
     const collection = makeDoc({
       type: 'collection',
       filePath: '/project/col.md',
@@ -1002,9 +951,11 @@ describe('parts en colecciones (exportación)', () => {
 
     const exportDoc = assembleExportDocument(collection, [item], 'es', '/project');
     expect(exportDoc).not.toBeNull();
-    expect(exportDoc!.body).toContain('# A');
-    expect(exportDoc!.body).toContain('*Por Autor*');
+    expect(exportDoc!.body).toContain('\\chapter{\\textsc{Autor}}');
+    expect(exportDoc!.body).toContain('## A');
     expect(exportDoc!.body).not.toContain('\\part{');
+    expect(exportDoc!.body).not.toContain('*Por Autor*');
+    expect(exportDoc!.body).not.toMatch(/^# A$/m);
   });
 
   // ---------------------------------------------------------------------------
@@ -1053,10 +1004,10 @@ describe('parts en colecciones (exportación)', () => {
     const body = exportDoc!.body;
 
     // Orden: items sueltos → partes
-    const prologoIdx = body.indexOf('# Prólogo');
-    const introIdx = body.indexOf('# Introducción');
+    const prologoIdx = body.indexOf('## Prólogo');
+    const introIdx = body.indexOf('## Introducción');
     const partIdx = body.indexOf('\\part{Parte I}');
-    const capIdx = body.indexOf('# Fundamentos');
+    const capIdx = body.indexOf('## Fundamentos');
 
     expect(prologoIdx).toBeGreaterThan(-1);
     expect(introIdx).toBeGreaterThan(-1);
@@ -1181,17 +1132,17 @@ describe('assembleBookBody — heading shift', () => {
     const exportDoc = assembleExportDocument(collection, [item], 'es', '/project');
     const body = exportDoc!.body;
 
-    // Item title stays as #
-    expect(body).toContain('# Capitulo');
-    // Body # → ##, ## → ###
-    expect(body).toContain('## Introducción');
-    expect(body).toContain('### Detalle');
+    // Item title is now ## (\section)
+    expect(body).toContain('## Capitulo');
+    // Body # → ### (offset +2), ## → ####
+    expect(body).toContain('### Introducción');
+    expect(body).toContain('#### Detalle');
     // Original levels should not remain
     expect(body).not.toContain('\n# Introducción\n');
     expect(body).not.toContain('\n## Detalle\n');
   });
 
-  test('con parts: body # se desplaza a ## (\\section{})', () => {
+  test('con parts: body # se desplaza a ### (offset +2)', () => {
     const collection = makeDoc({
       type: 'collection',
       filePath: '/project/libro.md',
@@ -1237,16 +1188,16 @@ describe('assembleBookBody — heading shift', () => {
     const body = exportDoc!.body;
 
     expect(body).toContain('\\part{Parte Única}');
-    // Item title stays as #
-    expect(body).toContain('# Capitulo');
-    // Body # → ## (offset +1), ## → ###
-    expect(body).toContain('## Introducción');
-    expect(body).toContain('### Detalle');
+    // Item title is ## (\section)
+    expect(body).toContain('## Capitulo');
+    // Body # → ### (offset +2), ## → ####
+    expect(body).toContain('### Introducción');
+    expect(body).toContain('#### Detalle');
     expect(body).not.toContain('\n# Introducción\n');
     expect(body).not.toContain('\n## Detalle\n');
   });
 
-  test('con parts + items sueltos: body headings también se desplazan +1', () => {
+  test('con parts + items sueltos: body headings también se desplazan +2', () => {
     const collection = makeDoc({
       type: 'collection',
       filePath: '/project/libro.md',
@@ -1320,14 +1271,14 @@ describe('assembleBookBody — heading shift', () => {
     );
     const body = exportDoc!.body;
 
-    // Loose item body heading shifted +1
-    expect(body).toContain('## Sección en prólogo');
-    // Part item body heading shifted +1
-    expect(body).toContain('## Introducción');
-    expect(body).toContain('### Detalle');
+    // Loose item body heading shifted +2
+    expect(body).toContain('### Sección en prólogo');
+    // Part item body heading shifted +2
+    expect(body).toContain('### Introducción');
+    expect(body).toContain('#### Detalle');
   });
 
-  test('standalone part file: title a \\part{}, body sin offset (h1 = \\chapter)', () => {
+  test('standalone part file: author como \\standalonepart, title como \\section, body offset +2', () => {
     const collection = makeDoc({
       type: 'collection',
       filePath: '/project/libro.md',
@@ -1357,7 +1308,7 @@ describe('assembleBookBody — heading shift', () => {
       frontmatter: {
         title: 'Introducción General',
         date: '',
-        author: [],
+        author: ['Autor del Prólogo'],
         speakers: [],
         type: 'file',
         keywords: [],
@@ -1376,7 +1327,7 @@ describe('assembleBookBody — heading shift', () => {
       frontmatter: {
         title: 'Fundamentos',
         date: '',
-        author: [],
+        author: ['Autor del Capítulo'],
         speakers: [],
         type: 'file',
         keywords: [],
@@ -1404,17 +1355,23 @@ describe('assembleBookBody — heading shift', () => {
     );
     const body = exportDoc!.body;
 
-    // Standalone part file: title as \part only (no duplicate # Title)
-    expect(body).toContain('\\part{Introducción General}');
-    expect(body).not.toContain('# Introducción General');
-    // Body h1 stays as # (offset 0 = \chapter)
-    expect(body).toContain('# Contexto');
-    // Body h2 stays as ## (offset 0)
-    expect(body).toContain('## Antecedentes');
-    // Part container items still shift +1
+    // Standalone part file: author as \standalonepart, title as ##, extra \cleardoublepage
+    expect(body).toContain('\\standalonepart{\\textsc{Autor del Prólogo}}');
+    expect(body).toContain('## Introducción General');
+    // Body h1 → ### (offset +2), h2 → ####
+    expect(body).toContain('### Contexto');
+    expect(body).toContain('#### Antecedentes');
+    // Extra \cleardoublepage entre title y body
+    const standaloneTitleIdx = body.indexOf('## Introducción General');
+    const standaloneBodyStart = body.indexOf('### Contexto', standaloneTitleIdx);
+    const standaloneCd = body.indexOf('\\cleardoublepage', standaloneTitleIdx);
+    expect(standaloneCd).toBeGreaterThan(standaloneTitleIdx);
+    expect(standaloneCd).toBeLessThan(standaloneBodyStart);
+    // Part container items: author como \chapter, title como ##, offset +2
     expect(body).toContain('\\part{Parte I}');
-    expect(body).toContain('# Fundamentos');
-    expect(body).toContain('## Tema central');
+    expect(body).toContain('\\chapter{\\textsc{Autor del Capítulo}}');
+    expect(body).toContain('## Fundamentos');
+    expect(body).toContain('### Tema central');
   });
 
   test('resolvePartsForExport incluye standalone part files como isPartFile', () => {
