@@ -132,7 +132,7 @@ export function assembleExportDocument(
       // (\part{}, \addpart{}, \standalonepart{}, \chapter{}), no moverlo
       // — forma parte de la estructura.
       const preamble = body.slice(0, headingMatch.index).trim();
-      const preambleIsOnlyLatexCommands = preamble.length === 0 || /^\\((add)?part|standalonepart|chapter)\{/.test(preamble);
+      const preambleIsOnlyLatexCommands = preamble.length === 0 || /^\\((add)?part|standalonepart|containerpart|chapter)\{/.test(preamble);
       if (!preambleIsOnlyLatexCommands) {
         const rest = body.slice(headingMatch.index);
         body = rest + '\n\n' + preamble;
@@ -186,7 +186,7 @@ function assembleBookBody(doc: BuildDocument, items: BuildDocument[], parts?: Ex
 
     for (const part of parts) {
       if (part.kind === 'container') {
-        result.push(`\\part{${part.name}}\n\n`);
+        result.push(`\\containerpart{${part.name}}\n\n`);
         for (const item of part.items) {
           appendItemBody(item, result, 'container');
         }

@@ -839,7 +839,7 @@ describe('parts en colecciones (exportación)', () => {
     expect(resolvePartsForExport(doc, [])).toHaveLength(0);
   });
 
-  test('assembleBookBody emite \\part{Name} entre grupos', () => {
+  test('assembleBookBody emite \\containerpart{Name} entre grupos', () => {
     const collection = makeCollectionWithParts({
       'Parte I': ['cap1.md'],
       'Parte II': ['cap2.md'],
@@ -866,13 +866,13 @@ describe('parts en colecciones (exportación)', () => {
     expect(exportDoc).not.toBeNull();
     const body = exportDoc!.body;
 
-    expect(body).toContain('\\part{Parte I}');
-    expect(body).toContain('\\part{Parte II}');
+    expect(body).toContain('\\containerpart{Parte I}');
+    expect(body).toContain('\\containerpart{Parte II}');
     expect(body).toContain('\\chapter{\\textsc{Autor A}}');
     expect(body).toContain('## Uno');
     expect(body).toContain('## Dos');
-    expect(body.indexOf('\\part{Parte I}')).toBeLessThan(body.indexOf('## Uno'));
-    expect(body.indexOf('\\part{Parte II}')).toBeLessThan(body.indexOf('## Dos'));
+    expect(body.indexOf('\\containerpart{Parte I}')).toBeLessThan(body.indexOf('## Uno'));
+    expect(body.indexOf('\\containerpart{Parte II}')).toBeLessThan(body.indexOf('## Dos'));
   });
 
   test('assembleBookBody con parts omite \\newpage antes de \\part', () => {
@@ -902,10 +902,10 @@ describe('parts en colecciones (exportación)', () => {
     const exportDoc = assembleExportDocument(collection, items, 'es', '/project', undefined, undefined, parts);
     const body = exportDoc!.body;
 
-    // Debe haber \\cleardoublepage entre items pero no antes de \\part
-    expect(body).toContain('\\part{Única}');
-    // \\cleardoublepage se emite después del body de cada item; no antes de \\part
-    const partIndex = body.indexOf('\\part{Única}');
+    // Debe haber \\cleardoublepage entre items pero no antes de \\containerpart
+    expect(body).toContain('\\containerpart{Única}');
+    // \\cleardoublepage se emite después del body de cada item; no antes de \\containerpart
+    const partIndex = body.indexOf('\\containerpart{Única}');
     const firstCdAfterPart = body.indexOf('\\cleardoublepage', partIndex);
     expect(firstCdAfterPart).toBeGreaterThan(partIndex);
   });
@@ -1006,7 +1006,7 @@ describe('parts en colecciones (exportación)', () => {
     // Orden: items sueltos → partes
     const prologoIdx = body.indexOf('## Prólogo');
     const introIdx = body.indexOf('## Introducción');
-    const partIdx = body.indexOf('\\part{Parte I}');
+    const partIdx = body.indexOf('\\containerpart{Parte I}');
     const capIdx = body.indexOf('## Fundamentos');
 
     expect(prologoIdx).toBeGreaterThan(-1);
@@ -1187,7 +1187,7 @@ describe('assembleBookBody — heading shift', () => {
     const exportDoc = assembleExportDocument(collection, items, 'es', '/project', undefined, undefined, parts);
     const body = exportDoc!.body;
 
-    expect(body).toContain('\\part{Parte Única}');
+    expect(body).toContain('\\containerpart{Parte Única}');
     // Item title is ## (\section)
     expect(body).toContain('## Capitulo');
     // Body # → ### (offset +2), ## → ####
@@ -1368,7 +1368,7 @@ describe('assembleBookBody — heading shift', () => {
     expect(standaloneCd).toBeGreaterThan(standaloneTitleIdx);
     expect(standaloneCd).toBeLessThan(standaloneBodyStart);
     // Part container items: author como \chapter, title como ##, offset +2
-    expect(body).toContain('\\part{Parte I}');
+    expect(body).toContain('\\containerpart{Parte I}');
     expect(body).toContain('\\chapter{\\textsc{Autor del Capítulo}}');
     expect(body).toContain('## Fundamentos');
     expect(body).toContain('### Tema central');
