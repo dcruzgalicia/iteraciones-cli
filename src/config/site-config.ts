@@ -37,6 +37,7 @@ export interface PdfFormatConfig {
   pageNumber?: PageNumberPlacement;
   sides?: Sides;
   documentclass?: 'scrartcl' | 'scrbook';
+  sfdefaults?: boolean;
 }
 
 export interface EpubFormatConfig {

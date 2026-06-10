@@ -188,6 +188,12 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfF
       lines.push(`  - left=${left}`);
     }
 
+    // sfdefaults: permite controlar la opcion de clase KOMA-Script del mismo nombre.
+    // Por defecto es false (no usar familias sans-serif para titulos).
+    if (pdfFormat.sfdefaults !== undefined) {
+      lines.push(`sfdefaults: ${pdfFormat.sfdefaults ? 'true' : 'false'}`);
+    }
+
     if (pdfFormat.fontSize) lines.push(`fontsize: ${pdfFormat.fontSize}`);
     // Solo emitir mainfont si el usuario eligió un paquete de fuente distinto al default.
     // El template ya carga mathptmx como fallback vía \usepackage{mathptmx} en $else$.
