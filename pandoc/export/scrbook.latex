@@ -207,11 +207,7 @@ $endif$
 \renewcommand{\footrulewidth}{0pt}
 \fancypagestyle{plain}{%
   \fancyhf{}%
-$if(pageno-head)$
-  \fancyhead[$if(pageno-fancy)$$pageno-fancy$$else$R$endif$]{\vspace*{\fill}\normalfont\normalsize\thepage}%
-$else$
-  \fancyfoot[$if(pageno-fancy)$$pageno-fancy$$else$R$endif$]{\normalfont\normalsize\thepage}%
-$endif$
+  \fancyfoot[C]{\normalfont\normalsize\thepage}%
   \renewcommand{\headrulewidth}{0pt}%
   \renewcommand{\footrulewidth}{0pt}%
 }
