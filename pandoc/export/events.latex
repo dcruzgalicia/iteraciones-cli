@@ -8,7 +8,7 @@
 \usepackage{fontspec}
 $if(mainfont)$
 \IfFontExistsTF{$mainfont$}{%
-  \setmainfont[Ligatures=TeX,Numbers=OldStyle]{$mainfont$}%
+  \setmainfont[Ligatures=TeX]{$mainfont$}%
 }{%
   \setmainfont[Ligatures=TeX,Numbers=OldStyle]{TeX Gyre Pagella}%
 }
