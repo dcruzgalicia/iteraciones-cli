@@ -3,7 +3,7 @@
 %% Motor: pdfLaTeX
 %% Requiere: TeX Live / MacTeX full con KOMA-Script, microtype, hyperref, babel
 
-\documentclass[$if(fontsize)$$fontsize$$else$12pt$endif$,toc=flat,sfdefaults=false,parskip=false$for(classoption)$,$classoption$$sep$,$endfor$]{$documentclass$}
+\documentclass[$if(fontsize)$$fontsize$$else$12pt$endif$,toc=flat,sfdefaults=$if(sfdefaults)$sfdefaults$else$false$endif$,parskip=false$for(classoption)$,$classoption$$sep$,$endfor$]{$documentclass$}
 
 % ─── PDF/A-1a ───────────────────────────────────────────────────────────────
 $if(pdfx)$

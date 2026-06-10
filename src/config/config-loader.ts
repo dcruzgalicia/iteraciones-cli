@@ -230,6 +230,8 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     process.stderr.write(`[iteraciones] format.pdf.documentclass: valor desconocido "${String(rawDocClass)}". Valores validos: scrartcl, scrbook.\n`);
   }
 
+  const sfdefaults = typeof obj.sfdefaults === 'boolean' ? obj.sfdefaults : undefined;
+
   return {
     engine,
     concurrency,
@@ -248,6 +250,7 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     pageNumber,
     sides,
     documentclass,
+    sfdefaults,
   };
 }
 
