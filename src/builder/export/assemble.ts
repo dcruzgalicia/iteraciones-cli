@@ -39,8 +39,9 @@ function safeEditorialPath(rawPath: string, cwd: string, fieldName: string): str
  * Ensambla un ExportDocument a partir de un BuildDocument.
  *
  * Para tipos scrartcl (file, event, author): retorna el body del documento sin modificar.
- * Para tipos scrbook (collection, events): concatena el body de los items como capítulos,
- * prefijados con `# Título` y (cuando corresponde) `*Por Autor*`.
+ * Para tipos scrbook (collection, events): concatena los items como secciones,
+ * con el author como heading (\part o \chapter), el title como \section,
+ * y el body con offset +2.
  *
  * @param doc                 Documento a exportar.
  * @param items               Items resueltos del documento (solo relevante para collection/events).
@@ -128,9 +129,10 @@ export function assembleExportDocument(
       metadata.toc = false;
     } else if (headingMatch.index && headingMatch.index > 0) {
       // Si todo el texto previo al primer # es solo comandos LaTeX
-      // (\part{}, \addpart{}), no moverlo — forma parte de la estructura.
+      // (\part{}, \addpart{}, \standalonepart{}, \chapter{}), no moverlo
+      // — forma parte de la estructura.
       const preamble = body.slice(0, headingMatch.index).trim();
-      const preambleIsOnlyLatexCommands = preamble.length === 0 || /^\\(add)?part\{/.test(preamble);
+      const preambleIsOnlyLatexCommands = preamble.length === 0 || /^\\((add)?part|standalonepart|chapter)\{/.test(preamble);
       if (!preambleIsOnlyLatexCommands) {
         const rest = body.slice(headingMatch.index);
         body = rest + '\n\n' + preamble;
@@ -150,13 +152,18 @@ export function assembleExportDocument(
 
 /**
  * Ensambla el body de un documento scrbook (collection o events) concatenando
- * los capítulos de sus items en orden editorial.
+ * los items en orden editorial.
  *
  * Cada item contribuye con:
- *   # Título del capítulo
- *   *Por Autor*          ← omitido si el item es de tipo `author` (sería redundante)
- *   [body del item con footnotes renombrados e imágenes con rutas absolutas]
- *   \newpage
+ *   \standalonepart{\textsc{Author}}  │  (standalone part file)
+ *   \chapter{\textsc{Author}}         │  (container / loose)
+ *   ## Title                          →  \section
+ *   [body del item con offset +2]
+ *   \cleardoublepage
+ *
+ * En standalone part files se inserta un \cleardoublepage extra entre
+ * el título \section y el body, para que la primera página del contenido
+ * quede en una página nueva.
  */
 function assembleBookBody(doc: BuildDocument, items: BuildDocument[], parts?: ExportCollectionPart[], loosePaths?: string[]): string {
   const result: string[] = [];
@@ -173,46 +180,56 @@ function assembleBookBody(doc: BuildDocument, items: BuildDocument[], parts?: Ex
     if (loosePaths) {
       for (const itemPath of loosePaths) {
         const item = byPath.get(itemPath);
-        if (item) appendItemBody(item, result, 1);
+        if (item) appendItemBody(item, result, 'loose');
       }
     }
 
     for (const part of parts) {
-      result.push(`\\part{${part.name}}\n\n`);
-      const offset = part.isPartFile ? 0 : 1;
-      for (const item of part.items) {
-        appendItemBody(item, result, offset, part.isPartFile);
+      if (part.kind === 'container') {
+        result.push(`\\part{${part.name}}\n\n`);
+        for (const item of part.items) {
+          appendItemBody(item, result, 'container');
+        }
+      } else {
+        // Standalone part file
+        const standaloneItem = part.items[0];
+        if (standaloneItem) appendItemBody(standaloneItem, result, 'standalone-file');
       }
     }
   } else {
-    // Sin partes: item title → \chapter{}, body headings → shift +1
+    // Sin partes: author → \chapter{}, title → \section{}, body offset +2
     for (const item of items) {
-      appendItemBody(item, result, 1);
+      appendItemBody(item, result, 'loose');
     }
   }
 
   return result.join('');
 }
 
-function appendItemBody(item: BuildDocument, target: string[], headingOffset: number, skipTitle = false): void {
+type ItemPartKind = 'standalone-file' | 'container' | 'loose';
+
+function appendItemBody(item: BuildDocument, target: string[], partKind: ItemPartKind): void {
   const authors = item.frontmatter.author;
   const slug = pathToSlug(item.relativePath);
+  const title = item.frontmatter.title || 'Sin título';
 
-  if (!skipTitle) {
-    const title = item.frontmatter.title || 'Sin título';
-    target.push(`# ${title}\n\n`);
-  }
-
-  // Caso especial: ítems de tipo `author` no llevan línea "Por Autor"
-  // porque el título ya es el nombre del autor — sería redundante.
-  if (item.type !== 'author' && authors.length > 0) {
-    target.push(`*Por ${authors.join(', ')}*\n\n`);
+  if (partKind === 'standalone-file') {
+    if (authors.length > 0) {
+      target.push(`\\standalonepart{\\textsc{${authors.join(', ')}}}\n\n`);
+    }
+    target.push(`## ${title}\n\n`);
+    target.push('\\cleardoublepage\n\n');
+  } else {
+    if (authors.length > 0) {
+      target.push(`\\chapter{\\textsc{${authors.join(', ')}}}\n\n`);
+    }
+    target.push(`## ${title}\n\n`);
   }
 
   const renamedBody = renameFootnotes(item.body, slug);
   const resolvedBody = resolveImagePaths(renamedBody, item.filePath);
-  const shiftedBody = shiftHeadings(resolvedBody, headingOffset);
-  target.push(shiftedBody.trim(), '\n\n\\newpage\n\n');
+  const shiftedBody = shiftHeadings(resolvedBody, 2);
+  target.push(shiftedBody.trim(), '\n\n\\cleardoublepage\n\n');
 }
 
 /**
