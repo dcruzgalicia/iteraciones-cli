@@ -132,7 +132,8 @@ export function assembleExportDocument(
       // (\part{}, \addpart{}, \standalonepart{}, \chapter{}), no moverlo
       // — forma parte de la estructura.
       const preamble = body.slice(0, headingMatch.index).trim();
-      const preambleIsOnlyLatexCommands = preamble.length === 0 || /^\\((add)?part|standalonepart|containerpart|chapter)\{/.test(preamble);
+      const preambleIsOnlyLatexCommands =
+        preamble.length === 0 || /^\\((add)?part|standalonepart|containerpart|chapterauthor|chapter)\{/.test(preamble);
       if (!preambleIsOnlyLatexCommands) {
         const rest = body.slice(headingMatch.index);
         body = rest + '\n\n' + preamble;
@@ -156,7 +157,7 @@ export function assembleExportDocument(
  *
  * Cada item contribuye con:
  *   \standalonepart{\textsc{Author}}  │  (standalone part file)
- *   \chapter{\textsc{Author}}         │  (container / loose)
+ *   \chapterauthor{\textsc{Author}}    │  (container / loose)
  *   ## Title                          →  \section
  *   [body del item con offset +2]
  *   \cleardoublepage
@@ -221,7 +222,7 @@ function appendItemBody(item: BuildDocument, target: string[], partKind: ItemPar
     target.push('\\cleardoublepage\n\n');
   } else {
     if (authors.length > 0) {
-      target.push(`\\chapter{\\textsc{${authors.join(', ')}}}\n\n`);
+      target.push(`\\chapterauthor{\\textsc{${authors.join(', ')}}}\n\n`);
     }
     target.push(`## ${title}\n\n`);
   }

@@ -148,6 +148,25 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
   \fi
 }
 \makeatother
+
+\newcommand*{\l@partauthor}[2]{%
+  \ifnum \c@tocdepth > -1\relax
+    \addpenalty{-\@highpenalty}%
+    \addvspace{1\baselineskip}%
+    \noindent\normalfont\normalsize
+    #1
+    \par
+  \fi
+}
+\newcommand*{\l@chapterauthor}[2]{%
+  \ifnum \c@tocdepth > -1\relax
+    \addpenalty{-\@highpenalty}%
+    \addvspace{0.5\baselineskip}%
+    \noindent\normalfont\normalsize
+    #1
+    \par
+  \fi
+}
 \setkomafont{chapterentry}{\normalsize\normalfont}
 \DeclareTOCStyleEntry[linefill=\TOCLeaderMedium,beforeskip=0.5\baselineskip]{tocline}{chapter}
 \DeclareTOCStyleEntry[entryformat=\normalsize\itshape,linefill=\TOCLeaderTight,beforeskip=0pt]{tocline}{section}
@@ -161,13 +180,16 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
   {\scr@part[{\MakeUppercase{#1}}]{\MakeUppercase{#2}}}
 \makeatother
 
-% \standalonepart: \part{} sin page break, autor en versalitas
+% \standalonepart: \part{} sin page break, autor en versalitas,
+% entrada TOC sin n\'umero de p\'agina (como \containerpart)
 \newcommand{\standalonepart}[1]{%
-  {%
+  \begingroup
+    \let\addcontentsline\gobblethreeargs
     \let\cleardoublepage\relax
     \let\clearpage\relax
     \part{\textsc{#1}}%
-  }%
+  \endgroup
+  \addcontentsline{toc}{partauthor}{\textsc{#1}}%
 }
 
 % \containerpart: \part{} con entrada TOC sin número de página
@@ -179,6 +201,13 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
   \endgroup
   \addcontentsline{toc}{partcontainer}{#1}%
 }
+
+% \chapterauthor: \chapter* con entrada TOC sin n\'umero de p\'agina
+\newcommand{\chapterauthor}[1]{%
+  \chapter*{#1}%
+  \addcontentsline{toc}{chapterauthor}{#1}%
+}
+
 
 % ─── Capítulos ───────────────────────────────────────────────────────────────
 \RedeclareSectionCommand[beforeskip=5\baselineskip,afterskip=2\baselineskip,afterindent=false]{chapter}
