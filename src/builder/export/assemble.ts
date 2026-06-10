@@ -332,13 +332,13 @@ export function resolvePartsForExport(doc: BuildDocument, pool: BuildDocument[])
         .map((p) => byPath.get(p))
         .filter((d): d is BuildDocument => d !== undefined);
       if (resolvedItems.length > 0) {
-        parts.push({ name: item.title, items: resolvedItems });
+        parts.push({ name: item.title, items: resolvedItems, kind: 'container', childCount: resolvedItems.length });
       }
     } else if (typeof item === 'object' && 'file' in item && typeof item.file === 'string' && item.part) {
       // Standalone part file
       const doc = byPath.get(item.file);
       if (doc) {
-        parts.push({ name: doc.frontmatter.title, items: [doc], isPartFile: true });
+        parts.push({ name: doc.frontmatter.title, items: [doc], kind: 'standalone-file', childCount: 0, isPartFile: true });
       }
     }
   }
