@@ -23,10 +23,10 @@ export async function getPandocVersion(): Promise<string> {
   }
 }
 
-/** Retorna `true` si xelatex está disponible en PATH y responde con exit code 0. */
-export async function isXelatexAvailable(): Promise<boolean> {
+/** Retorna `true` si pdflatex está disponible en PATH y responde con exit code 0. */
+export async function isPdflatexAvailable(): Promise<boolean> {
   try {
-    const result = await run('xelatex', ['--version']);
+    const result = await run('pdflatex', ['--version']);
     return result.exitCode === 0;
   } catch {
     return false;
