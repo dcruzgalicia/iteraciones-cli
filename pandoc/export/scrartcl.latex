@@ -11,7 +11,9 @@ $if(pdfx)$
 $endif$
 
 % ─── Fuentes (pdfLaTeX) ─────────────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
+\usepackage{textcomp}
 $if(mainfont)$
 \usepackage{$mainfont$}
 $else$
