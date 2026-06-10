@@ -173,40 +173,47 @@ function assembleBookBody(doc: BuildDocument, items: BuildDocument[], parts?: Ex
     if (loosePaths) {
       for (const itemPath of loosePaths) {
         const item = byPath.get(itemPath);
-        if (item) appendItemBody(item, result, 1);
+        if (item) appendItemBody(item, result, 2, false, true);
       }
     }
 
     for (const part of parts) {
       result.push(`\\part{${part.name}}\n\n`);
-      const offset = part.isPartFile ? 0 : 1;
       for (const item of part.items) {
-        appendItemBody(item, result, offset, part.isPartFile);
+        if (part.isPartFile) {
+          // Standalone part file: \part{Author} + # Title (\chapter{}) + body shift +1
+          const title = item.frontmatter.title || 'Sin título';
+          result.push(`# ${title}\n\n`);
+          appendItemBody(item, result, 1, true, false);
+        } else {
+          // Part container: \part{Group} + # Author (\chapter{}) + ## Title (\section{}) + body shift +2
+          appendItemBody(item, result, 2, false, true);
+        }
       }
     }
   } else {
-    // Sin partes: item title → \chapter{}, body headings → shift +1
+    // Sin partes: author → \chapter{}, title → \section{}, body shift +2
     for (const item of items) {
-      appendItemBody(item, result, 1);
+      appendItemBody(item, result, 2, false, true);
     }
   }
 
   return result.join('');
 }
 
-function appendItemBody(item: BuildDocument, target: string[], headingOffset: number, skipTitle = false): void {
+function appendItemBody(item: BuildDocument, target: string[], headingOffset: number, skipTitle = false, chapterAuthor = false): void {
   const authors = item.frontmatter.author;
   const slug = pathToSlug(item.relativePath);
 
-  if (!skipTitle) {
-    const title = item.frontmatter.title || 'Sin título';
-    target.push(`# ${title}\n\n`);
+  // Author como \chapter{} (solo para items dentro de partes)
+  if (chapterAuthor && authors.length > 0) {
+    target.push(`# ${authors.join(', ')}\n\n`);
   }
 
-  // Caso especial: ítems de tipo `author` no llevan línea "Por Autor"
-  // porque el título ya es el nombre del autor — sería redundante.
-  if (item.type !== 'author' && authors.length > 0) {
-    target.push(`*Por ${authors.join(', ')}*\n\n`);
+  if (!skipTitle) {
+    const title = item.frontmatter.title || 'Sin título';
+    // Title como \section{} (uno abajo de chapter)
+    target.push(`## ${title}\n\n`);
   }
 
   const renamedBody = renameFootnotes(item.body, slug);
@@ -335,10 +342,11 @@ export function resolvePartsForExport(doc: BuildDocument, pool: BuildDocument[])
         parts.push({ name: item.title, items: resolvedItems });
       }
     } else if (typeof item === 'object' && 'file' in item && typeof item.file === 'string' && item.part) {
-      // Standalone part file
+      // Standalone part file: part name = author (o title si no hay author)
       const doc = byPath.get(item.file);
       if (doc) {
-        parts.push({ name: doc.frontmatter.title, items: [doc], isPartFile: true });
+        const authorName = doc.frontmatter.author.join(', ');
+        parts.push({ name: authorName || doc.frontmatter.title, items: [doc], isPartFile: true });
       }
     }
   }

@@ -247,7 +247,7 @@ describe('assembleBookBody — separadores de capítulo', () => {
     expect(exportDoc!.body).toContain('# Mi artículo');
   });
 
-  test('incluye *Por Autor* para ítems tipo file', () => {
+  test('author como chapter{}, title como section{} en collection', () => {
     const item = makeDoc({
       type: 'file',
       filePath: '/project/articulo.md',
@@ -268,10 +268,13 @@ describe('assembleBookBody — separadores de capítulo', () => {
     });
 
     const exportDoc = assembleExportDocument(makeCollection(['articulo.md']), [item], 'es', '/project');
-    expect(exportDoc!.body).toContain('*Por Ana Pérez*');
+    const body = exportDoc!.body;
+    expect(body).toContain('# Ana Pérez');
+    expect(body).toContain('## Artículo');
+    expect(body).not.toContain('*Por Ana Pérez*');
   });
 
-  test('omite *Por Autor* para ítems de tipo author (sería redundante)', () => {
+  test('author type body mantiene titulo sin author extra', () => {
     const item = makeDoc({
       type: 'author',
       filePath: '/project/personas/ana.md',
@@ -1002,8 +1005,9 @@ describe('parts en colecciones (exportación)', () => {
 
     const exportDoc = assembleExportDocument(collection, [item], 'es', '/project');
     expect(exportDoc).not.toBeNull();
-    expect(exportDoc!.body).toContain('# A');
-    expect(exportDoc!.body).toContain('*Por Autor*');
+    expect(exportDoc!.body).toContain('# Autor');
+    expect(exportDoc!.body).toContain('## A');
+    expect(exportDoc!.body).not.toContain('*Por Autor*');
     expect(exportDoc!.body).not.toContain('\\part{');
   });
 
@@ -1404,17 +1408,18 @@ describe('assembleBookBody — heading shift', () => {
     );
     const body = exportDoc!.body;
 
-    // Standalone part file: title as \part only (no duplicate # Title)
+    // Standalone part file: part name = author, title as \chapter{}
+    // (test has empty author[], so part name falls back to doc title)
     expect(body).toContain('\\part{Introducción General}');
-    expect(body).not.toContain('# Introducción General');
-    // Body h1 stays as # (offset 0 = \chapter)
-    expect(body).toContain('# Contexto');
-    // Body h2 stays as ## (offset 0)
-    expect(body).toContain('## Antecedentes');
-    // Part container items still shift +1
+    expect(body).toContain('\n\n# Introducción General');
+    // Body h1 shifted +1 → ## (\section{})
+    expect(body).toContain('\n\n## Contexto');
+    // Body h2 shifted +1 → ### (\subsection{})
+    expect(body).toContain('\n\n### Antecedentes');
+    // Part container items: # Author + ## Title + body shift +2
     expect(body).toContain('\\part{Parte I}');
-    expect(body).toContain('# Fundamentos');
-    expect(body).toContain('## Tema central');
+    expect(body).toContain('\n\n## Fundamentos');
+    expect(body).toContain('\n\n### Tema central');
   });
 
   test('resolvePartsForExport incluye standalone part files como isPartFile', () => {
