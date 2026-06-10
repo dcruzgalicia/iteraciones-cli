@@ -97,10 +97,10 @@ $else$
 \usepackage[paperwidth=13.97cm,paperheight=21.59cm]{geometry}
 $endif$
 \geometry{%
-  tmargin=3\baselineskip,%
-  bmargin=3\baselineskip,%
-  lmargin=4.4\baselineskip,%
-  rmargin=3.3\baselineskip,%
+  tmargin=2.54cm,%
+  bmargin=2.54cm,%
+  lmargin=2.54cm,%
+  rmargin=2.54cm,%
   headheight=12pt,%
   headsep=6pt,%
   footskip=22pt%
