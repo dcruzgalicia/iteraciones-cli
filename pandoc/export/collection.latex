@@ -1,42 +1,22 @@
 %% Template KOMA-Script (scrbook) para exportación de colecciones (type: collection)
 %% Especializado para: antologías, libros con capítulos múltiples
-%% Requiere: TeX Live / MacTeX full con KOMA-Script, fontspec, microtype, hyperref, babel
+%% Motor: pdfLaTeX
+%% Requiere: TeX Live / MacTeX full con KOMA-Script, microtype, hyperref, babel
 
 \documentclass[$if(fontsize)$$fontsize$$else$12pt$endif$,toc=flat,sfdefaults=false,parskip=false$if(twoside)$,twoside$else$,twoside=false,openright=false$endif$$for(classoption)$,$classoption$$sep$,$endfor$]{$documentclass$}
 
-% ─── Fuentes (XeLaTeX / LuaLaTeX) ────────────────────────────────────────────
-\usepackage{fontspec}
-$if(mainfont)$
-\IfFontExistsTF{$mainfont$}{%
-  \setmainfont{$mainfont$}%
-}{%
-  \IfFontExistsTF{Times New Roman}{%
-    \setmainfont{Times New Roman}%
-  }{%
-    \setmainfont[
-      UprightFont = texgyretermes-regular.otf,
-      BoldFont = texgyretermes-bold.otf,
-      ItalicFont = texgyretermes-italic.otf,
-      BoldItalicFont = texgyretermes-bolditalic.otf,
-      Numbers = OldStyle,
-    ]{TeX Gyre Termes}%
-  }%
-}
-$else$
-\setmainfont[
-  UprightFont = texgyrepagella-regular.otf,
-  BoldFont = texgyrepagella-bold.otf,
-  ItalicFont = texgyrepagella-italic.otf,
-  BoldItalicFont = texgyrepagella-bolditalic.otf,
-  Numbers = OldStyle,
-]{TeX Gyre Pagella}
+% ─── PDF/A-1a ───────────────────────────────────────────────────────────────
+$if(pdfx)$
+\usepackage[x-1a]{pdfx}
 $endif$
-\setsansfont[
-  UprightFont = texgyreadventor-regular.otf,
-  BoldFont = texgyreadventor-bold.otf,
-  ItalicFont = texgyreadventor-italic.otf,
-  BoldItalicFont = texgyreadventor-bolditalic.otf,
-]{TeX Gyre Adventor}
+
+% ─── Fuentes (pdfLaTeX) ─────────────────────────────────────────────────────
+\usepackage[T1]{fontenc}
+$if(mainfont)$
+\usepackage{$mainfont$}
+$else$
+\usepackage{mathptmx}
+$endif$
 
 % ─── Idioma ──────────────────────────────────────────────────────────────────
 \usepackage[spanish,mexico-com,es-notilde,es-noshorthands,es-noindentfirst,es-ucroman]{babel}
@@ -110,8 +90,8 @@ $endif$
 \setlength{\footskip}{\dimexpr\fontcharht\font`A * \baselineskip / \normalbaseline + \baselineskip\relax}
 \geometry{headsep=\the\headsep,footskip=\the\footskip}
 
-% ─── Microtype (XeLaTeX: tracking y kerning; spacing=true no disponible) ─────
-\usepackage[tracking=true]{microtype}
+% ─── Microtype (pdfLaTeX: tracking, kerning y spacing completo) ──────────────
+\usepackage[tracking=true,spacing=true]{microtype}
 
 % ─── Parámetros tipográficos (viudas, huérfanas, guiones) ────────────────────
 \flushbottom
@@ -157,6 +137,7 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \makeatletter
 \newcommand*{\l@partcontainer}[2]{%
   \ifnum \c@tocdepth > -1\relax
+    \addpenalty{-\@highpenalty}%
     \addpenalty{-\@highpenalty}%
     \addvspace{1\baselineskip}%
     \noindent\normalfont\normalsize

@@ -1,42 +1,14 @@
 %% Template KOMA-Script (scrartcl) para exportación de documentos individuales (type: file)
 %% Especializado para: artículos, notas y páginas de contenido
-%% Requiere: TeX Live / MacTeX full con KOMA-Script, fontspec, microtype, hyperref, babel
+%% Motor: pdfLaTeX
+%% Requiere: TeX Live / MacTeX full con KOMA-Script, microtype, hyperref, babel
 
 \documentclass[$if(fontsize)$$fontsize$$else$12pt$endif$,toc=flat,sfdefaults=false,parskip=false$if(twoside)$,twoside$else$,twoside=false,openright=false$endif$$for(classoption)$,$classoption$$sep$,$endfor$]{$documentclass$}
 
-% ─── Fuentes (XeLaTeX / LuaLaTeX) ────────────────────────────────────────────
-\usepackage{fontspec}
-$if(mainfont)$
-\IfFontExistsTF{$mainfont$}{%
-  \setmainfont{$mainfont$}%
-}{%
-  \IfFontExistsTF{Times New Roman}{%
-    \setmainfont{Times New Roman}%
-  }{%
-    \setmainfont[
-      UprightFont = texgyretermes-regular.otf,
-      BoldFont = texgyretermes-bold.otf,
-      ItalicFont = texgyretermes-italic.otf,
-      BoldItalicFont = texgyretermes-bolditalic.otf,
-      Numbers = OldStyle,
-    ]{TeX Gyre Termes}%
-  }%
-}
-$else$
-\setmainfont[
-  UprightFont = texgyrepagella-regular.otf,
-  BoldFont = texgyrepagella-bold.otf,
-  ItalicFont = texgyrepagella-italic.otf,
-  BoldItalicFont = texgyrepagella-bolditalic.otf,
-  Numbers = OldStyle,
-]{TeX Gyre Pagella}
-$endif$
-\setsansfont[
-  UprightFont = texgyreadventor-regular.otf,
-  BoldFont = texgyreadventor-bold.otf,
-  ItalicFont = texgyreadventor-italic.otf,
-  BoldItalicFont = texgyreadventor-bolditalic.otf,
-]{TeX Gyre Adventor}
+% ─── Fuentes (pdfLaTeX) ──────────────────────────────────────────────────────
+$if(pdfx)$\usepackage[x-1a]{pdfx}$endif$
+\usepackage[T1]{fontenc}
+$if(mainfont)$\usepackage{$mainfont$}$else$\usepackage{mathptmx}$endif$
 
 % ─── Idioma ──────────────────────────────────────────────────────────────────
 \usepackage[spanish,mexico-com,es-notilde,es-noshorthands,es-noindentfirst,es-ucroman]{babel}
@@ -108,8 +80,8 @@ $endif$
 \setlength{\footskip}{\dimexpr\fontcharht\font`A * \baselineskip / \normalbaseline + \baselineskip\relax}
 \geometry{headsep=\the\headsep,footskip=\the\footskip}
 
-% ─── Microtype (XeLaTeX: tracking y kerning; spacing=true no disponible) ─────
-\usepackage[tracking=true]{microtype}
+% ─── Microtype (pdfLaTeX: tracking, kerning y spacing completo) ──────────────
+\usepackage[tracking=true,spacing=true]{microtype}
 
 % ─── Parámetros tipográficos (viudas, huérfanas, guiones) ────────────────────
 \flushbottom
