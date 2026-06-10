@@ -82,12 +82,14 @@ $endif$
 %     refleje el valor estirado en los cálculos de márgenes) ────────────────
 \usepackage{setspace}
 \setstretch{$if(linestretch)$$linestretch$$else$1.5$endif$}
-\setlength{\topskip}{\baselineskip}
-\setlength{\lineskip}{0pt}
+\setlength{\topskip}{\fontcharht\font`A}
+\setlength{\lineskip}{1pt}
+\newdimen\normalbaseline
+\normalbaseline=\baselineskip
 
 % ─── Geometría (media carta 13.97 × 21.59 cm) ────────────────────────────────
 $if(geometry)$
-\usepackage[$for(geometry)$$geometry$$sep$,$endfor$,headheight=1\baselineskip,headsep=0pt,footskip=1\baselineskip]{geometry}
+\usepackage[$for(geometry)$$geometry$$sep$,$endfor$,headheight=12pt,headsep=6pt,footskip=22pt]{geometry}
 $else$
 $if(paperwidth)$
 \usepackage[paperwidth=$paperwidth$,paperheight=$paperheight$]{geometry}
@@ -99,12 +101,14 @@ $endif$
   bmargin=3\baselineskip,%
   lmargin=4.4\baselineskip,%
   rmargin=3.3\baselineskip,%
-  headheight=1\baselineskip,%
-  headsep=0pt,%
-  footskip=1\baselineskip%
+  headheight=12pt,%
+  headsep=6pt,%
+  footskip=22pt%
 }
 $endif$
-
+\setlength{\headsep}{\dimexpr\fontcharht\font`A * \baselineskip / \normalbaseline + \baselineskip\relax}
+\setlength{\footskip}{\dimexpr\fontcharht\font`A * \baselineskip / \normalbaseline + \baselineskip\relax}
+\geometry{headsep=\the\headsep,footskip=\the\footskip}
 
 % ─── Microtype (XeLaTeX: tracking y kerning; spacing=true no disponible) ─────
 \usepackage[tracking=true]{microtype}
@@ -204,7 +208,7 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \pagestyle{fancy}
 \fancyhf{}
 $if(pageno-head)$
-\fancyhead[$if(pageno-fancy)$$pageno-fancy$$else$R$endif$]{\vspace*{\fill}\normalfont\normalsize\thepage}
+\fancyhead[$if(pageno-fancy)$$pageno-fancy$$else$R$endif$]{\normalfont\normalsize\thepage}
 $else$
 \fancyfoot[$if(pageno-fancy)$$pageno-fancy$$else$R$endif$]{\normalfont\normalsize\thepage}
 $endif$
