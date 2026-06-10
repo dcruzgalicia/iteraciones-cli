@@ -26,17 +26,33 @@ export const LATEX_CLASS = {
 } as const satisfies Partial<Record<DocumentType, 'scrartcl' | 'scrbook'>>;
 
 /**
+ * Tipo de part dentro de una colección.
+ *
+ * - `'standalone-file'` → archivo referenciado con `part: true`; el título del
+ *   archivo se usa como `\part{}`.
+ * - `'container'` → estructura `{ title, items: [...] }` con items anidados.
+ */
+export type PartKind = 'standalone-file' | 'container';
+
+/**
  * Grupo de items dentro de una colección, correspondiente a los elementos
  * estructurados del frontmatter `items:`.
  *
- * - `isPartFile: true` → archivo standalone que se renderiza a nivel `/part{}`,
- *   su body usa offset 0 (h1 → `\chapter{}`).
- * - `isPartFile: false` (default) → contenedor part con items anidados,
- *   cada item usa offset 1 (h1 → `\section{}`).
+ * - `kind: 'standalone-file'` → archivo standalone cuyo title se renderiza
+ *   como `\part{}`, body usa offset 0 (h1 → `\chapter{}`).
+ * - `kind: 'container'` → contenedor part con items anidados, cada item usa
+ *   offset 1 (h1 → `\section{}`).
  */
 export interface ExportCollectionPart {
   name: string;
   items: BuildDocument[];
+  kind: PartKind;
+  /** Número de ítems directos (solo relevante si kind === 'container'). */
+  childCount: number;
+  /**
+   * @deprecated Usar `kind` en su lugar.
+   * Equivale a `kind === 'standalone-file'`.
+   */
   isPartFile?: boolean;
 }
 
