@@ -148,8 +148,7 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \makeatother
 \setkomafont{partentry}{\normalsize\normalfont}
 \DeclareTOCStyleEntry[linefill=\TOCLeaderWide,beforeskip=1\baselineskip]{tocline}{part}
-\newcommand*{\gobbleonearg}[1]{}
-\DeclareTOCStyleEntry[linefill=\hfill,beforeskip=1\baselineskip,pagenumberbox=\gobbleonearg]{tocline}{partcontainer}
+
 \setkomafont{chapterentry}{\normalsize\normalfont}
 \DeclareTOCStyleEntry[linefill=\TOCLeaderMedium,beforeskip=0.5\baselineskip]{tocline}{chapter}
 \DeclareTOCStyleEntry[entryformat=\normalsize\itshape,linefill=\TOCLeaderTight,beforeskip=0pt]{tocline}{section}
@@ -174,14 +173,14 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
   }%
 }
 
-% \containerpart: \part{} con entrada TOC sin número de página ni dots
+% \containerpart: \part{} sin entrada TOC (no aparece en el índice)
 \newcommand{\gobblethreeargs}[3]{}
 \newcommand{\containerpart}[1]{%
   \begingroup
     \let\addcontentsline\gobblethreeargs
+    \let\addxcontentsline\gobblethreeargs
     \part{#1}%
   \endgroup
-  \addtocontents{toc}{\protect\contentsline{partcontainer}{\protect\numberline{\thepart}#1}{}}%
 }
 
 % ─── Capítulos ───────────────────────────────────────────────────────────────
