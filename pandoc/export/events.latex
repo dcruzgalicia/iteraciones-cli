@@ -148,6 +148,7 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 }
 \makeatother
 
+\makeatletter
 \newcommand*{\l@partauthor}[2]{%
   \ifnum \c@tocdepth > -1\relax
     \addpenalty{-\@highpenalty}%
@@ -166,6 +167,8 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
     \par
   \fi
 }
+\makeatother
+
 \setkomafont{chapterentry}{\normalsize\normalfont}
 \DeclareTOCStyleEntry[linefill=\TOCLeaderMedium,beforeskip=0.5\baselineskip]{tocline}{chapter}
 \DeclareTOCStyleEntry[entryformat=\normalsize\itshape,linefill=\TOCLeaderTight,beforeskip=0pt]{tocline}{section}
