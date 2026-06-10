@@ -2,7 +2,7 @@
  * T3 — export-pdf.test.ts
  *
  * Test de integración: verifica que convertToPdf produce un archivo PDF válido.
- * Se omite automáticamente si pandoc o xelatex no están disponibles en el entorno.
+ * Se omite automáticamente si pandoc o pdflatex no están disponibles en el entorno.
  */
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -10,13 +10,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { convertToPdf } from '../../services/pandoc-exporter.js';
 import type { ExportDocument } from '../export/types.js';
-import { isPandocAvailable, isXelatexAvailable } from './helpers/tools.js';
+import { isPandocAvailable, isPdflatexAvailable } from './helpers/tools.js';
 
-// Verificar disponibilidad de pandoc y xelatex en tiempo de inicialización del
+// Verificar disponibilidad de pandoc y pdflatex en tiempo de inicialización del
 // módulo para poder usar test.skipIf — más preciso que 'return' temprano en el
 // cuerpo del test (que Bun reporta como 'pass' en lugar de 'skip').
-const [pandocReady, xelatexReady] = await Promise.all([isPandocAvailable(), isXelatexAvailable()]);
-const toolsAvailable = pandocReady && xelatexReady;
+const [pandocReady, pdflatexReady] = await Promise.all([isPandocAvailable(), isPdflatexAvailable()]);
+const toolsAvailable = pandocReady && pdflatexReady;
 
 // ---------------------------------------------------------------------------
 // Fixture mínimo
@@ -58,7 +58,7 @@ describe('convertToPdf — integración', () => {
     const doc = makeMinimalExportDoc(outputDir);
     const outputPath = join(outputDir, 'articulo.pdf');
 
-    await convertToPdf(doc, outputPath, 'xelatex');
+    await convertToPdf(doc, outputPath);
 
     const pdfFile = Bun.file(outputPath);
     expect(await pdfFile.exists()).toBe(true);
@@ -73,7 +73,7 @@ describe('convertToPdf — integración', () => {
     const doc = makeMinimalExportDoc(outputDir);
     const outputPath = join(outputDir, 'articulo-size.pdf');
 
-    await convertToPdf(doc, outputPath, 'xelatex');
+    await convertToPdf(doc, outputPath);
 
     const pdfFile = Bun.file(outputPath);
     const size = (await pdfFile.stat())?.size ?? 0;
@@ -97,7 +97,7 @@ describe('convertToPdf — integración', () => {
     };
     const outputPath = join(outputDir, 'coleccion.pdf');
 
-    await convertToPdf(doc, outputPath, 'xelatex');
+    await convertToPdf(doc, outputPath);
 
     const pdfFile = Bun.file(outputPath);
     const buffer = await pdfFile.arrayBuffer();
