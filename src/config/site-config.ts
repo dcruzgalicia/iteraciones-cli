@@ -20,12 +20,13 @@ export interface HtmlFormatConfig {
 }
 
 export interface PdfFormatConfig {
-  engine: 'xelatex' | 'lualatex';
+  engine: 'pdflatex';
   concurrency: number;
   toc?: boolean;
   tocDepth?: number;
   numbering?: boolean;
   hyphenation: boolean;
+  pdfx: boolean;
   bibliography?: string;
   csl?: string;
   pageSize?: string;
@@ -107,14 +108,15 @@ export const DEFAULT_HTML_FORMAT: HtmlFormatConfig = {
 };
 
 export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
-  engine: 'xelatex',
+  engine: 'pdflatex',
   concurrency: 2,
   hyphenation: false,
+  pdfx: false,
   toc: true,
   tocDepth: 6,
   pageSize: 'letter',
   fontSize: '12pt',
-  fontFamily: 'Exo 2',
+  fontFamily: 'mathptmx',
   margins: ['2.54cm', '2.54cm', '2.54cm', '2.54cm'],
   lineSpacing: 1.5,
   pageNumber: 'header-right',
@@ -139,5 +141,9 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   baseUrl: undefined,
   plugins: [],
   pagination: DEFAULT_PAGINATION,
-  format: { html: DEFAULT_HTML_FORMAT, pdf: DEFAULT_PDF_FORMAT, epub: DEFAULT_EPUB_FORMAT },
+  format: {
+    html: DEFAULT_HTML_FORMAT,
+    pdf: DEFAULT_PDF_FORMAT,
+    epub: DEFAULT_EPUB_FORMAT,
+  },
 };

@@ -23,7 +23,11 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
   const configPath = join(cwd, CONFIG_FILE);
   const file = Bun.file(configPath);
 
-  if (!(await file.exists())) return { ...DEFAULT_SITE_CONFIG, plugins: [...DEFAULT_SITE_CONFIG.plugins] };
+  if (!(await file.exists()))
+    return {
+      ...DEFAULT_SITE_CONFIG,
+      plugins: [...DEFAULT_SITE_CONFIG.plugins],
+    };
 
   let raw: string;
   try {
@@ -39,7 +43,11 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
     throw new ConfigError(`Error de sintaxis en ${CONFIG_FILE}: ${String(err)}`, configPath);
   }
 
-  if (!parsed || typeof parsed !== 'object') return { ...DEFAULT_SITE_CONFIG, plugins: [...DEFAULT_SITE_CONFIG.plugins] };
+  if (!parsed || typeof parsed !== 'object')
+    return {
+      ...DEFAULT_SITE_CONFIG,
+      plugins: [...DEFAULT_SITE_CONFIG.plugins],
+    };
 
   const root = parsed as Record<string, unknown>;
   const site = root.site && typeof root.site === 'object' ? (root.site as Record<string, unknown>) : {};
@@ -56,7 +64,12 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
   const format =
     typeof root.format === 'object' && root.format !== null
       ? parseFormatConfig(root.format as Record<string, unknown>)
-      : { ...DEFAULT_SITE_CONFIG.format, html: { ...DEFAULT_HTML_FORMAT }, pdf: { ...DEFAULT_PDF_FORMAT }, epub: { ...DEFAULT_EPUB_FORMAT } };
+      : {
+          ...DEFAULT_SITE_CONFIG.format,
+          html: { ...DEFAULT_HTML_FORMAT },
+          pdf: { ...DEFAULT_PDF_FORMAT },
+          epub: { ...DEFAULT_EPUB_FORMAT },
+        };
 
   return {
     title,
@@ -125,7 +138,8 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
   if (!raw || typeof raw !== 'object') return { ...DEFAULT_PDF_FORMAT };
   const obj = raw as Record<string, unknown>;
 
-  const engine = obj.engine === 'lualatex' ? 'lualatex' : DEFAULT_PDF_FORMAT.engine;
+  // Solo pdflatex es soportado. Si se especifica otro valor, se usa el default.
+  const engine = obj.engine === 'pdflatex' ? 'pdflatex' : DEFAULT_PDF_FORMAT.engine;
 
   const rawConcurrency = obj.concurrency;
   const concurrency =
@@ -137,6 +151,7 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
   }
 
   const hyphenation = typeof obj.hyphenation === 'boolean' ? obj.hyphenation : DEFAULT_PDF_FORMAT.hyphenation;
+  const pdfx = typeof obj.pdfx === 'boolean' ? obj.pdfx : DEFAULT_PDF_FORMAT.pdfx;
   const rawBib = obj.bibliography;
   const bibliography = typeof rawBib === 'string' && rawBib.trim() ? rawBib.trim() : rawBib === '' ? undefined : DEFAULT_PDF_FORMAT.bibliography;
   const rawCsl = obj.csl;
@@ -219,6 +234,7 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     engine,
     concurrency,
     hyphenation,
+    pdfx,
     toc,
     tocDepth,
     numbering,
