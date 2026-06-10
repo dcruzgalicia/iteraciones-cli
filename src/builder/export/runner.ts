@@ -62,7 +62,7 @@ export interface ExportRunOptions {
   /**
    * Numero maximo de documentos que se procesan en paralelo en el outer loop.
    * Cuando la exportacion incluye PDF, un semaforo interno limita las instancias
-   * xelatex activas simultaneamente a `config.pdf.concurrency`; `concurrency` sigue
+   * de pdflatex activas simultaneamente a `config.pdf.concurrency`; `concurrency` sigue
    * siendo el limite de documentos en vuelo (incluidos los que esperan el semaforo).
    */
   concurrency: number;
@@ -130,31 +130,31 @@ function resolveExportGlobalPath(raw: string | undefined, cwd: string, field: st
 }
 
 // Semáforo module-level compartido entre peticiones on-demand concurrentes.
-// Limita las instancias xelatex lanzadas desde exportSingleDocument cuando el
+// Limita las instancias de pdflatex lanzadas desde exportSingleDocument cuando el
 // usuario abre múltiples PDFs en simultáneo (pestañas, prefetch, recargas).
 // Se inicializa con el primer valor de pdfConcurrency que recibe; si cambia
 // en recargas posteriores del config, el valor inicial sigue vigente.
-let _onDemandXelatexSlots = -1;
-const _onDemandXelatexQueue: Array<() => void> = [];
+let _onDemandLatexSlots = -1;
+const _onDemandLatexQueue: Array<() => void> = [];
 
-function acquireOnDemandXelatex(maxSlots: number): Promise<void> {
-  if (_onDemandXelatexSlots < 0) _onDemandXelatexSlots = maxSlots;
+function acquireOnDemandLatex(maxSlots: number): Promise<void> {
+  if (_onDemandLatexSlots < 0) _onDemandLatexSlots = maxSlots;
   return new Promise<void>((res) => {
-    if (_onDemandXelatexSlots > 0) {
-      _onDemandXelatexSlots--;
+    if (_onDemandLatexSlots > 0) {
+      _onDemandLatexSlots--;
       res();
     } else {
-      _onDemandXelatexQueue.push(res);
+      _onDemandLatexQueue.push(res);
     }
   });
 }
 
-function releaseOnDemandXelatex(): void {
-  const next = _onDemandXelatexQueue.shift();
+function releaseOnDemandLatex(): void {
+  const next = _onDemandLatexQueue.shift();
   if (next) {
     next();
   } else {
-    _onDemandXelatexSlots++;
+    _onDemandLatexSlots++;
   }
 }
 
@@ -188,28 +188,28 @@ export async function runExportDocuments(
   const { config, outputDir, cwd, lang, concurrency, cliVersion, pandocVersion, cacheManager, registry, pluginFingerprint, stats } = options;
 
   const hasPdf = !!config.pdf;
-  // Semaforo interno que limita las instancias xelatex concurrentes sin afectar EPUB.
+  // Semaforo interno que limita las instancias de pdflatex concurrentes sin afectar EPUB.
   // El outer mapWithConcurrency usa el limite general (concurrency); dentro del branch
-  // PDF se adquiere un slot antes de invocar xelatex y se libera al terminar — con o
+  // PDF se adquiere un slot antes de invocar pdflatex y se libera al terminar — con o
   // sin error. Asi el numero de documentos en vuelo es `concurrency`, pero las llamadas
-  // a xelatex activas simultaneamente se acotan a `pdfConcurrency` (~300-600 MB/proceso).
-  let xelatexSlots = hasPdf ? (Number.isInteger(config.pdf?.concurrency) && config.pdf!.concurrency! >= 1 ? config.pdf!.concurrency! : 1) : 0;
-  const xelatexQueue: Array<() => void> = [];
-  const acquireXelatex = (): Promise<void> =>
+  // a pdflatex activas simultaneamente se acotan a `pdfConcurrency` (~300-600 MB/proceso).
+  let latexSlots = hasPdf ? (Number.isInteger(config.pdf?.concurrency) && config.pdf!.concurrency! >= 1 ? config.pdf!.concurrency! : 1) : 0;
+  const latexQueue: Array<() => void> = [];
+  const acquireLatex = (): Promise<void> =>
     new Promise<void>((res) => {
-      if (xelatexSlots > 0) {
-        xelatexSlots--;
+      if (latexSlots > 0) {
+        latexSlots--;
         res();
       } else {
-        xelatexQueue.push(res);
+        latexQueue.push(res);
       }
     });
-  const releaseXelatex = (): void => {
-    const next = xelatexQueue.shift();
+  const releaseLatex = (): void => {
+    const next = latexQueue.shift();
     if (next) {
       next();
     } else {
-      xelatexSlots++;
+      latexSlots++;
     }
   };
 
@@ -279,10 +279,14 @@ export async function runExportDocuments(
   try {
     const tplHasher = new Bun.CryptoHasher('sha256');
     const tplFiles: string[] = [];
-    for await (const f of new Bun.Glob('*.latex').scan({ cwd: EXPORT_TEMPLATES_DIR })) {
+    for await (const f of new Bun.Glob('*.latex').scan({
+      cwd: EXPORT_TEMPLATES_DIR,
+    })) {
       tplFiles.push(f);
     }
-    for await (const f of new Bun.Glob('*.css').scan({ cwd: EXPORT_TEMPLATES_DIR })) {
+    for await (const f of new Bun.Glob('*.css').scan({
+      cwd: EXPORT_TEMPLATES_DIR,
+    })) {
       tplFiles.push(f);
     }
     tplFiles.sort(); // orden determinístico para un hash estable
@@ -363,7 +367,11 @@ export async function runExportDocuments(
           await convertToEpub(exportDoc, outputPath, cwd, config.pdf);
           const epubData = await Bun.file(outputPath).arrayBuffer();
           if (registry) {
-            const afterCtx = await registry.runAfterExport({ sourcePath: exportDoc.filePath, format: 'epub', data: new Uint8Array(epubData) });
+            const afterCtx = await registry.runAfterExport({
+              sourcePath: exportDoc.filePath,
+              format: 'epub',
+              data: new Uint8Array(epubData),
+            });
             await Bun.write(outputPath, afterCtx.data);
             if (cacheManager) await cacheManager.writeBinary('export', cacheKey, 'epub', afterCtx.data.slice().buffer as ArrayBuffer);
           } else if (cacheManager) {
@@ -401,15 +409,19 @@ export async function runExportDocuments(
             options.onExportProgress?.(exportDoc.relativePath, true);
             return { pdf: outputPath };
           }
-          await acquireXelatex();
+          await acquireLatex();
           try {
             await convertToPdf(exportDoc, outputPath, cwd, config.pdf);
           } finally {
-            releaseXelatex();
+            releaseLatex();
           }
           const pdfData = await Bun.file(outputPath).arrayBuffer();
           if (registry) {
-            const afterCtx = await registry.runAfterExport({ sourcePath: exportDoc.filePath, format: 'pdf', data: new Uint8Array(pdfData) });
+            const afterCtx = await registry.runAfterExport({
+              sourcePath: exportDoc.filePath,
+              format: 'pdf',
+              data: new Uint8Array(pdfData),
+            });
             await Bun.write(outputPath, afterCtx.data);
             if (cacheManager) await cacheManager.writeBinary('export', cacheKey, 'pdf', afterCtx.data.slice().buffer as ArrayBuffer);
           } else if (cacheManager) {
@@ -462,8 +474,22 @@ export async function runExportDocuments(
             metadata: rawFull.metadata as unknown as Record<string, unknown>,
           }),
         ]);
-        summaryDoc = { ...rawSummary, body: sBefore.body, metadata: { ...rawSummary.metadata, ...(sBefore.metadata as Partial<ExportMetadata>) } };
-        fullDoc = { ...rawFull, body: fBefore.body, metadata: { ...rawFull.metadata, ...(fBefore.metadata as Partial<ExportMetadata>) } };
+        summaryDoc = {
+          ...rawSummary,
+          body: sBefore.body,
+          metadata: {
+            ...rawSummary.metadata,
+            ...(sBefore.metadata as Partial<ExportMetadata>),
+          },
+        };
+        fullDoc = {
+          ...rawFull,
+          body: fBefore.body,
+          metadata: {
+            ...rawFull.metadata,
+            ...(fBefore.metadata as Partial<ExportMetadata>),
+          },
+        };
       }
 
       const summaryBase = exportOutputBase(summaryDoc, outputDir);
@@ -481,7 +507,10 @@ export async function runExportDocuments(
         generateFormats(fullDoc, fullBase, doc.sourceHash, `${authorItemHashes}\0full`),
       ]);
 
-      const result: ExportResult = { filePath: doc.filePath, relativePath: doc.relativePath };
+      const result: ExportResult = {
+        filePath: doc.filePath,
+        relativePath: doc.relativePath,
+      };
       let firstError: unknown;
       for (const fr of summaryResults) {
         if (fr.status === 'fulfilled') {
@@ -543,7 +572,10 @@ export async function runExportDocuments(
       exportDoc = {
         ...rawExportDoc,
         body: beforeCtx.body,
-        metadata: { ...rawExportDoc.metadata, ...(beforeCtx.metadata as Partial<ExportMetadata>) },
+        metadata: {
+          ...rawExportDoc.metadata,
+          ...(beforeCtx.metadata as Partial<ExportMetadata>),
+        },
       };
     }
 
@@ -675,7 +707,10 @@ export function injectDownloadLinksIntoListItems(docs: BuildDocument[]): BuildDo
       return { ...itemObj, ...links };
     });
     if (!changed) return doc;
-    return { ...doc, templateContext: { ...doc.templateContext, 'list-items': updatedItems } };
+    return {
+      ...doc,
+      templateContext: { ...doc.templateContext, 'list-items': updatedItems },
+    };
   });
 }
 
@@ -855,17 +890,20 @@ export async function exportSingleDocument(
     exportDoc = {
       ...rawExportDoc,
       body: beforeCtx.body,
-      metadata: { ...rawExportDoc.metadata, ...(beforeCtx.metadata as Partial<ExportMetadata>) },
+      metadata: {
+        ...rawExportDoc.metadata,
+        ...(beforeCtx.metadata as Partial<ExportMetadata>),
+      },
     };
   }
 
   const outputPath = `${exportOutputBase(exportDoc, outputDir)}.pdf`;
 
-  // Adquirir semáforo antes de invocar xelatex para limitar instancias concurrentes.
+  // Adquirir semáforo antes de invocar pdflatex para limitar instancias concurrentes.
   // Varias peticiones HTTP simultáneas (pestañas, prefetch) podrían saturar CPU/RAM
   // sin esta limitación.
   const maxSlots = Number.isInteger(config.pdf.concurrency) && config.pdf.concurrency >= 1 ? config.pdf.concurrency : 1;
-  await acquireOnDemandXelatex(maxSlots);
+  await acquireOnDemandLatex(maxSlots);
   let pdfGenerated = false;
   try {
     await convertToPdf(exportDoc, outputPath, cwd, config.pdf);
@@ -874,14 +912,18 @@ export async function exportSingleDocument(
     const msg = err instanceof Error ? err.message : String(err);
     process.stderr.write(`[serve] Error generando PDF bajo demanda ${pdfRelPath}: ${msg}\n`);
   } finally {
-    releaseOnDemandXelatex();
+    releaseOnDemandLatex();
   }
   if (!pdfGenerated) return null;
 
   // Hook afterExport.
   if (registry) {
     const pdfData = await Bun.file(outputPath).arrayBuffer();
-    const afterCtx = await registry.runAfterExport({ sourcePath: exportDoc.filePath, format: 'pdf', data: new Uint8Array(pdfData) });
+    const afterCtx = await registry.runAfterExport({
+      sourcePath: exportDoc.filePath,
+      format: 'pdf',
+      data: new Uint8Array(pdfData),
+    });
     await Bun.write(outputPath, afterCtx.data);
   }
 
