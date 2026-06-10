@@ -294,7 +294,7 @@ export async function runExportDocuments(
       tplHasher.update(await Bun.file(join(EXPORT_TEMPLATES_DIR, filename)).text());
       tplHasher.update('\0');
     }
-    // Incluir las fuentes TTF: PDF las usa vía fontspec y EPUB las embebe.
+    // Incluir las fuentes TTF para la caché de EPUB (las embebe en el archivo).
     const fontFiles: string[] = [];
     for await (const f of new Bun.Glob('*.ttf').scan({ cwd: FONTS_DIR })) {
       fontFiles.push(f);
