@@ -191,8 +191,7 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \newcommand{\standalonepart}[1]{%
   \begingroup
     \let\addcontentsline\gobblethreeargs
-    \let\cleardoublepage\relax
-    \let\clearpage\relax
+    \RedeclareSectionCommand[beforeskip=11\baselineskip,afterskip=\baselineskip,afterindent=false]{part}
     \part{\textsc{#1}}%
   \endgroup
   \addcontentsline{toc}{partauthor}{\textsc{#1}}%
