@@ -170,6 +170,32 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 }
 \makeatother
 
+% ─── TOC: espacio entre niveles profundos y superficiales ─────────────────
+% Agrega \baselineskip cuando una entrada profunda (subsection+)
+% es seguida por una entrada superficial (section, chapter, part, etc.)
+\makeatletter
+\newcommand{\toc@lastlevel}{0}
+\newcommand{\toc@marklevel}[1]{%
+  \ifnum#1>\c@tocdepth\relax
+  \else
+    \ifnum\toc@lastlevel>1\relax
+      \ifnum#1<2\relax
+        \addvspace{\baselineskip}%
+      \fi
+    \fi
+    \gdef\toc@lastlevel{#1}%
+  \fi
+}
+\let\orig@addcontentsline@toc\addcontentsline
+\renewcommand{\addcontentsline}[3]{%
+  \def\@tempa{#1}\def\@tempb{toc}%
+  \ifx\@tempa\@tempb
+    \addtocontents{toc}{\protect\toc@marklevel{\csname toclevel@#2\endcsname}}%
+  \fi
+  \orig@addcontentsline@toc{#1}{#2}{#3}%
+}
+\makeatother
+
 \setkomafont{chapterentry}{\normalsize\normalfont}
 \DeclareTOCStyleEntry[linefill=\TOCLeaderMedium,beforeskip=0.5\baselineskip]{tocline}{chapter}
 \DeclareTOCStyleEntry[entryformat=\normalsize,linefill=\TOCLeaderTight,beforeskip=0pt]{tocline}{section}
