@@ -217,8 +217,10 @@ function appendItemBody(item: BuildDocument, target: string[], partKind: ItemPar
   if (partKind === 'standalone-file') {
     if (authors.length > 0) {
       target.push(`\\standalonepart{\\textsc{${authors.join(', ')}}}\n\n`);
+      target.push(`## ${title}\n\n`);
+    } else {
+      target.push(`\\part{${title}}\n\n`);
     }
-    target.push(`## ${title}\n\n`);
     target.push('\\cleardoublepage\n\n');
   } else {
     if (authors.length > 0) {
@@ -350,13 +352,24 @@ export function resolvePartsForExport(doc: BuildDocument, pool: BuildDocument[])
         .map((p) => byPath.get(p))
         .filter((d): d is BuildDocument => d !== undefined);
       if (resolvedItems.length > 0) {
-        parts.push({ name: item.title, items: resolvedItems, kind: 'container', childCount: resolvedItems.length });
+        parts.push({
+          name: item.title,
+          items: resolvedItems,
+          kind: 'container',
+          childCount: resolvedItems.length,
+        });
       }
     } else if (typeof item === 'object' && 'file' in item && typeof item.file === 'string' && item.part) {
       // Standalone part file
       const doc = byPath.get(item.file);
       if (doc) {
-        parts.push({ name: doc.frontmatter.title, items: [doc], kind: 'standalone-file', childCount: 0, isPartFile: true });
+        parts.push({
+          name: doc.frontmatter.title,
+          items: [doc],
+          kind: 'standalone-file',
+          childCount: 0,
+          isPartFile: true,
+        });
       }
     }
   }
