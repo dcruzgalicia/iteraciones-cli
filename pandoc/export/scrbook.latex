@@ -193,9 +193,8 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
     \let\addcontentsline\gobblethreeargs
     \refstepcounter{part}%
     \vspace*{10\baselineskip}%
-    {\centering\normalsize\bfseries\textsc{#1}\par}%
+    {\centering\normalsize\normalfont\textsc{#1}\par}%
     \nopagebreak
-    \vspace{2\baselineskip}%
   \endgroup
   \addcontentsline{toc}{partauthor}{\textsc{#1}}%
 }
@@ -222,27 +221,34 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 
 
 % ─── Capítulos ───────────────────────────────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=5\baselineskip,afterskip=2\baselineskip,afterindent=false]{chapter}
-\setkomafont{chapter}{\normalsize\bfseries}
+\RedeclareSectionCommand[beforeskip=2\baselineskip,afterskip=1\baselineskip,afterindent=false]{chapter}
+\setkomafont{chapter}{\normalsize\normalfont}
 \renewcommand{\raggedchapter}{\centering}
 
 % ─── Secciones ───────────────────────────────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=3\baselineskip,afterskip=1\baselineskip,afterindent=false]{section}
-\setkomafont{section}{\normalsize\itshape}
+\RedeclareSectionCommand[beforeskip=1\baselineskip,afterskip=2\baselineskip,afterindent=false]{section}
+\setkomafont{section}{\normalsize\bfseries}
 \renewcommand{\raggedsection}{\centering}
+\makeatletter
+\renewcommand{\sectionlinesformat}[4]{%
+  \ifstr{#1}{section}
+    {\@hangfrom{\hskip #2#3}{\MakeUppercase{#4}}}
+    {\@hangfrom{\hskip #2#3}{#4}}%
+}
+\makeatother
 
 % ─── Subsecciones ────────────────────────────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=1\baselineskip,afterskip=1sp,afterindent=false]{subsection}
-\setkomafont{subsection}{\normalsize\normalfont}
+\RedeclareSectionCommand[beforeskip=1\baselineskip,afterskip=1\baselineskip,afterindent=false]{subsection}
+\setkomafont{subsection}{\normalsize\bfseries\itshape}
 
 % ─── Subsubsecciones ─────────────────────────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=0pt,afterskip=1sp,afterindent=false]{subsubsection}
-\setkomafont{subsubsection}{\normalsize\normalfont}
+\RedeclareSectionCommand[beforeskip=1\baselineskip,afterskip=1\baselineskip,afterindent=false]{subsubsection}
+\setkomafont{subsubsection}{\normalsize\itshape}
 
 % ─── Párrafos ──────────────────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=0pt,afterskip=1sp,afterindent=false]{paragraph}
+\RedeclareSectionCommand[beforeskip=1\baselineskip,afterskip=1\baselineskip,afterindent=false]{paragraph}
 \setkomafont{paragraph}{\normalsize\normalfont}
-\RedeclareSectionCommand[beforeskip=0pt,afterskip=1sp,afterindent=false]{subparagraph}
+\RedeclareSectionCommand[beforeskip=1\baselineskip,afterskip=1sp,afterindent=false]{subparagraph}
 \setkomafont{subparagraph}{\normalsize\normalfont}
 
 % ─── Dictum (epígrafe KOMA) ──────────────────────────────────────────────────
