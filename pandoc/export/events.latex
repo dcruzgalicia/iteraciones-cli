@@ -141,9 +141,9 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
   \ifnum \c@tocdepth > -1\relax
     \addpenalty{-\@highpenalty}%
     \addvspace{1\baselineskip}%
-    \noindent\normalfont\normalsize
-    #1
+    \noindent\normalfont\normalsize\MakeUppercase{#1}
     \par
+    \vspace{\baselineskip}%
   \fi
 }
 \makeatother
@@ -164,7 +164,7 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \newcommand*{\l@chapterauthor}[2]{%
   \ifnum \c@tocdepth > -1\relax
     \addpenalty{-\@highpenalty}%
-    \addvspace{0.5\baselineskip}%
+    \addvspace{1\baselineskip}%
     \noindent\normalfont\normalsize
     #1
     \par
@@ -185,6 +185,11 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \let\scr@part\@part
 \renewcommand*{\@part}[2][]
   {\scr@part[{\MakeUppercase{#1}}]{\MakeUppercase{#2}}}
+% TOC: partes en mayúsculas
+\let\orig@addparttocentry\addparttocentry
+\renewcommand{\addparttocentry}[2]{%
+  \orig@addparttocentry{#1}{\MakeUppercase{#2}}%
+}
 \makeatother
 
 % \standalonepart: \part{} sin page break, autor en versalitas,
@@ -236,6 +241,12 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
   \ifstr{#1}{section}
     {\@hangfrom{\hskip #2#3}{\MakeUppercase{#4}}}
     {\@hangfrom{\hskip #2#3}{#4}}%
+}
+% TOC: secciones en mayúsculas + línea en blanco después
+\let\orig@addsectiontocentry\addsectiontocentry
+\renewcommand{\addsectiontocentry}[2]{%
+  \orig@addsectiontocentry{#1}{\MakeUppercase{#2}}%
+  \addtocontents{toc}{\protect\vspace{\baselineskip}}%
 }
 \makeatother
 
