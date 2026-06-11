@@ -191,10 +191,11 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \newcommand{\standalonepart}[1]{%
   \begingroup
     \let\addcontentsline\gobblethreeargs
-    \let\scr@afterpart\relax
-    \let\cleardoublepage\relax
-    \let\clearpage\relax
-    \part{\textsc{#1}}%
+    \refstepcounter{part}%
+    \vspace*{10\baselineskip}%
+    {\centering\normalsize\bfseries\textsc{#1}\par}%
+    \nopagebreak
+    \vspace{2\baselineskip}%
   \endgroup
   \addcontentsline{toc}{partauthor}{\textsc{#1}}%
 }
