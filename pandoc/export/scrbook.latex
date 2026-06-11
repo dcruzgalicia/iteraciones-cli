@@ -122,7 +122,7 @@ $endif$
 $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 
 % ─── TOC ─────────────────────────────────────────────────────────────────────
-\renewcaptionname{spanish}{\contentsname}{\normalsize\bfseries Índice}
+\renewcaptionname{spanish}{\contentsname}{\normalsize\bfseries\MakeUppercase{Índice}}
 \BeforeTOCHead{%
   \RedeclareSectionCommand[beforeskip=5\baselineskip,afterskip=1sp,afterindent=false]{chapter}%
 }
