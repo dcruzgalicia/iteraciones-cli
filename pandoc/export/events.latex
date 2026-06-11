@@ -126,7 +126,7 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 % ─── TOC ─────────────────────────────────────────────────────────────────────
 \renewcaptionname{spanish}{\contentsname}{\normalsize\bfseries\MakeUppercase{Índice}}
 \BeforeTOCHead{%
-  \RedeclareSectionCommand[beforeskip=5\baselineskip,afterskip=1sp,afterindent=false]{chapter}%
+  \RedeclareSectionCommand[beforeskip=5\baselineskip,afterskip=2\baselineskip,afterindent=false]{chapter}%
 }
 \makeatletter
 \newcommand*{\TOCLeaderWide}{\leaders\hbox{\kern.15em\hbox{.}\kern.15em}\hfill}
@@ -135,7 +135,7 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \newcommand*{\TOCLeaderTighter}{\leaders\hbox{\kern.05em\hbox{.}\kern.05em}\hfill}
 \makeatother
 \setkomafont{partentry}{\normalsize\normalfont}
-\DeclareTOCStyleEntry[linefill=\TOCLeaderWide,beforeskip=1\baselineskip]{tocline}{part}
+\DeclareTOCStyleEntry[linefill=\TOCLeaderWide]{tocline}{part}
 \makeatletter
 \newcommand*{\l@partcontainer}[2]{%
   \ifnum \c@tocdepth > -1\relax
