@@ -149,6 +149,9 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \makeatother
 
 \makeatletter
+\providecommand*{\toclevel@chapterauthor}{0}
+\providecommand*{\toclevel@partauthor}{-1}
+\providecommand*{\toclevel@partcontainer}{-1}
 \newcommand*{\l@partauthor}[2]{%
   \ifnum \c@tocdepth > -1\relax
     \addpenalty{-\@highpenalty}%
@@ -206,7 +209,10 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 
 % \chapterauthor: \chapter* con entrada TOC sin n\'umero de p\'agina
 \newcommand{\chapterauthor}[1]{%
-  \chapter*{#1}%
+  \begingroup
+    \let\addcontentsline\gobblethreeargs
+    \chapter{#1}%
+  \endgroup
   \addcontentsline{toc}{chapterauthor}{#1}%
 }
 
