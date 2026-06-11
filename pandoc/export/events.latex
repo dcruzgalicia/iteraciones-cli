@@ -121,6 +121,12 @@ $endif$
 
 % ─── Sin numeración de secciones ─────────────────────────────────────────────
 \setcounter{secnumdepth}{$if(secnumdepth)$$secnumdepth$$else$-2$endif$}
+% Ocultar numeros de seccion sin afectar los anchors de hyperref
+$if(suppress-numbering)$\renewcommand{\thesection}{}$endif$
+$if(suppress-numbering)$\renewcommand{\thesubsection}{}$endif$
+$if(suppress-numbering)$\renewcommand{\thesubsubsection}{}$endif$
+$if(suppress-numbering)$\renewcommand{\theparagraph}{}$endif$
+$if(suppress-numbering)$\renewcommand{\thesubparagraph}{}$endif$
 $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 
 % ─── TOC ─────────────────────────────────────────────────────────────────────
@@ -151,6 +157,7 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \makeatletter
 \providecommand*{\toclevel@chapterauthor}{1}
 \providecommand*{\toclevel@partauthor}{0}
+\providecommand*{\toclevel@section}{2}
 \newcommand*{\l@partauthor}[2]{%
   \ifnum \c@tocdepth > -1\relax
     \addpenalty{-\@highpenalty}%
@@ -180,7 +187,7 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \setkomafont{part}{\normalsize\bfseries}
 \makeatletter
 \let\scr@part\@part
-\renewcommand*{\@part}[2][]
+\providecommand*{\@part}[2][]
   {\scr@part[{\MakeUppercase{#1}}]{\MakeUppercase{#2}}}
 \makeatother
 
@@ -216,15 +223,16 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 }
 
 
+
 % ─── Capítulos ───────────────────────────────────────────────────────────────
 \RedeclareSectionCommand[beforeskip=5\baselineskip,afterskip=2\baselineskip,afterindent=false]{chapter}
 \setkomafont{chapter}{\normalsize\bfseries}
-\renewcommand{\raggedchapter}{\centering}
+\providecommand{\raggedchapter}{\centering}
 
 % ─── Secciones ───────────────────────────────────────────────────────────────
 \RedeclareSectionCommand[beforeskip=3\baselineskip,afterskip=1\baselineskip,afterindent=false]{section}
 \setkomafont{section}{\normalsize\itshape}
-\renewcommand{\raggedsection}{\centering}
+\providecommand{\raggedsection}{\centering}
 
 % ─── Subsecciones ────────────────────────────────────────────────────────────
 \RedeclareSectionCommand[beforeskip=1\baselineskip,afterskip=1sp,afterindent=false]{subsection}
@@ -242,10 +250,10 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 
 % ─── Dictum (epígrafe KOMA) ──────────────────────────────────────────────────
 \setkomafont{dictum}{\normalsize\normalfont\itshape}
-\renewcommand*{\dictumwidth}{0.5\textwidth}
-\renewcommand*{\dictumrule}{}
+\providecommand*{\dictumwidth}{0.5\textwidth}
+\providecommand*{\dictumrule}{}
 \setkomafont{dictumauthor}{\normalsize\normalfont}
-\renewcommand*{\dictumauthorformat}[1]{#1\vspace*{2\baselineskip}}
+\providecommand*{\dictumauthorformat}[1]{#1\vspace*{2\baselineskip}}
 
 % ─── Entornos de alineación (pandoc genera estos) ────────────────────────────
 \renewenvironment{center}{\par\centering}{\par}
@@ -261,16 +269,16 @@ $if(pageno-head)$
 $else$
 \fancyfoot[$if(pageno-fancy)$$pageno-fancy$$else$R$endif$]{\normalfont\normalsize\thepage}
 $endif$
-\renewcommand{\headrulewidth}{0pt}
-\renewcommand{\footrulewidth}{0pt}
+\providecommand{\headrulewidth}{0pt}
+\providecommand{\footrulewidth}{0pt}
 \fancypagestyle{plain}{%
   \fancyhf{}%
   \fancyfoot[C]{\normalfont\normalsize\thepage}%
-  \renewcommand{\headrulewidth}{0pt}%
-  \renewcommand{\footrulewidth}{0pt}%
+  \providecommand{\headrulewidth}{0pt}%
+  \providecommand{\footrulewidth}{0pt}%
 }
-\renewcommand*{\partpagestyle}{empty}
-\renewcommand*{\chapterpagestyle}{plain}
+\providecommand*{\partpagestyle}{empty}
+\providecommand*{\chapterpagestyle}{plain}
 
 % ─── eso-pic (para portadas e imágenes a sangre) ─────────────────────────────
 \usepackage{eso-pic}
@@ -400,7 +408,7 @@ $if(toc)$
 \clearpage
 $endif$
 \makeatletter\@mainmattertrue\makeatother
-\renewcommand{\thepage}{\arabic{page}}
+\providecommand{\thepage}{\arabic{page}}
 \noindent
 $body$
 $if(biblatex)$

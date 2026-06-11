@@ -203,7 +203,10 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfF
     // PDF/A-1a con el paquete pdfx
     lines.push(`pdfx: ${pdfFormat.pdfx ? 'true' : 'false'}`);
     if (pdfFormat.lineSpacing !== undefined) lines.push(`linestretch: ${pdfFormat.lineSpacing}`);
-    if (pdfFormat.numbering !== undefined) lines.push(`secnumdepth: ${pdfFormat.numbering ? 3 : -2}`);
+    if (pdfFormat.numbering !== undefined) {
+      lines.push(`secnumdepth: ${pdfFormat.numbering ? 3 : 5}`);
+      if (!pdfFormat.numbering) lines.push('suppress-numbering: true');
+    }
     lines.push(`has-chapter: ${doc.metadata.documentclass === 'scrbook' ? 'true' : 'false'}`);
     if (pdfFormat.pageNumber) {
       const [placement, align] = pdfFormat.pageNumber.split('-') as [string, string];

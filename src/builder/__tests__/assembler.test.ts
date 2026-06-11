@@ -244,7 +244,7 @@ describe('assembleBookBody — separadores de capítulo', () => {
     });
 
     const exportDoc = assembleExportDocument(makeCollection(['articulo.md']), [item], 'es', '/project');
-    expect(exportDoc!.body).toContain('## Mi artículo');
+    expect(exportDoc!.body).toContain('\\section{Mi artículo}');
   });
 
   test('incluye directiva \\newpage al final de cada capítulo', () => {
@@ -740,7 +740,7 @@ describe('assembleAuthorExportVariants', () => {
   test('body vacío si el autor no tiene obras', () => {
     const author = makeAuthorDoc();
     const { summary } = assembleAuthorExportVariants(author, [], 'es', '/project');
-    expect(summary.body).not.toContain('## Trayectoria');
+    expect(summary.body).not.toContain('\\section{Trayectoria}');
   });
 });
 
@@ -869,10 +869,10 @@ describe('parts en colecciones (exportación)', () => {
     expect(body).toContain('\\containerpart{Parte I}');
     expect(body).toContain('\\containerpart{Parte II}');
     expect(body).toContain('\\chapterauthor{\\textsc{Autor A}}');
-    expect(body).toContain('## Uno');
-    expect(body).toContain('## Dos');
-    expect(body.indexOf('\\containerpart{Parte I}')).toBeLessThan(body.indexOf('## Uno'));
-    expect(body.indexOf('\\containerpart{Parte II}')).toBeLessThan(body.indexOf('## Dos'));
+    expect(body).toContain('\\section{Uno}');
+    expect(body).toContain('\\section{Dos}');
+    expect(body.indexOf('\\containerpart{Parte I}')).toBeLessThan(body.indexOf('\\section{Uno}'));
+    expect(body.indexOf('\\containerpart{Parte II}')).toBeLessThan(body.indexOf('section{Dos}'));
   });
 
   test('assembleBookBody con parts omite \\newpage antes de \\part', () => {
@@ -952,7 +952,7 @@ describe('parts en colecciones (exportación)', () => {
     const exportDoc = assembleExportDocument(collection, [item], 'es', '/project');
     expect(exportDoc).not.toBeNull();
     expect(exportDoc!.body).toContain('\\chapterauthor{\\textsc{Autor}}');
-    expect(exportDoc!.body).toContain('## A');
+    expect(exportDoc!.body).toContain('\\section{A}');
     expect(exportDoc!.body).not.toContain('\\part{');
     expect(exportDoc!.body).not.toContain('*Por Autor*');
     expect(exportDoc!.body).not.toMatch(/^# A$/m);
@@ -1004,10 +1004,10 @@ describe('parts en colecciones (exportación)', () => {
     const body = exportDoc!.body;
 
     // Orden: items sueltos → partes
-    const prologoIdx = body.indexOf('## Prólogo');
-    const introIdx = body.indexOf('## Introducción');
+    const prologoIdx = body.indexOf('\\section{Prólogo}');
+    const introIdx = body.indexOf('\\section{Introducción}');
     const partIdx = body.indexOf('\\containerpart{Parte I}');
-    const capIdx = body.indexOf('## Fundamentos');
+    const capIdx = body.indexOf('\\section{Fundamentos}');
 
     expect(prologoIdx).toBeGreaterThan(-1);
     expect(introIdx).toBeGreaterThan(-1);
@@ -1133,7 +1133,7 @@ describe('assembleBookBody — heading shift', () => {
     const body = exportDoc!.body;
 
     // Item title is now ## (\section)
-    expect(body).toContain('## Capitulo');
+    expect(body).toContain('\\section{Capitulo}');
     // Body # → ### (offset +2), ## → ####
     expect(body).toContain('### Introducción');
     expect(body).toContain('#### Detalle');
@@ -1189,7 +1189,7 @@ describe('assembleBookBody — heading shift', () => {
 
     expect(body).toContain('\\containerpart{Parte Única}');
     // Item title is ## (\section)
-    expect(body).toContain('## Capitulo');
+    expect(body).toContain('\\section{Capitulo}');
     // Body # → ### (offset +2), ## → ####
     expect(body).toContain('### Introducción');
     expect(body).toContain('#### Detalle');
@@ -1357,7 +1357,7 @@ describe('assembleBookBody — heading shift', () => {
 
     // Standalone part file: author as \standalonepart, title as ##, extra \cleardoublepage
     expect(body).toContain('\\standalonepart{\\textsc{Autor del Prólogo}}');
-    expect(body).toContain('## Introducción General');
+    expect(body).toContain('\\section{Introducción General}');
     // Body h1 → ### (offset +2), h2 → ####
     expect(body).toContain('### Contexto');
     expect(body).toContain('#### Antecedentes');
@@ -1370,7 +1370,7 @@ describe('assembleBookBody — heading shift', () => {
     // Part container items: author como \chapter, title como ##, offset +2
     expect(body).toContain('\\containerpart{Parte I}');
     expect(body).toContain('\\chapterauthor{\\textsc{Autor del Capítulo}}');
-    expect(body).toContain('## Fundamentos');
+    expect(body).toContain('\\section{Fundamentos}');
     expect(body).toContain('### Tema central');
   });
 
