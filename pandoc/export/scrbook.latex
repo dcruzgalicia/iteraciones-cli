@@ -187,14 +187,18 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 
 % \standalonepart: \part{} sin page break, autor en versalitas,
 % entrada TOC sin n\'umero de p\'agina (como \containerpart)
+\makeatletter
 \newcommand{\standalonepart}[1]{%
   \begingroup
     \let\addcontentsline\gobblethreeargs
-    \RedeclareSectionCommand[beforeskip=11\baselineskip,afterskip=\baselineskip,afterindent=false]{part}
+    \let\scr@afterpart\relax
+    \let\cleardoublepage\relax
+    \let\clearpage\relax
     \part{\textsc{#1}}%
   \endgroup
   \addcontentsline{toc}{partauthor}{\textsc{#1}}%
 }
+\makeatother
 
 % \containerpart: \part{} con entrada TOC sin número de página
 \newcommand{\gobblethreeargs}[3]{}
