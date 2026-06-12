@@ -266,7 +266,7 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \makeatletter
 \renewcommand{\sectionlinesformat}[4]{%
   \ifstr{#1}{section}
-    {\@hangfrom{\hskip #2#3}{\MakeUppercase{#4}}}
+    {\thispagestyle{plain}\@hangfrom{\hskip #2#3}{\MakeUppercase{#4}}}
     {\@hangfrom{\hskip #2#3}{#4}}%
 }
 % TOC: secciones en mayúsculas + línea en blanco después
