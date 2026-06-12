@@ -166,8 +166,29 @@ export function assembleExportDocument(
  * el título \section y el body, para que la primera página del contenido
  * quede en una página nueva.
  */
+/**
+ * Construye un mapa filePath → showAuthor a partir de los rawItems del frontmatter
+ * de una colección, para usar en exportación. Por defecto es `true`.
+ */
+function buildShowAuthorExportMap(rawItems: CollectionItem[]): Map<string, boolean> {
+  const map = new Map<string, boolean>();
+  for (const item of rawItems) {
+    if (typeof item === 'object' && 'file' in item && typeof item.file === 'string') {
+      map.set(item.file, item.author !== false);
+    } else if (typeof item === 'object' && 'items' in item) {
+      for (const subItem of item.items) {
+        if (typeof subItem === 'object' && 'file' in subItem && typeof subItem.file === 'string') {
+          map.set(subItem.file, subItem.author !== false);
+        }
+      }
+    }
+  }
+  return map;
+}
+
 function assembleBookBody(doc: BuildDocument, items: BuildDocument[], parts?: ExportCollectionPart[], loosePaths?: string[]): string {
   const result: string[] = [];
+  const showAuthorMap = buildShowAuthorExportMap(doc.frontmatter.items);
 
   // Intro opcional de la colección/eventos (body propio del doc index)
   if (doc.body.trim()) {
@@ -181,7 +202,7 @@ function assembleBookBody(doc: BuildDocument, items: BuildDocument[], parts?: Ex
     if (loosePaths) {
       for (const itemPath of loosePaths) {
         const item = byPath.get(itemPath);
-        if (item) appendItemBody(item, result, 'loose');
+        if (item) appendItemBody(item, result, 'loose', showAuthorMap.get(itemPath));
       }
     }
 
@@ -189,18 +210,18 @@ function assembleBookBody(doc: BuildDocument, items: BuildDocument[], parts?: Ex
       if (part.kind === 'container') {
         result.push(`\\containerpart{${part.name}}\n\n`);
         for (const item of part.items) {
-          appendItemBody(item, result, 'container');
+          appendItemBody(item, result, 'container', showAuthorMap.get(item.relativePath));
         }
       } else {
         // Standalone part file
         const standaloneItem = part.items[0];
-        if (standaloneItem) appendItemBody(standaloneItem, result, 'standalone-file');
+        if (standaloneItem) appendItemBody(standaloneItem, result, 'standalone-file', showAuthorMap.get(standaloneItem.relativePath));
       }
     }
   } else {
     // Sin partes: author → \chapter{}, title → \section{}, body offset +2
     for (const item of items) {
-      appendItemBody(item, result, 'loose');
+      appendItemBody(item, result, 'loose', showAuthorMap.get(item.relativePath));
     }
   }
 
@@ -209,13 +230,14 @@ function assembleBookBody(doc: BuildDocument, items: BuildDocument[], parts?: Ex
 
 type ItemPartKind = 'standalone-file' | 'container' | 'loose';
 
-function appendItemBody(item: BuildDocument, target: string[], partKind: ItemPartKind): void {
+function appendItemBody(item: BuildDocument, target: string[], partKind: ItemPartKind, showAuthor?: boolean): void {
   const authors = item.frontmatter.author;
   const slug = pathToSlug(item.relativePath);
   const title = item.frontmatter.title || 'Sin título';
+  const showAuthorLine = showAuthor !== false && authors.length > 0;
 
   if (partKind === 'standalone-file') {
-    if (authors.length > 0) {
+    if (showAuthorLine) {
       target.push(`\\standalonepart{\\textsc{${authors.join(', ')}}}\n\n`);
       target.push(`## ${title}\n\n`);
     } else {
@@ -223,7 +245,7 @@ function appendItemBody(item: BuildDocument, target: string[], partKind: ItemPar
     }
     target.push('\\thispagestyle{empty}\n\\cleardoublepage\n\\thispagestyle{plain}\n\n');
   } else {
-    if (authors.length > 0) {
+    if (showAuthorLine) {
       target.push(`\\chapterauthor{\\textsc{${authors.join(', ')}}}\n\n`);
     }
     target.push(`## ${title}\n\n`);

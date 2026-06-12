@@ -10,6 +10,7 @@ interface PartGroupTemplateItem {
   title: string;
   author: string;
   'author-href'?: string;
+  'show-author'?: boolean;
   date: string;
   abstract?: string;
   keywords?: string[];
@@ -21,13 +22,35 @@ interface PartGroupTemplate {
 }
 
 /**
+ * Construye un mapa filePath → showAuthor a partir de los rawItems de la colección.
+ * Permite que cada item del frontmatter pueda definir `author: false` para ocultar
+ * el autor en la vista de colección. Por defecto es `true`.
+ */
+function buildShowAuthorMap(rawItems?: CollectionItem[]): Map<string, boolean> {
+  const map = new Map<string, boolean>();
+  if (!rawItems) return map;
+  for (const item of rawItems) {
+    if (typeof item === 'object' && 'file' in item && typeof item.file === 'string') {
+      map.set(item.file, item.author !== false);
+    } else if (typeof item === 'object' && 'items' in item) {
+      for (const subItem of item.items) {
+        if (typeof subItem === 'object' && 'file' in subItem && typeof subItem.file === 'string') {
+          map.set(subItem.file, subItem.author !== false);
+        }
+      }
+    }
+  }
+  return map;
+}
+
+/**
  * Construye el TemplateContext para un documento de tipo `collection`.
  *
  * Variables producidas para `templates/collection.html`:
  *   title         → frontmatter.title del documento colección
  *   author        → frontmatter.author del documento colección
  *   body          → htmlFragment del documento colección (introducción opcional)
- *   list-items    → array de { href, title, author, author-href?, date, abstract?, keywords? }
+ *   list-items    → array de { href, title, author, author-href?, show-author?, date, abstract?, keywords? }
  *                   — todos los items planos (retrocompat: cuando no hay `parts:`).
  *   loose-items   → (opcional) array de items sueltos antes de la primera parte.
  *   parts         → (opcional) array de { name, items } para colecciones agrupadas en partes.
@@ -54,8 +77,12 @@ export function buildCollectionContext(
   allDocs?: BuildDocument[],
 ): TemplateContext {
   const byPath = new Map<string, BuildDocument>(items.map((d) => [d.relativePath, d]));
+  const showAuthorByPath = buildShowAuthorMap(rawItems);
 
-  const listItems = items.map((item) => itemToTemplateItem(item, authorIndex));
+  const listItems = items.map((item) => {
+    const showAuthor = showAuthorByPath.get(item.relativePath);
+    return itemToTemplateItem(item, authorIndex, showAuthor);
+  });
 
   // Construir parts y loose-items desde el nuevo schema unificado
   // Iteración ordenada única que preserva la intercalación original entre
@@ -76,16 +103,26 @@ export function buildCollectionContext(
         const resolvedItems = collectSubPaths(item.items)
           .map((p) => byPath.get(p))
           .filter((d): d is BuildDocument => d !== undefined)
-          .map((doc) => itemToTemplateItem(doc, authorIndex));
+          .map((doc) => {
+            const showAuthor = showAuthorByPath.get(doc.relativePath);
+            return itemToTemplateItem(doc, authorIndex, showAuthor);
+          });
         partsArray.push({ name: item.title, items: resolvedItems });
       } else if ('file' in item && typeof item.file === 'string' && item.part) {
         const doc = byPath.get(item.file);
         if (doc) {
-          partsArray.push({ name: doc.frontmatter.title, items: [itemToTemplateItem(doc, authorIndex)] });
+          const showAuthor = showAuthorByPath.get(item.file);
+          partsArray.push({
+            name: doc.frontmatter.title,
+            items: [itemToTemplateItem(doc, authorIndex, showAuthor)],
+          });
         }
       } else if ('file' in item && typeof item.file === 'string') {
         const doc = byPath.get(item.file);
-        if (doc) looseArray.push(itemToTemplateItem(doc, authorIndex));
+        if (doc) {
+          const showAuthor = showAuthorByPath.get(item.file);
+          looseArray.push(itemToTemplateItem(doc, authorIndex, showAuthor));
+        }
       }
     }
 
@@ -106,16 +143,21 @@ export function buildCollectionContext(
   };
 }
 
-function itemToTemplateItem(item: BuildDocument, authorIndex?: AuthorDocumentIndex): PartGroupTemplateItem {
+function itemToTemplateItem(item: BuildDocument, authorIndex?: AuthorDocumentIndex, showAuthor?: boolean): PartGroupTemplateItem {
   const authorHref = resolveAuthorHref(item.frontmatter.author, authorIndex);
   return {
     href: docHref(item),
     title: item.frontmatter.title,
     author: item.frontmatter.author.join(', '),
     'author-href': authorHref,
+    'show-author': showAuthor ?? true,
     date: item.frontmatter.date,
-    ...(item.frontmatter.abstract !== undefined && { abstract: item.frontmatter.abstract }),
-    ...(item.frontmatter.keywords.length > 0 && { keywords: item.frontmatter.keywords }),
+    ...(item.frontmatter.abstract !== undefined && {
+      abstract: item.frontmatter.abstract,
+    }),
+    ...(item.frontmatter.keywords.length > 0 && {
+      keywords: item.frontmatter.keywords,
+    }),
   };
 }
 

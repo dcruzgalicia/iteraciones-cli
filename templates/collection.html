@@ -49,10 +49,12 @@
               $date$
             </div>
           </div>
+          $if(show-author)$
           $if(author)$
           <div class="mt-0.5 pl-4 font-mono text-xs text-accent-600/70">
             ↳ $author$
           </div>
+          $endif$
           $endif$ $if(abstract)$
           <div class="mt-1.5 pl-4 text-sm leading-relaxed text-zinc-600">
             $abstract$
@@ -101,10 +103,12 @@
                 $date$
               </div>
             </div>
+            $if(show-author)$
             $if(author)$
             <div class="mt-0.5 pl-4 font-mono text-xs text-accent-600/70">
               ↳ $author$
             </div>
+            $endif$
             $endif$ $if(abstract)$
             <div class="mt-1.5 pl-4 text-sm leading-relaxed text-zinc-600">
               $abstract$
@@ -151,10 +155,12 @@
             $date$
           </div>
         </div>
+        $if(show-author)$
         $if(author)$
         <div class="mt-0.5 pl-4 font-mono text-xs text-accent-600/70">
           ↳ $author$
         </div>
+        $endif$
         $endif$ $if(abstract)$
         <div class="mt-1.5 pl-4 text-sm leading-relaxed text-zinc-600">
           $abstract$
