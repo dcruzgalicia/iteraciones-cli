@@ -251,6 +251,15 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
   \endgroup
   \addcontentsline{toc}{chapterauthor}{#1}%
 }
+% Versi\'on invisible de \chapterauthor para mantener la misma estructura
+% de p\'agina cuando el autor est\'a oculto (mismo \cleardoublepage, mismo
+% espaciado de \chapter) sin mostrar texto ni escribir al TOC.
+\newcommand{\invisiblechapter}{%
+  \begingroup
+    \let\addcontentsline\gobblethreeargs
+    \chapter{\mbox{}}%
+  \endgroup
+}
 
 
 % ─── Capítulos ───────────────────────────────────────────────────────────────

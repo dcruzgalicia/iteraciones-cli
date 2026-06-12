@@ -247,6 +247,8 @@ function appendItemBody(item: BuildDocument, target: string[], partKind: ItemPar
   } else {
     if (showAuthorLine) {
       target.push(`\\chapterauthor{\\textsc{${authors.join(', ')}}}\n\n`);
+    } else {
+      target.push(`\\invisiblechapter\n\n`);
     }
     target.push(`## ${title}\n\n`);
   }
