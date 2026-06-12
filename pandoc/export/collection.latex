@@ -212,10 +212,10 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \let\scr@part\@part
 \renewcommand*{\@part}[2][]
   {\scr@part[{\MakeUppercase{#1}}]{\MakeUppercase{#2}}}
-% TOC: partes en mayúsculas
-\let\orig@addparttocentry\addparttocentry
+% TOC: partes en mayúsculas; NO llama al KOMA-Script original
+% porque \'el puede agregar \addvspace{2\baselineskip} extra al \toc.
 \renewcommand{\addparttocentry}[2]{%
-  \orig@addparttocentry{#1}{\MakeUppercase{#2}}%
+  \addcontentsline{toc}{part}{\MakeUppercase{#2}}%
 }
 \makeatother
 
