@@ -133,7 +133,7 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \DeclareTOCStyleEntry[linefill=\TOCLeaderTighter,beforeskip=0pt]{tocline}{subsubsection}
 
 % ─── Secciones (equivalente a capítulo) ──────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=3\baselineskip,afterskip=1\baselineskip,afterindent=false]{section}
+\RedeclareSectionCommand[beforeskip=3\baselineskip,afterskip=1\baselineskip,afterindent=false,pagestyle=plain]{section}
 \setkomafont{section}{\normalsize\itshape}
 \renewcommand{\raggedsection}{\centering}
 
