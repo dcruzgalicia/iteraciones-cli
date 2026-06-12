@@ -225,10 +225,9 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
   \begingroup
     \let\addcontentsline\gobblethreeargs
     \refstepcounter{part}%
-    \vspace*{2\baselineskip}%
+    \vspace*{10\baselineskip}%
     {\centering\normalsize\normalfont\textsc{#1}\par}%
     \nopagebreak
-    \vspace{1\baselineskip}%
   \endgroup
   \addcontentsline{toc}{partauthor}{\textsc{#1}}%
 }
