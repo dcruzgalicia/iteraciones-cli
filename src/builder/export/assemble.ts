@@ -261,7 +261,7 @@ function appendItemBody(item: BuildDocument, target: string[], partKind: ItemPar
   // \\noindent: primer p\'arrafo sin indentaci\'on tras \\cleardoublepage
   // (el \\section ya suprime indentaci\'on, pero \\cleardoublepage la restaura).
   const bodyText = shiftedBody.trim();
-  target.push(bodyText ? `\\noindent ${bodyText}` : '', '\n\n\\cleardoublepage\n\n');
+  target.push(bodyText ? `\\noindent\n${bodyText}` : '', '\n\n\\cleardoublepage\n\n');
 }
 
 /**
