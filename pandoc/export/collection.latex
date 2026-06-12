@@ -135,7 +135,7 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \newcommand*{\TOCLeaderTighter}{\leaders\hbox{\kern.05em\hbox{.}\kern.05em}\hfill}
 \makeatother
 \setkomafont{partentry}{\normalsize\normalfont}
-\DeclareTOCStyleEntry[linefill=\TOCLeaderWide,beforeskip=0pt]{tocline}{part}
+\DeclareTOCStyleEntry[linefill=\TOCLeaderWide,beforeskip=1\baselineskip]{tocline}{part}
 \makeatletter
 \newcommand*{\l@partcontainer}[2]{%
   \ifnum \c@tocdepth > -1\relax
