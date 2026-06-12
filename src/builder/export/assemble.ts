@@ -258,7 +258,10 @@ function appendItemBody(item: BuildDocument, target: string[], partKind: ItemPar
   const renamedBody = renameFootnotes(item.body, slug);
   const resolvedBody = resolveImagePaths(renamedBody, item.filePath);
   const shiftedBody = shiftHeadings(resolvedBody, 2);
-  target.push(shiftedBody.trim(), '\n\n\\cleardoublepage\n\n');
+  // \\noindent: primer p\'arrafo sin indentaci\'on tras \\cleardoublepage
+  // (el \\section ya suprime indentaci\'on, pero \\cleardoublepage la restaura).
+  const bodyText = shiftedBody.trim();
+  target.push(bodyText ? `\\noindent ${bodyText}` : '', '\n\n\\cleardoublepage\n\n');
 }
 
 /**
