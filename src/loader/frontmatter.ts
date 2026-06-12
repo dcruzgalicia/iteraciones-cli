@@ -16,7 +16,7 @@ export interface CollectionPartItem {
   items: CollectionItem[];
 }
 
-export type CollectionItem = string | { file: string; part?: boolean } | CollectionPartItem;
+export type CollectionItem = string | { file: string; part?: boolean; author?: boolean } | CollectionPartItem;
 
 export interface FrontmatterFilters {
   type?: string[];
@@ -206,7 +206,11 @@ function normalizeCollectionItems(value: unknown): CollectionItem[] {
       } else if (typeof obj.file === 'string') {
         const file = obj.file.trim();
         if (file) {
-          result.push({ file, part: obj.part === true });
+          result.push({
+            file,
+            part: obj.part === true,
+            author: obj.author !== false,
+          });
         }
       }
     }
