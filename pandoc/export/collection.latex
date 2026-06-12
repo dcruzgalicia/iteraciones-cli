@@ -204,10 +204,10 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \setkomafont{chapterentry}{\normalsize\normalfont}
 \DeclareTOCStyleEntry[linefill=\TOCLeaderMedium,beforeskip=0.5\baselineskip]{tocline}{chapter}
 \DeclareTOCStyleEntry[entryformat=\normalsize,linefill=\TOCLeaderTight,beforeskip=0pt]{tocline}{section}
-\DeclareTOCStyleEntry[entryformat=\normalsize\itshape,linefill=\TOCLeaderTight,beforeskip=0pt]{tocline}{subsection}
-\DeclareTOCStyleEntry[entryformat=\normalsize\normalfont,linefill=\TOCLeaderTighter,beforeskip=0pt]{tocline}{subsubsection}
-\DeclareTOCStyleEntry[entryformat=\normalsize\normalfont,linefill=\TOCLeaderTighter,beforeskip=0pt]{tocline}{paragraph}
-\DeclareTOCStyleEntry[entryformat=\normalsize\normalfont,linefill=\TOCLeaderTighter,beforeskip=0pt]{tocline}{subparagraph}
+\DeclareTOCStyleEntry[entryformat=\normalsize\itshape,linefill=\TOCLeaderTight,beforeskip=0pt,afterskip=0pt]{tocline}{subsection}
+\DeclareTOCStyleEntry[entryformat=\normalsize\normalfont,linefill=\TOCLeaderTighter,beforeskip=0pt,afterskip=0pt]{tocline}{subsubsection}
+\DeclareTOCStyleEntry[entryformat=\normalsize\normalfont,linefill=\TOCLeaderTighter,beforeskip=0pt,afterskip=0pt]{tocline}{paragraph}
+\DeclareTOCStyleEntry[entryformat=\normalsize\normalfont,linefill=\TOCLeaderTighter,beforeskip=0pt,afterskip=0pt]{tocline}{subparagraph}
 \RedeclareSectionCommand[beforeskip=10\baselineskip,afterskip=2\baselineskip,afterindent=false]{part}
 \setkomafont{part}{\normalsize\bfseries}
 \makeatletter
