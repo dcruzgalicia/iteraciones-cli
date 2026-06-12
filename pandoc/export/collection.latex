@@ -223,6 +223,7 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 % entrada TOC sin n\'umero de p\'agina (como \containerpart)
 \makeatletter
 \newcommand{\standalonepart}[1]{%
+  \par % asegurar modo vertical antes de \\vspace* (viene tras \\noindent)
   \begingroup
     \let\addcontentsline\gobblethreeargs
     \refstepcounter{part}%
@@ -235,6 +236,7 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 % Versi\'on invisible de \standalonepart para mantener la misma posici\'on
 % del \section cuando el autor del part file est\'a oculto.
 \newcommand{\invisiblestandalonepart}{%
+  \par % asegurar modo vertical antes de \\vspace*
   \begingroup
     \let\addcontentsline\gobblethreeargs
     \refstepcounter{part}%
