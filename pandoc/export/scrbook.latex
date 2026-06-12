@@ -208,6 +208,9 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \RedeclareSectionCommand[beforeskip=10\baselineskip,afterskip=2\baselineskip,afterindent=false]{part}
 \setkomafont{part}{\normalsize\bfseries}
 \makeatletter
+% Asegura que \parttocline est\'e vac\'io para que KOMA-Script
+% no inyecte \addvspace{2\baselineskip} al .toc antes de cada parte.
+\parttocline\@empty
 \let\scr@part\@part
 \renewcommand*{\@part}[2][]
   {\scr@part[{\MakeUppercase{#1}}]{\MakeUppercase{#2}}}
