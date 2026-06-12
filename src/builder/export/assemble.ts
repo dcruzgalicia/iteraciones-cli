@@ -135,7 +135,8 @@ export function assembleExportDocument(
       const preambleIsOnlyLatexCommands =
         preamble.length === 0 ||
         /^\\((add)?part|standalonepart|containerpart|chapterauthor|chapter)\{/.test(preamble) ||
-        /^\\invisiblechapter/.test(preamble);
+        /^\\invisiblechapter/.test(preamble) ||
+        /^\\invisiblestandalonepart/.test(preamble);
       if (!preambleIsOnlyLatexCommands) {
         const rest = body.slice(headingMatch.index);
         body = rest + '\n\n' + preamble;
@@ -243,7 +244,8 @@ function appendItemBody(item: BuildDocument, target: string[], partKind: ItemPar
       target.push(`\\standalonepart{\\textsc{${authors.join(', ')}}}\n\n`);
       target.push(`## ${title}\n\n`);
     } else {
-      target.push(`\\part{${title}}\n\n`);
+      target.push(`\\invisiblestandalonepart\n\n`);
+      target.push(`## ${title}\n\n`);
     }
     target.push('\\thispagestyle{empty}\n\\cleardoublepage\n\\thispagestyle{plain}\n\n');
   } else {
