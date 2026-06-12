@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { basename, isAbsolute, join, resolve } from 'node:path';
+import dictumPlugin from '../../pandoc/plugins/dictum-plugin.js';
 import { CacheManager } from '../cache/cache-manager.js';
 import { hash } from '../cache/hasher.js';
 import { loadOutputManifest, saveOutputManifest } from '../cache/output-manifest.js';
@@ -196,6 +197,8 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
   const { plugins, luaFilters } = await loadPlugins(siteConfig.plugins, cwd);
   const registry = new PluginRegistry();
   for (const plugin of plugins) registry.register(plugin);
+  // Plugin built-in: transforma fenced divs .dictum a LaTeX en exportación PDF
+  registry.register(dictumPlugin);
 
   const ctx: BuildContext = {
     siteConfig,
@@ -212,11 +215,17 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
   // El fingerprint invalida la caché cuando cambia el código fuente de plugins locales
   // o el conjunto de plugins declarados. Para plugins locales se hashea el contenido del
   // archivo; para paquetes npm basta con el identificador.
-  const pluginFingerprint = await computePluginFingerprint(siteConfig.plugins, cwd);
+  const pluginPaths = [...siteConfig.plugins, 'pandoc/plugins/dictum-plugin.ts'];
+  const pluginFingerprint = await computePluginFingerprint(pluginPaths, cwd);
   // --no-cache: omitir caché completamente (renderDocuments/composeDocuments aceptan undefined).
   const renderCache: RenderCache | undefined = options.noCache
     ? undefined
-    : { manager: cacheManager, cliVersion: pkg.version, pandocVersion, pluginFingerprint };
+    : {
+        manager: cacheManager,
+        cliVersion: pkg.version,
+        pandocVersion,
+        pluginFingerprint,
+      };
   const composeCache: ComposeCache | undefined = options.noCache ? undefined : { manager: cacheManager, cliVersion: pkg.version, pluginFingerprint };
 
   const pandocPool = (await PandocPool.tryCreate()) ?? undefined;
@@ -228,7 +237,7 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
     renderCache,
     composeCache,
     registry,
-    hasPlugins: plugins.length > 0,
+    hasPlugins: true,
     pandocPool,
     cliVersion: pkg.version,
     pandocVersion,
@@ -276,7 +285,10 @@ function buildEnrichedSiteContext(ctx: BuildContext, allDocs: BuildDocument[]): 
 /**
  * Resuelve rutas globales de bibliography y csl desde la configuración del sitio.
  */
-function resolveGlobalExportPaths(ctx: BuildContext): { globalBibliography?: string; globalCsl?: string } {
+function resolveGlobalExportPaths(ctx: BuildContext): {
+  globalBibliography?: string;
+  globalCsl?: string;
+} {
   const pdfCfg = ctx.siteConfig.format?.pdf;
   if (!pdfCfg) return {};
   const cwd = ctx.cwd;
@@ -352,7 +364,12 @@ async function runPrimaryRender(
     onFileProcessed,
   );
 
-  return { renderedFileDocs, renderedAuthorDocs, renderedEventDocs, authorDocumentIndex };
+  return {
+    renderedFileDocs,
+    renderedAuthorDocs,
+    renderedEventDocs,
+    authorDocumentIndex,
+  };
 }
 
 /**
@@ -403,10 +420,16 @@ async function runBlocksPrestep(
         `runBlocksPrestep: tipo de bloque sin spec en el type-graph: "${doc.type ?? 'undefined'}". ¿Falta añadir una TypeStageSpec en type-graph.ts?`,
       );
     }
-    return { ...doc, templateContext: spec.buildBlockContext(doc, enrichedSiteCtx, primaryRendered, authorDocumentIndex) };
+    return {
+      ...doc,
+      templateContext: spec.buildBlockContext(doc, enrichedSiteCtx, primaryRendered, authorDocumentIndex),
+    };
   });
   const regionBlocks = await renderBlocksToRegions(contextBlockDocs);
-  return { finalSiteCtx: { ...enrichedSiteCtx, ...regionBlocks }, renderedBlockDocs };
+  return {
+    finalSiteCtx: { ...enrichedSiteCtx, ...regionBlocks },
+    renderedBlockDocs,
+  };
 }
 
 /**
@@ -466,7 +489,10 @@ async function runFinalization(
     }
     const generatedPaths = generatedFiles.map((f) => f.relativePath);
 
-    await registry.runAfterBuild({ ...initialContext, outputPaths: [...initialContext.outputPaths, ...generatedPaths] });
+    await registry.runAfterBuild({
+      ...initialContext,
+      outputPaths: [...initialContext.outputPaths, ...generatedPaths],
+    });
   }
 
   // Actualizar manifiesto de salida y eliminar archivos huérfanos en modo incremental.
@@ -706,7 +732,12 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     }
 
     // Paso de exportacion: genera PDF/EPUB si esta configurado y no se paso --no-export.
-    const exportStats: ExportStats = { totalEpub: 0, totalPdf: 0, cacheHitsEpub: 0, cacheHitsPdf: 0 };
+    const exportStats: ExportStats = {
+      totalEpub: 0,
+      totalPdf: 0,
+      cacheHitsEpub: 0,
+      cacheHitsPdf: 0,
+    };
     const formatCfg = ctx.siteConfig.format;
     const hasExport = (!!formatCfg?.pdf || !!formatCfg?.epub) && !options.noExport;
     if (hasExport && formatCfg) {
@@ -744,7 +775,13 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
             registry: hasPlugins ? registry : undefined,
             pluginFingerprint,
             stats: exportStats,
-            onExportProgress: (relativePath, cacheHit) => progress.reportFile({ relativePath, durationMs: 0, cacheHit, phase: 'export' }),
+            onExportProgress: (relativePath, cacheHit) =>
+              progress.reportFile({
+                relativePath,
+                durationMs: 0,
+                cacheHit,
+                phase: 'export',
+              }),
           })
         : [];
     if (exportResults.length > 0) {
