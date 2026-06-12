@@ -175,7 +175,9 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 
 % ─── TOC: espacio entre niveles profundos y superficiales ─────────────────
 % Agrega \baselineskip cuando una entrada profunda (subsection+)
-% es seguida por una entrada superficial (section, chapter, part, etc.)
+% es seguida por una entrada superficial (section, chapter, part, etc.),
+% y tambi\'en antes de una subsection si la entrada anterior no era
+% otra subsection (salto de linea no acumulativo entre tipos distintos).
 \makeatletter
 \newcommand{\toc@lastlevel}{0}
 \newcommand{\toc@marklevel}[1]{%
@@ -428,6 +430,44 @@ $endif$
   pdfauthor={$for(author)$$author$$sep$, $endfor$},
   pdflang={$lang$}
 }
+
+% Intercepta \contentsline para a\~nadir \baselineskip antes de cada
+% entrada subsection en el TOC, solo si la entrada anterior era
+% un nivel superficial (section, chapter, part, etc.). No agrega
+% espacio entre niveles profundos consecutivos (subsection,
+% subsubsection, paragraph, subparagraph).
+\makeatletter
+\newcommand{\toc@prevtype}{0}
+\let\orig@contentsline\contentsline
+\renewcommand{\contentsline}[3]{%
+  \def\@tempa{#1}\def\@tempb{subsection}%
+  \ifx\@tempa\@tempb
+    \ifnum\toc@prevtype>1\relax
+    \else
+      \addvspace{\baselineskip}%
+    \fi
+    \gdef\toc@prevtype{2}%
+  \else
+    \def\@tempb{subsubsection}%
+    \ifx\@tempa\@tempb
+      \gdef\toc@prevtype{3}%
+    \else
+      \def\@tempb{paragraph}%
+      \ifx\@tempa\@tempb
+        \gdef\toc@prevtype{4}%
+      \else
+        \def\@tempb{subparagraph}%
+        \ifx\@tempa\@tempb
+          \gdef\toc@prevtype{5}%
+        \else
+          \gdef\toc@prevtype{0}%
+        \fi
+      \fi
+    \fi
+  \fi
+  \orig@contentsline{#1}{#2}{#3}%
+}
+\makeatother
 
 % ═══════════════════════════════════════════════════════════════════════════════
 \begin{document}
