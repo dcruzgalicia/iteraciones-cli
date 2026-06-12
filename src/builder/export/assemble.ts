@@ -221,7 +221,7 @@ function appendItemBody(item: BuildDocument, target: string[], partKind: ItemPar
     } else {
       target.push(`\\part{${title}}\n\n`);
     }
-    target.push('\\cleardoublepage\n\n');
+    target.push('\\thispagestyle{empty}\n\\cleardoublepage\n\\thispagestyle{plain}\n\n');
   } else {
     if (authors.length > 0) {
       target.push(`\\chapterauthor{\\textsc{${authors.join(', ')}}}\n\n`);
