@@ -129,7 +129,6 @@ export function buildCollectionContext(
     partsData = partsArray.length > 0 ? partsArray : undefined;
     looseItemsData = looseArray.length > 0 ? looseArray : undefined;
   }
-
   return {
     title: doc.frontmatter.title,
     pagetitle: escapeHtml(doc.frontmatter.title),
@@ -144,13 +143,14 @@ export function buildCollectionContext(
 }
 
 function itemToTemplateItem(item: BuildDocument, authorIndex?: AuthorDocumentIndex, showAuthor?: boolean): PartGroupTemplateItem {
-  const authorHref = resolveAuthorHref(item.frontmatter.author, authorIndex);
+  const showAuthorValue = showAuthor !== false;
+  const authorHref = showAuthorValue ? resolveAuthorHref(item.frontmatter.author, authorIndex) : undefined;
   return {
     href: docHref(item),
     title: item.frontmatter.title,
-    author: item.frontmatter.author.join(', '),
+    author: showAuthorValue ? item.frontmatter.author.join(', ') : '',
     'author-href': authorHref,
-    'show-author': showAuthor ?? true,
+    'show-author': showAuthorValue,
     date: item.frontmatter.date,
     ...(item.frontmatter.abstract !== undefined && {
       abstract: item.frontmatter.abstract,
