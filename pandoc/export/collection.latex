@@ -226,11 +226,23 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
   \begingroup
     \let\addcontentsline\gobblethreeargs
     \refstepcounter{part}%
-    \vspace*{10\baselineskip}%
+    \vspace*{2\baselineskip}%
     {\centering\normalsize\normalfont\textsc{#1}\par}%
     \nopagebreak
+    \vspace{1\baselineskip}%
   \endgroup
   \addcontentsline{toc}{partauthor}{\textsc{#1}}%
+}
+% Versi\'on invisible de \standalonepart para mantener la misma posici\'on
+% del \section cuando el autor del part file est\'a oculto.
+\newcommand{\invisiblestandalonepart}{%
+  \begingroup
+    \let\addcontentsline\gobblethreeargs
+    \refstepcounter{part}%
+    \vspace*{2\baselineskip}%
+    {\centering\normalsize\normalfont\mbox{}\par}%
+    \vspace{1\baselineskip}%
+  \endgroup
 }
 \makeatother
 
