@@ -438,32 +438,45 @@ $endif$
 \newcommand{\toc@prevtype}{0}
 \let\orig@contentsline\contentsline
 \renewcommand{\contentsline}[3]{%
+  % DEBUG: medir \\lastskip antes de procesar
+  \ifdim\lastskip>0pt\relax
+    \typeout{contentsline: #1 — \string\lastskip=\the\lastskip}%
+  \else
+    \typeout{contentsline: #1 — no skip before}%
+  \fi
   \def\@tempa{#1}\def\@tempb{subsection}%
   \ifx\@tempa\@tempb
     \ifnum\toc@prevtype>1\relax
+      \typeout{contentsline: subsection skips space (prev type \toc@prevtype)}%
     \else
       \addvspace{\baselineskip}%
+      \typeout{contentsline: subsection adds 1baselineskip (prev type \toc@prevtype)}%
     \fi
     \gdef\toc@prevtype{2}%
   \else
     \def\@tempb{subsubsection}%
     \ifx\@tempa\@tempb
       \gdef\toc@prevtype{3}%
+      \typeout{contentsline: subsubsection — prevtype 3}%
     \else
       \def\@tempb{paragraph}%
       \ifx\@tempa\@tempb
         \gdef\toc@prevtype{4}%
+        \typeout{contentsline: paragraph — prevtype 4}%
       \else
         \def\@tempb{subparagraph}%
         \ifx\@tempa\@tempb
           \gdef\toc@prevtype{5}%
+          \typeout{contentsline: subparagraph — prevtype 5}%
         \else
           \gdef\toc@prevtype{0}%
+          \typeout{contentsline: #1 — prevtype reset 0}%
         \fi
       \fi
     \fi
   \fi
   \orig@contentsline{#1}{#2}{#3}%
+  \typeout{contentsline: after #1 — \string\lastskip=\the\lastskip}%
 }
 \makeatother
 
