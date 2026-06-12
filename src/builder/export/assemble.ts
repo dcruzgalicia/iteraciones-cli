@@ -245,7 +245,7 @@ function appendItemBody(item: BuildDocument, target: string[], partKind: ItemPar
     } else {
       target.push(`\\part{${title}}\n\n`);
     }
-    target.push('\\thispagestyle{empty}\n\\cleardoublepage\n\\noindent\n\\thispagestyle{plain}\n\n');
+    target.push('\\thispagestyle{empty}\n\\cleardoublepage\n\\thispagestyle{plain}\n\n');
   } else {
     if (showAuthorLine) {
       target.push(`\\chapterauthor{\\textsc{${authors.join(', ')}}}\n\n`);
@@ -258,7 +258,12 @@ function appendItemBody(item: BuildDocument, target: string[], partKind: ItemPar
   const renamedBody = renameFootnotes(item.body, slug);
   const resolvedBody = resolveImagePaths(renamedBody, item.filePath);
   const shiftedBody = shiftHeadings(resolvedBody, 2);
-  target.push(shiftedBody.trim(), '\n\n\\cleardoublepage\n\n');
+  const bodyStart = shiftedBody.trim();
+  if (bodyStart.startsWith('#')) {
+    target.push(bodyStart, '\n\n\\cleardoublepage\n\n');
+  } else {
+    target.push('\\noindent ', bodyStart, '\n\n\\cleardoublepage\n\n');
+  }
 }
 
 /**
