@@ -137,7 +137,6 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \makeatletter
 \newcommand*{\l@partcontainer}[2]{%
   \ifnum \c@tocdepth > -1\relax
-    \addpenalty{-\@highpenalty}%
     \addvspace{1\baselineskip}%
     \noindent\normalfont\normalsize\MakeUppercase{#1}
     \par
