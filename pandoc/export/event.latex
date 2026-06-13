@@ -23,6 +23,9 @@ $endif$
 % ─── Idioma ──────────────────────────────────────────────────────────────────
 \usepackage[spanish,mexico-com,es-notilde,es-noshorthands,es-noindentfirst,es-ucroman]{babel}
 
+% ─── xpatch: personalización de \dictum y \maketitle ──────────────────────────
+\usepackage{xpatch}
+
 % ─── \maketitle: título, autor y fecha con tamaño normal ──────────────────────
 \makeatletter
 \renewcommand{\maketitle}{%
@@ -169,7 +172,10 @@ $endif$
 \renewcommand*{\dictumwidth}{0.5\textwidth}
 \renewcommand*{\dictumrule}{}
 \setkomafont{dictumauthor}{\normalsize\normalfont}
-\renewcommand*{\dictumauthorformat}[1]{#1\vspace*{2\baselineskip}}
+% Valor por defecto; el plugin ajusta a 2\topskip entre dictums consecutivos
+\renewcommand*{\dictumauthorformat}[1]{#1\vspace*{3\topskip}}
+% KOMA-Script no agrega espacio vertical antes del parbox; lo parcheamos
+\xpatchcmd{\dictum}{\par}{\par\addvspace{1.5\topskip}}{}{}
 
 % ─── Entornos de alineación (pandoc genera estos) ────────────────────────────
 \renewenvironment{center}{\par\centering}{\par}

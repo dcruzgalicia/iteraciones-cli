@@ -4,9 +4,11 @@ import type { IPlugin } from "../../src/plugin/types.js";
  * Plugin built-in `dictum-plugin` para iteraciones-cli.
  *
  * Transforma fenced divs con clase `.dictum` en el comando LaTeX
- * `\dictum[author]{quote}` durante la exportación PDF, aprovechando
- * la configuración KOMA-Script ya presente en las plantillas LaTeX
- * del proyecto.
+ * `\dictum[author]{quote}` durante la exportación PDF.
+ *
+ * Detecta dictums consecutivos para reducir el espaciado entre ellos:
+ * - Si un dictum va seguido de otro dictum → `\vspace*{2\topskip}`
+ * - Si es el último dictum o va seguido de párrafo → `\vspace*{3\topskip}`
  *
  * Se registra automáticamente en todos los builds; no es necesario
  * declararlo en `_iteraciones.yaml`.
@@ -29,6 +31,22 @@ import type { IPlugin } from "../../src/plugin/types.js";
 const DICTUM_RE = /:::\s*\{\.dictum[^}]*\}\n([\s\S]*?)\n:::/g;
 
 /**
+ * Regex para detectar si entre dos dictums solo hay espacios/blank lines.
+ * Captura cualquier texto entre el cierre `:::` de un dictum
+ * y la apertura del siguiente.
+ */
+const CONSECUTIVE_GAP_RE = /^[ \t]*\n+[ \t]*$/;
+
+interface DictumMatch {
+  /** Índice de inicio del match completo en el body. */
+  index: number;
+  /** Longitud del match completo. */
+  length: number;
+  /** Contenido capturado (entre los `:::`). */
+  content: string;
+}
+
+/**
  * Escapa caracteres especiales de LaTeX para que el contenido
  * se renderice como texto literal dentro de `\dictum{…}`.
  */
@@ -46,38 +64,85 @@ function escapeLatex(text: string): string {
     .replace(/%/g, "\\%");
 }
 
+/**
+ * Convierte el contenido de un fenced div .dictum a LaTeX.
+ */
+function renderDictum(content: string): {
+  latex: string;
+} {
+  const lines = content
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+
+  if (lines.length === 0) return { latex: "" };
+
+  const quoteRaw = lines.slice(0, -1).join(" ");
+  const authorRaw =
+    lines.length > 1 ? (lines[lines.length - 1] ?? "") : undefined;
+
+  const quote = escapeLatex(quoteRaw);
+
+  if (authorRaw) {
+    const author = escapeLatex(authorRaw);
+    return { latex: `\\dictum[${author}]{${quote}}` };
+  }
+
+  return { latex: `\\dictum{${quote}}` };
+}
+
 const plugin: IPlugin = {
   name: "dictum-plugin",
 
   beforeExport(context) {
-    const body = context.body.replace(
-      DICTUM_RE,
-      (_match: string, content: string) => {
-        const lines = content
-          .split("\n")
-          .map((l) => l.trim())
-          .filter((l) => l.length > 0);
+    const body = context.body;
+    const matches: DictumMatch[] = [];
 
-        if (lines.length === 0) return "";
+    // Primera pasada: recolectar todos los matches con matchAll
+    // (escanea todo el string, a diferencia de exec con lastIndex)
+    for (const m of body.matchAll(DICTUM_RE)) {
+      matches.push({
+        index: m.index,
+        length: m[0].length,
+        content: m[1],
+      });
+    }
 
-        // La última línea no vacía se considera el autor;
-        // el resto se concatena como la cita.
-        const quoteRaw = lines.slice(0, -1).join(" ");
-        const authorRaw =
-          lines.length > 1 ? (lines[lines.length - 1] ?? "") : undefined;
+    if (matches.length === 0) return context;
 
-        const quote = escapeLatex(quoteRaw);
+    // Segunda pasada: determinar si cada dictum es seguido de otro dictum
+    // (reemplazo de derecha a izquierda para no alterar índices)
+    let result = body;
+    for (let i = matches.length - 1; i >= 0; i--) {
+      const m = matches[i];
+      const rendered = renderDictum(m.content);
+      if (!rendered.latex) {
+        result = result.slice(0, m.index) + result.slice(m.index + m.length);
+        continue;
+      }
 
-        if (authorRaw) {
-          const author = escapeLatex(authorRaw);
-          return `\\dictum[${author}]{${quote}}`;
+      // Determinar si este dictum es seguido inmediatamente por otro
+      // (solo espacios/blank lines entre el cierre y la siguiente apertura)
+      const next = matches[i + 1];
+      let isConsecutive = false;
+      if (next) {
+        const gapStart = m.index + m.length;
+        const gapEnd = next.index;
+        const gap = body.slice(gapStart, gapEnd);
+        if (CONSECUTIVE_GAP_RE.test(gap)) {
+          isConsecutive = true;
         }
+      }
 
-        return `\\dictum{${quote}}`;
-      },
-    );
+      const spacing = isConsecutive ? "2\\topskip" : "3\\topskip";
+      const prefix = `\\renewcommand*{\\dictumauthorformat}[1]{#1\\vspace*{${spacing}}}`;
+      const latex = `${prefix}\n${rendered.latex}`;
 
-    return { ...context, body };
+      result =
+        result.slice(0, m.index) + latex + result.slice(m.index + m.length);
+    }
+
+    return { ...context, body: result };
   },
 };
 
