@@ -241,9 +241,9 @@ function appendItemBody(item: BuildDocument, target: string[], partKind: ItemPar
   if (partKind === 'standalone-file') {
     if (showAuthorLine) {
       target.push(`\\standalonepart{\\textsc{${authors.join(', ')}}}\n\n`);
-      target.push(`## ${title}\n\n`);
+      target.push(`\\standalonesection{${title}}\n\n`);
     } else {
-      target.push(`\\part{${title}}\n\n`);
+      target.push(`\\standalonesection{${title}}\n\n`);
     }
     target.push('\\thispagestyle{empty}\n\\cleardoublepage\n\\thispagestyle{plain}\n\n');
   } else {
