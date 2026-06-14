@@ -124,9 +124,9 @@ $endif$
 $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 
 % ─── TOC ─────────────────────────────────────────────────────────────────────
-\renewcaptionname{spanish}{\contentsname}{\normalsize\bfseries\MakeUppercase{Índice}}
+\renewcaptionname{spanish}{\contentsname}{\normalsize\bfseriesÍndice}
 \BeforeTOCHead{%
-  \RedeclareSectionCommand[beforeskip=5\baselineskip,afterskip=2\baselineskip,afterindent=false]{chapter}%
+  \RedeclareSectionCommand[beforeskip=4\baselineskip,afterskip=2\baselineskip,afterindent=false]{chapter}%
 }
 \makeatletter
 \newcommand*{\TOCLeaderWide}{\leaders\hbox{\kern.15em\hbox{.}\kern.15em}\hfill}
@@ -157,7 +157,7 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
     \addvspace{1\baselineskip}%
     \noindent\normalfont\normalsize
     #1
-    \par
+    \par%
   \fi
 }
 \newcommand*{\l@chapterauthor}[2]{%
@@ -166,7 +166,7 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
     \addvspace{1\baselineskip}%
     \noindent\normalfont\normalsize
     #1
-    \par
+    \par%
   \fi
 }
 \makeatother
@@ -201,13 +201,15 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 
 \setkomafont{chapterentry}{\normalsize\normalfont}
 \DeclareTOCStyleEntry[linefill=\TOCLeaderMedium,beforeskip=0.5\baselineskip]{tocline}{chapter}
-\DeclareTOCStyleEntry[entryformat=\normalsize,linefill=\TOCLeaderTight,beforeskip=0pt]{tocline}{section}
-\DeclareTOCStyleEntry[entryformat=\normalsize\itshape,linefill=\TOCLeaderTight,beforeskip=0pt]{tocline}{subsection}
-\DeclareTOCStyleEntry[entryformat=\normalsize\normalfont,linefill=\TOCLeaderTighter,beforeskip=0pt]{tocline}{subsubsection}
-\DeclareTOCStyleEntry[entryformat=\normalsize\normalfont,linefill=\TOCLeaderTighter,beforeskip=0pt]{tocline}{paragraph}
-\DeclareTOCStyleEntry[entryformat=\normalsize\normalfont,linefill=\TOCLeaderTighter,beforeskip=0pt]{tocline}{subparagraph}
+\DeclareTOCStyleEntry[entryformat=\normalsize\bfseries,linefill=\TOCLeaderTight,beforeskip=0pt]{tocline}{section}
+\makeatletter\providecommand*{\toclevel@standalonesection}{1}\makeatother
+\DeclareTOCStyleEntry[entryformat=\normalsize\normalfont,linefill=\TOCLeaderTight,beforeskip=0pt,indent=0pt,numwidth=0pt]{tocline}{standalonesection}
+\DeclareTOCStyleEntry[entryformat=\normalsize\itshape,linefill=\TOCLeaderTight,beforeskip=1\baselineskip]{tocline}{subsection}
+\DeclareTOCStyleEntry[entryformat=\normalsize\normalfont\hspace*{2em}\textbullet\ ,linefill=\TOCLeaderTighter,beforeskip=0pt]{tocline}{subsubsection}
+\DeclareTOCStyleEntry[entryformat=\normalsize\normalfont\hspace*{4em}\textbullet\ ,linefill=\TOCLeaderTighter,beforeskip=0pt]{tocline}{paragraph}
+\DeclareTOCStyleEntry[entryformat=\normalsize\normalfont\hspace*{6em}\textbullet\ ,linefill=\TOCLeaderTighter,beforeskip=0pt]{tocline}{subparagraph}
 \RedeclareSectionCommand[beforeskip=10\baselineskip,afterskip=2\baselineskip,afterindent=false]{part}
-\setkomafont{part}{\normalsize\bfseries}
+\setkomafont{part}{\normalsize\normalfont}
 \makeatletter
 \let\scr@part\@part
 \renewcommand*{\@part}[2][]
@@ -246,9 +248,20 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
   \endgroup
 }
 \makeatother
+% \standalonesection: seccion hija de \standalonepart, en mayusculas,
+% sin negritas, con entrada TOC y bookmark via hyperref
+\newcommand{\standalonesection}[1]{%
+  \begingroup
+    \let\addcontentsline\gobblethreeargs
+    \let\addtocontents\gobbletwoargs
+    \section{\normalfont\MakeUppercase{#1}}%
+  \endgroup
+  \addcontentsline{toc}{standalonesection}{\MakeUppercase{#1}}%
+}
 
 % \containerpart: \part{} con entrada TOC sin número de página
 \newcommand{\gobblethreeargs}[3]{}
+\newcommand{\gobbletwoargs}[2]{}
 \newcommand{\containerpart}[1]{%
   \begingroup
     \let\addcontentsline\gobblethreeargs
@@ -288,24 +301,24 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \makeatletter
 \renewcommand{\sectionlinesformat}[4]{%
   \ifstr{#1}{section}
-    {\thispagestyle{plain}\@hangfrom{\hskip #2#3}{\MakeUppercase{#4}}}
+    {\thispagestyle{plain}\@hangfrom{\hskip #2#3}{#4}}
     {\@hangfrom{\hskip #2#3}{#4}}%
 }
 % TOC: secciones en mayúsculas + línea en blanco después
 \let\orig@addsectiontocentry\addsectiontocentry
 \renewcommand{\addsectiontocentry}[2]{%
-  \orig@addsectiontocentry{#1}{\MakeUppercase{#2}}%
+  \orig@addsectiontocentry{#1}{#2}%
   \addtocontents{toc}{\protect\addvspace{\baselineskip}}%
 }
 \makeatother
 
 % ─── Subsecciones ────────────────────────────────────────────────────────────
 \RedeclareSectionCommand[beforeskip=1\baselineskip,afterskip=1\baselineskip,afterindent=false]{subsection}
-\setkomafont{subsection}{\normalsize\bfseries\itshape}
+\setkomafont{subsection}{\normalsize\itshape}
 
 % ─── Subsubsecciones ─────────────────────────────────────────────────────────
 \RedeclareSectionCommand[beforeskip=1\baselineskip,afterskip=1\baselineskip,afterindent=false]{subsubsection}
-\setkomafont{subsubsection}{\normalsize\itshape}
+\setkomafont{subsubsection}{\normalsize\normalfont}
 
 % ─── Párrafos ──────────────────────────────────────────────────
 \RedeclareSectionCommand[beforeskip=1\baselineskip,afterskip=1\baselineskip,afterindent=false]{paragraph}
