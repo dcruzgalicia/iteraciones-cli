@@ -53,6 +53,7 @@ const EPUB_EMBED_FONTS: readonly string[] = [
  * Cadena de resolución (primera ruta existente):
  *   1. {cwd}/pandoc/export/{type}.latex  — override local
  *   2. built-in pandoc/export/{type}.latex
+ *   3. built-in pandoc/export/file.latex  — fallback universal
  *
  * Si ninguna ruta existe, lanza ConfigError.
  */
@@ -64,7 +65,11 @@ function resolveLatexTemplatePath(type: string, cwd?: string): string {
   const builtin = join(TEMPLATES_DIR, `${type}.latex`);
   if (existsSync(builtin)) return builtin;
 
-  throw new ConfigError(`Template LaTeX '${type}.latex' no encontrado en ${TEMPLATES_DIR}`, builtin);
+  // Fallback universal: usa file.latex si no hay template específico para el tipo.
+  const fallback = join(TEMPLATES_DIR, 'file.latex');
+  if (existsSync(fallback)) return fallback;
+
+  throw new ConfigError(`Template LaTeX '${type}.latex' ni su fallback 'file.latex' encontrados en ${TEMPLATES_DIR}`, builtin);
 }
 
 /**
