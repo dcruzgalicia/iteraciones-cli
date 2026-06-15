@@ -192,7 +192,11 @@ $endif$
 \renewcommand{\footrulewidth}{0pt}
 \fancypagestyle{plain}{%
   \fancyhf{}%
+$if(pageno-head)$
   \fancyfoot[C]{\normalfont\normalsize\thepage}%
+$else$
+  \fancyfoot[$if(pageno-fancy)$$pageno-fancy$$else$R$endif$]{\normalfont\normalsize\thepage}%
+$endif$
   \renewcommand{\headrulewidth}{0pt}%
   \renewcommand{\footrulewidth}{0pt}%
 }
@@ -326,6 +330,7 @@ $if(toc)$
 $endif$
 \makeatletter\@mainmattertrue\makeatother
 \renewcommand{\thepage}{\arabic{page}}
+\thispagestyle{plain}
 \noindent
 $body$
 $if(biblatex)$
