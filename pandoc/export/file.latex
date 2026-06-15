@@ -324,6 +324,7 @@ $if(toc)$
 \endgroup
 \clearpage
 $endif$
+\makeatletter\@mainmattertrue\makeatother
 \renewcommand{\thepage}{\arabic{page}}
 \noindent
 $body$
