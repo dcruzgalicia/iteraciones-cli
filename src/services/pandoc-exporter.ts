@@ -235,6 +235,11 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfF
     if (pdfFormat.sides) {
       lines.push(`twoside: ${pdfFormat.sides === 'twoside' ? 'true' : 'false'}`);
     }
+    // Respect-header-plain: cuando es true, plain style usa la posicion header
+    // configurada en lugar de footer-center.
+    if (pdfFormat.respectHeaderPlain) {
+      lines.push('respect-header-plain: true');
+    }
   }
 
   // fontdir ya no se usa (pdflatex no necesita rutas de fuentes OTF).

@@ -40,6 +40,13 @@ export interface PdfFormatConfig {
   /** Division top-level para pandoc: section (default), chapter o part. */
   topLevelDivision?: 'section' | 'chapter' | 'part';
   sfdefaults?: boolean;
+  /**
+   * Cuando es true, el estilo plain (usado en primera pagina de contenido
+   * y paginas de section) respeta la posicion header configurada en
+   * page-number, en lugar de usar footer-center.
+   * Solo aplica cuando page-number es header-*. Por defecto false.
+   */
+  respectHeaderPlain?: boolean;
 }
 
 export interface EpubFormatConfig {

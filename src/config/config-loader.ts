@@ -239,6 +239,8 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     );
   }
 
+  const respectHeaderPlain = typeof obj['respect-header-plain'] === 'boolean' ? obj['respect-header-plain'] : DEFAULT_PDF_FORMAT.respectHeaderPlain;
+
   return {
     engine,
     concurrency,
@@ -259,6 +261,7 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     documentclass,
     topLevelDivision,
     sfdefaults,
+    respectHeaderPlain,
   };
 }
 
