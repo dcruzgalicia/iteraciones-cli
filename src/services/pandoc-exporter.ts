@@ -319,7 +319,7 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
     '--pdf-engine',
     pdfFormat?.engine ?? 'pdflatex',
     `--template=${templatePath}`,
-    `--top-level-division=${doc.metadata.documentclass === 'scrbook' ? 'chapter' : 'section'}`,
+    `--top-level-division=${doc.type === 'file' && doc.metadata.topLevelDivision ? doc.metadata.topLevelDivision : doc.metadata.documentclass === 'scrbook' ? 'chapter' : 'section'}`,
     '--output',
     outputPath,
   ];
