@@ -91,6 +91,11 @@ export function assembleExportDocument(
 
   const tocDepth = pdfFormat?.tocDepth;
   const toc = pdfFormat?.toc ?? (tocDepth !== undefined ? tocDepth > 0 : documentclass === 'scrbook');
+  const perFileTopLevel =
+    rawFormatPdf !== undefined && typeof rawFormatPdf['top-level-division'] === 'string'
+      ? (rawFormatPdf['top-level-division'] as 'section' | 'chapter' | 'part')
+      : undefined;
+  const topLevelDivision = perFileTopLevel ?? pdfFormat?.topLevelDivision;
 
   const metadata: ExportMetadata = {
     title: doc.frontmatter.title || 'Sin título',
@@ -105,6 +110,7 @@ export function assembleExportDocument(
     bibliography,
     csl,
     documentclass,
+    topLevelDivision,
     toc,
     tocDepth: tocDepth ?? undefined,
     abstract: typeof rawEditorial['abstract'] === 'string' && rawEditorial['abstract'].trim() ? rawEditorial['abstract'].trim() : undefined,
@@ -249,10 +255,11 @@ function appendItemBody(item: BuildDocument, target: string[], partKind: ItemPar
   } else {
     if (showAuthorLine) {
       target.push(`\\chapterauthor{\\textsc{${authors.join(', ')}}}\n\n`);
+      target.push(`\\sectionchild{${title}}\n\n`);
     } else {
       target.push(`\\invisiblechapter\n\n`);
+      target.push(`## ${title}\n\n`);
     }
-    target.push(`## ${title}\n\n`);
   }
 
   const renamedBody = renameFootnotes(item.body, slug);
@@ -539,6 +546,11 @@ export function assembleAuthorExportVariants(
       ? 'scrartcl'
       : undefined;
 
+  const authorTopLevel =
+    rawFormatPdf !== undefined && typeof rawFormatPdf['top-level-division'] === 'string'
+      ? (rawFormatPdf['top-level-division'] as 'section' | 'chapter' | 'part')
+      : undefined;
+
   const metadata: ExportMetadata = {
     title: doc.frontmatter.title || 'Sin título',
     author: doc.frontmatter.author,
@@ -552,6 +564,7 @@ export function assembleAuthorExportVariants(
     bibliography,
     csl,
     documentclass: perFileDocClass ?? LATEX_CLASS.author,
+    topLevelDivision: authorTopLevel,
     toc: false,
     abstract: typeof rawEditorial['abstract'] === 'string' && rawEditorial['abstract'].trim() ? rawEditorial['abstract'].trim() : undefined,
     keywords: undefined,

@@ -37,6 +37,8 @@ export interface PdfFormatConfig {
   pageNumber?: PageNumberPlacement;
   sides?: Sides;
   documentclass?: 'scrartcl' | 'scrbook';
+  /** Division top-level para pandoc: section (default), chapter o part. */
+  topLevelDivision?: 'section' | 'chapter' | 'part';
   sfdefaults?: boolean;
 }
 

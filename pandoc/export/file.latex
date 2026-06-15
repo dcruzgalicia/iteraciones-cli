@@ -117,15 +117,17 @@ $endif$
 $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 
 % ─── TOC ─────────────────────────────────────────────────────────────────────
-\renewcaptionname{spanish}{\contentsname}{\normalsize\bfseries Índice}
+\renewcaptionname{spanish}{\contentsname}{\normalsize\bfseriesÍndice}
 \makeatletter
 \newcommand*{\TOCLeaderTight}{\leaders\hbox{\kern.075em\hbox{.}\kern.075em}\hfill}
 \newcommand*{\TOCLeaderTighter}{\leaders\hbox{\kern.05em\hbox{.}\kern.05em}\hfill}
 \makeatother
 \providecommand{\nonumberline}[1]{}
-\DeclareTOCStyleEntry[entryformat=\normalsize\itshape,linefill=\TOCLeaderTight,beforeskip=0pt]{tocline}{section}
-\DeclareTOCStyleEntry[linefill=\TOCLeaderTight,beforeskip=0pt]{tocline}{subsection}
-\DeclareTOCStyleEntry[linefill=\TOCLeaderTighter,beforeskip=0pt]{tocline}{subsubsection}
+\DeclareTOCStyleEntry[entryformat=\normalsize\bfseries,linefill=\TOCLeaderTight,beforeskip=1\baselineskip]{tocline}{section}
+\DeclareTOCStyleEntry[entryformat=\normalsize\itshape\hspace*{2em}\textbullet\ ,linefill=\TOCLeaderTight,beforeskip=0pt]{tocline}{subsection}
+\DeclareTOCStyleEntry[entryformat=\normalsize\normalfont\hspace*{4em}\textbullet\ ,linefill=\TOCLeaderTighter,beforeskip=0pt]{tocline}{subsubsection}
+\DeclareTOCStyleEntry[entryformat=\normalsize\normalfont\hspace*{6em}\textbullet\ ,linefill=\TOCLeaderTighter,beforeskip=0pt]{tocline}{paragraph}
+\DeclareTOCStyleEntry[entryformat=\normalsize\normalfont\hspace*{8em}\textbullet\ ,linefill=\TOCLeaderTighter,beforeskip=0pt]{tocline}{subparagraph}
 
 $if(has-chapter)$
 % ─── Capítulos (solo cuando se usa scrbook) ───────────────────────────────────
@@ -135,28 +137,31 @@ $if(has-chapter)$
 $endif$
 
 % ─── Secciones (equivalente a capítulo) ──────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=3\baselineskip,afterskip=1\baselineskip,afterindent=false]{section}
-\setkomafont{section}{\normalsize\itshape}
+\RedeclareSectionCommand[beforeskip=0pt,afterskip=2\baselineskip,afterindent=false]{section}
+\setkomafont{section}{\normalsize\bfseries}
+\let\originalsection\section
+\renewcommand{\section}{\cleardoublepage\originalsection}
 \renewcommand{\raggedsection}{\centering}
 \makeatletter
 \renewcommand{\sectionlinesformat}[4]{%
-  \ifstr{#1}{section}{\thispagestyle{plain}}{}%
-  \@hangfrom{\hskip #2#3}{#4}%
+  \ifstr{#1}{section}
+    {\thispagestyle{plain}\vspace*{3\baselineskip}\@hangfrom{\hskip #2#3}{#4}}
+    {\@hangfrom{\hskip #2#3}{#4}}%
 }
 \makeatother
 
 % ─── Subsecciones ────────────────────────────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=1\baselineskip,afterskip=1sp,afterindent=false]{subsection}
-\setkomafont{subsection}{\normalsize\normalfont}
+\RedeclareSectionCommand[beforeskip=1\baselineskip,afterskip=1\baselineskip,afterindent=false]{subsection}
+\setkomafont{subsection}{\normalsize\itshape}
 
 % ─── Subsubsecciones ─────────────────────────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=0pt,afterskip=1sp,afterindent=false]{subsubsection}
+\RedeclareSectionCommand[beforeskip=1\baselineskip,afterskip=1\baselineskip,afterindent=false]{subsubsection}
 \setkomafont{subsubsection}{\normalsize\normalfont}
 
 % ─── Párrafos ──────────────────────────────────────────────────
-\RedeclareSectionCommand[beforeskip=0pt,afterskip=1sp,afterindent=false]{paragraph}
+\RedeclareSectionCommand[beforeskip=1\baselineskip,afterskip=1\baselineskip,afterindent=false]{paragraph}
 \setkomafont{paragraph}{\normalsize\normalfont}
-\RedeclareSectionCommand[beforeskip=0pt,afterskip=1sp,afterindent=false]{subparagraph}
+\RedeclareSectionCommand[beforeskip=1\baselineskip,afterskip=1sp,afterindent=false]{subparagraph}
 \setkomafont{subparagraph}{\normalsize\normalfont}
 
 % ─── Dictum (epígrafe KOMA) ──────────────────────────────────────────────────
