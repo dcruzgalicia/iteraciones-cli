@@ -18,12 +18,12 @@ export const EXPORTABLE_TYPES = new Set<DocumentType>(['file', 'event', 'author'
  * scrbook:  colecciones (libro, programa de actividades).
  */
 export const LATEX_CLASS = {
-  file: 'scrartcl',
+  file: 'scrbook',
   event: 'scrbook',
   author: 'scrbook',
   collection: 'scrbook',
   events: 'scrbook',
-} as const satisfies Partial<Record<DocumentType, 'scrartcl' | 'scrbook'>>;
+} as const satisfies Partial<Record<DocumentType, 'scrbook'>>;
 
 /**
  * Tipo de part dentro de una colección.
@@ -83,6 +83,8 @@ export interface ExportMetadata {
   abstract?: string;
   /** Palabras clave del documento. */
   keywords?: string[];
+  /** Si es true, el documento usa partes (container o standalone-file) en su estructura. */
+  hasParts?: boolean;
 }
 
 /**

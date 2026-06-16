@@ -323,6 +323,8 @@ $endif$
 \noindent
 $body$
 $if(biblatex)$
-\printbibliography
+\section*{Referencias}
+\addcontentsline{toc}{section}{Referencias}
+\printbibliography[heading=none]
 $endif$
 \end{document}

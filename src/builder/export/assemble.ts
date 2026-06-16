@@ -97,6 +97,8 @@ export function assembleExportDocument(
       : undefined;
   const topLevelDivision = perFileTopLevel ?? pdfFormat?.topLevelDivision;
 
+  const hasParts = parts !== undefined && parts.length > 0;
+
   const metadata: ExportMetadata = {
     title: doc.frontmatter.title || 'Sin título',
     author: doc.frontmatter.author,
@@ -117,6 +119,7 @@ export function assembleExportDocument(
     keywords: Array.isArray(rawEditorial['keywords'])
       ? (rawEditorial['keywords'] as unknown[]).filter((k): k is string => typeof k === 'string')
       : undefined,
+    hasParts,
   };
 
   const body = documentclass === 'scrartcl' ? doc.body : assembleBookBody(doc, items, parts, loosePaths);
@@ -548,6 +551,7 @@ export function assembleAuthorExportVariants(
     toc: false,
     abstract: typeof rawEditorial['abstract'] === 'string' && rawEditorial['abstract'].trim() ? rawEditorial['abstract'].trim() : undefined,
     keywords: undefined,
+    hasParts: false,
   };
 
   // Resolver y ordenar las obras del autor por fecha descendente
