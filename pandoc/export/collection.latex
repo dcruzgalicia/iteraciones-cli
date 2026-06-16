@@ -560,6 +560,13 @@ $if(biblatex)$
 \let\cleardoublepage\relax
 \backmatter
 \endgroup
-\printbibliography
+$if(has-parts)$
+\part*{Referencias}
+\addcontentsline{toc}{part}{\MakeUppercase{Referencias}}
+$else$
+\section*{Referencias}
+\addcontentsline{toc}{section}{Referencias}
+$endif$
+\printbibliography[heading=none]
 $endif$
 \end{document}

@@ -131,7 +131,9 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfF
   if (metadata.description) lines.push(`description: ${yamlString(metadata.description)}`);
   if (metadata.rights) lines.push(`rights: ${yamlString(metadata.rights)}`);
   if (metadata.cover) lines.push(`cover-image: ${yamlString(metadata.cover)}`);
-  if (metadata.bibliography) lines.push(`bibliography: ${yamlString(metadata.bibliography)}`);
+  if (metadata.bibliography) {
+    lines.push(`bibliography: ${yamlString(metadata.bibliography)}`);
+  }
   // Validar existencia del CSL: si el archivo no existe, pandoc fallaría silenciosamente.
   if (metadata.csl) {
     if (existsSync(metadata.csl)) {
@@ -141,7 +143,10 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfF
     }
   }
 
-  // Metadatos académicos opcionales
+  // Variable de template: indica si el documento usa parts para el título de referencias
+  if (metadata.hasParts) {
+    lines.push('has-parts: true');
+  }
   if (metadata.abstract) lines.push(`abstract: ${yamlString(metadata.abstract)}`);
   if (metadata.keywords && metadata.keywords.length > 0) {
     lines.push('keywords:');
@@ -331,8 +336,15 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
 
   // Activar el procesador de citas cuando hay bibliografía declarada.
   // Sin --citeproc, las citas [@referencia] quedan sin resolver en el PDF final.
+  // Usamos un Lua filter para insertar el título antes de las referencias.
   if (doc.metadata.bibliography) {
+    // Escribir nivel de referencia para el Lua filter (via temp file)
+    const refLevel = doc.metadata.documentclass === 'scrbook' && doc.metadata.hasParts ? 'part' : 'section';
+    try {
+      Bun.write('/tmp/iteraciones-ref-level', refLevel);
+    } catch {}
     args.push('--citeproc');
+    args.push('--lua-filter', join(import.meta.dir, '../../pandoc/filters/suppress-references.lua'));
   }
 
   let proc: ReturnType<typeof Bun.spawn>;
