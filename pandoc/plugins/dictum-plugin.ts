@@ -47,6 +47,42 @@ interface DictumMatch {
 }
 
 /**
+ * Convierte formato inline markdown (negritas y cursivas) a comandos LaTeX,
+ * antes de aplicar escapeLatex. Usa placeholders para proteger los comandos
+ * LaTeX producidos del escape posterior.
+ */
+function renderMarkdownInline(text: string): string {
+  const markers: string[] = [];
+
+  // Negritas: **texto** → \textbf{texto}
+  text = text.replace(/\*\*(.+?)\*\*/g, (_match: string, inner: string) => {
+    const idx = markers.length;
+    markers.push(`\\textbf{${escapeLatex(inner)}}`);
+    return `\x00MD${idx}\x00`;
+  });
+
+  // Cursivas: *texto* → \textit{texto}
+  text = text.replace(/\*(.+?)\*/g, (_match: string, inner: string) => {
+    const idx = markers.length;
+    markers.push(`\\textit{${escapeLatex(inner)}}`);
+    return `\x00MD${idx}\x00`;
+  });
+
+  // Escapar el texto restante
+  text = escapeLatex(text);
+
+  // Restaurar placeholders
+  for (let i = 0; i < markers.length; i++) {
+    const restored = markers[i];
+    if (restored !== undefined) {
+      text = text.replace(`\x00MD${i}\x00`, restored);
+    }
+  }
+
+  return text;
+}
+
+/**
  * Escapa caracteres especiales de LaTeX para que el contenido
  * se renderice como texto literal dentro de `\dictum{…}`.
  */
@@ -81,10 +117,10 @@ function renderDictum(content: string): {
   const authorRaw =
     lines.length > 1 ? (lines[lines.length - 1] ?? "") : undefined;
 
-  const quote = escapeLatex(quoteRaw);
+  const quote = renderMarkdownInline(quoteRaw);
 
   if (authorRaw) {
-    const author = escapeLatex(authorRaw);
+    const author = renderMarkdownInline(authorRaw);
     return { latex: `\\dictum[${author}]{${quote}}` };
   }
 
