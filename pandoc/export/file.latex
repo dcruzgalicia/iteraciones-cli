@@ -145,7 +145,7 @@ $endif$
 \makeatletter
 \renewcommand{\sectionlinesformat}[4]{%
   \ifstr{#1}{section}
-    {\thispagestyle{plain}\vspace*{3\baselineskip}\@hangfrom{\hskip #2#3}{#4}}
+    {\thispagestyle{plain}\vspace*{3\baselineskip}\refstepcounter{section}\@hangfrom{\hskip #2#3}{#4}}
     {\@hangfrom{\hskip #2#3}{#4}}%
 }
 \makeatother
