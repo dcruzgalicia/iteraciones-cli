@@ -174,8 +174,24 @@ const plugin: IPlugin = {
       const prefix = `\\renewcommand*{\\dictumauthorformat}[1]{#1\\vspace*{${spacing}}}`;
       const latex = `${prefix}\n${rendered.latex}`;
 
-      result =
-        result.slice(0, m.index) + latex + result.slice(m.index + m.length);
+      let endIndex = m.index + m.length;
+      if (!isConsecutive) {
+        // Consumir las líneas en blanco después del cierre :::
+        // y añadir \noindent para que el párrafo siguiente no tenga indentación.
+        const after = result.slice(endIndex);
+        const blankMatch = /^\n+/.exec(after);
+        if (blankMatch) {
+          endIndex += blankMatch[0].length;
+          result =
+            result.slice(0, m.index) +
+            `${latex}\n\\noindent\\ignorespaces ` +
+            result.slice(endIndex);
+        } else {
+          result = result.slice(0, m.index) + latex + result.slice(endIndex);
+        }
+      } else {
+        result = result.slice(0, m.index) + latex + result.slice(endIndex);
+      }
     }
 
     return { ...context, body: result };
