@@ -232,7 +232,7 @@ function appendItemBody(item: BuildDocument, target: string[], partKind: ItemPar
       target.push(`\\standalonepart{\\textsc{${authors.join(', ')}}}\n\n`);
       target.push(`\\standalonesection{${title}}\n\n`);
     } else {
-      target.push(`\\standalonesection{${title}}\n\n`);
+      target.push(`\\vspace*{7\\baselineskip}\\standalonesection{${title}}\n\n`);
     }
     target.push('\\thispagestyle{empty}\n\\cleardoublepage\n\\thispagestyle{plain}\n\n');
   } else {
