@@ -204,7 +204,7 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \DeclareTOCStyleEntry[entryformat=\normalsize\bfseries,linefill=\TOCLeaderTight,beforeskip=1\baselineskip]{tocline}{section}
 \makeatletter\providecommand*{\toclevel@standalonesection}{1}\makeatother
 \makeatletter\providecommand*{\toclevel@sectionchild}{1}\makeatother
-\DeclareTOCStyleEntry[entryformat=\normalsize\normalfont,linefill=\TOCLeaderTight,beforeskip=0pt,indent=0pt,numwidth=0pt]{tocline}{standalonesection}
+\DeclareTOCStyleEntry[entryformat=\normalsize\normalfont,linefill=\TOCLeaderTight,beforeskip=1\baselineskip,indent=0pt,numwidth=0pt]{tocline}{standalonesection}
 \DeclareTOCStyleEntry[entryformat=\normalsize\bfseries,linefill=\TOCLeaderTight,beforeskip=0pt,indent=0pt,numwidth=0pt]{tocline}{sectionchild}
 \DeclareTOCStyleEntry[entryformat=\normalsize\itshape\hspace*{2em}\textbullet\ ,linefill=\TOCLeaderTight,beforeskip=0pt]{tocline}{subsection}
 \DeclareTOCStyleEntry[entryformat=\normalsize\normalfont\hspace*{4em}\textbullet\ ,linefill=\TOCLeaderTighter,beforeskip=0pt]{tocline}{subsubsection}
