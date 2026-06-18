@@ -327,14 +327,14 @@ $if(author)$\author{$for(author)$$author$$sep$ \and $endfor$}$endif$
 $if(publisher)$\publishers{$publisher$}$endif$
 \date{}
 \maketitle
-\clearpage
 $if(toc)$
+\cleardoublepage
 \begingroup
 \let\clearpage\relax
 \let\cleardoublepage\relax
 \tableofcontents
 \endgroup
-\clearpage
+\cleardoublepage
 $endif$
 \makeatletter\@mainmattertrue\makeatother
 \renewcommand{\thepage}{\arabic{page}}
