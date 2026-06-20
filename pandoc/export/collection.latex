@@ -251,14 +251,16 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 }
 \makeatother
 % \standalonesection: seccion hija de \standalonepart, en mayusculas,
-% sin negritas, con entrada TOC y bookmark via hyperref
+% sin negritas, con entrada TOC y bookmark via hyperref.
+% Usa \texorpdfstring para que el PDF outline preserve el caso original
+% mientras el TOC muestra el texto en mayusculas.
 \newcommand{\standalonesection}[1]{%
   \begingroup
     \let\addcontentsline\gobblethreeargs
     \let\addtocontents\gobbletwoargs
     \section{\normalfont\MakeUppercase{#1}}%
   \endgroup
-  \addcontentsline{toc}{standalonesection}{\MakeUppercase{#1}}%
+  \addcontentsline{toc}{standalonesection}{\texorpdfstring{\MakeUppercase{#1}}{#1}}%
 }
 
 \newcommand{\sectionchild}[1]{%
