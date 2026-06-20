@@ -1,5 +1,6 @@
 import type { TemplateContext } from '../../template/render/context.js';
 import { escapeHtml } from '../html.js';
+import { renderMarkdownInline } from '../markdown.js';
 import { docHref } from '../slug.js';
 import type { AuthorDocumentIndex, BuildDocument } from '../types.js';
 
@@ -53,10 +54,13 @@ export function buildAuthorContext(doc: BuildDocument, fileDocs: BuildDocument[]
   const listItems = matched.map((file) => ({
     href: docHref(file),
     title: file.frontmatter.title,
+    'title-html': renderMarkdownInline(file.frontmatter.title),
     author: file.frontmatter.author.join(', '),
     body: '',
     date: file.frontmatter.date,
-    ...(file.frontmatter.abstract !== undefined && { abstract: file.frontmatter.abstract }),
+    ...(file.frontmatter.abstract !== undefined && {
+      abstract: file.frontmatter.abstract,
+    }),
   }));
 
   const tagline = doc.frontmatter.tagline;
@@ -71,6 +75,7 @@ export function buildAuthorContext(doc: BuildDocument, fileDocs: BuildDocument[]
 
   return {
     title: doc.frontmatter.title,
+    'title-html': renderMarkdownInline(doc.frontmatter.title),
     pagetitle: escapeHtml(doc.frontmatter.title),
     author: doc.frontmatter.author.join(', '),
     body: doc.htmlFragment ?? '',
@@ -103,13 +108,19 @@ export function buildAuthorsContext(doc: BuildDocument, authorDocs: BuildDocumen
   const authors = authorDocs.map((authorDoc) => ({
     href: docHref(authorDoc),
     title: authorDoc.frontmatter.title,
+    'title-html': renderMarkdownInline(authorDoc.frontmatter.title),
     body: authorDoc.htmlFragment ?? '',
-    ...(authorDoc.frontmatter.abstract !== undefined && { abstract: authorDoc.frontmatter.abstract }),
-    ...(authorDoc.frontmatter.keywords.length > 0 && { keywords: authorDoc.frontmatter.keywords }),
+    ...(authorDoc.frontmatter.abstract !== undefined && {
+      abstract: authorDoc.frontmatter.abstract,
+    }),
+    ...(authorDoc.frontmatter.keywords.length > 0 && {
+      keywords: authorDoc.frontmatter.keywords,
+    }),
   }));
 
   return {
     title: doc.frontmatter.title,
+    'title-html': renderMarkdownInline(doc.frontmatter.title),
     pagetitle: escapeHtml(doc.frontmatter.title),
     body: doc.htmlFragment ?? '',
     authors,
@@ -154,6 +165,7 @@ export function buildRelatedAuthorsContext(doc: BuildDocument, authorIndex: Auth
     .map((authorDoc) => ({
       href: docHref(authorDoc),
       title: authorDoc.frontmatter.title,
+      'title-html': renderMarkdownInline(authorDoc.frontmatter.title),
       body: authorDoc.htmlFragment ?? '',
     }));
 

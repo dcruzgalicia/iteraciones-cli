@@ -1,5 +1,6 @@
 import type { TemplateContext } from '../../template/render/context.js';
 import { escapeHtml } from '../html.js';
+import { renderMarkdownInline } from '../markdown.js';
 import { docHref } from '../slug.js';
 import type { AuthorDocumentIndex, BuildDocument } from '../types.js';
 
@@ -18,7 +19,11 @@ function resolveSpeakers(
   speakers: SpeakerDefinition[],
   authorIndex: AuthorDocumentIndex,
   docRelativePath: string,
-): Array<{ title: string; href: string | undefined; body: string | undefined }> {
+): Array<{
+  title: string;
+  href: string | undefined;
+  body: string | undefined;
+}> {
   return speakers
     .map((speaker) => {
       if (typeof speaker === 'string') {
@@ -46,7 +51,15 @@ function resolveSpeakers(
         body: speaker.body?.trim() || (authorDoc && authorDoc.relativePath !== docRelativePath ? (authorDoc.htmlFragment ?? undefined) : undefined),
       };
     })
-    .filter((speaker): speaker is { title: string; href: string | undefined; body: string | undefined } => speaker !== undefined);
+    .filter(
+      (
+        speaker,
+      ): speaker is {
+        title: string;
+        href: string | undefined;
+        body: string | undefined;
+      } => speaker !== undefined,
+    );
 }
 
 /**
@@ -70,12 +83,19 @@ export function buildEventContext(doc: BuildDocument, authorIndex: AuthorDocumen
 
   return {
     title: doc.frontmatter.title,
+    'title-html': renderMarkdownInline(doc.frontmatter.title),
     pagetitle: escapeHtml(doc.frontmatter.title),
     author: doc.frontmatter.author.join(', '),
     body: doc.htmlFragment ?? '',
-    ...(typeof doc.frontmatter.time === 'string' && { time: doc.frontmatter.time }),
-    ...(typeof doc.frontmatter.location === 'string' && { location: doc.frontmatter.location }),
-    ...(typeof doc.frontmatter.modality === 'string' && { modality: doc.frontmatter.modality }),
+    ...(typeof doc.frontmatter.time === 'string' && {
+      time: doc.frontmatter.time,
+    }),
+    ...(typeof doc.frontmatter.location === 'string' && {
+      location: doc.frontmatter.location,
+    }),
+    ...(typeof doc.frontmatter.modality === 'string' && {
+      modality: doc.frontmatter.modality,
+    }),
     ...(speakers.length > 0 && { speakers }),
   };
 }
@@ -89,7 +109,11 @@ export function buildEventContext(doc: BuildDocument, authorIndex: AuthorDocumen
 export function splitAndSortEventsByDate(
   docs: BuildDocument[],
   buildDate: Date,
-): { upcoming: BuildDocument[]; past: BuildDocument[]; sorted: BuildDocument[] } {
+): {
+  upcoming: BuildDocument[];
+  past: BuildDocument[];
+  sorted: BuildDocument[];
+} {
   const ref = new Date(buildDate).setHours(0, 0, 0, 0);
   const upcoming: BuildDocument[] = [];
   const past: BuildDocument[] = [];
@@ -131,13 +155,26 @@ export function buildEventsContext(
   const formatItem = (event: BuildDocument) => ({
     href: docHref(event),
     title: event.frontmatter.title,
+    'title-html': renderMarkdownInline(event.frontmatter.title),
     date: event.frontmatter.date,
-    ...(typeof event.frontmatter.time === 'string' && { time: event.frontmatter.time }),
-    ...(typeof event.frontmatter.location === 'string' && { location: event.frontmatter.location }),
-    ...(typeof event.frontmatter.modality === 'string' && { modality: event.frontmatter.modality }),
-    ...(event.frontmatter.author.length > 0 && { author: event.frontmatter.author.join(', ') }),
-    ...(event.frontmatter.abstract !== undefined && { abstract: event.frontmatter.abstract }),
-    ...(event.frontmatter.keywords.length > 0 && { keywords: event.frontmatter.keywords }),
+    ...(typeof event.frontmatter.time === 'string' && {
+      time: event.frontmatter.time,
+    }),
+    ...(typeof event.frontmatter.location === 'string' && {
+      location: event.frontmatter.location,
+    }),
+    ...(typeof event.frontmatter.modality === 'string' && {
+      modality: event.frontmatter.modality,
+    }),
+    ...(event.frontmatter.author.length > 0 && {
+      author: event.frontmatter.author.join(', '),
+    }),
+    ...(event.frontmatter.abstract !== undefined && {
+      abstract: event.frontmatter.abstract,
+    }),
+    ...(event.frontmatter.keywords.length > 0 && {
+      keywords: event.frontmatter.keywords,
+    }),
   });
 
   const listItems = eventDocs.map(formatItem);
@@ -152,6 +189,7 @@ export function buildEventsContext(
 
   return {
     title: doc.frontmatter.title,
+    'title-html': renderMarkdownInline(doc.frontmatter.title),
     pagetitle: escapeHtml(doc.frontmatter.title),
     author: doc.frontmatter.author.join(', '),
     body: doc.htmlFragment ?? '',

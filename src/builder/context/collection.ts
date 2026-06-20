@@ -1,6 +1,7 @@
 import type { CollectionItem } from '../../loader/frontmatter.js';
 import type { TemplateContext } from '../../template/render/context.js';
 import { escapeHtml } from '../html.js';
+import { renderMarkdownInline } from '../markdown.js';
 import { docHref } from '../slug.js';
 import type { AuthorDocumentIndex, BuildDocument } from '../types.js';
 import { resolveAuthorHref } from './authors.js';
@@ -8,6 +9,7 @@ import { resolveAuthorHref } from './authors.js';
 interface PartGroupTemplateItem {
   href: string;
   title: string;
+  'title-html'?: string;
   author: string;
   'author-href'?: string;
   'show-author'?: boolean;
@@ -131,6 +133,7 @@ export function buildCollectionContext(
   }
   return {
     title: doc.frontmatter.title,
+    'title-html': renderMarkdownInline(doc.frontmatter.title),
     pagetitle: escapeHtml(doc.frontmatter.title),
     author: doc.frontmatter.author.join(', '),
     body: doc.htmlFragment ?? '',
@@ -148,6 +151,7 @@ function itemToTemplateItem(item: BuildDocument, authorIndex?: AuthorDocumentInd
   return {
     href: docHref(item),
     title: item.frontmatter.title,
+    'title-html': renderMarkdownInline(item.frontmatter.title),
     author: showAuthorValue ? item.frontmatter.author.join(', ') : '',
     'author-href': authorHref,
     'show-author': showAuthorValue,
