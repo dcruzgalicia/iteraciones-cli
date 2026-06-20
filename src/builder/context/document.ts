@@ -1,5 +1,6 @@
 import type { TemplateContext } from '../../template/render/context.js';
 import { escapeHtml } from '../html.js';
+import { renderMarkdownInline } from '../markdown.js';
 import type { AuthorDocumentIndex, BuildDocument } from '../types.js';
 import { resolveAuthorHref } from './authors.js';
 
@@ -50,13 +51,16 @@ export function buildDocumentContext(doc: BuildDocument, renderedHtml: string, a
 
   return {
     title: doc.frontmatter.title,
+    'title-html': renderMarkdownInline(doc.frontmatter.title),
     pagetitle: escapeHtml(doc.frontmatter.title),
     date: doc.frontmatter.date,
     author: doc.frontmatter.author.join(', '),
     'author-meta': doc.frontmatter.author.map(escapeHtml).filter(Boolean),
     ...(authorHref !== undefined && { 'author-href': authorHref }),
     keywords: doc.frontmatter.keywords,
-    ...(descriptionMeta !== undefined && { 'description-meta': descriptionMeta }),
+    ...(descriptionMeta !== undefined && {
+      'description-meta': descriptionMeta,
+    }),
     ...(dateMeta !== undefined && { 'date-meta': dateMeta }),
     body: renderedHtml,
   };

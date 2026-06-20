@@ -1,5 +1,6 @@
 import type { TemplateContext } from '../../template/render/context.js';
 import { escapeHtml } from '../html.js';
+import { renderMarkdownInline } from '../markdown.js';
 import { docHref } from '../slug.js';
 import type { AuthorDocumentIndex, BuildDocument } from '../types.js';
 import { resolveAuthorHref } from './authors.js';
@@ -36,11 +37,16 @@ export function buildListContext(
     return {
       href: docHref(item),
       title: item.frontmatter.title,
+      'title-html': renderMarkdownInline(item.frontmatter.title),
       author: item.frontmatter.author.join(', '),
       'author-href': authorHref,
       date: item.frontmatter.date,
-      ...(item.frontmatter.abstract !== undefined && { abstract: item.frontmatter.abstract }),
-      ...(item.frontmatter.keywords.length > 0 && { keywords: item.frontmatter.keywords }),
+      ...(item.frontmatter.abstract !== undefined && {
+        abstract: item.frontmatter.abstract,
+      }),
+      ...(item.frontmatter.keywords.length > 0 && {
+        keywords: item.frontmatter.keywords,
+      }),
     };
   });
 
@@ -48,6 +54,7 @@ export function buildListContext(
 
   return {
     title: doc.frontmatter.title,
+    'title-html': renderMarkdownInline(doc.frontmatter.title),
     pagetitle: escapeHtml(doc.frontmatter.title),
     author: doc.frontmatter.author.join(', '),
     ...(pageAuthorHref !== undefined && { 'author-href': pageAuthorHref }),
