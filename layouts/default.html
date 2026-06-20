@@ -1,322 +1,518 @@
 <header
-  class="sticky top-0 z-10 border-b border-accent-200/60 bg-surface-light/95 shadow-[0_2px_30px_oklch(from_var(--color-accent-600)_l_c_h_/_0.08)] backdrop-blur-sm">
-  <div
-    class="max-w-8xl mx-auto flex items-center justify-between px-4 py-3 md:px-8">
-    <a href="$home-href$" class="group flex items-center gap-3 no-underline">
-      $if(site-logo)$
-      <img
-        src="$site-logo$"
-        alt="$site-title$"
-        class="h-7 w-7 shrink-0 object-contain" />
-      $endif$
-      <div>
-        <div
-          class="font-mono text-base leading-tight font-bold tracking-wider text-accent-700 transition-colors group-hover:text-accent-600">
-          $site-title$
-        </div>
-        <div class="font-mono text-xs leading-tight text-zinc-400">
-          $site-tagline$
-        </div>
-      </div>
-    </a>
-    <nav class="flex shrink-0 items-center gap-3 md:gap-6">
-      $if(menuHref)$
-      <a
-        href="$menuHref$"
-        class="relative inline-flex h-10 w-10 items-center justify-center rounded border border-accent-400/60 bg-accent-50/80 text-accent-700 no-underline transition-all duration-200 hover:border-accent-600/80 hover:text-accent-600 hover:shadow-[0_0_14px_-3px_oklch(from_var(--color-accent-600)_l_c_h_/_0.3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-light"
-        aria-label="$menuTitle$">
-        <span
-          class="pointer-events-none absolute top-0 left-0 h-3 w-3 border-t border-l border-accent-400/50"></span>
-        <span
-          class="pointer-events-none absolute top-0 right-0 h-3 w-3 border-t border-r border-accent-400/50"></span>
-        <span
-          class="pointer-events-none absolute bottom-0 left-0 h-3 w-3 border-b border-l border-accent-400/50"></span>
-        <span
-          class="pointer-events-none absolute bottom-0 right-0 h-3 w-3 border-b border-r border-accent-400/50"></span>
-        <span class="sr-only">$menuTitle$</span>
-        <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor" aria-hidden="true">
-          <path d="M120-240v-80h720v80H120Zm0-200v-80h720v80H120Zm0-200v-80h720v80H120Z"/>
-        </svg>
-      </a>
-      $endif$
-    </nav>
-  </div>
+    class="sticky top-0 z-10 border-b border-accent-200/60 bg-surface-light/95 shadow-[0_2px_30px_oklch(from_var(--color-accent-600)_l_c_h_/_0.08)] backdrop-blur-sm"
+>
+    <div
+        class="max-w-8xl mx-auto flex items-center justify-between px-4 py-3 md:px-8"
+    >
+        <a
+            href="$home-href$"
+            class="group flex items-center gap-3 no-underline"
+        >
+            $if(site-logo)$
+            <img
+                src="$site-logo$"
+                alt="$site-title$"
+                class="h-7 w-7 shrink-0 object-contain"
+            />
+            $endif$
+            <div>
+                <div
+                    class="font-mono text-base leading-tight font-bold tracking-wider text-accent-700 transition-colors group-hover:text-accent-600"
+                >
+                    $site-title$
+                </div>
+                <div class="font-mono text-xs leading-tight text-zinc-400">
+                    $site-tagline$
+                </div>
+            </div>
+        </a>
+        <nav class="flex shrink-0 items-center gap-3 md:gap-6">
+            $if(menuHref)$
+            <a
+                href="$menuHref$"
+                class="relative inline-flex h-10 w-10 items-center justify-center rounded border border-accent-400/60 bg-accent-50/80 text-accent-700 no-underline transition-all duration-200 hover:border-accent-600/80 hover:text-accent-600 hover:shadow-[0_0_14px_-3px_oklch(from_var(--color-accent-600)_l_c_h_/_0.3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-light"
+                aria-label="$menuTitle$"
+            >
+                <span
+                    class="pointer-events-none absolute top-0 left-0 h-3 w-3 border-t border-l border-accent-400/50"
+                ></span>
+                <span
+                    class="pointer-events-none absolute top-0 right-0 h-3 w-3 border-t border-r border-accent-400/50"
+                ></span>
+                <span
+                    class="pointer-events-none absolute bottom-0 left-0 h-3 w-3 border-b border-l border-accent-400/50"
+                ></span>
+                <span
+                    class="pointer-events-none absolute bottom-0 right-0 h-3 w-3 border-b border-r border-accent-400/50"
+                ></span>
+                <span class="sr-only">$menuTitle$</span>
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    height="20px"
+                    viewBox="0 -960 960 960"
+                    width="20px"
+                    fill="currentColor"
+                    aria-hidden="true"
+                >
+                    <path
+                        d="M120-240v-80h720v80H120Zm0-200v-80h720v80H120Zm0-200v-80h720v80H120Z"
+                    />
+                </svg>
+            </a>
+            $endif$
+        </nav>
+    </div>
 </header>
 
 <main class="bg-grid-accent grow">
-  <div class="max-w-8xl mx-auto px-4 py-10 md:px-8 md:py-12">
-    <div class="flex flex-col gap-10 lg:flex-row lg:items-start">
-      <div class="min-w-0 flex-1">
-        $if(content-before)$
-        <div class="mb-8">$content-before$</div>
-        $endif$ $body$ $if(content-after)$
-        <div class="mt-8">$content-after$</div>
-        $endif$
-      </div>
-
-      <aside class="w-full shrink-0 lg:w-72 xl:w-80">
-        $if(event-details)$
-        <div
-          class="relative mt-4 mb-8 border border-accent-200/70 bg-gradient-to-br from-accent-100/60 to-surface-light p-5">
-          <span
-            class="pointer-events-none absolute top-0 left-0 h-3 w-3 border-t border-l border-accent-400/50"></span>
-          <span
-            class="pointer-events-none absolute top-0 right-0 h-3 w-3 border-t border-r border-accent-400/50"></span>
-          <span
-            class="pointer-events-none absolute bottom-0 left-0 h-3 w-3 border-b border-l border-accent-400/50"></span>
-          <span
-            class="pointer-events-none absolute right-0 bottom-0 h-3 w-3 border-r border-b border-accent-400/50"></span>
-          <div
-            class="mb-4 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase">
-            >> Detalles
-          </div>
-          <div class="space-y-3">
-            $for(event-details)$
-            <div>
-              <div class="font-mono text-[11px] tracking-widest text-accent-600/80 uppercase">
-                $event-details.label$
-              </div>
-              $if(event-details.href)$
-              <a
-                href="$event-details.href$"
-                class="mt-1 block w-full break-anywhere break-all whitespace-normal font-mono text-sm font-semibold text-accent-700 no-underline transition-colors hover:text-accent-600">
-                $event-details.value$
-              </a>
-              $else$
-              <div class="mt-1 text-sm font-semibold text-zinc-700">
-                $event-details.value$
-              </div>
-              $endif$
+    <div class="max-w-8xl mx-auto px-4 py-10 md:px-8 md:py-12">
+        <div class="flex flex-col gap-10 lg:flex-row lg:items-start">
+            <div class="min-w-0 flex-1">
+                $if(content-before)$
+                <div class="mb-8">$content-before$</div>
+                $endif$ $body$ $if(content-after)$
+                <div class="mt-8">$content-after$</div>
+                $endif$
             </div>
-            $endfor$
-          </div>
-        </div>
-        $endif$
-        $if(cover-image)$
-        <div class="mb-6">
-          $if(download-pdf)$
-          <a href="$download-pdf$" aria-label="Descargar PDF">
-            <img
-              src="$cover-image$"
-              alt="Portada"
-              class="aspect-[3/4] w-full rounded border border-accent-200/60 object-cover shadow-sm transition-opacity hover:opacity-80" />
-          </a>
-          $else$
-          <img
-            src="$cover-image$"
-            alt="Portada"
-            class="aspect-[3/4] w-full rounded border border-accent-200/60 object-cover shadow-sm" />
-          $endif$
-        </div>
-        $endif$
-        $if(download-pdf)$
-        <div class="mb-6">
-          <div
-            class="mb-3 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase">
-            // Formatos
-          </div>
-          <div class="flex flex-col gap-2">
-            $if(download-pdf-completo)$
-            <a href="$download-pdf$" class="inline-flex items-center gap-2 rounded border border-accent-200 bg-accent-50 px-3 py-2 font-mono text-xs text-accent-700 transition-colors hover:bg-accent-100" download>
-              <svg xmlns="http://www.w3.org/2000/svg" height="14px" viewBox="0 -960 960 960" width="14px" fill="currentColor" aria-hidden="true"><path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>
-              PDF — Perfil
-            </a>
-            $else$
-            <a href="$download-pdf$" class="inline-flex items-center gap-2 rounded border border-accent-200 bg-accent-50 px-3 py-2 font-mono text-xs text-accent-700 transition-colors hover:bg-accent-100" download>
-              <svg xmlns="http://www.w3.org/2000/svg" height="14px" viewBox="0 -960 960 960" width="14px" fill="currentColor" aria-hidden="true"><path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>
-              Descargar PDF
-            </a>
-            $endif$
-            $if(download-epub)$
-            $if(download-epub-completo)$
-            <a href="$download-epub$" class="inline-flex items-center gap-2 rounded border border-accent-200 bg-accent-50 px-3 py-2 font-mono text-xs text-accent-700 transition-colors hover:bg-accent-100" download>
-              <svg xmlns="http://www.w3.org/2000/svg" height="14px" viewBox="0 -960 960 960" width="14px" fill="currentColor" aria-hidden="true"><path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>
-              EPUB — Perfil
-            </a>
-            $else$
-            <a href="$download-epub$" class="inline-flex items-center gap-2 rounded border border-accent-200 bg-accent-50 px-3 py-2 font-mono text-xs text-accent-700 transition-colors hover:bg-accent-100" download>
-              <svg xmlns="http://www.w3.org/2000/svg" height="14px" viewBox="0 -960 960 960" width="14px" fill="currentColor" aria-hidden="true"><path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>
-              Descargar EPUB
-            </a>
-            $endif$
-            $endif$
-            $if(download-pdf-completo)$
-            <a href="$download-pdf-completo$" class="inline-flex items-center gap-2 rounded border border-accent-200 bg-accent-50 px-3 py-2 font-mono text-xs text-accent-700 transition-colors hover:bg-accent-100" download>
-              <svg xmlns="http://www.w3.org/2000/svg" height="14px" viewBox="0 -960 960 960" width="14px" fill="currentColor" aria-hidden="true"><path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>
-              PDF — Completo
-            </a>
-            $endif$
-            $if(download-epub-completo)$
-            <a href="$download-epub-completo$" class="inline-flex items-center gap-2 rounded border border-accent-200 bg-accent-50 px-3 py-2 font-mono text-xs text-accent-700 transition-colors hover:bg-accent-100" download>
-              <svg xmlns="http://www.w3.org/2000/svg" height="14px" viewBox="0 -960 960 960" width="14px" fill="currentColor" aria-hidden="true"><path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>
-              EPUB — Completo
-            </a>
-            $endif$
-          </div>
-        </div>
-        $else$
-        $if(download-epub)$
-        <div class="mb-6">
-          <div
-            class="mb-3 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase">
-            // Formatos
-          </div>
-          <div class="flex flex-col gap-2">
-            $if(download-epub-completo)$
-            <a href="$download-epub$" class="inline-flex items-center gap-2 rounded border border-accent-200 bg-accent-50 px-3 py-2 font-mono text-xs text-accent-700 transition-colors hover:bg-accent-100" download>
-              <svg xmlns="http://www.w3.org/2000/svg" height="14px" viewBox="0 -960 960 960" width="14px" fill="currentColor" aria-hidden="true"><path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>
-              EPUB — Perfil
-            </a>
-            <a href="$download-epub-completo$" class="inline-flex items-center gap-2 rounded border border-accent-200 bg-accent-50 px-3 py-2 font-mono text-xs text-accent-700 transition-colors hover:bg-accent-100" download>
-              <svg xmlns="http://www.w3.org/2000/svg" height="14px" viewBox="0 -960 960 960" width="14px" fill="currentColor" aria-hidden="true"><path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>
-              EPUB — Completo
-            </a>
-            $else$
-            <a href="$download-epub$" class="inline-flex items-center gap-2 rounded border border-accent-200 bg-accent-50 px-3 py-2 font-mono text-xs text-accent-700 transition-colors hover:bg-accent-100" download>
-              <svg xmlns="http://www.w3.org/2000/svg" height="14px" viewBox="0 -960 960 960" width="14px" fill="currentColor" aria-hidden="true"><path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>
-              Descargar EPUB
-            </a>
-            $endif$
-          </div>
-        </div>
-        $endif$
-        $endif$
-        $if(skills)$
-        <div class="mb-6">
-          <div
-            class="mb-3 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase">
-            // Skills
-          </div>
-          <div class="flex flex-wrap gap-1.5">
-            $for(skills)$<span class="rounded-full border border-accent-300/70 bg-accent-50 px-2.5 py-0.5 font-mono text-[11px] text-accent-700">$skills$</span>$endfor$
-          </div>
-        </div>
-        $endif$
-        $if(training)$
-        <div class="mb-6">
-          <div
-            class="mb-3 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase">
-            // Formación
-          </div>
-          <div class="space-y-2">
-            $for(training)$<div class="rounded border border-accent-200/60 bg-accent-50/50 px-3 py-2 font-mono text-xs leading-relaxed text-zinc-600">$training$</div>$endfor$
-          </div>
-        </div>
-        $endif$
-        $if(interests)$
-        <div class="mb-6">
-          <div
-            class="mb-3 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase">
-            // Intereses
-          </div>
-          <div class="flex flex-wrap gap-1.5">
-            $for(interests)$<span class="rounded-full border border-accent-300 bg-accent-50 px-2 py-0.5 font-mono text-[10px] text-accent-700">$interests$</span>$endfor$
-          </div>
-        </div>
-        $endif$
-        $if(languages)$
-        <div class="mb-6">
-          <div
-            class="mb-3 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase">
-            // Idiomas
-          </div>
-          <div class="space-y-2">
-            $for(languages)$<div class="rounded border border-accent-200/60 bg-accent-50/50 px-3 py-2 font-mono text-xs text-zinc-600">$languages$</div>$endfor$
-          </div>
-        </div>
-        $endif$
-        $if(date)$
-        <div class="mb-6">
-          <div
-            class="mb-1 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase">
-            // Publicación
-          </div>
-          <div class="font-mono text-sm text-zinc-600">$date$</div>
-        </div>
-        $endif$
-        $if(sidebar-authors)$
-        <div class="mb-8">
-          <div
-            class="mb-3 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase">
-            // Voces
-          </div>
-          <div class="space-y-3">
-            $for(sidebar-authors)$
-            <div
-              class="relative border-l-2 border-accent-400/60 bg-gradient-to-r from-accent-100/60 to-surface-light p-4 transition-all hover:border-accent-600/80 hover:shadow-[0_0_15px_-3px_oklch(from_var(--color-accent-600)_l_c_h_/_0.15)]">
-              $if(href)$
-              <a
-                href="$href$"
-                class="font-mono font-semibold text-accent-700 no-underline transition-colors hover:text-accent-600">
-                $title$
-              </a>
-              $else$
-              <div class="font-mono font-semibold text-zinc-500">
-                $title$
-              </div>
-              $endif$
-              $if(date)$
-              <div class="mt-0.5 font-mono text-xs text-zinc-400">
-                $date$
-              </div>
-              $endif$
-              $if(body)$
-              <div class="prose prose-accent prose-sm mt-2 max-w-none">
-                $body$
-              </div>
-              $endif$
-            </div>
-            $endfor$
-          </div>
-        </div>
-        $endif$
-        $if(keywords)$
-        <div class="mb-6">
-          <div
-            class="mb-3 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase">
-            // Temas
-          </div>
-          <div class="flex flex-wrap gap-1.5">
-            $for(keywords)$
-            <span class="rounded-full border border-accent-300 bg-accent-50 px-2 py-0.5 font-mono text-[10px] text-accent-700">$keywords$</span>
-            $endfor$
-          </div>
-        </div>
-        $endif$ $sidebar-primary$
-      </aside>
 
-      <aside class="w-full shrink-0 lg:w-64 xl:w-72">$sidebar-secondary$</aside>
+            <aside class="w-full shrink-0 lg:w-72 xl:w-80">
+                $if(event-details)$
+                <div
+                    class="relative mt-4 mb-8 border border-accent-200/70 bg-gradient-to-br from-accent-100/60 to-surface-light p-5"
+                >
+                    <span
+                        class="pointer-events-none absolute top-0 left-0 h-3 w-3 border-t border-l border-accent-400/50"
+                    ></span>
+                    <span
+                        class="pointer-events-none absolute top-0 right-0 h-3 w-3 border-t border-r border-accent-400/50"
+                    ></span>
+                    <span
+                        class="pointer-events-none absolute bottom-0 left-0 h-3 w-3 border-b border-l border-accent-400/50"
+                    ></span>
+                    <span
+                        class="pointer-events-none absolute right-0 bottom-0 h-3 w-3 border-r border-b border-accent-400/50"
+                    ></span>
+                    <div
+                        class="mb-4 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase"
+                    >
+                        >> Detalles
+                    </div>
+                    <div class="space-y-3">
+                        $for(event-details)$
+                        <div>
+                            <div
+                                class="font-mono text-[11px] tracking-widest text-accent-600/80 uppercase"
+                            >
+                                $event-details.label$
+                            </div>
+                            $if(event-details.href)$
+                            <a
+                                href="$event-details.href$"
+                                class="mt-1 block w-full break-anywhere break-all whitespace-normal font-mono text-sm font-semibold text-accent-700 no-underline transition-colors hover:text-accent-600"
+                            >
+                                $event-details.value$
+                            </a>
+                            $else$
+                            <div
+                                class="mt-1 text-sm font-semibold text-zinc-700"
+                            >
+                                $event-details.value$
+                            </div>
+                            $endif$
+                        </div>
+                        $endfor$
+                    </div>
+                </div>
+                $endif$ $if(cover-image)$
+                <div class="mb-6">
+                    $if(download-pdf)$
+                    <a href="$download-pdf$" aria-label="Descargar PDF">
+                        <img
+                            src="$cover-image$"
+                            alt="Portada"
+                            class="aspect-[3/4] w-full rounded border border-accent-200/60 object-cover shadow-sm transition-opacity hover:opacity-80"
+                        />
+                    </a>
+                    $else$
+                    <img
+                        src="$cover-image$"
+                        alt="Portada"
+                        class="aspect-[3/4] w-full rounded border border-accent-200/60 object-cover shadow-sm"
+                    />
+                    $endif$
+                </div>
+                $endif$ $if(download-pdf)$
+                <div class="mb-6">
+                    <div
+                        class="mb-3 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase"
+                    >
+                        // Formatos
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        $if(download-pdf-completo)$
+                        <a
+                            href="$download-pdf$"
+                            class="inline-flex items-center gap-2 rounded border border-accent-200 bg-accent-50 px-3 py-2 font-mono text-xs text-accent-700 transition-colors hover:bg-accent-100"
+                            download
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                height="14px"
+                                viewBox="0 -960 960 960"
+                                width="14px"
+                                fill="currentColor"
+                                aria-hidden="true"
+                            >
+                                <path
+                                    d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"
+                                />
+                            </svg>
+                            PDF — Perfil
+                        </a>
+                        $else$
+                        <a
+                            href="$download-pdf$"
+                            class="inline-flex items-center gap-2 rounded border border-accent-200 bg-accent-50 px-3 py-2 font-mono text-xs text-accent-700 transition-colors hover:bg-accent-100"
+                            download
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                height="14px"
+                                viewBox="0 -960 960 960"
+                                width="14px"
+                                fill="currentColor"
+                                aria-hidden="true"
+                            >
+                                <path
+                                    d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"
+                                />
+                            </svg>
+                            Descargar PDF
+                        </a>
+                        $endif$ $if(download-epub)$ $if(download-epub-completo)$
+                        <a
+                            href="$download-epub$"
+                            class="inline-flex items-center gap-2 rounded border border-accent-200 bg-accent-50 px-3 py-2 font-mono text-xs text-accent-700 transition-colors hover:bg-accent-100"
+                            download
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                height="14px"
+                                viewBox="0 -960 960 960"
+                                width="14px"
+                                fill="currentColor"
+                                aria-hidden="true"
+                            >
+                                <path
+                                    d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"
+                                />
+                            </svg>
+                            EPUB — Perfil
+                        </a>
+                        $else$
+                        <a
+                            href="$download-epub$"
+                            class="inline-flex items-center gap-2 rounded border border-accent-200 bg-accent-50 px-3 py-2 font-mono text-xs text-accent-700 transition-colors hover:bg-accent-100"
+                            download
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                height="14px"
+                                viewBox="0 -960 960 960"
+                                width="14px"
+                                fill="currentColor"
+                                aria-hidden="true"
+                            >
+                                <path
+                                    d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"
+                                />
+                            </svg>
+                            Descargar EPUB
+                        </a>
+                        $endif$ $endif$ $if(download-pdf-completo)$
+                        <a
+                            href="$download-pdf-completo$"
+                            class="inline-flex items-center gap-2 rounded border border-accent-200 bg-accent-50 px-3 py-2 font-mono text-xs text-accent-700 transition-colors hover:bg-accent-100"
+                            download
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                height="14px"
+                                viewBox="0 -960 960 960"
+                                width="14px"
+                                fill="currentColor"
+                                aria-hidden="true"
+                            >
+                                <path
+                                    d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"
+                                />
+                            </svg>
+                            PDF — Completo
+                        </a>
+                        $endif$ $if(download-epub-completo)$
+                        <a
+                            href="$download-epub-completo$"
+                            class="inline-flex items-center gap-2 rounded border border-accent-200 bg-accent-50 px-3 py-2 font-mono text-xs text-accent-700 transition-colors hover:bg-accent-100"
+                            download
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                height="14px"
+                                viewBox="0 -960 960 960"
+                                width="14px"
+                                fill="currentColor"
+                                aria-hidden="true"
+                            >
+                                <path
+                                    d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"
+                                />
+                            </svg>
+                            EPUB — Completo
+                        </a>
+                        $endif$
+                    </div>
+                </div>
+                $else$ $if(download-epub)$
+                <div class="mb-6">
+                    <div
+                        class="mb-3 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase"
+                    >
+                        // Formatos
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        $if(download-epub-completo)$
+                        <a
+                            href="$download-epub$"
+                            class="inline-flex items-center gap-2 rounded border border-accent-200 bg-accent-50 px-3 py-2 font-mono text-xs text-accent-700 transition-colors hover:bg-accent-100"
+                            download
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                height="14px"
+                                viewBox="0 -960 960 960"
+                                width="14px"
+                                fill="currentColor"
+                                aria-hidden="true"
+                            >
+                                <path
+                                    d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"
+                                />
+                            </svg>
+                            EPUB — Perfil
+                        </a>
+                        <a
+                            href="$download-epub-completo$"
+                            class="inline-flex items-center gap-2 rounded border border-accent-200 bg-accent-50 px-3 py-2 font-mono text-xs text-accent-700 transition-colors hover:bg-accent-100"
+                            download
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                height="14px"
+                                viewBox="0 -960 960 960"
+                                width="14px"
+                                fill="currentColor"
+                                aria-hidden="true"
+                            >
+                                <path
+                                    d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"
+                                />
+                            </svg>
+                            EPUB — Completo
+                        </a>
+                        $else$
+                        <a
+                            href="$download-epub$"
+                            class="inline-flex items-center gap-2 rounded border border-accent-200 bg-accent-50 px-3 py-2 font-mono text-xs text-accent-700 transition-colors hover:bg-accent-100"
+                            download
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                height="14px"
+                                viewBox="0 -960 960 960"
+                                width="14px"
+                                fill="currentColor"
+                                aria-hidden="true"
+                            >
+                                <path
+                                    d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"
+                                />
+                            </svg>
+                            Descargar EPUB
+                        </a>
+                        $endif$
+                    </div>
+                </div>
+                $endif$ $endif$ $if(skills)$
+                <div class="mb-6">
+                    <div
+                        class="mb-3 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase"
+                    >
+                        // Skills
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                        $for(skills)$<span
+                            class="rounded-full border border-accent-300/70 bg-accent-50 px-2.5 py-0.5 font-mono text-[11px] text-accent-700"
+                            >$skills$</span
+                        >$endfor$
+                    </div>
+                </div>
+                $endif$ $if(training)$
+                <div class="mb-6">
+                    <div
+                        class="mb-3 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase"
+                    >
+                        // Formación
+                    </div>
+                    <div class="space-y-2">
+                        $for(training)$
+                        <div
+                            class="rounded border border-accent-200/60 bg-accent-50/50 px-3 py-2 font-mono text-xs leading-relaxed text-zinc-600"
+                        >
+                            $training$
+                        </div>
+                        $endfor$
+                    </div>
+                </div>
+                $endif$ $if(interests)$
+                <div class="mb-6">
+                    <div
+                        class="mb-3 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase"
+                    >
+                        // Intereses
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                        $for(interests)$<span
+                            class="rounded-full border border-accent-300 bg-accent-50 px-2 py-0.5 font-mono text-[10px] text-accent-700"
+                            >$interests$</span
+                        >$endfor$
+                    </div>
+                </div>
+                $endif$ $if(languages)$
+                <div class="mb-6">
+                    <div
+                        class="mb-3 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase"
+                    >
+                        // Idiomas
+                    </div>
+                    <div class="space-y-2">
+                        $for(languages)$
+                        <div
+                            class="rounded border border-accent-200/60 bg-accent-50/50 px-3 py-2 font-mono text-xs text-zinc-600"
+                        >
+                            $languages$
+                        </div>
+                        $endfor$
+                    </div>
+                </div>
+                $endif$ $if(date)$
+                <div class="mb-6">
+                    <div
+                        class="mb-1 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase"
+                    >
+                        // Publicación
+                    </div>
+                    <div class="font-mono text-sm text-zinc-600">$date$</div>
+                </div>
+                $endif$ $if(sidebar-authors)$
+                <div class="mb-8">
+                    <div
+                        class="mb-3 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase"
+                    >
+                        // Voces
+                    </div>
+                    <div class="space-y-3">
+                        $for(sidebar-authors)$
+                        <div
+                            class="relative border-l-2 border-accent-400/60 bg-gradient-to-r from-accent-100/60 to-surface-light p-4 transition-all hover:border-accent-600/80 hover:shadow-[0_0_15px_-3px_oklch(from_var(--color-accent-600)_l_c_h_/_0.15)]"
+                        >
+                            $if(href)$
+                            <a
+                                href="$href$"
+                                class="font-mono font-semibold text-accent-700 no-underline transition-colors hover:text-accent-600"
+                            >
+                                $title-html$
+                            </a>
+                            $else$
+                            <div class="font-mono font-semibold text-zinc-500">
+                                $title-html$
+                            </div>
+                            $endif$ $if(date)$
+                            <div class="mt-0.5 font-mono text-xs text-zinc-400">
+                                $date$
+                            </div>
+                            $endif$ $if(body)$
+                            <div
+                                class="prose prose-accent prose-sm mt-2 max-w-none"
+                            >
+                                $body$
+                            </div>
+                            $endif$
+                        </div>
+                        $endfor$
+                    </div>
+                </div>
+                $endif$ $if(keywords)$
+                <div class="mb-6">
+                    <div
+                        class="mb-3 font-mono text-xs font-bold tracking-widest text-accent-600 uppercase"
+                    >
+                        // Temas
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                        $for(keywords)$
+                        <span
+                            class="rounded-full border border-accent-300 bg-accent-50 px-2 py-0.5 font-mono text-[10px] text-accent-700"
+                            >$keywords$</span
+                        >
+                        $endfor$
+                    </div>
+                </div>
+                $endif$ $sidebar-primary$
+            </aside>
+
+            <aside class="w-full shrink-0 lg:w-64 xl:w-72">
+                $sidebar-secondary$
+            </aside>
+        </div>
     </div>
-  </div>
 </main>
 
 <footer
-  class="mt-auto border-t border-accent-200/60 bg-gradient-to-b from-transparent to-surface-light/30">
-  <div
-    class="max-w-8xl mx-auto grid grid-cols-1 gap-8 px-4 py-10 text-zinc-500 md:grid-cols-3 md:px-8 md:py-12">
-    <div>$footer-left$</div>
-    <div>$footer-center$</div>
-    <div>$footer-right$</div>
-  </div>
-  <div class="border-t border-accent-200/20">
+    class="mt-auto border-t border-accent-200/60 bg-gradient-to-b from-transparent to-surface-light/30"
+>
     <div
-      class="max-w-8xl mx-auto flex items-center justify-between px-4 py-3 md:px-8">
-      $if(site-logo)$
-      <a href="$home-href$" class="flex items-center gap-2 no-underline">
-        <img
-          src="$site-logo$"
-          alt="$site-title$"
-          class="h-4 w-4 shrink-0 object-contain opacity-40" />
-        <span class="font-mono text-xs text-zinc-400">$site-title$</span>
-      </a>
-      $else$
-      <a
-        href="$home-href$"
-        class="font-mono text-xs text-zinc-400 transition-colors hover:text-accent-600">
-        $site-title$
-      </a>
-      $endif$
-      <div class="font-mono text-xs text-zinc-300">Creado con iteraciones</div>
+        class="max-w-8xl mx-auto grid grid-cols-1 gap-8 px-4 py-10 text-zinc-500 md:grid-cols-3 md:px-8 md:py-12"
+    >
+        <div>$footer-left$</div>
+        <div>$footer-center$</div>
+        <div>$footer-right$</div>
     </div>
-  </div>
+    <div class="border-t border-accent-200/20">
+        <div
+            class="max-w-8xl mx-auto flex items-center justify-between px-4 py-3 md:px-8"
+        >
+            $if(site-logo)$
+            <a href="$home-href$" class="flex items-center gap-2 no-underline">
+                <img
+                    src="$site-logo$"
+                    alt="$site-title$"
+                    class="h-4 w-4 shrink-0 object-contain opacity-40"
+                />
+                <span class="font-mono text-xs text-zinc-400"
+                    >$site-title$</span
+                >
+            </a>
+            $else$
+            <a
+                href="$home-href$"
+                class="font-mono text-xs text-zinc-400 transition-colors hover:text-accent-600"
+            >
+                $site-title$
+            </a>
+            $endif$
+            <div class="font-mono text-xs text-zinc-300">
+                Creado con iteraciones
+            </div>
+        </div>
+    </div>
 </footer>
