@@ -1,45 +1,50 @@
 <div class="space-y-4">
-  <header>
-    <div class="mb-3 flex items-center gap-3">
-      <span class="font-mono text-xs tracking-widest text-accent-600 uppercase"
-        >// feed</span
-      >
-      <span
-        class="h-px flex-1 bg-gradient-to-r from-accent-200/50 to-transparent"></span>
-    </div>
-    $if(title)$
-    <h2 class="text-lg font-bold text-zinc-900">$title$</h2>
-    $endif$
-    $if(body)$
-    $if(table-of-contents)$$table-of-contents$$endif$
-    <div class="mt-1 text-sm text-zinc-600">$body$</div>
-    $endif$
-  </header>
-  $if(feed-items)$
-  <div class="divide-y divide-accent-200/40">
-    $for(feed-items)$
-    <a
-      href="$href$"
-      class="group flex items-start justify-between gap-3 py-3 no-underline transition-colors first:pt-0">
-      <div class="min-w-0 flex-1">
-        <div
-          class="text-sm font-semibold leading-snug text-zinc-700 transition-colors group-hover:text-accent-700">
-          $title$
+    <header>
+        <div class="mb-3 flex items-center gap-3">
+            <span
+                class="font-mono text-xs tracking-widest text-accent-600 uppercase"
+                >// feed</span
+            >
+            <span
+                class="h-px flex-1 bg-gradient-to-r from-accent-200/50 to-transparent"
+            ></span>
         </div>
-        $if(author)$
-        <div class="mt-0.5 font-mono text-xs text-accent-600/70">↳ $author$</div>
+        $if(title)$
+        <h2 class="text-lg font-bold text-zinc-900">$title-html$</h2>
+        $endif$ $if(body)$ $if(table-of-contents)$$table-of-contents$$endif$
+        <div class="mt-1 text-sm text-zinc-600">$body$</div>
         $endif$
-      </div>
-      $if(date)$
-      <div class="shrink-0 font-mono text-xs text-zinc-500">$date$</div>
-      $endif$
-    </a>
-    $endfor$
-  </div>
-  $else$
-  <div
-    class="border border-dashed border-accent-200/40 px-4 py-6 text-center font-mono text-xs text-zinc-400">
-    [ Sin elementos ]
-  </div>
-  $endif$
+    </header>
+    $if(feed-items)$
+    <div class="divide-y divide-accent-200/40">
+        $for(feed-items)$
+        <a
+            href="$href$"
+            class="group flex items-start justify-between gap-3 py-3 no-underline transition-colors first:pt-0"
+        >
+            <div class="min-w-0 flex-1">
+                <div
+                    class="text-sm font-semibold leading-snug text-zinc-700 transition-colors group-hover:text-accent-700"
+                >
+                    $title-html$
+                </div>
+                $if(author)$
+                <div class="mt-0.5 font-mono text-xs text-accent-600/70">
+                    ↳ $author$
+                </div>
+                $endif$
+            </div>
+            $if(date)$
+            <div class="shrink-0 font-mono text-xs text-zinc-500">$date$</div>
+            $endif$
+        </a>
+        $endfor$
+    </div>
+    $else$
+    <div
+        class="border border-dashed border-accent-200/40 px-4 py-6 text-center font-mono text-xs text-zinc-400"
+    >
+        [ Sin elementos ]
+    </div>
+    $endif$
 </div>

@@ -1,209 +1,271 @@
 <div class="space-y-8 py-6">
-  <header class="mb-2">
-    <div class="mb-4 flex items-center gap-4">
-      <span class="font-mono text-xs tracking-widest text-accent-600 uppercase"
-        >// colección</span
-      >
-      <span
-        class="h-px flex-1 bg-gradient-to-r from-accent-800/50 to-transparent"></span>
-    </div>
-    $if(title)$
-    <h1 class="text-4xl font-bold text-stone-100 lg:text-5xl">
-      $title$
-    </h1>
-    $endif$ $if(author)$
-    <div class="mt-3 font-mono text-sm text-accent-400">↳ $author$</div>
-    $endif$
-    <div
-      class="mt-6 h-px bg-gradient-to-r from-accent-700/40 via-accent-900/20 to-transparent"></div>
-  </header>
-  $if(body)$
-  $if(table-of-contents)$$table-of-contents$$endif$
-  <div class="prose prose-invert prose-accent lg:prose-lg max-w-none">
-    $body$
-  </div>
-  $endif$ $if(parts)$
-  <div class="space-y-10">
-    $if(loose-items)$
-    <div class="divide-y divide-accent-900/30">
-      $for(loose-items)$
-      <article class="group flex items-start gap-4 py-5 first:pt-0">
-        $if(cover-image)$
-        <a href="$href$" class="shrink-0 w-16 sm:w-20 no-underline" tabindex="-1" aria-label="$title$">
-          <img src="$cover-image$" alt="" loading="lazy"
-            class="w-full rounded border border-accent-700/60 object-cover shadow-[0_0_15px_-3px_oklch(from_var(--color-accent-400)_l_c_h_/_0.2)] aspect-[3/4] transition-opacity group-hover:opacity-90" />
-        </a>
-        $endif$
-        <div class="min-w-0 flex-1">
-          <div class="flex items-start justify-between gap-3">
-            <div class="flex items-center gap-2 min-w-0">
-              <span
-                class="shrink-0 font-mono text-accent-700 transition-colors group-hover:text-accent-500"
-                >▸</span
-              >
-              <a
-                href="$href$"
-                class="font-semibold tracking-tight text-stone-200 no-underline transition-colors hover:text-accent-400">
-                $title$
-              </a>
-            </div>
-            <div class="shrink-0 font-mono text-xs text-stone-600 pt-0.5">
-              $date$
-            </div>
-          </div>
-          $if(author)$
-          <div class="mt-0.5 pl-4 font-mono text-xs text-accent-700/70">
-            ↳ $author$
-          </div>
-          $endif$ $if(abstract)$
-          <div class="mt-1.5 pl-4 text-sm leading-relaxed text-stone-500">
-            $abstract$
-          </div>
-          $endif$ $if(keywords)$
-          <div class="mt-2 pl-4 flex flex-wrap gap-1">
-            $for(keywords)$
-            <span class="rounded-full border border-accent-800 bg-accent-950 px-2 py-0.5 font-mono text-[10px] text-accent-500">$keywords$</span>
-            $endfor$
-          </div>
-          $endif$
+    <header class="mb-2">
+        <div class="mb-4 flex items-center gap-4">
+            <span
+                class="font-mono text-xs tracking-widest text-accent-600 uppercase"
+                >// colección</span
+            >
+            <span
+                class="h-px flex-1 bg-gradient-to-r from-accent-800/50 to-transparent"
+            ></span>
         </div>
-      </article>
-      $endfor$
+        $if(title)$
+        <h1 class="text-4xl font-bold text-stone-100 lg:text-5xl">
+            $title-html$
+        </h1>
+        $endif$ $if(author)$
+        <div class="mt-3 font-mono text-sm text-accent-400">↳ $author$</div>
+        $endif$
+        <div
+            class="mt-6 h-px bg-gradient-to-r from-accent-700/40 via-accent-900/20 to-transparent"
+        ></div>
+    </header>
+    $if(body)$ $if(table-of-contents)$$table-of-contents$$endif$
+    <div class="prose prose-invert prose-accent lg:prose-lg max-w-none">
+        $body$
     </div>
-    $endif$
-    $for(parts)$
-    <section>
-      <h2
-        class="mb-4 font-mono text-sm tracking-widest text-accent-600 uppercase">
-        $name$
-      </h2>
-      <div class="divide-y divide-accent-900/30 border-t border-accent-900/20">
-        $for(items)$
-        <article class="group flex items-start gap-4 py-5 no-underline transition-colors">
-          $if(cover-image)$
-          <a href="$href$" class="shrink-0 w-16 sm:w-20 no-underline" tabindex="-1" aria-label="$title$">
-            <img src="$cover-image$" alt="" loading="lazy"
-              class="w-full rounded border border-accent-700/60 object-cover shadow-[0_0_15px_-3px_oklch(from_var(--color-accent-400)_l_c_h_/_0.2)] aspect-[3/4] transition-opacity group-hover:opacity-90" />
-          </a>
-          $endif$
-          <div class="min-w-0 flex-1">
-            <div class="flex items-start justify-between gap-3">
-              <div class="flex items-center gap-2 min-w-0">
-                <span
-                  class="shrink-0 font-mono text-accent-700 transition-colors group-hover:text-accent-500"
-                  >▸</span
-                >
+    $endif$ $if(parts)$
+    <div class="space-y-10">
+        $if(loose-items)$
+        <div class="divide-y divide-accent-900/30">
+            $for(loose-items)$
+            <article class="group flex items-start gap-4 py-5 first:pt-0">
+                $if(cover-image)$
                 <a
-                  href="$href$"
-                  class="font-semibold tracking-tight text-stone-200 no-underline transition-colors hover:text-accent-400">
-                  $title$
+                    href="$href$"
+                    class="shrink-0 w-16 sm:w-20 no-underline"
+                    tabindex="-1"
+                    aria-label="$title$"
+                >
+                    <img
+                        src="$cover-image$"
+                        alt=""
+                        loading="lazy"
+                        class="w-full rounded border border-accent-700/60 object-cover shadow-[0_0_15px_-3px_oklch(from_var(--color-accent-400)_l_c_h_/_0.2)] aspect-[3/4] transition-opacity group-hover:opacity-90"
+                    />
                 </a>
-              </div>
-              <div class="shrink-0 font-mono text-xs text-stone-600 pt-0.5">
-                $date$
-              </div>
+                $endif$
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <span
+                                class="shrink-0 font-mono text-accent-700 transition-colors group-hover:text-accent-500"
+                                >▸</span
+                            >
+                            <a
+                                href="$href$"
+                                class="font-semibold tracking-tight text-stone-200 no-underline transition-colors hover:text-accent-400"
+                            >
+                                $title-html$
+                            </a>
+                        </div>
+                        <div
+                            class="shrink-0 font-mono text-xs text-stone-600 pt-0.5"
+                        >
+                            $date$
+                        </div>
+                    </div>
+                    $if(author)$
+                    <div
+                        class="mt-0.5 pl-4 font-mono text-xs text-accent-700/70"
+                    >
+                        ↳ $author$
+                    </div>
+                    $endif$ $if(abstract)$
+                    <div
+                        class="mt-1.5 pl-4 text-sm leading-relaxed text-stone-500"
+                    >
+                        $abstract$
+                    </div>
+                    $endif$ $if(keywords)$
+                    <div class="mt-2 pl-4 flex flex-wrap gap-1">
+                        $for(keywords)$
+                        <span
+                            class="rounded-full border border-accent-800 bg-accent-950 px-2 py-0.5 font-mono text-[10px] text-accent-500"
+                            >$keywords$</span
+                        >
+                        $endfor$
+                    </div>
+                    $endif$
+                </div>
+            </article>
+            $endfor$
+        </div>
+        $endif$ $for(parts)$
+        <section>
+            <h2
+                class="mb-4 font-mono text-sm tracking-widest text-accent-600 uppercase"
+            >
+                $name$
+            </h2>
+            <div
+                class="divide-y divide-accent-900/30 border-t border-accent-900/20"
+            >
+                $for(items)$
+                <article
+                    class="group flex items-start gap-4 py-5 no-underline transition-colors"
+                >
+                    $if(cover-image)$
+                    <a
+                        href="$href$"
+                        class="shrink-0 w-16 sm:w-20 no-underline"
+                        tabindex="-1"
+                        aria-label="$title$"
+                    >
+                        <img
+                            src="$cover-image$"
+                            alt=""
+                            loading="lazy"
+                            class="w-full rounded border border-accent-700/60 object-cover shadow-[0_0_15px_-3px_oklch(from_var(--color-accent-400)_l_c_h_/_0.2)] aspect-[3/4] transition-opacity group-hover:opacity-90"
+                        />
+                    </a>
+                    $endif$
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <span
+                                    class="shrink-0 font-mono text-accent-700 transition-colors group-hover:text-accent-500"
+                                    >▸</span
+                                >
+                                <a
+                                    href="$href$"
+                                    class="font-semibold tracking-tight text-stone-200 no-underline transition-colors hover:text-accent-400"
+                                >
+                                    $title-html$
+                                </a>
+                            </div>
+                            <div
+                                class="shrink-0 font-mono text-xs text-stone-600 pt-0.5"
+                            >
+                                $date$
+                            </div>
+                        </div>
+                        $if(author)$
+                        <div
+                            class="mt-0.5 pl-4 font-mono text-xs text-accent-700/70"
+                        >
+                            ↳ $author$
+                        </div>
+                        $endif$ $if(abstract)$
+                        <div
+                            class="mt-1.5 pl-4 text-sm leading-relaxed text-stone-500"
+                        >
+                            $abstract$
+                        </div>
+                        $endif$ $if(keywords)$
+                        <div class="mt-2 pl-4 flex flex-wrap gap-1">
+                            $for(keywords)$
+                            <span
+                                class="rounded-full border border-accent-800 bg-accent-950 px-2 py-0.5 font-mono text-[10px] text-accent-500"
+                                >$keywords$</span
+                            >
+                            $endfor$
+                        </div>
+                        $endif$
+                    </div>
+                </article>
+                $endfor$
             </div>
-            $if(author)$
-            <div class="mt-0.5 pl-4 font-mono text-xs text-accent-700/70">
-              ↳ $author$
-            </div>
-            $endif$ $if(abstract)$
-            <div class="mt-1.5 pl-4 text-sm leading-relaxed text-stone-500">
-              $abstract$
-            </div>
-            $endif$ $if(keywords)$
-            <div class="mt-2 pl-4 flex flex-wrap gap-1">
-              $for(keywords)$
-              <span class="rounded-full border border-accent-800 bg-accent-950 px-2 py-0.5 font-mono text-[10px] text-accent-500">$keywords$</span>
-              $endfor$
-            </div>
+        </section>
+        $endfor$
+    </div>
+    $else$ $if(list-items)$
+    <div class="divide-y divide-accent-900/30">
+        $for(list-items)$
+        <article
+            class="group flex items-start gap-4 py-5 no-underline transition-colors first:pt-0"
+        >
+            $if(cover-image)$
+            <a
+                href="$href$"
+                class="shrink-0 w-16 sm:w-20 no-underline"
+                tabindex="-1"
+                aria-label="$title$"
+            >
+                <img
+                    src="$cover-image$"
+                    alt=""
+                    loading="lazy"
+                    class="w-full rounded border border-accent-700/60 object-cover shadow-[0_0_15px_-3px_oklch(from_var(--color-accent-400)_l_c_h_/_0.2)] aspect-[3/4] transition-opacity group-hover:opacity-90"
+                />
+            </a>
             $endif$
-          </div>
+            <div class="min-w-0 flex-1">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <span
+                            class="shrink-0 font-mono text-accent-700 transition-colors group-hover:text-accent-500"
+                            >▸</span
+                        >
+                        <a
+                            href="$href$"
+                            class="font-semibold tracking-tight text-stone-200 no-underline transition-colors hover:text-accent-400"
+                        >
+                            $title-html$
+                        </a>
+                    </div>
+                    <div
+                        class="shrink-0 font-mono text-xs text-stone-600 pt-0.5"
+                    >
+                        $date$
+                    </div>
+                </div>
+                $if(author)$
+                <div class="mt-0.5 pl-4 font-mono text-xs text-accent-700/70">
+                    ↳ $author$
+                </div>
+                $endif$ $if(body)$
+                <div class="mt-1.5 pl-4 text-sm leading-relaxed text-stone-500">
+                    $body$
+                </div>
+                $endif$
+            </div>
         </article>
         $endfor$
-      </div>
-    </section>
-    $endfor$
-  </div>
-  $else$
-  $if(list-items)$
-  <div class="divide-y divide-accent-900/30">
-    $for(list-items)$
-    <article class="group flex items-start gap-4 py-5 no-underline transition-colors first:pt-0">
-      $if(cover-image)$
-      <a href="$href$" class="shrink-0 w-16 sm:w-20 no-underline" tabindex="-1" aria-label="$title$">
-        <img src="$cover-image$" alt="" loading="lazy"
-          class="w-full rounded border border-accent-700/60 object-cover shadow-[0_0_15px_-3px_oklch(from_var(--color-accent-400)_l_c_h_/_0.2)] aspect-[3/4] transition-opacity group-hover:opacity-90" />
-      </a>
-      $endif$
-      <div class="min-w-0 flex-1">
-        <div class="flex items-start justify-between gap-3">
-          <div class="flex items-center gap-2 min-w-0">
-            <span
-              class="shrink-0 font-mono text-accent-700 transition-colors group-hover:text-accent-500"
-              >▸</span
-            >
+    </div>
+    $else$
+    <div
+        class="border border-dashed border-accent-900/40 px-5 py-8 text-center font-mono text-sm text-stone-500"
+    >
+        [ Sin elementos ]
+    </div>
+    $endif$ $endif$ $if(has-pagination)$
+    <nav
+        class="flex flex-col gap-4 border-t border-accent-900/30 pt-6 sm:flex-row sm:items-center sm:justify-between"
+        aria-label="Paginación de colección"
+    >
+        <div class="font-mono text-xs tracking-widest text-stone-500 uppercase">
+            // página $page-number$ de $page-count$ · $total-items$ registros
+        </div>
+        <div class="flex items-center gap-3">
+            $if(page-previous)$
             <a
-              href="$href$"
-              class="font-semibold tracking-tight text-stone-200 no-underline transition-colors hover:text-accent-400">
-              $title$
+                href="$page-previous.href$"
+                class="inline-flex items-center rounded border border-accent-700/60 bg-accent-950/70 px-4 py-2 font-mono text-xs font-semibold tracking-widest text-accent-400 no-underline transition-all duration-200 hover:border-accent-500/80 hover:text-accent-300 hover:shadow-[0_0_14px_-3px_oklch(from_var(--color-accent-400)_l_c_h_/_0.35)] uppercase"
+            >
+                Anterior
             </a>
-          </div>
-          <div class="shrink-0 font-mono text-xs text-stone-600 pt-0.5">
-            $date$
-          </div>
+            $else$
+            <span
+                class="inline-flex items-center rounded border border-accent-950/70 px-4 py-2 font-mono text-xs font-semibold tracking-widest text-stone-700 uppercase"
+            >
+                Anterior
+            </span>
+            $endif$ $if(page-next)$
+            <a
+                href="$page-next.href$"
+                class="inline-flex items-center rounded border border-accent-700/60 bg-accent-950/70 px-4 py-2 font-mono text-xs font-semibold tracking-widest text-accent-400 no-underline transition-all duration-200 hover:border-accent-500/80 hover:text-accent-300 hover:shadow-[0_0_14px_-3px_oklch(from_var(--color-accent-400)_l_c_h_/_0.35)] uppercase"
+            >
+                Siguiente
+            </a>
+            $else$
+            <span
+                class="inline-flex items-center rounded border border-accent-950/70 px-4 py-2 font-mono text-xs font-semibold tracking-widest text-stone-700 uppercase"
+            >
+                Siguiente
+            </span>
+            $endif$
         </div>
-        $if(author)$
-        <div class="mt-0.5 pl-4 font-mono text-xs text-accent-700/70">
-          ↳ $author$
-        </div>
-        $endif$ $if(body)$
-        <div class="mt-1.5 pl-4 text-sm leading-relaxed text-stone-500">
-          $body$
-        </div>
-        $endif$
-      </div>
-    </article>
-    $endfor$
-  </div>
-  $else$
-  <div
-    class="border border-dashed border-accent-900/40 px-5 py-8 text-center font-mono text-sm text-stone-500">
-    [ Sin elementos ]
-  </div>
-  $endif$
-  $endif$ $if(has-pagination)$
-  <nav
-    class="flex flex-col gap-4 border-t border-accent-900/30 pt-6 sm:flex-row sm:items-center sm:justify-between"
-    aria-label="Paginación de colección">
-    <div class="font-mono text-xs tracking-widest text-stone-500 uppercase">
-      // página $page-number$ de $page-count$ · $total-items$ registros
-    </div>
-    <div class="flex items-center gap-3">
-      $if(page-previous)$
-      <a
-        href="$page-previous.href$"
-        class="inline-flex items-center rounded border border-accent-700/60 bg-accent-950/70 px-4 py-2 font-mono text-xs font-semibold tracking-widest text-accent-400 no-underline transition-all duration-200 hover:border-accent-500/80 hover:text-accent-300 hover:shadow-[0_0_14px_-3px_oklch(from_var(--color-accent-400)_l_c_h_/_0.35)] uppercase">
-        Anterior
-      </a>
-      $else$
-      <span
-        class="inline-flex items-center rounded border border-accent-950/70 px-4 py-2 font-mono text-xs font-semibold tracking-widest text-stone-700 uppercase">
-        Anterior
-      </span>
-      $endif$ $if(page-next)$
-      <a
-        href="$page-next.href$"
-        class="inline-flex items-center rounded border border-accent-700/60 bg-accent-950/70 px-4 py-2 font-mono text-xs font-semibold tracking-widest text-accent-400 no-underline transition-all duration-200 hover:border-accent-500/80 hover:text-accent-300 hover:shadow-[0_0_14px_-3px_oklch(from_var(--color-accent-400)_l_c_h_/_0.35)] uppercase">
-        Siguiente
-      </a>
-      $else$
-      <span
-        class="inline-flex items-center rounded border border-accent-950/70 px-4 py-2 font-mono text-xs font-semibold tracking-widest text-stone-700 uppercase">
-        Siguiente
-      </span>
-      $endif$
-    </div>
-  </nav>
-  $endif$
+    </nav>
+    $endif$
 </div>
