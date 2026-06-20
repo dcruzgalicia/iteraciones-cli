@@ -202,7 +202,7 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 \setkomafont{chapterentry}{\normalsize\normalfont}
 \DeclareTOCStyleEntry[linefill=\TOCLeaderMedium,beforeskip=0.5\baselineskip]{tocline}{chapter}
 \DeclareTOCStyleEntry[entryformat=\normalsize\bfseries,linefill=\TOCLeaderTight,beforeskip=1\baselineskip]{tocline}{section}
-\makeatletter\providecommand*{\toclevel@standalonesection}{1}\makeatother
+\makeatletter\providecommand*{\toclevel@standalonesection}{-1}\makeatother
 \makeatletter\providecommand*{\toclevel@sectionchild}{1}\makeatother
 \DeclareTOCStyleEntry[entryformat=\normalsize\normalfont,linefill=\TOCLeaderTight,beforeskip=1\baselineskip,indent=0pt,numwidth=0pt]{tocline}{standalonesection}
 \DeclareTOCStyleEntry[entryformat=\normalsize\bfseries,linefill=\TOCLeaderTight,beforeskip=0pt,indent=0pt,numwidth=0pt]{tocline}{sectionchild}
@@ -250,16 +250,20 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
   \endgroup
 }
 \makeatother
-% \standalonesection: seccion hija de \standalonepart, en mayusculas,
-% sin negritas, con entrada TOC y bookmark via hyperref.
-% Usa \texorpdfstring para que el PDF outline preserve el caso original
-% mientras el TOC muestra el texto en mayusculas.
+% \standalonesection: titulo de part file standalone como \part real.
+% Usa \part (no \part*) para que hyperref cree un destino part.N.
+% El contador de part se deshace con \addtocounter{part}{-1} para
+% no interferir con \standalonepart que ya lo incrementa.
+% El espaciado se reduce temporalmente con \RedeclareSectionCommand
+% local al grupo.
 \newcommand{\standalonesection}[1]{%
   \begingroup
+    \RedeclareSectionCommand[beforeskip=2\baselineskip,afterskip=2\baselineskip,afterindent=false]{part}%
     \let\addcontentsline\gobblethreeargs
     \let\addtocontents\gobbletwoargs
-    \section{\normalfont\MakeUppercase{#1}}%
+    \part{\normalfont\MakeUppercase{#1}}%
   \endgroup
+  \addtocounter{part}{-1}%
   \addcontentsline{toc}{standalonesection}{\texorpdfstring{\MakeUppercase{#1}}{#1}}%
 }
 
