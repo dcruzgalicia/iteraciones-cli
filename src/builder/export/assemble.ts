@@ -2,6 +2,7 @@ import { dirname, join, resolve } from 'node:path';
 import type { PdfFormatConfig } from '../../config/site-config.js';
 import type { CollectionItem } from '../../loader/frontmatter.js';
 import type { BuildDocument, DocumentType } from '../types.js';
+import { renderMarkdownInlineLatex } from './latex.js';
 import {
   EXPORTABLE_TYPES,
   type ExportableDocumentType,
@@ -199,7 +200,7 @@ function assembleBookBody(doc: BuildDocument, items: BuildDocument[], parts?: Ex
 
     for (const part of parts) {
       if (part.kind === 'container') {
-        result.push(`\\containerpart{${part.name}}\n\n`);
+        result.push(`\\containerpart{${renderMarkdownInlineLatex(part.name)}}\n\n`);
         for (const item of part.items) {
           appendItemBody(item, result, 'container', showAuthorMap.get(item.relativePath));
         }
@@ -230,15 +231,15 @@ function appendItemBody(item: BuildDocument, target: string[], partKind: ItemPar
   if (partKind === 'standalone-file') {
     if (showAuthorLine) {
       target.push(`\\standalonepart{\\textsc{${authors.join(', ')}}}\n\n`);
-      target.push(`\\standalonesection{${title}}\n\n`);
+      target.push(`\\standalonesection{${renderMarkdownInlineLatex(title)}}\n\n`);
     } else {
-      target.push(`\\vspace*{7\\baselineskip}\\standalonesection{${title}}\n\n`);
+      target.push(`\\vspace*{7\\baselineskip}\\standalonesection{${renderMarkdownInlineLatex(title)}}\n\n`);
     }
     target.push('\\thispagestyle{empty}\n\\cleardoublepage\n\\thispagestyle{plain}\n\n');
   } else {
     if (showAuthorLine) {
       target.push(`\\chapterauthor{\\textsc{${authors.join(', ')}}}\n\n`);
-      target.push(`\\sectionchild{${title}}\n\n`);
+      target.push(`\\sectionchild{${renderMarkdownInlineLatex(title)}}\n\n`);
     } else {
       target.push(`\\invisiblechapter\n\n`);
       target.push(`## ${title}\n\n`);
