@@ -147,6 +147,8 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfF
   if (metadata.hasParts) {
     lines.push('has-parts: true');
   }
+  if (metadata.dictum) lines.push(`dictum: ${yamlString(metadata.dictum)}`);
+  if (metadata['dictum-author']) lines.push(`dictum-author: ${yamlString(metadata['dictum-author'])}`);
   if (metadata.abstract) lines.push(`abstract: ${yamlString(metadata.abstract)}`);
   if (metadata.keywords && metadata.keywords.length > 0) {
     lines.push('keywords:');
