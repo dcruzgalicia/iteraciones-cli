@@ -535,14 +535,19 @@ $endif$
 \makeatother
 
 % ─── Dictum de colección (epígrafe entre portada e índice) ──────────
+\newcounter{dictumcount}
 \newcommand{\collectiondictum}[2]{%
-  \vspace*{5\baselineskip}%
+  \ifnum\value{dictumcount}=0
+    \vspace*{5\baselineskip}%
+  \else
+    \par\vspace{2\baselineskip}%
+  \fi
+  \stepcounter{dictumcount}%
   \if\relax\detokenize{#2}\relax
     \dictum{#1}%
   \else
     \dictum[#2]{#1}%
   \fi
-  \par\medskip
 }
 
 % ═══════════════════════════════════════════════════════════════════════════════
@@ -561,6 +566,7 @@ $if(publisher)$\publishers{$publisher$}$endif$
 $if(dictum)$
 \cleardoublepage
 \thispagestyle{empty}
+\setcounter{dictumcount}{0}%
 $for(dictum)$
 \collectiondictum{$dictum.text$}{$dictum.author$}
 $endfor$
