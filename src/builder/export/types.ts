@@ -85,6 +85,10 @@ export interface ExportMetadata {
   keywords?: string[];
   /** Si es true, el documento usa partes (container o standalone-file) en su estructura. */
   hasParts?: boolean;
+  /** Texto del epígrafe (dictum) para colecciones. */
+  dictum?: string;
+  /** Autor del epígrafe (opcional). */
+  'dictum-author'?: string;
 }
 
 /**

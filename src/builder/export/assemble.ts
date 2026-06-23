@@ -13,6 +13,29 @@ import {
 } from './types.js';
 
 /**
+ * Parsea el campo `dictum` del frontmatter (formato YAML block scalar).
+ *
+ * El texto se divide por doble salto de linea (\n\n): la primera parte es
+ * la cita del epigrafe; la segunda (opcional) es el autor.
+ * Ambas se procesan con renderMarkdownInlineLatex para escape LaTeX.
+ */
+function parseDictum(raw: unknown): {
+  dictum?: string;
+  'dictum-author'?: string;
+} {
+  if (typeof raw !== 'string' || !raw.trim()) return {};
+  const parts = raw
+    .trim()
+    .split(/\n+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const result: { dictum?: string; 'dictum-author'?: string } = {};
+  if (parts[0]) result.dictum = renderMarkdownInlineLatex(parts[0]);
+  if (parts[1]) result['dictum-author'] = renderMarkdownInlineLatex(parts[1]);
+  return result;
+}
+
+/**
  * Resuelve una ruta de archivo editorial (bibliography, csl, cover) y verifica
  * que esté dentro del directorio del proyecto para prevenir path traversal.
  *
@@ -121,6 +144,7 @@ export function assembleExportDocument(
       ? (rawEditorial['keywords'] as unknown[]).filter((k): k is string => typeof k === 'string')
       : undefined,
     hasParts,
+    ...parseDictum(doc.frontmatter['dictum']),
   };
 
   const body = documentclass === 'scrartcl' ? doc.body : assembleBookBody(doc, items, parts, loosePaths);
@@ -553,6 +577,7 @@ export function assembleAuthorExportVariants(
     abstract: typeof rawEditorial['abstract'] === 'string' && rawEditorial['abstract'].trim() ? rawEditorial['abstract'].trim() : undefined,
     keywords: undefined,
     hasParts: false,
+    ...parseDictum(doc.frontmatter['dictum']),
   };
 
   // Resolver y ordenar las obras del autor por fecha descendente
