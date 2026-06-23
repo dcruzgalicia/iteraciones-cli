@@ -4,6 +4,7 @@ import type { CollectionItem } from '../../loader/frontmatter.js';
 import type { BuildDocument, DocumentType } from '../types.js';
 import { renderMarkdownInlineLatex } from './latex.js';
 import {
+  type DictumEntry,
   EXPORTABLE_TYPES,
   type ExportableDocumentType,
   type ExportCollectionPart,
@@ -13,26 +14,50 @@ import {
 } from './types.js';
 
 /**
- * Parsea el campo `dictum` del frontmatter (formato YAML block scalar).
+ * Parsea el campo `dictum` del frontmatter.
  *
- * El texto se divide por doble salto de linea (\n\n): la primera parte es
- * la cita del epigrafe; la segunda (opcional) es el autor.
- * Ambas se procesan con renderMarkdownInlineLatex para escape LaTeX.
+ * Soporta dos formatos:
+ *   - Array de objetos: [{ text: "Cita", author: "Autor" }]
+ *   - String (legacy): "Cita\n\nAutor" o "Cita"
+ *
+ * Cada entrada se procesa con renderMarkdownInlineLatex.
  */
-function parseDictum(raw: unknown): {
-  dictum?: string;
-  'dictum-author'?: string;
-} {
-  if (typeof raw !== 'string' || !raw.trim()) return {};
-  const parts = raw
-    .trim()
-    .split(/\n+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-  const result: { dictum?: string; 'dictum-author'?: string } = {};
-  if (parts[0]) result.dictum = renderMarkdownInlineLatex(parts[0]);
-  if (parts[1]) result['dictum-author'] = renderMarkdownInlineLatex(parts[1]);
-  return result;
+function parseDictum(raw: unknown): { dictum?: DictumEntry[] } {
+  if (raw === undefined || raw === null) return {};
+  if (Array.isArray(raw)) {
+    const entries: DictumEntry[] = [];
+    for (const item of raw) {
+      if (typeof item === 'object' && item !== null) {
+        const obj = item as Record<string, unknown>;
+        if (typeof obj.text === 'string' && obj.text.trim()) {
+          const entry: DictumEntry = {
+            text: renderMarkdownInlineLatex(obj.text.trim()),
+          };
+          if (typeof obj.author === 'string' && obj.author.trim()) {
+            entry.author = renderMarkdownInlineLatex(obj.author.trim());
+          }
+          entries.push(entry);
+        }
+      } else if (typeof item === 'string' && item.trim()) {
+        // String individual (cita sin autor en el array)
+        entries.push({ text: renderMarkdownInlineLatex(item.trim()) });
+      }
+    }
+    return entries.length > 0 ? { dictum: entries } : {};
+  }
+  if (typeof raw === 'string' && raw.trim()) {
+    const parts = raw
+      .trim()
+      .split(/\n+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const entry: DictumEntry = {
+      text: renderMarkdownInlineLatex(parts[0] ?? ''),
+    };
+    if (parts[1]) entry.author = renderMarkdownInlineLatex(parts[1]);
+    return { dictum: [entry] };
+  }
+  return {};
 }
 
 /**

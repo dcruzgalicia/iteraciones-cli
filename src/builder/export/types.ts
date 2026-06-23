@@ -56,6 +56,14 @@ export interface ExportCollectionPart {
   isPartFile?: boolean;
 }
 
+/** Una entrada de epigrafe (dictum) con cita y autor opcional. */
+export interface DictumEntry {
+  /** Texto de la cita. */
+  text: string;
+  /** Autor del epigrafe (opcional). */
+  author?: string;
+}
+
 /** Metadatos editoriales que se inyectan en el YAML header del documento Pandoc. */
 export interface ExportMetadata {
   title: string;
@@ -85,10 +93,8 @@ export interface ExportMetadata {
   keywords?: string[];
   /** Si es true, el documento usa partes (container o standalone-file) en su estructura. */
   hasParts?: boolean;
-  /** Texto del epígrafe (dictum) para colecciones. */
-  dictum?: string;
-  /** Autor del epígrafe (opcional). */
-  'dictum-author'?: string;
+  /** Epigrafes (dictums) para colecciones. */
+  dictum?: DictumEntry[];
 }
 
 /**
