@@ -106,16 +106,21 @@ function escapeLatex(text: string): string {
 function renderDictum(content: string): {
   latex: string;
 } {
-  const lines = content
-    .split("\n")
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0);
+  // Dividir por dobles saltos de linea (parrafos)
+  const paragraphs = content
+    .trim()
+    .split(/\n{2,}/)
+    .map((p) => p.replace(/\n+/g, " ").trim())
+    .filter(Boolean);
 
-  if (lines.length === 0) return { latex: "" };
+  if (paragraphs.length === 0) return { latex: "" };
 
-  const quoteRaw = lines.slice(0, -1).join(" ");
+  // Ultimo parrafo = autor, resto = cita
+  const quoteRaw = paragraphs.slice(0, -1).join("\n\n");
   const authorRaw =
-    lines.length > 1 ? (lines[lines.length - 1] ?? "") : undefined;
+    paragraphs.length > 1
+      ? (paragraphs[paragraphs.length - 1] ?? "")
+      : undefined;
 
   const quote = renderMarkdownInline(quoteRaw);
 

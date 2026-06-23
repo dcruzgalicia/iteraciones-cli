@@ -30,20 +30,26 @@ function parseDictum(raw: unknown): { dictum?: DictumEntry[] } {
       if (typeof item === 'object' && item !== null) {
         const obj = item as Record<string, unknown>;
         if (typeof obj.text === 'string' && obj.text.trim()) {
-          // Dividir text por saltos de linea: first line = cita, second = autor
           const parts = obj.text
             .trim()
             .split(/\n+/)
             .map((s) => s.trim())
             .filter(Boolean);
-          const entry: DictumEntry = {
-            text: renderMarkdownInlineLatex(parts[0] ?? obj.text.trim()),
-          };
-          // Si hay author explicito, usar ese; si no, tomar de parts[1]
+          const entry: DictumEntry = {};
+          // Si hay author explicito, usar ese
           if (typeof obj.author === 'string' && obj.author.trim()) {
+            entry.text = renderMarkdownInlineLatex(parts.join('\n\n'));
             entry.author = renderMarkdownInlineLatex(obj.author.trim());
-          } else if (parts[1]) {
-            entry.author = renderMarkdownInlineLatex(parts[1]);
+          } else if (parts.length === 1) {
+            // Solo cita, sin autor
+            entry.text = renderMarkdownInlineLatex(parts[0]);
+          } else {
+            // Todas menos la ultima = cita, ultima = autor
+            entry.text = parts
+              .slice(0, -1)
+              .map((p) => renderMarkdownInlineLatex(p))
+              .join('\n\n');
+            entry.author = renderMarkdownInlineLatex(parts[parts.length - 1]!);
           }
           entries.push(entry);
         }
@@ -53,10 +59,16 @@ function parseDictum(raw: unknown): { dictum?: DictumEntry[] } {
           .split(/\n+/)
           .map((s) => s.trim())
           .filter(Boolean);
-        const entry: DictumEntry = {
-          text: renderMarkdownInlineLatex(parts[0] ?? item.trim()),
-        };
-        if (parts[1]) entry.author = renderMarkdownInlineLatex(parts[1]);
+        const entry: DictumEntry = {};
+        if (parts.length === 1) {
+          entry.text = renderMarkdownInlineLatex(parts[0]);
+        } else {
+          entry.text = parts
+            .slice(0, -1)
+            .map((p) => renderMarkdownInlineLatex(p))
+            .join('\n\n');
+          entry.author = renderMarkdownInlineLatex(parts[parts.length - 1]!);
+        }
         entries.push(entry);
       }
     }
@@ -68,10 +80,16 @@ function parseDictum(raw: unknown): { dictum?: DictumEntry[] } {
       .split(/\n+/)
       .map((s) => s.trim())
       .filter(Boolean);
-    const entry: DictumEntry = {
-      text: renderMarkdownInlineLatex(parts[0] ?? ''),
-    };
-    if (parts[1]) entry.author = renderMarkdownInlineLatex(parts[1]);
+    const entry: DictumEntry = {};
+    if (parts.length === 1) {
+      entry.text = renderMarkdownInlineLatex(parts[0] ?? '');
+    } else {
+      entry.text = parts
+        .slice(0, -1)
+        .map((p) => renderMarkdownInlineLatex(p))
+        .join('\n\n');
+      entry.author = renderMarkdownInlineLatex(parts[parts.length - 1]!);
+    }
     return { dictum: [entry] };
   }
   return {};
