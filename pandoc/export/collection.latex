@@ -536,15 +536,13 @@ $endif$
 
 % ─── Dictum de colección (epígrafe entre portada e índice) ──────────
 \newcommand{\collectiondictum}[2]{%
-  \cleardoublepage
-  \thispagestyle{empty}
   \vspace*{5\baselineskip}%
   \if\relax\detokenize{#2}\relax
     \dictum{#1}%
   \else
     \dictum[#2]{#1}%
   \fi
-  \cleardoublepage
+  \par\medskip
 }
 
 % ═══════════════════════════════════════════════════════════════════════════════
@@ -560,9 +558,14 @@ $if(author)$\author{$for(author)$$author$$sep$ \and $endfor$}$endif$
 $if(publisher)$\publishers{$publisher$}$endif$
 \date{}
 \maketitle
+$if(dictum)$
+\cleardoublepage
+\thispagestyle{empty}
 $for(dictum)$
 \collectiondictum{$dictum.text$}{$dictum.author$}
 $endfor$
+\cleardoublepage
+$endif$
 $if(toc)$
 \cleardoublepage
 \begingroup
