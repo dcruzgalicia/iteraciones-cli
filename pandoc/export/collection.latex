@@ -258,12 +258,11 @@ $if(toc-depth)$\setcounter{tocdepth}{$toc-depth$}$endif$
 % local al grupo.
 \newcommand{\standalonesection}[1]{%
   \begingroup
-    \RedeclareSectionCommand[beforeskip=2\baselineskip,afterskip=2\baselineskip,afterindent=false]{part}%
     \let\addcontentsline\gobblethreeargs
     \let\addtocontents\gobbletwoargs
-    \part{\normalfont\MakeUppercase{#1}}%
+    \phantomsection
+    \section*{\normalfont\MakeUppercase{#1}}%
   \endgroup
-  \addtocounter{part}{-1}%
   \addcontentsline{toc}{standalonesection}{\texorpdfstring{\MakeUppercase{#1}}{#1}}%
 }
 
@@ -540,7 +539,7 @@ $endif$
   \ifnum\value{dictumcount}=0
     \vspace*{5\baselineskip}%
   \else
-    \par\vspace{2\baselineskip}%
+    \par\vspace{1.5\topskip}%
   \fi
   \stepcounter{dictumcount}%
   \if\relax\detokenize{#2}\relax
@@ -583,8 +582,7 @@ $if(toc)$
 $endif$
 \makeatletter\@mainmattertrue\makeatother
 \renewcommand{\thepage}{\arabic{page}}
-\thispagestyle{plain}
-\noindent
+\par
 $body$
 $if(biblatex)$
 \begingroup

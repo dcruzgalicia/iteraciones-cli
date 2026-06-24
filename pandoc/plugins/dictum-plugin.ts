@@ -175,7 +175,26 @@ const plugin: IPlugin = {
         }
       }
 
-      const spacing = isConsecutive ? "2\\topskip" : "3\\topskip";
+      // Determinar si es el ultimo de una cadena consecutiva
+      // (el anterior es consecutivo pero no hay siguiente, o el siguiente no lo es)
+      let isChainEnd = false;
+      if (!isConsecutive) {
+        const prev = matches[i - 1];
+        if (prev) {
+          const prevGapStart = prev.index + prev.length;
+          const prevGapEnd = m.index;
+          const prevGap = body.slice(prevGapStart, prevGapEnd);
+          if (CONSECUTIVE_GAP_RE.test(prevGap)) {
+            isChainEnd = true;
+          }
+        }
+      }
+
+      const spacing = isConsecutive
+        ? "2\\topskip"
+        : isChainEnd
+          ? "2.9\\topskip"
+          : "3.4\\topskip";
       const prefix = `\\renewcommand*{\\dictumauthorformat}[1]{#1\\vspace*{${spacing}}}`;
       const latex = `${prefix}\n${rendered.latex}`;
 
