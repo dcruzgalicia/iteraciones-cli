@@ -12,6 +12,11 @@
 function Pandoc(doc)
   local new_blocks = {}
   local prev_was_dictum = false
+  -- When a dictum chain ends, the next paragraph needs \noindent to
+  -- avoid indentation. Rather than emitting a separate RawBlock (which
+  -- becomes an empty paragraph in LaTeX), we prepend a RawInline to
+  -- the next Para block.
+  local needs_noindent = false
 
   for i, block in ipairs(doc.blocks) do
     if block.t == "Div" and block.classes:includes("dictum") then
@@ -82,8 +87,6 @@ function Pandoc(doc)
       end
 
       -- Build LaTeX: \renewcommand + \dictum[author]{quote}
-      -- The \raggedleft\normalfont\normalsize ensures the author is not justified
-      -- even when \setkomafont{dictum} includes \justifying
       local prefix = "\\renewcommand*{\\dictumauthorformat}[1]{{\\raggedleft\\normalfont\\normalsize #1}\\vspace*{" .. spacing .. "}}"
       local dictum_cmd
       if author_latex ~= "" then
@@ -94,14 +97,19 @@ function Pandoc(doc)
 
       table.insert(new_blocks, pandoc.RawBlock('latex', prefix .. "\n" .. dictum_cmd))
 
-      -- After the last (non-consecutive) dictum, add \noindent for following paragraph
-      if not next_is_dictum then
-        table.insert(new_blocks, pandoc.RawBlock('latex', "\\noindent\\ignorespaces "))
-      end
-
+      -- After the last (non-consecutive) dictum, signal that the next
+      -- paragraph needs \noindent (to avoid indentation after dictum).
+      needs_noindent = not next_is_dictum
       prev_was_dictum = true
     else
+      -- For non-dictum blocks: if we need \noindent and this is a Para,
+      -- prepend \noindent\ignorespaces as a RawInline at the start of
+      -- the paragraph content.
+      if needs_noindent and block.t == "Para" then
+        table.insert(block.content, 1, pandoc.RawInline('latex', '\\noindent\\ignorespaces '))
+      end
       table.insert(new_blocks, block)
+      needs_noindent = false
       prev_was_dictum = false
     end
   end
