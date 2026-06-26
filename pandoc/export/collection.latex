@@ -601,6 +601,7 @@ $endif$
 \makeatletter\@mainmattertrue\makeatother
 \renewcommand{\thepage}{\arabic{page}}
 \par
+$if(dictum)$\noindent\ignorespaces$endif$
 $body$
 $if(biblatex)$
 \begingroup
