@@ -343,11 +343,10 @@ function appendItemBody(item: BuildDocument, target: string[], partKind: ItemPar
   const resolvedBody = resolveImagePaths(renamedBody, item.filePath);
   const shiftedBody = shiftHeadings(resolvedBody, 2);
   const bodyStart = shiftedBody.trim();
-  if (bodyStart.startsWith('#')) {
-    target.push(bodyStart, '\n\n\\cleardoublepage\n\n');
-  } else {
-    target.push('`\\noindent`{=latex}\n\n', bodyStart, '\n\n\\cleardoublepage\n\n');
-  }
+  // El noindent del primer parrafo tras un titulo se delega al filtro Lua
+  // dictum.lua, que lo anade automaticamente detectando Header, RawBlock
+  // de seccionamiento, BlockQuote, CodeBlock o Div.dictum.
+  target.push(bodyStart, '\n\n\\cleardoublepage\n\n');
 }
 
 /**
