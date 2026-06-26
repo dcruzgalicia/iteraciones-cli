@@ -181,6 +181,21 @@ $endif$
 \renewenvironment{center}{\par\centering}{\par}
 \renewenvironment{flushright}{\par\raggedleft}{\par}
 \renewenvironment{flushleft}{\par\raggedright}{\par}
+% Redefinir quote (blockquote en markdown) con espaciado controlado.
+% - Espaciado vertical before/after: \baselineskip
+% - Margen izquierdo: 2\parindent (doble del indent normal)
+% - Margen derecho: 0pt (alineado con borde derecho)
+\renewenvironment{quote}
+  {\list{}{%
+     \topsep=\baselineskip
+     \partopsep=0pt
+     \parsep=0pt
+     \itemsep=0pt
+     \leftmargin=2\parindent
+     \rightmargin=0pt
+   }%
+   \item\relax}
+  {\endlist}
 
 % ─── Estilo de página ────────────────────────────────────────────────────────
 \usepackage{fancyhdr}
