@@ -107,6 +107,37 @@ function Pandoc(doc)
       table.insert(new_blocks, block)
       needs_noindent = true
       prev_was_dictum = false
+    elseif block.t == "RawBlock" and (block.format == "latex" or block.format == "tex") then
+      -- Catch RawBlock with LaTeX sectioning commands (\sectionchild,
+      -- \standalonesection, \chapterauthor, etc.) that are wrapped in
+      -- groups and lose afterindent=false from the internal \section{}.
+      local text = block.text:gsub('^%s*', '')
+      local is_section_cmd = {
+        ['\\chapter'] = true, ['\\section'] = true,
+        ['\\subsection'] = true, ['\\subsubsection'] = true,
+        ['\\paragraph'] = true, ['\\subparagraph'] = true,
+        ['\\part'] = true,
+        ['\\standalonesection'] = true, ['\\sectionchild'] = true,
+        ['\\chapterauthor'] = true, ['\\standalonepart'] = true,
+        ['\\invisiblechapter'] = true, ['\\containerpart'] = true,
+      }
+      local matched = false
+      for cmd, _ in pairs(is_section_cmd) do
+        if text:find(cmd, 1, true) == 1 then
+          matched = true
+          break
+        end
+      end
+      if matched then
+        table.insert(new_blocks, block)
+        needs_noindent = true
+        prev_was_dictum = false
+      else
+        -- Other raw blocks (e.g. \cleardoublepage) preserve needs_noindent
+        -- from the previous block, so section → cleardoublepage → text
+        -- still gets noindent on the text.
+        table.insert(new_blocks, block)
+      end
     else
       -- For non-dictum blocks: if we need \noindent and this is a Para,
       -- prepend \noindent\ignorespaces as a RawInline at the start of
