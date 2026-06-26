@@ -101,6 +101,12 @@ function Pandoc(doc)
       -- paragraph needs \noindent (to avoid indentation after dictum).
       needs_noindent = not next_is_dictum
       prev_was_dictum = true
+    elseif block.t == "BlockQuote" or block.t == "CodeBlock" or block.t == "Header" then
+      -- After blockquotes, code blocks and section titles the first
+      -- text paragraph should not be indented.
+      table.insert(new_blocks, block)
+      needs_noindent = true
+      prev_was_dictum = false
     else
       -- For non-dictum blocks: if we need \noindent and this is a Para,
       -- prepend \noindent\ignorespaces as a RawInline at the start of
