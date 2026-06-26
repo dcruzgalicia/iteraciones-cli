@@ -358,6 +358,11 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
     args.push('--lua-filter', join(import.meta.dir, '../../pandoc/filters/suppress-references.lua'));
   }
 
+  // Lua filter para transformar fenced divs .dictum a comandos LaTeX \dictum.
+  // Debe ejecutarse después de citeproc para que @citekey se resuelva antes
+  // de la conversión a LaTeX. Corre también sin citeproc (dictums sin citas).
+  args.push('--lua-filter', join(import.meta.dir, '../../pandoc/filters/dictum.lua'));
+
   let proc: ReturnType<typeof Bun.spawn>;
   try {
     proc = Bun.spawn(args, { stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' });

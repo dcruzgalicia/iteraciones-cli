@@ -346,7 +346,7 @@ function appendItemBody(item: BuildDocument, target: string[], partKind: ItemPar
   if (bodyStart.startsWith('#')) {
     target.push(bodyStart, '\n\n\\cleardoublepage\n\n');
   } else {
-    target.push('\\noindent ', bodyStart, '\n\n\\cleardoublepage\n\n');
+    target.push('`\\noindent`{=latex}\n\n', bodyStart, '\n\n\\cleardoublepage\n\n');
   }
 }
 
