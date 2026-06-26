@@ -87,6 +87,7 @@ $endif$
 
 % ─── Microtype (pdfLaTeX: tracking, kerning y spacing completo) ──────────────
 \usepackage[tracking=true,spacing=true]{microtype}
+\usepackage{ragged2e}
 
 % ─── Parámetros tipográficos (viudas, huérfanas, guiones) ────────────────────
 \flushbottom
@@ -165,12 +166,12 @@ $endif$
 \setkomafont{subparagraph}{\normalsize\normalfont}
 
 % ─── Dictum (epígrafe KOMA) ──────────────────────────────────────────────────
-\setkomafont{dictum}{\normalsize\normalfont\itshape}
+\setkomafont{dictum}{\normalsize\normalfont\itshape\justifying}
 \renewcommand*{\dictumwidth}{0.5\textwidth}
 \renewcommand*{\dictumrule}{}
 \setkomafont{dictumauthor}{\normalsize\normalfont}
 % Valor por defecto; el plugin ajusta a 2\topskip entre dictums consecutivos
-\renewcommand*{\dictumauthorformat}[1]{#1\vspace*{3\topskip}}
+\renewcommand*{\dictumauthorformat}[1]{\raggedleft\normalfont\normalsize #1\vspace*{3\topskip}}
 % KOMA-Script no agrega espacio vertical antes del parbox; lo parcheamos
 \xpatchcmd{\dictum}{\par}{\par\addvspace{1.5\topskip}}{}{}
 
