@@ -82,7 +82,9 @@ function Pandoc(doc)
       end
 
       -- Build LaTeX: \renewcommand + \dictum[author]{quote}
-      local prefix = "\\renewcommand*{\\dictumauthorformat}[1]{#1\\vspace*{" .. spacing .. "}}"
+      -- The \raggedleft\normalfont\normalsize ensures the author is not justified
+      -- even when \setkomafont{dictum} includes \justifying
+      local prefix = "\\renewcommand*{\\dictumauthorformat}[1]{{\\raggedleft\\normalfont\\normalsize #1}\\vspace*{" .. spacing .. "}}"
       local dictum_cmd
       if author_latex ~= "" then
         dictum_cmd = "\\dictum[" .. author_latex .. "]{" .. quote_latex .. "}"
