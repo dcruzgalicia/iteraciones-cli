@@ -1,5 +1,68 @@
 # Changelog
 
+## [0.7.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.6.0...v0.7.0) (2026-06-26)
+
+
+### Features
+
+* **builder:** agrega title-html en todos los context builders ([e213f41](https://github.com/dcruzgalicia/iteraciones-cli/commit/e213f41f24a2971c4f830130e9f0ad08cb9ff9fd))
+* **builder:** crea renderMarkdownInline para markdown inline en titulos ([2e6f2ef](https://github.com/dcruzgalicia/iteraciones-cli/commit/2e6f2efa35f5b7a3c152c86ce285eff15a0843dd))
+* **export:** agrega dictum/epigrafe en colecciones entre portada e indice ([ef1ce41](https://github.com/dcruzgalicia/iteraciones-cli/commit/ef1ce4124dc44e15763899c0c44fda077e11b8b0))
+* **export:** agrega opcion respect-header-plain para mantener posicion header en estilo plain ([8852188](https://github.com/dcruzgalicia/iteraciones-cli/commit/88521882ec93515aec0e3653c4422631baa32820)), closes [#547](https://github.com/dcruzgalicia/iteraciones-cli/issues/547)
+* **export:** agrega título Referencias con nivel \part o \section según colección ([a958a5d](https://github.com/dcruzgalicia/iteraciones-cli/commit/a958a5df67ae4dcfdfd209fa9f4e9e5921857129))
+* **export:** añade plugin built-in dictum KOMA-Script via fenced div ([56c4dc2](https://github.com/dcruzgalicia/iteraciones-cli/commit/56c4dc29f67d860b7805c4b254ff3a0fdfbdeab1)), closes [#528](https://github.com/dcruzgalicia/iteraciones-cli/issues/528)
+* **export:** aplica renderMarkdownInlineLatex en titulos LaTeX ([ba469a2](https://github.com/dcruzgalicia/iteraciones-cli/commit/ba469a21bbed504b2b8d1581fdfef40841eb8426))
+* **export:** crea renderMarkdownInlineLatex para titulos LaTeX ([cf4310a](https://github.com/dcruzgalicia/iteraciones-cli/commit/cf4310ae59373e39b76c2b5f4d983c38ec54932c))
+* **export:** soporta multiples dictums en colecciones ([f12153b](https://github.com/dcruzgalicia/iteraciones-cli/commit/f12153b59022595bf9152bcf48a5ca38e93cae01))
+* **plugin:** soporta negritas y cursivas de markdown en dictum ([6190045](https://github.com/dcruzgalicia/iteraciones-cli/commit/6190045cff6c1dcb9a7abb3a301111cb245f9231))
+* **template:** usa title-html en todas las templates HTML ([aba372c](https://github.com/dcruzgalicia/iteraciones-cli/commit/aba372c7e8c6a60d4d2cbadb58eb751b424df604))
+
+
+### Bug Fixes
+
+* **assemble:** elimina \noindent intermedio que absorbia needs_noindent ([5974341](https://github.com/dcruzgalicia/iteraciones-cli/commit/5974341b81802403e2acfda2a8359bce28530df7))
+* **builder:** añade vspace antes de standalonesection cuando no hay autor ([adebe8f](https://github.com/dcruzgalicia/iteraciones-cli/commit/adebe8f11f98486f467a29ec65170fe25d2521aa))
+* **collection:** añade espaciado en TOC para standalonesection ([256cbaa](https://github.com/dcruzgalicia/iteraciones-cli/commit/256cbaa0bf1ff1330e1a0d92f094327a520773ae))
+* **export:** ajusta espaciado de dictums y pagina en colecciones ([4a66519](https://github.com/dcruzgalicia/iteraciones-cli/commit/4a665199d449ee321ebe852a10072444d1fa1ce7))
+* **export:** añade cleardoublepage antes y después del TOC para twoside ([b2f2d1a](https://github.com/dcruzgalicia/iteraciones-cli/commit/b2f2d1a7ca30f25759b5f98d08c954e81f45a44c))
+* **export:** cambia standalonesection de section a part ([54dbe20](https://github.com/dcruzgalicia/iteraciones-cli/commit/54dbe20c75dfb6a73ec33d96ef0316a4d50d1cd4))
+* **export:** corregir indent del primer párrafo en standalone part files ([2e0f5cd](https://github.com/dcruzgalicia/iteraciones-cli/commit/2e0f5cd756001590d34e6b4d7af7f7a9331086d7))
+* **export:** corrige anclas hyperref de secciones en file.latex con secnumdepth=-2 ([8eed361](https://github.com/dcruzgalicia/iteraciones-cli/commit/8eed3613eb4615b0b7044ff8d71354ac86deb804))
+* **export:** corrige espaciado entre dictums consecutivos en exportación PDF ([23cc441](https://github.com/dcruzgalicia/iteraciones-cli/commit/23cc441d34110d4c53168f42deaa4a4421c82b52)), closes [#528](https://github.com/dcruzgalicia/iteraciones-cli/issues/528)
+* **export:** corrige mayusculas en PDF outline de standalonesection ([fa1ee9c](https://github.com/dcruzgalicia/iteraciones-cli/commit/fa1ee9cff4ec38250cc69943f12dbee5186009a4))
+* **export:** elimina reubicación de preámbulo y maneja entrada fantasma en LaTeX template ([3ed9e7d](https://github.com/dcruzgalicia/iteraciones-cli/commit/3ed9e7d161b7ba588eb09b857250dd235d74ac25))
+* **export:** espacio reducido entre dictums consecutivos ([ca75da7](https://github.com/dcruzgalicia/iteraciones-cli/commit/ca75da79e601c298fe4b8d5a58ab91d34327e1f1))
+* **export:** reduce espaciado de standalonepart a 7 baselineskip ([b910ca6](https://github.com/dcruzgalicia/iteraciones-cli/commit/b910ca6b6ddd44cc23e0505d18557a09e522158b)), closes [#534](https://github.com/dcruzgalicia/iteraciones-cli/issues/534)
+* **export:** renderiza citekeys en dictums via filtro Lua post-citeproc ([3bb4b0b](https://github.com/dcruzgalicia/iteraciones-cli/commit/3bb4b0b269162d318f91e1025d7c0a9640d62f26)), closes [#577](https://github.com/dcruzgalicia/iteraciones-cli/issues/577)
+* **export:** respeta posicion de numero de pagina en footer segun configuracion ([4cb8f6f](https://github.com/dcruzgalicia/iteraciones-cli/commit/4cb8f6f27721542cc77a287e99072c2166469f30)), closes [#545](https://github.com/dcruzgalicia/iteraciones-cli/issues/545)
+* **export:** separa autor de cita en text y agrupa dictums en una pagina ([f9967f2](https://github.com/dcruzgalicia/iteraciones-cli/commit/f9967f2ffb3efb4da5e7cfd9c14cb845d0572788))
+* **export:** ultima linea del dictum como autor, resto como cita ([b1bbeae](https://github.com/dcruzgalicia/iteraciones-cli/commit/b1bbeaeb626a60c033bb07accf4e1f56b78b645c))
+* **invisiblechapter:** invisiblechapter replica espaciado de chapterauthor cuando autor oculto ([999ab7b](https://github.com/dcruzgalicia/iteraciones-cli/commit/999ab7b45426f0318e31c1efcae8a838ad33d6c3))
+* **invisiblechapter:** reconoce invisiblechapter en preamble check para evitar reordenarlo ([d7f019c](https://github.com/dcruzgalicia/iteraciones-cli/commit/d7f019c383a42cb17d158af2b0d4ec9e8efe91ad))
+* **lua:** detecta RawBlock con seccionamiento para noindent ([561b061](https://github.com/dcruzgalicia/iteraciones-cli/commit/561b061ceada41ce851bb6f20f363bbdbb785f14))
+* **lua:** extiende noindent a blockquote, codigo y titulos ([76a6385](https://github.com/dcruzgalicia/iteraciones-cli/commit/76a638560cb4ed29ea92815b8c5ab6cf8de8a9d2))
+* **plugin:** elimina indentación del párrafo posterior a un dictum ([1357fee](https://github.com/dcruzgalicia/iteraciones-cli/commit/1357feede1e7473e2851ba280b1bbe7821eb6113))
+* **standalone-file:** noindent antes del body tras cleardoublepage para evitar indentacion del primer parrafo ([bf65c7d](https://github.com/dcruzgalicia/iteraciones-cli/commit/bf65c7dfb23bf299b495ca589a2bdaa5828c734e))
+* **standalone-file:** noindent en linea separada para no romper headings markdown ([6f0c159](https://github.com/dcruzgalicia/iteraciones-cli/commit/6f0c15904e825ec006f19db24ccd9754f12468e8))
+* **standalone-file:** noindent tras cleardoublepage en standalone-file, no antes del body markdown ([9cf5707](https://github.com/dcruzgalicia/iteraciones-cli/commit/9cf570725de4eeb574195ecc354a0d5624f76d4d))
+* **standalonepart:** agrega par al inicio de standalonepart para que vspace* funcione tras noindent ([f49c453](https://github.com/dcruzgalicia/iteraciones-cli/commit/f49c453b8fe9aa2ca76caa7fa3a5775a537c717a))
+* **standalonepart:** reduce espaciado de standalonepart a 2bs+1bs ([6c84303](https://github.com/dcruzgalicia/iteraciones-cli/commit/6c843035e26e7d0323bec3b822d0f08a84ed4fb7))
+* **standalonepart:** restaura 10bs antes de standalonepart, elimina afterskip extra ([c10a0d4](https://github.com/dcruzgalicia/iteraciones-cli/commit/c10a0d46892f5da1b9bd658657b4e71933c9fdde))
+* **standalonepart:** standalonepart spacing 2bs+1bs e invisiblestandalonepart para autor oculto ([d2b9bba](https://github.com/dcruzgalicia/iteraciones-cli/commit/d2b9bbaabddfca36b81db3911bccf5f2e7e92906))
+* **template:** ajusta espaciado y margenes de blockquote ([2fc590e](https://github.com/dcruzgalicia/iteraciones-cli/commit/2fc590e986a651344a6b3b5346ae4116272531a3))
+* **template:** justifica texto del dictum, autor sin justificar ([1181b5b](https://github.com/dcruzgalicia/iteraciones-cli/commit/1181b5b481251e33a967c5617e94bb4b04b62752))
+* **template:** primer parrafo sin indent tras dictum ([f02ffbc](https://github.com/dcruzgalicia/iteraciones-cli/commit/f02ffbc2830f99262b4a2806ecf8c131ad7ee3e3))
+* **toc:** agrega espacio en TOC antes de subsections, salto solo entre tipos distintos ([c3d166a](https://github.com/dcruzgalicia/iteraciones-cli/commit/c3d166af6d8b8ca665d6f10d71a4c6effab68282)), closes [#515](https://github.com/dcruzgalicia/iteraciones-cli/issues/515)
+* **toc:** agrega typeout DEBUG para medir lastskip en contentsline ([602721a](https://github.com/dcruzgalicia/iteraciones-cli/commit/602721a3cb167df29cfab82d881127f9ecd37795))
+* **toc:** beforeskip=1baselineskip en toc para part (salto exacto) ([8c2ccb6](https://github.com/dcruzgalicia/iteraciones-cli/commit/8c2ccb6f9b69076857f68ddf44b6859e9ccbf6ce))
+* **toc:** explicita afterskip=0pt en TOC para subsection/subsubsection/paragraph/subparagraph ([d857875](https://github.com/dcruzgalicia/iteraciones-cli/commit/d8578750efeacf22bb5b5c06b6aa01dfe00d2ea9))
+* **toc:** explicita beforeskip=0pt en toc line para part ([c4e2cb4](https://github.com/dcruzgalicia/iteraciones-cli/commit/c4e2cb47964e4bd7f66fa6b127b0238203e0fb3c))
+* **toc:** explicita parttocline vacio para evitar addvspace{2baselineskip} extra en toc ([8028495](https://github.com/dcruzgalicia/iteraciones-cli/commit/80284952ec3240ccc67c4f5db06003df29042997))
+* **toc:** quita addpenalty en l@partcontainer para que addvspace se fusione correctamente ([0c5c691](https://github.com/dcruzgalicia/iteraciones-cli/commit/0c5c69188e7967a5cc3c0fe07712960f95807498))
+* **toc:** reescribe addparttocentry sin llamar al KOMA-Script original ([8f96919](https://github.com/dcruzgalicia/iteraciones-cli/commit/8f96919f14d7ff5123c62d5f155bda41897a0fe3))
+* **toc:** revierte afterskip=0pt (no soportado en KOMA-Script &lt;3.33) ([8c7b759](https://github.com/dcruzgalicia/iteraciones-cli/commit/8c7b75987f15c121e552d9648b2fbb855db16e71))
+* **toc:** revierte parttocline (no existe en este KOMA-Script) ([7f81ebf](https://github.com/dcruzgalicia/iteraciones-cli/commit/7f81ebfee72eeafa8b7dc0db49d3f6095e95589f))
+
 ## [0.6.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.5.0...v0.6.0) (2026-06-12)
 
 
