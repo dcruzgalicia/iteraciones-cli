@@ -87,7 +87,22 @@ async function copyFonts(outputDir: string): Promise<void> {
 
 async function copyLogo(outputDir: string, cwd: string, siteConfig: SiteConfig): Promise<void> {
   const logo = siteConfig.logo?.trim();
-  if (!logo) return;
+
+  if (!logo) {
+    // Sin logo configurado: usar el logo por defecto del paquete
+    const defaultSrc = join(PKG_ROOT, 'themes', 'default', 'logo.svg');
+    const dest = join(outputDir, 'logo.svg');
+    await mkdir(dirname(dest), { recursive: true });
+    await cp(defaultSrc, dest).catch((err: NodeJS.ErrnoException) => {
+      if (err.code === 'ENOENT') {
+        process.stderr.write(`\r\x1b[K⚠ logo por defecto no encontrado en "${defaultSrc}"\n`);
+      } else {
+        process.stderr.write(`\n⚠ No se pudo copiar el logo por defecto: ${err.message}\n`);
+        process.exitCode = 1;
+      }
+    });
+    return;
+  }
 
   if (logo.split('/').includes('..') || logo.startsWith('/')) {
     process.stderr.write(`\n⚠ logo: ruta inválida "${logo}" — debe ser relativa al proyecto\n`);

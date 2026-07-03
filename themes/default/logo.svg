@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 100 100" overflow="visible">
+  <!--
+    Layers (back to front):
+      1. Lens-flare rays   — blurred lines from center, simulate glow streaks
+      2. Structural crosshairs  — 8 thin crisp lines aligned with inner nodes
+      3. Outer ring        — thick stroke, medium glow
+      4. Orbital guide rings   — very faint reference circles at d=22 and d=36
+      5. Inner orbit nodes — alternating large/small hollow rings at d=22, aligned to crosshairs
+      6. Outer orbit nodes — alternating large/small hollow rings at d=36, offset 22.5°
+      7. Tiny accent dots  — near outer ring on crosshair axes, opacity 0.45
+      8. Nucleus           — bright hollow ring + solid core, intense glow
+  -->
+  <defs>
+    <!-- Intense multi-layer glow for nucleus -->
+    <filter id="glow-xl" x="-200%" y="-200%" width="500%" height="500%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="b5"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="b2"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="0.8" result="b1"/>
+      <feMerge>
+        <feMergeNode in="b5"/>
+        <feMergeNode in="b2"/>
+        <feMergeNode in="b1"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Dual-layer glow for outer ring -->
+    <filter id="glow-ring" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="b2"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="0.7" result="b1"/>
+      <feMerge>
+        <feMergeNode in="b2"/>
+        <feMergeNode in="b1"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Soft glow for orbital nodes (applied to group) -->
+    <filter id="glow-node" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Pure blur for lens-flare rays -->
+    <filter id="flare" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5"/>
+    </filter>
+
+    <!-- Node templates (cx along +X axis, rotated by parent) -->
+    <circle id="n-in" cx="22" cy="0" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/>
+    <circle id="n-in-sm" cx="22" cy="0" r="2" fill="none" stroke="currentColor" stroke-width="0.8"/>
+    <circle id="n-out" cx="36" cy="0" r="2.5" fill="none" stroke="currentColor" stroke-width="1.1"/>
+    <circle id="n-out-sm" cx="36" cy="0" r="1.25" fill="none" stroke="currentColor" stroke-width="0.55"/>
+    <circle id="n-dot" cx="42" cy="0" r="1" fill="currentColor"/>
+  </defs>
+
+  <!-- 1. Lens-flare rays (blurred, very soft atmospheric glow) -->
+  <g transform="translate(50,50)" filter="url(#flare)" opacity="0.18">
+    <line x1="0" y1="-48" x2="0" y2="48" stroke="currentColor" stroke-width="2.5"/>
+    <line x1="-48" y1="0" x2="48" y2="0" stroke="currentColor" stroke-width="2.5"/>
+    <line x1="-34" y1="-34" x2="34" y2="34" stroke="currentColor" stroke-width="2"/>
+    <line x1="34" y1="-34" x2="-34" y2="34" stroke="currentColor" stroke-width="2"/>
+  </g>
+
+  <!-- 2. Structural crosshairs (crisp, thin) -->
+  <g transform="translate(50,50)" stroke="currentColor" stroke-width="0.3" opacity="0.30">
+    <line x1="0" y1="-44" x2="0" y2="44"/>
+    <line x1="-44" y1="0" x2="44" y2="0"/>
+    <line x1="-31.1" y1="-31.1" x2="31.1" y2="31.1"/>
+    <line x1="31.1" y1="-31.1" x2="-31.1" y2="31.1"/>
+  </g>
+
+  <!-- 3. Outer ring -->
+  <circle cx="50" cy="50" r="44" fill="none" stroke="currentColor" stroke-width="2.8" filter="url(#glow-ring)"/>
+
+  <!-- 4. Orbital guide rings -->
+  <circle cx="50" cy="50" r="36" fill="none" stroke="currentColor" stroke-width="0.3" opacity="0.28"/>
+  <circle cx="50" cy="50" r="22" fill="none" stroke="currentColor" stroke-width="0.3" opacity="0.36"/>
+
+  <!-- 5. Inner orbit: alternating normal/small hollow nodes -->
+  <g transform="translate(50,50)" filter="url(#glow-node)">
+    <use href="#n-in"/>
+    <use href="#n-in-sm" transform="rotate(45)"/>
+    <use href="#n-in" transform="rotate(90)"/>
+    <use href="#n-in-sm" transform="rotate(135)"/>
+    <use href="#n-in" transform="rotate(180)"/>
+    <use href="#n-in-sm" transform="rotate(225)"/>
+    <use href="#n-in" transform="rotate(270)"/>
+    <use href="#n-in-sm" transform="rotate(315)"/>
+  </g>
+
+  <!-- 6. Outer orbit: alternating normal/small hollow nodes -->
+  <g transform="translate(50,50) rotate(45)" filter="url(#glow-node)" opacity="0.78">
+    <use href="#n-out"/>
+    <use href="#n-out-sm" transform="rotate(45)"/>
+    <use href="#n-out" transform="rotate(90)"/>
+    <use href="#n-out-sm" transform="rotate(135)"/>
+    <use href="#n-out" transform="rotate(180)"/>
+    <use href="#n-out-sm" transform="rotate(225)"/>
+    <use href="#n-out" transform="rotate(270)"/>
+    <use href="#n-out-sm" transform="rotate(315)"/>
+  </g>
+
+  <!-- 7. Tiny accent dots on crosshairs near outer ring -->
+  <g transform="translate(50,50)" opacity="0.42">
+    <use href="#n-dot"/>
+    <use href="#n-dot" transform="rotate(45)"/>
+    <use href="#n-dot" transform="rotate(90)"/>
+    <use href="#n-dot" transform="rotate(135)"/>
+    <use href="#n-dot" transform="rotate(180)"/>
+    <use href="#n-dot" transform="rotate(225)"/>
+    <use href="#n-dot" transform="rotate(270)"/>
+    <use href="#n-dot" transform="rotate(315)"/>
+  </g>
+
+  <!-- 8. Nucleus: aura + bright ring + solid core -->
+  <circle cx="50" cy="50" r="10" fill="currentColor" opacity="0.04"/>
+  <circle cx="50" cy="50" r="7" fill="currentColor" opacity="0.07"/>
+  <circle cx="50" cy="50" r="5.5" fill="none" stroke="currentColor" stroke-width="2.5" filter="url(#glow-xl)"/>
+  <circle cx="50" cy="50" r="3.5" fill="currentColor" opacity="0.95" filter="url(#glow-xl)"/>
+</svg>
