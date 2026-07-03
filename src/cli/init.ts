@@ -26,15 +26,12 @@ function buildDefaultConfig(): string {
   lines.push(`  lang: ${yamlStr(DEFAULT_SITE_CONFIG.lang)}`);
   lines.push(`  logo: ${yamlStr(DEFAULT_SITE_CONFIG.logo)}`);
   lines.push(`  base-url: ${yamlStr(DEFAULT_SITE_CONFIG.baseUrl ?? '')}`);
+  lines.push('  pagination:');
+  lines.push(`    limit: ${DEFAULT_PAGINATION.limit}`);
   lines.push('');
 
   // ── plugins ──
   lines.push('plugins: []');
-  lines.push('');
-
-  // ── pagination ──
-  lines.push('pagination:');
-  lines.push(`  limit: ${DEFAULT_PAGINATION.limit}`);
   lines.push('');
 
   // ── format ──
