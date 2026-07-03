@@ -37,7 +37,7 @@ export function buildSiteContext(config: SiteConfig, cssPath: string): TemplateC
     'site-title': config.title,
     'site-tagline': config.tagline,
     lang: config.lang,
-    'site-logo': config.logo ? `/${config.logo.replace(/^\/+/, '')}` : undefined,
+    'site-logo': config.logo ? `/${config.logo.replace(/^\/+/, '')}` : '/logo.svg',
     css: cssPath ? [cssPath] : [],
     'home-href': '/index.html',
     'site-base-url': config.baseUrl,
