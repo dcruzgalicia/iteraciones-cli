@@ -8,13 +8,22 @@
             href="$home-href$"
             class="group flex items-center gap-3 no-underline"
         >
-            $if(site-logo)$
+            $if(site-logo)$ $if(site-logo-svg)$
+            <span
+                class="flex h-7 w-7 shrink-0 text-accent-500"
+                aria-label="$site-title$"
+            >
+                <span class="[&_svg]:h-full [&_svg]:w-full"
+                    >$site-logo-svg$</span
+                >
+            </span>
+            $else$
             <img
                 src="$site-logo$"
                 alt="$site-title$"
                 class="h-7 w-7 shrink-0 object-contain"
             />
-            $endif$
+            $endif$ $endif$
             <div>
                 <div
                     class="font-mono text-base leading-tight font-bold tracking-wider text-accent-700 transition-colors group-hover:text-accent-600"
@@ -493,11 +502,22 @@
         >
             $if(site-logo)$
             <a href="$home-href$" class="flex items-center gap-2 no-underline">
+                $if(site-logo-svg)$
+                <span
+                    class="flex h-4 w-4 shrink-0 text-accent-500 opacity-40"
+                    aria-label="$site-title$"
+                >
+                    <span class="[&_svg]:h-full [&_svg]:w-full"
+                        >$site-logo-svg$</span
+                    >
+                </span>
+                $else$
                 <img
                     src="$site-logo$"
                     alt="$site-title$"
                     class="h-4 w-4 shrink-0 object-contain opacity-40"
                 />
+                $endif$
                 <span class="font-mono text-xs text-zinc-400"
                     >$site-title$</span
                 >

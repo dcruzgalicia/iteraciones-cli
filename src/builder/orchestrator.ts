@@ -262,19 +262,57 @@ async function runDiscovery(cwd: string, ctx: BuildContext, noCache?: boolean): 
 }
 
 /**
+ * Lee el contenido del logo SVG (el del proyecto o el por defecto del paquete)
+ * para inyectarlo inline en las templates con currentColor heredado del tema.
+ * Devuelve undefined si el logo no es SVG o no se pudo leer.
+ */
+async function readLogoSvgContent(ctx: BuildContext): Promise<string | undefined> {
+  const logo = ctx.siteConfig.logo?.trim();
+  let svgPath: string;
+  const isSvg = logo ? logo.endsWith('.svg') : true; // El logo por defecto es SVG
+
+  if (logo && isSvg) {
+    svgPath = join(ctx.cwd, logo);
+  } else if (!logo) {
+    const pkgRoot = join(import.meta.dir, '../..');
+    svgPath = join(pkgRoot, 'themes', 'default', 'logo.svg');
+  } else {
+    return undefined; // Logo no-SVG, no se puede hacer inline
+  }
+
+  try {
+    const content = await Bun.file(svgPath).text();
+    if (content.trimStart().startsWith('<svg') || content.trimStart().startsWith('<?xml')) {
+      return content;
+    }
+    return undefined;
+  } catch {
+    if (logo) {
+      process.stderr.write(`\r\x1b[K⚠ no se pudo leer el SVG del logo en "${svgPath}"\n`);
+    }
+    return undefined;
+  }
+}
+
+/**
  * Construye el siteCtx base e inyecta menuHref/menuTitle si existe un documento
  * primario de tipo 'menu'. El contexto resultante se comparte por todas las páginas.
  */
-function buildEnrichedSiteContext(ctx: BuildContext, allDocs: BuildDocument[]): TemplateContext {
+function buildEnrichedSiteContext(ctx: BuildContext, allDocs: BuildDocument[], logoSvg?: string): TemplateContext {
   const siteCtx = buildSiteContext(ctx.siteConfig, ctx.cssPath);
   const primaryMenuDoc = allDocs.find((doc) => doc.type === 'menu' && doc.kind !== 'block');
-  return primaryMenuDoc
+  const base = primaryMenuDoc
     ? {
         ...siteCtx,
         menuHref: docHref(primaryMenuDoc),
         menuTitle: escapeHtml(primaryMenuDoc.frontmatter.title || 'Menú'),
       }
     : siteCtx;
+
+  if (logoSvg) {
+    return { ...base, 'site-logo-svg': logoSvg };
+  }
+  return base;
 }
 
 /**
@@ -465,8 +503,8 @@ async function runFinalization(
   let generatedFiles: GeneratedFile[] = [];
   if (hasPlugins) {
     const docOutputPaths = writtenDocs.map((doc) => docHtmlPath(doc));
-    const assetPaths: string[] = ['css/styles.css'];
-    if (ctx.siteConfig.logo?.trim()) assetPaths.push(ctx.siteConfig.logo.trim());
+    const logoPath = ctx.siteConfig.logo?.trim() || 'logo.svg';
+    const assetPaths: string[] = ['css/styles.css', logoPath];
 
     // generateFiles: recopilar y escribir archivos adicionales de plugins (sitemap, RSS, etc.)
     const docSummaries: PluginDocumentSummary[] = writtenDocs.map((doc) => ({
@@ -640,7 +678,8 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       doc.slug = filenameStem === 'index' ? undefined : computeSlug(doc.frontmatter);
     }
 
-    const enrichedSiteCtx = buildEnrichedSiteContext(ctx, allDocs);
+    const logoSvg = await readLogoSvgContent(ctx);
+    const enrichedSiteCtx = buildEnrichedSiteContext(ctx, allDocs, logoSvg);
     progress.startPhase('render', allDocs.length);
     // Conjunto de claves realmente usadas por renderDocuments (hits + writes).
     // Se pasa a todas las fases de render para que cada llamada acumule sus claves.
