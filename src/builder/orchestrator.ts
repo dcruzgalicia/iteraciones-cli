@@ -876,7 +876,11 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     );
     progress.completePhase(); // fin de compose
 
-    progress.finish(allDocs.length);
+    const htmlOn = formatCfg?.html?.generate !== false;
+    const pdfOn = formatCfg?.pdf?.generate === true;
+    const epubOn = formatCfg?.epub?.generate === true;
+    const docCount = htmlOn || pdfOn || epubOn ? allDocs.length : 0;
+    progress.finish(docCount);
   } finally {
     pandocPool?.dispose();
   }
