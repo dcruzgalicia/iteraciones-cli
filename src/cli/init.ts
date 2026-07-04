@@ -45,6 +45,7 @@ function buildDefaultConfig(): string {
   lines.push(`    toc: ${yamlBool(DEFAULT_HTML_FORMAT.toc)}`);
   lines.push(`    toc-depth: ${DEFAULT_HTML_FORMAT.tocDepth}`);
   lines.push(`    hyphenation: ${yamlBool(DEFAULT_HTML_FORMAT.hyphenation)}`);
+  lines.push(`    generate: ${yamlBool(DEFAULT_HTML_FORMAT.generate!)}`);
 
   // pdf
   lines.push('  pdf:');

@@ -115,8 +115,9 @@ function parseHtmlFormatConfig(raw: unknown): HtmlFormatConfig | undefined {
       ? rawTocDepth
       : DEFAULT_HTML_FORMAT.tocDepth;
   const hyphenation = typeof obj.hyphenation === 'boolean' ? obj.hyphenation : DEFAULT_HTML_FORMAT.hyphenation;
+  const generate = typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_HTML_FORMAT.generate;
 
-  return { theme, accent, math, toc, tocDepth, hyphenation };
+  return { theme, accent, math, toc, tocDepth, hyphenation, generate };
 }
 
 const CUSTOM_PAGE_SIZE_RE = /^\d+(\.\d+)?(cm|mm|in|pt),\d+(\.\d+)?(cm|mm|in|pt)$/;
@@ -262,6 +263,7 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     topLevelDivision,
     sfdefaults,
     respectHeaderPlain,
+    generate: typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_PDF_FORMAT.generate,
   };
 }
 
@@ -286,6 +288,7 @@ function parseEpubFormatConfig(raw: unknown): EpubFormatConfig {
     tocDepth,
     ...(bibliography !== undefined ? { bibliography } : {}),
     ...(csl !== undefined ? { csl } : {}),
+    generate: typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_EPUB_FORMAT.generate,
   };
 }
 

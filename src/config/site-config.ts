@@ -17,6 +17,8 @@ export interface HtmlFormatConfig {
   toc: boolean;
   tocDepth: number;
   hyphenation: boolean;
+  /** Si true, genera HTML en el build. */
+  generate?: boolean;
 }
 
 export interface PdfFormatConfig {
@@ -47,6 +49,8 @@ export interface PdfFormatConfig {
    * Solo aplica cuando page-number es header-*. Por defecto false.
    */
   respectHeaderPlain?: boolean;
+  /** Si true, genera PDF en el build. */
+  generate?: boolean;
 }
 
 export interface EpubFormatConfig {
@@ -54,6 +58,8 @@ export interface EpubFormatConfig {
   tocDepth?: number;
   bibliography?: string;
   csl?: string;
+  /** Si true, genera EPUB en el build. */
+  generate?: boolean;
 }
 
 export interface FormatConfig {
@@ -115,6 +121,7 @@ export const DEFAULT_HTML_FORMAT: HtmlFormatConfig = {
   toc: true,
   tocDepth: 6,
   hyphenation: false,
+  generate: true,
 };
 
 export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
@@ -134,6 +141,7 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   numbering: false,
   bibliography: 'bibliography.bib',
   csl: 'apa.csl',
+  generate: false,
 };
 
 export const DEFAULT_EPUB_FORMAT: EpubFormatConfig = {
@@ -141,6 +149,7 @@ export const DEFAULT_EPUB_FORMAT: EpubFormatConfig = {
   tocDepth: 6,
   bibliography: 'bibliography.bib',
   csl: 'apa.csl',
+  generate: false,
 };
 
 export const DEFAULT_SITE_CONFIG: SiteConfig = {
