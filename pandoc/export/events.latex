@@ -427,7 +427,7 @@ $if(toc)$
 \endgroup
 \cleardoublepage
 $endif$
-\makeatletter\@mainmattertrue\makeatother
+	\makeatletter\@ifundefined{@mainmattertrue}{}{\@mainmattertrue}\makeatother
 \renewcommand{\thepage}{\arabic{page}}
 \noindent
 $body$
