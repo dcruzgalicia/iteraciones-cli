@@ -60,8 +60,8 @@ function buildDefaultConfig(): string {
   }
   // Opciones adicionales que no están en DEFAULT_PDF_FORMAT
   // pero son configurables según la interfaz PdfFormatConfig
-  lines.push('    documentclass: scrartcl');
-  lines.push('    top-level-division: section');
+  lines.push('    documentclass: scrbook');
+  lines.push('    top-level-division: chapter');
   lines.push('    sfdefaults: false');
   lines.push('    respect-header-plain: false');
 
