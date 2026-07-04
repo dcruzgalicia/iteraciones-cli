@@ -490,15 +490,24 @@ async function runFinalization(
   renderUsedKeys?: Set<string>,
   onFileProcessed?: (report: import('../output/progress.js').RenderFileReport) => void,
 ): Promise<number> {
-  const relativizedDocs = allContextDocs.map((doc) => ({
-    ...doc,
-    templateContext: makeRelativeContext(doc.templateContext, computeRootPrefix(doc.relativePath)) as TemplateContext,
-  }));
-  const tComposeStart = performance.now();
-  const composedDocs = await composeDocuments(relativizedDocs, ctx, composeCache, registry, composeStats, itemHashMap, onFileProcessed);
-  const composeMs = performance.now() - tComposeStart;
-  const writtenDocs = await writeDocuments(composedDocs, ctx);
-  log(`Escritos ${writtenDocs.length} archivos en ${ctx.outputDir}`);
+  const generateHtml = ctx.siteConfig.format?.html?.generate !== false;
+
+  let composeMs = 0;
+  const writtenDocs: BuildDocument[] = [];
+  if (generateHtml) {
+    const relativizedDocs = allContextDocs.map((doc) => ({
+      ...doc,
+      templateContext: makeRelativeContext(doc.templateContext, computeRootPrefix(doc.relativePath)) as TemplateContext,
+    }));
+    const tComposeStart = performance.now();
+    const composedDocs = await composeDocuments(relativizedDocs, ctx, composeCache, registry, composeStats, itemHashMap, onFileProcessed);
+    composeMs = performance.now() - tComposeStart;
+    const docs = await writeDocuments(composedDocs, ctx);
+    writtenDocs.push(...docs);
+    log(`Escritos ${docs.length} archivos en ${ctx.outputDir}`);
+  } else {
+    log('HTML desactivado: omitiendo generación de HTML');
+  }
 
   let generatedFiles: GeneratedFile[] = [];
   if (hasPlugins) {
