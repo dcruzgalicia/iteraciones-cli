@@ -187,7 +187,8 @@ export async function runExportDocuments(
 ): Promise<ExportResult[]> {
   const { config, outputDir, cwd, lang, concurrency, cliVersion, pandocVersion, cacheManager, registry, pluginFingerprint, stats } = options;
 
-  const hasPdf = !!config.pdf;
+  const hasPdf = config.pdf?.generate === true;
+  const hasEpub = config.epub?.generate === true;
   // Semaforo interno que limita las instancias de pdflatex concurrentes sin afectar EPUB.
   // El outer mapWithConcurrency usa el limite general (concurrency); dentro del branch
   // PDF se adquiere un slot antes de invocar pdflatex y se libera al terminar — con o
@@ -351,7 +352,7 @@ export async function runExportDocuments(
   ): Promise<Array<PromiseSettledResult<{ epub?: string; pdf?: string }>>> {
     const tasks: Array<Promise<{ epub?: string; pdf?: string }>> = [];
 
-    if (config.epub) {
+    if (config.epub?.generate) {
       const outputPath = `${outputBase}.epub`;
       const cacheKey = hash(sourceHash, itemHashes, 'epub', cliVersion, pandocVersion, pluginFingerprint ?? '', bibHash, cslHash, templateHash);
       tasks.push(
@@ -383,7 +384,7 @@ export async function runExportDocuments(
       );
     }
 
-    if (config.pdf) {
+    if (config.pdf?.generate) {
       const outputPath = `${outputBase}.pdf`;
       const cacheKey = hash(
         sourceHash,

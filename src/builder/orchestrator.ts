@@ -752,7 +752,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
     // Notificar el estado de exportacion on-demand (sirve a serve.ts para PDF bajo demanda).
     // Se invoca siempre que haya export configurado, independientemente de noExport.
-    if (options.onExportStateReady && ctx.siteConfig.format?.pdf) {
+    if (options.onExportStateReady && ctx.siteConfig.format?.pdf?.generate === true) {
       options.onExportStateReady({
         renderedMap,
         exportOptions: {
@@ -778,11 +778,11 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       cacheHitsPdf: 0,
     };
     const formatCfg = ctx.siteConfig.format;
-    const hasExport = (!!formatCfg?.pdf || !!formatCfg?.epub) && !options.noExport;
+    const hasExport = (formatCfg?.pdf?.generate === true || formatCfg?.epub?.generate === true) && !options.noExport;
     if (hasExport && formatCfg) {
       // Calcular total de PDFs para la barra de progreso (misma logica que runExportDocuments).
       let exportTotal = 0;
-      if (formatCfg.pdf) {
+      if (formatCfg.pdf?.generate === true) {
         for (const type of EXPORTABLE_TYPES) {
           const docs = (renderedMap.get(type) ?? []).filter((d) => d.kind !== 'block');
           for (const d of docs) {
