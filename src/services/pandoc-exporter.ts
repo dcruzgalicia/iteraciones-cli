@@ -299,6 +299,9 @@ export async function convertToEpub(doc: ExportDocument, outputPath: string, cwd
     args.push('--epub-cover-image', doc.metadata.cover);
   }
 
+  // Normaliza saltos de línea: colapsa LineBreaks consecutivos
+  args.push('--lua-filter', join(import.meta.dir, '../../pandoc/filters/linebreak.lua'));
+
   // Activar el procesador de citas cuando hay bibliografía declarada.
   // Sin --citeproc, las citas [@referencia] quedan sin resolver en el documento final.
   if (doc.metadata.bibliography) {
@@ -359,6 +362,10 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
   }
 
   // Lua filter para transformar fenced divs .dictum a comandos LaTeX \dictum.
+  // Normaliza saltos de línea: colapsa LineBreaks consecutivos para evitar
+  // que \ en líneas consecutivas generen 2\baselineskip en vez de 1.
+  args.push('--lua-filter', join(import.meta.dir, '../../pandoc/filters/linebreak.lua'));
+
   // Debe ejecutarse después de citeproc para que @citekey se resuelva antes
   // de la conversión a LaTeX. Corre también sin citeproc (dictums sin citas).
   args.push('--lua-filter', join(import.meta.dir, '../../pandoc/filters/dictum.lua'));
