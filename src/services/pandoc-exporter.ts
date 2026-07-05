@@ -299,6 +299,9 @@ export async function convertToEpub(doc: ExportDocument, outputPath: string, cwd
     args.push('--epub-cover-image', doc.metadata.cover);
   }
 
+  // Normaliza saltos de línea: colapsa LineBreaks consecutivos
+  args.push('--lua-filter', join(import.meta.dir, '../../pandoc/filters/linebreak.lua'));
+
   // Activar el procesador de citas cuando hay bibliografía declarada.
   // Sin --citeproc, las citas [@referencia] quedan sin resolver en el documento final.
   if (doc.metadata.bibliography) {
@@ -357,6 +360,10 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
     args.push('--citeproc');
     args.push('--lua-filter', join(import.meta.dir, '../../pandoc/filters/suppress-references.lua'));
   }
+
+  // Normaliza saltos de línea: colapsa LineBreaks consecutivos para que
+  // \ en líneas consecutivas genere el mismo espaciado que &nbsp;.
+  args.push('--lua-filter', join(import.meta.dir, '../../pandoc/filters/linebreak.lua'));
 
   // Lua filter para transformar fenced divs .dictum a comandos LaTeX \dictum.
   // Debe ejecutarse después de citeproc para que @citekey se resuelva antes
