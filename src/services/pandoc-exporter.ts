@@ -322,6 +322,17 @@ export async function convertToEpub(doc: ExportDocument, outputPath: string, cwd
 }
 
 /**
+ * Exporta un documento a Markdown. Escribe el cuerpo del documento (que ya
+ * incluye el YAML header) directamente a un archivo .md. La entrada ya está
+ * en formato markdown, por lo que no requiere conversión con pandoc.
+ */
+export async function convertToMarkdown(doc: ExportDocument, outputPath: string): Promise<void> {
+  await mkdir(dirname(outputPath), { recursive: true });
+  const yamlHeader = buildYamlHeader(doc, undefined, undefined);
+  await Bun.write(outputPath, yamlHeader + doc.body);
+}
+
+/**
  * Convierte un ExportDocument a PDF usando pandoc con pdflatex.
  * Usa el template KOMA-Script del directorio `pandoc/export/`.
  *

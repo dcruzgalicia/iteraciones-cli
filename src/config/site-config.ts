@@ -62,10 +62,16 @@ export interface EpubFormatConfig {
   generate?: boolean;
 }
 
+export interface MarkdownFormatConfig {
+  /** Si true, genera Markdown en el build. */
+  generate?: boolean;
+}
+
 export interface FormatConfig {
   html?: HtmlFormatConfig;
   pdf?: PdfFormatConfig;
   epub?: EpubFormatConfig;
+  markdown?: MarkdownFormatConfig;
 }
 
 // ── SiteConfig ──
@@ -152,6 +158,10 @@ export const DEFAULT_EPUB_FORMAT: EpubFormatConfig = {
   generate: false,
 };
 
+export const DEFAULT_MARKDOWN_FORMAT: MarkdownFormatConfig = {
+  generate: false,
+};
+
 export const DEFAULT_SITE_CONFIG: SiteConfig = {
   title: 'iteraciones',
   tagline: 'escribir, compartir, re-existir',
@@ -164,5 +174,6 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
     html: DEFAULT_HTML_FORMAT,
     pdf: DEFAULT_PDF_FORMAT,
     epub: DEFAULT_EPUB_FORMAT,
+    markdown: DEFAULT_MARKDOWN_FORMAT,
   },
 };

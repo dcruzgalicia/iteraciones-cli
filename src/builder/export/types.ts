@@ -1,6 +1,6 @@
 import type { BuildDocument, DocumentType } from '../types.js';
 
-export type ExportFormat = 'pdf' | 'epub';
+export type ExportFormat = 'pdf' | 'epub' | 'md';
 
 /** Tipos de documento que pueden exportarse (clave de LATEX_CLASS). */
 export type ExportableDocumentType = keyof typeof LATEX_CLASS;
@@ -125,6 +125,8 @@ export interface ExportResult {
   pdfPath?: string;
   /** Ruta absoluta al PDF completo generado (variante completo, solo type author); undefined si no se generó. */
   pdfFullPath?: string;
+  /** Ruta absoluta al Markdown generado; undefined si no se generó. */
+  markdownPath?: string;
   /** Ruta absoluta al EPUB generado (variante perfil); undefined si no se generó. */
   epubPath?: string;
   /** Ruta absoluta al EPUB completo generado (variante completo, solo type author); undefined si no se generó. */
