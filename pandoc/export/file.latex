@@ -172,7 +172,7 @@ $endif$
 % Valor por defecto; el plugin ajusta a 2\topskip entre dictums consecutivos
 \renewcommand*{\dictumauthorformat}[1]{\raggedleft\normalfont\normalsize #1\vspace*{3\topskip}}
 % KOMA-Script no agrega espacio vertical antes del parbox; lo parcheamos
-\xpatchcmd{\dictum}{\par}{\par\addvspace{1.5\topskip}}{}{}
+\xpatchcmd{\dictum}{\par}{\par\addvspace{4\topskip}}{}{}
 % \raggeddictumtext es \raggedright por defecto en KOMA; lo anulamos
 % para que el texto del dictum se justifique dentro del parbox.
 \renewcommand*{\raggeddictumtext}{}
