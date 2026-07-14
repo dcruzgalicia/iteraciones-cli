@@ -2,10 +2,10 @@ import { stat } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import type { CacheManager } from '../../cache/cache-manager.js';
 import { hash } from '../../cache/hasher.js';
-import type { EpubFormatConfig, PdfFormatConfig } from '../../config/site-config.js';
+import type { EpubFormatConfig, MarkdownFormatConfig, PdfFormatConfig } from '../../config/site-config.js';
 import { mapWithConcurrency } from '../../output/concurrency.js';
 import type { PluginRegistry } from '../../plugin/registry.js';
-import { convertToEpub, convertToPdf } from '../../services/pandoc-exporter.js';
+import { convertToEpub, convertToMarkdown, convertToPdf } from '../../services/pandoc-exporter.js';
 import { computeSlug, docHref } from '../slug.js';
 import type { BuildDocument, DocumentType } from '../types.js';
 import {
@@ -51,6 +51,7 @@ async function generateCoverImage(pdfPath: string, outputBase: string): Promise<
 export interface ExportFormatOptions {
   pdf?: PdfFormatConfig;
   epub?: EpubFormatConfig;
+  markdown?: MarkdownFormatConfig;
 }
 
 export interface ExportRunOptions {
@@ -89,8 +90,10 @@ export interface ExportRunOptions {
 export interface ExportStats {
   totalEpub: number;
   totalPdf: number;
+  totalMd: number;
   cacheHitsEpub: number;
   cacheHitsPdf: number;
+  cacheHitsMd: number;
 }
 
 /**
@@ -349,8 +352,32 @@ export async function runExportDocuments(
     outputBase: string,
     sourceHash: string,
     itemHashes: string,
-  ): Promise<Array<PromiseSettledResult<{ epub?: string; pdf?: string }>>> {
-    const tasks: Array<Promise<{ epub?: string; pdf?: string }>> = [];
+  ): Promise<Array<PromiseSettledResult<{ epub?: string; pdf?: string; md?: string }>>> {
+    const tasks: Array<Promise<{ epub?: string; pdf?: string; md?: string }>> = [];
+    const mdCacheKey = hash(sourceHash, itemHashes, 'md', cliVersion, pandocVersion, pluginFingerprint ?? '', bibHash, cslHash, templateHash);
+
+    if (config.markdown?.generate) {
+      const outputPath = `${outputBase}.md`;
+      tasks.push(
+        (async () => {
+          if (cacheManager && (await cacheManager.hasBinary('export', mdCacheKey, 'md'))) {
+            await cacheManager.copyBinaryTo('export', mdCacheKey, 'md', outputPath);
+            if (stats) {
+              stats.totalMd++;
+              stats.cacheHitsMd++;
+            }
+            return { md: outputPath };
+          }
+          await convertToMarkdown(exportDoc, outputPath);
+          if (cacheManager) {
+            const content = await Bun.file(outputPath).text();
+            await cacheManager.write('export', mdCacheKey, content);
+          }
+          if (stats) stats.totalMd++;
+          return { md: outputPath };
+        })(),
+      );
+    }
 
     if (config.epub?.generate) {
       const outputPath = `${outputBase}.epub`;
@@ -605,6 +632,7 @@ export async function runExportDocuments(
       if (fr.status === 'fulfilled') {
         if (fr.value.epub) result.epubPath = fr.value.epub;
         if (fr.value.pdf) result.pdfPath = fr.value.pdf;
+        if (fr.value.md) result.markdownPath = fr.value.md;
       } else if (!firstError) {
         firstError = fr.reason;
       }
@@ -653,6 +681,10 @@ export function injectDownloadLinks(docs: BuildDocument[], exportResults: Export
     if (result.epubPath) {
       const rel = result.epubPath.slice(outputDir.length).replace(/\\/g, '/');
       extra['download-epub'] = rel.startsWith('/') ? rel : `/${rel}`;
+    }
+    if (result.markdownPath) {
+      const rel = result.markdownPath.slice(outputDir.length).replace(/\\/g, '/');
+      extra['download-md'] = rel.startsWith('/') ? rel : `/${rel}`;
     }
     if (result.coverPath) {
       const rel = result.coverPath.slice(outputDir.length).replace(/\\/g, '/');

@@ -779,26 +779,46 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       });
     }
 
-    // Paso de exportacion: genera PDF/EPUB si esta configurado y no se paso --no-export.
+    // Paso de exportacion: genera PDF/EPUB/MD si esta configurado y no se paso --no-export.
     const exportStats: ExportStats = {
       totalEpub: 0,
       totalPdf: 0,
+      totalMd: 0,
       cacheHitsEpub: 0,
       cacheHitsPdf: 0,
+      cacheHitsMd: 0,
     };
     const formatCfg = ctx.siteConfig.format;
-    const hasExport = (formatCfg?.pdf?.generate === true || formatCfg?.epub?.generate === true) && !options.noExport;
+    const hasExport =
+      (formatCfg?.pdf?.generate === true || formatCfg?.epub?.generate === true || formatCfg?.markdown?.generate === true) && !options.noExport;
     if (hasExport && formatCfg) {
       // Calcular total de PDFs para la barra de progreso (misma logica que runExportDocuments).
       let exportTotal = 0;
+      const countExportDocs = (type: DocumentType): number => {
+        const docs = (renderedMap.get(type) ?? []).filter((d) => d.kind !== 'block');
+        let count = 0;
+        for (const d of docs) {
+          const raw = d.frontmatter['export'];
+          const skipped = typeof raw === 'object' && raw !== null && !Array.isArray(raw) && (raw as Record<string, unknown>)['skip'] === true;
+          if (skipped) continue;
+          count += d.type === 'author' ? 2 : 1;
+        }
+        return count;
+      };
+
       if (formatCfg.pdf?.generate === true) {
+        for (const type of EXPORTABLE_TYPES) {
+          exportTotal += countExportDocs(type);
+        }
+      }
+      if (formatCfg.markdown?.generate === true) {
         for (const type of EXPORTABLE_TYPES) {
           const docs = (renderedMap.get(type) ?? []).filter((d) => d.kind !== 'block');
           for (const d of docs) {
             const raw = d.frontmatter['export'];
             const skipped = typeof raw === 'object' && raw !== null && !Array.isArray(raw) && (raw as Record<string, unknown>)['skip'] === true;
             if (skipped) continue;
-            exportTotal += d.type === 'author' ? 2 : 1;
+            exportTotal++;
           }
         }
       }
@@ -835,9 +855,11 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     if (exportResults.length > 0) {
       const epubNew = exportStats.totalEpub - exportStats.cacheHitsEpub;
       const pdfNew = exportStats.totalPdf - exportStats.cacheHitsPdf;
+      const mdNew = exportStats.totalMd - exportStats.cacheHitsMd;
       const parts: string[] = [];
       if (exportStats.totalEpub > 0) parts.push(`EPUB: ${epubNew} generados, ${exportStats.cacheHitsEpub} de caché`);
       if (exportStats.totalPdf > 0) parts.push(`PDF: ${pdfNew} generados, ${exportStats.cacheHitsPdf} de caché`);
+      if (exportStats.totalMd > 0) parts.push(`MD: ${mdNew} generados, ${exportStats.cacheHitsMd} de caché`);
       const detail = parts.length > 0 ? ` — ${parts.join(' | ')}` : '';
       progress.log(`Exportación: ${exportResults.length} documento${exportResults.length > 1 ? 's' : ''}${detail}`);
     }
@@ -879,7 +901,8 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     const htmlOn = formatCfg?.html?.generate !== false;
     const pdfOn = formatCfg?.pdf?.generate === true;
     const epubOn = formatCfg?.epub?.generate === true;
-    const docCount = htmlOn || pdfOn || epubOn ? allDocs.length : 0;
+    const mdOn = formatCfg?.markdown?.generate === true;
+    const docCount = htmlOn || pdfOn || epubOn || mdOn ? allDocs.length : 0;
     progress.finish(docCount);
   } finally {
     pandocPool?.dispose();

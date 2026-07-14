@@ -1,6 +1,13 @@
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { DEFAULT_EPUB_FORMAT, DEFAULT_HTML_FORMAT, DEFAULT_PAGINATION, DEFAULT_PDF_FORMAT, DEFAULT_SITE_CONFIG } from '../config/site-config.js';
+import {
+  DEFAULT_EPUB_FORMAT,
+  DEFAULT_HTML_FORMAT,
+  DEFAULT_MARKDOWN_FORMAT,
+  DEFAULT_PAGINATION,
+  DEFAULT_PDF_FORMAT,
+  DEFAULT_SITE_CONFIG,
+} from '../config/site-config.js';
 
 const DEFAULT_README = [
   '---',
@@ -146,6 +153,13 @@ function buildDefaultConfig(): string {
     if (value !== undefined) {
       lines.push(`    ${yamlKey}: ${yamlValue(value)}`);
     }
+  }
+
+  // markdown
+  lines.push('  markdown:');
+  for (const [key, value] of Object.entries(DEFAULT_MARKDOWN_FORMAT)) {
+    const yamlKey = camelToKebab(key);
+    lines.push(`    ${yamlKey}: ${yamlValue(value)}`);
   }
 
   return lines.join('\n') + '\n';

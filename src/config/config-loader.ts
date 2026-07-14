@@ -3,6 +3,7 @@ import { ConfigError } from '../errors.js';
 import {
   DEFAULT_EPUB_FORMAT,
   DEFAULT_HTML_FORMAT,
+  DEFAULT_MARKDOWN_FORMAT,
   DEFAULT_PAGINATION,
   DEFAULT_PDF_FORMAT,
   DEFAULT_SITE_CONFIG,
@@ -10,6 +11,7 @@ import {
   type FormatConfig,
   type HtmlFormatConfig,
   KNOWN_ACCENT_COLORS,
+  type MarkdownFormatConfig,
   type PageNumberPlacement,
   type PaginationConfig,
   type PdfFormatConfig,
@@ -98,6 +100,7 @@ function parseFormatConfig(raw: Record<string, unknown>): FormatConfig {
     html: parseHtmlFormatConfig(raw.html) ?? { ...DEFAULT_HTML_FORMAT },
     pdf: parsePdfFormatConfig(raw.pdf),
     epub: parseEpubFormatConfig(raw.epub),
+    markdown: parseMarkdownFormatConfig(raw.markdown),
   };
 }
 
@@ -289,6 +292,14 @@ function parseEpubFormatConfig(raw: unknown): EpubFormatConfig {
     ...(bibliography !== undefined ? { bibliography } : {}),
     ...(csl !== undefined ? { csl } : {}),
     generate: typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_EPUB_FORMAT.generate,
+  };
+}
+
+function parseMarkdownFormatConfig(raw: unknown): MarkdownFormatConfig {
+  if (!raw || typeof raw !== 'object') return { ...DEFAULT_MARKDOWN_FORMAT };
+  const obj = raw as Record<string, unknown>;
+  return {
+    generate: typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_MARKDOWN_FORMAT.generate,
   };
 }
 
