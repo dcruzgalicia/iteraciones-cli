@@ -216,7 +216,9 @@ export function assembleExportDocument(
     ...parseDictum(doc.frontmatter['dictum']),
   };
 
-  const body = documentclass === 'scrartcl' ? doc.body : assembleBookBody(doc, items, parts, loosePaths);
+  // Usar el markdown final (processedBody) como fuente para la exportación.
+  const sourceBody = doc.processedBody ?? doc.body;
+  const body = documentclass === 'scrartcl' ? sourceBody : assembleBookBody(doc, items, parts, loosePaths);
 
   // Sin encabezados en el cuerpo: desactivar el TOC para evitar un índice vacío.
   // Nota: ya no se reubica el texto previo al primer encabezado al final del
@@ -276,8 +278,9 @@ function assembleBookBody(doc: BuildDocument, items: BuildDocument[], parts?: Ex
   const showAuthorMap = buildShowAuthorExportMap(doc.frontmatter.items);
 
   // Intro opcional de la colección/eventos (body propio del doc index)
-  if (doc.body.trim()) {
-    result.push(doc.body.trim(), '\n\n');
+  const sourceBody = doc.processedBody ?? doc.body;
+  if (sourceBody.trim()) {
+    result.push(sourceBody.trim(), '\n\n');
   }
 
   if (parts && parts.length > 0) {
@@ -339,7 +342,8 @@ function appendItemBody(item: BuildDocument, target: string[], partKind: ItemPar
     }
   }
 
-  const renamedBody = renameFootnotes(item.body, slug);
+  const itemBody = item.processedBody ?? item.body;
+  const renamedBody = renameFootnotes(itemBody, slug);
   const resolvedBody = resolveImagePaths(renamedBody, item.filePath);
   const shiftedBody = shiftHeadings(resolvedBody, 2);
   const bodyStart = shiftedBody.trim();
@@ -547,8 +551,9 @@ function buildAuthorExportBody(doc: BuildDocument, sortedWorks: BuildDocument[],
   }
 
   // Bio (perfil)
-  if (doc.body.trim()) {
-    parts.push(`## Perfil\n\n${doc.body.trim()}\n\n`);
+  const bioBody = doc.processedBody ?? doc.body;
+  if (bioBody.trim()) {
+    parts.push(`## Perfil\n\n${bioBody.trim()}\n\n`);
   }
 
   // Trayectoria

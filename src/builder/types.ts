@@ -53,6 +53,8 @@ export interface BuildDocument extends SourceDocument {
   slug?: string;
   // Asignado en render
   htmlFragment?: string;
+  // Markdown final procesado (asignado en renderMarkdown)
+  processedBody?: string;
   // Asignado en context
   templateContext?: TemplateContext;
   // Asignado en compose

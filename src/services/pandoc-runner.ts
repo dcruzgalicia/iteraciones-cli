@@ -23,7 +23,7 @@ export async function checkPandoc(): Promise<string> {
 }
 
 /**
- * Convierte contenido Markdown a HTML5.
+ * Convierte contenido Markdown a otro formato (por defecto HTML5).
  * Si se pasa un `pool`, delega en `pandoc-server` para evitar fork overhead.
  * En caso contrario, spawnea un proceso pandoc pasando el contenido por stdin.
  *
@@ -38,6 +38,7 @@ export async function checkPandoc(): Promise<string> {
  * @param pool       Pool de pandoc-server opcional.
  * @param bibOptions Opciones de bibliografía para procesar citas con citeproc.
  * @param luaFilters Rutas absolutas a filtros Lua que se aplican durante la conversión.
+ * @param toFormat   Formato de salida (por defecto 'html5').
  */
 export async function convertFragment(
   content: string,
@@ -45,8 +46,9 @@ export async function convertFragment(
   pool?: PandocPool,
   bibOptions?: BibOptions,
   luaFilters?: readonly string[],
+  toFormat: string = 'html5',
 ): Promise<string> {
-  const args = ['pandoc', '--from', 'markdown', '--to', 'html5', '--no-highlight'];
+  const args = ['pandoc', '--from', 'markdown', '--to', toFormat, '--no-highlight'];
 
   if (bibOptions) {
     // --citeproc requiere subproceso; pandoc-server no soporta bibliografías externas.
@@ -60,8 +62,9 @@ export async function convertFragment(
     }
   }
 
-  // Usar pool solo cuando no hay bibOptions ni luaFilters activos.
-  if (!bibOptions && (!luaFilters || luaFilters.length === 0) && pool) {
+  // Usar pool solo cuando no hay bibOptions ni luaFilters activos
+  // y el formato de salida es html5 (único que soporta pandoc-server).
+  if (!bibOptions && (!luaFilters || luaFilters.length === 0) && pool && toFormat === 'html5') {
     return pool.convert(content, sourcePath);
   }
 
