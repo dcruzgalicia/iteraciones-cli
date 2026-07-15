@@ -23,22 +23,21 @@ export async function checkPandoc(): Promise<string> {
 }
 
 /**
- * Convierte contenido Markdown a otro formato (por defecto HTML5).
+ * Convierte contenido de un formato a otro usando pandoc.
  * Si se pasa un `pool`, delega en `pandoc-server` para evitar fork overhead.
  * En caso contrario, spawnea un proceso pandoc pasando el contenido por stdin.
  *
- * Cuando se pasa `bibOptions`, siempre se usa un subproceso pandoc con `--citeproc`
- * (ignorando el pool), ya que pandoc-server no soporta citeproc con archivos .bib externos.
+ * NOTA: pandoc-server solo soporta conversión markdown → html5. Cuando se usa
+ * `bibOptions`, `luaFilters`, `toFormat` distinto de 'html5' o `fromFormat`
+ * distinto de 'markdown', se ignora el pool y se usa un subproceso directo.
  *
- * Cuando se pasan `luaFilters`, siempre se usa un subproceso pandoc con `--lua-filter`
- * (ignorando el pool), ya que pandoc-server no soporta filtros Lua con acceso al sistema de archivos.
- *
- * @param content    Contenido Markdown a convertir.
+ * @param content    Contenido a convertir.
  * @param sourcePath Ruta del archivo fuente (solo para mensajes de error).
  * @param pool       Pool de pandoc-server opcional.
  * @param bibOptions Opciones de bibliografía para procesar citas con citeproc.
  * @param luaFilters Rutas absolutas a filtros Lua que se aplican durante la conversión.
  * @param toFormat   Formato de salida (por defecto 'html5').
+ * @param fromFormat Formato de entrada (por defecto 'markdown').
  */
 export async function convertFragment(
   content: string,
@@ -47,8 +46,9 @@ export async function convertFragment(
   bibOptions?: BibOptions,
   luaFilters?: readonly string[],
   toFormat: string = 'html5',
+  fromFormat: string = 'markdown',
 ): Promise<string> {
-  const args = ['pandoc', '--from', 'markdown', '--to', toFormat, '--no-highlight'];
+  const args = ['pandoc', '--from', fromFormat, '--to', toFormat, '--no-highlight'];
 
   if (bibOptions) {
     // --citeproc requiere subproceso; pandoc-server no soporta bibliografías externas.
@@ -63,8 +63,8 @@ export async function convertFragment(
   }
 
   // Usar pool solo cuando no hay bibOptions ni luaFilters activos
-  // y el formato de salida es html5 (único que soporta pandoc-server).
-  if (!bibOptions && (!luaFilters || luaFilters.length === 0) && pool && toFormat === 'html5') {
+  // y los formatos son los que soporta pandoc-server (markdown→html5).
+  if (!bibOptions && (!luaFilters || luaFilters.length === 0) && pool && toFormat === 'html5' && fromFormat === 'markdown') {
     return pool.convert(content, sourcePath);
   }
 
