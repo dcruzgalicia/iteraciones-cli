@@ -8,34 +8,53 @@ import type { PandocPool } from '../../services/pandoc-pool.js';
 import { type BibOptions, convertFragment } from '../../services/pandoc-runner.js';
 import type { BuildDocument } from '../types.js';
 
-/**
- * Carga y aplica transpilers desde el directorio <paquete>/transpilers/.
- * Cada transpiler exporta una función process(body: string): string.
- *
- * Los transpilers se aplican en orden alfabético antes de pasar el
- * contenido a pandoc.
- */
-interface Transpiler {
-  process(body: string): string;
-}
+// ---------------------------------------------------------------------------
+// Sistema unificado de transpilers
+// ---------------------------------------------------------------------------
+// Cada transpiler vive en transpilers/<prioridad>-<nombre>.ts
+// y exporta:
+//   type: 'string'  → process(body: string): string  (regex, antes de pandoc)
+//   type: 'ast'     → transform(ast): Promise<ast>    (AST, después de pandoc --to json)
+//
+// Pipeline:
+//   markdown → transpilers string → pandoc --to json → transpilers AST → pandoc --from json --to latex
 
 /** Ruta absoluta al directorio de transpilers del paquete. */
 const PKG_TRANSPILERS_DIR = join(import.meta.dir, '../../../transpilers');
 
-/** Lista de transpilers empaquetados (orden de aplicación). */
-const BUILTIN_TRANSPILERS = ['double-colon'];
+/** Lista de transpilers empaquetados en orden de aplicación. */
+const BUILTIN_TRANSPILERS = ['01-double-colon', '02-dictum'];
 
-async function applyTranspilers(body: string, cwd?: string): Promise<string> {
-  let result = body;
+interface StringTranspiler {
+  type: 'string';
+  process(body: string): string;
+}
 
-  // Transpilers del paquete: se cargan con import() dinámico
+interface AstTranspiler {
+  type: 'ast';
+  transform(ast: Record<string, unknown>): Promise<Record<string, unknown>>;
+}
+
+type TranspilerModule = StringTranspiler | AstTranspiler;
+
+/**
+ * Carga transpilers desde el paquete y desde <cwd>/transpilers/.
+ * Los transpilers del proyecto con el mismo nombre reemplazan a los del paquete.
+ * Retorna dos listas ordenadas: string transpilers primero, luego AST.
+ */
+async function loadTranspilers(cwd?: string): Promise<{
+  stringTranspilers: Array<{ name: string; process: (body: string) => string }>;
+  astTranspilers: Array<{ name: string; transform: (ast: Record<string, unknown>) => Promise<Record<string, unknown>> }>;
+}> {
+  // Cargar módulos
+  const modules = new Map<string, TranspilerModule>();
+
   for (const name of BUILTIN_TRANSPILERS) {
-    const mod = (await import(join(PKG_TRANSPILERS_DIR, `${name}.ts`))) as Transpiler;
-    result = mod.process(result);
+    const mod = (await import(join(PKG_TRANSPILERS_DIR, `${name}.ts`))) as TranspilerModule;
+    modules.set(name, mod);
   }
 
-  // Proyecto: si existe <cwd>/transpilers/, cargar transpilers del proyecto
-  // (sobrescriben o complementan a los del paquete por el mismo nombre)
+  // Sobrescritura del proyecto: transpilers con el mismo nombre reemplazan
   if (cwd) {
     const projectDir = join(cwd, 'transpilers');
     const projectDirExists = await Bun.file(projectDir)
@@ -48,14 +67,29 @@ async function applyTranspilers(body: string, cwd?: string): Promise<string> {
           .exists()
           .catch(() => false);
         if (exists) {
-          const mod = (await import(projectPath)) as Transpiler;
-          result = mod.process(result);
+          const mod = (await import(projectPath)) as TranspilerModule;
+          modules.set(name, mod);
         }
       }
     }
   }
 
-  return result;
+  // Separar por tipo, preservando el orden de BUILTIN_TRANSPILERS
+  const stringTranspilers: Array<{ name: string; process: (body: string) => string }> = [];
+  const astTranspilers: Array<{ name: string; transform: (ast: Record<string, unknown>) => Promise<Record<string, unknown>> }> = [];
+
+  for (const name of BUILTIN_TRANSPILERS) {
+    const mod = modules.get(name);
+    if (!mod) continue;
+
+    if (mod.type === 'string') {
+      stringTranspilers.push({ name, process: mod.process });
+    } else if (mod.type === 'ast') {
+      astTranspilers.push({ name, transform: mod.transform });
+    }
+  }
+
+  return { stringTranspilers, astTranspilers };
 }
 
 export interface RenderCache {
@@ -73,39 +107,11 @@ export interface RenderStats {
 }
 
 /**
- * Aplica un filtro TypeScript (pandoc JSON pipe) al contenido JSON AST.
- * El filtro debe leer JSON de stdin y escribir JSON modificado a stdout.
- */
-async function pipeThroughTsFilter(filterPath: string, input: string): Promise<string> {
-  if (!input.trim()) return input;
-
-  const proc = Bun.spawn(['bun', 'run', filterPath], {
-    stdin: 'pipe',
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
-
-  if (!proc.stdin || typeof proc.stdin === 'number') return input;
-  proc.stdin.write(input);
-  proc.stdin.end();
-
-  const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
-
-  if (exitCode !== 0) {
-    process.stderr.write(`[pipe] filtro TypeScript ${filterPath} falló (exit ${exitCode}): ${stderr}
-`);
-    return input;
-  }
-
-  return stdout;
-}
-
-/**
  * Convierte el body original de cada documento a LaTeX final (processedBody)
- * aplicando transpilers, filtros TypeScript (JSON pipe) y filtros Lua.
+ * aplicando transpilers (string → AST) y filtros Lua.
  *
  * Pipeline:
- *   markdown → transpilers → pandoc --to json → dictum.ts → pandoc --from json --to latex → .tex
+ *   markdown → transpilers string → pandoc --to json → transpilers AST → pandoc --from json --to latex → .tex
  *
  * El processedBody (.tex) se usa luego como fuente para HTML, PDF, EPUB y markdown.
  */
@@ -116,24 +122,38 @@ export async function renderLatex(
   luaFilters?: readonly string[],
   cwd?: string,
 ): Promise<BuildDocument[]> {
-  // Ruta al filtro TypeScript dictum (built-in del paquete)
-  const dictumFilter = join(import.meta.dir, '../../../pandoc/filters/dictum.ts');
+  const { stringTranspilers, astTranspilers } = await loadTranspilers(cwd);
 
   return mapWithConcurrency(docs, concurrency, async (doc) => {
-    const body = await applyTranspilers(doc.body, cwd);
+    // Paso 1: transpilers string (regex) sobre el markdown original
+    let body = doc.body;
+    for (const t of stringTranspilers) {
+      body = t.process(body);
+    }
 
     if (!body.trim()) {
       return { ...doc, processedBody: '' };
     }
 
-    // Paso 1: convertir markdown a JSON AST
+    // Paso 2: convertir markdown a JSON AST
     const json = await convertFragment(body, doc.filePath, pool, undefined, undefined, 'json');
+    let ast: Record<string, unknown>;
+    try {
+      ast = JSON.parse(json) as Record<string, unknown>;
+    } catch {
+      process.stderr.write(`[render] error al parsear AST JSON de ${doc.filePath}
+`);
+      return { ...doc, processedBody: '' };
+    }
 
-    // Paso 2: aplicar filtro TypeScript dictum sobre el AST
-    const filteredJson = await pipeThroughTsFilter(dictumFilter, json);
+    // Paso 3: transpilers AST sobre el JSON
+    for (const t of astTranspilers) {
+      ast = await t.transform(ast);
+    }
 
-    // Paso 3: convertir el AST modificado a LaTeX
-    const processedBody = await convertFragment(filteredJson, doc.filePath, pool, undefined, luaFilters, 'latex', 'json');
+    // Paso 4: convertir el AST modificado a LaTeX
+    // Los filtros Lua definidos por el usuario se aplican aquí
+    const processedBody = await convertFragment(JSON.stringify(ast), doc.filePath, pool, undefined, luaFilters, 'latex', 'json');
 
     return { ...doc, processedBody };
   });
