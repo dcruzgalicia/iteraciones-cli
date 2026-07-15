@@ -299,9 +299,6 @@ export async function convertToEpub(doc: ExportDocument, outputPath: string, cwd
     args.push('--epub-cover-image', doc.metadata.cover);
   }
 
-  // Normaliza saltos de línea: colapsa LineBreaks consecutivos
-  args.push('--lua-filter', join(import.meta.dir, '../../pandoc/filters/linebreak.lua'));
-
   // Activar el procesador de citas cuando hay bibliografía declarada.
   // Sin --citeproc, las citas [@referencia] quedan sin resolver en el documento final.
   if (doc.metadata.bibliography) {
@@ -370,22 +367,10 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
 
   const templatePath = resolveLatexTemplatePath(doc.type, cwd);
 
-  // El body del documento ya es LaTeX (desde processedBody). Usamos
-  // markdown+raw_tex para que pandoc procese el YAML header y trate el
-  // contenido LaTeX como raw_tex (pasándolo sin modificar).
-  //
-  // Pre-procesamos el body para:
-  // 1. Convertir \( y \) a $ y $ (pandoc convierte $..$ a \(..\) en
-  //    LaTeX, pero al leerlo de vuelta con +raw_tex las \(..\) se
-  //    interpretan como math inline y se pierde el modo matemático).
-  // 2. Reemplazar caracteres Unicode problemáticos para LaTeX.
-  const body = doc.body
-    .replace(/\\\(/g, '$')
-    .replace(/\\\)/g, '$')
-    .replace(/\u2006/g, '\\,') // six-per-em space → \,
-    .replace(/\u2003/g, '\\quad') // em space → \quad
-    .replace(/\u2009/g, '\\,'); // thin space → \,
-  const input = buildYamlHeader(doc, undefined, pdfFormat) + body;
+  // El body del documento ya es LaTeX (desde processedBody).
+  // Usamos markdown+raw_tex para que pandoc procese el YAML header y
+  // pase el contenido LaTeX como raw_tex sin modificarlo.
+  const input = buildYamlHeader(doc, undefined, pdfFormat) + doc.body;
   const args = [
     'pandoc',
     '--from',
@@ -401,15 +386,8 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
   ];
 
   if (doc.metadata.bibliography) {
-    const refLevel = doc.metadata.documentclass === 'scrbook' && doc.metadata.hasParts ? 'part' : 'section';
-    try {
-      Bun.write('/tmp/iteraciones-ref-level', refLevel);
-    } catch {}
     args.push('--citeproc');
-    args.push('--lua-filter', join(import.meta.dir, '../../pandoc/filters/suppress-references.lua'));
   }
-
-  args.push('--lua-filter', join(import.meta.dir, '../../pandoc/filters/linebreak.lua'));
 
   let proc: ReturnType<typeof Bun.spawn>;
   try {
