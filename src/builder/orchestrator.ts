@@ -534,13 +534,20 @@ async function runFinalization(
         if (fm.date) preamble.push(`\\date{${fm.date}}`);
         if (fm.title) preamble.push('\\maketitle');
 
+        // Escribir .tex intermedio (solo body, sin preámbulo) en .iteraciones/tex/
+        const texIntermediateDir = join(ctx.cwd, '.iteraciones', 'tex', dirname(doc.relativePath));
+        const intermediatePath = join(texIntermediateDir, `${doc.slug}.intermediate.tex`);
+        await mkdir(texIntermediateDir, { recursive: true });
+        await Bun.write(intermediatePath, doc.processedBody);
+
+        // Escribir .tex final (con preámbulo)
         const fullTex = [...preamble, '', doc.processedBody, '', '\\end{document}'].join('\n');
         await Bun.write(texPath, fullTex);
         texWritten++;
       }
     }
     if (texWritten > 0) {
-      log(`Escritos ${texWritten} archivos .tex en ${ctx.outputDir}`);
+      log(`Escritos ${texWritten} archivos .tex en ${ctx.outputDir} (.intermediate.tex en .iteraciones/tex/)`);
     }
   }
 
