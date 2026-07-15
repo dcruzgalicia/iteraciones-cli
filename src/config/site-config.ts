@@ -70,6 +70,12 @@ export interface MarkdownFormatConfig {
 export interface LatexFormatConfig {
   /** Si true, genera LaTeX (.tex) en el build. */
   generate?: boolean;
+  /**
+   * Si false (default): cuando pdf.generate=true, latex.generate se trata como true
+   * aunque este configurado como false (el PDF necesita el .tex).
+   * Si true: respeta el valor exacto de generate.
+   */
+  force?: boolean;
 }
 
 export interface FormatConfig {
@@ -170,6 +176,7 @@ export const DEFAULT_MARKDOWN_FORMAT: MarkdownFormatConfig = {
 
 export const DEFAULT_LATEX_FORMAT: LatexFormatConfig = {
   generate: true,
+  force: false,
 };
 
 export const DEFAULT_SITE_CONFIG: SiteConfig = {

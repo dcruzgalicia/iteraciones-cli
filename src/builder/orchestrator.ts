@@ -509,8 +509,11 @@ async function runFinalization(
     log('HTML desactivado: omitiendo generación de HTML');
   }
 
-  // Escribir el .tex final (processedBody) si latex.generate está habilitado.
-  const genLatex = ctx.siteConfig.format?.latex?.generate !== false;
+  // Escribir el .tex final (processedBody) si latex está habilitado.
+  // latex se fuerza a true si pdf.generate=true, a menos que latex.force=true.
+  const latexCfg = ctx.siteConfig.format?.latex;
+  const pdfCfg = ctx.siteConfig.format?.pdf;
+  const genLatex = pdfCfg?.generate === true && latexCfg?.force !== true ? true : latexCfg?.generate !== false;
   let texWritten = 0;
   if (genLatex) {
     for (const doc of allContextDocs) {
@@ -853,6 +856,12 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       cacheHitsMd: 0,
     };
     const formatCfg = ctx.siteConfig.format;
+
+    // Limpiar .tex si latex.generate=false pero se forzo para PDF
+    const pdfOn = formatCfg?.pdf?.generate === true;
+    const latexForce = formatCfg?.latex?.force === true;
+    const latexGen = formatCfg?.latex?.generate === false;
+    const cleanupTex = pdfOn && latexForce && latexGen;
     const hasExport =
       (formatCfg?.pdf?.generate === true || formatCfg?.epub?.generate === true || formatCfg?.markdown?.generate === true) && !options.noExport;
     if (hasExport && formatCfg) {
@@ -929,6 +938,24 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     }
     if (hasExport) progress.completePhase(); // fin de export
 
+    // Limpiar .tex final e intermedio si latex.generate=false pero se forzo para PDF
+    if (cleanupTex) {
+      let cleaned = 0;
+      for (const doc of allContextDocs) {
+        if (!doc.processedBody) continue;
+        const texSlug = doc.slug ?? basename(doc.relativePath, '.md');
+        const outDir = join(ctx.outputDir, dirname(doc.relativePath));
+        const texPath = join(outDir, `${texSlug}.tex`);
+        const rmOk = await rm(texPath)
+          .then(() => true)
+          .catch(() => false);
+        const intermediatePath = join(ctx.cwd, '.iteraciones', 'tex', dirname(doc.relativePath), `${texSlug}.intermediate.tex`);
+        await rm(intermediatePath).catch(() => {});
+        if (rmOk) cleaned++;
+      }
+      if (cleaned > 0) log(`Eliminados ${cleaned} archivos .tex (latex.generate=false + force)`);
+    }
+
     // Inyectar enlaces de descarga en los docs exportables, propagarlos a los ítems
     // y luego añadir la miniatura `cover-image` a los list-items.
     const docsWithExportLinks = injectDownloadLinks(finalContextDocs, exportResults, ctx.outputDir);
@@ -963,10 +990,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     progress.completePhase(); // fin de compose
 
     const htmlOn = formatCfg?.html?.generate === true;
-    const pdfOn = formatCfg?.pdf?.generate === true;
     const epubOn = formatCfg?.epub?.generate === true;
     const mdOn = formatCfg?.markdown?.generate === true;
-    const latexOn = formatCfg?.latex?.generate !== false;
+    const latexOn = pdfOn && formatCfg?.latex?.force !== true ? true : formatCfg?.latex?.generate !== false;
     const docCount = htmlOn || pdfOn || epubOn || mdOn || latexOn ? allDocs.length : 0;
     progress.finish(docCount);
   } finally {
