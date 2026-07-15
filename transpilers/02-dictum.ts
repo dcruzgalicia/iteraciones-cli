@@ -1,9 +1,8 @@
-#!/usr/bin/env bun
 /**
- * Pandoc JSON filter (TypeScript): transforma Divs con clase .dictum a
- * comandos \dictum[author]{quote} en LaTeX.
+ * Transpiler AST: transforma Divs con clase .dictum a comandos
+ * \dictum[author]{quote} en LaTeX.
  *
- * Uso: pandoc --to json | bun run dictum.ts | pandoc --from json --to latex
+ * Se ejecuta sobre el JSON AST de pandoc (después del parseo inicial).
  *
  * Convierte:
  *   ::: {.dictum}
@@ -18,24 +17,10 @@
  *   Autor
  *   :::
  *   :::
- *   → \dictum[Author]{Contenido de la cita}
+ *   → \dictum[Autor]{Contenido de la cita}
  */
 
-// Lee JSON AST de stdin
-const input = await Bun.stdin.text();
-if (!input.trim()) {
-  process.stdout.write('{"pandoc-api-version":[1,23],"meta":{},"blocks":[]}');
-  process.exit(0);
-}
-
-let ast: { blocks: unknown[] };
-try {
-  ast = JSON.parse(input) as { blocks: unknown[] };
-} catch {
-  process.stderr.write('[dictum] error: el JSON de entrada no es válido\n');
-  process.stdout.write(input);
-  process.exit(1);
-}
+export const type = 'ast' as const;
 
 // ---------------------------------------------------------------------------
 // Helpers AST
@@ -68,7 +53,7 @@ async function blocksToLatex(innerBlocks: unknown[]): Promise<string> {
     blocks: innerBlocks,
   });
 
-  const proc = Bun.spawn(['pandoc', '--from', 'json', '--to', 'latex', '--no-highlight'], {
+  const proc = Bun.spawn(['pandoc', '--from', 'json', '--to', 'latex', '--syntax-highlighting=none'], {
     stdin: 'pipe',
     stdout: 'pipe',
     stderr: 'pipe',
@@ -79,11 +64,7 @@ async function blocksToLatex(innerBlocks: unknown[]): Promise<string> {
   proc.stdin.write(doc);
   proc.stdin.end();
 
-  const [stdout, stderr, exitCode] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-    proc.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
 
   if (exitCode !== 0) {
     process.stderr.write(`[dictum] pandoc falló al convertir a LaTeX: ${stderr}\n`);
@@ -109,8 +90,12 @@ async function processDictum(block: Record<string, unknown>): Promise<unknown> {
   let authorBlocks: unknown[] = [];
 
   for (const item of content) {
-    if (typeof item === 'object' && item !== null && (item as Record<string, unknown>).t === 'Div' && hasClass(item as Record<string, unknown>, 'author')) {
-      // Extraer párrafos del Div.author
+    if (
+      typeof item === 'object' &&
+      item !== null &&
+      (item as Record<string, unknown>).t === 'Div' &&
+      hasClass(item as Record<string, unknown>, 'author')
+    ) {
       authorBlocks = blockContent(item as Record<string, unknown>);
     } else {
       quoteBlocks.push(item);
@@ -123,14 +108,11 @@ async function processDictum(block: Record<string, unknown>): Promise<unknown> {
     authorBlocks.length > 0 ? blocksToLatex(authorBlocks) : Promise.resolve(''),
   ]);
 
-  // Colapsar whitespace: soft breaks dentro de párrafos → espacio
+  // Colapsar whitespace: soft breaks dentro de parrafos → espacio,
+  // saltos entre parrafos preservados
+  const PAR_MARKER = '@@PAR@@';
   const clean = (s: string): string =>
-    s
-      .replace(/\n\n+/g, '\x00PAR\x00')
-      .replace(/\n/g, ' ')
-      .replace(/\x00PAR\x00/g, '\n\n')
-      .replace(/^\s+/, '')
-      .replace(/\s+$/, '');
+    s.replace(/\n\n+/g, PAR_MARKER).replace(/\n/g, ' ').replace(new RegExp(PAR_MARKER, 'g'), '\n\n').replace(/^\s+/, '').replace(/\s+$/, '');
 
   const quote = clean(quoteLatex);
   const author = clean(authorLatex);
@@ -141,18 +123,27 @@ async function processDictum(block: Record<string, unknown>): Promise<unknown> {
 }
 
 // ---------------------------------------------------------------------------
-// Recorrido principal
+// Transformación principal del AST
 // ---------------------------------------------------------------------------
 
-const newBlocks: unknown[] = [];
+export async function transform(ast: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const blocks = ast.blocks as unknown[];
 
-for (const block of ast.blocks) {
-  if (typeof block === 'object' && block !== null && (block as Record<string, unknown>).t === 'Div' && hasClass(block as Record<string, unknown>, 'dictum')) {
-    newBlocks.push(await processDictum(block as Record<string, unknown>));
-  } else {
-    newBlocks.push(block);
+  const newBlocks: unknown[] = [];
+
+  for (const block of blocks) {
+    if (
+      typeof block === 'object' &&
+      block !== null &&
+      (block as Record<string, unknown>).t === 'Div' &&
+      hasClass(block as Record<string, unknown>, 'dictum')
+    ) {
+      newBlocks.push(await processDictum(block as Record<string, unknown>));
+    } else {
+      newBlocks.push(block);
+    }
   }
-}
 
-ast.blocks = newBlocks;
-process.stdout.write(JSON.stringify(ast));
+  ast.blocks = newBlocks;
+  return ast;
+}
