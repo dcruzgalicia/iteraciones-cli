@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
-import { mkdir } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { mkdir, rm } from 'node:fs/promises';
+import { basename, dirname, join } from 'node:path';
 import type { ExportDocument } from '../builder/export/types.js';
 import type { PdfFormatConfig } from '../config/site-config.js';
 import { DEFAULT_PDF_FORMAT } from '../config/site-config.js';
@@ -362,43 +362,69 @@ export async function convertToMarkdown(doc: ExportDocument, outputPath: string)
  * @param outputPath Ruta absoluta del archivo PDF de salida.
  * @param cwd        Directorio raíz del proyecto; para resolver rutas de bibliografía.
  */
-export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?: string, pdfFormat?: PdfFormatConfig): Promise<void> {
+export async function convertToPdf(doc: ExportDocument, outputPath: string, _cwd?: string, pdfFormat?: PdfFormatConfig): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
-  const templatePath = resolveLatexTemplatePath(doc.type, cwd);
-
-  // El body del documento ya es LaTeX (desde processedBody).
-  // Usamos markdown+raw_tex para que pandoc procese el YAML header y
-  // pase el contenido LaTeX como raw_tex sin modificarlo.
-  const input = buildYamlHeader(doc, undefined, pdfFormat) + doc.body;
-  const args = [
-    'pandoc',
-    '--from',
-    'markdown+raw_tex',
-    '--to',
-    'pdf',
-    '--pdf-engine',
-    pdfFormat?.engine ?? 'pdflatex',
-    `--template=${templatePath}`,
-    `--top-level-division=${doc.type === 'file' && doc.metadata.topLevelDivision ? doc.metadata.topLevelDivision : doc.metadata.documentclass === 'scrbook' ? 'chapter' : 'section'}`,
-    '--output',
-    outputPath,
+  // Construir .tex completo desde metadata + body (evita depender del
+  // .tex final en disco que puede estar en iCloud Drive)
+  const fm = doc.metadata;
+  const dc = fm.documentclass ?? 'scrbook';
+  const pre: string[] = [
+    `\\documentclass{${dc}}`,
+    '\\usepackage[T1]{fontenc}',
+    '\\usepackage[utf8]{inputenc}',
+    '\\usepackage{babel}',
+    '\\babelprovide[import, main]{mexican}',
+    '\\usepackage{longtable}',
+    '\\usepackage{booktabs}',
+    '\\usepackage{array}',
+    '\\usepackage{calc}',
+    '\\usepackage{hyperref}',
+    '\\newcounter{none}',
+    '\\providecommand{\\tightlist}{%',
+    '  \\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}}',
+    '\\begin{document}',
   ];
+  if (fm.title) pre.push(`\\title{${fm.title}}`);
+  if (fm.author?.length) pre.push(`\\author{${fm.author.join(' \\and ')}}`);
+  if (fm.date) pre.push(`\\date{${fm.date}}`);
+  if (fm.title) pre.push('\\maketitle');
 
-  if (doc.metadata.bibliography) {
-    args.push('--citeproc');
+  const texContent = [...pre, '', doc.body, '', '\\end{document}'].join('\n');
+
+  // Escribir a /tmp (evita problemas de sync con iCloud Drive) y compilar
+  const engine = pdfFormat?.engine ?? 'pdflatex';
+  const slug = basename(outputPath, '.pdf');
+  const tmpDir = '/tmp/iteraciones-pdf';
+  await mkdir(tmpDir, { recursive: true });
+  const tmpTex = join(tmpDir, `${slug}.tex`);
+  await Bun.write(tmpTex, texContent);
+
+  const proc = Bun.spawn([engine, '-interaction=nonstopmode', '-output-directory', tmpDir, tmpTex], {
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+
+  const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+
+  // Copiar PDF generado a destino
+  const tmpPdf = join(tmpDir, `${slug}.pdf`);
+  const pdfOk = await Bun.file(tmpPdf)
+    .exists()
+    .catch(() => false);
+  if (pdfOk) {
+    await Bun.write(outputPath, Bun.file(tmpPdf));
   }
 
-  let proc: ReturnType<typeof Bun.spawn>;
-  try {
-    proc = Bun.spawn(args, { stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' });
-  } catch (err) {
-    throw new PandocError(`pandoc no está disponible en PATH: ${String(err)}`, doc.filePath, '');
+  // Limpiar temporales de /tmp
+  for (const ext of ['.tex', '.pdf', '.aux', '.log', '.out']) {
+    await rm(join(tmpDir, `${slug}${ext}`)).catch(() => {});
   }
 
-  const [, stderr, exitCode] = await writeAndWait(proc, input, doc.filePath);
   if (exitCode !== 0) {
-    throw new PandocError(`pandoc/LaTeX falló al generar PDF para ${doc.filePath}`, doc.filePath, stderr);
+    const log = stdout + '\n' + stderr;
+    const m = log.match(/^! .*$/m);
+    throw new PandocError(`pdflatex falló al generar PDF para ${doc.filePath}: ${m ? m[0] : 'exit ' + exitCode}`, doc.filePath, stderr);
   }
 }
 

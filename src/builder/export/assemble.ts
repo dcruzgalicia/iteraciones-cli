@@ -155,6 +155,8 @@ export function assembleExportDocument(
   loosePaths?: string[],
 ): ExportDocument | null {
   if (!doc.type || !EXPORTABLE_TYPES.has(doc.type)) return null;
+  // Si no hay processedBody (.tex intermedio), no se puede exportar
+  if (!doc.processedBody) return null;
 
   const rawEditorial =
     typeof doc.frontmatter['editorial'] === 'object' && doc.frontmatter['editorial'] !== null
