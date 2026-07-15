@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
-import { rm } from 'node:fs/promises';
-import { basename, isAbsolute, join, resolve } from 'node:path';
+import { mkdir, rm } from 'node:fs/promises';
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 import dictumPlugin from '../../pandoc/plugins/dictum-plugin.js';
 import { CacheManager } from '../cache/cache-manager.js';
 import { hash } from '../cache/hasher.js';
@@ -32,7 +32,7 @@ import { classifyDocuments } from './pipeline/classify.js';
 import { type ComposeCache, type ComposeStats, composeDocuments, renderBlocksToRegions } from './pipeline/compose.js';
 import { computeAffectedDocs } from './pipeline/dependency-resolver.js';
 import { discover } from './pipeline/discover.js';
-import { type RenderCache, type RenderStats, renderDocuments } from './pipeline/render.js';
+import { type RenderCache, type RenderStats, renderDocuments, renderMarkdown } from './pipeline/render.js';
 import { runContextPhaseWithTypeGraph } from './pipeline/runner.js';
 import { TYPE_STAGE_MAP, VALID_TYPES } from './pipeline/type-graph.js';
 import { writeDocuments } from './pipeline/write.js';
@@ -509,6 +509,43 @@ async function runFinalization(
     log('HTML desactivado: omitiendo generación de HTML');
   }
 
+  // Escribir el markdown final (processedBody) para cada documento.
+  // Siempre se genera, independientemente de format.html.generate.
+  let mdWritten = 0;
+  for (const doc of allContextDocs) {
+    if (doc.processedBody && doc.slug) {
+      const mdDir = join(ctx.outputDir, dirname(doc.relativePath));
+      const mdPath = join(mdDir, `${doc.slug}.md`);
+      await mkdir(mdDir, { recursive: true });
+      // Serializar el frontmatter y anteponerlo al body procesado
+      const yamlLines = ['---'];
+      for (const [key, value] of Object.entries(doc.frontmatter)) {
+        if (key === 'items' || key === 'speakers' || key === 'block' || key === 'draft') continue;
+        if (value === undefined || value === null) continue;
+        if (typeof value === 'number') {
+          yamlLines.push(`${key}: ${value}`);
+        } else if (typeof value === 'boolean') {
+          yamlLines.push(`${key}: ${value}`);
+        } else if (typeof value === 'string' && value) {
+          yamlLines.push(`${key}: ${JSON.stringify(value)}`);
+        } else if (Array.isArray(value) && value.length > 0) {
+          yamlLines.push(`${key}:`);
+          for (const item of value) {
+            if (typeof item === 'string') {
+              yamlLines.push(`  - ${JSON.stringify(item)}`);
+            }
+          }
+        }
+      }
+      yamlLines.push('---', '');
+      await Bun.write(mdPath, yamlLines.join('\n') + doc.processedBody);
+      mdWritten++;
+    }
+  }
+  if (mdWritten > 0) {
+    log(`Escritos ${mdWritten} archivos markdown en ${ctx.outputDir}`);
+  }
+
   let generatedFiles: GeneratedFile[] = [];
   if (hasPlugins) {
     const docOutputPaths = writtenDocs.map((doc) => docHtmlPath(doc));
@@ -689,6 +726,20 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
     const logoSvg = await readLogoSvgContent(ctx);
     const enrichedSiteCtx = buildEnrichedSiteContext(ctx, allDocs, logoSvg);
+
+    // Fase de markdown final: procesa el body original con filtros Lua
+    // y produce el markdown final (processedBody) que se usará para HTML
+    // y exportación.
+    const docsWithMd = await renderMarkdown(allDocs, ctx.concurrency ?? 4, pandocPool, luaFilters);
+    // Reemplazar allDocs con los docs procesados (tienen processedBody)
+    const mdMap = new Map<string, BuildDocument>(docsWithMd.map((d) => [d.relativePath, d]));
+    for (const doc of allDocs) {
+      const processed = mdMap.get(doc.relativePath);
+      if (processed && processed.processedBody) {
+        doc.processedBody = processed.processedBody;
+      }
+    }
+
     progress.startPhase('render', allDocs.length);
     // Conjunto de claves realmente usadas por renderDocuments (hits + writes).
     // Se pasa a todas las fases de render para que cada llamada acumule sus claves.
