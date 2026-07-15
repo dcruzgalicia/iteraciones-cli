@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import {
   DEFAULT_EPUB_FORMAT,
   DEFAULT_HTML_FORMAT,
+  DEFAULT_LATEX_FORMAT,
   DEFAULT_MARKDOWN_FORMAT,
   DEFAULT_PAGINATION,
   DEFAULT_PDF_FORMAT,
@@ -158,6 +159,13 @@ function buildDefaultConfig(): string {
   // markdown
   lines.push('  markdown:');
   for (const [key, value] of Object.entries(DEFAULT_MARKDOWN_FORMAT)) {
+    const yamlKey = camelToKebab(key);
+    lines.push(`    ${yamlKey}: ${yamlValue(value)}`);
+  }
+
+  // latex
+  lines.push('  latex:');
+  for (const [key, value] of Object.entries(DEFAULT_LATEX_FORMAT)) {
     const yamlKey = camelToKebab(key);
     lines.push(`    ${yamlKey}: ${yamlValue(value)}`);
   }

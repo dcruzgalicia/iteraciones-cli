@@ -328,27 +328,68 @@ export async function convertToEpub(doc: ExportDocument, outputPath: string, cwd
  */
 export async function convertToMarkdown(doc: ExportDocument, outputPath: string): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
+  // El body del documento es LaTeX (desde processedBody). Lo convertimos a
+  // markdown limpio via pandoc.
+  const args = ['pandoc', '--from', 'latex', '--to', 'markdown', '--no-highlight'];
+  let proc: ReturnType<typeof Bun.spawn>;
+  try {
+    proc = Bun.spawn(args, { stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' });
+  } catch (err) {
+    throw new PandocError(`pandoc no está disponible en PATH: ${String(err)}`, doc.filePath, '');
+  }
+  if (proc.stdin == null || typeof proc.stdin === 'number') {
+    throw new PandocError('No se pudo escribir stdin de pandoc', doc.filePath, '');
+  }
+  if (proc.stdout == null || typeof proc.stdout === 'number') {
+    throw new PandocError('No se pudo leer stdout de pandoc', doc.filePath, '');
+  }
+  if (proc.stderr == null || typeof proc.stderr === 'number') {
+    throw new PandocError('No se pudo leer stderr de pandoc', doc.filePath, '');
+  }
+  proc.stdin.write(doc.body);
+  proc.stdin.end();
+  const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+  if (exitCode !== 0) {
+    throw new PandocError(`pandoc falló al convertir a markdown ${doc.filePath}`, doc.filePath, stderr);
+  }
   const yamlHeader = buildYamlHeader(doc, undefined, undefined);
-  await Bun.write(outputPath, yamlHeader + doc.body);
+  await Bun.write(outputPath, yamlHeader + stdout);
 }
 
 /**
- * Convierte un ExportDocument a PDF usando pandoc con pdflatex.
- * Usa el template KOMA-Script del directorio `pandoc/export/`.
+ * Convierte un ExportDocument a PDF compilando el .tex intermedio con pdflatex.
+ * El body del documento ya es LaTeX (desde processedBody). Se construye el
+ * documento completo con preámbulo y se compila con pdflatex.
  *
  * @param doc        Documento ensamblado listo para exportar.
  * @param outputPath Ruta absoluta del archivo PDF de salida.
- * @param cwd        Directorio raíz del proyecto; permite buscar templates de override locales.
+ * @param cwd        Directorio raíz del proyecto; para resolver rutas de bibliografía.
  */
 export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?: string, pdfFormat?: PdfFormatConfig): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
   const templatePath = resolveLatexTemplatePath(doc.type, cwd);
-  const input = buildYamlHeader(doc, undefined, pdfFormat) + doc.body;
+
+  // El body del documento ya es LaTeX (desde processedBody). Usamos
+  // markdown+raw_tex para que pandoc procese el YAML header y trate el
+  // contenido LaTeX como raw_tex (pasándolo sin modificar).
+  //
+  // Pre-procesamos el body para:
+  // 1. Convertir \( y \) a $ y $ (pandoc convierte $..$ a \(..\) en
+  //    LaTeX, pero al leerlo de vuelta con +raw_tex las \(..\) se
+  //    interpretan como math inline y se pierde el modo matemático).
+  // 2. Reemplazar caracteres Unicode problemáticos para LaTeX.
+  const body = doc.body
+    .replace(/\\\(/g, '$')
+    .replace(/\\\)/g, '$')
+    .replace(/\u2006/g, '\\,') // six-per-em space → \,
+    .replace(/\u2003/g, '\\quad') // em space → \quad
+    .replace(/\u2009/g, '\\,'); // thin space → \,
+  const input = buildYamlHeader(doc, undefined, pdfFormat) + body;
   const args = [
     'pandoc',
     '--from',
-    'markdown',
+    'markdown+raw_tex',
     '--to',
     'pdf',
     '--pdf-engine',
@@ -359,11 +400,7 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
     outputPath,
   ];
 
-  // Activar el procesador de citas cuando hay bibliografía declarada.
-  // Sin --citeproc, las citas [@referencia] quedan sin resolver en el PDF final.
-  // Usamos un Lua filter para insertar el título antes de las referencias.
   if (doc.metadata.bibliography) {
-    // Escribir nivel de referencia para el Lua filter (via temp file)
     const refLevel = doc.metadata.documentclass === 'scrbook' && doc.metadata.hasParts ? 'part' : 'section';
     try {
       Bun.write('/tmp/iteraciones-ref-level', refLevel);
@@ -372,13 +409,7 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
     args.push('--lua-filter', join(import.meta.dir, '../../pandoc/filters/suppress-references.lua'));
   }
 
-  // Normaliza saltos de línea: colapsa LineBreaks consecutivos para que
-  // \ en líneas consecutivas genere el mismo espaciado que &nbsp;.
   args.push('--lua-filter', join(import.meta.dir, '../../pandoc/filters/linebreak.lua'));
-
-  // Lua filter para transformar fenced divs .dictum a comandos LaTeX \dictum.
-  // Debe ejecutarse después de citeproc para que @citekey se resuelva antes
-  // de la conversión a LaTeX. Corre también sin citeproc (dictums sin citas).
   args.push('--lua-filter', join(import.meta.dir, '../../pandoc/filters/dictum.lua'));
 
   let proc: ReturnType<typeof Bun.spawn>;
@@ -390,9 +421,7 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
 
   const [, stderr, exitCode] = await writeAndWait(proc, input, doc.filePath);
   if (exitCode !== 0) {
-    // Filtrar la salida de pdflatex para mostrar solo los errores relevantes.
-    const filteredLines = filterLatexStderr(stderr);
-    throw new PandocError(`pandoc/LaTeX falló al generar PDF para ${doc.filePath}`, doc.filePath, filteredLines || stderr);
+    throw new PandocError(`pandoc/LaTeX falló al generar PDF para ${doc.filePath}`, doc.filePath, stderr);
   }
 }
 

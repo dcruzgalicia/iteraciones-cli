@@ -32,7 +32,7 @@ import { classifyDocuments } from './pipeline/classify.js';
 import { type ComposeCache, type ComposeStats, composeDocuments, renderBlocksToRegions } from './pipeline/compose.js';
 import { computeAffectedDocs } from './pipeline/dependency-resolver.js';
 import { discover } from './pipeline/discover.js';
-import { type RenderCache, type RenderStats, renderDocuments, renderMarkdown } from './pipeline/render.js';
+import { type RenderCache, type RenderStats, renderDocuments, renderLatex } from './pipeline/render.js';
 import { runContextPhaseWithTypeGraph } from './pipeline/runner.js';
 import { TYPE_STAGE_MAP, VALID_TYPES } from './pipeline/type-graph.js';
 import { writeDocuments } from './pipeline/write.js';
@@ -509,41 +509,39 @@ async function runFinalization(
     log('HTML desactivado: omitiendo generación de HTML');
   }
 
-  // Escribir el markdown final (processedBody) para cada documento.
-  // Siempre se genera, independientemente de format.html.generate.
-  let mdWritten = 0;
-  for (const doc of allContextDocs) {
-    if (doc.processedBody && doc.slug) {
-      const mdDir = join(ctx.outputDir, dirname(doc.relativePath));
-      const mdPath = join(mdDir, `${doc.slug}.md`);
-      await mkdir(mdDir, { recursive: true });
-      // Serializar el frontmatter y anteponerlo al body procesado
-      const yamlLines = ['---'];
-      for (const [key, value] of Object.entries(doc.frontmatter)) {
-        if (key === 'items' || key === 'speakers' || key === 'block' || key === 'draft') continue;
-        if (value === undefined || value === null) continue;
-        if (typeof value === 'number') {
-          yamlLines.push(`${key}: ${value}`);
-        } else if (typeof value === 'boolean') {
-          yamlLines.push(`${key}: ${value}`);
-        } else if (typeof value === 'string' && value) {
-          yamlLines.push(`${key}: ${JSON.stringify(value)}`);
-        } else if (Array.isArray(value) && value.length > 0) {
-          yamlLines.push(`${key}:`);
-          for (const item of value) {
-            if (typeof item === 'string') {
-              yamlLines.push(`  - ${JSON.stringify(item)}`);
-            }
-          }
-        }
+  // Escribir el .tex final (processedBody) si latex.generate está habilitado.
+  const genLatex = ctx.siteConfig.format?.latex?.generate !== false;
+  let texWritten = 0;
+  if (genLatex) {
+    for (const doc of allContextDocs) {
+      if (doc.processedBody && doc.slug && doc.frontmatter) {
+        const outDir = join(ctx.outputDir, dirname(doc.relativePath));
+        const texPath = join(outDir, `${doc.slug}.tex`);
+        await mkdir(outDir, { recursive: true });
+
+        // Construir preámbulo LaTeX mínimo
+        const fm = doc.frontmatter;
+        const preamble: string[] = [
+          '\\documentclass{scrbook}',
+          '\\usepackage[T1]{fontenc}',
+          '\\usepackage[utf8]{inputenc}',
+          '\\usepackage{babel}',
+          '\\babelprovide[import, main]{mexican}',
+          '\\begin{document}',
+        ];
+        if (fm.title) preamble.push(`\\title{${fm.title}}`);
+        if (fm.author && fm.author.length > 0) preamble.push(`\\author{${fm.author.join(' \\and ')}}`);
+        if (fm.date) preamble.push(`\\date{${fm.date}}`);
+        if (fm.title) preamble.push('\\maketitle');
+
+        const fullTex = [...preamble, '', doc.processedBody, '', '\\end{document}'].join('\n');
+        await Bun.write(texPath, fullTex);
+        texWritten++;
       }
-      yamlLines.push('---', '');
-      await Bun.write(mdPath, yamlLines.join('\n') + doc.processedBody);
-      mdWritten++;
     }
-  }
-  if (mdWritten > 0) {
-    log(`Escritos ${mdWritten} archivos markdown en ${ctx.outputDir}`);
+    if (texWritten > 0) {
+      log(`Escritos ${texWritten} archivos .tex en ${ctx.outputDir}`);
+    }
   }
 
   let generatedFiles: GeneratedFile[] = [];
@@ -727,10 +725,10 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     const logoSvg = await readLogoSvgContent(ctx);
     const enrichedSiteCtx = buildEnrichedSiteContext(ctx, allDocs, logoSvg);
 
-    // Fase de markdown final: procesa el body original con filtros Lua
-    // y produce el markdown final (processedBody) que se usará para HTML
+    // Fase de LaTeX final: procesa el body original con filtros Lua
+    // y produce el .tex final (processedBody) que se usará para HTML
     // y exportación.
-    const docsWithMd = await renderMarkdown(allDocs, ctx.concurrency ?? 4, pandocPool, luaFilters);
+    const docsWithMd = await renderLatex(allDocs, ctx.concurrency ?? 4, pandocPool, luaFilters);
     // Reemplazar allDocs con los docs procesados (tienen processedBody)
     const mdMap = new Map<string, BuildDocument>(docsWithMd.map((d) => [d.relativePath, d]));
     for (const doc of allDocs) {
@@ -949,11 +947,12 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     );
     progress.completePhase(); // fin de compose
 
-    const htmlOn = formatCfg?.html?.generate !== false;
+    const htmlOn = formatCfg?.html?.generate === true;
     const pdfOn = formatCfg?.pdf?.generate === true;
     const epubOn = formatCfg?.epub?.generate === true;
     const mdOn = formatCfg?.markdown?.generate === true;
-    const docCount = htmlOn || pdfOn || epubOn || mdOn ? allDocs.length : 0;
+    const latexOn = formatCfg?.latex?.generate !== false;
+    const docCount = htmlOn || pdfOn || epubOn || mdOn || latexOn ? allDocs.length : 0;
     progress.finish(docCount);
   } finally {
     pandocPool?.dispose();

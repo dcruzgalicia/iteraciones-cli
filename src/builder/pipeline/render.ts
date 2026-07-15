@@ -1,7 +1,6 @@
 import { join, resolve } from 'node:path';
 import type { CacheManager } from '../../cache/cache-manager.js';
 import { hash } from '../../cache/hasher.js';
-import type { Frontmatter } from '../../loader/frontmatter.js';
 import { mapWithConcurrency } from '../../output/concurrency.js';
 import type { RenderFileReport } from '../../output/progress.js';
 import type { PluginRegistry } from '../../plugin/registry.js';
@@ -24,54 +23,28 @@ export interface RenderStats {
 }
 
 /**
- * Convierte el body original de cada documento a markdown final (processedBody)
- * aplicando los filtros Lua. El processedBody se usa luego como fuente para
- * la generación de HTML y para la exportación a PDF/EPUB/markdown.
+ * Convierte el body original de cada documento a LaTeX final (processedBody)
+ * aplicando los filtros Lua. El processedBody (.tex) se usa luego como fuente
+ * para HTML, PDF, EPUB y markdown.
+ *
+ * El resultado es un fragmento LaTeX sin preámbulo (solo el body). El preámbulo
+ * se agrega al escribir el archivo .tex final en runFinalization.
  *
  * @param docs       Documentos a procesar.
  * @param concurrency Número máximo de conversiones simultáneas.
  * @param pool       Pool de pandoc-server opcional.
  * @param luaFilters Filtros Lua que se aplican durante la conversión.
  */
-export async function renderMarkdown(
+export async function renderLatex(
   docs: BuildDocument[],
   concurrency: number,
   pool?: PandocPool,
   luaFilters?: readonly string[],
 ): Promise<BuildDocument[]> {
   return mapWithConcurrency(docs, concurrency, async (doc) => {
-    // Convertir solo el cuerpo (sin frontmatter) a markdown final
-    const processedBody = await convertFragment(doc.body, doc.filePath, pool, undefined, luaFilters, 'markdown');
+    const processedBody = await convertFragment(doc.body, doc.filePath, pool, undefined, luaFilters, 'latex');
     return { ...doc, processedBody };
   });
-}
-
-/**
- * Serializa el frontmatter de un documento a formato YAML.
- * Produce un bloque YAML simple con los campos principales.
- */
-function serializeFrontmatter(fm: Frontmatter): string {
-  const lines: string[] = ['---'];
-  lines.push(`title: ${JSON.stringify(fm.title)}`);
-  if (fm.date) lines.push(`date: ${JSON.stringify(fm.date)}`);
-  if (fm.author.length > 0) {
-    lines.push('author:');
-    for (const a of fm.author) {
-      lines.push(`  - ${JSON.stringify(a)}`);
-    }
-  }
-  if (fm.type) lines.push(`type: ${JSON.stringify(fm.type)}`);
-  if (fm.keywords.length > 0) {
-    lines.push('keywords:');
-    for (const k of fm.keywords) {
-      lines.push(`  - ${JSON.stringify(k)}`);
-    }
-  }
-  if (fm.region) lines.push(`region: ${JSON.stringify(fm.region)}`);
-  if (fm.abstract) lines.push(`abstract: ${JSON.stringify(fm.abstract)}`);
-  if (fm.tagline) lines.push(`tagline: ${JSON.stringify(fm.tagline)}`);
-  lines.push('---');
-  return lines.join('\n');
 }
 
 export async function renderDocuments(
@@ -179,10 +152,11 @@ export async function renderDocuments(
       await registry.runBeforeRender({ sourcePath: doc.filePath, variables: {} });
     }
 
-    // Usar el markdown final (processedBody) como fuente para HTML,
-    // o el body original si aún no se procesó (por ejemplo bloques).
+    // Usar el processedBody (LaTeX) como fuente para HTML.
+    // Si no hay processedBody (ej. bloques), usa el body original (markdown).
     const source = doc.processedBody ?? doc.body;
-    let htmlFragment = await convertFragment(source, doc.filePath, pool, bibOptions, undefined, 'html5');
+    const fromFormat = doc.processedBody ? 'latex' : 'markdown';
+    let htmlFragment = await convertFragment(source, doc.filePath, pool, bibOptions, undefined, 'html5', fromFormat);
 
     if (registry) {
       const afterCtx = await registry.runAfterRender({ sourcePath: doc.filePath, html: htmlFragment });
