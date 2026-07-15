@@ -8,6 +8,56 @@ import type { PandocPool } from '../../services/pandoc-pool.js';
 import { type BibOptions, convertFragment } from '../../services/pandoc-runner.js';
 import type { BuildDocument } from '../types.js';
 
+/**
+ * Carga y aplica transpilers desde el directorio <paquete>/transpilers/.
+ * Cada transpiler exporta una función process(body: string): string.
+ *
+ * Los transpilers se aplican en orden alfabético antes de pasar el
+ * contenido a pandoc.
+ */
+interface Transpiler {
+  process(body: string): string;
+}
+
+/** Ruta absoluta al directorio de transpilers del paquete. */
+const PKG_TRANSPILERS_DIR = join(import.meta.dir, '../../../transpilers');
+
+/** Lista de transpilers empaquetados (orden de aplicación). */
+const BUILTIN_TRANSPILERS = ['double-colon'];
+
+async function applyTranspilers(body: string, cwd?: string): Promise<string> {
+  let result = body;
+
+  // Transpilers del paquete: se cargan con import() dinámico
+  for (const name of BUILTIN_TRANSPILERS) {
+    const mod = (await import(join(PKG_TRANSPILERS_DIR, `${name}.ts`))) as Transpiler;
+    result = mod.process(result);
+  }
+
+  // Proyecto: si existe <cwd>/transpilers/, cargar transpilers del proyecto
+  // (sobrescriben o complementan a los del paquete por el mismo nombre)
+  if (cwd) {
+    const projectDir = join(cwd, 'transpilers');
+    const projectDirExists = await Bun.file(projectDir)
+      .exists()
+      .catch(() => false);
+    if (projectDirExists) {
+      for (const name of BUILTIN_TRANSPILERS) {
+        const projectPath = join(projectDir, `${name}.ts`);
+        const exists = await Bun.file(projectPath)
+          .exists()
+          .catch(() => false);
+        if (exists) {
+          const mod = (await import(projectPath)) as Transpiler;
+          result = mod.process(result);
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
 export interface RenderCache {
   manager: CacheManager;
   cliVersion: string;
@@ -24,25 +74,19 @@ export interface RenderStats {
 
 /**
  * Convierte el body original de cada documento a LaTeX final (processedBody)
- * aplicando los filtros Lua. El processedBody (.tex) se usa luego como fuente
- * para HTML, PDF, EPUB y markdown.
- *
- * El resultado es un fragmento LaTeX sin preámbulo (solo el body). El preámbulo
- * se agrega al escribir el archivo .tex final en runFinalization.
- *
- * @param docs       Documentos a procesar.
- * @param concurrency Número máximo de conversiones simultáneas.
- * @param pool       Pool de pandoc-server opcional.
- * @param luaFilters Filtros Lua que se aplican durante la conversión.
+ * aplicando los transpilers y filtros. El processedBody (.tex) se usa luego
+ * como fuente para HTML, PDF, EPUB y markdown.
  */
 export async function renderLatex(
   docs: BuildDocument[],
   concurrency: number,
   pool?: PandocPool,
   luaFilters?: readonly string[],
+  cwd?: string,
 ): Promise<BuildDocument[]> {
   return mapWithConcurrency(docs, concurrency, async (doc) => {
-    const processedBody = await convertFragment(doc.body, doc.filePath, pool, undefined, luaFilters, 'latex');
+    const body = await applyTranspilers(doc.body, cwd);
+    const processedBody = await convertFragment(body, doc.filePath, pool, undefined, luaFilters, 'latex');
     return { ...doc, processedBody };
   });
 }
@@ -66,9 +110,6 @@ export async function renderDocuments(
   /** Callback invocado por cada archivo procesado (para reporte de progreso). */
   onFileProcessed?: (report: RenderFileReport) => void,
 ): Promise<BuildDocument[]> {
-  // Memoiza hashes de archivos para no leerlos más de una vez por llamada.
-  // Válido para la duración de esta llamada a renderDocuments(); si se invoca
-  // múltiples veces en el mismo build, el mapa se reinicia en cada llamada.
   const bibHashCache = new Map<string, string>();
 
   const getBibHash = async (bibPath: string): Promise<string> => {
@@ -94,8 +135,6 @@ export async function renderDocuments(
 
   return mapWithConcurrency(docs, concurrency, async (doc) => {
     const tStart = performance.now();
-    // Detectar bibliography en editorial del frontmatter.
-    // Solo se activa si hay cwd disponible para resolver la ruta.
     let bibOptions: BibOptions | undefined;
     if (cwd) {
       const rawEditorial =
@@ -145,15 +184,10 @@ export async function renderDocuments(
       }
     }
 
-    // beforeRender: las variables retornadas no se pasan a pandoc en la implementación
-    // actual (convertFragment no acepta variables); el hook sirve como punto de
-    // observación del ciclo de renderizado.
     if (registry) {
       await registry.runBeforeRender({ sourcePath: doc.filePath, variables: {} });
     }
 
-    // Usar el processedBody (LaTeX) como fuente para HTML.
-    // Si no hay processedBody (ej. bloques), usa el body original (markdown).
     const source = doc.processedBody ?? doc.body;
     const fromFormat = doc.processedBody ? 'latex' : 'markdown';
     let htmlFragment = await convertFragment(source, doc.filePath, pool, bibOptions, undefined, 'html5', fromFormat);
