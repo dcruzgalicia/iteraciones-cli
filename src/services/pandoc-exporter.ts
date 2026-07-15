@@ -410,7 +410,6 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
   }
 
   args.push('--lua-filter', join(import.meta.dir, '../../pandoc/filters/linebreak.lua'));
-  args.push('--lua-filter', join(import.meta.dir, '../../pandoc/filters/dictum.lua'));
 
   let proc: ReturnType<typeof Bun.spawn>;
   try {

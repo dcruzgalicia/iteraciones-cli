@@ -73,9 +73,41 @@ export interface RenderStats {
 }
 
 /**
+ * Aplica un filtro TypeScript (pandoc JSON pipe) al contenido JSON AST.
+ * El filtro debe leer JSON de stdin y escribir JSON modificado a stdout.
+ */
+async function pipeThroughTsFilter(filterPath: string, input: string): Promise<string> {
+  if (!input.trim()) return input;
+
+  const proc = Bun.spawn(['bun', 'run', filterPath], {
+    stdin: 'pipe',
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+
+  if (!proc.stdin || typeof proc.stdin === 'number') return input;
+  proc.stdin.write(input);
+  proc.stdin.end();
+
+  const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+
+  if (exitCode !== 0) {
+    process.stderr.write(`[pipe] filtro TypeScript ${filterPath} falló (exit ${exitCode}): ${stderr}
+`);
+    return input;
+  }
+
+  return stdout;
+}
+
+/**
  * Convierte el body original de cada documento a LaTeX final (processedBody)
- * aplicando los transpilers y filtros. El processedBody (.tex) se usa luego
- * como fuente para HTML, PDF, EPUB y markdown.
+ * aplicando transpilers, filtros TypeScript (JSON pipe) y filtros Lua.
+ *
+ * Pipeline:
+ *   markdown → transpilers → pandoc --to json → dictum.ts → pandoc --from json --to latex → .tex
+ *
+ * El processedBody (.tex) se usa luego como fuente para HTML, PDF, EPUB y markdown.
  */
 export async function renderLatex(
   docs: BuildDocument[],
@@ -84,9 +116,25 @@ export async function renderLatex(
   luaFilters?: readonly string[],
   cwd?: string,
 ): Promise<BuildDocument[]> {
+  // Ruta al filtro TypeScript dictum (built-in del paquete)
+  const dictumFilter = join(import.meta.dir, '../../../pandoc/filters/dictum.ts');
+
   return mapWithConcurrency(docs, concurrency, async (doc) => {
     const body = await applyTranspilers(doc.body, cwd);
-    const processedBody = await convertFragment(body, doc.filePath, pool, undefined, luaFilters, 'latex');
+
+    if (!body.trim()) {
+      return { ...doc, processedBody: '' };
+    }
+
+    // Paso 1: convertir markdown a JSON AST
+    const json = await convertFragment(body, doc.filePath, pool, undefined, undefined, 'json');
+
+    // Paso 2: aplicar filtro TypeScript dictum sobre el AST
+    const filteredJson = await pipeThroughTsFilter(dictumFilter, json);
+
+    // Paso 3: convertir el AST modificado a LaTeX
+    const processedBody = await convertFragment(filteredJson, doc.filePath, pool, undefined, luaFilters, 'latex', 'json');
+
     return { ...doc, processedBody };
   });
 }
