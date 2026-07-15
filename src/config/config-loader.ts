@@ -3,6 +3,7 @@ import { ConfigError } from '../errors.js';
 import {
   DEFAULT_EPUB_FORMAT,
   DEFAULT_HTML_FORMAT,
+  DEFAULT_LATEX_FORMAT,
   DEFAULT_MARKDOWN_FORMAT,
   DEFAULT_PAGINATION,
   DEFAULT_PDF_FORMAT,
@@ -11,6 +12,7 @@ import {
   type FormatConfig,
   type HtmlFormatConfig,
   KNOWN_ACCENT_COLORS,
+  type LatexFormatConfig,
   type MarkdownFormatConfig,
   type PageNumberPlacement,
   type PaginationConfig,
@@ -101,6 +103,7 @@ function parseFormatConfig(raw: Record<string, unknown>): FormatConfig {
     pdf: parsePdfFormatConfig(raw.pdf),
     epub: parseEpubFormatConfig(raw.epub),
     markdown: parseMarkdownFormatConfig(raw.markdown),
+    latex: parseLatexFormatConfig(raw.latex),
   };
 }
 
@@ -300,6 +303,14 @@ function parseMarkdownFormatConfig(raw: unknown): MarkdownFormatConfig {
   const obj = raw as Record<string, unknown>;
   return {
     generate: typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_MARKDOWN_FORMAT.generate,
+  };
+}
+
+function parseLatexFormatConfig(raw: unknown): LatexFormatConfig {
+  if (!raw || typeof raw !== 'object') return { ...DEFAULT_LATEX_FORMAT };
+  const obj = raw as Record<string, unknown>;
+  return {
+    generate: typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_LATEX_FORMAT.generate,
   };
 }
 

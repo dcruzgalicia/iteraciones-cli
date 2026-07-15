@@ -17,7 +17,6 @@ export async function checkPandoc(): Promise<string> {
     throw new PandocError(`pandoc no está disponible en PATH: ${String(err)}`, '', '');
   }
   if (result.exitCode !== 0) throw new PandocError('pandoc no está disponible en PATH', '', result.stderr);
-  // Primera línea de la salida: "pandoc X.Y.Z"
   const version = result.stdout.split('\n')[0]?.trim() ?? 'pandoc unknown';
   return version;
 }
@@ -25,8 +24,6 @@ export async function checkPandoc(): Promise<string> {
 /**
  * Convierte contenido de un formato a otro usando pandoc.
  * Si se pasa un `pool`, delega en `pandoc-server` para evitar fork overhead.
- * En caso contrario, spawnea un proceso pandoc pasando el contenido por stdin.
- *
  * NOTA: pandoc-server solo soporta conversión markdown → html5. Cuando se usa
  * `bibOptions`, `luaFilters`, `toFormat` distinto de 'html5' o `fromFormat`
  * distinto de 'markdown', se ignora el pool y se usa un subproceso directo.
@@ -51,7 +48,6 @@ export async function convertFragment(
   const args = ['pandoc', '--from', fromFormat, '--to', toFormat, '--no-highlight'];
 
   if (bibOptions) {
-    // --citeproc requiere subproceso; pandoc-server no soporta bibliografías externas.
     args.push('--citeproc', '--bibliography', bibOptions.bibliography);
     if (bibOptions.csl) args.push('--csl', bibOptions.csl);
   }

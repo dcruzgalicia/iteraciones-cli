@@ -67,11 +67,17 @@ export interface MarkdownFormatConfig {
   generate?: boolean;
 }
 
+export interface LatexFormatConfig {
+  /** Si true, genera LaTeX (.tex) en el build. */
+  generate?: boolean;
+}
+
 export interface FormatConfig {
   html?: HtmlFormatConfig;
   pdf?: PdfFormatConfig;
   epub?: EpubFormatConfig;
   markdown?: MarkdownFormatConfig;
+  latex?: LatexFormatConfig;
 }
 
 // ── SiteConfig ──
@@ -127,7 +133,7 @@ export const DEFAULT_HTML_FORMAT: HtmlFormatConfig = {
   toc: true,
   tocDepth: 6,
   hyphenation: false,
-  generate: true,
+  generate: false,
 };
 
 export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
@@ -162,6 +168,10 @@ export const DEFAULT_MARKDOWN_FORMAT: MarkdownFormatConfig = {
   generate: false,
 };
 
+export const DEFAULT_LATEX_FORMAT: LatexFormatConfig = {
+  generate: true,
+};
+
 export const DEFAULT_SITE_CONFIG: SiteConfig = {
   title: 'iteraciones',
   tagline: 'escribir, compartir, re-existir',
@@ -175,5 +185,6 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
     pdf: DEFAULT_PDF_FORMAT,
     epub: DEFAULT_EPUB_FORMAT,
     markdown: DEFAULT_MARKDOWN_FORMAT,
+    latex: DEFAULT_LATEX_FORMAT,
   },
 };
