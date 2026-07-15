@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import type { CacheManager } from '../../cache/cache-manager.js';
@@ -442,6 +443,10 @@ export async function runExportDocuments(
             await convertToPdf(exportDoc, outputPath, cwd, config.pdf);
           } finally {
             releaseLatex();
+          }
+          // Si convertToPdf no generó el PDF (ej: sin .tex final), salir
+          if (!existsSync(outputPath)) {
+            return {};
           }
           const pdfData = await Bun.file(outputPath).arrayBuffer();
           if (registry) {

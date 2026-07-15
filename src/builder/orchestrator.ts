@@ -527,6 +527,14 @@ async function runFinalization(
           '\\usepackage[utf8]{inputenc}',
           '\\usepackage{babel}',
           '\\babelprovide[import, main]{mexican}',
+          '\\usepackage{longtable}',
+          '\\usepackage{booktabs}',
+          '\\usepackage{array}',
+          '\\usepackage{calc}',
+          '\\usepackage{hyperref}',
+          '\\newcounter{none}',
+          '\\providecommand{\\tightlist}{%',
+          '  \\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}}',
           '\\begin{document}',
         ];
         if (fm.title) preamble.push(`\\title{${fm.title}}`);
