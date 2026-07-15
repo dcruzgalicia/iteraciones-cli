@@ -311,6 +311,7 @@ function parseLatexFormatConfig(raw: unknown): LatexFormatConfig {
   const obj = raw as Record<string, unknown>;
   return {
     generate: typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_LATEX_FORMAT.generate,
+    force: typeof obj.force === 'boolean' ? obj.force : DEFAULT_LATEX_FORMAT.force,
   };
 }
 
