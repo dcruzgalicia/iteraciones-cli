@@ -25,7 +25,7 @@ import {
   injectDownloadLinksIntoListItems,
   runExportDocuments,
 } from './export/runner.js';
-import { EXPORTABLE_TYPES } from './export/types.js';
+import { EXPORTABLE_TYPES, type ExportResult } from './export/types.js';
 import { buildDocumentGraph } from './graph-exporter.js';
 import { escapeHtml } from './html.js';
 import { classifyDocuments } from './pipeline/classify.js';
@@ -477,8 +477,61 @@ async function runBlocksPrestep(
 }
 
 /**
- * Fase final: relativiza contextos, compone HTML, escribe archivos,
- * ejecuta el hook afterBuild y poda la caché de render.
+ * Escribe los archivos .tex final e intermedio para cada documento.
+ */
+async function writeTexFiles(allContextDocs: BuildDocument[], ctx: BuildContext, log: (msg: string) => void): Promise<void> {
+  const latexCfg = ctx.siteConfig.format?.latex;
+  const pdfCfg = ctx.siteConfig.format?.pdf;
+  const genLatex = pdfCfg?.generate === true && latexCfg?.force !== true ? true : latexCfg?.generate !== false;
+  if (!genLatex) return;
+
+  let texWritten = 0;
+  for (const doc of allContextDocs) {
+    if (!doc.processedBody) continue;
+    const texSlug = doc.slug ?? basename(doc.relativePath, '.md');
+    const outDir = join(ctx.outputDir, dirname(doc.relativePath));
+    const texPath = join(outDir, `${texSlug}.tex`);
+    await mkdir(outDir, { recursive: true });
+
+    const fm = doc.frontmatter;
+    const preamble: string[] = [
+      '\\documentclass{scrbook}',
+      '\\usepackage[T1]{fontenc}',
+      '\\usepackage[utf8]{inputenc}',
+      '\\usepackage{babel}',
+      '\\babelprovide[import, main]{mexican}',
+      '\\usepackage{longtable}',
+      '\\usepackage{booktabs}',
+      '\\usepackage{array}',
+      '\\usepackage{calc}',
+      '\\usepackage{hyperref}',
+      '\\newcounter{none}',
+      '\\providecommand{\\tightlist}{%',
+      '  \\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}}',
+      '\\begin{document}',
+    ];
+    if (fm?.title) preamble.push(`\\title{${fm.title}}`);
+    if (fm?.author?.length) preamble.push(`\\author{${fm.author.join(' \\and ')}}`);
+    if (fm?.date) preamble.push(`\\date{${fm.date}}`);
+    if (fm?.title) preamble.push('\\maketitle');
+
+    const texIntermediateDir = join(ctx.cwd, '.iteraciones', 'tex', dirname(doc.relativePath));
+    const intermediatePath = join(texIntermediateDir, `${texSlug}.intermediate.tex`);
+    await mkdir(texIntermediateDir, { recursive: true });
+    await Bun.write(intermediatePath, doc.processedBody);
+
+    const fullTex = [...preamble, '', doc.processedBody, '', '\\end{document}'].join('\n');
+    await Bun.write(texPath, fullTex);
+    texWritten++;
+  }
+  if (texWritten > 0) {
+    log(`Escritos ${texWritten} archivos .tex en ${ctx.outputDir} (.intermediate.tex en .iteraciones/tex/)`);
+  }
+}
+
+/**
+ * Fase final: compone HTML, plugins, manifiesto y poda de caché.
+ * Debe ejecutarse al final, despues de exportar todos los formatos.
  */
 async function runFinalization(
   allContextDocs: BuildDocument[],
@@ -513,59 +566,6 @@ async function runFinalization(
     log(`Escritos ${docs.length} archivos en ${ctx.outputDir}`);
   } else {
     log('HTML desactivado: omitiendo generación de HTML');
-  }
-
-  // Escribir el .tex final (processedBody) si latex está habilitado.
-  // latex se fuerza a true si pdf.generate=true, a menos que latex.force=true.
-  const latexCfg = ctx.siteConfig.format?.latex;
-  const pdfCfg = ctx.siteConfig.format?.pdf;
-  const genLatex = pdfCfg?.generate === true && latexCfg?.force !== true ? true : latexCfg?.generate !== false;
-  let texWritten = 0;
-  if (genLatex) {
-    for (const doc of allContextDocs) {
-      if (doc.processedBody && doc.slug && doc.frontmatter) {
-        const outDir = join(ctx.outputDir, dirname(doc.relativePath));
-        const texPath = join(outDir, `${doc.slug}.tex`);
-        await mkdir(outDir, { recursive: true });
-
-        // Construir preámbulo LaTeX mínimo
-        const fm = doc.frontmatter;
-        const preamble: string[] = [
-          '\\documentclass{scrbook}',
-          '\\usepackage[T1]{fontenc}',
-          '\\usepackage[utf8]{inputenc}',
-          '\\usepackage{babel}',
-          '\\babelprovide[import, main]{mexican}',
-          '\\usepackage{longtable}',
-          '\\usepackage{booktabs}',
-          '\\usepackage{array}',
-          '\\usepackage{calc}',
-          '\\usepackage{hyperref}',
-          '\\newcounter{none}',
-          '\\providecommand{\\tightlist}{%',
-          '  \\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}}',
-          '\\begin{document}',
-        ];
-        if (fm.title) preamble.push(`\\title{${fm.title}}`);
-        if (fm.author && fm.author.length > 0) preamble.push(`\\author{${fm.author.join(' \\and ')}}`);
-        if (fm.date) preamble.push(`\\date{${fm.date}}`);
-        if (fm.title) preamble.push('\\maketitle');
-
-        // Escribir .tex intermedio (solo body, sin preámbulo) en .iteraciones/tex/
-        const texIntermediateDir = join(ctx.cwd, '.iteraciones', 'tex', dirname(doc.relativePath));
-        const intermediatePath = join(texIntermediateDir, `${doc.slug}.intermediate.tex`);
-        await mkdir(texIntermediateDir, { recursive: true });
-        await Bun.write(intermediatePath, doc.processedBody);
-
-        // Escribir .tex final (con preámbulo)
-        const fullTex = [...preamble, '', doc.processedBody, '', '\\end{document}'].join('\n');
-        await Bun.write(texPath, fullTex);
-        texWritten++;
-      }
-    }
-    if (texWritten > 0) {
-      log(`Escritos ${texWritten} archivos .tex en ${ctx.outputDir} (.intermediate.tex en .iteraciones/tex/)`);
-    }
   }
 
   let generatedFiles: GeneratedFile[] = [];
@@ -878,81 +878,94 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     const latexForce = formatCfg?.latex?.force === true;
     const latexGen = formatCfg?.latex?.generate === false;
     const cleanupTex = pdfOn && latexForce && latexGen;
-    const hasExport =
-      (formatCfg?.pdf?.generate === true || formatCfg?.epub?.generate === true || formatCfg?.markdown?.generate === true) && !options.noExport;
-    if (hasExport && formatCfg) {
-      // Calcular total de PDFs para la barra de progreso (misma logica que runExportDocuments).
-      let exportTotal = 0;
-      const countExportDocs = (type: DocumentType): number => {
-        const docs = (renderedMap.get(type) ?? []).filter((d) => d.kind !== 'block');
-        let count = 0;
-        for (const d of docs) {
-          const raw = d.frontmatter['export'];
-          const skipped = typeof raw === 'object' && raw !== null && !Array.isArray(raw) && (raw as Record<string, unknown>)['skip'] === true;
-          if (skipped) continue;
-          count += d.type === 'author' ? 2 : 1;
-        }
-        return count;
-      };
-
-      if (formatCfg.pdf?.generate === true) {
-        for (const type of EXPORTABLE_TYPES) {
-          exportTotal += countExportDocs(type);
-        }
-      }
-      if (formatCfg.markdown?.generate === true) {
-        for (const type of EXPORTABLE_TYPES) {
-          const docs = (renderedMap.get(type) ?? []).filter((d) => d.kind !== 'block');
-          for (const d of docs) {
-            const raw = d.frontmatter['export'];
-            const skipped = typeof raw === 'object' && raw !== null && !Array.isArray(raw) && (raw as Record<string, unknown>)['skip'] === true;
-            if (skipped) continue;
-            exportTotal++;
-          }
-        }
-      }
-      progress.startPhase('export', exportTotal);
-    }
+    const noExport = options.noExport === true;
     const exportRenderedMap = affectedPaths
       ? new Map<DocumentType, BuildDocument[]>(
           [...renderedMap].map(([type, docs]) => [type, docs.filter((doc) => affectedPaths.has(doc.relativePath))]),
         )
       : renderedMap;
-    const exportResults =
-      hasExport && formatCfg
-        ? await runExportDocuments(exportRenderedMap, {
-            config: formatCfg,
-            outputDir: ctx.outputDir,
-            cwd,
-            lang: ctx.siteConfig.lang,
-            concurrency: ctx.concurrency ?? 4,
-            cliVersion,
-            pandocVersion,
-            cacheManager: options.noCache ? undefined : cacheManager,
-            registry: hasPlugins ? registry : undefined,
-            pluginFingerprint,
-            stats: exportStats,
-            onExportProgress: (relativePath, cacheHit) =>
-              progress.reportFile({
-                relativePath,
-                durationMs: 0,
-                cacheHit,
-                phase: 'export',
-              }),
-          })
-        : [];
-    if (exportResults.length > 0) {
-      const epubNew = exportStats.totalEpub - exportStats.cacheHitsEpub;
-      const pdfNew = exportStats.totalPdf - exportStats.cacheHitsPdf;
-      const mdNew = exportStats.totalMd - exportStats.cacheHitsMd;
-      const parts: string[] = [];
-      if (exportStats.totalEpub > 0) parts.push(`EPUB: ${epubNew} generados, ${exportStats.cacheHitsEpub} de caché`);
-      if (exportStats.totalPdf > 0) parts.push(`PDF: ${pdfNew} generados, ${exportStats.cacheHitsPdf} de caché`);
-      if (exportStats.totalMd > 0) parts.push(`MD: ${mdNew} generados, ${exportStats.cacheHitsMd} de caché`);
-      const detail = parts.length > 0 ? ` — ${parts.join(' | ')}` : '';
-      progress.log(`Exportación: ${exportResults.length} documento${exportResults.length > 1 ? 's' : ''}${detail}`);
+
+    // ── Fase latex: escribir .tex ──
+    progress.startPhase('latex', allDocs.length);
+    await writeTexFiles(finalContextDocs, ctx, log);
+    progress.completePhase();
+
+    // ── Fase markdown ──
+    const exportBase = {
+      outputDir: ctx.outputDir,
+      cwd,
+      lang: ctx.siteConfig.lang,
+      concurrency: ctx.concurrency ?? 4,
+      cliVersion,
+      pandocVersion,
+      cacheManager: options.noCache ? undefined : cacheManager,
+      registry: hasPlugins ? registry : undefined,
+      pluginFingerprint,
+      onExportProgress: (relativePath: string, cacheHit: boolean) =>
+        progress.reportFile({ relativePath, durationMs: 0, cacheHit, phase: 'markdown' }),
+    };
+    const exportResults: ExportResult[] = [];
+    if (formatCfg?.markdown?.generate && !noExport) {
+      progress.startPhase('markdown', 1);
+      const mdStats: ExportStats = { totalEpub: 0, totalPdf: 0, totalMd: 0, cacheHitsEpub: 0, cacheHitsPdf: 0, cacheHitsMd: 0 };
+      const mdResults = await runExportDocuments(exportRenderedMap, { ...exportBase, config: formatCfg, stats: mdStats });
+      exportResults.push(...mdResults);
+      if (mdStats.totalMd > 0) progress.log(`Markdown: ${mdStats.totalMd - mdStats.cacheHitsMd} generados, ${mdStats.cacheHitsMd} de caché`);
+      progress.completePhase();
     }
-    if (hasExport) progress.completePhase(); // fin de export
+
+    // ── Fase pdf ──
+    if (formatCfg?.pdf?.generate && !noExport) {
+      progress.startPhase('pdf', 1);
+      const pdfStats: ExportStats = { totalEpub: 0, totalPdf: 0, totalMd: 0, cacheHitsEpub: 0, cacheHitsPdf: 0, cacheHitsMd: 0 };
+      const pdfResults = await runExportDocuments(exportRenderedMap, { ...exportBase, config: formatCfg, stats: pdfStats });
+      exportResults.push(...pdfResults);
+      if (pdfStats.totalPdf > 0) progress.log(`PDF: ${pdfStats.totalPdf - pdfStats.cacheHitsPdf} generados, ${pdfStats.cacheHitsPdf} de caché`);
+      progress.completePhase();
+    }
+
+    // ── Fase epub ──
+    if (formatCfg?.epub?.generate && !noExport) {
+      progress.startPhase('epub', 1);
+      const epubStats: ExportStats = { totalEpub: 0, totalPdf: 0, totalMd: 0, cacheHitsEpub: 0, cacheHitsPdf: 0, cacheHitsMd: 0 };
+      const epubResults = await runExportDocuments(exportRenderedMap, { ...exportBase, config: formatCfg, stats: epubStats });
+      exportResults.push(...epubResults);
+      if (epubStats.totalEpub > 0)
+        progress.log(`EPUB: ${epubStats.totalEpub - epubStats.cacheHitsEpub} generados, ${epubStats.cacheHitsEpub} de caché`);
+      progress.completePhase();
+    }
+
+    // ── Fase html (final) ──
+    progress.startPhase('html', finalContextDocs.length);
+    const docsWithLinks = finalContextDocs; // sin inyeccion de descargas (se hace dentro de runFinalization)
+    const itemHashMap = composeCache ? new Map(allDocs.map((d) => [d.relativePath, d.sourceHash])) : undefined;
+    const effectiveComposeCache = composeCache && affectedPaths ? { ...composeCache, skipPrune: true } : composeCache;
+
+    // Inyectar enlaces de descarga
+    let docsWithExportLinks = finalContextDocs;
+    if (exportResults.length > 0) {
+      docsWithExportLinks = injectDownloadLinks(finalContextDocs, exportResults, ctx.outputDir);
+      docsWithExportLinks = injectDownloadLinksIntoListItems(docsWithExportLinks);
+      docsWithExportLinks = injectCoverIntoListItems(docsWithExportLinks);
+    }
+
+    const composeMs = await runFinalization(
+      docsWithExportLinks,
+      ctx,
+      effectiveComposeCache,
+      renderCache,
+      registry,
+      hasPlugins,
+      log,
+      composeStats,
+      pandocPool,
+      cwd,
+      options.incremental === true,
+      itemHashMap,
+      renderUsedKeys,
+      onFileProcessed,
+    );
+    progress.completePhase(); // fin de html
 
     // Limpiar .tex final e intermedio si latex.generate=false pero se forzo para PDF
     if (cleanupTex) {
@@ -972,42 +985,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       if (cleaned > 0) log(`Eliminados ${cleaned} archivos .tex (latex.generate=false + force)`);
     }
 
-    // Inyectar enlaces de descarga en los docs exportables, propagarlos a los ítems
-    // y luego añadir la miniatura `cover-image` a los list-items.
-    const docsWithExportLinks = injectDownloadLinks(finalContextDocs, exportResults, ctx.outputDir);
-    const docsWithListLinks = injectDownloadLinksIntoListItems(docsWithExportLinks);
-    const docsWithLinks = injectCoverIntoListItems(docsWithListLinks);
-
-    // Mapa de relativePath → sourceHash: solo necesario cuando la caché de compose está activa.
-    // Con --no-cache composeCache es undefined y construir el mapa sería trabajo O(n) sin uso.
-    const itemHashMap = composeCache ? new Map(allDocs.map((d) => [d.relativePath, d.sourceHash])) : undefined;
-
-    // En builds incrementales (affectedPaths filtra un subset) desactivar la poda de compose
-    // para no eliminar entradas válidas de documentos que no se procesaron en este batch.
-    const effectiveComposeCache = composeCache && affectedPaths ? { ...composeCache, skipPrune: true } : composeCache;
-
-    progress.startPhase('compose', finalContextDocs.length);
-    await runFinalization(
-      docsWithLinks,
-      ctx,
-      effectiveComposeCache,
-      renderCache,
-      registry,
-      hasPlugins,
-      log,
-      composeStats,
-      pandocPool,
-      cwd,
-      options.incremental === true,
-      itemHashMap,
-      renderUsedKeys,
-      onFileProcessed,
-    );
-    progress.completePhase(); // fin de compose
-
     const htmlOn = formatCfg?.html?.generate === true;
-    const epubOn = formatCfg?.epub?.generate === true;
     const mdOn = formatCfg?.markdown?.generate === true;
+    const epubOn = formatCfg?.epub?.generate === true;
     const latexOn = pdfOn && formatCfg?.latex?.force !== true ? true : formatCfg?.latex?.generate !== false;
     const docCount = htmlOn || pdfOn || epubOn || mdOn || latexOn ? allDocs.length : 0;
     progress.finish(docCount);
