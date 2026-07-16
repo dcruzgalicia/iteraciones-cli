@@ -173,23 +173,57 @@ function buildDefaultConfig(): string {
   lines.push(`    hyphenation: ${yamlBool(DEFAULT_HTML_FORMAT.hyphenation)}`);
   lines.push(`    generate: ${yamlBool(DEFAULT_HTML_FORMAT.generate!)}`);
 
-  // pdf
+  // pdf — orden explícito de campos
+  const pdfCfg = DEFAULT_PDF_FORMAT;
   lines.push('  pdf:');
-  for (const [key, value] of Object.entries(pdfDefaults)) {
-    if (key === 'margins') continue; // Se renderiza en bloque abajo
-    const yamlKey = camelToKebab(key);
-    lines.push(`    ${yamlKey}: ${yamlValue(value)}`);
-  }
-  // Margins en formato bloque YAML para mejor legibilidad
-  lines.push('    margins:');
-  for (const m of DEFAULT_PDF_FORMAT.margins!) {
-    lines.push(`      - ${yamlStr(m)}`);
-  }
-  // Opciones adicionales que no están en DEFAULT_PDF_FORMAT
-  // pero son configurables según la interfaz PdfFormatConfig
+  // 1. generate
+  lines.push(`    generate: ${yamlBool(pdfCfg.generate!)}`);
+  // 2. engine
+  lines.push(`    engine: ${yamlStr(pdfCfg.engine)}`);
+  // 3. documentclass
   lines.push('    documentclass: scrbook');
+  // 4. sfdefaults
+  lines.push(`    sfdefaults: ${yamlBool(pdfCfg.sfdefaults!)}`);
+  // 5. page-size (usar 'custom' para tamano personalizado en geometry)
+  lines.push(`    page-size: ${yamlStr(pdfCfg.pageSize!)}`);
+  // 6. geometry (opciones para el paquete LaTeX geometry)
+  lines.push('    geometry:');
+  const geomOrder = ['paperwidth', 'paperheight', 'top', 'bottom', 'left', 'right', 'headheight', 'headsep', 'footskip'];
+  for (const key of geomOrder) {
+    const val = pdfCfg.geometry?.[key];
+    if (val) lines.push(`      ${key}: ${yamlStr(val)}`);
+  }
+  // 7. line-spacing
+  lines.push(`    line-spacing: ${yamlValue(pdfCfg.lineSpacing!)}`);
+  // 8. font-family
+  lines.push(`    font-family: ${yamlStr(pdfCfg.fontFamily!)}`);
+  // 9. font-size
+  lines.push(`    font-size: ${yamlStr(pdfCfg.fontSize!)}`);
+  // 10. concurrency
+  lines.push(`    concurrency: ${yamlValue(pdfCfg.concurrency)}`);
+  // 11. hyphenation
+  lines.push(`    hyphenation: ${yamlBool(pdfCfg.hyphenation)}`);
+  // 12. toc
+  lines.push(`    toc: ${yamlBool(pdfCfg.toc!)}`);
+  // 13. toc-depth
+  lines.push(`    toc-depth: ${yamlValue(pdfCfg.tocDepth!)}`);
+  // 14. top-level-division
   lines.push('    top-level-division: chapter');
-  lines.push('    sfdefaults: false');
+  // 15. page-number
+  lines.push(`    page-number: ${yamlStr(pdfCfg.pageNumber!)}`);
+  // 16. sides
+  lines.push(`    sides: ${yamlStr(pdfCfg.sides!)}`);
+  // 17. numbering
+  lines.push(`    numbering: ${yamlBool(pdfCfg.numbering!)}`);
+  // 18. bibliography
+  lines.push(`    bibliography: ${yamlStr(pdfCfg.bibliography!)}`);
+  // 19. csl
+  lines.push(`    csl: ${yamlStr(pdfCfg.csl!)}`);
+  // 20. pdfx
+  lines.push(`    pdfx: ${yamlBool(pdfCfg.pdfx)}`);
+  // 21. thumbnails
+  lines.push(`    thumbnails: ${yamlValue(pdfCfg.thumbnails!)}`);
+  // 22. respect-header-plain
   lines.push('    respect-header-plain: false');
 
   // epub

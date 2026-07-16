@@ -493,23 +493,63 @@ async function writeTexFiles(allContextDocs: BuildDocument[], ctx: BuildContext,
     const texPath = join(outDir, `${texSlug}.tex`);
     await mkdir(outDir, { recursive: true });
 
+    const fmt = ctx.siteConfig.format?.pdf;
+    const dc = fmt?.documentclass ?? 'scrbook';
+    const fontSize = fmt?.fontSize ?? '12pt';
+    const sfdefaults = fmt?.sfdefaults ?? false;
+    const twoside = fmt?.sides === 'twoside';
+    const pageSize = fmt?.pageSize;
+    const geometry = fmt?.geometry;
+    const fontFamily = fmt?.fontFamily ?? 'mathptmx';
+    const lineSpacing = fmt?.lineSpacing ?? 1.5;
+
+    // Opciones de clase KOMA-Script
+    const classOpts = [fontSize];
+    classOpts.push(`sfdefaults=${sfdefaults ? 'true' : 'false'}`);
+    if (pageSize) {
+      if (pageSize === 'half-letter') {
+        classOpts.push('paper=13.97cm:21.59cm');
+      } else if (pageSize !== 'custom' && !/^\d/.test(pageSize)) {
+        // Nombres estandar (letter, a4, a1, ...) — paper= se usa en documentclass
+        classOpts.push(`paper=${pageSize}`);
+      }
+      // custom o dimension explicita: no se agrega paper= al documentclass
+    }
+    if (twoside) classOpts.push('twoside');
+
     const fm = doc.frontmatter;
     const preamble: string[] = [
-      '\\documentclass{scrbook}',
+      `\\documentclass[${classOpts.join(',')}]{${dc}}`,
       '\\usepackage[T1]{fontenc}',
       '\\usepackage[utf8]{inputenc}',
       '\\usepackage{babel}',
       '\\babelprovide[import, main]{mexican}',
+      `\\usepackage{${fontFamily}}`,
       '\\usepackage{longtable}',
       '\\usepackage{booktabs}',
       '\\usepackage{array}',
       '\\usepackage{calc}',
+      '\\usepackage{setspace}',
+      `\\setstretch{${lineSpacing}}`,
       '\\usepackage{hyperref}',
       '\\newcounter{none}',
       '\\providecommand{\\tightlist}{%',
       '  \\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}}',
-      '\\begin{document}',
     ];
+
+    // Construir opciones de geometry desde el mapa de configuracion
+    if (geometry && Object.keys(geometry).length > 0) {
+      const geomOpts: string[] = [];
+      const order = ['paperwidth', 'paperheight', 'top', 'bottom', 'left', 'right', 'headheight', 'headsep', 'footskip'];
+      for (const key of order) {
+        const val = geometry[key];
+        if (val) geomOpts.push(`${key}=${val}`);
+      }
+      preamble.push(`\\usepackage[${geomOpts.join(',')}]{geometry}`);
+    }
+
+    preamble.push('\\begin{document}');
+
     if (fm?.title) preamble.push(`\\title{${fm.title}}`);
     if (fm?.author?.length) preamble.push(`\\author{${fm.author.join(' \\and ')}}`);
     if (fm?.date) preamble.push(`\\date{${fm.date}}`);

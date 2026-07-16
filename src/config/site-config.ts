@@ -43,7 +43,12 @@ export interface PdfFormatConfig {
   pageSize?: string;
   fontSize?: string;
   fontFamily?: string;
-  margins?: [string, string, string, string];
+  /**
+   * Opciones para el paquete geometry de LaTeX.
+   * Mapa con valores como 'top', 'bottom', 'left', 'right',
+   * 'headheight', 'headsep', 'footskip'.
+   */
+  geometry?: Record<string, string>;
   lineSpacing?: number;
   pageNumber?: PageNumberPlacement;
   sides?: Sides;
@@ -178,7 +183,15 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   pageSize: 'letter',
   fontSize: '12pt',
   fontFamily: 'mathptmx',
-  margins: ['2.54cm', '2.54cm', '2.54cm', '2.54cm'],
+  geometry: {
+    top: '2.54cm',
+    bottom: '2.54cm',
+    left: '2.54cm',
+    right: '2.54cm',
+    headheight: '12pt',
+    headsep: '6pt',
+    footskip: '22pt',
+  },
   lineSpacing: 1.5,
   pageNumber: 'header-right',
   sides: 'oneside',
