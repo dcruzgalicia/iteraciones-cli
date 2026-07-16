@@ -34,12 +34,15 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
 }
 
 export async function runClean(cwd: string, options: { outputDir?: string } = {}): Promise<void> {
-  const distDir = options.outputDir ?? join(cwd, 'dist', 'web');
+  const config = await loadSiteConfig(cwd).catch(() => null);
+  const defaultDir = config?.format?.html?.generate ? 'dist/www' : 'dist/documents';
+  const distDir = options.outputDir ?? join(cwd, defaultDir);
   const cacheDir = join(cwd, '.iteraciones');
+  const label = defaultDir === 'dist/www' ? 'dist/www' : 'dist/documents';
   try {
     await rm(distDir, { recursive: true, force: true });
     await rm(cacheDir, { recursive: true, force: true });
-    process.stdout.write('clean: eliminados dist/web y .iteraciones\n');
+    process.stdout.write(`clean: eliminados ${label} y .iteraciones\n`);
   } catch (err) {
     if (err instanceof Error) {
       process.stderr.write(`Error al limpiar: ${err.message}\n`);
@@ -56,7 +59,8 @@ export async function runInfo(cwd: string): Promise<void> {
     const pandocOk = await checkPandoc()
       .then(() => true)
       .catch(() => false);
-    const distExists = await stat(join(cwd, 'dist', 'web'))
+    const distLabel = config.format?.html?.generate ? 'dist/www' : 'dist/documents';
+    const distExists = await stat(join(cwd, distLabel))
       .then((s) => s.isDirectory())
       .catch(() => false);
 
@@ -65,7 +69,7 @@ export async function runInfo(cwd: string): Promise<void> {
     process.stdout.write(`  tagline:  ${config.tagline}\n`);
     process.stdout.write(`  lang:     ${config.lang}\n`);
     process.stdout.write(`  pandoc:   ${pandocOk ? 'disponible' : 'no disponible'}\n`);
-    process.stdout.write(`  dist:     ${distExists ? 'generado' : 'no generado'}\n`);
+    process.stdout.write(`  ${distLabel}:  ${distExists ? 'generado' : 'no generado'}\n`);
   } catch (err) {
     if (err instanceof ConfigError) {
       process.stderr.write(`Error de configuración: ${err.message}\n`);

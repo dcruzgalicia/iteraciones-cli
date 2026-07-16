@@ -200,15 +200,21 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
   // Plugin built-in: transforma fenced divs .dictum a LaTeX en exportación PDF
   registry.register(dictumPlugin);
 
+  // html.generate: true → dist/www (web). false → dist/documents (solo archivos).
+  const outputDirName = siteConfig.format?.html?.generate ? 'dist/www' : 'dist/documents';
+  const defaultOutputDir = join(cwd, outputDirName);
   const ctx: BuildContext = {
     siteConfig,
     cwd,
-    outputDir: options.outputDir ?? join(cwd, 'dist/web'),
+    outputDir: options.outputDir ?? defaultOutputDir,
     cssPath: options.cssPath ?? '',
     concurrency: options.concurrency ?? 4,
   };
 
   if (!options.incremental) await clean(ctx.outputDir);
+  // Eliminar la carpeta del otro modo (solo debe existir una)
+  const otherDirName = outputDirName === 'dist/www' ? 'dist/documents' : 'dist/www';
+  await rm(join(cwd, otherDirName), { recursive: true, force: true }).catch(() => {});
   const cacheManager = new CacheManager(cwd);
 
   const pkg = (await Bun.file(join(import.meta.dir, '../../package.json')).json()) as { version: string };

@@ -2,22 +2,27 @@ import { join } from 'node:path';
 import { exportSingleDocument } from '../builder/export/runner.js';
 import { type BuildOptions, build, type OnDemandExportState } from '../builder/orchestrator.js';
 import type { BuildDocument, DocumentType } from '../builder/types.js';
+import { loadSiteConfig } from '../config/config-loader.js';
 import { reportBuildError } from './build-errors.js';
 import { createHttpServer } from './http-server.js';
 import { createLivereloadBroadcaster, LIVERELOAD_SCRIPT } from './livereload.js';
 import { startWatcher } from './watcher.js';
 
 /**
- * Arranca un servidor HTTP local que sirve `dist/web` e inyecta el script de
- * livereload en cada respuesta HTML. Observa los ficheros fuente en `cwd` y
- * dispara un rebuild + notificación SSE cuando detecta cambios relevantes.
+ * Arranca un servidor HTTP local que sirve el directorio de salida e inyecta
+ * el script de livereload en cada respuesta HTML. Observa los ficheros fuente
+ * en `cwd` y dispara un rebuild + notificación SSE cuando detecta cambios.
  *
  * @param cwd Directorio raíz del proyecto (donde está `_iteraciones.yaml`).
  * @param port Puerto en el que escucha el servidor (default 3000).
  * @returns Función que detiene el servidor y el watcher al ser llamada.
  */
 export async function runServe(cwd: string, port: number, options: { concurrency?: number; verbose?: boolean } = {}): Promise<() => void> {
-  const distDir = join(cwd, 'dist/web');
+  // El servidor solo tiene sentido con html.generate: true.
+  // Determinamos el outputDir desde la config o usamos dist/www por defecto.
+  const config = await loadSiteConfig(cwd).catch(() => null);
+  const defaultDir = 'dist/www'; // serve solo con html.generate: true
+  const distDir = join(cwd, defaultDir);
   // La exportación PDF/EPUB se desactiva siempre en modo serve: xelatex tarda
   // 15–60s por documento, haciendo los rebuilds inutilizables en watch mode.
   // Para generar exportaciones completas, usar `iteraciones build` fuera del serve.

@@ -14,7 +14,7 @@ export function buildProgram(): Command {
     .option('-c, --concurrency <n>', 'máximo de invocaciones pandoc simultáneas', '4')
     .option('--no-cache', 'omite la caché incremental; siempre hace build completo')
     .option('--project-root <path>', 'directorio raíz del proyecto (por defecto: directorio actual)')
-    .option('--output <path>', 'directorio de salida (por defecto: dist/web dentro del project-root)')
+    .option('--output <path>', 'directorio de salida (por defecto: dist/www si html.generate:true, dist/documents si no)')
     .option('--no-tailwind', 'omite la generación de CSS con Tailwind')
     .option('--no-export', 'omite la exportación PDF/EPUB aunque esté configurada')
     .option('--dry-run', 'muestra los documentos que se procesarían sin generar salida')
