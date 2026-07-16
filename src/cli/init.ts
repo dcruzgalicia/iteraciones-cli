@@ -123,8 +123,18 @@ const DEFAULT_README = [
   ':::',
   ':::',
   '',
-  '> *Nota: puedes ver el código fuente de este epígrafe en el',
-  '> archivo `README.md`.*',
+  '## Poemas (verse)',
+  '',
+  'Para escribir poemas, usa un fenced div con la clase `.verse`.',
+  '',
+  '::: {.verse}',
+  'Rosa de fuego,',
+  'luminosa y efímera,',
+  'florece en el aire.',
+  ':::',
+  '',
+  '> *Nota: Puedes explorar el código fuente de este README para',
+  '> ver los ejemplos de ::, dictum y verse.*',
 ].join('\n');
 
 /**
