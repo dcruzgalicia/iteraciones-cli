@@ -5,15 +5,9 @@
  * Convierte:
  *   ::: {.verse}
  *   Texto del poema
- *
- *   ::: {.author}
- *   Autor
- *   :::
  *   :::
  *   → \begin{verse}
  *       Texto del poema
- *
- *       \textit{--- Autor}
  *     \end{verse}
  */
 
@@ -102,38 +96,9 @@ export async function transform(ast: Record<string, unknown>): Promise<Record<st
 
 async function processVerse(block: Record<string, unknown>): Promise<unknown> {
   const content = blockContent(block);
-
-  // Separar autor (Div.author) del contenido del poema
-  const verseBlocks: unknown[] = [];
-  let authorBlocks: unknown[] = [];
-
-  for (const item of content) {
-    if (
-      typeof item === 'object' &&
-      item !== null &&
-      (item as Record<string, unknown>).t === 'Div' &&
-      hasClass(item as Record<string, unknown>, 'author')
-    ) {
-      authorBlocks = blockContent(item as Record<string, unknown>);
-    } else {
-      verseBlocks.push(item);
-    }
-  }
-
-  const [verseLatex, authorLatex] = await Promise.all([
-    blocksToLatex(verseBlocks),
-    authorBlocks.length > 0 ? blocksToLatex(authorBlocks) : Promise.resolve(''),
-  ]);
-
+  const verseLatex = await blocksToLatex(content);
   const clean = (s: string): string => s.replace(/\n\n+/g, '\n\n').replace(/^\s+/, '').replace(/\s+$/, '');
-
   const verse = clean(verseLatex);
-  const author = clean(authorLatex);
 
-  const parts: string[] = ['\\begin{verse}'];
-  if (verse) parts.push(verse);
-  if (author) parts.push('', `\\textit{--- ${author}}`);
-  parts.push('\\end{verse}');
-
-  return { t: 'RawBlock', c: ['latex', parts.join('\n')] };
+  return { t: 'RawBlock', c: ['latex', `\\begin{verse}\n${verse}\n\\end{verse}`] };
 }
