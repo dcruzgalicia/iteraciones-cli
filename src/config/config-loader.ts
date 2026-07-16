@@ -180,14 +180,17 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
   const rawPageSize = obj['page-size'];
   let pageSize: string | undefined;
   if (typeof rawPageSize === 'string') {
-    if (KNOWN_PAGE_SIZES.has(rawPageSize) || CUSTOM_PAGE_SIZE_RE.test(rawPageSize)) {
+    if (rawPageSize === 'custom') {
+      pageSize = 'custom';
+    } else if (CUSTOM_PAGE_SIZE_RE.test(rawPageSize)) {
+      pageSize = rawPageSize; // dimension: "210mm,297mm"
+    } else {
+      // Cualquier nombre no vacio se trata como tamano estandar (a1, letter, b5, ...)
       pageSize = rawPageSize;
     }
   }
-  if (obj['page-size'] !== undefined && !pageSize) {
-    process.stderr.write(
-      `[iteraciones] format.pdf.page-size: valor desconocido "${String(obj['page-size'])}". Usa un nombre estandar (letter, a4, half-letter, etc.) o un tamano personalizado "ancho,alto" (ej: "15cm,23cm").\n`,
-    );
+  if (obj['page-size'] !== undefined && rawPageSize !== undefined && rawPageSize.trim() === '') {
+    process.stderr.write(`[iteraciones] format.pdf.page-size: no puede estar vacio.\n`);
   }
   pageSize ??= DEFAULT_PDF_FORMAT.pageSize;
 
@@ -200,18 +203,25 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
 
   const fontFamily = typeof obj['font-family'] === 'string' && obj['font-family'].trim() ? obj['font-family'].trim() : DEFAULT_PDF_FORMAT.fontFamily;
 
-  const rawMargins = obj.margins;
-  let margins: [string, string, string, string] | undefined;
-  if (
-    Array.isArray(rawMargins) &&
-    rawMargins.length === 4 &&
-    rawMargins.every((m) => typeof m === 'string' && /^\d+(\.\d+)?(cm|mm|in|pt)$/.test(m))
-  ) {
-    margins = rawMargins as [string, string, string, string];
-  } else if (rawMargins !== undefined) {
-    process.stderr.write(`[iteraciones] format.pdf.margins: debe ser un array de 4 strings con unidades (ej: ["2.5cm", "2.5cm", "3cm", "3cm"]).\n`);
+  const rawGeometry = obj.geometry;
+  let geometry: Record<string, string> | undefined;
+  if (rawGeometry && typeof rawGeometry === 'object' && !Array.isArray(rawGeometry)) {
+    const g = rawGeometry as Record<string, unknown>;
+    const validKeys = ['paperwidth', 'paperheight', 'top', 'bottom', 'left', 'right', 'headheight', 'headsep', 'footskip'];
+    const parsed: Record<string, string> = {};
+    for (const key of validKeys) {
+      const val = g[key];
+      if (typeof val === 'string' && /^\d+(\.\d+)?(cm|mm|in|pt)$/.test(val)) {
+        parsed[key] = val;
+      }
+    }
+    if (Object.keys(parsed).length > 0) geometry = parsed;
+  } else if (rawGeometry !== undefined) {
+    process.stderr.write(
+      `[iteraciones] format.pdf.geometry: debe ser un mapa con claves como top, bottom, left, right, headheight, headsep, footskip.\n`,
+    );
   }
-  margins ??= DEFAULT_PDF_FORMAT.margins;
+  geometry ??= DEFAULT_PDF_FORMAT.geometry;
 
   const rawLineSpacing = obj['line-spacing'];
   const lineSpacing = typeof rawLineSpacing === 'number' && rawLineSpacing > 0 ? rawLineSpacing : DEFAULT_PDF_FORMAT.lineSpacing;
@@ -267,7 +277,7 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     pageSize,
     fontSize,
     fontFamily,
-    margins,
+    geometry,
     lineSpacing,
     pageNumber,
     sides,

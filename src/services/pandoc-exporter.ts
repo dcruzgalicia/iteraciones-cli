@@ -176,37 +176,45 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfF
         // Tamaño estándar → opción de clase (letterpaper, paper=13.97cm:21.59cm, …)
         lines.push('classoption:');
         lines.push(`  - ${classOption}`);
+        geometryEmitted = false; // classoption no emite geometry
+      } else if (pdfFormat.pageSize === 'custom') {
+        // page-size: custom → geometry con paperwidth/paperheight desde config
+        if (pdfFormat.geometry && Object.keys(pdfFormat.geometry).length > 0) {
+          lines.push('geometry:');
+          const order = ['paperwidth', 'paperheight', 'top', 'bottom', 'left', 'right', 'headheight', 'headsep', 'footskip'];
+          for (const key of order) {
+            const val = pdfFormat.geometry[key];
+            if (val) lines.push(`  - ${key}=${val}`);
+          }
+          geometryEmitted = true;
+        }
       } else {
         const customMatch = CUSTOM_PAGE_SIZE_RE.exec(pdfFormat.pageSize);
         if (customMatch) {
           const [, pw, ph] = customMatch;
-          if (pdfFormat.margins) {
-            // Tamaño personalizado + márgenes → geometry con paperwidth/paperheight
-            lines.push('geometry:');
-            const [top, right, bottom, left] = pdfFormat.margins;
-            lines.push(`  - top=${top}`);
-            lines.push(`  - right=${right}`);
-            lines.push(`  - bottom=${bottom}`);
-            lines.push(`  - left=${left}`);
-            lines.push(`  - paperwidth=${pw}`);
-            lines.push(`  - paperheight=${ph}`);
-            geometryEmitted = true;
-          } else {
-            // Tamaño personalizado sin márgenes → vars top-level (template usa $if(paperwidth)$)
-            lines.push(`paperwidth: ${pw}`);
-            lines.push(`paperheight: ${ph}`);
+          lines.push('geometry:');
+          const g = pdfFormat.geometry ?? DEFAULT_PDF_FORMAT.geometry;
+          if (g) {
+            const order = ['top', 'bottom', 'left', 'right', 'headheight', 'headsep', 'footskip'];
+            for (const key of order) {
+              const val = g[key];
+              if (val) lines.push(`  - ${key}=${val}`);
+            }
           }
+          lines.push(`  - paperwidth=${pw}`);
+          lines.push(`  - paperheight=${ph}`);
+          geometryEmitted = true;
         }
       }
     }
-    if (pdfFormat.margins && !geometryEmitted) {
-      // Márgenes sin page-size o con page-size estándar → geometry con márgenes únicamente
+    if (pdfFormat.geometry && !geometryEmitted) {
+      // Geometry definida por configuracion → geometry con margenes y opciones
       lines.push('geometry:');
-      const [top, right, bottom, left] = pdfFormat.margins;
-      lines.push(`  - top=${top}`);
-      lines.push(`  - right=${right}`);
-      lines.push(`  - bottom=${bottom}`);
-      lines.push(`  - left=${left}`);
+      const order = ['paperwidth', 'paperheight', 'top', 'bottom', 'left', 'right', 'headheight', 'headsep', 'footskip'];
+      for (const key of order) {
+        const val = pdfFormat.geometry[key];
+        if (val) lines.push(`  - ${key}=${val}`);
+      }
     }
 
     // sfdefaults: permite controlar la opcion de clase KOMA-Script del mismo nombre.
@@ -365,26 +373,62 @@ export async function convertToMarkdown(doc: ExportDocument, outputPath: string)
 export async function convertToPdf(doc: ExportDocument, outputPath: string, _cwd?: string, pdfFormat?: PdfFormatConfig): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
-  // Construir .tex completo desde metadata + body (evita depender del
-  // .tex final en disco que puede estar en iCloud Drive)
-  const fm = doc.metadata;
-  const dc = fm.documentclass ?? 'scrbook';
+  // Construir preámbulo configurable usando pdfFormat (misma lógica que writeTexFiles)
+  const fmt = pdfFormat ?? DEFAULT_PDF_FORMAT;
+  const dc = fmt.documentclass ?? 'scrbook';
+  const fontSize = fmt.fontSize ?? '12pt';
+  const sfdefaults = fmt.sfdefaults ?? false;
+  const twoside = fmt.sides === 'twoside';
+  const pageSize = fmt.pageSize;
+  const geometry = fmt.geometry;
+  const fontFamily = fmt.fontFamily ?? 'mathptmx';
+  const lineSpacing = fmt.lineSpacing ?? 1.5;
+
+  // Opciones de clase KOMA-Script
+  const classOpts = [fontSize];
+  classOpts.push(`sfdefaults=${sfdefaults ? 'true' : 'false'}`);
+  if (pageSize) {
+    if (pageSize === 'half-letter') {
+      classOpts.push('paper=13.97cm:21.59cm');
+    } else if (pageSize !== 'custom' && !/^\d/.test(pageSize)) {
+      classOpts.push(`paper=${pageSize}`);
+    }
+  }
+  if (twoside) classOpts.push('twoside');
+
   const pre: string[] = [
-    `\\documentclass{${dc}}`,
+    `\\documentclass[${classOpts.join(',')}]{${dc}}`,
     '\\usepackage[T1]{fontenc}',
     '\\usepackage[utf8]{inputenc}',
     '\\usepackage{babel}',
     '\\babelprovide[import, main]{mexican}',
+    `\\usepackage{${fontFamily}}`,
     '\\usepackage{longtable}',
     '\\usepackage{booktabs}',
     '\\usepackage{array}',
     '\\usepackage{calc}',
+    '\\usepackage{setspace}',
+    `\\setstretch{${lineSpacing}}`,
     '\\usepackage{hyperref}',
     '\\newcounter{none}',
     '\\providecommand{\\tightlist}{%',
     '  \\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}}',
-    '\\begin{document}',
   ];
+
+  // Construir opciones de geometry desde el mapa de configuracion
+  if (geometry && Object.keys(geometry).length > 0) {
+    const geomOpts: string[] = [];
+    const order = ['paperwidth', 'paperheight', 'top', 'bottom', 'left', 'right', 'headheight', 'headsep', 'footskip'];
+    for (const key of order) {
+      const val = geometry[key];
+      if (val) geomOpts.push(`${key}=${val}`);
+    }
+    pre.push(`\\usepackage[${geomOpts.join(',')}]{geometry}`);
+  }
+
+  pre.push('\\begin{document}');
+
+  const fm = doc.metadata;
   if (fm.title) pre.push(`\\title{${fm.title}}`);
   if (fm.author?.length) pre.push(`\\author{${fm.author.join(' \\and ')}}`);
   if (fm.date) pre.push(`\\date{${fm.date}}`);
