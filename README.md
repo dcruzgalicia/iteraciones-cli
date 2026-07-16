@@ -120,6 +120,14 @@ Muestra información del proyecto y la configuración activa.
 iteraciones info
 ```
 
+### `iteraciones transpilers`
+
+Lista los transpilers disponibles con su tipo, descripción y estado (activo/desactivado).
+
+```
+iteraciones transpilers
+```
+
 ### `iteraciones init`
 
 Crea `_iteraciones.yaml` y `README.md` mínimos en el directorio actual. Si alguno de los archivos ya existe, lo omite sin sobreescribirlo.
@@ -149,6 +157,68 @@ iteraciones doctor [opciones]
 | `--fix` | Intenta corregir automáticamente los problemas detectados |
 
 Comprobaciones que realiza: pandoc disponible, configuración válida, plantillas presentes, Tailwind disponible, permisos de lectura y escritura.
+
+## Transpilers
+
+Los transpilers transforman el contenido Markdown antes de la conversión a LaTeX.
+Se ejecutan en dos fases:
+
+1. **String transpilers** — transforman el texto Markdown directamente (regex)
+2. **AST transpilers** — transforman el AST de Pandoc (después de parsear el Markdown a JSON)
+
+### Pipeline
+
+```
+markdown → transpilers string → pandoc --to json → transpilers AST → pandoc --from json --to latex
+```
+
+### Transpilers integrados
+
+| Nombre | Tipo | Entrada | Salida |
+|--------|------|---------|--------|
+| `01-double-colon` | string | `::` (línea sola) | `\\vspace{\\baselineskip}` |
+| `02-dictum` | ast | `::: {.dictum}` | `\\dictum[author]{quote}` |
+
+### Ejemplo de dictum
+
+```markdown
+::: {.dictum}
+Dios hizo los números enteros, el resto es obra del hombre.
+:::
+
+::: {.dictum}
+La ciencia se compone de errores, que a su vez son los pasos
+hacia la verdad.
+
+::: {.author}
+Julio Verne
+:::
+:::
+```
+
+### Desactivar un transpiler
+
+En `_iteraciones.yaml`:
+
+```yaml
+disabled-transpilers:
+  - 01-double-colon   # desactiva la conversión de ::
+```
+
+### Sobrescribir un transpiler
+
+Crea un archivo con el mismo nombre en `<proyecto>/transpilers/`:
+
+```bash
+mkdir -p transpilers
+cat > transpilers/01-double-colon.ts << 'EOF'
+export const type = 'string';
+export function process(body: string): string {
+  // tu propia implementación
+  return body;
+}
+EOF
+```
 
 ## Licencia
 
