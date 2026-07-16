@@ -23,7 +23,7 @@ import type { BuildDocument } from '../types.js';
 const PKG_TRANSPILERS_DIR = join(import.meta.dir, '../../../transpilers');
 
 /** Lista de transpilers empaquetados en orden de aplicación. */
-export const BUILTIN_TRANSPILERS = ['01-double-colon', '02-dictum'];
+export const BUILTIN_TRANSPILERS = ['01-double-colon', '02-dictum', '03-verse'];
 
 interface StringTranspiler {
   type: 'string';
@@ -107,10 +107,12 @@ export function getBuiltinTranspilerInfos(): TranspilerInfo[] {
   const descriptions: Record<string, string> = {
     '01-double-colon': ':: → \\vspace{\\baselineskip}',
     '02-dictum': 'Div.dictum → \\dictum[author]{quote}',
+    '03-verse': 'Div.verse → \\begin{verse}...\\end{verse}',
   };
   const types: Record<string, 'string' | 'ast'> = {
     '01-double-colon': 'string',
     '02-dictum': 'ast',
+    '03-verse': 'ast',
   };
   return BUILTIN_TRANSPILERS.map((name) => ({
     name,
