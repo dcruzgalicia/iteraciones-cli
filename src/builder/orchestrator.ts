@@ -905,8 +905,32 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         progress.reportFile({ relativePath, durationMs: 0, cacheHit, phase: 'markdown' }),
     };
     const exportResults: ExportResult[] = [];
+
+    // Calcular total de docs exportables por formato
+    const countExportDocs = (type: DocumentType): number => {
+      const docs = (renderedMap.get(type) ?? []).filter((d) => d.kind !== 'block');
+      let count = 0;
+      for (const d of docs) {
+        const raw = d.frontmatter['export'];
+        const skipped = typeof raw === 'object' && raw !== null && !Array.isArray(raw) && (raw as Record<string, unknown>)['skip'] === true;
+        if (skipped) continue;
+        count += d.type === 'author' ? 2 : 1;
+      }
+      return count;
+    };
+
     if (formatCfg?.markdown?.generate && !noExport) {
-      progress.startPhase('markdown', 1);
+      let mdTotal = 0;
+      for (const type of EXPORTABLE_TYPES) {
+        const docs = (renderedMap.get(type) ?? []).filter((d) => d.kind !== 'block');
+        for (const d of docs) {
+          const raw = d.frontmatter['export'];
+          const skipped = typeof raw === 'object' && raw !== null && !Array.isArray(raw) && (raw as Record<string, unknown>)['skip'] === true;
+          if (skipped) continue;
+          mdTotal++;
+        }
+      }
+      progress.startPhase('markdown', mdTotal);
       const mdStats: ExportStats = { totalEpub: 0, totalPdf: 0, totalMd: 0, cacheHitsEpub: 0, cacheHitsPdf: 0, cacheHitsMd: 0 };
       const mdResults = await runExportDocuments(exportRenderedMap, { ...exportBase, config: formatCfg, stats: mdStats });
       exportResults.push(...mdResults);
@@ -916,7 +940,11 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
     // ── Fase pdf ──
     if (formatCfg?.pdf?.generate && !noExport) {
-      progress.startPhase('pdf', 1);
+      let pdfTotal = 0;
+      for (const type of EXPORTABLE_TYPES) {
+        pdfTotal += countExportDocs(type);
+      }
+      progress.startPhase('pdf', pdfTotal);
       const pdfStats: ExportStats = { totalEpub: 0, totalPdf: 0, totalMd: 0, cacheHitsEpub: 0, cacheHitsPdf: 0, cacheHitsMd: 0 };
       const pdfResults = await runExportDocuments(exportRenderedMap, { ...exportBase, config: formatCfg, stats: pdfStats });
       exportResults.push(...pdfResults);
@@ -926,7 +954,11 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
     // ── Fase epub ──
     if (formatCfg?.epub?.generate && !noExport) {
-      progress.startPhase('epub', 1);
+      let epubTotal = 0;
+      for (const type of EXPORTABLE_TYPES) {
+        epubTotal += countExportDocs(type);
+      }
+      progress.startPhase('epub', epubTotal);
       const epubStats: ExportStats = { totalEpub: 0, totalPdf: 0, totalMd: 0, cacheHitsEpub: 0, cacheHitsPdf: 0, cacheHitsMd: 0 };
       const epubResults = await runExportDocuments(exportRenderedMap, { ...exportBase, config: formatCfg, stats: epubStats });
       exportResults.push(...epubResults);
