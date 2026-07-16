@@ -3,7 +3,8 @@ import { stat } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import type { CacheManager } from '../../cache/cache-manager.js';
 import { hash } from '../../cache/hasher.js';
-import type { EpubFormatConfig, MarkdownFormatConfig, PdfFormatConfig } from '../../config/site-config.js';
+import type { EpubFormatConfig, MarkdownFormatConfig, PdfFormatConfig, ThumbnailMode } from '../../config/site-config.js';
+import { THUMBNAIL_SIZES } from '../../config/site-config.js';
 import { mapWithConcurrency } from '../../output/concurrency.js';
 import type { PluginRegistry } from '../../plugin/registry.js';
 import { convertToEpub, convertToMarkdown, convertToPdf } from '../../services/pandoc-exporter.js';
@@ -21,28 +22,82 @@ import type { ExportCollectionPart, ExportDocument, ExportMetadata, ExportResult
 import { EXPORTABLE_TYPES } from './types.js';
 
 /**
- * Genera una imagen de portada JPG a partir de la primera página de un PDF.
+ * Tipos de thumbnail reconocidos:
+ * - true: genera un solo JPG de 1200px (`<outputBase>.jpg`)
+ * - 'responsive': genera sm(320), md(640), lg(1200), xl(2400)
+ *   (`<outputBase>.<name>.jpg`)
+ */
+type ThumbnailRequest = { mode: true; coverPath: string } | { mode: 'responsive' };
+
+const THUMBNAIL_DEFAULT_WIDTH = 1200;
+
+/**
+ * Determina qué thumbnails generar según el valor de ThumbnailMode.
+ */
+function resolveThumbnailRequest(mode: ThumbnailMode, outputBase: string): ThumbnailRequest | null {
+  if (!mode) return null;
+  if (mode === true) return { mode: true, coverPath: `${outputBase}.jpg` };
+  if (mode === 'responsive') return { mode: 'responsive' };
+  return null;
+}
+
+/**
+ * Genera thumbnails JPG a partir de la primera página de un PDF.
  * Usa `pdftoppm` (parte de poppler-utils). Si no está disponible o falla, retorna undefined.
  *
  * @param pdfPath   Ruta absoluta al PDF fuente.
  * @param outputBase Ruta base de salida sin extensión (ej: /dist/web/notas/foo).
- *                   pdftoppm produce `<outputBase>.jpg`.
- * @returns Ruta absoluta al JPG generado, o undefined si falló.
+ * @param request   Configuración de qué thumbnails generar.
+ * @param statCache Mapa opcional para cachear stat() del PDF.
+ * @returns Ruta absoluta al JPG principal (lg en responsive, único en simple), o undefined.
  */
-async function generateCoverImage(pdfPath: string, outputBase: string): Promise<string | undefined> {
+async function generateCoverImage(pdfPath: string, outputBase: string, request: ThumbnailRequest): Promise<string | undefined> {
   try {
-    const coverPath = `${outputBase}.jpg`;
-    // Reutilizar la imagen si ya existe y es más reciente que el PDF fuente.
-    const [coverStat, pdfStat] = await Promise.all([stat(coverPath).catch(() => null), stat(pdfPath)]);
-    if (coverStat && coverStat.mtimeMs >= pdfStat.mtimeMs) return coverPath;
-    const proc = Bun.spawn(['pdftoppm', '-r', '150', '-jpeg', '-singlefile', pdfPath, outputBase], {
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-    const exitCode = await proc.exited;
-    if (exitCode !== 0) return undefined;
-    const exists = await Bun.file(coverPath).exists();
-    return exists ? coverPath : undefined;
+    if (request.mode === true) {
+      // Modo simple: un solo JPG de 1200px
+      const coverPath = request.coverPath;
+      const [coverStat, pdfStat] = await Promise.all([stat(coverPath).catch(() => null), stat(pdfPath)]);
+      if (coverStat && coverStat.mtimeMs >= pdfStat.mtimeMs) return coverPath;
+      const proc = Bun.spawn(['pdftoppm', '-r', '150', '-jpeg', '-singlefile', '-scale-to', String(THUMBNAIL_DEFAULT_WIDTH), pdfPath, outputBase], {
+        stdout: 'pipe',
+        stderr: 'pipe',
+      });
+      const exitCode = await proc.exited;
+      if (exitCode !== 0) return undefined;
+      const exists = await Bun.file(coverPath).exists();
+      return exists ? coverPath : undefined;
+    }
+
+    // Modo responsive: generar sm, md, lg, xl
+    const pdfStat = await stat(pdfPath);
+    let coverPath: string | undefined;
+
+    for (const [name, width] of Object.entries(THUMBNAIL_SIZES)) {
+      const sizePath = `${outputBase}.${name}.jpg`;
+      try {
+        const existing = await stat(sizePath).catch(() => null);
+        if (existing && existing.mtimeMs >= pdfStat.mtimeMs) {
+          if (width === THUMBNAIL_DEFAULT_WIDTH) coverPath = sizePath;
+          continue;
+        }
+      } catch {}
+
+      const proc = Bun.spawn(['pdftoppm', '-r', '150', '-jpeg', '-singlefile', '-scale-to', String(width), pdfPath, `${outputBase}.${name}`], {
+        stdout: 'pipe',
+        stderr: 'pipe',
+      });
+      const exitCode = await proc.exited;
+      if (
+        exitCode === 0 &&
+        (await Bun.file(sizePath)
+          .exists()
+          .catch(() => false))
+      ) {
+        if (width === THUMBNAIL_DEFAULT_WIDTH) coverPath = sizePath;
+      }
+    }
+
+    return coverPath;
   } catch {
     // pdftoppm no instalado o no disponible en PATH — no es error fatal
     return undefined;
@@ -562,7 +617,10 @@ export async function runExportDocuments(
         }
       }
       if (firstError) throw firstError;
-      if (result.pdfPath) result.coverPath = await generateCoverImage(result.pdfPath, summaryBase);
+      if (result.pdfPath && config.pdf?.thumbnails) {
+        const request = resolveThumbnailRequest(config.pdf.thumbnails, summaryBase);
+        if (request) result.coverPath = await generateCoverImage(result.pdfPath, summaryBase, request);
+      }
       return result;
     }
 
@@ -643,9 +701,12 @@ export async function runExportDocuments(
       }
     }
     if (firstError) throw firstError;
-    // Generar thumbnail JPG de la primera pagina del PDF (si configurado).
+    // Generar thumbnail(s) JPG de la primera pagina del PDF (si configurado).
     if (result.pdfPath && config.pdf?.thumbnails) {
-      result.coverPath = await generateCoverImage(result.pdfPath, outputBase);
+      const request = resolveThumbnailRequest(config.pdf.thumbnails, outputBase);
+      if (request) {
+        result.coverPath = await generateCoverImage(result.pdfPath, outputBase, request);
+      }
     }
     return result;
   });

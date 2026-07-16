@@ -4,6 +4,15 @@ export type PageNumberPlacement = 'footer-left' | 'footer-center' | 'footer-righ
 
 export type Sides = 'oneside' | 'twoside';
 
+export type ThumbnailMode = boolean | 'responsive';
+
+export const THUMBNAIL_SIZES: Record<string, number> = {
+  sm: 320,
+  md: 640,
+  lg: 1200,
+  xl: 2400,
+} as const;
+
 // ── Schema `format:` (estilo Quarto) ──
 
 export interface PaginationConfig {
@@ -51,8 +60,13 @@ export interface PdfFormatConfig {
   respectHeaderPlain?: boolean;
   /** Si true, genera PDF en el build. */
   generate?: boolean;
-  /** Si true, genera un JPG de la primera pagina del PDF. */
-  thumbnails?: boolean;
+  /**
+   * Modo de generacion de thumbnails del PDF:
+   * - false: no generar
+   * - true: generar un solo JPG de 1200px (estandar Open Graph)
+   * - 'responsive': generar sm (320), md (640), lg (1200), xl (2400)
+   */
+  thumbnails?: ThumbnailMode;
 }
 
 export interface EpubFormatConfig {
