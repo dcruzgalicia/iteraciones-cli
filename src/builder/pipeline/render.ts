@@ -181,7 +181,10 @@ export async function renderLatex(
 
     // Paso 4: convertir el AST modificado a LaTeX
     // Los filtros Lua definidos por el usuario se aplican aquí
-    const processedBody = await convertFragment(JSON.stringify(ast), doc.filePath, pool, undefined, luaFilters, 'latex', 'json');
+    const processedBody = await convertFragment(JSON.stringify(ast), doc.filePath, pool, undefined, luaFilters, 'latex', 'json', [
+      '--top-level-division',
+      'section',
+    ]);
 
     return { ...doc, processedBody };
   });

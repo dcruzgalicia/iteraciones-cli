@@ -35,6 +35,7 @@ export async function checkPandoc(): Promise<string> {
  * @param luaFilters Rutas absolutas a filtros Lua que se aplican durante la conversión.
  * @param toFormat   Formato de salida (por defecto 'html5').
  * @param fromFormat Formato de entrada (por defecto 'markdown').
+ * @param extraArgs  Argumentos adicionales para pandoc (ej: ['--top-level-division', 'section']).
  */
 export async function convertFragment(
   content: string,
@@ -44,6 +45,7 @@ export async function convertFragment(
   luaFilters?: readonly string[],
   toFormat: string = 'html5',
   fromFormat: string = 'markdown',
+  extraArgs?: readonly string[],
 ): Promise<string> {
   const args = ['pandoc', '--from', fromFormat, '--to', toFormat, '--no-highlight'];
 
@@ -56,6 +58,10 @@ export async function convertFragment(
     for (const filter of luaFilters) {
       args.push('--lua-filter', filter);
     }
+  }
+
+  if (extraArgs && extraArgs.length > 0) {
+    args.push(...extraArgs);
   }
 
   // Usar pool solo cuando no hay bibOptions ni luaFilters activos
