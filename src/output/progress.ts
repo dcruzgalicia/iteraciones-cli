@@ -13,17 +13,21 @@ export interface RenderFileReport {
   phase: PipelinePhase;
 }
 
-export type PipelinePhase = 'discovery' | 'render' | 'context' | 'compose' | 'export';
+export type PipelinePhase = 'discovery' | 'render' | 'context' | 'latex' | 'markdown' | 'pdf' | 'epub' | 'html' | 'compose';
 
 const PHASE_LABELS: Record<PipelinePhase, string> = {
   discovery: 'Descubriendo documentos',
   render: 'Renderizando (pandoc)',
-  context: 'Construyendo índices',
-  compose: 'Componiendo HTML',
-  export: 'Exportando PDF/EPUB',
+  context: 'Construyendo \u00edndices',
+  latex: 'Generando .tex',
+  markdown: 'Exportando Markdown',
+  pdf: 'Compilando PDF',
+  epub: 'Exportando EPUB',
+  html: 'Componiendo HTML',
+  compose: 'Componiendo',
 };
 
-const PHASE_ORDER: PipelinePhase[] = ['discovery', 'render', 'context', 'compose', 'export'];
+const PHASE_ORDER: PipelinePhase[] = ['discovery', 'render', 'context', 'latex', 'markdown', 'pdf', 'epub', 'html'];
 
 export class ProgressTracker {
   private verbose: boolean;
