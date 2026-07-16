@@ -23,7 +23,7 @@ import type { BuildDocument } from '../types.js';
 const PKG_TRANSPILERS_DIR = join(import.meta.dir, '../../../transpilers');
 
 /** Lista de transpilers empaquetados en orden de aplicación. */
-const BUILTIN_TRANSPILERS = ['01-double-colon', '02-dictum'];
+export const BUILTIN_TRANSPILERS = ['01-double-colon', '02-dictum'];
 
 interface StringTranspiler {
   type: 'string';
@@ -35,21 +35,32 @@ interface AstTranspiler {
   transform(ast: Record<string, unknown>): Promise<Record<string, unknown>>;
 }
 
+export interface TranspilerInfo {
+  name: string;
+  type: 'string' | 'ast';
+  description: string;
+}
+
 type TranspilerModule = StringTranspiler | AstTranspiler;
 
 /**
  * Carga transpilers desde el paquete y desde <cwd>/transpilers/.
  * Los transpilers del proyecto con el mismo nombre reemplazan a los del paquete.
- * Retorna dos listas ordenadas: string transpilers primero, luego AST.
+ * @param disabledList Lista de transpilers a desactivar (blacklist). undefined = todos activos.
  */
-async function loadTranspilers(cwd?: string): Promise<{
+async function loadTranspilers(
+  disabledList?: string[],
+  cwd?: string,
+): Promise<{
   stringTranspilers: Array<{ name: string; process: (body: string) => string }>;
   astTranspilers: Array<{ name: string; transform: (ast: Record<string, unknown>) => Promise<Record<string, unknown>> }>;
 }> {
-  // Cargar módulos
+  const excluded = new Set(disabledList ?? []);
+  const names = BUILTIN_TRANSPILERS.filter((n) => !excluded.has(n));
+
   const modules = new Map<string, TranspilerModule>();
 
-  for (const name of BUILTIN_TRANSPILERS) {
+  for (const name of names) {
     const mod = (await import(join(PKG_TRANSPILERS_DIR, `${name}.ts`))) as TranspilerModule;
     modules.set(name, mod);
   }
@@ -61,7 +72,7 @@ async function loadTranspilers(cwd?: string): Promise<{
       .exists()
       .catch(() => false);
     if (projectDirExists) {
-      for (const name of BUILTIN_TRANSPILERS) {
+      for (const name of names) {
         const projectPath = join(projectDir, `${name}.ts`);
         const exists = await Bun.file(projectPath)
           .exists()
@@ -74,11 +85,10 @@ async function loadTranspilers(cwd?: string): Promise<{
     }
   }
 
-  // Separar por tipo, preservando el orden de BUILTIN_TRANSPILERS
   const stringTranspilers: Array<{ name: string; process: (body: string) => string }> = [];
   const astTranspilers: Array<{ name: string; transform: (ast: Record<string, unknown>) => Promise<Record<string, unknown>> }> = [];
 
-  for (const name of BUILTIN_TRANSPILERS) {
+  for (const name of names) {
     const mod = modules.get(name);
     if (!mod) continue;
 
@@ -90,6 +100,23 @@ async function loadTranspilers(cwd?: string): Promise<{
   }
 
   return { stringTranspilers, astTranspilers };
+}
+
+/** Retorna informacion de todos los transpilers built-in para el CLI. */
+export function getBuiltinTranspilerInfos(): TranspilerInfo[] {
+  const descriptions: Record<string, string> = {
+    '01-double-colon': ':: → \\vspace{\\baselineskip}',
+    '02-dictum': 'Div.dictum → \\dictum[author]{quote}',
+  };
+  const types: Record<string, 'string' | 'ast'> = {
+    '01-double-colon': 'string',
+    '02-dictum': 'ast',
+  };
+  return BUILTIN_TRANSPILERS.map((name) => ({
+    name,
+    type: types[name] ?? 'string',
+    description: descriptions[name] ?? '',
+  }));
 }
 
 export interface RenderCache {
@@ -121,8 +148,9 @@ export async function renderLatex(
   pool?: PandocPool,
   luaFilters?: readonly string[],
   cwd?: string,
+  activeTranspilers?: string[],
 ): Promise<BuildDocument[]> {
-  const { stringTranspilers, astTranspilers } = await loadTranspilers(cwd);
+  const { stringTranspilers, astTranspilers } = await loadTranspilers(activeTranspilers, cwd);
 
   return mapWithConcurrency(docs, concurrency, async (doc) => {
     // Paso 1: transpilers string (regex) sobre el markdown original

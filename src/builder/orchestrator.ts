@@ -746,7 +746,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     // Fase de LaTeX final: procesa el body original con filtros Lua
     // y produce el .tex final (processedBody) que se usará para HTML
     // y exportación.
-    const docsWithMd = await renderLatex(allDocs, ctx.concurrency ?? 4, pandocPool, luaFilters, cwd);
+    const docsWithMd = await renderLatex(allDocs, ctx.concurrency ?? 4, pandocPool, luaFilters, cwd, ctx.siteConfig.disabledTranspilers);
     // Reemplazar allDocs con los docs procesados (tienen processedBody)
     const mdMap = new Map<string, BuildDocument>(docsWithMd.map((d) => [d.relativePath, d]));
     for (const doc of allDocs) {

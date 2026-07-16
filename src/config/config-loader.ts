@@ -31,6 +31,7 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
     return {
       ...DEFAULT_SITE_CONFIG,
       plugins: [...DEFAULT_SITE_CONFIG.plugins],
+      disabledTranspilers: undefined,
     };
 
   let raw: string;
@@ -51,12 +52,16 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
     return {
       ...DEFAULT_SITE_CONFIG,
       plugins: [...DEFAULT_SITE_CONFIG.plugins],
+      disabledTranspilers: undefined,
     };
 
   const root = parsed as Record<string, unknown>;
   const site = root.site && typeof root.site === 'object' ? (root.site as Record<string, unknown>) : {};
 
   const plugins = Array.isArray(root.plugins) ? root.plugins.filter((p): p is string => typeof p === 'string') : [...DEFAULT_SITE_CONFIG.plugins];
+  const rawDisabled = root['disabled-transpilers'];
+  const disabledTranspilers =
+    Array.isArray(rawDisabled) && rawDisabled.length > 0 ? rawDisabled.filter((t): t is string => typeof t === 'string') : undefined;
 
   const title = typeof site.title === 'string' ? site.title : DEFAULT_SITE_CONFIG.title;
   const tagline = typeof site.tagline === 'string' ? site.tagline : DEFAULT_SITE_CONFIG.tagline;
@@ -82,6 +87,7 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
     logo,
     baseUrl,
     plugins,
+    disabledTranspilers,
     pagination,
     format,
   };

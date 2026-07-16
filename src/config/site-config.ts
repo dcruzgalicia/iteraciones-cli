@@ -115,6 +115,16 @@ export interface SiteConfig {
   pagination: PaginationConfig;
   /** Configuracion por formato de salida. */
   format: FormatConfig;
+  /**
+   * Lista de transpilers a desactivar (blacklist).
+   * Por defecto undefined = todos activos.
+   * Para desactivar uno, agrega su nombre aqui. Ej:
+   *   disabled-transpilers:
+   *     - 01-double-colon
+   * Para sobrescribir un transpiler, crea un archivo con el mismo
+   * nombre en <proyecto>/transpilers/<nombre>.ts.
+   */
+  disabledTranspilers?: string[];
 }
 
 /**
@@ -203,6 +213,7 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   logo: '',
   baseUrl: undefined,
   plugins: [],
+  disabledTranspilers: undefined,
   pagination: DEFAULT_PAGINATION,
   format: {
     html: DEFAULT_HTML_FORMAT,

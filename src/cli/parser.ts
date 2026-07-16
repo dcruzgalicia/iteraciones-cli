@@ -1,7 +1,7 @@
 import { isAbsolute, normalize } from 'node:path';
 import { Command } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
-import { runBuild, runClean, runDoctor, runGraph, runInfo, runInit, runNew, runServe, runValidate, runWatch } from './dispatcher.js';
+import { runBuild, runClean, runDoctor, runGraph, runInfo, runInit, runNew, runServe, runTranspilers, runValidate, runWatch } from './dispatcher.js';
 
 export function buildProgram(): Command {
   const program = new Command();
@@ -145,6 +145,11 @@ export function buildProgram(): Command {
     .action(async (type: string, path: string, opts: { region?: string }) => {
       await runNew(process.cwd(), type, path, { region: opts.region });
     });
+
+  program
+    .command('transpilers')
+    .description('lista los transpilers disponibles con su tipo y descripción')
+    .action(() => runTranspilers(process.cwd()));
 
   program
     .command('graph')
