@@ -163,8 +163,8 @@ export async function renderLatex(
       return { ...doc, processedBody: '' };
     }
 
-    // Paso 2: convertir markdown a JSON AST
-    const json = await convertFragment(body, doc.filePath, pool, undefined, undefined, 'json');
+    // Paso 2: convertir markdown a JSON AST (sin auto_identifiers para evitar labels en .tex)
+    const json = await convertFragment(body, doc.filePath, pool, undefined, undefined, 'json', 'markdown-auto_identifiers');
     let ast: Record<string, unknown>;
     try {
       ast = JSON.parse(json) as Record<string, unknown>;
