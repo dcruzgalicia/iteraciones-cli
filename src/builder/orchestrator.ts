@@ -673,13 +673,17 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         siteConfig: ctx.siteConfig as unknown as Readonly<Record<string, unknown>>,
       });
     }
+    // Assets web (css, fonts, logo) solo si se genera HTML
+    const generateHtml = ctx.siteConfig.format?.html?.generate === true;
     progress.startPhase('discovery');
     const [rawDocs, cssPath] = await Promise.all([
       runDiscovery(cwd, ctx, options.noCache),
-      buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, {
-        noTailwind: options.noTailwind,
-        cacheManager: options.noCache ? undefined : cacheManager,
-      }),
+      generateHtml
+        ? buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, {
+            noTailwind: options.noTailwind,
+            cacheManager: options.noCache ? undefined : cacheManager,
+          })
+        : Promise.resolve(''),
     ]);
     ctx.cssPath = cssPath;
     progress.completePhase();
@@ -746,8 +750,14 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       doc.slug = filenameStem === 'index' ? undefined : computeSlug(doc.frontmatter);
     }
 
-    const logoSvg = await readLogoSvgContent(ctx);
-    const enrichedSiteCtx = buildEnrichedSiteContext(ctx, allDocs, logoSvg);
+    let logoSvg: string | undefined;
+    let enrichedSiteCtx: TemplateContext;
+    if (generateHtml) {
+      logoSvg = await readLogoSvgContent(ctx);
+      enrichedSiteCtx = buildEnrichedSiteContext(ctx, allDocs, logoSvg);
+    } else {
+      enrichedSiteCtx = buildSiteContext(ctx.siteConfig, ctx.cssPath);
+    }
 
     // Fase de LaTeX final: procesa el body original con filtros Lua
     // y produce el .tex final (processedBody) que se usará para HTML
