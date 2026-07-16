@@ -643,8 +643,8 @@ export async function runExportDocuments(
       }
     }
     if (firstError) throw firstError;
-    // Generar imagen de portada a partir del PDF si se produjo uno.
-    if (result.pdfPath) {
+    // Generar thumbnail JPG de la primera pagina del PDF (si configurado).
+    if (result.pdfPath && config.pdf?.thumbnails) {
       result.coverPath = await generateCoverImage(result.pdfPath, outputBase);
     }
     return result;

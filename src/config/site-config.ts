@@ -51,6 +51,8 @@ export interface PdfFormatConfig {
   respectHeaderPlain?: boolean;
   /** Si true, genera PDF en el build. */
   generate?: boolean;
+  /** Si true, genera un JPG de la primera pagina del PDF. */
+  thumbnails?: boolean;
 }
 
 export interface EpubFormatConfig {
@@ -160,6 +162,7 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   bibliography: 'bibliography.bib',
   csl: 'apa.csl',
   generate: false,
+  thumbnails: false,
 };
 
 export const DEFAULT_EPUB_FORMAT: EpubFormatConfig = {

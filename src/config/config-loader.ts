@@ -270,6 +270,7 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     sfdefaults,
     respectHeaderPlain,
     generate: typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_PDF_FORMAT.generate,
+    thumbnails: typeof obj.thumbnails === 'boolean' ? obj.thumbnails : DEFAULT_PDF_FORMAT.thumbnails,
   };
 }
 
