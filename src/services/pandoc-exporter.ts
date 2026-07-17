@@ -410,6 +410,7 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, _cwd
     '\\usepackage{calc}',
     '\\usepackage{setspace}',
     `\\setstretch{${lineSpacing}}`,
+    '\\usepackage[activate={true,nocompatibility},final,tracking=true,kerning=true,spacing=true,factor=1100,stretch=10,shrink=10]{microtype}',
     '\\usepackage{hyperref}',
     '\\newcounter{none}',
     '\\providecommand{\\tightlist}{%',
