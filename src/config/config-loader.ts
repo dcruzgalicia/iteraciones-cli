@@ -254,13 +254,6 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
   }
 
   const sfdefaults = typeof obj.sfdefaults === 'boolean' ? obj.sfdefaults : undefined;
-  const rawTopLevel = obj['top-level-division'];
-  const topLevelDivision = rawTopLevel === 'section' || rawTopLevel === 'chapter' || rawTopLevel === 'part' ? rawTopLevel : undefined;
-  if (rawTopLevel !== undefined && rawTopLevel !== 'section' && rawTopLevel !== 'chapter' && rawTopLevel !== 'part') {
-    process.stderr.write(
-      `[iteraciones] format.pdf.top-level-division: valor desconocido "${String(rawTopLevel)}". Valores validos: section, chapter, part.\n`,
-    );
-  }
 
   const respectHeaderPlain = typeof obj['respect-header-plain'] === 'boolean' ? obj['respect-header-plain'] : DEFAULT_PDF_FORMAT.respectHeaderPlain;
   const crop = typeof obj.crop === 'boolean' ? obj.crop : DEFAULT_PDF_FORMAT.crop;
@@ -284,7 +277,6 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     pageNumber,
     sides,
     documentclass,
-    topLevelDivision,
     sfdefaults,
     respectHeaderPlain,
     crop,
