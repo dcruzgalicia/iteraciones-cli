@@ -186,9 +186,11 @@ function buildDefaultConfig(): string {
   lines.push(`    sfdefaults: ${yamlBool(pdfCfg.sfdefaults!)}`);
   // 5. page-size (usar 'custom' para tamano personalizado en geometry)
   lines.push(`    page-size: ${yamlStr(pdfCfg.pageSize!)}`);
-  // 6. sides
+  // 6. page-number
+  lines.push(`    page-number: ${yamlStr(pdfCfg.pageNumber!)}`);
+  // 7. sides
   lines.push(`    sides: ${yamlStr(pdfCfg.sides!)}`);
-  // 7. geometry (opciones para el paquete LaTeX geometry)
+  // 8. geometry (opciones para el paquete LaTeX geometry)
   lines.push('    geometry:');
   const geomOrder = ['paperwidth', 'paperheight', 'top', 'bottom', 'left', 'right', 'headheight', 'headsep', 'footskip'];
   for (const key of geomOrder) {
@@ -211,19 +213,17 @@ function buildDefaultConfig(): string {
   lines.push(`    toc-depth: ${yamlValue(pdfCfg.tocDepth!)}`);
   // 15. top-level-division
   lines.push('    top-level-division: chapter');
-  // 16. page-number
-  lines.push(`    page-number: ${yamlStr(pdfCfg.pageNumber!)}`);
-  // 17. numbering
+  // 16. numbering
   lines.push(`    numbering: ${yamlBool(pdfCfg.numbering!)}`);
-  // 18. bibliography
+  // 17. bibliography
   lines.push(`    bibliography: ${yamlStr(pdfCfg.bibliography!)}`);
-  // 19. csl
+  // 18. csl
   lines.push(`    csl: ${yamlStr(pdfCfg.csl!)}`);
-  // 20. pdfx
+  // 19. pdfx
   lines.push(`    pdfx: ${yamlBool(pdfCfg.pdfx)}`);
-  // 21. thumbnails
+  // 20. thumbnails
   lines.push(`    thumbnails: ${yamlValue(pdfCfg.thumbnails!)}`);
-  // 22. respect-header-plain
+  // 21. respect-header-plain
   lines.push('    respect-header-plain: false');
 
   // epub
