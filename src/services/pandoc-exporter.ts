@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, rm } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import type { ExportDocument } from '../builder/export/types.js';
+import { buildLatexPreamble } from '../builder/latex-preamble.js';
 import type { PdfFormatConfig } from '../config/site-config.js';
 import { DEFAULT_PDF_FORMAT } from '../config/site-config.js';
 import { ConfigError, PandocError } from '../errors.js';
@@ -373,78 +374,12 @@ export async function convertToMarkdown(doc: ExportDocument, outputPath: string)
 export async function convertToPdf(doc: ExportDocument, outputPath: string, _cwd?: string, pdfFormat?: PdfFormatConfig): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
-  // Construir preámbulo configurable usando pdfFormat (misma lógica que writeTexFiles)
-  const fmt = pdfFormat ?? DEFAULT_PDF_FORMAT;
-  const dc = fmt.documentclass ?? 'scrbook';
-  const fontSize = fmt.fontSize ?? '12pt';
-  const sfdefaults = fmt.sfdefaults ?? false;
-  const twoside = fmt.sides === 'twoside';
-  const pageSize = fmt.pageSize;
-  const geometry = fmt.geometry;
-  const fontFamily = fmt.fontFamily ?? 'mathptmx';
-  const lineSpacing = fmt.lineSpacing ?? 1.5;
-
-  // Opciones de clase KOMA-Script
-  const classOpts = [fontSize];
-  classOpts.push(`sfdefaults=${sfdefaults ? 'true' : 'false'}`);
-  if (pageSize) {
-    if (pageSize === 'half-letter') {
-      classOpts.push('paper=13.97cm:21.59cm');
-    } else if (pageSize !== 'custom' && !/^\d/.test(pageSize)) {
-      classOpts.push(`paper=${pageSize}`);
-    }
-  }
-  if (twoside) classOpts.push('twoside');
-
-  const pre: string[] = [
-    `\\documentclass[${classOpts.join(',')}]{${dc}}`,
-    '\\usepackage[T1]{fontenc}',
-    '\\usepackage[utf8]{inputenc}',
-    '\\usepackage{textcomp}',
-    '\\usepackage{babel}',
-    '\\babelprovide[import, main]{mexican}',
-    `\\usepackage{${fontFamily}}`,
-    '\\usepackage{longtable}',
-    '\\usepackage{booktabs}',
-    '\\usepackage{array}',
-    '\\usepackage{calc}',
-    '\\usepackage{setspace}',
-    `\\setstretch{${lineSpacing}}`,
-    '\\usepackage[activate={true,nocompatibility},final,tracking=true,kerning=true,spacing=true,factor=1100,stretch=10,shrink=10]{microtype}',
-    '\\usepackage{hyperref}',
-    '\\newcounter{none}',
-    '\\providecommand{\\tightlist}{%',
-    '  \\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}}',
-    '\\raggedbottom',
-    '\\pretolerance=200',
-    '\\tolerance=400',
-    `\\hyphenpenalty=${fmt.hyphenation ? 100 : 1000000}`,
-    '\\brokenpenalty=1000000',
-    '\\finalhyphendemerits=1000000',
-    '\\doublehyphendemerits=1000000',
-    '\\widowpenalty=1000000',
-    '\\clubpenalty=1000000',
-  ];
-
-  // Construir opciones de geometry desde el mapa de configuracion
-  if (geometry && Object.keys(geometry).length > 0) {
-    const geomOpts: string[] = [];
-    const order = ['paperwidth', 'paperheight', 'top', 'bottom', 'left', 'right', 'headheight', 'headsep', 'footskip'];
-    for (const key of order) {
-      const val = geometry[key];
-      if (val) geomOpts.push(`${key}=${val}`);
-    }
-    pre.push(`\\usepackage[${geomOpts.join(',')}]{geometry}`);
-  }
-
-  pre.push('\\begin{document}');
-
-  const fm = doc.metadata;
-  if (fm.title) pre.push(`\\title{${fm.title}}`);
-  if (fm.author?.length) pre.push(`\\author{${fm.author.join(' \\and ')}}`);
-  if (fm.date) pre.push(`\\date{${fm.date}}`);
-  if (fm.title) pre.push('\\maketitle');
-
+  // Construir preámbulo usando la función compartida (misma lógica que writeTexFiles)
+  const pre = buildLatexPreamble(pdfFormat, {
+    title: doc.metadata.title,
+    author: doc.metadata.author,
+    date: doc.metadata.date,
+  });
   const texContent = [...pre, '', doc.body, '', '\\end{document}'].join('\n');
 
   // Escribir a /tmp (evita problemas de sync con iCloud Drive) y compilar
