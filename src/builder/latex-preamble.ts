@@ -8,6 +8,21 @@
 import type { PdfFormatConfig } from '../config/site-config.js';
 import { DEFAULT_PDF_FORMAT } from '../config/site-config.js';
 
+/** Mapa de nombres de page-size a dimensiones [ancho, alto] en mm. */
+const PAGE_SIZE_DIMS: Record<string, [number, number]> = {
+  'half-letter': [139.7, 215.9],
+  letter: [215.9, 279.4],
+  legal: [215.9, 355.6],
+  executive: [184.15, 266.7],
+  a3: [297, 420],
+  a4: [210, 297],
+  a5: [148, 210],
+  b4: [250, 353],
+  b5: [176, 250],
+  tabloid: [279.4, 431.8],
+  pocket: [105, 176],
+};
+
 export interface PreambleMeta {
   title?: string;
   author?: string[];
@@ -90,8 +105,33 @@ export function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: PreambleM
   }
 
   // Marcas de corte con el paquete crop (opcional)
+  // Calcula width/height como page-size + 15mm para dejar espacio a marcas
   if (fmt.crop) {
-    preamble.push('\\usepackage[width=150truemm,height=225truemm,center,cam]{crop}');
+    let cropW: number | undefined;
+    let cropH: number | undefined;
+    const ps = fmt.pageSize;
+    if (ps && ps !== 'custom' && PAGE_SIZE_DIMS[ps]) {
+      const [pw, ph] = PAGE_SIZE_DIMS[ps];
+      cropW = pw + 15;
+      cropH = ph + 15;
+    } else if (ps === 'custom' && fmt.geometry) {
+      // Custom: leer paperwidth/paperheight de geometry
+      const gw = fmt.geometry['paperwidth'];
+      const gh = fmt.geometry['paperheight'];
+      if (gw && gh) {
+        const wp = parseFloat(gw);
+        const hp = parseFloat(gh);
+        const unitW = gw.replace(/[\d.]/g, '');
+        const unitH = gh.replace(/[\d.]/g, '');
+        if (unitW === 'mm' && unitH === 'mm' && !isNaN(wp) && !isNaN(hp)) {
+          cropW = wp + 15;
+          cropH = hp + 15;
+        }
+      }
+    }
+    if (cropW && cropH) {
+      preamble.push(`\\usepackage[width=${cropW}truemm,height=${cropH}truemm,center,cam]{crop}`);
+    }
   }
 
   // Construir opciones de geometry desde el mapa de configuracion
