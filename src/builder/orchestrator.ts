@@ -28,6 +28,7 @@ import {
 import { EXPORTABLE_TYPES, type ExportResult } from './export/types.js';
 import { buildDocumentGraph } from './graph-exporter.js';
 import { escapeHtml } from './html.js';
+import { buildLatexPreamble } from './latex-preamble.js';
 import { classifyDocuments } from './pipeline/classify.js';
 import { type ComposeCache, type ComposeStats, composeDocuments, renderBlocksToRegions } from './pipeline/compose.js';
 import { computeAffectedDocs } from './pipeline/dependency-resolver.js';
@@ -493,78 +494,11 @@ async function writeTexFiles(allContextDocs: BuildDocument[], ctx: BuildContext,
     const texPath = join(outDir, `${texSlug}.tex`);
     await mkdir(outDir, { recursive: true });
 
-    const fmt = ctx.siteConfig.format?.pdf;
-    const dc = fmt?.documentclass ?? 'scrbook';
-    const fontSize = fmt?.fontSize ?? '12pt';
-    const sfdefaults = fmt?.sfdefaults ?? false;
-    const twoside = fmt?.sides === 'twoside';
-    const pageSize = fmt?.pageSize;
-    const geometry = fmt?.geometry;
-    const fontFamily = fmt?.fontFamily ?? 'mathptmx';
-    const lineSpacing = fmt?.lineSpacing ?? 1.5;
-
-    // Opciones de clase KOMA-Script
-    const classOpts = [fontSize];
-    classOpts.push(`sfdefaults=${sfdefaults ? 'true' : 'false'}`);
-    if (pageSize) {
-      if (pageSize === 'half-letter') {
-        classOpts.push('paper=13.97cm:21.59cm');
-      } else if (pageSize !== 'custom' && !/^\d/.test(pageSize)) {
-        // Nombres estandar (letter, a4, a1, ...) — paper= se usa en documentclass
-        classOpts.push(`paper=${pageSize}`);
-      }
-      // custom o dimension explicita: no se agrega paper= al documentclass
-    }
-    if (twoside) classOpts.push('twoside');
-
-    const fm = doc.frontmatter;
-    const preamble: string[] = [
-      `\\documentclass[${classOpts.join(',')}]{${dc}}`,
-      '\\usepackage[T1]{fontenc}',
-      '\\usepackage[utf8]{inputenc}',
-      '\\usepackage{textcomp}',
-      '\\usepackage{babel}',
-      '\\babelprovide[import, main]{mexican}',
-      `\\usepackage{${fontFamily}}`,
-      '\\usepackage{longtable}',
-      '\\usepackage{booktabs}',
-      '\\usepackage{array}',
-      '\\usepackage{calc}',
-      '\\usepackage{setspace}',
-      `\\setstretch{${lineSpacing}}`,
-      '\\usepackage[activate={true,nocompatibility},final,tracking=true,kerning=true,spacing=true,factor=1100,stretch=10,shrink=10]{microtype}',
-      '\\usepackage{hyperref}',
-      '\\newcounter{none}',
-      '\\providecommand{\\tightlist}{%',
-      '  \\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}}',
-      '\\raggedbottom',
-      '\\pretolerance=200',
-      '\\tolerance=400',
-      `\\hyphenpenalty=${fmt?.hyphenation ? 100 : 1000000}`,
-      '\\brokenpenalty=1000000',
-      '\\finalhyphendemerits=1000000',
-      '\\doublehyphendemerits=1000000',
-      '\\widowpenalty=1000000',
-      '\\clubpenalty=1000000',
-    ];
-
-    // Construir opciones de geometry desde el mapa de configuracion
-    if (geometry && Object.keys(geometry).length > 0) {
-      const geomOpts: string[] = [];
-      const order = ['paperwidth', 'paperheight', 'top', 'bottom', 'left', 'right', 'headheight', 'headsep', 'footskip'];
-      for (const key of order) {
-        const val = geometry[key];
-        if (val) geomOpts.push(`${key}=${val}`);
-      }
-      preamble.push(`\\usepackage[${geomOpts.join(',')}]{geometry}`);
-    }
-
-    preamble.push('\\begin{document}');
-
-    if (fm?.title) preamble.push(`\\title{${fm.title}}`);
-    if (fm?.author?.length) preamble.push(`\\author{${fm.author.join(' \\and ')}}`);
-    if (fm?.date) preamble.push(`\\date{${fm.date}}`);
-    if (fm?.title) preamble.push('\\maketitle');
+    const preamble = buildLatexPreamble(ctx.siteConfig.format?.pdf, {
+      title: doc.frontmatter?.title as string | undefined,
+      author: doc.frontmatter?.author as string[] | undefined,
+      date: doc.frontmatter?.date as string | undefined,
+    });
 
     const texIntermediateDir = join(ctx.cwd, '.iteraciones', 'tex', dirname(doc.relativePath));
     const intermediatePath = join(texIntermediateDir, `${texSlug}.intermediate.tex`);
