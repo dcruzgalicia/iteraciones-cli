@@ -6,6 +6,13 @@ export type Sides = 'oneside' | 'twoside';
 
 export type ThumbnailMode = boolean | 'responsive';
 
+import { cpus } from 'node:os';
+
+/** Detecta concurrencia automatica: deja un nucleo libre. */
+function detectConcurrency(): number {
+  return Math.max(1, cpus().length - 1);
+}
+
 export const THUMBNAIL_SIZES: Record<string, number> = {
   sm: 320,
   md: 640,
@@ -177,7 +184,7 @@ export const DEFAULT_HTML_FORMAT: HtmlFormatConfig = {
 
 export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   engine: 'pdflatex',
-  concurrency: 2,
+  concurrency: detectConcurrency(),
   hyphenation: false,
   pdfx: false,
   toc: true,
