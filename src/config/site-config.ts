@@ -187,7 +187,7 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   concurrency: detectConcurrency(),
   hyphenation: false,
   pdfx: false,
-  toc: true,
+  toc: false,
   tocDepth: 6,
   pageSize: 'letter',
   fontSize: '12pt',
