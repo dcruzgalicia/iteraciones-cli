@@ -186,11 +186,6 @@ export function assembleExportDocument(
 
   const tocDepth = pdfFormat?.tocDepth;
   const toc = pdfFormat?.toc ?? (tocDepth !== undefined ? tocDepth > 0 : documentclass === 'scrbook');
-  const perFileTopLevel =
-    rawFormatPdf !== undefined && typeof rawFormatPdf['top-level-division'] === 'string'
-      ? (rawFormatPdf['top-level-division'] as 'section' | 'chapter' | 'part')
-      : undefined;
-  const topLevelDivision = perFileTopLevel ?? pdfFormat?.topLevelDivision;
 
   const hasParts = parts !== undefined && parts.length > 0;
 
@@ -207,7 +202,6 @@ export function assembleExportDocument(
     bibliography,
     csl,
     documentclass,
-    topLevelDivision,
     toc,
     tocDepth: tocDepth ?? undefined,
     abstract: typeof rawEditorial['abstract'] === 'string' && rawEditorial['abstract'].trim() ? rawEditorial['abstract'].trim() : undefined,
@@ -628,10 +622,7 @@ export function assembleAuthorExportVariants(
       ? 'scrartcl'
       : undefined;
 
-  const authorTopLevel =
-    rawFormatPdf !== undefined && typeof rawFormatPdf['top-level-division'] === 'string'
-      ? (rawFormatPdf['top-level-division'] as 'section' | 'chapter' | 'part')
-      : undefined;
+  const docClass = perFileDocClass ?? LATEX_CLASS.author;
 
   const metadata: ExportMetadata = {
     title: doc.frontmatter.title || 'Sin título',
@@ -645,8 +636,7 @@ export function assembleAuthorExportVariants(
     cover: typeof rawEditorial['cover'] === 'string' ? safeEditorialPath(rawEditorial['cover'], cwd, 'editorial.cover') : undefined,
     bibliography,
     csl,
-    documentclass: perFileDocClass ?? LATEX_CLASS.author,
-    topLevelDivision: authorTopLevel,
+    documentclass: docClass,
     toc: false,
     abstract: typeof rawEditorial['abstract'] === 'string' && rawEditorial['abstract'].trim() ? rawEditorial['abstract'].trim() : undefined,
     keywords: undefined,

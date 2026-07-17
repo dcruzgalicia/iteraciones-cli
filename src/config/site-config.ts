@@ -53,8 +53,6 @@ export interface PdfFormatConfig {
   pageNumber?: PageNumberPlacement;
   sides?: Sides;
   documentclass?: 'scrartcl' | 'scrbook';
-  /** Division top-level para pandoc: section (default), chapter o part. */
-  topLevelDivision?: 'section' | 'chapter' | 'part';
   sfdefaults?: boolean;
   /**
    * Cuando es true, el estilo plain (usado en primera pagina de contenido

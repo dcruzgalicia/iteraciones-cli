@@ -81,8 +81,6 @@ export interface ExportMetadata {
   /** Ruta al archivo .csl para formato de citas. */
   csl?: string;
   documentclass: 'scrartcl' | 'scrbook';
-  /** Division top-level para pandoc: section (default), chapter o part. */
-  topLevelDivision?: 'section' | 'chapter' | 'part';
   /** Si true, incluye tabla de contenidos (solo scrbook). */
   toc: boolean;
   /** Profundidad del índice (1-5), undefined para comportamiento por defecto. */

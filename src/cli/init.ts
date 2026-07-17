@@ -211,9 +211,7 @@ function buildDefaultConfig(): string {
   lines.push(`    toc: ${yamlBool(pdfCfg.toc!)}`);
   // 14. toc-depth
   lines.push(`    toc-depth: ${yamlValue(pdfCfg.tocDepth!)}`);
-  // 15. top-level-division
-  lines.push('    top-level-division: chapter');
-  // 16. numbering
+  // 15. numbering
   lines.push(`    numbering: ${yamlBool(pdfCfg.numbering!)}`);
   // 17. bibliography
   lines.push(`    bibliography: ${yamlStr(pdfCfg.bibliography!)}`);
