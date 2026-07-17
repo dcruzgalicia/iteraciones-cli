@@ -1,9 +1,9 @@
-import { existsSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import type { CacheManager } from '../../cache/cache-manager.js';
 import { hash } from '../../cache/hasher.js';
-import type { EpubFormatConfig, MarkdownFormatConfig, PdfFormatConfig, ThumbnailMode } from '../../config/site-config.js';
+import type { EpubFormatConfig, HtmlFormatConfig, MarkdownFormatConfig, PdfFormatConfig, ThumbnailMode } from '../../config/site-config.js';
 import { THUMBNAIL_SIZES } from '../../config/site-config.js';
 import { mapWithConcurrency } from '../../output/concurrency.js';
 import type { PluginRegistry } from '../../plugin/registry.js';
@@ -108,6 +108,7 @@ export interface ExportFormatOptions {
   pdf?: PdfFormatConfig;
   epub?: EpubFormatConfig;
   markdown?: MarkdownFormatConfig;
+  html?: HtmlFormatConfig;
 }
 
 export interface ExportRunOptions {
@@ -246,7 +247,7 @@ export async function runExportDocuments(
 ): Promise<ExportResult[]> {
   const { config, outputDir, cwd, lang, concurrency, cliVersion, pandocVersion, cacheManager, registry, pluginFingerprint, stats } = options;
 
-  const hasPdf = config.pdf?.generate === true;
+  const hasPdf = config.pdf?.generate === true || (config.html?.thumbnails ? true : false);
   const hasEpub = config.epub?.generate === true;
   // Semaforo interno que limita las instancias de pdflatex concurrentes sin afectar EPUB.
   // El outer mapWithConcurrency usa el limite general (concurrency); dentro del branch
@@ -467,7 +468,9 @@ export async function runExportDocuments(
       );
     }
 
-    if (config.pdf?.generate) {
+    // Generar PDF si esta configurado o si se necesitan thumbnails para HTML
+    const genPdf = config.pdf?.generate || (config.html?.thumbnails && config.pdf);
+    if (genPdf && config.pdf) {
       const outputPath = `${outputBase}.pdf`;
       const cacheKey = hash(
         sourceHash,
@@ -617,9 +620,13 @@ export async function runExportDocuments(
         }
       }
       if (firstError) throw firstError;
-      if (result.pdfPath && config.pdf?.thumbnails) {
-        const request = resolveThumbnailRequest(config.pdf.thumbnails, summaryBase);
+      if (result.pdfPath && config.html?.thumbnails) {
+        const request = resolveThumbnailRequest(config.html.thumbnails, summaryBase);
         if (request) result.coverPath = await generateCoverImage(result.pdfPath, summaryBase, request);
+        // Eliminar PDF si solo se genero para thumbnails
+        if (!config.pdf?.generate && config.pdf?.force) {
+          rmSync(result.pdfPath);
+        }
       }
       return result;
     }
@@ -702,10 +709,14 @@ export async function runExportDocuments(
     }
     if (firstError) throw firstError;
     // Generar thumbnail(s) JPG de la primera pagina del PDF (si configurado).
-    if (result.pdfPath && config.pdf?.thumbnails) {
-      const request = resolveThumbnailRequest(config.pdf.thumbnails, outputBase);
+    if (result.pdfPath && config.html?.thumbnails) {
+      const request = resolveThumbnailRequest(config.html.thumbnails, outputBase);
       if (request) {
         result.coverPath = await generateCoverImage(result.pdfPath, outputBase, request);
+      }
+      // Eliminar PDF si solo se genero para thumbnails
+      if (!config.pdf?.generate && config.pdf?.force) {
+        rmSync(result.pdfPath);
       }
     }
     return result;

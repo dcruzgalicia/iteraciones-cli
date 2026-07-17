@@ -172,6 +172,7 @@ function buildDefaultConfig(): string {
   lines.push(`    toc-depth: ${DEFAULT_HTML_FORMAT.tocDepth}`);
   lines.push(`    hyphenation: ${yamlBool(DEFAULT_HTML_FORMAT.hyphenation)}`);
   lines.push(`    generate: ${yamlBool(DEFAULT_HTML_FORMAT.generate!)}`);
+  lines.push(`    thumbnails: ${yamlValue(DEFAULT_HTML_FORMAT.thumbnails!)}`);
 
   // pdf — orden explícito de campos
   const pdfCfg = DEFAULT_PDF_FORMAT;
@@ -215,16 +216,16 @@ function buildDefaultConfig(): string {
   lines.push(`    bibliography: ${yamlStr(pdfCfg.bibliography!)}`);
   // 16. csl
   lines.push(`    csl: ${yamlStr(pdfCfg.csl!)}`);
-  // 17. thumbnails
-  lines.push(`    thumbnails: ${yamlValue(pdfCfg.thumbnails!)}`);
-  // 18. respect-header-plain
+  // 17. respect-header-plain
   lines.push('    respect-header-plain: false');
-  // 19. pdfx
+  // 18. pdfx
   lines.push(`    pdfx: ${yamlBool(pdfCfg.pdfx)}`);
-  // 20. crop
+  // 19. crop
   lines.push(`    crop: ${yamlBool(pdfCfg.crop!)}`);
-  // 21. eso-pic
+  // 20. eso-pic
   lines.push(`    eso-pic: ${yamlBool(pdfCfg.esoPic!)}`);
+  // 21. force
+  lines.push(`    force: ${yamlBool(pdfCfg.force!)}`);
 
   // epub
   lines.push('  epub:');
