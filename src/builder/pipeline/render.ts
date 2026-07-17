@@ -183,10 +183,34 @@ export async function renderLatex(
 
     // Paso 4: convertir el AST modificado a LaTeX
     // Los filtros Lua definidos por el usuario se aplican aquí
-    const processedBody = await convertFragment(JSON.stringify(ast), doc.filePath, pool, undefined, luaFilters, 'latex', 'json', [
-      '--top-level-division',
-      'section',
-    ]);
+    const pandocArgs: string[] = ['--top-level-division', 'section'];
+
+    // Auto-descubrir archivos .bib y pasar --biblatex a pandoc
+    const bibFiles: string[] = [];
+    if (cwd) {
+      try {
+        const glob = new Bun.Glob('**/*.bib');
+        for (const file of glob.scanSync({ cwd, absolute: true })) {
+          const rel = file.replace(cwd, '').replace(/^\/+/, '');
+          if (rel.startsWith('node_modules/') || rel.startsWith('.iteraciones/') || rel.startsWith('dist/') || rel.startsWith('.git/')) continue;
+          bibFiles.push(file);
+        }
+      } catch {}
+    }
+    if (bibFiles.length > 0) {
+      pandocArgs.push('--biblatex');
+      for (const bib of bibFiles) {
+        pandocArgs.push('--bibliography', bib);
+      }
+    }
+
+    let processedBody = await convertFragment(JSON.stringify(ast), doc.filePath, pool, undefined, luaFilters, 'latex', 'json', pandocArgs);
+
+    // Si hay citekeys en el body original y existen archivos .bib, agregar printbibliography
+    const hasCitekeys = bibFiles.length > 0 && /@\w+[\w:;#.,(){}'"\s]/.test(doc.body);
+    if (hasCitekeys) {
+      processedBody += '\n\\printbibliography[heading=bibintoc]\n';
+    }
 
     return { ...doc, processedBody };
   });

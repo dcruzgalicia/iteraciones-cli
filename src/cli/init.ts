@@ -133,8 +133,18 @@ const DEFAULT_README = [
   'florece en el aire.',
   ':::',
   '',
+  '## Citas y referencias',
+  '',
+  'Puedes usar citas con pandoc citekeys. Por ejemplo:',
+  '',
+  'Según @ejemplo2024, el uso de citekeys facilita la gestión de referencias.',
+  '',
+  'También puedes usar citas entre corchetes: [@ejemplo2024, p. 42].',
+  '',
+  'Las referencias se generan automáticamente al final del documento.',
+  '',
   '> *Nota: Puedes explorar el código fuente de este README para',
-  '> ver los ejemplos de ::, dictum y verse.*',
+  '> ver los ejemplos de ::, dictum, verse y citas.*',
 ].join('\n');
 
 /**
@@ -306,13 +316,25 @@ function yamlBool(b: boolean): string {
  * Si alguno de los archivos ya existe, lo omite e informa al usuario.
  */
 export async function runInit(cwd: string): Promise<void> {
-  const [configCreated, readmeCreated] = await Promise.all([
+  const DEFAULT_BIB = [
+    '@book{ejemplo2024,',
+    '  author    = {Autor, Nombre del},',
+    '  title     = {T\u00edtulo del libro de ejemplo},',
+    '  year      = {2024},',
+    '  publisher = {Editorial de ejemplo},',
+    '}',
+    '',
+  ].join('\n');
+
+  const [configCreated, readmeCreated, bibCreated] = await Promise.all([
     createExclusive(join(cwd, '_iteraciones.yaml'), buildDefaultConfig()),
     createExclusive(join(cwd, 'README.md'), DEFAULT_README),
+    createExclusive(join(cwd, 'bibliography.bib'), DEFAULT_BIB),
   ]);
 
   process.stdout.write(configCreated ? 'init: creado _iteraciones.yaml\n' : 'init: omitido _iteraciones.yaml (ya existe)\n');
   process.stdout.write(readmeCreated ? 'init: creado README.md\n' : 'init: omitido README.md (ya existe)\n');
+  process.stdout.write(bibCreated ? 'init: creado bibliography.bib\n' : 'init: omitido bibliography.bib (ya existe)\n');
 }
 
 /**
