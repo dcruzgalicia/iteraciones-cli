@@ -159,6 +159,10 @@ export function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: PreambleM
   if (meta?.title) preamble.push('\\maketitle');
 
   // Tabla de contenidos (opcional)
+  // Profundidad del indice (toc-depth) y tabla de contenidos
+  if (fmt.tocDepth !== undefined) {
+    preamble.push(`\\setcounter{tocdepth}{${fmt.tocDepth}}`);
+  }
   if (fmt.toc) {
     preamble.push('\\tableofcontents');
     preamble.push('\\cleardoublepage');
