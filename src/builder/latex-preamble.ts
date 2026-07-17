@@ -99,6 +99,11 @@ export function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: PreambleM
     if (cmd) preamble.push(cmd);
   }
 
+  // Cuadricula de fondo con eso-pic (opcional)
+  if (fmt.esoPic) {
+    preamble.push('\\usepackage[grid]{eso-pic}');
+  }
+
   // PDF/A-1a con el paquete pdfx (opcional)
   if (fmt.pdfx) {
     preamble.push('\\usepackage[x-1a]{pdfx}');

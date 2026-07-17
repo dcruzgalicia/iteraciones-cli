@@ -65,6 +65,8 @@ export interface PdfFormatConfig {
   respectHeaderPlain?: boolean;
   /** Si true, incluye marcas de corte con el paquete crop. */
   crop?: boolean;
+  /** Si true, incluye \usepackage[grid]{eso-pic} para cuadricula de fondo. */
+  esoPic?: boolean;
   /** Si true, genera PDF en el build. */
   generate?: boolean;
   /**
@@ -202,6 +204,7 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   csl: 'apa.csl',
   generate: false,
   crop: false,
+  esoPic: false,
   thumbnails: false,
 };
 
