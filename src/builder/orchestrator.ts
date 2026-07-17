@@ -495,10 +495,11 @@ async function writeTexFiles(allContextDocs: BuildDocument[], ctx: BuildContext,
     const texPath = join(outDir, `${texSlug}.tex`);
     await mkdir(outDir, { recursive: true });
 
-    const preamble = buildLatexPreamble(ctx.siteConfig.format?.pdf, {
+    const preamble = await buildLatexPreamble(ctx.siteConfig.format?.pdf, {
       title: doc.frontmatter?.title as string | undefined,
       author: doc.frontmatter?.author as string[] | undefined,
       date: doc.frontmatter?.date as string | undefined,
+      filePath: doc.filePath,
     });
 
     const texIntermediateDir = join(ctx.cwd, '.iteraciones', 'tex', dirname(doc.relativePath));
