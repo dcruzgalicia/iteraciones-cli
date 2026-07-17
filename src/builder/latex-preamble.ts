@@ -161,6 +161,7 @@ export function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: PreambleM
   // Tabla de contenidos (opcional)
   if (fmt.toc) {
     preamble.push('\\tableofcontents');
+    preamble.push('\\cleardoublepage');
   }
 
   return preamble;
