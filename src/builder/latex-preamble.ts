@@ -123,7 +123,7 @@ export function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: PreambleM
         const hp = parseFloat(gh);
         const unitW = gw.replace(/[\d.]/g, '');
         const unitH = gh.replace(/[\d.]/g, '');
-        if (unitW === 'mm' && unitH === 'mm' && !isNaN(wp) && !isNaN(hp)) {
+        if ((unitW === 'mm' || unitW === 'truemm') && (unitH === 'mm' || unitH === 'truemm') && !isNaN(wp) && !isNaN(hp)) {
           cropW = wp + 15;
           cropH = hp + 15;
         }
