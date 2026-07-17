@@ -53,6 +53,8 @@ export function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: PreambleM
     `\\setstretch{${lineSpacing}}`,
     '\\usepackage[activate={true,nocompatibility},final,tracking=true,kerning=true,spacing=true,factor=1100,stretch=10,shrink=10]{microtype}',
     '\\usepackage{hyperref}',
+    '\\usepackage{scrlayer-scrpage}',
+    '\\clearpairofpagestyles',
     '\\newcounter{none}',
     '\\providecommand{\\tightlist}{%',
     '  \\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}}',
@@ -66,6 +68,21 @@ export function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: PreambleM
     '\\widowpenalty=1000000',
     '\\clubpenalty=1000000',
   ];
+
+  // Configurar numeracion de pagina con scrlayer-scrpage
+  const pageNum = fmt.pageNumber;
+  if (pageNum) {
+    const PAGE_NUMBER_MAP: Record<string, string> = {
+      'header-right': '\\ohead*{\\pagemark}',
+      'header-center': '\\chead*{\\pagemark}',
+      'header-left': '\\ihead*{\\pagemark}',
+      'footer-right': '\\ofoot*{\\pagemark}',
+      'footer-center': '\\cfoot*{\\pagemark}',
+      'footer-left': '\\ifoot*{\\pagemark}',
+    };
+    const cmd = PAGE_NUMBER_MAP[pageNum];
+    if (cmd) preamble.push(cmd);
+  }
 
   // Construir opciones de geometry desde el mapa de configuracion
   if (geometry && Object.keys(geometry).length > 0) {
