@@ -201,10 +201,10 @@ function buildDefaultConfig(): string {
   lines.push(`    font-family: ${yamlStr(pdfCfg.fontFamily!)}`);
   // 10. font-size
   lines.push(`    font-size: ${yamlStr(pdfCfg.fontSize!)}`);
-  // 11. concurrency
-  lines.push(`    concurrency: ${yamlValue(pdfCfg.concurrency)}`);
-  // 12. hyphenation
+  // 11. hyphenation
   lines.push(`    hyphenation: ${yamlBool(pdfCfg.hyphenation)}`);
+  // 12. concurrency
+  lines.push(`    concurrency: ${yamlValue(pdfCfg.concurrency)}`);
   // 13. toc
   lines.push(`    toc: ${yamlBool(pdfCfg.toc!)}`);
   // 14. toc-depth
