@@ -483,7 +483,8 @@ async function runBlocksPrestep(
 async function writeTexFiles(allContextDocs: BuildDocument[], ctx: BuildContext, log: (msg: string) => void): Promise<void> {
   const latexCfg = ctx.siteConfig.format?.latex;
   const pdfCfg = ctx.siteConfig.format?.pdf;
-  const genLatex = pdfCfg?.generate === true && latexCfg?.force !== true ? true : latexCfg?.generate !== false;
+  const needsPdfForThumbnails = ctx.siteConfig.format?.html?.thumbnails && pdfCfg !== undefined;
+  const genLatex = pdfCfg?.generate === true && latexCfg?.force !== true ? true : latexCfg?.generate !== false || needsPdfForThumbnails;
   if (!genLatex) return;
 
   let texWritten = 0;
@@ -865,8 +866,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     };
     const formatCfg = ctx.siteConfig.format;
 
-    // Limpiar .tex si latex.generate=false pero se forzo para PDF
-    const pdfOn = formatCfg?.pdf?.generate === true;
+    // Forzar PDF si se necesitan thumbnails para HTML
+    const needsPdfForThumbnails = formatCfg?.html?.thumbnails && formatCfg?.pdf !== undefined;
+    const pdfOn = formatCfg?.pdf?.generate === true || needsPdfForThumbnails === true;
     const latexForce = formatCfg?.latex?.force === true;
     const latexGen = formatCfg?.latex?.generate === false;
     const cleanupTex = pdfOn && latexForce && latexGen;
@@ -931,7 +933,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     }
 
     // ── Fase pdf ──
-    if (formatCfg?.pdf?.generate && !noExport) {
+    if (pdfOn && !noExport) {
       let pdfTotal = 0;
       for (const type of EXPORTABLE_TYPES) {
         pdfTotal += countExportDocs(type);
