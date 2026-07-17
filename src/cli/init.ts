@@ -186,33 +186,33 @@ function buildDefaultConfig(): string {
   lines.push(`    sfdefaults: ${yamlBool(pdfCfg.sfdefaults!)}`);
   // 5. page-size (usar 'custom' para tamano personalizado en geometry)
   lines.push(`    page-size: ${yamlStr(pdfCfg.pageSize!)}`);
-  // 6. geometry (opciones para el paquete LaTeX geometry)
+  // 6. sides
+  lines.push(`    sides: ${yamlStr(pdfCfg.sides!)}`);
+  // 7. geometry (opciones para el paquete LaTeX geometry)
   lines.push('    geometry:');
   const geomOrder = ['paperwidth', 'paperheight', 'top', 'bottom', 'left', 'right', 'headheight', 'headsep', 'footskip'];
   for (const key of geomOrder) {
     const val = pdfCfg.geometry?.[key];
     if (val) lines.push(`      ${key}: ${yamlStr(val)}`);
   }
-  // 7. line-spacing
+  // 8. line-spacing
   lines.push(`    line-spacing: ${yamlValue(pdfCfg.lineSpacing!)}`);
-  // 8. font-family
+  // 9. font-family
   lines.push(`    font-family: ${yamlStr(pdfCfg.fontFamily!)}`);
-  // 9. font-size
+  // 10. font-size
   lines.push(`    font-size: ${yamlStr(pdfCfg.fontSize!)}`);
-  // 10. concurrency
+  // 11. concurrency
   lines.push(`    concurrency: ${yamlValue(pdfCfg.concurrency)}`);
-  // 11. hyphenation
+  // 12. hyphenation
   lines.push(`    hyphenation: ${yamlBool(pdfCfg.hyphenation)}`);
-  // 12. toc
+  // 13. toc
   lines.push(`    toc: ${yamlBool(pdfCfg.toc!)}`);
-  // 13. toc-depth
+  // 14. toc-depth
   lines.push(`    toc-depth: ${yamlValue(pdfCfg.tocDepth!)}`);
-  // 14. top-level-division
+  // 15. top-level-division
   lines.push('    top-level-division: chapter');
-  // 15. page-number
+  // 16. page-number
   lines.push(`    page-number: ${yamlStr(pdfCfg.pageNumber!)}`);
-  // 16. sides
-  lines.push(`    sides: ${yamlStr(pdfCfg.sides!)}`);
   // 17. numbering
   lines.push(`    numbering: ${yamlBool(pdfCfg.numbering!)}`);
   // 18. bibliography
