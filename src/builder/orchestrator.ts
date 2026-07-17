@@ -334,15 +334,18 @@ function resolveGlobalExportPaths(ctx: BuildContext): {
   globalBibliography?: string;
   globalCsl?: string;
 } {
-  const pdfCfg = ctx.siteConfig.format?.pdf;
-  if (!pdfCfg) return {};
   const cwd = ctx.cwd;
-  const bibPath = pdfCfg.bibliography ? join(cwd, pdfCfg.bibliography) : undefined;
-  const cslPath = pdfCfg.csl ? join(cwd, pdfCfg.csl) : undefined;
-  return {
-    globalBibliography: bibPath && existsSync(bibPath) ? bibPath : undefined,
-    globalCsl: cslPath && existsSync(cslPath) ? cslPath : undefined,
-  };
+  let globalBibliography: string | undefined;
+  try {
+    const glob = new Bun.Glob('**/*.bib');
+    for (const file of glob.scanSync({ cwd, absolute: true })) {
+      const rel = file.replace(cwd, '').replace(/^\/+/, '');
+      if (rel.startsWith('node_modules/') || rel.startsWith('.iteraciones/') || rel.startsWith('dist/') || rel.startsWith('.git/')) continue;
+      globalBibliography = file;
+      break;
+    }
+  } catch {}
+  return { globalBibliography, globalCsl: undefined };
 }
 
 async function runPrimaryRender(
@@ -500,6 +503,7 @@ async function writeTexFiles(allContextDocs: BuildDocument[], ctx: BuildContext,
       author: doc.frontmatter?.author as string[] | undefined,
       date: doc.frontmatter?.date as string | undefined,
       filePath: doc.filePath,
+      cwd: ctx.cwd,
     });
 
     const texIntermediateDir = join(ctx.cwd, '.iteraciones', 'tex', dirname(doc.relativePath));

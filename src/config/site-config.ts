@@ -53,10 +53,9 @@ export interface PdfFormatConfig {
   toc?: boolean;
   tocDepth?: number;
   secNumDepth?: number;
+  numbering?: boolean;
   hyphenation: boolean;
   pdfx: boolean;
-  bibliography?: string;
-  csl?: string;
   pageSize?: string;
   fontSize?: string;
   fontFamily?: string;
@@ -217,8 +216,6 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   pageNumber: 'header-right',
   sides: 'twoside',
   secNumDepth: 1,
-  bibliography: 'bibliography.bib',
-  csl: 'apa.csl',
   generate: false,
   crop: false,
   esoPic: false,

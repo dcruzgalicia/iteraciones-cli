@@ -29,6 +29,24 @@ export interface PreambleMeta {
   date?: string;
   filePath?: string;
   showDate?: boolean;
+  /** Directorio raiz del proyecto para descubrir archivos .bib. */
+  cwd?: string;
+}
+
+/** Descubre archivos .bib en el proyecto (excluye node_modules, .iteraciones, dist). */
+function discoverBibFiles(cwd: string): string[] {
+  const results: string[] = [];
+  try {
+    const glob = new Bun.Glob('**/*.bib');
+    for (const file of glob.scanSync({ cwd, absolute: true })) {
+      const rel = file.replace(cwd, '').replace(/^\/+/, '');
+      if (rel.startsWith('node_modules/') || rel.startsWith('.iteraciones/') || rel.startsWith('dist/') || rel.startsWith('.git/')) continue;
+      results.push(file);
+    }
+  } catch {
+    // Si falla el escaneo, continuar sin archivos .bib
+  }
+  return results.sort();
 }
 
 export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: PreambleMeta): Promise<string[]> {
@@ -124,8 +142,8 @@ export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: Pre
       cropH = ph + 15;
     } else if (ps === 'custom' && fmt.geometry) {
       // Custom: leer paperwidth/paperheight de geometry
-      const gw = fmt.geometry['paperwidth'];
-      const gh = fmt.geometry['paperheight'];
+      const gw = fmt.geometry.paperwidth;
+            const gh = fmt.geometry.paperheight;
       if (gw && gh) {
         const wp = parseFloat(gw);
         const hp = parseFloat(gh);
@@ -151,6 +169,18 @@ export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: Pre
       if (val) geomOpts.push(`${key}=${val}`);
     }
     preamble.push(`\\usepackage[${geomOpts.join(',')}]{geometry}`);
+  }
+
+  // biblatex con auto-descubrimiento de archivos .bib
+  const cwd = meta?.cwd;
+  if (cwd) {
+    const bibFiles = discoverBibFiles(cwd);
+    if (bibFiles.length > 0) {
+      preamble.push('\\usepackage[style=apa]{biblatex}');
+      for (const bib of bibFiles) {
+        preamble.push(`\\addbibresource{${bib}}`);
+      }
+    }
   }
 
   preamble.push('\\begin{document}');

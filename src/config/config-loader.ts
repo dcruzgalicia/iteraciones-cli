@@ -169,10 +169,6 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
 
   const hyphenation = typeof obj.hyphenation === 'boolean' ? obj.hyphenation : DEFAULT_PDF_FORMAT.hyphenation;
   const pdfx = typeof obj.pdfx === 'boolean' ? obj.pdfx : DEFAULT_PDF_FORMAT.pdfx;
-  const rawBib = obj.bibliography;
-  const bibliography = typeof rawBib === 'string' && rawBib.trim() ? rawBib.trim() : rawBib === '' ? undefined : DEFAULT_PDF_FORMAT.bibliography;
-  const rawCsl = obj.csl;
-  const csl = typeof rawCsl === 'string' && rawCsl.trim() ? rawCsl.trim() : rawCsl === '' ? undefined : DEFAULT_PDF_FORMAT.csl;
 
   const toc = typeof obj.toc === 'boolean' ? obj.toc : DEFAULT_PDF_FORMAT.toc;
   const rawTocDepth = obj['toc-depth'];
@@ -276,8 +272,6 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     toc,
     tocDepth,
     secNumDepth,
-    bibliography,
-    csl,
     pageSize,
     fontSize,
     fontFamily,
