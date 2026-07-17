@@ -219,16 +219,16 @@ function buildDefaultConfig(): string {
   lines.push(`    bibliography: ${yamlStr(pdfCfg.bibliography!)}`);
   // 18. csl
   lines.push(`    csl: ${yamlStr(pdfCfg.csl!)}`);
-  // 19. pdfx
-  lines.push(`    pdfx: ${yamlBool(pdfCfg.pdfx)}`);
-  // 20. crop
-  lines.push(`    crop: ${yamlBool(pdfCfg.crop!)}`);
-  // 21. eso-pic
-  lines.push(`    eso-pic: ${yamlBool(pdfCfg.esoPic!)}`);
-  // 22. thumbnails
+  // 19. thumbnails
   lines.push(`    thumbnails: ${yamlValue(pdfCfg.thumbnails!)}`);
-  // 23. respect-header-plain
+  // 20. respect-header-plain
   lines.push('    respect-header-plain: false');
+  // 21. pdfx
+  lines.push(`    pdfx: ${yamlBool(pdfCfg.pdfx)}`);
+  // 22. crop
+  lines.push(`    crop: ${yamlBool(pdfCfg.crop!)}`);
+  // 23. eso-pic
+  lines.push(`    eso-pic: ${yamlBool(pdfCfg.esoPic!)}`);
 
   // epub
   lines.push('  epub:');
