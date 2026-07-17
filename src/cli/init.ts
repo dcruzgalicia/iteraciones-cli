@@ -223,9 +223,11 @@ function buildDefaultConfig(): string {
   lines.push(`    pdfx: ${yamlBool(pdfCfg.pdfx)}`);
   // 20. crop
   lines.push(`    crop: ${yamlBool(pdfCfg.crop!)}`);
-  // 21. thumbnails
+  // 21. eso-pic
+  lines.push(`    eso-pic: ${yamlBool(pdfCfg.esoPic!)}`);
+  // 22. thumbnails
   lines.push(`    thumbnails: ${yamlValue(pdfCfg.thumbnails!)}`);
-  // 22. respect-header-plain
+  // 23. respect-header-plain
   lines.push('    respect-header-plain: false');
 
   // epub
