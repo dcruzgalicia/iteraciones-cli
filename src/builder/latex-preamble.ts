@@ -77,8 +77,7 @@ export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: Pre
     '\\usepackage[T1]{fontenc}',
     '\\usepackage[utf8]{inputenc}',
     '\\usepackage{textcomp}',
-    '\\usepackage{babel}',
-    '\\babelprovide[import, main]{mexican}',
+    '\\usepackage[spanish,mexico-com,es-noshorthands,es-noindentfirst]{babel}',
     `\\usepackage{${fontFamily}}`,
     '\\usepackage{longtable}',
     '\\usepackage{booktabs}',
@@ -176,6 +175,7 @@ export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: Pre
   if (cwd) {
     const bibFiles = discoverBibFiles(cwd);
     if (bibFiles.length > 0) {
+      preamble.push('\\usepackage{csquotes}');
       preamble.push('\\usepackage[style=apa]{biblatex}');
       for (const bib of bibFiles) {
         preamble.push(`\\addbibresource{${bib}}`);

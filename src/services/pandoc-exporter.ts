@@ -398,16 +398,46 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
     return { stdout, stderr, exitCode };
   }
 
-  // Primera ejecucion: genera .aux, .toc
+  // Secuencia de compilacion:
+  //   1. pdflatex → genera .aux, .toc
+  //   2. biber    → procesa citas biblatex (si hay referencias en .aux)
+  //   3. pdflatex → incorpora .bbl y resuelve ToC
+  //   4. pdflatex → resolve referencias cruzadas
   let { stdout, stderr, exitCode } = await runPdfLatex();
 
-  // Si hay ToC, ejecutar segunda vez para que 	ableofcontents lea el .toc
-  const needsToc = pdfFormat?.toc !== false;
-  if (needsToc && exitCode === 0) {
-    const secondRun = await runPdfLatex();
-    stdout = secondRun.stdout;
-    stderr = secondRun.stderr;
-    exitCode = secondRun.exitCode;
+  // Verificar si biblatex/biber es necesario (el .aux contiene referencias a .bib)
+  let needsBiber = false;
+  const auxPath = join(buildRoot, `${slug}.aux`);
+  try {
+    const auxContent = await Bun.file(auxPath).text();
+    needsBiber = auxContent.includes('\\bibdata') || auxContent.includes('\\abx@aux@');
+  } catch {}
+
+  if (needsBiber && exitCode === 0) {
+    const biberProc = Bun.spawn(['biber', '--dir', buildRoot, slug], {
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    const [biberStderr, biberExit] = await Promise.all([
+      new Response(biberProc.stderr).text(),
+      biberProc.exited,
+    ]);
+    if (biberExit !== 0) {
+      stderr += '\n[biber] ' + biberStderr;
+    }
+  }
+
+  // Ejecuciones adicionales: pdflatex → biber → pdflatex → pdflatex
+  const needsMoreRuns = pdfFormat?.toc !== false || needsBiber;
+  let runs = 0;
+  // Despues del primer pdflatex: si hay ToC o biber, 2 pasadas mas; si no, 0
+  const maxRuns = needsMoreRuns ? 2 : 0;
+  while (runs < maxRuns && exitCode === 0) {
+    const nextRun = await runPdfLatex();
+    stdout = nextRun.stdout;
+    stderr = nextRun.stderr;
+    exitCode = nextRun.exitCode;
+    runs++;
   }
 
   // Copiar PDF generado a destino
@@ -420,7 +450,7 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
   }
 
   // Limpiar auxiliares de compilacion (conservar solo el .tex en tex/)
-  for (const ext of ['.pdf', '.aux', '.log', '.out', '.toc']) {
+  for (const ext of ['.pdf', '.aux', '.log', '.out', '.toc', '.bbl', '.bcf', '.blg', '.run.xml']) {
     await rm(join(buildRoot, `${slug}${ext}`)).catch(() => {});
   }
 
