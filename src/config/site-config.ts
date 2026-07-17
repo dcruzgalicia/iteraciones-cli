@@ -35,7 +35,17 @@ export interface HtmlFormatConfig {
   hyphenation: boolean;
   /** Si true, genera HTML en el build. */
   generate?: boolean;
+  /**
+   * Genera thumbnails JPG de la primera pagina del PDF.
+   * - false: no generar
+   * - true: generar un solo JPG de 1200px (OG image)
+   'responsive': generar sm (320), md (640), lg (1200), xl (2400)
+*/
+  thumbnails?: ThumbnailMode;
 }
+
+/** Controla la eliminacion de PDF tras generar thumbnails. */
+export type PdfForceMode = boolean;
 
 export interface PdfFormatConfig {
   engine: 'pdflatex';
@@ -75,12 +85,11 @@ export interface PdfFormatConfig {
   /** Si true, genera PDF en el build. */
   generate?: boolean;
   /**
-   * Modo de generacion de thumbnails del PDF:
-   * - false: no generar
-   * - true: generar un solo JPG de 1200px (estandar Open Graph)
-   * - 'responsive': generar sm (320), md (640), lg (1200), xl (2400)
+   * Si false (default): cuando html.thumbnails=true, pdf.generate se trata como true
+   * aunque este configurado como false (los thumbnails necesitan el PDF).
+   * Si true: respeta el valor exacto de generate (elimina PDF tras thumbnails).
    */
-  thumbnails?: ThumbnailMode;
+  force?: boolean;
 }
 
 export interface EpubFormatConfig {
@@ -180,6 +189,7 @@ export const DEFAULT_HTML_FORMAT: HtmlFormatConfig = {
   tocDepth: 6,
   hyphenation: false,
   generate: false,
+  thumbnails: false,
 };
 
 export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
@@ -210,7 +220,7 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   generate: false,
   crop: false,
   esoPic: false,
-  thumbnails: false,
+  force: false,
 };
 
 export const DEFAULT_EPUB_FORMAT: EpubFormatConfig = {

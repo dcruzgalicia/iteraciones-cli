@@ -126,10 +126,14 @@ function parseHtmlFormatConfig(raw: unknown): HtmlFormatConfig | undefined {
     typeof rawTocDepth === 'number' && Number.isInteger(rawTocDepth) && rawTocDepth >= 1 && rawTocDepth <= 6
       ? rawTocDepth
       : DEFAULT_HTML_FORMAT.tocDepth;
+
   const hyphenation = typeof obj.hyphenation === 'boolean' ? obj.hyphenation : DEFAULT_HTML_FORMAT.hyphenation;
   const generate = typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_HTML_FORMAT.generate;
+  const rawThumbnails = obj.thumbnails;
+  const thumbnails =
+    rawThumbnails === 'responsive' ? 'responsive' : typeof rawThumbnails === 'boolean' ? rawThumbnails : DEFAULT_HTML_FORMAT.thumbnails;
 
-  return { theme, accent, math, toc, tocDepth, hyphenation, generate };
+  return { theme, accent, math, toc, tocDepth, hyphenation, generate, thumbnails };
 }
 
 const CUSTOM_PAGE_SIZE_RE = /^\d+(\.\d+)?(cm|mm|in|pt|truemm),\d+(\.\d+)?(cm|mm|in|pt|truemm)$/;
@@ -286,7 +290,7 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     crop,
     esoPic,
     generate: typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_PDF_FORMAT.generate,
-    thumbnails: typeof obj.thumbnails === 'boolean' ? obj.thumbnails : obj.thumbnails === 'responsive' ? 'responsive' : DEFAULT_PDF_FORMAT.thumbnails,
+    force: typeof obj.force === 'boolean' ? obj.force : DEFAULT_PDF_FORMAT.force,
   };
 }
 
