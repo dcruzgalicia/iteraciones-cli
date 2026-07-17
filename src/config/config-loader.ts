@@ -132,7 +132,7 @@ function parseHtmlFormatConfig(raw: unknown): HtmlFormatConfig | undefined {
   return { theme, accent, math, toc, tocDepth, hyphenation, generate };
 }
 
-const CUSTOM_PAGE_SIZE_RE = /^\d+(\.\d+)?(cm|mm|in|pt),\d+(\.\d+)?(cm|mm|in|pt)$/;
+const CUSTOM_PAGE_SIZE_RE = /^\d+(\.\d+)?(cm|mm|in|pt|truemm),\d+(\.\d+)?(cm|mm|in|pt|truemm)$/;
 
 const KNOWN_PAGE_SIZES = new Set<string>(['half-letter', 'letter', 'legal', 'executive', 'a3', 'a4', 'a5', 'b4', 'b5', 'tabloid', 'pocket']);
 
@@ -211,7 +211,7 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     const parsed: Record<string, string> = {};
     for (const key of validKeys) {
       const val = g[key];
-      if (typeof val === 'string' && /^\d+(\.\d+)?(cm|mm|in|pt)$/.test(val)) {
+      if (typeof val === 'string' && /^\d+(\.\d+)?(cm|mm|in|pt|truemm)$/.test(val)) {
         parsed[key] = val;
       }
     }
