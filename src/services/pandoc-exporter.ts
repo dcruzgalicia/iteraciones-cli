@@ -2,7 +2,6 @@ import { existsSync } from 'node:fs';
 import { mkdir, rm } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import type { ExportDocument } from '../builder/export/types.js';
-import { buildLatexPreamble } from '../builder/latex-preamble.js';
 import type { PdfFormatConfig } from '../config/site-config.js';
 import { DEFAULT_PDF_FORMAT } from '../config/site-config.js';
 import { ConfigError, PandocError } from '../errors.js';
@@ -363,32 +362,34 @@ export async function convertToMarkdown(doc: ExportDocument, outputPath: string)
 }
 
 /**
- * Convierte un ExportDocument a PDF compilando con pdflatex.
- * Usa el preámbulo de buildLatexPreamble y el body del ExportDocument.
- * El .tex completo se guarda en .iteraciones/pdf-build/ como parte de los
- * intermedios del proceso (junto a .intermediate.tex en .iteraciones/tex/).
+ * Convierte un ExportDocument a PDF compilando el .full.tex de
+ * .iteraciones/tex/ con pdflatex. La unica copia del .tex completo
+ * es .iteraciones/tex/<slug>.full.tex (junto a .intermediate.tex).
  */
 export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?: string, pdfFormat?: PdfFormatConfig): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
-  // Construir preámbulo usando la función compartida
-  const pre = buildLatexPreamble(pdfFormat, {
-    title: doc.metadata.title,
-    author: doc.metadata.author,
-    date: doc.metadata.date,
-  });
-  const texContent = [...pre, '', doc.body, '', '\\end{document}'].join('\n');
+  if (!cwd) {
+    throw new PandocError('convertToPdf: cwd es requerido para localizar .full.tex', doc.filePath, '');
+  }
 
-  // Usar .iteraciones/pdf-build/ para compilar (evita /tmp y mantiene
-  // el .tex completo accesible para revision junto a .intermediate.tex)
-  const buildRoot = cwd ? join(cwd, '.iteraciones', 'pdf-build') : '/tmp/iteraciones-pdf';
+  const slug = doc.slug ?? basename(doc.relativePath, '.md');
+  const texRelDir = dirname(doc.relativePath);
+  const fullTexPath = join(cwd, '.iteraciones', 'tex', texRelDir, `${slug}.full.tex`);
+
+  const texContent = await Bun.file(fullTexPath)
+    .text()
+    .catch(() => {
+      throw new PandocError(`convertToPdf: no se encontro ${fullTexPath}`, doc.filePath, '');
+    });
+
+  // Compilar desde .iteraciones/pdf-build/ con -output-directory
+  // para mantener los auxiliares (.aux, .log, .out) separados de .full.tex
   const engine = pdfFormat?.engine ?? 'pdflatex';
-  const slug = basename(outputPath, '.pdf');
+  const buildRoot = join(cwd, '.iteraciones', 'pdf-build');
   await mkdir(buildRoot, { recursive: true });
-  const texPath = join(buildRoot, `${slug}.tex`);
-  await Bun.write(texPath, texContent);
 
-  const proc = Bun.spawn([engine, '-interaction=nonstopmode', '-output-directory', buildRoot, texPath], {
+  const proc = Bun.spawn([engine, '-jobname', slug, '-interaction=nonstopmode', '-output-directory', buildRoot, fullTexPath], {
     stdout: 'pipe',
     stderr: 'pipe',
   });
@@ -404,7 +405,7 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
     await Bun.write(outputPath, Bun.file(pdfPath));
   }
 
-  // Limpiar auxiliares de compilacion (conservar .tex para revision)
+  // Limpiar auxiliares de compilacion (conservar solo el .tex en tex/)
   for (const ext of ['.pdf', '.aux', '.log', '.out']) {
     await rm(join(buildRoot, `${slug}${ext}`)).catch(() => {});
   }
