@@ -84,6 +84,11 @@ export function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: PreambleM
     if (cmd) preamble.push(cmd);
   }
 
+  // PDF/A-1a con el paquete pdfx (opcional)
+  if (fmt.pdfx) {
+    preamble.push('\\usepackage[x-1a]{pdfx}');
+  }
+
   // Construir opciones de geometry desde el mapa de configuracion
   if (geometry && Object.keys(geometry).length > 0) {
     const geomOpts: string[] = [];
