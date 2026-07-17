@@ -63,6 +63,11 @@ export interface PdfFormatConfig {
    * Solo aplica cuando page-number es header-*. Por defecto false.
    */
   respectHeaderPlain?: boolean;
+  /**
+   * Si true, incluye \usepackage{eso-pic} en el preambulo.
+   * eso-pic permite agregar contenido grafico como fondo o superposicion.
+   */
+  esoPic?: boolean;
   /** Si true, genera PDF en el build. */
   generate?: boolean;
   /**
@@ -199,6 +204,7 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   bibliography: 'bibliography.bib',
   csl: 'apa.csl',
   generate: false,
+  esoPic: false,
   thumbnails: false,
 };
 

@@ -89,6 +89,11 @@ export function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: PreambleM
     preamble.push('\\usepackage[x-1a]{pdfx}');
   }
 
+  // eso-pic: permite agregar contenido grafico como fondo/superposicion (opcional)
+  if (fmt.esoPic) {
+    preamble.push('\\usepackage{eso-pic}');
+  }
+
   // Construir opciones de geometry desde el mapa de configuracion
   if (geometry && Object.keys(geometry).length > 0) {
     const geomOpts: string[] = [];

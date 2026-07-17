@@ -221,9 +221,11 @@ function buildDefaultConfig(): string {
   lines.push(`    csl: ${yamlStr(pdfCfg.csl!)}`);
   // 19. pdfx
   lines.push(`    pdfx: ${yamlBool(pdfCfg.pdfx)}`);
-  // 20. thumbnails
+  // 20. eso-pic
+  lines.push(`    eso-pic: ${yamlBool(pdfCfg.esoPic!)}`);
+  // 21. thumbnails
   lines.push(`    thumbnails: ${yamlValue(pdfCfg.thumbnails!)}`);
-  // 21. respect-header-plain
+  // 22. respect-header-plain
   lines.push('    respect-header-plain: false');
 
   // epub
