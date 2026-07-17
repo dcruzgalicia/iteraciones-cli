@@ -189,7 +189,7 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
       pageSize = rawPageSize;
     }
   }
-  if (obj['page-size'] !== undefined && rawPageSize !== undefined && rawPageSize.trim() === '') {
+  if (typeof rawPageSize === 'string' && rawPageSize.trim() === '') {
     process.stderr.write(`[iteraciones] format.pdf.page-size: no puede estar vacio.\n`);
   }
   pageSize ??= DEFAULT_PDF_FORMAT.pageSize;

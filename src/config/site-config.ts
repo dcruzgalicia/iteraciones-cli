@@ -194,7 +194,7 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   },
   lineSpacing: 1.5,
   pageNumber: 'header-right',
-  sides: 'oneside',
+  sides: 'twoside',
   numbering: false,
   bibliography: 'bibliography.bib',
   csl: 'apa.csl',
