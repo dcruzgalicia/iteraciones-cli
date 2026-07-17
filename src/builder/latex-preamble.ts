@@ -157,6 +157,7 @@ export function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: PreambleM
   if (meta?.author?.length) preamble.push(`\\author{${meta.author.join(' \\and ')}}`);
   if (meta?.date) preamble.push(`\\date{${meta.date}}`);
   if (meta?.title) preamble.push('\\maketitle');
+  preamble.push('\\cleardoublepage');
 
   // Tabla de contenidos (opcional)
   // Profundidad de numeracion de secciones (sec-num-depth)
