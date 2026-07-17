@@ -107,6 +107,7 @@ export function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: PreambleM
   // PDF/A-1a con el paquete pdfx (opcional)
   if (fmt.pdfx) {
     preamble.push('\\usepackage[x-1a]{pdfx}');
+    preamble.push('\\pdfpagesattr{}');
   }
 
   // Marcas de corte con el paquete crop (opcional)
