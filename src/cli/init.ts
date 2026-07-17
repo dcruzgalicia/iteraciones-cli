@@ -205,27 +205,25 @@ function buildDefaultConfig(): string {
   lines.push(`    font-size: ${yamlStr(pdfCfg.fontSize!)}`);
   // 11. hyphenation
   lines.push(`    hyphenation: ${yamlBool(pdfCfg.hyphenation)}`);
-  // 12. concurrency
-  lines.push(`    concurrency: ${yamlValue(pdfCfg.concurrency)}`);
-  // 13. toc
+  // 12. toc
   lines.push(`    toc: ${yamlBool(pdfCfg.toc!)}`);
-  // 14. toc-depth
+  // 13. toc-depth
   lines.push(`    toc-depth: ${yamlValue(pdfCfg.tocDepth!)}`);
-  // 15. numbering
+  // 14. numbering
   lines.push(`    numbering: ${yamlBool(pdfCfg.numbering!)}`);
-  // 17. bibliography
+  // 15. bibliography
   lines.push(`    bibliography: ${yamlStr(pdfCfg.bibliography!)}`);
-  // 18. csl
+  // 16. csl
   lines.push(`    csl: ${yamlStr(pdfCfg.csl!)}`);
-  // 19. thumbnails
+  // 17. thumbnails
   lines.push(`    thumbnails: ${yamlValue(pdfCfg.thumbnails!)}`);
-  // 20. respect-header-plain
+  // 18. respect-header-plain
   lines.push('    respect-header-plain: false');
-  // 21. pdfx
+  // 19. pdfx
   lines.push(`    pdfx: ${yamlBool(pdfCfg.pdfx)}`);
-  // 22. crop
+  // 20. crop
   lines.push(`    crop: ${yamlBool(pdfCfg.crop!)}`);
-  // 23. eso-pic
+  // 21. eso-pic
   lines.push(`    eso-pic: ${yamlBool(pdfCfg.esoPic!)}`);
 
   // epub
