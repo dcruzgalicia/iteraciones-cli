@@ -42,7 +42,7 @@ export interface PdfFormatConfig {
   concurrency: number;
   toc?: boolean;
   tocDepth?: number;
-  numbering?: boolean;
+  secNumDepth?: number;
   hyphenation: boolean;
   pdfx: boolean;
   bibliography?: string;
@@ -204,7 +204,7 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   lineSpacing: 1.5,
   pageNumber: 'header-right',
   sides: 'twoside',
-  numbering: false,
+  secNumDepth: 1,
   bibliography: 'bibliography.bib',
   csl: 'apa.csl',
   generate: false,
