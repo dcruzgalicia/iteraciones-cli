@@ -263,6 +263,7 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
 
   const sfdefaults = typeof obj.sfdefaults === 'boolean' ? obj.sfdefaults : undefined;
 
+  const showDate = typeof obj['show-date'] === 'boolean' ? obj['show-date'] : DEFAULT_PDF_FORMAT.showDate;
   const respectHeaderPlain = typeof obj['respect-header-plain'] === 'boolean' ? obj['respect-header-plain'] : DEFAULT_PDF_FORMAT.respectHeaderPlain;
   const crop = typeof obj.crop === 'boolean' ? obj.crop : DEFAULT_PDF_FORMAT.crop;
   const esoPic = typeof obj['eso-pic'] === 'boolean' ? obj['eso-pic'] : DEFAULT_PDF_FORMAT.esoPic;
@@ -286,6 +287,7 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     sides,
     documentclass,
     sfdefaults,
+    showDate,
     respectHeaderPlain,
     crop,
     esoPic,
