@@ -188,7 +188,7 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   hyphenation: false,
   pdfx: false,
   toc: false,
-  tocDepth: 6,
+  tocDepth: 1,
   pageSize: 'letter',
   fontSize: '12pt',
   fontFamily: 'mathptmx',
