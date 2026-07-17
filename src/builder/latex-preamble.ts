@@ -159,6 +159,11 @@ export function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: PreambleM
   if (meta?.title) preamble.push('\\maketitle');
 
   // Tabla de contenidos (opcional)
+  // Profundidad de numeracion de secciones (sec-num-depth)
+  if (fmt.secNumDepth !== undefined) {
+    preamble.push(`\\setcounter{secnumdepth}{${fmt.secNumDepth}}`);
+  }
+
   // Profundidad del indice (toc-depth) y tabla de contenidos
   if (fmt.tocDepth !== undefined) {
     preamble.push(`\\setcounter{tocdepth}{${fmt.tocDepth}}`);

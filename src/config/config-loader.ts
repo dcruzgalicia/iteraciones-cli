@@ -229,7 +229,11 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     process.stderr.write(`[iteraciones] format.pdf.line-spacing: debe ser un numero positivo.\n`);
   }
 
-  const numbering = typeof obj.numbering === 'boolean' ? obj.numbering : DEFAULT_PDF_FORMAT.numbering;
+  const rawSecNumDepth = obj['sec-num-depth'];
+  const secNumDepth =
+    typeof rawSecNumDepth === 'number' && Number.isInteger(rawSecNumDepth) && rawSecNumDepth >= -2 && rawSecNumDepth <= 5
+      ? rawSecNumDepth
+      : DEFAULT_PDF_FORMAT.secNumDepth;
 
   const rawPageNumber = obj['page-number'];
   const isPageNumberValid = typeof rawPageNumber === 'string' && KNOWN_PAGE_NUMBER_PLACEMENTS.has(rawPageNumber);
@@ -266,7 +270,7 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     pdfx,
     toc,
     tocDepth,
-    numbering,
+    secNumDepth,
     bibliography,
     csl,
     pageSize,

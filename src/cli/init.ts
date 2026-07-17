@@ -209,8 +209,8 @@ function buildDefaultConfig(): string {
   lines.push(`    toc: ${yamlBool(pdfCfg.toc!)}`);
   // 13. toc-depth
   lines.push(`    toc-depth: ${yamlValue(pdfCfg.tocDepth!)}`);
-  // 14. numbering
-  lines.push(`    numbering: ${yamlBool(pdfCfg.numbering!)}`);
+  // 14. sec-num-depth
+  lines.push(`    sec-num-depth: ${yamlValue(pdfCfg.secNumDepth!)}`);
   // 15. bibliography
   lines.push(`    bibliography: ${yamlStr(pdfCfg.bibliography!)}`);
   // 16. csl
