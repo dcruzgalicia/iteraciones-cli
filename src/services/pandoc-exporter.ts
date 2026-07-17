@@ -363,18 +363,15 @@ export async function convertToMarkdown(doc: ExportDocument, outputPath: string)
 }
 
 /**
- * Convierte un ExportDocument a PDF compilando el .tex intermedio con pdflatex.
- * El body del documento ya es LaTeX (desde processedBody). Se construye el
- * documento completo con preámbulo y se compila con pdflatex.
- *
- * @param doc        Documento ensamblado listo para exportar.
- * @param outputPath Ruta absoluta del archivo PDF de salida.
- * @param cwd        Directorio raíz del proyecto; para resolver rutas de bibliografía.
+ * Convierte un ExportDocument a PDF compilando con pdflatex.
+ * Usa el preámbulo de buildLatexPreamble y el body del ExportDocument.
+ * El .tex completo se guarda en .iteraciones/pdf-build/ como parte de los
+ * intermedios del proceso (junto a .intermediate.tex en .iteraciones/tex/).
  */
-export async function convertToPdf(doc: ExportDocument, outputPath: string, _cwd?: string, pdfFormat?: PdfFormatConfig): Promise<void> {
+export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?: string, pdfFormat?: PdfFormatConfig): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
-  // Construir preámbulo usando la función compartida (misma lógica que writeTexFiles)
+  // Construir preámbulo usando la función compartida
   const pre = buildLatexPreamble(pdfFormat, {
     title: doc.metadata.title,
     author: doc.metadata.author,
@@ -382,15 +379,16 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, _cwd
   });
   const texContent = [...pre, '', doc.body, '', '\\end{document}'].join('\n');
 
-  // Escribir a /tmp (evita problemas de sync con iCloud Drive) y compilar
+  // Usar .iteraciones/pdf-build/ para compilar (evita /tmp y mantiene
+  // el .tex completo accesible para revision junto a .intermediate.tex)
+  const buildRoot = cwd ? join(cwd, '.iteraciones', 'pdf-build') : '/tmp/iteraciones-pdf';
   const engine = pdfFormat?.engine ?? 'pdflatex';
   const slug = basename(outputPath, '.pdf');
-  const tmpDir = '/tmp/iteraciones-pdf';
-  await mkdir(tmpDir, { recursive: true });
-  const tmpTex = join(tmpDir, `${slug}.tex`);
-  await Bun.write(tmpTex, texContent);
+  await mkdir(buildRoot, { recursive: true });
+  const texPath = join(buildRoot, `${slug}.tex`);
+  await Bun.write(texPath, texContent);
 
-  const proc = Bun.spawn([engine, '-interaction=nonstopmode', '-output-directory', tmpDir, tmpTex], {
+  const proc = Bun.spawn([engine, '-interaction=nonstopmode', '-output-directory', buildRoot, texPath], {
     stdout: 'pipe',
     stderr: 'pipe',
   });
@@ -398,17 +396,17 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, _cwd
   const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
 
   // Copiar PDF generado a destino
-  const tmpPdf = join(tmpDir, `${slug}.pdf`);
-  const pdfOk = await Bun.file(tmpPdf)
+  const pdfPath = join(buildRoot, `${slug}.pdf`);
+  const pdfOk = await Bun.file(pdfPath)
     .exists()
     .catch(() => false);
   if (pdfOk) {
-    await Bun.write(outputPath, Bun.file(tmpPdf));
+    await Bun.write(outputPath, Bun.file(pdfPath));
   }
 
-  // Limpiar temporales de /tmp
-  for (const ext of ['.tex', '.pdf', '.aux', '.log', '.out']) {
-    await rm(join(tmpDir, `${slug}${ext}`)).catch(() => {});
+  // Limpiar auxiliares de compilacion (conservar .tex para revision)
+  for (const ext of ['.pdf', '.aux', '.log', '.out']) {
+    await rm(join(buildRoot, `${slug}${ext}`)).catch(() => {});
   }
 
   if (exitCode !== 0) {
