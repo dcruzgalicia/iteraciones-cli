@@ -89,6 +89,11 @@ export function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: PreambleM
     preamble.push('\\usepackage[x-1a]{pdfx}');
   }
 
+  // Marcas de corte con el paquete crop (opcional)
+  if (fmt.crop) {
+    preamble.push('\\usepackage[width=150truemm,height=225truemm,center,cam]{crop}');
+  }
+
   // Construir opciones de geometry desde el mapa de configuracion
   if (geometry && Object.keys(geometry).length > 0) {
     const geomOpts: string[] = [];
