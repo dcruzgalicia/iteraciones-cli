@@ -1,5 +1,3 @@
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
 import type { RenderFileReport } from '../../output/progress.js';
 import type { PluginRegistry } from '../../plugin/registry.js';
 import type { PandocPool } from '../../services/pandoc-pool.js';
@@ -63,11 +61,18 @@ export async function runContextPhaseWithTypeGraph(
     } else {
       // Fase index: renderizar → registrar en mapa → construir pool → construir contextos.
       const docs = allDocs.filter((d) => d.type === spec.type && d.kind !== 'block');
-      // Pasar bibliography/csl global desde format.pdf como fallback para citas en HTML
-      const rawBibPath = ctx.siteConfig.format?.pdf?.bibliography ? join(ctx.cwd, ctx.siteConfig.format.pdf.bibliography) : undefined;
-      const rawCslPath = ctx.siteConfig.format?.pdf?.csl ? join(ctx.cwd, ctx.siteConfig.format.pdf.csl) : undefined;
-      const globalBibliography = rawBibPath && existsSync(rawBibPath) ? rawBibPath : undefined;
-      const globalCsl = rawCslPath && existsSync(rawCslPath) ? rawCslPath : undefined;
+      // Auto-descubrir archivos .bib en el proyecto para citas en HTML
+      let globalBibliography: string | undefined;
+      try {
+        const glob = new Bun.Glob('**/*.bib');
+        for (const file of glob.scanSync({ cwd: ctx.cwd, absolute: true })) {
+          const rel = file.replace(ctx.cwd, '').replace(/^\/+/, '');
+          if (rel.startsWith('node_modules/') || rel.startsWith('.iteraciones/') || rel.startsWith('dist/') || rel.startsWith('.git/')) continue;
+          globalBibliography = file;
+          break; // usar el primer .bib encontrado
+        }
+      } catch {}
+      const globalCsl = undefined;
       const rendered = await renderDocuments(
         docs,
         concurrency,

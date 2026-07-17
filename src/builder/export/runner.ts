@@ -274,28 +274,18 @@ export async function runExportDocuments(
     }
   };
 
-  // Resolver y validar rutas globales de bibliography y csl desde config.
-  let globalBibliography = resolveExportGlobalPath(config.pdf?.bibliography, cwd, 'bibliography');
-  let globalCsl = resolveExportGlobalPath(config.pdf?.csl, cwd, 'csl');
-
-  // Si el archivo de bibliografía no existe, ignorarlo y usar solo el CSL por defecto.
-  if (globalBibliography) {
-    const bibFile = Bun.file(globalBibliography);
-    if (!(await bibFile.exists())) {
-      process.stderr.write(`\r\x1b[K⚠ archivo de bibliografía no encontrado: "${config.pdf?.bibliography}". Usando solo el CSL por defecto.\n`);
-      globalBibliography = undefined;
+  // Auto-descubrir archivos .bib en el proyecto
+  let globalBibliography: string | undefined;
+  try {
+    const glob = new Bun.Glob('**/*.bib');
+    for (const file of glob.scanSync({ cwd, absolute: true })) {
+      const rel = file.replace(cwd, '').replace(/^\/+/, '');
+      if (rel.startsWith('node_modules/') || rel.startsWith('.iteraciones/') || rel.startsWith('dist/') || rel.startsWith('.git/')) continue;
+      globalBibliography = file;
+      break; // usar el primer .bib encontrado
     }
-  }
-
-  // Si el archivo CSL no existe, no usar CSL. Si bibliography está presente,
-  // assemble.ts resuelve al CSL empaquetado por defecto.
-  if (globalCsl) {
-    const cslFile = Bun.file(globalCsl);
-    if (!(await cslFile.exists())) {
-      process.stderr.write(`\r\x1b[K⚠ archivo CSL no encontrado: "${config.pdf?.csl}". Usando CSL empaquetado si hay bibliografía.\n`);
-      globalCsl = undefined;
-    }
-  }
+  } catch {}
+  let globalCsl = undefined;
 
   // Hash del archivo .bib global (si existe) para invalidar caché cuando cambia.
   let bibHash = '';
@@ -937,27 +927,18 @@ export async function exportSingleDocument(
   const itemPool = [...(renderedMap.get('file') ?? []), ...(renderedMap.get('author') ?? []), ...(renderedMap.get('event') ?? [])];
   const eventPool = renderedMap.get('event') ?? [];
 
-  // Resolver rutas globales de bibliography y csl (reutiliza el helper compartido, con aviso).
-  let globalBibliography = resolveExportGlobalPath(config.pdf?.bibliography, cwd, 'bibliography');
-  let globalCsl = resolveExportGlobalPath(config.pdf?.csl, cwd, 'csl');
-
-  // Si el archivo de bibliografía no existe, ignorarlo.
-  if (globalBibliography) {
-    const bibFile = Bun.file(globalBibliography);
-    if (!(await bibFile.exists())) {
-      process.stderr.write(`\r\x1b[K⚠ archivo de bibliografía no encontrado: "${config.pdf?.bibliography}". Usando solo el CSL por defecto.\n`);
-      globalBibliography = undefined;
+  // Auto-descubrir archivos .bib en el proyecto
+  let globalBibliography: string | undefined;
+  try {
+    const glob = new Bun.Glob('**/*.bib');
+    for (const file of glob.scanSync({ cwd, absolute: true })) {
+      const rel = file.replace(cwd, '').replace(/^\/+/, '');
+      if (rel.startsWith('node_modules/') || rel.startsWith('.iteraciones/') || rel.startsWith('dist/') || rel.startsWith('.git/')) continue;
+      globalBibliography = file;
+      break;
     }
-  }
-
-  // Si el archivo CSL no existe, no usar CSL.
-  if (globalCsl) {
-    const cslFile = Bun.file(globalCsl);
-    if (!(await cslFile.exists())) {
-      process.stderr.write(`\r\x1b[K⚠ archivo CSL no encontrado: "${config.pdf?.csl}". Usando CSL empaquetado si hay bibliografía.\n`);
-      globalCsl = undefined;
-    }
-  }
+  } catch {}
+  let globalCsl = undefined;
 
   // Para type author con variante completa: usar assembleAuthorExportVariants.
   let rawExportDoc: ExportDocument | null;
