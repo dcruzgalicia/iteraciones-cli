@@ -400,6 +400,7 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, _cwd
     `\\documentclass[${classOpts.join(',')}]{${dc}}`,
     '\\usepackage[T1]{fontenc}',
     '\\usepackage[utf8]{inputenc}',
+    '\\usepackage{textcomp}',
     '\\usepackage{babel}',
     '\\babelprovide[import, main]{mexican}',
     `\\usepackage{${fontFamily}}`,
