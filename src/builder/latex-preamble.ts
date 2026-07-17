@@ -158,5 +158,10 @@ export function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: PreambleM
   if (meta?.date) preamble.push(`\\date{${meta.date}}`);
   if (meta?.title) preamble.push('\\maketitle');
 
+  // Tabla de contenidos (opcional)
+  if (fmt.toc) {
+    preamble.push('\\tableofcontents');
+  }
+
   return preamble;
 }
