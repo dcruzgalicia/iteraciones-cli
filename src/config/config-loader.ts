@@ -263,6 +263,7 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
   }
 
   const respectHeaderPlain = typeof obj['respect-header-plain'] === 'boolean' ? obj['respect-header-plain'] : DEFAULT_PDF_FORMAT.respectHeaderPlain;
+  const crop = typeof obj.crop === 'boolean' ? obj.crop : DEFAULT_PDF_FORMAT.crop;
 
   return {
     engine,
@@ -285,6 +286,7 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     topLevelDivision,
     sfdefaults,
     respectHeaderPlain,
+    crop,
     generate: typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_PDF_FORMAT.generate,
     thumbnails: typeof obj.thumbnails === 'boolean' ? obj.thumbnails : obj.thumbnails === 'responsive' ? 'responsive' : DEFAULT_PDF_FORMAT.thumbnails,
   };

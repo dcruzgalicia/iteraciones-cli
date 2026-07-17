@@ -63,6 +63,8 @@ export interface PdfFormatConfig {
    * Solo aplica cuando page-number es header-*. Por defecto false.
    */
   respectHeaderPlain?: boolean;
+  /** Si true, incluye marcas de corte con el paquete crop. */
+  crop?: boolean;
   /** Si true, genera PDF en el build. */
   generate?: boolean;
   /**
@@ -199,6 +201,7 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   bibliography: 'bibliography.bib',
   csl: 'apa.csl',
   generate: false,
+  crop: false,
   thumbnails: false,
 };
 
