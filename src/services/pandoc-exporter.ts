@@ -389,12 +389,26 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
   const buildRoot = join(cwd, '.iteraciones', 'pdf-build');
   await mkdir(buildRoot, { recursive: true });
 
-  const proc = Bun.spawn([engine, '-jobname', slug, '-interaction=nonstopmode', '-output-directory', buildRoot, fullTexPath], {
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
+  const args = [engine, '-jobname', slug, '-interaction=nonstopmode', '-output-directory', buildRoot, fullTexPath];
 
-  const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+  /** Ejecuta pdflatex una vez y retorna {stdout, stderr, exitCode}. */
+  async function runPdfLatex(): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+    const proc = Bun.spawn(args, { stdout: 'pipe', stderr: 'pipe' });
+    const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+    return { stdout, stderr, exitCode };
+  }
+
+  // Primera ejecucion: genera .aux, .toc
+  let { stdout, stderr, exitCode } = await runPdfLatex();
+
+  // Si hay ToC, ejecutar segunda vez para que 	ableofcontents lea el .toc
+  const needsToc = pdfFormat?.toc !== false;
+  if (needsToc && exitCode === 0) {
+    const secondRun = await runPdfLatex();
+    stdout = secondRun.stdout;
+    stderr = secondRun.stderr;
+    exitCode = secondRun.exitCode;
+  }
 
   // Copiar PDF generado a destino
   const pdfPath = join(buildRoot, `${slug}.pdf`);
@@ -406,7 +420,7 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
   }
 
   // Limpiar auxiliares de compilacion (conservar solo el .tex en tex/)
-  for (const ext of ['.pdf', '.aux', '.log', '.out']) {
+  for (const ext of ['.pdf', '.aux', '.log', '.out', '.toc']) {
     await rm(join(buildRoot, `${slug}${ext}`)).catch(() => {});
   }
 
