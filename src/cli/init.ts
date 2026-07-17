@@ -179,53 +179,53 @@ function buildDefaultConfig(): string {
   lines.push('  pdf:');
   // 1. generate
   lines.push(`    generate: ${yamlBool(pdfCfg.generate!)}`);
-  // 2. engine
+  // 2. force
+  lines.push(`    force: ${yamlBool(pdfCfg.force!)}`);
+  // 3. engine
   lines.push(`    engine: ${yamlStr(pdfCfg.engine)}`);
-  // 3. documentclass
+  // 4. documentclass
   lines.push('    documentclass: scrbook');
-  // 4. sfdefaults
+  // 5. sfdefaults
   lines.push(`    sfdefaults: ${yamlBool(pdfCfg.sfdefaults!)}`);
-  // 5. page-size (usar 'custom' para tamano personalizado en geometry)
+  // 6. page-size (usar 'custom' para tamano personalizado en geometry)
   lines.push(`    page-size: ${yamlStr(pdfCfg.pageSize!)}`);
-  // 6. page-number
+  // 7. page-number
   lines.push(`    page-number: ${yamlStr(pdfCfg.pageNumber!)}`);
-  // 7. sides
+  // 8. sides
   lines.push(`    sides: ${yamlStr(pdfCfg.sides!)}`);
-  // 8. geometry (opciones para el paquete LaTeX geometry)
+  // 9. geometry (opciones para el paquete LaTeX geometry)
   lines.push('    geometry:');
   const geomOrder = ['paperwidth', 'paperheight', 'top', 'bottom', 'left', 'right', 'headheight', 'headsep', 'footskip'];
   for (const key of geomOrder) {
     const val = pdfCfg.geometry?.[key];
     if (val) lines.push(`      ${key}: ${yamlStr(val)}`);
   }
-  // 8. line-spacing
+  // 10. line-spacing
   lines.push(`    line-spacing: ${yamlValue(pdfCfg.lineSpacing!)}`);
-  // 9. font-family
+  // 11. font-family
   lines.push(`    font-family: ${yamlStr(pdfCfg.fontFamily!)}`);
-  // 10. font-size
+  // 12. font-size
   lines.push(`    font-size: ${yamlStr(pdfCfg.fontSize!)}`);
-  // 11. hyphenation
+  // 13. hyphenation
   lines.push(`    hyphenation: ${yamlBool(pdfCfg.hyphenation)}`);
-  // 12. toc
+  // 14. toc
   lines.push(`    toc: ${yamlBool(pdfCfg.toc!)}`);
-  // 13. toc-depth
+  // 15. toc-depth
   lines.push(`    toc-depth: ${yamlValue(pdfCfg.tocDepth!)}`);
-  // 14. sec-num-depth
+  // 16. sec-num-depth
   lines.push(`    sec-num-depth: ${yamlValue(pdfCfg.secNumDepth!)}`);
-  // 15. bibliography
+  // 17. bibliography
   lines.push(`    bibliography: ${yamlStr(pdfCfg.bibliography!)}`);
-  // 16. csl
+  // 18. csl
   lines.push(`    csl: ${yamlStr(pdfCfg.csl!)}`);
-  // 17. respect-header-plain
+  // 19. respect-header-plain
   lines.push('    respect-header-plain: false');
-  // 18. pdfx
+  // 20. pdfx
   lines.push(`    pdfx: ${yamlBool(pdfCfg.pdfx)}`);
-  // 19. crop
+  // 21. crop
   lines.push(`    crop: ${yamlBool(pdfCfg.crop!)}`);
-  // 20. eso-pic
+  // 22. eso-pic
   lines.push(`    eso-pic: ${yamlBool(pdfCfg.esoPic!)}`);
-  // 21. force
-  lines.push(`    force: ${yamlBool(pdfCfg.force!)}`);
 
   // epub
   lines.push('  epub:');
