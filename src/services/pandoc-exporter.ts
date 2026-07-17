@@ -415,6 +415,15 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, _cwd
     '\\newcounter{none}',
     '\\providecommand{\\tightlist}{%',
     '  \\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}}',
+    '\\raggedbottom',
+    '\\pretolerance=200',
+    '\\tolerance=400',
+    '\\hyphenpenalty=100',
+    '\\brokenpenalty=1000000',
+    '\\finalhyphendemerits=1000000',
+    '\\doublehyphendemerits=1000000',
+    '\\widowpenalty=1000000',
+    '\\clubpenalty=1000000',
   ];
 
   // Construir opciones de geometry desde el mapa de configuracion
