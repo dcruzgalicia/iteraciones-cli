@@ -418,7 +418,7 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, _cwd
     '\\raggedbottom',
     '\\pretolerance=200',
     '\\tolerance=400',
-    '\\hyphenpenalty=100',
+    `\\hyphenpenalty=${fmt.hyphenation ? 100 : 1000000}`,
     '\\brokenpenalty=1000000',
     '\\finalhyphendemerits=1000000',
     '\\doublehyphendemerits=1000000',
