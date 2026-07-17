@@ -77,6 +77,7 @@ export interface PdfFormatConfig {
    * page-number, en lugar de usar footer-center.
    * Solo aplica cuando page-number es header-*. Por defecto false.
    */
+  showDate?: boolean;
   respectHeaderPlain?: boolean;
   /** Si true, incluye marcas de corte con el paquete crop. */
   crop?: boolean;
@@ -196,6 +197,7 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   engine: 'pdflatex',
   concurrency: detectConcurrency(),
   hyphenation: false,
+  showDate: false,
   pdfx: false,
   toc: false,
   tocDepth: 1,

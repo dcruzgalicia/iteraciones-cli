@@ -155,7 +155,11 @@ export function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: PreambleM
 
   if (meta?.title) preamble.push(`\\title{${meta.title}}`);
   if (meta?.author?.length) preamble.push(`\\author{${meta.author.join(' \\and ')}}`);
-  if (meta?.date) preamble.push(`\\date{${meta.date}}`);
+  if (fmt.showDate) {
+    if (meta?.date) preamble.push(`\\date{${meta.date}}`);
+  } else {
+    preamble.push('\\date{}');
+  }
   if (meta?.title) preamble.push('\\maketitle');
   preamble.push('\\cleardoublepage');
 
