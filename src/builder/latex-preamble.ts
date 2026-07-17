@@ -27,9 +27,11 @@ export interface PreambleMeta {
   title?: string;
   author?: string[];
   date?: string;
+  filePath?: string;
+  showDate?: boolean;
 }
 
-export function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: PreambleMeta): string[] {
+export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: PreambleMeta): Promise<string[]> {
   const fmt = pdfFormat ?? DEFAULT_PDF_FORMAT;
   const dc = fmt.documentclass ?? 'scrbook';
   const fontSize = fmt.fontSize ?? '12pt';
@@ -156,7 +158,23 @@ export function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: PreambleM
   if (meta?.title) preamble.push(`\\title{${meta.title}}`);
   if (meta?.author?.length) preamble.push(`\\author{${meta.author.join(' \\and ')}}`);
   if (fmt.showDate) {
-    if (meta?.date) preamble.push(`\\date{${meta.date}}`);
+    if (meta?.date) {
+      preamble.push(`\\date{${meta.date}}`);
+    } else if (meta?.filePath) {
+      // Usar fecha de creacion del archivo si no hay date en frontmatter
+      try {
+        const fileStat = await Bun.file(meta.filePath).stat();
+        const btime = fileStat.birthtime || fileStat.mtime;
+        if (btime) {
+          const y = btime.getFullYear();
+          const m = String(btime.getMonth() + 1).padStart(2, '0');
+          const d = String(btime.getDate()).padStart(2, '0');
+          preamble.push(`\\date{${y}-${m}-${d}}`);
+        }
+      } catch {
+        // Si no se puede leer el archivo, no agregar fecha
+      }
+    }
   } else {
     preamble.push('\\date{}');
   }
