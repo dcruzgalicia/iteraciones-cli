@@ -501,16 +501,23 @@ async function writeTexFiles(allContextDocs: BuildDocument[], ctx: BuildContext,
     });
 
     const texIntermediateDir = join(ctx.cwd, '.iteraciones', 'tex', dirname(doc.relativePath));
-    const intermediatePath = join(texIntermediateDir, `${texSlug}.intermediate.tex`);
     await mkdir(texIntermediateDir, { recursive: true });
+
+    // Body solo (sin preambulo) — para revision
+    const intermediatePath = join(texIntermediateDir, `${texSlug}.intermediate.tex`);
     await Bun.write(intermediatePath, doc.processedBody);
 
+    // .tex completo con preambulo — usado para compilar PDF
     const fullTex = [...preamble, '', doc.processedBody, '', '\\end{document}'].join('\n');
+    const fullTexPath = join(texIntermediateDir, `${texSlug}.full.tex`);
+    await Bun.write(fullTexPath, fullTex);
+
+    // .tex final en dist/ — para el usuario
     await Bun.write(texPath, fullTex);
     texWritten++;
   }
   if (texWritten > 0) {
-    log(`Escritos ${texWritten} archivos .tex en ${ctx.outputDir} (.intermediate.tex en .iteraciones/tex/)`);
+    log(`Escritos ${texWritten} archivos .tex en ${ctx.outputDir} (.intermediate.tex y .full.tex en .iteraciones/tex/)`);
   }
 }
 
