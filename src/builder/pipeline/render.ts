@@ -209,7 +209,7 @@ export async function renderLatex(
     // Si hay citekeys en el body original y existen archivos .bib, agregar printbibliography
     const hasCitekeys = bibFiles.length > 0 && /@\w+[\w:;#.,(){}'"\s]/.test(doc.body);
     if (hasCitekeys) {
-      processedBody += '\n\\printbibliography[heading=bibintoc]\n';
+      processedBody += '\\printbibliography[heading=bibintoc]\n';
     }
 
     return { ...doc, processedBody };
