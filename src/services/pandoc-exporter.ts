@@ -414,14 +414,12 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
   } catch {}
 
   if (needsBiber && exitCode === 0) {
-    const biberProc = Bun.spawn(['biber', '--dir', buildRoot, slug], {
+    const biberProc = Bun.spawn(['biber', slug], {
+      cwd: buildRoot,
       stdout: 'pipe',
       stderr: 'pipe',
     });
-    const [biberStderr, biberExit] = await Promise.all([
-      new Response(biberProc.stderr).text(),
-      biberProc.exited,
-    ]);
+    const [biberStderr, biberExit] = await Promise.all([new Response(biberProc.stderr).text(), biberProc.exited]);
     if (biberExit !== 0) {
       stderr += '\n[biber] ' + biberStderr;
     }
