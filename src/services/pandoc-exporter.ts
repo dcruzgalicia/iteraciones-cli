@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdir, rm } from 'node:fs/promises';
+import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import type { ExportDocument } from '../builder/export/types.js';
 import type { PdfFormatConfig } from '../config/site-config.js';
@@ -377,65 +377,25 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
   const texRelDir = dirname(doc.relativePath);
   const fullTexPath = join(cwd, '.iteraciones', 'tex', texRelDir, `${slug}.full.tex`);
 
-  const texContent = await Bun.file(fullTexPath)
-    .text()
-    .catch(() => {
-      throw new PandocError(`convertToPdf: no se encontro ${fullTexPath}`, doc.filePath, '');
-    });
+  // Verificar que el .full.tex existe antes de compilar
+  if (!(await Bun.file(fullTexPath).exists())) {
+    throw new PandocError(`convertToPdf: no se encontro ${fullTexPath}`, doc.filePath, '');
+  }
 
-  // Compilar desde .iteraciones/pdf-build/ con -output-directory
-  // para mantener los auxiliares (.aux, .log, .out) separados de .full.tex
-  const engine = pdfFormat?.engine ?? 'pdflatex';
   const buildRoot = join(cwd, '.iteraciones', 'pdf-build');
   await mkdir(buildRoot, { recursive: true });
 
-  const args = [engine, '-jobname', slug, '-interaction=nonstopmode', '-output-directory', buildRoot, fullTexPath];
+  // latexmk -pdf determina automaticamente cuantas pasadas de pdflatex
+  // y si necesita biber/bibtex, segun los cambios en .aux, .bcf, etc.
+  const proc = Bun.spawn(['latexmk', '-pdf', '-interaction=nonstopmode', `-outdir=${buildRoot}`, `-jobname=${slug}`, fullTexPath], {
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
 
-  /** Ejecuta pdflatex una vez y retorna {stdout, stderr, exitCode}. */
-  async function runPdfLatex(): Promise<{ stdout: string; stderr: string; exitCode: number }> {
-    const proc = Bun.spawn(args, { stdout: 'pipe', stderr: 'pipe' });
-    const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
-    return { stdout, stderr, exitCode };
-  }
-
-  // Secuencia de compilacion:
-  //   1. pdflatex → genera .aux, .toc
-  //   2. biber    → procesa citas biblatex (si hay referencias en .aux)
-  //   3. pdflatex → incorpora .bbl y resuelve ToC
-  //   4. pdflatex → resolve referencias cruzadas
-  let { stdout, stderr, exitCode } = await runPdfLatex();
-
-  // Verificar si biblatex/biber es necesario (el .aux contiene referencias a .bib)
-  let needsBiber = false;
-  const auxPath = join(buildRoot, `${slug}.aux`);
-  try {
-    const auxContent = await Bun.file(auxPath).text();
-    needsBiber = auxContent.includes('\\bibdata') || auxContent.includes('\\abx@aux@');
-  } catch {}
-
-  if (needsBiber && exitCode === 0) {
-    const biberProc = Bun.spawn(['biber', slug], {
-      cwd: buildRoot,
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-    const [biberStderr, biberExit] = await Promise.all([new Response(biberProc.stderr).text(), biberProc.exited]);
-    if (biberExit !== 0) {
-      stderr += '\n[biber] ' + biberStderr;
-    }
-  }
-
-  // Ejecuciones adicionales: pdflatex → biber → pdflatex → pdflatex
-  const needsMoreRuns = pdfFormat?.toc !== false || needsBiber;
-  let runs = 0;
-  // Despues del primer pdflatex: si hay ToC o biber, 2 pasadas mas; si no, 0
-  const maxRuns = needsMoreRuns ? 2 : 0;
-  while (runs < maxRuns && exitCode === 0) {
-    const nextRun = await runPdfLatex();
-    stdout = nextRun.stdout;
-    stderr = nextRun.stderr;
-    exitCode = nextRun.exitCode;
-    runs++;
+  // latexmk -c para limpiar auxiliares (conserva .pdf y .tex original)
+  if (exitCode === 0) {
+    await Bun.spawn(['latexmk', '-c', `-outdir=${buildRoot}`, fullTexPath], { stdout: 'pipe', stderr: 'pipe' }).exited;
   }
 
   // Copiar PDF generado a destino
@@ -447,15 +407,10 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
     await Bun.write(outputPath, Bun.file(pdfPath));
   }
 
-  // Limpiar auxiliares de compilacion (conservar solo el .tex en tex/)
-  for (const ext of ['.pdf', '.aux', '.log', '.out', '.toc', '.bbl', '.bcf', '.blg', '.run.xml']) {
-    await rm(join(buildRoot, `${slug}${ext}`)).catch(() => {});
-  }
-
   if (exitCode !== 0) {
     const log = stdout + '\n' + stderr;
     const m = log.match(/^! .*$/m);
-    throw new PandocError(`pdflatex falló al generar PDF para ${doc.filePath}: ${m ? m[0] : 'exit ' + exitCode}`, doc.filePath, stderr);
+    throw new PandocError(`latexmk falló al generar PDF para ${doc.filePath}: ${m ? m[0] : 'exit ' + exitCode}`, doc.filePath, stderr);
   }
 }
 
