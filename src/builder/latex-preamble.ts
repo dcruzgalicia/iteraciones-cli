@@ -77,7 +77,7 @@ export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: Pre
     '\\usepackage[T1]{fontenc}',
     '\\usepackage[utf8]{inputenc}',
     '\\usepackage{textcomp}',
-    '\\usepackage[spanish,mexico-com,es-noshorthands,es-noindentfirst]{babel}',
+    '\\usepackage[spanish,mexico,es-noshorthands,es-noindentfirst]{babel}',
     `\\usepackage{${fontFamily}}`,
     '\\usepackage{longtable}',
     '\\usepackage{booktabs}',
