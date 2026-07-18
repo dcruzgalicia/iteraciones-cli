@@ -514,7 +514,8 @@ async function writeTexFiles(allContextDocs: BuildDocument[], ctx: BuildContext,
     await Bun.write(intermediatePath, doc.processedBody);
 
     // .tex completo con preambulo — usado para compilar PDF
-    const fullTex = [...preamble, '', doc.processedBody, '', '\\end{document}'].join('\n');
+    const bodyClean = doc.processedBody.replace(/\n+$/, '');
+    const fullTex = [...preamble, '', bodyClean, '', '\\end{document}'].join('\n');
     const fullTexPath = join(texIntermediateDir, `${texSlug}.full.tex`);
     await Bun.write(fullTexPath, fullTex);
 
