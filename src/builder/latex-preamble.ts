@@ -142,7 +142,7 @@ export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: Pre
     } else if (ps === 'custom' && fmt.geometry) {
       // Custom: leer paperwidth/paperheight de geometry
       const gw = fmt.geometry.paperwidth;
-            const gh = fmt.geometry.paperheight;
+      const gh = fmt.geometry.paperheight;
       if (gw && gh) {
         const wp = parseFloat(gw);
         const hp = parseFloat(gh);
@@ -175,7 +175,6 @@ export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: Pre
   if (cwd) {
     const bibFiles = discoverBibFiles(cwd);
     if (bibFiles.length > 0) {
-      preamble.push('\\usepackage{csquotes}');
       preamble.push('\\usepackage[style=apa]{biblatex}');
       for (const bib of bibFiles) {
         preamble.push(`\\addbibresource{${bib}}`);
