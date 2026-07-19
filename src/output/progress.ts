@@ -27,7 +27,7 @@ const PHASE_LABELS: Record<PipelinePhase, string> = {
   compose: 'Componiendo',
 };
 
-const PHASE_ORDER: PipelinePhase[] = ['discovery', 'render', 'context', 'latex', 'markdown', 'pdf', 'epub', 'html'];
+const PHASE_ORDER: PipelinePhase[] = ['discovery', 'render', 'context', 'latex', 'pdf', 'html', 'epub', 'markdown'];
 
 export class ProgressTracker {
   private verbose: boolean;

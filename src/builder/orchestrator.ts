@@ -890,7 +890,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     await writeTexFiles(finalContextDocs, ctx, log);
     progress.completePhase();
 
-    // ── Fase markdown ──
+    // ── Fase pdf ──
     const exportBase = {
       outputDir: ctx.outputDir,
       cwd,
@@ -901,8 +901,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       cacheManager: options.noCache ? undefined : cacheManager,
       registry: hasPlugins ? registry : undefined,
       pluginFingerprint,
-      onExportProgress: (relativePath: string, cacheHit: boolean) =>
-        progress.reportFile({ relativePath, durationMs: 0, cacheHit, phase: 'markdown' }),
+      onExportProgress: (relativePath: string, cacheHit: boolean) => progress.reportFile({ relativePath, durationMs: 0, cacheHit, phase: 'pdf' }),
     };
     const exportResults: ExportResult[] = [];
 
@@ -919,26 +918,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       return count;
     };
 
-    if (formatCfg?.markdown?.generate && !noExport) {
-      let mdTotal = 0;
-      for (const type of EXPORTABLE_TYPES) {
-        const docs = (renderedMap.get(type) ?? []).filter((d) => d.kind !== 'block');
-        for (const d of docs) {
-          const raw = d.frontmatter['export'];
-          const skipped = typeof raw === 'object' && raw !== null && !Array.isArray(raw) && (raw as Record<string, unknown>)['skip'] === true;
-          if (skipped) continue;
-          mdTotal++;
-        }
-      }
-      progress.startPhase('markdown', mdTotal);
-      const mdStats: ExportStats = { totalEpub: 0, totalPdf: 0, totalMd: 0, cacheHitsEpub: 0, cacheHitsPdf: 0, cacheHitsMd: 0 };
-      const mdResults = await runExportDocuments(exportRenderedMap, { ...exportBase, config: formatCfg, stats: mdStats });
-      exportResults.push(...mdResults);
-      if (mdStats.totalMd > 0) progress.log(`Markdown: ${mdStats.totalMd - mdStats.cacheHitsMd} generados, ${mdStats.cacheHitsMd} de caché`);
-      progress.completePhase();
-    }
-
-    // ── Fase pdf ──
     if (pdfOn && !noExport) {
       let pdfTotal = 0;
       for (const type of EXPORTABLE_TYPES) {
@@ -949,21 +928,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       const pdfResults = await runExportDocuments(exportRenderedMap, { ...exportBase, config: formatCfg, stats: pdfStats });
       exportResults.push(...pdfResults);
       if (pdfStats.totalPdf > 0) progress.log(`PDF: ${pdfStats.totalPdf - pdfStats.cacheHitsPdf} generados, ${pdfStats.cacheHitsPdf} de caché`);
-      progress.completePhase();
-    }
-
-    // ── Fase epub ──
-    if (formatCfg?.epub?.generate && !noExport) {
-      let epubTotal = 0;
-      for (const type of EXPORTABLE_TYPES) {
-        epubTotal += countExportDocs(type);
-      }
-      progress.startPhase('epub', epubTotal);
-      const epubStats: ExportStats = { totalEpub: 0, totalPdf: 0, totalMd: 0, cacheHitsEpub: 0, cacheHitsPdf: 0, cacheHitsMd: 0 };
-      const epubResults = await runExportDocuments(exportRenderedMap, { ...exportBase, config: formatCfg, stats: epubStats });
-      exportResults.push(...epubResults);
-      if (epubStats.totalEpub > 0)
-        progress.log(`EPUB: ${epubStats.totalEpub - epubStats.cacheHitsEpub} generados, ${epubStats.cacheHitsEpub} de caché`);
       progress.completePhase();
     }
 
@@ -998,6 +962,41 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       onFileProcessed,
     );
     progress.completePhase(); // fin de html
+
+    // ── Fase epub ──
+    if (formatCfg?.epub?.generate && !noExport) {
+      let epubTotal = 0;
+      for (const type of EXPORTABLE_TYPES) {
+        epubTotal += countExportDocs(type);
+      }
+      progress.startPhase('epub', epubTotal);
+      const epubStats: ExportStats = { totalEpub: 0, totalPdf: 0, totalMd: 0, cacheHitsEpub: 0, cacheHitsPdf: 0, cacheHitsMd: 0 };
+      const epubResults = await runExportDocuments(exportRenderedMap, { ...exportBase, config: formatCfg, stats: epubStats });
+      exportResults.push(...epubResults);
+      if (epubStats.totalEpub > 0)
+        progress.log(`EPUB: ${epubStats.totalEpub - epubStats.cacheHitsEpub} generados, ${epubStats.cacheHitsEpub} de caché`);
+      progress.completePhase();
+    }
+
+    // ── Fase markdown ──
+    if (formatCfg?.markdown?.generate && !noExport) {
+      let mdTotal = 0;
+      for (const type of EXPORTABLE_TYPES) {
+        const docs = (renderedMap.get(type) ?? []).filter((d) => d.kind !== 'block');
+        for (const d of docs) {
+          const raw = d.frontmatter['export'];
+          const skipped = typeof raw === 'object' && raw !== null && !Array.isArray(raw) && (raw as Record<string, unknown>)['skip'] === true;
+          if (skipped) continue;
+          mdTotal++;
+        }
+      }
+      progress.startPhase('markdown', mdTotal);
+      const mdStats: ExportStats = { totalEpub: 0, totalPdf: 0, totalMd: 0, cacheHitsEpub: 0, cacheHitsPdf: 0, cacheHitsMd: 0 };
+      const mdResults = await runExportDocuments(exportRenderedMap, { ...exportBase, config: formatCfg, stats: mdStats });
+      exportResults.push(...mdResults);
+      if (mdStats.totalMd > 0) progress.log(`Markdown: ${mdStats.totalMd - mdStats.cacheHitsMd} generados, ${mdStats.cacheHitsMd} de caché`);
+      progress.completePhase();
+    }
 
     // Limpiar .tex final e intermedio si latex.generate=false pero se forzo para PDF
     if (cleanupTex) {
