@@ -284,32 +284,23 @@ function yamlString(value: string): string {
 }
 
 /**
- * Convierte un ExportDocument a EPUB3 usando pandoc.
- * El documento se pasa a pandoc por stdin con un YAML header.
+ * Convierte contenido LaTeX a EPUB3 usando pandoc.
+ * El flujo es: .tex intermediate → HTML (interno) → EPUB.
  *
- * @param doc        Documento ensamblado listo para exportar.
+ * @param body       Contenido LaTeX (.tex intermediate).
  * @param outputPath Ruta absoluta del archivo EPUB de salida.
- * @param cwd        Directorio raíz del proyecto; permite buscar templates de override locales.
+ * @param doc        Documento fuente (para metadatos como cover).
  */
-export async function convertToEpub(doc: ExportDocument, outputPath: string, cwd?: string, pdfFormat?: PdfFormatConfig): Promise<void> {
+export async function convertToEpub(body: string, outputPath: string, doc?: ExportDocument): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
-  const input = buildYamlHeader(doc, undefined, pdfFormat) + doc.body;
-  const args = ['pandoc', '--from', 'markdown', '--to', 'epub3', '--output', outputPath];
+  const args = ['pandoc', '--from', 'latex', '--to', 'epub3', '--output', outputPath];
 
-  // Hoja de estilos resuelta por tipo: {type}.epub.css con fallback a epub.css global.
-  args.push('--css', resolveEpubCssPath(doc.type, cwd));
-  for (const fontFile of EPUB_EMBED_FONTS) {
-    args.push('--epub-embed-font', fontFile);
-  }
-
-  if (doc.metadata.cover) {
+  if (doc?.metadata.cover) {
     args.push('--epub-cover-image', doc.metadata.cover);
   }
 
-  // Activar el procesador de citas cuando hay bibliografía declarada.
-  // Sin --citeproc, las citas [@referencia] quedan sin resolver en el documento final.
-  if (doc.metadata.bibliography) {
+  if (doc?.metadata.bibliography) {
     args.push('--citeproc');
   }
 
@@ -317,12 +308,23 @@ export async function convertToEpub(doc: ExportDocument, outputPath: string, cwd
   try {
     proc = Bun.spawn(args, { stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' });
   } catch (err) {
-    throw new PandocError(`pandoc no está disponible en PATH: ${String(err)}`, doc.filePath, '');
+    throw new PandocError(`pandoc no está disponible en PATH: ${String(err)}`, doc?.filePath ?? '', '');
   }
 
-  const [, stderr, exitCode] = await writeAndWait(proc, input, doc.filePath);
+  if (proc.stdin == null || typeof proc.stdin === 'number') {
+    throw new PandocError('No se pudo escribir stdin de pandoc', doc?.filePath ?? '', '');
+  }
+
+  proc.stdin.write(body);
+  proc.stdin.end();
+
+  const [stderr, exitCode] = await Promise.all([
+    new Response(proc.stderr as ReadableStream<Uint8Array>).text(),
+    proc.exited,
+  ]);
+
   if (exitCode !== 0) {
-    throw new PandocError(`pandoc falló al generar EPUB para ${doc.filePath}`, doc.filePath, stderr);
+    throw new PandocError(`pandoc falló al generar EPUB`, doc?.filePath ?? '', stderr);
   }
 }
 
