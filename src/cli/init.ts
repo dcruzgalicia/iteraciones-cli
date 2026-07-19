@@ -173,6 +173,42 @@ function buildDefaultConfig(): string {
   // ── format ──
   lines.push('format:');
 
+  // latex (primero en orden de compilacion)
+  lines.push('  latex:');
+  for (const [key, value] of Object.entries(DEFAULT_LATEX_FORMAT)) {
+    const yamlKey = camelToKebab(key);
+    lines.push(`    ${yamlKey}: ${yamlValue(value)}`);
+  }
+
+  // pdf
+  const pdfCfg = DEFAULT_PDF_FORMAT;
+  lines.push('  pdf:');
+  lines.push(`    generate: ${yamlBool(pdfCfg.generate!)}`);
+  lines.push(`    force: ${yamlBool(pdfCfg.force!)}`);
+  lines.push(`    engine: ${yamlStr(pdfCfg.engine)}`);
+  lines.push('    documentclass: scrbook');
+  lines.push(`    sfdefaults: ${yamlBool(pdfCfg.sfdefaults!)}`);
+  lines.push(`    page-size: ${yamlStr(pdfCfg.pageSize!)}`);
+  lines.push(`    page-number: ${yamlStr(pdfCfg.pageNumber!)}`);
+  lines.push(`    sides: ${yamlStr(pdfCfg.sides!)}`);
+  lines.push('    geometry:');
+  for (const key of ['paperwidth', 'paperheight', 'top', 'bottom', 'left', 'right', 'headheight', 'headsep', 'footskip']) {
+    const val = pdfCfg.geometry?.[key];
+    if (val) lines.push(`      ${key}: ${yamlStr(val)}`);
+  }
+  lines.push(`    line-spacing: ${yamlValue(pdfCfg.lineSpacing!)}`);
+  lines.push(`    font-family: ${yamlStr(pdfCfg.fontFamily!)}`);
+  lines.push(`    font-size: ${yamlStr(pdfCfg.fontSize!)}`);
+  lines.push(`    hyphenation: ${yamlBool(pdfCfg.hyphenation)}`);
+  lines.push(`    show-date: ${yamlBool(pdfCfg.showDate!)}`);
+  lines.push(`    toc: ${yamlBool(pdfCfg.toc!)}`);
+  lines.push(`    toc-depth: ${yamlValue(pdfCfg.tocDepth!)}`);
+  lines.push(`    sec-num-depth: ${yamlValue(pdfCfg.secNumDepth!)}`);
+  lines.push('    respect-header-plain: false');
+  lines.push(`    pdfx: ${yamlBool(pdfCfg.pdfx)}`);
+  lines.push(`    crop: ${yamlBool(pdfCfg.crop!)}`);
+  lines.push(`    eso-pic: ${yamlBool(pdfCfg.esoPic!)}`);
+
   // html
   lines.push('  html:');
   lines.push(`    theme: dark`);
@@ -184,57 +220,6 @@ function buildDefaultConfig(): string {
   lines.push(`    generate: ${yamlBool(DEFAULT_HTML_FORMAT.generate!)}`);
   lines.push(`    thumbnails: ${yamlValue(DEFAULT_HTML_FORMAT.thumbnails!)}`);
 
-  // pdf — orden explícito de campos
-  const pdfCfg = DEFAULT_PDF_FORMAT;
-  lines.push('  pdf:');
-  // 1. generate
-  lines.push(`    generate: ${yamlBool(pdfCfg.generate!)}`);
-  // 2. force
-  lines.push(`    force: ${yamlBool(pdfCfg.force!)}`);
-  // 3. engine
-  lines.push(`    engine: ${yamlStr(pdfCfg.engine)}`);
-  // 4. documentclass
-  lines.push('    documentclass: scrbook');
-  // 5. sfdefaults
-  lines.push(`    sfdefaults: ${yamlBool(pdfCfg.sfdefaults!)}`);
-  // 6. page-size (usar 'custom' para tamano personalizado en geometry)
-  lines.push(`    page-size: ${yamlStr(pdfCfg.pageSize!)}`);
-  // 7. page-number
-  lines.push(`    page-number: ${yamlStr(pdfCfg.pageNumber!)}`);
-  // 8. sides
-  lines.push(`    sides: ${yamlStr(pdfCfg.sides!)}`);
-  // 9. geometry (opciones para el paquete LaTeX geometry)
-  lines.push('    geometry:');
-  const geomOrder = ['paperwidth', 'paperheight', 'top', 'bottom', 'left', 'right', 'headheight', 'headsep', 'footskip'];
-  for (const key of geomOrder) {
-    const val = pdfCfg.geometry?.[key];
-    if (val) lines.push(`      ${key}: ${yamlStr(val)}`);
-  }
-  // 10. line-spacing
-  lines.push(`    line-spacing: ${yamlValue(pdfCfg.lineSpacing!)}`);
-  // 11. font-family
-  lines.push(`    font-family: ${yamlStr(pdfCfg.fontFamily!)}`);
-  // 12. font-size
-  lines.push(`    font-size: ${yamlStr(pdfCfg.fontSize!)}`);
-  // 13. hyphenation
-  lines.push(`    hyphenation: ${yamlBool(pdfCfg.hyphenation)}`);
-  // 14. show-date
-  lines.push(`    show-date: ${yamlBool(pdfCfg.showDate!)}`);
-  // 15. toc
-  lines.push(`    toc: ${yamlBool(pdfCfg.toc!)}`);
-  // 16. toc-depth
-  lines.push(`    toc-depth: ${yamlValue(pdfCfg.tocDepth!)}`);
-  // 17. sec-num-depth
-  lines.push(`    sec-num-depth: ${yamlValue(pdfCfg.secNumDepth!)}`);
-  // 18. respect-header-plain
-  lines.push('    respect-header-plain: false');
-  // 19. pdfx
-  lines.push(`    pdfx: ${yamlBool(pdfCfg.pdfx)}`);
-  // 20. crop
-  lines.push(`    crop: ${yamlBool(pdfCfg.crop!)}`);
-  // 21. eso-pic
-  lines.push(`    eso-pic: ${yamlBool(pdfCfg.esoPic!)}`);
-
   // epub
   lines.push('  epub:');
   for (const [key, value] of Object.entries(DEFAULT_EPUB_FORMAT)) {
@@ -244,16 +229,9 @@ function buildDefaultConfig(): string {
     }
   }
 
-  // markdown
+  // markdown (ultimo en orden de compilacion)
   lines.push('  markdown:');
   for (const [key, value] of Object.entries(DEFAULT_MARKDOWN_FORMAT)) {
-    const yamlKey = camelToKebab(key);
-    lines.push(`    ${yamlKey}: ${yamlValue(value)}`);
-  }
-
-  // latex
-  lines.push('  latex:');
-  for (const [key, value] of Object.entries(DEFAULT_LATEX_FORMAT)) {
     const yamlKey = camelToKebab(key);
     lines.push(`    ${yamlKey}: ${yamlValue(value)}`);
   }
