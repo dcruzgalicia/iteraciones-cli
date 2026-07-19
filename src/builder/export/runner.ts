@@ -439,7 +439,7 @@ export async function runExportDocuments(
             }
             return { epub: outputPath };
           }
-          await convertToEpub(exportDoc, outputPath, cwd, config.pdf);
+          await convertToEpub(exportDoc.body, outputPath, exportDoc);
           const epubData = await Bun.file(outputPath).arrayBuffer();
           if (registry) {
             const afterCtx = await registry.runAfterExport({
