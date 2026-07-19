@@ -136,14 +136,14 @@ export class ProgressTracker {
     this.phaseDurations[phase] = elapsed;
 
     const count = actualCount ?? this.phaseTotal;
-    const countStr = count > 0 ? ` — ${count} documento${count !== 1 ? 's' : ''}` : '';
+    const countStr = count > 0 ? `${count} documento${count !== 1 ? 's' : ''} en ` : '';
 
     if (this.verbose) {
       this.clearLine();
-      process.stdout.write(`  ✓ ${formatTime(elapsed)}${countStr}\n\n`);
+      process.stdout.write(`  ✓ ${countStr}${formatTime(elapsed)}\n\n`);
     } else if (this.tty) {
       this.clearLine();
-      process.stderr.write(`✓ ${PHASE_LABELS[phase]}: ${formatTime(elapsed)}${countStr}\n`);
+      process.stderr.write(`✓ ${PHASE_LABELS[phase]}: ${countStr}${formatTime(elapsed)}\n`);
     }
     this.currentPhase = null;
   }
@@ -163,9 +163,9 @@ export class ProgressTracker {
           prevT += dur;
         }
       }
-      process.stdout.write(`\nBuild completado: ${docCount} documentos en ${elapsed}`);
+      process.stdout.write(`\nBuild completado: ${docCount} documento${docCount !== 1 ? 's' : ''} en ${elapsed}`);
     } else {
-      process.stdout.write(`Build completado: ${docCount} documentos en ${elapsed}`);
+      process.stdout.write(`Build completado: ${docCount} documento${docCount !== 1 ? 's' : ''} en ${elapsed}`);
     }
     if (this.excludedDraftsCount > 0) {
       const word = this.excludedDraftsCount === 1 ? 'borrador' : 'borradores';
