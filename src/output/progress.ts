@@ -128,19 +128,22 @@ export class ProgressTracker {
     }
   }
 
-  /** Cierra la fase actual y registra su duración. */
-  completePhase(): void {
+  /** Cierra la fase actual y registra su duración. Muestra conteo si hay documentos procesados. */
+  completePhase(actualCount?: number): void {
     const phase = this.currentPhase;
     if (!phase) return;
     const elapsed = performance.now() - this.phaseStart;
     this.phaseDurations[phase] = elapsed;
 
+    const count = actualCount ?? this.phaseTotal;
+    const countStr = count > 0 ? ` — ${count} documento${count !== 1 ? 's' : ''}` : '';
+
     if (this.verbose) {
       this.clearLine();
-      process.stdout.write(`  ✓ ${elapsed >= 1000 ? `${(elapsed / 1000).toFixed(1)}s` : `${Math.round(elapsed)}ms`}\n\n`);
+      process.stdout.write(`  ✓ ${formatTime(elapsed)}${countStr}\n\n`);
     } else if (this.tty) {
       this.clearLine();
-      process.stderr.write(`✓ ${PHASE_LABELS[phase]}: ${formatTime(elapsed)}\n`);
+      process.stderr.write(`✓ ${PHASE_LABELS[phase]}: ${formatTime(elapsed)}${countStr}\n`);
     }
     this.currentPhase = null;
   }

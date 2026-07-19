@@ -685,7 +685,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         : Promise.resolve(''),
     ]);
     ctx.cssPath = cssPath;
-    progress.completePhase();
+    progress.completePhase(rawDocs.length);
 
     // Hook onDocumentClassified: permite a plugins sobreescribir type/kind/templatePath
     // tras la clasificación automática, antes del render. Retornar null excluye el documento.
