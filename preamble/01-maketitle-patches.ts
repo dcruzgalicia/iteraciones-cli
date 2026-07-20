@@ -15,7 +15,7 @@ export function process(preamble: string[], config: PdfFormatConfig): string[] {
     '  \\fi',
     '  \\ifx\\@author\\@empty\\else',
       '    \\vskip 0\\baselineskip',
-      '    {\\centering\\usekomafont{author}{\\normalsize\\renewcommand{\\and}{\\unskip,\\ignorespaces}\\@author\\par}}%',
+      '    {\\centering\\usekomafont{author}{\\normalsize\\renewcommand{\\and}{\\unskip, \\ignorespaces}\\@author\\par}}%',
       '  \\fi',
     '  \\ifx\\@date\\@empty\\else',
     '    \\vskip 0\\baselineskip',
