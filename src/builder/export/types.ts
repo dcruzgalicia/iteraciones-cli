@@ -108,6 +108,10 @@ export interface ExportDocument {
   /** Tipo del documento fuente; determina qué template LaTeX/EPUB se resuelve. */
   type: ExportableDocumentType;
   body: string;
+  /** Fragmento HTML del documento, usado como fuente para EPUB.
+   * Para documentos tipo 'file' (scrartcl) se usa doc.htmlFragment directamente.
+   * Para libros ensamblados (scrbook) se genera convirtiendo el body LaTeX a HTML. */
+  htmlBody?: string;
   metadata: ExportMetadata;
   /** Slug computado del documento fuente, para nombrar archivos de salida. */
   slug?: string;

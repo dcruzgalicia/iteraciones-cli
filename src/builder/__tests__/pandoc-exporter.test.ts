@@ -57,7 +57,8 @@ describe('convertToEpub — integración', () => {
     const doc = makeMinimalExportDoc(outputDir);
     const outputPath = join(outputDir, 'articulo.epub');
 
-    await convertToEpub(doc.body, outputPath, doc);
+    const htmlBody = '<h2>Introducción</h2><p>Este es un documento de prueba para verificar la exportación EPUB.</p>';
+    await convertToEpub(htmlBody, outputPath, doc);
 
     const epubFile = Bun.file(outputPath);
     expect(await epubFile.exists()).toBe(true);
@@ -82,7 +83,8 @@ describe('convertToEpub — integración', () => {
     const doc = makeMinimalExportDoc(outputDir);
     const outputPath = join(outputDir, 'articulo-size.epub');
 
-    await convertToEpub(doc.body, outputPath, doc);
+    const htmlBody = '<h2>Introducción</h2><p>Este es un documento de prueba para verificar la exportación EPUB.</p>';
+    await convertToEpub(htmlBody, outputPath, doc);
 
     const epubFile = Bun.file(outputPath);
     const size = (await epubFile.stat())?.size ?? 0;

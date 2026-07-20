@@ -229,6 +229,7 @@ export function assembleExportDocument(
     relativePath: doc.relativePath,
     type: doc.type as ExportableDocumentType,
     body,
+    htmlBody: documentclass === 'scrartcl' ? (doc.htmlFragment ?? undefined) : undefined,
     metadata,
     slug: doc.slug,
   };
