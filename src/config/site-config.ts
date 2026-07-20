@@ -84,6 +84,8 @@ export interface PdfFormatConfig {
   setlist?: Array<{ env: string; opts: string[] }>;
   /** Opciones para el paquete hyperref (ej: hidelinks, pdftex). */
   hyperref?: string[];
+  /** Opciones para el paquete microtype. */
+  microtype?: Record<string, boolean | string | number>;
   /** Si true, incluye marcas de corte con el paquete crop. */
   crop?: boolean;
   /** Si true, incluye \usepackage[grid]{eso-pic} para cuadricula de fondo. */
@@ -227,6 +229,16 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   enumitem: true,
   setlist: [{ env: 'description', opts: ['noitemsep', 'nosep', 'topsep=\\baselineskip'] }],
   hyperref: ['hidelinks'],
+  microtype: {
+    activate: '{true,nocompatibility}',
+    final: true,
+    tracking: true,
+    kerning: true,
+    spacing: true,
+    factor: 1100,
+    stretch: 10,
+    shrink: 10,
+  },
   crop: false,
   esoPic: false,
   force: false,
