@@ -16,6 +16,7 @@ const DEFAULT_README = [
   'date: "2026-01-01"',
   'author:',
   '  - "Nombre del autor"',
+    '  - "Segundo autor"',
   'type: file',
   'keywords:',
   '  - "ejemplo"',
