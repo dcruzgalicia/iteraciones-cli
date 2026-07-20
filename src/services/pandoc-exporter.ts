@@ -279,17 +279,17 @@ function yamlString(value: string): string {
 }
 
 /**
- * Convierte contenido LaTeX a EPUB3 usando pandoc.
- * El flujo es: .tex intermediate → HTML (interno) → EPUB.
+ * Convierte contenido HTML a EPUB3 usando pandoc.
+ * El flujo es: HTML intermediate → EPUB.
  *
- * @param body       Contenido LaTeX (.tex intermediate).
+ * @param htmlBody   Contenido HTML (intermedio).
  * @param outputPath Ruta absoluta del archivo EPUB de salida.
  * @param doc        Documento fuente (para metadatos como cover).
  */
-export async function convertToEpub(body: string, outputPath: string, doc?: ExportDocument): Promise<void> {
+export async function convertToEpub(htmlBody: string, outputPath: string, doc?: ExportDocument): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
-  const args = ['pandoc', '--from', 'latex', '--to', 'epub3', '--output', outputPath];
+  const args = ['pandoc', '--from', 'html', '--to', 'epub3', '--output', outputPath];
 
   if (doc?.metadata.cover) {
     args.push('--epub-cover-image', doc.metadata.cover);
@@ -310,7 +310,7 @@ export async function convertToEpub(body: string, outputPath: string, doc?: Expo
     throw new PandocError('No se pudo escribir stdin de pandoc', doc?.filePath ?? '', '');
   }
 
-  proc.stdin.write(body);
+  proc.stdin.write(htmlBody);
   proc.stdin.end();
 
   const [stderr, exitCode] = await Promise.all([new Response(proc.stderr as ReadableStream<Uint8Array>).text(), proc.exited]);
