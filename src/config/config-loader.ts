@@ -286,6 +286,12 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
   const crop = typeof obj.crop === 'boolean' ? obj.crop : DEFAULT_PDF_FORMAT.crop;
   const esoPic = typeof obj['eso-pic'] === 'boolean' ? obj['eso-pic'] : DEFAULT_PDF_FORMAT.esoPic;
 
+  const rawHyperref = obj.hyperref;
+  const hyperref =
+    Array.isArray(rawHyperref) && rawHyperref.every((v): v is string => typeof v === 'string')
+      ? rawHyperref
+      : [...(DEFAULT_PDF_FORMAT.hyperref ?? [])];
+
   return {
     engine,
     concurrency,
@@ -307,6 +313,7 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     babel,
     enumitem,
     setlist,
+    hyperref,
     crop,
     esoPic,
     generate: typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_PDF_FORMAT.generate,

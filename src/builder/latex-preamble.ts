@@ -85,7 +85,6 @@ export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: Pre
     '\\usepackage{setspace}',
     `\\setstretch{${lineSpacing}}`,
     '\\usepackage[activate={true,nocompatibility},final,tracking=true,kerning=true,spacing=true,factor=1100,stretch=10,shrink=10]{microtype}',
-    '\\usepackage{hyperref}',
     '\\usepackage{scrlayer-scrpage}',
     '\\clearpairofpagestyles',
     '\\newcounter{none}',
@@ -130,6 +129,13 @@ export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: Pre
         preamble.push(`\\setlist[${sl.env}]{${sl.opts.join(',')}}`);
       }
     }
+  }
+
+  // Hyperref: opciones del paquete hyperref (opcional)
+  if (fmt.hyperref && fmt.hyperref.length > 0) {
+    preamble.push(`\\usepackage[${fmt.hyperref.join(',')}]{hyperref}`);
+  } else {
+    preamble.push('\\usepackage{hyperref}');
   }
 
   // Cuadricula de fondo con eso-pic (opcional)

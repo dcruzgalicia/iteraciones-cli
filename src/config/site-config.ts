@@ -82,6 +82,8 @@ export interface PdfFormatConfig {
   enumitem?: boolean;
   /** Comandos \\setlist para personalizar listas. */
   setlist?: Array<{ env: string; opts: string[] }>;
+  /** Opciones para el paquete hyperref (ej: hidelinks, pdftex). */
+  hyperref?: string[];
   /** Si true, incluye marcas de corte con el paquete crop. */
   crop?: boolean;
   /** Si true, incluye \usepackage[grid]{eso-pic} para cuadricula de fondo. */
@@ -224,6 +226,7 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   babel: ['spanish', 'mexico', 'es-noshorthands', 'es-noindentfirst'],
   enumitem: true,
   setlist: [{ env: 'description', opts: ['noitemsep', 'nosep', 'topsep=\\baselineskip'] }],
+  hyperref: ['hidelinks'],
   crop: false,
   esoPic: false,
   force: false,
