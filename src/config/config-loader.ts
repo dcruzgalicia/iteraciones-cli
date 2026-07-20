@@ -63,6 +63,12 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
   const disabledTranspilers =
     Array.isArray(rawDisabled) && rawDisabled.length > 0 ? rawDisabled.filter((t): t is string => typeof t === 'string') : undefined;
 
+  const rawDisabledPreamble = root['disabled-preamble-transpilers'];
+  const disabledPreambleTranspilers =
+    Array.isArray(rawDisabledPreamble) && rawDisabledPreamble.length > 0
+      ? rawDisabledPreamble.filter((t): t is string => typeof t === 'string')
+      : undefined;
+
   const title = typeof site.title === 'string' ? site.title : DEFAULT_SITE_CONFIG.title;
   const tagline = typeof site.tagline === 'string' ? site.tagline : DEFAULT_SITE_CONFIG.tagline;
   const lang = typeof site.lang === 'string' ? site.lang : DEFAULT_SITE_CONFIG.lang;
@@ -88,6 +94,7 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
     baseUrl,
     plugins,
     disabledTranspilers,
+    disabledPreambleTranspilers,
     pagination,
     format,
   };

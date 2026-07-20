@@ -7,6 +7,7 @@
  */
 import type { PdfFormatConfig } from '../config/site-config.js';
 import { DEFAULT_PDF_FORMAT } from '../config/site-config.js';
+import { loadPreambleTranspilers } from './preamble-loader.js';
 
 /** Mapa de nombres de page-size a dimensiones [ancho, alto] en mm. */
 const PAGE_SIZE_DIMS: Record<string, [number, number]> = {
@@ -49,7 +50,11 @@ function discoverBibFiles(cwd: string): string[] {
   return results.sort();
 }
 
-export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: PreambleMeta): Promise<string[]> {
+export async function buildLatexPreamble(
+  pdfFormat?: PdfFormatConfig,
+  meta?: PreambleMeta,
+  disabledPreambleTranspilers?: string[],
+): Promise<string[]> {
   const fmt = pdfFormat ?? DEFAULT_PDF_FORMAT;
   const dc = fmt.documentclass ?? 'scrbook';
   const fontSize = fmt.fontSize ?? '12pt';
@@ -270,7 +275,15 @@ export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: Pre
   }
   if (fmt.toc) {
     preamble.push('\\tableofcontents');
-    preamble.push('\\cleardoublepage');
+    preamble.push('\cleardoublepage');
+  }
+
+  // Ejecutar preamble transpilers (built-in + proyecto)
+  // Nota: el cwd se toma de meta.cwd si está disponible
+  const cwdForTranspilers = meta?.cwd;
+  const preambleTranspilers = await loadPreambleTranspilers(disabledPreambleTranspilers, cwdForTranspilers);
+  for (const tp of preambleTranspilers) {
+    tp.process(preamble, fmt);
   }
 
   return preamble;
