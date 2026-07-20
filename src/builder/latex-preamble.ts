@@ -87,18 +87,22 @@ export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: Pre
     '\\usepackage{scrlayer-scrpage}',
     '\\clearpairofpagestyles',
     '\\newcounter{none}',
-    '\\providecommand{\\tightlist}{%',
-    '  \\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}}',
-    '\\raggedbottom',
-    '\\pretolerance=200',
-    '\\tolerance=400',
-    `\\hyphenpenalty=${fmt.hyphenation ? 100 : 1000000}`,
-    '\\brokenpenalty=1000000',
-    '\\finalhyphendemerits=1000000',
-    '\\doublehyphendemerits=1000000',
-    '\\widowpenalty=1000000',
-    '\\clubpenalty=1000000',
+    '\providecommand{\tightlist}{%',
+    '  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}',
+    `\\pretolerance=${fmt.pretolerance ?? 200}`,
+    `\\tolerance=${fmt.tolerance ?? 400}`,
+    `\\hyphenpenalty=${fmt.hyphenation ? 100 : fmt.brokenpenalty ?? 1000000}`,
+    `\\brokenpenalty=${fmt.brokenpenalty ?? 1000000}`,
+    `\\finalhyphendemerits=${fmt.finalhyphendemerits ?? 1000000}`,
+    `\\doublehyphendemerits=${fmt.doublehyphendemerits ?? 1000000}`,
+    `\\widowpenalty=${fmt.widowpenalty ?? 1000000}`,
+    `\\clubpenalty=${fmt.clubpenalty ?? 1000000}`,
   ];
+
+  // Raggedbottom: control de pagina vertical (opcional, default true)
+  if (fmt.raggedbottom !== false) {
+    preamble.push('\\raggedbottom');
+  }
 
   // Configurar numeracion de pagina con scrlayer-scrpage
   const pageNum = fmt.pageNumber;

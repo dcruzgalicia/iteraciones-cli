@@ -241,6 +241,14 @@ function buildDefaultConfig(): string {
       }
     }
   }
+  lines.push(`    raggedbottom: ${yamlBool(pdfCfg.raggedbottom ?? true)}`);
+  lines.push(`    pretolerance: ${yamlValue(pdfCfg.pretolerance ?? 200)}`);
+  lines.push(`    tolerance: ${yamlValue(pdfCfg.tolerance ?? 400)}`);
+  lines.push(`    brokenpenalty: ${yamlValue(pdfCfg.brokenpenalty ?? 1000000)}`);
+  lines.push(`    finalhyphendemerits: ${yamlValue(pdfCfg.finalhyphendemerits ?? 1000000)}`);
+  lines.push(`    doublehyphendemerits: ${yamlValue(pdfCfg.doublehyphendemerits ?? 1000000)}`);
+  lines.push(`    widowpenalty: ${yamlValue(pdfCfg.widowpenalty ?? 1000000)}`);
+  lines.push(`    clubpenalty: ${yamlValue(pdfCfg.clubpenalty ?? 1000000)}`);
   lines.push(`    pdfx: ${yamlBool(pdfCfg.pdfx)}`);
   lines.push(`    crop: ${yamlBool(pdfCfg.crop!)}`);
   lines.push(`    eso-pic: ${yamlBool(pdfCfg.esoPic!)}`);

@@ -86,6 +86,22 @@ export interface PdfFormatConfig {
   hyperref?: string[];
   /** Opciones para el paquete microtype. */
   microtype?: Record<string, boolean | string | number>;
+  /** Control de pagina: \\raggedbottom. */
+  raggedbottom?: boolean;
+  /** Tolerancia para saltos de linea. */
+  pretolerance?: number;
+  /** Tolerancia para saltos de linea. */
+  tolerance?: number;
+  /** Penalizacion por salto tras linea con guion. */
+  brokenpenalty?: number;
+  /** Penalizacion por ultima linea con guion. */
+  finalhyphendemerits?: number;
+  /** Penalizacion por dos guiones consecutivos. */
+  doublehyphendemerits?: number;
+  /** Penalizacion por linea viuda. */
+  widowpenalty?: number;
+  /** Penalizacion por linea huérfana. */
+  clubpenalty?: number;
   /** Si true, incluye marcas de corte con el paquete crop. */
   crop?: boolean;
   /** Si true, incluye \usepackage[grid]{eso-pic} para cuadricula de fondo. */
@@ -239,6 +255,14 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
     stretch: 10,
     shrink: 10,
   },
+  raggedbottom: true,
+  pretolerance: 200,
+  tolerance: 400,
+  brokenpenalty: 1_000_000,
+  finalhyphendemerits: 1_000_000,
+  doublehyphendemerits: 1_000_000,
+  widowpenalty: 1_000_000,
+  clubpenalty: 1_000_000,
   crop: false,
   esoPic: false,
   force: false,

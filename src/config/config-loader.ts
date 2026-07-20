@@ -304,6 +304,15 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     if (Object.keys(parsed).length > 0) microtype = parsed;
   }
 
+  const raggedbottom = typeof obj.raggedbottom === 'boolean' ? obj.raggedbottom : DEFAULT_PDF_FORMAT.raggedbottom;
+  const pretolerance = typeof obj.pretolerance === 'number' ? obj.pretolerance : DEFAULT_PDF_FORMAT.pretolerance;
+  const tolerance = typeof obj.tolerance === 'number' ? obj.tolerance : DEFAULT_PDF_FORMAT.tolerance;
+  const brokenpenalty = typeof obj.brokenpenalty === 'number' ? obj.brokenpenalty : DEFAULT_PDF_FORMAT.brokenpenalty;
+  const finalhyphendemerits = typeof obj['finalhyphendemerits'] === 'number' ? obj['finalhyphendemerits'] : DEFAULT_PDF_FORMAT.finalhyphendemerits;
+  const doublehyphendemerits = typeof obj['doublehyphendemerits'] === 'number' ? obj['doublehyphendemerits'] : DEFAULT_PDF_FORMAT.doublehyphendemerits;
+  const widowpenalty = typeof obj.widowpenalty === 'number' ? obj.widowpenalty : DEFAULT_PDF_FORMAT.widowpenalty;
+  const clubpenalty = typeof obj.clubpenalty === 'number' ? obj.clubpenalty : DEFAULT_PDF_FORMAT.clubpenalty;
+
   return {
     engine,
     concurrency,
@@ -327,6 +336,14 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     setlist,
     hyperref,
     microtype,
+    raggedbottom,
+    pretolerance,
+    tolerance,
+    brokenpenalty,
+    finalhyphendemerits,
+    doublehyphendemerits,
+    widowpenalty,
+    clubpenalty,
     crop,
     esoPic,
     generate: typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_PDF_FORMAT.generate,
