@@ -29,6 +29,9 @@ export const BUILTIN_PREAMBLE_TRANSPILERS: string[] = [
   '07-section-subsubsection',
   '08-section-paragraph',
   '09-section-subparagraph',
+  '10-dictum',
+  '11-environments',
+  '12-page-style',
 ];
 
 export interface PreambleTranspiler {
@@ -104,6 +107,9 @@ export function getBuiltinPreambleTranspilerInfos(): PreambleTranspilerInfo[] {
     '07-section-subsubsection': 'Personaliza \\subsubsection con \\RedeclareSectionCommand',
     '08-section-paragraph': 'Personaliza \\paragraph con \\RedeclareSectionCommand',
     '09-section-subparagraph': 'Personaliza \\subparagraph con \\RedeclareSectionCommand',
+    '10-dictum': 'Personaliza \\dictum: ancho, regla, fuente y formato del autor',
+    '11-environments': 'Redefine center/flushright/flushleft sin espacio vertical extra',
+    '12-page-style': 'Define \\partpagestyle y \\chapterpagestyle como empty',
   };
   return BUILTIN_PREAMBLE_TRANSPILERS.map((name) => ({
     name,
