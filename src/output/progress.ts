@@ -16,16 +16,22 @@ export interface RenderFileReport {
 export type PipelinePhase = 'discovery' | 'render' | 'context' | 'latex' | 'markdown' | 'pdf' | 'epub' | 'html' | 'compose';
 
 const PHASE_LABELS: Record<PipelinePhase, string> = {
-  discovery: 'Descubriendo documentos',
-  render: 'Renderizando (pandoc)',
+  discovery: 'Buscando documentos',
+  render: 'Procesando contenido',
   context: 'Construyendo \u00edndices',
-  latex: 'Generando .tex',
-  markdown: 'Exportando Markdown',
-  pdf: 'Compilando PDF',
-  epub: 'Exportando EPUB',
-  html: 'Componiendo HTML',
+  latex: 'LaTeX',
+  markdown: 'Markdown',
+  pdf: 'PDF',
+  epub: 'EPUB',
+  html: 'HTML',
   compose: 'Componiendo',
 };
+
+/** Agrupaci\u00f3n de fases en secciones con su propio contador. */
+const PHASE_GROUPS: { title: string; phases: PipelinePhase[] }[] = [
+  { title: 'Preparando proyecto', phases: ['discovery', 'render'] },
+  { title: 'Generando formatos', phases: ['latex', 'pdf', 'html', 'epub', 'markdown'] },
+];
 
 const PHASE_ORDER: PipelinePhase[] = ['discovery', 'render', 'context', 'latex', 'pdf', 'html', 'epub', 'markdown'];
 
@@ -40,6 +46,9 @@ export class ProgressTracker {
   private phaseDone: number = 0;
   private lastLineLen: number = 0;
   private excludedDraftsCount: number = 0;
+  private currentGroupIndex: number = -1;
+  private groupPhaseIndex: number = 0;
+  private groupPhaseTotal: number = 0;
 
   constructor(options: { verbose?: boolean }) {
     this.verbose = options.verbose ?? false;
@@ -47,13 +56,11 @@ export class ProgressTracker {
     this.t0 = performance.now();
   }
 
-  /** Escribe a stderr, limpiando primero la línea del progress bar si existe. */
   private stderrLine(text: string): void {
     this.clearLine();
     process.stderr.write(`${text}\n`);
   }
 
-  /** Renderiza el progress bar (solo stderr TTY en modo normal). */
   private render(text: string): void {
     if (!this.tty || this.verbose) return;
     const line = `\r${text}`;
@@ -74,7 +81,6 @@ export class ProgressTracker {
     return '█'.repeat(filled) + '░'.repeat(width - filled);
   }
 
-  /** Mensaje informativo solo en verbose. */
   log(msg: string): void {
     if (this.verbose) {
       this.clearLine();
@@ -86,8 +92,33 @@ export class ProgressTracker {
     this.excludedDraftsCount = count;
   }
 
-  /** Abre una fase del pipeline con un total de trabajo conocido. */
+  /** Busca el grupo al que pertenece una fase y actualiza el contador. */
+  private locateGroup(phase: PipelinePhase): void {
+    for (let g = 0; g < PHASE_GROUPS.length; g++) {
+      const group = PHASE_GROUPS[g]!;
+      const pIdx = group.phases.indexOf(phase);
+      if (pIdx !== -1) {
+        if (g !== this.currentGroupIndex) {
+          this.currentGroupIndex = g;
+          this.groupPhaseIndex = 0;
+          this.groupPhaseTotal = group.phases.length;
+          if (!this.verbose && this.tty) {
+            this.clearLine();
+            process.stderr.write(`\n${group.title}\n`);
+          }
+        }
+        this.groupPhaseIndex = pIdx + 1;
+        return;
+      }
+    }
+    if (this.currentGroupIndex === -1) {
+      this.groupPhaseTotal = 0;
+      this.groupPhaseIndex = 0;
+    }
+  }
+
   startPhase(phase: PipelinePhase, total: number = 0): void {
+    this.locateGroup(phase);
     this.currentPhase = phase;
     this.phaseTotal = total;
     this.phaseDone = 0;
@@ -95,14 +126,13 @@ export class ProgressTracker {
 
     if (this.verbose) {
       this.clearLine();
-      process.stdout.write(`\n── ${PHASE_LABELS[phase]} ──\n`);
+      process.stdout.write(`\n\u2500\u2500 ${PHASE_LABELS[phase]} \u2500\u2500\n`);
     } else if (this.tty) {
       const b = this.bar(0, total || 1);
       this.render(`  ${PHASE_LABELS[phase]}: ${b} 0/${total || '?'}`);
     }
   }
 
-  /** Incrementa el contador de trabajo completado. */
   advance(by: number = 1): void {
     this.phaseDone += by;
     if (!this.verbose && this.tty && this.currentPhase) {
@@ -115,46 +145,43 @@ export class ProgressTracker {
     }
   }
 
-  /** Reporta un archivo procesado (verbose: stdout; normal: bar). */
   reportFile(file: RenderFileReport): void {
     if (this.verbose) {
       const tag = `[${file.phase}]`;
       const time = formatTime(file.durationMs);
-      const cache = file.cacheHit ? ' (caché)' : '';
+      const cache = file.cacheHit ? ' (cach\u00e9)' : '';
       this.clearLine();
-      process.stdout.write(`  ${tag} ${file.relativePath} → ${time}${cache}\n`);
+      process.stdout.write(`  ${tag} ${file.relativePath} \u2192 ${time}${cache}\n`);
     } else {
       this.advance();
     }
   }
 
-  /** Cierra la fase actual y registra su duración. Muestra conteo si hay documentos procesados. */
   completePhase(actualCount?: number): void {
     const phase = this.currentPhase;
     if (!phase) return;
     const elapsed = performance.now() - this.phaseStart;
     this.phaseDurations[phase] = elapsed;
 
-    const count = actualCount ?? this.phaseTotal;
-    const countStr = count > 0 ? `${count} documento${count !== 1 ? 's' : ''} en ` : '';
+    const hasCounter = this.groupPhaseTotal > 0;
+    const counter = hasCounter ? `[${this.groupPhaseIndex}/${this.groupPhaseTotal}] ` : '';
 
     if (this.verbose) {
       this.clearLine();
-      process.stdout.write(`  ✓ ${countStr}${formatTime(elapsed)}\n\n`);
+      process.stdout.write(`  ${counter}\u2713 ${formatTime(elapsed)}\n\n`);
     } else if (this.tty) {
       this.clearLine();
-      process.stderr.write(`✓ ${PHASE_LABELS[phase]} ${countStr}${formatTime(elapsed)}\n`);
+      process.stderr.write(`${counter}${PHASE_LABELS[phase]} \u2713 ${formatTime(elapsed)}\n`);
     }
     this.currentPhase = null;
   }
 
-  /** Cierra el tracker con un resumen final. */
-  finish(docCount: number): void {
+  finish(docCount: number, formatCount?: number): void {
     this.clearLine();
     const elapsed = formatTime(performance.now() - this.t0);
 
     if (this.verbose) {
-      process.stdout.write(`\n── Resumen ──\n`);
+      process.stdout.write(`\n\u2500\u2500 Resumen \u2500\u2500\n`);
       let prevT = this.t0;
       for (const ph of PHASE_ORDER) {
         const dur = this.phaseDurations[ph];
@@ -164,13 +191,17 @@ export class ProgressTracker {
         }
       }
       process.stdout.write(`\nBuild completado ${docCount} documento${docCount !== 1 ? 's' : ''} en ${elapsed}`);
-    } else {
-      process.stdout.write(`Build completado ${docCount} documento${docCount !== 1 ? 's' : ''} en ${elapsed}`);
+    } else if (this.tty) {
+      process.stderr.write(`\n\u2713 Build completado\n`);
+      process.stderr.write(`  Documentos procesados: ${docCount}\n`);
+      if (formatCount !== undefined && formatCount > 0) {
+        process.stderr.write(`  Formatos generados: ${formatCount}\n`);
+      }
+      process.stderr.write(`  Tiempo total: ${elapsed}\n`);
     }
     if (this.excludedDraftsCount > 0) {
       const word = this.excludedDraftsCount === 1 ? 'borrador' : 'borradores';
-      process.stdout.write(` (${this.excludedDraftsCount} ${word} excluido${this.excludedDraftsCount > 1 ? 's' : ''} por draft:true)`);
+      process.stderr.write(`  (${this.excludedDraftsCount} ${word} excluido${this.excludedDraftsCount > 1 ? 's' : ''} por draft:true)\n`);
     }
-    process.stdout.write('\n');
   }
 }
