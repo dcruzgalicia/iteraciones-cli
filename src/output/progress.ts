@@ -143,7 +143,7 @@ export class ProgressTracker {
       process.stdout.write(`  ✓ ${countStr}${formatTime(elapsed)}\n\n`);
     } else if (this.tty) {
       this.clearLine();
-      process.stderr.write(`✓ ${PHASE_LABELS[phase]}: ${countStr}${formatTime(elapsed)}\n`);
+      process.stderr.write(`✓ ${PHASE_LABELS[phase]} ${countStr}${formatTime(elapsed)}\n`);
     }
     this.currentPhase = null;
   }
@@ -159,13 +159,13 @@ export class ProgressTracker {
       for (const ph of PHASE_ORDER) {
         const dur = this.phaseDurations[ph];
         if (dur !== undefined) {
-          process.stdout.write(`  ${PHASE_LABELS[ph]}: ${formatTime(dur)}\n`);
+          process.stdout.write(`  ${PHASE_LABELS[ph]} ${formatTime(dur)}\n`);
           prevT += dur;
         }
       }
-      process.stdout.write(`\nBuild completado: ${docCount} documento${docCount !== 1 ? 's' : ''} en ${elapsed}`);
+      process.stdout.write(`\nBuild completado ${docCount} documento${docCount !== 1 ? 's' : ''} en ${elapsed}`);
     } else {
-      process.stdout.write(`Build completado: ${docCount} documento${docCount !== 1 ? 's' : ''} en ${elapsed}`);
+      process.stdout.write(`Build completado ${docCount} documento${docCount !== 1 ? 's' : ''} en ${elapsed}`);
     }
     if (this.excludedDraftsCount > 0) {
       const word = this.excludedDraftsCount === 1 ? 'borrador' : 'borradores';
