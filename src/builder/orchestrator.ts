@@ -1021,7 +1021,8 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     const epubOn = formatCfg?.epub?.generate === true;
     const latexOn = pdfOn && formatCfg?.latex?.force !== true ? true : formatCfg?.latex?.generate !== false;
     const docCount = htmlOn || pdfOn || epubOn || mdOn || latexOn ? allDocs.length : 0;
-    progress.finish(docCount);
+    const formatCount = [latexOn, pdfOn, htmlOn, epubOn, mdOn].filter(Boolean).length;
+    progress.finish(docCount, formatCount);
   } finally {
     pandocPool?.dispose();
   }
