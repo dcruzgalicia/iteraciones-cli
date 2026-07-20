@@ -6,7 +6,7 @@ import { CacheManager } from '../cache/cache-manager.js';
 import { hash } from '../cache/hasher.js';
 import { loadOutputManifest, saveOutputManifest } from '../cache/output-manifest.js';
 import { loadSiteConfig } from '../config/config-loader.js';
-import { ProgressTracker } from '../output/progress.js';
+import { ProgressTracker, type PipelinePhase } from '../output/progress.js';
 import { clean, writeFile } from '../output/writer.js';
 import { loadPlugins } from '../plugin/loader.js';
 import { PluginRegistry } from '../plugin/registry.js';
@@ -886,6 +886,14 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       : renderedMap;
 
     // ── Fase latex: escribir .tex ──
+    // Configurar contador de formatos activos antes de iniciar
+    const activeFormats: PipelinePhase[] = ['latex'];
+    if (pdfOn && !noExport) activeFormats.push('pdf');
+    if (formatCfg?.html?.generate === true) activeFormats.push('html');
+    if (formatCfg?.epub?.generate && !noExport) activeFormats.push('epub');
+    if (formatCfg?.markdown?.generate && !noExport) activeFormats.push('markdown');
+    progress.setFormatPhases(activeFormats);
+
     progress.startPhase('latex', allDocs.length);
     await writeTexFiles(finalContextDocs, ctx, log);
     progress.completePhase();
@@ -932,36 +940,38 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     }
 
     // ── Fase html (final) ──
-    progress.startPhase('html', finalContextDocs.length);
-    const docsWithLinks = finalContextDocs; // sin inyeccion de descargas (se hace dentro de runFinalization)
-    const itemHashMap = composeCache ? new Map(allDocs.map((d) => [d.relativePath, d.sourceHash])) : undefined;
-    const effectiveComposeCache = composeCache && affectedPaths ? { ...composeCache, skipPrune: true } : composeCache;
+    if (formatCfg?.html?.generate === true) {
+      progress.startPhase('html', finalContextDocs.length);
+      const docsWithLinks = finalContextDocs;
+      const itemHashMap = composeCache ? new Map(allDocs.map((d) => [d.relativePath, d.sourceHash])) : undefined;
+      const effectiveComposeCache = composeCache && affectedPaths ? { ...composeCache, skipPrune: true } : composeCache;
 
-    // Inyectar enlaces de descarga
-    let docsWithExportLinks = finalContextDocs;
-    if (exportResults.length > 0) {
-      docsWithExportLinks = injectDownloadLinks(finalContextDocs, exportResults, ctx.outputDir);
-      docsWithExportLinks = injectDownloadLinksIntoListItems(docsWithExportLinks);
-      docsWithExportLinks = injectCoverIntoListItems(docsWithExportLinks);
+      // Inyectar enlaces de descarga
+      let docsWithExportLinks = finalContextDocs;
+      if (exportResults.length > 0) {
+        docsWithExportLinks = injectDownloadLinks(finalContextDocs, exportResults, ctx.outputDir);
+        docsWithExportLinks = injectDownloadLinksIntoListItems(docsWithExportLinks);
+        docsWithExportLinks = injectCoverIntoListItems(docsWithExportLinks);
+      }
+
+      const composeMs = await runFinalization(
+        docsWithExportLinks,
+        ctx,
+        effectiveComposeCache,
+        renderCache,
+        registry,
+        hasPlugins,
+        log,
+        composeStats,
+        pandocPool,
+        cwd,
+        options.incremental === true,
+        itemHashMap,
+        renderUsedKeys,
+        onFileProcessed,
+      );
+      progress.completePhase();
     }
-
-    const composeMs = await runFinalization(
-      docsWithExportLinks,
-      ctx,
-      effectiveComposeCache,
-      renderCache,
-      registry,
-      hasPlugins,
-      log,
-      composeStats,
-      pandocPool,
-      cwd,
-      options.incremental === true,
-      itemHashMap,
-      renderUsedKeys,
-      onFileProcessed,
-    );
-    progress.completePhase(); // fin de html
 
     // ── Fase epub ──
     if (formatCfg?.epub?.generate && !noExport) {

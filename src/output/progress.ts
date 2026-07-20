@@ -27,11 +27,13 @@ const PHASE_LABELS: Record<PipelinePhase, string> = {
   compose: 'Componiendo',
 };
 
-/** Agrupaci\u00f3n de fases en secciones con su propio contador. */
+/** Agrupación de fases en secciones con su propio contador. */
 const PHASE_GROUPS: { title: string; phases: PipelinePhase[] }[] = [
   { title: 'Preparando proyecto', phases: ['discovery', 'render'] },
   { title: 'Generando formatos', phases: ['latex', 'pdf', 'html', 'epub', 'markdown'] },
 ];
+
+const FORMAT_GROUP_INDEX = 1;
 
 const PHASE_ORDER: PipelinePhase[] = ['discovery', 'render', 'context', 'latex', 'pdf', 'html', 'epub', 'markdown'];
 
@@ -54,6 +56,16 @@ export class ProgressTracker {
     this.verbose = options.verbose ?? false;
     this.tty = isTTY();
     this.t0 = performance.now();
+  }
+
+  /**
+   * Define qué fases de formato están activas para el contador [1/N].
+   * Debe llamarse antes de iniciar la primera fase de formato.
+   */
+  setFormatPhases(phases: PipelinePhase[]): void {
+    if (phases.length > 0) {
+      PHASE_GROUPS[FORMAT_GROUP_INDEX]!.phases = phases;
+    }
   }
 
   private stderrLine(text: string): void {
