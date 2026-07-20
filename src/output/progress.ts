@@ -149,9 +149,16 @@ export class ProgressTracker {
   }
 
   /** Cierra el tracker con un resumen final. */
-  finish(docCount: number): void {
+  finish(docCount: number, formatCount?: number): void {
     this.clearLine();
     const elapsed = formatTime(performance.now() - this.t0);
+
+    const docWord = docCount === 1 ? 'documento' : 'documentos';
+    let msg = `${docCount} ${docWord}`;
+    if (formatCount !== undefined && formatCount > 0) {
+      msg += ` exportado${docCount === 1 ? '' : 's'} a ${formatCount} formato${formatCount !== 1 ? 's' : ''}`;
+    }
+    msg += ` en ${elapsed}`;
 
     if (this.verbose) {
       process.stdout.write(`\n── Resumen ──\n`);
@@ -159,13 +166,13 @@ export class ProgressTracker {
       for (const ph of PHASE_ORDER) {
         const dur = this.phaseDurations[ph];
         if (dur !== undefined) {
-          process.stdout.write(`  ${PHASE_LABELS[ph]}: ${formatTime(dur)}\n`);
+          process.stdout.write(`  ${PHASE_LABELS[ph]} ${formatTime(dur)}\n`);
           prevT += dur;
         }
       }
-      process.stdout.write(`\nBuild completado: ${docCount} documento${docCount !== 1 ? 's' : ''} en ${elapsed}`);
+      process.stdout.write(`\nBuild completado ${msg}`);
     } else {
-      process.stdout.write(`Build completado: ${docCount} documento${docCount !== 1 ? 's' : ''} en ${elapsed}`);
+      process.stdout.write(`Build completado ${msg}`);
     }
     if (this.excludedDraftsCount > 0) {
       const word = this.excludedDraftsCount === 1 ? 'borrador' : 'borradores';
