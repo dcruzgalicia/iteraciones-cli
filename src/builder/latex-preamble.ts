@@ -84,7 +84,6 @@ export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: Pre
     '\\usepackage{calc}',
     '\\usepackage{setspace}',
     `\\setstretch{${lineSpacing}}`,
-    '\\usepackage[activate={true,nocompatibility},final,tracking=true,kerning=true,spacing=true,factor=1100,stretch=10,shrink=10]{microtype}',
     '\\usepackage{scrlayer-scrpage}',
     '\\clearpairofpagestyles',
     '\\newcounter{none}',
@@ -136,6 +135,21 @@ export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: Pre
     preamble.push(`\\usepackage[${fmt.hyperref.join(',')}]{hyperref}`);
   } else {
     preamble.push('\\usepackage{hyperref}');
+  }
+
+  // Microtype: microtipografia (usando config si existe, o default hardcodeado)
+  if (fmt.microtype && Object.keys(fmt.microtype).length > 0) {
+    const mtOpts: string[] = [];
+    for (const [k, v] of Object.entries(fmt.microtype)) {
+      if (v === true) {
+        mtOpts.push(k);
+      } else if (typeof v === 'string' || typeof v === 'number') {
+        mtOpts.push(`${k}=${v}`);
+      }
+    }
+    if (mtOpts.length > 0) {
+      preamble.push(`\\usepackage[${mtOpts.join(',')}]{microtype}`);
+    }
   }
 
   // Cuadricula de fondo con eso-pic (opcional)

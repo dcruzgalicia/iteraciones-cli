@@ -292,6 +292,18 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
       ? rawHyperref
       : [...(DEFAULT_PDF_FORMAT.hyperref ?? [])];
 
+  const rawMicrotype = obj.microtype;
+  let microtype = DEFAULT_PDF_FORMAT.microtype;
+  if (rawMicrotype && typeof rawMicrotype === 'object' && !Array.isArray(rawMicrotype)) {
+    const parsed: Record<string, boolean | string | number> = {};
+    for (const [k, v] of Object.entries(rawMicrotype as Record<string, unknown>)) {
+      if (typeof v === 'boolean' || typeof v === 'string' || typeof v === 'number') {
+        parsed[k] = v;
+      }
+    }
+    if (Object.keys(parsed).length > 0) microtype = parsed;
+  }
+
   return {
     engine,
     concurrency,
@@ -314,6 +326,7 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     enumitem,
     setlist,
     hyperref,
+    microtype,
     crop,
     esoPic,
     generate: typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_PDF_FORMAT.generate,

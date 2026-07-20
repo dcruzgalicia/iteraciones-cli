@@ -228,6 +228,19 @@ function buildDefaultConfig(): string {
   } else {
     lines.push('    hyperref: []');
   }
+  const microtypeCfg = pdfCfg.microtype ?? DEFAULT_PDF_FORMAT.microtype ?? {};
+  if (Object.keys(microtypeCfg).length > 0) {
+    lines.push('    microtype:');
+    for (const [k, v] of Object.entries(microtypeCfg)) {
+      if (v === true) {
+        lines.push(`      ${k}: true`);
+      } else if (typeof v === 'string') {
+        lines.push(`      ${k}: ${yamlStr(v)}`);
+      } else {
+        lines.push(`      ${k}: ${v}`);
+      }
+    }
+  }
   lines.push(`    pdfx: ${yamlBool(pdfCfg.pdfx)}`);
   lines.push(`    crop: ${yamlBool(pdfCfg.crop!)}`);
   lines.push(`    eso-pic: ${yamlBool(pdfCfg.esoPic!)}`);
