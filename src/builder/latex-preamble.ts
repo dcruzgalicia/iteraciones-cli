@@ -235,6 +235,15 @@ export async function buildLatexPreamble(
     }
   }
 
+  // Ejecutar preamble transpilers (built-in + proyecto)
+  // Se ejecutan antes de \begin{document} para que sus definiciones
+  // esten vigentes cuando se llame a \maketitle.
+  const cwdForTranspilers = meta?.cwd;
+  const preambleTranspilers = await loadPreambleTranspilers(disabledPreambleTranspilers, cwdForTranspilers);
+  for (const tp of preambleTranspilers) {
+    tp.process(preamble, fmt);
+  }
+
   preamble.push('\\begin{document}');
 
   if (meta?.title) preamble.push(`\\title{${meta.title}}`);
@@ -275,15 +284,7 @@ export async function buildLatexPreamble(
   }
   if (fmt.toc) {
     preamble.push('\\tableofcontents');
-    preamble.push('\cleardoublepage');
-  }
-
-  // Ejecutar preamble transpilers (built-in + proyecto)
-  // Nota: el cwd se toma de meta.cwd si está disponible
-  const cwdForTranspilers = meta?.cwd;
-  const preambleTranspilers = await loadPreambleTranspilers(disabledPreambleTranspilers, cwdForTranspilers);
-  for (const tp of preambleTranspilers) {
-    tp.process(preamble, fmt);
+    preamble.push('\\cleardoublepage');
   }
 
   return preamble;
