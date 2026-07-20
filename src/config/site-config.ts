@@ -172,6 +172,11 @@ export interface SiteConfig {
    * nombre en <proyecto>/transpilers/<nombre>.ts.
    */
   disabledTranspilers?: string[];
+  /**
+   * Lista de preamble transpilers a desactivar (blacklist).
+   * Por defecto undefined = todos activos.
+   */
+  disabledPreambleTranspilers?: string[];
 }
 
 /**
@@ -293,6 +298,7 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   baseUrl: undefined,
   plugins: [],
   disabledTranspilers: undefined,
+  disabledPreambleTranspilers: undefined,
   pagination: DEFAULT_PAGINATION,
   format: {
     html: DEFAULT_HTML_FORMAT,

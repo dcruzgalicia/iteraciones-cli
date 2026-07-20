@@ -504,7 +504,7 @@ async function writeTexFiles(allContextDocs: BuildDocument[], ctx: BuildContext,
       date: doc.frontmatter?.date as string | undefined,
       filePath: doc.filePath,
       cwd: ctx.cwd,
-    });
+    }, ctx.siteConfig.disabledPreambleTranspilers);
 
     const texIntermediateDir = join(ctx.cwd, '.iteraciones', 'tex', dirname(doc.relativePath));
     await mkdir(texIntermediateDir, { recursive: true });

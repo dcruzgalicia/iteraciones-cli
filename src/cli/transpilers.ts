@@ -1,4 +1,5 @@
 import { getBuiltinTranspilerInfos } from '../builder/pipeline/render.js';
+import { getBuiltinPreambleTranspilerInfos } from '../builder/preamble-loader.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 
 /**
@@ -26,4 +27,27 @@ export async function runTranspilers(cwd: string): Promise<void> {
     process.stdout.write('Para desactivar uno, agrégalo a la lista `disabled-transpilers:` en _iteraciones.yaml.\n');
   }
   process.stdout.write('Para sobrescribir un transpiler, crea `<proyecto>/transpilers/<nombre>.ts`.\n');
+
+  // Preamble transpilers
+  const preambleInfos = getBuiltinPreambleTranspilerInfos();
+  if (preambleInfos.length > 0) {
+    const preambleDisabled = new Set(config.disabledPreambleTranspilers ?? []);
+    const hasPreambleDisabled = config.disabledPreambleTranspilers !== undefined && config.disabledPreambleTranspilers.length > 0;
+
+    process.stdout.write('\nPreamble transpilers (orden de ejecución):\n\n');
+
+    for (const info of preambleInfos) {
+      const active = !preambleDisabled.has(info.name);
+      const status = active ? 'activo' : 'desactivado';
+      process.stdout.write(`  ${info.name}  ${info.description}  [${status}]\n`);
+    }
+
+    process.stdout.write('\n');
+    if (hasPreambleDisabled) {
+      process.stdout.write('Para reactivar uno, elimínalo de la lista `disabled-preamble-transpilers:` en _iteraciones.yaml.\n');
+    } else {
+      process.stdout.write('Para desactivar uno, agrégalo a la lista `disabled-preamble-transpilers:` en _iteraciones.yaml.\n');
+    }
+    process.stdout.write('Para sobrescribir un preamble transpiler, crea `<proyecto>/preamble/<nombre>.ts`.\n');
+  }
 }
