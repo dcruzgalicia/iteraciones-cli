@@ -26,6 +26,9 @@ export const BUILTIN_PREAMBLE_TRANSPILERS: string[] = [
   '04-section-chapter',
   '05-section-section',
   '06-section-subsection',
+  '07-section-subsubsection',
+  '08-section-paragraph',
+  '09-section-subparagraph',
 ];
 
 export interface PreambleTranspiler {
@@ -98,6 +101,9 @@ export function getBuiltinPreambleTranspilerInfos(): PreambleTranspilerInfo[] {
     '04-section-chapter': 'Personaliza \\chapter con \\RedeclareSectionCommand',
     '05-section-section': 'Personaliza \\section con \\RedeclareSectionCommand',
     '06-section-subsection': 'Personaliza \\subsection con \\RedeclareSectionCommand',
+    '07-section-subsubsection': 'Personaliza \\subsubsection con \\RedeclareSectionCommand',
+    '08-section-paragraph': 'Personaliza \\paragraph con \\RedeclareSectionCommand',
+    '09-section-subparagraph': 'Personaliza \\subparagraph con \\RedeclareSectionCommand',
   };
   return BUILTIN_PREAMBLE_TRANSPILERS.map((name) => ({
     name,
