@@ -76,6 +76,8 @@ export interface PdfFormatConfig {
    * Solo aplica cuando page-number es header-*. Por defecto false.
    */
   showDate?: boolean;
+  /** Opciones para el paquete babel (ej: spanish, mexico, es-noshorthands). */
+  babel?: string[];
   /** Si true, incluye marcas de corte con el paquete crop. */
   crop?: boolean;
   /** Si true, incluye \usepackage[grid]{eso-pic} para cuadricula de fondo. */
@@ -215,6 +217,7 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   sides: 'twoside',
   secNumDepth: 1,
   generate: false,
+  babel: ['spanish', 'mexico', 'es-noshorthands', 'es-noindentfirst'],
   crop: false,
   esoPic: false,
   force: false,

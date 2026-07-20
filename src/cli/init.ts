@@ -204,6 +204,10 @@ function buildDefaultConfig(): string {
   lines.push(`    toc: ${yamlBool(pdfCfg.toc!)}`);
   lines.push(`    toc-depth: ${yamlValue(pdfCfg.tocDepth!)}`);
   lines.push(`    sec-num-depth: ${yamlValue(pdfCfg.secNumDepth!)}`);
+  lines.push('    babel:');
+  for (const opt of pdfCfg.babel ?? DEFAULT_PDF_FORMAT.babel ?? []) {
+    lines.push(`      - ${yamlStr(opt)}`);
+  }
   lines.push(`    pdfx: ${yamlBool(pdfCfg.pdfx)}`);
   lines.push(`    crop: ${yamlBool(pdfCfg.crop!)}`);
   lines.push(`    eso-pic: ${yamlBool(pdfCfg.esoPic!)}`);
