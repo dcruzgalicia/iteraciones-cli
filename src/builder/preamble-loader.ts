@@ -32,6 +32,8 @@ export const BUILTIN_PREAMBLE_TRANSPILERS: string[] = [
   '10-dictum',
   '11-environments',
   '12-page-style',
+  '13-toc-styling',
+  '14-bibliography-heading',
 ];
 
 export interface PreambleTranspiler {
@@ -110,6 +112,8 @@ export function getBuiltinPreambleTranspilerInfos(): PreambleTranspilerInfo[] {
     '10-dictum': 'Personaliza \\dictum: ancho, regla, fuente y formato del autor',
     '11-environments': 'Redefine center/flushright/flushleft sin espacio vertical extra',
     '12-page-style': 'Define \\partpagestyle y \\chapterpagestyle como empty',
+    '13-toc-styling': 'Personaliza el indice (TOC): nombre, espaciado, fuentes y lideres',
+    '14-bibliography-heading': 'Cambia titulo de bibliografia de chapter a section',
   };
   return BUILTIN_PREAMBLE_TRANSPILERS.map((name) => ({
     name,
