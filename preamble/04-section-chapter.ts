@@ -5,7 +5,7 @@ export const description = 'Personaliza \\chapter con \\RedeclareSectionCommand 
 export function process(preamble: string[], config: PdfFormatConfig): string[] {
   preamble.push(
     '% --- Seccionamiento: chapter ---',
-    '\\RedeclareSectionCommand[beforeskip=2\\baselineskip,afterskip=\\baselineskip,afterindent=false]{chapter}',
+    '\\RedeclareSectionCommand[beforeskip=2\\baselineskip,afterskip=\\baselineskip,afterindent=false,style=chapter]{chapter}',
     '\\setkomafont{chapter}{\\normalsize\\normalfont\\scshape}',
     '\\renewcommand{\\raggedchapter}{\\centering}',
   );

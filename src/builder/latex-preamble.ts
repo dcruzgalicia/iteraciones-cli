@@ -270,7 +270,6 @@ export async function buildLatexPreamble(
     preamble.push('\\date{}');
   }
   if (meta?.title) preamble.push('\\maketitle');
-  preamble.push('\\cleardoublepage');
 
   // Tabla de contenidos (opcional)
   // Profundidad de numeracion de secciones (sec-num-depth)
@@ -284,7 +283,6 @@ export async function buildLatexPreamble(
   }
   if (fmt.toc) {
     preamble.push('\\tableofcontents');
-    preamble.push('\\cleardoublepage');
   }
 
   return preamble;
