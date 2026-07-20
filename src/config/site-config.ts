@@ -53,7 +53,6 @@ export interface PdfFormatConfig {
   toc?: boolean;
   tocDepth?: number;
   secNumDepth?: number;
-  numbering?: boolean;
   hyphenation: boolean;
   pdfx: boolean;
   pageSize?: string;
