@@ -142,7 +142,15 @@ export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: Pre
     const mtOpts: string[] = [];
     for (const [k, v] of Object.entries(fmt.microtype)) {
       if (v === true) {
-        mtOpts.push(k);
+        if (k === 'final') {
+          mtOpts.push('final');
+        } else {
+          mtOpts.push(`${k}=true`);
+        }
+      } else if (v === false) {
+        if (k === 'final') {
+          mtOpts.push('draft');
+        }
       } else if (typeof v === 'string' || typeof v === 'number') {
         mtOpts.push(`${k}=${v}`);
       }
