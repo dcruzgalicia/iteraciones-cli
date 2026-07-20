@@ -78,6 +78,10 @@ export interface PdfFormatConfig {
   showDate?: boolean;
   /** Opciones para el paquete babel (ej: spanish, mexico, es-noshorthands). */
   babel?: string[];
+  /** Si true, carga \\usepackage{enumitem}. */
+  enumitem?: boolean;
+  /** Comandos \\setlist para personalizar listas. */
+  setlist?: Array<{ env: string; opts: string }>;
   /** Si true, incluye marcas de corte con el paquete crop. */
   crop?: boolean;
   /** Si true, incluye \usepackage[grid]{eso-pic} para cuadricula de fondo. */
@@ -218,6 +222,8 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   secNumDepth: 1,
   generate: false,
   babel: ['spanish', 'mexico', 'es-noshorthands', 'es-noindentfirst'],
+  enumitem: true,
+  setlist: [{ env: 'description', opts: 'noitemsep,nosep,topsep=\\baselineskip' }],
   crop: false,
   esoPic: false,
   force: false,

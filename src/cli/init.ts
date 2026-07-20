@@ -208,6 +208,14 @@ function buildDefaultConfig(): string {
   for (const opt of pdfCfg.babel ?? DEFAULT_PDF_FORMAT.babel ?? []) {
     lines.push(`      - ${yamlStr(opt)}`);
   }
+  lines.push(`    enumitem: ${yamlBool(pdfCfg.enumitem ?? true)}`);
+  if ((pdfCfg.setlist ?? DEFAULT_PDF_FORMAT.setlist ?? []).length > 0) {
+    lines.push('    setlist:');
+    for (const sl of pdfCfg.setlist ?? DEFAULT_PDF_FORMAT.setlist ?? []) {
+      lines.push(`      - env: ${yamlStr(sl.env)}`);
+      lines.push(`        opts: ${yamlStr(sl.opts)}`);
+    }
+  }
   lines.push(`    pdfx: ${yamlBool(pdfCfg.pdfx)}`);
   lines.push(`    crop: ${yamlBool(pdfCfg.crop!)}`);
   lines.push(`    eso-pic: ${yamlBool(pdfCfg.esoPic!)}`);

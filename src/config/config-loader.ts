@@ -267,6 +267,20 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
       ? rawBabel
       : [...(DEFAULT_PDF_FORMAT.babel ?? ['spanish', 'mexico', 'es-noshorthands', 'es-noindentfirst'])];
 
+  const enumitem = typeof obj.enumitem === 'boolean' ? obj.enumitem : DEFAULT_PDF_FORMAT.enumitem;
+
+  const rawSetlist = obj.setlist;
+  let setlist = DEFAULT_PDF_FORMAT.setlist;
+  if (Array.isArray(rawSetlist)) {
+    const parsed = rawSetlist
+      .filter((s): s is Record<string, unknown> => typeof s === 'object' && s !== null)
+      .map((s) => ({
+        env: typeof s.env === 'string' ? s.env : DEFAULT_PDF_FORMAT.setlist![0]!.env,
+        opts: typeof s.opts === 'string' ? s.opts : DEFAULT_PDF_FORMAT.setlist![0]!.opts,
+      }));
+    if (parsed.length > 0) setlist = parsed;
+  }
+
   const crop = typeof obj.crop === 'boolean' ? obj.crop : DEFAULT_PDF_FORMAT.crop;
   const esoPic = typeof obj['eso-pic'] === 'boolean' ? obj['eso-pic'] : DEFAULT_PDF_FORMAT.esoPic;
 
@@ -289,6 +303,8 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     sfdefaults,
     showDate,
     babel,
+    enumitem,
+    setlist,
     crop,
     esoPic,
     generate: typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_PDF_FORMAT.generate,
