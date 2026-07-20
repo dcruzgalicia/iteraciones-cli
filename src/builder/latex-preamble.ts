@@ -127,7 +127,7 @@ export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: Pre
     preamble.push('\\usepackage{enumitem}');
     if (fmt.setlist) {
       for (const sl of fmt.setlist) {
-        preamble.push(`\\setlist[${sl.env}]{${sl.opts}}`);
+        preamble.push(`\\setlist[${sl.env}]{${sl.opts.join(',')}}`);
       }
     }
   }
