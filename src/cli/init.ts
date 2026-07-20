@@ -204,7 +204,6 @@ function buildDefaultConfig(): string {
   lines.push(`    toc: ${yamlBool(pdfCfg.toc!)}`);
   lines.push(`    toc-depth: ${yamlValue(pdfCfg.tocDepth!)}`);
   lines.push(`    sec-num-depth: ${yamlValue(pdfCfg.secNumDepth!)}`);
-  lines.push('    respect-header-plain: false');
   lines.push(`    pdfx: ${yamlBool(pdfCfg.pdfx)}`);
   lines.push(`    crop: ${yamlBool(pdfCfg.crop!)}`);
   lines.push(`    eso-pic: ${yamlBool(pdfCfg.esoPic!)}`);

@@ -76,7 +76,6 @@ export interface PdfFormatConfig {
    * Solo aplica cuando page-number es header-*. Por defecto false.
    */
   showDate?: boolean;
-  respectHeaderPlain?: boolean;
   /** Si true, incluye marcas de corte con el paquete crop. */
   crop?: boolean;
   /** Si true, incluye \usepackage[grid]{eso-pic} para cuadricula de fondo. */
