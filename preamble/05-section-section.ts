@@ -5,7 +5,7 @@ export const description = 'Personaliza \\section con \\RedeclareSectionCommand 
 export function process(preamble: string[], config: PdfFormatConfig): string[] {
   preamble.push(
     '% --- Seccionamiento: section ---',
-    '\\RedeclareSectionCommand[beforeskip=2\\baselineskip,afterskip=2\\baselineskip,afterindent=false]{section}',
+    '\\RedeclareSectionCommand[beforeskip=2\\baselineskip,afterskip=2\\baselineskip,afterindent=false,style=section]{section}',
     '\\setkomafont{section}{\\normalsize\\bfseries\\MakeUppercase}',
     '\\renewcommand{\\raggedsection}{\\centering}',
   );

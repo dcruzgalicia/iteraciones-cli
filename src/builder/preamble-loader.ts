@@ -34,6 +34,7 @@ export const BUILTIN_PREAMBLE_TRANSPILERS: string[] = [
   '12-page-style',
   '13-toc-styling',
   '14-bibliography-heading',
+  '15-toc-section',
 ];
 
 export interface PreambleTranspiler {
@@ -114,6 +115,7 @@ export function getBuiltinPreambleTranspilerInfos(): PreambleTranspilerInfo[] {
     '12-page-style': 'Define \\partpagestyle y \\chapterpagestyle como empty',
     '13-toc-styling': 'Personaliza el indice (TOC): nombre, espaciado, fuentes y lideres',
     '14-bibliography-heading': 'Cambia titulo de bibliografia de chapter a section',
+    '15-toc-section': 'Redefine \\tableofcontents para usar \\section* en lugar de \\chapter*',
   };
   return BUILTIN_PREAMBLE_TRANSPILERS.map((name) => ({
     name,
