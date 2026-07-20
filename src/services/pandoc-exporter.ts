@@ -259,11 +259,6 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfF
     if (pdfFormat.sides) {
       lines.push(`twoside: ${pdfFormat.sides === 'twoside' ? 'true' : 'false'}`);
     }
-    // Respect-header-plain: cuando es true, plain style usa la posicion header
-    // configurada en lugar de footer-center.
-    if (pdfFormat.respectHeaderPlain) {
-      lines.push('respect-header-plain: true');
-    }
   }
 
   // fontdir ya no se usa (pdflatex no necesita rutas de fuentes OTF).
@@ -318,10 +313,7 @@ export async function convertToEpub(body: string, outputPath: string, doc?: Expo
   proc.stdin.write(body);
   proc.stdin.end();
 
-  const [stderr, exitCode] = await Promise.all([
-    new Response(proc.stderr as ReadableStream<Uint8Array>).text(),
-    proc.exited,
-  ]);
+  const [stderr, exitCode] = await Promise.all([new Response(proc.stderr as ReadableStream<Uint8Array>).text(), proc.exited]);
 
   if (exitCode !== 0) {
     throw new PandocError(`pandoc falló al generar EPUB`, doc?.filePath ?? '', stderr);
