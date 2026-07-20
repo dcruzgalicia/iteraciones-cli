@@ -19,7 +19,7 @@ import type { PdfFormatConfig } from '../config/site-config.js';
 const PKG_PREAMBLE_DIR = join(import.meta.dir, '../../preamble');
 
 /** Lista de preamble transpilers empaquetados en orden de aplicación. */
-export const BUILTIN_PREAMBLE_TRANSPILERS: string[] = ['01-maketitle-patches'];
+export const BUILTIN_PREAMBLE_TRANSPILERS: string[] = ['01-maketitle-patches', '02-title-fonts'];
 
 export interface PreambleTranspiler {
   description?: string;
@@ -86,6 +86,7 @@ export async function loadPreambleTranspilers(
 export function getBuiltinPreambleTranspilerInfos(): PreambleTranspilerInfo[] {
   const descriptions: Record<string, string> = {
     '01-maketitle-patches': 'Personaliza \\maketitle: 3 baselineskip, autores por coma',
+    '02-title-fonts': 'Define \\setkomafont para title/subtitle/author/publishers',
   };
   return BUILTIN_PREAMBLE_TRANSPILERS.map((name) => ({
     name,
