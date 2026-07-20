@@ -122,6 +122,16 @@ export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: Pre
     preamble.push(`\\usepackage[${fmt.babel.join(',')}]{babel}`);
   }
 
+  // Enumitem: personalizacion de listas (opcional)
+  if (fmt.enumitem !== false) {
+    preamble.push('\\usepackage{enumitem}');
+    if (fmt.setlist) {
+      for (const sl of fmt.setlist) {
+        preamble.push(`\\setlist[${sl.env}]{${sl.opts}}`);
+      }
+    }
+  }
+
   // Cuadricula de fondo con eso-pic (opcional)
   if (fmt.esoPic) {
     preamble.push('\\usepackage[grid]{eso-pic}');
