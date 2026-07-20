@@ -276,7 +276,9 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
       .filter((s): s is Record<string, unknown> => typeof s === 'object' && s !== null)
       .map((s) => ({
         env: typeof s.env === 'string' ? s.env : DEFAULT_PDF_FORMAT.setlist![0]!.env,
-        opts: typeof s.opts === 'string' ? s.opts : DEFAULT_PDF_FORMAT.setlist![0]!.opts,
+        opts: Array.isArray(s.opts) && s.opts.every((v: unknown): v is string => typeof v === 'string')
+          ? s.opts
+          : DEFAULT_PDF_FORMAT.setlist![0]!.opts,
       }));
     if (parsed.length > 0) setlist = parsed;
   }

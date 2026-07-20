@@ -213,7 +213,10 @@ function buildDefaultConfig(): string {
     lines.push('    setlist:');
     for (const sl of pdfCfg.setlist ?? DEFAULT_PDF_FORMAT.setlist ?? []) {
       lines.push(`      - env: ${yamlStr(sl.env)}`);
-      lines.push(`        opts: ${yamlStr(sl.opts)}`);
+      lines.push('        opts:');
+      for (const o of sl.opts) {
+        lines.push(`          - ${yamlStr(o)}`);
+      }
     }
   }
   lines.push(`    pdfx: ${yamlBool(pdfCfg.pdfx)}`);
@@ -288,8 +291,10 @@ function yamlStr(s: string): string {
   if (/^\d+(\.\d+)?$/.test(s)) return `"${s}"`;
   if (/^0x[0-9a-f]+$/i.test(s)) return `"${s}"`;
   if (/^['"!@#%&*[\]{}|>:`]/d.test(s) || /[\s,:]#/.test(s)) return `"${s}"`;
-  // Contiene caracteres que requieren comillas dobles por escape
-  if (/[\\"\n\t]/.test(s)) return JSON.stringify(s);
+  // Contiene backslash: usar comillas simples (YAML trata \ literalmente)
+  if (/\\/.test(s)) return `'${s}'`;
+  // Contiene caracteres especiales que necesitan comillas dobles
+  if (/["\n\t]/.test(s)) return JSON.stringify(s);
   return s;
 }
 
