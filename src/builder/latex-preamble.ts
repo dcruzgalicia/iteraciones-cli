@@ -150,6 +150,8 @@ export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: Pre
       } else if (v === false) {
         if (k === 'final') {
           mtOpts.push('draft');
+        } else {
+          mtOpts.push(`${k}=false`);
         }
       } else if (typeof v === 'string' || typeof v === 'number') {
         mtOpts.push(`${k}=${v}`);
