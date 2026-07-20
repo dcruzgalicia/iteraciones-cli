@@ -260,6 +260,13 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
   const sfdefaults = typeof obj.sfdefaults === 'boolean' ? obj.sfdefaults : undefined;
 
   const showDate = typeof obj['show-date'] === 'boolean' ? obj['show-date'] : DEFAULT_PDF_FORMAT.showDate;
+
+  const rawBabel = obj.babel;
+  const babel =
+    Array.isArray(rawBabel) && rawBabel.every((v): v is string => typeof v === 'string')
+      ? rawBabel
+      : [...(DEFAULT_PDF_FORMAT.babel ?? ['spanish', 'mexico', 'es-noshorthands', 'es-noindentfirst'])];
+
   const crop = typeof obj.crop === 'boolean' ? obj.crop : DEFAULT_PDF_FORMAT.crop;
   const esoPic = typeof obj['eso-pic'] === 'boolean' ? obj['eso-pic'] : DEFAULT_PDF_FORMAT.esoPic;
 
@@ -281,6 +288,7 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     documentclass,
     sfdefaults,
     showDate,
+    babel,
     crop,
     esoPic,
     generate: typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_PDF_FORMAT.generate,

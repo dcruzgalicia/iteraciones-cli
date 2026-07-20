@@ -77,7 +77,6 @@ export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: Pre
     '\\usepackage[T1]{fontenc}',
     '\\usepackage[utf8]{inputenc}',
     '\\usepackage{textcomp}',
-    '\\usepackage[spanish,mexico,es-noshorthands,es-noindentfirst]{babel}',
     `\\usepackage{${fontFamily}}`,
     '\\usepackage{longtable}',
     '\\usepackage{booktabs}',
@@ -116,6 +115,11 @@ export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: Pre
     };
     const cmd = PAGE_NUMBER_MAP[pageNum];
     if (cmd) preamble.push(cmd);
+  }
+
+  // Babel: opciones de idioma (opcional, usa default si no se define)
+  if (fmt.babel && fmt.babel.length > 0) {
+    preamble.push(`\\usepackage[${fmt.babel.join(',')}]{babel}`);
   }
 
   // Cuadricula de fondo con eso-pic (opcional)
