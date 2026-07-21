@@ -69,7 +69,6 @@ export async function buildLatexPreamble(
   const pageSizeOption = fmt.documentclass?.options?.find((o) => o.startsWith('paper='));
   const pageSize = pageSizeOption ? pageSizeOption.replace('paper=', '') : undefined;
   const geometry = fmt.geometry;
-  const fontFamily = fmt.fontFamily ?? 'mathptmx';
   const lineSpacing = fmt.setstretch ?? 1.5;
 
   // Opciones de clase KOMA-Script
@@ -97,13 +96,17 @@ export async function buildLatexPreamble(
   );
 
   // ── 3. FUENTE ──
-  preamble.push(`\\usepackage{${fontFamily}}`);
+  if (fmt.mathptmx !== false) {
+    preamble.push('\\usepackage{mathptmx}');
+  }
 
   // ── 4. INTERLINEADO ──
-  preamble.push(
-    '\\usepackage{setspace}',
-    `\\setstretch{${lineSpacing}}`,
-  );
+  if (fmt.setspace !== false) {
+    preamble.push(
+      '\\usepackage{setspace}',
+      `\\setstretch{${lineSpacing}}`,
+    );
+  }
 
   // ── 5. MÁRGENES ──
   if (geometry?.options && geometry.options.length > 0) {

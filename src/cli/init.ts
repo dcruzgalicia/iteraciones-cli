@@ -199,10 +199,13 @@ function buildDefaultConfig(): string {
   }
 
   // ── 3. FUENTE ──
-  lines.push(`    font-family: ${yamlStr(pdfCfg.fontFamily ?? 'mathptmx')}`);
+  lines.push(`    mathptmx: ${yamlBool(pdfCfg.mathptmx ?? true)}`);
 
   // ── 4. INTERLINEADO ──
-  lines.push(`    setstretch: ${yamlValue(pdfCfg.setstretch ?? 1.5)}`);
+  lines.push(`    setspace: ${yamlBool(pdfCfg.setspace ?? true)}`);
+  if (pdfCfg.setspace !== false) {
+    lines.push(`    setstretch: ${yamlValue(pdfCfg.setstretch ?? 1.5)}`);
+  }
 
   // ── 5. MÁRGENES ──
   lines.push('    geometry:');
