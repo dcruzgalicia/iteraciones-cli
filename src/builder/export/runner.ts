@@ -468,7 +468,6 @@ export async function runExportDocuments(
         sourceHash,
         itemHashes,
         'pdf',
-        config.pdf.engine,
         cliVersion,
         pandocVersion,
         pluginFingerprint ?? '',

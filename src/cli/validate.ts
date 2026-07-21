@@ -198,13 +198,11 @@ async function validateFrontmatter(cwd: string, theme: string | undefined): Prom
 export async function runValidate(cwd: string): Promise<void> {
   let theme: string | undefined;
   let hasPdf = false;
-  let pdfEngine: 'pdflatex' = 'pdflatex';
   const configErrors: ValidationError[] = [];
   try {
     const config = await loadSiteConfig(cwd);
     theme = config.format?.html?.theme;
     hasPdf = !!config.format?.pdf;
-    pdfEngine = config.format?.pdf?.engine ?? 'pdflatex';
   } catch (err) {
     if (err instanceof ConfigError) {
       configErrors.push({
@@ -221,11 +219,11 @@ export async function runValidate(cwd: string): Promise<void> {
 
   // Si format.pdf esta configurado, verificar que el motor LaTeX este disponible.
   if (hasPdf) {
-    const latexResult = await checkLatexEngine(pdfEngine);
+    const latexResult = await checkLatexEngine('pdflatex');
     if (!latexResult.ok) {
       configErrors.push({
         file: '_iteraciones.yaml',
-        message: `format.pdf requiere ${pdfEngine} pero no esta disponible — ${latexResult.detail ?? ''}`,
+        message: 'format.pdf requiere pdflatex pero no esta disponible — ' + (latexResult.detail ?? ''),
       });
     }
   }
