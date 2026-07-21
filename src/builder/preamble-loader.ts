@@ -25,6 +25,7 @@ export const BUILTIN_PREAMBLE_TRANSPILERS: string[] = [
   '03-toc-styling',
   '04-toc-section',
   '05-bibliography-heading',
+  '06-hyphenation-rules',
 ];
 
 export interface PreambleTranspiler {
@@ -96,6 +97,7 @@ export function getBuiltinPreambleTranspilerInfos(): PreambleTranspilerInfo[] {
     '03-toc-styling': 'Personaliza el indice (TOC): nombre, espaciado, fuentes y lideres',
     '04-toc-section': 'Redefine \\tableofcontents para usar \\section* en lugar de \\chapter*',
     '05-bibliography-heading': 'Cambia titulo de bibliografia de chapter a section',
+    '06-hyphenation-rules': 'Agrega \\hyphenation{} con nombres propios de ejemplo',
   };
   return BUILTIN_PREAMBLE_TRANSPILERS.map((name) => ({
     name,
