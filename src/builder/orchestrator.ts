@@ -6,7 +6,7 @@ import { CacheManager } from '../cache/cache-manager.js';
 import { hash } from '../cache/hasher.js';
 import { loadOutputManifest, saveOutputManifest } from '../cache/output-manifest.js';
 import { loadSiteConfig } from '../config/config-loader.js';
-import { ProgressTracker, type PipelinePhase } from '../output/progress.js';
+import { type PipelinePhase, ProgressTracker } from '../output/progress.js';
 import { clean, writeFile } from '../output/writer.js';
 import { loadPlugins } from '../plugin/loader.js';
 import { PluginRegistry } from '../plugin/registry.js';
@@ -498,13 +498,17 @@ async function writeTexFiles(allContextDocs: BuildDocument[], ctx: BuildContext,
     const texPath = join(outDir, `${texSlug}.tex`);
     await mkdir(outDir, { recursive: true });
 
-    const preamble = await buildLatexPreamble(ctx.siteConfig.format?.pdf, {
-      title: doc.frontmatter?.title as string | undefined,
-      author: doc.frontmatter?.author as string[] | undefined,
-      date: doc.frontmatter?.date as string | undefined,
-      filePath: doc.filePath,
-      cwd: ctx.cwd,
-    }, ctx.siteConfig.disabledPreambleTranspilers);
+    const preamble = await buildLatexPreamble(
+      ctx.siteConfig.format?.pdf,
+      {
+        title: doc.frontmatter?.title as string | undefined,
+        author: doc.frontmatter?.author as string[] | undefined,
+        date: doc.frontmatter?.date as string | undefined,
+        filePath: doc.filePath,
+        cwd: ctx.cwd,
+      },
+      ctx.siteConfig.disabledPreambleTranspilers,
+    );
 
     const texIntermediateDir = join(ctx.cwd, '.iteraciones', 'tex', dirname(doc.relativePath));
     await mkdir(texIntermediateDir, { recursive: true });
@@ -854,6 +858,8 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
           concurrency: ctx.concurrency ?? 4,
           cliVersion,
           pandocVersion,
+          noCache: options.noCache,
+          verbose: options.verbose,
           cacheManager: options.noCache ? undefined : cacheManager,
           registry: hasPlugins ? registry : undefined,
           pluginFingerprint,
@@ -900,6 +906,8 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
     // ── Fase pdf ──
     const exportBase = {
+      noCache: options.noCache,
+      verbose: options.verbose,
       outputDir: ctx.outputDir,
       cwd,
       lang: ctx.siteConfig.lang,

@@ -1,5 +1,5 @@
 import { existsSync, rmSync } from 'node:fs';
-import { stat } from 'node:fs/promises';
+import { rm, stat } from 'node:fs/promises';
 import { cpus } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import type { CacheManager } from '../../cache/cache-manager.js';
@@ -133,6 +133,10 @@ export interface ExportRunOptions {
   cacheManager?: CacheManager;
   /** Registro de plugins para ejecutar los hooks beforeExport/afterExport. */
   registry?: PluginRegistry;
+  /** Si true, omite la caché global de biber antes de compilar PDF. */
+  noCache?: boolean;
+  /** Modo verbose: imprime informacion adicional sobre el proceso. */
+  verbose?: boolean;
   /** Hash del contenido de los plugins activos, para incluir en la clave de caché. */
   pluginFingerprint?: string;
   /** Acumulador de estadísticas de exportación. Se muta durante la ejecución. */
@@ -251,6 +255,12 @@ export async function runExportDocuments(
 
   const hasPdf = config.pdf?.generate === true || !!config.html?.thumbnails;
   const _hasEpub = config.epub?.generate === true;
+
+  // Limpiar cache global de biber una sola vez al inicio del build
+  // Solo cuando se genera PDF (biber se usa para biblatex) y se paso --no-cache
+  if (hasPdf && options.noCache) {
+    await clearBiberCache(cwd);
+  }
   // Semaforo interno que limita las instancias de pdflatex concurrentes sin afectar EPUB.
   // El outer mapWithConcurrency usa el limite general (concurrency); dentro del branch
   // PDF se adquiere un slot antes de invocar pdflatex y se libera al terminar — con o
@@ -1012,4 +1022,75 @@ export async function exportSingleDocument(
   }
 
   return outputPath;
+}
+
+/**
+ * Ruta al archivo donde se almacena el directorio de cache de biber
+ * para no tener que ejecutar `biber --cache` en cada build.
+ */
+const BIBER_CACHE_PATH_FILE = '.iteraciones/biber-cache-path';
+
+/**
+ * Obtiene el directorio de cache de biber.
+ *
+ * - Si forceDetect es true, siempre ejecuta `biber --cache` (no lee archivo almacenado).
+ * - Si forceDetect es false, primero intenta leer `.iteraciones/biber-cache-path`.
+ * - Retorna null si biber no esta instalado o falla.
+ */
+async function getBiberCacheDir(cwd: string, forceDetect?: boolean): Promise<string | null> {
+  const storedPath = join(cwd, BIBER_CACHE_PATH_FILE);
+
+  // Intentar leer desde archivo almacenado (solo si no se fuerza deteccion)
+  if (!forceDetect) {
+    try {
+      const file = Bun.file(storedPath);
+      const saved = (await file.text()).trim();
+      if (saved) return saved;
+    } catch {
+      // Archivo no existe o no se puede leer, seguir a deteccion
+    }
+  }
+
+  // Detectar con biber --cache
+  try {
+    const proc = Bun.spawn(['biber', '--cache'], { stdout: 'pipe' });
+    const dir = (await new Response(proc.stdout).text()).trim();
+    if (!dir) return null;
+
+    // Guardar para evitar ejecutar biber --cache en cada build
+    await Bun.write(storedPath, dir + '\n');
+    return dir;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Limpia la cache global de biber. Se ejecuta una sola vez al inicio del build
+ * cuando se pasa --no-cache.
+ *
+ * Orden:
+ *   1. Detecta path con biber --cache
+ *   2. Borra el archivo biber-cache-path (slate anterior)
+ *   3. Borra el directorio de cache
+ *   4. Guarda el path en biber-cache-path
+ */
+async function clearBiberCache(cwd: string): Promise<void> {
+  const storedPath = join(cwd, BIBER_CACHE_PATH_FILE);
+
+  // 1. Detectar path (forceDetect=true para ignorar archivo almacenado)
+  const cacheDir = await getBiberCacheDir(cwd, true);
+
+  // 2. Borrar archivo de path almacenado (slate anterior)
+  await rm(storedPath, { force: true });
+
+  // 3. Borrar el directorio de cache
+  if (cacheDir) {
+    await rm(cacheDir, { recursive: true, force: true });
+  }
+
+  // 4. Guardar path para futuros builds
+  if (cacheDir) {
+    await Bun.write(storedPath, cacheDir + '\n');
+  }
 }
