@@ -139,7 +139,7 @@ export async function buildLatexPreamble(
   preamble.push(
     `\\pretolerance=${fmt.pretolerance ?? 200}`,
     `\\tolerance=${fmt.tolerance ?? 400}`,
-    `\\hyphenpenalty=${fmt.brokenpenalty ?? 1000000}`,
+    `\\hyphenpenalty=${fmt.hyphenpenalty ?? 100}`,
     `\\brokenpenalty=${fmt.brokenpenalty ?? 1000000}`,
     `\\finalhyphendemerits=${fmt.finalhyphendemerits ?? 1000000}`,
     `\\doublehyphendemerits=${fmt.doublehyphendemerits ?? 1000000}`,

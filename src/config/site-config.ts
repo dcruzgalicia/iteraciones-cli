@@ -73,6 +73,7 @@ export interface PdfFormatConfig {
   pretolerance?: number;
   tolerance?: number;
   brokenpenalty?: number;
+  hyphenpenalty?: number;
   finalhyphendemerits?: number;
   doublehyphendemerits?: number;
   widowpenalty?: number;
@@ -250,6 +251,7 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   pretolerance: 200,
   tolerance: 400,
   brokenpenalty: 1_000_000,
+  hyphenpenalty: 100,
   finalhyphendemerits: 1_000_000,
   doublehyphendemerits: 1_000_000,
   widowpenalty: 1_000_000,
