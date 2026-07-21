@@ -21,10 +21,10 @@ const PKG_PREAMBLE_DIR = join(import.meta.dir, '../../preamble');
 /** Lista de preamble transpilers empaquetados en orden de aplicación. */
 export const BUILTIN_PREAMBLE_TRANSPILERS: string[] = [
   '01-maketitle-patches',
-  '11-environments',
-  '13-toc-styling',
-  '14-bibliography-heading',
-  '15-toc-section',
+  '02-environments',
+  '03-toc-styling',
+  '04-toc-section',
+  '05-bibliography-heading',
 ];
 
 export interface PreambleTranspiler {
@@ -92,10 +92,10 @@ export async function loadPreambleTranspilers(
 export function getBuiltinPreambleTranspilerInfos(): PreambleTranspilerInfo[] {
   const descriptions: Record<string, string> = {
     '01-maketitle-patches': 'Personaliza \\maketitle: 3 baselineskip, autores por coma',
-    '11-environments': 'Redefine center/flushright/flushleft sin espacio vertical extra',
-    '13-toc-styling': 'Personaliza el indice (TOC): nombre, espaciado, fuentes y lideres',
-    '14-bibliography-heading': 'Cambia titulo de bibliografia de chapter a section',
-    '15-toc-section': 'Redefine \\tableofcontents para usar \\section* en lugar de \\chapter*',
+    '02-environments': 'Redefine center/flushright/flushleft sin espacio vertical extra',
+    '03-toc-styling': 'Personaliza el indice (TOC): nombre, espaciado, fuentes y lideres',
+    '04-toc-section': 'Redefine \\tableofcontents para usar \\section* en lugar de \\chapter*',
+    '05-bibliography-heading': 'Cambia titulo de bibliografia de chapter a section',
   };
   return BUILTIN_PREAMBLE_TRANSPILERS.map((name) => ({
     name,
