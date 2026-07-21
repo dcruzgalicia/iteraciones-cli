@@ -89,11 +89,7 @@ export async function buildLatexPreamble(
   preamble.push(`\\documentclass[${classOpts.join(',')}]{${dc}}`);
 
   // ── 2. CORE ──
-  preamble.push(
-    '\\usepackage[T1]{fontenc}',
-    '\\usepackage[utf8]{inputenc}',
-    '\\usepackage{textcomp}',
-  );
+  preamble.push('\\usepackage[T1]{fontenc}', '\\usepackage[utf8]{inputenc}', '\\usepackage{textcomp}');
 
   // ── 3. FUENTE ──
   if (fmt.mathptmx !== false) {
@@ -102,10 +98,7 @@ export async function buildLatexPreamble(
 
   // ── 4. INTERLINEADO ──
   if (fmt.setspace !== false) {
-    preamble.push(
-      '\\usepackage{setspace}',
-      `\\setstretch{${lineSpacing}}`,
-    );
+    preamble.push('\\usepackage{setspace}', `\\setstretch{${lineSpacing}}`);
   }
 
   // ── 5. MÁRGENES ──
@@ -119,10 +112,7 @@ export async function buildLatexPreamble(
   }
 
   // ── 7. ENCABEZADOS ──
-  preamble.push(
-    '\\usepackage{scrlayer-scrpage}',
-    '\\clearpairofpagestyles',
-  );
+  preamble.push('\\usepackage{scrlayer-scrpage}', '\\clearpairofpagestyles');
   const pageNum = fmt.pageNumber;
   if (pageNum) {
     const PAGE_NUMBER_MAP: Record<string, string> = {
@@ -168,12 +158,7 @@ export async function buildLatexPreamble(
   }
 
   // ── 11. TABLAS ──
-  preamble.push(
-    '\\usepackage{longtable}',
-    '\\usepackage{booktabs}',
-    '\\usepackage{array}',
-    '\\usepackage{calc}',
-  );
+  preamble.push('\\usepackage{longtable}', '\\usepackage{booktabs}', '\\usepackage{array}', '\\usepackage{calc}');
 
   // ── 12. LISTAS ──
   if (fmt.enumitem !== false) {
@@ -190,6 +175,7 @@ export async function buildLatexPreamble(
   if (cwd) {
     const bibFiles = discoverBibFiles(cwd);
     if (bibFiles.length > 0) {
+      preamble.push('\\usepackage{csquotes}');
       preamble.push('\\usepackage[style=apa]{biblatex}');
       for (const bib of bibFiles) {
         preamble.push(`\\addbibresource{${bib}}`);
@@ -267,7 +253,7 @@ export async function buildLatexPreamble(
       if (p.afterskip) opts.push('afterskip=' + p.afterskip);
       if (opts.length > 0) {
         opts.push('afterindent=false');
-            preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{part}`);
+        preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{part}`);
       }
       if (p.font) preamble.push(`\\setkomafont{part}{${p.font}}`);
     }
@@ -280,7 +266,7 @@ export async function buildLatexPreamble(
       if (ch.afterskip) opts.push('afterskip=' + ch.afterskip);
       if (opts.length > 0) {
         opts.push('afterindent=false');
-            preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{chapter}`);
+        preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{chapter}`);
       }
       if (ch.font) preamble.push(`\\setkomafont{chapter}{${ch.font}}`);
       if (ch.align) preamble.push(`\\renewcommand{\\raggedchapter}{\\centering}`);
@@ -294,7 +280,7 @@ export async function buildLatexPreamble(
       if (s.afterskip) opts.push('afterskip=' + s.afterskip);
       if (opts.length > 0) {
         opts.push('afterindent=false');
-            preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{section}`);
+        preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{section}`);
       }
       if (s.font) preamble.push(`\\setkomafont{section}{${s.font}}`);
       if (s.align) preamble.push(`\\renewcommand{\\raggedsection}{\\centering}`);
@@ -307,7 +293,7 @@ export async function buildLatexPreamble(
       if (ss.afterskip) opts.push('afterskip=' + ss.afterskip);
       if (opts.length > 0) {
         opts.push('afterindent=false');
-            preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{subsection}`);
+        preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{subsection}`);
       }
       if (ss.font) preamble.push(`\\setkomafont{subsection}{${ss.font}}`);
     }
@@ -319,7 +305,7 @@ export async function buildLatexPreamble(
       if (sss.afterskip) opts.push('afterskip=' + sss.afterskip);
       if (opts.length > 0) {
         opts.push('afterindent=false');
-            preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{subsubsection}`);
+        preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{subsubsection}`);
       }
       if (sss.font) preamble.push(`\\setkomafont{subsubsection}{${sss.font}}`);
     }
@@ -331,7 +317,7 @@ export async function buildLatexPreamble(
       if (pg.afterskip) opts.push('afterskip=' + pg.afterskip);
       if (opts.length > 0) {
         opts.push('afterindent=false');
-            preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{paragraph}`);
+        preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{paragraph}`);
       }
       if (pg.font) preamble.push(`\\setkomafont{paragraph}{${pg.font}}`);
     }
@@ -343,7 +329,7 @@ export async function buildLatexPreamble(
       if (spg.afterskip) opts.push('afterskip=' + spg.afterskip);
       if (opts.length > 0) {
         opts.push('afterindent=false');
-            preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{subparagraph}`);
+        preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{subparagraph}`);
       }
       if (spg.font) preamble.push(`\\setkomafont{subparagraph}{${spg.font}}`);
     }
