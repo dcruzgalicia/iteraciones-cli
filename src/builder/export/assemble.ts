@@ -171,7 +171,7 @@ export function assembleExportDocument(
     rawFormatPdf !== undefined && typeof rawFormatPdf['documentclass'] === 'string' && rawFormatPdf['documentclass'] === 'scrartcl'
       ? 'scrartcl'
       : undefined;
-  const documentclass = perFileDocClass ?? pdfFormat?.documentclass ?? LATEX_CLASS[doc.type as keyof typeof LATEX_CLASS];
+  const documentclass = perFileDocClass ?? pdfFormat?.documentclass?.class ?? LATEX_CLASS[doc.type as keyof typeof LATEX_CLASS];
   if (!documentclass) return null;
 
   // Resolver bibliografía y CSL: editorial.bibliography → export.bibliography → APA 7 por defecto
@@ -184,7 +184,7 @@ export function assembleExportDocument(
       ? safeEditorialPath(rawEditorial['csl'], cwd, 'editorial.csl')
       : (globalCsl ?? (bibliography ? join(import.meta.dir, '../../../pandoc/csl/apa-7.csl') : undefined));
 
-  const tocDepth = pdfFormat?.tocDepth;
+  const tocDepth = pdfFormat?.setcounter?.tocdepth;
   const toc = pdfFormat?.toc ?? (tocDepth !== undefined ? tocDepth > 0 : documentclass === 'scrbook');
 
   const hasParts = parts !== undefined && parts.length > 0;
