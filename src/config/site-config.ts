@@ -73,6 +73,7 @@ export interface PdfFormatConfig {
   pretolerance?: number;
   tolerance?: number;
   brokenpenalty?: number;
+  hyphenpenalty?: number;
   finalhyphendemerits?: number;
   doublehyphendemerits?: number;
   widowpenalty?: number;
@@ -239,7 +240,9 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   geometry: { options: ['top=2.54cm', 'bottom=2.54cm', 'left=2.54cm', 'right=2.54cm', 'headheight=12pt', 'headsep=6pt', 'footskip=22pt'] },
   babel: { options: ['spanish', 'mexico', 'es-noshorthands', 'es-noindentfirst'] },
   hyperref: { options: ['hidelinks'] },
-  microtype: { options: ['activate={true,nocompatibility}', 'final', 'tracking=true', 'kerning=true', 'spacing=true', 'factor=1100', 'stretch=10', 'shrink=10'] },
+  microtype: {
+    options: ['activate={true,nocompatibility}', 'final', 'tracking=true', 'kerning=true', 'spacing=true', 'factor=1100', 'stretch=10', 'shrink=10'],
+  },
   enumitem: true,
   mathptmx: true,
   setspace: true,
@@ -248,6 +251,7 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   pretolerance: 200,
   tolerance: 400,
   brokenpenalty: 1_000_000,
+  hyphenpenalty: 100,
   finalhyphendemerits: 1_000_000,
   doublehyphendemerits: 1_000_000,
   widowpenalty: 1_000_000,
@@ -256,8 +260,20 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   setcounter: { secnumdepth: 1, tocdepth: 1 },
   sectioning: {
     part: { beforeskip: '11\\baselineskip', afterskip: '\\baselineskip', font: '\\normalsize\\bfseries\\MakeUppercase' },
-    chapter: { style: 'chapter', beforeskip: '2\\baselineskip', afterskip: '\\baselineskip', font: '\\normalsize\\normalfont\\scshape', align: 'center' },
-    section: { style: 'section', beforeskip: '2\\baselineskip', afterskip: '2\\baselineskip', font: '\\normalsize\\bfseries\\MakeUppercase', align: 'center' },
+    chapter: {
+      style: 'chapter',
+      beforeskip: '2\\baselineskip',
+      afterskip: '\\baselineskip',
+      font: '\\normalsize\\normalfont\\scshape',
+      align: 'center',
+    },
+    section: {
+      style: 'section',
+      beforeskip: '2\\baselineskip',
+      afterskip: '2\\baselineskip',
+      font: '\\normalsize\\bfseries\\MakeUppercase',
+      align: 'center',
+    },
     subsection: { beforeskip: '2\\baselineskip', afterskip: '2\\baselineskip', font: '\\normalsize\\normalfont\\textit' },
     subsubsection: { beforeskip: '2\\baselineskip', afterskip: '\\baselineskip', font: '\\normalsize\\normalfont\\itshape' },
     paragraph: { beforeskip: '\\baselineskip', afterskip: '0pt', font: '\\normalsize\\normalfont' },
