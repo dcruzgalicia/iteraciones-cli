@@ -155,15 +155,6 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
   if (!raw || typeof raw !== 'object') return { ...DEFAULT_PDF_FORMAT };
   const obj = raw as Record<string, unknown>;
 
-  const rawConcurrency = obj.concurrency;
-  const concurrency =
-    typeof rawConcurrency === 'number' && Number.isInteger(rawConcurrency) && rawConcurrency >= 1 ? rawConcurrency : DEFAULT_PDF_FORMAT.concurrency;
-  if (rawConcurrency !== undefined && concurrency === DEFAULT_PDF_FORMAT.concurrency && rawConcurrency !== DEFAULT_PDF_FORMAT.concurrency) {
-    process.stderr.write(
-      `[iteraciones] format.pdf.concurrency: valor invalido "${String(rawConcurrency)}". Debe ser un entero >= 1. Usando ${DEFAULT_PDF_FORMAT.concurrency} por defecto.\n`,
-    );
-  }
-
   const pdfx = typeof obj.pdfx === 'boolean' ? obj.pdfx : DEFAULT_PDF_FORMAT.pdfx;
   const toc = typeof obj.toc === 'boolean' ? obj.toc : DEFAULT_PDF_FORMAT.toc;
   const enumitem = typeof obj.enumitem === 'boolean' ? obj.enumitem : DEFAULT_PDF_FORMAT.enumitem;
@@ -176,7 +167,9 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     const dc = rawDocClass as Record<string, unknown>;
     const dcClass = typeof dc.class === 'string' && (dc.class === 'scrartcl' || dc.class === 'scrbook') ? dc.class : undefined;
     if (dc.class !== undefined && dcClass === undefined) {
-      process.stderr.write(`[iteraciones] format.pdf.documentclass.class: valor desconocido "${String(dc.class)}". Valores validos: scrartcl, scrbook.\n`);
+      process.stderr.write(
+        `[iteraciones] format.pdf.documentclass.class: valor desconocido "${String(dc.class)}". Valores validos: scrartcl, scrbook.\n`,
+      );
     }
     const dcOptions = Array.isArray(dc.options) && dc.options.every((v): v is string => typeof v === 'string') ? dc.options : undefined;
     if (dcClass || dcOptions) {
@@ -245,7 +238,8 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
   const tolerance = typeof obj.tolerance === 'number' ? obj.tolerance : DEFAULT_PDF_FORMAT.tolerance;
   const brokenpenalty = typeof obj.brokenpenalty === 'number' ? obj.brokenpenalty : DEFAULT_PDF_FORMAT.brokenpenalty;
   const finalhyphendemerits = typeof obj['finalhyphendemerits'] === 'number' ? obj['finalhyphendemerits'] : DEFAULT_PDF_FORMAT.finalhyphendemerits;
-  const doublehyphendemerits = typeof obj['doublehyphendemerits'] === 'number' ? obj['doublehyphendemerits'] : DEFAULT_PDF_FORMAT.doublehyphendemerits;
+  const doublehyphendemerits =
+    typeof obj['doublehyphendemerits'] === 'number' ? obj['doublehyphendemerits'] : DEFAULT_PDF_FORMAT.doublehyphendemerits;
   const widowpenalty = typeof obj.widowpenalty === 'number' ? obj.widowpenalty : DEFAULT_PDF_FORMAT.widowpenalty;
   const clubpenalty = typeof obj.clubpenalty === 'number' ? obj.clubpenalty : DEFAULT_PDF_FORMAT.clubpenalty;
 
@@ -264,9 +258,10 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
       .filter((s): s is Record<string, unknown> => typeof s === 'object' && s !== null)
       .map((s) => ({
         command: typeof s.command === 'string' ? s.command : DEFAULT_PDF_FORMAT.setlist![0]!.command,
-        options: Array.isArray(s.options) && s.options.every((v: unknown): v is string => typeof v === 'string')
-          ? s.options
-          : DEFAULT_PDF_FORMAT.setlist![0]!.options,
+        options:
+          Array.isArray(s.options) && s.options.every((v: unknown): v is string => typeof v === 'string')
+            ? s.options
+            : DEFAULT_PDF_FORMAT.setlist![0]!.options,
       }));
     if (parsed.length > 0) setlist = parsed;
   }
@@ -368,7 +363,6 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
   }
 
   return {
-    concurrency,
     documentclass,
     geometry,
     babel,
