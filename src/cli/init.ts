@@ -187,61 +187,44 @@ function buildDefaultConfig(): string {
   lines.push(`    generate: ${yamlBool(pdfCfg.generate!)}`);
   lines.push(`    force: ${yamlBool(pdfCfg.force!)}`);
   lines.push(`    engine: ${yamlStr(pdfCfg.engine)}`);
-  lines.push('    documentclass: scrbook');
-  lines.push(`    sfdefaults: ${yamlBool(pdfCfg.sfdefaults!)}`);
-  lines.push(`    page-size: ${yamlStr(pdfCfg.pageSize!)}`);
-  lines.push(`    page-number: ${yamlStr(pdfCfg.pageNumber!)}`);
-  lines.push(`    sides: ${yamlStr(pdfCfg.sides!)}`);
-  lines.push('    geometry:');
-  for (const key of ['paperwidth', 'paperheight', 'top', 'bottom', 'left', 'right', 'headheight', 'headsep', 'footskip']) {
-    const val = pdfCfg.geometry?.[key];
-    if (val) lines.push(`      ${key}: ${yamlStr(val)}`);
+  lines.push('    documentclass:');
+  lines.push(`      class: ${pdfCfg.documentclass?.class ?? 'scrbook'}`);
+  if (pdfCfg.documentclass?.options && pdfCfg.documentclass.options.length > 0) {
+    lines.push('      options:');
+    for (const opt of pdfCfg.documentclass.options) {
+      lines.push(`        - ${yamlStr(opt)}`);
+    }
   }
-  lines.push(`    line-spacing: ${yamlValue(pdfCfg.lineSpacing!)}`);
-  lines.push(`    font-family: ${yamlStr(pdfCfg.fontFamily!)}`);
-  lines.push(`    font-size: ${yamlStr(pdfCfg.fontSize!)}`);
-  lines.push(`    hyphenation: ${yamlBool(pdfCfg.hyphenation)}`);
-  lines.push(`    show-date: ${yamlBool(pdfCfg.showDate!)}`);
-  lines.push(`    toc: ${yamlBool(pdfCfg.toc!)}`);
-  lines.push(`    toc-depth: ${yamlValue(pdfCfg.tocDepth!)}`);
-  lines.push(`    sec-num-depth: ${yamlValue(pdfCfg.secNumDepth!)}`);
+  lines.push('    geometry:');
+  if (pdfCfg.geometry?.options && pdfCfg.geometry.options.length > 0) {
+    lines.push('      options:');
+    for (const opt of pdfCfg.geometry.options) {
+      lines.push(`        - ${yamlStr(opt)}`);
+    }
+  }
   lines.push('    babel:');
-  for (const opt of pdfCfg.babel ?? DEFAULT_PDF_FORMAT.babel ?? []) {
-    lines.push(`      - ${yamlStr(opt)}`);
+  if (pdfCfg.babel?.options && pdfCfg.babel.options.length > 0) {
+    lines.push('      options:');
+    for (const opt of pdfCfg.babel.options) {
+      lines.push(`        - ${yamlStr(opt)}`);
+    }
+  }
+  lines.push('    hyperref:');
+  if (pdfCfg.hyperref?.options && pdfCfg.hyperref.options.length > 0) {
+    lines.push('      options:');
+    for (const opt of pdfCfg.hyperref.options) {
+      lines.push(`        - ${yamlStr(opt)}`);
+    }
+  }
+  lines.push('    microtype:');
+  if (pdfCfg.microtype?.options && pdfCfg.microtype.options.length > 0) {
+    lines.push('      options:');
+    for (const opt of pdfCfg.microtype.options) {
+      lines.push(`        - ${yamlStr(opt)}`);
+    }
   }
   lines.push(`    enumitem: ${yamlBool(pdfCfg.enumitem ?? true)}`);
-  if ((pdfCfg.setlist ?? DEFAULT_PDF_FORMAT.setlist ?? []).length > 0) {
-    lines.push('    setlist:');
-    for (const sl of pdfCfg.setlist ?? DEFAULT_PDF_FORMAT.setlist ?? []) {
-      lines.push(`      - env: ${yamlStr(sl.env)}`);
-      lines.push('        opts:');
-      for (const o of sl.opts) {
-        lines.push(`          - ${yamlStr(o)}`);
-      }
-    }
-  }
-  const hyperrefOpts = pdfCfg.hyperref ?? DEFAULT_PDF_FORMAT.hyperref ?? [];
-  if (hyperrefOpts.length > 0) {
-    lines.push('    hyperref:');
-    for (const o of hyperrefOpts) {
-      lines.push(`      - ${yamlStr(o)}`);
-    }
-  } else {
-    lines.push('    hyperref: []');
-  }
-  const microtypeCfg = pdfCfg.microtype ?? DEFAULT_PDF_FORMAT.microtype ?? {};
-  if (Object.keys(microtypeCfg).length > 0) {
-    lines.push('    microtype:');
-    for (const [k, v] of Object.entries(microtypeCfg)) {
-      if (v === true) {
-        lines.push(`      ${k}: true`);
-      } else if (typeof v === 'string') {
-        lines.push(`      ${k}: ${yamlStr(v)}`);
-      } else {
-        lines.push(`      ${k}: ${v}`);
-      }
-    }
-  }
+  lines.push(`    setstretch: ${yamlValue(pdfCfg.setstretch ?? 1.5)}`);
   lines.push(`    raggedbottom: ${yamlBool(pdfCfg.raggedbottom ?? true)}`);
   lines.push(`    pretolerance: ${yamlValue(pdfCfg.pretolerance ?? 200)}`);
   lines.push(`    tolerance: ${yamlValue(pdfCfg.tolerance ?? 400)}`);
@@ -250,9 +233,37 @@ function buildDefaultConfig(): string {
   lines.push(`    doublehyphendemerits: ${yamlValue(pdfCfg.doublehyphendemerits ?? 1000000)}`);
   lines.push(`    widowpenalty: ${yamlValue(pdfCfg.widowpenalty ?? 1000000)}`);
   lines.push(`    clubpenalty: ${yamlValue(pdfCfg.clubpenalty ?? 1000000)}`);
-  lines.push(`    pdfx: ${yamlBool(pdfCfg.pdfx)}`);
-  lines.push(`    crop: ${yamlBool(pdfCfg.crop!)}`);
-  lines.push(`    eso-pic: ${yamlBool(pdfCfg.esoPic!)}`);
+  if (pdfCfg.setlist && pdfCfg.setlist.length > 0) {
+    lines.push('    setlist:');
+    for (const sl of pdfCfg.setlist) {
+      lines.push(`      - command: ${yamlStr(sl.command)}`);
+      lines.push('        options:');
+      for (const o of sl.options) {
+        lines.push(`          - ${yamlStr(o)}`);
+      }
+    }
+  }
+  if (pdfCfg.setcounter && Object.keys(pdfCfg.setcounter).length > 0) {
+    lines.push('    setcounter:');
+    for (const [key, val] of Object.entries(pdfCfg.setcounter)) {
+      lines.push(`      ${key}: ${yamlValue(val)}`);
+    }
+  }
+  if (typeof pdfCfg.esoPic === 'object' && pdfCfg.esoPic?.options && pdfCfg.esoPic.options.length > 0) {
+    lines.push('    eso-pic:');
+    lines.push('      options:');
+    for (const opt of pdfCfg.esoPic.options) {
+      lines.push(`        - ${yamlStr(opt)}`);
+    }
+  } else {
+    lines.push(`    eso-pic: ${yamlBool(pdfCfg.esoPic === true)}`);
+  }
+  lines.push(`    pdfx: ${yamlBool(pdfCfg.pdfx ?? false)}`);
+  lines.push(`    crop: ${yamlBool(pdfCfg.crop ?? false)}`);
+  lines.push(`    font-family: ${yamlStr(pdfCfg.fontFamily ?? 'mathptmx')}`);
+  lines.push(`    page-number: ${yamlStr(pdfCfg.pageNumber ?? 'header-right')}`);
+  lines.push(`    toc: ${yamlBool(pdfCfg.toc ?? false)}`);
+  lines.push(`    show-date: ${yamlBool(pdfCfg.showDate ?? false)}`);
 
   // html
   lines.push('  html:');

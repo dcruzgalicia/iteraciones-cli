@@ -17,7 +17,6 @@ import {
   type PageNumberPlacement,
   type PaginationConfig,
   type PdfFormatConfig,
-  type Sides,
   type SiteConfig,
 } from './site-config.js';
 
@@ -143,10 +142,6 @@ function parseHtmlFormatConfig(raw: unknown): HtmlFormatConfig | undefined {
   return { theme, accent, math, toc, tocDepth, hyphenation, generate, thumbnails };
 }
 
-const CUSTOM_PAGE_SIZE_RE = /^\d+(\.\d+)?(cm|mm|in|pt|truemm),\d+(\.\d+)?(cm|mm|in|pt|truemm)$/;
-
-const KNOWN_PAGE_SIZES = new Set<string>(['half-letter', 'letter', 'legal', 'executive', 'a3', 'a4', 'a5', 'b4', 'b5', 'tabloid', 'pocket']);
-
 const KNOWN_PAGE_NUMBER_PLACEMENTS = new Set<string>([
   'footer-left',
   'footer-center',
@@ -155,8 +150,6 @@ const KNOWN_PAGE_NUMBER_PLACEMENTS = new Set<string>([
   'header-center',
   'header-right',
 ]);
-
-const KNOWN_SIDES = new Set<string>(['oneside', 'twoside']);
 
 function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
   if (!raw || typeof raw !== 'object') return { ...DEFAULT_PDF_FORMAT };
@@ -174,73 +167,71 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     );
   }
 
-  const hyphenation = typeof obj.hyphenation === 'boolean' ? obj.hyphenation : DEFAULT_PDF_FORMAT.hyphenation;
   const pdfx = typeof obj.pdfx === 'boolean' ? obj.pdfx : DEFAULT_PDF_FORMAT.pdfx;
-
   const toc = typeof obj.toc === 'boolean' ? obj.toc : DEFAULT_PDF_FORMAT.toc;
-  const rawTocDepth = obj['toc-depth'];
-  const tocDepth =
-    typeof rawTocDepth === 'number' && Number.isInteger(rawTocDepth) && rawTocDepth >= 0 && rawTocDepth <= 5
-      ? rawTocDepth
-      : DEFAULT_PDF_FORMAT.tocDepth;
+  const enumitem = typeof obj.enumitem === 'boolean' ? obj.enumitem : DEFAULT_PDF_FORMAT.enumitem;
+  const crop = typeof obj.crop === 'boolean' ? obj.crop : DEFAULT_PDF_FORMAT.crop;
 
-  const rawPageSize = obj['page-size'];
-  let pageSize: string | undefined;
-  if (typeof rawPageSize === 'string') {
-    if (rawPageSize === 'custom') {
-      pageSize = 'custom';
-    } else if (CUSTOM_PAGE_SIZE_RE.test(rawPageSize)) {
-      pageSize = rawPageSize; // dimension: "210mm,297mm"
-    } else {
-      // Cualquier nombre no vacio se trata como tamano estandar (a1, letter, b5, ...)
-      pageSize = rawPageSize;
+  // documentclass
+  const rawDocClass = obj.documentclass;
+  let documentclass: { class?: 'scrartcl' | 'scrbook'; options?: string[] } | undefined;
+  if (rawDocClass && typeof rawDocClass === 'object' && !Array.isArray(rawDocClass)) {
+    const dc = rawDocClass as Record<string, unknown>;
+    const dcClass = typeof dc.class === 'string' && (dc.class === 'scrartcl' || dc.class === 'scrbook') ? dc.class : undefined;
+    if (dc.class !== undefined && dcClass === undefined) {
+      process.stderr.write(`[iteraciones] format.pdf.documentclass.class: valor desconocido "${String(dc.class)}". Valores validos: scrartcl, scrbook.\n`);
+    }
+    const dcOptions = Array.isArray(dc.options) && dc.options.every((v): v is string => typeof v === 'string') ? dc.options : undefined;
+    if (dcClass || dcOptions) {
+      documentclass = {};
+      if (dcClass) documentclass.class = dcClass;
+      if (dcOptions) documentclass.options = dcOptions;
     }
   }
-  if (typeof rawPageSize === 'string' && rawPageSize.trim() === '') {
-    process.stderr.write(`[iteraciones] format.pdf.page-size: no puede estar vacio.\n`);
-  }
-  pageSize ??= DEFAULT_PDF_FORMAT.pageSize;
 
-  const rawFontSize = obj['font-size'];
-  const isFontSizeValid = typeof rawFontSize === 'string' && /^\d+pt$/.test(rawFontSize);
-  const fontSize = isFontSizeValid ? rawFontSize : DEFAULT_PDF_FORMAT.fontSize;
-  if (rawFontSize !== undefined && !isFontSizeValid) {
-    process.stderr.write(`[iteraciones] format.pdf.font-size: debe ser un tamano LaTeX como "10pt", "11pt" o "12pt".\n`);
+  // geometry
+  const rawGeometry = obj.geometry;
+  let geometry: { options?: string[] } | undefined;
+  if (rawGeometry && typeof rawGeometry === 'object' && !Array.isArray(rawGeometry)) {
+    const g = rawGeometry as Record<string, unknown>;
+    if (Array.isArray(g.options) && g.options.every((v): v is string => typeof v === 'string')) {
+      geometry = { options: g.options };
+    }
+  }
+
+  // babel
+  const rawBabel = obj.babel;
+  let babel: { options?: string[] } | undefined;
+  if (rawBabel && typeof rawBabel === 'object' && !Array.isArray(rawBabel)) {
+    const b = rawBabel as Record<string, unknown>;
+    if (Array.isArray(b.options) && b.options.every((v): v is string => typeof v === 'string')) {
+      babel = { options: b.options };
+    }
+  }
+
+  // hyperref
+  const rawHyperref = obj.hyperref;
+  let hyperref: { options?: string[] } | undefined;
+  if (rawHyperref && typeof rawHyperref === 'object' && !Array.isArray(rawHyperref)) {
+    const h = rawHyperref as Record<string, unknown>;
+    if (Array.isArray(h.options) && h.options.every((v): v is string => typeof v === 'string')) {
+      hyperref = { options: h.options };
+    }
+  }
+
+  // microtype
+  const rawMicrotype = obj.microtype;
+  let microtype: { options?: string[] } | undefined;
+  if (rawMicrotype && typeof rawMicrotype === 'object' && !Array.isArray(rawMicrotype)) {
+    const m = rawMicrotype as Record<string, unknown>;
+    if (Array.isArray(m.options) && m.options.every((v): v is string => typeof v === 'string')) {
+      microtype = { options: m.options };
+    }
   }
 
   const fontFamily = typeof obj['font-family'] === 'string' && obj['font-family'].trim() ? obj['font-family'].trim() : DEFAULT_PDF_FORMAT.fontFamily;
 
-  const rawGeometry = obj.geometry;
-  let geometry: Record<string, string> | undefined;
-  if (rawGeometry && typeof rawGeometry === 'object' && !Array.isArray(rawGeometry)) {
-    const g = rawGeometry as Record<string, unknown>;
-    const validKeys = ['paperwidth', 'paperheight', 'top', 'bottom', 'left', 'right', 'headheight', 'headsep', 'footskip'];
-    const parsed: Record<string, string> = {};
-    for (const key of validKeys) {
-      const val = g[key];
-      if (typeof val === 'string' && /^\d+(\.\d+)?(cm|mm|in|pt|truemm)$/.test(val)) {
-        parsed[key] = val;
-      }
-    }
-    if (Object.keys(parsed).length > 0) geometry = parsed;
-  } else if (rawGeometry !== undefined) {
-    process.stderr.write(
-      `[iteraciones] format.pdf.geometry: debe ser un mapa con claves como top, bottom, left, right, headheight, headsep, footskip.\n`,
-    );
-  }
-  geometry ??= DEFAULT_PDF_FORMAT.geometry;
-
-  const rawLineSpacing = obj['line-spacing'];
-  const lineSpacing = typeof rawLineSpacing === 'number' && rawLineSpacing > 0 ? rawLineSpacing : DEFAULT_PDF_FORMAT.lineSpacing;
-  if (rawLineSpacing !== undefined && !(typeof rawLineSpacing === 'number' && rawLineSpacing > 0)) {
-    process.stderr.write(`[iteraciones] format.pdf.line-spacing: debe ser un numero positivo.\n`);
-  }
-
-  const rawSecNumDepth = obj['sec-num-depth'];
-  const secNumDepth =
-    typeof rawSecNumDepth === 'number' && Number.isInteger(rawSecNumDepth) && rawSecNumDepth >= -2 && rawSecNumDepth <= 5
-      ? rawSecNumDepth
-      : DEFAULT_PDF_FORMAT.secNumDepth;
+  const showDate = typeof obj['show-date'] === 'boolean' ? obj['show-date'] : DEFAULT_PDF_FORMAT.showDate;
 
   const rawPageNumber = obj['page-number'];
   const isPageNumberValid = typeof rawPageNumber === 'string' && KNOWN_PAGE_NUMBER_PLACEMENTS.has(rawPageNumber);
@@ -249,66 +240,6 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     process.stderr.write(
       `[iteraciones] format.pdf.page-number: valor desconocido "${String(rawPageNumber)}". Valores validos: footer-left, footer-center, footer-right, header-left, header-center, header-right.\n`,
     );
-  }
-
-  const rawSides = obj.sides;
-  const isValidSides = typeof rawSides === 'string' && KNOWN_SIDES.has(rawSides);
-  const sides = isValidSides ? (rawSides as Sides) : DEFAULT_PDF_FORMAT.sides;
-  if (rawSides !== undefined && !isValidSides) {
-    process.stderr.write(`[iteraciones] format.pdf.sides: valor desconocido "${String(rawSides)}". Valores validos: oneside, twoside.\n`);
-  }
-
-  const rawDocClass = obj.documentclass;
-  const documentclass = rawDocClass === 'scrartcl' ? 'scrartcl' : rawDocClass === 'scrbook' ? 'scrbook' : undefined;
-  if (rawDocClass !== undefined && rawDocClass !== 'scrartcl' && rawDocClass !== 'scrbook') {
-    process.stderr.write(`[iteraciones] format.pdf.documentclass: valor desconocido "${String(rawDocClass)}". Valores validos: scrartcl, scrbook.\n`);
-  }
-
-  const sfdefaults = typeof obj.sfdefaults === 'boolean' ? obj.sfdefaults : undefined;
-
-  const showDate = typeof obj['show-date'] === 'boolean' ? obj['show-date'] : DEFAULT_PDF_FORMAT.showDate;
-
-  const rawBabel = obj.babel;
-  const babel =
-    Array.isArray(rawBabel) && rawBabel.every((v): v is string => typeof v === 'string')
-      ? rawBabel
-      : [...(DEFAULT_PDF_FORMAT.babel ?? ['spanish', 'mexico', 'es-noshorthands', 'es-noindentfirst'])];
-
-  const enumitem = typeof obj.enumitem === 'boolean' ? obj.enumitem : DEFAULT_PDF_FORMAT.enumitem;
-
-  const rawSetlist = obj.setlist;
-  let setlist = DEFAULT_PDF_FORMAT.setlist;
-  if (Array.isArray(rawSetlist)) {
-    const parsed = rawSetlist
-      .filter((s): s is Record<string, unknown> => typeof s === 'object' && s !== null)
-      .map((s) => ({
-        env: typeof s.env === 'string' ? s.env : DEFAULT_PDF_FORMAT.setlist![0]!.env,
-        opts: Array.isArray(s.opts) && s.opts.every((v: unknown): v is string => typeof v === 'string')
-          ? s.opts
-          : DEFAULT_PDF_FORMAT.setlist![0]!.opts,
-      }));
-    if (parsed.length > 0) setlist = parsed;
-  }
-
-  const crop = typeof obj.crop === 'boolean' ? obj.crop : DEFAULT_PDF_FORMAT.crop;
-  const esoPic = typeof obj['eso-pic'] === 'boolean' ? obj['eso-pic'] : DEFAULT_PDF_FORMAT.esoPic;
-
-  const rawHyperref = obj.hyperref;
-  const hyperref =
-    Array.isArray(rawHyperref) && rawHyperref.every((v): v is string => typeof v === 'string')
-      ? rawHyperref
-      : [...(DEFAULT_PDF_FORMAT.hyperref ?? [])];
-
-  const rawMicrotype = obj.microtype;
-  let microtype = DEFAULT_PDF_FORMAT.microtype;
-  if (rawMicrotype && typeof rawMicrotype === 'object' && !Array.isArray(rawMicrotype)) {
-    const parsed: Record<string, boolean | string | number> = {};
-    for (const [k, v] of Object.entries(rawMicrotype as Record<string, unknown>)) {
-      if (typeof v === 'boolean' || typeof v === 'string' || typeof v === 'number') {
-        parsed[k] = v;
-      }
-    }
-    if (Object.keys(parsed).length > 0) microtype = parsed;
   }
 
   const raggedbottom = typeof obj.raggedbottom === 'boolean' ? obj.raggedbottom : DEFAULT_PDF_FORMAT.raggedbottom;
@@ -320,29 +251,65 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
   const widowpenalty = typeof obj.widowpenalty === 'number' ? obj.widowpenalty : DEFAULT_PDF_FORMAT.widowpenalty;
   const clubpenalty = typeof obj.clubpenalty === 'number' ? obj.clubpenalty : DEFAULT_PDF_FORMAT.clubpenalty;
 
+  // setstretch
+  const rawSetstretch = obj.setstretch;
+  const setstretch = typeof rawSetstretch === 'number' && rawSetstretch > 0 ? rawSetstretch : DEFAULT_PDF_FORMAT.setstretch;
+  if (rawSetstretch !== undefined && !(typeof rawSetstretch === 'number' && rawSetstretch > 0)) {
+    process.stderr.write(`[iteraciones] format.pdf.setstretch: debe ser un numero positivo.\n`);
+  }
+
+  // setlist
+  const rawSetlist = obj.setlist;
+  let setlist = DEFAULT_PDF_FORMAT.setlist;
+  if (Array.isArray(rawSetlist)) {
+    const parsed = rawSetlist
+      .filter((s): s is Record<string, unknown> => typeof s === 'object' && s !== null)
+      .map((s) => ({
+        command: typeof s.command === 'string' ? s.command : DEFAULT_PDF_FORMAT.setlist![0]!.command,
+        options: Array.isArray(s.options) && s.options.every((v: unknown): v is string => typeof v === 'string')
+          ? s.options
+          : DEFAULT_PDF_FORMAT.setlist![0]!.options,
+      }));
+    if (parsed.length > 0) setlist = parsed;
+  }
+
+  // setcounter
+  const rawSetcounter = obj.setcounter;
+  let setcounter: Record<string, number> | undefined;
+  if (rawSetcounter && typeof rawSetcounter === 'object' && !Array.isArray(rawSetcounter)) {
+    const parsed: Record<string, number> = {};
+    for (const [k, v] of Object.entries(rawSetcounter as Record<string, unknown>)) {
+      if (typeof v === 'number') {
+        parsed[k] = v;
+      }
+    }
+    if (Object.keys(parsed).length > 0) setcounter = parsed;
+  }
+
+  // esoPic
+  const rawEsoPic = obj['eso-pic'];
+  let esoPic: { options?: string[] } | boolean | undefined;
+  if (typeof rawEsoPic === 'boolean') {
+    esoPic = rawEsoPic;
+  } else if (rawEsoPic && typeof rawEsoPic === 'object' && !Array.isArray(rawEsoPic)) {
+    const ep = rawEsoPic as Record<string, unknown>;
+    if (Array.isArray(ep.options) && ep.options.every((v): v is string => typeof v === 'string')) {
+      esoPic = { options: ep.options };
+    } else if (Object.keys(ep).length > 0) {
+      esoPic = { options: [] };
+    }
+  }
+
   return {
     engine,
     concurrency,
-    hyphenation,
-    pdfx,
-    toc,
-    tocDepth,
-    secNumDepth,
-    pageSize,
-    fontSize,
-    fontFamily,
-    geometry,
-    lineSpacing,
-    pageNumber,
-    sides,
     documentclass,
-    sfdefaults,
-    showDate,
+    geometry,
     babel,
-    enumitem,
-    setlist,
     hyperref,
     microtype,
+    enumitem,
+    setstretch,
     raggedbottom,
     pretolerance,
     tolerance,
@@ -351,8 +318,15 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     doublehyphendemerits,
     widowpenalty,
     clubpenalty,
-    crop,
+    setlist,
+    setcounter,
     esoPic,
+    pdfx,
+    crop,
+    fontFamily,
+    pageNumber,
+    toc,
+    showDate,
     generate: typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_PDF_FORMAT.generate,
     force: typeof obj.force === 'boolean' ? obj.force : DEFAULT_PDF_FORMAT.force,
   };

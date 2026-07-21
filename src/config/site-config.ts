@@ -50,70 +50,45 @@ export type PdfForceMode = boolean;
 export interface PdfFormatConfig {
   engine: 'pdflatex';
   concurrency: number;
-  toc?: boolean;
-  tocDepth?: number;
-  secNumDepth?: number;
-  hyphenation: boolean;
-  pdfx: boolean;
-  pageSize?: string;
-  fontSize?: string;
-  fontFamily?: string;
-  /**
-   * Opciones para el paquete geometry de LaTeX.
-   * Mapa con valores como 'top', 'bottom', 'left', 'right',
-   * 'headheight', 'headsep', 'footskip'.
-   */
-  geometry?: Record<string, string>;
-  lineSpacing?: number;
-  pageNumber?: PageNumberPlacement;
-  sides?: Sides;
-  documentclass?: 'scrartcl' | 'scrbook';
-  sfdefaults?: boolean;
-  /**
-   * Cuando es true, el estilo plain (usado en primera pagina de contenido
-   * y paginas de section) respeta la posicion header configurada en
-   * page-number, en lugar de usar footer-center.
-   * Solo aplica cuando page-number es header-*. Por defecto false.
-   */
-  showDate?: boolean;
-  /** Opciones para el paquete babel (ej: spanish, mexico, es-noshorthands). */
-  babel?: string[];
-  /** Si true, carga \\usepackage{enumitem}. */
-  enumitem?: boolean;
-  /** Comandos \\setlist para personalizar listas. */
-  setlist?: Array<{ env: string; opts: string[] }>;
-  /** Opciones para el paquete hyperref (ej: hidelinks, pdftex). */
-  hyperref?: string[];
-  /** Opciones para el paquete microtype. */
-  microtype?: Record<string, boolean | string | number>;
-  /** Control de pagina: \\raggedbottom. */
-  raggedbottom?: boolean;
-  /** Tolerancia para saltos de linea. */
-  pretolerance?: number;
-  /** Tolerancia para saltos de linea. */
-  tolerance?: number;
-  /** Penalizacion por salto tras linea con guion. */
-  brokenpenalty?: number;
-  /** Penalizacion por ultima linea con guion. */
-  finalhyphendemerits?: number;
-  /** Penalizacion por dos guiones consecutivos. */
-  doublehyphendemerits?: number;
-  /** Penalizacion por linea viuda. */
-  widowpenalty?: number;
-  /** Penalizacion por linea huérfana. */
-  clubpenalty?: number;
-  /** Si true, incluye marcas de corte con el paquete crop. */
-  crop?: boolean;
-  /** Si true, incluye \usepackage[grid]{eso-pic} para cuadricula de fondo. */
-  esoPic?: boolean;
-  /** Si true, genera PDF en el build. */
   generate?: boolean;
-  /**
-   * Si false (default): cuando html.thumbnails=true, pdf.generate se trata como true
-   * aunque este configurado como false (los thumbnails necesitan el PDF).
-   * Si true: respeta el valor exacto de generate (elimina PDF tras thumbnails).
-   */
   force?: boolean;
+
+  // Class
+  documentclass?: {
+    class?: 'scrartcl' | 'scrbook';
+    options?: string[];
+  };
+
+  // Active packages (with options)
+  geometry?: { options?: string[] };
+  babel?: { options?: string[] };
+  hyperref?: { options?: string[] };
+  microtype?: { options?: string[] };
+  enumitem?: boolean;
+
+  // Active commands
+  setstretch?: number;
+  raggedbottom?: boolean;
+  pretolerance?: number;
+  tolerance?: number;
+  brokenpenalty?: number;
+  finalhyphendemerits?: number;
+  doublehyphendemerits?: number;
+  widowpenalty?: number;
+  clubpenalty?: number;
+  setlist?: Array<{ command: string; options: string[] }>;
+  setcounter?: Record<string, number>;
+
+  // Optional packages
+  esoPic?: { options?: string[] } | boolean;
+  pdfx?: boolean;
+  crop?: boolean;
+
+  // Other attributes
+  fontFamily?: string;
+  pageNumber?: PageNumberPlacement;
+  toc?: boolean;
+  showDate?: boolean;
 }
 
 export interface EpubFormatConfig {
@@ -224,42 +199,16 @@ export const DEFAULT_HTML_FORMAT: HtmlFormatConfig = {
 export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   engine: 'pdflatex',
   concurrency: detectConcurrency(),
-  hyphenation: false,
-  showDate: false,
-  pdfx: false,
-  toc: false,
-  tocDepth: 1,
-  pageSize: 'letter',
-  fontSize: '12pt',
-  fontFamily: 'mathptmx',
-  geometry: {
-    top: '2.54cm',
-    bottom: '2.54cm',
-    left: '2.54cm',
-    right: '2.54cm',
-    headheight: '12pt',
-    headsep: '6pt',
-    footskip: '22pt',
+  documentclass: {
+    class: 'scrbook',
+    options: ['12pt', 'sfdefaults=false', 'paper=letter', 'twoside'],
   },
-  lineSpacing: 1.5,
-  pageNumber: 'header-right',
-  sides: 'twoside',
-  secNumDepth: 1,
-  generate: false,
-  babel: ['spanish', 'mexico', 'es-noshorthands', 'es-noindentfirst'],
+  geometry: { options: ['top=2.54cm', 'bottom=2.54cm', 'left=2.54cm', 'right=2.54cm', 'headheight=12pt', 'headsep=6pt', 'footskip=22pt'] },
+  babel: { options: ['spanish', 'mexico', 'es-noshorthands', 'es-noindentfirst'] },
+  hyperref: { options: ['hidelinks'] },
+  microtype: { options: ['activate={true,nocompatibility}', 'final', 'tracking=true', 'kerning=true', 'spacing=true', 'factor=1100', 'stretch=10', 'shrink=10'] },
   enumitem: true,
-  setlist: [{ env: 'description', opts: ['noitemsep', 'nosep', 'topsep=\\baselineskip'] }],
-  hyperref: ['hidelinks'],
-  microtype: {
-    activate: '{true,nocompatibility}',
-    final: true,
-    tracking: true,
-    kerning: true,
-    spacing: true,
-    factor: 1100,
-    stretch: 10,
-    shrink: 10,
-  },
+  setstretch: 1.5,
   raggedbottom: true,
   pretolerance: 200,
   tolerance: 400,
@@ -268,8 +217,16 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   doublehyphendemerits: 1_000_000,
   widowpenalty: 1_000_000,
   clubpenalty: 1_000_000,
-  crop: false,
+  setlist: [{ command: 'description', options: ['noitemsep', 'nosep', 'topsep=\\baselineskip'] }],
+  setcounter: { secnumdepth: 1, tocdepth: 1 },
   esoPic: false,
+  pdfx: false,
+  crop: false,
+  fontFamily: 'mathptmx',
+  pageNumber: 'header-right',
+  toc: false,
+  showDate: false,
+  generate: false,
   force: false,
 };
 

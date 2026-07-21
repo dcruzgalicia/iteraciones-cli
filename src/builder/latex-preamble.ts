@@ -56,14 +56,15 @@ export async function buildLatexPreamble(
   disabledPreambleTranspilers?: string[],
 ): Promise<string[]> {
   const fmt = pdfFormat ?? DEFAULT_PDF_FORMAT;
-  const dc = fmt.documentclass ?? 'scrbook';
-  const fontSize = fmt.fontSize ?? '12pt';
-  const sfdefaults = fmt.sfdefaults ?? false;
-  const twoside = fmt.sides === 'twoside';
-  const pageSize = fmt.pageSize;
+  const dc = fmt.documentclass?.class ?? 'scrbook';
+  const fontSize = fmt.documentclass?.options?.find((o) => /^\d+pt$/.test(o)) ?? '12pt';
+  const sfdefaults = fmt.documentclass?.options?.includes('sfdefaults=true') ?? false;
+  const twoside = fmt.documentclass?.options?.includes('twoside') ?? false;
+  const pageSizeOption = fmt.documentclass?.options?.find((o) => o.startsWith('paper='));
+  const pageSize = pageSizeOption ? pageSizeOption.replace('paper=', '') : undefined;
   const geometry = fmt.geometry;
   const fontFamily = fmt.fontFamily ?? 'mathptmx';
-  const lineSpacing = fmt.lineSpacing ?? 1.5;
+  const lineSpacing = fmt.setstretch ?? 1.5;
 
   // Opciones de clase KOMA-Script
   const classOpts = [fontSize];
@@ -96,7 +97,7 @@ export async function buildLatexPreamble(
     '  \\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}}',
     `\\pretolerance=${fmt.pretolerance ?? 200}`,
     `\\tolerance=${fmt.tolerance ?? 400}`,
-    `\\hyphenpenalty=${fmt.hyphenation ? 100 : fmt.brokenpenalty ?? 1000000}`,
+    `\\hyphenpenalty=${fmt.brokenpenalty ?? 1000000}`,
     `\\brokenpenalty=${fmt.brokenpenalty ?? 1000000}`,
     `\\finalhyphendemerits=${fmt.finalhyphendemerits ?? 1000000}`,
     `\\doublehyphendemerits=${fmt.doublehyphendemerits ?? 1000000}`,
@@ -125,8 +126,8 @@ export async function buildLatexPreamble(
   }
 
   // Babel: opciones de idioma (opcional, usa default si no se define)
-  if (fmt.babel && fmt.babel.length > 0) {
-    preamble.push(`\\usepackage[${fmt.babel.join(',')}]{babel}`);
+  if (fmt.babel?.options && fmt.babel.options.length > 0) {
+    preamble.push(`\\usepackage[${fmt.babel.options.join(',')}]{babel}`);
   }
 
   // Enumitem: personalizacion de listas (opcional)
@@ -134,46 +135,31 @@ export async function buildLatexPreamble(
     preamble.push('\\usepackage{enumitem}');
     if (fmt.setlist) {
       for (const sl of fmt.setlist) {
-        preamble.push(`\\setlist[${sl.env}]{${sl.opts.join(',')}}`);
+        preamble.push(`\\setlist[${sl.command}]{${sl.options.join(',')}}`);
       }
     }
   }
 
   // Hyperref: opciones del paquete hyperref (opcional)
-  if (fmt.hyperref && fmt.hyperref.length > 0) {
-    preamble.push(`\\usepackage[${fmt.hyperref.join(',')}]{hyperref}`);
+  if (fmt.hyperref?.options && fmt.hyperref.options.length > 0) {
+    preamble.push(`\\usepackage[${fmt.hyperref.options.join(',')}]{hyperref}`);
   } else {
     preamble.push('\\usepackage{hyperref}');
   }
 
   // Microtype: microtipografia (usando config si existe, o default hardcodeado)
-  if (fmt.microtype && Object.keys(fmt.microtype).length > 0) {
-    const mtOpts: string[] = [];
-    for (const [k, v] of Object.entries(fmt.microtype)) {
-      if (v === true) {
-        if (k === 'final') {
-          mtOpts.push('final');
-        } else {
-          mtOpts.push(`${k}=true`);
-        }
-      } else if (v === false) {
-        if (k === 'final') {
-          mtOpts.push('draft');
-        } else {
-          mtOpts.push(`${k}=false`);
-        }
-      } else if (typeof v === 'string' || typeof v === 'number') {
-        mtOpts.push(`${k}=${v}`);
-      }
-    }
-    if (mtOpts.length > 0) {
-      preamble.push(`\\usepackage[${mtOpts.join(',')}]{microtype}`);
-    }
+  if (fmt.microtype?.options && fmt.microtype.options.length > 0) {
+    preamble.push(`\\usepackage[${fmt.microtype.options.join(',')}]{microtype}`);
   }
 
   // Cuadricula de fondo con eso-pic (opcional)
   if (fmt.esoPic) {
-    preamble.push('\\usepackage[grid]{eso-pic}');
+    const esoPicOpts = typeof fmt.esoPic === 'boolean' ? [] : (fmt.esoPic.options ?? []);
+    if (esoPicOpts.length > 0) {
+      preamble.push(`\\usepackage[${esoPicOpts.join(',')}]{eso-pic}`);
+    } else {
+      preamble.push('\\usepackage{eso-pic}');
+    }
   }
 
   // PDF/A-1a con el paquete pdfx (opcional)
@@ -187,20 +173,21 @@ export async function buildLatexPreamble(
   if (fmt.crop) {
     let cropW: number | undefined;
     let cropH: number | undefined;
-    const ps = fmt.pageSize;
-    if (ps && ps !== 'custom' && PAGE_SIZE_DIMS[ps]) {
-      const [pw, ph] = PAGE_SIZE_DIMS[ps];
+    if (pageSize && pageSize !== 'custom' && PAGE_SIZE_DIMS[pageSize]) {
+      const [pw, ph] = PAGE_SIZE_DIMS[pageSize];
       cropW = pw + 15;
       cropH = ph + 15;
-    } else if (ps === 'custom' && fmt.geometry) {
+    } else if (pageSize === 'custom' && geometry?.options) {
       // Custom: leer paperwidth/paperheight de geometry
-      const gw = fmt.geometry.paperwidth;
-      const gh = fmt.geometry.paperheight;
+      const gw = geometry.options.find((o) => o.startsWith('paperwidth='));
+      const gh = geometry.options.find((o) => o.startsWith('paperheight='));
       if (gw && gh) {
-        const wp = parseFloat(gw);
-        const hp = parseFloat(gh);
-        const unitW = gw.replace(/[\d.]/g, '');
-        const unitH = gh.replace(/[\d.]/g, '');
+        const gwVal = gw.replace('paperwidth=', '');
+        const ghVal = gh.replace('paperheight=', '');
+        const wp = parseFloat(gwVal);
+        const hp = parseFloat(ghVal);
+        const unitW = gwVal.replace(/[\d.]/g, '');
+        const unitH = ghVal.replace(/[\d.]/g, '');
         if ((unitW === 'mm' || unitW === 'truemm') && (unitH === 'mm' || unitH === 'truemm') && !isNaN(wp) && !isNaN(hp)) {
           cropW = wp + 15;
           cropH = hp + 15;
@@ -213,14 +200,8 @@ export async function buildLatexPreamble(
   }
 
   // Construir opciones de geometry desde el mapa de configuracion
-  if (geometry && Object.keys(geometry).length > 0) {
-    const geomOpts: string[] = [];
-    const order = ['paperwidth', 'paperheight', 'top', 'bottom', 'left', 'right', 'headheight', 'headsep', 'footskip'];
-    for (const key of order) {
-      const val = geometry[key];
-      if (val) geomOpts.push(`${key}=${val}`);
-    }
-    preamble.push(`\\usepackage[${geomOpts.join(',')}]{geometry}`);
+  if (geometry?.options && geometry.options.length > 0) {
+    preamble.push(`\\usepackage[${geometry.options.join(',')}]{geometry}`);
   }
 
   // biblatex con auto-descubrimiento de archivos .bib
@@ -273,13 +254,13 @@ export async function buildLatexPreamble(
 
   // Tabla de contenidos (opcional)
   // Profundidad de numeracion de secciones (sec-num-depth)
-  if (fmt.secNumDepth !== undefined) {
-    preamble.push(`\\setcounter{secnumdepth}{${fmt.secNumDepth}}`);
+  if (fmt.setcounter?.secnumdepth !== undefined) {
+    preamble.push(`\\setcounter{secnumdepth}{${fmt.setcounter.secnumdepth}}`);
   }
 
   // Profundidad del indice (toc-depth) y tabla de contenidos
-  if (fmt.tocDepth !== undefined) {
-    preamble.push(`\\setcounter{tocdepth}{${fmt.tocDepth}}`);
+  if (fmt.setcounter?.tocdepth !== undefined) {
+    preamble.push(`\\setcounter{tocdepth}{${fmt.setcounter.tocdepth}}`);
   }
   if (fmt.toc) {
     preamble.push('\\tableofcontents');

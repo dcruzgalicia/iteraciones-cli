@@ -123,7 +123,7 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfF
   }
 
   // Hyphenation: permite desactivar guiones en la salida PDF vía configuración
-  lines.push(`hyphenation-active: ${pdfFormat?.hyphenation !== false ? 'true' : 'false'}`);
+  lines.push('hyphenation-active: true');
 
   // Metadatos editoriales opcionales
   if (metadata.isbn) lines.push(`isbn: ${yamlString(metadata.isbn)}`);
@@ -170,60 +170,44 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfF
   if (pdfFormat) {
     // ── Tamaño de página ────────────────────────────────────────────────────
     let geometryEmitted = false;
-    if (pdfFormat.pageSize) {
-      const classOption = STANDARD_PAGE_SIZES[pdfFormat.pageSize];
+    const paperOpt = pdfFormat?.documentclass?.options?.find((o) => o.startsWith('paper='));
+    const pageSizeVal = paperOpt ? paperOpt.replace('paper=', '') : undefined;
+    if (pageSizeVal) {
+      const classOption = STANDARD_PAGE_SIZES[pageSizeVal];
       if (classOption) {
         // Tamaño estándar → opción de clase (letterpaper, paper=13.97cm:21.59cm, …)
         lines.push('classoption:');
         lines.push(`  - ${classOption}`);
         geometryEmitted = false; // classoption no emite geometry
-      } else if (pdfFormat.pageSize === 'custom') {
-        // page-size: custom → geometry con paperwidth/paperheight desde config
-        if (pdfFormat.geometry && Object.keys(pdfFormat.geometry).length > 0) {
-          lines.push('geometry:');
-          const order = ['paperwidth', 'paperheight', 'top', 'bottom', 'left', 'right', 'headheight', 'headsep', 'footskip'];
-          for (const key of order) {
-            const val = pdfFormat.geometry[key];
-            if (val) lines.push(`  - ${key}=${val}`);
-          }
-          geometryEmitted = true;
-        }
       } else {
-        const customMatch = CUSTOM_PAGE_SIZE_RE.exec(pdfFormat.pageSize);
-        if (customMatch) {
-          const [, pw, ph] = customMatch;
-          lines.push('geometry:');
-          const g = pdfFormat.geometry ?? DEFAULT_PDF_FORMAT.geometry;
-          if (g) {
-            const order = ['top', 'bottom', 'left', 'right', 'headheight', 'headsep', 'footskip'];
-            for (const key of order) {
-              const val = g[key];
-              if (val) lines.push(`  - ${key}=${val}`);
-            }
-          }
-          lines.push(`  - paperwidth=${pw}`);
-          lines.push(`  - paperheight=${ph}`);
-          geometryEmitted = true;
+        // Tamaño personalizado: emitir geometry con paperwidth y paperheight
+        lines.push('geometry:');
+        const geomOpts = pdfFormat?.geometry?.options && pdfFormat.geometry.options.length > 0
+          ? pdfFormat.geometry.options
+          : (DEFAULT_PDF_FORMAT.geometry?.options ?? []);
+        for (const opt of geomOpts) {
+          lines.push(`  - ${opt}`);
         }
+        geometryEmitted = true;
       }
     }
-    if (pdfFormat.geometry && !geometryEmitted) {
+    if (pdfFormat?.geometry?.options && pdfFormat.geometry.options.length > 0 && !geometryEmitted) {
       // Geometry definida por configuracion → geometry con margenes y opciones
       lines.push('geometry:');
-      const order = ['paperwidth', 'paperheight', 'top', 'bottom', 'left', 'right', 'headheight', 'headsep', 'footskip'];
-      for (const key of order) {
-        const val = pdfFormat.geometry[key];
-        if (val) lines.push(`  - ${key}=${val}`);
+      for (const opt of pdfFormat.geometry.options) {
+        lines.push(`  - ${opt}`);
       }
     }
 
     // sfdefaults: permite controlar la opcion de clase KOMA-Script del mismo nombre.
     // Por defecto es false (no usar familias sans-serif para titulos).
-    if (pdfFormat.sfdefaults !== undefined) {
-      lines.push(`sfdefaults: ${pdfFormat.sfdefaults ? 'true' : 'false'}`);
+    const sfdefaultsOpt = pdfFormat?.documentclass?.options?.find((o) => o.startsWith('sfdefaults='));
+    if (sfdefaultsOpt) {
+      lines.push(`sfdefaults: ${sfdefaultsOpt.replace('sfdefaults=', '')}`);
     }
 
-    if (pdfFormat.fontSize) lines.push(`fontsize: ${pdfFormat.fontSize}`);
+    const fontSize = pdfFormat?.documentclass?.options?.find((o) => /^\d+pt$/.test(o));
+    if (fontSize) lines.push(`fontsize: ${fontSize}`);
     // Solo emitir mainfont si el usuario eligió un paquete de fuente distinto al default.
     // El template ya carga mathptmx como fallback vía \usepackage{mathptmx} en $else$.
     if (pdfFormat.fontFamily && pdfFormat.fontFamily !== DEFAULT_PDF_FORMAT.fontFamily) {
@@ -231,13 +215,14 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfF
     }
     // PDF/A-1a con el paquete pdfx
     lines.push(`pdfx: ${pdfFormat.pdfx ? 'true' : 'false'}`);
-    if (pdfFormat.lineSpacing !== undefined) lines.push(`linestretch: ${pdfFormat.lineSpacing}`);
-    if (pdfFormat.secNumDepth !== undefined) lines.push(`secnumdepth: ${pdfFormat.secNumDepth}`);
+    if (pdfFormat?.setstretch !== undefined) lines.push(`linestretch: ${pdfFormat.setstretch}`);
+    if (pdfFormat?.setcounter?.secnumdepth !== undefined) lines.push(`secnumdepth: ${pdfFormat.setcounter.secnumdepth}`);
     lines.push(`has-chapter: ${doc.metadata.documentclass === 'scrbook' ? 'true' : 'false'}`);
+    const hasTwoside = pdfFormat?.documentclass?.options?.includes('twoside') ?? false;
     if (pdfFormat.pageNumber) {
       const [placement, align] = pdfFormat.pageNumber.split('-') as [string, string];
       lines.push(`pageno-head: ${placement === 'header' ? 'true' : 'false'}`);
-      if (pdfFormat.sides === 'twoside') {
+      if (hasTwoside) {
         const twosideMap: Record<string, string> = {
           left: 'LO,RE',
           center: 'CE,CO',
@@ -252,12 +237,12 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfF
         };
         lines.push(`pageno-fancy: ${alignMap[align] ?? 'R'}`);
       }
-    } else if (pdfFormat.sides === 'twoside') {
+    } else if (hasTwoside) {
       // Sin page-number explícito: footer-right por defecto → LE,RO en twoside
       lines.push('pageno-fancy: LE,RO');
     }
-    if (pdfFormat.sides) {
-      lines.push(`twoside: ${pdfFormat.sides === 'twoside' ? 'true' : 'false'}`);
+    if (hasTwoside) {
+      lines.push('twoside: true');
     }
   }
 
