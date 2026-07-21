@@ -65,6 +65,8 @@ export interface PdfFormatConfig {
   hyperref?: { options?: string[] };
   microtype?: { options?: string[] };
   enumitem?: boolean;
+  mathptmx?: boolean;
+  setspace?: boolean;
 
   // Active commands
   setstretch?: number;
@@ -85,7 +87,6 @@ export interface PdfFormatConfig {
   crop?: boolean;
 
   // Other attributes
-  fontFamily?: string;
   pageNumber?: PageNumberPlacement;
   toc?: boolean;
   showDate?: boolean;
@@ -208,6 +209,8 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   hyperref: { options: ['hidelinks'] },
   microtype: { options: ['activate={true,nocompatibility}', 'final', 'tracking=true', 'kerning=true', 'spacing=true', 'factor=1100', 'stretch=10', 'shrink=10'] },
   enumitem: true,
+  mathptmx: true,
+  setspace: true,
   setstretch: 1.5,
   raggedbottom: true,
   pretolerance: 200,
@@ -222,7 +225,6 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   esoPic: false,
   pdfx: false,
   crop: false,
-  fontFamily: 'mathptmx',
   pageNumber: 'header-right',
   toc: false,
   showDate: false,

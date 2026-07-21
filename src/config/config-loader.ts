@@ -229,7 +229,8 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     }
   }
 
-  const fontFamily = typeof obj['font-family'] === 'string' && obj['font-family'].trim() ? obj['font-family'].trim() : DEFAULT_PDF_FORMAT.fontFamily;
+  const mathptmx = typeof obj.mathptmx === 'boolean' ? obj.mathptmx : DEFAULT_PDF_FORMAT.mathptmx;
+  const setspace = typeof obj.setspace === 'boolean' ? obj.setspace : DEFAULT_PDF_FORMAT.setspace;
 
   const showDate = typeof obj['show-date'] === 'boolean' ? obj['show-date'] : DEFAULT_PDF_FORMAT.showDate;
 
@@ -323,7 +324,8 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     esoPic,
     pdfx,
     crop,
-    fontFamily,
+    mathptmx,
+    setspace,
     pageNumber,
     toc,
     showDate,

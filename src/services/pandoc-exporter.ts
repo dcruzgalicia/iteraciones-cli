@@ -208,11 +208,7 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfF
 
     const fontSize = pdfFormat?.documentclass?.options?.find((o) => /^\d+pt$/.test(o));
     if (fontSize) lines.push(`fontsize: ${fontSize}`);
-    // Solo emitir mainfont si el usuario eligió un paquete de fuente distinto al default.
-    // El template ya carga mathptmx como fallback vía \usepackage{mathptmx} en $else$.
-    if (pdfFormat.fontFamily && pdfFormat.fontFamily !== DEFAULT_PDF_FORMAT.fontFamily) {
-      lines.push(`mainfont: ${yamlString(pdfFormat.fontFamily)}`);
-    }
+    if (fontSize) lines.push('fontsize: ' + yamlString(fontSize));
     // PDF/A-1a con el paquete pdfx
     lines.push(`pdfx: ${pdfFormat.pdfx ? 'true' : 'false'}`);
     if (pdfFormat?.setstretch !== undefined) lines.push(`linestretch: ${pdfFormat.setstretch}`);
