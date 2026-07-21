@@ -289,7 +289,46 @@ function buildDefaultConfig(): string {
     }
   }
 
-  // ── TRAS egin{document} ──
+  // ── SECTIONING (reemplaza transpilers 03-09) ──
+  const sec = DEFAULT_PDF_FORMAT.sectioning;
+  if (sec) {
+    lines.push('    sectioning:');
+    for (const [levelName, levelData] of Object.entries(sec)) {
+      lines.push(`      ${levelName}:`);
+      for (const [k, v] of Object.entries(levelData)) {
+        lines.push(`        ${k}: ${yamlStr(v)}`);
+      }
+    }
+  }
+
+  // ── SETKOMAFONT (reemplaza transpiler 02) ──
+  const skf = DEFAULT_PDF_FORMAT.setkomafont;
+  if (skf) {
+    lines.push('    setkomafont:');
+    for (const [el, font] of Object.entries(skf)) {
+      lines.push(`      ${el}: ${yamlStr(font)}`);
+    }
+  }
+
+  // ── DICTUM (reemplaza transpiler 10) ──
+  const dict = DEFAULT_PDF_FORMAT.dictum;
+  if (dict) {
+    lines.push('    dictum:');
+    for (const [k, v] of Object.entries(dict)) {
+      lines.push(`      ${k}: ${yamlStr(v)}`);
+    }
+  }
+
+  // ── PAGE STYLE (reemplaza transpiler 12) ──
+  const ps = DEFAULT_PDF_FORMAT.pagestyle;
+  if (ps) {
+    lines.push('    pagestyle:');
+    for (const [k, v] of Object.entries(ps)) {
+      lines.push(`      ${k}: ${yamlStr(v)}`);
+    }
+  }
+
+  // ── TRAS \\begin{document} ──
   lines.push(`    toc: ${yamlBool(pdfCfg.toc ?? false)}`);
   lines.push(`    show-date: ${yamlBool(pdfCfg.showDate ?? false)}`);
 
@@ -360,9 +399,9 @@ function yamlStr(s: string): string {
   if (/^(true|false|yes|no|on|off|null|undefined|~)$/i.test(s)) return `"${s}"`;
   if (/^\d+(\.\d+)?$/.test(s)) return `"${s}"`;
   if (/^0x[0-9a-f]+$/i.test(s)) return `"${s}"`;
+  // Contiene backslash: escaparlo con JSON.stringify para evitar interpretacion de YAML
+  if (/\\/.test(s)) return JSON.stringify(s);
   if (/^['"!@#%&*[\]{}|>:`]/d.test(s) || /[\s,:]#/.test(s)) return `"${s}"`;
-  // Contiene backslash: usar comillas simples (YAML trata \ literalmente)
-  if (/\\/.test(s)) return `'${s}'`;
   // Contiene caracteres especiales que necesitan comillas dobles
   if (/["\n\t]/.test(s)) return JSON.stringify(s);
   return s;

@@ -89,6 +89,40 @@ export interface PdfFormatConfig {
   pageNumber?: PageNumberPlacement;
   toc?: boolean;
   showDate?: boolean;
+
+  // Sectioning (replaces transpilers 03-09)
+  sectioning?: {
+    part?: { beforeskip?: string; afterskip?: string; font?: string };
+    chapter?: { style?: string; beforeskip?: string; afterskip?: string; font?: string; align?: string };
+    section?: { style?: string; beforeskip?: string; afterskip?: string; font?: string; align?: string };
+    subsection?: { beforeskip?: string; afterskip?: string; font?: string };
+    subsubsection?: { beforeskip?: string; afterskip?: string; font?: string };
+    paragraph?: { beforeskip?: string; afterskip?: string; font?: string };
+    subparagraph?: { beforeskip?: string; afterskip?: string; font?: string };
+  };
+
+  // setkomafont for maketitle elements (replaces transpiler 02)
+  setkomafont?: {
+    title?: string;
+    subtitle?: string;
+    author?: string;
+    publishers?: string;
+  };
+
+  // Dictum (replaces transpiler 10)
+  dictum?: {
+    width?: string;
+    font?: string;
+    rule?: string;
+    authorfont?: string;
+    authorformat?: string;
+  };
+
+  // Page style (replaces transpiler 12)
+  pagestyle?: {
+    part?: string;
+    chapter?: string;
+  };
 }
 
 export interface EpubFormatConfig {
@@ -220,6 +254,32 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   clubpenalty: 1_000_000,
   setlist: [{ command: 'description', options: ['noitemsep', 'nosep', 'topsep=\\baselineskip'] }],
   setcounter: { secnumdepth: 1, tocdepth: 1 },
+  sectioning: {
+    part: { beforeskip: '11\\baselineskip', afterskip: '\\baselineskip', font: '\\normalsize\\bfseries\\MakeUppercase' },
+    chapter: { style: 'chapter', beforeskip: '2\\baselineskip', afterskip: '\\baselineskip', font: '\\normalsize\\normalfont\\scshape', align: 'center' },
+    section: { style: 'section', beforeskip: '2\\baselineskip', afterskip: '2\\baselineskip', font: '\\normalsize\\bfseries\\MakeUppercase', align: 'center' },
+    subsection: { beforeskip: '2\\baselineskip', afterskip: '2\\baselineskip', font: '\\normalsize\\normalfont\\textit' },
+    subsubsection: { beforeskip: '2\\baselineskip', afterskip: '\\baselineskip', font: '\\normalsize\\normalfont\\itshape' },
+    paragraph: { beforeskip: '\\baselineskip', afterskip: '0pt', font: '\\normalsize\\normalfont' },
+    subparagraph: { beforeskip: '\\baselineskip', afterskip: '0pt', font: '\\normalsize\\normalfont' },
+  },
+  setkomafont: {
+    title: '\\normalsize\\bfseries',
+    subtitle: '\\normalsize\\normalfont\\itshape',
+    author: '\\normalsize\\normalfont',
+    publishers: '\\normalsize\\normalfont',
+  },
+  dictum: {
+    width: '0.5\\textwidth',
+    font: '\\normalsize\\normalfont\\itshape',
+    rule: '',
+    authorfont: '\\normalsize\\normalfont',
+    authorformat: '#1\\vspace*{32pt}',
+  },
+  pagestyle: {
+    part: 'empty',
+    chapter: 'empty',
+  },
   esoPic: false,
   pdfx: false,
   crop: false,

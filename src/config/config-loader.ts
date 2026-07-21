@@ -298,6 +298,75 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     }
   }
 
+  // sectioning
+  const rawSectioning = obj.sectioning;
+  let sectioning: PdfFormatConfig['sectioning'];
+  if (rawSectioning && typeof rawSectioning === 'object' && !Array.isArray(rawSectioning)) {
+    const s = rawSectioning as Record<string, unknown>;
+    const parsed: PdfFormatConfig['sectioning'] = {};
+    const LEVELS = ['part', 'chapter', 'section', 'subsection', 'subsubsection', 'paragraph', 'subparagraph'] as const;
+    const LEVEL_KEYS: Record<string, string[]> = {
+      part: ['beforeskip', 'afterskip', 'font'],
+      chapter: ['style', 'beforeskip', 'afterskip', 'font', 'align'],
+      section: ['style', 'beforeskip', 'afterskip', 'font', 'align'],
+      subsection: ['beforeskip', 'afterskip', 'font'],
+      subsubsection: ['beforeskip', 'afterskip', 'font'],
+      paragraph: ['beforeskip', 'afterskip', 'font'],
+      subparagraph: ['beforeskip', 'afterskip', 'font'],
+    };
+    for (const level of LEVELS) {
+      const rawLevel = s[level];
+      if (rawLevel && typeof rawLevel === 'object' && !Array.isArray(rawLevel)) {
+        const l = rawLevel as Record<string, unknown>;
+        const levelObj: Record<string, string> = {};
+        const keys = LEVEL_KEYS[level];
+        if (keys) {
+          for (const key of keys) {
+            if (typeof l[key] === 'string') levelObj[key] = l[key];
+          }
+        }
+        if (Object.keys(levelObj).length > 0) parsed[level] = levelObj;
+      }
+    }
+    if (Object.keys(parsed).length > 0) sectioning = parsed;
+  }
+
+  // setkomafont
+  const rawSetkomafont = obj.setkomafont;
+  let setkomafont: PdfFormatConfig['setkomafont'];
+  if (rawSetkomafont && typeof rawSetkomafont === 'object' && !Array.isArray(rawSetkomafont)) {
+    const sk = rawSetkomafont as Record<string, unknown>;
+    const parsed: Record<string, string> = {};
+    for (const [key, val] of Object.entries(sk)) {
+      if (typeof val === 'string') parsed[key] = val;
+    }
+    if (Object.keys(parsed).length > 0) setkomafont = parsed;
+  }
+
+  // dictum
+  const rawDictum = obj.dictum;
+  let dictum: PdfFormatConfig['dictum'];
+  if (rawDictum && typeof rawDictum === 'object' && !Array.isArray(rawDictum)) {
+    const d = rawDictum as Record<string, unknown>;
+    const parsed: Record<string, string> = {};
+    for (const key of ['width', 'font', 'rule', 'authorfont', 'authorformat']) {
+      if (typeof d[key] === 'string') parsed[key] = d[key];
+    }
+    if (Object.keys(parsed).length > 0) dictum = parsed;
+  }
+
+  // pagestyle
+  const rawPagestyle = obj.pagestyle;
+  let pagestyle: PdfFormatConfig['pagestyle'];
+  if (rawPagestyle && typeof rawPagestyle === 'object' && !Array.isArray(rawPagestyle)) {
+    const ps = rawPagestyle as Record<string, unknown>;
+    const parsed: Record<string, string> = {};
+    for (const key of ['part', 'chapter']) {
+      if (typeof ps[key] === 'string') parsed[key] = ps[key];
+    }
+    if (Object.keys(parsed).length > 0) pagestyle = parsed;
+  }
+
   return {
     concurrency,
     documentclass,
@@ -317,6 +386,10 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     clubpenalty,
     setlist,
     setcounter,
+    sectioning,
+    setkomafont,
+    dictum,
+    pagestyle,
     esoPic,
     pdfx,
     crop,
