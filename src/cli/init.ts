@@ -187,6 +187,8 @@ function buildDefaultConfig(): string {
   lines.push(`    generate: ${yamlBool(pdfCfg.generate!)}`);
   lines.push(`    force: ${yamlBool(pdfCfg.force!)}`);
   lines.push(`    engine: ${yamlStr(pdfCfg.engine)}`);
+
+  // ── 1. CLASE ──
   lines.push('    documentclass:');
   lines.push(`      class: ${pdfCfg.documentclass?.class ?? 'scrbook'}`);
   if (pdfCfg.documentclass?.options && pdfCfg.documentclass.options.length > 0) {
@@ -195,6 +197,14 @@ function buildDefaultConfig(): string {
       lines.push(`        - ${yamlStr(opt)}`);
     }
   }
+
+  // ── 3. FUENTE ──
+  lines.push(`    font-family: ${yamlStr(pdfCfg.fontFamily ?? 'mathptmx')}`);
+
+  // ── 4. INTERLINEADO ──
+  lines.push(`    setstretch: ${yamlValue(pdfCfg.setstretch ?? 1.5)}`);
+
+  // ── 5. MÁRGENES ──
   lines.push('    geometry:');
   if (pdfCfg.geometry?.options && pdfCfg.geometry.options.length > 0) {
     lines.push('      options:');
@@ -202,6 +212,8 @@ function buildDefaultConfig(): string {
       lines.push(`        - ${yamlStr(opt)}`);
     }
   }
+
+  // ── 6. IDIOMA ──
   lines.push('    babel:');
   if (pdfCfg.babel?.options && pdfCfg.babel.options.length > 0) {
     lines.push('      options:');
@@ -209,13 +221,11 @@ function buildDefaultConfig(): string {
       lines.push(`        - ${yamlStr(opt)}`);
     }
   }
-  lines.push('    hyperref:');
-  if (pdfCfg.hyperref?.options && pdfCfg.hyperref.options.length > 0) {
-    lines.push('      options:');
-    for (const opt of pdfCfg.hyperref.options) {
-      lines.push(`        - ${yamlStr(opt)}`);
-    }
-  }
+
+  // ── 7. ENCABEZADOS ──
+  lines.push(`    page-number: ${yamlStr(pdfCfg.pageNumber ?? 'header-right')}`);
+
+  // ── 8. TIPOGRAFÍA ──
   lines.push('    microtype:');
   if (pdfCfg.microtype?.options && pdfCfg.microtype.options.length > 0) {
     lines.push('      options:');
@@ -223,8 +233,8 @@ function buildDefaultConfig(): string {
       lines.push(`        - ${yamlStr(opt)}`);
     }
   }
-  lines.push(`    enumitem: ${yamlBool(pdfCfg.enumitem ?? true)}`);
-  lines.push(`    setstretch: ${yamlValue(pdfCfg.setstretch ?? 1.5)}`);
+
+  // ── 9. COMPOSICIÓN ──
   lines.push(`    raggedbottom: ${yamlBool(pdfCfg.raggedbottom ?? true)}`);
   lines.push(`    pretolerance: ${yamlValue(pdfCfg.pretolerance ?? 200)}`);
   lines.push(`    tolerance: ${yamlValue(pdfCfg.tolerance ?? 400)}`);
@@ -233,6 +243,18 @@ function buildDefaultConfig(): string {
   lines.push(`    doublehyphendemerits: ${yamlValue(pdfCfg.doublehyphendemerits ?? 1000000)}`);
   lines.push(`    widowpenalty: ${yamlValue(pdfCfg.widowpenalty ?? 1000000)}`);
   lines.push(`    clubpenalty: ${yamlValue(pdfCfg.clubpenalty ?? 1000000)}`);
+
+  // ── 10. ENLACES ──
+  lines.push('    hyperref:');
+  if (pdfCfg.hyperref?.options && pdfCfg.hyperref.options.length > 0) {
+    lines.push('      options:');
+    for (const opt of pdfCfg.hyperref.options) {
+      lines.push(`        - ${yamlStr(opt)}`);
+    }
+  }
+
+  // ── 12. LISTAS ──
+  lines.push(`    enumitem: ${yamlBool(pdfCfg.enumitem ?? true)}`);
   if (pdfCfg.setlist && pdfCfg.setlist.length > 0) {
     lines.push('    setlist:');
     for (const sl of pdfCfg.setlist) {
@@ -243,12 +265,8 @@ function buildDefaultConfig(): string {
       }
     }
   }
-  if (pdfCfg.setcounter && Object.keys(pdfCfg.setcounter).length > 0) {
-    lines.push('    setcounter:');
-    for (const [key, val] of Object.entries(pdfCfg.setcounter)) {
-      lines.push(`      ${key}: ${yamlValue(val)}`);
-    }
-  }
+
+  // ── 14. EXTRAS ──
   if (typeof pdfCfg.esoPic === 'object' && pdfCfg.esoPic?.options && pdfCfg.esoPic.options.length > 0) {
     lines.push('    eso-pic:');
     lines.push('      options:');
@@ -260,8 +278,16 @@ function buildDefaultConfig(): string {
   }
   lines.push(`    pdfx: ${yamlBool(pdfCfg.pdfx ?? false)}`);
   lines.push(`    crop: ${yamlBool(pdfCfg.crop ?? false)}`);
-  lines.push(`    font-family: ${yamlStr(pdfCfg.fontFamily ?? 'mathptmx')}`);
-  lines.push(`    page-number: ${yamlStr(pdfCfg.pageNumber ?? 'header-right')}`);
+
+  // ── 15. CONTADORES ──
+  if (pdfCfg.setcounter && Object.keys(pdfCfg.setcounter).length > 0) {
+    lines.push('    setcounter:');
+    for (const [key, val] of Object.entries(pdfCfg.setcounter)) {
+      lines.push(`      ${key}: ${yamlValue(val)}`);
+    }
+  }
+
+  // ── TRAS egin{document} ──
   lines.push(`    toc: ${yamlBool(pdfCfg.toc ?? false)}`);
   lines.push(`    show-date: ${yamlBool(pdfCfg.showDate ?? false)}`);
 

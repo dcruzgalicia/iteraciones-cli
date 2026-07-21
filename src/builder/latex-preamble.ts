@@ -4,6 +4,12 @@
  * Dado un PdfFormatConfig y metadatos opcionales (title, author, date),
  * retorna un array de líneas del preámbulo listo para unir con \n.
  * Incluye \begin{document} y \title{}/\author{}/\date{}/\maketitle.
+ *
+ * El orden de los paquetes y comandos sigue la tabla:
+ *   CLASE → CORE → FUENTE → INTERLINEADO → MÁRGENES → IDIOMA →
+ *   ENCABEZADOS → TIPOGRAFÍA → COMPOSICIÓN → ENLACES → TABLAS →
+ *   LISTAS → BIBLIOGRAFÍA → EXTRAS → CONTADORES →
+ *   (transpilers) → \begin{document} → \title/\author/\date/\maketitle → \tableofcontents
  */
 import type { PdfFormatConfig } from '../config/site-config.js';
 import { DEFAULT_PDF_FORMAT } from '../config/site-config.js';
@@ -78,39 +84,42 @@ export async function buildLatexPreamble(
   }
   if (twoside) classOpts.push('twoside');
 
-  const preamble: string[] = [
-    `\\documentclass[${classOpts.join(',')}]{${dc}}`,
+  const preamble: string[] = [];
+
+  // ── 1. CLASE ──
+  preamble.push(`\\documentclass[${classOpts.join(',')}]{${dc}}`);
+
+  // ── 2. CORE ──
+  preamble.push(
     '\\usepackage[T1]{fontenc}',
     '\\usepackage[utf8]{inputenc}',
     '\\usepackage{textcomp}',
-    `\\usepackage{${fontFamily}}`,
-    '\\usepackage{longtable}',
-    '\\usepackage{booktabs}',
-    '\\usepackage{array}',
-    '\\usepackage{calc}',
+  );
+
+  // ── 3. FUENTE ──
+  preamble.push(`\\usepackage{${fontFamily}}`);
+
+  // ── 4. INTERLINEADO ──
+  preamble.push(
     '\\usepackage{setspace}',
     `\\setstretch{${lineSpacing}}`,
-    '\\usepackage{scrlayer-scrpage}',
-    '\\clearpairofpagestyles',
-    '\\newcounter{none}',
-    '\\providecommand{\\tightlist}{%',
-    '  \\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}}',
-    `\\pretolerance=${fmt.pretolerance ?? 200}`,
-    `\\tolerance=${fmt.tolerance ?? 400}`,
-    `\\hyphenpenalty=${fmt.brokenpenalty ?? 1000000}`,
-    `\\brokenpenalty=${fmt.brokenpenalty ?? 1000000}`,
-    `\\finalhyphendemerits=${fmt.finalhyphendemerits ?? 1000000}`,
-    `\\doublehyphendemerits=${fmt.doublehyphendemerits ?? 1000000}`,
-    `\\widowpenalty=${fmt.widowpenalty ?? 1000000}`,
-    `\\clubpenalty=${fmt.clubpenalty ?? 1000000}`,
-  ];
+  );
 
-  // Raggedbottom: control de pagina vertical (opcional, default true)
-  if (fmt.raggedbottom !== false) {
-    preamble.push('\\raggedbottom');
+  // ── 5. MÁRGENES ──
+  if (geometry?.options && geometry.options.length > 0) {
+    preamble.push(`\\usepackage[${geometry.options.join(',')}]{geometry}`);
   }
 
-  // Configurar numeracion de pagina con scrlayer-scrpage
+  // ── 6. IDIOMA ──
+  if (fmt.babel?.options && fmt.babel.options.length > 0) {
+    preamble.push(`\\usepackage[${fmt.babel.options.join(',')}]{babel}`);
+  }
+
+  // ── 7. ENCABEZADOS ──
+  preamble.push(
+    '\\usepackage{scrlayer-scrpage}',
+    '\\clearpairofpagestyles',
+  );
   const pageNum = fmt.pageNumber;
   if (pageNum) {
     const PAGE_NUMBER_MAP: Record<string, string> = {
@@ -125,12 +134,45 @@ export async function buildLatexPreamble(
     if (cmd) preamble.push(cmd);
   }
 
-  // Babel: opciones de idioma (opcional, usa default si no se define)
-  if (fmt.babel?.options && fmt.babel.options.length > 0) {
-    preamble.push(`\\usepackage[${fmt.babel.options.join(',')}]{babel}`);
+  // ── 8. TIPOGRAFÍA ──
+  if (fmt.microtype?.options && fmt.microtype.options.length > 0) {
+    preamble.push(`\\usepackage[${fmt.microtype.options.join(',')}]{microtype}`);
   }
 
-  // Enumitem: personalizacion de listas (opcional)
+  // ── 9. COMPOSICIÓN E INTERNOS ──
+  if (fmt.raggedbottom !== false) {
+    preamble.push('\\raggedbottom');
+  }
+  preamble.push(
+    `\\pretolerance=${fmt.pretolerance ?? 200}`,
+    `\\tolerance=${fmt.tolerance ?? 400}`,
+    `\\hyphenpenalty=${fmt.brokenpenalty ?? 1000000}`,
+    `\\brokenpenalty=${fmt.brokenpenalty ?? 1000000}`,
+    `\\finalhyphendemerits=${fmt.finalhyphendemerits ?? 1000000}`,
+    `\\doublehyphendemerits=${fmt.doublehyphendemerits ?? 1000000}`,
+    `\\widowpenalty=${fmt.widowpenalty ?? 1000000}`,
+    `\\clubpenalty=${fmt.clubpenalty ?? 1000000}`,
+    '\\newcounter{none}',
+    '\\providecommand{\\tightlist}{%',
+    '  \\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}}',
+  );
+
+  // ── 10. ENLACES ──
+  if (fmt.hyperref?.options && fmt.hyperref.options.length > 0) {
+    preamble.push(`\\usepackage[${fmt.hyperref.options.join(',')}]{hyperref}`);
+  } else {
+    preamble.push('\\usepackage{hyperref}');
+  }
+
+  // ── 11. TABLAS ──
+  preamble.push(
+    '\\usepackage{longtable}',
+    '\\usepackage{booktabs}',
+    '\\usepackage{array}',
+    '\\usepackage{calc}',
+  );
+
+  // ── 12. LISTAS ──
   if (fmt.enumitem !== false) {
     preamble.push('\\usepackage{enumitem}');
     if (fmt.setlist) {
@@ -140,19 +182,19 @@ export async function buildLatexPreamble(
     }
   }
 
-  // Hyperref: opciones del paquete hyperref (opcional)
-  if (fmt.hyperref?.options && fmt.hyperref.options.length > 0) {
-    preamble.push(`\\usepackage[${fmt.hyperref.options.join(',')}]{hyperref}`);
-  } else {
-    preamble.push('\\usepackage{hyperref}');
+  // ── 13. BIBLIOGRAFÍA ──
+  const cwd = meta?.cwd;
+  if (cwd) {
+    const bibFiles = discoverBibFiles(cwd);
+    if (bibFiles.length > 0) {
+      preamble.push('\\usepackage[style=apa]{biblatex}');
+      for (const bib of bibFiles) {
+        preamble.push(`\\addbibresource{${bib}}`);
+      }
+    }
   }
 
-  // Microtype: microtipografia (usando config si existe, o default hardcodeado)
-  if (fmt.microtype?.options && fmt.microtype.options.length > 0) {
-    preamble.push(`\\usepackage[${fmt.microtype.options.join(',')}]{microtype}`);
-  }
-
-  // Cuadricula de fondo con eso-pic (opcional)
+  // ── 14. EXTRAS: eso-pic ──
   if (fmt.esoPic) {
     const esoPicOpts = typeof fmt.esoPic === 'boolean' ? [] : (fmt.esoPic.options ?? []);
     if (esoPicOpts.length > 0) {
@@ -162,14 +204,13 @@ export async function buildLatexPreamble(
     }
   }
 
-  // PDF/A-1a con el paquete pdfx (opcional)
+  // ── 14. EXTRAS: pdfx ──
   if (fmt.pdfx) {
     preamble.push('\\usepackage[x-1a]{pdfx}');
     preamble.push('\\pdfpagesattr{}');
   }
 
-  // Marcas de corte con el paquete crop (opcional)
-  // Calcula width/height como page-size + 15mm para dejar espacio a marcas
+  // ── 14. EXTRAS: crop ──
   if (fmt.crop) {
     let cropW: number | undefined;
     let cropH: number | undefined;
@@ -178,7 +219,6 @@ export async function buildLatexPreamble(
       cropW = pw + 15;
       cropH = ph + 15;
     } else if (pageSize === 'custom' && geometry?.options) {
-      // Custom: leer paperwidth/paperheight de geometry
       const gw = geometry.options.find((o) => o.startsWith('paperwidth='));
       const gh = geometry.options.find((o) => o.startsWith('paperheight='));
       if (gw && gh) {
@@ -199,24 +239,15 @@ export async function buildLatexPreamble(
     }
   }
 
-  // Construir opciones de geometry desde el mapa de configuracion
-  if (geometry?.options && geometry.options.length > 0) {
-    preamble.push(`\\usepackage[${geometry.options.join(',')}]{geometry}`);
+  // ── 15. CONTADORES ──
+  if (fmt.setcounter?.secnumdepth !== undefined) {
+    preamble.push(`\\setcounter{secnumdepth}{${fmt.setcounter.secnumdepth}}`);
+  }
+  if (fmt.setcounter?.tocdepth !== undefined) {
+    preamble.push(`\\setcounter{tocdepth}{${fmt.setcounter.tocdepth}}`);
   }
 
-  // biblatex con auto-descubrimiento de archivos .bib
-  const cwd = meta?.cwd;
-  if (cwd) {
-    const bibFiles = discoverBibFiles(cwd);
-    if (bibFiles.length > 0) {
-      preamble.push('\\usepackage[style=apa]{biblatex}');
-      for (const bib of bibFiles) {
-        preamble.push(`\\addbibresource{${bib}}`);
-      }
-    }
-  }
-
-  // Ejecutar preamble transpilers (built-in + proyecto)
+  // ── PREAMBLE TRANSPILERS ──
   // Se ejecutan antes de \begin{document} para que sus definiciones
   // esten vigentes cuando se llame a \maketitle.
   const cwdForTranspilers = meta?.cwd;
@@ -225,8 +256,10 @@ export async function buildLatexPreamble(
     tp.process(preamble, fmt);
   }
 
+  // ── CUERPO DEL DOCUMENTO ──
   preamble.push('\\begin{document}');
 
+  // ── PORTADA ──
   if (meta?.title) preamble.push(`\\title{${meta.title}}`);
   if (meta?.author?.length) preamble.push(`\\author{${meta.author.join(' \\and ')}}`);
   if (fmt.showDate) {
@@ -252,16 +285,7 @@ export async function buildLatexPreamble(
   }
   if (meta?.title) preamble.push('\\maketitle');
 
-  // Tabla de contenidos (opcional)
-  // Profundidad de numeracion de secciones (sec-num-depth)
-  if (fmt.setcounter?.secnumdepth !== undefined) {
-    preamble.push(`\\setcounter{secnumdepth}{${fmt.setcounter.secnumdepth}}`);
-  }
-
-  // Profundidad del indice (toc-depth) y tabla de contenidos
-  if (fmt.setcounter?.tocdepth !== undefined) {
-    preamble.push(`\\setcounter{tocdepth}{${fmt.setcounter.tocdepth}}`);
-  }
+  // ── TABLA DE CONTENIDOS ──
   if (fmt.toc) {
     preamble.push('\\tableofcontents');
   }
