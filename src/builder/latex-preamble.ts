@@ -250,6 +250,120 @@ export async function buildLatexPreamble(
     preamble.push(`\\setcounter{tocdepth}{${fmt.setcounter.tocdepth}}`);
   }
 
+  // ── 10. SETKOMAFONT (desde config, reemplaza transpiler 02) ──
+  if (fmt.setkomafont) {
+    for (const [element, font] of Object.entries(fmt.setkomafont)) {
+      preamble.push(`\\setkomafont{${element}}{${font}}`);
+    }
+  }
+
+  // ── 11. SECTIONING (desde config, reemplaza transpilers 03-09) ──
+  if (fmt.sectioning) {
+    // part
+    if (fmt.sectioning.part) {
+      const p = fmt.sectioning.part;
+      const opts: string[] = [];
+      if (p.beforeskip) opts.push('beforeskip=' + p.beforeskip);
+      if (p.afterskip) opts.push('afterskip=' + p.afterskip);
+      if (opts.length > 0) {
+        opts.push('afterindent=false');
+            preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{part}`);
+      }
+      if (p.font) preamble.push(`\\setkomafont{part}{${p.font}}`);
+    }
+    // chapter
+    if (fmt.sectioning.chapter) {
+      const ch = fmt.sectioning.chapter;
+      const opts: string[] = [];
+      if (ch.style) opts.push('style=' + ch.style);
+      if (ch.beforeskip) opts.push('beforeskip=' + ch.beforeskip);
+      if (ch.afterskip) opts.push('afterskip=' + ch.afterskip);
+      if (opts.length > 0) {
+        opts.push('afterindent=false');
+            preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{chapter}`);
+      }
+      if (ch.font) preamble.push(`\\setkomafont{chapter}{${ch.font}}`);
+      if (ch.align) preamble.push(`\\renewcommand{\\raggedchapter}{\\centering}`);
+    }
+    // section
+    if (fmt.sectioning.section) {
+      const s = fmt.sectioning.section;
+      const opts: string[] = [];
+      if (s.style) opts.push('style=' + s.style);
+      if (s.beforeskip) opts.push('beforeskip=' + s.beforeskip);
+      if (s.afterskip) opts.push('afterskip=' + s.afterskip);
+      if (opts.length > 0) {
+        opts.push('afterindent=false');
+            preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{section}`);
+      }
+      if (s.font) preamble.push(`\\setkomafont{section}{${s.font}}`);
+      if (s.align) preamble.push(`\\renewcommand{\\raggedsection}{\\centering}`);
+    }
+    // subsection
+    if (fmt.sectioning.subsection) {
+      const ss = fmt.sectioning.subsection;
+      const opts: string[] = [];
+      if (ss.beforeskip) opts.push('beforeskip=' + ss.beforeskip);
+      if (ss.afterskip) opts.push('afterskip=' + ss.afterskip);
+      if (opts.length > 0) {
+        opts.push('afterindent=false');
+            preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{subsection}`);
+      }
+      if (ss.font) preamble.push(`\\setkomafont{subsection}{${ss.font}}`);
+    }
+    // subsubsection
+    if (fmt.sectioning.subsubsection) {
+      const sss = fmt.sectioning.subsubsection;
+      const opts: string[] = [];
+      if (sss.beforeskip) opts.push('beforeskip=' + sss.beforeskip);
+      if (sss.afterskip) opts.push('afterskip=' + sss.afterskip);
+      if (opts.length > 0) {
+        opts.push('afterindent=false');
+            preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{subsubsection}`);
+      }
+      if (sss.font) preamble.push(`\\setkomafont{subsubsection}{${sss.font}}`);
+    }
+    // paragraph
+    if (fmt.sectioning.paragraph) {
+      const pg = fmt.sectioning.paragraph;
+      const opts: string[] = [];
+      if (pg.beforeskip) opts.push('beforeskip=' + pg.beforeskip);
+      if (pg.afterskip) opts.push('afterskip=' + pg.afterskip);
+      if (opts.length > 0) {
+        opts.push('afterindent=false');
+            preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{paragraph}`);
+      }
+      if (pg.font) preamble.push(`\\setkomafont{paragraph}{${pg.font}}`);
+    }
+    // subparagraph
+    if (fmt.sectioning.subparagraph) {
+      const spg = fmt.sectioning.subparagraph;
+      const opts: string[] = [];
+      if (spg.beforeskip) opts.push('beforeskip=' + spg.beforeskip);
+      if (spg.afterskip) opts.push('afterskip=' + spg.afterskip);
+      if (opts.length > 0) {
+        opts.push('afterindent=false');
+            preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{subparagraph}`);
+      }
+      if (spg.font) preamble.push(`\\setkomafont{subparagraph}{${spg.font}}`);
+    }
+  }
+
+  // ── 12. DICTUM (desde config, reemplaza transpiler 10) ──
+  if (fmt.dictum) {
+    if (fmt.dictum.font) preamble.push(`\\setkomafont{dictum}{${fmt.dictum.font}}`);
+    if (fmt.dictum.width) preamble.push(`\\renewcommand*{\\dictumwidth}{${fmt.dictum.width}}`);
+    if (fmt.dictum.rule !== undefined) preamble.push(`\\renewcommand*{\\dictumrule}{${fmt.dictum.rule}}`);
+    if (fmt.dictum.authorfont) preamble.push(`\\setkomafont{dictumauthor}{${fmt.dictum.authorfont}}`);
+    if (fmt.dictum.authorformat) preamble.push(`\\renewcommand*{\\dictumauthorformat}[1]{${fmt.dictum.authorformat}}`);
+  }
+
+  // ── 13. PAGE STYLE (desde config, reemplaza transpiler 12) ──
+  if (fmt.pagestyle) {
+    if (fmt.pagestyle.part) preamble.push(`\\renewcommand*{\\partpagestyle}{${fmt.pagestyle.part}}`);
+    if (fmt.pagestyle.chapter) preamble.push(`\\renewcommand*{\\chapterpagestyle}{${fmt.pagestyle.chapter}}`);
+  }
+
   // ── PREAMBLE TRANSPILERS ──
   // Se ejecutan antes de \begin{document} para que sus definiciones
   // esten vigentes cuando se llame a \maketitle.
