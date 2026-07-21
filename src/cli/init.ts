@@ -16,7 +16,7 @@ const DEFAULT_README = [
   'date: "2026-01-01"',
   'author:',
   '  - "Nombre del autor"',
-    '  - "Segundo autor"',
+  '  - "Segundo autor"',
   'type: file',
   'keywords:',
   '  - "ejemplo"',
@@ -241,6 +241,7 @@ function buildDefaultConfig(): string {
   lines.push(`    pretolerance: ${yamlValue(pdfCfg.pretolerance ?? 200)}`);
   lines.push(`    tolerance: ${yamlValue(pdfCfg.tolerance ?? 400)}`);
   lines.push(`    brokenpenalty: ${yamlValue(pdfCfg.brokenpenalty ?? 1000000)}`);
+  lines.push(`    hyphenpenalty: ${yamlValue(pdfCfg.hyphenpenalty ?? 100)}`);
   lines.push(`    finalhyphendemerits: ${yamlValue(pdfCfg.finalhyphendemerits ?? 1000000)}`);
   lines.push(`    doublehyphendemerits: ${yamlValue(pdfCfg.doublehyphendemerits ?? 1000000)}`);
   lines.push(`    widowpenalty: ${yamlValue(pdfCfg.widowpenalty ?? 1000000)}`);
