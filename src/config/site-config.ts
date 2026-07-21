@@ -48,7 +48,6 @@ export interface HtmlFormatConfig {
 export type PdfForceMode = boolean;
 
 export interface PdfFormatConfig {
-  engine: 'pdflatex';
   concurrency: number;
   generate?: boolean;
   force?: boolean;
@@ -198,7 +197,6 @@ export const DEFAULT_HTML_FORMAT: HtmlFormatConfig = {
 };
 
 export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
-  engine: 'pdflatex',
   concurrency: detectConcurrency(),
   documentclass: {
     class: 'scrbook',

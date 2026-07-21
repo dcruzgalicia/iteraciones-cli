@@ -155,9 +155,6 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
   if (!raw || typeof raw !== 'object') return { ...DEFAULT_PDF_FORMAT };
   const obj = raw as Record<string, unknown>;
 
-  // Solo pdflatex es soportado. Si se especifica otro valor, se usa el default.
-  const engine = obj.engine === 'pdflatex' ? 'pdflatex' : DEFAULT_PDF_FORMAT.engine;
-
   const rawConcurrency = obj.concurrency;
   const concurrency =
     typeof rawConcurrency === 'number' && Number.isInteger(rawConcurrency) && rawConcurrency >= 1 ? rawConcurrency : DEFAULT_PDF_FORMAT.concurrency;
@@ -302,7 +299,6 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
   }
 
   return {
-    engine,
     concurrency,
     documentclass,
     geometry,

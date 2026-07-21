@@ -186,7 +186,6 @@ function buildDefaultConfig(): string {
   lines.push('  pdf:');
   lines.push(`    generate: ${yamlBool(pdfCfg.generate!)}`);
   lines.push(`    force: ${yamlBool(pdfCfg.force!)}`);
-  lines.push(`    engine: ${yamlStr(pdfCfg.engine)}`);
 
   // ── 1. CLASE ──
   lines.push('    documentclass:');
