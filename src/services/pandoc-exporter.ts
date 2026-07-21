@@ -182,9 +182,10 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfF
       } else {
         // Tamaño personalizado: emitir geometry con paperwidth y paperheight
         lines.push('geometry:');
-        const geomOpts = pdfFormat?.geometry?.options && pdfFormat.geometry.options.length > 0
-          ? pdfFormat.geometry.options
-          : (DEFAULT_PDF_FORMAT.geometry?.options ?? []);
+        const geomOpts =
+          pdfFormat?.geometry?.options && pdfFormat.geometry.options.length > 0
+            ? pdfFormat.geometry.options
+            : (DEFAULT_PDF_FORMAT.geometry?.options ?? []);
         for (const opt of geomOpts) {
           lines.push(`  - ${opt}`);
         }
@@ -359,6 +360,9 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
 
   const buildRoot = join(cwd, '.iteraciones', 'pdf-build');
   await mkdir(buildRoot, { recursive: true });
+
+  // Limpiar compilaciones anteriores para evitar errores por stale data
+  await Bun.spawn(['latexmk', '-C', `-outdir=${buildRoot}`, fullTexPath], { stdout: 'pipe', stderr: 'pipe' }).exited;
 
   // latexmk -pdf determina automaticamente cuantas pasadas de pdflatex
   // y si necesita biber/bibtex, segun los cambios en .aux, .bcf, etc.
