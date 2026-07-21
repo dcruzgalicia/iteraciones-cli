@@ -6,13 +6,6 @@ export type Sides = 'oneside' | 'twoside';
 
 export type ThumbnailMode = boolean | 'responsive';
 
-import { cpus } from 'node:os';
-
-/** Detecta concurrencia automatica: deja un nucleo libre. */
-function detectConcurrency(): number {
-  return Math.max(1, cpus().length - 1);
-}
-
 export const THUMBNAIL_SIZES: Record<string, number> = {
   sm: 320,
   md: 640,
@@ -48,7 +41,6 @@ export interface HtmlFormatConfig {
 export type PdfForceMode = boolean;
 
 export interface PdfFormatConfig {
-  concurrency: number;
   generate?: boolean;
   force?: boolean;
 
@@ -232,7 +224,6 @@ export const DEFAULT_HTML_FORMAT: HtmlFormatConfig = {
 };
 
 export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
-  concurrency: detectConcurrency(),
   documentclass: {
     class: 'scrbook',
     options: ['12pt', 'sfdefaults=false', 'paper=letter', 'twoside'],

@@ -1,14 +1,15 @@
 import { existsSync, rmSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
-import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { cpus } from 'node:os';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import type { CacheManager } from '../../cache/cache-manager.js';
 import { hash } from '../../cache/hasher.js';
 import type { EpubFormatConfig, HtmlFormatConfig, MarkdownFormatConfig, PdfFormatConfig, ThumbnailMode } from '../../config/site-config.js';
 import { THUMBNAIL_SIZES } from '../../config/site-config.js';
 import { mapWithConcurrency } from '../../output/concurrency.js';
 import type { PluginRegistry } from '../../plugin/registry.js';
-import { convertFragment } from '../../services/pandoc-runner.js';
 import { convertToEpub, convertToMarkdown, convertToPdf } from '../../services/pandoc-exporter.js';
+import { convertFragment } from '../../services/pandoc-runner.js';
 import { computeSlug, docHref } from '../slug.js';
 import type { BuildDocument, DocumentType } from '../types.js';
 import {
@@ -174,7 +175,7 @@ export interface ExportStats {
  * quede dentro de `cwd`. Emite un aviso por stderr y retorna `undefined` si la ruta es
  * exterior al proyecto. Compartida entre `runExportDocuments` y `exportSingleDocument`.
  */
-function resolveExportGlobalPath(raw: string | undefined, cwd: string, field: string): string | undefined {
+function _resolveExportGlobalPath(raw: string | undefined, cwd: string, field: string): string | undefined {
   if (!raw) return undefined;
   // resolve() normaliza siempre: elimina '..', maneja rutas relativas y absolutas.
   // Una ruta absoluta con '..' como '/project/../etc/passwd' queda normalizada a '/etc/passwd'.
@@ -248,14 +249,14 @@ export async function runExportDocuments(
 ): Promise<ExportResult[]> {
   const { config, outputDir, cwd, lang, concurrency, cliVersion, pandocVersion, cacheManager, registry, pluginFingerprint, stats } = options;
 
-  const hasPdf = config.pdf?.generate === true || (config.html?.thumbnails ? true : false);
-  const hasEpub = config.epub?.generate === true;
+  const hasPdf = config.pdf?.generate === true || !!config.html?.thumbnails;
+  const _hasEpub = config.epub?.generate === true;
   // Semaforo interno que limita las instancias de pdflatex concurrentes sin afectar EPUB.
   // El outer mapWithConcurrency usa el limite general (concurrency); dentro del branch
   // PDF se adquiere un slot antes de invocar pdflatex y se libera al terminar — con o
   // sin error. Asi el numero de documentos en vuelo es `concurrency`, pero las llamadas
   // a pdflatex activas simultaneamente se acotan a `pdfConcurrency` (~300-600 MB/proceso).
-  let latexSlots = hasPdf ? (Number.isInteger(config.pdf?.concurrency) && config.pdf!.concurrency! >= 1 ? config.pdf!.concurrency! : 1) : 0;
+  let latexSlots = hasPdf ? Math.max(1, cpus().length - 1) : 0;
   const latexQueue: Array<() => void> = [];
   const acquireLatex = (): Promise<void> =>
     new Promise<void>((res) => {
@@ -286,7 +287,7 @@ export async function runExportDocuments(
       break; // usar el primer .bib encontrado
     }
   } catch {}
-  let globalCsl = undefined;
+  let globalCsl: string | undefined;
 
   // Hash del archivo .bib global (si existe) para invalidar caché cuando cambia.
   let bibHash = '';
@@ -375,17 +376,17 @@ export async function runExportDocuments(
 
   if (exportableDocs.length === 0) return [];
 
-  let pdfDone = 0;
+  let _pdfDone = 0;
   // Los autores generan 2 PDFs cada uno (summary + full), por eso se cuentan por separado.
-  const pdfTotal = hasPdf
+  const _pdfTotal = hasPdf
     ? exportableDocs.reduce((acc, d) => {
-        const raw = d.frontmatter['export'];
+        const raw = d.frontmatter.export;
         const skipped =
           typeof raw === 'object' &&
           raw !== null &&
           !Array.isArray(raw) &&
           Object.getPrototypeOf(raw) === Object.prototype &&
-          (raw as Record<string, unknown>)['skip'] === true;
+          (raw as Record<string, unknown>).skip === true;
         if (skipped) return acc;
         return acc + (d.type === 'author' ? 2 : 1);
       }, 0)
@@ -440,7 +441,8 @@ export async function runExportDocuments(
             }
             return { epub: outputPath };
           }
-          const epubHtml = exportDoc.htmlBody ?? await convertFragment(exportDoc.body, exportDoc.filePath, undefined, undefined, undefined, 'html5', 'latex');
+          const epubHtml =
+            exportDoc.htmlBody ?? (await convertFragment(exportDoc.body, exportDoc.filePath, undefined, undefined, undefined, 'html5', 'latex'));
           await convertToEpub(epubHtml, outputPath, exportDoc);
           const epubData = await Bun.file(outputPath).arrayBuffer();
           if (registry) {
@@ -464,17 +466,7 @@ export async function runExportDocuments(
     const genPdf = config.pdf?.generate || (config.html?.thumbnails && config.pdf);
     if (genPdf && config.pdf) {
       const outputPath = `${outputBase}.pdf`;
-      const cacheKey = hash(
-        sourceHash,
-        itemHashes,
-        'pdf',
-        cliVersion,
-        pandocVersion,
-        pluginFingerprint ?? '',
-        bibHash,
-        cslHash,
-        templateHash,
-      );
+      const cacheKey = hash(sourceHash, itemHashes, 'pdf', cliVersion, pandocVersion, pluginFingerprint ?? '', bibHash, cslHash, templateHash);
       tasks.push(
         (async () => {
           if (cacheManager && (await cacheManager.hasBinary('export', cacheKey, 'pdf'))) {
@@ -483,7 +475,7 @@ export async function runExportDocuments(
               stats.totalPdf++;
               stats.cacheHitsPdf++;
             }
-            pdfDone++;
+            _pdfDone++;
             options.onExportProgress?.(exportDoc.relativePath, true);
             return { pdf: outputPath };
           }
@@ -510,7 +502,7 @@ export async function runExportDocuments(
             await cacheManager.writeBinary('export', cacheKey, 'pdf', pdfData);
           }
           if (stats) stats.totalPdf++;
-          pdfDone++;
+          _pdfDone++;
           options.onExportProgress?.(exportDoc.relativePath, false);
           return { pdf: outputPath };
         })(),
@@ -524,13 +516,13 @@ export async function runExportDocuments(
     // Respetar export: { skip: true } en el frontmatter del documento.
     // Se valida que sea un objeto plano (sin arrays ni prototipos no-Object)
     // siguiendo el patrón del codebase en normalizeSpeaker/parseFrontmatter.
-    const rawExportField = doc.frontmatter['export'];
+    const rawExportField = doc.frontmatter.export;
     if (
       typeof rawExportField === 'object' &&
       rawExportField !== null &&
       !Array.isArray(rawExportField) &&
       Object.getPrototypeOf(rawExportField) === Object.prototype &&
-      (rawExportField as Record<string, unknown>)['skip'] === true
+      (rawExportField as Record<string, unknown>).skip === true
     ) {
       return null;
     }
@@ -800,7 +792,7 @@ export function injectDownloadLinksIntoListItems(docs: BuildDocument[]): BuildDo
     const updatedItems = items.map((item: unknown) => {
       if (!item || typeof item !== 'object') return item;
       const itemObj = item as Record<string, unknown>;
-      const href = itemObj['href'];
+      const href = itemObj.href;
       if (typeof href !== 'string') return item;
       const links = linksByHref.get(href);
       if (!links) return item;
@@ -842,7 +834,7 @@ export function injectCoverIntoListItems(docs: BuildDocument[]): BuildDocument[]
       items.map((item) => {
         if (!item || typeof item !== 'object') return item;
         const itemObj = item as Record<string, unknown>;
-        const href = itemObj['href'];
+        const href = itemObj.href;
         if (typeof href !== 'string') return { ...itemObj, 'cover-image': '' };
         const cover = coverByHref.get(href);
         return { ...itemObj, 'cover-image': cover ?? '' };
@@ -856,11 +848,11 @@ export function injectCoverIntoListItems(docs: BuildDocument[]): BuildDocument[]
     if (Array.isArray(result['loose-items'])) {
       result['loose-items'] = injectItems(result['loose-items']);
     }
-    if (Array.isArray(result['parts'])) {
-      result['parts'] = (result['parts'] as unknown[]).map((part) => {
+    if (Array.isArray(result.parts)) {
+      result.parts = (result.parts as unknown[]).map((part) => {
         if (!part || typeof part !== 'object') return part;
         const partObj = part as Record<string, unknown>;
-        const items = partObj['items'];
+        const items = partObj.items;
         if (!Array.isArray(items)) return part;
         return { ...partObj, items: injectItems(items) };
       });
@@ -913,13 +905,13 @@ export async function exportSingleDocument(
   if (isCompleto && targetDoc.type !== 'author') return null;
 
   // Respetar export: { skip: true } en el frontmatter del documento.
-  const rawExportField = targetDoc.frontmatter['export'];
+  const rawExportField = targetDoc.frontmatter.export;
   if (
     typeof rawExportField === 'object' &&
     rawExportField !== null &&
     !Array.isArray(rawExportField) &&
     Object.getPrototypeOf(rawExportField) === Object.prototype &&
-    (rawExportField as Record<string, unknown>)['skip'] === true
+    (rawExportField as Record<string, unknown>).skip === true
   ) {
     return null;
   }
@@ -939,7 +931,7 @@ export async function exportSingleDocument(
       break;
     }
   } catch {}
-  let globalCsl = undefined;
+  let globalCsl: string | undefined;
 
   // Para type author con variante completa: usar assembleAuthorExportVariants.
   let rawExportDoc: ExportDocument | null;
@@ -994,7 +986,7 @@ export async function exportSingleDocument(
   // Adquirir semáforo antes de invocar pdflatex para limitar instancias concurrentes.
   // Varias peticiones HTTP simultáneas (pestañas, prefetch) podrían saturar CPU/RAM
   // sin esta limitación.
-  const maxSlots = Number.isInteger(config.pdf.concurrency) && config.pdf.concurrency >= 1 ? config.pdf.concurrency : 1;
+  const maxSlots = Math.max(1, cpus().length - 1);
   await acquireOnDemandLatex(maxSlots);
   let pdfGenerated = false;
   try {
