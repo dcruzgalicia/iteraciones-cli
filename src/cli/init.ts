@@ -185,7 +185,6 @@ function buildDefaultConfig(): string {
   const pdfCfg = DEFAULT_PDF_FORMAT;
   lines.push('  pdf:');
   lines.push(`    generate: ${yamlBool(pdfCfg.generate!)}`);
-  lines.push(`    force: ${yamlBool(pdfCfg.force!)}`);
 
   // ── 1. CLASE ──
   lines.push('    documentclass:');

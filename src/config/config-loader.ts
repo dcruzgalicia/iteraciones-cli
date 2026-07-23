@@ -393,7 +393,6 @@ function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
     toc,
     showDate,
     generate: typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_PDF_FORMAT.generate,
-    force: typeof obj.force === 'boolean' ? obj.force : DEFAULT_PDF_FORMAT.force,
   };
 }
 
