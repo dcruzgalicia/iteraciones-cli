@@ -265,6 +265,10 @@ export async function renderDocuments(
     const fromFormat = doc.processedBody ? 'latex' : 'markdown';
     let htmlFragment = await convertFragment(source, doc.filePath, pool, bibOptions, undefined, 'html5', fromFormat);
 
+    // Eliminar IDs automaticos generados por pandoc en encabezados (<h1 id="...">)
+    // No afecta IDs manuales en el contenido Markdown
+    htmlFragment = htmlFragment.replace(/<h([1-6])\s+id="[^"]*">/g, '<h$1>');
+
     if (registry) {
       const afterCtx = await registry.runAfterRender({ sourcePath: doc.filePath, html: htmlFragment });
       htmlFragment = afterCtx.html;
