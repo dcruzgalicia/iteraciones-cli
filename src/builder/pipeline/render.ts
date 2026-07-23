@@ -167,7 +167,6 @@ export async function renderLatex(docs: BuildDocument[], concurrency: number, cw
     }
 
     // Paso 4: convertir el AST modificado a LaTeX
-    // Los filtros Lua definidos por el usuario se aplican aquí
     const pandocArgs: string[] = ['--top-level-division', 'section'];
 
     // Auto-descubrir archivos .bib y pasar --biblatex a pandoc
