@@ -129,7 +129,7 @@ export interface RenderStats {
 
 /**
  * Convierte el body original de cada documento a LaTeX final (processedBody)
- * aplicando transpilers (string → AST) y filtros Lua.
+ * aplicando transpilers (string → AST).
  *
  * Pipeline:
  *   markdown → transpilers string → pandoc --to json → transpilers AST → pandoc --from json --to latex → .tex
