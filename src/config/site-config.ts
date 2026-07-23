@@ -37,12 +37,8 @@ export interface HtmlFormatConfig {
   thumbnails?: ThumbnailMode;
 }
 
-/** Controla la eliminacion de PDF tras generar thumbnails. */
-export type PdfForceMode = boolean;
-
 export interface PdfFormatConfig {
   generate?: boolean;
-  force?: boolean;
 
   // Class
   documentclass?: {
@@ -288,7 +284,6 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   toc: false,
   showDate: false,
   generate: false,
-  force: false,
 };
 
 export const DEFAULT_EPUB_FORMAT: EpubFormatConfig = {

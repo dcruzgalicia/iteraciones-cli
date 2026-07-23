@@ -456,7 +456,7 @@ export async function runExportDocuments(
         const request = resolveThumbnailRequest(config.html.thumbnails, summaryBase);
         if (request) result.coverPath = await generateCoverImage(result.pdfPath, summaryBase, request);
         // Eliminar PDF si solo se genero para thumbnails
-        if (!config.pdf?.generate && config.pdf?.force) {
+        if (!config.pdf?.generate) {
           rmSync(result.pdfPath);
         }
       }
@@ -543,7 +543,7 @@ export async function runExportDocuments(
         result.coverPath = await generateCoverImage(result.pdfPath, outputBase, request);
       }
       // Eliminar PDF si solo se genero para thumbnails
-      if (!config.pdf?.generate && config.pdf?.force) {
+      if (!config.pdf?.generate) {
         rmSync(result.pdfPath);
       }
     }
