@@ -188,9 +188,10 @@ export class ProgressTracker {
     this.currentPhase = null;
   }
 
-  finish(processed: number, cached: number, formatCount?: number): void {
+  finish(processed: number, cached: number, formats?: string[]): void {
     this.clearLine();
     const elapsed = formatTime(performance.now() - this.t0);
+    const fmtLabel = formats && formats.length > 0 ? formats.join(', ') : '';
 
     if (this.verbose) {
       process.stdout.write(`\n\u2500\u2500 Resumen \u2500\u2500\n`);
@@ -204,22 +205,24 @@ export class ProgressTracker {
       }
       process.stdout.write(`\nBuild completado ${processed} documento${processed !== 1 ? 's' : ''} en ${elapsed}`);
       if (cached > 0) {
-        process.stdout.write(` (${cached} en caché)`);
+        process.stdout.write(` (${cached} en cach\u00e9)`);
       }
+      if (fmtLabel) process.stdout.write(` [${fmtLabel}]`);
       process.stdout.write(`\n`);
     } else if (this.tty) {
       process.stderr.write(`\n\u2713 Build completado\n`);
       process.stderr.write(`  Documentos procesados: ${processed}\n`);
       if (cached > 0) {
-        process.stderr.write(`  Documentos en caché: ${cached}\n`);
+        process.stderr.write(`  Documentos en cach\u00e9: ${cached}\n`);
       }
-      if (formatCount !== undefined && formatCount > 0) {
-        process.stderr.write(`  Formatos generados: ${formatCount}\n`);
+      if (fmtLabel) {
+        process.stderr.write(`  Formatos generados: ${fmtLabel}\n`);
       }
       process.stderr.write(`  Tiempo total: ${elapsed}\n`);
     } else {
       process.stdout.write(`\u2713 Build completado: ${processed} doc${processed !== 1 ? 's' : ''} procesado${processed !== 1 ? 's' : ''}`);
-      if (cached > 0) process.stdout.write(`, ${cached} en caché`);
+      if (cached > 0) process.stdout.write(`, ${cached} en cach\u00e9`);
+      if (fmtLabel) process.stdout.write(` [${fmtLabel}]`);
       process.stdout.write(` (${elapsed})\n`);
     }
   }
