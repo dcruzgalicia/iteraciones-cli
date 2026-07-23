@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { mkdir, rm } from 'node:fs/promises';
-import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import dictumPlugin from '../../pandoc/plugins/dictum-plugin.js';
 import { loadOutputManifest, saveOutputManifest } from '../cache/output-manifest.js';
 import { loadSiteConfig } from '../config/config-loader.js';
@@ -9,7 +9,7 @@ import { clean, writeFile } from '../output/writer.js';
 import { loadPlugins } from '../plugin/loader.js';
 import { PluginRegistry } from '../plugin/registry.js';
 import type { GeneratedFile, PluginClassifiedDocument, PluginDocumentGraph, PluginDocumentSummary } from '../plugin/types.js';
-import { checkPandoc } from '../services/pandoc-runner.js';
+
 import type { TemplateContext } from '../template/render/context.js';
 import { buildAssets } from './assets.js';
 import { createAuthorDocumentIndex } from './context/authors.js';
@@ -80,12 +80,6 @@ interface SetupResult {
   ctx: BuildContext;
   registry: PluginRegistry;
   hasPlugins: boolean;
-  /** Versión del CLI (de package.json), para claves de caché de exportación. */
-  cliVersion: string;
-  /** Versión de pandoc detectada en el entorno, para claves de caché. */
-  pandocVersion: string;
-  /** Hash del contenido de los plugins activos para invalidar cachés cuando cambian. */
-  pluginFingerprint: string | undefined;
 }
 
 interface PrimaryRenderResult {
@@ -147,42 +141,10 @@ function makeRelativeContext(value: unknown, prefix: string, depth = 0): unknown
 // ---------------------------------------------------------------------------
 
 /**
- * Calcula el fingerprint de los plugins activos para invalidar la caché cuando cambia
- * el código fuente de un plugin local o el conjunto de plugins declarados.
- *
- * Para plugins locales (rutas relativas o absolutas) lee el contenido del archivo
- * y lo incluye en el hash, de modo que modificar el código de un plugin sin cambiar
- * su nombre de archivo invalida correctamente la caché.
- * Para paquetes npm se usa solo el identificador (el contenido no cambia sin
- * un cambio de versión en package.json, que sí altera el identificador resuelto).
- */
-async function computePluginFingerprint(plugins: string[], cwd: string): Promise<string | undefined> {
-  if (plugins.length === 0) return undefined;
-  const hasher = new Bun.CryptoHasher('sha256');
-  for (const pluginId of plugins) {
-    hasher.update(pluginId);
-    hasher.update('\0');
-    const isLocalPath = isAbsolute(pluginId) || pluginId.startsWith('./') || pluginId.startsWith('../');
-    // Los filtros Lua sin prefijo de ruta también son archivos locales (se resuelven desde cwd en resolveLuaFilter).
-    const isSimpleLua = !isLocalPath && pluginId.endsWith('.lua');
-    if (isLocalPath || isSimpleLua) {
-      const pluginPath = isAbsolute(pluginId) ? pluginId : resolve(cwd, pluginId);
-      const content = await Bun.file(pluginPath)
-        .text()
-        .catch(() => '');
-      hasher.update(content);
-      hasher.update('\0');
-    }
-  }
-  return hasher.digest('hex');
-}
-
-/**
- * Prepara el entorno de build: verifica Pandoc, carga config y plugins,
- * crea el BuildContext, limpia el outputDir, genera assets y construye las caches.
+ * Prepara el entorno de build: carga config y plugins,
+ * crea el BuildContext, limpia el outputDir y genera assets.
  */
 async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (msg: string) => void): Promise<SetupResult> {
-  const pandocVersion = await checkPandoc();
   const siteConfig = await loadSiteConfig(cwd);
 
   const { plugins } = await loadPlugins(siteConfig.plugins, cwd);
@@ -221,19 +183,10 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
     }
   }
 
-  const pkg = (await Bun.file(join(import.meta.dir, '../../package.json')).json()) as { version: string };
-  // El fingerprint invalida la caché cuando cambia el código fuente de plugins locales
-  // o el conjunto de plugins declarados. Para plugins locales se hashea el contenido del
-  // archivo; para paquetes npm basta con el identificador.
-  const pluginPaths = [...siteConfig.plugins, 'pandoc/plugins/dictum-plugin.ts'];
-  const pluginFingerprint = await computePluginFingerprint(pluginPaths, cwd);
   return {
     ctx,
     registry,
     hasPlugins: true,
-    cliVersion: pkg.version,
-    pandocVersion,
-    pluginFingerprint,
   };
 }
 
@@ -567,7 +520,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const progress = new ProgressTracker({ verbose: options.verbose ?? false });
   const log = (msg: string) => progress.log(msg);
 
-  const { ctx, registry, hasPlugins, cliVersion, pandocVersion, pluginFingerprint } = await setupBuildEnvironment(cwd, options, log);
+  const { ctx, registry, hasPlugins } = await setupBuildEnvironment(cwd, options, log);
   try {
     // Hook beforeBuild: ejecutado antes de descubrir o procesar ningún documento.
     if (hasPlugins) {
