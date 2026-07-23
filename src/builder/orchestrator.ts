@@ -666,6 +666,20 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       doc.slug = filenameStem === 'index' ? undefined : computeSlug(doc.frontmatter);
     }
 
+    // Detectar slugs duplicados dentro del mismo directorio y agregar sufijo numerico
+    // El primer archivo mantiene su slug, los siguientes reciben -2, -3, etc.
+    const slugCounters = new Map<string, number>();
+    for (const doc of allDocs) {
+      if (!doc.slug) continue;
+      const dir = dirname(doc.relativePath);
+      const key = dir + '/' + doc.slug;
+      const count = slugCounters.get(key) ?? 0;
+      slugCounters.set(key, count + 1);
+      if (count > 0) {
+        doc.slug = `${doc.slug}-${count + 1}`;
+      }
+    }
+
     let logoSvg: string | undefined;
     let enrichedSiteCtx: TemplateContext;
     if (generateHtml) {
