@@ -9,7 +9,6 @@ import { clean, writeFile } from '../output/writer.js';
 import { loadPlugins } from '../plugin/loader.js';
 import { PluginRegistry } from '../plugin/registry.js';
 import type { GeneratedFile, PluginClassifiedDocument, PluginDocumentGraph, PluginDocumentSummary } from '../plugin/types.js';
-import { PandocPool } from '../services/pandoc-pool.js';
 import { checkPandoc } from '../services/pandoc-runner.js';
 import type { TemplateContext } from '../template/render/context.js';
 import { buildAssets } from './assets.js';
@@ -81,7 +80,6 @@ interface SetupResult {
   ctx: BuildContext;
   registry: PluginRegistry;
   hasPlugins: boolean;
-  pandocPool: PandocPool | undefined;
   /** Versión del CLI (de package.json), para claves de caché de exportación. */
   cliVersion: string;
   /** Versión de pandoc detectada en el entorno, para claves de caché. */
@@ -231,14 +229,10 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
   // archivo; para paquetes npm basta con el identificador.
   const pluginPaths = [...siteConfig.plugins, 'pandoc/plugins/dictum-plugin.ts'];
   const pluginFingerprint = await computePluginFingerprint(pluginPaths, cwd);
-  const pandocPool = (await PandocPool.tryCreate()) ?? undefined;
-  if (pandocPool) log('pandoc-server disponible: usando pool para conversiones');
-
   return {
     ctx,
     registry,
     hasPlugins: true,
-    pandocPool,
     cliVersion: pkg.version,
     pandocVersion,
     pluginFingerprint,
@@ -341,25 +335,19 @@ function resolveGlobalExportPaths(ctx: BuildContext): {
   return { globalBibliography, globalCsl: undefined };
 }
 
-async function runPrimaryRender(
-  allDocs: BuildDocument[],
-  ctx: BuildContext,
-  registry: PluginRegistry,
-  pool?: PandocPool,
-  cwd?: string,
-): Promise<PrimaryRenderResult> {
+async function runPrimaryRender(allDocs: BuildDocument[], ctx: BuildContext, registry: PluginRegistry, cwd?: string): Promise<PrimaryRenderResult> {
   const { globalBibliography, globalCsl } = resolveGlobalExportPaths(ctx);
   const fileDocs = allDocs.filter((doc) => doc.type === 'file' && doc.kind !== 'block');
-  const renderedFileDocs = await renderDocuments(fileDocs, ctx.concurrency ?? 4, registry, pool, cwd, globalBibliography, globalCsl);
+  const renderedFileDocs = await renderDocuments(fileDocs, ctx.concurrency ?? 4, registry, cwd, globalBibliography, globalCsl);
 
   const authorDocs = allDocs.filter((doc) => doc.type === 'author' && doc.kind !== 'block');
-  const renderedAuthorDocs = await renderDocuments(authorDocs, ctx.concurrency ?? 4, registry, pool, cwd, globalBibliography, globalCsl);
+  const renderedAuthorDocs = await renderDocuments(authorDocs, ctx.concurrency ?? 4, registry, cwd, globalBibliography, globalCsl);
   // Índice de autores por título normalizado (lowercase). Se construye aquí para que
   // esté disponible antes del pre-paso de bloques y del paso de contexto de páginas.
   const authorDocumentIndex = createAuthorDocumentIndex(renderedAuthorDocs);
 
   const eventDocs = allDocs.filter((doc) => doc.type === 'event' && doc.kind !== 'block');
-  const renderedEventDocs = await renderDocuments(eventDocs, ctx.concurrency ?? 4, registry, pool, cwd, globalBibliography, globalCsl);
+  const renderedEventDocs = await renderDocuments(eventDocs, ctx.concurrency ?? 4, registry, cwd, globalBibliography, globalCsl);
 
   return {
     renderedFileDocs,
@@ -386,12 +374,11 @@ async function runBlocksPrestep(
   enrichedSiteCtx: TemplateContext,
   primaryRendered: ReadonlyMap<DocumentType, BuildDocument[]>,
   authorDocumentIndex: AuthorDocumentIndex,
-  pool?: PandocPool,
   cwd?: string,
 ): Promise<BlocksPrestepResult> {
   const { globalBibliography, globalCsl } = resolveGlobalExportPaths(ctx);
   const allBlockDocs = allDocs.filter((doc) => doc.kind === 'block');
-  const renderedBlockDocs = await renderDocuments(allBlockDocs, ctx.concurrency ?? 4, registry, pool, cwd, globalBibliography, globalCsl);
+  const renderedBlockDocs = await renderDocuments(allBlockDocs, ctx.concurrency ?? 4, registry, cwd, globalBibliography, globalCsl);
   const contextBlockDocs = renderedBlockDocs.map((doc) => {
     const spec = doc.type ? TYPE_STAGE_MAP.get(doc.type) : undefined;
     if (!spec) {
@@ -479,7 +466,6 @@ async function runFinalization(
   registry: PluginRegistry,
   hasPlugins: boolean,
   log: (msg: string) => void,
-  pandocPool?: PandocPool,
   cwd?: string,
   incremental?: boolean,
 ): Promise<number> {
@@ -584,11 +570,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const progress = new ProgressTracker({ verbose: options.verbose ?? false });
   const log = (msg: string) => progress.log(msg);
 
-  const { ctx, registry, hasPlugins, pandocPool, cliVersion, pandocVersion, pluginFingerprint, luaFilters } = await setupBuildEnvironment(
-    cwd,
-    options,
-    log,
-  );
+  const { ctx, registry, hasPlugins, cliVersion, pandocVersion, pluginFingerprint, luaFilters } = await setupBuildEnvironment(cwd, options, log);
   try {
     // Hook beforeBuild: ejecutado antes de descubrir o procesar ningún documento.
     if (hasPlugins) {
@@ -713,7 +695,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     // Fase de LaTeX final: procesa el body original con filtros Lua
     // y produce el .tex final (processedBody) que se usará para HTML
     // y exportación.
-    const docsWithMd = await renderLatex(allDocs, ctx.concurrency ?? 4, pandocPool, luaFilters, cwd, ctx.siteConfig.disabledTranspilers);
+    const docsWithMd = await renderLatex(allDocs, ctx.concurrency ?? 4, luaFilters, cwd, ctx.siteConfig.disabledTranspilers);
     // Reemplazar allDocs con los docs procesados (tienen processedBody)
     const mdMap = new Map<string, BuildDocument>(docsWithMd.map((d) => [d.relativePath, d]));
     for (const doc of allDocs) {
@@ -735,7 +717,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     let primaryRendered = new Map<DocumentType, BuildDocument[]>();
     let authorDocumentIndex: AuthorDocumentIndex = new Map();
     if (needsRender) {
-      const result = await runPrimaryRender(allDocs, ctx, registry, pandocPool, cwd);
+      const result = await runPrimaryRender(allDocs, ctx, registry, cwd);
       primaryRendered = new Map<DocumentType, BuildDocument[]>([
         ['file', result.renderedFileDocs],
         ['author', result.renderedAuthorDocs],
@@ -776,27 +758,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     let renderedMap = new Map<DocumentType, BuildDocument[]>();
     const finalSiteCtx = enrichedSiteCtx;
     if (needsHtmlRender) {
-      const { renderedBlockDocs } = await runBlocksPrestep(
-        pipelineDocs,
-        ctx,
-        registry,
-        enrichedSiteCtx,
-        primaryRendered,
-        authorDocumentIndex,
-        pandocPool,
-        cwd,
-      );
+      const { renderedBlockDocs } = await runBlocksPrestep(pipelineDocs, ctx, registry, enrichedSiteCtx, primaryRendered, authorDocumentIndex, cwd);
 
-      const result = await runContextPhaseWithTypeGraph(
-        pipelineDocs,
-        ctx,
-        registry,
-        enrichedSiteCtx,
-        primaryRendered,
-        authorDocumentIndex,
-        pandocPool,
-        cwd,
-      );
+      const result = await runContextPhaseWithTypeGraph(pipelineDocs, ctx, registry, enrichedSiteCtx, primaryRendered, authorDocumentIndex, cwd);
       allContextDocs = result.allContextDocs;
       renderedMap = result.renderedMap;
     } else {
@@ -924,7 +888,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         docsWithExportLinks = injectCoverIntoListItems(docsWithExportLinks);
       }
 
-      const composeMs = await runFinalization(docsWithExportLinks, ctx, registry, hasPlugins, log, pandocPool, cwd, options.incremental === true);
+      const composeMs = await runFinalization(docsWithExportLinks, ctx, registry, hasPlugins, log, cwd, options.incremental === true);
       progress.completePhase();
     }
 
@@ -981,7 +945,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     if (mdOn) generatedFormats.push('markdown');
     progress.finish(processedCount, cachedCount, generatedFormats);
   } finally {
-    pandocPool?.dispose();
   }
 }
 
