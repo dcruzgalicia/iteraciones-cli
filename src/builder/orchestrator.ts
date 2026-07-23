@@ -407,19 +407,19 @@ async function runBlocksPrestep(
  * Escribe los archivos .tex final e intermedio para cada documento.
  */
 async function writeTexFiles(allContextDocs: BuildDocument[], ctx: BuildContext, log: (msg: string) => void): Promise<void> {
-  const latexCfg = ctx.siteConfig.format?.latex;
   const pdfCfg = ctx.siteConfig.format?.pdf;
+  const latexGen = ctx.siteConfig.format?.latex?.generate === true;
   const needsPdfForThumbnails = ctx.siteConfig.format?.html?.thumbnails && pdfCfg !== undefined;
-  const genLatex = pdfCfg?.generate === true && latexCfg?.force !== true ? true : latexCfg?.generate !== false || needsPdfForThumbnails;
-  if (!genLatex) return;
+  const needsTex = pdfCfg?.generate === true || needsPdfForThumbnails || latexGen;
+  if (!needsTex) return;
 
   let texWritten = 0;
+  let texCopied = 0;
   for (const doc of allContextDocs) {
     if (!doc.processedBody) continue;
     const texSlug = doc.slug ?? basename(doc.relativePath, '.md');
     const outDir = join(ctx.outputDir, dirname(doc.relativePath));
     const texPath = join(outDir, `${texSlug}.tex`);
-    await mkdir(outDir, { recursive: true });
 
     const preamble = await buildLatexPreamble(
       ctx.siteConfig.format?.pdf,
@@ -442,17 +442,22 @@ async function writeTexFiles(allContextDocs: BuildDocument[], ctx: BuildContext,
     await Bun.write(join(phase1LatexDir, `${texSlug}.tex`), doc.processedBody);
 
     // .tex completo — para PDF (única copia, junto a sus auxiliares)
+    // Siempre se escribe si se necesita PDF, aunque latex.generate sea false
     const bodyClean = doc.processedBody.replace(/\n+$/, '');
     const fullTex = [...preamble, '', bodyClean, '', '\\end{document}'].join('\n');
     const fullTexPath = join(pdfDir, `${texSlug}.tex`);
     await Bun.write(fullTexPath, fullTex);
+    texWritten++;
 
     // .tex final en dist/ — solo si latex.generate: true
-    await Bun.write(texPath, fullTex);
-    texWritten++;
+    if (latexGen) {
+      await mkdir(outDir, { recursive: true });
+      await Bun.write(texPath, fullTex);
+      texCopied++;
+    }
   }
   if (texWritten > 0) {
-    log(`Escritos ${texWritten} archivos .tex (body en phase-1-latex/, completo en phase-2-formatos/pdf/)`);
+    log(`Escritos ${texWritten} archivos .tex en phase-2-formatos/pdf/${texCopied > 0 ? `, copiados ${texCopied} a dist/` : ''}`);
   }
 }
 
@@ -898,7 +903,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     const htmlOn = formatCfg?.html?.generate === true;
     const mdOn = formatCfg?.markdown?.generate === true;
     const epubOn = formatCfg?.epub?.generate === true;
-    const latexOn = pdfOn && formatCfg?.latex?.force !== true ? true : formatCfg?.latex?.generate !== false;
+    const latexOn = formatCfg?.latex?.generate === true;
     const totalDocs = htmlOn || pdfOn || epubOn || mdOn || latexOn ? totalDocCount : 0;
     const processedCount = noChanges ? 0 : affectedPaths ? affectedPaths.size : totalDocs;
     const cachedCount = totalDocs - processedCount;
