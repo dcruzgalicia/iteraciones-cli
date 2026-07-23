@@ -1,7 +1,7 @@
 import { isAbsolute, normalize } from 'node:path';
 import { Command } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
-import { runBuild, runClean, runDoctor, runGraph, runInfo, runInit, runNew, runServe, runTranspilers, runValidate, runWatch } from './dispatcher.js';
+import { runBuild, runClean, runDoctor, runGraph, runInfo, runInit, runNew, runTranspilers, runValidate, runWatch } from './dispatcher.js';
 
 export function buildProgram(): Command {
   const program = new Command();
@@ -113,29 +113,6 @@ export function buildProgram(): Command {
     .option('--fix', 'intenta corregir automáticamente los problemas detectados')
     .action(async (opts: { fix?: boolean }) => {
       await runDoctor(process.cwd(), { fix: opts.fix });
-    });
-
-  program
-    .command('serve')
-    .description('arranca un servidor HTTP con livereload automático')
-    .option('-p, --port <n>', 'puerto del servidor', '3000')
-    .option('--project-root <path>', 'directorio raíz del proyecto (por defecto: directorio actual)')
-    .option('-c, --concurrency <n>', 'máximo de invocaciones pandoc simultáneas', '4')
-    .option('--verbose', 'muestra información adicional de progreso')
-    .action((opts: { port: string; projectRoot?: string; concurrency: string; verbose?: boolean }) => {
-      const port = Number(opts.port);
-      if (!Number.isInteger(port) || port < 1 || port > 65535) {
-        process.stderr.write(`Error: el puerto debe ser un entero entre 1 y 65535 (recibido: "${opts.port}")\n`);
-        process.exitCode = 1;
-        return;
-      }
-      const concurrency = Number.parseInt(opts.concurrency, 10);
-      if (!Number.isInteger(concurrency) || concurrency < 1) {
-        process.stderr.write(`Error: --concurrency debe ser un entero positivo (recibido: "${opts.concurrency}")\n`);
-        process.exitCode = 1;
-        return;
-      }
-      runServe(opts.projectRoot ?? process.cwd(), port, { concurrency, verbose: opts.verbose });
     });
 
   program

@@ -9,7 +9,6 @@ import { runDoctor as doctor } from './doctor.js';
 import { runGraph as graph } from './graph.js';
 import { runInit as init } from './init.js';
 import { runNew as newDoc } from './new.js';
-import { runServe as serve } from './serve.js';
 import { runTranspilers as transpilers } from './transpilers.js';
 import { runValidate as validate } from './validate.js';
 import { runWatch as watch } from './watch.js';
@@ -136,32 +135,6 @@ export async function runDoctor(cwd: string, options: { fix?: boolean } = {}): P
       process.stderr.write(`Error al ejecutar doctor: ${err.message}\n`);
     } else {
       process.stderr.write('Error desconocido al ejecutar doctor.\n');
-    }
-    process.exitCode = 1;
-  }
-}
-
-export async function runServe(cwd: string, port: number, options: { concurrency?: number; verbose?: boolean } = {}): Promise<void> {
-  try {
-    const stop = await serve(cwd, port, options);
-    // Mantener el proceso activo hasta recibir señal de terminación.
-    const shutdown = (): void => {
-      stop();
-      process.exitCode = 0;
-    };
-    process.once('SIGINT', shutdown);
-    process.once('SIGTERM', shutdown);
-  } catch (err) {
-    if (err instanceof PandocError) {
-      const location = err.sourcePath ? ` en "${err.sourcePath}"` : '';
-      process.stderr.write(`Error de pandoc${location}: ${err.message}\n`);
-      if (err.stderr) process.stderr.write(`${err.stderr}\n`);
-    } else if (err instanceof ConfigError) {
-      process.stderr.write(`Error de configuración en "${err.configPath}": ${err.message}\n`);
-    } else if (err instanceof Error) {
-      process.stderr.write(`Error: ${err.message}\n`);
-    } else {
-      process.stderr.write('Error desconocido al arrancar el servidor.\n');
     }
     process.exitCode = 1;
   }
