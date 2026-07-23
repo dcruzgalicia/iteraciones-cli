@@ -902,8 +902,13 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     const totalDocs = htmlOn || pdfOn || epubOn || mdOn || latexOn ? totalDocCount : 0;
     const processedCount = noChanges ? 0 : affectedPaths ? affectedPaths.size : totalDocs;
     const cachedCount = totalDocs - processedCount;
-    const formatCount = [latexOn, pdfOn, htmlOn, epubOn, mdOn].filter(Boolean).length;
-    progress.finish(processedCount, cachedCount, formatCount);
+    const generatedFormats: string[] = [];
+    if (latexOn) generatedFormats.push('latex');
+    if (pdfOn) generatedFormats.push('pdf');
+    if (htmlOn) generatedFormats.push('html');
+    if (epubOn) generatedFormats.push('epub');
+    if (mdOn) generatedFormats.push('markdown');
+    progress.finish(processedCount, cachedCount, generatedFormats);
   } finally {
     pandocPool?.dispose();
   }
