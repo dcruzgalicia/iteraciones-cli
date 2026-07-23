@@ -263,8 +263,8 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
 /**
  * Descubre, clasifica y filtra borradores. Retorna el pool de documentos activos.
  */
-async function runDiscovery(cwd: string, ctx: BuildContext, noCache?: boolean): Promise<BuildDocument[]> {
-  const sourceDocs = await discover(cwd, { noCache });
+async function runDiscovery(cwd: string, ctx: BuildContext, noCache?: boolean): Promise<{ docs: BuildDocument[]; changedPaths: Set<string> }> {
+  const { docs: sourceDocs, changedPaths } = await discover(cwd, { noCache });
   const classified = classifyDocuments(sourceDocs, ctx.siteConfig.format?.html?.theme, ctx.cwd);
   const allDocs = excludeDrafts(classified);
   const draftCount = classified.length - allDocs.length;
@@ -272,7 +272,7 @@ async function runDiscovery(cwd: string, ctx: BuildContext, noCache?: boolean): 
     // Registrar en stderr para que no se pierda ni mezcle con stdout
     process.stderr.write(`[iteraciones] ${draftCount} borrador${draftCount > 1 ? 'es' : ''} excluido${draftCount > 1 ? 's' : ''} (draft:true)\n`);
   }
-  return allDocs;
+  return { docs: allDocs, changedPaths };
 }
 
 /**
@@ -649,7 +649,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // --dry-run: solo descubrir y clasificar; mostrar resumen sin generar salida.
   if (options.dryRun) {
     const dryConfig = await loadSiteConfig(cwd);
-    const sourceDocs = await discover(cwd, { noCache: true });
+    const { docs: sourceDocs } = await discover(cwd, { noCache: true });
     const classified = classifyDocuments(sourceDocs, dryConfig.format?.html?.theme, cwd);
     const allDocs = excludeDrafts(classified);
     const draftCount = classified.length - allDocs.length;
@@ -687,7 +687,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     // Assets web (css, fonts, logo) solo si se genera HTML
     const generateHtml = ctx.siteConfig.format?.html?.generate === true;
     progress.startPhase('discovery');
-    const [rawDocs, cssPath] = await Promise.all([
+    const [{ docs: rawDocs, changedPaths: discoveredChanges }, cssPath] = await Promise.all([
       runDiscovery(cwd, ctx, options.noCache),
       generateHtml
         ? buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, {
@@ -807,15 +807,20 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       ['event', renderedEventDocs],
     ]);
 
-    // Filtrado incremental: cuando se conocen los archivos modificados, limitar
-    // el procesamiento de bloques y del context-phase a los docs afectados.
-    // Si algún archivo global cambia (YAML de config, plantillas HTML) se omite
-    // el filtrado y se reprocesa el sitio completo.
+    // Filtrado incremental: detectar archivos .md modificados por mtime
+    // y limitar el procesamiento a los docs afectados.
     const GLOBAL_CHANGE_PATTERNS = [/\.ya?ml$/, /\.html$/];
-    const isGlobalChange =
-      options.changedPaths !== undefined && [...options.changedPaths].some((p) => GLOBAL_CHANGE_PATTERNS.some((re) => re.test(p)));
-    const affectedPaths = options.changedPaths && !isGlobalChange ? computeAffectedDocs(options.changedPaths, allDocs) : null;
+    const changedPaths = options.changedPaths ?? discoveredChanges;
+    const noChanges = changedPaths.size === 0;
+    const isGlobalChange = !noChanges && [...changedPaths].some((p) => GLOBAL_CHANGE_PATTERNS.some((re) => re.test(p)));
+    const affectedPaths = !isGlobalChange && !noChanges ? computeAffectedDocs(changedPaths, allDocs) : null;
     const pipelineDocs = affectedPaths ? allDocs.filter((d) => affectedPaths.has(d.relativePath)) : allDocs;
+
+    if (noChanges && !affectedPaths) {
+      log('Ningun documento modificado — build incremental sin cambios');
+      // Saltar todo el pipeline: marcar allDocs como vacio para que las fases sean no-op
+      allDocs = [];
+    }
 
     const { finalSiteCtx, renderedBlockDocs } = await runBlocksPrestep(
       pipelineDocs,

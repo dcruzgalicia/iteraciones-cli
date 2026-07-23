@@ -9,7 +9,7 @@ export interface DiscoverOptions {
   noCache?: boolean;
 }
 
-export async function discover(cwd: string, options: DiscoverOptions = {}): Promise<SourceDocument[]> {
+export async function discover(cwd: string, options: DiscoverOptions = {}): Promise<{ docs: SourceDocument[]; changedPaths: Set<string> }> {
   const relativePaths: string[] = [];
 
   for await (const entry of new Bun.Glob('**/*.md').scan({ cwd })) {
@@ -23,6 +23,7 @@ export async function discover(cwd: string, options: DiscoverOptions = {}): Prom
   const useCache = !options.noCache;
   const cachedIndex = useCache ? await loadDiscoveryIndex(cwd) : new Map();
   const updatedIndex = new Map(cachedIndex);
+  const changedPaths = new Set<string>();
 
   const docs = await Promise.all(
     relativePaths.map(async (relativePath) => {
@@ -42,6 +43,9 @@ export async function discover(cwd: string, options: DiscoverOptions = {}): Prom
         // Caché válida: reusar datos sin leer el archivo.
         return { filePath, relativePath, frontmatter: cached.frontmatter, body: cached.body, sourceHash: cached.sourceHash, mtimeMs };
       }
+
+      // Caché inválida o ausente: el archivo cambio o es nuevo → registrar en changedPaths
+      changedPaths.add(relativePath);
 
       // Caché inválida o ausente: leer y procesar el archivo.
       let raw: string;
@@ -67,10 +71,13 @@ export async function discover(cwd: string, options: DiscoverOptions = {}): Prom
     // Eliminar entradas del índice que ya no tienen archivo correspondiente.
     const relativePathsSet = new Set(relativePaths);
     for (const key of updatedIndex.keys()) {
-      if (!relativePathsSet.has(key)) updatedIndex.delete(key);
+      if (!relativePathsSet.has(key)) {
+        updatedIndex.delete(key);
+        changedPaths.add(key);
+      }
     }
     await saveDiscoveryIndex(cwd, updatedIndex);
   }
 
-  return docs;
+  return { docs, changedPaths };
 }
