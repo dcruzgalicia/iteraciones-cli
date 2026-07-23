@@ -737,6 +737,16 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         ['event', result.renderedEventDocs],
       ]);
       authorDocumentIndex = result.authorDocumentIndex;
+
+      // Escribir htmlFragment a disco como fuente unica para composicion HTML y EPUB
+      for (const [, docs] of primaryRendered) {
+        for (const doc of docs) {
+          if (!doc.htmlFragment || !doc.slug) continue;
+          const htmlDir = join(ctx.cwd, '.iteraciones', 'cache', 'phase-2-formatos', 'html', dirname(doc.relativePath), doc.slug);
+          await mkdir(htmlDir, { recursive: true });
+          await Bun.write(join(htmlDir, 'index.html'), doc.htmlFragment);
+        }
+      }
     }
 
     const totalDocCount = allDocs.length;
