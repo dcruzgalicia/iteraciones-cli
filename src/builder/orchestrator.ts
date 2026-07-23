@@ -213,7 +213,10 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
 
   // --no-cache: eliminar toda la caché para partir desde cero
   if (options.noCache) {
-    await rm(join(cwd, '.iteraciones', 'cache'), { recursive: true, force: true });
+    await rm(join(cwd, '.iteraciones', 'cache'), {
+      recursive: true,
+      force: true,
+    });
     await clearBiberCache();
   }
 
@@ -667,17 +670,25 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     }
 
     // Detectar slugs duplicados dentro del mismo directorio y agregar sufijo numerico
-    // El primer archivo mantiene su slug, los siguientes reciben -2, -3, etc.
-    const slugCounters = new Map<string, number>();
+    // Se usa un Set para tracking y un loop para evitar colisiones con slugs existentes
+    // (ej: title duplicado → title-2, pero title-2 ya existe como slug original)
+    const usedSlugs = new Set<string>();
     for (const doc of allDocs) {
       if (!doc.slug) continue;
       const dir = dirname(doc.relativePath);
-      const key = dir + '/' + doc.slug;
-      const count = slugCounters.get(key) ?? 0;
-      slugCounters.set(key, count + 1);
-      if (count > 0) {
-        doc.slug = `${doc.slug}-${count + 1}`;
+      let slug = doc.slug;
+      while (usedSlugs.has(dir + '/' + slug)) {
+        // Encontrar el sufijo actual o empezar en 2
+        const match = slug.match(/-(\d+)$/);
+        if (match) {
+          const num = parseInt(match[1]!, 10);
+          slug = slug.replace(/-\d+$/, '-' + (num + 1));
+        } else {
+          slug = slug + '-2';
+        }
       }
+      usedSlugs.add(dir + '/' + slug);
+      doc.slug = slug;
     }
 
     let logoSvg: string | undefined;
@@ -843,7 +854,13 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       lang: ctx.siteConfig.lang,
       concurrency: ctx.concurrency ?? 4,
       registry: hasPlugins ? registry : undefined,
-      onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, durationMs: 0, cacheHit: false, phase: 'pdf' }),
+      onExportProgress: (relativePath: string) =>
+        progress.reportFile({
+          relativePath,
+          durationMs: 0,
+          cacheHit: false,
+          phase: 'pdf',
+        }),
     };
     const exportResults: ExportResult[] = [];
 
@@ -866,7 +883,10 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         pdfTotal += countExportDocs(type);
       }
       progress.startPhase('pdf', pdfTotal);
-      const pdfResults = await runExportDocuments(exportRenderedMap, { ...exportBase, config: formatCfg });
+      const pdfResults = await runExportDocuments(exportRenderedMap, {
+        ...exportBase,
+        config: formatCfg,
+      });
       exportResults.push(...pdfResults);
       if (pdfTotal > 0) progress.log(`PDF: ${pdfTotal} generados`);
       progress.completePhase();
@@ -895,7 +915,10 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         epubTotal += countExportDocs(type);
       }
       progress.startPhase('epub', epubTotal);
-      const epubResults = await runExportDocuments(exportRenderedMap, { ...exportBase, config: formatCfg });
+      const epubResults = await runExportDocuments(exportRenderedMap, {
+        ...exportBase,
+        config: formatCfg,
+      });
       exportResults.push(...epubResults);
       if (epubTotal > 0) progress.log(`EPUB: ${epubTotal} generados`);
       progress.completePhase();
@@ -914,7 +937,10 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         }
       }
       progress.startPhase('markdown', mdTotal);
-      const mdResults = await runExportDocuments(exportRenderedMap, { ...exportBase, config: formatCfg });
+      const mdResults = await runExportDocuments(exportRenderedMap, {
+        ...exportBase,
+        config: formatCfg,
+      });
       exportResults.push(...mdResults);
       if (mdTotal > 0) progress.log(`Markdown: ${mdTotal} generados`);
       progress.completePhase();
