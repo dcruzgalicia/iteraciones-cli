@@ -897,6 +897,23 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     if (epubOn) generatedFormats.push('epub');
     if (mdOn) generatedFormats.push('markdown');
     progress.finish(processedCount, cachedCount, generatedFormats);
+
+    // Limpiar carpetas de cache de formatos que ya no estan activos.
+    // --no-cache ya limpio toda la cache al inicio, por lo que este paso
+    // solo aplica en builds normales donde se desactivo un formato.
+    if (!options.noCache) {
+      const cacheBase = join(cwd, '.iteraciones', 'cache');
+      const needsTex =
+        formatCfg?.pdf?.generate === true || (!!formatCfg?.html?.thumbnails && formatCfg?.pdf !== undefined) || formatCfg?.latex?.generate === true;
+      const needsHtml = formatCfg?.html?.generate === true || formatCfg?.epub?.generate === true;
+      if (!needsTex) {
+        await rm(join(cacheBase, 'phase-1-latex'), { recursive: true, force: true }).catch(() => {});
+        await rm(join(cacheBase, 'phase-2-formatos', 'pdf'), { recursive: true, force: true }).catch(() => {});
+      }
+      if (!needsHtml) {
+        await rm(join(cacheBase, 'phase-2-formatos', 'html'), { recursive: true, force: true }).catch(() => {});
+      }
+    }
   } finally {
   }
 }
