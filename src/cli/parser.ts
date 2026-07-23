@@ -1,7 +1,7 @@
 import { isAbsolute, normalize } from 'node:path';
 import { Command } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
-import { runBuild, runClean, runDoctor, runGraph, runInfo, runInit, runNew, runTranspilers, runValidate, runWatch } from './dispatcher.js';
+import { runBuild, runClean, runDoctor, runGraph, runInfo, runInit, runNew, runTranspilers, runValidate } from './dispatcher.js';
 
 export function buildProgram(): Command {
   const program = new Command();
@@ -90,21 +90,6 @@ export function buildProgram(): Command {
     .option('--project-root <path>', 'directorio raíz del proyecto (por defecto: directorio actual)')
     .action(async (opts: { projectRoot?: string }) => {
       await runValidate(opts.projectRoot ?? process.cwd());
-    });
-
-  program
-    .command('watch')
-    .description('observa cambios y reconstruye el sitio sin servidor HTTP')
-    .option('--project-root <path>', 'directorio raíz del proyecto (por defecto: directorio actual)')
-    .option('--verbose', 'muestra información adicional de progreso')
-    .action(async (opts: { projectRoot?: string; verbose?: boolean }) => {
-      const stop = await runWatch(opts.projectRoot ?? process.cwd(), { verbose: opts.verbose });
-      const shutdown = (): void => {
-        stop();
-        process.exitCode = 0;
-      };
-      process.once('SIGINT', shutdown);
-      process.once('SIGTERM', shutdown);
     });
 
   program
