@@ -18,13 +18,3 @@ export class ConfigError extends Error {
     this.name = 'ConfigError';
   }
 }
-
-export class PluginError extends Error {
-  constructor(
-    message: string,
-    public readonly pluginPath: string,
-  ) {
-    super(message);
-    this.name = 'PluginError';
-  }
-}
