@@ -783,29 +783,43 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       }
     }
 
-    progress.startPhase('render', allDocs.length);
+    const formatCfg = ctx.siteConfig.format;
+    const needsHtmlRender = formatCfg?.html?.generate === true;
+    const needsRender = needsHtmlRender || formatCfg?.epub?.generate === true;
+
+    if (needsRender) {
+      progress.startPhase('render', allDocs.length);
+    }
     // Conjunto de claves realmente usadas por renderDocuments (hits + writes).
     // Se pasa a todas las fases de render para que cada llamada acumule sus claves.
     // Permite que el prune elimine solo entradas genuinamente obsoletas.
     const renderUsedKeys = renderCache ? new Set<string>() : undefined;
     const onFileProcessed = (report: import('../output/progress.js').RenderFileReport) => progress.reportFile(report);
-    const { renderedFileDocs, renderedAuthorDocs, renderedEventDocs, authorDocumentIndex } = await runPrimaryRender(
-      allDocs,
-      ctx,
-      renderCache,
-      registry,
-      renderStats,
-      pandocPool,
-      cwd,
-      renderUsedKeys,
-      luaFilters,
-      onFileProcessed,
-    );
-    const primaryRendered = new Map<DocumentType, BuildDocument[]>([
-      ['file', renderedFileDocs],
-      ['author', renderedAuthorDocs],
-      ['event', renderedEventDocs],
-    ]);
+
+    // runPrimaryRender convierte cada documento a HTML (htmlFragment).
+    // Solo es necesario cuando se genera HTML o EPUB (EPUB usa el htmlFragment).
+    let primaryRendered = new Map<DocumentType, BuildDocument[]>();
+    let authorDocumentIndex: AuthorDocumentIndex = new Map();
+    if (needsRender) {
+      const result = await runPrimaryRender(
+        allDocs,
+        ctx,
+        renderCache,
+        registry,
+        renderStats,
+        pandocPool,
+        cwd,
+        renderUsedKeys,
+        luaFilters,
+        onFileProcessed,
+      );
+      primaryRendered = new Map<DocumentType, BuildDocument[]>([
+        ['file', result.renderedFileDocs],
+        ['author', result.renderedAuthorDocs],
+        ['event', result.renderedEventDocs],
+      ]);
+      authorDocumentIndex = result.authorDocumentIndex;
+    }
 
     const totalDocCount = allDocs.length;
 
@@ -820,42 +834,64 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
     if (noChanges && !affectedPaths) {
       log('Ningun documento modificado — build incremental sin cambios');
-      // Saltar todo el pipeline: marcar allDocs como vacio para que las fases sean no-op
-      // Preservar totalDocCount antes de vaciar para el resumen final
       allDocs = [];
     }
 
-    const { finalSiteCtx, renderedBlockDocs } = await runBlocksPrestep(
-      pipelineDocs,
-      ctx,
-      renderCache,
-      registry,
-      enrichedSiteCtx,
-      primaryRendered,
-      authorDocumentIndex,
-      renderStats,
-      pandocPool,
-      cwd,
-      renderUsedKeys,
-      luaFilters,
-      onFileProcessed,
-    );
-    const { allContextDocs, renderedMap } = await runContextPhaseWithTypeGraph(
-      pipelineDocs,
-      ctx,
-      renderCache,
-      registry,
-      finalSiteCtx,
-      primaryRendered,
-      authorDocumentIndex,
-      renderStats,
-      pandocPool,
-      cwd,
-      renderUsedKeys,
-      luaFilters,
-      onFileProcessed,
-    );
-    progress.completePhase(); // fin de render
+    // Fases del pipeline HTML: blocks + context + compose.
+    // Solo se ejecutan si html.generate: true.
+    let allContextDocs: BuildDocument[] = pipelineDocs;
+    let renderedMap = new Map<DocumentType, BuildDocument[]>();
+    const finalSiteCtx = enrichedSiteCtx;
+    if (needsHtmlRender) {
+      const { renderedBlockDocs } = await runBlocksPrestep(
+        pipelineDocs,
+        ctx,
+        renderCache,
+        registry,
+        enrichedSiteCtx,
+        primaryRendered,
+        authorDocumentIndex,
+        renderStats,
+        pandocPool,
+        cwd,
+        renderUsedKeys,
+        luaFilters,
+        onFileProcessed,
+      );
+
+      const result = await runContextPhaseWithTypeGraph(
+        pipelineDocs,
+        ctx,
+        renderCache,
+        registry,
+        enrichedSiteCtx,
+        primaryRendered,
+        authorDocumentIndex,
+        renderStats,
+        pandocPool,
+        cwd,
+        renderUsedKeys,
+        luaFilters,
+        onFileProcessed,
+      );
+      allContextDocs = result.allContextDocs;
+      renderedMap = result.renderedMap;
+    } else {
+      // Sin HTML: poblar renderedMap con pipelineDocs para que la exportación
+      // (PDF, EPUB, MD) tenga documentos que procesar.
+      const byType = new Map<DocumentType, BuildDocument[]>();
+      for (const doc of pipelineDocs) {
+        const type = doc.type ?? 'file';
+        const list = byType.get(type);
+        if (list) list.push(doc);
+        else byType.set(type, [doc]);
+      }
+      renderedMap = byType;
+    }
+
+    if (needsRender) {
+      progress.completePhase(); // fin de render
+    }
 
     // En modo incremental, pasar solo los docs afectados a compose/write para evitar
     // reprocesar documentos que no cambiaron.
@@ -892,7 +928,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       cacheHitsPdf: 0,
       cacheHitsMd: 0,
     };
-    const formatCfg = ctx.siteConfig.format;
 
     // Forzar PDF si se necesitan thumbnails para HTML
     const needsPdfForThumbnails = formatCfg?.html?.thumbnails && formatCfg?.pdf !== undefined;
