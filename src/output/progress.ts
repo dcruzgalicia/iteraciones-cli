@@ -188,7 +188,7 @@ export class ProgressTracker {
     this.currentPhase = null;
   }
 
-  finish(docCount: number, formatCount?: number): void {
+  finish(processed: number, cached: number, formatCount?: number): void {
     this.clearLine();
     const elapsed = formatTime(performance.now() - this.t0);
 
@@ -202,18 +202,25 @@ export class ProgressTracker {
           prevT += dur;
         }
       }
-      process.stdout.write(`\nBuild completado ${docCount} documento${docCount !== 1 ? 's' : ''} en ${elapsed}`);
+      process.stdout.write(`\nBuild completado ${processed} documento${processed !== 1 ? 's' : ''} en ${elapsed}`);
+      if (cached > 0) {
+        process.stdout.write(` (${cached} en caché)`);
+      }
+      process.stdout.write(`\n`);
     } else if (this.tty) {
       process.stderr.write(`\n\u2713 Build completado\n`);
-      process.stderr.write(`  Documentos procesados: ${docCount}\n`);
+      process.stderr.write(`  Documentos procesados: ${processed}\n`);
+      if (cached > 0) {
+        process.stderr.write(`  Documentos en caché: ${cached}\n`);
+      }
       if (formatCount !== undefined && formatCount > 0) {
         process.stderr.write(`  Formatos generados: ${formatCount}\n`);
       }
       process.stderr.write(`  Tiempo total: ${elapsed}\n`);
-    }
-    if (this.excludedDraftsCount > 0) {
-      const word = this.excludedDraftsCount === 1 ? 'borrador' : 'borradores';
-      process.stderr.write(`  (${this.excludedDraftsCount} ${word} excluido${this.excludedDraftsCount > 1 ? 's' : ''} por draft:true)\n`);
+    } else {
+      process.stdout.write(`\u2713 Build completado: ${processed} doc${processed !== 1 ? 's' : ''} procesado${processed !== 1 ? 's' : ''}`);
+      if (cached > 0) process.stdout.write(`, ${cached} en caché`);
+      process.stdout.write(` (${elapsed})\n`);
     }
   }
 }
