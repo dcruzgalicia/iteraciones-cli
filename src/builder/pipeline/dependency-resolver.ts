@@ -8,8 +8,8 @@ import { TYPE_STAGES } from './type-graph.js';
 const INDEX_TYPES = new Set<DocumentType>(TYPE_STAGES.filter((s) => s.phase === 'index').map((s) => s.type));
 
 /**
- * Calcula el conjunto de documentos que deben reprocesarse en un rebuild
- * incremental (serve) dado un conjunto de rutas de archivos modificadas.
+ * Calcula el conjunto de documentos que deben reprocesarse en un build
+ * incremental dado un conjunto de rutas de archivos modificadas.
  *
  * Reglas:
  * - Cualquier doc cuya ruta relativa esté en `changedPaths` → siempre afectado.
