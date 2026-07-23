@@ -101,7 +101,6 @@ export class PandocPool {
           from: 'markdown',
           to: 'html5',
           standalone: false,
-          'syntax-highlighting': 'none',
         }),
       });
     } catch (err) {

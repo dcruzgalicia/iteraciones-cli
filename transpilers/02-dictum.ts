@@ -53,7 +53,7 @@ async function blocksToLatex(innerBlocks: unknown[]): Promise<string> {
     blocks: innerBlocks,
   });
 
-  const proc = Bun.spawn(['pandoc', '--from', 'json', '--to', 'latex', '--syntax-highlighting=none'], {
+  const proc = Bun.spawn(['pandoc', '--from', 'json', '--to', 'latex'], {
     stdin: 'pipe',
     stdout: 'pipe',
     stderr: 'pipe',
