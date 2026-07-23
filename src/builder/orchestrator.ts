@@ -216,6 +216,12 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
   // Eliminar la carpeta del otro modo (solo debe existir una)
   const otherDirName = outputDirName === 'dist/www' ? 'dist/documents' : 'dist/www';
   await rm(join(cwd, otherDirName), { recursive: true, force: true }).catch(() => {});
+
+  // --no-cache: eliminar toda la caché para partir desde cero
+  if (options.noCache) {
+    await rm(join(cwd, '.iteraciones', 'cache'), { recursive: true, force: true });
+  }
+
   const cacheManager = new CacheManager(cwd);
 
   const pkg = (await Bun.file(join(import.meta.dir, '../../package.json')).json()) as { version: string };
