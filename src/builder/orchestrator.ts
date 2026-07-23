@@ -807,6 +807,8 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       ['event', renderedEventDocs],
     ]);
 
+    const totalDocCount = allDocs.length;
+
     // Filtrado incremental: detectar archivos .md modificados por mtime
     // y limitar el procesamiento a los docs afectados.
     const GLOBAL_CHANGE_PATTERNS = [/\.ya?ml$/, /\.html$/];
@@ -819,6 +821,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     if (noChanges && !affectedPaths) {
       log('Ningun documento modificado — build incremental sin cambios');
       // Saltar todo el pipeline: marcar allDocs como vacio para que las fases sean no-op
+      // Preservar totalDocCount antes de vaciar para el resumen final
       allDocs = [];
     }
 
@@ -1049,9 +1052,11 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     const mdOn = formatCfg?.markdown?.generate === true;
     const epubOn = formatCfg?.epub?.generate === true;
     const latexOn = pdfOn && formatCfg?.latex?.force !== true ? true : formatCfg?.latex?.generate !== false;
-    const docCount = htmlOn || pdfOn || epubOn || mdOn || latexOn ? allDocs.length : 0;
+    const totalDocs = htmlOn || pdfOn || epubOn || mdOn || latexOn ? totalDocCount : 0;
+    const processedCount = noChanges ? 0 : affectedPaths ? affectedPaths.size : totalDocs;
+    const cachedCount = totalDocs - processedCount;
     const formatCount = [latexOn, pdfOn, htmlOn, epubOn, mdOn].filter(Boolean).length;
-    progress.finish(docCount, formatCount);
+    progress.finish(processedCount, cachedCount, formatCount);
   } finally {
     pandocPool?.dispose();
   }

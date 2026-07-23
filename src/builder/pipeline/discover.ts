@@ -67,16 +67,23 @@ export async function discover(cwd: string, options: DiscoverOptions = {}): Prom
     }),
   );
 
-  if (useCache) {
-    // Eliminar entradas del índice que ya no tienen archivo correspondiente.
-    const relativePathsSet = new Set(relativePaths);
-    for (const key of updatedIndex.keys()) {
-      if (!relativePathsSet.has(key)) {
-        updatedIndex.delete(key);
-        changedPaths.add(key);
-      }
+  // Siempre guardar el índice de discovery, incluso con --no-cache.
+  // Los mtimes son independientes de la caché de contenido.
+  const relativePathsSet = new Set(relativePaths);
+  for (const key of updatedIndex.keys()) {
+    if (!relativePathsSet.has(key)) {
+      updatedIndex.delete(key);
+      if (useCache) changedPaths.add(key);
     }
-    await saveDiscoveryIndex(cwd, updatedIndex);
+  }
+  await saveDiscoveryIndex(cwd, updatedIndex);
+
+  // En modo --no-cache, todos los archivos se consideran cambiados
+  // (el discovery index existe para el proximo build, pero este build reprocesa todo)
+  if (!useCache) {
+    for (const doc of docs) {
+      changedPaths.add(doc.relativePath);
+    }
   }
 
   return { docs, changedPaths };
