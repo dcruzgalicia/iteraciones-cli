@@ -311,7 +311,7 @@ export async function convertToMarkdown(doc: ExportDocument, outputPath: string)
   await mkdir(dirname(outputPath), { recursive: true });
   // El body del documento es LaTeX (desde processedBody). Lo convertimos a
   // markdown limpio via pandoc.
-  const args = ['pandoc', '--from', 'latex', '--to', 'markdown', '--no-highlight'];
+  const args = ['pandoc', '--from', 'latex', '--to', 'markdown'];
   let proc: ReturnType<typeof Bun.spawn>;
   try {
     proc = Bun.spawn(args, { stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' });

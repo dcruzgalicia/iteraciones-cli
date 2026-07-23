@@ -47,7 +47,7 @@ export async function convertFragment(
   fromFormat: string = 'markdown',
   extraArgs?: readonly string[],
 ): Promise<string> {
-  const args = ['pandoc', '--from', fromFormat, '--to', toFormat, '--no-highlight'];
+  const args = ['pandoc', '--from', fromFormat, '--to', toFormat];
 
   if (bibOptions) {
     args.push('--citeproc', '--bibliography', bibOptions.bibliography);
