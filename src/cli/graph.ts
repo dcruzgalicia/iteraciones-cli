@@ -24,7 +24,7 @@ export type GraphOutput = {
  */
 export async function runGraph(cwd: string, options: GraphCommandOptions = {}): Promise<void> {
   const config = await loadSiteConfig(cwd);
-  const discovered = await discover(cwd, { noCache: true });
+  const { docs: discovered } = await discover(cwd, { noCache: true });
   const classified = classifyDocuments(discovered, config.format?.html?.theme, cwd);
   const nonDrafts = classified.filter((doc) => !doc.frontmatter.draft);
 
