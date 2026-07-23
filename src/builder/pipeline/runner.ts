@@ -1,9 +1,7 @@
-import type { RenderFileReport } from '../../output/progress.js';
 import type { PluginRegistry } from '../../plugin/registry.js';
 import type { PandocPool } from '../../services/pandoc-pool.js';
 import type { TemplateContext } from '../../template/render/context.js';
 import type { AuthorDocumentIndex, BuildContext, BuildDocument, DocumentType } from '../types.js';
-import type { RenderCache, RenderStats } from './render.js';
 import { renderDocuments } from './render.js';
 import { TYPE_STAGES } from './type-graph.js';
 
@@ -34,17 +32,12 @@ export interface ContextPhaseResult {
 export async function runContextPhaseWithTypeGraph(
   allDocs: BuildDocument[],
   ctx: BuildContext,
-  renderCache: RenderCache | undefined,
   registry: PluginRegistry,
   siteCtx: TemplateContext,
   primaryRendered: ReadonlyMap<DocumentType, BuildDocument[]>,
   authorIndex: AuthorDocumentIndex,
-  renderStats?: RenderStats,
   pool?: PandocPool,
   cwd?: string,
-  collectedKeys?: Set<string>,
-  luaFilters?: readonly string[],
-  onFileProcessed?: (report: RenderFileReport) => void,
 ): Promise<ContextPhaseResult> {
   const renderedMap = new Map<DocumentType, BuildDocument[]>(primaryRendered);
   const allContextDocs: BuildDocument[] = [];
@@ -73,20 +66,7 @@ export async function runContextPhaseWithTypeGraph(
         }
       } catch {}
       const globalCsl = undefined;
-      const rendered = await renderDocuments(
-        docs,
-        concurrency,
-        renderCache,
-        registry,
-        renderStats,
-        pool,
-        cwd,
-        collectedKeys,
-        luaFilters,
-        globalBibliography,
-        globalCsl,
-        onFileProcessed,
-      );
+      const rendered = await renderDocuments(docs, concurrency, registry, pool, cwd, globalBibliography, globalCsl);
       renderedMap.set(spec.type, rendered);
       const pool2 = spec.buildPool(renderedMap);
       const contextDocs = rendered.flatMap((doc) => spec.buildPageContexts(doc, siteCtx, pool2, authorIndex, listItemsLimit));

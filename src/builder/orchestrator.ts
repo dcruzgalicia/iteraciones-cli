@@ -2,8 +2,6 @@ import { existsSync } from 'node:fs';
 import { mkdir, rm } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 import dictumPlugin from '../../pandoc/plugins/dictum-plugin.js';
-import { CacheManager } from '../cache/cache-manager.js';
-import { hash } from '../cache/hasher.js';
 import { loadOutputManifest, saveOutputManifest } from '../cache/output-manifest.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { type PipelinePhase, ProgressTracker } from '../output/progress.js';
@@ -19,7 +17,6 @@ import { createAuthorDocumentIndex } from './context/authors.js';
 import { buildSiteContext } from './context/site.js';
 import {
   type ExportRunOptions,
-  type ExportStats,
   injectCoverIntoListItems,
   injectDownloadLinks,
   injectDownloadLinksIntoListItems,
@@ -30,10 +27,10 @@ import { buildDocumentGraph } from './graph-exporter.js';
 import { escapeHtml } from './html.js';
 import { buildLatexPreamble } from './latex-preamble.js';
 import { classifyDocuments } from './pipeline/classify.js';
-import { type ComposeCache, type ComposeStats, composeDocuments, renderBlocksToRegions } from './pipeline/compose.js';
+import { composeDocuments, renderBlocksToRegions } from './pipeline/compose.js';
 import { computeAffectedDocs } from './pipeline/dependency-resolver.js';
 import { discover } from './pipeline/discover.js';
-import { type RenderCache, type RenderStats, renderDocuments, renderLatex } from './pipeline/render.js';
+import { renderDocuments, renderLatex } from './pipeline/render.js';
 import { runContextPhaseWithTypeGraph } from './pipeline/runner.js';
 import { TYPE_STAGE_MAP, VALID_TYPES } from './pipeline/type-graph.js';
 import { writeDocuments } from './pipeline/write.js';
@@ -82,9 +79,6 @@ export interface BuildOptions {
 
 interface SetupResult {
   ctx: BuildContext;
-  cacheManager: CacheManager;
-  renderCache: RenderCache | undefined;
-  composeCache: ComposeCache | undefined;
   registry: PluginRegistry;
   hasPlugins: boolean;
   pandocPool: PandocPool | undefined;
@@ -223,33 +217,17 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
     await clearBiberCache();
   }
 
-  const cacheManager = new CacheManager(cwd);
-
   const pkg = (await Bun.file(join(import.meta.dir, '../../package.json')).json()) as { version: string };
   // El fingerprint invalida la caché cuando cambia el código fuente de plugins locales
   // o el conjunto de plugins declarados. Para plugins locales se hashea el contenido del
   // archivo; para paquetes npm basta con el identificador.
   const pluginPaths = [...siteConfig.plugins, 'pandoc/plugins/dictum-plugin.ts'];
   const pluginFingerprint = await computePluginFingerprint(pluginPaths, cwd);
-  // --no-cache: omitir caché completamente (renderDocuments/composeDocuments aceptan undefined).
-  const renderCache: RenderCache | undefined = options.noCache
-    ? undefined
-    : {
-        manager: cacheManager,
-        cliVersion: pkg.version,
-        pandocVersion,
-        pluginFingerprint,
-      };
-  const composeCache: ComposeCache | undefined = options.noCache ? undefined : { manager: cacheManager, cliVersion: pkg.version, pluginFingerprint };
-
   const pandocPool = (await PandocPool.tryCreate()) ?? undefined;
   if (pandocPool) log('pandoc-server disponible: usando pool para conversiones');
 
   return {
     ctx,
-    cacheManager,
-    renderCache,
-    composeCache,
     registry,
     hasPlugins: true,
     pandocPool,
@@ -358,66 +336,22 @@ function resolveGlobalExportPaths(ctx: BuildContext): {
 async function runPrimaryRender(
   allDocs: BuildDocument[],
   ctx: BuildContext,
-  renderCache: RenderCache | undefined,
   registry: PluginRegistry,
-  stats?: RenderStats,
   pool?: PandocPool,
   cwd?: string,
-  collectedKeys?: Set<string>,
-  luaFilters?: readonly string[],
-  onFileProcessed?: (report: import('../output/progress.js').RenderFileReport) => void,
 ): Promise<PrimaryRenderResult> {
   const { globalBibliography, globalCsl } = resolveGlobalExportPaths(ctx);
   const fileDocs = allDocs.filter((doc) => doc.type === 'file' && doc.kind !== 'block');
-  const renderedFileDocs = await renderDocuments(
-    fileDocs,
-    ctx.concurrency ?? 4,
-    renderCache,
-    registry,
-    stats,
-    pool,
-    cwd,
-    collectedKeys,
-    luaFilters,
-    globalBibliography,
-    globalCsl,
-    onFileProcessed,
-  );
+  const renderedFileDocs = await renderDocuments(fileDocs, ctx.concurrency ?? 4, registry, pool, cwd, globalBibliography, globalCsl);
 
   const authorDocs = allDocs.filter((doc) => doc.type === 'author' && doc.kind !== 'block');
-  const renderedAuthorDocs = await renderDocuments(
-    authorDocs,
-    ctx.concurrency ?? 4,
-    renderCache,
-    registry,
-    stats,
-    pool,
-    cwd,
-    collectedKeys,
-    luaFilters,
-    globalBibliography,
-    globalCsl,
-    onFileProcessed,
-  );
+  const renderedAuthorDocs = await renderDocuments(authorDocs, ctx.concurrency ?? 4, registry, pool, cwd, globalBibliography, globalCsl);
   // Índice de autores por título normalizado (lowercase). Se construye aquí para que
   // esté disponible antes del pre-paso de bloques y del paso de contexto de páginas.
   const authorDocumentIndex = createAuthorDocumentIndex(renderedAuthorDocs);
 
   const eventDocs = allDocs.filter((doc) => doc.type === 'event' && doc.kind !== 'block');
-  const renderedEventDocs = await renderDocuments(
-    eventDocs,
-    ctx.concurrency ?? 4,
-    renderCache,
-    registry,
-    stats,
-    pool,
-    cwd,
-    collectedKeys,
-    luaFilters,
-    globalBibliography,
-    globalCsl,
-    onFileProcessed,
-  );
+  const renderedEventDocs = await renderDocuments(eventDocs, ctx.concurrency ?? 4, registry, pool, cwd, globalBibliography, globalCsl);
 
   return {
     renderedFileDocs,
@@ -440,34 +374,16 @@ async function runPrimaryRender(
 async function runBlocksPrestep(
   allDocs: BuildDocument[],
   ctx: BuildContext,
-  renderCache: RenderCache | undefined,
   registry: PluginRegistry,
   enrichedSiteCtx: TemplateContext,
   primaryRendered: ReadonlyMap<DocumentType, BuildDocument[]>,
   authorDocumentIndex: AuthorDocumentIndex,
-  stats?: RenderStats,
   pool?: PandocPool,
   cwd?: string,
-  collectedKeys?: Set<string>,
-  luaFilters?: readonly string[],
-  onFileProcessed?: (report: import('../output/progress.js').RenderFileReport) => void,
 ): Promise<BlocksPrestepResult> {
   const { globalBibliography, globalCsl } = resolveGlobalExportPaths(ctx);
   const allBlockDocs = allDocs.filter((doc) => doc.kind === 'block');
-  const renderedBlockDocs = await renderDocuments(
-    allBlockDocs,
-    ctx.concurrency ?? 4,
-    renderCache,
-    registry,
-    stats,
-    pool,
-    cwd,
-    collectedKeys,
-    luaFilters,
-    globalBibliography,
-    globalCsl,
-    onFileProcessed,
-  );
+  const renderedBlockDocs = await renderDocuments(allBlockDocs, ctx.concurrency ?? 4, registry, pool, cwd, globalBibliography, globalCsl);
   const contextBlockDocs = renderedBlockDocs.map((doc) => {
     const spec = doc.type ? TYPE_STAGE_MAP.get(doc.type) : undefined;
     if (!spec) {
@@ -547,18 +463,12 @@ async function writeTexFiles(allContextDocs: BuildDocument[], ctx: BuildContext,
 async function runFinalization(
   allContextDocs: BuildDocument[],
   ctx: BuildContext,
-  composeCache: ComposeCache | undefined,
-  renderCache: RenderCache | undefined,
   registry: PluginRegistry,
   hasPlugins: boolean,
   log: (msg: string) => void,
-  composeStats: ComposeStats,
   pandocPool?: PandocPool,
   cwd?: string,
   incremental?: boolean,
-  itemHashMap?: ReadonlyMap<string, string>,
-  renderUsedKeys?: Set<string>,
-  onFileProcessed?: (report: import('../output/progress.js').RenderFileReport) => void,
 ): Promise<number> {
   const generateHtml = ctx.siteConfig.format?.html?.generate !== false;
 
@@ -570,7 +480,7 @@ async function runFinalization(
       templateContext: makeRelativeContext(doc.templateContext, computeRootPrefix(doc.relativePath)) as TemplateContext,
     }));
     const tComposeStart = performance.now();
-    const composedDocs = await composeDocuments(relativizedDocs, ctx, composeCache, registry, composeStats, itemHashMap, onFileProcessed);
+    const composedDocs = await composeDocuments(relativizedDocs, ctx, registry);
     composeMs = performance.now() - tComposeStart;
     const docs = await writeDocuments(composedDocs, ctx);
     writtenDocs.push(...docs);
@@ -629,15 +539,6 @@ async function runFinalization(
   }
   if (cwd) await saveOutputManifest(cwd, currentManifest);
 
-  // Podar entradas obsoletas del scope 'render' usando las claves de todos los
-  // documentos procesados en esta ejecución. Se hace al final para no eliminar
-  // entradas que aún no han sido escritas por los batches posteriores.
-  // Si renderUsedKeys no está disponible (undefined), se omite el prune para
-  // evitar borrar la caché entera por error.
-  if (renderCache && renderUsedKeys) {
-    await renderCache.manager.prune('render', renderUsedKeys);
-  }
-
   return composeMs;
 }
 
@@ -670,11 +571,11 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const progress = new ProgressTracker({ verbose: options.verbose ?? false });
   const log = (msg: string) => progress.log(msg);
 
-  const renderStats: RenderStats = { total: 0, cacheHits: 0 };
-  const composeStats: ComposeStats = { total: 0, cacheHits: 0 };
-
-  const { ctx, cacheManager, renderCache, composeCache, registry, hasPlugins, pandocPool, cliVersion, pandocVersion, pluginFingerprint, luaFilters } =
-    await setupBuildEnvironment(cwd, options, log);
+  const { ctx, registry, hasPlugins, pandocPool, cliVersion, pandocVersion, pluginFingerprint, luaFilters } = await setupBuildEnvironment(
+    cwd,
+    options,
+    log,
+  );
   try {
     // Hook beforeBuild: ejecutado antes de descubrir o procesar ningún documento.
     if (hasPlugins) {
@@ -692,7 +593,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       generateHtml
         ? buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, {
             noTailwind: options.noTailwind,
-            cacheManager: options.noCache ? undefined : cacheManager,
           })
         : Promise.resolve(''),
     ]);
@@ -790,29 +690,12 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     if (needsRender) {
       progress.startPhase('render', allDocs.length);
     }
-    // Conjunto de claves realmente usadas por renderDocuments (hits + writes).
-    // Se pasa a todas las fases de render para que cada llamada acumule sus claves.
-    // Permite que el prune elimine solo entradas genuinamente obsoletas.
-    const renderUsedKeys = renderCache ? new Set<string>() : undefined;
-    const onFileProcessed = (report: import('../output/progress.js').RenderFileReport) => progress.reportFile(report);
-
     // runPrimaryRender convierte cada documento a HTML (htmlFragment).
     // Solo es necesario cuando se genera HTML o EPUB (EPUB usa el htmlFragment).
     let primaryRendered = new Map<DocumentType, BuildDocument[]>();
     let authorDocumentIndex: AuthorDocumentIndex = new Map();
     if (needsRender) {
-      const result = await runPrimaryRender(
-        allDocs,
-        ctx,
-        renderCache,
-        registry,
-        renderStats,
-        pandocPool,
-        cwd,
-        renderUsedKeys,
-        luaFilters,
-        onFileProcessed,
-      );
+      const result = await runPrimaryRender(allDocs, ctx, registry, pandocPool, cwd);
       primaryRendered = new Map<DocumentType, BuildDocument[]>([
         ['file', result.renderedFileDocs],
         ['author', result.renderedAuthorDocs],
@@ -846,33 +729,23 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       const { renderedBlockDocs } = await runBlocksPrestep(
         pipelineDocs,
         ctx,
-        renderCache,
         registry,
         enrichedSiteCtx,
         primaryRendered,
         authorDocumentIndex,
-        renderStats,
         pandocPool,
         cwd,
-        renderUsedKeys,
-        luaFilters,
-        onFileProcessed,
       );
 
       const result = await runContextPhaseWithTypeGraph(
         pipelineDocs,
         ctx,
-        renderCache,
         registry,
         enrichedSiteCtx,
         primaryRendered,
         authorDocumentIndex,
-        renderStats,
         pandocPool,
         cwd,
-        renderUsedKeys,
-        luaFilters,
-        onFileProcessed,
       );
       allContextDocs = result.allContextDocs;
       renderedMap = result.renderedMap;
@@ -908,33 +781,16 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
           cwd,
           lang: ctx.siteConfig.lang,
           concurrency: ctx.concurrency ?? 4,
-          cliVersion,
-          pandocVersion,
-          noCache: options.noCache,
-          verbose: options.verbose,
-          cacheManager: options.noCache ? undefined : cacheManager,
           registry: hasPlugins ? registry : undefined,
-          pluginFingerprint,
         },
       });
     }
 
     // Paso de exportacion: genera PDF/EPUB/MD si esta configurado y no se paso --no-export.
-    const exportStats: ExportStats = {
-      totalEpub: 0,
-      totalPdf: 0,
-      totalMd: 0,
-      cacheHitsEpub: 0,
-      cacheHitsPdf: 0,
-      cacheHitsMd: 0,
-    };
 
     // Forzar PDF si se necesitan thumbnails para HTML
     const needsPdfForThumbnails = formatCfg?.html?.thumbnails && formatCfg?.pdf !== undefined;
     const pdfOn = formatCfg?.pdf?.generate === true || needsPdfForThumbnails === true;
-    const latexForce = formatCfg?.latex?.force === true;
-    const latexGen = formatCfg?.latex?.generate === false;
-    const cleanupTex = pdfOn && latexForce && latexGen;
     const noExport = options.noExport === true;
     const exportRenderedMap = affectedPaths
       ? new Map<DocumentType, BuildDocument[]>(
@@ -957,18 +813,12 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
     // ── Fase pdf ──
     const exportBase = {
-      noCache: options.noCache,
-      verbose: options.verbose,
       outputDir: ctx.outputDir,
       cwd,
       lang: ctx.siteConfig.lang,
       concurrency: ctx.concurrency ?? 4,
-      cliVersion,
-      pandocVersion,
-      cacheManager: options.noCache ? undefined : cacheManager,
       registry: hasPlugins ? registry : undefined,
-      pluginFingerprint,
-      onExportProgress: (relativePath: string, cacheHit: boolean) => progress.reportFile({ relativePath, durationMs: 0, cacheHit, phase: 'pdf' }),
+      onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, durationMs: 0, cacheHit: false, phase: 'pdf' }),
     };
     const exportResults: ExportResult[] = [];
 
@@ -991,10 +841,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         pdfTotal += countExportDocs(type);
       }
       progress.startPhase('pdf', pdfTotal);
-      const pdfStats: ExportStats = { totalEpub: 0, totalPdf: 0, totalMd: 0, cacheHitsEpub: 0, cacheHitsPdf: 0, cacheHitsMd: 0 };
-      const pdfResults = await runExportDocuments(exportRenderedMap, { ...exportBase, config: formatCfg, stats: pdfStats });
+      const pdfResults = await runExportDocuments(exportRenderedMap, { ...exportBase, config: formatCfg });
       exportResults.push(...pdfResults);
-      if (pdfStats.totalPdf > 0) progress.log(`PDF: ${pdfStats.totalPdf - pdfStats.cacheHitsPdf} generados, ${pdfStats.cacheHitsPdf} de caché`);
+      if (pdfTotal > 0) progress.log(`PDF: ${pdfTotal} generados`);
       progress.completePhase();
     }
 
@@ -1002,9 +851,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     if (formatCfg?.html?.generate === true) {
       progress.startPhase('html', finalContextDocs.length);
       const docsWithLinks = finalContextDocs;
-      const itemHashMap = composeCache ? new Map(allDocs.map((d) => [d.relativePath, d.sourceHash])) : undefined;
-      const effectiveComposeCache = composeCache && affectedPaths ? { ...composeCache, skipPrune: true } : composeCache;
-
       // Inyectar enlaces de descarga
       let docsWithExportLinks = finalContextDocs;
       if (exportResults.length > 0) {
@@ -1013,22 +859,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         docsWithExportLinks = injectCoverIntoListItems(docsWithExportLinks);
       }
 
-      const composeMs = await runFinalization(
-        docsWithExportLinks,
-        ctx,
-        effectiveComposeCache,
-        renderCache,
-        registry,
-        hasPlugins,
-        log,
-        composeStats,
-        pandocPool,
-        cwd,
-        options.incremental === true,
-        itemHashMap,
-        renderUsedKeys,
-        onFileProcessed,
-      );
+      const composeMs = await runFinalization(docsWithExportLinks, ctx, registry, hasPlugins, log, pandocPool, cwd, options.incremental === true);
       progress.completePhase();
     }
 
@@ -1039,11 +870,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         epubTotal += countExportDocs(type);
       }
       progress.startPhase('epub', epubTotal);
-      const epubStats: ExportStats = { totalEpub: 0, totalPdf: 0, totalMd: 0, cacheHitsEpub: 0, cacheHitsPdf: 0, cacheHitsMd: 0 };
-      const epubResults = await runExportDocuments(exportRenderedMap, { ...exportBase, config: formatCfg, stats: epubStats });
+      const epubResults = await runExportDocuments(exportRenderedMap, { ...exportBase, config: formatCfg });
       exportResults.push(...epubResults);
-      if (epubStats.totalEpub > 0)
-        progress.log(`EPUB: ${epubStats.totalEpub - epubStats.cacheHitsEpub} generados, ${epubStats.cacheHitsEpub} de caché`);
+      if (epubTotal > 0) progress.log(`EPUB: ${epubTotal} generados`);
       progress.completePhase();
     }
 
@@ -1060,27 +889,10 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         }
       }
       progress.startPhase('markdown', mdTotal);
-      const mdStats: ExportStats = { totalEpub: 0, totalPdf: 0, totalMd: 0, cacheHitsEpub: 0, cacheHitsPdf: 0, cacheHitsMd: 0 };
-      const mdResults = await runExportDocuments(exportRenderedMap, { ...exportBase, config: formatCfg, stats: mdStats });
+      const mdResults = await runExportDocuments(exportRenderedMap, { ...exportBase, config: formatCfg });
       exportResults.push(...mdResults);
-      if (mdStats.totalMd > 0) progress.log(`Markdown: ${mdStats.totalMd - mdStats.cacheHitsMd} generados, ${mdStats.cacheHitsMd} de caché`);
+      if (mdTotal > 0) progress.log(`Markdown: ${mdTotal} generados`);
       progress.completePhase();
-    }
-
-    // Limpiar .tex final si latex.generate=false pero se forzo para PDF
-    if (cleanupTex) {
-      let cleaned = 0;
-      for (const doc of allContextDocs) {
-        if (!doc.processedBody) continue;
-        const texSlug = doc.slug ?? basename(doc.relativePath, '.md');
-        const outDir = join(ctx.outputDir, dirname(doc.relativePath));
-        const texPath = join(outDir, `${texSlug}.tex`);
-        const rmOk = await rm(texPath)
-          .then(() => true)
-          .catch(() => false);
-        if (rmOk) cleaned++;
-      }
-      if (cleaned > 0) log(`Eliminados ${cleaned} archivos .tex de dist/ (latex.generate=false + force)`);
     }
 
     const htmlOn = formatCfg?.html?.generate === true;

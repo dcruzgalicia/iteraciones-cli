@@ -2,8 +2,6 @@ import { existsSync, rmSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { cpus } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
-import type { CacheManager } from '../../cache/cache-manager.js';
-import { hash } from '../../cache/hasher.js';
 import type { EpubFormatConfig, HtmlFormatConfig, MarkdownFormatConfig, PdfFormatConfig, ThumbnailMode } from '../../config/site-config.js';
 import { THUMBNAIL_SIZES } from '../../config/site-config.js';
 import { mapWithConcurrency } from '../../output/concurrency.js';
@@ -126,37 +124,14 @@ export interface ExportRunOptions {
    * siendo el limite de documentos en vuelo (incluidos los que esperan el semaforo).
    */
   concurrency: number;
-  /** Versión del CLI para la clave de caché. */
-  cliVersion: string;
-  /** Versión de pandoc para la clave de caché. */
-  pandocVersion: string;
-  cacheManager?: CacheManager;
   /** Registro de plugins para ejecutar los hooks beforeExport/afterExport. */
   registry?: PluginRegistry;
-  /** Si true, omite la caché global de biber antes de compilar PDF. */
-  noCache?: boolean;
-  /** Modo verbose: imprime informacion adicional sobre el proceso. */
-  verbose?: boolean;
-  /** Hash del contenido de los plugins activos, para incluir en la clave de caché. */
-  pluginFingerprint?: string;
-  /** Acumulador de estadísticas de exportación. Se muta durante la ejecución. */
-  stats?: ExportStats;
   /**
    * Callback invocado por cada formato exportado (PDF/EPUB) para reporte de progreso.
    * En modo verbose se espera que muestre una línea por archivo;
    * en modo normal avanza la barra de progreso.
    */
-  onExportProgress?: (relativePath: string, cacheHit: boolean) => void;
-}
-
-/** Contadores acumulativos de la fase de exportación; se mutan durante la ejecución. */
-export interface ExportStats {
-  totalEpub: number;
-  totalPdf: number;
-  totalMd: number;
-  cacheHitsEpub: number;
-  cacheHitsPdf: number;
-  cacheHitsMd: number;
+  onExportProgress?: (relativePath: string) => void;
 }
 
 /**
@@ -251,7 +226,7 @@ export async function runExportDocuments(
   renderedMap: ReadonlyMap<DocumentType, BuildDocument[]>,
   options: ExportRunOptions,
 ): Promise<ExportResult[]> {
-  const { config, outputDir, cwd, lang, concurrency, cliVersion, pandocVersion, cacheManager, registry, pluginFingerprint, stats } = options;
+  const { config, outputDir, cwd, lang, concurrency, registry } = options;
 
   const hasPdf = config.pdf?.generate === true || !!config.html?.thumbnails;
   const _hasEpub = config.epub?.generate === true;
@@ -294,80 +269,6 @@ export async function runExportDocuments(
   } catch {}
   let globalCsl: string | undefined;
 
-  // Hash del archivo .bib global (si existe) para invalidar caché cuando cambia.
-  let bibHash = '';
-  if (globalBibliography) {
-    const bibFile = Bun.file(globalBibliography);
-    if (await bibFile.exists()) {
-      try {
-        const bibText = await bibFile.text();
-        const hasher = new Bun.CryptoHasher('sha256');
-        hasher.update(bibText);
-        bibHash = hasher.digest('hex');
-      } catch (err) {
-        process.stderr.write(`[export] no se pudo leer export.bibliography para caché: ${err instanceof Error ? err.message : String(err)}\n`);
-      }
-    }
-  }
-
-  // Hash del archivo .csl global (si existe) para invalidar caché cuando cambia el estilo.
-  let cslHash = '';
-  if (globalCsl) {
-    const cslFile = Bun.file(globalCsl);
-    if (await cslFile.exists()) {
-      try {
-        const cslText = await cslFile.text();
-        const hasher = new Bun.CryptoHasher('sha256');
-        hasher.update(cslText);
-        cslHash = hasher.digest('hex');
-      } catch (err) {
-        process.stderr.write(`[export] no se pudo leer export.csl para caché: ${err instanceof Error ? err.message : String(err)}\n`);
-      }
-    }
-  }
-
-  // Hash de los templates de exportación (*.latex, *.css) y fuentes TTF para
-  // invalidar caché cuando se modifica el diseño del PDF/EPUB o las fuentes,
-  // sin cambiar el contenido fuente.
-  // Se escanea el directorio dinámicamente para incluir cualquier template nuevo
-  // sin necesidad de actualizar una lista manual.
-  const EXPORT_TEMPLATES_DIR = join(import.meta.dir, '../../../pandoc/export');
-  const FONTS_DIR = join(import.meta.dir, '../../../fonts');
-  let templateHash = '';
-  try {
-    const tplHasher = new Bun.CryptoHasher('sha256');
-    const tplFiles: string[] = [];
-    for await (const f of new Bun.Glob('*.latex').scan({
-      cwd: EXPORT_TEMPLATES_DIR,
-    })) {
-      tplFiles.push(f);
-    }
-    for await (const f of new Bun.Glob('*.css').scan({
-      cwd: EXPORT_TEMPLATES_DIR,
-    })) {
-      tplFiles.push(f);
-    }
-    tplFiles.sort(); // orden determinístico para un hash estable
-    for (const filename of tplFiles) {
-      tplHasher.update(await Bun.file(join(EXPORT_TEMPLATES_DIR, filename)).text());
-      tplHasher.update('\0');
-    }
-    // Incluir las fuentes TTF para la caché de EPUB (las embebe en el archivo).
-    const fontFiles: string[] = [];
-    for await (const f of new Bun.Glob('*.ttf').scan({ cwd: FONTS_DIR })) {
-      fontFiles.push(f);
-    }
-    fontFiles.sort();
-    for (const filename of fontFiles) {
-      const buf = await Bun.file(join(FONTS_DIR, filename)).arrayBuffer();
-      tplHasher.update(new Uint8Array(buf));
-      tplHasher.update('\0');
-    }
-    templateHash = tplHasher.digest('hex');
-  } catch (err) {
-    process.stderr.write(`[export] no se pudo calcular hash de templates/fuentes: ${err instanceof Error ? err.message : String(err)}\n`);
-  }
-
   // Pool de items primarios para resolver colecciones y programas de eventos.
   const itemPool = [...(renderedMap.get('file') ?? []), ...(renderedMap.get('author') ?? []), ...(renderedMap.get('event') ?? [])];
   const eventPool = renderedMap.get('event') ?? [];
@@ -398,36 +299,17 @@ export async function runExportDocuments(
     : 0;
 
   // Closure que genera los formatos (epub, pdf) para un ExportDocument ya ensamblado.
-  // `sourceHash` es el hash del documento fuente original (para la clave de caché).
-  // `itemHashes` es la cadena de hashes de los ítems incluidos (string vacío para
-  // documentos sin ítems como author).
   async function generateFormats(
     exportDoc: ExportDocument,
     outputBase: string,
-    sourceHash: string,
-    itemHashes: string,
   ): Promise<Array<PromiseSettledResult<{ epub?: string; pdf?: string; md?: string }>>> {
     const tasks: Array<Promise<{ epub?: string; pdf?: string; md?: string }>> = [];
-    const mdCacheKey = hash(sourceHash, itemHashes, 'md', cliVersion, pandocVersion, pluginFingerprint ?? '', bibHash, cslHash, templateHash);
 
     if (config.markdown?.generate) {
       const outputPath = `${outputBase}.md`;
       tasks.push(
         (async () => {
-          if (cacheManager && (await cacheManager.hasBinary('export', mdCacheKey, 'md'))) {
-            await cacheManager.copyBinaryTo('export', mdCacheKey, 'md', outputPath);
-            if (stats) {
-              stats.totalMd++;
-              stats.cacheHitsMd++;
-            }
-            return { md: outputPath };
-          }
           await convertToMarkdown(exportDoc, outputPath);
-          if (cacheManager) {
-            const content = await Bun.file(outputPath).text();
-            await cacheManager.write('export', mdCacheKey, content);
-          }
-          if (stats) stats.totalMd++;
           return { md: outputPath };
         })(),
       );
@@ -435,17 +317,8 @@ export async function runExportDocuments(
 
     if (config.epub?.generate) {
       const outputPath = `${outputBase}.epub`;
-      const cacheKey = hash(sourceHash, itemHashes, 'epub', cliVersion, pandocVersion, pluginFingerprint ?? '', bibHash, cslHash, templateHash);
       tasks.push(
         (async () => {
-          if (cacheManager && (await cacheManager.hasBinary('export', cacheKey, 'epub'))) {
-            await cacheManager.copyBinaryTo('export', cacheKey, 'epub', outputPath);
-            if (stats) {
-              stats.totalEpub++;
-              stats.cacheHitsEpub++;
-            }
-            return { epub: outputPath };
-          }
           const epubHtml =
             exportDoc.htmlBody ?? (await convertFragment(exportDoc.body, exportDoc.filePath, undefined, undefined, undefined, 'html5', 'latex'));
           await convertToEpub(epubHtml, outputPath, exportDoc);
@@ -457,11 +330,7 @@ export async function runExportDocuments(
               data: new Uint8Array(epubData),
             });
             await Bun.write(outputPath, afterCtx.data);
-            if (cacheManager) await cacheManager.writeBinary('export', cacheKey, 'epub', afterCtx.data.slice().buffer as ArrayBuffer);
-          } else if (cacheManager) {
-            await cacheManager.writeBinary('export', cacheKey, 'epub', epubData);
           }
-          if (stats) stats.totalEpub++;
           return { epub: outputPath };
         })(),
       );
@@ -471,19 +340,8 @@ export async function runExportDocuments(
     const genPdf = config.pdf?.generate || (config.html?.thumbnails && config.pdf);
     if (genPdf && config.pdf) {
       const outputPath = `${outputBase}.pdf`;
-      const cacheKey = hash(sourceHash, itemHashes, 'pdf', cliVersion, pandocVersion, pluginFingerprint ?? '', bibHash, cslHash, templateHash);
       tasks.push(
         (async () => {
-          if (cacheManager && (await cacheManager.hasBinary('export', cacheKey, 'pdf'))) {
-            await cacheManager.copyBinaryTo('export', cacheKey, 'pdf', outputPath);
-            if (stats) {
-              stats.totalPdf++;
-              stats.cacheHitsPdf++;
-            }
-            _pdfDone++;
-            options.onExportProgress?.(exportDoc.relativePath, true);
-            return { pdf: outputPath };
-          }
           await acquireLatex();
           try {
             await convertToPdf(exportDoc, outputPath, cwd, config.pdf);
@@ -502,13 +360,9 @@ export async function runExportDocuments(
               data: new Uint8Array(pdfData),
             });
             await Bun.write(outputPath, afterCtx.data);
-            if (cacheManager) await cacheManager.writeBinary('export', cacheKey, 'pdf', afterCtx.data.slice().buffer as ArrayBuffer);
-          } else if (cacheManager) {
-            await cacheManager.writeBinary('export', cacheKey, 'pdf', pdfData);
           }
-          if (stats) stats.totalPdf++;
           _pdfDone++;
-          options.onExportProgress?.(exportDoc.relativePath, false);
+          options.onExportProgress?.(exportDoc.relativePath);
           return { pdf: outputPath };
         })(),
       );
@@ -574,17 +428,7 @@ export async function runExportDocuments(
       const summaryBase = exportOutputBase(summaryDoc, outputDir);
       const fullBase = exportOutputBase(fullDoc, outputDir);
 
-      // Hashes de obras del autor para la clave de caché
-      const authorName = (doc.frontmatter.title || '').trim().toLowerCase();
-      const authorItemHashes = fileDocs
-        .filter((f) => f.kind !== 'block' && f.frontmatter.author.some((a) => a.trim().toLowerCase() === authorName))
-        .map((f) => f.sourceHash)
-        .join('\0');
-
-      const [summaryResults, fullResults] = await Promise.all([
-        generateFormats(summaryDoc, summaryBase, doc.sourceHash, authorItemHashes),
-        generateFormats(fullDoc, fullBase, doc.sourceHash, `${authorItemHashes}\0full`),
-      ]);
+      const [summaryResults, fullResults] = await Promise.all([generateFormats(summaryDoc, summaryBase), generateFormats(fullDoc, fullBase)]);
 
       const result: ExportResult = {
         filePath: doc.filePath,
@@ -666,17 +510,13 @@ export async function runExportDocuments(
     }
 
     const outputBase = exportOutputBase(exportDoc, outputDir);
-    // Hash de items pre-computado una sola vez: compartido por todos los formatos
-    // del documento. Evita la duplicación del cálculo que había en el loop secuencial.
-    const itemHashes = items.map((i) => i.sourceHash).join('\0');
 
     // Generar todos los formatos en paralelo: PDF y EPUB son completamente
     // independientes para el mismo documento y no comparten estado de escritura.
     // Promise.allSettled garantiza que ambos formatos terminan (éxito o error)
     // antes de propagar el primer error, de modo que no quedan promesas en vuelo
-    // cuando la función retorna o lanza. No evita que un formato escriba en caché
-    // aunque el otro falle después.
-    const formatResults = await generateFormats(exportDoc, outputBase, doc.sourceHash, itemHashes);
+    // cuando la función retorna o lanza.
+    const formatResults = await generateFormats(exportDoc, outputBase);
 
     // Recopilar resultados exitosos y acumular errores.
     // Re-lanzar el primer error si algún formato falló (mantiene el comportamiento
