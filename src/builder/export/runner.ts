@@ -7,7 +7,6 @@ import { THUMBNAIL_SIZES } from '../../config/site-config.js';
 import { mapWithConcurrency } from '../../output/concurrency.js';
 import type { PluginRegistry } from '../../plugin/registry.js';
 import { convertToEpub, convertToMarkdown, convertToPdf } from '../../services/pandoc-exporter.js';
-import { convertFragment } from '../../services/pandoc-runner.js';
 import { computeSlug, docHref } from '../slug.js';
 import type { BuildDocument, DocumentType } from '../types.js';
 import {
@@ -319,8 +318,8 @@ export async function runExportDocuments(
       const outputPath = `${outputBase}.epub`;
       tasks.push(
         (async () => {
-          const epubHtml =
-            exportDoc.htmlBody ?? (await convertFragment(exportDoc.body, exportDoc.filePath, undefined, undefined, undefined, 'html5', 'latex'));
+          const epubHtml = exportDoc.htmlBody;
+          if (!epubHtml) return {};
           await convertToEpub(epubHtml, outputPath, exportDoc);
           const epubData = await Bun.file(outputPath).arrayBuffer();
           if (registry) {

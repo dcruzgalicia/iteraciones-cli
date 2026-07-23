@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { basename, dirname, join } from 'node:path';
 import { hash } from '../../cache/hasher.js';
 
 import { mapWithConcurrency } from '../../output/concurrency.js';
@@ -56,6 +57,22 @@ export async function composeDocuments(
     const tStart = performance.now();
     if (!doc.templateContext) {
       throw new Error(`composeDocuments: templateContext no definido en "${doc.relativePath}"`);
+    }
+    if (doc.htmlFragment === undefined) {
+      // Intentar leer desde disco (fase de render previa o build anterior)
+      const htmlDir = join(
+        ctx.cwd,
+        '.iteraciones',
+        'cache',
+        'phase-2-formatos',
+        'html',
+        dirname(doc.relativePath),
+        doc.slug ?? basename(doc.relativePath, '.md'),
+      );
+      const htmlFile = Bun.file(join(htmlDir, 'index.html'));
+      if (await htmlFile.exists()) {
+        doc.htmlFragment = await htmlFile.text();
+      }
     }
     if (doc.htmlFragment === undefined) {
       throw new Error(`composeDocuments: htmlFragment no definido en "${doc.relativePath}"`);
