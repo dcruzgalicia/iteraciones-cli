@@ -670,37 +670,24 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     }
 
     // Detectar slugs duplicados dentro del mismo directorio.
-    // Los slugs originales (del frontmatter) tienen prioridad.
-    // Los duplicados incrementan el sufijo hasta encontrar un numero
-    // que no colisione con ningun slug original.
-    // Pre-registrar todos los slugs originales para saber que numeros
-    // estan ocupados antes de asignar sufijos.
-    const allOriginalSlugs = new Set<string>();
+    // Los slugs que aparecen mas de una vez reciben sufijo -d1, -d2, -d3...
+    // Esto incluye TODOS los duplicados, no solo los siguientes al primero.
+    const slugCount = new Map<string, number>();
     for (const doc of allDocs) {
       if (!doc.slug) continue;
-      allOriginalSlugs.add(dirname(doc.relativePath) + '/' + doc.slug);
+      const key = dirname(doc.relativePath) + '/' + doc.slug;
+      slugCount.set(key, (slugCount.get(key) ?? 0) + 1);
     }
-    // Asignar slugs finales: el primero en aparecer conserva el slug original;
-    // los siguientes incrementan hasta un numero libre (sin colisionar con originales).
-    const assignedSlugs = new Set<string>();
+    // Asignar sufijos a slugs duplicados
+    const slugIndex = new Map<string, number>();
     for (const doc of allDocs) {
       if (!doc.slug) continue;
-      const dir = dirname(doc.relativePath);
-      let slug = doc.slug;
-      let key = dir + '/' + slug;
-      if (assignedSlugs.has(key)) {
-        // Ya hay otro documento con este slug → buscar numero libre
-        let suffix = 2;
-        slug = doc.slug + '-' + suffix;
-        key = dir + '/' + slug;
-        while (assignedSlugs.has(key) || allOriginalSlugs.has(key)) {
-          suffix++;
-          slug = doc.slug + '-' + suffix;
-          key = dir + '/' + slug;
-        }
-      }
-      assignedSlugs.add(key);
-      doc.slug = slug;
+      const key = dirname(doc.relativePath) + '/' + doc.slug;
+      const count = slugCount.get(key) ?? 0;
+      if (count <= 1) continue; // sin duplicados, no se modifica
+      const idx = (slugIndex.get(key) ?? 0) + 1;
+      slugIndex.set(key, idx);
+      doc.slug = doc.slug + '-d' + idx;
     }
 
     let logoSvg: string | undefined;
