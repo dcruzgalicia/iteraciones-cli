@@ -392,9 +392,7 @@ async function runFinalization(
   registry: PluginRegistry,
   hasPlugins: boolean,
   log: (msg: string) => void,
-  cwd?: string,
-  allDocRelativePaths?: Set<string>,
-): Promise<number> {
+): Promise<{ composeMs: number; writtenDocs: BuildDocument[]; generatedFiles: GeneratedFile[] }> {
   const generateHtml = ctx.siteConfig.format?.html?.generate !== false;
 
   let composeMs = 0;
@@ -447,44 +445,7 @@ async function runFinalization(
     });
   }
 
-  // Actualizar manifiesto de salida. Se fusiona con el manifiesto anterior
-  // para preservar las entradas de archivos que no fueron reprocesados en este
-  // build. Luego se eliminan los archivos de documentos que ya no existen.
-  const currentManifest = new Map(writtenDocs.map((doc) => [doc.relativePath, doc.outputPath ?? '']));
-  for (const file of generatedFiles) {
-    currentManifest.set(file.relativePath, join(ctx.outputDir, file.relativePath));
-  }
-  if (cwd) {
-    const prevManifest = await loadOutputManifest(cwd);
-    // Fusionar: las entradas del build actual tienen prioridad, pero se
-    // preservan las del manifiesto anterior para archivos no reprocesados.
-    for (const [relPath, outputPath] of prevManifest) {
-      if (!currentManifest.has(relPath)) {
-        currentManifest.set(relPath, outputPath);
-      }
-    }
-    // Eliminar archivos de documentos markdown que ya no existen.
-    // Ademas del HTML (tracked en el manifiesto), se eliminan los
-    // archivos de exportacion (PDF, EPUB, MD, .tex) que comparten
-    // la misma base de slug.
-    if (allDocRelativePaths) {
-      for (const [relPath, outputPath] of currentManifest) {
-        if (!allDocRelativePaths.has(relPath) && outputPath) {
-          await rm(outputPath, { force: true }).catch(() => {});
-          currentManifest.delete(relPath);
-          // Eliminar archivos de exportacion con la misma base de slug.
-          // HTML: dist/{dir}/{slug}/index.html -> export: dist/{dir}/{slug}.{ext}
-          const exportBase = outputPath.replace(/\/index\.html$/, '');
-          for (const ext of ['.pdf', '.epub', '.md', '.tex']) {
-            await rm(exportBase + ext, { force: true }).catch(() => {});
-          }
-        }
-      }
-    }
-    await saveOutputManifest(cwd, currentManifest);
-  }
-
-  return composeMs;
+  return { composeMs, writtenDocs, generatedFiles };
 }
 
 // ---------------------------------------------------------------------------
@@ -630,9 +591,13 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     }
 
     // Conjunto de rutas relativas de todos los documentos del proyecto.
-    // Se usa en runFinalization para detectar documentos eliminados y
+    // Se usa al final del build para detectar documentos eliminados y
     // remover sus archivos del directorio de salida.
+    // Se captura antes del filtrado incremental porque allDocs puede
+    // ser modificado (puesto a []) si no hay cambios.
     const allDocRelativePaths = new Set(allDocs.map((d) => d.relativePath));
+    // Guardar copia de allDocs para el manifiesto al final del build
+    const fullAllDocs = [...allDocs];
 
     let logoSvg: string | undefined;
     let enrichedSiteCtx: TemplateContext;
@@ -812,6 +777,8 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     }
 
     // ── Fase html (final) ──
+    let htmlWrittenDocs: BuildDocument[] = [];
+    let htmlGeneratedFiles: GeneratedFile[] = [];
     if (formatCfg?.html?.generate === true) {
       progress.startPhase('html', finalContextDocs.length);
       const docsWithLinks = finalContextDocs;
@@ -823,7 +790,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         docsWithExportLinks = injectCoverIntoListItems(docsWithExportLinks);
       }
 
-      const composeMs = await runFinalization(docsWithExportLinks, ctx, registry, hasPlugins, log, cwd, allDocRelativePaths);
+      const result = await runFinalization(docsWithExportLinks, ctx, registry, hasPlugins, log);
+      htmlWrittenDocs = result.writtenDocs;
+      htmlGeneratedFiles = result.generatedFiles;
       progress.completePhase();
     }
 
@@ -879,6 +848,39 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     if (epubOn) generatedFormats.push('epub');
     if (mdOn) generatedFormats.push('markdown');
     progress.finish(processedCount, cachedCount, generatedFormats);
+
+    // Gestion del manifiesto de salida. Siempre se guarda, independientemente
+    // de que formatos esten activos. Cada entrada mapea relativePath del
+    // markdown fuente → ruta HTML esperada. Desde esta ruta se derivan
+    // las rutas de exportacion (PDF, EPUB, MD, .tex) al detectar eliminados.
+    if (!options.noCache) {
+      const currentManifest = new Map<string, string>(fullAllDocs.map((doc) => [doc.relativePath, join(ctx.outputDir, docHtmlPath(doc))]));
+
+      // Fusionar con el manifiesto anterior para preservar entradas
+      // de documentos no reprocesados en este build.
+      const prevManifest = await loadOutputManifest(cwd);
+      for (const [relPath, outputPath] of prevManifest) {
+        if (!currentManifest.has(relPath)) {
+          currentManifest.set(relPath, outputPath);
+        }
+      }
+
+      // Detectar documentos markdown eliminados: remover su HTML y archivos
+      // de exportacion derivados (PDF, EPUB, MD, .tex).
+      for (const [relPath, outputPath] of currentManifest) {
+        if (!allDocRelativePaths.has(relPath) && outputPath) {
+          await rm(outputPath, { force: true }).catch(() => {});
+          currentManifest.delete(relPath);
+          // HTML: dist/{dir}/{slug}/index.html -> export: dist/{dir}/{slug}.{ext}
+          const exportBase = outputPath.replace(/\/index\.html$/, '');
+          for (const ext of ['.pdf', '.epub', '.md', '.tex']) {
+            await rm(exportBase + ext, { force: true }).catch(() => {});
+          }
+        }
+      }
+
+      await saveOutputManifest(cwd, currentManifest);
+    }
 
     // Limpiar carpetas de cache de formatos que ya no estan activos.
     // --no-cache ya limpio toda la cache al inicio, por lo que este paso
