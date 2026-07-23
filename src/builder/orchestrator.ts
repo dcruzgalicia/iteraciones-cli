@@ -217,7 +217,12 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
       recursive: true,
       force: true,
     });
-    await clearBiberCache();
+    // Solo limpiar cache de biber si se va a generar PDF
+    const pdfGen = siteConfig.format?.pdf?.generate === true;
+    const thumbnailsNeedPdf = siteConfig.format?.html?.thumbnails && siteConfig.format?.pdf !== undefined;
+    if (pdfGen || thumbnailsNeedPdf) {
+      await clearBiberCache();
+    }
   }
 
   const pkg = (await Bun.file(join(import.meta.dir, '../../package.json')).json()) as { version: string };
