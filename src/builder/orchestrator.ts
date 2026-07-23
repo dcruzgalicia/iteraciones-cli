@@ -392,7 +392,7 @@ async function runFinalization(
   registry: PluginRegistry,
   hasPlugins: boolean,
   log: (msg: string) => void,
-): Promise<{ composeMs: number; writtenDocs: BuildDocument[]; generatedFiles: GeneratedFile[] }> {
+): Promise<void> {
   const generateHtml = ctx.siteConfig.format?.html?.generate !== false;
 
   let composeMs = 0;
@@ -444,8 +444,6 @@ async function runFinalization(
       outputPaths: [...initialContext.outputPaths, ...generatedPaths],
     });
   }
-
-  return { composeMs, writtenDocs, generatedFiles };
 }
 
 // ---------------------------------------------------------------------------
@@ -777,8 +775,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     }
 
     // ── Fase html (final) ──
-    let htmlWrittenDocs: BuildDocument[] = [];
-    let htmlGeneratedFiles: GeneratedFile[] = [];
     if (formatCfg?.html?.generate === true) {
       progress.startPhase('html', finalContextDocs.length);
       const docsWithLinks = finalContextDocs;
@@ -790,9 +786,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         docsWithExportLinks = injectCoverIntoListItems(docsWithExportLinks);
       }
 
-      const result = await runFinalization(docsWithExportLinks, ctx, registry, hasPlugins, log);
-      htmlWrittenDocs = result.writtenDocs;
-      htmlGeneratedFiles = result.generatedFiles;
+      await runFinalization(docsWithExportLinks, ctx, registry, hasPlugins, log);
       progress.completePhase();
     }
 
