@@ -671,23 +671,29 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
     // Detectar slugs duplicados dentro del mismo directorio.
     // Los slugs que aparecen mas de una vez reciben sufijo -d1, -d2, -d3...
-    // Esto incluye TODOS los duplicados, no solo los siguientes al primero.
     const slugCount = new Map<string, number>();
+    const allSlugs = new Set<string>();
     for (const doc of allDocs) {
       if (!doc.slug) continue;
       const key = dirname(doc.relativePath) + '/' + doc.slug;
       slugCount.set(key, (slugCount.get(key) ?? 0) + 1);
+      allSlugs.add(key);
     }
-    // Asignar sufijos a slugs duplicados
-    const slugIndex = new Map<string, number>();
+    // Asignar sufijos a slugs duplicados, saltando numeros que colisionen
+    // con slugs originales (ej: un titulo "mi-articulo-d1" ya existe como slug).
     for (const doc of allDocs) {
       if (!doc.slug) continue;
-      const key = dirname(doc.relativePath) + '/' + doc.slug;
+      const dir = dirname(doc.relativePath);
+      const key = dir + '/' + doc.slug;
       const count = slugCount.get(key) ?? 0;
-      if (count <= 1) continue; // sin duplicados, no se modifica
-      const idx = (slugIndex.get(key) ?? 0) + 1;
-      slugIndex.set(key, idx);
-      doc.slug = doc.slug + '-d' + idx;
+      if (count <= 1) continue;
+      // Encontrar el menor sufijo -dN que no colisione con ningun slug original
+      let n = 1;
+      while (allSlugs.has(dir + '/' + doc.slug + '-d' + n)) {
+        n++;
+      }
+      doc.slug = doc.slug + '-d' + n;
+      allSlugs.add(dir + '/' + doc.slug); // registrar el nuevo slug para evitar colisiones entre duplicados
     }
 
     let logoSvg: string | undefined;
