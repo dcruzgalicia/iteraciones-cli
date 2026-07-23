@@ -873,6 +873,18 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         }
       }
 
+      // Limpiar archivos de formatos desactivados para documentos activos.
+      // Cuando un formato se desactiva (ej. latex → false), los archivos
+      // generados en builds anteriores quedan huerfanos en dist.
+      for (const [, outputPath] of currentManifest) {
+        if (!outputPath) continue;
+        const exportBase = outputPath.replace(/\/index\.html$/, '');
+        if (!latexOn) await rm(exportBase + '.tex', { force: true }).catch(() => {});
+        if (!pdfOn) await rm(exportBase + '.pdf', { force: true }).catch(() => {});
+        if (!epubOn) await rm(exportBase + '.epub', { force: true }).catch(() => {});
+        if (!mdOn) await rm(exportBase + '.md', { force: true }).catch(() => {});
+      }
+
       await saveOutputManifest(cwd, currentManifest);
     }
 
