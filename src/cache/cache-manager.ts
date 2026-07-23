@@ -5,6 +5,16 @@ import { dirname, join } from 'node:path';
 export type CacheScope = 'render' | 'compose' | 'css' | 'export';
 
 /**
+ * Mapa de cada scope a su subdirectorio dentro de `.iteraciones/cache/`.
+ */
+const SCOPE_PATHS: Record<CacheScope, string> = {
+  render: 'phase-2-formatos/html/render',
+  compose: 'phase-2-formatos/html/compose',
+  css: 'css',
+  export: 'phase-2-formatos/export',
+};
+
+/**
  * Gestiona la caché incremental en disco bajo `{cwd}/.iteraciones/cache/`.
  *
  * Estructura de directorios:
@@ -61,7 +71,7 @@ export class CacheManager {
    * Los subdirectorios vacíos resultantes no se eliminan (coste insignificante).
    */
   async prune(scope: CacheScope, activeKeys: Set<string>): Promise<void> {
-    const scopeDir = join(this.#baseDir, scope);
+    const scopeDir = join(this.#baseDir, SCOPE_PATHS[scope]);
     let buckets: Dirent[];
     try {
       buckets = await readdir(scopeDir, { withFileTypes: true });
@@ -97,7 +107,7 @@ export class CacheManager {
   }
 
   #entryDir(scope: CacheScope, key: string): string {
-    return join(this.#baseDir, scope, key.slice(0, 2));
+    return join(this.#baseDir, SCOPE_PATHS[scope], key.slice(0, 2));
   }
 
   #entryPath(scope: CacheScope, key: string): string {

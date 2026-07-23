@@ -1028,7 +1028,7 @@ export async function exportSingleDocument(
  * Ruta al archivo donde se almacena el directorio de cache de biber
  * para no tener que ejecutar `biber --cache` en cada build.
  */
-const BIBER_CACHE_PATH_FILE = '.iteraciones/biber-cache-path';
+const BIBER_CACHE_PATH_FILE = 'cache/phase-2-formatos/pdf/biber-cache-path';
 
 /**
  * Obtiene el directorio de cache de biber.
