@@ -1,7 +1,6 @@
 import { readFile } from 'node:fs/promises';
-import type { CacheManager } from '../../cache/cache-manager.js';
 import { hash } from '../../cache/hasher.js';
-import type { CollectionItem } from '../../loader/frontmatter.js';
+
 import { mapWithConcurrency } from '../../output/concurrency.js';
 import type { RenderFileReport } from '../../output/progress.js';
 import type { PluginRegistry } from '../../plugin/registry.js';
@@ -15,28 +14,10 @@ import { resolveEffectivePaths } from '../theme-resolver.js';
 import { buildTocHtml } from '../toc.js';
 import { type BuildContext, type BuildDocument, VALID_REGIONS } from '../types.js';
 
-export interface ComposeCache {
-  manager: CacheManager;
-  cliVersion: string;
-  /** Hash de los paths de plugins activos. Invalida la caché si cambia el conjunto de plugins. */
-  pluginFingerprint?: string;
-  /** Cuando true, omite la poda de entradas obsoletas al terminar.
-   * Usar en builds incrementales donde solo se procesa un subset de documentos:
-   * podar con un subset eliminaría entradas válidas de los docs no procesados. */
-  skipPrune?: boolean;
-}
-
 /** Contadores acumulativos de la fase de compose; se mutan en lugar de retornar un nuevo objeto. */
 export interface ComposeStats {
   total: number;
   cacheHits: number;
-}
-
-function flattenCollectionItem(item: CollectionItem): string[] {
-  if (typeof item === 'string') return [item];
-  if ('file' in item && typeof item.file === 'string') return [item.file];
-  if ('items' in item) return item.items.flatMap(flattenCollectionItem);
-  return [];
 }
 
 async function readAndParseTemplate(path: string): Promise<{ ast: AstNode[]; contentHash: string }> {
@@ -47,12 +28,8 @@ async function readAndParseTemplate(path: string): Promise<{ ast: AstNode[]; con
 export async function composeDocuments(
   docs: BuildDocument[],
   ctx: BuildContext,
-  cache?: ComposeCache,
   registry?: PluginRegistry,
   stats?: ComposeStats,
-  /** Mapa de relativePath → sourceHash para todos los documentos activos.
-   * Permite detectar cambios en items de colecciones sin serializar su contenido. */
-  itemHashMap?: ReadonlyMap<string, string>,
   /** Callback invocado por cada archivo compuesto (para reporte de progreso). */
   onFileProcessed?: (report: RenderFileReport) => void,
 ): Promise<BuildDocument[]> {
@@ -70,20 +47,10 @@ export async function composeDocuments(
   // Pre-parsear layout y pandoc template una sola vez.
   const layoutAst = parse(tokenize(layoutTemplate));
   const pandocAst = parse(tokenize(pandocTemplate));
-  // Hashes del contenido de los templates compartidos para detectar cambios sin bump de versión.
-  const layoutHash = hash(layoutTemplate);
-  const pandocHash = hash(pandocTemplate);
 
   // Pre-parsear los templates por tipo (únicos) para no releer el mismo archivo por cada doc.
   const uniqueTemplatePaths = [...new Set(docs.map((d) => d.templatePath).filter((p): p is string => !!p))];
   const templateDataMap = new Map(await Promise.all(uniqueTemplatePaths.map(async (p) => [p, await readAndParseTemplate(p)] as const)));
-
-  // Hash del contexto de sitio: cubre siteConfig + cssPath + menuHref/menuTitle.
-  // ctx.cssPath puede diferir del siteConfig si --no-tailwind está activo.
-  // Se calcula una sola vez fuera del loop.
-  const siteCtxHash = cache ? hash(JSON.stringify(ctx.siteConfig), ctx.cssPath) : '';
-
-  const activeComposeKeys = cache ? new Set<string>() : null;
 
   const result = await mapWithConcurrency(docs, ctx.concurrency ?? 4, async (doc) => {
     const tStart = performance.now();
@@ -94,39 +61,7 @@ export async function composeDocuments(
       throw new Error(`composeDocuments: htmlFragment no definido en "${doc.relativePath}"`);
     }
 
-    const typeTemplateHash = doc.templatePath ? (templateDataMap.get(doc.templatePath)?.contentHash ?? '') : '';
-    const itemPaths = doc.frontmatter.items.flatMap(flattenCollectionItem);
-    const key = cache
-      ? hash(
-          doc.htmlFragment,
-          doc.sourceHash,
-          doc.relativePath,
-          ...itemPaths.map((itemPath) => itemHashMap?.get(itemPath) ?? itemPath),
-          siteCtxHash,
-          cache.cliVersion,
-          layoutHash,
-          pandocHash,
-          typeTemplateHash,
-          cache.pluginFingerprint ?? '',
-        )
-      : '';
-
-    if (cache) {
-      activeComposeKeys?.add(key);
-      const cached = await cache.manager.read('compose', key);
-      if (cached !== undefined) {
-        if (stats) {
-          stats.total++;
-          stats.cacheHits++;
-        }
-        onFileProcessed?.({ relativePath: doc.relativePath, durationMs: performance.now() - tStart, cacheHit: true, phase: 'compose' });
-        return { ...doc, outputHtml: cached };
-      }
-    }
-
     // beforeCompose: permite al plugin modificar el templateContext antes de renderizar.
-    // La clave de caché se calcula sobre el contexto original; las modificaciones del
-    // plugin se persisten en el resultado cacheado (válido para plugins deterministas).
     let effectiveTemplateContext: TemplateContext = doc.templateContext;
     if (registry) {
       const beforeCtx = await registry.runBeforeCompose({
@@ -164,23 +99,10 @@ export async function composeDocuments(
       outputHtml = afterCtx.html;
     }
 
-    if (cache) {
-      await cache.manager.write('compose', key, outputHtml);
-    }
-
     if (stats) stats.total++;
     onFileProcessed?.({ relativePath: doc.relativePath, durationMs: performance.now() - tStart, cacheHit: false, phase: 'compose' });
     return { ...doc, outputHtml };
   });
-
-  // Podar entradas obsoletas del scope 'compose' al final, una vez que todas las claves
-  // activas han sido registradas. Se hace aquí y no en el orchestrator porque la fórmula
-  // de la clave depende de los hashes de templates que solo se conocen dentro de esta función.
-  // En builds incrementales (subset de docs) se omite la poda para no eliminar entradas
-  // válidas de documentos que no se procesaron en este batch.
-  if (cache && activeComposeKeys && !cache.skipPrune) {
-    await cache.manager.prune('compose', activeComposeKeys);
-  }
 
   return result;
 }
