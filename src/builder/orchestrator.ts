@@ -805,16 +805,22 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
     // ── Fase latex: escribir .tex ──
     // Configurar contador de formatos activos antes de iniciar
-    const activeFormats: PipelinePhase[] = ['latex'];
+    // latex solo se muestra como formato si el usuario lo pidio explicitamente
+    const activeFormats: PipelinePhase[] = [];
+    if (formatCfg?.latex?.generate === true && !noExport) activeFormats.push('latex');
     if (pdfOn && !noExport) activeFormats.push('pdf');
     if (formatCfg?.html?.generate === true) activeFormats.push('html');
     if (formatCfg?.epub?.generate && !noExport) activeFormats.push('epub');
     if (formatCfg?.markdown?.generate && !noExport) activeFormats.push('markdown');
     progress.setFormatPhases(activeFormats);
 
-    progress.startPhase('latex', allDocs.length);
+    if (activeFormats.includes('latex')) {
+      progress.startPhase('latex', allDocs.length);
+    }
     await writeTexFiles(finalContextDocs, ctx, log);
-    progress.completePhase();
+    if (activeFormats.includes('latex')) {
+      progress.completePhase();
+    }
 
     // ── Fase pdf ──
     const exportBase = {
