@@ -26,7 +26,6 @@ export async function checkPandoc(): Promise<string> {
  * @param content    Contenido a convertir.
  * @param sourcePath Ruta del archivo fuente (solo para mensajes de error).
  * @param bibOptions Opciones de bibliografía para procesar citas con citeproc.
- * @param luaFilters Rutas absolutas a filtros Lua que se aplican durante la conversión.
  * @param toFormat   Formato de salida (por defecto 'html5').
  * @param fromFormat Formato de entrada (por defecto 'markdown').
  * @param extraArgs  Argumentos adicionales para pandoc (ej: ['--top-level-division', 'section']).
@@ -35,7 +34,6 @@ export async function convertFragment(
   content: string,
   sourcePath: string,
   bibOptions?: BibOptions,
-  luaFilters?: readonly string[],
   toFormat: string = 'html5',
   fromFormat: string = 'markdown',
   extraArgs?: readonly string[],
@@ -45,12 +43,6 @@ export async function convertFragment(
   if (bibOptions) {
     args.push('--citeproc', '--bibliography', bibOptions.bibliography);
     if (bibOptions.csl) args.push('--csl', bibOptions.csl);
-  }
-
-  if (luaFilters && luaFilters.length > 0) {
-    for (const filter of luaFilters) {
-      args.push('--lua-filter', filter);
-    }
   }
 
   if (extraArgs && extraArgs.length > 0) {

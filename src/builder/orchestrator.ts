@@ -86,8 +86,6 @@ interface SetupResult {
   pandocVersion: string;
   /** Hash del contenido de los plugins activos para invalidar cachés cuando cambian. */
   pluginFingerprint: string | undefined;
-  /** Rutas absolutas a filtros Pandoc Lua declarados en la configuración. */
-  luaFilters: string[];
 }
 
 interface PrimaryRenderResult {
@@ -187,7 +185,7 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
   const pandocVersion = await checkPandoc();
   const siteConfig = await loadSiteConfig(cwd);
 
-  const { plugins, luaFilters } = await loadPlugins(siteConfig.plugins, cwd);
+  const { plugins } = await loadPlugins(siteConfig.plugins, cwd);
   const registry = new PluginRegistry();
   for (const plugin of plugins) registry.register(plugin);
   // Plugin built-in: transforma fenced divs .dictum a LaTeX en exportación PDF
@@ -236,7 +234,6 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
     cliVersion: pkg.version,
     pandocVersion,
     pluginFingerprint,
-    luaFilters,
   };
 }
 
@@ -570,7 +567,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const progress = new ProgressTracker({ verbose: options.verbose ?? false });
   const log = (msg: string) => progress.log(msg);
 
-  const { ctx, registry, hasPlugins, cliVersion, pandocVersion, pluginFingerprint, luaFilters } = await setupBuildEnvironment(cwd, options, log);
+  const { ctx, registry, hasPlugins, cliVersion, pandocVersion, pluginFingerprint } = await setupBuildEnvironment(cwd, options, log);
   try {
     // Hook beforeBuild: ejecutado antes de descubrir o procesar ningún documento.
     if (hasPlugins) {
@@ -695,7 +692,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     // Fase de LaTeX final: procesa el body original con filtros Lua
     // y produce el .tex final (processedBody) que se usará para HTML
     // y exportación.
-    const docsWithMd = await renderLatex(allDocs, ctx.concurrency ?? 4, luaFilters, cwd, ctx.siteConfig.disabledTranspilers);
+    const docsWithMd = await renderLatex(allDocs, ctx.concurrency ?? 4, cwd, ctx.siteConfig.disabledTranspilers);
     // Reemplazar allDocs con los docs procesados (tienen processedBody)
     const mdMap = new Map<string, BuildDocument>(docsWithMd.map((d) => [d.relativePath, d]));
     for (const doc of allDocs) {
