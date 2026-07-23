@@ -463,12 +463,21 @@ async function runFinalization(
         currentManifest.set(relPath, outputPath);
       }
     }
-    // Eliminar archivos de documentos markdown que ya no existen
+    // Eliminar archivos de documentos markdown que ya no existen.
+    // Ademas del HTML (tracked en el manifiesto), se eliminan los
+    // archivos de exportacion (PDF, EPUB, MD, .tex) que comparten
+    // la misma base de slug.
     if (allDocRelativePaths) {
       for (const [relPath, outputPath] of currentManifest) {
         if (!allDocRelativePaths.has(relPath) && outputPath) {
           await rm(outputPath, { force: true }).catch(() => {});
           currentManifest.delete(relPath);
+          // Eliminar archivos de exportacion con la misma base de slug.
+          // HTML: dist/{dir}/{slug}/index.html -> export: dist/{dir}/{slug}.{ext}
+          const exportBase = outputPath.replace(/\/index\.html$/, '');
+          for (const ext of ['.pdf', '.epub', '.md', '.tex']) {
+            await rm(exportBase + ext, { force: true }).catch(() => {});
+          }
         }
       }
     }
