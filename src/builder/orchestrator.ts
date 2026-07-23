@@ -220,6 +220,7 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
   // --no-cache: eliminar toda la caché para partir desde cero
   if (options.noCache) {
     await rm(join(cwd, '.iteraciones', 'cache'), { recursive: true, force: true });
+    await clearBiberCache();
   }
 
   const cacheManager = new CacheManager(cwd);
@@ -1048,5 +1049,30 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     progress.finish(docCount, formatCount);
   } finally {
     pandocPool?.dispose();
+  }
+}
+
+/**
+ * Obtiene el directorio de cache global de biber ejecutando `biber --cache`.
+ * Retorna null si biber no esta instalado o falla.
+ */
+async function getBiberCacheDir(): Promise<string | null> {
+  try {
+    const proc = Bun.spawn(['biber', '--cache'], { stdout: 'pipe' });
+    const dir = (await new Response(proc.stdout).text()).trim();
+    return dir || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Limpia la cache global de biber. Se ejecuta junto con --no-cache
+ * para evitar errores por stale data en compilaciones PDF con biblatex.
+ */
+async function clearBiberCache(): Promise<void> {
+  const cacheDir = await getBiberCacheDir();
+  if (cacheDir) {
+    await rm(cacheDir, { recursive: true, force: true });
   }
 }
