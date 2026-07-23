@@ -865,8 +865,8 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         if (!allDocRelativePaths.has(relPath) && outputPath) {
           await rm(outputPath, { force: true }).catch(() => {});
           currentManifest.delete(relPath);
-          // HTML: dist/{dir}/{slug}/index.html -> export: dist/{dir}/{slug}.{ext}
-          const exportBase = outputPath.replace(/\/index\.html$/, '');
+          // HTML: dist/{dir}/{slug}.html -> export: dist/{dir}/{slug}.{ext}
+          const exportBase = outputPath.replace(/\.html$/, '');
           for (const ext of ['.pdf', '.epub', '.md', '.tex']) {
             await rm(exportBase + ext, { force: true }).catch(() => {});
           }
@@ -878,7 +878,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       // generados en builds anteriores quedan huerfanos en dist.
       for (const [, outputPath] of currentManifest) {
         if (!outputPath) continue;
-        const exportBase = outputPath.replace(/\/index\.html$/, '');
+        const exportBase = outputPath.replace(/\.html$/, '');
         if (!latexOn) await rm(exportBase + '.tex', { force: true }).catch(() => {});
         if (!pdfOn) await rm(exportBase + '.pdf', { force: true }).catch(() => {});
         if (!epubOn) await rm(exportBase + '.epub', { force: true }).catch(() => {});
