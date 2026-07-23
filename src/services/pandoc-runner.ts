@@ -1,5 +1,4 @@
 import { PandocError } from '../errors.js';
-import type { PandocPool } from './pandoc-pool.js';
 import { type RunResult, run } from './run.js';
 
 export interface BibOptions {
@@ -23,14 +22,9 @@ export async function checkPandoc(): Promise<string> {
 
 /**
  * Convierte contenido de un formato a otro usando pandoc.
- * Si se pasa un `pool`, delega en `pandoc-server` para evitar fork overhead.
- * NOTA: pandoc-server solo soporta conversión markdown → html5. Cuando se usa
- * `bibOptions`, `luaFilters`, `toFormat` distinto de 'html5' o `fromFormat`
- * distinto de 'markdown', se ignora el pool y se usa un subproceso directo.
  *
  * @param content    Contenido a convertir.
  * @param sourcePath Ruta del archivo fuente (solo para mensajes de error).
- * @param pool       Pool de pandoc-server opcional.
  * @param bibOptions Opciones de bibliografía para procesar citas con citeproc.
  * @param luaFilters Rutas absolutas a filtros Lua que se aplican durante la conversión.
  * @param toFormat   Formato de salida (por defecto 'html5').
@@ -40,7 +34,6 @@ export async function checkPandoc(): Promise<string> {
 export async function convertFragment(
   content: string,
   sourcePath: string,
-  pool?: PandocPool,
   bibOptions?: BibOptions,
   luaFilters?: readonly string[],
   toFormat: string = 'html5',
@@ -62,12 +55,6 @@ export async function convertFragment(
 
   if (extraArgs && extraArgs.length > 0) {
     args.push(...extraArgs);
-  }
-
-  // Usar pool solo cuando no hay bibOptions ni luaFilters activos
-  // y los formatos son los que soporta pandoc-server (markdown→html5).
-  if (!bibOptions && (!luaFilters || luaFilters.length === 0) && pool && toFormat === 'html5' && fromFormat === 'markdown') {
-    return pool.convert(content, sourcePath);
   }
 
   let proc: ReturnType<typeof Bun.spawn>;

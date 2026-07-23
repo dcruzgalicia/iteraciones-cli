@@ -3,7 +3,6 @@ import { join, resolve } from 'node:path';
 import { mapWithConcurrency } from '../../output/concurrency.js';
 import type { RenderFileReport } from '../../output/progress.js';
 import type { PluginRegistry } from '../../plugin/registry.js';
-import type { PandocPool } from '../../services/pandoc-pool.js';
 import { type BibOptions, convertFragment } from '../../services/pandoc-runner.js';
 import type { BuildDocument } from '../types.js';
 
@@ -140,7 +139,6 @@ export interface RenderStats {
 export async function renderLatex(
   docs: BuildDocument[],
   concurrency: number,
-  pool?: PandocPool,
   luaFilters?: readonly string[],
   cwd?: string,
   activeTranspilers?: string[],
@@ -159,7 +157,7 @@ export async function renderLatex(
     }
 
     // Paso 2: convertir markdown a JSON AST (sin auto_identifiers para evitar labels en .tex)
-    const json = await convertFragment(body, doc.filePath, pool, undefined, undefined, 'json', 'markdown-auto_identifiers');
+    const json = await convertFragment(body, doc.filePath, undefined, undefined, 'json', 'markdown-auto_identifiers');
     let ast: Record<string, unknown>;
     try {
       ast = JSON.parse(json) as Record<string, unknown>;
@@ -197,7 +195,7 @@ export async function renderLatex(
       }
     }
 
-    let processedBody = await convertFragment(JSON.stringify(ast), doc.filePath, pool, undefined, luaFilters, 'latex', 'json', pandocArgs);
+    let processedBody = await convertFragment(JSON.stringify(ast), doc.filePath, undefined, luaFilters, 'latex', 'json', pandocArgs);
 
     // Si hay citekeys en el body original y existen archivos .bib, agregar printbibliography
     const hasCitekeys = bibFiles.length > 0 && /@\w+[\w:;#.,(){}'"\s]/.test(doc.body);
@@ -213,7 +211,6 @@ export async function renderDocuments(
   docs: BuildDocument[],
   concurrency: number,
   registry?: PluginRegistry,
-  pool?: PandocPool,
   cwd?: string,
   /** Ruta absoluta al .bib global del sitio (fallback si el frontmatter no define editorial.bibliography). */
   globalBibliography?: string,
@@ -263,7 +260,7 @@ export async function renderDocuments(
 
     const source = doc.processedBody ?? doc.body;
     const fromFormat = doc.processedBody ? 'latex-auto_identifiers' : 'markdown';
-    let htmlFragment = await convertFragment(source, doc.filePath, pool, bibOptions, undefined, 'html5', fromFormat);
+    let htmlFragment = await convertFragment(source, doc.filePath, bibOptions, undefined, 'html5', fromFormat);
 
     if (registry) {
       const afterCtx = await registry.runAfterRender({ sourcePath: doc.filePath, html: htmlFragment });
