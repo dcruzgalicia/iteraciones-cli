@@ -510,25 +510,26 @@ async function writeTexFiles(allContextDocs: BuildDocument[], ctx: BuildContext,
       ctx.siteConfig.disabledPreambleTranspilers,
     );
 
-    const texIntermediateDir = join(ctx.cwd, '.iteraciones', 'tex', dirname(doc.relativePath));
-    await mkdir(texIntermediateDir, { recursive: true });
+    const pdfDir = join(ctx.cwd, '.iteraciones', 'cache', 'phase-2-formatos', 'pdf', dirname(doc.relativePath), texSlug);
+    await mkdir(pdfDir, { recursive: true });
 
-    // Body solo (sin preambulo) — para revision
-    const intermediatePath = join(texIntermediateDir, `${texSlug}.intermediate.tex`);
-    await Bun.write(intermediatePath, doc.processedBody);
+    // Body post-transpilers — para fase 1 (Markdown → LaTeX)
+    const phase1LatexDir = join(ctx.cwd, '.iteraciones', 'cache', 'phase-1-latex', dirname(doc.relativePath));
+    await mkdir(phase1LatexDir, { recursive: true });
+    await Bun.write(join(phase1LatexDir, `${texSlug}.tex`), doc.processedBody);
 
-    // .tex completo con preambulo — usado para compilar PDF
+    // .tex completo — para PDF (única copia, junto a sus auxiliares)
     const bodyClean = doc.processedBody.replace(/\n+$/, '');
     const fullTex = [...preamble, '', bodyClean, '', '\\end{document}'].join('\n');
-    const fullTexPath = join(texIntermediateDir, `${texSlug}.full.tex`);
+    const fullTexPath = join(pdfDir, `${texSlug}.tex`);
     await Bun.write(fullTexPath, fullTex);
 
-    // .tex final en dist/ — para el usuario
+    // .tex final en dist/ — solo si latex.generate: true
     await Bun.write(texPath, fullTex);
     texWritten++;
   }
   if (texWritten > 0) {
-    log(`Escritos ${texWritten} archivos .tex en ${ctx.outputDir} (.intermediate.tex y .full.tex en .iteraciones/tex/)`);
+    log(`Escritos ${texWritten} archivos .tex (body en phase-1-latex/, completo en phase-2-formatos/pdf/)`);
   }
 }
 
@@ -1016,7 +1017,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       progress.completePhase();
     }
 
-    // Limpiar .tex final e intermedio si latex.generate=false pero se forzo para PDF
+    // Limpiar .tex final si latex.generate=false pero se forzo para PDF
     if (cleanupTex) {
       let cleaned = 0;
       for (const doc of allContextDocs) {
@@ -1027,11 +1028,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         const rmOk = await rm(texPath)
           .then(() => true)
           .catch(() => false);
-        const intermediatePath = join(ctx.cwd, '.iteraciones', 'tex', dirname(doc.relativePath), `${texSlug}.intermediate.tex`);
-        await rm(intermediatePath).catch(() => {});
         if (rmOk) cleaned++;
       }
-      if (cleaned > 0) log(`Eliminados ${cleaned} archivos .tex (latex.generate=false + force)`);
+      if (cleaned > 0) log(`Eliminados ${cleaned} archivos .tex de dist/ (latex.generate=false + force)`);
     }
 
     const htmlOn = formatCfg?.html?.generate === true;

@@ -338,47 +338,38 @@ export async function convertToMarkdown(doc: ExportDocument, outputPath: string)
 }
 
 /**
- * Convierte un ExportDocument a PDF compilando el .full.tex de
- * .iteraciones/tex/ con pdflatex. La unica copia del .tex completo
- * es .iteraciones/tex/<slug>.full.tex (junto a .intermediate.tex).
+ * Convierte un ExportDocument a PDF compilando el .tex de
+ * phase-2-formatos/pdf/<slug>/ con pdflatex. El .tex y sus
+ * auxiliares (.aux, .bbl, .bcf) comparten el mismo directorio.
  */
 export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?: string, pdfFormat?: PdfFormatConfig): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
   if (!cwd) {
-    throw new PandocError('convertToPdf: cwd es requerido para localizar .full.tex', doc.filePath, '');
+    throw new PandocError('convertToPdf: cwd es requerido para localizar el .tex', doc.filePath, '');
   }
 
   const slug = doc.slug ?? basename(doc.relativePath, '.md');
   const texRelDir = dirname(doc.relativePath);
-  const fullTexPath = join(cwd, '.iteraciones', 'tex', texRelDir, `${slug}.full.tex`);
+  const pdfDir = join(cwd, '.iteraciones', 'cache', 'phase-2-formatos', 'pdf', texRelDir, slug);
+  const fullTexPath = join(pdfDir, `${slug}.tex`);
 
-  // Verificar que el .full.tex existe antes de compilar
+  // Verificar que el .tex existe antes de compilar
   if (!(await Bun.file(fullTexPath).exists())) {
     throw new PandocError(`convertToPdf: no se encontro ${fullTexPath}`, doc.filePath, '');
   }
 
-  const buildRoot = join(cwd, '.iteraciones', 'pdf-build');
-  await mkdir(buildRoot, { recursive: true });
-
-  // Limpiar compilaciones anteriores para evitar errores por stale data
-  await Bun.spawn(['latexmk', '-C', `-outdir=${buildRoot}`, fullTexPath], { stdout: 'pipe', stderr: 'pipe' }).exited;
-
   // latexmk -pdf determina automaticamente cuantas pasadas de pdflatex
   // y si necesita biber/bibtex, segun los cambios en .aux, .bcf, etc.
-  const proc = Bun.spawn(['latexmk', '-pdf', '-interaction=nonstopmode', `-outdir=${buildRoot}`, `-jobname=${slug}`, fullTexPath], {
+  // Usa pdfDir como outdir para que los auxiliares queden junto al .tex.
+  const proc = Bun.spawn(['latexmk', '-pdf', '-interaction=nonstopmode', `-outdir=${pdfDir}`, `-jobname=${slug}`, fullTexPath], {
     stdout: 'pipe',
     stderr: 'pipe',
   });
   const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
 
-  // latexmk -c para limpiar auxiliares (conserva .pdf y .tex original)
-  if (exitCode === 0) {
-    await Bun.spawn(['latexmk', '-c', `-outdir=${buildRoot}`, fullTexPath], { stdout: 'pipe', stderr: 'pipe' }).exited;
-  }
-
   // Copiar PDF generado a destino
-  const pdfPath = join(buildRoot, `${slug}.pdf`);
+  const pdfPath = join(pdfDir, `${slug}.pdf`);
   const pdfOk = await Bun.file(pdfPath)
     .exists()
     .catch(() => false);
@@ -389,7 +380,7 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
   if (exitCode !== 0) {
     const log = stdout + '\n' + stderr;
     const m = log.match(/^! .*$/m);
-    throw new PandocError(`latexmk falló al generar PDF para ${doc.filePath}: ${m ? m[0] : 'exit ' + exitCode}`, doc.filePath, stderr);
+    throw new PandocError(`latexmk fall\u00f3 al generar PDF para ${doc.filePath}: ${m ? m[0] : 'exit ' + exitCode}`, doc.filePath, stderr);
   }
 }
 
