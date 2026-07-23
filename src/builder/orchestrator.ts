@@ -471,18 +471,21 @@ async function runFinalization(
     });
   }
 
-  // Actualizar manifiesto de salida y eliminar archivos huérfanos en modo incremental.
-  // Se incluyen los archivos generados por plugins para que el purge incremental
-  // los elimine si un plugin deja de generarlos en builds posteriores.
+  // Actualizar manifiesto de salida. En modo incremental se fusiona con el
+  // manifiesto anterior para preservar las entradas de archivos que no fueron
+  // reprocesados en este build. Esto evita que el purge elimine archivos de
+  // documentos no modificados.
   const currentManifest = new Map(writtenDocs.map((doc) => [doc.relativePath, doc.outputPath ?? '']));
   for (const file of generatedFiles) {
     currentManifest.set(file.relativePath, join(ctx.outputDir, file.relativePath));
   }
   if (incremental && cwd) {
     const prevManifest = await loadOutputManifest(cwd);
+    // Fusionar: las entradas del build actual tienen prioridad, pero se
+    // preservan las del manifiesto anterior para archivos no reprocesados.
     for (const [relPath, outputPath] of prevManifest) {
-      if (!currentManifest.has(relPath) && outputPath) {
-        await rm(outputPath, { force: true });
+      if (!currentManifest.has(relPath)) {
+        currentManifest.set(relPath, outputPath);
       }
     }
   }
