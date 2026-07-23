@@ -11,7 +11,6 @@ import { runInit as init } from './init.js';
 import { runNew as newDoc } from './new.js';
 import { runTranspilers as transpilers } from './transpilers.js';
 import { runValidate as validate } from './validate.js';
-import { runWatch as watch } from './watch.js';
 
 export async function runBuild(cwd: string, options: BuildOptions = {}): Promise<void> {
   try {
@@ -104,26 +103,6 @@ export async function runValidate(cwd: string): Promise<void> {
       process.stderr.write('Error desconocido al validar.\n');
     }
     process.exitCode = 1;
-  }
-}
-
-export async function runWatch(cwd: string, options: { verbose?: boolean } = {}): Promise<() => void> {
-  try {
-    return await watch(cwd, options);
-  } catch (err) {
-    if (err instanceof PandocError) {
-      const location = err.sourcePath ? ` en "${err.sourcePath}"` : '';
-      process.stderr.write(`Error de pandoc${location}: ${err.message}\n`);
-      if (err.stderr) process.stderr.write(`${err.stderr}\n`);
-    } else if (err instanceof ConfigError) {
-      process.stderr.write(`Error de configuración en "${err.configPath}": ${err.message}\n`);
-    } else if (err instanceof Error) {
-      process.stderr.write(`Error: ${err.message}\n`);
-    } else {
-      process.stderr.write('Error desconocido al arrancar watch.\n');
-    }
-    process.exitCode = 1;
-    return () => undefined;
   }
 }
 
