@@ -406,7 +406,6 @@ Contenido actualizado A.
       outputDir,
       noCache: false,
       noTailwind: true,
-      incremental: true,
       changedPaths: new Set(['a.md']),
     });
 

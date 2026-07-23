@@ -44,8 +44,6 @@ export interface BuildOptions {
   dryRun?: boolean;
   /** Imprime información adicional de progreso durante el build. */
   verbose?: boolean;
-  /** Omite clean() del outputDir; solo escribe archivos nuevos o modificados. */
-  incremental?: boolean;
   /** Rutas relativas de archivos modificados; limita el pipeline a docs afectados. */
   changedPaths?: Set<string>;
 }
@@ -142,7 +140,7 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
     concurrency: options.concurrency ?? 4,
   };
 
-  if (!options.incremental) await clean(ctx.outputDir);
+  if (options.noCache) await clean(ctx.outputDir);
   // Eliminar la carpeta del otro modo (solo debe existir una)
   const otherDirName = outputDirName === 'dist/www' ? 'dist/documents' : 'dist/www';
   await rm(join(cwd, otherDirName), { recursive: true, force: true }).catch(() => {});
@@ -395,7 +393,7 @@ async function runFinalization(
   hasPlugins: boolean,
   log: (msg: string) => void,
   cwd?: string,
-  incremental?: boolean,
+  allDocRelativePaths?: Set<string>,
 ): Promise<number> {
   const generateHtml = ctx.siteConfig.format?.html?.generate !== false;
 
@@ -449,15 +447,14 @@ async function runFinalization(
     });
   }
 
-  // Actualizar manifiesto de salida. En modo incremental se fusiona con el
-  // manifiesto anterior para preservar las entradas de archivos que no fueron
-  // reprocesados en este build. Esto evita que el purge elimine archivos de
-  // documentos no modificados.
+  // Actualizar manifiesto de salida. Se fusiona con el manifiesto anterior
+  // para preservar las entradas de archivos que no fueron reprocesados en este
+  // build. Luego se eliminan los archivos de documentos que ya no existen.
   const currentManifest = new Map(writtenDocs.map((doc) => [doc.relativePath, doc.outputPath ?? '']));
   for (const file of generatedFiles) {
     currentManifest.set(file.relativePath, join(ctx.outputDir, file.relativePath));
   }
-  if (incremental && cwd) {
+  if (cwd) {
     const prevManifest = await loadOutputManifest(cwd);
     // Fusionar: las entradas del build actual tienen prioridad, pero se
     // preservan las del manifiesto anterior para archivos no reprocesados.
@@ -466,8 +463,17 @@ async function runFinalization(
         currentManifest.set(relPath, outputPath);
       }
     }
+    // Eliminar archivos de documentos markdown que ya no existen
+    if (allDocRelativePaths) {
+      for (const [relPath, outputPath] of currentManifest) {
+        if (!allDocRelativePaths.has(relPath) && outputPath) {
+          await rm(outputPath, { force: true }).catch(() => {});
+          currentManifest.delete(relPath);
+        }
+      }
+    }
+    await saveOutputManifest(cwd, currentManifest);
   }
-  if (cwd) await saveOutputManifest(cwd, currentManifest);
 
   return composeMs;
 }
@@ -614,6 +620,11 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       allSlugs.add(dir + '/' + doc.slug); // registrar el nuevo slug para evitar colisiones entre duplicados
     }
 
+    // Conjunto de rutas relativas de todos los documentos del proyecto.
+    // Se usa en runFinalization para detectar documentos eliminados y
+    // remover sus archivos del directorio de salida.
+    const allDocRelativePaths = new Set(allDocs.map((d) => d.relativePath));
+
     let logoSvg: string | undefined;
     let enrichedSiteCtx: TemplateContext;
     if (generateHtml) {
@@ -679,7 +690,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     const pipelineDocs = affectedPaths ? allDocs.filter((d) => affectedPaths.has(d.relativePath)) : allDocs;
 
     if (noChanges && !affectedPaths) {
-      log('Ningun documento modificado — build incremental sin cambios');
+      log('Ningun documento modificado — sin cambios');
       allDocs = [];
     }
 
@@ -711,7 +722,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       progress.completePhase(); // fin de render
     }
 
-    // En modo incremental, pasar solo los docs afectados a compose/write para evitar
+    // Pasar solo los docs afectados a compose/write para evitar
     // reprocesar documentos que no cambiaron.
     const finalContextDocs = affectedPaths ? allContextDocs.filter((d) => affectedPaths.has(d.relativePath)) : allContextDocs;
 
@@ -803,7 +814,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         docsWithExportLinks = injectCoverIntoListItems(docsWithExportLinks);
       }
 
-      const composeMs = await runFinalization(docsWithExportLinks, ctx, registry, hasPlugins, log, cwd, options.incremental === true);
+      const composeMs = await runFinalization(docsWithExportLinks, ctx, registry, hasPlugins, log, cwd, allDocRelativePaths);
       progress.completePhase();
     }
 
