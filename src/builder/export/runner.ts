@@ -342,6 +342,13 @@ export async function runExportDocuments(
     return Promise.allSettled(tasks);
   }
 
+  // Pre-crear directorios de cache de biber para todos los slots disponibles.
+  // Asi el usuario puede verlos en .iteraciones/biber/ y --no-cache los limpia.
+  if (hasPdf && maxSlots > 0) {
+    const biberBase = join(cwd, '.iteraciones', 'biber');
+    await Promise.all(Array.from({ length: maxSlots }, (_, i) => mkdir(join(biberBase, `cache-${i}`), { recursive: true })));
+  }
+
   const results = await mapWithConcurrency(exportableDocs, concurrency, async (doc): Promise<ExportResult | null> => {
     // Respetar export: { skip: true } en el frontmatter del documento.
     // Se valida que sea un objeto plano (sin arrays ni prototipos no-Object)
