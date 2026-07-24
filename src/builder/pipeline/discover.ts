@@ -18,15 +18,10 @@ export interface DiscoverResult {
   deletedEntries: Map<string, DiscoveryEntry>;
 }
 
-export interface DiffEntry {
-  path: string; // relative path with .md
-  slug: string; // computed slug
-}
-
 export interface BuildReport {
   startedAt: number;
-  recentFiles: DiffEntry[];
-  deletedFiles: DiffEntry[];
+  recentFiles: string[];
+  deletedFiles: string[];
 }
 
 const FM_RE = /^---\r?\n([\s\S]*?)\r?\n---/;
@@ -155,14 +150,8 @@ export async function discover(cwd: string, options: DiscoverOptions = {}): Prom
 
   const buildReport: BuildReport = {
     startedAt: thisBuildStartedAt,
-    recentFiles: recentFiles.map((p) => ({
-      path: p,
-      slug: discoveryIndex.get(p)?.slug ?? basename(p, '.md'),
-    })),
-    deletedFiles: deletedFiles.map((p) => ({
-      path: p,
-      slug: deletedEntries.get(p)?.slug ?? basename(p, '.md'),
-    })),
+    recentFiles: [...recentFiles],
+    deletedFiles: [...deletedFiles],
   };
 
   await saveDiscoveryIndex(cwd, discoveryIndex);
