@@ -201,9 +201,19 @@ export async function runExportDocuments(
   const hasPdf = config.pdf?.generate === true || !!config.html?.thumbnails;
   const _hasEpub = config.epub?.generate === true;
 
-  // Semaforo interno que limita las instancias de pdflatex/biber a 1 proceso a la vez.
-  // Biber usa una cache global (PAR) que no soporta acceso concurrente;
-  // multiples latexmk simultaneos corrompen la cache y fallan con errno=8 / ENOEXEC.
+  // Pre-extraer el thin binary de biber (lipo arm64) antes del loop.
+  // Biber usa una cache global (PAR) que solo soporta 1 proceso a la vez;
+  // la pre-extraccion serial evita que N procesos lancen lipo simultaneo.
+  if (hasPdf) {
+    try {
+      await Bun.spawn(['biber', '--version'], { stdout: 'pipe', stderr: 'pipe' }).exited;
+    } catch {
+      // biber no disponible — latexmk fallara mas adelante
+    }
+  }
+
+  // Semaforo: 1 latexmk a la vez. Biber no soporta acceso concurrente a
+  // su cache global incluso despues de extraer el thin binary (errno=8).
   let latexSlots = hasPdf ? 1 : 0;
   const latexQueue: Array<() => void> = [];
   const acquireLatex = (): Promise<void> =>
