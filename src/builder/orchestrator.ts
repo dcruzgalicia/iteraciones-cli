@@ -1,4 +1,5 @@
 import { mkdir, rm } from 'node:fs/promises';
+import { cpus } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { type PipelinePhase, ProgressTracker } from '../output/progress.js';
@@ -114,7 +115,7 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions): Promis
     cwd,
     outputDir: options.outputDir ?? defaultOutputDir,
     cssPath: options.cssPath ?? '',
-    concurrency: options.concurrency ?? 4,
+    concurrency: options.concurrency ?? Math.max(1, cpus().length - 1),
   };
 
   if (options.noCache) {
