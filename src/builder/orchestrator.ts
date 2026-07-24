@@ -1,14 +1,7 @@
-import { existsSync } from 'node:fs';
 import { mkdir, rm } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
-import dictumPlugin from '../../pandoc/plugins/dictum-plugin.js';
-import { loadOutputManifest, saveOutputManifest } from '../cache/output-manifest.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { type PipelinePhase, ProgressTracker } from '../output/progress.js';
-import { clean, writeFile } from '../output/writer.js';
-import { loadPlugins } from '../plugin/loader.js';
-import { PluginRegistry } from '../plugin/registry.js';
-import type { GeneratedFile, PluginClassifiedDocument, PluginDocumentGraph, PluginDocumentSummary } from '../plugin/types.js';
 
 import type { TemplateContext } from '../template/render/context.js';
 import { buildAssets } from './assets.js';
@@ -16,19 +9,18 @@ import { createAuthorDocumentIndex } from './context/authors.js';
 import { buildSiteContext } from './context/site.js';
 import { injectCoverIntoListItems, injectDownloadLinks, injectDownloadLinksIntoListItems, runExportDocuments } from './export/runner.js';
 import { EXPORTABLE_TYPES, type ExportResult } from './export/types.js';
-import { buildDocumentGraph } from './graph-exporter.js';
 import { escapeHtml } from './html.js';
 import { buildLatexPreamble } from './latex-preamble.js';
 import { classifyDocuments } from './pipeline/classify.js';
 import { composeDocuments, renderBlocksToRegions } from './pipeline/compose.js';
 import { computeAffectedDocs } from './pipeline/dependency-resolver.js';
-import { discover } from './pipeline/discover.js';
+import { buildDocsFromIndex, discover } from './pipeline/discover.js';
 import { renderDocuments, renderLatex } from './pipeline/render.js';
 import { runContextPhaseWithTypeGraph } from './pipeline/runner.js';
-import { TYPE_STAGE_MAP, VALID_TYPES } from './pipeline/type-graph.js';
+import { TYPE_STAGE_MAP } from './pipeline/type-graph.js';
 import { writeDocuments } from './pipeline/write.js';
-import { computeSlug, docHref, docHtmlPath } from './slug.js';
-import type { AuthorDocumentIndex, BuildContext, BuildDocument, DocumentKind, DocumentType } from './types.js';
+import { computeSlug, docHref } from './slug.js';
+import type { AuthorDocumentIndex, BuildContext, BuildDocument, DocumentType } from './types.js';
 
 export interface BuildOptions {
   outputDir?: string;
@@ -51,12 +43,6 @@ export interface BuildOptions {
 // ---------------------------------------------------------------------------
 // Interfaces internas de resultado entre funciones del pipeline
 // ---------------------------------------------------------------------------
-
-interface SetupResult {
-  ctx: BuildContext;
-  registry: PluginRegistry;
-  hasPlugins: boolean;
-}
 
 interface PrimaryRenderResult {
   renderedFileDocs: BuildDocument[];
@@ -117,19 +103,11 @@ function makeRelativeContext(value: unknown, prefix: string, depth = 0): unknown
 // ---------------------------------------------------------------------------
 
 /**
- * Prepara el entorno de build: carga config y plugins,
- * crea el BuildContext, limpia el outputDir y genera assets.
+ * Prepara el entorno de build: carga config, crea el BuildContext.
  */
-async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (msg: string) => void): Promise<SetupResult> {
+async function setupBuildEnvironment(cwd: string, options: BuildOptions): Promise<BuildContext> {
   const siteConfig = await loadSiteConfig(cwd);
 
-  const { plugins } = await loadPlugins(siteConfig.plugins, cwd);
-  const registry = new PluginRegistry();
-  for (const plugin of plugins) registry.register(plugin);
-  // Plugin built-in: transforma fenced divs .dictum a LaTeX en exportación PDF
-  registry.register(dictumPlugin);
-
-  // html.generate: true → dist/www (web). false → dist/documents (solo archivos).
   const outputDirName = siteConfig.format?.html?.generate ? 'dist/www' : 'dist/documents';
   const defaultOutputDir = join(cwd, outputDirName);
   const ctx: BuildContext = {
@@ -140,45 +118,38 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions, log: (m
     concurrency: options.concurrency ?? 4,
   };
 
-  if (options.noCache) await clean(ctx.outputDir);
-  // Eliminar la carpeta del otro modo (solo debe existir una)
-  const otherDirName = outputDirName === 'dist/www' ? 'dist/documents' : 'dist/www';
-  await rm(join(cwd, otherDirName), { recursive: true, force: true }).catch(() => {});
-
-  // --no-cache: eliminar toda la caché para partir desde cero
   if (options.noCache) {
-    await rm(join(cwd, '.iteraciones', 'cache'), {
-      recursive: true,
-      force: true,
-    });
-    // Solo limpiar cache de biber si se va a generar PDF
+    await rm(ctx.outputDir, { recursive: true, force: true });
+    await rm(join(cwd, '.iteraciones'), { recursive: true, force: true });
     const pdfGen = siteConfig.format?.pdf?.generate === true;
     const thumbnailsNeedPdf = siteConfig.format?.html?.thumbnails && siteConfig.format?.pdf !== undefined;
     if (pdfGen || thumbnailsNeedPdf) {
       await clearBiberCache();
     }
   }
+  const otherDirName = outputDirName === 'dist/www' ? 'dist/documents' : 'dist/www';
+  await rm(join(cwd, otherDirName), { recursive: true, force: true }).catch(() => {});
 
-  return {
-    ctx,
-    registry,
-    hasPlugins: true,
-  };
+  return ctx;
 }
 
 /**
  * Descubre, clasifica y filtra borradores. Retorna el pool de documentos activos.
  */
-async function runDiscovery(cwd: string, ctx: BuildContext, noCache?: boolean): Promise<{ docs: BuildDocument[]; changedPaths: Set<string> }> {
-  const { docs: sourceDocs, changedPaths } = await discover(cwd, { noCache });
+async function runDiscovery(
+  cwd: string,
+  ctx: BuildContext,
+  noCache?: boolean,
+): Promise<{ docs: BuildDocument[]; changedPaths: Set<string>; deletedEntries: Map<string, { title: string; author: string[] }> }> {
+  const result = await discover(cwd, { noCache });
+  const sourceDocs = buildDocsFromIndex(result.relativePaths, result.discoveryIndex, cwd);
   const classified = classifyDocuments(sourceDocs, ctx.siteConfig.format?.html?.theme, ctx.cwd);
   const allDocs = excludeDrafts(classified);
   const draftCount = classified.length - allDocs.length;
   if (draftCount > 0) {
-    // Registrar en stderr para que no se pierda ni mezcle con stdout
     process.stderr.write(`[iteraciones] ${draftCount} borrador${draftCount > 1 ? 'es' : ''} excluido${draftCount > 1 ? 's' : ''} (draft:true)\n`);
   }
-  return { docs: allDocs, changedPaths };
+  return { docs: allDocs, changedPaths: result.changedPaths, deletedEntries: result.deletedEntries };
 }
 
 /**
@@ -261,19 +232,19 @@ function resolveGlobalExportPaths(ctx: BuildContext): {
   return { globalBibliography, globalCsl: undefined };
 }
 
-async function runPrimaryRender(allDocs: BuildDocument[], ctx: BuildContext, registry: PluginRegistry, cwd?: string): Promise<PrimaryRenderResult> {
+async function runPrimaryRender(allDocs: BuildDocument[], ctx: BuildContext, cwd?: string): Promise<PrimaryRenderResult> {
   const { globalBibliography, globalCsl } = resolveGlobalExportPaths(ctx);
   const fileDocs = allDocs.filter((doc) => doc.type === 'file' && doc.kind !== 'block');
-  const renderedFileDocs = await renderDocuments(fileDocs, ctx.concurrency ?? 4, registry, cwd, globalBibliography, globalCsl);
+  const renderedFileDocs = await renderDocuments(fileDocs, ctx.concurrency ?? 4, undefined, cwd, globalBibliography, globalCsl);
 
   const authorDocs = allDocs.filter((doc) => doc.type === 'author' && doc.kind !== 'block');
-  const renderedAuthorDocs = await renderDocuments(authorDocs, ctx.concurrency ?? 4, registry, cwd, globalBibliography, globalCsl);
+  const renderedAuthorDocs = await renderDocuments(authorDocs, ctx.concurrency ?? 4, undefined, cwd, globalBibliography, globalCsl);
   // Índice de autores por título normalizado (lowercase). Se construye aquí para que
   // esté disponible antes del pre-paso de bloques y del paso de contexto de páginas.
   const authorDocumentIndex = createAuthorDocumentIndex(renderedAuthorDocs);
 
   const eventDocs = allDocs.filter((doc) => doc.type === 'event' && doc.kind !== 'block');
-  const renderedEventDocs = await renderDocuments(eventDocs, ctx.concurrency ?? 4, registry, cwd, globalBibliography, globalCsl);
+  const renderedEventDocs = await renderDocuments(eventDocs, ctx.concurrency ?? 4, undefined, cwd, globalBibliography, globalCsl);
 
   return {
     renderedFileDocs,
@@ -296,7 +267,6 @@ async function runPrimaryRender(allDocs: BuildDocument[], ctx: BuildContext, reg
 async function runBlocksPrestep(
   allDocs: BuildDocument[],
   ctx: BuildContext,
-  registry: PluginRegistry,
   enrichedSiteCtx: TemplateContext,
   primaryRendered: ReadonlyMap<DocumentType, BuildDocument[]>,
   authorDocumentIndex: AuthorDocumentIndex,
@@ -304,7 +274,7 @@ async function runBlocksPrestep(
 ): Promise<BlocksPrestepResult> {
   const { globalBibliography, globalCsl } = resolveGlobalExportPaths(ctx);
   const allBlockDocs = allDocs.filter((doc) => doc.kind === 'block');
-  const renderedBlockDocs = await renderDocuments(allBlockDocs, ctx.concurrency ?? 4, registry, cwd, globalBibliography, globalCsl);
+  const renderedBlockDocs = await renderDocuments(allBlockDocs, ctx.concurrency ?? 4, undefined, cwd, globalBibliography, globalCsl);
   const contextBlockDocs = renderedBlockDocs.map((doc) => {
     const spec = doc.type ? TYPE_STAGE_MAP.get(doc.type) : undefined;
     if (!spec) {
@@ -354,11 +324,11 @@ async function writeTexFiles(allContextDocs: BuildDocument[], ctx: BuildContext,
       ctx.siteConfig.disabledPreambleTranspilers,
     );
 
-    const pdfDir = join(ctx.cwd, '.iteraciones', 'cache', 'phase-2-formatos', 'pdf', dirname(doc.relativePath), texSlug);
+    const pdfDir = join(ctx.cwd, '.iteraciones', 'phase-2-formatos', 'pdf', dirname(doc.relativePath), texSlug);
     await mkdir(pdfDir, { recursive: true });
 
-    // Body post-transpilers — para fase 1 (Markdown → LaTeX)
-    const phase1LatexDir = join(ctx.cwd, '.iteraciones', 'cache', 'phase-1-latex', dirname(doc.relativePath));
+    // Body post-transpilers — para fase 2 (Markdown → LaTeX)
+    const phase1LatexDir = join(ctx.cwd, '.iteraciones', 'markdown-to-latex', dirname(doc.relativePath));
     await mkdir(phase1LatexDir, { recursive: true });
     await Bun.write(join(phase1LatexDir, `${texSlug}.tex`), doc.processedBody);
 
@@ -386,63 +356,19 @@ async function writeTexFiles(allContextDocs: BuildDocument[], ctx: BuildContext,
  * Fase final: compone HTML, plugins, manifiesto y poda de caché.
  * Debe ejecutarse al final, despues de exportar todos los formatos.
  */
-async function runFinalization(
-  allContextDocs: BuildDocument[],
-  ctx: BuildContext,
-  registry: PluginRegistry,
-  hasPlugins: boolean,
-  log: (msg: string) => void,
-): Promise<void> {
+async function runFinalization(allContextDocs: BuildDocument[], ctx: BuildContext, log: (msg: string) => void): Promise<void> {
   const generateHtml = ctx.siteConfig.format?.html?.generate !== false;
 
-  let composeMs = 0;
-  const writtenDocs: BuildDocument[] = [];
   if (generateHtml) {
     const relativizedDocs = allContextDocs.map((doc) => ({
       ...doc,
       templateContext: makeRelativeContext(doc.templateContext, computeRootPrefix(doc.relativePath)) as TemplateContext,
     }));
-    const tComposeStart = performance.now();
-    const composedDocs = await composeDocuments(relativizedDocs, ctx, registry);
-    composeMs = performance.now() - tComposeStart;
+    const composedDocs = await composeDocuments(relativizedDocs, ctx);
     const docs = await writeDocuments(composedDocs, ctx);
-    writtenDocs.push(...docs);
     log(`Escritos ${docs.length} archivos en ${ctx.outputDir}`);
   } else {
     log('HTML desactivado: omitiendo generación de HTML');
-  }
-
-  let generatedFiles: GeneratedFile[] = [];
-  if (hasPlugins) {
-    const docOutputPaths = writtenDocs.map((doc) => docHtmlPath(doc));
-    const logoPath = ctx.siteConfig.logo?.trim() || 'logo.svg';
-    const assetPaths: string[] = ['css/styles.css', logoPath];
-
-    // generateFiles: recopilar y escribir archivos adicionales de plugins (sitemap, RSS, etc.)
-    const docSummaries: PluginDocumentSummary[] = writtenDocs.map((doc) => ({
-      relativePath: doc.relativePath,
-      outputPath: docHtmlPath(doc),
-      type: doc.type ?? 'file',
-      frontmatter: doc.frontmatter as Record<string, unknown>,
-    }));
-    const graph = buildDocumentGraph(docSummaries);
-    const initialContext = {
-      outputDir: ctx.outputDir,
-      outputPaths: [...assetPaths, ...docOutputPaths],
-      siteConfig: ctx.siteConfig as unknown as Readonly<Record<string, unknown>>,
-      documents: docSummaries,
-      graph,
-    };
-    generatedFiles = await registry.runGenerateFiles(initialContext);
-    for (const file of generatedFiles) {
-      await writeFile(join(ctx.outputDir, file.relativePath), file.content);
-    }
-    const generatedPaths = generatedFiles.map((f) => f.relativePath);
-
-    await registry.runAfterBuild({
-      ...initialContext,
-      outputPaths: [...initialContext.outputPaths, ...generatedPaths],
-    });
   }
 }
 
@@ -454,7 +380,8 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // --dry-run: solo descubrir y clasificar; mostrar resumen sin generar salida.
   if (options.dryRun) {
     const dryConfig = await loadSiteConfig(cwd);
-    const { docs: sourceDocs } = await discover(cwd, { noCache: true });
+    const { relativePaths, discoveryIndex } = await discover(cwd, { noCache: true });
+    const sourceDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
     const classified = classifyDocuments(sourceDocs, dryConfig.format?.html?.theme, cwd);
     const allDocs = excludeDrafts(classified);
     const draftCount = classified.length - allDocs.length;
@@ -475,20 +402,13 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const progress = new ProgressTracker({ verbose: options.verbose ?? false });
   const log = (msg: string) => progress.log(msg);
 
-  const { ctx, registry, hasPlugins } = await setupBuildEnvironment(cwd, options, log);
+  const ctx = await setupBuildEnvironment(cwd, options);
   try {
-    // Hook beforeBuild: ejecutado antes de descubrir o procesar ningún documento.
-    if (hasPlugins) {
-      await registry.runBeforeBuild({
-        cwd,
-        outputDir: ctx.outputDir,
-        siteConfig: ctx.siteConfig as unknown as Readonly<Record<string, unknown>>,
-      });
-    }
     // Assets web (css, fonts, logo) solo si se genera HTML
     const generateHtml = ctx.siteConfig.format?.html?.generate === true;
+
     progress.startPhase('discovery');
-    const [{ docs: rawDocs, changedPaths: discoveredChanges }, cssPath] = await Promise.all([
+    const [{ docs: allDocs, changedPaths: discoveredChanges, deletedEntries }, cssPath] = await Promise.all([
       runDiscovery(cwd, ctx, options.noCache),
       generateHtml
         ? buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, {
@@ -497,61 +417,59 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         : Promise.resolve(''),
     ]);
     ctx.cssPath = cssPath;
-    progress.completePhase(rawDocs.length);
+    progress.completePhase(allDocs.length);
 
-    // Hook onDocumentClassified: permite a plugins sobreescribir type/kind/templatePath
-    // tras la clasificación automática, antes del render. Retornar null excluye el documento.
-    let allDocs = rawDocs;
-    if (hasPlugins) {
-      const classified: BuildDocument[] = [];
-      for (const doc of rawDocs) {
-        const result = await registry.runOnDocumentClassified({
-          sourcePath: doc.filePath,
-          relativePath: doc.relativePath,
-          type: doc.type ?? 'file',
-          kind: doc.kind ?? 'page',
-          templatePath: doc.templatePath,
-          frontmatter: doc.frontmatter as Readonly<Record<string, unknown>>,
-          body: doc.body,
-        } satisfies PluginClassifiedDocument);
-        if (result === null) continue;
-        if (!VALID_TYPES.has(result.type as DocumentType)) {
-          throw new Error(`[plugin:onDocumentClassified] tipo inválido "${result.type}"; valores válidos: ${[...VALID_TYPES].join(', ')}`);
-        }
-        if (result.kind !== 'page' && result.kind !== 'block') {
-          throw new Error(`[plugin:onDocumentClassified] kind inválido "${result.kind}"; valores válidos: page, block`);
-        }
-        classified.push({
-          ...doc,
-          type: result.type as DocumentType,
-          kind: result.kind as DocumentKind,
-          templatePath: result.templatePath,
-        });
-      }
-      allDocs = classified;
+    // ── Filtrado incremental ──
+    // Identifica archivos modificados por mtime/hash y limita el pipeline
+    // a los docs afectados. Los no modificados conservan sus archivos en
+    // dist sin reprocesarse.
+    const GLOBAL_CHANGE_PATTERNS = [/\.ya?ml$/, /\.html$/];
+    const changedPaths = options.changedPaths ?? discoveredChanges;
+    const noChanges = changedPaths.size === 0;
+    const isGlobalChange = !noChanges && [...changedPaths].some((p) => GLOBAL_CHANGE_PATTERNS.some((re) => re.test(p)));
+    const affectedPaths = !isGlobalChange && !noChanges ? computeAffectedDocs(changedPaths, allDocs) : null;
+    const pipelineDocs = affectedPaths ? allDocs.filter((d) => affectedPaths.has(d.relativePath)) : allDocs;
+
+    const totalDocCount = allDocs.length;
+
+    if (noChanges && !affectedPaths) {
+      log('Ningun documento modificado — sin cambios');
+      progress.finish(0, totalDocCount, []);
+      return;
     }
 
-    // Hook onDocumentDiscovered: permite a plugins filtrar o modificar el pool de documentos.
-    // Retornar null excluye el documento; retornar un objeto aplica cambios de body/frontmatter/relativePath.
-    if (hasPlugins) {
-      const discovered: BuildDocument[] = [];
+    // ── FASE 2: markdown-to-latex ──
+    // Convierte markdown a .tex solo para docs afectados. Los no modificados
+    // ya tienen su .tex en cache del build anterior.
+    if (pipelineDocs.length > 0) {
+      const docsWithMd = await renderLatex(pipelineDocs, ctx.concurrency ?? 4, cwd, ctx.siteConfig.disabledTranspilers);
+      const mdMap = new Map<string, BuildDocument>(docsWithMd.map((d) => [d.relativePath, d]));
       for (const doc of allDocs) {
-        const result = await registry.runOnDocumentDiscovered({
-          sourcePath: doc.filePath,
-          relativePath: doc.relativePath,
-          type: doc.type ?? 'file',
-          frontmatter: doc.frontmatter as Readonly<Record<string, unknown>>,
-          body: doc.body,
-        });
-        if (result === null) continue;
-        discovered.push({
-          ...doc,
-          relativePath: result.relativePath,
-          frontmatter: result.frontmatter as BuildDocument['frontmatter'],
-          body: result.body,
-        });
+        const processed = mdMap.get(doc.relativePath);
+        if (processed && processed.processedBody) {
+          doc.processedBody = processed.processedBody;
+        }
       }
-      allDocs = discovered;
+    }
+
+    // Limpiar archivos de documentos markdown eliminados del disco.
+    {
+      const allDocPathsSet = new Set(allDocs.map((d) => d.relativePath));
+      const deletedPaths = [...changedPaths].filter((p) => p.endsWith('.md') && !allDocPathsSet.has(p));
+      if (deletedPaths.length > 0) {
+        const cacheBase = join(ctx.cwd, '.iteraciones');
+        for (const relPath of deletedPaths) {
+          const dir = dirname(relPath);
+          const entry = deletedEntries.get(relPath);
+          const slug = entry ? (computeSlug({ ...entry, relativePath: relPath }) ?? basename(relPath, '.md')) : basename(relPath, '.md');
+          await rm(join(cacheBase, 'markdown-to-latex', dir, `${slug}.tex`), { force: true }).catch(() => {});
+          await rm(join(cacheBase, 'phase-2-formatos', 'pdf', dir, slug), { recursive: true, force: true }).catch(() => {});
+          await rm(join(cacheBase, 'phase-2-formatos', 'html', dir, slug), { recursive: true, force: true }).catch(() => {});
+          for (const ext of ['.html', '.tex', '.pdf', '.epub', '.md']) {
+            await rm(join(ctx.outputDir, dir, `${slug}${ext}`), { force: true }).catch(() => {});
+          }
+        }
+      }
     }
 
     // Compute output-path slugs for all documents.
@@ -588,15 +506,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       allSlugs.add(dir + '/' + doc.slug); // registrar el nuevo slug para evitar colisiones entre duplicados
     }
 
-    // Conjunto de rutas relativas de todos los documentos del proyecto.
-    // Se usa al final del build para detectar documentos eliminados y
-    // remover sus archivos del directorio de salida.
-    // Se captura antes del filtrado incremental porque allDocs puede
-    // ser modificado (puesto a []) si no hay cambios.
-    const allDocRelativePaths = new Set(allDocs.map((d) => d.relativePath));
-    // Guardar copia de allDocs para el manifiesto al final del build
-    const fullAllDocs = [...allDocs];
-
     let logoSvg: string | undefined;
     let enrichedSiteCtx: TemplateContext;
     if (generateHtml) {
@@ -606,80 +515,73 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       enrichedSiteCtx = buildSiteContext(ctx.siteConfig, ctx.cssPath);
     }
 
-    // Fase de LaTeX final: procesa el body original con filtros Lua
-    // y produce el .tex final (processedBody) que se usará para HTML
-    // y exportación.
-    const docsWithMd = await renderLatex(allDocs, ctx.concurrency ?? 4, cwd, ctx.siteConfig.disabledTranspilers);
-    // Reemplazar allDocs con los docs procesados (tienen processedBody)
-    const mdMap = new Map<string, BuildDocument>(docsWithMd.map((d) => [d.relativePath, d]));
-    for (const doc of allDocs) {
-      const processed = mdMap.get(doc.relativePath);
-      if (processed && processed.processedBody) {
-        doc.processedBody = processed.processedBody;
-      }
+    const formatCfg = ctx.siteConfig.format;
+
+    // ── Escribir .tex a cache y dist ──
+    const activeFormats: PipelinePhase[] = [];
+    const pdfOn = formatCfg?.pdf?.generate === true || (!!formatCfg?.html?.thumbnails && formatCfg?.pdf !== undefined);
+    const latexOn = formatCfg?.latex?.generate === true;
+    if (latexOn && !options.noExport) activeFormats.push('latex');
+    if (pdfOn && !options.noExport) activeFormats.push('pdf');
+    if (formatCfg?.html?.generate === true) activeFormats.push('html');
+    if (formatCfg?.epub?.generate && !options.noExport) activeFormats.push('epub');
+    if (formatCfg?.markdown?.generate && !options.noExport) activeFormats.push('markdown');
+    progress.setFormatPhases(activeFormats);
+
+    if (activeFormats.includes('latex')) {
+      progress.startPhase('latex', pipelineDocs.length);
+    }
+    await writeTexFiles(pipelineDocs, ctx, log);
+    if (activeFormats.includes('latex')) {
+      progress.completePhase();
     }
 
-    const formatCfg = ctx.siteConfig.format;
+    // ── FASE 3: latex-to-html ──
+    // Convierte .tex a HTML fragment, procesa bloques y construye contextos.
+    // Solo se ejecuta si html.generate o epub.generate estan activos.
     const needsHtmlRender = formatCfg?.html?.generate === true;
     const needsRender = needsHtmlRender || formatCfg?.epub?.generate === true;
-
+    let allContextDocs: BuildDocument[] = pipelineDocs;
+    let renderedMap = new Map<DocumentType, BuildDocument[]>();
     if (needsRender) {
-      progress.startPhase('render', allDocs.length);
-    }
-    // runPrimaryRender convierte cada documento a HTML (htmlFragment).
-    // Solo es necesario cuando se genera HTML o EPUB (EPUB usa el htmlFragment).
-    let primaryRendered = new Map<DocumentType, BuildDocument[]>();
-    let authorDocumentIndex: AuthorDocumentIndex = new Map();
-    if (needsRender) {
-      const result = await runPrimaryRender(allDocs, ctx, registry, cwd);
-      primaryRendered = new Map<DocumentType, BuildDocument[]>([
+      progress.startPhase('render', pipelineDocs.length);
+      const result = await runPrimaryRender(pipelineDocs, ctx, cwd);
+      const primaryRendered = new Map<DocumentType, BuildDocument[]>([
         ['file', result.renderedFileDocs],
         ['author', result.renderedAuthorDocs],
         ['event', result.renderedEventDocs],
       ]);
-      authorDocumentIndex = result.authorDocumentIndex;
+      const authorDocumentIndex = result.authorDocumentIndex;
 
-      // Escribir htmlFragment a disco como fuente unica para composicion HTML y EPUB
+      // Escribir htmlFragment a disco
       for (const [, docs] of primaryRendered) {
         for (const doc of docs) {
           if (!doc.htmlFragment || !doc.slug) continue;
-          const htmlDir = join(ctx.cwd, '.iteraciones', 'cache', 'phase-2-formatos', 'html', dirname(doc.relativePath), doc.slug);
+          const htmlDir = join(ctx.cwd, '.iteraciones', 'phase-2-formatos', 'html', dirname(doc.relativePath), doc.slug);
           await mkdir(htmlDir, { recursive: true });
           await Bun.write(join(htmlDir, 'index.html'), doc.htmlFragment);
         }
       }
-    }
 
-    const totalDocCount = allDocs.length;
-
-    // Filtrado incremental: detectar archivos .md modificados por mtime
-    // y limitar el procesamiento a los docs afectados.
-    const GLOBAL_CHANGE_PATTERNS = [/\.ya?ml$/, /\.html$/];
-    const changedPaths = options.changedPaths ?? discoveredChanges;
-    const noChanges = changedPaths.size === 0;
-    const isGlobalChange = !noChanges && [...changedPaths].some((p) => GLOBAL_CHANGE_PATTERNS.some((re) => re.test(p)));
-    const affectedPaths = !isGlobalChange && !noChanges ? computeAffectedDocs(changedPaths, allDocs) : null;
-    const pipelineDocs = affectedPaths ? allDocs.filter((d) => affectedPaths.has(d.relativePath)) : allDocs;
-
-    if (noChanges && !affectedPaths) {
-      log('Ningun documento modificado — sin cambios');
-      allDocs = [];
-    }
-
-    // Fases del pipeline HTML: blocks + context + compose.
-    // Solo se ejecutan si html.generate: true.
-    let allContextDocs: BuildDocument[] = pipelineDocs;
-    let renderedMap = new Map<DocumentType, BuildDocument[]>();
-    const finalSiteCtx = enrichedSiteCtx;
-    if (needsHtmlRender) {
-      const { renderedBlockDocs } = await runBlocksPrestep(pipelineDocs, ctx, registry, enrichedSiteCtx, primaryRendered, authorDocumentIndex, cwd);
-
-      const result = await runContextPhaseWithTypeGraph(pipelineDocs, ctx, registry, enrichedSiteCtx, primaryRendered, authorDocumentIndex, cwd);
-      allContextDocs = result.allContextDocs;
-      renderedMap = result.renderedMap;
+      if (needsHtmlRender) {
+        const { renderedBlockDocs } = await runBlocksPrestep(pipelineDocs, ctx, enrichedSiteCtx, primaryRendered, authorDocumentIndex, cwd);
+        const contextResult = await runContextPhaseWithTypeGraph(pipelineDocs, ctx, enrichedSiteCtx, primaryRendered, authorDocumentIndex, cwd);
+        allContextDocs = contextResult.allContextDocs;
+        renderedMap = contextResult.renderedMap;
+      } else {
+        // Sin HTML: poblar renderedMap para exportacion (PDF, EPUB, MD)
+        const byType = new Map<DocumentType, BuildDocument[]>();
+        for (const doc of pipelineDocs) {
+          const type = doc.type ?? 'file';
+          const list = byType.get(type);
+          if (list) list.push(doc);
+          else byType.set(type, [doc]);
+        }
+        renderedMap = byType;
+      }
+      progress.completePhase();
     } else {
-      // Sin HTML: poblar renderedMap con pipelineDocs para que la exportación
-      // (PDF, EPUB, MD) tenga documentos que procesar.
+      // Sin render HTML/EPUB: renderedMap desde pipelineDocs para exportacion
       const byType = new Map<DocumentType, BuildDocument[]>();
       for (const doc of pipelineDocs) {
         const type = doc.type ?? 'file';
@@ -690,19 +592,10 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       renderedMap = byType;
     }
 
-    if (needsRender) {
-      progress.completePhase(); // fin de render
-    }
-
-    // Pasar solo los docs afectados a compose/write para evitar
-    // reprocesar documentos que no cambiaron.
+    // Filtrar docs afectados para compose/write (solo HTML)
     const finalContextDocs = affectedPaths ? allContextDocs.filter((d) => affectedPaths.has(d.relativePath)) : allContextDocs;
 
-    // Paso de exportacion: genera PDF/EPUB/MD si esta configurado y no se paso --no-export.
-
-    // Forzar PDF si se necesitan thumbnails para HTML
-    const needsPdfForThumbnails = formatCfg?.html?.thumbnails && formatCfg?.pdf !== undefined;
-    const pdfOn = formatCfg?.pdf?.generate === true || needsPdfForThumbnails === true;
+    // ── FASE 4: export ──
     const noExport = options.noExport === true;
     const exportRenderedMap = affectedPaths
       ? new Map<DocumentType, BuildDocument[]>(
@@ -710,32 +603,11 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         )
       : renderedMap;
 
-    // ── Fase latex: escribir .tex ──
-    // Configurar contador de formatos activos antes de iniciar
-    // latex solo se muestra como formato si el usuario lo pidio explicitamente
-    const activeFormats: PipelinePhase[] = [];
-    if (formatCfg?.latex?.generate === true && !noExport) activeFormats.push('latex');
-    if (pdfOn && !noExport) activeFormats.push('pdf');
-    if (formatCfg?.html?.generate === true) activeFormats.push('html');
-    if (formatCfg?.epub?.generate && !noExport) activeFormats.push('epub');
-    if (formatCfg?.markdown?.generate && !noExport) activeFormats.push('markdown');
-    progress.setFormatPhases(activeFormats);
-
-    if (activeFormats.includes('latex')) {
-      progress.startPhase('latex', allDocs.length);
-    }
-    await writeTexFiles(finalContextDocs, ctx, log);
-    if (activeFormats.includes('latex')) {
-      progress.completePhase();
-    }
-
-    // ── Fase pdf ──
     const exportBase = {
       outputDir: ctx.outputDir,
       cwd,
       lang: ctx.siteConfig.lang,
       concurrency: ctx.concurrency ?? 4,
-      registry: hasPlugins ? registry : undefined,
       onExportProgress: (relativePath: string) =>
         progress.reportFile({
           relativePath,
@@ -786,7 +658,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         docsWithExportLinks = injectCoverIntoListItems(docsWithExportLinks);
       }
 
-      await runFinalization(docsWithExportLinks, ctx, registry, hasPlugins, log);
+      await runFinalization(docsWithExportLinks, ctx, log);
       progress.completePhase();
     }
 
@@ -831,7 +703,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     const htmlOn = formatCfg?.html?.generate === true;
     const mdOn = formatCfg?.markdown?.generate === true;
     const epubOn = formatCfg?.epub?.generate === true;
-    const latexOn = formatCfg?.latex?.generate === true;
+    // latexOn y pdfOn ya declarados arriba
     const totalDocs = htmlOn || pdfOn || epubOn || mdOn || latexOn ? totalDocCount : 0;
     const processedCount = noChanges ? 0 : affectedPaths ? affectedPaths.size : totalDocs;
     const cachedCount = totalDocs - processedCount;
@@ -843,61 +715,32 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     if (mdOn) generatedFormats.push('markdown');
     progress.finish(processedCount, cachedCount, generatedFormats);
 
-    // Gestion del manifiesto de salida. Siempre se guarda, independientemente
-    // de que formatos esten activos. Cada entrada mapea relativePath del
-    // markdown fuente → ruta HTML esperada. Desde esta ruta se derivan
-    // las rutas de exportacion (PDF, EPUB, MD, .tex) al detectar eliminados.
+    // Limpiar archivos de formatos desactivados en dist para cada documento.
+    // Itera sobre allDocs (todos los markdown del proyecto) y elimina los
+    // archivos de exportacion de formatos que ya no estan activos.
     if (!options.noCache) {
-      const currentManifest = new Map<string, string>(fullAllDocs.map((doc) => [doc.relativePath, join(ctx.outputDir, docHtmlPath(doc))]));
-
-      // Fusionar con el manifiesto anterior para preservar entradas
-      // de documentos no reprocesados en este build.
-      const prevManifest = await loadOutputManifest(cwd);
-      for (const [relPath, outputPath] of prevManifest) {
-        if (!currentManifest.has(relPath)) {
-          currentManifest.set(relPath, outputPath);
-        }
+      for (const doc of allDocs) {
+        const dir = dirname(doc.relativePath);
+        const slug = doc.slug ?? basename(doc.relativePath, '.md');
+        const base = join(ctx.outputDir, dir, slug);
+        if (!latexOn) await rm(base + '.tex', { force: true }).catch(() => {});
+        if (!pdfOn) await rm(base + '.pdf', { force: true }).catch(() => {});
+        if (!epubOn) await rm(base + '.epub', { force: true }).catch(() => {});
+        if (!mdOn) await rm(base + '.md', { force: true }).catch(() => {});
+        if (!htmlOn) await rm(base + '.html', { force: true }).catch(() => {});
       }
-
-      // Detectar documentos markdown eliminados: remover su HTML y archivos
-      // de exportacion derivados (PDF, EPUB, MD, .tex).
-      for (const [relPath, outputPath] of currentManifest) {
-        if (!allDocRelativePaths.has(relPath) && outputPath) {
-          await rm(outputPath, { force: true }).catch(() => {});
-          currentManifest.delete(relPath);
-          // HTML: dist/{dir}/{slug}.html -> export: dist/{dir}/{slug}.{ext}
-          const exportBase = outputPath.replace(/\.html$/, '');
-          for (const ext of ['.pdf', '.epub', '.md', '.tex']) {
-            await rm(exportBase + ext, { force: true }).catch(() => {});
-          }
-        }
-      }
-
-      // Limpiar archivos de formatos desactivados para documentos activos.
-      // Cuando un formato se desactiva (ej. latex → false), los archivos
-      // generados en builds anteriores quedan huerfanos en dist.
-      for (const [, outputPath] of currentManifest) {
-        if (!outputPath) continue;
-        const exportBase = outputPath.replace(/\.html$/, '');
-        if (!latexOn) await rm(exportBase + '.tex', { force: true }).catch(() => {});
-        if (!pdfOn) await rm(exportBase + '.pdf', { force: true }).catch(() => {});
-        if (!epubOn) await rm(exportBase + '.epub', { force: true }).catch(() => {});
-        if (!mdOn) await rm(exportBase + '.md', { force: true }).catch(() => {});
-      }
-
-      await saveOutputManifest(cwd, currentManifest);
     }
 
     // Limpiar carpetas de cache de formatos que ya no estan activos.
     // --no-cache ya limpio toda la cache al inicio, por lo que este paso
     // solo aplica en builds normales donde se desactivo un formato.
     if (!options.noCache) {
-      const cacheBase = join(cwd, '.iteraciones', 'cache');
+      const cacheBase = join(cwd, '.iteraciones');
       const needsTex =
         formatCfg?.pdf?.generate === true || (!!formatCfg?.html?.thumbnails && formatCfg?.pdf !== undefined) || formatCfg?.latex?.generate === true;
       const needsHtml = formatCfg?.html?.generate === true || formatCfg?.epub?.generate === true;
       if (!needsTex) {
-        await rm(join(cacheBase, 'phase-1-latex'), { recursive: true, force: true }).catch(() => {});
+        await rm(join(cacheBase, 'markdown-to-latex'), { recursive: true, force: true }).catch(() => {});
         await rm(join(cacheBase, 'phase-2-formatos', 'pdf'), { recursive: true, force: true }).catch(() => {});
       }
       if (!needsHtml) {

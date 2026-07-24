@@ -1,4 +1,3 @@
-import type { PluginRegistry } from '../../plugin/registry.js';
 import type { TemplateContext } from '../../template/render/context.js';
 import type { AuthorDocumentIndex, BuildContext, BuildDocument, DocumentType } from '../types.js';
 import { renderDocuments } from './render.js';
@@ -31,7 +30,6 @@ export interface ContextPhaseResult {
 export async function runContextPhaseWithTypeGraph(
   allDocs: BuildDocument[],
   ctx: BuildContext,
-  registry: PluginRegistry,
   siteCtx: TemplateContext,
   primaryRendered: ReadonlyMap<DocumentType, BuildDocument[]>,
   authorIndex: AuthorDocumentIndex,
@@ -64,7 +62,7 @@ export async function runContextPhaseWithTypeGraph(
         }
       } catch {}
       const globalCsl = undefined;
-      const rendered = await renderDocuments(docs, concurrency, registry, cwd, globalBibliography, globalCsl);
+      const rendered = await renderDocuments(docs, concurrency, undefined, cwd, globalBibliography, globalCsl);
       renderedMap.set(spec.type, rendered);
       const pool2 = spec.buildPool(renderedMap);
       const contextDocs = rendered.flatMap((doc) => spec.buildPageContexts(doc, siteCtx, pool2, authorIndex, listItemsLimit));

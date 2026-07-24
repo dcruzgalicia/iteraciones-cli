@@ -351,7 +351,7 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
 
   const slug = doc.slug ?? basename(doc.relativePath, '.md');
   const texRelDir = dirname(doc.relativePath);
-  const pdfDir = join(cwd, '.iteraciones', 'cache', 'phase-2-formatos', 'pdf', texRelDir, slug);
+  const pdfDir = join(cwd, '.iteraciones', 'phase-2-formatos', 'pdf', texRelDir, slug);
   const fullTexPath = join(pdfDir, `${slug}.tex`);
 
   // Verificar que el .tex existe antes de compilar

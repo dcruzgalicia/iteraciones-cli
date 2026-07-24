@@ -28,12 +28,12 @@ async function generateCss(outputDir: string, cwd: string, accent: string, cssHa
   const accentTheme = shades.map((s) => `  --color-accent-${s}: var(--color-${accent}-${s});`).join('\n');
 
   if (cssHash) {
-    const cssCachePath = join(cwd, '.iteraciones', 'cache', '.css-hash');
+    const cssCachePath = join(cwd, '.iteraciones', '.css-hash');
     try {
       const previousHash = (await Bun.file(cssCachePath).text()).trim();
       if (previousHash === cssHash) {
         // Cache hit: copiar CSS anterior si existe
-        const cachedCssPath = join(cwd, '.iteraciones', 'cache', 'css', 'styles.css');
+        const cachedCssPath = join(cwd, '.iteraciones', 'css', 'styles.css');
         const cached = await Bun.file(cachedCssPath).exists();
         if (cached) {
           await cp(cachedCssPath, targetCssPath);
@@ -48,10 +48,10 @@ async function generateCss(outputDir: string, cwd: string, accent: string, cssHa
   const generated = await buildCssWithTailwind(targetCssPath, cwd, accentTheme);
 
   if (cssHash) {
-    const cssCacheDir = join(cwd, '.iteraciones', 'cache', 'css');
+    const cssCacheDir = join(cwd, '.iteraciones', 'css');
     await mkdir(cssCacheDir, { recursive: true });
     await Bun.write(join(cssCacheDir, 'styles.css'), generated);
-    await Bun.write(join(cwd, '.iteraciones', 'cache', '.css-hash'), cssHash + '\n');
+    await Bun.write(join(cwd, '.iteraciones', '.css-hash'), cssHash + '\n');
   }
 }
 

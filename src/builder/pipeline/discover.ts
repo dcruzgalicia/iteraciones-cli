@@ -1,15 +1,37 @@
-import { join } from 'node:path';
-import { loadDiscoveryIndex, saveDiscoveryIndex } from '../../cache/discovery-index.js';
+import { mkdir } from 'node:fs/promises';
+import { basename, dirname, join } from 'node:path';
+import { type DiscoveryEntry, loadDiscoveryIndex, saveDiscoveryIndex } from '../../cache/discovery-index.js';
 import { IGNORED_DIRS } from '../../constants.js';
-import { parseFrontmatter } from '../../loader/frontmatter.js';
+import { computeSlug } from '../slug.js';
 import type { SourceDocument } from '../types.js';
 
 export interface DiscoverOptions {
-  /** Si es true, ignora el índice de discovery en disco (siempre lee todos los archivos). */
   noCache?: boolean;
 }
 
-export async function discover(cwd: string, options: DiscoverOptions = {}): Promise<{ docs: SourceDocument[]; changedPaths: Set<string> }> {
+export interface DiscoverResult {
+  relativePaths: string[];
+  changedPaths: Set<string>;
+  buildReport: BuildReport;
+  discoveryIndex: Map<string, DiscoveryEntry>;
+  /** Entradas de archivos eliminados (title/author para calcular slugs). */
+  deletedEntries: Map<string, DiscoveryEntry>;
+}
+
+export interface BuildReport {
+  startedAt: number;
+  newFiles: string[];
+  modifiedFiles: string[];
+  deletedFiles: string[];
+}
+
+const FM_RE = /^---\r?\n([\s\S]*?)\r?\n---/;
+
+/**
+ * Fase 1 — discover: detecta cambios y actualiza discovery.json
+ * con title/author de cada archivo.
+ */
+export async function discover(cwd: string, options: DiscoverOptions = {}): Promise<DiscoverResult> {
   const relativePaths: string[] = [];
 
   for await (const entry of new Bun.Glob('**/*.md').scan({ cwd })) {
@@ -21,70 +43,184 @@ export async function discover(cwd: string, options: DiscoverOptions = {}): Prom
   relativePaths.sort();
 
   const useCache = !options.noCache;
-  const cachedIndex = useCache ? await loadDiscoveryIndex(cwd) : new Map();
-  const updatedIndex = new Map(cachedIndex);
+  const prevReport = useCache ? await loadBuildReport(cwd) : null;
+  const discoveryIndex = useCache ? await loadDiscoveryIndex(cwd) : new Map<string, DiscoveryEntry>();
+  const currentSet = new Set(relativePaths);
   const changedPaths = new Set<string>();
+  const newFiles: string[] = [];
+  const modifiedFiles: string[] = [];
+  const deletedFiles: string[] = [];
 
-  const docs = await Promise.all(
-    relativePaths.map(async (relativePath) => {
-      const filePath = join(cwd, relativePath);
-      const file = Bun.file(filePath);
+  const thisBuildStartedAt = Date.now();
 
-      let mtimeMs: number;
-      try {
-        const stat = await file.stat();
-        mtimeMs = stat.mtime.getTime();
-      } catch (err) {
-        throw new Error(`Error al leer "${relativePath}": ${String(err)}`, { cause: err });
-      }
+  // Leer title/author de archivos nuevos o modificados
+  for (const relativePath of relativePaths) {
+    const filePath = join(cwd, relativePath);
+    let mtimeMs: number;
+    try {
+      const stat = await Bun.file(filePath).stat();
+      mtimeMs = stat.mtime.getTime();
+    } catch (err) {
+      throw new Error(`Error al leer "${relativePath}": ${String(err)}`, { cause: err });
+    }
 
-      const cached = cachedIndex.get(relativePath);
-      if (useCache && cached !== undefined && cached.mtimeMs === mtimeMs) {
-        // Caché válida: reusar datos sin leer el archivo.
-        return { filePath, relativePath, frontmatter: cached.frontmatter, body: cached.body, sourceHash: cached.sourceHash, mtimeMs };
-      }
+    const isNew = !useCache || !prevReport || mtimeMs > prevReport.startedAt;
+    const existed = discoveryIndex.has(relativePath);
 
-      // Caché inválida o ausente: el archivo cambio o es nuevo → registrar en changedPaths
+    if (isNew) {
       changedPaths.add(relativePath);
-
-      // Caché inválida o ausente: leer y procesar el archivo.
-      let raw: string;
-      try {
-        raw = await file.text();
-      } catch (err) {
-        throw new Error(`Error al leer "${relativePath}": ${String(err)}`, { cause: err });
+      if (existed) {
+        modifiedFiles.push(relativePath);
+      } else {
+        newFiles.push(relativePath);
       }
 
-      const { frontmatter, body } = parseFrontmatter(raw);
-
-      const hasher = new Bun.CryptoHasher('sha256');
-      hasher.update(raw);
-      const sourceHash = hasher.digest('hex');
-
-      updatedIndex.set(relativePath, { mtimeMs, sourceHash, frontmatter, body });
-
-      return { filePath, relativePath, frontmatter, body, sourceHash, mtimeMs };
-    }),
-  );
-
-  // Siempre guardar el índice de discovery, incluso con --no-cache.
-  // Los mtimes son independientes de la caché de contenido.
-  const relativePathsSet = new Set(relativePaths);
-  for (const key of updatedIndex.keys()) {
-    if (!relativePathsSet.has(key)) {
-      updatedIndex.delete(key);
-      if (useCache) changedPaths.add(key);
+      // Leer YAML frontmatter para title/author (solo archivos nuevos/modificados)
+      try {
+        const raw = await Bun.file(filePath).text();
+        const fmMatch = FM_RE.exec(raw);
+        if (fmMatch?.[1]) {
+          const parsed = Bun.YAML.parse(fmMatch[1]) as Record<string, unknown>;
+          if (parsed && !Array.isArray(parsed)) {
+            const title = typeof parsed['title'] === 'string' ? parsed['title'] : '';
+            const authors = Array.isArray(parsed['author']) ? parsed['author'].filter((a: unknown) => typeof a === 'string') : [];
+            discoveryIndex.set(relativePath, { title, author: authors });
+          }
+        }
+      } catch {
+        // fallthrough — mantener datos anteriores si existen
+      }
     }
-  }
-  await saveDiscoveryIndex(cwd, updatedIndex);
-
-  // En modo --no-cache, todos los archivos se consideran cambiados
-  // (el discovery index existe para el proximo build, pero este build reprocesa todo)
-  if (!useCache) {
-    for (const doc of docs) {
-      changedPaths.add(doc.relativePath);
-    }
+    // Archivos sin cambios: conservan su entrada en discoveryIndex
   }
 
-  return { docs, changedPaths };
+  // Detectar eliminados y capturar sus datos antes de borrarlos
+  const deletedEntries = new Map<string, DiscoveryEntry>();
+  for (const key of discoveryIndex.keys()) {
+    if (!currentSet.has(key)) {
+      changedPaths.add(key);
+      deletedFiles.push(key);
+      const entry = discoveryIndex.get(key);
+      if (entry) deletedEntries.set(key, entry);
+    }
+  }
+
+  // Limpiar discoveryIndex de archivos eliminados
+  for (const p of deletedFiles) {
+    discoveryIndex.delete(p);
+  }
+
+  // Calcular slugs para todos los archivos (con resolucion de duplicados)
+  const { fileToSlug } = computeAllSlugs(relativePaths, discoveryIndex);
+
+  // Calcular slugs para eliminados (sin duplicados porque ya no existen)
+  const deletedSlugs = computeDeletedSlugs(deletedEntries);
+
+  const buildReport: BuildReport = {
+    startedAt: thisBuildStartedAt,
+    newFiles: newFiles.map((p) => fileToSlug.get(p) ?? basename(p, '.md')),
+    modifiedFiles: modifiedFiles.map((p) => fileToSlug.get(p) ?? basename(p, '.md')),
+    deletedFiles: deletedFiles.map((p) => deletedSlugs.get(p) ?? basename(p, '.md')),
+  };
+
+  await saveDiscoveryIndex(cwd, discoveryIndex);
+  await saveBuildReport(cwd, buildReport);
+
+  return { relativePaths, changedPaths, buildReport, discoveryIndex, deletedEntries };
+}
+
+const BUILD_REPORT_PATH = join('.iteraciones', 'discover', 'build-report.json');
+
+async function loadBuildReport(cwd: string): Promise<BuildReport | null> {
+  const file = Bun.file(join(cwd, BUILD_REPORT_PATH));
+  if (!(await file.exists())) return null;
+  try {
+    const raw = await file.text();
+    return JSON.parse(raw) as BuildReport;
+  } catch {
+    return null;
+  }
+}
+
+async function saveBuildReport(cwd: string, report: BuildReport): Promise<void> {
+  const filePath = join(cwd, BUILD_REPORT_PATH);
+  await mkdir(dirname(filePath), { recursive: true });
+  await Bun.write(filePath, JSON.stringify(report));
+}
+
+/**
+ * Construye SourceDocument[] con frontmatter desde discoveryIndex.
+ * Solo title y author — el resto usa valores por defecto.
+ */
+export function buildDocsFromIndex(relativePaths: string[], discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): SourceDocument[] {
+  return relativePaths.map((relativePath) => {
+    const entry = discoveryIndex.get(relativePath);
+    return {
+      filePath: join(cwd, relativePath),
+      relativePath,
+      frontmatter: {
+        title: entry?.title ?? '',
+        date: '',
+        author: entry?.author ?? [],
+        speakers: [],
+        keywords: [],
+        region: '',
+        block: false,
+        draft: false,
+        items: [],
+        type: '',
+      },
+      body: '',
+      sourceHash: '',
+      mtimeMs: 0,
+    };
+  });
+}
+
+/** Calcula slugs unicos por directorio con resolucion de duplicados. */
+function computeAllSlugs(relativePaths: string[], discoveryIndex: Map<string, DiscoveryEntry>): { fileToSlug: Map<string, string> } {
+  const fileToSlug = new Map<string, string>();
+  const slugCount = new Map<string, number>();
+  const allSlugs: string[] = [];
+
+  // Primera pasada: calcular slugs base
+  for (const p of relativePaths) {
+    const entry = discoveryIndex.get(p);
+    const base = entry ? (computeSlug({ title: entry.title, author: entry.author, relativePath: p }) ?? basename(p, '.md')) : basename(p, '.md');
+    const key = dirname(p) + '/' + base;
+    slugCount.set(key, (slugCount.get(key) ?? 0) + 1);
+    allSlugs.push(key);
+  }
+
+  const allSlugsSet = new Set(allSlugs);
+
+  // Segunda pasada: asignar slugs con sufijo para duplicados
+  for (const p of relativePaths) {
+    const entry = discoveryIndex.get(p);
+    let base = entry ? (computeSlug({ title: entry.title, author: entry.author, relativePath: p }) ?? basename(p, '.md')) : basename(p, '.md');
+    const dir = dirname(p);
+    const key = dir + '/' + base;
+    const count = slugCount.get(key) ?? 0;
+    if (count > 1) {
+      let n = 1;
+      while (allSlugsSet.has(dir + '/' + base + '-d' + n)) {
+        n++;
+      }
+      base = base + '-d' + n;
+      allSlugsSet.add(dir + '/' + base);
+    }
+    fileToSlug.set(p, base);
+  }
+
+  return { fileToSlug };
+}
+
+/** Calcula slugs para archivos eliminados (sin duplicados). */
+function computeDeletedSlugs(deletedEntries: Map<string, DiscoveryEntry>): Map<string, string> {
+  const result = new Map<string, string>();
+  for (const [relPath, entry] of deletedEntries) {
+    const slug = computeSlug({ title: entry.title, author: entry.author, relativePath: relPath }) ?? basename(relPath, '.md');
+    result.set(relPath, slug);
+  }
+  return result;
 }
