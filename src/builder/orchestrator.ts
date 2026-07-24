@@ -14,7 +14,7 @@ import { buildLatexPreamble } from './latex-preamble.js';
 import { classifyDocuments } from './pipeline/classify.js';
 import { composeDocuments, renderBlocksToRegions } from './pipeline/compose.js';
 import { computeAffectedDocs } from './pipeline/dependency-resolver.js';
-import { buildDocsFromIndex, discover } from './pipeline/discover.js';
+import { buildDocsFromIndex, type DiscoverResult, discover } from './pipeline/discover.js';
 import { renderDocuments, renderLatex } from './pipeline/render.js';
 import { runContextPhaseWithTypeGraph } from './pipeline/runner.js';
 import { TYPE_STAGE_MAP } from './pipeline/type-graph.js';
@@ -131,20 +131,8 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions): Promis
 /**
  * Descubre, clasifica y filtra borradores. Retorna el pool de documentos activos.
  */
-async function runDiscovery(
-  cwd: string,
-  ctx: BuildContext,
-  noCache?: boolean,
-): Promise<{ docs: BuildDocument[]; changedPaths: Set<string>; deletedEntries: Map<string, { title: string; author: string[] }> }> {
-  const result = await discover(cwd, { noCache });
-  const sourceDocs = buildDocsFromIndex(result.relativePaths, result.discoveryIndex, cwd);
-  const classified = classifyDocuments(sourceDocs, ctx.siteConfig.format?.html?.theme, ctx.cwd);
-  const allDocs = excludeDrafts(classified);
-  const draftCount = classified.length - allDocs.length;
-  if (draftCount > 0) {
-    process.stderr.write(`[iteraciones] ${draftCount} borrador${draftCount > 1 ? 'es' : ''} excluido${draftCount > 1 ? 's' : ''} (draft:true)\n`);
-  }
-  return { docs: allDocs, changedPaths: result.changedPaths, deletedEntries: result.deletedEntries };
+async function runDiscovery(cwd: string, _ctx: BuildContext, noCache?: boolean): Promise<DiscoverResult> {
+  return discover(cwd, { noCache });
 }
 
 /**
@@ -403,7 +391,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     const generateHtml = ctx.siteConfig.format?.html?.generate === true;
 
     progress.startPhase('discovery');
-    const [{ docs: allDocs, changedPaths: discoveredChanges, deletedEntries }, cssPath] = await Promise.all([
+    const [{ relativePaths, changedPaths: discoveredChanges, discoveryIndex, deletedEntries }, cssPath] = await Promise.all([
       runDiscovery(cwd, ctx, options.noCache),
       generateHtml
         ? buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, {
@@ -412,6 +400,13 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         : Promise.resolve(''),
     ]);
     ctx.cssPath = cssPath;
+    const sourceDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
+    const classified = classifyDocuments(sourceDocs, ctx.siteConfig.format?.html?.theme, ctx.cwd);
+    const allDocs = excludeDrafts(classified);
+    const draftCount = classified.length - allDocs.length;
+    if (draftCount > 0) {
+      process.stderr.write(`[iteraciones] ${draftCount} borrador${draftCount > 1 ? 'es' : ''} excluido${draftCount > 1 ? 's' : ''} (draft:true)\n`);
+    }
     progress.completePhase(allDocs.length);
 
     // ── Filtrado incremental ──
@@ -467,6 +462,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       }
     }
 
+    // ── FASE 3: latex-preparation ──
     // Compute output-path slugs for all documents.
     // Los archivos llamados index.md siempre conservan su nombre (index.html).
     for (const doc of allDocs) {
@@ -531,7 +527,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       progress.completePhase();
     }
 
-    // ── FASE 3: latex-to-html ──
+    // ── FASE 4: latex-to-html ──
     // Convierte .tex a HTML fragment, procesa bloques y construye contextos.
     // Solo se ejecuta si html.generate o epub.generate estan activos.
     const needsHtmlRender = formatCfg?.html?.generate === true;
@@ -590,7 +586,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     // Filtrar docs afectados para compose/write (solo HTML)
     const finalContextDocs = affectedPaths ? allContextDocs.filter((d) => affectedPaths.has(d.relativePath)) : allContextDocs;
 
-    // ── FASE 4: export ──
+    // ── FASE 5: export ──
     const noExport = options.noExport === true;
     const exportRenderedMap = affectedPaths
       ? new Map<DocumentType, BuildDocument[]>(
@@ -641,7 +637,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       progress.completePhase();
     }
 
-    // ── Fase html (final) ──
+    // ── FASE 6: html (final) ──
     if (formatCfg?.html?.generate === true) {
       progress.startPhase('html', finalContextDocs.length);
       const docsWithLinks = finalContextDocs;
@@ -657,7 +653,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       progress.completePhase();
     }
 
-    // ── Fase epub ──
+    // ── FASE 7: epub ──
     if (formatCfg?.epub?.generate && !noExport) {
       let epubTotal = 0;
       for (const type of EXPORTABLE_TYPES) {
