@@ -122,6 +122,19 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions): Promis
     process.stdout.write('  limpiado dist/\n');
     await rm(join(cwd, '.iteraciones'), { recursive: true, force: true });
     process.stdout.write('  limpiado .iteraciones/\n');
+    // Limpiar cache global de biber para un build verdaderamente limpio
+    if (siteConfig.format?.pdf?.generate === true || (siteConfig.format?.html?.thumbnails && siteConfig.format?.pdf !== undefined)) {
+      try {
+        const proc = Bun.spawn(['biber', '--cache'], { stdout: 'pipe' });
+        const cacheDir = (await new Response(proc.stdout).text()).trim();
+        if (cacheDir) {
+          await rm(cacheDir, { recursive: true, force: true });
+          process.stdout.write('  limpiado caché de biber\n');
+        }
+      } catch {
+        // biber no encontrado en PATH — ignorar
+      }
+    }
   }
 
   return ctx;
