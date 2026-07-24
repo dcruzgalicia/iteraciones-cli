@@ -14,7 +14,7 @@ interface DiscoveryIndexFile {
   entries: Record<string, DiscoveryEntry>;
 }
 
-const DISCOVERY_INDEX_PATH = join('.iteraciones', 'discover', 'discovery.json');
+const DISCOVERY_INDEX_PATH = join('.iteraciones', 'changes', 'files.json');
 
 async function readCliVersion(): Promise<string> {
   try {
