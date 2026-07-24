@@ -33,10 +33,10 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
 
 export async function runClean(cwd: string, options: { outputDir?: string } = {}): Promise<void> {
   const config = await loadSiteConfig(cwd).catch(() => null);
-  const defaultDir = config?.format?.html?.generate ? 'dist/www' : 'dist/documents';
+  const defaultDir = 'dist/files';
   const distDir = options.outputDir ?? join(cwd, defaultDir);
   const cacheDir = join(cwd, '.iteraciones');
-  const label = defaultDir === 'dist/www' ? 'dist/www' : 'dist/documents';
+  const label = 'dist/files';
   try {
     await rm(distDir, { recursive: true, force: true });
     await rm(cacheDir, { recursive: true, force: true });
@@ -57,7 +57,7 @@ export async function runInfo(cwd: string): Promise<void> {
     const pandocOk = await checkPandoc()
       .then(() => true)
       .catch(() => false);
-    const distLabel = config.format?.html?.generate ? 'dist/www' : 'dist/documents';
+    const distLabel = 'dist/files';
     const distExists = await stat(join(cwd, distLabel))
       .then((s) => s.isDirectory())
       .catch(() => false);

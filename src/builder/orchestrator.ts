@@ -108,8 +108,7 @@ function makeRelativeContext(value: unknown, prefix: string, depth = 0): unknown
 async function setupBuildEnvironment(cwd: string, options: BuildOptions): Promise<BuildContext> {
   const siteConfig = await loadSiteConfig(cwd);
 
-  const outputDirName = siteConfig.format?.html?.generate ? 'dist/www' : 'dist/documents';
-  const defaultOutputDir = join(cwd, outputDirName);
+  const defaultOutputDir = join(cwd, 'dist', 'files');
   const ctx: BuildContext = {
     siteConfig,
     cwd,
@@ -121,14 +120,10 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions): Promis
   if (options.noCache) {
     await rm(ctx.outputDir, { recursive: true, force: true });
     await rm(join(cwd, '.iteraciones'), { recursive: true, force: true });
-    const pdfGen = siteConfig.format?.pdf?.generate === true;
-    const thumbnailsNeedPdf = siteConfig.format?.html?.thumbnails && siteConfig.format?.pdf !== undefined;
-    if (pdfGen || thumbnailsNeedPdf) {
+    if (siteConfig.format?.pdf?.generate === true || (siteConfig.format?.html?.thumbnails && siteConfig.format?.pdf !== undefined)) {
       await clearBiberCache();
     }
   }
-  const otherDirName = outputDirName === 'dist/www' ? 'dist/documents' : 'dist/www';
-  await rm(join(cwd, otherDirName), { recursive: true, force: true }).catch(() => {});
 
   return ctx;
 }
