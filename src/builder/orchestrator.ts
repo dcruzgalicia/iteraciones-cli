@@ -319,11 +319,11 @@ async function writeTexFiles(allContextDocs: BuildDocument[], ctx: BuildContext,
       ctx.siteConfig.disabledPreambleTranspilers,
     );
 
-    const pdfDir = join(ctx.cwd, '.iteraciones', 'phase-2-formatos', 'pdf', dirname(doc.relativePath), texSlug);
+    const pdfDir = join(ctx.cwd, '.iteraciones', 'formats', 'pdf', dirname(doc.relativePath), texSlug);
     await mkdir(pdfDir, { recursive: true });
 
     // Body post-transpilers — para fase 2 (Markdown → LaTeX)
-    const phase1LatexDir = join(ctx.cwd, '.iteraciones', 'markdown-to-latex', dirname(doc.relativePath));
+    const phase1LatexDir = join(ctx.cwd, '.iteraciones', 'tex', dirname(doc.relativePath));
     await mkdir(phase1LatexDir, { recursive: true });
     await Bun.write(join(phase1LatexDir, `${texSlug}.tex`), doc.processedBody);
 
@@ -343,7 +343,7 @@ async function writeTexFiles(allContextDocs: BuildDocument[], ctx: BuildContext,
     }
   }
   if (texWritten > 0) {
-    log(`Escritos ${texWritten} archivos .tex en phase-2-formatos/pdf/${texCopied > 0 ? `, copiados ${texCopied} a dist/` : ''}`);
+    log(`Escritos ${texWritten} archivos .tex en formats/pdf/${texCopied > 0 ? `, copiados ${texCopied} a dist/` : ''}`);
   }
 }
 
@@ -433,7 +433,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       return;
     }
 
-    // ── FASE 2: markdown-to-latex ──
+    // ── FASE 2: tex ──
     // Convierte markdown a .tex solo para docs afectados. Los no modificados
     // ya tienen su .tex en cache del build anterior.
     if (pipelineDocs.length > 0) {
@@ -457,9 +457,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
           const dir = dirname(relPath);
           const entry = deletedEntries.get(relPath);
           const slug = entry ? (computeSlug({ ...entry, relativePath: relPath }) ?? basename(relPath, '.md')) : basename(relPath, '.md');
-          await rm(join(cacheBase, 'markdown-to-latex', dir, `${slug}.tex`), { force: true }).catch(() => {});
-          await rm(join(cacheBase, 'phase-2-formatos', 'pdf', dir, slug), { recursive: true, force: true }).catch(() => {});
-          await rm(join(cacheBase, 'phase-2-formatos', 'html', dir, slug), { recursive: true, force: true }).catch(() => {});
+          await rm(join(cacheBase, 'tex', dir, `${slug}.tex`), { force: true }).catch(() => {});
+          await rm(join(cacheBase, 'formats', 'pdf', dir, slug), { recursive: true, force: true }).catch(() => {});
+          await rm(join(cacheBase, 'formats', 'html', dir, slug), { recursive: true, force: true }).catch(() => {});
           for (const ext of ['.html', '.tex', '.pdf', '.epub', '.md']) {
             await rm(join(ctx.outputDir, dir, `${slug}${ext}`), { force: true }).catch(() => {});
           }
@@ -552,7 +552,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       for (const [, docs] of primaryRendered) {
         for (const doc of docs) {
           if (!doc.htmlFragment || !doc.slug) continue;
-          const htmlDir = join(ctx.cwd, '.iteraciones', 'phase-2-formatos', 'html', dirname(doc.relativePath), doc.slug);
+          const htmlDir = join(ctx.cwd, '.iteraciones', 'formats', 'html', dirname(doc.relativePath), doc.slug);
           await mkdir(htmlDir, { recursive: true });
           await Bun.write(join(htmlDir, 'index.html'), doc.htmlFragment);
         }
@@ -735,11 +735,11 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         formatCfg?.pdf?.generate === true || (!!formatCfg?.html?.thumbnails && formatCfg?.pdf !== undefined) || formatCfg?.latex?.generate === true;
       const needsHtml = formatCfg?.html?.generate === true || formatCfg?.epub?.generate === true;
       if (!needsTex) {
-        await rm(join(cacheBase, 'markdown-to-latex'), { recursive: true, force: true }).catch(() => {});
-        await rm(join(cacheBase, 'phase-2-formatos', 'pdf'), { recursive: true, force: true }).catch(() => {});
+        await rm(join(cacheBase, 'tex'), { recursive: true, force: true }).catch(() => {});
+        await rm(join(cacheBase, 'formats', 'pdf'), { recursive: true, force: true }).catch(() => {});
       }
       if (!needsHtml) {
-        await rm(join(cacheBase, 'phase-2-formatos', 'html'), { recursive: true, force: true }).catch(() => {});
+        await rm(join(cacheBase, 'formats', 'html'), { recursive: true, force: true }).catch(() => {});
       }
     }
   } finally {

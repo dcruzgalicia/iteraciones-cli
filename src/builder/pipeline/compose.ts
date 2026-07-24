@@ -64,7 +64,7 @@ export async function composeDocuments(
         ctx.cwd,
         '.iteraciones',
         'cache',
-        'phase-2-formatos',
+        'formats',
         'html',
         dirname(doc.relativePath),
         doc.slug ?? basename(doc.relativePath, '.md'),
