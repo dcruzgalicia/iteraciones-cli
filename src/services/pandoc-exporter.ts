@@ -342,7 +342,14 @@ export async function convertToMarkdown(doc: ExportDocument, outputPath: string)
  * formats/pdf/<slug>/ con pdflatex. El .tex y sus
  * auxiliares (.aux, .bbl, .bcf) comparten el mismo directorio.
  */
-export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?: string, pdfFormat?: PdfFormatConfig): Promise<void> {
+export async function convertToPdf(
+  doc: ExportDocument,
+  outputPath: string,
+  cwd?: string,
+  pdfFormat?: PdfFormatConfig,
+  /** Dir donde biber guardara su cache via PAR_GLOBAL_TEMP. Si se omite, no se aísla. */
+  biberCacheDir?: string,
+): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
   if (!cwd) {
@@ -359,10 +366,10 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
     throw new PandocError(`convertToPdf: no se encontro ${fullTexPath}`, doc.filePath, '');
   }
 
-  // Caché de biber aislada en .iteraciones/biber/ para que --no-cache la limpie
-  // automaticamente. PAR_GLOBAL_TEMP unico por invocacion evita que N procesos
-  // paralelos corrompan el thin binary (errno=8).
-  const biberCache = join(cwd, '.iteraciones', 'biber', texRelDir, slug);
+  // PAR_GLOBAL_TEMP aísla la cache de biber para que N procesos paralelos
+  // no corrompan el thin binary (errno=8). Si se pasa biberCacheDir, se usa
+  // ese directorio; si no, se usa .iteraciones/biber/{dir}/{slug}/.
+  const biberCache = biberCacheDir ?? join(cwd, '.iteraciones', 'biber', texRelDir, slug);
   await mkdir(biberCache, { recursive: true });
   const proc = Bun.spawn(['latexmk', '-pdf', '-interaction=nonstopmode', `-outdir=${pdfDir}`, `-jobname=${slug}`, fullTexPath], {
     stdout: 'pipe',

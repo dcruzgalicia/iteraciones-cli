@@ -1,5 +1,5 @@
 import { existsSync, rmSync } from 'node:fs';
-import { stat } from 'node:fs/promises';
+import { mkdir, stat } from 'node:fs/promises';
 
 import { cpus } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
@@ -202,26 +202,26 @@ export async function runExportDocuments(
   const hasPdf = config.pdf?.generate === true || !!config.html?.thumbnails;
   const _hasEpub = config.epub?.generate === true;
 
-  // Semaforo interno que limita las instancias de pdflatex concurrentes.
-  // Cada proceso usa PAR_GLOBAL_TEMP unico (en convertToPdf) para aislar
-  // la cache de biber, permitiendo paralelismo total sin corrupcion.
-  let latexSlots = hasPdf ? Math.max(1, cpus().length - 1) : 0;
-  const latexQueue: Array<() => void> = [];
-  const acquireLatex = (): Promise<void> =>
-    new Promise<void>((res) => {
-      if (latexSlots > 0) {
-        latexSlots--;
-        res();
+  // Semaforo con indices de slot para aislar cache de biber.
+  // cache-0 a cache-N se reusan entre documentos.
+  const maxSlots = hasPdf ? Math.max(1, cpus().length - 1) : 0;
+  const freeSlots: number[] = Array.from({ length: maxSlots }, (_, i) => i);
+  const latexQueue: Array<(slot: number) => void> = [];
+  const acquireLatex = (): Promise<number> =>
+    new Promise<number>((res) => {
+      if (freeSlots.length > 0) {
+        const slot = freeSlots.pop()!;
+        res(slot);
       } else {
         latexQueue.push(res);
       }
     });
-  const releaseLatex = (): void => {
+  const releaseLatex = (slot: number): void => {
     const next = latexQueue.shift();
     if (next) {
-      next();
+      next(slot);
     } else {
-      latexSlots++;
+      freeSlots.push(slot);
     }
   };
 
@@ -311,11 +311,13 @@ export async function runExportDocuments(
       const outputPath = `${outputBase}.pdf`;
       tasks.push(
         (async () => {
-          await acquireLatex();
+          const slot = await acquireLatex();
+          const biberCache = join(cwd, '.iteraciones', 'biber', `cache-${slot}`);
+          await mkdir(biberCache, { recursive: true });
           try {
-            await convertToPdf(exportDoc, outputPath, cwd, config.pdf);
+            await convertToPdf(exportDoc, outputPath, cwd, config.pdf, biberCache);
           } finally {
-            releaseLatex();
+            releaseLatex(slot);
           }
           // Si convertToPdf no generó el PDF (ej: sin .tex final), salir
           if (!existsSync(outputPath)) {
