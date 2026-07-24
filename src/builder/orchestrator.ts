@@ -19,7 +19,7 @@ import { renderDocuments, renderLatex } from './pipeline/render.js';
 import { runContextPhaseWithTypeGraph } from './pipeline/runner.js';
 import { TYPE_STAGE_MAP } from './pipeline/type-graph.js';
 import { writeDocuments } from './pipeline/write.js';
-import { computeSlug, docHref } from './slug.js';
+import { docHref } from './slug.js';
 import type { AuthorDocumentIndex, BuildContext, BuildDocument, DocumentType } from './types.js';
 
 export interface BuildOptions {
@@ -451,7 +451,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         for (const relPath of deletedPaths) {
           const dir = dirname(relPath);
           const entry = deletedEntries.get(relPath);
-          const slug = entry ? (computeSlug({ ...entry, relativePath: relPath }) ?? basename(relPath, '.md')) : basename(relPath, '.md');
+          const slug = entry?.slug ?? basename(relPath, '.md');
           await rm(join(cacheBase, 'tex', dir, `${slug}.tex`), { force: true }).catch(() => {});
           await rm(join(cacheBase, 'formats', 'pdf', dir, slug), { recursive: true, force: true }).catch(() => {});
           await rm(join(cacheBase, 'formats', 'html', dir, slug), { recursive: true, force: true }).catch(() => {});
@@ -463,38 +463,11 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     }
 
     // ── FASE 3: latex-preparation ──
-    // Compute output-path slugs for all documents.
-    // Los archivos llamados index.md siempre conservan su nombre (index.html).
+    // Leer slugs desde files.json (ya resueltos con -dN por discover).
     for (const doc of allDocs) {
-      const filenameStem = basename(doc.relativePath, '.md');
-      doc.slug = filenameStem === 'index' ? undefined : computeSlug(doc.frontmatter);
-    }
-
-    // Detectar slugs duplicados dentro del mismo directorio.
-    // Los slugs que aparecen mas de una vez reciben sufijo -d1, -d2, -d3...
-    const slugCount = new Map<string, number>();
-    const allSlugs = new Set<string>();
-    for (const doc of allDocs) {
-      if (!doc.slug) continue;
-      const key = dirname(doc.relativePath) + '/' + doc.slug;
-      slugCount.set(key, (slugCount.get(key) ?? 0) + 1);
-      allSlugs.add(key);
-    }
-    // Asignar sufijos a slugs duplicados, saltando numeros que colisionen
-    // con slugs originales (ej: un titulo "mi-articulo-d1" ya existe como slug).
-    for (const doc of allDocs) {
-      if (!doc.slug) continue;
-      const dir = dirname(doc.relativePath);
-      const key = dir + '/' + doc.slug;
-      const count = slugCount.get(key) ?? 0;
-      if (count <= 1) continue;
-      // Encontrar el menor sufijo -dN que no colisione con ningun slug original
-      let n = 1;
-      while (allSlugs.has(dir + '/' + doc.slug + '-d' + n)) {
-        n++;
-      }
-      doc.slug = doc.slug + '-d' + n;
-      allSlugs.add(dir + '/' + doc.slug); // registrar el nuevo slug para evitar colisiones entre duplicados
+      const pathNoMd = doc.relativePath;
+      const entry = discoveryIndex.get(pathNoMd);
+      doc.slug = entry?.slug ?? basename(pathNoMd, '.md');
     }
 
     let logoSvg: string | undefined;
