@@ -9,12 +9,12 @@ import { createAuthorDocumentIndex } from './context/authors.js';
 import { buildSiteContext } from './context/site.js';
 import { injectCoverIntoListItems, injectDownloadLinks, injectDownloadLinksIntoListItems, runExportDocuments } from './export/runner.js';
 import { EXPORTABLE_TYPES, type ExportResult } from './export/types.js';
+import { generateFormats } from './format-generator.js';
 import { escapeHtml } from './html.js';
-import { buildLatexPreamble } from './latex-preamble.js';
 import { classifyDocuments } from './pipeline/classify.js';
 import { composeDocuments, renderBlocksToRegions } from './pipeline/compose.js';
 import { computeAffectedDocs } from './pipeline/dependency-resolver.js';
-import { buildDocsFromIndex, type DiscoverResult, discover } from './pipeline/discover.js';
+import { type BuildReport, buildDocsFromIndex, type DiscoverResult, discover } from './pipeline/discover.js';
 import { renderDocuments, renderLatex } from './pipeline/render.js';
 import { runContextPhaseWithTypeGraph } from './pipeline/runner.js';
 import { TYPE_STAGE_MAP } from './pipeline/type-graph.js';
@@ -280,60 +280,6 @@ async function runBlocksPrestep(
 /**
  * Escribe los archivos .tex final e intermedio para cada documento.
  */
-async function writeTexFiles(allContextDocs: BuildDocument[], ctx: BuildContext, log: (msg: string) => void): Promise<void> {
-  const pdfCfg = ctx.siteConfig.format?.pdf;
-  const latexGen = ctx.siteConfig.format?.latex?.generate === true;
-  const needsPdfForThumbnails = ctx.siteConfig.format?.html?.thumbnails && pdfCfg !== undefined;
-  const needsTex = pdfCfg?.generate === true || needsPdfForThumbnails || latexGen;
-  if (!needsTex) return;
-
-  let texWritten = 0;
-  let texCopied = 0;
-  for (const doc of allContextDocs) {
-    if (!doc.processedBody) continue;
-    const texSlug = doc.slug ?? basename(doc.relativePath, '.md');
-    const outDir = join(ctx.outputDir, dirname(doc.relativePath));
-    const texPath = join(outDir, `${texSlug}.tex`);
-
-    const preamble = await buildLatexPreamble(
-      ctx.siteConfig.format?.pdf,
-      {
-        title: doc.frontmatter?.title as string | undefined,
-        author: doc.frontmatter?.author as string[] | undefined,
-        date: doc.frontmatter?.date as string | undefined,
-        filePath: doc.filePath,
-        cwd: ctx.cwd,
-      },
-      ctx.siteConfig.disabledPreambleTranspilers,
-    );
-
-    const pdfDir = join(ctx.cwd, '.iteraciones', 'formats', 'pdf', dirname(doc.relativePath), texSlug);
-    await mkdir(pdfDir, { recursive: true });
-
-    // Body post-transpilers — para fase 2 (Markdown → LaTeX)
-    const phase1LatexDir = join(ctx.cwd, '.iteraciones', 'tex', dirname(doc.relativePath));
-    await mkdir(phase1LatexDir, { recursive: true });
-    await Bun.write(join(phase1LatexDir, `${texSlug}.tex`), doc.processedBody);
-
-    // .tex completo — para PDF (única copia, junto a sus auxiliares)
-    // Siempre se escribe si se necesita PDF, aunque latex.generate sea false
-    const bodyClean = doc.processedBody.replace(/\n+$/, '');
-    const fullTex = [...preamble, '', bodyClean, '', '\\end{document}'].join('\n');
-    const fullTexPath = join(pdfDir, `${texSlug}.tex`);
-    await Bun.write(fullTexPath, fullTex);
-    texWritten++;
-
-    // .tex final en dist/ — solo si latex.generate: true
-    if (latexGen) {
-      await mkdir(outDir, { recursive: true });
-      await Bun.write(texPath, fullTex);
-      texCopied++;
-    }
-  }
-  if (texWritten > 0) {
-    log(`Escritos ${texWritten} archivos .tex en formats/pdf/${texCopied > 0 ? `, copiados ${texCopied} a dist/` : ''}`);
-  }
-}
 
 /**
  * Fase final: compone HTML, plugins, manifiesto y poda de caché.
@@ -409,6 +355,12 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     }
     progress.completePhase(allDocs.length);
 
+    // ── Assign slugs from discoveryIndex (needed for downstream phases) ──
+    for (const doc of allDocs) {
+      const entry = discoveryIndex.get(doc.relativePath);
+      doc.slug = entry?.slug ?? basename(doc.relativePath, '.md');
+    }
+
     // ── Filtrado incremental ──
     // Identifica archivos modificados por mtime/hash y limita el pipeline
     // a los docs afectados. Los no modificados conservan sus archivos en
@@ -442,19 +394,25 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       }
     }
 
-    // Limpiar archivos de documentos markdown eliminados del disco.
+    // ── Write .tex body to disk (persists FASE 2 output for FASE 3) ──
+    for (const doc of pipelineDocs) {
+      if (!doc.processedBody || !doc.slug) continue;
+      const texDir = join(ctx.cwd, '.iteraciones', 'tex', dirname(doc.relativePath));
+      await mkdir(texDir, { recursive: true });
+      await Bun.write(join(texDir, `${doc.slug}.tex`), doc.processedBody);
+    }
+
+    // ── Limpiar archivos de documentos markdown eliminados ──
     {
       const allDocPathsSet = new Set(allDocs.map((d) => d.relativePath));
-      const deletedPaths = [...changedPaths].filter((p) => p.endsWith('.md') && !allDocPathsSet.has(p));
-      if (deletedPaths.length > 0) {
+      const deletedMdPaths = [...changedPaths].filter((p) => p.endsWith('.md') && !allDocPathsSet.has(p));
+      if (deletedMdPaths.length > 0) {
         const cacheBase = join(ctx.cwd, '.iteraciones');
-        for (const relPath of deletedPaths) {
+        for (const relPath of deletedMdPaths) {
           const dir = dirname(relPath);
           const entry = deletedEntries.get(relPath);
           const slug = entry?.slug ?? basename(relPath, '.md');
           await rm(join(cacheBase, 'tex', dir, `${slug}.tex`), { force: true }).catch(() => {});
-          await rm(join(cacheBase, 'formats', 'pdf', dir, slug), { recursive: true, force: true }).catch(() => {});
-          await rm(join(cacheBase, 'formats', 'html', dir, slug), { recursive: true, force: true }).catch(() => {});
           for (const ext of ['.html', '.tex', '.pdf', '.epub', '.md']) {
             await rm(join(ctx.outputDir, dir, `${slug}${ext}`), { force: true }).catch(() => {});
           }
@@ -462,14 +420,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       }
     }
 
-    // ── FASE 3: latex-preparation ──
-    // Leer slugs desde files.json (ya resueltos con -dN por discover).
-    for (const doc of allDocs) {
-      const pathNoMd = doc.relativePath;
-      const entry = discoveryIndex.get(pathNoMd);
-      doc.slug = entry?.slug ?? basename(pathNoMd, '.md');
-    }
-
+    // ── Build site context (needed for HTML composition) ──
     let logoSvg: string | undefined;
     let enrichedSiteCtx: TemplateContext;
     if (generateHtml) {
@@ -480,24 +431,45 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     }
 
     const formatCfg = ctx.siteConfig.format;
-
-    // ── Escribir .tex a cache y dist ──
-    const activeFormats: PipelinePhase[] = [];
     const pdfOn = formatCfg?.pdf?.generate === true || (!!formatCfg?.html?.thumbnails && formatCfg?.pdf !== undefined);
     const latexOn = formatCfg?.latex?.generate === true;
+    const htmlOn = formatCfg?.html?.generate === true;
+    const epubOn = formatCfg?.epub?.generate === true;
+    const mdOn = formatCfg?.markdown?.generate === true;
+    const activeFormats: PipelinePhase[] = [];
     if (latexOn && !options.noExport) activeFormats.push('latex');
     if (pdfOn && !options.noExport) activeFormats.push('pdf');
-    if (formatCfg?.html?.generate === true) activeFormats.push('html');
-    if (formatCfg?.epub?.generate && !options.noExport) activeFormats.push('epub');
-    if (formatCfg?.markdown?.generate && !options.noExport) activeFormats.push('markdown');
+    if (htmlOn) activeFormats.push('html');
+    if (epubOn && !options.noExport) activeFormats.push('epub');
+    if (mdOn && !options.noExport) activeFormats.push('markdown');
     progress.setFormatPhases(activeFormats);
 
-    if (activeFormats.includes('latex')) {
-      progress.startPhase('latex', pipelineDocs.length);
+    // ── FASE 3: generate formats from .tex body on disk ──
+    // Uses discoveryIndex + diff data, NOT allDocs/pipelineDocs.
+    {
+      const recentMdPaths = [...changedPaths].filter((p) => p.endsWith('.md') && !deletedEntries.has(p));
+      const deletedMdPaths = [...deletedEntries.keys()].filter((p) => p.endsWith('.md'));
+      const diff: BuildReport = {
+        startedAt: Date.now(),
+        recentFiles: recentMdPaths,
+        deletedFiles: deletedMdPaths,
+      };
+      await generateFormats(cwd, ctx.siteConfig, discoveryIndex, diff, log);
     }
-    await writeTexFiles(pipelineDocs, ctx, log);
-    if (activeFormats.includes('latex')) {
-      progress.completePhase();
+
+    // ── Copy .tex to dist (export step for latex format) ──
+    if (latexOn && !options.noExport) {
+      for (const doc of pipelineDocs) {
+        if (!doc.slug) continue;
+        const outDir = join(ctx.outputDir, dirname(doc.relativePath));
+        const pdfDir = join(ctx.cwd, '.iteraciones', 'formats', 'pdf', dirname(doc.relativePath), doc.slug);
+        const fullTexPath = join(pdfDir, `${doc.slug}.tex`);
+        const texExists = await Bun.file(fullTexPath).exists();
+        if (texExists) {
+          await mkdir(outDir, { recursive: true });
+          await Bun.write(join(outDir, `${doc.slug}.tex`), Bun.file(fullTexPath));
+        }
+      }
     }
 
     // ── FASE 4: latex-to-html ──
@@ -664,10 +636,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       progress.completePhase();
     }
 
-    const htmlOn = formatCfg?.html?.generate === true;
-    const mdOn = formatCfg?.markdown?.generate === true;
-    const epubOn = formatCfg?.epub?.generate === true;
-    // latexOn y pdfOn ya declarados arriba
+    // latexOn, pdfOn, htmlOn, epubOn, mdOn ya declarados arriba
     const totalDocs = htmlOn || pdfOn || epubOn || mdOn || latexOn ? totalDocCount : 0;
     const processedCount = noChanges ? 0 : affectedPaths ? affectedPaths.size : totalDocs;
     const cachedCount = totalDocs - processedCount;
