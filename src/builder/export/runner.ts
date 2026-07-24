@@ -353,7 +353,10 @@ export async function runExportDocuments(
     });
   }
 
-  const results = await mapWithConcurrency(exportableDocs, concurrency, async (doc): Promise<ExportResult | null> => {
+  // Usar maxSlots como concurrencia para que todos los cache slots de biber
+  // se utilicen simultaneamente (hasta cpus()-1 latexmk en paralelo).
+  const pdfConcurrency = hasPdf ? maxSlots : concurrency;
+  const results = await mapWithConcurrency(exportableDocs, pdfConcurrency, async (doc): Promise<ExportResult | null> => {
     // Respetar export: { skip: true } en el frontmatter del documento.
     // Se valida que sea un objeto plano (sin arrays ni prototipos no-Object)
     // siguiendo el patrón del codebase en normalizeSpeaker/parseFrontmatter.
