@@ -380,7 +380,7 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
   if (exitCode !== 0) {
     const log = stdout + '\n' + stderr;
     const m = log.match(/^! .*$/m);
-    throw new PandocError(`latexmk fall\u00f3 al generar PDF para ${doc.filePath}: ${m ? m[0] : 'exit ' + exitCode}`, doc.filePath, stderr);
+    throw new PandocError(`latexmk falló al generar PDF para ${doc.filePath}: ${m ? m[0] : 'exit ' + exitCode}`, doc.filePath, stderr);
   }
 }
 

@@ -1,6 +1,6 @@
 import { existsSync, rmSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
-import { cpus } from 'node:os';
+
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import type { EpubFormatConfig, HtmlFormatConfig, MarkdownFormatConfig, PdfFormatConfig, ThumbnailMode } from '../../config/site-config.js';
 import { THUMBNAIL_SIZES } from '../../config/site-config.js';
@@ -201,12 +201,10 @@ export async function runExportDocuments(
   const hasPdf = config.pdf?.generate === true || !!config.html?.thumbnails;
   const _hasEpub = config.epub?.generate === true;
 
-  // Semaforo interno que limita las instancias de pdflatex concurrentes sin afectar EPUB.
-  // El outer mapWithConcurrency usa el limite general (concurrency); dentro del branch
-  // PDF se adquiere un slot antes de invocar pdflatex y se libera al terminar — con o
-  // sin error. Asi el numero de documentos en vuelo es `concurrency`, pero las llamadas
-  // a pdflatex activas simultaneamente se acotan a `pdfConcurrency` (~300-600 MB/proceso).
-  let latexSlots = hasPdf ? Math.max(1, cpus().length - 1) : 0;
+  // Semaforo interno que limita las instancias de pdflatex/biber a 1 proceso a la vez.
+  // Biber usa una cache global (PAR) que no soporta acceso concurrente;
+  // multiples latexmk simultaneos corrompen la cache y fallan con errno=8 / ENOEXEC.
+  let latexSlots = hasPdf ? 1 : 0;
   const latexQueue: Array<() => void> = [];
   const acquireLatex = (): Promise<void> =>
     new Promise<void>((res) => {
