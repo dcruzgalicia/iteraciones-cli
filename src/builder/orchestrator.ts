@@ -122,10 +122,6 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions): Promis
     process.stdout.write('  limpiado dist/\n');
     await rm(join(cwd, '.iteraciones'), { recursive: true, force: true });
     process.stdout.write('  limpiado .iteraciones/\n');
-    if (siteConfig.format?.pdf?.generate === true || (siteConfig.format?.html?.thumbnails && siteConfig.format?.pdf !== undefined)) {
-      await clearBiberCache();
-      process.stdout.write('  limpiado caché de biber\n');
-    }
   }
 
   return ctx;
@@ -651,30 +647,5 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     if (mdOn) generatedFormats.push('markdown');
     progress.finish(processedCount, cachedCount, generatedFormats);
   } finally {
-  }
-}
-
-/**
- * Obtiene el directorio de cache global de biber ejecutando `biber --cache`.
- * Retorna null si biber no esta instalado o falla.
- */
-async function getBiberCacheDir(): Promise<string | null> {
-  try {
-    const proc = Bun.spawn(['biber', '--cache'], { stdout: 'pipe' });
-    const dir = (await new Response(proc.stdout).text()).trim();
-    return dir || null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Limpia la cache global de biber. Se ejecuta junto con --no-cache
- * para evitar errores por stale data en compilaciones PDF con biblatex.
- */
-async function clearBiberCache(): Promise<void> {
-  const cacheDir = await getBiberCacheDir();
-  if (cacheDir) {
-    await rm(cacheDir, { recursive: true, force: true });
   }
 }
