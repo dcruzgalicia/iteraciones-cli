@@ -12,7 +12,6 @@ export interface DiscoverOptions {
 export interface DiscoverResult {
   relativePaths: string[];
   changedPaths: Set<string>;
-  buildReport: BuildReport;
   discoveryIndex: Map<string, DiscoveryEntry>;
   /** Entradas de archivos eliminados (title/author para calcular slugs). */
   deletedEntries: Map<string, DiscoveryEntry>;
@@ -20,8 +19,7 @@ export interface DiscoverResult {
 
 export interface BuildReport {
   startedAt: number;
-  newFiles: string[];
-  modifiedFiles: string[];
+  recentFiles: string[];
   deletedFiles: string[];
 }
 
@@ -47,8 +45,7 @@ export async function discover(cwd: string, options: DiscoverOptions = {}): Prom
   const discoveryIndex = useCache ? await loadDiscoveryIndex(cwd) : new Map<string, DiscoveryEntry>();
   const currentSet = new Set(relativePaths);
   const changedPaths = new Set<string>();
-  const newFiles: string[] = [];
-  const modifiedFiles: string[] = [];
+  const recentFiles: string[] = [];
   const deletedFiles: string[] = [];
 
   const thisBuildStartedAt = Date.now();
@@ -65,15 +62,10 @@ export async function discover(cwd: string, options: DiscoverOptions = {}): Prom
     }
 
     const isNew = !useCache || !prevReport || mtimeMs > prevReport.startedAt;
-    const existed = discoveryIndex.has(relativePath);
 
     if (isNew) {
       changedPaths.add(relativePath);
-      if (existed) {
-        modifiedFiles.push(relativePath);
-      } else {
-        newFiles.push(relativePath);
-      }
+      recentFiles.push(relativePath);
 
       // Leer YAML frontmatter para title/author (solo archivos nuevos/modificados)
       try {
@@ -110,23 +102,16 @@ export async function discover(cwd: string, options: DiscoverOptions = {}): Prom
     discoveryIndex.delete(p);
   }
 
-  // Calcular slugs para todos los archivos (con resolucion de duplicados)
-  const { fileToSlug } = computeAllSlugs(relativePaths, discoveryIndex);
-
-  // Calcular slugs para eliminados (sin duplicados porque ya no existen)
-  const deletedSlugs = computeDeletedSlugs(deletedEntries);
-
   const buildReport: BuildReport = {
     startedAt: thisBuildStartedAt,
-    newFiles: newFiles.map((p) => fileToSlug.get(p) ?? basename(p, '.md')),
-    modifiedFiles: modifiedFiles.map((p) => fileToSlug.get(p) ?? basename(p, '.md')),
-    deletedFiles: deletedFiles.map((p) => deletedSlugs.get(p) ?? basename(p, '.md')),
+    recentFiles: [...recentFiles],
+    deletedFiles: [...deletedFiles],
   };
 
   await saveDiscoveryIndex(cwd, discoveryIndex);
   await saveBuildReport(cwd, buildReport);
 
-  return { relativePaths, changedPaths, buildReport, discoveryIndex, deletedEntries };
+  return { relativePaths, changedPaths, discoveryIndex, deletedEntries };
 }
 
 const BUILD_REPORT_PATH = join('.iteraciones', 'changes', 'diff.json');
