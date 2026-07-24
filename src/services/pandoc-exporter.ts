@@ -339,7 +339,7 @@ export async function convertToMarkdown(doc: ExportDocument, outputPath: string)
 
 /**
  * Convierte un ExportDocument a PDF compilando el .tex de
- * phase-2-formatos/pdf/<slug>/ con pdflatex. El .tex y sus
+ * formats/pdf/<slug>/ con pdflatex. El .tex y sus
  * auxiliares (.aux, .bbl, .bcf) comparten el mismo directorio.
  */
 export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?: string, pdfFormat?: PdfFormatConfig): Promise<void> {
@@ -351,7 +351,7 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
 
   const slug = doc.slug ?? basename(doc.relativePath, '.md');
   const texRelDir = dirname(doc.relativePath);
-  const pdfDir = join(cwd, '.iteraciones', 'phase-2-formatos', 'pdf', texRelDir, slug);
+  const pdfDir = join(cwd, '.iteraciones', 'formats', 'pdf', texRelDir, slug);
   const fullTexPath = join(pdfDir, `${slug}.tex`);
 
   // Verificar que el .tex existe antes de compilar

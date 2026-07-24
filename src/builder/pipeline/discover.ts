@@ -129,7 +129,7 @@ export async function discover(cwd: string, options: DiscoverOptions = {}): Prom
   return { relativePaths, changedPaths, buildReport, discoveryIndex, deletedEntries };
 }
 
-const BUILD_REPORT_PATH = join('.iteraciones', 'discover', 'build-report.json');
+const BUILD_REPORT_PATH = join('.iteraciones', 'changes', 'diff.json');
 
 async function loadBuildReport(cwd: string): Promise<BuildReport | null> {
   const file = Bun.file(join(cwd, BUILD_REPORT_PATH));
