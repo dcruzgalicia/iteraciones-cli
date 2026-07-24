@@ -140,8 +140,23 @@ export async function renderLatex(docs: BuildDocument[], concurrency: number, cw
   const { stringTranspilers, astTranspilers } = await loadTranspilers(activeTranspilers, cwd);
 
   return mapWithConcurrency(docs, concurrency, async (doc) => {
-    // Paso 1: transpilers string (regex) sobre el markdown original
+    // Si el body esta vacio (doc sin cambios que no fue leido en discovery),
+    // leer el archivo del disco ahora que entro al pipeline.
     let body = doc.body;
+    if (!body && cwd) {
+      try {
+        body = await Bun.file(doc.filePath).text();
+        // Extraer el body sin frontmatter
+        const fmMatch = body.match(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/);
+        if (fmMatch) {
+          body = body.slice(fmMatch[0].length);
+        }
+      } catch {
+        return { ...doc, processedBody: '' };
+      }
+    }
+
+    // Paso 1: transpilers string (regex) sobre el markdown original
     for (const t of stringTranspilers) {
       body = t.process(body);
     }

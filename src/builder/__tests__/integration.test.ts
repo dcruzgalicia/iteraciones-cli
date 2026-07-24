@@ -307,7 +307,7 @@ describe('caché: segunda build produce output idéntico al primero', () => {
     // Prueba indirecta de que la caché fue usada en la segunda build:
     // la caché de render debe existir y tener al menos un subdirectorio (prefijo hex)
     // tras la primera build, lo que confirma que las entradas fueron escritas.
-    const renderCacheDir = join(tmpCwd, '.iteraciones', 'cache', 'render');
+    const renderCacheDir = join(tmpCwd, '.iteraciones', 'render');
     expect(existsSync(renderCacheDir)).toBe(true);
     const prefixDirs = readdirSync(renderCacheDir);
     expect(prefixDirs.length).toBeGreaterThan(0);

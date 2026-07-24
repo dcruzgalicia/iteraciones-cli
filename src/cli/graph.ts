@@ -2,7 +2,7 @@ import { writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { buildDocumentGraph } from '../builder/graph-exporter.js';
 import { classifyDocuments } from '../builder/pipeline/classify.js';
-import { discover } from '../builder/pipeline/discover.js';
+import { buildDocsFromIndex, discover } from '../builder/pipeline/discover.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 
 export type GraphCommandOptions = {
@@ -24,7 +24,8 @@ export type GraphOutput = {
  */
 export async function runGraph(cwd: string, options: GraphCommandOptions = {}): Promise<void> {
   const config = await loadSiteConfig(cwd);
-  const { docs: discovered } = await discover(cwd, { noCache: true });
+  const { relativePaths, discoveryIndex } = await discover(cwd, { noCache: true });
+  const discovered = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
   const classified = classifyDocuments(discovered, config.format?.html?.theme, cwd);
   const nonDrafts = classified.filter((doc) => !doc.frontmatter.draft);
 
