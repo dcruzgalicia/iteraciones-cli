@@ -16,6 +16,10 @@ import type { BuildReport } from './pipeline/discover.js';
  *   formats/html/{dir}/{slug}/index.html  (html fragment, si html/epub activo)
  *   formats/markdown/{dir}/{slug}.md      (markdown, si formato markdown activo)
  *
+ * El orden respeta la cadena de dependencias: primero pdf/latex, luego html,
+ * luego markdown. Cada formato se completa para todos los archivos antes de
+ * iniciar el siguiente.
+ *
  * No usa allDocs ni pipelineDocs — solo trabaja con discoveryIndex y diff.json.
  */
 export async function generateFormats(
@@ -35,28 +39,24 @@ export async function generateFormats(
 
   const cacheBase = join(cwd, '.iteraciones');
 
-  // ── Process recent files (new/modified) ──
-  for (const relPath of diff.recentFiles) {
-    const entry = discoveryIndex.get(relPath);
-    if (!entry) continue;
+  // ── FASE 3a: formats/pdf/ (full .tex con preamble) ──
+  if (pdfActive) {
+    for (const relPath of diff.recentFiles) {
+      const entry = discoveryIndex.get(relPath);
+      if (!entry) continue;
 
-    const slug = entry.slug ?? basename(relPath, '.md');
-    const dir = dirname(relPath);
-    const texBodyPath = join(cacheBase, 'tex', dir, `${slug}.tex`);
+      const slug = entry.slug ?? basename(relPath, '.md');
+      const dir = dirname(relPath);
+      const texBodyPath = join(cacheBase, 'tex', dir, `${slug}.tex`);
 
-    // Read the .tex body from disk (generated in FASE 2)
-    let texBody: string;
-    try {
-      texBody = await Bun.file(texBodyPath).text();
-      // Strip trailing whitespace for clean preamble splicing
-      texBody = texBody.replace(/\n+$/, '');
-    } catch {
-      // No .tex body means this document was likely skipped during renderLatex
-      continue;
-    }
+      let texBody: string;
+      try {
+        texBody = await Bun.file(texBodyPath).text();
+        texBody = texBody.replace(/\n+$/, '');
+      } catch {
+        continue;
+      }
 
-    // ── PDF/LaTeX: write full .tex with preamble to formats/pdf/ ──
-    if (pdfActive) {
       const preamble = await buildLatexPreamble(
         siteConfig.format?.pdf,
         {
@@ -74,12 +74,27 @@ export async function generateFormats(
       await mkdir(pdfDir, { recursive: true });
       await Bun.write(join(pdfDir, `${slug}.tex`), fullTex);
     }
+  }
 
-    // ── HTML: convert .tex body to html fragment in formats/html/ ──
-    if (htmlActive) {
+  // ── FASE 3b: formats/html/ (fragmento html desde latex) ──
+  if (htmlActive) {
+    for (const relPath of diff.recentFiles) {
+      const entry = discoveryIndex.get(relPath);
+      if (!entry) continue;
+
+      const slug = entry.slug ?? basename(relPath, '.md');
+      const dir = dirname(relPath);
+      const texBodyPath = join(cacheBase, 'tex', dir, `${slug}.tex`);
+
+      let texBody: string;
+      try {
+        texBody = await Bun.file(texBodyPath).text();
+      } catch {
+        continue;
+      }
+
       try {
         const htmlFragment = await convertFragment(texBody, join(cwd, relPath), undefined, 'html5', 'latex-auto_identifiers');
-
         const htmlDir = join(cacheBase, 'formats', 'html', dir, slug);
         await mkdir(htmlDir, { recursive: true });
         await Bun.write(join(htmlDir, 'index.html'), htmlFragment);
@@ -87,12 +102,27 @@ export async function generateFormats(
         process.stderr.write(`[format-generator] error al convertir ${slug}.tex a HTML: ${String(err)}\n`);
       }
     }
+  }
 
-    // ── Markdown: convert .tex body to markdown in formats/markdown/ ──
-    if (mdActive) {
+  // ── FASE 3c: formats/markdown/ (markdown desde latex) ──
+  if (mdActive) {
+    for (const relPath of diff.recentFiles) {
+      const entry = discoveryIndex.get(relPath);
+      if (!entry) continue;
+
+      const slug = entry.slug ?? basename(relPath, '.md');
+      const dir = dirname(relPath);
+      const texBodyPath = join(cacheBase, 'tex', dir, `${slug}.tex`);
+
+      let texBody: string;
+      try {
+        texBody = await Bun.file(texBodyPath).text();
+      } catch {
+        continue;
+      }
+
       try {
         const mdContent = await convertFragment(texBody, join(cwd, relPath), undefined, 'markdown', 'latex-auto_identifiers');
-
         const mdDir = join(cacheBase, 'formats', 'markdown', dir);
         await mkdir(mdDir, { recursive: true });
         await Bun.write(join(mdDir, `${slug}.md`), mdContent);
@@ -108,7 +138,6 @@ export async function generateFormats(
     const slug = entry?.slug ?? basename(relPath, '.md');
     const dir = dirname(relPath);
 
-    // Delete from all format directories regardless of current config
     await rm(join(cacheBase, 'formats', 'pdf', dir, slug), { recursive: true, force: true }).catch(() => {});
     await rm(join(cacheBase, 'formats', 'html', dir, slug), { recursive: true, force: true }).catch(() => {});
     await rm(join(cacheBase, 'formats', 'markdown', dir, `${slug}.md`), { force: true }).catch(() => {});
