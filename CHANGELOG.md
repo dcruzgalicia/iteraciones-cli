@@ -1,5 +1,70 @@
 # Changelog
 
+## [0.9.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.8.0...v0.9.0) (2026-07-24)
+
+
+### Features
+
+* **builder:** activa build incremental por defecto en iteraciones build ([0fd5399](https://github.com/dcruzgalicia/iteraciones-cli/commit/0fd539901afac0bb250de22ceec130cfb28bce65)), closes [#822](https://github.com/dcruzgalicia/iteraciones-cli/issues/822)
+* **cache:** --no-cache elimina completamente .iteraciones/cache/ ([bfc5eba](https://github.com/dcruzgalicia/iteraciones-cli/commit/bfc5eba04808c7e2bd092c5c59832792df2fc607))
+* **cache:** build incremental por mtime de archivos .md ([38660b7](https://github.com/dcruzgalicia/iteraciones-cli/commit/38660b70a6e45e345fd26e99f5b695e234ab6065))
+* **cache:** limpia carpetas de formatos desactivados al finalizar build ([968b4a9](https://github.com/dcruzgalicia/iteraciones-cli/commit/968b4a990ad808892b9e06cddfc429268e70f85f)), closes [#821](https://github.com/dcruzgalicia/iteraciones-cli/issues/821)
+* **html:** elimina IDs auto generados en encabezados del body HTML ([0e8ebb4](https://github.com/dcruzgalicia/iteraciones-cli/commit/0e8ebb48acc9084abeeaf13a1096bda5a699c8e4))
+* **latex:** agrega csquotes como dependencia requerida de biblatex ([0b1c2ae](https://github.com/dcruzgalicia/iteraciones-cli/commit/0b1c2ae9461e18900039c7fd4c984a27b76b1aea)), closes [#769](https://github.com/dcruzgalicia/iteraciones-cli/issues/769)
+* **latex:** sistema de transpilers para el preambulo ([4f12e42](https://github.com/dcruzgalicia/iteraciones-cli/commit/4f12e42cbdc7355fcb9d6c2617733df75f09df9c))
+* **log:** muestra nombres de formatos generados en lugar de solo contador ([9bc718f](https://github.com/dcruzgalicia/iteraciones-cli/commit/9bc718f6dca4de282fc72d7e6d73ef768bfb0597)), closes [#791](https://github.com/dcruzgalicia/iteraciones-cli/issues/791)
+* **pdf:** agrega atributo hyperref a format.pdf con default hidelinks ([7ff841d](https://github.com/dcruzgalicia/iteraciones-cli/commit/7ff841d897544ab19dbd9117851ffeedd74fa842))
+* **pdf:** agrega atributo microtype a format.pdf ([9820c8e](https://github.com/dcruzgalicia/iteraciones-cli/commit/9820c8e4383f28ede05b273122452840e7d1b3b1))
+* **pdf:** agrega raggedbottom y penalties a format.pdf ([f2b281e](https://github.com/dcruzgalicia/iteraciones-cli/commit/f2b281e8ce2a6c37dd0ec7444dd6a6756373a8f5))
+* **pdf:** convierte transpilers sectioning, setkomafont, dictum y pagestyle a config ([216cd7c](https://github.com/dcruzgalicia/iteraciones-cli/commit/216cd7c9ad705be0412cfeaeeac7198d9a6c946d))
+* **pdf:** guarda htmlFragment en phase-2-formatos/html/ como unica fuente ([c608007](https://github.com/dcruzgalicia/iteraciones-cli/commit/c60800754223bcfb0db042552a933130dbe3b38a))
+* **pdf:** limpia cache de biber al usar build --no-cache ([3b75cc5](https://github.com/dcruzgalicia/iteraciones-cli/commit/3b75cc594beba0d9ea520d7796412f26502833d5))
+* **pdf:** mathptmx y setspace como paquetes explicitos ([40458dc](https://github.com/dcruzgalicia/iteraciones-cli/commit/40458dca5c011e5b05c738d09466e1720320e275))
+* **preamble:** agrega transpiler hyphenation-rules con nombres propios que nunca se dividen ([2b5c97f](https://github.com/dcruzgalicia/iteraciones-cli/commit/2b5c97f5e127dcb9ba940dfbc34ddfb629d80c52))
+* **preamble:** toc como section, style explicito en chapter/section, sin cleardoublepage ([1139922](https://github.com/dcruzgalicia/iteraciones-cli/commit/11399227fe1bf89d8dcdb2caa430a62029e8b7e9))
+* **preamble:** transpiler bibliography-heading con bibintoc como section numerada ([29de467](https://github.com/dcruzgalicia/iteraciones-cli/commit/29de46798206c2412ff4216ea3a6015df9fa58c3))
+* **preamble:** transpiler maketitle-patches con \and y coma en PDF ([4db147c](https://github.com/dcruzgalicia/iteraciones-cli/commit/4db147cc267fa6d3be9cc1454520b5e6e8860055))
+* **preamble:** transpiler title-fonts con setkomafont, normalsize en author via setkomafont ([ae2d7bb](https://github.com/dcruzgalicia/iteraciones-cli/commit/ae2d7bb80c8693b13aae917ae521b09ed05abf89))
+* **preamble:** transpiler toc-styling ([2e615a8](https://github.com/dcruzgalicia/iteraciones-cli/commit/2e615a8656b63f6b04e911b49e556457b64eb220))
+* **preamble:** transpilers dictum, environments, page-style ([f6a4d3d](https://github.com/dcruzgalicia/iteraciones-cli/commit/f6a4d3d0421a5e86bf9b9793fdd7731648518259))
+* **preamble:** transpilers section part, chapter, section, subsection ([5e00dc8](https://github.com/dcruzgalicia/iteraciones-cli/commit/5e00dc8706ad8a813c5b427d1cc2b90fba0dfbe0))
+* **preamble:** transpilers subsubsection, paragraph, subparagraph ([d8caa15](https://github.com/dcruzgalicia/iteraciones-cli/commit/d8caa15b5dfe755c5a0d47fcaaba10be6cdf7fd1))
+* **transpilers:** agrega transpiler AST mbox-sentence-ends para envolver palabras en \mbox{} ([adc45be](https://github.com/dcruzgalicia/iteraciones-cli/commit/adc45bec3e48e5d0239c477c58e1861be7a3fc5f))
+
+
+### Bug Fixes
+
+* **builder:** -dN salta numeros ocupados por slugs originales ([ff45b56](https://github.com/dcruzgalicia/iteraciones-cli/commit/ff45b56df668212960c6e2d0fb28685eb5d6a2bb))
+* **builder:** agrega sufijo numerico a slugs duplicados en mismo directorio ([ce7563b](https://github.com/dcruzgalicia/iteraciones-cli/commit/ce7563b456a14fd0f48e8b5e5fc245d96dccd2fe))
+* **builder:** maneja colisiones de slugs con while loop en vez de contador simple ([6541ef0](https://github.com/dcruzgalicia/iteraciones-cli/commit/6541ef0e48cb93134158b65555eb92fdaea8ef84))
+* **builder:** slugs duplicados usan sufijo -d1, -d2, -d3 para evitar colisiones ([3042391](https://github.com/dcruzgalicia/iteraciones-cli/commit/30423919083e360ae3eea06adf43293eaa5dd450))
+* **builder:** slugs originales tienen prioridad sobre duplicados ([bee9985](https://github.com/dcruzgalicia/iteraciones-cli/commit/bee9985939a9d8c8bd1c6801c5feff7c8b0c5cbd))
+* **cache:** corrige regex de derivacion de exportBase (.html en lugar de /index.html) ([35ef31f](https://github.com/dcruzgalicia/iteraciones-cli/commit/35ef31f872b488d4d51d2f57c71f2f889d2da9de)), closes [#822](https://github.com/dcruzgalicia/iteraciones-cli/issues/822)
+* **cache:** elimina archivos de exportacion al detectar documento eliminado ([a616962](https://github.com/dcruzgalicia/iteraciones-cli/commit/a616962c1fa8b21f7e2db4ef1e25cd6d372edcf6)), closes [#822](https://github.com/dcruzgalicia/iteraciones-cli/issues/822)
+* **cache:** limpia archivos de formatos desactivados en dist ([c1b9c0c](https://github.com/dcruzgalicia/iteraciones-cli/commit/c1b9c0c7423a8df3ee862b5ca9c11be24e8a3225)), closes [#822](https://github.com/dcruzgalicia/iteraciones-cli/issues/822)
+* **cache:** manifiesto universal basado en markdown, no en HTML ([ec744bc](https://github.com/dcruzgalicia/iteraciones-cli/commit/ec744bcac63a4ba0f6903256c0c3803a3d224bab)), closes [#822](https://github.com/dcruzgalicia/iteraciones-cli/issues/822)
+* **cache:** preserva archivos no modificados en manifiesto incremental ([792bd72](https://github.com/dcruzgalicia/iteraciones-cli/commit/792bd727e2887b93906d4921e49e04012ead76c6)), closes [#819](https://github.com/dcruzgalicia/iteraciones-cli/issues/819)
+* **cache:** restaura limpieza de cache global de biber en --no-cache ([ebb1c09](https://github.com/dcruzgalicia/iteraciones-cli/commit/ebb1c0902867ca8f0c2a63b47f9268d5f3e2540b))
+* **cache:** separa contador procesados vs en cache en el resumen final ([7e35d30](https://github.com/dcruzgalicia/iteraciones-cli/commit/7e35d30b7164085ffd81c0e6178b61c544da6bd4))
+* **html:** usa latex-auto_identifiers en vez de regex para evitar IDs en encabezados ([8c8772c](https://github.com/dcruzgalicia/iteraciones-cli/commit/8c8772c28bff4eacc3ec3d68ed77d40290effb79))
+* **log:** solo muestra latex como formato si el usuario lo pidio explicitamente ([1729c51](https://github.com/dcruzgalicia/iteraciones-cli/commit/1729c511619844042db5f909be388e4f07c564fc))
+* **pdf:** agrega latexmk -C antes de latexmk -pdf ([eeb7db6](https://github.com/dcruzgalicia/iteraciones-cli/commit/eeb7db6679a047da6727940e9bfb5d61e3d54e49))
+* **pdf:** cambia headheight por defecto a 1 baselineskip ([3ca50e6](https://github.com/dcruzgalicia/iteraciones-cli/commit/3ca50e6e88af2eed04dc94f02e178ed9b3ba9265)), closes [#771](https://github.com/dcruzgalicia/iteraciones-cli/issues/771)
+* **pdf:** corrige backslash en tightlist y setlength del preambulo ([c3bf635](https://github.com/dcruzgalicia/iteraciones-cli/commit/c3bf6357aba37228f8be0dcef2adaf3da06622b3))
+* **pdf:** microtype booleans explicitos (tracking=true, final/draft) ([2a3aa08](https://github.com/dcruzgalicia/iteraciones-cli/commit/2a3aa08ab417ad4fa127ed81f85e08afe3b92ae6))
+* **pdf:** separa hyphenpenalty de brokenpenalty con default de 100 ([d77f161](https://github.com/dcruzgalicia/iteraciones-cli/commit/d77f1613accd6908e44937aa037de982e6973d2d))
+* **pdf:** soporta microtype=false explicito para tracking, kerning, spacing ([c869cce](https://github.com/dcruzgalicia/iteraciones-cli/commit/c869ccee68304284f4bceaef05c27825ab3ec79b))
+* **preamble:** author font-size 12pt y espacio antes de coma ([ae78a8d](https://github.com/dcruzgalicia/iteraciones-cli/commit/ae78a8d3c2d494bfd450ad3bd0fd22e1e269e9a6))
+* **preamble:** espacio entre coma y nombre en autores ([5028f08](https://github.com/dcruzgalicia/iteraciones-cli/commit/5028f081fd266679b27bf0fb57016a31b774f937))
+* **preamble:** transpilers se ejecutan antes de begin{document} ([7818a2d](https://github.com/dcruzgalicia/iteraciones-cli/commit/7818a2d2ab8caf21a3bba57cb812506ca64710e0))
+* **progress:** contadores de fases solo para formatos activos y HTML condicional ([0db63bc](https://github.com/dcruzgalicia/iteraciones-cli/commit/0db63bcb1245d94797685c42a52a5fd8a4bf85b6))
+
+
+### Performance Improvements
+
+* **cache:** ejecuta solo las fases necesarias segun los formatos ([b526a79](https://github.com/dcruzgalicia/iteraciones-cli/commit/b526a79201d871484b576c839f9bd98cfb24af44))
+* **cache:** solo limpia biber cache cuando pdf.generate es true ([0b085e7](https://github.com/dcruzgalicia/iteraciones-cli/commit/0b085e7bfe0458bb918ebfdbcf62a73220020f31))
+
 ## [0.8.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.7.0...v0.8.0) (2026-07-20)
 
 
