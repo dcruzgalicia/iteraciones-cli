@@ -86,48 +86,8 @@ export async function discover(cwd: string, options: DiscoverOptions = {}): Prom
         // fallthrough — mantener datos anteriores si existen
       }
 
-      // Compute slug
-      const slugBase = computeSlug({ title, author: authors, relativePath }) ?? basename(relativePath, '.md');
-
-      // Check for duplicates in the same directory
-      const dir = dirname(relativePath);
-      const slugKey = dir === '.' ? slugBase : dir + '/' + slugBase;
-      const existingSlug = discoveryIndex.get(relativePath)?.slug;
-
-      // Determine the actual slug (with -dN if needed)
-      let finalSlug = slugBase;
-      const maxN = slugsCounter.get(slugKey) ?? 0;
-      let n = maxN;
-
-      if (n > 0) {
-        // There are existing duplicates. Check if this file already has a slug.
-        if (existingSlug) {
-          finalSlug = existingSlug; // preserve existing slug
-        } else {
-          // New duplicate: increment counter
-          n++;
-          slugsCounter.set(slugKey, n);
-          finalSlug = slugBase + '-d' + n;
-        }
-      } else {
-        // Check if base slug collides with any EXISTING entry in discoveryIndex in same directory
-        let hasCollision = false;
-        for (const [key, entry] of discoveryIndex) {
-          if (key === relativePath) continue;
-          const existingDir = dirname(key);
-          if (existingDir !== dir) continue;
-          if (entry.slug && (entry.slug === slugBase || entry.slug.startsWith(slugBase + '-d'))) {
-            hasCollision = true;
-            break;
-          }
-        }
-        if (hasCollision) {
-          slugsCounter.set(slugKey, 1);
-          finalSlug = slugBase + '-d1';
-        }
-      }
-
-      discoveryIndex.set(relativePath, { title, author: authors, slug: finalSlug });
+      // Store base data (slug resolution happens later, after all files are processed)
+      discoveryIndex.set(relativePath, { title, author: authors });
     }
     // Archivos sin cambios: conservan su entrada en discoveryIndex
   }
@@ -146,6 +106,37 @@ export async function discover(cwd: string, options: DiscoverOptions = {}): Prom
   // Limpiar discoveryIndex de archivos eliminados
   for (const p of deletedFiles) {
     discoveryIndex.delete(p);
+  }
+
+  // Resolver slugs duplicados: asignar -dN a todos los archivos con mismo slug base en mismo directorio
+  const slugGroups = new Map<string, string[]>();
+  for (const [relPath, entry] of discoveryIndex) {
+    const slugBase = computeSlug({ title: entry.title, author: entry.author, relativePath: relPath }) ?? basename(relPath, '.md');
+    const dir = dirname(relPath);
+    const key = dir === '.' ? slugBase : dir + '/' + slugBase;
+    if (!slugGroups.has(key)) slugGroups.set(key, []);
+    slugGroups.get(key)!.push(relPath);
+  }
+
+  for (const [key, paths] of slugGroups) {
+    if (paths.length <= 1) {
+      // No duplicates: assign base slug
+      const path = paths[0]!;
+      const entry = discoveryIndex.get(path)!;
+      const slugBase = computeSlug({ title: entry.title, author: entry.author, relativePath: path }) ?? basename(path, '.md');
+      entry.slug = slugBase;
+    } else {
+      // Duplicates: assign -d1, -d2... sorted by relativePath
+      paths.sort();
+      let n = 1;
+      for (const path of paths) {
+        const entry = discoveryIndex.get(path)!;
+        const slugBase = computeSlug({ title: entry.title, author: entry.author, relativePath: path }) ?? basename(path, '.md');
+        entry.slug = slugBase + '-d' + n;
+        n++;
+      }
+      slugsCounter.set(key, n - 1);
+    }
   }
 
   const buildReport: BuildReport = {
