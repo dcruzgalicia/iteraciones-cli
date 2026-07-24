@@ -202,26 +202,27 @@ export async function runExportDocuments(
   const hasPdf = config.pdf?.generate === true || !!config.html?.thumbnails;
   const _hasEpub = config.epub?.generate === true;
 
-  // Semaforo con indices de slot para aislar cache de biber.
-  // cache-0 a cache-N se reusan entre documentos.
+  // Semaforo que limita las instancias de pdflatex concurrentes.
+  // La cache de biber se asigna por indice del documento (idx % maxSlots)
+  // para que el archivo 0 use cache-0, el archivo 1 use cache-1, etc.
   const maxSlots = hasPdf ? Math.max(1, cpus().length - 1) : 0;
-  const freeSlots: number[] = Array.from({ length: maxSlots }, (_, i) => i);
-  const latexQueue: Array<(slot: number) => void> = [];
-  const acquireLatex = (): Promise<number> =>
-    new Promise<number>((res) => {
-      if (freeSlots.length > 0) {
-        const slot = freeSlots.pop()!;
-        res(slot);
+  let latexSlots = maxSlots;
+  const latexQueue: Array<() => void> = [];
+  const acquireLatex = (): Promise<void> =>
+    new Promise<void>((res) => {
+      if (latexSlots > 0) {
+        latexSlots--;
+        res();
       } else {
         latexQueue.push(res);
       }
     });
-  const releaseLatex = (slot: number): void => {
+  const releaseLatex = (): void => {
     const next = latexQueue.shift();
     if (next) {
-      next(slot);
+      next();
     } else {
-      freeSlots.push(slot);
+      latexSlots++;
     }
   };
 
@@ -271,6 +272,7 @@ export async function runExportDocuments(
   async function generateFormats(
     exportDoc: ExportDocument,
     outputBase: string,
+    biberCacheDir?: string,
   ): Promise<Array<PromiseSettledResult<{ epub?: string; pdf?: string; md?: string }>>> {
     const tasks: Array<Promise<{ epub?: string; pdf?: string; md?: string }>> = [];
 
@@ -311,13 +313,11 @@ export async function runExportDocuments(
       const outputPath = `${outputBase}.pdf`;
       tasks.push(
         (async () => {
-          const slot = await acquireLatex();
-          const biberCache = join(cwd, '.iteraciones', 'biber', `cache-${slot}`);
-          await mkdir(biberCache, { recursive: true });
+          await acquireLatex();
           try {
-            await convertToPdf(exportDoc, outputPath, cwd, config.pdf, biberCache);
+            await convertToPdf(exportDoc, outputPath, cwd, config.pdf, biberCacheDir);
           } finally {
-            releaseLatex(slot);
+            releaseLatex();
           }
           // Si convertToPdf no generó el PDF (ej: sin .tex final), salir
           if (!existsSync(outputPath)) {
@@ -342,11 +342,15 @@ export async function runExportDocuments(
     return Promise.allSettled(tasks);
   }
 
-  // Pre-crear directorios de cache de biber para todos los slots disponibles.
-  // Asi el usuario puede verlos en .iteraciones/biber/ y --no-cache los limpia.
+  // Pre-crear directorios de cache de biber y mapear cada documento a su cache.
+  // cache-(idx % maxSlots) para que el archivo 0 use cache-0, etc.
+  const biberCacheForDoc = new Map<string, string>();
   if (hasPdf && maxSlots > 0) {
     const biberBase = join(cwd, '.iteraciones', 'biber');
     await Promise.all(Array.from({ length: maxSlots }, (_, i) => mkdir(join(biberBase, `cache-${i}`), { recursive: true })));
+    exportableDocs.forEach((doc, i) => {
+      biberCacheForDoc.set(doc.relativePath, join(biberBase, `cache-${i % maxSlots}`));
+    });
   }
 
   const results = await mapWithConcurrency(exportableDocs, concurrency, async (doc): Promise<ExportResult | null> => {
@@ -406,7 +410,12 @@ export async function runExportDocuments(
       const summaryBase = exportOutputBase(summaryDoc, outputDir);
       const fullBase = exportOutputBase(fullDoc, outputDir);
 
-      const [summaryResults, fullResults] = await Promise.all([generateFormats(summaryDoc, summaryBase), generateFormats(fullDoc, fullBase)]);
+      const biberCacheSummary = biberCacheForDoc.get(doc.relativePath);
+      const biberCacheFull = biberCacheForDoc.get(doc.relativePath);
+      const [summaryResults, fullResults] = await Promise.all([
+        generateFormats(summaryDoc, summaryBase, biberCacheSummary),
+        generateFormats(fullDoc, fullBase, biberCacheFull),
+      ]);
 
       const result: ExportResult = {
         filePath: doc.filePath,
@@ -494,7 +503,8 @@ export async function runExportDocuments(
     // Promise.allSettled garantiza que ambos formatos terminan (éxito o error)
     // antes de propagar el primer error, de modo que no quedan promesas en vuelo
     // cuando la función retorna o lanza.
-    const formatResults = await generateFormats(exportDoc, outputBase);
+    const biberCacheDir = biberCacheForDoc.get(doc.relativePath);
+    const formatResults = await generateFormats(exportDoc, outputBase, biberCacheDir);
 
     // Recopilar resultados exitosos y acumular errores.
     // Re-lanzar el primer error si algún formato falló (mantiene el comportamiento
