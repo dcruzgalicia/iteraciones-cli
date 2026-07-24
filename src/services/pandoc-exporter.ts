@@ -1,6 +1,5 @@
-import { existsSync, mkdtempSync } from 'node:fs';
-import { mkdir, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { existsSync } from 'node:fs';
+import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import type { ExportDocument } from '../builder/export/types.js';
 import type { PdfFormatConfig } from '../config/site-config.js';
@@ -360,13 +359,11 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
     throw new PandocError(`convertToPdf: no se encontro ${fullTexPath}`, doc.filePath, '');
   }
 
-  // latexmk -pdf determina automaticamente cuantas pasadas de pdflatex
-  // y si necesita biber/bibtex, segun los cambios en .aux, .bcf, etc.
-  // Usa pdfDir como outdir para que los auxiliares queden junto al .tex.
-  //
-  // PAR_GLOBAL_TEMP unico por invocacion aísla la cache de biber para que
-  // multiples procesos paralelos no corrompan el thin binary (errno=8).
-  const biberCache = mkdtempSync(join(tmpdir(), 'biber-'));
+  // Caché de biber aislada dentro de .iteraciones para que --no-cache la limpie
+  // automaticamente. PAR_GLOBAL_TEMP unico por invocacion evita que N procesos
+  // paralelos corrompan el thin binary (errno=8).
+  const biberCache = join(pdfDir, '.biber-cache');
+  await mkdir(biberCache, { recursive: true });
   const proc = Bun.spawn(['latexmk', '-pdf', '-interaction=nonstopmode', `-outdir=${pdfDir}`, `-jobname=${slug}`, fullTexPath], {
     stdout: 'pipe',
     stderr: 'pipe',
@@ -382,9 +379,6 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
   if (pdfOk) {
     await Bun.write(outputPath, Bun.file(pdfPath));
   }
-
-  // Limpiar cache temporal de biber
-  await rm(biberCache, { recursive: true, force: true }).catch(() => {});
 
   if (exitCode !== 0) {
     const log = stdout + '\n' + stderr;
