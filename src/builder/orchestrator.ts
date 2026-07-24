@@ -119,9 +119,12 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions): Promis
 
   if (options.noCache) {
     await rm(ctx.outputDir, { recursive: true, force: true });
+    process.stdout.write('  limpiado dist/\n');
     await rm(join(cwd, '.iteraciones'), { recursive: true, force: true });
+    process.stdout.write('  limpiado .iteraciones/\n');
     if (siteConfig.format?.pdf?.generate === true || (siteConfig.format?.html?.thumbnails && siteConfig.format?.pdf !== undefined)) {
       await clearBiberCache();
+      process.stdout.write('  limpiado caché de biber\n');
     }
   }
 
