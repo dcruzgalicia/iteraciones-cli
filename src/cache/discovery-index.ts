@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 export interface DiscoveryEntry {
   title: string;
   author: string[];
+  slug?: string;
 }
 
 /** Mapa de relativePath → { title, author }. */

@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { type DiscoveryEntry, loadDiscoveryIndex, saveDiscoveryIndex } from '../../cache/discovery-index.js';
+import { loadSlugsCounter, saveSlugsCounter } from '../../cache/slugs-cache.js';
 import { IGNORED_DIRS } from '../../constants.js';
 import { computeSlug } from '../slug.js';
 import type { SourceDocument } from '../types.js';
@@ -13,21 +14,26 @@ export interface DiscoverResult {
   relativePaths: string[];
   changedPaths: Set<string>;
   discoveryIndex: Map<string, DiscoveryEntry>;
-  /** Entradas de archivos eliminados (title/author para calcular slugs). */
+  /** Entradas de archivos eliminados (title/author/slug para calcular slugs). */
   deletedEntries: Map<string, DiscoveryEntry>;
+}
+
+export interface DiffEntry {
+  path: string; // relative path with .md
+  slug: string; // computed slug
 }
 
 export interface BuildReport {
   startedAt: number;
-  recentFiles: string[];
-  deletedFiles: string[];
+  recentFiles: DiffEntry[];
+  deletedFiles: DiffEntry[];
 }
 
 const FM_RE = /^---\r?\n([\s\S]*?)\r?\n---/;
 
 /**
  * Fase 1 — discover: detecta cambios y actualiza discovery.json
- * con title/author de cada archivo.
+ * con title/author/slug de cada archivo.
  */
 export async function discover(cwd: string, options: DiscoverOptions = {}): Promise<DiscoverResult> {
   const relativePaths: string[] = [];
@@ -43,6 +49,7 @@ export async function discover(cwd: string, options: DiscoverOptions = {}): Prom
   const useCache = !options.noCache;
   const prevReport = useCache ? await loadBuildReport(cwd) : null;
   const discoveryIndex = useCache ? await loadDiscoveryIndex(cwd) : new Map<string, DiscoveryEntry>();
+  const slugsCounter = useCache ? await loadSlugsCounter(cwd) : new Map<string, number>();
   const currentSet = new Set(relativePaths);
   const changedPaths = new Set<string>();
   const recentFiles: string[] = [];
@@ -50,7 +57,7 @@ export async function discover(cwd: string, options: DiscoverOptions = {}): Prom
 
   const thisBuildStartedAt = Date.now();
 
-  // Leer title/author de archivos nuevos o modificados
+  // Leer title/author de archivos nuevos o modificados y calcular slugs
   for (const relativePath of relativePaths) {
     const filePath = join(cwd, relativePath);
     let mtimeMs: number;
@@ -67,21 +74,65 @@ export async function discover(cwd: string, options: DiscoverOptions = {}): Prom
       changedPaths.add(relativePath);
       recentFiles.push(relativePath);
 
-      // Leer YAML frontmatter para title/author (solo archivos nuevos/modificados)
+      // Read YAML frontmatter
+      let title = '',
+        authors: string[] = [];
       try {
         const raw = await Bun.file(filePath).text();
         const fmMatch = FM_RE.exec(raw);
         if (fmMatch?.[1]) {
           const parsed = Bun.YAML.parse(fmMatch[1]) as Record<string, unknown>;
           if (parsed && !Array.isArray(parsed)) {
-            const title = typeof parsed['title'] === 'string' ? parsed['title'] : '';
-            const authors = Array.isArray(parsed['author']) ? parsed['author'].filter((a: unknown) => typeof a === 'string') : [];
-            discoveryIndex.set(relativePath, { title, author: authors });
+            title = typeof parsed['title'] === 'string' ? parsed['title'] : '';
+            authors = Array.isArray(parsed['author']) ? parsed['author'].filter((a: unknown) => typeof a === 'string') : [];
           }
         }
       } catch {
         // fallthrough — mantener datos anteriores si existen
       }
+
+      // Compute slug
+      const slugBase = computeSlug({ title, author: authors, relativePath }) ?? basename(relativePath, '.md');
+
+      // Check for duplicates in the same directory
+      const dir = dirname(relativePath);
+      const slugKey = dir === '.' ? slugBase : dir + '/' + slugBase;
+      const existingSlug = discoveryIndex.get(relativePath)?.slug;
+
+      // Determine the actual slug (with -dN if needed)
+      let finalSlug = slugBase;
+      const maxN = slugsCounter.get(slugKey) ?? 0;
+      let n = maxN;
+
+      if (n > 0) {
+        // There are existing duplicates. Check if this file already has a slug.
+        if (existingSlug) {
+          finalSlug = existingSlug; // preserve existing slug
+        } else {
+          // New duplicate: increment counter
+          n++;
+          slugsCounter.set(slugKey, n);
+          finalSlug = slugBase + '-d' + n;
+        }
+      } else {
+        // Check if base slug collides with any EXISTING entry in discoveryIndex in same directory
+        let hasCollision = false;
+        for (const [key, entry] of discoveryIndex) {
+          if (key === relativePath) continue;
+          const existingDir = dirname(key);
+          if (existingDir !== dir) continue;
+          if (entry.slug && (entry.slug === slugBase || entry.slug.startsWith(slugBase + '-d'))) {
+            hasCollision = true;
+            break;
+          }
+        }
+        if (hasCollision) {
+          slugsCounter.set(slugKey, 1);
+          finalSlug = slugBase + '-d1';
+        }
+      }
+
+      discoveryIndex.set(relativePath, { title, author: authors, slug: finalSlug });
     }
     // Archivos sin cambios: conservan su entrada en discoveryIndex
   }
@@ -93,7 +144,7 @@ export async function discover(cwd: string, options: DiscoverOptions = {}): Prom
       changedPaths.add(key);
       deletedFiles.push(key);
       const entry = discoveryIndex.get(key);
-      if (entry) deletedEntries.set(key, entry);
+      if (entry) deletedEntries.set(key, entry); // entry now has slug!
     }
   }
 
@@ -104,12 +155,19 @@ export async function discover(cwd: string, options: DiscoverOptions = {}): Prom
 
   const buildReport: BuildReport = {
     startedAt: thisBuildStartedAt,
-    recentFiles: [...recentFiles],
-    deletedFiles: [...deletedFiles],
+    recentFiles: recentFiles.map((p) => ({
+      path: p,
+      slug: discoveryIndex.get(p)?.slug ?? basename(p, '.md'),
+    })),
+    deletedFiles: deletedFiles.map((p) => ({
+      path: p,
+      slug: deletedEntries.get(p)?.slug ?? basename(p, '.md'),
+    })),
   };
 
   await saveDiscoveryIndex(cwd, discoveryIndex);
   await saveBuildReport(cwd, buildReport);
+  await saveSlugsCounter(cwd, slugsCounter);
 
   return { relativePaths, changedPaths, discoveryIndex, deletedEntries };
 }
@@ -160,52 +218,4 @@ export function buildDocsFromIndex(relativePaths: string[], discoveryIndex: Map<
       mtimeMs: 0,
     };
   });
-}
-
-/** Calcula slugs unicos por directorio con resolucion de duplicados. */
-function computeAllSlugs(relativePaths: string[], discoveryIndex: Map<string, DiscoveryEntry>): { fileToSlug: Map<string, string> } {
-  const fileToSlug = new Map<string, string>();
-  const slugCount = new Map<string, number>();
-  const allSlugs: string[] = [];
-
-  // Primera pasada: calcular slugs base
-  for (const p of relativePaths) {
-    const entry = discoveryIndex.get(p);
-    const base = entry ? (computeSlug({ title: entry.title, author: entry.author, relativePath: p }) ?? basename(p, '.md')) : basename(p, '.md');
-    const key = dirname(p) + '/' + base;
-    slugCount.set(key, (slugCount.get(key) ?? 0) + 1);
-    allSlugs.push(key);
-  }
-
-  const allSlugsSet = new Set(allSlugs);
-
-  // Segunda pasada: asignar slugs con sufijo para duplicados
-  for (const p of relativePaths) {
-    const entry = discoveryIndex.get(p);
-    let base = entry ? (computeSlug({ title: entry.title, author: entry.author, relativePath: p }) ?? basename(p, '.md')) : basename(p, '.md');
-    const dir = dirname(p);
-    const key = dir + '/' + base;
-    const count = slugCount.get(key) ?? 0;
-    if (count > 1) {
-      let n = 1;
-      while (allSlugsSet.has(dir + '/' + base + '-d' + n)) {
-        n++;
-      }
-      base = base + '-d' + n;
-      allSlugsSet.add(dir + '/' + base);
-    }
-    fileToSlug.set(p, base);
-  }
-
-  return { fileToSlug };
-}
-
-/** Calcula slugs para archivos eliminados (sin duplicados). */
-function computeDeletedSlugs(deletedEntries: Map<string, DiscoveryEntry>): Map<string, string> {
-  const result = new Map<string, string>();
-  for (const [relPath, entry] of deletedEntries) {
-    const slug = computeSlug({ title: entry.title, author: entry.author, relativePath: relPath }) ?? basename(relPath, '.md');
-    result.set(relPath, slug);
-  }
-  return result;
 }
