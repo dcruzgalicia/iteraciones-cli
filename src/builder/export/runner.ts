@@ -1,6 +1,7 @@
 import { existsSync, rmSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 
+import { cpus } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import type { EpubFormatConfig, HtmlFormatConfig, MarkdownFormatConfig, PdfFormatConfig, ThumbnailMode } from '../../config/site-config.js';
 import { THUMBNAIL_SIZES } from '../../config/site-config.js';
@@ -201,20 +202,10 @@ export async function runExportDocuments(
   const hasPdf = config.pdf?.generate === true || !!config.html?.thumbnails;
   const _hasEpub = config.epub?.generate === true;
 
-  // Pre-extraer el thin binary de biber (lipo arm64) antes del loop.
-  // Biber usa una cache global (PAR) que solo soporta 1 proceso a la vez;
-  // la pre-extraccion serial evita que N procesos lancen lipo simultaneo.
-  if (hasPdf) {
-    try {
-      await Bun.spawn(['biber', '--version'], { stdout: 'pipe', stderr: 'pipe' }).exited;
-    } catch {
-      // biber no disponible — latexmk fallara mas adelante
-    }
-  }
-
-  // Semaforo: 1 latexmk a la vez. Biber no soporta acceso concurrente a
-  // su cache global incluso despues de extraer el thin binary (errno=8).
-  let latexSlots = hasPdf ? 1 : 0;
+  // Semaforo interno que limita las instancias de pdflatex concurrentes.
+  // Cada proceso usa PAR_GLOBAL_TEMP unico (en convertToPdf) para aislar
+  // la cache de biber, permitiendo paralelismo total sin corrupcion.
+  let latexSlots = hasPdf ? Math.max(1, cpus().length - 1) : 0;
   const latexQueue: Array<() => void> = [];
   const acquireLatex = (): Promise<void> =>
     new Promise<void>((res) => {
