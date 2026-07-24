@@ -647,39 +647,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     if (epubOn) generatedFormats.push('epub');
     if (mdOn) generatedFormats.push('markdown');
     progress.finish(processedCount, cachedCount, generatedFormats);
-
-    // Limpiar archivos de formatos desactivados en dist para cada documento.
-    // Itera sobre allDocs (todos los markdown del proyecto) y elimina los
-    // archivos de exportacion de formatos que ya no estan activos.
-    if (!options.noCache) {
-      for (const doc of allDocs) {
-        const dir = dirname(doc.relativePath);
-        const slug = doc.slug ?? basename(doc.relativePath, '.md');
-        const base = join(ctx.outputDir, dir, slug);
-        if (!latexOn) await rm(base + '.tex', { force: true }).catch(() => {});
-        if (!pdfOn) await rm(base + '.pdf', { force: true }).catch(() => {});
-        if (!epubOn) await rm(base + '.epub', { force: true }).catch(() => {});
-        if (!mdOn) await rm(base + '.md', { force: true }).catch(() => {});
-        if (!htmlOn) await rm(base + '.html', { force: true }).catch(() => {});
-      }
-    }
-
-    // Limpiar carpetas de cache de formatos que ya no estan activos.
-    // --no-cache ya limpio toda la cache al inicio, por lo que este paso
-    // solo aplica en builds normales donde se desactivo un formato.
-    if (!options.noCache) {
-      const cacheBase = join(cwd, '.iteraciones');
-      const needsTex =
-        formatCfg?.pdf?.generate === true || (!!formatCfg?.html?.thumbnails && formatCfg?.pdf !== undefined) || formatCfg?.latex?.generate === true;
-      const needsHtml = formatCfg?.html?.generate === true || formatCfg?.epub?.generate === true;
-      if (!needsTex) {
-        await rm(join(cacheBase, 'tex'), { recursive: true, force: true }).catch(() => {});
-        await rm(join(cacheBase, 'formats', 'pdf'), { recursive: true, force: true }).catch(() => {});
-      }
-      if (!needsHtml) {
-        await rm(join(cacheBase, 'formats', 'html'), { recursive: true, force: true }).catch(() => {});
-      }
-    }
   } finally {
   }
 }

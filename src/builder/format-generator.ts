@@ -102,23 +102,15 @@ export async function generateFormats(
     }
   }
 
-  // ── Clean up deleted files from formats/ ──
+  // ── Clean up deleted files from formats/ (unconditional: all formats) ──
   for (const relPath of diff.deletedFiles) {
     const entry = discoveryIndex.get(relPath);
-    // Note: deleted entries are no longer in discoveryIndex, but we stored
-    // deletedEntries separately. For deleted cleanup, we use the path directly.
     const slug = entry?.slug ?? basename(relPath, '.md');
     const dir = dirname(relPath);
 
-    // Clean up each format directory
-    if (pdfActive || siteConfig.format?.pdf !== undefined || siteConfig.format?.latex !== undefined) {
-      await rm(join(cacheBase, 'formats', 'pdf', dir, slug), { recursive: true, force: true }).catch(() => {});
-    }
-    if (htmlActive || siteConfig.format?.html !== undefined || siteConfig.format?.epub !== undefined) {
-      await rm(join(cacheBase, 'formats', 'html', dir, slug), { recursive: true, force: true }).catch(() => {});
-    }
-    if (mdActive || siteConfig.format?.markdown !== undefined) {
-      await rm(join(cacheBase, 'formats', 'markdown', dir, `${slug}.md`), { force: true }).catch(() => {});
-    }
+    // Delete from all format directories regardless of current config
+    await rm(join(cacheBase, 'formats', 'pdf', dir, slug), { recursive: true, force: true }).catch(() => {});
+    await rm(join(cacheBase, 'formats', 'html', dir, slug), { recursive: true, force: true }).catch(() => {});
+    await rm(join(cacheBase, 'formats', 'markdown', dir, `${slug}.md`), { force: true }).catch(() => {});
   }
 }
