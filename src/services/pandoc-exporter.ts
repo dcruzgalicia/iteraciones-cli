@@ -359,10 +359,10 @@ export async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?
     throw new PandocError(`convertToPdf: no se encontro ${fullTexPath}`, doc.filePath, '');
   }
 
-  // Caché de biber aislada dentro de .iteraciones para que --no-cache la limpie
+  // Caché de biber aislada en .iteraciones/biber/ para que --no-cache la limpie
   // automaticamente. PAR_GLOBAL_TEMP unico por invocacion evita que N procesos
   // paralelos corrompan el thin binary (errno=8).
-  const biberCache = join(pdfDir, '.biber-cache');
+  const biberCache = join(cwd, '.iteraciones', 'biber', texRelDir, slug);
   await mkdir(biberCache, { recursive: true });
   const proc = Bun.spawn(['latexmk', '-pdf', '-interaction=nonstopmode', `-outdir=${pdfDir}`, `-jobname=${slug}`, fullTexPath], {
     stdout: 'pipe',
