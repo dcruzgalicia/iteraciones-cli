@@ -1,4 +1,4 @@
-import { mkdir, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, stat, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, normalize } from 'node:path';
 import type { BuildOptions } from '../builder/orchestrator.js';
 import { build } from '../builder/orchestrator.js';
@@ -24,26 +24,6 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
       process.stderr.write(`Error: ${err.message}\n`);
     } else {
       process.stderr.write('Error desconocido al construir el sitio.\n');
-    }
-    process.exitCode = 1;
-  }
-}
-
-export async function runClean(cwd: string, options: { outputDir?: string } = {}): Promise<void> {
-  const config = await loadSiteConfig(cwd).catch(() => null);
-  const defaultDir = 'dist/files';
-  const distDir = options.outputDir ?? join(cwd, defaultDir);
-  const cacheDir = join(cwd, '.iteraciones');
-  const label = 'dist/files';
-  try {
-    await rm(distDir, { recursive: true, force: true });
-    await rm(cacheDir, { recursive: true, force: true });
-    process.stdout.write(`clean: eliminados ${label} y .iteraciones\n`);
-  } catch (err) {
-    if (err instanceof Error) {
-      process.stderr.write(`Error al limpiar: ${err.message}\n`);
-    } else {
-      process.stderr.write('Error desconocido al limpiar.\n');
     }
     process.exitCode = 1;
   }
