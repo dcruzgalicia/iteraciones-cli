@@ -160,10 +160,11 @@ function processParaInlines(inlines: unknown[]): unknown[] {
     const lastTwo = wordIndices.slice(-2);
 
     // Verificar que los wraps no se solapen (solo si la oración tiene >= 6 palabras)
-    if (firstTwo[1] >= lastTwo[0]) continue; // solapamiento, saltar
+    // firstTwo y lastTwo tienen >= 2 elementos garantizado por wordIndices.length >= 4
+    if (firstTwo[1]! >= lastTwo[0]!) continue; // solapamiento, saltar
 
-    wraps.push({ startIdx: firstTwo[0], endIdx: firstTwo[1] });
-    wraps.push({ startIdx: lastTwo[0], endIdx: lastTwo[1] });
+    wraps.push({ startIdx: firstTwo[0]!, endIdx: firstTwo[1]! });
+    wraps.push({ startIdx: lastTwo[0]!, endIdx: lastTwo[1]! });
   }
 
   // --- Paso 3: aplicar wraps generando nuevo array de inlines ---

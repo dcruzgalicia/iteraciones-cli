@@ -356,6 +356,10 @@ async function convertToEpub(htmlBody: string, outputPath: string, doc?: ExportD
   proc.stdin.write(htmlBody);
   proc.stdin.end();
 
+  if (proc.stderr == null || typeof proc.stderr === 'number') {
+    throw new PandocError('No se pudo leer stderr de pandoc', doc?.filePath ?? '', '');
+  }
+
   const [stderr, exitCode] = await Promise.all([new Response(proc.stderr).text(), proc.exited]);
 
   if (exitCode !== 0) {
