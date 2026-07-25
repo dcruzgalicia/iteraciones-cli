@@ -390,6 +390,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     // Convierte markdown a .tex solo para docs afectados. Los no modificados
     // ya tienen su .tex en cache del build anterior.
     if (pipelineDocs.length > 0) {
+      progress.startPhase('render', pipelineDocs.length);
       const docsWithMd = await renderLatex(pipelineDocs, ctx.concurrency ?? 4, cwd, ctx.siteConfig.disabledTranspilers);
       const mdMap = new Map<string, BuildDocument>(docsWithMd.map((d) => [d.relativePath, d]));
       for (const doc of allDocs) {
@@ -406,6 +407,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       const texDir = join(ctx.cwd, '.iteraciones', 'tex', dirname(doc.relativePath));
       await mkdir(texDir, { recursive: true });
       await Bun.write(join(texDir, `${doc.slug}.tex`), doc.processedBody);
+    }
+    if (pipelineDocs.length > 0) {
+      progress.completePhase();
     }
 
     // ── Limpiar archivos de documentos markdown eliminados ──
@@ -445,6 +449,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
     // ── FASE 3: generate formats from .tex body on disk ──
     // Uses discoveryIndex + diff data, NOT allDocs/pipelineDocs.
+    if (latexOn || pdfOn || htmlOn || epubOn || mdOn) {
+      progress.startPhase('latex');
+    }
     {
       const recentMdPaths = [...changedPaths].filter((p) => p.endsWith('.md') && !deletedEntries.has(p));
       const deletedMdPaths = [...deletedEntries.keys()].filter((p) => p.endsWith('.md'));
@@ -455,6 +462,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       };
       await generateFormats(cwd, ctx.siteConfig, discoveryIndex, diff, log);
     }
+    if (latexOn || pdfOn || htmlOn || epubOn || mdOn) {
+      progress.completePhase();
+    }
 
     // ── FASE 4: latex-to-html ──
     // Convierte .tex a HTML fragment, procesa bloques y construye contextos.
@@ -464,7 +474,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     let allContextDocs: BuildDocument[] = pipelineDocs;
     let renderedMap = new Map<DocumentType, BuildDocument[]>();
     if (needsRender) {
-      progress.startPhase('render', pipelineDocs.length);
       const result = await runPrimaryRender(pipelineDocs, ctx, cwd);
       const primaryRendered = new Map<DocumentType, BuildDocument[]>([
         ['file', result.renderedFileDocs],
@@ -499,7 +508,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         }
         renderedMap = byType;
       }
-      progress.completePhase();
     } else {
       // Sin render HTML/EPUB: renderedMap desde pipelineDocs para exportacion
       const byType = new Map<DocumentType, BuildDocument[]>();
