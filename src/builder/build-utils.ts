@@ -149,7 +149,7 @@ export async function generateLatexPreamble(
   discoveryIndex: Map<string, DiscoveryEntry>,
   diff: BuildReport,
 ): Promise<void> {
-  const pdfActive = siteConfig.format?.pdf?.generate === true || siteConfig.format?.latex?.generate === true;
+  const pdfActive = siteConfig.format?.pdf?.generate === true || siteConfig.format?.latex === true;
   if (!pdfActive) return;
   const cacheBase = join(cwd, '.iteraciones');
   for (const relPath of diff.recentFiles) {

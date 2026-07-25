@@ -34,13 +34,3 @@ export interface ExportDocument {
   metadata: ExportMetadata;
   slug?: string;
 }
-
-/** Resultado de exportar un documento. */
-export interface ExportResult {
-  filePath: string;
-  relativePath: string;
-  pdfPath?: string;
-  markdownPath?: string;
-  epubPath?: string;
-  coverPath?: string;
-}
