@@ -10,13 +10,23 @@
   <style>
     :root {
       --accent: $accent$;
+      --text-color: #1a1a1a;
+      --bg-color: #ffffff;
+      --border-color: #e5e5e5;
+      --muted-color: #666;
+    }
+    html[data-theme="dark"] {
+      --text-color: #e0e0e0;
+      --bg-color: #1a1a1a;
+      --border-color: #333;
+      --muted-color: #999;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: system-ui, -apple-system, sans-serif;
       line-height: 1.6;
-      color: var(--text-color, #1a1a1a);
-      background: var(--bg-color, #ffffff);
+      color: var(--text-color);
+      background: var(--bg-color);
       max-width: 65ch;
       margin: 0 auto;
       padding: 1.5rem;
@@ -27,7 +37,7 @@
       gap: 0.75rem;
       padding-bottom: 1rem;
       margin-bottom: 2rem;
-      border-bottom: 1px solid var(--border-color, #e5e5e5);
+      border-bottom: 1px solid var(--border-color);
     }
     .site-logo {
       display: flex;
@@ -38,21 +48,15 @@
     }
     .site-logo img { height: 2rem; width: auto; }
     .site-title { font-size: 1.25rem; font-weight: 600; }
-    .tagline { font-size: 0.875rem; color: #666; margin-left: auto; }
+    .tagline { font-size: 0.875rem; color: var(--muted-color); margin-left: auto; }
     main { min-height: 60vh; }
     footer {
       margin-top: 3rem;
       padding-top: 1rem;
-      border-top: 1px solid var(--border-color, #e5e5e5);
+      border-top: 1px solid var(--border-color);
       font-size: 0.8rem;
-      color: #666;
+      color: var(--muted-color);
       text-align: center;
-    }
-    @media (prefers-color-scheme: dark) {
-      body { color: #e0e0e0; background: #1a1a1a; }
-      .tagline { color: #999; }
-      footer { color: #999; }
-      header, footer { border-color: #333; }
     }
   </style>
 </head>
