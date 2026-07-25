@@ -1,4 +1,18 @@
-import type { PluginDocumentEdge, PluginDocumentGraph } from '../plugin/types.js';
+/**
+ * Arista dirigida entre dos documentos en el grafo de dependencias.
+ */
+export type PluginDocumentEdge = {
+  readonly from: string;
+  readonly to: string;
+  readonly relation: 'contains' | 'authored-by';
+};
+
+/**
+ * Grafo de dependencias entre documentos.
+ */
+export type PluginDocumentGraph = {
+  readonly edges: ReadonlyArray<PluginDocumentEdge>;
+};
 
 /**
  * Tipo mínimo requerido para construir el grafo de dependencias.

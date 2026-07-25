@@ -6,7 +6,6 @@ import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import type { EpubFormatConfig, HtmlFormatConfig, MarkdownFormatConfig, PdfFormatConfig, ThumbnailMode } from '../../config/site-config.js';
 import { THUMBNAIL_SIZES } from '../../config/site-config.js';
 import { mapWithConcurrency } from '../../output/concurrency.js';
-import type { PluginRegistry } from '../../plugin/registry.js';
 import { convertToEpub, convertToMarkdown, convertToPdf } from '../../services/pandoc-exporter.js';
 import { computeSlug } from '../slug.js';
 import type { BuildDocument, DocumentType } from '../types.js';
@@ -124,8 +123,6 @@ export interface ExportRunOptions {
    * siendo el limite de documentos en vuelo (incluidos los que esperan el semaforo).
    */
   concurrency: number;
-  /** Registro de plugins para ejecutar los hooks beforeExport/afterExport. */
-  registry?: PluginRegistry;
   /**
    * Callback invocado por cada formato exportado (PDF/EPUB) para reporte de progreso.
    * En modo verbose se espera que muestre una línea por archivo;
@@ -197,7 +194,7 @@ export async function runExportDocuments(
   renderedMap: ReadonlyMap<DocumentType, BuildDocument[]>,
   options: ExportRunOptions,
 ): Promise<ExportResult[]> {
-  const { config, outputDir, cwd, lang, concurrency, registry } = options;
+  const { config, outputDir, cwd, lang, concurrency } = options;
 
   const hasPdf = config.pdf?.generate === true || !!config.html?.thumbnails;
   const _hasEpub = config.epub?.generate === true;
@@ -293,15 +290,7 @@ export async function runExportDocuments(
           const epubHtml = exportDoc.htmlBody;
           if (!epubHtml) return {};
           await convertToEpub(epubHtml, outputPath, exportDoc);
-          const epubData = await Bun.file(outputPath).arrayBuffer();
-          if (registry) {
-            const afterCtx = await registry.runAfterExport({
-              sourcePath: exportDoc.filePath,
-              format: 'epub',
-              data: new Uint8Array(epubData),
-            });
-            await Bun.write(outputPath, afterCtx.data);
-          }
+          // EPUB ya escrito por convertToEpub
           return { epub: outputPath };
         })(),
       );
@@ -323,15 +312,7 @@ export async function runExportDocuments(
           if (!existsSync(outputPath)) {
             return {};
           }
-          const pdfData = await Bun.file(outputPath).arrayBuffer();
-          if (registry) {
-            const afterCtx = await registry.runAfterExport({
-              sourcePath: exportDoc.filePath,
-              format: 'pdf',
-              data: new Uint8Array(pdfData),
-            });
-            await Bun.write(outputPath, afterCtx.data);
-          }
+          // PDF ya escrito por convertToPdf
           _pdfDone++;
           options.onExportProgress?.(exportDoc.relativePath);
           return { pdf: outputPath };
@@ -377,47 +358,14 @@ export async function runExportDocuments(
       const fileDocs = renderedMap.get('file') ?? [];
       const { summary: rawSummary, full: rawFull } = assembleAuthorExportVariants(doc, [...fileDocs], lang, cwd, globalBibliography, globalCsl);
 
-      let summaryDoc = rawSummary;
-      let fullDoc = rawFull;
-      if (registry) {
-        const [sBefore, fBefore] = await Promise.all([
-          registry.runBeforeExport({
-            sourcePath: rawSummary.filePath,
-            body: rawSummary.body,
-            metadata: rawSummary.metadata as unknown as Record<string, unknown>,
-          }),
-          registry.runBeforeExport({
-            sourcePath: rawFull.filePath,
-            body: rawFull.body,
-            metadata: rawFull.metadata as unknown as Record<string, unknown>,
-          }),
-        ]);
-        summaryDoc = {
-          ...rawSummary,
-          body: sBefore.body,
-          metadata: {
-            ...rawSummary.metadata,
-            ...(sBefore.metadata as Partial<ExportMetadata>),
-          },
-        };
-        fullDoc = {
-          ...rawFull,
-          body: fBefore.body,
-          metadata: {
-            ...rawFull.metadata,
-            ...(fBefore.metadata as Partial<ExportMetadata>),
-          },
-        };
-      }
-
-      const summaryBase = exportOutputBase(summaryDoc, outputDir);
-      const fullBase = exportOutputBase(fullDoc, outputDir);
+      const summaryBase = exportOutputBase(rawSummary, outputDir);
+      const fullBase = exportOutputBase(rawFull, outputDir);
 
       const biberCacheSummary = biberCacheForDoc.get(doc.relativePath);
       const biberCacheFull = biberCacheForDoc.get(doc.relativePath);
       const [summaryResults, fullResults] = await Promise.all([
-        generateFormats(summaryDoc, summaryBase, biberCacheSummary),
-        generateFormats(fullDoc, fullBase, biberCacheFull),
+        generateFormats(rawSummary, summaryBase, biberCacheSummary),
+        generateFormats(rawFull, fullBase, biberCacheFull),
       ]);
 
       const result: ExportResult = {
@@ -482,22 +430,7 @@ export async function runExportDocuments(
     // del documento antes de que pandoc genere el PDF/EPUB.
     // Nota: el plugin es responsable de respetar la forma de ExportMetadata al
     // retornar metadata modificada — campos desconocidos se pasan tal cual a pandoc.
-    let exportDoc = rawExportDoc;
-    if (registry) {
-      const beforeCtx = await registry.runBeforeExport({
-        sourcePath: rawExportDoc.filePath,
-        body: rawExportDoc.body,
-        metadata: rawExportDoc.metadata as unknown as Record<string, unknown>,
-      });
-      exportDoc = {
-        ...rawExportDoc,
-        body: beforeCtx.body,
-        metadata: {
-          ...rawExportDoc.metadata,
-          ...(beforeCtx.metadata as Partial<ExportMetadata>),
-        },
-      };
-    }
+    const exportDoc = rawExportDoc;
 
     const outputBase = exportOutputBase(exportDoc, outputDir);
 
