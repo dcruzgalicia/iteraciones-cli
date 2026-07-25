@@ -31,22 +31,17 @@ const PHASE_ORDER: PipelinePhase[] = ['discovery', 'render', 'latex', 'pdf', 'ht
 
 export class ProgressTracker {
   private verbose: boolean;
-  private tty: boolean;
   private t0: number;
   private phaseDurations: Partial<Record<PipelinePhase, number>> = {};
   private phaseCounts: Partial<Record<PipelinePhase, number>> = {};
-  private phaseDone: Partial<Record<PipelinePhase, number>> = {};
   private currentPhase: PipelinePhase | null = null;
   private phaseStart: number = 0;
   private sectionsShown: Set<string> = new Set();
   private phaseFiles: Partial<Record<PipelinePhase, string[]>> = {};
   private currentLine: string = '';
-  private spinnerIdx: number = 0;
-  private spinnerChars: string[] = ['|', '/', '-', '\\'];
 
   constructor(options: { verbose?: boolean }) {
     this.verbose = options.verbose ?? false;
-    this.tty = process.stdout.isTTY === true;
     this.t0 = performance.now();
   }
 
@@ -71,32 +66,9 @@ export class ProgressTracker {
         process.stdout.write(`\n\u25a0 ${meta.section}\n`);
       }
     }
-
-    if (!this.verbose && meta.section === 'Generando publicaciones') {
-      if (this.tty) {
-        this.writeLine(`  ${this.spinnerChars[0]} ${meta.label}`);
-      } else {
-        process.stdout.write(`  Generando ${meta.label}...`);
-      }
-    }
   }
 
-  advance(_by: number = 1): void {
-    // No progress bars needed
-  }
-
-  private writeLine(text: string): void {
-    this.clearLine();
-    process.stdout.write(text);
-    this.currentLine = text;
-  }
-
-  private clearLine(): void {
-    if (this.currentLine.length > 0) {
-      process.stdout.write(`\r${' '.repeat(this.currentLine.length)}\r`);
-      this.currentLine = '';
-    }
-  }
+  advance(_by: number = 1): void {}
 
   reportFile(file: RenderFileReport): void {
     // Collect files per phase for verbose mode
@@ -104,20 +76,6 @@ export class ProgressTracker {
       const files = this.phaseFiles[file.phase];
       if (files) {
         files.push(file.relativePath);
-      }
-    }
-
-    // Normal mode: progress indicator (spinner en TTY, estatico en otro caso)
-    if (!this.verbose && this.currentPhase && this.tty) {
-      const total = this.phaseCounts[this.currentPhase] ?? 0;
-      const done = (this.phaseDone[this.currentPhase] ?? 0) + 1;
-      this.phaseDone[this.currentPhase] = done;
-      const meta = PHASE_META[this.currentPhase];
-      if (meta?.section === 'Generando publicaciones') {
-        this.spinnerIdx = (this.spinnerIdx + 1) % this.spinnerChars.length;
-        const spin = this.spinnerChars[this.spinnerIdx];
-        const progress = total > 0 ? ` [${done}/${total}]` : '';
-        this.writeLine(`  ${spin} ${meta.label}${progress}`);
       }
     }
   }
@@ -160,11 +118,9 @@ export class ProgressTracker {
         process.stdout.write(`    ${durStr}\n\n`);
       }
     } else {
-      this.clearLine();
       const countPart = count > 0 ? ` ${count}` : '';
-      process.stdout.write(
-        `  \u2713 ${meta.label}${countPart}${' '.repeat(Math.max(1, 30 - meta.label.length - countPart.length))}${formatTime(elapsed)}\n`,
-      );
+      process.stdout.write(`  ✓ ${meta.label}${countPart}${' '.repeat(Math.max(1, 30 - meta.label.length - countPart.length))}${formatTime(elapsed)}
+`);
     }
 
     this.currentPhase = null;
@@ -172,7 +128,6 @@ export class ProgressTracker {
 
   finish(processed: number, cached: number, formats?: string[]): void {
     const totalTime = performance.now() - this.t0;
-    this.clearLine();
 
     if (this.verbose) {
       const formatCount = formats ? formats.filter((f) => f !== 'latex').length : 0;
