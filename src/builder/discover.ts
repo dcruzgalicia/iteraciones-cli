@@ -168,7 +168,7 @@ export async function discover(cwd: string, options: DiscoverOptions = {}): Prom
   // Resolver slugs duplicados: asignar -dN a todos los archivos con mismo slug base en mismo directorio
   const slugGroups = new Map<string, string[]>();
   for (const [relPath, entry] of discoveryIndex) {
-    const slugBase = computeSlug({ title: entry.title, author: entry.author, relativePath: relPath }) ?? basename(relPath, '.md');
+    const slugBase = computeSlug({ title: entry.title, author: entry.author }) ?? basename(relPath, '.md');
     const dir = dirname(relPath);
     const key = dir === '.' ? slugBase : dir + '/' + slugBase;
     if (!slugGroups.has(key)) slugGroups.set(key, []);
@@ -180,7 +180,7 @@ export async function discover(cwd: string, options: DiscoverOptions = {}): Prom
       // No duplicates: assign base slug
       const path = paths[0]!;
       const entry = discoveryIndex.get(path)!;
-      const slugBase = computeSlug({ title: entry.title, author: entry.author, relativePath: path }) ?? basename(path, '.md');
+      const slugBase = computeSlug({ title: entry.title, author: entry.author }) ?? basename(path, '.md');
       entry.slug = slugBase;
     } else {
       // Duplicates: assign -d1, -d2... sorted by relativePath
@@ -188,7 +188,7 @@ export async function discover(cwd: string, options: DiscoverOptions = {}): Prom
       let n = 1;
       for (const path of paths) {
         const entry = discoveryIndex.get(path)!;
-        const slugBase = computeSlug({ title: entry.title, author: entry.author, relativePath: path }) ?? basename(path, '.md');
+        const slugBase = computeSlug({ title: entry.title, author: entry.author }) ?? basename(path, '.md');
         entry.slug = slugBase + '-d' + n;
         n++;
       }
