@@ -1,7 +1,7 @@
 import { isAbsolute, normalize } from 'node:path';
 import { Command } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
-import { runBuild, runClean, runDoctor, runInfo, runInit, runNew, runTranspilers, runValidate } from './dispatcher.js';
+import { runBuild, runDoctor, runInfo, runInit, runNew, runTranspilers, runValidate } from './dispatcher.js';
 
 export function buildProgram(): Command {
   const program = new Command();
