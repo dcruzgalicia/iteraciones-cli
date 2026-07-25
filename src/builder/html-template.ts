@@ -57,7 +57,7 @@ function renderTemplate(template: string, vars: Record<string, string | undefine
  * Lee el template HTML de pandoc y genera el HTML completo para un documento.
  */
 export async function renderHtmlPage(fragment: string, vars: HtmlTemplateVars): Promise<string> {
-  const templatePath = join(import.meta.dir, '../../pandoc/template.html');
+  const templatePath = join(import.meta.dir, '../../src/lib/resources/template.html');
   const template = await readFile(templatePath, 'utf-8');
 
   const theme = vars.theme ?? 'dark';

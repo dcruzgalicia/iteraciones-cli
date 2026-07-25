@@ -110,7 +110,7 @@ export function assembleExportDocument(
   const csl =
     typeof rawEditorial['csl'] === 'string'
       ? safeEditorialPath(rawEditorial['csl'], cwd, 'editorial.csl')
-      : (globalCsl ?? (bibliography ? join(import.meta.dir, '../../../pandoc/csl/apa-7.csl') : undefined));
+      : (globalCsl ?? (bibliography ? join(import.meta.dir, '../../../src/lib/resources/apa-7.csl') : undefined));
 
   const metadata: ExportMetadata = {
     title: doc.frontmatter.title || 'Sin título',

@@ -5,8 +5,8 @@ import type { SiteConfig } from '../config/site-config.js';
 import { run } from '../lib/run.js';
 
 const PKG_ROOT = join(import.meta.dir, '../..');
-const CSS_SRC = join(PKG_ROOT, 'css', 'styles.css');
-const FONTS_SRC = join(PKG_ROOT, 'fonts');
+const CSS_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'styles.css');
+const FONTS_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'fonts');
 
 export async function buildAssets(
   outputDir: string,
@@ -60,7 +60,7 @@ async function buildCssWithTailwind(targetCssPath: string, cwd: string, accentTh
   const tempContent = [
     `@import "${CSS_SRC}";`,
     `@source "${PKG_ROOT}";`,
-    `@source "${PKG_ROOT}/themes";`,
+    `@source "${PKG_ROOT}/src/lib/resources";`,
     `@source "${cwd}";`,
     `@theme {`,
     accentTheme,
@@ -90,7 +90,7 @@ async function copyLogo(outputDir: string, cwd: string, siteConfig: SiteConfig):
 
   if (!logo) {
     // Sin logo configurado: usar el logo por defecto del paquete
-    const defaultSrc = join(PKG_ROOT, 'themes', 'default', 'logo.svg');
+    const defaultSrc = join(PKG_ROOT, 'src', 'lib', 'resources', 'logo.svg');
     const dest = join(outputDir, 'logo.svg');
     await mkdir(dirname(dest), { recursive: true });
     await cp(defaultSrc, dest).catch((err: NodeJS.ErrnoException) => {
