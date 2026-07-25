@@ -232,7 +232,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         });
         for (const r of epubResults) {
           if (r.epubPath) r.epubPath = r.epubPath.replace(join(formatsDir, 'html'), ctx.outputDir);
-          if (r.epubFullPath) r.epubFullPath = r.epubFullPath.replace(join(formatsDir, 'html'), ctx.outputDir);
         }
         exportResults.push(...epubResults);
         progress.completePhase(undefined, 'epub');
@@ -262,7 +261,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
           });
           for (const r of pdfResults) {
             if (r.pdfPath) r.pdfPath = r.pdfPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
-            if (r.pdfFullPath) r.pdfFullPath = r.pdfFullPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
             if (r.coverPath) r.coverPath = r.coverPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
           }
           exportResults.push(...pdfResults);

@@ -143,10 +143,6 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfF
     }
   }
 
-  // Variable de template: indica si el documento usa parts para el título de referencias
-  if (metadata.hasParts) {
-    lines.push('has-parts: true');
-  }
   if (metadata.dictum && metadata.dictum.length > 0) {
     lines.push('dictum:');
     for (const entry of metadata.dictum) {
