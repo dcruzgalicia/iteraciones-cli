@@ -2,7 +2,7 @@ import { existsSync, rmSync } from 'node:fs';
 import { mkdir, stat } from 'node:fs/promises';
 
 import { cpus } from 'node:os';
-import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import type { EpubFormatConfig, HtmlFormatConfig, MarkdownFormatConfig, PdfFormatConfig, ThumbnailMode } from '../../config/site-config.js';
 import { THUMBNAIL_SIZES } from '../../config/site-config.js';
 import { mapWithConcurrency } from '../../output/concurrency.js';
@@ -92,17 +92,6 @@ export interface ExportRunOptions {
   lang: string;
   concurrency: number;
   onExportProgress?: (relativePath: string) => void;
-}
-
-function _resolveExportGlobalPath(raw: string | undefined, cwd: string, field: string): string | undefined {
-  if (!raw) return undefined;
-  const resolved = resolve(cwd, raw);
-  const rel = relative(cwd, resolved);
-  if (rel.startsWith('..') || isAbsolute(rel)) {
-    process.stderr.write(`[export] export.${field}: ruta fuera del proyecto ignorada: "${raw}"\n`);
-    return undefined;
-  }
-  return resolved;
 }
 
 function exportOutputBase(exportDoc: ExportDocument, outputDir: string): string {
