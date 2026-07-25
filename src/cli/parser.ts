@@ -103,9 +103,8 @@ export function buildProgram(): Command {
   program
     .command('new <type> <path>')
     .description('crea un archivo Markdown con el frontmatter mínimo para el tipo indicado')
-    .option('--region <region>', 'región del bloque (solo para documentos de tipo bloque)')
-    .action(async (type: string, path: string, opts: { region?: string }) => {
-      await runNew(process.cwd(), type, path, { region: opts.region });
+    .action(async (type: string, path: string) => {
+      await runNew(process.cwd(), type, path);
     });
 
   program

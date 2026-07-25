@@ -5,19 +5,6 @@ export type DocumentKind = 'page' | 'block';
 
 export type DocumentType = 'file' | 'collection' | 'author' | 'authors' | 'event' | 'events' | 'menu' | 'card' | 'feed' | 'list';
 
-export type Region = 'content-before' | 'content-after' | 'sidebar-primary' | 'sidebar-secondary' | 'footer-left' | 'footer-center' | 'footer-right';
-
-/** Set de todos los valores válidos de `region:` en documentos de tipo bloque. */
-export const VALID_REGIONS = new Set<Region>([
-  'content-before',
-  'content-after',
-  'sidebar-primary',
-  'sidebar-secondary',
-  'footer-left',
-  'footer-center',
-  'footer-right',
-]);
-
 /** Tipos de documento válidos. Derivado manualmente de la unión DocumentType. */
 export const VALID_TYPES = new Set<DocumentType>(['file', 'collection', 'author', 'authors', 'event', 'events', 'menu', 'card', 'feed', 'list']);
 

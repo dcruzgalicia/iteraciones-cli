@@ -1,13 +1,13 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, normalize } from 'node:path';
-import type { DocumentType, Region } from '../builder/types.js';
-import { VALID_REGIONS, VALID_TYPES } from '../builder/types.js';
+import type { DocumentType } from '../builder/types.js';
+import { VALID_TYPES } from '../builder/types.js';
 
 /**
  * Frontmatter mínimo correcto por tipo de documento.
  * La fecha se sustituye en tiempo de ejecución por la fecha actual.
  */
-function minimalFrontmatter(type: DocumentType, opts: { region?: string } = {}): string {
+function minimalFrontmatter(type: DocumentType): string {
   const today = new Date().toISOString().slice(0, 10);
 
   let base: string;
@@ -16,7 +16,7 @@ function minimalFrontmatter(type: DocumentType, opts: { region?: string } = {}):
       base = `---\ntitle: ''\ndate: ${today}`;
       break;
     case 'collection':
-      base = `---\ntitle: ''\ntype: collection\nitems: []`;
+      base = `---\ntitle: ''\ntype: collection`;
       break;
     case 'author':
       base = `---\ntitle: ''\ntype: author`;
@@ -31,7 +31,7 @@ function minimalFrontmatter(type: DocumentType, opts: { region?: string } = {}):
       base = `---\ntitle: ''\ntype: events`;
       break;
     case 'menu':
-      base = `---\ntitle: ''\ntype: menu\nnav: []`;
+      base = `---\ntitle: ''\ntype: menu`;
       break;
     case 'card':
       base = `---\ntitle: ''\ntype: card`;
@@ -42,13 +42,6 @@ function minimalFrontmatter(type: DocumentType, opts: { region?: string } = {}):
     case 'feed':
       base = `---\ntitle: ''\ntype: feed`;
       break;
-  }
-
-  // Si se indica region, el documento es un bloque. Se antepone block:true y region:
-  // independientemente del tipo base para que iteraciones new card foo.md --region sidebar-primary
-  // produzca un bloque de tipo card, que es el comportamiento esperado.
-  if (opts.region) {
-    return `${base}\nblock: true\nregion: ${opts.region}\n---\n\n`;
   }
 
   return `${base}\n---\n\n`;
@@ -63,17 +56,10 @@ function minimalFrontmatter(type: DocumentType, opts: { region?: string } = {}):
  * @param path  Ruta relativa del archivo a crear (incluye `.md`).
  * @param opts  Opciones adicionales: `region` para bloques.
  */
-export async function runNew(cwd: string, type: string, path: string, opts: { region?: string } = {}): Promise<void> {
+export async function runNew(cwd: string, type: string, path: string): Promise<void> {
   // Validar tipo
   if (!VALID_TYPES.has(type as DocumentType)) {
     process.stderr.write(`Error: tipo "${type}" no válido.\nTipos disponibles: ${[...VALID_TYPES].join(', ')}\n`);
-    process.exitCode = 1;
-    return;
-  }
-
-  // Validar region si se proporcionó
-  if (opts.region && !VALID_REGIONS.has(opts.region as Region)) {
-    process.stderr.write(`Error: región "${opts.region}" no válida.\nRegiones disponibles: ${[...VALID_REGIONS].join(', ')}\n`);
     process.exitCode = 1;
     return;
   }
@@ -93,7 +79,7 @@ export async function runNew(cwd: string, type: string, path: string, opts: { re
   // Crear directorio si no existe
   await mkdir(dirname(absPath), { recursive: true });
 
-  const content = minimalFrontmatter(type as DocumentType, opts);
+  const content = minimalFrontmatter(type as DocumentType);
 
   // Crear con bandera exclusiva (wx) para garantizar que no se sobreescribe aunque
   // otro proceso cree el archivo entre la comprobación y la escritura (TOCTOU).
