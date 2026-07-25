@@ -1,4 +1,3 @@
-import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 const PKG_ROOT = join(import.meta.dir, '../..');
@@ -28,25 +27,5 @@ export function resolveThemePaths(theme: string | undefined): ThemePaths {
     layoutPath: join(PKG_ROOT, 'layouts/default.html'),
     pandocTemplatePath: join(PKG_ROOT, 'pandoc/template.html'),
     templatesDir: join(PKG_ROOT, 'templates'),
-  };
-}
-
-/**
- * Resuelve los paths efectivos con prioridad de tres niveles:
- * 1. Proyecto   — cwd/layouts/default.html, cwd/pandoc/template.html
- * 2. Tema built-in — themes/{name}/layouts/… (p. ej. dark)
- * 3. CLI defaults — raíz del paquete (tema light por defecto)
- *
- * Los overrides de templates individuales por tipo siguen la misma jerarquía
- * y se resuelven en resolveTemplatePath (classifier/resolve-template.ts).
- */
-export function resolveEffectivePaths(theme: string | undefined, cwd: string): ThemePaths {
-  const base = resolveThemePaths(theme);
-  const projectLayout = join(cwd, 'layouts/default.html');
-  const projectPandoc = join(cwd, 'pandoc/template.html');
-  return {
-    layoutPath: existsSync(projectLayout) ? projectLayout : base.layoutPath,
-    pandocTemplatePath: existsSync(projectPandoc) ? projectPandoc : base.pandocTemplatePath,
-    templatesDir: base.templatesDir,
   };
 }
