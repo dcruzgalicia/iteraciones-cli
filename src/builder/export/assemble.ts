@@ -2,7 +2,7 @@ import { dirname, join, resolve } from 'node:path';
 import type { PdfFormatConfig } from '../../config/site-config.js';
 import type { BuildDocument } from '../types.js';
 import { renderMarkdownInlineLatex } from './latex.js';
-import { type DictumEntry, EXPORTABLE_TYPES, type ExportDocument, type ExportMetadata, LATEX_CLASS } from './types.js';
+import type { DictumEntry, ExportDocument, ExportMetadata } from './types.js';
 
 /**
  * Parsea el campo `dictum` del frontmatter.
@@ -93,7 +93,6 @@ export function assembleExportDocument(
   globalCsl?: string,
   pdfFormat?: PdfFormatConfig,
 ): ExportDocument | null {
-  if (!EXPORTABLE_TYPES.has('file')) return null;
   if (!doc.processedBody) return null;
 
   const rawEditorial =
@@ -101,7 +100,7 @@ export function assembleExportDocument(
       ? (doc.frontmatter['editorial'] as Record<string, unknown>)
       : {};
 
-  const documentclass = pdfFormat?.documentclass?.class ?? LATEX_CLASS['file'];
+  const documentclass = pdfFormat?.documentclass?.class ?? 'scrbook';
   if (!documentclass) return null;
 
   const bibliography =
@@ -138,7 +137,6 @@ export function assembleExportDocument(
   return {
     filePath: doc.filePath,
     relativePath: doc.relativePath,
-    type: 'file' as const,
     body: doc.processedBody ?? doc.body,
     htmlBody: doc.htmlFragment ?? undefined,
     metadata,

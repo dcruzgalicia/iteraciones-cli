@@ -6,11 +6,11 @@ import { ProgressTracker } from '../output/progress.js';
 
 import { buildAssets } from './assets.js';
 import { runExportDocuments } from './export/runner.js';
-import { EXPORTABLE_TYPES, type ExportResult } from './export/types.js';
+import type { ExportResult } from './export/types.js';
 import { generateLatexPreamble } from './format-generator.js';
 import { type BuildReport, buildDocsFromIndex, type DiscoverResult, discover } from './pipeline/discover.js';
 import { renderLatex } from './pipeline/render.js';
-import type { BuildContext, BuildDocument, DocumentType } from './types.js';
+import type { BuildContext, BuildDocument } from './types.js';
 
 export interface BuildOptions {
   outputDir?: string;
@@ -157,11 +157,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     const exportBase = { cwd, lang: ctx.siteConfig.lang, concurrency: ctx.concurrency ?? 4 };
     const exportResults: ExportResult[] = [];
 
-    const baseRenderedMap = new Map<DocumentType, BuildDocument[]>();
-    baseRenderedMap.set('file', pipelineDocs);
-
-    const countExportDocs = (map: Map<DocumentType, BuildDocument[]>, type: DocumentType): number => {
-      const docs = map.get(type) ?? [];
+    const countExportDocs = (docs: BuildDocument[]): number => {
       let count = 0;
       for (const d of docs) {
         const raw = d.frontmatter['export'];
@@ -177,18 +173,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       // Markdown
       (async () => {
         if (!formatCfg?.markdown?.generate || noExport) return;
-        let mdTotal = 0;
-        for (const type of EXPORTABLE_TYPES) {
-          const docs = (baseRenderedMap.get(type) ?? []).filter((d) => d.kind !== 'block');
-          for (const d of docs) {
-            const raw = d.frontmatter['export'];
-            const skipped = typeof raw === 'object' && raw !== null && !Array.isArray(raw) && (raw as Record<string, unknown>)['skip'] === true;
-            if (skipped) continue;
-            mdTotal++;
-          }
-        }
+        const mdTotal = countExportDocs(pipelineDocs);
         progress.startPhase('markdown', mdTotal);
-        const mdResults = await runExportDocuments(baseRenderedMap, {
+        const mdResults = await runExportDocuments(pipelineDocs, {
           ...exportBase,
           outputDir: join(formatsDir, 'markdown'),
           config: { markdown: formatCfg?.markdown },
@@ -221,10 +208,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       // EPUB
       (async () => {
         if (!formatCfg?.epub?.generate || noExport) return;
-        let epubTotal = 0;
-        for (const type of EXPORTABLE_TYPES) epubTotal += countExportDocs(baseRenderedMap, type);
+        const epubTotal = countExportDocs(pipelineDocs);
         progress.startPhase('epub', epubTotal);
-        const epubResults = await runExportDocuments(baseRenderedMap, {
+        const epubResults = await runExportDocuments(pipelineDocs, {
           ...exportBase,
           outputDir: join(formatsDir, 'html'),
           config: { epub: formatCfg?.epub },
@@ -250,10 +236,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         progress.completePhase(undefined, 'latex');
 
         if (pdfOn && !noExport) {
-          let pdfTotal = 0;
-          for (const type of EXPORTABLE_TYPES) pdfTotal += countExportDocs(baseRenderedMap, type);
+          const pdfTotal = countExportDocs(pipelineDocs);
           progress.startPhase('pdf', pdfTotal);
-          const pdfResults = await runExportDocuments(baseRenderedMap, {
+          const pdfResults = await runExportDocuments(pipelineDocs, {
             ...exportBase,
             outputDir: join(formatsDir, 'pdf'),
             config: { pdf: formatCfg?.pdf },

@@ -1,7 +1,5 @@
 import { readFile, stat } from 'node:fs/promises';
 import { join, relative } from 'node:path';
-import { EXPORTABLE_TYPES } from '../builder/export/types.js';
-import { VALID_TYPES } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { IGNORED_DIRS } from '../constants.js';
 import { ConfigError } from '../errors.js';
@@ -68,42 +66,27 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
       continue;
     }
 
-    // ── Validación semántica ────────────────────────────────────────────────
-
-    // type: debe ser un DocumentType válido si está declarado
-    if (fm.type && !VALID_TYPES.has(fm.type as Parameters<typeof VALID_TYPES.has>[0])) {
-      errors.push({
-        file: entry,
-        message: `type: "${fm.type}" no es un tipo válido. Valores permitidos: ${[...VALID_TYPES].join(', ')}`,
-      });
-    }
-
-    const effectiveType = fm.type && VALID_TYPES.has(fm.type as Parameters<typeof VALID_TYPES.has>[0]) ? fm.type : 'file';
-
     // Validar rutas de archivos editoriales (editorial.cover, .bibliography, .csl).
-    // Si estos archivos no existen, el build falla con un error críptico de LaTeX/Pandoc.
-    if (EXPORTABLE_TYPES.has(effectiveType as Parameters<typeof EXPORTABLE_TYPES.has>[0])) {
-      const rawEditorial =
-        typeof parsed['editorial'] === 'object' && parsed['editorial'] !== null ? (parsed['editorial'] as Record<string, unknown>) : null;
+    const rawEditorial =
+      typeof parsed['editorial'] === 'object' && parsed['editorial'] !== null ? (parsed['editorial'] as Record<string, unknown>) : null;
 
-      if (rawEditorial) {
-        const editorialPaths: Array<[string, string]> = [
-          ['editorial.cover', typeof rawEditorial['cover'] === 'string' ? rawEditorial['cover'] : ''],
-          ['editorial.bibliography', typeof rawEditorial['bibliography'] === 'string' ? rawEditorial['bibliography'] : ''],
-          ['editorial.csl', typeof rawEditorial['csl'] === 'string' ? rawEditorial['csl'] : ''],
-        ];
-        for (const [fieldName, fieldValue] of editorialPaths) {
-          if (!fieldValue) continue;
-          const absFilePath = join(cwd, fieldValue);
-          const fileExists = await stat(absFilePath)
-            .then((s) => s.isFile())
-            .catch(() => false);
-          if (!fileExists) {
-            errors.push({
-              file: entry,
-              message: `${fieldName}: "${fieldValue}" no existe en el proyecto`,
-            });
-          }
+    if (rawEditorial) {
+      const editorialPaths: Array<[string, string]> = [
+        ['editorial.cover', typeof rawEditorial['cover'] === 'string' ? rawEditorial['cover'] : ''],
+        ['editorial.bibliography', typeof rawEditorial['bibliography'] === 'string' ? rawEditorial['bibliography'] : ''],
+        ['editorial.csl', typeof rawEditorial['csl'] === 'string' ? rawEditorial['csl'] : ''],
+      ];
+      for (const [fieldName, fieldValue] of editorialPaths) {
+        if (!fieldValue) continue;
+        const absFilePath = join(cwd, fieldValue);
+        const fileExists = await stat(absFilePath)
+          .then((s) => s.isFile())
+          .catch(() => false);
+        if (!fileExists) {
+          errors.push({
+            file: entry,
+            message: `${fieldName}: "${fieldValue}" no existe en el proyecto`,
+          });
         }
       }
     }
