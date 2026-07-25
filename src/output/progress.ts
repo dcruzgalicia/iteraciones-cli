@@ -69,31 +69,7 @@ export class ProgressTracker {
 
   advance(_by: number = 1): void {}
 
-  reportFile(file: RenderFileReport): void {
-    if (this.verbose) {
-      const files = this.phaseFiles[file.phase];
-      if (files) {
-        files.push(file.relativePath);
-      }
-    }
-  }
-
-  private flushPhaseFiles(phase: PipelinePhase): void {
-    const files = this.phaseFiles[phase];
-    if (files && files.length > 0) {
-      for (const f of files) {
-        process.stdout.write(`    ${f}\n`);
-      }
-    }
-    if (phase === 'html') {
-      const composeFiles = this.phaseFiles['compose'];
-      if (composeFiles && composeFiles.length > 0) {
-        for (const f of composeFiles) {
-          process.stdout.write(`    ${f}\n`);
-        }
-      }
-    }
-  }
+  reportFile(file: RenderFileReport): void {}
 
   completePhase(actualCount?: number): void {
     const phase = this.currentPhase;
@@ -110,9 +86,7 @@ export class ProgressTracker {
         process.stdout.write('\n');
       } else if (meta.section === 'Generando publicaciones') {
         const durStr = formatTime(elapsed);
-        process.stdout.write(`  ${meta.label}\n`);
-        this.flushPhaseFiles(phase);
-        process.stdout.write(`    ${durStr}\n\n`);
+        process.stdout.write(`  ${meta.label}  ${durStr}\n\n`);
       }
     } else {
       const countPart = count > 0 ? ` ${count}` : '';
@@ -152,6 +126,23 @@ export class ProgressTracker {
     } else {
       process.stdout.write('\u25a0 Preparaci\u00f3n\n');
       process.stdout.write('  \u2713 Archivos temporales limpiados\n');
+    }
+  }
+
+  private flushPhaseFiles(phase: PipelinePhase): void {
+    const files = this.phaseFiles[phase];
+    if (files && files.length > 0) {
+      for (const f of files) {
+        process.stdout.write(`    ${f}\n`);
+      }
+    }
+    if (phase === 'html') {
+      const composeFiles = this.phaseFiles['compose'];
+      if (composeFiles && composeFiles.length > 0) {
+        for (const f of composeFiles) {
+          process.stdout.write(`    ${f}\n`);
+        }
+      }
     }
   }
 }
