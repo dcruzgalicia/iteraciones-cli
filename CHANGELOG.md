@@ -1,5 +1,46 @@
 # Changelog
 
+## [0.10.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.9.0...v0.10.0) (2026-07-25)
+
+
+### Features
+
+* **cache:** agrega slug a files.json y archivo slugs.json para duplicados ([b5ca0a6](https://github.com/dcruzgalicia/iteraciones-cli/commit/b5ca0a6aed9e363773efd85037f279b9eefe87c5))
+* **cli:** indicador animado de progreso en modo normal y lista de archivos por formato en verbose ([d802702](https://github.com/dcruzgalicia/iteraciones-cli/commit/d80270297607bae81b8e771aaa8f7e31d1591c2c))
+* **cli:** muestra mensajes al limpiar dist, .iteraciones y cache de biber con --no-cache ([23fe979](https://github.com/dcruzgalicia/iteraciones-cli/commit/23fe979d8a3ce092040933d4cc333936095c2fbd))
+
+
+### Bug Fixes
+
+* **builder:** solo limpia cache y dist por archivos en deletedFiles, no por formato desactivado ([b49e964](https://github.com/dcruzgalicia/iteraciones-cli/commit/b49e964ee4d81483449d66d5cf98860667ae26c7))
+* **build:** estructura plana en formats/ y evita contaminacion cruzada entre formatos ([935a32f](https://github.com/dcruzgalicia/iteraciones-cli/commit/935a32f8f6b316e467b952400398ee2e36954229))
+* **build:** extrae thin binary de biber una vez y serializa latexmk para evitar corruptcion de cache ([af639b7](https://github.com/dcruzgalicia/iteraciones-cli/commit/af639b7e50b6962572051d88af7e08dad92c33bc))
+* **build:** mueve html compose al promise.all, espera pdf para enlaces ([d24e275](https://github.com/dcruzgalicia/iteraciones-cli/commit/d24e2751b5f0e63e1b622553a7e7c5ac97ffd076))
+* **build:** serializa latexmk a 1 proceso para evitar corruptcion de cache de biber ([733122d](https://github.com/dcruzgalicia/iteraciones-cli/commit/733122d2185d4a66d30dcf6db5ae444b8dba6c02))
+* **changes:** guarda solo paths en diff.json, slugs en files.json ([6cfa107](https://github.com/dcruzgalicia/iteraciones-cli/commit/6cfa1075a46a074afc3a10e2f4647e0e7384086d))
+* **cli:** cambia Publicaciones creadas a Formatos creados e incluye LaTeX en el conteo ([de5fa0a](https://github.com/dcruzgalicia/iteraciones-cli/commit/de5fa0ab65b2809f778327347fe5722cf86fc655))
+* **cli:** elimina lista de archivos en verbose, solo muestra formato y tiempo ([984b9c1](https://github.com/dcruzgalicia/iteraciones-cli/commit/984b9c186b88de1d80431af16c9c37ad7b7e2c34))
+* **cli:** elimina spinner, solo muestra resultado final por fase ([8b899dc](https://github.com/dcruzgalicia/iteraciones-cli/commit/8b899dca5148bb8444fe1a95040cd0e72c1c4093))
+* **cli:** orden de fases, tiempos en verbose e indicador de progreso en formato largo ([21da5ec](https://github.com/dcruzgalicia/iteraciones-cli/commit/21da5ecf0af924b19137805758e151601515454c))
+* **cli:** restaura limpieza de cache de biber en --no-cache para builds verdaderamente limpios ([da1409b](https://github.com/dcruzgalicia/iteraciones-cli/commit/da1409bd93074ea72502976228c4c3036f5e0b44))
+* **cli:** restaura lista de archivos en Descubriendo documentos, la quita de formatos ([4174450](https://github.com/dcruzgalicia/iteraciones-cli/commit/417445027787f29f4335680bf24ccdca505df42b))
+* **cli:** spinner animado solo en TTY, mensaje estatico en salida capturada ([df368de](https://github.com/dcruzgalicia/iteraciones-cli/commit/df368de56b0d00bb75c511c2d589acc90c1a6e75))
+* **discover:** asigna -dN desde 1 a slugs duplicados ([b552a12](https://github.com/dcruzgalicia/iteraciones-cli/commit/b552a1289c24f2082186379f929b44409d901786))
+* **pdf:** aísla cache de biber via PAR_GLOBAL_TEMP para permitir latexmk paralelo ([34bdd6d](https://github.com/dcruzgalicia/iteraciones-cli/commit/34bdd6dbe68ab7f94e284a4656ce6291c9d88b05))
+* **pdf:** asigna cache de biber por indice de documento (idx %% maxSlots) en lugar de slot ([c17d5b4](https://github.com/dcruzgalicia/iteraciones-cli/commit/c17d5b47e58b345e6b94e51f0409d599fcfaf943))
+* **pdf:** persiste biber cache en .iteraciones para reuso entre builds, no en /tmp ([af0baee](https://github.com/dcruzgalicia/iteraciones-cli/commit/af0baee3c1f52660774730fd00e67ef890e63c4b))
+* **pdf:** pre-crea todos los directorios cache-0..cache-N para visibilidad ([0b4da13](https://github.com/dcruzgalicia/iteraciones-cli/commit/0b4da13bde627f904211254fa25fcc2853f3bd3c))
+
+
+### Performance Improvements
+
+* **build:** ejecuta EPUB tras runPrimaryRender, en paralelo con blocks/context ([fc12847](https://github.com/dcruzgalicia/iteraciones-cli/commit/fc1284731de514706814312e71101f718b66afc0))
+* **build:** ejecuta PDF y render/context en paralelo ([e51ee88](https://github.com/dcruzgalicia/iteraciones-cli/commit/e51ee88c9877a86396712e1d54f851cf79185e3b))
+* **build:** ejecuta PDF, Markdown y render/context en paralelo ([e6d03c9](https://github.com/dcruzgalicia/iteraciones-cli/commit/e6d03c9997dc824ae864e80799562fb690c2f58b))
+* **build:** fase 3 genera html con citas, 4 formatos en un solo promise.all ([dcb2969](https://github.com/dcruzgalicia/iteraciones-cli/commit/dcb29694e076f8b6ff214310254c68d6cd8af27a))
+* **build:** usa cpus()-1 como concurrencia por defecto en lugar de 4 ([b443157](https://github.com/dcruzgalicia/iteraciones-cli/commit/b443157c2ec8f92bd13b7780064852f5e883f105))
+* **pdf:** usa maxSlots como concurrencia del loop externo para paralelizar latexmk ([7a4a685](https://github.com/dcruzgalicia/iteraciones-cli/commit/7a4a685a1d22b39e63ff5c839cc467eb65dcad74))
+
 ## [0.9.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.8.0...v0.9.0) (2026-07-24)
 
 
