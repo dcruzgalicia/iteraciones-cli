@@ -1,13 +1,6 @@
 import type { SiteConfig } from '../config/site-config.js';
 import type { Frontmatter } from '../loader/frontmatter.js';
 
-export type DocumentKind = 'page' | 'block';
-
-export type DocumentType = 'file' | 'collection' | 'author' | 'authors' | 'event' | 'events' | 'menu' | 'card' | 'feed' | 'list';
-
-/** Tipos de documento válidos. Derivado manualmente de la unión DocumentType. */
-export const VALID_TYPES = new Set<DocumentType>(['file', 'collection', 'author', 'authors', 'event', 'events', 'menu', 'card', 'feed', 'list']);
-
 /**
  * Documento fuente tal como sale del paso de discovery.
  */
@@ -24,14 +17,9 @@ export interface SourceDocument {
  * Documento que acumula datos a través del pipeline.
  */
 export interface BuildDocument extends SourceDocument {
-  // Asignado en classify (hoy siempre undefined, se mantiene por compatibilidad export)
-  type?: DocumentType;
-  kind?: DocumentKind;
-  // Asignado en orchestrator (slug computation)
   slug?: string;
-  // Asignado en renderLatex
   htmlFragment?: string;
-  // Cuerpo LaTeX generado en renderLatex
+  /** Cuerpo LaTeX generado en renderLatex. */
   processedBody?: string;
 }
 

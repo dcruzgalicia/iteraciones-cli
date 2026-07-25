@@ -119,9 +119,9 @@ export async function runDoctor(cwd: string, options: { fix?: boolean } = {}): P
   }
 }
 
-export async function runNew(cwd: string, type: string, path: string): Promise<void> {
+export async function runNew(cwd: string, path: string): Promise<void> {
   try {
-    await newDoc(cwd, type, path);
+    await newDoc(cwd, path);
   } catch (err) {
     if (err instanceof Error) {
       process.stderr.write(`Error al crear documento: ${err.message}\n`);

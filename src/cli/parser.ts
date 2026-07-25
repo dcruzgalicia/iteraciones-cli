@@ -101,10 +101,10 @@ export function buildProgram(): Command {
     });
 
   program
-    .command('new <type> <path>')
-    .description('crea un archivo Markdown con el frontmatter mínimo para el tipo indicado')
-    .action(async (type: string, path: string) => {
-      await runNew(process.cwd(), type, path);
+    .command('new <path>')
+    .description('crea un archivo Markdown con frontmatter mínimo')
+    .action(async (path: string) => {
+      await runNew(process.cwd(), path);
     });
 
   program

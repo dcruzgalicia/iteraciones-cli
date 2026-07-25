@@ -8,10 +8,9 @@ import { THUMBNAIL_SIZES } from '../../config/site-config.js';
 import { mapWithConcurrency } from '../../output/concurrency.js';
 import { convertToEpub, convertToMarkdown, convertToPdf } from '../../services/pandoc-exporter.js';
 import { computeSlug } from '../slug.js';
-import type { BuildDocument, DocumentType } from '../types.js';
+import type { BuildDocument } from '../types.js';
 import { assembleExportDocument } from './assemble.js';
 import type { ExportDocument, ExportMetadata, ExportResult } from './types.js';
-import { EXPORTABLE_TYPES } from './types.js';
 
 /**
  * Tipos de thumbnail reconocidos:
@@ -122,13 +121,12 @@ function exportOutputBase(exportDoc: ExportDocument, outputDir: string): string 
   return join(outputDir, exportDoc.relativePath.replace(/\.md$/, ''));
 }
 
-export async function runExportDocuments(
-  renderedMap: ReadonlyMap<DocumentType, BuildDocument[]>,
-  options: ExportRunOptions,
-): Promise<ExportResult[]> {
+export async function runExportDocuments(exportableDocs: BuildDocument[], options: ExportRunOptions): Promise<ExportResult[]> {
   const { config, outputDir, cwd, lang, concurrency } = options;
 
   const hasPdf = config.pdf?.generate === true || !!config.html?.thumbnails;
+
+  if (exportableDocs.length === 0) return [];
 
   // Semaforo que limita las instancias de pdflatex concurrentes.
   const maxSlots = hasPdf ? Math.max(1, cpus().length - 1) : 0;
@@ -164,15 +162,6 @@ export async function runExportDocuments(
     }
   } catch {}
   let globalCsl: string | undefined;
-
-  // Recopilar todos los docs exportables.
-  const exportableDocs: BuildDocument[] = [];
-  for (const type of EXPORTABLE_TYPES) {
-    const docs = renderedMap.get(type) ?? [];
-    exportableDocs.push(...docs);
-  }
-
-  if (exportableDocs.length === 0) return [];
 
   let _pdfDone = 0;
   const _pdfTotal = hasPdf ? exportableDocs.length : 0;
