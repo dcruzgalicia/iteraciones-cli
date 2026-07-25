@@ -4,6 +4,7 @@ import { basename, dirname, join } from 'node:path';
 import { mapWithConcurrency } from '../lib/concurrency.js';
 import { convertFragment } from '../lib/pandoc-runner.js';
 import { discoverBibFiles } from './latex-preamble.js';
+import { loadModules } from './load-modules.js';
 import type { BuildDocument } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -56,32 +57,7 @@ async function loadTranspilers(
   const excluded = new Set(disabledList ?? []);
   const names = BUILTIN_TRANSPILERS.filter((n) => !excluded.has(n));
 
-  const modules = new Map<string, TranspilerModule>();
-
-  for (const name of names) {
-    const mod = (await import(join(PKG_TRANSPILERS_DIR, `${name}.ts`))) as TranspilerModule;
-    modules.set(name, mod);
-  }
-
-  // Sobrescritura del proyecto: transpilers con el mismo nombre reemplazan
-  if (cwd) {
-    const projectDir = join(cwd, 'transpilers');
-    const projectDirExists = await Bun.file(projectDir)
-      .exists()
-      .catch(() => false);
-    if (projectDirExists) {
-      for (const name of names) {
-        const projectPath = join(projectDir, `${name}.ts`);
-        const exists = await Bun.file(projectPath)
-          .exists()
-          .catch(() => false);
-        if (exists) {
-          const mod = (await import(projectPath)) as TranspilerModule;
-          modules.set(name, mod);
-        }
-      }
-    }
-  }
+  const modules = await loadModules<TranspilerModule>(PKG_TRANSPILERS_DIR, names, cwd, 'transpilers');
 
   const stringTranspilers: Array<{ name: string; process: (body: string) => string }> = [];
   const astTranspilers: Array<{ name: string; transform: (ast: Record<string, unknown>) => Promise<Record<string, unknown>> }> = [];

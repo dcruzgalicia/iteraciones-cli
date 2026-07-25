@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import type { PdfFormatConfig } from '../config/site-config.js';
+import { loadModules } from './load-modules.js';
 
 // ---------------------------------------------------------------------------
 // Sistema de transpilers para el preámbulo LaTeX
@@ -51,32 +52,7 @@ export async function loadPreambleTranspilers(
   const excluded = new Set(disabledList ?? []);
   const names = BUILTIN_PREAMBLE_TRANSPILERS.filter((n) => !excluded.has(n));
 
-  const modules = new Map<string, PreambleTranspiler>();
-
-  for (const name of names) {
-    const mod = (await import(join(PKG_PREAMBLE_DIR, `${name}.ts`))) as PreambleTranspiler;
-    modules.set(name, mod);
-  }
-
-  // Sobrescritura del proyecto: transpilers con el mismo nombre reemplazan
-  if (cwd) {
-    const projectDir = join(cwd, 'preamble');
-    const projectDirExists = await Bun.file(projectDir)
-      .exists()
-      .catch(() => false);
-    if (projectDirExists) {
-      for (const name of names) {
-        const projectPath = join(projectDir, `${name}.ts`);
-        const exists = await Bun.file(projectPath)
-          .exists()
-          .catch(() => false);
-        if (exists) {
-          const mod = (await import(projectPath)) as PreambleTranspiler;
-          modules.set(name, mod);
-        }
-      }
-    }
-  }
+  const modules = await loadModules<PreambleTranspiler>(PKG_PREAMBLE_DIR, names, cwd, 'preamble');
 
   const result: Array<{ name: string; process: (preamble: string[], config: PdfFormatConfig) => string[] }> = [];
 

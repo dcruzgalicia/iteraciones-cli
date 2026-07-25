@@ -1,8 +1,8 @@
 import { readFile, stat } from 'node:fs/promises';
 import { join, relative } from 'node:path';
+import { IGNORED_DIRS } from '../builder/discover.js';
 import type { Frontmatter } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
-import { IGNORED_DIRS } from '../lib/constants.js';
 import { ConfigError } from '../lib/errors.js';
 import { checkLatexEngine } from './doctor/system-checks.js';
 
