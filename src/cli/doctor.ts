@@ -1,4 +1,4 @@
-import { checkSiteConfig, checkTemplates } from './doctor/project-checks.js';
+import { checkSiteConfig } from './doctor/project-checks.js';
 import {
   type CheckResult,
   checkLatexEngine,
@@ -19,7 +19,6 @@ export async function runDoctor(cwd: string, options: { fix?: boolean } = {}): P
   const checks = await Promise.all([
     checkPandoc(),
     checkSiteConfig(cwd),
-    Promise.resolve(checkTemplates(cwd)),
     checkTailwind(cwd),
     checkReadPermissions(cwd),
     checkWritePermissions(cwd),
