@@ -59,26 +59,6 @@ async function saveDiscoveryIndex(cwd: string, index: Map<string, DiscoveryEntry
   await Bun.write(filePath, JSON.stringify(file));
 }
 
-const SLUGS_CACHE_PATH = join('.iteraciones', 'changes', 'slugs.json');
-
-async function loadSlugsCounter(cwd: string): Promise<Map<string, number>> {
-  const file = Bun.file(join(cwd, SLUGS_CACHE_PATH));
-  if (!(await file.exists())) return new Map();
-  try {
-    const raw = await file.text();
-    const parsed: Record<string, number> = JSON.parse(raw);
-    return new Map(Object.entries(parsed));
-  } catch {
-    return new Map();
-  }
-}
-
-async function saveSlugsCounter(cwd: string, counter: Map<string, number>): Promise<void> {
-  const filePath = join(cwd, SLUGS_CACHE_PATH);
-  await mkdir(dirname(filePath), { recursive: true });
-  await Bun.write(filePath, JSON.stringify(Object.fromEntries(counter)));
-}
-
 const FM_RE = /^---\r?\n([\s\S]*?)\r?\n---/;
 
 /**
@@ -99,7 +79,7 @@ export async function discover(cwd: string, options: DiscoverOptions = {}): Prom
   const useCache = !options.noCache;
   const prevReport = useCache ? await loadBuildReport(cwd) : null;
   const discoveryIndex = useCache ? await loadDiscoveryIndex(cwd) : new Map<string, DiscoveryEntry>();
-  const slugsCounter = useCache ? await loadSlugsCounter(cwd) : new Map<string, number>();
+
   const currentSet = new Set(relativePaths);
   const changedPaths = new Set<string>();
   const recentFiles: string[] = [];
@@ -190,7 +170,6 @@ export async function discover(cwd: string, options: DiscoverOptions = {}): Prom
         entry.slug = slugBase + '-d' + n;
         n++;
       }
-      slugsCounter.set(key, n - 1);
     }
   }
 
@@ -202,7 +181,6 @@ export async function discover(cwd: string, options: DiscoverOptions = {}): Prom
 
   await saveDiscoveryIndex(cwd, discoveryIndex);
   await saveBuildReport(cwd, buildReport);
-  await saveSlugsCounter(cwd, slugsCounter);
 
   return { relativePaths, changedPaths, discoveryIndex, deletedEntries };
 }
