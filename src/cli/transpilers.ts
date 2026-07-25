@@ -1,5 +1,5 @@
-import { getBuiltinTranspilerInfos } from '../builder/pipeline/render.js';
 import { getBuiltinPreambleTranspilerInfos } from '../builder/preamble-loader.js';
+import { getBuiltinTranspilerInfos } from '../builder/render.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 
 /**

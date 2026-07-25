@@ -2,7 +2,7 @@ import { cp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/site-config.js';
-import { run } from '../services/run.js';
+import { run } from '../lib/run.js';
 
 const PKG_ROOT = join(import.meta.dir, '../..');
 const CSS_SRC = join(PKG_ROOT, 'css', 'styles.css');

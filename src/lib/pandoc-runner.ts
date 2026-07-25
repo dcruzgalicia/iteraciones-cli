@@ -1,4 +1,4 @@
-import { PandocError } from '../errors.js';
+import { PandocError } from './errors.js';
 import { type RunResult, run } from './run.js';
 
 export interface BibOptions {

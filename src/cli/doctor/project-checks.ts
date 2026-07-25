@@ -1,5 +1,5 @@
 import { loadSiteConfig } from '../../config/config-loader.js';
-import { ConfigError } from '../../errors.js';
+import { ConfigError } from '../../lib/errors.js';
 import type { CheckResult } from './system-checks.js';
 
 export async function checkSiteConfig(cwd: string): Promise<CheckResult> {

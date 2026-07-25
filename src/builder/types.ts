@@ -1,5 +1,5 @@
 import type { SiteConfig } from '../config/site-config.js';
-import type { Frontmatter } from '../loader/frontmatter.js';
+import type { Frontmatter } from '../lib/frontmatter.js';
 
 /**
  * Documento fuente tal como sale del paso de discovery.
