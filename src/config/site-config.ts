@@ -224,6 +224,19 @@ export const DEFAULT_MARKDOWN_FORMAT: MarkdownFormatConfig = {
   generate: false,
 };
 
+/**
+ * Extrae los nombres de formatos activos desde FormatConfig.
+ */
+export function computeActiveFormats(format: FormatConfig): string[] {
+  const formats: string[] = [];
+  if (format.latex === true) formats.push('latex');
+  if (format.pdf?.generate === true) formats.push('pdf');
+  if (format.html?.generate === true) formats.push('html');
+  if (format.epub?.generate === true) formats.push('epub');
+  if (format.markdown?.generate === true) formats.push('markdown');
+  return formats;
+}
+
 export const DEFAULT_SITE_CONFIG: SiteConfig = {
   title: 'iteraciones',
   tagline: 'escribir, compartir, re-existir',
