@@ -53,15 +53,15 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // Cargar config primero para detectar cambios de formato antes de setupBuildEnvironment
   const siteConfig = await loadSiteConfig(cwd);
   const currentFormats = computeActiveFormats(siteConfig.format);
+  let newFormats: string[] = [];
 
   // Detectar formatos nuevos comparando con el build anterior
   const prevReport = await loadBuildReport(cwd);
   if (prevReport !== null) {
     const prevFormats = new Set(prevReport.activeFormats ?? []);
-    const newFormats = currentFormats.filter((f) => !prevFormats.has(f));
+    newFormats = currentFormats.filter((f) => !prevFormats.has(f));
     if (newFormats.length > 0) {
-      options = { ...options, noCache: true };
-      log(`Nuevos formatos detectados: ${newFormats.join(', ')}. Reconstruyendo desde cero.`);
+      log(`Nuevos formatos detectados: ${newFormats.join(', ')}. Procesando todos los documentos.`);
     }
   }
 
@@ -93,6 +93,13 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   for (const doc of allDocs) {
     const entry = discoveryIndex.get(doc.relativePath);
     doc.slug = entry?.slug ?? basename(doc.relativePath, '.md');
+  }
+
+  // Si hay formatos nuevos, forzar que todos los documentos pasen por el pipeline
+  if (newFormats.length > 0) {
+    for (const doc of allDocs) {
+      discoveredChanges.add(doc.relativePath);
+    }
   }
 
   const GLOBAL_CHANGE_PATTERNS = [/\.ya?ml$/, /\.html$/];
