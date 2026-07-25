@@ -203,7 +203,7 @@ export function assembleExportDocument(
   return {
     filePath: doc.filePath,
     relativePath: doc.relativePath,
-    body: doc.processedBody ?? doc.body,
+    body: doc.processedBody ?? '',
     htmlBody: doc.htmlFragment ?? undefined,
     metadata,
     slug: doc.slug,

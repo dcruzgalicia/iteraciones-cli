@@ -223,7 +223,6 @@ export function buildDocsFromIndex(relativePaths: string[], discoveryIndex: Map<
         author: entry?.author ?? [],
         keywords: [],
       },
-      body: '',
     };
   });
 }

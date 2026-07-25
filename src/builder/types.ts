@@ -23,7 +23,6 @@ export interface SourceDocument {
   filePath: string;
   relativePath: string;
   frontmatter: Frontmatter;
-  body: string;
 }
 
 /**

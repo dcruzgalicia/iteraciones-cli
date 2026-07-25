@@ -30,7 +30,7 @@ async function generateCss(outputDir: string, cwd: string, accent: string): Prom
   await buildCssWithTailwind(targetCssPath, cwd, accentTheme);
 }
 
-async function buildCssWithTailwind(targetCssPath: string, cwd: string, accentTheme: string): Promise<string> {
+async function buildCssWithTailwind(targetCssPath: string, cwd: string, accentTheme: string): Promise<void> {
   const tempInputPath = join(tmpdir(), `_iteraciones-${crypto.randomUUID()}.css`);
   const tempContent = [
     `@import "${CSS_SRC}";`,
@@ -48,7 +48,6 @@ async function buildCssWithTailwind(targetCssPath: string, cwd: string, accentTh
   } finally {
     await rm(tempInputPath, { force: true });
   }
-  return Bun.file(targetCssPath).text();
 }
 
 async function copyFonts(outputDir: string): Promise<void> {
