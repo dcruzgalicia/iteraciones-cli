@@ -78,13 +78,16 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
   // Pasar activeFormats a discover() para que se guarden en diff.json
   const generateHtml = ctx.siteConfig.format?.html?.generate === true;
+  const needsCss = generateHtml && !options.noTailwind;
+  ctx.cssPath = needsCss ? '/css/styles.css' : '';
 
   progress.startPhase('discovery');
-  const [{ relativePaths, changedPaths: discoveredChanges, discoveryIndex, deletedEntries }, cssPath] = await Promise.all([
-    discover(cwd, { noCache: options.noCache, activeFormats: currentFormats }),
-    generateHtml ? buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, { noTailwind: options.noTailwind }) : Promise.resolve(''),
-  ]);
-  ctx.cssPath = cssPath;
+  const {
+    relativePaths,
+    changedPaths: discoveredChanges,
+    discoveryIndex,
+    deletedEntries,
+  } = await discover(cwd, { noCache: options.noCache, activeFormats: currentFormats });
   const allDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
 
   if (options.verbose) {
@@ -235,11 +238,12 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         const dst = join(formatsDir, 'html', dir, `${slug}.html`);
         try {
           const fragment = await Bun.file(src).text();
-          // Leer SVG del logo para incrustarlo inline (permite currentColor)
+          // Leer SVG del logo desde source (antes de copiar a dist/)
           let logoInline: string | undefined;
           try {
-            const logoPath = join(ctx.outputDir, 'logo.svg');
-            logoInline = await Bun.file(logoPath).text();
+            const logoRel = ctx.siteConfig.logo?.trim();
+            const logoSrc = logoRel ? join(ctx.cwd, logoRel) : join(import.meta.dir, '../../src/lib/resources/logo.svg');
+            logoInline = await Bun.file(logoSrc).text();
           } catch {}
 
           const html = await renderHtmlPage(fragment, {
@@ -304,6 +308,11 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       }
     })(),
   ]);
+
+  // ── Build assets (css, fonts, logo) antes de copiar a dist/ ──
+  if (generateHtml) {
+    await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, { noTailwind: options.noTailwind });
+  }
 
   // ── FASE 5: copiar de formats/ a dist/ ──
   {
