@@ -6,7 +6,6 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import { ConfigError, PandocError } from '../errors.js';
 import { checkPandoc } from '../services/pandoc-runner.js';
 import { runDoctor as doctor } from './doctor.js';
-import { runGraph as graph } from './graph.js';
 import { runInit as init } from './init.js';
 import { runNew as newDoc } from './new.js';
 import { runTranspilers as transpilers } from './transpilers.js';
@@ -139,23 +138,6 @@ export async function runTranspilers(cwd: string): Promise<void> {
     if (err instanceof Error) {
       process.stderr.write(`Error: ${err.message}
 `);
-    }
-    process.exitCode = 1;
-  }
-}
-
-export async function runGraph(cwd: string, options: { output?: string } = {}): Promise<void> {
-  try {
-    await graph(cwd, options);
-  } catch (err) {
-    if (err instanceof ConfigError) {
-      process.stderr.write(`Error de configuración: ${err.message}
-`);
-    } else if (err instanceof Error) {
-      process.stderr.write(`Error al construir el grafo: ${err.message}
-`);
-    } else {
-      process.stderr.write('Error desconocido al construir el grafo.\n');
     }
     process.exitCode = 1;
   }
