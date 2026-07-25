@@ -13,48 +13,21 @@ const PKG_ROOT = join(import.meta.dir, '../..');
 const CSS_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'styles.css');
 const FONTS_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'fonts');
 
-export async function buildAssets(
-  outputDir: string,
-  cwd: string,
-  siteConfig: SiteConfig,
-  options: { noTailwind?: boolean; cssHash?: string } = {},
-): Promise<string> {
+export async function buildAssets(outputDir: string, cwd: string, siteConfig: SiteConfig, options: { noTailwind?: boolean } = {}): Promise<string> {
   const tasks: Promise<void>[] = [copyFonts(outputDir), copyLogo(outputDir, cwd, siteConfig)];
-  if (!options.noTailwind) tasks.push(generateCss(outputDir, cwd, siteConfig.format?.html?.accent ?? 'lime', options.cssHash));
+  if (!options.noTailwind) tasks.push(generateCss(outputDir, cwd, siteConfig.format?.html?.accent ?? 'lime'));
   await Promise.all(tasks);
   return options.noTailwind ? '' : '/css/styles.css';
 }
 
-async function generateCss(outputDir: string, cwd: string, accent: string, cssHash?: string): Promise<void> {
+async function generateCss(outputDir: string, cwd: string, accent: string): Promise<void> {
   const targetCssDir = join(outputDir, 'css');
   await mkdir(targetCssDir, { recursive: true });
   const targetCssPath = join(targetCssDir, 'styles.css');
   const shades = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
   const accentTheme = shades.map((s) => `  --color-accent-${s}: var(--color-${accent}-${s});`).join('\n');
 
-  if (cssHash) {
-    const cssCachePath = join(cwd, '.iteraciones', '.css-hash');
-    try {
-      const previousHash = (await Bun.file(cssCachePath).text()).trim();
-      if (previousHash === cssHash) {
-        const cachedCssPath = join(cwd, '.iteraciones', 'css', 'styles.css');
-        const cached = await Bun.file(cachedCssPath).exists();
-        if (cached) {
-          await cp(cachedCssPath, targetCssPath);
-          return;
-        }
-      }
-    } catch {}
-  }
-
-  const generated = await buildCssWithTailwind(targetCssPath, cwd, accentTheme);
-
-  if (cssHash) {
-    const cssCacheDir = join(cwd, '.iteraciones', 'css');
-    await mkdir(cssCacheDir, { recursive: true });
-    await Bun.write(join(cssCacheDir, 'styles.css'), generated);
-    await Bun.write(join(cwd, '.iteraciones', '.css-hash'), cssHash + '\n');
-  }
+  await buildCssWithTailwind(targetCssPath, cwd, accentTheme);
 }
 
 async function buildCssWithTailwind(targetCssPath: string, cwd: string, accentTheme: string): Promise<string> {
