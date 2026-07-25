@@ -203,12 +203,19 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
           const dst = join(formatsDir, 'html', dir, `${slug}.html`);
           try {
             const fragment = await Bun.file(src).text();
+            // Leer SVG del logo para incrustarlo inline (permite currentColor)
+            let logoInline: string | undefined;
+            try {
+              const logoPath = join(ctx.outputDir, 'logo.svg');
+              logoInline = await Bun.file(logoPath).text();
+            } catch {}
+
             const html = await renderHtmlPage(fragment, {
               title: doc.frontmatter.title || slug,
               siteTitle: siteConfig.title ?? '',
               tagline: siteConfig.tagline,
               lang: siteConfig.lang ?? 'es',
-              logo: 'logo.svg',
+              logoInline,
               baseUrl: siteConfig.baseUrl,
               theme: htmlConfig?.theme,
               accent: htmlConfig?.accent,

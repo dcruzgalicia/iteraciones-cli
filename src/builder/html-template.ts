@@ -10,8 +10,8 @@ export interface HtmlTemplateVars {
   tagline?: string;
   /** Idioma (site.lang). */
   lang: string;
-  /** Ruta al logo (site.logo), ej: /files/logo.svg. */
-  logo?: string;
+  /** Contenido SVG del logo para incrustar inline (permite currentColor). */
+  logoInline?: string;
   /** Base URL del sitio (site.baseUrl). */
   baseUrl?: string;
   /** Tema claro/oscuro (format.html.theme). */
@@ -70,7 +70,7 @@ export async function renderHtmlPage(fragment: string, vars: HtmlTemplateVars): 
     'site-title': vars.siteTitle,
     tagline: vars.tagline,
     lang: vars.lang,
-    logo: vars.logo,
+    'logo-inline': vars.logoInline,
     'base-url': vars.baseUrl ?? '',
     theme: theme,
     accent: accent,
