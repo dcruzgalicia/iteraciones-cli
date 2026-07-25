@@ -1,8 +1,8 @@
 import { mkdir, rm } from 'node:fs/promises';
 import { cpus } from 'node:os';
 import { basename, dirname, join } from 'node:path';
+import { ProgressTracker } from '../cli/progress.js';
 import { loadSiteConfig } from '../config/config-loader.js';
-import { ProgressTracker } from '../lib/progress.js';
 
 import { buildAssets } from './assets.js';
 import { type BuildReport, buildDocsFromIndex, type DiscoverResult, discover } from './discover.js';
