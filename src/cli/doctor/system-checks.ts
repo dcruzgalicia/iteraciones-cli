@@ -110,14 +110,14 @@ export async function checkWritePermissions(cwd: string): Promise<CheckResult> {
  * `validate` (donde un resultado negativo se trata como error bloqueante).
  * La semántica de informacional vs. bloqueante la determina cada punto de uso.
  */
-export async function checkLatexEngine(engine: 'pdflatex' = 'pdflatex'): Promise<CheckResult> {
+export async function checkLatexEngine(): Promise<CheckResult> {
   try {
-    const engineResult = await run(engine, ['--version']);
+    const engineResult = await run('pdflatex', ['--version']);
     if (engineResult.exitCode !== 0) {
       return {
-        label: `${engine} disponible`,
+        label: 'pdflatex disponible',
         ok: false,
-        detail: `${engine} no encontrado en PATH. Instala MacTeX: https://tug.org/mactex/`,
+        detail: 'pdflatex no encontrado en PATH. Instala MacTeX: https://tug.org/mactex/',
       };
     }
     // Verificar que KOMA-Script esté instalado (scrartcl.cls).
@@ -130,18 +130,18 @@ export async function checkLatexEngine(engine: 'pdflatex' = 'pdflatex'): Promise
     }
     if (!komaOk) {
       return {
-        label: `${engine} disponible`,
+        label: 'pdflatex disponible',
         ok: false,
-        detail: `${engine} encontrado pero KOMA-Script no instalado. Instala MacTeX full: https://tug.org/mactex/`,
+        detail: 'pdflatex encontrado pero KOMA-Script no instalado. Instala MacTeX full: https://tug.org/mactex/',
       };
     }
-    const versionLine = engineResult.stdout.split('\n')[0]?.trim() ?? engine;
-    return { label: `${engine} disponible`, ok: true, detail: versionLine };
+    const versionLine = engineResult.stdout.split('\n')[0]?.trim() ?? 'pdflatex';
+    return { label: 'pdflatex disponible', ok: true, detail: versionLine };
   } catch {
     return {
-      label: `${engine} disponible`,
+      label: 'pdflatex disponible',
       ok: false,
-      detail: `${engine} no encontrado en PATH. Instala MacTeX: https://tug.org/mactex/`,
+      detail: 'pdflatex no encontrado en PATH. Instala MacTeX: https://tug.org/mactex/',
     };
   }
 }

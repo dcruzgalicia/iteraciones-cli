@@ -185,7 +185,7 @@ export async function runValidate(cwd: string): Promise<void> {
 
   // Si format.pdf esta configurado, verificar que el motor LaTeX este disponible.
   if (hasPdf) {
-    const latexResult = await checkLatexEngine('pdflatex');
+    const latexResult = await checkLatexEngine();
     if (!latexResult.ok) {
       configErrors.push({
         file: '_iteraciones.yaml',
