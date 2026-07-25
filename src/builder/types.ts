@@ -17,18 +17,13 @@ export interface Frontmatter {
 }
 
 /**
- * Documento fuente tal como sale del paso de discovery.
+ * Documento que acumula datos a través del pipeline.
+ * Creado en discovery, enriquecido en render y export.
  */
-export interface SourceDocument {
+export interface BuildDocument {
   filePath: string;
   relativePath: string;
   frontmatter: Frontmatter;
-}
-
-/**
- * Documento que acumula datos a través del pipeline.
- */
-export interface BuildDocument extends SourceDocument {
   slug?: string;
   htmlFragment?: string;
   /** Cuerpo LaTeX generado en renderLatex. */
