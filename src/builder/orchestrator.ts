@@ -133,8 +133,8 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   }
 
   const formatCfg = ctx.siteConfig.format;
-  const pdfOn = formatCfg?.pdf?.generate === true || (!!formatCfg?.html?.thumbnails && formatCfg?.pdf !== undefined);
-  const latexOn = formatCfg?.latex?.generate === true;
+  const pdfOn = formatCfg?.pdf?.generate === true;
+  const latexOn = formatCfg?.latex === true;
   const htmlOn = formatCfg?.html?.generate === true;
   const epubOn = formatCfg?.epub?.generate === true;
   const mdOn = formatCfg?.markdown?.generate === true;
