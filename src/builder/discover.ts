@@ -2,11 +2,11 @@ import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
 
-export interface DiscoverOptions {
+interface DiscoverOptions {
   noCache?: boolean;
 }
 
-export interface DiscoverResult {
+interface DiscoverResult {
   relativePaths: string[];
   changedPaths: Set<string>;
   discoveryIndex: Map<string, DiscoveryEntry>;
