@@ -9,30 +9,19 @@ import { mapWithConcurrency } from '../../output/concurrency.js';
 import { convertToEpub, convertToMarkdown, convertToPdf } from '../../services/pandoc-exporter.js';
 import { computeSlug } from '../slug.js';
 import type { BuildDocument, DocumentType } from '../types.js';
-import {
-  assembleAuthorExportVariants,
-  assembleExportDocument,
-  resolveEventsForExport,
-  resolveItemsForExport,
-  resolveLooseItemPaths,
-  resolvePartsForExport,
-} from './assemble.js';
-import type { ExportCollectionPart, ExportDocument, ExportMetadata, ExportResult } from './types.js';
+import { assembleExportDocument } from './assemble.js';
+import type { ExportDocument, ExportMetadata, ExportResult } from './types.js';
 import { EXPORTABLE_TYPES } from './types.js';
 
 /**
  * Tipos de thumbnail reconocidos:
  * - true: genera un solo JPG de 1200px (`<outputBase>.jpg`)
  * - 'responsive': genera sm(320), md(640), lg(1200), xl(2400)
- *   (`<outputBase>.<name>.jpg`)
  */
 type ThumbnailRequest = { mode: true; coverPath: string } | { mode: 'responsive' };
 
 const THUMBNAIL_DEFAULT_WIDTH = 1200;
 
-/**
- * Determina qué thumbnails generar según el valor de ThumbnailMode.
- */
 function resolveThumbnailRequest(mode: ThumbnailMode, outputBase: string): ThumbnailRequest | null {
   if (!mode) return null;
   if (mode === true) return { mode: true, coverPath: `${outputBase}.jpg` };
@@ -40,20 +29,9 @@ function resolveThumbnailRequest(mode: ThumbnailMode, outputBase: string): Thumb
   return null;
 }
 
-/**
- * Genera thumbnails JPG a partir de la primera página de un PDF.
- * Usa `pdftoppm` (parte de poppler-utils). Si no está disponible o falla, retorna undefined.
- *
- * @param pdfPath   Ruta absoluta al PDF fuente.
- * @param outputBase Ruta base de salida sin extensión (ej: /dist/web/notas/foo).
- * @param request   Configuración de qué thumbnails generar.
- * @param statCache Mapa opcional para cachear stat() del PDF.
- * @returns Ruta absoluta al JPG principal (lg en responsive, único en simple), o undefined.
- */
 async function generateCoverImage(pdfPath: string, outputBase: string, request: ThumbnailRequest): Promise<string | undefined> {
   try {
     if (request.mode === true) {
-      // Modo simple: un solo JPG de 1200px
       const coverPath = request.coverPath;
       const [coverStat, pdfStat] = await Promise.all([stat(coverPath).catch(() => null), stat(pdfPath)]);
       if (coverStat && coverStat.mtimeMs >= pdfStat.mtimeMs) return coverPath;
@@ -67,7 +45,6 @@ async function generateCoverImage(pdfPath: string, outputBase: string, request: 
       return exists ? coverPath : undefined;
     }
 
-    // Modo responsive: generar sm, md, lg, xl
     const pdfStat = await stat(pdfPath);
     let coverPath: string | undefined;
 
@@ -98,7 +75,6 @@ async function generateCoverImage(pdfPath: string, outputBase: string, request: 
 
     return coverPath;
   } catch {
-    // pdftoppm no instalado o no disponible en PATH — no es error fatal
     return undefined;
   }
 }
@@ -113,52 +89,15 @@ export interface ExportFormatOptions {
 export interface ExportRunOptions {
   config: ExportFormatOptions;
   outputDir: string;
-  /** Directorio raíz del proyecto; usado para validar rutas editoriales (cover, bibliography, csl) y para resolver rutas globales. */
   cwd: string;
   lang: string;
-  /**
-   * Numero maximo de documentos que se procesan en paralelo en el outer loop.
-   * Cuando la exportacion incluye PDF, un semaforo interno limita las instancias
-   * de pdflatex activas simultaneamente a `config.pdf.concurrency`; `concurrency` sigue
-   * siendo el limite de documentos en vuelo (incluidos los que esperan el semaforo).
-   */
   concurrency: number;
-  /**
-   * Callback invocado por cada formato exportado (PDF/EPUB) para reporte de progreso.
-   * En modo verbose se espera que muestre una línea por archivo;
-   * en modo normal avanza la barra de progreso.
-   */
   onExportProgress?: (relativePath: string) => void;
 }
 
-/**
- * Ejecuta la exportación de todos los documentos exportables.
- *
- * Itera sobre los tipos en EXPORTABLE_TYPES, construye el ExportDocument
- * para cada doc (ensamblando capítulos para collection/events), y genera
- * los archivos PDF y EPUB solicitados en `config.formats`.
- *
- * Los archivos exportados se escriben en `outputDir` junto a sus equivalentes HTML.
- *
- * @param renderedMap  Mapa de todos los docs renderizados por tipo (completo, post context-phase).
- * @param options      Configuración de exportación y opciones de runtime.
- */
-
-/**
- * Resuelve y valida una ruta de configuración global (bibliography, csl) dentro del proyecto.
- *
- * Normaliza la ruta con `resolve()` para eliminar `..` y rutas relativas, y verifica que
- * quede dentro de `cwd`. Emite un aviso por stderr y retorna `undefined` si la ruta es
- * exterior al proyecto. Usada por `runExportDocuments`.
- */
 function _resolveExportGlobalPath(raw: string | undefined, cwd: string, field: string): string | undefined {
   if (!raw) return undefined;
-  // resolve() normaliza siempre: elimina '..', maneja rutas relativas y absolutas.
-  // Una ruta absoluta con '..' como '/project/../etc/passwd' queda normalizada a '/etc/passwd'.
   const resolved = resolve(cwd, raw);
-  // Usar relative() en lugar de startsWith() para una verificación cross-platform:
-  // en Windows, cwd usa '\\' y cwd+'/' no coincide con las rutas resueltas.
-  // relative(cwd, resolved) devuelve '' o una ruta sin '..' inicial si resolved está dentro.
   const rel = relative(cwd, resolved);
   if (rel.startsWith('..') || isAbsolute(rel)) {
     process.stderr.write(`[export] export.${field}: ruta fuera del proyecto ignorada: "${raw}"\n`);
@@ -167,11 +106,6 @@ function _resolveExportGlobalPath(raw: string | undefined, cwd: string, field: s
   return resolved;
 }
 
-/**
- * Calcula la ruta base de salida para un ExportDocument.
- * Usa el slug (autor-título) si está disponible, con soporte para la variante
- * `-completo` de autores. Si no hay slug, usa el nombre del archivo fuente.
- */
 function exportOutputBase(exportDoc: ExportDocument, outputDir: string): string {
   const dir = dirname(exportDoc.relativePath);
   const dirPart = dir === '.' ? '' : dir;
@@ -181,12 +115,10 @@ function exportOutputBase(exportDoc: ExportDocument, outputDir: string): string 
   }
 
   const computed = computeSlug(exportDoc.metadata);
-  // Evitar usar el título genérico 'Sin título' para nombrar archivos.
   if (computed && exportDoc.metadata.title !== 'Sin título') {
     return join(outputDir, dirPart, computed);
   }
 
-  // Último recurso: usar el nombre original del archivo.
   return join(outputDir, exportDoc.relativePath.replace(/\.md$/, ''));
 }
 
@@ -197,11 +129,8 @@ export async function runExportDocuments(
   const { config, outputDir, cwd, lang, concurrency } = options;
 
   const hasPdf = config.pdf?.generate === true || !!config.html?.thumbnails;
-  const _hasEpub = config.epub?.generate === true;
 
   // Semaforo que limita las instancias de pdflatex concurrentes.
-  // La cache de biber se asigna por indice del documento (idx % maxSlots)
-  // para que el archivo 0 use cache-0, el archivo 1 use cache-1, etc.
   const maxSlots = hasPdf ? Math.max(1, cpus().length - 1) : 0;
   let latexSlots = maxSlots;
   const latexQueue: Array<() => void> = [];
@@ -231,41 +160,24 @@ export async function runExportDocuments(
       const rel = file.replace(cwd, '').replace(/^\/+/, '');
       if (rel.startsWith('node_modules/') || rel.startsWith('.iteraciones/') || rel.startsWith('dist/') || rel.startsWith('.git/')) continue;
       globalBibliography = file;
-      break; // usar el primer .bib encontrado
+      break;
     }
   } catch {}
   let globalCsl: string | undefined;
 
-  // Pool de items primarios para resolver colecciones y programas de eventos.
-  const itemPool = [...(renderedMap.get('file') ?? []), ...(renderedMap.get('author') ?? []), ...(renderedMap.get('event') ?? [])];
-  const eventPool = renderedMap.get('event') ?? [];
-
-  // Recopilar todos los docs exportables (no-bloques) de los tipos registrados.
+  // Recopilar todos los docs exportables.
   const exportableDocs: BuildDocument[] = [];
   for (const type of EXPORTABLE_TYPES) {
-    const docs = (renderedMap.get(type) ?? []).filter((d) => d.kind !== 'block');
+    const docs = renderedMap.get(type) ?? [];
     exportableDocs.push(...docs);
   }
 
   if (exportableDocs.length === 0) return [];
 
   let _pdfDone = 0;
-  // Los autores generan 2 PDFs cada uno (summary + full), por eso se cuentan por separado.
-  const _pdfTotal = hasPdf
-    ? exportableDocs.reduce((acc, d) => {
-        const raw = d.frontmatter.export;
-        const skipped =
-          typeof raw === 'object' &&
-          raw !== null &&
-          !Array.isArray(raw) &&
-          Object.getPrototypeOf(raw) === Object.prototype &&
-          (raw as Record<string, unknown>).skip === true;
-        if (skipped) return acc;
-        return acc + (d.type === 'author' ? 2 : 1);
-      }, 0)
-    : 0;
+  const _pdfTotal = hasPdf ? exportableDocs.length : 0;
 
-  // Closure que genera los formatos (epub, pdf) para un ExportDocument ya ensamblado.
+  // Closure que genera los formatos para un ExportDocument ya ensamblado.
   async function generateFormats(
     exportDoc: ExportDocument,
     outputBase: string,
@@ -290,13 +202,11 @@ export async function runExportDocuments(
           const epubHtml = exportDoc.htmlBody;
           if (!epubHtml) return {};
           await convertToEpub(epubHtml, outputPath, exportDoc);
-          // EPUB ya escrito por convertToEpub
           return { epub: outputPath };
         })(),
       );
     }
 
-    // Generar PDF si esta configurado o si se necesitan thumbnails para HTML
     const genPdf = config.pdf?.generate || (config.html?.thumbnails && config.pdf);
     if (genPdf && config.pdf) {
       const outputPath = `${outputBase}.pdf`;
@@ -308,11 +218,9 @@ export async function runExportDocuments(
           } finally {
             releaseLatex();
           }
-          // Si convertToPdf no generó el PDF (ej: sin .tex final), salir
           if (!existsSync(outputPath)) {
             return {};
           }
-          // PDF ya escrito por convertToPdf
           _pdfDone++;
           options.onExportProgress?.(exportDoc.relativePath);
           return { pdf: outputPath };
@@ -323,8 +231,7 @@ export async function runExportDocuments(
     return Promise.allSettled(tasks);
   }
 
-  // Pre-crear directorios de cache de biber y mapear cada documento a su cache.
-  // cache-(idx % maxSlots) para que el archivo 0 use cache-0, etc.
+  // Pre-crear directorios de cache de biber.
   const biberCacheForDoc = new Map<string, string>();
   if (hasPdf && maxSlots > 0) {
     const biberBase = join(cwd, '.iteraciones', 'biber');
@@ -334,13 +241,8 @@ export async function runExportDocuments(
     });
   }
 
-  // Usar maxSlots como concurrencia para que todos los cache slots de biber
-  // se utilicen simultaneamente (hasta cpus()-1 latexmk en paralelo).
   const pdfConcurrency = hasPdf ? maxSlots : concurrency;
   const results = await mapWithConcurrency(exportableDocs, pdfConcurrency, async (doc): Promise<ExportResult | null> => {
-    // Respetar export: { skip: true } en el frontmatter del documento.
-    // Se valida que sea un objeto plano (sin arrays ni prototipos no-Object)
-    // siguiendo el patrón del codebase en normalizeSpeaker/parseFrontmatter.
     const rawExportField = doc.frontmatter.export;
     if (
       typeof rawExportField === 'object' &&
@@ -352,99 +254,14 @@ export async function runExportDocuments(
       return null;
     }
 
-    // Resolver items según el tipo del documento
-    // Author: exportación especial con dos variantes (perfil y completo)
-    if (doc.type === 'author') {
-      const fileDocs = renderedMap.get('file') ?? [];
-      const { summary: rawSummary, full: rawFull } = assembleAuthorExportVariants(doc, [...fileDocs], lang, cwd, globalBibliography, globalCsl);
-
-      const summaryBase = exportOutputBase(rawSummary, outputDir);
-      const fullBase = exportOutputBase(rawFull, outputDir);
-
-      const biberCacheSummary = biberCacheForDoc.get(doc.relativePath);
-      const biberCacheFull = biberCacheForDoc.get(doc.relativePath);
-      const [summaryResults, fullResults] = await Promise.all([
-        generateFormats(rawSummary, summaryBase, biberCacheSummary),
-        generateFormats(rawFull, fullBase, biberCacheFull),
-      ]);
-
-      const result: ExportResult = {
-        filePath: doc.filePath,
-        relativePath: doc.relativePath,
-      };
-      let firstError: unknown;
-      for (const fr of summaryResults) {
-        if (fr.status === 'fulfilled') {
-          if (fr.value.epub) result.epubPath = fr.value.epub;
-          if (fr.value.pdf) result.pdfPath = fr.value.pdf;
-        } else if (!firstError) {
-          firstError = fr.reason;
-        }
-      }
-      for (const fr of fullResults) {
-        if (fr.status === 'fulfilled') {
-          if (fr.value.epub) result.epubFullPath = fr.value.epub;
-          if (fr.value.pdf) result.pdfFullPath = fr.value.pdf;
-        } else if (!firstError) {
-          firstError = fr.reason;
-        }
-      }
-      if (firstError) throw firstError;
-      if (result.pdfPath && config.html?.thumbnails) {
-        const request = resolveThumbnailRequest(config.html.thumbnails, summaryBase);
-        if (request) result.coverPath = await generateCoverImage(result.pdfPath, summaryBase, request);
-        // Eliminar PDF si solo se genero para thumbnails
-        if (!config.pdf?.generate) {
-          rmSync(result.pdfPath);
-        }
-      }
-      return result;
-    }
-
-    // Resolver items según el tipo del documento (non-author)
-    let items: BuildDocument[] = [];
-    let partGroups: ExportCollectionPart[] = [];
-    if (doc.type === 'collection') {
-      items = resolveItemsForExport(doc, itemPool);
-      partGroups = resolvePartsForExport(doc, itemPool);
-    } else if (doc.type === 'events') {
-      items = resolveEventsForExport(doc, eventPool);
-    }
-
-    const loosePaths = doc.type === 'collection' ? resolveLooseItemPaths(doc) : undefined;
-
-    const rawExportDoc = assembleExportDocument(
-      doc,
-      items,
-      lang,
-      cwd,
-      globalBibliography,
-      globalCsl,
-      partGroups.length > 0 ? partGroups : undefined,
-      config.pdf,
-      loosePaths,
-    );
+    const rawExportDoc = assembleExportDocument(doc, lang, cwd, globalBibliography, globalCsl, config.pdf);
     if (!rawExportDoc) return null;
 
-    // Hook beforeExport: permite a los plugins modificar el body y/o los metadatos
-    // del documento antes de que pandoc genere el PDF/EPUB.
-    // Nota: el plugin es responsable de respetar la forma de ExportMetadata al
-    // retornar metadata modificada — campos desconocidos se pasan tal cual a pandoc.
     const exportDoc = rawExportDoc;
-
     const outputBase = exportOutputBase(exportDoc, outputDir);
-
-    // Generar todos los formatos en paralelo: PDF y EPUB son completamente
-    // independientes para el mismo documento y no comparten estado de escritura.
-    // Promise.allSettled garantiza que ambos formatos terminan (éxito o error)
-    // antes de propagar el primer error, de modo que no quedan promesas en vuelo
-    // cuando la función retorna o lanza.
     const biberCacheDir = biberCacheForDoc.get(doc.relativePath);
     const formatResults = await generateFormats(exportDoc, outputBase, biberCacheDir);
 
-    // Recopilar resultados exitosos y acumular errores.
-    // Re-lanzar el primer error si algún formato falló (mantiene el comportamiento
-    // de fallo explícito), pero todos los formatos ya completaron su ejecución.
     const result: ExportResult = {
       filePath: exportDoc.filePath,
       relativePath: exportDoc.relativePath,
@@ -460,13 +277,12 @@ export async function runExportDocuments(
       }
     }
     if (firstError) throw firstError;
-    // Generar thumbnail(s) JPG de la primera pagina del PDF (si configurado).
     if (result.pdfPath && config.html?.thumbnails) {
       const request = resolveThumbnailRequest(config.html.thumbnails, outputBase);
       if (request) {
-        result.coverPath = await generateCoverImage(result.pdfPath, outputBase, request);
+        const coverPath = await generateCoverImage(result.pdfPath, outputBase, request);
+        if (coverPath) result.coverPath = coverPath;
       }
-      // Eliminar PDF si solo se genero para thumbnails
       if (!config.pdf?.generate) {
         rmSync(result.pdfPath);
       }
