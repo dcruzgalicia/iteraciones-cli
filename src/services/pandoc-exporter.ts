@@ -3,52 +3,13 @@ import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import type { ExportDocument } from '../builder/export/types.js';
 import type { PdfFormatConfig } from '../config/site-config.js';
-import { DEFAULT_PDF_FORMAT } from '../config/site-config.js';
 import { PandocError } from '../errors.js';
-
-/** Ruta absoluta al directorio de fuentes TTF del proyecto. */
-const FONTS_DIR = join(import.meta.dir, '../../fonts');
-
-/**
- * Mapa de nombres estándar de page-size a opciones de clase KOMA-Script.
- *
- * Los sufijos `*paper` (letterpaper, a4paper, …) funcionan en cualquier clase
- * estándar y en KOMA-Script. Para tamaños sin equivalente directo
- * (`half-letter`, `pocket`) se usa la sintaxis `paper=ancho:alto` —
- * KOMA-Script la entiende y aplica las dimensiones correctas.
- */
-const STANDARD_PAGE_SIZES: Record<string, string> = {
-  'half-letter': 'paper=13.97cm:21.59cm',
-  letter: 'letterpaper',
-  legal: 'legalpaper',
-  executive: 'executivepaper',
-  a3: 'a3paper',
-  a4: 'a4paper',
-  a5: 'a5paper',
-  b4: 'b4paper',
-  b5: 'b5paper',
-  tabloid: 'tabloidpaper',
-  pocket: 'paper=10.5cm:17.6cm',
-};
-
-/** Regex para tamaño de página personalizado: `"ancho,alto"` con unidades LaTeX (cm, mm, in, pt). */
-const CUSTOM_PAGE_SIZE_RE = /^(\d+(?:\.\d+)?(?:cm|mm|in|pt)),(\d+(?:\.\d+)?(?:cm|mm|in|pt))$/;
-
-/** Archivos de fuente que se embeben en los EPUB generados. */
-const EPUB_EMBED_FONTS: readonly string[] = [
-  join(FONTS_DIR, 'Exo2-VariableFont_wght.ttf'),
-  join(FONTS_DIR, 'Exo2-Italic-VariableFont_wght.ttf'),
-  join(FONTS_DIR, 'SpaceMono-Regular.ttf'),
-  join(FONTS_DIR, 'SpaceMono-Bold.ttf'),
-  join(FONTS_DIR, 'SpaceMono-Italic.ttf'),
-  join(FONTS_DIR, 'SpaceMono-BoldItalic.ttf'),
-];
 
 /**
  * Construye el bloque YAML de metadatos que Pandoc inyectará en el documento.
- * Pandoc acepta un bloque YAML al inicio del documento delimitado por `---`.
+ * Solo usada para exportación a Markdown.
  */
-function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfFormatConfig): string {
+function buildYamlHeader(doc: ExportDocument): string {
   const { metadata } = doc;
   const lines: string[] = ['---'];
 
@@ -73,9 +34,6 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfF
     lines.push(`toc-depth: ${metadata.tocDepth}`);
   }
 
-  // Hyphenation: permite desactivar guiones en la salida PDF vía configuración
-  lines.push('hyphenation-active: true');
-
   // Metadatos editoriales opcionales
   if (metadata.isbn) lines.push(`isbn: ${yamlString(metadata.isbn)}`);
   if (metadata.publisher) lines.push(`publisher: ${yamlString(metadata.publisher)}`);
@@ -85,7 +43,6 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfF
   if (metadata.bibliography) {
     lines.push(`bibliography: ${yamlString(metadata.bibliography)}`);
   }
-  // Validar existencia del CSL: si el archivo no existe, pandoc fallaría silenciosamente.
   if (metadata.csl) {
     if (existsSync(metadata.csl)) {
       lines.push(`csl: ${yamlString(metadata.csl)}`);
@@ -113,107 +70,16 @@ function buildYamlHeader(doc: ExportDocument, fontdir?: string, pdfFormat?: PdfF
     }
   }
 
-  // Layout editorial (desde format.pdf)
-  if (pdfFormat) {
-    // ── Tamaño de página ────────────────────────────────────────────────────
-    let geometryEmitted = false;
-    const paperOpt = pdfFormat?.documentclass?.options?.find((o) => o.startsWith('paper='));
-    const pageSizeVal = paperOpt ? paperOpt.replace('paper=', '') : undefined;
-    if (pageSizeVal) {
-      const classOption = STANDARD_PAGE_SIZES[pageSizeVal];
-      if (classOption) {
-        // Tamaño estándar → opción de clase (letterpaper, paper=13.97cm:21.59cm, …)
-        lines.push('classoption:');
-        lines.push(`  - ${classOption}`);
-        geometryEmitted = false; // classoption no emite geometry
-      } else {
-        // Tamaño personalizado: emitir geometry con paperwidth y paperheight
-        lines.push('geometry:');
-        const geomOpts =
-          pdfFormat?.geometry?.options && pdfFormat.geometry.options.length > 0
-            ? pdfFormat.geometry.options
-            : (DEFAULT_PDF_FORMAT.geometry?.options ?? []);
-        for (const opt of geomOpts) {
-          lines.push(`  - ${opt}`);
-        }
-        geometryEmitted = true;
-      }
-    }
-    if (pdfFormat?.geometry?.options && pdfFormat.geometry.options.length > 0 && !geometryEmitted) {
-      // Geometry definida por configuracion → geometry con margenes y opciones
-      lines.push('geometry:');
-      for (const opt of pdfFormat.geometry.options) {
-        lines.push(`  - ${opt}`);
-      }
-    }
-
-    // sfdefaults: permite controlar la opcion de clase KOMA-Script del mismo nombre.
-    // Por defecto es false (no usar familias sans-serif para titulos).
-    const sfdefaultsOpt = pdfFormat?.documentclass?.options?.find((o) => o.startsWith('sfdefaults='));
-    if (sfdefaultsOpt) {
-      lines.push(`sfdefaults: ${sfdefaultsOpt.replace('sfdefaults=', '')}`);
-    }
-
-    const fontSize = pdfFormat?.documentclass?.options?.find((o) => /^\d+pt$/.test(o));
-    if (fontSize) lines.push(`fontsize: ${fontSize}`);
-    if (fontSize) lines.push('fontsize: ' + yamlString(fontSize));
-    // PDF/A-1a con el paquete pdfx
-    lines.push(`pdfx: ${pdfFormat.pdfx ? 'true' : 'false'}`);
-    if (pdfFormat?.setstretch !== undefined) lines.push(`linestretch: ${pdfFormat.setstretch}`);
-    if (pdfFormat?.setcounter?.secnumdepth !== undefined) lines.push(`secnumdepth: ${pdfFormat.setcounter.secnumdepth}`);
-    lines.push(`has-chapter: ${doc.metadata.documentclass === 'scrbook' ? 'true' : 'false'}`);
-    const hasTwoside = pdfFormat?.documentclass?.options?.includes('twoside') ?? false;
-    if (pdfFormat.pageNumber) {
-      const [placement, align] = pdfFormat.pageNumber.split('-') as [string, string];
-      lines.push(`pageno-head: ${placement === 'header' ? 'true' : 'false'}`);
-      if (hasTwoside) {
-        const twosideMap: Record<string, string> = {
-          left: 'LO,RE',
-          center: 'CE,CO',
-          right: 'LE,RO',
-        };
-        lines.push(`pageno-fancy: ${twosideMap[align] ?? 'LE,RO'}`);
-      } else {
-        const alignMap: Record<string, string> = {
-          left: 'L',
-          center: 'C',
-          right: 'R',
-        };
-        lines.push(`pageno-fancy: ${alignMap[align] ?? 'R'}`);
-      }
-    } else if (hasTwoside) {
-      // Sin page-number explícito: footer-right por defecto → LE,RO en twoside
-      lines.push('pageno-fancy: LE,RO');
-    }
-    if (hasTwoside) {
-      lines.push('twoside: true');
-    }
-  }
-
-  // fontdir ya no se usa (pdflatex no necesita rutas de fuentes OTF).
-  // Se mantiene el parámetro para compatibilidad de firma pero no se emite.
-
   lines.push('---', '');
   return lines.join('\n');
 }
 
-/**
- * Escapa un valor de cadena para un campo en YAML, siempre entre comillas dobles.
- * Citar siempre evita falsos positivos con tokens especiales de YAML: `true`,
- * `false`, `null`, `~`, números, `yes`/`no`, etc., que pandoc reinterpretaría
- * como booleanos, nulos o enteros en lugar de cadenas.
- */
 function yamlString(value: string): string {
   return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`;
 }
 
 /**
  * Convierte contenido HTML a EPUB3 usando pandoc.
- * El flujo es: HTML intermediate → EPUB.
- *
- * @param htmlBody   Contenido HTML (intermedio).
- * @param outputPath Ruta absoluta del archivo EPUB de salida.
- * @param doc        Documento fuente (para metadatos como cover).
  */
 export async function convertToEpub(htmlBody: string, outputPath: string, doc?: ExportDocument): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
@@ -250,14 +116,10 @@ export async function convertToEpub(htmlBody: string, outputPath: string, doc?: 
 }
 
 /**
- * Exporta un documento a Markdown. Escribe el cuerpo del documento (que ya
- * incluye el YAML header) directamente a un archivo .md. La entrada ya está
- * en formato markdown, por lo que no requiere conversión con pandoc.
+ * Exporta un documento a Markdown via pandoc (latex → markdown).
  */
 export async function convertToMarkdown(doc: ExportDocument, outputPath: string): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
-  // El body del documento es LaTeX (desde processedBody). Lo convertimos a
-  // markdown limpio via pandoc.
   const args = ['pandoc', '--from', 'latex', '--to', 'markdown'];
   let proc: ReturnType<typeof Bun.spawn>;
   try {
@@ -280,21 +142,18 @@ export async function convertToMarkdown(doc: ExportDocument, outputPath: string)
   if (exitCode !== 0) {
     throw new PandocError(`pandoc falló al convertir a markdown ${doc.filePath}`, doc.filePath, stderr);
   }
-  const yamlHeader = buildYamlHeader(doc, undefined, undefined);
+  const yamlHeader = buildYamlHeader(doc);
   await Bun.write(outputPath, yamlHeader + stdout);
 }
 
 /**
- * Convierte un ExportDocument a PDF compilando el .tex de
- * formats/pdf/<slug>/ con pdflatex. El .tex y sus
- * auxiliares (.aux, .bbl, .bcf) comparten el mismo directorio.
+ * Convierte un ExportDocument a PDF compilando el .tex con latexmk.
  */
 export async function convertToPdf(
   doc: ExportDocument,
   outputPath: string,
   cwd?: string,
   pdfFormat?: PdfFormatConfig,
-  /** Dir donde biber guardara su cache via PAR_GLOBAL_TEMP. Si se omite, no se aísla. */
   biberCacheDir?: string,
 ): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
@@ -308,14 +167,10 @@ export async function convertToPdf(
   const pdfDir = join(cwd, '.iteraciones', 'formats', 'pdf', texRelDir);
   const fullTexPath = join(pdfDir, `${slug}.tex`);
 
-  // Verificar que el .tex existe antes de compilar
   if (!(await Bun.file(fullTexPath).exists())) {
     throw new PandocError(`convertToPdf: no se encontro ${fullTexPath}`, doc.filePath, '');
   }
 
-  // PAR_GLOBAL_TEMP aísla la cache de biber para que N procesos paralelos
-  // no corrompan el thin binary (errno=8). Si se pasa biberCacheDir, se usa
-  // ese directorio; si no, se usa .iteraciones/biber/{dir}/{slug}/.
   const biberCache = biberCacheDir ?? join(cwd, '.iteraciones', 'biber', texRelDir, slug);
   await mkdir(biberCache, { recursive: true });
   const proc = Bun.spawn(['latexmk', '-pdf', '-interaction=nonstopmode', `-outdir=${pdfDir}`, `-jobname=${slug}`, fullTexPath], {
@@ -330,67 +185,4 @@ export async function convertToPdf(
     const m = log.match(/^! .*$/m);
     throw new PandocError(`latexmk falló al generar PDF para ${doc.filePath}: ${m ? m[0] : 'exit ' + exitCode}`, doc.filePath, stderr);
   }
-}
-
-/** Escribe al stdin del proceso y espera su terminación. Retorna [stdout, stderr, exitCode]. */
-async function writeAndWait(proc: ReturnType<typeof Bun.spawn>, input: string, sourcePath: string): Promise<[string, string, number]> {
-  if (proc.stdin == null || typeof proc.stdin === 'number') {
-    throw new PandocError('No se pudo escribir stdin de pandoc', sourcePath, '');
-  }
-  proc.stdin.write(input);
-  proc.stdin.end();
-
-  if (proc.stdout == null || typeof proc.stdout === 'number') {
-    throw new PandocError('No se pudo leer stdout de pandoc', sourcePath, '');
-  }
-  if (proc.stderr == null || typeof proc.stderr === 'number') {
-    throw new PandocError('No se pudo leer stderr de pandoc', sourcePath, '');
-  }
-
-  const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
-  return [stdout, stderr, exitCode];
-}
-
-/**
- * Filtra y mejora la salida stderr de LaTeX para mostrar errores accionables.
- *
- * - Detecta paquetes faltantes (`File 'X.sty' not found`) y sugiere `tlmgr install X`
- *   (sin límite de líneas: cada paquete faltante genera una línea de sugerencia)
- * - Extrae errores TeX reales (líneas con `! ` o `l.`) limitados a 25 líneas
- *
- * @param stderr  Salida stderr completa de pandoc/LaTeX.
- */
-function filterLatexStderr(stderr: string): string {
-  const lines = stderr.split('\n');
-  const output: string[] = [];
-
-  // Detectar paquetes faltantes: "! LaTeX Error: File 'paquete.sty' not found."
-  // xelatex imprime esto como un error TeX estándar.
-  const missingPackages = new Set<string>();
-  for (const line of lines) {
-    const match = /File '([^']+)\.sty' not found/.exec(line);
-    if (match) {
-      const pkg = match[1];
-      if (pkg) missingPackages.add(pkg);
-    }
-  }
-
-  if (missingPackages.size > 0) {
-    output.push(`[LaTeX] Paquetes faltantes detectados. Instálalos con:`);
-    for (const pkg of missingPackages) {
-      output.push(`  tlmgr install ${pkg}`);
-    }
-    output.push('');
-  }
-
-  // Extraer errores TeX reales limitando a 25 líneas.
-  const texErrors = lines
-    .filter((line) => line.startsWith('! ') || line.startsWith('l.') || (line.includes('Error') && !line.includes('rerunfilecheck')))
-    .slice(0, 25);
-
-  if (texErrors.length > 0) {
-    output.push(...texErrors);
-  }
-
-  return output.join('\n');
 }
