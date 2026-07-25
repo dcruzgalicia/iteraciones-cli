@@ -1,7 +1,7 @@
 import { isAbsolute, normalize } from 'node:path';
 import { Command } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
-import { runBuild, runClean, runDoctor, runGraph, runInfo, runInit, runNew, runTranspilers, runValidate } from './dispatcher.js';
+import { runBuild, runClean, runDoctor, runInfo, runInit, runNew, runTranspilers, runValidate } from './dispatcher.js';
 
 export function buildProgram(): Command {
   const program = new Command();
@@ -111,15 +111,6 @@ export function buildProgram(): Command {
     .command('transpilers')
     .description('lista los transpilers disponibles con su tipo y descripción')
     .action(() => runTranspilers(process.cwd()));
-
-  program
-    .command('graph')
-    .description('emite el grafo de relaciones entre documentos en formato JSON')
-    .option('--output <path>', 'escribe el JSON en este archivo en lugar de stdout')
-    .option('--project-root <path>', 'directorio raíz del proyecto (por defecto: directorio actual)')
-    .action(async (opts: { output?: string; projectRoot?: string }) => {
-      await runGraph(opts.projectRoot ?? process.cwd(), { output: opts.output });
-    });
 
   return program;
 }
