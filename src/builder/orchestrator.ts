@@ -8,8 +8,6 @@ import { buildAssets } from './assets.js';
 import { runExportDocuments } from './export/runner.js';
 import { EXPORTABLE_TYPES, type ExportResult } from './export/types.js';
 import { generateHtmlFragment, generateLatexPreamble } from './format-generator.js';
-import { classifyDocuments } from './pipeline/classify.js';
-import { computeAffectedDocs } from './pipeline/dependency-resolver.js';
 import { type BuildReport, buildDocsFromIndex, type DiscoverResult, discover } from './pipeline/discover.js';
 import { renderLatex } from './pipeline/render.js';
 import type { BuildContext, BuildDocument, DocumentType } from './types.js';
@@ -24,10 +22,6 @@ export interface BuildOptions {
   dryRun?: boolean;
   verbose?: boolean;
   changedPaths?: Set<string>;
-}
-
-function excludeDrafts(docs: BuildDocument[]): BuildDocument[] {
-  return docs.filter((doc) => !doc.frontmatter.draft);
 }
 
 async function setupBuildEnvironment(cwd: string, options: BuildOptions): Promise<BuildContext> {
@@ -56,23 +50,9 @@ async function runDiscovery(cwd: string, _ctx: BuildContext, noCache?: boolean):
 
 export async function build(cwd: string, options: BuildOptions = {}): Promise<void> {
   if (options.dryRun) {
-    const dryConfig = await loadSiteConfig(cwd);
     const { relativePaths, discoveryIndex } = await discover(cwd, { noCache: true });
     const sourceDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
-    const classified = classifyDocuments(sourceDocs, dryConfig.format?.html?.theme, cwd);
-    const allDocs = excludeDrafts(classified);
-    const draftCount = classified.length - allDocs.length;
-    const counts = new Map<string, number>();
-    for (const doc of allDocs) {
-      const type = doc.type ?? 'unknown';
-      counts.set(type, (counts.get(type) ?? 0) + 1);
-    }
-    process.stdout.write(`[dry-run] Se procesar\u00edan ${allDocs.length} documentos`);
-    if (draftCount > 0) process.stdout.write(` (${draftCount} omitido${draftCount > 1 ? 'es' : ''} por draft:true)`);
-    process.stdout.write(':\n');
-    for (const [type, count] of [...counts.entries()].sort()) {
-      process.stdout.write(`  ${type.padEnd(12)}: ${count}\n`);
-    }
+    process.stdout.write(`[dry-run] Se procesar\u00edan ${sourceDocs.length} documentos\n`);
     return;
   }
 
@@ -94,12 +74,8 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     ]);
     ctx.cssPath = cssPath;
     const sourceDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
-    const classified = classifyDocuments(sourceDocs, ctx.siteConfig.format?.html?.theme, ctx.cwd);
-    const allDocs = excludeDrafts(classified);
-    const draftCount = classified.length - allDocs.length;
-    if (draftCount > 0) {
-      process.stderr.write(`[iteraciones] ${draftCount} borrador${draftCount > 1 ? 'es' : ''} excluido${draftCount > 1 ? 's' : ''} (draft:true)\n`);
-    }
+    const allDocs = sourceDocs as BuildDocument[];
+
     if (options.verbose) {
       for (const doc of allDocs) {
         progress.reportFile({ relativePath: doc.relativePath, durationMs: 0, cacheHit: false, phase: 'discovery' });
@@ -116,12 +92,18 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     const GLOBAL_CHANGE_PATTERNS = [/\.ya?ml$/, /\.html$/];
     const changedPaths = options.changedPaths ?? discoveredChanges;
     const noChanges = changedPaths.size === 0;
-    const isGlobalChange = !noChanges && [...changedPaths].some((p) => GLOBAL_CHANGE_PATTERNS.some((re) => re.test(p)));
-    const affectedPaths = !isGlobalChange && !noChanges ? computeAffectedDocs(changedPaths, allDocs) : null;
-    const pipelineDocs = affectedPaths ? allDocs.filter((d) => affectedPaths.has(d.relativePath)) : allDocs;
+
+    if (noChanges) {
+      log('Ningun documento modificado — sin cambios');
+      progress.finish(0, allDocs.length, []);
+      return;
+    }
+
+    const isGlobalChange = [...changedPaths].some((p) => GLOBAL_CHANGE_PATTERNS.some((re) => re.test(p)));
+    const pipelineDocs = isGlobalChange ? allDocs : allDocs.filter((d) => changedPaths.has(d.relativePath));
     const totalDocCount = allDocs.length;
 
-    if (noChanges && !affectedPaths) {
+    if (pipelineDocs.length === 0) {
       log('Ningun documento modificado — sin cambios');
       progress.finish(0, totalDocCount, []);
       return;
@@ -183,21 +165,16 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     const exportResults: ExportResult[] = [];
 
     const baseRenderedMap = new Map<DocumentType, BuildDocument[]>();
-    for (const doc of pipelineDocs) {
-      const type = doc.type ?? 'file';
-      const list = baseRenderedMap.get(type);
-      if (list) list.push(doc);
-      else baseRenderedMap.set(type, [doc]);
-    }
+    baseRenderedMap.set('file', pipelineDocs);
 
     const countExportDocs = (map: Map<DocumentType, BuildDocument[]>, type: DocumentType): number => {
-      const docs = (map.get(type) ?? []).filter((d) => d.kind !== 'block');
+      const docs = map.get(type) ?? [];
       let count = 0;
       for (const d of docs) {
         const raw = d.frontmatter['export'];
         const skipped = typeof raw === 'object' && raw !== null && !Array.isArray(raw) && (raw as Record<string, unknown>)['skip'] === true;
         if (skipped) continue;
-        count += d.type === 'author' ? 2 : 1;
+        count++;
       }
       return count;
     };
@@ -362,7 +339,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     }
 
     const totalDocs = htmlOn || pdfOn || epubOn || mdOn || latexOn ? totalDocCount : 0;
-    const processedCount = noChanges ? 0 : affectedPaths ? affectedPaths.size : totalDocs;
+    const processedCount = pipelineDocs.length;
     const cachedCount = totalDocs - processedCount;
     const generatedFormats: string[] = [];
     if (latexOn) generatedFormats.push('latex');
