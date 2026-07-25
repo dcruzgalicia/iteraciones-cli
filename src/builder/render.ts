@@ -17,7 +17,7 @@ import type { BuildDocument } from './types.js';
 //   markdown → transpilers string → pandoc --to json → transpilers AST → pandoc --from json --to latex
 
 /** Ruta absoluta al directorio de transpilers del paquete. */
-const PKG_TRANSPILERS_DIR = join(import.meta.dir, '../../transpilers');
+const PKG_TRANSPILERS_DIR = join(import.meta.dir, 'transpilers');
 
 /** Lista de transpilers empaquetados en orden de aplicación. */
 export const BUILTIN_TRANSPILERS = ['01-double-colon', '02-dictum', '03-verse', '04-mbox-sentence-ends'];

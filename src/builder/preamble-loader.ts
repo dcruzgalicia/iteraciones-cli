@@ -16,7 +16,7 @@ import type { PdfFormatConfig } from '../config/site-config.js';
 // ---------------------------------------------------------------------------
 
 /** Ruta absoluta al directorio de preamble transpilers del paquete. */
-const PKG_PREAMBLE_DIR = join(import.meta.dir, '../../preamble');
+const PKG_PREAMBLE_DIR = join(import.meta.dir, 'preamble');
 
 /** Lista de preamble transpilers empaquetados en orden de aplicación. */
 export const BUILTIN_PREAMBLE_TRANSPILERS: string[] = [
