@@ -561,7 +561,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       const pdfResults = await runExportDocuments(exportRenderedMap, {
         ...exportBase,
         outputDir: join(formatsDir, 'pdf'),
-        config: formatCfg,
+        config: { pdf: formatCfg?.pdf },
       });
       for (const r of pdfResults) {
         if (r.pdfPath) r.pdfPath = r.pdfPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
@@ -589,7 +589,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       progress.completePhase();
     }
 
-    // ── FASE 7: epub ──
+    // ── FASE 7: epub (bajo formats/html/) ──
     if (formatCfg?.epub?.generate && !noExport) {
       let epubTotal = 0;
       for (const type of EXPORTABLE_TYPES) {
@@ -598,12 +598,12 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       progress.startPhase('epub', epubTotal);
       const epubResults = await runExportDocuments(exportRenderedMap, {
         ...exportBase,
-        outputDir: join(formatsDir, 'epub'),
-        config: formatCfg,
+        outputDir: join(formatsDir, 'html'),
+        config: { epub: formatCfg?.epub },
       });
       for (const r of epubResults) {
-        if (r.epubPath) r.epubPath = r.epubPath.replace(join(formatsDir, 'epub'), ctx.outputDir);
-        if (r.epubFullPath) r.epubFullPath = r.epubFullPath.replace(join(formatsDir, 'epub'), ctx.outputDir);
+        if (r.epubPath) r.epubPath = r.epubPath.replace(join(formatsDir, 'html'), ctx.outputDir);
+        if (r.epubFullPath) r.epubFullPath = r.epubFullPath.replace(join(formatsDir, 'html'), ctx.outputDir);
       }
       exportResults.push(...epubResults);
       if (epubTotal > 0) progress.log(`EPUB: ${epubTotal} generados`);
@@ -626,7 +626,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       const mdResults = await runExportDocuments(exportRenderedMap, {
         ...exportBase,
         outputDir: join(formatsDir, 'markdown'),
-        config: formatCfg,
+        config: { markdown: formatCfg?.markdown },
       });
       for (const r of mdResults) {
         if (r.markdownPath) r.markdownPath = r.markdownPath.replace(join(formatsDir, 'markdown'), ctx.outputDir);
@@ -638,26 +638,19 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
     // ── FASE 8: copiar de formats/ a dist/ ──
     {
-      const formatMap: Array<[boolean, string, string]> = [
+      const copySpec: Array<[boolean, string, string]> = [
         [latexOn, 'pdf', 'tex'],
         [pdfOn, 'pdf', 'pdf'],
         [htmlOn, 'html', 'html'],
-        [epubOn, 'epub', 'epub'],
+        [epubOn, 'html', 'epub'],
         [mdOn, 'markdown', 'md'],
       ];
       for (const doc of allDocs) {
         const slug = doc.slug ?? basename(doc.relativePath, '.md');
         const dir = dirname(doc.relativePath);
-        for (const [active, format, ext] of formatMap) {
+        for (const [active, format, ext] of copySpec) {
           if (!active) continue;
-          let srcPath: string;
-          if (format === 'pdf') {
-            srcPath = join(formatsDir, 'pdf', dir, slug, `${slug}.${ext}`);
-          } else if (format === 'html') {
-            srcPath = join(formatsDir, 'html', dir, `${slug}.html`);
-          } else {
-            srcPath = join(formatsDir, format, dir, `${slug}.${ext}`);
-          }
+          const srcPath = join(formatsDir, format, dir, `${slug}.${ext}`);
           const dstPath = join(ctx.outputDir, dir, `${slug}.${ext}`);
           const exists = await Bun.file(srcPath).exists();
           if (exists) {

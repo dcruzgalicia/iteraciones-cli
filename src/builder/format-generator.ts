@@ -69,7 +69,7 @@ export async function generateFormats(
       );
 
       const fullTex = [...preamble, '', texBody, '', '\\end{document}'].join('\n');
-      const pdfDir = join(cacheBase, 'formats', 'pdf', dir, slug);
+      const pdfDir = join(cacheBase, 'formats', 'pdf', dir);
       await mkdir(pdfDir, { recursive: true });
       await Bun.write(join(pdfDir, `${slug}.tex`), fullTex);
     }
@@ -109,7 +109,8 @@ export async function generateFormats(
     const slug = entry?.slug ?? basename(relPath, '.md');
     const dir = dirname(relPath);
 
-    await rm(join(cacheBase, 'formats', 'pdf', dir, slug), { recursive: true, force: true }).catch(() => {});
-    await rm(join(cacheBase, 'formats', 'html', dir, slug), { recursive: true, force: true }).catch(() => {});
+    await rm(join(cacheBase, 'formats', 'pdf', dir, `${slug}.tex`), { force: true }).catch(() => {});
+    await rm(join(cacheBase, 'formats', 'html', dir, `${slug}.html`), { force: true }).catch(() => {});
+    await rm(join(cacheBase, 'formats', 'html', dir, `${slug}.epub`), { force: true }).catch(() => {});
   }
 }
