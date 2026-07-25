@@ -119,6 +119,7 @@ export async function renderLatex(
   concurrency: number,
   cwd: string,
   activeTranspilers?: string[],
+  generateHtml?: boolean,
 ): Promise<Map<string, RenderLatexResult>> {
   const { stringTranspilers, astTranspilers } = await loadTranspilers(activeTranspilers, cwd);
 
@@ -192,18 +193,20 @@ export async function renderLatex(
 
     // Paso 5: convertir latex body a html fragment (con citeproc)
     let htmlFragment = '';
-    try {
-      htmlFragment = await convertFragment(processedBody, doc.filePath, bibOptions, 'html5', 'latex-auto_identifiers');
-    } catch {
-      process.stderr.write(`[render] error al convertir a HTML para ${doc.relativePath}
+    if (generateHtml !== false) {
+      try {
+        htmlFragment = await convertFragment(processedBody, doc.filePath, bibOptions, 'html5', 'latex-auto_identifiers');
+      } catch {
+        process.stderr.write(`[render] error al convertir a HTML para ${doc.relativePath}
 `);
-    }
+      }
 
-    // Escribir html/{slug}.html
-    if (htmlFragment) {
-      const htmlDir = join(cacheBase, 'html', dir);
-      await mkdir(htmlDir, { recursive: true });
-      await Bun.write(join(htmlDir, `${slug}.html`), htmlFragment);
+      // Escribir html/{slug}.html
+      if (htmlFragment) {
+        const htmlDir = join(cacheBase, 'html', dir);
+        await mkdir(htmlDir, { recursive: true });
+        await Bun.write(join(htmlDir, `${slug}.html`), htmlFragment);
+      }
     }
 
     results.set(doc.relativePath, { processedBody, htmlFragment, slug });
