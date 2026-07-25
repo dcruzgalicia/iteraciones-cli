@@ -34,11 +34,14 @@ export class ProgressTracker {
   private t0: number;
   private phaseDurations: Partial<Record<PipelinePhase, number>> = {};
   private phaseCounts: Partial<Record<PipelinePhase, number>> = {};
+  private phaseDone: Partial<Record<PipelinePhase, number>> = {};
   private currentPhase: PipelinePhase | null = null;
   private phaseStart: number = 0;
   private sectionsShown: Set<string> = new Set();
   private phaseFiles: Partial<Record<PipelinePhase, string[]>> = {};
   private currentLine: string = '';
+  private spinnerIdx: number = 0;
+  private spinnerChars: string[] = ['|', '/', '-', '\\'];
 
   constructor(options: { verbose?: boolean }) {
     this.verbose = options.verbose ?? false;
@@ -67,9 +70,8 @@ export class ProgressTracker {
       }
     }
 
-    // En modo normal, mostrar mensaje de inicio para fases de publicacion
     if (!this.verbose && meta.section === 'Generando publicaciones') {
-      this.writeLine(`  Generando ${meta.label}...`);
+      this.writeLine(`  ${this.spinnerChars[0]} ${meta.label}`);
     }
   }
 
@@ -77,7 +79,6 @@ export class ProgressTracker {
     // No progress bars needed
   }
 
-  /** Sobrescribe la linea actual sin salto de linea */
   private writeLine(text: string): void {
     this.clearLine();
     process.stdout.write(text);
@@ -92,17 +93,44 @@ export class ProgressTracker {
   }
 
   reportFile(file: RenderFileReport): void {
+    // Collect files per phase for verbose mode
     if (this.verbose) {
       const files = this.phaseFiles[file.phase];
-      if (files) files.push(file.relativePath);
+      if (files) {
+        files.push(file.relativePath);
+      }
+    }
+
+    // Normal mode: animated progress indicator
+    if (!this.verbose && this.currentPhase) {
+      const total = this.phaseCounts[this.currentPhase] ?? 0;
+      const done = (this.phaseDone[this.currentPhase] ?? 0) + 1;
+      this.phaseDone[this.currentPhase] = done;
+      const meta = PHASE_META[this.currentPhase];
+      if (meta?.section === 'Generando publicaciones') {
+        this.spinnerIdx = (this.spinnerIdx + 1) % this.spinnerChars.length;
+        const spin = this.spinnerChars[this.spinnerIdx];
+        const progress = total > 0 ? ` [${done}/${total}]` : '';
+        this.writeLine(`  ${spin} ${meta.label}${progress}`);
+      }
     }
   }
 
   private flushPhaseFiles(phase: PipelinePhase): void {
     const files = this.phaseFiles[phase];
-    if (!files || files.length === 0) return;
-    for (const f of files) {
-      process.stdout.write(`    ${f}\n`);
+    if (files && files.length > 0) {
+      for (const f of files) {
+        process.stdout.write(`    ${f}\n`);
+      }
+    }
+    // For HTML, also flush 'compose' files (reported by composeDocuments)
+    if (phase === 'html') {
+      const composeFiles = this.phaseFiles['compose'];
+      if (composeFiles && composeFiles.length > 0) {
+        for (const f of composeFiles) {
+          process.stdout.write(`    ${f}\n`);
+        }
+      }
     }
   }
 

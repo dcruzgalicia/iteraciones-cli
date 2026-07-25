@@ -2,7 +2,7 @@ import { mkdir, rm } from 'node:fs/promises';
 import { cpus } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { loadSiteConfig } from '../config/config-loader.js';
-import { ProgressTracker } from '../output/progress.js';
+import { ProgressTracker, type RenderFileReport } from '../output/progress.js';
 
 import type { TemplateContext } from '../template/render/context.js';
 import { buildAssets } from './assets.js';
@@ -283,7 +283,12 @@ async function runBlocksPrestep(
  * Fase final: compone HTML, plugins, manifiesto y poda de caché.
  * Debe ejecutarse al final, despues de exportar todos los formatos.
  */
-async function runFinalization(allContextDocs: BuildDocument[], ctx: BuildContext, log: (msg: string) => void): Promise<void> {
+async function runFinalization(
+  allContextDocs: BuildDocument[],
+  ctx: BuildContext,
+  log: (msg: string) => void,
+  onFileProcessed?: (report: RenderFileReport) => void,
+): Promise<void> {
   const generateHtml = ctx.siteConfig.format?.html?.generate !== false;
 
   if (generateHtml) {
@@ -291,7 +296,7 @@ async function runFinalization(allContextDocs: BuildDocument[], ctx: BuildContex
       ...doc,
       templateContext: makeRelativeContext(doc.templateContext, computeRootPrefix(doc.relativePath)) as TemplateContext,
     }));
-    const composedDocs = await composeDocuments(relativizedDocs, ctx);
+    const composedDocs = await composeDocuments(relativizedDocs, ctx, undefined, undefined, onFileProcessed);
     await writeDocuments(composedDocs, ctx);
   } else {
     log('HTML desactivado: omitiendo generación de HTML');
@@ -535,13 +540,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     const exportBase = {
       cwd,
       lang: ctx.siteConfig.lang,
-      onExportProgress: (relativePath: string) =>
-        progress.reportFile({
-          relativePath,
-          durationMs: 0,
-          cacheHit: false,
-          phase: 'pdf',
-        }),
       concurrency: ctx.concurrency ?? 4,
     };
     const exportResults: ExportResult[] = [];
@@ -569,6 +567,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         ...exportBase,
         outputDir: join(formatsDir, 'pdf'),
         config: { pdf: formatCfg?.pdf },
+        onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, durationMs: 0, cacheHit: false, phase: 'pdf' }),
       });
       for (const r of pdfResults) {
         if (r.pdfPath) r.pdfPath = r.pdfPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
@@ -591,7 +590,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
       const htmlFormatsDir = join(formatsDir, 'html');
       const htmlCtx = { ...ctx, outputDir: htmlFormatsDir };
-      await runFinalization(docsWithExportLinks, htmlCtx, log);
+      await runFinalization(docsWithExportLinks, htmlCtx, log, (r) => progress.reportFile(r));
       progress.completePhase();
     }
 
@@ -606,6 +605,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         ...exportBase,
         outputDir: join(formatsDir, 'html'),
         config: { epub: formatCfg?.epub },
+        onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, durationMs: 0, cacheHit: false, phase: 'epub' }),
       });
       for (const r of epubResults) {
         if (r.epubPath) r.epubPath = r.epubPath.replace(join(formatsDir, 'html'), ctx.outputDir);
@@ -632,6 +632,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         ...exportBase,
         outputDir: join(formatsDir, 'markdown'),
         config: { markdown: formatCfg?.markdown },
+        onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, durationMs: 0, cacheHit: false, phase: 'markdown' }),
       });
       for (const r of mdResults) {
         if (r.markdownPath) r.markdownPath = r.markdownPath.replace(join(formatsDir, 'markdown'), ctx.outputDir);
