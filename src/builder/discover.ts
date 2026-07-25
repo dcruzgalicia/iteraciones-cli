@@ -1,7 +1,6 @@
 import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { type DiscoveryEntry, loadDiscoveryIndex, saveDiscoveryIndex } from '../builder/persist/discovery-index.js';
-import { IGNORED_DIRS } from '../lib/constants.js';
 import { computeSlug } from './slug.js';
 import type { SourceDocument } from './types.js';
 
@@ -170,6 +169,9 @@ export async function discover(cwd: string, options: DiscoverOptions = {}): Prom
 
   return { relativePaths, changedPaths, discoveryIndex, deletedEntries };
 }
+
+/** Directorios que el CLI ignora al escanear el proyecto. */
+export const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', '.iteraciones']);
 
 const BUILD_REPORT_PATH = join('.iteraciones', 'changes', 'diff.json');
 
