@@ -1,7 +1,6 @@
 import { writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { buildDocumentGraph } from '../builder/graph-exporter.js';
-import { classifyDocuments } from '../builder/pipeline/classify.js';
 import { buildDocsFromIndex, discover } from '../builder/pipeline/discover.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 
@@ -25,18 +24,16 @@ export type GraphOutput = {
 export async function runGraph(cwd: string, options: GraphCommandOptions = {}): Promise<void> {
   const config = await loadSiteConfig(cwd);
   const { relativePaths, discoveryIndex } = await discover(cwd, { noCache: true });
-  const discovered = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
-  const classified = classifyDocuments(discovered, config.format?.html?.theme, cwd);
-  const nonDrafts = classified.filter((doc) => !doc.frontmatter.draft);
+  const docs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
 
-  const { edges } = buildDocumentGraph(nonDrafts);
+  const { edges } = buildDocumentGraph(docs);
 
   const output: GraphOutput = {
     generatedAt: new Date().toISOString(),
-    documents: nonDrafts.map((doc) => ({
+    documents: docs.map((doc) => ({
       relativePath: doc.relativePath,
-      type: doc.type ?? 'unknown',
-      kind: doc.kind ?? 'page',
+      type: 'file',
+      kind: 'page',
       ...(typeof doc.frontmatter.title === 'string' ? { title: doc.frontmatter.title } : {}),
     })),
     edges,
@@ -47,7 +44,7 @@ export async function runGraph(cwd: string, options: GraphCommandOptions = {}): 
   if (options.output) {
     const outputPath = resolve(cwd, options.output);
     await writeFile(outputPath, json, 'utf-8');
-    process.stdout.write(`graph: ${nonDrafts.length} documentos, ${edges.length} aristas → "${options.output}"\n`);
+    process.stdout.write(`graph: ${docs.length} documentos, 0 aristas → "${options.output}"\n`);
   } else {
     process.stdout.write(json + '\n');
   }
