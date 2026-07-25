@@ -7,7 +7,7 @@ import { ProgressTracker, type RenderFileReport } from '../output/progress.js';
 import { buildAssets } from './assets.js';
 import { runExportDocuments } from './export/runner.js';
 import { EXPORTABLE_TYPES, type ExportResult } from './export/types.js';
-import { generateFormats, generateHtmlFragment, generateLatexPreamble } from './format-generator.js';
+import { generateHtmlFragment, generateLatexPreamble } from './format-generator.js';
 import { classifyDocuments } from './pipeline/classify.js';
 import { computeAffectedDocs } from './pipeline/dependency-resolver.js';
 import { type BuildReport, buildDocsFromIndex, type DiscoverResult, discover } from './pipeline/discover.js';
@@ -202,66 +202,44 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       return count;
     };
 
-    // Promesas compartidas: html fragment y preamble notifican cuando terminan
-    let htmlFragDone: () => void = () => {};
-    let preambleDone: () => void = () => {};
-    const htmlFragReady = new Promise<void>((r) => {
-      htmlFragDone = r;
-    });
-    const preambleReady = new Promise<void>((r) => {
-      preambleDone = r;
-    });
-
-    // Preparar diff para generateFormats
-    const recentMdPaths = [...changedPaths].filter((p) => p.endsWith('.md') && !deletedEntries.has(p));
-    const deletedMdPaths = [...deletedEntries.keys()].filter((p) => p.endsWith('.md'));
-    const diff: BuildReport = {
-      startedAt: Date.now(),
-      recentFiles: recentMdPaths,
-      deletedFiles: deletedMdPaths,
-    };
-
-    // ── FASE 4: 6 ramas en paralelo ──
-    await Promise.all([
-      // HtmlFragment + HTML copy (html/{slug}.html → formats/html/)
-      (async () => {
-        if (!htmlOn && !epubOn) {
-          htmlFragDone();
-          return;
-        }
+    // ── FASE 3: html fragment (antes del Promise.all) ──
+    {
+      const recentMdPaths = [...changedPaths].filter((p) => p.endsWith('.md') && !deletedEntries.has(p));
+      const deletedMdPaths = [...deletedEntries.keys()].filter((p) => p.endsWith('.md'));
+      const diff: BuildReport = {
+        startedAt: Date.now(),
+        recentFiles: recentMdPaths,
+        deletedFiles: deletedMdPaths,
+      };
+      if (htmlOn || epubOn) {
         await generateHtmlFragment(cwd, ctx.siteConfig, discoveryIndex, diff);
-        htmlFragDone();
+      }
+      // Cleanup deleted files from formats/
+      for (const relPath of deletedMdPaths) {
+        const entry = discoveryIndex.get(relPath);
+        const slug = entry?.slug ?? basename(relPath, '.md');
+        const dir = dirname(relPath);
+        await rm(join(cwd, '.iteraciones', 'formats', 'pdf', dir, `${slug}.tex`), { force: true }).catch(() => {});
+        await rm(join(cwd, '.iteraciones', 'formats', 'html', dir, `${slug}.html`), { force: true }).catch(() => {});
+        await rm(join(cwd, '.iteraciones', 'formats', 'html', dir, `${slug}.epub`), { force: true }).catch(() => {});
+      }
+    }
 
-        // HTML copy inmediatamente despues del fragmento
-        if (formatCfg?.html?.generate && !noExport) {
-          progress.startPhase('html', pipelineDocs.length);
-          for (const doc of pipelineDocs) {
-            const slug = doc.slug ?? basename(doc.relativePath, '.md');
-            const dir = dirname(doc.relativePath);
-            const src = join(ctx.cwd, '.iteraciones', 'html', dir, `${slug}.html`);
-            const dst = join(formatsDir, 'html', dir, `${slug}.html`);
-            try {
-              await mkdir(dirname(dst), { recursive: true });
-              await Bun.write(dst, Bun.file(src));
-            } catch {}
-          }
-          progress.completePhase(undefined, 'html');
-        }
-      })(),
+    // Leer htmlFragment del disco para EPUB
+    if (epubOn) {
+      for (const doc of pipelineDocs) {
+        if (doc.htmlFragment !== undefined) continue;
+        const slug = doc.slug ?? basename(doc.relativePath, '.md');
+        const htmlPath = join(ctx.cwd, '.iteraciones', 'html', dirname(doc.relativePath), `${slug}.html`);
+        try {
+          doc.htmlFragment = await Bun.file(htmlPath).text();
+        } catch {}
+      }
+    }
 
-      // Preámbulo: formats/pdf/{slug}.tex (independiente, solo tex/ de FASE 2)
-      (async () => {
-        if (!latexOn && !pdfOn) {
-          preambleDone();
-          return;
-        }
-        progress.startPhase('latex');
-        await generateLatexPreamble(cwd, ctx.siteConfig, discoveryIndex, diff);
-        progress.completePhase(undefined, 'latex');
-        preambleDone();
-      })(),
-
-      // Markdown (independiente de todo, usa tex/ de FASE 2)
+    // ── FASE 4: 4 ramas en paralelo ──
+    await Promise.all([
+      // Markdown
       (async () => {
         if (!formatCfg?.markdown?.generate || noExport) return;
         let mdTotal = 0;
@@ -288,18 +266,26 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         progress.completePhase(undefined, 'markdown');
       })(),
 
-      // EPUB (espera html/{slug}.html)
+      // HTML (copia fragmento)
       (async () => {
-        if (!formatCfg?.epub?.generate || noExport) return;
-        await htmlFragReady;
+        if (!formatCfg?.html?.generate || noExport) return;
+        progress.startPhase('html', pipelineDocs.length);
         for (const doc of pipelineDocs) {
-          if (doc.htmlFragment !== undefined) continue;
           const slug = doc.slug ?? basename(doc.relativePath, '.md');
-          const htmlPath = join(ctx.cwd, '.iteraciones', 'html', dirname(doc.relativePath), `${slug}.html`);
+          const dir = dirname(doc.relativePath);
+          const src = join(ctx.cwd, '.iteraciones', 'html', dir, `${slug}.html`);
+          const dst = join(formatsDir, 'html', dir, `${slug}.html`);
           try {
-            doc.htmlFragment = await Bun.file(htmlPath).text();
+            await mkdir(dirname(dst), { recursive: true });
+            await Bun.write(dst, Bun.file(src));
           } catch {}
         }
+        progress.completePhase(undefined, 'html');
+      })(),
+
+      // EPUB
+      (async () => {
+        if (!formatCfg?.epub?.generate || noExport) return;
         let epubTotal = 0;
         for (const type of EXPORTABLE_TYPES) epubTotal += countExportDocs(baseRenderedMap, type);
         progress.startPhase('epub', epubTotal);
@@ -317,26 +303,36 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         progress.completePhase(undefined, 'epub');
       })(),
 
-      // PDF (espera formats/pdf/{slug}.tex)
+      // LaTeX → PDF (secuencial dentro de la misma rama)
       (async () => {
-        if (!pdfOn || noExport) return;
-        await preambleReady;
-        let pdfTotal = 0;
-        for (const type of EXPORTABLE_TYPES) pdfTotal += countExportDocs(baseRenderedMap, type);
-        progress.startPhase('pdf', pdfTotal);
-        const pdfResults = await runExportDocuments(baseRenderedMap, {
-          ...exportBase,
-          outputDir: join(formatsDir, 'pdf'),
-          config: { pdf: formatCfg?.pdf },
-          onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, durationMs: 0, cacheHit: false, phase: 'pdf' }),
-        });
-        for (const r of pdfResults) {
-          if (r.pdfPath) r.pdfPath = r.pdfPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
-          if (r.pdfFullPath) r.pdfFullPath = r.pdfFullPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
-          if (r.coverPath) r.coverPath = r.coverPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
+        if (!pdfOn && !latexOn) return;
+        const diff: BuildReport = {
+          startedAt: Date.now(),
+          recentFiles: [...changedPaths].filter((p) => p.endsWith('.md') && !deletedEntries.has(p)),
+          deletedFiles: [...deletedEntries.keys()].filter((p) => p.endsWith('.md')),
+        };
+        progress.startPhase('latex');
+        await generateLatexPreamble(cwd, ctx.siteConfig, discoveryIndex, diff);
+        progress.completePhase(undefined, 'latex');
+
+        if (pdfOn && !noExport) {
+          let pdfTotal = 0;
+          for (const type of EXPORTABLE_TYPES) pdfTotal += countExportDocs(baseRenderedMap, type);
+          progress.startPhase('pdf', pdfTotal);
+          const pdfResults = await runExportDocuments(baseRenderedMap, {
+            ...exportBase,
+            outputDir: join(formatsDir, 'pdf'),
+            config: { pdf: formatCfg?.pdf },
+            onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, durationMs: 0, cacheHit: false, phase: 'pdf' }),
+          });
+          for (const r of pdfResults) {
+            if (r.pdfPath) r.pdfPath = r.pdfPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
+            if (r.pdfFullPath) r.pdfFullPath = r.pdfFullPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
+            if (r.coverPath) r.coverPath = r.coverPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
+          }
+          exportResults.push(...pdfResults);
+          progress.completePhase(undefined, 'pdf');
         }
-        exportResults.push(...pdfResults);
-        progress.completePhase(undefined, 'pdf');
       })(),
     ]);
 
