@@ -536,11 +536,20 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         ['event', eventDocs],
       ]);
 
+      // Promesa compartida para que HTML espere resultados de PDF
+      let pdfResolve: (results: ExportResult[]) => void = () => {};
+      const pdfResultsPromise = new Promise<ExportResult[]>((r) => {
+        pdfResolve = r;
+      });
+
       // Ejecutar PDF, Markdown, EPUB y HTML en un solo Promise.all
       await Promise.all([
         // PDF
         (async () => {
-          if (!pdfOn || noExport) return;
+          if (!pdfOn || noExport) {
+            pdfResolve([]);
+            return;
+          }
           let pdfTotal = 0;
           for (const type of EXPORTABLE_TYPES) pdfTotal += countExportDocs(baseRenderedMap, type);
           progress.startPhase('pdf', pdfTotal);
@@ -555,6 +564,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
             if (r.pdfFullPath) r.pdfFullPath = r.pdfFullPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
             if (r.coverPath) r.coverPath = r.coverPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
           }
+          pdfResolve(pdfResults);
           exportResults.push(...pdfResults);
           progress.completePhase(undefined, 'pdf');
         })(),
@@ -606,13 +616,27 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
           progress.completePhase(undefined, 'epub');
         })(),
 
-        // HTML compose (blocks + context + htmlFragment)
+        // HTML: blocks + context + compose (espera resultados de PDF)
         (async () => {
           if (!needsHtmlRender) return;
           const { renderedBlockDocs } = await runBlocksPrestep(pipelineDocs, ctx, enrichedSiteCtx, primaryRendered, authorDocumentIndex, cwd);
           const contextResult = await runContextPhaseWithTypeGraph(pipelineDocs, ctx, enrichedSiteCtx, primaryRendered, authorDocumentIndex, cwd);
           allContextDocs = contextResult.allContextDocs;
           renderedMap = contextResult.renderedMap;
+
+          // Componer HTML (espera a PDF para enlaces de descarga)
+          const pdfResults = await pdfResultsPromise;
+          progress.startPhase('html', allContextDocs.length);
+          let docsWithExportLinks = allContextDocs;
+          if (pdfResults.length > 0) {
+            docsWithExportLinks = injectDownloadLinks(allContextDocs, pdfResults, ctx.outputDir);
+            docsWithExportLinks = injectDownloadLinksIntoListItems(docsWithExportLinks);
+            docsWithExportLinks = injectCoverIntoListItems(docsWithExportLinks);
+          }
+          const htmlFormatsDir = join(formatsDir, 'html');
+          const htmlCtx = { ...ctx, outputDir: htmlFormatsDir };
+          await runFinalization(docsWithExportLinks, htmlCtx, log, (r) => progress.reportFile(r));
+          progress.completePhase();
         })(),
       ]);
     } else {
@@ -663,28 +687,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
           progress.completePhase(undefined, 'markdown');
         })(),
       ]);
-    }
-
-    const finalContextDocs = affectedPaths ? allContextDocs.filter((d) => affectedPaths.has(d.relativePath)) : allContextDocs;
-    const exportRenderedMap = affectedPaths
-      ? new Map<DocumentType, BuildDocument[]>(
-          [...renderedMap].map(([type, docs]) => [type, docs.filter((doc) => affectedPaths.has(doc.relativePath))]),
-        )
-      : renderedMap;
-
-    // ── FASE 5: html (final) ──
-    if (formatCfg?.html?.generate === true) {
-      progress.startPhase('html', finalContextDocs.length);
-      let docsWithExportLinks = finalContextDocs;
-      if (exportResults.length > 0) {
-        docsWithExportLinks = injectDownloadLinks(finalContextDocs, exportResults, ctx.outputDir);
-        docsWithExportLinks = injectDownloadLinksIntoListItems(docsWithExportLinks);
-        docsWithExportLinks = injectCoverIntoListItems(docsWithExportLinks);
-      }
-      const htmlFormatsDir = join(formatsDir, 'html');
-      const htmlCtx = { ...ctx, outputDir: htmlFormatsDir };
-      await runFinalization(docsWithExportLinks, htmlCtx, log, (r) => progress.reportFile(r));
-      progress.completePhase();
     }
 
     // ── FASE 8: copiar de formats/ a dist/ ──
