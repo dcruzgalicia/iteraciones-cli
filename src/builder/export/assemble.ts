@@ -9,7 +9,7 @@
  * El contenido interno se escapa para LaTeX.
  * El texto fuera de los spans markdown también se escapa.
  */
-export function renderMarkdownInlineLatex(text: string): string {
+function renderMarkdownInlineLatex(text: string): string {
   const markers: string[] = [];
 
   // Negritas: **texto** → \textbf{texto}

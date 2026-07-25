@@ -29,7 +29,7 @@ export const BUILTIN_PREAMBLE_TRANSPILERS: string[] = [
   '06-hyphenation-rules',
 ];
 
-export interface PreambleTranspiler {
+interface PreambleTranspiler {
   description?: string;
   process(preamble: string[], config: PdfFormatConfig): string[];
 }
