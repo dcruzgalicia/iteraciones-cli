@@ -457,21 +457,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       await generateFormats(cwd, ctx.siteConfig, discoveryIndex, diff, log);
     }
 
-    // ── Copy .tex to dist (export step for latex format) ──
-    if (latexOn && !options.noExport) {
-      for (const doc of pipelineDocs) {
-        if (!doc.slug) continue;
-        const outDir = join(ctx.outputDir, dirname(doc.relativePath));
-        const pdfDir = join(ctx.cwd, '.iteraciones', 'formats', 'pdf', dirname(doc.relativePath), doc.slug);
-        const fullTexPath = join(pdfDir, `${doc.slug}.tex`);
-        const texExists = await Bun.file(fullTexPath).exists();
-        if (texExists) {
-          await mkdir(outDir, { recursive: true });
-          await Bun.write(join(outDir, `${doc.slug}.tex`), Bun.file(fullTexPath));
-        }
-      }
-    }
-
     // ── FASE 4: latex-to-html ──
     // Convierte .tex a HTML fragment, procesa bloques y construye contextos.
     // Solo se ejecuta si html.generate o epub.generate estan activos.
@@ -539,11 +524,10 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         )
       : renderedMap;
 
+    const formatsDir = join(cwd, '.iteraciones', 'formats');
     const exportBase = {
-      outputDir: ctx.outputDir,
       cwd,
       lang: ctx.siteConfig.lang,
-      concurrency: ctx.concurrency ?? 4,
       onExportProgress: (relativePath: string) =>
         progress.reportFile({
           relativePath,
@@ -551,6 +535,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
           cacheHit: false,
           phase: 'pdf',
         }),
+      concurrency: ctx.concurrency ?? 4,
     };
     const exportResults: ExportResult[] = [];
 
@@ -575,18 +560,22 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       progress.startPhase('pdf', pdfTotal);
       const pdfResults = await runExportDocuments(exportRenderedMap, {
         ...exportBase,
+        outputDir: join(formatsDir, 'pdf'),
         config: formatCfg,
       });
+      for (const r of pdfResults) {
+        if (r.pdfPath) r.pdfPath = r.pdfPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
+        if (r.pdfFullPath) r.pdfFullPath = r.pdfFullPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
+        if (r.coverPath) r.coverPath = r.coverPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
+      }
       exportResults.push(...pdfResults);
       if (pdfTotal > 0) progress.log(`PDF: ${pdfTotal} generados`);
       progress.completePhase();
     }
 
-    // ── FASE 6: html (final) ──
+    // ── FASE 6: html (final) — escribe en formats/html/ ──
     if (formatCfg?.html?.generate === true) {
       progress.startPhase('html', finalContextDocs.length);
-      const docsWithLinks = finalContextDocs;
-      // Inyectar enlaces de descarga
       let docsWithExportLinks = finalContextDocs;
       if (exportResults.length > 0) {
         docsWithExportLinks = injectDownloadLinks(finalContextDocs, exportResults, ctx.outputDir);
@@ -594,7 +583,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         docsWithExportLinks = injectCoverIntoListItems(docsWithExportLinks);
       }
 
-      await runFinalization(docsWithExportLinks, ctx, log);
+      const htmlFormatsDir = join(formatsDir, 'html');
+      const htmlCtx = { ...ctx, outputDir: htmlFormatsDir };
+      await runFinalization(docsWithExportLinks, htmlCtx, log);
       progress.completePhase();
     }
 
@@ -607,8 +598,13 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       progress.startPhase('epub', epubTotal);
       const epubResults = await runExportDocuments(exportRenderedMap, {
         ...exportBase,
+        outputDir: join(formatsDir, 'epub'),
         config: formatCfg,
       });
+      for (const r of epubResults) {
+        if (r.epubPath) r.epubPath = r.epubPath.replace(join(formatsDir, 'epub'), ctx.outputDir);
+        if (r.epubFullPath) r.epubFullPath = r.epubFullPath.replace(join(formatsDir, 'epub'), ctx.outputDir);
+      }
       exportResults.push(...epubResults);
       if (epubTotal > 0) progress.log(`EPUB: ${epubTotal} generados`);
       progress.completePhase();
@@ -629,14 +625,49 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       progress.startPhase('markdown', mdTotal);
       const mdResults = await runExportDocuments(exportRenderedMap, {
         ...exportBase,
+        outputDir: join(formatsDir, 'markdown'),
         config: formatCfg,
       });
+      for (const r of mdResults) {
+        if (r.markdownPath) r.markdownPath = r.markdownPath.replace(join(formatsDir, 'markdown'), ctx.outputDir);
+      }
       exportResults.push(...mdResults);
       if (mdTotal > 0) progress.log(`Markdown: ${mdTotal} generados`);
       progress.completePhase();
     }
 
-    // latexOn, pdfOn, htmlOn, epubOn, mdOn ya declarados arriba
+    // ── FASE 8: copiar de formats/ a dist/ ──
+    {
+      const formatMap: Array<[boolean, string, string]> = [
+        [latexOn, 'pdf', 'tex'],
+        [pdfOn, 'pdf', 'pdf'],
+        [htmlOn, 'html', 'html'],
+        [epubOn, 'epub', 'epub'],
+        [mdOn, 'markdown', 'md'],
+      ];
+      for (const doc of allDocs) {
+        const slug = doc.slug ?? basename(doc.relativePath, '.md');
+        const dir = dirname(doc.relativePath);
+        for (const [active, format, ext] of formatMap) {
+          if (!active) continue;
+          let srcPath: string;
+          if (format === 'pdf') {
+            srcPath = join(formatsDir, 'pdf', dir, slug, `${slug}.${ext}`);
+          } else if (format === 'html') {
+            srcPath = join(formatsDir, 'html', dir, `${slug}.html`);
+          } else {
+            srcPath = join(formatsDir, format, dir, `${slug}.${ext}`);
+          }
+          const dstPath = join(ctx.outputDir, dir, `${slug}.${ext}`);
+          const exists = await Bun.file(srcPath).exists();
+          if (exists) {
+            await mkdir(dirname(dstPath), { recursive: true });
+            await Bun.write(dstPath, Bun.file(srcPath));
+          }
+        }
+      }
+    }
+
     const totalDocs = htmlOn || pdfOn || epubOn || mdOn || latexOn ? totalDocCount : 0;
     const processedCount = noChanges ? 0 : affectedPaths ? affectedPaths.size : totalDocs;
     const cachedCount = totalDocs - processedCount;

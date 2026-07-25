@@ -31,9 +31,8 @@ export async function generateFormats(
 ): Promise<void> {
   const pdfActive = siteConfig.format?.pdf?.generate === true || siteConfig.format?.latex?.generate === true;
   const htmlActive = siteConfig.format?.html?.generate === true || siteConfig.format?.epub?.generate === true;
-  const mdActive = siteConfig.format?.markdown?.generate === true;
 
-  if (!pdfActive && !htmlActive && !mdActive && diff.deletedFiles.length === 0) {
+  if (!pdfActive && !htmlActive && diff.deletedFiles.length === 0) {
     return; // Nothing to do
   }
 
@@ -104,34 +103,6 @@ export async function generateFormats(
     }
   }
 
-  // ── FASE 3c: formats/markdown/ (markdown desde latex) ──
-  if (mdActive) {
-    for (const relPath of diff.recentFiles) {
-      const entry = discoveryIndex.get(relPath);
-      if (!entry) continue;
-
-      const slug = entry.slug ?? basename(relPath, '.md');
-      const dir = dirname(relPath);
-      const texBodyPath = join(cacheBase, 'tex', dir, `${slug}.tex`);
-
-      let texBody: string;
-      try {
-        texBody = await Bun.file(texBodyPath).text();
-      } catch {
-        continue;
-      }
-
-      try {
-        const mdContent = await convertFragment(texBody, join(cwd, relPath), undefined, 'markdown', 'latex-auto_identifiers');
-        const mdDir = join(cacheBase, 'formats', 'markdown', dir);
-        await mkdir(mdDir, { recursive: true });
-        await Bun.write(join(mdDir, `${slug}.md`), mdContent);
-      } catch (err) {
-        process.stderr.write(`[format-generator] error al convertir ${slug}.tex a Markdown: ${String(err)}\n`);
-      }
-    }
-  }
-
   // ── Clean up deleted files from formats/ (unconditional: all formats) ──
   for (const relPath of diff.deletedFiles) {
     const entry = discoveryIndex.get(relPath);
@@ -140,6 +111,5 @@ export async function generateFormats(
 
     await rm(join(cacheBase, 'formats', 'pdf', dir, slug), { recursive: true, force: true }).catch(() => {});
     await rm(join(cacheBase, 'formats', 'html', dir, slug), { recursive: true, force: true }).catch(() => {});
-    await rm(join(cacheBase, 'formats', 'markdown', dir, `${slug}.md`), { force: true }).catch(() => {});
   }
 }
