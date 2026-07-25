@@ -559,7 +559,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         progress.completePhase(undefined, 'markdown');
       })(),
 
-      // Render/context (para HTML, EPUB)
+      // Render/context + EPUB (EPUB solo necesita htmlFragment, se ejecuta tras runPrimaryRender)
       (async () => {
         if (!needsRender) return;
         const result = await runPrimaryRender(pipelineDocs, ctx, cwd);
@@ -570,7 +570,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         ]);
         const authorDocumentIndex = result.authorDocumentIndex;
 
-        // Escribir htmlFragment a disco
+        // Escribir htmlFragment a disco (con citas, sobrescribe el de FASE 3)
         for (const [, docs] of primaryRendered) {
           for (const doc of docs) {
             if (!doc.htmlFragment || !doc.slug) continue;
@@ -580,6 +580,30 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
           }
         }
 
+        // EPUB: solo necesita el htmlFragment (ya disponible tras runPrimaryRender)
+        // Se ejecuta en paralelo con blocks/context para HTML
+        const epubPromise =
+          formatCfg?.epub?.generate && !noExport
+            ? (async () => {
+                let epubTotal = 0;
+                for (const type of EXPORTABLE_TYPES) epubTotal += countExportDocs(baseRenderedMap, type);
+                progress.startPhase('epub', epubTotal);
+                const results = await runExportDocuments(baseRenderedMap, {
+                  ...exportBase,
+                  outputDir: join(formatsDir, 'html'),
+                  config: { epub: formatCfg?.epub },
+                  onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, durationMs: 0, cacheHit: false, phase: 'epub' }),
+                });
+                for (const r of results) {
+                  if (r.epubPath) r.epubPath = r.epubPath.replace(join(formatsDir, 'html'), ctx.outputDir);
+                  if (r.epubFullPath) r.epubFullPath = r.epubFullPath.replace(join(formatsDir, 'html'), ctx.outputDir);
+                }
+                progress.completePhase(undefined, 'epub');
+                return results;
+              })()
+            : Promise.resolve([] as ExportResult[]);
+
+        // HTML: blocks + context (solo si html.generate)
         if (needsHtmlRender) {
           const { renderedBlockDocs } = await runBlocksPrestep(pipelineDocs, ctx, enrichedSiteCtx, primaryRendered, authorDocumentIndex, cwd);
           const contextResult = await runContextPhaseWithTypeGraph(pipelineDocs, ctx, enrichedSiteCtx, primaryRendered, authorDocumentIndex, cwd);
@@ -595,6 +619,10 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
           }
           renderedMap = byType;
         }
+
+        // EPUB results se anaden al final (ya que esperamos a blocks/context)
+        const epubResults = await epubPromise;
+        exportResults.push(...epubResults);
       })(),
     ]);
 
@@ -617,25 +645,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       const htmlFormatsDir = join(formatsDir, 'html');
       const htmlCtx = { ...ctx, outputDir: htmlFormatsDir };
       await runFinalization(docsWithExportLinks, htmlCtx, log, (r) => progress.reportFile(r));
-      progress.completePhase();
-    }
-
-    // ── FASE 6: epub ──
-    if (formatCfg?.epub?.generate && !noExport) {
-      let epubTotal = 0;
-      for (const type of EXPORTABLE_TYPES) epubTotal += countExportDocs(renderedMap, type);
-      progress.startPhase('epub', epubTotal);
-      const epubResults = await runExportDocuments(exportRenderedMap, {
-        ...exportBase,
-        outputDir: join(formatsDir, 'html'),
-        config: { epub: formatCfg?.epub },
-        onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, durationMs: 0, cacheHit: false, phase: 'epub' }),
-      });
-      for (const r of epubResults) {
-        if (r.epubPath) r.epubPath = r.epubPath.replace(join(formatsDir, 'html'), ctx.outputDir);
-        if (r.epubFullPath) r.epubFullPath = r.epubFullPath.replace(join(formatsDir, 'html'), ctx.outputDir);
-      }
-      exportResults.push(...epubResults);
       progress.completePhase();
     }
 
