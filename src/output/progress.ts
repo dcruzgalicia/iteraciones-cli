@@ -38,7 +38,6 @@ export class ProgressTracker {
   private phaseStart: number = 0;
   private sectionsShown: Set<string> = new Set();
   private phaseFiles: Partial<Record<PipelinePhase, string[]>> = {};
-  private currentLine: string = '';
 
   constructor(options: { verbose?: boolean }) {
     this.verbose = options.verbose ?? false;
@@ -71,7 +70,6 @@ export class ProgressTracker {
   advance(_by: number = 1): void {}
 
   reportFile(file: RenderFileReport): void {
-    // Collect files per phase for verbose mode
     if (this.verbose) {
       const files = this.phaseFiles[file.phase];
       if (files) {
@@ -87,7 +85,6 @@ export class ProgressTracker {
         process.stdout.write(`    ${f}\n`);
       }
     }
-    // For HTML, also flush 'compose' files (reported by composeDocuments)
     if (phase === 'html') {
       const composeFiles = this.phaseFiles['compose'];
       if (composeFiles && composeFiles.length > 0) {
@@ -119,8 +116,9 @@ export class ProgressTracker {
       }
     } else {
       const countPart = count > 0 ? ` ${count}` : '';
-      process.stdout.write(`  ✓ ${meta.label}${countPart}${' '.repeat(Math.max(1, 30 - meta.label.length - countPart.length))}${formatTime(elapsed)}
-`);
+      process.stdout.write(
+        `  \u2713 ${meta.label}${countPart}${' '.repeat(Math.max(1, 30 - meta.label.length - countPart.length))}${formatTime(elapsed)}\n`,
+      );
     }
 
     this.currentPhase = null;
@@ -128,22 +126,21 @@ export class ProgressTracker {
 
   finish(processed: number, cached: number, formats?: string[]): void {
     const totalTime = performance.now() - this.t0;
+    const formatCount = formats ? formats.length : 0;
 
     if (this.verbose) {
-      const formatCount = formats ? formats.filter((f) => f !== 'latex').length : 0;
       process.stdout.write('\u25a0 Resultado\n\n');
       process.stdout.write(`  ${padRight('Documentos procesados', 30)} ${processed}\n`);
-      process.stdout.write(`  ${padRight('Publicaciones creadas', 30)} ${formatCount}\n`);
+      process.stdout.write(`  ${padRight('Formatos creados', 30)} ${formatCount}\n`);
       process.stdout.write(`  ${padRight('Tiempo total', 30)} ${formatTime(totalTime)}\n\n`);
       process.stdout.write('\u2713 Todo listo.\n');
     } else {
-      const formatCount = formats ? formats.filter((f) => f !== 'latex').length : 0;
       process.stdout.write(`\n\u2713 Todo listo.\n\n`);
       process.stdout.write(`  ${padRight('Documentos procesados', 30)}${processed}\n`);
       if (cached > 0) {
         process.stdout.write(`  ${padRight('En cach\u00e9', 30)}${cached}\n`);
       }
-      process.stdout.write(`  ${padRight('Publicaciones creadas', 30)}${formatCount}\n`);
+      process.stdout.write(`  ${padRight('Formatos creados', 30)}${formatCount}\n`);
       process.stdout.write(`  ${padRight('Tiempo total', 30)}${formatTime(totalTime)}\n`);
     }
   }
