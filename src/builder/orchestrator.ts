@@ -54,14 +54,19 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const siteConfig = await loadSiteConfig(cwd);
   const currentFormats = computeActiveFormats(siteConfig.format);
   let newFormats: string[] = [];
+  let removedFormats: string[] = [];
 
-  // Detectar formatos nuevos comparando con el build anterior
+  // Detectar formatos nuevos y eliminados comparando con el build anterior
   const prevReport = await loadBuildReport(cwd);
   if (prevReport !== null) {
     const prevFormats = new Set(prevReport.activeFormats ?? []);
     newFormats = currentFormats.filter((f) => !prevFormats.has(f));
+    removedFormats = prevReport.activeFormats?.filter((f) => !currentFormats.includes(f)) ?? [];
     if (newFormats.length > 0) {
       log(`Nuevos formatos detectados: ${newFormats.join(', ')}. Procesando todos los documentos.`);
+    }
+    if (removedFormats.length > 0) {
+      log(`Formatos eliminados: ${removedFormats.join(', ')}. Limpiando archivos de dist.`);
     }
   }
 
@@ -298,6 +303,27 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         if (exists) {
           await mkdir(dirname(dstPath), { recursive: true });
           await Bun.write(dstPath, Bun.file(srcPath));
+        }
+      }
+    }
+  }
+
+  // ── FASE 6: limpiar de dist/ archivos de formatos eliminados ──
+  if (removedFormats.length > 0) {
+    const FORMAT_EXT_MAP: Record<string, string> = {
+      latex: '.tex',
+      pdf: '.pdf',
+      html: '.html',
+      epub: '.epub',
+      markdown: '.md',
+    };
+    for (const doc of allDocs) {
+      const slug = doc.slug ?? basename(doc.relativePath, '.md');
+      const dir = dirname(doc.relativePath);
+      for (const fmt of removedFormats) {
+        const ext = FORMAT_EXT_MAP[fmt];
+        if (ext) {
+          await rm(join(ctx.outputDir, dir, `${slug}${ext}`), { force: true }).catch(() => {});
         }
       }
     }
