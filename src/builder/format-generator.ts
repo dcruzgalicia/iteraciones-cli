@@ -13,7 +13,7 @@ import type { BuildReport } from './pipeline/discover.js';
  * genera los siguientes formatos en .iteraciones/formats/:
  *
  *   formats/pdf/{dir}/{slug}/{slug}.tex   (con preamble, si pdf/latex activo)
- *   formats/html/{dir}/{slug}/index.html  (html fragment, si html/epub activo)
+ *   formats/html/{dir}/{slug}.fragment.html  (html fragment, si html/epub activo)
  *   formats/markdown/{dir}/{slug}.md      (markdown, si formato markdown activo)
  *
  * El orden respeta la cadena de dependencias: primero pdf/latex, luego html,
@@ -94,9 +94,9 @@ export async function generateFormats(
 
       try {
         const htmlFragment = await convertFragment(texBody, join(cwd, relPath), undefined, 'html5', 'latex-auto_identifiers');
-        const htmlDir = join(cacheBase, 'formats', 'html', dir, slug);
+        const htmlDir = join(cacheBase, 'formats', 'html', dir);
         await mkdir(htmlDir, { recursive: true });
-        await Bun.write(join(htmlDir, 'index.html'), htmlFragment);
+        await Bun.write(join(htmlDir, `${slug}.fragment.html`), htmlFragment);
       } catch (err) {
         process.stderr.write(`[format-generator] error al convertir ${slug}.tex a HTML: ${String(err)}\n`);
       }

@@ -478,9 +478,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       for (const [, docs] of primaryRendered) {
         for (const doc of docs) {
           if (!doc.htmlFragment || !doc.slug) continue;
-          const htmlDir = join(ctx.cwd, '.iteraciones', 'formats', 'html', dirname(doc.relativePath), doc.slug);
+          const htmlDir = join(ctx.cwd, '.iteraciones', 'formats', 'html', dirname(doc.relativePath));
           await mkdir(htmlDir, { recursive: true });
-          await Bun.write(join(htmlDir, 'index.html'), doc.htmlFragment);
+          await Bun.write(join(htmlDir, `${doc.slug}.fragment.html`), doc.htmlFragment);
         }
       }
 

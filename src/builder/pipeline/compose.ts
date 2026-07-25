@@ -60,16 +60,8 @@ export async function composeDocuments(
     }
     if (doc.htmlFragment === undefined) {
       // Intentar leer desde disco (fase de render previa o build anterior)
-      const htmlDir = join(
-        ctx.cwd,
-        '.iteraciones',
-        'cache',
-        'formats',
-        'html',
-        dirname(doc.relativePath),
-        doc.slug ?? basename(doc.relativePath, '.md'),
-      );
-      const htmlFile = Bun.file(join(htmlDir, 'index.html'));
+      const htmlDir = join(ctx.cwd, '.iteraciones', 'formats', 'html', dirname(doc.relativePath));
+      const htmlFile = Bun.file(join(htmlDir, `${doc.slug ?? basename(doc.relativePath, '.md')}.fragment.html`));
       if (await htmlFile.exists()) {
         doc.htmlFragment = await htmlFile.text();
       }
