@@ -154,7 +154,7 @@ export function assembleExportDocument(
   pdfFormat?: PdfFormatConfig,
   loosePaths?: string[],
 ): ExportDocument | null {
-  if (!doc.type || !EXPORTABLE_TYPES.has(doc.type)) return null;
+  if (!EXPORTABLE_TYPES.has(doc.type ?? 'file')) return null;
   // Si no hay processedBody (.tex intermedio), no se puede exportar
   if (!doc.processedBody) return null;
 
@@ -171,7 +171,7 @@ export function assembleExportDocument(
     rawFormatPdf !== undefined && typeof rawFormatPdf['documentclass'] === 'string' && rawFormatPdf['documentclass'] === 'scrartcl'
       ? 'scrartcl'
       : undefined;
-  const documentclass = perFileDocClass ?? pdfFormat?.documentclass?.class ?? LATEX_CLASS[doc.type as keyof typeof LATEX_CLASS];
+  const documentclass = perFileDocClass ?? pdfFormat?.documentclass?.class ?? LATEX_CLASS[(doc.type ?? 'file') as keyof typeof LATEX_CLASS];
   if (!documentclass) return null;
 
   // Resolver bibliografía y CSL: editorial.bibliography → export.bibliography → APA 7 por defecto
