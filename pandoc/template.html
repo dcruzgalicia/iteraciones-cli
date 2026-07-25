@@ -46,7 +46,8 @@
       text-decoration: none;
       color: inherit;
     }
-    .site-logo img { height: 2rem; width: auto; color: var(--accent); }
+    .logo-svg { height: 2rem; width: auto; color: var(--accent); }
+    .logo-svg svg { height: 2rem; width: auto; display: block; }
     .site-title { font-size: 1.25rem; font-weight: 600; }
     .tagline { font-size: 0.875rem; color: var(--muted-color); margin-left: auto; }
     main { min-height: 60vh; }
@@ -63,7 +64,7 @@
 <body>
   <header>
     <a href="$base-url$/" class="site-logo">
-      $if(logo)$<img src="$logo$" alt="" aria-hidden="true">$endif$
+      $if(logo-inline)$<div class="logo-svg">$logo-inline$</div>$endif$
       <span class="site-title">$site-title$</span>
     </a>
     $if(tagline)$<span class="tagline">$tagline$</span>$endif$
