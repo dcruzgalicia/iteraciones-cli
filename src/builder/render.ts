@@ -101,7 +101,6 @@ export interface RenderLatexResult {
   processedBody: string;
   htmlFragment: string;
   slug: string;
-  relativePath: string;
 }
 
 /**
@@ -133,16 +132,14 @@ export async function renderLatex(
   await mapWithConcurrency(docs, concurrency, async (doc) => {
     // Leer body del disco
     let body = '';
-    if (cwd) {
-      try {
-        body = await Bun.file(doc.filePath).text();
-        const fmMatch = body.match(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/);
-        if (fmMatch) {
-          body = body.slice(fmMatch[0].length);
-        }
-      } catch {
-        return;
+    try {
+      body = await Bun.file(doc.filePath).text();
+      const fmMatch = body.match(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/);
+      if (fmMatch) {
+        body = body.slice(fmMatch[0].length);
       }
+    } catch {
+      return;
     }
 
     // Paso 1: transpilers string (regex) sobre el markdown original
@@ -195,20 +192,11 @@ export async function renderLatex(
 
     // Paso 5: convertir latex body a html fragment (con citeproc)
     let htmlFragment = '';
-    if (bibOptions) {
-      try {
-        htmlFragment = await convertFragment(processedBody, doc.filePath, bibOptions, 'html5', 'latex-auto_identifiers');
-      } catch {
-        process.stderr.write(`[render] error al convertir a HTML para ${doc.relativePath}
+    try {
+      htmlFragment = await convertFragment(processedBody, doc.filePath, bibOptions, 'html5', 'latex-auto_identifiers');
+    } catch {
+      process.stderr.write(`[render] error al convertir a HTML para ${doc.relativePath}
 `);
-      }
-    } else {
-      try {
-        htmlFragment = await convertFragment(processedBody, doc.filePath, undefined, 'html5', 'latex-auto_identifiers');
-      } catch {
-        process.stderr.write(`[render] error al convertir a HTML para ${doc.relativePath}
-`);
-      }
     }
 
     // Escribir html/{slug}.html
@@ -218,7 +206,7 @@ export async function renderLatex(
       await Bun.write(join(htmlDir, `${slug}.html`), htmlFragment);
     }
 
-    results.set(doc.relativePath, { processedBody, htmlFragment, slug, relativePath: doc.relativePath });
+    results.set(doc.relativePath, { processedBody, htmlFragment, slug });
   });
 
   return results;
