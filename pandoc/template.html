@@ -1,44 +1,74 @@
-<!doctype html>
-<html
-  xmlns="http://www.w3.org/1999/xhtml"
-  $if(lang)$
-  lang="$lang$"
-  xml:lang="$lang$"
-  $endif$$if(dir)$
-  dir="$dir$"
-  $endif$
-  $if(hyphenation-class)$class="$hyphenation-class$"$endif$>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="generator" content="pandoc" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-    $for(author-meta)$
-    <meta name="author" content="$author-meta$" />
-    $endfor$ $if(date-meta)$
-    <meta name="dcterms.date" content="$date-meta$" />
-    $endif$ $if(keywords)$
-    <meta name="keywords" content="$for(keywords)$$keywords$$sep$, $endfor$" />
-    $endif$ $if(description-meta)$
-    <meta name="description" content="$description-meta$" />
-    $else$
-    <meta name="description" content="$site-tagline$" />
-    $endif$
-    <title>
-      $if(title-prefix)$$title-prefix$ | $endif$$pagetitle$ | $site-title$
-    </title>
-    $if(site-logo)$
-    <link rel="icon" href="$site-logo$" type="image/svg+xml" />
-    $endif$ $for(css)$
-    <link rel="stylesheet" href="$css$" />
-    $endfor$ $for(header-includes)$ $header-includes$ $endfor$ $if(math)$ $math$
-    $endif$
-  </head>
-  <body
-    data-theme="light"
-    class="flex min-h-svh w-full flex-col bg-surface-light font-sans text-zinc-900 antialiased">
-    $for(include-before)$ $include-before$ $endfor$ $body$ $for(include-after)$
-    $include-after$ $endfor$
-  </body>
+<!DOCTYPE html>
+<html lang="$lang$" data-theme="$theme$">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>$title$$if(site-title)$ · $site-title$$endif$</title>
+  $if(author-meta)$<meta name="author" content="$author-meta$">$endif$
+  $if(description-meta)$<meta name="description" content="$description-meta$">$endif$
+  $if(css)$<link rel="stylesheet" href="$css$">$endif$
+  <style>
+    :root {
+      --accent: $accent$;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      line-height: 1.6;
+      color: var(--text-color, #1a1a1a);
+      background: var(--bg-color, #ffffff);
+      max-width: 65ch;
+      margin: 0 auto;
+      padding: 1.5rem;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding-bottom: 1rem;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border-color, #e5e5e5);
+    }
+    .site-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+      color: inherit;
+    }
+    .site-logo img { height: 2rem; width: auto; }
+    .site-title { font-size: 1.25rem; font-weight: 600; }
+    .tagline { font-size: 0.875rem; color: #666; margin-left: auto; }
+    main { min-height: 60vh; }
+    footer {
+      margin-top: 3rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border-color, #e5e5e5);
+      font-size: 0.8rem;
+      color: #666;
+      text-align: center;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { color: #e0e0e0; background: #1a1a1a; }
+      .tagline { color: #999; }
+      footer { color: #999; }
+      header, footer { border-color: #333; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="$base-url$/" class="site-logo">
+      $if(logo)$<img src="$logo$" alt="" aria-hidden="true">$endif$
+      <span class="site-title">$site-title$</span>
+    </a>
+    $if(tagline)$<span class="tagline">$tagline$</span>$endif$
+  </header>
+  <main>
+    $body$
+  </main>
+  <footer>
+    <p>$if(site-title)$© $site-title$$endif$</p>
+  </footer>
+</body>
 </html>

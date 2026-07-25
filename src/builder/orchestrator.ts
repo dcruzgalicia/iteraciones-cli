@@ -8,6 +8,7 @@ import { buildAssets } from './assets.js';
 import { runExportDocuments } from './export/runner.js';
 import type { ExportResult } from './export/types.js';
 import { generateLatexPreamble } from './format-generator.js';
+import { renderHtmlPage } from './html-template.js';
 import { type BuildReport, buildDocsFromIndex, type DiscoverResult, discover } from './pipeline/discover.js';
 import { renderLatex } from './pipeline/render.js';
 import type { BuildContext, BuildDocument } from './types.js';
@@ -188,9 +189,12 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         progress.completePhase(undefined, 'markdown');
       })(),
 
-      // HTML (copia fragmento)
+      // HTML (template completo)
       (async () => {
         if (!formatCfg?.html?.generate || noExport) return;
+        const siteConfig = ctx.siteConfig;
+        const htmlConfig = siteConfig.format?.html;
+        const hasCss = !options.noTailwind && ctx.cssPath;
         progress.startPhase('html', pipelineDocs.length);
         for (const doc of pipelineDocs) {
           const slug = doc.slug ?? basename(doc.relativePath, '.md');
@@ -198,8 +202,22 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
           const src = join(ctx.cwd, '.iteraciones', 'html', dir, `${slug}.html`);
           const dst = join(formatsDir, 'html', dir, `${slug}.html`);
           try {
+            const fragment = await Bun.file(src).text();
+            const html = await renderHtmlPage(fragment, {
+              title: doc.frontmatter.title || slug,
+              siteTitle: siteConfig.title ?? '',
+              tagline: siteConfig.tagline,
+              lang: siteConfig.lang ?? 'es',
+              logo: 'logo.svg',
+              baseUrl: siteConfig.baseUrl,
+              theme: htmlConfig?.theme,
+              accent: htmlConfig?.accent,
+              css: hasCss ? 'css/styles.css' : undefined,
+              author: doc.frontmatter.author,
+              description: typeof doc.frontmatter.abstract === 'string' ? doc.frontmatter.abstract : undefined,
+            });
             await mkdir(dirname(dst), { recursive: true });
-            await Bun.write(dst, Bun.file(src));
+            await Bun.write(dst, html);
           } catch {}
         }
         progress.completePhase(undefined, 'html');
