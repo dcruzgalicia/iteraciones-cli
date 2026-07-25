@@ -7,7 +7,6 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import { buildAssets, generateLatexPreamble, renderHtmlPage } from './build-utils.js';
 import { type BuildReport, buildDocsFromIndex, discover } from './discover.js';
 import { runExportDocuments } from './export/runner.js';
-import type { ExportResult } from './export/types.js';
 import { renderLatex } from './render.js';
 import { type BuildContext, type BuildDocument, isExportSkipped } from './types.js';
 
@@ -65,8 +64,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     generateHtml ? buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, { noTailwind: options.noTailwind }) : Promise.resolve(''),
   ]);
   ctx.cssPath = cssPath;
-  const sourceDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
-  const allDocs = sourceDocs as BuildDocument[];
+  const allDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
 
   if (options.verbose) {
     for (const doc of allDocs) {
@@ -103,7 +101,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
   // ── FASE 2+3: markdown → latex → html (combinada) ──
   progress.startPhase('render', pipelineDocs.length);
-  const renderResults = await renderLatex(pipelineDocs, ctx.concurrency ?? 4, cwd, ctx.siteConfig.disabledTranspilers);
+  const renderResults = await renderLatex(pipelineDocs, ctx.concurrency, cwd, ctx.siteConfig.disabledTranspilers);
   for (const doc of allDocs) {
     const result = renderResults.get(doc.relativePath);
     if (result) {
@@ -144,8 +142,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // Preparar datos para FASE 4
   const noExport = options.noExport === true;
   const formatsDir = join(cwd, '.iteraciones', 'formats');
-  const exportBase = { cwd, lang: ctx.siteConfig.lang, concurrency: ctx.concurrency ?? 4 };
-  const exportResults: ExportResult[] = [];
+  const exportBase = { cwd, lang: ctx.siteConfig.lang, concurrency: ctx.concurrency };
 
   const countExportDocs = (docs: BuildDocument[]): number => {
     let count = 0;
@@ -163,16 +160,12 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       if (!formatCfg?.markdown?.generate || noExport) return;
       const mdTotal = countExportDocs(pipelineDocs);
       progress.startPhase('markdown', mdTotal);
-      const mdResults = await runExportDocuments(pipelineDocs, {
+      await runExportDocuments(pipelineDocs, {
         ...exportBase,
         outputDir: join(formatsDir, 'markdown'),
         config: { markdown: formatCfg?.markdown },
         onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, phase: 'markdown' }),
       });
-      for (const r of mdResults) {
-        if (r.markdownPath) r.markdownPath = r.markdownPath.replace(join(formatsDir, 'markdown'), ctx.outputDir);
-      }
-      exportResults.push(...mdResults);
       progress.completePhase(undefined, 'markdown');
     })(),
 
@@ -225,16 +218,12 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       if (!formatCfg?.epub?.generate || noExport) return;
       const epubTotal = countExportDocs(pipelineDocs);
       progress.startPhase('epub', epubTotal);
-      const epubResults = await runExportDocuments(pipelineDocs, {
+      await runExportDocuments(pipelineDocs, {
         ...exportBase,
         outputDir: join(formatsDir, 'html'),
         config: { epub: formatCfg?.epub },
         onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, phase: 'epub' }),
       });
-      for (const r of epubResults) {
-        if (r.epubPath) r.epubPath = r.epubPath.replace(join(formatsDir, 'html'), ctx.outputDir);
-      }
-      exportResults.push(...epubResults);
       progress.completePhase(undefined, 'epub');
     })(),
 
@@ -253,17 +242,12 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       if (pdfOn && !noExport) {
         const pdfTotal = countExportDocs(pipelineDocs);
         progress.startPhase('pdf', pdfTotal);
-        const pdfResults = await runExportDocuments(pipelineDocs, {
+        await runExportDocuments(pipelineDocs, {
           ...exportBase,
           outputDir: join(formatsDir, 'pdf'),
           config: { pdf: formatCfg?.pdf },
           onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, phase: 'pdf' }),
         });
-        for (const r of pdfResults) {
-          if (r.pdfPath) r.pdfPath = r.pdfPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
-          if (r.coverPath) r.coverPath = r.coverPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
-        }
-        exportResults.push(...pdfResults);
         progress.completePhase(undefined, 'pdf');
       }
     })(),

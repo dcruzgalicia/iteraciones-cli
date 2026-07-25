@@ -1,6 +1,6 @@
 import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
-import type { DiscoveryEntry, SourceDocument } from './types.js';
+import type { BuildDocument, DiscoveryEntry } from './types.js';
 
 export interface DiscoverOptions {
   noCache?: boolean;
@@ -60,7 +60,7 @@ async function saveDiscoveryIndex(cwd: string, index: Map<string, DiscoveryEntry
 
 const FM_RE = /^---\r?\n([\s\S]*?)\r?\n---/;
 
-export function slugify(text: string): string {
+function slugify(text: string): string {
   return text
     .toLowerCase()
     .normalize('NFD')
@@ -230,10 +230,10 @@ async function saveBuildReport(cwd: string, report: BuildReport): Promise<void> 
 }
 
 /**
- * Construye SourceDocument[] con frontmatter desde discoveryIndex.
+ * Construye BuildDocument[] con frontmatter desde discoveryIndex.
  * Solo title y author — el resto usa valores por defecto.
  */
-export function buildDocsFromIndex(relativePaths: string[], discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): SourceDocument[] {
+export function buildDocsFromIndex(relativePaths: string[], discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): BuildDocument[] {
   return relativePaths.map((relativePath) => {
     const entry = discoveryIndex.get(relativePath);
     return {
