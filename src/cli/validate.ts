@@ -1,13 +1,10 @@
 import { readFile, stat } from 'node:fs/promises';
 import { join, relative } from 'node:path';
-import { resolveTemplatePath } from '../builder/classifier/resolve-template.js';
 import { EXPORTABLE_TYPES } from '../builder/export/types.js';
-import { resolveThemePaths } from '../builder/theme-resolver.js';
-import { VALID_REGIONS, VALID_TYPES } from '../builder/types.js';
+import { VALID_TYPES } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { IGNORED_DIRS } from '../constants.js';
 import { ConfigError } from '../errors.js';
-import type { CollectionItem } from '../loader/frontmatter.js';
 import { FRONTMATTER_RE, parseFrontmatter } from '../loader/frontmatter.js';
 import { checkLatexEngine } from './doctor/system-checks.js';
 
@@ -20,13 +17,9 @@ type ValidationResult = {
   warnings: ValidationError[];
 };
 
-async function validateFrontmatter(cwd: string, theme: string | undefined): Promise<ValidationResult> {
+async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
   const errors: ValidationError[] = [];
   const warnings: ValidationError[] = [];
-
-  // Resolver el tema una sola vez antes del loop para evitar emitir el warning
-  // "tema desconocido" una vez por cada archivo tipado del proyecto.
-  const themePaths = resolveThemePaths(theme);
 
   const entries: string[] = [];
   for await (const entry of new Bun.Glob('**/*.md').scan({ cwd })) {
@@ -85,78 +78,7 @@ async function validateFrontmatter(cwd: string, theme: string | undefined): Prom
       });
     }
 
-    // region: en bloques debe ser un Region válido
-    if (fm.block && fm.region && !VALID_REGIONS.has(fm.region as Parameters<typeof VALID_REGIONS.has>[0])) {
-      errors.push({
-        file: entry,
-        message: `region: "${fm.region}" no es una región válida. Valores permitidos: ${[...VALID_REGIONS].join(', ')}`,
-      });
-    }
-
-    // block: true sin region: el build omite el bloque con un aviso; reportar como advertencia.
-    if (fm.block && !fm.region) {
-      warnings.push({
-        file: entry,
-        message: 'block: true pero region: no está definido. El bloque no se insertará en ninguna región del layout',
-      });
-    }
-
-    // items: en colecciones deben apuntar a archivos existentes; el builder siempre
-    // resuelve items por relativePath con extensión .md, por lo que se normaliza aquí.
-    // Soporta el nuevo schema unificado (strings, {file}, {title,items}).
-    async function validateItem(item: CollectionItem): Promise<void> {
-      if (typeof item === 'string') {
-        const normalized = item.endsWith('.md') ? item : `${item}.md`;
-        const itemPath = join(cwd, normalized);
-        const exists = await stat(itemPath)
-          .then((s) => s.isFile())
-          .catch(() => false);
-        if (!exists)
-          errors.push({
-            file: entry,
-            message: `items: "${item}" no existe en el proyecto`,
-          });
-      } else if ('file' in item && typeof item.file === 'string') {
-        // { file, part? }
-        const file = item.file.endsWith('.md') ? item.file : `${item.file}.md`;
-        const itemPath = join(cwd, file);
-        const exists = await stat(itemPath)
-          .then((s) => s.isFile())
-          .catch(() => false);
-        if (!exists)
-          errors.push({
-            file: entry,
-            message: `items: "${item.file}" no existe en el proyecto`,
-          });
-      } else if ('title' in item && 'items' in item) {
-        // { title, items } — part container
-        for (const sub of item.items) {
-          await validateItem(sub);
-        }
-      }
-    }
-
     const effectiveType = fm.type && VALID_TYPES.has(fm.type as Parameters<typeof VALID_TYPES.has>[0]) ? fm.type : 'file';
-    if (effectiveType === 'collection' && fm.items.length > 0) {
-      for (const item of fm.items) {
-        await validateItem(item);
-      }
-    }
-
-    // Validar que el template resuelto automáticamente existe.
-    // El builder nunca lee frontmatter.template; usa siempre resolveTemplatePath(type, theme, cwd).
-    if (fm.type && VALID_TYPES.has(fm.type as Parameters<typeof VALID_TYPES.has>[0])) {
-      const resolvedTemplate = resolveTemplatePath(fm.type as Parameters<typeof VALID_TYPES.has>[0], theme, cwd, themePaths);
-      const templateExists = await stat(resolvedTemplate)
-        .then((s) => s.isFile())
-        .catch(() => false);
-      if (!templateExists) {
-        errors.push({
-          file: entry,
-          message: `no se encontró el template para type: "${fm.type}" (buscado en: ${resolvedTemplate}). Ejecuta "iteraciones doctor" para verificar los templates`,
-        });
-      }
-    }
 
     // Validar rutas de archivos editoriales (editorial.cover, .bibliography, .csl).
     // Si estos archivos no existen, el build falla con un error críptico de LaTeX/Pandoc.
@@ -195,12 +117,10 @@ async function validateFrontmatter(cwd: string, theme: string | undefined): Prom
  * No ejecuta la compilación completa.
  */
 export async function runValidate(cwd: string): Promise<void> {
-  let theme: string | undefined;
   let hasPdf = false;
   const configErrors: ValidationError[] = [];
   try {
     const config = await loadSiteConfig(cwd);
-    theme = config.format?.html?.theme;
     hasPdf = !!config.format?.pdf;
   } catch (err) {
     if (err instanceof ConfigError) {
@@ -226,7 +146,7 @@ export async function runValidate(cwd: string): Promise<void> {
       });
     }
   }
-  const { errors: fmErrors, warnings } = await validateFrontmatter(cwd, theme);
+  const { errors: fmErrors, warnings } = await validateFrontmatter(cwd);
   const errors = [...configErrors, ...fmErrors];
 
   if (warnings.length > 0) {

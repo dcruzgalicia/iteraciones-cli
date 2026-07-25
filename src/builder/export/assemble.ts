@@ -1,6 +1,5 @@
 import { dirname, join, resolve } from 'node:path';
 import type { PdfFormatConfig } from '../../config/site-config.js';
-import type { CollectionItem } from '../../loader/frontmatter.js';
 import type { BuildDocument, DocumentType } from '../types.js';
 import { renderMarkdownInlineLatex } from './latex.js';
 import {
@@ -214,7 +213,8 @@ export function assembleExportDocument(
 
   // Usar el markdown final (processedBody) como fuente para la exportación.
   const sourceBody = doc.processedBody ?? doc.body;
-  const body = documentclass === 'scrartcl' ? sourceBody : assembleBookBody(doc, items, parts, loosePaths);
+  const hasItems = items.length > 0 || (parts && parts.length > 0) || (loosePaths && loosePaths.length > 0);
+  const body = documentclass === 'scrartcl' || !hasItems ? sourceBody : assembleBookBody(doc, items, parts, loosePaths);
 
   // Sin encabezados en el cuerpo: desactivar el TOC para evitar un índice vacío.
   // Nota: ya no se reubica el texto previo al primer encabezado al final del
@@ -254,7 +254,7 @@ export function assembleExportDocument(
  * Construye un mapa filePath → showAuthor a partir de los rawItems del frontmatter
  * de una colección, para usar en exportación. Por defecto es `true`.
  */
-function buildShowAuthorExportMap(rawItems: CollectionItem[]): Map<string, boolean> {
+function buildShowAuthorExportMap(rawItems: LegacyCollectionItem[]): Map<string, boolean> {
   const map = new Map<string, boolean>();
   for (const item of rawItems) {
     if (typeof item === 'object' && 'file' in item && typeof item.file === 'string') {
@@ -272,7 +272,7 @@ function buildShowAuthorExportMap(rawItems: CollectionItem[]): Map<string, boole
 
 function assembleBookBody(doc: BuildDocument, items: BuildDocument[], parts?: ExportCollectionPart[], loosePaths?: string[]): string {
   const result: string[] = [];
-  const showAuthorMap = buildShowAuthorExportMap(doc.frontmatter.items);
+  const showAuthorMap = buildShowAuthorExportMap((doc.frontmatter.items ?? []) as unknown as LegacyCollectionItem[]);
 
   // Intro opcional de la colección/eventos (body propio del doc index)
   const sourceBody = doc.processedBody ?? doc.body;
@@ -413,7 +413,9 @@ function pathToSlug(relativePath: string): string {
     .replace(/[^a-z0-9-]/gi, '');
 }
 
-function collectItemPaths(items: CollectionItem[]): string[] {
+type LegacyCollectionItem = string | { file: string; part?: boolean; author?: boolean } | { title: string; items: LegacyCollectionItem[] };
+
+function collectItemPaths(items: LegacyCollectionItem[]): string[] {
   const paths: string[] = [];
   for (const item of items) {
     if (typeof item === 'string') {
@@ -430,7 +432,8 @@ function collectItemPaths(items: CollectionItem[]): string[] {
 export function resolveLooseItemPaths(doc: BuildDocument): string[] {
   if (doc.type !== 'collection') return [];
   const paths: string[] = [];
-  for (const item of doc.frontmatter.items) {
+  const fm = doc.frontmatter as unknown as { items: Array<string | { file: string; part?: boolean }> };
+  for (const item of fm.items) {
     if (typeof item === 'string') {
       paths.push(item);
     } else if ('file' in item && typeof item.file === 'string' && !('title' in item) && !item.part) {
@@ -450,7 +453,8 @@ export function resolveLooseItemPaths(doc: BuildDocument): string[] {
 export function resolveItemsForExport(doc: BuildDocument, pool: BuildDocument[]): BuildDocument[] {
   if (doc.type !== 'collection') return [];
   const byPath = new Map<string, BuildDocument>(pool.map((d) => [d.relativePath, d]));
-  const itemPaths = collectItemPaths(doc.frontmatter.items);
+  const fm = doc.frontmatter as unknown as { items: Array<string | { file: string; part?: boolean } | { title: string; items: string[] }> };
+  const itemPaths = collectItemPaths(fm.items);
   return itemPaths.map((itemPath) => byPath.get(itemPath)).filter((d): d is BuildDocument => d !== undefined);
 }
 
@@ -458,8 +462,9 @@ export function resolvePartsForExport(doc: BuildDocument, pool: BuildDocument[])
   if (doc.type !== 'collection') return [];
   const byPath = new Map<string, BuildDocument>(pool.map((d) => [d.relativePath, d]));
   const parts: ExportCollectionPart[] = [];
+  const fm = doc.frontmatter as unknown as { items: Array<string | { file: string; part?: boolean } | { title: string; items: string[] }> };
 
-  for (const item of doc.frontmatter.items) {
+  for (const item of fm.items) {
     if (typeof item === 'object' && 'title' in item && 'items' in item) {
       // Part container
       const resolvedItems = collectItemPaths(item.items)
@@ -516,7 +521,8 @@ function normalizeForComparison(value: string): string {
  */
 function buildAuthorExportBody(doc: BuildDocument, sortedWorks: BuildDocument[], variant: 'summary' | 'full'): string {
   const parts: string[] = [];
-  const fm = doc.frontmatter;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fm = doc.frontmatter as Record<string, any>;
 
   // Contacto / datos de contexto
   const contactLines: string[] = [];
@@ -537,13 +543,13 @@ function buildAuthorExportBody(doc: BuildDocument, sortedWorks: BuildDocument[],
     parts.push(`## Skills\n\n${fm.skills.join(', ')}\n\n`);
   }
   if (fm.training && fm.training.length > 0) {
-    parts.push(`## Formación\n\n${fm.training.map((t) => `- ${t}`).join('\n')}\n\n`);
+    parts.push(`## Formación\n\n${fm.training.map((t: string) => `- ${t}`).join('\n')}\n\n`);
   }
   if (fm.interests && fm.interests.length > 0) {
     parts.push(`## Intereses\n\n${fm.interests.join(', ')}\n\n`);
   }
   if (fm.languages && fm.languages.length > 0) {
-    parts.push(`## Idiomas\n\n${fm.languages.map((l) => `- ${l}`).join('\n')}\n\n`);
+    parts.push(`## Idiomas\n\n${fm.languages.map((l: string) => `- ${l}`).join('\n')}\n\n`);
   }
 
   // Bio (perfil)
