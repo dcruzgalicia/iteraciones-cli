@@ -9,7 +9,7 @@ import { mapWithConcurrency } from '../../lib/concurrency.js';
 import { PandocError } from '../../lib/errors.js';
 import { discoverBibFiles } from '../latex-preamble.js';
 import { computeSlug } from '../slug.js';
-import type { BuildDocument } from '../types.js';
+import { type BuildDocument, isExportSkipped } from '../types.js';
 import { assembleExportDocument } from './assemble.js';
 
 import type { ExportDocument, ExportMetadata, ExportResult } from './types.js';
@@ -80,14 +80,14 @@ async function generateCoverImage(pdfPath: string, outputBase: string, request: 
   }
 }
 
-export interface ExportFormatOptions {
+interface ExportFormatOptions {
   pdf?: PdfFormatConfig;
   epub?: EpubFormatConfig;
   markdown?: MarkdownFormatConfig;
   html?: HtmlFormatConfig;
 }
 
-export interface ExportRunOptions {
+interface ExportRunOptions {
   config: ExportFormatOptions;
   outputDir: string;
   cwd: string;
@@ -211,14 +211,7 @@ export async function runExportDocuments(exportableDocs: BuildDocument[], option
 
   const pdfConcurrency = hasPdf ? maxSlots : concurrency;
   const results = await mapWithConcurrency(exportableDocs, pdfConcurrency, async (doc): Promise<ExportResult | null> => {
-    const rawExportField = doc.frontmatter.export;
-    if (
-      typeof rawExportField === 'object' &&
-      rawExportField !== null &&
-      !Array.isArray(rawExportField) &&
-      Object.getPrototypeOf(rawExportField) === Object.prototype &&
-      (rawExportField as Record<string, unknown>).skip === true
-    ) {
+    if (isExportSkipped(doc.frontmatter)) {
       return null;
     }
 
@@ -336,7 +329,7 @@ function yamlString(value: string): string {
 /**
  * Convierte contenido HTML a EPUB3 usando pandoc.
  */
-export async function convertToEpub(htmlBody: string, outputPath: string, doc?: ExportDocument): Promise<void> {
+async function convertToEpub(htmlBody: string, outputPath: string, doc?: ExportDocument): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
   const args = ['pandoc', '--from', 'html', '--to', 'epub3', '--output', outputPath];
@@ -363,7 +356,7 @@ export async function convertToEpub(htmlBody: string, outputPath: string, doc?: 
   proc.stdin.write(htmlBody);
   proc.stdin.end();
 
-  const [stderr, exitCode] = await Promise.all([new Response(proc.stderr as ReadableStream<Uint8Array>).text(), proc.exited]);
+  const [stderr, exitCode] = await Promise.all([new Response(proc.stderr).text(), proc.exited]);
 
   if (exitCode !== 0) {
     throw new PandocError(`pandoc falló al generar EPUB`, doc?.filePath ?? '', stderr);
@@ -373,7 +366,7 @@ export async function convertToEpub(htmlBody: string, outputPath: string, doc?: 
 /**
  * Exporta un documento a Markdown via pandoc (latex → markdown).
  */
-export async function convertToMarkdown(doc: ExportDocument, outputPath: string): Promise<void> {
+async function convertToMarkdown(doc: ExportDocument, outputPath: string): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
   const args = ['pandoc', '--from', 'latex', '--to', 'markdown'];
   let proc: ReturnType<typeof Bun.spawn>;
@@ -404,7 +397,7 @@ export async function convertToMarkdown(doc: ExportDocument, outputPath: string)
 /**
  * Convierte un ExportDocument a PDF compilando el .tex con latexmk.
  */
-export async function convertToPdf(
+async function convertToPdf(
   doc: ExportDocument,
   outputPath: string,
   cwd?: string,
