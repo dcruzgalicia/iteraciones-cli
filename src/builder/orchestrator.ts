@@ -2,7 +2,7 @@ import { mkdir, rm } from 'node:fs/promises';
 import { cpus } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { loadSiteConfig } from '../config/config-loader.js';
-import { type PipelinePhase, ProgressTracker } from '../output/progress.js';
+import { ProgressTracker } from '../output/progress.js';
 
 import type { TemplateContext } from '../template/render/context.js';
 import { buildAssets } from './assets.js';
@@ -119,10 +119,11 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions): Promis
   };
 
   if (options.noCache) {
+    if (!options.verbose) process.stdout.write('Limpiando archivos temporales\n');
     await rm(ctx.outputDir, { recursive: true, force: true });
-    process.stdout.write('  limpiado dist/\n');
+    process.stdout.write('  \u2713 dist/\n');
     await rm(join(cwd, '.iteraciones'), { recursive: true, force: true });
-    process.stdout.write('  limpiado .iteraciones/\n');
+    process.stdout.write('  \u2713 .iteraciones/\n');
   }
 
   return ctx;
@@ -436,13 +437,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     const htmlOn = formatCfg?.html?.generate === true;
     const epubOn = formatCfg?.epub?.generate === true;
     const mdOn = formatCfg?.markdown?.generate === true;
-    const activeFormats: PipelinePhase[] = [];
-    if (latexOn && !options.noExport) activeFormats.push('latex');
-    if (pdfOn && !options.noExport) activeFormats.push('pdf');
-    if (htmlOn) activeFormats.push('html');
-    if (epubOn && !options.noExport) activeFormats.push('epub');
-    if (mdOn && !options.noExport) activeFormats.push('markdown');
-    progress.setFormatPhases(activeFormats);
 
     // ── FASE 3: generate formats from .tex body on disk ──
     // Uses discoveryIndex + diff data, NOT allDocs/pipelineDocs.
