@@ -3,14 +3,12 @@ import { ConfigError } from '../lib/errors.js';
 import {
   DEFAULT_EPUB_FORMAT,
   DEFAULT_HTML_FORMAT,
-  DEFAULT_LATEX_FORMAT,
   DEFAULT_MARKDOWN_FORMAT,
   DEFAULT_PDF_FORMAT,
   DEFAULT_SITE_CONFIG,
   type EpubFormatConfig,
   type FormatConfig,
   type HtmlFormatConfig,
-  type LatexFormatConfig,
   type MarkdownFormatConfig,
   type PageNumberPlacement,
   type PdfFormatConfig,
@@ -99,7 +97,7 @@ function parseFormatConfig(raw: Record<string, unknown>): FormatConfig {
     pdf: parsePdfFormatConfig(raw.pdf),
     epub: parseEpubFormatConfig(raw.epub),
     markdown: parseMarkdownFormatConfig(raw.markdown),
-    latex: parseLatexFormatConfig(raw.latex),
+    latex: typeof raw.latex === 'boolean' ? raw.latex : true,
   };
 }
 
@@ -110,11 +108,8 @@ function parseHtmlFormatConfig(raw: unknown): HtmlFormatConfig | undefined {
   const theme = typeof obj.theme === 'string' ? obj.theme : undefined;
   const accent = resolveAccent(obj.accent);
   const generate = typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_HTML_FORMAT.generate;
-  const rawThumbnails = obj.thumbnails;
-  const thumbnails =
-    rawThumbnails === 'responsive' ? 'responsive' : typeof rawThumbnails === 'boolean' ? rawThumbnails : DEFAULT_HTML_FORMAT.thumbnails;
 
-  return { theme, accent, generate, thumbnails };
+  return { theme, accent, generate };
 }
 
 const KNOWN_PAGE_NUMBER_PLACEMENTS = new Set<string>([
@@ -385,14 +380,6 @@ function parseMarkdownFormatConfig(raw: unknown): MarkdownFormatConfig {
   const obj = raw as Record<string, unknown>;
   return {
     generate: typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_MARKDOWN_FORMAT.generate,
-  };
-}
-
-function parseLatexFormatConfig(raw: unknown): LatexFormatConfig {
-  if (!raw || typeof raw !== 'object') return { ...DEFAULT_LATEX_FORMAT };
-  const obj = raw as Record<string, unknown>;
-  return {
-    generate: typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_LATEX_FORMAT.generate,
   };
 }
 
