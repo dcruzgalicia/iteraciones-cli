@@ -1,8 +1,8 @@
 import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
+import { type DiscoveryEntry, loadDiscoveryIndex, saveDiscoveryIndex } from '../builder/persist/discovery-index.js';
+import { loadSlugsCounter, saveSlugsCounter } from '../builder/persist/slugs-cache.js';
 import { IGNORED_DIRS } from '../lib/constants.js';
-import { type DiscoveryEntry, loadDiscoveryIndex, saveDiscoveryIndex } from '../lib/discovery-index.js';
-import { loadSlugsCounter, saveSlugsCounter } from '../lib/slugs-cache.js';
 import { computeSlug } from './slug.js';
 import type { SourceDocument } from './types.js';
 
