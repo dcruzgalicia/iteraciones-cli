@@ -246,8 +246,6 @@ export function buildDocsFromIndex(relativePaths: string[], discoveryIndex: Map<
         keywords: [],
       },
       body: '',
-      sourceHash: '',
-      mtimeMs: 0,
     };
   });
 }

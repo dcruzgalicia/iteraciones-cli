@@ -17,23 +17,6 @@ export interface Frontmatter {
 }
 
 /**
- * Normaliza un valor desconocido a un array de strings no vacíos con trim.
- */
-export function normalizeStringList(value: unknown): string[] {
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    return trimmed ? [trimmed] : [];
-  }
-  if (Array.isArray(value)) {
-    return value
-      .filter((item): item is string => typeof item === 'string')
-      .map((item) => item.trim())
-      .filter(Boolean);
-  }
-  return [];
-}
-
-/**
  * Documento fuente tal como sale del paso de discovery.
  */
 export interface SourceDocument {
@@ -41,8 +24,6 @@ export interface SourceDocument {
   relativePath: string;
   frontmatter: Frontmatter;
   body: string;
-  sourceHash: string;
-  mtimeMs: number;
 }
 
 /**
