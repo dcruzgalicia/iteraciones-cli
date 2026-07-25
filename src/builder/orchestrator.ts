@@ -13,14 +13,12 @@ import type { BuildContext, BuildDocument } from './types.js';
 
 export interface BuildOptions {
   outputDir?: string;
-  cssPath?: string;
   concurrency?: number;
   noCache?: boolean;
   noTailwind?: boolean;
   noExport?: boolean;
   dryRun?: boolean;
   verbose?: boolean;
-  changedPaths?: Set<string>;
 }
 
 async function setupBuildEnvironment(cwd: string, options: BuildOptions): Promise<BuildContext> {
@@ -31,7 +29,7 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions): Promis
     siteConfig,
     cwd,
     outputDir: options.outputDir ?? defaultOutputDir,
-    cssPath: options.cssPath ?? '',
+    cssPath: '',
     concurrency: options.concurrency ?? Math.max(1, cpus().length - 1),
   };
 
@@ -43,7 +41,7 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions): Promis
   return ctx;
 }
 
-async function runDiscovery(cwd: string, _ctx: BuildContext, noCache?: boolean): Promise<DiscoverResult> {
+async function runDiscovery(cwd: string, noCache?: boolean): Promise<DiscoverResult> {
   return discover(cwd, { noCache });
 }
 
@@ -68,7 +66,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
     progress.startPhase('discovery');
     const [{ relativePaths, changedPaths: discoveredChanges, discoveryIndex, deletedEntries }, cssPath] = await Promise.all([
-      runDiscovery(cwd, ctx, options.noCache),
+      runDiscovery(cwd, options.noCache),
       generateHtml ? buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, { noTailwind: options.noTailwind }) : Promise.resolve(''),
     ]);
     ctx.cssPath = cssPath;
@@ -89,7 +87,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     }
 
     const GLOBAL_CHANGE_PATTERNS = [/\.ya?ml$/, /\.html$/];
-    const changedPaths = options.changedPaths ?? discoveredChanges;
+    const changedPaths = discoveredChanges;
     const noChanges = changedPaths.size === 0;
 
     if (noChanges) {
