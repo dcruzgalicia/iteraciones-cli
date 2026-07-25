@@ -31,6 +31,7 @@ const PHASE_ORDER: PipelinePhase[] = ['discovery', 'render', 'latex', 'pdf', 'ht
 
 export class ProgressTracker {
   private verbose: boolean;
+  private tty: boolean;
   private t0: number;
   private phaseDurations: Partial<Record<PipelinePhase, number>> = {};
   private phaseCounts: Partial<Record<PipelinePhase, number>> = {};
@@ -45,6 +46,7 @@ export class ProgressTracker {
 
   constructor(options: { verbose?: boolean }) {
     this.verbose = options.verbose ?? false;
+    this.tty = process.stdout.isTTY === true;
     this.t0 = performance.now();
   }
 
@@ -71,7 +73,11 @@ export class ProgressTracker {
     }
 
     if (!this.verbose && meta.section === 'Generando publicaciones') {
-      this.writeLine(`  ${this.spinnerChars[0]} ${meta.label}`);
+      if (this.tty) {
+        this.writeLine(`  ${this.spinnerChars[0]} ${meta.label}`);
+      } else {
+        process.stdout.write(`  Generando ${meta.label}...`);
+      }
     }
   }
 
@@ -101,8 +107,8 @@ export class ProgressTracker {
       }
     }
 
-    // Normal mode: animated progress indicator
-    if (!this.verbose && this.currentPhase) {
+    // Normal mode: progress indicator (spinner en TTY, estatico en otro caso)
+    if (!this.verbose && this.currentPhase && this.tty) {
       const total = this.phaseCounts[this.currentPhase] ?? 0;
       const done = (this.phaseDone[this.currentPhase] ?? 0) + 1;
       this.phaseDone[this.currentPhase] = done;
