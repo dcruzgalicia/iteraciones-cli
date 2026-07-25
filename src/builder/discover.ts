@@ -70,7 +70,7 @@ function slugify(text: string): string {
     .replace(/-+/g, '-');
 }
 
-export function computeSlug(frontmatter: { title?: string; author?: string[]; relativePath?: string }): string | undefined {
+export function computeSlug(frontmatter: { title?: string; author?: string[] }): string | undefined {
   const title = frontmatter.title;
   if (title) {
     const titleSlug = slugify(title);
