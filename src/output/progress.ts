@@ -69,7 +69,13 @@ export class ProgressTracker {
 
   advance(_by: number = 1): void {}
 
-  reportFile(file: RenderFileReport): void {}
+  reportFile(file: RenderFileReport): void {
+    // Colectar archivos solo para discovery (se muestran al completar fase)
+    if (file.phase === 'discovery') {
+      const files = this.phaseFiles[file.phase];
+      if (files) files.push(file.relativePath);
+    }
+  }
 
   completePhase(actualCount?: number): void {
     const phase = this.currentPhase;
@@ -81,9 +87,8 @@ export class ProgressTracker {
 
     if (this.verbose) {
       if (meta.section === 'Descubriendo documentos' && count > 0) {
-        process.stdout.write(`  ${count} documento${count !== 1 ? 's' : ''} encontrado${count !== 1 ? 's' : ''}.\n\n`);
+        process.stdout.write(`  ${count} documento${count !== 1 ? 's' : ''} encontrado${count !== 1 ? 's' : ''}.\n`);
         this.flushPhaseFiles(phase);
-        process.stdout.write('\n');
       } else if (meta.section === 'Generando publicaciones') {
         const durStr = formatTime(elapsed);
         process.stdout.write(`  ${meta.label}  ${durStr}\n\n`);
