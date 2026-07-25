@@ -4,10 +4,7 @@ import { basename, dirname, join } from 'node:path';
 import type { ExportDocument } from '../builder/export/types.js';
 import type { PdfFormatConfig } from '../config/site-config.js';
 import { DEFAULT_PDF_FORMAT } from '../config/site-config.js';
-import { ConfigError, PandocError } from '../errors.js';
-
-/** Ruta base al directorio de templates LaTeX de exportación, relativa a este archivo. */
-const TEMPLATES_DIR = join(import.meta.dir, '../../pandoc/export');
+import { PandocError } from '../errors.js';
 
 /** Ruta absoluta al directorio de fuentes TTF del proyecto. */
 const FONTS_DIR = join(import.meta.dir, '../../fonts');
@@ -46,52 +43,6 @@ const EPUB_EMBED_FONTS: readonly string[] = [
   join(FONTS_DIR, 'SpaceMono-Italic.ttf'),
   join(FONTS_DIR, 'SpaceMono-BoldItalic.ttf'),
 ];
-
-/**
- * Resuelve la ruta al template LaTeX usando el tipo del documento.
- *
- * Cadena de resolución (primera ruta existente):
- *   1. {cwd}/pandoc/export/{type}.latex  — override local
- *   2. built-in pandoc/export/{type}.latex
- *   3. built-in pandoc/export/file.latex  — fallback universal
- *
- * Si ninguna ruta existe, lanza ConfigError.
- */
-function resolveLatexTemplatePath(type: string, cwd?: string): string {
-  if (cwd) {
-    const p = join(cwd, 'pandoc', 'export', `${type}.latex`);
-    if (existsSync(p)) return p;
-  }
-  const builtin = join(TEMPLATES_DIR, `${type}.latex`);
-  if (existsSync(builtin)) return builtin;
-
-  // Fallback universal: usa file.latex si no hay template específico para el tipo.
-  const fallback = join(TEMPLATES_DIR, 'file.latex');
-  if (existsSync(fallback)) return fallback;
-
-  throw new ConfigError(`Template LaTeX '${type}.latex' ni su fallback 'file.latex' encontrados en ${TEMPLATES_DIR}`, builtin);
-}
-
-/**
- * Resuelve la hoja de estilos CSS para EPUB usando el tipo del documento como eje primario.
- *
- * Cadena de resolución (primera ruta existente):
- *   1. {cwd}/pandoc/export/{type}.epub.css  — override local por tipo
- *   2. built-in pandoc/export/{type}.epub.css
- *
- * Si ninguna ruta existe, lanza ConfigError.
- */
-function resolveEpubCssPath(type: string, cwd?: string): string {
-  const filename = `${type}.epub.css`;
-  if (cwd) {
-    const p = join(cwd, 'pandoc', 'export', filename);
-    if (existsSync(p)) return p;
-  }
-  const builtin = join(TEMPLATES_DIR, filename);
-  if (existsSync(builtin)) return builtin;
-
-  throw new ConfigError(`Stylesheet EPUB '${filename}' no encontrado en ${TEMPLATES_DIR}`, builtin);
-}
 
 /**
  * Construye el bloque YAML de metadatos que Pandoc inyectará en el documento.
