@@ -35,7 +35,8 @@ export class ProgressTracker {
   private phaseDurations: Partial<Record<PipelinePhase, number>> = {};
   private phaseCounts: Partial<Record<PipelinePhase, number>> = {};
   private currentPhase: PipelinePhase | null = null;
-  private phaseStart: number = 0;
+  private phaseStart: Partial<Record<PipelinePhase, number>> = {};
+  private phaseDone: Set<PipelinePhase> = new Set();
   private sectionsShown: Set<string> = new Set();
   private phaseFiles: Partial<Record<PipelinePhase, string[]>> = {};
 
@@ -53,7 +54,7 @@ export class ProgressTracker {
   startPhase(phase: PipelinePhase, total: number = 0): void {
     this.currentPhase = phase;
     this.phaseCounts[phase] = total;
-    this.phaseStart = performance.now();
+    this.phaseStart[phase] = performance.now();
     this.phaseFiles[phase] = [];
 
     const meta = PHASE_META[phase];
@@ -77,10 +78,13 @@ export class ProgressTracker {
     }
   }
 
-  completePhase(actualCount?: number): void {
-    const phase = this.currentPhase;
-    if (!phase) return;
-    const elapsed = performance.now() - this.phaseStart;
+  completePhase(actualCount?: number, phaseOverride?: PipelinePhase): void {
+    const phase = phaseOverride ?? this.currentPhase;
+    if (!phase || this.phaseDone.has(phase)) return;
+    this.phaseDone.add(phase);
+
+    const st = this.phaseStart[phase];
+    const elapsed = st !== undefined ? performance.now() - st : 0;
     this.phaseDurations[phase] = elapsed;
     const meta = PHASE_META[phase];
     const count = actualCount ?? this.phaseCounts[phase] ?? 0;
@@ -99,8 +103,6 @@ export class ProgressTracker {
         `  \u2713 ${meta.label}${countPart}${' '.repeat(Math.max(1, 30 - meta.label.length - countPart.length))}${formatTime(elapsed)}\n`,
       );
     }
-
-    this.currentPhase = null;
   }
 
   finish(processed: number, cached: number, formats?: string[]): void {

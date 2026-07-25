@@ -471,10 +471,11 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       progress.completePhase();
     }
 
-    // ── FASE 4: render/context + PDF (paralelo) ──
-    // PDF solo necesita formats/pdf/{slug}.tex (FASE 3).
-    // HTML/EPUB/MD necesitan render/context (htmlFragment, templateContext).
-    // Ambos pueden ejecutarse en paralelo.
+    // ── FASE 4: PDF + Markdown + render/context (paralelo) ──
+    // PDF necesita formats/pdf/{slug}.tex (FASE 3).
+    // Markdown usa tex/{slug}.tex directamente.
+    // Render/context prepara htmlFragment para HTML/EPUB.
+    // Los tres son independientes y se ejecutan en paralelo.
     const needsHtmlRender = formatCfg?.html?.generate === true;
     const needsRender = needsHtmlRender || formatCfg?.epub?.generate === true;
     const noExport = options.noExport === true;
@@ -528,10 +529,37 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
           if (r.coverPath) r.coverPath = r.coverPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
         }
         exportResults.push(...pdfResults);
-        progress.completePhase();
+        progress.completePhase(undefined, 'pdf');
       })(),
 
-      // Render/context (para HTML, EPUB, MD)
+      // Markdown (usa baseRenderedMap, no necesita render/context)
+      (async () => {
+        if (!formatCfg?.markdown?.generate || noExport) return;
+        let mdTotal = 0;
+        for (const type of EXPORTABLE_TYPES) {
+          const docs = (baseRenderedMap.get(type) ?? []).filter((d) => d.kind !== 'block');
+          for (const d of docs) {
+            const raw = d.frontmatter['export'];
+            const skipped = typeof raw === 'object' && raw !== null && !Array.isArray(raw) && (raw as Record<string, unknown>)['skip'] === true;
+            if (skipped) continue;
+            mdTotal++;
+          }
+        }
+        progress.startPhase('markdown', mdTotal);
+        const mdResults = await runExportDocuments(baseRenderedMap, {
+          ...exportBase,
+          outputDir: join(formatsDir, 'markdown'),
+          config: { markdown: formatCfg?.markdown },
+          onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, durationMs: 0, cacheHit: false, phase: 'markdown' }),
+        });
+        for (const r of mdResults) {
+          if (r.markdownPath) r.markdownPath = r.markdownPath.replace(join(formatsDir, 'markdown'), ctx.outputDir);
+        }
+        exportResults.push(...mdResults);
+        progress.completePhase(undefined, 'markdown');
+      })(),
+
+      // Render/context (para HTML, EPUB)
       (async () => {
         if (!needsRender) return;
         const result = await runPrimaryRender(pipelineDocs, ctx, cwd);
@@ -608,32 +636,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         if (r.epubFullPath) r.epubFullPath = r.epubFullPath.replace(join(formatsDir, 'html'), ctx.outputDir);
       }
       exportResults.push(...epubResults);
-      progress.completePhase();
-    }
-
-    // ── FASE 7: markdown ──
-    if (formatCfg?.markdown?.generate && !noExport) {
-      let mdTotal = 0;
-      for (const type of EXPORTABLE_TYPES) {
-        const docs = (renderedMap.get(type) ?? []).filter((d) => d.kind !== 'block');
-        for (const d of docs) {
-          const raw = d.frontmatter['export'];
-          const skipped = typeof raw === 'object' && raw !== null && !Array.isArray(raw) && (raw as Record<string, unknown>)['skip'] === true;
-          if (skipped) continue;
-          mdTotal++;
-        }
-      }
-      progress.startPhase('markdown', mdTotal);
-      const mdResults = await runExportDocuments(exportRenderedMap, {
-        ...exportBase,
-        outputDir: join(formatsDir, 'markdown'),
-        config: { markdown: formatCfg?.markdown },
-        onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, durationMs: 0, cacheHit: false, phase: 'markdown' }),
-      });
-      for (const r of mdResults) {
-        if (r.markdownPath) r.markdownPath = r.markdownPath.replace(join(formatsDir, 'markdown'), ctx.outputDir);
-      }
-      exportResults.push(...mdResults);
       progress.completePhase();
     }
 
