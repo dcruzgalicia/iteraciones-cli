@@ -1,5 +1,13 @@
 import type { SiteConfig } from '../config/site-config.js';
 
+export interface DiscoveryEntry {
+  title: string;
+  author: string[];
+  slug?: string;
+}
+
+export type DiscoveryIndex = Map<string, DiscoveryEntry>;
+
 export interface Frontmatter {
   title: string;
   date: string;

@@ -1,5 +1,5 @@
-import { rm, stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir, rm, stat, writeFile } from 'node:fs/promises';
+import { dirname, isAbsolute, join, normalize } from 'node:path';
 import type { BuildOptions } from '../builder/orchestrator.js';
 import { build } from '../builder/orchestrator.js';
 import { loadSiteConfig } from '../config/config-loader.js';
@@ -7,7 +7,6 @@ import { ConfigError, PandocError } from '../lib/errors.js';
 import { checkPandoc } from '../lib/pandoc-runner.js';
 import { runDoctor as doctor } from './doctor.js';
 import { runInit as init } from './init.js';
-import { runNew as newDoc } from './new.js';
 import { runTranspilers as transpilers } from './transpilers.js';
 import { runValidate as validate } from './validate.js';
 
@@ -120,13 +119,28 @@ export async function runDoctor(cwd: string, options: { fix?: boolean } = {}): P
 
 export async function runNew(cwd: string, path: string): Promise<void> {
   try {
-    await newDoc(cwd, path);
-  } catch (err) {
-    if (err instanceof Error) {
-      process.stderr.write(`Error al crear documento: ${err.message}\n`);
-    } else {
-      process.stderr.write('Error desconocido al crear documento.\n');
+    const normalizedPath = path.endsWith('.md') ? path : `${path}.md`;
+
+    if (isAbsolute(normalizedPath) || normalize(normalizedPath).startsWith('..')) {
+      process.stderr.write(`Error: la ruta debe ser relativa al directorio del proyecto (recibido: "${path}")\n`);
+      process.exitCode = 1;
+      return;
     }
+
+    const absPath = join(cwd, normalizedPath);
+    await mkdir(dirname(absPath), { recursive: true });
+
+    const today = new Date().toISOString().slice(0, 10);
+    const content = `---\ntitle: ''\ndate: ${today}\n---\n\n`;
+
+    await writeFile(absPath, content, { encoding: 'utf8', flag: 'wx' });
+    process.stdout.write(`new: creado ${normalizedPath}\n`);
+  } catch (err) {
+    if (err instanceof Error && 'code' in err && err.code === 'EEXIST') {
+      process.stdout.write(`new: omitido ${path} (ya existe)\n`);
+      return;
+    }
+    process.stderr.write(`Error al crear "${path}": ${err instanceof Error ? err.message : String(err)}\n`);
     process.exitCode = 1;
   }
 }

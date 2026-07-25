@@ -10,7 +10,6 @@ import {
   type EpubFormatConfig,
   type FormatConfig,
   type HtmlFormatConfig,
-  KNOWN_ACCENT_COLORS,
   type LatexFormatConfig,
   type MarkdownFormatConfig,
   type PageNumberPlacement,
@@ -396,6 +395,31 @@ function parseLatexFormatConfig(raw: unknown): LatexFormatConfig {
     generate: typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_LATEX_FORMAT.generate,
   };
 }
+
+const KNOWN_ACCENT_COLORS = new Set([
+  'slate',
+  'gray',
+  'zinc',
+  'neutral',
+  'stone',
+  'red',
+  'orange',
+  'amber',
+  'yellow',
+  'lime',
+  'green',
+  'emerald',
+  'teal',
+  'cyan',
+  'sky',
+  'blue',
+  'indigo',
+  'violet',
+  'purple',
+  'fuchsia',
+  'pink',
+  'rose',
+]);
 
 function resolveAccent(value: unknown): string {
   if (typeof value !== 'string') return DEFAULT_HTML_FORMAT.accent!;
