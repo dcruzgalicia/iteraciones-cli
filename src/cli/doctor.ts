@@ -35,7 +35,7 @@ export async function runDoctor(cwd: string, options: { fix?: boolean } = {}): P
     checkTailwind(cwd),
     checkReadPermissions(cwd),
     checkWritePermissions(cwd),
-    checkLatexEngine('pdflatex'),
+    checkLatexEngine(),
     checkPdftoppm(),
   ]);
 
