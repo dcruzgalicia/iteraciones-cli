@@ -119,11 +119,8 @@ async function setupBuildEnvironment(cwd: string, options: BuildOptions): Promis
   };
 
   if (options.noCache) {
-    if (!options.verbose) process.stdout.write('Limpiando archivos temporales\n');
     await rm(ctx.outputDir, { recursive: true, force: true });
-    process.stdout.write('  \u2713 dist/\n');
     await rm(join(cwd, '.iteraciones'), { recursive: true, force: true });
-    process.stdout.write('  \u2713 .iteraciones/\n');
   }
 
   return ctx;
@@ -295,8 +292,7 @@ async function runFinalization(allContextDocs: BuildDocument[], ctx: BuildContex
       templateContext: makeRelativeContext(doc.templateContext, computeRootPrefix(doc.relativePath)) as TemplateContext,
     }));
     const composedDocs = await composeDocuments(relativizedDocs, ctx);
-    const docs = await writeDocuments(composedDocs, ctx);
-    log(`Escritos ${docs.length} archivos en ${ctx.outputDir}`);
+    await writeDocuments(composedDocs, ctx);
   } else {
     log('HTML desactivado: omitiendo generación de HTML');
   }
@@ -332,6 +328,10 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const progress = new ProgressTracker({ verbose: options.verbose ?? false });
   const log = (msg: string) => progress.log(msg);
 
+  if (options.noCache) {
+    progress.showCleanup();
+  }
+
   const ctx = await setupBuildEnvironment(cwd, options);
   try {
     // Assets web (css, fonts, logo) solo si se genera HTML
@@ -353,6 +353,11 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     const draftCount = classified.length - allDocs.length;
     if (draftCount > 0) {
       process.stderr.write(`[iteraciones] ${draftCount} borrador${draftCount > 1 ? 'es' : ''} excluido${draftCount > 1 ? 's' : ''} (draft:true)\n`);
+    }
+    if (options.verbose) {
+      for (const doc of allDocs) {
+        progress.reportFile({ relativePath: doc.relativePath, durationMs: 0, cacheHit: false, phase: 'discovery' });
+      }
     }
     progress.completePhase(allDocs.length);
 
@@ -563,7 +568,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         if (r.coverPath) r.coverPath = r.coverPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
       }
       exportResults.push(...pdfResults);
-      if (pdfTotal > 0) progress.log(`PDF: ${pdfTotal} generados`);
       progress.completePhase();
     }
 
@@ -600,7 +604,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         if (r.epubFullPath) r.epubFullPath = r.epubFullPath.replace(join(formatsDir, 'html'), ctx.outputDir);
       }
       exportResults.push(...epubResults);
-      if (epubTotal > 0) progress.log(`EPUB: ${epubTotal} generados`);
       progress.completePhase();
     }
 
@@ -626,7 +629,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         if (r.markdownPath) r.markdownPath = r.markdownPath.replace(join(formatsDir, 'markdown'), ctx.outputDir);
       }
       exportResults.push(...mdResults);
-      if (mdTotal > 0) progress.log(`Markdown: ${mdTotal} generados`);
       progress.completePhase();
     }
 
