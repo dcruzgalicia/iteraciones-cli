@@ -2,12 +2,12 @@ import { mkdir, rm } from 'node:fs/promises';
 import { cpus } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { loadSiteConfig } from '../config/config-loader.js';
-import { ProgressTracker, type RenderFileReport } from '../output/progress.js';
+import { ProgressTracker } from '../output/progress.js';
 
 import { buildAssets } from './assets.js';
 import { runExportDocuments } from './export/runner.js';
 import { EXPORTABLE_TYPES, type ExportResult } from './export/types.js';
-import { generateHtmlFragment, generateLatexPreamble } from './format-generator.js';
+import { generateLatexPreamble } from './format-generator.js';
 import { type BuildReport, buildDocsFromIndex, type DiscoverResult, discover } from './pipeline/discover.js';
 import { renderLatex } from './pipeline/render.js';
 import type { BuildContext, BuildDocument, DocumentType } from './types.js';
@@ -109,44 +109,37 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       return;
     }
 
-    // ── FASE 2: markdown → latex (tex/)
+    // ── FASE 2+3: markdown → latex → html (combinada) ──
     if (pipelineDocs.length > 0) {
       progress.startPhase('render', pipelineDocs.length);
-      const docsWithMd = await renderLatex(pipelineDocs, ctx.concurrency ?? 4, cwd, ctx.siteConfig.disabledTranspilers);
-      const mdMap = new Map<string, BuildDocument>(docsWithMd.map((d) => [d.relativePath, d]));
+      const renderResults = await renderLatex(pipelineDocs, ctx.concurrency ?? 4, cwd, ctx.siteConfig.disabledTranspilers);
       for (const doc of allDocs) {
-        const processed = mdMap.get(doc.relativePath);
-        if (processed && processed.processedBody) {
-          doc.processedBody = processed.processedBody;
+        const result = renderResults.get(doc.relativePath);
+        if (result) {
+          doc.processedBody = result.processedBody;
+          doc.htmlFragment = result.htmlFragment;
+          doc.slug = result.slug;
         }
       }
-    }
-
-    // Write .tex body to disk
-    for (const doc of pipelineDocs) {
-      if (!doc.processedBody || !doc.slug) continue;
-      const texDir = join(ctx.cwd, '.iteraciones', 'tex', dirname(doc.relativePath));
-      await mkdir(texDir, { recursive: true });
-      await Bun.write(join(texDir, `${doc.slug}.tex`), doc.processedBody);
-    }
-    if (pipelineDocs.length > 0) {
       progress.completePhase();
     }
 
-    // Cleanup deleted files
+    // Cleanup deleted files from tex/ and formats/
     {
       const allDocPathsSet = new Set(allDocs.map((d) => d.relativePath));
       const deletedMdPaths = [...changedPaths].filter((p) => p.endsWith('.md') && !allDocPathsSet.has(p));
-      if (deletedMdPaths.length > 0) {
-        const cacheBase = join(ctx.cwd, '.iteraciones');
-        for (const relPath of deletedMdPaths) {
-          const dir = dirname(relPath);
-          const entry = deletedEntries.get(relPath);
-          const slug = entry?.slug ?? basename(relPath, '.md');
-          await rm(join(cacheBase, 'tex', dir, `${slug}.tex`), { force: true }).catch(() => {});
-          for (const ext of ['.html', '.tex', '.pdf', '.epub', '.md']) {
-            await rm(join(ctx.outputDir, dir, `${slug}${ext}`), { force: true }).catch(() => {});
-          }
+      const cacheBase = join(ctx.cwd, '.iteraciones');
+      for (const relPath of deletedMdPaths) {
+        const dir = dirname(relPath);
+        const entry = deletedEntries.get(relPath);
+        const slug = entry?.slug ?? basename(relPath, '.md');
+        await rm(join(cacheBase, 'tex', dir, `${slug}.tex`), { force: true }).catch(() => {});
+        await rm(join(cacheBase, 'html', dir, `${slug}.html`), { force: true }).catch(() => {});
+        await rm(join(cacheBase, 'formats', 'pdf', dir, `${slug}.tex`), { force: true }).catch(() => {});
+        await rm(join(cacheBase, 'formats', 'html', dir, `${slug}.html`), { force: true }).catch(() => {});
+        await rm(join(cacheBase, 'formats', 'html', dir, `${slug}.epub`), { force: true }).catch(() => {});
+        for (const ext of ['.html', '.tex', '.pdf', '.epub', '.md']) {
+          await rm(join(ctx.outputDir, dir, `${slug}${ext}`), { force: true }).catch(() => {});
         }
       }
     }
@@ -178,41 +171,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       }
       return count;
     };
-
-    // ── FASE 3: html fragment (antes del Promise.all) ──
-    {
-      const recentMdPaths = [...changedPaths].filter((p) => p.endsWith('.md') && !deletedEntries.has(p));
-      const deletedMdPaths = [...deletedEntries.keys()].filter((p) => p.endsWith('.md'));
-      const diff: BuildReport = {
-        startedAt: Date.now(),
-        recentFiles: recentMdPaths,
-        deletedFiles: deletedMdPaths,
-      };
-      if (htmlOn || epubOn) {
-        await generateHtmlFragment(cwd, ctx.siteConfig, discoveryIndex, diff);
-      }
-      // Cleanup deleted files from formats/
-      for (const relPath of deletedMdPaths) {
-        const entry = discoveryIndex.get(relPath);
-        const slug = entry?.slug ?? basename(relPath, '.md');
-        const dir = dirname(relPath);
-        await rm(join(cwd, '.iteraciones', 'formats', 'pdf', dir, `${slug}.tex`), { force: true }).catch(() => {});
-        await rm(join(cwd, '.iteraciones', 'formats', 'html', dir, `${slug}.html`), { force: true }).catch(() => {});
-        await rm(join(cwd, '.iteraciones', 'formats', 'html', dir, `${slug}.epub`), { force: true }).catch(() => {});
-      }
-    }
-
-    // Leer htmlFragment del disco para EPUB
-    if (epubOn) {
-      for (const doc of pipelineDocs) {
-        if (doc.htmlFragment !== undefined) continue;
-        const slug = doc.slug ?? basename(doc.relativePath, '.md');
-        const htmlPath = join(ctx.cwd, '.iteraciones', 'html', dirname(doc.relativePath), `${slug}.html`);
-        try {
-          doc.htmlFragment = await Bun.file(htmlPath).text();
-        } catch {}
-      }
-    }
 
     // ── FASE 4: 4 ramas en paralelo ──
     await Promise.all([
