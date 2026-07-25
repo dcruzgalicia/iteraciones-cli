@@ -132,9 +132,9 @@ export async function renderLatex(
   const results = new Map<string, RenderLatexResult>();
 
   await mapWithConcurrency(docs, concurrency, async (doc) => {
-    // Leer body del disco si no vino en discovery
-    let body = doc.body;
-    if (!body && cwd) {
+    // Leer body del disco
+    let body = '';
+    if (cwd) {
       try {
         body = await Bun.file(doc.filePath).text();
         const fmMatch = body.match(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/);
