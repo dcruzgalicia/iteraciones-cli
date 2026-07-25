@@ -1,5 +1,30 @@
 import type { SiteConfig } from '../config/site-config.js';
-import type { Frontmatter } from '../lib/frontmatter.js';
+
+export interface Frontmatter {
+  title: string;
+  date: string;
+  author: string[];
+  type: string;
+  keywords: string[];
+  [key: string]: unknown;
+}
+
+/**
+ * Normaliza un valor desconocido a un array de strings no vacíos con trim.
+ */
+export function normalizeStringList(value: unknown): string[] {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed ? [trimmed] : [];
+  }
+  if (Array.isArray(value)) {
+    return value
+      .filter((item): item is string => typeof item === 'string')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
 
 /**
  * Documento fuente tal como sale del paso de discovery.
