@@ -45,5 +45,5 @@ export interface BuildContext {
   outputDir: string;
   cssPath: string;
   /** Máximo de invocaciones pandoc simultáneas. Default: CPU - 1. */
-  concurrency?: number;
+  concurrency: number;
 }
