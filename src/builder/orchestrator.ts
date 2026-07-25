@@ -146,6 +146,26 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const pipelineDocs = isGlobalChange ? allDocs : allDocs.filter((d) => changedPaths.has(d.relativePath));
   const totalDocCount = allDocs.length;
 
+  // Cleanup deleted files from tex/ and formats/ (se ejecuta incluso si pipelineDocs esta vacio)
+  {
+    const allDocPathsSet = new Set(allDocs.map((d) => d.relativePath));
+    const deletedMdPaths = [...changedPaths].filter((p) => p.endsWith('.md') && !allDocPathsSet.has(p));
+    const cacheBase = join(ctx.cwd, '.iteraciones');
+    for (const relPath of deletedMdPaths) {
+      const dir = dirname(relPath);
+      const entry = deletedEntries.get(relPath);
+      const slug = entry?.slug ?? basename(relPath, '.md');
+      await rm(join(cacheBase, 'tex', dir, `${slug}.tex`), { force: true }).catch(() => {});
+      await rm(join(cacheBase, 'html', dir, `${slug}.html`), { force: true }).catch(() => {});
+      await rm(join(cacheBase, 'formats', 'pdf', dir, `${slug}.tex`), { force: true }).catch(() => {});
+      await rm(join(cacheBase, 'formats', 'html', dir, `${slug}.html`), { force: true }).catch(() => {});
+      await rm(join(cacheBase, 'formats', 'html', dir, `${slug}.epub`), { force: true }).catch(() => {});
+      for (const ext of ['.html', '.tex', '.pdf', '.epub', '.md']) {
+        await rm(join(ctx.outputDir, dir, `${slug}${ext}`), { force: true }).catch(() => {});
+      }
+    }
+  }
+
   if (pipelineDocs.length === 0) {
     log('Ningun documento modificado — sin cambios');
     progress.finish(0, totalDocCount, []);
@@ -166,26 +186,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     }
   }
   progress.completePhase();
-
-  // Cleanup deleted files from tex/ and formats/
-  {
-    const allDocPathsSet = new Set(allDocs.map((d) => d.relativePath));
-    const deletedMdPaths = [...changedPaths].filter((p) => p.endsWith('.md') && !allDocPathsSet.has(p));
-    const cacheBase = join(ctx.cwd, '.iteraciones');
-    for (const relPath of deletedMdPaths) {
-      const dir = dirname(relPath);
-      const entry = deletedEntries.get(relPath);
-      const slug = entry?.slug ?? basename(relPath, '.md');
-      await rm(join(cacheBase, 'tex', dir, `${slug}.tex`), { force: true }).catch(() => {});
-      await rm(join(cacheBase, 'html', dir, `${slug}.html`), { force: true }).catch(() => {});
-      await rm(join(cacheBase, 'formats', 'pdf', dir, `${slug}.tex`), { force: true }).catch(() => {});
-      await rm(join(cacheBase, 'formats', 'html', dir, `${slug}.html`), { force: true }).catch(() => {});
-      await rm(join(cacheBase, 'formats', 'html', dir, `${slug}.epub`), { force: true }).catch(() => {});
-      for (const ext of ['.html', '.tex', '.pdf', '.epub', '.md']) {
-        await rm(join(ctx.outputDir, dir, `${slug}${ext}`), { force: true }).catch(() => {});
-      }
-    }
-  }
 
   const formatCfg = ctx.siteConfig.format;
   const pdfOn = formatCfg?.pdf?.generate === true;
