@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { ConfigError } from '../errors.js';
+import { ConfigError } from '../lib/errors.js';
 import {
   DEFAULT_EPUB_FORMAT,
   DEFAULT_HTML_FORMAT,

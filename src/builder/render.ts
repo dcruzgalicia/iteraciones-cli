@@ -1,9 +1,9 @@
 import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 
-import { mapWithConcurrency } from '../../output/concurrency.js';
-import { convertFragment } from '../../services/pandoc-runner.js';
-import type { BuildDocument } from '../types.js';
+import { mapWithConcurrency } from '../lib/concurrency.js';
+import { convertFragment } from '../lib/pandoc-runner.js';
+import type { BuildDocument } from './types.js';
 
 // ---------------------------------------------------------------------------
 // Sistema unificado de transpilers
@@ -17,7 +17,7 @@ import type { BuildDocument } from '../types.js';
 //   markdown → transpilers string → pandoc --to json → transpilers AST → pandoc --from json --to latex
 
 /** Ruta absoluta al directorio de transpilers del paquete. */
-const PKG_TRANSPILERS_DIR = join(import.meta.dir, '../../../transpilers');
+const PKG_TRANSPILERS_DIR = join(import.meta.dir, '../../transpilers');
 
 /** Lista de transpilers empaquetados en orden de aplicación. */
 export const BUILTIN_TRANSPILERS = ['01-double-colon', '02-dictum', '03-verse', '04-mbox-sentence-ends'];
@@ -159,7 +159,7 @@ export async function renderLatex(
       }
     } catch {}
   }
-  const bibOptions = bibFiles.length > 0 ? { bibliography: bibFiles[0]!, csl: join(import.meta.dir, '../../../pandoc/csl/apa-7.csl') } : undefined;
+  const bibOptions = bibFiles.length > 0 ? { bibliography: bibFiles[0]!, csl: join(import.meta.dir, '../../pandoc/csl/apa-7.csl') } : undefined;
 
   const results = new Map<string, RenderLatexResult>();
 

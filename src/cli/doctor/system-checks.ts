@@ -1,7 +1,7 @@
 import { access, constants, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { checkPandoc as pandocVersion } from '../../services/pandoc-runner.js';
-import { run } from '../../services/run.js';
+import { checkPandoc as pandocVersion } from '../../lib/pandoc-runner.js';
+import { run } from '../../lib/run.js';
 
 export type CheckResult = {
   label: string;

@@ -1,9 +1,9 @@
 import { readFile, stat } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { loadSiteConfig } from '../config/config-loader.js';
-import { IGNORED_DIRS } from '../constants.js';
-import { ConfigError } from '../errors.js';
-import { FRONTMATTER_RE, parseFrontmatter } from '../loader/frontmatter.js';
+import { IGNORED_DIRS } from '../lib/constants.js';
+import { ConfigError } from '../lib/errors.js';
+import { FRONTMATTER_RE, parseFrontmatter } from '../lib/frontmatter.js';
 import { checkLatexEngine } from './doctor/system-checks.js';
 
 type ValidationError = { file: string; message: string };

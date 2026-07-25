@@ -2,15 +2,15 @@ import { mkdir, rm } from 'node:fs/promises';
 import { cpus } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { loadSiteConfig } from '../config/config-loader.js';
-import { ProgressTracker } from '../output/progress.js';
+import { ProgressTracker } from '../lib/progress.js';
 
 import { buildAssets } from './assets.js';
+import { type BuildReport, buildDocsFromIndex, type DiscoverResult, discover } from './discover.js';
 import { runExportDocuments } from './export/runner.js';
 import type { ExportResult } from './export/types.js';
 import { generateLatexPreamble } from './format-generator.js';
 import { renderHtmlPage } from './html-template.js';
-import { type BuildReport, buildDocsFromIndex, type DiscoverResult, discover } from './pipeline/discover.js';
-import { renderLatex } from './pipeline/render.js';
+import { renderLatex } from './render.js';
 import type { BuildContext, BuildDocument } from './types.js';
 
 export interface BuildOptions {
