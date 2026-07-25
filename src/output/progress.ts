@@ -1,9 +1,9 @@
-function isTTY(): boolean {
-  return process.stderr.isTTY === true;
-}
-
 function formatTime(ms: number): string {
   return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${Math.round(ms)}ms`;
+}
+
+function padRight(s: string, w: number): string {
+  return s.length < w ? s + ' '.repeat(w - s.length) : s;
 }
 
 export interface RenderFileReport {
@@ -13,148 +13,77 @@ export interface RenderFileReport {
   phase: PipelinePhase;
 }
 
-export type PipelinePhase = 'discovery' | 'render' | 'context' | 'latex' | 'markdown' | 'pdf' | 'epub' | 'html' | 'compose';
+export type PipelinePhase = 'discovery' | 'render' | 'latex' | 'markdown' | 'pdf' | 'epub' | 'html' | 'compose';
 
-const PHASE_LABELS: Record<PipelinePhase, string> = {
-  discovery: 'Buscando documentos',
-  render: 'Procesando contenido',
-  context: 'Construyendo \u00edndices',
-  latex: 'LaTeX',
-  markdown: 'Markdown',
-  pdf: 'PDF',
-  epub: 'EPUB',
-  html: 'HTML',
-  compose: 'Componiendo',
+interface PhaseMeta {
+  label: string;
+  /** Label para modo verbose en el resumen de tiempos. */
+  verboseLabel: string;
+  /** Título del grupo en modo normal. null = sin grupo. */
+  group: string | null;
+  /** Etiqueta corta para el conteo de documentos procesados. */
+  countLabel: string | null;
+}
+
+const PHASE_META: Record<PipelinePhase, PhaseMeta> = {
+  discovery: {
+    label: 'Documentos encontrados',
+    verboseLabel: 'Buscar documentos',
+    group: 'Preparando proyecto',
+    countLabel: 'Documentos encontrados',
+  },
+  render: { label: 'Documentos preparados', verboseLabel: 'Preparar documentos', group: 'Preparando proyecto', countLabel: null },
+  latex: { label: 'LaTeX', verboseLabel: 'Generar LaTeX', group: 'Generando archivos', countLabel: null },
+  pdf: { label: 'PDF', verboseLabel: 'Generar PDF', group: 'Generando archivos', countLabel: 'PDF generado' },
+  html: { label: 'HTML', verboseLabel: 'Generar HTML', group: 'Generando archivos', countLabel: 'HTML generado' },
+  epub: { label: 'EPUB', verboseLabel: 'Generar EPUB', group: 'Generando archivos', countLabel: 'EPUB generado' },
+  markdown: { label: 'Markdown', verboseLabel: 'Generar Markdown', group: 'Generando archivos', countLabel: 'Markdown generado' },
+  compose: { label: 'Componer', verboseLabel: 'Componer', group: null, countLabel: null },
 };
 
-/** Agrupación de fases en secciones con su propio contador. */
-const PHASE_GROUPS: { title: string; phases: PipelinePhase[] }[] = [
-  { title: 'Preparando proyecto', phases: ['discovery', 'render'] },
-  { title: 'Generando formatos', phases: ['latex', 'pdf', 'html', 'epub', 'markdown'] },
-];
+const PHASE_ORDER: PipelinePhase[] = ['discovery', 'render', 'latex', 'pdf', 'html', 'epub', 'markdown', 'compose'];
 
-const FORMAT_GROUP_INDEX = 1;
-
-const PHASE_ORDER: PipelinePhase[] = ['discovery', 'render', 'context', 'latex', 'pdf', 'html', 'epub', 'markdown'];
+const FORMAT_LABELS: Record<string, string> = {
+  pdf: 'PDF',
+  html: 'HTML',
+  epub: 'EPUB',
+  markdown: 'Markdown',
+};
 
 export class ProgressTracker {
   private verbose: boolean;
-  private tty: boolean;
   private t0: number;
   private phaseDurations: Partial<Record<PipelinePhase, number>> = {};
+  private phaseCounts: Partial<Record<PipelinePhase, number>> = {};
   private currentPhase: PipelinePhase | null = null;
   private phaseStart: number = 0;
-  private phaseTotal: number = 0;
-  private phaseDone: number = 0;
-  private lastLineLen: number = 0;
-  private excludedDraftsCount: number = 0;
-  private currentGroupIndex: number = -1;
-  private groupPhaseIndex: number = 0;
-  private groupPhaseTotal: number = 0;
+  private groupShown: Set<string> = new Set();
 
   constructor(options: { verbose?: boolean }) {
     this.verbose = options.verbose ?? false;
-    this.tty = isTTY();
     this.t0 = performance.now();
-  }
-
-  /**
-   * Define qué fases de formato están activas para el contador [1/N].
-   * Debe llamarse antes de iniciar la primera fase de formato.
-   */
-  setFormatPhases(phases: PipelinePhase[]): void {
-    if (phases.length > 0) {
-      PHASE_GROUPS[FORMAT_GROUP_INDEX]!.phases = phases;
-    }
-  }
-
-  private stderrLine(text: string): void {
-    this.clearLine();
-    process.stderr.write(`${text}\n`);
-  }
-
-  private render(text: string): void {
-    if (!this.tty || this.verbose) return;
-    const line = `\r${text}`;
-    process.stderr.write(line);
-    this.lastLineLen = text.length;
-  }
-
-  private clearLine(): void {
-    if (this.lastLineLen > 0) {
-      process.stderr.write(`\r${' '.repeat(this.lastLineLen)}\r`);
-      this.lastLineLen = 0;
-    }
-  }
-
-  private bar(done: number, total: number, width = 16): string {
-    if (total === 0) return '░'.repeat(width);
-    const filled = Math.round(Math.min(done / total, 1) * width);
-    return '█'.repeat(filled) + '░'.repeat(width - filled);
   }
 
   log(msg: string): void {
     if (this.verbose) {
-      this.clearLine();
       process.stdout.write(`${msg}\n`);
     }
   }
 
-  setExcludedDrafts(count: number): void {
-    this.excludedDraftsCount = count;
-  }
-
-  /** Busca el grupo al que pertenece una fase y actualiza el contador. */
-  private locateGroup(phase: PipelinePhase): void {
-    for (let g = 0; g < PHASE_GROUPS.length; g++) {
-      const group = PHASE_GROUPS[g]!;
-      const pIdx = group.phases.indexOf(phase);
-      if (pIdx !== -1) {
-        if (g !== this.currentGroupIndex) {
-          this.currentGroupIndex = g;
-          this.groupPhaseIndex = 0;
-          this.groupPhaseTotal = group.phases.length;
-          if (!this.verbose && this.tty) {
-            this.clearLine();
-            process.stderr.write(`\n${group.title}\n`);
-          }
-        }
-        this.groupPhaseIndex = pIdx + 1;
-        return;
-      }
-    }
-    if (this.currentGroupIndex === -1) {
-      this.groupPhaseTotal = 0;
-      this.groupPhaseIndex = 0;
-    }
-  }
-
   startPhase(phase: PipelinePhase, total: number = 0): void {
-    this.locateGroup(phase);
     this.currentPhase = phase;
-    this.phaseTotal = total;
-    this.phaseDone = 0;
+    this.phaseCounts[phase] = total;
     this.phaseStart = performance.now();
 
-    if (this.verbose) {
-      this.clearLine();
-      process.stdout.write(`\n\u2500\u2500 ${PHASE_LABELS[phase]} \u2500\u2500\n`);
-    } else if (this.tty) {
-      const b = this.bar(0, total || 1);
-      this.render(`  ${PHASE_LABELS[phase]}: ${b} 0/${total || '?'}`);
+    const meta = PHASE_META[phase];
+    if (!this.verbose && meta.group && !this.groupShown.has(meta.group)) {
+      this.groupShown.add(meta.group);
+      process.stdout.write(`\n${meta.group}\n`);
     }
   }
 
-  advance(by: number = 1): void {
-    this.phaseDone += by;
-    if (!this.verbose && this.tty && this.currentPhase) {
-      if (this.phaseTotal > 0) {
-        const b = this.bar(this.phaseDone, this.phaseTotal);
-        this.render(`  ${PHASE_LABELS[this.currentPhase]}: ${b} ${this.phaseDone}/${this.phaseTotal}`);
-      } else {
-        this.render(`  ${PHASE_LABELS[this.currentPhase]}: ${this.phaseDone}`);
-      }
-    }
+  advance(_by: number = 1): void {
+    // No progress bars in normal mode
   }
 
   reportFile(file: RenderFileReport): void {
@@ -162,10 +91,7 @@ export class ProgressTracker {
       const tag = `[${file.phase}]`;
       const time = formatTime(file.durationMs);
       const cache = file.cacheHit ? ' (cach\u00e9)' : '';
-      this.clearLine();
       process.stdout.write(`  ${tag} ${file.relativePath} \u2192 ${time}${cache}\n`);
-    } else {
-      this.advance();
     }
   }
 
@@ -174,56 +100,65 @@ export class ProgressTracker {
     if (!phase) return;
     const elapsed = performance.now() - this.phaseStart;
     this.phaseDurations[phase] = elapsed;
-
-    const hasCounter = this.groupPhaseTotal > 0;
-    const counter = hasCounter ? `[${this.groupPhaseIndex}/${this.groupPhaseTotal}] ` : '';
+    const meta = PHASE_META[phase];
 
     if (this.verbose) {
-      this.clearLine();
-      process.stdout.write(`  ${counter}\u2713 ${formatTime(elapsed)}\n\n`);
-    } else if (this.tty) {
-      this.clearLine();
-      process.stderr.write(`${counter}${PHASE_LABELS[phase]} \u2713 ${formatTime(elapsed)}\n`);
+      // No verbose output for phase completion; use finish()
+    } else {
+      const count = actualCount ?? this.phaseCounts[phase] ?? 0;
+      const countPart = count > 0 ? ` (${count})` : '';
+      process.stdout.write(
+        `  \u2713 ${meta.label}${countPart}${' '.repeat(Math.max(1, 32 - meta.label.length - countPart.length))}${formatTime(elapsed)}\n`,
+      );
     }
+
     this.currentPhase = null;
   }
 
   finish(processed: number, cached: number, formats?: string[]): void {
-    this.clearLine();
-    const elapsed = formatTime(performance.now() - this.t0);
-    const fmtLabel = formats && formats.length > 0 ? formats.join(', ') : '';
+    const totalTime = performance.now() - this.t0;
 
     if (this.verbose) {
-      process.stdout.write(`\n\u2500\u2500 Resumen \u2500\u2500\n`);
-      let prevT = this.t0;
-      for (const ph of PHASE_ORDER) {
-        const dur = this.phaseDurations[ph];
-        if (dur !== undefined) {
-          process.stdout.write(`  ${PHASE_LABELS[ph]} ${formatTime(dur)}\n`);
-          prevT += dur;
-        }
-      }
-      process.stdout.write(`\nBuild completado ${processed} documento${processed !== 1 ? 's' : ''} en ${elapsed}`);
-      if (cached > 0) {
-        process.stdout.write(` (${cached} en cach\u00e9)`);
-      }
-      if (fmtLabel) process.stdout.write(` [${fmtLabel}]`);
-      process.stdout.write(`\n`);
-    } else if (this.tty) {
-      process.stderr.write(`\n\u2713 Build completado\n`);
-      process.stderr.write(`  Documentos procesados: ${processed}\n`);
-      if (cached > 0) {
-        process.stderr.write(`  Documentos en cach\u00e9: ${cached}\n`);
-      }
-      if (fmtLabel) {
-        process.stderr.write(`  Formatos generados: ${fmtLabel}\n`);
-      }
-      process.stderr.write(`  Tiempo total: ${elapsed}\n`);
+      this.renderVerboseSummary(totalTime, formats);
     } else {
-      process.stdout.write(`\u2713 Build completado: ${processed} doc${processed !== 1 ? 's' : ''} procesado${processed !== 1 ? 's' : ''}`);
-      if (cached > 0) process.stdout.write(`, ${cached} en cach\u00e9`);
-      if (fmtLabel) process.stdout.write(` [${fmtLabel}]`);
-      process.stdout.write(` (${elapsed})\n`);
+      this.renderNormalSummary(totalTime, processed, cached, formats);
     }
+  }
+
+  private renderNormalSummary(totalTime: number, processed: number, cached: number, formats?: string[]): void {
+    process.stdout.write(`\n\u2713 Proyecto generado correctamente\n\n`);
+    process.stdout.write(`  Documentos: ${processed}\n`);
+    if (cached > 0) {
+      process.stdout.write(`  En cach\u00e9: ${cached}\n`);
+    }
+    if (formats && formats.length > 0) {
+      const visible = formats.filter((f) => FORMAT_LABELS[f]).map((f) => FORMAT_LABELS[f]!);
+      process.stdout.write(`  Archivos: ${visible.join(', ')}\n`);
+    }
+    process.stdout.write(`  Tiempo total: ${formatTime(totalTime)}\n`);
+  }
+
+  private renderVerboseSummary(totalTime: number, formats?: string[]): void {
+    process.stdout.write(`\nResumen\n\n`);
+
+    for (const ph of PHASE_ORDER) {
+      const meta = PHASE_META[ph];
+      const count = this.phaseCounts[ph] ?? 0;
+      if (meta.countLabel && count > 0) {
+        process.stdout.write(`  ${padRight(meta.countLabel, 26)}${count}\n`);
+      }
+    }
+
+    process.stdout.write(`\nTiempo por etapa\n\n`);
+    for (const ph of PHASE_ORDER) {
+      const dur = this.phaseDurations[ph];
+      if (dur !== undefined) {
+        const meta = PHASE_META[ph];
+        const label = meta.verboseLabel;
+        process.stdout.write(`  ${padRight(label, 26)}${formatTime(dur)}\n`);
+      }
+    }
+
+    process.stdout.write(`\n  ${padRight('Tiempo total', 26)}${formatTime(totalTime)}\n`);
   }
 }
