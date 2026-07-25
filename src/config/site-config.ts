@@ -1,14 +1,5 @@
 export type PageNumberPlacement = 'footer-left' | 'footer-center' | 'footer-right' | 'header-left' | 'header-center' | 'header-right';
 
-export type ThumbnailMode = boolean | 'responsive';
-
-export const THUMBNAIL_SIZES: Record<string, number> = {
-  sm: 320,
-  md: 640,
-  lg: 1200,
-  xl: 2400,
-} as const;
-
 // ── Schema `format:` (estilo Quarto) ──
 
 export interface HtmlFormatConfig {
@@ -16,13 +7,6 @@ export interface HtmlFormatConfig {
   accent?: string;
   /** Si true, genera HTML en el build. */
   generate?: boolean;
-  /**
-   * Genera thumbnails JPG de la primera pagina del PDF.
-   * - false: no generar
-   * - true: generar un solo JPG de 1200px (OG image)
-   'responsive': generar sm (320), md (640), lg (1200), xl (2400)
-*/
-  thumbnails?: ThumbnailMode;
 }
 
 export interface PdfFormatConfig {
@@ -112,17 +96,13 @@ export interface MarkdownFormatConfig {
   generate?: boolean;
 }
 
-export interface LatexFormatConfig {
-  /** Si true, genera LaTeX (.tex) en el build. */
-  generate?: boolean;
-}
-
 export interface FormatConfig {
   html?: HtmlFormatConfig;
   pdf?: PdfFormatConfig;
   epub?: EpubFormatConfig;
   markdown?: MarkdownFormatConfig;
-  latex?: LatexFormatConfig;
+  /** Si true (default), genera archivos .tex en el output. */
+  latex?: boolean;
 }
 
 // ── SiteConfig ──
@@ -161,7 +141,6 @@ export const DEFAULT_HTML_FORMAT: HtmlFormatConfig = {
   theme: undefined,
   accent: 'lime',
   generate: false,
-  thumbnails: false,
 };
 
 export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
@@ -245,10 +224,6 @@ export const DEFAULT_MARKDOWN_FORMAT: MarkdownFormatConfig = {
   generate: false,
 };
 
-export const DEFAULT_LATEX_FORMAT: LatexFormatConfig = {
-  generate: true,
-};
-
 export const DEFAULT_SITE_CONFIG: SiteConfig = {
   title: 'iteraciones',
   tagline: 'escribir, compartir, re-existir',
@@ -262,6 +237,6 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
     pdf: DEFAULT_PDF_FORMAT,
     epub: DEFAULT_EPUB_FORMAT,
     markdown: DEFAULT_MARKDOWN_FORMAT,
-    latex: DEFAULT_LATEX_FORMAT,
+    latex: true,
   },
 };

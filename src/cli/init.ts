@@ -1,13 +1,6 @@
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import {
-  DEFAULT_EPUB_FORMAT,
-  DEFAULT_HTML_FORMAT,
-  DEFAULT_LATEX_FORMAT,
-  DEFAULT_MARKDOWN_FORMAT,
-  DEFAULT_PDF_FORMAT,
-  DEFAULT_SITE_CONFIG,
-} from '../config/site-config.js';
+import { DEFAULT_EPUB_FORMAT, DEFAULT_HTML_FORMAT, DEFAULT_MARKDOWN_FORMAT, DEFAULT_PDF_FORMAT, DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 
 const DEFAULT_README = [
   '---',
@@ -166,11 +159,7 @@ function buildDefaultConfig(): string {
   lines.push('format:');
 
   // latex (primero en orden de compilacion)
-  lines.push('  latex:');
-  for (const [key, value] of Object.entries(DEFAULT_LATEX_FORMAT)) {
-    const yamlKey = camelToKebab(key);
-    lines.push(`    ${yamlKey}: ${yamlValue(value)}`);
-  }
+  lines.push('  latex: true');
 
   // pdf
   const pdfCfg = DEFAULT_PDF_FORMAT;
@@ -328,7 +317,6 @@ function buildDefaultConfig(): string {
   lines.push(`    theme: dark`);
   lines.push(`    accent: ${DEFAULT_HTML_FORMAT.accent}`);
   lines.push(`    generate: ${yamlBool(DEFAULT_HTML_FORMAT.generate!)}`);
-  lines.push(`    thumbnails: ${yamlValue(DEFAULT_HTML_FORMAT.thumbnails!)}`);
 
   // epub
   lines.push('  epub:');
