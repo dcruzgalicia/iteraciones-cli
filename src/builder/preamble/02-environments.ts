@@ -1,4 +1,4 @@
-import type { PdfFormatConfig } from '../src/config/site-config.js';
+import type { PdfFormatConfig } from '../../config/site-config.js';
 
 export const description = 'Redefine center, flushright, flushleft sin espacio vertical extra';
 

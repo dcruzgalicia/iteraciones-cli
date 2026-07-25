@@ -159,7 +159,7 @@ export async function renderLatex(
       }
     } catch {}
   }
-  const bibOptions = bibFiles.length > 0 ? { bibliography: bibFiles[0]!, csl: join(import.meta.dir, '../../pandoc/csl/apa-7.csl') } : undefined;
+  const bibOptions = bibFiles.length > 0 ? { bibliography: bibFiles[0]!, csl: join(import.meta.dir, '../../src/lib/resources/apa-7.csl') } : undefined;
 
   const results = new Map<string, RenderLatexResult>();
 
