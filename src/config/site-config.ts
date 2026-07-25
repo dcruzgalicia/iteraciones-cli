@@ -160,30 +160,6 @@ export interface SiteConfig {
  * Colores Tailwind v4 con escala completa 50-950 válidos como acento.
  * Excluye white, black, transparent y similares que no tienen escala.
  */
-export const KNOWN_ACCENT_COLORS = new Set([
-  'slate',
-  'gray',
-  'zinc',
-  'neutral',
-  'stone',
-  'red',
-  'orange',
-  'amber',
-  'yellow',
-  'lime',
-  'green',
-  'emerald',
-  'teal',
-  'cyan',
-  'sky',
-  'blue',
-  'indigo',
-  'violet',
-  'purple',
-  'fuchsia',
-  'pink',
-  'rose',
-]);
 
 export const DEFAULT_HTML_FORMAT: HtmlFormatConfig = {
   theme: undefined,

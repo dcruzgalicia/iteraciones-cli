@@ -4,12 +4,10 @@ import { basename, dirname, join } from 'node:path';
 import { ProgressTracker } from '../cli/progress.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 
-import { buildAssets } from './assets.js';
+import { buildAssets, generateLatexPreamble, renderHtmlPage } from './build-utils.js';
 import { type BuildReport, buildDocsFromIndex, type DiscoverResult, discover } from './discover.js';
 import { runExportDocuments } from './export/runner.js';
 import type { ExportResult } from './export/types.js';
-import { renderHtmlPage } from './html-template.js';
-import { generateLatexPreamble } from './latex-preamble-generator.js';
 import { renderLatex } from './render.js';
 import type { BuildContext, BuildDocument } from './types.js';
 

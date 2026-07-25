@@ -1,8 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
-import { type DiscoveryEntry, loadDiscoveryIndex, saveDiscoveryIndex } from '../builder/persist/discovery-index.js';
 import { computeSlug } from './slug.js';
-import type { SourceDocument } from './types.js';
+import type { DiscoveryEntry, SourceDocument } from './types.js';
 
 export interface DiscoverOptions {
   noCache?: boolean;
@@ -20,6 +19,44 @@ export interface BuildReport {
   startedAt: number;
   recentFiles: string[];
   deletedFiles: string[];
+}
+
+const DISCOVERY_INDEX_PATH = join('.iteraciones', 'changes', 'files.json');
+
+async function readCliVersion(): Promise<string> {
+  try {
+    const pkg = (await Bun.file(join(import.meta.dir, '../../package.json')).json()) as { version: string };
+    return pkg.version;
+  } catch {
+    return 'unknown';
+  }
+}
+
+interface DiscoveryIndexFile {
+  cliVersion: string;
+  entries: Record<string, DiscoveryEntry>;
+}
+
+async function loadDiscoveryIndex(cwd: string): Promise<Map<string, DiscoveryEntry>> {
+  const file = Bun.file(join(cwd, DISCOVERY_INDEX_PATH));
+  if (!(await file.exists())) return new Map();
+  try {
+    const raw = await file.text();
+    const parsed: DiscoveryIndexFile = JSON.parse(raw);
+    const currentVersion = await readCliVersion();
+    if (parsed.cliVersion !== currentVersion) return new Map();
+    return new Map(Object.entries(parsed.entries));
+  } catch {
+    return new Map();
+  }
+}
+
+async function saveDiscoveryIndex(cwd: string, index: Map<string, DiscoveryEntry>): Promise<void> {
+  const filePath = join(cwd, DISCOVERY_INDEX_PATH);
+  await mkdir(dirname(filePath), { recursive: true });
+  const cliVersion = await readCliVersion();
+  const file: DiscoveryIndexFile = { cliVersion, entries: Object.fromEntries(index) };
+  await Bun.write(filePath, JSON.stringify(file));
 }
 
 const SLUGS_CACHE_PATH = join('.iteraciones', 'changes', 'slugs.json');
