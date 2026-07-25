@@ -1,9 +1,9 @@
 import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/site-config.js';
-import type { DiscoveryEntry } from '../lib/discovery-index.js';
 import type { BuildReport } from './discover.js';
 import { buildLatexPreamble } from './latex-preamble.js';
+import type { DiscoveryEntry } from './persist/discovery-index.js';
 
 /**
  * Genera formats/pdf/{slug}.tex (full .tex con preamble).
