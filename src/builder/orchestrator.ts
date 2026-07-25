@@ -75,7 +75,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
     if (options.verbose) {
       for (const doc of allDocs) {
-        progress.reportFile({ relativePath: doc.relativePath, durationMs: 0, cacheHit: false, phase: 'discovery' });
+        progress.reportFile({ relativePath: doc.relativePath, phase: 'discovery' });
       }
     }
     progress.completePhase(allDocs.length);
@@ -176,7 +176,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
           ...exportBase,
           outputDir: join(formatsDir, 'markdown'),
           config: { markdown: formatCfg?.markdown },
-          onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, durationMs: 0, cacheHit: false, phase: 'markdown' }),
+          onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, phase: 'markdown' }),
         });
         for (const r of mdResults) {
           if (r.markdownPath) r.markdownPath = r.markdownPath.replace(join(formatsDir, 'markdown'), ctx.outputDir);
@@ -238,7 +238,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
           ...exportBase,
           outputDir: join(formatsDir, 'html'),
           config: { epub: formatCfg?.epub },
-          onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, durationMs: 0, cacheHit: false, phase: 'epub' }),
+          onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, phase: 'epub' }),
         });
         for (const r of epubResults) {
           if (r.epubPath) r.epubPath = r.epubPath.replace(join(formatsDir, 'html'), ctx.outputDir);
@@ -266,7 +266,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
             ...exportBase,
             outputDir: join(formatsDir, 'pdf'),
             config: { pdf: formatCfg?.pdf },
-            onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, durationMs: 0, cacheHit: false, phase: 'pdf' }),
+            onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, phase: 'pdf' }),
           });
           for (const r of pdfResults) {
             if (r.pdfPath) r.pdfPath = r.pdfPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);

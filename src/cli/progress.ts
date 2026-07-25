@@ -4,8 +4,6 @@ function formatTime(ms: number): string {
 
 export interface RenderFileReport {
   relativePath: string;
-  durationMs: number;
-  cacheHit: boolean;
   phase: PipelinePhase;
 }
 
@@ -66,8 +64,6 @@ export class ProgressTracker {
       }
     }
   }
-
-  advance(_by: number = 1): void {}
 
   reportFile(file: RenderFileReport): void {
     // Colectar archivos solo para discovery (se muestran al completar fase)
