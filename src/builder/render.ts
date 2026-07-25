@@ -3,6 +3,7 @@ import { basename, dirname, join } from 'node:path';
 
 import { mapWithConcurrency } from '../lib/concurrency.js';
 import { convertFragment } from '../lib/pandoc-runner.js';
+import { discoverBibFiles } from './latex-preamble.js';
 import type { BuildDocument } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -148,18 +149,9 @@ export async function renderLatex(
   const { stringTranspilers, astTranspilers } = await loadTranspilers(activeTranspilers, cwd);
 
   // Auto-descubrir archivos .bib una sola vez para todo el build
-  const bibFiles: string[] = [];
-  if (cwd) {
-    try {
-      const glob = new Bun.Glob('**/*.bib');
-      for (const file of glob.scanSync({ cwd, absolute: true })) {
-        const rel = file.replace(cwd, '').replace(/^\/+/, '');
-        if (rel.startsWith('node_modules/') || rel.startsWith('.iteraciones/') || rel.startsWith('dist/') || rel.startsWith('.git/')) continue;
-        bibFiles.push(file);
-      }
-    } catch {}
-  }
-  const bibOptions = bibFiles.length > 0 ? { bibliography: bibFiles[0]!, csl: join(import.meta.dir, '../../src/lib/resources/apa-7.csl') } : undefined;
+  const bibFiles = cwd ? discoverBibFiles(cwd) : [];
+  const bibOptions =
+    bibFiles.length > 0 ? { bibliography: bibFiles[0]!, csl: join(import.meta.dir, '../../src/lib/resources/apa-7.csl') } : undefined;
 
   const results = new Map<string, RenderLatexResult>();
 
@@ -232,13 +224,15 @@ export async function renderLatex(
       try {
         htmlFragment = await convertFragment(processedBody, doc.filePath, bibOptions, 'html5', 'latex-auto_identifiers');
       } catch {
-        // Si falla la conversion a HTML, continuar sin htmlFragment
+        process.stderr.write(`[render] error al convertir a HTML para ${doc.relativePath}
+`);
       }
     } else {
       try {
         htmlFragment = await convertFragment(processedBody, doc.filePath, undefined, 'html5', 'latex-auto_identifiers');
       } catch {
-        // Si falla la conversion a HTML, continuar sin htmlFragment
+        process.stderr.write(`[render] error al convertir a HTML para ${doc.relativePath}
+`);
       }
     }
 

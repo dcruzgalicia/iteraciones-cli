@@ -225,7 +225,10 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
             });
             await mkdir(dirname(dst), { recursive: true });
             await Bun.write(dst, html);
-          } catch {}
+          } catch {
+            process.stderr.write(`[orchestrator] error al generar HTML para ${doc.relativePath}
+`);
+          }
         }
         progress.completePhase(undefined, 'html');
       })(),

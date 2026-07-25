@@ -1,9 +1,9 @@
 import { existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
-import type { ExportDocument } from '../builder/export/types.js';
-import type { PdfFormatConfig } from '../config/site-config.js';
-import { PandocError } from './errors.js';
+import type { PdfFormatConfig } from '../../config/site-config.js';
+import { PandocError } from '../../lib/errors.js';
+import type { ExportDocument } from './types.js';
 
 /**
  * Construye el bloque YAML de metadatos que Pandoc inyectará en el documento.
