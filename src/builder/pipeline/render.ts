@@ -1,9 +1,8 @@
-import { join, resolve } from 'node:path';
+import { mkdir } from 'node:fs/promises';
+import { basename, dirname, join } from 'node:path';
 
 import { mapWithConcurrency } from '../../output/concurrency.js';
-import type { RenderFileReport } from '../../output/progress.js';
-import type { PluginRegistry } from '../../plugin/registry.js';
-import { type BibOptions, convertFragment } from '../../services/pandoc-runner.js';
+import { convertFragment } from '../../services/pandoc-runner.js';
 import type { BuildDocument } from '../types.js';
 
 // ---------------------------------------------------------------------------
@@ -121,38 +120,61 @@ export function getBuiltinTranspilerInfos(): TranspilerInfo[] {
   }));
 }
 
-/** Contadores acumulativos de la fase de render; se mutan en lugar de retornar un nuevo objeto. */
-export interface RenderStats {
-  total: number;
-  cacheHits: number;
+/** Resultado individual del pipeline combinado. */
+export interface RenderLatexResult {
+  processedBody: string;
+  htmlFragment: string;
+  slug: string;
+  relativePath: string;
 }
 
 /**
- * Convierte el body original de cada documento a LaTeX final (processedBody)
- * aplicando transpilers (string → AST).
+ * FASE 2+3 combinada: markdown → latex body + html fragment.
  *
- * Pipeline:
- *   markdown → transpilers string → pandoc --to json → transpilers AST → pandoc --from json --to latex → .tex
+ * Pipeline por archivo:
+ *   markdown → transpilers string → pandoc --to json → transpilers AST
+ *     → pandoc --from json --to latex → tex/{slug}.tex
+ *     → pandoc --to html5 --citeproc → html/{slug}.html
  *
- * El processedBody (.tex) se usa luego como fuente para HTML, PDF, EPUB y markdown.
+ * Escribe tex/{slug}.tex y html/{slug}.html directamente.
+ * Retorna un mapa relativePath → { processedBody, htmlFragment, slug }.
  */
-export async function renderLatex(docs: BuildDocument[], concurrency: number, cwd?: string, activeTranspilers?: string[]): Promise<BuildDocument[]> {
+export async function renderLatex(
+  docs: BuildDocument[],
+  concurrency: number,
+  cwd: string,
+  activeTranspilers?: string[],
+): Promise<Map<string, RenderLatexResult>> {
   const { stringTranspilers, astTranspilers } = await loadTranspilers(activeTranspilers, cwd);
 
-  return mapWithConcurrency(docs, concurrency, async (doc) => {
-    // Si el body esta vacio (doc sin cambios que no fue leido en discovery),
-    // leer el archivo del disco ahora que entro al pipeline.
+  // Auto-descubrir archivos .bib una sola vez para todo el build
+  const bibFiles: string[] = [];
+  if (cwd) {
+    try {
+      const glob = new Bun.Glob('**/*.bib');
+      for (const file of glob.scanSync({ cwd, absolute: true })) {
+        const rel = file.replace(cwd, '').replace(/^\/+/, '');
+        if (rel.startsWith('node_modules/') || rel.startsWith('.iteraciones/') || rel.startsWith('dist/') || rel.startsWith('.git/')) continue;
+        bibFiles.push(file);
+      }
+    } catch {}
+  }
+  const bibOptions = bibFiles.length > 0 ? { bibliography: bibFiles[0]!, csl: join(import.meta.dir, '../../../pandoc/csl/apa-7.csl') } : undefined;
+
+  const results = new Map<string, RenderLatexResult>();
+
+  await mapWithConcurrency(docs, concurrency, async (doc) => {
+    // Leer body del disco si no vino en discovery
     let body = doc.body;
     if (!body && cwd) {
       try {
         body = await Bun.file(doc.filePath).text();
-        // Extraer el body sin frontmatter
         const fmMatch = body.match(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/);
         if (fmMatch) {
           body = body.slice(fmMatch[0].length);
         }
       } catch {
-        return { ...doc, processedBody: '' };
+        return;
       }
     }
 
@@ -161,19 +183,16 @@ export async function renderLatex(docs: BuildDocument[], concurrency: number, cw
       body = t.process(body);
     }
 
-    if (!body.trim()) {
-      return { ...doc, processedBody: '' };
-    }
+    if (!body.trim()) return;
 
-    // Paso 2: convertir markdown a JSON AST (sin auto_identifiers para evitar labels en .tex)
+    // Paso 2: convertir markdown a JSON AST
     const json = await convertFragment(body, doc.filePath, undefined, 'json', 'markdown-auto_identifiers');
     let ast: Record<string, unknown>;
     try {
       ast = JSON.parse(json) as Record<string, unknown>;
     } catch {
-      process.stderr.write(`[render] error al parsear AST JSON de ${doc.filePath}
-`);
-      return { ...doc, processedBody: '' };
+      process.stderr.write(`[render] error al parsear AST JSON de ${doc.filePath}\n`);
+      return;
     }
 
     // Paso 3: transpilers AST sobre el JSON
@@ -183,19 +202,6 @@ export async function renderLatex(docs: BuildDocument[], concurrency: number, cw
 
     // Paso 4: convertir el AST modificado a LaTeX
     const pandocArgs: string[] = ['--top-level-division', 'section'];
-
-    // Auto-descubrir archivos .bib y pasar --biblatex a pandoc
-    const bibFiles: string[] = [];
-    if (cwd) {
-      try {
-        const glob = new Bun.Glob('**/*.bib');
-        for (const file of glob.scanSync({ cwd, absolute: true })) {
-          const rel = file.replace(cwd, '').replace(/^\/+/, '');
-          if (rel.startsWith('node_modules/') || rel.startsWith('.iteraciones/') || rel.startsWith('dist/') || rel.startsWith('.git/')) continue;
-          bibFiles.push(file);
-        }
-      } catch {}
-    }
     if (bibFiles.length > 0) {
       pandocArgs.push('--biblatex');
       for (const bib of bibFiles) {
@@ -205,77 +211,46 @@ export async function renderLatex(docs: BuildDocument[], concurrency: number, cw
 
     let processedBody = await convertFragment(JSON.stringify(ast), doc.filePath, undefined, 'latex', 'json', pandocArgs);
 
-    // Si hay citekeys en el body (leido del disco) y existen archivos .bib, agregar printbibliography
-    const hasCitekeys = bibFiles.length > 0 && /@\w+[\w:;#.,(){}'"\s]/.test(body);
-    if (hasCitekeys) {
+    // Si hay citekeys y archivos .bib, agregar printbibliography
+    if (bibFiles.length > 0 && /@\w+[\w:;#.,(){}'"\s]/.test(body)) {
       processedBody = processedBody.replace(/\n+$/, '\n\n') + '\\printbibliography[heading=bibintoc]\n';
     }
 
-    return { ...doc, processedBody };
-  });
-}
+    // Obtener slug del doc o calcularlo
+    const slug = doc.slug ?? basename(doc.relativePath, '.md');
+    const dir = dirname(doc.relativePath);
+    const cacheBase = join(cwd, '.iteraciones');
 
-export async function renderDocuments(
-  docs: BuildDocument[],
-  concurrency: number,
-  registry?: PluginRegistry,
-  cwd?: string,
-  /** Ruta absoluta al .bib global del sitio (fallback si el frontmatter no define editorial.bibliography). */
-  globalBibliography?: string,
-  /** Ruta absoluta al .csl global del sitio (fallback si el frontmatter no define editorial.csl). */
-  globalCsl?: string,
-  /** Callback invocado por cada archivo procesado (para reporte de progreso). */
-  onFileProcessed?: (report: RenderFileReport) => void,
-): Promise<BuildDocument[]> {
-  return mapWithConcurrency(docs, concurrency, async (doc) => {
-    const tStart = performance.now();
-    let bibOptions: BibOptions | undefined;
-    if (cwd) {
-      const rawEditorial =
-        typeof doc.frontmatter['editorial'] === 'object' && doc.frontmatter['editorial'] !== null
-          ? (doc.frontmatter['editorial'] as Record<string, unknown>)
-          : {};
+    // Escribir tex/{slug}.tex
+    const texDir = join(cacheBase, 'tex', dir);
+    await mkdir(texDir, { recursive: true });
+    await Bun.write(join(texDir, `${slug}.tex`), processedBody);
 
-      const rawBib = typeof rawEditorial['bibliography'] === 'string' ? rawEditorial['bibliography'] : undefined;
-      const effectiveBib = rawBib ?? globalBibliography;
-
-      if (effectiveBib) {
-        const resolvedBib = resolve(cwd, effectiveBib);
-        if (resolvedBib.startsWith(cwd + '/') || resolvedBib === cwd) {
-          const rawCsl = typeof rawEditorial['csl'] === 'string' ? rawEditorial['csl'] : undefined;
-          const effectiveCsl = rawCsl ?? globalCsl;
-          let resolvedCsl: string | undefined;
-          if (effectiveCsl) {
-            const cslAbs = resolve(cwd, effectiveCsl);
-            if (cslAbs.startsWith(cwd + '/') || cslAbs === cwd) {
-              resolvedCsl = cslAbs;
-            } else {
-              process.stderr.write(`[render] CSL fuera del proyecto ignorado: "${effectiveCsl}"\n`);
-            }
-          } else {
-            resolvedCsl = join(import.meta.dir, '../../../pandoc/csl/apa-7.csl');
-          }
-          bibOptions = { bibliography: resolvedBib, csl: resolvedCsl };
-        } else {
-          process.stderr.write(`[render] bibliography fuera del proyecto ignorado: "${effectiveBib}"\n`);
-        }
+    // Paso 5: convertir latex body a html fragment (con citeproc)
+    let htmlFragment = '';
+    if (bibOptions) {
+      try {
+        htmlFragment = await convertFragment(processedBody, doc.filePath, bibOptions, 'html5', 'latex-auto_identifiers');
+      } catch {
+        // Si falla la conversion a HTML, continuar sin htmlFragment
+      }
+    } else {
+      try {
+        htmlFragment = await convertFragment(processedBody, doc.filePath, undefined, 'html5', 'latex-auto_identifiers');
+      } catch {
+        // Si falla la conversion a HTML, continuar sin htmlFragment
       }
     }
 
-    if (registry) {
-      await registry.runBeforeRender({ sourcePath: doc.filePath, variables: {} });
+    // Escribir html/{slug}.html
+    if (htmlFragment) {
+      const htmlDir = join(cacheBase, 'html', dir);
+      await mkdir(htmlDir, { recursive: true });
+      await Bun.write(join(htmlDir, `${slug}.html`), htmlFragment);
     }
 
-    const source = doc.processedBody ?? doc.body;
-    const fromFormat = doc.processedBody ? 'latex-auto_identifiers' : 'markdown';
-    let htmlFragment = await convertFragment(source, doc.filePath, bibOptions, 'html5', fromFormat);
-
-    if (registry) {
-      const afterCtx = await registry.runAfterRender({ sourcePath: doc.filePath, html: htmlFragment });
-      htmlFragment = afterCtx.html;
-    }
-
-    onFileProcessed?.({ relativePath: doc.relativePath, durationMs: performance.now() - tStart, cacheHit: false, phase: 'render' });
-    return { ...doc, htmlFragment };
+    results.set(doc.relativePath, { processedBody, htmlFragment, slug, relativePath: doc.relativePath });
   });
+
+  return results;
 }
