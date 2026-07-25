@@ -3,3 +3,4 @@ dist/
 .iteraciones/
 *.js.map
 AGENTS.md
+themes/.DS_Store
