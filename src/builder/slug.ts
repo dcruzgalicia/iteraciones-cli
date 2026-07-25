@@ -1,5 +1,3 @@
-import { basename, dirname } from 'node:path';
-
 export function slugify(text: string): string {
   return text
     .toLowerCase()
@@ -21,14 +19,4 @@ export function computeSlug(frontmatter: { title?: string; author?: string[]; re
     return titleSlug;
   }
   return undefined;
-}
-
-export function docHtmlPath(doc: { slug?: string; relativePath: string }): string {
-  const dir = dirname(doc.relativePath);
-  const base = doc.slug ?? basename(doc.relativePath, '.md');
-  return dir === '.' ? `${base}.html` : `${dir}/${base}.html`;
-}
-
-export function docHref(doc: { slug?: string; relativePath: string }): string {
-  return `/${docHtmlPath(doc)}`;
 }

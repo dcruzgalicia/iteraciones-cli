@@ -1,6 +1,5 @@
 import type { SiteConfig } from '../config/site-config.js';
 import type { Frontmatter } from '../loader/frontmatter.js';
-import type { TemplateContext } from '../template/render/context.js';
 
 export type DocumentKind = 'page' | 'block';
 
@@ -8,7 +7,7 @@ export type DocumentType = 'file' | 'collection' | 'author' | 'authors' | 'event
 
 export type Region = 'content-before' | 'content-after' | 'sidebar-primary' | 'sidebar-secondary' | 'footer-left' | 'footer-center' | 'footer-right';
 
-/** Set de todos los valores válidos de `region:` en documentos de tipo bloque. Fuente única de verdad. */
+/** Set de todos los valores válidos de `region:` en documentos de tipo bloque. */
 export const VALID_REGIONS = new Set<Region>([
   'content-before',
   'content-after',
@@ -19,16 +18,11 @@ export const VALID_REGIONS = new Set<Region>([
   'footer-right',
 ]);
 
-/**
- * Índice de documentos de tipo `author` indexados por su título normalizado
- * (lowercase, trimmed). Usado para resolución eficiente de autores relacionados
- * y ponentes de eventos durante la fase de construcción de contexto.
- */
-export type AuthorDocumentIndex = ReadonlyMap<string, BuildDocument>;
+/** Tipos de documento válidos. Derivado manualmente de la unión DocumentType. */
+export const VALID_TYPES = new Set<DocumentType>(['file', 'collection', 'author', 'authors', 'event', 'events', 'menu', 'card', 'feed', 'list']);
 
 /**
  * Documento fuente tal como sale del paso de discovery.
- * Contiene el contenido Markdown, frontmatter parseado y metadatos de archivo.
  */
 export interface SourceDocument {
   filePath: string;
@@ -41,26 +35,17 @@ export interface SourceDocument {
 
 /**
  * Documento que acumula datos a través del pipeline.
- * Nace en classify (type, kind, templatePath) y recibe htmlFragment en render,
- * templateContext en context, outputHtml en compose y outputPath en write.
  */
 export interface BuildDocument extends SourceDocument {
-  // Asignado en classify
+  // Asignado en classify (hoy siempre undefined, se mantiene por compatibilidad export)
   type?: DocumentType;
   kind?: DocumentKind;
-  templatePath?: string;
   // Asignado en orchestrator (slug computation)
   slug?: string;
-  // Asignado en render
+  // Asignado en renderLatex
   htmlFragment?: string;
-  // Markdown final procesado (asignado en renderMarkdown)
+  // Cuerpo LaTeX generado en renderLatex
   processedBody?: string;
-  // Asignado en context
-  templateContext?: TemplateContext;
-  // Asignado en compose
-  outputHtml?: string;
-  // Asignado en write
-  outputPath?: string;
 }
 
 /**
@@ -71,6 +56,6 @@ export interface BuildContext {
   cwd: string;
   outputDir: string;
   cssPath: string;
-  /** Máximo de invocaciones pandoc simultáneas. Default: 4. */
+  /** Máximo de invocaciones pandoc simultáneas. Default: CPU - 1. */
   concurrency?: number;
 }
