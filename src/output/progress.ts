@@ -9,7 +9,7 @@ export interface RenderFileReport {
   phase: PipelinePhase;
 }
 
-export type PipelinePhase = 'discovery' | 'render' | 'latex' | 'markdown' | 'pdf' | 'epub' | 'html' | 'compose';
+export type PipelinePhase = 'discovery' | 'render' | 'latex' | 'markdown' | 'pdf' | 'epub' | 'html';
 
 interface PhaseMeta {
   label: string;
@@ -24,10 +24,9 @@ const PHASE_META: Record<PipelinePhase, PhaseMeta> = {
   html: { label: 'HTML', section: 'Generando publicaciones' },
   epub: { label: 'EPUB', section: 'Generando publicaciones' },
   markdown: { label: 'Markdown', section: 'Generando publicaciones' },
-  compose: { label: 'Componer', section: null },
 };
 
-const PHASE_ORDER: PipelinePhase[] = ['discovery', 'render', 'latex', 'pdf', 'html', 'epub', 'markdown', 'compose'];
+const PHASE_ORDER: PipelinePhase[] = ['discovery', 'render', 'latex', 'pdf', 'html', 'epub', 'markdown'];
 
 export class ProgressTracker {
   private verbose: boolean;
@@ -141,14 +140,6 @@ export class ProgressTracker {
     if (files && files.length > 0) {
       for (const f of files) {
         process.stdout.write(`    ${f}\n`);
-      }
-    }
-    if (phase === 'html') {
-      const composeFiles = this.phaseFiles['compose'];
-      if (composeFiles && composeFiles.length > 0) {
-        for (const f of composeFiles) {
-          process.stdout.write(`    ${f}\n`);
-        }
       }
     }
   }
