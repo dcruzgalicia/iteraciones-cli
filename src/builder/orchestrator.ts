@@ -124,7 +124,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
   // ── FASE 2+3: markdown → latex → html (combinada) ──
   progress.startPhase('render', pipelineDocs.length);
-  const renderResults = await renderLatex(pipelineDocs, ctx.concurrency, cwd, ctx.siteConfig.disabledTranspilers);
+  const fmt = ctx.siteConfig.format;
+  const needsHtml = fmt?.html?.generate === true || fmt?.epub?.generate === true;
+  const renderResults = await renderLatex(pipelineDocs, ctx.concurrency, cwd, ctx.siteConfig.disabledTranspilers, needsHtml);
   for (const doc of allDocs) {
     const result = renderResults.get(doc.relativePath);
     if (result) {
