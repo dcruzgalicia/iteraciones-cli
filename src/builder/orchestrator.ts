@@ -471,82 +471,30 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       progress.completePhase();
     }
 
-    // ── FASE 4: latex-to-html ──
-    // Convierte .tex a HTML fragment, procesa bloques y construye contextos.
-    // Solo se ejecuta si html.generate o epub.generate estan activos.
+    // ── FASE 4: render/context + PDF (paralelo) ──
+    // PDF solo necesita formats/pdf/{slug}.tex (FASE 3).
+    // HTML/EPUB/MD necesitan render/context (htmlFragment, templateContext).
+    // Ambos pueden ejecutarse en paralelo.
     const needsHtmlRender = formatCfg?.html?.generate === true;
     const needsRender = needsHtmlRender || formatCfg?.epub?.generate === true;
-    let allContextDocs: BuildDocument[] = pipelineDocs;
-    let renderedMap = new Map<DocumentType, BuildDocument[]>();
-    if (needsRender) {
-      const result = await runPrimaryRender(pipelineDocs, ctx, cwd);
-      const primaryRendered = new Map<DocumentType, BuildDocument[]>([
-        ['file', result.renderedFileDocs],
-        ['author', result.renderedAuthorDocs],
-        ['event', result.renderedEventDocs],
-      ]);
-      const authorDocumentIndex = result.authorDocumentIndex;
+    const noExport = options.noExport === true;
 
-      // Escribir htmlFragment a disco
-      for (const [, docs] of primaryRendered) {
-        for (const doc of docs) {
-          if (!doc.htmlFragment || !doc.slug) continue;
-          const htmlDir = join(ctx.cwd, '.iteraciones', 'html', dirname(doc.relativePath));
-          await mkdir(htmlDir, { recursive: true });
-          await Bun.write(join(htmlDir, `${doc.slug}.html`), doc.htmlFragment);
-        }
-      }
-
-      if (needsHtmlRender) {
-        const { renderedBlockDocs } = await runBlocksPrestep(pipelineDocs, ctx, enrichedSiteCtx, primaryRendered, authorDocumentIndex, cwd);
-        const contextResult = await runContextPhaseWithTypeGraph(pipelineDocs, ctx, enrichedSiteCtx, primaryRendered, authorDocumentIndex, cwd);
-        allContextDocs = contextResult.allContextDocs;
-        renderedMap = contextResult.renderedMap;
-      } else {
-        // Sin HTML: poblar renderedMap para exportacion (PDF, EPUB, MD)
-        const byType = new Map<DocumentType, BuildDocument[]>();
-        for (const doc of pipelineDocs) {
-          const type = doc.type ?? 'file';
-          const list = byType.get(type);
-          if (list) list.push(doc);
-          else byType.set(type, [doc]);
-        }
-        renderedMap = byType;
-      }
-    } else {
-      // Sin render HTML/EPUB: renderedMap desde pipelineDocs para exportacion
-      const byType = new Map<DocumentType, BuildDocument[]>();
-      for (const doc of pipelineDocs) {
-        const type = doc.type ?? 'file';
-        const list = byType.get(type);
-        if (list) list.push(doc);
-        else byType.set(type, [doc]);
-      }
-      renderedMap = byType;
+    // Construir renderedMap basico desde pipelineDocs para PDF
+    const baseRenderedMap = new Map<DocumentType, BuildDocument[]>();
+    for (const doc of pipelineDocs) {
+      const type = doc.type ?? 'file';
+      const list = baseRenderedMap.get(type);
+      if (list) list.push(doc);
+      else baseRenderedMap.set(type, [doc]);
     }
 
-    // Filtrar docs afectados para compose/write (solo HTML)
-    const finalContextDocs = affectedPaths ? allContextDocs.filter((d) => affectedPaths.has(d.relativePath)) : allContextDocs;
-
-    // ── FASE 5: export ──
-    const noExport = options.noExport === true;
-    const exportRenderedMap = affectedPaths
-      ? new Map<DocumentType, BuildDocument[]>(
-          [...renderedMap].map(([type, docs]) => [type, docs.filter((doc) => affectedPaths.has(doc.relativePath))]),
-        )
-      : renderedMap;
-
     const formatsDir = join(cwd, '.iteraciones', 'formats');
-    const exportBase = {
-      cwd,
-      lang: ctx.siteConfig.lang,
-      concurrency: ctx.concurrency ?? 4,
-    };
+    const exportBase = { cwd, lang: ctx.siteConfig.lang, concurrency: ctx.concurrency ?? 4 };
     const exportResults: ExportResult[] = [];
 
-    // Calcular total de docs exportables por formato
-    const countExportDocs = (type: DocumentType): number => {
-      const docs = (renderedMap.get(type) ?? []).filter((d) => d.kind !== 'block');
+    // Calcular total de docs exportables
+    const countExportDocs = (map: Map<DocumentType, BuildDocument[]>, type: DocumentType): number => {
+      const docs = (map.get(type) ?? []).filter((d) => d.kind !== 'block');
       let count = 0;
       for (const d of docs) {
         const raw = d.frontmatter['export'];
@@ -557,28 +505,79 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       return count;
     };
 
-    if (pdfOn && !noExport) {
-      let pdfTotal = 0;
-      for (const type of EXPORTABLE_TYPES) {
-        pdfTotal += countExportDocs(type);
-      }
-      progress.startPhase('pdf', pdfTotal);
-      const pdfResults = await runExportDocuments(exportRenderedMap, {
-        ...exportBase,
-        outputDir: join(formatsDir, 'pdf'),
-        config: { pdf: formatCfg?.pdf },
-        onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, durationMs: 0, cacheHit: false, phase: 'pdf' }),
-      });
-      for (const r of pdfResults) {
-        if (r.pdfPath) r.pdfPath = r.pdfPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
-        if (r.pdfFullPath) r.pdfFullPath = r.pdfFullPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
-        if (r.coverPath) r.coverPath = r.coverPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
-      }
-      exportResults.push(...pdfResults);
-      progress.completePhase();
-    }
+    // Ejecutar PDF y render/context en paralelo
+    let allContextDocs: BuildDocument[] = pipelineDocs;
+    let renderedMap = baseRenderedMap;
 
-    // ── FASE 6: html (final) — escribe en formats/html/ ──
+    await Promise.all([
+      // PDF
+      (async () => {
+        if (!pdfOn || noExport) return;
+        let pdfTotal = 0;
+        for (const type of EXPORTABLE_TYPES) pdfTotal += countExportDocs(baseRenderedMap, type);
+        progress.startPhase('pdf', pdfTotal);
+        const pdfResults = await runExportDocuments(baseRenderedMap, {
+          ...exportBase,
+          outputDir: join(formatsDir, 'pdf'),
+          config: { pdf: formatCfg?.pdf },
+          onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, durationMs: 0, cacheHit: false, phase: 'pdf' }),
+        });
+        for (const r of pdfResults) {
+          if (r.pdfPath) r.pdfPath = r.pdfPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
+          if (r.pdfFullPath) r.pdfFullPath = r.pdfFullPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
+          if (r.coverPath) r.coverPath = r.coverPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
+        }
+        exportResults.push(...pdfResults);
+        progress.completePhase();
+      })(),
+
+      // Render/context (para HTML, EPUB, MD)
+      (async () => {
+        if (!needsRender) return;
+        const result = await runPrimaryRender(pipelineDocs, ctx, cwd);
+        const primaryRendered = new Map<DocumentType, BuildDocument[]>([
+          ['file', result.renderedFileDocs],
+          ['author', result.renderedAuthorDocs],
+          ['event', result.renderedEventDocs],
+        ]);
+        const authorDocumentIndex = result.authorDocumentIndex;
+
+        // Escribir htmlFragment a disco
+        for (const [, docs] of primaryRendered) {
+          for (const doc of docs) {
+            if (!doc.htmlFragment || !doc.slug) continue;
+            const htmlDir = join(ctx.cwd, '.iteraciones', 'html', dirname(doc.relativePath));
+            await mkdir(htmlDir, { recursive: true });
+            await Bun.write(join(htmlDir, `${doc.slug}.html`), doc.htmlFragment);
+          }
+        }
+
+        if (needsHtmlRender) {
+          const { renderedBlockDocs } = await runBlocksPrestep(pipelineDocs, ctx, enrichedSiteCtx, primaryRendered, authorDocumentIndex, cwd);
+          const contextResult = await runContextPhaseWithTypeGraph(pipelineDocs, ctx, enrichedSiteCtx, primaryRendered, authorDocumentIndex, cwd);
+          allContextDocs = contextResult.allContextDocs;
+          renderedMap = contextResult.renderedMap;
+        } else {
+          const byType = new Map<DocumentType, BuildDocument[]>();
+          for (const doc of pipelineDocs) {
+            const type = doc.type ?? 'file';
+            const list = byType.get(type);
+            if (list) list.push(doc);
+            else byType.set(type, [doc]);
+          }
+          renderedMap = byType;
+        }
+      })(),
+    ]);
+
+    const finalContextDocs = affectedPaths ? allContextDocs.filter((d) => affectedPaths.has(d.relativePath)) : allContextDocs;
+    const exportRenderedMap = affectedPaths
+      ? new Map<DocumentType, BuildDocument[]>(
+          [...renderedMap].map(([type, docs]) => [type, docs.filter((doc) => affectedPaths.has(doc.relativePath))]),
+        )
+      : renderedMap;
+
+    // ── FASE 5: html (final) ──
     if (formatCfg?.html?.generate === true) {
       progress.startPhase('html', finalContextDocs.length);
       let docsWithExportLinks = finalContextDocs;
@@ -587,19 +586,16 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         docsWithExportLinks = injectDownloadLinksIntoListItems(docsWithExportLinks);
         docsWithExportLinks = injectCoverIntoListItems(docsWithExportLinks);
       }
-
       const htmlFormatsDir = join(formatsDir, 'html');
       const htmlCtx = { ...ctx, outputDir: htmlFormatsDir };
       await runFinalization(docsWithExportLinks, htmlCtx, log, (r) => progress.reportFile(r));
       progress.completePhase();
     }
 
-    // ── FASE 7: epub (bajo formats/html/) ──
+    // ── FASE 6: epub ──
     if (formatCfg?.epub?.generate && !noExport) {
       let epubTotal = 0;
-      for (const type of EXPORTABLE_TYPES) {
-        epubTotal += countExportDocs(type);
-      }
+      for (const type of EXPORTABLE_TYPES) epubTotal += countExportDocs(renderedMap, type);
       progress.startPhase('epub', epubTotal);
       const epubResults = await runExportDocuments(exportRenderedMap, {
         ...exportBase,
@@ -615,7 +611,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       progress.completePhase();
     }
 
-    // ── Fase markdown ──
+    // ── FASE 7: markdown ──
     if (formatCfg?.markdown?.generate && !noExport) {
       let mdTotal = 0;
       for (const type of EXPORTABLE_TYPES) {
