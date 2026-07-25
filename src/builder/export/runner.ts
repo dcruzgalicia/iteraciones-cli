@@ -146,9 +146,6 @@ export async function runExportDocuments(exportableDocs: BuildDocument[], option
   const globalBibliography: string | undefined = allBib[0];
   let globalCsl: string | undefined;
 
-  let _pdfDone = 0;
-  const _pdfTotal = hasPdf ? exportableDocs.length : 0;
-
   // Closure que genera los formatos para un ExportDocument ya ensamblado.
   async function generateFormats(
     exportDoc: ExportDocument,
@@ -193,7 +190,6 @@ export async function runExportDocuments(exportableDocs: BuildDocument[], option
           if (!existsSync(outputPath)) {
             return {};
           }
-          _pdfDone++;
           options.onExportProgress?.(exportDoc.relativePath);
           return { pdf: outputPath };
         })(),
