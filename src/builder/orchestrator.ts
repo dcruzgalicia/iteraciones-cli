@@ -9,7 +9,7 @@ import { type BuildReport, buildDocsFromIndex, discover } from './discover.js';
 import { runExportDocuments } from './export/runner.js';
 import type { ExportResult } from './export/types.js';
 import { renderLatex } from './render.js';
-import type { BuildContext, BuildDocument } from './types.js';
+import { type BuildContext, type BuildDocument, isExportSkipped } from './types.js';
 
 export interface BuildOptions {
   outputDir?: string;
@@ -150,9 +150,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const countExportDocs = (docs: BuildDocument[]): number => {
     let count = 0;
     for (const d of docs) {
-      const raw = d.frontmatter.export;
-      const skipped = typeof raw === 'object' && raw !== null && !Array.isArray(raw) && (raw as Record<string, unknown>).skip === true;
-      if (skipped) continue;
+      if (isExportSkipped(d.frontmatter)) continue;
       count++;
     }
     return count;
