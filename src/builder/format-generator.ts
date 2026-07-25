@@ -75,7 +75,21 @@ export async function generateFormats(
     }
   }
 
-  // ── FASE 3b: formats/html/ (fragmento html desde latex) ──
+  // ── FASE 3b: html/ (fragmento html desde latex, con bibliografia) ──
+  // Auto-descubrir archivos .bib para pasar --citeproc a pandoc
+  const bibFiles: string[] = [];
+  if (htmlActive && cwd) {
+    try {
+      const glob = new Bun.Glob('**/*.bib');
+      for (const file of glob.scanSync({ cwd, absolute: true })) {
+        const rel = file.replace(cwd, '').replace(/^\/+/, '');
+        if (rel.startsWith('node_modules/') || rel.startsWith('.iteraciones/') || rel.startsWith('dist/') || rel.startsWith('.git/')) continue;
+        bibFiles.push(file);
+      }
+    } catch {}
+  }
+  const bibOptions = bibFiles.length > 0 ? { bibliography: bibFiles[0]!, csl: join(import.meta.dir, '../../pandoc/csl/apa-7.csl') } : undefined;
+
   if (htmlActive) {
     for (const relPath of diff.recentFiles) {
       const entry = discoveryIndex.get(relPath);
@@ -93,12 +107,13 @@ export async function generateFormats(
       }
 
       try {
-        const htmlFragment = await convertFragment(texBody, join(cwd, relPath), undefined, 'html5', 'latex-auto_identifiers');
+        const htmlFragment = await convertFragment(texBody, join(cwd, relPath), bibOptions, 'html5', 'latex-auto_identifiers');
         const htmlDir = join(cacheBase, 'html', dir);
         await mkdir(htmlDir, { recursive: true });
         await Bun.write(join(htmlDir, `${slug}.html`), htmlFragment);
       } catch (err) {
-        process.stderr.write(`[format-generator] error al convertir ${slug}.tex a HTML: ${String(err)}\n`);
+        process.stderr.write(`[format-generator] error al convertir ${slug}.tex a HTML: ${String(err)}
+`);
       }
     }
   }

@@ -506,125 +506,164 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       return count;
     };
 
-    // Ejecutar PDF y render/context en paralelo
+    // Leer htmlFragment desde disco (FASE 3 ya lo genero con bibliografia)
+    // Reemplaza runPrimaryRender: ya no se necesita pandoc, solo cargar en memoria
+    if (needsRender) {
+      for (const doc of pipelineDocs) {
+        if (doc.htmlFragment !== undefined) continue;
+        const slug = doc.slug ?? basename(doc.relativePath, '.md');
+        const htmlPath = join(ctx.cwd, '.iteraciones', 'html', dirname(doc.relativePath), `${slug}.html`);
+        try {
+          doc.htmlFragment = await Bun.file(htmlPath).text();
+        } catch {
+          // Fragmento no disponible
+        }
+      }
+    }
+
+    // Construir primaryRendered y authorDocumentIndex para blocks/context
     let allContextDocs: BuildDocument[] = pipelineDocs;
     let renderedMap = baseRenderedMap;
+    let authorDocumentIndex: AuthorDocumentIndex | undefined;
+    if (needsHtmlRender || formatCfg?.epub?.generate) {
+      const fileDocs = pipelineDocs.filter((d) => d.type === 'file' && d.kind !== 'block');
+      const authorDocs = pipelineDocs.filter((d) => d.type === 'author' && d.kind !== 'block');
+      const eventDocs = pipelineDocs.filter((d) => d.type === 'event' && d.kind !== 'block');
+      authorDocumentIndex = createAuthorDocumentIndex(authorDocs);
+      const primaryRendered = new Map<DocumentType, BuildDocument[]>([
+        ['file', fileDocs],
+        ['author', authorDocs],
+        ['event', eventDocs],
+      ]);
 
-    await Promise.all([
-      // PDF
-      (async () => {
-        if (!pdfOn || noExport) return;
-        let pdfTotal = 0;
-        for (const type of EXPORTABLE_TYPES) pdfTotal += countExportDocs(baseRenderedMap, type);
-        progress.startPhase('pdf', pdfTotal);
-        const pdfResults = await runExportDocuments(baseRenderedMap, {
-          ...exportBase,
-          outputDir: join(formatsDir, 'pdf'),
-          config: { pdf: formatCfg?.pdf },
-          onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, durationMs: 0, cacheHit: false, phase: 'pdf' }),
-        });
-        for (const r of pdfResults) {
-          if (r.pdfPath) r.pdfPath = r.pdfPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
-          if (r.pdfFullPath) r.pdfFullPath = r.pdfFullPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
-          if (r.coverPath) r.coverPath = r.coverPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
-        }
-        exportResults.push(...pdfResults);
-        progress.completePhase(undefined, 'pdf');
-      })(),
-
-      // Markdown (usa baseRenderedMap, no necesita render/context)
-      (async () => {
-        if (!formatCfg?.markdown?.generate || noExport) return;
-        let mdTotal = 0;
-        for (const type of EXPORTABLE_TYPES) {
-          const docs = (baseRenderedMap.get(type) ?? []).filter((d) => d.kind !== 'block');
-          for (const d of docs) {
-            const raw = d.frontmatter['export'];
-            const skipped = typeof raw === 'object' && raw !== null && !Array.isArray(raw) && (raw as Record<string, unknown>)['skip'] === true;
-            if (skipped) continue;
-            mdTotal++;
+      // Ejecutar PDF, Markdown, EPUB y HTML en un solo Promise.all
+      await Promise.all([
+        // PDF
+        (async () => {
+          if (!pdfOn || noExport) return;
+          let pdfTotal = 0;
+          for (const type of EXPORTABLE_TYPES) pdfTotal += countExportDocs(baseRenderedMap, type);
+          progress.startPhase('pdf', pdfTotal);
+          const pdfResults = await runExportDocuments(baseRenderedMap, {
+            ...exportBase,
+            outputDir: join(formatsDir, 'pdf'),
+            config: { pdf: formatCfg?.pdf },
+            onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, durationMs: 0, cacheHit: false, phase: 'pdf' }),
+          });
+          for (const r of pdfResults) {
+            if (r.pdfPath) r.pdfPath = r.pdfPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
+            if (r.pdfFullPath) r.pdfFullPath = r.pdfFullPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
+            if (r.coverPath) r.coverPath = r.coverPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
           }
-        }
-        progress.startPhase('markdown', mdTotal);
-        const mdResults = await runExportDocuments(baseRenderedMap, {
-          ...exportBase,
-          outputDir: join(formatsDir, 'markdown'),
-          config: { markdown: formatCfg?.markdown },
-          onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, durationMs: 0, cacheHit: false, phase: 'markdown' }),
-        });
-        for (const r of mdResults) {
-          if (r.markdownPath) r.markdownPath = r.markdownPath.replace(join(formatsDir, 'markdown'), ctx.outputDir);
-        }
-        exportResults.push(...mdResults);
-        progress.completePhase(undefined, 'markdown');
-      })(),
+          exportResults.push(...pdfResults);
+          progress.completePhase(undefined, 'pdf');
+        })(),
 
-      // Render/context + EPUB (EPUB solo necesita htmlFragment, se ejecuta tras runPrimaryRender)
-      (async () => {
-        if (!needsRender) return;
-        const result = await runPrimaryRender(pipelineDocs, ctx, cwd);
-        const primaryRendered = new Map<DocumentType, BuildDocument[]>([
-          ['file', result.renderedFileDocs],
-          ['author', result.renderedAuthorDocs],
-          ['event', result.renderedEventDocs],
-        ]);
-        const authorDocumentIndex = result.authorDocumentIndex;
-
-        // Escribir htmlFragment a disco (con citas, sobrescribe el de FASE 3)
-        for (const [, docs] of primaryRendered) {
-          for (const doc of docs) {
-            if (!doc.htmlFragment || !doc.slug) continue;
-            const htmlDir = join(ctx.cwd, '.iteraciones', 'html', dirname(doc.relativePath));
-            await mkdir(htmlDir, { recursive: true });
-            await Bun.write(join(htmlDir, `${doc.slug}.html`), doc.htmlFragment);
+        // Markdown
+        (async () => {
+          if (!formatCfg?.markdown?.generate || noExport) return;
+          let mdTotal = 0;
+          for (const type of EXPORTABLE_TYPES) {
+            const docs = (baseRenderedMap.get(type) ?? []).filter((d) => d.kind !== 'block');
+            for (const d of docs) {
+              const raw = d.frontmatter['export'];
+              const skipped = typeof raw === 'object' && raw !== null && !Array.isArray(raw) && (raw as Record<string, unknown>)['skip'] === true;
+              if (skipped) continue;
+              mdTotal++;
+            }
           }
-        }
+          progress.startPhase('markdown', mdTotal);
+          const mdResults = await runExportDocuments(baseRenderedMap, {
+            ...exportBase,
+            outputDir: join(formatsDir, 'markdown'),
+            config: { markdown: formatCfg?.markdown },
+            onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, durationMs: 0, cacheHit: false, phase: 'markdown' }),
+          });
+          for (const r of mdResults) {
+            if (r.markdownPath) r.markdownPath = r.markdownPath.replace(join(formatsDir, 'markdown'), ctx.outputDir);
+          }
+          exportResults.push(...mdResults);
+          progress.completePhase(undefined, 'markdown');
+        })(),
 
-        // EPUB: solo necesita el htmlFragment (ya disponible tras runPrimaryRender)
-        // Se ejecuta en paralelo con blocks/context para HTML
-        const epubPromise =
-          formatCfg?.epub?.generate && !noExport
-            ? (async () => {
-                let epubTotal = 0;
-                for (const type of EXPORTABLE_TYPES) epubTotal += countExportDocs(baseRenderedMap, type);
-                progress.startPhase('epub', epubTotal);
-                const results = await runExportDocuments(baseRenderedMap, {
-                  ...exportBase,
-                  outputDir: join(formatsDir, 'html'),
-                  config: { epub: formatCfg?.epub },
-                  onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, durationMs: 0, cacheHit: false, phase: 'epub' }),
-                });
-                for (const r of results) {
-                  if (r.epubPath) r.epubPath = r.epubPath.replace(join(formatsDir, 'html'), ctx.outputDir);
-                  if (r.epubFullPath) r.epubFullPath = r.epubFullPath.replace(join(formatsDir, 'html'), ctx.outputDir);
-                }
-                progress.completePhase(undefined, 'epub');
-                return results;
-              })()
-            : Promise.resolve([] as ExportResult[]);
+        // EPUB (solo necesita htmlFragment, ya en memoria)
+        (async () => {
+          if (!formatCfg?.epub?.generate || noExport) return;
+          let epubTotal = 0;
+          for (const type of EXPORTABLE_TYPES) epubTotal += countExportDocs(baseRenderedMap, type);
+          progress.startPhase('epub', epubTotal);
+          const epubResults = await runExportDocuments(baseRenderedMap, {
+            ...exportBase,
+            outputDir: join(formatsDir, 'html'),
+            config: { epub: formatCfg?.epub },
+            onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, durationMs: 0, cacheHit: false, phase: 'epub' }),
+          });
+          for (const r of epubResults) {
+            if (r.epubPath) r.epubPath = r.epubPath.replace(join(formatsDir, 'html'), ctx.outputDir);
+            if (r.epubFullPath) r.epubFullPath = r.epubFullPath.replace(join(formatsDir, 'html'), ctx.outputDir);
+          }
+          exportResults.push(...epubResults);
+          progress.completePhase(undefined, 'epub');
+        })(),
 
-        // HTML: blocks + context (solo si html.generate)
-        if (needsHtmlRender) {
+        // HTML compose (blocks + context + htmlFragment)
+        (async () => {
+          if (!needsHtmlRender) return;
           const { renderedBlockDocs } = await runBlocksPrestep(pipelineDocs, ctx, enrichedSiteCtx, primaryRendered, authorDocumentIndex, cwd);
           const contextResult = await runContextPhaseWithTypeGraph(pipelineDocs, ctx, enrichedSiteCtx, primaryRendered, authorDocumentIndex, cwd);
           allContextDocs = contextResult.allContextDocs;
           renderedMap = contextResult.renderedMap;
-        } else {
-          const byType = new Map<DocumentType, BuildDocument[]>();
-          for (const doc of pipelineDocs) {
-            const type = doc.type ?? 'file';
-            const list = byType.get(type);
-            if (list) list.push(doc);
-            else byType.set(type, [doc]);
+        })(),
+      ]);
+    } else {
+      // Sin HTML ni EPUB: solo PDF + Markdown
+      await Promise.all([
+        (async () => {
+          if (!pdfOn || noExport) return;
+          let pdfTotal = 0;
+          for (const type of EXPORTABLE_TYPES) pdfTotal += countExportDocs(baseRenderedMap, type);
+          progress.startPhase('pdf', pdfTotal);
+          const pdfResults = await runExportDocuments(baseRenderedMap, {
+            ...exportBase,
+            outputDir: join(formatsDir, 'pdf'),
+            config: { pdf: formatCfg?.pdf },
+            onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, durationMs: 0, cacheHit: false, phase: 'pdf' }),
+          });
+          for (const r of pdfResults) {
+            if (r.pdfPath) r.pdfPath = r.pdfPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
+            if (r.pdfFullPath) r.pdfFullPath = r.pdfFullPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
+            if (r.coverPath) r.coverPath = r.coverPath.replace(join(formatsDir, 'pdf'), ctx.outputDir);
           }
-          renderedMap = byType;
-        }
-
-        // EPUB results se anaden al final (ya que esperamos a blocks/context)
-        const epubResults = await epubPromise;
-        exportResults.push(...epubResults);
-      })(),
-    ]);
+          exportResults.push(...pdfResults);
+          progress.completePhase(undefined, 'pdf');
+        })(),
+        (async () => {
+          if (!formatCfg?.markdown?.generate || noExport) return;
+          let mdTotal = 0;
+          for (const type of EXPORTABLE_TYPES) {
+            const docs = (baseRenderedMap.get(type) ?? []).filter((d) => d.kind !== 'block');
+            for (const d of docs) {
+              const raw = d.frontmatter['export'];
+              const skipped = typeof raw === 'object' && raw !== null && !Array.isArray(raw) && (raw as Record<string, unknown>)['skip'] === true;
+              if (skipped) continue;
+              mdTotal++;
+            }
+          }
+          progress.startPhase('markdown', mdTotal);
+          const mdResults = await runExportDocuments(baseRenderedMap, {
+            ...exportBase,
+            outputDir: join(formatsDir, 'markdown'),
+            config: { markdown: formatCfg?.markdown },
+            onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, durationMs: 0, cacheHit: false, phase: 'markdown' }),
+          });
+          for (const r of mdResults) {
+            if (r.markdownPath) r.markdownPath = r.markdownPath.replace(join(formatsDir, 'markdown'), ctx.outputDir);
+          }
+          exportResults.push(...mdResults);
+          progress.completePhase(undefined, 'markdown');
+        })(),
+      ]);
+    }
 
     const finalContextDocs = affectedPaths ? allContextDocs.filter((d) => affectedPaths.has(d.relativePath)) : allContextDocs;
     const exportRenderedMap = affectedPaths
