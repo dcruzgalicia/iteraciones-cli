@@ -205,8 +205,8 @@ export async function renderLatex(docs: BuildDocument[], concurrency: number, cw
 
     let processedBody = await convertFragment(JSON.stringify(ast), doc.filePath, undefined, 'latex', 'json', pandocArgs);
 
-    // Si hay citekeys en el body original y existen archivos .bib, agregar printbibliography
-    const hasCitekeys = bibFiles.length > 0 && /@\w+[\w:;#.,(){}'"\s]/.test(doc.body);
+    // Si hay citekeys en el body (leido del disco) y existen archivos .bib, agregar printbibliography
+    const hasCitekeys = bibFiles.length > 0 && /@\w+[\w:;#.,(){}'"\s]/.test(body);
     if (hasCitekeys) {
       processedBody = processedBody.replace(/\n+$/, '\n\n') + '\\printbibliography[heading=bibintoc]\n';
     }
