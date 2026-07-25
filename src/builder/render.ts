@@ -1,8 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
-
-import { mapWithConcurrency } from '../lib/concurrency.js';
 import { convertFragment } from '../lib/pandoc-runner.js';
+import { mapWithConcurrency } from '../lib/run.js';
 import { discoverBibFiles } from './latex-preamble.js';
 import { loadModules } from './load-modules.js';
 import type { BuildDocument } from './types.js';

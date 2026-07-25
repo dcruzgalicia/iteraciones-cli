@@ -5,10 +5,10 @@ import { cpus } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import type { EpubFormatConfig, HtmlFormatConfig, MarkdownFormatConfig, PdfFormatConfig, ThumbnailMode } from '../../config/site-config.js';
 import { THUMBNAIL_SIZES } from '../../config/site-config.js';
-import { mapWithConcurrency } from '../../lib/concurrency.js';
 import { PandocError } from '../../lib/errors.js';
+import { mapWithConcurrency } from '../../lib/run.js';
+import { computeSlug } from '../discover.js';
 import { discoverBibFiles } from '../latex-preamble.js';
-import { computeSlug } from '../slug.js';
 import { type BuildDocument, isExportSkipped } from '../types.js';
 import { assembleExportDocument } from './assemble.js';
 
