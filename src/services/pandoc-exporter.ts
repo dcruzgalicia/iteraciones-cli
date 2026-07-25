@@ -378,15 +378,6 @@ export async function convertToPdf(
   });
   const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
 
-  // Copiar PDF generado a destino
-  const pdfPath = join(pdfDir, `${slug}.pdf`);
-  const pdfOk = await Bun.file(pdfPath)
-    .exists()
-    .catch(() => false);
-  if (pdfOk) {
-    await Bun.write(outputPath, Bun.file(pdfPath));
-  }
-
   if (exitCode !== 0) {
     const log = stdout + '\n' + stderr;
     const m = log.match(/^! .*$/m);
