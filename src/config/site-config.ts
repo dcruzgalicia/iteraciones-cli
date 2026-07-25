@@ -1,8 +1,4 @@
-export type PageSize = 'half-letter' | 'letter' | 'legal' | 'executive' | 'a3' | 'a4' | 'a5' | 'b4' | 'b5' | 'tabloid' | 'pocket' | (string & {});
-
 export type PageNumberPlacement = 'footer-left' | 'footer-center' | 'footer-right' | 'header-left' | 'header-center' | 'header-right';
-
-export type Sides = 'oneside' | 'twoside';
 
 export type ThumbnailMode = boolean | 'responsive';
 
