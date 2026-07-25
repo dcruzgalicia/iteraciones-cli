@@ -14,6 +14,8 @@ export interface BuildReport {
   startedAt: number;
   recentFiles: string[];
   deletedFiles: string[];
+  /** Formatos activos durante este build (para detectar formatos nuevos en el siguiente build). */
+  activeFormats?: string[];
 }
 
 const DISCOVERY_INDEX_PATH = join('.iteraciones', 'changes', 'files.json');
@@ -65,7 +67,7 @@ export function computeSlug(frontmatter: { title?: string; author?: string[] }):
  * Fase 1 — discover: detecta cambios y actualiza discovery.json
  * con title/author/slug de cada archivo.
  */
-export async function discover(cwd: string, options: { noCache?: boolean } = {}): Promise<DiscoverResult> {
+export async function discover(cwd: string, options: { noCache?: boolean; activeFormats?: string[] } = {}): Promise<DiscoverResult> {
   const relativePaths: string[] = [];
 
   for await (const entry of new Bun.Glob('**/*.md').scan({ cwd })) {
@@ -180,7 +182,7 @@ export async function discover(cwd: string, options: { noCache?: boolean } = {})
   };
 
   await saveDiscoveryIndex(cwd, discoveryIndex);
-  await saveBuildReport(cwd, buildReport);
+  await saveBuildReport(cwd, buildReport, options.activeFormats);
 
   return { relativePaths, changedPaths, discoveryIndex, deletedEntries };
 }
@@ -190,7 +192,7 @@ export const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', '.iteracion
 
 const BUILD_REPORT_PATH = join('.iteraciones', 'changes', 'diff.json');
 
-async function loadBuildReport(cwd: string): Promise<BuildReport | null> {
+export async function loadBuildReport(cwd: string): Promise<BuildReport | null> {
   const file = Bun.file(join(cwd, BUILD_REPORT_PATH));
   if (!(await file.exists())) return null;
   try {
@@ -201,10 +203,10 @@ async function loadBuildReport(cwd: string): Promise<BuildReport | null> {
   }
 }
 
-async function saveBuildReport(cwd: string, report: BuildReport): Promise<void> {
+async function saveBuildReport(cwd: string, report: BuildReport, activeFormats?: string[]): Promise<void> {
   const filePath = join(cwd, BUILD_REPORT_PATH);
   await mkdir(dirname(filePath), { recursive: true });
-  await Bun.write(filePath, JSON.stringify(report));
+  await Bun.write(filePath, JSON.stringify({ ...report, activeFormats: activeFormats ?? [] }));
 }
 
 /**

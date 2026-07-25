@@ -3,9 +3,10 @@ import { cpus } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { ProgressTracker } from '../cli/progress.js';
 import { loadSiteConfig } from '../config/config-loader.js';
-
+import type { SiteConfig } from '../config/site-config.js';
+import { computeActiveFormats } from '../config/site-config.js';
 import { buildAssets, generateLatexPreamble, renderHtmlPage } from './build-utils.js';
-import { type BuildReport, buildDocsFromIndex, discover } from './discover.js';
+import { type BuildReport, buildDocsFromIndex, discover, loadBuildReport } from './discover.js';
 import { runExportDocuments } from './export/runner.js';
 import { renderLatex } from './render.js';
 import { type BuildContext, type BuildDocument, isExportSkipped } from './types.js';
@@ -20,9 +21,7 @@ export interface BuildOptions {
   verbose?: boolean;
 }
 
-async function setupBuildEnvironment(cwd: string, options: BuildOptions): Promise<BuildContext> {
-  const siteConfig = await loadSiteConfig(cwd);
-
+async function setupBuildEnvironment(cwd: string, siteConfig: SiteConfig, options: BuildOptions): Promise<BuildContext> {
   const defaultOutputDir = join(cwd, 'dist', 'files');
   const ctx: BuildContext = {
     siteConfig,
@@ -51,16 +50,33 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const progress = new ProgressTracker({ verbose: options.verbose ?? false });
   const log = (msg: string) => progress.log(msg);
 
+  // Cargar config primero para detectar cambios de formato antes de setupBuildEnvironment
+  const siteConfig = await loadSiteConfig(cwd);
+  const currentFormats = computeActiveFormats(siteConfig.format);
+
+  // Detectar formatos nuevos comparando con el build anterior
+  const prevReport = await loadBuildReport(cwd);
+  if (prevReport !== null) {
+    const prevFormats = new Set(prevReport.activeFormats ?? []);
+    const newFormats = currentFormats.filter((f) => !prevFormats.has(f));
+    if (newFormats.length > 0) {
+      options = { ...options, noCache: true };
+      log(`Nuevos formatos detectados: ${newFormats.join(', ')}. Reconstruyendo desde cero.`);
+    }
+  }
+
   if (options.noCache) {
     progress.showCleanup();
   }
 
-  const ctx = await setupBuildEnvironment(cwd, options);
+  const ctx = await setupBuildEnvironment(cwd, siteConfig, options);
+
+  // Pasar activeFormats a discover() para que se guarden en diff.json
   const generateHtml = ctx.siteConfig.format?.html?.generate === true;
 
   progress.startPhase('discovery');
   const [{ relativePaths, changedPaths: discoveredChanges, discoveryIndex, deletedEntries }, cssPath] = await Promise.all([
-    discover(cwd, { noCache: options.noCache }),
+    discover(cwd, { noCache: options.noCache, activeFormats: currentFormats }),
     generateHtml ? buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, { noTailwind: options.noTailwind }) : Promise.resolve(''),
   ]);
   ctx.cssPath = cssPath;
