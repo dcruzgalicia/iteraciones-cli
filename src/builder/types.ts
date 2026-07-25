@@ -4,7 +4,6 @@ export interface Frontmatter {
   title: string;
   date: string;
   author: string[];
-  type: string;
   keywords: string[];
   [key: string]: unknown;
 }

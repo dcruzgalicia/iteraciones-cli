@@ -110,21 +110,12 @@ function parseHtmlFormatConfig(raw: unknown): HtmlFormatConfig | undefined {
 
   const theme = typeof obj.theme === 'string' ? obj.theme : undefined;
   const accent = resolveAccent(obj.accent);
-  const math = obj.math === 'katex' || obj.math === 'mathjax' ? obj.math : 'none';
-  const toc = typeof obj.toc === 'boolean' ? obj.toc : DEFAULT_HTML_FORMAT.toc;
-  const rawTocDepth = obj['toc-depth'];
-  const tocDepth =
-    typeof rawTocDepth === 'number' && Number.isInteger(rawTocDepth) && rawTocDepth >= 1 && rawTocDepth <= 6
-      ? rawTocDepth
-      : DEFAULT_HTML_FORMAT.tocDepth;
-
-  const hyphenation = typeof obj.hyphenation === 'boolean' ? obj.hyphenation : DEFAULT_HTML_FORMAT.hyphenation;
   const generate = typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_HTML_FORMAT.generate;
   const rawThumbnails = obj.thumbnails;
   const thumbnails =
     rawThumbnails === 'responsive' ? 'responsive' : typeof rawThumbnails === 'boolean' ? rawThumbnails : DEFAULT_HTML_FORMAT.thumbnails;
 
-  return { theme, accent, math, toc, tocDepth, hyphenation, generate, thumbnails };
+  return { theme, accent, generate, thumbnails };
 }
 
 const KNOWN_PAGE_NUMBER_PLACEMENTS = new Set<string>([
@@ -385,23 +376,7 @@ function parseEpubFormatConfig(raw: unknown): EpubFormatConfig {
   if (!raw || typeof raw !== 'object') return { ...DEFAULT_EPUB_FORMAT };
   const obj = raw as Record<string, unknown>;
 
-  const toc = typeof obj.toc === 'boolean' ? obj.toc : DEFAULT_EPUB_FORMAT.toc;
-  const rawTocDepth = obj['toc-depth'];
-  const tocDepth =
-    typeof rawTocDepth === 'number' && Number.isInteger(rawTocDepth) && rawTocDepth >= 0 && rawTocDepth <= 5
-      ? rawTocDepth
-      : DEFAULT_EPUB_FORMAT.tocDepth;
-  const rawEpubBib = obj.bibliography;
-  const bibliography =
-    typeof rawEpubBib === 'string' && rawEpubBib.trim() ? rawEpubBib.trim() : rawEpubBib === '' ? undefined : DEFAULT_EPUB_FORMAT.bibliography;
-  const rawEpubCsl = obj.csl;
-  const csl = typeof rawEpubCsl === 'string' && rawEpubCsl.trim() ? rawEpubCsl.trim() : rawEpubCsl === '' ? undefined : DEFAULT_EPUB_FORMAT.csl;
-
   return {
-    toc,
-    tocDepth,
-    ...(bibliography !== undefined ? { bibliography } : {}),
-    ...(csl !== undefined ? { csl } : {}),
     generate: typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_EPUB_FORMAT.generate,
   };
 }

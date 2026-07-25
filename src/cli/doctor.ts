@@ -1,4 +1,5 @@
-import { checkSiteConfig } from './doctor/project-checks.js';
+import { loadSiteConfig } from '../config/config-loader.js';
+import { ConfigError } from '../lib/errors.js';
 import {
   type CheckResult,
   checkLatexEngine,
@@ -8,6 +9,18 @@ import {
   checkTailwind,
   checkWritePermissions,
 } from './doctor/system-checks.js';
+
+async function checkSiteConfig(cwd: string): Promise<CheckResult> {
+  try {
+    await loadSiteConfig(cwd);
+    return { label: '_iteraciones.yaml', ok: true };
+  } catch (err) {
+    if (err instanceof ConfigError) {
+      return { label: '_iteraciones.yaml', ok: false, detail: err.message };
+    }
+    return { label: '_iteraciones.yaml', ok: false, detail: err instanceof Error ? err.message : String(err) };
+  }
+}
 
 /**
  * Verifica que el entorno tenga todo lo necesario para correr \`iteraciones build\`.
