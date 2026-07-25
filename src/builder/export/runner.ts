@@ -6,10 +6,11 @@ import { dirname, join, resolve } from 'node:path';
 import type { EpubFormatConfig, HtmlFormatConfig, MarkdownFormatConfig, PdfFormatConfig, ThumbnailMode } from '../../config/site-config.js';
 import { THUMBNAIL_SIZES } from '../../config/site-config.js';
 import { mapWithConcurrency } from '../../lib/concurrency.js';
-import { convertToEpub, convertToMarkdown, convertToPdf } from '../../lib/pandoc-exporter.js';
+import { discoverBibFiles } from '../latex-preamble.js';
 import { computeSlug } from '../slug.js';
 import type { BuildDocument } from '../types.js';
 import { assembleExportDocument } from './assemble.js';
+import { convertToEpub, convertToMarkdown, convertToPdf } from './pandoc.js';
 import type { ExportDocument, ExportMetadata, ExportResult } from './types.js';
 
 /**
@@ -140,16 +141,8 @@ export async function runExportDocuments(exportableDocs: BuildDocument[], option
   };
 
   // Auto-descubrir archivos .bib en el proyecto
-  let globalBibliography: string | undefined;
-  try {
-    const glob = new Bun.Glob('**/*.bib');
-    for (const file of glob.scanSync({ cwd, absolute: true })) {
-      const rel = file.replace(cwd, '').replace(/^\/+/, '');
-      if (rel.startsWith('node_modules/') || rel.startsWith('.iteraciones/') || rel.startsWith('dist/') || rel.startsWith('.git/')) continue;
-      globalBibliography = file;
-      break;
-    }
-  } catch {}
+  const allBib = discoverBibFiles(cwd);
+  const globalBibliography: string | undefined = allBib[0];
   let globalCsl: string | undefined;
 
   let _pdfDone = 0;

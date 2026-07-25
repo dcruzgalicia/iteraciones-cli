@@ -41,7 +41,7 @@ export interface PreambleMeta {
 }
 
 /** Descubre archivos .bib en el proyecto (excluye node_modules, .iteraciones, dist). */
-function discoverBibFiles(cwd: string): string[] {
+export function discoverBibFiles(cwd: string): string[] {
   const results: string[] = [];
   try {
     const glob = new Bun.Glob('**/*.bib');

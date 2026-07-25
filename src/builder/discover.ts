@@ -1,7 +1,6 @@
 import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { type DiscoveryEntry, loadDiscoveryIndex, saveDiscoveryIndex } from '../builder/persist/discovery-index.js';
-import { loadSlugsCounter, saveSlugsCounter } from '../builder/persist/slugs-cache.js';
 import { IGNORED_DIRS } from '../lib/constants.js';
 import { computeSlug } from './slug.js';
 import type { SourceDocument } from './types.js';
@@ -22,6 +21,26 @@ export interface BuildReport {
   startedAt: number;
   recentFiles: string[];
   deletedFiles: string[];
+}
+
+const SLUGS_CACHE_PATH = join('.iteraciones', 'changes', 'slugs.json');
+
+async function loadSlugsCounter(cwd: string): Promise<Map<string, number>> {
+  const file = Bun.file(join(cwd, SLUGS_CACHE_PATH));
+  if (!(await file.exists())) return new Map();
+  try {
+    const raw = await file.text();
+    const parsed: Record<string, number> = JSON.parse(raw);
+    return new Map(Object.entries(parsed));
+  } catch {
+    return new Map();
+  }
+}
+
+async function saveSlugsCounter(cwd: string, counter: Map<string, number>): Promise<void> {
+  const filePath = join(cwd, SLUGS_CACHE_PATH);
+  await mkdir(dirname(filePath), { recursive: true });
+  await Bun.write(filePath, JSON.stringify(Object.fromEntries(counter)));
 }
 
 const FM_RE = /^---\r?\n([\s\S]*?)\r?\n---/;
