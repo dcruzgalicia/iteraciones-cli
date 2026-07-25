@@ -1,7 +1,3 @@
-import type { BuildDocument } from '../types.js';
-
-export type ExportFormat = 'pdf' | 'epub' | 'md';
-
 /** Una entrada de epigrafe (dictum) con cita y autor opcional. */
 export interface DictumEntry {
   text: string;
