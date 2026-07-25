@@ -5,7 +5,6 @@ import {
   DEFAULT_HTML_FORMAT,
   DEFAULT_LATEX_FORMAT,
   DEFAULT_MARKDOWN_FORMAT,
-  DEFAULT_PAGINATION,
   DEFAULT_PDF_FORMAT,
   DEFAULT_SITE_CONFIG,
 } from '../config/site-config.js';
@@ -163,12 +162,6 @@ function buildDefaultConfig(): string {
   lines.push(`  lang: ${yamlStr(DEFAULT_SITE_CONFIG.lang)}`);
   lines.push(`  logo: ${yamlStr(DEFAULT_SITE_CONFIG.logo)}`);
   lines.push(`  base-url: ${yamlStr(DEFAULT_SITE_CONFIG.baseUrl ?? '')}`);
-  lines.push('  pagination:');
-  lines.push(`    limit: ${DEFAULT_PAGINATION.limit}`);
-  lines.push('');
-
-  // ── plugins ──
-  lines.push('plugins: []');
   lines.push('');
 
   // ── format ──

@@ -15,10 +15,6 @@ export const THUMBNAIL_SIZES: Record<string, number> = {
 
 // ── Schema `format:` (estilo Quarto) ──
 
-export interface PaginationConfig {
-  limit: number;
-}
-
 export interface HtmlFormatConfig {
   theme?: string;
   accent?: string;
@@ -149,9 +145,6 @@ export interface SiteConfig {
   lang: string;
   logo: string;
   baseUrl: string | undefined;
-  plugins: string[];
-  /** Configuracion de paginacion de listas. */
-  pagination: PaginationConfig;
   /** Configuracion por formato de salida. */
   format: FormatConfig;
   /**
@@ -199,8 +192,6 @@ export const KNOWN_ACCENT_COLORS = new Set([
   'pink',
   'rose',
 ]);
-
-export const DEFAULT_PAGINATION: PaginationConfig = { limit: 10 };
 
 export const DEFAULT_HTML_FORMAT: HtmlFormatConfig = {
   theme: undefined,
@@ -308,10 +299,8 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   lang: 'es-MX',
   logo: '',
   baseUrl: undefined,
-  plugins: [],
   disabledTranspilers: undefined,
   disabledPreambleTranspilers: undefined,
-  pagination: DEFAULT_PAGINATION,
   format: {
     html: DEFAULT_HTML_FORMAT,
     pdf: DEFAULT_PDF_FORMAT,

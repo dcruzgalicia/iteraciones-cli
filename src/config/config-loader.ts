@@ -5,7 +5,6 @@ import {
   DEFAULT_HTML_FORMAT,
   DEFAULT_LATEX_FORMAT,
   DEFAULT_MARKDOWN_FORMAT,
-  DEFAULT_PAGINATION,
   DEFAULT_PDF_FORMAT,
   DEFAULT_SITE_CONFIG,
   type EpubFormatConfig,
@@ -15,7 +14,6 @@ import {
   type LatexFormatConfig,
   type MarkdownFormatConfig,
   type PageNumberPlacement,
-  type PaginationConfig,
   type PdfFormatConfig,
   type SiteConfig,
 } from './site-config.js';
@@ -29,7 +27,6 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
   if (!(await file.exists()))
     return {
       ...DEFAULT_SITE_CONFIG,
-      plugins: [...DEFAULT_SITE_CONFIG.plugins],
       disabledTranspilers: undefined,
     };
 
@@ -50,14 +47,12 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
   if (!parsed || typeof parsed !== 'object')
     return {
       ...DEFAULT_SITE_CONFIG,
-      plugins: [...DEFAULT_SITE_CONFIG.plugins],
       disabledTranspilers: undefined,
     };
 
   const root = parsed as Record<string, unknown>;
   const site = root.site && typeof root.site === 'object' ? (root.site as Record<string, unknown>) : {};
 
-  const plugins = Array.isArray(root.plugins) ? root.plugins.filter((p): p is string => typeof p === 'string') : [...DEFAULT_SITE_CONFIG.plugins];
   const rawDisabled = root['disabled-transpilers'];
   const disabledTranspilers =
     Array.isArray(rawDisabled) && rawDisabled.length > 0 ? rawDisabled.filter((t): t is string => typeof t === 'string') : undefined;
@@ -74,7 +69,6 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
   const logo = typeof site.logo === 'string' ? site.logo : DEFAULT_SITE_CONFIG.logo;
   const baseUrl = typeof site['base-url'] === 'string' && site['base-url'].trim() ? site['base-url'].trim() : DEFAULT_SITE_CONFIG.baseUrl;
 
-  const pagination = parsePaginationConfig(site.pagination);
   const format =
     typeof root.format === 'object' && root.format !== null
       ? parseFormatConfig(root.format as Record<string, unknown>)
@@ -91,23 +85,14 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
     lang,
     logo,
     baseUrl,
-    plugins,
-    disabledTranspilers,
-    disabledPreambleTranspilers,
-    pagination,
     format,
+    disabledTranspilers: disabledTranspilers !== undefined && disabledTranspilers.length > 0 ? disabledTranspilers : undefined,
+    disabledPreambleTranspilers:
+      disabledPreambleTranspilers !== undefined && disabledPreambleTranspilers.length > 0 ? disabledPreambleTranspilers : undefined,
   };
 }
 
 // ── Parsers ──────────────────────────────────────────────────────────────
-
-function parsePaginationConfig(raw: unknown): PaginationConfig {
-  if (!raw || typeof raw !== 'object') return { ...DEFAULT_PAGINATION };
-  const obj = raw as Record<string, unknown>;
-  const rawLimit = obj.limit;
-  const limit = typeof rawLimit === 'number' && Number.isFinite(rawLimit) && rawLimit > 0 ? Math.floor(rawLimit) : DEFAULT_PAGINATION.limit;
-  return { limit };
-}
 
 function parseFormatConfig(raw: Record<string, unknown>): FormatConfig {
   return {
