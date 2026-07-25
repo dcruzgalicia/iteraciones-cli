@@ -7,78 +7,23 @@ import { buildLatexPreamble } from './latex-preamble.js';
 import type { BuildReport } from './pipeline/discover.js';
 
 /**
- * FASE 3 — Generación de formatos intermedios.
- *
- * A partir de los archivos .tex (body) ya generados en FASE 2 (tex/),
- * genera los siguientes formatos en .iteraciones/formats/:
- *
- *   formats/pdf/{dir}/{slug}/{slug}.tex   (con preamble, si pdf/latex activo)
- *   html/{dir}/{slug}.html                (html fragment, si html/epub activo)
- *   formats/markdown/{dir}/{slug}.md      (markdown, si formato markdown activo)
- *
- * El orden respeta la cadena de dependencias: primero pdf/latex, luego html,
- * luego markdown. Cada formato se completa para todos los archivos antes de
- * iniciar el siguiente.
- *
- * No usa allDocs ni pipelineDocs — solo trabaja con discoveryIndex y diff.json.
+ * FASE 3a — Genera html/{slug}.html (fragmento con bibliografia).
+ * No necesita esperar a formats/pdf/. Lee directo de tex/.
  */
-export async function generateFormats(
+export async function generateHtmlFragment(
   cwd: string,
   siteConfig: SiteConfig,
   discoveryIndex: Map<string, DiscoveryEntry>,
   diff: BuildReport,
-  log: (msg: string) => void,
 ): Promise<void> {
-  const pdfActive = siteConfig.format?.pdf?.generate === true || siteConfig.format?.latex?.generate === true;
   const htmlActive = siteConfig.format?.html?.generate === true || siteConfig.format?.epub?.generate === true;
-
-  if (!pdfActive && !htmlActive && diff.deletedFiles.length === 0) {
-    return; // Nothing to do
-  }
+  if (!htmlActive) return;
 
   const cacheBase = join(cwd, '.iteraciones');
 
-  // ── FASE 3a: formats/pdf/ (full .tex con preamble) ──
-  if (pdfActive) {
-    for (const relPath of diff.recentFiles) {
-      const entry = discoveryIndex.get(relPath);
-      if (!entry) continue;
-
-      const slug = entry.slug ?? basename(relPath, '.md');
-      const dir = dirname(relPath);
-      const texBodyPath = join(cacheBase, 'tex', dir, `${slug}.tex`);
-
-      let texBody: string;
-      try {
-        texBody = await Bun.file(texBodyPath).text();
-        texBody = texBody.replace(/\n+$/, '');
-      } catch {
-        continue;
-      }
-
-      const preamble = await buildLatexPreamble(
-        siteConfig.format?.pdf,
-        {
-          title: entry.title,
-          author: entry.author,
-          date: undefined,
-          filePath: join(cwd, relPath),
-          cwd,
-        },
-        siteConfig.disabledPreambleTranspilers,
-      );
-
-      const fullTex = [...preamble, '', texBody, '', '\\end{document}'].join('\n');
-      const pdfDir = join(cacheBase, 'formats', 'pdf', dir);
-      await mkdir(pdfDir, { recursive: true });
-      await Bun.write(join(pdfDir, `${slug}.tex`), fullTex);
-    }
-  }
-
-  // ── FASE 3b: html/ (fragmento html desde latex, con bibliografia) ──
-  // Auto-descubrir archivos .bib para pasar --citeproc a pandoc
+  // Auto-descubrir .bib para citeproc
   const bibFiles: string[] = [];
-  if (htmlActive && cwd) {
+  if (cwd) {
     try {
       const glob = new Bun.Glob('**/*.bib');
       for (const file of glob.scanSync({ cwd, absolute: true })) {
@@ -90,40 +35,101 @@ export async function generateFormats(
   }
   const bibOptions = bibFiles.length > 0 ? { bibliography: bibFiles[0]!, csl: join(import.meta.dir, '../../pandoc/csl/apa-7.csl') } : undefined;
 
-  if (htmlActive) {
-    for (const relPath of diff.recentFiles) {
-      const entry = discoveryIndex.get(relPath);
-      if (!entry) continue;
+  for (const relPath of diff.recentFiles) {
+    const entry = discoveryIndex.get(relPath);
+    if (!entry) continue;
 
-      const slug = entry.slug ?? basename(relPath, '.md');
-      const dir = dirname(relPath);
-      const texBodyPath = join(cacheBase, 'tex', dir, `${slug}.tex`);
+    const slug = entry.slug ?? basename(relPath, '.md');
+    const dir = dirname(relPath);
+    const texBodyPath = join(cacheBase, 'tex', dir, `${slug}.tex`);
 
-      let texBody: string;
-      try {
-        texBody = await Bun.file(texBodyPath).text();
-      } catch {
-        continue;
-      }
+    let texBody: string;
+    try {
+      texBody = await Bun.file(texBodyPath).text();
+    } catch {
+      continue;
+    }
 
-      try {
-        const htmlFragment = await convertFragment(texBody, join(cwd, relPath), bibOptions, 'html5', 'latex-auto_identifiers');
-        const htmlDir = join(cacheBase, 'html', dir);
-        await mkdir(htmlDir, { recursive: true });
-        await Bun.write(join(htmlDir, `${slug}.html`), htmlFragment);
-      } catch (err) {
-        process.stderr.write(`[format-generator] error al convertir ${slug}.tex a HTML: ${String(err)}
-`);
-      }
+    try {
+      const htmlFragment = await convertFragment(texBody, join(cwd, relPath), bibOptions, 'html5', 'latex-auto_identifiers');
+      const htmlDir = join(cacheBase, 'html', dir);
+      await mkdir(htmlDir, { recursive: true });
+      await Bun.write(join(htmlDir, `${slug}.html`), htmlFragment);
+    } catch (err) {
+      process.stderr.write(`[format-generator] error al convertir ${slug}.tex a HTML: ${String(err)}\n`);
     }
   }
+}
 
-  // ── Clean up deleted files from formats/ (unconditional: all formats) ──
+/**
+ * FASE 3b — Genera formats/pdf/{slug}.tex (full .tex con preamble).
+ */
+export async function generateLatexPreamble(
+  cwd: string,
+  siteConfig: SiteConfig,
+  discoveryIndex: Map<string, DiscoveryEntry>,
+  diff: BuildReport,
+): Promise<void> {
+  const pdfActive = siteConfig.format?.pdf?.generate === true || siteConfig.format?.latex?.generate === true;
+  if (!pdfActive) return;
+
+  const cacheBase = join(cwd, '.iteraciones');
+
+  for (const relPath of diff.recentFiles) {
+    const entry = discoveryIndex.get(relPath);
+    if (!entry) continue;
+
+    const slug = entry.slug ?? basename(relPath, '.md');
+    const dir = dirname(relPath);
+    const texBodyPath = join(cacheBase, 'tex', dir, `${slug}.tex`);
+
+    let texBody: string;
+    try {
+      texBody = await Bun.file(texBodyPath).text();
+      texBody = texBody.replace(/\n+$/, '');
+    } catch {
+      continue;
+    }
+
+    const preamble = await buildLatexPreamble(
+      siteConfig.format?.pdf,
+      {
+        title: entry.title,
+        author: entry.author,
+        date: undefined,
+        filePath: join(cwd, relPath),
+        cwd,
+      },
+      siteConfig.disabledPreambleTranspilers,
+    );
+
+    const fullTex = [...preamble, '', texBody, '', '\\end{document}'].join('\n');
+    const pdfDir = join(cacheBase, 'formats', 'pdf', dir);
+    await mkdir(pdfDir, { recursive: true });
+    await Bun.write(join(pdfDir, `${slug}.tex`), fullTex);
+  }
+}
+
+/**
+ * FASE 3 (completa) — Genera todos los formatos intermedios.
+ * Mantenida para compatibilidad, pero usa las funciones separadas.
+ */
+export async function generateFormats(
+  cwd: string,
+  siteConfig: SiteConfig,
+  discoveryIndex: Map<string, DiscoveryEntry>,
+  diff: BuildReport,
+  log: (msg: string) => void,
+): Promise<void> {
+  await generateHtmlFragment(cwd, siteConfig, discoveryIndex, diff);
+  await generateLatexPreamble(cwd, siteConfig, discoveryIndex, diff);
+
+  // Clean up deleted files from formats/
+  const cacheBase = join(cwd, '.iteraciones');
   for (const relPath of diff.deletedFiles) {
     const entry = discoveryIndex.get(relPath);
     const slug = entry?.slug ?? basename(relPath, '.md');
     const dir = dirname(relPath);
-
     await rm(join(cacheBase, 'formats', 'pdf', dir, `${slug}.tex`), { force: true }).catch(() => {});
     await rm(join(cacheBase, 'formats', 'html', dir, `${slug}.html`), { force: true }).catch(() => {});
     await rm(join(cacheBase, 'formats', 'html', dir, `${slug}.epub`), { force: true }).catch(() => {});
