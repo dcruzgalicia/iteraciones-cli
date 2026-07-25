@@ -16,12 +16,10 @@ const DEFAULT_README = [
   'author:',
   '  - "Nombre del autor"',
   '  - "Segundo autor"',
-  'type: file',
   'keywords:',
   '  - "ejemplo"',
-  '  - "documentaci\u00f3n"',
+  '  - "documentación"',
   'region: mx',
-  'draft: false',
   'abstract: "Resumen o extracto breve del documento. Aparece en listados y previstas."',
   'tagline: "Subt\u00edtulo o descripci\u00f3n breve"',
   '---',
@@ -329,10 +327,6 @@ function buildDefaultConfig(): string {
   lines.push('  html:');
   lines.push(`    theme: dark`);
   lines.push(`    accent: ${DEFAULT_HTML_FORMAT.accent}`);
-  lines.push(`    math: ${DEFAULT_HTML_FORMAT.math}`);
-  lines.push(`    toc: ${yamlBool(DEFAULT_HTML_FORMAT.toc)}`);
-  lines.push(`    toc-depth: ${DEFAULT_HTML_FORMAT.tocDepth}`);
-  lines.push(`    hyphenation: ${yamlBool(DEFAULT_HTML_FORMAT.hyphenation)}`);
   lines.push(`    generate: ${yamlBool(DEFAULT_HTML_FORMAT.generate!)}`);
   lines.push(`    thumbnails: ${yamlValue(DEFAULT_HTML_FORMAT.thumbnails!)}`);
 

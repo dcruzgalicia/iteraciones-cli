@@ -186,7 +186,6 @@ export function buildDocsFromIndex(relativePaths: string[], discoveryIndex: Map<
         date: '',
         author: entry?.author ?? [],
         keywords: [],
-        type: '',
       },
       body: '',
       sourceHash: '',

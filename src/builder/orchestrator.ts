@@ -8,8 +8,8 @@ import { buildAssets } from './assets.js';
 import { type BuildReport, buildDocsFromIndex, type DiscoverResult, discover } from './discover.js';
 import { runExportDocuments } from './export/runner.js';
 import type { ExportResult } from './export/types.js';
-import { generateLatexPreamble } from './format-generator.js';
 import { renderHtmlPage } from './html-template.js';
+import { generateLatexPreamble } from './latex-preamble-generator.js';
 import { renderLatex } from './render.js';
 import type { BuildContext, BuildDocument } from './types.js';
 

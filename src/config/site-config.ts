@@ -18,10 +18,6 @@ export const THUMBNAIL_SIZES: Record<string, number> = {
 export interface HtmlFormatConfig {
   theme?: string;
   accent?: string;
-  math?: 'none' | 'katex' | 'mathjax';
-  toc: boolean;
-  tocDepth: number;
-  hyphenation: boolean;
   /** Si true, genera HTML en el build. */
   generate?: boolean;
   /**
@@ -111,10 +107,6 @@ export interface PdfFormatConfig {
 }
 
 export interface EpubFormatConfig {
-  toc?: boolean;
-  tocDepth?: number;
-  bibliography?: string;
-  csl?: string;
   /** Si true, genera EPUB en el build. */
   generate?: boolean;
 }
@@ -196,10 +188,6 @@ export const KNOWN_ACCENT_COLORS = new Set([
 export const DEFAULT_HTML_FORMAT: HtmlFormatConfig = {
   theme: undefined,
   accent: 'lime',
-  math: 'none',
-  toc: true,
-  tocDepth: 6,
-  hyphenation: false,
   generate: false,
   thumbnails: false,
 };
@@ -278,10 +266,6 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
 };
 
 export const DEFAULT_EPUB_FORMAT: EpubFormatConfig = {
-  toc: true,
-  tocDepth: 6,
-  bibliography: 'bibliography.bib',
-  csl: 'apa.csl',
   generate: false,
 };
 
