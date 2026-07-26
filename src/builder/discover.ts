@@ -8,6 +8,8 @@ interface DiscoverResult {
   discoveryIndex: Map<string, DiscoveryEntry>;
   /** Entradas de archivos eliminados (title/author/slug para calcular slugs). */
   deletedEntries: Map<string, DiscoveryEntry>;
+  /** Archivos cuyo slug cambio (relativePath -> slug anterior). */
+  slugChangedEntries: Map<string, string>;
 }
 
 export interface BuildReport {
@@ -105,6 +107,7 @@ export async function discover(cwd: string, options: { noCache?: boolean; active
   const changedPaths = new Set<string>();
   const recentFiles: string[] = [];
   const deletedFiles: string[] = [];
+  const slugChangedEntries = new Map<string, string>();
 
   const thisBuildStartedAt = Date.now();
 
@@ -143,6 +146,14 @@ export async function discover(cwd: string, options: { noCache?: boolean; active
       }
 
       // Store base data (slug resolution happens later, after all files are processed)
+      // Capturar slug anterior antes de sobrescribir (para limpiar archivos si cambia)
+      const prevSlug = discoveryIndex.get(relativePath)?.slug;
+      if (prevSlug) {
+        const newSlugBase = computeSlug({ title, author: authors });
+        if (newSlugBase && !prevSlug.startsWith(newSlugBase)) {
+          slugChangedEntries.set(relativePath, prevSlug);
+        }
+      }
       discoveryIndex.set(relativePath, { title, author: authors });
     }
     // Archivos sin cambios: conservan su entrada en discoveryIndex
@@ -187,6 +198,7 @@ export async function discover(cwd: string, options: { noCache?: boolean; active
       if (entry.slug && entry.slug !== slugBase) {
         changedPaths.add(path);
         if (!recentFiles.includes(path)) recentFiles.push(path);
+        slugChangedEntries.set(path, entry.slug);
       }
       entry.slug = slugBase;
     } else {
@@ -219,10 +231,11 @@ export async function discover(cwd: string, options: { noCache?: boolean; active
         const entry = discoveryIndex.get(path)!;
         const slugBase = computeSlug({ title: entry.title, author: entry.author }) ?? basename(path, '.md');
         const newSlug = slugBase + '-d' + nextN;
-        // Si el slug existente cambio, forzar reprocesamiento
+        // Si el slug existente cambio, forzar reprocesamiento y limpiar archivos viejos
         if (entry.slug && entry.slug !== newSlug) {
           changedPaths.add(path);
           if (!recentFiles.includes(path)) recentFiles.push(path);
+          slugChangedEntries.set(path, entry.slug);
         }
         entry.slug = newSlug;
         nextN++;
@@ -245,7 +258,7 @@ export async function discover(cwd: string, options: { noCache?: boolean; active
   await saveDiscoveryIndex(cwd, discoveryIndex);
   await saveBuildReport(cwd, buildReport, options.activeFormats);
 
-  return { relativePaths, changedPaths, discoveryIndex, deletedEntries };
+  return { relativePaths, changedPaths, discoveryIndex, deletedEntries, slugChangedEntries };
 }
 
 /** Directorios que el CLI ignora al escanear el proyecto. */
