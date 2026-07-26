@@ -87,6 +87,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     changedPaths: discoveredChanges,
     discoveryIndex,
     deletedEntries,
+    slugChangedEntries,
   } = await discover(cwd, { noCache: options.noCache, activeFormats: currentFormats });
   const allDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
 
@@ -162,6 +163,22 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       await rm(join(cacheBase, 'formats', 'html', dir, `${slug}.epub`), { force: true }).catch(() => {});
       for (const ext of ['.html', '.tex', '.pdf', '.epub', '.md']) {
         await rm(join(ctx.outputDir, dir, `${slug}${ext}`), { force: true }).catch(() => {});
+      }
+    }
+  }
+
+  // Cleanup archivos cuyo slug cambio (ej. unico -> duplicado o viceversa)
+  if (slugChangedEntries.size > 0) {
+    const cacheBase = join(ctx.cwd, '.iteraciones');
+    for (const [relPath, oldSlug] of slugChangedEntries) {
+      const dir = dirname(relPath);
+      await rm(join(cacheBase, 'tex', dir, `${oldSlug}.tex`), { force: true }).catch(() => {});
+      await rm(join(cacheBase, 'html', dir, `${oldSlug}.html`), { force: true }).catch(() => {});
+      await rm(join(cacheBase, 'formats', 'pdf', dir, `${oldSlug}.tex`), { force: true }).catch(() => {});
+      await rm(join(cacheBase, 'formats', 'html', dir, `${oldSlug}.html`), { force: true }).catch(() => {});
+      await rm(join(cacheBase, 'formats', 'html', dir, `${oldSlug}.epub`), { force: true }).catch(() => {});
+      for (const ext of ['.html', '.tex', '.pdf', '.epub', '.md']) {
+        await rm(join(ctx.outputDir, dir, `${oldSlug}${ext}`), { force: true }).catch(() => {});
       }
     }
   }
