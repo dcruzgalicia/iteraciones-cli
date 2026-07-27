@@ -131,6 +131,13 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         }
       }
     }
+
+    // Limpiar assets de HTML (css, fonts, logo) si se desactivo el formato
+    if (removedFormats.includes('html')) {
+      await rm(join(ctx.outputDir, 'css'), { recursive: true, force: true }).catch(() => {});
+      await rm(join(ctx.outputDir, 'fonts'), { recursive: true, force: true }).catch(() => {});
+      await rm(join(ctx.outputDir, 'logo.svg'), { force: true }).catch(() => {});
+    }
   }
 
   const GLOBAL_CHANGE_PATTERNS = [/\.ya?ml$/, /\.html$/];
