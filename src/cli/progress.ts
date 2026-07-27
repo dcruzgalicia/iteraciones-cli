@@ -2,6 +2,9 @@ function formatTime(ms: number): string {
   return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${Math.round(ms)}ms`;
 }
 
+/** Ancho mínimo para la columna de etiquetas en el resumen final. */
+const LABEL_WIDTH = 30;
+
 export interface RenderFileReport {
   relativePath: string;
   phase: PipelinePhase;
@@ -16,15 +19,13 @@ interface PhaseMeta {
 
 const PHASE_META: Record<PipelinePhase, PhaseMeta> = {
   discovery: { label: 'Documentos encontrados', section: 'Descubriendo documentos' },
-  render: { label: 'Preparando contenido', section: 'Preparando contenido' },
+  render: { label: 'Renderizando contenido', section: 'Renderizando contenido' },
   latex: { label: 'LaTeX', section: 'Generando formatos' },
   pdf: { label: 'PDF', section: 'Generando formatos' },
   html: { label: 'HTML', section: 'Generando formatos' },
   epub: { label: 'EPUB', section: 'Generando formatos' },
   markdown: { label: 'Markdown', section: 'Generando formatos' },
 };
-
-const PHASE_ORDER: PipelinePhase[] = ['discovery', 'render', 'latex', 'pdf', 'html', 'epub', 'markdown'];
 
 export class ProgressTracker {
   private verbose: boolean;
@@ -95,7 +96,7 @@ export class ProgressTracker {
     } else {
       const countPart = ` ${count}`;
       process.stdout.write(
-        `  \u2713 ${meta.label}${countPart}${' '.repeat(Math.max(1, 30 - meta.label.length - countPart.length))}${formatTime(elapsed)}\n`,
+        `  \u2713 ${meta.label}${countPart}${' '.repeat(Math.max(1, LABEL_WIDTH - meta.label.length - countPart.length))}${formatTime(elapsed)}\n`,
       );
     }
   }
@@ -106,18 +107,18 @@ export class ProgressTracker {
 
     if (this.verbose) {
       process.stdout.write('\u25a0 Resultado\n\n');
-      process.stdout.write(`  ${padRight('Documentos procesados', 30)} ${processed}\n`);
-      process.stdout.write(`  ${padRight('Formatos creados', 30)} ${formatCount}\n`);
-      process.stdout.write(`  ${padRight('Tiempo total', 30)} ${formatTime(totalTime)}\n\n`);
+      process.stdout.write(`  ${padRight('Documentos procesados', LABEL_WIDTH)} ${processed}\n`);
+      process.stdout.write(`  ${padRight('Formatos generados', LABEL_WIDTH)} ${formatCount}\n`);
+      process.stdout.write(`  ${padRight('Tiempo total', LABEL_WIDTH)} ${formatTime(totalTime)}\n\n`);
       process.stdout.write('\u2713 Todo listo.\n');
     } else {
       process.stdout.write(`\n\u2713 Todo listo.\n\n`);
-      process.stdout.write(`  ${padRight('Documentos procesados', 30)}${processed}\n`);
+      process.stdout.write(`  ${padRight('Documentos procesados', LABEL_WIDTH)}${processed}\n`);
       if (cached > 0) {
-        process.stdout.write(`  ${padRight('En cach\u00e9', 30)}${cached}\n`);
+        process.stdout.write(`  ${padRight('Sin cambios (reutilizado)', LABEL_WIDTH)}${cached}\n`);
       }
-      process.stdout.write(`  ${padRight('Formatos creados', 30)}${formatCount}\n`);
-      process.stdout.write(`  ${padRight('Tiempo total', 30)}${formatTime(totalTime)}\n`);
+      process.stdout.write(`  ${padRight('Formatos generados', LABEL_WIDTH)}${formatCount}\n`);
+      process.stdout.write(`  ${padRight('Tiempo total', LABEL_WIDTH)}${formatTime(totalTime)}\n`);
     }
   }
 
