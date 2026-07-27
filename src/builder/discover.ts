@@ -20,25 +20,57 @@ export interface BuildReport {
   activeFormats?: string[];
 }
 
-const DISCOVERY_INDEX_PATH = join('.iteraciones', 'changes', 'files.json');
+/**
+ * Estado del build anterior, leído de state.json.
+ * Combina el report (startedAt, activeFormats) con el discovery index (entries).
+ */
+export interface BuildState {
+  /** Timestamp del build anterior. */
+  startedAt: number;
+  /** Formatos que estaban activos en el build anterior. */
+  activeFormats: string[];
+  /** Entradas del discovery index (path → title/author/slug). */
+  entries: Map<string, DiscoveryEntry>;
+}
+
+const STATE_PATH = join('.iteraciones', 'changes', 'state.json');
 const SLUGS_CACHE_PATH = join('.iteraciones', 'changes', 'slugs.json');
 
-async function loadDiscoveryIndex(cwd: string): Promise<Map<string, DiscoveryEntry>> {
-  const file = Bun.file(join(cwd, DISCOVERY_INDEX_PATH));
-  if (!(await file.exists())) return new Map();
+/**
+ * Carga el estado del build anterior desde state.json.
+ * Retorna null si no existe (primer build).
+ */
+export async function loadBuildState(cwd: string): Promise<BuildState | null> {
+  const file = Bun.file(join(cwd, STATE_PATH));
+  if (!(await file.exists())) return null;
   try {
     const raw = await file.text();
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    return new Map(Object.entries(parsed?.entries ?? {}));
+    const parsed = JSON.parse(raw) as { startedAt: number; activeFormats: string[]; entries: Record<string, unknown> };
+    return {
+      startedAt: parsed.startedAt,
+      activeFormats: parsed.activeFormats ?? [],
+      entries: new Map(Object.entries(parsed.entries ?? {})) as Map<string, DiscoveryEntry>,
+    };
   } catch {
-    return new Map();
+    return null;
   }
 }
 
-async function saveDiscoveryIndex(cwd: string, index: Map<string, DiscoveryEntry>): Promise<void> {
-  const filePath = join(cwd, DISCOVERY_INDEX_PATH);
+/**
+ * Guarda el estado del build actual en state.json.
+ * Combina el report (startedAt, activeFormats) con el discovery index (entries).
+ */
+export async function saveBuildState(cwd: string, state: BuildState): Promise<void> {
+  const filePath = join(cwd, STATE_PATH);
   await mkdir(dirname(filePath), { recursive: true });
-  await Bun.write(filePath, JSON.stringify({ entries: Object.fromEntries(index) }));
+  await Bun.write(
+    filePath,
+    JSON.stringify({
+      startedAt: state.startedAt,
+      activeFormats: state.activeFormats,
+      entries: Object.fromEntries(state.entries),
+    }),
+  );
 }
 
 async function loadSlugsCounter(cwd: string): Promise<Map<string, number>> {
@@ -85,10 +117,14 @@ export function computeSlug(frontmatter: { title?: string; author?: string[] }):
 }
 
 /**
- * Fase 1 — discover: detecta cambios y actualiza discovery.json
- * con title/author/slug de cada archivo.
+ * Fase 1 — discover: detecta cambios y actualiza el estado del build.
+ * Si se proporciona prevState (desde orchestrator), evita la segunda
+ * lectura de state.json.
  */
-export async function discover(cwd: string, options: { noCache?: boolean; activeFormats?: string[] } = {}): Promise<DiscoverResult> {
+export async function discover(
+  cwd: string,
+  options: { noCache?: boolean; activeFormats?: string[]; prevState?: BuildState | null } = {},
+): Promise<DiscoverResult> {
   const relativePaths: string[] = [];
 
   for await (const entry of new Bun.Glob('**/*.md').scan({ cwd })) {
@@ -100,8 +136,12 @@ export async function discover(cwd: string, options: { noCache?: boolean; active
   relativePaths.sort();
 
   const useCache = !options.noCache;
-  const prevReport = useCache ? await loadBuildReport(cwd) : null;
-  const discoveryIndex = useCache ? await loadDiscoveryIndex(cwd) : new Map<string, DiscoveryEntry>();
+  // Si orchestrator ya pasó el estado, no leer state.json otra vez
+  const prevState = options.prevState !== undefined ? options.prevState : useCache ? await loadBuildState(cwd) : null;
+  const prevReport: BuildReport | null = prevState
+    ? { startedAt: prevState.startedAt, recentFiles: [], deletedFiles: [], activeFormats: prevState.activeFormats }
+    : null;
+  const discoveryIndex = useCache ? (prevState?.entries ?? new Map<string, DiscoveryEntry>()) : new Map<string, DiscoveryEntry>();
 
   const currentSet = new Set(relativePaths);
   const changedPaths = new Set<string>();
@@ -252,39 +292,17 @@ export async function discover(cwd: string, options: { noCache?: boolean; active
     await saveSlugsCounter(cwd, slugsCounter);
   }
 
-  const buildReport: BuildReport = {
+  await saveBuildState(cwd, {
     startedAt: thisBuildStartedAt,
-    recentFiles: [...recentFiles],
-    deletedFiles: [...deletedFiles],
-  };
-
-  await saveDiscoveryIndex(cwd, discoveryIndex);
-  await saveBuildReport(cwd, buildReport, options.activeFormats);
+    activeFormats: options.activeFormats ?? [],
+    entries: discoveryIndex,
+  });
 
   return { relativePaths, changedPaths, discoveryIndex, deletedEntries, slugChangedEntries };
 }
 
 /** Directorios que el CLI ignora al escanear el proyecto. */
 export const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', '.iteraciones']);
-
-const BUILD_REPORT_PATH = join('.iteraciones', 'changes', 'diff.json');
-
-export async function loadBuildReport(cwd: string): Promise<BuildReport | null> {
-  const file = Bun.file(join(cwd, BUILD_REPORT_PATH));
-  if (!(await file.exists())) return null;
-  try {
-    const raw = await file.text();
-    return JSON.parse(raw) as BuildReport;
-  } catch {
-    return null;
-  }
-}
-
-async function saveBuildReport(cwd: string, report: BuildReport, activeFormats?: string[]): Promise<void> {
-  const filePath = join(cwd, BUILD_REPORT_PATH);
-  await mkdir(dirname(filePath), { recursive: true });
-  await Bun.write(filePath, JSON.stringify({ ...report, activeFormats: activeFormats ?? [] }));
-}
 
 /**
  * Construye BuildDocument[] con frontmatter desde discoveryIndex.
