@@ -100,10 +100,16 @@ export async function runExportDocuments(exportableDocs: BuildDocument[], option
       tasks.push(
         (async () => {
           await acquireLatex();
+          if (process.stdout.isTTY) {
+            process.stdout.write(`  PDF: compilando ${exportDoc.relativePath}...`);
+          }
           try {
             await convertToPdf(exportDoc, outputPath, cwd, config.pdf, biberCacheDir);
           } finally {
             releaseLatex();
+          }
+          if (process.stdout.isTTY) {
+            process.stdout.write('\r\x1b[K');
           }
           options.onExportProgress?.(exportDoc.relativePath);
         })(),
