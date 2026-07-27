@@ -93,7 +93,7 @@ export class ProgressTracker {
         process.stdout.write(`  ${meta.label}  ${durStr}\n\n`);
       }
     } else {
-      const countPart = count > 0 ? ` ${count}` : '';
+      const countPart = ` ${count}`;
       process.stdout.write(
         `  \u2713 ${meta.label}${countPart}${' '.repeat(Math.max(1, 30 - meta.label.length - countPart.length))}${formatTime(elapsed)}\n`,
       );
