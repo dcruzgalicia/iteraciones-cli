@@ -1,3 +1,5 @@
+import { logWarning } from '../../lib/logger.js';
+
 /**
  * Funciones auxiliares compartidas para transpilers que operan sobre
  * el AST JSON de pandoc.
@@ -45,7 +47,7 @@ export async function blocksToLatex(innerBlocks: unknown[]): Promise<string> {
   const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
 
   if (exitCode !== 0) {
-    process.stderr.write(`[ast-utils] pandoc falló al convertir a LaTeX: ${stderr}\n`);
+    logWarning(`pandoc falló al convertir a LaTeX: ${stderr}`, 'ast-utils');
     return '';
   }
 
