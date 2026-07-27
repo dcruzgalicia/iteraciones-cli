@@ -202,7 +202,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     // HTML (template completo)
     (async () => {
       if (!formatCfg?.html?.generate || noExport) return;
+      progress.startPhase('html', pipelineDocs.length);
       await generateHtmlPages(ctx, pipelineDocs, formatsDir, options);
+      progress.completePhase(undefined, 'html');
     })(),
 
     // EPUB
@@ -342,12 +344,9 @@ async function cleanupSlugChanges(ctx: BuildContext, slugChangedEntries: Map<str
 }
 
 async function generateHtmlPages(ctx: BuildContext, pipelineDocs: BuildDocument[], formatsDir: string, options: BuildOptions): Promise<void> {
-  const progress = new ProgressTracker({ verbose: options.verbose ?? false });
   const siteConfig = ctx.siteConfig;
   const htmlConfig = siteConfig.format?.html;
   const hasCss = !options.noTailwind && ctx.cssPath;
-
-  progress.startPhase('html', pipelineDocs.length);
   for (const doc of pipelineDocs) {
     const slug = doc.slug ?? basename(doc.relativePath, '.md');
     const dir = dirname(doc.relativePath);
@@ -381,7 +380,6 @@ async function generateHtmlPages(ctx: BuildContext, pipelineDocs: BuildDocument[
       logWarning(`error al generar HTML para ${doc.relativePath}`, 'orchestrator');
     }
   }
-  progress.completePhase(undefined, 'html');
 }
 
 async function copyToDist(
