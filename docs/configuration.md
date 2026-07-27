@@ -1,56 +1,114 @@
 # Configuración — `_iteraciones.yaml`
 
-El archivo `_iteraciones.yaml` en la raíz del proyecto es la única fuente de configuración del sitio. Es opcional: si no existe, se usan todos los valores por defecto.
+El archivo `_iteraciones.yaml` en la raíz del proyecto es la única fuente de configuración. Es opcional: si no existe, se usan todos los valores por defecto.
 
 ## Estructura completa
 
 ```yaml
 site:
-  title: Iteraciones
+  title: Iteraciones              # título del sitio
   tagline: escribir, compartir, re-existir
-  lang: es
-  logo: ''
-  base-url: ''
-  pagination:
-    limit: 10
-
-plugins: []
+  lang: es-MX                     # código de idioma BCP 47
+  logo: ''                        # ruta al logo, relativa al proyecto
+  base-url: ''                    # URL base del sitio
 
 format:
-  html:
-    theme: light
-    accent: lime
-    math: ''
-    toc: false
-    toc-depth: 6
-    hyphenation: false
+  latex: true                     # genera archivos .tex
 
   pdf:
-    engine: xelatex
-    concurrency: 2
-    toc: true
-    toc-depth: 3
-    numbering: true
-    hyphenation: true
-    bibliography: ''
-    csl: ''
-    page-size: letter
-    font-size: 10pt
-    font-family: ''
-    margins:
-      - 2.5cm
-      - 2.5cm
-      - 2.5cm
-      - 2.5cm
-    line-spacing: 1.0
-    page-number: footer-center
-    sides: oneside
+    generate: false               # genera PDF
+    documentclass:
+      class: scrbook              # scrartcl | scrbook
+      options:
+        - 12pt
+        - sfdefaults=false
+        - paper=letter
+        - twoside
+    geometry:
+      options:
+        - top=2.54cm
+        - bottom=2.54cm
+        - left=2.54cm
+        - right=2.54cm
+    babel:
+      options:
+        - spanish
+        - mexico
+    hyperref:
+      options:
+        - hidelinks
+    microtype:
+      options:
+        - activate={true,nocompatibility}
+        - final
+        - tracking=true
+        - kerning=true
+        - spacing=true
+    enumitem: true
+    mathptmx: true
+    setspace: true
+    setstretch: 1.5
+    raggedbottom: true
+    pretolerance: 200
+    tolerance: 400
+    brokenpenalty: 1000000
+    hyphenpenalty: 100
+    widowpenalty: 1000000
+    clubpenalty: 1000000
+    page-number: header-right
+    toc: false
+    show-date: false
+    sectioning:
+      part:
+        beforeskip: 11\baselineskip
+        afterskip: \baselineskip
+        font: \normalsize\bfseries\MakeUppercase
+      chapter:
+        style: chapter
+        beforeskip: 2\baselineskip
+        afterskip: \baselineskip
+        font: \normalsize\normalfont\scshape
+        align: center
+      section:
+        style: section
+        beforeskip: 2\baselineskip
+        afterskip: 2\baselineskip
+        font: \normalsize\bfseries\MakeUppercase
+        align: center
+      subsection:
+        beforeskip: 2\baselineskip
+        afterskip: 2\baselineskip
+        font: \normalsize\normalfont\textit
+    setkomafont:
+      title: \normalsize\bfseries
+      subtitle: \normalsize\normalfont\itshape
+      author: \normalsize\normalfont
+    dictum:
+      width: 0.5\textwidth
+      font: \normalsize\normalfont\itshape
+    pagestyle:
+      part: empty
+      chapter: empty
+    eso-pic: false
+    pdfx: false
+    crop: false
+
+  html:
+    theme: dark                   # tema: "light" o "dark"
+    accent: lime                  # color de acento (lime, blue, rose, etc.)
+    generate: false               # genera HTML
 
   epub:
-    toc: true
-    toc-depth: 3
-    bibliography: ''
-    csl: ''
+    generate: false               # genera EPUB
+
+  markdown:
+    generate: false               # genera Markdown procesado
+
+disabled-transpilers:             # transpilers a desactivar (opcional)
+  # - 01-double-colon
+
+disabled-preamble-transpilers:    # preamble transpilers a desactivar (opcional)
+  # - 01-maketitle-patches
 ```
 
 ## Campos
@@ -60,347 +118,324 @@ format:
 **Tipo:** `string`
 **Por defecto:** `'Iteraciones'`
 
-Título del sitio. Aparece en el `<title>` de cada página HTML y en el encabezado del layout.
+Título del sitio. Se usa en el `<title>` de cada página HTML y en el encabezado.
+
+```yaml
+site:
+  title: Mi sitio
+```
 
 ### `site.tagline`
 
 **Tipo:** `string`
 **Por defecto:** `'escribir, compartir, re-existir'`
 
-Frase corta que acompaña al título en el encabezado.
+Frase corta que acompaña al título en el encabezado HTML.
 
 ### `site.lang`
 
 **Tipo:** `string`
-**Por defecto:** `'es'`
+**Por defecto:** `'es-MX'`
 
 Código de idioma BCP 47. Se usa como valor del atributo `lang` en el elemento `<html>`.
 
 ### `site.logo`
 
 **Tipo:** `string`
-**Por defecto:** `''` (sin logo)
+**Por defecto:** `''` (usa el logo integrado)
 
-Ruta al archivo de logo relativa al directorio raíz del proyecto. Acepta SVG, PNG o cualquier formato de imagen que el navegador soporte.
+Ruta al archivo de logo, relativa al directorio raíz del proyecto. Si se omite o está vacío, se usa un logo SVG por defecto incluido en el paquete.
 
 ```yaml
 site:
-  logo: 'assets/logo.svg'
+  logo: assets/mi-logo.svg
 ```
 
 ### `site.base-url`
 
 **Tipo:** `string`
-**Por defecto:** `''` (sin prefijo)
+**Por defecto:** `undefined` (sin prefijo)
 
-URL base del sitio, usada para construir enlaces absolutos (sitemap, feeds). Debe incluir el protocolo y no terminar en `/`.
-
-```yaml
-site:
-  base-url: 'https://ejemplo.com'
-```
-
-### `site.pagination.limit`
-
-**Tipo:** `number` (entero positivo)
-**Por defecto:** `10`
-
-Número máximo de elementos por página en las listas paginadas (tipos `list`, `events`, `authors`, `collection`).
+URL base del sitio. Debe incluir el protocolo y no terminar en `/`.
 
 ```yaml
 site:
-  pagination:
-    limit: 5
+  base-url: https://ejemplo.com
 ```
 
-### `plugins`
-
-**Tipo:** `string[]`
-**Por defecto:** `[]`
-
-Lista de rutas relativas a módulos ESM que implementan la interfaz de plugin. Ver [docs/plugins.md](plugins.md).
-
-```yaml
-plugins:
-  - plugins/mi-plugin.js
-  - plugins/otro-plugin.js
-```
-
-### `format`
-
-Configuración de los formatos de salida. La presencia de una sección habilita ese formato:
-
-- HTML **siempre** se genera (con defaults si no se especifica `format.html`)
-- `format.pdf` habilita la exportación a PDF
-- `format.epub` habilita la exportación a EPUB
-
-#### `format.html`
-
-##### `format.html.theme`
-
-**Tipo:** `string | undefined`
-**Por defecto:** `undefined` (tema claro)
-
-Tema visual del sitio. Valores disponibles: `light`, `dark`. Ver [docs/themes.md](themes.md).
-
-```yaml
-format:
-  html:
-    theme: dark
-```
-
-##### `format.html.accent`
-
-**Tipo:** `string`
-**Por defecto:** `'lime'`
-
-Color de acento del tema. Debe ser un color de la paleta de Tailwind CSS v4 con escala completa (50–950). Colores válidos: `slate`, `gray`, `zinc`, `neutral`, `stone`, `red`, `orange`, `amber`, `yellow`, `lime`, `green`, `emerald`, `teal`, `cyan`, `sky`, `blue`, `indigo`, `violet`, `purple`, `fuchsia`, `pink`, `rose`.
-
-Si se declara un color no reconocido, se usa `'lime'` con un aviso en `stderr`.
-
-##### `format.html.math`
-
-**Tipo:** `'katex' | 'mathjax' | undefined`
-**Por defecto:** sin renderizado matemático
-
-Motor de renderizado de fórmulas matemáticas. `katex` es más rápido y se carga desde CDN en el cliente; `mathjax` ofrece mayor cobertura de LaTeX pero es más pesado. Si se omite, no se inyecta ningún motor.
-
-```yaml
-format:
-  html:
-    math: katex
-```
-
-##### `format.html.toc`
-
-**Tipo:** `boolean`
-**Por defecto:** `false`
-
-Genera una tabla de contenidos al inicio del `<body>` de cada página HTML cuando es `true`.
-
-##### `format.html.toc-depth`
-
-**Tipo:** `number` (entero, 1–6)
-**Por defecto:** `6`
-
-Profundidad máxima de encabezados en la tabla de contenidos HTML.
-
-##### `format.html.hyphenation`
-
-**Tipo:** `boolean`
-**Por defecto:** `false`
-
-Cuando es `true`, añade la clase CSS `hyphens-auto` al `<body>` para activar separación silábica automática en navegadores.
-
-#### `format.pdf`
-
-##### `format.pdf.engine`
-
-**Tipo:** `'xelatex' | 'lualatex'`
-**Por defecto:** `'xelatex'`
-
-Motor LaTeX utilizado para generar PDF. `xelatex` tiene mayor compatibilidad con fuentes OpenType; `lualatex` ofrece soporte más completo de Unicode.
-
-##### `format.pdf.concurrency`
-
-**Tipo:** `integer >= 1`
-**Por defecto:** `2`
-
-Número máximo de documentos que se exportan a PDF en paralelo. xelatex no es multi-thread y consume memoria significativa (~300–600 MB por instancia).
-
-Ajustar según la RAM disponible:
-
-| RAM disponible | Valor recomendado |
-|---------------|-------------------|
-| 4 GB           | 1                 |
-| 8 GB           | 2 (por defecto)   |
-| 16 GB+         | 3–4               |
-
-```yaml
-format:
-  pdf:
-    engine: xelatex
-    concurrency: 3
-```
-
-##### `format.pdf.toc`
-
-**Tipo:** `boolean | undefined`
-**Por defecto:** `undefined` (se deriva de `toc-depth` o de la clase LaTeX)
-
-Incluye una tabla de contenidos en el PDF cuando es `true`. Si no se especifica, se habilita automáticamente cuando `toc-depth > 0` o cuando la clase del documento es `scrbook`.
-
-##### `format.pdf.toc-depth`
-
-**Tipo:** `number` (entero, 0–5)
-**Por defecto:** `undefined` (usa el de la clase LaTeX)
-
-Profundidad máxima de encabezados en la tabla de contenidos del PDF.
-
-##### `format.pdf.numbering`
-
-**Tipo:** `boolean | undefined`
-**Por defecto:** `undefined` (LaTeX default: numeración visible)
-
-Muestra u oculta la numeración de capítulos y secciones en el PDF.
-
-##### `format.pdf.hyphenation`
+### `format.latex`
 
 **Tipo:** `boolean`
 **Por defecto:** `true`
 
-Controla la separación silábica en el PDF generado por LaTeX.
+Genera archivos `.tex` (LaTeX) para cada documento procesado en el directorio de salida.
 
-##### `format.pdf.bibliography`
+### `format.pdf`
 
-**Tipo:** `string | undefined`
-**Por defecto:** sin bibliografía global
+Configuración de la exportación a PDF. Se compila con `latexmk` + `pdflatex` + `biber` (para citas bibliográficas).
 
-Ruta relativa al proyecto a un archivo `.bib` de bibliografía BibTeX. Se aplica a todos los documentos exportados, salvo que el frontmatter del documento especifique la suya propia.
+#### `format.pdf.generate`
 
-##### `format.pdf.csl`
+**Tipo:** `boolean`
+**Por defecto:** `false`
 
-**Tipo:** `string | undefined`
-**Por defecto:** estilo por defecto de pandoc
+Habilita la generación de PDF.
 
-Ruta relativa al proyecto a un archivo `.csl` de estilo de citas. Requiere que `bibliography` esté configurado.
+#### `format.pdf.documentclass.class`
 
-##### `format.pdf.page-size`
+**Tipo:** `'scrartcl' | 'scrbook'`
+**Por defecto:** `'scrbook'`
 
-**Tipo:** `string | undefined`
-**Por defecto:** `undefined` (usa el de la clase LaTeX)
+Clase KOMA-Script del documento LaTeX.
 
-Tamaño de página del PDF. Valores estándar: `half-letter`, `letter`, `legal`, `executive`, `a3`, `a4`, `a5`, `b4`, `b5`, `tabloid`, `pocket`. También acepta tamaños personalizados en formato `"ancho,alto"` con unidades (`cm`, `mm`, `in`, `pt`), por ejemplo: `"15cm,23cm"`.
+#### `format.pdf.documentclass.options`
 
-##### `format.pdf.font-size`
+**Tipo:** `string[]`
+**Por defecto:** `['12pt', 'sfdefaults=false', 'paper=letter', 'twoside']`
 
-**Tipo:** `string | undefined`
-**Por defecto:** `undefined` (usa el de la clase LaTeX)
+Opciones de la clase del documento. Cada elemento es una opción que se pasa separada por coma a `\documentclass[]{}`.
 
-Tamaño de fuente base del PDF. Debe incluir la unidad `pt`: `"10pt"`, `"11pt"`, `"12pt"`.
+#### `format.pdf.geometry.options`
 
-##### `format.pdf.font-family`
+**Tipo:** `string[]`
+**Por defecto:** `['top=2.54cm', 'bottom=2.54cm', 'left=2.54cm', 'right=2.54cm', 'headheight=\\baselineskip', 'headsep=6pt', 'footskip=22pt']`
 
-**Tipo:** `string | undefined`
-**Por defecto:** `undefined` (usa la fuente por defecto de LaTeX)
+Opciones del paquete `geometry` para márgenes.
 
-Familia tipográfica principal del PDF. Se pasa a LaTeX como `mainfont` vía `fontspec`.
+#### `format.pdf.babel.options`
+
+**Tipo:** `string[]`
+**Por defecto:** `['spanish', 'mexico', 'es-noshorthands', 'es-noindentfirst']`
+
+Opciones del paquete `babel` para idioma.
+
+#### `format.pdf.hyperref.options`
+
+**Tipo:** `string[]`
+**Por defecto:** `['hidelinks']`
+
+Opciones del paquete `hyperref` para enlaces.
+
+#### `format.pdf.microtype.options`
+
+**Tipo:** `string[]`
+**Por defecto:** `['activate={true,nocompatibility}', 'final', 'tracking=true', 'kerning=true', 'spacing=true', 'factor=1100', 'stretch=10', 'shrink=10']`
+
+Opciones del paquete `microtype` para ajuste tipográfico.
+
+#### `format.pdf.enumitem`
+
+**Tipo:** `boolean`
+**Por defecto:** `true`
+
+Habilita el paquete `enumitem` para listas personalizadas.
+
+#### `format.pdf.setlist`
+
+**Tipo:** `Array<{ command: string; options: string[] }>`
+**Por defecto:** `[{ command: 'description', options: ['noitemsep', 'nosep', 'topsep=\\baselineskip'] }]`
+
+Configuración de listas vía `\setlist[]{...}`.
+
+#### `format.pdf.mathptmx`
+
+**Tipo:** `boolean`
+**Por defecto:** `true`
+
+Usa la fuente Times New Roman (paquete `mathptmx`) para el texto del PDF.
+
+#### `format.pdf.setspace`
+
+**Tipo:** `boolean`
+**Por defecto:** `true`
+
+Habilita el paquete `setspace` para control de interlineado.
+
+#### `format.pdf.setstretch`
+
+**Tipo:** `number`
+**Por defecto:** `1.5`
+
+Factor de interlineado. Requiere `setspace: true`.
+
+#### `format.pdf.raggedbottom`
+
+**Tipo:** `boolean`
+**Por defecto:** `true`
+
+Evita que LaTeX estire el contenido verticalmente para llenar la página.
+
+#### `format.pdf.pretolerance`
+
+**Tipo:** `number`
+**Por defecto:** `200`
+
+Controla la tolerancia de partición de palabras en el primer pase de LaTeX.
+
+#### `format.pdf.tolerance`
+
+**Tipo:** `number`
+**Por defecto:** `400`
+
+Controla la tolerancia de partición de palabras en el segundo pase.
+
+#### `format.pdf.brokenpenalty`
+
+**Tipo:** `number`
+**Por defecto:** `1000000`
+
+Penalización por líneas huérfanas al final de página.
+
+#### `format.pdf.hyphenpenalty`
+
+**Tipo:** `number`
+**Por defecto:** `100`
+
+Penalización por partición de palabras. Valores altos reducen la partición.
+
+#### `format.pdf.widowpenalty`
+
+**Tipo:** `number`
+**Por defecto:** `1000000`
+
+Penalización por líneas viudas (línea sola al inicio de página).
+
+#### `format.pdf.clubpenalty`
+
+**Tipo:** `number`
+**Por defecto:** `1000000`
+
+Penalización por líneas huérfanas (línea sola al final de página).
+
+#### `format.pdf.page-number`
+
+**Tipo:** `string`
+**Por defecto:** `'header-right'`
+
+Posición del número de página. Valores: `footer-left`, `footer-center`, `footer-right`, `header-left`, `header-center`, `header-right`.
+
+#### `format.pdf.toc`
+
+**Tipo:** `boolean`
+**Por defecto:** `false`
+
+Incluye una tabla de contenidos en el PDF.
+
+#### `format.pdf.show-date`
+
+**Tipo:** `boolean`
+**Por defecto:** `false`
+
+Muestra la fecha en la portada del PDF. Si es `true` y el frontmatter del documento no declara `date`, se usa la fecha de creación del archivo.
+
+#### `format.pdf.sectioning`
+
+Configuración de secciones LaTeX: `part`, `chapter`, `section`, `subsection`, `subsubsection`, `paragraph`, `subparagraph`. Cada nivel acepta los siguientes campos (según el nivel):
+
+| Campo | Aplica a | Descripción |
+|-------|----------|-------------|
+| `style` | chapter, section | Estilo de la sección (`chapter`, `section`, etc.) |
+| `beforeskip` | todos | Espacio vertical antes del título |
+| `afterskip` | todos | Espacio vertical después del título |
+| `font` | todos | Fuente del título |
+| `align` | chapter, section | Alineación: `center` |
+
+#### `format.pdf.setkomafont`
+
+Configuración de fuentes KOMA-Script para elementos de la portada. Campos: `title`, `subtitle`, `author`, `publishers`.
+
+#### `format.pdf.dictum`
+
+Configuración de epígrafes. Campos: `width`, `font`, `rule`, `authorfont`, `authorformat`.
+
+#### `format.pdf.pagestyle`
+
+Estilo de página para partes y capítulos. Campos: `part`, `chapter`.
+
+#### `format.pdf.eso-pic`
+
+**Tipo:** `boolean | { options: string[] }`
+**Por defecto:** `false`
+
+Habilita el paquete `eso-pic` para añadir contenido gráfico al fondo de cada página.
+
+#### `format.pdf.pdfx`
+
+**Tipo:** `boolean`
+**Por defecto:** `false`
+
+Habilita la creación de PDF/X-1a para impresión profesional.
+
+#### `format.pdf.crop`
+
+**Tipo:** `boolean`
+**Por defecto:** `false`
+
+Añade marcas de corte al PDF. Las dimensiones se calculan automáticamente desde el tamaño de página + 15 mm.
+
+### `format.html`
+
+#### `format.html.generate`
+
+**Tipo:** `boolean`
+**Por defecto:** `false`
+
+Habilita la generación de páginas HTML.
+
+#### `format.html.theme`
+
+**Tipo:** `'light' | 'dark'`
+**Por defecto:** `undefined` (dark)
+
+Tema visual del HTML.
+
+#### `format.html.accent`
+
+**Tipo:** `string`
+**Por defecto:** `'lime'`
+
+Color de acento del tema. Debe ser un color de la paleta Tailwind CSS v4 con escala completa (50–950). Colores válidos: `slate`, `gray`, `zinc`, `neutral`, `stone`, `red`, `orange`, `amber`, `yellow`, `lime`, `green`, `emerald`, `teal`, `cyan`, `sky`, `blue`, `indigo`, `violet`, `purple`, `fuchsia`, `pink`, `rose`.
+
+### `format.epub`
+
+#### `format.epub.generate`
+
+**Tipo:** `boolean`
+**Por defecto:** `false`
+
+Habilita la generación de archivos EPUB.
+
+### `format.markdown`
+
+#### `format.markdown.generate`
+
+**Tipo:** `boolean`
+**Por defecto:** `false`
+
+Habilita la exportación a Markdown procesado (con los transpilers aplicados).
+
+### `disabled-transpilers`
+
+**Tipo:** `string[]`
+**Por defecto:** `undefined` (todos activos)
+
+Lista de transpilers a desactivar. Cada elemento es el nombre del transpiler (ej: `01-double-colon`).
 
 ```yaml
-format:
-  pdf:
-    font-family: "Libertinus Serif"
+disabled-transpilers:
+  - 01-double-colon
 ```
 
-##### `format.pdf.margins`
+### `disabled-preamble-transpilers`
 
-**Tipo:** `[string, string, string, string] | undefined`
-**Por defecto:** `undefined` (usa los márgenes por defecto de LaTeX)
+**Tipo:** `string[]`
+**Por defecto:** `undefined` (todos activos)
 
-Márgenes del PDF en orden `[superior, derecho, inferior, izquierdo]`. Cada valor debe incluir unidad (`cm`, `mm`, `in`, `pt`).
-
-```yaml
-format:
-  pdf:
-    margins:
-      - 2.5cm
-      - 2.5cm
-      - 3cm
-      - 3cm
-```
-
-##### `format.pdf.line-spacing`
-
-**Tipo:** `number (positivo) | undefined`
-**Por defecto:** `undefined` (interlineado simple de LaTeX)
-
-Factor de interlineado. Se pasa a LaTeX como `setstretch`. `1.5` produce espacio y medio.
-
-##### `format.pdf.page-number`
-
-**Tipo:** `string | undefined`
-**Por defecto:** `undefined`
-
-Posición del número de página en el PDF. Valores válidos: `footer-left`, `footer-center`, `footer-right`, `header-left`, `header-center`, `header-right`.
-
-##### `format.pdf.sides`
-
-**Tipo:** `'oneside' | 'twoside' | undefined`
-**Por defecto:** `undefined` (depende de la clase LaTeX)
-
-Define si el PDF es a una cara (`oneside`) o a doble cara (`twoside`). Afecta márgenes alternos y posición de números de página.
-
-#### `format.epub`
-
-##### `format.epub.toc`
-
-**Tipo:** `boolean | undefined`
-**Por defecto:** `undefined`
-
-Incluye una tabla de contenidos en el EPUB.
-
-##### `format.epub.toc-depth`
-
-**Tipo:** `number` (entero, 0–5) | `undefined`
-**Por defecto:** `undefined`
-
-Profundidad máxima de la tabla de contenidos del EPUB.
-
-##### `format.epub.bibliography`
-
-**Tipo:** `string | undefined`
-**Por defecto:** sin bibliografía
-
-Ruta relativa a un archivo `.bib` para el EPUB.
-
-##### `format.epub.csl`
-
-**Tipo:** `string | undefined`
-**Por defecto:** estilo por defecto
-
-Ruta relativa a un archivo `.csl` para el EPUB.
-
-## Ejemplo mínimo
+Lista de preamble transpilers a desactivar.
 
 ```yaml
-site:
-  title: 'Notas de campo'
-  tagline: 'apuntes desde el margen'
-  lang: 'es'
-```
-
-## Ejemplo con PDF
-
-```yaml
-site:
-  title: 'Tesis doctoral'
-  lang: 'es-MX'
-  pagination:
-    limit: 15
-
-format:
-  html:
-    theme: dark
-    toc: true
-    toc-depth: 4
-  pdf:
-    engine: xelatex
-    toc: true
-    toc-depth: 5
-    numbering: false
-    hyphenation: false
-    bibliography: ./referencias.bib
-    page-size: letter
-    font-size: 12pt
-    font-family: "Times New Roman"
-    margins:
-      - 2.54cm
-      - 2.54cm
-      - 2.54cm
-      - 2.54cm
-    line-spacing: 1.5
-    page-number: header-right
-    sides: twoside
+disabled-preamble-transpilers:
+  - 01-maketitle-patches
 ```
 
 ## Validación
