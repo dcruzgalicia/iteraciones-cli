@@ -315,7 +315,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         recentFiles: [...changedPaths].filter((p) => p.endsWith('.md') && !deletedEntries.has(p)),
         deletedFiles: [...deletedEntries.keys()].filter((p) => p.endsWith('.md')),
       };
-      progress.startPhase('latex');
+      progress.startPhase('latex', diff.recentFiles.length);
       await generateLatexPreamble(cwd, ctx.siteConfig, discoveryIndex, diff);
       progress.completePhase(undefined, 'latex');
 
