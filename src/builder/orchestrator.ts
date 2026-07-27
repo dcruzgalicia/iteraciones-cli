@@ -9,7 +9,8 @@ import { buildAssets, generateLatexPreamble, renderHtmlPage } from './build-util
 import { type BuildReport, buildDocsFromIndex, discover, loadBuildReport } from './discover.js';
 import { runExportDocuments } from './export/runner.js';
 import { renderLatex } from './render.js';
-import { type BuildContext, type BuildDocument, isExportSkipped } from './types.js';
+import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
+import { isExportSkipped } from './types.js';
 
 export interface BuildOptions {
   outputDir?: string;
@@ -119,33 +120,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   }
 
   // ── FASE 6: limpiar de dist/ archivos de formatos eliminados ──
-  // Se ejecuta antes del early-return para asegurar limpieza aunque no haya cambios.
-  if (removedFormats.length > 0) {
-    const FORMAT_EXT_MAP: Record<string, string> = {
-      latex: '.tex',
-      pdf: '.pdf',
-      html: '.html',
-      epub: '.epub',
-      markdown: '.md',
-    };
-    for (const doc of allDocs) {
-      const slug = doc.slug ?? basename(doc.relativePath, '.md');
-      const dir = dirname(doc.relativePath);
-      for (const fmt of removedFormats) {
-        const ext = FORMAT_EXT_MAP[fmt];
-        if (ext) {
-          await rm(join(ctx.outputDir, dir, `${slug}${ext}`), { force: true }).catch(() => {});
-        }
-      }
-    }
-
-    // Limpiar assets de HTML (css, fonts, logo) si se desactivo el formato
-    if (removedFormats.includes('html')) {
-      await rm(join(ctx.outputDir, 'css'), { recursive: true, force: true }).catch(() => {});
-      await rm(join(ctx.outputDir, 'fonts'), { recursive: true, force: true }).catch(() => {});
-      await rm(join(ctx.outputDir, 'logo.svg'), { force: true }).catch(() => {});
-    }
-  }
+  await cleanupRemovedFormats(ctx, allDocs, removedFormats);
 
   const GLOBAL_CHANGE_PATTERNS = [/\.ya?ml$/, /\.html$/];
   const changedPaths = discoveredChanges;
@@ -161,41 +136,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const pipelineDocs = isGlobalChange ? allDocs : allDocs.filter((d) => changedPaths.has(d.relativePath));
   const totalDocCount = allDocs.length;
 
-  // Cleanup deleted files from tex/ and formats/ (se ejecuta incluso si pipelineDocs esta vacio)
-  {
-    const allDocPathsSet = new Set(allDocs.map((d) => d.relativePath));
-    const deletedMdPaths = [...changedPaths].filter((p) => p.endsWith('.md') && !allDocPathsSet.has(p));
-    const cacheBase = join(ctx.cwd, '.iteraciones');
-    for (const relPath of deletedMdPaths) {
-      const dir = dirname(relPath);
-      const entry = deletedEntries.get(relPath);
-      const slug = entry?.slug ?? basename(relPath, '.md');
-      await rm(join(cacheBase, 'tex', dir, `${slug}.tex`), { force: true }).catch(() => {});
-      await rm(join(cacheBase, 'html', dir, `${slug}.html`), { force: true }).catch(() => {});
-      await rm(join(cacheBase, 'formats', 'pdf', dir, `${slug}.tex`), { force: true }).catch(() => {});
-      await rm(join(cacheBase, 'formats', 'html', dir, `${slug}.html`), { force: true }).catch(() => {});
-      await rm(join(cacheBase, 'formats', 'html', dir, `${slug}.epub`), { force: true }).catch(() => {});
-      for (const ext of ['.html', '.tex', '.pdf', '.epub', '.md']) {
-        await rm(join(ctx.outputDir, dir, `${slug}${ext}`), { force: true }).catch(() => {});
-      }
-    }
-  }
-
-  // Cleanup archivos cuyo slug cambio (ej. unico -> duplicado o viceversa)
-  if (slugChangedEntries.size > 0) {
-    const cacheBase = join(ctx.cwd, '.iteraciones');
-    for (const [relPath, oldSlug] of slugChangedEntries) {
-      const dir = dirname(relPath);
-      await rm(join(cacheBase, 'tex', dir, `${oldSlug}.tex`), { force: true }).catch(() => {});
-      await rm(join(cacheBase, 'html', dir, `${oldSlug}.html`), { force: true }).catch(() => {});
-      await rm(join(cacheBase, 'formats', 'pdf', dir, `${oldSlug}.tex`), { force: true }).catch(() => {});
-      await rm(join(cacheBase, 'formats', 'html', dir, `${oldSlug}.html`), { force: true }).catch(() => {});
-      await rm(join(cacheBase, 'formats', 'html', dir, `${oldSlug}.epub`), { force: true }).catch(() => {});
-      for (const ext of ['.html', '.tex', '.pdf', '.epub', '.md']) {
-        await rm(join(ctx.outputDir, dir, `${oldSlug}${ext}`), { force: true }).catch(() => {});
-      }
-    }
-  }
+  // Cleanup de archivos eliminados y slugs cambiados
+  await cleanupDeletedFiles(ctx, changedPaths, allDocs, deletedEntries);
+  await cleanupSlugChanges(ctx, slugChangedEntries);
 
   if (pipelineDocs.length === 0) {
     log('Ningun documento modificado — sin cambios');
@@ -258,46 +201,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     // HTML (template completo)
     (async () => {
       if (!formatCfg?.html?.generate || noExport) return;
-      const siteConfig = ctx.siteConfig;
-      const htmlConfig = siteConfig.format?.html;
-      const hasCss = !options.noTailwind && ctx.cssPath;
-      progress.startPhase('html', pipelineDocs.length);
-      for (const doc of pipelineDocs) {
-        const slug = doc.slug ?? basename(doc.relativePath, '.md');
-        const dir = dirname(doc.relativePath);
-        const src = join(ctx.cwd, '.iteraciones', 'html', dir, `${slug}.html`);
-        const dst = join(formatsDir, 'html', dir, `${slug}.html`);
-        try {
-          const fragment = await Bun.file(src).text();
-          // Leer SVG del logo desde source (antes de copiar a dist/)
-          let logoInline: string | undefined;
-          try {
-            const logoRel = ctx.siteConfig.logo?.trim();
-            const logoSrc = logoRel ? join(ctx.cwd, logoRel) : join(import.meta.dir, '../../src/lib/resources/logo.svg');
-            logoInline = await Bun.file(logoSrc).text();
-          } catch {}
-
-          const html = await renderHtmlPage(fragment, {
-            title: doc.frontmatter.title || slug,
-            siteTitle: siteConfig.title ?? '',
-            tagline: siteConfig.tagline,
-            lang: siteConfig.lang ?? 'es',
-            logoInline,
-            baseUrl: siteConfig.baseUrl,
-            theme: htmlConfig?.theme,
-            accent: htmlConfig?.accent,
-            css: hasCss ? 'css/styles.css' : undefined,
-            author: doc.frontmatter.author,
-            description: typeof doc.frontmatter.abstract === 'string' ? doc.frontmatter.abstract : undefined,
-          });
-          await mkdir(dirname(dst), { recursive: true });
-          await Bun.write(dst, html);
-        } catch {
-          process.stderr.write(`[orchestrator] error al generar HTML para ${doc.relativePath}
-`);
-        }
-      }
-      progress.completePhase(undefined, 'html');
+      await generateHtmlPages(ctx, pipelineDocs, formatsDir, options);
     })(),
 
     // EPUB
@@ -346,38 +250,173 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   }
 
   // ── FASE 5: copiar de formats/ a dist/ ──
-  {
-    const copySpec: Array<[boolean, string, string]> = [
-      [latexOn, 'pdf', 'tex'],
-      [pdfOn, 'pdf', 'pdf'],
-      [htmlOn, 'html', 'html'],
-      [epubOn, 'html', 'epub'],
-      [mdOn, 'markdown', 'md'],
-    ];
-    for (const doc of allDocs) {
-      const slug = doc.slug ?? basename(doc.relativePath, '.md');
-      const dir = dirname(doc.relativePath);
-      for (const [active, format, ext] of copySpec) {
-        if (!active) continue;
-        const srcPath = join(formatsDir, format, dir, `${slug}.${ext}`);
-        const dstPath = join(ctx.outputDir, dir, `${slug}.${ext}`);
-        const exists = await Bun.file(srcPath).exists();
-        if (exists) {
-          await mkdir(dirname(dstPath), { recursive: true });
-          await Bun.write(dstPath, Bun.file(srcPath));
-        }
-      }
-    }
-  }
+  await copyToDist(ctx, allDocs, formatsDir, { latexOn, pdfOn, htmlOn, epubOn, mdOn });
 
   const totalDocs = htmlOn || pdfOn || epubOn || mdOn || latexOn ? totalDocCount : 0;
   const processedCount = pipelineDocs.length;
   const cachedCount = totalDocs - processedCount;
-  const generatedFormats: string[] = [];
-  if (latexOn) generatedFormats.push('latex');
-  if (pdfOn) generatedFormats.push('pdf');
-  if (htmlOn) generatedFormats.push('html');
-  if (epubOn) generatedFormats.push('epub');
-  if (mdOn) generatedFormats.push('markdown');
-  progress.finish(processedCount, cachedCount, generatedFormats);
+  progress.finish(processedCount, cachedCount, buildFormatsList({ latexOn, pdfOn, htmlOn, epubOn, mdOn }));
+}
+
+// ── Funciones extraídas ───────────────────────────────────────────────────
+
+async function cleanupRemovedFormats(ctx: BuildContext, allDocs: BuildDocument[], removedFormats: string[]): Promise<void> {
+  if (removedFormats.length === 0) return;
+
+  const FORMAT_EXT_MAP: Record<string, string> = {
+    latex: '.tex',
+    pdf: '.pdf',
+    html: '.html',
+    epub: '.epub',
+    markdown: '.md',
+  };
+  for (const doc of allDocs) {
+    const slug = doc.slug ?? basename(doc.relativePath, '.md');
+    const dir = dirname(doc.relativePath);
+    for (const fmt of removedFormats) {
+      const ext = FORMAT_EXT_MAP[fmt];
+      if (ext) {
+        await rm(join(ctx.outputDir, dir, `${slug}${ext}`), { force: true }).catch(() => {});
+      }
+    }
+  }
+
+  if (removedFormats.includes('html')) {
+    await rm(join(ctx.outputDir, 'css'), { recursive: true, force: true }).catch(() => {});
+    await rm(join(ctx.outputDir, 'fonts'), { recursive: true, force: true }).catch(() => {});
+    await rm(join(ctx.outputDir, 'logo.svg'), { force: true }).catch(() => {});
+  }
+}
+
+async function cleanupDeletedFiles(
+  ctx: BuildContext,
+  changedPaths: Set<string>,
+  allDocs: BuildDocument[],
+  deletedEntries: Map<string, DiscoveryEntry>,
+): Promise<void> {
+  const allDocPathsSet = new Set(allDocs.map((d) => d.relativePath));
+  const deletedMdPaths = [...changedPaths].filter((p) => p.endsWith('.md') && !allDocPathsSet.has(p));
+  if (deletedMdPaths.length === 0) return;
+
+  const cacheBase = join(ctx.cwd, '.iteraciones');
+  for (const relPath of deletedMdPaths) {
+    const dir = dirname(relPath);
+    const entry = deletedEntries.get(relPath);
+    const slug = entry?.slug ?? basename(relPath, '.md');
+    const CACHE_PATHS = ['tex', 'html'];
+    for (const sub of CACHE_PATHS) {
+      await rm(join(cacheBase, sub, dir, `${slug}.tex`), { force: true }).catch(() => {});
+      await rm(join(cacheBase, sub, dir, `${slug}.html`), { force: true }).catch(() => {});
+    }
+    for (const sub of ['pdf', 'html']) {
+      await rm(join(cacheBase, 'formats', sub, dir, `${slug}.tex`), { force: true }).catch(() => {});
+      await rm(join(cacheBase, 'formats', sub, dir, `${slug}.html`), { force: true }).catch(() => {});
+      await rm(join(cacheBase, 'formats', sub, dir, `${slug}.epub`), { force: true }).catch(() => {});
+    }
+    for (const ext of ['.html', '.tex', '.pdf', '.epub', '.md']) {
+      await rm(join(ctx.outputDir, dir, `${slug}${ext}`), { force: true }).catch(() => {});
+    }
+  }
+}
+
+async function cleanupSlugChanges(ctx: BuildContext, slugChangedEntries: Map<string, string>): Promise<void> {
+  if (slugChangedEntries.size === 0) return;
+
+  const cacheBase = join(ctx.cwd, '.iteraciones');
+  for (const [relPath, oldSlug] of slugChangedEntries) {
+    const dir = dirname(relPath);
+    for (const sub of ['tex', 'html']) {
+      await rm(join(cacheBase, sub, dir, `${oldSlug}.tex`), { force: true }).catch(() => {});
+      await rm(join(cacheBase, sub, dir, `${oldSlug}.html`), { force: true }).catch(() => {});
+    }
+    for (const sub of ['pdf', 'html']) {
+      await rm(join(cacheBase, 'formats', sub, dir, `${oldSlug}.tex`), { force: true }).catch(() => {});
+      await rm(join(cacheBase, 'formats', sub, dir, `${oldSlug}.html`), { force: true }).catch(() => {});
+      await rm(join(cacheBase, 'formats', sub, dir, `${oldSlug}.epub`), { force: true }).catch(() => {});
+    }
+    for (const ext of ['.html', '.tex', '.pdf', '.epub', '.md']) {
+      await rm(join(ctx.outputDir, dir, `${oldSlug}${ext}`), { force: true }).catch(() => {});
+    }
+  }
+}
+
+async function generateHtmlPages(ctx: BuildContext, pipelineDocs: BuildDocument[], formatsDir: string, options: BuildOptions): Promise<void> {
+  const progress = new ProgressTracker({ verbose: options.verbose ?? false });
+  const siteConfig = ctx.siteConfig;
+  const htmlConfig = siteConfig.format?.html;
+  const hasCss = !options.noTailwind && ctx.cssPath;
+
+  progress.startPhase('html', pipelineDocs.length);
+  for (const doc of pipelineDocs) {
+    const slug = doc.slug ?? basename(doc.relativePath, '.md');
+    const dir = dirname(doc.relativePath);
+    const src = join(ctx.cwd, '.iteraciones', 'html', dir, `${slug}.html`);
+    const dst = join(formatsDir, 'html', dir, `${slug}.html`);
+    try {
+      const fragment = await Bun.file(src).text();
+      let logoInline: string | undefined;
+      try {
+        const logoRel = ctx.siteConfig.logo?.trim();
+        const logoSrc = logoRel ? join(ctx.cwd, logoRel) : join(import.meta.dir, '../../src/lib/resources/logo.svg');
+        logoInline = await Bun.file(logoSrc).text();
+      } catch {}
+
+      const html = await renderHtmlPage(fragment, {
+        title: doc.frontmatter.title || slug,
+        siteTitle: siteConfig.title ?? '',
+        tagline: siteConfig.tagline,
+        lang: siteConfig.lang ?? 'es',
+        logoInline,
+        baseUrl: siteConfig.baseUrl,
+        theme: htmlConfig?.theme,
+        accent: htmlConfig?.accent,
+        css: hasCss ? 'css/styles.css' : undefined,
+        author: doc.frontmatter.author,
+        description: typeof doc.frontmatter.abstract === 'string' ? doc.frontmatter.abstract : undefined,
+      });
+      await mkdir(dirname(dst), { recursive: true });
+      await Bun.write(dst, html);
+    } catch {
+      process.stderr.write(`[orchestrator] error al generar HTML para ${doc.relativePath}\n`);
+    }
+  }
+  progress.completePhase(undefined, 'html');
+}
+
+async function copyToDist(
+  ctx: BuildContext,
+  allDocs: BuildDocument[],
+  formatsDir: string,
+  active: { latexOn: boolean; pdfOn: boolean; htmlOn: boolean; epubOn: boolean; mdOn: boolean },
+): Promise<void> {
+  const copySpec: Array<[boolean, string, string]> = [
+    [active.latexOn, 'pdf', 'tex'],
+    [active.pdfOn, 'pdf', 'pdf'],
+    [active.htmlOn, 'html', 'html'],
+    [active.epubOn, 'html', 'epub'],
+    [active.mdOn, 'markdown', 'md'],
+  ];
+  for (const doc of allDocs) {
+    const slug = doc.slug ?? basename(doc.relativePath, '.md');
+    const dir = dirname(doc.relativePath);
+    for (const [active, format, ext] of copySpec) {
+      if (!active) continue;
+      const srcPath = join(formatsDir, format, dir, `${slug}.${ext}`);
+      const dstPath = join(ctx.outputDir, dir, `${slug}.${ext}`);
+      if (await Bun.file(srcPath).exists()) {
+        await mkdir(dirname(dstPath), { recursive: true });
+        await Bun.write(dstPath, Bun.file(srcPath));
+      }
+    }
+  }
+}
+
+function buildFormatsList(active: { latexOn: boolean; pdfOn: boolean; htmlOn: boolean; epubOn: boolean; mdOn: boolean }): string[] {
+  const formats: string[] = [];
+  if (active.latexOn) formats.push('latex');
+  if (active.pdfOn) formats.push('pdf');
+  if (active.htmlOn) formats.push('html');
+  if (active.epubOn) formats.push('epub');
+  if (active.mdOn) formats.push('markdown');
+  return formats;
 }
