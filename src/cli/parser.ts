@@ -1,4 +1,3 @@
-import { isAbsolute, normalize } from 'node:path';
 import { Command } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
 import { runBuild, runClean, runDoctor, runInfo, runInit, runNew, runTranspilers, runValidate } from './dispatcher.js';
@@ -31,37 +30,8 @@ export function buildProgram(): Command {
         verbose?: boolean;
       }) => {
         const concurrency = Number.parseInt(opts.concurrency, 10);
-        if (!Number.isInteger(concurrency) || concurrency < 1) {
-          process.stderr.write(`Error: --concurrency debe ser un entero positivo (recibido: "${opts.concurrency}")\n`);
-          process.exitCode = 1;
-          return;
-        }
-        if (opts.output !== undefined) {
-          const normalized = normalize(opts.output);
-          // Rechazar rutas relativas con escalada de directorio o la raíz absoluta.
-          // clean() borra el directorio antes del build; un path incorrecto puede
-          // eliminar el proyecto o directorios del sistema.
-          if ((!isAbsolute(normalized) && normalized.startsWith('..')) || normalized === '/') {
-            process.stderr.write(`Error: --output no puede apuntar fuera del proyecto o a la raíz del sistema (recibido: "${opts.output}")\n`);
-            process.exitCode = 1;
-            return;
-          }
-          // Rechazar rutas absolutas que sean igual o ancestro del directorio del proyecto.
-          // clean() borra outputDir antes del build; apuntar a un ancestro del cwd
-          // eliminaría los archivos fuente del proyecto.
-          if (isAbsolute(normalized)) {
-            const projectRoot = normalize(opts.projectRoot ?? process.cwd());
-            if (projectRoot === normalized || projectRoot.startsWith(normalized + '/')) {
-              process.stderr.write(
-                `Error: --output "${opts.output}" es un directorio padre del proyecto; ejecutar clean() borraría los archivos fuente.\n`,
-              );
-              process.exitCode = 1;
-              return;
-            }
-          }
-        }
         await runBuild(opts.projectRoot ?? process.cwd(), {
-          concurrency,
+          concurrency: Number.isInteger(concurrency) ? concurrency : undefined,
           noCache: !opts.cache,
           outputDir: opts.output,
           noTailwind: !opts.tailwind,
@@ -70,12 +40,11 @@ export function buildProgram(): Command {
           verbose: opts.verbose,
         });
       },
-    );
-
-  program
-    .command('info')
-    .description('muestra información del proyecto y configuración')
-    .action(() => runInfo(process.cwd()));
+    ),
+    program
+      .command('info')
+      .description('muestra información del proyecto y configuración')
+      .action(() => runInfo(process.cwd()));
 
   program
     .command('init')

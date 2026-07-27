@@ -24,6 +24,27 @@ export async function runClean(cwd: string): Promise<void> {
 
 export async function runBuild(cwd: string, options: BuildOptions = {}): Promise<void> {
   try {
+    // Validar --concurrency
+    const concurrency = options.concurrency;
+    if (concurrency !== undefined && (!Number.isInteger(concurrency) || concurrency < 1)) {
+      throw new Error(`--concurrency debe ser un entero positivo (recibido: "${concurrency}")`);
+    }
+
+    // Validar --output
+    const output = options.outputDir;
+    if (output !== undefined) {
+      const normalized = normalize(output);
+      if ((!isAbsolute(normalized) && normalized.startsWith('..')) || normalized === '/') {
+        throw new Error(`--output no puede apuntar fuera del proyecto o a la raíz del sistema (recibido: "${output}")`);
+      }
+      if (isAbsolute(normalized)) {
+        const projectRoot = normalize(cwd);
+        if (projectRoot === normalized || projectRoot.startsWith(normalized + '/')) {
+          throw new Error(`--output "${output}" es un directorio padre del proyecto; ejecutar clean() borraría los archivos fuente.`);
+        }
+      }
+    }
+
     await build(cwd, options);
   } catch (err) {
     if (err instanceof PandocError) {
@@ -114,9 +135,7 @@ export async function runNew(cwd: string, path: string): Promise<void> {
     const normalizedPath = path.endsWith('.md') ? path : `${path}.md`;
 
     if (isAbsolute(normalizedPath) || normalize(normalizedPath).startsWith('..')) {
-      process.stderr.write(`Error: la ruta debe ser relativa al directorio del proyecto (recibido: "${path}")\n`);
-      process.exitCode = 1;
-      return;
+      throw new Error(`la ruta debe ser relativa al directorio del proyecto (recibido: "${path}")`);
     }
 
     const absPath = join(cwd, normalizedPath);
