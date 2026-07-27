@@ -91,6 +91,13 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   } = await discover(cwd, { noCache: options.noCache, activeFormats: currentFormats });
   const allDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
 
+  if (allDocs.length === 0) {
+    process.stdout.write('  No se encontraron documentos Markdown en el proyecto.\n');
+    process.stdout.write("  Crea un archivo .md con frontmatter o ejecuta 'iteraciones init'.\n");
+    progress.finish(0, 0, []);
+    return;
+  }
+
   if (options.verbose) {
     for (const doc of allDocs) {
       progress.reportFile({ relativePath: doc.relativePath, phase: 'discovery' });
