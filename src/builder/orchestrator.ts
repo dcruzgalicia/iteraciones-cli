@@ -6,7 +6,7 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/site-config.js';
 import { computeActiveFormats } from '../config/site-config.js';
 import { buildAssets, generateLatexPreamble, renderHtmlPage } from './build-utils.js';
-import { type BuildReport, buildDocsFromIndex, discover, loadBuildReport } from './discover.js';
+import { type BuildReport, buildDocsFromIndex, discover, loadBuildState } from './discover.js';
 import { runExportDocuments } from './export/runner.js';
 import { renderLatex } from './render.js';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
@@ -58,11 +58,11 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   let removedFormats: string[] = [];
 
   // Detectar formatos nuevos y eliminados comparando con el build anterior
-  const prevReport = await loadBuildReport(cwd);
-  if (prevReport !== null) {
-    const prevFormats = new Set(prevReport.activeFormats ?? []);
+  const prevState = await loadBuildState(cwd);
+  if (prevState !== null) {
+    const prevFormats = new Set(prevState.activeFormats);
     newFormats = currentFormats.filter((f) => !prevFormats.has(f));
-    removedFormats = prevReport.activeFormats?.filter((f) => !currentFormats.includes(f)) ?? [];
+    removedFormats = prevState.activeFormats.filter((f) => !currentFormats.includes(f));
     if (newFormats.length > 0) {
       log(`Nuevos formatos detectados: ${newFormats.join(', ')}. Procesando todos los documentos.`);
     }
@@ -89,7 +89,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     discoveryIndex,
     deletedEntries,
     slugChangedEntries,
-  } = await discover(cwd, { noCache: options.noCache, activeFormats: currentFormats });
+  } = await discover(cwd, { noCache: options.noCache, activeFormats: currentFormats, prevState });
   const allDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
 
   if (allDocs.length === 0) {
