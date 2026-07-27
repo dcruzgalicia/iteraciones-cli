@@ -1,31 +1,48 @@
 import { join } from 'node:path';
+import { ZodError } from 'zod';
 import { ConfigError } from '../lib/errors.js';
-import {
-  DEFAULT_EPUB_FORMAT,
-  DEFAULT_HTML_FORMAT,
-  DEFAULT_MARKDOWN_FORMAT,
-  DEFAULT_PDF_FORMAT,
-  DEFAULT_SITE_CONFIG,
-  type EpubFormatConfig,
-  type FormatConfig,
-  type HtmlFormatConfig,
-  type MarkdownFormatConfig,
-  type PageNumberPlacement,
-  type PdfFormatConfig,
-  type SiteConfig,
-} from './site-config.js';
+import { SiteConfigSchema } from './config-schema.js';
+import { DEFAULT_PDF_FORMAT, type SiteConfig } from './site-config.js';
 
 const CONFIG_FILE = '_iteraciones.yaml';
+
+const ROOT_KNOWN_KEYS = new Set(['site', 'format', 'disabled-transpilers', 'disabled-preamble-transpilers']);
+const SITE_KNOWN_KEYS = new Set(['title', 'tagline', 'lang', 'logo', 'base-url']);
+const FORMAT_KNOWN_KEYS = new Set(['latex', 'pdf', 'html', 'epub', 'markdown']);
+const HTML_KNOWN_KEYS = new Set(['theme', 'accent', 'generate']);
+const EPUB_KNOWN_KEYS = new Set(['generate']);
+const MD_KNOWN_KEYS = new Set(['generate']);
+
+function warnUnknownKeys(obj: Record<string, unknown>, knownKeys: Set<string>, prefix: string): void {
+  for (const key of Object.keys(obj)) {
+    if (!knownKeys.has(key)) {
+      process.stderr.write(`[iteraciones] _iteraciones.yaml: "${prefix}${key}" no es una clave válida. Revisa docs/configuration.md\n`);
+    }
+  }
+}
 
 export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
   const configPath = join(cwd, CONFIG_FILE);
   const file = Bun.file(configPath);
 
-  if (!(await file.exists()))
+  if (!(await file.exists())) {
     return {
-      ...DEFAULT_SITE_CONFIG,
+      title: 'iteraciones',
+      tagline: 'escribir, compartir, re-existir',
+      lang: 'es-MX',
+      logo: '',
+      baseUrl: undefined,
+      format: {
+        latex: true,
+        html: { theme: undefined, accent: 'lime', generate: false },
+        pdf: { ...DEFAULT_PDF_FORMAT },
+        epub: { generate: false },
+        markdown: { generate: false },
+      },
       disabledTranspilers: undefined,
+      disabledPreambleTranspilers: undefined,
     };
+  }
 
   let raw: string;
   try {
@@ -41,429 +58,55 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
     throw new ConfigError(`Error de sintaxis en ${CONFIG_FILE}: ${String(err)}`, configPath);
   }
 
-  if (!parsed || typeof parsed !== 'object')
+  if (!parsed || typeof parsed !== 'object') {
     return {
-      ...DEFAULT_SITE_CONFIG,
+      title: 'iteraciones',
+      tagline: 'escribir, compartir, re-existir',
+      lang: 'es-MX',
+      logo: '',
+      baseUrl: undefined,
+      format: {
+        latex: true,
+        html: { theme: undefined, accent: 'lime', generate: false },
+        pdf: { ...DEFAULT_PDF_FORMAT },
+        epub: { generate: false },
+        markdown: { generate: false },
+      },
       disabledTranspilers: undefined,
+      disabledPreambleTranspilers: undefined,
     };
+  }
 
   const root = parsed as Record<string, unknown>;
 
-  // Validar claves desconocidas en la raíz
-  const ROOT_KNOWN_KEYS = new Set(['site', 'format', 'disabled-transpilers', 'disabled-preamble-transpilers']);
+  // Validar claves desconocidas
   warnUnknownKeys(root, ROOT_KNOWN_KEYS, '');
-
-  const site = root.site && typeof root.site === 'object' ? (root.site as Record<string, unknown>) : {};
-
-  // Validar claves desconocidas en site:
-  const SITE_KNOWN_KEYS = new Set(['title', 'tagline', 'lang', 'logo', 'base-url']);
-  if (Object.keys(site).length > 0) {
-    warnUnknownKeys(site, SITE_KNOWN_KEYS, 'site.');
+  if (root.site && typeof root.site === 'object' && !Array.isArray(root.site)) {
+    warnUnknownKeys(root.site as Record<string, unknown>, SITE_KNOWN_KEYS, 'site.');
   }
-
-  // Validar claves desconocidas en format:
-  const FORMAT_KNOWN_KEYS = new Set(['latex', 'pdf', 'html', 'epub', 'markdown']);
   if (root.format && typeof root.format === 'object' && !Array.isArray(root.format)) {
     warnUnknownKeys(root.format as Record<string, unknown>, FORMAT_KNOWN_KEYS, 'format.');
   }
+  const fmtRaw = root.format as Record<string, unknown> | undefined;
+  if (fmtRaw?.html && typeof fmtRaw.html === 'object' && !Array.isArray(fmtRaw.html)) {
+    warnUnknownKeys(fmtRaw.html as Record<string, unknown>, HTML_KNOWN_KEYS, 'format.html.');
+  }
+  if (fmtRaw?.epub && typeof fmtRaw.epub === 'object' && !Array.isArray(fmtRaw.epub)) {
+    warnUnknownKeys(fmtRaw.epub as Record<string, unknown>, EPUB_KNOWN_KEYS, 'format.epub.');
+  }
+  if (fmtRaw?.markdown && typeof fmtRaw.markdown === 'object' && !Array.isArray(fmtRaw.markdown)) {
+    warnUnknownKeys(fmtRaw.markdown as Record<string, unknown>, MD_KNOWN_KEYS, 'format.markdown.');
+  }
 
-  const rawDisabled = root['disabled-transpilers'];
-  const disabledTranspilers =
-    Array.isArray(rawDisabled) && rawDisabled.length > 0 ? rawDisabled.filter((t): t is string => typeof t === 'string') : undefined;
-
-  const rawDisabledPreamble = root['disabled-preamble-transpilers'];
-  const disabledPreambleTranspilers =
-    Array.isArray(rawDisabledPreamble) && rawDisabledPreamble.length > 0
-      ? rawDisabledPreamble.filter((t): t is string => typeof t === 'string')
-      : undefined;
-
-  const title = typeof site.title === 'string' ? site.title : DEFAULT_SITE_CONFIG.title;
-  const tagline = typeof site.tagline === 'string' ? site.tagline : DEFAULT_SITE_CONFIG.tagline;
-  const lang = typeof site.lang === 'string' ? site.lang : DEFAULT_SITE_CONFIG.lang;
-  const logo = typeof site.logo === 'string' ? site.logo : DEFAULT_SITE_CONFIG.logo;
-  const baseUrl = typeof site['base-url'] === 'string' && site['base-url'].trim() ? site['base-url'].trim() : DEFAULT_SITE_CONFIG.baseUrl;
-
-  const format =
-    typeof root.format === 'object' && root.format !== null
-      ? parseFormatConfig(root.format as Record<string, unknown>)
-      : {
-          ...DEFAULT_SITE_CONFIG.format,
-          html: { ...DEFAULT_HTML_FORMAT },
-          pdf: { ...DEFAULT_PDF_FORMAT },
-          epub: { ...DEFAULT_EPUB_FORMAT },
-        };
-
-  return {
-    title,
-    tagline,
-    lang,
-    logo,
-    baseUrl,
-    format,
-    disabledTranspilers: disabledTranspilers !== undefined && disabledTranspilers.length > 0 ? disabledTranspilers : undefined,
-    disabledPreambleTranspilers:
-      disabledPreambleTranspilers !== undefined && disabledPreambleTranspilers.length > 0 ? disabledPreambleTranspilers : undefined,
-  };
-}
-
-// ── Validación de claves desconocidas ────────────────────────────────────
-
-/**
- * Escribe un warning en stderr por cada clave en `obj` que no esté en `knownKeys`.
- */
-function warnUnknownKeys(obj: Record<string, unknown>, knownKeys: Set<string>, prefix: string): void {
-  for (const key of Object.keys(obj)) {
-    if (!knownKeys.has(key)) {
-      process.stderr.write(`[iteraciones] _iteraciones.yaml: "${prefix}${key}" no es una clave válida. Revisa docs/configuration.md\n`);
+  try {
+    return SiteConfigSchema.parse(root) as unknown as SiteConfig;
+  } catch (err) {
+    if (err instanceof ZodError) {
+      const first = err.issues[0];
+      const path = first?.path.join('.') ?? '';
+      const message = first?.message ?? 'Error de validación';
+      throw new ConfigError(`${path}: ${message}`, configPath);
     }
+    throw err;
   }
-}
-
-// ── Parsers ──────────────────────────────────────────────────────────────
-
-function parseFormatConfig(raw: Record<string, unknown>): FormatConfig {
-  // Validar claves desconocidas en format.html
-  const HTML_KNOWN_KEYS = new Set(['theme', 'accent', 'generate']);
-  if (raw.html && typeof raw.html === 'object' && !Array.isArray(raw.html)) {
-    warnUnknownKeys(raw.html as Record<string, unknown>, HTML_KNOWN_KEYS, 'format.html.');
-  }
-
-  // Validar claves desconocidas en format.epub
-  const EPUB_KNOWN_KEYS = new Set(['generate']);
-  if (raw.epub && typeof raw.epub === 'object' && !Array.isArray(raw.epub)) {
-    warnUnknownKeys(raw.epub as Record<string, unknown>, EPUB_KNOWN_KEYS, 'format.epub.');
-  }
-
-  // Validar claves desconocidas en format.markdown
-  const MD_KNOWN_KEYS = new Set(['generate']);
-  if (raw.markdown && typeof raw.markdown === 'object' && !Array.isArray(raw.markdown)) {
-    warnUnknownKeys(raw.markdown as Record<string, unknown>, MD_KNOWN_KEYS, 'format.markdown.');
-  }
-
-  // Nota: format.pdf no se valida aquí porque tiene ~40 campos válidos;
-  // los campos individuales ya se validan en parsePdfFormatConfig.
-
-  return {
-    html: parseHtmlFormatConfig(raw.html) ?? { ...DEFAULT_HTML_FORMAT },
-    pdf: parsePdfFormatConfig(raw.pdf),
-    epub: parseEpubFormatConfig(raw.epub),
-    markdown: parseMarkdownFormatConfig(raw.markdown),
-    latex: typeof raw.latex === 'boolean' ? raw.latex : true,
-  };
-}
-
-function parseHtmlFormatConfig(raw: unknown): HtmlFormatConfig | undefined {
-  if (!raw || typeof raw !== 'object') return undefined;
-  const obj = raw as Record<string, unknown>;
-
-  const theme = typeof obj.theme === 'string' ? obj.theme : undefined;
-  const accent = resolveAccent(obj.accent);
-  const generate = typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_HTML_FORMAT.generate;
-
-  return { theme, accent, generate };
-}
-
-const KNOWN_PAGE_NUMBER_PLACEMENTS = new Set<string>([
-  'footer-left',
-  'footer-center',
-  'footer-right',
-  'header-left',
-  'header-center',
-  'header-right',
-]);
-
-function parsePdfFormatConfig(raw: unknown): PdfFormatConfig {
-  if (!raw || typeof raw !== 'object') return { ...DEFAULT_PDF_FORMAT };
-  const obj = raw as Record<string, unknown>;
-
-  const pdfx = typeof obj.pdfx === 'boolean' ? obj.pdfx : DEFAULT_PDF_FORMAT.pdfx;
-  const toc = typeof obj.toc === 'boolean' ? obj.toc : DEFAULT_PDF_FORMAT.toc;
-  const enumitem = typeof obj.enumitem === 'boolean' ? obj.enumitem : DEFAULT_PDF_FORMAT.enumitem;
-  const crop = typeof obj.crop === 'boolean' ? obj.crop : DEFAULT_PDF_FORMAT.crop;
-
-  // documentclass
-  const rawDocClass = obj.documentclass;
-  let documentclass: { class?: 'scrartcl' | 'scrbook'; options?: string[] } | undefined;
-  if (rawDocClass && typeof rawDocClass === 'object' && !Array.isArray(rawDocClass)) {
-    const dc = rawDocClass as Record<string, unknown>;
-    const dcClass = typeof dc.class === 'string' && (dc.class === 'scrartcl' || dc.class === 'scrbook') ? dc.class : undefined;
-    if (dc.class !== undefined && dcClass === undefined) {
-      process.stderr.write(
-        `[iteraciones] format.pdf.documentclass.class: valor desconocido "${String(dc.class)}". Valores validos: scrartcl, scrbook.\n`,
-      );
-    }
-    const dcOptions = Array.isArray(dc.options) && dc.options.every((v): v is string => typeof v === 'string') ? dc.options : undefined;
-    if (dcClass || dcOptions) {
-      documentclass = {};
-      if (dcClass) documentclass.class = dcClass;
-      if (dcOptions) documentclass.options = dcOptions;
-    }
-  }
-
-  // geometry
-  const rawGeometry = obj.geometry;
-  let geometry: { options?: string[] } | undefined;
-  if (rawGeometry && typeof rawGeometry === 'object' && !Array.isArray(rawGeometry)) {
-    const g = rawGeometry as Record<string, unknown>;
-    if (Array.isArray(g.options) && g.options.every((v): v is string => typeof v === 'string')) {
-      geometry = { options: g.options };
-    }
-  }
-
-  // babel
-  const rawBabel = obj.babel;
-  let babel: { options?: string[] } | undefined;
-  if (rawBabel && typeof rawBabel === 'object' && !Array.isArray(rawBabel)) {
-    const b = rawBabel as Record<string, unknown>;
-    if (Array.isArray(b.options) && b.options.every((v): v is string => typeof v === 'string')) {
-      babel = { options: b.options };
-    }
-  }
-
-  // hyperref
-  const rawHyperref = obj.hyperref;
-  let hyperref: { options?: string[] } | undefined;
-  if (rawHyperref && typeof rawHyperref === 'object' && !Array.isArray(rawHyperref)) {
-    const h = rawHyperref as Record<string, unknown>;
-    if (Array.isArray(h.options) && h.options.every((v): v is string => typeof v === 'string')) {
-      hyperref = { options: h.options };
-    }
-  }
-
-  // microtype
-  const rawMicrotype = obj.microtype;
-  let microtype: { options?: string[] } | undefined;
-  if (rawMicrotype && typeof rawMicrotype === 'object' && !Array.isArray(rawMicrotype)) {
-    const m = rawMicrotype as Record<string, unknown>;
-    if (Array.isArray(m.options) && m.options.every((v): v is string => typeof v === 'string')) {
-      microtype = { options: m.options };
-    }
-  }
-
-  const mathptmx = typeof obj.mathptmx === 'boolean' ? obj.mathptmx : DEFAULT_PDF_FORMAT.mathptmx;
-  const setspace = typeof obj.setspace === 'boolean' ? obj.setspace : DEFAULT_PDF_FORMAT.setspace;
-
-  const showDate = typeof obj['show-date'] === 'boolean' ? obj['show-date'] : DEFAULT_PDF_FORMAT.showDate;
-
-  const rawPageNumber = obj['page-number'];
-  const isPageNumberValid = typeof rawPageNumber === 'string' && KNOWN_PAGE_NUMBER_PLACEMENTS.has(rawPageNumber);
-  const pageNumber = isPageNumberValid ? (rawPageNumber as PageNumberPlacement) : DEFAULT_PDF_FORMAT.pageNumber;
-  if (rawPageNumber !== undefined && !isPageNumberValid) {
-    process.stderr.write(
-      `[iteraciones] format.pdf.page-number: valor desconocido "${String(rawPageNumber)}". Valores validos: footer-left, footer-center, footer-right, header-left, header-center, header-right.\n`,
-    );
-  }
-
-  const raggedbottom = typeof obj.raggedbottom === 'boolean' ? obj.raggedbottom : DEFAULT_PDF_FORMAT.raggedbottom;
-  const pretolerance = typeof obj.pretolerance === 'number' ? obj.pretolerance : DEFAULT_PDF_FORMAT.pretolerance;
-  const tolerance = typeof obj.tolerance === 'number' ? obj.tolerance : DEFAULT_PDF_FORMAT.tolerance;
-  const brokenpenalty = typeof obj.brokenpenalty === 'number' ? obj.brokenpenalty : DEFAULT_PDF_FORMAT.brokenpenalty;
-  const finalhyphendemerits = typeof obj['finalhyphendemerits'] === 'number' ? obj['finalhyphendemerits'] : DEFAULT_PDF_FORMAT.finalhyphendemerits;
-  const doublehyphendemerits =
-    typeof obj['doublehyphendemerits'] === 'number' ? obj['doublehyphendemerits'] : DEFAULT_PDF_FORMAT.doublehyphendemerits;
-  const widowpenalty = typeof obj.widowpenalty === 'number' ? obj.widowpenalty : DEFAULT_PDF_FORMAT.widowpenalty;
-  const clubpenalty = typeof obj.clubpenalty === 'number' ? obj.clubpenalty : DEFAULT_PDF_FORMAT.clubpenalty;
-
-  // setstretch
-  const rawSetstretch = obj.setstretch;
-  const setstretch = typeof rawSetstretch === 'number' && rawSetstretch > 0 ? rawSetstretch : DEFAULT_PDF_FORMAT.setstretch;
-  if (rawSetstretch !== undefined && !(typeof rawSetstretch === 'number' && rawSetstretch > 0)) {
-    process.stderr.write(`[iteraciones] format.pdf.setstretch: debe ser un numero positivo.\n`);
-  }
-
-  // setlist
-  const rawSetlist = obj.setlist;
-  let setlist = DEFAULT_PDF_FORMAT.setlist;
-  if (Array.isArray(rawSetlist)) {
-    const parsed = rawSetlist
-      .filter((s): s is Record<string, unknown> => typeof s === 'object' && s !== null)
-      .map((s) => ({
-        command: typeof s.command === 'string' ? s.command : DEFAULT_PDF_FORMAT.setlist![0]!.command,
-        options:
-          Array.isArray(s.options) && s.options.every((v: unknown): v is string => typeof v === 'string')
-            ? s.options
-            : DEFAULT_PDF_FORMAT.setlist![0]!.options,
-      }));
-    if (parsed.length > 0) setlist = parsed;
-  }
-
-  // setcounter
-  const rawSetcounter = obj.setcounter;
-  let setcounter: Record<string, number> | undefined;
-  if (rawSetcounter && typeof rawSetcounter === 'object' && !Array.isArray(rawSetcounter)) {
-    const parsed: Record<string, number> = {};
-    for (const [k, v] of Object.entries(rawSetcounter as Record<string, unknown>)) {
-      if (typeof v === 'number') {
-        parsed[k] = v;
-      }
-    }
-    if (Object.keys(parsed).length > 0) setcounter = parsed;
-  }
-
-  // esoPic
-  const rawEsoPic = obj['eso-pic'];
-  let esoPic: { options?: string[] } | boolean | undefined;
-  if (typeof rawEsoPic === 'boolean') {
-    esoPic = rawEsoPic;
-  } else if (rawEsoPic && typeof rawEsoPic === 'object' && !Array.isArray(rawEsoPic)) {
-    const ep = rawEsoPic as Record<string, unknown>;
-    if (Array.isArray(ep.options) && ep.options.every((v): v is string => typeof v === 'string')) {
-      esoPic = { options: ep.options };
-    } else if (Object.keys(ep).length > 0) {
-      esoPic = { options: [] };
-    }
-  }
-
-  // sectioning
-  const rawSectioning = obj.sectioning;
-  let sectioning: PdfFormatConfig['sectioning'];
-  if (rawSectioning && typeof rawSectioning === 'object' && !Array.isArray(rawSectioning)) {
-    const s = rawSectioning as Record<string, unknown>;
-    const parsed: PdfFormatConfig['sectioning'] = {};
-    const LEVELS = ['part', 'chapter', 'section', 'subsection', 'subsubsection', 'paragraph', 'subparagraph'] as const;
-    const LEVEL_KEYS: Record<string, string[]> = {
-      part: ['beforeskip', 'afterskip', 'font'],
-      chapter: ['style', 'beforeskip', 'afterskip', 'font', 'align'],
-      section: ['style', 'beforeskip', 'afterskip', 'font', 'align'],
-      subsection: ['beforeskip', 'afterskip', 'font'],
-      subsubsection: ['beforeskip', 'afterskip', 'font'],
-      paragraph: ['beforeskip', 'afterskip', 'font'],
-      subparagraph: ['beforeskip', 'afterskip', 'font'],
-    };
-    for (const level of LEVELS) {
-      const rawLevel = s[level];
-      if (rawLevel && typeof rawLevel === 'object' && !Array.isArray(rawLevel)) {
-        const l = rawLevel as Record<string, unknown>;
-        const levelObj: Record<string, string> = {};
-        const keys = LEVEL_KEYS[level];
-        if (keys) {
-          for (const key of keys) {
-            if (typeof l[key] === 'string') levelObj[key] = l[key];
-          }
-        }
-        if (Object.keys(levelObj).length > 0) parsed[level] = levelObj;
-      }
-    }
-    if (Object.keys(parsed).length > 0) sectioning = parsed;
-  }
-
-  // setkomafont
-  const rawSetkomafont = obj.setkomafont;
-  let setkomafont: PdfFormatConfig['setkomafont'];
-  if (rawSetkomafont && typeof rawSetkomafont === 'object' && !Array.isArray(rawSetkomafont)) {
-    const sk = rawSetkomafont as Record<string, unknown>;
-    const parsed: Record<string, string> = {};
-    for (const [key, val] of Object.entries(sk)) {
-      if (typeof val === 'string') parsed[key] = val;
-    }
-    if (Object.keys(parsed).length > 0) setkomafont = parsed;
-  }
-
-  // dictum
-  const rawDictum = obj.dictum;
-  let dictum: PdfFormatConfig['dictum'];
-  if (rawDictum && typeof rawDictum === 'object' && !Array.isArray(rawDictum)) {
-    const d = rawDictum as Record<string, unknown>;
-    const parsed: Record<string, string> = {};
-    for (const key of ['width', 'font', 'rule', 'authorfont', 'authorformat']) {
-      if (typeof d[key] === 'string') parsed[key] = d[key];
-    }
-    if (Object.keys(parsed).length > 0) dictum = parsed;
-  }
-
-  // pagestyle
-  const rawPagestyle = obj.pagestyle;
-  let pagestyle: PdfFormatConfig['pagestyle'];
-  if (rawPagestyle && typeof rawPagestyle === 'object' && !Array.isArray(rawPagestyle)) {
-    const ps = rawPagestyle as Record<string, unknown>;
-    const parsed: Record<string, string> = {};
-    for (const key of ['part', 'chapter']) {
-      if (typeof ps[key] === 'string') parsed[key] = ps[key];
-    }
-    if (Object.keys(parsed).length > 0) pagestyle = parsed;
-  }
-
-  return {
-    documentclass,
-    geometry,
-    babel,
-    hyperref,
-    microtype,
-    enumitem,
-    setstretch,
-    raggedbottom,
-    pretolerance,
-    tolerance,
-    brokenpenalty,
-    finalhyphendemerits,
-    doublehyphendemerits,
-    widowpenalty,
-    clubpenalty,
-    setlist,
-    setcounter,
-    sectioning,
-    setkomafont,
-    dictum,
-    pagestyle,
-    esoPic,
-    pdfx,
-    crop,
-    mathptmx,
-    setspace,
-    pageNumber,
-    toc,
-    showDate,
-    generate: typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_PDF_FORMAT.generate,
-  };
-}
-
-function parseEpubFormatConfig(raw: unknown): EpubFormatConfig {
-  if (!raw || typeof raw !== 'object') return { ...DEFAULT_EPUB_FORMAT };
-  const obj = raw as Record<string, unknown>;
-
-  return {
-    generate: typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_EPUB_FORMAT.generate,
-  };
-}
-
-function parseMarkdownFormatConfig(raw: unknown): MarkdownFormatConfig {
-  if (!raw || typeof raw !== 'object') return { ...DEFAULT_MARKDOWN_FORMAT };
-  const obj = raw as Record<string, unknown>;
-  return {
-    generate: typeof obj.generate === 'boolean' ? obj.generate : DEFAULT_MARKDOWN_FORMAT.generate,
-  };
-}
-
-const KNOWN_ACCENT_COLORS = new Set([
-  'slate',
-  'gray',
-  'zinc',
-  'neutral',
-  'stone',
-  'red',
-  'orange',
-  'amber',
-  'yellow',
-  'lime',
-  'green',
-  'emerald',
-  'teal',
-  'cyan',
-  'sky',
-  'blue',
-  'indigo',
-  'violet',
-  'purple',
-  'fuchsia',
-  'pink',
-  'rose',
-]);
-
-function resolveAccent(value: unknown): string {
-  if (typeof value !== 'string') return DEFAULT_HTML_FORMAT.accent!;
-  if (!KNOWN_ACCENT_COLORS.has(value)) {
-    process.stderr.write(`[iteraciones] color de acento desconocido: "${value}". Usando "${DEFAULT_HTML_FORMAT.accent}" por defecto.\n`);
-    return DEFAULT_HTML_FORMAT.accent!;
-  }
-  return value;
 }
