@@ -1,2 +1,4 @@
 #!/usr/bin/env sh
 bunx lint-staged --allow-empty
+bun run typecheck
+bun test
