@@ -109,7 +109,7 @@ const VAR_RE = /[\w-]+/;
 const VAR_PATTERN = new RegExp(`\\$(${VAR_RE.source})\\$`, 'g');
 const IF_PATTERN = new RegExp(`\\$if\\((${VAR_RE.source})\\)\\$([\\s\\S]*?)\\$endif\\$`, 'g');
 
-function renderTemplate(template: string, vars: Record<string, string | undefined>): string {
+export function renderTemplate(template: string, vars: Record<string, string | undefined>): string {
   let result = template.replace(IF_PATTERN, (_match: string, name: string, content: string) => {
     const val = vars[name];
     if (val !== undefined && val !== '') return content.replace(VAR_PATTERN, (_m: string, n: string) => vars[n] ?? '');
