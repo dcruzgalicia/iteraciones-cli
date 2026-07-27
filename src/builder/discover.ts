@@ -150,7 +150,7 @@ export async function discover(cwd: string, options: { noCache?: boolean; active
       const prevSlug = discoveryIndex.get(relativePath)?.slug;
       if (prevSlug) {
         const newSlugBase = computeSlug({ title, author: authors });
-        if (newSlugBase && !prevSlug.startsWith(newSlugBase)) {
+        if (newSlugBase && prevSlug !== newSlugBase && !prevSlug.startsWith(newSlugBase + '-')) {
           slugChangedEntries.set(relativePath, prevSlug);
         }
       }
