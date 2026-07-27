@@ -48,7 +48,24 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
     };
 
   const root = parsed as Record<string, unknown>;
+
+  // Validar claves desconocidas en la raíz
+  const ROOT_KNOWN_KEYS = new Set(['site', 'format', 'disabled-transpilers', 'disabled-preamble-transpilers']);
+  warnUnknownKeys(root, ROOT_KNOWN_KEYS, '');
+
   const site = root.site && typeof root.site === 'object' ? (root.site as Record<string, unknown>) : {};
+
+  // Validar claves desconocidas en site:
+  const SITE_KNOWN_KEYS = new Set(['title', 'tagline', 'lang', 'logo', 'base-url']);
+  if (Object.keys(site).length > 0) {
+    warnUnknownKeys(site, SITE_KNOWN_KEYS, 'site.');
+  }
+
+  // Validar claves desconocidas en format:
+  const FORMAT_KNOWN_KEYS = new Set(['latex', 'pdf', 'html', 'epub', 'markdown']);
+  if (root.format && typeof root.format === 'object' && !Array.isArray(root.format)) {
+    warnUnknownKeys(root.format as Record<string, unknown>, FORMAT_KNOWN_KEYS, 'format.');
+  }
 
   const rawDisabled = root['disabled-transpilers'];
   const disabledTranspilers =
@@ -89,9 +106,43 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
   };
 }
 
+// ── Validación de claves desconocidas ────────────────────────────────────
+
+/**
+ * Escribe un warning en stderr por cada clave en `obj` que no esté en `knownKeys`.
+ */
+function warnUnknownKeys(obj: Record<string, unknown>, knownKeys: Set<string>, prefix: string): void {
+  for (const key of Object.keys(obj)) {
+    if (!knownKeys.has(key)) {
+      process.stderr.write(`[iteraciones] _iteraciones.yaml: "${prefix}${key}" no es una clave válida. Revisa docs/configuration.md\n`);
+    }
+  }
+}
+
 // ── Parsers ──────────────────────────────────────────────────────────────
 
 function parseFormatConfig(raw: Record<string, unknown>): FormatConfig {
+  // Validar claves desconocidas en format.html
+  const HTML_KNOWN_KEYS = new Set(['theme', 'accent', 'generate']);
+  if (raw.html && typeof raw.html === 'object' && !Array.isArray(raw.html)) {
+    warnUnknownKeys(raw.html as Record<string, unknown>, HTML_KNOWN_KEYS, 'format.html.');
+  }
+
+  // Validar claves desconocidas en format.epub
+  const EPUB_KNOWN_KEYS = new Set(['generate']);
+  if (raw.epub && typeof raw.epub === 'object' && !Array.isArray(raw.epub)) {
+    warnUnknownKeys(raw.epub as Record<string, unknown>, EPUB_KNOWN_KEYS, 'format.epub.');
+  }
+
+  // Validar claves desconocidas en format.markdown
+  const MD_KNOWN_KEYS = new Set(['generate']);
+  if (raw.markdown && typeof raw.markdown === 'object' && !Array.isArray(raw.markdown)) {
+    warnUnknownKeys(raw.markdown as Record<string, unknown>, MD_KNOWN_KEYS, 'format.markdown.');
+  }
+
+  // Nota: format.pdf no se valida aquí porque tiene ~40 campos válidos;
+  // los campos individuales ya se validan en parsePdfFormatConfig.
+
   return {
     html: parseHtmlFormatConfig(raw.html) ?? { ...DEFAULT_HTML_FORMAT },
     pdf: parsePdfFormatConfig(raw.pdf),
