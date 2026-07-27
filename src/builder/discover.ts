@@ -185,8 +185,9 @@ export async function discover(cwd: string, options: { noCache?: boolean; active
     slugGroups.get(key)!.push(relPath);
   }
 
-  // Cargar contador de slugs duplicados (max N por grupo)
-  const slugsCounter = await loadSlugsCounter(cwd);
+  // Solo cargar contador de slugs si hay grupos duplicados
+  const hasDuplicateGroups = [...slugGroups.values()].some((paths) => paths.length > 1);
+  const slugsCounter = hasDuplicateGroups ? await loadSlugsCounter(cwd) : new Map<string, number>();
 
   for (const [key, paths] of slugGroups) {
     if (paths.length <= 1) {
@@ -246,8 +247,10 @@ export async function discover(cwd: string, options: { noCache?: boolean; active
     }
   }
 
-  // Guardar contador de slugs
-  await saveSlugsCounter(cwd, slugsCounter);
+  // Guardar contador de slugs solo si hay grupos duplicados
+  if (hasDuplicateGroups) {
+    await saveSlugsCounter(cwd, slugsCounter);
+  }
 
   const buildReport: BuildReport = {
     startedAt: thisBuildStartedAt,
