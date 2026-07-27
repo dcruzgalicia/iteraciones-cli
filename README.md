@@ -2,7 +2,7 @@
 
 > escribir, compartir, re-existir
 
-CLI para construir sitios estáticos a partir de archivos Markdown usando pandoc y Tailwind CSS.
+CLI para construir documentos HTML, PDF, EPUB, LaTeX y Markdown a partir de archivos Markdown usando pandoc y Tailwind CSS.
 
 ## Requisitos
 
@@ -45,27 +45,49 @@ cd mi-proyecto
 iteraciones init
 ```
 
+Esto también crea un archivo `bibliography.bib` de ejemplo.
+
 ## Configuración (`_iteraciones.yaml`)
 
 ```yaml
 site:
-  title: "Mi sitio"          # título del sitio (por defecto: "Iteraciones")
-  tagline: "mi tagline"      # frase corta (por defecto: "escribir, compartir, re-existir")
-  lang: "es"                 # idioma HTML (por defecto: "es")
-  logo: ""                   # ruta al logo (por defecto: "")
-  list-items:
-    limit: 10                # máximo de elementos en listas paginadas (por defecto: 10)
+  title: "Mi sitio"                 # título del sitio (por defecto: "Iteraciones")
+  tagline: "mi tagline"             # frase corta (por defecto: "escribir, compartir, re-existir")
+  lang: "es-MX"                     # idioma HTML (por defecto: "es-MX")
+  logo: ""                          # ruta al logo (por defecto: sin logo)
+  base-url: ""                      # URL base del sitio (por defecto: vacío)
 
-plugins: []                  # rutas ESM a plugins (relativas al directorio del proyecto)
+format:
+  latex: true                       # genera archivos .tex (por defecto: true)
 
-theme:                       # nombre o ruta del tema (por defecto: tema integrado)
+  pdf:
+    generate: false                 # genera PDF (por defecto: false)
+    # documentclass, geometry, babel, hyperref, microtype, etc.
+    # Ver docs/configuration.md para todas las opciones disponibles
+
+  html:
+    theme: dark                     # tema: "light" o "dark"
+    accent: lime                    # color de acento (lime, blue, rose, etc.)
+    generate: false                 # genera HTML (por defecto: false)
+
+  epub:
+    generate: false                 # genera EPUB (por defecto: false)
+
+  markdown:
+    generate: false                 # genera Markdown procesado (por defecto: false)
+
+disabled-transpilers:               # transpilers a desactivar (opcional)
+  # - 01-double-colon
+
+disabled-preamble-transpilers:      # preamble transpilers a desactivar (opcional)
+  # - 01-maketitle-patches
 ```
 
 ## Comandos
 
 ### `iteraciones build`
 
-Construye el sitio a partir de los archivos Markdown.
+Construye los documentos a partir de los archivos Markdown.
 
 ```
 iteraciones build [opciones]
@@ -76,65 +98,33 @@ iteraciones build [opciones]
 | `-c, --concurrency <n>` | Máximo de invocaciones pandoc simultáneas | `4` |
 | `--no-cache` | Omite la caché incremental; siempre hace build completo | — |
 | `--project-root <path>` | Directorio raíz del proyecto | directorio actual |
+| `--output <path>` | Directorio de salida | `dist/files` |
 | `--no-tailwind` | Omite la generación de CSS con Tailwind | — |
+| `--no-export` | Omite la exportación PDF/EPUB | — |
 | `--dry-run` | Muestra los documentos a procesar sin generar salida | — |
 | `--verbose` | Muestra información adicional de progreso | — |
 
-### `iteraciones serve`
-
-Arranca un servidor HTTP con livereload automático.
-
-```
-iteraciones serve [opciones]
-```
-
-| Opción | Descripción | Por defecto |
-|--------|-------------|-------------|
-| `-p, --port <n>` | Puerto del servidor | `3000` |
-
-### `iteraciones watch`
-
-Observa cambios en los archivos y reconstruye el sitio sin servidor HTTP.
-
-```
-iteraciones watch [opciones]
-```
-
-| Opción | Descripción |
-|--------|-------------|
-| `--verbose` | Muestra información adicional de progreso |
-
-### `iteraciones clean`
-
-Elimina el directorio de salida (`dist/web`) y la caché (`.iteraciones`).
-
-```
-iteraciones clean
-```
-
-### `iteraciones info`
-
-Muestra información del proyecto y la configuración activa.
-
-```
-iteraciones info
-```
-
-### `iteraciones transpilers`
-
-Lista los transpilers disponibles con su tipo, descripción y estado (activo/desactivado).
-
-```
-iteraciones transpilers
-```
-
 ### `iteraciones init`
 
-Crea `_iteraciones.yaml` y `README.md` mínimos en el directorio actual. Si alguno de los archivos ya existe, lo omite sin sobreescribirlo.
+Crea `_iteraciones.yaml`, `README.md` y `bibliography.bib` mínimos en el directorio actual. Si alguno de los archivos ya existe, lo omite sin sobreescribirlo.
 
 ```
 iteraciones init
 ```
+
+### `iteraciones new <path>`
+
+Crea un archivo Markdown con frontmatter mínimo.
+
+```
+iteraciones new posts/mi-articulo.md
+```
+
+El archivo se crea con `title`, `date` y el bloque `---`. Si no se incluye extensión `.md`, se agrega automáticamente.
+
+### `iteraciones build --dry-run`
+
+Muestra los documentos que se procesarían sin generar salida. Útil para verificar qué archivos están incluidos antes de un build completo.
 
 ### `iteraciones validate`
 
@@ -142,6 +132,18 @@ Valida `_iteraciones.yaml` y el frontmatter de todos los documentos Markdown del
 
 ```
 iteraciones validate
+```
+
+| Opción | Descripción |
+|--------|-------------|
+| `--project-root <path>` | Directorio raíz del proyecto (por defecto: directorio actual) |
+
+### `iteraciones info`
+
+Muestra información básica del proyecto: título, tagline, idioma, estado de pandoc y del directorio de salida.
+
+```
+iteraciones info
 ```
 
 ### `iteraciones doctor`
@@ -156,7 +158,15 @@ iteraciones doctor [opciones]
 |--------|-------------|
 | `--fix` | Intenta corregir automáticamente los problemas detectados |
 
-Comprobaciones que realiza: pandoc disponible, configuración válida, plantillas presentes, Tailwind disponible, permisos de lectura y escritura.
+Comprobaciones que realiza: pandoc disponible en PATH, configuración del proyecto (`_iteraciones.yaml`) válida, Tailwind CSS disponible, pdflatex y KOMA-Script instalados, pdftoppm disponible, permisos de lectura y escritura.
+
+### `iteraciones transpilers`
+
+Lista los transpilers disponibles con su tipo, descripción y estado (activo/desactivado).
+
+```
+iteraciones transpilers
+```
 
 ## Transpilers
 
@@ -178,6 +188,8 @@ markdown → transpilers string → pandoc --to json → transpilers AST → pan
 |--------|------|---------|--------|
 | `01-double-colon` | string | `::` (línea sola) | `\\vspace{\\baselineskip}` |
 | `02-dictum` | ast | `::: {.dictum}` | `\\dictum[author]{quote}` |
+| `03-verse` | ast | `::: {.verse}` | `\\begin{verse}...\\end{verse}` |
+| `04-mbox-sentence-ends` | ast | primeras y últimas 2 palabras de cada oración | envueltas en `\\mbox{}` |
 
 ### Ejemplo de dictum
 

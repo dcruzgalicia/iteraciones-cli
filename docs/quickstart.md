@@ -1,6 +1,6 @@
 # Quickstart — del `init` al primer build
 
-Esta guía lleva un directorio vacío hasta un sitio HTML funcional en menos de 5 minutos.
+Esta guía lleva un directorio vacío hasta documentos procesados en menos de 5 minutos.
 
 ## Requisitos previos
 
@@ -35,12 +35,13 @@ mkdir mi-sitio && cd mi-sitio
 iteraciones init
 ```
 
-Esto crea dos archivos:
+Esto crea tres archivos:
 
 ```
 mi-sitio/
-  _iteraciones.yaml   # configuración del sitio
-  README.md           # documento de ejemplo
+  _iteraciones.yaml       # configuración del sitio
+  README.md               # documento de ejemplo
+  bibliography.bib        # archivo de referencias bibliográficas
 ```
 
 ## 3. Escribir contenido
@@ -48,7 +49,7 @@ mi-sitio/
 Crea documentos Markdown adicionales:
 
 ```bash
-iteraciones new file posts/primer-articulo.md
+iteraciones new posts/primer-articulo.md
 ```
 
 El comando crea `posts/primer-articulo.md` con el frontmatter mínimo correcto:
@@ -63,19 +64,19 @@ date: 2025-01-01
 
 Edita el archivo y añade tu contenido después del bloque `---`.
 
-## 4. Construir el sitio
+## 4. Construir los documentos
 
 ```bash
 iteraciones build
 ```
 
-El sitio se genera en `dist/web/`. Para ver el resultado con recarga automática:
+Los documentos procesados se generan en `dist/files/`. Los formatos activos dependen de la configuración en `_iteraciones.yaml` (`format.latex`, `format.pdf.generate`, `format.html.generate`, etc.).
+
+Para ver qué documentos se procesarían sin generar salida:
 
 ```bash
-iteraciones serve
+iteraciones build --dry-run
 ```
-
-Abre `http://localhost:3000` en tu navegador.
 
 ## 5. Verificar el proyecto
 
@@ -90,22 +91,23 @@ Los errores y advertencias se imprimen en `stderr` con la ruta del archivo y el 
 ## 6. Ciclo de trabajo habitual
 
 ```bash
-# Desarrollar con servidor y livereload
-iteraciones serve
+# Verificar entorno
+iteraciones doctor
 
-# Verificar sin generar salida
-iteraciones build --dry-run
+# Validar configuración y frontmatter
+iteraciones validate
 
-# Limpiar artefactos generados
-iteraciones clean
+# Build rápido (solo archivos modificados)
+iteraciones build
 
-# Build de producción con timing detallado
+# Build completo sin caché
+iteraciones build --no-cache
+
+# Build con información detallada
 iteraciones build --verbose
 ```
 
 ## Próximos pasos
 
 - [docs/configuration.md](configuration.md) — todos los campos de `_iteraciones.yaml`
-- [docs/frontmatter-reference.md](frontmatter-reference.md) — frontmatter por tipo de documento
-- [docs/themes.md](themes.md) — cómo personalizar el layout
-- [docs/plugins.md](plugins.md) — extender el pipeline con hooks
+- [docs/frontmatter-reference.md](frontmatter-reference.md) — frontmatter de documentos
