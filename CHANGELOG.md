@@ -1,5 +1,46 @@
 # Changelog
 
+## [0.11.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.10.0...v0.11.0) (2026-07-27)
+
+
+### Features
+
+* agrega typecheck y tests a hooks pre-commit con Husky ([2c2f649](https://github.com/dcruzgalicia/iteraciones-cli/commit/2c2f64930d610783202a858d97e61f71b3d8e6b5)), closes [#962](https://github.com/dcruzgalicia/iteraciones-cli/issues/962)
+* **builder:** detecta nuevos formatos y fuerza build con --no-cache ([b007592](https://github.com/dcruzgalicia/iteraciones-cli/commit/b007592aa87597a0105c61547154d0b3c268df07)), closes [#908](https://github.com/dcruzgalicia/iteraciones-cli/issues/908)
+* **builder:** elimina de dist los archivos de formatos quitados ([db63740](https://github.com/dcruzgalicia/iteraciones-cli/commit/db637400c59086f4aed0db16f7f107cdbd960aca)), closes [#912](https://github.com/dcruzgalicia/iteraciones-cli/issues/912)
+* **builder:** limpia assets html (css, fonts, logo) al desactivar el formato ([4c1f352](https://github.com/dcruzgalicia/iteraciones-cli/commit/4c1f35254d20fc3abfe0f624188dd71aba83b42b)), closes [#918](https://github.com/dcruzgalicia/iteraciones-cli/issues/918)
+* **cli:** implementa comando iteraciones clean ([2fd5598](https://github.com/dcruzgalicia/iteraciones-cli/commit/2fd55987afe45ada36e1ae4cb279c823159466f9)), closes [#934](https://github.com/dcruzgalicia/iteraciones-cli/issues/934)
+* **config:** advierte sobre claves desconocidas en _iteraciones.yaml ([9806305](https://github.com/dcruzgalicia/iteraciones-cli/commit/9806305c9b0cb549e6bcdad66b7ff23532d880d8)), closes [#932](https://github.com/dcruzgalicia/iteraciones-cli/issues/932)
+* **html:** genera HTML completo con template minimalista ([e5d6585](https://github.com/dcruzgalicia/iteraciones-cli/commit/e5d6585f7f16e7fef198825cafe7c08039eff364)), closes [#863](https://github.com/dcruzgalicia/iteraciones-cli/issues/863)
+
+
+### Bug Fixes
+
+* **builder:** ejecuta cleanup de archivos eliminados aunque pipelineDocs este vacio ([56921e8](https://github.com/dcruzgalicia/iteraciones-cli/commit/56921e8ffbdcd3ce6f08a263b6e2c40ce22c8f6a)), closes [#916](https://github.com/dcruzgalicia/iteraciones-cli/issues/916)
+* **builder:** limpia archivos viejos cuando un slug cambia (rename, colision, duplicado-&gt;unico) ([6179115](https://github.com/dcruzgalicia/iteraciones-cli/commit/61791154d56222785f27438e8359cc756e972d3e))
+* **builder:** mueve limpieza de formatos antes del early-return ([8bbdb5d](https://github.com/dcruzgalicia/iteraciones-cli/commit/8bbdb5d0de60e839f73a8e7aa8a3ac9e88e3a002))
+* **builder:** pasa conteo correcto a fase LaTeX ([4903038](https://github.com/dcruzgalicia/iteraciones-cli/commit/4903038840e388b803a2fb3ed2d532c70794a4c4)), closes [#928](https://github.com/dcruzgalicia/iteraciones-cli/issues/928)
+* **build:** fase 3 solo html fragment, latex+preamble juntos en fase 4 ([bcdd3cc](https://github.com/dcruzgalicia/iteraciones-cli/commit/bcdd3ccae01d23d2dad84b1479c963cc44ec5e32))
+* **cli:** elimina import de runClean eliminada en parser.ts ([e4882af](https://github.com/dcruzgalicia/iteraciones-cli/commit/e4882af4b1c238c632ceff38029e3fd8ff67543d))
+* **cli:** muestra conteo de documentos en fase LaTeX (y todas las fases) ([111ddee](https://github.com/dcruzgalicia/iteraciones-cli/commit/111ddee271cc7680af210e7acaca0f5c485cf650)), closes [#924](https://github.com/dcruzgalicia/iteraciones-cli/issues/924)
+* **cli:** muestra mensaje claro cuando no hay documentos Markdown ([47d2f0d](https://github.com/dcruzgalicia/iteraciones-cli/commit/47d2f0dfe6f4542855ce655ebbf36b5ea36444ee)), closes [#933](https://github.com/dcruzgalicia/iteraciones-cli/issues/933)
+* **discover:** corrige deteccion de cambio de slug base al acortar titulo ([f114894](https://github.com/dcruzgalicia/iteraciones-cli/commit/f114894f499f273d35c37098ad4f11d22c3a19eb))
+* **discover:** implementa slugs duplicados sin renumeracion ([cfcf1ae](https://github.com/dcruzgalicia/iteraciones-cli/commit/cfcf1ae36ac736cf6df89fd8894459d627ae6ab2)), closes [#919](https://github.com/dcruzgalicia/iteraciones-cli/issues/919)
+* **export:** usa 'file' como type por defecto en assembleExportDocument ([6940e78](https://github.com/dcruzgalicia/iteraciones-cli/commit/6940e7882ef918b4ed33df5de5627161757b4e5d))
+* **html:** incrusta SVG inline para que currentColor herede accent ([aa0f04c](https://github.com/dcruzgalicia/iteraciones-cli/commit/aa0f04c223b3e5ec9ffc807437865ec2749db67b))
+* **html:** logo.svg hereda color de accent via currentColor ([68eb122](https://github.com/dcruzgalicia/iteraciones-cli/commit/68eb1227a24058ade42af1b3d7cd7a768ce64426))
+* **html:** usa data-theme en vez de prefers-color-scheme para cambiar tema ([53fdf7f](https://github.com/dcruzgalicia/iteraciones-cli/commit/53fdf7febcb5f953ef4e52ca1506c95dd5443936))
+* **pdf:** elimina autocopia que truncaba PDF a 0 bytes ([5e6f9aa](https://github.com/dcruzgalicia/iteraciones-cli/commit/5e6f9aa3988fb55ed109e23b1df81d372bbb7cc7))
+* **pdf:** usa body local en vez de doc.body para detectar citekeys ([74060c7](https://github.com/dcruzgalicia/iteraciones-cli/commit/74060c73bc00e9a7c097c1719887bd0c72be4e3e)), closes [#846](https://github.com/dcruzgalicia/iteraciones-cli/issues/846)
+* **transpilers:** corrige tipos estrictos en 04-mbox-sentence-ends ([0fe48b9](https://github.com/dcruzgalicia/iteraciones-cli/commit/0fe48b90ab686e94825f78e723d0b23341d330fa))
+* **types:** corrige tipo concurrency como required y elimina relativePath en llamadas a computeSlug ([c80af9c](https://github.com/dcruzgalicia/iteraciones-cli/commit/c80af9c8af3ccbc00036cd24c288b4c0800a90fc))
+
+
+### Performance Improvements
+
+* **discover:** elimina I/O de slugsCounter cuando no hay duplicados ([6c30a9b](https://github.com/dcruzgalicia/iteraciones-cli/commit/6c30a9b9a0c06297dac2c091a8b2b64285f69e35)), closes [#946](https://github.com/dcruzgalicia/iteraciones-cli/issues/946)
+* **render:** genera HTML fragments solo cuando html o epub estan activos ([44268b5](https://github.com/dcruzgalicia/iteraciones-cli/commit/44268b557ddc5cdc052382ced8484014845e8ba1)), closes [#910](https://github.com/dcruzgalicia/iteraciones-cli/issues/910)
+
 ## [0.10.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.9.0...v0.10.0) (2026-07-25)
 
 
