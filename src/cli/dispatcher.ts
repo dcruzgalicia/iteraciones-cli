@@ -1,4 +1,4 @@
-import { mkdir, stat, writeFile } from 'node:fs/promises';
+import { mkdir, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, normalize } from 'node:path';
 import type { BuildOptions } from '../builder/orchestrator.js';
 import { build } from '../builder/orchestrator.js';
@@ -9,6 +9,18 @@ import { runDoctor as doctor } from './doctor.js';
 import { runInit as init } from './init.js';
 import { runTranspilers as transpilers } from './transpilers.js';
 import { runValidate as validate } from './validate.js';
+
+export async function runClean(cwd: string): Promise<void> {
+  const targets = [join(cwd, 'dist'), join(cwd, '.iteraciones')];
+  await Promise.all(
+    targets.map((dir) =>
+      rm(dir, { recursive: true, force: true }).catch(() => {
+        // ignorar errores de directorios que no existen
+      }),
+    ),
+  );
+  process.stdout.write('clean: eliminado dist/ y .iteraciones/\n');
+}
 
 export async function runBuild(cwd: string, options: BuildOptions = {}): Promise<void> {
   try {
