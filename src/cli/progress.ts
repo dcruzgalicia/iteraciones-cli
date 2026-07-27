@@ -17,11 +17,11 @@ interface PhaseMeta {
 const PHASE_META: Record<PipelinePhase, PhaseMeta> = {
   discovery: { label: 'Documentos encontrados', section: 'Descubriendo documentos' },
   render: { label: 'Preparando contenido', section: 'Preparando contenido' },
-  latex: { label: 'LaTeX', section: 'Generando publicaciones' },
-  pdf: { label: 'PDF', section: 'Generando publicaciones' },
-  html: { label: 'HTML', section: 'Generando publicaciones' },
-  epub: { label: 'EPUB', section: 'Generando publicaciones' },
-  markdown: { label: 'Markdown', section: 'Generando publicaciones' },
+  latex: { label: 'LaTeX', section: 'Generando formatos' },
+  pdf: { label: 'PDF', section: 'Generando formatos' },
+  html: { label: 'HTML', section: 'Generando formatos' },
+  epub: { label: 'EPUB', section: 'Generando formatos' },
+  markdown: { label: 'Markdown', section: 'Generando formatos' },
 };
 
 const PHASE_ORDER: PipelinePhase[] = ['discovery', 'render', 'latex', 'pdf', 'html', 'epub', 'markdown'];
@@ -88,7 +88,7 @@ export class ProgressTracker {
       if (meta.section === 'Descubriendo documentos' && count > 0) {
         process.stdout.write(`  ${count} documento${count !== 1 ? 's' : ''} encontrado${count !== 1 ? 's' : ''}.\n`);
         this.flushPhaseFiles(phase);
-      } else if (meta.section === 'Generando publicaciones') {
+      } else if (meta.section === 'Generando formatos') {
         const durStr = formatTime(elapsed);
         process.stdout.write(`  ${meta.label}  ${durStr}\n\n`);
       }
