@@ -1,5 +1,6 @@
 import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
+import { logWarning } from '../lib/logger.js';
 import { convertFragment } from '../lib/pandoc-runner.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import { discoverBibFiles } from './latex-preamble.js';
@@ -156,7 +157,7 @@ export async function renderLatex(
     try {
       ast = JSON.parse(json) as Record<string, unknown>;
     } catch {
-      process.stderr.write(`[render] error al parsear AST JSON de ${doc.filePath}\n`);
+      logWarning(`error al parsear AST JSON de ${doc.filePath}`, 'render');
       return;
     }
 
@@ -197,8 +198,7 @@ export async function renderLatex(
       try {
         htmlFragment = await convertFragment(processedBody, doc.filePath, bibOptions, 'html5', 'latex-auto_identifiers');
       } catch {
-        process.stderr.write(`[render] error al convertir a HTML para ${doc.relativePath}
-`);
+        logWarning(`error al convertir a HTML para ${doc.relativePath}`, 'render');
       }
 
       // Escribir html/{slug}.html

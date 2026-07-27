@@ -67,6 +67,7 @@ function escapeLatex(s: string): string {
 
 import { dirname, join, resolve } from 'node:path';
 import type { PdfFormatConfig } from '../../config/site-config.js';
+import { logWarning } from '../../lib/logger.js';
 import type { BuildDocument } from '../types.js';
 import type { DictumEntry, ExportDocument, ExportMetadata } from './types.js';
 
@@ -141,7 +142,7 @@ function parseDictum(raw: unknown): { dictum?: DictumEntry[] } {
 function safeEditorialPath(rawPath: string, cwd: string, fieldName: string): string | undefined {
   const resolved = resolve(cwd, rawPath);
   if (!resolved.startsWith(cwd + '/') && resolved !== cwd) {
-    process.stderr.write(`[export] campo '${fieldName}' con ruta fuera del proyecto ignorado: "${rawPath}"\n`);
+    logWarning(`campo '${fieldName}' con ruta fuera del proyecto ignorado: "${rawPath}"`, 'export');
     return undefined;
   }
   return resolved;

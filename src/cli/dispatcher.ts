@@ -4,6 +4,7 @@ import type { BuildOptions } from '../builder/orchestrator.js';
 import { build } from '../builder/orchestrator.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { ConfigError, PandocError } from '../lib/errors.js';
+import { logError } from '../lib/logger.js';
 import { checkPandoc } from '../lib/pandoc-runner.js';
 import { runDoctor as doctor } from './doctor.js';
 import { runInit as init } from './init.js';
@@ -49,14 +50,14 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
   } catch (err) {
     if (err instanceof PandocError) {
       const location = err.sourcePath ? ` en "${err.sourcePath}"` : '';
-      process.stderr.write(`Error de pandoc${location}: ${err.message}\n`);
+      logError(`${err.message}${location}`);
       if (err.stderr) process.stderr.write(`${err.stderr}\n`);
     } else if (err instanceof ConfigError) {
-      process.stderr.write(`Error de configuración en "${err.configPath}": ${err.message}\n`);
+      logError(err.message, 'config');
     } else if (err instanceof Error) {
-      process.stderr.write(`Error: ${err.message}\n`);
+      logError(err.message);
     } else {
-      process.stderr.write('Error desconocido al construir el sitio.\n');
+      logError('Error desconocido al construir el sitio.');
     }
     process.exitCode = 1;
   }
@@ -81,11 +82,11 @@ export async function runInfo(cwd: string): Promise<void> {
     process.stdout.write(`  ${distLabel}:  ${distExists ? 'generado' : 'no generado'}\n`);
   } catch (err) {
     if (err instanceof ConfigError) {
-      process.stderr.write(`Error de configuración: ${err.message}\n`);
+      logError(err.message, 'config');
     } else if (err instanceof Error) {
-      process.stderr.write(`Error al obtener información: ${err.message}\n`);
+      logError(err.message, 'info');
     } else {
-      process.stderr.write('Error desconocido al obtener información.\n');
+      logError('Error desconocido al obtener información.');
     }
     process.exitCode = 1;
   }
@@ -96,9 +97,9 @@ export async function runInit(cwd: string): Promise<void> {
     await init(cwd);
   } catch (err) {
     if (err instanceof Error) {
-      process.stderr.write(`Error al inicializar: ${err.message}\n`);
+      logError(err.message, 'init');
     } else {
-      process.stderr.write('Error desconocido al inicializar.\n');
+      logError('Error desconocido al inicializar.');
     }
     process.exitCode = 1;
   }
@@ -109,9 +110,9 @@ export async function runValidate(cwd: string): Promise<void> {
     await validate(cwd);
   } catch (err) {
     if (err instanceof Error) {
-      process.stderr.write(`Error al validar: ${err.message}\n`);
+      logError(err.message, 'validate');
     } else {
-      process.stderr.write('Error desconocido al validar.\n');
+      logError('Error desconocido al validar.');
     }
     process.exitCode = 1;
   }
@@ -122,9 +123,9 @@ export async function runDoctor(cwd: string, options: { fix?: boolean } = {}): P
     await doctor(cwd, options);
   } catch (err) {
     if (err instanceof Error) {
-      process.stderr.write(`Error al ejecutar doctor: ${err.message}\n`);
+      logError(err.message, 'doctor');
     } else {
-      process.stderr.write('Error desconocido al ejecutar doctor.\n');
+      logError('Error desconocido al ejecutar doctor.');
     }
     process.exitCode = 1;
   }
@@ -151,7 +152,7 @@ export async function runNew(cwd: string, path: string): Promise<void> {
       process.stdout.write(`new: omitido ${path} (ya existe)\n`);
       return;
     }
-    process.stderr.write(`Error al crear "${path}": ${err instanceof Error ? err.message : String(err)}\n`);
+    logError(`al crear "${path}": ${err instanceof Error ? err.message : String(err)}`, 'new');
     process.exitCode = 1;
   }
 }
@@ -161,8 +162,7 @@ export async function runTranspilers(cwd: string): Promise<void> {
     await transpilers(cwd);
   } catch (err) {
     if (err instanceof Error) {
-      process.stderr.write(`Error: ${err.message}
-`);
+      logError(err.message, 'transpilers');
     }
     process.exitCode = 1;
   }

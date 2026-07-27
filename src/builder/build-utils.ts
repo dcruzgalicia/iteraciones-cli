@@ -2,6 +2,7 @@ import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/site-config.js';
+import { logWarning } from '../lib/logger.js';
 import { run } from '../lib/run.js';
 import type { BuildReport } from './discover.js';
 import { buildLatexPreamble } from './latex-preamble.js';
@@ -64,16 +65,16 @@ async function copyLogo(outputDir: string, cwd: string, siteConfig: SiteConfig):
     const dest = join(outputDir, 'logo.svg');
     await mkdir(dirname(dest), { recursive: true });
     await cp(defaultSrc, dest).catch((err: NodeJS.ErrnoException) => {
-      if (err.code === 'ENOENT') process.stderr.write(`\r\x1b[K⚠ logo por defecto no encontrado en "${defaultSrc}"\n`);
+      if (err.code === 'ENOENT') logWarning(`logo por defecto no encontrado en "${defaultSrc}"`, 'assets');
       else {
-        process.stderr.write(`\n⚠ No se pudo copiar el logo por defecto: ${err.message}\n`);
+        logWarning(`No se pudo copiar el logo por defecto: ${err.message}`, 'assets');
         process.exitCode = 1;
       }
     });
     return;
   }
   if (logo.split('/').includes('..') || logo.startsWith('/')) {
-    process.stderr.write(`\n⚠ logo: ruta inválida "${logo}" — debe ser relativa al proyecto\n`);
+    logWarning(`logo: ruta inválida "${logo}" — debe ser relativa al proyecto`, 'assets');
     process.exitCode = 1;
     return;
   }
@@ -81,9 +82,9 @@ async function copyLogo(outputDir: string, cwd: string, siteConfig: SiteConfig):
   const dest = join(outputDir, logo);
   await mkdir(dirname(dest), { recursive: true });
   await cp(src, dest).catch((err: NodeJS.ErrnoException) => {
-    if (err.code === 'ENOENT') process.stderr.write(`\r\x1b[K⚠ logo no encontrado: "${logo}"\n`);
+    if (err.code === 'ENOENT') logWarning(`logo no encontrado: "${logo}"`, 'assets');
     else {
-      process.stderr.write(`\n⚠ No se pudo copiar el logo "${logo}": ${err.message}\n`);
+      logWarning(`No se pudo copiar el logo "${logo}": ${err.message}`, 'assets');
       process.exitCode = 1;
     }
   });

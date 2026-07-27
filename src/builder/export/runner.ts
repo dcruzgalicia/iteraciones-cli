@@ -5,6 +5,7 @@ import { cpus } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import type { EpubFormatConfig, HtmlFormatConfig, MarkdownFormatConfig, PdfFormatConfig } from '../../config/site-config.js';
 import { PandocError } from '../../lib/errors.js';
+import { logWarning } from '../../lib/logger.js';
 import { runPandoc } from '../../lib/pandoc-runner.js';
 import { mapWithConcurrency } from '../../lib/run.js';
 import { computeSlug } from '../discover.js';
@@ -182,7 +183,7 @@ function buildYamlHeader(doc: ExportDocument): string {
     if (existsSync(metadata.csl)) {
       lines.push(`csl: ${yamlString(metadata.csl)}`);
     } else {
-      process.stderr.write(`\r\x1b[K⚠ archivo CSL no encontrado: "${metadata.csl}"\n`);
+      logWarning(`archivo CSL no encontrado: "${metadata.csl}"`, 'export');
     }
   }
 

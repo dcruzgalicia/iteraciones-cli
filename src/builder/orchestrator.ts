@@ -5,6 +5,7 @@ import { ProgressTracker } from '../cli/progress.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/site-config.js';
 import { computeActiveFormats } from '../config/site-config.js';
+import { logWarning } from '../lib/logger.js';
 import { buildAssets, generateLatexPreamble, renderHtmlPage } from './build-utils.js';
 import { type BuildReport, buildDocsFromIndex, discover, loadBuildState } from './discover.js';
 import { runExportDocuments } from './export/runner.js';
@@ -377,7 +378,7 @@ async function generateHtmlPages(ctx: BuildContext, pipelineDocs: BuildDocument[
       await mkdir(dirname(dst), { recursive: true });
       await Bun.write(dst, html);
     } catch {
-      process.stderr.write(`[orchestrator] error al generar HTML para ${doc.relativePath}\n`);
+      logWarning(`error al generar HTML para ${doc.relativePath}`, 'orchestrator');
     }
   }
   progress.completePhase(undefined, 'html');
