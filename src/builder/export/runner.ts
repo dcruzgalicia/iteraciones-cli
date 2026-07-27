@@ -5,6 +5,7 @@ import { cpus } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import type { EpubFormatConfig, HtmlFormatConfig, MarkdownFormatConfig, PdfFormatConfig } from '../../config/site-config.js';
 import { PandocError } from '../../lib/errors.js';
+import { runPandoc } from '../../lib/pandoc-runner.js';
 import { mapWithConcurrency } from '../../lib/run.js';
 import { computeSlug } from '../discover.js';
 import { discoverBibFiles } from '../latex-preamble.js';
@@ -228,29 +229,7 @@ async function convertToEpub(htmlBody: string, outputPath: string, doc?: ExportD
     args.push('--citeproc');
   }
 
-  let proc: ReturnType<typeof Bun.spawn>;
-  try {
-    proc = Bun.spawn(args, { stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' });
-  } catch (err) {
-    throw new PandocError(`pandoc no está disponible en PATH: ${String(err)}`, doc?.filePath ?? '', '');
-  }
-
-  if (proc.stdin == null || typeof proc.stdin === 'number') {
-    throw new PandocError('No se pudo escribir stdin de pandoc', doc?.filePath ?? '', '');
-  }
-
-  proc.stdin.write(htmlBody);
-  proc.stdin.end();
-
-  if (proc.stderr == null || typeof proc.stderr === 'number') {
-    throw new PandocError('No se pudo leer stderr de pandoc', doc?.filePath ?? '', '');
-  }
-
-  const [stderr, exitCode] = await Promise.all([new Response(proc.stderr).text(), proc.exited]);
-
-  if (exitCode !== 0) {
-    throw new PandocError(`pandoc falló al generar EPUB`, doc?.filePath ?? '', stderr);
-  }
+  await runPandoc(args, htmlBody, doc?.filePath ?? '');
 }
 
 /**
@@ -259,27 +238,7 @@ async function convertToEpub(htmlBody: string, outputPath: string, doc?: ExportD
 async function convertToMarkdown(doc: ExportDocument, outputPath: string): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
   const args = ['pandoc', '--from', 'latex', '--to', 'markdown'];
-  let proc: ReturnType<typeof Bun.spawn>;
-  try {
-    proc = Bun.spawn(args, { stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' });
-  } catch (err) {
-    throw new PandocError(`pandoc no está disponible en PATH: ${String(err)}`, doc.filePath, '');
-  }
-  if (proc.stdin == null || typeof proc.stdin === 'number') {
-    throw new PandocError('No se pudo escribir stdin de pandoc', doc.filePath, '');
-  }
-  if (proc.stdout == null || typeof proc.stdout === 'number') {
-    throw new PandocError('No se pudo leer stdout de pandoc', doc.filePath, '');
-  }
-  if (proc.stderr == null || typeof proc.stderr === 'number') {
-    throw new PandocError('No se pudo leer stderr de pandoc', doc.filePath, '');
-  }
-  proc.stdin.write(doc.body);
-  proc.stdin.end();
-  const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
-  if (exitCode !== 0) {
-    throw new PandocError(`pandoc falló al convertir a markdown ${doc.filePath}`, doc.filePath, stderr);
-  }
+  const { stdout } = await runPandoc(args, doc.body, doc.filePath);
   const yamlHeader = buildYamlHeader(doc);
   await Bun.write(outputPath, yamlHeader + stdout);
 }

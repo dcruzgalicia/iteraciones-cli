@@ -21,6 +21,39 @@ export async function checkPandoc(): Promise<string> {
 }
 
 /**
+ * Ejecuta pandoc con entrada stdin y retorna stdout + stderr.
+ * Lanza PandocError si pandoc no está disponible o el proceso falla.
+ */
+export async function runPandoc(args: string[], stdin: string, sourcePath: string): Promise<{ stdout: string; stderr: string }> {
+  let proc: ReturnType<typeof Bun.spawn>;
+  try {
+    proc = Bun.spawn(args, { stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' });
+  } catch (err) {
+    throw new PandocError(`pandoc no está disponible en PATH: ${String(err)}`, sourcePath, '');
+  }
+
+  if (proc.stdin == null || typeof proc.stdin === 'number') {
+    throw new PandocError('No se pudo escribir stdin de pandoc', sourcePath, '');
+  }
+  proc.stdin.write(stdin);
+  proc.stdin.end();
+
+  if (proc.stdout == null || typeof proc.stdout === 'number') {
+    throw new PandocError('No se pudo leer stdout de pandoc', sourcePath, '');
+  }
+  if (proc.stderr == null || typeof proc.stderr === 'number') {
+    throw new PandocError('No se pudo leer stderr de pandoc', sourcePath, '');
+  }
+
+  const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+
+  if (exitCode !== 0) {
+    throw new PandocError(`pandoc falló al convertir ${sourcePath}`, sourcePath, stderr);
+  }
+  return { stdout, stderr };
+}
+
+/**
  * Convierte contenido de un formato a otro usando pandoc.
  *
  * @param content    Contenido a convertir.
@@ -49,34 +82,6 @@ export async function convertFragment(
     args.push(...extraArgs);
   }
 
-  let proc: ReturnType<typeof Bun.spawn>;
-  try {
-    proc = Bun.spawn(args, {
-      stdin: 'pipe',
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-  } catch (err) {
-    throw new PandocError(`pandoc no está disponible en PATH: ${String(err)}`, sourcePath, '');
-  }
-
-  if (proc.stdin == null || typeof proc.stdin === 'number') {
-    throw new PandocError('No se pudo escribir stdin de pandoc', sourcePath, '');
-  }
-  proc.stdin.write(content);
-  proc.stdin.end();
-
-  if (proc.stdout == null || typeof proc.stdout === 'number') {
-    throw new PandocError('No se pudo leer stdout de pandoc', sourcePath, '');
-  }
-  if (proc.stderr == null || typeof proc.stderr === 'number') {
-    throw new PandocError('No se pudo leer stderr de pandoc', sourcePath, '');
-  }
-
-  const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
-
-  if (exitCode !== 0) {
-    throw new PandocError(`pandoc falló al convertir ${sourcePath}`, sourcePath, stderr);
-  }
+  const { stdout } = await runPandoc(args, content, sourcePath);
   return stdout;
 }
