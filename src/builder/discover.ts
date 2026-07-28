@@ -1,5 +1,7 @@
 import { mkdir } from 'node:fs/promises';
+import { cpus } from 'node:os';
 import { basename, dirname, join } from 'node:path';
+import { mapWithConcurrency } from '../lib/run.js';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
 
 interface DiscoverResult {
@@ -152,7 +154,8 @@ export async function discover(
   const thisBuildStartedAt = Date.now();
 
   // Leer title/author de archivos nuevos o modificados y calcular slugs
-  for (const relativePath of relativePaths) {
+  const FILE_IO_CONCURRENCY = Math.max(1, cpus().length - 1);
+  await mapWithConcurrency(relativePaths, FILE_IO_CONCURRENCY, async (relativePath) => {
     const filePath = join(cwd, relativePath);
     let mtimeMs: number;
     try {
@@ -197,7 +200,7 @@ export async function discover(
       discoveryIndex.set(relativePath, { title, author: authors });
     }
     // Archivos sin cambios: conservan su entrada en discoveryIndex
-  }
+  });
 
   // Detectar eliminados y capturar sus datos antes de borrarlos
   const deletedEntries = new Map<string, DiscoveryEntry>();
