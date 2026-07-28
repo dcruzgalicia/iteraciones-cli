@@ -4,6 +4,9 @@ import { basename, dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/site-config.js';
 import { logWarning } from '../lib/logger.js';
 import { run } from '../lib/run.js';
+
+const STATE_PATH = join('.iteraciones', 'changes', 'state.json');
+
 import type { BuildReport } from './discover.js';
 import { buildLatexPreamble } from './latex-preamble.js';
 import type { DiscoveryEntry } from './types.js';
@@ -25,10 +28,55 @@ async function generateCss(outputDir: string, cwd: string, accent: string): Prom
   const targetCssDir = join(outputDir, 'css');
   await mkdir(targetCssDir, { recursive: true });
   const targetCssPath = join(targetCssDir, 'styles.css');
+
+  // Verificar si es necesario regenerar:
+  // - Si _iteraciones.yaml cambió y el accent es distinto al previo
+  // - O si styles.css (del paquete) cambió
+  const targetExists = await Bun.file(targetCssPath).exists();
+  if (targetExists) {
+    try {
+      const targetMtime = (await Bun.file(targetCssPath).stat()).mtimeMs;
+
+      // ¿_iteraciones.yaml cambió?
+      const configPath = join(cwd, '_iteraciones.yaml');
+      const configMtime = await Bun.file(configPath)
+        .stat()
+        .then((s) => s.mtimeMs)
+        .catch(() => 0);
+      if (configMtime > targetMtime) {
+        // Leer state.json para saber si el accent cambió
+        const statePath = join(cwd, STATE_PATH);
+        const stateRaw = await readFile(statePath, 'utf8').catch(() => '{}');
+        const state = JSON.parse(stateRaw);
+        if (state.cssAccent === accent) {
+          return; // el accent no cambió, no hay nada que hacer
+        }
+      } else {
+        // _iteraciones.yaml no cambió → el accent es el mismo.
+        // Solo regenerar si styles.css (del paquete) cambió
+        const cssMtime = (await Bun.file(CSS_SRC).stat()).mtimeMs;
+        if (cssMtime < targetMtime) {
+          return; // nada relevante cambió
+        }
+      }
+    } catch {
+      // Si falla la verificación, regenerar por las dudas
+    }
+  }
+
   const shades = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
   const accentTheme = shades.map((s) => `  --color-accent-${s}: var(--color-${accent}-${s});`).join('\n');
-
   await buildCssWithTailwind(targetCssPath, cwd, accentTheme);
+
+  // Persistir el accent actual en state.json para el próximo build
+  const statePath = join(cwd, STATE_PATH);
+  const stateRaw = await readFile(statePath, 'utf8').catch(() => '{}');
+  const state = JSON.parse(stateRaw);
+  state.cssAccent = accent;
+  state.activeFormats = state.activeFormats ?? [];
+  state.entries = state.entries ?? {};
+  await mkdir(dirname(statePath), { recursive: true });
+  await writeFile(statePath, JSON.stringify(state));
 }
 
 async function buildCssWithTailwind(targetCssPath: string, cwd: string, accentTheme: string): Promise<void> {
