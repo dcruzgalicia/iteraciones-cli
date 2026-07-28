@@ -32,6 +32,7 @@ const PAGE_SIZE_DIMS: Record<string, [number, number]> = {
 
 export interface PreambleMeta {
   title?: string;
+  subtitle?: string;
   author?: string[];
   date?: string;
   filePath?: string;
@@ -363,8 +364,9 @@ export async function buildLatexPreamble(
   preamble.push('\\begin{document}');
 
   // ── PORTADA ──
-  if (meta?.title) preamble.push(`\\title{${meta.title}}`);
-  if (meta?.author?.length) preamble.push(`\\author{${meta.author.join(' \\and ')}}`);
+  if (meta?.title) preamble.push(`\title{${meta.title}}`);
+  if (meta?.subtitle) preamble.push(`subtitle{${meta.subtitle}}`);
+  if (meta?.author?.length) preamble.push(`author{${meta.author.join(' and ')}}`);
   if (fmt.showDate) {
     if (meta?.date) {
       preamble.push(`\\date{${meta.date}}`);

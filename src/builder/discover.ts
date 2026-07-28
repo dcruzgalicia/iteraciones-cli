@@ -173,6 +173,7 @@ export async function discover(
 
       // Read YAML frontmatter
       let title = '',
+        subtitle: string | undefined,
         authors: string[] = [];
       try {
         const raw = await Bun.file(filePath).text();
@@ -181,6 +182,7 @@ export async function discover(
           const parsed = Bun.YAML.parse(fmMatch[1]) as Record<string, unknown>;
           if (parsed && !Array.isArray(parsed)) {
             title = typeof parsed['title'] === 'string' ? parsed['title'] : '';
+            subtitle = typeof parsed['subtitle'] === 'string' && parsed['subtitle'].trim() ? parsed['subtitle'].trim() : undefined;
             {
               const raw = parsed['author'];
               authors = Array.isArray(raw)
@@ -204,7 +206,7 @@ export async function discover(
           slugChangedEntries.set(relativePath, prevSlug);
         }
       }
-      discoveryIndex.set(relativePath, { title, author: authors });
+      discoveryIndex.set(relativePath, { title, subtitle, author: authors });
     }
     // Archivos sin cambios: conservan su entrada en discoveryIndex
   });
