@@ -107,15 +107,15 @@ function slugify(text: string): string {
 
 export function computeSlug(frontmatter: { title?: string; author?: string[] }): string | undefined {
   const title = frontmatter.title;
-  if (title) {
-    const titleSlug = slugify(title);
-    const author = frontmatter.author;
-    if (author && author.length > 0 && author[0]) {
-      return `${slugify(author[0])}-${titleSlug}`;
-    }
-    return titleSlug;
-  }
-  return undefined;
+  if (!title) return undefined;
+
+  const titleSlug = slugify(title);
+  const authors = frontmatter.author?.filter(Boolean).slice(0, 3);
+
+  if (!authors || authors.length === 0) return titleSlug;
+
+  const authorSlug = authors.map((a) => slugify(a)).join('-y-');
+  return `${titleSlug}-by-${authorSlug}`;
 }
 
 /**

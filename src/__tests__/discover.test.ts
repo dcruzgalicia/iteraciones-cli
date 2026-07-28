@@ -8,9 +8,30 @@ describe('computeSlug', () => {
     expect(result).toBe('mi-articulo-de-prueba');
   });
 
-  it('incluye el primer autor cuando está presente', () => {
+  it('incluye el primer autor: title-by-author', () => {
     const result = computeSlug({ title: 'Mi Artículo', author: ['Juan Pérez'] });
-    expect(result).toBe('juan-perez-mi-articulo');
+    expect(result).toBe('mi-articulo-by-juan-perez');
+  });
+
+  it('incluye hasta 3 autores separados por -y-', () => {
+    const result = computeSlug({
+      title: 'Mi Artículo',
+      author: ['Sofia García', 'Juan Pérez', 'Ana López'],
+    });
+    expect(result).toBe('mi-articulo-by-sofia-garcia-y-juan-perez-y-ana-lopez');
+  });
+
+  it('usa maximo 3 autores aunque haya mas', () => {
+    const result = computeSlug({
+      title: 'Test',
+      author: ['A', 'B', 'C', 'D', 'E'],
+    });
+    expect(result).toBe('test-by-a-y-b-y-c');
+  });
+
+  it('usa 2 autores separados por -y-', () => {
+    const result = computeSlug({ title: 'Doc', author: ['Ana', 'Luis'] });
+    expect(result).toBe('doc-by-ana-y-luis');
   });
 
   it('normaliza caracteres acentuados', () => {
