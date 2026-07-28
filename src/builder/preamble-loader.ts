@@ -68,7 +68,7 @@ export async function loadPreambleTranspilers(
 /** Retorna información de todos los preamble transpilers built-in. */
 export function getBuiltinPreambleTranspilerInfos(): PreambleTranspilerInfo[] {
   const descriptions: Record<string, string> = {
-    '01-maketitle-patches': 'Personaliza \\maketitle: 3 baselineskip, autores por coma',
+    '01-maketitle-patches': 'Personaliza \\maketitle: 1+2 baselineskip, autores por coma',
     '02-environments': 'Redefine center/flushright/flushleft sin espacio vertical extra',
     '03-toc-styling': 'Personaliza el indice (TOC): nombre, espaciado, fuentes y lideres',
     '04-toc-section': 'Redefine \\tableofcontents para usar \\section* en lugar de \\chapter*',
