@@ -120,7 +120,7 @@ describe('buildDocsFromIndex', () => {
 
   it('usa valores por defecto cuando no hay entrada en el index', () => {
     const docs = buildDocsFromIndex(['x.md'], new Map(), '/proyecto');
-    expect(docs[0]?.frontmatter.title).toBe('');
+    expect(docs[0]?.frontmatter.title).toBe('Sin título');
     expect(docs[0]?.frontmatter.author).toEqual([]);
     expect(docs[0]?.frontmatter.date).toBe('');
     expect(docs[0]?.frontmatter.keywords).toEqual([]);

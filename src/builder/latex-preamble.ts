@@ -364,9 +364,10 @@ export async function buildLatexPreamble(
   preamble.push('\\begin{document}');
 
   // ── PORTADA ──
-  if (meta?.title) preamble.push(`\title{${meta.title}}`);
-  if (meta?.subtitle) preamble.push(`subtitle{${meta.subtitle}}`);
-  if (meta?.author?.length) preamble.push(`author{${meta.author.join(' and ')}}`);
+  const displayTitle = meta?.title || 'Sin t\u00edtulo';
+  preamble.push(`\\title{${displayTitle}}`);
+  if (meta?.subtitle) preamble.push(`\\subtitle{${meta.subtitle}}`);
+  if (meta?.author?.length) preamble.push(`\\author{${meta.author.join(' \\and ')}}`);
   if (fmt.showDate) {
     if (meta?.date) {
       preamble.push(`\\date{${meta.date}}`);
@@ -388,7 +389,7 @@ export async function buildLatexPreamble(
   } else {
     preamble.push('\\date{}');
   }
-  if (meta?.title) preamble.push('\\maketitle');
+  preamble.push('\\maketitle');
 
   // ── TABLA DE CONTENIDOS ──
   if (fmt.toc) {
