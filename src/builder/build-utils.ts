@@ -216,7 +216,7 @@ export async function generateLatexPreamble(
     }
     const preamble = await buildLatexPreamble(
       siteConfig.format?.pdf,
-      { title: entry.title, author: entry.author, filePath: join(cwd, relPath), cwd },
+      { title: entry.title, subtitle: entry.subtitle, author: entry.author, filePath: join(cwd, relPath), cwd },
       siteConfig.disabledPreambleTranspilers,
     );
     const fullTex = [...preamble, '', texBody, '', '\\end{document}'].join('\n');

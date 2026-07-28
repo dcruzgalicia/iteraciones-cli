@@ -2,6 +2,7 @@ import type { SiteConfig } from '../config/site-config.js';
 
 export interface DiscoveryEntry {
   title: string;
+  subtitle?: string;
   author: string[];
   slug?: string;
 }
