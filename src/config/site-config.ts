@@ -67,6 +67,7 @@ export interface PdfFormatConfig {
     title?: string;
     subtitle?: string;
     author?: string;
+    date?: string;
     publishers?: string;
   };
 
@@ -193,7 +194,8 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   setkomafont: {
     title: '\\normalsize\\bfseries',
     subtitle: '\\normalsize\\normalfont\\itshape',
-    author: '\\normalsize\\normalfont',
+    author: '\\normalsize\\normalfont\\scshape',
+    date: '\\normalsize\\normalfont',
     publishers: '\\normalsize\\normalfont',
   },
   dictum: {
