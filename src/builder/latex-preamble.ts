@@ -64,25 +64,19 @@ export async function buildLatexPreamble(
 ): Promise<string[]> {
   const fmt = pdfFormat ?? DEFAULT_PDF_FORMAT;
   const dc = fmt.documentclass?.class ?? 'scrbook';
-  const fontSize = fmt.documentclass?.options?.find((o) => /^\d+pt$/.test(o)) ?? '12pt';
-  const sfdefaults = fmt.documentclass?.options?.includes('sfdefaults=true') ?? false;
-  const twoside = fmt.documentclass?.options?.includes('twoside') ?? false;
-  const pageSizeOption = fmt.documentclass?.options?.find((o) => o.startsWith('paper='));
-  const pageSize = pageSizeOption ? pageSizeOption.replace('paper=', '') : undefined;
+
+  // Propagar todas las opciones del usuario, completando defaults solo si faltan
+  const rawOpts = [...(fmt.documentclass?.options ?? [])];
+  if (!rawOpts.some((o) => /^\d+pt$/.test(o))) rawOpts.unshift('12pt');
+  if (!rawOpts.some((o) => o.startsWith('sfdefaults='))) rawOpts.push('sfdefaults=false');
+  if (!rawOpts.some((o) => o.startsWith('paper='))) rawOpts.push('paper=letter');
+  const classOpts = rawOpts;
+
+  // Detectar twoside/oneside para otros usos (page-number, margins)
+  const twoside = rawOpts.includes('twoside');
+  const pageSize = rawOpts.find((o) => o.startsWith('paper='))?.replace('paper=', '');
   const geometry = fmt.geometry;
   const lineSpacing = fmt.setstretch ?? 1.5;
-
-  // Opciones de clase KOMA-Script
-  const classOpts = [fontSize];
-  classOpts.push(`sfdefaults=${sfdefaults ? 'true' : 'false'}`);
-  if (pageSize) {
-    if (pageSize === 'half-letter') {
-      classOpts.push('paper=13.97cm:21.59cm');
-    } else if (pageSize !== 'custom' && !/^\d/.test(pageSize)) {
-      classOpts.push(`paper=${pageSize}`);
-    }
-  }
-  if (twoside) classOpts.push('twoside');
 
   const preamble: string[] = [];
 
