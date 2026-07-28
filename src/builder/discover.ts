@@ -181,7 +181,14 @@ export async function discover(
           const parsed = Bun.YAML.parse(fmMatch[1]) as Record<string, unknown>;
           if (parsed && !Array.isArray(parsed)) {
             title = typeof parsed['title'] === 'string' ? parsed['title'] : '';
-            authors = Array.isArray(parsed['author']) ? parsed['author'].filter((a: unknown) => typeof a === 'string') : [];
+            {
+              const raw = parsed['author'];
+              authors = Array.isArray(raw)
+                ? raw.filter((a: unknown): a is string => typeof a === 'string')
+                : typeof raw === 'string' && raw.trim()
+                  ? [raw.trim()]
+                  : [];
+            }
           }
         }
       } catch {

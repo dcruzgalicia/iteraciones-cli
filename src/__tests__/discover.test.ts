@@ -39,6 +39,48 @@ describe('computeSlug', () => {
   });
 });
 
+describe('parseAuthors', () => {
+  // Prueba la logica de parseo de author del frontmatter
+  // que acepta tanto string como array
+  function parseAuthors(raw: unknown): string[] {
+    if (Array.isArray(raw)) {
+      return raw.filter((a: unknown): a is string => typeof a === 'string');
+    }
+    if (typeof raw === 'string' && raw.trim()) {
+      return [raw.trim()];
+    }
+    return [];
+  }
+
+  it('acepta string simple', () => {
+    expect(parseAuthors('Sofia García')).toEqual(['Sofia García']);
+  });
+
+  it('acepta array con un elemento', () => {
+    expect(parseAuthors(['Sofia García'])).toEqual(['Sofia García']);
+  });
+
+  it('acepta array con multiples elementos', () => {
+    expect(parseAuthors(['Sofia García', 'Juan Pérez'])).toEqual(['Sofia García', 'Juan Pérez']);
+  });
+
+  it('retorna array vacio para string vacio', () => {
+    expect(parseAuthors('')).toEqual([]);
+  });
+
+  it('retorna array vacio si no hay author', () => {
+    expect(parseAuthors(undefined)).toEqual([]);
+  });
+
+  it('retorna array vacio para null', () => {
+    expect(parseAuthors(null)).toEqual([]);
+  });
+
+  it('filtra elementos no-string en arrays mixtos', () => {
+    expect(parseAuthors(['Sofia', 123, 'Juan'])).toEqual(['Sofia', 'Juan']);
+  });
+});
+
 describe('buildDocsFromIndex', () => {
   it('construye BuildDocument[] desde paths e index', () => {
     const paths = ['a.md', 'b.md'];
