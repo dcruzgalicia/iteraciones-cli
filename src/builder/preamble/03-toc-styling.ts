@@ -5,8 +5,7 @@ export const description = 'Personaliza el indice (TOC): nombre, espaciado, fuen
 export function process(preamble: string[], config: PdfFormatConfig): string[] {
   preamble.push(
     '% --- Estilo del indice (TOC) ---',
-    '\\renewcaptionname{spanish}{\\contentsname}{\\large\\normalfont Índice}',
-    '\\BeforeTOCHead{\\RedeclareSectionCommand[beforeskip=30pt,afterskip=2\\baselineskip,afterindent=false]{chapter}}',
+    '\\renewcaptionname{spanish}{\\contentsname}{\\normalsize\\normalfont\\bfseries Índice}',
     '\\setkomafont{partentry}{\\normalsize\\normalfont}',
     '\\DeclareTOCStyleEntry[linefill=\\TOCLineLeaderFill,beforeskip=2\\baselineskip]{tocline}{part}',
     '\\setkomafont{chapterentry}{\\normalsize\\normalfont\\scshape}',
