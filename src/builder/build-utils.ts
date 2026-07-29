@@ -214,9 +214,11 @@ export async function generateLatexPreamble(
     } catch {
       continue;
     }
+    // Detectar si el cuerpo tiene encabezados (para evitar TOC vacio)
+    const hasTocEntries = /\\(chapter|section|subsection|subsubsection|paragraph)\{/.test(texBody);
     const preamble = await buildLatexPreamble(
       siteConfig.format?.pdf,
-      { title: entry.title, subtitle: entry.subtitle, author: entry.author, filePath: join(cwd, relPath), cwd },
+      { title: entry.title, subtitle: entry.subtitle, author: entry.author, filePath: join(cwd, relPath), cwd, hasTocEntries },
       siteConfig.disabledPreambleTranspilers,
     );
     const fullTex = [...preamble, '', texBody, '', '\\end{document}'].join('\n');

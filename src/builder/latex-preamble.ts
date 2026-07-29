@@ -39,6 +39,8 @@ export interface PreambleMeta {
   showDate?: boolean;
   /** Directorio raiz del proyecto para descubrir archivos .bib. */
   cwd?: string;
+  /** Si el cuerpo LaTeX contiene encabezados (section, chapter, etc.). */
+  hasTocEntries?: boolean;
 }
 
 /** Descubre archivos .bib en el proyecto (excluye node_modules, .iteraciones, dist). */
@@ -386,7 +388,7 @@ export async function buildLatexPreamble(
   preamble.push('\\maketitle');
 
   // ── TABLA DE CONTENIDOS ──
-  if (fmt.toc) {
+  if (fmt.toc && meta?.hasTocEntries) {
     preamble.push('\\tableofcontents');
   }
 
