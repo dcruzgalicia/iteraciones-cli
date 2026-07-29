@@ -299,8 +299,6 @@ function buildDefaultConfig(): string {
     }
   }
 
-  // ── PAGE STYLE (ahora en cada nivel de sectioning.*.pagestyle) ──
-
   // ── TRAS \\begin{document} ──
   lines.push(`    toc: ${yamlBool(pdfCfg.toc ?? false)}`);
   lines.push(`    show-date: ${yamlBool(pdfCfg.showDate ?? false)}`);
