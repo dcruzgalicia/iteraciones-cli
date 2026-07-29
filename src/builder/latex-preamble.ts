@@ -30,6 +30,16 @@ const PAGE_SIZE_DIMS: Record<string, [number, number]> = {
   pocket: [105, 176],
 };
 
+/** Mapa de posiciones de numero de pagina a comandos KOMA-Script. */
+const PAGE_NUMBER_MAP: Record<string, string> = {
+  'header-right': '\\ohead*{\\pagemark}',
+  'header-center': '\\chead*{\\pagemark}',
+  'header-left': '\\ihead*{\\pagemark}',
+  'footer-right': '\\ofoot*{\\pagemark}',
+  'footer-center': '\\cfoot*{\\pagemark}',
+  'footer-left': '\\ifoot*{\\pagemark}',
+};
+
 export interface PreambleMeta {
   title?: string;
   subtitle?: string;
@@ -110,19 +120,8 @@ export async function buildLatexPreamble(
 
   // ── 7. ENCABEZADOS ──
   preamble.push('\\usepackage{scrlayer-scrpage}', '\\clearpairofpagestyles');
-  const pageNum = fmt.pageNumber;
-  if (pageNum) {
-    const PAGE_NUMBER_MAP: Record<string, string> = {
-      'header-right': '\\ohead*{\\pagemark}',
-      'header-center': '\\chead*{\\pagemark}',
-      'header-left': '\\ihead*{\\pagemark}',
-      'footer-right': '\\ofoot*{\\pagemark}',
-      'footer-center': '\\cfoot*{\\pagemark}',
-      'footer-left': '\\ifoot*{\\pagemark}',
-    };
-    const cmd = PAGE_NUMBER_MAP[pageNum];
-    if (cmd) preamble.push(cmd);
-  }
+  // Nota: \ohead*{\pagemark} se inserta despues de \maketitle o \tableofcontents
+  // para evitar numeracion en portada e indice.
 
   // ── 8. TIPOGRAFÍA ──
   if (fmt.microtype?.options && fmt.microtype.options.length > 0) {
@@ -386,6 +385,15 @@ export async function buildLatexPreamble(
   // ── TABLA DE CONTENIDOS ──
   if (fmt.toc && meta?.hasTocEntries) {
     preamble.push('\\tableofcontents');
+  }
+
+  // ── NUMERO DE PAGINA ──
+  // Se inserta despues de portada/indice para evitar numeracion
+  // en portada (maketitle) e indice (tableofcontents).
+  const pageNum = fmt.pageNumber;
+  if (pageNum) {
+    const cmd = PAGE_NUMBER_MAP[pageNum];
+    if (cmd) preamble.push(cmd);
   }
 
   return preamble;

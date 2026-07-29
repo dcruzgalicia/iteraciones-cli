@@ -11,6 +11,7 @@ export function process(preamble: string[], config: PdfFormatConfig): string[] {
     '  \\begingroup',
     '    \\section*{\\contentsname}%',
     '    \\@starttoc{toc}%',
+    '    \\thispagestyle{empty}% asegurar que pagina del TOC no tenga numero',
     '    \\@afterindentfalse\\@afterheading%',
     '  \\endgroup',
     '}',
