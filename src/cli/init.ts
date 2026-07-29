@@ -299,14 +299,7 @@ function buildDefaultConfig(): string {
     }
   }
 
-  // ── PAGE STYLE (reemplaza transpiler 12) ──
-  const ps = DEFAULT_PDF_FORMAT.pagestyle;
-  if (ps) {
-    lines.push('    pagestyle:');
-    for (const [k, v] of Object.entries(ps)) {
-      lines.push(`      ${k}: ${yamlStr(v)}`);
-    }
-  }
+  // ── PAGE STYLE (ahora en cada nivel de sectioning.*.pagestyle) ──
 
   // ── TRAS \\begin{document} ──
   lines.push(`    toc: ${yamlBool(pdfCfg.toc ?? false)}`);
