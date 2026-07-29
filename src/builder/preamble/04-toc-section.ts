@@ -11,6 +11,7 @@ export function process(preamble: string[], config: PdfFormatConfig): string[] {
     '  \\begingroup',
     '    \\section*{\\contentsname}%',
     '    \\@starttoc{toc}%',
+    '    \\@afterindentfalse\\@afterheading%',
     '  \\endgroup',
     '}',
     '\\makeatother',
