@@ -59,6 +59,7 @@ const SectionLevelSchema = z.object({
   beforeskip: z.string().optional(),
   afterskip: z.string().optional(),
   font: z.string().optional(),
+  pagestyle: z.string().optional(),
 });
 
 const SectionLevelWithStyleSchema = SectionLevelSchema.extend({

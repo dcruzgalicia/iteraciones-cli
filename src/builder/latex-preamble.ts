@@ -248,6 +248,7 @@ export async function buildLatexPreamble(
       const opts: string[] = [];
       if (p.beforeskip) opts.push('beforeskip=' + p.beforeskip);
       if (p.afterskip) opts.push('afterskip=' + p.afterskip);
+      if (p.pagestyle) opts.push('pagestyle=' + p.pagestyle);
       if (opts.length > 0) {
         opts.push('afterindent=false');
         preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{part}`);
@@ -261,6 +262,7 @@ export async function buildLatexPreamble(
       if (ch.style) opts.push('style=' + ch.style);
       if (ch.beforeskip) opts.push('beforeskip=' + ch.beforeskip);
       if (ch.afterskip) opts.push('afterskip=' + ch.afterskip);
+      if (ch.pagestyle) opts.push('pagestyle=' + ch.pagestyle);
       if (opts.length > 0) {
         opts.push('afterindent=false');
         preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{chapter}`);
@@ -275,6 +277,7 @@ export async function buildLatexPreamble(
       if (s.style) opts.push('style=' + s.style);
       if (s.beforeskip) opts.push('beforeskip=' + s.beforeskip);
       if (s.afterskip) opts.push('afterskip=' + s.afterskip);
+      if (s.pagestyle) opts.push('pagestyle=' + s.pagestyle);
       if (opts.length > 0) {
         opts.push('afterindent=false');
         preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{section}`);
@@ -288,6 +291,7 @@ export async function buildLatexPreamble(
       const opts: string[] = [];
       if (ss.beforeskip) opts.push('beforeskip=' + ss.beforeskip);
       if (ss.afterskip) opts.push('afterskip=' + ss.afterskip);
+      if (ss.pagestyle) opts.push('pagestyle=' + ss.pagestyle);
       if (opts.length > 0) {
         opts.push('afterindent=false');
         preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{subsection}`);
@@ -300,6 +304,7 @@ export async function buildLatexPreamble(
       const opts: string[] = [];
       if (sss.beforeskip) opts.push('beforeskip=' + sss.beforeskip);
       if (sss.afterskip) opts.push('afterskip=' + sss.afterskip);
+      if (sss.pagestyle) opts.push('pagestyle=' + sss.pagestyle);
       if (opts.length > 0) {
         opts.push('afterindent=false');
         preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{subsubsection}`);
@@ -312,6 +317,7 @@ export async function buildLatexPreamble(
       const opts: string[] = [];
       if (pg.beforeskip) opts.push('beforeskip=' + pg.beforeskip);
       if (pg.afterskip) opts.push('afterskip=' + pg.afterskip);
+      if (pg.pagestyle) opts.push('pagestyle=' + pg.pagestyle);
       if (opts.length > 0) {
         opts.push('afterindent=false');
         preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{paragraph}`);
@@ -324,6 +330,7 @@ export async function buildLatexPreamble(
       const opts: string[] = [];
       if (spg.beforeskip) opts.push('beforeskip=' + spg.beforeskip);
       if (spg.afterskip) opts.push('afterskip=' + spg.afterskip);
+      if (spg.pagestyle) opts.push('pagestyle=' + spg.pagestyle);
       if (opts.length > 0) {
         opts.push('afterindent=false');
         preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{subparagraph}`);
@@ -341,10 +348,14 @@ export async function buildLatexPreamble(
     if (fmt.dictum.authorformat) preamble.push(`\\renewcommand*{\\dictumauthorformat}[1]{${fmt.dictum.authorformat}}`);
   }
 
-  // ── 13. PAGE STYLE (desde config, reemplaza transpiler 12) ──
+  // ── 13. PAGE STYLE (compatibilidad legacy, migrar a sectioning.*.pagestyle) ──
   if (fmt.pagestyle) {
-    if (fmt.pagestyle.part) preamble.push(`\\renewcommand*{\\partpagestyle}{${fmt.pagestyle.part}}`);
-    if (fmt.pagestyle.chapter) preamble.push(`\\renewcommand*{\\chapterpagestyle}{${fmt.pagestyle.chapter}}`);
+    if (fmt.pagestyle.part && !fmt.sectioning?.part?.pagestyle) {
+      preamble.push(`\\renewcommand*{\\partpagestyle}{${fmt.pagestyle.part}}`);
+    }
+    if (fmt.pagestyle.chapter && !fmt.sectioning?.chapter?.pagestyle) {
+      preamble.push(`\\renewcommand*{\\chapterpagestyle}{${fmt.pagestyle.chapter}}`);
+    }
   }
 
   // ── PREAMBLE TRANSPILERS ──
