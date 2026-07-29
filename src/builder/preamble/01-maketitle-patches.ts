@@ -7,6 +7,7 @@ export function process(preamble: string[], config: PdfFormatConfig): string[] {
     '% --- Personalizacion de \\maketitle ---',
     '\\makeatletter',
     '\\renewcommand{\\maketitle}{%',
+    '  \\thispagestyle{empty}%',
     '  \\vspace*{1\\baselineskip}%',
     '  \\ifx\\@author\\@empty',
     '    \\vskip 1\\baselineskip%',
