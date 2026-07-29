@@ -277,7 +277,6 @@ export async function buildLatexPreamble(
       if (s.style) opts.push('style=' + s.style);
       if (s.beforeskip) opts.push('beforeskip=' + s.beforeskip);
       if (s.afterskip) opts.push('afterskip=' + s.afterskip);
-      if (s.pagestyle) opts.push('pagestyle=' + s.pagestyle);
       if (opts.length > 0) {
         opts.push('afterindent=false');
         preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{section}`);
@@ -291,7 +290,6 @@ export async function buildLatexPreamble(
       const opts: string[] = [];
       if (ss.beforeskip) opts.push('beforeskip=' + ss.beforeskip);
       if (ss.afterskip) opts.push('afterskip=' + ss.afterskip);
-      if (ss.pagestyle) opts.push('pagestyle=' + ss.pagestyle);
       if (opts.length > 0) {
         opts.push('afterindent=false');
         preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{subsection}`);
@@ -304,7 +302,6 @@ export async function buildLatexPreamble(
       const opts: string[] = [];
       if (sss.beforeskip) opts.push('beforeskip=' + sss.beforeskip);
       if (sss.afterskip) opts.push('afterskip=' + sss.afterskip);
-      if (sss.pagestyle) opts.push('pagestyle=' + sss.pagestyle);
       if (opts.length > 0) {
         opts.push('afterindent=false');
         preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{subsubsection}`);
@@ -317,7 +314,6 @@ export async function buildLatexPreamble(
       const opts: string[] = [];
       if (pg.beforeskip) opts.push('beforeskip=' + pg.beforeskip);
       if (pg.afterskip) opts.push('afterskip=' + pg.afterskip);
-      if (pg.pagestyle) opts.push('pagestyle=' + pg.pagestyle);
       if (opts.length > 0) {
         opts.push('afterindent=false');
         preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{paragraph}`);
@@ -330,7 +326,6 @@ export async function buildLatexPreamble(
       const opts: string[] = [];
       if (spg.beforeskip) opts.push('beforeskip=' + spg.beforeskip);
       if (spg.afterskip) opts.push('afterskip=' + spg.afterskip);
-      if (spg.pagestyle) opts.push('pagestyle=' + spg.pagestyle);
       if (opts.length > 0) {
         opts.push('afterindent=false');
         preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{subparagraph}`);
