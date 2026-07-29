@@ -104,7 +104,6 @@ const PdfFormatSchema = z.object({
   sectioning: SectioningSchema.optional(),
   setkomafont: z.record(z.string(), z.string()).optional(),
   dictum: z.record(z.string(), z.string()).optional(),
-  pagestyle: z.object({ part: z.string().optional(), chapter: z.string().optional() }).optional(),
   'eso-pic': z.union([z.boolean(), z.object({ options: z.array(z.string()) })]).default(false),
   pdfx: z.boolean().default(false),
   crop: z.boolean().default(false),

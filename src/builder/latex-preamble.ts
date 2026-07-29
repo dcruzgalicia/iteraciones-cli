@@ -343,16 +343,6 @@ export async function buildLatexPreamble(
     if (fmt.dictum.authorformat) preamble.push(`\\renewcommand*{\\dictumauthorformat}[1]{${fmt.dictum.authorformat}}`);
   }
 
-  // ── 13. PAGE STYLE (compatibilidad legacy, migrar a sectioning.*.pagestyle) ──
-  if (fmt.pagestyle) {
-    if (fmt.pagestyle.part && !fmt.sectioning?.part?.pagestyle) {
-      preamble.push(`\\renewcommand*{\\partpagestyle}{${fmt.pagestyle.part}}`);
-    }
-    if (fmt.pagestyle.chapter && !fmt.sectioning?.chapter?.pagestyle) {
-      preamble.push(`\\renewcommand*{\\chapterpagestyle}{${fmt.pagestyle.chapter}}`);
-    }
-  }
-
   // ── PREAMBLE TRANSPILERS ──
   // Se ejecutan antes de \begin{document} para que sus definiciones
   // esten vigentes cuando se llame a \maketitle.

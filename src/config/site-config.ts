@@ -79,12 +79,6 @@ export interface PdfFormatConfig {
     authorfont?: string;
     authorformat?: string;
   };
-
-  // Page style (replaces transpiler 12)
-  pagestyle?: {
-    part?: string;
-    chapter?: string;
-  };
 }
 
 export interface EpubFormatConfig {
