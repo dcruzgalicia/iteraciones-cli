@@ -35,11 +35,13 @@ function processParaInlines(inlines: unknown[]): unknown[] {
     }
 
     const isLastSentence = end === inlines.length;
-    const wrapCount = isLastSentence ? 3 : 1;
+    const idealWrapCount = isLastSentence ? 3 : 1;
     const minWords = isLastSentence ? 3 : 2;
 
     if (wordIndices.length < minWords) continue;
 
+    // No superar wordIndices.length-1 para evitar solapamiento con mbox-sentence-start
+    const wrapCount = Math.min(idealWrapCount, wordIndices.length - 1);
     const lastWords = wordIndices.slice(-wrapCount);
     wraps.push({ startIdx: lastWords[0]!, endIdx: lastWords[lastWords.length - 1]! });
   }

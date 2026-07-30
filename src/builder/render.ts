@@ -28,8 +28,8 @@ const BUILTIN_TRANSPILERS = [
   '03-verse',
   '05-center',
   '06-flushright',
-  '07-mbox-sentence-start',
-  '08-mbox-sentence-end',
+  '07-mbox-sentence-end',
+  '08-mbox-sentence-start',
 ];
 
 interface StringTranspiler {
@@ -92,8 +92,8 @@ export function getBuiltinTranspilerInfos(): TranspilerInfo[] {
     '03-verse': 'Div.verse → \\begin{verse}...\\end{verse}',
     '05-center': 'Div.center → \\begin{center}...\\end{center}',
     '06-flushright': 'Div.flushright → \\begin{flushright}...\\end{flushright}',
-    '07-mbox-sentence-start': 'Envuelve la primera palabra de cada oracion en \\mbox{} (AST)',
-    '08-mbox-sentence-end': 'Envuelve las ultimas 2 palabras de cada oracion en \\mbox{} (AST)',
+    '07-mbox-sentence-end': 'Envuelve las ultimas 2 palabras de cada oracion en \\mbox{} (AST)',
+    '08-mbox-sentence-start': 'Envuelve la primera palabra de cada oracion en \\mbox{} (AST)',
   };
   const types: Record<string, 'string' | 'ast'> = {
     '01-double-colon': 'string',
@@ -101,8 +101,8 @@ export function getBuiltinTranspilerInfos(): TranspilerInfo[] {
     '03-verse': 'ast',
     '05-center': 'ast',
     '06-flushright': 'ast',
-    '07-mbox-sentence-start': 'ast',
-    '08-mbox-sentence-end': 'ast',
+    '07-mbox-sentence-end': 'ast',
+    '08-mbox-sentence-start': 'ast',
   };
   return BUILTIN_TRANSPILERS.map((name) => ({
     name,
