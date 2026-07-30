@@ -101,8 +101,15 @@ export async function buildLatexPreamble(
   preamble.push('\\usepackage[T1]{fontenc}', '\\usepackage[utf8]{inputenc}', '\\usepackage{textcomp}');
 
   // ── 3. FUENTE ──
-  if (fmt.mathptmx !== false) {
-    preamble.push('\\usepackage{mathptmx}');
+  if (fmt.fontFamily && fmt.fontFamily.length > 0) {
+    for (const font of fmt.fontFamily) {
+      const opts = font.options && font.options.length > 0 ? font.options.join(',') : undefined;
+      if (opts) {
+        preamble.push(`\\usepackage[${opts}]{${font.name}}`);
+      } else {
+        preamble.push(`\\usepackage{${font.name}}`);
+      }
+    }
   }
 
   // ── 4. INTERLINEADO ──

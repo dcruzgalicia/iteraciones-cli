@@ -24,7 +24,8 @@ export interface PdfFormatConfig {
   hyperref?: { options?: string[] };
   microtype?: { options?: string[] };
   enumitem?: boolean;
-  mathptmx?: boolean;
+  /** Lista de paquetes de fuente a cargar. Cada entrada genera \\usepackage[options]{name}. */
+  fontFamily?: Array<{ name: string; options?: string[] }>;
   setspace?: boolean;
 
   // Active commands
@@ -150,7 +151,6 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
     options: ['activate={true,nocompatibility}', 'final', 'tracking=true', 'kerning=true', 'spacing=true', 'factor=1100', 'stretch=10', 'shrink=10'],
   },
   enumitem: true,
-  mathptmx: true,
   setspace: true,
   setstretch: 1.5,
   raggedbottom: true,
