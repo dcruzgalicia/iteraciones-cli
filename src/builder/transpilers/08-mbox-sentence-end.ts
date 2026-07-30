@@ -1,6 +1,6 @@
 /**
- * Transpiler AST: envuelve las ULTIMAS 2 palabras de cada oración en \mbox{}
- * con espacios dentro del \\mbox{}, solo dentro de bloques Para (párrafos).
+ * Transpiler AST: envuelve en \\mbox{} la ultima palabra de cada oracion
+ * (o las ultimas 3 si es la oracion final del parrafo).
  *
  * Pipeline:
  *   markdown → string transpilers → pandoc --to json → AST transpilers
@@ -8,8 +8,8 @@
  *   → pandoc --from json --to latex → .tex intermediate
  *
  * Ejemplo:
- *   "Principio de la oración. Otra oración aquí."
- *   → "Principio de \\mbox{la oración}. Otra \\mbox{oración aquí}."
+ *   "Primera oración de ejemplo. Segunda aquí. Tercera oración de ejemplo final."
+ *   → "Primera oración de \\mbox{ejemplo}. Segunda \\mbox{aquí}. Tercera oración \\mbox{de ejemplo final}."
  */
 
 import { classifyInline, findSentenceBounds, isSpace, type MboxWrap } from './_sentence-utils.js';
@@ -34,10 +34,14 @@ function processParaInlines(inlines: unknown[]): unknown[] {
       }
     }
 
-    if (wordIndices.length < 4) continue;
+    const isLastSentence = end === inlines.length;
+    const wrapCount = isLastSentence ? 3 : 1;
+    const minWords = isLastSentence ? 3 : 2;
 
-    const lastTwo = wordIndices.slice(-2);
-    wraps.push({ startIdx: lastTwo[0]!, endIdx: lastTwo[1]! });
+    if (wordIndices.length < minWords) continue;
+
+    const lastWords = wordIndices.slice(-wrapCount);
+    wraps.push({ startIdx: lastWords[0]!, endIdx: lastWords[lastWords.length - 1]! });
   }
 
   if (wraps.length === 0) return inlines;
