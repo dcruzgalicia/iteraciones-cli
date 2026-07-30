@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.12.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.11.0...v0.12.0) (2026-07-30)
+
+
+### Features
+
+* agrega soporte de subtitle desde frontmatter a PDF ([c8240e0](https://github.com/dcruzgalicia/iteraciones-cli/commit/c8240e0a6af4f5a4b449bc80ea5035126c7adf02)), closes [#990](https://github.com/dcruzgalicia/iteraciones-cli/issues/990)
+* **discover:** cambia formato del slug a title-by-author[-y-author] ([5e20adb](https://github.com/dcruzgalicia/iteraciones-cli/commit/5e20adb180d0a77317efb974cd229d770c469ff2)), closes [#985](https://github.com/dcruzgalicia/iteraciones-cli/issues/985)
+* **latex:** suprime indentacion del primer parrafo tras maketitle y TOC ([64108be](https://github.com/dcruzgalicia/iteraciones-cli/commit/64108be1f0805eb7b828f58df1adb854449fa0c9))
+* **latex:** suprime numeracion de pagina en paginas del indice (TOC) ([d3d71ff](https://github.com/dcruzgalicia/iteraciones-cli/commit/d3d71fff1b3fb7b52e0ef7791ea0301e80beb4c5))
+* **preamble:** ajusta espaciado de maketitle (1+2 baselineskip) ([c716bcb](https://github.com/dcruzgalicia/iteraciones-cli/commit/c716bcb83bd676b5a59735a21677739972b978d9)), closes [#988](https://github.com/dcruzgalicia/iteraciones-cli/issues/988)
+* **preamble:** rediseno completo de maketitle patches ([4a52ead](https://github.com/dcruzgalicia/iteraciones-cli/commit/4a52eade840e6d1842a2feb65e873e81df0ccdb3)), closes [#988](https://github.com/dcruzgalicia/iteraciones-cli/issues/988)
+* usa 'Sin titulo' como default cuando falta title en frontmatter ([14a4475](https://github.com/dcruzgalicia/iteraciones-cli/commit/14a4475636eeb77ed4121ba2617aaee770caeba4))
+
+
+### Bug Fixes
+
+* **cli:** elimina duplicacion de seccion 'Generando formatos' ([7cd0aec](https://github.com/dcruzgalicia/iteraciones-cli/commit/7cd0aec94f803338df1ab7d9bc28fc9870421651)), closes [#975](https://github.com/dcruzgalicia/iteraciones-cli/issues/975)
+* **config:** corrige escapes en setkomafont/dictum y limita pagestyle a part/chapter ([a14f934](https://github.com/dcruzgalicia/iteraciones-cli/commit/a14f93401359b6ae8e84e59e8bb4a4327c6613a4))
+* **discover:** acepta author como string simple en frontmatter ([83148a0](https://github.com/dcruzgalicia/iteraciones-cli/commit/83148a0b5fcf00d74a56d3b3800033a58a0110af)), closes [#983](https://github.com/dcruzgalicia/iteraciones-cli/issues/983)
+* **latex:** elimina [@afterheading](https://github.com/afterheading) de maketitle/toc, agrega espaciado condicional para parrafos ([cc6b734](https://github.com/dcruzgalicia/iteraciones-cli/commit/cc6b734576b4cc22e23fdcafd6411891e439e4d3))
+* **latex:** no agrega TOC si el documento no tiene encabezados ([21f1107](https://github.com/dcruzgalicia/iteraciones-cli/commit/21f11071736f55f21101918ad917f6c89005f829)), closes [#1002](https://github.com/dcruzgalicia/iteraciones-cli/issues/1002)
+* **latex:** propaga todas las opciones de documentclass.options al preambulo ([422a9c0](https://github.com/dcruzgalicia/iteraciones-cli/commit/422a9c013e7a1801fcdf9d4059af3be6af27dda0)), closes [#998](https://github.com/dcruzgalicia/iteraciones-cli/issues/998)
+* **preamble:** evita acumulacion de espaciado entre maketitle y TOC ([4703de1](https://github.com/dcruzgalicia/iteraciones-cli/commit/4703de16e8f3878aff819d67a13d4b4f2a7e66c3)), closes [#996](https://github.com/dcruzgalicia/iteraciones-cli/issues/996)
+* **preamble:** mantiene posicion del title cuando no hay author en maketitle ([a7676ff](https://github.com/dcruzgalicia/iteraciones-cli/commit/a7676ff0040c70673e9c31a066619291cd142f27))
+* **preamble:** suprime numeracion de pagina en portada (maketitle) ([92fe9ae](https://github.com/dcruzgalicia/iteraciones-cli/commit/92fe9ae9b3d777e914b5f23815dd96e943409de5)), closes [#1006](https://github.com/dcruzgalicia/iteraciones-cli/issues/1006)
+
+
+### Performance Improvements
+
+* **build:** cachea generacion de CSS por mtime de _iteraciones.yaml ([7080e38](https://github.com/dcruzgalicia/iteraciones-cli/commit/7080e385ffa85b3cc9228dde1aca8c83115e6db7)), closes [#945](https://github.com/dcruzgalicia/iteraciones-cli/issues/945)
+* **discover:** paraleliza lectura de archivos en discover() ([9e88106](https://github.com/dcruzgalicia/iteraciones-cli/commit/9e88106c8eed6c7f8ebd00ec2cf0889fab46c590)), closes [#943](https://github.com/dcruzgalicia/iteraciones-cli/issues/943)
+
 ## [0.11.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.10.0...v0.11.0) (2026-07-27)
 
 
