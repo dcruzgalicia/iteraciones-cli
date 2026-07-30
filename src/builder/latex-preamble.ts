@@ -51,6 +51,8 @@ export interface PreambleMeta {
   cwd?: string;
   /** Si el cuerpo LaTeX contiene encabezados (section, chapter, etc.). */
   hasTocEntries?: boolean;
+  /** Si el primer bloque del cuerpo LaTeX es un encabezado (true) o un parrafo (false). */
+  firstBlockIsHeading?: boolean;
 }
 
 /** Descubre archivos .bib en el proyecto (excluye node_modules, .iteraciones, dist). */
@@ -394,6 +396,14 @@ export async function buildLatexPreamble(
   if (pageNum) {
     const cmd = PAGE_NUMBER_MAP[pageNum];
     if (cmd) preamble.push(cmd);
+  }
+
+  // ── ESPACIO TRAS PORTADA/INDICE ──
+  // Solo cuando el PRIMER bloque del cuerpo NO es un encabezado.
+  // Los encabezados (section, chapter) usan su propio espaciado
+  // mediante \\RedeclareSectionCommand.
+  if (!meta?.firstBlockIsHeading) {
+    preamble.push('\\vspace*{2\\baselineskip}');
   }
 
   return preamble;

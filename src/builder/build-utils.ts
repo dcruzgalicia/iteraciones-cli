@@ -216,9 +216,15 @@ export async function generateLatexPreamble(
     }
     // Detectar si el cuerpo tiene encabezados (para evitar TOC vacio)
     const hasTocEntries = /\\(chapter|section|subsection|subsubsection|paragraph)\{/.test(texBody);
+    // Detectar si el primer bloque es un encabezado
+    const firstBlockIsHeading = /^\s*\\(chapter|section|subsection|subsubsection|paragraph)\{/.test(texBody.trimStart());
+    // Si el primer bloque es un parrafo, anteponer \\noindent
+    if (!firstBlockIsHeading) {
+      texBody = '\\noindent ' + texBody.trimStart();
+    }
     const preamble = await buildLatexPreamble(
       siteConfig.format?.pdf,
-      { title: entry.title, subtitle: entry.subtitle, author: entry.author, filePath: join(cwd, relPath), cwd, hasTocEntries },
+      { title: entry.title, subtitle: entry.subtitle, author: entry.author, filePath: join(cwd, relPath), cwd, hasTocEntries, firstBlockIsHeading },
       siteConfig.disabledPreambleTranspilers,
     );
     const fullTex = [...preamble, '', texBody, '', '\\end{document}'].join('\n');
