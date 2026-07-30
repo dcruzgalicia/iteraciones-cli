@@ -24,8 +24,6 @@ export function process(preamble: string[], config: PdfFormatConfig): string[] {
     '    \\vskip 1\\baselineskip',
     '    {\\centering\\usekomafont{date}{\\@date\\par}}%',
     '  \\fi',
-    '  \\vspace*{2\\baselineskip}%',
-    '  \\@afterindentfalse\\@afterheading%',
     '}',
     '\\makeatother',
   );
