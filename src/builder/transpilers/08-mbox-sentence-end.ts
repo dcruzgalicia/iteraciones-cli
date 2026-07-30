@@ -1,6 +1,6 @@
 /**
  * Transpiler AST: envuelve las ULTIMAS 2 palabras de cada oración en \mbox{}
- * con espacios reemplazados por ~, solo dentro de bloques Para (párrafos).
+ * con espacios dentro del \\mbox{}, solo dentro de bloques Para (párrafos).
  *
  * Pipeline:
  *   markdown → string transpilers → pandoc --to json → AST transpilers
@@ -9,7 +9,7 @@
  *
  * Ejemplo:
  *   "Principio de la oración. Otra oración aquí."
- *   → "Principio de \mbox{la~oración}. Otra \mbox{oración~aquí}."
+ *   → "Principio de \\mbox{la oración}. Otra \\mbox{oración aquí}."
  */
 
 import { classifyInline, findSentenceBounds, isSpace, type MboxWrap } from './_sentence-utils.js';
@@ -42,7 +42,7 @@ function processParaInlines(inlines: unknown[]): unknown[] {
 
   if (wraps.length === 0) return inlines;
 
-  // Aplicar wraps con ~ en lugar de espacios
+  // Aplicar wraps
   const result: unknown[] = [];
   let i = 0;
   while (i < inlines.length) {
@@ -51,7 +51,7 @@ function processParaInlines(inlines: unknown[]): unknown[] {
       result.push({ t: 'RawInline', c: ['latex', '\\mbox{'] });
       for (let j = wrap.startIdx; j <= wrap.endIdx; j++) {
         if (j > wrap.startIdx && isSpace(inlines[j])) {
-          result.push({ t: 'RawInline', c: ['latex', '~'] });
+          result.push({ t: 'RawInline', c: ['latex', ' '] });
         } else if (!isSpace(inlines[j])) {
           result.push(inlines[j]);
         }
