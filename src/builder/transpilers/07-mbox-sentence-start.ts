@@ -1,7 +1,5 @@
 /**
- * Transpiler AST: envuelve la PRIMERA palabra de cada oración en \mbox{}
- * con espacios reemplazados por ~, solo dentro de bloques Para (párrafos).
- *
+ * Transpiler AST: envuelve la PRIMERA palabra de cada oración en \\mbox{}, solo dentro de bloques Para (párrafos).
  * Pipeline:
  *   markdown → string transpilers → pandoc --to json → AST transpilers
  *                                                     ↑ este
