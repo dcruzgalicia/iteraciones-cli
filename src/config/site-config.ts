@@ -199,7 +199,7 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
     font: '\\normalsize\\normalfont\\itshape',
     rule: '',
     authorfont: '\\normalsize\\normalfont',
-    authorformat: '#1\\vspace*{32pt}',
+    authorformat: '#1',
   },
   esoPic: false,
   pdfx: false,

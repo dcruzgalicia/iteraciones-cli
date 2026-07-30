@@ -51,8 +51,10 @@ export interface PreambleMeta {
   cwd?: string;
   /** Si el cuerpo LaTeX contiene encabezados (section, chapter, etc.). */
   hasTocEntries?: boolean;
-  /** Si el primer bloque del cuerpo LaTeX es un encabezado (true) o un parrafo (false). */
-  firstBlockIsHeading?: boolean;
+  /** Si el primer bloque del cuerpo LaTeX es un encabezado o dictum (true) o un parrafo (false). */
+  skipNoIndent?: boolean;
+  /** Si el primer bloque del cuerpo LaTeX es solo un parrafo (no heading, no dictum). */
+  skipParagraphSpace?: boolean;
 }
 
 /** Descubre archivos .bib en el proyecto (excluye node_modules, .iteraciones, dist). */
@@ -406,10 +408,11 @@ export async function buildLatexPreamble(
   }
 
   // ── ESPACIO TRAS PORTADA/INDICE ──
-  // Solo cuando el PRIMER bloque del cuerpo NO es un encabezado.
+  // Solo cuando el PRIMER bloque es un parrafo (no heading, no dictum).
   // Los encabezados (section, chapter) usan su propio espaciado
-  // mediante \\RedeclareSectionCommand.
-  if (!meta?.firstBlockIsHeading) {
+  // mediante \\RedeclareSectionCommand. Los dictum tienen el suyo
+  // propio desde el transpiler.
+  if (!meta?.skipParagraphSpace) {
     preamble.push('\\vspace*{2\\baselineskip}');
   }
 

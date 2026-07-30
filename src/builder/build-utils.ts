@@ -216,15 +216,35 @@ export async function generateLatexPreamble(
     }
     // Detectar si el cuerpo tiene encabezados (para evitar TOC vacio)
     const hasTocEntries = /\\(chapter|section|subsection|subsubsection|paragraph)\{/.test(texBody);
-    // Detectar si el primer bloque es un encabezado
-    const firstBlockIsHeading = /^\s*\\(chapter|section|subsection|subsubsection|paragraph)\{/.test(texBody.trimStart());
+    // Detectar primer bloque para decisiones de espaciado
+    const trimmed = texBody.trimStart();
+    const isSectionStart =
+      trimmed.startsWith('\\chapter{') ||
+      trimmed.startsWith('\\section{') ||
+      trimmed.startsWith('\\subsection{') ||
+      trimmed.startsWith('\\subsubsection{') ||
+      trimmed.startsWith('\\paragraph{');
+    const isDictumStart = trimmed.startsWith('\\dictum[') || trimmed.startsWith('\\dictum{') || trimmed.startsWith('\\vspace*{');
+    // Para \\noindent: no agregar antes de headings NI dictum
+    const skipNoIndent = isSectionStart || isDictumStart;
+    // Para \\vspace*{2\\baselineskip}: no agregar solo antes de headings (dictum SI lo necesita)
+    const skipParagraphSpace = isSectionStart;
     // Si el primer bloque es un parrafo, anteponer \\noindent
-    if (!firstBlockIsHeading) {
+    if (!skipNoIndent) {
       texBody = '\\noindent ' + texBody.trimStart();
     }
     const preamble = await buildLatexPreamble(
       siteConfig.format?.pdf,
-      { title: entry.title, subtitle: entry.subtitle, author: entry.author, filePath: join(cwd, relPath), cwd, hasTocEntries, firstBlockIsHeading },
+      {
+        title: entry.title,
+        subtitle: entry.subtitle,
+        author: entry.author,
+        filePath: join(cwd, relPath),
+        cwd,
+        hasTocEntries,
+        skipNoIndent,
+        skipParagraphSpace,
+      },
       siteConfig.disabledPreambleTranspilers,
     );
     const fullTex = [...preamble, '', texBody, '', '\\end{document}'].join('\n');
