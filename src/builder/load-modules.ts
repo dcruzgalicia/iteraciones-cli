@@ -18,20 +18,14 @@ export async function loadModules<T>(pkgDir: string, names: string[], cwd?: stri
   }
 
   if (cwd && projectSubdir) {
-    const projectDir = join(cwd, projectSubdir);
-    const projectDirExists = await Bun.file(projectDir)
-      .exists()
-      .catch(() => false);
-    if (projectDirExists) {
-      for (const name of names) {
-        const projectPath = join(projectDir, `${name}.ts`);
-        const exists = await Bun.file(projectPath)
-          .exists()
-          .catch(() => false);
-        if (exists) {
-          const mod = (await import(projectPath)) as T;
-          modules.set(name, mod);
-        }
+    for (const name of names) {
+      const projectPath = join(cwd, projectSubdir, `${name}.ts`);
+      const exists = await Bun.file(projectPath)
+        .exists()
+        .catch(() => false);
+      if (exists) {
+        const mod = (await import(projectPath)) as T;
+        modules.set(name, mod);
       }
     }
   }
