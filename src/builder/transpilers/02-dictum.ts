@@ -2,7 +2,8 @@ import { blockContent, blocksToLatex, hasClass } from './_ast-utils.js';
 
 /**
  * Transpiler AST: transforma Divs con clase .dictum a comandos
- * \dictum[author]{quote} en LaTeX.
+ * \dictum[author]{quote} en LaTeX, con espacio superior e inferior
+ * configurables mediante atributos beforeskip y afterskip.
  *
  * Se ejecuta sobre el JSON AST de pandoc (después del parseo inicial).
  *
@@ -10,7 +11,12 @@ import { blockContent, blocksToLatex, hasClass } from './_ast-utils.js';
  *   ::: {.dictum}
  *   Contenido de la cita
  *   :::
- *   → \dictum{Contenido de la cita}
+ *   → \vspace*{0.5\topskip}\dictum{Contenido de la cita}\vspace*{32pt}
+ *
+ *   ::: {.dictum beforeskip="1\\baselineskip" afterskip="24pt"}
+ *   Contenido de la cita
+ *   :::
+ *   → \vspace*{1\baselineskip}\dictum{Contenido de la cita}\vspace*{24pt}
  *
  *   ::: {.dictum}
  *   Contenido de la cita
@@ -19,7 +25,7 @@ import { blockContent, blocksToLatex, hasClass } from './_ast-utils.js';
  *   Autor
  *   :::
  *   :::
- *   → \dictum[Autor]{Contenido de la cita}
+ *   → \vspace*{0.5\topskip}\dictum[Autor]{Contenido de la cita}\vspace*{32pt}
  */
 
 export const type = 'ast' as const;
@@ -30,6 +36,15 @@ export const type = 'ast' as const;
 
 async function processDictum(block: Record<string, unknown>): Promise<unknown> {
   const content = blockContent(block);
+
+  // Leer atributos del fenced div: {.dictum beforeskip="..." afterskip="..."}
+  const c = block.c as unknown[];
+  const attrs = Array.isArray(c) && c.length >= 1 ? (c[0] as unknown[]) : [];
+  const kvPairs: [string, string][] = Array.isArray(attrs) && attrs.length >= 3 ? (attrs[2] as [string, string][]) : [];
+  const getAttr = (key: string, fallback: string): string => (Array.isArray(kvPairs) ? kvPairs.find(([k]) => k === key)?.[1] : undefined) ?? fallback;
+
+  const beforeskip = getAttr('beforeskip', '0.5\\topskip');
+  const afterskip = getAttr('afterskip', '32pt');
 
   // Separar autor (Div.author) del resto del contenido
   const quoteBlocks: unknown[] = [];
@@ -54,8 +69,7 @@ async function processDictum(block: Record<string, unknown>): Promise<unknown> {
     authorBlocks.length > 0 ? blocksToLatex(authorBlocks) : Promise.resolve(''),
   ]);
 
-  // Colapsar whitespace: soft breaks dentro de parrafos → espacio,
-  // saltos entre parrafos preservados
+  // Colapsar whitespace
   const PAR_MARKER = '@@PAR@@';
   const clean = (s: string): string =>
     s.replace(/\n\n+/g, PAR_MARKER).replace(/\n/g, ' ').replace(new RegExp(PAR_MARKER, 'g'), '\n\n').replace(/^\s+/, '').replace(/\s+$/, '');
@@ -63,7 +77,9 @@ async function processDictum(block: Record<string, unknown>): Promise<unknown> {
   const quote = clean(quoteLatex);
   const author = clean(authorLatex);
 
-  const cmd = author ? `\\dictum[${author}]{${quote}}` : `\\dictum{${quote}}`;
+  const cmd = author
+    ? `\\vspace*{${beforeskip}}\\dictum[${author}]{${quote}}\\vspace*{${afterskip}}`
+    : `\\vspace*{${beforeskip}}\\dictum{${quote}}\\vspace*{${afterskip}}`;
 
   return { t: 'RawBlock', c: ['latex', cmd] };
 }
