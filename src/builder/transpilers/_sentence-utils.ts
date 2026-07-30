@@ -102,7 +102,7 @@ export function findSentenceBounds(inlines: unknown[]): Array<{ start: number; e
       const nextIdx = findNextNonSpace(inlines, i + 1);
       if (nextIdx !== -1) {
         const nextText = getInlineText(inlines[nextIdx]);
-        if (nextText && /^[A-ZÁÉÍÓÚÜÑ]/.test(nextText.trim())) {
+        if (nextText && /^[A-ZÁÉÍÓÚÜÑ¿¡]/.test(nextText.trim())) {
           bounds.push({ start: sentStart, end: i + 1 });
           sentStart = nextIdx;
           i = nextIdx - 1;
