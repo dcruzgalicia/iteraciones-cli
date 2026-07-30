@@ -13,6 +13,49 @@ const HTML_KNOWN_KEYS = new Set(['theme', 'accent', 'generate']);
 const EPUB_KNOWN_KEYS = new Set(['generate']);
 const MD_KNOWN_KEYS = new Set(['generate']);
 
+// Claves conocidas dentro de format.pdf
+const PDF_KNOWN_KEYS = new Set([
+  'generate',
+  'documentclass',
+  'geometry',
+  'babel',
+  'hyperref',
+  'microtype',
+  'enumitem',
+  'font-family',
+  'setspace',
+  'setstretch',
+  'raggedbottom',
+  'pretolerance',
+  'tolerance',
+  'brokenpenalty',
+  'hyphenpenalty',
+  'finalhyphendemerits',
+  'doublehyphendemerits',
+  'widowpenalty',
+  'clubpenalty',
+  'setlist',
+  'setcounter',
+  'eso-pic',
+  'pdfx',
+  'crop',
+  'page-number',
+  'toc',
+  'show-date',
+  'sectioning',
+  'setkomafont',
+  'dictum',
+]);
+const PDF_DOCUMENTCLASS_KEYS = new Set(['class', 'options']);
+const PDF_GEOMETRY_KEYS = new Set(['options']);
+const PDF_BABEL_KEYS = new Set(['options']);
+const PDF_HYPERREF_KEYS = new Set(['options']);
+const PDF_MICROTYPE_KEYS = new Set(['options']);
+const PDF_ESOPIC_KEYS = new Set(['options']);
+const PDF_SETLIST_ITEM_KEYS = new Set(['command', 'options']);
+const PDF_SECTIONING_LEVEL_KEYS = new Set(['style', 'beforeskip', 'afterskip', 'font', 'align', 'pagestyle']);
+const SECTIONING_LEVEL_NAMES = new Set(['part', 'chapter', 'section', 'subsection', 'subsubsection', 'paragraph', 'subparagraph']);
+
 function warnUnknownKeys(obj: Record<string, unknown>, knownKeys: Set<string>, prefix: string): void {
   for (const key of Object.keys(obj)) {
     if (!knownKeys.has(key)) {
@@ -96,6 +139,59 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
   }
   if (fmtRaw?.markdown && typeof fmtRaw.markdown === 'object' && !Array.isArray(fmtRaw.markdown)) {
     warnUnknownKeys(fmtRaw.markdown as Record<string, unknown>, MD_KNOWN_KEYS, 'format.markdown.');
+  }
+
+  // ── Validar format.pdf ──
+  const pdfRaw = fmtRaw?.pdf as Record<string, unknown> | undefined;
+  if (pdfRaw && typeof pdfRaw === 'object' && !Array.isArray(pdfRaw)) {
+    warnUnknownKeys(pdfRaw, PDF_KNOWN_KEYS, 'format.pdf.');
+
+    // documentclass
+    const dcRaw = pdfRaw.documentclass as Record<string, unknown> | undefined;
+    if (dcRaw && typeof dcRaw === 'object' && !Array.isArray(dcRaw)) {
+      warnUnknownKeys(dcRaw, PDF_DOCUMENTCLASS_KEYS, 'format.pdf.documentclass.');
+    }
+
+    // geometry, babel, hyperref, microtype
+    for (const key of ['geometry', 'babel', 'hyperref', 'microtype'] as const) {
+      const obj = pdfRaw[key] as Record<string, unknown> | undefined;
+      if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+        const keySet =
+          key === 'geometry' ? PDF_GEOMETRY_KEYS : key === 'babel' ? PDF_BABEL_KEYS : key === 'hyperref' ? PDF_HYPERREF_KEYS : PDF_MICROTYPE_KEYS;
+        warnUnknownKeys(obj, keySet, `format.pdf.${key}.`);
+      }
+    }
+
+    // eso-pic (solo cuando es objeto)
+    const esopicRaw = pdfRaw['eso-pic'] as Record<string, unknown> | undefined;
+    if (esopicRaw && typeof esopicRaw === 'object' && !Array.isArray(esopicRaw)) {
+      warnUnknownKeys(esopicRaw, PDF_ESOPIC_KEYS, 'format.pdf.eso-pic.');
+    }
+
+    // setlist (array de objetos)
+    const setlistRaw = pdfRaw.setlist as unknown[] | undefined;
+    if (Array.isArray(setlistRaw)) {
+      for (let i = 0; i < setlistRaw.length; i++) {
+        const item = setlistRaw[i] as Record<string, unknown> | undefined;
+        if (item && typeof item === 'object') {
+          warnUnknownKeys(item, PDF_SETLIST_ITEM_KEYS, `format.pdf.setlist[${i}].`);
+        }
+      }
+    }
+
+    // sectioning
+    const secRaw = pdfRaw.sectioning as Record<string, unknown> | undefined;
+    if (secRaw && typeof secRaw === 'object' && !Array.isArray(secRaw)) {
+      for (const [levelName, levelData] of Object.entries(secRaw)) {
+        if (!SECTIONING_LEVEL_NAMES.has(levelName)) {
+          process.stderr.write(`[iteraciones] _iteraciones.yaml: "format.pdf.sectioning.${levelName}" no es un nivel de seccionamiento válido. Niveles válidos: ${[...SECTIONING_LEVEL_NAMES].join(', ')}
+`);
+        }
+        if (levelData && typeof levelData === 'object' && !Array.isArray(levelData)) {
+          warnUnknownKeys(levelData as Record<string, unknown>, PDF_SECTIONING_LEVEL_KEYS, `format.pdf.sectioning.${levelName}.`);
+        }
+      }
+    }
   }
 
   try {
