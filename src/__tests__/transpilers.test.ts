@@ -115,69 +115,13 @@ describe('03-verse (AST transpiler)', () => {
   });
 });
 
-// ─── 07-mbox-sentence-start ──────────────────────────────────────────────
+// ─── 07-mbox-sentence-end ────────────────────────────────────────────────
 
-describe('07-mbox-sentence-start (AST transpiler)', () => {
+describe('07-mbox-sentence-end (AST transpiler)', () => {
   let mod: any;
 
   beforeAll(async () => {
-    mod = await import('../builder/transpilers/07-mbox-sentence-start.ts');
-  });
-
-  it('exporta type como "ast"', () => {
-    expect(mod.type).toBe('ast');
-  });
-
-  it('exporta una función transform', () => {
-    expect(typeof mod.transform).toBe('function');
-  });
-
-  it('retorna AST sin cambios si no hay bloques Para', async () => {
-    const ast = {
-      'pandoc-api-version': [1, 23],
-      meta: {},
-      blocks: [{ t: 'Header', c: [1, ['title', [], []], [{ t: 'Str', c: 'Título' }]] }],
-    };
-    const result = await mod.transform(ast);
-    expect(result).toEqual(ast);
-  });
-
-  it('retorna AST sin cambios si blocks está vacío', async () => {
-    const ast = { 'pandoc-api-version': [1, 23], meta: {}, blocks: [] };
-    const result = await mod.transform(ast);
-    expect(result).toEqual(ast);
-  });
-
-  it('no modifica un párrafo con menos de 2 palabras', async () => {
-    const ast = {
-      'pandoc-api-version': [1, 23],
-      meta: {},
-      blocks: [{ t: 'Para', c: [{ t: 'Str', c: 'Hola' }] }],
-    };
-    const result = await mod.transform(ast);
-    expect(result).toEqual(ast);
-  });
-
-  it('maneja blocks que no es un array', async () => {
-    const ast = { 'pandoc-api-version': [1, 23], meta: {}, blocks: 'no-array' };
-    const result = await mod.transform(ast);
-    expect(result).toEqual(ast);
-  });
-
-  it('maneja bloque Para sin c (inlines)', async () => {
-    const ast = { 'pandoc-api-version': [1, 23], meta: {}, blocks: [{ t: 'Para' }] };
-    const result = await mod.transform(ast);
-    expect(result).toEqual(ast);
-  });
-});
-
-// ─── 08-mbox-sentence-end ────────────────────────────────────────────────
-
-describe('08-mbox-sentence-end (AST transpiler)', () => {
-  let mod: any;
-
-  beforeAll(async () => {
-    mod = await import('../builder/transpilers/08-mbox-sentence-end.ts');
+    mod = await import('../builder/transpilers/07-mbox-sentence-end.ts');
   });
 
   it('exporta type como "ast"', () => {
@@ -209,6 +153,62 @@ describe('08-mbox-sentence-end (AST transpiler)', () => {
       'pandoc-api-version': [1, 23],
       meta: {},
       blocks: [{ t: 'Para', c: [{ t: 'Str', c: 'Hola' }, { t: 'Space' }, { t: 'Str', c: 'mundo' }] }],
+    };
+    const result = await mod.transform(ast);
+    expect(result).toEqual(ast);
+  });
+
+  it('maneja blocks que no es un array', async () => {
+    const ast = { 'pandoc-api-version': [1, 23], meta: {}, blocks: 'no-array' };
+    const result = await mod.transform(ast);
+    expect(result).toEqual(ast);
+  });
+
+  it('maneja bloque Para sin c (inlines)', async () => {
+    const ast = { 'pandoc-api-version': [1, 23], meta: {}, blocks: [{ t: 'Para' }] };
+    const result = await mod.transform(ast);
+    expect(result).toEqual(ast);
+  });
+});
+
+// ─── 08-mbox-sentence-start ──────────────────────────────────────────────
+
+describe('08-mbox-sentence-start (AST transpiler)', () => {
+  let mod: any;
+
+  beforeAll(async () => {
+    mod = await import('../builder/transpilers/08-mbox-sentence-start.ts');
+  });
+
+  it('exporta type como "ast"', () => {
+    expect(mod.type).toBe('ast');
+  });
+
+  it('exporta una función transform', () => {
+    expect(typeof mod.transform).toBe('function');
+  });
+
+  it('retorna AST sin cambios si no hay bloques Para', async () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [{ t: 'Header', c: [1, ['title', [], []], [{ t: 'Str', c: 'Título' }]] }],
+    };
+    const result = await mod.transform(ast);
+    expect(result).toEqual(ast);
+  });
+
+  it('retorna AST sin cambios si blocks está vacío', async () => {
+    const ast = { 'pandoc-api-version': [1, 23], meta: {}, blocks: [] };
+    const result = await mod.transform(ast);
+    expect(result).toEqual(ast);
+  });
+
+  it('no modifica un párrafo con menos de 2 palabras', async () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [{ t: 'Para', c: [{ t: 'Str', c: 'Hola' }] }],
     };
     const result = await mod.transform(ast);
     expect(result).toEqual(ast);
