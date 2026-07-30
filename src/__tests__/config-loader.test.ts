@@ -239,7 +239,6 @@ describe('loadSiteConfig', () => {
       expect(config.format.pdf?.pdfx).toBe(false);
       expect(config.format.pdf?.toc).toBe(false);
       expect(config.format.pdf?.crop).toBe(false);
-      expect(config.format.pdf?.mathptmx).toBe(true);
     });
   });
 

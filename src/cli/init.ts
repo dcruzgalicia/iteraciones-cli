@@ -177,7 +177,8 @@ function buildDefaultConfig(): string {
   }
 
   // ── 3. FUENTE ──
-  lines.push(`    mathptmx: ${yamlBool(pdfCfg.mathptmx ?? true)}`);
+  lines.push('    font-family:');
+  lines.push('      - name: mathptmx');
 
   // ── 4. INTERLINEADO ──
   lines.push(`    setspace: ${yamlBool(pdfCfg.setspace ?? true)}`);

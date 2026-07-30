@@ -85,7 +85,7 @@ const PdfFormatSchema = z.object({
   hyperref: z.object({ options: z.array(z.string()).default(['hidelinks']) }).optional(),
   microtype: z.object({ options: z.array(z.string()) }).optional(),
   enumitem: z.boolean().default(true),
-  mathptmx: z.boolean().default(true),
+  'font-family': z.array(z.object({ name: z.string(), options: z.array(z.string()).optional() })).optional(),
   setspace: z.boolean().default(true),
   setstretch: z.number().positive().default(1.5),
   raggedbottom: z.boolean().default(true),
