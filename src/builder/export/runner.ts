@@ -11,7 +11,7 @@ import { runPandoc } from '../../lib/pandoc-runner.js';
 import { mapWithConcurrency } from '../../lib/run.js';
 import { computeSlug } from '../discover.js';
 import { discoverBibFiles } from '../latex-preamble.js';
-import { type BuildDocument, isExportSkipped } from '../types.js';
+import type { BuildDocument } from '../types.js';
 import { assembleExportDocument } from './assemble.js';
 
 import type { ExportDocument, ExportMetadata } from './types.js';
@@ -130,10 +130,6 @@ export async function runExportDocuments(exportableDocs: BuildDocument[], option
 
   const pdfConcurrency = hasPdf ? maxSlots : concurrency;
   await mapWithConcurrency(exportableDocs, pdfConcurrency, async (doc): Promise<void> => {
-    if (isExportSkipped(doc.frontmatter)) {
-      return;
-    }
-
     const exportDoc = assembleExportDocument(doc, lang, cwd, globalBibliography, undefined, config.pdf);
     if (!exportDoc) return;
 
@@ -162,12 +158,7 @@ function buildYamlHeader(doc: ExportDocument): string {
     header['toc-depth'] = metadata.tocDepth;
   }
 
-  // Metadatos editoriales opcionales
-  if (metadata.isbn) header.isbn = metadata.isbn;
-  if (metadata.publisher) header.publisher = metadata.publisher;
-  if (metadata.description) header.description = metadata.description;
-  if (metadata.rights) header.rights = metadata.rights;
-  if (metadata.cover) header['cover-image'] = metadata.cover;
+  // Bibliografía global (auto-descubierta de archivos .bib del proyecto)
   if (metadata.bibliography) {
     header.bibliography = metadata.bibliography;
   }
@@ -179,13 +170,6 @@ function buildYamlHeader(doc: ExportDocument): string {
     }
   }
 
-  if (metadata.abstract) header.abstract = metadata.abstract;
-  if (metadata.keywords && metadata.keywords.length > 0) {
-    header.keywords = metadata.keywords;
-  }
-
-  // Comillas dobles en valores (claves plain) para paridad con el formato
-  // anterior y máxima compatibilidad con pandoc
   return `---\n${stringify(header, { defaultKeyType: 'PLAIN', defaultStringType: 'QUOTE_DOUBLE' })}---\n`;
 }
 
@@ -196,10 +180,6 @@ async function convertToEpub(htmlBody: string, outputPath: string, doc?: ExportD
   await mkdir(dirname(outputPath), { recursive: true });
 
   const args = ['pandoc', '--from', 'html', '--to', 'epub3', '--output', outputPath];
-
-  if (doc?.metadata.cover) {
-    args.push('--epub-cover-image', doc.metadata.cover);
-  }
 
   if (doc?.metadata.bibliography) {
     args.push('--citeproc');

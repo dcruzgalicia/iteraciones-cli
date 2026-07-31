@@ -4,18 +4,11 @@ export interface ExportMetadata {
   author: string[];
   date?: string;
   lang: string;
-  isbn?: string;
-  publisher?: string;
-  description?: string;
-  rights?: string;
-  cover?: string;
   bibliography?: string;
   csl?: string;
   documentclass: 'scrartcl' | 'scrbook';
   toc: boolean;
   tocDepth?: number;
-  abstract?: string;
-  keywords?: string[];
 }
 
 /** Documento listo para exportación. */

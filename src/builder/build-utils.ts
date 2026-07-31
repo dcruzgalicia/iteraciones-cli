@@ -143,7 +143,6 @@ export interface HtmlTemplateVars {
   accent?: string;
   css?: string;
   author?: string[];
-  description?: string;
 }
 
 const VAR_RE = /[\w-]+/;
@@ -177,7 +176,6 @@ export async function renderHtmlPage(fragment: string, vars: HtmlTemplateVars): 
     accent,
     css: vars.css,
     'author-meta': vars.author?.join(', '),
-    'description-meta': vars.description,
   };
   return renderTemplate(template, templateVars);
 }

@@ -32,10 +32,9 @@ function normalizeStringList(value: unknown): string[] {
 function emptyFrontmatter(): Frontmatter {
   return {
     title: '',
+    subtitle: undefined,
     date: '',
     author: [],
-    type: '',
-    keywords: [],
   };
 }
 
@@ -43,10 +42,9 @@ function normalizeFrontmatter(data: Record<string, unknown>): Frontmatter {
   return {
     ...data,
     title: typeof data.title === 'string' ? data.title : '',
+    subtitle: typeof data.subtitle === 'string' && data.subtitle.trim() ? data.subtitle.trim() : undefined,
     date: typeof data.date === 'string' ? data.date : data.date instanceof Date ? data.date.toISOString().slice(0, 10) : '',
     author: normalizeStringList(data.author),
-    type: typeof data.type === 'string' ? data.type : '',
-    keywords: Array.isArray(data.keywords) ? data.keywords.filter((k): k is string => typeof k === 'string') : [],
   };
 }
 
@@ -106,10 +104,9 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
     }
 
     const match = FRONTMATTER_RE.exec(raw);
-    if (!match) continue; // sin frontmatter → válido (type: 'file' por defecto)
+    if (!match) continue; // sin frontmatter → válido
 
     // Validar sintaxis YAML y normalizar el frontmatter en un solo paso.
-    let parsed: Record<string, unknown>;
     let fm: ReturnType<typeof parseFrontmatter>['frontmatter'];
     try {
       const result = Bun.YAML.parse(match[1] ?? '');
@@ -120,39 +117,12 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
         });
         continue;
       }
-      parsed = result as Record<string, unknown>;
       fm = parseFrontmatter(raw).frontmatter;
     } catch (err) {
       errors.push({
         file: entry,
         message: `frontmatter YAML inválido: ${err instanceof Error ? err.message : String(err)}`,
       });
-      continue;
-    }
-
-    // Validar rutas de archivos editoriales (editorial.cover, .bibliography, .csl).
-    const rawEditorial =
-      typeof parsed['editorial'] === 'object' && parsed['editorial'] !== null ? (parsed['editorial'] as Record<string, unknown>) : null;
-
-    if (rawEditorial) {
-      const editorialPaths: Array<[string, string]> = [
-        ['editorial.cover', typeof rawEditorial['cover'] === 'string' ? rawEditorial['cover'] : ''],
-        ['editorial.bibliography', typeof rawEditorial['bibliography'] === 'string' ? rawEditorial['bibliography'] : ''],
-        ['editorial.csl', typeof rawEditorial['csl'] === 'string' ? rawEditorial['csl'] : ''],
-      ];
-      for (const [fieldName, fieldValue] of editorialPaths) {
-        if (!fieldValue) continue;
-        const absFilePath = join(cwd, fieldValue);
-        const fileExists = await stat(absFilePath)
-          .then((s) => s.isFile())
-          .catch(() => false);
-        if (!fileExists) {
-          errors.push({
-            file: entry,
-            message: `${fieldName}: "${fieldValue}" no existe en el proyecto`,
-          });
-        }
-      }
     }
   }
   return { errors, warnings };

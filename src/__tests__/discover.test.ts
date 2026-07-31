@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'bun:test';
 import { buildDocsFromIndex, computeSlug } from '../builder/discover.js';
-import { type Frontmatter, isExportSkipped } from '../builder/types.js';
 
 describe('computeSlug', () => {
   it('genera slug desde el título', () => {
@@ -123,34 +122,10 @@ describe('buildDocsFromIndex', () => {
     expect(docs[0]?.frontmatter.title).toBe('Sin título');
     expect(docs[0]?.frontmatter.author).toEqual([]);
     expect(docs[0]?.frontmatter.date).toBe('');
-    expect(docs[0]?.frontmatter.keywords).toEqual([]);
   });
 
   it('asigna filePath correcto', () => {
     const docs = buildDocsFromIndex(['sub/documento.md'], new Map(), '/raiz');
     expect(docs[0]?.filePath).toBe('/raiz/sub/documento.md');
-  });
-});
-
-describe('isExportSkipped', () => {
-  const baseFm: Frontmatter = { title: 'Test', date: '2024-01-01', author: [], keywords: [] };
-
-  it('retorna false cuando no hay campo export', () => {
-    expect(isExportSkipped(baseFm)).toBe(false);
-  });
-
-  it('retorna true cuando export.skip es true', () => {
-    const fm: Frontmatter = { ...baseFm, export: { skip: true } };
-    expect(isExportSkipped(fm)).toBe(true);
-  });
-
-  it('retorna false cuando export.skip es false', () => {
-    const fm: Frontmatter = { ...baseFm, export: { skip: false } };
-    expect(isExportSkipped(fm)).toBe(false);
-  });
-
-  it('retorna false cuando export no es un objeto', () => {
-    const fm: Frontmatter = { ...baseFm, export: 'skip' as unknown as Record<string, unknown> };
-    expect(isExportSkipped(fm)).toBe(false);
   });
 });
