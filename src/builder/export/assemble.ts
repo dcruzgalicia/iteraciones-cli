@@ -50,10 +50,12 @@ function renderMarkdownInlineLatex(text: string): string {
 
 /**
  * Escapa caracteres especiales de LaTeX.
+ * Usa un placeholder para el backslash para que las llaves de
+ * \textbackslash{} no se re-escapen.
  */
 function escapeLatex(s: string): string {
   return s
-    .replace(/\\/g, '\\textbackslash{}')
+    .replace(/\\/g, '@@BS@@')
     .replace(/{/g, '\\{')
     .replace(/}/g, '\\}')
     .replace(/\$/g, '\\$')
@@ -62,7 +64,9 @@ function escapeLatex(s: string): string {
     .replace(/\^/g, '\\textasciicircum{}')
     .replace(/_/g, '\\_')
     .replace(/~/g, '\\textasciitilde{}')
-    .replace(/%/g, '\\%');
+    .replace(/%/g, '\\%')
+    .split('@@BS@@')
+    .join('\\textbackslash{}');
 }
 
 import { dirname, join, resolve } from 'node:path';
