@@ -128,16 +128,16 @@ Además, existen los **preamble transpilers** que modifican el preámbulo LaTeX.
 
 | Nombre | Archivo | Propósito |
 |--------|---------|-----------|
-| 01-maketitle-patches | `preamble/01-maketitle-patches.ts` | Personaliza `\maketitle` |
-| 02-environments | `preamble/02-environments.ts` | Redefine center/flushright sin espacio extra |
-| 03-toc-styling | `preamble/03-toc-styling.ts` | Estilo del índice |
-| 04-toc-section | `preamble/04-toc-section.ts` | TOC como `\section*` |
-| 05-bibliography-heading | `preamble/05-bibliography-heading.ts` | Título de bibliografía como section |
-| 06-hyphenation-rules | `preamble/06-hyphenation-rules.ts` | Reglas de partición de palabras |
+| 01-maketitle-patches | `lib/resources/preamble/01-maketitle-patches.tex` | Personaliza `\maketitle` |
+| 02-environments | `lib/resources/preamble/02-environments.tex` | Redefine center/flushright sin espacio extra |
+| 03-toc-styling | `lib/resources/preamble/03-toc-styling.tex` | Estilo del índice |
+| 04-toc-section | `lib/resources/preamble/04-toc-section.tex` | TOC como `\section*` |
+| 05-bibliography-heading | `lib/resources/preamble/05-bibliography-heading.tex` | Título de bibliografía como section |
+| 06-hyphenation-rules | `lib/resources/preamble/06-hyphenation-rules.tex` | Reglas de partición de palabras |
 
 ### Extensibilidad
 
-Los transpilers del proyecto con el mismo nombre reemplazan a los del paquete (override). Para desactivar un transpiler se usa `disabled-transpilers` en `_iteraciones.yaml`.
+Los preamble transpilers del proyecto con el mismo nombre (`<proyecto>/preamble/<nombre>.tex`) reemplazan a los del paquete (override). Para desactivar uno se usa `disabled-preamble-transpilers` en `_iteraciones.yaml`.
 
 ---
 

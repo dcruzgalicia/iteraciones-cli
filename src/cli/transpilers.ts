@@ -48,6 +48,6 @@ export async function runTranspilers(cwd: string): Promise<void> {
     } else {
       process.stdout.write('Para desactivar uno, agrégalo a la lista `disabled-preamble-transpilers:` en _iteraciones.yaml.\n');
     }
-    process.stdout.write('Para sobrescribir un preamble transpiler, crea `<proyecto>/preamble/<nombre>.ts`.\n');
+    process.stdout.write('Para sobrescribir un preamble transpiler, crea `<proyecto>/preamble/<nombre>.tex` con contenido LaTeX.\n');
   }
 }

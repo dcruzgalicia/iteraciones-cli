@@ -1,31 +1,44 @@
 import { beforeAll, describe, expect, it } from 'bun:test';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { BUILTIN_PREAMBLE_TRANSPILERS, getBuiltinPreambleTranspilerInfos, loadPreambleTranspilers } from '../builder/preamble-loader.js';
 
-// ─── 05-bibliography-heading ────────────────────────────────────────────────
-
-describe('05-bibliography-heading (preamble transpiler)', () => {
-  let mod: any;
-
-  beforeAll(async () => {
-    mod = await import('../builder/preamble/05-bibliography-heading.ts');
+describe('preamble-loader', () => {
+  it('lista los 6 transpilers built-in con descripción', () => {
+    const infos = getBuiltinPreambleTranspilerInfos();
+    expect(infos).toHaveLength(6);
+    expect(infos.map((i) => i.name)).toEqual(BUILTIN_PREAMBLE_TRANSPILERS);
+    expect(infos.every((i) => i.description.length > 0)).toBe(true);
   });
 
-  it('exporta una función process', () => {
-    expect(typeof mod.process).toBe('function');
+  it('carga el contenido .tex del paquete para todos los transpilers', async () => {
+    const transpilers = await loadPreambleTranspilers();
+    expect(transpilers).toHaveLength(6);
+    const biblio = transpilers.find((t) => t.name === '05-bibliography-heading');
+    expect(biblio?.content).toContain('\\ifcsname ver@biblatex.sty\\endcsname');
+    expect(biblio?.content).toContain('\\defbibheading{bibintoc}[\\refname]{%');
+    const maketitle = transpilers.find((t) => t.name === '01-maketitle-patches');
+    expect(maketitle?.content).toContain('\\renewcommand{\\maketitle}{%');
   });
 
-  it('emite defbibheading condicionado a que biblatex esté cargado', () => {
-    const preamble: string[] = [];
-    mod.process(preamble, {});
-    const joined = preamble.join('\n');
-    expect(joined).toContain('\\ifcsname ver@biblatex.sty\\endcsname');
-    expect(joined).toContain('\\defbibheading{bibintoc}[\\refname]{%');
-    expect(joined).toContain('\\fi');
-    // El defbibheading solo puede ejecutarse dentro del condicional
-    const ifIdx = joined.indexOf('\\ifcsname');
-    const defIdx = joined.indexOf('\\defbibheading');
-    const fiIdx = joined.lastIndexOf('\\fi');
-    expect(ifIdx).toBeGreaterThan(-1);
-    expect(defIdx).toBeGreaterThan(ifIdx);
-    expect(defIdx).toBeLessThan(fiIdx);
+  it('respeta la disabled list', async () => {
+    const transpilers = await loadPreambleTranspilers(['06-hyphenation-rules']);
+    expect(transpilers.map((t) => t.name)).not.toContain('06-hyphenation-rules');
+    expect(transpilers).toHaveLength(5);
+  });
+
+  it('un .tex del proyecto reemplaza al del paquete', async () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-preamble-'));
+    try {
+      mkdirSync(join(cwd, 'preamble'), { recursive: true });
+      writeFileSync(join(cwd, 'preamble', '06-hyphenation-rules.tex'), '% --- Override de proyecto ---\n\\hyphenation{OverridePrueba}\n');
+      const transpilers = await loadPreambleTranspilers(undefined, cwd);
+      const hyphen = transpilers.find((t) => t.name === '06-hyphenation-rules');
+      expect(hyphen?.content).toContain('OverridePrueba');
+      expect(hyphen?.content).not.toContain('Separacion silabica');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
   });
 });
