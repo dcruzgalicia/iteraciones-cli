@@ -359,7 +359,7 @@ export async function buildLatexPreamble(
   const cwdForTranspilers = meta?.cwd;
   const preambleTranspilers = await loadPreambleTranspilers(disabledPreambleTranspilers, cwdForTranspilers);
   for (const tp of preambleTranspilers) {
-    tp.process(preamble, fmt);
+    preamble.push(tp.content.trimEnd());
   }
 
   // ── CUERPO DEL DOCUMENTO ──

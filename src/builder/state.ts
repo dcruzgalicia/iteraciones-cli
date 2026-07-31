@@ -79,10 +79,16 @@ export async function saveStateFile(cwd: string, state: StateFile): Promise<void
  */
 export async function computeTranspilerHash(cwd: string, siteConfig: SiteConfig): Promise<string> {
   const parts: string[] = [];
-  const dirs = [join(import.meta.dir, 'transpilers'), join(import.meta.dir, 'preamble'), join(cwd, 'transpilers'), join(cwd, 'preamble')];
-  for (const dir of dirs) {
+  // [directorio, glob]: los transpilers AST/string son .ts; los preamble son .tex
+  const specs: Array<[string, string]> = [
+    [join(import.meta.dir, 'transpilers'), '*.ts'],
+    [join(import.meta.dir, '../lib/resources/preamble'), '*.tex'],
+    [join(cwd, 'transpilers'), '*.ts'],
+    [join(cwd, 'preamble'), '*.tex'],
+  ];
+  for (const [dir, glob] of specs) {
     try {
-      const files = [...new Bun.Glob('*.ts').scanSync({ cwd: dir })].sort();
+      const files = [...new Bun.Glob(glob).scanSync({ cwd: dir })].sort();
       for (const file of files) {
         parts.push(file, await Bun.file(join(dir, file)).text());
       }
