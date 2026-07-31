@@ -215,7 +215,7 @@ export async function generateLatexPreamble(
       continue;
     }
     // Detectar si el cuerpo tiene encabezados (para evitar TOC vacio)
-    const hasTocEntries = /\\(chapter|section|subsection|subsubsection|paragraph)\{/.test(texBody);
+    const hasTocEntries = /\\(chapter|section|subsection|subsubsection|paragraph|subparagraph)\{/.test(texBody);
     // Detectar primer bloque para decisiones de espaciado
     const trimmed = texBody.trimStart();
     const isSectionStart =
@@ -223,7 +223,8 @@ export async function generateLatexPreamble(
       trimmed.startsWith('\\section{') ||
       trimmed.startsWith('\\subsection{') ||
       trimmed.startsWith('\\subsubsection{') ||
-      trimmed.startsWith('\\paragraph{');
+      trimmed.startsWith('\\paragraph{') ||
+      trimmed.startsWith('\\subparagraph{');
     const isDictumStart = trimmed.startsWith('\\dictum[') || trimmed.startsWith('\\dictum{') || trimmed.startsWith('\\vspace*{');
     // Para \\noindent: no agregar antes de headings NI dictum
     const skipNoIndent = isSectionStart || isDictumStart;
