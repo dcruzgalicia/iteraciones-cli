@@ -81,24 +81,6 @@ Este fenómeno ha sido ampliamente estudiado [@garcia2023; @mendez2024].
 Según @ejemplo2024, el uso de citekeys facilita la gestión de referencias.
 ```
 
-## Epígrafe (dictum)
-
-Se puede declarar un epígrafe al inicio del documento usando el campo `dictum` en el frontmatter. Aplica solo a la exportación PDF.
-
-```yaml
----
-title: 'Mi artículo'
-dictum:
-  - text: 'Dios hizo los números enteros, el resto es obra del hombre.'
-    author: 'Leopold Kronecker'
----
-```
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `text` | `string` | Texto de la cita. |
-| `author` | `string` | Autor de la cita (opcional). |
-
 ## Campos personalizados
 
 El frontmatter acepta campos arbitrarios. Los campos no reconocidos se ignoran en el procesamiento estándar.
