@@ -1,7 +1,6 @@
-import { readFile, stat } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { IGNORED_DIRS } from '../builder/discover.js';
-import type { Frontmatter } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { ConfigError } from '../lib/errors.js';
 import { checkLatexEngine } from './doctor/system-checks.js';
@@ -9,66 +8,6 @@ import { checkLatexEngine } from './doctor/system-checks.js';
 type ValidationError = { file: string; message: string };
 
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
-
-interface ParsedFile {
-  frontmatter: Frontmatter;
-  body: string;
-}
-
-function normalizeStringList(value: unknown): string[] {
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    return trimmed ? [trimmed] : [];
-  }
-  if (Array.isArray(value)) {
-    return value
-      .filter((item): item is string => typeof item === 'string')
-      .map((item) => item.trim())
-      .filter(Boolean);
-  }
-  return [];
-}
-
-function emptyFrontmatter(): Frontmatter {
-  return {
-    title: '',
-    subtitle: undefined,
-    date: '',
-    author: [],
-  };
-}
-
-function normalizeFrontmatter(data: Record<string, unknown>): Frontmatter {
-  return {
-    ...data,
-    title: typeof data.title === 'string' ? data.title : '',
-    subtitle: typeof data.subtitle === 'string' && data.subtitle.trim() ? data.subtitle.trim() : undefined,
-    date: typeof data.date === 'string' ? data.date : data.date instanceof Date ? data.date.toISOString().slice(0, 10) : '',
-    author: normalizeStringList(data.author),
-  };
-}
-
-function parseFrontmatter(raw: string): ParsedFile {
-  const match = raw.match(FRONTMATTER_RE);
-
-  if (!match) return { frontmatter: emptyFrontmatter(), body: raw };
-
-  let data: Record<string, unknown> = {};
-  try {
-    const parsed = Bun.YAML.parse(match[1] ?? '');
-    if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed) && Object.getPrototypeOf(parsed) === Object.prototype) {
-      data = parsed as Record<string, unknown>;
-    } else {
-      return { frontmatter: emptyFrontmatter(), body: raw };
-    }
-  } catch {
-    return { frontmatter: emptyFrontmatter(), body: raw };
-  }
-
-  const body = raw.slice(match[0].length);
-
-  return { frontmatter: normalizeFrontmatter(data), body };
-}
 
 // theme se pasa desde runValidate para evitar que loadSiteConfig se llame dos veces
 // (una en validateConfig + otra aquí), lo que duplicaría los warnings de stderr.
@@ -106,8 +45,7 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
     const match = FRONTMATTER_RE.exec(raw);
     if (!match) continue; // sin frontmatter → válido
 
-    // Validar sintaxis YAML y normalizar el frontmatter en un solo paso.
-    let fm: ReturnType<typeof parseFrontmatter>['frontmatter'];
+    // Validar sintaxis YAML del frontmatter.
     try {
       const result = Bun.YAML.parse(match[1] ?? '');
       if (!result || typeof result !== 'object' || Array.isArray(result)) {
@@ -115,9 +53,7 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
           file: entry,
           message: 'frontmatter YAML inválido: debe ser un objeto',
         });
-        continue;
       }
-      fm = parseFrontmatter(raw).frontmatter;
     } catch (err) {
       errors.push({
         file: entry,

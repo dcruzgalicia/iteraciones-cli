@@ -21,7 +21,6 @@ export interface Frontmatter {
   subtitle?: string;
   date: string;
   author: string[];
-  [key: string]: unknown;
 }
 
 /**
