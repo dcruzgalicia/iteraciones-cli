@@ -10,7 +10,7 @@
  *   → "\mbox{Principio} de la oración. \mbox{Otra} oración aquí."
  */
 
-import { classifyInline, findSentenceBounds, getInlineText, isSpace, type MboxWrap } from './_sentence-utils.js';
+import { classifyInline, findSentenceBounds, type MboxWrap } from './_sentence-utils.js';
 
 export const type = 'ast' as const;
 
@@ -35,7 +35,9 @@ function processParaInlines(inlines: unknown[]): unknown[] {
     if (wordIndices.length < 2) continue;
 
     // Envolver SOLO la primera palabra
-    wraps.push({ startIdx: wordIndices[0]!, endIdx: wordIndices[0]! });
+    const firstIdx = wordIndices[0];
+    if (firstIdx === undefined) continue;
+    wraps.push({ startIdx: firstIdx, endIdx: firstIdx });
   }
 
   if (wraps.length === 0) return inlines;

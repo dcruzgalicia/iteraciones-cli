@@ -43,7 +43,10 @@ function processParaInlines(inlines: unknown[]): unknown[] {
     // No superar wordIndices.length-1 para evitar solapamiento con mbox-sentence-start
     const wrapCount = Math.min(idealWrapCount, wordIndices.length - 1);
     const lastWords = wordIndices.slice(-wrapCount);
-    wraps.push({ startIdx: lastWords[0]!, endIdx: lastWords[lastWords.length - 1]! });
+    const firstIdx = lastWords[0];
+    const lastIdx = lastWords[lastWords.length - 1];
+    if (firstIdx === undefined || lastIdx === undefined) continue;
+    wraps.push({ startIdx: firstIdx, endIdx: lastIdx });
   }
 
   if (wraps.length === 0) return inlines;
