@@ -4,11 +4,8 @@ import { basename, dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/site-config.js';
 import { logWarning } from '../lib/logger.js';
 import { run } from '../lib/run.js';
-
-const STATE_PATH = join('.iteraciones', 'changes', 'state.json');
-
-import type { BuildReport } from './discover.js';
 import { buildLatexPreamble } from './latex-preamble.js';
+import { loadStateFile, saveStateFile } from './state.js';
 import type { DiscoveryEntry } from './types.js';
 
 // ── Assets (CSS, fonts, logo) ──────────────────────────────────────────────
@@ -45,10 +42,8 @@ async function generateCss(outputDir: string, cwd: string, accent: string): Prom
         .catch(() => 0);
       if (configMtime > targetMtime) {
         // Leer state.json para saber si el accent cambió
-        const statePath = join(cwd, STATE_PATH);
-        const stateRaw = await readFile(statePath, 'utf8').catch(() => '{}');
-        const state = JSON.parse(stateRaw);
-        if (state.cssAccent === accent) {
+        const state = await loadStateFile(cwd);
+        if (state?.cssAccent === accent) {
           return; // el accent no cambió, no hay nada que hacer
         }
       } else {
@@ -69,14 +64,11 @@ async function generateCss(outputDir: string, cwd: string, accent: string): Prom
   await buildCssWithTailwind(targetCssPath, cwd, accentTheme);
 
   // Persistir el accent actual en state.json para el próximo build
-  const statePath = join(cwd, STATE_PATH);
-  const stateRaw = await readFile(statePath, 'utf8').catch(() => '{}');
-  const state = JSON.parse(stateRaw);
+  const state = (await loadStateFile(cwd)) ?? { startedAt: 0, activeFormats: [], entries: {} };
   state.cssAccent = accent;
   state.activeFormats = state.activeFormats ?? [];
   state.entries = state.entries ?? {};
-  await mkdir(dirname(statePath), { recursive: true });
-  await writeFile(statePath, JSON.stringify(state));
+  await saveStateFile(cwd, state);
 }
 
 async function buildCssWithTailwind(targetCssPath: string, cwd: string, accentTheme: string): Promise<void> {
@@ -196,12 +188,12 @@ export async function generateLatexPreamble(
   cwd: string,
   siteConfig: SiteConfig,
   discoveryIndex: Map<string, DiscoveryEntry>,
-  diff: BuildReport,
+  recentFiles: string[],
 ): Promise<void> {
   const pdfActive = siteConfig.format?.pdf?.generate === true || siteConfig.format?.latex === true;
   if (!pdfActive) return;
   const cacheBase = join(cwd, '.iteraciones');
-  for (const relPath of diff.recentFiles) {
+  for (const relPath of recentFiles) {
     const entry = discoveryIndex.get(relPath);
     if (!entry) continue;
     const slug = entry.slug ?? basename(relPath, '.md');
