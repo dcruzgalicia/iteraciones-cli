@@ -2,21 +2,24 @@ import { blockContent, blocksToLatex, hasClass } from './_ast-utils.js';
 
 /**
  * Transpiler AST: transforma Divs con clase .dictum a comandos
- * \dictum[author]{quote} en LaTeX, con espacio superior e inferior
+ * \\dictum[author]{quote} en LaTeX, con espacio superior e inferior
  * configurables mediante atributos beforeskip y afterskip.
  *
- * Se ejecuta sobre el JSON AST de pandoc (después del parseo inicial).
+ * Si despues de un dictum sigue un parrafo normal, le antepone
+ * \\noindent para evitar sangria.
+ *
+ * Se ejecuta sobre el JSON AST de pandoc (despues del parseo inicial).
  *
  * Convierte:
  *   ::: {.dictum}
  *   Contenido de la cita
  *   :::
- *   → \vspace*{0.5\topskip}\dictum{Contenido de la cita}\vspace*{32pt}
+ *   → \\vspace*{0.5\\topskip}\\dictum{Contenido de la cita}\\vspace*{32pt}
  *
  *   ::: {.dictum beforeskip="1\\baselineskip" afterskip="24pt"}
  *   Contenido de la cita
  *   :::
- *   → \vspace*{1\baselineskip}\dictum{Contenido de la cita}\vspace*{24pt}
+ *   → \\vspace*{1\\baselineskip}\\dictum{Contenido de la cita}\\vspace*{24pt}
  *
  *   ::: {.dictum}
  *   Contenido de la cita
@@ -25,7 +28,10 @@ import { blockContent, blocksToLatex, hasClass } from './_ast-utils.js';
  *   Autor
  *   :::
  *   :::
- *   → \vspace*{0.5\topskip}\dictum[Autor]{Contenido de la cita}\vspace*{32pt}
+ *   → \\vspace*{0.5\\topskip}\\dictum[Autor]{Contenido de la cita}\\vspace*{32pt}
+ *
+ *   Si el siguiente bloque es un parrafo:
+ *   → (dictum) \\noindent Texto del parrafo sin sangria
  */
 
 export const type = 'ast' as const;
@@ -92,6 +98,7 @@ export async function transform(ast: Record<string, unknown>): Promise<Record<st
   const blocks = ast.blocks as unknown[];
 
   const newBlocks: unknown[] = [];
+  let lastWasDictum = false;
 
   for (const block of blocks) {
     if (
@@ -101,8 +108,20 @@ export async function transform(ast: Record<string, unknown>): Promise<Record<st
       hasClass(block as Record<string, unknown>, 'dictum')
     ) {
       newBlocks.push(await processDictum(block as Record<string, unknown>));
+      lastWasDictum = true;
+    } else if (lastWasDictum && typeof block === 'object' && block !== null && (block as Record<string, unknown>).t === 'Para') {
+      // Agregar \\noindent al primer parrafo despues de un dictum
+      const para = block as Record<string, unknown>;
+      const inlines = para.c as unknown[];
+      if (Array.isArray(inlines)) {
+        newBlocks.push({ ...para, c: [{ t: 'RawInline', c: ['latex', '\\noindent '] }, ...inlines] });
+      } else {
+        newBlocks.push(block);
+      }
+      lastWasDictum = false;
     } else {
       newBlocks.push(block);
+      lastWasDictum = false;
     }
   }
 
