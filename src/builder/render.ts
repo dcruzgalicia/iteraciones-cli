@@ -181,7 +181,7 @@ export async function renderLatex(
     }
 
     // Paso 4: convertir el AST modificado a LaTeX
-    const pandocArgs: string[] = ['--top-level-division', 'section'];
+    const pandocArgs: string[] = ['--top-level-division', 'section', '--shift-heading-level-by=2'];
     if (bibFiles.length > 0) {
       pandocArgs.push('--biblatex');
       for (const bib of bibFiles) {
