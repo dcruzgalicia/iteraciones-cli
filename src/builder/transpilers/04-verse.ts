@@ -1,4 +1,4 @@
-import { blockContent, blocksToLatex, hasClass } from './_ast-utils.js';
+import { blockContent, hasClass } from './_ast-utils.js';
 
 /**
  * Transpiler AST: transforma Divs con clase .verse a entorno
@@ -7,6 +7,8 @@ import { blockContent, blocksToLatex, hasClass } from './_ast-utils.js';
  *
  * Si despues de un verse sigue un parrafo normal, le antepone
  * \noindent para evitar sangria.
+ *
+ * Se ejecuta sobre el JSON AST de pandoc (despues del parseo inicial).
  *
  * Convierte:
  *   ::: {.verse}
@@ -22,15 +24,20 @@ import { blockContent, blocksToLatex, hasClass } from './_ast-utils.js';
  *   → \vspace*{1\baselineskip}\begin{verse}
  *       Texto del poema
  *     \end{verse}\vspace*{24pt}
+ *
+ * En lugar de convertir el contenido interno con un proceso pandoc por
+ * bloque (blocksToLatex), se emiten RawBlocks de apertura/cierre alrededor
+ * de los bloques internos nativos: pandoc los convierte en la misma pasada,
+ * con cero procesos extra.
  */
 
 export const type = 'ast' as const;
 
 // ---------------------------------------------------------------------------
-// Procesar un Div.verse → \begin{verse}...\end{verse}
+// Procesar un Div.verse → \begin{verse}...\end{verse} con bloques nativos
 // ---------------------------------------------------------------------------
 
-async function processVerse(block: Record<string, unknown>): Promise<unknown> {
+function processVerse(block: Record<string, unknown>): unknown[] {
   const content = blockContent(block);
 
   // Leer atributos del fenced div: {.verse beforeskip="..." afterskip="..."}
@@ -42,13 +49,11 @@ async function processVerse(block: Record<string, unknown>): Promise<unknown> {
   const beforeskip = getAttr('beforeskip', '3pt');
   const afterskip = getAttr('afterskip', '3pt');
 
-  const verseLatex = await blocksToLatex(content);
-  const clean = (s: string): string => s.replace(/\n\n+/g, '\n\n').replace(/^\s+/, '').replace(/\s+$/, '');
-  const verse = clean(verseLatex);
-
-  const cmd = `\\vspace*{${beforeskip}}\\begin{verse}\n${verse}\n\\end{verse}\\vspace*{${afterskip}}`;
-
-  return { t: 'RawBlock', c: ['latex', cmd] };
+  return [
+    { t: 'RawBlock', c: ['latex', `\\vspace*{${beforeskip}}\\begin{verse}`] },
+    ...content,
+    { t: 'RawBlock', c: ['latex', `\\end{verse}\\vspace*{${afterskip}}`] },
+  ];
 }
 
 // ---------------------------------------------------------------------------
@@ -68,7 +73,7 @@ export async function transform(ast: Record<string, unknown>): Promise<Record<st
       (block as Record<string, unknown>).t === 'Div' &&
       hasClass(block as Record<string, unknown>, 'verse')
     ) {
-      newBlocks.push(await processVerse(block as Record<string, unknown>));
+      newBlocks.push(...processVerse(block as Record<string, unknown>));
       lastWasVerse = true;
     } else if (lastWasVerse && typeof block === 'object' && block !== null && (block as Record<string, unknown>).t === 'Para') {
       // Agregar \noindent al primer parrafo despues de un verse

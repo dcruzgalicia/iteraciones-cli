@@ -1,7 +1,7 @@
-import { blockContent, blocksToLatex, hasClass } from './_ast-utils.js';
+import { blockContent, hasClass, inlinesToLatex } from './_ast-utils.js';
 
 /**
- * Transpiler AST: transforma Divs con clase .dictum a comandos
+ * Transpiler AST: transforma Divs con clase .dictum al comando
  * \\dictum[author]{quote} en LaTeX, con espacio superior e inferior
  * configurables mediante atributos beforeskip y afterskip.
  *
@@ -32,15 +32,22 @@ import { blockContent, blocksToLatex, hasClass } from './_ast-utils.js';
  *
  *   Si el siguiente bloque es un parrafo:
  *   → (dictum) \\noindent Texto del parrafo sin sangria
+ *
+ * En lugar de convertir el contenido interno con un proceso pandoc por
+ * bloque (blocksToLatex), se emiten RawInline/RawBlock de apertura y cierre
+ * alrededor de los bloques internos nativos: pandoc los convierte en la misma
+ * pasada, con cero procesos extra. Los RawInline se pegan al primer/último
+ * párrafo para que pandoc no inserte líneas en blanco (\par) dentro del
+ * argumento de \dictum, que separaría la cita del autor.
  */
 
 export const type = 'ast' as const;
 
 // ---------------------------------------------------------------------------
-// Procesar un Div.dictum → \dictum[author]{quote}
+// Procesar un Div.dictum → \dictum[author]{quote} con bloques nativos
 // ---------------------------------------------------------------------------
 
-async function processDictum(block: Record<string, unknown>): Promise<unknown> {
+function processDictum(block: Record<string, unknown>): unknown[] {
   const content = blockContent(block);
 
   // Leer atributos del fenced div: {.dictum beforeskip="..." afterskip="..."}
@@ -54,7 +61,7 @@ async function processDictum(block: Record<string, unknown>): Promise<unknown> {
 
   // Separar autor (Div.author) del resto del contenido
   const quoteBlocks: unknown[] = [];
-  let authorBlocks: unknown[] = [];
+  let authorLatex = '';
 
   for (const item of content) {
     if (
@@ -63,31 +70,71 @@ async function processDictum(block: Record<string, unknown>): Promise<unknown> {
       (item as Record<string, unknown>).t === 'Div' &&
       hasClass(item as Record<string, unknown>, 'author')
     ) {
-      authorBlocks = blockContent(item as Record<string, unknown>);
+      const authorBlocks = blockContent(item as Record<string, unknown>);
+      // El autor suele ser un parrafo: convertir sus inlines sin proceso pandoc
+      const allParas = authorBlocks.every((b) => typeof b === 'object' && b !== null && (b as Record<string, unknown>).t === 'Para');
+      if (allParas) {
+        const inlines = authorBlocks.flatMap((b) => {
+          const bc = (b as Record<string, unknown>).c;
+          return Array.isArray(bc) ? (bc as unknown[]) : [];
+        });
+        authorLatex = inlinesToLatex(inlines).trim();
+      } else {
+        // Autor con estructura compleja: se conserva dentro de la cita
+        quoteBlocks.push(item);
+      }
     } else {
       quoteBlocks.push(item);
     }
   }
 
-  // Convertir a LaTeX
-  const [quoteLatex, authorLatex] = await Promise.all([
-    blocksToLatex(quoteBlocks),
-    authorBlocks.length > 0 ? blocksToLatex(authorBlocks) : Promise.resolve(''),
-  ]);
+  const opening = `\\vspace*{${beforeskip}}\\dictum${authorLatex ? `[${authorLatex}]` : ''}{`;
+  const closing = `}\\vspace*{${afterskip}}`;
 
-  // Colapsar whitespace
-  const PAR_MARKER = '@@PAR@@';
-  const clean = (s: string): string =>
-    s.replace(/\n\n+/g, PAR_MARKER).replace(/\n/g, ' ').replace(new RegExp(PAR_MARKER, 'g'), '\n\n').replace(/^\s+/, '').replace(/\s+$/, '');
+  // Sin contenido: emitir solo los RawBlocks (\dictum{})
+  if (quoteBlocks.length === 0) {
+    return [
+      { t: 'RawBlock', c: ['latex', opening] },
+      { t: 'RawBlock', c: ['latex', closing] },
+    ];
+  }
 
-  const quote = clean(quoteLatex);
-  const author = clean(authorLatex);
+  const isPara = (b: unknown): boolean => typeof b === 'object' && b !== null && (b as Record<string, unknown>).t === 'Para';
+  const withRawInline = (b: unknown, atStart: boolean, atEnd: boolean): unknown => {
+    const para = b as Record<string, unknown>;
+    const inlines = Array.isArray(para.c) ? (para.c as unknown[]) : [];
+    const newInlines = [...inlines];
+    if (atStart) newInlines.unshift({ t: 'RawInline', c: ['latex', opening] });
+    if (atEnd) newInlines.push({ t: 'RawInline', c: ['latex', closing] });
+    return { ...para, c: newInlines };
+  };
 
-  const cmd = author
-    ? `\\vspace*{${beforeskip}}\\dictum[${author}]{${quote}}\\vspace*{${afterskip}}`
-    : `\\vspace*{${beforeskip}}\\dictum{${quote}}\\vspace*{${afterskip}}`;
-
-  return { t: 'RawBlock', c: ['latex', cmd] };
+  // Los RawInline de apertura/cierre se pegan al primer/último párrafo para
+  // que pandoc no inserte líneas en blanco (\par) dentro del argumento de
+  // \dictum, que separaría la cita del autor.
+  const result: unknown[] = [];
+  for (let i = 0; i < quoteBlocks.length; i++) {
+    const block = quoteBlocks[i];
+    if (block === undefined) continue;
+    const isFirst = i === 0;
+    const isLast = i === quoteBlocks.length - 1;
+    if (isFirst && isLast && isPara(block)) {
+      result.push(withRawInline(block, true, true));
+    } else if (isFirst && isPara(block)) {
+      result.push(withRawInline(block, true, false));
+    } else if (isLast && isPara(block)) {
+      result.push(withRawInline(block, false, true));
+    } else if (isFirst && isLast) {
+      result.push(block, { t: 'RawBlock', c: ['latex', opening] }, { t: 'RawBlock', c: ['latex', closing] });
+    } else if (isFirst) {
+      result.push(block, { t: 'RawBlock', c: ['latex', opening] });
+    } else if (isLast) {
+      result.push(block, { t: 'RawBlock', c: ['latex', closing] });
+    } else {
+      result.push(block);
+    }
+  }
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -107,7 +154,7 @@ export async function transform(ast: Record<string, unknown>): Promise<Record<st
       (block as Record<string, unknown>).t === 'Div' &&
       hasClass(block as Record<string, unknown>, 'dictum')
     ) {
-      newBlocks.push(await processDictum(block as Record<string, unknown>));
+      newBlocks.push(...processDictum(block as Record<string, unknown>));
       lastWasDictum = true;
     } else if (lastWasDictum && typeof block === 'object' && block !== null && (block as Record<string, unknown>).t === 'Para') {
       // Agregar \\noindent al primer parrafo despues de un dictum
