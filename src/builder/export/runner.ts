@@ -187,17 +187,6 @@ function buildYamlHeader(doc: ExportDocument): string {
     }
   }
 
-  if (metadata.dictum && metadata.dictum.length > 0) {
-    lines.push('dictum:');
-    for (const entry of metadata.dictum) {
-      if (entry.author) {
-        lines.push(`  - text: ${yamlString(entry.text)}`);
-        lines.push(`    author: ${yamlString(entry.author)}`);
-      } else {
-        lines.push(`  - text: ${yamlString(entry.text)}`);
-      }
-    }
-  }
   if (metadata.abstract) lines.push(`abstract: ${yamlString(metadata.abstract)}`);
   if (metadata.keywords && metadata.keywords.length > 0) {
     lines.push('keywords:');

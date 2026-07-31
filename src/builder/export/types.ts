@@ -1,9 +1,3 @@
-/** Una entrada de epigrafe (dictum) con cita y autor opcional. */
-export interface DictumEntry {
-  text: string;
-  author?: string;
-}
-
 /** Metadatos editoriales que se inyectan en el YAML header del documento Pandoc. */
 export interface ExportMetadata {
   title: string;
@@ -22,7 +16,6 @@ export interface ExportMetadata {
   tocDepth?: number;
   abstract?: string;
   keywords?: string[];
-  dictum?: DictumEntry[];
 }
 
 /** Documento listo para exportación. */
