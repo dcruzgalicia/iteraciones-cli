@@ -1,0 +1,7 @@
+% --- Estilo del indice (TOC) ---
+\renewcaptionname{spanish}{\contentsname}{\normalsize\normalfont\bfseries Índice}
+\setkomafont{partentry}{\normalsize\normalfont}
+\DeclareTOCStyleEntry[linefill=\TOCLineLeaderFill,beforeskip=2\baselineskip]{tocline}{part}
+\setkomafont{chapterentry}{\normalsize\normalfont\scshape}
+\DeclareTOCStyleEntry[pagenumberbox=\phantom,beforeskip=\baselineskip]{tocline}{chapter}
+\DeclareTOCStyleEntry[entryformat=\normalsize\normalfont]{tocline}{section}

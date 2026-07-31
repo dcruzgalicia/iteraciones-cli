@@ -1,0 +1,10 @@
+% --- TOC como section ---
+\makeatletter
+\renewcommand*{\tableofcontents}{%
+  \begingroup
+    \section*{\contentsname}%
+    \@starttoc{toc}%
+    \thispagestyle{empty}% asegurar que pagina del TOC no tenga numero
+  \endgroup
+}
+\makeatother
