@@ -18,9 +18,9 @@ export type DiscoveryIndex = Map<string, DiscoveryEntry>;
 
 export interface Frontmatter {
   title: string;
+  subtitle?: string;
   date: string;
   author: string[];
-  keywords: string[];
   [key: string]: unknown;
 }
 
@@ -41,12 +41,6 @@ export interface BuildDocument {
 /**
  * Contexto de ejecución del pipeline: config, rutas y opciones de build.
  */
-/** Retorna true si el frontmatter tiene export.skip=true. */
-export function isExportSkipped(frontmatter: Frontmatter): boolean {
-  const raw = frontmatter.export;
-  return typeof raw === 'object' && raw !== null && !Array.isArray(raw) && (raw as Record<string, unknown>).skip === true;
-}
-
 export interface BuildContext {
   siteConfig: SiteConfig;
   cwd: string;

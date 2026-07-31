@@ -14,7 +14,6 @@ import type { RenderLatexResult } from './render.js';
 import { renderLatex } from './render.js';
 import { computeBibHash, computeConfigHashes, computeTranspilerHash } from './state.js';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
-import { isExportSkipped } from './types.js';
 
 export interface BuildOptions {
   outputDir?: string;
@@ -245,14 +244,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const formatsDir = join(cwd, '.iteraciones', 'formats');
   const exportBase = { cwd, lang: ctx.siteConfig.lang, concurrency: ctx.concurrency };
 
-  const countExportDocs = (docs: BuildDocument[]): number => {
-    let count = 0;
-    for (const d of docs) {
-      if (isExportSkipped(d.frontmatter)) continue;
-      count++;
-    }
-    return count;
-  };
+  const countExportDocs = (docs: BuildDocument[]): number => docs.length;
 
   // ── FASE 4: 4 ramas en paralelo ──
   await Promise.all([
@@ -303,7 +295,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       if (!pdfOn && !latexOn) return;
       const pdfDocs = exportSets.pdf;
       if (pdfDocs.length === 0) return;
-      const pdfRelPaths = pdfDocs.filter((d) => !isExportSkipped(d.frontmatter)).map((d) => d.relativePath);
+      const pdfRelPaths = pdfDocs.map((d) => d.relativePath);
       if (pdfRelPaths.length > 0) {
         progress.startPhase('latex', pdfRelPaths.length);
         await generateLatexPreamble(cwd, ctx.siteConfig, discoveryIndex, pdfRelPaths);
@@ -454,7 +446,6 @@ async function generateHtmlPages(ctx: BuildContext, pipelineDocs: BuildDocument[
         accent: htmlConfig?.accent,
         css: hasCss ? 'css/styles.css' : undefined,
         author: doc.frontmatter.author,
-        description: typeof doc.frontmatter.abstract === 'string' ? doc.frontmatter.abstract : undefined,
       });
       await mkdir(dirname(dst), { recursive: true });
       await Bun.write(dst, html);

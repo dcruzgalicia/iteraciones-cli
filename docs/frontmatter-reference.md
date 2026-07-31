@@ -5,75 +5,30 @@ Todos los archivos Markdown pueden declarar metadatos en un bloque YAML al inici
 ```markdown
 ---
 title: 'Mi artículo'
+subtitle: 'Subtítulo opcional'
 date: 2025-01-15
 author:
   - Sofia García
-keywords:
-  - cultura
-  - memoria
+  - Juan Pérez
 ---
 
 Contenido del artículo...
 ```
 
-## Campos comunes
+## Campos
+
+El pipeline consume **4 campos** del frontmatter:
 
 | Campo | Tipo | Por defecto | Descripción |
 |-------|------|-------------|-------------|
-| `title` | `string` | `''` | Título del documento. |
-| `date` | `string` | `''` | Fecha en formato `YYYY-MM-DD`. |
-| `author` | `string \| string[]` | `[]` | Uno o varios autores. |
-| `keywords` | `string \| string[]` | `[]` | Palabras clave del documento. |
+| `title` | `string` | `''` | Título del documento. Se usa para el slug y el maketitle del PDF. |
+| `subtitle` | `string` | — | Subtítulo del documento. Se muestra bajo el título en el maketitle del PDF. |
+| `date` | `string` | — | Fecha en formato `YYYY-MM-DD`. Con `pdf.show-date: true` se muestra en el maketitle; si no se declara, se usa la fecha de creación del archivo. |
+| `author` | `string \| string[]` | `[]` | Uno o varios autores. Hasta 3 participan en el slug (`title-by-author`). |
 
-## Omitir exportación para un documento individual
+## Citas bibliográficas
 
-Un documento puede excluirse de la exportación PDF, EPUB y Markdown mientras sigue apareciendo normalmente en HTML:
-
-```yaml
----
-title: Mi artículo
-export:
-  skip: true
----
-```
-
-Con `export: { skip: true }` en el frontmatter, el documento no genera PDF, EPUB ni Markdown, pero continúa siendo renderizado como HTML.
-
-## Metadatos editoriales
-
-El bloque `editorial` activa metadatos de publicación en los archivos PDF y EPUB generados. Todos los campos son opcionales.
-
-```yaml
----
-title: 'Antología de ensayos'
-editorial:
-  isbn: 978-0-000-00000-0
-  publisher: Editorial Iteraciones
-  rights: CC BY-SA 4.0
-  description: Una colección de textos sobre diseño y tecnología.
-  cover: assets/portada.jpg          # ruta relativa al directorio raíz del proyecto
-  bibliography: referencias.bib      # activa --citeproc; ruta relativa al directorio raíz
-  csl: apa.csl                       # estilo de citas CSL
-  abstract: Resumen del documento    # texto breve que aparece en metadatos
----
-```
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `isbn` | `string` | ISBN del documento. Se incluye en los metadatos del PDF y EPUB. |
-| `publisher` | `string` | Nombre de la editorial o institución publicadora. |
-| `rights` | `string` | Licencia o nota de derechos (p. ej. `CC BY-SA 4.0`). |
-| `description` | `string` | Descripción del documento. |
-| `abstract` | `string` | Resumen o extracto breve. Se usa como meta description en HTML. |
-| `cover` | `string` | Ruta relativa a una imagen de portada. Se usa como portada en EPUB. |
-| `bibliography` | `string` | Ruta relativa a un archivo `.bib`. Activa `--citeproc` de pandoc en PDF y EPUB. |
-| `csl` | `string` | Ruta relativa a un archivo CSL. Controla el formato de citas. Requiere `bibliography`. |
-
-Las rutas de `cover`, `bibliography` y `csl` se validan con `iteraciones validate` antes del build.
-
-### Citas bibliográficas
-
-Cuando `editorial.bibliography` está declarado (o se encuentran archivos `.bib` en el proyecto), las citas en Markdown siguen el formato pandoc `[@clave]`:
+Cuando se encuentran archivos `.bib` en el proyecto (auto-descubrimiento), las citas en Markdown siguen el formato pandoc `[@clave]`:
 
 ```markdown
 Este fenómeno ha sido ampliamente estudiado [@garcia2023; @mendez2024].

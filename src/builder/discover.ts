@@ -390,9 +390,9 @@ export function buildDocsFromIndex(relativePaths: string[], discoveryIndex: Map<
       relativePath,
       frontmatter: {
         title: entry?.title || 'Sin t\u00edtulo',
+        subtitle: entry?.subtitle,
         date: entry?.date ?? '',
         author: entry?.author ?? [],
-        keywords: [],
       },
     };
   });
