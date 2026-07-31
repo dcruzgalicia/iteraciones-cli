@@ -1,4 +1,4 @@
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import type { PdfFormatConfig } from '../../config/site-config.js';
 import type { BuildDocument } from '../types.js';
 import type { ExportDocument, ExportMetadata } from './types.js';
@@ -10,7 +10,6 @@ import type { ExportDocument, ExportMetadata } from './types.js';
 export function assembleExportDocument(
   doc: BuildDocument,
   lang: string,
-  cwd: string,
   globalBibliography?: string,
   globalCsl?: string,
   pdfFormat?: PdfFormatConfig,

@@ -14,7 +14,7 @@ import { discoverBibFiles } from '../latex-preamble.js';
 import type { BuildDocument } from '../types.js';
 import { assembleExportDocument } from './assemble.js';
 
-import type { ExportDocument, ExportMetadata } from './types.js';
+import type { ExportDocument } from './types.js';
 
 interface ExportFormatOptions {
   pdf?: PdfFormatConfig;
@@ -102,7 +102,7 @@ export async function runExportDocuments(exportableDocs: BuildDocument[], option
         (async () => {
           await acquireLatex();
           try {
-            await convertToPdf(exportDoc, outputPath, cwd, config.pdf, biberCacheDir);
+            await convertToPdf(exportDoc, outputPath, cwd, biberCacheDir);
           } finally {
             releaseLatex();
           }
@@ -130,7 +130,7 @@ export async function runExportDocuments(exportableDocs: BuildDocument[], option
 
   const pdfConcurrency = hasPdf ? maxSlots : concurrency;
   await mapWithConcurrency(exportableDocs, pdfConcurrency, async (doc): Promise<void> => {
-    const exportDoc = assembleExportDocument(doc, lang, cwd, globalBibliography, undefined, config.pdf);
+    const exportDoc = assembleExportDocument(doc, lang, globalBibliography, undefined, config.pdf);
     if (!exportDoc) return;
 
     const outputBase = exportOutputBase(exportDoc, outputDir);
@@ -202,13 +202,7 @@ async function convertToMarkdown(doc: ExportDocument, outputPath: string): Promi
 /**
  * Convierte un ExportDocument a PDF compilando el .tex con latexmk.
  */
-async function convertToPdf(
-  doc: ExportDocument,
-  outputPath: string,
-  cwd?: string,
-  pdfFormat?: PdfFormatConfig,
-  biberCacheDir?: string,
-): Promise<void> {
+async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?: string, biberCacheDir?: string): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
   if (!cwd) {

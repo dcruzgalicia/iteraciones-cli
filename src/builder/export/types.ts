@@ -1,4 +1,4 @@
-/** Metadatos editoriales que se inyectan en el YAML header del documento Pandoc. */
+/** Metadatos que se inyectan en el YAML header del documento Pandoc. */
 export interface ExportMetadata {
   title: string;
   author: string[];
