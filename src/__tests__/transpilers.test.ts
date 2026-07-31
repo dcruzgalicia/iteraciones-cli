@@ -64,7 +64,7 @@ describe('02-double-colon-noindent (AST transpiler)', () => {
     expect(typeof mod.transform).toBe('function');
   });
 
-  it('convierte Para con solo :; a RawBlock latex', async () => {
+  it('convierte Para con solo :; a RawBlock vspace', async () => {
     const ast = {
       'pandoc-api-version': [1, 23],
       meta: {},
@@ -72,7 +72,37 @@ describe('02-double-colon-noindent (AST transpiler)', () => {
     };
     const result = await mod.transform(ast);
     expect(result.blocks[0].t).toBe('RawBlock');
-    expect(result.blocks[0].c).toEqual(['latex', '\\vspace{\\baselineskip}\\@afterindentfalse\\@afterheading']);
+    expect(result.blocks[0].c).toEqual(['latex', '\\vspace{\\baselineskip}']);
+  });
+
+  it('agrega \\noindent al parrafo siguiente despues de :;', async () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [
+        { t: 'Para', c: [{ t: 'Str', c: ':;' }] },
+        { t: 'Para', c: [{ t: 'Str', c: 'Texto siguiente' }] },
+      ],
+    };
+    const result = await mod.transform(ast);
+    expect(result.blocks[0].t).toBe('RawBlock');
+    expect(result.blocks[1].t).toBe('Para');
+    expect(result.blocks[1].c[0]).toEqual({ t: 'RawInline', c: ['latex', '\\noindent '] });
+    expect(result.blocks[1].c[1]).toEqual({ t: 'Str', c: 'Texto siguiente' });
+  });
+
+  it('no agrega \\noindent si despues de :; hay un bloque que no es Para', async () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [
+        { t: 'Para', c: [{ t: 'Str', c: ':;' }] },
+        { t: 'Header', c: [1, ['title', [], []], [{ t: 'Str', c: 'Título' }]] },
+      ],
+    };
+    const result = await mod.transform(ast);
+    expect(result.blocks[1].t).toBe('Header');
+    expect(result.blocks[1].c[2]).toEqual([{ t: 'Str', c: 'Título' }]);
   });
 
   it('no modifica Para con texto adicional', async () => {
