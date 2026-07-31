@@ -1,15 +1,23 @@
-import { blockContent, blocksToLatex, hasClass } from './_ast-utils.js';
+import { blockContent, hasClass } from './_ast-utils.js';
+
+/**
+ * Transpiler AST: transforma Divs con clase .center al entorno
+ * \begin{center}...\end{center} en LaTeX.
+ *
+ * Emite RawBlocks de apertura/cierre alrededor de los bloques internos
+ * nativos: pandoc los convierte en la misma pasada, con cero procesos extra.
+ */
 
 export const type = 'ast' as const;
 
-async function processCenter(block: Record<string, unknown>): Promise<unknown> {
+function processCenter(block: Record<string, unknown>): unknown[] {
   const content = blockContent(block);
-  const latex = await blocksToLatex(content);
-  return { t: 'RawBlock', c: ['latex', `\\begin{center}\n${latex}\n\\end{center}`] };
+  return [{ t: 'RawBlock', c: ['latex', '\\begin{center}'] }, ...content, { t: 'RawBlock', c: ['latex', '\\end{center}'] }];
 }
 
 export async function transform(ast: Record<string, unknown>): Promise<Record<string, unknown>> {
   const blocks = ast.blocks as unknown[];
+
   const newBlocks: unknown[] = [];
   for (const block of blocks) {
     if (
@@ -18,7 +26,7 @@ export async function transform(ast: Record<string, unknown>): Promise<Record<st
       (block as Record<string, unknown>).t === 'Div' &&
       hasClass(block as Record<string, unknown>, 'center')
     ) {
-      newBlocks.push(await processCenter(block as Record<string, unknown>));
+      newBlocks.push(...processCenter(block as Record<string, unknown>));
     } else {
       newBlocks.push(block);
     }

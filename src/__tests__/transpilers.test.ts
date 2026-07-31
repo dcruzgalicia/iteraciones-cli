@@ -170,9 +170,125 @@ describe('03-dictum (AST transpiler)', () => {
     const result = await mod.transform(ast);
     expect(result).toEqual(ast);
   });
-});
 
-// ─── 04-verse ──────────────────────────────────────────────────────────────
+  it('convierte Div.dictum en RawInline de apertura/cierre pegados al parrafo', async () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [
+        {
+          t: 'Div',
+          c: [['', ['dictum'], []], [{ t: 'Para', c: [{ t: 'Str', c: 'Cita de prueba' }] }]],
+        },
+      ],
+    };
+    const result = await mod.transform(ast);
+    expect(result.blocks).toEqual([
+      {
+        t: 'Para',
+        c: [
+          { t: 'RawInline', c: ['latex', '\\vspace*{0.5\\topskip}\\dictum{'] },
+          { t: 'Str', c: 'Cita de prueba' },
+          { t: 'RawInline', c: ['latex', '}\\vspace*{32pt}'] },
+        ],
+      },
+    ]);
+  });
+
+  it('usa beforeskip/afterskip de los atributos del fenced div', async () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [
+        {
+          t: 'Div',
+          c: [
+            [
+              '',
+              ['dictum'],
+              [
+                ['beforeskip', '1\\baselineskip'],
+                ['afterskip', '24pt'],
+              ],
+            ],
+            [{ t: 'Para', c: [{ t: 'Str', c: 'Cita' }] }],
+          ],
+        },
+      ],
+    };
+    const result = await mod.transform(ast);
+    expect(result.blocks[0].c[0]).toEqual({ t: 'RawInline', c: ['latex', '\\vspace*{1\\baselineskip}\\dictum{'] });
+    expect(result.blocks[0].c[2]).toEqual({ t: 'RawInline', c: ['latex', '}\\vspace*{24pt}'] });
+  });
+
+  it('convierte Div.author a \\dictum[autor]{', async () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [
+        {
+          t: 'Div',
+          c: [
+            ['', ['dictum'], []],
+            [
+              { t: 'Para', c: [{ t: 'Str', c: 'Cita de prueba' }] },
+              {
+                t: 'Div',
+                c: [['', ['author'], []], [{ t: 'Para', c: [{ t: 'Str', c: 'Autor' }] }]],
+              },
+            ],
+          ],
+        },
+      ],
+    };
+    const result = await mod.transform(ast);
+    expect(result.blocks[0].c[0]).toEqual({ t: 'RawInline', c: ['latex', '\\vspace*{0.5\\topskip}\\dictum[Autor]{'] });
+    expect(result.blocks[0].c[1]).toEqual({ t: 'Str', c: 'Cita de prueba' });
+    expect(result.blocks[0].c[2]).toEqual({ t: 'RawInline', c: ['latex', '}\\vspace*{32pt}'] });
+    expect(result.blocks).toHaveLength(1);
+  });
+
+  it('usa RawBlocks de apertura/cierre si el contenido no es un parrafo', async () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [
+        {
+          t: 'Div',
+          c: [['', ['dictum'], []], [{ t: 'BulletList', c: [[{ t: 'Plain', c: [{ t: 'Str', c: 'Item' }] }]] }]],
+        },
+      ],
+    };
+    const result = await mod.transform(ast);
+    expect(result.blocks).toEqual([
+      { t: 'BulletList', c: [[{ t: 'Plain', c: [{ t: 'Str', c: 'Item' }] }]] },
+      { t: 'RawBlock', c: ['latex', '\\vspace*{0.5\\topskip}\\dictum{'] },
+      { t: 'RawBlock', c: ['latex', '}\\vspace*{32pt}'] },
+    ]);
+  });
+
+  it('agrega \\noindent al parrafo siguiente despues de un dictum', async () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [
+        {
+          t: 'Div',
+          c: [['', ['dictum'], []], [{ t: 'Para', c: [{ t: 'Str', c: 'Cita' }] }]],
+        },
+        { t: 'Para', c: [{ t: 'Str', c: 'Texto siguiente' }] },
+      ],
+    };
+    const result = await mod.transform(ast);
+    expect(result.blocks[1]).toEqual({
+      t: 'Para',
+      c: [
+        { t: 'RawInline', c: ['latex', '\\noindent '] },
+        { t: 'Str', c: 'Texto siguiente' },
+      ],
+    });
+  });
+});
 
 describe('04-verse (AST transpiler)', () => {
   let mod: any;
@@ -203,6 +319,73 @@ describe('04-verse (AST transpiler)', () => {
     const ast = { 'pandoc-api-version': [1, 23], meta: {}, blocks: [] };
     const result = await mod.transform(ast);
     expect(result).toEqual(ast);
+  });
+
+  it('convierte Div.verse en RawBlocks de apertura/cierre con bloques nativos', async () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [
+        {
+          t: 'Div',
+          c: [['', ['verse'], []], [{ t: 'Para', c: [{ t: 'Str', c: 'Texto del poema' }] }]],
+        },
+      ],
+    };
+    const result = await mod.transform(ast);
+    expect(result.blocks).toEqual([
+      { t: 'RawBlock', c: ['latex', '\\vspace*{3pt}\\begin{verse}'] },
+      { t: 'Para', c: [{ t: 'Str', c: 'Texto del poema' }] },
+      { t: 'RawBlock', c: ['latex', '\\end{verse}\\vspace*{3pt}'] },
+    ]);
+  });
+
+  it('usa beforeskip/afterskip de los atributos del fenced div', async () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [
+        {
+          t: 'Div',
+          c: [
+            [
+              '',
+              ['verse'],
+              [
+                ['beforeskip', '1\\baselineskip'],
+                ['afterskip', '24pt'],
+              ],
+            ],
+            [{ t: 'Para', c: [{ t: 'Str', c: 'Poema' }] }],
+          ],
+        },
+      ],
+    };
+    const result = await mod.transform(ast);
+    expect(result.blocks[0]).toEqual({ t: 'RawBlock', c: ['latex', '\\vspace*{1\\baselineskip}\\begin{verse}'] });
+    expect(result.blocks[2]).toEqual({ t: 'RawBlock', c: ['latex', '\\end{verse}\\vspace*{24pt}'] });
+  });
+
+  it('agrega \\noindent al parrafo siguiente despues de un verse', async () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [
+        {
+          t: 'Div',
+          c: [['', ['verse'], []], [{ t: 'Para', c: [{ t: 'Str', c: 'Poema' }] }]],
+        },
+        { t: 'Para', c: [{ t: 'Str', c: 'Texto siguiente' }] },
+      ],
+    };
+    const result = await mod.transform(ast);
+    expect(result.blocks[3]).toEqual({
+      t: 'Para',
+      c: [
+        { t: 'RawInline', c: ['latex', '\\noindent '] },
+        { t: 'Str', c: 'Texto siguiente' },
+      ],
+    });
   });
 });
 
@@ -368,6 +551,45 @@ describe('_ast-utils (helpers compartidos)', () => {
     it('retorna array vacío si c tiene menos de 2 elementos', () => {
       const block = { t: 'Div', c: [['', ['dictum'], []]] };
       expect(utils.blockContent(block)).toEqual([]);
+    });
+  });
+
+  describe('escapeLatex', () => {
+    it('escapa caracteres especiales de LaTeX', () => {
+      expect(utils.escapeLatex('100% {real} & \\texto#1_$~^')).toBe(
+        '100\\% \\{real\\} \\& \\textbackslash{}texto\\#1\\_\\$\\textasciitilde{}\\textasciicircum{}',
+      );
+    });
+  });
+
+  describe('inlinesToLatex', () => {
+    it('convierte Str y Space a texto plano escapado', () => {
+      expect(utils.inlinesToLatex([{ t: 'Str', c: 'Autor' }, { t: 'Space' }, { t: 'Str', c: '100%' }])).toBe('Autor 100\\%');
+    });
+
+    it('convierte Emph y Strong a comandos LaTeX', () => {
+      expect(
+        utils.inlinesToLatex([{ t: 'Emph', c: [{ t: 'Str', c: 'cursiva' }] }, { t: 'Space' }, { t: 'Strong', c: [{ t: 'Str', c: 'negrita' }] }]),
+      ).toBe('\\emph{cursiva} \\textbf{negrita}');
+    });
+
+    it('convierte SoftBreak a espacio y LineBreak a \\\\', () => {
+      expect(utils.inlinesToLatex([{ t: 'Str', c: 'a' }, { t: 'SoftBreak' }, { t: 'Str', c: 'b' }, { t: 'LineBreak' }, { t: 'Str', c: 'c' }])).toBe(
+        'a b\\\\c',
+      );
+    });
+
+    it('incluye RawInline latex tal cual', () => {
+      expect(
+        utils.inlinesToLatex([
+          { t: 'Str', c: 'x' },
+          { t: 'RawInline', c: ['latex', '\\textbf{y}'] },
+        ]),
+      ).toBe('x\\textbf{y}');
+    });
+
+    it('retorna string vacío para lista vacía', () => {
+      expect(utils.inlinesToLatex([])).toBe('');
     });
   });
 });

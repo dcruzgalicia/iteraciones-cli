@@ -1,15 +1,23 @@
-import { blockContent, blocksToLatex, hasClass } from './_ast-utils.js';
+import { blockContent, hasClass } from './_ast-utils.js';
+
+/**
+ * Transpiler AST: transforma Divs con clase .flushright al entorno
+ * \begin{flushright}...\end{flushright} en LaTeX.
+ *
+ * Emite RawBlocks de apertura/cierre alrededor de los bloques internos
+ * nativos: pandoc los convierte en la misma pasada, con cero procesos extra.
+ */
 
 export const type = 'ast' as const;
 
-async function processFlushright(block: Record<string, unknown>): Promise<unknown> {
+function processFlushright(block: Record<string, unknown>): unknown[] {
   const content = blockContent(block);
-  const latex = await blocksToLatex(content);
-  return { t: 'RawBlock', c: ['latex', `\\begin{flushright}\n${latex}\n\\end{flushright}`] };
+  return [{ t: 'RawBlock', c: ['latex', '\\begin{flushright}'] }, ...content, { t: 'RawBlock', c: ['latex', '\\end{flushright}'] }];
 }
 
 export async function transform(ast: Record<string, unknown>): Promise<Record<string, unknown>> {
   const blocks = ast.blocks as unknown[];
+
   const newBlocks: unknown[] = [];
   for (const block of blocks) {
     if (
@@ -18,7 +26,7 @@ export async function transform(ast: Record<string, unknown>): Promise<Record<st
       (block as Record<string, unknown>).t === 'Div' &&
       hasClass(block as Record<string, unknown>, 'flushright')
     ) {
-      newBlocks.push(await processFlushright(block as Record<string, unknown>));
+      newBlocks.push(...processFlushright(block as Record<string, unknown>));
     } else {
       newBlocks.push(block);
     }
