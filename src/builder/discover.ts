@@ -232,6 +232,7 @@ export async function discover(
       // Read YAML frontmatter
       let title = '',
         subtitle: string | undefined,
+        date: string | undefined,
         authors: string[] = [];
       try {
         const fmMatch = FM_RE.exec(text);
@@ -240,6 +241,7 @@ export async function discover(
           if (parsed && !Array.isArray(parsed)) {
             title = typeof parsed['title'] === 'string' ? parsed['title'] : '';
             subtitle = typeof parsed['subtitle'] === 'string' && parsed['subtitle'].trim() ? parsed['subtitle'].trim() : undefined;
+            date = typeof parsed['date'] === 'string' && parsed['date'].trim() ? parsed['date'].trim() : undefined;
             {
               const raw = parsed['author'];
               authors = Array.isArray(raw)
@@ -263,7 +265,7 @@ export async function discover(
           slugChangedEntries.set(relativePath, prevSlug);
         }
       }
-      discoveryIndex.set(relativePath, { title, subtitle, author: authors, mtime, size, hash });
+      discoveryIndex.set(relativePath, { title, subtitle, author: authors, date, mtime, size, hash });
     }
     // Archivos sin cambios: conservan su entrada en discoveryIndex
   });
@@ -388,7 +390,7 @@ export function buildDocsFromIndex(relativePaths: string[], discoveryIndex: Map<
       relativePath,
       frontmatter: {
         title: entry?.title || 'Sin t\u00edtulo',
-        date: '',
+        date: entry?.date ?? '',
         author: entry?.author ?? [],
         keywords: [],
       },

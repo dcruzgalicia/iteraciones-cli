@@ -232,6 +232,7 @@ export async function generateLatexPreamble(
         title: entry.title,
         subtitle: entry.subtitle,
         author: entry.author,
+        date: entry.date,
         filePath: join(cwd, relPath),
         cwd,
         hasTocEntries,
