@@ -24,12 +24,13 @@ const PKG_TRANSPILERS_DIR = join(import.meta.dir, 'transpilers');
 /** Lista de transpilers empaquetados en orden de aplicación. */
 const BUILTIN_TRANSPILERS = [
   '01-double-colon',
-  '02-dictum',
-  '03-verse',
-  '05-center',
-  '06-flushright',
-  '07-mbox-sentence-end',
-  '08-mbox-sentence-start',
+  '02-double-colon-noindent',
+  '03-dictum',
+  '04-verse',
+  '06-center',
+  '07-flushright',
+  '08-mbox-sentence-end',
+  '09-mbox-sentence-start',
 ];
 
 interface StringTranspiler {
@@ -88,21 +89,23 @@ async function loadTranspilers(
 export function getBuiltinTranspilerInfos(): TranspilerInfo[] {
   const descriptions: Record<string, string> = {
     '01-double-colon': ':: → \\vspace{\\baselineskip}',
-    '02-dictum': 'Div.dictum → \\dictum[author]{quote}',
-    '03-verse': 'Div.verse → \\begin{verse}...\\end{verse}',
-    '05-center': 'Div.center → \\begin{center}...\\end{center}',
-    '06-flushright': 'Div.flushright → \\begin{flushright}...\\end{flushright}',
-    '07-mbox-sentence-end': 'Envuelve las ultimas 2 palabras de cada oracion en \\mbox{} (AST)',
-    '08-mbox-sentence-start': 'Envuelve la primera palabra de cada oracion en \\mbox{} (AST)',
+    '02-double-colon-noindent': ':; → \\vspace{\\baselineskip} + sin sangria en el siguiente parrafo',
+    '03-dictum': 'Div.dictum → \\dictum[author]{quote}',
+    '04-verse': 'Div.verse → \\begin{verse}...\\end{verse}',
+    '06-center': 'Div.center → \\begin{center}...\\end{center}',
+    '07-flushright': 'Div.flushright → \\begin{flushright}...\\end{flushright}',
+    '08-mbox-sentence-end': 'Envuelve las ultimas 2 palabras de cada oracion en \\mbox{} (AST)',
+    '09-mbox-sentence-start': 'Envuelve la primera palabra de cada oracion en \\mbox{} (AST)',
   };
   const types: Record<string, 'string' | 'ast'> = {
     '01-double-colon': 'string',
-    '02-dictum': 'ast',
-    '03-verse': 'ast',
-    '05-center': 'ast',
-    '06-flushright': 'ast',
-    '07-mbox-sentence-end': 'ast',
-    '08-mbox-sentence-start': 'ast',
+    '02-double-colon-noindent': 'string',
+    '03-dictum': 'ast',
+    '04-verse': 'ast',
+    '06-center': 'ast',
+    '07-flushright': 'ast',
+    '08-mbox-sentence-end': 'ast',
+    '09-mbox-sentence-start': 'ast',
   };
   return BUILTIN_TRANSPILERS.map((name) => ({
     name,

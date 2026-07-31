@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'bun:test';
 
-// ─── 01-double-colon ───────────────────────────────────────────────────────
+// ─── 01-double-colon ──────────────────────────────────────────────────────
 
 describe('01-double-colon (string transpiler)', () => {
   let mod: any;
@@ -47,13 +47,54 @@ describe('01-double-colon (string transpiler)', () => {
   });
 });
 
-// ─── 02-dictum ─────────────────────────────────────────────────────────────
+// ─── 02-double-colon-noindent ─────────────────────────────────────────────
 
-describe('02-dictum (AST transpiler)', () => {
+describe('02-double-colon-noindent (string transpiler)', () => {
   let mod: any;
 
   beforeAll(async () => {
-    mod = await import('../builder/transpilers/02-dictum.ts');
+    mod = await import('../builder/transpilers/02-double-colon-noindent.ts');
+  });
+
+  it('exporta type como "string"', () => {
+    expect(mod.type).toBe('string');
+  });
+
+  it('exporta una función process', () => {
+    expect(typeof mod.process).toBe('function');
+  });
+
+  it('convierte :; sola en una línea a vspace + afterheading', () => {
+    const input = 'Texto antes.\n\n:;\n\nTexto después.';
+    const result = mod.process(input);
+    expect(result).toContain('\\vspace{\\baselineskip}\\@afterindentfalse\\@afterheading');
+  });
+
+  it('no modifica :; cuando no está sola en la línea', () => {
+    const input = 'Texto con :; en la línea';
+    const result = mod.process(input);
+    expect(result).toBe(input);
+  });
+
+  it('no modifica :: (doble colon simple)', () => {
+    const input = 'Texto antes.\n\n::\n\nTexto después.';
+    const result = mod.process(input);
+    expect(result).toBe(input);
+  });
+
+  it('retorna string vacío sin cambios', () => {
+    const result = mod.process('');
+    expect(result).toBe('');
+  });
+});
+
+// ─── 03-dictum ─────────────────────────────────────────────────────────────
+
+describe('03-dictum (AST transpiler)', () => {
+  let mod: any;
+
+  beforeAll(async () => {
+    mod = await import('../builder/transpilers/03-dictum.ts');
   });
 
   it('exporta type como "ast"', () => {
@@ -81,13 +122,13 @@ describe('02-dictum (AST transpiler)', () => {
   });
 });
 
-// ─── 03-verse ──────────────────────────────────────────────────────────────
+// ─── 04-verse ──────────────────────────────────────────────────────────────
 
-describe('03-verse (AST transpiler)', () => {
+describe('04-verse (AST transpiler)', () => {
   let mod: any;
 
   beforeAll(async () => {
-    mod = await import('../builder/transpilers/03-verse.ts');
+    mod = await import('../builder/transpilers/04-verse.ts');
   });
 
   it('exporta type como "ast"', () => {
@@ -115,13 +156,13 @@ describe('03-verse (AST transpiler)', () => {
   });
 });
 
-// ─── 07-mbox-sentence-end ────────────────────────────────────────────────
+// ─── 08-mbox-sentence-end ────────────────────────────────────────────────
 
-describe('07-mbox-sentence-end (AST transpiler)', () => {
+describe('08-mbox-sentence-end (AST transpiler)', () => {
   let mod: any;
 
   beforeAll(async () => {
-    mod = await import('../builder/transpilers/07-mbox-sentence-end.ts');
+    mod = await import('../builder/transpilers/08-mbox-sentence-end.ts');
   });
 
   it('exporta type como "ast"', () => {
@@ -171,13 +212,13 @@ describe('07-mbox-sentence-end (AST transpiler)', () => {
   });
 });
 
-// ─── 08-mbox-sentence-start ──────────────────────────────────────────────
+// ─── 09-mbox-sentence-start ──────────────────────────────────────────────
 
-describe('08-mbox-sentence-start (AST transpiler)', () => {
+describe('09-mbox-sentence-start (AST transpiler)', () => {
   let mod: any;
 
   beforeAll(async () => {
-    mod = await import('../builder/transpilers/08-mbox-sentence-start.ts');
+    mod = await import('../builder/transpilers/09-mbox-sentence-start.ts');
   });
 
   it('exporta type como "ast"', () => {
