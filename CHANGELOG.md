@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.13.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.12.0...v0.13.0) (2026-07-31)
+
+
+### Features
+
+* **config:** reemplaza mathptmx por font-family para soportar multiples fuentes ([afdef47](https://github.com/dcruzgalicia/iteraciones-cli/commit/afdef47d54cd623c5f471c819e11ee521742d90f))
+* **config:** valida atributos desconocidos en format.pdf y niveles anidados ([be14ae8](https://github.com/dcruzgalicia/iteraciones-cli/commit/be14ae8f9dc020a7ed8b6361e0df1d9eb3fbe566))
+* **dictum:** agrega espaciado vertical, simplifica authorformat, y evita \noindent antes de dictum ([2053840](https://github.com/dcruzgalicia/iteraciones-cli/commit/20538404b6a055b618699c9491e1d37e6f97bcd3))
+* **latex:** cambia h1 (#) de \section a \subsubsection via shift-heading-level-by=2 ([f2254e5](https://github.com/dcruzgalicia/iteraciones-cli/commit/f2254e552f87ddfe5dfd688ea711883938c7441a))
+* **transpiler:** agrega \noindent al primer parrafo tras un dictum ([ada1ddf](https://github.com/dcruzgalicia/iteraciones-cli/commit/ada1ddf62e8d0e73b4ae982f4a0364671e71df6d))
+* **transpiler:** agrega 02-double-colon-noindent (:;) y renumeracion de transpilers ([b7068e8](https://github.com/dcruzgalicia/iteraciones-cli/commit/b7068e89bb8d17dba084905e12f2d594dcfda8d0))
+* **transpiler:** agrega espaciado configurable a Div.verse y \noindent al parrafo siguiente ([2fe2348](https://github.com/dcruzgalicia/iteraciones-cli/commit/2fe23480faedc16b727609f9abbb708706fc5926))
+* **transpiler:** agrega transpiler Div.center a LaTeX center environment ([760f1f0](https://github.com/dcruzgalicia/iteraciones-cli/commit/760f1f0ce0b8828b02582118b90aaaa7ead082a2))
+* **transpiler:** agrega transpiler Div.flushright a LaTeX flushright environment ([c9c89b8](https://github.com/dcruzgalicia/iteraciones-cli/commit/c9c89b83fbf75384c68409af2d6d63c94c4ca769))
+* **transpiler:** mbox-sentence-end: 1 palabra final en oraciones intermedias, 3 en la ultima ([23e059b](https://github.com/dcruzgalicia/iteraciones-cli/commit/23e059ba65c5fa3279bf8ab7118a44f8acec9c92))
+
+
+### Bug Fixes
+
+* **core:** corrige deteccion de directorio de overrides (Bun.file no funciona con directorios) ([b2d56df](https://github.com/dcruzgalicia/iteraciones-cli/commit/b2d56dfc040d76e09e5e649f50f59127c52279ed))
+* **transpiler:** agrega ¿ y ¡ como marcadores de inicio de oracion ([2234d84](https://github.com/dcruzgalicia/iteraciones-cli/commit/2234d8403ffec451c37dacef85d92b8cf3c1b045))
+* **transpiler:** convierte 02-double-colon-noindent a AST para preservar \@ en latex ([808dcb4](https://github.com/dcruzgalicia/iteraciones-cli/commit/808dcb47bf447ead86ed245bc5e2f14b5493b7eb))
+* **transpiler:** usa \noindent en siguiente parrafo en vez de \[@afterindentfalse](https://github.com/afterindentfalse)\[@afterheading](https://github.com/afterheading) ([b3a8be0](https://github.com/dcruzgalicia/iteraciones-cli/commit/b3a8be078edf256b9824d948bdd8cc5987874acd))
+* **transpiler:** usa espacios normales en lugar de ~ dentro de mbox en sentence-end ([be0384c](https://github.com/dcruzgalicia/iteraciones-cli/commit/be0384c2c882472356ef708ec681989e6a0fc077))
+
 ## [0.12.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.11.0...v0.12.0) (2026-07-30)
 
 
