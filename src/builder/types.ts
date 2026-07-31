@@ -5,6 +5,12 @@ export interface DiscoveryEntry {
   subtitle?: string;
   author: string[];
   slug?: string;
+  /** mtime (ms) del archivo en el último build (caché content-addressed). */
+  mtime?: number;
+  /** Tamaño del archivo en el último build. */
+  size?: number;
+  /** sha256 del contenido (solo se calcula cuando el mtime cambió con el mismo tamaño). */
+  hash?: string;
 }
 
 export type DiscoveryIndex = Map<string, DiscoveryEntry>;
