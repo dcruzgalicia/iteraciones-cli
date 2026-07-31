@@ -4,6 +4,7 @@ export interface DiscoveryEntry {
   title: string;
   subtitle?: string;
   author: string[];
+  date?: string;
   slug?: string;
   /** mtime (ms) del archivo en el último build (caché content-addressed). */
   mtime?: number;
