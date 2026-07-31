@@ -3,6 +3,7 @@ import { mkdir } from 'node:fs/promises';
 
 import { cpus } from 'node:os';
 import { basename, dirname, join } from 'node:path';
+import { stringify } from 'yaml';
 import type { EpubFormatConfig, HtmlFormatConfig, MarkdownFormatConfig, PdfFormatConfig } from '../../config/site-config.js';
 import { PandocError } from '../../lib/errors.js';
 import { logWarning } from '../../lib/logger.js';
@@ -147,60 +148,45 @@ export async function runExportDocuments(exportableDocs: BuildDocument[], option
  */
 function buildYamlHeader(doc: ExportDocument): string {
   const { metadata } = doc;
-  const lines: string[] = ['---'];
-
-  lines.push(`title: ${yamlString(metadata.title)}`);
+  const header: Record<string, unknown> = { title: metadata.title };
 
   if (metadata.author.length > 0) {
-    if (metadata.author.length === 1) {
-      lines.push(`author: ${yamlString(metadata.author[0] ?? '')}`);
-    } else {
-      lines.push('author:');
-      for (const a of metadata.author) {
-        lines.push(`  - ${yamlString(a)}`);
-      }
-    }
+    header.author = metadata.author.length === 1 ? metadata.author[0] : metadata.author;
   }
 
-  if (metadata.date) lines.push(`date: ${yamlString(metadata.date)}`);
-  lines.push(`lang: ${metadata.lang}`);
-  lines.push(`documentclass: ${metadata.documentclass}`);
-  if (metadata.toc) lines.push('toc: true');
+  if (metadata.date) header.date = metadata.date;
+  header.lang = metadata.lang;
+  header.documentclass = metadata.documentclass;
+  if (metadata.toc) header.toc = true;
   if (metadata.tocDepth !== undefined && metadata.tocDepth > 0) {
-    lines.push(`toc-depth: ${metadata.tocDepth}`);
+    header['toc-depth'] = metadata.tocDepth;
   }
 
   // Metadatos editoriales opcionales
-  if (metadata.isbn) lines.push(`isbn: ${yamlString(metadata.isbn)}`);
-  if (metadata.publisher) lines.push(`publisher: ${yamlString(metadata.publisher)}`);
-  if (metadata.description) lines.push(`description: ${yamlString(metadata.description)}`);
-  if (metadata.rights) lines.push(`rights: ${yamlString(metadata.rights)}`);
-  if (metadata.cover) lines.push(`cover-image: ${yamlString(metadata.cover)}`);
+  if (metadata.isbn) header.isbn = metadata.isbn;
+  if (metadata.publisher) header.publisher = metadata.publisher;
+  if (metadata.description) header.description = metadata.description;
+  if (metadata.rights) header.rights = metadata.rights;
+  if (metadata.cover) header['cover-image'] = metadata.cover;
   if (metadata.bibliography) {
-    lines.push(`bibliography: ${yamlString(metadata.bibliography)}`);
+    header.bibliography = metadata.bibliography;
   }
   if (metadata.csl) {
     if (existsSync(metadata.csl)) {
-      lines.push(`csl: ${yamlString(metadata.csl)}`);
+      header.csl = metadata.csl;
     } else {
       logWarning(`archivo CSL no encontrado: "${metadata.csl}"`, 'export');
     }
   }
 
-  if (metadata.abstract) lines.push(`abstract: ${yamlString(metadata.abstract)}`);
+  if (metadata.abstract) header.abstract = metadata.abstract;
   if (metadata.keywords && metadata.keywords.length > 0) {
-    lines.push('keywords:');
-    for (const kw of metadata.keywords) {
-      lines.push(`  - ${yamlString(kw)}`);
-    }
+    header.keywords = metadata.keywords;
   }
 
-  lines.push('---', '');
-  return lines.join('\n');
-}
-
-function yamlString(value: string): string {
-  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`;
+  // Comillas dobles en valores (claves plain) para paridad con el formato
+  // anterior y máxima compatibilidad con pandoc
+  return `---\n${stringify(header, { defaultKeyType: 'PLAIN', defaultStringType: 'QUOTE_DOUBLE' })}---\n`;
 }
 
 /**

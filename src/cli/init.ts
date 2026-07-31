@@ -1,5 +1,6 @@
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { stringify } from 'yaml';
 import { DEFAULT_EPUB_FORMAT, DEFAULT_HTML_FORMAT, DEFAULT_MARKDOWN_FORMAT, DEFAULT_PDF_FORMAT, DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 
 const DEFAULT_README = [
@@ -141,244 +142,74 @@ const DEFAULT_README = [
 /**
  * Genera un _iteraciones.yaml completo con todas las opciones posibles
  * y sus valores por defecto. Útil como referencia para nuevos usuarios.
+ *
+ * Se construye como objeto y se serializa con la libreria yaml (block style
+ * legible); Bun.YAML.stringify no sirve aqui porque solo emite flow style.
  */
 function buildDefaultConfig(): string {
-  const pdfDefaults = DEFAULT_PDF_FORMAT;
-  const lines: string[] = [];
+  const pdf = DEFAULT_PDF_FORMAT;
 
   // ── site ──
-  lines.push('site:');
-  lines.push(`  title: ${yamlStr(DEFAULT_SITE_CONFIG.title)}`);
-  lines.push(`  tagline: ${yamlStr(DEFAULT_SITE_CONFIG.tagline)}`);
-  lines.push(`  lang: ${yamlStr(DEFAULT_SITE_CONFIG.lang)}`);
-  lines.push(`  logo: ${yamlStr(DEFAULT_SITE_CONFIG.logo)}`);
-  lines.push(`  base-url: ${yamlStr(DEFAULT_SITE_CONFIG.baseUrl ?? '')}`);
-  lines.push('');
+  const site = {
+    title: DEFAULT_SITE_CONFIG.title,
+    tagline: DEFAULT_SITE_CONFIG.tagline,
+    lang: DEFAULT_SITE_CONFIG.lang,
+    logo: DEFAULT_SITE_CONFIG.logo,
+    'base-url': DEFAULT_SITE_CONFIG.baseUrl ?? '',
+  };
+
+  // ── format.pdf (orden curado por secciones: CLASE → FUENTE → … → CONTADORES) ──
+  const pdfConfig: Record<string, unknown> = {
+    generate: pdf.generate ?? false,
+    documentclass: pdf.documentclass,
+    'font-family': [{ name: 'mathptmx' }],
+    setspace: pdf.setspace ?? true,
+  };
+  if (pdf.setspace !== false) {
+    pdfConfig.setstretch = pdf.setstretch ?? 1.5;
+  }
+  Object.assign(pdfConfig, {
+    geometry: pdf.geometry,
+    babel: pdf.babel,
+    'page-number': pdf.pageNumber ?? 'header-right',
+    microtype: pdf.microtype,
+    raggedbottom: pdf.raggedbottom ?? true,
+    pretolerance: pdf.pretolerance ?? 200,
+    tolerance: pdf.tolerance ?? 400,
+    brokenpenalty: pdf.brokenpenalty ?? 1_000_000,
+    hyphenpenalty: pdf.hyphenpenalty ?? 100,
+    finalhyphendemerits: pdf.finalhyphendemerits ?? 1_000_000,
+    doublehyphendemerits: pdf.doublehyphendemerits ?? 1_000_000,
+    widowpenalty: pdf.widowpenalty ?? 1_000_000,
+    clubpenalty: pdf.clubpenalty ?? 1_000_000,
+    hyperref: pdf.hyperref,
+    enumitem: pdf.enumitem ?? true,
+    setlist: pdf.setlist,
+    'eso-pic': pdf.esoPic ?? false,
+    pdfx: pdf.pdfx ?? false,
+    crop: pdf.crop ?? false,
+    setcounter: pdf.setcounter,
+    sectioning: pdf.sectioning,
+    setkomafont: pdf.setkomafont,
+    dictum: pdf.dictum,
+    toc: pdf.toc ?? false,
+    'show-date': pdf.showDate ?? false,
+  });
 
   // ── format ──
-  lines.push('format:');
+  const format: Record<string, unknown> = {
+    latex: true,
+    pdf: pdfConfig,
+    html: {
+      theme: 'dark',
+      accent: DEFAULT_HTML_FORMAT.accent,
+      generate: DEFAULT_HTML_FORMAT.generate ?? false,
+    },
+    epub: { generate: DEFAULT_EPUB_FORMAT.generate ?? false },
+    markdown: { generate: DEFAULT_MARKDOWN_FORMAT.generate ?? false },
+  };
 
-  // latex (primero en orden de compilacion)
-  lines.push('  latex: true');
-
-  // pdf
-  const pdfCfg = DEFAULT_PDF_FORMAT;
-  lines.push('  pdf:');
-  lines.push(`    generate: ${yamlBool(pdfCfg.generate!)}`);
-
-  // ── 1. CLASE ──
-  lines.push('    documentclass:');
-  lines.push(`      class: ${pdfCfg.documentclass?.class ?? 'scrbook'}`);
-  if (pdfCfg.documentclass?.options && pdfCfg.documentclass.options.length > 0) {
-    lines.push('      options:');
-    for (const opt of pdfCfg.documentclass.options) {
-      lines.push(`        - ${yamlStr(opt)}`);
-    }
-  }
-
-  // ── 3. FUENTE ──
-  lines.push('    font-family:');
-  lines.push('      - name: mathptmx');
-
-  // ── 4. INTERLINEADO ──
-  lines.push(`    setspace: ${yamlBool(pdfCfg.setspace ?? true)}`);
-  if (pdfCfg.setspace !== false) {
-    lines.push(`    setstretch: ${yamlValue(pdfCfg.setstretch ?? 1.5)}`);
-  }
-
-  // ── 5. MÁRGENES ──
-  lines.push('    geometry:');
-  if (pdfCfg.geometry?.options && pdfCfg.geometry.options.length > 0) {
-    lines.push('      options:');
-    for (const opt of pdfCfg.geometry.options) {
-      lines.push(`        - ${yamlStr(opt)}`);
-    }
-  }
-
-  // ── 6. IDIOMA ──
-  lines.push('    babel:');
-  if (pdfCfg.babel?.options && pdfCfg.babel.options.length > 0) {
-    lines.push('      options:');
-    for (const opt of pdfCfg.babel.options) {
-      lines.push(`        - ${yamlStr(opt)}`);
-    }
-  }
-
-  // ── 7. ENCABEZADOS ──
-  lines.push(`    page-number: ${yamlStr(pdfCfg.pageNumber ?? 'header-right')}`);
-
-  // ── 8. TIPOGRAFÍA ──
-  lines.push('    microtype:');
-  if (pdfCfg.microtype?.options && pdfCfg.microtype.options.length > 0) {
-    lines.push('      options:');
-    for (const opt of pdfCfg.microtype.options) {
-      lines.push(`        - ${yamlStr(opt)}`);
-    }
-  }
-
-  // ── 9. COMPOSICIÓN ──
-  lines.push(`    raggedbottom: ${yamlBool(pdfCfg.raggedbottom ?? true)}`);
-  lines.push(`    pretolerance: ${yamlValue(pdfCfg.pretolerance ?? 200)}`);
-  lines.push(`    tolerance: ${yamlValue(pdfCfg.tolerance ?? 400)}`);
-  lines.push(`    brokenpenalty: ${yamlValue(pdfCfg.brokenpenalty ?? 1000000)}`);
-  lines.push(`    hyphenpenalty: ${yamlValue(pdfCfg.hyphenpenalty ?? 100)}`);
-  lines.push(`    finalhyphendemerits: ${yamlValue(pdfCfg.finalhyphendemerits ?? 1000000)}`);
-  lines.push(`    doublehyphendemerits: ${yamlValue(pdfCfg.doublehyphendemerits ?? 1000000)}`);
-  lines.push(`    widowpenalty: ${yamlValue(pdfCfg.widowpenalty ?? 1000000)}`);
-  lines.push(`    clubpenalty: ${yamlValue(pdfCfg.clubpenalty ?? 1000000)}`);
-
-  // ── 10. ENLACES ──
-  lines.push('    hyperref:');
-  if (pdfCfg.hyperref?.options && pdfCfg.hyperref.options.length > 0) {
-    lines.push('      options:');
-    for (const opt of pdfCfg.hyperref.options) {
-      lines.push(`        - ${yamlStr(opt)}`);
-    }
-  }
-
-  // ── 12. LISTAS ──
-  lines.push(`    enumitem: ${yamlBool(pdfCfg.enumitem ?? true)}`);
-  if (pdfCfg.setlist && pdfCfg.setlist.length > 0) {
-    lines.push('    setlist:');
-    for (const sl of pdfCfg.setlist) {
-      lines.push(`      - command: ${yamlStr(sl.command)}`);
-      lines.push('        options:');
-      for (const o of sl.options) {
-        lines.push(`          - ${yamlStr(o)}`);
-      }
-    }
-  }
-
-  // ── 14. EXTRAS ──
-  if (typeof pdfCfg.esoPic === 'object' && pdfCfg.esoPic?.options && pdfCfg.esoPic.options.length > 0) {
-    lines.push('    eso-pic:');
-    lines.push('      options:');
-    for (const opt of pdfCfg.esoPic.options) {
-      lines.push(`        - ${yamlStr(opt)}`);
-    }
-  } else {
-    lines.push(`    eso-pic: ${yamlBool(pdfCfg.esoPic === true)}`);
-  }
-  lines.push(`    pdfx: ${yamlBool(pdfCfg.pdfx ?? false)}`);
-  lines.push(`    crop: ${yamlBool(pdfCfg.crop ?? false)}`);
-
-  // ── 15. CONTADORES ──
-  if (pdfCfg.setcounter && Object.keys(pdfCfg.setcounter).length > 0) {
-    lines.push('    setcounter:');
-    for (const [key, val] of Object.entries(pdfCfg.setcounter)) {
-      lines.push(`      ${key}: ${yamlValue(val)}`);
-    }
-  }
-
-  // ── SECTIONING (reemplaza transpilers 03-09) ──
-  const sec = DEFAULT_PDF_FORMAT.sectioning;
-  if (sec) {
-    lines.push('    sectioning:');
-    for (const [levelName, levelData] of Object.entries(sec)) {
-      lines.push(`      ${levelName}:`);
-      for (const [k, v] of Object.entries(levelData)) {
-        lines.push(`        ${k}: ${yamlStr(v)}`);
-      }
-    }
-  }
-
-  // ── SETKOMAFONT (reemplaza transpiler 02) ──
-  const skf = DEFAULT_PDF_FORMAT.setkomafont;
-  if (skf) {
-    lines.push('    setkomafont:');
-    for (const [el, font] of Object.entries(skf)) {
-      lines.push(`      ${el}: ${yamlStr(font)}`);
-    }
-  }
-
-  // ── DICTUM (reemplaza transpiler 10) ──
-  const dict = DEFAULT_PDF_FORMAT.dictum;
-  if (dict) {
-    lines.push('    dictum:');
-    for (const [k, v] of Object.entries(dict)) {
-      lines.push(`      ${k}: ${yamlStr(v)}`);
-    }
-  }
-
-  // ── TRAS \\begin{document} ──
-  lines.push(`    toc: ${yamlBool(pdfCfg.toc ?? false)}`);
-  lines.push(`    show-date: ${yamlBool(pdfCfg.showDate ?? false)}`);
-
-  // html
-  lines.push('  html:');
-  lines.push(`    theme: dark`);
-  lines.push(`    accent: ${DEFAULT_HTML_FORMAT.accent}`);
-  lines.push(`    generate: ${yamlBool(DEFAULT_HTML_FORMAT.generate!)}`);
-
-  // epub
-  lines.push('  epub:');
-  for (const [key, value] of Object.entries(DEFAULT_EPUB_FORMAT)) {
-    const yamlKey = camelToKebab(key);
-    if (value !== undefined) {
-      lines.push(`    ${yamlKey}: ${yamlValue(value)}`);
-    }
-  }
-
-  // markdown (ultimo en orden de compilacion)
-  lines.push('  markdown:');
-  for (const [key, value] of Object.entries(DEFAULT_MARKDOWN_FORMAT)) {
-    const yamlKey = camelToKebab(key);
-    lines.push(`    ${yamlKey}: ${yamlValue(value)}`);
-  }
-
-  return lines.join('\n') + '\n';
-}
-
-/**
- * Convierte camelCase a kebab-case para usar como keys YAML.
- */
-function camelToKebab(s: string): string {
-  return s.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
-}
-
-/**
- * Serializa un valor a YAML, manejando strings, booleanos y números.
- */
-function yamlValue(value: unknown): string {
-  if (typeof value === 'string') {
-    return yamlStr(value);
-  }
-  if (typeof value === 'boolean') {
-    return yamlBool(value);
-  }
-  if (typeof value === 'number') {
-    return String(value);
-  }
-  if (value === undefined || value === null) {
-    return '~';
-  }
-  return String(value);
-}
-
-/**
- * Serializa un string a YAML, añadiendo comillas cuando es necesario
- * para evitar ambigüedades (valores parecidos a booleanos, números, etc.).
- */
-function yamlStr(s: string): string {
-  // Si está vacío, siempre con comillas
-  if (s === '') return '""';
-  // Valores YAML ambiguos que necesitan comillas
-  if (/^(true|false|yes|no|on|off|null|undefined|~)$/i.test(s)) return `"${s}"`;
-  if (/^\d+(\.\d+)?$/.test(s)) return `"${s}"`;
-  if (/^0x[0-9a-f]+$/i.test(s)) return `"${s}"`;
-  // Contiene backslash: escaparlo con JSON.stringify para evitar interpretacion de YAML
-  if (/\\/.test(s)) return JSON.stringify(s);
-  if (/^['"!@#%&*[\]{}|>:`]/d.test(s) || /[\s,:]#/.test(s)) return `"${s}"`;
-  // Contiene caracteres especiales que necesitan comillas dobles
-  if (/["\n\t]/.test(s)) return JSON.stringify(s);
-  return s;
-}
-
-/**
- * Serializa un booleano a YAML.
- */
-function yamlBool(b: boolean): string {
-  return b ? 'true' : 'false';
+  return stringify({ site, format }, { indent: 2 }) + '\n';
 }
 
 /**
