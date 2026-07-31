@@ -49,42 +49,62 @@ describe('01-double-colon (string transpiler)', () => {
 
 // ─── 02-double-colon-noindent ─────────────────────────────────────────────
 
-describe('02-double-colon-noindent (string transpiler)', () => {
+describe('02-double-colon-noindent (AST transpiler)', () => {
   let mod: any;
 
   beforeAll(async () => {
     mod = await import('../builder/transpilers/02-double-colon-noindent.ts');
   });
 
-  it('exporta type como "string"', () => {
-    expect(mod.type).toBe('string');
+  it('exporta type como "ast"', () => {
+    expect(mod.type).toBe('ast');
   });
 
-  it('exporta una función process', () => {
-    expect(typeof mod.process).toBe('function');
+  it('exporta una función transform', () => {
+    expect(typeof mod.transform).toBe('function');
   });
 
-  it('convierte :; sola en una línea a vspace + afterheading', () => {
-    const input = 'Texto antes.\n\n:;\n\nTexto después.';
-    const result = mod.process(input);
-    expect(result).toContain('\\vspace{\\baselineskip}\\@afterindentfalse\\@afterheading');
+  it('convierte Para con solo :; a RawBlock latex', async () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [{ t: 'Para', c: [{ t: 'Str', c: ':;' }] }],
+    };
+    const result = await mod.transform(ast);
+    expect(result.blocks[0].t).toBe('RawBlock');
+    expect(result.blocks[0].c).toEqual(['latex', '\\vspace{\\baselineskip}\\@afterindentfalse\\@afterheading']);
   });
 
-  it('no modifica :; cuando no está sola en la línea', () => {
-    const input = 'Texto con :; en la línea';
-    const result = mod.process(input);
-    expect(result).toBe(input);
+  it('no modifica Para con texto adicional', async () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [{ t: 'Para', c: [{ t: 'Str', c: 'Texto con :; en la línea' }] }],
+    };
+    const result = await mod.transform(ast);
+    expect(result.blocks[0].t).toBe('Para');
   });
 
-  it('no modifica :: (doble colon simple)', () => {
-    const input = 'Texto antes.\n\n::\n\nTexto después.';
-    const result = mod.process(input);
-    expect(result).toBe(input);
+  it('no modifica bloques que no son Para', async () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [{ t: 'Header', c: [1, ['title', [], []], [{ t: 'Str', c: 'Título' }]] }],
+    };
+    const result = await mod.transform(ast);
+    expect(result).toEqual(ast);
   });
 
-  it('retorna string vacío sin cambios', () => {
-    const result = mod.process('');
-    expect(result).toBe('');
+  it('retorna AST sin cambios si blocks está vacío', async () => {
+    const ast = { 'pandoc-api-version': [1, 23], meta: {}, blocks: [] };
+    const result = await mod.transform(ast);
+    expect(result).toEqual(ast);
+  });
+
+  it('maneja blocks que no es un array', async () => {
+    const ast = { 'pandoc-api-version': [1, 23], meta: {}, blocks: 'no-array' };
+    const result = await mod.transform(ast);
+    expect(result).toEqual(ast);
   });
 });
 

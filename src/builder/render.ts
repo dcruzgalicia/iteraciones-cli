@@ -99,7 +99,7 @@ export function getBuiltinTranspilerInfos(): TranspilerInfo[] {
   };
   const types: Record<string, 'string' | 'ast'> = {
     '01-double-colon': 'string',
-    '02-double-colon-noindent': 'string',
+    '02-double-colon-noindent': 'ast',
     '03-dictum': 'ast',
     '04-verse': 'ast',
     '06-center': 'ast',
