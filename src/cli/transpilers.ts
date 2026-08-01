@@ -1,5 +1,5 @@
 import { getBuiltinPreambleTranspilerInfos, validateDisabledPreambleTranspilers } from '../builder/preamble-loader.js';
-import { getBuiltinTranspilerInfos, validateDisabledTranspilers } from '../builder/render.js';
+import { getBuiltinLuaTranspilerInfos, getBuiltinTranspilerInfos, validateDisabledTranspilers } from '../builder/render.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 
 /**
@@ -12,6 +12,7 @@ export async function runTranspilers(cwd: string): Promise<void> {
   validateDisabledPreambleTranspilers(config.disabledPreambleTranspilers);
   const disabled = new Set(config.disabledTranspilers ?? []);
   const allInfos = getBuiltinTranspilerInfos();
+  const luaInfos = await getBuiltinLuaTranspilerInfos();
   const hasDisabled = config.disabledTranspilers !== undefined && config.disabledTranspilers.length > 0;
 
   process.stdout.write('Transpilers disponibles (orden de ejecución):\n\n');
@@ -23,6 +24,12 @@ export async function runTranspilers(cwd: string): Promise<void> {
     process.stdout.write(`  ${info.name}  ${typeLabel}  ${info.description}  [${status}]\n`);
   }
 
+  for (const info of luaInfos) {
+    const active = !disabled.has(info.name);
+    const status = active ? 'activo' : 'desactivado';
+    process.stdout.write(`  ${info.name}  lua     ${info.description}  [${status}]\n`);
+  }
+
   process.stdout.write('\n');
   if (hasDisabled) {
     process.stdout.write('Para reactivar uno, elimínalo de la lista `disabled-transpilers:` en _iteraciones.yaml.\n');
@@ -30,7 +37,7 @@ export async function runTranspilers(cwd: string): Promise<void> {
     process.stdout.write('Para desactivar uno, agrégalo a la lista `disabled-transpilers:` en _iteraciones.yaml.\n');
   }
   process.stdout.write(
-    'Para sobrescribir un transpiler, crea `<proyecto>/transpilers/<grupo>/<nombre>.ts` (p. ej. `transpilers/latex/02-dictum.ts`).\n',
+    'Para sobrescribir un transpiler, crea `<proyecto>/transpilers/<grupo>/<nombre>.ts` o `.lua` (p. ej. `transpilers/latex/02-dictum.lua`).\n',
   );
 
   // Preamble transpilers
