@@ -200,15 +200,19 @@ describe('validateDisabledTranspilers', () => {
 });
 
 describe('resolveLuaFilters (sistema dual Fase 6)', () => {
-  it('retorna vacío sin overrides del proyecto (el paquete aún no tiene .lua)', async () => {
+  const PKG = join(import.meta.dir, '..', 'lib', 'resources', 'transpilers');
+
+  it('resuelve los filtros del paquete por capa sin overrides', async () => {
     const f = await resolveLuaFilters();
-    expect(f.semantic).toEqual([]);
+    expect(f.semantic).toEqual([
+      join(PKG, 'semantic', 'string', '01-double-colon.lua'),
+      join(PKG, 'semantic', 'ast', '02-double-colon-noindent.lua'),
+    ]);
     expect(f.latex).toEqual([]);
     expect(f.html).toEqual([]);
-    expect(f.resolvedNames.size).toBe(0);
   });
 
-  it('resuelve overrides del proyecto por capa y respeta el orden', async () => {
+  it('el override del proyecto gana sobre el paquete para el mismo nombre', async () => {
     const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-lua-'));
     try {
       mkdirSync(join(cwd, 'transpilers', 'semantic', 'ast'), { recursive: true });
@@ -216,26 +220,22 @@ describe('resolveLuaFilters (sistema dual Fase 6)', () => {
       writeFileSync(join(cwd, 'transpilers', 'semantic', 'ast', '02-double-colon-noindent.lua'), '-- test\n');
       writeFileSync(join(cwd, 'transpilers', 'latex', '02-dictum.lua'), '-- test\n');
       const f = await resolveLuaFilters(undefined, cwd);
-      expect(f.semantic).toEqual([join(cwd, 'transpilers', 'semantic', 'ast', '02-double-colon-noindent.lua')]);
+      expect(f.semantic).toEqual([
+        join(PKG, 'semantic', 'string', '01-double-colon.lua'),
+        join(cwd, 'transpilers', 'semantic', 'ast', '02-double-colon-noindent.lua'),
+      ]);
       expect(f.latex).toEqual([join(cwd, 'transpilers', 'latex', '02-dictum.lua')]);
       expect(f.html).toEqual([]);
-      expect(f.resolvedNames).toEqual(new Set(['semantic/ast/02-double-colon-noindent', 'latex/02-dictum']));
+      expect(f.resolvedNames).toEqual(new Set(['semantic/string/01-double-colon', 'semantic/ast/02-double-colon-noindent', 'latex/02-dictum']));
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
   });
 
   it('excluye filtros desactivados por nombre completo', async () => {
-    const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-lua-'));
-    try {
-      mkdirSync(join(cwd, 'transpilers', 'latex'), { recursive: true });
-      writeFileSync(join(cwd, 'transpilers', 'latex', '02-dictum.lua'), '-- test\n');
-      const f = await resolveLuaFilters(['latex/02-dictum'], cwd);
-      expect(f.latex).toEqual([]);
-      expect(f.resolvedNames.size).toBe(0);
-    } finally {
-      rmSync(cwd, { recursive: true, force: true });
-    }
+    const f = await resolveLuaFilters(['semantic/string/01-double-colon']);
+    expect(f.semantic).toEqual([join(PKG, 'semantic', 'ast', '02-double-colon-noindent.lua')]);
+    expect(f.resolvedNames).toEqual(new Set(['semantic/ast/02-double-colon-noindent']));
   });
 });
 
