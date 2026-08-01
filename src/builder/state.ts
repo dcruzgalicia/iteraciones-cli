@@ -123,10 +123,10 @@ export async function computeConfigHashes(cwd: string, siteConfig: SiteConfig): 
     .catch(() => '');
   const logo = siteConfig.logo?.trim() ? await hashFileContent(join(cwd, siteConfig.logo)).catch(() => '') : '';
   return {
-    pdf: hashString(JSON.stringify(fmt?.pdf ?? {}) + '\n' + String(fmt?.latex ?? false)),
-    html: hashString(JSON.stringify(fmt?.html ?? {}) + '\n' + htmlTemplate + '\n' + site + '\n' + logo),
-    epub: hashString(JSON.stringify(fmt?.epub ?? {})),
-    markdown: hashString(JSON.stringify(fmt?.markdown ?? {}) + '\n' + String(siteConfig.lang ?? '')),
+    pdf: hashString(`${JSON.stringify(fmt?.pdf ?? {})}\n${String(fmt?.latex ?? false)}`),
+    html: hashString(`${JSON.stringify(fmt?.html ?? {})}\n${htmlTemplate}\n${site}\n${logo}`),
+    epub: hashString(`${JSON.stringify(fmt?.epub ?? {})}`),
+    markdown: hashString(`${JSON.stringify(fmt?.markdown ?? {})}\n${String(siteConfig.lang ?? '')}`),
   };
 }
 
