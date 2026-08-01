@@ -79,11 +79,11 @@ export async function saveStateFile(cwd: string, state: StateFile): Promise<void
  */
 export async function computeTranspilerHash(cwd: string, siteConfig: SiteConfig): Promise<string> {
   const parts: string[] = [];
-  // [directorio, glob]: los transpilers AST/string son .ts; los preamble son .tex
+  // [directorio, glob]: los transpilers AST/string son .ts (recursivo por capas); los preamble son .tex
   const specs: Array<[string, string]> = [
-    [join(import.meta.dir, 'transpilers'), '*.ts'],
+    [join(import.meta.dir, 'transpilers'), '**/*.ts'],
     [join(import.meta.dir, '../lib/resources/preamble'), '*.tex'],
-    [join(cwd, 'transpilers'), '*.ts'],
+    [join(cwd, 'transpilers'), '**/*.ts'],
     [join(cwd, 'preamble'), '*.tex'],
   ];
   for (const [dir, glob] of specs) {

@@ -1,8 +1,8 @@
-import { blockContent, hasClass } from './_ast-utils.js';
+import { blockContent, hasClass } from '../_ast-utils.js';
 
 /**
- * Transpiler AST: transforma Divs con clase .flushright al entorno
- * \begin{flushright}...\end{flushright} en LaTeX.
+ * Transpiler AST: transforma Divs con clase .center al entorno
+ * \begin{center}...\end{center} en LaTeX.
  *
  * Emite RawBlocks de apertura/cierre alrededor de los bloques internos
  * nativos: pandoc los convierte en la misma pasada, con cero procesos extra.
@@ -10,9 +10,9 @@ import { blockContent, hasClass } from './_ast-utils.js';
 
 export const type = 'ast' as const;
 
-function processFlushright(block: Record<string, unknown>): unknown[] {
+function processCenter(block: Record<string, unknown>): unknown[] {
   const content = blockContent(block);
-  return [{ t: 'RawBlock', c: ['latex', '\\begin{flushright}'] }, ...content, { t: 'RawBlock', c: ['latex', '\\end{flushright}'] }];
+  return [{ t: 'RawBlock', c: ['latex', '\\begin{center}'] }, ...content, { t: 'RawBlock', c: ['latex', '\\end{center}'] }];
 }
 
 export async function transform(ast: Record<string, unknown>): Promise<Record<string, unknown>> {
@@ -24,9 +24,9 @@ export async function transform(ast: Record<string, unknown>): Promise<Record<st
       typeof block === 'object' &&
       block !== null &&
       (block as Record<string, unknown>).t === 'Div' &&
-      hasClass(block as Record<string, unknown>, 'flushright')
+      hasClass(block as Record<string, unknown>, 'center')
     ) {
-      newBlocks.push(...processFlushright(block as Record<string, unknown>));
+      newBlocks.push(...processCenter(block as Record<string, unknown>));
     } else {
       newBlocks.push(block);
     }

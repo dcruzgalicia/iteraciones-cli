@@ -108,21 +108,31 @@ pandoc --from json      → Cuerpo LaTeX (.tex)
 
 ## Sistema de transpilers
 
-Los transpilers son módulos ESM que transforman el contenido antes de la conversión final a LaTeX. Se ejecutan en dos fases:
+Los transpilers son módulos ESM que transforman el contenido. Se organizan en **capas** (decisión D1):
 
-1. **String transpilers** — regex sobre el texto Markdown directamente
-2. **AST transpilers** — transformaciones sobre el AST JSON de pandoc
+1. **Capa semántica** (`semantic/`) — corre una vez y deja el **AST canónico** sin contenido de formato específico: `::` → `Div.spacer`, `:;` → `Div.spacer noindent`. Los `Div.dictum/verse/center/flushright` quedan sin transformar.
+2. **Capa de formato** (`latex/`, `html/`) — corre en cada exportación y convierte los nodos semánticos a su formato (RawBlocks de apertura/cierre alrededor de los bloques nativos).
 
-Además, existen los **preamble transpilers** que modifican el preámbulo LaTeX.
+Además, existen los **preamble transpilers** (`lib/resources/preamble/*.tex`) que modifican el preámbulo LaTeX.
 
 ### Transpilers integrados
 
-| Nombre | Tipo | Archivo | Entrada → Salida |
-|--------|------|---------|-------------------|
-| 01-double-colon | string | `transpilers/01-double-colon.ts` | `::` → `\vspace{\\baselineskip}` |
-| 02-dictum | ast | `transpilers/02-dictum.ts` | Div.dictum → `\dictum[author]{quote}` |
-| 03-verse | ast | `transpilers/03-verse.ts` | Div.verse → `\begin{verse}...\end{verse}` |
-| 04-mbox-sentence-ends | ast | `transpilers/04-mbox-sentence-ends.ts` | primeras/últimas 2 palabras → `\mbox{}` |
+| Nombre | Tipo | Entrada → Salida |
+|--------|------|-------------------|
+| `semantic/string/01-double-colon` | string | `::` → `Div.spacer` |
+| `semantic/ast/02-double-colon-noindent` | ast | `:;` → `Div.spacer noindent` |
+| `latex/01-spacer` | ast | `Div.spacer` → `\vspace{\baselineskip}` (+`\noindent` si noindent) |
+| `latex/02-dictum` | ast | `Div.dictum` → `\dictum[author]{quote}` |
+| `latex/03-verse` | ast | `Div.verse` → `\begin{verse}...\end{verse}` |
+| `latex/04-center` | ast | `Div.center` → `\begin{center}...\end{center}` |
+| `latex/05-flushright` | ast | `Div.flushright` → `\begin{flushright}...\end{flushright}` |
+| `latex/06-mbox-sentence-end` | ast | últimas palabras de cada oración → `\mbox{}` |
+| `latex/07-mbox-sentence-start` | ast | primera palabra de cada oración → `\mbox{}` |
+| `html/01-dictum` | ast | `Div.dictum` → `<blockquote class="dictum">` |
+| `html/02-verse` | ast | `Div.verse` → `<div class="verse">` |
+| `html/03-center` | ast | `Div.center` → `<div class="center">` |
+| `html/04-flushright` | ast | `Div.flushright` → `<div class="flushright">` |
+| `html/05-spacer` | ast | `Div.spacer` → `<div class="spacer"></div>` |
 
 ### Preamble transpilers integrados
 
@@ -137,7 +147,9 @@ Además, existen los **preamble transpilers** que modifican el preámbulo LaTeX.
 
 ### Extensibilidad
 
-Los preamble transpilers del proyecto con el mismo nombre (`<proyecto>/preamble/<nombre>.tex`) reemplazan a los del paquete (override). Para desactivar uno se usa `disabled-preamble-transpilers` en `_iteraciones.yaml`.
+- Un transpiler del proyecto con el mismo nombre completo (p. ej. `<proyecto>/transpilers/latex/02-dictum.ts`) reemplaza al del paquete (override).
+- Para desactivar uno se usa `disabled-transpilers` (nombres completos, p. ej. `latex/02-dictum`) en `_iteraciones.yaml`.
+- Los preamble transpilers del proyecto (`<proyecto>/preamble/<nombre>.tex`) reemplazan a los del paquete; se desactivan con `disabled-preamble-transpilers`.
 
 ---
 

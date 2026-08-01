@@ -40,19 +40,13 @@ describe('computePreambleFlags (desde el AST)', () => {
     expect(flags.skipParagraphSpace).toBe(false);
   });
 
-  it('dictum (Para con RawInline de apertura): skipNoIndent true, skipParagraphSpace false', () => {
+  it('dictum (Div.dictum como primer bloque): skipNoIndent true, skipParagraphSpace false', () => {
     const ast = {
       'pandoc-api-version': [1, 23],
       meta: {},
       blocks: [
-        {
-          t: 'Para',
-          c: [
-            { t: 'RawInline', c: ['latex', '\\vspace*{0.5\\topskip}\\dictum{'] },
-            { t: 'Str', c: 'Cita' },
-            { t: 'RawInline', c: ['latex', '}\\vspace*{32pt}'] },
-          ],
-        },
+        { t: 'Div', c: [['', ['dictum'], []], [{ t: 'Para', c: [{ t: 'Str', c: 'Cita' }] }]] },
+        { t: 'Para', c: [] },
       ],
     };
     const flags = computePreambleFlags(ast);
@@ -60,26 +54,37 @@ describe('computePreambleFlags (desde el AST)', () => {
     expect(flags.skipParagraphSpace).toBe(false);
   });
 
-  it('verse (RawBlock con vspace): skipNoIndent true', () => {
+  it('verse (Div.verse como primer bloque): skipNoIndent true', () => {
     const ast = {
       'pandoc-api-version': [1, 23],
       meta: {},
       blocks: [
-        { t: 'RawBlock', c: ['latex', '\\vspace*{3pt}\\begin{verse}'] },
+        { t: 'Div', c: [['', ['verse'], []], [{ t: 'Para', c: [] }]] },
         { t: 'Para', c: [] },
-        { t: 'RawBlock', c: ['latex', '\\end{verse}\\vspace*{3pt}'] },
       ],
     };
     const flags = computePreambleFlags(ast);
     expect(flags.skipNoIndent).toBe(true);
   });
 
-  it('center (RawBlock sin vspace) no cuenta como dictum-start', () => {
+  it('center (Div.center) no cuenta como dictum-start', () => {
     const ast = {
       'pandoc-api-version': [1, 23],
       meta: {},
       blocks: [
-        { t: 'RawBlock', c: ['latex', '\\begin{center}'] },
+        { t: 'Div', c: [['', ['center'], []], [{ t: 'Para', c: [] }]] },
+        { t: 'Para', c: [] },
+      ],
+    };
+    expect(computePreambleFlags(ast).skipNoIndent).toBe(false);
+  });
+
+  it('spacer (Div.spacer) no cuenta como dictum-start', () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [
+        { t: 'Div', c: [['', ['spacer'], []], []] },
         { t: 'Para', c: [] },
       ],
     };

@@ -1,12 +1,42 @@
 import { beforeAll, describe, expect, it } from 'bun:test';
 
-// ─── 01-double-colon ──────────────────────────────────────────────────────
+// Tipos para los módulos de transpilers en tests (evita any explícito)
+interface TestBlock {
+  t?: string;
+  c: unknown[];
+}
 
-describe('01-double-colon (string transpiler)', () => {
-  let mod: any;
+interface TestAst {
+  blocks: TestBlock[];
+}
+
+interface TranspilerTestModule {
+  type: string;
+  process: (body: string) => string;
+  transform: (ast: Record<string, unknown>) => Promise<TestAst>;
+}
+
+interface AstUtilsModule {
+  hasClass: (block: Record<string, unknown>, cls: string) => boolean;
+  blockContent: (block: Record<string, unknown>) => unknown[];
+  escapeLatex: (s: string) => string;
+  inlinesToLatex: (inlines: unknown[]) => string;
+}
+
+/** Accede a un bloque del AST de prueba sin aserciones no nulas. */
+function b(result: TestAst, index: number): TestBlock {
+  const block = result.blocks[index];
+  if (block === undefined) throw new Error(`Bloque ${index} no existe en el AST de prueba`);
+  return block;
+}
+
+// ─── semantic/string/01-double-colon ──────────────────────────────────────
+
+describe('semantic/string/01-double-colon (string transpiler)', () => {
+  let mod: TranspilerTestModule;
 
   beforeAll(async () => {
-    mod = await import('../builder/transpilers/01-double-colon.ts');
+    mod = (await import('../builder/transpilers/semantic/string/01-double-colon.ts')) as unknown as TranspilerTestModule;
   });
 
   it('exporta type como "string"', () => {
@@ -17,14 +47,14 @@ describe('01-double-colon (string transpiler)', () => {
     expect(typeof mod.process).toBe('function');
   });
 
-  it('convierte :: sola en una línea a \\vspace', () => {
+  it('convierte :: sola en una línea a un fenced div .spacer', () => {
     const result = mod.process('texto antes\n\n::\n\ntexto después');
-    expect(result).toBe('texto antes\n\n\\vspace{\\baselineskip}\n\ntexto después');
+    expect(result).toBe('texto antes\n\n::: {.spacer}\n:::\n\ntexto después');
   });
 
   it('convierte múltiples líneas ::', () => {
     const result = mod.process('a\n::\nb\n::\nc');
-    expect(result).toBe('a\n\\vspace{\\baselineskip}\nb\n\\vspace{\\baselineskip}\nc');
+    expect(result).toBe('a\n::: {.spacer}\n:::\nb\n::: {.spacer}\n:::\nc');
   });
 
   it('no modifica :: cuando no está sola en la línea', () => {
@@ -39,7 +69,7 @@ describe('01-double-colon (string transpiler)', () => {
 
   it('convierte tres líneas :: consecutivas', () => {
     const result = mod.process('::\n::\n::');
-    expect(result).toBe('\\vspace{\\baselineskip}\n\\vspace{\\baselineskip}\n\\vspace{\\baselineskip}');
+    expect(result).toBe('::: {.spacer}\n:::\n::: {.spacer}\n:::\n::: {.spacer}\n:::');
   });
 
   it('retorna string vacío sin cambios', () => {
@@ -47,13 +77,13 @@ describe('01-double-colon (string transpiler)', () => {
   });
 });
 
-// ─── 02-double-colon-noindent ─────────────────────────────────────────────
+// ─── semantic/ast/02-double-colon-noindent ────────────────────────────────
 
-describe('02-double-colon-noindent (AST transpiler)', () => {
-  let mod: any;
+describe('semantic/ast/02-double-colon-noindent (AST transpiler)', () => {
+  let mod: TranspilerTestModule;
 
   beforeAll(async () => {
-    mod = await import('../builder/transpilers/02-double-colon-noindent.ts');
+    mod = (await import('../builder/transpilers/semantic/ast/02-double-colon-noindent.ts')) as unknown as TranspilerTestModule;
   });
 
   it('exporta type como "ast"', () => {
@@ -64,45 +94,14 @@ describe('02-double-colon-noindent (AST transpiler)', () => {
     expect(typeof mod.transform).toBe('function');
   });
 
-  it('convierte Para con solo :; a RawBlock vspace', async () => {
+  it('convierte Para con solo :; a Div.spacer noindent (semántico)', async () => {
     const ast = {
       'pandoc-api-version': [1, 23],
       meta: {},
       blocks: [{ t: 'Para', c: [{ t: 'Str', c: ':;' }] }],
     };
     const result = await mod.transform(ast);
-    expect(result.blocks[0].t).toBe('RawBlock');
-    expect(result.blocks[0].c).toEqual(['latex', '\\vspace{\\baselineskip}']);
-  });
-
-  it('agrega \\noindent al parrafo siguiente despues de :;', async () => {
-    const ast = {
-      'pandoc-api-version': [1, 23],
-      meta: {},
-      blocks: [
-        { t: 'Para', c: [{ t: 'Str', c: ':;' }] },
-        { t: 'Para', c: [{ t: 'Str', c: 'Texto siguiente' }] },
-      ],
-    };
-    const result = await mod.transform(ast);
-    expect(result.blocks[0].t).toBe('RawBlock');
-    expect(result.blocks[1].t).toBe('Para');
-    expect(result.blocks[1].c[0]).toEqual({ t: 'RawInline', c: ['latex', '\\noindent '] });
-    expect(result.blocks[1].c[1]).toEqual({ t: 'Str', c: 'Texto siguiente' });
-  });
-
-  it('no agrega \\noindent si despues de :; hay un bloque que no es Para', async () => {
-    const ast = {
-      'pandoc-api-version': [1, 23],
-      meta: {},
-      blocks: [
-        { t: 'Para', c: [{ t: 'Str', c: ':;' }] },
-        { t: 'Header', c: [1, ['title', [], []], [{ t: 'Str', c: 'Título' }]] },
-      ],
-    };
-    const result = await mod.transform(ast);
-    expect(result.blocks[1].t).toBe('Header');
-    expect(result.blocks[1].c[2]).toEqual([{ t: 'Str', c: 'Título' }]);
+    expect(b(result, 0)).toEqual({ t: 'Div', c: [['', ['spacer', 'noindent'], []], []] });
   });
 
   it('no modifica Para con texto adicional', async () => {
@@ -112,7 +111,7 @@ describe('02-double-colon-noindent (AST transpiler)', () => {
       blocks: [{ t: 'Para', c: [{ t: 'Str', c: 'Texto con :; en la línea' }] }],
     };
     const result = await mod.transform(ast);
-    expect(result.blocks[0].t).toBe('Para');
+    expect(b(result, 0).t).toBe('Para');
   });
 
   it('no modifica bloques que no son Para', async () => {
@@ -122,29 +121,91 @@ describe('02-double-colon-noindent (AST transpiler)', () => {
       blocks: [{ t: 'Header', c: [1, ['title', [], []], [{ t: 'Str', c: 'Título' }]] }],
     };
     const result = await mod.transform(ast);
-    expect(result).toEqual(ast);
+    expect(result).toEqual(ast as unknown as TestAst);
   });
 
   it('retorna AST sin cambios si blocks está vacío', async () => {
     const ast = { 'pandoc-api-version': [1, 23], meta: {}, blocks: [] };
     const result = await mod.transform(ast);
-    expect(result).toEqual(ast);
+    expect(result).toEqual(ast as unknown as TestAst);
   });
 
   it('maneja blocks que no es un array', async () => {
     const ast = { 'pandoc-api-version': [1, 23], meta: {}, blocks: 'no-array' };
     const result = await mod.transform(ast);
-    expect(result).toEqual(ast);
+    expect(result).toEqual(ast as unknown as TestAst);
+  });
+});
+
+// ─── latex/01-spacer ───────────────────────────────────────────────────────
+
+describe('latex/01-spacer (AST transpiler)', () => {
+  let mod: TranspilerTestModule;
+
+  beforeAll(async () => {
+    mod = (await import('../builder/transpilers/latex/01-spacer.ts')) as unknown as TranspilerTestModule;
+  });
+
+  it('convierte Div.spacer a RawBlock vspace', async () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [{ t: 'Div', c: [['', ['spacer'], []], []] }],
+    };
+    const result = await mod.transform(ast);
+    expect(b(result, 0)).toEqual({ t: 'RawBlock', c: ['latex', '\\vspace{\\baselineskip}'] });
+  });
+
+  it('agrega \\noindent al parrafo siguiente despues de un spacer noindent', async () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [
+        { t: 'Div', c: [['', ['spacer', 'noindent'], []], []] },
+        { t: 'Para', c: [{ t: 'Str', c: 'Texto siguiente' }] },
+      ],
+    };
+    const result = await mod.transform(ast);
+    expect(b(result, 0).t).toBe('RawBlock');
+    expect(b(result, 1).t).toBe('Para');
+    expect(b(result, 1).c[0]).toEqual({ t: 'RawInline', c: ['latex', '\\noindent '] });
+    expect(b(result, 1).c[1]).toEqual({ t: 'Str', c: 'Texto siguiente' });
+  });
+
+  it('no agrega \\noindent si despues del spacer hay un bloque que no es Para', async () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [
+        { t: 'Div', c: [['', ['spacer', 'noindent'], []], []] },
+        { t: 'Header', c: [1, ['title', [], []], [{ t: 'Str', c: 'Título' }]] },
+      ],
+    };
+    const result = await mod.transform(ast);
+    expect(b(result, 1).t).toBe('Header');
+  });
+
+  it('no agrega noindent para un spacer sin clase noindent', async () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [
+        { t: 'Div', c: [['', ['spacer'], []], []] },
+        { t: 'Para', c: [{ t: 'Str', c: 'Texto' }] },
+      ],
+    };
+    const result = await mod.transform(ast);
+    expect(b(result, 1).c[0]).toEqual({ t: 'Str', c: 'Texto' });
   });
 });
 
 // ─── 03-dictum ─────────────────────────────────────────────────────────────
 
-describe('03-dictum (AST transpiler)', () => {
-  let mod: any;
+describe('latex/02-dictum (AST transpiler)', () => {
+  let mod: TranspilerTestModule;
 
   beforeAll(async () => {
-    mod = await import('../builder/transpilers/03-dictum.ts');
+    mod = (await import('../builder/transpilers/latex/02-dictum.ts')) as unknown as TranspilerTestModule;
   });
 
   it('exporta type como "ast"', () => {
@@ -162,13 +223,13 @@ describe('03-dictum (AST transpiler)', () => {
       blocks: [{ t: 'Para', c: [{ t: 'Str', c: 'Hola' }] }],
     };
     const result = await mod.transform(ast);
-    expect(result).toEqual(ast);
+    expect(result).toEqual(ast as unknown as TestAst);
   });
 
   it('retorna el AST sin cambios si blocks está vacío', async () => {
     const ast = { 'pandoc-api-version': [1, 23], meta: {}, blocks: [] };
     const result = await mod.transform(ast);
-    expect(result).toEqual(ast);
+    expect(result).toEqual(ast as unknown as TestAst);
   });
 
   it('convierte Div.dictum en RawInline de apertura/cierre pegados al parrafo', async () => {
@@ -217,8 +278,8 @@ describe('03-dictum (AST transpiler)', () => {
       ],
     };
     const result = await mod.transform(ast);
-    expect(result.blocks[0].c[0]).toEqual({ t: 'RawInline', c: ['latex', '\\vspace*{1\\baselineskip}\\dictum{'] });
-    expect(result.blocks[0].c[2]).toEqual({ t: 'RawInline', c: ['latex', '}\\vspace*{24pt}'] });
+    expect(b(result, 0).c[0]).toEqual({ t: 'RawInline', c: ['latex', '\\vspace*{1\\baselineskip}\\dictum{'] });
+    expect(b(result, 0).c[2]).toEqual({ t: 'RawInline', c: ['latex', '}\\vspace*{24pt}'] });
   });
 
   it('convierte Div.author a \\dictum[autor]{', async () => {
@@ -242,9 +303,9 @@ describe('03-dictum (AST transpiler)', () => {
       ],
     };
     const result = await mod.transform(ast);
-    expect(result.blocks[0].c[0]).toEqual({ t: 'RawInline', c: ['latex', '\\vspace*{0.5\\topskip}\\dictum[Autor]{'] });
-    expect(result.blocks[0].c[1]).toEqual({ t: 'Str', c: 'Cita de prueba' });
-    expect(result.blocks[0].c[2]).toEqual({ t: 'RawInline', c: ['latex', '}\\vspace*{32pt}'] });
+    expect(b(result, 0).c[0]).toEqual({ t: 'RawInline', c: ['latex', '\\vspace*{0.5\\topskip}\\dictum[Autor]{'] });
+    expect(b(result, 0).c[1]).toEqual({ t: 'Str', c: 'Cita de prueba' });
+    expect(b(result, 0).c[2]).toEqual({ t: 'RawInline', c: ['latex', '}\\vspace*{32pt}'] });
     expect(result.blocks).toHaveLength(1);
   });
 
@@ -280,7 +341,7 @@ describe('03-dictum (AST transpiler)', () => {
       ],
     };
     const result = await mod.transform(ast);
-    expect(result.blocks[1]).toEqual({
+    expect(b(result, 1)).toEqual({
       t: 'Para',
       c: [
         { t: 'RawInline', c: ['latex', '\\noindent '] },
@@ -290,11 +351,11 @@ describe('03-dictum (AST transpiler)', () => {
   });
 });
 
-describe('04-verse (AST transpiler)', () => {
-  let mod: any;
+describe('latex/03-verse (AST transpiler)', () => {
+  let mod: TranspilerTestModule;
 
   beforeAll(async () => {
-    mod = await import('../builder/transpilers/04-verse.ts');
+    mod = (await import('../builder/transpilers/latex/03-verse.ts')) as unknown as TranspilerTestModule;
   });
 
   it('exporta type como "ast"', () => {
@@ -312,13 +373,13 @@ describe('04-verse (AST transpiler)', () => {
       blocks: [{ t: 'Para', c: [{ t: 'Str', c: 'Hola' }] }],
     };
     const result = await mod.transform(ast);
-    expect(result).toEqual(ast);
+    expect(result).toEqual(ast as unknown as TestAst);
   });
 
   it('retorna el AST sin cambios si blocks está vacío', async () => {
     const ast = { 'pandoc-api-version': [1, 23], meta: {}, blocks: [] };
     const result = await mod.transform(ast);
-    expect(result).toEqual(ast);
+    expect(result).toEqual(ast as unknown as TestAst);
   });
 
   it('convierte Div.verse en RawBlocks de apertura/cierre con bloques nativos', async () => {
@@ -362,8 +423,8 @@ describe('04-verse (AST transpiler)', () => {
       ],
     };
     const result = await mod.transform(ast);
-    expect(result.blocks[0]).toEqual({ t: 'RawBlock', c: ['latex', '\\vspace*{1\\baselineskip}\\begin{verse}'] });
-    expect(result.blocks[2]).toEqual({ t: 'RawBlock', c: ['latex', '\\end{verse}\\vspace*{24pt}'] });
+    expect(b(result, 0)).toEqual({ t: 'RawBlock', c: ['latex', '\\vspace*{1\\baselineskip}\\begin{verse}'] });
+    expect(b(result, 2)).toEqual({ t: 'RawBlock', c: ['latex', '\\end{verse}\\vspace*{24pt}'] });
   });
 
   it('agrega \\noindent al parrafo siguiente despues de un verse', async () => {
@@ -379,7 +440,7 @@ describe('04-verse (AST transpiler)', () => {
       ],
     };
     const result = await mod.transform(ast);
-    expect(result.blocks[3]).toEqual({
+    expect(b(result, 3)).toEqual({
       t: 'Para',
       c: [
         { t: 'RawInline', c: ['latex', '\\noindent '] },
@@ -391,11 +452,11 @@ describe('04-verse (AST transpiler)', () => {
 
 // ─── 08-mbox-sentence-end ────────────────────────────────────────────────
 
-describe('08-mbox-sentence-end (AST transpiler)', () => {
-  let mod: any;
+describe('latex/06-mbox-sentence-end (AST transpiler)', () => {
+  let mod: TranspilerTestModule;
 
   beforeAll(async () => {
-    mod = await import('../builder/transpilers/08-mbox-sentence-end.ts');
+    mod = (await import('../builder/transpilers/latex/06-mbox-sentence-end.ts')) as unknown as TranspilerTestModule;
   });
 
   it('exporta type como "ast"', () => {
@@ -413,13 +474,13 @@ describe('08-mbox-sentence-end (AST transpiler)', () => {
       blocks: [{ t: 'Header', c: [1, ['title', [], []], [{ t: 'Str', c: 'Título' }]] }],
     };
     const result = await mod.transform(ast);
-    expect(result).toEqual(ast);
+    expect(result).toEqual(ast as unknown as TestAst);
   });
 
   it('retorna AST sin cambios si blocks está vacío', async () => {
     const ast = { 'pandoc-api-version': [1, 23], meta: {}, blocks: [] };
     const result = await mod.transform(ast);
-    expect(result).toEqual(ast);
+    expect(result).toEqual(ast as unknown as TestAst);
   });
 
   it('no modifica un párrafo con menos de 4 palabras', async () => {
@@ -429,29 +490,29 @@ describe('08-mbox-sentence-end (AST transpiler)', () => {
       blocks: [{ t: 'Para', c: [{ t: 'Str', c: 'Hola' }, { t: 'Space' }, { t: 'Str', c: 'mundo' }] }],
     };
     const result = await mod.transform(ast);
-    expect(result).toEqual(ast);
+    expect(result).toEqual(ast as unknown as TestAst);
   });
 
   it('maneja blocks que no es un array', async () => {
     const ast = { 'pandoc-api-version': [1, 23], meta: {}, blocks: 'no-array' };
     const result = await mod.transform(ast);
-    expect(result).toEqual(ast);
+    expect(result).toEqual(ast as unknown as TestAst);
   });
 
   it('maneja bloque Para sin c (inlines)', async () => {
     const ast = { 'pandoc-api-version': [1, 23], meta: {}, blocks: [{ t: 'Para' }] };
     const result = await mod.transform(ast);
-    expect(result).toEqual(ast);
+    expect(result).toEqual(ast as unknown as TestAst);
   });
 });
 
 // ─── 09-mbox-sentence-start ──────────────────────────────────────────────
 
-describe('09-mbox-sentence-start (AST transpiler)', () => {
-  let mod: any;
+describe('latex/07-mbox-sentence-start (AST transpiler)', () => {
+  let mod: TranspilerTestModule;
 
   beforeAll(async () => {
-    mod = await import('../builder/transpilers/09-mbox-sentence-start.ts');
+    mod = (await import('../builder/transpilers/latex/07-mbox-sentence-start.ts')) as unknown as TranspilerTestModule;
   });
 
   it('exporta type como "ast"', () => {
@@ -469,13 +530,13 @@ describe('09-mbox-sentence-start (AST transpiler)', () => {
       blocks: [{ t: 'Header', c: [1, ['title', [], []], [{ t: 'Str', c: 'Título' }]] }],
     };
     const result = await mod.transform(ast);
-    expect(result).toEqual(ast);
+    expect(result).toEqual(ast as unknown as TestAst);
   });
 
   it('retorna AST sin cambios si blocks está vacío', async () => {
     const ast = { 'pandoc-api-version': [1, 23], meta: {}, blocks: [] };
     const result = await mod.transform(ast);
-    expect(result).toEqual(ast);
+    expect(result).toEqual(ast as unknown as TestAst);
   });
 
   it('no modifica un párrafo con menos de 2 palabras', async () => {
@@ -485,26 +546,26 @@ describe('09-mbox-sentence-start (AST transpiler)', () => {
       blocks: [{ t: 'Para', c: [{ t: 'Str', c: 'Hola' }] }],
     };
     const result = await mod.transform(ast);
-    expect(result).toEqual(ast);
+    expect(result).toEqual(ast as unknown as TestAst);
   });
 
   it('maneja blocks que no es un array', async () => {
     const ast = { 'pandoc-api-version': [1, 23], meta: {}, blocks: 'no-array' };
     const result = await mod.transform(ast);
-    expect(result).toEqual(ast);
+    expect(result).toEqual(ast as unknown as TestAst);
   });
 
   it('maneja bloque Para sin c (inlines)', async () => {
     const ast = { 'pandoc-api-version': [1, 23], meta: {}, blocks: [{ t: 'Para' }] };
     const result = await mod.transform(ast);
-    expect(result).toEqual(ast);
+    expect(result).toEqual(ast as unknown as TestAst);
   });
 });
 
 // ─── _ast-utils ────────────────────────────────────────────────────────────
 
 describe('_ast-utils (helpers compartidos)', () => {
-  let utils: any;
+  let utils: AstUtilsModule;
 
   beforeAll(async () => {
     utils = await import('../builder/transpilers/_ast-utils.ts');
@@ -591,5 +652,107 @@ describe('_ast-utils (helpers compartidos)', () => {
     it('retorna string vacío para lista vacía', () => {
       expect(utils.inlinesToLatex([])).toBe('');
     });
+  });
+});
+
+// ─── html/* transpilers ─────────────────────────────────────────────────────
+
+describe('html/01-dictum (AST transpiler)', () => {
+  let mod: TranspilerTestModule;
+
+  beforeAll(async () => {
+    mod = (await import('../builder/transpilers/html/01-dictum.ts')) as unknown as TranspilerTestModule;
+  });
+
+  it('envuelve Div.dictum en blockquote con bloques nativos', async () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [{ t: 'Div', c: [['', ['dictum'], []], [{ t: 'Para', c: [{ t: 'Str', c: 'Cita' }] }]] }],
+    };
+    const result = await mod.transform(ast);
+    expect(result.blocks).toEqual([
+      { t: 'RawBlock', c: ['html', '<blockquote class="dictum">'] },
+      { t: 'Para', c: [{ t: 'Str', c: 'Cita' }] },
+      { t: 'RawBlock', c: ['html', '</blockquote>'] },
+    ]);
+  });
+});
+
+describe('html/02-verse (AST transpiler)', () => {
+  let mod: TranspilerTestModule;
+
+  beforeAll(async () => {
+    mod = (await import('../builder/transpilers/html/02-verse.ts')) as unknown as TranspilerTestModule;
+  });
+
+  it('envuelve Div.verse en div con bloques nativos', async () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [{ t: 'Div', c: [['', ['verse'], []], [{ t: 'Para', c: [{ t: 'Str', c: 'Poema' }] }]] }],
+    };
+    const result = await mod.transform(ast);
+    expect(result.blocks).toEqual([
+      { t: 'RawBlock', c: ['html', '<div class="verse">'] },
+      { t: 'Para', c: [{ t: 'Str', c: 'Poema' }] },
+      { t: 'RawBlock', c: ['html', '</div>'] },
+    ]);
+  });
+});
+
+describe('html/03-center (AST transpiler)', () => {
+  let mod: TranspilerTestModule;
+
+  beforeAll(async () => {
+    mod = (await import('../builder/transpilers/html/03-center.ts')) as unknown as TranspilerTestModule;
+  });
+
+  it('envuelve Div.center en div con bloques nativos', async () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [{ t: 'Div', c: [['', ['center'], []], [{ t: 'Para', c: [{ t: 'Str', c: 'Centrado' }] }]] }],
+    };
+    const result = await mod.transform(ast);
+    expect(b(result, 0)).toEqual({ t: 'RawBlock', c: ['html', '<div class="center">'] });
+    expect(b(result, 2)).toEqual({ t: 'RawBlock', c: ['html', '</div>'] });
+  });
+});
+
+describe('html/04-flushright (AST transpiler)', () => {
+  let mod: TranspilerTestModule;
+
+  beforeAll(async () => {
+    mod = (await import('../builder/transpilers/html/04-flushright.ts')) as unknown as TranspilerTestModule;
+  });
+
+  it('envuelve Div.flushright en div con bloques nativos', async () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [{ t: 'Div', c: [['', ['flushright'], []], [{ t: 'Para', c: [{ t: 'Str', c: 'Derecha' }] }]] }],
+    };
+    const result = await mod.transform(ast);
+    expect(b(result, 0)).toEqual({ t: 'RawBlock', c: ['html', '<div class="flushright">'] });
+    expect(b(result, 2)).toEqual({ t: 'RawBlock', c: ['html', '</div>'] });
+  });
+});
+
+describe('html/05-spacer (AST transpiler)', () => {
+  let mod: TranspilerTestModule;
+
+  beforeAll(async () => {
+    mod = (await import('../builder/transpilers/html/05-spacer.ts')) as unknown as TranspilerTestModule;
+  });
+
+  it('convierte Div.spacer a div vacío', async () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [{ t: 'Div', c: [['', ['spacer', 'noindent'], []], []] }],
+    };
+    const result = await mod.transform(ast);
+    expect(result.blocks).toEqual([{ t: 'RawBlock', c: ['html', '<div class="spacer"></div>'] }]);
   });
 });
