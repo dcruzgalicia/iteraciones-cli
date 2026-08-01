@@ -1,7 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { logWarning } from '../lib/logger.js';
-import { convertFragment } from '../lib/pandoc-runner.js';
+import { type BibOptions, convertFragment } from '../lib/pandoc-runner.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import { discoverBibFiles } from './latex-preamble.js';
 import { loadModules } from './load-modules.js';
@@ -211,6 +211,87 @@ export function computePreambleFlags(ast: Record<string, unknown>): PreambleFlag
   };
 }
 
+/** Retorna true si el AST contiene nodos Cite (citas con bibliografía). */
+export function hasCiteNodes(ast: Record<string, unknown>): boolean {
+  return JSON.stringify(ast).includes('"t":"Cite"');
+}
+
+type TranspilerGroups = Awaited<ReturnType<typeof loadTranspilerGroups>>;
+
+/** Convierte el AST canónico a body LaTeX con los transpilers de formato latex. */
+async function renderLatexBody(
+  ast: Record<string, unknown>,
+  doc: BuildDocument,
+  groups: TranspilerGroups,
+  bibFiles: string[],
+  hasCiteKeys: boolean,
+): Promise<string> {
+  let latexAst: Record<string, unknown> = structuredClone(ast);
+  for (const t of groups.latex) {
+    latexAst = await t.transform(latexAst);
+  }
+  const pandocArgs: string[] = ['--top-level-division', 'section', '--shift-heading-level-by=2'];
+  if (bibFiles.length > 0) {
+    pandocArgs.push('--biblatex');
+    for (const bib of bibFiles) {
+      pandocArgs.push('--bibliography', bib);
+    }
+  }
+  let processedBody = await convertFragment(JSON.stringify(latexAst), doc.filePath, undefined, 'latex', 'json', pandocArgs);
+  if (bibFiles.length > 0 && hasCiteKeys) {
+    processedBody = `${processedBody.replace(/\n+$/, '\n\n')}\\printbibliography[heading=bibintoc]\n`;
+  }
+  return processedBody;
+}
+
+/** Convierte el AST canónico a fragmento HTML con los transpilers de formato html. */
+async function renderHtmlFragment(
+  ast: Record<string, unknown>,
+  doc: BuildDocument,
+  groups: TranspilerGroups,
+  bibOptions?: BibOptions,
+): Promise<string> {
+  let htmlAst: Record<string, unknown> = structuredClone(ast);
+  for (const t of groups.html) {
+    htmlAst = await t.transform(htmlAst);
+  }
+  return convertFragment(JSON.stringify(htmlAst), doc.filePath, bibOptions, 'html5', 'json');
+}
+
+/** Escribe el AST canónico y los outputs cacheados de un documento. */
+async function writeCachedArtifacts(
+  cwd: string,
+  doc: BuildDocument,
+  slug: string,
+  processedBody: string,
+  htmlFragment: string,
+  flags: PreambleFlags,
+  ast: Record<string, unknown>,
+): Promise<void> {
+  const dir = dirname(doc.relativePath);
+  const cacheBase = join(cwd, '.iteraciones');
+  const astDir = join(cacheBase, 'ast', dir);
+  await mkdir(astDir, { recursive: true });
+  await Bun.write(join(astDir, `${slug}.json`), JSON.stringify(ast));
+  const texDir = join(cacheBase, 'tex', dir);
+  await mkdir(texDir, { recursive: true });
+  await Bun.write(join(texDir, `${slug}.tex`), processedBody);
+  await Bun.write(join(texDir, `${slug}.flags.json`), JSON.stringify(flags));
+  if (htmlFragment) {
+    const htmlDir = join(cacheBase, 'html', dir);
+    await mkdir(htmlDir, { recursive: true });
+    await Bun.write(join(htmlDir, `${slug}.html`), htmlFragment);
+  }
+}
+
+/** Contexto compartido de bibliografía para las exportaciones. */
+function bibContext(cwd: string): { bibFiles: string[]; bibOptions?: BibOptions } {
+  const bibFiles = cwd ? discoverBibFiles(cwd) : [];
+  const firstBib = bibFiles[0];
+  const bibOptions = firstBib !== undefined ? { bibliography: firstBib, csl: join(import.meta.dir, '../../src/lib/resources/apa-7.csl') } : undefined;
+  return { bibFiles, bibOptions };
+}
+
 /**
  * FASE 2+3 combinada: markdown → AST canónico → latex body + html fragment.
  *
@@ -219,6 +300,9 @@ export function computePreambleFlags(ast: Record<string, unknown>): PreambleFlag
  *     → [transpilers semánticos ast] → AST canónico
  *     → [transpilers latex] → pandoc --from json --to latex → tex/{slug}.tex
  *     → [transpilers html]  → pandoc --from json --to html5 → html/{slug}.html
+ *
+ * También serializa el AST canónico a disco (`.iteraciones/ast/{slug}.json`)
+ * en formato JSON nativo de pandoc para reutilizarlo en builds futuros.
  *
  * Retorna un mapa relativePath → { processedBody, htmlFragment, slug }.
  */
@@ -230,11 +314,7 @@ export async function renderLatex(
   generateHtml?: boolean,
 ): Promise<Map<string, RenderLatexResult>> {
   const groups = await loadTranspilerGroups(activeTranspilers, cwd);
-
-  // Auto-descubrir archivos .bib una sola vez para todo el build
-  const bibFiles = cwd ? discoverBibFiles(cwd) : [];
-  const firstBib = bibFiles[0];
-  const bibOptions = firstBib !== undefined ? { bibliography: firstBib, csl: join(import.meta.dir, '../../src/lib/resources/apa-7.csl') } : undefined;
+  const { bibFiles, bibOptions } = bibContext(cwd);
 
   const results = new Map<string, RenderLatexResult>();
 
@@ -275,59 +355,78 @@ export async function renderLatex(
 
     // Flags de preámbulo desde la estructura real del AST canónico
     const flags = computePreambleFlags(ast);
+    const hasCiteKeys = bibFiles.length > 0 && /@\w+[\w:;#.,(){}'"\s]/.test(body);
+    const processedBody = await renderLatexBody(ast, doc, groups, bibFiles, hasCiteKeys);
 
-    // Paso 4a: transpilers de formato LaTeX → latex body
-    let latexAst: Record<string, unknown> = structuredClone(ast);
-    for (const t of groups.latex) {
-      latexAst = await t.transform(latexAst);
-    }
-    const pandocArgs: string[] = ['--top-level-division', 'section', '--shift-heading-level-by=2'];
-    if (bibFiles.length > 0) {
-      pandocArgs.push('--biblatex');
-      for (const bib of bibFiles) {
-        pandocArgs.push('--bibliography', bib);
-      }
-    }
-
-    let processedBody = await convertFragment(JSON.stringify(latexAst), doc.filePath, undefined, 'latex', 'json', pandocArgs);
-
-    // Si hay citekeys y archivos .bib, agregar printbibliography
-    if (bibFiles.length > 0 && /@\w+[\w:;#.,(){}'"\s]/.test(body)) {
-      processedBody = processedBody.replace(/\n+$/, '\n\n') + '\\printbibliography[heading=bibintoc]\n';
-    }
-
-    // Obtener slug del doc o calcularlo
-    const slug = doc.slug ?? basename(doc.relativePath, '.md');
-    const dir = dirname(doc.relativePath);
-    const cacheBase = join(cwd, '.iteraciones');
-
-    // Escribir tex/{slug}.tex y tex/{slug}.flags.json
-    const texDir = join(cacheBase, 'tex', dir);
-    await mkdir(texDir, { recursive: true });
-    await Bun.write(join(texDir, `${slug}.tex`), processedBody);
-    await Bun.write(join(texDir, `${slug}.flags.json`), JSON.stringify(flags));
-
-    // Paso 4b: transpilers de formato HTML → html fragment (con citeproc)
+    // Paso 4: transpilers de formato HTML → html fragment (con citeproc)
     let htmlFragment = '';
     if (generateHtml !== false) {
       try {
-        let htmlAst: Record<string, unknown> = structuredClone(ast);
-        for (const t of groups.html) {
-          htmlAst = await t.transform(htmlAst);
-        }
-        htmlFragment = await convertFragment(JSON.stringify(htmlAst), doc.filePath, bibOptions, 'html5', 'json');
+        htmlFragment = await renderHtmlFragment(ast, doc, groups, bibOptions);
       } catch {
         logWarning(`error al convertir a HTML para ${doc.relativePath}`, 'render');
       }
+    }
 
-      // Escribir html/{slug}.html
-      if (htmlFragment) {
-        const htmlDir = join(cacheBase, 'html', dir);
-        await mkdir(htmlDir, { recursive: true });
-        await Bun.write(join(htmlDir, `${slug}.html`), htmlFragment);
+    const slug = doc.slug ?? basename(doc.relativePath, '.md');
+    await writeCachedArtifacts(cwd, doc, slug, processedBody, htmlFragment, flags, ast);
+    results.set(doc.relativePath, { processedBody, htmlFragment, slug });
+  });
+
+  return results;
+}
+
+/**
+ * Exporta los formatos desde el AST canónico serializado en disco
+ * (`.iteraciones/ast/{slug}.json`) sin re-ejecutar markdown → json.
+ *
+ * Se usa cuando se activa un formato nuevo: el AST ya existe del build
+ * anterior, solo faltan los outputs de ese formato. Los docs sin AST en
+ * disco se omiten del resultado (el caller los manda al pipeline completo).
+ */
+export async function renderFromAstCache(
+  docs: BuildDocument[],
+  concurrency: number,
+  cwd: string,
+  generateHtml?: boolean,
+  activeTranspilers?: string[],
+): Promise<Map<string, RenderLatexResult>> {
+  const groups = await loadTranspilerGroups(activeTranspilers, cwd);
+  const { bibFiles, bibOptions } = bibContext(cwd);
+  const results = new Map<string, RenderLatexResult>();
+
+  await mapWithConcurrency(docs, concurrency, async (doc) => {
+    const slug = doc.slug ?? basename(doc.relativePath, '.md');
+    const dir = dirname(doc.relativePath);
+    const astPath = join(cwd, '.iteraciones', 'ast', dir, `${slug}.json`);
+    const raw = await Bun.file(astPath)
+      .text()
+      .catch(() => '');
+    if (!raw) return;
+
+    let ast: Record<string, unknown>;
+    try {
+      ast = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      logWarning(`error al parsear AST en disco de ${doc.relativePath}`, 'render');
+      return;
+    }
+
+    const flags = computePreambleFlags(ast);
+    // El markdown original no está disponible: detectar citas desde el AST
+    const hasCiteKeys = bibFiles.length > 0 && hasCiteNodes(ast);
+    const processedBody = await renderLatexBody(ast, doc, groups, bibFiles, hasCiteKeys);
+
+    let htmlFragment = '';
+    if (generateHtml !== false) {
+      try {
+        htmlFragment = await renderHtmlFragment(ast, doc, groups, bibOptions);
+      } catch {
+        logWarning(`error al convertir a HTML para ${doc.relativePath}`, 'render');
       }
     }
 
+    await writeCachedArtifacts(cwd, doc, slug, processedBody, htmlFragment, flags, ast);
     results.set(doc.relativePath, { processedBody, htmlFragment, slug });
   });
 

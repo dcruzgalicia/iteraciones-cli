@@ -161,6 +161,7 @@ El build incremental evita reprocesar documentos que no han cambiado:
 2. **Detección por mtime**: cada archivo .md se compara contra el timestamp del build anterior
 3. **Formatos activos**: si cambia la configuración de formatos entre builds, se fuerza el reprocesamiento completo
 4. **Slugs duplicados**: contador persistente para slugs con sufijo `-dN`
+5. **AST canónico** (`.iteraciones/ast/{slug}.json`): el AST de pandoc (JSON nativo, sin contenido de formato) se serializa en cada render. Cuando se activa un formato nuevo, sus salidas se exportan desde el AST en disco sin re-ejecutar markdown → json; si no hay AST (primer build o caché limpiada), el documento vuelve al pipeline completo.
 
 Solo los documentos modificados (o con slug cambiado) pasan por el pipeline completo. El resto se copia desde el caché.
 
