@@ -1,4 +1,4 @@
-import { blockContent, hasClass, inlinesToLatex } from './_ast-utils.js';
+import { blockContent, hasClass, inlinesToLatex } from '../_ast-utils.js';
 
 /**
  * Transpiler AST: transforma Divs con clase .dictum al comando

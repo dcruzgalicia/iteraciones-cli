@@ -1,4 +1,4 @@
-import { blockContent, hasClass } from './_ast-utils.js';
+import { blockContent, hasClass } from '../_ast-utils.js';
 
 /**
  * Transpiler AST: transforma Divs con clase .verse a entorno

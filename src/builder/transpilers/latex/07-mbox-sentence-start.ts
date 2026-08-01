@@ -10,7 +10,7 @@
  *   → "\mbox{Principio} de la oración. \mbox{Otra} oración aquí."
  */
 
-import { classifyInline, findSentenceBounds, type MboxWrap } from './_sentence-utils.js';
+import { classifyInline, findSentenceBounds, type MboxWrap } from '../_sentence-utils.js';
 
 export const type = 'ast' as const;
 

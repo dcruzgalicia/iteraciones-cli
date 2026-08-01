@@ -26,7 +26,9 @@ export async function runTranspilers(cwd: string): Promise<void> {
   } else {
     process.stdout.write('Para desactivar uno, agrégalo a la lista `disabled-transpilers:` en _iteraciones.yaml.\n');
   }
-  process.stdout.write('Para sobrescribir un transpiler, crea `<proyecto>/transpilers/<nombre>.ts`.\n');
+  process.stdout.write(
+    'Para sobrescribir un transpiler, crea `<proyecto>/transpilers/<grupo>/<nombre>.ts` (p. ej. `transpilers/latex/02-dictum.ts`).\n',
+  );
 
   // Preamble transpilers
   const preambleInfos = getBuiltinPreambleTranspilerInfos();

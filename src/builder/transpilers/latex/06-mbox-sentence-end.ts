@@ -12,7 +12,7 @@
  *   → "Primera oración de \\mbox{ejemplo}. Segunda \\mbox{aquí}. Tercera oración \\mbox{de ejemplo final}."
  */
 
-import { classifyInline, findSentenceBounds, isSpace, type MboxWrap } from './_sentence-utils.js';
+import { classifyInline, findSentenceBounds, isSpace, type MboxWrap } from '../_sentence-utils.js';
 
 export const type = 'ast' as const;
 
