@@ -129,7 +129,7 @@ describe('hasCiteNodes (detección de citas en el AST)', () => {
 });
 
 describe('renderFromAstCache (exportación desde AST en disco)', () => {
-  it('retorna mapa vacío si no hay AST serializado en disco', async () => {
+  it('retorna conjunto vacío si no hay AST serializado en disco', async () => {
     const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-ast-'));
     try {
       const doc: BuildDocument = {
@@ -138,8 +138,8 @@ describe('renderFromAstCache (exportación desde AST en disco)', () => {
         frontmatter: { title: 'Prueba', date: '', author: [] },
         slug: 'prueba',
       };
-      const results = await renderFromAstCache([doc], 1, cwd, false);
-      expect(results.size).toBe(0);
+      const processed = await renderFromAstCache([doc], 1, cwd, false);
+      expect(processed.size).toBe(0);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }

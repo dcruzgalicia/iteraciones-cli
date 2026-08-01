@@ -15,8 +15,6 @@ export interface ExportMetadata {
 export interface ExportDocument {
   filePath: string;
   relativePath: string;
-  body: string;
-  htmlBody?: string;
   metadata: ExportMetadata;
   slug?: string;
 }

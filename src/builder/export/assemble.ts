@@ -5,7 +5,8 @@ import type { ExportDocument, ExportMetadata } from './types.js';
 
 /**
  * Ensambla un ExportDocument a partir de un BuildDocument.
- * El body se toma de processedBody (LaTeX) sin modificaciones.
+ * Los inputs de conversión (AST/LaTeX/HTML) se leen del caché en disco
+ * (`.iteraciones/ast/`, `.iteraciones/tex/`) en el momento de exportar.
  */
 export function assembleExportDocument(
   doc: BuildDocument,
@@ -13,11 +14,8 @@ export function assembleExportDocument(
   globalBibliography?: string,
   globalCsl?: string,
   pdfFormat?: PdfFormatConfig,
-): ExportDocument | null {
-  if (!doc.processedBody) return null;
-
+): ExportDocument {
   const documentclass = pdfFormat?.documentclass?.class ?? 'scrbook';
-  if (!documentclass) return null;
 
   const bibliography = globalBibliography;
   const csl = globalCsl ?? (bibliography ? join(import.meta.dir, '../../../src/lib/resources/apa-7.csl') : undefined);
@@ -37,8 +35,6 @@ export function assembleExportDocument(
   return {
     filePath: doc.filePath,
     relativePath: doc.relativePath,
-    body: doc.processedBody ?? '',
-    htmlBody: doc.htmlFragment ?? undefined,
     metadata,
     slug: doc.slug,
   };

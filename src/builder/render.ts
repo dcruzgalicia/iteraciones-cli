@@ -159,13 +159,6 @@ export function getBuiltinTranspilerInfos(): TranspilerInfo[] {
   }));
 }
 
-/** Resultado individual del pipeline combinado. */
-export interface RenderLatexResult {
-  processedBody: string;
-  htmlFragment: string;
-  slug: string;
-}
-
 /** Flags de preámbulo calculados desde el AST (estructura real del documento). */
 export interface PreambleFlags {
   /** ¿Existen nodos Header? (para evitar un TOC vacío). */
@@ -258,25 +251,27 @@ async function renderHtmlFragment(
   return convertFragment(JSON.stringify(htmlAst), doc.filePath, bibOptions, 'html5', 'json');
 }
 
-/** Escribe el AST canónico y los outputs cacheados de un documento. */
+/** Escribe el AST canónico y los outputs cacheados según los formatos activos. */
 async function writeCachedArtifacts(
   cwd: string,
   doc: BuildDocument,
   slug: string,
-  processedBody: string,
-  htmlFragment: string,
-  flags: PreambleFlags,
   ast: Record<string, unknown>,
+  processedBody?: string,
+  flags?: PreambleFlags,
+  htmlFragment?: string,
 ): Promise<void> {
   const dir = dirname(doc.relativePath);
   const cacheBase = join(cwd, '.iteraciones');
   const astDir = join(cacheBase, 'ast', dir);
   await mkdir(astDir, { recursive: true });
   await Bun.write(join(astDir, `${slug}.json`), JSON.stringify(ast));
-  const texDir = join(cacheBase, 'tex', dir);
-  await mkdir(texDir, { recursive: true });
-  await Bun.write(join(texDir, `${slug}.tex`), processedBody);
-  await Bun.write(join(texDir, `${slug}.flags.json`), JSON.stringify(flags));
+  if (processedBody !== undefined && flags !== undefined) {
+    const texDir = join(cacheBase, 'tex', dir);
+    await mkdir(texDir, { recursive: true });
+    await Bun.write(join(texDir, `${slug}.tex`), processedBody);
+    await Bun.write(join(texDir, `${slug}.flags.json`), JSON.stringify(flags));
+  }
   if (htmlFragment) {
     const htmlDir = join(cacheBase, 'html', dir);
     await mkdir(htmlDir, { recursive: true });
@@ -292,19 +287,37 @@ function bibContext(cwd: string): { bibFiles: string[]; bibOptions?: BibOptions 
   return { bibFiles, bibOptions };
 }
 
+/** Lee el AST canónico serializado de `.iteraciones/ast/{slug}.json`. */
+export async function readAstFromCache(cwd: string, doc: BuildDocument): Promise<Record<string, unknown> | null> {
+  const slug = doc.slug ?? basename(doc.relativePath, '.md');
+  const dir = dirname(doc.relativePath);
+  const astPath = join(cwd, '.iteraciones', 'ast', dir, `${slug}.json`);
+  const raw = await Bun.file(astPath)
+    .text()
+    .catch(() => '');
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    logWarning(`error al parsear AST en disco de ${doc.relativePath}`, 'render');
+    return null;
+  }
+}
+
 /**
- * FASE 2+3 combinada: markdown → AST canónico → latex body + html fragment.
+ * FASE 2+3 combinada: markdown → AST canónico → salidas por formato activo.
  *
  * Pipeline por archivo:
  *   markdown → [transpilers semánticos string] → pandoc --to json
  *     → [transpilers semánticos ast] → AST canónico
- *     → [transpilers latex] → pandoc --from json --to latex → tex/{slug}.tex
- *     → [transpilers html]  → pandoc --from json --to html5 → html/{slug}.html
+ *     → [transpilers latex] → pandoc --from json --to latex → tex/{slug}.tex (si generateLatex)
+ *     → [transpilers html]  → pandoc --from json --to html5 → html/{slug}.html (si generateHtml)
  *
- * También serializa el AST canónico a disco (`.iteraciones/ast/{slug}.json`)
- * en formato JSON nativo de pandoc para reutilizarlo en builds futuros.
+ * El AST canónico siempre se serializa a disco (`.iteraciones/ast/{slug}.json`)
+ * en formato JSON nativo de pandoc: es el origen único de los demás formatos
+ * (EPUB y Markdown se exportan desde él en src/builder/export/runner.ts).
  *
- * Retorna un mapa relativePath → { processedBody, htmlFragment, slug }.
+ * Retorna los relativePath procesados.
  */
 export async function renderLatex(
   docs: BuildDocument[],
@@ -312,11 +325,12 @@ export async function renderLatex(
   cwd: string,
   activeTranspilers?: string[],
   generateHtml?: boolean,
-): Promise<Map<string, RenderLatexResult>> {
+  generateLatex?: boolean,
+): Promise<Set<string>> {
   const groups = await loadTranspilerGroups(activeTranspilers, cwd);
   const { bibFiles, bibOptions } = bibContext(cwd);
 
-  const results = new Map<string, RenderLatexResult>();
+  const processed = new Set<string>();
 
   await mapWithConcurrency(docs, concurrency, async (doc) => {
     // Leer body del disco
@@ -355,8 +369,11 @@ export async function renderLatex(
 
     // Flags de preámbulo desde la estructura real del AST canónico
     const flags = computePreambleFlags(ast);
-    const hasCiteKeys = bibFiles.length > 0 && /@\w+[\w:;#.,(){}'"\s]/.test(body);
-    const processedBody = await renderLatexBody(ast, doc, groups, bibFiles, hasCiteKeys);
+    let processedBody: string | undefined;
+    if (generateLatex !== false) {
+      const hasCiteKeys = bibFiles.length > 0 && /@\w+[\w:;#.,(){}'"\s]/.test(body);
+      processedBody = await renderLatexBody(ast, doc, groups, bibFiles, hasCiteKeys);
+    }
 
     // Paso 4: transpilers de formato HTML → html fragment (con citeproc)
     let htmlFragment = '';
@@ -369,19 +386,19 @@ export async function renderLatex(
     }
 
     const slug = doc.slug ?? basename(doc.relativePath, '.md');
-    await writeCachedArtifacts(cwd, doc, slug, processedBody, htmlFragment, flags, ast);
-    results.set(doc.relativePath, { processedBody, htmlFragment, slug });
+    await writeCachedArtifacts(cwd, doc, slug, ast, processedBody, flags, htmlFragment);
+    processed.add(doc.relativePath);
   });
 
-  return results;
+  return processed;
 }
 
 /**
- * Exporta los formatos desde el AST canónico serializado en disco
+ * Exporta las salidas desde el AST canónico serializado en disco
  * (`.iteraciones/ast/{slug}.json`) sin re-ejecutar markdown → json.
  *
  * Se usa cuando se activa un formato nuevo: el AST ya existe del build
- * anterior, solo faltan los outputs de ese formato. Los docs sin AST en
+ * anterior, solo faltan las salidas de ese formato. Los docs sin AST en
  * disco se omiten del resultado (el caller los manda al pipeline completo).
  */
 export async function renderFromAstCache(
@@ -389,33 +406,24 @@ export async function renderFromAstCache(
   concurrency: number,
   cwd: string,
   generateHtml?: boolean,
+  generateLatex?: boolean,
   activeTranspilers?: string[],
-): Promise<Map<string, RenderLatexResult>> {
+): Promise<Set<string>> {
   const groups = await loadTranspilerGroups(activeTranspilers, cwd);
   const { bibFiles, bibOptions } = bibContext(cwd);
-  const results = new Map<string, RenderLatexResult>();
+  const processed = new Set<string>();
 
   await mapWithConcurrency(docs, concurrency, async (doc) => {
-    const slug = doc.slug ?? basename(doc.relativePath, '.md');
-    const dir = dirname(doc.relativePath);
-    const astPath = join(cwd, '.iteraciones', 'ast', dir, `${slug}.json`);
-    const raw = await Bun.file(astPath)
-      .text()
-      .catch(() => '');
-    if (!raw) return;
-
-    let ast: Record<string, unknown>;
-    try {
-      ast = JSON.parse(raw) as Record<string, unknown>;
-    } catch {
-      logWarning(`error al parsear AST en disco de ${doc.relativePath}`, 'render');
-      return;
-    }
+    const ast = await readAstFromCache(cwd, doc);
+    if (!ast) return;
 
     const flags = computePreambleFlags(ast);
-    // El markdown original no está disponible: detectar citas desde el AST
-    const hasCiteKeys = bibFiles.length > 0 && hasCiteNodes(ast);
-    const processedBody = await renderLatexBody(ast, doc, groups, bibFiles, hasCiteKeys);
+    let processedBody: string | undefined;
+    if (generateLatex !== false) {
+      // El markdown original no está disponible: detectar citas desde el AST
+      const hasCiteKeys = bibFiles.length > 0 && hasCiteNodes(ast);
+      processedBody = await renderLatexBody(ast, doc, groups, bibFiles, hasCiteKeys);
+    }
 
     let htmlFragment = '';
     if (generateHtml !== false) {
@@ -426,9 +434,10 @@ export async function renderFromAstCache(
       }
     }
 
-    await writeCachedArtifacts(cwd, doc, slug, processedBody, htmlFragment, flags, ast);
-    results.set(doc.relativePath, { processedBody, htmlFragment, slug });
+    const slug = doc.slug ?? basename(doc.relativePath, '.md');
+    await writeCachedArtifacts(cwd, doc, slug, ast, processedBody, flags, htmlFragment);
+    processed.add(doc.relativePath);
   });
 
-  return results;
+  return processed;
 }

@@ -6,11 +6,9 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/site-config.js';
 import { computeActiveFormats } from '../config/site-config.js';
 import { logWarning } from '../lib/logger.js';
-import { mapWithConcurrency } from '../lib/run.js';
 import { buildAssets, generateLatexPreamble, renderHtmlPage } from './build-utils.js';
 import { buildDocsFromIndex, discover, loadBuildState } from './discover.js';
 import { runExportDocuments } from './export/runner.js';
-import type { RenderLatexResult } from './render.js';
 import { renderFromAstCache, renderLatex } from './render.js';
 import { computeBibHash, computeConfigHashes, computeTranspilerHash } from './state.js';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
@@ -107,7 +105,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const htmlOn = formatCfg?.html?.generate === true;
   const epubOn = formatCfg?.epub?.generate === true;
   const mdOn = formatCfg?.markdown?.generate === true;
-  const needsHtml = htmlOn || epubOn;
+  const needsHtml = htmlOn;
+  // EPUB y Markdown se exportan directamente desde el AST canónico (json → epub3/markdown)
+  const generateLatex = pdfOn || latexOn;
 
   const needsCss = htmlOn && !options.noTailwind;
   ctx.cssPath = needsCss ? '/css/styles.css' : '';
@@ -203,7 +203,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     return;
   }
 
-  // ── FASE 2+3: markdown → AST canónico → latex/html ──
+  // ── FASE 2+3: markdown → AST canónico → salidas por formato activo ──
   // renderDocs: AST invalidado (markdown/transpilers/bibliografía cambiados).
   // astExportCandidates: formatos nuevos con AST válido en disco → solo
   // exportaciones (sin re-ejecutar markdown → json).
@@ -212,50 +212,28 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const newMarkdown = mdOn && newFormats.includes('markdown');
   const astExportCandidates = allDocs.filter((d) => !astChanged.has(d.relativePath) && (newPdf || newHtml || newMarkdown));
 
-  let renderResults: Map<string, RenderLatexResult> = new Map();
+  const processedPaths = new Set<string>();
   if (renderDocs.length > 0 || astExportCandidates.length > 0) {
     progress.startPhase('render', renderDocs.length + astExportCandidates.length);
     if (renderDocs.length > 0) {
-      renderResults = await renderLatex(renderDocs, ctx.concurrency, cwd, ctx.siteConfig.disabledTranspilers, needsHtml);
+      const done = await renderLatex(renderDocs, ctx.concurrency, cwd, ctx.siteConfig.disabledTranspilers, needsHtml, generateLatex);
+      for (const p of done) processedPaths.add(p);
     }
     if (astExportCandidates.length > 0) {
-      const astResults = await renderFromAstCache(astExportCandidates, ctx.concurrency, cwd, needsHtml, ctx.siteConfig.disabledTranspilers);
+      const done = await renderFromAstCache(astExportCandidates, ctx.concurrency, cwd, needsHtml, generateLatex, ctx.siteConfig.disabledTranspilers);
       // Docs sin AST en disco (primer build, caché limpiada): pipeline completo
-      const missingAstDocs = astExportCandidates.filter((d) => !astResults.has(d.relativePath));
+      const missingAstDocs = astExportCandidates.filter((d) => !done.has(d.relativePath));
       if (missingAstDocs.length > 0) {
-        const extraResults = await renderLatex(missingAstDocs, ctx.concurrency, cwd, ctx.siteConfig.disabledTranspilers, needsHtml);
-        for (const [path, result] of extraResults) astResults.set(path, result);
+        const extra = await renderLatex(missingAstDocs, ctx.concurrency, cwd, ctx.siteConfig.disabledTranspilers, needsHtml, generateLatex);
+        for (const p of extra) done.add(p);
       }
-      for (const [path, result] of astResults) renderResults.set(path, result);
-    }
-    for (const doc of allDocs) {
-      const result = renderResults.get(doc.relativePath);
-      if (result) {
-        doc.processedBody = result.processedBody;
-        doc.htmlFragment = result.htmlFragment;
-        doc.slug = result.slug;
-      }
+      for (const p of done) processedPaths.add(p);
     }
     progress.completePhase();
   }
 
-  // Docs que se exportan sin re-render: hidratar cuerpos cacheados desde el disco
-  const hydrateTargets = [...exportSets.pdf, ...exportSets.epub, ...exportSets.markdown].filter((d) => !renderResults.has(d.relativePath));
-  if (hydrateTargets.length > 0) {
-    await mapWithConcurrency(hydrateTargets, ctx.concurrency, async (doc) => {
-      const slug = doc.slug ?? basename(doc.relativePath, '.md');
-      const dir = dirname(doc.relativePath);
-      const cacheBase = join(cwd, '.iteraciones');
-      const tex = await Bun.file(join(cacheBase, 'tex', dir, `${slug}.tex`))
-        .text()
-        .catch(() => '');
-      if (tex) doc.processedBody = tex;
-      const html = await Bun.file(join(cacheBase, 'html', dir, `${slug}.html`))
-        .text()
-        .catch(() => '');
-      if (html) doc.htmlFragment = html;
-    });
-  }
+  // Los exports leen sus inputs del caché en disco (AST/tex/html):
+  // no hay hidratación de cuerpos en memoria.
 
   // Preparar datos para FASE 4
   const noExport = options.noExport === true;
