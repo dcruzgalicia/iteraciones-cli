@@ -10,7 +10,8 @@ import { buildAssets, generateLatexPreamble } from './build-utils.js';
 import { buildDocsFromIndex, discover, loadBuildState } from './discover.js';
 import { runExportDocuments } from './export/runner.js';
 import { discoverBibFiles } from './latex-preamble.js';
-import { readAstFromCache, renderFromAstCache, renderHtmlPageFromAst, renderLatex } from './render.js';
+import { validateDisabledPreambleTranspilers } from './preamble-loader.js';
+import { readAstFromCache, renderFromAstCache, renderHtmlPageFromAst, renderLatex, validateDisabledTranspilers } from './render.js';
 import { computeBibHash, computeConfigHashes, computeTranspilerHash } from './state.js';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
 
@@ -55,6 +56,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
   // Cargar config primero para detectar cambios de formato antes de setupBuildEnvironment
   const siteConfig = await loadSiteConfig(cwd);
+  // Validar nombres de transpilers desactivados (warning sin romper el build)
+  validateDisabledTranspilers(siteConfig.disabledTranspilers);
+  validateDisabledPreambleTranspilers(siteConfig.disabledPreambleTranspilers);
   const currentFormats = computeActiveFormats(siteConfig.format);
   let newFormats: string[] = [];
   let removedFormats: string[] = [];

@@ -1,5 +1,5 @@
-import { getBuiltinPreambleTranspilerInfos } from '../builder/preamble-loader.js';
-import { getBuiltinTranspilerInfos } from '../builder/render.js';
+import { getBuiltinPreambleTranspilerInfos, validateDisabledPreambleTranspilers } from '../builder/preamble-loader.js';
+import { getBuiltinTranspilerInfos, validateDisabledTranspilers } from '../builder/render.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 
 /**
@@ -7,6 +7,9 @@ import { loadSiteConfig } from '../config/config-loader.js';
  */
 export async function runTranspilers(cwd: string): Promise<void> {
   const config = await loadSiteConfig(cwd);
+  // Advertir sobre nombres desconocidos antes de listar el estado
+  validateDisabledTranspilers(config.disabledTranspilers);
+  validateDisabledPreambleTranspilers(config.disabledPreambleTranspilers);
   const disabled = new Set(config.disabledTranspilers ?? []);
   const allInfos = getBuiltinTranspilerInfos();
   const hasDisabled = config.disabledTranspilers !== undefined && config.disabledTranspilers.length > 0;

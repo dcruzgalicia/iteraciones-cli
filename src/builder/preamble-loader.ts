@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { logWarning } from '../lib/logger.js';
 
 // ---------------------------------------------------------------------------
 // Sistema de transpilers para el preámbulo LaTeX
@@ -72,4 +73,17 @@ export function getBuiltinPreambleTranspilerInfos(): PreambleTranspilerInfo[] {
     name,
     description: DESCRIPTIONS[name] ?? '',
   }));
+}
+
+/**
+ * Valida los nombres de `disabled-preamble-transpilers` contra los preamble
+ * transpilers built-in. Los nombres desconocidos emiten un warning sin romper
+ * el build.
+ */
+export function validateDisabledPreambleTranspilers(disabled: string[] | undefined): void {
+  if (!disabled || disabled.length === 0) return;
+  for (const name of disabled) {
+    if (BUILTIN_PREAMBLE_TRANSPILERS.includes(name)) continue;
+    logWarning(`disabled-preamble-transpilers: "${name}" no coincide con ningún preamble transpiler`, 'config');
+  }
 }

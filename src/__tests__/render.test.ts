@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, spyOn } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { computePreambleFlags, hasCiteNodes, renderFromAstCache } from '../builder/render.js';
+import { computePreambleFlags, hasCiteNodes, renderFromAstCache, suggestTranspilerName, validateDisabledTranspilers } from '../builder/render.js';
 import type { BuildDocument } from '../builder/types.js';
+import * as logger from '../lib/logger.js';
 
 describe('computePreambleFlags (desde el AST)', () => {
   it('detecta hasTocEntries con nodos Header', () => {
@@ -143,5 +144,49 @@ describe('renderFromAstCache (exportación desde AST en disco)', () => {
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
+  });
+});
+
+describe('suggestTranspilerName', () => {
+  it('sugiere el nombre completo por sufijo', () => {
+    expect(suggestTranspilerName('02-dictum')).toBe('latex/02-dictum');
+    expect(suggestTranspilerName('01-dictum')).toBe('html/01-dictum');
+    expect(suggestTranspilerName('05-spacer')).toBe('html/05-spacer');
+  });
+
+  it('retorna undefined sin coincidencia', () => {
+    expect(suggestTranspilerName('no-existe')).toBeUndefined();
+    expect(suggestTranspilerName('spacer')).toBeUndefined();
+  });
+});
+
+describe('validateDisabledTranspilers', () => {
+  it('no advierte con undefined o lista vacía', () => {
+    const spy = spyOn(logger, 'logWarning');
+    validateDisabledTranspilers(undefined);
+    validateDisabledTranspilers([]);
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it('no advierte con nombres completos válidos', () => {
+    const spy = spyOn(logger, 'logWarning');
+    validateDisabledTranspilers(['latex/02-dictum', 'semantic/string/01-double-colon']);
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it('advierte con sugerencia para un nombre viejo (pre-D1)', () => {
+    const spy = spyOn(logger, 'logWarning');
+    validateDisabledTranspilers(['02-dictum']);
+    expect(spy).toHaveBeenCalledWith('disabled-transpilers: "02-dictum" no existe; ¿quisiste decir "latex/02-dictum"?', 'config');
+    spy.mockRestore();
+  });
+
+  it('advierte sin sugerencia para un nombre inexistente', () => {
+    const spy = spyOn(logger, 'logWarning');
+    validateDisabledTranspilers(['foo/bar']);
+    expect(spy).toHaveBeenCalledWith('disabled-transpilers: "foo/bar" no coincide con ningún transpiler', 'config');
+    spy.mockRestore();
   });
 });
