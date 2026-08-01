@@ -245,6 +245,15 @@ export interface LuaTranspilerInfo {
   description: string;
 }
 
+/** Retorna true si la ruta es un directorio existente. */
+async function dirExists(path: string): Promise<boolean> {
+  try {
+    return (await Bun.file(path).stat()).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Escanea los filtros Lua built-in del paquete (`lib/resources/transpilers`).
  * La descripción se toma de la primera línea de comentario `-- ...` del archivo.
@@ -252,7 +261,7 @@ export interface LuaTranspilerInfo {
 export async function getBuiltinLuaTranspilerInfos(): Promise<LuaTranspilerInfo[]> {
   const infos: LuaTranspilerInfo[] = [];
   // El directorio de recursos se crea al migrar los primeros transpilers (Fase B)
-  if (!(await Bun.file(LUA_TRANSPILERS_ROOT).exists())) return infos;
+  if (!(await dirExists(LUA_TRANSPILERS_ROOT))) return infos;
   const glob = new Bun.Glob('**/*.lua');
   for await (const rel of glob.scan({ cwd: LUA_TRANSPILERS_ROOT, onlyFiles: true })) {
     const group = dirname(rel);
