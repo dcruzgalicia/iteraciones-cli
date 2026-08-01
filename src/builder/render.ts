@@ -121,6 +121,60 @@ export interface RenderLatexResult {
   slug: string;
 }
 
+/** Flags de preámbulo calculados desde el AST (estructura real del documento). */
+export interface PreambleFlags {
+  /** ¿Existen nodos Header? (para evitar un TOC vacío). */
+  hasTocEntries: boolean;
+  /** ¿El primer bloque es un heading o un dictum/verse? (no anteponer \noindent). */
+  skipNoIndent: boolean;
+  /** ¿El primer bloque es un heading? (no anteponer \vspace*{2\baselineskip}). */
+  skipParagraphSpace: boolean;
+}
+
+function isHeader(block: unknown): boolean {
+  return typeof block === 'object' && block !== null && (block as Record<string, unknown>).t === 'Header';
+}
+
+function startsWithLatex(block: unknown, prefixes: string[]): boolean {
+  if (typeof block !== 'object' || block === null) return false;
+  const b = block as Record<string, unknown>;
+  let latex = '';
+  if (b.t === 'RawBlock') {
+    const c = b.c as unknown[];
+    if (Array.isArray(c) && c[0] === 'latex' && typeof c[1] === 'string') latex = c[1];
+  } else if (b.t === 'Para') {
+    const inlines = b.c as unknown[];
+    if (Array.isArray(inlines) && inlines.length > 0) {
+      const first = inlines[0] as Record<string, unknown>;
+      if (first?.t === 'RawInline') {
+        const c = first.c as unknown[];
+        if (Array.isArray(c) && c[0] === 'latex' && typeof c[1] === 'string') latex = c[1];
+      }
+    }
+  }
+  return prefixes.some((p) => latex.startsWith(p));
+}
+
+/**
+ * Calcula los flags de preámbulo desde el AST ya transformado por los
+ * transpilers. Reemplaza la detección por regex/startsWith sobre el LaTeX,
+ * que se rompía al cambiar los comandos de heading (p. ej. shift-heading).
+ */
+export function computePreambleFlags(ast: Record<string, unknown>): PreambleFlags {
+  const blocks = ast.blocks as unknown[];
+  const list = Array.isArray(blocks) ? blocks : [];
+  const first = list[0];
+  const isSectionStart = isHeader(first);
+  // dictum y verse emiten \vspace*{...} al inicio (RawInline en el Para del dictum,
+  // RawBlock en el verse); center/flushright no lo hacen, igual que la detección previa
+  const isDictumStart = startsWithLatex(first, ['\\vspace*{', '\\dictum']);
+  return {
+    hasTocEntries: list.some(isHeader),
+    skipNoIndent: isSectionStart || isDictumStart,
+    skipParagraphSpace: isSectionStart,
+  };
+}
+
 /**
  * FASE 2+3 combinada: markdown → latex body + html fragment.
  *
@@ -183,6 +237,9 @@ export async function renderLatex(
       ast = await t.transform(ast);
     }
 
+    // Flags de preámbulo desde la estructura real del AST (sin regex sobre LaTeX)
+    const flags = computePreambleFlags(ast);
+
     // Paso 4: convertir el AST modificado a LaTeX
     const pandocArgs: string[] = ['--top-level-division', 'section', '--shift-heading-level-by=2'];
     if (bibFiles.length > 0) {
@@ -204,10 +261,11 @@ export async function renderLatex(
     const dir = dirname(doc.relativePath);
     const cacheBase = join(cwd, '.iteraciones');
 
-    // Escribir tex/{slug}.tex
+    // Escribir tex/{slug}.tex y tex/{slug}.flags.json
     const texDir = join(cacheBase, 'tex', dir);
     await mkdir(texDir, { recursive: true });
     await Bun.write(join(texDir, `${slug}.tex`), processedBody);
+    await Bun.write(join(texDir, `${slug}.flags.json`), JSON.stringify(flags));
 
     // Paso 5: convertir latex body a html fragment (con citeproc)
     let htmlFragment = '';
