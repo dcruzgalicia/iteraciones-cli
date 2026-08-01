@@ -11,7 +11,7 @@ import { buildAssets, generateLatexPreamble, renderHtmlPage } from './build-util
 import { buildDocsFromIndex, discover, loadBuildState } from './discover.js';
 import { runExportDocuments } from './export/runner.js';
 import type { RenderLatexResult } from './render.js';
-import { renderLatex } from './render.js';
+import { renderFromAstCache, renderLatex } from './render.js';
 import { computeBibHash, computeConfigHashes, computeTranspilerHash } from './state.js';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
 
@@ -81,7 +81,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     newFormats = currentFormats.filter((f) => !prevFormats.has(f));
     removedFormats = prevState.activeFormats.filter((f) => !currentFormats.includes(f));
     if (newFormats.length > 0) {
-      log(`Nuevos formatos detectados: ${newFormats.join(', ')}. Procesando todos los documentos.`);
+      log(`Nuevos formatos detectados: ${newFormats.join(', ')}. Generando sus salidas para todos los documentos.`);
     }
     if (removedFormats.length > 0) {
       log(`Formatos eliminados: ${removedFormats.join(', ')}. Limpiando archivos de dist.`);
@@ -147,12 +147,10 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     doc.slug = entry?.slug ?? basename(doc.relativePath, '.md');
   }
 
-  // Si hay formatos nuevos, forzar que todos los documentos pasen por el pipeline
-  if (newFormats.length > 0) {
-    for (const doc of allDocs) {
-      discoveredChanges.add(doc.relativePath);
-    }
-  }
+  // Los formatos nuevos no fuerzan re-render: el AST canónico en disco
+  // (`.iteraciones/ast/`) permite exportar sus salidas sin re-ejecutar
+  // markdown → json (los exportSets ya incluyen todos los docs vía
+  // formatInvalidated, que cambia al activarse un formato).
 
   // ── FASE 6: limpiar de dist/ archivos de formatos eliminados ──
   await cleanupRemovedFormats(ctx, allDocs, removedFormats);
@@ -205,11 +203,31 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     return;
   }
 
-  // ── FASE 2+3: markdown → latex → html (solo docs con AST invalidado) ──
+  // ── FASE 2+3: markdown → AST canónico → latex/html ──
+  // renderDocs: AST invalidado (markdown/transpilers/bibliografía cambiados).
+  // astExportCandidates: formatos nuevos con AST válido en disco → solo
+  // exportaciones (sin re-ejecutar markdown → json).
+  const newPdf = (pdfOn || latexOn) && (newFormats.includes('pdf') || newFormats.includes('latex'));
+  const newHtml = (htmlOn || epubOn) && (newFormats.includes('html') || newFormats.includes('epub'));
+  const newMarkdown = mdOn && newFormats.includes('markdown');
+  const astExportCandidates = allDocs.filter((d) => !astChanged.has(d.relativePath) && (newPdf || newHtml || newMarkdown));
+
   let renderResults: Map<string, RenderLatexResult> = new Map();
-  if (renderDocs.length > 0) {
-    progress.startPhase('render', renderDocs.length);
-    renderResults = await renderLatex(renderDocs, ctx.concurrency, cwd, ctx.siteConfig.disabledTranspilers, needsHtml);
+  if (renderDocs.length > 0 || astExportCandidates.length > 0) {
+    progress.startPhase('render', renderDocs.length + astExportCandidates.length);
+    if (renderDocs.length > 0) {
+      renderResults = await renderLatex(renderDocs, ctx.concurrency, cwd, ctx.siteConfig.disabledTranspilers, needsHtml);
+    }
+    if (astExportCandidates.length > 0) {
+      const astResults = await renderFromAstCache(astExportCandidates, ctx.concurrency, cwd, needsHtml, ctx.siteConfig.disabledTranspilers);
+      // Docs sin AST en disco (primer build, caché limpiada): pipeline completo
+      const missingAstDocs = astExportCandidates.filter((d) => !astResults.has(d.relativePath));
+      if (missingAstDocs.length > 0) {
+        const extraResults = await renderLatex(missingAstDocs, ctx.concurrency, cwd, ctx.siteConfig.disabledTranspilers, needsHtml);
+        for (const [path, result] of extraResults) astResults.set(path, result);
+      }
+      for (const [path, result] of astResults) renderResults.set(path, result);
+    }
     for (const doc of allDocs) {
       const result = renderResults.get(doc.relativePath);
       if (result) {
@@ -380,11 +398,9 @@ async function cleanupDeletedFiles(
     const dir = dirname(relPath);
     const entry = deletedEntries.get(relPath);
     const slug = entry?.slug ?? basename(relPath, '.md');
-    const CACHE_PATHS = ['tex', 'html'];
-    for (const sub of CACHE_PATHS) {
-      await rm(join(cacheBase, sub, dir, `${slug}.tex`), { force: true }).catch(() => {});
-      await rm(join(cacheBase, sub, dir, `${slug}.html`), { force: true }).catch(() => {});
-    }
+    await rm(join(cacheBase, 'tex', dir, `${slug}.tex`), { force: true }).catch(() => {});
+    await rm(join(cacheBase, 'html', dir, `${slug}.html`), { force: true }).catch(() => {});
+    await rm(join(cacheBase, 'ast', dir, `${slug}.json`), { force: true }).catch(() => {});
     await rm(join(cacheBase, 'tex', dir, `${slug}.flags.json`), { force: true }).catch(() => {});
     for (const sub of ['pdf', 'html']) {
       await rm(join(cacheBase, 'formats', sub, dir, `${slug}.tex`), { force: true }).catch(() => {});
@@ -403,10 +419,9 @@ async function cleanupSlugChanges(ctx: BuildContext, slugChangedEntries: Map<str
   const cacheBase = join(ctx.cwd, '.iteraciones');
   for (const [relPath, oldSlug] of slugChangedEntries) {
     const dir = dirname(relPath);
-    for (const sub of ['tex', 'html']) {
-      await rm(join(cacheBase, sub, dir, `${oldSlug}.tex`), { force: true }).catch(() => {});
-      await rm(join(cacheBase, sub, dir, `${oldSlug}.html`), { force: true }).catch(() => {});
-    }
+    await rm(join(cacheBase, 'tex', dir, `${oldSlug}.tex`), { force: true }).catch(() => {});
+    await rm(join(cacheBase, 'html', dir, `${oldSlug}.html`), { force: true }).catch(() => {});
+    await rm(join(cacheBase, 'ast', dir, `${oldSlug}.json`), { force: true }).catch(() => {});
     await rm(join(cacheBase, 'tex', dir, `${oldSlug}.flags.json`), { force: true }).catch(() => {});
     for (const sub of ['pdf', 'html']) {
       await rm(join(cacheBase, 'formats', sub, dir, `${oldSlug}.tex`), { force: true }).catch(() => {});
