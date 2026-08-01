@@ -11,6 +11,7 @@ import { runPandoc } from '../../lib/pandoc-runner.js';
 import { mapWithConcurrency } from '../../lib/run.js';
 import { computeSlug } from '../discover.js';
 import { discoverBibFiles } from '../latex-preamble.js';
+import { readAstFromCache } from '../render.js';
 import type { BuildDocument } from '../types.js';
 import { assembleExportDocument } from './assemble.js';
 
@@ -82,18 +83,21 @@ export async function runExportDocuments(exportableDocs: BuildDocument[], option
   const globalBibliography: string | undefined = allBib[0];
 
   // Closure que genera los formatos para un ExportDocument ya ensamblado.
-  async function generateFormats(exportDoc: ExportDocument, outputBase: string, biberCacheDir?: string): Promise<void> {
+  // epub/markdown se generan desde el AST canónico (json → epub3/markdown).
+  async function generateFormats(
+    exportDoc: ExportDocument,
+    outputBase: string,
+    ast: Record<string, unknown> | null,
+    biberCacheDir?: string,
+  ): Promise<void> {
     const tasks: Array<Promise<void>> = [];
 
-    if (config.markdown?.generate) {
-      tasks.push(convertToMarkdown(exportDoc, `${outputBase}.md`));
+    if (config.markdown?.generate && ast) {
+      tasks.push(convertToMarkdown(ast, `${outputBase}.md`, exportDoc));
     }
 
-    if (config.epub?.generate) {
-      const epubHtml = exportDoc.htmlBody;
-      if (epubHtml) {
-        tasks.push(convertToEpub(epubHtml, `${outputBase}.epub`, exportDoc));
-      }
+    if (config.epub?.generate && ast) {
+      tasks.push(convertToEpub(ast, `${outputBase}.epub`, exportDoc));
     }
 
     if (config.pdf?.generate) {
@@ -129,13 +133,18 @@ export async function runExportDocuments(exportableDocs: BuildDocument[], option
   }
 
   const pdfConcurrency = hasPdf ? maxSlots : concurrency;
+  const needsAst = config.epub?.generate === true || config.markdown?.generate === true;
   await mapWithConcurrency(exportableDocs, pdfConcurrency, async (doc): Promise<void> => {
     const exportDoc = assembleExportDocument(doc, lang, globalBibliography, undefined, config.pdf);
-    if (!exportDoc) return;
+
+    const ast = needsAst ? await readAstFromCache(cwd, doc) : null;
+    if (needsAst && !ast) {
+      logWarning(`sin AST en caché para ${doc.relativePath}; se omite la exportación epub/markdown`, 'export');
+    }
 
     const outputBase = exportOutputBase(exportDoc, outputDir);
     const biberCacheDir = biberCacheForDoc.get(doc.relativePath);
-    await generateFormats(exportDoc, outputBase, biberCacheDir);
+    await generateFormats(exportDoc, outputBase, ast, biberCacheDir);
   });
 }
 /**
@@ -174,27 +183,27 @@ function buildYamlHeader(doc: ExportDocument): string {
 }
 
 /**
- * Convierte contenido HTML a EPUB3 usando pandoc.
+ * Convierte el AST canónico a EPUB3 usando pandoc (sin intermediario HTML).
  */
-async function convertToEpub(htmlBody: string, outputPath: string, doc?: ExportDocument): Promise<void> {
+async function convertToEpub(ast: Record<string, unknown>, outputPath: string, doc: ExportDocument): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
-  const args = ['pandoc', '--from', 'html', '--to', 'epub3', '--output', outputPath];
+  const args = ['pandoc', '--from', 'json', '--to', 'epub3', '--output', outputPath];
 
-  if (doc?.metadata.bibliography) {
+  if (doc.metadata.bibliography) {
     args.push('--citeproc');
   }
 
-  await runPandoc(args, htmlBody, doc?.filePath ?? '');
+  await runPandoc(args, JSON.stringify(ast), doc.filePath);
 }
 
 /**
- * Exporta un documento a Markdown via pandoc (latex → markdown).
+ * Exporta un documento a Markdown via pandoc (json → markdown, sin round-trip por LaTeX).
  */
-async function convertToMarkdown(doc: ExportDocument, outputPath: string): Promise<void> {
+async function convertToMarkdown(ast: Record<string, unknown>, outputPath: string, doc: ExportDocument): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
-  const args = ['pandoc', '--from', 'latex', '--to', 'markdown'];
-  const { stdout } = await runPandoc(args, doc.body, doc.filePath);
+  const args = ['pandoc', '--from', 'json', '--to', 'markdown'];
+  const { stdout } = await runPandoc(args, JSON.stringify(ast), doc.filePath);
   const yamlHeader = buildYamlHeader(doc);
   await Bun.write(outputPath, yamlHeader + stdout);
 }
@@ -228,8 +237,8 @@ async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?: strin
   const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
 
   if (exitCode !== 0) {
-    const log = stdout + '\n' + stderr;
+    const log = `${stdout}\n${stderr}`;
     const m = log.match(/^! .*$/m);
-    throw new PandocError(`latexmk falló al generar PDF para ${doc.filePath}: ${m ? m[0] : 'exit ' + exitCode}`, doc.filePath, stderr);
+    throw new PandocError(`latexmk falló al generar PDF para ${doc.filePath}: ${m ? m[0] : `exit ${exitCode}`}`, doc.filePath, stderr);
   }
 }

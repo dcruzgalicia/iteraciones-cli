@@ -25,16 +25,14 @@ export interface Frontmatter {
 
 /**
  * Documento que acumula datos a través del pipeline.
- * Creado en discovery, enriquecido en render y export.
+ * Creado en discovery; los exports leen sus inputs (AST/LaTeX/HTML) del caché
+ * en disco (`.iteraciones/ast/`, `.iteraciones/tex/`, `.iteraciones/html/`).
  */
 export interface BuildDocument {
   filePath: string;
   relativePath: string;
   frontmatter: Frontmatter;
   slug?: string;
-  htmlFragment?: string;
-  /** Cuerpo LaTeX generado en renderLatex. */
-  processedBody?: string;
 }
 
 /**

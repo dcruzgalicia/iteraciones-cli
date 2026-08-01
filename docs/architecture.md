@@ -35,12 +35,11 @@ El pipeline convierte archivos Markdown en documentos en los formatos configurad
        ▼
 ┌─────────────┐
 │  FASE 2+3   │  renderLatex()
-│  Render     │  • Aplica transpilers string (regex)
-│             │  • pandoc --to json → AST
-│             │  • Aplica transpilers AST
-│             │  • pandoc --from json --to latex → .tex
-│             │  • pandoc --from latex --to html5 → .html fragment
-│             │  (opcional: solo si html o epub están activos)
+│  Render     │  • Transpilers semánticos string (regex)
+│             │  • pandoc --to json → AST canónico
+│             │  • Serializa el AST a disco (.iteraciones/ast/)
+│             │  • pandoc --from json --to latex → .tex (si LaTeX/PDF activos)
+│             │  • pandoc --from json --to html5 → .html fragment (si HTML activo)
 └──────┬──────┘
        │ pipelineDocs[]
        ▼
@@ -50,7 +49,7 @@ El pipeline convierte archivos Markdown en documentos en los formatos configurad
 │                                             │
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐    │
 │  │ Markdown │ │  HTML    │ │  EPUB    │    │
-│  │ (latex→md)│ │(fragment→│ │(html→    │    │
+│  │(json→md) │ │(fragment→│ │(json→    │    │
 │  │          │ │ template)│ │ epub3)   │    │
 │  └──────────┘ └──────────┘ └──────────┘    │
 │                                             │
@@ -89,19 +88,22 @@ Frontmatter YAML        → SiteConfig (Zod schema)
 Body Markdown
   │
   ▼
-Transpilers string      → Transformaciones regex
-  │                        (01-double-colon, etc.)
+Transpilers semánticos string → Transformaciones regex
+  │                              (:: → Div.spacer, etc.)
   ▼
 pandoc --to json        → AST JSON
   │
   ▼
-Transpilers AST         → Transformaciones sobre el AST
-  │                        (02-dictum, 03-verse, 04-mbox)
-  ▼
-pandoc --from json      → Cuerpo LaTeX (.tex)
+Transpilers semánticos ast → AST canónico
+  │                          (Div.dictum/verse/spacer… sin formato)
   │
-  ├─ pandoc --to latex  → processedBody (para PDF/LaTeX output)
-  └─ pandoc --to html5  → htmlFragment (para HTML/EPUB output)
+  ▼
+AST canónico (memoria + .iteraciones/ast/{slug}.json)
+  │
+  ├─ pandoc --from json --to latex   → .tex (LaTeX/PDF)
+  ├─ pandoc --from json --to html5   → .html fragment (HTML)
+  ├─ pandoc --from json --to epub3   → .epub (EPUB)
+  └─ pandoc --from json --to markdown → .md (Markdown)
 ```
 
 ---
