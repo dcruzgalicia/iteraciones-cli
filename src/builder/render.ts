@@ -3,6 +3,7 @@ import { basename, dirname, join } from 'node:path';
 import { logWarning } from '../lib/logger.js';
 import { type BibOptions, convertFragment } from '../lib/pandoc-runner.js';
 import { mapWithConcurrency } from '../lib/run.js';
+import { splitFrontmatter } from './discover.js';
 import { discoverBibFiles } from './latex-preamble.js';
 import { loadModules } from './load-modules.js';
 import type { BuildDocument } from './types.js';
@@ -368,14 +369,10 @@ export async function renderLatex(
   const processed = new Set<string>();
 
   await mapWithConcurrency(docs, concurrency, async (doc) => {
-    // Leer body del disco
+    // Leer body del disco sin frontmatter (parser compartido con discovery)
     let body = '';
     try {
-      body = await Bun.file(doc.filePath).text();
-      const fmMatch = body.match(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/);
-      if (fmMatch) {
-        body = body.slice(fmMatch[0].length);
-      }
+      body = splitFrontmatter(await Bun.file(doc.filePath).text()).body;
     } catch {
       return;
     }
@@ -406,7 +403,8 @@ export async function renderLatex(
     const flags = computePreambleFlags(ast);
     let processedBody: string | undefined;
     if (generateLatex !== false) {
-      const hasCiteKeys = bibFiles.length > 0 && /@\w+[\w:;#.,(){}'"\s]/.test(body);
+      // Detección de citas desde el AST (nodos Cite reales, sin regex sobre el markdown)
+      const hasCiteKeys = bibFiles.length > 0 && hasCiteNodes(ast);
       processedBody = await renderLatexBody(ast, doc, groups, bibFiles, hasCiteKeys);
     }
 

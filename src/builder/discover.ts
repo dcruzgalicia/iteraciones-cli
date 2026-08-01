@@ -88,7 +88,18 @@ async function saveSlugsCounter(cwd: string, counter: Map<string, number>): Prom
   await Bun.write(filePath, JSON.stringify(Object.fromEntries(counter)));
 }
 
-const FM_RE = /^---\r?\n([\s\S]*?)\r?\n---/;
+const FM_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
+
+/**
+ * Separa el frontmatter YAML del body del documento.
+ * Única implementación del parser: discover la usa para el YAML y render
+ * para obtener el body sin frontmatter (sin strip duplicado).
+ */
+export function splitFrontmatter(content: string): { yaml?: string; body: string } {
+  const fmMatch = FM_RE.exec(content);
+  if (!fmMatch) return { body: content };
+  return { yaml: fmMatch[1], body: content.slice(fmMatch[0].length) };
+}
 
 function slugify(text: string): string {
   return text
@@ -235,15 +246,15 @@ export async function discover(
         date: string | undefined,
         authors: string[] = [];
       try {
-        const fmMatch = FM_RE.exec(text);
-        if (fmMatch?.[1]) {
-          const parsed = Bun.YAML.parse(fmMatch[1]) as Record<string, unknown>;
+        const { yaml } = splitFrontmatter(text);
+        if (yaml) {
+          const parsed = Bun.YAML.parse(yaml) as Record<string, unknown>;
           if (parsed && !Array.isArray(parsed)) {
-            title = typeof parsed['title'] === 'string' ? parsed['title'] : '';
-            subtitle = typeof parsed['subtitle'] === 'string' && parsed['subtitle'].trim() ? parsed['subtitle'].trim() : undefined;
-            date = typeof parsed['date'] === 'string' && parsed['date'].trim() ? parsed['date'].trim() : undefined;
+            title = typeof parsed.title === 'string' ? parsed.title : '';
+            subtitle = typeof parsed.subtitle === 'string' && parsed.subtitle.trim() ? parsed.subtitle.trim() : undefined;
+            date = typeof parsed.date === 'string' && parsed.date.trim() ? parsed.date.trim() : undefined;
             {
-              const raw = parsed['author'];
+              const raw = parsed.author;
               authors = Array.isArray(raw)
                 ? raw.filter((a: unknown): a is string => typeof a === 'string')
                 : typeof raw === 'string' && raw.trim()
