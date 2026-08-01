@@ -54,3 +54,49 @@ describe('filtros Lua semánticos (Fase 6, B1)', () => {
     expect(ast.blocks).toEqual([{ t: 'CodeBlock', c: [['', [], []], '::'] }]);
   });
 });
+
+const HTML_FILTERS = ['01-dictum', '02-verse', '03-center', '04-flushright', '05-spacer'].map((n) => join(RESOURCES, 'html', `${n}.lua`));
+
+async function toHtml5(markdown: string, extraFilters: string[] = []): Promise<string> {
+  const args = ['pandoc', '--from', 'markdown', '--to', 'html5'];
+  for (const f of [...extraFilters, ...HTML_FILTERS]) args.push('--lua-filter', f);
+  const { stdout } = await runPandoc(args, markdown, 'test.md');
+  return stdout;
+}
+
+describe('filtros Lua html (Fase 6, B3)', () => {
+  it('envuelve Div.dictum en blockquote con bloques nativos', async () => {
+    const html = await toHtml5('::: {.dictum}\nCita de prueba\n:::\n');
+    expect(html).toContain('<blockquote class="dictum">');
+    expect(html).toContain('<p>Cita de prueba</p>');
+    expect(html).toContain('</blockquote>');
+  });
+
+  it('envuelve Div.verse en div', async () => {
+    const html = await toHtml5('::: {.verse}\nPoema\n:::\n');
+    expect(html).toContain('<div class="verse">');
+    expect(html).toContain('</div>');
+  });
+
+  it('envuelve Div.center en div', async () => {
+    const html = await toHtml5('::: {.center}\nCentrado\n:::\n');
+    expect(html).toContain('<div class="center">');
+  });
+
+  it('envuelve Div.flushright en div', async () => {
+    const html = await toHtml5('::: {.flushright}\nDerecha\n:::\n');
+    expect(html).toContain('<div class="flushright">');
+  });
+
+  it('convierte :: (Div.spacer) en div vacío con los filtros semánticos', async () => {
+    const html = await toHtml5('texto\n\n::\n\ntexto', SEMANTIC_FILTERS);
+    expect(html).toContain('<div class="spacer"></div>');
+  });
+
+  it('no altera párrafos normales', async () => {
+    const html = await toHtml5('Párrafo normal');
+    expect(html).toContain('<p>Párrafo normal</p>');
+    expect(html).not.toContain('blockquote');
+    expect(html).not.toContain('class="spacer"');
+  });
+});
