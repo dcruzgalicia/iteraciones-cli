@@ -154,14 +154,15 @@ docs(config): documenta bloque editorial y export en frontmatter
 
 ## Cómo agregar un transpiler
 
-Los transpilers transforman el contenido Markdown antes de la conversión a LaTeX.
+Los transpilers transforman el contenido Markdown y se organizan en **capas** (semántica y de formato).
 
-1. Crea un archivo en `src/builder/transpilers/<prioridad>-<nombre>.ts`
+1. Crea un archivo en `src/builder/transpilers/<capa>/<prioridad>-<nombre>.ts`
+   - Capas: `semantic/string`, `semantic/ast`, `latex/`, `html/`
 2. Exporta:
    - `type`: `'string'` para transformación de texto (regex), o `'ast'` para transformación del AST de pandoc
    - `process(body: string): string` (para string transpilers)
    - `transform(ast): Promise<ast>` (para AST transpilers)
-3. Agrega el nombre a `BUILTIN_TRANSPILERS` en `src/builder/render.ts`
+3. Agrega el nombre a la lista `BUILTIN_*` correspondiente en `src/builder/render.ts` (`BUILTIN_SEMANTIC_STRING`, `BUILTIN_SEMANTIC_AST`, `BUILTIN_LATEX_TRANSPILERS`, `BUILTIN_HTML_TRANSPILERS`)
 4. Agrega descripción y tipo a `getBuiltinTranspilerInfos()` en el mismo archivo
 5. Agrega tests en `src/__tests__/transpilers.test.ts`
 

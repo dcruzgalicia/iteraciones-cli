@@ -110,9 +110,9 @@ describe('loadSiteConfig', () => {
 
   it('lee disabled-transpilers', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'disabled-transpilers:\n  - 01-double-colon\n  - 02-dictum');
+      await writeConfig(dir, 'disabled-transpilers:\n  - semantic/string/01-double-colon\n  - latex/02-dictum');
       const config = await loadSiteConfig(dir);
-      expect(config.disabledTranspilers).toEqual(['01-double-colon', '02-dictum']);
+      expect(config.disabledTranspilers).toEqual(['semantic/string/01-double-colon', 'latex/02-dictum']);
     });
   });
 
@@ -208,7 +208,7 @@ describe('loadSiteConfig', () => {
           '  markdown:',
           '    generate: false',
           'disabled-transpilers:',
-          '  - 01-double-colon',
+          '  - semantic/string/01-double-colon',
         ].join('\n'),
       );
       const config = await loadSiteConfig(dir);
@@ -226,7 +226,7 @@ describe('loadSiteConfig', () => {
       expect(config.format.html?.accent).toBe('rose');
       expect(config.format.epub?.generate).toBe(true);
       expect(config.format.markdown?.generate).toBe(false);
-      expect(config.disabledTranspilers).toEqual(['01-double-colon']);
+      expect(config.disabledTranspilers).toEqual(['semantic/string/01-double-colon']);
     });
   });
 

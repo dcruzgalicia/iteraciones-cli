@@ -112,13 +112,13 @@ export interface SiteConfig {
   /** Configuracion por formato de salida. */
   format: FormatConfig;
   /**
-   * Lista de transpilers a desactivar (blacklist).
+   * Lista de transpilers a desactivar (blacklist), por nombre completo.
    * Por defecto undefined = todos activos.
-   * Para desactivar uno, agrega su nombre aqui. Ej:
+   * Para desactivar uno, agrega su nombre completo aqui. Ej:
    *   disabled-transpilers:
-   *     - 01-double-colon
+   *     - latex/02-dictum
    * Para sobrescribir un transpiler, crea un archivo con el mismo
-   * nombre en <proyecto>/transpilers/<nombre>.ts.
+   * nombre completo en <proyecto>/transpilers/<grupo>/<nombre>.ts.
    */
   disabledTranspilers?: string[];
   /**
