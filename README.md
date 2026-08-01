@@ -76,8 +76,8 @@ format:
   markdown:
     generate: false                 # genera Markdown procesado (por defecto: false)
 
-disabled-transpilers:               # transpilers a desactivar (opcional)
-  # - 01-double-colon
+disabled-transpilers:               # transpilers a desactivar por nombre completo (opcional)
+  # - latex/02-dictum
 
 disabled-preamble-transpilers:      # preamble transpilers a desactivar (opcional)
   # - 01-maketitle-patches
@@ -170,26 +170,37 @@ iteraciones transpilers
 
 ## Transpilers
 
-Los transpilers transforman el contenido Markdown antes de la conversión a LaTeX.
-Se ejecutan en dos fases:
+Los transpilers transforman el contenido Markdown. Se organizan en **capas**:
 
-1. **String transpilers** — transforman el texto Markdown directamente (regex)
-2. **AST transpilers** — transforman el AST de Pandoc (después de parsear el Markdown a JSON)
+1. **Capa semántica** (`semantic/`) — corre una vez por documento y deja el **AST canónico** sin contenido de formato específico (`::` → `Div.spacer`, `:;` → `Div.spacer noindent`; los `Div.dictum/verse/center/flushright` quedan sin transformar).
+2. **Capa de formato** (`latex/`, `html/`) — corre en cada exportación y convierte los nodos semánticos a su formato.
 
 ### Pipeline
 
 ```
-markdown → transpilers string → pandoc --to json → transpilers AST → pandoc --from json --to latex
+markdown → semantic/string → pandoc --to json → semantic/ast → AST canónico
+  → latex/ → pandoc --from json --to latex → .tex
+  → html/  → pandoc --from json --to html5 → .html
 ```
 
 ### Transpilers integrados
 
-| Nombre | Tipo | Entrada | Salida |
-|--------|------|---------|--------|
-| `01-double-colon` | string | `::` (línea sola) | `\\vspace{\\baselineskip}` |
-| `02-dictum` | ast | `::: {.dictum}` | `\\dictum[author]{quote}` |
-| `03-verse` | ast | `::: {.verse}` | `\\begin{verse}...\\end{verse}` |
-| `04-mbox-sentence-ends` | ast | primeras y últimas 2 palabras de cada oración | envueltas en `\\mbox{}` |
+| Nombre | Tipo | Entrada → Salida |
+|--------|------|------------------|
+| `semantic/string/01-double-colon` | string | `::` (línea sola) → `Div.spacer` |
+| `semantic/ast/02-double-colon-noindent` | ast | `:;` → `Div.spacer noindent` |
+| `latex/01-spacer` | ast | `Div.spacer` → `\\vspace{\\baselineskip}` (+`\\noindent` si noindent) |
+| `latex/02-dictum` | ast | `Div.dictum` → `\\dictum[author]{quote}` |
+| `latex/03-verse` | ast | `Div.verse` → `\\begin{verse}...\\end{verse}` |
+| `latex/04-center` | ast | `Div.center` → `\\begin{center}...\\end{center}` |
+| `latex/05-flushright` | ast | `Div.flushright` → `\\begin{flushright}...\\end{flushright}` |
+| `latex/06-mbox-sentence-end` | ast | últimas palabras de cada oración → `\\mbox{}` |
+| `latex/07-mbox-sentence-start` | ast | primera palabra de cada oración → `\\mbox{}` |
+| `html/01-dictum` | ast | `Div.dictum` → `<blockquote class="dictum">` |
+| `html/02-verse` | ast | `Div.verse` → `<div class="verse">` |
+| `html/03-center` | ast | `Div.center` → `<div class="center">` |
+| `html/04-flushright` | ast | `Div.flushright` → `<div class="flushright">` |
+| `html/05-spacer` | ast | `Div.spacer` → `<div class="spacer"></div>` |
 
 ### Ejemplo de dictum
 
@@ -214,16 +225,16 @@ En `_iteraciones.yaml`:
 
 ```yaml
 disabled-transpilers:
-  - 01-double-colon   # desactiva la conversión de ::
+  - semantic/string/01-double-colon   # desactiva la conversión de ::
 ```
 
 ### Sobrescribir un transpiler
 
-Crea un archivo con el mismo nombre en `<proyecto>/transpilers/`:
+Crea un archivo con el mismo nombre completo en `<proyecto>/transpilers/<grupo>/`:
 
 ```bash
-mkdir -p transpilers
-cat > transpilers/01-double-colon.ts << 'EOF'
+mkdir -p transpilers/semantic/string
+cat > transpilers/semantic/string/01-double-colon.ts << 'EOF'
 export const type = 'string';
 export function process(body: string): string {
   // tu propia implementación
