@@ -1,4 +1,4 @@
-import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/site-config.js';
@@ -128,56 +128,6 @@ async function copyLogo(outputDir: string, cwd: string, siteConfig: SiteConfig):
       process.exitCode = 1;
     }
   });
-}
-
-// ── HTML template ─────────────────────────────────────────────────────────
-
-export interface HtmlTemplateVars {
-  title: string;
-  siteTitle: string;
-  tagline?: string;
-  lang: string;
-  logoInline?: string;
-  baseUrl?: string;
-  theme?: string;
-  accent?: string;
-  css?: string;
-  author?: string[];
-}
-
-const VAR_RE = /[\w-]+/;
-const VAR_PATTERN = new RegExp(`\\$(${VAR_RE.source})\\$`, 'g');
-const IF_PATTERN = new RegExp(`\\$if\\((${VAR_RE.source})\\)\\$([\\s\\S]*?)\\$endif\\$`, 'g');
-
-export function renderTemplate(template: string, vars: Record<string, string | undefined>): string {
-  let result = template.replace(IF_PATTERN, (_match: string, name: string, content: string) => {
-    const val = vars[name];
-    if (val !== undefined && val !== '') return content.replace(VAR_PATTERN, (_m: string, n: string) => vars[n] ?? '');
-    return '';
-  });
-  result = result.replace(VAR_PATTERN, (_match: string, name: string) => vars[name] ?? '');
-  return result;
-}
-
-export async function renderHtmlPage(fragment: string, vars: HtmlTemplateVars): Promise<string> {
-  const templatePath = join(import.meta.dir, '../../src/lib/resources/template.html');
-  const template = await readFile(templatePath, 'utf-8');
-  const theme = vars.theme ?? 'dark';
-  const accent = vars.accent ?? 'lime';
-  const templateVars: Record<string, string | undefined> = {
-    body: fragment,
-    title: vars.title,
-    'site-title': vars.siteTitle,
-    tagline: vars.tagline,
-    lang: vars.lang,
-    'logo-inline': vars.logoInline,
-    'base-url': vars.baseUrl ?? '',
-    theme,
-    accent,
-    css: vars.css,
-    'author-meta': vars.author?.join(', '),
-  };
-  return renderTemplate(template, templateVars);
 }
 
 // ── LaTeX preamble generator ──────────────────────────────────────────────

@@ -6,10 +6,11 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/site-config.js';
 import { computeActiveFormats } from '../config/site-config.js';
 import { logWarning } from '../lib/logger.js';
-import { buildAssets, generateLatexPreamble, renderHtmlPage } from './build-utils.js';
+import { buildAssets, generateLatexPreamble } from './build-utils.js';
 import { buildDocsFromIndex, discover, loadBuildState } from './discover.js';
 import { runExportDocuments } from './export/runner.js';
-import { renderFromAstCache, renderLatex } from './render.js';
+import { discoverBibFiles } from './latex-preamble.js';
+import { readAstFromCache, renderFromAstCache, renderHtmlPageFromAst, renderLatex } from './render.js';
 import { computeBibHash, computeConfigHashes, computeTranspilerHash } from './state.js';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
 
@@ -105,8 +106,8 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const htmlOn = formatCfg?.html?.generate === true;
   const epubOn = formatCfg?.epub?.generate === true;
   const mdOn = formatCfg?.markdown?.generate === true;
-  const needsHtml = htmlOn;
-  // EPUB y Markdown se exportan directamente desde el AST canónico (json → epub3/markdown)
+  // EPUB, Markdown y HTML se exportan directamente desde el AST canónico
+  // (json → epub3/markdown, json → html5 + template de pandoc)
   const generateLatex = pdfOn || latexOn;
 
   const needsCss = htmlOn && !options.noTailwind;
@@ -205,26 +206,24 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
   // ── FASE 2+3: markdown → AST canónico → salidas por formato activo ──
   // renderDocs: AST invalidado (markdown/transpilers/bibliografía cambiados).
-  // astExportCandidates: formatos nuevos con AST válido en disco → solo
-  // exportaciones (sin re-ejecutar markdown → json).
+  // astExportCandidates: LaTeX/PDF nuevos con AST válido en disco → solo
+  // regenerar el tex body (HTML/EPUB/Markdown leen el AST directamente).
   const newPdf = (pdfOn || latexOn) && (newFormats.includes('pdf') || newFormats.includes('latex'));
-  const newHtml = (htmlOn || epubOn) && (newFormats.includes('html') || newFormats.includes('epub'));
-  const newMarkdown = mdOn && newFormats.includes('markdown');
-  const astExportCandidates = allDocs.filter((d) => !astChanged.has(d.relativePath) && (newPdf || newHtml || newMarkdown));
+  const astExportCandidates = allDocs.filter((d) => !astChanged.has(d.relativePath) && newPdf);
 
   const processedPaths = new Set<string>();
   if (renderDocs.length > 0 || astExportCandidates.length > 0) {
     progress.startPhase('render', renderDocs.length + astExportCandidates.length);
     if (renderDocs.length > 0) {
-      const done = await renderLatex(renderDocs, ctx.concurrency, cwd, ctx.siteConfig.disabledTranspilers, needsHtml, generateLatex);
+      const done = await renderLatex(renderDocs, ctx.concurrency, cwd, ctx.siteConfig.disabledTranspilers, generateLatex);
       for (const p of done) processedPaths.add(p);
     }
     if (astExportCandidates.length > 0) {
-      const done = await renderFromAstCache(astExportCandidates, ctx.concurrency, cwd, needsHtml, generateLatex, ctx.siteConfig.disabledTranspilers);
+      const done = await renderFromAstCache(astExportCandidates, ctx.concurrency, cwd, generateLatex, ctx.siteConfig.disabledTranspilers);
       // Docs sin AST en disco (primer build, caché limpiada): pipeline completo
       const missingAstDocs = astExportCandidates.filter((d) => !done.has(d.relativePath));
       if (missingAstDocs.length > 0) {
-        const extra = await renderLatex(missingAstDocs, ctx.concurrency, cwd, ctx.siteConfig.disabledTranspilers, needsHtml, generateLatex);
+        const extra = await renderLatex(missingAstDocs, ctx.concurrency, cwd, ctx.siteConfig.disabledTranspilers, generateLatex);
         for (const p of extra) done.add(p);
       }
       for (const p of done) processedPaths.add(p);
@@ -232,7 +231,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     progress.completePhase();
   }
 
-  // Los exports leen sus inputs del caché en disco (AST/tex/html):
+  // Los exports leen sus inputs del caché en disco (AST/tex):
   // no hay hidratación de cuerpos en memoria.
 
   // Preparar datos para FASE 4
@@ -416,32 +415,44 @@ async function generateHtmlPages(ctx: BuildContext, pipelineDocs: BuildDocument[
   const siteConfig = ctx.siteConfig;
   const htmlConfig = siteConfig.format?.html;
   const hasCss = !options.noTailwind && ctx.cssPath;
+  const bibFiles = discoverBibFiles(ctx.cwd);
+  const firstBib = bibFiles[0];
+  const bibOptions = firstBib !== undefined ? { bibliography: firstBib, csl: join(import.meta.dir, '../../src/lib/resources/apa-7.csl') } : undefined;
   for (const doc of pipelineDocs) {
     const slug = doc.slug ?? basename(doc.relativePath, '.md');
     const dir = dirname(doc.relativePath);
-    const src = join(ctx.cwd, '.iteraciones', 'html', dir, `${slug}.html`);
     const dst = join(formatsDir, 'html', dir, `${slug}.html`);
+    const ast = await readAstFromCache(ctx.cwd, doc);
+    if (!ast) {
+      logWarning(`sin AST en caché para ${doc.relativePath}; se omite la página HTML`, 'orchestrator');
+      continue;
+    }
+    let logoInline: string | undefined;
     try {
-      const fragment = await Bun.file(src).text();
-      let logoInline: string | undefined;
-      try {
-        const logoRel = ctx.siteConfig.logo?.trim();
-        const logoSrc = logoRel ? join(ctx.cwd, logoRel) : join(import.meta.dir, '../../src/lib/resources/logo.svg');
-        logoInline = await Bun.file(logoSrc).text();
-      } catch {}
-
-      const html = await renderHtmlPage(fragment, {
-        title: doc.frontmatter.title || slug,
-        siteTitle: siteConfig.title ?? '',
-        tagline: siteConfig.tagline,
-        lang: siteConfig.lang ?? 'es',
-        logoInline,
-        baseUrl: siteConfig.baseUrl,
-        theme: htmlConfig?.theme,
-        accent: htmlConfig?.accent,
-        css: hasCss ? 'css/styles.css' : undefined,
-        author: doc.frontmatter.author,
-      });
+      const logoRel = siteConfig.logo?.trim();
+      const logoSrc = logoRel ? join(ctx.cwd, logoRel) : join(import.meta.dir, '../../src/lib/resources/logo.svg');
+      logoInline = await Bun.file(logoSrc).text();
+    } catch {}
+    try {
+      const html = await renderHtmlPageFromAst(
+        ast,
+        doc,
+        ctx.cwd,
+        {
+          title: doc.frontmatter.title || slug,
+          siteTitle: siteConfig.title ?? '',
+          tagline: siteConfig.tagline,
+          lang: siteConfig.lang ?? 'es',
+          baseUrl: siteConfig.baseUrl,
+          theme: htmlConfig?.theme,
+          accent: htmlConfig?.accent,
+          css: hasCss ? 'css/styles.css' : undefined,
+          authorMeta: doc.frontmatter.author.join(', '),
+          logoInline,
+        },
+        bibOptions,
+        ctx.siteConfig.disabledTranspilers,
+      );
       await mkdir(dirname(dst), { recursive: true });
       await Bun.write(dst, html);
     } catch {
