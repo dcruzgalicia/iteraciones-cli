@@ -113,6 +113,7 @@ Los transpilers son módulos ESM que transforman el contenido. Se organizan en *
 
 1. **Capa semántica** (`semantic/`) — corre una vez y deja el **AST canónico** sin contenido de formato específico: `::` → `Div.spacer`, `:;` → `Div.spacer noindent`. Los `Div.dictum/verse/center/flushright` quedan sin transformar.
 2. **Capa de formato** (`latex/`, `html/`) — corre en cada exportación y convierte los nodos semánticos a su formato (RawBlocks de apertura/cierre alrededor de los bloques nativos). La capa `html/` se aplica al generar la página HTML con el template de pandoc.
+3. **Fase 6 — filtros Lua** (en transición): un transpiler puede vivir como `.lua` (paquete: `lib/resources/transpilers/<grupo>/<nombre>.lua`, override: `<proyecto>/transpilers/<grupo>/<nombre>.lua`). Si existe el `.lua`, **gana sobre el `.ts` equivalente** y se pasa como `--lua-filter` en la invocación pandoc de su capa; `disabled-transpilers` filtra ambos sistemas.
 
 Además, existen los **preamble transpilers** (`lib/resources/preamble/*.tex`) que modifican el preámbulo LaTeX.
 
