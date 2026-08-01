@@ -237,18 +237,60 @@ async function renderLatexBody(
   return processedBody;
 }
 
-/** Convierte el AST canónico a fragmento HTML con los transpilers de formato html. */
-async function renderHtmlFragment(
+/** Convierte el AST canónico a body LaTeX con los transpilers de formato latex. */
+/** Ruta de la plantilla HTML (template system de pandoc). */
+const HTML_TEMPLATE_PATH = join(import.meta.dir, '../../src/lib/resources/template.html');
+
+/** Variables de la plantilla HTML (template system de pandoc). */
+export interface HtmlPageVars {
+  title: string;
+  siteTitle: string;
+  tagline?: string;
+  lang: string;
+  baseUrl?: string;
+  theme?: string;
+  accent?: string;
+  css?: string;
+  authorMeta?: string;
+  logoInline?: string;
+}
+
+/**
+ * Genera la página HTML completa desde el AST canónico con el template
+ * system de pandoc (`--template template.html`), aplicando antes los
+ * transpilers de formato html a los nodos semánticos.
+ */
+export async function renderHtmlPageFromAst(
   ast: Record<string, unknown>,
   doc: BuildDocument,
-  groups: TranspilerGroups,
+  cwd: string,
+  vars: HtmlPageVars,
   bibOptions?: BibOptions,
+  activeTranspilers?: string[],
 ): Promise<string> {
+  const groups = await loadTranspilerGroups(activeTranspilers, cwd);
   let htmlAst: Record<string, unknown> = structuredClone(ast);
   for (const t of groups.html) {
     htmlAst = await t.transform(htmlAst);
   }
-  return convertFragment(JSON.stringify(htmlAst), doc.filePath, bibOptions, 'html5', 'json');
+
+  const extraArgs = [
+    '--template',
+    HTML_TEMPLATE_PATH,
+    `--metadata=title:${vars.title}`,
+    `--metadata=site-title:${vars.siteTitle}`,
+    `--metadata=lang:${vars.lang}`,
+  ];
+  if (vars.tagline) extraArgs.push(`--metadata=tagline:${vars.tagline}`);
+  if (vars.baseUrl) extraArgs.push(`--metadata=base-url:${vars.baseUrl}`);
+  if (vars.theme) extraArgs.push(`--metadata=theme:${vars.theme}`);
+  if (vars.accent) extraArgs.push(`--metadata=accent:${vars.accent}`);
+  if (vars.css) extraArgs.push(`--metadata=css:${vars.css}`);
+  if (vars.authorMeta) extraArgs.push(`--metadata=author-meta:${vars.authorMeta}`);
+  // -V (template variable): se inserta cruda, sin escape HTML (el logo es SVG)
+  if (vars.logoInline) extraArgs.push(`--variable=logo-inline:${vars.logoInline}`);
+
+  return convertFragment(JSON.stringify(htmlAst), doc.filePath, bibOptions, 'html5', 'json', extraArgs);
 }
 
 /** Escribe el AST canónico y los outputs cacheados según los formatos activos. */
@@ -259,7 +301,6 @@ async function writeCachedArtifacts(
   ast: Record<string, unknown>,
   processedBody?: string,
   flags?: PreambleFlags,
-  htmlFragment?: string,
 ): Promise<void> {
   const dir = dirname(doc.relativePath);
   const cacheBase = join(cwd, '.iteraciones');
@@ -271,11 +312,6 @@ async function writeCachedArtifacts(
     await mkdir(texDir, { recursive: true });
     await Bun.write(join(texDir, `${slug}.tex`), processedBody);
     await Bun.write(join(texDir, `${slug}.flags.json`), JSON.stringify(flags));
-  }
-  if (htmlFragment) {
-    const htmlDir = join(cacheBase, 'html', dir);
-    await mkdir(htmlDir, { recursive: true });
-    await Bun.write(join(htmlDir, `${slug}.html`), htmlFragment);
   }
 }
 
@@ -311,11 +347,11 @@ export async function readAstFromCache(cwd: string, doc: BuildDocument): Promise
  *   markdown → [transpilers semánticos string] → pandoc --to json
  *     → [transpilers semánticos ast] → AST canónico
  *     → [transpilers latex] → pandoc --from json --to latex → tex/{slug}.tex (si generateLatex)
- *     → [transpilers html]  → pandoc --from json --to html5 → html/{slug}.html (si generateHtml)
  *
  * El AST canónico siempre se serializa a disco (`.iteraciones/ast/{slug}.json`)
  * en formato JSON nativo de pandoc: es el origen único de los demás formatos
- * (EPUB y Markdown se exportan desde él en src/builder/export/runner.ts).
+ * (HTML se pagina con el template de pandoc, EPUB y Markdown se exportan
+ * desde él en src/builder/export/runner.ts).
  *
  * Retorna los relativePath procesados.
  */
@@ -324,11 +360,10 @@ export async function renderLatex(
   concurrency: number,
   cwd: string,
   activeTranspilers?: string[],
-  generateHtml?: boolean,
   generateLatex?: boolean,
 ): Promise<Set<string>> {
   const groups = await loadTranspilerGroups(activeTranspilers, cwd);
-  const { bibFiles, bibOptions } = bibContext(cwd);
+  const { bibFiles } = bibContext(cwd);
 
   const processed = new Set<string>();
 
@@ -375,18 +410,8 @@ export async function renderLatex(
       processedBody = await renderLatexBody(ast, doc, groups, bibFiles, hasCiteKeys);
     }
 
-    // Paso 4: transpilers de formato HTML → html fragment (con citeproc)
-    let htmlFragment = '';
-    if (generateHtml !== false) {
-      try {
-        htmlFragment = await renderHtmlFragment(ast, doc, groups, bibOptions);
-      } catch {
-        logWarning(`error al convertir a HTML para ${doc.relativePath}`, 'render');
-      }
-    }
-
     const slug = doc.slug ?? basename(doc.relativePath, '.md');
-    await writeCachedArtifacts(cwd, doc, slug, ast, processedBody, flags, htmlFragment);
+    await writeCachedArtifacts(cwd, doc, slug, ast, processedBody, flags);
     processed.add(doc.relativePath);
   });
 
@@ -405,12 +430,11 @@ export async function renderFromAstCache(
   docs: BuildDocument[],
   concurrency: number,
   cwd: string,
-  generateHtml?: boolean,
   generateLatex?: boolean,
   activeTranspilers?: string[],
 ): Promise<Set<string>> {
   const groups = await loadTranspilerGroups(activeTranspilers, cwd);
-  const { bibFiles, bibOptions } = bibContext(cwd);
+  const { bibFiles } = bibContext(cwd);
   const processed = new Set<string>();
 
   await mapWithConcurrency(docs, concurrency, async (doc) => {
@@ -425,17 +449,8 @@ export async function renderFromAstCache(
       processedBody = await renderLatexBody(ast, doc, groups, bibFiles, hasCiteKeys);
     }
 
-    let htmlFragment = '';
-    if (generateHtml !== false) {
-      try {
-        htmlFragment = await renderHtmlFragment(ast, doc, groups, bibOptions);
-      } catch {
-        logWarning(`error al convertir a HTML para ${doc.relativePath}`, 'render');
-      }
-    }
-
     const slug = doc.slug ?? basename(doc.relativePath, '.md');
-    await writeCachedArtifacts(cwd, doc, slug, ast, processedBody, flags, htmlFragment);
+    await writeCachedArtifacts(cwd, doc, slug, ast, processedBody, flags);
     processed.add(doc.relativePath);
   });
 

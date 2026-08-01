@@ -39,7 +39,6 @@ El pipeline convierte archivos Markdown en documentos en los formatos configurad
 │             │  • pandoc --to json → AST canónico
 │             │  • Serializa el AST a disco (.iteraciones/ast/)
 │             │  • pandoc --from json --to latex → .tex (si LaTeX/PDF activos)
-│             │  • pandoc --from json --to html5 → .html fragment (si HTML activo)
 └──────┬──────┘
        │ pipelineDocs[]
        ▼
@@ -49,7 +48,7 @@ El pipeline convierte archivos Markdown en documentos en los formatos configurad
 │                                             │
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐    │
 │  │ Markdown │ │  HTML    │ │  EPUB    │    │
-│  │(json→md) │ │(fragment→│ │(json→    │    │
+│  │(json→md) │ │(json→    │ │(json→    │    │
 │  │          │ │ template)│ │ epub3)   │    │
 │  └──────────┘ └──────────┘ └──────────┘    │
 │                                             │
@@ -101,7 +100,7 @@ Transpilers semánticos ast → AST canónico
 AST canónico (memoria + .iteraciones/ast/{slug}.json)
   │
   ├─ pandoc --from json --to latex   → .tex (LaTeX/PDF)
-  ├─ pandoc --from json --to html5   → .html fragment (HTML)
+  ├─ pandoc --from json --to html5 --template → .html (HTML)
   ├─ pandoc --from json --to epub3   → .epub (EPUB)
   └─ pandoc --from json --to markdown → .md (Markdown)
 ```
@@ -113,7 +112,7 @@ AST canónico (memoria + .iteraciones/ast/{slug}.json)
 Los transpilers son módulos ESM que transforman el contenido. Se organizan en **capas** (decisión D1):
 
 1. **Capa semántica** (`semantic/`) — corre una vez y deja el **AST canónico** sin contenido de formato específico: `::` → `Div.spacer`, `:;` → `Div.spacer noindent`. Los `Div.dictum/verse/center/flushright` quedan sin transformar.
-2. **Capa de formato** (`latex/`, `html/`) — corre en cada exportación y convierte los nodos semánticos a su formato (RawBlocks de apertura/cierre alrededor de los bloques nativos).
+2. **Capa de formato** (`latex/`, `html/`) — corre en cada exportación y convierte los nodos semánticos a su formato (RawBlocks de apertura/cierre alrededor de los bloques nativos). La capa `html/` se aplica al generar la página HTML con el template de pandoc.
 
 Además, existen los **preamble transpilers** (`lib/resources/preamble/*.tex`) que modifican el preámbulo LaTeX.
 

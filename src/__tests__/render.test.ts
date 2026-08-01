@@ -138,7 +138,7 @@ describe('renderFromAstCache (exportación desde AST en disco)', () => {
         frontmatter: { title: 'Prueba', date: '', author: [] },
         slug: 'prueba',
       };
-      const processed = await renderFromAstCache([doc], 1, cwd, false);
+      const processed = await renderFromAstCache([doc], 1, cwd);
       expect(processed.size).toBe(0);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
