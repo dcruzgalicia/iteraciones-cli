@@ -78,6 +78,30 @@ export function getBuiltinTranspilerNames(): string[] {
   ];
 }
 
+/** Retorna el nombre completo que termina en "/<name>", si existe. */
+export function suggestTranspilerName(name: string): string | undefined {
+  return getBuiltinTranspilerNames().find((n) => n.endsWith(`/${name}`));
+}
+
+/**
+ * Valida los nombres de `disabled-transpilers` contra los transpilers built-in.
+ * Los nombres desconocidos (p. ej. de configs anteriores al cambio de nombres
+ * completos de D1) emiten un warning con la sugerencia, sin romper el build.
+ */
+export function validateDisabledTranspilers(disabled: string[] | undefined): void {
+  if (!disabled || disabled.length === 0) return;
+  for (const name of disabled) {
+    if (getBuiltinTranspilerNames().includes(name)) continue;
+    const suggestion = suggestTranspilerName(name);
+    logWarning(
+      suggestion
+        ? `disabled-transpilers: "${name}" no existe; ¿quisiste decir "${suggestion}"?`
+        : `disabled-transpilers: "${name}" no coincide con ningún transpiler`,
+      'config',
+    );
+  }
+}
+
 /**
  * Carga los transpilers por grupo desde el paquete y desde <cwd>/transpilers/.
  * Los transpilers del proyecto con el mismo nombre reemplazan a los del paquete.
