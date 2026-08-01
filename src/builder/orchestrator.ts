@@ -385,6 +385,7 @@ async function cleanupDeletedFiles(
       await rm(join(cacheBase, sub, dir, `${slug}.tex`), { force: true }).catch(() => {});
       await rm(join(cacheBase, sub, dir, `${slug}.html`), { force: true }).catch(() => {});
     }
+    await rm(join(cacheBase, 'tex', dir, `${slug}.flags.json`), { force: true }).catch(() => {});
     for (const sub of ['pdf', 'html']) {
       await rm(join(cacheBase, 'formats', sub, dir, `${slug}.tex`), { force: true }).catch(() => {});
       await rm(join(cacheBase, 'formats', sub, dir, `${slug}.html`), { force: true }).catch(() => {});
@@ -406,6 +407,7 @@ async function cleanupSlugChanges(ctx: BuildContext, slugChangedEntries: Map<str
       await rm(join(cacheBase, sub, dir, `${oldSlug}.tex`), { force: true }).catch(() => {});
       await rm(join(cacheBase, sub, dir, `${oldSlug}.html`), { force: true }).catch(() => {});
     }
+    await rm(join(cacheBase, 'tex', dir, `${oldSlug}.flags.json`), { force: true }).catch(() => {});
     for (const sub of ['pdf', 'html']) {
       await rm(join(cacheBase, 'formats', sub, dir, `${oldSlug}.tex`), { force: true }).catch(() => {});
       await rm(join(cacheBase, 'formats', sub, dir, `${oldSlug}.html`), { force: true }).catch(() => {});
