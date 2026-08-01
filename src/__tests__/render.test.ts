@@ -209,7 +209,7 @@ describe('resolveLuaFilters (sistema dual Fase 6)', () => {
       join(PKG, 'semantic', 'ast', '02-double-colon-noindent.lua'),
     ]);
     expect(f.latex).toEqual([]);
-    expect(f.html).toEqual([]);
+    expect(f.html).toEqual(['01-dictum', '02-verse', '03-center', '04-flushright', '05-spacer'].map((n) => join(PKG, 'html', `${n}.lua`)));
   });
 
   it('el override del proyecto gana sobre el paquete para el mismo nombre', async () => {
@@ -225,8 +225,19 @@ describe('resolveLuaFilters (sistema dual Fase 6)', () => {
         join(cwd, 'transpilers', 'semantic', 'ast', '02-double-colon-noindent.lua'),
       ]);
       expect(f.latex).toEqual([join(cwd, 'transpilers', 'latex', '02-dictum.lua')]);
-      expect(f.html).toEqual([]);
-      expect(f.resolvedNames).toEqual(new Set(['semantic/string/01-double-colon', 'semantic/ast/02-double-colon-noindent', 'latex/02-dictum']));
+      expect(f.html).toEqual(['01-dictum', '02-verse', '03-center', '04-flushright', '05-spacer'].map((n) => join(PKG, 'html', `${n}.lua`)));
+      expect(f.resolvedNames).toEqual(
+        new Set([
+          'semantic/string/01-double-colon',
+          'semantic/ast/02-double-colon-noindent',
+          'latex/02-dictum',
+          'html/01-dictum',
+          'html/02-verse',
+          'html/03-center',
+          'html/04-flushright',
+          'html/05-spacer',
+        ]),
+      );
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
@@ -235,7 +246,9 @@ describe('resolveLuaFilters (sistema dual Fase 6)', () => {
   it('excluye filtros desactivados por nombre completo', async () => {
     const f = await resolveLuaFilters(['semantic/string/01-double-colon']);
     expect(f.semantic).toEqual([join(PKG, 'semantic', 'ast', '02-double-colon-noindent.lua')]);
-    expect(f.resolvedNames).toEqual(new Set(['semantic/ast/02-double-colon-noindent']));
+    expect(f.resolvedNames).toEqual(
+      new Set(['semantic/ast/02-double-colon-noindent', 'html/01-dictum', 'html/02-verse', 'html/03-center', 'html/04-flushright', 'html/05-spacer']),
+    );
   });
 });
 
