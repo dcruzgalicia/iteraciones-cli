@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { buildDocsFromIndex, computeSlug } from '../builder/discover.js';
+import { buildDocsFromIndex, computeSlug, splitFrontmatter } from '../builder/discover.js';
 
 describe('computeSlug', () => {
   it('genera slug desde el título', () => {
@@ -127,5 +127,37 @@ describe('buildDocsFromIndex', () => {
   it('asigna filePath correcto', () => {
     const docs = buildDocsFromIndex(['sub/documento.md'], new Map(), '/raiz');
     expect(docs[0]?.filePath).toBe('/raiz/sub/documento.md');
+  });
+});
+
+describe('splitFrontmatter', () => {
+  it('separa el YAML del body', () => {
+    const { yaml, body } = splitFrontmatter('---\ntitle: Prueba\n---\n\nContenido');
+    expect(yaml).toBe('title: Prueba');
+    expect(body).toBe('\nContenido');
+  });
+
+  it('retorna body completo sin yaml si no hay frontmatter', () => {
+    const { yaml, body } = splitFrontmatter('Contenido sin frontmatter');
+    expect(yaml).toBeUndefined();
+    expect(body).toBe('Contenido sin frontmatter');
+  });
+
+  it('maneja frontmatter al final del archivo sin newline final', () => {
+    const { yaml, body } = splitFrontmatter('---\ntitle: Fin\n---');
+    expect(yaml).toBe('title: Fin');
+    expect(body).toBe('');
+  });
+
+  it('no confunde un bloque --- interno con frontmatter', () => {
+    const { yaml, body } = splitFrontmatter('---\ntitle: Prueba\n---\n\n---\nno es frontmatter\n---');
+    expect(yaml).toBe('title: Prueba');
+    expect(body).toBe('\n---\nno es frontmatter\n---');
+  });
+
+  it('soporta saltos de línea CRLF', () => {
+    const { yaml, body } = splitFrontmatter('---\r\ntitle: Prueba\r\n---\r\n\r\nContenido');
+    expect(yaml).toBe('title: Prueba');
+    expect(body).toBe('\r\nContenido');
   });
 });
