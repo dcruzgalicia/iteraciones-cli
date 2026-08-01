@@ -201,6 +201,9 @@ describe('validateDisabledTranspilers', () => {
 
 describe('resolveLuaFilters (sistema dual Fase 6)', () => {
   const PKG = join(import.meta.dir, '..', 'lib', 'resources', 'transpilers');
+  const LATEX_PKG = ['01-spacer', '02-dictum', '03-verse', '04-center', '05-flushright', '06-mbox-sentence-end', '07-mbox-sentence-start'].map((n) =>
+    join(PKG, 'latex', `${n}.lua`),
+  );
 
   it('resuelve los filtros del paquete por capa sin overrides', async () => {
     const f = await resolveLuaFilters();
@@ -208,7 +211,7 @@ describe('resolveLuaFilters (sistema dual Fase 6)', () => {
       join(PKG, 'semantic', 'string', '01-double-colon.lua'),
       join(PKG, 'semantic', 'ast', '02-double-colon-noindent.lua'),
     ]);
-    expect(f.latex).toEqual([]);
+    expect(f.latex).toEqual(LATEX_PKG);
     expect(f.html).toEqual(['01-dictum', '02-verse', '03-center', '04-flushright', '05-spacer'].map((n) => join(PKG, 'html', `${n}.lua`)));
   });
 
@@ -224,13 +227,21 @@ describe('resolveLuaFilters (sistema dual Fase 6)', () => {
         join(PKG, 'semantic', 'string', '01-double-colon.lua'),
         join(cwd, 'transpilers', 'semantic', 'ast', '02-double-colon-noindent.lua'),
       ]);
-      expect(f.latex).toEqual([join(cwd, 'transpilers', 'latex', '02-dictum.lua')]);
+      const expectedLatex = [...LATEX_PKG];
+      expectedLatex[1] = join(cwd, 'transpilers', 'latex', '02-dictum.lua');
+      expect(f.latex).toEqual(expectedLatex);
       expect(f.html).toEqual(['01-dictum', '02-verse', '03-center', '04-flushright', '05-spacer'].map((n) => join(PKG, 'html', `${n}.lua`)));
       expect(f.resolvedNames).toEqual(
         new Set([
           'semantic/string/01-double-colon',
           'semantic/ast/02-double-colon-noindent',
+          'latex/01-spacer',
           'latex/02-dictum',
+          'latex/03-verse',
+          'latex/04-center',
+          'latex/05-flushright',
+          'latex/06-mbox-sentence-end',
+          'latex/07-mbox-sentence-start',
           'html/01-dictum',
           'html/02-verse',
           'html/03-center',
@@ -246,28 +257,27 @@ describe('resolveLuaFilters (sistema dual Fase 6)', () => {
   it('excluye filtros desactivados por nombre completo', async () => {
     const f = await resolveLuaFilters(['semantic/string/01-double-colon']);
     expect(f.semantic).toEqual([join(PKG, 'semantic', 'ast', '02-double-colon-noindent.lua')]);
-    expect(f.resolvedNames).toEqual(
-      new Set(['semantic/ast/02-double-colon-noindent', 'html/01-dictum', 'html/02-verse', 'html/03-center', 'html/04-flushright', 'html/05-spacer']),
-    );
+    expect(f.resolvedNames.size).toBe(13);
+    expect(f.resolvedNames.has('semantic/string/01-double-colon')).toBe(false);
   });
 });
 
 describe('loadTranspilerGroups (dual .lua > .ts)', () => {
-  it('mantiene el transpiler TS cuando no existe su .lua', async () => {
+  it('no carga transpilers TS cuando el paquete tiene sus .lua (capa latex completa)', async () => {
     const groups = await loadTranspilerGroups();
-    expect(groups.latex.map((t) => t.name)).toContain('02-dictum');
-    expect(groups.luaFilters.latex).toEqual([]);
+    expect(groups.latex).toEqual([]);
+    expect(groups.luaFilters.latex).toHaveLength(7);
   });
 
-  it('omite el transpiler TS cuando existe su .lua (override del proyecto)', async () => {
+  it('el override .lua del proyecto reemplaza al del paquete y el TS se omite', async () => {
     const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-lua-'));
     try {
       mkdirSync(join(cwd, 'transpilers', 'latex'), { recursive: true });
       writeFileSync(join(cwd, 'transpilers', 'latex', '02-dictum.lua'), '-- test\n');
       const groups = await loadTranspilerGroups(undefined, cwd);
-      expect(groups.latex.map((t) => t.name)).not.toContain('02-dictum');
-      expect(groups.luaFilters.latex).toEqual([join(cwd, 'transpilers', 'latex', '02-dictum.lua')]);
-      expect(groups.latex.map((t) => t.name)).toContain('01-spacer');
+      expect(groups.latex).toEqual([]);
+      expect(groups.luaFilters.latex).toHaveLength(7);
+      expect(groups.luaFilters.latex[1]).toBe(join(cwd, 'transpilers', 'latex', '02-dictum.lua'));
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }

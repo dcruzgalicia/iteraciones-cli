@@ -100,3 +100,71 @@ describe('filtros Lua html (Fase 6, B3)', () => {
     expect(html).not.toContain('class="spacer"');
   });
 });
+
+const LATEX_FILTERS = ['01-spacer', '02-dictum', '03-verse', '04-center', '05-flushright', '06-mbox-sentence-end', '07-mbox-sentence-start'].map(
+  (n) => join(RESOURCES, 'latex', `${n}.lua`),
+);
+
+async function toLatex(markdown: string): Promise<string> {
+  const args = ['pandoc', '--from', 'markdown', '--to', 'latex'];
+  for (const f of [...SEMANTIC_FILTERS, ...LATEX_FILTERS]) args.push('--lua-filter', f);
+  const { stdout } = await runPandoc(args, markdown, 'test.md');
+  return stdout;
+}
+
+describe('filtros Lua latex (Fase 6, B2)', () => {
+  it('convierte :: en \\vspace{\\baselineskip}', async () => {
+    const tex = await toLatex('texto\n\n::\n\ntexto');
+    expect(tex).toContain('\\vspace{\\baselineskip}');
+  });
+
+  it('convierte :; en vspace + \\noindent al párrafo siguiente', async () => {
+    const tex = await toLatex('texto\n\n:;\n\ntexto siguiente');
+    expect(tex).toContain('\\vspace{\\baselineskip}');
+    // el mbox-start envuelve la primera palabra después del \\noindent
+    expect(tex).toContain('\\noindent \\mbox{texto} siguiente');
+  });
+
+  it('convierte Div.dictum sin autor', async () => {
+    const tex = await toLatex('::: {.dictum}\nCita de prueba\n:::\n');
+    // mbox-start envuelve "Cita" y mbox-end "de prueba" (oración final del párrafo)
+    expect(tex).toContain('\\vspace*{0.5\\topskip}\\dictum{\\mbox{Cita} \\mbox{de prueba}}\\vspace*{32pt}');
+  });
+
+  it('convierte Div.dictum con autor', async () => {
+    const tex = await toLatex('::: {.dictum}\nCita\n\n::: {.author}\nJulio Verne\n::: \n:::\n');
+    expect(tex).toContain('\\dictum[Julio Verne]{Cita}');
+  });
+
+  it('convierte Div.verse con vspace por defecto', async () => {
+    const tex = await toLatex('::: {.verse}\nPoema\n:::\n');
+    expect(tex).toContain('\\vspace*{3pt}\\begin{verse}');
+    expect(tex).toContain('\\end{verse}\\vspace*{3pt}');
+  });
+
+  it('convierte Div.center y Div.flushright', async () => {
+    const tex = await toLatex('::: {.center}\nCentrado\n:::\n\n::: {.flushright}\nDerecha\n:::\n');
+    expect(tex).toContain('\\begin{center}');
+    expect(tex).toContain('\\end{center}');
+    expect(tex).toContain('\\begin{flushright}');
+    expect(tex).toContain('\\end{flushright}');
+  });
+
+  it('mbox-sentence-end envuelve las últimas palabras (1 por oración, 3 en la final)', async () => {
+    const tex = await toLatex('Primera oración de ejemplo. Segunda aquí. Tercera oración de ejemplo final.');
+    expect(tex).toContain('oración de \\mbox{ejemplo.}');
+    expect(tex).toContain('\\mbox{aquí.}');
+    expect(tex).toContain('oración \\mbox{de ejemplo final.}');
+  });
+
+  it('mbox-sentence-start envuelve la primera palabra de cada oración', async () => {
+    const tex = await toLatex('Principio de la oración. Otra oración aquí.');
+    expect(tex).toContain('\\mbox{Principio} de la');
+    expect(tex).toContain('\\mbox{Otra}');
+  });
+
+  it('no modifica párrafos de menos de 4 palabras', async () => {
+    const tex = await toLatex('Hola mundo.');
+    expect(tex).not.toContain('\\mbox');
+  });
+});
