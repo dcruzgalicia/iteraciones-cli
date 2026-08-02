@@ -1,5 +1,5 @@
 import { getBuiltinPreambleTranspilerInfos, validateDisabledPreambleTranspilers } from '../builder/preamble-loader.js';
-import { getBuiltinLuaTranspilerInfos, getBuiltinTranspilerInfos, validateDisabledTranspilers } from '../builder/render.js';
+import { getBuiltinLuaTranspilerInfos, validateDisabledTranspilers } from '../builder/render.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 
 /**
@@ -11,20 +11,12 @@ export async function runTranspilers(cwd: string): Promise<void> {
   validateDisabledTranspilers(config.disabledTranspilers);
   validateDisabledPreambleTranspilers(config.disabledPreambleTranspilers);
   const disabled = new Set(config.disabledTranspilers ?? []);
-  const allInfos = getBuiltinTranspilerInfos();
-  const luaInfos = await getBuiltinLuaTranspilerInfos();
+  const allInfos = await getBuiltinLuaTranspilerInfos();
   const hasDisabled = config.disabledTranspilers !== undefined && config.disabledTranspilers.length > 0;
 
   process.stdout.write('Transpilers disponibles (orden de ejecución):\n\n');
 
   for (const info of allInfos) {
-    const active = !disabled.has(info.name);
-    const status = active ? 'activo' : 'desactivado';
-    const typeLabel = info.type === 'string' ? 'string' : 'ast    ';
-    process.stdout.write(`  ${info.name}  ${typeLabel}  ${info.description}  [${status}]\n`);
-  }
-
-  for (const info of luaInfos) {
     const active = !disabled.has(info.name);
     const status = active ? 'activo' : 'desactivado';
     process.stdout.write(`  ${info.name}  lua     ${info.description}  [${status}]\n`);
