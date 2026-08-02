@@ -8,6 +8,7 @@ import {
   loadTranspilerGroups,
   renderFromAstCache,
   resolveLuaFilters,
+  resolveUserLuaFilters,
   suggestTranspilerName,
   validateDisabledTranspilers,
 } from '../builder/render.js';
@@ -277,6 +278,45 @@ describe('loadTranspilerGroups (solo resolución de filtros Lua)', () => {
       const groups = await loadTranspilerGroups(undefined, cwd);
       expect(groups.latex).toHaveLength(7);
       expect(groups.latex[1]).toBe(join(cwd, 'transpilers', 'latex', '02-dictum.lua'));
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('resolveUserLuaFilters (lua-filters de usuario)', () => {
+  it('resuelve rutas relativas del proyecto a absolutas', async () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-lua-'));
+    try {
+      mkdirSync(join(cwd, 'filters'), { recursive: true });
+      writeFileSync(join(cwd, 'filters', 'mi-filtro.lua'), '-- test\n');
+      writeFileSync(join(cwd, '_iteraciones.yaml'), 'lua-filters:\n  - filters/mi-filtro.lua\n');
+      const resolved = await resolveUserLuaFilters(cwd);
+      expect(resolved).toEqual([join(cwd, 'filters', 'mi-filtro.lua')]);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('advierte y omite rutas inexistentes', async () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-lua-'));
+    try {
+      writeFileSync(join(cwd, '_iteraciones.yaml'), 'lua-filters:\n  - filters/no-existe.lua\n');
+      const spy = spyOn(logger, 'logWarning');
+      const resolved = await resolveUserLuaFilters(cwd);
+      expect(resolved).toEqual([]);
+      expect(spy).toHaveBeenCalledWith('lua-filters: "filters/no-existe.lua" no encontrado en el proyecto', 'config');
+      spy.mockRestore();
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('retorna vacío sin config o sin lua-filters', async () => {
+    expect(await resolveUserLuaFilters()).toEqual([]);
+    const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-lua-'));
+    try {
+      expect(await resolveUserLuaFilters(cwd)).toEqual([]);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }

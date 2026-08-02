@@ -109,6 +109,9 @@ disabled-transpilers:             # transpilers a desactivar (opcional)
 
 disabled-preamble-transpilers:    # preamble transpilers a desactivar (opcional)
   # - 01-maketitle-patches
+
+lua-filters:                      # filtros Lua de usuario (opcional)
+  # - filters/mi-filtro.lua
 ```
 
 ## Campos
@@ -436,6 +439,18 @@ Lista de preamble transpilers a desactivar.
 ```yaml
 disabled-preamble-transpilers:
   - 01-maketitle-patches
+```
+
+### `lua-filters`
+
+**Tipo:** `string[]`
+**Por defecto:** `undefined` (sin filtros de usuario)
+
+Lista de filtros Lua de usuario. Cada elemento es una ruta relativa al proyecto (ej: `filters/nota.lua`). Los filtros corren en todas las invocaciones de pandoc: en las exportaciones (latex, html) antes de los transpilers del paquete; en la conversión markdown → AST, después de los filtros semánticos. La variable global `FORMAT` de pandoc permite ramificar el comportamiento por formato de salida (`latex`, `html5`, `epub3`, `markdown`, `json`). Si una ruta no existe, se muestra una advertencia y se omite.
+
+```yaml
+lua-filters:
+  - filters/nota.lua
 ```
 
 ## Validación

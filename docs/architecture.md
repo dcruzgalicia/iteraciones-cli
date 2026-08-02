@@ -149,8 +149,9 @@ Además, existen los **preamble transpilers** (`lib/resources/preamble/*.tex`) q
 
 ### Extensibilidad
 
-- Un transpiler del proyecto con el mismo nombre completo (p. ej. `<proyecto>/transpilers/latex/02-dictum.ts`) reemplaza al del paquete (override).
+- Un transpiler del proyecto con el mismo nombre completo (p. ej. `<proyecto>/transpilers/latex/02-dictum.lua`) reemplaza al del paquete (override).
 - Para desactivar uno se usa `disabled-transpilers` (nombres completos, p. ej. `latex/02-dictum`) en `_iteraciones.yaml`.
+- **Filtros Lua de usuario** (`lua-filters:`): lista de rutas relativas al proyecto que corren en todas las invocaciones pandoc (markdown → AST, latex, html, epub, markdown). En las exportaciones corren antes de la capa de formato; en la conversión markdown → AST, después de los filtros semánticos. La variable global `FORMAT` de pandoc permite ramificar el comportamiento por formato de salida. Si una ruta no existe se advierte y se omite.
 - Los preamble transpilers del proyecto (`<proyecto>/preamble/<nombre>.tex`) reemplazan a los del paquete; se desactivan con `disabled-preamble-transpilers`.
 
 ---
@@ -195,6 +196,7 @@ format:
 
 disabled-transpilers: []
 disabled-preamble-transpilers: []
+lua-filters: []
 ```
 
 El esquema Zod (`config-schema.ts`) aplica defaults para todos los campos, valida tipos, y transforma claves kebab-case a camelCase para las interfaces TypeScript.

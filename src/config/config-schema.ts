@@ -154,6 +154,10 @@ const RawSiteConfigSchema = z.object({
     .array(z.string())
     .optional()
     .transform((v) => (v?.length ? v : undefined)),
+  'lua-filters': z
+    .array(z.string())
+    .optional()
+    .transform((v) => (v?.length ? v : undefined)),
 });
 
 /** Convierte kebab-case a camelCase. */
@@ -195,5 +199,6 @@ export const SiteConfigSchema = RawSiteConfigSchema.transform((raw) => {
     },
     disabledTranspilers: raw['disabled-transpilers'],
     disabledPreambleTranspilers: raw['disabled-preamble-transpilers'],
+    luaFilters: raw['lua-filters'],
   };
 });

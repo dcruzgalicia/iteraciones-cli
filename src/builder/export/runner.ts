@@ -11,7 +11,7 @@ import { runPandoc } from '../../lib/pandoc-runner.js';
 import { mapWithConcurrency } from '../../lib/run.js';
 import { computeSlug } from '../discover.js';
 import { discoverBibFiles } from '../latex-preamble.js';
-import { readAstFromCache } from '../render.js';
+import { readAstFromCache, resolveUserLuaFilters } from '../render.js';
 import type { BuildDocument } from '../types.js';
 import { assembleExportDocument } from './assemble.js';
 
@@ -88,16 +88,17 @@ export async function runExportDocuments(exportableDocs: BuildDocument[], option
     exportDoc: ExportDocument,
     outputBase: string,
     ast: Record<string, unknown> | null,
+    userFilters: string[],
     biberCacheDir?: string,
   ): Promise<void> {
     const tasks: Array<Promise<void>> = [];
 
     if (config.markdown?.generate && ast) {
-      tasks.push(convertToMarkdown(ast, `${outputBase}.md`, exportDoc));
+      tasks.push(convertToMarkdown(ast, `${outputBase}.md`, exportDoc, userFilters));
     }
 
     if (config.epub?.generate && ast) {
-      tasks.push(convertToEpub(ast, `${outputBase}.epub`, exportDoc));
+      tasks.push(convertToEpub(ast, `${outputBase}.epub`, exportDoc, userFilters));
     }
 
     if (config.pdf?.generate) {
@@ -134,6 +135,7 @@ export async function runExportDocuments(exportableDocs: BuildDocument[], option
 
   const pdfConcurrency = hasPdf ? maxSlots : concurrency;
   const needsAst = config.epub?.generate === true || config.markdown?.generate === true;
+  const userFilters = await resolveUserLuaFilters(cwd);
   await mapWithConcurrency(exportableDocs, pdfConcurrency, async (doc): Promise<void> => {
     const exportDoc = assembleExportDocument(doc, lang, globalBibliography, undefined, config.pdf);
 
@@ -144,7 +146,7 @@ export async function runExportDocuments(exportableDocs: BuildDocument[], option
 
     const outputBase = exportOutputBase(exportDoc, outputDir);
     const biberCacheDir = biberCacheForDoc.get(doc.relativePath);
-    await generateFormats(exportDoc, outputBase, ast, biberCacheDir);
+    await generateFormats(exportDoc, outputBase, ast, userFilters, biberCacheDir);
   });
 }
 /**
@@ -185,10 +187,11 @@ function buildYamlHeader(doc: ExportDocument): string {
 /**
  * Convierte el AST canónico a EPUB3 usando pandoc (sin intermediario HTML).
  */
-async function convertToEpub(ast: Record<string, unknown>, outputPath: string, doc: ExportDocument): Promise<void> {
+async function convertToEpub(ast: Record<string, unknown>, outputPath: string, doc: ExportDocument, userFilters: string[]): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
   const args = ['pandoc', '--from', 'json', '--to', 'epub3', '--output', outputPath];
+  for (const f of userFilters) args.push('--lua-filter', f);
 
   if (doc.metadata.bibliography) {
     args.push('--citeproc');
@@ -200,9 +203,10 @@ async function convertToEpub(ast: Record<string, unknown>, outputPath: string, d
 /**
  * Exporta un documento a Markdown via pandoc (json → markdown, sin round-trip por LaTeX).
  */
-async function convertToMarkdown(ast: Record<string, unknown>, outputPath: string, doc: ExportDocument): Promise<void> {
+async function convertToMarkdown(ast: Record<string, unknown>, outputPath: string, doc: ExportDocument, userFilters: string[]): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
   const args = ['pandoc', '--from', 'json', '--to', 'markdown'];
+  for (const f of userFilters) args.push('--lua-filter', f);
   const { stdout } = await runPandoc(args, JSON.stringify(ast), doc.filePath);
   const yamlHeader = buildYamlHeader(doc);
   await Bun.write(outputPath, yamlHeader + stdout);
