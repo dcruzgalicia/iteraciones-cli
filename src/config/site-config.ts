@@ -118,7 +118,7 @@ export interface SiteConfig {
    *   disabled-transpilers:
    *     - latex/02-dictum
    * Para sobrescribir un transpiler, crea un archivo con el mismo
-   * nombre completo en <proyecto>/transpilers/<grupo>/<nombre>.ts.
+   * nombre completo en <proyecto>/transpilers/<grupo>/<nombre>.lua.
    */
   disabledTranspilers?: string[];
   /**
@@ -126,6 +126,16 @@ export interface SiteConfig {
    * Por defecto undefined = todos activos.
    */
   disabledPreambleTranspilers?: string[];
+  /**
+   * Filtros Lua de usuario (rutas relativas al proyecto). Se pasan como
+   * `--lua-filter` en TODAS las invocaciones pandoc del documento
+   * (markdown→json, json→latex, json→html5, json→epub3, json→markdown).
+   * Dentro del filtro, la variable global `FORMAT` permite condicionar por
+   * formato de salida (latex, html5, epub3, markdown, json). Ej:
+   *   lua-filters:
+   *     - filters/mi-filtro.lua
+   */
+  luaFilters?: string[];
 }
 
 /**
@@ -239,6 +249,7 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   baseUrl: undefined,
   disabledTranspilers: undefined,
   disabledPreambleTranspilers: undefined,
+  luaFilters: undefined,
   format: {
     html: DEFAULT_HTML_FORMAT,
     pdf: DEFAULT_PDF_FORMAT,

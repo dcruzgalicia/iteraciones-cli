@@ -79,12 +79,10 @@ export async function saveStateFile(cwd: string, state: StateFile): Promise<void
  */
 export async function computeTranspilerHash(cwd: string, siteConfig: SiteConfig): Promise<string> {
   const parts: string[] = [];
-  // [directorio, glob]: transpilers TS (.ts recursivo), filtros Lua (.lua), preamble .tex
+  // [directorio, glob]: filtros Lua del paquete y del proyecto, preamble .tex
   const specs: Array<[string, string]> = [
-    [join(import.meta.dir, 'transpilers'), '**/*.ts'],
     [join(import.meta.dir, '../lib/resources/transpilers'), '**/*.lua'],
     [join(import.meta.dir, '../lib/resources/preamble'), '*.tex'],
-    [join(cwd, 'transpilers'), '**/*.ts'],
     [join(cwd, 'transpilers'), '**/*.lua'],
     [join(cwd, 'preamble'), '*.tex'],
   ];
@@ -97,6 +95,13 @@ export async function computeTranspilerHash(cwd: string, siteConfig: SiteConfig)
     } catch {
       // Directorio inexistente (transpilers/preamble del proyecto son opcionales)
     }
+  }
+  // Filtros Lua de usuario (`lua-filters:`) — pueden estar en cualquier directorio
+  for (const rel of siteConfig.luaFilters ?? []) {
+    const content = await Bun.file(join(cwd, rel))
+      .text()
+      .catch(() => '');
+    parts.push(rel, content);
   }
   parts.push(JSON.stringify(siteConfig.disabledTranspilers ?? []));
   parts.push(JSON.stringify(siteConfig.disabledPreambleTranspilers ?? []));

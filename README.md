@@ -81,6 +81,9 @@ disabled-transpilers:               # transpilers a desactivar por nombre comple
 
 disabled-preamble-transpilers:      # preamble transpilers a desactivar (opcional)
   # - 01-maketitle-patches
+
+lua-filters:                        # filtros Lua de usuario (opcional)
+  # - filters/mi-filtro.lua
 ```
 
 ## Comandos
@@ -234,14 +237,41 @@ Crea un archivo con el mismo nombre completo en `<proyecto>/transpilers/<grupo>/
 
 ```bash
 mkdir -p transpilers/semantic/string
-cat > transpilers/semantic/string/01-double-colon.ts << 'EOF'
-export const type = 'string';
-export function process(body: string): string {
-  // tu propia implementación
-  return body;
-}
+cat > transpilers/semantic/string/01-double-colon.lua << 'EOF'
+function Para(para)
+  -- tu propia implementación
+  return nil
+end
 EOF
 ```
+
+### Filtros Lua de usuario
+
+Además de sobrescribir transpilers, puedes agregar filtros Lua propios con `lua-filters:` en `_iteraciones.yaml`. Las rutas son relativas al proyecto:
+
+```yaml
+lua-filters:
+  - filters/nota.lua
+```
+
+Los filtros corren en **todas** las invocaciones de pandoc (markdown → AST, latex, html, epub y markdown). En las exportaciones (latex, html) corren **antes** de los transpilers del paquete, para poder transformar los nodos semánticos antes de la capa de formato; en la conversión markdown → AST corren **después** de los filtros semánticos, para ver los nodos ya resueltos (por ejemplo, `Div.spacer`).
+
+Dentro del filtro, la variable global `FORMAT` de pandoc indica el formato de salida (`latex`, `html5`, `epub3`, `markdown`, `json`), lo que permite que un mismo filtro ramifique su comportamiento:
+
+```lua
+-- filters/nota.lua
+function Div(div)
+  if not div.classes:includes("nota") then return nil end
+  if FORMAT == "latex" then
+    return pandoc.RawBlock("latex", "\\fbox{Nota}")
+  elseif FORMAT == "html5" then
+    return pandoc.RawBlock("html", '<aside class="nota">Nota</aside>')
+  end
+  return nil
+end
+```
+
+Si una ruta no existe en el proyecto, se muestra una advertencia y se omite.
 
 ## Licencia
 

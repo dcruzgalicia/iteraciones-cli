@@ -1,5 +1,6 @@
 import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
+import { loadSiteConfig } from '../config/config-loader.js';
 import { logWarning } from '../lib/logger.js';
 import { type BibOptions, convertFragment } from '../lib/pandoc-runner.js';
 import { mapWithConcurrency } from '../lib/run.js';
@@ -48,6 +49,8 @@ export interface LuaFilterGroup {
   semantic: string[];
   latex: string[];
   html: string[];
+  /** Filtros Lua de usuario (`lua-filters:` del proyecto), corren en todas las invocaciones. */
+  user: string[];
   /** Nombres completos resueltos como .lua (los .ts equivalentes se omiten). */
   resolvedNames: Set<string>;
 }
@@ -69,7 +72,7 @@ async function resolveLuaFilter(group: string, name: string, cwd?: string): Prom
  */
 export async function resolveLuaFilters(disabledList?: string[], cwd?: string): Promise<LuaFilterGroup> {
   const excluded = new Set(disabledList ?? []);
-  const result: LuaFilterGroup = { semantic: [], latex: [], html: [], resolvedNames: new Set() };
+  const result: LuaFilterGroup = { semantic: [], latex: [], html: [], user: [], resolvedNames: new Set() };
 
   const groups: Array<{ prefix: string; names: string[]; target: 'semantic' | 'latex' | 'html' }> = [
     { prefix: 'semantic/string', names: BUILTIN_SEMANTIC_STRING, target: 'semantic' },
@@ -126,14 +129,38 @@ export function validateDisabledTranspilers(disabled: string[] | undefined): voi
 }
 
 /**
+ * Resuelve los filtros Lua de usuario (`lua-filters:` en _iteraciones.yaml,
+ * rutas relativas al proyecto). Las rutas inexistentes emiten un warning sin
+ * romper el build.
+ */
+export async function resolveUserLuaFilters(cwd?: string): Promise<string[]> {
+  if (!cwd) return [];
+  const siteConfig = await loadSiteConfig(cwd);
+  const filters = siteConfig.luaFilters ?? [];
+  const resolved: string[] = [];
+  for (const rel of filters) {
+    const abs = join(cwd, rel);
+    if (await Bun.file(abs).exists()) {
+      resolved.push(abs);
+    } else {
+      logWarning(`lua-filters: "${rel}" no encontrado en el proyecto`, 'config');
+    }
+  }
+  return resolved;
+}
+
+/**
  * Resuelve los filtros Lua por capa (sistema de transpilers Fase 6): los
  * nombres con un .lua disponible (paquete o override del proyecto) se pasan
- * como `--lua-filter` en la invocación pandoc de su capa.
+ * como `--lua-filter` en la invocación pandoc de su capa. Incluye los filtros
+ * de usuario (`lua-filters:`), que corren en todas las invocaciones.
  * @param disabledList Lista de transpilers a desactivar (nombres completos). undefined = todos activos.
  * @param cwd Directorio del proyecto para buscar overrides.
  */
 export async function loadTranspilerGroups(disabledList?: string[], cwd?: string): Promise<LuaFilterGroup> {
-  return resolveLuaFilters(disabledList, cwd);
+  const group = await resolveLuaFilters(disabledList, cwd);
+  group.user = await resolveUserLuaFilters(cwd);
+  return group;
 }
 
 /** Información de un filtro Lua built-in para el CLI. */
@@ -227,9 +254,11 @@ async function renderLatexBody(
   bibFiles: string[],
   hasCiteKeys: boolean,
   luaFilters: string[],
+  userFilters: string[],
 ): Promise<string> {
   const pandocArgs: string[] = ['--top-level-division', 'section', '--shift-heading-level-by=2'];
-  for (const filter of luaFilters) {
+  // Filtros de usuario primero: pueden transformar los nodos semánticos antes de la capa latex
+  for (const filter of [...userFilters, ...luaFilters]) {
     pandocArgs.push('--lua-filter', filter);
   }
   if (bibFiles.length > 0) {
@@ -284,8 +313,8 @@ export async function renderHtmlPageFromAst(
     `--metadata=site-title:${vars.siteTitle}`,
     `--metadata=lang:${vars.lang}`,
   ];
-  // Filtros Lua de la capa html
-  for (const filter of luaFilters.html) {
+  // Filtros de usuario primero, luego la capa html
+  for (const filter of [...luaFilters.user, ...luaFilters.html]) {
     extraArgs.push('--lua-filter', filter);
   }
   if (vars.tagline) extraArgs.push(`--metadata=tagline:${vars.tagline}`);
@@ -385,8 +414,8 @@ export async function renderLatex(
 
     if (!body.trim()) return;
 
-    // Paso 1: convertir markdown a JSON AST con los filtros Lua semánticos
-    const semanticLuaArgs = luaFilters.semantic.flatMap((f) => ['--lua-filter', f]);
+    // Paso 1: convertir markdown a JSON AST con los filtros Lua semánticos + de usuario
+    const semanticLuaArgs = [...luaFilters.semantic, ...luaFilters.user].flatMap((f) => ['--lua-filter', f]);
     const json = await convertFragment(body, doc.filePath, undefined, 'json', 'markdown-auto_identifiers', semanticLuaArgs);
     let ast: Record<string, unknown>;
     try {
@@ -402,7 +431,7 @@ export async function renderLatex(
     if (generateLatex !== false) {
       // Detección de citas desde el AST (nodos Cite reales, sin regex sobre el markdown)
       const hasCiteKeys = bibFiles.length > 0 && hasCiteNodes(ast);
-      processedBody = await renderLatexBody(ast, doc, bibFiles, hasCiteKeys, luaFilters.latex);
+      processedBody = await renderLatexBody(ast, doc, bibFiles, hasCiteKeys, luaFilters.latex, luaFilters.user);
     }
 
     const slug = doc.slug ?? basename(doc.relativePath, '.md');
@@ -441,7 +470,7 @@ export async function renderFromAstCache(
     if (generateLatex !== false) {
       // El markdown original no está disponible: detectar citas desde el AST
       const hasCiteKeys = bibFiles.length > 0 && hasCiteNodes(ast);
-      processedBody = await renderLatexBody(ast, doc, bibFiles, hasCiteKeys, luaFilters.latex);
+      processedBody = await renderLatexBody(ast, doc, bibFiles, hasCiteKeys, luaFilters.latex, luaFilters.user);
     }
 
     const slug = doc.slug ?? basename(doc.relativePath, '.md');

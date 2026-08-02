@@ -132,6 +132,14 @@ describe('loadSiteConfig', () => {
     });
   });
 
+  it('lee lua-filters', async () => {
+    await withTempDir(async (dir) => {
+      await writeConfig(dir, 'lua-filters:\n  - filters/mi-filtro.lua');
+      const config = await loadSiteConfig(dir);
+      expect(config.luaFilters).toEqual(['filters/mi-filtro.lua']);
+    });
+  });
+
   it('activa format.latex con true', async () => {
     await withTempDir(async (dir) => {
       await writeConfig(dir, 'format:\n  latex: true');

@@ -6,7 +6,7 @@ import { DEFAULT_PDF_FORMAT, type SiteConfig } from './site-config.js';
 
 const CONFIG_FILE = '_iteraciones.yaml';
 
-const ROOT_KNOWN_KEYS = new Set(['site', 'format', 'disabled-transpilers', 'disabled-preamble-transpilers']);
+const ROOT_KNOWN_KEYS = new Set(['site', 'format', 'disabled-transpilers', 'disabled-preamble-transpilers', 'lua-filters']);
 const SITE_KNOWN_KEYS = new Set(['title', 'tagline', 'lang', 'logo', 'base-url']);
 const FORMAT_KNOWN_KEYS = new Set(['latex', 'pdf', 'html', 'epub', 'markdown']);
 const HTML_KNOWN_KEYS = new Set(['theme', 'accent', 'generate']);
@@ -84,6 +84,7 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
       },
       disabledTranspilers: undefined,
       disabledPreambleTranspilers: undefined,
+      luaFilters: undefined,
     };
   }
 
