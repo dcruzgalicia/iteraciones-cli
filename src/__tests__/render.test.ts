@@ -262,22 +262,21 @@ describe('resolveLuaFilters (sistema dual Fase 6)', () => {
   });
 });
 
-describe('loadTranspilerGroups (dual .lua > .ts)', () => {
-  it('no carga transpilers TS cuando el paquete tiene sus .lua (capa latex completa)', async () => {
+describe('loadTranspilerGroups (solo resolución de filtros Lua)', () => {
+  it('resuelve los 7 filtros latex del paquete en orden', async () => {
     const groups = await loadTranspilerGroups();
-    expect(groups.latex).toEqual([]);
-    expect(groups.luaFilters.latex).toHaveLength(7);
+    expect(groups.latex).toHaveLength(7);
+    expect(groups.latex[1]).toContain('02-dictum.lua');
   });
 
-  it('el override .lua del proyecto reemplaza al del paquete y el TS se omite', async () => {
+  it('el override .lua del proyecto reemplaza al del paquete', async () => {
     const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-lua-'));
     try {
       mkdirSync(join(cwd, 'transpilers', 'latex'), { recursive: true });
       writeFileSync(join(cwd, 'transpilers', 'latex', '02-dictum.lua'), '-- test\n');
       const groups = await loadTranspilerGroups(undefined, cwd);
-      expect(groups.latex).toEqual([]);
-      expect(groups.luaFilters.latex).toHaveLength(7);
-      expect(groups.luaFilters.latex[1]).toBe(join(cwd, 'transpilers', 'latex', '02-dictum.lua'));
+      expect(groups.latex).toHaveLength(7);
+      expect(groups.latex[1]).toBe(join(cwd, 'transpilers', 'latex', '02-dictum.lua'));
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
