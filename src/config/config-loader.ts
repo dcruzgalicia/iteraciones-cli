@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import type { ZodIssue } from 'zod';
 import { ConfigError } from '../lib/errors.js';
 import { KNOWN_ACCENT_COLORS, SiteConfigSchema } from './config-schema.js';
-import { DEFAULT_PDF_FORMAT, type SiteConfig } from './site-config.js';
+import { DEFAULT_SITE_CONFIG, type SiteConfig } from './site-config.js';
 
 const CONFIG_FILE = '_iteraciones.yaml';
 
@@ -40,23 +40,7 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
   const file = Bun.file(configPath);
 
   if (!(await file.exists())) {
-    return {
-      title: 'iteraciones',
-      tagline: 'escribir, compartir, re-existir',
-      lang: 'es-MX',
-      logo: '',
-      baseUrl: undefined,
-      format: {
-        latex: true,
-        html: { theme: undefined, accent: 'lime', generate: false },
-        pdf: { ...DEFAULT_PDF_FORMAT },
-        epub: { generate: false },
-        markdown: { generate: false },
-      },
-      disabledTranspilers: undefined,
-      disabledPreambleTranspilers: undefined,
-      luaFilters: undefined,
-    };
+    return { ...DEFAULT_SITE_CONFIG };
   }
 
   let raw: string;
@@ -74,22 +58,7 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
   }
 
   if (!parsed || typeof parsed !== 'object') {
-    return {
-      title: 'iteraciones',
-      tagline: 'escribir, compartir, re-existir',
-      lang: 'es-MX',
-      logo: '',
-      baseUrl: undefined,
-      format: {
-        latex: true,
-        html: { theme: undefined, accent: 'lime', generate: false },
-        pdf: { ...DEFAULT_PDF_FORMAT },
-        epub: { generate: false },
-        markdown: { generate: false },
-      },
-      disabledTranspilers: undefined,
-      disabledPreambleTranspilers: undefined,
-    };
+    return { ...DEFAULT_SITE_CONFIG };
   }
 
   const root = parsed as Record<string, unknown>;
