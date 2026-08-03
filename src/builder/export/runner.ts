@@ -94,11 +94,11 @@ export async function runExportDocuments(exportableDocs: BuildDocument[], option
     const tasks: Array<Promise<void>> = [];
 
     if (config.markdown?.generate && ast) {
-      tasks.push(convertToMarkdown(ast, `${outputBase}.md`, exportDoc, userFilters));
+      tasks.push(convertToMarkdown(ast, `${outputBase}.md`, exportDoc, userFilters).then(() => options.onExportProgress?.(exportDoc.relativePath)));
     }
 
     if (config.epub?.generate && ast) {
-      tasks.push(convertToEpub(ast, `${outputBase}.epub`, exportDoc, userFilters));
+      tasks.push(convertToEpub(ast, `${outputBase}.epub`, exportDoc, userFilters).then(() => options.onExportProgress?.(exportDoc.relativePath)));
     }
 
     if (config.pdf?.generate) {
