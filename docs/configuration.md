@@ -6,7 +6,7 @@ El archivo `_iteraciones.yaml` en la raíz del proyecto es la única fuente de c
 
 ```yaml
 site:
-  title: Iteraciones              # título del sitio
+  title: iteraciones             # título del sitio
   tagline: escribir, compartir, re-existir
   lang: es-MX                     # código de idioma BCP 47
   logo: ''                        # ruta al logo, relativa al proyecto
@@ -45,7 +45,8 @@ format:
         - kerning=true
         - spacing=true
     enumitem: true
-    mathptmx: true
+    font-family:
+      - name: mathptmx
     setspace: true
     setstretch: 1.5
     raggedbottom: true
@@ -53,8 +54,19 @@ format:
     tolerance: 400
     brokenpenalty: 1000000
     hyphenpenalty: 100
+    finalhyphendemerits: 1000000
+    doublehyphendemerits: 1000000
     widowpenalty: 1000000
     clubpenalty: 1000000
+    setlist:
+      - command: description
+        options:
+          - noitemsep
+          - nosep
+          - topsep=\baselineskip
+    setcounter:
+      secnumdepth: 1
+      tocdepth: 1
     page-number: header-right
     toc: false
     show-date: false
@@ -63,32 +75,35 @@ format:
         beforeskip: 11\baselineskip
         afterskip: \baselineskip
         font: \normalsize\bfseries\MakeUppercase
+        pagestyle: empty
       chapter:
         style: chapter
         beforeskip: 2\baselineskip
         afterskip: \baselineskip
         font: \normalsize\normalfont\scshape
         align: center
+        pagestyle: plain
       section:
         style: section
         beforeskip: 2\baselineskip
         afterskip: 2\baselineskip
         font: \normalsize\bfseries\MakeUppercase
         align: center
+        pagestyle: plain
       subsection:
         beforeskip: 2\baselineskip
         afterskip: 2\baselineskip
         font: \normalsize\normalfont\textit
+        pagestyle: plain
     setkomafont:
       title: \normalsize\bfseries
       subtitle: \normalsize\normalfont\itshape
       author: \normalsize\normalfont
+      date: \normalsize\normalfont
+      publishers: \normalsize\normalfont
     dictum:
       width: 0.5\textwidth
       font: \normalsize\normalfont\itshape
-    pagestyle:
-      part: empty
-      chapter: empty
     eso-pic: false
     pdfx: false
     crop: false
@@ -105,7 +120,7 @@ format:
     generate: false               # genera Markdown procesado
 
 disabled-transpilers:             # transpilers a desactivar (opcional)
-  # - 01-double-colon
+  # - semantic/string/01-double-colon
 
 disabled-preamble-transpilers:    # preamble transpilers a desactivar (opcional)
   # - 01-maketitle-patches
@@ -119,7 +134,7 @@ lua-filters:                      # filtros Lua de usuario (opcional)
 ### `site.title`
 
 **Tipo:** `string`
-**Por defecto:** `'Iteraciones'`
+**Por defecto:** `'iteraciones'`
 
 Título del sitio. Se usa en el `<title>` de cada página HTML y en el encabezado.
 
@@ -240,12 +255,26 @@ Habilita el paquete `enumitem` para listas personalizadas.
 
 Configuración de listas vía `\setlist[]{...}`.
 
-#### `format.pdf.mathptmx`
+#### `format.pdf.setcounter`
 
-**Tipo:** `boolean`
-**Por defecto:** `true`
+**Tipo:** `Record<string, number>`
+**Por defecto:** `{ secnumdepth: 1, tocdepth: 1 }`
 
-Usa la fuente Times New Roman (paquete `mathptmx`) para el texto del PDF.
+Valores de contadores LaTeX vía `\setcounter{...}{...}`. `secnumdepth` controla hasta qué nivel se numeran las secciones; `tocdepth` hasta qué nivel aparece en el índice.
+
+#### `format.pdf.font-family`
+
+**Tipo:** `Array<{ name: string; options?: string[] }>`
+**Por defecto:** sin fuente adicional
+
+Lista de paquetes de fuente a cargar con `\usepackage[options]{name}`. El ejemplo clásico es `mathptmx` (Times New Roman):
+
+```yaml
+format:
+  pdf:
+    font-family:
+      - name: mathptmx
+```
 
 #### `format.pdf.setspace`
 
@@ -296,6 +325,20 @@ Penalización por líneas huérfanas al final de página.
 
 Penalización por partición de palabras. Valores altos reducen la partición.
 
+#### `format.pdf.finalhyphendemerits`
+
+**Tipo:** `number`
+**Por defecto:** `1000000`
+
+Penalización adicional por guión final en la última línea de un párrafo.
+
+#### `format.pdf.doublehyphendemerits`
+
+**Tipo:** `number`
+**Por defecto:** `1000000`
+
+Penalización adicional por guiones consecutivos en líneas adyacentes.
+
 #### `format.pdf.widowpenalty`
 
 **Tipo:** `number`
@@ -342,18 +385,15 @@ Configuración de secciones LaTeX: `part`, `chapter`, `section`, `subsection`, `
 | `afterskip` | todos | Espacio vertical después del título |
 | `font` | todos | Fuente del título |
 | `align` | chapter, section | Alineación: `center` |
+| `pagestyle` | todos | Estilo de página del nivel (`empty`, `plain`, `headings`) |
 
 #### `format.pdf.setkomafont`
 
-Configuración de fuentes KOMA-Script para elementos de la portada. Campos: `title`, `subtitle`, `author`, `publishers`.
+Configuración de fuentes KOMA-Script para elementos de la portada. Campos: `title`, `subtitle`, `author`, `date`, `publishers`.
 
 #### `format.pdf.dictum`
 
 Configuración de epígrafes. Campos: `width`, `font`, `rule`, `authorfont`, `authorformat`.
-
-#### `format.pdf.pagestyle`
-
-Estilo de página para partes y capítulos. Campos: `part`, `chapter`.
 
 #### `format.pdf.eso-pic`
 
@@ -422,11 +462,12 @@ Habilita la exportación a Markdown procesado (con los transpilers aplicados).
 **Tipo:** `string[]`
 **Por defecto:** `undefined` (todos activos)
 
-Lista de transpilers a desactivar. Cada elemento es el nombre del transpiler (ej: `01-double-colon`).
+Lista de transpilers a desactivar. Cada elemento es el **nombre completo** del transpiler (ej: `semantic/string/01-double-colon`, `latex/02-dictum`). Usa `iteraciones transpilers` para ver la lista con sus nombres.
 
 ```yaml
 disabled-transpilers:
-  - 01-double-colon
+  - semantic/string/01-double-colon
+  - latex/02-dictum
 ```
 
 ### `disabled-preamble-transpilers`
