@@ -13,6 +13,7 @@ export async function run(command: string, args: string[]): Promise<RunResult> {
       stderr: 'pipe',
     });
   } catch {
+    // Error esperado: ENOENT al spawnear; el mensaje accionable es más útil que la causa técnica
     throw new Error(`No se encontró el comando "${command}". Verifica que esté instalado y disponible en PATH.`);
   }
 

@@ -1,6 +1,7 @@
 import { mkdir, rename, rm } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/site-config.js';
+import { logWarning } from '../lib/logger.js';
 import type { DiscoveryEntry } from './types.js';
 
 /** Ruta relativa del archivo de estado del build dentro del proyecto. */
@@ -50,7 +51,9 @@ export async function loadStateFile(cwd: string): Promise<StateFile | null> {
       cssAccent: parsed.cssAccent,
       entries: (parsed.entries ?? {}) as Record<string, DiscoveryEntry>,
     };
-  } catch {
+  } catch (err) {
+    // state.json corrupto (build interrumpido a mitad de escritura): se ignora y se hará build completo
+    logWarning(`no se pudo leer state.json; se hará build completo: ${String(err)}`, 'cache');
     return null;
   }
 }
@@ -67,6 +70,7 @@ export async function saveStateFile(cwd: string, state: StateFile): Promise<void
   try {
     await rename(tmpPath, filePath);
   } catch {
+    // El destino ya existe en algunos sistemas (Windows): se elimina y se reintenta el rename
     await rm(filePath, { force: true });
     await rename(tmpPath, filePath);
   }

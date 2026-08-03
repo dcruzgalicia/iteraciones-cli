@@ -23,6 +23,7 @@ export async function checkPandoc(): Promise<CheckResult> {
       detail: ok ? version : `${version} — se recomienda 3.0+`,
     };
   } catch {
+    // Error esperado: pandoc no está en PATH (ENOENT); el detalle accionable ya se reporta
     return {
       label: 'pandoc instalado',
       ok: false,
@@ -60,6 +61,7 @@ export async function checkTailwind(cwd: string): Promise<CheckResult> {
       fixAction,
     };
   } catch {
+    // Error esperado: bun x no encuentra el paquete; el detalle accionable ya se reporta
     return {
       label: '@tailwindcss/cli disponible',
       ok: false,
@@ -74,6 +76,7 @@ export async function checkReadPermissions(cwd: string): Promise<CheckResult> {
     await access(cwd, constants.R_OK);
     return { label: 'permisos de lectura en cwd', ok: true };
   } catch {
+    // Error esperado: EACCES en access(); el detalle accionable ya se reporta
     return {
       label: 'permisos de lectura en cwd',
       ok: false,
@@ -89,6 +92,7 @@ export async function checkWritePermissions(cwd: string): Promise<CheckResult> {
     await writeFile(probe, '');
     canWrite = true;
   } catch {
+    // Error esperado: EACCES en writeFile(); el detalle accionable ya se reporta
     return {
       label: 'permisos de escritura en cwd',
       ok: false,
@@ -126,6 +130,7 @@ export async function checkLatexEngine(): Promise<CheckResult> {
       const komaResult = await run('kpsewhich', ['scrartcl.cls']);
       komaOk = komaResult.exitCode === 0 && komaResult.stdout.trim().length > 0;
     } catch {
+      // kpsewhich no disponible o KOMA-Script ausente: lo reporta el check principal
       komaOk = false;
     }
     if (!komaOk) {
@@ -138,6 +143,7 @@ export async function checkLatexEngine(): Promise<CheckResult> {
     const versionLine = engineResult.stdout.split('\n')[0]?.trim() ?? 'pdflatex';
     return { label: 'pdflatex disponible', ok: true, detail: versionLine };
   } catch {
+    // Error esperado: pdflatex no está en PATH (ENOENT); el detalle accionable ya se reporta
     return {
       label: 'pdflatex disponible',
       ok: false,
