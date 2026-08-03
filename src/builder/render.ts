@@ -244,7 +244,22 @@ export function computePreambleFlags(ast: Record<string, unknown>): PreambleFlag
 
 /** Retorna true si el AST contiene nodos Cite (citas con bibliografía). */
 export function hasCiteNodes(ast: Record<string, unknown>): boolean {
-  return JSON.stringify(ast).includes('"t":"Cite"');
+  return walkAst(ast, (node) => typeof node === 'object' && node !== null && (node as Record<string, unknown>).t === 'Cite');
+}
+
+/**
+ * Camina un árbol de nodos (AST de pandoc) aplicando un predicado.
+ * Evita serializar el AST a string (JSON.stringify) solo para buscar un nodo.
+ */
+function walkAst(node: unknown, predicate: (node: unknown) => boolean): boolean {
+  if (predicate(node)) return true;
+  if (Array.isArray(node)) {
+    return node.some((item) => walkAst(item, predicate));
+  }
+  if (typeof node === 'object' && node !== null) {
+    return Object.values(node as Record<string, unknown>).some((value) => walkAst(value, predicate));
+  }
+  return false;
 }
 
 /** Convierte el AST canónico a body LaTeX aplicando los filtros Lua de la capa latex. */
