@@ -1,3 +1,6 @@
+import type { ListrDefaultRenderer, ListrTask, ListrTaskWrapper } from 'listr2';
+import { type DefaultRenderer, Listr, type ListrRendererValue } from 'listr2';
+
 function formatTime(ms: number): string {
   return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${Math.round(ms)}ms`;
 }
@@ -14,89 +17,100 @@ export type PipelinePhase = 'discovery' | 'render' | 'latex' | 'markdown' | 'pdf
 
 interface PhaseMeta {
   label: string;
-  section: string | null;
 }
 
 const PHASE_META: Record<PipelinePhase, PhaseMeta> = {
-  discovery: { label: 'Documentos encontrados', section: 'Descubriendo documentos' },
-  render: { label: 'Renderizando contenido', section: 'Renderizando contenido' },
-  latex: { label: 'LaTeX', section: 'Generando formatos' },
-  pdf: { label: 'PDF', section: 'Generando formatos' },
-  html: { label: 'HTML', section: 'Generando formatos' },
-  epub: { label: 'EPUB', section: 'Generando formatos' },
-  markdown: { label: 'Markdown', section: 'Generando formatos' },
+  discovery: { label: 'Documentos encontrados' },
+  render: { label: 'Renderizando contenido' },
+  latex: { label: 'LaTeX' },
+  pdf: { label: 'PDF' },
+  html: { label: 'HTML' },
+  epub: { label: 'EPUB' },
+  markdown: { label: 'Markdown' },
 };
 
+const FORMAT_PHASES: PipelinePhase[] = ['latex', 'markdown', 'html', 'epub', 'pdf'];
+
+type ListrCtx = Record<string, never>;
+type TrackerTask = ListrTaskWrapper<ListrCtx, ListrDefaultRenderer, ListrDefaultRenderer>;
+
 /**
- * Tracker de progreso del build con dos modos:
+ * Tracker de progreso del build basado en listr2.
  *
- * - **TTY interactivo**: las fases muestran el conteo en vivo en una sola
- *   línea (sobrescrita con carriage return `\r`, sin secuencias ANSI), de
- *   forma portable entre terminales.
- * - **Non-TTY / --verbose**: salida plana por fases (formato histórico), sin
- *   caracteres de control, legible en pipes y CI.
- *
- * Se descartó listr2 (issue #1104): su renderer emite códigos ANSI incluso en
- * modo non-TTY (verificado con color:false y renderers simple/verbose), y su
- * modelo task-driven choca con el flujo event-driven del orquestador.
+ * - **TTY**: renderer `default` (tareas animadas con conteo en vivo [i/N]).
+ *   listr2 cae automáticamente al fallback SimpleRenderer en non-TTY (pipes y
+ *   CI, uso automático sin interacción) — no hay lógica dual manual.
+ * - **--verbose**: renderer `verbose` (texto plano).
+ * - Las 7 fases se pre-registran al primer startPhase: listr2 no procesa
+ *   tareas agregadas después de la primera. Las no usadas se saltan con
+ *   `skip`, evaluado cuando el runner llega a ellas — sin carrera porque la
+ *   tarea discovery se libera en `planPhases()`, cuando el orquestador ya
+ *   conoce todas las fases del build.
  */
 export class ProgressTracker {
-  private verbose: boolean;
-  private tty: boolean;
   private t0: number;
   private phaseDurations: Partial<Record<PipelinePhase, number>> = {};
   private phaseCounts: Partial<Record<PipelinePhase, number>> = {};
   private currentPhase: PipelinePhase | null = null;
   private phaseStart: Partial<Record<PipelinePhase, number>> = {};
   private phaseDone: Set<PipelinePhase> = new Set();
-  private sectionsShown: Set<string> = new Set();
-  private phaseFiles: Partial<Record<PipelinePhase, string[]>> = {};
-  /** Documentos reportados en la fase actual (progreso en vivo en TTY). */
+  /** Documentos reportados en la fase actual (progreso en vivo). */
   private currentPhaseCount = 0;
 
-  constructor(options: { verbose?: boolean }) {
-    this.verbose = options.verbose ?? false;
-    this.tty = process.stdout.isTTY === true && !this.verbose;
+  // ── listr2 ────────────────────────────────────────────────────────────────
+  private renderer: ListrRendererValue;
+  private listr: Listr<ListrCtx, ListrDefaultRenderer> | null = null;
+  private runPromise: Promise<unknown> | null = null;
+  private listrTasks: Map<PipelinePhase, TrackerTask> = new Map();
+  private phaseResolvers: Map<PipelinePhase, () => void> = new Map();
+  private usedPhases: Set<PipelinePhase> = new Set();
+  private runnerAlive = false;
+  private runnerDone = false;
+
+  constructor(options: { renderer?: 'default' | 'verbose' | 'test' } = {}) {
+    this.renderer = (options.renderer ?? 'default') as ListrRendererValue;
     this.t0 = performance.now();
+    if (this.renderer === 'default') {
+      // Restaurar el cursor si el proceso sale sin completar run() (errores del build)
+      process.once('exit', () => process.stdout.write('\x1b[?25h'));
+    }
   }
 
   log(msg: string): void {
-    if (this.verbose) {
-      process.stdout.write(`${msg}\n`);
-    }
+    // Los logs del orquestador ocurren antes del primer startPhase (inicio del
+    // build): quedan arriba de la lista de tareas de listr2.
+    process.stdout.write(`${msg}\n`);
+  }
+
+  /**
+   * Declara las fases que el build ejecutará. Debe llamarse después de que el
+   * orquestador conozca los conjuntos de trabajo y antes del render. Libera la
+   * tarea discovery para que el runner de listr2 evalúe los skips con la
+   * información completa.
+   */
+  planPhases(phases: PipelinePhase[]): void {
+    for (const phase of phases) this.usedPhases.add(phase);
+    this.phaseResolvers.get('discovery')?.();
+    this.phaseResolvers.delete('discovery');
   }
 
   startPhase(phase: PipelinePhase, total: number = 0): void {
     this.currentPhase = phase;
     this.phaseCounts[phase] = total;
     this.phaseStart[phase] = performance.now();
-    this.phaseFiles[phase] = [];
     this.currentPhaseCount = 0;
-
-    const meta = PHASE_META[phase];
-    if (meta.section && !this.sectionsShown.has(meta.section)) {
-      this.sectionsShown.add(meta.section);
-      if (this.verbose) {
-        process.stdout.write(`\n\u25a0 ${meta.section}\n\n`);
-      } else {
-        process.stdout.write(`\n\u25a0 ${meta.section}\n`);
-      }
-    }
-    if (this.tty) {
-      this.renderPhaseLine();
-    }
+    if (!this.listr) this.createListr();
   }
 
   reportFile(file: RenderFileReport): void {
-    // Colectar archivos solo para discovery (se muestran al completar fase)
-    if (file.phase === 'discovery') {
-      const files = this.phaseFiles[file.phase];
-      if (files) files.push(file.relativePath);
-    }
-    // Progreso en vivo: cada documento completado actualiza la línea de la fase actual
-    if (this.tty && file.phase === this.currentPhase) {
+    // Progreso en vivo: cada documento completado actualiza la tarea de su fase
+    if (file.phase === this.currentPhase) {
       this.currentPhaseCount++;
-      this.renderPhaseLine();
+      const task = this.listrTasks.get(file.phase);
+      if (task) {
+        const total = this.phaseCounts[file.phase] ?? 0;
+        task.output = total > 0 ? `[${Math.min(this.currentPhaseCount, total)}/${total}]` : '';
+      }
     }
   }
 
@@ -111,81 +125,94 @@ export class ProgressTracker {
     const meta = PHASE_META[phase];
     const count = actualCount ?? this.phaseCounts[phase] ?? this.currentPhaseCount;
 
-    if (this.verbose) {
-      if (meta.section === 'Descubriendo documentos' && count > 0) {
-        process.stdout.write(`  ${count} documento${count !== 1 ? 's' : ''} encontrado${count !== 1 ? 's' : ''}.\n`);
-        this.flushPhaseFiles(phase);
-      } else if (meta.section === 'Generando formatos') {
-        const durStr = formatTime(elapsed);
-        process.stdout.write(`  ${meta.label}  ${durStr}\n\n`);
-      }
-    } else if (this.tty) {
-      // Sobrescribir la línea de progreso en vivo con el resultado de la fase
-      const countPart = ` ${count}`;
-      process.stdout.write(
-        `\r  \u2713 ${meta.label}${countPart}${' '.repeat(Math.max(1, LABEL_WIDTH - meta.label.length - countPart.length))}${formatTime(elapsed)}`.padEnd(
-          70,
-        ) + '\n',
-      );
-    } else {
-      const countPart = ` ${count}`;
-      process.stdout.write(
-        `  \u2713 ${meta.label}${countPart}${' '.repeat(Math.max(1, LABEL_WIDTH - meta.label.length - countPart.length))}${formatTime(elapsed)}\n`,
-      );
+    const task = this.listrTasks.get(phase);
+    if (task) {
+      const countPart = count > 0 ? ` ${count}` : '';
+      task.title = `${meta.label}${countPart}  ${formatTime(elapsed)}`;
+    }
+    // Resolver la fase para que el runner avance (discovery la resuelve planPhases)
+    if (phase !== 'discovery') {
+      this.phaseResolvers.get(phase)?.();
+      this.phaseResolvers.delete(phase);
     }
   }
 
-  finish(processed: number, cached: number, formats?: string[]): void {
-    const totalTime = performance.now() - this.t0;
-    const formatCount = formats ? formats.length : 0;
-
-    if (this.verbose) {
-      process.stdout.write('\u25a0 Resultado\n\n');
-      process.stdout.write(`  ${padRight('Documentos procesados', LABEL_WIDTH)} ${processed}\n`);
-      process.stdout.write(`  ${padRight('Formatos generados', LABEL_WIDTH)} ${formatCount}\n`);
-      process.stdout.write(`  ${padRight('Tiempo total', LABEL_WIDTH)} ${formatTime(totalTime)}\n\n`);
-      process.stdout.write('\u2713 Todo listo.\n');
-    } else {
-      process.stdout.write(`\n\u2713 Todo listo.\n\n`);
-      process.stdout.write(`  ${padRight('Documentos procesados', LABEL_WIDTH)}${processed}\n`);
-      if (cached > 0) {
-        process.stdout.write(`  ${padRight('Sin cambios (reutilizado)', LABEL_WIDTH)}${cached}\n`);
-      }
-      process.stdout.write(`  ${padRight('Formatos generados', LABEL_WIDTH)}${formatCount}\n`);
-      process.stdout.write(`  ${padRight('Tiempo total', LABEL_WIDTH)}${formatTime(totalTime)}\n`);
+  async finish(processed: number, cached: number, formats?: string[]): Promise<void> {
+    // Red de seguridad: si el runner aún no procesó la primera tarea (flujo sin
+    // awaits intermedios), esperarlo; luego resolver lo que quede pendiente
+    // (p. ej. discovery en early returns sin planPhases).
+    const deadline = Date.now() + 1000;
+    while (!this.runnerAlive && !this.runnerDone && this.listr && Date.now() < deadline) {
+      await Bun.sleep(5);
     }
+    this.phaseResolvers.forEach((resolve) => {
+      resolve();
+    });
+    this.phaseResolvers.clear();
+    await this.runPromise?.catch(() => {});
+    this.writeSummary(processed, cached, formats);
   }
 
   showCleanup(): void {
-    if (this.verbose) {
-      process.stdout.write('\u25a0 Preparaci\u00f3n\n\n');
-      process.stdout.write('  \u2713 Se limpiaron los archivos temporales.\n');
-    } else {
-      process.stdout.write('\u25a0 Preparaci\u00f3n\n');
-      process.stdout.write('  \u2713 Archivos temporales limpiados\n');
-    }
+    // La limpieza ocurre antes del primer startPhase (listr2 aún no dibuja)
+    process.stdout.write('\u25a0 Preparaci\u00f3n\n');
+    process.stdout.write('  \u2713 Archivos temporales limpiados\n');
   }
 
-  /** Renderiza la línea de progreso de la fase actual (solo TTY). */
-  private renderPhaseLine(): void {
-    const phase = this.currentPhase;
-    if (!phase) return;
-    const meta = PHASE_META[phase];
-    const total = this.phaseCounts[phase] ?? 0;
-    const count = this.currentPhaseCount;
-    // El conteo se muestra solo cuando hay reportes (las fases sin notificaciones
-    // por documento muestran la etiqueta sola hasta completarse).
-    const progress = count > 0 && total > 0 ? ` [${Math.min(count, total)}/${total}]` : '';
-    process.stdout.write(`\r  ${meta.label}${progress}`.padEnd(70));
+  /** Crea la lista de listr2 con las 7 fases pre-registradas. */
+  private createListr(): void {
+    const subtasks: ListrTask<ListrCtx, ListrDefaultRenderer>[] = FORMAT_PHASES.map((phase) => this.makeTask(phase));
+
+    this.listr = new Listr<ListrCtx, ListrDefaultRenderer>(
+      [
+        this.makeTask('discovery'),
+        this.makeTask('render'),
+        {
+          title: 'Generando formatos',
+          skip: () => !FORMAT_PHASES.some((phase) => this.usedPhases.has(phase)),
+          task: (_ctx, task) => task.newListr(subtasks, { concurrent: true }),
+        },
+      ],
+      { renderer: this.renderer as unknown as typeof DefaultRenderer, rendererOptions: { clearOutput: false } },
+    );
+    this.runPromise = this.listr.run().then(
+      () => {
+        this.runnerDone = true;
+      },
+      () => {
+        this.runnerDone = true;
+      },
+    );
   }
 
-  private flushPhaseFiles(phase: PipelinePhase): void {
-    const files = this.phaseFiles[phase];
-    if (files && files.length > 0) {
-      for (const f of files) {
-        process.stdout.write(`    ${f}\n`);
-      }
+  /** Crea una tarea de fase con Promise controlada y skip según las fases planificadas. */
+  private makeTask(phase: PipelinePhase): ListrTask<ListrCtx, ListrDefaultRenderer> {
+    const title = PHASE_META[phase].label;
+    // discovery siempre corre; el resto solo si está en usedPhases (planPhases)
+    const skip = phase === 'discovery' ? () => false : () => !this.usedPhases.has(phase);
+    return {
+      title,
+      skip,
+      task: (_ctx, task) =>
+        new Promise<void>((resolve) => {
+          this.runnerAlive = true;
+          this.listrTasks.set(phase, task);
+          this.phaseResolvers.set(phase, resolve);
+        }),
+    };
+  }
+
+  private writeSummary(processed: number, cached: number, formats?: string[]): void {
+    const totalTime = performance.now() - this.t0;
+    const formatCount = formats ? formats.length : 0;
+
+    process.stdout.write(`\n\u2713 Todo listo.\n\n`);
+    process.stdout.write(`  ${padRight('Documentos procesados', LABEL_WIDTH)}${processed}\n`);
+    if (cached > 0) {
+      process.stdout.write(`  ${padRight('Sin cambios (reutilizado)', LABEL_WIDTH)}${cached}\n`);
     }
+    process.stdout.write(`  ${padRight('Formatos generados', LABEL_WIDTH)}${formatCount}\n`);
+    process.stdout.write(`  ${padRight('Tiempo total', LABEL_WIDTH)}${formatTime(totalTime)}\n`);
   }
 }
 

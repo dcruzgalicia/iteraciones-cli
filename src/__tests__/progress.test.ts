@@ -2,72 +2,103 @@ import { describe, expect, it, spyOn } from 'bun:test';
 import { ProgressTracker } from '../cli/progress.js';
 
 /**
- * Verifica el comportamiento del ProgressTracker en sus dos modos:
- * - Non-TTY: salida plana por fases, sin caracteres de control (pipes/CI)
- * - TTY: línea de progreso en vivo con \r y conteo [i/N]
+ * Verifica el ProgressTracker usando el TestRenderer de listr2, que emite un
+ * JSON por línea con los eventos de cada tarea (STATE/OUTPUT) — sin depender
+ * de terminal ni de animaciones.
  */
 
-function captureOutput(fn: (write: (s: string) => void) => void, isTTY: boolean): string {
-  const original = process.stdout.write;
-  const originalIsTTY = Object.getOwnPropertyDescriptor(process.stdout, 'isTTY');
+interface TestEvent {
+  event: string;
+  data: string | { output?: string; skip?: string };
+  task?: { title: string; isSkipped: boolean; isCompleted: boolean };
+}
+
+async function runTracker(fn: (tracker: ProgressTracker) => Promise<void>): Promise<TestEvent[]> {
   let output = '';
   const spy = spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
     output += String(chunk);
     return true;
   });
   try {
-    Object.defineProperty(process.stdout, 'isTTY', { value: isTTY, configurable: true });
-    fn((s: string) => void s);
+    const tracker = new ProgressTracker({ renderer: 'test' });
+    await fn(tracker);
+    await Bun.sleep(30); // que el TestRenderer escriba los eventos finales
   } finally {
     spy.mockRestore();
-    if (originalIsTTY) {
-      Object.defineProperty(process.stdout, 'isTTY', originalIsTTY);
-    }
   }
-  return output;
+  return output
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith('{'))
+    .map((line) => JSON.parse(line) as TestEvent);
+}
+
+/** Títulos de los eventos STATE con el estado indicado. */
+function titlesWith(events: TestEvent[], state: string): string[] {
+  return events.filter((e) => e.event === 'STATE' && e.data === state).map((e) => e.task?.title ?? '');
 }
 
 describe('ProgressTracker', () => {
-  it('en non-TTY emite salida plana sin carriage returns', () => {
-    const output = captureOutput(() => {
-      const tracker = new ProgressTracker({});
+  it('registra discovery, render y las fases de formato como tareas completadas', async () => {
+    const events = await runTracker(async (tracker) => {
       tracker.startPhase('discovery', 2);
+      await Bun.sleep(20);
       tracker.completePhase(2);
+      tracker.planPhases(['discovery', 'render', 'pdf']);
+      tracker.startPhase('render', 1);
+      await Bun.sleep(20);
+      tracker.completePhase(1);
       tracker.startPhase('pdf', 3);
+      await Bun.sleep(20);
       tracker.reportFile({ relativePath: 'a.md', phase: 'pdf' });
       tracker.reportFile({ relativePath: 'b.md', phase: 'pdf' });
+      tracker.reportFile({ relativePath: 'c.md', phase: 'pdf' });
       tracker.completePhase(3);
-      tracker.finish(3, 0, ['pdf']);
-    }, false);
+      await tracker.finish(3, 0, ['pdf']);
+    });
 
-    expect(output).not.toContain('\r');
-    expect(output).toContain('■ Descubriendo documentos');
-    expect(output).toContain('✓ Documentos encontrados 2');
-    expect(output).toContain('✓ PDF 3');
+    const completed = titlesWith(events, 'COMPLETED');
+    expect(completed.some((t) => t.includes('Documentos encontrados'))).toBe(true);
+    expect(completed.some((t) => t.includes('Renderizando contenido'))).toBe(true);
+    expect(completed.some((t) => t.includes('PDF'))).toBe(true);
   });
 
-  it('en TTY muestra progreso en vivo con \r y conteo [i/N]', () => {
-    const output = captureOutput(() => {
-      const tracker = new ProgressTracker({});
+  it('muestra el conteo en vivo [i/N] en el output de la tarea', async () => {
+    const events = await runTracker(async (tracker) => {
+      tracker.startPhase('discovery', 1);
+      await Bun.sleep(20);
+      tracker.completePhase(1);
+      tracker.planPhases(['discovery', 'pdf']);
       tracker.startPhase('pdf', 3);
+      await Bun.sleep(20);
       tracker.reportFile({ relativePath: 'a.md', phase: 'pdf' });
       tracker.reportFile({ relativePath: 'b.md', phase: 'pdf' });
-      tracker.completePhase(3);
-    }, true);
+      tracker.completePhase(2);
+      await tracker.finish(2, 0, ['pdf']);
+    });
 
-    expect(output).toContain('\r  PDF [1/3]');
-    expect(output).toContain('\r  PDF [2/3]');
-    expect(output).toContain('\r  ✓ PDF 3');
+    const outputs = events.filter((e) => e.event === 'OUTPUT').map((e) => e.data as string);
+    expect(outputs).toContain('[1/3]');
+    expect(outputs).toContain('[2/3]');
   });
 
-  it('en TTY no muestra conteo sin reportes (fases sin notificación por documento)', () => {
-    const output = captureOutput(() => {
-      const tracker = new ProgressTracker({});
-      tracker.startPhase('render', 4);
-      tracker.completePhase(4);
-    }, true);
+  it('salta las fases no planificadas (render y formatos sin trabajo)', async () => {
+    const events = await runTracker(async (tracker) => {
+      tracker.startPhase('discovery', 1);
+      await Bun.sleep(20);
+      tracker.completePhase(1);
+      // Solo discovery se planifica (early return del orquestador)
+      tracker.planPhases(['discovery']);
+      await tracker.finish(1, 0, []);
+    });
 
-    expect(output).not.toContain('[0/4]');
-    expect(output).toContain('✓ Renderizando contenido 4');
+    const skipped = titlesWith(events, 'SKIPPED');
+    expect(skipped.some((t) => t.includes('Renderizando contenido'))).toBe(true);
+    expect(skipped.some((t) => t.includes('Generando formatos'))).toBe(true);
+    const completed = titlesWith(events, 'COMPLETED');
+    expect(completed.some((t) => t.includes('Documentos encontrados'))).toBe(true);
+    // Las subtasks del padre saltado nunca se procesan
+    expect(completed.some((t) => t.includes('PDF'))).toBe(false);
+    expect(completed.some((t) => t.includes('Markdown'))).toBe(false);
   });
 });
