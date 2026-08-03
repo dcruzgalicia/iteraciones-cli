@@ -53,7 +53,7 @@ src/
 │   ├── doctor.ts            # Comando doctor
 │   ├── doctor/system-checks.ts  # Verificaciones del sistema
 │   ├── validate.ts          # Comando validate
-│   └── transpilers.ts       # Comando transpilers
+│   └── filters.ts         # Comando filters
 ├── config/                  # Configuración del sitio
 │   ├── config-loader.ts     # Carga de _iteraciones.yaml
 │   ├── config-schema.ts     # Esquemas Zod de validación
@@ -174,8 +174,8 @@ Para agregar uno:
 
 1. Crea un archivo en `src/lib/resources/transpilers/<capa>/<prioridad>-<nombre>.lua`
    - El prefijo numérico (`01-`, `02-`, …) define el **orden de ejecución** dentro de la capa
-   - El **nombre completo** es `<capa>/<prioridad>-<nombre>` (ej: `latex/02-dictum`); es el que se usa en `disabled-transpilers` y se muestra en `iteraciones transpilers`
-2. Escribe la primera línea como comentario `-- descripción corta`: se muestra en `iteraciones transpilers` (la lee `getBuiltinLuaTranspilerInfos()`)
+   - El **nombre completo** es `<capa>/<prioridad>-<nombre>` (ej: `latex/02-dictum`); es el que se usa en `disabled-transpilers` y se muestra en `iteraciones filters`
+2. Escribe la primera línea como comentario `-- descripción corta`: se muestra en `iteraciones filters` (la lee `getBuiltinLuaTranspilerInfos()`)
 3. Implementa las funciones de filtro de pandoc (`Pandoc(doc)`, `Div(div)`, `Para(para)`, etc.) que transforman el AST
 4. Agrega el nombre del archivo a la lista `BUILTIN_*` correspondiente en `src/builder/render.ts` (`BUILTIN_SEMANTIC_STRING`, `BUILTIN_SEMANTIC_AST`, `BUILTIN_LATEX_TRANSPILERS`, `BUILTIN_HTML_TRANSPILERS`)
 5. Agrega tests en `src/__tests__/lua-filters.test.ts` (los tests que invocan pandoc requieren que esté instalado; los de resolución de nombres no)
@@ -209,7 +209,7 @@ Los preamble transpilers son archivos `.tex` con contenido LaTeX puro que se ins
 
 1. Crea un archivo en `src/lib/resources/preamble/<prioridad>-<nombre>.tex`
 2. Agrega el nombre a `BUILTIN_PREAMBLE_TRANSPILERS` en `src/builder/preamble-loader.ts` (la lista define el orden de aplicación)
-3. Agrega una descripción a `DESCRIPTIONS` en el mismo archivo (se muestra en `iteraciones transpilers`)
+3. Agrega una descripción a `DESCRIPTIONS` en el mismo archivo (se muestra en `iteraciones filters`)
 
 Un proyecto puede sobrescribir un preamble transpiler creando `<proyecto>/preamble/<nombre>.tex`, o desactivarlo con `disabled-preamble-transpilers:` en `_iteraciones.yaml`.
 

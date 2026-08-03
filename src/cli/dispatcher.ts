@@ -7,8 +7,8 @@ import { ConfigError, PandocError } from '../lib/errors.js';
 import { logError } from '../lib/logger.js';
 import { checkPandoc } from '../lib/pandoc-runner.js';
 import { runDoctor as doctor } from './doctor.js';
+import { runFilters as filters } from './filters.js';
 import { runInit as init } from './init.js';
-import { runTranspilers as transpilers } from './transpilers.js';
 import { runValidate as validate } from './validate.js';
 
 export async function runClean(cwd: string): Promise<void> {
@@ -157,12 +157,12 @@ export async function runNew(cwd: string, path: string): Promise<void> {
   }
 }
 
-export async function runTranspilers(cwd: string): Promise<void> {
+export async function runFilters(cwd: string): Promise<void> {
   try {
-    await transpilers(cwd);
+    await filters(cwd);
   } catch (err) {
     if (err instanceof Error) {
-      logError(err.message, 'transpilers');
+      logError(err.message, 'filters');
     }
     process.exitCode = 1;
   }

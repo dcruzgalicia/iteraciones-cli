@@ -3,9 +3,9 @@ import { getBuiltinLuaTranspilerInfos, validateDisabledTranspilers } from '../bu
 import { loadSiteConfig } from '../config/config-loader.js';
 
 /**
- * Muestra la lista de transpilers disponibles y su estado (activo/inactivo).
+ * Muestra la lista de filtros (transpilers) disponibles y su estado (activo/inactivo).
  */
-export async function runTranspilers(cwd: string): Promise<void> {
+export async function runFilters(cwd: string): Promise<void> {
   const config = await loadSiteConfig(cwd);
   // Advertir sobre nombres desconocidos antes de listar el estado
   validateDisabledTranspilers(config.disabledTranspilers);
@@ -14,7 +14,7 @@ export async function runTranspilers(cwd: string): Promise<void> {
   const allInfos = await getBuiltinLuaTranspilerInfos();
   const hasDisabled = config.disabledTranspilers !== undefined && config.disabledTranspilers.length > 0;
 
-  process.stdout.write('Transpilers disponibles (orden de ejecución):\n\n');
+  process.stdout.write('Filtros disponibles (orden de ejecución):\n\n');
 
   for (const info of allInfos) {
     const active = !disabled.has(info.name);
@@ -29,7 +29,7 @@ export async function runTranspilers(cwd: string): Promise<void> {
     process.stdout.write('Para desactivar uno, agrégalo a la lista `disabled-transpilers:` en _iteraciones.yaml.\n');
   }
   process.stdout.write(
-    'Para sobrescribir un transpiler, crea `<proyecto>/transpilers/<grupo>/<nombre>.ts` o `.lua` (p. ej. `transpilers/latex/02-dictum.lua`).\n',
+    'Para sobrescribir un filtro, crea `<proyecto>/transpilers/<grupo>/<nombre>.lua` (p. ej. `transpilers/latex/02-dictum.lua`).\n',
   );
 
   // Preamble transpilers
@@ -38,7 +38,7 @@ export async function runTranspilers(cwd: string): Promise<void> {
     const preambleDisabled = new Set(config.disabledPreambleTranspilers ?? []);
     const hasPreambleDisabled = config.disabledPreambleTranspilers !== undefined && config.disabledPreambleTranspilers.length > 0;
 
-    process.stdout.write('\nPreamble transpilers (orden de ejecución):\n\n');
+    process.stdout.write('\nFiltros de preámbulo (orden de ejecución):\n\n');
 
     for (const info of preambleInfos) {
       const active = !preambleDisabled.has(info.name);
@@ -52,6 +52,6 @@ export async function runTranspilers(cwd: string): Promise<void> {
     } else {
       process.stdout.write('Para desactivar uno, agrégalo a la lista `disabled-preamble-transpilers:` en _iteraciones.yaml.\n');
     }
-    process.stdout.write('Para sobrescribir un preamble transpiler, crea `<proyecto>/preamble/<nombre>.tex` con contenido LaTeX.\n');
+    process.stdout.write('Para sobrescribir un filtro de preámbulo, crea `<proyecto>/preamble/<nombre>.tex` con contenido LaTeX.\n');
   }
 }

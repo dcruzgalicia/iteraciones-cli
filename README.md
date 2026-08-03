@@ -167,12 +167,12 @@ iteraciones doctor [opciones]
 
 Comprobaciones que realiza: pandoc disponible en PATH, configuración del proyecto (`_iteraciones.yaml`) válida, Tailwind CSS disponible, pdflatex y KOMA-Script instalados, permisos de lectura y escritura.
 
-### `iteraciones transpilers`
+### `iteraciones filters`
 
-Lista los transpilers disponibles con su tipo, descripción y estado (activo/desactivado).
+Lista los filtros Lua disponibles con su tipo, descripción y estado (activo/desactivado).
 
 ```
-iteraciones transpilers
+iteraciones filters
 ```
 
 ## Transpilers

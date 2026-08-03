@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
-import { runBuild, runClean, runDoctor, runInfo, runInit, runNew, runTranspilers, runValidate } from './dispatcher.js';
+import { runBuild, runClean, runDoctor, runFilters, runInfo, runInit, runNew, runValidate } from './dispatcher.js';
 
 export function buildProgram(): Command {
   const program = new Command();
@@ -85,9 +85,9 @@ export function buildProgram(): Command {
     });
 
   program
-    .command('transpilers')
-    .description('lista los transpilers disponibles con su tipo y descripción')
-    .action(() => runTranspilers(projectRoot()));
+    .command('filters')
+    .description('lista los filtros Lua disponibles y su estado')
+    .action(() => runFilters(projectRoot()));
 
   return program;
 }

@@ -462,7 +462,7 @@ Habilita la exportación a Markdown procesado (con los transpilers aplicados).
 **Tipo:** `string[]`
 **Por defecto:** `undefined` (todos activos)
 
-Lista de transpilers a desactivar. Cada elemento es el **nombre completo** del transpiler (ej: `semantic/string/01-double-colon`, `latex/02-dictum`). Usa `iteraciones transpilers` para ver la lista con sus nombres.
+Lista de transpilers a desactivar. Cada elemento es el **nombre completo** del transpiler (ej: `semantic/string/01-double-colon`, `latex/02-dictum`). Usa `iteraciones filters` para ver la lista con sus nombres.
 
 ```yaml
 disabled-transpilers:
