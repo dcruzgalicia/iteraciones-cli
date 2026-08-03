@@ -145,34 +145,3 @@ export async function checkLatexEngine(): Promise<CheckResult> {
     };
   }
 }
-
-export async function checkPdftoppm(): Promise<CheckResult> {
-  try {
-    const proc = Bun.spawn(['pdftoppm', '-v'], {
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-    // Leer stderr en paralelo con proc.exited para evitar bloqueos si la salida llena el buffer.
-    const [exitCode, stderr] = await Promise.all([proc.exited, new Response(proc.stderr).text()]);
-    // pdftoppm -v escribe en stderr y sale con código 0 o 99 según la versión
-    if (exitCode === 0 || exitCode === 99) {
-      const version = stderr.split('\n')[0]?.trim() ?? 'pdftoppm';
-      return {
-        label: 'pdftoppm disponible (portadas)',
-        ok: true,
-        detail: version,
-      };
-    }
-    return {
-      label: 'pdftoppm disponible (portadas)',
-      ok: false,
-      detail: 'pdftoppm no ejecutable. Instala poppler: macOS → brew install poppler | Debian/Ubuntu → apt install poppler-utils',
-    };
-  } catch {
-    return {
-      label: 'pdftoppm disponible (portadas)',
-      ok: false,
-      detail: 'pdftoppm no encontrado en PATH. Instala poppler: macOS → brew install poppler | Debian/Ubuntu → apt install poppler-utils',
-    };
-  }
-}
