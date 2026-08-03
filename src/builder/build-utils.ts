@@ -27,15 +27,15 @@ async function generateCss(outputDir: string, cwd: string, accent: string): Prom
   const targetCssPath = join(targetCssDir, 'styles.css');
 
   // Verificar si es necesario regenerar:
-  // - Si _iteraciones.yaml cambió y el accent es distinto al previo
+  // - Si iteraciones.config.yaml cambió y el accent es distinto al previo
   // - O si styles.css (del paquete) cambió
   const targetExists = await Bun.file(targetCssPath).exists();
   if (targetExists) {
     try {
       const targetMtime = (await Bun.file(targetCssPath).stat()).mtimeMs;
 
-      // ¿_iteraciones.yaml cambió?
-      const configPath = join(cwd, '_iteraciones.yaml');
+      // ¿iteraciones.config.yaml cambió?
+      const configPath = join(cwd, 'iteraciones.config.yaml');
       const configMtime = await Bun.file(configPath)
         .stat()
         .then((s) => s.mtimeMs)
@@ -47,7 +47,7 @@ async function generateCss(outputDir: string, cwd: string, accent: string): Prom
           return; // el accent no cambió, no hay nada que hacer
         }
       } else {
-        // _iteraciones.yaml no cambió → el accent es el mismo.
+        // iteraciones.config.yaml no cambió → el accent es el mismo.
         // Solo regenerar si styles.css (del paquete) cambió
         const cssMtime = (await Bun.file(CSS_SRC).stat()).mtimeMs;
         if (cssMtime < targetMtime) {

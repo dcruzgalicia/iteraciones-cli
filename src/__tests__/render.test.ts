@@ -290,7 +290,7 @@ describe('resolveUserLuaFilters (lua-filters de usuario)', () => {
     try {
       mkdirSync(join(cwd, 'filters'), { recursive: true });
       writeFileSync(join(cwd, 'filters', 'mi-filtro.lua'), '-- test\n');
-      writeFileSync(join(cwd, '_iteraciones.yaml'), 'lua-filters:\n  - filters/mi-filtro.lua\n');
+      writeFileSync(join(cwd, 'iteraciones.config.yaml'), 'lua-filters:\n  - filters/mi-filtro.lua\n');
       const resolved = await resolveUserLuaFilters(cwd);
       expect(resolved).toEqual([join(cwd, 'filters', 'mi-filtro.lua')]);
     } finally {
@@ -301,7 +301,7 @@ describe('resolveUserLuaFilters (lua-filters de usuario)', () => {
   it('advierte y omite rutas inexistentes', async () => {
     const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-lua-'));
     try {
-      writeFileSync(join(cwd, '_iteraciones.yaml'), 'lua-filters:\n  - filters/no-existe.lua\n');
+      writeFileSync(join(cwd, 'iteraciones.config.yaml'), 'lua-filters:\n  - filters/no-existe.lua\n');
       const spy = spyOn(logger, 'logWarning');
       const resolved = await resolveUserLuaFilters(cwd);
       expect(resolved).toEqual([]);

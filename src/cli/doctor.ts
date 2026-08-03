@@ -12,12 +12,12 @@ import {
 async function checkSiteConfig(cwd: string): Promise<CheckResult> {
   try {
     await loadSiteConfig(cwd);
-    return { label: '_iteraciones.yaml', ok: true };
+    return { label: 'iteraciones.config.yaml', ok: true };
   } catch (err) {
     if (err instanceof ConfigError) {
-      return { label: '_iteraciones.yaml', ok: false, detail: err.message };
+      return { label: 'iteraciones.config.yaml', ok: false, detail: err.message };
     }
-    return { label: '_iteraciones.yaml', ok: false, detail: err instanceof Error ? err.message : String(err) };
+    return { label: 'iteraciones.config.yaml', ok: false, detail: err instanceof Error ? err.message : String(err) };
   }
 }
 

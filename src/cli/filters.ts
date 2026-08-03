@@ -24,9 +24,9 @@ export async function runFilters(cwd: string): Promise<void> {
 
   process.stdout.write('\n');
   if (hasDisabled) {
-    process.stdout.write('Para reactivar uno, elimínalo de la lista `disabled-transpilers:` en _iteraciones.yaml.\n');
+    process.stdout.write('Para reactivar uno, elimínalo de la lista `disabled-transpilers:` en iteraciones.config.yaml.\n');
   } else {
-    process.stdout.write('Para desactivar uno, agrégalo a la lista `disabled-transpilers:` en _iteraciones.yaml.\n');
+    process.stdout.write('Para desactivar uno, agrégalo a la lista `disabled-transpilers:` en iteraciones.config.yaml.\n');
   }
   process.stdout.write(
     'Para sobrescribir un filtro, crea `<proyecto>/transpilers/<grupo>/<nombre>.lua` (p. ej. `transpilers/latex/02-dictum.lua`).\n',
@@ -48,9 +48,9 @@ export async function runFilters(cwd: string): Promise<void> {
 
     process.stdout.write('\n');
     if (hasPreambleDisabled) {
-      process.stdout.write('Para reactivar uno, elimínalo de la lista `disabled-preamble-transpilers:` en _iteraciones.yaml.\n');
+      process.stdout.write('Para reactivar uno, elimínalo de la lista `disabled-preamble-transpilers:` en iteraciones.config.yaml.\n');
     } else {
-      process.stdout.write('Para desactivar uno, agrégalo a la lista `disabled-preamble-transpilers:` en _iteraciones.yaml.\n');
+      process.stdout.write('Para desactivar uno, agrégalo a la lista `disabled-preamble-transpilers:` en iteraciones.config.yaml.\n');
     }
     process.stdout.write('Para sobrescribir un filtro de preámbulo, crea `<proyecto>/preamble/<nombre>.tex` con contenido LaTeX.\n');
   }

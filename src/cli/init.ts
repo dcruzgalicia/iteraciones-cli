@@ -135,7 +135,7 @@ const DEFAULT_README = [
 ].join('\n');
 
 /**
- * Genera un _iteraciones.yaml completo con todas las opciones posibles
+ * Genera un iteraciones.config.yaml completo con todas las opciones posibles
  * y sus valores por defecto. Útil como referencia para nuevos usuarios.
  *
  * Se construye como objeto y se serializa con la libreria yaml (block style
@@ -208,7 +208,7 @@ function buildDefaultConfig(): string {
 }
 
 /**
- * Crea `_iteraciones.yaml` y `README.md` en el directorio indicado.
+ * Crea `iteraciones.config.yaml` y `README.md` en el directorio indicado.
  * Si alguno de los archivos ya existe, lo omite e informa al usuario.
  */
 export async function runInit(cwd: string): Promise<void> {
@@ -223,12 +223,12 @@ export async function runInit(cwd: string): Promise<void> {
   ].join('\n');
 
   const [configCreated, readmeCreated, bibCreated] = await Promise.all([
-    createExclusive(join(cwd, '_iteraciones.yaml'), buildDefaultConfig()),
+    createExclusive(join(cwd, 'iteraciones.config.yaml'), buildDefaultConfig()),
     createExclusive(join(cwd, 'README.md'), DEFAULT_README),
     createExclusive(join(cwd, 'bibliography.bib'), DEFAULT_BIB),
   ]);
 
-  process.stdout.write(configCreated ? 'init: creado _iteraciones.yaml\n' : 'init: omitido _iteraciones.yaml (ya existe)\n');
+  process.stdout.write(configCreated ? 'init: creado iteraciones.config.yaml\n' : 'init: omitido iteraciones.config.yaml (ya existe)\n');
   process.stdout.write(readmeCreated ? 'init: creado README.md\n' : 'init: omitido README.md (ya existe)\n');
   process.stdout.write(bibCreated ? 'init: creado bibliography.bib\n' : 'init: omitido bibliography.bib (ya existe)\n');
 }

@@ -34,7 +34,7 @@ iteraciones --version
 
 ```
 mi-proyecto/
-  _iteraciones.yaml   # configuración del sitio
+  iteraciones.config.yaml   # configuración del sitio
   README.md           # o cualquier archivo .md
 ```
 
@@ -47,7 +47,7 @@ iteraciones init
 
 Esto también crea un archivo `bibliography.bib` de ejemplo.
 
-## Configuración (`_iteraciones.yaml`)
+## Configuración (`iteraciones.config.yaml`)
 
 ```yaml
 site:
@@ -117,7 +117,7 @@ iteraciones build [opciones]
 
 ### `iteraciones init`
 
-Crea `_iteraciones.yaml`, `README.md` y `bibliography.bib` mínimos en el directorio actual. Si alguno de los archivos ya existe, lo omite sin sobreescribirlo.
+Crea `iteraciones.config.yaml`, `README.md` y `bibliography.bib` mínimos en el directorio actual. Si alguno de los archivos ya existe, lo omite sin sobreescribirlo.
 
 ```
 iteraciones init
@@ -139,7 +139,7 @@ Muestra los documentos que se procesarían sin generar salida. Útil para verifi
 
 ### `iteraciones validate`
 
-Valida `_iteraciones.yaml` y el frontmatter de todos los documentos Markdown del proyecto.
+Valida `iteraciones.config.yaml` y el frontmatter de todos los documentos Markdown del proyecto.
 
 ```
 iteraciones validate
@@ -165,7 +165,7 @@ iteraciones doctor [opciones]
 |--------|-------------|
 | `--fix` | Intenta corregir automáticamente los problemas detectados |
 
-Comprobaciones que realiza: pandoc disponible en PATH, configuración del proyecto (`_iteraciones.yaml`) válida, Tailwind CSS disponible, pdflatex y KOMA-Script instalados, permisos de lectura y escritura.
+Comprobaciones que realiza: pandoc disponible en PATH, configuración del proyecto (`iteraciones.config.yaml`) válida, Tailwind CSS disponible, pdflatex y KOMA-Script instalados, permisos de lectura y escritura.
 
 ### `iteraciones filters`
 
@@ -228,7 +228,7 @@ Julio Verne
 
 ### Desactivar un transpiler
 
-En `_iteraciones.yaml`:
+En `iteraciones.config.yaml`:
 
 ```yaml
 disabled-transpilers:
@@ -251,7 +251,7 @@ EOF
 
 ### Filtros Lua de usuario
 
-Además de sobrescribir transpilers, puedes agregar filtros Lua propios con `lua-filters:` en `_iteraciones.yaml`. Las rutas son relativas al proyecto:
+Además de sobrescribir transpilers, puedes agregar filtros Lua propios con `lua-filters:` en `iteraciones.config.yaml`. Las rutas son relativas al proyecto:
 
 ```yaml
 lua-filters:

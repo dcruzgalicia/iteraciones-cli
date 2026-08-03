@@ -83,7 +83,7 @@ export async function runValidate(cwd: string): Promise<void> {
       });
     } else {
       configErrors.push({
-        file: '_iteraciones.yaml',
+        file: 'iteraciones.config.yaml',
         message: err instanceof Error ? err.message : String(err),
       });
     }
@@ -94,7 +94,7 @@ export async function runValidate(cwd: string): Promise<void> {
     const latexResult = await checkLatexEngine();
     if (!latexResult.ok) {
       configErrors.push({
-        file: '_iteraciones.yaml',
+        file: 'iteraciones.config.yaml',
         message: 'format.pdf requiere pdflatex pero no esta disponible — ' + (latexResult.detail ?? ''),
       });
     }

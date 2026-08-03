@@ -50,14 +50,14 @@ export function buildProgram(): Command {
 
   program
     .command('init')
-    .description('crea _iteraciones.yaml y README.md mínimos en el directorio actual')
+    .description('crea iteraciones.config.yaml y README.md mínimos en el directorio actual')
     .action(async () => {
       await runInit(projectRoot());
     });
 
   program
     .command('validate')
-    .description('valida _iteraciones.yaml y el frontmatter de todos los documentos Markdown')
+    .description('valida iteraciones.config.yaml y el frontmatter de todos los documentos Markdown')
     .action(async () => {
       await runValidate(projectRoot());
     });

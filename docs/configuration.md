@@ -1,6 +1,6 @@
-# Configuración — `_iteraciones.yaml`
+# Configuración — `iteraciones.config.yaml`
 
-El archivo `_iteraciones.yaml` en la raíz del proyecto es la única fuente de configuración. Es opcional: si no existe, se usan todos los valores por defecto.
+El archivo `iteraciones.config.yaml` en la raíz del proyecto es la única fuente de configuración. Es opcional: si no existe, se usan todos los valores por defecto.
 
 ## Estructura completa
 
@@ -496,7 +496,7 @@ lua-filters:
 
 ## Validación
 
-El comando `iteraciones validate` verifica la sintaxis de `_iteraciones.yaml` y el frontmatter de todos los documentos Markdown del proyecto:
+El comando `iteraciones validate` verifica la sintaxis de `iteraciones.config.yaml` y el frontmatter de todos los documentos Markdown del proyecto:
 
 ```bash
 iteraciones validate
