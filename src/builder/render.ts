@@ -5,7 +5,7 @@ import { logWarning } from '../lib/logger.js';
 import { type BibOptions, convertFragment } from '../lib/pandoc-runner.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import { splitFrontmatter } from './discover.js';
-import { discoverBibFiles } from './latex-preamble.js';
+import { discoverBibFiles } from './state.js';
 import type { BuildDocument } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -368,7 +368,7 @@ async function writeCachedArtifacts(
 
 /** Contexto compartido de bibliografía para las exportaciones. */
 function bibContext(cwd: string): { bibFiles: string[]; bibOptions?: BibOptions } {
-  const bibFiles = cwd ? discoverBibFiles(cwd) : [];
+  const bibFiles = cwd ? discoverBibFiles(cwd, ['bib']) : [];
   const firstBib = bibFiles[0];
   const bibOptions = firstBib !== undefined ? { bibliography: firstBib, csl: join(import.meta.dir, '../../src/lib/resources/apa-7.csl') } : undefined;
   return { bibFiles, bibOptions };

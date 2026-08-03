@@ -141,11 +141,16 @@ export async function computeConfigHashes(cwd: string, siteConfig: SiteConfig): 
   };
 }
 
-/** Descubre archivos .bib y .csl del proyecto (excluye node_modules, .iteraciones, dist, .git). */
-function discoverBibAndCslFiles(cwd: string): string[] {
+/**
+ * Descubre archivos de bibliografía del proyecto (excluye node_modules,
+ * .iteraciones, dist, .git). Unifica la implementación que antes vivía
+ * duplicada en latex-preamble.ts (solo .bib).
+ * @param extensions Extensiones a incluir (default: bib y csl).
+ */
+export function discoverBibFiles(cwd: string, extensions: string[] = ['bib', 'csl']): string[] {
   const results: string[] = [];
   try {
-    const glob = new Bun.Glob('**/*.{bib,csl}');
+    const glob = new Bun.Glob(`**/*.{${extensions.join(',')}}`);
     for (const file of glob.scanSync({ cwd, absolute: true })) {
       const rel = file.replace(cwd, '').replace(/^[/\\]+/, '');
       if (rel.startsWith('node_modules/') || rel.startsWith('.iteraciones/') || rel.startsWith('dist/') || rel.startsWith('.git/')) continue;
@@ -160,7 +165,7 @@ function discoverBibAndCslFiles(cwd: string): string[] {
 /** Hash del contenido de todos los .bib y .csl del proyecto. */
 export async function computeBibHash(cwd: string): Promise<string> {
   const parts: string[] = [];
-  for (const file of discoverBibAndCslFiles(cwd)) {
+  for (const file of discoverBibFiles(cwd)) {
     parts.push(
       file,
       await Bun.file(file)
