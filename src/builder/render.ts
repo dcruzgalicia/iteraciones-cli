@@ -2,7 +2,7 @@ import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { logWarning } from '../lib/logger.js';
-import { type BibOptions, convertFragment } from '../lib/pandoc-runner.js';
+import { type BibOptions, runPandoc } from '../lib/pandoc-runner.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import { splitFrontmatter } from './discover.js';
 import { discoverBibFiles } from './state.js';
@@ -282,7 +282,7 @@ async function renderLatexBody(
       pandocArgs.push('--bibliography', bib);
     }
   }
-  let processedBody = await convertFragment(JSON.stringify(ast), doc.filePath, undefined, 'latex', 'json', pandocArgs);
+  let processedBody = await runPandoc({ input: JSON.stringify(ast), sourcePath: doc.filePath, from: 'json', to: 'latex', extraArgs: pandocArgs });
   if (bibFiles.length > 0 && hasCiteKeys) {
     processedBody = `${processedBody.replace(/\n+$/, '\n\n')}\\printbibliography[heading=bibintoc]\n`;
   }
@@ -341,7 +341,7 @@ export async function renderHtmlPageFromAst(
   // -V (template variable): se inserta cruda, sin escape HTML (el logo es SVG)
   if (vars.logoInline) extraArgs.push(`--variable=logo-inline:${vars.logoInline}`);
 
-  return convertFragment(JSON.stringify(ast), doc.filePath, bibOptions, 'html5', 'json', extraArgs);
+  return runPandoc({ input: JSON.stringify(ast), sourcePath: doc.filePath, from: 'json', to: 'html5', bibOptions, extraArgs });
 }
 
 /** Escribe el AST canónico y los outputs cacheados según los formatos activos. */
@@ -431,7 +431,13 @@ export async function renderLatex(
 
     // Paso 1: convertir markdown a JSON AST con los filtros Lua semánticos + de usuario
     const semanticLuaArgs = [...luaFilters.semantic, ...luaFilters.user].flatMap((f) => ['--lua-filter', f]);
-    const json = await convertFragment(body, doc.filePath, undefined, 'json', 'markdown-auto_identifiers', semanticLuaArgs);
+    const json = await runPandoc({
+      input: body,
+      sourcePath: doc.filePath,
+      from: 'markdown-auto_identifiers',
+      to: 'json',
+      extraArgs: semanticLuaArgs,
+    });
     let ast: Record<string, unknown>;
     try {
       ast = JSON.parse(json) as Record<string, unknown>;
