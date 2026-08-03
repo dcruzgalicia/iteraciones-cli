@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, spyOn } from 'bun:test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -257,5 +257,56 @@ describe('loadSiteConfig', () => {
       // El código existente usa 'lime' como fallback y escribe en stderr
       expect(config.format.html?.accent).toBe('lime');
     });
+  });
+
+  it('advierte sobre claves desconocidas en format.pdf sin romper el build', async () => {
+    const stderrSpy = spyOn(process.stderr, 'write');
+    let output = '';
+    try {
+      await withTempDir(async (dir) => {
+        // mathptmx es la clave de la documentación antigua; ya no existe en el esquema
+        await writeConfig(dir, 'format:\n  pdf:\n    mathptmx: true\n    generate: true');
+        const config = await loadSiteConfig(dir);
+        expect(config.format.pdf?.generate).toBe(true);
+      });
+    } finally {
+      output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+      stderrSpy.mockRestore();
+    }
+    expect(output).toContain('claves desconocidas');
+    expect(output).toContain('format.pdf');
+    expect(output).toContain('mathptmx');
+  });
+
+  it('advierte sobre claves desconocidas en la raíz sin romper el build', async () => {
+    const stderrSpy = spyOn(process.stderr, 'write');
+    let output = '';
+    try {
+      await withTempDir(async (dir) => {
+        await writeConfig(dir, 'clave-inventada: 1\nsite:\n  title: ok');
+        const config = await loadSiteConfig(dir);
+        expect(config.title).toBe('ok');
+      });
+    } finally {
+      output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+      stderrSpy.mockRestore();
+    }
+    expect(output).toContain('claves desconocidas');
+    expect(output).toContain('clave-inventada');
+  });
+
+  it('no emite warnings para una configuración válida', async () => {
+    const stderrSpy = spyOn(process.stderr, 'write');
+    let callCount = 0;
+    try {
+      await withTempDir(async (dir) => {
+        await writeConfig(dir, 'site:\n  title: ok\nformat:\n  pdf:\n    generate: true');
+        await loadSiteConfig(dir);
+      });
+    } finally {
+      callCount = stderrSpy.mock.calls.length;
+      stderrSpy.mockRestore();
+    }
+    expect(callCount).toBe(0);
   });
 });
