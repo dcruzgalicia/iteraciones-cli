@@ -161,7 +161,7 @@ iteraciones doctor [opciones]
 |--------|-------------|
 | `--fix` | Intenta corregir automáticamente los problemas detectados |
 
-Comprobaciones que realiza: pandoc disponible en PATH, configuración del proyecto (`_iteraciones.yaml`) válida, Tailwind CSS disponible, pdflatex y KOMA-Script instalados, pdftoppm disponible, permisos de lectura y escritura.
+Comprobaciones que realiza: pandoc disponible en PATH, configuración del proyecto (`_iteraciones.yaml`) válida, Tailwind CSS disponible, pdflatex y KOMA-Script instalados, permisos de lectura y escritura.
 
 ### `iteraciones transpilers`
 
