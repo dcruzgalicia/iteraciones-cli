@@ -6,6 +6,7 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/site-config.js';
 import { computeActiveFormats } from '../config/site-config.js';
 import { logWarning } from '../lib/logger.js';
+import { mapWithConcurrency } from '../lib/run.js';
 import { buildAssets, generateLatexPreamble } from './build-utils.js';
 import { buildDocsFromIndex, discover, loadBuildState } from './discover.js';
 import { runExportDocuments } from './export/runner.js';
@@ -422,14 +423,15 @@ async function generateHtmlPages(ctx: BuildContext, pipelineDocs: BuildDocument[
   const bibFiles = discoverBibFiles(ctx.cwd);
   const firstBib = bibFiles[0];
   const bibOptions = firstBib !== undefined ? { bibliography: firstBib, csl: join(import.meta.dir, '../../src/lib/resources/apa-7.csl') } : undefined;
-  for (const doc of pipelineDocs) {
+  // Cada documento es independiente (lee AST del disco, escribe su HTML): paralelizar
+  await mapWithConcurrency(pipelineDocs, ctx.concurrency, async (doc) => {
     const slug = doc.slug ?? basename(doc.relativePath, '.md');
     const dir = dirname(doc.relativePath);
     const dst = join(formatsDir, 'html', dir, `${slug}.html`);
     const ast = await readAstFromCache(ctx.cwd, doc);
     if (!ast) {
       logWarning(`sin AST en caché para ${doc.relativePath}; se omite la página HTML`, 'orchestrator');
-      continue;
+      return;
     }
     let logoInline: string | undefined;
     try {
@@ -464,7 +466,7 @@ async function generateHtmlPages(ctx: BuildContext, pipelineDocs: BuildDocument[
     } catch (err) {
       logWarning(`error al generar HTML para ${doc.relativePath}: ${String(err)}`, 'orchestrator');
     }
-  }
+  });
 }
 
 async function copyToDist(
