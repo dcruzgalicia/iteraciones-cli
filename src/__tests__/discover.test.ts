@@ -57,6 +57,26 @@ describe('computeSlug', () => {
     const result = computeSlug({ title: '  Hola!!!   Mundo... ' });
     expect(result).toBe('hola-mundo');
   });
+
+  it('usa el nombre del archivo como base cuando no hay título y se provee fallbackPath', () => {
+    const result = computeSlug({}, { fallbackPath: 'posts/mi-articulo.md' });
+    expect(result).toBe('mi-articulo');
+  });
+
+  it('genera filename-by-author con fallbackPath y autor', () => {
+    const result = computeSlug({ author: ['Juan Pérez'] }, { fallbackPath: 'notas/apuntes.md' });
+    expect(result).toBe('apuntes-by-juan-perez');
+  });
+
+  it('con fallbackPath siempre retorna string (incluso con título vacío)', () => {
+    const result = computeSlug({ title: '' }, { fallbackPath: 'sub/documento.md' });
+    expect(result).toBe('documento');
+  });
+
+  it('retorna undefined sin título ni fallbackPath', () => {
+    const result = computeSlug({});
+    expect(result).toBeUndefined();
+  });
 });
 
 describe('parseAuthors', () => {
