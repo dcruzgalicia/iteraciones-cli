@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.14.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.13.0...v0.14.0) (2026-08-03)
+
+
+### Features
+
+* **cache:** detecta cambios por mtime+size+hash e invalida transpilers, config y bibliografía ([800323b](https://github.com/dcruzgalicia/iteraciones-cli/commit/800323bbdf35e49113d3731ab21fa578a5a41dc4))
+* **cache:** serializa AST canonico a disco y reutilizalo para formatos nuevos ([7ebb147](https://github.com/dcruzgalicia/iteraciones-cli/commit/7ebb14738cd780759fa144021e4301895171f12d))
+* **config:** advierte sobre nombres desconocidos en disabled-transpilers ([77606f1](https://github.com/dcruzgalicia/iteraciones-cli/commit/77606f1c3751995c514f45d3ac7712872ac49787))
+* **config:** soporta filtros Lua de usuario en el proyecto ([3a390f1](https://github.com/dcruzgalicia/iteraciones-cli/commit/3a390f188b3dfd2eb010b55864e664e0b7938743))
+* **html:** usa template system de pandoc en lugar del motor custom ([84a8aa7](https://github.com/dcruzgalicia/iteraciones-cli/commit/84a8aa77dc1816867af50cf4c5bd69bdc63ee2fe))
+* **transpiler:** infraestructura de filtros Lua por capa con override y disable ([bb6a1d2](https://github.com/dcruzgalicia/iteraciones-cli/commit/bb6a1d28ef117f75a6dbeebd65385a726fb4c88f))
+
+
+### Bug Fixes
+
+* **frontmatter:** usa date del frontmatter en show-date en vez de fecha de creacion ([1204d2b](https://github.com/dcruzgalicia/iteraciones-cli/commit/1204d2be27da2533dcf22753ac3b6d08d1e8875a))
+* **preamble:** condiciona defbibheading a biblatex cargado ([5051fd0](https://github.com/dcruzgalicia/iteraciones-cli/commit/5051fd08b6f2a889f484ec8458325fb958b899ad))
+
+
+### Performance Improvements
+
+* **transpiler:** elimina blocksToLatex con RawBlocks alrededor de bloques nativos ([03349d3](https://github.com/dcruzgalicia/iteraciones-cli/commit/03349d367f9e77e6af412a4c854b7771cfdd8e87))
+
 ## [0.13.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.12.0...v0.13.0) (2026-07-31)
 
 
