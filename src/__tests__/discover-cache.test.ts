@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, spyOn } from 'bun:test';
 import { mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -30,6 +30,22 @@ describe('discover (caché content-addressed)', () => {
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
+  });
+
+  it('advierte cuando un documento no tiene título en el frontmatter', async () => {
+    const cwd = makeProject();
+    writeFileSync(join(cwd, 'sin-titulo.md'), '# Solo contenido, sin frontmatter');
+    const stderrSpy = spyOn(process.stderr, 'write');
+    let output = '';
+    try {
+      await discover(cwd);
+    } finally {
+      output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+      stderrSpy.mockRestore();
+    }
+    expect(output).toContain('sin-titulo.md');
+    expect(output).toContain('no tiene título');
+    expect(output).toContain('Sin título');
   });
 
   it('build sin cambios no reprocesa nada (solo stat)', async () => {
