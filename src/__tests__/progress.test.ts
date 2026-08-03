@@ -44,7 +44,7 @@ describe('ProgressTracker', () => {
       tracker.startPhase('discovery', 2);
       await Bun.sleep(20);
       tracker.completePhase(2);
-      tracker.planPhases(['discovery', 'render', 'pdf']);
+      await tracker.planPhases(['discovery', 'render', 'pdf']);
       tracker.startPhase('render', 1);
       await Bun.sleep(20);
       tracker.completePhase(1);
@@ -68,7 +68,7 @@ describe('ProgressTracker', () => {
       tracker.startPhase('discovery', 1);
       await Bun.sleep(20);
       tracker.completePhase(1);
-      tracker.planPhases(['discovery', 'pdf']);
+      await tracker.planPhases(['discovery', 'pdf']);
       tracker.startPhase('pdf', 3);
       await Bun.sleep(20);
       tracker.reportFile({ relativePath: 'a.md', phase: 'pdf' });
@@ -88,7 +88,7 @@ describe('ProgressTracker', () => {
       await Bun.sleep(20);
       tracker.completePhase(1);
       // Solo discovery se planifica (early return del orquestador)
-      tracker.planPhases(['discovery']);
+      await tracker.planPhases(['discovery']);
       await tracker.finish(1, 0, []);
     });
 
@@ -111,7 +111,7 @@ describe('ProgressTracker', () => {
       // Flujo sin awaits intermedios: finish llega antes de que el runner procese
       tracker.startPhase('discovery', 1);
       tracker.completePhase(1);
-      tracker.planPhases(['discovery', 'render']);
+      await tracker.planPhases(['discovery', 'render']);
       tracker.startPhase('render', 1);
       tracker.completePhase(1);
       await tracker.finish(1, 0, []);
