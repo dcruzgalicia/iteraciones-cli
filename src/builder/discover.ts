@@ -270,6 +270,10 @@ export async function discover(
         logWarning(`frontmatter YAML inválido en "${relativePath}": ${String(err)}`, 'discover');
       }
 
+      if (!title) {
+        logWarning(`"${relativePath}" no tiene título en el frontmatter; se usará "Sin título"`, 'discover');
+      }
+
       // Store base data (slug resolution happens later, after all files are processed)
       // Capturar slug anterior antes de sobrescribir (para limpiar archivos si cambia)
       const prevSlug = discoveryIndex.get(relativePath)?.slug;
