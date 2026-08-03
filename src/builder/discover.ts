@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { cpus } from 'node:os';
 import { basename, dirname, join } from 'node:path';
+import slugifyLib from 'slugify';
 import { logWarning } from '../lib/logger.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import { hashString, loadStateFile, saveStateFile } from './state.js';
@@ -103,14 +104,13 @@ export function splitFrontmatter(content: string): { yaml?: string; body: string
   return { yaml: fmMatch[1], body: content.slice(fmMatch[0].length) };
 }
 
+/**
+ * Convierte un texto a slug URL-safe. Usa la librería slugify (con `strict`
+ * elimina lo que no sea [a-z0-9] y con `lower` normaliza a minúsculas);
+ * maneja caracteres acentuados, ß→ss y símbolos (&→and, %→percent).
+ */
 function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .replace(/-+/g, '-');
+  return slugifyLib(text, { lower: true, strict: true });
 }
 
 export function computeSlug(frontmatter: { title?: string; author?: string[] }): string | undefined {
