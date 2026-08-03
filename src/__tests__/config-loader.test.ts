@@ -15,11 +15,11 @@ async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
 }
 
 async function writeConfig(dir: string, content: string): Promise<void> {
-  await writeFile(join(dir, '_iteraciones.yaml'), content, 'utf8');
+  await writeFile(join(dir, 'iteraciones.config.yaml'), content, 'utf8');
 }
 
 describe('loadSiteConfig', () => {
-  it('retorna defaults cuando no existe _iteraciones.yaml', async () => {
+  it('retorna defaults cuando no existe iteraciones.config.yaml', async () => {
     await withTempDir(async (dir) => {
       const config = await loadSiteConfig(dir);
       expect(config.title).toBe('iteraciones');

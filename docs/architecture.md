@@ -150,7 +150,7 @@ Además, existen los **preamble transpilers** (`lib/resources/preamble/*.tex`) q
 ### Extensibilidad
 
 - Un transpiler del proyecto con el mismo nombre completo (p. ej. `<proyecto>/transpilers/latex/02-dictum.lua`) reemplaza al del paquete (override).
-- Para desactivar uno se usa `disabled-transpilers` (nombres completos, p. ej. `latex/02-dictum`) en `_iteraciones.yaml`.
+- Para desactivar uno se usa `disabled-transpilers` (nombres completos, p. ej. `latex/02-dictum`) en `iteraciones.config.yaml`.
 - **Filtros Lua de usuario** (`lua-filters:`): lista de rutas relativas al proyecto que corren en todas las invocaciones pandoc (markdown → AST, latex, html, epub, markdown). En las exportaciones corren antes de la capa de formato; en la conversión markdown → AST, después de los filtros semánticos. La variable global `FORMAT` de pandoc permite ramificar el comportamiento por formato de salida. Si una ruta no existe se advierte y se omite.
 - Los preamble transpilers del proyecto (`<proyecto>/preamble/<nombre>.tex`) reemplazan a los del paquete; se desactivan con `disabled-preamble-transpilers`.
 
@@ -172,7 +172,7 @@ Solo los documentos modificados (o con slug cambiado) pasan por el pipeline comp
 
 ## Sistema de configuración
 
-La configuración se lee de `_iteraciones.yaml` y se valida con **Zod**:
+La configuración se lee de `iteraciones.config.yaml` y se valida con **Zod**:
 
 ```yaml
 site:
@@ -250,7 +250,7 @@ La configuración PDF es la más compleja e incluye:
 | Archivo | Responsabilidad |
 |---------|----------------|
 | `config-schema.ts` | Esquemas Zod para toda la configuración. |
-| `config-loader.ts` | Carga y valida `_iteraciones.yaml`. ~76 líneas. |
+| `config-loader.ts` | Carga y valida `iteraciones.config.yaml`. ~76 líneas. |
 | `site-config.ts` | Interfaces TypeScript y valores por defecto. |
 
 ### `src/lib/`

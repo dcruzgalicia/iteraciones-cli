@@ -55,7 +55,7 @@ src/
 │   ├── validate.ts          # Comando validate
 │   └── filters.ts         # Comando filters
 ├── config/                  # Configuración del sitio
-│   ├── config-loader.ts     # Carga de _iteraciones.yaml
+│   ├── config-loader.ts     # Carga de iteraciones.config.yaml
 │   ├── config-schema.ts     # Esquemas Zod de validación
 │   └── site-config.ts       # Tipos y defaults de SiteConfig
 └── lib/                     # Utilidades compartidas
@@ -200,8 +200,8 @@ La variable global `FORMAT` de pandoc indica el formato de salida (`latex`, `htm
 ### Sobrescribir y desactivar
 
 - Un proyecto puede sobrescribir un transpiler creando `<proyecto>/transpilers/<capa>/<nombre>.lua` (mismo nombre completo que el del paquete)
-- Un proyecto puede desactivar uno con `disabled-transpilers:` en `_iteraciones.yaml` (nombres completos)
-- Los filtros de usuario se agregan con `lua-filters:` en `_iteraciones.yaml` y corren en todas las invocaciones pandoc
+- Un proyecto puede desactivar uno con `disabled-transpilers:` en `iteraciones.config.yaml` (nombres completos)
+- Los filtros de usuario se agregan con `lua-filters:` en `iteraciones.config.yaml` y corren en todas las invocaciones pandoc
 
 ## Cómo agregar un preamble transpiler
 
@@ -211,7 +211,7 @@ Los preamble transpilers son archivos `.tex` con contenido LaTeX puro que se ins
 2. Agrega el nombre a `BUILTIN_PREAMBLE_TRANSPILERS` en `src/builder/preamble-loader.ts` (la lista define el orden de aplicación)
 3. Agrega una descripción a `DESCRIPTIONS` en el mismo archivo (se muestra en `iteraciones filters`)
 
-Un proyecto puede sobrescribir un preamble transpiler creando `<proyecto>/preamble/<nombre>.tex`, o desactivarlo con `disabled-preamble-transpilers:` en `_iteraciones.yaml`.
+Un proyecto puede sobrescribir un preamble transpiler creando `<proyecto>/preamble/<nombre>.tex`, o desactivarlo con `disabled-preamble-transpilers:` en `iteraciones.config.yaml`.
 
 ## Reportar bugs
 
@@ -221,6 +221,6 @@ Si encuentras un error:
 2. Incluye:
    - Versión del CLI (`iteraciones --version`)
    - Sistema operativo y versión de Bun (`bun --version`)
-   - `_iteraciones.yaml` (sin información sensible)
+   - `iteraciones.config.yaml` (sin información sensible)
    - Salida completa del comando (usa `--verbose` si aplica)
    - Comportamiento esperado vs. real

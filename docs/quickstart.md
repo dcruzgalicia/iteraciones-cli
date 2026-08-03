@@ -39,7 +39,7 @@ Esto crea tres archivos:
 
 ```
 mi-sitio/
-  _iteraciones.yaml       # configuración del sitio
+  iteraciones.config.yaml       # configuración del sitio
   README.md               # documento de ejemplo
   bibliography.bib        # archivo de referencias bibliográficas
 ```
@@ -70,7 +70,7 @@ Edita el archivo y añade tu contenido después del bloque `---`.
 iteraciones build
 ```
 
-Los documentos procesados se generan en `dist/files/`. Los formatos activos dependen de la configuración en `_iteraciones.yaml` (`format.latex`, `format.pdf.generate`, `format.html.generate`, etc.).
+Los documentos procesados se generan en `dist/files/`. Los formatos activos dependen de la configuración en `iteraciones.config.yaml` (`format.latex`, `format.pdf.generate`, `format.html.generate`, etc.).
 
 Para ver qué documentos se procesarían sin generar salida:
 
@@ -109,5 +109,5 @@ iteraciones build --verbose
 
 ## Próximos pasos
 
-- [docs/configuration.md](configuration.md) — todos los campos de `_iteraciones.yaml`
+- [docs/configuration.md](configuration.md) — todos los campos de `iteraciones.config.yaml`
 - [docs/frontmatter-reference.md](frontmatter-reference.md) — frontmatter de documentos

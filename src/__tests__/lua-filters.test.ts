@@ -202,7 +202,7 @@ describe('filtros Lua de usuario (Fase 6, C)', () => {
     try {
       mkdirSync(join(cwd, 'filters'), { recursive: true });
       writeFileSync(join(cwd, 'filters', 'nota.lua'), USER_FILTER);
-      writeFileSync(join(cwd, '_iteraciones.yaml'), 'lua-filters:\n  - filters/nota.lua\n');
+      writeFileSync(join(cwd, 'iteraciones.config.yaml'), 'lua-filters:\n  - filters/nota.lua\n');
       writeFileSync(join(cwd, 'doc.md'), '---\ntitle: Prueba\n---\n\n::: {.nota}\nImportante\n:::\n');
       const doc: BuildDocument = {
         filePath: join(cwd, 'doc.md'),

@@ -129,7 +129,7 @@ export function validateDisabledTranspilers(disabled: string[] | undefined): voi
 }
 
 /**
- * Resuelve los filtros Lua de usuario (`lua-filters:` en _iteraciones.yaml,
+ * Resuelve los filtros Lua de usuario (`lua-filters:` en iteraciones.config.yaml,
  * rutas relativas al proyecto). Las rutas inexistentes emiten un warning sin
  * romper el build.
  */

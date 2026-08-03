@@ -4,7 +4,7 @@ import { ConfigError } from '../lib/errors.js';
 import { KNOWN_ACCENT_COLORS, SiteConfigSchema } from './config-schema.js';
 import { DEFAULT_SITE_CONFIG, type SiteConfig } from './site-config.js';
 
-const CONFIG_FILE = '_iteraciones.yaml';
+const CONFIG_FILE = 'iteraciones.config.yaml';
 
 /**
  * Elimina del objeto crudo las claves desconocidas reportadas por los issues
@@ -71,7 +71,7 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
     for (const issue of unknownKeyIssues) {
       const path = issue.path.length > 0 ? `"${issue.path.join('.')}"` : 'la raíz';
       const keys = issue.keys.map((k) => `"${k}"`).join(', ');
-      process.stderr.write(`[iteraciones] _iteraciones.yaml: claves desconocidas en ${path}: ${keys}. Revisa docs/configuration.md\n`);
+      process.stderr.write(`[iteraciones] iteraciones.config.yaml: claves desconocidas en ${path}: ${keys}. Revisa docs/configuration.md\n`);
     }
     const realIssues = result.error.issues.filter((issue) => issue.code !== 'unrecognized_keys');
     if (realIssues.length > 0) {
