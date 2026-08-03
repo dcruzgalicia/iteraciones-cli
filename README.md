@@ -88,6 +88,15 @@ lua-filters:                        # filtros Lua de usuario (opcional)
 
 ## Comandos
 
+### Opción global `--project-root`
+
+Todos los comandos aceptan `--project-root <path>` para indicar el directorio raíz del proyecto. Sin ella, se usa el directorio actual. Puede colocarse antes o después del subcomando:
+
+```bash
+iteraciones build --project-root /ruta/al/proyecto
+iteraciones --project-root /ruta/al/proyecto validate
+```
+
 ### `iteraciones build`
 
 Construye los documentos a partir de los archivos Markdown.
@@ -100,7 +109,6 @@ iteraciones build [opciones]
 |--------|-------------|-------------|
 | `-c, --concurrency <n>` | Máximo de invocaciones pandoc simultáneas | `4` |
 | `--no-cache` | Omite la caché incremental; siempre hace build completo | — |
-| `--project-root <path>` | Directorio raíz del proyecto | directorio actual |
 | `--output <path>` | Directorio de salida | `dist/files` |
 | `--no-tailwind` | Omite la generación de CSS con Tailwind | — |
 | `--no-export` | Omite la exportación PDF/EPUB | — |
@@ -136,10 +144,6 @@ Valida `_iteraciones.yaml` y el frontmatter de todos los documentos Markdown del
 ```
 iteraciones validate
 ```
-
-| Opción | Descripción |
-|--------|-------------|
-| `--project-root <path>` | Directorio raíz del proyecto (por defecto: directorio actual) |
 
 ### `iteraciones info`
 

@@ -6,13 +6,16 @@ export function buildProgram(): Command {
   const program = new Command();
 
   program.name(packageJson.name.replace(/-cli$/, '')).description(packageJson.description).version(packageJson.version);
+  program.option('--project-root <path>', 'directorio raíz del proyecto (por defecto: directorio actual)');
+
+  /** Resuelve el directorio raíz del proyecto: --project-root global o el directorio actual. */
+  const projectRoot = (): string => program.opts().projectRoot ?? process.cwd();
 
   program
     .command('build')
     .description('construye el sitio a partir de los archivos Markdown')
     .option('-c, --concurrency <n>', 'máximo de invocaciones pandoc simultáneas', '4')
     .option('--no-cache', 'omite la caché incremental; siempre hace build completo')
-    .option('--project-root <path>', 'directorio raíz del proyecto (por defecto: directorio actual)')
     .option('--output <path>', 'directorio de salida (por defecto: dist/www si html.generate:true, dist/documents si no)')
     .option('--no-tailwind', 'omite la generación de CSS con Tailwind')
     .option('--no-export', 'omite la exportación PDF/EPUB aunque esté configurada')
@@ -22,7 +25,6 @@ export function buildProgram(): Command {
       async (opts: {
         concurrency: string;
         cache: boolean;
-        projectRoot?: string;
         output?: string;
         tailwind: boolean;
         export: boolean;
@@ -30,7 +32,7 @@ export function buildProgram(): Command {
         verbose?: boolean;
       }) => {
         const concurrency = Number.parseInt(opts.concurrency, 10);
-        await runBuild(opts.projectRoot ?? process.cwd(), {
+        await runBuild(projectRoot(), {
           concurrency: Number.isInteger(concurrency) ? concurrency : undefined,
           noCache: !opts.cache,
           outputDir: opts.output,
@@ -44,21 +46,20 @@ export function buildProgram(): Command {
     program
       .command('info')
       .description('muestra información del proyecto y configuración')
-      .action(() => runInfo(process.cwd()));
+      .action(() => runInfo(projectRoot()));
 
   program
     .command('init')
     .description('crea _iteraciones.yaml y README.md mínimos en el directorio actual')
     .action(async () => {
-      await runInit(process.cwd());
+      await runInit(projectRoot());
     });
 
   program
     .command('validate')
     .description('valida _iteraciones.yaml y el frontmatter de todos los documentos Markdown')
-    .option('--project-root <path>', 'directorio raíz del proyecto (por defecto: directorio actual)')
-    .action(async (opts: { projectRoot?: string }) => {
-      await runValidate(opts.projectRoot ?? process.cwd());
+    .action(async () => {
+      await runValidate(projectRoot());
     });
 
   program
@@ -66,27 +67,27 @@ export function buildProgram(): Command {
     .description('verifica el entorno de build y opcionalmente corrige problemas')
     .option('--fix', 'intenta corregir automáticamente los problemas detectados')
     .action(async (opts: { fix?: boolean }) => {
-      await runDoctor(process.cwd(), { fix: opts.fix });
+      await runDoctor(projectRoot(), { fix: opts.fix });
     });
 
   program
     .command('new <path>')
     .description('crea un archivo Markdown con frontmatter mínimo')
     .action(async (path: string) => {
-      await runNew(process.cwd(), path);
+      await runNew(projectRoot(), path);
     });
 
   program
     .command('clean')
     .description('elimina el directorio de salida (dist/) y la caché (.iteraciones)')
     .action(async () => {
-      await runClean(process.cwd());
+      await runClean(projectRoot());
     });
 
   program
     .command('transpilers')
     .description('lista los transpilers disponibles con su tipo y descripción')
-    .action(() => runTranspilers(process.cwd()));
+    .action(() => runTranspilers(projectRoot()));
 
   return program;
 }
