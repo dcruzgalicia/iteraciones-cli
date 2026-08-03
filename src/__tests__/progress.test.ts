@@ -101,4 +101,25 @@ describe('ProgressTracker', () => {
     expect(completed.some((t) => t.includes('PDF'))).toBe(false);
     expect(completed.some((t) => t.includes('Markdown'))).toBe(false);
   });
+
+  it('no cuelga cuando finish llega antes de que el runner procese (renderer async en TTY)', async () => {
+    // Regresión: en TTY el render() del DefaultRenderer es async y retrasa el
+    // procesamiento del runner. Si todo el build termina antes, finish resolvía
+    // un mapa vacío y las Promises registradas después colgaban run() para
+    // siempre. El flag `finished` las resuelve al momento.
+    const events = await runTracker(async (tracker) => {
+      // Flujo sin awaits intermedios: finish llega antes de que el runner procese
+      tracker.startPhase('discovery', 1);
+      tracker.completePhase(1);
+      tracker.planPhases(['discovery', 'render']);
+      tracker.startPhase('render', 1);
+      tracker.completePhase(1);
+      await tracker.finish(1, 0, []);
+    });
+
+    // El flujo completó sin colgarse; las tareas terminaron con su estado final
+    const completed = titlesWith(events, 'COMPLETED');
+    expect(completed.some((t) => t.includes('Documentos encontrados'))).toBe(true);
+    expect(completed.some((t) => t.includes('Renderizando contenido'))).toBe(true);
+  });
 });
