@@ -20,7 +20,7 @@ Verifica que todo funcione:
 
 ```bash
 bun run typecheck   # tsc --noEmit
-bun test            # bun test (89+ tests)
+bun test            # bun test (126+ tests)
 bun run src/bin.ts build --project-root /ruta/a/proyecto
 ```
 
@@ -31,17 +31,16 @@ Los hooks de pre-commit (Husky + lint-staged) ejecutan Biome, typecheck y tests 
 ```
 src/
 ├── bin.ts                   # Entry point (#!/usr/bin/env bun)
+├── __tests__/               # Tests unitarios (bun test)
 ├── builder/                 # Pipeline de construcción
 │   ├── orchestrator.ts      # Orquestador principal (build())
 │   ├── discover.ts          # Fase 1: discovery y detección de cambios
-│   ├── render.ts            # Fase 2+3: transpilers + conversión pandoc
-│   ├── build-utils.ts       # Assets (CSS, fonts, logo) y template HTML
+│   ├── render.ts            # Fase 2+3: filtros Lua + conversión pandoc
+│   ├── build-utils.ts       # Assets (CSS, fonts, logo) y preámbulo LaTeX
 │   ├── latex-preamble.ts    # Constructor de preámbulo LaTeX
 │   ├── types.ts             # BuildDocument, Frontmatter, contextos
-│   ├── load-modules.ts      # Carga dinámica ESM de transpilers
-│   ├── transpilers/         # Transpilers string y AST
-│   ├── preamble/            # Transpilers de preámbulo LaTeX
-│   ├── preamble-loader.ts   # Carga de preamble transpilers
+│   ├── preamble-loader.ts   # Carga de preamble transpilers (.tex)
+│   ├── state.ts             # Caché content-addressed (state.json, hashes)
 │   └── export/              # Exportación a PDF, EPUB, Markdown
 │       ├── runner.ts        # Ejecutor de exportación
 │       ├── assemble.ts      # Ensamblado de ExportDocument
@@ -63,7 +62,15 @@ src/
     ├── errors.ts            # Clases de error (PandocError, ConfigError)
     ├── logger.ts            # Funciones helper para mensajes (logError, logWarning)
     ├── pandoc-runner.ts     # Invocación de pandoc
-    └── run.ts               # mapWithConcurrency y utilidades de procesos
+    ├── run.ts               # mapWithConcurrency y utilidades de procesos
+    └── resources/           # Recursos empaquetados
+        ├── transpilers/     # Filtros Lua por capa (semantic/, latex/, html/)
+        ├── preamble/        # Preamble transpilers (.tex)
+        ├── template.html    # Template HTML (sistema de templates de pandoc)
+        ├── styles.css       # CSS entry point de Tailwind
+        ├── fonts/           # Fuentes para HTML
+        ├── logo.svg         # Logo por defecto
+        └── apa-7.csl        # Estilo de citas APA 7ª edición
 ```
 
 ### Pipeline de construcción
@@ -95,7 +102,7 @@ tipo(scope): verbo en imperativo
 ### Ejemplos
 
 ```
-feat(plugin): añade hook beforeBuild a IPlugin
+feat(transpiler): agrega filtro Lua para Div.nota
 fix(cache): agrega separador \0 en hash() para evitar colisiones
 refactor(cli): extrae reportBuildError para evitar duplicación
 docs(config): documenta bloque editorial y export en frontmatter
@@ -154,27 +161,57 @@ docs(config): documenta bloque editorial y export en frontmatter
 
 ## Cómo agregar un transpiler
 
-Los transpilers transforman el contenido Markdown y se organizan en **capas** (semántica y de formato).
+Los transpilers son **filtros Lua** que corren dentro de las invocaciones de pandoc (vía `--lua-filter`). Se organizan en **capas**:
 
-1. Crea un archivo en `src/builder/transpilers/<capa>/<prioridad>-<nombre>.ts`
-   - Capas: `semantic/string`, `semantic/ast`, `latex/`, `html/`
-2. Exporta:
-   - `type`: `'string'` para transformación de texto (regex), o `'ast'` para transformación del AST de pandoc
-   - `process(body: string): string` (para string transpilers)
-   - `transform(ast): Promise<ast>` (para AST transpilers)
-3. Agrega el nombre a la lista `BUILTIN_*` correspondiente en `src/builder/render.ts` (`BUILTIN_SEMANTIC_STRING`, `BUILTIN_SEMANTIC_AST`, `BUILTIN_LATEX_TRANSPILERS`, `BUILTIN_HTML_TRANSPILERS`)
-4. Agrega descripción y tipo a `getBuiltinTranspilerInfos()` en el mismo archivo
-5. Agrega tests en `src/__tests__/transpilers.test.ts`
+| Capa | Ubicación | Cuándo corre | Ejemplos |
+|------|-----------|--------------|----------|
+| `semantic/string` | `src/lib/resources/transpilers/semantic/string/` | En `markdown → json`, antes del parseo | `01-double-colon` (`::` → `Div.spacer`) |
+| `semantic/ast` | `src/lib/resources/transpilers/semantic/ast/` | En `markdown → json`, después del parseo | `02-double-colon-noindent` (`:;` → `Div.spacer noindent`) |
+| `latex/` | `src/lib/resources/transpilers/latex/` | En `json → latex` | `02-dictum`, `03-verse`, `06-mbox-sentence-end` |
+| `html/` | `src/lib/resources/transpilers/html/` | En `json → html5` | `01-dictum`, `02-verse`, `05-spacer` |
+
+Para agregar uno:
+
+1. Crea un archivo en `src/lib/resources/transpilers/<capa>/<prioridad>-<nombre>.lua`
+   - El prefijo numérico (`01-`, `02-`, …) define el **orden de ejecución** dentro de la capa
+   - El **nombre completo** es `<capa>/<prioridad>-<nombre>` (ej: `latex/02-dictum`); es el que se usa en `disabled-transpilers` y se muestra en `iteraciones transpilers`
+2. Escribe la primera línea como comentario `-- descripción corta`: se muestra en `iteraciones transpilers` (la lee `getBuiltinLuaTranspilerInfos()`)
+3. Implementa las funciones de filtro de pandoc (`Pandoc(doc)`, `Div(div)`, `Para(para)`, etc.) que transforman el AST
+4. Agrega el nombre del archivo a la lista `BUILTIN_*` correspondiente en `src/builder/render.ts` (`BUILTIN_SEMANTIC_STRING`, `BUILTIN_SEMANTIC_AST`, `BUILTIN_LATEX_TRANSPILERS`, `BUILTIN_HTML_TRANSPILERS`)
+5. Agrega tests en `src/__tests__/lua-filters.test.ts` (los tests que invocan pandoc requieren que esté instalado; los de resolución de nombres no)
+
+### Ejemplo mínimo
+
+```lua
+-- Convierte Div.nota en una nota destacada (formato LaTeX)
+function Div(div)
+  if not div.classes:includes('nota') then return nil end
+  if FORMAT == 'latex' then
+    return pandoc.RawBlock('latex', '\\fbox{Nota}')
+  elseif FORMAT == 'html5' then
+    return pandoc.RawBlock('html', '<aside class="nota">Nota</aside>')
+  end
+  return nil
+end
+```
+
+La variable global `FORMAT` de pandoc indica el formato de salida (`latex`, `html5`, `epub3`, `markdown`, `json`), lo que permite que un mismo filtro ramifique su comportamiento.
+
+### Sobrescribir y desactivar
+
+- Un proyecto puede sobrescribir un transpiler creando `<proyecto>/transpilers/<capa>/<nombre>.lua` (mismo nombre completo que el del paquete)
+- Un proyecto puede desactivar uno con `disabled-transpilers:` en `_iteraciones.yaml` (nombres completos)
+- Los filtros de usuario se agregan con `lua-filters:` en `_iteraciones.yaml` y corren en todas las invocaciones pandoc
 
 ## Cómo agregar un preamble transpiler
 
-Los preamble transpilers modifican el preámbulo LaTeX.
+Los preamble transpilers son archivos `.tex` con contenido LaTeX puro que se inserta en el preámbulo antes de `\begin{document}`. Se editan como LaTeX, sin escaping de strings TypeScript.
 
-1. Crea un archivo en `src/builder/preamble/<prioridad>-<nombre>.ts`
-2. Exporta:
-   - `description: string`
-   - `process(preamble: string[], config: PdfFormatConfig): string[]`
-3. Agrega el nombre a `BUILTIN_PREAMBLE_TRANSPILERS` en `src/builder/preamble-loader.ts`
+1. Crea un archivo en `src/lib/resources/preamble/<prioridad>-<nombre>.tex`
+2. Agrega el nombre a `BUILTIN_PREAMBLE_TRANSPILERS` en `src/builder/preamble-loader.ts` (la lista define el orden de aplicación)
+3. Agrega una descripción a `DESCRIPTIONS` en el mismo archivo (se muestra en `iteraciones transpilers`)
+
+Un proyecto puede sobrescribir un preamble transpiler creando `<proyecto>/preamble/<nombre>.tex`, o desactivarlo con `disabled-preamble-transpilers:` en `_iteraciones.yaml`.
 
 ## Reportar bugs
 
