@@ -226,7 +226,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   if (exportSets.html.length > 0) usedPhases.push('html');
   if (exportSets.epub.length > 0) usedPhases.push('epub');
   if (exportSets.markdown.length > 0) usedPhases.push('markdown');
-  progress.planPhases(usedPhases);
+  await progress.planPhases(usedPhases);
 
   const processedPaths = new Set<string>();
   if (renderDocs.length > 0 || astExportCandidates.length > 0) {

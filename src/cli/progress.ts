@@ -86,12 +86,20 @@ export class ProgressTracker {
 
   /**
    * Declara las fases que el build ejecutará. Debe llamarse después de que el
-   * orquestador conozca los conjuntos de trabajo y antes del render. Libera la
-   * tarea discovery para que el runner de listr2 evalúe los skips con la
-   * información completa.
+   * orquestador conozca los conjuntos de trabajo y antes del render. Espera a
+   * que el runner procese discovery (en TTY el render() del DefaultRenderer es
+   * async y retrasa el arranque) y libera su Promise para que los skips se
+   * evalúen con la información completa.
    */
-  planPhases(phases: PipelinePhase[]): void {
+  async planPhases(phases: PipelinePhase[]): Promise<void> {
     for (const phase of phases) this.usedPhases.add(phase);
+    if (!this.listr) return;
+    // Si discovery aún no está registrada, esperar al runner (hasta 5s); si no,
+    // su Promise quedaría pendiente hasta finish y el spinner se pegaría a ella.
+    const deadline = Date.now() + 5000;
+    while (!this.phaseResolvers.has('discovery') && !this.runnerDone && Date.now() < deadline) {
+      await Bun.sleep(5);
+    }
     this.phaseResolvers.get('discovery')?.();
     this.phaseResolvers.delete('discovery');
   }
@@ -176,7 +184,7 @@ export class ProgressTracker {
           task: (_ctx, task) => task.newListr(subtasks, { concurrent: true }),
         },
       ],
-      { renderer: this.renderer as unknown as typeof DefaultRenderer, rendererOptions: { clearOutput: false } },
+      { renderer: this.renderer as unknown as typeof DefaultRenderer, rendererOptions: { clearOutput: false, collapseSubtasks: false } },
     );
     this.runPromise = this.listr.run().then(
       () => {
