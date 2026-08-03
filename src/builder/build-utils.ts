@@ -155,15 +155,16 @@ export async function generateLatexPreamble(
       continue;
     }
     // Flags de preámbulo: desde flags.json (calculados del AST en render.ts).
-    // Fallback: caché anterior al cambio — detectar con regex y persistir el
-    // flags.json para que el siguiente build ya use el camino del AST.
+    // El fallback por regex (detectFlagsFromLatex) se eliminó: writeCachedArtifacts
+    // escribe el .tex y flags.json juntos, así que si el body existe, los flags
+    // deben existir. Un flags.json ausente o inválido es un estado inconsistente
+    // del caché y el build debe fallar con un error claro.
     const flagsPath = join(cacheBase, 'tex', dir, `${slug}.flags.json`);
     let flags: { hasTocEntries: boolean; skipNoIndent: boolean; skipParagraphSpace: boolean };
     try {
       flags = JSON.parse(await Bun.file(flagsPath).text()) as typeof flags;
-    } catch {
-      flags = detectFlagsFromLatex(texBody);
-      await Bun.write(flagsPath, JSON.stringify(flags));
+    } catch (err) {
+      throw new Error(`flags.json no encontrado o inválido para "${relPath}" (${flagsPath}): ${String(err)}`);
     }
     const { hasTocEntries, skipNoIndent, skipParagraphSpace } = flags;
     // Si el primer bloque es un parrafo, anteponer \noindent
@@ -190,29 +191,4 @@ export async function generateLatexPreamble(
     await mkdir(pdfDir, { recursive: true });
     await Bun.write(join(pdfDir, `${slug}.tex`), fullTex);
   }
-}
-
-/**
- * Fallback transitorio de migración: detecta los flags de preámbulo con
- * regex/startsWith sobre el LaTeX (mecanismo anterior a #1041). Solo se usa
- * cuando flags.json no existe (caché generado antes del cambio); el resultado
- * se persiste para que el siguiente build use el camino del AST.
- * Se eliminará junto con #982 (AST canónico).
- */
-function detectFlagsFromLatex(texBody: string): { hasTocEntries: boolean; skipNoIndent: boolean; skipParagraphSpace: boolean } {
-  const hasTocEntries = /\\(chapter|section|subsection|subsubsection|paragraph|subparagraph)\{/.test(texBody);
-  const trimmed = texBody.trimStart();
-  const isSectionStart =
-    trimmed.startsWith('\\chapter{') ||
-    trimmed.startsWith('\\section{') ||
-    trimmed.startsWith('\\subsection{') ||
-    trimmed.startsWith('\\subsubsection{') ||
-    trimmed.startsWith('\\paragraph{') ||
-    trimmed.startsWith('\\subparagraph{');
-  const isDictumStart = trimmed.startsWith('\\dictum[') || trimmed.startsWith('\\dictum{') || trimmed.startsWith('\\vspace*{');
-  return {
-    hasTocEntries,
-    skipNoIndent: isSectionStart || isDictumStart,
-    skipParagraphSpace: isSectionStart,
-  };
 }
