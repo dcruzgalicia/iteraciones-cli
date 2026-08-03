@@ -27,8 +27,22 @@ const PHASE_META: Record<PipelinePhase, PhaseMeta> = {
   markdown: { label: 'Markdown', section: 'Generando formatos' },
 };
 
+/**
+ * Tracker de progreso del build con dos modos:
+ *
+ * - **TTY interactivo**: las fases muestran el conteo en vivo en una sola
+ *   línea (sobrescrita con carriage return `\r`, sin secuencias ANSI), de
+ *   forma portable entre terminales.
+ * - **Non-TTY / --verbose**: salida plana por fases (formato histórico), sin
+ *   caracteres de control, legible en pipes y CI.
+ *
+ * Se descartó listr2 (issue #1104): su renderer emite códigos ANSI incluso en
+ * modo non-TTY (verificado con color:false y renderers simple/verbose), y su
+ * modelo task-driven choca con el flujo event-driven del orquestador.
+ */
 export class ProgressTracker {
   private verbose: boolean;
+  private tty: boolean;
   private t0: number;
   private phaseDurations: Partial<Record<PipelinePhase, number>> = {};
   private phaseCounts: Partial<Record<PipelinePhase, number>> = {};
@@ -37,9 +51,12 @@ export class ProgressTracker {
   private phaseDone: Set<PipelinePhase> = new Set();
   private sectionsShown: Set<string> = new Set();
   private phaseFiles: Partial<Record<PipelinePhase, string[]>> = {};
+  /** Documentos reportados en la fase actual (progreso en vivo en TTY). */
+  private currentPhaseCount = 0;
 
   constructor(options: { verbose?: boolean }) {
     this.verbose = options.verbose ?? false;
+    this.tty = process.stdout.isTTY === true && !this.verbose;
     this.t0 = performance.now();
   }
 
@@ -54,6 +71,7 @@ export class ProgressTracker {
     this.phaseCounts[phase] = total;
     this.phaseStart[phase] = performance.now();
     this.phaseFiles[phase] = [];
+    this.currentPhaseCount = 0;
 
     const meta = PHASE_META[phase];
     if (meta.section && !this.sectionsShown.has(meta.section)) {
@@ -64,6 +82,9 @@ export class ProgressTracker {
         process.stdout.write(`\n\u25a0 ${meta.section}\n`);
       }
     }
+    if (this.tty) {
+      this.renderPhaseLine();
+    }
   }
 
   reportFile(file: RenderFileReport): void {
@@ -71,6 +92,11 @@ export class ProgressTracker {
     if (file.phase === 'discovery') {
       const files = this.phaseFiles[file.phase];
       if (files) files.push(file.relativePath);
+    }
+    // Progreso en vivo: cada documento completado actualiza la línea de la fase actual
+    if (this.tty && file.phase === this.currentPhase) {
+      this.currentPhaseCount++;
+      this.renderPhaseLine();
     }
   }
 
@@ -83,7 +109,7 @@ export class ProgressTracker {
     const elapsed = st !== undefined ? performance.now() - st : 0;
     this.phaseDurations[phase] = elapsed;
     const meta = PHASE_META[phase];
-    const count = actualCount ?? this.phaseCounts[phase] ?? 0;
+    const count = actualCount ?? this.phaseCounts[phase] ?? this.currentPhaseCount;
 
     if (this.verbose) {
       if (meta.section === 'Descubriendo documentos' && count > 0) {
@@ -93,6 +119,14 @@ export class ProgressTracker {
         const durStr = formatTime(elapsed);
         process.stdout.write(`  ${meta.label}  ${durStr}\n\n`);
       }
+    } else if (this.tty) {
+      // Sobrescribir la línea de progreso en vivo con el resultado de la fase
+      const countPart = ` ${count}`;
+      process.stdout.write(
+        `\r  \u2713 ${meta.label}${countPart}${' '.repeat(Math.max(1, LABEL_WIDTH - meta.label.length - countPart.length))}${formatTime(elapsed)}`.padEnd(
+          70,
+        ) + '\n',
+      );
     } else {
       const countPart = ` ${count}`;
       process.stdout.write(
@@ -130,6 +164,19 @@ export class ProgressTracker {
       process.stdout.write('\u25a0 Preparaci\u00f3n\n');
       process.stdout.write('  \u2713 Archivos temporales limpiados\n');
     }
+  }
+
+  /** Renderiza la línea de progreso de la fase actual (solo TTY). */
+  private renderPhaseLine(): void {
+    const phase = this.currentPhase;
+    if (!phase) return;
+    const meta = PHASE_META[phase];
+    const total = this.phaseCounts[phase] ?? 0;
+    const count = this.currentPhaseCount;
+    // El conteo se muestra solo cuando hay reportes (las fases sin notificaciones
+    // por documento muestran la etiqueta sola hasta completarse).
+    const progress = count > 0 && total > 0 ? ` [${Math.min(count, total)}/${total}]` : '';
+    process.stdout.write(`\r  ${meta.label}${progress}`.padEnd(70));
   }
 
   private flushPhaseFiles(phase: PipelinePhase): void {

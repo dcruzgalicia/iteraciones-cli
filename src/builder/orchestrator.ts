@@ -269,7 +269,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       const htmlDocs = exportSets.html;
       if (htmlDocs.length === 0) return;
       progress.startPhase('html', htmlDocs.length);
-      await generateHtmlPages(ctx, htmlDocs, formatsDir, options);
+      await generateHtmlPages(ctx, htmlDocs, formatsDir, options, (relativePath) => progress.reportFile({ relativePath, phase: 'html' }));
       progress.completePhase(undefined, 'html');
     })(),
 
@@ -415,7 +415,13 @@ async function cleanupSlugChanges(ctx: BuildContext, slugChangedEntries: Map<str
   }
 }
 
-async function generateHtmlPages(ctx: BuildContext, pipelineDocs: BuildDocument[], formatsDir: string, options: BuildOptions): Promise<void> {
+async function generateHtmlPages(
+  ctx: BuildContext,
+  pipelineDocs: BuildDocument[],
+  formatsDir: string,
+  options: BuildOptions,
+  onProgress?: (relativePath: string) => void,
+): Promise<void> {
   const siteConfig = ctx.siteConfig;
   const htmlConfig = siteConfig.format?.html;
   const hasCss = !options.noTailwind && ctx.cssPath;
@@ -462,6 +468,7 @@ async function generateHtmlPages(ctx: BuildContext, pipelineDocs: BuildDocument[
       );
       await mkdir(dirname(dst), { recursive: true });
       await Bun.write(dst, html);
+      onProgress?.(doc.relativePath);
     } catch (err) {
       logWarning(`error al generar HTML para ${doc.relativePath}: ${String(err)}`, 'orchestrator');
     }
