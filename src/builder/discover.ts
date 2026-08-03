@@ -20,15 +20,15 @@ interface DiscoverResult {
 /**
  * Estado del build anterior, leído de state.json.
  * Combina el report (startedAt, activeFormats) con el discovery index (entries)
- * y los hashes de invalidación (transpilers, config por formato, bibliografía).
+ * y los hashes de invalidación (filters, config por formato, bibliografía).
  */
 export interface BuildState {
   /** Timestamp del build anterior. */
   startedAt: number;
   /** Formatos que estaban activos en el build anterior. */
   activeFormats: string[];
-  /** Hash de los transpilers efectivos del build anterior. */
-  transpilerHash?: string;
+  /** Hash de los filters efectivos del build anterior. */
+  filtersHash?: string;
   /** Hash de configuración por formato del build anterior. */
   configHashes?: Record<string, string>;
   /** Hash de los .bib/.csl del build anterior. */
@@ -49,7 +49,7 @@ export async function loadBuildState(cwd: string): Promise<BuildState | null> {
   return {
     startedAt: state.startedAt,
     activeFormats: state.activeFormats,
-    transpilerHash: state.transpilerHash,
+    filtersHash: state.filtersHash,
     configHashes: state.configHashes,
     bibHash: state.bibHash,
     entries: new Map(Object.entries(state.entries)),
@@ -65,7 +65,7 @@ export async function saveBuildState(cwd: string, state: BuildState): Promise<vo
   await saveStateFile(cwd, {
     startedAt: state.startedAt,
     activeFormats: state.activeFormats,
-    transpilerHash: state.transpilerHash,
+    filtersHash: state.filtersHash,
     configHashes: state.configHashes,
     bibHash: state.bibHash,
     entries: Object.fromEntries(state.entries),
@@ -152,7 +152,7 @@ export async function discover(
     activeFormats?: string[];
     prevState?: BuildState | null;
     /** Hashes de invalidación calculados por el orchestrator, guardados en state.json. */
-    meta?: { transpilerHash: string; configHashes: Record<string, string>; bibHash: string };
+    meta?: { filtersHash: string; configHashes: Record<string, string>; bibHash: string };
   } = {},
 ): Promise<DiscoverResult> {
   const relativePaths: string[] = [];
@@ -375,7 +375,7 @@ export async function discover(
     startedAt: thisBuildStartedAt,
     activeFormats: options.activeFormats ?? [],
     entries: discoveryIndex,
-    transpilerHash: options.meta?.transpilerHash,
+    filtersHash: options.meta?.filtersHash,
     configHashes: options.meta?.configHashes,
     bibHash: options.meta?.bibHash,
   });

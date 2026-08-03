@@ -6,7 +6,7 @@ import { renderLatex } from '../builder/render.js';
 import type { BuildDocument } from '../builder/types.js';
 import { runPandoc } from '../lib/pandoc-runner.js';
 
-const RESOURCES = join(import.meta.dir, '..', 'lib', 'resources', 'transpilers');
+const RESOURCES = join(import.meta.dir, '..', 'lib', 'resources', 'filters');
 const SEMANTIC_FILTERS = [
   join(RESOURCES, 'semantic', 'string', '01-double-colon.lua'),
   join(RESOURCES, 'semantic', 'ast', '02-double-colon-noindent.lua'),

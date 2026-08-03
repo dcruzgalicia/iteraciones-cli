@@ -14,8 +14,8 @@ const TEMPLATE_PATH = join(import.meta.dir, '../../src/lib/resources/template.ht
 export interface StateFile {
   startedAt: number;
   activeFormats: string[];
-  /** Hash de los transpilers efectivos (paquete + proyecto) y sus disabled lists. */
-  transpilerHash?: string;
+  /** Hash de los filters efectivos (paquete + proyecto) y sus disabled lists. */
+  filtersHash?: string;
   /** Hash de configuración por formato (pdf, html, epub, markdown). */
   configHashes?: Record<string, string>;
   /** Hash de los archivos .bib y .csl del proyecto. */
@@ -45,7 +45,7 @@ export async function loadStateFile(cwd: string): Promise<StateFile | null> {
     return {
       startedAt: parsed.startedAt,
       activeFormats: Array.isArray(parsed.activeFormats) ? parsed.activeFormats : [],
-      transpilerHash: parsed.transpilerHash,
+      filtersHash: parsed.filtersHash,
       configHashes: parsed.configHashes,
       bibHash: parsed.bibHash,
       cssAccent: parsed.cssAccent,
@@ -77,17 +77,17 @@ export async function saveStateFile(cwd: string, state: StateFile): Promise<void
 }
 
 /**
- * Hash de los transpilers efectivos (paquete + proyecto) y de los preamble
- * transpilers, incluyendo las disabled lists. Cambia solo si el código de un
- * transpiler o la lista de desactivados cambia.
+ * Hash de los filters efectivos (paquete + proyecto) y de los preamble
+ * filters, incluyendo las disabled lists. Cambia solo si el código de un
+ * filter o la lista de desactivados cambia.
  */
-export async function computeTranspilerHash(cwd: string, siteConfig: SiteConfig): Promise<string> {
+export async function computeFiltersHash(cwd: string, siteConfig: SiteConfig): Promise<string> {
   const parts: string[] = [];
   // [directorio, glob]: filtros Lua del paquete y del proyecto, preamble .tex
   const specs: Array<[string, string]> = [
-    [join(import.meta.dir, '../lib/resources/transpilers'), '**/*.lua'],
+    [join(import.meta.dir, '../lib/resources/filters'), '**/*.lua'],
     [join(import.meta.dir, '../lib/resources/preamble'), '*.tex'],
-    [join(cwd, 'transpilers'), '**/*.lua'],
+    [join(cwd, 'filters'), '**/*.lua'],
     [join(cwd, 'preamble'), '*.tex'],
   ];
   for (const [dir, glob] of specs) {
@@ -97,7 +97,7 @@ export async function computeTranspilerHash(cwd: string, siteConfig: SiteConfig)
         parts.push(file, await Bun.file(join(dir, file)).text());
       }
     } catch {
-      // Directorio inexistente (transpilers/preamble del proyecto son opcionales)
+      // Directorio inexistente (filters/preamble del proyecto son opcionales)
     }
   }
   // Filtros Lua de usuario (`lua-filters:`) — pueden estar en cualquier directorio
@@ -107,8 +107,8 @@ export async function computeTranspilerHash(cwd: string, siteConfig: SiteConfig)
       .catch(() => '');
     parts.push(rel, content);
   }
-  parts.push(JSON.stringify(siteConfig.disabledTranspilers ?? []));
-  parts.push(JSON.stringify(siteConfig.disabledPreambleTranspilers ?? []));
+  parts.push(JSON.stringify(siteConfig.disabledFilters ?? []));
+  parts.push(JSON.stringify(siteConfig.disabledPreambleFilters ?? []));
   return hashString(parts.join('\0'));
 }
 

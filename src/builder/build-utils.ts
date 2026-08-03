@@ -184,7 +184,7 @@ export async function generateLatexPreamble(
         skipNoIndent,
         skipParagraphSpace,
       },
-      siteConfig.disabledPreambleTranspilers,
+      siteConfig.disabledPreambleFilters,
     );
     const fullTex = [...preamble, '', texBody, '', '\\end{document}'].join('\n');
     const pdfDir = join(cacheBase, 'formats', 'pdf', dir);

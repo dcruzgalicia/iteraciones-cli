@@ -1,5 +1,5 @@
 -- Convierte Div.center al entorno \begin{center}...\end{center} (formato LaTeX).
--- Reemplaza al transpiler TS latex/04-center (Fase 6).
+-- Reemplaza al filter TS latex/04-center (Fase 6).
 -- Uso: pandoc --from json --to latex --lua-filter latex/04-center.lua
 
 local function has_class(block, cls)

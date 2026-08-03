@@ -9,11 +9,11 @@
  *   CLASE → CORE → FUENTE → INTERLINEADO → MÁRGENES → IDIOMA →
  *   ENCABEZADOS → TIPOGRAFÍA → COMPOSICIÓN → ENLACES → TABLAS →
  *   LISTAS → BIBLIOGRAFÍA → EXTRAS → CONTADORES →
- *   (transpilers) → \begin{document} → \title/\author/\date/\maketitle → \tableofcontents
+ *   (filters) → \begin{document} → \title/\author/\date/\maketitle → \tableofcontents
  */
 import type { PdfFormatConfig } from '../config/site-config.js';
 import { DEFAULT_PDF_FORMAT } from '../config/site-config.js';
-import { loadPreambleTranspilers } from './preamble-loader.js';
+import { loadPreambleFilters } from './preamble-loader.js';
 import { discoverBibFiles } from './state.js';
 
 /** Mapa de nombres de page-size a dimensiones [ancho, alto] en mm. */
@@ -58,11 +58,7 @@ export interface PreambleMeta {
   skipParagraphSpace?: boolean;
 }
 
-export async function buildLatexPreamble(
-  pdfFormat?: PdfFormatConfig,
-  meta?: PreambleMeta,
-  disabledPreambleTranspilers?: string[],
-): Promise<string[]> {
+export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: PreambleMeta, disabledPreambleFilters?: string[]): Promise<string[]> {
   const fmt = pdfFormat ?? DEFAULT_PDF_FORMAT;
   const dc = fmt.documentclass?.class ?? 'scrbook';
 
@@ -228,14 +224,14 @@ export async function buildLatexPreamble(
     preamble.push(`\\setcounter{tocdepth}{${fmt.setcounter.tocdepth}}`);
   }
 
-  // ── 10. SETKOMAFONT (desde config, reemplaza transpiler 02) ──
+  // ── 10. SETKOMAFONT (desde config, reemplaza filter 02) ──
   if (fmt.setkomafont) {
     for (const [element, font] of Object.entries(fmt.setkomafont)) {
       preamble.push(`\\setkomafont{${element}}{${font}}`);
     }
   }
 
-  // ── 11. SECTIONING (desde config, reemplaza transpilers 03-09) ──
+  // ── 11. SECTIONING (desde config, reemplaza filters 03-09) ──
   if (fmt.sectioning) {
     // part
     if (fmt.sectioning.part) {
@@ -329,7 +325,7 @@ export async function buildLatexPreamble(
     }
   }
 
-  // ── 12. DICTUM (desde config, reemplaza transpiler 10) ──
+  // ── 12. DICTUM (desde config, reemplaza filter 10) ──
   if (fmt.dictum) {
     if (fmt.dictum.font) preamble.push(`\\setkomafont{dictum}{${fmt.dictum.font}}`);
     if (fmt.dictum.width) preamble.push(`\\renewcommand*{\\dictumwidth}{${fmt.dictum.width}}`);
@@ -341,9 +337,9 @@ export async function buildLatexPreamble(
   // ── PREAMBLE TRANSPILERS ──
   // Se ejecutan antes de \begin{document} para que sus definiciones
   // esten vigentes cuando se llame a \maketitle.
-  const cwdForTranspilers = meta?.cwd;
-  const preambleTranspilers = await loadPreambleTranspilers(disabledPreambleTranspilers, cwdForTranspilers);
-  for (const tp of preambleTranspilers) {
+  const cwdForFilters = meta?.cwd;
+  const preambleFilters = await loadPreambleFilters(disabledPreambleFilters, cwdForFilters);
+  for (const tp of preambleFilters) {
     preamble.push(tp.content.trimEnd());
   }
 
@@ -396,7 +392,7 @@ export async function buildLatexPreamble(
   // Solo cuando el PRIMER bloque es un parrafo (no heading, no dictum).
   // Los encabezados (section, chapter) usan su propio espaciado
   // mediante \\RedeclareSectionCommand. Los dictum tienen el suyo
-  // propio desde el transpiler.
+  // propio desde el filter.
   if (!meta?.skipParagraphSpace) {
     preamble.push('\\vspace*{2\\baselineskip}');
   }

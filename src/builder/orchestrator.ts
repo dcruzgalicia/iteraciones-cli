@@ -10,8 +10,8 @@ import { type BuildMetadata, computeBuildMetadata, computeWorkSets, type WorkSet
 import { buildAssets, generateLatexPreamble } from './build-utils.js';
 import { buildDocsFromIndex, discover, loadBuildState } from './discover.js';
 import { runExportDocuments } from './export/runner.js';
-import { validateDisabledPreambleTranspilers } from './preamble-loader.js';
-import { readAstFromCache, renderFromAstCache, renderHtmlPageFromAst, renderLatex, validateDisabledTranspilers } from './render.js';
+import { validateDisabledPreambleFilters } from './preamble-loader.js';
+import { readAstFromCache, renderFromAstCache, renderHtmlPageFromAst, renderLatex, validateDisabledFilters } from './render.js';
 import { discoverBibFiles } from './state.js';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
 
@@ -56,9 +56,9 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
   // Cargar config primero para detectar cambios de formato antes de setupBuildEnvironment
   const siteConfig = await loadSiteConfig(cwd);
-  // Validar nombres de transpilers desactivados (warning sin romper el build)
-  validateDisabledTranspilers(siteConfig.disabledTranspilers);
-  validateDisabledPreambleTranspilers(siteConfig.disabledPreambleTranspilers);
+  // Validar nombres de filters desactivados (warning sin romper el build)
+  validateDisabledFilters(siteConfig.disabledFilters);
+  validateDisabledPreambleFilters(siteConfig.disabledPreambleFilters);
 
   // ── Planificación: hashes de invalidación + formatos (caché content-addressed) ──
   // Con --no-cache no hay estado previo con qué comparar (la caché se borra en
@@ -73,7 +73,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   if (plan.removedFormats.length > 0) {
     log(`Formatos eliminados: ${plan.removedFormats.join(', ')}. Limpiando archivos de dist.`);
   }
-  if (plan.transpilersInvalidated) log('Transpilers modificados — reprocesando todos los documentos');
+  if (plan.filtersInvalidated) log('Filters modificados — reprocesando todos los documentos');
   if (plan.bibInvalidated) log('Bibliografía modificada — reprocesando todos los documentos');
   if (plan.formatInvalidated.pdf) log('Configuración PDF/LaTeX modificada — regenerando LaTeX/PDF');
   if (plan.formatInvalidated.html) log('Configuración HTML modificada — regenerando páginas HTML');
@@ -98,7 +98,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     noCache: options.noCache,
     activeFormats: plan.currentFormats,
     prevState,
-    meta: { transpilerHash: plan.transpilerHash, configHashes: plan.configHashes, bibHash: plan.bibHash },
+    meta: { filtersHash: plan.filtersHash, configHashes: plan.configHashes, bibHash: plan.bibHash },
   });
   const allDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
 
@@ -167,15 +167,15 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   if (work.renderDocs.length > 0 || work.astExportCandidates.length > 0) {
     progress.startPhase('render', work.renderDocs.length + work.astExportCandidates.length);
     if (work.renderDocs.length > 0) {
-      const done = await renderLatex(work.renderDocs, ctx.concurrency, cwd, ctx.siteConfig.disabledTranspilers, plan.generateLatex);
+      const done = await renderLatex(work.renderDocs, ctx.concurrency, cwd, ctx.siteConfig.disabledFilters, plan.generateLatex);
       for (const p of done) processedPaths.add(p);
     }
     if (work.astExportCandidates.length > 0) {
-      const done = await renderFromAstCache(work.astExportCandidates, ctx.concurrency, cwd, plan.generateLatex, ctx.siteConfig.disabledTranspilers);
+      const done = await renderFromAstCache(work.astExportCandidates, ctx.concurrency, cwd, plan.generateLatex, ctx.siteConfig.disabledFilters);
       // Docs sin AST en disco (primer build, caché limpiada): pipeline completo
       const missingAstDocs = work.astExportCandidates.filter((d) => !done.has(d.relativePath));
       if (missingAstDocs.length > 0) {
-        const extra = await renderLatex(missingAstDocs, ctx.concurrency, cwd, ctx.siteConfig.disabledTranspilers, plan.generateLatex);
+        const extra = await renderLatex(missingAstDocs, ctx.concurrency, cwd, ctx.siteConfig.disabledFilters, plan.generateLatex);
         for (const p of extra) done.add(p);
       }
       for (const p of done) processedPaths.add(p);
@@ -428,7 +428,7 @@ async function generateHtmlPages(
           logoInline,
         },
         bibOptions,
-        ctx.siteConfig.disabledTranspilers,
+        ctx.siteConfig.disabledFilters,
       );
       await mkdir(dirname(dst), { recursive: true });
       await Bun.write(dst, html);

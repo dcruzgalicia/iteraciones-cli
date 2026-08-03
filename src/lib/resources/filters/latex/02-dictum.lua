@@ -1,7 +1,7 @@
 -- Convierte Div.dictum a \dictum[author]{quote} (formato LaTeX), con espacio
 -- superior e inferior configurables (beforeskip/afterskip) y \noindent al
 -- párrafo siguiente si es Para.
--- Reemplaza al transpiler TS latex/02-dictum (Fase 6).
+-- Reemplaza al filter TS latex/02-dictum (Fase 6).
 -- Uso: pandoc --from json --to latex --lua-filter latex/02-dictum.lua
 
 local BS = '\1' -- placeholder para el backslash (evita re-escapar \textbackslash{})
@@ -92,7 +92,7 @@ local function process_dictum(div)
     }
   end
 
-  -- Mismo orden de RawInline/RawBlock que el transpiler TS
+  -- Mismo orden de RawInline/RawBlock que el filter TS
   local result = {}
   for i, block in ipairs(quote_blocks) do
     local is_first = i == 1
