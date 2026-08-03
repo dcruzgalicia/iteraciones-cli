@@ -113,34 +113,24 @@ function slugify(text: string): string {
   return slugifyLib(text, { lower: true, strict: true });
 }
 
-export function computeSlug(frontmatter: { title?: string; author?: string[] }): string | undefined {
-  const title = frontmatter.title;
-  if (!title) return undefined;
-
-  const titleSlug = slugify(title);
+/**
+ * Calcula el slug de un documento desde su frontmatter: `title[-by-author]`.
+ * Si no hay title y se provee `fallbackPath`, usa el nombre del archivo
+ * (sin extensión .md) como base: `filename[-by-author]`.
+ * Sin title ni fallbackPath, retorna undefined.
+ */
+export function computeSlug(frontmatter: { title?: string; author?: string[] }): string | undefined;
+export function computeSlug(frontmatter: { title?: string; author?: string[] }, options: { fallbackPath: string }): string;
+export function computeSlug(frontmatter: { title?: string; author?: string[] }, options?: { fallbackPath?: string }): string | undefined {
   const authors = frontmatter.author?.filter(Boolean).slice(0, 3);
 
-  if (!authors || authors.length === 0) return titleSlug;
+  const base = frontmatter.title ? slugify(frontmatter.title) : options?.fallbackPath ? slugify(basename(options.fallbackPath, '.md')) : undefined;
+  if (!base) return undefined;
+
+  if (!authors || authors.length === 0) return base;
 
   const authorSlug = authors.map((a) => slugify(a)).join('-y-');
-  return `${titleSlug}-by-${authorSlug}`;
-}
-
-/**
- * Como computeSlug, pero cuando no hay title usa el nombre del archivo
- * como base. Si ademas hay author, genera filename-by-author.
- */
-export function computeSlugWithFallback(frontmatter: { title?: string; author?: string[] }, filePath: string): string {
-  const slug = computeSlug(frontmatter);
-  if (slug) return slug;
-
-  const filename = basename(filePath, '.md');
-  const authors = frontmatter.author?.filter(Boolean).slice(0, 3);
-  if (authors && authors.length > 0) {
-    const authorSlug = authors.map((a) => slugify(a)).join('-y-');
-    return `${slugify(filename)}-by-${authorSlug}`;
-  }
-  return slugify(filename);
+  return `${base}-by-${authorSlug}`;
 }
 
 /**
@@ -307,7 +297,7 @@ export async function discover(
   // Resolver slugs duplicados: asignar -dN sin renumeracion
   const slugGroups = new Map<string, string[]>();
   for (const [relPath, entry] of discoveryIndex) {
-    const slugBase = computeSlugWithFallback({ title: entry.title, author: entry.author }, relPath);
+    const slugBase = computeSlug({ title: entry.title, author: entry.author }, { fallbackPath: relPath });
     const dir = dirname(relPath);
     const key = dir === '.' ? slugBase : dir + '/' + slugBase;
     if (!slugGroups.has(key)) slugGroups.set(key, []);
@@ -323,7 +313,7 @@ export async function discover(
       // No duplicates: assign base slug (sin -dN)
       const path = paths[0]!;
       const entry = discoveryIndex.get(path)!;
-      const slugBase = computeSlugWithFallback({ title: entry.title, author: entry.author }, path);
+      const slugBase = computeSlug({ title: entry.title, author: entry.author }, { fallbackPath: path });
       // Si antes tenia un slug con -dN y ahora es unico, forzar reprocesamiento
       if (entry.slug && entry.slug !== slugBase) {
         changedPaths.add(path);
@@ -340,7 +330,7 @@ export async function discover(
       const existingSlugs = new Map<string, string>();
       for (const path of paths) {
         const entry = discoveryIndex.get(path)!;
-        const slugBase = computeSlugWithFallback({ title: entry.title, author: entry.author }, path);
+        const slugBase = computeSlug({ title: entry.title, author: entry.author }, { fallbackPath: path });
         if (entry.slug) {
           const m = entry.slug.match(/-d(\d+)$/);
           if (m) {
@@ -359,7 +349,7 @@ export async function discover(
       for (const path of paths) {
         if (existingSlugs.has(path)) continue;
         const entry = discoveryIndex.get(path)!;
-        const slugBase = computeSlugWithFallback({ title: entry.title, author: entry.author }, path);
+        const slugBase = computeSlug({ title: entry.title, author: entry.author }, { fallbackPath: path });
         const newSlug = slugBase + '-d' + nextN;
         // Si el slug existente cambio, forzar reprocesamiento y limpiar archivos viejos
         if (entry.slug && entry.slug !== newSlug) {
