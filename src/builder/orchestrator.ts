@@ -61,7 +61,10 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   validateDisabledPreambleTranspilers(siteConfig.disabledPreambleTranspilers);
 
   // ── Planificación: hashes de invalidación + formatos (caché content-addressed) ──
-  const prevState = await loadBuildState(cwd);
+  // Con --no-cache no hay estado previo con qué comparar (la caché se borra en
+  // setupBuildEnvironment): no cargar prevState evita mensajes de invalidación
+  // engañosos y fuerza el reprocesamiento completo.
+  const prevState = options.noCache ? null : await loadBuildState(cwd);
   const plan = await computeBuildMetadata(cwd, siteConfig, prevState, options.noTailwind);
 
   if (plan.newFormats.length > 0) {
