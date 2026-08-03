@@ -14,6 +14,7 @@
 import type { PdfFormatConfig } from '../config/site-config.js';
 import { DEFAULT_PDF_FORMAT } from '../config/site-config.js';
 import { loadPreambleTranspilers } from './preamble-loader.js';
+import { discoverBibFiles } from './state.js';
 
 /** Mapa de nombres de page-size a dimensiones [ancho, alto] en mm. */
 const PAGE_SIZE_DIMS: Record<string, [number, number]> = {
@@ -55,22 +56,6 @@ export interface PreambleMeta {
   skipNoIndent?: boolean;
   /** Si el primer bloque del cuerpo LaTeX es solo un parrafo (no heading, no dictum). */
   skipParagraphSpace?: boolean;
-}
-
-/** Descubre archivos .bib en el proyecto (excluye node_modules, .iteraciones, dist). */
-export function discoverBibFiles(cwd: string): string[] {
-  const results: string[] = [];
-  try {
-    const glob = new Bun.Glob('**/*.bib');
-    for (const file of glob.scanSync({ cwd, absolute: true })) {
-      const rel = file.replace(cwd, '').replace(/^\/+/, '');
-      if (rel.startsWith('node_modules/') || rel.startsWith('.iteraciones/') || rel.startsWith('dist/') || rel.startsWith('.git/')) continue;
-      results.push(file);
-    }
-  } catch {
-    // Si falla el escaneo, continuar sin archivos .bib
-  }
-  return results.sort();
 }
 
 export async function buildLatexPreamble(
@@ -180,7 +165,7 @@ export async function buildLatexPreamble(
   // ── 13. BIBLIOGRAFÍA ──
   const cwd = meta?.cwd;
   if (cwd) {
-    const bibFiles = discoverBibFiles(cwd);
+    const bibFiles = discoverBibFiles(cwd, ['bib']);
     if (bibFiles.length > 0) {
       preamble.push('\\usepackage{csquotes}');
       preamble.push('\\usepackage[style=apa]{biblatex}');

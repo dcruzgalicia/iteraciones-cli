@@ -10,10 +10,9 @@ import { mapWithConcurrency } from '../lib/run.js';
 import { buildAssets, generateLatexPreamble } from './build-utils.js';
 import { buildDocsFromIndex, discover, loadBuildState } from './discover.js';
 import { runExportDocuments } from './export/runner.js';
-import { discoverBibFiles } from './latex-preamble.js';
 import { validateDisabledPreambleTranspilers } from './preamble-loader.js';
 import { readAstFromCache, renderFromAstCache, renderHtmlPageFromAst, renderLatex, validateDisabledTranspilers } from './render.js';
-import { computeBibHash, computeConfigHashes, computeTranspilerHash } from './state.js';
+import { computeBibHash, computeConfigHashes, computeTranspilerHash, discoverBibFiles } from './state.js';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
 
 export interface BuildOptions {
@@ -420,7 +419,7 @@ async function generateHtmlPages(ctx: BuildContext, pipelineDocs: BuildDocument[
   const siteConfig = ctx.siteConfig;
   const htmlConfig = siteConfig.format?.html;
   const hasCss = !options.noTailwind && ctx.cssPath;
-  const bibFiles = discoverBibFiles(ctx.cwd);
+  const bibFiles = discoverBibFiles(ctx.cwd, ['bib']);
   const firstBib = bibFiles[0];
   const bibOptions = firstBib !== undefined ? { bibliography: firstBib, csl: join(import.meta.dir, '../../src/lib/resources/apa-7.csl') } : undefined;
   // Cada documento es independiente (lee AST del disco, escribe su HTML): paralelizar
