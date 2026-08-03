@@ -436,7 +436,9 @@ async function generateHtmlPages(ctx: BuildContext, pipelineDocs: BuildDocument[
       const logoRel = siteConfig.logo?.trim();
       const logoSrc = logoRel ? join(ctx.cwd, logoRel) : join(import.meta.dir, '../../src/lib/resources/logo.svg');
       logoInline = await Bun.file(logoSrc).text();
-    } catch {}
+    } catch (err) {
+      logWarning(`no se pudo leer el logo para ${doc.relativePath}: ${String(err)}`, 'orchestrator');
+    }
     try {
       const html = await renderHtmlPageFromAst(
         ast,
@@ -459,8 +461,8 @@ async function generateHtmlPages(ctx: BuildContext, pipelineDocs: BuildDocument[
       );
       await mkdir(dirname(dst), { recursive: true });
       await Bun.write(dst, html);
-    } catch {
-      logWarning(`error al generar HTML para ${doc.relativePath}`, 'orchestrator');
+    } catch (err) {
+      logWarning(`error al generar HTML para ${doc.relativePath}: ${String(err)}`, 'orchestrator');
     }
   }
 }

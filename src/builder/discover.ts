@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { cpus } from 'node:os';
 import { basename, dirname, join } from 'node:path';
+import { logWarning } from '../lib/logger.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import { hashString, loadStateFile, saveStateFile } from './state.js';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
@@ -77,7 +78,8 @@ async function loadSlugsCounter(cwd: string): Promise<Map<string, number>> {
     const raw = await file.text();
     const parsed: Record<string, number> = JSON.parse(raw);
     return new Map(Object.entries(parsed));
-  } catch {
+  } catch (err) {
+    logWarning(`no se pudo leer slugs.json; se reinicia el contador de slugs duplicados: ${String(err)}`, 'discover');
     return new Map();
   }
 }
@@ -263,8 +265,9 @@ export async function discover(
             }
           }
         }
-      } catch {
-        // fallthrough — mantener datos anteriores si existen
+      } catch (err) {
+        // frontmatter YAML inválido: mantener datos anteriores y advertir para que el usuario lo corrija
+        logWarning(`frontmatter YAML inválido en "${relativePath}": ${String(err)}`, 'discover');
       }
 
       // Store base data (slug resolution happens later, after all files are processed)
