@@ -25,10 +25,10 @@ function meta(overrides: Partial<BuildMetadata> = {}): BuildMetadata {
     newFormats: [],
     removedFormats: [],
     configHashes: {},
-    transpilerHash: 'h',
+    filtersHash: 'h',
     bibHash: 'b',
     formatInvalidated: { pdf: false, html: false, epub: false, markdown: false },
-    transpilersInvalidated: false,
+    filtersInvalidated: false,
     bibInvalidated: false,
     pdfOn: false,
     latexOn: true,
@@ -60,8 +60,8 @@ describe('computeWorkSets', () => {
     expect(work.usedPhases).toEqual(['discovery', 'render', 'latex']);
   });
 
-  it('transpilersInvalidated: todos los documentos se re-renderizan', () => {
-    const work = computeWorkSets(meta({ transpilersInvalidated: true }), DOCS, new Set());
+  it('filtersInvalidated: todos los documentos se re-renderizan', () => {
+    const work = computeWorkSets(meta({ filtersInvalidated: true }), DOCS, new Set());
     expect(work.astChanged.size).toBe(3);
     expect(work.renderDocs.length).toBe(3);
   });
@@ -127,7 +127,7 @@ describe('computeBuildMetadata', () => {
     await withTempDir(async (dir) => {
       const siteConfig = await loadSiteConfig(dir);
       const plan = await computeBuildMetadata(dir, siteConfig, null);
-      expect(plan.transpilersInvalidated).toBe(false);
+      expect(plan.filtersInvalidated).toBe(false);
       expect(plan.bibInvalidated).toBe(false);
       expect(plan.formatInvalidated.pdf).toBe(false);
     });

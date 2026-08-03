@@ -39,7 +39,7 @@ src/
 │   ├── build-utils.ts       # Assets (CSS, fonts, logo) y preámbulo LaTeX
 │   ├── latex-preamble.ts    # Constructor de preámbulo LaTeX
 │   ├── types.ts             # BuildDocument, Frontmatter, contextos
-│   ├── preamble-loader.ts   # Carga de preamble transpilers (.tex)
+│   ├── preamble-loader.ts   # Carga de preamble filters (.tex)
 │   ├── state.ts             # Caché content-addressed (state.json, hashes)
 │   └── export/              # Exportación a PDF, EPUB, Markdown
 │       ├── runner.ts        # Ejecutor de exportación
@@ -64,8 +64,8 @@ src/
     ├── pandoc-runner.ts     # Invocación de pandoc
     ├── run.ts               # mapWithConcurrency y utilidades de procesos
     └── resources/           # Recursos empaquetados
-        ├── transpilers/     # Filtros Lua por capa (semantic/, latex/, html/)
-        ├── preamble/        # Preamble transpilers (.tex)
+        ├── filters/     # Filtros Lua por capa (semantic/, latex/, html/)
+        ├── preamble/        # Preamble filters (.tex)
         ├── template.html    # Template HTML (sistema de templates de pandoc)
         ├── styles.css       # CSS entry point de Tailwind
         ├── fonts/           # Fuentes para HTML
@@ -102,7 +102,7 @@ tipo(scope): verbo en imperativo
 ### Ejemplos
 
 ```
-feat(transpiler): agrega filtro Lua para Div.nota
+feat(filter): agrega filtro Lua para Div.nota
 fix(cache): agrega separador \0 en hash() para evitar colisiones
 refactor(cli): extrae reportBuildError para evitar duplicación
 docs(config): documenta bloque editorial y export en frontmatter
@@ -159,23 +159,23 @@ docs(config): documenta bloque editorial y export en frontmatter
 - **Tests:** `bun test`. Los tests deben ser independientes y no requerir pandoc a menos que sea estrictamente necesario.
 - **Linting:** Biome (espacios, `lineWidth: 150`, comillas simples). Se ejecuta automáticamente en pre-commit.
 
-## Cómo agregar un transpiler
+## Cómo agregar un filter
 
-Los transpilers son **filtros Lua** que corren dentro de las invocaciones de pandoc (vía `--lua-filter`). Se organizan en **capas**:
+Los filters son **filtros Lua** que corren dentro de las invocaciones de pandoc (vía `--lua-filter`). Se organizan en **capas**:
 
 | Capa | Ubicación | Cuándo corre | Ejemplos |
 |------|-----------|--------------|----------|
-| `semantic/string` | `src/lib/resources/transpilers/semantic/string/` | En `markdown → json`, antes del parseo | `01-double-colon` (`::` → `Div.spacer`) |
-| `semantic/ast` | `src/lib/resources/transpilers/semantic/ast/` | En `markdown → json`, después del parseo | `02-double-colon-noindent` (`:;` → `Div.spacer noindent`) |
-| `latex/` | `src/lib/resources/transpilers/latex/` | En `json → latex` | `02-dictum`, `03-verse`, `06-mbox-sentence-end` |
-| `html/` | `src/lib/resources/transpilers/html/` | En `json → html5` | `01-dictum`, `02-verse`, `05-spacer` |
+| `semantic/string` | `src/lib/resources/filters/semantic/string/` | En `markdown → json`, antes del parseo | `01-double-colon` (`::` → `Div.spacer`) |
+| `semantic/ast` | `src/lib/resources/filters/semantic/ast/` | En `markdown → json`, después del parseo | `02-double-colon-noindent` (`:;` → `Div.spacer noindent`) |
+| `latex/` | `src/lib/resources/filters/latex/` | En `json → latex` | `02-dictum`, `03-verse`, `06-mbox-sentence-end` |
+| `html/` | `src/lib/resources/filters/html/` | En `json → html5` | `01-dictum`, `02-verse`, `05-spacer` |
 
 Para agregar uno:
 
-1. Crea un archivo en `src/lib/resources/transpilers/<capa>/<prioridad>-<nombre>.lua`
+1. Crea un archivo en `src/lib/resources/filters/<capa>/<prioridad>-<nombre>.lua`
    - El prefijo numérico (`01-`, `02-`, …) define el **orden de ejecución** dentro de la capa
-   - El **nombre completo** es `<capa>/<prioridad>-<nombre>` (ej: `latex/02-dictum`); es el que se usa en `disabled-transpilers` y se muestra en `iteraciones filters`
-2. Escribe la primera línea como comentario `-- descripción corta`: se muestra en `iteraciones filters` (la lee `getBuiltinLuaTranspilerInfos()`)
+   - El **nombre completo** es `<capa>/<prioridad>-<nombre>` (ej: `latex/02-dictum`); es el que se usa en `disabled-filters` y se muestra en `iteraciones filters`
+2. Escribe la primera línea como comentario `-- descripción corta`: se muestra en `iteraciones filters` (la lee `getBuiltinLuaFilterInfos()`)
 3. Implementa las funciones de filtro de pandoc (`Pandoc(doc)`, `Div(div)`, `Para(para)`, etc.) que transforman el AST
 4. Agrega el nombre del archivo a la lista `BUILTIN_*` correspondiente en `src/builder/render.ts` (`BUILTIN_SEMANTIC_STRING`, `BUILTIN_SEMANTIC_AST`, `BUILTIN_LATEX_TRANSPILERS`, `BUILTIN_HTML_TRANSPILERS`)
 5. Agrega tests en `src/__tests__/lua-filters.test.ts` (los tests que invocan pandoc requieren que esté instalado; los de resolución de nombres no)
@@ -199,19 +199,19 @@ La variable global `FORMAT` de pandoc indica el formato de salida (`latex`, `htm
 
 ### Sobrescribir y desactivar
 
-- Un proyecto puede sobrescribir un transpiler creando `<proyecto>/transpilers/<capa>/<nombre>.lua` (mismo nombre completo que el del paquete)
-- Un proyecto puede desactivar uno con `disabled-transpilers:` en `iteraciones.config.yaml` (nombres completos)
+- Un proyecto puede sobrescribir un filter creando `<proyecto>/filters/<capa>/<nombre>.lua` (mismo nombre completo que el del paquete)
+- Un proyecto puede desactivar uno con `disabled-filters:` en `iteraciones.config.yaml` (nombres completos)
 - Los filtros de usuario se agregan con `lua-filters:` en `iteraciones.config.yaml` y corren en todas las invocaciones pandoc
 
-## Cómo agregar un preamble transpiler
+## Cómo agregar un preamble filter
 
-Los preamble transpilers son archivos `.tex` con contenido LaTeX puro que se inserta en el preámbulo antes de `\begin{document}`. Se editan como LaTeX, sin escaping de strings TypeScript.
+Los preamble filters son archivos `.tex` con contenido LaTeX puro que se inserta en el preámbulo antes de `\begin{document}`. Se editan como LaTeX, sin escaping de strings TypeScript.
 
 1. Crea un archivo en `src/lib/resources/preamble/<prioridad>-<nombre>.tex`
 2. Agrega el nombre a `BUILTIN_PREAMBLE_TRANSPILERS` en `src/builder/preamble-loader.ts` (la lista define el orden de aplicación)
 3. Agrega una descripción a `DESCRIPTIONS` en el mismo archivo (se muestra en `iteraciones filters`)
 
-Un proyecto puede sobrescribir un preamble transpiler creando `<proyecto>/preamble/<nombre>.tex`, o desactivarlo con `disabled-preamble-transpilers:` en `iteraciones.config.yaml`.
+Un proyecto puede sobrescribir un preamble filter creando `<proyecto>/preamble/<nombre>.tex`, o desactivarlo con `disabled-preamble-filters:` en `iteraciones.config.yaml`.
 
 ## Reportar bugs
 

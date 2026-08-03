@@ -1,7 +1,7 @@
--- Envuelve en \mbox{} la primera palabra de cada oración. Solo dentro de
--- bloques Para. Corre después de mbox-sentence-end (evita mbox anidados).
--- Reemplaza al transpiler TS latex/07-mbox-sentence-start (Fase 6).
--- Uso: pandoc --from json --to latex --lua-filter latex/07-mbox-sentence-start.lua
+-- Envuelve en \mbox{} la última palabra de cada oración (o las últimas 3 si
+-- es la oración final del párrafo). Solo dentro de bloques Para.
+-- Reemplaza al filter TS latex/06-mbox-sentence-end (Fase 6).
+-- Uso: pandoc --from json --to latex --lua-filter latex/06-mbox-sentence-end.lua
 
 -- ── Helpers de oraciones (equivalentes a _sentence-utils.ts) ──────────────
 
@@ -51,6 +51,10 @@ end
 
 local function is_abbreviation(text)
   return ABBREVIATIONS[trim(text):lower()] == true
+end
+
+local function is_space(inl)
+  return inl.t == 'Space' or inl.t == 'SoftBreak'
 end
 
 local function find_next_non_space(inlines, from_idx)
@@ -108,9 +112,16 @@ local function process_para_inlines(inlines)
       end
     end
 
-    if #word_indices >= 2 then
-      local first_idx = word_indices[1]
-      table.insert(wraps, { start_idx = first_idx, finish_idx = first_idx })
+    local is_last_sentence = sb.finish == #inlines + 1
+    local ideal_wrap_count = is_last_sentence and 3 or 1
+    local min_words = is_last_sentence and 3 or 2
+
+    if #word_indices >= min_words then
+      -- No superar #word_indices - 1 (evita solapamiento con mbox-sentence-start)
+      local wrap_count = math.min(ideal_wrap_count, #word_indices - 1)
+      local first_idx = word_indices[#word_indices - wrap_count + 1]
+      local last_idx = word_indices[#word_indices]
+      table.insert(wraps, { start_idx = first_idx, finish_idx = last_idx })
     end
   end
 
@@ -128,7 +139,13 @@ local function process_para_inlines(inlines)
     end
     if wrap ~= nil then
       table.insert(result, pandoc.RawInline('latex', '\\mbox{'))
-      table.insert(result, inlines[i])
+      for j = wrap.start_idx, wrap.finish_idx do
+        if j > wrap.start_idx and is_space(inlines[j]) then
+          table.insert(result, pandoc.RawInline('latex', ' '))
+        elseif not is_space(inlines[j]) then
+          table.insert(result, inlines[j])
+        end
+      end
       table.insert(result, pandoc.RawInline('latex', '}'))
       i = wrap.finish_idx + 1
     else

@@ -1,5 +1,5 @@
 -- Convierte Div.center a <div class="center"> (formato HTML).
--- Reemplaza al transpiler TS html/03-center (Fase 6).
+-- Reemplaza al filter TS html/03-center (Fase 6).
 -- Uso: pandoc --from json --to html5 --lua-filter html/03-center.lua
 
 function Div(div)

@@ -175,11 +175,11 @@ const RawSiteConfigSchema = z
   .object({
     site: SiteSchema.optional(),
     format: FormatSchema.optional(),
-    'disabled-transpilers': z
+    'disabled-filters': z
       .array(z.string())
       .optional()
       .transform((v) => (v?.length ? v : undefined)),
-    'disabled-preamble-transpilers': z
+    'disabled-preamble-filters': z
       .array(z.string())
       .optional()
       .transform((v) => (v?.length ? v : undefined)),
@@ -227,8 +227,8 @@ export const SiteConfigSchema = RawSiteConfigSchema.transform((raw) => {
       epub: epubRaw ? (camelizeKeys(epubRaw) as SiteConfig['format']['epub']) : { generate: false },
       markdown: mdRaw ? (camelizeKeys(mdRaw) as SiteConfig['format']['markdown']) : { generate: false },
     },
-    disabledTranspilers: raw['disabled-transpilers'],
-    disabledPreambleTranspilers: raw['disabled-preamble-transpilers'],
+    disabledFilters: raw['disabled-filters'],
+    disabledPreambleFilters: raw['disabled-preamble-filters'],
     luaFilters: raw['lua-filters'],
   };
 });

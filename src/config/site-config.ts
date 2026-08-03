@@ -52,7 +52,7 @@ export interface PdfFormatConfig {
   toc?: boolean;
   showDate?: boolean;
 
-  // Sectioning (replaces transpilers 03-09)
+  // Sectioning (replaces filters 03-09)
   sectioning?: {
     part?: { beforeskip?: string; afterskip?: string; font?: string; pagestyle?: string };
     chapter?: { style?: string; beforeskip?: string; afterskip?: string; font?: string; align?: string; pagestyle?: string };
@@ -63,7 +63,7 @@ export interface PdfFormatConfig {
     subparagraph?: { beforeskip?: string; afterskip?: string; font?: string; pagestyle?: string };
   };
 
-  // setkomafont for maketitle elements (replaces transpiler 02)
+  // setkomafont for maketitle elements (replaces filter 02)
   setkomafont?: {
     title?: string;
     subtitle?: string;
@@ -72,7 +72,7 @@ export interface PdfFormatConfig {
     publishers?: string;
   };
 
-  // Dictum (replaces transpiler 10)
+  // Dictum (replaces filter 10)
   dictum?: {
     width?: string;
     font?: string;
@@ -112,20 +112,20 @@ export interface SiteConfig {
   /** Configuracion por formato de salida. */
   format: FormatConfig;
   /**
-   * Lista de transpilers a desactivar (blacklist), por nombre completo.
+   * Lista de filters a desactivar (blacklist), por nombre completo.
    * Por defecto undefined = todos activos.
    * Para desactivar uno, agrega su nombre completo aqui. Ej:
-   *   disabled-transpilers:
+   *   disabled-filters:
    *     - latex/02-dictum
-   * Para sobrescribir un transpiler, crea un archivo con el mismo
-   * nombre completo en <proyecto>/transpilers/<grupo>/<nombre>.lua.
+   * Para sobrescribir un filter, crea un archivo con el mismo
+   * nombre completo en <proyecto>/filters/<grupo>/<nombre>.lua.
    */
-  disabledTranspilers?: string[];
+  disabledFilters?: string[];
   /**
-   * Lista de preamble transpilers a desactivar (blacklist).
+   * Lista de preamble filters a desactivar (blacklist).
    * Por defecto undefined = todos activos.
    */
-  disabledPreambleTranspilers?: string[];
+  disabledPreambleFilters?: string[];
   /**
    * Filtros Lua de usuario (rutas relativas al proyecto). Se pasan como
    * `--lua-filter` en TODAS las invocaciones pandoc del documento
@@ -247,8 +247,8 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   lang: 'es-MX',
   logo: '',
   baseUrl: undefined,
-  disabledTranspilers: undefined,
-  disabledPreambleTranspilers: undefined,
+  disabledFilters: undefined,
+  disabledPreambleFilters: undefined,
   luaFilters: undefined,
   format: {
     html: DEFAULT_HTML_FORMAT,

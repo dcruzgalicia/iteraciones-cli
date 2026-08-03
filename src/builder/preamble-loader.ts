@@ -2,22 +2,22 @@ import { join } from 'node:path';
 import { logWarning } from '../lib/logger.js';
 
 // ---------------------------------------------------------------------------
-// Sistema de transpilers para el preámbulo LaTeX
+// Sistema de filters para el preámbulo LaTeX
 // ---------------------------------------------------------------------------
-// Cada transpiler es un archivo de recurso preamble/<prioridad>-<nombre>.tex
+// Cada filter es un archivo de recurso preamble/<prioridad>-<nombre>.tex
 // con contenido LaTeX puro (se edita como LaTeX, sin escaping de strings TS).
 // El proyecto puede sobreescribir cualquiera con preamble/<nombre>.tex en su
 // raíz; si no existe, se usa el recurso del paquete.
 //
-// La lógica condicional real del proyecto vive en los transpilers del AST
-// (src/builder/transpilers/), que sí requieren TypeScript.
+// La lógica condicional real del proyecto vive en los filters del AST
+// (src/builder/filters/), que sí requieren TypeScript.
 // ---------------------------------------------------------------------------
 
-/** Directorio de preamble transpilers del paquete. */
+/** Directorio de preamble filters del paquete. */
 const PKG_PREAMBLE_DIR = join(import.meta.dir, '../lib/resources/preamble');
 
-/** Lista de preamble transpilers empaquetados en orden de aplicación. */
-export const BUILTIN_PREAMBLE_TRANSPILERS: string[] = [
+/** Lista de preamble filters empaquetados en orden de aplicación. */
+export const BUILTIN_PREAMBLE_FILTERS: string[] = [
   '01-maketitle-patches',
   '02-environments',
   '03-toc-styling',
@@ -35,27 +35,27 @@ const DESCRIPTIONS: Record<string, string> = {
   '06-hyphenation-rules': 'Agrega \\hyphenation{} con nombres propios de ejemplo',
 };
 
-export interface PreambleTranspiler {
+export interface PreambleFilter {
   name: string;
   content: string;
 }
 
-export interface PreambleTranspilerInfo {
+export interface PreambleFilterInfo {
   name: string;
   description: string;
 }
 
 /**
- * Carga preamble transpilers desde el paquete y desde <cwd>/preamble/.
+ * Carga preamble filters desde el paquete y desde <cwd>/preamble/.
  * Los .tex del proyecto con el mismo nombre reemplazan a los del paquete.
- * @param disabledList Lista de transpilers a desactivar (blacklist). undefined = todos activos.
+ * @param disabledList Lista de filters a desactivar (blacklist). undefined = todos activos.
  * @param cwd Directorio del proyecto para buscar overrides.
  */
-export async function loadPreambleTranspilers(disabledList?: string[], cwd?: string): Promise<PreambleTranspiler[]> {
+export async function loadPreambleFilters(disabledList?: string[], cwd?: string): Promise<PreambleFilter[]> {
   const excluded = new Set(disabledList ?? []);
-  const result: PreambleTranspiler[] = [];
+  const result: PreambleFilter[] = [];
 
-  for (const name of BUILTIN_PREAMBLE_TRANSPILERS) {
+  for (const name of BUILTIN_PREAMBLE_FILTERS) {
     if (excluded.has(name)) continue;
     const projectPath = join(cwd ?? '', 'preamble', `${name}.tex`);
     const pkgPath = join(PKG_PREAMBLE_DIR, `${name}.tex`);
@@ -67,23 +67,23 @@ export async function loadPreambleTranspilers(disabledList?: string[], cwd?: str
   return result;
 }
 
-/** Retorna información de todos los preamble transpilers built-in. */
-export function getBuiltinPreambleTranspilerInfos(): PreambleTranspilerInfo[] {
-  return BUILTIN_PREAMBLE_TRANSPILERS.map((name) => ({
+/** Retorna información de todos los preamble filters built-in. */
+export function getBuiltinPreambleFilterInfos(): PreambleFilterInfo[] {
+  return BUILTIN_PREAMBLE_FILTERS.map((name) => ({
     name,
     description: DESCRIPTIONS[name] ?? '',
   }));
 }
 
 /**
- * Valida los nombres de `disabled-preamble-transpilers` contra los preamble
- * transpilers built-in. Los nombres desconocidos emiten un warning sin romper
+ * Valida los nombres de `disabled-preamble-filters` contra los preamble
+ * filters built-in. Los nombres desconocidos emiten un warning sin romper
  * el build.
  */
-export function validateDisabledPreambleTranspilers(disabled: string[] | undefined): void {
+export function validateDisabledPreambleFilters(disabled: string[] | undefined): void {
   if (!disabled || disabled.length === 0) return;
   for (const name of disabled) {
-    if (BUILTIN_PREAMBLE_TRANSPILERS.includes(name)) continue;
-    logWarning(`disabled-preamble-transpilers: "${name}" no coincide con ningún preamble transpiler`, 'config');
+    if (BUILTIN_PREAMBLE_FILTERS.includes(name)) continue;
+    logWarning(`disabled-preamble-filters: "${name}" no coincide con ningún preamble filter`, 'config');
   }
 }

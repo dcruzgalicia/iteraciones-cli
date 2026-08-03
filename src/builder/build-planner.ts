@@ -2,7 +2,7 @@ import type { PipelinePhase } from '../cli/progress.js';
 import type { SiteConfig } from '../config/site-config.js';
 import { computeActiveFormats } from '../config/site-config.js';
 import type { BuildState } from './discover.js';
-import { computeBibHash, computeConfigHashes, computeTranspilerHash } from './state.js';
+import { computeBibHash, computeConfigHashes, computeFiltersHash } from './state.js';
 import type { BuildDocument } from './types.js';
 
 /**
@@ -24,10 +24,10 @@ export interface BuildMetadata {
   newFormats: string[];
   removedFormats: string[];
   configHashes: Record<string, string>;
-  transpilerHash: string;
+  filtersHash: string;
   bibHash: string;
   formatInvalidated: Record<FormatKey, boolean>;
-  transpilersInvalidated: boolean;
+  filtersInvalidated: boolean;
   bibInvalidated: boolean;
   pdfOn: boolean;
   latexOn: boolean;
@@ -40,7 +40,7 @@ export interface BuildMetadata {
 }
 
 export interface WorkSets {
-  /** Documentos cuyo AST debe regenerarse (markdown cambiado, transpilers o bibliografía). */
+  /** Documentos cuyo AST debe regenerarse (markdown cambiado, filters o bibliografía). */
   astChanged: Set<string>;
   anyWork: boolean;
   renderDocs: BuildDocument[];
@@ -65,9 +65,9 @@ export async function computeBuildMetadata(
 ): Promise<BuildMetadata> {
   const currentFormats = computeActiveFormats(siteConfig.format);
 
-  const [configHashes, transpilerHash, bibHash] = await Promise.all([
+  const [configHashes, filtersHash, bibHash] = await Promise.all([
     computeConfigHashes(cwd, siteConfig),
-    computeTranspilerHash(cwd, siteConfig),
+    computeFiltersHash(cwd, siteConfig),
     computeBibHash(cwd),
   ]);
 
@@ -78,7 +78,7 @@ export async function computeBuildMetadata(
     epub: prevState !== null && prevHashes?.epub !== configHashes.epub,
     markdown: prevState !== null && prevHashes?.markdown !== configHashes.markdown,
   };
-  const transpilersInvalidated = prevState !== null && prevState.transpilerHash !== transpilerHash;
+  const filtersInvalidated = prevState !== null && prevState.filtersHash !== filtersHash;
   const bibInvalidated = prevState !== null && prevState.bibHash !== bibHash;
 
   let newFormats: string[] = [];
@@ -103,10 +103,10 @@ export async function computeBuildMetadata(
     newFormats,
     removedFormats,
     configHashes,
-    transpilerHash,
+    filtersHash,
     bibHash,
     formatInvalidated,
-    transpilersInvalidated,
+    filtersInvalidated,
     bibInvalidated,
     pdfOn,
     latexOn,
@@ -126,9 +126,9 @@ export async function computeBuildMetadata(
 export function computeWorkSets(meta: BuildMetadata, allDocs: BuildDocument[], discoveredChanges: Set<string>): WorkSets {
   const { pdfOn, latexOn, htmlOn, epubOn, mdOn, formatInvalidated } = meta;
 
-  // astChanged: documentos cuyo AST debe regenerarse (markdown cambiado, transpilers o bibliografía)
+  // astChanged: documentos cuyo AST debe regenerarse (markdown cambiado, filters o bibliografía)
   const astChanged = new Set(discoveredChanges);
-  if (meta.transpilersInvalidated || meta.bibInvalidated) {
+  if (meta.filtersInvalidated || meta.bibInvalidated) {
     for (const doc of allDocs) {
       astChanged.add(doc.relativePath);
     }

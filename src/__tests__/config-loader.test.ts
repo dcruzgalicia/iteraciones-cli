@@ -27,8 +27,8 @@ describe('loadSiteConfig', () => {
       expect(config.lang).toBe('es-MX');
       expect(config.logo).toBe('');
       expect(config.baseUrl).toBeUndefined();
-      expect(config.disabledTranspilers).toBeUndefined();
-      expect(config.disabledPreambleTranspilers).toBeUndefined();
+      expect(config.disabledFilters).toBeUndefined();
+      expect(config.disabledPreambleFilters).toBeUndefined();
       expect(config.format.latex).toBe(true);
       expect(config.format.html?.generate).toBe(false);
       expect(config.format.pdf?.generate).toBe(false);
@@ -108,27 +108,27 @@ describe('loadSiteConfig', () => {
     });
   });
 
-  it('lee disabled-transpilers', async () => {
+  it('lee disabled-filters', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'disabled-transpilers:\n  - semantic/string/01-double-colon\n  - latex/02-dictum');
+      await writeConfig(dir, 'disabled-filters:\n  - semantic/string/01-double-colon\n  - latex/02-dictum');
       const config = await loadSiteConfig(dir);
-      expect(config.disabledTranspilers).toEqual(['semantic/string/01-double-colon', 'latex/02-dictum']);
+      expect(config.disabledFilters).toEqual(['semantic/string/01-double-colon', 'latex/02-dictum']);
     });
   });
 
-  it('ignora disabled-transpilers vacío', async () => {
+  it('ignora disabled-filters vacío', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'disabled-transpilers: []');
+      await writeConfig(dir, 'disabled-filters: []');
       const config = await loadSiteConfig(dir);
-      expect(config.disabledTranspilers).toBeUndefined();
+      expect(config.disabledFilters).toBeUndefined();
     });
   });
 
-  it('lee disabled-preamble-transpilers', async () => {
+  it('lee disabled-preamble-filters', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'disabled-preamble-transpilers:\n  - 01-maketitle-patches');
+      await writeConfig(dir, 'disabled-preamble-filters:\n  - 01-maketitle-patches');
       const config = await loadSiteConfig(dir);
-      expect(config.disabledPreambleTranspilers).toEqual(['01-maketitle-patches']);
+      expect(config.disabledPreambleFilters).toEqual(['01-maketitle-patches']);
     });
   });
 
@@ -215,7 +215,7 @@ describe('loadSiteConfig', () => {
           '    generate: true',
           '  markdown:',
           '    generate: false',
-          'disabled-transpilers:',
+          'disabled-filters:',
           '  - semantic/string/01-double-colon',
         ].join('\n'),
       );
@@ -234,7 +234,7 @@ describe('loadSiteConfig', () => {
       expect(config.format.html?.accent).toBe('rose');
       expect(config.format.epub?.generate).toBe(true);
       expect(config.format.markdown?.generate).toBe(false);
-      expect(config.disabledTranspilers).toEqual(['semantic/string/01-double-colon']);
+      expect(config.disabledFilters).toEqual(['semantic/string/01-double-colon']);
     });
   });
 

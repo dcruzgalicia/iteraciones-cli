@@ -35,7 +35,7 @@ El pipeline convierte archivos Markdown en documentos en los formatos configurad
        ▼
 ┌─────────────┐
 │  FASE 2+3   │  renderLatex()
-│  Render     │  • Transpilers semánticos string (regex)
+│  Render     │  • Filters semánticos string (regex)
 │             │  • pandoc --to json → AST canónico
 │             │  • Serializa el AST a disco (.iteraciones/ast/)
 │             │  • pandoc --from json --to latex → .tex (si LaTeX/PDF activos)
@@ -87,13 +87,13 @@ Frontmatter YAML        → SiteConfig (Zod schema)
 Body Markdown
   │
   ▼
-Transpilers semánticos string → Transformaciones regex
+Filters semánticos string → Transformaciones regex
   │                              (:: → Div.spacer, etc.)
   ▼
 pandoc --to json        → AST JSON
   │
   ▼
-Transpilers semánticos ast → AST canónico
+Filters semánticos ast → AST canónico
   │                          (Div.dictum/verse/spacer… sin formato)
   │
   ▼
@@ -107,17 +107,17 @@ AST canónico (memoria + .iteraciones/ast/{slug}.json)
 
 ---
 
-## Sistema de transpilers
+## Sistema de filters
 
-Los transpilers son módulos ESM que transforman el contenido. Se organizan en **capas** (decisión D1):
+Los filters son módulos ESM que transforman el contenido. Se organizan en **capas** (decisión D1):
 
 1. **Capa semántica** (`semantic/`) — corre en la invocación `markdown → json` y deja el **AST canónico** sin contenido de formato específico: `::` → `Div.spacer`, `:;` → `Div.spacer noindent`. Los `Div.dictum/verse/center/flushright` quedan sin transformar.
 2. **Capa de formato** (`latex/`, `html/`) — corre en cada exportación y convierte los nodos semánticos a su formato (RawBlocks de apertura/cierre alrededor de los bloques nativos). La capa `html/` se aplica al generar la página HTML con el template de pandoc.
-3. **Filtros Lua (Fase 6)**: todos los transpilers son filtros Lua (`lib/resources/transpilers/<grupo>/<nombre>.lua`) que corren **dentro** de las invocaciones pandoc (`--lua-filter`), en el orden numérico de su capa. Override: `<proyecto>/transpilers/<grupo>/<nombre>.lua` reemplaza al del paquete; `disabled-transpilers` (nombres completos) los desactiva.
+3. **Filtros Lua (Fase 6)**: todos los filters son filtros Lua (`lib/resources/filters/<grupo>/<nombre>.lua`) que corren **dentro** de las invocaciones pandoc (`--lua-filter`), en el orden numérico de su capa. Override: `<proyecto>/filters/<grupo>/<nombre>.lua` reemplaza al del paquete; `disabled-filters` (nombres completos) los desactiva.
 
-Además, existen los **preamble transpilers** (`lib/resources/preamble/*.tex`) que modifican el preámbulo LaTeX.
+Además, existen los **preamble filters** (`lib/resources/preamble/*.tex`) que modifican el preámbulo LaTeX.
 
-### Transpilers integrados
+### Filters integrados
 
 | Nombre | Tipo | Entrada → Salida |
 |--------|------|-------------------|
@@ -136,7 +136,7 @@ Además, existen los **preamble transpilers** (`lib/resources/preamble/*.tex`) q
 | `html/04-flushright` | ast | `Div.flushright` → `<div class="flushright">` |
 | `html/05-spacer` | ast | `Div.spacer` → `<div class="spacer"></div>` |
 
-### Preamble transpilers integrados
+### Preamble filters integrados
 
 | Nombre | Archivo | Propósito |
 |--------|---------|-----------|
@@ -149,10 +149,10 @@ Además, existen los **preamble transpilers** (`lib/resources/preamble/*.tex`) q
 
 ### Extensibilidad
 
-- Un transpiler del proyecto con el mismo nombre completo (p. ej. `<proyecto>/transpilers/latex/02-dictum.lua`) reemplaza al del paquete (override).
-- Para desactivar uno se usa `disabled-transpilers` (nombres completos, p. ej. `latex/02-dictum`) en `iteraciones.config.yaml`.
+- Un filter del proyecto con el mismo nombre completo (p. ej. `<proyecto>/filters/latex/02-dictum.lua`) reemplaza al del paquete (override).
+- Para desactivar uno se usa `disabled-filters` (nombres completos, p. ej. `latex/02-dictum`) en `iteraciones.config.yaml`.
 - **Filtros Lua de usuario** (`lua-filters:`): lista de rutas relativas al proyecto que corren en todas las invocaciones pandoc (markdown → AST, latex, html, epub, markdown). En las exportaciones corren antes de la capa de formato; en la conversión markdown → AST, después de los filtros semánticos. La variable global `FORMAT` de pandoc permite ramificar el comportamiento por formato de salida. Si una ruta no existe se advierte y se omite.
-- Los preamble transpilers del proyecto (`<proyecto>/preamble/<nombre>.tex`) reemplazan a los del paquete; se desactivan con `disabled-preamble-transpilers`.
+- Los preamble filters del proyecto (`<proyecto>/preamble/<nombre>.tex`) reemplazan a los del paquete; se desactivan con `disabled-preamble-filters`.
 
 ---
 
@@ -194,8 +194,8 @@ format:
   markdown:
     generate: false
 
-disabled-transpilers: []
-disabled-preamble-transpilers: []
+disabled-filters: []
+disabled-preamble-filters: []
 lua-filters: []
 ```
 
@@ -237,13 +237,13 @@ La configuración PDF es la más compleja e incluye:
 |---------|----------------|
 | `orchestrator.ts` | `build()`: coordina las 5 fases del pipeline. Función principal de ~260 líneas. |
 | `discover.ts` | Fase 1: escanea archivos, lee frontmatter, detecta cambios. |
-| `render.ts` | Fase 2+3: transpilers + conversión pandoc a LaTeX y HTML. |
+| `render.ts` | Fase 2+3: filters + conversión pandoc a LaTeX y HTML. |
 | `build-utils.ts` | Assets CSS (Tailwind), fonts, logo. Template HTML + renderizado. |
 | `latex-preamble.ts` | Construcción del preámbulo LaTeX. |
 | `types.ts` | BuildDocument, Frontmatter, BuildContext. |
 | `export/runner.ts` | Ejecuta exportación a PDF, EPUB, Markdown con concurrencia limitada. |
 | `export/assemble.ts` | Ensambla ExportDocument desde BuildDocument. |
-| `load-modules.ts` | Carga dinámica ESM de transpilers con override del proyecto. |
+| `load-modules.ts` | Carga dinámica ESM de filters con override del proyecto. |
 
 ### `src/config/`
 

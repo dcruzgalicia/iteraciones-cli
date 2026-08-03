@@ -119,10 +119,10 @@ format:
   markdown:
     generate: false               # genera Markdown procesado
 
-disabled-transpilers:             # transpilers a desactivar (opcional)
+disabled-filters:             # filters a desactivar (opcional)
   # - semantic/string/01-double-colon
 
-disabled-preamble-transpilers:    # preamble transpilers a desactivar (opcional)
+disabled-preamble-filters:    # preamble filters a desactivar (opcional)
   # - 01-maketitle-patches
 
 lua-filters:                      # filtros Lua de usuario (opcional)
@@ -455,30 +455,30 @@ Habilita la generación de archivos EPUB.
 **Tipo:** `boolean`
 **Por defecto:** `false`
 
-Habilita la exportación a Markdown procesado (con los transpilers aplicados).
+Habilita la exportación a Markdown procesado (con los filters aplicados).
 
-### `disabled-transpilers`
+### `disabled-filters`
 
 **Tipo:** `string[]`
 **Por defecto:** `undefined` (todos activos)
 
-Lista de transpilers a desactivar. Cada elemento es el **nombre completo** del transpiler (ej: `semantic/string/01-double-colon`, `latex/02-dictum`). Usa `iteraciones filters` para ver la lista con sus nombres.
+Lista de filters a desactivar. Cada elemento es el **nombre completo** del filter (ej: `semantic/string/01-double-colon`, `latex/02-dictum`). Usa `iteraciones filters` para ver la lista con sus nombres.
 
 ```yaml
-disabled-transpilers:
+disabled-filters:
   - semantic/string/01-double-colon
   - latex/02-dictum
 ```
 
-### `disabled-preamble-transpilers`
+### `disabled-preamble-filters`
 
 **Tipo:** `string[]`
 **Por defecto:** `undefined` (todos activos)
 
-Lista de preamble transpilers a desactivar.
+Lista de preamble filters a desactivar.
 
 ```yaml
-disabled-preamble-transpilers:
+disabled-preamble-filters:
   - 01-maketitle-patches
 ```
 
@@ -487,7 +487,7 @@ disabled-preamble-transpilers:
 **Tipo:** `string[]`
 **Por defecto:** `undefined` (sin filtros de usuario)
 
-Lista de filtros Lua de usuario. Cada elemento es una ruta relativa al proyecto (ej: `filters/nota.lua`). Los filtros corren en todas las invocaciones de pandoc: en las exportaciones (latex, html) antes de los transpilers del paquete; en la conversión markdown → AST, después de los filtros semánticos. La variable global `FORMAT` de pandoc permite ramificar el comportamiento por formato de salida (`latex`, `html5`, `epub3`, `markdown`, `json`). Si una ruta no existe, se muestra una advertencia y se omite.
+Lista de filtros Lua de usuario. Cada elemento es una ruta relativa al proyecto (ej: `filters/nota.lua`). Los filtros corren en todas las invocaciones de pandoc: en las exportaciones (latex, html) antes de los filters del paquete; en la conversión markdown → AST, después de los filtros semánticos. La variable global `FORMAT` de pandoc permite ramificar el comportamiento por formato de salida (`latex`, `html5`, `epub3`, `markdown`, `json`). Si una ruta no existe, se muestra una advertencia y se omite.
 
 ```yaml
 lua-filters:

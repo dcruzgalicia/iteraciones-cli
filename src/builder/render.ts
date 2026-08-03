@@ -9,9 +9,9 @@ import { discoverBibFiles } from './state.js';
 import type { BuildDocument } from './types.js';
 
 // ---------------------------------------------------------------------------
-// Sistema de transpilers por capas (decisión D1 + Fase 6: filtros Lua)
+// Sistema de filters por capas (decisión D1 + Fase 6: filtros Lua)
 // ---------------------------------------------------------------------------
-// Los transpilers son filtros Lua que corren dentro de las invocaciones pandoc:
+// Los filters son filtros Lua que corren dentro de las invocaciones pandoc:
 //   semantic/string y semantic/ast: en markdown → json (dejan el AST canónico
 //   sin contenido de formato específico).
 //   latex/ y html/: en cada exportación (json → latex, json → html5).
@@ -21,28 +21,20 @@ import type { BuildDocument } from './types.js';
 //     → pandoc --from json --to latex [--lua-filter latex/*] → tex
 //     → pandoc --from json --to html5 [--lua-filter html/*] → página HTML
 
-/** Lista de transpilers semánticos string en orden de aplicación. */
+/** Lista de filters semánticos string en orden de aplicación. */
 const BUILTIN_SEMANTIC_STRING = ['01-double-colon'];
 
-/** Lista de transpilers semánticos ast en orden de aplicación. */
+/** Lista de filters semánticos ast en orden de aplicación. */
 const BUILTIN_SEMANTIC_AST = ['02-double-colon-noindent'];
 
-/** Lista de transpilers de formato LaTeX en orden de aplicación. */
-const BUILTIN_LATEX_TRANSPILERS = [
-  '01-spacer',
-  '02-dictum',
-  '03-verse',
-  '04-center',
-  '05-flushright',
-  '06-mbox-sentence-end',
-  '07-mbox-sentence-start',
-];
+/** Lista de filters de formato LaTeX en orden de aplicación. */
+const BUILTIN_LATEX_FILTERS = ['01-spacer', '02-dictum', '03-verse', '04-center', '05-flushright', '06-mbox-sentence-end', '07-mbox-sentence-start'];
 
-/** Lista de transpilers de formato HTML en orden de aplicación. */
-const BUILTIN_HTML_TRANSPILERS = ['01-dictum', '02-verse', '03-center', '04-flushright', '05-spacer'];
+/** Lista de filters de formato HTML en orden de aplicación. */
+const BUILTIN_HTML_FILTERS = ['01-dictum', '02-verse', '03-center', '04-flushright', '05-spacer'];
 
 /** Raíz de los filtros Lua del paquete (Fase 6: migración a filtros Lua). */
-const LUA_TRANSPILERS_ROOT = join(import.meta.dir, '../lib/resources/transpilers');
+const LUA_FILTERS_ROOT = join(import.meta.dir, '../lib/resources/filters');
 
 /** Filtros Lua resueltos por capa (rutas absolutas, en orden de aplicación). */
 export interface LuaFilterGroup {
@@ -55,13 +47,13 @@ export interface LuaFilterGroup {
   resolvedNames: Set<string>;
 }
 
-/** Resuelve el .lua de un transpiler: override del proyecto gana sobre el paquete. */
+/** Resuelve el .lua de un filter: override del proyecto gana sobre el paquete. */
 async function resolveLuaFilter(group: string, name: string, cwd?: string): Promise<string | undefined> {
   if (cwd) {
-    const projectPath = join(cwd, 'transpilers', group, `${name}.lua`);
+    const projectPath = join(cwd, 'filters', group, `${name}.lua`);
     if (await Bun.file(projectPath).exists()) return projectPath;
   }
-  const pkgPath = join(LUA_TRANSPILERS_ROOT, group, `${name}.lua`);
+  const pkgPath = join(LUA_FILTERS_ROOT, group, `${name}.lua`);
   return (await Bun.file(pkgPath).exists()) ? pkgPath : undefined;
 }
 
@@ -77,8 +69,8 @@ export async function resolveLuaFilters(disabledList?: string[], cwd?: string): 
   const groups: Array<{ prefix: string; names: string[]; target: 'semantic' | 'latex' | 'html' }> = [
     { prefix: 'semantic/string', names: BUILTIN_SEMANTIC_STRING, target: 'semantic' },
     { prefix: 'semantic/ast', names: BUILTIN_SEMANTIC_AST, target: 'semantic' },
-    { prefix: 'latex', names: BUILTIN_LATEX_TRANSPILERS, target: 'latex' },
-    { prefix: 'html', names: BUILTIN_HTML_TRANSPILERS, target: 'html' },
+    { prefix: 'latex', names: BUILTIN_LATEX_FILTERS, target: 'latex' },
+    { prefix: 'html', names: BUILTIN_HTML_FILTERS, target: 'html' },
   ];
 
   for (const { prefix, names, target } of groups) {
@@ -94,35 +86,35 @@ export async function resolveLuaFilters(disabledList?: string[], cwd?: string): 
   return result;
 }
 
-/** Nombres completos (grupo/nombre) de todos los transpilers built-in. */
-export function getBuiltinTranspilerNames(): string[] {
+/** Nombres completos (grupo/nombre) de todos los filters built-in. */
+export function getBuiltinFilterNames(): string[] {
   return [
     ...BUILTIN_SEMANTIC_STRING.map((n) => `semantic/string/${n}`),
     ...BUILTIN_SEMANTIC_AST.map((n) => `semantic/ast/${n}`),
-    ...BUILTIN_LATEX_TRANSPILERS.map((n) => `latex/${n}`),
-    ...BUILTIN_HTML_TRANSPILERS.map((n) => `html/${n}`),
+    ...BUILTIN_LATEX_FILTERS.map((n) => `latex/${n}`),
+    ...BUILTIN_HTML_FILTERS.map((n) => `html/${n}`),
   ];
 }
 
 /** Retorna el nombre completo que termina en "/<name>", si existe. */
-export function suggestTranspilerName(name: string): string | undefined {
-  return getBuiltinTranspilerNames().find((n) => n.endsWith(`/${name}`));
+export function suggestFilterName(name: string): string | undefined {
+  return getBuiltinFilterNames().find((n) => n.endsWith(`/${name}`));
 }
 
 /**
- * Valida los nombres de `disabled-transpilers` contra los transpilers built-in.
+ * Valida los nombres de `disabled-filters` contra los filters built-in.
  * Los nombres desconocidos (p. ej. de configs anteriores al cambio de nombres
  * completos de D1) emiten un warning con la sugerencia, sin romper el build.
  */
-export function validateDisabledTranspilers(disabled: string[] | undefined): void {
+export function validateDisabledFilters(disabled: string[] | undefined): void {
   if (!disabled || disabled.length === 0) return;
   for (const name of disabled) {
-    if (getBuiltinTranspilerNames().includes(name)) continue;
-    const suggestion = suggestTranspilerName(name);
+    if (getBuiltinFilterNames().includes(name)) continue;
+    const suggestion = suggestFilterName(name);
     logWarning(
       suggestion
-        ? `disabled-transpilers: "${name}" no existe; ¿quisiste decir "${suggestion}"?`
-        : `disabled-transpilers: "${name}" no coincide con ningún transpiler`,
+        ? `disabled-filters: "${name}" no existe; ¿quisiste decir "${suggestion}"?`
+        : `disabled-filters: "${name}" no coincide con ningún filter`,
       'config',
     );
   }
@@ -150,21 +142,21 @@ export async function resolveUserLuaFilters(cwd?: string): Promise<string[]> {
 }
 
 /**
- * Resuelve los filtros Lua por capa (sistema de transpilers Fase 6): los
+ * Resuelve los filtros Lua por capa (sistema de filters Fase 6): los
  * nombres con un .lua disponible (paquete o override del proyecto) se pasan
  * como `--lua-filter` en la invocación pandoc de su capa. Incluye los filtros
  * de usuario (`lua-filters:`), que corren en todas las invocaciones.
- * @param disabledList Lista de transpilers a desactivar (nombres completos). undefined = todos activos.
+ * @param disabledList Lista de filters a desactivar (nombres completos). undefined = todos activos.
  * @param cwd Directorio del proyecto para buscar overrides.
  */
-export async function loadTranspilerGroups(disabledList?: string[], cwd?: string): Promise<LuaFilterGroup> {
+export async function loadFilterGroups(disabledList?: string[], cwd?: string): Promise<LuaFilterGroup> {
   const group = await resolveLuaFilters(disabledList, cwd);
   group.user = await resolveUserLuaFilters(cwd);
   return group;
 }
 
 /** Información de un filtro Lua built-in para el CLI. */
-export interface LuaTranspilerInfo {
+export interface LuaFilterInfo {
   name: string;
   description: string;
 }
@@ -179,18 +171,18 @@ async function dirExists(path: string): Promise<boolean> {
 }
 
 /**
- * Escanea los filtros Lua built-in del paquete (`lib/resources/transpilers`).
+ * Escanea los filtros Lua built-in del paquete (`lib/resources/filters`).
  * La descripción se toma de la primera línea de comentario `-- ...` del archivo.
  */
-export async function getBuiltinLuaTranspilerInfos(): Promise<LuaTranspilerInfo[]> {
-  const infos: LuaTranspilerInfo[] = [];
-  // El directorio de recursos se crea al migrar los primeros transpilers (Fase B)
-  if (!(await dirExists(LUA_TRANSPILERS_ROOT))) return infos;
+export async function getBuiltinLuaFilterInfos(): Promise<LuaFilterInfo[]> {
+  const infos: LuaFilterInfo[] = [];
+  // El directorio de recursos se crea al migrar los primeros filters (Fase B)
+  if (!(await dirExists(LUA_FILTERS_ROOT))) return infos;
   const glob = new Bun.Glob('**/*.lua');
-  for await (const rel of glob.scan({ cwd: LUA_TRANSPILERS_ROOT, onlyFiles: true })) {
+  for await (const rel of glob.scan({ cwd: LUA_FILTERS_ROOT, onlyFiles: true })) {
     const group = dirname(rel);
     const full = `${group}/${basename(rel, '.lua')}`;
-    const content = await Bun.file(join(LUA_TRANSPILERS_ROOT, rel)).text();
+    const content = await Bun.file(join(LUA_FILTERS_ROOT, rel)).text();
     const descLine = content.split('\n').find((l) => l.trim().startsWith('-- '));
     infos.push({ name: full, description: descLine?.replace(/^--\s*/, '').trim() ?? '' });
   }
@@ -225,7 +217,7 @@ function isDivWithClass(block: unknown, cls: string): boolean {
 
 /**
  * Calcula los flags de preámbulo desde el AST canónico (después de los
- * transpilers semánticos, sin contenido de formato). Reemplaza la detección
+ * filters semánticos, sin contenido de formato). Reemplaza la detección
  * por regex/startsWith sobre el LaTeX.
  */
 export function computePreambleFlags(ast: Record<string, unknown>): PreambleFlags {
@@ -317,9 +309,9 @@ export async function renderHtmlPageFromAst(
   cwd: string,
   vars: HtmlPageVars,
   bibOptions?: BibOptions,
-  activeTranspilers?: string[],
+  activeFilters?: string[],
 ): Promise<string> {
-  const luaFilters = await loadTranspilerGroups(activeTranspilers, cwd);
+  const luaFilters = await loadFilterGroups(activeFilters, cwd);
 
   const extraArgs = [
     '--template',
@@ -395,7 +387,7 @@ export async function readAstFromCache(cwd: string, doc: BuildDocument): Promise
  * FASE 2+3 combinada: markdown → AST canónico → salidas por formato activo.
  *
  * Pipeline por archivo:
- *   markdown → [transpilers semánticos string] → pandoc --to json
+ *   markdown → [filters semánticos string] → pandoc --to json
  *     → [filtros Lua semánticos] → AST canónico
  *     → [filtros Lua latex] → pandoc --from json --to latex → tex/{slug}.tex (si generateLatex)
  *
@@ -410,10 +402,10 @@ export async function renderLatex(
   docs: BuildDocument[],
   concurrency: number,
   cwd: string,
-  activeTranspilers?: string[],
+  activeFilters?: string[],
   generateLatex?: boolean,
 ): Promise<Set<string>> {
-  const luaFilters = await loadTranspilerGroups(activeTranspilers, cwd);
+  const luaFilters = await loadFilterGroups(activeFilters, cwd);
   const { bibFiles } = bibContext(cwd);
 
   const processed = new Set<string>();
@@ -476,9 +468,9 @@ export async function renderFromAstCache(
   concurrency: number,
   cwd: string,
   generateLatex?: boolean,
-  activeTranspilers?: string[],
+  activeFilters?: string[],
 ): Promise<Set<string>> {
-  const luaFilters = await loadTranspilerGroups(activeTranspilers, cwd);
+  const luaFilters = await loadFilterGroups(activeFilters, cwd);
   const { bibFiles } = bibContext(cwd);
   const processed = new Set<string>();
 

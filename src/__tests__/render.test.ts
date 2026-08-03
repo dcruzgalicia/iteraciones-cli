@@ -5,12 +5,12 @@ import { join } from 'node:path';
 import {
   computePreambleFlags,
   hasCiteNodes,
-  loadTranspilerGroups,
+  loadFilterGroups,
   renderFromAstCache,
   resolveLuaFilters,
   resolveUserLuaFilters,
-  suggestTranspilerName,
-  validateDisabledTranspilers,
+  suggestFilterName,
+  validateDisabledFilters,
 } from '../builder/render.js';
 import type { BuildDocument } from '../builder/types.js';
 import * as logger from '../lib/logger.js';
@@ -156,52 +156,52 @@ describe('renderFromAstCache (exportación desde AST en disco)', () => {
   });
 });
 
-describe('suggestTranspilerName', () => {
+describe('suggestFilterName', () => {
   it('sugiere el nombre completo por sufijo', () => {
-    expect(suggestTranspilerName('02-dictum')).toBe('latex/02-dictum');
-    expect(suggestTranspilerName('01-dictum')).toBe('html/01-dictum');
-    expect(suggestTranspilerName('05-spacer')).toBe('html/05-spacer');
+    expect(suggestFilterName('02-dictum')).toBe('latex/02-dictum');
+    expect(suggestFilterName('01-dictum')).toBe('html/01-dictum');
+    expect(suggestFilterName('05-spacer')).toBe('html/05-spacer');
   });
 
   it('retorna undefined sin coincidencia', () => {
-    expect(suggestTranspilerName('no-existe')).toBeUndefined();
-    expect(suggestTranspilerName('spacer')).toBeUndefined();
+    expect(suggestFilterName('no-existe')).toBeUndefined();
+    expect(suggestFilterName('spacer')).toBeUndefined();
   });
 });
 
-describe('validateDisabledTranspilers', () => {
+describe('validateDisabledFilters', () => {
   it('no advierte con undefined o lista vacía', () => {
     const spy = spyOn(logger, 'logWarning');
-    validateDisabledTranspilers(undefined);
-    validateDisabledTranspilers([]);
+    validateDisabledFilters(undefined);
+    validateDisabledFilters([]);
     expect(spy).not.toHaveBeenCalled();
     spy.mockRestore();
   });
 
   it('no advierte con nombres completos válidos', () => {
     const spy = spyOn(logger, 'logWarning');
-    validateDisabledTranspilers(['latex/02-dictum', 'semantic/string/01-double-colon']);
+    validateDisabledFilters(['latex/02-dictum', 'semantic/string/01-double-colon']);
     expect(spy).not.toHaveBeenCalled();
     spy.mockRestore();
   });
 
   it('advierte con sugerencia para un nombre viejo (pre-D1)', () => {
     const spy = spyOn(logger, 'logWarning');
-    validateDisabledTranspilers(['02-dictum']);
-    expect(spy).toHaveBeenCalledWith('disabled-transpilers: "02-dictum" no existe; ¿quisiste decir "latex/02-dictum"?', 'config');
+    validateDisabledFilters(['02-dictum']);
+    expect(spy).toHaveBeenCalledWith('disabled-filters: "02-dictum" no existe; ¿quisiste decir "latex/02-dictum"?', 'config');
     spy.mockRestore();
   });
 
   it('advierte sin sugerencia para un nombre inexistente', () => {
     const spy = spyOn(logger, 'logWarning');
-    validateDisabledTranspilers(['foo/bar']);
-    expect(spy).toHaveBeenCalledWith('disabled-transpilers: "foo/bar" no coincide con ningún transpiler', 'config');
+    validateDisabledFilters(['foo/bar']);
+    expect(spy).toHaveBeenCalledWith('disabled-filters: "foo/bar" no coincide con ningún filter', 'config');
     spy.mockRestore();
   });
 });
 
 describe('resolveLuaFilters (sistema dual Fase 6)', () => {
-  const PKG = join(import.meta.dir, '..', 'lib', 'resources', 'transpilers');
+  const PKG = join(import.meta.dir, '..', 'lib', 'resources', 'filters');
   const LATEX_PKG = ['01-spacer', '02-dictum', '03-verse', '04-center', '05-flushright', '06-mbox-sentence-end', '07-mbox-sentence-start'].map((n) =>
     join(PKG, 'latex', `${n}.lua`),
   );
@@ -219,17 +219,17 @@ describe('resolveLuaFilters (sistema dual Fase 6)', () => {
   it('el override del proyecto gana sobre el paquete para el mismo nombre', async () => {
     const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-lua-'));
     try {
-      mkdirSync(join(cwd, 'transpilers', 'semantic', 'ast'), { recursive: true });
-      mkdirSync(join(cwd, 'transpilers', 'latex'), { recursive: true });
-      writeFileSync(join(cwd, 'transpilers', 'semantic', 'ast', '02-double-colon-noindent.lua'), '-- test\n');
-      writeFileSync(join(cwd, 'transpilers', 'latex', '02-dictum.lua'), '-- test\n');
+      mkdirSync(join(cwd, 'filters', 'semantic', 'ast'), { recursive: true });
+      mkdirSync(join(cwd, 'filters', 'latex'), { recursive: true });
+      writeFileSync(join(cwd, 'filters', 'semantic', 'ast', '02-double-colon-noindent.lua'), '-- test\n');
+      writeFileSync(join(cwd, 'filters', 'latex', '02-dictum.lua'), '-- test\n');
       const f = await resolveLuaFilters(undefined, cwd);
       expect(f.semantic).toEqual([
         join(PKG, 'semantic', 'string', '01-double-colon.lua'),
-        join(cwd, 'transpilers', 'semantic', 'ast', '02-double-colon-noindent.lua'),
+        join(cwd, 'filters', 'semantic', 'ast', '02-double-colon-noindent.lua'),
       ]);
       const expectedLatex = [...LATEX_PKG];
-      expectedLatex[1] = join(cwd, 'transpilers', 'latex', '02-dictum.lua');
+      expectedLatex[1] = join(cwd, 'filters', 'latex', '02-dictum.lua');
       expect(f.latex).toEqual(expectedLatex);
       expect(f.html).toEqual(['01-dictum', '02-verse', '03-center', '04-flushright', '05-spacer'].map((n) => join(PKG, 'html', `${n}.lua`)));
       expect(f.resolvedNames).toEqual(
@@ -263,9 +263,9 @@ describe('resolveLuaFilters (sistema dual Fase 6)', () => {
   });
 });
 
-describe('loadTranspilerGroups (solo resolución de filtros Lua)', () => {
+describe('loadFilterGroups (solo resolución de filtros Lua)', () => {
   it('resuelve los 7 filtros latex del paquete en orden', async () => {
-    const groups = await loadTranspilerGroups();
+    const groups = await loadFilterGroups();
     expect(groups.latex).toHaveLength(7);
     expect(groups.latex[1]).toContain('02-dictum.lua');
   });
@@ -273,11 +273,11 @@ describe('loadTranspilerGroups (solo resolución de filtros Lua)', () => {
   it('el override .lua del proyecto reemplaza al del paquete', async () => {
     const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-lua-'));
     try {
-      mkdirSync(join(cwd, 'transpilers', 'latex'), { recursive: true });
-      writeFileSync(join(cwd, 'transpilers', 'latex', '02-dictum.lua'), '-- test\n');
-      const groups = await loadTranspilerGroups(undefined, cwd);
+      mkdirSync(join(cwd, 'filters', 'latex'), { recursive: true });
+      writeFileSync(join(cwd, 'filters', 'latex', '02-dictum.lua'), '-- test\n');
+      const groups = await loadFilterGroups(undefined, cwd);
       expect(groups.latex).toHaveLength(7);
-      expect(groups.latex[1]).toBe(join(cwd, 'transpilers', 'latex', '02-dictum.lua'));
+      expect(groups.latex[1]).toBe(join(cwd, 'filters', 'latex', '02-dictum.lua'));
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }

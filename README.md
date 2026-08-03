@@ -76,10 +76,10 @@ format:
   markdown:
     generate: false                 # genera Markdown procesado (por defecto: false)
 
-disabled-transpilers:               # transpilers a desactivar por nombre completo (opcional)
+disabled-filters:               # filters a desactivar por nombre completo (opcional)
   # - latex/02-dictum
 
-disabled-preamble-transpilers:      # preamble transpilers a desactivar (opcional)
+disabled-preamble-filters:      # preamble filters a desactivar (opcional)
   # - 01-maketitle-patches
 
 lua-filters:                        # filtros Lua de usuario (opcional)
@@ -175,9 +175,9 @@ Lista los filtros Lua disponibles con su tipo, descripción y estado (activo/des
 iteraciones filters
 ```
 
-## Transpilers
+## Filters
 
-Los transpilers transforman el contenido Markdown. Se organizan en **capas**:
+Los filters transforman el contenido Markdown. Se organizan en **capas**:
 
 1. **Capa semántica** (`semantic/`) — corre una vez por documento y deja el **AST canónico** sin contenido de formato específico (`::` → `Div.spacer`, `:;` → `Div.spacer noindent`; los `Div.dictum/verse/center/flushright` quedan sin transformar).
 2. **Capa de formato** (`latex/`, `html/`) — corre en cada exportación y convierte los nodos semánticos a su formato.
@@ -190,7 +190,7 @@ markdown → semantic/string → pandoc --to json → semantic/ast → AST canó
   → html/  → pandoc --from json --to html5 → .html
 ```
 
-### Transpilers integrados
+### Filters integrados
 
 | Nombre | Tipo | Entrada → Salida |
 |--------|------|------------------|
@@ -226,22 +226,22 @@ Julio Verne
 :::
 ```
 
-### Desactivar un transpiler
+### Desactivar un filter
 
 En `iteraciones.config.yaml`:
 
 ```yaml
-disabled-transpilers:
+disabled-filters:
   - semantic/string/01-double-colon   # desactiva la conversión de ::
 ```
 
-### Sobrescribir un transpiler
+### Sobrescribir un filter
 
-Crea un archivo con el mismo nombre completo en `<proyecto>/transpilers/<grupo>/`:
+Crea un archivo con el mismo nombre completo en `<proyecto>/filters/<grupo>/`:
 
 ```bash
-mkdir -p transpilers/semantic/string
-cat > transpilers/semantic/string/01-double-colon.lua << 'EOF'
+mkdir -p filters/semantic/string
+cat > filters/semantic/string/01-double-colon.lua << 'EOF'
 function Para(para)
   -- tu propia implementación
   return nil
@@ -251,14 +251,14 @@ EOF
 
 ### Filtros Lua de usuario
 
-Además de sobrescribir transpilers, puedes agregar filtros Lua propios con `lua-filters:` en `iteraciones.config.yaml`. Las rutas son relativas al proyecto:
+Además de sobrescribir filters, puedes agregar filtros Lua propios con `lua-filters:` en `iteraciones.config.yaml`. Las rutas son relativas al proyecto:
 
 ```yaml
 lua-filters:
   - filters/nota.lua
 ```
 
-Los filtros corren en **todas** las invocaciones de pandoc (markdown → AST, latex, html, epub y markdown). En las exportaciones (latex, html) corren **antes** de los transpilers del paquete, para poder transformar los nodos semánticos antes de la capa de formato; en la conversión markdown → AST corren **después** de los filtros semánticos, para ver los nodos ya resueltos (por ejemplo, `Div.spacer`).
+Los filtros corren en **todas** las invocaciones de pandoc (markdown → AST, latex, html, epub y markdown). En las exportaciones (latex, html) corren **antes** de los filters del paquete, para poder transformar los nodos semánticos antes de la capa de formato; en la conversión markdown → AST corren **después** de los filtros semánticos, para ver los nodos ya resueltos (por ejemplo, `Div.spacer`).
 
 Dentro del filtro, la variable global `FORMAT` de pandoc indica el formato de salida (`latex`, `html5`, `epub3`, `markdown`, `json`), lo que permite que un mismo filtro ramifique su comportamiento:
 
