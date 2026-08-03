@@ -190,14 +190,13 @@ function buildYamlHeader(doc: ExportDocument): string {
 async function convertToEpub(ast: Record<string, unknown>, outputPath: string, doc: ExportDocument, userFilters: string[]): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
-  const args = ['pandoc', '--from', 'json', '--to', 'epub3', '--output', outputPath];
-  for (const f of userFilters) args.push('--lua-filter', f);
-
+  const extraArgs: string[] = [];
+  for (const f of userFilters) extraArgs.push('--lua-filter', f);
   if (doc.metadata.bibliography) {
-    args.push('--citeproc');
+    extraArgs.push('--citeproc');
   }
 
-  await runPandoc(args, JSON.stringify(ast), doc.filePath);
+  await runPandoc({ input: JSON.stringify(ast), sourcePath: doc.filePath, from: 'json', to: 'epub3', outputPath, extraArgs });
 }
 
 /**
@@ -205,9 +204,9 @@ async function convertToEpub(ast: Record<string, unknown>, outputPath: string, d
  */
 async function convertToMarkdown(ast: Record<string, unknown>, outputPath: string, doc: ExportDocument, userFilters: string[]): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
-  const args = ['pandoc', '--from', 'json', '--to', 'markdown'];
-  for (const f of userFilters) args.push('--lua-filter', f);
-  const { stdout } = await runPandoc(args, JSON.stringify(ast), doc.filePath);
+  const extraArgs: string[] = [];
+  for (const f of userFilters) extraArgs.push('--lua-filter', f);
+  const stdout = await runPandoc({ input: JSON.stringify(ast), sourcePath: doc.filePath, from: 'json', to: 'markdown', extraArgs });
   const yamlHeader = buildYamlHeader(doc);
   await Bun.write(outputPath, yamlHeader + stdout);
 }

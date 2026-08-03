@@ -13,9 +13,8 @@ const SEMANTIC_FILTERS = [
 ];
 
 async function toJson(markdown: string): Promise<Record<string, unknown>> {
-  const args = ['pandoc', '--from', 'markdown', '--to', 'json'];
-  for (const f of SEMANTIC_FILTERS) args.push('--lua-filter', f);
-  const { stdout } = await runPandoc(args, markdown, 'test.md');
+  const extraArgs = SEMANTIC_FILTERS.flatMap((f) => ['--lua-filter', f]);
+  const stdout = await runPandoc({ input: markdown, sourcePath: 'test.md', to: 'json', extraArgs });
   return JSON.parse(stdout) as Record<string, unknown>;
 }
 
@@ -62,10 +61,8 @@ describe('filtros Lua semánticos (Fase 6, B1)', () => {
 const HTML_FILTERS = ['01-dictum', '02-verse', '03-center', '04-flushright', '05-spacer'].map((n) => join(RESOURCES, 'html', `${n}.lua`));
 
 async function toHtml5(markdown: string, extraFilters: string[] = []): Promise<string> {
-  const args = ['pandoc', '--from', 'markdown', '--to', 'html5'];
-  for (const f of [...extraFilters, ...HTML_FILTERS]) args.push('--lua-filter', f);
-  const { stdout } = await runPandoc(args, markdown, 'test.md');
-  return stdout;
+  const extraArgs = [...extraFilters, ...HTML_FILTERS].flatMap((f) => ['--lua-filter', f]);
+  return runPandoc({ input: markdown, sourcePath: 'test.md', to: 'html5', extraArgs });
 }
 
 describe('filtros Lua html (Fase 6, B3)', () => {
@@ -110,10 +107,8 @@ const LATEX_FILTERS = ['01-spacer', '02-dictum', '03-verse', '04-center', '05-fl
 );
 
 async function toLatex(markdown: string): Promise<string> {
-  const args = ['pandoc', '--from', 'markdown', '--to', 'latex'];
-  for (const f of [...SEMANTIC_FILTERS, ...LATEX_FILTERS]) args.push('--lua-filter', f);
-  const { stdout } = await runPandoc(args, markdown, 'test.md');
-  return stdout;
+  const extraArgs = [...SEMANTIC_FILTERS, ...LATEX_FILTERS].flatMap((f) => ['--lua-filter', f]);
+  return runPandoc({ input: markdown, sourcePath: 'test.md', to: 'latex', extraArgs });
 }
 
 describe('filtros Lua latex (Fase 6, B2)', () => {
@@ -193,14 +188,10 @@ describe('filtros Lua de usuario (Fase 6, C)', () => {
       mkdirSync(join(cwd, 'filters'), { recursive: true });
       writeFileSync(join(cwd, 'filters', 'nota.lua'), USER_FILTER);
       const md = '::: {.nota}\nImportante\n:::\n';
-      const tex = await runPandoc(['pandoc', '--from', 'markdown', '--to', 'latex', '--lua-filter', join(cwd, 'filters', 'nota.lua')], md, 'test.md');
-      expect(tex.stdout).toContain('\\fbox{Nota}');
-      const html = await runPandoc(
-        ['pandoc', '--from', 'markdown', '--to', 'html5', '--lua-filter', join(cwd, 'filters', 'nota.lua')],
-        md,
-        'test.md',
-      );
-      expect(html.stdout).toContain('<aside class="nota">');
+      const tex = await runPandoc({ input: md, sourcePath: 'test.md', to: 'latex', extraArgs: ['--lua-filter', join(cwd, 'filters', 'nota.lua')] });
+      expect(tex).toContain('\\fbox{Nota}');
+      const html = await runPandoc({ input: md, sourcePath: 'test.md', to: 'html5', extraArgs: ['--lua-filter', join(cwd, 'filters', 'nota.lua')] });
+      expect(html).toContain('<aside class="nota">');
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
