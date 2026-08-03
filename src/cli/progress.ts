@@ -66,6 +66,8 @@ export class ProgressTracker {
   private usedPhases: Set<PipelinePhase> = new Set();
   private runnerAlive = false;
   private runnerDone = false;
+  /** finish() ya se ejecutó: las tareas registradas después se resuelven al momento. */
+  private finished = false;
 
   constructor(options: { renderer?: 'default' | 'verbose' | 'test' } = {}) {
     this.renderer = (options.renderer ?? 'default') as ListrRendererValue;
@@ -138,9 +140,10 @@ export class ProgressTracker {
   }
 
   async finish(processed: number, cached: number, formats?: string[]): Promise<void> {
-    // Red de seguridad: si el runner aún no procesó la primera tarea (flujo sin
-    // awaits intermedios), esperarlo; luego resolver lo que quede pendiente
-    // (p. ej. discovery en early returns sin planPhases).
+    this.finished = true;
+    // Red de seguridad: si el runner aún no procesó la primera tarea (en TTY el
+    // render() del DefaultRenderer es async y retrasa el procesamiento), esperarlo;
+    // luego resolver lo que quede pendiente (p. ej. discovery en early returns).
     const deadline = Date.now() + 1000;
     while (!this.runnerAlive && !this.runnerDone && this.listr && Date.now() < deadline) {
       await Bun.sleep(5);
@@ -198,6 +201,9 @@ export class ProgressTracker {
           this.runnerAlive = true;
           this.listrTasks.set(phase, task);
           this.phaseResolvers.set(phase, resolve);
+          // Si finish() ya pasó (el runner se retrasó, p. ej. render() async del
+          // DefaultRenderer en TTY), resolver al momento para no colgar run().
+          if (this.finished) resolve();
         }),
     };
   }
