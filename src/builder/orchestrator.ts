@@ -1,7 +1,7 @@
 import { mkdir, rm } from 'node:fs/promises';
 import { cpus } from 'node:os';
 import { basename, dirname, join } from 'node:path';
-import { ProgressTracker } from '../cli/progress.js';
+import { type PipelinePhase, ProgressTracker } from '../cli/progress.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/site-config.js';
 import { computeActiveFormats } from '../config/site-config.js';
@@ -51,7 +51,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     return;
   }
 
-  const progress = new ProgressTracker({ verbose: options.verbose ?? false });
+  const progress = new ProgressTracker({ renderer: options.verbose ? 'verbose' : 'default' });
   const log = (msg: string) => progress.log(msg);
 
   // Cargar config primero para detectar cambios de formato antes de setupBuildEnvironment
@@ -135,7 +135,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   if (allDocs.length === 0) {
     process.stdout.write('  No se encontraron documentos Markdown en el proyecto.\n');
     process.stdout.write("  Crea un archivo .md con frontmatter o ejecuta 'iteraciones init'.\n");
-    progress.finish(0, 0, []);
+    await progress.finish(0, 0, []);
     return;
   }
 
@@ -179,7 +179,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
   if (!anyWork) {
     log('Ningun documento modificado — sin cambios');
-    progress.finish(0, allDocs.length, []);
+    await progress.finish(0, allDocs.length, []);
     return;
   }
 
@@ -204,7 +204,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     exportSets.markdown.length === 0
   ) {
     log('Ningun documento modificado — sin cambios');
-    progress.finish(0, allDocs.length, []);
+    await progress.finish(0, allDocs.length, []);
     return;
   }
 
@@ -214,6 +214,19 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // regenerar el tex body (HTML/EPUB/Markdown leen el AST directamente).
   const newPdf = (pdfOn || latexOn) && (newFormats.includes('pdf') || newFormats.includes('latex'));
   const astExportCandidates = allDocs.filter((d) => !astChanged.has(d.relativePath) && newPdf);
+
+  // Declarar al tracker las fases que se ejecutarán (TTY: libera discovery para
+  // que listr2 evalúe los skips con la información completa)
+  const usedPhases: PipelinePhase[] = ['discovery'];
+  if (renderDocs.length > 0 || astExportCandidates.length > 0) usedPhases.push('render');
+  if (exportSets.pdf.length > 0) {
+    if (latexOn) usedPhases.push('latex');
+    if (pdfOn) usedPhases.push('pdf');
+  }
+  if (exportSets.html.length > 0) usedPhases.push('html');
+  if (exportSets.epub.length > 0) usedPhases.push('epub');
+  if (exportSets.markdown.length > 0) usedPhases.push('markdown');
+  progress.planPhases(usedPhases);
 
   const processedPaths = new Set<string>();
   if (renderDocs.length > 0 || astExportCandidates.length > 0) {
@@ -331,7 +344,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   }
   const processedCount = workedPaths.size;
   const cachedCount = totalDocs - processedCount;
-  progress.finish(processedCount, cachedCount, buildFormatsList({ latexOn, pdfOn, htmlOn, epubOn, mdOn }));
+  await progress.finish(processedCount, cachedCount, buildFormatsList({ latexOn, pdfOn, htmlOn, epubOn, mdOn }));
 }
 
 // ── Funciones extraídas ───────────────────────────────────────────────────
