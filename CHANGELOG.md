@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.15.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.14.0...v0.15.0) (2026-08-03)
+
+
+### Features
+
+* **builder:** advierte sobre documentos sin titulo en el frontmatter ([6249004](https://github.com/dcruzgalicia/iteraciones-cli/commit/6249004c8ccbe1caa317b453bc07b79a6503e87c)), closes [#1095](https://github.com/dcruzgalicia/iteraciones-cli/issues/1095)
+* **cli:** agrega --project-root como opcion global de todos los comandos ([088ed98](https://github.com/dcruzgalicia/iteraciones-cli/commit/088ed9809cf0e69d2b9bf86e939b67037ecdedde)), closes [#1098](https://github.com/dcruzgalicia/iteraciones-cli/issues/1098)
+* **cli:** agrega progreso en vivo al build en terminales TTY ([1b9b04c](https://github.com/dcruzgalicia/iteraciones-cli/commit/1b9b04c2657f9221116c0ebf7bb1c4637b6ca63c)), closes [#1104](https://github.com/dcruzgalicia/iteraciones-cli/issues/1104)
+* **cli:** renombra comando transpilers a filters ([ece1e4d](https://github.com/dcruzgalicia/iteraciones-cli/commit/ece1e4dec33e26c4b2d20fdb6ae3a9da827cfb15)), closes [#1103](https://github.com/dcruzgalicia/iteraciones-cli/issues/1103)
+* **cli:** usa listr2 para el progreso del build (reemplaza carriage return) ([195d9b1](https://github.com/dcruzgalicia/iteraciones-cli/commit/195d9b1d9c5ee26d9bd06748f253fb3c8c99bfe1)), closes [#1104](https://github.com/dcruzgalicia/iteraciones-cli/issues/1104)
+* **config:** renombra _iteraciones.yaml a iteraciones.config.yaml ([4852864](https://github.com/dcruzgalicia/iteraciones-cli/commit/485286479a2916f0b70ce929d0505194d83377d7)), closes [#1102](https://github.com/dcruzgalicia/iteraciones-cli/issues/1102)
+* **discover:** usa libreria slugify para generar slugs ([7faa701](https://github.com/dcruzgalicia/iteraciones-cli/commit/7faa7019948c216e594a34e5761c64246c5d10ca)), closes [#1096](https://github.com/dcruzgalicia/iteraciones-cli/issues/1096)
+
+
+### Bug Fixes
+
+* **builder:** no compara contra el estado previo con --no-cache ([6f89920](https://github.com/dcruzgalicia/iteraciones-cli/commit/6f899205bddffca6d432ac10d30a2feabc0e50cf))
+* **cli:** elimina check de pdftoppm del comando doctor ([f31fb02](https://github.com/dcruzgalicia/iteraciones-cli/commit/f31fb02f32bd4057a3884fe223ce1fe3141996d2)), closes [#1086](https://github.com/dcruzgalicia/iteraciones-cli/issues/1086)
+* **cli:** incluye causa en catch blocks silenciados ([de9121d](https://github.com/dcruzgalicia/iteraciones-cli/commit/de9121d1b1a63b09e039fe736c3cc0487eb546fc)), closes [#1092](https://github.com/dcruzgalicia/iteraciones-cli/issues/1092)
+* **cli:** libera discovery al momento y muestra el detalle de los formatos ([6fa54b5](https://github.com/dcruzgalicia/iteraciones-cli/commit/6fa54b56d1c4c17148eb9f0dbcd9dfd87c112af1)), closes [#1104](https://github.com/dcruzgalicia/iteraciones-cli/issues/1104)
+* **cli:** resuelve cuelgue infinito del build en TTY con listr2 ([cfc0e5f](https://github.com/dcruzgalicia/iteraciones-cli/commit/cfc0e5f1c5d3a9c9a3db6cea3192c2fd36151101)), closes [#1104](https://github.com/dcruzgalicia/iteraciones-cli/issues/1104)
+
+
+### Performance Improvements
+
+* **builder:** paraleliza generateHtmlPages con mapWithConcurrency ([6c522b7](https://github.com/dcruzgalicia/iteraciones-cli/commit/6c522b73e0920923ddb48b5770b68958fdb125ff)), closes [#1090](https://github.com/dcruzgalicia/iteraciones-cli/issues/1090)
+* **render:** reemplaza JSON.stringify en hasCiteNodes por walker de AST ([5bb4c3a](https://github.com/dcruzgalicia/iteraciones-cli/commit/5bb4c3a5ce172e1aed6d0add953bb8c0627d8bdf)), closes [#1089](https://github.com/dcruzgalicia/iteraciones-cli/issues/1089)
+
 ## [0.14.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.13.0...v0.14.0) (2026-08-03)
 
 
