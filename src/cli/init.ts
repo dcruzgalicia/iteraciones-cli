@@ -143,6 +143,7 @@ const DEFAULT_README = [
  */
 function buildDefaultConfig(): string {
   const format: Record<string, unknown> = {
+    latex: false,
     html: {
       title: DEFAULT_HTML_FORMAT.title,
       tagline: DEFAULT_HTML_FORMAT.tagline,
