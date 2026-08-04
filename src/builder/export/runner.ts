@@ -237,16 +237,7 @@ async function convertToPdf(doc: ExportDocument, outputPath: string, cwd?: strin
     stderr: 'pipe',
     env: { ...process.env, PAR_GLOBAL_TEMP: biberCache },
   });
-  const result = await Promise.race([
-    Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]),
-    new Promise<never>((_, reject) =>
-      setTimeout(() => {
-        proc.kill();
-        reject(new PandocError(`latexmk excedio el timeout de 120s para ${doc.filePath}`, doc.filePath, ''));
-      }, 120_000),
-    ),
-  ]);
-  const [stdout, stderr, exitCode] = result;
+  const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
 
   if (exitCode !== 0) {
     const log = `${stdout}\n${stderr}`;
