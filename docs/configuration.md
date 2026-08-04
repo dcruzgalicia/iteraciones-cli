@@ -5,15 +5,10 @@ El archivo `iteraciones.config.yaml` en la raíz del proyecto es la única fuent
 ## Estructura completa
 
 ```yaml
-site:
-  title: iteraciones             # título del sitio
-  tagline: escribir, compartir, re-existir
-  lang: es-MX                     # código de idioma BCP 47
-  logo: ''                        # ruta al logo, relativa al proyecto
-  base-url: ''                    # URL base del sitio
+lang: es-MX                       # código de idioma BCP 47
 
 format:
-  latex: true                     # genera archivos .tex
+  latex: false                     # genera archivos .tex
 
   pdf:
     generate: false               # genera PDF
@@ -109,9 +104,13 @@ format:
     crop: false
 
   html:
+    title: iteraciones             # título del sitio
+    tagline: escribir, compartir, re-existir
+    logo: ''                        # ruta al logo, relativa al proyecto
+    base-url: ''                    # URL base del sitio
     theme: dark                   # tema: "light" o "dark"
     accent: lime                  # color de acento (lime, blue, rose, etc.)
-    generate: false               # genera HTML
+    generate: true                 # genera HTML
 
   epub:
     generate: false               # genera EPUB
@@ -131,60 +130,21 @@ lua-filters:                      # filtros Lua de usuario (opcional)
 
 ## Campos
 
-### `site.title`
-
-**Tipo:** `string`
-**Por defecto:** `'iteraciones'`
-
-Título del sitio. Se usa en el `<title>` de cada página HTML y en el encabezado.
-
-```yaml
-site:
-  title: Mi sitio
-```
-
-### `site.tagline`
-
-**Tipo:** `string`
-**Por defecto:** `'escribir, compartir, re-existir'`
-
-Frase corta que acompaña al título en el encabezado HTML.
-
-### `site.lang`
+### `lang`
 
 **Tipo:** `string`
 **Por defecto:** `'es-MX'`
 
-Código de idioma BCP 47. Se usa como valor del atributo `lang` en el elemento `<html>`.
-
-### `site.logo`
-
-**Tipo:** `string`
-**Por defecto:** `''` (usa el logo integrado)
-
-Ruta al archivo de logo, relativa al directorio raíz del proyecto. Si se omite o está vacío, se usa un logo SVG por defecto incluido en el paquete.
+Código de idioma BCP 47. Se usa como valor del atributo `lang` en el elemento `<html>` y en la configuración de `babel` para LaTeX.
 
 ```yaml
-site:
-  logo: assets/mi-logo.svg
-```
-
-### `site.base-url`
-
-**Tipo:** `string`
-**Por defecto:** `undefined` (sin prefijo)
-
-URL base del sitio. Debe incluir el protocolo y no terminar en `/`.
-
-```yaml
-site:
-  base-url: https://ejemplo.com
+lang: es-MX
 ```
 
 ### `format.latex`
 
 **Tipo:** `boolean`
-**Por defecto:** `true`
+**Por defecto:** `false`
 
 Genera archivos `.tex` (LaTeX) para cada documento procesado en el directorio de salida.
 
@@ -418,10 +378,56 @@ Añade marcas de corte al PDF. Las dimensiones se calculan automáticamente desd
 
 ### `format.html`
 
+#### `format.html.title`
+
+**Tipo:** `string`
+**Por defecto:** `'iteraciones'`
+
+Título del sitio. Se usa en el `<title>` de cada página HTML y en el encabezado.
+
+```yaml
+format:
+  html:
+    title: Mi sitio
+```
+
+#### `format.html.tagline`
+
+**Tipo:** `string`
+**Por defecto:** `'escribir, compartir, re-existir'`
+
+Frase corta que acompaña al título en el encabezado HTML.
+
+#### `format.html.logo`
+
+**Tipo:** `string`
+**Por defecto:** `''` (usa el logo integrado)
+
+Ruta al archivo de logo, relativa al directorio raíz del proyecto. Si se omite o está vacío, se usa un logo SVG por defecto incluido en el paquete.
+
+```yaml
+format:
+  html:
+    logo: assets/mi-logo.svg
+```
+
+#### `format.html.base-url`
+
+**Tipo:** `string`
+**Por defecto:** `undefined` (sin prefijo)
+
+URL base del sitio. Debe incluir el protocolo y no terminar en `/`.
+
+```yaml
+format:
+  html:
+    base-url: https://ejemplo.com
+```
+
 #### `format.html.generate`
 
 **Tipo:** `boolean`
-**Por defecto:** `false`
+**Por defecto:** `true`
 
 Habilita la generación de páginas HTML.
 
