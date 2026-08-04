@@ -16,7 +16,7 @@ export function buildProgram(): Command {
     .description('construye el sitio a partir de los archivos Markdown')
     .option('-c, --concurrency <n>', 'máximo de invocaciones pandoc simultáneas (por defecto: CPU − 1)')
     .option('--no-cache', 'omite la caché incremental; siempre hace build completo')
-    .option('--output <path>', 'directorio de salida (por defecto: dist/www si html.generate:true, dist/documents si no)')
+    .option('--output <path>', 'directorio de salida (por defecto: dist/files)')
     .option('--no-tailwind', 'omite la generación de CSS con Tailwind')
     .option('--no-export', 'omite la exportación PDF/EPUB aunque esté configurada')
     .option('--dry-run', 'muestra los documentos que se procesarían sin generar salida')
