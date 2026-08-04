@@ -1,6 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { IGNORED_DIRS } from '../builder/discover.js';
+import { validateDisabledPreambleFilters } from '../builder/preamble-loader.js';
+import { validateDisabledFilters } from '../builder/render.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { ConfigError } from '../lib/errors.js';
 import { checkLatexEngine } from './doctor/system-checks.js';
@@ -75,6 +77,9 @@ export async function runValidate(cwd: string): Promise<void> {
   try {
     const config = await loadSiteConfig(cwd);
     hasPdf = !!config.format?.pdf;
+    // Validar nombres de filters desactivados (warnings, no errores)
+    validateDisabledFilters(config.disabledFilters);
+    validateDisabledPreambleFilters(config.disabledPreambleFilters);
   } catch (err) {
     if (err instanceof ConfigError) {
       configErrors.push({
