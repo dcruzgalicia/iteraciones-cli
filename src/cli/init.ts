@@ -144,15 +144,6 @@ const DEFAULT_README = [
 function buildDefaultConfig(): string {
   const pdf = DEFAULT_PDF_FORMAT;
 
-  // ── site ──
-  const site = {
-    title: DEFAULT_SITE_CONFIG.title,
-    tagline: DEFAULT_SITE_CONFIG.tagline,
-    lang: DEFAULT_SITE_CONFIG.lang,
-    logo: DEFAULT_SITE_CONFIG.logo,
-    'base-url': DEFAULT_SITE_CONFIG.baseUrl ?? '',
-  };
-
   // ── format.pdf (orden curado por secciones: CLASE → FUENTE → … → CONTADORES) ──
   const pdfConfig: Record<string, unknown> = {
     generate: pdf.generate ?? false,
@@ -196,6 +187,10 @@ function buildDefaultConfig(): string {
     latex: true,
     pdf: pdfConfig,
     html: {
+      title: DEFAULT_HTML_FORMAT.title,
+      tagline: DEFAULT_HTML_FORMAT.tagline,
+      logo: DEFAULT_HTML_FORMAT.logo,
+      'base-url': DEFAULT_HTML_FORMAT.baseUrl ?? '',
       theme: 'dark',
       accent: DEFAULT_HTML_FORMAT.accent,
       generate: DEFAULT_HTML_FORMAT.generate ?? false,
@@ -204,7 +199,7 @@ function buildDefaultConfig(): string {
     markdown: { generate: DEFAULT_MARKDOWN_FORMAT.generate ?? false },
   };
 
-  return stringify({ site, format }, { indent: 2 }) + '\n';
+  return stringify({ lang: DEFAULT_SITE_CONFIG.lang, format }, { indent: 2 }) + '\n';
 }
 
 /**

@@ -75,8 +75,8 @@ export async function runInfo(cwd: string): Promise<void> {
       .catch(() => false);
 
     process.stdout.write('info:\n');
-    process.stdout.write(`  título:   ${config.title}\n`);
-    process.stdout.write(`  tagline:  ${config.tagline}\n`);
+    process.stdout.write(`  título:   ${config.format?.html?.title ?? 'iteraciones'}\n`);
+    process.stdout.write(`  tagline:  ${config.format?.html?.tagline ?? 'escribir, compartir, re-existir'}\n`);
     process.stdout.write(`  lang:     ${config.lang}\n`);
     process.stdout.write(`  pandoc:   ${pandocOk ? 'disponible' : 'no disponible'}\n`);
     process.stdout.write(`  ${distLabel}:  ${distExists ? 'generado' : 'no generado'}\n`);

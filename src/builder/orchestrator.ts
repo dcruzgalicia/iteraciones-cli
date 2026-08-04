@@ -404,7 +404,7 @@ async function generateHtmlPages(
     }
     let logoInline: string | undefined;
     try {
-      const logoRel = siteConfig.logo?.trim();
+      const logoRel = htmlConfig?.logo?.trim();
       const logoSrc = logoRel ? join(ctx.cwd, logoRel) : join(import.meta.dir, '../../src/lib/resources/logo.svg');
       logoInline = await Bun.file(logoSrc).text();
     } catch (err) {
@@ -417,10 +417,10 @@ async function generateHtmlPages(
         ctx.cwd,
         {
           title: doc.frontmatter.title || slug,
-          siteTitle: siteConfig.title ?? '',
-          tagline: siteConfig.tagline,
+          siteTitle: htmlConfig?.title ?? 'iteraciones',
+          tagline: htmlConfig?.tagline ?? 'escribir, compartir, re-existir',
           lang: siteConfig.lang ?? 'es',
-          baseUrl: siteConfig.baseUrl,
+          baseUrl: htmlConfig?.baseUrl,
           theme: htmlConfig?.theme,
           accent: htmlConfig?.accent,
           css: hasCss ? 'css/styles.css' : undefined,

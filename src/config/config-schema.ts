@@ -42,6 +42,13 @@ const PAGE_NUMBER_PLACEMENTS = ['footer-left', 'footer-center', 'footer-right', 
 
 const HtmlFormatSchema = z
   .object({
+    title: z.string().default('iteraciones'),
+    tagline: z.string().default('escribir, compartir, re-existir'),
+    logo: z.string().default(''),
+    'base-url': z
+      .string()
+      .default('')
+      .transform((v) => (v || undefined) as string | undefined),
     theme: z.string().optional(),
     accent: z.string().default('lime'),
     generate: z.boolean().default(false),
@@ -160,20 +167,10 @@ const FormatSchema = z
 
 // ── SiteConfig ─────────────────────────────────────────────────────────────
 
-const SiteSchema = z
-  .object({
-    title: z.string().default('iteraciones'),
-    tagline: z.string().default('escribir, compartir, re-existir'),
-    lang: z.string().default('es-MX'),
-    logo: z.string().default(''),
-    'base-url': z.string().default(''),
-  })
-  .strict();
-
 // Esquema intermedio que refleja la estructura del YAML
 const RawSiteConfigSchema = z
   .object({
-    site: SiteSchema.optional(),
+    lang: z.string().default('es-MX'),
     format: FormatSchema.optional(),
     'disabled-filters': z
       .array(z.string())
@@ -204,9 +201,8 @@ function camelizeKeys(obj: Record<string, unknown>): Record<string, unknown> {
   return result;
 }
 
-// Transformar a SiteConfig (aplanar site: y format:, camelizar claves)
+// Transformar a SiteConfig (aplanar format:, camelizar claves)
 export const SiteConfigSchema = RawSiteConfigSchema.transform((raw) => {
-  const s = raw.site ?? ({} as Record<string, unknown>);
   const f = raw.format ?? ({} as Record<string, unknown>);
 
   const pdfRaw = f.pdf as Record<string, unknown> | undefined;
@@ -215,14 +211,20 @@ export const SiteConfigSchema = RawSiteConfigSchema.transform((raw) => {
   const mdRaw = f.markdown as Record<string, unknown> | undefined;
 
   return {
-    title: (s.title as string) ?? 'iteraciones',
-    tagline: (s.tagline as string) ?? 'escribir, compartir, re-existir',
-    lang: (s.lang as string) ?? 'es-MX',
-    logo: (s.logo as string) ?? '',
-    baseUrl: ((s['base-url'] as string) || undefined) as string | undefined,
+    lang: (raw.lang as string) ?? 'es-MX',
     format: {
       latex: (f.latex as boolean) ?? true,
-      html: htmlRaw ? (camelizeKeys(htmlRaw) as SiteConfig['format']['html']) : { theme: undefined, accent: 'lime', generate: false },
+      html: htmlRaw
+        ? (camelizeKeys(htmlRaw) as SiteConfig['format']['html'])
+        : {
+            title: 'iteraciones',
+            tagline: 'escribir, compartir, re-existir',
+            logo: '',
+            baseUrl: undefined,
+            theme: undefined,
+            accent: 'lime',
+            generate: false,
+          },
       pdf: pdfRaw ? { ...DEFAULT_PDF_FORMAT, ...camelizeKeys(pdfRaw) } : { ...DEFAULT_PDF_FORMAT },
       epub: epubRaw ? (camelizeKeys(epubRaw) as SiteConfig['format']['epub']) : { generate: false },
       markdown: mdRaw ? (camelizeKeys(mdRaw) as SiteConfig['format']['markdown']) : { generate: false },

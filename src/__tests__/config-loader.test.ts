@@ -22,11 +22,11 @@ describe('loadSiteConfig', () => {
   it('retorna defaults cuando no existe iteraciones.config.yaml', async () => {
     await withTempDir(async (dir) => {
       const config = await loadSiteConfig(dir);
-      expect(config.title).toBe('iteraciones');
-      expect(config.tagline).toBe('escribir, compartir, re-existir');
+      expect(config.format.html?.title).toBe('iteraciones');
+      expect(config.format.html?.tagline).toBe('escribir, compartir, re-existir');
       expect(config.lang).toBe('es-MX');
-      expect(config.logo).toBe('');
-      expect(config.baseUrl).toBeUndefined();
+      expect(config.format.html?.logo).toBe('');
+      expect(config.format.html?.baseUrl).toBeUndefined();
       expect(config.disabledFilters).toBeUndefined();
       expect(config.disabledPreambleFilters).toBeUndefined();
       expect(config.format.latex).toBe(true);
@@ -41,7 +41,7 @@ describe('loadSiteConfig', () => {
     await withTempDir(async (dir) => {
       await writeConfig(dir, '');
       const config = await loadSiteConfig(dir);
-      expect(config.title).toBe('iteraciones');
+      expect(config.format.html?.title).toBe('iteraciones');
     });
   });
 
@@ -49,62 +49,62 @@ describe('loadSiteConfig', () => {
     await withTempDir(async (dir) => {
       await writeConfig(dir, 'solo-un-string');
       const config = await loadSiteConfig(dir);
-      expect(config.title).toBe('iteraciones');
+      expect(config.format.html?.title).toBe('iteraciones');
     });
   });
 
   it('lanza ConfigError cuando el YAML tiene sintaxis inválida', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'site: [mal formado');
+      await writeConfig(dir, 'format: [mal formado');
       expect(loadSiteConfig(dir)).rejects.toThrow(ConfigError);
     });
   });
 
-  it('lee site.title correctamente', async () => {
+  it('lee format.html.title correctamente', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'site:\n  title: Mi Título');
+      await writeConfig(dir, 'format:\n  html:\n    title: Mi Título');
       const config = await loadSiteConfig(dir);
-      expect(config.title).toBe('Mi Título');
+      expect(config.format.html?.title).toBe('Mi Título');
     });
   });
 
-  it('lee site.tagline correctamente', async () => {
+  it('lee format.html.tagline correctamente', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'site:\n  tagline: mi frase');
+      await writeConfig(dir, 'format:\n  html:\n    tagline: mi frase');
       const config = await loadSiteConfig(dir);
-      expect(config.tagline).toBe('mi frase');
+      expect(config.format.html?.tagline).toBe('mi frase');
     });
   });
 
-  it('lee site.lang correctamente', async () => {
+  it('lee lang correctamente', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'site:\n  lang: en-US');
+      await writeConfig(dir, 'lang: en-US');
       const config = await loadSiteConfig(dir);
       expect(config.lang).toBe('en-US');
     });
   });
 
-  it('lee site.logo correctamente', async () => {
+  it('lee format.html.logo correctamente', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'site:\n  logo: assets/logo.svg');
+      await writeConfig(dir, 'format:\n  html:\n    logo: assets/logo.svg');
       const config = await loadSiteConfig(dir);
-      expect(config.logo).toBe('assets/logo.svg');
+      expect(config.format.html?.logo).toBe('assets/logo.svg');
     });
   });
 
-  it('lee site.base-url correctamente', async () => {
+  it('lee format.html.base-url correctamente', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'site:\n  base-url: https://ejemplo.com');
+      await writeConfig(dir, 'format:\n  html:\n    base-url: https://ejemplo.com');
       const config = await loadSiteConfig(dir);
-      expect(config.baseUrl).toBe('https://ejemplo.com');
+      expect(config.format.html?.baseUrl).toBe('https://ejemplo.com');
     });
   });
 
   it('ignora base-url vacío y retorna undefined', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'site:\n  base-url: ""');
+      await writeConfig(dir, 'format:\n  html:\n    base-url: ""');
       const config = await loadSiteConfig(dir);
-      expect(config.baseUrl).toBeUndefined();
+      expect(config.format.html?.baseUrl).toBeUndefined();
     });
   });
 
@@ -195,12 +195,7 @@ describe('loadSiteConfig', () => {
       await writeConfig(
         dir,
         [
-          'site:',
-          '  title: Mi Sitio',
-          '  tagline: mi tagline',
-          '  lang: es-MX',
-          '  logo: logo.svg',
-          '  base-url: https://ejemplo.com',
+          'lang: es-MX',
           'format:',
           '  latex: true',
           '  pdf:',
@@ -208,6 +203,10 @@ describe('loadSiteConfig', () => {
           '    toc: true',
           '    show-date: true',
           '  html:',
+          '    title: Mi Sitio',
+          '    tagline: mi tagline',
+          '    logo: logo.svg',
+          '    base-url: https://ejemplo.com',
           '    generate: true',
           '    theme: dark',
           '    accent: rose',
@@ -220,11 +219,11 @@ describe('loadSiteConfig', () => {
         ].join('\n'),
       );
       const config = await loadSiteConfig(dir);
-      expect(config.title).toBe('Mi Sitio');
-      expect(config.tagline).toBe('mi tagline');
+      expect(config.format.html?.title).toBe('Mi Sitio');
+      expect(config.format.html?.tagline).toBe('mi tagline');
       expect(config.lang).toBe('es-MX');
-      expect(config.logo).toBe('logo.svg');
-      expect(config.baseUrl).toBe('https://ejemplo.com');
+      expect(config.format.html?.logo).toBe('logo.svg');
+      expect(config.format.html?.baseUrl).toBe('https://ejemplo.com');
       expect(config.format.latex).toBe(true);
       expect(config.format.pdf?.generate).toBe(true);
       expect(config.format.pdf?.toc).toBe(true);
@@ -283,9 +282,9 @@ describe('loadSiteConfig', () => {
     let output = '';
     try {
       await withTempDir(async (dir) => {
-        await writeConfig(dir, 'clave-inventada: 1\nsite:\n  title: ok');
+        await writeConfig(dir, 'clave-inventada: 1\nformat:\n  html:\n    title: ok');
         const config = await loadSiteConfig(dir);
-        expect(config.title).toBe('ok');
+        expect(config.format.html?.title).toBe('ok');
       });
     } finally {
       output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
@@ -300,7 +299,7 @@ describe('loadSiteConfig', () => {
     let callCount = 0;
     try {
       await withTempDir(async (dir) => {
-        await writeConfig(dir, 'site:\n  title: ok\nformat:\n  pdf:\n    generate: true');
+        await writeConfig(dir, 'format:\n  html:\n    title: ok\n  pdf:\n    generate: true');
         await loadSiteConfig(dir);
       });
     } finally {
