@@ -122,20 +122,15 @@ export async function computeFiltersHash(cwd: string, siteConfig: SiteConfig): P
  */
 export async function computeConfigHashes(cwd: string, siteConfig: SiteConfig): Promise<Record<string, string>> {
   const fmt = siteConfig.format;
-  const site = JSON.stringify({
-    title: siteConfig.title,
-    tagline: siteConfig.tagline,
-    lang: siteConfig.lang,
-    'base-url': siteConfig.baseUrl,
-    logo: siteConfig.logo,
-  });
+  const htmlConfig = fmt?.html;
   const htmlTemplate = await Bun.file(TEMPLATE_PATH)
     .text()
     .catch(() => '');
-  const logo = siteConfig.logo?.trim() ? await hashFileContent(join(cwd, siteConfig.logo)).catch(() => '') : '';
+  const logoPath = htmlConfig?.logo?.trim();
+  const logo = logoPath ? await hashFileContent(join(cwd, logoPath)).catch(() => '') : '';
   return {
     pdf: hashString(`${JSON.stringify(fmt?.pdf ?? {})}\n${String(fmt?.latex ?? false)}`),
-    html: hashString(`${JSON.stringify(fmt?.html ?? {})}\n${htmlTemplate}\n${site}\n${logo}`),
+    html: hashString(`${JSON.stringify(fmt?.html ?? {})}\n${htmlTemplate}\n${logo}`),
     epub: hashString(`${JSON.stringify(fmt?.epub ?? {})}`),
     markdown: hashString(`${JSON.stringify(fmt?.markdown ?? {})}\n${String(siteConfig.lang ?? '')}`),
   };

@@ -3,6 +3,14 @@ export type PageNumberPlacement = 'footer-left' | 'footer-center' | 'footer-righ
 // ── Schema `format:` (estilo Quarto) ──
 
 export interface HtmlFormatConfig {
+  /** Título del sitio. Se usa en el <title> de cada página HTML. */
+  title?: string;
+  /** Frase corta que acompaña al título en el encabezado HTML. */
+  tagline?: string;
+  /** Ruta al logo, relativa al proyecto. */
+  logo?: string;
+  /** URL base del sitio para el link del encabezado. */
+  baseUrl?: string;
   theme?: string;
   accent?: string;
   /** Si true, genera HTML en el build. */
@@ -104,11 +112,7 @@ export interface FormatConfig {
 // ── SiteConfig ──
 
 export interface SiteConfig {
-  title: string;
-  tagline: string;
   lang: string;
-  logo: string;
-  baseUrl: string | undefined;
   /** Configuracion por formato de salida. */
   format: FormatConfig;
   /**
@@ -144,6 +148,10 @@ export interface SiteConfig {
  */
 
 export const DEFAULT_HTML_FORMAT: HtmlFormatConfig = {
+  title: 'iteraciones',
+  tagline: 'escribir, compartir, re-existir',
+  logo: '',
+  baseUrl: undefined,
   theme: undefined,
   accent: 'lime',
   generate: false,
@@ -242,11 +250,7 @@ export function computeActiveFormats(format: FormatConfig): string[] {
 }
 
 export const DEFAULT_SITE_CONFIG: SiteConfig = {
-  title: 'iteraciones',
-  tagline: 'escribir, compartir, re-existir',
   lang: 'es-MX',
-  logo: '',
-  baseUrl: undefined,
   disabledFilters: undefined,
   disabledPreambleFilters: undefined,
   luaFilters: undefined,

@@ -99,7 +99,7 @@ async function copyFonts(outputDir: string): Promise<void> {
 }
 
 async function copyLogo(outputDir: string, cwd: string, siteConfig: SiteConfig): Promise<void> {
-  const logo = siteConfig.logo?.trim();
+  const logo = siteConfig.format?.html?.logo?.trim();
   if (!logo) {
     const defaultSrc = join(PKG_ROOT, 'src', 'lib', 'resources', 'logo.svg');
     const dest = join(outputDir, 'logo.svg');
