@@ -3,8 +3,8 @@ import { basename, dirname, join } from 'node:path';
 import { logWarning } from '../lib/logger.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import type { BuildOptions } from './orchestrator.js';
-import { readAstFromCache, renderHtmlPageFromAst } from './render.js';
-import { discoverBibFiles } from './state.js';
+import { renderHtmlPageFromAst } from './render.js';
+import { discoverBibFiles, readAstFromCache, resolveBibOptions } from './state.js';
 import type { BuildContext, BuildDocument } from './types.js';
 
 /**
@@ -21,9 +21,7 @@ export async function generateHtmlPages(
   const siteConfig = ctx.siteConfig;
   const htmlConfig = siteConfig.format?.html;
   const hasCss = !options.noCss && ctx.cssPath;
-  const bibFiles = discoverBibFiles(ctx.cwd, ['bib']);
-  const firstBib = bibFiles[0];
-  const bibOptions = firstBib !== undefined ? { bibliography: firstBib, csl: join(import.meta.dir, '../../src/lib/resources/apa-7.csl') } : undefined;
+  const { bibOptions } = resolveBibOptions(ctx.cwd);
   // Cada documento es independiente (lee AST del disco, escribe su HTML): paralelizar
   await mapWithConcurrency(pipelineDocs, ctx.concurrency, async (doc) => {
     const slug = doc.slug ?? basename(doc.relativePath, '.md');

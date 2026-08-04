@@ -6,8 +6,8 @@ import { logWarning } from '../lib/logger.js';
 import { type BibOptions, runPandoc } from '../lib/pandoc-runner.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import { splitFrontmatter } from './discover.js';
-import { discoverBibFiles } from './state.js';
-import type { BuildDocument } from './types.js';
+import { discoverBibFiles, readAstFromCache, resolveBibOptions, writeCachedArtifacts } from './state.js';
+import type { BuildDocument, PreambleFlags } from './types.js';
 
 // ---------------------------------------------------------------------------
 // Sistema de filters por capas (decisión D1 + Fase 6: filtros Lua)
@@ -190,16 +190,6 @@ export async function getBuiltinLuaFilterInfos(): Promise<LuaFilterInfo[]> {
   return infos.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-/** Flags de preámbulo calculados desde el AST (estructura real del documento). */
-export interface PreambleFlags {
-  /** ¿Existen nodos Header? (para evitar un TOC vacío). */
-  hasTocEntries: boolean;
-  /** ¿El primer bloque es un heading o un dictum/verse? (no anteponer \\noindent). */
-  skipNoIndent: boolean;
-  /** ¿El primer bloque es un heading? (no anteponer \\vspace*{2\\baselineskip}). */
-  skipParagraphSpace: boolean;
-}
-
 function isHeader(block: unknown): boolean {
   return typeof block === 'object' && block !== null && (block as Record<string, unknown>).t === 'Header';
 }
@@ -337,53 +327,6 @@ export async function renderHtmlPageFromAst(
   return runPandoc({ input: JSON.stringify(ast), sourcePath: doc.filePath, from: 'json', to: 'html5', bibOptions, extraArgs });
 }
 
-/** Escribe el AST canónico y los outputs cacheados según los formatos activos. */
-async function writeCachedArtifacts(
-  cwd: string,
-  doc: BuildDocument,
-  slug: string,
-  ast: Record<string, unknown>,
-  processedBody?: string,
-  flags?: PreambleFlags,
-): Promise<void> {
-  const dir = dirname(doc.relativePath);
-  const cacheBase = join(cwd, '.iteraciones');
-  const astDir = join(cacheBase, 'ast', dir);
-  await mkdir(astDir, { recursive: true });
-  await Bun.write(join(astDir, `${slug}.json`), JSON.stringify(ast));
-  if (processedBody !== undefined && flags !== undefined) {
-    const texDir = join(cacheBase, 'tex', dir);
-    await mkdir(texDir, { recursive: true });
-    await Bun.write(join(texDir, `${slug}.tex`), processedBody);
-    await Bun.write(join(texDir, `${slug}.flags.json`), JSON.stringify(flags));
-  }
-}
-
-/** Contexto compartido de bibliografía para las exportaciones. */
-function bibContext(cwd: string): { bibFiles: string[]; bibOptions?: BibOptions } {
-  const bibFiles = cwd ? discoverBibFiles(cwd, ['bib']) : [];
-  const firstBib = bibFiles[0];
-  const bibOptions = firstBib !== undefined ? { bibliography: firstBib, csl: join(import.meta.dir, '../../src/lib/resources/apa-7.csl') } : undefined;
-  return { bibFiles, bibOptions };
-}
-
-/** Lee el AST canónico serializado de `.iteraciones/ast/{slug}.json`. */
-export async function readAstFromCache(cwd: string, doc: BuildDocument): Promise<Record<string, unknown> | null> {
-  const slug = doc.slug ?? basename(doc.relativePath, '.md');
-  const dir = dirname(doc.relativePath);
-  const astPath = join(cwd, '.iteraciones', 'ast', dir, `${slug}.json`);
-  const raw = await Bun.file(astPath)
-    .text()
-    .catch(() => '');
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as Record<string, unknown>;
-  } catch {
-    logWarning(`error al parsear AST en disco de ${doc.relativePath}`, 'render');
-    return null;
-  }
-}
-
 /**
  * FASE 2+3 combinada: markdown → AST canónico → salidas por formato activo.
  *
@@ -407,7 +350,7 @@ export async function renderDocuments(
   generateLatex?: boolean,
 ): Promise<Set<string>> {
   const luaFilters = await loadFilterGroups(activeFilters, cwd);
-  const { bibFiles } = bibContext(cwd);
+  const { bibFiles } = resolveBibOptions(cwd);
 
   const processed = new Set<string>();
 
@@ -472,7 +415,7 @@ export async function renderFromAstCache(
   activeFilters?: string[],
 ): Promise<Set<string>> {
   const luaFilters = await loadFilterGroups(activeFilters, cwd);
-  const { bibFiles } = bibContext(cwd);
+  const { bibFiles } = resolveBibOptions(cwd);
   const processed = new Set<string>();
 
   await mapWithConcurrency(docs, concurrency, async (doc) => {

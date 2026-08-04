@@ -46,3 +46,13 @@ export interface BuildContext {
   /** Máximo de invocaciones pandoc simultáneas. Default: CPU - 1. */
   concurrency: number;
 }
+
+/** Flags de preámbulo calculados desde el AST (estructura real del documento). */
+export interface PreambleFlags {
+  /** ¿Existen nodos Header? (para evitar un TOC vacío). */
+  hasTocEntries: boolean;
+  /** ¿El primer bloque es un heading o un dictum/verse? (no anteponer \\noindent). */
+  skipNoIndent: boolean;
+  /** ¿El primer bloque es un heading? (no anteponer \\vspace*{2\\baselineskip}). */
+  skipParagraphSpace: boolean;
+}
