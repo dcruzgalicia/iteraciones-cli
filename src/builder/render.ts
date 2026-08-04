@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { loadSiteConfig } from '../config/config-loader.js';
+import type { SiteConfig } from '../config/site-config.js';
 import { logWarning } from '../lib/logger.js';
 import { type BibOptions, runPandoc } from '../lib/pandoc-runner.js';
 import { mapWithConcurrency } from '../lib/run.js';
@@ -125,10 +126,10 @@ export function validateDisabledFilters(disabled: string[] | undefined): void {
  * rutas relativas al proyecto). Las rutas inexistentes emiten un warning sin
  * romper el build.
  */
-export async function resolveUserLuaFilters(cwd?: string): Promise<string[]> {
+export async function resolveUserLuaFilters(cwd?: string, siteConfig?: SiteConfig): Promise<string[]> {
   if (!cwd) return [];
-  const siteConfig = await loadSiteConfig(cwd);
-  const filters = siteConfig.luaFilters ?? [];
+  const config = siteConfig ?? (await loadSiteConfig(cwd));
+  const filters = config.luaFilters ?? [];
   const resolved: string[] = [];
   for (const rel of filters) {
     const abs = join(cwd, rel);
@@ -149,9 +150,9 @@ export async function resolveUserLuaFilters(cwd?: string): Promise<string[]> {
  * @param disabledList Lista de filters a desactivar (nombres completos). undefined = todos activos.
  * @param cwd Directorio del proyecto para buscar overrides.
  */
-export async function loadFilterGroups(disabledList?: string[], cwd?: string): Promise<LuaFilterGroup> {
+export async function loadFilterGroups(disabledList?: string[], cwd?: string, siteConfig?: SiteConfig): Promise<LuaFilterGroup> {
   const group = await resolveLuaFilters(disabledList, cwd);
-  group.user = await resolveUserLuaFilters(cwd);
+  group.user = await resolveUserLuaFilters(cwd, siteConfig);
   return group;
 }
 
