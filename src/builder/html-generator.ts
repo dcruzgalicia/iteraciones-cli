@@ -20,7 +20,7 @@ export async function generateHtmlPages(
 ): Promise<void> {
   const siteConfig = ctx.siteConfig;
   const htmlConfig = siteConfig.format?.html;
-  const hasCss = !options.noTailwind && ctx.cssPath;
+  const hasCss = !options.noCss && ctx.cssPath;
   const bibFiles = discoverBibFiles(ctx.cwd, ['bib']);
   const firstBib = bibFiles[0];
   const bibOptions = firstBib !== undefined ? { bibliography: firstBib, csl: join(import.meta.dir, '../../src/lib/resources/apa-7.csl') } : undefined;

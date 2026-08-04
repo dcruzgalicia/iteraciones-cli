@@ -18,7 +18,7 @@ export interface BuildOptions {
   outputDir?: string;
   concurrency?: number;
   noCache?: boolean;
-  noTailwind?: boolean;
+  noCss?: boolean;
   noExport?: boolean;
   dryRun?: boolean;
   verbose?: boolean;
@@ -64,7 +64,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // setupBuildEnvironment): no cargar prevState evita mensajes de invalidación
   // engañosos y fuerza el reprocesamiento completo.
   const prevState = options.noCache ? null : await loadBuildState(cwd);
-  const plan = await computeBuildMetadata(cwd, siteConfig, prevState, options.noTailwind);
+  const plan = await computeBuildMetadata(cwd, siteConfig, prevState, options.noCss);
 
   if (plan.newFormats.length > 0) {
     log(`Nuevos formatos detectados: ${plan.newFormats.join(', ')}. Generando sus salidas para todos los documentos.`);
@@ -191,7 +191,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
   // ── Build assets (css, fonts, logo) antes de copiar a dist/ ──
   if (plan.htmlOn) {
-    await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, { noTailwind: options.noTailwind });
+    await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, { noCss: options.noCss });
   }
 
   // ── FASE 5: copiar de formats/ a dist/ ──

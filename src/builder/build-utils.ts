@@ -14,11 +14,11 @@ const PKG_ROOT = join(import.meta.dir, '../..');
 const CSS_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'styles.css');
 const FONTS_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'fonts');
 
-export async function buildAssets(outputDir: string, cwd: string, siteConfig: SiteConfig, options: { noTailwind?: boolean } = {}): Promise<string> {
+export async function buildAssets(outputDir: string, cwd: string, siteConfig: SiteConfig, options: { noCss?: boolean } = {}): Promise<string> {
   const tasks: Promise<void>[] = [copyFonts(outputDir), copyLogo(outputDir, cwd, siteConfig)];
-  if (!options.noTailwind) tasks.push(generateCss(outputDir, cwd, siteConfig.format?.html?.accent ?? 'lime'));
+  if (!options.noCss) tasks.push(generateCss(outputDir, cwd, siteConfig.format?.html?.accent ?? 'lime'));
   await Promise.all(tasks);
-  return options.noTailwind ? '' : '/css/styles.css';
+  return options.noCss ? '' : '/css/styles.css';
 }
 
 async function generateCss(outputDir: string, cwd: string, accent: string): Promise<void> {

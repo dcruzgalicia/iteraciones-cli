@@ -61,7 +61,7 @@ export async function computeBuildMetadata(
   cwd: string,
   siteConfig: SiteConfig,
   prevState: BuildState | null,
-  noTailwind?: boolean,
+  noCss?: boolean,
 ): Promise<BuildMetadata> {
   const currentFormats = computeActiveFormats(siteConfig.format);
 
@@ -96,7 +96,7 @@ export async function computeBuildMetadata(
   const epubOn = formatCfg?.epub?.generate === true;
   const mdOn = formatCfg?.markdown?.generate === true;
   const generateLatex = pdfOn || latexOn;
-  const needsCss = htmlOn && !noTailwind;
+  const needsCss = htmlOn && !noCss;
 
   return {
     currentFormats,

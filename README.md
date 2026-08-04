@@ -109,7 +109,7 @@ iteraciones build [opciones]
 | `-c, --concurrency <n>` | Máximo de invocaciones pandoc simultáneas | `CPU − 1` |
 | `--no-cache` | Omite la caché incremental; siempre hace build completo | — |
 | `--output <path>` | Directorio de salida | `dist/files` |
-| `--no-tailwind` | Omite la generación de CSS con Tailwind | — |
+| `--no-css` | Omite la generación de CSS | — |
 | `--no-export` | Omite la exportación PDF/EPUB | — |
 | `--dry-run` | Muestra los documentos a procesar sin generar salida | — |
 | `--verbose` | Muestra información adicional de progreso | — |
