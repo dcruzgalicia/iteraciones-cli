@@ -142,50 +142,7 @@ const DEFAULT_README = [
  * legible); Bun.YAML.stringify no sirve aqui porque solo emite flow style.
  */
 function buildDefaultConfig(): string {
-  const pdf = DEFAULT_PDF_FORMAT;
-
-  // ── format.pdf (orden curado por secciones: CLASE → FUENTE → … → CONTADORES) ──
-  const pdfConfig: Record<string, unknown> = {
-    generate: pdf.generate ?? false,
-    documentclass: pdf.documentclass,
-    'font-family': [{ name: 'mathptmx' }],
-    setspace: pdf.setspace ?? true,
-  };
-  if (pdf.setspace !== false) {
-    pdfConfig.setstretch = pdf.setstretch ?? 1.5;
-  }
-  Object.assign(pdfConfig, {
-    geometry: pdf.geometry,
-    babel: pdf.babel,
-    'page-number': pdf.pageNumber ?? 'header-right',
-    microtype: pdf.microtype,
-    raggedbottom: pdf.raggedbottom ?? true,
-    pretolerance: pdf.pretolerance ?? 200,
-    tolerance: pdf.tolerance ?? 400,
-    brokenpenalty: pdf.brokenpenalty ?? 1_000_000,
-    hyphenpenalty: pdf.hyphenpenalty ?? 100,
-    finalhyphendemerits: pdf.finalhyphendemerits ?? 1_000_000,
-    doublehyphendemerits: pdf.doublehyphendemerits ?? 1_000_000,
-    widowpenalty: pdf.widowpenalty ?? 1_000_000,
-    clubpenalty: pdf.clubpenalty ?? 1_000_000,
-    hyperref: pdf.hyperref,
-    enumitem: pdf.enumitem ?? true,
-    setlist: pdf.setlist,
-    'eso-pic': pdf.esoPic ?? false,
-    pdfx: pdf.pdfx ?? false,
-    crop: pdf.crop ?? false,
-    setcounter: pdf.setcounter,
-    sectioning: pdf.sectioning,
-    setkomafont: pdf.setkomafont,
-    dictum: pdf.dictum,
-    toc: pdf.toc ?? false,
-    'show-date': pdf.showDate ?? false,
-  });
-
-  // ── format ──
   const format: Record<string, unknown> = {
-    latex: true,
-    pdf: pdfConfig,
     html: {
       title: DEFAULT_HTML_FORMAT.title,
       tagline: DEFAULT_HTML_FORMAT.tagline,
@@ -193,7 +150,12 @@ function buildDefaultConfig(): string {
       'base-url': DEFAULT_HTML_FORMAT.baseUrl ?? '',
       theme: 'dark',
       accent: DEFAULT_HTML_FORMAT.accent,
-      generate: DEFAULT_HTML_FORMAT.generate ?? false,
+      generate: DEFAULT_HTML_FORMAT.generate ?? true,
+    },
+    pdf: {
+      generate: DEFAULT_PDF_FORMAT.generate ?? false,
+      toc: DEFAULT_PDF_FORMAT.toc ?? false,
+      'show-date': DEFAULT_PDF_FORMAT.showDate ?? false,
     },
     epub: { generate: DEFAULT_EPUB_FORMAT.generate ?? false },
     markdown: { generate: DEFAULT_MARKDOWN_FORMAT.generate ?? false },

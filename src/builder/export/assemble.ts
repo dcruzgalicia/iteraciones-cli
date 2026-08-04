@@ -15,7 +15,7 @@ export function assembleExportDocument(
   globalCsl?: string,
   pdfFormat?: PdfFormatConfig,
 ): ExportDocument {
-  const documentclass = pdfFormat?.documentclass?.class ?? 'scrbook';
+  const documentclass: 'scrartcl' | 'scrbook' = 'scrbook';
 
   const bibliography = globalBibliography;
   const csl = globalCsl ?? (bibliography ? join(import.meta.dir, '../../../src/lib/resources/apa-7.csl') : undefined);
@@ -29,7 +29,7 @@ export function assembleExportDocument(
     csl,
     documentclass,
     toc: pdfFormat?.toc ?? false,
-    tocDepth: pdfFormat?.setcounter?.tocdepth ?? undefined,
+    tocDepth: 1,
   };
 
   return {
