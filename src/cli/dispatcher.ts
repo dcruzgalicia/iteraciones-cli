@@ -63,13 +63,13 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
   }
 }
 
-export async function runInfo(cwd: string): Promise<void> {
+export async function runInfo(cwd: string, outputDir?: string): Promise<void> {
   try {
     const config = await loadSiteConfig(cwd);
     const pandocOk = await checkPandoc()
       .then(() => true)
       .catch(() => false);
-    const distLabel = 'dist/files';
+    const distLabel = outputDir ?? 'dist/files';
     const distExists = await stat(join(cwd, distLabel))
       .then((s) => s.isDirectory())
       .catch(() => false);
