@@ -242,6 +242,7 @@ async function runFormatExports(
         ...exportBase,
         outputDir: join(formatsDir, 'markdown'),
         config: { markdown: formatCfg?.markdown },
+        siteConfig: ctx.siteConfig,
         onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, phase: 'markdown' }),
       });
       progress.completePhase(undefined, 'markdown');
@@ -267,6 +268,7 @@ async function runFormatExports(
         ...exportBase,
         outputDir: join(formatsDir, 'html'),
         config: { epub: formatCfg?.epub },
+        siteConfig: ctx.siteConfig,
         onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, phase: 'epub' }),
       });
       progress.completePhase(undefined, 'epub');
@@ -290,6 +292,7 @@ async function runFormatExports(
           ...exportBase,
           outputDir: join(formatsDir, 'pdf'),
           config: { pdf: formatCfg?.pdf },
+          siteConfig: ctx.siteConfig,
           onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, phase: 'pdf' }),
         });
         progress.completePhase(undefined, 'pdf');

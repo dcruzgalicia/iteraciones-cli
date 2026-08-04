@@ -4,7 +4,7 @@ import { mkdir } from 'node:fs/promises';
 import { cpus } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { stringify } from 'yaml';
-import type { EpubFormatConfig, HtmlFormatConfig, MarkdownFormatConfig, PdfFormatConfig } from '../../config/site-config.js';
+import type { EpubFormatConfig, HtmlFormatConfig, MarkdownFormatConfig, PdfFormatConfig, SiteConfig } from '../../config/site-config.js';
 import { PandocError } from '../../lib/errors.js';
 import { logWarning } from '../../lib/logger.js';
 import { runPandoc } from '../../lib/pandoc-runner.js';
@@ -30,6 +30,7 @@ interface ExportRunOptions {
   cwd: string;
   lang: string;
   concurrency: number;
+  siteConfig?: SiteConfig;
   onExportProgress?: (relativePath: string) => void;
 }
 
@@ -135,7 +136,7 @@ export async function runExportDocuments(exportableDocs: BuildDocument[], option
 
   const pdfConcurrency = hasPdf ? maxSlots : concurrency;
   const needsAst = config.epub?.generate === true || config.markdown?.generate === true;
-  const userFilters = await resolveUserLuaFilters(cwd);
+  const userFilters = await resolveUserLuaFilters(cwd, options.siteConfig);
   await mapWithConcurrency(exportableDocs, pdfConcurrency, async (doc): Promise<void> => {
     const exportDoc = assembleExportDocument(doc, lang, globalBibliography, undefined, config.pdf);
 
