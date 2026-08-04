@@ -1,6 +1,7 @@
 import { getBuiltinPreambleFilterInfos, validateDisabledPreambleFilters } from '../builder/preamble-loader.js';
 import { getBuiltinLuaFilterInfos, validateDisabledFilters } from '../builder/render.js';
 import { loadSiteConfig } from '../config/config-loader.js';
+import { logInfo } from '../lib/logger.js';
 
 /**
  * Muestra la lista de filtros (filters) disponibles y su estado (activo/inactivo).
@@ -14,21 +15,22 @@ export async function runFilters(cwd: string): Promise<void> {
   const allInfos = await getBuiltinLuaFilterInfos();
   const hasDisabled = config.disabledFilters !== undefined && config.disabledFilters.length > 0;
 
-  process.stdout.write('Filtros disponibles (orden de ejecución):\n\n');
+  logInfo('Filtros disponibles (orden de ejecución):');
+  logInfo('');
 
   for (const info of allInfos) {
     const active = !disabled.has(info.name);
     const status = active ? 'activo' : 'desactivado';
-    process.stdout.write(`  ${info.name}  lua     ${info.description}  [${status}]\n`);
+    logInfo(`  ${info.name}  lua     ${info.description}  [${status}]`);
   }
 
-  process.stdout.write('\n');
+  logInfo('');
   if (hasDisabled) {
-    process.stdout.write('Para reactivar uno, elimínalo de la lista `disabled-filters:` en iteraciones.config.yaml.\n');
+    logInfo('Para reactivar uno, elimínalo de la lista `disabled-filters:` en iteraciones.config.yaml.');
   } else {
-    process.stdout.write('Para desactivar uno, agrégalo a la lista `disabled-filters:` en iteraciones.config.yaml.\n');
+    logInfo('Para desactivar uno, agrégalo a la lista `disabled-filters:` en iteraciones.config.yaml.');
   }
-  process.stdout.write('Para sobrescribir un filtro, crea `<proyecto>/filters/<grupo>/<nombre>.lua` (p. ej. `filters/latex/02-dictum.lua`).\n');
+  logInfo('Para sobrescribir un filtro, crea `<proyecto>/filters/<grupo>/<nombre>.lua` (p. ej. `filters/latex/02-dictum.lua`).');
 
   // Preamble filters
   const preambleInfos = getBuiltinPreambleFilterInfos();
@@ -36,20 +38,22 @@ export async function runFilters(cwd: string): Promise<void> {
     const preambleDisabled = new Set(config.disabledPreambleFilters ?? []);
     const hasPreambleDisabled = config.disabledPreambleFilters !== undefined && config.disabledPreambleFilters.length > 0;
 
-    process.stdout.write('\nFiltros de preámbulo (orden de ejecución):\n\n');
+    logInfo('');
+    logInfo('Filtros de preámbulo (orden de ejecución):');
+    logInfo('');
 
     for (const info of preambleInfos) {
       const active = !preambleDisabled.has(info.name);
       const status = active ? 'activo' : 'desactivado';
-      process.stdout.write(`  ${info.name}  ${info.description}  [${status}]\n`);
+      logInfo(`  ${info.name}  ${info.description}  [${status}]`);
     }
 
-    process.stdout.write('\n');
+    logInfo('');
     if (hasPreambleDisabled) {
-      process.stdout.write('Para reactivar uno, elimínalo de la lista `disabled-preamble-filters:` en iteraciones.config.yaml.\n');
+      logInfo('Para reactivar uno, elimínalo de la lista `disabled-preamble-filters:` en iteraciones.config.yaml.');
     } else {
-      process.stdout.write('Para desactivar uno, agrégalo a la lista `disabled-preamble-filters:` en iteraciones.config.yaml.\n');
+      logInfo('Para desactivar uno, agrégalo a la lista `disabled-preamble-filters:` en iteraciones.config.yaml.');
     }
-    process.stdout.write('Para sobrescribir un filtro de preámbulo, crea `<proyecto>/preamble/<nombre>.tex` con contenido LaTeX.\n');
+    logInfo('Para sobrescribir un filtro de preámbulo, crea `<proyecto>/preamble/<nombre>.tex` con contenido LaTeX.');
   }
 }

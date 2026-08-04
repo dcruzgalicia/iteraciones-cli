@@ -1,6 +1,7 @@
 import { Listr } from 'listr2';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { ConfigError } from '../lib/errors.js';
+import { logInfo, logWarning } from '../lib/logger.js';
 import {
   type CheckResult,
   checkLatexEngine,
@@ -54,7 +55,7 @@ export async function runDoctor(cwd: string, options: { fix?: boolean } = {}): P
       // listr2 ya muestra los errores; solo marcar exit code
     }
 
-    process.stdout.write(allOk ? '\nTodo en orden.\n' : '\nHay problemas que corregir.\n');
+    logInfo(allOk ? 'Todo en orden.' : 'Hay problemas que corregir.', 'doctor');
     if (!allOk) process.exitCode = 1;
     return;
   }
@@ -89,11 +90,11 @@ export async function runDoctor(cwd: string, options: { fix?: boolean } = {}): P
   const stillBroken = unfixable.length > 0 || fixFailed;
 
   if (!stillBroken && fixable.length > 0) {
-    process.stdout.write('\nCorrecciones aplicadas. Ejecuta doctor de nuevo para verificar.\n');
+    logInfo('Correcciones aplicadas. Ejecuta doctor de nuevo para verificar.', 'doctor');
   } else if (stillBroken) {
-    process.stdout.write(fixable.length > 0 ? '\nHay problemas sin corrección automática disponible.\n' : '\nHay problemas que corregir.\n');
+    logWarning(fixable.length > 0 ? 'Hay problemas sin correccion automatica disponible.' : 'Hay problemas que corregir.', 'doctor');
   } else {
-    process.stdout.write('\nTodo en orden.\n');
+    logInfo('Todo en orden.', 'doctor');
   }
 
   if (stillBroken) process.exitCode = 1;

@@ -4,7 +4,7 @@ import type { BuildOptions } from '../builder/orchestrator.js';
 import { build } from '../builder/orchestrator.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { ConfigError, PandocError } from '../lib/errors.js';
-import { logError } from '../lib/logger.js';
+import { logError, logInfo, logSuccess } from '../lib/logger.js';
 import { checkPandoc } from '../lib/pandoc-runner.js';
 import { runDoctor as doctor } from './doctor.js';
 import { runFilters as filters } from './filters.js';
@@ -20,7 +20,7 @@ export async function runClean(cwd: string): Promise<void> {
       }),
     ),
   );
-  process.stdout.write('clean: eliminado dist/ y .iteraciones/\n');
+  logSuccess('eliminado dist/ y .iteraciones/', 'clean');
 }
 
 export async function runBuild(cwd: string, options: BuildOptions = {}): Promise<void> {
@@ -74,12 +74,12 @@ export async function runInfo(cwd: string, outputDir?: string): Promise<void> {
       .then((s) => s.isDirectory())
       .catch(() => false);
 
-    process.stdout.write('info:\n');
-    process.stdout.write(`  título:   ${config.format?.html?.title ?? 'iteraciones'}\n`);
-    process.stdout.write(`  tagline:  ${config.format?.html?.tagline ?? 'escribir, compartir, re-existir'}\n`);
-    process.stdout.write(`  lang:     ${config.lang}\n`);
-    process.stdout.write(`  pandoc:   ${pandocOk ? 'disponible' : 'no disponible'}\n`);
-    process.stdout.write(`  ${distLabel}:  ${distExists ? 'generado' : 'no generado'}\n`);
+    logInfo('', 'info');
+    logInfo(`  título:   ${config.format?.html?.title ?? 'iteraciones'}`, 'info');
+    logInfo(`  tagline:  ${config.format?.html?.tagline ?? 'escribir, compartir, re-existir'}`, 'info');
+    logInfo(`  lang:     ${config.lang}`, 'info');
+    logInfo(`  pandoc:   ${pandocOk ? 'disponible' : 'no disponible'}`, 'info');
+    logInfo(`  ${distLabel}:  ${distExists ? 'generado' : 'no generado'}`, 'info');
   } catch (err) {
     if (err instanceof ConfigError) {
       logError(err.message, 'config');
@@ -146,10 +146,10 @@ export async function runNew(cwd: string, path: string): Promise<void> {
     const content = `---\ntitle: ''\ndate: ${today}\n---\n\n`;
 
     await writeFile(absPath, content, { encoding: 'utf8', flag: 'wx' });
-    process.stdout.write(`new: creado ${normalizedPath}\n`);
+    logSuccess(`creado ${normalizedPath}`, 'new');
   } catch (err) {
     if (err instanceof Error && 'code' in err && err.code === 'EEXIST') {
-      process.stdout.write(`new: omitido ${path} (ya existe)\n`);
+      logInfo(`omitido ${path} (ya existe)`, 'new');
       return;
     }
     logError(`al crear "${path}": ${err instanceof Error ? err.message : String(err)}`, 'new');
