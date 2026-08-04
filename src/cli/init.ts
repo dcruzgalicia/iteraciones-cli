@@ -163,7 +163,10 @@ function buildDefaultConfig(): string {
     markdown: { generate: DEFAULT_MARKDOWN_FORMAT.generate ?? false },
   };
 
-  return stringify({ lang: DEFAULT_SITE_CONFIG.lang, format }, { indent: 2 }) + '\n';
+  return (
+    stringify({ lang: DEFAULT_SITE_CONFIG.lang, format, 'disabled-preamble-filters': DEFAULT_SITE_CONFIG.disabledPreambleFilters }, { indent: 2 }) +
+    '\n'
+  );
 }
 
 /**
