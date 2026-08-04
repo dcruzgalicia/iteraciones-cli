@@ -371,14 +371,25 @@ export async function discover(
     await saveSlugsCounter(cwd, slugsCounter);
   }
 
-  await saveBuildState(cwd, {
-    startedAt: thisBuildStartedAt,
-    activeFormats: options.activeFormats ?? [],
-    entries: discoveryIndex,
-    filtersHash: options.meta?.filtersHash,
-    configHashes: options.meta?.configHashes,
-    bibHash: options.meta?.bibHash,
-  });
+  // Solo persistir state.json si hubo cambios (archivos nuevos/modificados/eliminados
+  // o los hashes de invalidación cambiaron). En builds sin cambios, evitar I/O innecesario.
+  const hasChanged =
+    changedPaths.size > 0 ||
+    !useCache ||
+    options.meta?.filtersHash !== prevState?.filtersHash ||
+    JSON.stringify(options.meta?.configHashes) !== JSON.stringify(prevState?.configHashes) ||
+    options.meta?.bibHash !== prevState?.bibHash;
+
+  if (hasChanged) {
+    await saveBuildState(cwd, {
+      startedAt: thisBuildStartedAt,
+      activeFormats: options.activeFormats ?? [],
+      entries: discoveryIndex,
+      filtersHash: options.meta?.filtersHash,
+      configHashes: options.meta?.configHashes,
+      bibHash: options.meta?.bibHash,
+    });
+  }
 
   return { relativePaths, changedPaths, discoveryIndex, deletedEntries, slugChangedEntries };
 }
