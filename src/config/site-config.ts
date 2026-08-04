@@ -154,7 +154,7 @@ export const DEFAULT_HTML_FORMAT: HtmlFormatConfig = {
   baseUrl: undefined,
   theme: undefined,
   accent: 'lime',
-  generate: false,
+  generate: true,
 };
 
 export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
@@ -259,6 +259,6 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
     pdf: DEFAULT_PDF_FORMAT,
     epub: DEFAULT_EPUB_FORMAT,
     markdown: DEFAULT_MARKDOWN_FORMAT,
-    latex: true,
+    latex: false,
   },
 };
