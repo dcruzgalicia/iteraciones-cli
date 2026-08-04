@@ -34,7 +34,7 @@ El pipeline convierte archivos Markdown en documentos en los formatos configurad
        │ allDocs[]
        ▼
 ┌─────────────┐
-│  FASE 2+3   │  renderLatex()
+│  FASE 2+3   │  renderDocuments()
 │  Render     │  • Filters semánticos string (regex)
 │             │  • pandoc --to json → AST canónico
 │             │  • Serializa el AST a disco (.iteraciones/ast/)
@@ -109,7 +109,7 @@ AST canónico (memoria + .iteraciones/ast/{slug}.json)
 
 ## Sistema de filters
 
-Los filters son módulos ESM que transforman el contenido. Se organizan en **capas** (decisión D1):
+Los filters son filtros Lua que transforman el contenido. Se organizan en **capas** (decisión D1):
 
 1. **Capa semántica** (`semantic/`) — corre en la invocación `markdown → json` y deja el **AST canónico** sin contenido de formato específico: `::` → `Div.spacer`, `:;` → `Div.spacer noindent`. Los `Div.dictum/verse/center/flushright` quedan sin transformar.
 2. **Capa de formato** (`latex/`, `html/`) — corre en cada exportación y convierte los nodos semánticos a su formato (RawBlocks de apertura/cierre alrededor de los bloques nativos). La capa `html/` se aplica al generar la página HTML con el template de pandoc.
@@ -140,12 +140,31 @@ Además, existen los **preamble filters** (`lib/resources/preamble/*.tex`) que m
 
 | Nombre | Archivo | Propósito |
 |--------|---------|-----------|
-| 01-maketitle-patches | `lib/resources/preamble/01-maketitle-patches.tex` | Personaliza `\maketitle` |
-| 02-environments | `lib/resources/preamble/02-environments.tex` | Redefine center/flushright sin espacio extra |
-| 03-toc-styling | `lib/resources/preamble/03-toc-styling.tex` | Estilo del índice |
-| 04-toc-section | `lib/resources/preamble/04-toc-section.tex` | TOC como `\section*` |
-| 05-bibliography-heading | `lib/resources/preamble/05-bibliography-heading.tex` | Título de bibliografía como section |
-| 06-hyphenation-rules | `lib/resources/preamble/06-hyphenation-rules.tex` | Reglas de partición de palabras |
+| 01-documentclass | `lib/resources/preamble/01-documentclass.tex` | \documentclass con clase KOMA-Script |
+| 02-fonts | `lib/resources/preamble/02-fonts.tex` | Codificación y fuente principal |
+| 03-spacing | `lib/resources/preamble/03-spacing.tex` | Interlineado con setspace |
+| 04-margins | `lib/resources/preamble/04-margins.tex` | Márgenes con geometry |
+| 05-language | `lib/resources/preamble/05-language.tex` | Idioma con babel |
+| 06-headers | `lib/resources/preamble/06-headers.tex` | Encabezados con scrlayer-scrpage |
+| 07-typography | `lib/resources/preamble/07-typography.tex` | Microtipografía y penalizaciones |
+| 08-hyperref | `lib/resources/preamble/08-hyperref.tex` | Enlaces PDF |
+| 09-tables | `lib/resources/preamble/09-tables.tex` | Paquetes de tablas |
+| 10-lists | `lib/resources/preamble/10-lists.tex` | Listas con enumitem |
+| 11-bibliography | `lib/resources/preamble/11-bibliography.tex` | Bibliografía con biblatex |
+| 12-counters | `lib/resources/preamble/12-counters.tex` | Contadores de secciones |
+| 13-setkomafont | `lib/resources/preamble/13-setkomafont.tex` | Fuentes de la portada |
+| 14-sectioning | `lib/resources/preamble/14-sectioning.tex` | Estilo de secciones |
+| 15-dictum | `lib/resources/preamble/15-dictum.tex` | Configuración de epígrafes |
+| 16-page-number | `lib/resources/preamble/16-page-number.tex` | Posición del número de página |
+| 17-eso-pic | `lib/resources/preamble/17-eso-pic.tex` | Fondo de página (desactivado por defecto) |
+| 18-pdfx | `lib/resources/preamble/18-pdfx.tex` | PDF/X-1a (desactivado por defecto) |
+| 19-crop | `lib/resources/preamble/19-crop.tex` | Marcas de corte (desactivado por defecto) |
+| 20-maketitle-patches | `lib/resources/preamble/20-maketitle-patches.tex` | Personaliza \maketitle |
+| 21-environments | `lib/resources/preamble/21-environments.tex` | Redefine entornos sin espacio extra |
+| 22-toc-styling | `lib/resources/preamble/22-toc-styling.tex` | Estilo del índice |
+| 23-toc-section | `lib/resources/preamble/23-toc-section.tex` | TOC como \section* |
+| 24-bibliography-heading | `lib/resources/preamble/24-bibliography-heading.tex` | Título de bibliografía como section |
+| 25-hyphenation-rules | `lib/resources/preamble/25-hyphenation-rules.tex` | Reglas de partición de palabras |
 
 ### Extensibilidad
 
@@ -175,18 +194,17 @@ Solo los documentos modificados (o con slug cambiado) pasan por el pipeline comp
 La configuración se lee de `iteraciones.config.yaml` y se valida con **Zod**:
 
 ```yaml
-site:
-  title: "Mi sitio"
-  tagline: "escribir, compartir, re-existir"
-  lang: es-MX
+lang: es-MX
 
 format:
-  latex: true
+  latex: false
   pdf:
     generate: false
     # ... 30+ campos tipográficos
   html:
-    generate: false
+    title: "Mi sitio"
+    tagline: "escribir, compartir, re-existir"
+    generate: true
     theme: dark
     accent: lime
   epub:
@@ -243,7 +261,10 @@ La configuración PDF es la más compleja e incluye:
 | `types.ts` | BuildDocument, Frontmatter, BuildContext. |
 | `export/runner.ts` | Ejecuta exportación a PDF, EPUB, Markdown con concurrencia limitada. |
 | `export/assemble.ts` | Ensambla ExportDocument desde BuildDocument. |
-| `load-modules.ts` | Carga dinámica ESM de filters con override del proyecto. |
+| `build-planner.ts` | Planificador: metadatos de invalidación y conjuntos de trabajo. |
+| `html-generator.ts` | Generación de páginas HTML desde el AST. |
+| `preamble-loader.ts` | Carga de preamble filters (.tex) con override por proyecto. |
+| `state.ts` | Caché content-addressed (state.json, hashes de invalidación). |
 
 ### `src/config/`
 

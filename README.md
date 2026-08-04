@@ -50,15 +50,10 @@ Esto también crea un archivo `bibliography.bib` de ejemplo.
 ## Configuración (`iteraciones.config.yaml`)
 
 ```yaml
-site:
-  title: "Mi sitio"                 # título del sitio (por defecto: "Iteraciones")
-  tagline: "mi tagline"             # frase corta (por defecto: "escribir, compartir, re-existir")
-  lang: "es-MX"                     # idioma HTML (por defecto: "es-MX")
-  logo: ""                          # ruta al logo (por defecto: sin logo)
-  base-url: ""                      # URL base del sitio (por defecto: vacío)
+lang: "es-MX"                     # idioma del sitio (por defecto: "es-MX")
 
 format:
-  latex: true                       # genera archivos .tex (por defecto: true)
+  latex: false                      # genera archivos .tex (por defecto: false)
 
   pdf:
     generate: false                 # genera PDF (por defecto: false)
@@ -66,9 +61,13 @@ format:
     # Ver docs/configuration.md para todas las opciones disponibles
 
   html:
+    title: "Mi sitio"               # título del sitio (por defecto: "iteraciones")
+    tagline: "mi tagline"           # frase corta (por defecto: "escribir, compartir, re-existir")
+    logo: ""                        # ruta al logo (por defecto: sin logo)
+    base-url: ""                    # URL base del sitio (por defecto: vacío)
     theme: dark                     # tema: "light" o "dark"
     accent: lime                    # color de acento (lime, blue, rose, etc.)
-    generate: false                 # genera HTML (por defecto: false)
+    generate: true                  # genera HTML (por defecto: true)
 
   epub:
     generate: false                 # genera EPUB (por defecto: false)
@@ -80,7 +79,7 @@ disabled-filters:               # filters a desactivar por nombre completo (opci
   # - latex/02-dictum
 
 disabled-preamble-filters:      # preamble filters a desactivar (opcional)
-  # - 01-maketitle-patches
+  # - 17-eso-pic
 
 lua-filters:                        # filtros Lua de usuario (opcional)
   # - filters/mi-filtro.lua
@@ -107,7 +106,7 @@ iteraciones build [opciones]
 
 | Opción | Descripción | Por defecto |
 |--------|-------------|-------------|
-| `-c, --concurrency <n>` | Máximo de invocaciones pandoc simultáneas | `4` |
+| `-c, --concurrency <n>` | Máximo de invocaciones pandoc simultáneas | `CPU − 1` |
 | `--no-cache` | Omite la caché incremental; siempre hace build completo | — |
 | `--output <path>` | Directorio de salida | `dist/files` |
 | `--no-tailwind` | Omite la generación de CSS con Tailwind | — |
