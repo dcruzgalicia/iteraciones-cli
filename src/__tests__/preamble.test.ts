@@ -11,16 +11,16 @@ import {
 import * as logger from '../lib/logger.js';
 
 describe('preamble-loader', () => {
-  it('lista los 25 filters built-in con descripción', () => {
+  it('lista los 24 filters built-in con descripción', () => {
     const infos = getBuiltinPreambleFilterInfos();
-    expect(infos).toHaveLength(25);
+    expect(infos).toHaveLength(24);
     expect(infos.map((i) => i.name)).toEqual(BUILTIN_PREAMBLE_FILTERS);
     expect(infos.every((i) => i.description.length > 0)).toBe(true);
   });
 
   it('carga el contenido .tex del paquete para todos los filters', async () => {
     const filters = await loadPreambleFilters();
-    expect(filters).toHaveLength(25);
+    expect(filters).toHaveLength(24);
     const biblio = filters.find((t) => t.name === '24-bibliography-heading');
     expect(biblio?.content).toContain('\\ifcsname ver@biblatex.sty\\endcsname');
     expect(biblio?.content).toContain('\\defbibheading{bibintoc}[\\refname]{%');
@@ -31,7 +31,7 @@ describe('preamble-loader', () => {
   it('respeta la disabled list', async () => {
     const filters = await loadPreambleFilters(['25-hyphenation-rules']);
     expect(filters.map((t) => t.name)).not.toContain('25-hyphenation-rules');
-    expect(filters).toHaveLength(24);
+    expect(filters).toHaveLength(23);
   });
 
   it('un .tex del proyecto reemplaza al del paquete', async () => {

@@ -59,6 +59,7 @@ const PdfFormatSchema = z
     generate: z.boolean().default(false),
     toc: z.boolean().default(false),
     'show-date': z.boolean().default(false),
+    'page-number': z.string().default('header-right'),
   })
   .strict();
 
@@ -148,7 +149,9 @@ export const SiteConfigSchema = RawSiteConfigSchema.transform((raw) => {
             accent: 'lime',
             generate: false,
           },
-      pdf: pdfRaw ? (camelizeKeys(pdfRaw) as SiteConfig['format']['pdf']) : { generate: false, toc: false, showDate: false },
+      pdf: pdfRaw
+        ? (camelizeKeys(pdfRaw) as SiteConfig['format']['pdf'])
+        : { generate: false, toc: false, showDate: false, pageNumber: 'header-right' },
       epub: epubRaw ? (camelizeKeys(epubRaw) as SiteConfig['format']['epub']) : { generate: false },
       markdown: mdRaw ? (camelizeKeys(mdRaw) as SiteConfig['format']['markdown']) : { generate: false },
     },
