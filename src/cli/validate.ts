@@ -5,6 +5,7 @@ import { validateDisabledPreambleFilters } from '../builder/preamble-loader.js';
 import { validateDisabledFilters } from '../builder/render.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { ConfigError } from '../lib/errors.js';
+import { logInfo, logWarning } from '../lib/logger.js';
 import { checkLatexEngine } from './doctor/system-checks.js';
 
 type ValidationError = { file: string; message: string };
@@ -108,20 +109,20 @@ export async function runValidate(cwd: string): Promise<void> {
   const errors = [...configErrors, ...fmErrors];
 
   if (warnings.length > 0) {
-    process.stderr.write(`validate: ${warnings.length} advertencia(s):\n`);
+    logWarning(`${warnings.length} advertencia(s):`, 'validate');
     for (const w of warnings) {
-      process.stderr.write(`  ⚠ ${w.file}: ${w.message}\n`);
+      logWarning(`${w.file}: ${w.message}`, 'validate');
     }
   }
 
   if (errors.length === 0) {
-    process.stdout.write('validate: sin errores.\n');
+    logInfo('sin errores.', 'validate');
     return;
   }
 
-  process.stderr.write(`validate: se encontraron ${errors.length} error(es):\n`);
+  logWarning(`se encontraron ${errors.length} error(es):`, 'validate');
   for (const e of errors) {
-    process.stderr.write(`  ✖ ${e.file}: ${e.message}\n`);
+    logWarning(`${e.file}: ${e.message}`, 'validate');
   }
   process.exitCode = 1;
 }

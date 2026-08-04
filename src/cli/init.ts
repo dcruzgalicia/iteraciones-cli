@@ -2,6 +2,7 @@ import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { stringify } from 'yaml';
 import { DEFAULT_EPUB_FORMAT, DEFAULT_HTML_FORMAT, DEFAULT_MARKDOWN_FORMAT, DEFAULT_PDF_FORMAT, DEFAULT_SITE_CONFIG } from '../config/site-config.js';
+import { logInfo, logSuccess } from '../lib/logger.js';
 
 const DEFAULT_README = [
   '---',
@@ -186,9 +187,9 @@ export async function runInit(cwd: string): Promise<void> {
     createExclusive(join(cwd, 'bibliography.bib'), DEFAULT_BIB),
   ]);
 
-  process.stdout.write(configCreated ? 'init: creado iteraciones.config.yaml\n' : 'init: omitido iteraciones.config.yaml (ya existe)\n');
-  process.stdout.write(readmeCreated ? 'init: creado README.md\n' : 'init: omitido README.md (ya existe)\n');
-  process.stdout.write(bibCreated ? 'init: creado bibliography.bib\n' : 'init: omitido bibliography.bib (ya existe)\n');
+  logInfo(configCreated ? 'creado iteraciones.config.yaml' : 'omitido iteraciones.config.yaml (ya existe)', 'init');
+  logInfo(readmeCreated ? 'creado README.md' : 'omitido README.md (ya existe)', 'init');
+  logInfo(bibCreated ? 'creado bibliography.bib' : 'omitido bibliography.bib (ya existe)', 'init');
 }
 
 /**

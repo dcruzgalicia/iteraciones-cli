@@ -23,7 +23,18 @@ export function logWarning(message: string, context?: string): void {
 
 /**
  * Escribe un mensaje informativo en stdout.
+ * Formato: [contexto] mensaje
  */
-export function logInfo(message: string): void {
-  process.stdout.write(`${message}\n`);
+export function logInfo(message: string, context?: string): void {
+  const prefix = context ? `${context}: ` : '';
+  process.stdout.write(`${prefix}${message}\n`);
+}
+
+/**
+ * Escribe un mensaje de éxito en stdout.
+ * Formato: ✓ [contexto] mensaje
+ */
+export function logSuccess(message: string, context?: string): void {
+  const prefix = context ? `${context}: ` : '';
+  process.stdout.write(`✓ ${prefix}${message}\n`);
 }
