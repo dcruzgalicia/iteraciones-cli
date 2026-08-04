@@ -148,7 +148,7 @@ export async function runNew(cwd: string, path: string): Promise<void> {
     await mkdir(dirname(absPath), { recursive: true });
 
     const today = new Date().toISOString().slice(0, 10);
-    const content = `---\ntitle: ''\ndate: ${today}\n---\n\n`;
+    const content = `---\ntitle: 'Título del documento'\ndate: ${today}\n---\n\n`;
 
     await writeFile(absPath, content, { encoding: 'utf8', flag: 'wx' });
     logSuccess(`creado ${normalizedPath}`, 'new');
