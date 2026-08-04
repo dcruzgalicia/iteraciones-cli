@@ -256,7 +256,7 @@ function walkAst(node: unknown, predicate: (node: unknown) => boolean): boolean 
 }
 
 /** Convierte el AST canónico a body LaTeX aplicando los filtros Lua de la capa latex. */
-async function renderLatexBody(
+async function renderTexBody(
   ast: Record<string, unknown>,
   doc: BuildDocument,
   bibFiles: string[],
@@ -399,7 +399,7 @@ export async function readAstFromCache(cwd: string, doc: BuildDocument): Promise
  *
  * Retorna los relativePath procesados.
  */
-export async function renderLatex(
+export async function renderDocuments(
   docs: BuildDocument[],
   concurrency: number,
   cwd: string,
@@ -445,7 +445,7 @@ export async function renderLatex(
     if (generateLatex !== false) {
       // Detección de citas desde el AST (nodos Cite reales, sin regex sobre el markdown)
       const hasCiteKeys = bibFiles.length > 0 && hasCiteNodes(ast);
-      processedBody = await renderLatexBody(ast, doc, bibFiles, hasCiteKeys, luaFilters.latex, luaFilters.user);
+      processedBody = await renderTexBody(ast, doc, bibFiles, hasCiteKeys, luaFilters.latex, luaFilters.user);
     }
 
     const slug = doc.slug ?? basename(doc.relativePath, '.md');
@@ -484,7 +484,7 @@ export async function renderFromAstCache(
     if (generateLatex !== false) {
       // El markdown original no está disponible: detectar citas desde el AST
       const hasCiteKeys = bibFiles.length > 0 && hasCiteNodes(ast);
-      processedBody = await renderLatexBody(ast, doc, bibFiles, hasCiteKeys, luaFilters.latex, luaFilters.user);
+      processedBody = await renderTexBody(ast, doc, bibFiles, hasCiteKeys, luaFilters.latex, luaFilters.user);
     }
 
     const slug = doc.slug ?? basename(doc.relativePath, '.md');

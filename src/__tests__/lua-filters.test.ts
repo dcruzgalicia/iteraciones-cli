@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { renderLatex } from '../builder/render.js';
+import { renderDocuments } from '../builder/render.js';
 import type { BuildDocument } from '../builder/types.js';
 import { runPandoc } from '../lib/pandoc-runner.js';
 
@@ -197,7 +197,7 @@ describe('filtros Lua de usuario (Fase 6, C)', () => {
     }
   });
 
-  it('el pipeline (renderLatex) aplica los lua-filters del proyecto', async () => {
+  it('el pipeline (renderDocuments) aplica los lua-filters del proyecto', async () => {
     const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-user-lua-'));
     try {
       mkdirSync(join(cwd, 'filters'), { recursive: true });
@@ -210,7 +210,7 @@ describe('filtros Lua de usuario (Fase 6, C)', () => {
         frontmatter: { title: 'Prueba', date: '', author: [] },
         slug: 'prueba',
       };
-      const processed = await renderLatex([doc], 1, cwd, undefined, true);
+      const processed = await renderDocuments([doc], 1, cwd, undefined, true);
       expect(processed.has('doc.md')).toBe(true);
       const tex = await Bun.file(join(cwd, '.iteraciones', 'tex', 'prueba.tex')).text();
       expect(tex).toContain('\\fbox{Nota}');
