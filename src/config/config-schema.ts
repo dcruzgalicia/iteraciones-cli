@@ -48,7 +48,7 @@ const HtmlFormatSchema = z
       .transform((v) => (v || undefined) as string | undefined),
     theme: z.string().optional(),
     accent: z.string().default('lime'),
-    generate: z.boolean().default(false),
+    generate: z.boolean().default(true),
   })
   .strict();
 
