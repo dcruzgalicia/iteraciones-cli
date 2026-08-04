@@ -14,7 +14,7 @@ export function buildProgram(): Command {
   program
     .command('build')
     .description('construye el sitio a partir de los archivos Markdown')
-    .option('-c, --concurrency <n>', 'máximo de invocaciones pandoc simultáneas', '4')
+    .option('-c, --concurrency <n>', 'máximo de invocaciones pandoc simultáneas (por defecto: CPU − 1)')
     .option('--no-cache', 'omite la caché incremental; siempre hace build completo')
     .option('--output <path>', 'directorio de salida (por defecto: dist/www si html.generate:true, dist/documents si no)')
     .option('--no-tailwind', 'omite la generación de CSS con Tailwind')
@@ -23,7 +23,7 @@ export function buildProgram(): Command {
     .option('--verbose', 'muestra información adicional de progreso')
     .action(
       async (opts: {
-        concurrency: string;
+        concurrency?: string;
         cache: boolean;
         output?: string;
         tailwind: boolean;
@@ -31,7 +31,7 @@ export function buildProgram(): Command {
         dryRun?: boolean;
         verbose?: boolean;
       }) => {
-        const concurrency = Number.parseInt(opts.concurrency, 10);
+        const concurrency = opts.concurrency !== undefined ? Number.parseInt(opts.concurrency, 10) : undefined;
         await runBuild(projectRoot(), {
           concurrency: Number.isInteger(concurrency) ? concurrency : undefined,
           noCache: !opts.cache,
