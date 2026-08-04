@@ -22,6 +22,8 @@ export interface PdfFormatConfig {
   toc?: boolean;
   /** Muestra la fecha en la portada del PDF. */
   showDate?: boolean;
+  /** Posición del número de página: footer-left|center|right, header-left|center|right. */
+  pageNumber?: string;
 }
 
 export interface EpubFormatConfig {
@@ -95,6 +97,7 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   generate: false,
   toc: false,
   showDate: false,
+  pageNumber: 'header-right',
 };
 
 export const DEFAULT_EPUB_FORMAT: EpubFormatConfig = {

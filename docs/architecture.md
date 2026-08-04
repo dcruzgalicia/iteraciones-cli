@@ -155,7 +155,6 @@ Además, existen los **preamble filters** (`lib/resources/preamble/*.tex`) que m
 | 13-setkomafont | `lib/resources/preamble/13-setkomafont.tex` | Fuentes de la portada |
 | 14-sectioning | `lib/resources/preamble/14-sectioning.tex` | Estilo de secciones |
 | 15-dictum | `lib/resources/preamble/15-dictum.tex` | Configuración de epígrafes |
-| 16-page-number | `lib/resources/preamble/16-page-number.tex` | Posición del número de página |
 | 17-eso-pic | `lib/resources/preamble/17-eso-pic.tex` | Fondo de página (desactivado por defecto) |
 | 18-pdfx | `lib/resources/preamble/18-pdfx.tex` | PDF/X-1a (desactivado por defecto) |
 | 19-crop | `lib/resources/preamble/19-crop.tex` | Marcas de corte (desactivado por defecto) |

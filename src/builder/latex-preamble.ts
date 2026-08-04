@@ -92,5 +92,26 @@ export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: Pre
     preamble.push('\\vspace*{2\\baselineskip}');
   }
 
+  // ── NÚMERO DE PÁGINA ──
+  // Se aplica en el cuerpo, después de maketitle/TOC, para no afectar
+  // la portada ni el índice (que usan \thispagestyle{empty}).
+  const pageNumber = pdfFormat?.pageNumber ?? 'header-right';
+  const pageCommand = PAGE_NUMBER_COMMANDS[pageNumber];
+  if (pageCommand) {
+    preamble.push(pageCommand);
+  } else {
+    throw new Error(`page-number inválido: "${pageNumber}". Valores válidos: ${Object.keys(PAGE_NUMBER_COMMANDS).join(', ')}`);
+  }
+
   return preamble;
 }
+
+/** Comandos scrlayer-scrpage por posición del número de página. */
+const PAGE_NUMBER_COMMANDS: Record<string, string> = {
+  'header-left': '\\ihead*{\\pagemark}',
+  'header-center': '\\chead*{\\pagemark}',
+  'header-right': '\\ohead*{\\pagemark}',
+  'footer-left': '\\ifoot*{\\pagemark}',
+  'footer-center': '\\cfoot*{\\pagemark}',
+  'footer-right': '\\ofoot*{\\pagemark}',
+};

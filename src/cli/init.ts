@@ -158,6 +158,7 @@ function buildDefaultConfig(): string {
       generate: DEFAULT_PDF_FORMAT.generate ?? false,
       toc: DEFAULT_PDF_FORMAT.toc ?? false,
       'show-date': DEFAULT_PDF_FORMAT.showDate ?? false,
+      'page-number': DEFAULT_PDF_FORMAT.pageNumber ?? 'header-right',
     },
     epub: { generate: DEFAULT_EPUB_FORMAT.generate ?? false },
     markdown: { generate: DEFAULT_MARKDOWN_FORMAT.generate ?? false },

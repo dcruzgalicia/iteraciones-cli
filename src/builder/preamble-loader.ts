@@ -34,7 +34,6 @@ export const BUILTIN_PREAMBLE_FILTERS: string[] = [
   '13-setkomafont',
   '14-sectioning',
   '15-dictum',
-  '16-page-number',
   // ── Extras (desactivados por defecto: disabled-preamble-filters) ──
   '17-eso-pic',
   '18-pdfx',
@@ -64,7 +63,6 @@ const DESCRIPTIONS: Record<string, string> = {
   '13-setkomafont': 'Fuentes de la portada (\\setkomafont para title, subtitle, author, date)',
   '14-sectioning': 'Estilo de secciones (\\RedeclareSectionCommand para todos los niveles)',
   '15-dictum': 'Configuración de epígrafes (\\dictumwidth, fuente del autor)',
-  '16-page-number': 'Posición del número de página (\\ohead*{\\pagemark})',
   '17-eso-pic': 'Fondo de página con eso-pic (desactivado por defecto)',
   '18-pdfx': 'PDF/X-1a para impresión profesional (desactivado por defecto)',
   '19-crop': 'Marcas de corte con crop (desactivado por defecto)',
