@@ -4,6 +4,7 @@ import { basename, dirname, join } from 'node:path';
 import slugifyLib from 'slugify';
 import { logWarning } from '../lib/logger.js';
 import { mapWithConcurrency } from '../lib/run.js';
+import { resolveSlugs } from './slug-resolver.js';
 import { hashString, loadStateFile, saveStateFile } from './state.js';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
 
@@ -37,12 +38,8 @@ export interface BuildState {
   entries: Map<string, DiscoveryEntry>;
 }
 
-const SLUGS_CACHE_PATH = join('.iteraciones', 'changes', 'slugs.json');
+const FM_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
 
-/**
- * Carga el estado del build anterior desde state.json.
- * Retorna null si no existe (primer build).
- */
 export async function loadBuildState(cwd: string): Promise<BuildState | null> {
   const state = await loadStateFile(cwd);
   if (!state) return null;
@@ -71,27 +68,6 @@ export async function saveBuildState(cwd: string, state: BuildState): Promise<vo
     entries: Object.fromEntries(state.entries),
   });
 }
-
-async function loadSlugsCounter(cwd: string): Promise<Map<string, number>> {
-  const file = Bun.file(join(cwd, SLUGS_CACHE_PATH));
-  if (!(await file.exists())) return new Map();
-  try {
-    const raw = await file.text();
-    const parsed: Record<string, number> = JSON.parse(raw);
-    return new Map(Object.entries(parsed));
-  } catch (err) {
-    logWarning(`no se pudo leer slugs.json; se reinicia el contador de slugs duplicados: ${String(err)}`, 'discover');
-    return new Map();
-  }
-}
-
-async function saveSlugsCounter(cwd: string, counter: Map<string, number>): Promise<void> {
-  const filePath = join(cwd, SLUGS_CACHE_PATH);
-  await mkdir(dirname(filePath), { recursive: true });
-  await Bun.write(filePath, JSON.stringify(Object.fromEntries(counter)));
-}
-
-const FM_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
 
 /**
  * Separa el frontmatter YAML del body del documento.
@@ -294,81 +270,12 @@ export async function discover(
     discoveryIndex.delete(p);
   }
 
-  // Resolver slugs duplicados: asignar -dN sin renumeracion
-  const slugGroups = new Map<string, string[]>();
-  for (const [relPath, entry] of discoveryIndex) {
-    const slugBase = computeSlug({ title: entry.title, author: entry.author }, { fallbackPath: relPath });
-    const dir = dirname(relPath);
-    const key = dir === '.' ? slugBase : dir + '/' + slugBase;
-    if (!slugGroups.has(key)) slugGroups.set(key, []);
-    slugGroups.get(key)!.push(relPath);
-  }
-
-  // Solo cargar contador de slugs si hay grupos duplicados
-  const hasDuplicateGroups = [...slugGroups.values()].some((paths) => paths.length > 1);
-  const slugsCounter = hasDuplicateGroups ? await loadSlugsCounter(cwd) : new Map<string, number>();
-
-  for (const [key, paths] of slugGroups) {
-    if (paths.length <= 1) {
-      // No duplicates: assign base slug (sin -dN)
-      const path = paths[0]!;
-      const entry = discoveryIndex.get(path)!;
-      const slugBase = computeSlug({ title: entry.title, author: entry.author }, { fallbackPath: path });
-      // Si antes tenia un slug con -dN y ahora es unico, forzar reprocesamiento
-      if (entry.slug && entry.slug !== slugBase) {
-        changedPaths.add(path);
-        if (!recentFiles.includes(path)) recentFiles.push(path);
-        slugChangedEntries.set(path, entry.slug);
-      }
-      entry.slug = slugBase;
-    } else {
-      // Duplicates: preservar -dN existentes, asignar maxN+1 a nuevos
-      paths.sort();
-
-      // Fase 1: preservar -dN de archivos existentes, calcular max N actual
-      let maxN = slugsCounter.get(key) ?? 0;
-      const existingSlugs = new Map<string, string>();
-      for (const path of paths) {
-        const entry = discoveryIndex.get(path)!;
-        const slugBase = computeSlug({ title: entry.title, author: entry.author }, { fallbackPath: path });
-        if (entry.slug) {
-          const m = entry.slug.match(/-d(\d+)$/);
-          if (m) {
-            const prefix = entry.slug.slice(0, -m[0].length);
-            if (prefix === slugBase) {
-              const n = parseInt(m[1]!, 10);
-              if (n > maxN) maxN = n;
-              existingSlugs.set(path, entry.slug);
-            }
-          }
-        }
-      }
-
-      // Fase 2: asignar slugs para archivos sin -dN (nuevos o que cambiaron de slug base)
-      let nextN = maxN + 1;
-      for (const path of paths) {
-        if (existingSlugs.has(path)) continue;
-        const entry = discoveryIndex.get(path)!;
-        const slugBase = computeSlug({ title: entry.title, author: entry.author }, { fallbackPath: path });
-        const newSlug = slugBase + '-d' + nextN;
-        // Si el slug existente cambio, forzar reprocesamiento y limpiar archivos viejos
-        if (entry.slug && entry.slug !== newSlug) {
-          changedPaths.add(path);
-          if (!recentFiles.includes(path)) recentFiles.push(path);
-          slugChangedEntries.set(path, entry.slug);
-        }
-        entry.slug = newSlug;
-        nextN++;
-      }
-
-      // Actualizar contador con el maximo asignado
-      slugsCounter.set(key, nextN - 1);
-    }
-  }
-
-  // Guardar contador de slugs solo si hay grupos duplicados
-  if (hasDuplicateGroups) {
-    await saveSlugsCounter(cwd, slugsCounter);
+  // Resolver slugs via slug-resolver
+  const slugResult = await resolveSlugs(cwd, discoveryIndex, (meta, opts) => computeSlug(meta, opts as { fallbackPath: string }));
+  for (const [path, oldSlug] of slugResult.slugChangedEntries) slugChangedEntries.set(path, oldSlug);
+  for (const path of slugResult.changedPaths) changedPaths.add(path);
+  for (const path of slugResult.newRecentFiles) {
+    if (!recentFiles.includes(path)) recentFiles.push(path);
   }
 
   // Solo persistir state.json si hubo cambios (archivos nuevos/modificados/eliminados
