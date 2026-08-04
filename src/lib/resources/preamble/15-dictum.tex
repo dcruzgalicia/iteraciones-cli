@@ -20,13 +20,8 @@
     }\par%
   \endgroup
 }
-% Regla del dictum: vskip negativo de la diferencia entre \topskip y la
-% altura del hbox de Á, para alinear la línea base con el texto siguiente.
-\renewcommand*{\dictumrule}{%
-  \settoheight{\dimen@}{Á}%
-  \vskip-\dimexpr\topskip-\dimen@\relax
-  \par
-}
+% Regla del dictum: vacía (sin línea entre dictum y texto siguiente)
+\renewcommand*{\dictumrule}{}
 \makeatother
 \setkomafont{dictumauthor}{\normalsize\normalfont}
 \renewcommand*{\dictumauthorformat}[1]{#1}
