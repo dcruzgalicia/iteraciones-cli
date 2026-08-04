@@ -103,10 +103,10 @@ export class ProgressTracker {
   async planPhases(phases: PipelinePhase[]): Promise<void> {
     for (const phase of phases) this.usedPhases.add(phase);
     if (!this.listr) return;
-    // Si discovery aún no está registrada, esperar al runner (hasta 5s); si no,
-    // su Promise quedaría pendiente hasta finish y el spinner se pegaría a ella.
-    const deadline = Date.now() + 5000;
-    while (!this.phaseResolvers.has('discovery') && !this.runnerDone && Date.now() < deadline) {
+    // Esperar a que el runner registre discovery (en TTY el render() del
+    // DefaultRenderer es async y retrasa el arranque); runnerDone cubre el
+    // caso de runner roto.
+    while (!this.phaseResolvers.has('discovery') && !this.runnerDone) {
       await Bun.sleep(5);
     }
     this.phaseResolvers.get('discovery')?.();
@@ -158,11 +158,11 @@ export class ProgressTracker {
 
   async finish(processed: number, cached: number, formats?: string[]): Promise<void> {
     this.finished = true;
-    // Red de seguridad: si el runner aún no procesó la primera tarea (en TTY el
-    // render() del DefaultRenderer es async y retrasa el procesamiento), esperarlo;
-    // luego resolver lo que quede pendiente (p. ej. discovery en early returns).
-    const deadline = Date.now() + 1000;
-    while (!this.runnerAlive && !this.runnerDone && this.listr && Date.now() < deadline) {
+    // Esperar a que el runner procese la primera tarea (en TTY el render() del
+    // DefaultRenderer es async y retrasa el procesamiento); runnerDone cubre el
+    // caso de runner roto. Luego resolver lo que quede pendiente (p. ej.
+    // discovery en early returns).
+    while (!this.runnerAlive && !this.runnerDone && this.listr) {
       await Bun.sleep(5);
     }
     this.phaseResolvers.forEach((resolve) => {
