@@ -50,8 +50,8 @@ local function has_class(block, cls)
 end
 
 local function process_dictum(div)
-  local beforeskip = div.attributes['beforeskip'] or '\\dp\\strutbox'
-  local afterskip = div.attributes['afterskip'] or '\\dimexpr 2\\baselineskip+\\dp\\strutbox/2\\relax'
+  local beforeskip = div.attributes['beforeskip'] or ''
+  local afterskip = div.attributes['afterskip'] or '\\dimexpr 0.5\\baselineskip-0.5\\alturaA\\relax'
 
   local quote_blocks = {}
   local author_latex = ''
@@ -77,7 +77,12 @@ local function process_dictum(div)
     end
   end
 
-  local opening = '\\vspace*{' .. beforeskip .. '}\\dictum'
+  -- Apertura: vspace antes solo si beforeskip está definido
+  local opening = ''
+  if beforeskip ~= '' then
+    opening = '\\vspace*{' .. beforeskip .. '}'
+  end
+  opening = opening .. '\\dictum'
   if author_latex ~= '' then
     opening = opening .. '[' .. author_latex .. ']'
   end

@@ -1,9 +1,27 @@
 % Epígrafes (dictum)
 \setkomafont{dictum}{\normalsize\normalfont\itshape}
 \renewcommand*{\dictumwidth}{0.5\textwidth}
+% Altura del hbox de Á (para espaciados relativos al dictum)
+\newlength{\alturaA}
+\settoheight{\alturaA}{\hbox{Á}}
+% Redefinición de \dictum: idéntica a la definición de KOMA-Script, salvo
+% que \parbox usa la opción [t] (contenido alineado desde la parte superior).
+\makeatletter
+\renewcommand{\dictum}[2][]{\par%
+  \begingroup
+    \raggeddictum\parbox[t]{\dictumwidth}{%
+      {\@dictumfont{\raggeddictumtext #2\strut\par}%
+        \def\@tempa{#1}\ifx\@tempa\@empty\else%
+          {\raggeddictumtext\dictumrule}%
+          \raggeddictumauthor\@dictumauthorfont\dictumauthorformat{#1}%
+          \strut\par%
+        \fi%
+      }%
+    }\par%
+  \endgroup
+}
 % Regla del dictum: vskip negativo de la diferencia entre \topskip y la
 % altura del hbox de Á, para alinear la línea base con el texto siguiente.
-\makeatletter
 \renewcommand*{\dictumrule}{%
   \settoheight{\dimen@}{Á}%
   \vskip-\dimexpr\topskip-\dimen@\relax
