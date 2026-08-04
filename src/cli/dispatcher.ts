@@ -3,6 +3,7 @@ import { dirname, isAbsolute, join, normalize } from 'node:path';
 import type { BuildOptions } from '../builder/orchestrator.js';
 import { build } from '../builder/orchestrator.js';
 import { loadSiteConfig } from '../config/config-loader.js';
+import { computeActiveFormats } from '../config/site-config.js';
 import { ConfigError, PandocError } from '../lib/errors.js';
 import { logError, logInfo, logSuccess } from '../lib/logger.js';
 import { checkPandoc } from '../lib/pandoc-runner.js';
@@ -69,17 +70,21 @@ export async function runInfo(cwd: string, outputDir?: string): Promise<void> {
     const pandocOk = await checkPandoc()
       .then(() => true)
       .catch(() => false);
-    const distLabel = outputDir ?? 'dist/files';
-    const distExists = await stat(join(cwd, distLabel))
+    const distDir = outputDir ?? join(cwd, 'dist', 'files');
+    const distExists = await stat(distDir)
       .then((s) => s.isDirectory())
       .catch(() => false);
+    const activeFormats = computeActiveFormats(config.format);
+    const disabledList = config.disabledFilters?.length ? config.disabledFilters.join(', ') : '(todos activos)';
+    const disabledPreamble = config.disabledPreambleFilters?.length ? config.disabledPreambleFilters.join(', ') : '(todos activos)';
 
     logInfo('', 'info');
-    logInfo(`  título:   ${config.format?.html?.title ?? 'iteraciones'}`, 'info');
-    logInfo(`  tagline:  ${config.format?.html?.tagline ?? 'escribir, compartir, re-existir'}`, 'info');
-    logInfo(`  lang:     ${config.lang}`, 'info');
-    logInfo(`  pandoc:   ${pandocOk ? 'disponible' : 'no disponible'}`, 'info');
-    logInfo(`  ${distLabel}:  ${distExists ? 'generado' : 'no generado'}`, 'info');
+    logInfo(`  lang:                    ${config.lang}`, 'info');
+    logInfo(`  salida:                  ${distDir}${distExists ? ' (generado)' : ' (no generado)'}`, 'info');
+    logInfo(`  pandoc:                  ${pandocOk ? 'disponible' : 'no disponible'}`, 'info');
+    logInfo(`  formatos activos:        ${activeFormats.length > 0 ? activeFormats.join(', ') : '(ninguno)'}`, 'info');
+    logInfo(`  filters desactivados:    ${disabledList}`, 'info');
+    logInfo(`  preamble desactivados:   ${disabledPreamble}`, 'info');
   } catch (err) {
     if (err instanceof ConfigError) {
       logError(err.message, 'config');
