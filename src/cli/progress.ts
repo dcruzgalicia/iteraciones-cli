@@ -68,6 +68,8 @@ export class ProgressTracker {
   private runnerDone = false;
   /** finish() ya se ejecutó: las tareas registradas después se resuelven al momento. */
   private finished = false;
+  /** Mensajes informativos acumulados para mostrar en la primera tarea. */
+  private infoMessages: string[] = [];
 
   constructor(options: { renderer?: 'default' | 'verbose' | 'test' } = {}) {
     this.renderer = (options.renderer ?? 'default') as ListrRendererValue;
@@ -79,9 +81,16 @@ export class ProgressTracker {
   }
 
   log(msg: string): void {
-    // Los logs del orquestador ocurren antes del primer startPhase (inicio del
-    // build): quedan arriba de la lista de tareas de listr2.
-    process.stdout.write(`${msg}\n`);
+    // Acumular mensajes hasta que listr2 esté listo; luego emitirlos como output
+    // de la primera tarea activa (discovery)
+    if (this.runnerAlive) {
+      const task = this.listrTasks.get('discovery');
+      if (task) {
+        task.output = msg;
+        return;
+      }
+    }
+    this.infoMessages.push(msg);
   }
 
   /**
@@ -165,18 +174,26 @@ export class ProgressTracker {
   }
 
   showCleanup(): void {
-    // La limpieza ocurre antes del primer startPhase (listr2 aún no dibuja)
-    process.stdout.write('\u25a0 Preparaci\u00f3n\n');
-    process.stdout.write('  \u2713 Archivos temporales limpiados\n');
+    this.infoMessages.push('Archivos temporales limpiados');
   }
 
   /** Crea la lista de listr2 con las 7 fases pre-registradas. */
   private createListr(): void {
+    // Volcar mensajes informativos acumulados como output de la tarea discovery
+    const discoveryTask = this.makeTask('discovery');
+    if (this.infoMessages.length > 0) {
+      const originalTask = discoveryTask.task;
+      discoveryTask.task = (_ctx, task) => {
+        task.output = this.infoMessages.join('\n');
+        this.infoMessages = [];
+        return typeof originalTask === 'function' ? originalTask(_ctx, task) : undefined;
+      };
+    }
     const subtasks: ListrTask<ListrCtx, ListrDefaultRenderer>[] = FORMAT_PHASES.map((phase) => this.makeTask(phase));
 
     this.listr = new Listr<ListrCtx, ListrDefaultRenderer>(
       [
-        this.makeTask('discovery'),
+        discoveryTask,
         this.makeTask('render'),
         {
           title: 'Generando formatos',
