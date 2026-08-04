@@ -128,7 +128,7 @@ describe('filtros Lua latex (Fase 6, B2)', () => {
     const tex = await toLatex('::: {.dictum}\nCita de prueba\n:::\n');
     // mbox-start envuelve "Cita" y mbox-end "de prueba" (oración final del párrafo)
     expect(tex).toContain('\\vspace*{\\dp\\strutbox}\\dictum{');
-    expect(tex).toContain('}\\vspace*{2\\baselineskip+\\dp\\strutbox/2}');
+    expect(tex).toContain('}\\vspace*{\\dimexpr 2\\baselineskip+\\dp\\strutbox/2\\relax}');
   });
 
   it('convierte Div.dictum con autor', async () => {

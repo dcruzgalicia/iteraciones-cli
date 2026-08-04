@@ -1,6 +1,14 @@
 % Epígrafes (dictum)
 \setkomafont{dictum}{\normalsize\normalfont\itshape}
 \renewcommand*{\dictumwidth}{0.5\textwidth}
-\renewcommand*{\dictumrule}{}
+% Regla del dictum: vskip negativo de la diferencia entre \topskip y la
+% altura del hbox de Á, para alinear la línea base con el texto siguiente.
+\makeatletter
+\renewcommand*{\dictumrule}{%
+  \settoheight{\dimen@}{Á}%
+  \vskip-\dimexpr\topskip-\dimen@\relax
+  \par
+}
+\makeatother
 \setkomafont{dictumauthor}{\normalsize\normalfont}
 \renewcommand*{\dictumauthorformat}[1]{#1}
