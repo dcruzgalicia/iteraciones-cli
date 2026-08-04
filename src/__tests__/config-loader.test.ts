@@ -29,8 +29,8 @@ describe('loadSiteConfig', () => {
       expect(config.format.html?.baseUrl).toBeUndefined();
       expect(config.disabledFilters).toBeUndefined();
       expect(config.disabledPreambleFilters).toBeUndefined();
-      expect(config.format.latex).toBe(true);
-      expect(config.format.html?.generate).toBe(false);
+      expect(config.format.latex).toBe(false);
+      expect(config.format.html?.generate).toBe(true);
       expect(config.format.pdf?.generate).toBe(false);
       expect(config.format.epub?.generate).toBe(false);
       expect(config.format.markdown?.generate).toBe(false);
