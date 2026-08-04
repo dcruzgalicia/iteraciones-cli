@@ -50,8 +50,8 @@ local function has_class(block, cls)
 end
 
 local function process_dictum(div)
-  local beforeskip = div.attributes['beforeskip'] or '0.5\\topskip'
-  local afterskip = div.attributes['afterskip'] or '32pt'
+  local beforeskip = div.attributes['beforeskip'] or '\\dp\\strutbox'
+  local afterskip = div.attributes['afterskip'] or '2\\baselineskip+\\dp\\strutbox/2'
 
   local quote_blocks = {}
   local author_latex = ''
