@@ -10,8 +10,8 @@ import { logWarning } from '../../lib/logger.js';
 import { runPandoc } from '../../lib/pandoc-runner.js';
 import { mapWithConcurrency } from '../../lib/run.js';
 import { computeSlug } from '../discover.js';
-import { readAstFromCache, resolveUserLuaFilters } from '../render.js';
-import { discoverBibFiles } from '../state.js';
+import { resolveUserLuaFilters } from '../render.js';
+import { readAstFromCache, resolveBibOptions } from '../state.js';
 import type { BuildDocument } from '../types.js';
 import { assembleExportDocument } from './assemble.js';
 
@@ -80,8 +80,7 @@ export async function runExportDocuments(exportableDocs: BuildDocument[], option
   };
 
   // Auto-descubrir archivos .bib en el proyecto
-  const allBib = discoverBibFiles(cwd, ['bib']);
-  const globalBibliography: string | undefined = allBib[0];
+  const globalBibliography: string | undefined = resolveBibOptions(cwd).bibOptions?.bibliography;
 
   // Closure que genera los formatos para un ExportDocument ya ensamblado.
   // epub/markdown se generan desde el AST canónico (json → epub3/markdown).

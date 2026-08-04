@@ -1,8 +1,9 @@
 import { mkdir, rename, rm } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/site-config.js';
 import { logWarning } from '../lib/logger.js';
-import type { DiscoveryEntry } from './types.js';
+import type { BibOptions } from '../lib/pandoc-runner.js';
+import type { BuildDocument, DiscoveryEntry, PreambleFlags } from './types.js';
 
 /** Ruta relativa del archivo de estado del build dentro del proyecto. */
 export const STATE_PATH = join('.iteraciones', 'changes', 'state.json');
@@ -169,4 +170,51 @@ export async function computeBibHash(cwd: string): Promise<string> {
     );
   }
   return hashString(parts.join('\0'));
+}
+
+/** Lee el AST canónico serializado de `.iteraciones/ast/{slug}.json`. */
+export async function readAstFromCache(cwd: string, doc: BuildDocument): Promise<Record<string, unknown> | null> {
+  const slug = doc.slug ?? basename(doc.relativePath, '.md');
+  const dir = dirname(doc.relativePath);
+  const astPath = join(cwd, '.iteraciones', 'ast', dir, `${slug}.json`);
+  const raw = await Bun.file(astPath)
+    .text()
+    .catch(() => '');
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    logWarning(`error al parsear AST en disco de ${doc.relativePath}`, 'render');
+    return null;
+  }
+}
+
+/** Escribe el AST canónico y los outputs cacheados según los formatos activos. */
+export async function writeCachedArtifacts(
+  cwd: string,
+  doc: BuildDocument,
+  slug: string,
+  ast: Record<string, unknown>,
+  processedBody?: string,
+  flags?: PreambleFlags,
+): Promise<void> {
+  const dir = dirname(doc.relativePath);
+  const cacheBase = join(cwd, '.iteraciones');
+  const astDir = join(cacheBase, 'ast', dir);
+  await mkdir(astDir, { recursive: true });
+  await Bun.write(join(astDir, `${slug}.json`), JSON.stringify(ast));
+  if (processedBody !== undefined && flags !== undefined) {
+    const texDir = join(cacheBase, 'tex', dir);
+    await mkdir(texDir, { recursive: true });
+    await Bun.write(join(texDir, `${slug}.tex`), processedBody);
+    await Bun.write(join(texDir, `${slug}.flags.json`), JSON.stringify(flags));
+  }
+}
+
+/** Resuelve las opciones de bibliografía compartidas para exportaciones. */
+export function resolveBibOptions(cwd: string): { bibFiles: string[]; bibOptions?: BibOptions } {
+  const bibFiles = cwd ? discoverBibFiles(cwd, ['bib']) : [];
+  const firstBib = bibFiles[0];
+  const bibOptions = firstBib !== undefined ? { bibliography: firstBib, csl: join(import.meta.dir, '../../src/lib/resources/apa-7.csl') } : undefined;
+  return { bibFiles, bibOptions };
 }
