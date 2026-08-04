@@ -1,45 +1,19 @@
 /**
  * Constructor de preámbulo LaTeX compartido entre writeTexFiles y convertToPdf.
  *
- * Dado un PdfFormatConfig y metadatos opcionales (title, author, date),
- * retorna un array de líneas del preámbulo listo para unir con \n.
- * Incluye \begin{document} y \title{}/\author{}/\date{}/\maketitle.
+ * La configuración estática de paquetes LaTeX vive en archivos .tex bajo
+ * src/lib/resources/preamble/ (01-documentclass.tex, 02-fonts.tex, …).
+ * Esta función solo compone la parte dinámica: metadatos del documento,
+ * tabla de contenidos condicional, bibliografía con rutas del proyecto,
+ * y espaciado post-portada.
  *
- * El orden de los paquetes y comandos sigue la tabla:
- *   CLASE → CORE → FUENTE → INTERLINEADO → MÁRGENES → IDIOMA →
- *   ENCABEZADOS → TIPOGRAFÍA → COMPOSICIÓN → ENLACES → TABLAS →
- *   LISTAS → BIBLIOGRAFÍA → EXTRAS → CONTADORES →
- *   (filters) → \begin{document} → \title/\author/\date/\maketitle → \tableofcontents
+ * Orden de composición:
+ *   preamble filters (01-25) → \begin{document} → \title/\author/\date/\maketitle
+ *   → \tableofcontents (condicional) → espaciado post-portada
  */
 import type { PdfFormatConfig } from '../config/site-config.js';
-import { DEFAULT_PDF_FORMAT } from '../config/site-config.js';
 import { loadPreambleFilters } from './preamble-loader.js';
 import { discoverBibFiles } from './state.js';
-
-/** Mapa de nombres de page-size a dimensiones [ancho, alto] en mm. */
-const PAGE_SIZE_DIMS: Record<string, [number, number]> = {
-  'half-letter': [139.7, 215.9],
-  letter: [215.9, 279.4],
-  legal: [215.9, 355.6],
-  executive: [184.15, 266.7],
-  a3: [297, 420],
-  a4: [210, 297],
-  a5: [148, 210],
-  b4: [250, 353],
-  b5: [176, 250],
-  tabloid: [279.4, 431.8],
-  pocket: [105, 176],
-};
-
-/** Mapa de posiciones de numero de pagina a comandos KOMA-Script. */
-const PAGE_NUMBER_MAP: Record<string, string> = {
-  'header-right': '\\ohead*{\\pagemark}',
-  'header-center': '\\chead*{\\pagemark}',
-  'header-left': '\\ihead*{\\pagemark}',
-  'footer-right': '\\ofoot*{\\pagemark}',
-  'footer-center': '\\cfoot*{\\pagemark}',
-  'footer-left': '\\ifoot*{\\pagemark}',
-};
 
 export interface PreambleMeta {
   title?: string;
@@ -59,288 +33,23 @@ export interface PreambleMeta {
 }
 
 export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: PreambleMeta, disabledPreambleFilters?: string[]): Promise<string[]> {
-  const fmt = pdfFormat ?? DEFAULT_PDF_FORMAT;
-  const dc = fmt.documentclass?.class ?? 'scrbook';
-
-  // Propagar todas las opciones del usuario, completando defaults solo si faltan
-  const rawOpts = [...(fmt.documentclass?.options ?? [])];
-  if (!rawOpts.some((o) => /^\d+pt$/.test(o))) rawOpts.unshift('12pt');
-  if (!rawOpts.some((o) => o.startsWith('sfdefaults='))) rawOpts.push('sfdefaults=false');
-  if (!rawOpts.some((o) => o.startsWith('paper='))) rawOpts.push('paper=letter');
-  const classOpts = rawOpts;
-
-  // Detectar twoside/oneside para otros usos (page-number, margins)
-  const twoside = rawOpts.includes('twoside');
-  const pageSize = rawOpts.find((o) => o.startsWith('paper='))?.replace('paper=', '');
-  const geometry = fmt.geometry;
-  const lineSpacing = fmt.setstretch ?? 1.5;
-
   const preamble: string[] = [];
 
-  // ── 1. CLASE ──
-  preamble.push(`\\documentclass[${classOpts.join(',')}]{${dc}}`);
-
-  // ── 2. CORE ──
-  preamble.push('\\usepackage[T1]{fontenc}', '\\usepackage[utf8]{inputenc}', '\\usepackage{textcomp}');
-
-  // ── 3. FUENTE ──
-  if (fmt.fontFamily && fmt.fontFamily.length > 0) {
-    for (const font of fmt.fontFamily) {
-      const opts = font.options && font.options.length > 0 ? font.options.join(',') : undefined;
-      if (opts) {
-        preamble.push(`\\usepackage[${opts}]{${font.name}}`);
-      } else {
-        preamble.push(`\\usepackage{${font.name}}`);
-      }
-    }
+  // ── Preamble filters (archivos .tex en orden, con override del proyecto) ──
+  const cwdForFilters = meta?.cwd;
+  const preambleFilters = await loadPreambleFilters(disabledPreambleFilters, cwdForFilters);
+  for (const filter of preambleFilters) {
+    preamble.push(filter.content.trimEnd());
   }
 
-  // ── 4. INTERLINEADO ──
-  if (fmt.setspace !== false) {
-    preamble.push('\\usepackage{setspace}', `\\setstretch{${lineSpacing}}`);
-  }
-
-  // ── 5. MÁRGENES ──
-  if (geometry?.options && geometry.options.length > 0) {
-    preamble.push(`\\usepackage[${geometry.options.join(',')}]{geometry}`);
-  }
-
-  // ── 6. IDIOMA ──
-  if (fmt.babel?.options && fmt.babel.options.length > 0) {
-    preamble.push(`\\usepackage[${fmt.babel.options.join(',')}]{babel}`);
-  }
-
-  // ── 7. ENCABEZADOS ──
-  preamble.push('\\usepackage{scrlayer-scrpage}', '\\clearpairofpagestyles');
-  // Nota: \ohead*{\pagemark} se inserta despues de \maketitle o \tableofcontents
-  // para evitar numeracion en portada e indice.
-
-  // ── 8. TIPOGRAFÍA ──
-  if (fmt.microtype?.options && fmt.microtype.options.length > 0) {
-    preamble.push(`\\usepackage[${fmt.microtype.options.join(',')}]{microtype}`);
-  }
-
-  // ── 9. COMPOSICIÓN E INTERNOS ──
-  if (fmt.raggedbottom !== false) {
-    preamble.push('\\raggedbottom');
-  }
-  preamble.push(
-    `\\pretolerance=${fmt.pretolerance ?? 200}`,
-    `\\tolerance=${fmt.tolerance ?? 400}`,
-    `\\hyphenpenalty=${fmt.hyphenpenalty ?? 100}`,
-    `\\brokenpenalty=${fmt.brokenpenalty ?? 1000000}`,
-    `\\finalhyphendemerits=${fmt.finalhyphendemerits ?? 1000000}`,
-    `\\doublehyphendemerits=${fmt.doublehyphendemerits ?? 1000000}`,
-    `\\widowpenalty=${fmt.widowpenalty ?? 1000000}`,
-    `\\clubpenalty=${fmt.clubpenalty ?? 1000000}`,
-    '\\newcounter{none}',
-    '\\providecommand{\\tightlist}{%',
-    '  \\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}}',
-  );
-
-  // ── 10. ENLACES ──
-  if (fmt.hyperref?.options && fmt.hyperref.options.length > 0) {
-    preamble.push(`\\usepackage[${fmt.hyperref.options.join(',')}]{hyperref}`);
-  } else {
-    preamble.push('\\usepackage{hyperref}');
-  }
-
-  // ── 11. TABLAS ──
-  preamble.push('\\usepackage{longtable}', '\\usepackage{booktabs}', '\\usepackage{array}', '\\usepackage{calc}');
-
-  // ── 12. LISTAS ──
-  if (fmt.enumitem !== false) {
-    preamble.push('\\usepackage{enumitem}');
-    if (fmt.setlist) {
-      for (const sl of fmt.setlist) {
-        preamble.push(`\\setlist[${sl.command}]{${sl.options.join(',')}}`);
-      }
-    }
-  }
-
-  // ── 13. BIBLIOGRAFÍA ──
-  const cwd = meta?.cwd;
-  if (cwd) {
-    const bibFiles = discoverBibFiles(cwd, ['bib']);
+  // ── Bibliografía (rutas .bib dinámicas desde el proyecto) ──
+  if (cwdForFilters) {
+    const bibFiles = discoverBibFiles(cwdForFilters, ['bib']);
     if (bibFiles.length > 0) {
-      preamble.push('\\usepackage{csquotes}');
-      preamble.push('\\usepackage[style=apa]{biblatex}');
       for (const bib of bibFiles) {
         preamble.push(`\\addbibresource{${bib}}`);
       }
     }
-  }
-
-  // ── 14. EXTRAS: eso-pic ──
-  if (fmt.esoPic) {
-    const esoPicOpts = typeof fmt.esoPic === 'boolean' ? [] : (fmt.esoPic.options ?? []);
-    if (esoPicOpts.length > 0) {
-      preamble.push(`\\usepackage[${esoPicOpts.join(',')}]{eso-pic}`);
-    } else {
-      preamble.push('\\usepackage{eso-pic}');
-    }
-  }
-
-  // ── 14. EXTRAS: pdfx ──
-  if (fmt.pdfx) {
-    preamble.push('\\usepackage[x-1a]{pdfx}');
-    preamble.push('\\pdfpagesattr{}');
-  }
-
-  // ── 14. EXTRAS: crop ──
-  if (fmt.crop) {
-    let cropW: number | undefined;
-    let cropH: number | undefined;
-    if (pageSize && pageSize !== 'custom' && PAGE_SIZE_DIMS[pageSize]) {
-      const [pw, ph] = PAGE_SIZE_DIMS[pageSize];
-      cropW = pw + 15;
-      cropH = ph + 15;
-    } else if (pageSize === 'custom' && geometry?.options) {
-      const gw = geometry.options.find((o) => o.startsWith('paperwidth='));
-      const gh = geometry.options.find((o) => o.startsWith('paperheight='));
-      if (gw && gh) {
-        const gwVal = gw.replace('paperwidth=', '');
-        const ghVal = gh.replace('paperheight=', '');
-        const wp = parseFloat(gwVal);
-        const hp = parseFloat(ghVal);
-        const unitW = gwVal.replace(/[\d.]/g, '');
-        const unitH = ghVal.replace(/[\d.]/g, '');
-        if ((unitW === 'mm' || unitW === 'truemm') && (unitH === 'mm' || unitH === 'truemm') && !isNaN(wp) && !isNaN(hp)) {
-          cropW = wp + 15;
-          cropH = hp + 15;
-        }
-      }
-    }
-    if (cropW && cropH) {
-      preamble.push(`\\usepackage[width=${cropW}truemm,height=${cropH}truemm,center,cam]{crop}`);
-    }
-  }
-
-  // ── 15. CONTADORES ──
-  if (fmt.setcounter?.secnumdepth !== undefined) {
-    preamble.push(`\\setcounter{secnumdepth}{${fmt.setcounter.secnumdepth}}`);
-  }
-  if (fmt.setcounter?.tocdepth !== undefined) {
-    preamble.push(`\\setcounter{tocdepth}{${fmt.setcounter.tocdepth}}`);
-  }
-
-  // ── 10. SETKOMAFONT (desde config, reemplaza filter 02) ──
-  if (fmt.setkomafont) {
-    for (const [element, font] of Object.entries(fmt.setkomafont)) {
-      preamble.push(`\\setkomafont{${element}}{${font}}`);
-    }
-  }
-
-  // ── 11. SECTIONING (desde config, reemplaza filters 03-09) ──
-  if (fmt.sectioning) {
-    // part
-    if (fmt.sectioning.part) {
-      const p = fmt.sectioning.part;
-      const opts: string[] = [];
-      if (p.beforeskip) opts.push('beforeskip=' + p.beforeskip);
-      if (p.afterskip) opts.push('afterskip=' + p.afterskip);
-      if (p.pagestyle) opts.push('pagestyle=' + p.pagestyle);
-      if (opts.length > 0) {
-        opts.push('afterindent=false');
-        preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{part}`);
-      }
-      if (p.font) preamble.push(`\\setkomafont{part}{${p.font}}`);
-    }
-    // chapter
-    if (fmt.sectioning.chapter) {
-      const ch = fmt.sectioning.chapter;
-      const opts: string[] = [];
-      if (ch.style) opts.push('style=' + ch.style);
-      if (ch.beforeskip) opts.push('beforeskip=' + ch.beforeskip);
-      if (ch.afterskip) opts.push('afterskip=' + ch.afterskip);
-      if (ch.pagestyle) opts.push('pagestyle=' + ch.pagestyle);
-      if (opts.length > 0) {
-        opts.push('afterindent=false');
-        preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{chapter}`);
-      }
-      if (ch.font) preamble.push(`\\setkomafont{chapter}{${ch.font}}`);
-      if (ch.align) preamble.push(`\\renewcommand{\\raggedchapter}{\\centering}`);
-    }
-    // section
-    if (fmt.sectioning.section) {
-      const s = fmt.sectioning.section;
-      const opts: string[] = [];
-      if (s.style) opts.push('style=' + s.style);
-      if (s.beforeskip) opts.push('beforeskip=' + s.beforeskip);
-      if (s.afterskip) opts.push('afterskip=' + s.afterskip);
-      if (opts.length > 0) {
-        opts.push('afterindent=false');
-        preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{section}`);
-      }
-      if (s.font) preamble.push(`\\setkomafont{section}{${s.font}}`);
-      if (s.align) preamble.push(`\\renewcommand{\\raggedsection}{\\centering}`);
-    }
-    // subsection
-    if (fmt.sectioning.subsection) {
-      const ss = fmt.sectioning.subsection;
-      const opts: string[] = [];
-      if (ss.beforeskip) opts.push('beforeskip=' + ss.beforeskip);
-      if (ss.afterskip) opts.push('afterskip=' + ss.afterskip);
-      if (opts.length > 0) {
-        opts.push('afterindent=false');
-        preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{subsection}`);
-      }
-      if (ss.font) preamble.push(`\\setkomafont{subsection}{${ss.font}}`);
-    }
-    // subsubsection
-    if (fmt.sectioning.subsubsection) {
-      const sss = fmt.sectioning.subsubsection;
-      const opts: string[] = [];
-      if (sss.beforeskip) opts.push('beforeskip=' + sss.beforeskip);
-      if (sss.afterskip) opts.push('afterskip=' + sss.afterskip);
-      if (opts.length > 0) {
-        opts.push('afterindent=false');
-        preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{subsubsection}`);
-      }
-      if (sss.font) preamble.push(`\\setkomafont{subsubsection}{${sss.font}}`);
-    }
-    // paragraph
-    if (fmt.sectioning.paragraph) {
-      const pg = fmt.sectioning.paragraph;
-      const opts: string[] = [];
-      if (pg.beforeskip) opts.push('beforeskip=' + pg.beforeskip);
-      if (pg.afterskip) opts.push('afterskip=' + pg.afterskip);
-      if (opts.length > 0) {
-        opts.push('afterindent=false');
-        preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{paragraph}`);
-      }
-      if (pg.font) preamble.push(`\\setkomafont{paragraph}{${pg.font}}`);
-    }
-    // subparagraph
-    if (fmt.sectioning.subparagraph) {
-      const spg = fmt.sectioning.subparagraph;
-      const opts: string[] = [];
-      if (spg.beforeskip) opts.push('beforeskip=' + spg.beforeskip);
-      if (spg.afterskip) opts.push('afterskip=' + spg.afterskip);
-      if (opts.length > 0) {
-        opts.push('afterindent=false');
-        preamble.push(`\\RedeclareSectionCommand[${opts.join(',')}]{subparagraph}`);
-      }
-      if (spg.font) preamble.push(`\\setkomafont{subparagraph}{${spg.font}}`);
-    }
-  }
-
-  // ── 12. DICTUM (desde config, reemplaza filter 10) ──
-  if (fmt.dictum) {
-    if (fmt.dictum.font) preamble.push(`\\setkomafont{dictum}{${fmt.dictum.font}}`);
-    if (fmt.dictum.width) preamble.push(`\\renewcommand*{\\dictumwidth}{${fmt.dictum.width}}`);
-    if (fmt.dictum.rule !== undefined) preamble.push(`\\renewcommand*{\\dictumrule}{${fmt.dictum.rule}}`);
-    if (fmt.dictum.authorfont) preamble.push(`\\setkomafont{dictumauthor}{${fmt.dictum.authorfont}}`);
-    if (fmt.dictum.authorformat) preamble.push(`\\renewcommand*{\\dictumauthorformat}[1]{${fmt.dictum.authorformat}}`);
-  }
-
-  // ── PREAMBLE TRANSPILERS ──
-  // Se ejecutan antes de \begin{document} para que sus definiciones
-  // esten vigentes cuando se llame a \maketitle.
-  const cwdForFilters = meta?.cwd;
-  const preambleFilters = await loadPreambleFilters(disabledPreambleFilters, cwdForFilters);
-  for (const tp of preambleFilters) {
-    preamble.push(tp.content.trimEnd());
   }
 
   // ── CUERPO DEL DOCUMENTO ──
@@ -351,11 +60,10 @@ export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: Pre
   preamble.push(`\\title{${displayTitle}}`);
   if (meta?.subtitle) preamble.push(`\\subtitle{${meta.subtitle}}`);
   if (meta?.author?.length) preamble.push(`\\author{${meta.author.join(' \\and ')}}`);
-  if (fmt.showDate) {
+  if (pdfFormat?.showDate) {
     if (meta?.date) {
       preamble.push(`\\date{${meta.date}}`);
     } else if (meta?.filePath) {
-      // Usar fecha de creacion del archivo si no hay date en frontmatter
       try {
         const fileStat = await Bun.file(meta.filePath).stat();
         const btime = fileStat.birthtime || fileStat.mtime;
@@ -375,24 +83,11 @@ export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: Pre
   preamble.push('\\maketitle');
 
   // ── TABLA DE CONTENIDOS ──
-  if (fmt.toc && meta?.hasTocEntries) {
+  if (pdfFormat?.toc && meta?.hasTocEntries) {
     preamble.push('\\tableofcontents');
   }
 
-  // ── NUMERO DE PAGINA ──
-  // Se inserta despues de portada/indice para evitar numeracion
-  // en portada (maketitle) e indice (tableofcontents).
-  const pageNum = fmt.pageNumber;
-  if (pageNum) {
-    const cmd = PAGE_NUMBER_MAP[pageNum];
-    if (cmd) preamble.push(cmd);
-  }
-
   // ── ESPACIO TRAS PORTADA/INDICE ──
-  // Solo cuando el PRIMER bloque es un parrafo (no heading, no dictum).
-  // Los encabezados (section, chapter) usan su propio espaciado
-  // mediante \\RedeclareSectionCommand. Los dictum tienen el suyo
-  // propio desde el filter.
   if (!meta?.skipParagraphSpace) {
     preamble.push('\\vspace*{2\\baselineskip}');
   }

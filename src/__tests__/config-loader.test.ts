@@ -242,10 +242,8 @@ describe('loadSiteConfig', () => {
       await writeConfig(dir, 'format:\n  pdf:\n    generate: true');
       const config = await loadSiteConfig(dir);
       expect(config.format.pdf?.generate).toBe(true);
-      // pdfx, toc, crop, etc. tienen fallback directo a DEFAULT_PDF_FORMAT
-      expect(config.format.pdf?.pdfx).toBe(false);
       expect(config.format.pdf?.toc).toBe(false);
-      expect(config.format.pdf?.crop).toBe(false);
+      expect(config.format.pdf?.showDate).toBe(false);
     });
   });
 

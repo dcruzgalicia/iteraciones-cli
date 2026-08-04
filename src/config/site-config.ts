@@ -1,5 +1,3 @@
-export type PageNumberPlacement = 'footer-left' | 'footer-center' | 'footer-right' | 'header-left' | 'header-center' | 'header-right';
-
 // ── Schema `format:` (estilo Quarto) ──
 
 export interface HtmlFormatConfig {
@@ -18,76 +16,12 @@ export interface HtmlFormatConfig {
 }
 
 export interface PdfFormatConfig {
+  /** Si true, genera PDF mediante latexmk. */
   generate?: boolean;
-
-  // Class
-  documentclass?: {
-    class?: 'scrartcl' | 'scrbook';
-    options?: string[];
-  };
-
-  // Active packages (with options)
-  geometry?: { options?: string[] };
-  babel?: { options?: string[] };
-  hyperref?: { options?: string[] };
-  microtype?: { options?: string[] };
-  enumitem?: boolean;
-  /** Lista de paquetes de fuente a cargar. Cada entrada genera \\usepackage[options]{name}. */
-  fontFamily?: Array<{ name: string; options?: string[] }>;
-  setspace?: boolean;
-
-  // Active commands
-  setstretch?: number;
-  raggedbottom?: boolean;
-  pretolerance?: number;
-  tolerance?: number;
-  brokenpenalty?: number;
-  hyphenpenalty?: number;
-  finalhyphendemerits?: number;
-  doublehyphendemerits?: number;
-  widowpenalty?: number;
-  clubpenalty?: number;
-  setlist?: Array<{ command: string; options: string[] }>;
-  setcounter?: Record<string, number>;
-
-  // Optional packages
-  esoPic?: { options?: string[] } | boolean;
-  pdfx?: boolean;
-  crop?: boolean;
-
-  // Other attributes
-  pageNumber?: PageNumberPlacement;
+  /** Incluye tabla de contenidos en el PDF. */
   toc?: boolean;
+  /** Muestra la fecha en la portada del PDF. */
   showDate?: boolean;
-
-  // Sectioning (replaces filters 03-09)
-  sectioning?: {
-    part?: { beforeskip?: string; afterskip?: string; font?: string; pagestyle?: string };
-    chapter?: { style?: string; beforeskip?: string; afterskip?: string; font?: string; align?: string; pagestyle?: string };
-    section?: { style?: string; beforeskip?: string; afterskip?: string; font?: string; align?: string; pagestyle?: string };
-    subsection?: { beforeskip?: string; afterskip?: string; font?: string; pagestyle?: string };
-    subsubsection?: { beforeskip?: string; afterskip?: string; font?: string; pagestyle?: string };
-    paragraph?: { beforeskip?: string; afterskip?: string; font?: string; pagestyle?: string };
-    subparagraph?: { beforeskip?: string; afterskip?: string; font?: string; pagestyle?: string };
-  };
-
-  // setkomafont for maketitle elements (replaces filter 02)
-  setkomafont?: {
-    title?: string;
-    subtitle?: string;
-    author?: string;
-    date?: string;
-    publishers?: string;
-  };
-
-  // Dictum (replaces filter 10)
-  dictum?: {
-    width?: string;
-    font?: string;
-    rule?: string;
-    authorfont?: string;
-    authorformat?: string;
-  };
 }
 
 export interface EpubFormatConfig {
@@ -158,74 +92,9 @@ export const DEFAULT_HTML_FORMAT: HtmlFormatConfig = {
 };
 
 export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
-  documentclass: {
-    class: 'scrbook',
-    options: ['12pt', 'sfdefaults=false', 'paper=letter', 'twoside'],
-  },
-  geometry: { options: ['top=2.54cm', 'bottom=2.54cm', 'left=2.54cm', 'right=2.54cm', 'headheight=\\baselineskip', 'headsep=6pt', 'footskip=22pt'] },
-  babel: { options: ['spanish', 'mexico', 'es-noshorthands', 'es-noindentfirst'] },
-  hyperref: { options: ['hidelinks'] },
-  microtype: {
-    options: ['activate={true,nocompatibility}', 'final', 'tracking=true', 'kerning=true', 'spacing=true', 'factor=1100', 'stretch=10', 'shrink=10'],
-  },
-  enumitem: true,
-  setspace: true,
-  setstretch: 1.5,
-  raggedbottom: true,
-  pretolerance: 200,
-  tolerance: 400,
-  brokenpenalty: 1_000_000,
-  hyphenpenalty: 100,
-  finalhyphendemerits: 1_000_000,
-  doublehyphendemerits: 1_000_000,
-  widowpenalty: 1_000_000,
-  clubpenalty: 1_000_000,
-  setlist: [{ command: 'description', options: ['noitemsep', 'nosep', 'topsep=\\baselineskip'] }],
-  setcounter: { secnumdepth: 1, tocdepth: 1 },
-  sectioning: {
-    part: { beforeskip: '11\\baselineskip', afterskip: '\\baselineskip', font: '\\normalsize\\bfseries\\MakeUppercase', pagestyle: 'empty' },
-    chapter: {
-      style: 'chapter',
-      beforeskip: '2\\baselineskip',
-      afterskip: '\\baselineskip',
-      font: '\\normalsize\\normalfont\\scshape',
-      align: 'center',
-      pagestyle: 'plain',
-    },
-    section: {
-      style: 'section',
-      beforeskip: '2\\baselineskip',
-      afterskip: '2\\baselineskip',
-      font: '\\normalsize\\bfseries\\MakeUppercase',
-      align: 'center',
-      pagestyle: 'plain',
-    },
-    subsection: { beforeskip: '2\\baselineskip', afterskip: '2\\baselineskip', font: '\\normalsize\\normalfont\\textit', pagestyle: 'plain' },
-    subsubsection: { beforeskip: '2\\baselineskip', afterskip: '\\baselineskip', font: '\\normalsize\\normalfont\\itshape', pagestyle: 'plain' },
-    paragraph: { beforeskip: '\\baselineskip', afterskip: '0pt', font: '\\normalsize\\normalfont', pagestyle: 'plain' },
-    subparagraph: { beforeskip: '\\baselineskip', afterskip: '0pt', font: '\\normalsize\\normalfont', pagestyle: 'plain' },
-  },
-  setkomafont: {
-    title: '\\normalsize\\bfseries',
-    subtitle: '\\normalsize\\normalfont\\itshape',
-    author: '\\normalsize\\normalfont\\scshape',
-    date: '\\normalsize\\normalfont',
-    publishers: '\\normalsize\\normalfont',
-  },
-  dictum: {
-    width: '0.5\\textwidth',
-    font: '\\normalsize\\normalfont\\itshape',
-    rule: '',
-    authorfont: '\\normalsize\\normalfont',
-    authorformat: '#1',
-  },
-  esoPic: false,
-  pdfx: false,
-  crop: false,
-  pageNumber: 'header-right',
+  generate: false,
   toc: false,
   showDate: false,
-  generate: false,
 };
 
 export const DEFAULT_EPUB_FORMAT: EpubFormatConfig = {

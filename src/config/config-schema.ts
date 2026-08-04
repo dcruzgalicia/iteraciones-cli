@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import type { SiteConfig } from './site-config.js';
-import { DEFAULT_PDF_FORMAT } from './site-config.js';
 
 // ── Constantes ────────────────────────────────────────────────────────────
 
@@ -29,8 +28,6 @@ export const KNOWN_ACCENT_COLORS = [
   'rose',
 ] as const;
 
-const PAGE_NUMBER_PLACEMENTS = ['footer-left', 'footer-center', 'footer-right', 'header-left', 'header-center', 'header-right'] as const;
-
 /**
  * Todos los sub-esquemas usan `.strict()`: las claves desconocidas en
  * cualquier nivel generan issues `unrecognized_keys` que `config-loader.ts`
@@ -57,83 +54,9 @@ const HtmlFormatSchema = z
 
 // ── PdfFormatConfig ────────────────────────────────────────────────────────
 
-const DocumentClassSchema = z
-  .object({
-    class: z.enum(['scrartcl', 'scrbook']).default('scrbook'),
-    options: z.array(z.string()).default(['12pt', 'sfdefaults=false', 'paper=letter', 'twoside']),
-  })
-  .strict();
-
-const SectionLevelSchema = z
-  .object({
-    beforeskip: z.string().optional(),
-    afterskip: z.string().optional(),
-    font: z.string().optional(),
-    pagestyle: z.string().optional(),
-  })
-  .strict();
-
-const SectionLevelWithStyleSchema = SectionLevelSchema.extend({
-  style: z.string().optional(),
-  align: z.string().optional(),
-}).strict();
-
-const SectioningSchema = z
-  .object({
-    part: SectionLevelSchema.optional(),
-    chapter: SectionLevelWithStyleSchema.optional(),
-    section: SectionLevelWithStyleSchema.optional(),
-    subsection: SectionLevelSchema.optional(),
-    subsubsection: SectionLevelSchema.optional(),
-    paragraph: SectionLevelSchema.optional(),
-    subparagraph: SectionLevelSchema.optional(),
-  })
-  .strict();
-
 const PdfFormatSchema = z
   .object({
     generate: z.boolean().default(false),
-    documentclass: DocumentClassSchema.optional(),
-    geometry: z
-      .object({ options: z.array(z.string()) })
-      .strict()
-      .optional(),
-    babel: z
-      .object({ options: z.array(z.string()) })
-      .strict()
-      .optional(),
-    hyperref: z
-      .object({ options: z.array(z.string()).default(['hidelinks']) })
-      .strict()
-      .optional(),
-    microtype: z
-      .object({ options: z.array(z.string()) })
-      .strict()
-      .optional(),
-    enumitem: z.boolean().default(true),
-    'font-family': z.array(z.object({ name: z.string(), options: z.array(z.string()).optional() }).strict()).optional(),
-    setspace: z.boolean().default(true),
-    setstretch: z.number().positive().default(1.5),
-    raggedbottom: z.boolean().default(true),
-    pretolerance: z.number().default(200),
-    tolerance: z.number().default(400),
-    brokenpenalty: z.number().default(1_000_000),
-    hyphenpenalty: z.number().default(100),
-    finalhyphendemerits: z.number().default(1_000_000),
-    doublehyphendemerits: z.number().default(1_000_000),
-    widowpenalty: z.number().default(1_000_000),
-    clubpenalty: z.number().default(1_000_000),
-    setlist: z
-      .array(z.object({ command: z.string(), options: z.array(z.string()) }).strict())
-      .default([{ command: 'description', options: ['noitemsep', 'nosep', 'topsep=\\baselineskip'] }]),
-    setcounter: z.record(z.string(), z.number()).default({ secnumdepth: 1, tocdepth: 1 }),
-    sectioning: SectioningSchema.optional(),
-    setkomafont: z.record(z.string(), z.string()).optional(),
-    dictum: z.record(z.string(), z.string()).optional(),
-    'eso-pic': z.union([z.boolean(), z.object({ options: z.array(z.string()) }).strict()]).default(false),
-    pdfx: z.boolean().default(false),
-    crop: z.boolean().default(false),
-    'page-number': z.enum(PAGE_NUMBER_PLACEMENTS).default('header-right'),
     toc: z.boolean().default(false),
     'show-date': z.boolean().default(false),
   })
@@ -225,7 +148,7 @@ export const SiteConfigSchema = RawSiteConfigSchema.transform((raw) => {
             accent: 'lime',
             generate: false,
           },
-      pdf: pdfRaw ? { ...DEFAULT_PDF_FORMAT, ...camelizeKeys(pdfRaw) } : { ...DEFAULT_PDF_FORMAT },
+      pdf: pdfRaw ? (camelizeKeys(pdfRaw) as SiteConfig['format']['pdf']) : { generate: false, toc: false, showDate: false },
       epub: epubRaw ? (camelizeKeys(epubRaw) as SiteConfig['format']['epub']) : { generate: false },
       markdown: mdRaw ? (camelizeKeys(mdRaw) as SiteConfig['format']['markdown']) : { generate: false },
     },
