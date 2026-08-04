@@ -28,7 +28,7 @@ describe('loadSiteConfig', () => {
       expect(config.format.html?.logo).toBe('');
       expect(config.format.html?.baseUrl).toBeUndefined();
       expect(config.disabledFilters).toBeUndefined();
-      expect(config.disabledPreambleFilters).toBeUndefined();
+      expect(config.disabledPreambleFilters).toEqual(['17-eso-pic', '18-pdfx', '19-crop']);
       expect(config.format.latex).toBe(false);
       expect(config.format.html?.generate).toBe(true);
       expect(config.format.pdf?.generate).toBe(false);
