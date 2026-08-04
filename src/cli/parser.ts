@@ -57,10 +57,9 @@ export function buildProgram(): Command {
 
   program
     .command('doctor')
-    .description('verifica el entorno de build y opcionalmente corrige problemas')
-    .option('--fix', 'intenta corregir automáticamente los problemas detectados')
-    .action(async (opts: { fix?: boolean }) => {
-      await runDoctor(projectRoot(), { fix: opts.fix });
+    .description('verifica el entorno de build')
+    .action(async () => {
+      await runDoctor(projectRoot());
     });
 
   program

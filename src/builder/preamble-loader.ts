@@ -9,8 +9,8 @@ import { logWarning } from '../lib/logger.js';
 // El proyecto puede sobreescribir cualquiera con preamble/<nombre>.tex en su
 // raíz; si no existe, se usa el recurso del paquete.
 //
-// La lógica condicional real del proyecto vive en los filters del AST
-// (src/builder/filters/), que sí requieren TypeScript.
+// La lógica condicional real del proyecto vive en los filtros Lua
+// (src/lib/resources/filters/) y en los preamble filters (.tex).
 // ---------------------------------------------------------------------------
 
 /** Directorio de preamble filters del paquete. */
