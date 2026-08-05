@@ -64,13 +64,16 @@ export async function loadSiteConfig(cwd: string, options?: { mode?: 'build' | '
 
   const root = parsed as Record<string, unknown>;
 
-  // Advertir sobre accent inválido antes del parse (una sola ejecución, evita
-  // duplicar el warning al re-parsear por claves desconocidas). La sustitución
-  // a "lime" la realiza el esquema Zod (z.enum().catch()).
+  // Advertir sobre accent inválido: en modo validate es error, en build es
+  // fallback a "lime" con warning (el esquema Zod ya no aplica .catch()).
   const htmlRaw = (root.format as Record<string, unknown> | undefined)?.html;
   const accentRaw = (htmlRaw as Record<string, unknown> | undefined)?.accent;
   if (typeof accentRaw === 'string' && !KNOWN_ACCENT_COLORS.includes(accentRaw as (typeof KNOWN_ACCENT_COLORS)[number])) {
+    if (isValidate) {
+      throw new ConfigError(`format.html.accent: "${accentRaw}" no es un color válido. Usa uno de: ${KNOWN_ACCENT_COLORS.join(', ')}`, configPath);
+    }
     process.stderr.write(`[iteraciones] color de acento desconocido: "${accentRaw}". Usando "lime" por defecto.\n`);
+    (root.format as Record<string, unknown>).html = { ...((htmlRaw as Record<string, unknown>) ?? {}), accent: 'lime' };
   }
 
   // Las claves desconocidas (issues unrecognized_keys de los esquemas strict)
