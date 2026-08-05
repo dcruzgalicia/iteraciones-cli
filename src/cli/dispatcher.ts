@@ -1,5 +1,6 @@
 import { mkdir, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, normalize } from 'node:path';
+import { IGNORED_DIRS } from '../builder/discover.js';
 import type { BuildOptions } from '../builder/orchestrator.js';
 import { build } from '../builder/orchestrator.js';
 import { loadSiteConfig } from '../config/config-loader.js';
@@ -67,9 +68,7 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
 export async function runInfo(cwd: string): Promise<void> {
   try {
     const config = await loadSiteConfig(cwd);
-    const pandocOk = await checkPandoc()
-      .then(() => true)
-      .catch(() => false);
+    const pandocVersion = await checkPandoc().catch(() => 'no disponible');
     const distDir = join(cwd, 'dist', 'files');
     const distExists = await stat(distDir)
       .then((s) => s.isDirectory())
@@ -77,12 +76,19 @@ export async function runInfo(cwd: string): Promise<void> {
     const activeFormats = computeActiveFormats(config.format);
     const disabledList = config.disabledFilters?.length ? config.disabledFilters.join(', ') : '(todos activos)';
     const disabledPreamble = config.disabledPreambleFilters?.length ? config.disabledPreambleFilters.join(', ') : '(todos activos)';
+    const docCount = await countMarkdownDocuments(cwd);
+    const html = config.format?.html;
+    const theme = html?.theme ?? '(por defecto)';
+    const accent = html?.accent ?? '(por defecto)';
 
     logInfo('', 'info');
     logInfo(`  lang:                    ${config.lang}`, 'info');
+    logInfo(`  documentos:              ${docCount}`, 'info');
     logInfo(`  salida:                  ${distDir}${distExists ? ' (generado)' : ' (no generado)'}`, 'info');
-    logInfo(`  pandoc:                  ${pandocOk ? 'disponible' : 'no disponible'}`, 'info');
+    logInfo(`  pandoc:                  ${pandocVersion}`, 'info');
     logInfo(`  formatos activos:        ${activeFormats.length > 0 ? activeFormats.join(', ') : '(ninguno)'}`, 'info');
+    logInfo(`  tema HTML:               ${theme}`, 'info');
+    logInfo(`  acento HTML:             ${accent}`, 'info');
     logInfo(`  filters desactivados:    ${disabledList}`, 'info');
     logInfo(`  preamble desactivados:   ${disabledPreamble}`, 'info');
   } catch (err) {
@@ -95,6 +101,17 @@ export async function runInfo(cwd: string): Promise<void> {
     }
     process.exitCode = 1;
   }
+}
+
+/** Cuenta los documentos Markdown del proyecto, excluyendo directorios ignorados. */
+async function countMarkdownDocuments(cwd: string): Promise<number> {
+  let count = 0;
+  for await (const entry of new Bun.Glob('**/*.md').scan({ cwd })) {
+    const first = entry.split('/')[0];
+    if (first && IGNORED_DIRS.has(first)) continue;
+    count++;
+  }
+  return count;
 }
 
 export async function runInit(cwd: string): Promise<void> {
