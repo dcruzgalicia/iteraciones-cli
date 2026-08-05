@@ -1,5 +1,5 @@
 import { mkdir, rm, stat, writeFile } from 'node:fs/promises';
-import { dirname, isAbsolute, join, normalize } from 'node:path';
+import { basename, dirname, isAbsolute, join, normalize } from 'node:path';
 import { IGNORED_DIRS } from '../builder/discover.js';
 import type { BuildOptions } from '../builder/orchestrator.js';
 import { build } from '../builder/orchestrator.js';
@@ -165,7 +165,8 @@ export async function runNew(cwd: string, path: string): Promise<void> {
     await mkdir(dirname(absPath), { recursive: true });
 
     const today = new Date().toISOString().slice(0, 10);
-    const content = `---\ntitle: 'Título del documento'\ndate: ${today}\n---\n\n`;
+    const title = inferTitleFromPath(normalizedPath);
+    const content = `---\ntitle: '${title}'\ndate: ${today}\n---\n\n`;
 
     await writeFile(absPath, content, { encoding: 'utf8', flag: 'wx' });
     logSuccess(`creado ${normalizedPath}`, 'new');
@@ -188,4 +189,15 @@ export async function runFilters(cwd: string): Promise<void> {
     }
     process.exitCode = 1;
   }
+}
+
+/**
+ * Infiere un título legible desde la ruta del archivo: elimina la extensión
+ * .md, reemplaza guiones y guiones bajos por espacios, y capitaliza la
+ * primera letra de cada palabra. Ej: `posts/mi-articulo` → `Mi Articulo`.
+ */
+export function inferTitleFromPath(path: string): string {
+  const base = basename(path, '.md').replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!base) return 'Título del documento';
+  return base.replace(/\b\w/g, (c) => c.toUpperCase());
 }
