@@ -30,7 +30,7 @@ describe('discover (cambios de slug por metadatos)', () => {
       await discover(cwd);
       writeFileSync(join(cwd, 'doc.md'), '---\ntitle: Prueba\n---\n\nContenido');
       const result = await discover(cwd);
-      expect(result.slugChangedEntries.get('doc.md')).toBe('prueba-by-juan-perez');
+      expect(result.slugChangedEntries.get('doc.md')).toBe('prueba-por-juan-perez');
       expect(result.discoveryIndex.get('doc.md')?.slug).toBe('prueba');
     } finally {
       rmSync(cwd, { recursive: true, force: true });
@@ -44,7 +44,7 @@ describe('discover (cambios de slug por metadatos)', () => {
       writeFileSync(join(cwd, 'doc.md'), '---\ntitle: Prueba\nauthor: Juan Pérez\n---\n\nContenido');
       const result = await discover(cwd);
       expect(result.slugChangedEntries.get('doc.md')).toBe('prueba');
-      expect(result.discoveryIndex.get('doc.md')?.slug).toBe('prueba-by-juan-perez');
+      expect(result.discoveryIndex.get('doc.md')?.slug).toBe('prueba-por-juan-perez');
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
@@ -70,8 +70,8 @@ describe('discover (cambios de slug por metadatos)', () => {
       writeFileSync(join(cwd, 'doc.md'), '---\ntitle: Prueba\nauthor: Autor B\n---\n\nContenido');
       touchFuture(join(cwd, 'doc.md'));
       const result = await discover(cwd);
-      expect(result.slugChangedEntries.get('doc.md')).toBe('prueba-by-autor-a');
-      expect(result.discoveryIndex.get('doc.md')?.slug).toBe('prueba-by-autor-b');
+      expect(result.slugChangedEntries.get('doc.md')).toBe('prueba-por-autor-a');
+      expect(result.discoveryIndex.get('doc.md')?.slug).toBe('prueba-por-autor-b');
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
@@ -85,11 +85,11 @@ describe('discover (cambios de slug por metadatos)', () => {
       writeFileSync(join(cwd, 'doc.md'), '---\ntitle: Prueba\nauthor: Autor B\n---\n\nContenido');
       touchFuture(join(cwd, 'doc.md'));
       const pasoCambio = await discover(cwd);
-      expect(pasoCambio.slugChangedEntries.get('doc.md')).toBe('prueba-by-autor-a');
+      expect(pasoCambio.slugChangedEntries.get('doc.md')).toBe('prueba-por-autor-a');
       // Quitar el author: limpia el slug del author actual
       writeFileSync(join(cwd, 'doc.md'), '---\ntitle: Prueba\n---\n\nContenido');
       const pasoQuitar = await discover(cwd);
-      expect(pasoQuitar.slugChangedEntries.get('doc.md')).toBe('prueba-by-autor-b');
+      expect(pasoQuitar.slugChangedEntries.get('doc.md')).toBe('prueba-por-autor-b');
       expect(pasoQuitar.discoveryIndex.get('doc.md')?.slug).toBe('prueba');
     } finally {
       rmSync(cwd, { recursive: true, force: true });
@@ -104,7 +104,7 @@ describe('discover (cambios de slug por metadatos)', () => {
       const result = await discover(cwd);
       expect(result.changedPaths.has('doc.md')).toBe(true);
       expect(result.slugChangedEntries.size).toBe(0);
-      expect(result.discoveryIndex.get('doc.md')?.slug).toBe('prueba-by-juan-perez');
+      expect(result.discoveryIndex.get('doc.md')?.slug).toBe('prueba-por-juan-perez');
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
