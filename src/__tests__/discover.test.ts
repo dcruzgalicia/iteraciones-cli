@@ -7,30 +7,27 @@ describe('computeSlug', () => {
     expect(result).toBe('mi-articulo-de-prueba');
   });
 
-  it('incluye el primer autor: title-by-author', () => {
+  it('incluye el primer autor: title-por-author', () => {
     const result = computeSlug({ title: 'Mi Artículo', author: ['Juan Pérez'] });
-    expect(result).toBe('mi-articulo-by-juan-perez');
+    expect(result).toBe('mi-articulo-por-juan-perez');
   });
 
-  it('incluye hasta 3 autores separados por -y-', () => {
+  it('usa solo el primer autor por defecto', () => {
     const result = computeSlug({
       title: 'Mi Artículo',
       author: ['Sofia García', 'Juan Pérez', 'Ana López'],
     });
-    expect(result).toBe('mi-articulo-by-sofia-garcia-y-juan-perez-y-ana-lopez');
+    expect(result).toBe('mi-articulo-por-sofia-garcia');
   });
 
-  it('usa maximo 3 autores aunque haya mas', () => {
-    const result = computeSlug({
-      title: 'Test',
-      author: ['A', 'B', 'C', 'D', 'E'],
-    });
-    expect(result).toBe('test-by-a-y-b-y-c');
+  it('permite expandir autores con maxAuthors', () => {
+    const result = computeSlug({ title: 'Test', author: ['A', 'B', 'C'] }, { maxAuthors: 3 });
+    expect(result).toBe('test-por-a-y-b-y-c');
   });
 
-  it('usa 2 autores separados por -y-', () => {
-    const result = computeSlug({ title: 'Doc', author: ['Ana', 'Luis'] });
-    expect(result).toBe('doc-by-ana-y-luis');
+  it('usa 2 autores cuando se especifica maxAuthors', () => {
+    const result = computeSlug({ title: 'Doc', author: ['Ana', 'Luis'] }, { maxAuthors: 2 });
+    expect(result).toBe('doc-por-ana-y-luis');
   });
 
   it('normaliza caracteres acentuados', () => {
@@ -65,7 +62,7 @@ describe('computeSlug', () => {
 
   it('genera filename-by-author con fallbackPath y autor', () => {
     const result = computeSlug({ author: ['Juan Pérez'] }, { fallbackPath: 'notas/apuntes.md' });
-    expect(result).toBe('apuntes-by-juan-perez');
+    expect(result).toBe('apuntes-por-juan-perez');
   });
 
   it('con fallbackPath siempre retorna string (incluso con título vacío)', () => {

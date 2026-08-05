@@ -99,15 +99,18 @@ function slugify(text: string): string {
 }
 
 /**
- * Calcula el slug de un documento desde su frontmatter: `title[-by-author]`.
+ * Calcula el slug de un documento desde su frontmatter: `title[-por-author]`.
+ * Por defecto solo usa el primer autor; en caso de colisión se expande.
  * Si no hay title y se provee `fallbackPath`, usa el nombre del archivo
- * (sin extensión .md) como base: `filename[-by-author]`.
+ * (sin extensión .md) como base.
  * Sin title ni fallbackPath, retorna undefined.
  */
-export function computeSlug(frontmatter: { title?: string; author?: string[] }): string | undefined;
-export function computeSlug(frontmatter: { title?: string; author?: string[] }, options: { fallbackPath: string }): string;
-export function computeSlug(frontmatter: { title?: string; author?: string[] }, options?: { fallbackPath?: string }): string | undefined {
-  const authors = frontmatter.author?.filter(Boolean).slice(0, 3);
+export function computeSlug(
+  frontmatter: { title?: string; author?: string[] },
+  options?: { fallbackPath?: string; maxAuthors?: number },
+): string | undefined {
+  const maxAuthors = options?.maxAuthors ?? 1;
+  const authors = frontmatter.author?.filter(Boolean).slice(0, maxAuthors);
 
   const base = frontmatter.title ? slugify(frontmatter.title) : options?.fallbackPath ? slugify(basename(options.fallbackPath, '.md')) : undefined;
   if (!base) return undefined;
@@ -115,7 +118,7 @@ export function computeSlug(frontmatter: { title?: string; author?: string[] }, 
   if (!authors || authors.length === 0) return base;
 
   const authorSlug = authors.map((a) => slugify(a)).join('-y-');
-  return `${base}-by-${authorSlug}`;
+  return `${base}-por-${authorSlug}`;
 }
 
 /**
@@ -275,7 +278,7 @@ export async function discover(
   }
 
   // Resolver slugs via slug-resolver
-  const slugResult = await resolveSlugs(cwd, discoveryIndex, (meta, opts) => computeSlug(meta, opts as { fallbackPath: string }));
+  const slugResult = await resolveSlugs(cwd, discoveryIndex, (meta, opts) => computeSlug(meta, opts)!);
   for (const [path, oldSlug] of slugResult.slugChangedEntries) slugChangedEntries.set(path, oldSlug);
   for (const path of slugResult.changedPaths) changedPaths.add(path);
   for (const path of slugResult.newRecentFiles) {
