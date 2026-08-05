@@ -110,6 +110,36 @@ describe('discover (cambios de slug por metadatos)', () => {
     }
   });
 
+  it('conserva el sufijo -dN de un duplicado que queda único', async () => {
+    const cwd = makeProject('---\ntitle: Prueba\n---\n\nContenido');
+    try {
+      await discover(cwd);
+      // Segundo archivo con el mismo título: entra al grupo de duplicados
+      writeFileSync(join(cwd, 'otro.md'), '---\ntitle: Prueba\n---\n\nOtro contenido');
+      const conDuplicado = await discover(cwd);
+      expect(conDuplicado.discoveryIndex.get('doc.md')?.slug).toBe('prueba-d1');
+      // Eliminar el duplicado: doc.md queda único y conserva su -d1
+      rmSync(join(cwd, 'otro.md'));
+      const sinDuplicado = await discover(cwd);
+      expect(sinDuplicado.discoveryIndex.get('doc.md')?.slug).toBe('prueba-d1');
+      expect(sinDuplicado.slugChangedEntries.size).toBe(0);
+      expect(sinDuplicado.changedPaths.has('doc.md')).toBe(false);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('asigna el slug limpio sin estado previo (noCache)', async () => {
+    const cwd = makeProject('---\ntitle: Prueba\n---\n\nContenido');
+    try {
+      await discover(cwd);
+      const result = await discover(cwd, { noCache: true });
+      expect(result.discoveryIndex.get('doc.md')?.slug).toBe('prueba');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
   it('conserva el sufijo -dN de un duplicado al modificar solo el body', async () => {
     const cwd = makeProject('---\ntitle: Prueba\n---\n\nContenido');
     try {
