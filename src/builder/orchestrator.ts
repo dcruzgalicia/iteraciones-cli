@@ -1,4 +1,4 @@
-import { mkdir, rm } from 'node:fs/promises';
+import { mkdir, rename, rm } from 'node:fs/promises';
 import { cpus } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { ProgressTracker } from '../cli/progress.js';
@@ -454,9 +454,14 @@ async function copyToDist(
     }
   }
   await mapWithConcurrency(copies, 20, async ({ srcPath, dstPath }) => {
-    if (!(await Bun.file(srcPath).exists())) return;
     await mkdir(dirname(dstPath), { recursive: true });
-    await Bun.write(dstPath, Bun.file(srcPath));
+    // Mover (no copiar): el archivo ya existe en .iteraciones/formats/ y solo
+    // cambia de ubicación. rename es O(1) en el mismo dispositivo; copiar
+    // leería y reescribiría el contenido completo.
+    await rename(srcPath, dstPath).catch((err: NodeJS.ErrnoException) => {
+      if (err.code === 'ENOENT') return; // formato no generado para este doc
+      throw err;
+    });
   });
 }
 
