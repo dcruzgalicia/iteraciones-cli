@@ -13,6 +13,8 @@ import {
   validateDisabledFilters,
 } from '../builder/render.js';
 import type { BuildDocument } from '../builder/types.js';
+import { loadSiteConfig } from '../config/config-loader.js';
+import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import * as logger from '../lib/logger.js';
 
 describe('computePreambleFlags (desde el AST)', () => {
@@ -148,7 +150,7 @@ describe('renderTexBodyFromCachedAst (exportación desde AST en disco)', () => {
         frontmatter: { title: 'Prueba', date: '', author: [] },
         slug: 'prueba',
       };
-      const processed = await renderTexBodyFromCachedAst([doc], 1, cwd);
+      const processed = await renderTexBodyFromCachedAst([doc], 1, cwd, DEFAULT_SITE_CONFIG);
       expect(processed.size).toBe(0);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
@@ -265,7 +267,7 @@ describe('resolveLuaFilters (sistema dual Fase 6)', () => {
 
 describe('loadFilterGroups (solo resolución de filtros Lua)', () => {
   it('resuelve los 7 filtros latex del paquete en orden', async () => {
-    const groups = await loadFilterGroups();
+    const groups = await loadFilterGroups(DEFAULT_SITE_CONFIG);
     expect(groups.latex).toHaveLength(7);
     expect(groups.latex[1]).toContain('02-dictum.lua');
   });
@@ -275,7 +277,7 @@ describe('loadFilterGroups (solo resolución de filtros Lua)', () => {
     try {
       mkdirSync(join(cwd, 'filters', 'latex'), { recursive: true });
       writeFileSync(join(cwd, 'filters', 'latex', '02-dictum.lua'), '-- test\n');
-      const groups = await loadFilterGroups(undefined, cwd);
+      const groups = await loadFilterGroups(DEFAULT_SITE_CONFIG, undefined, cwd);
       expect(groups.latex).toHaveLength(7);
       expect(groups.latex[1]).toBe(join(cwd, 'filters', 'latex', '02-dictum.lua'));
     } finally {
@@ -291,7 +293,8 @@ describe('resolveUserLuaFilters (lua-filters de usuario)', () => {
       mkdirSync(join(cwd, 'filters'), { recursive: true });
       writeFileSync(join(cwd, 'filters', 'mi-filtro.lua'), '-- test\n');
       writeFileSync(join(cwd, 'iteraciones.config.yaml'), 'lua-filters:\n  - filters/mi-filtro.lua\n');
-      const resolved = await resolveUserLuaFilters(cwd);
+      const config = await loadSiteConfig(cwd);
+      const resolved = await resolveUserLuaFilters(cwd, config);
       expect(resolved).toEqual([join(cwd, 'filters', 'mi-filtro.lua')]);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
@@ -303,7 +306,8 @@ describe('resolveUserLuaFilters (lua-filters de usuario)', () => {
     try {
       writeFileSync(join(cwd, 'iteraciones.config.yaml'), 'lua-filters:\n  - filters/no-existe.lua\n');
       const spy = spyOn(logger, 'logWarning');
-      const resolved = await resolveUserLuaFilters(cwd);
+      const config = await loadSiteConfig(cwd);
+      const resolved = await resolveUserLuaFilters(cwd, config);
       expect(resolved).toEqual([]);
       expect(spy).toHaveBeenCalledWith('lua-filters: "filters/no-existe.lua" no encontrado en el proyecto', 'config');
       spy.mockRestore();
@@ -312,11 +316,10 @@ describe('resolveUserLuaFilters (lua-filters de usuario)', () => {
     }
   });
 
-  it('retorna vacío sin config o sin lua-filters', async () => {
-    expect(await resolveUserLuaFilters()).toEqual([]);
+  it('retorna vacío sin lua-filters', async () => {
     const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-lua-'));
     try {
-      expect(await resolveUserLuaFilters(cwd)).toEqual([]);
+      expect(await resolveUserLuaFilters(cwd, DEFAULT_SITE_CONFIG)).toEqual([]);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }

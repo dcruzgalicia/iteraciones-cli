@@ -57,8 +57,8 @@ export async function generateHtmlPages(
           authorMeta: doc.frontmatter.author.join(', '),
           logoInline,
         },
+        ctx.siteConfig,
         bibOptions,
-        ctx.siteConfig.disabledFilters,
       );
       await mkdir(dirname(dst), { recursive: true });
       await Bun.write(dst, html);
