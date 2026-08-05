@@ -4,6 +4,7 @@ import { basename, dirname, join } from 'node:path';
 import { ProgressTracker } from '../cli/progress.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import type { FormatConfig, SiteConfig } from '../config/site-config.js';
+import { logInfo } from '../lib/logger.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import { buildAssets } from './build-assets.js';
 import { type BuildMetadata, computeBuildMetadata, computeWorkSets, type WorkSets } from './build-planner.js';
@@ -47,7 +48,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   if (options.dryRun) {
     const { relativePaths, discoveryIndex } = await discover(cwd, { noCache: true });
     const sourceDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
-    process.stdout.write(`[dry-run] Se procesar\u00edan ${sourceDocs.length} documentos\n`);
+    logInfo(`Se procesar\u00edan ${sourceDocs.length} documentos`, 'dry-run');
     return;
   }
 
@@ -115,8 +116,8 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   const allDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
 
   if (allDocs.length === 0) {
-    process.stdout.write('  No se encontraron documentos Markdown en el proyecto.\n');
-    process.stdout.write("  Crea un archivo .md con frontmatter o ejecuta 'iteraciones init'.\n");
+    logInfo('No se encontraron documentos Markdown en el proyecto.', 'build');
+    logInfo("Crea un archivo .md con frontmatter o ejecuta 'iteraciones init'.", 'build');
     await progress.finish(0, 0, []);
     return;
   }
