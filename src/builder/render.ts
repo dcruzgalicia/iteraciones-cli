@@ -297,8 +297,9 @@ export async function renderHtmlPageFromAst(
   vars: HtmlPageVars,
   siteConfig: SiteConfig,
   bibOptions?: BibOptions,
+  luaFilters?: LuaFilterGroup,
 ): Promise<string> {
-  const luaFilters = await loadFilterGroups(siteConfig, siteConfig.disabledFilters, cwd);
+  const filters = luaFilters ?? (await loadFilterGroups(siteConfig, siteConfig.disabledFilters, cwd));
 
   const extraArgs = [
     '--template',
@@ -308,7 +309,7 @@ export async function renderHtmlPageFromAst(
     `--metadata=lang:${vars.lang}`,
   ];
   // Filtros de usuario primero, luego la capa html
-  for (const filter of [...luaFilters.user, ...luaFilters.html]) {
+  for (const filter of [...filters.user, ...filters.html]) {
     extraArgs.push('--lua-filter', filter);
   }
   if (vars.tagline) extraArgs.push(`--metadata=tagline:${vars.tagline}`);
