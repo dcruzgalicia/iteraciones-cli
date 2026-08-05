@@ -41,7 +41,7 @@ export interface FormatConfig {
   pdf?: PdfFormatConfig;
   epub?: EpubFormatConfig;
   markdown?: MarkdownFormatConfig;
-  /** Si true (default), genera archivos .tex en el output. */
+  /** Si true (por defecto: false), genera archivos .tex en el output. */
   latex?: boolean;
 }
 
