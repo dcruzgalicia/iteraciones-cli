@@ -32,6 +32,8 @@ export interface BuildState {
   filtersHash?: string;
   /** Caché de archivos de filtro del build anterior (mtime+size+hash). */
   filterFileCache?: FilterFileCache;
+  /** Hash de los inputs del CSS del build anterior. */
+  cssInputHash?: string;
   /** Hash de configuración por formato del build anterior. */
   configHashes?: Record<string, string>;
   /** Hash de los .bib/.csl del build anterior. */
@@ -50,6 +52,7 @@ export async function loadBuildState(cwd: string): Promise<BuildState | null> {
     activeFormats: state.activeFormats,
     filtersHash: state.filtersHash,
     filterFileCache: state.filterFileCache,
+    cssInputHash: state.cssInputHash,
     configHashes: state.configHashes,
     bibHash: state.bibHash,
     entries: new Map(Object.entries(state.entries)),
@@ -67,6 +70,7 @@ export async function saveBuildState(cwd: string, state: BuildState): Promise<vo
     activeFormats: state.activeFormats,
     filtersHash: state.filtersHash,
     filterFileCache: state.filterFileCache,
+    cssInputHash: state.cssInputHash,
     configHashes: state.configHashes,
     bibHash: state.bibHash,
     entries: Object.fromEntries(state.entries),
@@ -132,7 +136,7 @@ export async function discover(
     activeFormats?: string[];
     prevState?: BuildState | null;
     /** Hashes de invalidación calculados por el orchestrator, guardados en state.json. */
-    meta?: { filtersHash: string; filterFileCache: FilterFileCache; configHashes: Record<string, string>; bibHash: string };
+    meta?: { filtersHash: string; filterFileCache: FilterFileCache; configHashes: Record<string, string>; bibHash: string; cssInputHash: string };
   } = {},
 ): Promise<DiscoverResult> {
   const relativePaths: string[] = [];
@@ -286,7 +290,8 @@ export async function discover(
     options.meta?.filtersHash !== prevState?.filtersHash ||
     JSON.stringify(options.meta?.filterFileCache) !== JSON.stringify(prevState?.filterFileCache) ||
     JSON.stringify(options.meta?.configHashes) !== JSON.stringify(prevState?.configHashes) ||
-    options.meta?.bibHash !== prevState?.bibHash;
+    options.meta?.bibHash !== prevState?.bibHash ||
+    options.meta?.cssInputHash !== prevState?.cssInputHash;
 
   if (hasChanged) {
     await saveBuildState(cwd, {
@@ -295,6 +300,7 @@ export async function discover(
       entries: discoveryIndex,
       filtersHash: options.meta?.filtersHash,
       filterFileCache: options.meta?.filterFileCache,
+      cssInputHash: options.meta?.cssInputHash,
       configHashes: options.meta?.configHashes,
       bibHash: options.meta?.bibHash,
     });

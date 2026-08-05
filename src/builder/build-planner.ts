@@ -1,6 +1,7 @@
 import type { PipelinePhase } from '../cli/progress.js';
 import type { SiteConfig } from '../config/site-config.js';
 import { computeActiveFormats } from '../config/site-config.js';
+import { computeCssInputHash } from './build-assets.js';
 import type { BuildState } from './discover.js';
 import { computeBibHash, computeConfigHashes, computeFiltersHash, type FilterFileCache } from './state.js';
 import type { BuildDocument } from './types.js';
@@ -28,6 +29,8 @@ export interface BuildMetadata {
   /** Caché de archivos de filtro (mtime+size+hash) para persistir en state.json. */
   filterFileCache: FilterFileCache;
   bibHash: string;
+  /** Hash de los inputs del CSS (acento + estilos) para decidir si regenerar Tailwind. */
+  cssInputHash: string;
   formatInvalidated: Record<FormatKey, boolean>;
   filtersInvalidated: boolean;
   bibInvalidated: boolean;
@@ -67,10 +70,11 @@ export async function computeBuildMetadata(
 ): Promise<BuildMetadata> {
   const currentFormats = computeActiveFormats(siteConfig.format);
 
-  const [configHashes, filtersHashResult, bibHash] = await Promise.all([
+  const [configHashes, filtersHashResult, bibHash, cssInputHash] = await Promise.all([
     computeConfigHashes(cwd, siteConfig),
     computeFiltersHash(cwd, siteConfig, prevState?.filterFileCache),
     computeBibHash(cwd),
+    computeCssInputHash(siteConfig),
   ]);
   const filtersHash = filtersHashResult.hash;
   const filterFileCache = filtersHashResult.cache;
@@ -110,6 +114,7 @@ export async function computeBuildMetadata(
     filtersHash,
     filterFileCache,
     bibHash,
+    cssInputHash,
     formatInvalidated,
     filtersInvalidated,
     bibInvalidated,
