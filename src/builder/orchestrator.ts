@@ -52,6 +52,18 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   }
 
   const progress = new ProgressTracker({ renderer: options.verbose ? 'verbose' : 'default' });
+  try {
+    await runBuild(cwd, options, progress);
+  } catch (err) {
+    // Resolver las fases pendientes del tracker para que el proceso salga:
+    // en TTY el render loop de listr2 mantiene el proceso vivo mientras
+    // run() no termine (regresión #1211).
+    await progress.fail();
+    throw err;
+  }
+}
+
+async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTracker): Promise<void> {
   const log = (msg: string) => progress.log(msg);
 
   // Cargar config primero para detectar cambios de formato antes de setupBuildEnvironment
