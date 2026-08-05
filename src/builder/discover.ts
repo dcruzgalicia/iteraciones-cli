@@ -160,6 +160,7 @@ export async function discover(
   const recentFiles: string[] = [];
   const deletedFiles: string[] = [];
   const slugChangedEntries = new Map<string, string>();
+  const frontmatterErrors: Array<{ file: string; error: string }> = [];
 
   const thisBuildStartedAt = Date.now();
 
@@ -234,8 +235,7 @@ export async function discover(
           }
         }
       } catch (err) {
-        // frontmatter YAML inválido: mantener datos anteriores y advertir para que el usuario lo corrija
-        logWarning(`frontmatter YAML inválido en "${relativePath}": ${formatUserError(err)}`, 'discover');
+        frontmatterErrors.push({ file: relativePath, error: formatUserError(err) });
       }
 
       if (!title) {
@@ -266,6 +266,12 @@ export async function discover(
   // Limpiar discoveryIndex de archivos eliminados
   for (const p of deletedFiles) {
     discoveryIndex.delete(p);
+  }
+
+  // Frontmatter YAML inválido: error de build (no publicar degradado)
+  if (frontmatterErrors.length > 0) {
+    const msg = frontmatterErrors.map((e) => `  ${e.file}: ${e.error}`).join('\n');
+    throw new Error(`frontmatter YAML inválido en ${frontmatterErrors.length} documento(s):\n${msg}`);
   }
 
   // Resolver slugs via slug-resolver
