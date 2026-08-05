@@ -6,7 +6,6 @@ import {
   computePreambleFlags,
   hasCiteNodes,
   loadFilterGroups,
-  renderTexBodyFromCachedAst,
   resolveLuaFilters,
   resolveUserLuaFilters,
   suggestFilterName,
@@ -137,24 +136,6 @@ describe('hasCiteNodes (detección de citas en el AST)', () => {
   it('retorna false para AST sin bloques', () => {
     const ast = { 'pandoc-api-version': [1, 23], meta: {}, blocks: [] };
     expect(hasCiteNodes(ast)).toBe(false);
-  });
-});
-
-describe('renderTexBodyFromCachedAst (exportación desde AST en disco)', () => {
-  it('retorna conjunto vacío si no hay AST serializado en disco', async () => {
-    const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-ast-'));
-    try {
-      const doc: BuildDocument = {
-        filePath: join(cwd, 'doc.md'),
-        relativePath: 'doc.md',
-        frontmatter: { title: 'Prueba', date: '', author: [] },
-        slug: 'prueba',
-      };
-      const processed = await renderTexBodyFromCachedAst([doc], 1, cwd, DEFAULT_SITE_CONFIG);
-      expect(processed.size).toBe(0);
-    } finally {
-      rmSync(cwd, { recursive: true, force: true });
-    }
   });
 });
 

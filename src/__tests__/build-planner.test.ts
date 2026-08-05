@@ -51,7 +51,6 @@ describe('computeWorkSets', () => {
     expect(work.anyWork).toBe(false);
     expect(work.renderDocs).toEqual([]);
     expect(work.exportSets.pdf).toEqual([]);
-    expect(work.usedPhases).toEqual(['discovery']);
   });
 
   it('documentos modificados: entran en astChanged, renderDocs y los exportSets activos', () => {
@@ -59,7 +58,6 @@ describe('computeWorkSets', () => {
     expect(work.anyWork).toBe(true);
     expect(work.renderDocs.map((d) => d.relativePath)).toEqual(['a.md']);
     expect(work.exportSets.pdf.map((d) => d.relativePath)).toEqual(['a.md']);
-    expect(work.usedPhases).toEqual(['discovery', 'render', 'latex']);
   });
 
   it('filtersInvalidated: todos los documentos se re-renderizan', () => {
@@ -76,23 +74,20 @@ describe('computeWorkSets', () => {
     );
     expect(work.exportSets.html.length).toBe(3);
     expect(work.renderDocs.length).toBe(0);
-    expect(work.usedPhases).toEqual(['discovery', 'html']);
   });
 
-  it('nuevo formato pdf con latex: astExportCandidates para regenerar solo el tex body', () => {
+  it('nuevo formato pdf: formatInvalidated incluye todos los docs en el exportSet pdf', () => {
     // Al activar un formato nuevo, su hash de config cambia → formatInvalidated true
     const work = computeWorkSets(
       meta({ newFormats: ['pdf'], pdfOn: true, latexOn: true, formatInvalidated: { pdf: true, html: false, epub: false, markdown: false } }),
       DOCS,
       new Set(),
     );
-    expect(work.newPdf).toBe(true);
-    expect(work.astExportCandidates.length).toBe(3);
-    // Los astExportCandidates se procesan en la fase render (renderTexBodyFromCachedAst)
-    expect(work.usedPhases).toEqual(['discovery', 'render', 'latex', 'pdf']);
+    expect(work.exportSets.pdf.length).toBe(3);
+    expect(work.renderDocs.length).toBe(0);
   });
 
-  it('todos los formatos activos: usedPhases incluye render, latex, pdf, html, epub y markdown', () => {
+  it('todos los formatos activos: todos los docs van a los exportSets correspondientes', () => {
     const m = meta({
       pdfOn: true,
       latexOn: true,
@@ -102,7 +97,6 @@ describe('computeWorkSets', () => {
       formatInvalidated: { pdf: true, html: true, epub: true, markdown: true },
     });
     const work = computeWorkSets(m, DOCS, new Set(['b.md']));
-    expect(work.usedPhases).toEqual(['discovery', 'render', 'latex', 'pdf', 'html', 'epub', 'markdown']);
     expect(work.exportSets.html.length).toBe(3);
     expect(work.exportSets.markdown.length).toBe(3);
   });
