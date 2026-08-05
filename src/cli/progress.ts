@@ -1,5 +1,6 @@
 import type { ListrDefaultRenderer, ListrTask, ListrTaskWrapper } from 'listr2';
 import { type DefaultRenderer, Listr, type ListrRendererValue } from 'listr2';
+import { setWarningSink } from '../lib/logger.js';
 
 function formatTime(ms: number): string {
   return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${Math.round(ms)}ms`;
@@ -70,6 +71,8 @@ export class ProgressTracker {
   private finished = false;
   /** Mensajes informativos acumulados para mostrar en la primera tarea. */
   private infoMessages: string[] = [];
+  /** Warnings diferidos (modo no verbose) para mostrar en el resumen final. */
+  private warnings: string[] = [];
 
   constructor(options: { renderer?: 'default' | 'verbose' | 'test' } = {}) {
     this.renderer = (options.renderer ?? 'default') as ListrRendererValue;
@@ -77,6 +80,8 @@ export class ProgressTracker {
     if (this.renderer === 'default') {
       // Restaurar el cursor si el proceso sale sin completar run() (errores del build)
       process.once('exit', () => process.stdout.write('\x1b[?25h'));
+      // Diferir warnings al resumen final para no interferir con listr2
+      setWarningSink((message) => this.warnings.push(message));
     }
   }
 
@@ -171,6 +176,7 @@ export class ProgressTracker {
     this.phaseResolvers.clear();
     await this.runPromise?.catch(() => {});
     this.writeSummary(processed, cached, formats);
+    setWarningSink(null);
   }
 
   /**
@@ -186,6 +192,7 @@ export class ProgressTracker {
     });
     this.phaseResolvers.clear();
     await this.runPromise?.catch(() => {});
+    setWarningSink(null);
   }
 
   showCleanup(): void {
@@ -259,6 +266,12 @@ export class ProgressTracker {
     }
     process.stdout.write(`  ${padRight('Formatos generados', LABEL_WIDTH)}${formatCount}\n`);
     process.stdout.write(`  ${padRight('Tiempo total', LABEL_WIDTH)}${formatTime(totalTime)}\n`);
+    if (this.warnings.length > 0) {
+      process.stdout.write(`\nAdvertencias:\n`);
+      for (const warning of this.warnings) {
+        process.stdout.write(`  ${warning}\n`);
+      }
+    }
   }
 }
 
