@@ -26,7 +26,7 @@ export function logWarning(message: string, context?: string): void {
  * Formato: [contexto] mensaje
  */
 export function logInfo(message: string, context?: string): void {
-  const prefix = context ? `${context}: ` : '';
+  const prefix = context ? `[${context}] ` : '';
   process.stdout.write(`${prefix}${message}\n`);
 }
 
@@ -35,6 +35,6 @@ export function logInfo(message: string, context?: string): void {
  * Formato: ✓ [contexto] mensaje
  */
 export function logSuccess(message: string, context?: string): void {
-  const prefix = context ? `${context}: ` : '';
+  const prefix = context ? `[${context}] ` : '';
   process.stdout.write(`✓ ${prefix}${message}\n`);
 }
