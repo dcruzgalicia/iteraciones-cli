@@ -1,4 +1,4 @@
-import { access, constants, unlink, writeFile } from 'node:fs/promises';
+import { access, constants, mkdir, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { checkPandoc as pandocVersion } from '../../lib/pandoc-runner.js';
 import { run } from '../../lib/run.js';
@@ -86,23 +86,23 @@ export async function checkReadPermissions(cwd: string): Promise<CheckResult> {
 }
 
 export async function checkWritePermissions(cwd: string): Promise<CheckResult> {
-  const probe = join(cwd, `.iteraciones-doctor-probe-${Date.now()}`);
-  let canWrite = false;
+  // Escribir el probe dentro de .iteraciones/, el directorio de caché del build.
+  // Si el proceso muere, el archivo queda en un directorio que se limpia con
+  // clean o --no-cache, no en la raíz del proyecto.
+  const probeDir = join(cwd, '.iteraciones');
+  const probe = join(probeDir, `doctor-probe-${Date.now()}`);
   try {
+    await mkdir(probeDir, { recursive: true });
     await writeFile(probe, '');
-    canWrite = true;
+    await unlink(probe);
+    return { label: 'permisos de escritura en cwd', ok: true };
   } catch {
-    // Error esperado: EACCES en writeFile(); el detalle accionable ya se reporta
     return {
       label: 'permisos de escritura en cwd',
       ok: false,
       detail: `sin permisos de escritura en ${cwd}`,
     };
-  } finally {
-    // Limpiar el archivo probe independientemente de lo que ocurra después.
-    await unlink(probe).catch(() => undefined);
   }
-  return { label: 'permisos de escritura en cwd', ok: canWrite };
 }
 
 /**
