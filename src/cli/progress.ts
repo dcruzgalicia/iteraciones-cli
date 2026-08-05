@@ -273,7 +273,7 @@ export class ProgressTracker {
           collapseSubtasks: false,
           // Los formatos desactivados se muestran con ✗ (no con ↓, que sugiere
           // trabajo pendiente en lugar de estado de configuración).
-          icon: { SKIPPED_WITH_COLLAPSE: '✗', SKIPPED_WITHOUT_COLLAPSE: '✗' },
+          icon: { SKIPPED_WITH_COLLAPSE: '–', SKIPPED_WITHOUT_COLLAPSE: '–' },
         },
       },
     );
