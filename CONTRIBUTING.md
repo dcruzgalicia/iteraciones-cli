@@ -20,7 +20,7 @@ Verifica que todo funcione:
 
 ```bash
 bun run typecheck   # tsc --noEmit
-bun test            # bun test (126+ tests)
+bun test            # bun test (178 tests en 13 archivos)
 bun run src/bin.ts build --project-root /ruta/a/proyecto
 ```
 
@@ -36,11 +36,15 @@ src/
 │   ├── orchestrator.ts      # Orquestador principal (build())
 │   ├── discover.ts          # Fase 1: discovery y detección de cambios
 │   ├── render.ts            # Fase 2+3: filtros Lua + conversión pandoc
-│   ├── build-utils.ts       # Assets (CSS, fonts, logo) y preámbulo LaTeX
+│   ├── cleanup.ts           # Limpieza de archivos (formatos, caché, slugs)
+│   ├── build-assets.ts      # Assets (CSS, fuentes, logo)
 │   ├── latex-preamble.ts    # Constructor de preámbulo LaTeX
-│   ├── types.ts             # BuildDocument, Frontmatter, contextos
 │   ├── preamble-loader.ts   # Carga de preamble filters (.tex)
-│   ├── state.ts             # Caché content-addressed (state.json, hashes)
+│   ├── build-planner.ts     # Planificador: metadatos de invalidación
+│   ├── state.ts             # Caché content-addressed (state.json)
+│   ├── pipeline.ts          # Pipeline por documento (pools 1 y 2)
+│   ├── slug-resolver.ts     # Resolución de slugs y colisiones
+│   ├── types.ts             # BuildDocument, Frontmatter, BuildContext
 │   └── export/              # Exportación a PDF, EPUB, Markdown
 │       ├── runner.ts        # Ejecutor de exportación
 │       ├── assemble.ts      # Ensamblado de ExportDocument
@@ -97,7 +101,7 @@ tipo(scope): verbo en imperativo
 
 ### Scopes activos
 
-`builder`, `cache`, `cli`, `config`, `css`, `export`, `frontmatter`, `loader`, `orchestrator`, `pagination`, `plugin`, `template`, `theme`
+`builder`, `cache`, `cli`, `config`, `css`, `export`, `frontmatter`, `orchestrator`, `preamble`, `render`, `state`
 
 ### Ejemplos
 
