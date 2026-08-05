@@ -315,25 +315,52 @@ async function runFormatExports(
 
 // ── Funciones extraídas ───────────────────────────────────────────────────
 
+/** Extensiones de salida estándar por documento en dist/. */
+const OUTPUT_EXTENSIONS = ['.html', '.tex', '.pdf', '.epub', '.md'];
+
+const FORMAT_EXT_MAP: Record<string, string> = {
+  latex: '.tex',
+  pdf: '.pdf',
+  html: '.html',
+  epub: '.epub',
+  markdown: '.md',
+};
+
+/** Elimina los artefactos cacheados de un documento (`.iteraciones/`). */
+async function removeCachedArtifacts(cacheBase: string, dir: string, slug: string): Promise<void> {
+  await rm(join(cacheBase, 'tex', dir, `${slug}.tex`), { force: true }).catch(() => {});
+  await rm(join(cacheBase, 'html', dir, `${slug}.html`), { force: true }).catch(() => {});
+  await rm(join(cacheBase, 'ast', dir, `${slug}.json`), { force: true }).catch(() => {});
+  await rm(join(cacheBase, 'tex', dir, `${slug}.flags.json`), { force: true }).catch(() => {});
+  for (const sub of ['pdf', 'html']) {
+    for (const ext of ['.tex', '.html', '.epub']) {
+      await rm(join(cacheBase, 'formats', sub, dir, `${slug}${ext}`), { force: true }).catch(() => {});
+    }
+  }
+}
+
+/** Elimina archivos de salida de un documento en dist/ (por extensiones). */
+async function removeOutputFiles(outputDir: string, dir: string, slug: string, extensions: string[]): Promise<void> {
+  for (const ext of extensions) {
+    await rm(join(outputDir, dir, `${slug}${ext}`), { force: true }).catch(() => {});
+  }
+}
+
+/** Limpia caché y salida de documentos identificados por (directorio, slug). */
+async function cleanupBySlug(ctx: BuildContext, entries: Iterable<{ dir: string; slug: string }>): Promise<void> {
+  const cacheBase = join(ctx.cwd, '.iteraciones');
+  for (const { dir, slug } of entries) {
+    await removeCachedArtifacts(cacheBase, dir, slug);
+    await removeOutputFiles(ctx.outputDir, dir, slug, OUTPUT_EXTENSIONS);
+  }
+}
+
 async function cleanupRemovedFormats(ctx: BuildContext, allDocs: BuildDocument[], removedFormats: string[]): Promise<void> {
   if (removedFormats.length === 0) return;
 
-  const FORMAT_EXT_MAP: Record<string, string> = {
-    latex: '.tex',
-    pdf: '.pdf',
-    html: '.html',
-    epub: '.epub',
-    markdown: '.md',
-  };
+  const extensions = removedFormats.map((fmt) => FORMAT_EXT_MAP[fmt]).filter((ext): ext is string => ext !== undefined);
   for (const doc of allDocs) {
-    const slug = doc.slug ?? basename(doc.relativePath, '.md');
-    const dir = dirname(doc.relativePath);
-    for (const fmt of removedFormats) {
-      const ext = FORMAT_EXT_MAP[fmt];
-      if (ext) {
-        await rm(join(ctx.outputDir, dir, `${slug}${ext}`), { force: true }).catch(() => {});
-      }
-    }
+    await removeOutputFiles(ctx.outputDir, dirname(doc.relativePath), doc.slug ?? basename(doc.relativePath, '.md'), extensions);
   }
 
   if (removedFormats.includes('html')) {
@@ -353,45 +380,18 @@ async function cleanupDeletedFiles(
   const deletedMdPaths = [...changedPaths].filter((p) => p.endsWith('.md') && !allDocPathsSet.has(p));
   if (deletedMdPaths.length === 0) return;
 
-  const cacheBase = join(ctx.cwd, '.iteraciones');
-  for (const relPath of deletedMdPaths) {
-    const dir = dirname(relPath);
-    const entry = deletedEntries.get(relPath);
-    const slug = entry?.slug ?? basename(relPath, '.md');
-    await rm(join(cacheBase, 'tex', dir, `${slug}.tex`), { force: true }).catch(() => {});
-    await rm(join(cacheBase, 'html', dir, `${slug}.html`), { force: true }).catch(() => {});
-    await rm(join(cacheBase, 'ast', dir, `${slug}.json`), { force: true }).catch(() => {});
-    await rm(join(cacheBase, 'tex', dir, `${slug}.flags.json`), { force: true }).catch(() => {});
-    for (const sub of ['pdf', 'html']) {
-      await rm(join(cacheBase, 'formats', sub, dir, `${slug}.tex`), { force: true }).catch(() => {});
-      await rm(join(cacheBase, 'formats', sub, dir, `${slug}.html`), { force: true }).catch(() => {});
-      await rm(join(cacheBase, 'formats', sub, dir, `${slug}.epub`), { force: true }).catch(() => {});
-    }
-    for (const ext of ['.html', '.tex', '.pdf', '.epub', '.md']) {
-      await rm(join(ctx.outputDir, dir, `${slug}${ext}`), { force: true }).catch(() => {});
-    }
-  }
+  const entries = deletedMdPaths.map((relPath) => ({
+    dir: dirname(relPath),
+    slug: deletedEntries.get(relPath)?.slug ?? basename(relPath, '.md'),
+  }));
+  await cleanupBySlug(ctx, entries);
 }
 
 async function cleanupSlugChanges(ctx: BuildContext, slugChangedEntries: Map<string, string>): Promise<void> {
   if (slugChangedEntries.size === 0) return;
 
-  const cacheBase = join(ctx.cwd, '.iteraciones');
-  for (const [relPath, oldSlug] of slugChangedEntries) {
-    const dir = dirname(relPath);
-    await rm(join(cacheBase, 'tex', dir, `${oldSlug}.tex`), { force: true }).catch(() => {});
-    await rm(join(cacheBase, 'html', dir, `${oldSlug}.html`), { force: true }).catch(() => {});
-    await rm(join(cacheBase, 'ast', dir, `${oldSlug}.json`), { force: true }).catch(() => {});
-    await rm(join(cacheBase, 'tex', dir, `${oldSlug}.flags.json`), { force: true }).catch(() => {});
-    for (const sub of ['pdf', 'html']) {
-      await rm(join(cacheBase, 'formats', sub, dir, `${oldSlug}.tex`), { force: true }).catch(() => {});
-      await rm(join(cacheBase, 'formats', sub, dir, `${oldSlug}.html`), { force: true }).catch(() => {});
-      await rm(join(cacheBase, 'formats', sub, dir, `${oldSlug}.epub`), { force: true }).catch(() => {});
-    }
-    for (const ext of ['.html', '.tex', '.pdf', '.epub', '.md']) {
-      await rm(join(ctx.outputDir, dir, `${oldSlug}${ext}`), { force: true }).catch(() => {});
-    }
-  }
+  const entries = [...slugChangedEntries].map(([relPath, oldSlug]) => ({ dir: dirname(relPath), slug: oldSlug }));
+  await cleanupBySlug(ctx, entries);
 }
 
 async function copyToDist(
