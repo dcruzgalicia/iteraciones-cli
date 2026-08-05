@@ -80,7 +80,7 @@ export async function runValidate(cwd: string): Promise<void> {
   const configErrors: ValidationError[] = [];
   const configWarnings: ValidationError[] = [];
   try {
-    const config = await loadSiteConfig(cwd);
+    const config = await loadSiteConfig(cwd, { mode: 'validate' });
     hasPdf = !!config.format?.pdf;
     disabledFiltersCount = config.disabledFilters?.length ?? 0;
     luaFiltersCount = config.luaFilters?.length ?? 0;
