@@ -67,36 +67,48 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
 
 /**
  * Muestra los documentos que se procesarían sin generar salida.
- * Descubre con noCache (sin escribir state.json) y marca el estado
- * previo por documento desde el state.json existente (solo lectura).
+ * Utiliza la misma lógica de invalidación que el build real
+ * (mtime/size/hash, filtros, bibliografía y configuración).
  */
 async function dryRun(cwd: string): Promise<void> {
   const siteConfig = await loadSiteConfig(cwd);
-  const formats = computeActiveFormats(siteConfig.format);
   const prevState = await loadBuildState(cwd);
-  const { relativePaths, discoveryIndex } = await discover(cwd, { noCache: true });
-  const sourceDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
-  for (const doc of sourceDocs) {
+
+  // Computar la metadata de invalidación igual que el build
+  const plan = await computeBuildMetadata(cwd, siteConfig, prevState, false);
+
+  // Descubrir documentos con el estado anterior (sin escribir state.json)
+  const { relativePaths, changedPaths, discoveryIndex } = await discover(cwd, {
+    prevState,
+    activeFormats: plan.currentFormats,
+  });
+  const allDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
+  for (const doc of allDocs) {
     doc.slug = discoveryIndex.get(doc.relativePath)?.slug ?? basename(doc.relativePath, '.md');
   }
 
+  const formats = computeActiveFormats(siteConfig.format);
   const formatStr = formats.length > 0 ? formats.join(', ') : '(ninguno)';
-  logInfo(`Se procesarían ${sourceDocs.length} documentos`, 'dry-run');
+  logInfo(`Se procesarían ${allDocs.length} documentos`, 'dry-run');
   logInfo(`Formatos activos: ${formatStr}`, 'dry-run');
-  if (sourceDocs.length === 0) return;
+  if (allDocs.length === 0) return;
 
-  const rows = sourceDocs.map((doc) => ({
-    path: doc.relativePath,
-    slug: doc.slug ?? '',
-    cached: prevState?.entries.has(doc.relativePath) ?? false,
-  }));
+  // Conjuntos de trabajo reales (igual que el build)
+  const work = computeWorkSets(plan, allDocs, changedPaths);
+  const reprocessPaths = new Set(work.renderDocs.map((d) => d.relativePath));
+
+  const rows = allDocs.map((doc) => {
+    const status = reprocessPaths.has(doc.relativePath) ? 'se reprocesará' : 'reutilizado';
+    return { path: doc.relativePath, slug: doc.slug ?? '', status };
+  });
+
   const pathWidth = Math.max(...rows.map((r) => r.path.length), 'DOCUMENTO'.length);
   const slugWidth = Math.max(...rows.map((r) => r.slug.length), 'SLUG'.length);
 
   logInfo('');
   logInfo(`  ${'DOCUMENTO'.padEnd(pathWidth)}  ${'SLUG'.padEnd(slugWidth)}  ESTADO`);
   for (const row of rows) {
-    logInfo(`  ${row.path.padEnd(pathWidth)}  ${row.slug.padEnd(slugWidth)}  ${row.cached ? 'en caché' : 'nuevo'}`);
+    logInfo(`  ${row.path.padEnd(pathWidth)}  ${row.slug.padEnd(slugWidth)}  ${row.status}`);
   }
 }
 
