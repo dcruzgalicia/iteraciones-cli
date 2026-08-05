@@ -3,6 +3,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loadSiteConfig } from '../config/config-loader.js';
+import type { SiteConfig } from '../config/site-config.js';
 import { ConfigError } from '../lib/errors.js';
 
 async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
@@ -305,5 +306,57 @@ describe('loadSiteConfig', () => {
       stderrSpy.mockRestore();
     }
     expect(callCount).toBe(0);
+  });
+
+  // ── Tests de las tres vías de carga (cubren la unificación de defaults) ──
+
+  it('format.latex es false con config presente sin clave latex (vía 1)', async () => {
+    await withTempDir(async (dir) => {
+      await writeConfig(dir, 'lang: es-MX');
+      const config = await loadSiteConfig(dir);
+      expect(config.format.latex).toBe(false);
+    });
+  });
+
+  it('format.html.generate es true con format: {} (vía 2)', async () => {
+    await withTempDir(async (dir) => {
+      await writeConfig(dir, 'format: {}');
+      const config = await loadSiteConfig(dir);
+      expect(config.format.html?.generate).toBe(true);
+    });
+  });
+
+  it('disabled-preamble-filters tiene los 3 defaults con config presente sin la clave (vía 3)', async () => {
+    await withTempDir(async (dir) => {
+      await writeConfig(dir, 'lang: es-MX\nformat:\n  html:\n    title: ok');
+      const config = await loadSiteConfig(dir);
+      expect(config.disabledPreambleFilters).toEqual(['16-eso-pic', '17-pdfx', '18-crop']);
+    });
+  });
+
+  it('las tres vías de carga producen los mismos defaults de formato', async () => {
+    let defaultsSinArchivo: SiteConfig = null!;
+    let defaultsConArchivoVacio: SiteConfig = null!;
+    let defaultsConMinimo: SiteConfig = null!;
+
+    await withTempDir(async (dir) => {
+      defaultsSinArchivo = await loadSiteConfig(dir);
+    });
+    await withTempDir(async (dir) => {
+      await writeConfig(dir, '');
+      defaultsConArchivoVacio = await loadSiteConfig(dir);
+    });
+    await withTempDir(async (dir) => {
+      await writeConfig(dir, 'lang: es-MX');
+      defaultsConMinimo = await loadSiteConfig(dir);
+    });
+
+    // Los defaults de formato deben coincidir en las tres vías
+    expect(defaultsConArchivoVacio.format.latex).toBe(defaultsSinArchivo.format.latex);
+    expect(defaultsConMinimo.format.latex).toBe(defaultsSinArchivo.format.latex);
+    expect(defaultsConArchivoVacio.format.html?.generate).toBe(defaultsSinArchivo.format.html?.generate);
+    expect(defaultsConMinimo.format.html?.generate).toBe(defaultsSinArchivo.format.html?.generate);
+    expect(defaultsConArchivoVacio.disabledPreambleFilters).toEqual(defaultsSinArchivo.disabledPreambleFilters);
+    expect(defaultsConMinimo.disabledPreambleFilters).toEqual(defaultsSinArchivo.disabledPreambleFilters);
   });
 });
