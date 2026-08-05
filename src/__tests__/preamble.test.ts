@@ -12,16 +12,16 @@ import {
 import * as logger from '../lib/logger.js';
 
 describe('preamble-loader', () => {
-  it('lista los 24 filters built-in con descripción', () => {
+  it('lista los preamble filters built-in con descripción', () => {
     const infos = getBuiltinPreambleFilterInfos();
-    expect(infos).toHaveLength(24);
+    expect(infos).toHaveLength(BUILTIN_PREAMBLE_FILTERS.length);
     expect(infos.map((i) => i.name)).toEqual(BUILTIN_PREAMBLE_FILTERS);
     expect(infos.every((i) => i.description.length > 0)).toBe(true);
   });
 
   it('carga el contenido .tex del paquete para todos los filters', async () => {
     const filters = await loadPreambleFilters();
-    expect(filters).toHaveLength(24);
+    expect(filters).toHaveLength(BUILTIN_PREAMBLE_FILTERS.length);
     const biblio = filters.find((t) => t.name === '23-bibliography-heading');
     expect(biblio?.content).toContain('\\ifcsname ver@biblatex.sty\\endcsname');
     expect(biblio?.content).toContain('\\defbibheading{bibintoc}[\\refname]{%');
