@@ -104,6 +104,7 @@ export async function runDocumentPipeline(
   const pdfPaths = new Set(work.exportSets.pdf.map((d) => d.relativePath));
   const filters = await loadFilterGroups(siteConfig, siteConfig.disabledFilters, ctx.cwd);
 
+  progress.startLightFormats();
   await mapWithConcurrency(workDocList, ctx.concurrency, async (doc) => {
     await processDocumentFormats(
       doc,
@@ -130,6 +131,14 @@ export async function runDocumentPipeline(
     processed.add(doc.relativePath);
     progress.reportFile({ relativePath: doc.relativePath, phase: 'render' });
   });
+
+  // Completar las subtareas de los formatos ligeros activos (su trabajo ocurre
+  // dentro del pool 1); pdf se completa con el consumidor de la cola.
+  const count = processed.size;
+  if (latexOn) progress.completePhase(count, 'latex');
+  if (htmlOn) progress.completePhase(count, 'html');
+  if (epubOn) progress.completePhase(count, 'epub');
+  if (mdOn) progress.completePhase(count, 'markdown');
 
   pdfProducerDone = true;
   if (compilePdf) {
