@@ -132,13 +132,16 @@ export async function runDocumentPipeline(
     progress.reportFile({ relativePath: doc.relativePath, phase: 'render' });
   });
 
-  // Completar las subtareas de los formatos ligeros activos (su trabajo ocurre
-  // dentro del pool 1); pdf se completa con el consumidor de la cola.
+  // Completar las subtareas de los formatos ligeros activos y la fase render:
+  // su trabajo ocurre dentro del pool 1, así que el tracker avanza al grupo
+  // 'Generando formatos' mientras los PDFs siguen compilando en el pool 2
+  // (con su propio progreso en vivo).
   const count = processed.size;
   if (latexOn) progress.completePhase(count, 'latex');
   if (htmlOn) progress.completePhase(count, 'html');
   if (epubOn) progress.completePhase(count, 'epub');
   if (mdOn) progress.completePhase(count, 'markdown');
+  progress.completePhase(count, 'render');
 
   pdfProducerDone = true;
   if (compilePdf) {

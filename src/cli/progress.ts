@@ -164,19 +164,22 @@ export class ProgressTracker {
     const st = this.phaseStart[phase];
     const elapsed = st !== undefined ? performance.now() - st : 0;
     this.phaseDurations[phase] = elapsed;
-    const meta = PHASE_META[phase];
     const count = actualCount ?? this.phaseCounts[phase] ?? this.currentPhaseCount;
+    this.applyPhaseTitle(phase, count, elapsed);
 
-    const task = this.listrTasks.get(phase);
-    if (task) {
-      const countPart = count > 0 ? ` ${count}` : '';
-      task.title = `${meta.label}${countPart}  ${formatTime(elapsed)}`;
-    }
     // Resolver la fase para que el runner avance (discovery la resuelve planPhases)
     if (phase !== 'discovery') {
       this.phaseResolvers.get(phase)?.();
       this.phaseResolvers.delete(phase);
     }
+  }
+
+  /** Aplica el título final (etiqueta + conteo + duración) a la tarea de una fase. */
+  private applyPhaseTitle(phase: PipelinePhase, count: number, elapsed: number): void {
+    const task = this.listrTasks.get(phase);
+    if (!task) return;
+    const countPart = count > 0 ? ` ${count}` : '';
+    task.title = `${PHASE_META[phase].label}${countPart}  ${formatTime(elapsed)}`;
   }
 
   async finish(processed: number, cached: number, formats?: string[]): Promise<void> {
@@ -297,9 +300,13 @@ export class ProgressTracker {
           this.runnerAlive = true;
           this.listrTasks.set(phase, task);
           this.phaseResolvers.set(phase, resolve);
-          // Si finish() ya pasó (el runner se retrasó, p. ej. render() async del
-          // DefaultRenderer en TTY), resolver al momento para no colgar run().
-          if (this.finished) resolve();
+          // La fase ya se completó antes de que el runner llegara a la tarea
+          // (p. ej. render termina con el pool 1, antes del wrapper de formatos):
+          // resolver al momento con el título final, sin esperar a finish().
+          if (this.finished || this.phaseDone.has(phase)) {
+            this.applyPhaseTitle(phase, this.phaseCounts[phase] ?? 0, this.phaseDurations[phase] ?? 0);
+            resolve();
+          }
         }),
     };
   }
@@ -319,7 +326,12 @@ export class ProgressTracker {
           this.runnerAlive = true;
           this.listrTasks.set(phase, task);
           this.phaseResolvers.set(phase, resolve);
-          if (this.finished) resolve();
+          // El trabajo del formato (pool 1) puede terminar antes de que el
+          // wrapper 'Generando formatos' arranque: resolver al momento.
+          if (this.finished || this.phaseDone.has(phase)) {
+            this.applyPhaseTitle(phase, this.phaseCounts[phase] ?? 0, this.phaseDurations[phase] ?? 0);
+            resolve();
+          }
         }),
     };
   }
