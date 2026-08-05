@@ -180,7 +180,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   const work = computeWorkSets(plan, allDocs, discoveredChanges);
 
   if (!work.anyWork) {
-    log('Ningun documento modificado — sin cambios');
+    log('Ningún documento modificado — sin cambios');
     await progress.finish(0, allDocs.length, []);
     return;
   }
@@ -197,7 +197,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
     work.exportSets.epub.length === 0 &&
     work.exportSets.markdown.length === 0
   ) {
-    log('Ningun documento modificado — sin cambios');
+    log('Ningún documento modificado — sin cambios');
     await progress.finish(0, allDocs.length, []);
     return;
   }

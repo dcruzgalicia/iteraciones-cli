@@ -52,11 +52,11 @@ Crea documentos Markdown adicionales:
 iteraciones new posts/primer-articulo.md
 ```
 
-El comando crea `posts/primer-articulo.md` con el frontmatter mínimo correcto:
+El comando crea `posts/primer-articulo.md` con el frontmatter mínimo correcto, infiriendo el título desde el nombre del archivo:
 
 ```markdown
 ---
-title: ''
+title: 'Primer Articulo'
 date: 2025-01-01
 ---
 
