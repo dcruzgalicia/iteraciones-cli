@@ -38,8 +38,7 @@ export function buildProgram(): Command {
     program
       .command('info')
       .description('muestra información del proyecto y configuración')
-      .option('--output <path>', 'directorio de salida (por defecto: dist/files)')
-      .action((opts: { output?: string }) => runInfo(projectRoot(), opts.output));
+      .action(() => runInfo(projectRoot()));
 
   program
     .command('init')
