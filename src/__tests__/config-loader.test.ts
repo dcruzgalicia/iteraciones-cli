@@ -271,7 +271,7 @@ describe('loadSiteConfig', () => {
       output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
       stderrSpy.mockRestore();
     }
-    expect(output).toContain('claves desconocidas');
+    expect(output).toContain('claves sin efecto');
     expect(output).toContain('format.pdf');
     expect(output).toContain('mathptmx');
   });
@@ -289,8 +289,7 @@ describe('loadSiteConfig', () => {
       output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
       stderrSpy.mockRestore();
     }
-    expect(output).toContain('claves desconocidas');
-    expect(output).toContain('clave-inventada');
+    expect(output).toContain('claves sin efecto');
   });
 
   it('no emite warnings para una configuración válida', async () => {

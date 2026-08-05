@@ -35,7 +35,8 @@ function removeUnknownKeys(value: unknown, issues: ZodIssue[]): unknown {
   return result;
 }
 
-export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
+export async function loadSiteConfig(cwd: string, options?: { mode?: 'build' | 'validate' }): Promise<SiteConfig> {
+  const isValidate = options?.mode === 'validate';
   const configPath = join(cwd, CONFIG_FILE);
   const file = Bun.file(configPath);
 
@@ -77,10 +78,22 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
   const result = SiteConfigSchema.safeParse(root);
   if (!result.success) {
     const unknownKeyIssues = result.error.issues.filter((issue) => issue.code === 'unrecognized_keys');
-    for (const issue of unknownKeyIssues) {
-      const path = issue.path.length > 0 ? `"${issue.path.join('.')}"` : 'la raíz';
-      const keys = issue.keys.map((k) => `"${k}"`).join(', ');
-      process.stderr.write(`[iteraciones] iteraciones.config.yaml: claves desconocidas en ${path}: ${keys}. Revisa docs/configuration.md\n`);
+    if (unknownKeyIssues.length > 0) {
+      if (isValidate) {
+        const details = unknownKeyIssues
+          .map((issue) => {
+            const path = issue.path.length > 0 ? `"${issue.path.join('.')}"` : 'la raíz';
+            const keys = issue.keys.map((k) => `"${k}"`).join(', ');
+            return `en ${path}: ${keys}`;
+          })
+          .join('; ');
+        throw new ConfigError(`claves desconocidas: ${details}`, configPath);
+      }
+      for (const issue of unknownKeyIssues) {
+        const path = issue.path.length > 0 ? `"${issue.path.join('.')}"` : 'la raíz';
+        const keys = issue.keys.map((k) => `"${k}"`).join(', ');
+        process.stderr.write(`[iteraciones] iteraciones.config.yaml: claves sin efecto en ${path}: ${keys}. Revisa docs/configuration.md\n`);
+      }
     }
     const realIssues = result.error.issues.filter((issue) => issue.code !== 'unrecognized_keys');
     if (realIssues.length > 0) {
