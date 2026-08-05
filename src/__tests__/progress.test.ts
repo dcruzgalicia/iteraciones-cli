@@ -122,4 +122,29 @@ describe('ProgressTracker', () => {
     expect(completed.some((t) => t.includes('Documentos encontrados'))).toBe(true);
     expect(completed.some((t) => t.includes('Renderizando contenido'))).toBe(true);
   });
+
+  it('fail resuelve las fases pendientes cuando el build falla (regresión #1211)', async () => {
+    // Regresión: cuando una exportación lanza (p. ej. latexmk), la fase en curso
+    // nunca se completa y run() quedaba pendiente; en TTY el render loop del
+    // DefaultRenderer mantiene el proceso vivo y el build se bloqueaba tras el
+    // error. fail() debe resolver las fases pendientes y esperar al runner.
+    const events = await runTracker(async (tracker) => {
+      tracker.startPhase('discovery', 2);
+      await Bun.sleep(20);
+      tracker.completePhase(2);
+      await tracker.planPhases(['discovery', 'render', 'pdf']);
+      tracker.startPhase('render', 1);
+      await Bun.sleep(20);
+      tracker.completePhase(1);
+      tracker.startPhase('pdf', 2);
+      // Simula un error de exportación: la fase pdf nunca se completa
+      await tracker.fail();
+    });
+
+    const completed = titlesWith(events, 'COMPLETED');
+    expect(completed.some((t) => t.includes('Documentos encontrados'))).toBe(true);
+    expect(completed.some((t) => t.includes('Renderizando contenido'))).toBe(true);
+    // fail resolvió la fase pendiente: el runner terminó sin colgarse
+    expect(completed.some((t) => t.includes('PDF'))).toBe(true);
+  });
 });

@@ -173,6 +173,21 @@ export class ProgressTracker {
     this.writeSummary(processed, cached, formats);
   }
 
+  /**
+   * Resuelve las fases pendientes y espera al runner cuando el build falla.
+   * En TTY el render loop del DefaultRenderer mantiene el proceso vivo mientras
+   * run() no termine, así que sin esto el proceso quedaría bloqueado tras el
+   * error (regresión #1211). No escribe el resumen: el error ya se reportó.
+   */
+  async fail(): Promise<void> {
+    this.finished = true;
+    this.phaseResolvers.forEach((resolve) => {
+      resolve();
+    });
+    this.phaseResolvers.clear();
+    await this.runPromise?.catch(() => {});
+  }
+
   showCleanup(): void {
     this.infoMessages.push('Archivos temporales limpiados');
   }
