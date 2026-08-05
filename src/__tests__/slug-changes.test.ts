@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { discover } from '../builder/discover.js';
@@ -16,6 +16,11 @@ function makeProject(content: string): string {
   const dir = mkdtempSync(join(tmpdir(), 'iteraciones-slug-'));
   writeFileSync(join(dir, 'doc.md'), content);
   return dir;
+}
+
+/** Fuerza mtime futuro para detectar cambios de mismo tamaño (misma resolución de ms). */
+function touchFuture(file: string): void {
+  utimesSync(file, new Date(Date.now() + 60_000), new Date(Date.now() + 60_000));
 }
 
 describe('discover (cambios de slug por metadatos)', () => {
@@ -53,6 +58,39 @@ describe('discover (cambios de slug por metadatos)', () => {
       const result = await discover(cwd);
       expect(result.slugChangedEntries.get('doc.md')).toBe('guia-completa');
       expect(result.discoveryIndex.get('doc.md')?.slug).toBe('guia');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('registra el slug anterior al cambiar de author', async () => {
+    const cwd = makeProject('---\ntitle: Prueba\nauthor: Autor A\n---\n\nContenido');
+    try {
+      await discover(cwd);
+      writeFileSync(join(cwd, 'doc.md'), '---\ntitle: Prueba\nauthor: Autor B\n---\n\nContenido');
+      touchFuture(join(cwd, 'doc.md'));
+      const result = await discover(cwd);
+      expect(result.slugChangedEntries.get('doc.md')).toBe('prueba-by-autor-a');
+      expect(result.discoveryIndex.get('doc.md')?.slug).toBe('prueba-by-autor-b');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('registra el slug anterior en cada paso de cambiar author y luego quitarlo', async () => {
+    const cwd = makeProject('---\ntitle: Prueba\nauthor: Autor A\n---\n\nContenido');
+    try {
+      await discover(cwd);
+      // Cambiar de author: limpia el slug del author anterior
+      writeFileSync(join(cwd, 'doc.md'), '---\ntitle: Prueba\nauthor: Autor B\n---\n\nContenido');
+      touchFuture(join(cwd, 'doc.md'));
+      const pasoCambio = await discover(cwd);
+      expect(pasoCambio.slugChangedEntries.get('doc.md')).toBe('prueba-by-autor-a');
+      // Quitar el author: limpia el slug del author actual
+      writeFileSync(join(cwd, 'doc.md'), '---\ntitle: Prueba\n---\n\nContenido');
+      const pasoQuitar = await discover(cwd);
+      expect(pasoQuitar.slugChangedEntries.get('doc.md')).toBe('prueba-by-autor-b');
+      expect(pasoQuitar.discoveryIndex.get('doc.md')?.slug).toBe('prueba');
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
