@@ -241,15 +241,11 @@ export async function discover(
       }
 
       // Store base data (slug resolution happens later, after all files are processed)
-      // Capturar slug anterior antes de sobrescribir (para limpiar archivos si cambia)
+      // Preservar el slug anterior en la entrada para que resolveSlugs detecte el
+      // cambio contra el slug final: comparar por prefijos aquí falla cuando el slug
+      // nuevo es prefijo del viejo (quitar author, acortar título, sufijo -dN).
       const prevSlug = discoveryIndex.get(relativePath)?.slug;
-      if (prevSlug) {
-        const newSlugBase = computeSlug({ title, author: authors });
-        if (newSlugBase && prevSlug !== newSlugBase && !prevSlug.startsWith(newSlugBase + '-')) {
-          slugChangedEntries.set(relativePath, prevSlug);
-        }
-      }
-      discoveryIndex.set(relativePath, { title, subtitle, author: authors, date, mtime, size, hash });
+      discoveryIndex.set(relativePath, { title, subtitle, author: authors, date, mtime, size, hash, slug: prevSlug });
     }
     // Archivos sin cambios: conservan su entrada en discoveryIndex
   });
