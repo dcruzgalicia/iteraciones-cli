@@ -243,7 +243,6 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   const { processed } = await runDocumentPipeline(progress, ctx, plan, work, formatCfg, formatsDir, discoveryIndex, {
     noExport: options.noExport === true,
   });
-  progress.completePhase(workDocCount, 'render');
 
   // ── Build assets (css, fonts, logo) antes de copiar a dist/ ──
   if (plan.htmlOn) {
