@@ -65,12 +65,18 @@ export async function resolveSlugs(
       const path = paths[0]!;
       const entry = discoveryIndex.get(path)!;
       const slugBase = computeSlug({ title: entry.title, author: entry.author }, { fallbackPath: path });
-      if (entry.slug && entry.slug !== slugBase) {
-        changedPaths.push(path);
-        newRecentFiles.push(path);
-        slugChangedEntries.set(path, entry.slug);
+      // Un doc que queda único conserva su sufijo -dN: la renumeración a slug
+      // limpio solo corresponde a builds sin estado previo (--no-cache).
+      const prevSlug = entry.slug;
+      const dnMatch = prevSlug?.match(/^(.*)-d(\d+)$/);
+      if (!(dnMatch && dnMatch[1] === slugBase)) {
+        if (prevSlug && prevSlug !== slugBase) {
+          changedPaths.push(path);
+          newRecentFiles.push(path);
+          slugChangedEntries.set(path, prevSlug);
+        }
+        entry.slug = slugBase;
       }
-      entry.slug = slugBase;
     } else {
       paths.sort();
       let maxN = slugsCounter.get(key) ?? 0;
