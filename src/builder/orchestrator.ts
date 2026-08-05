@@ -27,12 +27,16 @@ export interface BuildOptions {
 
 async function setupBuildEnvironment(cwd: string, siteConfig: SiteConfig, options: BuildOptions): Promise<BuildContext> {
   const defaultOutputDir = join(cwd, 'dist', 'files');
+  // Límite superior de 16: en máquinas con muchos núcleos, demasiados procesos
+  // simultáneos saturan el sistema de archivos y degradan el rendimiento.
+  // Solo aplica al default automático: `--concurrency` explícito se respeta.
+  const defaultConcurrency = Math.min(Math.max(1, cpus().length - 1), 16);
   const ctx: BuildContext = {
     siteConfig,
     cwd,
     outputDir: options.outputDir ?? defaultOutputDir,
     cssPath: '',
-    concurrency: options.concurrency ?? Math.max(1, cpus().length - 1),
+    concurrency: options.concurrency ?? defaultConcurrency,
   };
 
   if (options.noCache) {
