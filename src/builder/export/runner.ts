@@ -57,73 +57,17 @@ export async function runExportDocuments(exportableDocs: BuildDocument[], option
 
   if (exportableDocs.length === 0) return;
 
-  // Semaforo que limita las instancias de pdflatex concurrentes.
+  // Con PDF activo, el limite de concurrencia es CPU − 1: las invocaciones
+  // de latexmk son pesadas y compiten por el mismo pool de workers.
   const maxSlots = hasPdf ? Math.max(1, cpus().length - 1) : 0;
-  let latexSlots = maxSlots;
-  const latexQueue: Array<() => void> = [];
-  const acquireLatex = (): Promise<void> =>
-    new Promise<void>((res) => {
-      if (latexSlots > 0) {
-        latexSlots--;
-        res();
-      } else {
-        latexQueue.push(res);
-      }
-    });
-  const releaseLatex = (): void => {
-    const next = latexQueue.shift();
-    if (next) {
-      next();
-    } else {
-      latexSlots++;
-    }
-  };
 
   // Auto-descubrir archivos .bib en el proyecto
   const globalBibliography: string | undefined = resolveBibOptions(cwd).bibOptions?.bibliography;
+  const userFilters = await resolveUserLuaFilters(cwd, options.siteConfig);
+  const needsAst = config.epub?.generate === true || config.markdown?.generate === true;
+  const pdfConcurrency = hasPdf ? maxSlots : concurrency;
 
-  // Closure que genera los formatos para un ExportDocument ya ensamblado.
-  // epub/markdown se generan desde el AST canónico (json → epub3/markdown).
-  async function generateFormats(
-    exportDoc: ExportDocument,
-    outputBase: string,
-    ast: Record<string, unknown> | null,
-    userFilters: string[],
-    biberCacheDir?: string,
-  ): Promise<void> {
-    const tasks: Array<Promise<void>> = [];
-
-    if (config.markdown?.generate && ast) {
-      tasks.push(convertToMarkdown(ast, `${outputBase}.md`, exportDoc, userFilters).then(() => options.onExportProgress?.(exportDoc.relativePath)));
-    }
-
-    if (config.epub?.generate && ast) {
-      tasks.push(convertToEpub(ast, `${outputBase}.epub`, exportDoc, userFilters).then(() => options.onExportProgress?.(exportDoc.relativePath)));
-    }
-
-    if (config.pdf?.generate) {
-      const outputPath = `${outputBase}.pdf`;
-      tasks.push(
-        (async () => {
-          await acquireLatex();
-          try {
-            await convertToPdf(exportDoc, outputPath, cwd, biberCacheDir);
-          } finally {
-            releaseLatex();
-          }
-          options.onExportProgress?.(exportDoc.relativePath);
-        })(),
-      );
-    }
-
-    if (tasks.length > 0) {
-      const settled = await Promise.allSettled(tasks);
-      const rejected = settled.find((r) => r.status === 'rejected');
-      if (rejected) throw rejected.reason;
-    }
-  }
-
-  // Pre-crear directorios de cache de biber.
+  // Pre-crear directorios de cache de biber (uno por slot de concurrencia).
   const biberCacheForDoc = new Map<string, string>();
   if (hasPdf && maxSlots > 0) {
     const biberBase = join(cwd, '.iteraciones', 'biber');
@@ -133,21 +77,80 @@ export async function runExportDocuments(exportableDocs: BuildDocument[], option
     });
   }
 
-  const pdfConcurrency = hasPdf ? maxSlots : concurrency;
-  const needsAst = config.epub?.generate === true || config.markdown?.generate === true;
-  const userFilters = await resolveUserLuaFilters(cwd, options.siteConfig);
-  await mapWithConcurrency(exportableDocs, pdfConcurrency, async (doc): Promise<void> => {
-    const exportDoc = assembleExportDocument(doc, lang, globalBibliography, undefined, config.pdf);
+  const ctx: ExportDocContext = {
+    config,
+    outputDir,
+    cwd,
+    lang,
+    globalBibliography,
+    needsAst,
+    userFilters,
+    biberCacheForDoc,
+    onExportProgress: options.onExportProgress,
+  };
+  await mapWithConcurrency(exportableDocs, pdfConcurrency, (doc) => exportOneDoc(doc, ctx));
+}
 
-    const ast = needsAst ? await readAstFromCache(cwd, doc) : null;
-    if (needsAst && !ast) {
-      logWarning(`sin AST en caché para ${doc.relativePath}; se omite la exportación epub/markdown`, 'export');
-    }
+/** Contexto compartido por todas las exportaciones de un build. */
+interface ExportDocContext {
+  config: ExportFormatOptions;
+  outputDir: string;
+  cwd: string;
+  lang: string;
+  globalBibliography?: string;
+  needsAst: boolean;
+  userFilters: string[];
+  biberCacheForDoc: Map<string, string>;
+  onExportProgress?: (relativePath: string) => void;
+}
 
-    const outputBase = exportOutputBase(exportDoc, outputDir);
-    const biberCacheDir = biberCacheForDoc.get(doc.relativePath);
-    await generateFormats(exportDoc, outputBase, ast, userFilters, biberCacheDir);
-  });
+/**
+ * Exporta todos los formatos activos de un documento individual.
+ * epub/markdown se generan desde el AST canónico (json → epub3/markdown),
+ * PDF compila el .tex con latexmk.
+ */
+async function exportOneDoc(doc: BuildDocument, ctx: ExportDocContext): Promise<void> {
+  const exportDoc = assembleExportDocument(doc, ctx.lang, ctx.globalBibliography, undefined, ctx.config.pdf);
+
+  const ast = ctx.needsAst ? await readAstFromCache(ctx.cwd, doc) : null;
+  if (ctx.needsAst && !ast) {
+    logWarning(`sin AST en caché para ${doc.relativePath}; se omite la exportación epub/markdown`, 'export');
+  }
+
+  const outputBase = exportOutputBase(exportDoc, ctx.outputDir);
+  const biberCacheDir = ctx.biberCacheForDoc.get(doc.relativePath);
+  await generateFormats(ctx, exportDoc, outputBase, ast, biberCacheDir);
+}
+
+/** Genera los formatos para un ExportDocument ya ensamblado. */
+async function generateFormats(
+  ctx: ExportDocContext,
+  exportDoc: ExportDocument,
+  outputBase: string,
+  ast: Record<string, unknown> | null,
+  biberCacheDir?: string,
+): Promise<void> {
+  const { config, cwd, userFilters, onExportProgress } = ctx;
+  const tasks: Array<Promise<void>> = [];
+
+  if (config.markdown?.generate && ast) {
+    tasks.push(convertToMarkdown(ast, `${outputBase}.md`, exportDoc, userFilters).then(() => onExportProgress?.(exportDoc.relativePath)));
+  }
+
+  if (config.epub?.generate && ast) {
+    tasks.push(convertToEpub(ast, `${outputBase}.epub`, exportDoc, userFilters).then(() => onExportProgress?.(exportDoc.relativePath)));
+  }
+
+  if (config.pdf?.generate) {
+    const outputPath = `${outputBase}.pdf`;
+    tasks.push(convertToPdf(exportDoc, outputPath, cwd, biberCacheDir).then(() => onExportProgress?.(exportDoc.relativePath)));
+  }
+
+  if (tasks.length > 0) {
+    const settled = await Promise.allSettled(tasks);
+    const rejected = settled.find((r) => r.status === 'rejected');
+    if (rejected) throw rejected.reason;
+  }
 }
 /**
  * Construye el bloque YAML de metadatos que Pandoc inyectará en el documento.
