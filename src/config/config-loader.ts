@@ -63,6 +63,15 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
 
   const root = parsed as Record<string, unknown>;
 
+  // Advertir sobre accent inválido antes del parse (una sola ejecución, evita
+  // duplicar el warning al re-parsear por claves desconocidas). La sustitución
+  // a "lime" la realiza el esquema Zod (z.enum().catch()).
+  const htmlRaw = (root.format as Record<string, unknown> | undefined)?.html;
+  const accentRaw = (htmlRaw as Record<string, unknown> | undefined)?.accent;
+  if (typeof accentRaw === 'string' && !KNOWN_ACCENT_COLORS.includes(accentRaw as (typeof KNOWN_ACCENT_COLORS)[number])) {
+    process.stderr.write(`[iteraciones] color de acento desconocido: "${accentRaw}". Usando "lime" por defecto.\n`);
+  }
+
   // Las claves desconocidas (issues unrecognized_keys de los esquemas strict)
   // son warnings, no errores: el build continúa. Los errores de tipo sí rompen.
   const result = SiteConfigSchema.safeParse(root);
@@ -88,14 +97,6 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
   }
 
   const config = result.data as unknown as SiteConfig;
-
-  // Validación del accent fuera de Zod: el transform anterior escribía a stderr
-  // (efecto secundario que se duplicaría al re-parsear por claves desconocidas).
-  const html = config.format.html;
-  if (html && html.accent && !KNOWN_ACCENT_COLORS.includes(html.accent as (typeof KNOWN_ACCENT_COLORS)[number])) {
-    process.stderr.write(`[iteraciones] color de acento desconocido: "${html.accent}". Usando "lime" por defecto.\n`);
-    html.accent = 'lime';
-  }
 
   return config;
 }
