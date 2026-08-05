@@ -2,6 +2,7 @@ import { describe, expect, it, spyOn } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { buildLatexPreamble } from '../builder/latex-preamble.js';
 import {
   BUILTIN_PREAMBLE_FILTERS,
   getBuiltinPreambleFilterInfos,
@@ -46,6 +47,35 @@ describe('preamble-loader', () => {
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
+  });
+});
+
+describe('buildLatexPreamble', () => {
+  it('emite \\author{} con los autores del documento', async () => {
+    const preamble = await buildLatexPreamble(undefined, { title: 'Título', author: ['Juan Pérez', 'Ana López'] });
+    const authorLine = preamble.find((line) => line.startsWith('\\author{'));
+    expect(authorLine).toBe('\\author{Juan Pérez \\and Ana López}');
+  });
+
+  it('emite \\author{} vacío cuando no hay author para mantener la posición del título', async () => {
+    const preamble = await buildLatexPreamble(undefined, { title: 'Título' });
+    const authorLine = preamble.find((line) => line.startsWith('\\author{'));
+    expect(authorLine).toBe('\\author{}');
+  });
+
+  it('emite \\author{} vacío cuando author es una lista vacía', async () => {
+    const preamble = await buildLatexPreamble(undefined, { title: 'Título', author: [] });
+    const authorLine = preamble.find((line) => line.startsWith('\\author{'));
+    expect(authorLine).toBe('\\author{}');
+  });
+
+  it('emite \\author{} después de \\title y antes de \\date', async () => {
+    const preamble = await buildLatexPreamble(undefined, { title: 'Título' });
+    const titleIdx = preamble.findIndex((line) => line.startsWith('\\title{'));
+    const authorIdx = preamble.findIndex((line) => line.startsWith('\\author{'));
+    const dateIdx = preamble.findIndex((line) => line.startsWith('\\date{'));
+    expect(authorIdx).toBeGreaterThan(titleIdx);
+    expect(dateIdx).toBeGreaterThan(authorIdx);
   });
 });
 

@@ -59,7 +59,11 @@ export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: Pre
   const displayTitle = meta?.title || 'Sin t\u00edtulo';
   preamble.push(`\\title{${displayTitle}}`);
   if (meta?.subtitle) preamble.push(`\\subtitle{${meta.subtitle}}`);
-  if (meta?.author?.length) preamble.push(`\\author{${meta.author.join(' \\and ')}}`);
+  // Se emite siempre (vacío sin author) para que \ifx\@author\@empty en
+  // 19-maketitle-patches.tex sea verdadero y el título mantenga su posición:
+  // si \author{} no se llama, \@author es una macro de warning de LaTeX
+  // que deja la rama de compensación sin efecto.
+  preamble.push(`\\author{${meta?.author?.length ? meta.author.join(' \\and ') : ''}}`);
   if (pdfFormat?.showDate) {
     if (meta?.date) {
       preamble.push(`\\date{${meta.date}}`);
