@@ -441,19 +441,22 @@ async function copyToDist(
     [active.epubOn, 'html', 'epub'],
     [active.mdOn, 'markdown', 'md'],
   ];
+  // Aplanar las copias (doc × formato) y ejecutarlas en paralelo: son
+  // independientes entre sí. Límite 20 para no saturar el sistema de archivos.
+  const copies: Array<{ srcPath: string; dstPath: string }> = [];
   for (const doc of allDocs) {
     const slug = doc.slug ?? basename(doc.relativePath, '.md');
     const dir = dirname(doc.relativePath);
-    for (const [active, format, ext] of copySpec) {
-      if (!active) continue;
-      const srcPath = join(formatsDir, format, dir, `${slug}.${ext}`);
-      const dstPath = join(ctx.outputDir, dir, `${slug}.${ext}`);
-      if (await Bun.file(srcPath).exists()) {
-        await mkdir(dirname(dstPath), { recursive: true });
-        await Bun.write(dstPath, Bun.file(srcPath));
-      }
+    for (const [isActive, format, ext] of copySpec) {
+      if (!isActive) continue;
+      copies.push({ srcPath: join(formatsDir, format, dir, `${slug}.${ext}`), dstPath: join(ctx.outputDir, dir, `${slug}.${ext}`) });
     }
   }
+  await mapWithConcurrency(copies, 20, async ({ srcPath, dstPath }) => {
+    if (!(await Bun.file(srcPath).exists())) return;
+    await mkdir(dirname(dstPath), { recursive: true });
+    await Bun.write(dstPath, Bun.file(srcPath));
+  });
 }
 
 function buildFormatsList(active: { latexOn: boolean; pdfOn: boolean; htmlOn: boolean; epubOn: boolean; mdOn: boolean }): string[] {
