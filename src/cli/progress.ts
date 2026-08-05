@@ -339,13 +339,14 @@ export class ProgressTracker {
   private writeSummary(processed: number, cached: number, formats?: string[]): void {
     const totalTime = performance.now() - this.t0;
     const formatCount = formats ? formats.length : 0;
+    const formatLabel = processed > 0 ? String(formatCount) : '— (reutilizado)';
 
     process.stdout.write(`\n\u2713 Todo listo.\n\n`);
     process.stdout.write(`  ${padRight('Documentos procesados', LABEL_WIDTH)}${processed}\n`);
     if (cached > 0) {
       process.stdout.write(`  ${padRight('Sin cambios (reutilizado)', LABEL_WIDTH)}${cached}\n`);
     }
-    process.stdout.write(`  ${padRight('Formatos generados', LABEL_WIDTH)}${formatCount}\n`);
+    process.stdout.write(`  ${padRight('Formatos generados', LABEL_WIDTH)}${formatLabel}\n`);
     process.stdout.write(`  ${padRight('Tiempo total', LABEL_WIDTH)}${formatTime(totalTime)}\n`);
     if (this.warnings.length > 0) {
       process.stdout.write(`\nAdvertencias:\n`);
