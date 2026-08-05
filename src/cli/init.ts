@@ -65,10 +65,21 @@ function buildDefaultConfig(): string {
     markdown: { generate: DEFAULT_MARKDOWN_FORMAT.generate ?? false },
   };
 
-  return (
+  let yaml =
     stringify({ lang: DEFAULT_SITE_CONFIG.lang, format, 'disabled-preamble-filters': DEFAULT_SITE_CONFIG.disabledPreambleFilters }, { indent: 2 }) +
-    '\n'
+    '\n';
+
+  // Añadir comentarios explicativos sobre los defaults
+  yaml = yaml.replace('    theme: dark', '    # Tema visual del HTML: "light" o "dark". Por defecto: dark.\n    theme: dark');
+  yaml = yaml.replace(
+    'disabled-preamble-filters:',
+    '# Los preamble filters 16, 17 y 18 añaden funcionalidades para impresión\n' +
+      '# profesional (fondo de página, PDF/X-1a y marcas de corte). Vienen\n' +
+      '# desactivados por defecto. Elimina nombres de esta lista para activarlos.\n' +
+      'disabled-preamble-filters:',
   );
+
+  return yaml;
 }
 
 /**
