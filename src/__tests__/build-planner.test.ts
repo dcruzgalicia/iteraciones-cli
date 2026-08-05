@@ -86,7 +86,7 @@ describe('computeWorkSets', () => {
     );
     expect(work.newPdf).toBe(true);
     expect(work.astExportCandidates.length).toBe(3);
-    // Los astExportCandidates se procesan en la fase render (renderFromAstCache)
+    // Los astExportCandidates se procesan en la fase render (renderTexBodyFromCachedAst)
     expect(work.usedPhases).toEqual(['discovery', 'render', 'latex', 'pdf']);
   });
 

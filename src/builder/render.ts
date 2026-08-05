@@ -342,7 +342,7 @@ export async function renderHtmlPageFromAst(
  *
  * Retorna los relativePath procesados.
  */
-export async function renderDocuments(
+export async function renderToCanonicalAst(
   docs: BuildDocument[],
   concurrency: number,
   cwd: string,
@@ -407,7 +407,7 @@ export async function renderDocuments(
  * anterior, solo faltan las salidas de ese formato. Los docs sin AST en
  * disco se omiten del resultado (el caller los manda al pipeline completo).
  */
-export async function renderFromAstCache(
+export async function renderTexBodyFromCachedAst(
   docs: BuildDocument[],
   concurrency: number,
   cwd: string,

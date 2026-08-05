@@ -6,7 +6,7 @@ import {
   computePreambleFlags,
   hasCiteNodes,
   loadFilterGroups,
-  renderFromAstCache,
+  renderTexBodyFromCachedAst,
   resolveLuaFilters,
   resolveUserLuaFilters,
   suggestFilterName,
@@ -138,7 +138,7 @@ describe('hasCiteNodes (detección de citas en el AST)', () => {
   });
 });
 
-describe('renderFromAstCache (exportación desde AST en disco)', () => {
+describe('renderTexBodyFromCachedAst (exportación desde AST en disco)', () => {
   it('retorna conjunto vacío si no hay AST serializado en disco', async () => {
     const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-ast-'));
     try {
@@ -148,7 +148,7 @@ describe('renderFromAstCache (exportación desde AST en disco)', () => {
         frontmatter: { title: 'Prueba', date: '', author: [] },
         slug: 'prueba',
       };
-      const processed = await renderFromAstCache([doc], 1, cwd);
+      const processed = await renderTexBodyFromCachedAst([doc], 1, cwd);
       expect(processed.size).toBe(0);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
