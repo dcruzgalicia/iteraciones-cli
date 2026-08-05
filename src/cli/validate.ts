@@ -5,10 +5,14 @@ import { validateDisabledPreambleFilters } from '../builder/preamble-loader.js';
 import { validateDisabledFilters } from '../builder/render.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { ConfigError } from '../lib/errors.js';
-import { logInfo, logWarning } from '../lib/logger.js';
+import { logError, logInfo, logWarning } from '../lib/logger.js';
 import { checkLatexEngine } from './doctor/system-checks.js';
 
 type ValidationError = { file: string; message: string };
+
+function plural(n: number, singular: string): string {
+  return `${n} ${n === 1 ? singular : singular + 's'}`;
+}
 
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
 
@@ -122,23 +126,24 @@ export async function runValidate(cwd: string): Promise<void> {
   const allWarnings = [...configWarnings, ...warnings];
 
   if (allWarnings.length > 0) {
-    logWarning(`${allWarnings.length} advertencia(s):`, 'validate');
+    logWarning(`${plural(allWarnings.length, 'advertencia')}:`, 'validate');
     for (const w of allWarnings) {
       logWarning(`${w.file}: ${w.message}`, 'validate');
     }
   }
 
   if (errors.length === 0) {
-    const detail: string[] = [`${docCount} documento(s)`];
+    const detail: string[] = [plural(docCount, 'documento')];
     if (disabledFiltersCount > 0) detail.push(`${disabledFiltersCount} filter(s) desactivados`);
     if (luaFiltersCount > 0) detail.push(`${luaFiltersCount} lua-filter(s)`);
     logInfo(`sin errores — ${detail.join(', ')}.`, 'validate');
     return;
   }
 
-  logWarning(`se encontraron ${errors.length} error(es):`, 'validate');
+  logError(`${plural(errors.length, 'error')}:`, 'validate');
+  logError(`se encontraron ${errors.length} error(es):`, 'validate');
   for (const e of errors) {
-    logWarning(`${e.file}: ${e.message}`, 'validate');
+    logError(`${e.file}: ${e.message}`, 'validate');
   }
   process.exitCode = 1;
 }
