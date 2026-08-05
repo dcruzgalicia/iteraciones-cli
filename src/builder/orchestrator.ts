@@ -3,7 +3,7 @@ import { cpus } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { ProgressTracker } from '../cli/progress.js';
 import { loadSiteConfig } from '../config/config-loader.js';
-import type { FormatConfig, SiteConfig } from '../config/site-config.js';
+import { computeActiveFormats, type FormatConfig, type SiteConfig } from '../config/site-config.js';
 import { logInfo } from '../lib/logger.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import { buildAssets } from './build-assets.js';
@@ -46,9 +46,7 @@ async function setupBuildEnvironment(cwd: string, siteConfig: SiteConfig, option
 
 export async function build(cwd: string, options: BuildOptions = {}): Promise<void> {
   if (options.dryRun) {
-    const { relativePaths, discoveryIndex } = await discover(cwd, { noCache: true });
-    const sourceDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
-    logInfo(`Se procesar\u00edan ${sourceDocs.length} documentos`, 'dry-run');
+    await dryRun(cwd);
     return;
   }
 
@@ -61,6 +59,41 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     // run() no termine (regresión #1211).
     await progress.fail();
     throw err;
+  }
+}
+
+/**
+ * Muestra los documentos que se procesarían sin generar salida.
+ * Descubre con noCache (sin escribir state.json) y marca el estado
+ * previo por documento desde el state.json existente (solo lectura).
+ */
+async function dryRun(cwd: string): Promise<void> {
+  const siteConfig = await loadSiteConfig(cwd);
+  const formats = computeActiveFormats(siteConfig.format);
+  const prevState = await loadBuildState(cwd);
+  const { relativePaths, discoveryIndex } = await discover(cwd, { noCache: true });
+  const sourceDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
+  for (const doc of sourceDocs) {
+    doc.slug = discoveryIndex.get(doc.relativePath)?.slug ?? basename(doc.relativePath, '.md');
+  }
+
+  const formatStr = formats.length > 0 ? formats.join(', ') : '(ninguno)';
+  logInfo(`Se procesarían ${sourceDocs.length} documentos`, 'dry-run');
+  logInfo(`Formatos activos: ${formatStr}`, 'dry-run');
+  if (sourceDocs.length === 0) return;
+
+  const rows = sourceDocs.map((doc) => ({
+    path: doc.relativePath,
+    slug: doc.slug ?? '',
+    cached: prevState?.entries.has(doc.relativePath) ?? false,
+  }));
+  const pathWidth = Math.max(...rows.map((r) => r.path.length), 'DOCUMENTO'.length);
+  const slugWidth = Math.max(...rows.map((r) => r.slug.length), 'SLUG'.length);
+
+  logInfo('');
+  logInfo(`  ${'DOCUMENTO'.padEnd(pathWidth)}  ${'SLUG'.padEnd(slugWidth)}  ESTADO`);
+  for (const row of rows) {
+    logInfo(`  ${row.path.padEnd(pathWidth)}  ${row.slug.padEnd(slugWidth)}  ${row.cached ? 'en caché' : 'nuevo'}`);
   }
 }
 
