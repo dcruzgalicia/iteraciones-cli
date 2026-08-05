@@ -1,6 +1,5 @@
 import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
-import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/site-config.js';
 import { logWarning } from '../lib/logger.js';
 import { type BibOptions, runPandoc } from '../lib/pandoc-runner.js';
@@ -126,10 +125,8 @@ export function validateDisabledFilters(disabled: string[] | undefined): void {
  * rutas relativas al proyecto). Las rutas inexistentes emiten un warning sin
  * romper el build.
  */
-export async function resolveUserLuaFilters(cwd?: string, siteConfig?: SiteConfig): Promise<string[]> {
-  if (!cwd) return [];
-  const config = siteConfig ?? (await loadSiteConfig(cwd));
-  const filters = config.luaFilters ?? [];
+export async function resolveUserLuaFilters(cwd: string, siteConfig: SiteConfig): Promise<string[]> {
+  const filters = siteConfig.luaFilters ?? [];
   const resolved: string[] = [];
   for (const rel of filters) {
     const abs = join(cwd, rel);
@@ -150,9 +147,9 @@ export async function resolveUserLuaFilters(cwd?: string, siteConfig?: SiteConfi
  * @param disabledList Lista de filters a desactivar (nombres completos). undefined = todos activos.
  * @param cwd Directorio del proyecto para buscar overrides.
  */
-export async function loadFilterGroups(disabledList?: string[], cwd?: string, siteConfig?: SiteConfig): Promise<LuaFilterGroup> {
+export async function loadFilterGroups(siteConfig: SiteConfig, disabledList?: string[], cwd?: string): Promise<LuaFilterGroup> {
   const group = await resolveLuaFilters(disabledList, cwd);
-  group.user = await resolveUserLuaFilters(cwd, siteConfig);
+  group.user = cwd ? await resolveUserLuaFilters(cwd, siteConfig) : [];
   return group;
 }
 
@@ -299,10 +296,10 @@ export async function renderHtmlPageFromAst(
   doc: BuildDocument,
   cwd: string,
   vars: HtmlPageVars,
+  siteConfig: SiteConfig,
   bibOptions?: BibOptions,
-  activeFilters?: string[],
 ): Promise<string> {
-  const luaFilters = await loadFilterGroups(activeFilters, cwd);
+  const luaFilters = await loadFilterGroups(siteConfig, siteConfig.disabledFilters, cwd);
 
   const extraArgs = [
     '--template',
@@ -346,10 +343,10 @@ export async function renderToCanonicalAst(
   docs: BuildDocument[],
   concurrency: number,
   cwd: string,
-  activeFilters?: string[],
+  siteConfig: SiteConfig,
   generateLatex?: boolean,
 ): Promise<Set<string>> {
-  const luaFilters = await loadFilterGroups(activeFilters, cwd);
+  const luaFilters = await loadFilterGroups(siteConfig, siteConfig.disabledFilters, cwd);
   const { bibFiles } = resolveBibOptions(cwd);
 
   const processed = new Set<string>();
@@ -411,10 +408,10 @@ export async function renderTexBodyFromCachedAst(
   docs: BuildDocument[],
   concurrency: number,
   cwd: string,
+  siteConfig: SiteConfig,
   generateLatex?: boolean,
-  activeFilters?: string[],
 ): Promise<Set<string>> {
-  const luaFilters = await loadFilterGroups(activeFilters, cwd);
+  const luaFilters = await loadFilterGroups(siteConfig, siteConfig.disabledFilters, cwd);
   const { bibFiles } = resolveBibOptions(cwd);
   const processed = new Set<string>();
 

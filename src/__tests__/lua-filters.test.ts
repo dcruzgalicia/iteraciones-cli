@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { renderToCanonicalAst } from '../builder/render.js';
 import type { BuildDocument } from '../builder/types.js';
+import { loadSiteConfig } from '../config/config-loader.js';
 import { runPandoc } from '../lib/pandoc-runner.js';
 
 const RESOURCES = join(import.meta.dir, '..', 'lib', 'resources', 'filters');
@@ -211,7 +212,8 @@ describe('filtros Lua de usuario (Fase 6, C)', () => {
         frontmatter: { title: 'Prueba', date: '', author: [] },
         slug: 'prueba',
       };
-      const processed = await renderToCanonicalAst([doc], 1, cwd, undefined, true);
+      const siteConfig = await loadSiteConfig(cwd);
+      const processed = await renderToCanonicalAst([doc], 1, cwd, siteConfig, true);
       expect(processed.has('doc.md')).toBe(true);
       const tex = await Bun.file(join(cwd, '.iteraciones', 'tex', 'prueba.tex')).text();
       expect(tex).toContain('\\fbox{Nota}');

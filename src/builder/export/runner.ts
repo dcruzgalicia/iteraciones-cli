@@ -30,7 +30,7 @@ interface ExportRunOptions {
   cwd: string;
   lang: string;
   concurrency: number;
-  siteConfig?: SiteConfig;
+  siteConfig: SiteConfig;
   onExportProgress?: (relativePath: string) => void;
 }
 
