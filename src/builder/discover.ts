@@ -229,14 +229,7 @@ export async function discover(
             title = typeof parsed.title === 'string' ? parsed.title : '';
             subtitle = typeof parsed.subtitle === 'string' && parsed.subtitle.trim() ? parsed.subtitle.trim() : undefined;
             date = typeof parsed.date === 'string' && parsed.date.trim() ? parsed.date.trim() : undefined;
-            {
-              const raw = parsed.author;
-              authors = Array.isArray(raw)
-                ? raw.filter((a: unknown): a is string => typeof a === 'string')
-                : typeof raw === 'string' && raw.trim()
-                  ? [raw.trim()]
-                  : [];
-            }
+            authors = parseAuthors(parsed.author);
           }
         }
       } catch (err) {
@@ -330,4 +323,19 @@ export function buildDocsFromIndex(relativePaths: string[], discoveryIndex: Map<
       },
     };
   });
+}
+
+/**
+ * Parsea el campo author del frontmatter. Acepta tanto string simple
+ * como array de strings; filtra valores que no sean texto y retorna un
+ * array vacío si el campo está ausente, es nulo o está vacío.
+ */
+export function parseAuthors(raw: unknown): string[] {
+  if (Array.isArray(raw)) {
+    return raw.filter((a: unknown): a is string => typeof a === 'string');
+  }
+  if (typeof raw === 'string' && raw.trim()) {
+    return [raw.trim()];
+  }
+  return [];
 }

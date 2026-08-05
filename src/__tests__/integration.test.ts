@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from 'bun:test';
+import { describe, expect, it } from 'bun:test';
 import { mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -7,22 +7,15 @@ import { runInit } from '../cli/init.js';
 import { checkPandoc } from '../lib/pandoc-runner.js';
 
 describe('integration: init + build', () => {
-  let hasPandoc = false;
-
-  afterAll(async () => {
-    if (!hasPandoc) return;
-  });
-
   it('genera HTML después de init + build', async () => {
-    // Verificar que pandoc está disponible; si no, saltar el test
-    try {
-      await checkPandoc();
-      hasPandoc = true;
-    } catch {
+    // Verificar que pandoc está disponible; si no, omitir el test de integración
+    const pandocOk = await checkPandoc().catch(() => null);
+    if (!pandocOk) {
+      // pandoc no instalado en este entorno — no es un fallo del test
       return;
     }
 
-    const cwd = join(tmpdir(), `iteraciones-test-${Date.now()}`);
+    const cwd = join(tmpdir(), `iteraciones-integration-test-${Date.now()}`);
     await mkdir(cwd, { recursive: true });
     try {
       // 1. Inicializar el proyecto

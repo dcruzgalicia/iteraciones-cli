@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { buildDocsFromIndex, computeSlug, splitFrontmatter } from '../builder/discover.js';
+import { buildDocsFromIndex, computeSlug, parseAuthors, splitFrontmatter } from '../builder/discover.js';
 
 describe('computeSlug', () => {
   it('genera slug desde el título', () => {
@@ -80,18 +80,6 @@ describe('computeSlug', () => {
 });
 
 describe('parseAuthors', () => {
-  // Prueba la logica de parseo de author del frontmatter
-  // que acepta tanto string como array
-  function parseAuthors(raw: unknown): string[] {
-    if (Array.isArray(raw)) {
-      return raw.filter((a: unknown): a is string => typeof a === 'string');
-    }
-    if (typeof raw === 'string' && raw.trim()) {
-      return [raw.trim()];
-    }
-    return [];
-  }
-
   it('acepta string simple', () => {
     expect(parseAuthors('Sofia García')).toEqual(['Sofia García']);
   });
