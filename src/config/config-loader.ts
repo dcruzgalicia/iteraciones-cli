@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import type { ZodIssue } from 'zod';
 import { ConfigError } from '../lib/errors.js';
 import { KNOWN_ACCENT_COLORS, SiteConfigSchema } from './config-schema.js';
-import { DEFAULT_SITE_CONFIG, type SiteConfig } from './site-config.js';
+import type { SiteConfig } from './site-config.js';
 
 const CONFIG_FILE = 'iteraciones.config.yaml';
 
@@ -40,7 +40,7 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
   const file = Bun.file(configPath);
 
   if (!(await file.exists())) {
-    return { ...DEFAULT_SITE_CONFIG };
+    return SiteConfigSchema.parse({}) as unknown as SiteConfig;
   }
 
   let raw: string;
@@ -58,7 +58,7 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
   }
 
   if (!parsed || typeof parsed !== 'object') {
-    return { ...DEFAULT_SITE_CONFIG };
+    return SiteConfigSchema.parse({}) as unknown as SiteConfig;
   }
 
   const root = parsed as Record<string, unknown>;

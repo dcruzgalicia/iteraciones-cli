@@ -81,7 +81,7 @@ const MarkdownFormatSchema = z
 
 const FormatSchema = z
   .object({
-    latex: z.boolean().default(true),
+    latex: z.boolean().default(false),
     html: HtmlFormatSchema.optional(),
     pdf: PdfFormatSchema.optional(),
     epub: EpubFormatSchema.optional(),
@@ -102,7 +102,7 @@ const RawSiteConfigSchema = z
       .transform((v) => (v?.length ? v : undefined)),
     'disabled-preamble-filters': z
       .array(z.string())
-      .optional()
+      .default(['16-eso-pic', '17-pdfx', '18-crop'])
       .transform((v) => (v?.length ? v : undefined)),
     'lua-filters': z
       .array(z.string())
@@ -125,7 +125,8 @@ function camelizeKeys(obj: Record<string, unknown>): Record<string, unknown> {
   return result;
 }
 
-// Transformar a SiteConfig (aplanar format:, camelizar claves)
+// Transformar a SiteConfig (aplanar format:, camelizar claves).
+// Los defaults del schema Zod y del transform son la única fuente de verdad.
 export const SiteConfigSchema = RawSiteConfigSchema.transform((raw) => {
   const f = raw.format ?? ({} as Record<string, unknown>);
 
@@ -137,7 +138,7 @@ export const SiteConfigSchema = RawSiteConfigSchema.transform((raw) => {
   return {
     lang: (raw.lang as string) ?? 'es-MX',
     format: {
-      latex: (f.latex as boolean) ?? true,
+      latex: (f.latex as boolean) ?? false,
       html: htmlRaw
         ? (camelizeKeys(htmlRaw) as SiteConfig['format']['html'])
         : {
@@ -147,7 +148,7 @@ export const SiteConfigSchema = RawSiteConfigSchema.transform((raw) => {
             baseUrl: undefined,
             theme: undefined,
             accent: 'lime',
-            generate: false,
+            generate: true,
           },
       pdf: pdfRaw
         ? (camelizeKeys(pdfRaw) as SiteConfig['format']['pdf'])
