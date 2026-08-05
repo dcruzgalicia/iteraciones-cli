@@ -41,10 +41,11 @@ function titlesWith(events: TestEvent[], state: string): string[] {
 describe('ProgressTracker', () => {
   it('registra discovery, render y las fases de formato como tareas completadas', async () => {
     const events = await runTracker(async (tracker) => {
+      tracker.setFormats([{ phase: 'pdf', active: true }]);
       tracker.startPhase('discovery', 2);
       await Bun.sleep(20);
       tracker.completePhase(2);
-      await tracker.planPhases(['discovery', 'render', 'pdf']);
+      await tracker.planPhases(['discovery', 'render']);
       tracker.startPhase('render', 1);
       await Bun.sleep(20);
       tracker.completePhase(1);
@@ -65,10 +66,11 @@ describe('ProgressTracker', () => {
 
   it('muestra el conteo en vivo [i/N] en el output de la tarea', async () => {
     const events = await runTracker(async (tracker) => {
+      tracker.setFormats([{ phase: 'pdf', active: true }]);
       tracker.startPhase('discovery', 1);
       await Bun.sleep(20);
       tracker.completePhase(1);
-      await tracker.planPhases(['discovery', 'pdf']);
+      await tracker.planPhases(['discovery']);
       tracker.startPhase('pdf', 3);
       await Bun.sleep(20);
       tracker.reportFile({ relativePath: 'a.md', phase: 'pdf' });
@@ -84,6 +86,8 @@ describe('ProgressTracker', () => {
 
   it('salta las fases no planificadas (render y formatos sin trabajo)', async () => {
     const events = await runTracker(async (tracker) => {
+      // Sin formatos activos: el grupo 'Generando formatos' se salta completo
+      tracker.setFormats([{ phase: 'pdf', active: false }]);
       tracker.startPhase('discovery', 1);
       await Bun.sleep(20);
       tracker.completePhase(1);
@@ -129,10 +133,11 @@ describe('ProgressTracker', () => {
     // DefaultRenderer mantiene el proceso vivo y el build se bloqueaba tras el
     // error. fail() debe resolver las fases pendientes y esperar al runner.
     const events = await runTracker(async (tracker) => {
+      tracker.setFormats([{ phase: 'pdf', active: true }]);
       tracker.startPhase('discovery', 2);
       await Bun.sleep(20);
       tracker.completePhase(2);
-      await tracker.planPhases(['discovery', 'render', 'pdf']);
+      await tracker.planPhases(['discovery', 'render']);
       tracker.startPhase('render', 1);
       await Bun.sleep(20);
       tracker.completePhase(1);

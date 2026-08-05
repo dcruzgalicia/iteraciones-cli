@@ -31,12 +31,17 @@ const PHASE_META: Record<PipelinePhase, PhaseMeta> = {
 };
 
 /**
- * Fases de formato del tracker. Desde el pipeline por documento (#1256), los
- * formatos ligeros (latex, html, epub, markdown) se generan dentro de la fase
- * 'render'; solo la compilación PDF (pool 2) es una fase separada. Las fases
- * no planificadas se saltan con skip (sin flechas engañosas en la salida).
+ * Formatos configurados del proyecto: el tracker los muestra siempre como
+ * subtareas del grupo 'Generando formatos', con ✔ si están activos (su trabajo
+ * se completa en el pipeline) o con ✗ '(desactivado)' si generate:false.
  */
-const FORMAT_PHASES: PipelinePhase[] = ['pdf'];
+export interface FormatState {
+  phase: PipelinePhase;
+  active: boolean;
+}
+
+/** Formatos ligeros generados dentro del pool 1 del pipeline (no fase separada). */
+const LIGHT_FORMAT_PHASES: PipelinePhase[] = ['latex', 'html', 'epub', 'markdown'];
 
 type ListrCtx = Record<string, never>;
 type TrackerTask = ListrTaskWrapper<ListrCtx, ListrDefaultRenderer, ListrDefaultRenderer>;
@@ -53,6 +58,8 @@ type TrackerTask = ListrTaskWrapper<ListrCtx, ListrDefaultRenderer, ListrDefault
  *   `skip`, evaluado cuando el runner llega a ellas — sin carrera porque la
  *   tarea discovery se libera en `planPhases()`, cuando el orquestador ya
  *   conoce todas las fases del build.
+ * - Los 5 formatos configurados (setFormats) se muestran siempre como
+ *   subtareas: activos → ✔ al completar su trabajo; desactivados → ✗.
  */
 export class ProgressTracker {
   private t0: number;
@@ -65,6 +72,8 @@ export class ProgressTracker {
   private currentPhaseCount = 0;
   /** Si true, escribe el desglose de tiempos por fase tras el resumen (--profile). */
   private profile: boolean;
+  /** Formatos configurados del proyecto (para las subtareas del grupo de formatos). */
+  private formats: FormatState[] = [];
 
   // ── listr2 ────────────────────────────────────────────────────────────────
   private renderer: ListrRendererValue;
@@ -208,7 +217,28 @@ export class ProgressTracker {
     this.infoMessages.push('Archivos temporales limpiados');
   }
 
-  /** Crea la lista de listr2 con las 7 fases pre-registradas. */
+  /**
+   * Declara los formatos configurados del proyecto (generate:true/false).
+   * Debe llamarse antes del primer startPhase: las subtareas del grupo
+   * 'Generando formatos' se crean a partir de esta lista.
+   */
+  setFormats(formats: FormatState[]): void {
+    this.formats = formats;
+  }
+
+  /**
+   * Marca el inicio de los formatos ligeros (latex, html, epub, markdown)
+   * sin cambiar la fase activa: su trabajo ocurre dentro del pool 1 del
+   * pipeline, cuyo progreso en vivo se reporta bajo 'render'.
+   */
+  startLightFormats(): void {
+    const now = performance.now();
+    for (const phase of LIGHT_FORMAT_PHASES) {
+      this.phaseStart[phase] = now;
+    }
+  }
+
+  /** Crea la lista de listr2: discovery, render y el grupo de formatos configurados. */
   private createListr(): void {
     // Volcar mensajes informativos acumulados como output de la tarea discovery
     const discoveryTask = this.makeTask('discovery');
@@ -220,7 +250,7 @@ export class ProgressTracker {
         return typeof originalTask === 'function' ? originalTask(_ctx, task) : undefined;
       };
     }
-    const subtasks: ListrTask<ListrCtx, ListrDefaultRenderer>[] = FORMAT_PHASES.map((phase) => this.makeTask(phase));
+    const subtasks: ListrTask<ListrCtx, ListrDefaultRenderer>[] = this.formats.map(({ phase, active }) => this.makeFormatTask(phase, active));
 
     this.listr = new Listr<ListrCtx, ListrDefaultRenderer>(
       [
@@ -228,11 +258,21 @@ export class ProgressTracker {
         this.makeTask('render'),
         {
           title: 'Generando formatos',
-          skip: () => !FORMAT_PHASES.some((phase) => this.usedPhases.has(phase)),
+          // Sin formatos activos: el grupo no tiene trabajo que mostrar
+          skip: () => !this.formats.some((f) => f.active),
           task: (_ctx, task) => task.newListr(subtasks, { concurrent: true }),
         },
       ],
-      { renderer: this.renderer as unknown as typeof DefaultRenderer, rendererOptions: { clearOutput: false, collapseSubtasks: false } },
+      {
+        renderer: this.renderer as unknown as typeof DefaultRenderer,
+        rendererOptions: {
+          clearOutput: false,
+          collapseSubtasks: false,
+          // Los formatos desactivados se muestran con ✗ (no con ↓, que sugiere
+          // trabajo pendiente en lugar de estado de configuración).
+          icon: { SKIPPED_WITH_COLLAPSE: '✗', SKIPPED_WITHOUT_COLLAPSE: '✗' },
+        },
+      },
     );
     this.runPromise = this.listr.run().then(
       () => {
@@ -259,6 +299,26 @@ export class ProgressTracker {
           this.phaseResolvers.set(phase, resolve);
           // Si finish() ya pasó (el runner se retrasó, p. ej. render() async del
           // DefaultRenderer en TTY), resolver al momento para no colgar run().
+          if (this.finished) resolve();
+        }),
+    };
+  }
+
+  /**
+   * Crea la subtarea de un formato configurado. Activo: se completa cuando el
+   * pipeline reporta su fase (completePhase). Desactivado: skip con mensaje
+   * '<Nombre> (desactivado)' — el renderer lo muestra con ✗.
+   */
+  private makeFormatTask(phase: PipelinePhase, active: boolean): ListrTask<ListrCtx, ListrDefaultRenderer> {
+    const label = PHASE_META[phase].label;
+    return {
+      title: label,
+      skip: active ? () => false : () => `${label} (desactivado)`,
+      task: (_ctx, task) =>
+        new Promise<void>((resolve) => {
+          this.runnerAlive = true;
+          this.listrTasks.set(phase, task);
+          this.phaseResolvers.set(phase, resolve);
           if (this.finished) resolve();
         }),
     };

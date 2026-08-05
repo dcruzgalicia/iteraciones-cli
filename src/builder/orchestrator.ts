@@ -1,7 +1,7 @@
 import { mkdir, rename, rm } from 'node:fs/promises';
 import { cpus } from 'node:os';
 import { basename, dirname, join } from 'node:path';
-import { type PipelinePhase, ProgressTracker } from '../cli/progress.js';
+import { ProgressTracker } from '../cli/progress.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { computeActiveFormats, type FormatConfig, type SiteConfig } from '../config/site-config.js';
 import { logInfo } from '../lib/logger.js';
@@ -136,6 +136,16 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   const ctx = await setupBuildEnvironment(cwd, siteConfig, options);
   ctx.cssPath = plan.needsCss ? '/css/styles.css' : '';
 
+  // Los 5 formatos configurados se muestran siempre en el tracker: activos con
+  // ✔ (su trabajo se completa en el pipeline), desactivados con ✗.
+  progress.setFormats([
+    { phase: 'latex', active: plan.latexOn },
+    { phase: 'pdf', active: plan.pdfOn },
+    { phase: 'html', active: plan.htmlOn },
+    { phase: 'epub', active: plan.epubOn },
+    { phase: 'markdown', active: plan.mdOn },
+  ]);
+
   progress.startPhase('discovery');
   const {
     relativePaths,
@@ -212,12 +222,10 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   }
 
   // Declarar al tracker las fases que se ejecutarán (TTY: libera discovery para
-  // que listr2 evalúe los skips con la información completa). El pipeline por
-  // documento fusiona render y formatos ligeros bajo 'render'; el PDF se
-  // reporta en su propia fase.
-  const trackerPhases: PipelinePhase[] = ['discovery', 'render'];
-  if (plan.pdfOn) trackerPhases.push('pdf');
-  await progress.planPhases(trackerPhases);
+  // que listr2 evalúe los skips con la información completa). Las subtareas de
+  // formato se controlan por setFormats; aquí solo se declaran las fases de
+  // pipeline (render se salta en early returns sin trabajo).
+  await progress.planPhases(['discovery', 'render']);
 
   const formatCfg = siteConfig.format;
 
