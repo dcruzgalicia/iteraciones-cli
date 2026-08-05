@@ -81,16 +81,18 @@ export async function runInfo(cwd: string): Promise<void> {
     const theme = html?.theme ?? '(por defecto)';
     const accent = html?.accent ?? '(por defecto)';
 
-    logInfo('', 'info');
-    logInfo(`  lang:                    ${config.lang}`, 'info');
-    logInfo(`  documentos:              ${docCount}`, 'info');
-    logInfo(`  salida:                  ${distDir}${distExists ? ' (generado)' : ' (no generado)'}`, 'info');
-    logInfo(`  pandoc:                  ${pandocVersion}`, 'info');
-    logInfo(`  formatos activos:        ${activeFormats.length > 0 ? activeFormats.join(', ') : '(ninguno)'}`, 'info');
-    logInfo(`  tema HTML:               ${theme}`, 'info');
-    logInfo(`  acento HTML:             ${accent}`, 'info');
-    logInfo(`  filters desactivados:    ${disabledList}`, 'info');
-    logInfo(`  preamble desactivados:   ${disabledPreamble}`, 'info');
+    const lines = [
+      `  lang:                    ${config.lang}`,
+      `  documentos:              ${docCount}`,
+      `  salida:                  ${distDir}${distExists ? ' (generado)' : ' (no generado)'}`,
+      `  pandoc:                  ${pandocVersion}`,
+      `  formatos activos:        ${activeFormats.length > 0 ? activeFormats.join(', ') : '(ninguno)'}`,
+      `  tema HTML:               ${theme}`,
+      `  acento HTML:             ${accent}`,
+      `  filters desactivados:    ${disabledList}`,
+      `  preamble desactivados:   ${disabledPreamble}`,
+    ];
+    logInfo(lines.join('\n'), 'info');
   } catch (err) {
     if (err instanceof ConfigError) {
       logError(err.message, 'config');
