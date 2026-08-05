@@ -2,6 +2,7 @@ import { mkdir } from 'node:fs/promises';
 import { cpus } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import slugifyLib from 'slugify';
+import { formatUserError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import { resolveSlugs } from './slug-resolver.js';
@@ -234,7 +235,7 @@ export async function discover(
         }
       } catch (err) {
         // frontmatter YAML inválido: mantener datos anteriores y advertir para que el usuario lo corrija
-        logWarning(`frontmatter YAML inválido en "${relativePath}": ${String(err)}`, 'discover');
+        logWarning(`frontmatter YAML inválido en "${relativePath}": ${formatUserError(err)}`, 'discover');
       }
 
       if (!title) {

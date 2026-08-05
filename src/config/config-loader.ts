@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import type { ZodIssue } from 'zod';
-import { ConfigError } from '../lib/errors.js';
+import { ConfigError, formatUserError } from '../lib/errors.js';
 import { KNOWN_ACCENT_COLORS, SiteConfigSchema } from './config-schema.js';
 import type { SiteConfig } from './site-config.js';
 
@@ -55,7 +55,7 @@ export async function loadSiteConfig(cwd: string, options?: { mode?: 'build' | '
   try {
     parsed = Bun.YAML.parse(raw);
   } catch (err) {
-    throw new ConfigError(`Error de sintaxis en ${CONFIG_FILE}: ${String(err)}`, configPath);
+    throw new ConfigError(`Error de sintaxis en ${CONFIG_FILE}: ${formatUserError(err)}`, configPath);
   }
 
   if (!parsed || typeof parsed !== 'object') {
