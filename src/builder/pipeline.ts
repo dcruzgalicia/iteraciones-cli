@@ -49,7 +49,8 @@ export async function runDocumentPipeline(
   const noExport = options.noExport === true;
   const siteConfig = ctx.siteConfig;
   const userFilters = await resolveUserLuaFilters(ctx.cwd, siteConfig);
-  const globalBibliography = resolveBibOptions(ctx.cwd).bibOptions?.bibliography;
+  const bibOptions = resolveBibOptions(ctx.cwd).bibOptions;
+  const globalBibliography = bibOptions?.bibliography;
   const lang = siteConfig.lang ?? 'es';
   const htmlConfig = formatCfg?.html;
   const logoInline = await loadLogoInline(ctx.cwd, htmlConfig?.logo?.trim());
@@ -118,6 +119,7 @@ export async function runDocumentPipeline(
         lang,
         logoInline,
         filters,
+        bibOptions,
         renderDocPaths,
         htmlPaths,
         epubPaths,
@@ -163,6 +165,7 @@ interface FormatPoolCtx {
   lang: string;
   logoInline: string | undefined;
   filters: Awaited<ReturnType<typeof loadFilterGroups>>;
+  bibOptions: ReturnType<typeof resolveBibOptions>['bibOptions'];
   renderDocPaths: Set<string>;
   htmlPaths: Set<string>;
   epubPaths: Set<string>;
@@ -184,6 +187,7 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
     lang,
     logoInline,
     filters,
+    bibOptions,
     renderDocPaths,
     htmlPaths,
     epubPaths,
@@ -244,7 +248,8 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
         logoInline,
       },
       ctx.siteConfig,
-      resolveBibOptions(cwd).bibOptions,
+      bibOptions,
+      filters,
     );
     await writeOutput(join(formatsDir, 'html', dir, `${slug}.html`), html);
   }
