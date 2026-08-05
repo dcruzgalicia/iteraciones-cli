@@ -2,7 +2,7 @@ import type { PipelinePhase } from '../cli/progress.js';
 import type { SiteConfig } from '../config/site-config.js';
 import { computeActiveFormats } from '../config/site-config.js';
 import type { BuildState } from './discover.js';
-import { computeBibHash, computeConfigHashes, computeFiltersHash } from './state.js';
+import { computeBibHash, computeConfigHashes, computeFiltersHash, type FilterFileCache } from './state.js';
 import type { BuildDocument } from './types.js';
 
 /**
@@ -25,6 +25,8 @@ export interface BuildMetadata {
   removedFormats: string[];
   configHashes: Record<string, string>;
   filtersHash: string;
+  /** Caché de archivos de filtro (mtime+size+hash) para persistir en state.json. */
+  filterFileCache: FilterFileCache;
   bibHash: string;
   formatInvalidated: Record<FormatKey, boolean>;
   filtersInvalidated: boolean;
@@ -65,11 +67,13 @@ export async function computeBuildMetadata(
 ): Promise<BuildMetadata> {
   const currentFormats = computeActiveFormats(siteConfig.format);
 
-  const [configHashes, filtersHash, bibHash] = await Promise.all([
+  const [configHashes, filtersHashResult, bibHash] = await Promise.all([
     computeConfigHashes(cwd, siteConfig),
-    computeFiltersHash(cwd, siteConfig),
+    computeFiltersHash(cwd, siteConfig, prevState?.filterFileCache),
     computeBibHash(cwd),
   ]);
+  const filtersHash = filtersHashResult.hash;
+  const filterFileCache = filtersHashResult.cache;
 
   const prevHashes = prevState?.configHashes;
   const formatInvalidated: Record<FormatKey, boolean> = {
@@ -104,6 +108,7 @@ export async function computeBuildMetadata(
     removedFormats,
     configHashes,
     filtersHash,
+    filterFileCache,
     bibHash,
     formatInvalidated,
     filtersInvalidated,
