@@ -20,34 +20,54 @@ iteraciones-cli es un static site generator (SSG) orientado a publicación edito
 
 ## Pipeline de construcción
 
-El pipeline convierte archivos Markdown en documentos en los formatos configurados. Se ejecuta en 5 fases principales:
+El pipeline convierte archivos Markdown en documentos en los formatos configurados. Se ejecuta en estas fases:
 
 ```
 ┌─────────────┐
 │  FASE 1     │  discover()
 │  Discovery   │  • Escanea archivos .md con Bun.Glob
-│             │  • Compara mtime contra el build anterior
+│             │  • Caché content-addressed (mtime+size+hash)
 │             │  • Lee frontmatter (title, author)
-│             │  • Calcula slugs (con manejo de duplicados)
+│             │  • Calcula slugs (title-por-author con colisiones)
 │             │  • Detecta archivos nuevos, modificados y eliminados
 └──────┬──────┘
        │ allDocs[]
        ▼
-┌─────────────┐
-│  FASE 2+3   │  renderDocuments()
-│  Render     │  • Filters semánticos string (regex)
-│             │  • pandoc --to json → AST canónico
-│             │  • Serializa el AST a disco (.iteraciones/ast/)
-│             │  • pandoc --from json --to latex → .tex (si LaTeX/PDF activos)
-└──────┬──────┘
-       │ pipelineDocs[]
+┌──────────────────────────────┐
+│  Planificación                │  computeBuildMetadata()
+│                              │  • Hashes de invalidación (filtros, bib, config)
+│                              │  • Formatos nuevos/eliminados
+│                              │  • computeWorkSets() → renderDocs + exportSets
+└──────┬───────────────────────┘
+       │
        ▼
-┌─────────────────────────────────────────────┐
-│  FASE 4              4 ramas en Promise.all │
-│  Exportación                                 │
-│                                             │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐    │
-│  │ Markdown │ │  HTML    │ │  EPUB    │    │
+┌──────────────────────────────┐
+│  Pipeline por documento       │  runDocumentPipeline()
+│                              │
+│  Pool 1 (formatos ligeros)   │  • AST fresco o desde caché (.iteraciones/ast/)
+│  • markdown → json           │  • Cuerpo LaTeX + flags de preámbulo
+│  • json → HTML/EPUB/Markdown │  • .tex completo (preámbulo + cuerpo)
+│  • .tex → cola PDF           │  • Concurrencia: ctx.concurrency
+│                              │
+│  Pool 2 (PDF, en paralelo)   │  • Consume cola del pool 1
+│  • latexmk -pdf              │  • Concurrencia independiente
+└──────┬───────────────────────┘
+       │
+       ▼
+┌─────────────┐
+│  Assets      │  buildAssets()
+│             │  • Genera CSS con Tailwind (cacheado por hash)
+│             │  • Copia fuentes y logo a dist/
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  Distribución│  cleanup.ts
+│             │  • copyToDist() — rename de formats/ a dist/
+│             │  • Limpieza de formatos eliminados, archivos borrados,
+│             │    slugs cambiados y caché obsoleta
+└─────────────┘
+```
 │  │(json→md) │ │(json→    │ │(json→    │    │
 │  │          │ │ template)│ │ epub3)   │    │
 │  └──────────┘ └──────────┘ └──────────┘    │
@@ -252,18 +272,20 @@ La configuración PDF es la más compleja e incluye:
 
 | Archivo | Responsabilidad |
 |---------|----------------|
-| `orchestrator.ts` | `build()`: coordina las 5 fases del pipeline. Función principal de ~260 líneas. |
+| `orchestrator.ts` | `build()`: coordina las fases del pipeline. Función principal. |
 | `discover.ts` | Fase 1: escanea archivos, lee frontmatter, detecta cambios. |
-| `render.ts` | Fase 2+3: filters + conversión pandoc a LaTeX y HTML. |
-| `build-utils.ts` | Assets CSS (Tailwind), fonts, logo. Template HTML + renderizado. |
+| `render.ts` | Fase 2+3: filtros Lua + conversión pandoc a AST/LaTeX/HTML. |
+| `build-assets.ts` | Assets CSS (Tailwind), fonts, logo. |
 | `latex-preamble.ts` | Construcción del preámbulo LaTeX. |
 | `types.ts` | BuildDocument, Frontmatter, BuildContext. |
 | `export/runner.ts` | Ejecuta exportación a PDF, EPUB, Markdown con concurrencia limitada. |
 | `export/assemble.ts` | Ensambla ExportDocument desde BuildDocument. |
 | `build-planner.ts` | Planificador: metadatos de invalidación y conjuntos de trabajo. |
-| `html-generator.ts` | Generación de páginas HTML desde el AST. |
+| `pipeline.ts` | Pipeline por documento (pools 1 y 2) con generación HTML desde AST. |
 | `preamble-loader.ts` | Carga de preamble filters (.tex) con override por proyecto. |
 | `state.ts` | Caché content-addressed (state.json, hashes de invalidación). |
+| `cleanup.ts` | Limpieza de archivos: copyToDist, formatos eliminados, slugs cambiados. |
+| `slug-resolver.ts` | Resolución de slugs con colisiones y sufijos -dN. |
 
 ### `src/config/`
 
