@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { renderToCanonicalAst } from '../builder/render.js';
+import { markdownToAst, texBodyFromAst } from '../builder/render.js';
 import type { BuildDocument } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { runPandoc } from '../lib/pandoc-runner.js';
@@ -199,7 +199,7 @@ describe('filtros Lua de usuario (Fase 6, C)', () => {
     }
   });
 
-  it('el pipeline (renderToCanonicalAst) aplica los lua-filters del proyecto', async () => {
+  it('el pipeline (markdownToAst + texBodyFromAst) aplica los lua-filters del proyecto', async () => {
     const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-user-lua-'));
     try {
       mkdirSync(join(cwd, 'filters'), { recursive: true });
@@ -213,10 +213,10 @@ describe('filtros Lua de usuario (Fase 6, C)', () => {
         slug: 'prueba',
       };
       const siteConfig = await loadSiteConfig(cwd);
-      const processed = await renderToCanonicalAst([doc], 1, cwd, siteConfig, true);
-      expect(processed.has('doc.md')).toBe(true);
-      const tex = await Bun.file(join(cwd, '.iteraciones', 'tex', 'prueba.tex')).text();
-      expect(tex).toContain('\\fbox{Nota}');
+      const ast = await markdownToAst(doc, cwd, siteConfig);
+      expect(ast).not.toBeNull();
+      const { body } = await texBodyFromAst(ast!, doc, cwd, siteConfig);
+      expect(body).toContain('\\fbox{Nota}');
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }

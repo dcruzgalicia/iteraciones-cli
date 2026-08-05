@@ -1,7 +1,7 @@
 import { mkdir, rename, rm } from 'node:fs/promises';
 import { cpus } from 'node:os';
 import { basename, dirname, join } from 'node:path';
-import { ProgressTracker } from '../cli/progress.js';
+import { type PipelinePhase, ProgressTracker } from '../cli/progress.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { computeActiveFormats, type FormatConfig, type SiteConfig } from '../config/site-config.js';
 import { logInfo } from '../lib/logger.js';
@@ -9,11 +9,9 @@ import { mapWithConcurrency } from '../lib/run.js';
 import { buildAssets } from './build-assets.js';
 import { type BuildMetadata, computeBuildMetadata, computeWorkSets, type WorkSets } from './build-planner.js';
 import { buildDocsFromIndex, discover, loadBuildState } from './discover.js';
-import { runExportDocuments } from './export/runner.js';
-import { generateHtmlPages } from './html-generator.js';
-import { generateLatexPreamble } from './latex-preamble.js';
+import { runDocumentPipeline } from './pipeline.js';
 import { validateDisabledPreambleFilters } from './preamble-loader.js';
-import { renderTexBodyFromCachedAst, renderToCanonicalAst, validateDisabledFilters } from './render.js';
+import { validateDisabledFilters } from './render.js';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
 
 export interface BuildOptions {
@@ -210,38 +208,30 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   }
 
   // Declarar al tracker las fases que se ejecutarán (TTY: libera discovery para
-  // que listr2 evalúe los skips con la información completa)
-  await progress.planPhases(work.usedPhases);
+  // que listr2 evalúe los skips con la información completa). El pipeline por
+  // documento fusiona render y formatos ligeros bajo 'render'; el PDF se
+  // reporta en su propia fase.
+  const trackerPhases: PipelinePhase[] = ['discovery', 'render'];
+  if (plan.pdfOn) trackerPhases.push('pdf');
+  await progress.planPhases(trackerPhases);
 
   const formatCfg = siteConfig.format;
 
-  // ── FASE 2+3: markdown → AST canónico → salidas por formato activo ──
-  const processedPaths = new Set<string>();
-  if (work.renderDocs.length > 0 || work.astExportCandidates.length > 0) {
-    progress.startPhase('render', work.renderDocs.length + work.astExportCandidates.length);
-    if (work.renderDocs.length > 0) {
-      const done = await renderToCanonicalAst(work.renderDocs, ctx.concurrency, cwd, ctx.siteConfig, plan.generateLatex);
-      for (const p of done) processedPaths.add(p);
-    }
-    if (work.astExportCandidates.length > 0) {
-      const done = await renderTexBodyFromCachedAst(work.astExportCandidates, ctx.concurrency, cwd, ctx.siteConfig, plan.generateLatex);
-      // Docs sin AST en disco (primer build, caché limpiada): pipeline completo
-      const missingAstDocs = work.astExportCandidates.filter((d) => !done.has(d.relativePath));
-      if (missingAstDocs.length > 0) {
-        const extra = await renderToCanonicalAst(missingAstDocs, ctx.concurrency, cwd, ctx.siteConfig, plan.generateLatex);
-        for (const p of extra) done.add(p);
-      }
-      for (const p of done) processedPaths.add(p);
-    }
-    progress.completePhase();
-  }
-
-  // Los exports leen sus inputs del caché en disco (AST/tex):
-  // no hay hidratación de cuerpos en memoria.
-
-  // ── FASE 4: exportaciones en paralelo ──
+  // ── FASE 2-6: pipeline por documento (AST → formatos ligeros → .tex → PDF) ──
   const formatsDir = join(cwd, '.iteraciones', 'formats');
-  await runFormatExports(progress, ctx, work, plan, formatCfg, options, formatsDir, discoveryIndex);
+  const workDocCount = new Set([
+    ...work.renderDocs.map((d) => d.relativePath),
+    ...work.exportSets.html.map((d) => d.relativePath),
+    ...work.exportSets.epub.map((d) => d.relativePath),
+    ...work.exportSets.markdown.map((d) => d.relativePath),
+    ...work.exportSets.pdf.map((d) => d.relativePath),
+  ]).size;
+
+  progress.startPhase('render', workDocCount);
+  const { processed } = await runDocumentPipeline(progress, ctx, plan, work, formatCfg, formatsDir, discoveryIndex, {
+    noExport: options.noExport === true,
+  });
+  progress.completePhase(workDocCount, 'render');
 
   // ── Build assets (css, fonts, logo) antes de copiar a dist/ ──
   if (plan.htmlOn) {
@@ -256,12 +246,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   await copyToDist(ctx, allDocs, formatsDir, { latexOn: plan.latexOn, pdfOn: plan.pdfOn, htmlOn: plan.htmlOn, epubOn: plan.epubOn, mdOn: plan.mdOn });
 
   const totalDocs = plan.htmlOn || plan.pdfOn || plan.epubOn || plan.mdOn || plan.latexOn ? allDocs.length : 0;
-  const workedPaths = new Set<string>();
-  for (const d of work.renderDocs) workedPaths.add(d.relativePath);
-  for (const list of [work.exportSets.pdf, work.exportSets.html, work.exportSets.epub, work.exportSets.markdown]) {
-    for (const d of list) workedPaths.add(d.relativePath);
-  }
-  const processedCount = workedPaths.size;
+  const processedCount = processed.size;
   const cachedCount = totalDocs - processedCount;
   await progress.finish(
     processedCount,
@@ -271,93 +256,8 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
 }
 
 /**
- * FASE 4: exporta los formatos activos en 4 ramas paralelas.
- * Markdown y EPUB desde el AST, HTML con template, LaTeX → PDF secuencial
- * (con semáforo de latexmk dentro de runExportDocuments).
+ * FASE 5: limpiar de dist/ archivos de formatos eliminados.
  */
-async function runFormatExports(
-  progress: ProgressTracker,
-  ctx: BuildContext,
-  work: WorkSets,
-  plan: BuildMetadata,
-  formatCfg: FormatConfig | undefined,
-  options: BuildOptions,
-  formatsDir: string,
-  discoveryIndex: Map<string, DiscoveryEntry>,
-): Promise<void> {
-  const noExport = options.noExport === true;
-  const exportBase = { cwd: ctx.cwd, lang: ctx.siteConfig.lang, concurrency: ctx.concurrency };
-
-  await Promise.all([
-    // Markdown
-    (async () => {
-      if (!plan.mdOn || noExport) return;
-      const mdDocs = work.exportSets.markdown;
-      if (mdDocs.length === 0) return;
-      progress.startPhase('markdown', mdDocs.length);
-      await runExportDocuments(mdDocs, {
-        ...exportBase,
-        outputDir: join(formatsDir, 'markdown'),
-        config: { markdown: formatCfg?.markdown },
-        siteConfig: ctx.siteConfig,
-        onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, phase: 'markdown' }),
-      });
-      progress.completePhase(undefined, 'markdown');
-    })(),
-
-    // HTML (template completo)
-    (async () => {
-      if (!plan.htmlOn || noExport) return;
-      const htmlDocs = work.exportSets.html;
-      if (htmlDocs.length === 0) return;
-      progress.startPhase('html', htmlDocs.length);
-      await generateHtmlPages(ctx, htmlDocs, formatsDir, options, (relativePath) => progress.reportFile({ relativePath, phase: 'html' }));
-      progress.completePhase(undefined, 'html');
-    })(),
-
-    // EPUB
-    (async () => {
-      if (!plan.epubOn || noExport) return;
-      const epubDocs = work.exportSets.epub;
-      if (epubDocs.length === 0) return;
-      progress.startPhase('epub', epubDocs.length);
-      await runExportDocuments(epubDocs, {
-        ...exportBase,
-        outputDir: join(formatsDir, 'html'),
-        config: { epub: formatCfg?.epub },
-        siteConfig: ctx.siteConfig,
-        onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, phase: 'epub' }),
-      });
-      progress.completePhase(undefined, 'epub');
-    })(),
-
-    // LaTeX → PDF (secuencial dentro de la misma rama)
-    (async () => {
-      if (!plan.pdfOn && !plan.latexOn) return;
-      const pdfDocs = work.exportSets.pdf;
-      if (pdfDocs.length === 0) return;
-      const pdfRelPaths = pdfDocs.map((d) => d.relativePath);
-      if (pdfRelPaths.length > 0) {
-        progress.startPhase('latex', pdfRelPaths.length);
-        await generateLatexPreamble(ctx.cwd, ctx.siteConfig, discoveryIndex, pdfRelPaths);
-        progress.completePhase(undefined, 'latex');
-      }
-
-      if (plan.pdfOn && !noExport) {
-        progress.startPhase('pdf', pdfDocs.length);
-        await runExportDocuments(pdfDocs, {
-          ...exportBase,
-          outputDir: join(formatsDir, 'pdf'),
-          config: { pdf: formatCfg?.pdf },
-          siteConfig: ctx.siteConfig,
-          onExportProgress: (relativePath: string) => progress.reportFile({ relativePath, phase: 'pdf' }),
-        });
-        progress.completePhase(undefined, 'pdf');
-      }
-    })(),
-  ]);
-}
-
 // ── Funciones extraídas ───────────────────────────────────────────────────
 
 /** Extensiones de salida estándar por documento en dist/. */

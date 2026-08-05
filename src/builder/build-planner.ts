@@ -1,4 +1,3 @@
-import type { PipelinePhase } from '../cli/progress.js';
 import type { SiteConfig } from '../config/site-config.js';
 import { computeActiveFormats } from '../config/site-config.js';
 import { computeCssInputHash } from './build-assets.js';
@@ -50,11 +49,6 @@ export interface WorkSets {
   anyWork: boolean;
   renderDocs: BuildDocument[];
   exportSets: Record<FormatKey, BuildDocument[]>;
-  /** LaTeX/PDF nuevos con AST válido en disco: solo regenerar el tex body. */
-  newPdf: boolean;
-  astExportCandidates: BuildDocument[];
-  /** Fases que el build ejecutará (para el tracker de progreso). */
-  usedPhases: PipelinePhase[];
 }
 
 /**
@@ -159,28 +153,10 @@ export function computeWorkSets(meta: BuildMetadata, allDocs: BuildDocument[], d
     markdown: mdOn ? allDocs.filter((d) => astChanged.has(d.relativePath) || formatInvalidated.markdown) : [],
   };
 
-  // LaTeX/PDF nuevos con AST válido en disco: solo regenerar el tex body
-  // (HTML/EPUB/Markdown leen el AST directamente).
-  const newPdf = (pdfOn || latexOn) && (meta.newFormats.includes('pdf') || meta.newFormats.includes('latex'));
-  const astExportCandidates = allDocs.filter((d) => !astChanged.has(d.relativePath) && newPdf);
-
-  const usedPhases: PipelinePhase[] = ['discovery'];
-  if (renderDocs.length > 0 || astExportCandidates.length > 0) usedPhases.push('render');
-  if (exportSets.pdf.length > 0) {
-    if (latexOn) usedPhases.push('latex');
-    if (pdfOn) usedPhases.push('pdf');
-  }
-  if (exportSets.html.length > 0) usedPhases.push('html');
-  if (exportSets.epub.length > 0) usedPhases.push('epub');
-  if (exportSets.markdown.length > 0) usedPhases.push('markdown');
-
   return {
     astChanged,
     anyWork,
     renderDocs,
     exportSets,
-    newPdf,
-    astExportCandidates,
-    usedPhases,
   };
 }

@@ -1,11 +1,10 @@
-import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/site-config.js';
 import { logWarning } from '../lib/logger.js';
 import { type BibOptions, runPandoc } from '../lib/pandoc-runner.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import { splitFrontmatter } from './discover.js';
-import { discoverBibFiles, readAstFromCache, resolveBibOptions, writeCachedArtifacts } from './state.js';
+import { resolveBibOptions } from './state.js';
 import type { BuildDocument, PreambleFlags } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -325,112 +324,60 @@ export async function renderHtmlPageFromAst(
 }
 
 /**
- * FASE 2+3 combinada: markdown → AST canónico → salidas por formato activo.
- *
- * Pipeline por archivo:
- *   markdown → [filters semánticos string] → pandoc --to json
- *     → [filtros Lua semánticos] → AST canónico
- *     → [filtros Lua latex] → pandoc --from json --to latex → tex/{slug}.tex (si generateLatex)
- *
- * El AST canónico siempre se serializa a disco (`.iteraciones/ast/{slug}.json`)
- * en formato JSON nativo de pandoc: es el origen único de los demás formatos
- * (HTML se pagina con el template de pandoc, EPUB y Markdown se exportan
- * desde él en src/builder/export/runner.ts).
- *
- * Retorna los relativePath procesados.
+ * Genera el AST canónico desde el markdown de un documento (sin frontmatter),
+ * aplicando los filtros semánticos (string + ast) y los de usuario.
+ * Retorna null si el archivo no se puede leer o el JSON no es válido.
  */
-export async function renderToCanonicalAst(
-  docs: BuildDocument[],
-  concurrency: number,
+export async function markdownToAst(
+  doc: BuildDocument,
   cwd: string,
   siteConfig: SiteConfig,
-  generateLatex?: boolean,
-): Promise<Set<string>> {
-  const luaFilters = await loadFilterGroups(siteConfig, siteConfig.disabledFilters, cwd);
-  const { bibFiles } = resolveBibOptions(cwd);
+  luaFilters?: LuaFilterGroup,
+): Promise<Record<string, unknown> | null> {
+  const filters = luaFilters ?? (await loadFilterGroups(siteConfig, siteConfig.disabledFilters, cwd));
 
-  const processed = new Set<string>();
+  // Leer body del disco sin frontmatter (parser compartido con discovery)
+  let body = '';
+  try {
+    body = splitFrontmatter(await Bun.file(doc.filePath).text()).body;
+  } catch {
+    return null;
+  }
+  if (!body.trim()) return null;
 
-  await mapWithConcurrency(docs, concurrency, async (doc) => {
-    // Leer body del disco sin frontmatter (parser compartido con discovery)
-    let body = '';
-    try {
-      body = splitFrontmatter(await Bun.file(doc.filePath).text()).body;
-    } catch {
-      return;
-    }
-
-    if (!body.trim()) return;
-
-    // Paso 1: convertir markdown a JSON AST con los filtros Lua semánticos + de usuario
-    const semanticLuaArgs = [...luaFilters.semantic, ...luaFilters.user].flatMap((f) => ['--lua-filter', f]);
-    const json = await runPandoc({
-      input: body,
-      sourcePath: doc.filePath,
-      from: 'markdown-auto_identifiers',
-      to: 'json',
-      extraArgs: semanticLuaArgs,
-    });
-    let ast: Record<string, unknown>;
-    try {
-      ast = JSON.parse(json) as Record<string, unknown>;
-    } catch {
-      logWarning(`error al parsear AST JSON de ${doc.filePath}`, 'render');
-      return;
-    }
-
-    // Paso 2: AST canónico → flags de preámbulo + salidas por formato activo
-    const flags = computePreambleFlags(ast);
-    let processedBody: string | undefined;
-    if (generateLatex !== false) {
-      // Detección de citas desde el AST (nodos Cite reales, sin regex sobre el markdown)
-      const hasCiteKeys = bibFiles.length > 0 && hasCiteNodes(ast);
-      processedBody = await renderTexBody(ast, doc, bibFiles, hasCiteKeys, luaFilters.latex, luaFilters.user);
-    }
-
-    const slug = doc.slug ?? basename(doc.relativePath, '.md');
-    await writeCachedArtifacts(cwd, doc, slug, ast, processedBody, flags);
-    processed.add(doc.relativePath);
+  // Convertir markdown a JSON AST con los filtros Lua semánticos + de usuario
+  const semanticLuaArgs = [...filters.semantic, ...filters.user].flatMap((f) => ['--lua-filter', f]);
+  const json = await runPandoc({
+    input: body,
+    sourcePath: doc.filePath,
+    from: 'markdown-auto_identifiers',
+    to: 'json',
+    extraArgs: semanticLuaArgs,
   });
-
-  return processed;
+  try {
+    return JSON.parse(json) as Record<string, unknown>;
+  } catch {
+    logWarning(`error al parsear AST JSON de ${doc.filePath}`, 'render');
+    return null;
+  }
 }
 
 /**
- * Exporta las salidas desde el AST canónico serializado en disco
- * (`.iteraciones/ast/{slug}.json`) sin re-ejecutar markdown → json.
- *
- * Se usa cuando se activa un formato nuevo: el AST ya existe del build
- * anterior, solo faltan las salidas de ese formato. Los docs sin AST en
- * disco se omiten del resultado (el caller los manda al pipeline completo).
+ * Genera el cuerpo LaTeX + flags de preámbulo desde el AST canónico.
+ * Se usa en el pipeline por documento y para formatos nuevos desde el AST en disco.
  */
-export async function renderTexBodyFromCachedAst(
-  docs: BuildDocument[],
-  concurrency: number,
+export async function texBodyFromAst(
+  ast: Record<string, unknown>,
+  doc: BuildDocument,
   cwd: string,
   siteConfig: SiteConfig,
-  generateLatex?: boolean,
-): Promise<Set<string>> {
-  const luaFilters = await loadFilterGroups(siteConfig, siteConfig.disabledFilters, cwd);
+  luaFilters?: LuaFilterGroup,
+): Promise<{ body: string; flags: PreambleFlags }> {
+  const filters = luaFilters ?? (await loadFilterGroups(siteConfig, siteConfig.disabledFilters, cwd));
   const { bibFiles } = resolveBibOptions(cwd);
-  const processed = new Set<string>();
-
-  await mapWithConcurrency(docs, concurrency, async (doc) => {
-    const ast = await readAstFromCache(cwd, doc);
-    if (!ast) return;
-
-    const flags = computePreambleFlags(ast);
-    let processedBody: string | undefined;
-    if (generateLatex !== false) {
-      // El markdown original no está disponible: detectar citas desde el AST
-      const hasCiteKeys = bibFiles.length > 0 && hasCiteNodes(ast);
-      processedBody = await renderTexBody(ast, doc, bibFiles, hasCiteKeys, luaFilters.latex, luaFilters.user);
-    }
-
-    const slug = doc.slug ?? basename(doc.relativePath, '.md');
-    await writeCachedArtifacts(cwd, doc, slug, ast, processedBody, flags);
-    processed.add(doc.relativePath);
-  });
-
-  return processed;
+  const flags = computePreambleFlags(ast);
+  // Detección de citas desde el AST (nodos Cite reales, sin regex sobre el markdown)
+  const hasCiteKeys = bibFiles.length > 0 && hasCiteNodes(ast);
+  const body = await renderTexBody(ast, doc, bibFiles, hasCiteKeys, filters.latex, filters.user);
+  return { body, flags };
 }
