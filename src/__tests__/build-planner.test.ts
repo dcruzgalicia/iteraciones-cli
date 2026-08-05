@@ -26,6 +26,7 @@ function meta(overrides: Partial<BuildMetadata> = {}): BuildMetadata {
     removedFormats: [],
     configHashes: {},
     filtersHash: 'h',
+    filterFileCache: {},
     bibHash: 'b',
     formatInvalidated: { pdf: false, html: false, epub: false, markdown: false },
     filtersInvalidated: false,

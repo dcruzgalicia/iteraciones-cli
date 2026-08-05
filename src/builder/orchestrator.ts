@@ -144,7 +144,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
     noCache: options.noCache,
     activeFormats: plan.currentFormats,
     prevState,
-    meta: { filtersHash: plan.filtersHash, configHashes: plan.configHashes, bibHash: plan.bibHash },
+    meta: { filtersHash: plan.filtersHash, filterFileCache: plan.filterFileCache, configHashes: plan.configHashes, bibHash: plan.bibHash },
   });
   const allDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
 

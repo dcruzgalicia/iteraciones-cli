@@ -5,7 +5,7 @@ import slugifyLib from 'slugify';
 import { logWarning } from '../lib/logger.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import { resolveSlugs } from './slug-resolver.js';
-import { hashString, loadStateFile, saveStateFile } from './state.js';
+import { type FilterFileCache, hashString, loadStateFile, saveStateFile } from './state.js';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
 
 interface DiscoverResult {
@@ -30,6 +30,8 @@ export interface BuildState {
   activeFormats: string[];
   /** Hash de los filters efectivos del build anterior. */
   filtersHash?: string;
+  /** Caché de archivos de filtro del build anterior (mtime+size+hash). */
+  filterFileCache?: FilterFileCache;
   /** Hash de configuración por formato del build anterior. */
   configHashes?: Record<string, string>;
   /** Hash de los .bib/.csl del build anterior. */
@@ -47,6 +49,7 @@ export async function loadBuildState(cwd: string): Promise<BuildState | null> {
     startedAt: state.startedAt,
     activeFormats: state.activeFormats,
     filtersHash: state.filtersHash,
+    filterFileCache: state.filterFileCache,
     configHashes: state.configHashes,
     bibHash: state.bibHash,
     entries: new Map(Object.entries(state.entries)),
@@ -63,6 +66,7 @@ export async function saveBuildState(cwd: string, state: BuildState): Promise<vo
     startedAt: state.startedAt,
     activeFormats: state.activeFormats,
     filtersHash: state.filtersHash,
+    filterFileCache: state.filterFileCache,
     configHashes: state.configHashes,
     bibHash: state.bibHash,
     entries: Object.fromEntries(state.entries),
@@ -128,7 +132,7 @@ export async function discover(
     activeFormats?: string[];
     prevState?: BuildState | null;
     /** Hashes de invalidación calculados por el orchestrator, guardados en state.json. */
-    meta?: { filtersHash: string; configHashes: Record<string, string>; bibHash: string };
+    meta?: { filtersHash: string; filterFileCache: FilterFileCache; configHashes: Record<string, string>; bibHash: string };
   } = {},
 ): Promise<DiscoverResult> {
   const relativePaths: string[] = [];
@@ -280,6 +284,7 @@ export async function discover(
     changedPaths.size > 0 ||
     !useCache ||
     options.meta?.filtersHash !== prevState?.filtersHash ||
+    JSON.stringify(options.meta?.filterFileCache) !== JSON.stringify(prevState?.filterFileCache) ||
     JSON.stringify(options.meta?.configHashes) !== JSON.stringify(prevState?.configHashes) ||
     options.meta?.bibHash !== prevState?.bibHash;
 
@@ -289,6 +294,7 @@ export async function discover(
       activeFormats: options.activeFormats ?? [],
       entries: discoveryIndex,
       filtersHash: options.meta?.filtersHash,
+      filterFileCache: options.meta?.filterFileCache,
       configHashes: options.meta?.configHashes,
       bibHash: options.meta?.bibHash,
     });

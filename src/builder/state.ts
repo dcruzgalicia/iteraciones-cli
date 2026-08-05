@@ -11,12 +11,23 @@ export const STATE_PATH = join('.iteraciones', 'changes', 'state.json');
 /** Plantilla HTML del paquete (participa en la invalidación del formato HTML). */
 const TEMPLATE_PATH = join(import.meta.dir, '../../src/lib/resources/template.html');
 
+/** Entrada de caché de archivo de filtro (mtime+size evitan re-leer contenido). */
+export interface FilterFileCacheEntry {
+  mtime: number;
+  size: number;
+  hash: string;
+}
+
+export type FilterFileCache = Record<string, FilterFileCacheEntry>;
+
 /** Contenido completo de state.json (caché content-addressed del build). */
 export interface StateFile {
   startedAt: number;
   activeFormats: string[];
   /** Hash de los filters efectivos (paquete + proyecto) y sus disabled lists. */
   filtersHash?: string;
+  /** Caché por archivo de filtro (mtime+size+hash) para evitar re-leer contenido. */
+  filterFileCache?: FilterFileCache;
   /** Hash de configuración por formato (pdf, html, epub, markdown). */
   configHashes?: Record<string, string>;
   /** Hash de los archivos .bib y .csl del proyecto. */
@@ -47,6 +58,7 @@ export async function loadStateFile(cwd: string): Promise<StateFile | null> {
       startedAt: parsed.startedAt,
       activeFormats: Array.isArray(parsed.activeFormats) ? parsed.activeFormats : [],
       filtersHash: parsed.filtersHash,
+      filterFileCache: parsed.filterFileCache,
       configHashes: parsed.configHashes,
       bibHash: parsed.bibHash,
       cssAccent: parsed.cssAccent,
@@ -81,9 +93,18 @@ export async function saveStateFile(cwd: string, state: StateFile): Promise<void
  * Hash de los filters efectivos (paquete + proyecto) y de los preamble
  * filters, incluyendo las disabled lists. Cambia solo si el código de un
  * filter o la lista de desactivados cambia.
+ *
+ * Con `prevCache` (de state.json), cada archivo se compara por mtime+size:
+ * si no cambió, se reutiliza su hash sin leer el contenido (mismo patrón
+ * content-addressed que discover usa para los documentos).
  */
-export async function computeFiltersHash(cwd: string, siteConfig: SiteConfig): Promise<string> {
+export async function computeFiltersHash(
+  cwd: string,
+  siteConfig: SiteConfig,
+  prevCache?: FilterFileCache,
+): Promise<{ hash: string; cache: FilterFileCache }> {
   const parts: string[] = [];
+  const cache: FilterFileCache = {};
   // [directorio, glob]: filtros Lua del paquete y del proyecto, preamble .tex
   const specs: Array<[string, string]> = [
     [join(import.meta.dir, '../lib/resources/filters'), '**/*.lua'],
@@ -95,7 +116,7 @@ export async function computeFiltersHash(cwd: string, siteConfig: SiteConfig): P
     try {
       const files = [...new Bun.Glob(glob).scanSync({ cwd: dir })].sort();
       for (const file of files) {
-        parts.push(file, await Bun.file(join(dir, file)).text());
+        parts.push(file, await hashFilterFile(join(dir, file), prevCache, cache));
       }
     } catch {
       // Directorio inexistente (filters/preamble del proyecto son opcionales)
@@ -103,14 +124,28 @@ export async function computeFiltersHash(cwd: string, siteConfig: SiteConfig): P
   }
   // Filtros Lua de usuario (`lua-filters:`) — pueden estar en cualquier directorio
   for (const rel of siteConfig.luaFilters ?? []) {
-    const content = await Bun.file(join(cwd, rel))
-      .text()
-      .catch(() => '');
+    const content = await hashFilterFile(join(cwd, rel), prevCache, cache).catch(() => '');
     parts.push(rel, content);
   }
   parts.push(JSON.stringify(siteConfig.disabledFilters ?? []));
   parts.push(JSON.stringify(siteConfig.disabledPreambleFilters ?? []));
-  return hashString(parts.join('\0'));
+  return { hash: hashString(parts.join('\0')), cache };
+}
+
+/** Hash del contenido de un archivo de filtro, reutilizando el caché si mtime+size coinciden. */
+async function hashFilterFile(abs: string, prevCache: FilterFileCache | undefined, cache: FilterFileCache): Promise<string> {
+  const stat = await Bun.file(abs).stat();
+  const mtime = Math.round(stat.mtimeMs);
+  const size = stat.size;
+  const prev = prevCache?.[abs];
+  if (prev && prev.mtime === mtime && prev.size === size) {
+    cache[abs] = prev;
+    return prev.hash;
+  }
+  const content = await Bun.file(abs).text();
+  const hash = hashString(content);
+  cache[abs] = { mtime, size, hash };
+  return hash;
 }
 
 /**
