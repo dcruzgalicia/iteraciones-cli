@@ -17,12 +17,11 @@ const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
 type ValidationResult = {
   errors: ValidationError[];
   warnings: ValidationError[];
+  /** Número de documentos Markdown validados. */
+  count: number;
 };
 
 async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
-  const errors: ValidationError[] = [];
-  const warnings: ValidationError[] = [];
-
   const entries: string[] = [];
   for await (const entry of new Bun.Glob('**/*.md').scan({ cwd })) {
     const first = entry.split('/')[0];
@@ -32,6 +31,8 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
   // Ordenar para salida determinista independiente del sistema de archivos.
   entries.sort();
 
+  const errors: ValidationError[] = [];
+  const warnings: ValidationError[] = [];
   for (const entry of entries) {
     const absPath = join(cwd, entry);
     let raw: string;
@@ -64,7 +65,7 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
       });
     }
   }
-  return { errors, warnings };
+  return { errors, warnings, count: entries.length };
 }
 
 /**
@@ -74,13 +75,24 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
  */
 export async function runValidate(cwd: string): Promise<void> {
   let hasPdf = false;
+  let disabledFiltersCount = 0;
+  let luaFiltersCount = 0;
   const configErrors: ValidationError[] = [];
+  const configWarnings: ValidationError[] = [];
   try {
     const config = await loadSiteConfig(cwd);
     hasPdf = !!config.format?.pdf;
+    disabledFiltersCount = config.disabledFilters?.length ?? 0;
+    luaFiltersCount = config.luaFilters?.length ?? 0;
     // Validar nombres de filters desactivados (warnings, no errores)
     validateDisabledFilters(config.disabledFilters);
     validateDisabledPreambleFilters(config.disabledPreambleFilters);
+    // Verificar que las rutas de lua-filters existan en el proyecto
+    for (const rel of config.luaFilters ?? []) {
+      if (!(await Bun.file(join(cwd, rel)).exists())) {
+        configWarnings.push({ file: 'iteraciones.config.yaml', message: `lua-filters: "${rel}" no encontrado en el proyecto` });
+      }
+    }
   } catch (err) {
     if (err instanceof ConfigError) {
       configErrors.push({
@@ -105,18 +117,22 @@ export async function runValidate(cwd: string): Promise<void> {
       });
     }
   }
-  const { errors: fmErrors, warnings } = await validateFrontmatter(cwd);
+  const { errors: fmErrors, warnings, count: docCount } = await validateFrontmatter(cwd);
   const errors = [...configErrors, ...fmErrors];
+  const allWarnings = [...configWarnings, ...warnings];
 
-  if (warnings.length > 0) {
-    logWarning(`${warnings.length} advertencia(s):`, 'validate');
-    for (const w of warnings) {
+  if (allWarnings.length > 0) {
+    logWarning(`${allWarnings.length} advertencia(s):`, 'validate');
+    for (const w of allWarnings) {
       logWarning(`${w.file}: ${w.message}`, 'validate');
     }
   }
 
   if (errors.length === 0) {
-    logInfo('sin errores.', 'validate');
+    const detail: string[] = [`${docCount} documento(s)`];
+    if (disabledFiltersCount > 0) detail.push(`${disabledFiltersCount} filter(s) desactivados`);
+    if (luaFiltersCount > 0) detail.push(`${luaFiltersCount} lua-filter(s)`);
+    logInfo(`sin errores — ${detail.join(', ')}.`, 'validate');
     return;
   }
 
