@@ -51,7 +51,7 @@ end
 
 local function process_dictum(div)
   local beforeskip = div.attributes['beforeskip'] or ''
-  local afterskip = div.attributes['afterskip'] or '\\dimexpr 0.5\\baselineskip-0.5\\alturaA\\relax'
+  local afterskip = div.attributes['afterskip'] or '\\dimexpr 0.5\\baselineskip-0.5\\alturaA+2\\baselineskip\\relax'
 
   local quote_blocks = {}
   local author_latex = ''
