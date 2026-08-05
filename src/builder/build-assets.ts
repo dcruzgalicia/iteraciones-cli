@@ -91,15 +91,13 @@ async function copyLogo(outputDir: string, cwd: string, siteConfig: SiteConfig):
       if (err.code === 'ENOENT') logWarning(`logo por defecto no encontrado en "${defaultSrc}"`, 'assets');
       else {
         logWarning(`No se pudo copiar el logo por defecto: ${err.message}`, 'assets');
-        process.exitCode = 1;
+        throw new Error(`No se pudo copiar el logo por defecto: ${err.message}`);
       }
     });
     return;
   }
   if (logo.split('/').includes('..') || logo.startsWith('/')) {
-    logWarning(`logo: ruta inválida "${logo}" — debe ser relativa al proyecto`, 'assets');
-    process.exitCode = 1;
-    return;
+    throw new Error(`logo: ruta inválida "${logo}" — debe ser relativa al proyecto`);
   }
   const src = join(cwd, logo);
   const dest = join(outputDir, logo);
@@ -108,7 +106,7 @@ async function copyLogo(outputDir: string, cwd: string, siteConfig: SiteConfig):
     if (err.code === 'ENOENT') logWarning(`logo no encontrado: "${logo}"`, 'assets');
     else {
       logWarning(`No se pudo copiar el logo "${logo}": ${err.message}`, 'assets');
-      process.exitCode = 1;
+      throw new Error(`No se pudo copiar el logo "${logo}": ${err.message}`);
     }
   });
 }
