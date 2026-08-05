@@ -12,7 +12,7 @@ import { runExportDocuments } from './export/runner.js';
 import { generateHtmlPages } from './html-generator.js';
 import { generateLatexPreamble } from './latex-preamble.js';
 import { validateDisabledPreambleFilters } from './preamble-loader.js';
-import { renderDocuments, renderFromAstCache, validateDisabledFilters } from './render.js';
+import { renderTexBodyFromCachedAst, renderToCanonicalAst, validateDisabledFilters } from './render.js';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
 
 export interface BuildOptions {
@@ -179,15 +179,21 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   if (work.renderDocs.length > 0 || work.astExportCandidates.length > 0) {
     progress.startPhase('render', work.renderDocs.length + work.astExportCandidates.length);
     if (work.renderDocs.length > 0) {
-      const done = await renderDocuments(work.renderDocs, ctx.concurrency, cwd, ctx.siteConfig.disabledFilters, plan.generateLatex);
+      const done = await renderToCanonicalAst(work.renderDocs, ctx.concurrency, cwd, ctx.siteConfig.disabledFilters, plan.generateLatex);
       for (const p of done) processedPaths.add(p);
     }
     if (work.astExportCandidates.length > 0) {
-      const done = await renderFromAstCache(work.astExportCandidates, ctx.concurrency, cwd, plan.generateLatex, ctx.siteConfig.disabledFilters);
+      const done = await renderTexBodyFromCachedAst(
+        work.astExportCandidates,
+        ctx.concurrency,
+        cwd,
+        plan.generateLatex,
+        ctx.siteConfig.disabledFilters,
+      );
       // Docs sin AST en disco (primer build, caché limpiada): pipeline completo
       const missingAstDocs = work.astExportCandidates.filter((d) => !done.has(d.relativePath));
       if (missingAstDocs.length > 0) {
-        const extra = await renderDocuments(missingAstDocs, ctx.concurrency, cwd, ctx.siteConfig.disabledFilters, plan.generateLatex);
+        const extra = await renderToCanonicalAst(missingAstDocs, ctx.concurrency, cwd, ctx.siteConfig.disabledFilters, plan.generateLatex);
         for (const p of extra) done.add(p);
       }
       for (const p of done) processedPaths.add(p);
