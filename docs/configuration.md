@@ -122,7 +122,7 @@ disabled-filters:             # filters a desactivar (opcional)
   # - semantic/string/01-double-colon
 
 disabled-preamble-filters:    # preamble filters a desactivar (opcional)
-  # - 01-maketitle-patches
+  # - 19-maketitle-patches
 
 lua-filters:                      # filtros Lua de usuario (opcional)
   # - filters/mi-filtro.lua
@@ -485,7 +485,7 @@ Lista de preamble filters a desactivar.
 
 ```yaml
 disabled-preamble-filters:
-  - 01-maketitle-patches
+  - 19-maketitle-patches
 ```
 
 ### `lua-filters`

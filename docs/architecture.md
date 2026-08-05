@@ -155,15 +155,15 @@ Además, existen los **preamble filters** (`lib/resources/preamble/*.tex`) que m
 | 13-setkomafont | `lib/resources/preamble/13-setkomafont.tex` | Fuentes de la portada |
 | 14-sectioning | `lib/resources/preamble/14-sectioning.tex` | Estilo de secciones |
 | 15-dictum | `lib/resources/preamble/15-dictum.tex` | Configuración de epígrafes |
-| 17-eso-pic | `lib/resources/preamble/17-eso-pic.tex` | Fondo de página (desactivado por defecto) |
-| 18-pdfx | `lib/resources/preamble/18-pdfx.tex` | PDF/X-1a (desactivado por defecto) |
-| 19-crop | `lib/resources/preamble/19-crop.tex` | Marcas de corte (desactivado por defecto) |
-| 20-maketitle-patches | `lib/resources/preamble/20-maketitle-patches.tex` | Personaliza \maketitle |
-| 21-environments | `lib/resources/preamble/21-environments.tex` | Redefine entornos sin espacio extra |
-| 22-toc-styling | `lib/resources/preamble/22-toc-styling.tex` | Estilo del índice |
-| 23-toc-section | `lib/resources/preamble/23-toc-section.tex` | TOC como \section* |
-| 24-bibliography-heading | `lib/resources/preamble/24-bibliography-heading.tex` | Título de bibliografía como section |
-| 25-hyphenation-rules | `lib/resources/preamble/25-hyphenation-rules.tex` | Reglas de partición de palabras |
+| 16-eso-pic | `lib/resources/preamble/16-eso-pic.tex` | Fondo de página (desactivado por defecto) |
+| 17-pdfx | `lib/resources/preamble/17-pdfx.tex` | PDF/X-1a (desactivado por defecto) |
+| 18-crop | `lib/resources/preamble/18-crop.tex` | Marcas de corte (desactivado por defecto) |
+| 19-maketitle-patches | `lib/resources/preamble/19-maketitle-patches.tex` | Personaliza \maketitle |
+| 20-environments | `lib/resources/preamble/20-environments.tex` | Redefine entornos sin espacio extra |
+| 21-toc-styling | `lib/resources/preamble/21-toc-styling.tex` | Estilo del índice |
+| 22-toc-section | `lib/resources/preamble/22-toc-section.tex` | TOC como \section* |
+| 23-bibliography-heading | `lib/resources/preamble/23-bibliography-heading.tex` | Título de bibliografía como section |
+| 24-hyphenation-rules | `lib/resources/preamble/24-hyphenation-rules.tex` | Reglas de partición de palabras |
 
 ### Extensibilidad
 

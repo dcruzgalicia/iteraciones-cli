@@ -1,11 +1,10 @@
-% Epígrafes (dictum)
 \setkomafont{dictum}{\normalsize\normalfont\itshape}
+\setkomafont{dictumauthor}{\normalsize\normalfont}
 \renewcommand*{\dictumwidth}{0.5\textwidth}
-% Altura del hbox de Á (para espaciados relativos al dictum)
+\renewcommand*{\dictumrule}{}
+\renewcommand*{\dictumauthorformat}[1]{#1}
 \newlength{\alturaA}
 \settoheight{\alturaA}{\hbox{Á}}
-% Redefinición de \dictum: idéntica a la definición de KOMA-Script, salvo
-% que \parbox usa la opción [t] (contenido alineado desde la parte superior).
 \makeatletter
 \renewcommand{\dictum}[2][]{\par%
   \begingroup
@@ -20,8 +19,4 @@
     }\par%
   \endgroup
 }
-% Regla del dictum: vacía (sin línea entre dictum y texto siguiente)
-\renewcommand*{\dictumrule}{}
 \makeatother
-\setkomafont{dictumauthor}{\normalsize\normalfont}
-\renewcommand*{\dictumauthorformat}[1]{#1}

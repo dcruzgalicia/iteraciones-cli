@@ -35,16 +35,16 @@ export const BUILTIN_PREAMBLE_FILTERS: string[] = [
   '14-sectioning',
   '15-dictum',
   // ── Extras (desactivados por defecto: disabled-preamble-filters) ──
-  '17-eso-pic',
-  '18-pdfx',
-  '19-crop',
+  '16-eso-pic',
+  '17-pdfx',
+  '18-crop',
   // ── Parches y estilos (preamble filters originales, renumerados) ──
-  '20-maketitle-patches',
-  '21-environments',
-  '22-toc-styling',
-  '23-toc-section',
-  '24-bibliography-heading',
-  '25-hyphenation-rules',
+  '19-maketitle-patches',
+  '20-environments',
+  '21-toc-styling',
+  '22-toc-section',
+  '23-bibliography-heading',
+  '24-hyphenation-rules',
 ];
 
 const DESCRIPTIONS: Record<string, string> = {
@@ -63,15 +63,15 @@ const DESCRIPTIONS: Record<string, string> = {
   '13-setkomafont': 'Fuentes de la portada (\\setkomafont para title, subtitle, author, date)',
   '14-sectioning': 'Estilo de secciones (\\RedeclareSectionCommand para todos los niveles)',
   '15-dictum': 'Configuración de epígrafes (\\dictumwidth, fuente del autor)',
-  '17-eso-pic': 'Fondo de página con eso-pic (desactivado por defecto)',
-  '18-pdfx': 'PDF/X-1a para impresión profesional (desactivado por defecto)',
-  '19-crop': 'Marcas de corte con crop (desactivado por defecto)',
-  '20-maketitle-patches': 'Personaliza \\maketitle: 1+2 baselineskip, titulo en mayusculas',
-  '21-environments': 'Redefine center/flushright/flushleft sin espacio vertical extra',
-  '22-toc-styling': 'Personaliza el indice (TOC): nombre, espaciado, fuentes y lideres',
-  '23-toc-section': 'Redefine \\tableofcontents para usar \\section* en lugar de \\chapter*',
-  '24-bibliography-heading': 'Cambia titulo de bibliografia de chapter a section',
-  '25-hyphenation-rules': 'Agrega \\hyphenation{} con nombres propios de ejemplo',
+  '16-eso-pic': 'Fondo de página con eso-pic (desactivado por defecto)',
+  '17-pdfx': 'PDF/X-1a para impresión profesional (desactivado por defecto)',
+  '18-crop': 'Marcas de corte con crop (desactivado por defecto)',
+  '19-maketitle-patches': 'Personaliza \\maketitle: 1+2 baselineskip, titulo en mayusculas',
+  '20-environments': 'Redefine center/flushright/flushleft sin espacio vertical extra',
+  '21-toc-styling': 'Personaliza el indice (TOC): nombre, espaciado, fuentes y lideres',
+  '22-toc-section': 'Redefine \\tableofcontents para usar \\section* en lugar de \\chapter*',
+  '23-bibliography-heading': 'Cambia titulo de bibliografia de chapter a section',
+  '24-hyphenation-rules': 'Agrega \\hyphenation{} con nombres propios de ejemplo',
 };
 
 export interface PreambleFilter {

@@ -79,7 +79,7 @@ disabled-filters:               # filters a desactivar por nombre completo (opci
   # - latex/02-dictum
 
 disabled-preamble-filters:      # preamble filters a desactivar (opcional)
-  # - 17-eso-pic
+  # - 16-eso-pic
 
 lua-filters:                        # filtros Lua de usuario (opcional)
   # - filters/mi-filtro.lua

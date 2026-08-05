@@ -124,7 +124,7 @@ export function computeActiveFormats(format: FormatConfig): string[] {
 export const DEFAULT_SITE_CONFIG: SiteConfig = {
   lang: 'es-MX',
   disabledFilters: undefined,
-  disabledPreambleFilters: ['17-eso-pic', '18-pdfx', '19-crop'],
+  disabledPreambleFilters: ['16-eso-pic', '17-pdfx', '18-crop'],
   luaFilters: undefined,
   format: {
     html: DEFAULT_HTML_FORMAT,
