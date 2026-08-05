@@ -21,6 +21,16 @@ export function buildProgram(): Command {
     .option('--no-export', 'omite la exportación PDF/EPUB aunque esté configurada')
     .option('--dry-run', 'muestra los documentos que se procesarían sin generar salida')
     .option('--verbose', 'muestra información adicional de progreso')
+    .addHelpText(
+      'after',
+      `
+Ejemplos:
+  iteraciones build                build incremental (solo archivos modificados)
+  iteraciones build --no-cache     build completo sin caché
+  iteraciones build --dry-run      muestra los documentos a procesar sin generar salida
+  iteraciones build --verbose      muestra información adicional de progreso
+`,
+    )
     .action(
       async (opts: { concurrency?: string; cache: boolean; output?: string; css: boolean; export: boolean; dryRun?: boolean; verbose?: boolean }) => {
         const concurrency = opts.concurrency !== undefined ? Number.parseInt(opts.concurrency, 10) : undefined;
@@ -38,11 +48,25 @@ export function buildProgram(): Command {
     program
       .command('info')
       .description('muestra información del proyecto y configuración')
+      .addHelpText(
+        'after',
+        `
+Ejemplos:
+  iteraciones info    muestra idioma, salida, pandoc y formatos activos
+`,
+      )
       .action(() => runInfo(projectRoot()));
 
   program
     .command('init')
-    .description('crea iteraciones.config.yaml y README.md mínimos en el directorio actual')
+    .description('crea iteraciones.config.yaml, README.md y bibliography.bib mínimos en el directorio actual')
+    .addHelpText(
+      'after',
+      `
+Ejemplos:
+  iteraciones init    crea la estructura mínima del proyecto en el directorio actual
+`,
+    )
     .action(async () => {
       await runInit(projectRoot());
     });
@@ -50,6 +74,13 @@ export function buildProgram(): Command {
   program
     .command('validate')
     .description('valida iteraciones.config.yaml y el frontmatter de todos los documentos Markdown')
+    .addHelpText(
+      'after',
+      `
+Ejemplos:
+  iteraciones validate    valida la configuración y el frontmatter del proyecto
+`,
+    )
     .action(async () => {
       await runValidate(projectRoot());
     });
@@ -57,13 +88,29 @@ export function buildProgram(): Command {
   program
     .command('doctor')
     .description('verifica el entorno de build')
-    .action(async () => {
-      await runDoctor(projectRoot());
+    .option('--fix', 'intenta corregir automáticamente los problemas detectados')
+    .addHelpText(
+      'after',
+      `
+Ejemplos:
+  iteraciones doctor         verifica pandoc, pdflatex, Tailwind y permisos
+  iteraciones doctor --fix   intenta corregir los problemas automáticamente
+`,
+    )
+    .action(async (opts: { fix?: boolean }) => {
+      await runDoctor(projectRoot(), { fix: opts.fix });
     });
 
   program
     .command('new <path>')
     .description('crea un archivo Markdown con frontmatter mínimo')
+    .addHelpText(
+      'after',
+      `
+Ejemplos:
+  iteraciones new posts/mi-articulo.md    crea el archivo con title, date y frontmatter
+`,
+    )
     .action(async (path: string) => {
       await runNew(projectRoot(), path);
     });
@@ -71,6 +118,13 @@ export function buildProgram(): Command {
   program
     .command('clean')
     .description('elimina el directorio de salida (dist/) y la caché (.iteraciones)')
+    .addHelpText(
+      'after',
+      `
+Ejemplos:
+  iteraciones clean    elimina dist/ y .iteraciones/ del proyecto
+`,
+    )
     .action(async () => {
       await runClean(projectRoot());
     });
@@ -78,6 +132,13 @@ export function buildProgram(): Command {
   program
     .command('filters')
     .description('lista los filtros Lua disponibles y su estado')
+    .addHelpText(
+      'after',
+      `
+Ejemplos:
+  iteraciones filters    lista filters y preamble filters con su estado
+`,
+    )
     .action(() => runFilters(projectRoot()));
 
   return program;
