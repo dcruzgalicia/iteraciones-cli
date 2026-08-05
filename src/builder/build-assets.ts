@@ -4,14 +4,42 @@ import { dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/site-config.js';
 import { logWarning } from '../lib/logger.js';
 import { run } from '../lib/run.js';
+import { hashString } from './state.js';
 
 const PKG_ROOT = join(import.meta.dir, '../..');
 const CSS_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'styles.css');
 const FONTS_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'fonts');
 
-export async function buildAssets(outputDir: string, cwd: string, siteConfig: SiteConfig, options: { noCss?: boolean } = {}): Promise<string> {
+/**
+ * Hash de los inputs del CSS (acento + estilos base del paquete). Si no cambió
+ * respecto al build anterior y ningún documento fue modificado, el CSS generado
+ * es idéntico y se reutiliza sin invocar Tailwind.
+ */
+export async function computeCssInputHash(siteConfig: SiteConfig): Promise<string> {
+  const accent = siteConfig.format?.html?.accent ?? 'lime';
+  const styles = await Bun.file(CSS_SRC)
+    .text()
+    .catch(() => '');
+  return hashString(`${accent}\n${styles}`);
+}
+
+export async function buildAssets(
+  outputDir: string,
+  cwd: string,
+  siteConfig: SiteConfig,
+  options: { noCss?: boolean; prevCssInputHash?: string; anyWork?: boolean } = {},
+): Promise<string> {
   const tasks: Promise<void>[] = [copyFonts(outputDir), copyLogo(outputDir, cwd, siteConfig)];
-  if (!options.noCss) tasks.push(generateCss(outputDir, cwd, siteConfig.format?.html?.accent ?? 'lime'));
+  if (!options.noCss) {
+    const accent = siteConfig.format?.html?.accent ?? 'lime';
+    const cssInputHash = await computeCssInputHash(siteConfig);
+    // Los inputs del CSS no cambiaron y ningún documento fue modificado: el
+    // HTML (y las clases Tailwind usadas) es idéntico al build anterior.
+    const cssCacheable = cssInputHash === options.prevCssInputHash && options.anyWork === false;
+    if (!cssCacheable) {
+      tasks.push(generateCss(outputDir, cwd, accent));
+    }
+  }
   await Promise.all(tasks);
   return options.noCss ? '' : '/css/styles.css';
 }

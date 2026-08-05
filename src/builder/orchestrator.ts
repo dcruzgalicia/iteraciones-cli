@@ -145,7 +145,13 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
     noCache: options.noCache,
     activeFormats: plan.currentFormats,
     prevState,
-    meta: { filtersHash: plan.filtersHash, filterFileCache: plan.filterFileCache, configHashes: plan.configHashes, bibHash: plan.bibHash },
+    meta: {
+      filtersHash: plan.filtersHash,
+      filterFileCache: plan.filterFileCache,
+      configHashes: plan.configHashes,
+      bibHash: plan.bibHash,
+      cssInputHash: plan.cssInputHash,
+    },
   });
   const allDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
 
@@ -239,7 +245,11 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
 
   // ── Build assets (css, fonts, logo) antes de copiar a dist/ ──
   if (plan.htmlOn) {
-    await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, { noCss: options.noCss });
+    await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, {
+      noCss: options.noCss,
+      prevCssInputHash: prevState?.cssInputHash,
+      anyWork: work.anyWork,
+    });
   }
 
   // ── FASE 5: copiar de formats/ a dist/ ──

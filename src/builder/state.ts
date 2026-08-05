@@ -32,8 +32,8 @@ export interface StateFile {
   configHashes?: Record<string, string>;
   /** Hash de los archivos .bib y .csl del proyecto. */
   bibHash?: string;
-  /** Accent usado en el último CSS generado (regeneración de Tailwind). */
-  cssAccent?: string;
+  /** Hash de los inputs del CSS (acento + estilos base) para decidir si regenerar Tailwind. */
+  cssInputHash?: string;
   /** Índice de descubrimiento: path relativo → entry con frontmatter y caché. */
   entries: Record<string, DiscoveryEntry>;
 }
@@ -61,7 +61,7 @@ export async function loadStateFile(cwd: string): Promise<StateFile | null> {
       filterFileCache: parsed.filterFileCache,
       configHashes: parsed.configHashes,
       bibHash: parsed.bibHash,
-      cssAccent: parsed.cssAccent,
+      cssInputHash: parsed.cssInputHash,
       entries: (parsed.entries ?? {}) as Record<string, DiscoveryEntry>,
     };
   } catch (err) {
