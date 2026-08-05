@@ -43,7 +43,7 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
       if (isAbsolute(normalized)) {
         const projectRoot = normalize(cwd);
         if (projectRoot === normalized || projectRoot.startsWith(normalized + '/')) {
-          throw new Error(`--output "${output}" es un directorio padre del proyecto; ejecutar clean() borraría los archivos fuente.`);
+          throw new Error(`--output "${output}" apunta a un directorio padre del proyecto, lo que podría sobrescribir los archivos fuente.`);
         }
       }
     }

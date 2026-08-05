@@ -18,3 +18,20 @@ export class ConfigError extends Error {
     this.name = 'ConfigError';
   }
 }
+
+/**
+ * Normaliza un mensaje de error para el usuario: elimina prefijos de clase
+ * (SyntaxError:, Error:) y ruido interno como stacks o causas.
+ * Los errores de YAML se traducen a formato legible.
+ */
+export function formatUserError(err: unknown): string {
+  if (err instanceof Error) {
+    let msg = err.message;
+    // Eliminar prefijos de clase: "SyntaxError: ...", "Error: ..."
+    msg = msg.replace(/^\w*Error:\s*/, '');
+    // Eliminar nombres de funciones internas (p.ej. "clean()")
+    // y otros detalles de implementación
+    return msg;
+  }
+  return String(err);
+}
