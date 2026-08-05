@@ -30,7 +30,13 @@ const PHASE_META: Record<PipelinePhase, PhaseMeta> = {
   markdown: { label: 'Markdown' },
 };
 
-const FORMAT_PHASES: PipelinePhase[] = ['latex', 'markdown', 'html', 'epub', 'pdf'];
+/**
+ * Fases de formato del tracker. Desde el pipeline por documento (#1256), los
+ * formatos ligeros (latex, html, epub, markdown) se generan dentro de la fase
+ * 'render'; solo la compilación PDF (pool 2) es una fase separada. Las fases
+ * no planificadas se saltan con skip (sin flechas engañosas en la salida).
+ */
+const FORMAT_PHASES: PipelinePhase[] = ['pdf'];
 
 type ListrCtx = Record<string, never>;
 type TrackerTask = ListrTaskWrapper<ListrCtx, ListrDefaultRenderer, ListrDefaultRenderer>;
@@ -42,7 +48,7 @@ type TrackerTask = ListrTaskWrapper<ListrCtx, ListrDefaultRenderer, ListrDefault
  *   listr2 cae automáticamente al fallback SimpleRenderer en non-TTY (pipes y
  *   CI, uso automático sin interacción) — no hay lógica dual manual.
  * - **--verbose**: renderer `verbose` (texto plano).
- * - Las 7 fases se pre-registran al primer startPhase: listr2 no procesa
+ * - Las fases se pre-registran al primer startPhase: listr2 no procesa
  *   tareas agregadas después de la primera. Las no usadas se saltan con
  *   `skip`, evaluado cuando el runner llega a ellas — sin carrera porque la
  *   tarea discovery se libera en `planPhases()`, cuando el orquestador ya
