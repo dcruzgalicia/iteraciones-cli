@@ -138,9 +138,9 @@ export async function computeConfigHashes(cwd: string, siteConfig: SiteConfig): 
 }
 
 /**
- * Descubre archivos de bibliografía del proyecto (excluye node_modules,
- * .iteraciones, dist, .git). Unifica la implementación que antes vivía
- * duplicada en latex-preamble.ts (solo .bib).
+ * Descubre archivos de bibliografía del proyecto. Bun.Glob omite por defecto
+ * los directorios ocultos (`.iteraciones/`, `.git/`), así que solo se excluyen
+ * los directorios visibles no deseados (node_modules, dist).
  * @param extensions Extensiones a incluir (default: bib y csl).
  */
 export function discoverBibFiles(cwd: string, extensions: string[] = ['bib', 'csl']): string[] {
@@ -149,7 +149,8 @@ export function discoverBibFiles(cwd: string, extensions: string[] = ['bib', 'cs
     const glob = new Bun.Glob(`**/*.{${extensions.join(',')}}`);
     for (const file of glob.scanSync({ cwd, absolute: true })) {
       const rel = file.replace(cwd, '').replace(/^[/\\]+/, '');
-      if (rel.startsWith('node_modules/') || rel.startsWith('.iteraciones/') || rel.startsWith('dist/') || rel.startsWith('.git/')) continue;
+      const first = rel.split('/')[0];
+      if (first === 'node_modules' || first === 'dist') continue;
       results.push(file);
     }
   } catch {
