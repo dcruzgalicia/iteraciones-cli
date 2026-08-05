@@ -8,6 +8,8 @@ CLI para construir documentos HTML, PDF, EPUB, LaTeX y Markdown a partir de arch
 
 - [bun](https://bun.sh) ≥ 1.0
 - [pandoc](https://pandoc.org/installing.html) disponible en `PATH`
+- `@tailwindcss/cli` disponible en el proyecto (`bun add -d @tailwindcss/cli` si `doctor` lo pide)
+- (para PDF) TeX Live o MacTeX con KOMA-Script instalado
 
 ## Instalación
 
@@ -106,13 +108,14 @@ iteraciones build [opciones]
 
 | Opción | Descripción | Por defecto |
 |--------|-------------|-------------|
-| `-c, --concurrency <n>` | Máximo de invocaciones pandoc simultáneas | `CPU − 1` |
+| `-c, --concurrency <n>` | Máximo de invocaciones pandoc simultáneas | `CPU − 1` (máx. 16) |
 | `--no-cache` | Omite la caché incremental; siempre hace build completo | — |
 | `--output <path>` | Directorio de salida | `dist/files` |
 | `--no-css` | Omite la generación de CSS | — |
 | `--no-export` | Omite la exportación PDF/EPUB | — |
 | `--dry-run` | Muestra los documentos a procesar sin generar salida | — |
 | `--verbose` | Muestra información adicional de progreso | — |
+| `--profile` | Muestra el tiempo de cada fase del pipeline | — |
 
 ### `iteraciones init`
 
@@ -172,6 +175,14 @@ Lista los filtros Lua disponibles con su tipo, descripción y estado (activo/des
 
 ```
 iteraciones filters
+```
+
+### `iteraciones clean`
+
+Elimina el directorio de salida (`dist/`) y la caché (`.iteraciones/`).
+
+```
+iteraciones clean
 ```
 
 ## Filters
