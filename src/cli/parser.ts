@@ -43,9 +43,13 @@ Ejemplos:
         verbose?: boolean;
         profile?: boolean;
       }) => {
-        const concurrency = opts.concurrency !== undefined ? Number.parseInt(opts.concurrency, 10) : undefined;
+        const raw = opts.concurrency;
+        const concurrency = raw !== undefined ? Number.parseInt(raw, 10) : undefined;
+        if (raw !== undefined && (!Number.isInteger(concurrency) || (concurrency as number) < 1)) {
+          throw new Error(`--concurrency debe ser un entero positivo (recibido: "${raw}")`);
+        }
         await runBuild(projectRoot(), {
-          concurrency: Number.isInteger(concurrency) ? concurrency : undefined,
+          concurrency: concurrency ? concurrency : undefined,
           noCache: !opts.cache,
           outputDir: opts.output,
           noCss: !opts.css,

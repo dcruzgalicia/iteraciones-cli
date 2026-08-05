@@ -46,8 +46,8 @@ const HtmlFormatSchema = z
       .string()
       .default('')
       .transform((v) => (v || undefined) as string | undefined),
-    theme: z.string().optional(),
-    accent: z.enum(KNOWN_ACCENT_COLORS).catch('lime'),
+    theme: z.enum(['light', 'dark']).optional(),
+    accent: z.enum(KNOWN_ACCENT_COLORS).optional().default('lime'),
     generate: z.boolean().default(true),
   })
   .strict();
@@ -59,7 +59,7 @@ const PdfFormatSchema = z
     generate: z.boolean().default(false),
     toc: z.boolean().default(false),
     'show-date': z.boolean().default(false),
-    'page-number': z.string().default('header-right'),
+    'page-number': z.enum(['header-left', 'header-center', 'header-right', 'footer-left', 'footer-center', 'footer-right']).default('header-right'),
   })
   .strict();
 
