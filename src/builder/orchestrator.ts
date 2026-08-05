@@ -24,6 +24,7 @@ export interface BuildOptions {
   noExport?: boolean;
   dryRun?: boolean;
   verbose?: boolean;
+  profile?: boolean;
 }
 
 async function setupBuildEnvironment(cwd: string, siteConfig: SiteConfig, options: BuildOptions): Promise<BuildContext> {
@@ -50,7 +51,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     return;
   }
 
-  const progress = new ProgressTracker({ renderer: options.verbose ? 'verbose' : 'default' });
+  const progress = new ProgressTracker({ renderer: options.verbose ? 'verbose' : 'default', profile: options.profile });
   try {
     await runBuild(cwd, options, progress);
   } catch (err) {

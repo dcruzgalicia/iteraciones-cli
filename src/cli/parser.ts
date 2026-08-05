@@ -21,6 +21,7 @@ export function buildProgram(): Command {
     .option('--no-export', 'omite la exportación PDF/EPUB aunque esté configurada')
     .option('--dry-run', 'muestra los documentos que se procesarían sin generar salida')
     .option('--verbose', 'muestra información adicional de progreso')
+    .option('--profile', 'muestra el tiempo de cada fase del pipeline al final del build')
     .addHelpText(
       'after',
       `
@@ -32,7 +33,16 @@ Ejemplos:
 `,
     )
     .action(
-      async (opts: { concurrency?: string; cache: boolean; output?: string; css: boolean; export: boolean; dryRun?: boolean; verbose?: boolean }) => {
+      async (opts: {
+        concurrency?: string;
+        cache: boolean;
+        output?: string;
+        css: boolean;
+        export: boolean;
+        dryRun?: boolean;
+        verbose?: boolean;
+        profile?: boolean;
+      }) => {
         const concurrency = opts.concurrency !== undefined ? Number.parseInt(opts.concurrency, 10) : undefined;
         await runBuild(projectRoot(), {
           concurrency: Number.isInteger(concurrency) ? concurrency : undefined,
@@ -42,6 +52,7 @@ Ejemplos:
           noExport: !opts.export,
           dryRun: opts.dryRun,
           verbose: opts.verbose,
+          profile: opts.profile,
         });
       },
     ),

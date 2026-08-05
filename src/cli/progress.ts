@@ -57,6 +57,8 @@ export class ProgressTracker {
   private phaseDone: Set<PipelinePhase> = new Set();
   /** Documentos reportados en la fase actual (progreso en vivo). */
   private currentPhaseCount = 0;
+  /** Si true, escribe el desglose de tiempos por fase tras el resumen (--profile). */
+  private profile: boolean;
 
   // ── listr2 ────────────────────────────────────────────────────────────────
   private renderer: ListrRendererValue;
@@ -74,8 +76,9 @@ export class ProgressTracker {
   /** Warnings diferidos (modo no verbose) para mostrar en el resumen final. */
   private warnings: string[] = [];
 
-  constructor(options: { renderer?: 'default' | 'verbose' | 'test' } = {}) {
+  constructor(options: { renderer?: 'default' | 'verbose' | 'test'; profile?: boolean } = {}) {
     this.renderer = (options.renderer ?? 'default') as ListrRendererValue;
+    this.profile = options.profile ?? false;
     this.t0 = performance.now();
     if (this.renderer === 'default') {
       // Restaurar el cursor si el proceso sale sin completar run() (errores del build)
@@ -270,6 +273,16 @@ export class ProgressTracker {
       process.stdout.write(`\nAdvertencias:\n`);
       for (const warning of this.warnings) {
         process.stdout.write(`  ${warning}\n`);
+      }
+    }
+    if (this.profile) {
+      process.stdout.write(`\nPerfil de fases:\n`);
+      const order: PipelinePhase[] = ['discovery', 'render', 'latex', 'pdf', 'html', 'epub', 'markdown'];
+      for (const phase of order) {
+        const ms = this.phaseDurations[phase];
+        if (ms !== undefined) {
+          process.stdout.write(`  ${padRight(PHASE_META[phase].label, LABEL_WIDTH)}${formatTime(ms)}\n`);
+        }
       }
     }
   }
