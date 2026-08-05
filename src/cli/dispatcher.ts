@@ -166,9 +166,10 @@ export async function runNew(cwd: string, path: string): Promise<void> {
     const absPath = join(cwd, normalizedPath);
     await mkdir(dirname(absPath), { recursive: true });
 
-    const today = new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const title = inferTitleFromPath(normalizedPath);
-    const content = `---\ntitle: '${title}'\ndate: ${today}\n---\n\n`;
+    const content = `---\ntitle: '${title}'\ndate: ${today}\n---\n\nEscribe tu contenido aquí.\n`;
 
     await writeFile(absPath, content, { encoding: 'utf8', flag: 'wx' });
     logSuccess(`creado ${normalizedPath}`, 'new');
@@ -201,5 +202,6 @@ export async function runFilters(cwd: string): Promise<void> {
 export function inferTitleFromPath(path: string): string {
   const base = basename(path, '.md').replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
   if (!base) return 'Título del documento';
-  return base.replace(/\b\w/g, (c) => c.toUpperCase());
+  // Capitalizar solo la primera letra
+  return base.charAt(0).toUpperCase() + base.slice(1);
 }
