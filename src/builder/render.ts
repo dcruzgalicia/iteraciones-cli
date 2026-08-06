@@ -232,7 +232,7 @@ export function computePreambleFlags(ast: Record<string, unknown>): PreambleFlag
   return {
     hasTocEntries: list.some(isHeader) || list.some(isSectionRawBlock),
     skipNoIndent: isSectionStart || isDictumStart,
-    skipParagraphSpace: isSectionStart,
+    skipParagraphSpace: isSectionStart || isDictumStart,
   };
 }
 

@@ -113,7 +113,7 @@ describe('computePreambleFlags (desde el AST)', () => {
     expect(computePreambleFlags(astHtml).skipParagraphSpace).toBe(false);
   });
 
-  it('dictum (Div.dictum como primer bloque): skipNoIndent true, skipParagraphSpace false', () => {
+  it('dictum (Div.dictum como primer bloque): skipNoIndent y skipParagraphSpace true', () => {
     const ast = {
       'pandoc-api-version': [1, 23],
       meta: {},
@@ -124,10 +124,10 @@ describe('computePreambleFlags (desde el AST)', () => {
     };
     const flags = computePreambleFlags(ast);
     expect(flags.skipNoIndent).toBe(true);
-    expect(flags.skipParagraphSpace).toBe(false);
+    expect(flags.skipParagraphSpace).toBe(true);
   });
 
-  it('verse (Div.verse como primer bloque): skipNoIndent true', () => {
+  it('verse (Div.verse como primer bloque): skipNoIndent y skipParagraphSpace true', () => {
     const ast = {
       'pandoc-api-version': [1, 23],
       meta: {},
@@ -138,6 +138,7 @@ describe('computePreambleFlags (desde el AST)', () => {
     };
     const flags = computePreambleFlags(ast);
     expect(flags.skipNoIndent).toBe(true);
+    expect(flags.skipParagraphSpace).toBe(true);
   });
 
   it('center (Div.center) no cuenta como dictum-start', () => {
