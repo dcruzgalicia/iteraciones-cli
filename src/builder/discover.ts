@@ -354,3 +354,13 @@ export function parseAuthors(raw: unknown): string[] {
   }
   return [];
 }
+
+/**
+ * Slug especial para la salida HTML: un archivo llamado `index.md` (en
+ * cualquier directorio) se convierte a `index.html`. El resto de formatos
+ * (PDF, EPUB, LaTeX, Markdown) usa el slug normal calculado desde el
+ * frontmatter (title-por-author).
+ */
+export function htmlSlugFor(relativePath: string, slug: string | undefined): string {
+  return basename(relativePath) === 'index.md' ? 'index' : (slug ?? basename(relativePath, '.md'));
+}

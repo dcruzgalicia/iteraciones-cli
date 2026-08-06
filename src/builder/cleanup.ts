@@ -1,6 +1,7 @@
 import { mkdir, rename, rm } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { mapWithConcurrency } from '../lib/run.js';
+import { htmlSlugFor } from './discover.js';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
 
 /** Extensiones de salida estándar por documento en dist/. */
@@ -73,6 +74,12 @@ export async function cleanupDeletedFiles(
     slug: deletedEntries.get(relPath)?.slug ?? basename(relPath, '.md'),
   }));
   await cleanupBySlug(ctx, entries);
+  // Un index.md eliminado deja su index.html huérfano en dist/
+  for (const relPath of deletedMdPaths) {
+    if (basename(relPath) === 'index.md') {
+      await rm(join(ctx.outputDir, dirname(relPath), 'index.html'), { force: true }).catch(() => {});
+    }
+  }
 }
 
 export async function cleanupSlugChanges(ctx: BuildContext, slugChangedEntries: Map<string, string>): Promise<void> {
@@ -98,10 +105,12 @@ export async function copyToDist(
   const copies: Array<{ srcPath: string; dstPath: string }> = [];
   for (const doc of allDocs) {
     const slug = doc.slug ?? basename(doc.relativePath, '.md');
+    const htmlSlug = htmlSlugFor(doc.relativePath, slug);
     const dir = dirname(doc.relativePath);
     for (const [isActive, format, ext] of copySpec) {
       if (!isActive) continue;
-      copies.push({ srcPath: join(formatsDir, format, dir, `${slug}.${ext}`), dstPath: join(ctx.outputDir, dir, `${slug}.${ext}`) });
+      const outSlug = format === 'html' ? htmlSlug : slug;
+      copies.push({ srcPath: join(formatsDir, format, dir, `${outSlug}.${ext}`), dstPath: join(ctx.outputDir, dir, `${outSlug}.${ext}`) });
     }
   }
   await mapWithConcurrency(copies, 20, async ({ srcPath, dstPath }) => {
