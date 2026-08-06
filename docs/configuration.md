@@ -20,7 +20,6 @@ format:
     title: iteraciones             # título del sitio
     tagline: escribir, compartir, re-existir
     logo: ''                        # ruta al logo, relativa al proyecto
-    base-url: ''                    # URL base del sitio
     theme: dark                   # tema: "light" o "dark"
     accent: lime                  # color de acento (lime, blue, rose, etc.)
     generate: true                 # genera HTML
@@ -136,19 +135,6 @@ Ruta al archivo de logo, relativa al directorio raíz del proyecto. Si se omite 
 format:
   html:
     logo: assets/mi-logo.svg
-```
-
-#### `format.html.base-url`
-
-**Tipo:** `string`
-**Por defecto:** `undefined` (sin prefijo)
-
-URL base del sitio. Debe incluir el protocolo y no terminar en `/`.
-
-```yaml
-format:
-  html:
-    base-url: https://ejemplo.com
 ```
 
 #### `format.html.generate`
