@@ -1,6 +1,6 @@
--- Convierte Div.verse al entorno \vspace*{beforeskip}\begin{verse}...\end{verse}\vspace*{afterskip}
--- (formato LaTeX), con \noindent al párrafo siguiente si es Para.
--- Reemplaza al filter TS latex/03-verse.
+-- Convierte Div.verse al entorno \begin{verse}...\end{verse} (formato LaTeX),
+-- con \noindent al párrafo siguiente si es Para.
+-- El espaciado vertical lo gestiona el entorno verse (preamble 25-verse.tex).
 -- Uso: pandoc --from json --to latex --lua-filter latex/03-verse.lua
 
 local function has_class(block, cls)
@@ -12,14 +12,11 @@ local function has_class(block, cls)
 end
 
 local function process_verse(div)
-  local beforeskip = div.attributes['beforeskip'] or '3pt'
-  local afterskip = div.attributes['afterskip'] or '3pt'
-
-  local result = { pandoc.RawBlock('latex', '\\vspace*{' .. beforeskip .. '}\\begin{verse}') }
+  local result = { pandoc.RawBlock('latex', '\\begin{verse}') }
   for _, b in ipairs(div.content) do
     table.insert(result, b)
   end
-  table.insert(result, pandoc.RawBlock('latex', '\\end{verse}\\vspace*{' .. afterskip .. '}'))
+  table.insert(result, pandoc.RawBlock('latex', '\\end{verse}'))
   return result
 end
 

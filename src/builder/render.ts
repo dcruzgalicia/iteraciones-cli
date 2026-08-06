@@ -227,7 +227,7 @@ export function computePreambleFlags(ast: Record<string, unknown>): PreambleFlag
   const list = Array.isArray(blocks) ? blocks : [];
   const first = list[0];
   const isSectionStart = isHeader(first) || isSectionRawBlock(first);
-  // dictum y verse abren con \vspace*{...} en latex; center/flushright no
+  // dictum abre con \vspace*{...} en latex; verse y center/flushright no
   const isDictumStart = isDivWithClass(first, 'dictum') || isDivWithClass(first, 'verse');
   return {
     hasTocEntries: list.some(isHeader) || list.some(isSectionRawBlock),
