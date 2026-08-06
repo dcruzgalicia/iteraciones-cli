@@ -45,6 +45,7 @@ export const BUILTIN_PREAMBLE_FILTERS: string[] = [
   '22-toc-section',
   '23-bibliography-heading',
   '24-hyphenation-rules',
+  '25-verse',
 ];
 
 const DESCRIPTIONS: Record<string, string> = {
@@ -67,11 +68,12 @@ const DESCRIPTIONS: Record<string, string> = {
   '17-pdfx': 'PDF/X-1a para impresión profesional (desactivado por defecto)',
   '18-crop': 'Marcas de corte con crop (desactivado por defecto)',
   '19-maketitle-patches': 'Personaliza \\maketitle: 1+2 baselineskip, titulo en mayusculas',
-  '20-environments': 'Redefine center/flushright/flushleft y verse con espaciado tipográfico',
+  '20-environments': 'Redefine center/flushright/flushleft sin espacio vertical extra',
   '21-toc-styling': 'Personaliza el indice (TOC): nombre, espaciado, fuentes y lideres',
   '22-toc-section': 'Redefine \\tableofcontents para usar \\subsubsection* en lugar de \\chapter*',
   '23-bibliography-heading': 'Cambia titulo de bibliografia de chapter a subsubsection',
   '24-hyphenation-rules': 'Agrega \\hyphenation{} con nombres propios de ejemplo',
+  '25-verse': 'Redefine el entorno verse con márgenes y espaciado tipográfico',
 };
 
 export interface PreambleFilter {
