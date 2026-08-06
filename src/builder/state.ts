@@ -3,6 +3,7 @@ import { basename, dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/site-config.js';
 import { logWarning } from '../lib/logger.js';
 import type { BibOptions } from '../lib/pandoc-runner.js';
+import { isIgnoredByRules, loadGitignoreRules } from './gitignore.js';
 import type { BuildDocument, DiscoveryEntry, PreambleFlags } from './types.js';
 
 /** Ruta relativa del archivo de estado del build dentro del proyecto. */
@@ -178,14 +179,16 @@ export async function computeConfigHashes(cwd: string, siteConfig: SiteConfig): 
  * los directorios visibles no deseados (node_modules, dist).
  * @param extensions Extensiones a incluir (default: bib y csl).
  */
-export function discoverBibFiles(cwd: string, extensions: string[] = ['bib', 'csl']): string[] {
+export async function discoverBibFiles(cwd: string, extensions: string[] = ['bib', 'csl']): Promise<string[]> {
   const results: string[] = [];
+  const gitignoreRules = await loadGitignoreRules(cwd);
   try {
     const glob = new Bun.Glob(`**/*.{${extensions.join(',')}}`);
     for (const file of glob.scanSync({ cwd, absolute: true })) {
       const rel = file.replace(cwd, '').replace(/^[/\\]+/, '');
       const first = rel.split('/')[0];
       if (first === 'node_modules' || first === 'dist') continue;
+      if (isIgnoredByRules(rel, gitignoreRules)) continue;
       results.push(file);
     }
   } catch {
@@ -197,7 +200,7 @@ export function discoverBibFiles(cwd: string, extensions: string[] = ['bib', 'cs
 /** Hash del contenido de todos los .bib y .csl del proyecto. */
 export async function computeBibHash(cwd: string): Promise<string> {
   const parts: string[] = [];
-  for (const file of discoverBibFiles(cwd)) {
+  for (const file of await discoverBibFiles(cwd)) {
     parts.push(
       file,
       await Bun.file(file)
@@ -248,8 +251,8 @@ export async function writeCachedArtifacts(
 }
 
 /** Resuelve las opciones de bibliografía compartidas para exportaciones. */
-export function resolveBibOptions(cwd: string): { bibFiles: string[]; bibOptions?: BibOptions } {
-  const bibFiles = cwd ? discoverBibFiles(cwd, ['bib']) : [];
+export async function resolveBibOptions(cwd: string): Promise<{ bibFiles: string[]; bibOptions?: BibOptions }> {
+  const bibFiles = cwd ? await discoverBibFiles(cwd, ['bib']) : [];
   const firstBib = bibFiles[0];
   const bibOptions = firstBib !== undefined ? { bibliography: firstBib, csl: join(import.meta.dir, '../../src/lib/resources/apa-7.csl') } : undefined;
   return { bibFiles, bibOptions };

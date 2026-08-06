@@ -8,10 +8,10 @@ import type { BuildMetadata, WorkSets } from './build-planner.js';
 import { assembleExportDocument } from './export/assemble.js';
 import { convertToEpub, convertToMarkdown } from './export/runner.js';
 import { composeFullTex } from './latex-preamble.js';
+import { createPdfConsumer, type PdfJob } from './pdf-pool.js';
 import { loadFilterGroups, markdownToAst, renderHtmlPageFromAst, resolveUserLuaFilters, texBodyFromAst } from './render.js';
 import { readAstFromCache, resolveBibOptions, writeCachedArtifacts } from './state.js';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
-import { createPdfConsumer, type PdfJob } from './pdf-pool.js';
 
 /** Job de compilación PDF encolado por el pool de formatos. */
 
@@ -57,7 +57,7 @@ export async function runDocumentPipeline(
   const noExport = options.noExport === true;
   const siteConfig = ctx.siteConfig;
   const userFilters = await resolveUserLuaFilters(ctx.cwd, siteConfig);
-  const bibOptions = resolveBibOptions(ctx.cwd).bibOptions;
+  const bibOptions = (await resolveBibOptions(ctx.cwd)).bibOptions;
   const globalBibliography = bibOptions?.bibliography;
   const lang = siteConfig.lang ?? 'es';
   const htmlConfig = formatCfg?.html;
@@ -145,7 +145,7 @@ interface FormatPoolCtx {
   lang: string;
   logoInline: string | undefined;
   filters: Awaited<ReturnType<typeof loadFilterGroups>>;
-  bibOptions: ReturnType<typeof resolveBibOptions>['bibOptions'];
+  bibOptions: Awaited<ReturnType<typeof resolveBibOptions>>['bibOptions'];
   renderDocPaths: Set<string>;
   htmlPaths: Set<string>;
   epubPaths: Set<string>;

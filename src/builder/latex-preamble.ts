@@ -45,7 +45,7 @@ export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: Pre
 
   // ── Bibliografía (rutas .bib dinámicas desde el proyecto) ──
   if (cwdForFilters) {
-    const bibFiles = discoverBibFiles(cwdForFilters, ['bib']);
+    const bibFiles = await discoverBibFiles(cwdForFilters, ['bib']);
     if (bibFiles.length > 0) {
       for (const bib of bibFiles) {
         preamble.push(`\\addbibresource{${bib}}`);

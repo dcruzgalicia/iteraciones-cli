@@ -1,0 +1,44 @@
+## Problema
+
+`iteraciones-cli` no respeta `.gitignore` al descubrir documentos. El escaneo de archivos Markdown (`Bun.Glob('**/*.md')`) solo excluye un conjunto fijo de directorios (`IGNORED_DIRS = ['node_modules', '.git', 'dist', '.iteraciones']` en `src/builder/discover.ts`).
+
+Consecuencias:
+
+- Un archivo como `AGENTS.md` (ignorado por `.gitignore`) **sí se procesa** y genera salida en `dist/`.
+- Archivos o carpetas que el usuario excluye explícitamente con `.gitignore` (p. ej. `borradores/`, `*.tmp.md`, `notas-privadas.md`) se convierten igualmente, publicando contenido que el usuario marcó como no versionado.
+- Los mismos globs existen en `validate.ts` (`validateFrontmatter`), `dispatcher.ts` (`countMarkdownDocuments`) y `state.ts` (`discoverBibFiles` para `.bib`/`.csl`), con el mismo problema.
+
+## Objetivo
+
+Que el descubrimiento de documentos respete las reglas de `.gitignore` de la raíz del proyecto: los archivos y carpetas ignorados no deben convertirse (ni validarse, ni contarse).
+
+## Trabajo esperado
+
+1. Nuevo módulo `src/builder/gitignore.ts`:
+   - `parseGitignore(content: string)` → reglas (negación `!`, directorios con `/` final, patrones anclados con `/`, `*`, `**`, `?`, clases `[...]`).
+   - `isIgnoredByRules(relPath, rules)` → la última regla que matchea gana (estándar git).
+   - `loadGitignoreRules(cwd)` → lee `<proyecto>/.gitignore`, retorna lista vacía si no existe.
+2. Aplicar el filtro en los cuatro puntos de descubrimiento:
+   - `discover.ts` (`discover()`)
+   - `validate.ts` (`validateFrontmatter()`)
+   - `dispatcher.ts` (`countMarkdownDocuments()`)
+   - `state.ts` (`discoverBibFiles()`)
+3. Mantener `IGNORED_DIRS` como red de seguridad adicional (no reemplazarlo).
+4. Tests: parseo de reglas, casos típicos de matching (negación, directorios, anclado), e integración con `discover` (proyecto con `.gitignore` que excluya un `.md`).
+
+## Criterios de aceptación
+
+- [ ] Un `.md` listado en `.gitignore` (p. ej. `AGENTS.md`) no genera salida en `build`.
+- [ ] Una carpeta ignorada (p. ej. `borradores/`) no procesa sus `.md`.
+- [ ] `validate` no valida documentos ignorados; `info` no los cuenta.
+- [ ] La negación `!` funciona (un archivo re-incluido sí se procesa).
+- [ ] `bun test` pasa completo; build de integración con los 5 formatos correcto.
+
+## Dependencias
+
+Ninguna.
+
+## Notas
+
+- Alcance: solo el `.gitignore` de la raíz del proyecto (no los anidados en subdirectorios, que requieren reglas relativas a su propia ubicación). Se documenta como limitación conocida.
+- Los `.bib`/`.csl` también respetan `.gitignore` por consistencia.
