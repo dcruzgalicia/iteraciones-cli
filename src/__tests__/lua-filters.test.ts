@@ -137,10 +137,11 @@ describe('filtros Lua latex', () => {
     expect(tex).toContain('\\dictum[Julio Verne]{Cita}');
   });
 
-  it('convierte Div.verse con vspace por defecto', async () => {
+  it('convierte Div.verse sin vspace externo', async () => {
     const tex = await toLatex('::: {.verse}\nPoema\n:::\n');
-    expect(tex).toContain('\\vspace*{3pt}\\begin{verse}');
-    expect(tex).toContain('\\end{verse}\\vspace*{3pt}');
+    expect(tex).toContain('\\begin{verse}');
+    expect(tex).toContain('\\end{verse}');
+    expect(tex).not.toContain('\\vspace*{3pt}');
   });
 
   it('convierte Div.center y Div.flushright', async () => {
