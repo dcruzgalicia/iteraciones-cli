@@ -5,6 +5,7 @@ import slugifyLib from 'slugify';
 import { formatUserError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 import { mapWithConcurrency } from '../lib/run.js';
+import { isIgnoredByRules, loadGitignoreRules } from './gitignore.js';
 import { resolveSlugs } from './slug-resolver.js';
 import { type FilterFileCache, hashString, loadStateFile, saveStateFile } from './state.js';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
@@ -145,9 +146,12 @@ export async function discover(
 ): Promise<DiscoverResult> {
   const relativePaths: string[] = [];
 
+  // Respetar .gitignore: los archivos y carpetas ignorados no se procesan
+  const gitignoreRules = await loadGitignoreRules(cwd);
   for await (const entry of new Bun.Glob('**/*.md').scan({ cwd })) {
     const first = entry.split('/')[0];
     if (first && IGNORED_DIRS.has(first)) continue;
+    if (isIgnoredByRules(entry, gitignoreRules)) continue;
     relativePaths.push(entry);
   }
 

@@ -1,6 +1,7 @@
 import { mkdir, rm, stat, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, normalize } from 'node:path';
 import { IGNORED_DIRS } from '../builder/discover.js';
+import { isIgnoredByRules, loadGitignoreRules } from '../builder/gitignore.js';
 import type { BuildOptions } from '../builder/orchestrator.js';
 import { build } from '../builder/orchestrator.js';
 import { loadSiteConfig } from '../config/config-loader.js';
@@ -108,9 +109,11 @@ export async function runInfo(cwd: string): Promise<void> {
 /** Cuenta los documentos Markdown del proyecto, excluyendo directorios ignorados. */
 async function countMarkdownDocuments(cwd: string): Promise<number> {
   let count = 0;
+  const gitignoreRules = await loadGitignoreRules(cwd);
   for await (const entry of new Bun.Glob('**/*.md').scan({ cwd })) {
     const first = entry.split('/')[0];
     if (first && IGNORED_DIRS.has(first)) continue;
+    if (isIgnoredByRules(entry, gitignoreRules)) continue;
     count++;
   }
   return count;
