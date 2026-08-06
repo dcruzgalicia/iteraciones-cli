@@ -69,8 +69,8 @@ const DESCRIPTIONS: Record<string, string> = {
   '19-maketitle-patches': 'Personaliza \\maketitle: 1+2 baselineskip, titulo en mayusculas',
   '20-environments': 'Redefine center/flushright/flushleft sin espacio vertical extra',
   '21-toc-styling': 'Personaliza el indice (TOC): nombre, espaciado, fuentes y lideres',
-  '22-toc-section': 'Redefine \\tableofcontents para usar \\section* en lugar de \\chapter*',
-  '23-bibliography-heading': 'Cambia titulo de bibliografia de chapter a section',
+  '22-toc-section': 'Redefine \\tableofcontents para usar \\subsubsection* en lugar de \\chapter*',
+  '23-bibliography-heading': 'Cambia titulo de bibliografia de chapter a subsubsection',
   '24-hyphenation-rules': 'Agrega \\hyphenation{} con nombres propios de ejemplo',
 };
 
