@@ -205,6 +205,11 @@ function isSectionRawBlock(block: unknown): boolean {
   return SECTION_COMMAND_RE.test(c[1].trim());
 }
 
+/** BlockQuote nativo de markdown (`> cita`), que pandoc convierte a \begin{quote} en LaTeX. */
+function isBlockQuote(block: unknown): boolean {
+  return typeof block === 'object' && block !== null && (block as Record<string, unknown>).t === 'BlockQuote';
+}
+
 function isDivWithClass(block: unknown, cls: string): boolean {
   if (typeof block !== 'object' || block === null) return false;
   const b = block as Record<string, unknown>;
@@ -227,8 +232,8 @@ export function computePreambleFlags(ast: Record<string, unknown>): PreambleFlag
   const list = Array.isArray(blocks) ? blocks : [];
   const first = list[0];
   const isSectionStart = isHeader(first) || isSectionRawBlock(first);
-  // dictum y verse abren entornos list: no anteponer \noindent
-  const isDictumStart = isDivWithClass(first, 'dictum') || isDivWithClass(first, 'verse');
+  // dictum, verse y quote (Div o BlockQuote nativo) abren entornos list
+  const isDictumStart = isDivWithClass(first, 'dictum') || isDivWithClass(first, 'verse') || isDivWithClass(first, 'quote') || isBlockQuote(first);
   return {
     hasTocEntries: list.some(isHeader) || list.some(isSectionRawBlock),
     skipNoIndent: isSectionStart || isDictumStart,
