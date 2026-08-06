@@ -1,9 +1,6 @@
 \makeatletter
-\renewcommand*{\tableofcontents}{%
-  \begingroup
-    \subsubsection*{\contentsname}%
-    \@starttoc{toc}%
-    \thispagestyle{empty}%
-  \endgroup
+\newcommand*{\tocbasic@listhead@toc}[1]{%
+  \subsubsection*{#1}%
+  \@mkboth{\MakeMarkcase{#1}}{\MakeMarkcase{#1}}%
 }
 \makeatother
