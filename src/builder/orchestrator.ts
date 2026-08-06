@@ -3,7 +3,7 @@ import { cpus } from 'node:os';
 import { basename, join } from 'node:path';
 import { ProgressTracker } from '../cli/progress.js';
 import { loadSiteConfig } from '../config/config-loader.js';
-import { computeActiveFormats, type FormatConfig, type SiteConfig } from '../config/site-config.js';
+import { computeActiveFormats, type SiteConfig } from '../config/site-config.js';
 import { logInfo } from '../lib/logger.js';
 import { buildAssets } from './build-assets.js';
 import { computeBuildMetadata, computeWorkSets } from './build-planner.js';
@@ -12,7 +12,7 @@ import { buildDocsFromIndex, discover, loadBuildState } from './discover.js';
 import { runDocumentPipeline } from './pipeline.js';
 import { validateDisabledPreambleFilters } from './preamble-loader.js';
 import { validateDisabledFilters } from './render.js';
-import type { BuildContext, BuildDocument } from './types.js';
+import type { BuildContext } from './types.js';
 
 export interface BuildOptions {
   outputDir?: string;

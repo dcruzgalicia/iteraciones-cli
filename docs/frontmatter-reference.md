@@ -24,7 +24,7 @@ El pipeline consume **4 campos** del frontmatter:
 | `title` | `string` | `''` | Título del documento. Se usa para el slug y el maketitle del PDF. |
 | `subtitle` | `string` | — | Subtítulo del documento. Se muestra bajo el título en el maketitle del PDF. |
 | `date` | `string` | — | Fecha en formato `YYYY-MM-DD`. Con `pdf.show-date: true` se muestra en el maketitle; si no se declara, se usa la fecha de creación del archivo. |
-| `author` | `string \| string[]` | `[]` | Uno o varios autores. Hasta 3 participan en el slug (`title-by-author`). |
+| `author` | `string \| string[]` | `[]` | Uno o varios autores. El slug usa `title-por-author`: por defecto solo el primer autor; en caso de colisión se van añadiendo autores (`-y-`) y, si se agotan, se aplica un sufijo `-dN`. |
 
 ## Citas bibliográficas
 

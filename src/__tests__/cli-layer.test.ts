@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, spyOn } from 'bun:test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { runBuild, runClean, runInfo, runInit, runNew, runValidate } from '../cli/dispatcher.js';
+import { runBuild, runClean, runInit, runNew, runValidate } from '../cli/dispatcher.js';
 import { initTestProject } from './helpers.js';
 
 /**

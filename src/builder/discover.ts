@@ -1,6 +1,5 @@
-import { mkdir } from 'node:fs/promises';
 import { cpus } from 'node:os';
-import { basename, dirname, join } from 'node:path';
+import { basename, join } from 'node:path';
 import slugifyLib from 'slugify';
 import { formatUserError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
