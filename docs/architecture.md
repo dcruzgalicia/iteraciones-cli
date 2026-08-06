@@ -179,7 +179,7 @@ Además, existen los **preamble filters** (`lib/resources/preamble/*.tex`) que m
 | 17-pdfx | `lib/resources/preamble/17-pdfx.tex` | PDF/X-1a (desactivado por defecto) |
 | 18-crop | `lib/resources/preamble/18-crop.tex` | Marcas de corte (desactivado por defecto) |
 | 19-maketitle-patches | `lib/resources/preamble/19-maketitle-patches.tex` | Personaliza \maketitle |
-| 20-environments | `lib/resources/preamble/20-environments.tex` | Redefine entornos sin espacio extra |
+| 20-environments | `lib/resources/preamble/20-environments.tex` | Redefine center/flushright/flushleft y verse |
 | 21-toc-styling | `lib/resources/preamble/21-toc-styling.tex` | Estilo del índice |
 | 22-toc-section | `lib/resources/preamble/22-toc-section.tex` | TOC como \subsubsection* |
 | 23-bibliography-heading | `lib/resources/preamble/23-bibliography-heading.tex` | Título de bibliografía como subsubsection |
