@@ -4,3 +4,4 @@ dist/
 *.js.map
 AGENTS.md
 .DS_Store
+.gh-issue-bodies/
