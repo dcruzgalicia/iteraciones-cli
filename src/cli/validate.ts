@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { IGNORED_DIRS } from '../builder/discover.js';
-import { isIgnoredByRules, loadGitignoreRules } from '../builder/gitignore.js';
+import { isHiddenPath, isIgnoredByRules, loadGitignoreRules } from '../builder/gitignore.js';
 import { validateDisabledPreambleFilters } from '../builder/preamble-loader.js';
 import { validateDisabledFilters } from '../builder/render.js';
 import { loadSiteConfig } from '../config/config-loader.js';
@@ -33,6 +33,7 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
     const first = entry.split('/')[0];
     if (first && IGNORED_DIRS.has(first)) continue;
     if (isIgnoredByRules(entry, gitignoreRules)) continue;
+    if (isHiddenPath(entry)) continue;
     entries.push(entry);
   }
   // Ordenar para salida determinista independiente del sistema de archivos.

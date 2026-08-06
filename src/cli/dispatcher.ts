@@ -1,7 +1,7 @@
 import { mkdir, rm, stat, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, normalize } from 'node:path';
 import { IGNORED_DIRS } from '../builder/discover.js';
-import { isIgnoredByRules, loadGitignoreRules } from '../builder/gitignore.js';
+import { isHiddenPath, isIgnoredByRules, loadGitignoreRules } from '../builder/gitignore.js';
 import type { BuildOptions } from '../builder/orchestrator.js';
 import { build } from '../builder/orchestrator.js';
 import { loadSiteConfig } from '../config/config-loader.js';
@@ -114,6 +114,7 @@ async function countMarkdownDocuments(cwd: string): Promise<number> {
     const first = entry.split('/')[0];
     if (first && IGNORED_DIRS.has(first)) continue;
     if (isIgnoredByRules(entry, gitignoreRules)) continue;
+    if (isHiddenPath(entry)) continue;
     count++;
   }
   return count;

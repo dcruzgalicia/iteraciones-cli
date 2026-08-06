@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { discover } from '../builder/discover.js';
-import { isIgnoredByRules, loadGitignoreRules, parseGitignore } from '../builder/gitignore.js';
+import { isHiddenPath, isIgnoredByRules, loadGitignoreRules, parseGitignore } from '../builder/gitignore.js';
 
 async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
   const dir = await mkdtemp(join(tmpdir(), 'iteraciones-gitignore-'));
@@ -120,6 +120,52 @@ describe('discover respeta .gitignore', () => {
 
       const { relativePaths } = await discover(dir);
       expect(relativePaths.sort()).toEqual(['a.md', 'sub/b.md']);
+    });
+  });
+});
+
+describe('isHiddenPath', () => {
+  it('detecta archivos ocultos en la raíz', () => {
+    expect(isHiddenPath('.oculto.md')).toBe(true);
+    expect(isHiddenPath('.DS_Store')).toBe(true);
+  });
+
+  it('detecta archivos ocultos en subdirectorios', () => {
+    expect(isHiddenPath('visible/.privado.md')).toBe(true);
+    expect(isHiddenPath('a/b/.notas.md')).toBe(true);
+  });
+
+  it('detecta carpetas ocultas en cualquier nivel', () => {
+    expect(isHiddenPath('.borradores/nota.md')).toBe(true);
+    expect(isHiddenPath('visible/.oculto/nota.md')).toBe(true);
+    expect(isHiddenPath('.iteraciones/ast/x.md')).toBe(true);
+  });
+
+  it('no marca archivos normales', () => {
+    expect(isHiddenPath('normal.md')).toBe(false);
+    expect(isHiddenPath('docs/normal.md')).toBe(false);
+    expect(isHiddenPath('docs/carpeta/normal.md')).toBe(false);
+  });
+
+  it('ignora segmentos . y ..', () => {
+    expect(isHiddenPath('./normal.md')).toBe(false);
+    expect(isHiddenPath('../normal.md')).toBe(false);
+  });
+});
+
+describe('discover excluye dotfiles', () => {
+  it('excluye archivos y carpetas con prefijo .', async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(join(dir, 'normal.md'), '# Normal\n', 'utf8');
+      await writeFile(join(dir, '.oculto.md'), '# Oculto\n', 'utf8');
+      await mkdir(join(dir, 'visible'), { recursive: true });
+      await writeFile(join(dir, 'visible', 'normal.md'), '# Visible\n', 'utf8');
+      await writeFile(join(dir, 'visible', '.privado.md'), '# Privado\n', 'utf8');
+      await mkdir(join(dir, 'visible', '.oculto'), { recursive: true });
+      await writeFile(join(dir, 'visible', '.oculto', 'nota.md'), '# Nota\n', 'utf8');
+
+      const { relativePaths } = await discover(dir);
+      expect(relativePaths.sort()).toEqual(['normal.md', 'visible/normal.md']);
     });
   });
 });
