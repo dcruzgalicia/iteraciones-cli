@@ -5,6 +5,7 @@ import type { FormatConfig, SiteConfig } from '../config/site-config.js';
 import { logWarning } from '../lib/logger.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import type { BuildMetadata, WorkSets } from './build-planner.js';
+import { htmlSlugFor } from './discover.js';
 import { assembleExportDocument } from './export/assemble.js';
 import { convertToEpub, convertToMarkdown } from './export/runner.js';
 import { composeFullTex } from './latex-preamble.js';
@@ -208,6 +209,8 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
 
   const exportDoc = assembleExportDocument(doc, lang, globalBibliography, undefined, formatCfg?.pdf);
   const outputBase = (outputDir: string): string => join(outputDir, dir === '.' ? '' : dir, slug);
+  // El HTML tiene un caso especial: un archivo index.md se convierte a index.html
+  const htmlSlug = htmlSlugFor(doc.relativePath, slug);
 
   // HTML
   if (htmlOn && htmlPaths.has(doc.relativePath)) {
@@ -224,7 +227,6 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
         theme: htmlConfig?.theme,
         accent: htmlConfig?.accent,
         css: ctx.cssPath ? relativeHref(dir, 'css/styles.css') : undefined,
-        indexHref: relativeHref(dir, 'index.html'),
         authorMeta: doc.frontmatter.author.join(', '),
         logoInline,
       },
@@ -232,7 +234,7 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
       bibOptions,
       filters,
     );
-    await writeOutput(join(formatsDir, 'html', dir, `${slug}.html`), html);
+    await writeOutput(join(formatsDir, 'html', dir, `${htmlSlug}.html`), html);
   }
 
   // EPUB y Markdown desde el AST canónico

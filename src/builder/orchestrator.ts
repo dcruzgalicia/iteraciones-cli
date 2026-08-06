@@ -1,13 +1,13 @@
 import { rm } from 'node:fs/promises';
 import { cpus } from 'node:os';
-import { basename, dirname, join } from 'node:path';
+import { basename, join } from 'node:path';
 import { ProgressTracker } from '../cli/progress.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { computeActiveFormats, type FormatConfig, type SiteConfig } from '../config/site-config.js';
 import { logInfo } from '../lib/logger.js';
 import { buildAssets } from './build-assets.js';
-import { buildFormatsList, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges, copyToDist } from './cleanup.js';
 import { computeBuildMetadata, computeWorkSets } from './build-planner.js';
+import { buildFormatsList, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges, copyToDist } from './cleanup.js';
 import { buildDocsFromIndex, discover, loadBuildState } from './discover.js';
 import { runDocumentPipeline } from './pipeline.js';
 import { validateDisabledPreambleFilters } from './preamble-loader.js';
@@ -267,32 +267,6 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
 
   // ── FASE 5: copiar de formats/ a dist/ ──
   await copyToDist(ctx, allDocs, formatsDir, { latexOn: plan.latexOn, pdfOn: plan.pdfOn, htmlOn: plan.htmlOn, epubOn: plan.epubOn, mdOn: plan.mdOn });
-
-  // ── Índice de documentos (HTML) ──
-  if (plan.htmlOn && allDocs.length > 0) {
-    const htmlConfig = siteConfig.format?.html;
-    const siteTitle = htmlConfig?.title ?? 'iteraciones';
-    const indexLines = [
-      '<!DOCTYPE html>',
-      `<html lang="${siteConfig.lang ?? 'es-MX'}">`,
-      '<head><meta charset="UTF-8"><title>Índice</title></head>',
-      '<body>',
-      `<h1>${siteTitle}</h1>`,
-      '<ul>',
-      ...allDocs.map((doc) => {
-        const slug = doc.slug ?? basename(doc.relativePath, '.md');
-        const title = doc.frontmatter.title || slug;
-        const dir = dirname(doc.relativePath);
-        // El índice vive en la raíz: los documentos anidados necesitan su directorio
-        const href = dir === '.' ? `${slug}.html` : `${dir}/${slug}.html`;
-        return `  <li><a href="${href}">${title}</a></li>`;
-      }),
-      '</ul>',
-      '</body>',
-      '</html>',
-    ];
-    await Bun.write(join(ctx.outputDir, 'index.html'), indexLines.join('\n'));
-  }
 
   const totalDocs = plan.htmlOn || plan.pdfOn || plan.epubOn || plan.mdOn || plan.latexOn ? allDocs.length : 0;
   const processedCount = processed.size;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { buildDocsFromIndex, computeSlug, parseAuthors, splitFrontmatter } from '../builder/discover.js';
+import { buildDocsFromIndex, computeSlug, htmlSlugFor, parseAuthors, splitFrontmatter } from '../builder/discover.js';
 
 describe('computeSlug', () => {
   it('genera slug desde el título', () => {
@@ -73,6 +73,25 @@ describe('computeSlug', () => {
   it('retorna undefined sin título ni fallbackPath', () => {
     const result = computeSlug({});
     expect(result).toBeUndefined();
+  });
+});
+
+describe('htmlSlugFor', () => {
+  it('retorna index para un archivo index.md en la raíz', () => {
+    expect(htmlSlugFor('index.md', 'mi-titulo-por-autor')).toBe('index');
+  });
+
+  it('retorna index para un index.md en subdirectorio', () => {
+    expect(htmlSlugFor('posts/index.md', 'mi-titulo-por-autor')).toBe('index');
+  });
+
+  it('retorna el slug normal para otros archivos', () => {
+    expect(htmlSlugFor('posts/mi-articulo.md', 'mi-articulo-por-autor')).toBe('mi-articulo-por-autor');
+  });
+
+  it('usa el nombre del archivo si no hay slug', () => {
+    expect(htmlSlugFor('posts/nota.md', undefined)).toBe('nota');
+    expect(htmlSlugFor('index.md', undefined)).toBe('index');
   });
 });
 
