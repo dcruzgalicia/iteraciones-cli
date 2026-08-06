@@ -127,9 +127,8 @@ describe('filtros Lua latex', () => {
 
   it('convierte Div.dictum sin autor', async () => {
     const tex = await toLatex('::: {.dictum}\nCita de prueba\n:::\n');
-    // Sin vspace antes por defecto; mbox-start envuelve "Cita" y mbox-end "de prueba"
     expect(tex).toContain('\\dictum{');
-    expect(tex).toContain('}\\vspace*{2\\baselineskip}');
+    expect(tex).not.toContain('\\vspace*{2\\baselineskip}');
   });
 
   it('convierte Div.dictum con autor', async () => {
