@@ -1,19 +1,11 @@
 \renewcaptionname{spanish}{\contentsname}{\normalsize\normalfont\bfseries Índice}
-
 \renewcommand*{\addparttocentry}[2]{%
   \addtocentrydefault{part}{#1}{\MakeUppercase{#2}}%
 }
-
 \DeclareTOCStyleEntry[entryformat=\normalsize\normalfont,pagenumberbox=\phantom,indent=0pt,beforeskip=0pt]{tocline}{part}
-
 \DeclareTOCStyleEntry[entryformat=\normalsize\normalfont\scshape,pagenumberbox=\phantom,indent=0pt,beforeskip=\baselineskip]{tocline}{chapter}
-
 \DeclareTOCStyleEntry[entryformat=\normalsize\normalfont,indent=0pt]{tocline}{section}
-
 \DeclareTOCStyleEntry[entryformat=\normalsize\normalfont\itshape,indent=0pt]{tocline}{subsection}
-
 \DeclareTOCStyleEntry[entryformat=\normalsize\normalfont\bfseries,indent=0pt]{tocline}{subsubsection}
-
 \DeclareTOCStyleEntry[entryformat=\normalsize\normalfont\bfseries\itshape,indent=1em]{tocline}{paragraph}
-
 \DeclareTOCStyleEntry[entryformat=\normalsize\normalfont,indent=2em]{tocline}{subparagraph}

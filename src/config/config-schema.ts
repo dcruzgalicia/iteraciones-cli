@@ -98,7 +98,7 @@ const RawSiteConfigSchema = z
       .transform((v) => (v?.length ? v : undefined)),
     'disabled-preamble-filters': z
       .array(z.string())
-      .default(['16-eso-pic', '17-pdfx', '18-crop'])
+      .default(['24-eso-pic', '25-pdfx', '26-crop'])
       .transform((v) => (v?.length ? v : undefined)),
     'lua-filters': z
       .array(z.string())

@@ -28,7 +28,7 @@ describe('loadSiteConfig', () => {
       expect(config.lang).toBe('es-MX');
       expect(config.format.html?.logo).toBe('');
       expect(config.disabledFilters).toBeUndefined();
-      expect(config.disabledPreambleFilters).toEqual(['16-eso-pic', '17-pdfx', '18-crop']);
+      expect(config.disabledPreambleFilters).toEqual(['24-eso-pic', '25-pdfx', '26-crop']);
       expect(config.format.latex).toBe(false);
       expect(config.format.html?.generate).toBe(true);
       expect(config.format.pdf?.generate).toBe(false);
@@ -110,9 +110,9 @@ describe('loadSiteConfig', () => {
 
   it('lee disabled-preamble-filters', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'disabled-preamble-filters:\n  - 01-maketitle-patches');
+      await writeConfig(dir, 'disabled-preamble-filters:\n  - 19-maketitle');
       const config = await loadSiteConfig(dir);
-      expect(config.disabledPreambleFilters).toEqual(['01-maketitle-patches']);
+      expect(config.disabledPreambleFilters).toEqual(['19-maketitle']);
     });
   });
 
@@ -310,7 +310,7 @@ describe('loadSiteConfig', () => {
     await withTempDir(async (dir) => {
       await writeConfig(dir, 'lang: es-MX\nformat:\n  html:\n    title: ok');
       const config = await loadSiteConfig(dir);
-      expect(config.disabledPreambleFilters).toEqual(['16-eso-pic', '17-pdfx', '18-crop']);
+      expect(config.disabledPreambleFilters).toEqual(['24-eso-pic', '25-pdfx', '26-crop']);
     });
   });
 

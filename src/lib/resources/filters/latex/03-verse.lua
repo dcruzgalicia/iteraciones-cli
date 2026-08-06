@@ -1,6 +1,6 @@
 -- Convierte Div.verse al entorno \begin{verse}...\end{verse} (formato LaTeX),
 -- con \noindent al párrafo siguiente si es Para.
--- El espaciado vertical lo gestiona el entorno verse (preamble 25-verse.tex).
+-- El espaciado vertical lo gestiona el entorno verse (preamble 22-verse.tex).
 -- Uso: pandoc --from json --to latex --lua-filter latex/03-verse.lua
 
 local function has_class(block, cls)

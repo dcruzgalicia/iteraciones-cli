@@ -1,6 +1,6 @@
 -- Convierte Div.dictum a \dictum[author]{quote} (formato LaTeX), con
 -- \noindent al párrafo siguiente si es Para.
--- El espaciado lo gestiona el entorno dictum (preamble 15-dictum.tex).
+-- El espaciado lo gestiona el entorno dictum (preamble 21-dictum.tex).
 -- Uso: pandoc --from json --to latex --lua-filter latex/02-dictum.lua
 
 local BS = '\1' -- placeholder para el backslash (evita re-escapar \textbackslash{})

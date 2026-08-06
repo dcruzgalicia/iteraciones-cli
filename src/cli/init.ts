@@ -72,7 +72,7 @@ function buildDefaultConfig(): string {
   yaml = yaml.replace('    theme: dark', '    # Tema visual del HTML: "light" o "dark". Por defecto: dark.\n    theme: dark');
   yaml = yaml.replace(
     'disabled-preamble-filters:',
-    '# Los preamble filters 16, 17 y 18 añaden funcionalidades para impresión\n' +
+    '# Los preamble filters 24, 25 y 26 añaden funcionalidades para impresión\n' +
       '# profesional (fondo de página, PDF/X-1a y marcas de corte). Vienen\n' +
       '# desactivados por defecto. Elimina nombres de esta lista para activarlos.\n' +
       'disabled-preamble-filters:',
