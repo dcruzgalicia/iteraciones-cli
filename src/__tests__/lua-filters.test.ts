@@ -103,9 +103,16 @@ describe('filtros Lua html', () => {
   });
 });
 
-const LATEX_FILTERS = ['01-spacer', '02-dictum', '03-verse', '04-center', '05-flushright', '06-mbox-sentence-end', '07-mbox-sentence-start'].map(
-  (n) => join(RESOURCES, 'latex', `${n}.lua`),
-);
+const LATEX_FILTERS = [
+  '01-spacer',
+  '02-dictum',
+  '03-verse',
+  '04-center',
+  '05-flushright',
+  '06-mbox-sentence-end',
+  '07-mbox-sentence-start',
+  '08-quote-noindent',
+].map((n) => join(RESOURCES, 'latex', `${n}.lua`));
 
 async function toLatex(markdown: string): Promise<string> {
   const extraArgs = [...SEMANTIC_FILTERS, ...LATEX_FILTERS].flatMap((f) => ['--lua-filter', f]);
@@ -141,6 +148,20 @@ describe('filtros Lua latex', () => {
     expect(tex).toContain('\\begin{verse}');
     expect(tex).toContain('\\end{verse}');
     expect(tex).not.toContain('\\vspace*{3pt}');
+  });
+
+  it('agrega \\noindent al párrafo posterior a un blockquote', async () => {
+    const tex = await toLatex('> Cita\n\nPárrafo siguiente.\n\nOtro párrafo.\n');
+    expect(tex).toContain('\\begin{quote}');
+    expect(tex).toContain('\\end{quote}');
+    expect(tex).toContain('\\noindent Párrafo siguiente.');
+    // Solo el primer párrafo tras el quote lleva \\noindent
+    expect(tex.match(/\\noindent/g)).toHaveLength(1);
+  });
+
+  it('no agrega \\noindent si el quote no es seguido por un párrafo', async () => {
+    const tex = await toLatex('> Cita\n\n### Título\n\nContenido.\n');
+    expect(tex).not.toContain('\\noindent Título');
   });
 
   it('convierte Div.center y Div.flushright', async () => {

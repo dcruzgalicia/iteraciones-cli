@@ -269,9 +269,16 @@ describe('validateDisabledFilters', () => {
 
 describe('resolveLuaFilters (resolución de filtros)', () => {
   const PKG = join(import.meta.dir, '..', 'lib', 'resources', 'filters');
-  const LATEX_PKG = ['01-spacer', '02-dictum', '03-verse', '04-center', '05-flushright', '06-mbox-sentence-end', '07-mbox-sentence-start'].map((n) =>
-    join(PKG, 'latex', `${n}.lua`),
-  );
+  const LATEX_PKG = [
+    '01-spacer',
+    '02-dictum',
+    '03-verse',
+    '04-center',
+    '05-flushright',
+    '06-mbox-sentence-end',
+    '07-mbox-sentence-start',
+    '08-quote-noindent',
+  ].map((n) => join(PKG, 'latex', `${n}.lua`));
 
   it('resuelve los filtros del paquete por capa sin overrides', async () => {
     const f = await resolveLuaFilters();
@@ -310,6 +317,7 @@ describe('resolveLuaFilters (resolución de filtros)', () => {
           'latex/05-flushright',
           'latex/06-mbox-sentence-end',
           'latex/07-mbox-sentence-start',
+          'latex/08-quote-noindent',
           'html/01-dictum',
           'html/02-verse',
           'html/03-center',
@@ -325,15 +333,15 @@ describe('resolveLuaFilters (resolución de filtros)', () => {
   it('excluye filtros desactivados por nombre completo', async () => {
     const f = await resolveLuaFilters(['semantic/string/01-double-colon']);
     expect(f.semantic).toEqual([join(PKG, 'semantic', 'ast', '02-double-colon-noindent.lua')]);
-    expect(f.resolvedNames.size).toBe(13);
+    expect(f.resolvedNames.size).toBe(14);
     expect(f.resolvedNames.has('semantic/string/01-double-colon')).toBe(false);
   });
 });
 
 describe('loadFilterGroups (solo resolución de filtros Lua)', () => {
-  it('resuelve los 7 filtros latex del paquete en orden', async () => {
+  it('resuelve los 8 filtros latex del paquete en orden', async () => {
     const groups = await loadFilterGroups(DEFAULT_SITE_CONFIG);
-    expect(groups.latex).toHaveLength(7);
+    expect(groups.latex).toHaveLength(8);
     expect(groups.latex[1]).toContain('02-dictum.lua');
   });
 
@@ -343,7 +351,7 @@ describe('loadFilterGroups (solo resolución de filtros Lua)', () => {
       mkdirSync(join(cwd, 'filters', 'latex'), { recursive: true });
       writeFileSync(join(cwd, 'filters', 'latex', '02-dictum.lua'), '-- test\n');
       const groups = await loadFilterGroups(DEFAULT_SITE_CONFIG, undefined, cwd);
-      expect(groups.latex).toHaveLength(7);
+      expect(groups.latex).toHaveLength(8);
       expect(groups.latex[1]).toBe(join(cwd, 'filters', 'latex', '02-dictum.lua'));
     } finally {
       rmSync(cwd, { recursive: true, force: true });

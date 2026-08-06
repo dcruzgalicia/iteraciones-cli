@@ -24,7 +24,16 @@ const BUILTIN_SEMANTIC_STRING = ['01-double-colon'];
 const BUILTIN_SEMANTIC_AST = ['02-double-colon-noindent'];
 
 /** Lista de filters de formato LaTeX en orden de aplicación. */
-const BUILTIN_LATEX_FILTERS = ['01-spacer', '02-dictum', '03-verse', '04-center', '05-flushright', '06-mbox-sentence-end', '07-mbox-sentence-start'];
+const BUILTIN_LATEX_FILTERS = [
+  '01-spacer',
+  '02-dictum',
+  '03-verse',
+  '04-center',
+  '05-flushright',
+  '06-mbox-sentence-end',
+  '07-mbox-sentence-start',
+  '08-quote-noindent',
+];
 
 /** Lista de filters de formato HTML en orden de aplicación. */
 const BUILTIN_HTML_FILTERS = ['01-dictum', '02-verse', '03-center', '04-flushright', '05-spacer'];
