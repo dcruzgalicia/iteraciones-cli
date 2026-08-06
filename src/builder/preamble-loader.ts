@@ -46,6 +46,7 @@ export const BUILTIN_PREAMBLE_FILTERS: string[] = [
   '23-bibliography-heading',
   '24-hyphenation-rules',
   '25-verse',
+  '26-quote',
 ];
 
 const DESCRIPTIONS: Record<string, string> = {
@@ -74,6 +75,7 @@ const DESCRIPTIONS: Record<string, string> = {
   '23-bibliography-heading': 'Cambia titulo de bibliografia de chapter a subsubsection',
   '24-hyphenation-rules': 'Agrega \\hyphenation{} con nombres propios de ejemplo',
   '25-verse': 'Redefine el entorno verse con márgenes y espaciado tipográfico',
+  '26-quote': 'Redefine el entorno quote con margen izquierdo de 4em y espaciado tipográfico',
 };
 
 export interface PreambleFilter {

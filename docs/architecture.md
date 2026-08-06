@@ -185,6 +185,7 @@ Además, existen los **preamble filters** (`lib/resources/preamble/*.tex`) que m
 | 23-bibliography-heading | `lib/resources/preamble/23-bibliography-heading.tex` | Título de bibliografía como subsubsection |
 | 24-hyphenation-rules | `lib/resources/preamble/24-hyphenation-rules.tex` | Reglas de partición de palabras |
 | 25-verse | `lib/resources/preamble/25-verse.tex` | Redefine el entorno verse |
+| 26-quote | `lib/resources/preamble/26-quote.tex` | Redefine el entorno quote |
 
 ### Extensibilidad
 

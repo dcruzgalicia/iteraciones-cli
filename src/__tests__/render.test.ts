@@ -141,6 +141,31 @@ describe('computePreambleFlags (desde el AST)', () => {
     expect(flags.skipParagraphSpace).toBe(true);
   });
 
+  it('quote (Div.quote como primer bloque): skipNoIndent y skipParagraphSpace true', () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [
+        { t: 'Div', c: [['', ['quote'], []], [{ t: 'Para', c: [] }]] },
+        { t: 'Para', c: [] },
+      ],
+    };
+    const flags = computePreambleFlags(ast);
+    expect(flags.skipNoIndent).toBe(true);
+    expect(flags.skipParagraphSpace).toBe(true);
+  });
+
+  it('BlockQuote de markdown como primer bloque: skipNoIndent y skipParagraphSpace true', () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [{ t: 'BlockQuote', c: [{ t: 'Para', c: [{ t: 'Str', c: 'Cita' }] }] }],
+    };
+    const flags = computePreambleFlags(ast);
+    expect(flags.skipNoIndent).toBe(true);
+    expect(flags.skipParagraphSpace).toBe(true);
+  });
+
   it('center (Div.center) no cuenta como dictum-start', () => {
     const ast = {
       'pandoc-api-version': [1, 23],
