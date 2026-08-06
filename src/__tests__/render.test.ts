@@ -54,6 +54,65 @@ describe('computePreambleFlags (desde el AST)', () => {
     expect(flags.skipParagraphSpace).toBe(false);
   });
 
+  it('RawBlock tex \\chapter: skipNoIndent y skipParagraphSpace true, y cuenta para hasTocEntries', () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [{ t: 'RawBlock', c: ['tex', '\\chapter{Capitulo directo}'] }],
+    };
+    const flags = computePreambleFlags(ast);
+    expect(flags.skipNoIndent).toBe(true);
+    expect(flags.skipParagraphSpace).toBe(true);
+    expect(flags.hasTocEntries).toBe(true);
+  });
+
+  it('RawBlock tex \\section*, \\part y \\subsection: skipParagraphSpace true', () => {
+    const astStar = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [{ t: 'RawBlock', c: ['tex', '\\section*{Intro}'] }],
+    };
+    const astPart = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [{ t: 'RawBlock', c: ['tex', '\\part[Primera]{Parte Uno}'] }],
+    };
+    const astSub = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [{ t: 'RawBlock', c: ['latex', '\\subsection{Sub}'] }],
+    };
+    expect(computePreambleFlags(astStar).skipParagraphSpace).toBe(true);
+    expect(computePreambleFlags(astPart).skipParagraphSpace).toBe(true);
+    expect(computePreambleFlags(astSub).skipParagraphSpace).toBe(true);
+  });
+
+  it('RawBlock tex con prefijo section (\\sectionmark) no se confunde con sección', () => {
+    const ast = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [{ t: 'RawBlock', c: ['tex', '\\sectionmark{Texto}'] }],
+    };
+    const flags = computePreambleFlags(ast);
+    expect(flags.skipParagraphSpace).toBe(false);
+    expect(flags.hasTocEntries).toBe(false);
+  });
+
+  it('RawBlock tex no seccional (\\textit) y RawBlock html: flags false', () => {
+    const astIt = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [{ t: 'RawBlock', c: ['tex', '\\textit{Texto}'] }],
+    };
+    const astHtml = {
+      'pandoc-api-version': [1, 23],
+      meta: {},
+      blocks: [{ t: 'RawBlock', c: ['html', '<div>Hola</div>'] }],
+    };
+    expect(computePreambleFlags(astIt).skipParagraphSpace).toBe(false);
+    expect(computePreambleFlags(astHtml).skipParagraphSpace).toBe(false);
+  });
+
   it('dictum (Div.dictum como primer bloque): skipNoIndent true, skipParagraphSpace false', () => {
     const ast = {
       'pandoc-api-version': [1, 23],

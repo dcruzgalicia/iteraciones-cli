@@ -186,6 +186,25 @@ function isHeader(block: unknown): boolean {
   return typeof block === 'object' && block !== null && (block as Record<string, unknown>).t === 'Header';
 }
 
+/** Comandos de sección LaTeX reconocidos como inicio de documento. */
+const SECTION_COMMAND_RE = /^\\(subsubsection|subsection|section|subparagraph|paragraph|chapter|part)\*?(?:\[|\{|\s*$)/;
+
+/**
+ * Detecta un RawBlock LaTeX que sea un comando de sección (`\chapter{...}`,
+ * `\section*{...}`, etc.) escrito directamente en markdown. Pandoc lo
+ * representa como RawBlock, no como Header, pero tipográficamente inicia
+ * una sección y debe tratarse igual.
+ */
+function isSectionRawBlock(block: unknown): boolean {
+  if (typeof block !== 'object' || block === null) return false;
+  const b = block as Record<string, unknown>;
+  if (b.t !== 'RawBlock') return false;
+  const c = b.c as unknown[];
+  // pandoc usa 'tex' para raw TeX en markdown y 'latex' en otros contextos
+  if (!Array.isArray(c) || (c[0] !== 'tex' && c[0] !== 'latex') || typeof c[1] !== 'string') return false;
+  return SECTION_COMMAND_RE.test(c[1].trim());
+}
+
 function isDivWithClass(block: unknown, cls: string): boolean {
   if (typeof block !== 'object' || block === null) return false;
   const b = block as Record<string, unknown>;
@@ -207,11 +226,11 @@ export function computePreambleFlags(ast: Record<string, unknown>): PreambleFlag
   const blocks = ast.blocks as unknown[];
   const list = Array.isArray(blocks) ? blocks : [];
   const first = list[0];
-  const isSectionStart = isHeader(first);
+  const isSectionStart = isHeader(first) || isSectionRawBlock(first);
   // dictum y verse abren con \vspace*{...} en latex; center/flushright no
   const isDictumStart = isDivWithClass(first, 'dictum') || isDivWithClass(first, 'verse');
   return {
-    hasTocEntries: list.some(isHeader),
+    hasTocEntries: list.some(isHeader) || list.some(isSectionRawBlock),
     skipNoIndent: isSectionStart || isDictumStart,
     skipParagraphSpace: isSectionStart,
   };
