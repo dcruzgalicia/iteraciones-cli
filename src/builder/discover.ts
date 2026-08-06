@@ -65,7 +65,7 @@ export async function loadBuildState(cwd: string): Promise<BuildState | null> {
  * Combina el report (startedAt, activeFormats), los hashes de invalidación
  * y el discovery index (entries).
  */
-export async function saveBuildState(cwd: string, state: BuildState): Promise<void> {
+async function saveBuildState(cwd: string, state: BuildState): Promise<void> {
   await saveStateFile(cwd, {
     startedAt: state.startedAt,
     activeFormats: state.activeFormats,

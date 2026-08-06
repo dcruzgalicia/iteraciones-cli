@@ -182,7 +182,7 @@ describe('validateDisabledFilters', () => {
   });
 });
 
-describe('resolveLuaFilters (sistema dual Fase 6)', () => {
+describe('resolveLuaFilters (resolución de filtros)', () => {
   const PKG = join(import.meta.dir, '..', 'lib', 'resources', 'filters');
   const LATEX_PKG = ['01-spacer', '02-dictum', '03-verse', '04-center', '05-flushright', '06-mbox-sentence-end', '07-mbox-sentence-start'].map((n) =>
     join(PKG, 'latex', `${n}.lua`),

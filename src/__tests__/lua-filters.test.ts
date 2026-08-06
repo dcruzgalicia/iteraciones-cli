@@ -19,7 +19,7 @@ async function toJson(markdown: string): Promise<Record<string, unknown>> {
   return JSON.parse(stdout) as Record<string, unknown>;
 }
 
-describe('filtros Lua semánticos (Fase 6, B1)', () => {
+describe('filtros Lua semánticos', () => {
   it('convierte :: sola en una línea a Div.spacer', async () => {
     const ast = await toJson('texto antes\n\n::\n\ntexto después');
     expect(ast.blocks).toEqual([
@@ -66,7 +66,7 @@ async function toHtml5(markdown: string, extraFilters: string[] = []): Promise<s
   return runPandoc({ input: markdown, sourcePath: 'test.md', to: 'html5', extraArgs });
 }
 
-describe('filtros Lua html (Fase 6, B3)', () => {
+describe('filtros Lua html', () => {
   it('envuelve Div.dictum en blockquote con bloques nativos', async () => {
     const html = await toHtml5('::: {.dictum}\nCita de prueba\n:::\n');
     expect(html).toContain('<blockquote class="dictum">');
@@ -112,7 +112,7 @@ async function toLatex(markdown: string): Promise<string> {
   return runPandoc({ input: markdown, sourcePath: 'test.md', to: 'latex', extraArgs });
 }
 
-describe('filtros Lua latex (Fase 6, B2)', () => {
+describe('filtros Lua latex', () => {
   it('convierte :: en \\vspace{\\baselineskip}', async () => {
     const tex = await toLatex('texto\n\n::\n\ntexto');
     expect(tex).toContain('\\vspace{\\baselineskip}');
@@ -170,7 +170,7 @@ describe('filtros Lua latex (Fase 6, B2)', () => {
   });
 });
 
-describe('filtros Lua de usuario (Fase 6, C)', () => {
+describe('filtros Lua de usuario', () => {
   const USER_FILTER = [
     '-- Convierte Div.nota según el formato de salida',
     'function Div(div)',

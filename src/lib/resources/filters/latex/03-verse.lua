@@ -1,6 +1,6 @@
 -- Convierte Div.verse al entorno \vspace*{beforeskip}\begin{verse}...\end{verse}\vspace*{afterskip}
 -- (formato LaTeX), con \noindent al párrafo siguiente si es Para.
--- Reemplaza al filter TS latex/03-verse (Fase 6).
+-- Reemplaza al filter TS latex/03-verse.
 -- Uso: pandoc --from json --to latex --lua-filter latex/03-verse.lua
 
 local function has_class(block, cls)

@@ -203,7 +203,7 @@ export async function runFilters(cwd: string): Promise<void> {
  * .md, reemplaza guiones y guiones bajos por espacios, y capitaliza la
  * primera letra de cada palabra. Ej: `posts/mi-articulo` → `Mi Articulo`.
  */
-export function inferTitleFromPath(path: string): string {
+function inferTitleFromPath(path: string): string {
   const base = basename(path, '.md').replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
   if (!base) return 'Título del documento';
   // Capitalizar solo la primera letra

@@ -36,7 +36,7 @@ async function removeOutputFiles(outputDir: string, dir: string, slug: string, e
 }
 
 /** Limpia caché y salida de documentos identificados por (directorio, slug). */
-export async function cleanupBySlug(ctx: BuildContext, entries: Iterable<{ dir: string; slug: string }>): Promise<void> {
+async function cleanupBySlug(ctx: BuildContext, entries: Iterable<{ dir: string; slug: string }>): Promise<void> {
   const cacheBase = join(ctx.cwd, '.iteraciones');
   for (const { dir, slug } of entries) {
     await removeCachedArtifacts(cacheBase, dir, slug);

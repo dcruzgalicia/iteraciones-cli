@@ -1,5 +1,5 @@
 -- Convierte párrafos con solo ":;" en Div.spacer noindent (semántico).
--- Reemplaza al filter TS semantic/ast/02-double-colon-noindent (Fase 6).
+-- Reemplaza al filter TS semantic/ast/02-double-colon-noindent.
 -- Usa el filtro Pandoc para replicar el alcance del TS (solo nivel superior).
 -- Uso: pandoc --from markdown --to json --lua-filter semantic/ast/02-double-colon-noindent.lua
 

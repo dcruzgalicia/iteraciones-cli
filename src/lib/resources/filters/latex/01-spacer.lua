@@ -1,7 +1,7 @@
 -- Convierte Div.spacer en \vspace{\baselineskip} (formato LaTeX).
 -- Si el Div tiene la clase noindent (caso :;), agrega \noindent al primer
 -- párrafo siguiente (solo si es Para, igual que el filter TS).
--- Reemplaza al filter TS latex/01-spacer (Fase 6).
+-- Reemplaza al filter TS latex/01-spacer.
 -- Uso: pandoc --from json --to latex --lua-filter latex/01-spacer.lua
 
 local function has_class(block, cls)

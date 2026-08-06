@@ -17,7 +17,7 @@ import type { BuildDocument } from './types.js';
  * Ambas son deterministas: mismo input → mismo output, sin efectos secundarios.
  */
 
-export type FormatKey = 'pdf' | 'html' | 'epub' | 'markdown';
+type FormatKey = 'pdf' | 'html' | 'epub' | 'markdown';
 
 export interface BuildMetadata {
   currentFormats: string[];

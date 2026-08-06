@@ -24,12 +24,12 @@ export interface PdfFormatConfig {
   pageNumber?: string;
 }
 
-export interface EpubFormatConfig {
+interface EpubFormatConfig {
   /** Si true, genera EPUB en el build. */
   generate?: boolean;
 }
 
-export interface MarkdownFormatConfig {
+interface MarkdownFormatConfig {
   /** Si true, genera Markdown en el build. */
   generate?: boolean;
 }

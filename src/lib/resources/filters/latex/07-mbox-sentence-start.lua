@@ -1,6 +1,6 @@
 -- Envuelve en \mbox{} la primera palabra de cada oración. Solo dentro de
 -- bloques Para. Corre después de mbox-sentence-end (evita mbox anidados).
--- Reemplaza al filter TS latex/07-mbox-sentence-start (Fase 6).
+-- Reemplaza al filter TS latex/07-mbox-sentence-start.
 -- Uso: pandoc --from json --to latex --lua-filter latex/07-mbox-sentence-start.lua
 
 -- ── Helpers de oraciones (equivalentes a _sentence-utils.ts) ──────────────
