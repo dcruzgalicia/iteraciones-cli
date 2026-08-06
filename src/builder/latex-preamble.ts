@@ -16,7 +16,7 @@ import { loadPreambleFilters } from './preamble-loader.js';
 import { discoverBibFiles } from './state.js';
 import type { PreambleFlags } from './types.js';
 
-export interface PreambleMeta {
+interface PreambleMeta {
   title?: string;
   subtitle?: string;
   author?: string[];

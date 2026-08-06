@@ -8,7 +8,7 @@ export interface BibOptions {
   csl?: string;
 }
 
-export interface PandocOptions {
+interface PandocOptions {
   /** Formato de entrada (por defecto 'markdown'). */
   from?: string;
   /** Formato de salida (requerido). */

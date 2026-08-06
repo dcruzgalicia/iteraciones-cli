@@ -9,12 +9,12 @@ function formatTime(ms: number): string {
 /** Ancho mínimo para la columna de etiquetas en el resumen final. */
 const LABEL_WIDTH = 30;
 
-export interface RenderFileReport {
+interface RenderFileReport {
   relativePath: string;
   phase: PipelinePhase;
 }
 
-export type PipelinePhase = 'discovery' | 'render' | 'latex' | 'markdown' | 'pdf' | 'epub' | 'html';
+type PipelinePhase = 'discovery' | 'render' | 'latex' | 'markdown' | 'pdf' | 'epub' | 'html';
 
 interface PhaseMeta {
   label: string;
@@ -35,7 +35,7 @@ const PHASE_META: Record<PipelinePhase, PhaseMeta> = {
  * subtareas del grupo 'Generando formatos', con ✔ si están activos (su trabajo
  * se completa en el pipeline) o con ✗ '(desactivado)' si generate:false.
  */
-export interface FormatState {
+interface FormatState {
   phase: PipelinePhase;
   active: boolean;
 }

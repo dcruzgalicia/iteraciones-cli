@@ -1,6 +1,6 @@
 -- Envuelve en \mbox{} la última palabra de cada oración (o las últimas 3 si
 -- es la oración final del párrafo). Solo dentro de bloques Para.
--- Reemplaza al filter TS latex/06-mbox-sentence-end (Fase 6).
+-- Reemplaza al filter TS latex/06-mbox-sentence-end.
 -- Uso: pandoc --from json --to latex --lua-filter latex/06-mbox-sentence-end.lua
 
 -- ── Helpers de oraciones (equivalentes a _sentence-utils.ts) ──────────────

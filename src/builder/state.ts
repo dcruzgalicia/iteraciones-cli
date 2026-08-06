@@ -7,13 +7,13 @@ import { isHiddenPath, isIgnoredByRules, loadGitignoreRules } from './gitignore.
 import type { BuildDocument, DiscoveryEntry, PreambleFlags } from './types.js';
 
 /** Ruta relativa del archivo de estado del build dentro del proyecto. */
-export const STATE_PATH = join('.iteraciones', 'changes', 'state.json');
+const STATE_PATH = join('.iteraciones', 'changes', 'state.json');
 
 /** Plantilla HTML del paquete (participa en la invalidación del formato HTML). */
 const TEMPLATE_PATH = join(import.meta.dir, '../../src/lib/resources/template.html');
 
 /** Entrada de caché de archivo de filtro (mtime+size evitan re-leer contenido). */
-export interface FilterFileCacheEntry {
+interface FilterFileCacheEntry {
   mtime: number;
   size: number;
   hash: string;
@@ -43,7 +43,7 @@ export function hashString(input: string): string {
   return Bun.CryptoHasher.hash('sha256', input, 'hex');
 }
 
-export async function hashFileContent(path: string): Promise<string> {
+async function hashFileContent(path: string): Promise<string> {
   const bytes = new Uint8Array(await Bun.file(path).arrayBuffer());
   return Bun.CryptoHasher.hash('sha256', bytes, 'hex');
 }

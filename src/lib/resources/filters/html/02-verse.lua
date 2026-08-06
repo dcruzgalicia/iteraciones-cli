@@ -1,5 +1,5 @@
 -- Convierte Div.verse a <div class="verse"> (formato HTML).
--- Reemplaza al filter TS html/02-verse (Fase 6).
+-- Reemplaza al filter TS html/02-verse.
 -- Uso: pandoc --from json --to html5 --lua-filter html/02-verse.lua
 
 function Div(div)

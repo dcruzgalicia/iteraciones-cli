@@ -1,6 +1,6 @@
 -- Convierte Div.spacer a <div class="spacer"></div> (formato HTML).
 -- La clase noindent se ignora (la sangría de párrafo es LaTeX-only).
--- Reemplaza al filter TS html/05-spacer (Fase 6).
+-- Reemplaza al filter TS html/05-spacer.
 -- Uso: pandoc --from json --to html5 --lua-filter html/05-spacer.lua
 
 function Div(div)

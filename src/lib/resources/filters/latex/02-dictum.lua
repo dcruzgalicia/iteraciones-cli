@@ -1,7 +1,7 @@
 -- Convierte Div.dictum a \dictum[author]{quote} (formato LaTeX), con espacio
 -- superior e inferior configurables (beforeskip/afterskip) y \noindent al
 -- párrafo siguiente si es Para.
--- Reemplaza al filter TS latex/02-dictum (Fase 6).
+-- Reemplaza al filter TS latex/02-dictum.
 -- Uso: pandoc --from json --to latex --lua-filter latex/02-dictum.lua
 
 local BS = '\1' -- placeholder para el backslash (evita re-escapar \textbackslash{})

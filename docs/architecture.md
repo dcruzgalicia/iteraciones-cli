@@ -129,11 +129,11 @@ AST canónico (memoria + .iteraciones/ast/{slug}.json)
 
 ## Sistema de filters
 
-Los filters son filtros Lua que transforman el contenido. Se organizan en **capas** (decisión D1):
+Los filters son filtros Lua que transforman el contenido. Se organizan en **capas**:
 
 1. **Capa semántica** (`semantic/`) — corre en la invocación `markdown → json` y deja el **AST canónico** sin contenido de formato específico: `::` → `Div.spacer`, `:;` → `Div.spacer noindent`. Los `Div.dictum/verse/center/flushright` quedan sin transformar.
 2. **Capa de formato** (`latex/`, `html/`) — corre en cada exportación y convierte los nodos semánticos a su formato (RawBlocks de apertura/cierre alrededor de los bloques nativos). La capa `html/` se aplica al generar la página HTML con el template de pandoc.
-3. **Filtros Lua (Fase 6)**: todos los filters son filtros Lua (`lib/resources/filters/<grupo>/<nombre>.lua`) que corren **dentro** de las invocaciones pandoc (`--lua-filter`), en el orden numérico de su capa. Override: `<proyecto>/filters/<grupo>/<nombre>.lua` reemplaza al del paquete; `disabled-filters` (nombres completos) los desactiva.
+3. **Filtros Lua**: todos los filters son filtros Lua (`lib/resources/filters/<grupo>/<nombre>.lua`) que corren **dentro** de las invocaciones pandoc (`--lua-filter`), en el orden numérico de su capa. Override: `<proyecto>/filters/<grupo>/<nombre>.lua` reemplaza al del paquete; `disabled-filters` (nombres completos) los desactiva.
 
 Además, existen los **preamble filters** (`lib/resources/preamble/*.tex`) que modifican el preámbulo LaTeX.
 

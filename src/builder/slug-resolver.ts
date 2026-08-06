@@ -24,7 +24,7 @@ async function saveSlugsCounter(cwd: string, counter: Map<string, number>): Prom
   await Bun.write(filePath, JSON.stringify(Object.fromEntries(counter)));
 }
 
-export interface SlugResolutionResult {
+interface SlugResolutionResult {
   /** Archivos cuyo slug cambio (relativePath -> slug anterior). */
   slugChangedEntries: Map<string, string>;
   /** Paths que deben reprocesarse por cambio de slug. */

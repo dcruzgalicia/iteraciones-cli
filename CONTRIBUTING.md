@@ -82,10 +82,10 @@ src/
 ### Pipeline de construcción
 
 ```
-discover → renderLatex → export (PDF, HTML, EPUB, MD) → copyToDist
+discover → runDocumentPipeline (AST → LaTeX/HTML/EPUB/Markdown/PDF) → copyToDist
 ```
 
-Las fases se ejecutan en paralelo cuando es posible (FASE 4). Ver `orchestrator.ts` para la secuencia completa.
+El pipeline por documento usa dos pools: el pool 1 genera los formatos ligeros y encola el PDF; el pool 2 compila PDF en paralelo. Ver `orchestrator.ts` para la secuencia completa.
 
 ## Commits
 

@@ -8,11 +8,8 @@ import { resolveBibOptions } from './state.js';
 import type { BuildDocument, PreambleFlags } from './types.js';
 
 // ---------------------------------------------------------------------------
-// Sistema de filters por capas (decisión D1 + Fase 6: filtros Lua)
-// ---------------------------------------------------------------------------
-// Los filters son filtros Lua que corren dentro de las invocaciones pandoc:
-//   semantic/string y semantic/ast: en markdown → json (dejan el AST canónico
-//   sin contenido de formato específico).
+// Sistema de filters por capas: filtros Lua que corren dentro de pandoc.
+//   semantic/string y semantic/ast: en markdown → json (AST canónico).
 //   latex/ y html/: en cada exportación (json → latex, json → html5).
 //
 // Pipeline:
@@ -32,11 +29,11 @@ const BUILTIN_LATEX_FILTERS = ['01-spacer', '02-dictum', '03-verse', '04-center'
 /** Lista de filters de formato HTML en orden de aplicación. */
 const BUILTIN_HTML_FILTERS = ['01-dictum', '02-verse', '03-center', '04-flushright', '05-spacer'];
 
-/** Raíz de los filtros Lua del paquete (Fase 6: migración a filtros Lua). */
+/** Raíz de los filtros Lua del paquete. */
 const LUA_FILTERS_ROOT = join(import.meta.dir, '../lib/resources/filters');
 
 /** Filtros Lua resueltos por capa (rutas absolutas, en orden de aplicación). */
-export interface LuaFilterGroup {
+interface LuaFilterGroup {
   semantic: string[];
   latex: string[];
   html: string[];
@@ -57,9 +54,9 @@ async function resolveLuaFilter(group: string, name: string, cwd?: string): Prom
 }
 
 /**
- * Resuelve los filtros Lua por capa (sistema dual de la Fase 6): los nombres
- * con un .lua disponible (paquete o override del proyecto) se pasan como
- * `--lua-filter` en la invocación pandoc de su capa y omiten el .ts equivalente.
+ * Resuelve los filtros Lua por capa: los nombres con un .lua disponible
+ * (paquete o override del proyecto) se pasan como `--lua-filter` en la
+ * invocación pandoc de su capa.
  */
 export async function resolveLuaFilters(disabledList?: string[], cwd?: string): Promise<LuaFilterGroup> {
   const excluded = new Set(disabledList ?? []);
@@ -86,7 +83,7 @@ export async function resolveLuaFilters(disabledList?: string[], cwd?: string): 
 }
 
 /** Nombres completos (grupo/nombre) de todos los filters built-in. */
-export function getBuiltinFilterNames(): string[] {
+function getBuiltinFilterNames(): string[] {
   return [
     ...BUILTIN_SEMANTIC_STRING.map((n) => `semantic/string/${n}`),
     ...BUILTIN_SEMANTIC_AST.map((n) => `semantic/ast/${n}`),
@@ -102,8 +99,8 @@ export function suggestFilterName(name: string): string | undefined {
 
 /**
  * Valida los nombres de `disabled-filters` contra los filters built-in.
- * Los nombres desconocidos (p. ej. de configs anteriores al cambio de nombres
- * completos de D1) emiten un warning con la sugerencia, sin romper el build.
+ * Los nombres desconocidos (p. ej. configs con nombres incompletos) emiten un
+ * warning con la sugerencia, sin romper el build.
  */
 export function validateDisabledFilters(disabled: string[] | undefined): void {
   if (!disabled || disabled.length === 0) return;
@@ -139,10 +136,10 @@ export async function resolveUserLuaFilters(cwd: string, siteConfig: SiteConfig)
 }
 
 /**
- * Resuelve los filtros Lua por capa (sistema de filters Fase 6): los
- * nombres con un .lua disponible (paquete o override del proyecto) se pasan
- * como `--lua-filter` en la invocación pandoc de su capa. Incluye los filtros
- * de usuario (`lua-filters:`), que corren en todas las invocaciones.
+ * Resuelve los filtros Lua por capa: los nombres con un .lua disponible
+ * (paquete o override del proyecto) se pasan como `--lua-filter` en la
+ * invocación pandoc de su capa. Incluye los filtros de usuario
+ * (`lua-filters:`), que corren en todas las invocaciones.
  * @param disabledList Lista de filters a desactivar (nombres completos). undefined = todos activos.
  * @param cwd Directorio del proyecto para buscar overrides.
  */
@@ -173,7 +170,6 @@ async function dirExists(path: string): Promise<boolean> {
  */
 export async function getBuiltinLuaFilterInfos(): Promise<LuaFilterInfo[]> {
   const infos: LuaFilterInfo[] = [];
-  // El directorio de recursos se crea al migrar los primeros filters (Fase B)
   if (!(await dirExists(LUA_FILTERS_ROOT))) return infos;
   const glob = new Bun.Glob('**/*.lua');
   for await (const rel of glob.scan({ cwd: LUA_FILTERS_ROOT, onlyFiles: true })) {
@@ -272,7 +268,7 @@ async function renderTexBody(
 const HTML_TEMPLATE_PATH = join(import.meta.dir, '../../src/lib/resources/template.html');
 
 /** Variables de la plantilla HTML (template system de pandoc). */
-export interface HtmlPageVars {
+interface HtmlPageVars {
   title: string;
   siteTitle: string;
   tagline?: string;
