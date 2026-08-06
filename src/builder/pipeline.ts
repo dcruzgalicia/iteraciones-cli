@@ -6,19 +6,16 @@ import { logWarning } from '../lib/logger.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import type { BuildMetadata, WorkSets } from './build-planner.js';
 import { assembleExportDocument } from './export/assemble.js';
-import { convertToEpub, convertToMarkdown, convertToPdf } from './export/runner.js';
+import { convertToEpub, convertToMarkdown } from './export/runner.js';
 import { composeFullTex } from './latex-preamble.js';
 import { loadFilterGroups, markdownToAst, renderHtmlPageFromAst, resolveUserLuaFilters, texBodyFromAst } from './render.js';
 import { readAstFromCache, resolveBibOptions, writeCachedArtifacts } from './state.js';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
+import { createPdfConsumer, type PdfJob } from './pdf-pool.js';
 
 /** Job de compilación PDF encolado por el pool de formatos. */
-interface PdfJob {
-  dir: string;
-  slug: string;
-  relativePath: string;
-}
 
+/** Contexto compartido por el pool de formatos ligeros. */
 /**
  * Ejecuta el pipeline por documento (fases 2-6 fusionadas):
  *
@@ -71,30 +68,7 @@ export async function runDocumentPipeline(
   }
 
   // ── Pool 2 (PDF): consumidor de la cola, arranca en paralelo con el pool 1 ──
-  const pdfJobs: PdfJob[] = [];
-  let pdfProducerDone = false;
-  let pdfSlot = 0;
-  const pdfConsumer = (async () => {
-    if (!compilePdf) return;
-    let next = 0;
-    const worker = async (): Promise<void> => {
-      while (true) {
-        if (next < pdfJobs.length) {
-          const job = pdfJobs[next++]!;
-          const slot = pdfSlot++ % maxSlots;
-          const pdfDir = join(formatsDir, 'pdf', job.dir);
-          const fullTexPath = join(pdfDir, `${job.slug}.tex`);
-          await convertToPdf(fullTexPath, job.relativePath, pdfDir, job.slug, join(biberBase, `cache-${slot}`));
-          progress.reportFile({ relativePath: job.relativePath, phase: 'pdf' });
-        } else if (pdfProducerDone) {
-          return;
-        } else {
-          await Bun.sleep(5);
-        }
-      }
-    };
-    await Promise.all(Array.from({ length: maxSlots }, () => worker()));
-  })();
+  const pdfConsumer = createPdfConsumer(formatsDir, biberBase, maxSlots, progress);
 
   // ── Pool 1 (formatos ligeros) ──
   const processed = new Set<string>();
@@ -125,7 +99,7 @@ export async function runDocumentPipeline(
         epubPaths,
         mdPaths,
         pdfPaths,
-        pdfJobs,
+        pdfJobs: pdfConsumer.pdfJobs,
         noExport,
       },
       discoveryIndex,
@@ -145,12 +119,7 @@ export async function runDocumentPipeline(
   if (mdOn) progress.completePhase(count, 'markdown');
   progress.completePhase(count, 'render');
 
-  pdfProducerDone = true;
-  if (compilePdf) {
-    progress.startPhase('pdf', pdfJobs.length);
-    await pdfConsumer;
-    progress.completePhase();
-  }
+  await pdfConsumer.drain();
   return { processed };
 }
 
