@@ -1,3 +1,20 @@
 \renewenvironment{center}{\par\centering}{\par}
 \renewenvironment{flushright}{\par\raggedleft}{\par}
 \renewenvironment{flushleft}{\par\raggedright}{\par}
+\makeatletter
+\renewenvironment{verse}{%
+  \let\\=\@centercr
+  \list{}{\itemsep=\z@
+    \topsep=\baselineskip
+    \parsep=\z@
+    \partopsep=\z@
+    \itemindent=-2em
+    \listparindent=\itemindent
+    \leftmargin=4em
+    \rightmargin=\leftmargin
+  }%
+  \item\relax
+}{%
+  \endlist
+}
+\makeatother
