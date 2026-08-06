@@ -174,18 +174,18 @@ Además, existen los **preamble filters** (`lib/resources/preamble/*.tex`) que m
 | 12-counters | `lib/resources/preamble/12-counters.tex` | Contadores de secciones |
 | 13-setkomafont | `lib/resources/preamble/13-setkomafont.tex` | Fuentes de la portada |
 | 14-sectioning | `lib/resources/preamble/14-sectioning.tex` | Estilo de secciones |
-| 15-dictum | `lib/resources/preamble/15-dictum.tex` | Configuración de epígrafes |
-| 16-eso-pic | `lib/resources/preamble/16-eso-pic.tex` | Fondo de página (desactivado por defecto) |
-| 17-pdfx | `lib/resources/preamble/17-pdfx.tex` | PDF/X-1a (desactivado por defecto) |
-| 18-crop | `lib/resources/preamble/18-crop.tex` | Marcas de corte (desactivado por defecto) |
-| 19-maketitle-patches | `lib/resources/preamble/19-maketitle-patches.tex` | Personaliza \maketitle |
-| 20-environments | `lib/resources/preamble/20-environments.tex` | Redefine center/flushright/flushleft |
-| 21-toc-styling | `lib/resources/preamble/21-toc-styling.tex` | Estilo del índice |
-| 22-toc-section | `lib/resources/preamble/22-toc-section.tex` | TOC como \subsubsection* |
-| 23-bibliography-heading | `lib/resources/preamble/23-bibliography-heading.tex` | Título de bibliografía como subsubsection |
-| 24-hyphenation-rules | `lib/resources/preamble/24-hyphenation-rules.tex` | Reglas de partición de palabras |
-| 25-verse | `lib/resources/preamble/25-verse.tex` | Redefine el entorno verse |
-| 26-quote | `lib/resources/preamble/26-quote.tex` | Redefine el entorno quote |
+| 15-hyphenation-rules | `lib/resources/preamble/15-hyphenation-rules.tex` | Reglas de partición de palabras |
+| 16-toc-styling | `lib/resources/preamble/16-toc-styling.tex` | Estilo del índice |
+| 17-toc-section | `lib/resources/preamble/17-toc-section.tex` | TOC como \subsubsection* |
+| 18-bibliography-heading | `lib/resources/preamble/18-bibliography-heading.tex` | Título de bibliografía como subsubsection |
+| 19-maketitle | `lib/resources/preamble/19-maketitle.tex` | Personaliza \maketitle |
+| 20-alignment | `lib/resources/preamble/20-alignment.tex` | Redefine center/flushright/flushleft |
+| 21-dictum | `lib/resources/preamble/21-dictum.tex` | Configuración de epígrafes |
+| 22-verse | `lib/resources/preamble/22-verse.tex` | Redefine el entorno verse |
+| 23-quote | `lib/resources/preamble/23-quote.tex` | Redefine el entorno quote |
+| 24-eso-pic | `lib/resources/preamble/24-eso-pic.tex` | Fondo de página (desactivado por defecto) |
+| 25-pdfx | `lib/resources/preamble/25-pdfx.tex` | PDF/X-1a (desactivado por defecto) |
+| 26-crop | `lib/resources/preamble/26-crop.tex` | Marcas de corte (desactivado por defecto) |
 
 ### Extensibilidad
 

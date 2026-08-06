@@ -18,7 +18,7 @@ const PKG_PREAMBLE_DIR = join(import.meta.dir, '../lib/resources/preamble');
 
 /** Lista de preamble filters empaquetados en orden de aplicación. */
 export const BUILTIN_PREAMBLE_FILTERS: string[] = [
-  // ── Configuración LaTeX (paquetes y comandos) ──
+  // ── Base: paquetes y configuración del documento ──
   '01-documentclass',
   '02-fonts',
   '03-spacing',
@@ -27,26 +27,32 @@ export const BUILTIN_PREAMBLE_FILTERS: string[] = [
   '06-headers',
   '07-typography',
   '08-hyperref',
+  // ── Contenido: paquetes para tablas, listas y citas ──
   '09-tables',
   '10-lists',
   '11-bibliography',
+  // ── Estructura: contadores, fuentes de portada y secciones ──
   '12-counters',
   '13-setkomafont',
   '14-sectioning',
-  '15-dictum',
-  // ── Extras (desactivados por defecto: disabled-preamble-filters) ──
-  '16-eso-pic',
-  '17-pdfx',
-  '18-crop',
-  // ── Parches y estilos (preamble filters originales, renumerados) ──
-  '19-maketitle-patches',
-  '20-environments',
-  '21-toc-styling',
-  '22-toc-section',
-  '23-bibliography-heading',
-  '24-hyphenation-rules',
-  '25-verse',
-  '26-quote',
+  // ── Tipografía ──
+  '15-hyphenation-rules',
+  // ── Índice ──
+  '16-toc-styling',
+  '17-toc-section',
+  // ── Bibliografía ──
+  '18-bibliography-heading',
+  // ── Portada ──
+  '19-maketitle',
+  // ── Entornos tipográficos ──
+  '20-alignment',
+  '21-dictum',
+  '22-verse',
+  '23-quote',
+  // ── Extras de impresión (desactivados por defecto) ──
+  '24-eso-pic',
+  '25-pdfx',
+  '26-crop',
 ];
 
 const DESCRIPTIONS: Record<string, string> = {
@@ -64,18 +70,18 @@ const DESCRIPTIONS: Record<string, string> = {
   '12-counters': 'Contadores de secciones (secnumdepth, tocdepth)',
   '13-setkomafont': 'Fuentes de la portada (\\setkomafont para title, subtitle, author, date)',
   '14-sectioning': 'Estilo de secciones (\\RedeclareSectionCommand para todos los niveles)',
-  '15-dictum': 'Configuración de epígrafes (\\dictumwidth, fuente del autor)',
-  '16-eso-pic': 'Fondo de página con eso-pic (desactivado por defecto)',
-  '17-pdfx': 'PDF/X-1a para impresión profesional (desactivado por defecto)',
-  '18-crop': 'Marcas de corte con crop (desactivado por defecto)',
-  '19-maketitle-patches': 'Personaliza \\maketitle: 1+2 baselineskip, titulo en mayusculas',
-  '20-environments': 'Redefine center/flushright/flushleft sin espacio vertical extra',
-  '21-toc-styling': 'Personaliza el indice (TOC): nombre, espaciado, fuentes y lideres',
-  '22-toc-section': 'Redefine \\tableofcontents para usar \\subsubsection* en lugar de \\chapter*',
-  '23-bibliography-heading': 'Cambia titulo de bibliografia de chapter a subsubsection',
-  '24-hyphenation-rules': 'Agrega \\hyphenation{} con nombres propios de ejemplo',
-  '25-verse': 'Redefine el entorno verse con márgenes y espaciado tipográfico',
-  '26-quote': 'Redefine el entorno quote con margen izquierdo de 4em y espaciado tipográfico',
+  '15-hyphenation-rules': 'Agrega \\hyphenation{} con nombres propios de ejemplo',
+  '16-toc-styling': 'Personaliza el indice (TOC): nombre, espaciado, fuentes y lideres',
+  '17-toc-section': 'Redefine \\tableofcontents para usar \\subsubsection* en lugar de \\chapter*',
+  '18-bibliography-heading': 'Cambia titulo de bibliografia de chapter a subsubsection',
+  '19-maketitle': 'Personaliza \\maketitle: 1+2 baselineskip, titulo en mayusculas',
+  '20-alignment': 'Redefine center/flushright/flushleft sin espacio vertical extra',
+  '21-dictum': 'Configuración de epígrafes (\\dictumwidth, fuente del autor)',
+  '22-verse': 'Redefine el entorno verse con márgenes y espaciado tipográfico',
+  '23-quote': 'Redefine el entorno quote con margen izquierdo de 4em y espaciado tipográfico',
+  '24-eso-pic': 'Fondo de página con eso-pic (desactivado por defecto)',
+  '25-pdfx': 'PDF/X-1a para impresión profesional (desactivado por defecto)',
+  '26-crop': 'Marcas de corte con crop (desactivado por defecto)',
 };
 
 export interface PreambleFilter {

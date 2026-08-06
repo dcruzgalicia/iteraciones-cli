@@ -22,16 +22,16 @@ describe('preamble-loader', () => {
   it('carga el contenido .tex del paquete para todos los filters', async () => {
     const filters = await loadPreambleFilters();
     expect(filters).toHaveLength(BUILTIN_PREAMBLE_FILTERS.length);
-    const biblio = filters.find((t) => t.name === '23-bibliography-heading');
+    const biblio = filters.find((t) => t.name === '18-bibliography-heading');
     expect(biblio?.content).toContain('\\ifcsname ver@biblatex.sty\\endcsname');
     expect(biblio?.content).toContain('\\defbibheading{bibintoc}[\\refname]{%');
-    const maketitle = filters.find((t) => t.name === '19-maketitle-patches');
+    const maketitle = filters.find((t) => t.name === '19-maketitle');
     expect(maketitle?.content).toContain('\\renewcommand{\\maketitle}{%');
   });
 
   it('respeta la disabled list', async () => {
-    const filters = await loadPreambleFilters(['24-hyphenation-rules']);
-    expect(filters.map((t) => t.name)).not.toContain('24-hyphenation-rules');
+    const filters = await loadPreambleFilters(['15-hyphenation-rules']);
+    expect(filters.map((t) => t.name)).not.toContain('15-hyphenation-rules');
     expect(filters).toHaveLength(BUILTIN_PREAMBLE_FILTERS.length - 1);
   });
 
@@ -39,9 +39,9 @@ describe('preamble-loader', () => {
     const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-preamble-'));
     try {
       mkdirSync(join(cwd, 'preamble'), { recursive: true });
-      writeFileSync(join(cwd, 'preamble', '24-hyphenation-rules.tex'), 'hyphenation{OverridePrueba}\n');
+      writeFileSync(join(cwd, 'preamble', '15-hyphenation-rules.tex'), 'hyphenation{OverridePrueba}\n');
       const filters = await loadPreambleFilters(undefined, cwd);
-      const hyphen = filters.find((t) => t.name === '24-hyphenation-rules');
+      const hyphen = filters.find((t) => t.name === '15-hyphenation-rules');
       expect(hyphen?.content).toContain('OverridePrueba');
       expect(hyphen?.content).not.toContain('Separacion silabica');
     } finally {
@@ -90,7 +90,7 @@ describe('validateDisabledPreambleFilters', () => {
 
   it('no advierte con nombres válidos', () => {
     const spy = spyOn(logger, 'logWarning');
-    validateDisabledPreambleFilters(['24-hyphenation-rules']);
+    validateDisabledPreambleFilters(['15-hyphenation-rules']);
     expect(spy).not.toHaveBeenCalled();
     spy.mockRestore();
   });
