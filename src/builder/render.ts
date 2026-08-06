@@ -281,6 +281,8 @@ export interface HtmlPageVars {
   theme?: string;
   accent?: string;
   css?: string;
+  /** Ruta relativa al index.html desde el directorio del documento (sin base-url). */
+  indexHref?: string;
   authorMeta?: string;
   logoInline?: string;
 }
@@ -317,6 +319,7 @@ export async function renderHtmlPageFromAst(
   if (vars.theme) extraArgs.push(`--metadata=theme:${vars.theme}`);
   if (vars.accent) extraArgs.push(`--metadata=accent:${vars.accent}`);
   if (vars.css) extraArgs.push(`--metadata=css:${vars.css}`);
+  if (vars.indexHref) extraArgs.push(`--metadata=index-href:${vars.indexHref}`);
   if (vars.authorMeta) extraArgs.push(`--metadata=author-meta:${vars.authorMeta}`);
   // -V (template variable): se inserta cruda, sin escape HTML (el logo es SVG)
   if (vars.logoInline) extraArgs.push(`--variable=logo-inline:${vars.logoInline}`);

@@ -15,6 +15,17 @@ import { createPdfConsumer, type PdfJob } from './pdf-pool.js';
 
 /** Job de compilación PDF encolado por el pool de formatos. */
 
+/**
+ * Ruta relativa desde el directorio de un documento (en dist/files/) hasta
+ * un archivo en la raíz de salida. Permite abrir el HTML con file:// sin
+ * servidor: los enlaces son relativos al documento, no absolutos.
+ * Ej: dir='.' → './css/styles.css'; dir='posts' → './../css/styles.css'.
+ */
+function relativeHref(dir: string, file: string): string {
+  const depth = dir === '.' ? 0 : dir.split('/').length;
+  return `./${'../'.repeat(depth)}${file}`;
+}
+
 /** Contexto compartido por el pool de formatos ligeros. */
 /**
  * Ejecuta el pipeline por documento (fases 2-6 fusionadas):
@@ -212,7 +223,8 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
         baseUrl: htmlConfig?.baseUrl,
         theme: htmlConfig?.theme,
         accent: htmlConfig?.accent,
-        css: ctx.cssPath || undefined,
+        css: ctx.cssPath ? relativeHref(dir, 'css/styles.css') : undefined,
+        indexHref: relativeHref(dir, 'index.html'),
         authorMeta: doc.frontmatter.author.join(', '),
         logoInline,
       },

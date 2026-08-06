@@ -1,6 +1,6 @@
 import { rm } from 'node:fs/promises';
 import { cpus } from 'node:os';
-import { basename, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { ProgressTracker } from '../cli/progress.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { computeActiveFormats, type FormatConfig, type SiteConfig } from '../config/site-config.js';
@@ -282,7 +282,9 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
       ...allDocs.map((doc) => {
         const slug = doc.slug ?? basename(doc.relativePath, '.md');
         const title = doc.frontmatter.title || slug;
-        const href = `${slug}.html`;
+        const dir = dirname(doc.relativePath);
+        // El índice vive en la raíz: los documentos anidados necesitan su directorio
+        const href = dir === '.' ? `${slug}.html` : `${dir}/${slug}.html`;
         return `  <li><a href="${href}">${title}</a></li>`;
       }),
       '</ul>',
