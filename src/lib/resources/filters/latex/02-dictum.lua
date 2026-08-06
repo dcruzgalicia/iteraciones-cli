@@ -1,7 +1,6 @@
--- Convierte Div.dictum a \dictum[author]{quote} (formato LaTeX), con espacio
--- superior e inferior configurables (beforeskip/afterskip) y \noindent al
--- párrafo siguiente si es Para.
--- Reemplaza al filter TS latex/02-dictum.
+-- Convierte Div.dictum a \dictum[author]{quote} (formato LaTeX), con
+-- \noindent al párrafo siguiente si es Para.
+-- El espaciado lo gestiona el entorno dictum (preamble 15-dictum.tex).
 -- Uso: pandoc --from json --to latex --lua-filter latex/02-dictum.lua
 
 local BS = '\1' -- placeholder para el backslash (evita re-escapar \textbackslash{})
@@ -50,9 +49,6 @@ local function has_class(block, cls)
 end
 
 local function process_dictum(div)
-  local beforeskip = div.attributes['beforeskip'] or ''
-  local afterskip = div.attributes['afterskip'] or '2\\baselineskip'
-
   local quote_blocks = {}
   local author_latex = ''
   for _, block in ipairs(div.content) do
@@ -77,17 +73,13 @@ local function process_dictum(div)
     end
   end
 
-  -- Apertura: vspace antes solo si beforeskip está definido
-  local opening = ''
-  if beforeskip ~= '' then
-    opening = '\\vspace*{' .. beforeskip .. '}'
-  end
-  opening = opening .. '\\dictum'
+  -- Apertura: \dictum[autor]{  (sin vspace externo)
+  local opening = '\\dictum'
   if author_latex ~= '' then
     opening = opening .. '[' .. author_latex .. ']'
   end
   opening = opening .. '{'
-  local closing = '}\\vspace*{' .. afterskip .. '}'
+  local closing = '}'
 
   -- Sin contenido: solo los RawBlocks
   if #quote_blocks == 0 then
