@@ -50,7 +50,6 @@ function buildDefaultConfig(): string {
       title: DEFAULT_HTML_FORMAT.title,
       tagline: DEFAULT_HTML_FORMAT.tagline,
       logo: DEFAULT_HTML_FORMAT.logo,
-      'base-url': DEFAULT_HTML_FORMAT.baseUrl ?? '',
       theme: 'dark',
       accent: DEFAULT_HTML_FORMAT.accent,
       generate: DEFAULT_HTML_FORMAT.generate ?? true,

@@ -42,10 +42,6 @@ const HtmlFormatSchema = z
     title: z.string().default('iteraciones'),
     tagline: z.string().default('escribir, compartir, re-existir'),
     logo: z.string().default(''),
-    'base-url': z
-      .string()
-      .default('')
-      .transform((v) => (v || undefined) as string | undefined),
     theme: z.enum(['light', 'dark']).optional(),
     accent: z.enum(KNOWN_ACCENT_COLORS).optional().default('lime'),
     generate: z.boolean().default(true),
@@ -145,7 +141,6 @@ export const SiteConfigSchema = RawSiteConfigSchema.transform((raw) => {
             title: 'iteraciones',
             tagline: 'escribir, compartir, re-existir',
             logo: '',
-            baseUrl: undefined,
             theme: undefined,
             accent: 'lime',
             generate: true,

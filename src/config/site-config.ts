@@ -7,8 +7,6 @@ export interface HtmlFormatConfig {
   tagline?: string;
   /** Ruta al logo, relativa al proyecto. */
   logo?: string;
-  /** URL base del sitio para el link del encabezado. */
-  baseUrl?: string;
   theme?: string;
   accent?: string;
   /** Si true, genera HTML en el build. */
@@ -87,7 +85,6 @@ export const DEFAULT_HTML_FORMAT: HtmlFormatConfig = {
   title: 'iteraciones',
   tagline: 'escribir, compartir, re-existir',
   logo: '',
-  baseUrl: undefined,
   theme: undefined,
   accent: 'lime',
   generate: true,

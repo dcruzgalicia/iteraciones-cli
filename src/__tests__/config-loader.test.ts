@@ -27,7 +27,6 @@ describe('loadSiteConfig', () => {
       expect(config.format.html?.tagline).toBe('escribir, compartir, re-existir');
       expect(config.lang).toBe('es-MX');
       expect(config.format.html?.logo).toBe('');
-      expect(config.format.html?.baseUrl).toBeUndefined();
       expect(config.disabledFilters).toBeUndefined();
       expect(config.disabledPreambleFilters).toEqual(['16-eso-pic', '17-pdfx', '18-crop']);
       expect(config.format.latex).toBe(false);
@@ -90,22 +89,6 @@ describe('loadSiteConfig', () => {
       await writeConfig(dir, 'format:\n  html:\n    logo: assets/logo.svg');
       const config = await loadSiteConfig(dir);
       expect(config.format.html?.logo).toBe('assets/logo.svg');
-    });
-  });
-
-  it('lee format.html.base-url correctamente', async () => {
-    await withTempDir(async (dir) => {
-      await writeConfig(dir, 'format:\n  html:\n    base-url: https://ejemplo.com');
-      const config = await loadSiteConfig(dir);
-      expect(config.format.html?.baseUrl).toBe('https://ejemplo.com');
-    });
-  });
-
-  it('ignora base-url vacío y retorna undefined', async () => {
-    await withTempDir(async (dir) => {
-      await writeConfig(dir, 'format:\n  html:\n    base-url: ""');
-      const config = await loadSiteConfig(dir);
-      expect(config.format.html?.baseUrl).toBeUndefined();
     });
   });
 
@@ -207,7 +190,6 @@ describe('loadSiteConfig', () => {
           '    title: Mi Sitio',
           '    tagline: mi tagline',
           '    logo: logo.svg',
-          '    base-url: https://ejemplo.com',
           '    generate: true',
           '    theme: dark',
           '    accent: rose',
@@ -224,7 +206,6 @@ describe('loadSiteConfig', () => {
       expect(config.format.html?.tagline).toBe('mi tagline');
       expect(config.lang).toBe('es-MX');
       expect(config.format.html?.logo).toBe('logo.svg');
-      expect(config.format.html?.baseUrl).toBe('https://ejemplo.com');
       expect(config.format.latex).toBe(true);
       expect(config.format.pdf?.generate).toBe(true);
       expect(config.format.pdf?.toc).toBe(true);

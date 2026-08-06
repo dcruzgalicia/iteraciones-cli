@@ -277,7 +277,6 @@ export interface HtmlPageVars {
   siteTitle: string;
   tagline?: string;
   lang: string;
-  baseUrl?: string;
   theme?: string;
   accent?: string;
   css?: string;
@@ -313,7 +312,6 @@ export async function renderHtmlPageFromAst(
     extraArgs.push('--lua-filter', filter);
   }
   if (vars.tagline) extraArgs.push(`--metadata=tagline:${vars.tagline}`);
-  if (vars.baseUrl) extraArgs.push(`--metadata=base-url:${vars.baseUrl}`);
   if (vars.theme) extraArgs.push(`--metadata=theme:${vars.theme}`);
   if (vars.accent) extraArgs.push(`--metadata=accent:${vars.accent}`);
   if (vars.css) extraArgs.push(`--metadata=css:${vars.css}`);

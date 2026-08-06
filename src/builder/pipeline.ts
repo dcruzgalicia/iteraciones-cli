@@ -223,7 +223,6 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
         siteTitle: htmlConfig?.title ?? 'iteraciones',
         tagline: htmlConfig?.tagline ?? 'escribir, compartir, re-existir',
         lang,
-        baseUrl: htmlConfig?.baseUrl,
         theme: htmlConfig?.theme,
         accent: htmlConfig?.accent,
         css: ctx.cssPath ? relativeHref(dir, 'css/styles.css') : undefined,

@@ -1,0 +1,34 @@
+## Problema
+
+Desde el cambio de URLs relativas (#1322), todas las rutas del HTML generado (CSS y enlaces) se calculan respecto al documento con niveles de anidamiento (`./`, `./../`, …). Esto funciona con `file://`, en servidores bajo cualquier subdirectorio y en IPFS. El atributo `base-url` de `format.html` quedó obsoleto: solo servía para el enlace del header, y con las URLs relativas ya no aporta nada.
+
+## Objetivo
+
+Eliminar el atributo `base-url` de la configuración, el template y la documentación. Sin `base-url`, el título del header se muestra sin enlace.
+
+## Trabajo esperado
+
+1. `config-schema.ts`: eliminar la clave `'base-url'` del `HtmlFormatSchema` y `baseUrl: undefined` del fallback del transform.
+2. `site-config.ts`: eliminar `baseUrl?: string` de `HtmlFormatConfig` y de `DEFAULT_HTML_FORMAT`.
+3. `pipeline.ts`: eliminar `baseUrl: htmlConfig?.baseUrl` de las variables del template.
+4. `render.ts`: eliminar `baseUrl?: string` de `HtmlPageVars` y el metadata `--metadata=base-url`.
+5. `template.html`: el header simplifica — el título siempre es un `<span>` (sin condicionales `$if(base-url)$`).
+6. `init.ts`: eliminar `'base-url'` del config generado.
+7. Documentación: quitar `base-url` de `README.md` y `docs/configuration.md` (estructura completa y sección `format.html.base-url`).
+8. Tests: actualizar `config-loader.test.ts` (quitar asserts de `baseUrl` y el caso de lectura de base-url).
+
+## Criterios de aceptación
+
+- [ ] El schema rechaza `base-url` como clave desconocida (warning en build, error en validate).
+- [ ] El header del HTML no contiene condicionales ni enlaces basados en base-url.
+- [ ] `init` ya no genera `base-url` en el config.
+- [ ] Ninguna referencia a `base-url`/`baseUrl` en `src/`, `README.md` ni `docs/` (excepto CHANGELOG histórico).
+- [ ] `bun test` pasa completo; build de integración con los 5 formatos correcto.
+
+## Dependencias
+
+- #1322 — rutas relativas en URLs del HTML (el cambio que hizo obsoleto base-url)
+
+## Notas
+
+- Cambio incompatible aceptado (pre-1.0): los proyectos con `base-url` en su config verán el warning de clave sin efecto (y `validate` lo reportará como error).
