@@ -43,6 +43,8 @@ src/
 │   ├── build-planner.ts     # Planificador: metadatos de invalidación
 │   ├── state.ts             # Caché content-addressed (state.json)
 │   ├── pipeline.ts          # Pipeline por documento (pools 1 y 2)
+│   ├── pdf-pool.ts          # Pool consumidor de compilación PDF
+│   ├── gitignore.ts         # Reglas de .gitignore y paths ocultos
 │   ├── slug-resolver.ts     # Resolución de slugs y colisiones
 │   ├── types.ts             # BuildDocument, Frontmatter, BuildContext
 │   └── export/              # Exportación a PDF, EPUB, Markdown
@@ -181,7 +183,7 @@ Para agregar uno:
    - El **nombre completo** es `<capa>/<prioridad>-<nombre>` (ej: `latex/02-dictum`); es el que se usa en `disabled-filters` y se muestra en `iteraciones filters`
 2. Escribe la primera línea como comentario `-- descripción corta`: se muestra en `iteraciones filters` (la lee `getBuiltinLuaFilterInfos()`)
 3. Implementa las funciones de filtro de pandoc (`Pandoc(doc)`, `Div(div)`, `Para(para)`, etc.) que transforman el AST
-4. Agrega el nombre del archivo a la lista `BUILTIN_*` correspondiente en `src/builder/render.ts` (`BUILTIN_SEMANTIC_STRING`, `BUILTIN_SEMANTIC_AST`, `BUILTIN_LATEX_TRANSPILERS`, `BUILTIN_HTML_TRANSPILERS`)
+4. Agrega el nombre del archivo a la lista `BUILTIN_*` correspondiente en `src/builder/render.ts` (`BUILTIN_SEMANTIC_STRING`, `BUILTIN_SEMANTIC_AST`, `BUILTIN_LATEX_FILTERS`, `BUILTIN_HTML_FILTERS`)
 5. Agrega tests en `src/__tests__/lua-filters.test.ts` (los tests que invocan pandoc requieren que esté instalado; los de resolución de nombres no)
 
 ### Ejemplo mínimo
@@ -212,7 +214,7 @@ La variable global `FORMAT` de pandoc indica el formato de salida (`latex`, `htm
 Los preamble filters son archivos `.tex` con contenido LaTeX puro que se inserta en el preámbulo antes de `\begin{document}`. Se editan como LaTeX, sin escaping de strings TypeScript.
 
 1. Crea un archivo en `src/lib/resources/preamble/<prioridad>-<nombre>.tex`
-2. Agrega el nombre a `BUILTIN_PREAMBLE_TRANSPILERS` en `src/builder/preamble-loader.ts` (la lista define el orden de aplicación)
+2. Agrega el nombre a `BUILTIN_PREAMBLE_FILTERS` en `src/builder/preamble-loader.ts` (la lista define el orden de aplicación)
 3. Agrega una descripción a `DESCRIPTIONS` en el mismo archivo (se muestra en `iteraciones filters`)
 
 Un proyecto puede sobrescribir un preamble filter creando `<proyecto>/preamble/<nombre>.tex`, o desactivarlo con `disabled-preamble-filters:` en `iteraciones.config.yaml`.

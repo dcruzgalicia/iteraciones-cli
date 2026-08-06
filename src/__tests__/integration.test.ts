@@ -32,7 +32,7 @@ describe('integration: init + build', () => {
 
       // 3. Verificar que se generó HTML (el slug depende del frontmatter de README.md)
       let found = false;
-      for await (const entry of new Bun.Glob('*.html').scan({ cwd: join(cwd, 'dist', 'files') })) {
+      for await (const _entry of new Bun.Glob('*.html').scan({ cwd: join(cwd, 'dist', 'files') })) {
         found = true;
         break;
       }

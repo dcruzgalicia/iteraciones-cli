@@ -11,7 +11,6 @@ import {
   suggestFilterName,
   validateDisabledFilters,
 } from '../builder/render.js';
-import type { BuildDocument } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import * as logger from '../lib/logger.js';

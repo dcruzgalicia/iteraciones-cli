@@ -282,10 +282,12 @@ La configuración PDF es la más compleja e incluye:
 | `export/assemble.ts` | Ensambla ExportDocument desde BuildDocument. |
 | `build-planner.ts` | Planificador: metadatos de invalidación y conjuntos de trabajo. |
 | `pipeline.ts` | Pipeline por documento (pools 1 y 2) con generación HTML desde AST. |
+| `pdf-pool.ts` | Pool consumidor de compilación PDF (cola de jobs, slots biber). |
 | `preamble-loader.ts` | Carga de preamble filters (.tex) con override por proyecto. |
 | `state.ts` | Caché content-addressed (state.json, hashes de invalidación). |
 | `cleanup.ts` | Limpieza de archivos: copyToDist, formatos eliminados, slugs cambiados. |
 | `slug-resolver.ts` | Resolución de slugs con colisiones y sufijos -dN. |
+| `gitignore.ts` | Reglas de .gitignore del proyecto y exclusión de paths ocultos. |
 
 ### `src/config/`
 
