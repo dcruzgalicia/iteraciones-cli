@@ -1,0 +1,39 @@
+## Problema
+
+Los archivos y carpetas cuyo nombre empieza con `.` (dotfiles: `.oculto.md`, `carpeta/.privado.md`, `.borradores/nota.md`) se excluyen del descubrimiento **solo por comportamiento implícito de `Bun.Glob`** (no matchea dotfiles, como un shell). No hay ningún filtro explícito ni test que garantice la invariante.
+
+Riesgo: si se cambia el patrón del glob, el motor de globs o se usa otro mecanismo de escaneo, los dotfiles empezarían a procesarse y publicarse silenciosamente. Un archivo como `.notas.md` o una carpeta `.privado/` contienen típicamente contenido que no debe publicarse.
+
+## Objetivo
+
+Garantizar de forma explícita y testeada que ningún archivo o carpeta cuyo nombre empiece con `.` se procese, valide ni cuente en el descubrimiento de documentos, independientemente del motor de globs.
+
+## Trabajo esperado
+
+1. Añadir `isHiddenPath(relPath: string): boolean` en `src/builder/gitignore.ts`: retorna `true` si algún segmento del path relativo empieza con `.` (ignorando `.` y `..`).
+2. Aplicar el filtro en los cuatro puntos de descubrimiento (defensa en profundidad, junto al filtro de `.gitignore` ya existente):
+   - `discover.ts` (`discover()`)
+   - `validate.ts` (`validateFrontmatter()`)
+   - `dispatcher.ts` (`countMarkdownDocuments()`)
+   - `state.ts` (`discoverBibFiles()`)
+3. Tests en `src/__tests__/gitignore.test.ts`:
+   - Archivo oculto en la raíz (`.oculto.md`) excluido.
+   - Archivo oculto en subdirectorio (`visible/.privado.md`) excluido.
+   - Carpeta oculta (`visible/.oculto/nota.md`) excluida.
+   - Archivos normales no afectados.
+
+## Criterios de aceptación
+
+- [ ] `build --dry-run` no muestra ningún dotfile.
+- [ ] `validate` no valida dotfiles; `info` no los cuenta.
+- [ ] Los tests nuevos blindan la invariante (fallarían si se quitara el filtro).
+- [ ] `bun test` pasa completo; build de integración con los 5 formatos correcto.
+
+## Dependencias
+
+- #1325 — respeta .gitignore (el módulo `gitignore.ts` ya existe y se reutiliza)
+
+## Notas
+
+- La regla coincide con la convención de git/shell: los nombres que empiezan con `.` son ocultos.
+- El filtro es adicional al de `.gitignore` y a `IGNORED_DIRS`; no los reemplaza.

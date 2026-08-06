@@ -145,3 +145,13 @@ export async function loadGitignoreRules(cwd: string): Promise<GitignoreRule[]> 
     return [];
   }
 }
+
+/**
+ * Retorna true si algún segmento del path relativo empieza con '.' (dotfile:
+ * archivo o carpeta oculta). Es una regla independiente de .gitignore: los
+ * nombres que empiezan con . son ocultos por convención de git/shell y nunca
+ * deben procesarse como contenido editorial.
+ */
+export function isHiddenPath(relPath: string): boolean {
+  return relPath.split('/').some((segment) => segment !== '.' && segment !== '..' && segment.startsWith('.'));
+}

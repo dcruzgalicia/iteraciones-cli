@@ -3,7 +3,7 @@ import { basename, dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/site-config.js';
 import { logWarning } from '../lib/logger.js';
 import type { BibOptions } from '../lib/pandoc-runner.js';
-import { isIgnoredByRules, loadGitignoreRules } from './gitignore.js';
+import { isHiddenPath, isIgnoredByRules, loadGitignoreRules } from './gitignore.js';
 import type { BuildDocument, DiscoveryEntry, PreambleFlags } from './types.js';
 
 /** Ruta relativa del archivo de estado del build dentro del proyecto. */
@@ -189,6 +189,7 @@ export async function discoverBibFiles(cwd: string, extensions: string[] = ['bib
       const first = rel.split('/')[0];
       if (first === 'node_modules' || first === 'dist') continue;
       if (isIgnoredByRules(rel, gitignoreRules)) continue;
+      if (isHiddenPath(rel)) continue;
       results.push(file);
     }
   } catch {
