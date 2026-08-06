@@ -32,7 +32,7 @@ describe('preamble-loader', () => {
   it('respeta la disabled list', async () => {
     const filters = await loadPreambleFilters(['24-hyphenation-rules']);
     expect(filters.map((t) => t.name)).not.toContain('24-hyphenation-rules');
-    expect(filters).toHaveLength(23);
+    expect(filters).toHaveLength(BUILTIN_PREAMBLE_FILTERS.length - 1);
   });
 
   it('un .tex del proyecto reemplaza al del paquete', async () => {
