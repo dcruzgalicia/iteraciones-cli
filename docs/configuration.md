@@ -6,13 +6,13 @@ El archivo `iteraciones.config.yaml` en la raíz del proyecto es la única fuent
 
 ```yaml
 lang: es-MX                       # código de idioma BCP 47
+toc: false                        # tabla de contenidos (PDF, LaTeX, HTML, EPUB)
 
 format:
   latex: false                     # genera archivos .tex
 
   pdf:
     generate: false               # genera PDF
-    toc: false                     # tabla de contenidos
     show-date: false               # muestra la fecha en la portada
     page-number: header-right      # posición del número de página
     disabled-preamble-filters:    # preamble filters a desactivar (opcional)
@@ -87,12 +87,16 @@ Los campos de configuración que sí son dinámicos (viajan desde `iteraciones.c
 
 Posición del número de página. Valores: `footer-left`, `footer-center`, `footer-right`, `header-left`, `header-center`, `header-right`.
 
-#### `format.pdf.toc`
+### `toc`
 
 **Tipo:** `boolean`
 **Por defecto:** `false`
 
-Incluye una tabla de contenidos en el PDF.
+Genera una tabla de contenidos (TOC) en los formatos PDF, LaTeX, HTML y EPUB.
+
+```yaml
+toc: true
+```
 
 #### `format.pdf.show-date`
 

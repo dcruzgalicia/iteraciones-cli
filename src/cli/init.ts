@@ -56,7 +56,6 @@ function buildDefaultConfig(): string {
     },
     pdf: {
       generate: DEFAULT_PDF_FORMAT.generate ?? false,
-      toc: DEFAULT_PDF_FORMAT.toc ?? false,
       'show-date': DEFAULT_PDF_FORMAT.showDate ?? false,
       'page-number': DEFAULT_PDF_FORMAT.pageNumber ?? 'header-right',
       'disabled-preamble-filters': DEFAULT_PDF_FORMAT.disabledPreambleFilters,
@@ -65,7 +64,7 @@ function buildDefaultConfig(): string {
     markdown: { generate: DEFAULT_MARKDOWN_FORMAT.generate ?? false },
   };
 
-  let yaml = stringify({ lang: DEFAULT_SITE_CONFIG.lang, format }, { indent: 2 }) + '\n';
+  let yaml = stringify({ lang: DEFAULT_SITE_CONFIG.lang, toc: DEFAULT_SITE_CONFIG.toc, format }, { indent: 2 }) + '\n';
 
   // Añadir comentarios explicativos sobre los defaults
   yaml = yaml.replace('    theme: dark', '    # Tema visual del HTML: "light" o "dark". Por defecto: dark.\n    theme: dark');

@@ -1,5 +1,4 @@
 import { join } from 'node:path';
-import type { PdfFormatConfig } from '../../config/site-config.js';
 import type { BuildDocument } from '../types.js';
 import type { ExportDocument, ExportMetadata } from './types.js';
 
@@ -13,7 +12,7 @@ export function assembleExportDocument(
   lang: string,
   globalBibliography?: string,
   globalCsl?: string,
-  pdfFormat?: PdfFormatConfig,
+  toc?: boolean,
 ): ExportDocument {
   const documentclass: 'scrartcl' | 'scrbook' = 'scrbook';
 
@@ -28,7 +27,7 @@ export function assembleExportDocument(
     bibliography,
     csl,
     documentclass,
-    toc: pdfFormat?.toc ?? false,
+    toc: toc ?? false,
     tocDepth: 1,
   };
 

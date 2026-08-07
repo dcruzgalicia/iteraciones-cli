@@ -16,8 +16,6 @@ export interface HtmlFormatConfig {
 export interface PdfFormatConfig {
   /** Si true, genera PDF mediante latexmk. */
   generate?: boolean;
-  /** Incluye tabla de contenidos en el PDF. */
-  toc?: boolean;
   /** Muestra la fecha en la portada del PDF. */
   showDate?: boolean;
   /** Posición del número de página: footer-left|center|right, header-left|center|right. */
@@ -52,6 +50,8 @@ export interface FormatConfig {
 
 export interface SiteConfig {
   lang: string;
+  /** Si true, genera tabla de contenidos en PDF, LaTeX, HTML y EPUB. */
+  toc: boolean;
   /** Configuracion por formato de salida. */
   format: FormatConfig;
   /**
@@ -92,7 +92,6 @@ export const DEFAULT_HTML_FORMAT: HtmlFormatConfig = {
 
 export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   generate: false,
-  toc: false,
   showDate: false,
   pageNumber: 'header-right',
   disabledPreambleFilters: ['24-eso-pic', '25-pdfx', '26-crop'],
@@ -121,6 +120,7 @@ export function computeActiveFormats(format: FormatConfig): string[] {
 
 export const DEFAULT_SITE_CONFIG: SiteConfig = {
   lang: 'es-MX',
+  toc: false,
   disabledFilters: undefined,
   luaFilters: undefined,
   format: {
