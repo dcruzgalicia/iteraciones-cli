@@ -8,18 +8,20 @@
   $if(description-meta)$<meta name="description" content="$description-meta$">$endif$
   $if(css)$<link rel="stylesheet" href="$css$">$endif$
 </head>
-<body class="font-sans antialiased text-accent-950 dark:text-accent-50 bg-white dark:bg-stone-950 max-w-3xl mx-auto p-6">
-  <header class="flex items-center gap-3 pb-4 mb-8 border-b border-accent-300/30 dark:border-accent-700/30">
+<body class="min-h-dvh flex flex-col font-sans antialiased text-accent-950 dark:text-accent-50 bg-white dark:bg-stone-950">
+  <header class="flex items-center gap-3 px-4 sm:px-6 lg:px-8 py-4 border-b border-accent-300/30 dark:border-accent-700/30">
     <span class="flex items-center gap-2">
       $if(logo-inline)$<span class="flex h-8 w-8 shrink-0 items-center justify-center text-accent-500 logo-fill">$logo-inline$</span>$endif$
       <span class="font-bold text-lg text-accent-700 dark:text-accent-300">$site-title$</span>
     </span>
     $if(tagline)$<span class="text-sm text-accent-400 dark:text-accent-500 ml-auto">$tagline$</span>$endif$
   </header>
-  <main class="prose prose-accent dark:prose-invert max-w-none">
-    $body$
+  <main class="columns-1 sm:columns-2 lg:columns-3 2xl:columns-4 gap-6 px-4 sm:px-6 lg:px-8 py-8">
+    <article class="prose prose-accent dark:prose-invert max-w-none break-inside-avoid mb-6">
+      $body$
+    </article>
   </main>
-  <footer class="mt-12 pt-4 border-t border-accent-300/30 dark:border-accent-700/30 text-sm text-center text-accent-400 dark:text-accent-500">
+  <footer class="mt-auto px-4 sm:px-6 lg:px-8 py-4 border-t border-accent-300/30 dark:border-accent-700/30 text-sm text-center text-accent-400 dark:text-accent-500">
     <p>$if(site-title)$© $site-title$$endif$</p>
   </footer>
 </body>
