@@ -39,7 +39,7 @@
         <h2 class="inline-block align-top rounded-full border border-accent-500/30 bg-accent-500/10 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-12 text-accent-400 dark:text-accent-500">Trayectura</h2>
 
         <!-- Ficha de identificación del documento -->
-        <div class="mb-6">
+        <div class="mb-12">
           $if(author-meta)$
           <p class="mb-4 text-sm text-accent-950 dark:text-accent-50 [font-variant-caps:small-caps] tracking-widest">$author-meta$</p>
           $endif$
@@ -50,7 +50,7 @@
           <p class="mb-3 text-base italic text-accent-950 dark:text-accent-50">$subtitle$</p>
           $endif$
           $if(date)$
-          <p class="mb-6 text-sm text-accent-600 dark:text-accent-400">$date$</p>
+          <p class="text-sm text-accent-600 dark:text-accent-400">$date$</p>
           $endif$
         </div>
 
@@ -65,7 +65,6 @@
         id="TOC"
         class="rounded-xl border border-accent-500/15 bg-white/60 dark:bg-stone-900/60 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 transition-colors duration-200 hover:border-accent-500/30 [overflow-wrap:anywhere]
         [&_ul]:m-0 [&_ul]:list-none [&_ul]:p-0
-        [&_li]:relative [&_li]:pl-4 [&_li]:py-1 [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:top-1/2 [&_li]:before:h-px [&_li]:before:w-2.5 [&_li]:before:-translate-y-1/2 [&_li]:before:bg-accent-500/40
         [&_ul_ul_a]:text-sm [&_ul_ul_a]:text-accent-500/70
         [&_a]:text-accent-600 dark:[&_a]:text-accent-400 [&_a]:no-underline [&_a]:transition-colors [&_a]:duration-200 [&_a:hover]:text-accent-500 dark:[&_a:hover]:text-accent-300"
       >
