@@ -192,7 +192,7 @@ Además, existen los **preamble filters** (`lib/resources/preamble/*.tex`) que m
 - Un filter del proyecto con el mismo nombre completo (p. ej. `<proyecto>/filters/latex/02-dictum.lua`) reemplaza al del paquete (override).
 - Para desactivar uno se usa `disabled-filters` (nombres completos, p. ej. `latex/02-dictum`) en `iteraciones.config.yaml`.
 - **Filtros Lua de usuario** (`lua-filters:`): lista de rutas relativas al proyecto que corren en todas las invocaciones pandoc (markdown → AST, latex, html, epub, markdown). En las exportaciones corren antes de la capa de formato; en la conversión markdown → AST, después de los filtros semánticos. La variable global `FORMAT` de pandoc permite ramificar el comportamiento por formato de salida. Si una ruta no existe se advierte y se omite.
-- Los preamble filters del proyecto (`<proyecto>/preamble/<nombre>.tex`) reemplazan a los del paquete; se desactivan con `disabled-preamble-filters`.
+- Los preamble filters del proyecto (`<proyecto>/preamble/<nombre>.tex`) reemplazan a los del paquete; se desactivan con `format.pdf.disabled-preamble-filters`.
 
 ---
 
@@ -221,6 +221,7 @@ format:
   latex: false
   pdf:
     generate: false
+    disabled-preamble-filters: []
     # ... 30+ campos tipográficos
   html:
     title: "Mi sitio"
@@ -234,7 +235,6 @@ format:
     generate: false
 
 disabled-filters: []
-disabled-preamble-filters: []
 lua-filters: []
 ```
 

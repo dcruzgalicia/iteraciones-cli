@@ -129,7 +129,7 @@ export async function computeFiltersHash(
     parts.push(rel, content);
   }
   parts.push(JSON.stringify(siteConfig.disabledFilters ?? []));
-  parts.push(JSON.stringify(siteConfig.disabledPreambleFilters ?? []));
+  parts.push(JSON.stringify(siteConfig.format?.pdf?.disabledPreambleFilters ?? []));
   return { hash: hashString(parts.join('\0')), cache };
 }
 

@@ -59,23 +59,22 @@ function buildDefaultConfig(): string {
       toc: DEFAULT_PDF_FORMAT.toc ?? false,
       'show-date': DEFAULT_PDF_FORMAT.showDate ?? false,
       'page-number': DEFAULT_PDF_FORMAT.pageNumber ?? 'header-right',
+      'disabled-preamble-filters': DEFAULT_PDF_FORMAT.disabledPreambleFilters,
     },
     epub: { generate: DEFAULT_EPUB_FORMAT.generate ?? false },
     markdown: { generate: DEFAULT_MARKDOWN_FORMAT.generate ?? false },
   };
 
-  let yaml =
-    stringify({ lang: DEFAULT_SITE_CONFIG.lang, format, 'disabled-preamble-filters': DEFAULT_SITE_CONFIG.disabledPreambleFilters }, { indent: 2 }) +
-    '\n';
+  let yaml = stringify({ lang: DEFAULT_SITE_CONFIG.lang, format }, { indent: 2 }) + '\n';
 
   // Añadir comentarios explicativos sobre los defaults
   yaml = yaml.replace('    theme: dark', '    # Tema visual del HTML: "light" o "dark". Por defecto: dark.\n    theme: dark');
   yaml = yaml.replace(
-    'disabled-preamble-filters:',
+    '    disabled-preamble-filters:',
     '# Los preamble filters 24, 25 y 26 añaden funcionalidades para impresión\n' +
       '# profesional (fondo de página, PDF/X-1a y marcas de corte). Vienen\n' +
       '# desactivados por defecto. Elimina nombres de esta lista para activarlos.\n' +
-      'disabled-preamble-filters:',
+      '    disabled-preamble-filters:',
   );
 
   return yaml;

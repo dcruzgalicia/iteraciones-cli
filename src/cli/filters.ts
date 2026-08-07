@@ -25,7 +25,7 @@ export async function runFilters(cwd: string): Promise<void> {
   const config = await loadSiteConfig(cwd);
   // Advertir sobre nombres desconocidos antes de listar el estado
   validateDisabledFilters(config.disabledFilters);
-  validateDisabledPreambleFilters(config.disabledPreambleFilters);
+  validateDisabledPreambleFilters(config.format?.pdf?.disabledPreambleFilters);
   const disabled = new Set(config.disabledFilters ?? []);
   const allInfos = sortLuaInfos(await getBuiltinLuaFilterInfos());
   const hasDisabled = config.disabledFilters !== undefined && config.disabledFilters.length > 0;
@@ -50,8 +50,8 @@ export async function runFilters(cwd: string): Promise<void> {
   // Preamble filters
   const preambleInfos = getBuiltinPreambleFilterInfos();
   if (preambleInfos.length > 0) {
-    const preambleDisabled = new Set(config.disabledPreambleFilters ?? []);
-    const hasPreambleDisabled = config.disabledPreambleFilters !== undefined && config.disabledPreambleFilters.length > 0;
+    const preambleDisabled = new Set(config.format?.pdf?.disabledPreambleFilters ?? []);
+    const hasPreambleDisabled = config.format?.pdf?.disabledPreambleFilters !== undefined && config.format?.pdf?.disabledPreambleFilters.length > 0;
 
     logInfo('');
     logInfo('Filtros de preámbulo (orden de ejecución):');

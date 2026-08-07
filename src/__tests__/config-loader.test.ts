@@ -28,7 +28,7 @@ describe('loadSiteConfig', () => {
       expect(config.lang).toBe('es-MX');
       expect(config.format.html?.logo).toBe('');
       expect(config.disabledFilters).toBeUndefined();
-      expect(config.disabledPreambleFilters).toEqual(['24-eso-pic', '25-pdfx', '26-crop']);
+      expect(config.format?.pdf?.disabledPreambleFilters).toEqual(['24-eso-pic', '25-pdfx', '26-crop']);
       expect(config.format.latex).toBe(false);
       expect(config.format.html?.generate).toBe(true);
       expect(config.format.pdf?.generate).toBe(false);
@@ -110,9 +110,9 @@ describe('loadSiteConfig', () => {
 
   it('lee disabled-preamble-filters', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'disabled-preamble-filters:\n  - 19-maketitle');
+      await writeConfig(dir, 'format:\n  pdf:\n    disabled-preamble-filters:\n      - 19-maketitle');
       const config = await loadSiteConfig(dir);
-      expect(config.disabledPreambleFilters).toEqual(['19-maketitle']);
+      expect(config.format?.pdf?.disabledPreambleFilters).toEqual(['19-maketitle']);
     });
   });
 
@@ -310,7 +310,7 @@ describe('loadSiteConfig', () => {
     await withTempDir(async (dir) => {
       await writeConfig(dir, 'lang: es-MX\nformat:\n  html:\n    title: ok');
       const config = await loadSiteConfig(dir);
-      expect(config.disabledPreambleFilters).toEqual(['24-eso-pic', '25-pdfx', '26-crop']);
+      expect(config.format?.pdf?.disabledPreambleFilters).toEqual(['24-eso-pic', '25-pdfx', '26-crop']);
     });
   });
 
@@ -336,7 +336,7 @@ describe('loadSiteConfig', () => {
     expect(defaultsConMinimo.format.latex).toBe(defaultsSinArchivo.format.latex);
     expect(defaultsConArchivoVacio.format.html?.generate).toBe(defaultsSinArchivo.format.html?.generate);
     expect(defaultsConMinimo.format.html?.generate).toBe(defaultsSinArchivo.format.html?.generate);
-    expect(defaultsConArchivoVacio.disabledPreambleFilters).toEqual(defaultsSinArchivo.disabledPreambleFilters);
-    expect(defaultsConMinimo.disabledPreambleFilters).toEqual(defaultsSinArchivo.disabledPreambleFilters);
+    expect(defaultsConArchivoVacio.format?.pdf?.disabledPreambleFilters).toEqual(defaultsSinArchivo.format?.pdf?.disabledPreambleFilters);
+    expect(defaultsConMinimo.format?.pdf?.disabledPreambleFilters).toEqual(defaultsSinArchivo.format?.pdf?.disabledPreambleFilters);
   });
 });
