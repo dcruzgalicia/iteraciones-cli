@@ -311,6 +311,12 @@ interface HtmlPageVars {
   css?: string;
   authorMeta?: string;
   logoInline?: string;
+  /** Título del documento desde el frontmatter (undefined si es el default "Sin título"). */
+  docTitle?: string;
+  /** Subtítulo del documento desde el frontmatter. */
+  subtitle?: string;
+  /** Fecha del documento desde el frontmatter. */
+  date?: string;
 }
 
 /**
@@ -342,6 +348,9 @@ export async function renderHtmlPageFromAst(
     extraArgs.push('--lua-filter', filter);
   }
   if (vars.tagline) extraArgs.push(`--metadata=tagline:${vars.tagline}`);
+  if (vars.docTitle) extraArgs.push(`--metadata=doc-title:${vars.docTitle}`);
+  if (vars.subtitle) extraArgs.push(`--metadata=subtitle:${vars.subtitle}`);
+  if (vars.date) extraArgs.push(`--metadata=date:${vars.date}`);
   if (vars.theme) extraArgs.push(`--metadata=theme:${vars.theme}`);
   if (vars.accent) extraArgs.push(`--metadata=accent:${vars.accent}`);
   if (vars.css) extraArgs.push(`--metadata=css:${vars.css}`);
