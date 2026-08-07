@@ -1,5 +1,53 @@
 # Changelog
 
+## [0.17.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.16.0...v0.17.0) (2026-08-07)
+
+
+### Features
+
+* **builder:** genera index.html con índice de documentos ([be02aa9](https://github.com/dcruzgalicia/iteraciones-cli/commit/be02aa935da65c4c4707c542d2d4116b11f16c67)), closes [#1290](https://github.com/dcruzgalicia/iteraciones-cli/issues/1290)
+* **config:** elimina el atributo base-url ([aa7ae81](https://github.com/dcruzgalicia/iteraciones-cli/commit/aa7ae816466abc1aaead214bc609ad80040afa23)), closes [#1331](https://github.com/dcruzgalicia/iteraciones-cli/issues/1331)
+* **discover:** excluye explícitamente archivos y carpetas ocultos (prefijo .) ([e3cdc64](https://github.com/dcruzgalicia/iteraciones-cli/commit/e3cdc64131a6f9d5f51051e9328678644c0b0b6a)), closes [#1327](https://github.com/dcruzgalicia/iteraciones-cli/issues/1327)
+* **discover:** respeta .gitignore al descubrir documentos ([45b4157](https://github.com/dcruzgalicia/iteraciones-cli/commit/45b415700ed4995ddc998c0bd553c1d1b22ba885)), closes [#1325](https://github.com/dcruzgalicia/iteraciones-cli/issues/1325)
+* **html:** elimina índice automático y trata index.md como caso especial ([2240760](https://github.com/dcruzgalicia/iteraciones-cli/commit/224076029113903f047651f3db8d675f6708cf45)), closes [#1329](https://github.com/dcruzgalicia/iteraciones-cli/issues/1329)
+* **init:** añade comentarios explicativos al config generado ([8387448](https://github.com/dcruzgalicia/iteraciones-cli/commit/838744876c36d1a6829426b9b813073a6028f006)), closes [#1273](https://github.com/dcruzgalicia/iteraciones-cli/issues/1273)
+* **latex:** agrega noindent al párrafo posterior a un blockquote ([c93e21b](https://github.com/dcruzgalicia/iteraciones-cli/commit/c93e21b4f8e885188df4ebdb35b35b66611f07ab)), closes [#1365](https://github.com/dcruzgalicia/iteraciones-cli/issues/1365)
+* **latex:** ajusta fuentes y espaciado de subsubsection, paragraph y subparagraph ([14a895b](https://github.com/dcruzgalicia/iteraciones-cli/commit/14a895b2fed541974f4281a7ad589b28d0a08d26)), closes [#1339](https://github.com/dcruzgalicia/iteraciones-cli/issues/1339)
+* **latex:** elimina el vspace externo del dictum ([57bd505](https://github.com/dcruzgalicia/iteraciones-cli/commit/57bd5052fe1c0f03a75963cccb83aa11f1e1e3a2)), closes [#1359](https://github.com/dcruzgalicia/iteraciones-cli/issues/1359)
+* **latex:** elimina el vspace externo del entorno verse ([48a7114](https://github.com/dcruzgalicia/iteraciones-cli/commit/48a71141007bce3d7633805b6d14cb29d39c5d03)), closes [#1355](https://github.com/dcruzgalicia/iteraciones-cli/issues/1355)
+* **latex:** índice y bibliografía como subsubsection en lugar de section ([5e26e2f](https://github.com/dcruzgalicia/iteraciones-cli/commit/5e26e2fbec1ad54b2d51cbe275c209c51c3741b0)), closes [#1337](https://github.com/dcruzgalicia/iteraciones-cli/issues/1337)
+* **latex:** integra ajustes del TOC y niveles de sección en los preamble filters ([97668a7](https://github.com/dcruzgalicia/iteraciones-cli/commit/97668a72096e65ec49caf960b7aba2ff7b286b34)), closes [#1345](https://github.com/dcruzgalicia/iteraciones-cli/issues/1345)
+* **latex:** redefine el dictum con estructura de list ([3ae14b1](https://github.com/dcruzgalicia/iteraciones-cli/commit/3ae14b1044b24f9cd94e7d420de7b6310ee4e1eb)), closes [#1357](https://github.com/dcruzgalicia/iteraciones-cli/issues/1357)
+* **latex:** redefine el entorno quote y normaliza el espaciado de dictum y verse ([d38c5a2](https://github.com/dcruzgalicia/iteraciones-cli/commit/d38c5a28c550c60191e49424b6cd3a1487d22b20)), closes [#1363](https://github.com/dcruzgalicia/iteraciones-cli/issues/1363)
+* **latex:** redefine el entorno verse con márgenes y espaciado tipográfico ([3564dd9](https://github.com/dcruzgalicia/iteraciones-cli/commit/3564dd9f70f683aaa58464ce9e9ab2e344ff2959)), closes [#1351](https://github.com/dcruzgalicia/iteraciones-cli/issues/1351)
+* **latex:** uniformiza el espaciado vertical de los títulos de sección ([9937c6a](https://github.com/dcruzgalicia/iteraciones-cli/commit/9937c6a2427289d64556679c1cba9e8e4b8e10ea)), closes [#1349](https://github.com/dcruzgalicia/iteraciones-cli/issues/1349)
+* **slugs:** cambia slugs a title-por-author con expansión progresiva ([0d4ed4f](https://github.com/dcruzgalicia/iteraciones-cli/commit/0d4ed4f1d3122f68298e0c51cfdd1a0e75912d65)), closes [#1288](https://github.com/dcruzgalicia/iteraciones-cli/issues/1288)
+
+
+### Bug Fixes
+
+* **builder:** logo inválido produce error de build en lugar de exit 1 silencioso ([ea89a71](https://github.com/dcruzgalicia/iteraciones-cli/commit/ea89a71b1b379d639179bc9356557434b772a956)), closes [#1281](https://github.com/dcruzgalicia/iteraciones-cli/issues/1281)
+* **cli:** dry-run usa la misma invalidación que el build real ([fb3111e](https://github.com/dcruzgalicia/iteraciones-cli/commit/fb3111e45e72492c05c7cca49505895cc2455364)), closes [#1284](https://github.com/dcruzgalicia/iteraciones-cli/issues/1284)
+* **cli:** formato de salida de info, validate y filters ([0d53259](https://github.com/dcruzgalicia/iteraciones-cli/commit/0d53259a1f49e9e6d2411d5fe2204a2bdc20688b)), closes [#1283](https://github.com/dcruzgalicia/iteraciones-cli/issues/1283)
+* **cli:** iconografía coherente en tracker y validate ([0ab422f](https://github.com/dcruzgalicia/iteraciones-cli/commit/0ab422f64077d7b18c27c4ae5b9921e70a823917)), closes [#1282](https://github.com/dcruzgalicia/iteraciones-cli/issues/1282)
+* **cli:** muestra '— (reutilizado)' en formatos cuando el build fue cached ([ba939ab](https://github.com/dcruzgalicia/iteraciones-cli/commit/ba939ab32f66796b3ebb01416f606153333c55f8)), closes [#1285](https://github.com/dcruzgalicia/iteraciones-cli/issues/1285)
+* **cli:** normaliza mensajes de error con formatUserError ([3a215ff](https://github.com/dcruzgalicia/iteraciones-cli/commit/3a215ff27c825127bde6e983d655e71720e6c75e)), closes [#1280](https://github.com/dcruzgalicia/iteraciones-cli/issues/1280)
+* **config:** resuelve los campos fantasma de format.pdf ([3a73df4](https://github.com/dcruzgalicia/iteraciones-cli/commit/3a73df4af0ecb21772ca4fa19540602980af5d68)), closes [#1271](https://github.com/dcruzgalicia/iteraciones-cli/issues/1271)
+* **config:** unifica los defaults de configuración en una sola fuente de verdad ([17212b1](https://github.com/dcruzgalicia/iteraciones-cli/commit/17212b1cf88474c8955ac9d26c2094a357b535e2)), closes [#1269](https://github.com/dcruzgalicia/iteraciones-cli/issues/1269)
+* **config:** valida theme, page-number y accent en el esquema Zod ([7dde65f](https://github.com/dcruzgalicia/iteraciones-cli/commit/7dde65fcb9bb721df7830b1f91f88d94f1a96828)), closes [#1272](https://github.com/dcruzgalicia/iteraciones-cli/issues/1272)
+* **discover:** frontmatter YAML inválido produce error de build ([36ca159](https://github.com/dcruzgalicia/iteraciones-cli/commit/36ca1594e1e7015e614ef61086287b77c4d67161)), closes [#1287](https://github.com/dcruzgalicia/iteraciones-cli/issues/1287)
+* **doctor:** escribe el probe de permisos en .iteraciones/ en lugar de la raíz del proyecto ([8c26bda](https://github.com/dcruzgalicia/iteraciones-cli/commit/8c26bdaa7e666153b94e4de969dee1570096e1e9)), closes [#1276](https://github.com/dcruzgalicia/iteraciones-cli/issues/1276)
+* **html:** usa rutas relativas en todas las URLs del HTML generado ([d4566a9](https://github.com/dcruzgalicia/iteraciones-cli/commit/d4566a99a4b515853dcf6312800dfacecbe10c7d))
+* **latex:** omite vspace tras portada/índice con comandos de sección raw ([a283b05](https://github.com/dcruzgalicia/iteraciones-cli/commit/a283b057106d46156eb38ebbb5ba33175766e02f)), closes [#1347](https://github.com/dcruzgalicia/iteraciones-cli/issues/1347)
+* **latex:** respeta el espaciado del dictum y verse tras portada y headings ([11d3dcf](https://github.com/dcruzgalicia/iteraciones-cli/commit/11d3dcfbfc0da8d38a146fd86cb1126b2d52b578)), closes [#1361](https://github.com/dcruzgalicia/iteraciones-cli/issues/1361)
+* **latex:** subsubsection solo con bfseries, sin itshape ([157b6fd](https://github.com/dcruzgalicia/iteraciones-cli/commit/157b6fd242b8c96c40e390193e2c7b5337f29f3f)), closes [#1341](https://github.com/dcruzgalicia/iteraciones-cli/issues/1341)
+* **new:** fecha local, título con mayúscula inicial y body con ejemplo ([7ec0342](https://github.com/dcruzgalicia/iteraciones-cli/commit/7ec034285384203f1731f42ccd332eb7b1ac6372)), closes [#1286](https://github.com/dcruzgalicia/iteraciones-cli/issues/1286)
+
+
+### Performance Improvements
+
+* **pipeline:** resuelve bibOptions y luaFilters una sola vez por build ([d31ba01](https://github.com/dcruzgalicia/iteraciones-cli/commit/d31ba0155223da5e73a083631e39336c04cc902f)), closes [#1279](https://github.com/dcruzgalicia/iteraciones-cli/issues/1279)
+
 ## [0.16.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.15.0...v0.16.0) (2026-08-05)
 
 
