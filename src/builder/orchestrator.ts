@@ -119,7 +119,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   const siteConfig = await loadSiteConfig(cwd);
   // Validar nombres de filters desactivados (warning sin romper el build)
   validateDisabledFilters(siteConfig.disabledFilters);
-  validateDisabledPreambleFilters(siteConfig.disabledPreambleFilters);
+  validateDisabledPreambleFilters(siteConfig.format?.pdf?.disabledPreambleFilters);
 
   // ── Planificación: hashes de invalidación + formatos (caché content-addressed) ──
   // Con --no-cache no hay estado previo con qué comparar (la caché se borra en

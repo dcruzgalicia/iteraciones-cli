@@ -94,7 +94,7 @@ export async function runValidate(cwd: string): Promise<void> {
     luaFiltersCount = config.luaFilters?.length ?? 0;
     // Validar nombres de filters desactivados (warnings, no errores)
     validateDisabledFilters(config.disabledFilters);
-    validateDisabledPreambleFilters(config.disabledPreambleFilters);
+    validateDisabledPreambleFilters(config.format?.pdf?.disabledPreambleFilters);
     // Verificar que las rutas de lua-filters existan en el proyecto
     for (const rel of config.luaFilters ?? []) {
       if (!(await Bun.file(join(cwd, rel)).exists())) {

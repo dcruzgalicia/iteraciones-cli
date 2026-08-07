@@ -76,7 +76,9 @@ export async function runInfo(cwd: string): Promise<void> {
       .catch(() => false);
     const activeFormats = computeActiveFormats(config.format);
     const disabledList = config.disabledFilters?.length ? config.disabledFilters.join(', ') : '(todos activos)';
-    const disabledPreamble = config.disabledPreambleFilters?.length ? config.disabledPreambleFilters.join(', ') : '(todos activos)';
+    const disabledPreamble = config.format?.pdf?.disabledPreambleFilters?.length
+      ? config.format?.pdf?.disabledPreambleFilters.join(', ')
+      : '(todos activos)';
     const docCount = await countMarkdownDocuments(cwd);
     const html = config.format?.html;
     const theme = html?.theme ?? '(por defecto)';

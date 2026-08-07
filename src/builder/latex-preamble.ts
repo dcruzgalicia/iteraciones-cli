@@ -136,7 +136,7 @@ export async function composeFullTex(siteConfig: SiteConfig, meta: PreambleMeta,
   const preamble = await buildLatexPreamble(
     siteConfig.format?.pdf,
     { ...meta, hasTocEntries: flags.hasTocEntries, skipNoIndent: flags.skipNoIndent, skipParagraphSpace: flags.skipParagraphSpace },
-    siteConfig.disabledPreambleFilters,
+    siteConfig.format?.pdf?.disabledPreambleFilters,
   );
   return [...preamble, '', body, '', '\\end{document}'].join('\n');
 }

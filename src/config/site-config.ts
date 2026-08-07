@@ -22,6 +22,11 @@ export interface PdfFormatConfig {
   showDate?: boolean;
   /** Posición del número de página: footer-left|center|right, header-left|center|right. */
   pageNumber?: string;
+  /**
+   * Lista de preamble filters a desactivar (blacklist).
+   * Por defecto undefined = todos activos.
+   */
+  disabledPreambleFilters?: string[];
 }
 
 interface EpubFormatConfig {
@@ -60,11 +65,6 @@ export interface SiteConfig {
    */
   disabledFilters?: string[];
   /**
-   * Lista de preamble filters a desactivar (blacklist).
-   * Por defecto undefined = todos activos.
-   */
-  disabledPreambleFilters?: string[];
-  /**
    * Filtros Lua de usuario (rutas relativas al proyecto). Se pasan como
    * `--lua-filter` en TODAS las invocaciones pandoc del documento
    * (markdown→json, json→latex, json→html5, json→epub3, json→markdown).
@@ -95,6 +95,7 @@ export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
   toc: false,
   showDate: false,
   pageNumber: 'header-right',
+  disabledPreambleFilters: ['24-eso-pic', '25-pdfx', '26-crop'],
 };
 
 export const DEFAULT_EPUB_FORMAT: EpubFormatConfig = {
@@ -121,7 +122,6 @@ export function computeActiveFormats(format: FormatConfig): string[] {
 export const DEFAULT_SITE_CONFIG: SiteConfig = {
   lang: 'es-MX',
   disabledFilters: undefined,
-  disabledPreambleFilters: ['24-eso-pic', '25-pdfx', '26-crop'],
   luaFilters: undefined,
   format: {
     html: DEFAULT_HTML_FORMAT,

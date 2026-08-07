@@ -15,6 +15,8 @@ format:
     toc: false                     # tabla de contenidos
     show-date: false               # muestra la fecha en la portada
     page-number: header-right      # posición del número de página
+    disabled-preamble-filters:    # preamble filters a desactivar (opcional)
+      # - 19-maketitle
 
   html:
     title: iteraciones             # título del sitio
@@ -32,9 +34,6 @@ format:
 
 disabled-filters:             # filters a desactivar (opcional)
   # - semantic/string/01-double-colon
-
-disabled-preamble-filters:    # preamble filters a desactivar (opcional)
-  # - 19-maketitle
 
 lua-filters:                      # filtros Lua de usuario (opcional)
   # - filters/mi-filtro.lua
@@ -75,7 +74,7 @@ Habilita la generación de PDF.
 
 La configuración tipográfica del PDF (márgenes, fuentes, interlineado, idioma, penalizaciones, estilo de secciones, epígrafes, etc.) se gestiona mediante **preamble filters**: archivos `.tex` con contenido LaTeX puro que se insertan en el preámbulo antes de `\begin{document}`.
 
-Los preamble filters se encuentran en `src/lib/resources/preamble/` del paquete y pueden sobrescribirse por proyecto creando archivos con el mismo nombre en `<proyecto>/preamble/`. Para desactivar uno, se usa `disabled-preamble-filters` (ver sección más abajo).
+Los preamble filters se encuentran en `src/lib/resources/preamble/` del paquete y pueden sobrescribirse por proyecto creando archivos con el mismo nombre en `<proyecto>/preamble/`. Para desactivar uno, se usa `format.pdf.disabled-preamble-filters`.
 
 Usa `iteraciones filters` para ver la lista completa con sus descripciones y estado.
 
@@ -189,16 +188,18 @@ disabled-filters:
   - latex/02-dictum
 ```
 
-### `disabled-preamble-filters`
+### `format.pdf.disabled-preamble-filters`
 
 **Tipo:** `string[]`
 **Por defecto:** `undefined` (todos activos)
 
-Lista de preamble filters a desactivar.
+Lista de preamble filters a desactivar. Los defaults del paquete `24-eso-pic`, `25-pdfx` y `26-crop` vienen desactivados por defecto.
 
 ```yaml
-disabled-preamble-filters:
-  - 19-maketitle
+format:
+  pdf:
+    disabled-preamble-filters:
+      - 19-maketitle
 ```
 
 ### `lua-filters`

@@ -56,6 +56,10 @@ const PdfFormatSchema = z
     toc: z.boolean().default(false),
     'show-date': z.boolean().default(false),
     'page-number': z.enum(['header-left', 'header-center', 'header-right', 'footer-left', 'footer-center', 'footer-right']).default('header-right'),
+    'disabled-preamble-filters': z
+      .array(z.string())
+      .default(['24-eso-pic', '25-pdfx', '26-crop'])
+      .transform((v) => (v?.length ? v : undefined)),
   })
   .strict();
 
@@ -95,10 +99,6 @@ const RawSiteConfigSchema = z
     'disabled-filters': z
       .array(z.string())
       .optional()
-      .transform((v) => (v?.length ? v : undefined)),
-    'disabled-preamble-filters': z
-      .array(z.string())
-      .default(['24-eso-pic', '25-pdfx', '26-crop'])
       .transform((v) => (v?.length ? v : undefined)),
     'lua-filters': z
       .array(z.string())
@@ -147,12 +147,11 @@ export const SiteConfigSchema = RawSiteConfigSchema.transform((raw) => {
           },
       pdf: pdfRaw
         ? (camelizeKeys(pdfRaw) as SiteConfig['format']['pdf'])
-        : { generate: false, toc: false, showDate: false, pageNumber: 'header-right' },
+        : { generate: false, toc: false, showDate: false, pageNumber: 'header-right', disabledPreambleFilters: ['24-eso-pic', '25-pdfx', '26-crop'] },
       epub: epubRaw ? (camelizeKeys(epubRaw) as SiteConfig['format']['epub']) : { generate: false },
       markdown: mdRaw ? (camelizeKeys(mdRaw) as SiteConfig['format']['markdown']) : { generate: false },
     },
     disabledFilters: raw['disabled-filters'],
-    disabledPreambleFilters: raw['disabled-preamble-filters'],
     luaFilters: raw['lua-filters'],
   };
 });
