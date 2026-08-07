@@ -211,7 +211,8 @@ markdown → semantic/string → pandoc --to json → semantic/ast → AST canó
 | `latex/04-center` | ast | `Div.center` → `\\begin{center}...\\end{center}` |
 | `latex/05-flushright` | ast | `Div.flushright` → `\\begin{flushright}...\\end{flushright}` |
 | `latex/06-mbox-sentence-end` | ast | últimas palabras de cada oración → `\\mbox{}` |
-| `latex/07-mbox-sentence-start` | ast | primera palabra de cada oración → `\\mbox{}` |
+| `latex/07-mbox-sentence-start` | ast | primera palabra de cada oración → `\mbox{}` |
+| `latex/08-quote-noindent` | ast | `BlockQuote` seguido de párrafo → `\noindent` al párrafo |
 | `html/01-dictum` | ast | `Div.dictum` → `<blockquote class="dictum">` |
 | `html/02-verse` | ast | `Div.verse` → `<div class="verse">` |
 | `html/03-center` | ast | `Div.center` → `<div class="center">` |
