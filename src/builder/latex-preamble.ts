@@ -33,7 +33,12 @@ interface PreambleMeta {
   skipParagraphSpace?: boolean;
 }
 
-export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: PreambleMeta, disabledPreambleFilters?: string[]): Promise<string[]> {
+export async function buildLatexPreamble(
+  pdfFormat?: PdfFormatConfig,
+  meta?: PreambleMeta,
+  disabledPreambleFilters?: string[],
+  toc?: boolean,
+): Promise<string[]> {
   const preamble: string[] = [];
 
   // ── Preamble filters (archivos .tex en orden, con override del proyecto) ──
@@ -88,7 +93,7 @@ export async function buildLatexPreamble(pdfFormat?: PdfFormatConfig, meta?: Pre
   preamble.push('\\maketitle');
 
   // ── TABLA DE CONTENIDOS ──
-  if (pdfFormat?.toc && meta?.hasTocEntries) {
+  if (toc && meta?.hasTocEntries) {
     preamble.push('\\tableofcontents');
   }
 
@@ -137,6 +142,7 @@ export async function composeFullTex(siteConfig: SiteConfig, meta: PreambleMeta,
     siteConfig.format?.pdf,
     { ...meta, hasTocEntries: flags.hasTocEntries, skipNoIndent: flags.skipNoIndent, skipParagraphSpace: flags.skipParagraphSpace },
     siteConfig.format?.pdf?.disabledPreambleFilters,
+    siteConfig.toc,
   );
   return [...preamble, '', body, '', '\\end{document}'].join('\n');
 }

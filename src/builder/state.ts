@@ -166,9 +166,9 @@ export async function computeConfigHashes(cwd: string, siteConfig: SiteConfig): 
   const logoPath = htmlConfig?.logo?.trim();
   const logo = logoPath ? await hashFileContent(join(cwd, logoPath)).catch(() => '') : '';
   return {
-    pdf: hashString(`${JSON.stringify(fmt?.pdf ?? {})}\n${String(fmt?.latex ?? false)}`),
-    html: hashString(`${JSON.stringify(fmt?.html ?? {})}\n${htmlTemplate}\n${logo}`),
-    epub: hashString(`${JSON.stringify(fmt?.epub ?? {})}`),
+    pdf: hashString(`${JSON.stringify(fmt?.pdf ?? {})}\n${String(fmt?.latex ?? false)}\n${String(siteConfig.toc ?? false)}`),
+    html: hashString(`${JSON.stringify(fmt?.html ?? {})}\n${htmlTemplate}\n${logo}\n${String(siteConfig.toc ?? false)}`),
+    epub: hashString(`${JSON.stringify(fmt?.epub ?? {})}\n${String(siteConfig.toc ?? false)}`),
     markdown: hashString(`${JSON.stringify(fmt?.markdown ?? {})}\n${String(siteConfig.lang ?? '')}`),
   };
 }

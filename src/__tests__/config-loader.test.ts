@@ -197,6 +197,7 @@ describe('loadSiteConfig', () => {
           '    generate: true',
           '  markdown:',
           '    generate: false',
+          'toc: true',
           'disabled-filters:',
           '  - semantic/string/01-double-colon',
         ].join('\n'),
@@ -208,8 +209,8 @@ describe('loadSiteConfig', () => {
       expect(config.format.html?.logo).toBe('logo.svg');
       expect(config.format.latex).toBe(true);
       expect(config.format.pdf?.generate).toBe(true);
-      expect(config.format.pdf?.toc).toBe(true);
       expect(config.format.pdf?.showDate).toBe(true);
+      expect(config.toc).toBe(true);
       expect(config.format.html?.generate).toBe(true);
       expect(config.format.html?.theme).toBe('dark');
       expect(config.format.html?.accent).toBe('rose');
@@ -224,7 +225,7 @@ describe('loadSiteConfig', () => {
       await writeConfig(dir, 'format:\n  pdf:\n    generate: true');
       const config = await loadSiteConfig(dir);
       expect(config.format.pdf?.generate).toBe(true);
-      expect(config.format.pdf?.toc).toBe(false);
+      expect(config.toc).toBe(false);
       expect(config.format.pdf?.showDate).toBe(false);
     });
   });

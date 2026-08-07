@@ -334,8 +334,9 @@ export async function renderHtmlPageFromAst(
     HTML_TEMPLATE_PATH,
     `--metadata=title:${vars.title}`,
     `--metadata=site-title:${vars.siteTitle}`,
-    `--metadata=lang:${vars.lang}`,
+    '--metadata=lang:${vars.lang}',
   ];
+  if (siteConfig.toc) extraArgs.push('--toc');
   // Filtros de usuario primero, luego la capa html
   for (const filter of [...filters.user, ...filters.html]) {
     extraArgs.push('--lua-filter', filter);

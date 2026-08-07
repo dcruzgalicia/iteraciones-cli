@@ -216,6 +216,7 @@ La configuración se lee de `iteraciones.config.yaml` y se valida con **Zod**:
 
 ```yaml
 lang: es-MX
+toc: false
 
 format:
   latex: false

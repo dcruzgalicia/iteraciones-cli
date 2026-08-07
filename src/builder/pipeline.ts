@@ -207,7 +207,7 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
   // --no-export: solo actualizar el caché (AST + tex body), sin salidas.
   if (noExport) return;
 
-  const exportDoc = assembleExportDocument(doc, lang, globalBibliography, undefined, formatCfg?.pdf);
+  const exportDoc = assembleExportDocument(doc, lang, globalBibliography, undefined, ctx.siteConfig.toc);
   const outputBase = (outputDir: string): string => join(outputDir, dir === '.' ? '' : dir, slug);
   // El HTML tiene un caso especial: un archivo index.md se convierte a index.html
   const htmlSlug = htmlSlugFor(doc.relativePath, slug);
@@ -238,7 +238,7 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
 
   // EPUB y Markdown desde el AST canónico
   if (epubOn && epubPaths.has(doc.relativePath)) {
-    await convertToEpub(ast, `${outputBase(join(formatsDir, 'html'))}.epub`, exportDoc, userFilters);
+    await convertToEpub(ast, `${outputBase(join(formatsDir, 'html'))}.epub`, exportDoc, userFilters, ctx.siteConfig.toc);
   }
   if (mdOn && mdPaths.has(doc.relativePath)) {
     await convertToMarkdown(ast, `${outputBase(join(formatsDir, 'markdown'))}.md`, exportDoc, userFilters);

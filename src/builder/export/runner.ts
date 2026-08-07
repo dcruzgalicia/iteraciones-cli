@@ -45,7 +45,13 @@ function buildYamlHeader(doc: ExportDocument): string {
 /**
  * Convierte el AST canónico a EPUB3 usando pandoc (sin intermediario HTML).
  */
-export async function convertToEpub(ast: Record<string, unknown>, outputPath: string, doc: ExportDocument, userFilters: string[]): Promise<void> {
+export async function convertToEpub(
+  ast: Record<string, unknown>,
+  outputPath: string,
+  doc: ExportDocument,
+  userFilters: string[],
+  toc?: boolean,
+): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
   const extraArgs: string[] = [];
@@ -53,6 +59,7 @@ export async function convertToEpub(ast: Record<string, unknown>, outputPath: st
   if (doc.metadata.bibliography) {
     extraArgs.push('--citeproc');
   }
+  if (toc) extraArgs.push('--toc');
 
   await runPandoc({ input: JSON.stringify(ast), sourcePath: doc.filePath, from: 'json', to: 'epub3', outputPath, extraArgs });
 }

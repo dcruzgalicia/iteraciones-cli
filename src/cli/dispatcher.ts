@@ -86,6 +86,7 @@ export async function runInfo(cwd: string): Promise<void> {
 
     const lines = [
       `  lang:                    ${config.lang}`,
+      `  toc:                     ${config.toc ? 'sí' : 'no'}`,
       `  documentos:              ${docCount}`,
       `  salida:                  ${distDir}${distExists ? ' (generado)' : ' (no generado)'}`,
       `  pandoc:                  ${pandocVersion}`,
