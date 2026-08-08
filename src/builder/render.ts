@@ -426,6 +426,8 @@ export async function renderHtmlPageFromAst(
     `--metadata=title:${vars.title}`,
     `--metadata=site-title:${vars.siteTitle}`,
     `--metadata=lang:${vars.lang}`,
+    // Las citas del texto enlazan a sus entradas en la tarjeta de referencias
+    '--metadata=link-citations:true',
   ];
   if (siteConfig.toc) extraArgs.push('--toc');
   // Filtros de usuario primero, luego la capa html
