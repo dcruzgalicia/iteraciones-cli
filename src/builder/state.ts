@@ -104,11 +104,11 @@ const CACHE_SCHEMA_VERSIONS = {
   /** Conversión yyyy-mm-dd → fecha legible (src/lib/date.ts). */
   humanDate: 'human-date-v1',
   /** Tarjeta de referencias del HTML (moveReferencesToCard en render.ts). */
-  referencesCard: 'references-card-v3',
+  referencesCard: 'references-card-v4',
   /** Enlazado de citas del HTML (--metadata=link-citations). */
   linkCitations: 'link-citations-v1',
   /** Tarjeta de formatos del HTML (insertFormatsCard en render.ts). */
-  formatsCard: 'formats-card-v2',
+  formatsCard: 'formats-card-v3',
 } as const;
 
 /**

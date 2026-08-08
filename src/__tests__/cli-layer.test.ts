@@ -335,6 +335,23 @@ describe('runBuild', () => {
     });
   });
 
+  it('las tarjetas de formatos y referencias se insertan fuera de la tarjeta de contenido (regresión #1445)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  latex: true\n', 'utf8');
+      await writeFile(join(dir, 'bibliography.bib'), '@book{key1, author = {García, Lucía}, title = {Libro}, year = {2024}}\n', 'utf8');
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\n# Sección\n\nCita [@key1].\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
+      // La tarjeta Formatos va después de la tarjeta de contenido
+      expect(html.indexOf('>Formatos</h2>')).toBeGreaterThan(html.indexOf('<article'));
+      // Las referencias viven en su propia tarjeta, fuera del article
+      expect(html.indexOf('id="referencias"')).toBeGreaterThan(html.indexOf('</article>'));
+    });
+  });
+
   it('--no-export no modifica dist/, reporta salidas no modificadas y el siguiente build las regenera', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
