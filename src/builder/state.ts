@@ -103,12 +103,10 @@ export async function saveStateFile(cwd: string, state: StateFile): Promise<void
 const CACHE_SCHEMA_VERSIONS = {
   /** Conversión yyyy-mm-dd → fecha legible (src/lib/date.ts). */
   humanDate: 'human-date-v1',
-  /** Tarjeta de referencias del HTML (moveReferencesToCard en render.ts). */
-  referencesCard: 'references-card-v4',
+  /** Ensamblado de bloques del masonry HTML (html-blocks.ts + render.ts). */
+  htmlBlocks: 'html-blocks-v1',
   /** Enlazado de citas del HTML (--metadata=link-citations). */
   linkCitations: 'link-citations-v1',
-  /** Tarjeta de formatos del HTML (insertFormatsCard en render.ts). */
-  formatsCard: 'formats-card-v3',
 } as const;
 
 /**

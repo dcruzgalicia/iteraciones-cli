@@ -4,6 +4,7 @@ import { logWarning } from '../lib/logger.js';
 import { type BibOptions, runPandoc } from '../lib/pandoc-runner.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import { splitFrontmatter } from './discover.js';
+import { assembleHtmlBlocks, blockMarker } from './html-blocks.js';
 import { resolveBibOptions } from './state.js';
 import type { BuildDocument, PreambleFlags } from './types.js';
 
@@ -381,20 +382,12 @@ const FORMAT_ICONS: Record<string, string> = {
 };
 
 /**
- * Inserta la tarjeta Formatos (enlaces a los formatos generados) después del
- * índice: antes de la tarjeta de referencias si existe, o antes de la
- * identidad final. Sin formatos activos no se inserta nada.
+ * Genera el bloque de la tarjeta Formatos (enlaces a los formatos generados)
+ * con su marcador. Sin formatos activos no se genera nada: el bloque queda
+ * ausente y el resto del masonry no se altera.
  */
-function insertFormatsCard(html: string, formats: Array<{ href: string; name: string; description: string }>): string {
-  if (formats.length === 0) return html;
-
-  const refsPos = html.indexOf('id="referencias"');
-  let insertAt = -1;
-  if (refsPos >= 0) {
-    insertAt = html.lastIndexOf('<div class="break-inside-avoid pb-6">', refsPos);
-  }
-  if (insertAt < 0) insertAt = html.indexOf(IDENTITY_END_ANCHOR);
-  if (insertAt < 0) return html;
+function buildFormatsBlock(formats: Array<{ href: string; name: string; description: string }>): string | undefined {
+  if (formats.length === 0) return undefined;
 
   const items = formats
     .map(
@@ -413,7 +406,9 @@ function insertFormatsCard(html: string, formats: Array<{ href: string; name: st
 
   const chipClass =
     'inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-12 text-accent-600 dark:text-accent-400';
-  const card =
+  return (
+    blockMarker('formatos') +
+    '\n' +
     `<div class="break-inside-avoid pb-6">\n` +
     `      <section class="relative [&::before]:pointer-events-none [&::before]:absolute [&::before]:left-2 [&::before]:top-2 [&::before]:h-3 [&::before]:w-3 [&::before]:border-l [&::before]:border-t [&::before]:border-accent-500/30 [&::before]:content-[''] [&::after]:pointer-events-none [&::after]:absolute [&::after]:bottom-2 [&::after]:right-2 [&::after]:h-3 [&::after]:w-3 [&::after]:border-b [&::after]:border-r [&::after]:border-accent-500/30 [&::after]:content-[''] rounded-xl border border-accent-500/25 bg-stone-50/70 dark:bg-stone-900/60 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5">\n` +
     `        <h2 class="${chipClass}">Formatos</h2>\n` +
@@ -421,37 +416,25 @@ function insertFormatsCard(html: string, formats: Array<{ href: string; name: st
     items +
     `\n        </ul>\n` +
     `      </section>\n` +
-    `    </div>\n    `;
-
-  return html.slice(0, insertAt) + card + html.slice(insertAt);
+    `    </div>`
+  );
 }
 
 /**
- * Ancla de inserción de la tarjeta de referencias (antes de la identidad final).
- * Es un **prefijo** del comentario de la tarjeta identidad final del template:
- * la búsqueda por prefijo tolera variantes del comentario (la regresión de
- * #1445 ocurrió porque el comentario cambió y el indexOf exacto falló en
- * silencio, dejando las referencias dentro del article y la tarjeta Formatos
- * al inicio de la página).
- */
-const IDENTITY_END_ANCHOR = '<!-- ── Tarjeta identidad final';
-
-/**
  * Extrae el bloque de referencias (h1#referencias + div#refs) del article y lo
- * inserta como una tarjeta propia del masonry, antes de la identidad final
- * (después del índice). El parse del cierre es balanceado: las entradas
- * csl-entry son divs anidados, el primer `</div>` no cierra el bloque.
+ * devuelve como bloque del masonry con su marcador. El parse del cierre es
+ * balanceado: las entradas csl-entry son divs anidados, el primer `</div>` no
+ * cierra el bloque. Sin citas, no se genera bloque.
  */
-function moveReferencesToCard(html: string): string {
+function extractReferencesBlock(html: string): { html: string; block?: string } {
   const refsIdPos = html.indexOf('id="referencias"');
   const refsDivPos = html.indexOf('<div id="refs"');
-  if (refsIdPos < 0 && refsDivPos < 0) return html;
+  if (refsIdPos < 0 && refsDivPos < 0) return { html };
 
   const start = refsIdPos >= 0 ? html.lastIndexOf('<h1', refsIdPos) : refsDivPos;
   const divStart = html.indexOf('<div id="refs"', start);
-  if (divStart < 0) return html;
+  if (divStart < 0) return { html };
 
-  // Balance de divs desde el div#refs hasta su cierre
   let depth = 0;
   let i = divStart;
   while (i < html.length) {
@@ -467,12 +450,11 @@ function moveReferencesToCard(html: string): string {
       if (depth === 0) break;
     }
   }
-  if (depth !== 0) return html; // HTML inesperado: no tocar
+  if (depth !== 0) return { html }; // HTML inesperado: no tocar
   const end = i;
 
   const block = html.slice(start, end);
   const withoutBlock = html.slice(0, start) + html.slice(end);
-  if (!withoutBlock.includes(IDENTITY_END_ANCHOR)) return html;
 
   // Título de la tarjeta: chip como el resto de las tarjetas (Trayectura/Índice).
   // Se conserva el id referencias: el enlace del índice sigue funcionando.
@@ -480,13 +462,15 @@ function moveReferencesToCard(html: string): string {
     'inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-12 text-accent-600 dark:text-accent-400';
   const styledHeading = block.replace(/<h1[^>]*id="referencias"[^>]*>/, `<h2 id="referencias" class="${chipClass}">`).replace('</h1>', '</h2>');
   const card =
+    blockMarker('referencias') +
+    '\n' +
     `<div class="break-inside-avoid pb-6">\n` +
     `      <section class="relative [&::before]:pointer-events-none [&::before]:absolute [&::before]:left-2 [&::before]:top-2 [&::before]:h-3 [&::before]:w-3 [&::before]:border-l [&::before]:border-t [&::before]:border-accent-500/30 [&::before]:content-[''] [&::after]:pointer-events-none [&::after]:absolute [&::after]:bottom-2 [&::after]:right-2 [&::after]:h-3 [&::after]:w-3 [&::after]:border-b [&::after]:border-r [&::after]:border-accent-500/30 [&::after]:content-[''] rounded-xl border border-accent-500/25 bg-stone-50/80 dark:bg-stone-900/70 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [&_.csl-entry]:mb-3 [&_.csl-entry]:pl-4 [&_.csl-entry]:-indent-4">\n` +
     `        ${styledHeading}\n` +
     `      </section>\n` +
-    `    </div>\n    `;
+    `    </div>`;
 
-  return withoutBlock.replace(IDENTITY_END_ANCHOR, `${card}${IDENTITY_END_ANCHOR}`);
+  return { html: withoutBlock, block: card };
 }
 
 /**
@@ -539,11 +523,12 @@ export async function renderHtmlPageFromAst(
   const html = await runPandoc({ input: JSON.stringify(inputAst), sourcePath: doc.filePath, from: 'json', to: 'html5', bibOptions, extraArgs });
 
   // Post-procesamiento: las referencias salen del article y se convierten en
-  // una tarjeta propia del masonry, después de la tarjeta del índice.
-  const withRefs = moveReferencesToCard(html);
-  // Tarjeta Formatos: enlaces a los formatos generados, después del índice
-  // (antes de las referencias si existen, o antes de la identidad final).
-  return insertFormatsCard(withRefs, vars.formats ?? []);
+  // un bloque del masonry; la tarjeta Formatos es otro bloque generado. Ambos
+  // se ordenan junto con los bloques del template (header, trayectura, indice,
+  // footer) según format.html.blocks (sistema de bloques: sin anclas de texto).
+  const { html: htmlWithoutRefs, block: referencesBlock } = extractReferencesBlock(html);
+  const formatsBlock = buildFormatsBlock(vars.formats ?? []);
+  return assembleHtmlBlocks(htmlWithoutRefs, { formatos: formatsBlock, referencias: referencesBlock }, siteConfig.format?.html?.blocks);
 }
 
 /**
