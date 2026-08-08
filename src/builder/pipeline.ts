@@ -221,7 +221,7 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
       ...(plan.pdfOn ? [{ href: relativeHref(dir, `${slug}.pdf`), name: 'PDF', description: 'Documento final para lectura e impresión' }] : []),
       ...(plan.epubOn ? [{ href: relativeHref(dir, `${slug}.epub`), name: 'EPUB', description: 'Edición adaptable para lectura digital' }] : []),
       ...(plan.latexOn
-        ? [{ href: relativeHref(dir, `${slug}.tex`), name: 'LaTeX', description: 'Archivo fuente editable para composición tipográfica' }]
+        ? [{ href: relativeHref(dir, `${slug}.tex`), name: 'LaTeX', description: 'Archivo fuente para composición tipográfica' }]
         : []),
       ...(plan.mdOn ? [{ href: relativeHref(dir, `${slug}.md`), name: 'Markdown', description: 'Texto fuente reutilizable y portable' }] : []),
     ];
