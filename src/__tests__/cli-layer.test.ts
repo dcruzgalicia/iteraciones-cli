@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CommanderError } from 'commander';
-import { runBuild, runClean, runInit, runNew, runValidate } from '../cli/dispatcher.js';
+import { runBuild, runClean, runDoctor, runInit, runNew, runValidate } from '../cli/dispatcher.js';
 import { buildProgram } from '../cli/parser.js';
 import { initTestProject } from './helpers.js';
 
@@ -300,6 +300,42 @@ describe('runValidate', () => {
       expect(output).toContain('✖ [validate] 2 errores:');
       expect(output).not.toContain('error(es)');
       expect(output).not.toContain('se encontraron');
+    });
+  });
+});
+
+describe('runDoctor', () => {
+  afterEach(resetExitCode);
+
+  /** Ejecuta doctor y captura la salida de stdout. */
+  async function doctorOutput(dir: string): Promise<string> {
+    const stdoutSpy = spyOn(process.stdout, 'write');
+    let output = '';
+    try {
+      process.exitCode = 0;
+      await runDoctor(dir);
+    } finally {
+      output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+      stdoutSpy.mockRestore();
+    }
+    return output;
+  }
+
+  it('no verifica el motor LaTeX cuando el proyecto no usa PDF ni LaTeX', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir); // config html-only
+      const output = await doctorOutput(dir);
+      expect(process.exitCode).toBe(0);
+      expect(output).not.toContain('pdflatex');
+    });
+  });
+
+  it('verifica el motor LaTeX cuando format.pdf está activo', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  pdf:\n    generate: true\n', 'utf8');
+      const output = await doctorOutput(dir);
+      expect(output).toContain('pdflatex disponible');
     });
   });
 });
