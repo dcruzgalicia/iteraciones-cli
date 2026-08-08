@@ -426,8 +426,15 @@ function insertFormatsCard(html: string, formats: Array<{ href: string; name: st
   return html.slice(0, insertAt) + card + html.slice(insertAt);
 }
 
-/** Ancla de inserción de la tarjeta de referencias (antes de la identidad final). */
-const IDENTITY_END_ANCHOR = '<!-- ── Tarjeta identidad final ── -->';
+/**
+ * Ancla de inserción de la tarjeta de referencias (antes de la identidad final).
+ * Es un **prefijo** del comentario de la tarjeta identidad final del template:
+ * la búsqueda por prefijo tolera variantes del comentario (la regresión de
+ * #1445 ocurrió porque el comentario cambió y el indexOf exacto falló en
+ * silencio, dejando las referencias dentro del article y la tarjeta Formatos
+ * al inicio de la página).
+ */
+const IDENTITY_END_ANCHOR = '<!-- ── Tarjeta identidad final';
 
 /**
  * Extrae el bloque de referencias (h1#referencias + div#refs) del article y lo
