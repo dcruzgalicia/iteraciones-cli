@@ -310,6 +310,17 @@ async function renderTexBody(
 const HTML_TEMPLATE_PATH = join(import.meta.dir, '../../src/lib/resources/template.html');
 
 /**
+ * Normaliza un valor string para `--metadata=clave:valor` de pandoc: los
+ * saltos de línea se pliegan a espacios. Pandoc trata el resto de caracteres
+ * (comillas, dos puntos, llaves) como literales dentro del valor y no pueden
+ * inyectar claves ni romper el parseo (un solo elemento de argv); el plegado
+ * explícito hace el comportamiento determinista.
+ */
+function metadataValue(value: string): string {
+  return value.replace(/\n/g, ' ');
+}
+
+/**
  * Reader de markdown con auto-identifiers activos: los headings llevan `id`
  * y el TOC puede generar enlaces `#`. Participa en el hash de filters para
  * invalidar los ASTs cacheados si cambia (ver state.ts).
@@ -490,8 +501,8 @@ export async function renderHtmlPageFromAst(
   const extraArgs = [
     '--template',
     HTML_TEMPLATE_PATH,
-    `--metadata=title:${vars.title}`,
-    `--metadata=site-title:${vars.siteTitle}`,
+    `--metadata=title:${metadataValue(vars.title)}`,
+    `--metadata=site-title:${metadataValue(vars.siteTitle)}`,
     `--metadata=lang:${vars.lang}`,
     // Las citas del texto enlazan a sus entradas en la tarjeta de referencias
     '--metadata=link-citations:true',
@@ -501,10 +512,10 @@ export async function renderHtmlPageFromAst(
   for (const filter of [...filters.user, ...filters.html]) {
     extraArgs.push('--lua-filter', filter);
   }
-  if (vars.tagline) extraArgs.push(`--metadata=tagline:${vars.tagline}`);
-  if (vars.docTitle) extraArgs.push(`--metadata=doc-title:${vars.docTitle}`);
-  if (vars.subtitle) extraArgs.push(`--metadata=subtitle:${vars.subtitle}`);
-  if (vars.date) extraArgs.push(`--metadata=date:${vars.date}`);
+  if (vars.tagline) extraArgs.push(`--metadata=tagline:${metadataValue(vars.tagline)}`);
+  if (vars.docTitle) extraArgs.push(`--metadata=doc-title:${metadataValue(vars.docTitle)}`);
+  if (vars.subtitle) extraArgs.push(`--metadata=subtitle:${metadataValue(vars.subtitle)}`);
+  if (vars.date) extraArgs.push(`--metadata=date:${metadataValue(vars.date)}`);
   if (vars.homeHref) extraArgs.push(`--metadata=home-href:${vars.homeHref}`);
   if (vars.theme) extraArgs.push(`--metadata=theme:${vars.theme}`);
   if (vars.accent) extraArgs.push(`--metadata=accent:${vars.accent}`);

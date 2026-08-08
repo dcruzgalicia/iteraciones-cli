@@ -319,6 +319,22 @@ describe('runBuild', () => {
     });
   });
 
+  it('títulos con comillas, dos puntos y saltos de línea no rompen el HTML', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      // El YAML de doble comilla interpreta \n como salto de línea real en el valor
+      await writeFile(join(dir, 'test.md'), '---\ntitle: "Título: \\"especial\\" y más\\ncon salto"\ndate: 2026-01-01\n---\n\nContenido.\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      // El slug deriva del título: titulo-especial-y-mas-con-salto
+      const html = await Bun.file(join(dir, 'dist', 'files', 'titulo-especial-y-mas-con-salto.html')).text();
+      expect(html).toContain('"especial"');
+      expect(html).toContain('con salto');
+      expect(html).toContain('<title>Título: "especial" y más con salto · Test</title>');
+    });
+  });
+
   it('--no-export no modifica dist/, reporta salidas no modificadas y el siguiente build las regenera', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
