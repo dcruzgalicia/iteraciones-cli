@@ -103,8 +103,8 @@ export async function saveStateFile(cwd: string, state: StateFile): Promise<void
 const CACHE_SCHEMA_VERSIONS = {
   /** Conversión yyyy-mm-dd → fecha legible (src/lib/date.ts). */
   humanDate: 'human-date-v1',
-  /** Ensamblado de bloques del masonry HTML (html-blocks.ts + render.ts). */
-  htmlBlocks: 'html-blocks-v1',
+  /** Generación de la página HTML (pipeline.ts) y ensamblado de bloques (html-blocks.ts, render.ts). */
+  htmlBlocks: 'html-blocks-v2',
   /** Enlazado de citas del HTML (--metadata=link-citations). */
   linkCitations: 'link-citations-v1',
 } as const;

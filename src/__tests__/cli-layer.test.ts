@@ -158,13 +158,13 @@ describe('runBuild', () => {
       await runBuild(dir);
       expect(process.exitCode).toBe(0);
       const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
-      expect(html).not.toContain('<a href="./"');
+      expect(html).not.toContain('<a href="./index.html"');
       // La tarjeta se renderiza como div (sin enlace)
       expect(html).toContain('Tarjeta identidad');
     });
   });
 
-  it('con index.md la tarjeta identidad enlaza al home', async () => {
+  it('con index.md la tarjeta identidad enlaza explícitamente a index.html', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
       await writeFile(join(dir, 'index.md'), '---\ntitle: Inicio\n---\n\n# Bienvenida\n\nContenido.\n', 'utf8');
@@ -172,7 +172,7 @@ describe('runBuild', () => {
       await runBuild(dir);
       expect(process.exitCode).toBe(0);
       const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
-      expect(html).toContain('href="./"');
+      expect(html).toContain('href="./index.html"');
       expect(await Bun.file(join(dir, 'dist', 'files', 'index.html')).exists()).toBe(true);
     });
   });
