@@ -16,9 +16,10 @@
 
       <!-- Tarjeta identidad -->
       <div class="flex items-center gap-2 rounded-xl border border-accent-500/15 bg-white/70 dark:bg-stone-900/70 p-5 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 transition-colors duration-200 hover:border-accent-500/30">
-        $if(logo-inline)$<span class="flex h-4 w-4 shrink-0 items-center justify-center text-accent-500 logo-fill">$logo-inline$</span>$endif$
-        <span class="font-bold text-base leading-tight text-accent-700 dark:text-accent-300">$site-title$</span>
-        $if(tagline)$<span class="text-xs leading-tight text-accent-400 dark:text-accent-500">$tagline$</span>$endif$
+        $if(logo-inline)$<span class="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-accent-500/25 p-[3px] text-accent-500 logo-fill">$logo-inline$</span>$endif$
+        <span class="font-semibold text-sm tracking-[0.25em] text-accent-700 dark:text-accent-300">$site-title$</span>
+        <span class="text-accent-500/50" aria-hidden="true">·</span>
+        $if(tagline)$<span class="text-xs italic text-accent-400/80">$tagline$</span>$endif$
       </div>
 
       <!-- Tarjeta documento -->
@@ -76,9 +77,10 @@
     <!-- ── Tarjeta identidad final ── -->
     <div class="break-inside-avoid pb-6">
       <div class="flex items-center gap-2 rounded-xl border border-accent-500/15 bg-white/70 dark:bg-stone-900/70 p-5 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 transition-colors duration-200 hover:border-accent-500/30">
-        $if(logo-inline)$<span class="flex h-4 w-4 shrink-0 items-center justify-center text-accent-500 logo-fill">$logo-inline$</span>$endif$
-        <span class="font-bold text-base leading-tight text-accent-700 dark:text-accent-300">$site-title$</span>
-        $if(tagline)$<span class="text-xs leading-tight text-accent-400 dark:text-accent-500">$tagline$</span>$endif$
+        $if(logo-inline)$<span class="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-accent-500/25 p-[3px] text-accent-500 logo-fill">$logo-inline$</span>$endif$
+        <span class="font-semibold text-sm tracking-[0.25em] text-accent-700 dark:text-accent-300">$site-title$</span>
+        <span class="text-accent-500/50" aria-hidden="true">·</span>
+        $if(tagline)$<span class="text-xs italic text-accent-400/80">$tagline$</span>$endif$
       </div>
     </div>
 
