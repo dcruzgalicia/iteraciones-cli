@@ -35,6 +35,9 @@ format:
 disabled-filters:             # filters a desactivar (opcional)
   # - semantic/string/01-double-colon
 
+bibliography: refs/mi-libro.bib  # archivo .bib (opcional; auto-descubierto si falta)
+csl: styles/nature.csl           # estilo de citas CSL (opcional; APA-7 si falta)
+
 lua-filters:                      # filtros Lua de usuario (opcional)
   # - filters/mi-filtro.lua
 ```
@@ -98,6 +101,31 @@ Genera una tabla de contenidos (TOC) en los formatos PDF, LaTeX, HTML y EPUB.
 toc: true
 ```
 
+### `bibliography`
+
+**Tipo:** `string` (ruta relativa al proyecto o absoluta)
+**Por defecto:** auto-descubrimiento del primer archivo `.bib` del proyecto
+
+Archivo de bibliografía para las citas pandoc (`[@clave]`). Sin configurar, se usa el primer `.bib` del proyecto (orden alfabético).
+
+```yaml
+bibliography: refs/mi-libro.bib
+```
+
+### `csl`
+
+**Tipo:** `string` (ruta relativa al proyecto o absoluta)
+**Por defecto:** estilo APA-7 empaquetado
+
+Archivo de estilo de citas (CSL). Solo tiene efecto junto con `bibliography`.
+
+```yaml
+csl: styles/nature.csl
+```
+
+`validate` reporta un error si alguna de las dos rutas no existe. Si una ruta configurada no existe al construir, se advierte y se vuelve al auto-descubrimiento (mismo comportamiento que `lua-filters`).
+
+
 #### `format.pdf.show-date`
 
 **Tipo:** `boolean`
@@ -150,9 +178,9 @@ Habilita la generación de páginas HTML.
 #### `format.html.theme`
 
 **Tipo:** `'light' | 'dark'`
-**Por defecto:** `undefined` (dark)
+**Por defecto:** `'dark'`
 
-Tema visual del HTML.
+Tema visual del HTML (atributo `data-theme` del `<html>`).
 
 #### `format.html.accent`
 
@@ -182,7 +210,7 @@ Habilita la exportación a Markdown procesado (con los filters aplicados).
 ### `disabled-filters`
 
 **Tipo:** `string[]`
-**Por defecto:** `undefined` (todos activos)
+**Por defecto:** `undefined` (ninguno desactivado)
 
 Lista de filters a desactivar. Cada elemento es el **nombre completo** del filter (ej: `semantic/string/01-double-colon`, `latex/02-dictum`). Usa `iteraciones filters` para ver la lista con sus nombres.
 
@@ -195,9 +223,9 @@ disabled-filters:
 ### `format.pdf.disabled-preamble-filters`
 
 **Tipo:** `string[]`
-**Por defecto:** `undefined` (todos activos)
+**Por defecto:** `['24-eso-pic', '25-pdfx', '26-crop']`
 
-Lista de preamble filters a desactivar. Los defaults del paquete `24-eso-pic`, `25-pdfx` y `26-crop` vienen desactivados por defecto.
+Lista de preamble filters a desactivar. Los defaults del paquete desactivan `24-eso-pic` (fondo de página), `25-pdfx` (PDF/X-1a) y `26-crop` (marcas de corte), pensados para impresión profesional; agrega nombres a la lista para desactivar más, o elimínalos para activarlos.
 
 ```yaml
 format:
