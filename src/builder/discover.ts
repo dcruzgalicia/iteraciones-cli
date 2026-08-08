@@ -30,6 +30,8 @@ export interface BuildState {
   startedAt: number;
   /** Formatos que estaban activos en el build anterior. */
   activeFormats: string[];
+  /** Directorio de salida del build anterior (para el comando info). */
+  outputDir?: string;
   /** Hash de los filters efectivos del build anterior. */
   filtersHash?: string;
   /** Caché de archivos de filtro del build anterior (mtime+size+hash). */
@@ -52,6 +54,7 @@ export async function loadBuildState(cwd: string): Promise<BuildState | null> {
   return {
     startedAt: state.startedAt,
     activeFormats: state.activeFormats,
+    outputDir: state.outputDir,
     filtersHash: state.filtersHash,
     filterFileCache: state.filterFileCache,
     cssInputHash: state.cssInputHash,
@@ -70,6 +73,7 @@ async function saveBuildState(cwd: string, state: BuildState): Promise<void> {
   await saveStateFile(cwd, {
     startedAt: state.startedAt,
     activeFormats: state.activeFormats,
+    outputDir: state.outputDir,
     filtersHash: state.filtersHash,
     filterFileCache: state.filterFileCache,
     cssInputHash: state.cssInputHash,
@@ -140,6 +144,8 @@ export async function discover(
     noCache?: boolean;
     activeFormats?: string[];
     prevState?: BuildState | null;
+    /** Directorio de salida del build actual (se persiste para el comando info). */
+    outputDir?: string;
     /** Hashes de invalidación calculados por el orchestrator, guardados en state.json. */
     meta?: { filtersHash: string; filterFileCache: FilterFileCache; configHashes: Record<string, string>; bibHash: string; cssInputHash: string };
     /** Si false, no persiste state.json (--no-export: las salidas siguen desactualizadas). */
@@ -297,6 +303,7 @@ export async function discover(
   const hasChanged =
     changedPaths.size > 0 ||
     !useCache ||
+    options.outputDir !== prevState?.outputDir ||
     options.meta?.filtersHash !== prevState?.filtersHash ||
     JSON.stringify(options.meta?.filterFileCache) !== JSON.stringify(prevState?.filterFileCache) ||
     JSON.stringify(options.meta?.configHashes) !== JSON.stringify(prevState?.configHashes) ||
@@ -307,6 +314,7 @@ export async function discover(
     await saveBuildState(cwd, {
       startedAt: thisBuildStartedAt,
       activeFormats: options.activeFormats ?? [],
+      outputDir: options.outputDir,
       entries: discoveryIndex,
       filtersHash: options.meta?.filtersHash,
       filterFileCache: options.meta?.filterFileCache,

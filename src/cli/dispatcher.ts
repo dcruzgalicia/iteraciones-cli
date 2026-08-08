@@ -4,8 +4,9 @@ import { IGNORED_DIRS } from '../builder/discover.js';
 import { isHiddenPath, isIgnoredByRules, loadGitignoreRules } from '../builder/gitignore.js';
 import type { BuildOptions } from '../builder/orchestrator.js';
 import { build } from '../builder/orchestrator.js';
+import { loadStateFile } from '../builder/state.js';
 import { loadSiteConfig } from '../config/config-loader.js';
-import { computeActiveFormats } from '../config/site-config.js';
+import { computeActiveFormats, DEFAULT_PDF_FORMAT } from '../config/site-config.js';
 import { BuildError, ConfigError, PandocError } from '../lib/errors.js';
 import { logError, logInfo, logSuccess } from '../lib/logger.js';
 import { checkPandoc } from '../lib/pandoc-runner.js';
@@ -78,15 +79,20 @@ export async function runInfo(cwd: string): Promise<void> {
   try {
     const config = await loadSiteConfig(cwd);
     const pandocVersion = await checkPandoc().catch(() => 'no disponible');
-    const distDir = join(cwd, 'dist', 'files');
+    // El directorio de salida real es el del último build (state.json);
+    // sin estado previo, el default.
+    const state = await loadStateFile(cwd);
+    const distDir = state?.outputDir ?? join(cwd, 'dist', 'files');
     const distExists = await stat(distDir)
       .then((s) => s.isDirectory())
       .catch(() => false);
     const activeFormats = computeActiveFormats(config.format);
-    const disabledList = config.disabledFilters?.length ? config.disabledFilters.join(', ') : '(todos activos)';
-    const disabledPreamble = config.format?.pdf?.disabledPreambleFilters?.length
-      ? config.format?.pdf?.disabledPreambleFilters.join(', ')
-      : '(todos activos)';
+    const disabledFilters = config.disabledFilters?.length ? config.disabledFilters.join(', ') : '(ninguno)';
+    // Distinguir los preamble desactivados por defecto (defaults del paquete)
+    // de los que el usuario agregó explícitamente.
+    const defaultPreamble = DEFAULT_PDF_FORMAT.disabledPreambleFilters;
+    const preambleDisabled = config.format?.pdf?.disabledPreambleFilters ?? [];
+    const userPreamble = preambleDisabled.filter((name) => !defaultPreamble.includes(name));
     const docCount = await countMarkdownDocuments(cwd);
     const html = config.format?.html;
     const theme = html?.theme ?? '(por defecto)';
@@ -101,8 +107,9 @@ export async function runInfo(cwd: string): Promise<void> {
       `  formatos activos:        ${activeFormats.length > 0 ? activeFormats.join(', ') : '(ninguno)'}`,
       `  tema HTML:               ${theme}`,
       `  acento HTML:             ${accent}`,
-      `  filters desactivados:    ${disabledList}`,
-      `  preamble desactivados:   ${disabledPreamble}`,
+      `  filters desactivados:    ${disabledFilters}`,
+      `  preamble desactivados:   ${preambleDisabled.length > 0 ? preambleDisabled.join(', ') : '(ninguno)'}`,
+      `  preamble adicionales:    ${userPreamble.length > 0 ? userPreamble.join(', ') : '(ninguno)'}`,
     ];
     logInfo(lines.join('\n'), 'info');
   } catch (err) {
