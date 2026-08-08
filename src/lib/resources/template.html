@@ -28,7 +28,7 @@
         class="relative prose prose-xl prose-accent dark:prose-invert max-w-none mt-6 rounded-2xl border border-accent-500/30 bg-stone-50/90 dark:bg-stone-900/85 p-8 shadow-sm ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 outline outline-1 outline-offset-4 outline-accent-500/10 transition duration-200 hover:-translate-y-0.5 hover:border-accent-500/30 [overflow-wrap:anywhere] [&::before]:pointer-events-none [&::before]:absolute [&::before]:left-2 [&::before]:top-2 [&::before]:h-3 [&::before]:w-3 [&::before]:border-l [&::before]:border-t [&::before]:border-accent-500/40 [&::before]:content-[''] [&::after]:pointer-events-none [&::after]:absolute [&::after]:bottom-2 [&::after]:right-2 [&::after]:h-3 [&::after]:w-3 [&::after]:border-b [&::after]:border-r [&::after]:border-accent-500/40 [&::after]:content-['']
         [&_blockquote]:border-accent-500/40
         [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-accent-500/10 [&_pre]:bg-stone-100 dark:[&_pre]:bg-stone-950/70
-        [&_h1:not([class])]:text-2xl [&_h2:not([class])]:text-xl
+        [&_h1:not([class])]:text-2xl [&_h1.unnumbered]:text-2xl [&_h2:not([class])]:text-xl
         [&_h3:not([class])]:text-xl [&_h3:not([class])]:text-accent-700 dark:[&_h3:not([class])]:text-accent-300
         [&_h4:not([class])]:text-xl [&_h4:not([class])]:uppercase [&_h4:not([class])]:tracking-wide
         [&_h5:not([class])]:text-xl [&_h5:not([class])]:italic
@@ -68,7 +68,7 @@
         [&_li]:py-1 [&_li]:font-bold [&_li]:text-accent-950 dark:[&_li]:text-accent-50
         [&_ul_ul_li]:font-normal [&_ul_ul_li]:italic
         [&_ul_ul_ul_li]:font-normal [&_ul_ul_ul_li]:not-italic
-        [&_a]:text-accent-600 dark:[&_a]:text-accent-400 [&_a]:no-underline [&_a]:transition-colors [&_a]:duration-200 [&_a:hover]:text-accent-500 dark:[&_a:hover]:text-accent-300"
+        [&_a]:underline [&_a]:underline-offset-4 [&_a]:decoration-accent-500/60 [&_a]:transition-colors [&_a]:duration-200 [&_a:hover]:decoration-accent-500"
       >
         <h2 class="inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-12 text-accent-600 dark:text-accent-400">Índice</h2>
         $toc$
