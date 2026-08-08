@@ -55,6 +55,16 @@ export interface SiteConfig {
   /** Configuracion por formato de salida. */
   format: FormatConfig;
   /**
+   * Archivo .bib del proyecto (ruta relativa o absoluta). Sin configurar,
+   * se auto-descubre el primero .bib del proyecto.
+   */
+  bibliography?: string;
+  /**
+   * Archivo CSL (ruta relativa o absoluta). Sin configurar, se usa el
+   * estilo APA-7 empaquetado.
+   */
+  csl?: string;
+  /**
    * Lista de filters a desactivar (blacklist), por nombre completo.
    * Por defecto undefined = todos activos.
    * Para desactivar uno, agrega su nombre completo aqui. Ej:

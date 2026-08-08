@@ -51,6 +51,8 @@ interface PreambleMeta {
   showDate?: boolean;
   /** Directorio raiz del proyecto para descubrir archivos .bib. */
   cwd?: string;
+  /** Ruta absoluta de la bibliografía efectiva (configurada o auto-descubierta). */
+  bibliography?: string;
   /** Si el cuerpo LaTeX contiene encabezados (section, chapter, etc.). */
   hasTocEntries?: boolean;
   /** Si el primer bloque del cuerpo LaTeX es un encabezado o dictum (true) o un parrafo (false). */
@@ -75,8 +77,10 @@ export async function buildLatexPreamble(
   }
 
   // ── Bibliografía (rutas .bib dinámicas desde el proyecto) ──
-  if (cwdForFilters) {
-    const bibFiles = await discoverBibFiles(cwdForFilters, ['bib']);
+  // Con bibliografía efectiva (configurada o auto-descubierta por el pipeline)
+  // se referencia esa ruta; sin ella, se descubren los .bib del proyecto.
+  if (meta?.bibliography || cwdForFilters) {
+    const bibFiles = meta?.bibliography ? [meta.bibliography] : await discoverBibFiles(cwdForFilters ?? '', ['bib']);
     if (bibFiles.length > 0) {
       for (const bib of bibFiles) {
         preamble.push(`\\addbibresource{${escapeLatexPath(bib)}}`);

@@ -557,10 +557,9 @@ export async function texBodyFromAst(
   doc: BuildDocument,
   cwd: string,
   siteConfig: SiteConfig,
-  luaFilters?: LuaFilterGroup,
+  filters: LuaFilterGroup,
 ): Promise<{ body: string; flags: PreambleFlags }> {
-  const filters = luaFilters ?? (await loadFilterGroups(siteConfig, siteConfig.disabledFilters, cwd));
-  const { bibFiles } = await resolveBibOptions(cwd);
+  const { bibFiles } = await resolveBibOptions(cwd, siteConfig);
   const flags = computePreambleFlags(ast);
   // Detección de citas desde el AST (nodos Cite reales, sin regex sobre el markdown)
   const hasCiteKeys = bibFiles.length > 0 && hasCiteNodes(ast);

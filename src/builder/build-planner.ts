@@ -67,7 +67,7 @@ export async function computeBuildMetadata(
   const [configHashes, filtersHashResult, bibHash, cssInputHash] = await Promise.all([
     computeConfigHashes(cwd, siteConfig),
     computeFiltersHash(cwd, siteConfig, prevState?.filterFileCache),
-    computeBibHash(cwd),
+    computeBibHash(cwd, siteConfig),
     computeCssInputHash(siteConfig),
   ]);
   const filtersHash = filtersHashResult.hash;
