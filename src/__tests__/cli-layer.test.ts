@@ -151,6 +151,32 @@ describe('runBuild', () => {
     });
   });
 
+  it('sin index.md la tarjeta identidad no enlaza a un home inexistente', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir); // test.md en la raíz, sin index.md
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
+      expect(html).not.toContain('<a href="./"');
+      // La tarjeta se renderiza como div (sin enlace)
+      expect(html).toContain('Tarjeta identidad');
+    });
+  });
+
+  it('con index.md la tarjeta identidad enlaza al home', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'index.md'), '---\ntitle: Inicio\n---\n\n# Bienvenida\n\nContenido.\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
+      expect(html).toContain('href="./"');
+      expect(await Bun.file(join(dir, 'dist', 'files', 'index.html')).exists()).toBe(true);
+    });
+  });
+
   it('build cacheado mantiene "(reutilizado)" en el resumen', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
