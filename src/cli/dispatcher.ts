@@ -28,10 +28,16 @@ export async function runClean(cwd: string): Promise<void> {
 
 export async function runBuild(cwd: string, options: BuildOptions = {}): Promise<void> {
   try {
-    // Validar --concurrency
-    const concurrency = options.concurrency;
-    if (concurrency !== undefined && (!Number.isInteger(concurrency) || concurrency < 1)) {
-      throw new Error(`--concurrency debe ser un entero positivo (recibido: "${concurrency}")`);
+    // Validar y normalizar --concurrency (llega como string crudo desde el parser).
+    // La validación vive aquí y no en parser.ts para que el error use el
+    // formato unificado (logError) en lugar de un stack trace.
+    let concurrency = options.concurrency;
+    if (concurrency !== undefined) {
+      const parsed = typeof concurrency === 'string' ? Number.parseInt(concurrency, 10) : concurrency;
+      if (!Number.isInteger(parsed) || parsed < 1) {
+        throw new Error(`--concurrency debe ser un entero positivo (recibido: "${concurrency}")`);
+      }
+      concurrency = parsed;
     }
 
     // Validar --output
@@ -49,7 +55,7 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
       }
     }
 
-    await build(cwd, options);
+    await build(cwd, { ...options, concurrency });
   } catch (err) {
     if (err instanceof PandocError) {
       const location = err.sourcePath ? ` en "${err.sourcePath}"` : '';

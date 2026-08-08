@@ -16,7 +16,7 @@ import type { BuildContext } from './types.js';
 
 export interface BuildOptions {
   outputDir?: string;
-  concurrency?: number;
+  concurrency?: number | string;
   noCache?: boolean;
   noCss?: boolean;
   noExport?: boolean;
@@ -31,12 +31,14 @@ async function setupBuildEnvironment(cwd: string, siteConfig: SiteConfig, option
   // simultáneos saturan el sistema de archivos y degradan el rendimiento.
   // Solo aplica al default automático: `--concurrency` explícito se respeta.
   const defaultConcurrency = Math.min(Math.max(1, cpus().length - 1), 16);
+  const rawConcurrency = options.concurrency ?? defaultConcurrency;
+  const concurrency = typeof rawConcurrency === 'number' ? rawConcurrency : Number.parseInt(rawConcurrency, 10);
   const ctx: BuildContext = {
     siteConfig,
     cwd,
     outputDir: options.outputDir ?? defaultOutputDir,
     cssPath: '',
-    concurrency: options.concurrency ?? defaultConcurrency,
+    concurrency,
   };
 
   if (options.noCache) {
