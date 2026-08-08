@@ -1,5 +1,6 @@
 import { Listr } from 'listr2';
 import { loadSiteConfig } from '../config/config-loader.js';
+import type { SiteConfig } from '../config/site-config.js';
 import { ConfigError } from '../lib/errors.js';
 import { logInfo, logWarning } from '../lib/logger.js';
 import {
@@ -11,31 +12,40 @@ import {
   checkWritePermissions,
 } from './doctor/system-checks.js';
 
-async function checkSiteConfig(cwd: string): Promise<CheckResult> {
-  try {
-    await loadSiteConfig(cwd);
-    return { label: 'iteraciones.config.yaml', ok: true };
-  } catch (err) {
-    if (err instanceof ConfigError) {
-      return { label: 'iteraciones.config.yaml', ok: false, detail: err.message };
-    }
-    return { label: 'iteraciones.config.yaml', ok: false, detail: err instanceof Error ? err.message : String(err) };
-  }
-}
-
 /**
  * Verifica que el entorno tenga todo lo necesario para correr `iteraciones build`.
  * Con `options.fix = true` intenta corregir automáticamente los problemas reparables.
  */
 export async function runDoctor(cwd: string, options: { fix?: boolean } = {}): Promise<void> {
-  const checks = await Promise.all([
+  // La config se carga una sola vez (en paralelo con las verificaciones de
+  // entorno): el motor LaTeX solo se verifica si el proyecto lo necesita
+  // (format.pdf o format.latex activos), mismo criterio que validate.
+  const [configResult, pandoc, tailwind, read, write] = await Promise.all([
+    loadSiteConfig(cwd).then(
+      (siteConfig: SiteConfig) => ({ siteConfig, ok: true, detail: undefined as string | undefined }),
+      (err: unknown) => ({
+        siteConfig: null,
+        ok: false,
+        detail: err instanceof ConfigError ? err.message : err instanceof Error ? err.message : String(err),
+      }),
+    ),
     checkPandoc(),
-    checkSiteConfig(cwd),
     checkTailwind(cwd),
     checkReadPermissions(cwd),
     checkWritePermissions(cwd),
-    checkLatexEngine(),
   ]);
+  const needsLatex =
+    configResult.siteConfig !== null && (configResult.siteConfig.format?.pdf?.generate === true || configResult.siteConfig.format?.latex === true);
+  const latex = needsLatex ? await checkLatexEngine() : undefined;
+
+  const checks: CheckResult[] = [
+    pandoc,
+    { label: 'iteraciones.config.yaml', ok: configResult.ok, detail: configResult.detail },
+    tailwind,
+    read,
+    write,
+    ...(latex ? [latex] : []),
+  ];
 
   const allOk = checks.every((c) => c.ok);
 
