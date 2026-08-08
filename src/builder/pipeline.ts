@@ -231,6 +231,7 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
         docTitle: doc.frontmatter.title && doc.frontmatter.title !== 'Sin t\u00edtulo' ? doc.frontmatter.title : undefined,
         subtitle: doc.frontmatter.subtitle,
         date: doc.frontmatter.date || undefined,
+        homeHref: dir === '.' ? './' : '../'.repeat(dir.split('/').length),
       },
       ctx.siteConfig,
       bibOptions,

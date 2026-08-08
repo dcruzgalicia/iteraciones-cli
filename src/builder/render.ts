@@ -344,6 +344,8 @@ interface HtmlPageVars {
   subtitle?: string;
   /** Fecha del documento desde el frontmatter. */
   date?: string;
+  /** Ruta relativa al home (./, ../, ../../ según la profundidad). */
+  homeHref?: string;
 }
 
 /**
@@ -378,6 +380,7 @@ export async function renderHtmlPageFromAst(
   if (vars.docTitle) extraArgs.push(`--metadata=doc-title:${vars.docTitle}`);
   if (vars.subtitle) extraArgs.push(`--metadata=subtitle:${vars.subtitle}`);
   if (vars.date) extraArgs.push(`--metadata=date:${vars.date}`);
+  if (vars.homeHref) extraArgs.push(`--metadata=home-href:${vars.homeHref}`);
   if (vars.theme) extraArgs.push(`--metadata=theme:${vars.theme}`);
   if (vars.accent) extraArgs.push(`--metadata=accent:${vars.accent}`);
   if (vars.css) extraArgs.push(`--metadata=css:${vars.css}`);
