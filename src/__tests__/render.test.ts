@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   computePreambleFlags,
+  getBuiltinFilterNames,
   hasCiteNodes,
   loadFilterGroups,
   resolveLuaFilters,
@@ -339,9 +340,11 @@ describe('resolveLuaFilters (resolución de filtros)', () => {
 });
 
 describe('loadFilterGroups (solo resolución de filtros Lua)', () => {
-  it('resuelve los 8 filtros latex del paquete en orden', async () => {
+  it('resuelve los filtros latex del paquete en orden (derivado del filesystem)', async () => {
     const groups = await loadFilterGroups(DEFAULT_SITE_CONFIG);
-    expect(groups.latex).toHaveLength(8);
+    const latexCount = getBuiltinFilterNames().filter((n) => n.startsWith('latex/')).length;
+    expect(latexCount).toBeGreaterThan(0);
+    expect(groups.latex).toHaveLength(latexCount);
     expect(groups.latex[1]).toContain('02-dictum.lua');
   });
 
@@ -351,7 +354,8 @@ describe('loadFilterGroups (solo resolución de filtros Lua)', () => {
       mkdirSync(join(cwd, 'filters', 'latex'), { recursive: true });
       writeFileSync(join(cwd, 'filters', 'latex', '02-dictum.lua'), '-- test\n');
       const groups = await loadFilterGroups(DEFAULT_SITE_CONFIG, undefined, cwd);
-      expect(groups.latex).toHaveLength(8);
+      const latexCount = getBuiltinFilterNames().filter((n) => n.startsWith('latex/')).length;
+      expect(groups.latex).toHaveLength(latexCount);
       expect(groups.latex[1]).toBe(join(cwd, 'filters', 'latex', '02-dictum.lua'));
     } finally {
       rmSync(cwd, { recursive: true, force: true });

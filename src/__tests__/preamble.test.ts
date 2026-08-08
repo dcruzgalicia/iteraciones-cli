@@ -4,24 +4,25 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildLatexPreamble } from '../builder/latex-preamble.js';
 import {
-  BUILTIN_PREAMBLE_FILTERS,
   getBuiltinPreambleFilterInfos,
+  getBuiltinPreambleFilterNames,
   loadPreambleFilters,
   validateDisabledPreambleFilters,
 } from '../builder/preamble-loader.js';
 import * as logger from '../lib/logger.js';
 
 describe('preamble-loader', () => {
-  it('lista los preamble filters built-in con descripción', () => {
-    const infos = getBuiltinPreambleFilterInfos();
-    expect(infos).toHaveLength(BUILTIN_PREAMBLE_FILTERS.length);
-    expect(infos.map((i) => i.name)).toEqual(BUILTIN_PREAMBLE_FILTERS);
+  it('lista los preamble filters built-in con descripción', async () => {
+    const infos = await getBuiltinPreambleFilterInfos();
+    const names = getBuiltinPreambleFilterNames();
+    expect(infos).toHaveLength(names.length);
+    expect(infos.map((i) => i.name)).toEqual(names);
     expect(infos.every((i) => i.description.length > 0)).toBe(true);
   });
 
   it('carga el contenido .tex del paquete para todos los filters', async () => {
     const filters = await loadPreambleFilters();
-    expect(filters).toHaveLength(BUILTIN_PREAMBLE_FILTERS.length);
+    expect(filters).toHaveLength(getBuiltinPreambleFilterNames().length);
     const biblio = filters.find((t) => t.name === '18-bibliography-heading');
     expect(biblio?.content).toContain('\\ifcsname ver@biblatex.sty\\endcsname');
     expect(biblio?.content).toContain('\\defbibheading{bibintoc}[\\refname]{%');
@@ -32,7 +33,7 @@ describe('preamble-loader', () => {
   it('respeta la disabled list', async () => {
     const filters = await loadPreambleFilters(['15-hyphenation-rules']);
     expect(filters.map((t) => t.name)).not.toContain('15-hyphenation-rules');
-    expect(filters).toHaveLength(BUILTIN_PREAMBLE_FILTERS.length - 1);
+    expect(filters).toHaveLength(getBuiltinPreambleFilterNames().length - 1);
   });
 
   it('un .tex del proyecto reemplaza al del paquete', async () => {
