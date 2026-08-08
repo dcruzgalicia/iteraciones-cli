@@ -25,6 +25,7 @@ format:
     theme: dark                   # tema: "light" o "dark"
     accent: lime                  # color de acento (lime, blue, rose, etc.)
     generate: true                 # genera HTML
+    # blocks: orden del masonry (ver format.html.blocks)
 
   epub:
     generate: false               # genera EPUB
@@ -188,6 +189,24 @@ Tema visual del HTML (atributo `data-theme` del `<html>`).
 **Por defecto:** `'lime'`
 
 Color de acento del tema. Debe ser un color de la paleta Tailwind CSS v4 con escala completa (50–950). Colores válidos: `slate`, `gray`, `zinc`, `neutral`, `stone`, `red`, `orange`, `amber`, `yellow`, `lime`, `green`, `emerald`, `teal`, `cyan`, `sky`, `blue`, `indigo`, `violet`, `purple`, `fuchsia`, `pink`, `rose`.
+
+#### `format.html.blocks`
+
+**Tipo:** `object` (clave de bloque → número entero)
+**Por defecto:**
+
+```yaml
+blocks:
+  header: -1        # tarjeta identidad inicial
+  trayectura: 0     # tarjeta de contenido
+  # (el 1 queda libre: futura tarjeta volver-al-principio)
+  formatos: 2       # tarjeta de formatos generados
+  indice: 3         # tabla de contenidos
+  referencias: 4    # citas bibliográficas
+  footer: 99        # tarjeta identidad final
+```
+
+Orden de los bloques del masonry: **más alto = más tarde**. Es un override **individual**: cada clave es opcional y puede moverse sin tocar las demás (p. ej. `formatos: 4` lo coloca después de `indice`). Los números iguales se desempatan por el orden canónico de claves (`header → trayectura → formatos → indice → referencias → footer`). Los bloques de tarjetas ausentes (TOC sin `toc`, referencias sin citas, formatos sin formatos activos) no se renderizan y no alteran el orden del resto.
 
 ### `format.epub`
 

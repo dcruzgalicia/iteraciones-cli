@@ -1,7 +1,14 @@
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { stringify } from 'yaml';
-import { DEFAULT_EPUB_FORMAT, DEFAULT_HTML_FORMAT, DEFAULT_MARKDOWN_FORMAT, DEFAULT_PDF_FORMAT, DEFAULT_SITE_CONFIG } from '../config/site-config.js';
+import {
+  DEFAULT_EPUB_FORMAT,
+  DEFAULT_HTML_BLOCKS,
+  DEFAULT_HTML_FORMAT,
+  DEFAULT_MARKDOWN_FORMAT,
+  DEFAULT_PDF_FORMAT,
+  DEFAULT_SITE_CONFIG,
+} from '../config/site-config.js';
 import { logInfo, logSuccess } from '../lib/logger.js';
 
 const DEFAULT_README = [
@@ -53,6 +60,7 @@ function buildDefaultConfig(): string {
       theme: 'dark',
       accent: DEFAULT_HTML_FORMAT.accent,
       generate: DEFAULT_HTML_FORMAT.generate ?? true,
+      blocks: { ...DEFAULT_HTML_BLOCKS },
     },
     pdf: {
       generate: DEFAULT_PDF_FORMAT.generate ?? false,
@@ -68,6 +76,10 @@ function buildDefaultConfig(): string {
 
   // Añadir comentarios explicativos sobre los defaults
   yaml = yaml.replace('    theme: dark', '    # Tema visual del HTML: "light" o "dark". Por defecto: dark.\n    theme: dark');
+  yaml = yaml.replace(
+    '    blocks:',
+    '# Orden de los bloques del masonry: más alto = más tarde.\n' + '# El 1 queda libre (futura tarjeta volver-al-principio).\n' + '    blocks:',
+  );
   yaml = yaml.replace(
     '    disabled-preamble-filters:',
     '# Los preamble filters 24, 25 y 26 añaden funcionalidades para impresión\n' +
