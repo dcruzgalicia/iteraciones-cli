@@ -76,10 +76,7 @@ function buildDefaultConfig(): string {
 
   // Añadir comentarios explicativos sobre los defaults
   yaml = yaml.replace('    theme: dark', '    # Tema visual del HTML: "light" o "dark". Por defecto: dark.\n    theme: dark');
-  yaml = yaml.replace(
-    '    blocks:',
-    '# Orden de los bloques del masonry: más alto = más tarde.\n' + '# El 1 queda libre (futura tarjeta volver-al-principio).\n' + '    blocks:',
-  );
+  yaml = yaml.replace('    blocks:', '# Orden de los bloques del masonry: más alto = más tarde.\n' + '    blocks:');
   yaml = yaml.replace(
     '    disabled-preamble-filters:',
     '# Los preamble filters 24, 25 y 26 añaden funcionalidades para impresión\n' +

@@ -2,8 +2,7 @@
 
 /**
  * Bloques del masonry HTML. Cada clave es una tarjeta; el número indica el
- * orden (más alto = más tarde). El 1 queda sin asignar (reservado para la
- * futura tarjeta volver-al-principio).
+ * orden (más alto = más tarde). El 1 queda sin asignar.
  */
 export const DEFAULT_HTML_BLOCKS = {
   header: -1,

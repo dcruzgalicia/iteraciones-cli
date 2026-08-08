@@ -8,7 +8,7 @@
   $if(description-meta)$<meta name="description" content="$description-meta$">$endif$
   $if(css)$<link rel="stylesheet" href="$css$">$endif$
 </head>
-<body class="font-sans antialiased text-xl text-accent-950 dark:text-accent-50 bg-stone-200 dark:bg-stone-950 [background-image:radial-gradient(circle,color-mix(in_srgb,var(--color-accent-600)_90%,transparent)_2px,transparent_2px),radial-gradient(circle_at_85%_8%,color-mix(in_srgb,var(--color-accent-600)_22%,transparent)_0,transparent_55%),linear-gradient(to_right,color-mix(in_srgb,var(--color-accent-600)_15%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_srgb,var(--color-accent-600)_15%,transparent)_1px,transparent_1px)] [background-size:48px_48px,100%_100%,48px_48px,48px_48px] dark:[background-image:radial-gradient(circle,color-mix(in_srgb,var(--color-accent-500)_45%,transparent)_2px,transparent_2px),radial-gradient(circle_at_85%_8%,color-mix(in_srgb,var(--color-accent-500)_12%,transparent)_0,transparent_55%),linear-gradient(to_right,color-mix(in_srgb,var(--color-accent-500)_8%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_srgb,var(--color-accent-500)_8%,transparent)_1px,transparent_1px)] dark:[background-size:64px_64px,100%_100%,64px_64px,64px_64px]">
+<body id="top" class="font-sans antialiased text-xl text-accent-950 dark:text-accent-50 bg-stone-200 dark:bg-stone-950 [background-image:radial-gradient(circle,color-mix(in_srgb,var(--color-accent-600)_90%,transparent)_2px,transparent_2px),radial-gradient(circle_at_85%_8%,color-mix(in_srgb,var(--color-accent-600)_22%,transparent)_0,transparent_55%),linear-gradient(to_right,color-mix(in_srgb,var(--color-accent-600)_15%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_srgb,var(--color-accent-600)_15%,transparent)_1px,transparent_1px)] [background-size:48px_48px,100%_100%,48px_48px,48px_48px] dark:[background-image:radial-gradient(circle,color-mix(in_srgb,var(--color-accent-500)_45%,transparent)_2px,transparent_2px),radial-gradient(circle_at_85%_8%,color-mix(in_srgb,var(--color-accent-500)_12%,transparent)_0,transparent_55%),linear-gradient(to_right,color-mix(in_srgb,var(--color-accent-500)_8%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_srgb,var(--color-accent-500)_8%,transparent)_1px,transparent_1px)] dark:[background-size:64px_64px,100%_100%,64px_64px,64px_64px]">
   <main class="columns-1 md:columns-2 xl:columns-3 2xl:columns-4 gap-6 px-4 sm:px-6 lg:px-8 py-8">
 
     <!-- block:header -->
@@ -109,5 +109,15 @@
     </div>
 
   </main>
+
+  <!-- Botón flotante: aparece al hacer scroll y desaparece al volver al
+       principio (scroll-driven animation, cero JS; ver styles.css). -->
+  <a
+    href="#top"
+    aria-label="Volver al principio"
+    class="scroll-reveal fixed right-6 bottom-6 z-50 flex size-11 items-center justify-center rounded-full border border-accent-500/40 bg-stone-950/90 text-accent-400 shadow-lg backdrop-blur-sm transition-colors duration-200 hover:border-accent-500"
+  >
+    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+  </a>
 </body>
 </html>

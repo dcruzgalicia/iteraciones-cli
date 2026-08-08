@@ -120,3 +120,35 @@
     display: block;
   }
 }
+
+/* Botón flotante "volver al principio": aparece al hacer scroll y desaparece
+   al volver al inicio (scroll-driven animation, cero JS). El `@supports` fija
+   opacity/pointer-events base dentro del soporte para evitar el parpadeo del
+   primer frame (el timeline aún no está computado); sin soporte, el botón
+   queda visible siempre (degradado seguro). */
+@utility scroll-reveal {
+  animation: scroll-reveal linear both;
+  animation-timeline: scroll();
+  animation-range: 150px 300px;
+}
+
+@supports (animation-timeline: scroll()) {
+  .scroll-reveal {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+@keyframes scroll-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+    pointer-events: none;
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+}
