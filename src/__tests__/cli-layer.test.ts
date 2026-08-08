@@ -377,6 +377,27 @@ describe('runBuild', () => {
     });
   });
 
+  it('el HTML incluye el botón flotante para volver al principio y el CSS su animación', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
+      // El ancla y el botón existen en cada página
+      expect(html).toContain('<body id="top"');
+      expect(html).toContain('aria-label="Volver al principio"');
+      expect(html).toContain('scroll-reveal');
+      // El botón no es un bloque del masonry (fuera del sistema de bloques)
+      expect(html).not.toContain('block:volver');
+      // El CSS precompilado incluye la animación scroll-driven
+      const css = await Bun.file(join(dir, 'dist', 'files', 'css', 'styles.css')).text();
+      expect(css).toContain('.scroll-reveal');
+      expect(css).toContain('@keyframes scroll-reveal');
+      expect(css).toContain('animation-timeline:scroll()');
+    });
+  });
+
   it('el masonry sigue el orden de bloques por defecto (header, trayectura, formatos, indice, referencias, footer)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);

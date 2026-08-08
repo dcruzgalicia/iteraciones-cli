@@ -199,7 +199,6 @@ Color de acento del tema. Debe ser un color de la paleta Tailwind CSS v4 con esc
 blocks:
   header: -1        # tarjeta identidad inicial
   trayectura: 0     # tarjeta de contenido
-  # (el 1 queda libre: futura tarjeta volver-al-principio)
   formatos: 2       # tarjeta de formatos generados
   indice: 3         # tabla de contenidos
   referencias: 4    # citas bibliográficas
