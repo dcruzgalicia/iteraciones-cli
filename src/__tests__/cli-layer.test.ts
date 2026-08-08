@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { CommanderError } from 'commander';
 import { runBuild, runClean, runDoctor, runFilters, runInfo, runInit, runNew, runValidate } from '../cli/dispatcher.js';
 import { buildProgram } from '../cli/parser.js';
+import { DEFAULT_HTML_BLOCKS } from '../config/site-config.js';
 import { initTestProject } from './helpers.js';
 
 /**
@@ -735,6 +736,17 @@ describe('runInit', () => {
       // Llamar init de nuevo: los archivos ya existen
       await runInit(dir);
       expect(process.exitCode).toBe(0);
+    });
+  });
+
+  it('el config generado incluye los defaults de format.html.blocks', async () => {
+    await withTempDir(async (dir) => {
+      process.exitCode = 0;
+      await runInit(dir);
+      expect(process.exitCode).toBe(0);
+      const yaml = await Bun.file(join(dir, 'iteraciones.config.yaml')).text();
+      const parsed = Bun.YAML.parse(yaml) as { format?: { html?: { blocks?: Record<string, number> } } };
+      expect(parsed.format?.html?.blocks).toEqual(DEFAULT_HTML_BLOCKS);
     });
   });
 });
