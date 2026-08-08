@@ -4,7 +4,7 @@ import { basename, join } from 'node:path';
 import { ProgressTracker } from '../cli/progress.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { computeActiveFormats, type SiteConfig } from '../config/site-config.js';
-import { logInfo } from '../lib/logger.js';
+import { logInfo, logWarning } from '../lib/logger.js';
 import { buildAssets } from './build-assets.js';
 import { computeBuildMetadata, computeWorkSets } from './build-planner.js';
 import { buildFormatsList, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges, copyToDist } from './cleanup.js';
@@ -192,8 +192,10 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   const allDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
 
   if (allDocs.length === 0) {
-    logInfo('No se encontraron documentos Markdown en el proyecto.', 'build');
-    logInfo("Crea un archivo .md con frontmatter o ejecuta 'iteraciones init'.", 'build');
+    // Proyecto vacío: mensaje visible en stderr (advertencias del resumen) y
+    // resumen con 0 formatos (sin "reutilizado"). Exit 0: no es un error.
+    logWarning('No se encontraron documentos Markdown en el proyecto.', 'build');
+    logWarning("Crea un archivo .md con frontmatter o ejecuta 'iteraciones init'.", 'build');
     await progress.finish(0, 0, []);
     return;
   }
