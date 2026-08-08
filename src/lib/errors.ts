@@ -20,6 +20,17 @@ export class ConfigError extends Error {
 }
 
 /**
+ * Error del pipeline de build con contexto de documento (frontmatter inválido,
+ * etc.). El dispatcher lo reporta con el prefijo [build].
+ */
+export class BuildError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'BuildError';
+  }
+}
+
+/**
  * Normaliza un mensaje de error para el usuario: elimina prefijos de clase
  * (SyntaxError:, Error:) y ruido interno como stacks o causas.
  * Los errores de YAML se traducen a formato legible.

@@ -6,7 +6,7 @@ import type { BuildOptions } from '../builder/orchestrator.js';
 import { build } from '../builder/orchestrator.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { computeActiveFormats } from '../config/site-config.js';
-import { ConfigError, PandocError } from '../lib/errors.js';
+import { BuildError, ConfigError, PandocError } from '../lib/errors.js';
 import { logError, logInfo, logSuccess } from '../lib/logger.js';
 import { checkPandoc } from '../lib/pandoc-runner.js';
 import { runDoctor as doctor } from './doctor.js';
@@ -63,6 +63,8 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
       if (err.stderr) process.stderr.write(`${err.stderr}\n`);
     } else if (err instanceof ConfigError) {
       logError(err.message, 'config');
+    } else if (err instanceof BuildError) {
+      logError(err.message, 'build');
     } else if (err instanceof Error) {
       logError(err.message);
     } else {
