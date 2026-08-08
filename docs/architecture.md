@@ -339,3 +339,22 @@ El archivo `config-loader.ts` pasó de **469 a 76 líneas** (-84%) al reemplazar
 ### ¿Por qué no hay plugins/tipos de documento/paginación?
 
 El proyecto comenzó con una arquitectura muy ambiciosa (plugins ESM, 8 tipos de documento, paginación, temas, layouts) que fue simplificada drásticamente entre v0.8 y v0.10. La eliminación de ~3000+ líneas de código muerto mejoró la mantenibilidad, velocidad y predictibilidad del pipeline. Ver `CHANGELOG.md` para los detalles de cada release.
+
+### ¿Por qué el esquema de slugs conserva la expansión de autores y el contador `-dN`?
+
+Decisión registrada en el issue #1434 (2026-08): **se conserva el esquema actual**.
+
+Reglas del esquema (implementadas en `src/builder/slug-resolver.ts`):
+
+1. Slug base: `title` transliterado (acentos eliminados, símbolos mapeados: `&` → `y`, `%` → `por-ciento`).
+2. Con autor: `title-por-author` usando el primer autor; si el título se repite, se expanden progresivamente los autores (`-y-`) hasta 20.
+3. Si la expansión de autores no resuelve la colisión, se aplica un sufijo `-dN` (N incremental).
+4. El contador de `-dN` persiste en `.iteraciones/changes/slugs.json` para que los números no se reasignen al eliminar documentos del grupo en colisión.
+
+Motivos de la decisión:
+
+- La convención `title-por-author` es parte de la identidad documentada de la herramienta (README y `docs/frontmatter-reference.md`).
+- La estabilidad de nombres entre builds protege enlaces, notas y bookmarks del usuario: eliminar un documento no renumera los restantes.
+- El esquema está cubierto por tests de casos límite (`slug-changes.test.ts`: títulos duplicados, cambio/quita de autor, acortar título, sufijos `-dN`).
+
+Coste aceptado: ~180 líneas y un archivo de estado por proyecto. La alternativa simple (slug por título + sufijo numérico sin contador) fue descartada porque renumera archivos al eliminar documentos y rompe la convención documentada; la simplicidad del código no compensa la pérdida de estabilidad para el usuario.
