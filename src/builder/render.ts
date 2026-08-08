@@ -383,7 +383,7 @@ function insertFormatsCard(html: string, formats: Array<{ href: string; name: st
         `          <a href="${f.href}" class="flex items-center gap-3 rounded-lg transition-colors duration-200 hover:bg-accent-500/10">\n` +
         `            <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-accent-500/30 bg-accent-500/10 text-accent-500">${FORMAT_ICONS[f.name] ?? ''}</span>\n` +
         `            <div class="flex flex-col">\n` +
-        `              <span class="font-semibold text-accent-950 dark:text-accent-50">${f.name}</span>\n` +
+        `              <span class="text-lg font-semibold text-accent-950 dark:text-accent-50">${f.name}</span>\n` +
         `              <span class="text-sm italic text-accent-600 dark:text-accent-400">${f.description}</span>\n` +
         `            </div>\n` +
         `          </a>\n` +
