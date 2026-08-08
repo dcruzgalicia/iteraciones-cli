@@ -388,10 +388,11 @@ describe('runBuild', () => {
       expect(html).toContain('<body id="top"');
       expect(html).toContain('aria-label="Volver al principio"');
       expect(html).toContain('scroll-reveal');
-      // Posición centrada inferior, tamaño y fondo accent del botón
+      // Posición centrada inferior, tamaño y estilo tipo chip del botón
       expect(html).toContain('left-1/2 -translate-x-1/2');
       expect(html).toContain('size-12');
-      expect(html).toContain('bg-accent-500');
+      expect(html).toContain('bg-accent-500/15');
+      expect(html).toContain('text-accent-600 dark:text-accent-400');
       // Padding inferior del main: el botón no tapa el contenido al final
       expect(html).toContain('pt-8 pb-24');
       // El botón no es un bloque del masonry (fuera del sistema de bloques)
