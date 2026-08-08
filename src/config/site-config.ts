@@ -81,29 +81,34 @@ export interface SiteConfig {
  * Excluye white, black, transparent y similares que no tienen escala.
  */
 
-export const DEFAULT_HTML_FORMAT: HtmlFormatConfig = {
+// Los DEFAULT_* son la única fuente de verdad de los valores por defecto:
+// el esquema Zod (config-schema.ts) los consume con .default() y el
+// transform usa los mismos objetos como fallback. `satisfies` conserva los
+// tipos concretos (p. ej. theme: undefined, accent literal) para que el
+// esquema pueda leerlos sin fallbacks adicionales.
+export const DEFAULT_HTML_FORMAT = {
   title: 'iteraciones',
   tagline: 'escribir, compartir, re-existir',
   logo: '',
   theme: undefined,
-  accent: 'lime',
+  accent: 'lime' as const,
   generate: true,
-};
+} satisfies HtmlFormatConfig;
 
-export const DEFAULT_PDF_FORMAT: PdfFormatConfig = {
+export const DEFAULT_PDF_FORMAT = {
   generate: false,
   showDate: false,
-  pageNumber: 'header-right',
+  pageNumber: 'header-right' as const,
   disabledPreambleFilters: ['24-eso-pic', '25-pdfx', '26-crop'],
-};
+} satisfies PdfFormatConfig;
 
-export const DEFAULT_EPUB_FORMAT: EpubFormatConfig = {
+export const DEFAULT_EPUB_FORMAT = {
   generate: false,
-};
+} satisfies EpubFormatConfig;
 
-export const DEFAULT_MARKDOWN_FORMAT: MarkdownFormatConfig = {
+export const DEFAULT_MARKDOWN_FORMAT = {
   generate: false,
-};
+} satisfies MarkdownFormatConfig;
 
 /**
  * Extrae los nombres de formatos activos desde FormatConfig.
@@ -118,7 +123,7 @@ export function computeActiveFormats(format: FormatConfig): string[] {
   return formats;
 }
 
-export const DEFAULT_SITE_CONFIG: SiteConfig = {
+export const DEFAULT_SITE_CONFIG = {
   lang: 'es-MX',
   toc: false,
   disabledFilters: undefined,
@@ -130,4 +135,4 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
     markdown: DEFAULT_MARKDOWN_FORMAT,
     latex: false,
   },
-};
+} satisfies SiteConfig;

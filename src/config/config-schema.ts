@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { SiteConfig } from './site-config.js';
+import { DEFAULT_EPUB_FORMAT, DEFAULT_HTML_FORMAT, DEFAULT_MARKDOWN_FORMAT, DEFAULT_PDF_FORMAT, DEFAULT_SITE_CONFIG } from './site-config.js';
 
 // ── Constantes ────────────────────────────────────────────────────────────
 
@@ -39,12 +40,12 @@ export const KNOWN_ACCENT_COLORS = [
 
 const HtmlFormatSchema = z
   .object({
-    title: z.string().default('iteraciones'),
-    tagline: z.string().default('escribir, compartir, re-existir'),
-    logo: z.string().default(''),
+    title: z.string().default(DEFAULT_HTML_FORMAT.title),
+    tagline: z.string().default(DEFAULT_HTML_FORMAT.tagline),
+    logo: z.string().default(DEFAULT_HTML_FORMAT.logo),
     theme: z.enum(['light', 'dark']).optional(),
-    accent: z.enum(KNOWN_ACCENT_COLORS).optional().default('lime'),
-    generate: z.boolean().default(true),
+    accent: z.enum(KNOWN_ACCENT_COLORS).optional().default(DEFAULT_HTML_FORMAT.accent),
+    generate: z.boolean().default(DEFAULT_HTML_FORMAT.generate),
   })
   .strict();
 
@@ -52,12 +53,14 @@ const HtmlFormatSchema = z
 
 const PdfFormatSchema = z
   .object({
-    generate: z.boolean().default(false),
-    'show-date': z.boolean().default(false),
-    'page-number': z.enum(['header-left', 'header-center', 'header-right', 'footer-left', 'footer-center', 'footer-right']).default('header-right'),
+    generate: z.boolean().default(DEFAULT_PDF_FORMAT.generate),
+    'show-date': z.boolean().default(DEFAULT_PDF_FORMAT.showDate),
+    'page-number': z
+      .enum(['header-left', 'header-center', 'header-right', 'footer-left', 'footer-center', 'footer-right'])
+      .default(DEFAULT_PDF_FORMAT.pageNumber),
     'disabled-preamble-filters': z
       .array(z.string())
-      .default(['24-eso-pic', '25-pdfx', '26-crop'])
+      .default(DEFAULT_PDF_FORMAT.disabledPreambleFilters)
       .transform((v) => (v?.length ? v : undefined)),
   })
   .strict();
@@ -66,13 +69,13 @@ const PdfFormatSchema = z
 
 const EpubFormatSchema = z
   .object({
-    generate: z.boolean().default(false),
+    generate: z.boolean().default(DEFAULT_EPUB_FORMAT.generate),
   })
   .strict();
 
 const MarkdownFormatSchema = z
   .object({
-    generate: z.boolean().default(false),
+    generate: z.boolean().default(DEFAULT_MARKDOWN_FORMAT.generate),
   })
   .strict();
 
@@ -80,7 +83,7 @@ const MarkdownFormatSchema = z
 
 const FormatSchema = z
   .object({
-    latex: z.boolean().default(false),
+    latex: z.boolean().default(DEFAULT_SITE_CONFIG.format.latex),
     html: HtmlFormatSchema.optional(),
     pdf: PdfFormatSchema.optional(),
     epub: EpubFormatSchema.optional(),
@@ -93,8 +96,8 @@ const FormatSchema = z
 // Esquema intermedio que refleja la estructura del YAML
 const RawSiteConfigSchema = z
   .object({
-    lang: z.string().default('es-MX'),
-    toc: z.boolean().default(false),
+    lang: z.string().default(DEFAULT_SITE_CONFIG.lang),
+    toc: z.boolean().default(DEFAULT_SITE_CONFIG.toc),
     format: FormatSchema.optional(),
     'disabled-filters': z
       .array(z.string())
@@ -132,25 +135,14 @@ export const SiteConfigSchema = RawSiteConfigSchema.transform((raw) => {
   const mdRaw = f.markdown as Record<string, unknown> | undefined;
 
   return {
-    lang: (raw.lang as string) ?? 'es-MX',
-    toc: (raw.toc as boolean) ?? false,
+    lang: raw.lang,
+    toc: raw.toc,
     format: {
-      latex: (f.latex as boolean) ?? false,
-      html: htmlRaw
-        ? (camelizeKeys(htmlRaw) as SiteConfig['format']['html'])
-        : {
-            title: 'iteraciones',
-            tagline: 'escribir, compartir, re-existir',
-            logo: '',
-            theme: undefined,
-            accent: 'lime',
-            generate: true,
-          },
-      pdf: pdfRaw
-        ? (camelizeKeys(pdfRaw) as SiteConfig['format']['pdf'])
-        : { generate: false, showDate: false, pageNumber: 'header-right', disabledPreambleFilters: ['24-eso-pic', '25-pdfx', '26-crop'] },
-      epub: epubRaw ? (camelizeKeys(epubRaw) as SiteConfig['format']['epub']) : { generate: false },
-      markdown: mdRaw ? (camelizeKeys(mdRaw) as SiteConfig['format']['markdown']) : { generate: false },
+      latex: (f.latex as boolean | undefined) ?? DEFAULT_SITE_CONFIG.format.latex,
+      html: htmlRaw ? (camelizeKeys(htmlRaw) as SiteConfig['format']['html']) : { ...DEFAULT_HTML_FORMAT },
+      pdf: pdfRaw ? (camelizeKeys(pdfRaw) as SiteConfig['format']['pdf']) : { ...DEFAULT_PDF_FORMAT },
+      epub: epubRaw ? (camelizeKeys(epubRaw) as SiteConfig['format']['epub']) : { ...DEFAULT_EPUB_FORMAT },
+      markdown: mdRaw ? (camelizeKeys(mdRaw) as SiteConfig['format']['markdown']) : { ...DEFAULT_MARKDOWN_FORMAT },
     },
     disabledFilters: raw['disabled-filters'],
     luaFilters: raw['lua-filters'],
