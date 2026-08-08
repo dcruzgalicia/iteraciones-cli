@@ -43,7 +43,7 @@ const HtmlFormatSchema = z
     title: z.string().default(DEFAULT_HTML_FORMAT.title),
     tagline: z.string().default(DEFAULT_HTML_FORMAT.tagline),
     logo: z.string().default(DEFAULT_HTML_FORMAT.logo),
-    theme: z.enum(['light', 'dark']).optional(),
+    theme: z.enum(['light', 'dark']).optional().default(DEFAULT_HTML_FORMAT.theme),
     accent: z.enum(KNOWN_ACCENT_COLORS).optional().default(DEFAULT_HTML_FORMAT.accent),
     generate: z.boolean().default(DEFAULT_HTML_FORMAT.generate),
   })

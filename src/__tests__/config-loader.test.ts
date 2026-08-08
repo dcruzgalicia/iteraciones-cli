@@ -360,4 +360,18 @@ describe('loadSiteConfig', () => {
       expect(config.format.markdown).toEqual(DEFAULT_MARKDOWN_FORMAT);
     });
   });
+
+  it('el tema por defecto es dark sin config y con config sin la clave', async () => {
+    await withTempDir(async (dir) => {
+      expect((await loadSiteConfig(dir)).format.html?.theme).toBe('dark');
+    });
+    await withTempDir(async (dir) => {
+      await writeConfig(dir, 'format:\n  html:\n    title: ok');
+      expect((await loadSiteConfig(dir)).format.html?.theme).toBe('dark');
+    });
+    await withTempDir(async (dir) => {
+      await writeConfig(dir, 'format:\n  html:\n    theme: light');
+      expect((await loadSiteConfig(dir)).format.html?.theme).toBe('light');
+    });
+  });
 });
