@@ -225,6 +225,10 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
         : []),
       ...(plan.mdOn ? [{ href: relativeHref(dir, `${slug}.md`), name: 'Markdown', description: 'Texto fuente reutilizable y portable' }] : []),
     ];
+    // La tarjeta identidad enlaza al home solo si existe index.html en la
+    // raíz de salida (index.md en la raíz del proyecto); sin él, la tarjeta
+    // se renderiza sin enlace (template $if(home-href)$).
+    const hasHomePage = discoveryIndex.has('index.md');
     const html = await renderHtmlPageFromAst(
       ast,
       doc,
@@ -242,7 +246,7 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
         docTitle: doc.frontmatter.title && doc.frontmatter.title !== 'Sin t\u00edtulo' ? doc.frontmatter.title : undefined,
         subtitle: doc.frontmatter.subtitle,
         date: formatHumanDate(doc.frontmatter.date),
-        homeHref: dir === '.' ? './' : '../'.repeat(dir.split('/').length),
+        homeHref: hasHomePage ? (dir === '.' ? './' : '../'.repeat(dir.split('/').length)) : undefined,
         formats: formats.length > 0 ? formats : undefined,
       },
       ctx.siteConfig,
