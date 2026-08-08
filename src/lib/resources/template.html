@@ -77,7 +77,7 @@
 
     <!-- ── Tarjeta identidad final ── -->
     <div class="break-inside-avoid pb-6">
-      <div class="flex items-center gap-3 rounded-xl border border-accent-500/25 bg-stone-50/80 dark:bg-stone-900/70 p-5 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 transition-colors duration-200 hover:border-accent-500/30">
+      <div class="relative flex items-center gap-3 rounded-xl border border-accent-500/25 bg-stone-50/80 dark:bg-stone-900/70 p-5 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 transition duration-200 hover:-translate-y-0.5 hover:border-accent-500/30 [&::before]:pointer-events-none [&::before]:absolute [&::before]:left-2 [&::before]:top-2 [&::before]:h-3 [&::before]:w-3 [&::before]:border-l [&::before]:border-t [&::before]:border-accent-500/30 [&::before]:content-[''] [&::after]:pointer-events-none [&::after]:absolute [&::after]:bottom-2 [&::after]:right-2 [&::after]:h-3 [&::after]:w-3 [&::after]:border-b [&::after]:border-r [&::after]:border-accent-500/30 [&::after]:content-['']">
         $if(logo-inline)$<span class="flex h-7 w-7 shrink-0 items-center justify-center text-accent-500 logo-fill">$logo-inline$</span>$endif$
         <div class="flex flex-col">
           <span class="font-semibold text-sm tracking-[0.25em] text-accent-700 dark:text-accent-300">$site-title$</span>
