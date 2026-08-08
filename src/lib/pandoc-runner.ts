@@ -81,7 +81,8 @@ export async function runPandoc(options: PandocOptions): Promise<string> {
   const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
 
   if (exitCode !== 0) {
-    throw new PandocError(`pandoc falló al convertir ${options.sourcePath}`, options.sourcePath, stderr);
+    // El mensaje no incluye la ruta: el dispatcher la añade una sola vez.
+    throw new PandocError('pandoc falló al convertir el documento', options.sourcePath, stderr);
   }
   return stdout;
 }

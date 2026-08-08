@@ -86,7 +86,7 @@ export async function convertToMarkdown(ast: Record<string, unknown>, outputPath
  */
 export async function convertToPdf(fullTexPath: string, sourcePath: string, pdfDir: string, slug: string, biberCacheDir?: string): Promise<void> {
   if (!(await Bun.file(fullTexPath).exists())) {
-    throw new PandocError(`convertToPdf: no se encontro ${fullTexPath}`, sourcePath, '');
+    throw new PandocError('no se encontró el archivo .tex generado', sourcePath, '');
   }
 
   const biberCache = biberCacheDir ?? join(pdfDir, 'biber', slug);
@@ -99,8 +99,12 @@ export async function convertToPdf(fullTexPath: string, sourcePath: string, pdfD
   const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
 
   if (exitCode !== 0) {
+    // El mensaje no incluye la ruta: el dispatcher la añade una sola vez
+    // ("en \"<sourcePath>\""). El stderr se recorta a la línea clave del
+    // error de TeX más la referencia al log completo.
     const log = `${stdout}\n${stderr}`;
     const m = log.match(/^! .*$/m);
-    throw new PandocError(`latexmk falló al generar PDF para ${sourcePath}: ${m ? m[0] : `exit ${exitCode}`}`, sourcePath, stderr);
+    const detail = m ? m[0] : `exit ${exitCode}`;
+    throw new PandocError(`latexmk falló al generar el PDF: ${detail}`, sourcePath, `Revisa el log completo en: ${join(pdfDir, `${slug}.log`)}`);
   }
 }
