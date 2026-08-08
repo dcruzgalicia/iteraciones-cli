@@ -43,13 +43,10 @@ Ejemplos:
         verbose?: boolean;
         profile?: boolean;
       }) => {
-        const raw = opts.concurrency;
-        const concurrency = raw !== undefined ? Number.parseInt(raw, 10) : undefined;
-        if (raw !== undefined && (!Number.isInteger(concurrency) || (concurrency as number) < 1)) {
-          throw new Error(`--concurrency debe ser un entero positivo (recibido: "${raw}")`);
-        }
+        // La validación de --concurrency y --output ocurre en runBuild, donde
+        // los errores se reportan con el formato unificado (sin stack traces).
         await runBuild(projectRoot(), {
-          concurrency: concurrency ? concurrency : undefined,
+          concurrency: opts.concurrency,
           noCache: !opts.cache,
           outputDir: opts.output,
           noCss: !opts.css,

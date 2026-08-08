@@ -3,6 +3,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runBuild, runClean, runInit, runNew, runValidate } from '../cli/dispatcher.js';
+import { buildProgram } from '../cli/parser.js';
 import { initTestProject } from './helpers.js';
 
 /**
@@ -28,6 +29,49 @@ function spyStderr() {
   const s = spyOn(process.stderr, 'write');
   return s;
 }
+
+describe('parser (errores de flags)', () => {
+  afterEach(resetExitCode);
+
+  /** Ejecuta el parser con argv dados y captura stderr. */
+  async function parseWithStderr(argv: string[]): Promise<string> {
+    const stderrSpy = spyStderr();
+    let output = '';
+    try {
+      await buildProgram().parseAsync(['bun', 'bin.ts', ...argv]);
+    } finally {
+      output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+      stderrSpy.mockRestore();
+    }
+    return output;
+  }
+
+  it('--concurrency 0 produce mensaje amigable sin stack trace', async () => {
+    process.exitCode = 0;
+    const output = await parseWithStderr(['build', '--concurrency', '0']);
+    expect(output).toContain('✖');
+    expect(output).toContain('--concurrency debe ser un entero positivo (recibido: "0")');
+    expect(output).not.toContain('at <anonymous>');
+    expect(output).not.toContain('.ts:');
+    expect(process.exitCode).toBe(1);
+  });
+
+  it('--concurrency abc produce mensaje amigable sin stack trace', async () => {
+    process.exitCode = 0;
+    const output = await parseWithStderr(['build', '--concurrency', 'abc']);
+    expect(output).toContain('--concurrency debe ser un entero positivo (recibido: "abc")');
+    expect(output).not.toContain('at <anonymous>');
+    expect(process.exitCode).toBe(1);
+  });
+
+  it('--output fuera del proyecto produce mensaje amigable sin stack trace', async () => {
+    process.exitCode = 0;
+    const output = await parseWithStderr(['build', '--output', '../fuera']);
+    expect(output).toContain('--output no puede apuntar fuera del proyecto');
+    expect(output).not.toContain('at <anonymous>');
+    expect(process.exitCode).toBe(1);
+  });
+});
 
 describe('runBuild', () => {
   afterEach(resetExitCode);
