@@ -380,7 +380,7 @@ function insertFormatsCard(html: string, formats: Array<{ href: string; name: st
     .map(
       (f) =>
         `        <li>\n` +
-        `          <a href="${f.href}" class="flex items-center gap-3 rounded-lg p-2 transition-colors duration-200 hover:bg-accent-500/10">\n` +
+        `          <a href="${f.href}" class="flex items-center gap-3 rounded-lg transition-colors duration-200 hover:bg-accent-500/10">\n` +
         `            <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-accent-500/30 bg-accent-500/10 text-accent-500">${FORMAT_ICONS[f.name] ?? ''}</span>\n` +
         `            <div class="flex flex-col">\n` +
         `              <span class="font-semibold text-accent-950 dark:text-accent-50">${f.name}</span>\n` +
@@ -397,7 +397,7 @@ function insertFormatsCard(html: string, formats: Array<{ href: string; name: st
     `<div class="break-inside-avoid pb-6">\n` +
     `      <section class="rounded-xl border border-accent-500/25 bg-stone-50/70 dark:bg-stone-900/60 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5">\n` +
     `        <h2 class="${chipClass}">Formatos</h2>\n` +
-    `        <ul class="list-none m-0 p-0">\n` +
+    `        <ul class="list-none m-0 p-0 space-y-3">\n` +
     items +
     `\n        </ul>\n` +
     `      </section>\n` +
