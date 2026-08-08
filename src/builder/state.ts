@@ -137,6 +137,9 @@ export async function computeFiltersHash(
   // Versión del formateo de fechas: invalidar outputs cacheados si cambia
   // la conversión yyyy-mm-dd -> legible.
   parts.push('human-date-v1');
+  // Versión del post-procesamiento HTML (tarjeta de referencias): invalidar
+  // los outputs cacheados si cambia.
+  parts.push('references-card-v1');
   return { hash: hashString(parts.join('\0')), cache };
 }
 
