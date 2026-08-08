@@ -58,9 +58,17 @@ async function buildCssWithTailwind(targetCssPath: string, cwd: string, accentTh
   const tempInputPath = join(tmpdir(), `_iteraciones-${crypto.randomUUID()}.css`);
   const tempContent = [
     `@import "${CSS_SRC}";`,
-    `@source "${PKG_ROOT}";`,
+    // Fuentes del paquete acotadas a donde viven las clases del HTML generado:
+    // template.html (resources) y el post-procesamiento de render.ts (builder).
+    // Sin el glob del paquete completo: evita escanear tests y artefactos.
+    `@source "${PKG_ROOT}/src/builder";`,
     `@source "${PKG_ROOT}/src/lib/resources";`,
-    `@source "${cwd}";`,
+    // El proyecto se escanea solo por su contenido editorial (Markdown);
+    // dist/ y .iteraciones/ se excluyen explícitamente para no depender del
+    // .gitignore del usuario (escaneo incontrolado en cada build no cacheable).
+    `@source "${cwd}/**/*.md";`,
+    `@source not "${cwd}/dist";`,
+    `@source not "${cwd}/.iteraciones";`,
     `@theme {`,
     accentTheme,
     `}`,

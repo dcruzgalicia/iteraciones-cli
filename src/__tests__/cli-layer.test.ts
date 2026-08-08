@@ -285,6 +285,41 @@ describe('runBuild', () => {
     });
   });
 
+  it('el escaneo de Tailwind se limita al contenido editorial (sin dist/ ni .iteraciones/)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      // Clase presente solo en el contenido markdown
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\n<div class="bg-teal-300">x</div>\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      const cssPath = join(dir, 'dist', 'files', 'css', 'styles.css');
+      const css = await Bun.file(cssPath).text();
+      // El contenido markdown y el template son fuentes del CSS
+      expect(css).toContain('bg-teal-300');
+      expect(css).toContain('prose-xl');
+
+      // Archivos .md dentro de dist/ y .iteraciones/ no deben escanearse
+      const { mkdir } = await import('node:fs/promises');
+      await mkdir(join(dir, 'dist', 'files'), { recursive: true });
+      await mkdir(join(dir, '.iteraciones', 'changes'), { recursive: true });
+      await writeFile(join(dir, 'dist', 'files', 'basura.md'), 'bg-fuchsia-700\n', 'utf8');
+      await writeFile(join(dir, '.iteraciones', 'changes', 'basura.md'), 'bg-indigo-700\n', 'utf8');
+
+      // Modificar el documento para forzar la regeneración del CSS
+      await writeFile(
+        join(dir, 'test.md'),
+        '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\n<div class="bg-teal-300">x</div>\n\nNuevo contenido.\n',
+        'utf8',
+      );
+      process.exitCode = 0;
+      await runBuild(dir);
+      const css2 = await Bun.file(cssPath).text();
+      expect(css2).not.toContain('bg-fuchsia-700');
+      expect(css2).not.toContain('bg-indigo-700');
+      expect(css2).toContain('bg-teal-300');
+    });
+  });
+
   it('--no-export no modifica dist/, reporta salidas no modificadas y el siguiente build las regenera', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
