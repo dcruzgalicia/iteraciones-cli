@@ -8,24 +8,24 @@
   $if(description-meta)$<meta name="description" content="$description-meta$">$endif$
   $if(css)$<link rel="stylesheet" href="$css$">$endif$
 </head>
-<body class="font-sans antialiased text-xl text-accent-950 dark:text-accent-50 bg-white dark:bg-stone-950 bg-grid-accent dark:[background-image:linear-gradient(to_right,color-mix(in_srgb,var(--color-accent-500)_3%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_srgb,var(--color-accent-500)_3%,transparent)_1px,transparent_1px)] dark:[background-size:64px_64px]">
+<body class="font-sans antialiased text-xl text-accent-950 dark:text-accent-50 bg-stone-200 dark:bg-stone-950 [background-image:radial-gradient(circle,color-mix(in_srgb,var(--color-accent-500)_15%,transparent)_1px,transparent_1px),radial-gradient(circle_at_85%_8%,color-mix(in_srgb,var(--color-accent-500)_5%,transparent)_0,transparent_55%),linear-gradient(to_right,color-mix(in_srgb,var(--color-accent-400)_3%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_srgb,var(--color-accent-400)_3%,transparent)_1px,transparent_1px)] [background-size:48px_48px,100%_100%,48px_48px,48px_48px] dark:[background-image:radial-gradient(circle,color-mix(in_srgb,var(--color-accent-500)_20%,transparent)_1px,transparent_1px),radial-gradient(circle_at_85%_8%,color-mix(in_srgb,var(--color-accent-500)_5%,transparent)_0,transparent_55%),linear-gradient(to_right,color-mix(in_srgb,var(--color-accent-500)_3%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_srgb,var(--color-accent-500)_3%,transparent)_1px,transparent_1px)] dark:[background-size:64px_64px,100%_100%,64px_64px,64px_64px]">
   <main class="columns-1 md:columns-2 xl:columns-3 gap-6 px-4 sm:px-6 lg:px-8 py-8">
 
     <!-- ── Grupo: identidad + documento ── -->
     <div class="break-inside-avoid pb-6">
 
       <!-- Tarjeta identidad -->
-      <div class="flex items-center gap-3 rounded-xl border border-accent-500/15 bg-white/70 dark:bg-stone-900/70 p-5 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 transition-colors duration-200 hover:border-accent-500/30">
+      <div class="relative flex items-center gap-3 rounded-xl border border-accent-500/25 bg-stone-50/80 dark:bg-stone-900/70 p-5 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 transition duration-200 hover:-translate-y-0.5 hover:border-accent-500/30 [&::before]:pointer-events-none [&::before]:absolute [&::before]:left-2 [&::before]:top-2 [&::before]:h-3 [&::before]:w-3 [&::before]:border-l [&::before]:border-t [&::before]:border-accent-500/30 [&::before]:content-[''] [&::after]:pointer-events-none [&::after]:absolute [&::after]:bottom-2 [&::after]:right-2 [&::after]:h-3 [&::after]:w-3 [&::after]:border-b [&::after]:border-r [&::after]:border-accent-500/30 [&::after]:content-['']">
         $if(logo-inline)$<span class="flex h-7 w-7 shrink-0 items-center justify-center text-accent-500 logo-fill">$logo-inline$</span>$endif$
         <div class="flex flex-col">
           <span class="font-semibold text-sm tracking-[0.25em] text-accent-700 dark:text-accent-300">$site-title$</span>
-          $if(tagline)$<span class="text-xs italic text-accent-400/80">$tagline$</span>$endif$
+          $if(tagline)$<span class="text-xs italic text-accent-600 dark:text-accent-400">$tagline$</span>$endif$
         </div>
       </div>
 
       <!-- Tarjeta documento -->
       <article
-        class="prose prose-xl prose-accent dark:prose-invert max-w-none mt-6 rounded-2xl border border-accent-500/20 bg-white/85 dark:bg-stone-900/85 p-8 shadow-sm ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 transition-colors duration-200 hover:border-accent-500/30 [overflow-wrap:anywhere]
+        class="relative prose prose-xl prose-accent dark:prose-invert max-w-none mt-6 rounded-2xl border border-accent-500/30 bg-stone-50/90 dark:bg-stone-900/85 p-8 shadow-sm ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 outline outline-1 outline-offset-4 outline-accent-500/10 transition duration-200 hover:-translate-y-0.5 hover:border-accent-500/30 [overflow-wrap:anywhere] [&::before]:pointer-events-none [&::before]:absolute [&::before]:left-2 [&::before]:top-2 [&::before]:h-3 [&::before]:w-3 [&::before]:border-l [&::before]:border-t [&::before]:border-accent-500/40 [&::before]:content-[''] [&::after]:pointer-events-none [&::after]:absolute [&::after]:bottom-2 [&::after]:right-2 [&::after]:h-3 [&::after]:w-3 [&::after]:border-b [&::after]:border-r [&::after]:border-accent-500/40 [&::after]:content-['']
         [&_blockquote]:border-accent-500/40
         [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-accent-500/10 [&_pre]:bg-stone-100 dark:[&_pre]:bg-stone-950/70
         [&_h1:not([class])]:text-2xl [&_h2:not([class])]:text-xl
@@ -35,12 +35,12 @@
         [&_h6:not([class])]:text-xl [&_h6:not([class])]:italic [&_h6:not([class])]:font-normal
         [&_table]:border-accent-500/10 [&_th]:border-accent-500/10 [&_td]:border-accent-500/10"
       >
-        <h2 class="inline-block align-top rounded-full border border-accent-500/30 bg-accent-500/10 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-12 text-accent-400 dark:text-accent-500">Trayectura</h2>
+        <h2 class="inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-12 text-accent-600 dark:text-accent-400">Trayectura</h2>
 
         <!-- Ficha de identificación del documento -->
         <div class="mb-24">
           $if(author-meta)$
-          <p class="mb-4 text-sm text-accent-950 dark:text-accent-50 [font-variant-caps:small-caps] tracking-widest">$author-meta$</p>
+          <p class="mb-4 text-sm font-mono text-accent-950 dark:text-accent-50 [font-variant-caps:small-caps] tracking-widest">$author-meta$</p>
           $endif$
           $if(doc-title)$
           <h1 class="mb-3 font-bold uppercase tracking-wide text-3xl text-accent-500">$doc-title$</h1>
@@ -49,7 +49,7 @@
           <p class="mb-3 text-base italic text-accent-950 dark:text-accent-50">$subtitle$</p>
           $endif$
           $if(date)$
-          <p class="text-sm text-accent-600 dark:text-accent-400">$date$</p>
+          <p class="text-sm font-mono text-accent-600 dark:text-accent-400">$date$</p>
           $endif$
         </div>
 
@@ -62,14 +62,14 @@
     <div class="break-inside-avoid pb-6">
       <nav
         id="TOC"
-        class="rounded-xl border border-accent-500/15 bg-white/60 dark:bg-stone-900/60 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 transition-colors duration-200 hover:border-accent-500/30 [overflow-wrap:anywhere]
+        class="relative rounded-xl border border-accent-500/25 bg-stone-50/70 dark:bg-stone-900/60 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 transition duration-200 hover:-translate-y-0.5 hover:border-accent-500/30 [overflow-wrap:anywhere] [&::before]:pointer-events-none [&::before]:absolute [&::before]:left-2 [&::before]:top-2 [&::before]:h-3 [&::before]:w-3 [&::before]:border-l [&::before]:border-t [&::before]:border-accent-500/30 [&::before]:content-[''] [&::after]:pointer-events-none [&::after]:absolute [&::after]:bottom-2 [&::after]:right-2 [&::after]:h-3 [&::after]:w-3 [&::after]:border-b [&::after]:border-r [&::after]:border-accent-500/30 [&::after]:content-['']
         [&_ul]:m-0 [&_ul]:list-none [&_ul]:p-0
         [&_ul_ul]:pl-5 [&_ul_ul_ul]:pl-5
         [&_li]:py-1 [&_li]:font-bold [&_li]:text-accent-950 dark:[&_li]:text-accent-50
         [&_ul_ul_li]:font-normal [&_ul_ul_li]:italic
         [&_ul_ul_ul_li]:font-normal [&_ul_ul_ul_li]:not-italic"
       >
-        <h2 class="inline-block align-top rounded-full border border-accent-500/30 bg-accent-500/10 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-12 text-accent-400 dark:text-accent-500">Índice</h2>
+        <h2 class="inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-12 text-accent-600 dark:text-accent-400">Índice</h2>
         $toc$
       </nav>
     </div>
@@ -77,11 +77,11 @@
 
     <!-- ── Tarjeta identidad final ── -->
     <div class="break-inside-avoid pb-6">
-      <div class="flex items-center gap-3 rounded-xl border border-accent-500/15 bg-white/70 dark:bg-stone-900/70 p-5 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 transition-colors duration-200 hover:border-accent-500/30">
+      <div class="flex items-center gap-3 rounded-xl border border-accent-500/25 bg-stone-50/80 dark:bg-stone-900/70 p-5 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 transition-colors duration-200 hover:border-accent-500/30">
         $if(logo-inline)$<span class="flex h-7 w-7 shrink-0 items-center justify-center text-accent-500 logo-fill">$logo-inline$</span>$endif$
         <div class="flex flex-col">
           <span class="font-semibold text-sm tracking-[0.25em] text-accent-700 dark:text-accent-300">$site-title$</span>
-          $if(tagline)$<span class="text-xs italic text-accent-400/80">$tagline$</span>$endif$
+          $if(tagline)$<span class="text-xs italic text-accent-600 dark:text-accent-400">$tagline$</span>$endif$
         </div>
       </div>
     </div>
