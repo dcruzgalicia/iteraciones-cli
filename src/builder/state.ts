@@ -95,7 +95,24 @@ export async function saveStateFile(cwd: string, state: StateFile): Promise<void
 }
 
 /**
- * Hash de los filters efectivos (paquete + proyecto) y de los preamble
+ * Versiones de esquema de los outputs cacheados. Subir la versión de un área
+ * cuando cambie su lógica de generación (invalida los outputs cacheados en el
+ * próximo build). La lista completa de cuándo subir cada versión está en
+ * CONTRIBUTING.md (sección "Cómo invalidar la caché de outputs").
+ */
+const CACHE_SCHEMA_VERSIONS = {
+  /** Conversión yyyy-mm-dd → fecha legible (src/lib/date.ts). */
+  humanDate: 'human-date-v1',
+  /** Tarjeta de referencias del HTML (moveReferencesToCard en render.ts). */
+  referencesCard: 'references-card-v3',
+  /** Enlazado de citas del HTML (--metadata=link-citations). */
+  linkCitations: 'link-citations-v1',
+  /** Tarjeta de formatos del HTML (insertFormatsCard en render.ts). */
+  formatsCard: 'formats-card-v2',
+} as const;
+
+/**
+ * Hashea los filtros efectivos (paquete + proyecto) y de los preamble
  * filters, incluyendo las disabled lists. Cambia solo si el código de un
  * filter o la lista de desactivados cambia.
  *
@@ -137,16 +154,10 @@ export async function computeFiltersHash(
   // El reader del pipeline produce el AST canónico: si cambia, los ASTs
   // cacheados quedan obsoletos y todos los documentos deben re-renderizarse.
   parts.push(MD_READER);
-  // Versión del formateo de fechas: invalidar outputs cacheados si cambia
-  // la conversión yyyy-mm-dd -> legible.
-  parts.push('human-date-v1');
-  // Versión del post-procesamiento HTML (tarjeta de referencias): invalidar
-  // los outputs cacheados si cambia.
-  parts.push('references-card-v3');
-  // Versión del enlazado de citas (link-citations): invalidar outputs.
-  parts.push('link-citations-v1');
-  // Versión de la tarjeta Formatos (post-procesamiento HTML).
-  parts.push('formats-card-v2');
+  // Versiones de esquema de los outputs cacheados (ver CACHE_SCHEMA_VERSIONS).
+  for (const version of Object.values(CACHE_SCHEMA_VERSIONS)) {
+    parts.push(version);
+  }
   return { hash: hashString(parts.join('\0')), cache };
 }
 
