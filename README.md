@@ -81,6 +81,9 @@ disabled-filters:               # filters a desactivar por nombre completo (opci
 disabled-preamble-filters:      # preamble filters a desactivar (opcional)
   # - 24-eso-pic
 
+bibliography: refs/mi-libro.bib  # archivo .bib (opcional; auto-descubierto si falta)
+csl: styles/nature.csl           # estilo de citas CSL (opcional; APA-7 si falta)
+
 lua-filters:                        # filtros Lua de usuario (opcional)
   # - filters/mi-filtro.lua
 ```
