@@ -1,4 +1,3 @@
-import { Listr } from 'listr2';
 import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/site-config.js';
 import { ConfigError } from '../lib/errors.js';
@@ -38,53 +37,28 @@ export async function runDoctor(cwd: string, options: { fix?: boolean } = {}): P
     ...(latex ? [latex] : []),
   ];
 
-  const allOk = checks.every((c) => c.ok);
+  renderChecks(checks);
 
   if (!options.fix) {
-    // Modo solo verificación: usar listr2 para output consistente
-    const tasks = checks.map((c) => ({
-      title: c.label,
-      task: () => {
-        if (!c.ok) throw new Error(c.detail ?? 'falló');
-      },
-    }));
-
-    const listr = new Listr(tasks, { renderer: 'default', rendererOptions: { clearOutput: false, collapseSubtasks: false } });
-    try {
-      await listr.run();
-    } catch {
-      // listr2 ya muestra los errores; solo marcar exit code
-    }
-
+    const allOk = checks.every((c) => c.ok);
     logInfo(allOk ? 'Todo en orden.' : 'Hay problemas que corregir.', 'doctor');
     if (!allOk) process.exitCode = 1;
     return;
   }
 
-  // Modo --fix: ejecutar verificaciones y luego correcciones
+  // Modo --fix: corregir los problemas reparables y reportar lo restante
   const fixable = checks.filter((c): c is CheckResult & { fixAction: () => Promise<string> } => !c.ok && c.fixAction != null);
-
-  const tasks = [
-    ...checks.map((c) => ({
-      title: c.label,
-      task: () => {
-        if (!c.ok) throw new Error(c.detail ?? 'falló');
-      },
-    })),
-    ...fixable.map((c) => ({
-      title: `${c.label} (corregir)`,
-      task: async () => {
-        await c.fixAction();
-      },
-    })),
-  ];
-
-  const listr = new Listr(tasks, { renderer: 'default', rendererOptions: { clearOutput: false, collapseSubtasks: false } });
   let fixFailed = false;
-  try {
-    await listr.run();
-  } catch {
-    fixFailed = true;
+  for (const check of fixable) {
+    try {
+      const detail = await check.fixAction();
+      const suffix = detail ? ` — ${detail}` : '';
+      process.stdout.write(`✔ ${check.label} (corregido)${suffix}\n`);
+    } catch (err) {
+      fixFailed = true;
+      const message = err instanceof Error ? err.message : String(err);
+      process.stdout.write(`✖ ${check.label} (corrección falló — ${message})\n`);
+    }
   }
 
   const unfixable = checks.filter((c) => !c.ok && c.fixAction == null);
@@ -99,4 +73,15 @@ export async function runDoctor(cwd: string, options: { fix?: boolean } = {}): P
   }
 
   if (stillBroken) process.exitCode = 1;
+}
+
+/**
+ * Renderiza una línea por check con ✔/✖ y el detalle del fallo (sin ANSI:
+ * la salida es idéntica en TTY y non-TTY, patrón del tracker del build).
+ */
+function renderChecks(checks: CheckResult[]): void {
+  for (const check of checks) {
+    const detail = check.ok || !check.detail ? '' : ` — ${check.detail}`;
+    process.stdout.write(`${check.ok ? '✔' : '✖'} ${check.label}${detail}\n`);
+  }
 }

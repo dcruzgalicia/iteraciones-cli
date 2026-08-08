@@ -741,6 +741,26 @@ describe('runDoctor', () => {
       expect(output).toContain('pdflatex disponible');
     });
   });
+
+  it('renderiza cada check con ✔/✖ y sin códigos de escape', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir); // config html-only válida
+      const output = await doctorOutput(dir);
+      expect(output).toContain('✔ iteraciones.config.yaml');
+      expect(output).toContain('✔ permisos de lectura en cwd');
+      expect(output).not.toContain('\x1b');
+    });
+  });
+
+  it('muestra ✖ con el detalle cuando la config es inválida y sale con código 1', async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(join(dir, 'iteraciones.config.yaml'), ':: yaml inválido ::', 'utf8');
+      const output = await doctorOutput(dir);
+      expect(output).toContain('✖ iteraciones.config.yaml');
+      expect(output).toContain('Error de sintaxis');
+      expect(process.exitCode).toBe(1);
+    });
+  });
 });
 
 describe('runInit', () => {
