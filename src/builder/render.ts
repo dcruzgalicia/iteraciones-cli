@@ -175,10 +175,29 @@ export async function getBuiltinLuaFilterInfos(): Promise<LuaFilterInfo[]> {
     const group = dirname(rel);
     const full = `${group}/${basename(rel, '.lua')}`;
     const content = await Bun.file(join(LUA_FILTERS_ROOT, rel)).text();
-    const descLine = content.split('\n').find((l) => l.trim().startsWith('-- '));
-    infos.push({ name: full, description: descLine?.replace(/^--\s*/, '').trim() ?? '' });
+    infos.push({ name: full, description: readLuaDescription(content) });
   }
   return infos.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Lee la descripción de un filter Lua: une las líneas de comentario iniciales
+ * (`-- ...`) en una sola frase. Se detiene en la primera línea de código o en
+ * una línea de "Uso: ..." (instrucciones de invocación, no descripción).
+ */
+function readLuaDescription(content: string): string {
+  const lines: string[] = [];
+  for (const rawLine of content.split('\n')) {
+    const line = rawLine.trim();
+    if (line.startsWith('--')) {
+      const text = line.replace(/^--\s*/, '').trim();
+      if (text.startsWith('Uso:')) break;
+      lines.push(text);
+    } else if (lines.length > 0) {
+      break;
+    }
+  }
+  return lines.join(' ');
 }
 
 function isHeader(block: unknown): boolean {

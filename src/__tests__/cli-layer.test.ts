@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CommanderError } from 'commander';
-import { runBuild, runClean, runDoctor, runInfo, runInit, runNew, runValidate } from '../cli/dispatcher.js';
+import { runBuild, runClean, runDoctor, runFilters, runInfo, runInit, runNew, runValidate } from '../cli/dispatcher.js';
 import { buildProgram } from '../cli/parser.js';
 import { initTestProject } from './helpers.js';
 
@@ -348,6 +348,32 @@ describe('runInfo', () => {
       const output = await infoOutput(dir);
       expect(output).toContain('preamble adicionales:');
       expect(output).toContain('(ninguno)');
+    });
+  });
+});
+
+describe('runFilters', () => {
+  afterEach(resetExitCode);
+
+  it('muestra descripciones completas (líneas de comentario unidas) y columnas alineadas', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runFilters(dir);
+      } finally {
+        output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      // La descripción de latex/02-dictum tiene 3 líneas de comentario: la
+      // frase completa termina en "si es Para." (antes se truncaba a mitad).
+      expect(output).toContain('si es Para.');
+      expect(output).not.toContain('(formato LaTeX), con  [');
+      // Columnas alineadas: el nombre padded seguido de la columna lua
+      expect(output).toMatch(/latex\/02-dictum {2,}lua {2}Convierte/);
+      expect(process.exitCode).toBe(0);
     });
   });
 });
