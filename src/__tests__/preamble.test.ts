@@ -77,6 +77,41 @@ describe('buildLatexPreamble', () => {
     expect(authorIdx).toBeGreaterThan(titleIdx);
     expect(dateIdx).toBeGreaterThan(authorIdx);
   });
+
+  it('escapa caracteres especiales LaTeX en title y subtitle', async () => {
+    const preamble = await buildLatexPreamble(undefined, {
+      title: 'Resultados 100% & Análisis',
+      subtitle: 'Tema: {ciencia} $y$ #1 _nota_',
+    });
+    const titleLine = preamble.find((line) => line.startsWith('\\title{'));
+    const subtitleLine = preamble.find((line) => line.startsWith('\\subtitle{'));
+    expect(titleLine).toBe('\\title{Resultados 100\\% \\& Análisis}');
+    expect(subtitleLine).toBe('\\subtitle{Tema: \\{ciencia\\} \\$y\\$ \\#1 \\_nota\\_}');
+  });
+
+  it('escapa caracteres especiales LaTeX en author', async () => {
+    const preamble = await buildLatexPreamble(undefined, { title: 'Título', author: ['Ana & Torres', 'Juan 100%'] });
+    const authorLine = preamble.find((line) => line.startsWith('\\author{'));
+    expect(authorLine).toBe('\\author{Ana \\& Torres \\and Juan 100\\%}');
+  });
+
+  it('escapa tilde, caret y backslash como comandos de texto', async () => {
+    const preamble = await buildLatexPreamble(undefined, { title: 'Tilde ~ y caret ^ y backslash \\' });
+    const titleLine = preamble.find((line) => line.startsWith('\\title{'));
+    expect(titleLine).toBe('\\title{Tilde \\textasciitilde{} y caret \\textasciicircum{} y backslash \\textbackslash{}}');
+  });
+
+  it('escapa rutas de bibliografía en \\addbibresource sin tocar guiones bajos', async () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-preamble-'));
+    try {
+      writeFileSync(join(cwd, 'mi_bib%1.bib'), '@book{k1, title={T}, year={2020}}\n');
+      const preamble = await buildLatexPreamble(undefined, { title: 'Título', cwd });
+      const bibLine = preamble.find((line) => line.startsWith('\\addbibresource'));
+      expect(bibLine).toBe(`\\addbibresource{${join(cwd, 'mi_bib%1.bib').replace('%', '\\%')}}`);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
 });
 
 describe('validateDisabledPreambleFilters', () => {
