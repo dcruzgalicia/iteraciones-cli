@@ -104,7 +104,7 @@ const CACHE_SCHEMA_VERSIONS = {
   /** Conversión yyyy-mm-dd → fecha legible (src/lib/date.ts). */
   humanDate: 'human-date-v1',
   /** Generación de la página HTML (pipeline.ts) y ensamblado de bloques (html-blocks.ts, render.ts). */
-  htmlBlocks: 'html-blocks-v2',
+  htmlBlocks: 'html-blocks-v3',
   /** Enlazado de citas del HTML (--metadata=link-citations). */
   linkCitations: 'link-citations-v1',
 } as const;

@@ -334,8 +334,9 @@ const REFERENCES_HEADING_TEXT = 'Referencias';
 
 /**
  * Clona el AST agregando al final el heading de referencias (nivel 1).
- * Solo se usa en la invocación HTML: citeproc inserta el div#refs después
- * del último bloque, dejando el h1 justo antes; el TOC lo incluye como item.
+ * Citeproc lo necesita para enlazar las citas del texto (link-citations) y
+ * deja el h1 justo antes del div#refs; el ítem que genera en el TOC se
+ * elimina en el post-procesamiento (removeTocReferencesLink).
  */
 function withReferencesHeading(ast: Record<string, unknown>): Record<string, unknown> {
   const clone = JSON.parse(JSON.stringify(ast)) as Record<string, unknown>;
@@ -346,6 +347,15 @@ function withReferencesHeading(ast: Record<string, unknown>): Record<string, unk
   });
   clone.blocks = blocks;
   return clone;
+}
+
+/**
+ * Elimina del TOC el ítem que enlaza a #referencias (el header sintético que
+ * citeproc necesita para link-citations; sin él, el TOC lo incluiría). El
+ * ítem es el último li del TOC y no contiene sublistas (header de nivel 1).
+ */
+function removeTocReferencesLink(html: string): string {
+  return html.replace(/<li>\s*<a href="#referencias"[^>]*>.*?<\/a>\s*<\/li>/gs, '');
 }
 
 /** Variables de la plantilla HTML (template system de pandoc). */
@@ -457,7 +467,7 @@ function extractReferencesBlock(html: string): { html: string; block?: string } 
   const withoutBlock = html.slice(0, start) + html.slice(end);
 
   // Título de la tarjeta: chip como el resto de las tarjetas (Trayectura/Índice).
-  // Se conserva el id referencias: el enlace del índice sigue funcionando.
+  // Se conserva el id referencias.
   const chipClass =
     'inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-12 text-accent-600 dark:text-accent-400';
   const styledHeading = block.replace(/<h1[^>]*id="referencias"[^>]*>/, `<h2 id="referencias" class="${chipClass}">`).replace('</h1>', '</h2>');
@@ -517,16 +527,19 @@ export async function renderHtmlPageFromAst(
 
   // Sección de referencias: si hay citas y bibliografía, el AST HTML lleva un
   // heading h1 'Referencias' (id referencias) justo antes del div#refs que
-  // citeproc inserta. El AST canónico no se modifica (LaTeX/EPUB/Markdown
-  // intactos); el TOC incluye el item con enlace #referencias.
+  // citeproc inserta — necesario para que link-citations enlace las citas del
+  // texto. El AST canónico no se modifica (LaTeX/EPUB/Markdown intactos).
   const inputAst = bibOptions?.bibliography && hasCiteNodes(ast) ? withReferencesHeading(ast) : ast;
   const html = await runPandoc({ input: JSON.stringify(inputAst), sourcePath: doc.filePath, from: 'json', to: 'html5', bibOptions, extraArgs });
+
+  // El TOC incluiría el ítem 'Referencias' (el header sintético): se elimina.
+  const htmlWithoutTocRefs = removeTocReferencesLink(html);
 
   // Post-procesamiento: las referencias salen del article y se convierten en
   // un bloque del masonry; la tarjeta Formatos es otro bloque generado. Ambos
   // se ordenan junto con los bloques del template (header, trayectura, indice,
   // footer) según format.html.blocks (sistema de bloques: sin anclas de texto).
-  const { html: htmlWithoutRefs, block: referencesBlock } = extractReferencesBlock(html);
+  const { html: htmlWithoutRefs, block: referencesBlock } = extractReferencesBlock(htmlWithoutTocRefs);
   const formatsBlock = buildFormatsBlock(vars.formats ?? []);
   return assembleHtmlBlocks(htmlWithoutRefs, { formatos: formatsBlock, referencias: referencesBlock }, siteConfig.format?.html?.blocks);
 }
