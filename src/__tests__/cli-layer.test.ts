@@ -128,6 +128,48 @@ describe('runBuild', () => {
     });
   });
 
+  it('proyecto vacío reporta 0 formatos sin "(reutilizado)" y avisa en stderr', async () => {
+    await withTempDir(async (dir) => {
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      const stderrSpy = spyStderr();
+      let out = '';
+      let err = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir);
+      } finally {
+        out = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        err = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+        stderrSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      expect(out).toMatch(/Formatos generados\s+0/);
+      expect(out).not.toContain('reutilizado');
+      // El aviso es un warning diferido al bloque Advertencias del resumen
+      expect(out).toContain('⚠ [build] No se encontraron documentos Markdown en el proyecto.');
+    });
+  });
+
+  it('build cacheado mantiene "(reutilizado)" en el resumen', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      process.exitCode = 0;
+      await runBuild(dir);
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let out = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir);
+      } finally {
+        out = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      expect(out).toContain('(reutilizado)');
+    });
+  });
+
   it('termina con exit 1 con --concurrency inválido', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);

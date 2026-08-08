@@ -353,7 +353,9 @@ export class ProgressTracker {
   private writeSummary(processed: number, cached: number, formats?: string[]): void {
     const totalTime = performance.now() - this.t0;
     const formatCount = formats ? formats.length : 0;
-    const formatLabel = processed > 0 ? String(formatCount) : '— (reutilizado)';
+    // Sin trabajo y sin caché (proyecto vacío): 0 formatos. Con caché:
+    // "(reutilizado)". Con trabajo: el conteo real.
+    const formatLabel = processed > 0 ? String(formatCount) : cached > 0 ? '— (reutilizado)' : '0';
 
     process.stdout.write(`\n✔ Todo listo.\n\n`);
     process.stdout.write(`  ${padRight('Documentos procesados', LABEL_WIDTH)}${processed}\n`);
