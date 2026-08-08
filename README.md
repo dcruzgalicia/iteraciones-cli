@@ -8,7 +8,6 @@ CLI para construir documentos HTML, PDF, EPUB, LaTeX y Markdown a partir de arch
 
 - [bun](https://bun.sh) ≥ 1.0
 - [pandoc](https://pandoc.org/installing.html) disponible en `PATH`
-- `@tailwindcss/cli` disponible en el proyecto (`bun add -d @tailwindcss/cli` si `doctor` lo pide)
 - (para PDF) TeX Live o MacTeX con KOMA-Script instalado
 
 ## Instalación
@@ -166,7 +165,7 @@ iteraciones doctor [opciones]
 |--------|-------------|
 | `--fix` | Intenta corregir automáticamente los problemas detectados |
 
-Comprobaciones que realiza: pandoc disponible en PATH, configuración del proyecto (`iteraciones.config.yaml`) válida, Tailwind CSS disponible, pdflatex y KOMA-Script instalados, permisos de lectura y escritura.
+Comprobaciones que realiza: pandoc disponible en PATH, configuración del proyecto (`iteraciones.config.yaml`) válida, pdflatex y KOMA-Script instalados (solo si el proyecto usa PDF o LaTeX), permisos de lectura y escritura.
 
 ### `iteraciones filters`
 

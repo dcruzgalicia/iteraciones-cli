@@ -3,14 +3,7 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/site-config.js';
 import { ConfigError } from '../lib/errors.js';
 import { logInfo, logWarning } from '../lib/logger.js';
-import {
-  type CheckResult,
-  checkLatexEngine,
-  checkPandoc,
-  checkReadPermissions,
-  checkTailwind,
-  checkWritePermissions,
-} from './doctor/system-checks.js';
+import { type CheckResult, checkLatexEngine, checkPandoc, checkReadPermissions, checkWritePermissions } from './doctor/system-checks.js';
 
 /**
  * Verifica que el entorno tenga todo lo necesario para correr `iteraciones build`.
@@ -20,7 +13,7 @@ export async function runDoctor(cwd: string, options: { fix?: boolean } = {}): P
   // La config se carga una sola vez (en paralelo con las verificaciones de
   // entorno): el motor LaTeX solo se verifica si el proyecto lo necesita
   // (format.pdf o format.latex activos), mismo criterio que validate.
-  const [configResult, pandoc, tailwind, read, write] = await Promise.all([
+  const [configResult, pandoc, read, write] = await Promise.all([
     loadSiteConfig(cwd).then(
       (siteConfig: SiteConfig) => ({ siteConfig, ok: true, detail: undefined as string | undefined }),
       (err: unknown) => ({
@@ -30,7 +23,6 @@ export async function runDoctor(cwd: string, options: { fix?: boolean } = {}): P
       }),
     ),
     checkPandoc(),
-    checkTailwind(cwd),
     checkReadPermissions(cwd),
     checkWritePermissions(cwd),
   ]);
@@ -41,7 +33,6 @@ export async function runDoctor(cwd: string, options: { fix?: boolean } = {}): P
   const checks: CheckResult[] = [
     pandoc,
     { label: 'iteraciones.config.yaml', ok: configResult.ok, detail: configResult.detail },
-    tailwind,
     read,
     write,
     ...(latex ? [latex] : []),
