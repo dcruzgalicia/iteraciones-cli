@@ -1,5 +1,3 @@
-import type { ListrDefaultRenderer, ListrTask, ListrTaskWrapper } from 'listr2';
-import { type DefaultRenderer, Listr, type ListrRendererValue } from 'listr2';
 import { setWarningSink } from '../lib/logger.js';
 
 function formatTime(ms: number): string {
@@ -30,36 +28,37 @@ const PHASE_META: Record<PipelinePhase, PhaseMeta> = {
   markdown: { label: 'Markdown' },
 };
 
-/**
- * Formatos configurados del proyecto: el tracker los muestra siempre como
- * subtareas del grupo 'Generando formatos', con ✔ si están activos (su trabajo
- * se completa en el pipeline) o con ✗ '(desactivado)' si generate:false.
- */
+/** Formatos ligeros generados dentro del pool 1 del pipeline (no fase separada). */
+const LIGHT_FORMAT_PHASES: PipelinePhase[] = ['latex', 'html', 'epub', 'markdown'];
+
 interface FormatState {
   phase: PipelinePhase;
   active: boolean;
 }
 
-/** Formatos ligeros generados dentro del pool 1 del pipeline (no fase separada). */
-const LIGHT_FORMAT_PHASES: PipelinePhase[] = ['latex', 'html', 'epub', 'markdown'];
+type RowStatus = 'pending' | 'active' | 'done' | 'skipped';
 
-type ListrCtx = Record<string, never>;
-type TrackerTask = ListrTaskWrapper<ListrCtx, ListrDefaultRenderer, ListrDefaultRenderer>;
+interface Row {
+  key: string;
+  indent: number;
+  label: string;
+  status: RowStatus;
+  count: number;
+  elapsed?: number;
+}
 
 /**
- * Tracker de progreso del build basado en listr2.
+ * Tracker de progreso del build con renderer propio (sin listr2).
  *
- * - **TTY**: renderer `default` (tareas animadas con conteo en vivo [i/N]).
- *   listr2 cae automáticamente al fallback SimpleRenderer en non-TTY (pipes y
- *   CI, uso automático sin interacción) — no hay lógica dual manual.
- * - **--verbose**: renderer `verbose` (texto plano).
- * - Las fases se pre-registran al primer startPhase: listr2 no procesa
- *   tareas agregadas después de la primera. Las no usadas se saltan con
- *   `skip`, evaluado cuando el runner llega a ellas — sin carrera porque la
- *   tarea discovery se libera en `planPhases()`, cuando el orquestador ya
- *   conoce todas las fases del build.
- * - Los 5 formatos configurados (setFormats) se muestran siempre como
- *   subtareas: activos → ✔ al completar su trabajo; desactivados → ✗.
+ * - **TTY**: filas interactivas con conteo en vivo [i/N] y re-render en sitio.
+ * - **Non-TTY (pipes, CI)**: cada fila se imprime al finalizar, en el orden en
+ *   que se cierra.
+ * - **--verbose**: texto plano con etiquetas [iniciado]/[completado]/[omitido].
+ * - El resumen final (tabla alineada, advertencias, --profile) es idéntico.
+ *
+ * El renderer es síncrono y sin bucles de render: un error del build nunca
+ * puede dejar el proceso colgado (regresiones #1211 resueltas por diseño,
+ * no por coordinación de promesas).
  */
 export class ProgressTracker {
   private t0: number;
@@ -68,76 +67,54 @@ export class ProgressTracker {
   private currentPhase: PipelinePhase | null = null;
   private phaseStart: Partial<Record<PipelinePhase, number>> = {};
   private phaseDone: Set<PipelinePhase> = new Set();
-  /** Documentos reportados en la fase actual (progreso en vivo). */
   private currentPhaseCount = 0;
   /** Si true, escribe el desglose de tiempos por fase tras el resumen (--profile). */
   private profile: boolean;
   /** Con --no-export las salidas no se generan: el resumen lo indica. */
   private noExport: boolean;
-  /** Formatos configurados del proyecto (para las subtareas del grupo de formatos). */
+  /** Modo --verbose: texto plano con etiquetas. */
+  private verbose: boolean;
+  /** Render interactivo (TTY) o impresión de estados finales. */
+  private tty: boolean;
+  /** Formatos configurados del proyecto (para las filas del grupo de formatos). */
   private formats: FormatState[] = [];
-
-  // ── listr2 ────────────────────────────────────────────────────────────────
-  private renderer: ListrRendererValue;
-  private listr: Listr<ListrCtx, ListrDefaultRenderer> | null = null;
-  private runPromise: Promise<unknown> | null = null;
-  private listrTasks: Map<PipelinePhase, TrackerTask> = new Map();
-  private phaseResolvers: Map<PipelinePhase, () => void> = new Map();
+  /** Fases que el build ejecutará (declaradas por planPhases). */
   private usedPhases: Set<PipelinePhase> = new Set();
-  private runnerAlive = false;
-  private runnerDone = false;
-  /** finish() ya se ejecutó: las tareas registradas después se resuelven al momento. */
-  private finished = false;
-  /** Mensajes informativos acumulados para mostrar en la primera tarea. */
-  private infoMessages: string[] = [];
   /** Warnings diferidos (modo no verbose) para mostrar en el resumen final. */
   private warnings: string[] = [];
+  private finished = false;
+
+  // ── Renderer: filas en orden de aparición ──
+  private rows: Row[] = [];
+  private rowIndex = new Map<string, number>();
+  private nextLine = 0;
+  private formatsShown = false;
 
   constructor(options: { renderer?: 'default' | 'verbose' | 'test'; profile?: boolean; noExport?: boolean } = {}) {
-    this.renderer = (options.renderer ?? 'default') as ListrRendererValue;
+    this.verbose = options.renderer === 'verbose';
+    this.tty = options.renderer === 'default' && process.stdout.isTTY === true;
     this.profile = options.profile ?? false;
-    /** Con --no-export el resumen no afirma formatos generados. */
     this.noExport = options.noExport ?? false;
     this.t0 = performance.now();
-    if (this.renderer === 'default') {
-      // Restaurar el cursor si el proceso sale sin completar run() (errores del build)
+    if (options.renderer === 'default') {
+      // Restaurar el cursor si el proceso sale sin completar (errores del build)
       process.once('exit', () => process.stdout.write('\x1b[?25h'));
-      // Diferir warnings al resumen final para no interferir con listr2
+      // Diferir warnings al resumen final para no interferir con el render
       setWarningSink((message) => this.warnings.push(message));
     }
   }
 
+  /** Mensajes informativos del orquestador (visibles en --verbose). */
   log(msg: string): void {
-    // Acumular mensajes hasta que listr2 esté listo; luego emitirlos como output
-    // de la primera tarea activa (discovery)
-    if (this.runnerAlive) {
-      const task = this.listrTasks.get('discovery');
-      if (task) {
-        task.output = msg;
-        return;
-      }
-    }
-    this.infoMessages.push(msg);
+    if (this.verbose) process.stdout.write(`[info] ${msg}\n`);
   }
 
   /**
-   * Declara las fases que el build ejecutará. Debe llamarse después de que el
-   * orquestador conozca los conjuntos de trabajo y antes del render. Espera a
-   * que el runner procese discovery (en TTY el render() del DefaultRenderer es
-   * async y retrasa el arranque) y libera su Promise para que los skips se
-   * evalúen con la información completa.
+   * Declara las fases que el build ejecutará. Debe llamarse antes de que el
+   * render finalice: las fases no declaradas se muestran como omitidas.
    */
   async planPhases(phases: PipelinePhase[]): Promise<void> {
     for (const phase of phases) this.usedPhases.add(phase);
-    if (!this.listr) return;
-    // Esperar a que el runner registre discovery (en TTY el render() del
-    // DefaultRenderer es async y retrasa el arranque); runnerDone cubre el
-    // caso de runner roto.
-    while (!this.phaseResolvers.has('discovery') && !this.runnerDone) {
-      await Bun.sleep(5);
-    }
-    this.phaseResolvers.get('discovery')?.();
-    this.phaseResolvers.delete('discovery');
   }
 
   startPhase(phase: PipelinePhase, total: number = 0): void {
@@ -145,19 +122,23 @@ export class ProgressTracker {
     this.phaseCounts[phase] = total;
     this.phaseStart[phase] = performance.now();
     this.currentPhaseCount = 0;
-    if (!this.listr) this.createListr();
+    this.ensurePhaseRow(phase);
+    // Las fases de formato (pdf) muestran su fila dentro del grupo de formatos
+    if (phase !== 'discovery' && phase !== 'render') this.ensureFormatsBlock();
+    this.setRowStatus(this.rowKeyFor(phase), 'active');
+    this.renderRow(this.rowKeyFor(phase));
+    if (this.verbose) process.stdout.write(`[iniciado] ${PHASE_META[phase].label}\n`);
   }
 
   reportFile(file: RenderFileReport): void {
-    // Progreso en vivo: cada documento completado actualiza la tarea de su fase
-    if (file.phase === this.currentPhase) {
-      this.currentPhaseCount++;
-      const task = this.listrTasks.get(file.phase);
-      if (task) {
-        const total = this.phaseCounts[file.phase] ?? 0;
-        task.output = total > 0 ? `[${Math.min(this.currentPhaseCount, total)}/${total}]` : '';
-      }
-    }
+    // Progreso en vivo: cada documento completado actualiza la fila de su fase
+    if (file.phase !== this.currentPhase) return;
+    this.currentPhaseCount++;
+    const row = this.getRow(this.rowKeyFor(file.phase));
+    if (!row || row.status !== 'active') return;
+    const total = this.phaseCounts[file.phase] ?? 0;
+    const live = total > 0 ? `[${Math.min(this.currentPhaseCount, total)}/${total}]` : '';
+    this.renderRow(this.rowKeyFor(file.phase), live);
   }
 
   completePhase(actualCount?: number, phaseOverride?: PipelinePhase): void {
@@ -169,64 +150,45 @@ export class ProgressTracker {
     const elapsed = st !== undefined ? performance.now() - st : 0;
     this.phaseDurations[phase] = elapsed;
     const count = actualCount ?? this.phaseCounts[phase] ?? this.currentPhaseCount;
-    this.applyPhaseTitle(phase, count, elapsed);
+    this.phaseCounts[phase] = count;
 
-    // Resolver la fase para que el runner avance (discovery la resuelve planPhases)
-    if (phase !== 'discovery') {
-      this.phaseResolvers.get(phase)?.();
-      this.phaseResolvers.delete(phase);
+    const key = this.rowKeyFor(phase);
+    // El bloque de formatos solo se crea cuando el trabajo de un formato
+    // comienza o termina (nunca al completar discovery/render).
+    if (phase !== 'discovery' && phase !== 'render') this.ensureFormatsBlock();
+    this.setRowStatus(key, 'done', count, elapsed);
+    this.renderRow(key);
+    if (phase === 'pdf') this.maybeFinishGroup();
+    if (this.verbose) {
+      process.stdout.write(`[completado] ${PHASE_META[phase].label}${count > 0 ? ` ${count}` : ''}  ${formatTime(elapsed)}\n`);
     }
-  }
-
-  /** Aplica el título final (etiqueta + conteo + duración) a la tarea de una fase. */
-  private applyPhaseTitle(phase: PipelinePhase, count: number, elapsed: number): void {
-    const task = this.listrTasks.get(phase);
-    if (!task) return;
-    const countPart = count > 0 ? ` ${count}` : '';
-    task.title = `${PHASE_META[phase].label}${countPart}  ${formatTime(elapsed)}`;
   }
 
   async finish(processed: number, cached: number, formats?: string[]): Promise<void> {
     this.finished = true;
-    // Esperar a que el runner procese la primera tarea (en TTY el render() del
-    // DefaultRenderer es async y retrasa el procesamiento); runnerDone cubre el
-    // caso de runner roto. Luego resolver lo que quede pendiente (p. ej.
-    // discovery en early returns).
-    while (!this.runnerAlive && !this.runnerDone && this.listr) {
-      await Bun.sleep(5);
-    }
-    this.phaseResolvers.forEach((resolve) => {
-      resolve();
-    });
-    this.phaseResolvers.clear();
-    await this.runPromise?.catch(() => {});
+    this.finalizePendingRows();
     this.writeSummary(processed, cached, formats);
     setWarningSink(null);
   }
 
   /**
-   * Resuelve las fases pendientes y espera al runner cuando el build falla.
-   * En TTY el render loop del DefaultRenderer mantiene el proceso vivo mientras
-   * run() no termine, así que sin esto el proceso quedaría bloqueado tras el
-   * error (regresión #1211). No escribe el resumen: el error ya se reportó.
+   * Cierra el tracker cuando el build falla (sin resumen: el error ya se
+   * reportó). Las fases pendientes se cierran con su estado actual; el estado
+   * de fallo explícito lo introduce C1b.
    */
   async fail(): Promise<void> {
     this.finished = true;
-    this.phaseResolvers.forEach((resolve) => {
-      resolve();
-    });
-    this.phaseResolvers.clear();
-    await this.runPromise?.catch(() => {});
+    this.finalizePendingRows();
     setWarningSink(null);
   }
 
   showCleanup(): void {
-    this.infoMessages.push('Archivos temporales limpiados');
+    if (this.verbose) process.stdout.write('[info] Archivos temporales limpiados\n');
   }
 
   /**
    * Declara los formatos configurados del proyecto (generate:true/false).
-   * Debe llamarse antes del primer startPhase: las subtareas del grupo
+   * Debe llamarse antes del primer startPhase: las filas del grupo
    * 'Generando formatos' se crean a partir de esta lista.
    */
   setFormats(formats: FormatState[]): void {
@@ -245,99 +207,127 @@ export class ProgressTracker {
     }
   }
 
-  /** Crea la lista de listr2: discovery, render y el grupo de formatos configurados. */
-  private createListr(): void {
-    // Volcar mensajes informativos acumulados como output de la tarea discovery
-    const discoveryTask = this.makeTask('discovery');
-    if (this.infoMessages.length > 0) {
-      const originalTask = discoveryTask.task;
-      discoveryTask.task = (_ctx, task) => {
-        task.output = this.infoMessages.join('\n');
-        this.infoMessages = [];
-        return typeof originalTask === 'function' ? originalTask(_ctx, task) : undefined;
-      };
-    }
-    const subtasks: ListrTask<ListrCtx, ListrDefaultRenderer>[] = this.formats.map(({ phase, active }) => this.makeFormatTask(phase, active));
+  // ── Renderer ──────────────────────────────────────────────────────────────
 
-    this.listr = new Listr<ListrCtx, ListrDefaultRenderer>(
-      [
-        discoveryTask,
-        this.makeTask('render'),
-        {
-          title: 'Generando formatos',
-          // Sin formatos activos: el grupo no tiene trabajo que mostrar
-          skip: () => !this.formats.some((f) => f.active),
-          task: (_ctx, task) => task.newListr(subtasks, { concurrent: true }),
-        },
-      ],
-      {
-        renderer: this.renderer as unknown as typeof DefaultRenderer,
-        rendererOptions: {
-          clearOutput: false,
-          collapseSubtasks: false,
-          // Los formatos desactivados se muestran con ✗ (no con ↓, que sugiere
-          // trabajo pendiente en lugar de estado de configuración).
-          icon: { SKIPPED_WITH_COLLAPSE: '–', SKIPPED_WITHOUT_COLLAPSE: '–' },
-        },
-      },
-    );
-    this.runPromise = this.listr.run().then(
-      () => {
-        this.runnerDone = true;
-      },
-      () => {
-        this.runnerDone = true;
-      },
-    );
+  private rowKeyFor(phase: PipelinePhase): string {
+    return phase === 'discovery' || phase === 'render' ? `phase:${phase}` : `fmt:${phase}`;
   }
 
-  /** Crea una tarea de fase con Promise controlada y skip según las fases planificadas. */
-  private makeTask(phase: PipelinePhase): ListrTask<ListrCtx, ListrDefaultRenderer> {
-    const title = PHASE_META[phase].label;
-    // discovery siempre corre; el resto solo si está en usedPhases (planPhases)
-    const skip = phase === 'discovery' ? () => false : () => !this.usedPhases.has(phase);
-    return {
-      title,
-      skip,
-      task: (_ctx, task) =>
-        new Promise<void>((resolve) => {
-          this.runnerAlive = true;
-          this.listrTasks.set(phase, task);
-          this.phaseResolvers.set(phase, resolve);
-          // La fase ya se completó antes de que el runner llegara a la tarea
-          // (p. ej. render termina con el pool 1, antes del wrapper de formatos):
-          // resolver al momento con el título final, sin esperar a finish().
-          if (this.finished || this.phaseDone.has(phase)) {
-            this.applyPhaseTitle(phase, this.phaseCounts[phase] ?? 0, this.phaseDurations[phase] ?? 0);
-            resolve();
-          }
-        }),
-    };
+  private getRow(key: string): Row | undefined {
+    return this.rows.find((row) => row.key === key);
+  }
+
+  /** Crea la fila de una fase de pipeline; discovery crea también la de render. */
+  private ensurePhaseRow(phase: PipelinePhase): void {
+    if (this.getRow(`phase:${phase}`)) return;
+    const row: Row = { key: `phase:${phase}`, indent: 0, label: PHASE_META[phase].label, status: 'pending', count: 0 };
+    this.rows.push(row);
+    if (phase === 'discovery') {
+      // La fila de render siempre existe: se muestra como omitida si no se planifica
+      const renderRow: Row = { key: 'phase:render', indent: 0, label: PHASE_META.render.label, status: 'pending', count: 0 };
+      this.rows.push(renderRow);
+    }
   }
 
   /**
-   * Crea la subtarea de un formato configurado. Activo: se completa cuando el
-   * pipeline reporta su fase (completePhase). Desactivado: skip con mensaje
-   * '<Nombre> (desactivado)' — el renderer lo muestra con ✗.
+   * Crea el grupo 'Generando formatos' y las filas de los 5 formatos
+   * configurados (activos → pendientes; desactivados → omitidos). El grupo
+   * se omite completo si ningún formato está activo.
    */
-  private makeFormatTask(phase: PipelinePhase, active: boolean): ListrTask<ListrCtx, ListrDefaultRenderer> {
-    const label = PHASE_META[phase].label;
-    return {
-      title: label,
-      skip: active ? () => false : () => `${label} (desactivado)`,
-      task: (_ctx, task) =>
-        new Promise<void>((resolve) => {
-          this.runnerAlive = true;
-          this.listrTasks.set(phase, task);
-          this.phaseResolvers.set(phase, resolve);
-          // El trabajo del formato (pool 1) puede terminar antes de que el
-          // wrapper 'Generando formatos' arranque: resolver al momento.
-          if (this.finished || this.phaseDone.has(phase)) {
-            this.applyPhaseTitle(phase, this.phaseCounts[phase] ?? 0, this.phaseDurations[phase] ?? 0);
-            resolve();
-          }
-        }),
-    };
+  private ensureFormatsBlock(): void {
+    if (this.formatsShown) return;
+    if (!this.formats.some((f) => f.active)) return;
+    this.formatsShown = true;
+    const group: Row = { key: 'group', indent: 0, label: 'Generando formatos', status: 'active', count: 0 };
+    this.rows.push(group);
+    for (const f of this.formats) {
+      const row: Row = {
+        key: `fmt:${f.phase}`,
+        indent: 1,
+        label: f.active ? PHASE_META[f.phase].label : `${PHASE_META[f.phase].label} (desactivado)`,
+        status: f.active ? 'pending' : 'skipped',
+        count: 0,
+      };
+      this.rows.push(row);
+      if (!f.active) this.renderRow(row.key);
+    }
+  }
+
+  /** Marca el grupo como completado cuando todas las filas de formato se cerraron. */
+  private maybeFinishGroup(): void {
+    const group = this.getRow('group');
+    if (!group || group.status === 'done') return;
+    const allClosed = this.formats.every((f) => {
+      const row = this.getRow(`fmt:${f.phase}`);
+      return row !== undefined && row.status !== 'pending';
+    });
+    if (allClosed) {
+      group.status = 'done';
+      this.renderRow('group');
+      if (this.verbose) process.stdout.write('[completado] Generando formatos\n');
+    }
+  }
+
+  /** Cierra filas pendientes al final del tracker (finish/fail). */
+  private finalizePendingRows(): void {
+    const renderRow = this.getRow('phase:render');
+    if (renderRow && renderRow.status === 'pending') {
+      renderRow.status = 'skipped';
+      this.renderRow('phase:render');
+      if (this.verbose) process.stdout.write(`[omitido] ${PHASE_META.render.label}\n`);
+    }
+    this.ensureFormatsBlock();
+    for (const f of this.formats) {
+      const row = this.getRow(`fmt:${f.phase}`);
+      if (row && row.status === 'pending' && f.active) {
+        row.status = 'done';
+        row.count = 0;
+        row.elapsed = 0;
+        this.renderRow(row.key);
+      }
+    }
+    this.maybeFinishGroup();
+  }
+
+  private setRowStatus(key: string, status: RowStatus, count = 0, elapsed?: number): void {
+    const row = this.getRow(key);
+    if (!row) return;
+    row.status = status;
+    row.count = count;
+    row.elapsed = elapsed;
+  }
+
+  private rowContent(row: Row, live?: string): string {
+    const indent = '  '.repeat(row.indent);
+    const prefix = row.status === 'done' ? '✔ ' : row.status === 'skipped' ? '– ' : '';
+    const countPart = row.count > 0 ? ` ${row.count}` : '';
+    const timePart = row.elapsed !== undefined ? `  ${formatTime(row.elapsed)}` : '';
+    const livePart = live !== undefined ? ` ${live}` : '';
+    return `${indent}${prefix}${row.label}${countPart}${timePart}${livePart}`;
+  }
+
+  /**
+   * Escribe (o actualiza) la fila. En TTY las filas activas se re-renderizan en
+   * sitio; en non-TTY solo se imprimen los estados finales (done/skipped).
+   */
+  private renderRow(key: string, live?: string): void {
+    const row = this.getRow(key);
+    if (!row || row.status === 'pending') return;
+    const content = this.rowContent(row, live);
+    const idx = this.rowIndex.get(key);
+    if (this.tty) {
+      if (idx === undefined) {
+        process.stdout.write(`${content}\n`);
+        this.rowIndex.set(key, this.nextLine);
+        this.nextLine++;
+      } else {
+        const up = this.nextLine - idx;
+        process.stdout.write(`\x1b[${up}A\x1b[2K${content}\x1b[${up}B`);
+      }
+    } else if (idx === undefined && (row.status === 'done' || row.status === 'skipped')) {
+      process.stdout.write(`${content}\n`);
+      this.rowIndex.set(key, this.nextLine++);
+    }
   }
 
   private writeSummary(processed: number, cached: number, formats?: string[]): void {
