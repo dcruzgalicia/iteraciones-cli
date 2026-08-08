@@ -388,6 +388,9 @@ describe('runBuild', () => {
       expect(html).toContain('<body id="top"');
       expect(html).toContain('aria-label="Volver al principio"');
       expect(html).toContain('scroll-reveal');
+      // Posición centrada inferior y tamaño del botón
+      expect(html).toContain('left-1/2 -translate-x-1/2');
+      expect(html).toContain('size-12');
       // El botón no es un bloque del masonry (fuera del sistema de bloques)
       expect(html).not.toContain('block:volver');
       // El CSS precompilado incluye la animación scroll-driven
