@@ -1,9 +1,7 @@
-import { cp, mkdir, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { cp, mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/site-config.js';
 import { logWarning } from '../lib/logger.js';
-import { run } from '../lib/run.js';
 import { hashString } from './state.js';
 
 const PKG_ROOT = join(import.meta.dir, '../..');
@@ -23,63 +21,22 @@ export async function computeCssInputHash(siteConfig: SiteConfig): Promise<strin
   return hashString(`${accent}\n${styles}`);
 }
 
-export async function buildAssets(
-  outputDir: string,
-  cwd: string,
-  siteConfig: SiteConfig,
-  options: { noCss?: boolean; prevCssInputHash?: string; anyWork?: boolean } = {},
-): Promise<string> {
+export async function buildAssets(outputDir: string, cwd: string, siteConfig: SiteConfig, options: { noCss?: boolean } = {}): Promise<string> {
   const tasks: Promise<void>[] = [copyFonts(outputDir), copyLogo(outputDir, cwd, siteConfig)];
   if (!options.noCss) {
     const accent = siteConfig.format?.html?.accent ?? 'lime';
-    const cssInputHash = await computeCssInputHash(siteConfig);
-    // Los inputs del CSS no cambiaron y ningún documento fue modificado: el
-    // HTML (y las clases Tailwind usadas) es idéntico al build anterior.
-    const cssCacheable = cssInputHash === options.prevCssInputHash && options.anyWork === false;
-    if (!cssCacheable) {
-      tasks.push(generateCss(outputDir, cwd, accent));
-    }
+    tasks.push(copyPrecompiledCss(outputDir, accent));
   }
   await Promise.all(tasks);
   return options.noCss ? '' : '/css/styles.css';
 }
 
-async function generateCss(outputDir: string, cwd: string, accent: string): Promise<void> {
+/** Copia el CSS precompilado del acento (src/lib/resources/css/<accent>.css). */
+async function copyPrecompiledCss(outputDir: string, accent: string): Promise<void> {
   const targetCssDir = join(outputDir, 'css');
   await mkdir(targetCssDir, { recursive: true });
-  const targetCssPath = join(targetCssDir, 'styles.css');
-
-  const shades = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
-  const accentTheme = shades.map((s) => `  --color-accent-${s}: var(--color-${accent}-${s});`).join('\n');
-  await buildCssWithTailwind(targetCssPath, cwd, accentTheme);
-}
-
-async function buildCssWithTailwind(targetCssPath: string, cwd: string, accentTheme: string): Promise<void> {
-  const tempInputPath = join(tmpdir(), `_iteraciones-${crypto.randomUUID()}.css`);
-  const tempContent = [
-    `@import "${CSS_SRC}";`,
-    // Fuentes del paquete acotadas a donde viven las clases del HTML generado:
-    // template.html (resources) y el post-procesamiento de render.ts (builder).
-    // Sin el glob del paquete completo: evita escanear tests y artefactos.
-    `@source "${PKG_ROOT}/src/builder";`,
-    `@source "${PKG_ROOT}/src/lib/resources";`,
-    // El proyecto se escanea solo por su contenido editorial (Markdown);
-    // dist/ y .iteraciones/ se excluyen explícitamente para no depender del
-    // .gitignore del usuario (escaneo incontrolado en cada build no cacheable).
-    `@source "${cwd}/**/*.md";`,
-    `@source not "${cwd}/dist";`,
-    `@source not "${cwd}/.iteraciones";`,
-    `@theme {`,
-    accentTheme,
-    `}`,
-  ].join('\n');
-  await writeFile(tempInputPath, tempContent, 'utf8');
-  try {
-    const result = await run('bun', ['x', '--bun', '@tailwindcss/cli', '-i', tempInputPath, '-o', targetCssPath, '--minify']);
-    if (result.exitCode !== 0) throw new Error(`Tailwind CSS falló:\n${result.stderr}`);
-  } finally {
-    await rm(tempInputPath, { force: true });
-  }
+  const src = join(PKG_ROOT, 'src', 'lib', 'resources', 'css', `${accent}.css`);
+  await cp(src, join(targetCssDir, 'styles.css'));
 }
 
 async function copyFonts(outputDir: string): Promise<void> {

@@ -165,6 +165,16 @@ docs(config): documenta bloque editorial y export en frontmatter
 - **Tests:** `bun test`. Los tests deben ser independientes y no requerir pandoc a menos que sea estrictamente necesario.
 - **Linting:** Biome (espacios, `lineWidth: 150`, comillas simples). Se ejecuta automáticamente en pre-commit.
 
+## Cómo regenerar el CSS precompilado
+
+El CSS de cada color de acento está precompilado en `src/lib/resources/css/<accent>.css` (un archivo por acento; el tema light/dark vive en el mismo archivo vía `data-theme`). Cuando cambies `styles.css`, el template HTML (`src/lib/resources/template.html`) o las clases del post-procesamiento de `render.ts`, regenera:
+
+```bash
+bun run scripts/generate-css.ts
+```
+
+El test `src/__tests__/css-integrity.test.ts` regenera el CSS de `lime` y lo compara byte a byte con el embarcado: falla si los inputs cambiaron sin regenerar.
+
 ## Cómo agregar un filter
 
 Los filters son **filtros Lua** que corren dentro de las invocaciones de pandoc (vía `--lua-filter`). Se organizan en **capas**:
