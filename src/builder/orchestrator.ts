@@ -279,8 +279,6 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   if (plan.htmlOn && !noExport) {
     await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, {
       noCss: options.noCss,
-      prevCssInputHash: prevState?.cssInputHash,
-      anyWork: work.anyWork,
     });
   }
 
