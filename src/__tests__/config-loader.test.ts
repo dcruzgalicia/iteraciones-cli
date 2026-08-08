@@ -322,6 +322,15 @@ describe('loadSiteConfig', () => {
     });
   });
 
+  it('parsea la bibliografía y el CSL configurados a nivel raíz', async () => {
+    await withTempDir(async (dir) => {
+      await writeConfig(dir, 'lang: es-MX\nbibliography: refs/mi-libro.bib\ncsl: styles/nature.csl');
+      const config = await loadSiteConfig(dir);
+      expect(config.bibliography).toBe('refs/mi-libro.bib');
+      expect(config.csl).toBe('styles/nature.csl');
+    });
+  });
+
   it('las tres vías de carga producen los mismos defaults de formato', async () => {
     let defaultsSinArchivo: SiteConfig = null!;
     let defaultsConArchivoVacio: SiteConfig = null!;

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { markdownToAst, texBodyFromAst } from '../builder/render.js';
+import { loadFilterGroups, markdownToAst, texBodyFromAst } from '../builder/render.js';
 import type { BuildDocument } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { runPandoc } from '../lib/pandoc-runner.js';
@@ -236,7 +236,8 @@ describe('filtros Lua de usuario', () => {
       const siteConfig = await loadSiteConfig(cwd);
       const ast = await markdownToAst(doc, cwd, siteConfig);
       expect(ast).not.toBeNull();
-      const { body } = await texBodyFromAst(ast!, doc, cwd, siteConfig);
+      const filters = await loadFilterGroups(siteConfig, undefined, cwd);
+      const { body } = await texBodyFromAst(ast!, doc, cwd, siteConfig, filters);
       expect(body).toContain('\\fbox{Nota}');
     } finally {
       rmSync(cwd, { recursive: true, force: true });

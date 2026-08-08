@@ -59,7 +59,7 @@ export async function runDocumentPipeline(
   const noExport = options.noExport === true;
   const siteConfig = ctx.siteConfig;
   const userFilters = await resolveUserLuaFilters(ctx.cwd, siteConfig);
-  const bibOptions = (await resolveBibOptions(ctx.cwd)).bibOptions;
+  const bibOptions = (await resolveBibOptions(ctx.cwd, siteConfig)).bibOptions;
   const globalBibliography = bibOptions?.bibliography;
   const lang = siteConfig.lang ?? 'es';
   const htmlConfig = formatCfg?.html;
@@ -273,6 +273,9 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
         date: entry?.date ?? doc.frontmatter.date ?? undefined,
         filePath: doc.filePath,
         cwd,
+        // La bibliografía efectiva (configurada o auto-descubierta) se
+        // referencia en el preámbulo para que biblatex use la misma que citeproc.
+        bibliography: bibOptions?.bibliography,
       },
       texBody,
       flags,

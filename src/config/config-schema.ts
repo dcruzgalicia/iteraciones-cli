@@ -99,6 +99,8 @@ const RawSiteConfigSchema = z
     lang: z.string().default(DEFAULT_SITE_CONFIG.lang),
     toc: z.boolean().default(DEFAULT_SITE_CONFIG.toc),
     format: FormatSchema.optional(),
+    bibliography: z.string().optional(),
+    csl: z.string().optional(),
     'disabled-filters': z
       .array(z.string())
       .optional()
@@ -146,5 +148,7 @@ export const SiteConfigSchema = RawSiteConfigSchema.transform((raw) => {
     },
     disabledFilters: raw['disabled-filters'],
     luaFilters: raw['lua-filters'],
+    bibliography: raw.bibliography,
+    csl: raw.csl,
   };
 });

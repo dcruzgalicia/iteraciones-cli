@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { join, relative } from 'node:path';
+import { isAbsolute, join, relative } from 'node:path';
 import { IGNORED_DIRS } from '../builder/discover.js';
 import { isHiddenPath, isIgnoredByRules, loadGitignoreRules } from '../builder/gitignore.js';
 import { validateDisabledPreambleFilters } from '../builder/preamble-loader.js';
@@ -115,6 +115,15 @@ export async function runValidate(cwd: string): Promise<void> {
     for (const rel of config.luaFilters ?? []) {
       if (!(await Bun.file(join(cwd, rel)).exists())) {
         configWarnings.push({ file: 'iteraciones.config.yaml', message: `lua-filters: "${rel}" no encontrado en el proyecto` });
+      }
+    }
+    // Las rutas de bibliografía/CSL configuradas deben existir (error, no warning)
+    for (const key of ['bibliography', 'csl'] as const) {
+      const rel = config[key];
+      if (!rel) continue;
+      const abs = isAbsolute(rel) ? rel : join(cwd, rel);
+      if (!(await Bun.file(abs).exists())) {
+        configErrors.push({ file: 'iteraciones.config.yaml', message: `${key}: "${rel}" no encontrado en el proyecto` });
       }
     }
   } catch (err) {

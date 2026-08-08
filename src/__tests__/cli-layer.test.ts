@@ -404,6 +404,24 @@ describe('runValidate', () => {
       expect(process.exitCode).toBe(0);
     });
   });
+
+  it('reporta error con rutas de bibliografía o CSL inexistentes', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nbibliography: refs/no-existe.bib\n', 'utf8');
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(output).toContain('bibliography: "refs/no-existe.bib" no encontrado en el proyecto');
+      expect(process.exitCode).toBe(1);
+    });
+  });
 });
 
 describe('runDoctor', () => {

@@ -1,5 +1,5 @@
 import { mkdir, rename, rm } from 'node:fs/promises';
-import { basename, dirname, join } from 'node:path';
+import { basename, dirname, isAbsolute, join } from 'node:path';
 import type { SiteConfig } from '../config/site-config.js';
 import { logWarning } from '../lib/logger.js';
 import type { BibOptions } from '../lib/pandoc-runner.js';
@@ -220,16 +220,42 @@ export async function discoverBibFiles(cwd: string, extensions: string[] = ['bib
   return results.sort();
 }
 
-/** Hash del contenido de todos los .bib y .csl del proyecto. */
-export async function computeBibHash(cwd: string): Promise<string> {
+/**
+ * Hash del contenido de los archivos de bibliografía efectivos (los que el
+ * pipeline realmente usa). Con `bibliography` configurada: esa ruta y el CSL
+ * configurado. Sin configurar: todos los .bib/.csl del proyecto (la capa
+ * LaTeX referencia todos los .bib descubiertos).
+ */
+export async function computeBibHash(cwd: string, siteConfig?: SiteConfig): Promise<string> {
   const parts: string[] = [];
-  for (const file of await discoverBibFiles(cwd)) {
+  const configuredBib = siteConfig?.bibliography?.trim();
+  if (configuredBib) {
+    const bibPath = resolveConfiguredPath(cwd, configuredBib);
     parts.push(
-      file,
-      await Bun.file(file)
+      bibPath,
+      await Bun.file(bibPath)
         .text()
         .catch(() => ''),
     );
+    const configuredCsl = siteConfig?.csl?.trim();
+    if (configuredCsl) {
+      const cslPath = resolveConfiguredPath(cwd, configuredCsl);
+      parts.push(
+        cslPath,
+        await Bun.file(cslPath)
+          .text()
+          .catch(() => ''),
+      );
+    }
+  } else {
+    for (const file of await discoverBibFiles(cwd)) {
+      parts.push(
+        file,
+        await Bun.file(file)
+          .text()
+          .catch(() => ''),
+      );
+    }
   }
   return hashString(parts.join('\0'));
 }
@@ -273,8 +299,30 @@ export async function writeCachedArtifacts(
   }
 }
 
-/** Resuelve las opciones de bibliografía compartidas para exportaciones. */
-export async function resolveBibOptions(cwd: string): Promise<{ bibFiles: string[]; bibOptions?: BibOptions }> {
+/** Resuelve una ruta configurada (bibliography/csl) contra la raíz del proyecto. */
+function resolveConfiguredPath(cwd: string, rel: string): string {
+  return isAbsolute(rel) ? rel : join(cwd, rel);
+}
+
+/**
+ * Resuelve las opciones de bibliografía compartidas para exportaciones.
+ * Con `bibliography` configurada (raíz de la config) se usa esa ruta y el CSL
+ * configurado (o el APA-7 empaquetado). Sin configurar: auto-descubrimiento
+ * del primer .bib del proyecto con APA-7.
+ * Si la ruta configurada no existe, se advierte y se vuelve al comportamiento
+ * de auto-descubrimiento (mismo patrón que lua-filters inexistentes).
+ */
+export async function resolveBibOptions(cwd: string, siteConfig?: SiteConfig): Promise<{ bibFiles: string[]; bibOptions?: BibOptions }> {
+  const configuredBib = siteConfig?.bibliography?.trim();
+  if (configuredBib) {
+    const bibPath = resolveConfiguredPath(cwd, configuredBib);
+    if (await Bun.file(bibPath).exists()) {
+      const configuredCsl = siteConfig?.csl?.trim();
+      const cslPath = configuredCsl ? resolveConfiguredPath(cwd, configuredCsl) : join(import.meta.dir, '../../src/lib/resources/apa-7.csl');
+      return { bibFiles: [bibPath], bibOptions: { bibliography: bibPath, csl: cslPath } };
+    }
+    logWarning(`bibliography: "${configuredBib}" no encontrado en el proyecto; se usa el auto-descubrimiento`, 'config');
+  }
   const bibFiles = cwd ? await discoverBibFiles(cwd, ['bib']) : [];
   const firstBib = bibFiles[0];
   const bibOptions = firstBib !== undefined ? { bibliography: firstBib, csl: join(import.meta.dir, '../../src/lib/resources/apa-7.csl') } : undefined;
