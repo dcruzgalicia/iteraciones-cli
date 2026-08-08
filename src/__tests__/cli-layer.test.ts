@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, spyOn } from 'bun:test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { CommanderError } from 'commander';
 import { runBuild, runClean, runInit, runNew, runValidate } from '../cli/dispatcher.js';
 import { buildProgram } from '../cli/parser.js';
 import { initTestProject } from './helpers.js';
@@ -29,6 +30,48 @@ function spyStderr() {
   const s = spyOn(process.stderr, 'write');
   return s;
 }
+
+describe('parser (errores de commander en español)', () => {
+  /** Ejecuta el parser con argv dados, captura stderr y el exit code del error. */
+  async function parseUsageError(argv: string[]): Promise<{ output: string; exitCode: number }> {
+    const stderrSpy = spyStderr();
+    let output = '';
+    let exitCode = 0;
+    try {
+      await buildProgram().parseAsync(['bun', 'bin.ts', ...argv]);
+    } catch (err) {
+      exitCode = err instanceof CommanderError ? err.exitCode : 1;
+    } finally {
+      output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+      stderrSpy.mockRestore();
+    }
+    return { output, exitCode };
+  }
+
+  it('comando desconocido se reporta en español', async () => {
+    const { output, exitCode } = await parseUsageError(['comando-inexistente']);
+    expect(output).toContain("error: comando desconocido 'comando-inexistente'");
+    expect(exitCode).toBe(1);
+  });
+
+  it('sugiere comandos cercanos en español', async () => {
+    const { output } = await parseUsageError(['bui']);
+    expect(output).toContain("error: comando desconocido 'bui'");
+    expect(output).toContain('(¿Quisiste decir build?)');
+  });
+
+  it('opción sin argumento se reporta en español', async () => {
+    const { output, exitCode } = await parseUsageError(['validate', '--project-root']);
+    expect(output).toContain("error: falta el argumento de la opción '--project-root <path>'");
+    expect(exitCode).toBe(1);
+  });
+
+  it('argumento requerido faltante se reporta en español', async () => {
+    const { output, exitCode } = await parseUsageError(['new']);
+    expect(output).toContain("error: falta el argumento requerido 'path'");
+    expect(exitCode).toBe(1);
+  });
+});
 
 describe('parser (errores de flags)', () => {
   afterEach(resetExitCode);

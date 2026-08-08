@@ -1,12 +1,35 @@
-import { Command } from 'commander';
+import { Command, CommanderError } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
 import { runBuild, runClean, runDoctor, runFilters, runInfo, runInit, runNew, runValidate } from './dispatcher.js';
+
+/**
+ * Traduce los mensajes de error conocidos de commander al español.
+ * Los mensajes no reconocidos se conservan tal cual.
+ */
+function translateCommanderError(message: string): string {
+  // El mensaje puede traer varias líneas (p. ej. la sugerencia de comandos
+  // cercanos en una segunda línea): se traduce línea por línea.
+  return message
+    .split('\n')
+    .map((line) =>
+      line
+        .replace(/^error: unknown command '([^']+)'$/, "error: comando desconocido '$1'")
+        .replace(/^\(Did you mean (.+)\?\)$/, '(¿Quisiste decir $1?)')
+        .replace(/^error: option '([^']+)' argument missing$/, "error: falta el argumento de la opción '$1'")
+        .replace(/^error: missing required argument '([^']+)'$/, "error: falta el argumento requerido '$1'")
+        .replace(/^error: unknown option '([^']+)'$/, "error: opción desconocida '$1'"),
+    )
+    .join('\n');
+}
 
 export function buildProgram(): Command {
   const program = new Command();
 
   program.name(packageJson.name.replace(/-cli$/, '')).description(packageJson.description).version(packageJson.version);
   program.option('--project-root <path>', 'directorio raíz del proyecto (por defecto: directorio actual)');
+  // Errores de uso en español y sin process.exit (el exit code lo fija bin.ts).
+  program.configureOutput({ outputError: (str, write) => write(translateCommanderError(str)) });
+  program.exitOverride();
 
   /** Resuelve el directorio raíz del proyecto: --project-root global o el directorio actual. */
   const projectRoot = (): string => program.opts().projectRoot ?? process.cwd();
