@@ -53,7 +53,11 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     return;
   }
 
-  const progress = new ProgressTracker({ renderer: options.verbose ? 'verbose' : 'default', profile: options.profile });
+  const progress = new ProgressTracker({
+    renderer: options.verbose ? 'verbose' : 'default',
+    profile: options.profile,
+    noExport: options.noExport === true,
+  });
   try {
     await runBuild(cwd, options, progress);
   } catch (err) {
@@ -114,6 +118,7 @@ async function dryRun(cwd: string): Promise<void> {
 
 async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTracker): Promise<void> {
   const log = (msg: string) => progress.log(msg);
+  const noExport = options.noExport === true;
 
   // Cargar config primero para detectar cambios de formato antes de setupBuildEnvironment
   const siteConfig = await loadSiteConfig(cwd);
@@ -169,6 +174,9 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
     noCache: options.noCache,
     activeFormats: plan.currentFormats,
     prevState,
+    // Con --no-export el estado no se avanza: las salidas de dist/ siguen
+    // desactualizadas y el siguiente build normal debe regenerarlas.
+    persist: !noExport,
     meta: {
       filtersHash: plan.filtersHash,
       filterFileCache: plan.filterFileCache,
@@ -205,7 +213,10 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   // formatInvalidated, que cambia al activarse un formato).
 
   // ── FASE 6: limpiar de dist/ archivos de formatos eliminados ──
-  await cleanupRemovedFormats(ctx, allDocs, plan.removedFormats);
+  // Con --no-export no se toca dist/ (cleanup, assets y copia se omiten).
+  if (!noExport) {
+    await cleanupRemovedFormats(ctx, allDocs, plan.removedFormats);
+  }
 
   // ── Planificación: conjuntos de trabajo (caché content-addressed) ──
   const work = computeWorkSets(plan, allDocs, discoveredChanges);
@@ -217,8 +228,10 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   }
 
   // Cleanup de archivos eliminados y slugs cambiados
-  await cleanupDeletedFiles(ctx, discoveredChanges, allDocs, deletedEntries);
-  await cleanupSlugChanges(ctx, slugChangedEntries);
+  if (!noExport) {
+    await cleanupDeletedFiles(ctx, discoveredChanges, allDocs, deletedEntries);
+    await cleanupSlugChanges(ctx, slugChangedEntries);
+  }
 
   // Solo hubo eliminaciones o slugs cambiados: el cleanup ya corrió
   if (
@@ -257,7 +270,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   });
 
   // ── Build assets (css, fonts, logo) antes de copiar a dist/ ──
-  if (plan.htmlOn) {
+  if (plan.htmlOn && !noExport) {
     await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, {
       noCss: options.noCss,
       prevCssInputHash: prevState?.cssInputHash,
@@ -266,7 +279,15 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   }
 
   // ── FASE 5: copiar de formats/ a dist/ ──
-  await copyToDist(ctx, allDocs, formatsDir, { latexOn: plan.latexOn, pdfOn: plan.pdfOn, htmlOn: plan.htmlOn, epubOn: plan.epubOn, mdOn: plan.mdOn });
+  if (!noExport) {
+    await copyToDist(ctx, allDocs, formatsDir, {
+      latexOn: plan.latexOn,
+      pdfOn: plan.pdfOn,
+      htmlOn: plan.htmlOn,
+      epubOn: plan.epubOn,
+      mdOn: plan.mdOn,
+    });
+  }
 
   const totalDocs = plan.htmlOn || plan.pdfOn || plan.epubOn || plan.mdOn || plan.latexOn ? allDocs.length : 0;
   const processedCount = processed.size;

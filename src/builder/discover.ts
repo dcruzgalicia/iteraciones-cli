@@ -141,6 +141,8 @@ export async function discover(
     prevState?: BuildState | null;
     /** Hashes de invalidación calculados por el orchestrator, guardados en state.json. */
     meta?: { filtersHash: string; filterFileCache: FilterFileCache; configHashes: Record<string, string>; bibHash: string; cssInputHash: string };
+    /** Si false, no persiste state.json (--no-export: las salidas siguen desactualizadas). */
+    persist?: boolean;
   } = {},
 ): Promise<DiscoverResult> {
   const relativePaths: string[] = [];
@@ -300,7 +302,7 @@ export async function discover(
     options.meta?.bibHash !== prevState?.bibHash ||
     options.meta?.cssInputHash !== prevState?.cssInputHash;
 
-  if (hasChanged) {
+  if (hasChanged && options.persist !== false) {
     await saveBuildState(cwd, {
       startedAt: thisBuildStartedAt,
       activeFormats: options.activeFormats ?? [],

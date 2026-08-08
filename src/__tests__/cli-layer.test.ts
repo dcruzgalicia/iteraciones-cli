@@ -74,6 +74,44 @@ describe('runBuild', () => {
     }
     expect(output).toContain('concurrency');
   });
+
+  it('--no-export no modifica dist/, reporta salidas no modificadas y el siguiente build las regenera', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+
+      const htmlPath = join(dir, 'dist', 'files', 'test-document.html');
+      const before = await Bun.file(htmlPath).text();
+
+      // Modificar el documento y ejecutar --no-export
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\nContenido modificado.\n', 'utf8');
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      try {
+        process.exitCode = 0;
+        await runBuild(dir, { noExport: true });
+        expect(process.exitCode).toBe(0);
+        const output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        expect(output).toContain('Salidas no modificadas');
+        expect(output).not.toContain('Formatos generados');
+      } finally {
+        stdoutSpy.mockRestore();
+      }
+
+      // dist/ no se tocó
+      const after = await Bun.file(htmlPath).text();
+      expect(after).toBe(before);
+
+      // El siguiente build normal regenera las salidas con el contenido nuevo
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const regenerated = await Bun.file(htmlPath).text();
+      expect(regenerated).not.toBe(before);
+      expect(regenerated).toContain('Contenido modificado');
+    });
+  });
 });
 
 describe('runValidate', () => {

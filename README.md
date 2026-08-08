@@ -111,7 +111,7 @@ iteraciones build [opciones]
 | `--no-cache` | Omite la caché incremental; siempre hace build completo | — |
 | `--output <path>` | Directorio de salida | `dist/files` |
 | `--no-css` | Omite la generación de CSS | — |
-| `--no-export` | Omite la exportación PDF/EPUB | — |
+| `--no-export` | Solo actualiza la caché; no genera ni copia salidas a `dist/` | — |
 | `--dry-run` | Muestra los documentos a procesar sin generar salida | — |
 | `--verbose` | Muestra información adicional de progreso | — |
 | `--profile` | Muestra el tiempo de cada fase del pipeline | — |

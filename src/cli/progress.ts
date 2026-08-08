@@ -72,6 +72,8 @@ export class ProgressTracker {
   private currentPhaseCount = 0;
   /** Si true, escribe el desglose de tiempos por fase tras el resumen (--profile). */
   private profile: boolean;
+  /** Con --no-export las salidas no se generan: el resumen lo indica. */
+  private noExport: boolean;
   /** Formatos configurados del proyecto (para las subtareas del grupo de formatos). */
   private formats: FormatState[] = [];
 
@@ -91,9 +93,11 @@ export class ProgressTracker {
   /** Warnings diferidos (modo no verbose) para mostrar en el resumen final. */
   private warnings: string[] = [];
 
-  constructor(options: { renderer?: 'default' | 'verbose' | 'test'; profile?: boolean } = {}) {
+  constructor(options: { renderer?: 'default' | 'verbose' | 'test'; profile?: boolean; noExport?: boolean } = {}) {
     this.renderer = (options.renderer ?? 'default') as ListrRendererValue;
     this.profile = options.profile ?? false;
+    /** Con --no-export el resumen no afirma formatos generados. */
+    this.noExport = options.noExport ?? false;
     this.t0 = performance.now();
     if (this.renderer === 'default') {
       // Restaurar el cursor si el proceso sale sin completar run() (errores del build)
@@ -346,7 +350,11 @@ export class ProgressTracker {
     if (cached > 0) {
       process.stdout.write(`  ${padRight('Sin cambios (reutilizado)', LABEL_WIDTH)}${cached}\n`);
     }
-    process.stdout.write(`  ${padRight('Formatos generados', LABEL_WIDTH)}${formatLabel}\n`);
+    if (this.noExport) {
+      process.stdout.write(`  Salidas no modificadas (caché actualizada)\n`);
+    } else {
+      process.stdout.write(`  ${padRight('Formatos generados', LABEL_WIDTH)}${formatLabel}\n`);
+    }
     process.stdout.write(`  ${padRight('Tiempo total', LABEL_WIDTH)}${formatTime(totalTime)}\n`);
     if (this.warnings.length > 0) {
       process.stdout.write(`\nAdvertencias:\n`);
