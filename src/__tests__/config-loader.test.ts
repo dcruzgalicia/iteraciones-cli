@@ -3,7 +3,14 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loadSiteConfig } from '../config/config-loader.js';
-import type { SiteConfig } from '../config/site-config.js';
+import {
+  DEFAULT_EPUB_FORMAT,
+  DEFAULT_HTML_FORMAT,
+  DEFAULT_MARKDOWN_FORMAT,
+  DEFAULT_PDF_FORMAT,
+  DEFAULT_SITE_CONFIG,
+  type SiteConfig,
+} from '../config/site-config.js';
 import { ConfigError } from '../lib/errors.js';
 
 async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
@@ -339,5 +346,18 @@ describe('loadSiteConfig', () => {
     expect(defaultsConMinimo.format.html?.generate).toBe(defaultsSinArchivo.format.html?.generate);
     expect(defaultsConArchivoVacio.format?.pdf?.disabledPreambleFilters).toEqual(defaultsSinArchivo.format?.pdf?.disabledPreambleFilters);
     expect(defaultsConMinimo.format?.pdf?.disabledPreambleFilters).toEqual(defaultsSinArchivo.format?.pdf?.disabledPreambleFilters);
+  });
+
+  it('los defaults del esquema coinciden con las constantes DEFAULT_* (fuente única)', async () => {
+    await withTempDir(async (dir) => {
+      const config = await loadSiteConfig(dir);
+      expect(config.lang).toBe(DEFAULT_SITE_CONFIG.lang);
+      expect(config.toc).toBe(DEFAULT_SITE_CONFIG.toc);
+      expect(config.format.latex).toBe(DEFAULT_SITE_CONFIG.format.latex);
+      expect(config.format.html).toEqual(DEFAULT_HTML_FORMAT);
+      expect(config.format.pdf).toEqual(DEFAULT_PDF_FORMAT);
+      expect(config.format.epub).toEqual(DEFAULT_EPUB_FORMAT);
+      expect(config.format.markdown).toEqual(DEFAULT_MARKDOWN_FORMAT);
+    });
   });
 });
