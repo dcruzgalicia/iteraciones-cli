@@ -17,6 +17,31 @@ import { loadPreambleFilters } from './preamble-loader.js';
 import { discoverBibFiles } from './state.js';
 import type { PreambleFlags } from './types.js';
 
+/**
+ * Escapa caracteres especiales de LaTeX en texto de metadatos (títulos,
+ * autores). Es el mismo conjunto de caracteres que escape_latex de los
+ * filtros Lua de la capa latex (src/lib/resources/filters/latex/).
+ */
+function escapeLatex(s: string): string {
+  const BS = '\u0001'; // placeholder para el backslash (evita re-escapar \textbackslash{})
+  return s
+    .replace(/\\/g, BS)
+    .replace(/([{}#$&_%])/g, '\\$1')
+    .replace(/\^/g, '\\textasciicircum{}')
+    .replace(/~/g, '\\textasciitilde{}')
+    .replaceAll(BS, '\\textbackslash{}');
+}
+
+/**
+ * Escapa los caracteres que romperían el parseo TeX en rutas de archivo
+ * (\addbibresource): % inicia un comentario y # es un carácter de parámetro.
+ * No escapa _ ni ~ porque biblatex usa la ruta literalmente y el escape
+ * rompería nombres de archivo comunes (p. ej. mi_bibliografia.bib).
+ */
+function escapeLatexPath(s: string): string {
+  return s.replace(/([%#\\])/g, '\\$1');
+}
+
 interface PreambleMeta {
   title?: string;
   subtitle?: string;
@@ -54,7 +79,7 @@ export async function buildLatexPreamble(
     const bibFiles = await discoverBibFiles(cwdForFilters, ['bib']);
     if (bibFiles.length > 0) {
       for (const bib of bibFiles) {
-        preamble.push(`\\addbibresource{${bib}}`);
+        preamble.push(`\\addbibresource{${escapeLatexPath(bib)}}`);
       }
     }
   }
@@ -63,14 +88,15 @@ export async function buildLatexPreamble(
   preamble.push('\\begin{document}');
 
   // ── PORTADA ──
-  const displayTitle = meta?.title || 'Sin t\u00edtulo';
+  const displayTitle = escapeLatex(meta?.title || 'Sin t\u00edtulo');
   preamble.push(`\\title{${displayTitle}}`);
-  if (meta?.subtitle) preamble.push(`\\subtitle{${meta.subtitle}}`);
+  if (meta?.subtitle) preamble.push(`\\subtitle{${escapeLatex(meta.subtitle)}}`);
   // Se emite siempre (vacío sin author) para que \ifx\@author\@empty en
   // 19-maketitle.tex sea verdadero y el título mantenga su posición:
   // si \author{} no se llama, \@author es una macro de warning de LaTeX
   // que deja la rama de compensación sin efecto.
-  preamble.push(`\\author{${meta?.author?.length ? meta.author.join(' \\and ') : ''}}`);
+  const authors = meta?.author?.map((a) => escapeLatex(a)).join(' \\and ') ?? '';
+  preamble.push(`\\author{${authors}}`);
   if (pdfFormat?.showDate) {
     if (meta?.date) {
       preamble.push(`\\date{${formatHumanDate(meta.date)}}`);
