@@ -56,7 +56,7 @@ El pipeline convierte archivos Markdown en documentos en los formatos configurad
        ▼
 ┌─────────────┐
 │  Assets      │  buildAssets()
-│             │  • Genera CSS con Tailwind (cacheado por hash)
+│             │  • Copia el CSS precompilado del acento (lib/resources/css/)
 │             │  • Copia fuentes y logo a dist/
 └──────┬──────┘
        │
@@ -68,35 +68,10 @@ El pipeline convierte archivos Markdown en documentos en los formatos configurad
 │             │    slugs cambiados y caché obsoleta
 └─────────────┘
 ```
-│  │(json→md) │ │(json→    │ │(json→    │    │
-│  │          │ │ template)│ │ epub3)   │    │
-│  └──────────┘ └──────────┘ └──────────┘    │
-│                                             │
-│  ┌──────────────────────────────────────┐   │
-│  │  LaTeX → PDF (secuencial)           │   │
-│  │  • generateLatexPreamble()          │   │
-│  │  • latexmk -pdf (con biber)         │   │
-│  │  • Semáforo: CPU-1 instancias       │   │
-│  └──────────────────────────────────────┘   │
-└───────────────────┬─────────────────────────┘
-                    │ formats/
-                    ▼
-┌─────────────┐
-│  Build Assets │  buildAssets()
-│  CSS+Fonts   │  • Tailwind CSS (bun x @tailwindcss/cli)
-│             │  • Copia fonts y logo a dist/
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│  FASE 5     │  copyToDist()
-│  Copia      │  • Copia de .iteraciones/formats/ a dist/files/
-│             │  • Solo formatos activos
-└─────────────┘
-```
 
-### Flujo de datos
+---
 
+## Sistema de filters
 ```
 Archivo .md
   │
@@ -222,8 +197,12 @@ format:
   latex: false
   pdf:
     generate: false
-    disabled-preamble-filters: []
-    # ... 30+ campos tipográficos
+    show-date: false
+    page-number: header-right
+    disabled-preamble-filters:
+      - 24-eso-pic
+      - 25-pdfx
+      - 26-crop
   html:
     title: "Mi sitio"
     tagline: "escribir, compartir, re-existir"
@@ -235,30 +214,17 @@ format:
   markdown:
     generate: false
 
+bibliography: refs/mi-libro.bib   # opcional: .bib del proyecto
+csl: styles/nature.csl            # opcional: estilo de citas
 disabled-filters: []
 lua-filters: []
 ```
 
-El esquema Zod (`config-schema.ts`) aplica defaults para todos los campos, valida tipos, y transforma claves kebab-case a camelCase para las interfaces TypeScript.
+El esquema Zod (`config-schema.ts`) valida tipos, aplica defaults y transforma claves kebab-case a camelCase para las interfaces TypeScript. Los valores por defecto viven en una única fuente: las constantes `DEFAULT_*` de `site-config.ts` (el esquema las consume con `.default()` y el transform las usa como fallback).
 
-### PdfFormatConfig (30+ campos)
+### PdfFormatConfig (campos reales)
 
-La configuración PDF es la más compleja e incluye:
-
-| Grupo | Campos | Propósito |
-|-------|--------|-----------|
-| Clase | `documentclass` | Clase KOMA-Script (scrartcl, scrbook) |
-| Paquetes | `geometry`, `babel`, `hyperref`, `microtype` | Opciones de paquetes LaTeX |
-| Fuente | `mathptmx` | Times New Roman |
-| Interlineado | `setspace`, `setstretch` | Espaciado entre líneas |
-| Guiones | `pretolerance`, `tolerance`, `hyphenpenalty` | Control de partición |
-| Composición | `raggedbottom`, `widowpenalty` | Control de páginas |
-| Secciones | `sectioning` | Estilo de part, chapter, section |
-| Epígrafes | `dictum` | Configuración de dictum |
-| Portada | `setkomafont` | Fuentes de maketitle |
-| Extras | `eso-pic`, `pdfx`, `crop` | Funcionalidades adicionales |
-
----
+La configuración PDF es mínima y deliberada: `generate` (activa la compilación con latexmk), `show-date` (fecha en la portada), `page-number` (posición del número de página) y `disabled-preamble-filters` (lista negra de preamble filters, con `24-eso-pic`, `25-pdfx` y `26-crop` desactivados por defecto). Todo el diseño tipográfico (márgenes, fuentes, interlineado, secciones, epígrafes, portada) se gestiona con **preamble filters** `.tex` sobrescribibles por proyecto (`<proyecto>/preamble/<nombre>.tex`) y no es configuración YAML.
 
 ## Módulos principales
 
@@ -297,7 +263,7 @@ La configuración PDF es la más compleja e incluye:
 | Archivo | Responsabilidad |
 |---------|----------------|
 | `config-schema.ts` | Esquemas Zod para toda la configuración. |
-| `config-loader.ts` | Carga y valida `iteraciones.config.yaml`. ~76 líneas. |
+| `config-loader.ts` | Carga y valida `iteraciones.config.yaml`. |
 | `site-config.ts` | Interfaces TypeScript y valores por defecto. |
 
 ### `src/lib/`
@@ -322,19 +288,25 @@ La configuración PDF es la más compleja e incluye:
 - `Bun.Glob`: globbing nativo sin dependencias.
 - `bun test`: test runner integrado, API compatible con Jest.
 
-### ¿Por qué el pipeline está en fases paralelas?
+### ¿Por qué el pipeline usa dos pools de concurrencia?
 
-Los formatos de salida son independientes entre sí (excepto PDF que necesita LaTeX). La FASE 4 ejecuta HTML, EPUB, Markdown y PDF en 4 ramas paralelas con `Promise.all()`, reduciendo el tiempo total de build.
-
-PDF tiene un semáforo que limita las instancias de `latexmk` a `CPU - 1` porque cada instancia consume ~300-600 MB de RAM.
+Cada documento atraviesa su pipeline completo (AST → formatos ligeros → .tex → cola PDF) en el **pool 1**, con concurrencia `ctx.concurrency` (CPU − 1, máx. 16). El **pool 2** consume la cola de compilación PDF en paralelo, solapando latexmk con pandoc: el PDF no bloquea al resto de formatos. Cada instancia de latexmk consume ~300-600 MB de RAM, por eso su concurrencia está acotada.
 
 ### ¿Por qué Zod en lugar de parseo manual?
 
-El archivo `config-loader.ts` pasó de **469 a 76 líneas** (-84%) al reemplazar el parseo manual campo por campo con esquemas Zod. Beneficios:
+El archivo `config-loader.ts` usa esquemas Zod en lugar de parseo manual campo por campo. Beneficios:
 - Mensajes de error descriptivos automáticos
 - Validación de tipos en runtime
-- Defaults declarativos con `.default()`
+- Defaults declarativos con `.default()` (consumidos desde las constantes `DEFAULT_*`)
 - Documentación viva del esquema
+
+### ¿Por qué el tracker de progreso es propio (sin listr2)?
+
+El tracker del build (`src/cli/progress.ts`) es un renderer propio y síncrono: filas interactivas en TTY (conteo en vivo `[i/N]`), impresión de estados finales en pipes y texto plano en `--verbose`. La integración anterior con listr2 causó dos regresiones de cuelgue del proceso en TTY; el renderer propio no tiene bucles de render ni promesas de coordinación, así que un error del build no puede dejar el proceso colgado. listr2 se conserva únicamente en `doctor` (uso trivial).
+
+### ¿Por qué las listas de filters se derivan del filesystem?
+
+Los nombres de los filters Lua y de los preamble filters se derivan de un glob ordenado de `src/lib/resources/` (el prefijo numérico define el orden): agregar un filter nuevo es crear un archivo, sin tocar código. Las descripciones viven en la primera línea de comentario de cada archivo.
 
 ### ¿Por qué no hay plugins/tipos de documento/paginación?
 
