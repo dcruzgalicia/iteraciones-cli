@@ -146,6 +146,18 @@ describe('runBuild', () => {
     });
   });
 
+  it('resuelve --output relativo contra la raíz del proyecto', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      process.exitCode = 0;
+      await runBuild(dir, { outputDir: 'salida' });
+      expect(process.exitCode).toBe(0);
+      expect(await Bun.file(join(dir, 'salida', 'test-document.html')).exists()).toBe(true);
+      // No escribe en el cwd del proceso
+      expect(await Bun.file(join(tmpdir(), 'salida')).exists()).toBe(false);
+    });
+  });
+
   it('rechaza --concurrency no entero con mensaje en stderr', async () => {
     const stderrSpy = spyStderr();
     let output = '';

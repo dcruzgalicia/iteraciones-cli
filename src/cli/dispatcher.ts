@@ -40,22 +40,22 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
       concurrency = parsed;
     }
 
-    // Validar --output
-    const output = options.outputDir;
+    // Validar y resolver --output: las rutas relativas se resuelven contra la
+    // raíz del proyecto (--project-root), no contra el cwd del proceso.
+    let output = options.outputDir;
     if (output !== undefined) {
-      const normalized = normalize(output);
-      if ((!isAbsolute(normalized) && normalized.startsWith('..')) || normalized === '/') {
-        throw new Error(`--output no puede apuntar fuera del proyecto o a la raíz del sistema (recibido: "${output}")`);
+      const projectRoot = normalize(cwd);
+      const resolved = isAbsolute(output) ? normalize(output) : join(projectRoot, output);
+      if (resolved === '/' || resolved === projectRoot || projectRoot.startsWith(resolved + '/')) {
+        throw new Error(`--output "${output}" apunta a un directorio padre del proyecto, lo que podría sobrescribir los archivos fuente.`);
       }
-      if (isAbsolute(normalized)) {
-        const projectRoot = normalize(cwd);
-        if (projectRoot === normalized || projectRoot.startsWith(normalized + '/')) {
-          throw new Error(`--output "${output}" apunta a un directorio padre del proyecto, lo que podría sobrescribir los archivos fuente.`);
-        }
+      if (!resolved.startsWith(projectRoot + '/')) {
+        throw new Error(`--output no puede apuntar fuera del proyecto (recibido: "${output}")`);
       }
+      output = resolved;
     }
 
-    await build(cwd, { ...options, concurrency });
+    await build(cwd, { ...options, concurrency, outputDir: output });
   } catch (err) {
     if (err instanceof PandocError) {
       const location = err.sourcePath ? ` en "${err.sourcePath}"` : '';
