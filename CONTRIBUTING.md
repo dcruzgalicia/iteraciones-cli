@@ -165,6 +165,17 @@ docs(config): documenta bloque editorial y export en frontmatter
 - **Tests:** `bun test`. Los tests deben ser independientes y no requerir pandoc a menos que sea estrictamente necesario.
 - **Linting:** Biome (espacios, `lineWidth: 150`, comillas simples). Se ejecuta automáticamente en pre-commit.
 
+## Cómo invalidar la caché de outputs
+
+El hash de filters (`computeFiltersHash` en `src/builder/state.ts`) incluye las versiones de esquema de `CACHE_SCHEMA_VERSIONS`. **Sube la versión de un área cuando cambie su lógica de generación**; si no lo haces, los outputs cacheados (HTML, cuerpos LaTeX) quedan obsoletos silenciosamente:
+
+- `humanDate`: cambios en `src/lib/date.ts` (formato de fecha legible).
+- `referencesCard`: cambios en `moveReferencesToCard` (`src/builder/render.ts`).
+- `linkCitations`: cambios en el enlazado de citas del HTML.
+- `formatsCard`: cambios en `insertFormatsCard` (`src/builder/render.ts`).
+
+Los cambios en el template HTML y en los archivos `.tex` de recursos no requieren bump: ya participan en los hashes de configuración y de filters.
+
 ## Cómo regenerar el CSS precompilado
 
 El CSS de cada color de acento está precompilado en `src/lib/resources/css/<accent>.css` (un archivo por acento; el tema light/dark vive en el mismo archivo vía `data-theme`). Cuando cambies `styles.css`, el template HTML (`src/lib/resources/template.html`) o las clases del post-procesamiento de `render.ts`, regenera:
