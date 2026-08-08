@@ -142,6 +142,8 @@ export async function computeFiltersHash(
   parts.push('references-card-v2');
   // Versión del enlazado de citas (link-citations): invalidar outputs.
   parts.push('link-citations-v1');
+  // Versión de la tarjeta Formatos (post-procesamiento HTML).
+  parts.push('formats-card-v1');
   return { hash: hashString(parts.join('\0')), cache };
 }
 
@@ -179,7 +181,12 @@ export async function computeConfigHashes(cwd: string, siteConfig: SiteConfig): 
   const logo = logoPath ? await hashFileContent(join(cwd, logoPath)).catch(() => '') : '';
   return {
     pdf: hashString(`${JSON.stringify(fmt?.pdf ?? {})}\n${String(fmt?.latex ?? false)}\n${String(siteConfig.toc ?? false)}`),
-    html: hashString(`${JSON.stringify(fmt?.html ?? {})}\n${htmlTemplate}\n${logo}\n${String(siteConfig.toc ?? false)}`),
+    // El HTML muestra la tarjeta Formatos con los formatos activos: cambiar
+    // pdf/latex/epub/markdown debe regenerar las páginas HTML.
+    html: hashString(
+      `${JSON.stringify(fmt?.html ?? {})}\n${htmlTemplate}\n${logo}\n${String(siteConfig.toc ?? false)}\n` +
+        `${String(fmt?.pdf?.generate ?? false)}\n${String(fmt?.latex ?? false)}\n${String(fmt?.epub?.generate ?? false)}\n${String(fmt?.markdown?.generate ?? false)}`,
+    ),
     epub: hashString(`${JSON.stringify(fmt?.epub ?? {})}\n${String(siteConfig.toc ?? false)}`),
     markdown: hashString(`${JSON.stringify(fmt?.markdown ?? {})}\n${String(siteConfig.lang ?? '')}`),
   };

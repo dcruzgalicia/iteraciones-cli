@@ -346,6 +346,49 @@ interface HtmlPageVars {
   date?: string;
   /** Ruta relativa al home (./, ../, ../../ según la profundidad). */
   homeHref?: string;
+  /** Enlaces a los formatos generados del documento (PDF/LaTeX/EPUB/Markdown). */
+  formats?: Array<{ href: string; name: string; description: string }>;
+}
+
+/**
+ * Inserta la tarjeta Formatos (enlaces a los formatos generados) después del
+ * índice: antes de la tarjeta de referencias si existe, o antes de la
+ * identidad final. Sin formatos activos no se inserta nada.
+ */
+function insertFormatsCard(html: string, formats: Array<{ href: string; name: string; description: string }>): string {
+  if (formats.length === 0) return html;
+
+  const refsPos = html.indexOf('id="referencias"');
+  let insertAt = -1;
+  if (refsPos >= 0) {
+    insertAt = html.lastIndexOf('<div class="break-inside-avoid pb-6">', refsPos);
+  }
+  if (insertAt < 0) insertAt = html.indexOf(IDENTITY_END_ANCHOR);
+  if (insertAt < 0) return html;
+
+  const items = formats
+    .map(
+      (f) =>
+        `        <li class="py-1">\n` +
+        `          <a href="${f.href}" class="font-semibold text-accent-950 dark:text-accent-50 underline underline-offset-4 decoration-accent-500/60 transition-colors duration-200 hover:decoration-accent-500">${f.name}</a>` +
+        ` <span class="text-sm italic text-accent-600 dark:text-accent-400">— ${f.description}</span>\n` +
+        `        </li>`,
+    )
+    .join('\n');
+
+  const chipClass =
+    'inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-12 text-accent-600 dark:text-accent-400';
+  const card =
+    `<div class="break-inside-avoid pb-6">\n` +
+    `      <section class="rounded-xl border border-accent-500/25 bg-stone-50/70 dark:bg-stone-900/60 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5">\n` +
+    `        <h2 class="${chipClass}">Formatos</h2>\n` +
+    `        <ul class="list-none m-0 p-0">\n` +
+    items +
+    `\n        </ul>\n` +
+    `      </section>\n` +
+    `    </div>\n    `;
+
+  return html.slice(0, insertAt) + card + html.slice(insertAt);
 }
 
 /** Ancla de inserción de la tarjeta de referencias (antes de la identidad final). */
@@ -455,7 +498,10 @@ export async function renderHtmlPageFromAst(
 
   // Post-procesamiento: las referencias salen del article y se convierten en
   // una tarjeta propia del masonry, después de la tarjeta del índice.
-  return moveReferencesToCard(html);
+  const withRefs = moveReferencesToCard(html);
+  // Tarjeta Formatos: enlaces a los formatos generados, después del índice
+  // (antes de las referencias si existen, o antes de la identidad final).
+  return insertFormatsCard(withRefs, vars.formats ?? []);
 }
 
 /**
