@@ -134,6 +134,9 @@ export async function computeFiltersHash(
   // El reader del pipeline produce el AST canónico: si cambia, los ASTs
   // cacheados quedan obsoletos y todos los documentos deben re-renderizarse.
   parts.push(MD_READER);
+  // Versión del formateo de fechas: invalidar outputs cacheados si cambia
+  // la conversión yyyy-mm-dd -> legible.
+  parts.push('human-date-v1');
   return { hash: hashString(parts.join('\0')), cache };
 }
 

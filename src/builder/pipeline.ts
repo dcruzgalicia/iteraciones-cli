@@ -2,6 +2,7 @@ import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import type { ProgressTracker } from '../cli/progress.js';
 import type { FormatConfig, SiteConfig } from '../config/site-config.js';
+import { formatHumanDate } from '../lib/date.js';
 import { logWarning } from '../lib/logger.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import type { BuildMetadata, WorkSets } from './build-planner.js';
@@ -230,7 +231,7 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
         logoInline,
         docTitle: doc.frontmatter.title && doc.frontmatter.title !== 'Sin t\u00edtulo' ? doc.frontmatter.title : undefined,
         subtitle: doc.frontmatter.subtitle,
-        date: doc.frontmatter.date || undefined,
+        date: formatHumanDate(doc.frontmatter.date),
         homeHref: dir === '.' ? './' : '../'.repeat(dir.split('/').length),
       },
       ctx.siteConfig,
