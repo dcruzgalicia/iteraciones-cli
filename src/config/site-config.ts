@@ -90,7 +90,7 @@ export const DEFAULT_HTML_FORMAT = {
   title: 'iteraciones',
   tagline: 'escribir, compartir, re-existir',
   logo: '',
-  theme: undefined,
+  theme: 'dark' as const,
   accent: 'lime' as const,
   generate: true,
 } satisfies HtmlFormatConfig;
