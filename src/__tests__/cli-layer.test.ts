@@ -602,6 +602,17 @@ describe('runNew', () => {
     });
   });
 
+  it('normaliza espacios del nombre a guiones', async () => {
+    await withTempDir(async (dir) => {
+      process.exitCode = 0;
+      await runNew(dir, 'mi articulo nuevo');
+      expect(process.exitCode).toBe(0);
+      expect(await Bun.file(join(dir, 'mi-articulo-nuevo.md')).exists()).toBe(true);
+      const content = await Bun.file(join(dir, 'mi-articulo-nuevo.md')).text();
+      expect(content).toContain("title: 'Mi articulo nuevo'");
+    });
+  });
+
   it('rechaza rutas absolutas', async () => {
     await withTempDir(async (dir) => {
       process.exitCode = 0;

@@ -179,7 +179,11 @@ export async function runDoctor(cwd: string, options: { fix?: boolean } = {}): P
 
 export async function runNew(cwd: string, path: string): Promise<void> {
   try {
-    const normalizedPath = path.endsWith('.md') ? path : `${path}.md`;
+    // Normalizar el nombre: espacios → guiones y separadores múltiples
+    // colapsados ('mi articulo' → 'mi-articulo.md'). Coherente con
+    // inferTitleFromPath, que convierte guiones en espacios para el título.
+    const base = path.endsWith('.md') ? path : `${path}.md`;
+    const normalizedPath = base.replace(/\s+/g, '-').replace(/-+/g, '-');
 
     if (isAbsolute(normalizedPath) || normalize(normalizedPath).startsWith('..')) {
       throw new Error(`la ruta debe ser relativa al directorio del proyecto (recibido: "${path}")`);
