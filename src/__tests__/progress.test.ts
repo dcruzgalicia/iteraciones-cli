@@ -141,4 +141,53 @@ describe('ProgressTracker', () => {
     expect(output).toContain('✔ Documentos encontrados 2');
     expect(output).toContain('✔ Renderizando contenido 1');
   });
+
+  it('marca la fase activa como fallida (✖) cuando el build falla', async () => {
+    const output = await runTracker(async (tracker) => {
+      tracker.setFormats([{ phase: 'pdf', active: true }]);
+      tracker.startPhase('discovery', 2);
+      tracker.completePhase(2);
+      await tracker.planPhases(['discovery', 'render']);
+      tracker.startPhase('render', 1);
+      tracker.completePhase(1);
+      tracker.startPhase('pdf', 2);
+      await tracker.fail();
+    });
+
+    expect(output).toContain('✖ PDF');
+    expect(output).not.toContain('✔ PDF');
+    // Las fases completadas antes del fallo conservan su estado real
+    expect(output).toContain('✔ Renderizando contenido 1');
+  });
+
+  it('un fallo en render no muestra éxito en fases posteriores no ejecutadas', async () => {
+    const output = await runTracker(async (tracker) => {
+      tracker.setFormats([
+        { phase: 'pdf', active: true },
+        { phase: 'html', active: true },
+      ]);
+      tracker.startPhase('discovery', 1);
+      tracker.completePhase(1);
+      await tracker.planPhases(['discovery', 'render']);
+      tracker.startPhase('render', 1);
+      await tracker.fail();
+    });
+
+    expect(output).toContain('✖ Renderizando contenido');
+    expect(output).not.toContain('✔ Renderizando contenido');
+    expect(output).not.toContain('✔ PDF');
+    expect(output).not.toContain('✔ HTML');
+  });
+
+  it('el resumen usa el mismo glifo de éxito que las filas', async () => {
+    const output = await runTracker(async (tracker) => {
+      tracker.startPhase('discovery', 1);
+      tracker.completePhase(1);
+      await tracker.planPhases(['discovery']);
+      await tracker.finish(1, 0, []);
+    });
+
+    expect(output).toContain('✔ Todo listo.');
+    expect(output).not.toContain('✓ Todo listo.');
+  });
 });
