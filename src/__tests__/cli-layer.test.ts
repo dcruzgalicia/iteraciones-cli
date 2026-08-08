@@ -368,6 +368,42 @@ describe('runValidate', () => {
       expect(output).not.toContain('se encontraron');
     });
   });
+
+  it('advierte sobre campos de frontmatter ignorados sin romper el exit code', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'extra.md'), '---\ntitle: Extra\nabstract: Resumen del trabajo\nkeywords: [uno, dos]\n---\n\nContenido.\n', 'utf8');
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(output).toContain('campos de frontmatter ignorados por el pipeline: abstract, keywords');
+      expect(output).toContain('extra.md');
+      expect(process.exitCode).toBe(0);
+    });
+  });
+
+  it('no advierte con solo campos conocidos', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(output).not.toContain('ignorados');
+      expect(process.exitCode).toBe(0);
+    });
+  });
 });
 
 describe('runDoctor', () => {
