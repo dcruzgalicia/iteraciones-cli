@@ -7,13 +7,10 @@ import { validateDisabledFilters } from '../builder/render.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { ConfigError } from '../lib/errors.js';
 import { logError, logInfo, logWarning } from '../lib/logger.js';
+import { plural } from '../lib/plural.js';
 import { checkLatexEngine } from './doctor/system-checks.js';
 
 type ValidationError = { file: string; message: string };
-
-function plural(n: number, singular: string): string {
-  return `${n} ${n === 1 ? singular : singular + 's'}`;
-}
 
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
 
@@ -138,14 +135,13 @@ export async function runValidate(cwd: string): Promise<void> {
 
   if (errors.length === 0) {
     const detail: string[] = [plural(docCount, 'documento')];
-    if (disabledFiltersCount > 0) detail.push(`${disabledFiltersCount} filter(s) desactivados`);
-    if (luaFiltersCount > 0) detail.push(`${luaFiltersCount} lua-filter(s)`);
+    if (disabledFiltersCount > 0) detail.push(`${plural(disabledFiltersCount, 'filter', 'filters')} desactivados`);
+    if (luaFiltersCount > 0) detail.push(`${plural(luaFiltersCount, 'lua-filter', 'lua-filters')}`);
     logInfo(`sin errores — ${detail.join(', ')}.`, 'validate');
     return;
   }
 
   logError(`${plural(errors.length, 'error')}:`, 'validate');
-  logError(`se encontraron ${errors.length} error(es):`, 'validate');
   for (const e of errors) {
     logError(`${e.file}: ${e.message}`, 'validate');
   }

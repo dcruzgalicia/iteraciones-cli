@@ -3,6 +3,7 @@ import { basename, join } from 'node:path';
 import slugifyLib from 'slugify';
 import { formatUserError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
+import { plural } from '../lib/plural.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import { isHiddenPath, isIgnoredByRules, loadGitignoreRules } from './gitignore.js';
 import { resolveSlugs } from './slug-resolver.js';
@@ -280,7 +281,7 @@ export async function discover(
   // Frontmatter YAML inválido: error de build (no publicar degradado)
   if (frontmatterErrors.length > 0) {
     const msg = frontmatterErrors.map((e) => `  ${e.file}: ${e.error}`).join('\n');
-    throw new Error(`frontmatter YAML inválido en ${frontmatterErrors.length} documento(s):\n${msg}`);
+    throw new Error(`frontmatter YAML inválido en ${plural(frontmatterErrors.length, 'documento')}:\n${msg}`);
   }
 
   // Resolver slugs via slug-resolver

@@ -178,6 +178,44 @@ describe('runValidate', () => {
       expect(process.exitCode).toBe(1);
     });
   });
+
+  it('reporta una sola línea de resumen con plural correcto (1 error)', async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: [inválido\n', 'utf8');
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(output).toContain('✖ [validate] 1 error:');
+      expect(output).not.toContain('error(es)');
+      expect(output).not.toContain('se encontraron');
+      expect(output).not.toContain('errors:');
+    });
+  });
+
+  it('reporta 2 errores con plural correcto', async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: [inválido\n', 'utf8');
+      await writeFile(join(dir, 'roto.md'), '---\ntitle: "Roto"\ninvalid: [unclosed\n---\n\nContenido.\n', 'utf8');
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(output).toContain('✖ [validate] 2 errores:');
+      expect(output).not.toContain('error(es)');
+      expect(output).not.toContain('se encontraron');
+    });
+  });
 });
 
 describe('runInit', () => {
