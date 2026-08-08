@@ -218,10 +218,12 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
     // Enlaces a los formatos generados (PDF/LaTeX/EPUB/Markdown); el HTML es la
     // página actual y no se enlaza a sí mismo. Solo formatos activos.
     const formats = [
-      ...(plan.pdfOn ? [{ href: relativeHref(dir, `${slug}.pdf`), name: 'PDF', description: 'documento final para impresión' }] : []),
-      ...(plan.latexOn ? [{ href: relativeHref(dir, `${slug}.tex`), name: 'LaTeX', description: 'fuente tipográfica editable' }] : []),
-      ...(plan.epubOn ? [{ href: relativeHref(dir, `${slug}.epub`), name: 'EPUB', description: 'lectura en dispositivos' }] : []),
-      ...(plan.mdOn ? [{ href: relativeHref(dir, `${slug}.md`), name: 'Markdown', description: 'texto plano reutilizable' }] : []),
+      ...(plan.pdfOn ? [{ href: relativeHref(dir, `${slug}.pdf`), name: 'PDF', description: 'Documento final para lectura e impresión' }] : []),
+      ...(plan.epubOn ? [{ href: relativeHref(dir, `${slug}.epub`), name: 'EPUB', description: 'Edición adaptable para lectura digital' }] : []),
+      ...(plan.latexOn
+        ? [{ href: relativeHref(dir, `${slug}.tex`), name: 'LaTeX', description: 'Archivo fuente editable para composición tipográfica' }]
+        : []),
+      ...(plan.mdOn ? [{ href: relativeHref(dir, `${slug}.md`), name: 'Markdown', description: 'Texto fuente reutilizable y portable' }] : []),
     ];
     const html = await renderHtmlPageFromAst(
       ast,
