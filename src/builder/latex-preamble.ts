@@ -12,6 +12,7 @@
  *   → \tableofcontents (condicional) → espaciado post-portada
  */
 import type { PdfFormatConfig, SiteConfig } from '../config/site-config.js';
+import { formatHumanDate } from '../lib/date.js';
 import { loadPreambleFilters } from './preamble-loader.js';
 import { discoverBibFiles } from './state.js';
 import type { PreambleFlags } from './types.js';
@@ -72,7 +73,7 @@ export async function buildLatexPreamble(
   preamble.push(`\\author{${meta?.author?.length ? meta.author.join(' \\and ') : ''}}`);
   if (pdfFormat?.showDate) {
     if (meta?.date) {
-      preamble.push(`\\date{${meta.date}}`);
+      preamble.push(`\\date{${formatHumanDate(meta.date)}}`);
     } else if (meta?.filePath) {
       try {
         const fileStat = await Bun.file(meta.filePath).stat();
@@ -81,7 +82,7 @@ export async function buildLatexPreamble(
           const y = btime.getFullYear();
           const m = String(btime.getMonth() + 1).padStart(2, '0');
           const d = String(btime.getDate()).padStart(2, '0');
-          preamble.push(`\\date{${y}-${m}-${d}}`);
+          preamble.push(`\\date{${formatHumanDate(`${y}-${m}-${d}`)}}`);
         }
       } catch {
         // Si no se puede leer el archivo, no agregar fecha

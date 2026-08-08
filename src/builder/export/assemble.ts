@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { formatHumanDate } from '../../lib/date.js';
 import type { BuildDocument } from '../types.js';
 import type { ExportDocument, ExportMetadata } from './types.js';
 
@@ -22,7 +23,7 @@ export function assembleExportDocument(
   const metadata: ExportMetadata = {
     title: doc.frontmatter.title || 'Sin título',
     author: doc.frontmatter.author,
-    date: doc.frontmatter.date || undefined,
+    date: formatHumanDate(doc.frontmatter.date) ?? undefined,
     lang,
     bibliography,
     csl,
