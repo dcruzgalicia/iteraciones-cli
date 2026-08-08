@@ -177,6 +177,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
     noCache: options.noCache,
     activeFormats: plan.currentFormats,
     prevState,
+    outputDir: ctx.outputDir,
     // Con --no-export el estado no se avanza: las salidas de dist/ siguen
     // desactualizadas y el siguiente build normal debe regenerarlas.
     persist: !noExport,

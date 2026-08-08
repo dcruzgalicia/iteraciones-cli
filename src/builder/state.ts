@@ -26,6 +26,8 @@ export type FilterFileCache = Record<string, FilterFileCacheEntry>;
 export interface StateFile {
   startedAt: number;
   activeFormats: string[];
+  /** Directorio de salida usado por el último build (para el comando info). */
+  outputDir?: string;
   /** Hash de los filters efectivos (paquete + proyecto) y sus disabled lists. */
   filtersHash?: string;
   /** Caché por archivo de filtro (mtime+size+hash) para evitar re-leer contenido. */
@@ -59,6 +61,7 @@ export async function loadStateFile(cwd: string): Promise<StateFile | null> {
     return {
       startedAt: parsed.startedAt,
       activeFormats: Array.isArray(parsed.activeFormats) ? parsed.activeFormats : [],
+      outputDir: parsed.outputDir,
       filtersHash: parsed.filtersHash,
       filterFileCache: parsed.filterFileCache,
       configHashes: parsed.configHashes,

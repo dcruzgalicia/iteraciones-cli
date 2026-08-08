@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CommanderError } from 'commander';
-import { runBuild, runClean, runDoctor, runInit, runNew, runValidate } from '../cli/dispatcher.js';
+import { runBuild, runClean, runDoctor, runInfo, runInit, runNew, runValidate } from '../cli/dispatcher.js';
 import { buildProgram } from '../cli/parser.js';
 import { initTestProject } from './helpers.js';
 
@@ -252,6 +252,60 @@ describe('runBuild', () => {
       const regenerated = await Bun.file(htmlPath).text();
       expect(regenerated).not.toBe(before);
       expect(regenerated).toContain('Contenido modificado');
+    });
+  });
+});
+
+describe('runInfo', () => {
+  afterEach(resetExitCode);
+
+  /** Ejecuta info y captura stdout. */
+  async function infoOutput(dir: string): Promise<string> {
+    const stdoutSpy = spyOn(process.stdout, 'write');
+    let output = '';
+    try {
+      process.exitCode = 0;
+      await runInfo(dir);
+    } finally {
+      output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+      stdoutSpy.mockRestore();
+    }
+    return output;
+  }
+
+  it('refleja el directorio de salida real del último build', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      process.exitCode = 0;
+      await runBuild(dir, { outputDir: 'salida' });
+      const output = await infoOutput(dir);
+      expect(process.exitCode).toBe(0);
+      expect(output).toContain(join(dir, 'salida'));
+      expect(output).toContain('(generado)');
+    });
+  });
+
+  it('distingue preamble desactivados por defecto de los del usuario', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(
+        join(dir, 'iteraciones.config.yaml'),
+        'lang: es-MX\nformat:\n  pdf:\n    disabled-preamble-filters:\n      - 19-maketitle\n',
+        'utf8',
+      );
+      const output = await infoOutput(dir);
+      expect(output).toContain('preamble desactivados:');
+      expect(output).toContain('19-maketitle');
+      expect(output).toContain('preamble adicionales:');
+    });
+  });
+
+  it('sin desactivaciones de usuario, preamble adicionales es (ninguno)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      const output = await infoOutput(dir);
+      expect(output).toContain('preamble adicionales:');
+      expect(output).toContain('(ninguno)');
     });
   });
 });
