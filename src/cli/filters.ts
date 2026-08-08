@@ -48,7 +48,7 @@ export async function runFilters(cwd: string): Promise<void> {
   logInfo('Para sobrescribir un filtro, crea `<proyecto>/filters/<grupo>/<nombre>.lua` (p. ej. `filters/latex/02-dictum.lua`).');
 
   // Preamble filters
-  const preambleInfos = getBuiltinPreambleFilterInfos();
+  const preambleInfos = await getBuiltinPreambleFilterInfos();
   if (preambleInfos.length > 0) {
     const preambleDisabled = new Set(config.format?.pdf?.disabledPreambleFilters ?? []);
     const hasPreambleDisabled = config.format?.pdf?.disabledPreambleFilters !== undefined && config.format?.pdf?.disabledPreambleFilters.length > 0;

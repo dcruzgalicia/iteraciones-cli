@@ -17,29 +17,16 @@ import type { BuildDocument, PreambleFlags } from './types.js';
 //     → pandoc --from json --to latex [--lua-filter latex/*] → tex
 //     → pandoc --from json --to html5 [--lua-filter html/*] → página HTML
 
-/** Lista de filters semánticos string en orden de aplicación. */
-const BUILTIN_SEMANTIC_STRING = ['01-double-colon'];
-
-/** Lista de filters semánticos ast en orden de aplicación. */
-const BUILTIN_SEMANTIC_AST = ['02-double-colon-noindent'];
-
-/** Lista de filters de formato LaTeX en orden de aplicación. */
-const BUILTIN_LATEX_FILTERS = [
-  '01-spacer',
-  '02-dictum',
-  '03-verse',
-  '04-center',
-  '05-flushright',
-  '06-mbox-sentence-end',
-  '07-mbox-sentence-start',
-  '08-quote-noindent',
-];
-
-/** Lista de filters de formato HTML en orden de aplicación. */
-const BUILTIN_HTML_FILTERS = ['01-dictum', '02-verse', '03-center', '04-flushright', '05-spacer'];
-
 /** Raíz de los filtros Lua del paquete. */
 const LUA_FILTERS_ROOT = join(import.meta.dir, '../lib/resources/filters');
+
+/** Capas de filtros Lua del paquete: directorio → grupo de resolución. */
+const LUA_GROUPS: Array<{ dir: string; target: 'semantic' | 'latex' | 'html' }> = [
+  { dir: 'semantic/string', target: 'semantic' },
+  { dir: 'semantic/ast', target: 'semantic' },
+  { dir: 'latex', target: 'latex' },
+  { dir: 'html', target: 'html' },
+];
 
 /** Filtros Lua resueltos por capa (rutas absolutas, en orden de aplicación). */
 interface LuaFilterGroup {
@@ -63,6 +50,15 @@ async function resolveLuaFilter(group: string, name: string, cwd?: string): Prom
 }
 
 /**
+ * Nombres de los .lua de una capa del paquete, en orden de aplicación
+ * (el prefijo numérico del archivo define el orden). Derivado del
+ * filesystem: crear un .lua nuevo no requiere tocar código.
+ */
+function builtinNamesForGroup(dir: string): string[] {
+  return [...new Bun.Glob('*.lua').scanSync({ cwd: join(LUA_FILTERS_ROOT, dir), onlyFiles: true })].sort().map((file) => file.replace(/\.lua$/, ''));
+}
+
+/**
  * Resuelve los filtros Lua por capa: los nombres con un .lua disponible
  * (paquete o override del proyecto) se pasan como `--lua-filter` en la
  * invocación pandoc de su capa.
@@ -71,18 +67,11 @@ export async function resolveLuaFilters(disabledList?: string[], cwd?: string): 
   const excluded = new Set(disabledList ?? []);
   const result: LuaFilterGroup = { semantic: [], latex: [], html: [], user: [], resolvedNames: new Set() };
 
-  const groups: Array<{ prefix: string; names: string[]; target: 'semantic' | 'latex' | 'html' }> = [
-    { prefix: 'semantic/string', names: BUILTIN_SEMANTIC_STRING, target: 'semantic' },
-    { prefix: 'semantic/ast', names: BUILTIN_SEMANTIC_AST, target: 'semantic' },
-    { prefix: 'latex', names: BUILTIN_LATEX_FILTERS, target: 'latex' },
-    { prefix: 'html', names: BUILTIN_HTML_FILTERS, target: 'html' },
-  ];
-
-  for (const { prefix, names, target } of groups) {
-    for (const name of names) {
-      const full = `${prefix}/${name}`;
+  for (const { dir, target } of LUA_GROUPS) {
+    for (const name of builtinNamesForGroup(dir)) {
+      const full = `${dir}/${name}`;
       if (excluded.has(full)) continue;
-      const path = await resolveLuaFilter(prefix, name, cwd);
+      const path = await resolveLuaFilter(dir, name, cwd);
       if (!path) continue;
       result[target].push(path);
       result.resolvedNames.add(full);
@@ -91,14 +80,15 @@ export async function resolveLuaFilters(disabledList?: string[], cwd?: string): 
   return result;
 }
 
-/** Nombres completos (grupo/nombre) de todos los filters built-in. */
-function getBuiltinFilterNames(): string[] {
-  return [
-    ...BUILTIN_SEMANTIC_STRING.map((n) => `semantic/string/${n}`),
-    ...BUILTIN_SEMANTIC_AST.map((n) => `semantic/ast/${n}`),
-    ...BUILTIN_LATEX_FILTERS.map((n) => `latex/${n}`),
-    ...BUILTIN_HTML_FILTERS.map((n) => `html/${n}`),
-  ];
+/** Nombres completos (grupo/nombre) de todos los filters built-in del paquete. */
+export function getBuiltinFilterNames(): string[] {
+  const names: string[] = [];
+  for (const { dir } of LUA_GROUPS) {
+    for (const name of builtinNamesForGroup(dir)) {
+      names.push(`${dir}/${name}`);
+    }
+  }
+  return names;
 }
 
 /** Retorna el nombre completo que termina en "/<name>", si existe. */
