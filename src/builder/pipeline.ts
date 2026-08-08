@@ -215,6 +215,14 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
 
   // HTML
   if (htmlOn && htmlPaths.has(doc.relativePath)) {
+    // Enlaces a los formatos generados (PDF/LaTeX/EPUB/Markdown); el HTML es la
+    // página actual y no se enlaza a sí mismo. Solo formatos activos.
+    const formats = [
+      ...(plan.pdfOn ? [{ href: relativeHref(dir, `${slug}.pdf`), name: 'PDF', description: 'documento final para impresión' }] : []),
+      ...(plan.latexOn ? [{ href: relativeHref(dir, `${slug}.tex`), name: 'LaTeX', description: 'fuente tipográfica editable' }] : []),
+      ...(plan.epubOn ? [{ href: relativeHref(dir, `${slug}.epub`), name: 'EPUB', description: 'lectura en dispositivos' }] : []),
+      ...(plan.mdOn ? [{ href: relativeHref(dir, `${slug}.md`), name: 'Markdown', description: 'texto plano reutilizable' }] : []),
+    ];
     const html = await renderHtmlPageFromAst(
       ast,
       doc,
@@ -233,6 +241,7 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
         subtitle: doc.frontmatter.subtitle,
         date: formatHumanDate(doc.frontmatter.date),
         homeHref: dir === '.' ? './' : '../'.repeat(dir.split('/').length),
+        formats: formats.length > 0 ? formats : undefined,
       },
       ctx.siteConfig,
       bibOptions,
