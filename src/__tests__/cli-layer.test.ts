@@ -335,6 +335,30 @@ describe('runBuild', () => {
     });
   });
 
+  it('el índice no enlaza a referencias y la tarjeta conserva su chip', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\ntoc: true\nformat:\n  latex: true\n', 'utf8');
+      await writeFile(join(dir, 'bibliography.bib'), '@book{key1, author = {García, Lucía}, title = {Libro}, year = {2024}}\n', 'utf8');
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\n# Sección\n\nCita [@key1].\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
+      // El bloque del índice no contiene el enlace a referencias
+      const indiceStart = html.indexOf('block:indice');
+      const indiceEnd = html.indexOf('block:referencias');
+      const indiceBlock = html.slice(indiceStart, indiceEnd);
+      expect(indiceBlock).not.toContain('href="#referencias"');
+      // La tarjeta de referencias conserva su chip y sus entradas
+      expect(html).toContain('id="referencias"');
+      expect(html).toContain('>Referencias</h2>');
+      expect(html).toContain('csl-entry');
+      // Las citas del texto siguen enlazando a sus entradas (link-citations)
+      expect(html).toContain('href="#ref-key1"');
+    });
+  });
+
   it('las tarjetas de formatos y referencias se insertan fuera de la tarjeta de contenido (regresión #1445)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
