@@ -358,3 +358,17 @@ Motivos de la decisión:
 - El esquema está cubierto por tests de casos límite (`slug-changes.test.ts`: títulos duplicados, cambio/quita de autor, acortar título, sufijos `-dN`).
 
 Coste aceptado: ~180 líneas y un archivo de estado por proyecto. La alternativa simple (slug por título + sufijo numérico sin contador) fue descartada porque renumera archivos al eliminar documentos y rompe la convención documentada; la simplicidad del código no compensa la pérdida de estabilidad para el usuario.
+
+### ¿Cómo se excluyen documentos del build? (alcance de `.gitignore`)
+
+Decisión registrada en el issue #1436 (2026-08): **se mantiene el soporte propio de `.gitignore`** y se documentan sus límites.
+
+El descubrimiento de documentos (`src/builder/discover.ts`) procesa **todo** `.md` del proyecto salvo lo que se excluya por: directorios fijos (`node_modules/`, `.git/`, `dist/`, `.iteraciones/`), rutas ocultas (cualquier segmento que empiece por `.`) y reglas de `.gitignore`.
+
+Alcance del soporte (`src/builder/gitignore.ts`):
+
+- Solo el `.gitignore` de la **raíz** del proyecto (sin `.gitignore` anidados en subdirectorios).
+- Patrones comunes de git: negación (`!`), anclaje a la raíz (`/` inicial o interior), directorios (barra final `/`), `*`, `**`, `?` y clases `[..]`.
+- La última regla que coincide gana (estándar git).
+
+Límites conocidos (aceptados): semántica aproximada en casos límite del estándar git (p. ej. `**` en medio de patrones, escapes exóticos) y ausencia de reglas heredadas de `.gitignore` superiores. Es el único mecanismo de exclusión de contenido; no se ampliará su alcance.
