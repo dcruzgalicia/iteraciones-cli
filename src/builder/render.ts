@@ -365,7 +365,7 @@ interface HtmlPageVars {
   subtitle?: string;
   /** Fecha del documento desde el frontmatter. */
   date?: string;
-  /** Ruta relativa al home (./, ../, ../../ según la profundidad). */
+  /** Ruta relativa al home (./index.html, ../index.html, ../../index.html según la profundidad). */
   homeHref?: string;
   /** Enlaces a los formatos generados del documento (PDF/LaTeX/EPUB/Markdown). */
   formats?: Array<{ href: string; name: string; description: string }>;

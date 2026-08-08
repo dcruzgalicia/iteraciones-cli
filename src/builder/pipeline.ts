@@ -227,7 +227,9 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
     ];
     // La tarjeta identidad enlaza al home solo si existe index.html en la
     // raíz de salida (index.md en la raíz del proyecto); sin él, la tarjeta
-    // se renderiza sin enlace (template $if(home-href)$).
+    // se renderiza sin enlace (template $if(home-href)$). El href apunta
+    // explícitamente a index.html (./index.html, ../index.html, ...):
+    // determinista con file:// y en servidores sin directory index.
     const hasHomePage = discoveryIndex.has('index.md');
     const html = await renderHtmlPageFromAst(
       ast,
@@ -246,7 +248,7 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
         docTitle: doc.frontmatter.title && doc.frontmatter.title !== 'Sin t\u00edtulo' ? doc.frontmatter.title : undefined,
         subtitle: doc.frontmatter.subtitle,
         date: formatHumanDate(doc.frontmatter.date),
-        homeHref: hasHomePage ? (dir === '.' ? './' : '../'.repeat(dir.split('/').length)) : undefined,
+        homeHref: hasHomePage ? (dir === '.' ? './index.html' : '../'.repeat(dir.split('/').length) + 'index.html') : undefined,
         formats: formats.length > 0 ? formats : undefined,
       },
       ctx.siteConfig,
