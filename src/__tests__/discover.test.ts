@@ -35,6 +35,11 @@ describe('computeSlug', () => {
     expect(result).toBe('cancion-para-jose');
   });
 
+  it('mapea símbolos al español: & → y, % → por-ciento', () => {
+    expect(computeSlug({ title: 'Diseño & Desarrollo' })).toBe('diseno-y-desarrollo');
+    expect(computeSlug({ title: 'Resultados 100%' })).toBe('resultados-100-por-ciento');
+  });
+
   it('retorna undefined si no hay título', () => {
     const result = computeSlug({});
     expect(result).toBeUndefined();

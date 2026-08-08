@@ -97,10 +97,13 @@ export function splitFrontmatter(content: string): { yaml?: string; body: string
 /**
  * Convierte un texto a slug URL-safe. Usa la librería slugify (con `strict`
  * elimina lo que no sea [a-z0-9] y con `lower` normaliza a minúsculas);
- * maneja caracteres acentuados, ß→ss y símbolos (&→and, %→percent).
+ * maneja caracteres acentuados y ß→ss. Los símbolos se mapean al español
+ * antes de slugificar porque el mapa interno de slugify es en inglés
+ * (&→and, %→percent) y no se puede sobrescribir: & → y, % → por-ciento.
  */
 function slugify(text: string): string {
-  return slugifyLib(text, { lower: true, strict: true });
+  const mapped = text.replace(/&/g, ' y ').replace(/%/g, ' por-ciento');
+  return slugifyLib(mapped, { lower: true, strict: true });
 }
 
 /**
