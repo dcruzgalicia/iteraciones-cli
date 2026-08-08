@@ -36,7 +36,7 @@ interface FormatState {
   active: boolean;
 }
 
-type RowStatus = 'pending' | 'active' | 'done' | 'skipped';
+type RowStatus = 'pending' | 'active' | 'done' | 'skipped' | 'failed';
 
 interface Row {
   key: string;
@@ -173,12 +173,32 @@ export class ProgressTracker {
 
   /**
    * Cierra el tracker cuando el build falla (sin resumen: el error ya se
-   * reportó). Las fases pendientes se cierran con su estado actual; el estado
-   * de fallo explícito lo introduce C1b.
+   * reportó). La fase activa se marca como fallida (✖); las fases no
+   * iniciadas no muestran estado de éxito.
    */
   async fail(): Promise<void> {
     this.finished = true;
-    this.finalizePendingRows();
+    // La fase activa al fallar se marca como fallida, no como completada
+    if (this.currentPhase) {
+      const key = this.rowKeyFor(this.currentPhase);
+      const row = this.getRow(key);
+      if (row && row.status === 'active') {
+        row.status = 'failed';
+        const st = this.phaseStart[this.currentPhase];
+        row.elapsed = st !== undefined ? performance.now() - st : 0;
+        this.renderRow(key);
+        if (this.verbose) process.stdout.write(`[fallido] ${PHASE_META[this.currentPhase].label}\n`);
+      }
+    }
+    // Fases no iniciadas: nunca muestran estado de éxito
+    const renderRow = this.getRow('phase:render');
+    if (renderRow && renderRow.status === 'pending') {
+      renderRow.status = 'skipped';
+      this.renderRow('phase:render');
+      if (this.verbose) process.stdout.write(`[omitido] ${PHASE_META.render.label}\n`);
+    }
+    this.ensureFormatsBlock();
+    // Las filas de formato pendientes quedan sin imprimir: no son un éxito
     setWarningSink(null);
   }
 
@@ -299,7 +319,7 @@ export class ProgressTracker {
 
   private rowContent(row: Row, live?: string): string {
     const indent = '  '.repeat(row.indent);
-    const prefix = row.status === 'done' ? '✔ ' : row.status === 'skipped' ? '– ' : '';
+    const prefix = row.status === 'done' ? '✔ ' : row.status === 'failed' ? '✖ ' : row.status === 'skipped' ? '– ' : '';
     const countPart = row.count > 0 ? ` ${row.count}` : '';
     const timePart = row.elapsed !== undefined ? `  ${formatTime(row.elapsed)}` : '';
     const livePart = live !== undefined ? ` ${live}` : '';
@@ -324,7 +344,7 @@ export class ProgressTracker {
         const up = this.nextLine - idx;
         process.stdout.write(`\x1b[${up}A\x1b[2K${content}\x1b[${up}B`);
       }
-    } else if (idx === undefined && (row.status === 'done' || row.status === 'skipped')) {
+    } else if (idx === undefined && (row.status === 'done' || row.status === 'skipped' || row.status === 'failed')) {
       process.stdout.write(`${content}\n`);
       this.rowIndex.set(key, this.nextLine++);
     }
@@ -335,7 +355,7 @@ export class ProgressTracker {
     const formatCount = formats ? formats.length : 0;
     const formatLabel = processed > 0 ? String(formatCount) : '— (reutilizado)';
 
-    process.stdout.write(`\n\u2713 Todo listo.\n\n`);
+    process.stdout.write(`\n✔ Todo listo.\n\n`);
     process.stdout.write(`  ${padRight('Documentos procesados', LABEL_WIDTH)}${processed}\n`);
     if (cached > 0) {
       process.stdout.write(`  ${padRight('Sin cambios (reutilizado)', LABEL_WIDTH)}${cached}\n`);
