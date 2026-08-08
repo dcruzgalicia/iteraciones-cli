@@ -4,6 +4,7 @@ import type { SiteConfig } from '../config/site-config.js';
 import { logWarning } from '../lib/logger.js';
 import type { BibOptions } from '../lib/pandoc-runner.js';
 import { isHiddenPath, isIgnoredByRules, loadGitignoreRules } from './gitignore.js';
+import { MD_READER } from './render.js';
 import type { BuildDocument, DiscoveryEntry, PreambleFlags } from './types.js';
 
 /** Ruta relativa del archivo de estado del build dentro del proyecto. */
@@ -130,6 +131,9 @@ export async function computeFiltersHash(
   }
   parts.push(JSON.stringify(siteConfig.disabledFilters ?? []));
   parts.push(JSON.stringify(siteConfig.format?.pdf?.disabledPreambleFilters ?? []));
+  // El reader del pipeline produce el AST canónico: si cambia, los ASTs
+  // cacheados quedan obsoletos y todos los documentos deben re-renderizarse.
+  parts.push(MD_READER);
   return { hash: hashString(parts.join('\0')), cache };
 }
 

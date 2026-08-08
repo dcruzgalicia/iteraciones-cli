@@ -300,6 +300,33 @@ async function renderTexBody(
 /** Ruta de la plantilla HTML (template system de pandoc). */
 const HTML_TEMPLATE_PATH = join(import.meta.dir, '../../src/lib/resources/template.html');
 
+/**
+ * Reader de markdown con auto-identifiers activos: los headings llevan `id`
+ * y el TOC puede generar enlaces `#`. Participa en el hash de filters para
+ * invalidar los ASTs cacheados si cambia (ver state.ts).
+ */
+export const MD_READER = 'markdown+auto_identifiers';
+
+/** Id y título de la sección de referencias (citeproc). */
+const REFERENCES_HEADING_ID = 'referencias';
+const REFERENCES_HEADING_TEXT = 'Referencias';
+
+/**
+ * Clona el AST agregando al final el heading de referencias (nivel 1).
+ * Solo se usa en la invocación HTML: citeproc inserta el div#refs después
+ * del último bloque, dejando el h1 justo antes; el TOC lo incluye como item.
+ */
+function withReferencesHeading(ast: Record<string, unknown>): Record<string, unknown> {
+  const clone = JSON.parse(JSON.stringify(ast)) as Record<string, unknown>;
+  const blocks = Array.isArray(clone.blocks) ? (clone.blocks as unknown[]) : [];
+  blocks.push({
+    t: 'Header',
+    c: [1, [REFERENCES_HEADING_ID, [], []], [{ t: 'Str', c: REFERENCES_HEADING_TEXT }]],
+  });
+  clone.blocks = blocks;
+  return clone;
+}
+
 /** Variables de la plantilla HTML (template system de pandoc). */
 interface HtmlPageVars {
   title: string;
@@ -358,7 +385,13 @@ export async function renderHtmlPageFromAst(
   // -V (template variable): se inserta cruda, sin escape HTML (el logo es SVG)
   if (vars.logoInline) extraArgs.push(`--variable=logo-inline:${vars.logoInline}`);
 
-  return runPandoc({ input: JSON.stringify(ast), sourcePath: doc.filePath, from: 'json', to: 'html5', bibOptions, extraArgs });
+  // Sección de referencias: si hay citas y bibliografía, el AST HTML lleva un
+  // heading h1 'Referencias' (id referencias) justo antes del div#refs que
+  // citeproc inserta. El AST canónico no se modifica (LaTeX/EPUB/Markdown
+  // intactos); el TOC incluye el item con enlace #referencias.
+  const inputAst = bibOptions?.bibliography && hasCiteNodes(ast) ? withReferencesHeading(ast) : ast;
+
+  return runPandoc({ input: JSON.stringify(inputAst), sourcePath: doc.filePath, from: 'json', to: 'html5', bibOptions, extraArgs });
 }
 
 /**
@@ -388,7 +421,7 @@ export async function markdownToAst(
   const json = await runPandoc({
     input: body,
     sourcePath: doc.filePath,
-    from: 'markdown-auto_identifiers',
+    from: MD_READER,
     to: 'json',
     extraArgs: semanticLuaArgs,
   });
