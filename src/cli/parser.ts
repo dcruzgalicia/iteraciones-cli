@@ -18,7 +18,7 @@ export function buildProgram(): Command {
     .option('--no-cache', 'omite la caché incremental; siempre hace build completo')
     .option('--output <path>', 'directorio de salida (por defecto: dist/files)')
     .option('--no-css', 'omite la generación de CSS')
-    .option('--no-export', 'omite la exportación PDF/EPUB aunque esté configurada')
+    .option('--no-export', 'solo actualiza la caché; no genera ni copia salidas a dist')
     .option('--dry-run', 'muestra los documentos que se procesarían sin generar salida')
     .option('--verbose', 'muestra información adicional de progreso')
     .option('--profile', 'muestra el tiempo de cada fase del pipeline al final del build')
