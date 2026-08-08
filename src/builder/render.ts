@@ -389,11 +389,11 @@ function moveReferencesToCard(html: string): string {
   const withoutBlock = html.slice(0, start) + html.slice(end);
   if (!withoutBlock.includes(IDENTITY_END_ANCHOR)) return html;
 
-  // El h1 queda fuera del prose: se re-estiliza con la jerarquía del documento
-  const styledHeading = block.replace(
-    /<h1[^>]*id="referencias"[^>]*>/,
-    '<h1 id="referencias" class="text-2xl font-bold text-accent-950 dark:text-accent-50 mb-4">',
-  );
+  // Título de la tarjeta: chip como el resto de las tarjetas (Trayectura/Índice).
+  // Se conserva el id referencias: el enlace del índice sigue funcionando.
+  const chipClass =
+    'inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-12 text-accent-600 dark:text-accent-400';
+  const styledHeading = block.replace(/<h1[^>]*id="referencias"[^>]*>/, `<h2 id="referencias" class="${chipClass}">`).replace('</h1>', '</h2>');
   const card =
     `<div class="break-inside-avoid pb-6">\n` +
     `      <section class="rounded-xl border border-accent-500/25 bg-stone-50/80 dark:bg-stone-900/70 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [&_.csl-entry]:mb-3 [&_.csl-entry]:pl-4 [&_.csl-entry]:-indent-4">\n` +
