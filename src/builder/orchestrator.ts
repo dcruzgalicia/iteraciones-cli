@@ -149,6 +149,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   if (plan.formatInvalidated.markdown) log('Configuración Markdown modificada — regenerando exports Markdown');
 
   if (options.noCache) {
+    log('--no-cache: se eliminaron la caché y la salida anterior');
     progress.showCleanup();
   }
 

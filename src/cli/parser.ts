@@ -38,7 +38,7 @@ export function buildProgram(): Command {
     .command('build')
     .description('construye el sitio a partir de los archivos Markdown')
     .option('-c, --concurrency <n>', 'máximo de invocaciones pandoc simultáneas (por defecto: CPU − 1)')
-    .option('--no-cache', 'omite la caché incremental; siempre hace build completo')
+    .option('--no-cache', 'omite la caché y elimina la salida anterior (dist/); hace build completo')
     .option('--output <path>', 'directorio de salida (por defecto: dist/files)')
     .option('--no-css', 'omite la generación de CSS')
     .option('--no-export', 'solo actualiza la caché; no genera ni copia salidas a dist')

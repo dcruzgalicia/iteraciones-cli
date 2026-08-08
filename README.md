@@ -108,7 +108,7 @@ iteraciones build [opciones]
 | Opción | Descripción | Por defecto |
 |--------|-------------|-------------|
 | `-c, --concurrency <n>` | Máximo de invocaciones pandoc simultáneas | `CPU − 1` (máx. 16) |
-| `--no-cache` | Omite la caché incremental; siempre hace build completo | — |
+| `--no-cache` | Omite la caché y **elimina la salida anterior** (`dist/`); siempre hace build completo | — |
 | `--output <path>` | Directorio de salida | `dist/files` |
 | `--no-css` | Omite la generación de CSS | — |
 | `--no-export` | Solo actualiza la caché; no genera ni copia salidas a `dist/` | — |
