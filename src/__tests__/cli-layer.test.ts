@@ -352,6 +352,75 @@ describe('runBuild', () => {
     });
   });
 
+  it('el masonry sigue el orden de bloques por defecto (header, trayectura, formatos, indice, referencias, footer)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\ntoc: true\nformat:\n  latex: true\n', 'utf8');
+      await writeFile(join(dir, 'bibliography.bib'), '@book{key1, author = {García, Lucía}, title = {Libro}, year = {2024}}\n', 'utf8');
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\n# Sección\n\nCita [@key1].\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
+      const pos = (s: string): number => html.indexOf(s);
+      expect(pos('block:header')).toBeGreaterThanOrEqual(0);
+      expect(pos('block:header')).toBeLessThan(pos('block:trayectura'));
+      expect(pos('block:trayectura')).toBeLessThan(pos('block:formatos'));
+      expect(pos('block:formatos')).toBeLessThan(pos('block:indice'));
+      expect(pos('block:indice')).toBeLessThan(pos('block:referencias'));
+      expect(pos('block:referencias')).toBeLessThan(pos('block:footer'));
+    });
+  });
+
+  it('format.html.blocks: un override individual mueve la tarjeta (formatos después de índice)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(
+        join(dir, 'iteraciones.config.yaml'),
+        'lang: es-MX\ntoc: true\nformat:\n  latex: true\n  html:\n    blocks:\n      formatos: 4\n',
+        'utf8',
+      );
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\n# Sección\n\nContenido.\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
+      const pos = (s: string): number => html.indexOf(s);
+      expect(pos('block:formatos')).toBeGreaterThan(pos('block:indice'));
+      // Empate formatos 4 / referencias 4 → desempate canónico: formatos antes
+      expect(pos('block:formatos')).toBeLessThan(pos('block:footer'));
+      expect(pos('block:header')).toBeLessThan(pos('block:trayectura'));
+    });
+  });
+
+  it('sin toc, sin citas y sin formatos activos, los bloques ausentes no aparecen', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir); // html-only, toc false, sin citas ni formatos
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
+      expect(html).not.toContain('block:formatos');
+      expect(html).not.toContain('block:indice');
+      expect(html).not.toContain('block:referencias');
+      const pos = (s: string): number => html.indexOf(s);
+      expect(pos('block:header')).toBeLessThan(pos('block:trayectura'));
+      expect(pos('block:trayectura')).toBeLessThan(pos('block:footer'));
+    });
+  });
+
+  it('el chip del contenido dice Trayectura (neologismo)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
+      expect(html).toContain('>Trayectura</h2>');
+      expect(html).not.toContain('>Trayectoria</h2>');
+    });
+  });
+
   it('--no-export no modifica dist/, reporta salidas no modificadas y el siguiente build las regenera', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);

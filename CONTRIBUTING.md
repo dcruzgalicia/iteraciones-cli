@@ -170,11 +170,10 @@ docs(config): documenta bloque editorial y export en frontmatter
 El hash de filters (`computeFiltersHash` en `src/builder/state.ts`) incluye las versiones de esquema de `CACHE_SCHEMA_VERSIONS`. **Sube la versión de un área cuando cambie su lógica de generación**; si no lo haces, los outputs cacheados (HTML, cuerpos LaTeX) quedan obsoletos silenciosamente:
 
 - `humanDate`: cambios en `src/lib/date.ts` (formato de fecha legible).
-- `referencesCard`: cambios en `moveReferencesToCard` (`src/builder/render.ts`).
+- `htmlBlocks`: cambios en el ensamblado de bloques del masonry (`src/builder/html-blocks.ts` o el post-procesamiento de `render.ts`).
 - `linkCitations`: cambios en el enlazado de citas del HTML.
-- `formatsCard`: cambios en `insertFormatsCard` (`src/builder/render.ts`).
 
-Los cambios en el template HTML y en los archivos `.tex` de recursos no requieren bump: ya participan en los hashes de configuración y de filters.
+Los cambios en el template HTML, en los archivos `.tex` de recursos y en `format.html.blocks` no requieren bump: ya participan en los hashes de configuración y de filters.
 
 ## Cómo regenerar el CSS precompilado
 

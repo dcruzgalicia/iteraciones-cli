@@ -1,6 +1,13 @@
 import { z } from 'zod';
 import type { SiteConfig } from './site-config.js';
-import { DEFAULT_EPUB_FORMAT, DEFAULT_HTML_FORMAT, DEFAULT_MARKDOWN_FORMAT, DEFAULT_PDF_FORMAT, DEFAULT_SITE_CONFIG } from './site-config.js';
+import {
+  DEFAULT_EPUB_FORMAT,
+  DEFAULT_HTML_BLOCKS,
+  DEFAULT_HTML_FORMAT,
+  DEFAULT_MARKDOWN_FORMAT,
+  DEFAULT_PDF_FORMAT,
+  DEFAULT_SITE_CONFIG,
+} from './site-config.js';
 
 // ── Constantes ────────────────────────────────────────────────────────────
 
@@ -38,6 +45,18 @@ export const KNOWN_ACCENT_COLORS = [
 
 // ── HtmlFormatConfig ───────────────────────────────────────────────────────
 
+/** Orden de bloques del masonry: enteros, claves conocidas (strict). */
+const HtmlBlocksSchema = z
+  .object({
+    header: z.number().int().optional(),
+    trayectura: z.number().int().optional(),
+    formatos: z.number().int().optional(),
+    indice: z.number().int().optional(),
+    referencias: z.number().int().optional(),
+    footer: z.number().int().optional(),
+  })
+  .strict();
+
 const HtmlFormatSchema = z
   .object({
     title: z.string().default(DEFAULT_HTML_FORMAT.title),
@@ -46,6 +65,7 @@ const HtmlFormatSchema = z
     theme: z.enum(['light', 'dark']).optional().default(DEFAULT_HTML_FORMAT.theme),
     accent: z.enum(KNOWN_ACCENT_COLORS).optional().default(DEFAULT_HTML_FORMAT.accent),
     generate: z.boolean().default(DEFAULT_HTML_FORMAT.generate),
+    blocks: HtmlBlocksSchema.optional(),
   })
   .strict();
 

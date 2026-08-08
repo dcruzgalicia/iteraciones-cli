@@ -331,6 +331,30 @@ describe('loadSiteConfig', () => {
     });
   });
 
+  it('parsea format.html.blocks con override individual', async () => {
+    await withTempDir(async (dir) => {
+      await writeConfig(dir, 'format:\n  html:\n    blocks:\n      formatos: 4');
+      const config = await loadSiteConfig(dir);
+      expect(config.format.html?.blocks).toEqual({ formatos: 4 });
+    });
+  });
+
+  it('adviierte sobre claves desconocidas en format.html.blocks', async () => {
+    await withTempDir(async (dir) => {
+      const writeSpy = spyOn(process.stderr, 'write');
+      let output = '';
+      try {
+        await writeConfig(dir, 'format:\n  html:\n    blocks:\n      tarjeta-rara: 1');
+        await loadSiteConfig(dir);
+        output = writeSpy.mock.calls.map((c) => String(c[0])).join('');
+      } finally {
+        writeSpy.mockRestore();
+      }
+      expect(output).toContain('claves sin efecto');
+      expect(output).toContain('tarjeta-rara');
+    });
+  });
+
   it('las tres vías de carga producen los mismos defaults de formato', async () => {
     let defaultsSinArchivo: SiteConfig = null!;
     let defaultsConArchivoVacio: SiteConfig = null!;
