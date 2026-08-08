@@ -139,11 +139,11 @@ export async function computeFiltersHash(
   parts.push('human-date-v1');
   // Versión del post-procesamiento HTML (tarjeta de referencias): invalidar
   // los outputs cacheados si cambia.
-  parts.push('references-card-v2');
+  parts.push('references-card-v3');
   // Versión del enlazado de citas (link-citations): invalidar outputs.
   parts.push('link-citations-v1');
   // Versión de la tarjeta Formatos (post-procesamiento HTML).
-  parts.push('formats-card-v1');
+  parts.push('formats-card-v2');
   return { hash: hashString(parts.join('\0')), cache };
 }
 
