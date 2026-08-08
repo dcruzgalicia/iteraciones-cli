@@ -33,10 +33,12 @@ export async function runFilters(cwd: string): Promise<void> {
   logInfo('Filtros disponibles (orden de ejecución):');
   logInfo('');
 
+  // Columna de nombres alineada (padEnd sobre el ancho máximo)
+  const nameWidth = Math.max(...allInfos.map((info) => info.name.length));
   for (const info of allInfos) {
     const active = !disabled.has(info.name);
     const status = active ? 'activo' : 'desactivado';
-    logInfo(`  ${info.name}  lua     ${info.description}  [${status}]`);
+    logInfo(`  ${info.name.padEnd(nameWidth)}  lua  ${info.description}  [${status}]`);
   }
 
   logInfo('');
