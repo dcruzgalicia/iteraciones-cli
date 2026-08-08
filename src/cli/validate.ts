@@ -14,6 +14,17 @@ type ValidationError = { file: string; message: string };
 
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
 
+/**
+ * Campos del frontmatter que el pipeline consume. Cualquier otro campo se
+ * descarta en todos los formatos: validate advierte para que no sea silencioso.
+ */
+const KNOWN_FRONTMATTER_FIELDS = ['title', 'subtitle', 'date', 'author'];
+
+/** Devuelve los campos del frontmatter que el pipeline ignorará. */
+function unknownFrontmatterFields(parsed: Record<string, unknown>): string[] {
+  return Object.keys(parsed).filter((key) => !KNOWN_FRONTMATTER_FIELDS.includes(key));
+}
+
 // theme se pasa desde runValidate para evitar que loadSiteConfig se llame dos veces
 // (una en validateConfig + otra aquí), lo que duplicaría los warnings de stderr.
 type ValidationResult = {
@@ -62,6 +73,14 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
           file: entry,
           message: 'frontmatter YAML inválido: debe ser un objeto',
         });
+      } else {
+        const unknown = unknownFrontmatterFields(result as Record<string, unknown>);
+        if (unknown.length > 0) {
+          warnings.push({
+            file: entry,
+            message: `campos de frontmatter ignorados por el pipeline: ${unknown.join(', ')}`,
+          });
+        }
       }
     } catch (err) {
       errors.push({
