@@ -348,6 +348,62 @@ interface HtmlPageVars {
   homeHref?: string;
 }
 
+/** Ancla de inserción de la tarjeta de referencias (antes de la identidad final). */
+const IDENTITY_END_ANCHOR = '<!-- ── Tarjeta identidad final ── -->';
+
+/**
+ * Extrae el bloque de referencias (h1#referencias + div#refs) del article y lo
+ * inserta como una tarjeta propia del masonry, antes de la identidad final
+ * (después del índice). El parse del cierre es balanceado: las entradas
+ * csl-entry son divs anidados, el primer `</div>` no cierra el bloque.
+ */
+function moveReferencesToCard(html: string): string {
+  const refsIdPos = html.indexOf('id="referencias"');
+  const refsDivPos = html.indexOf('<div id="refs"');
+  if (refsIdPos < 0 && refsDivPos < 0) return html;
+
+  const start = refsIdPos >= 0 ? html.lastIndexOf('<h1', refsIdPos) : refsDivPos;
+  const divStart = html.indexOf('<div id="refs"', start);
+  if (divStart < 0) return html;
+
+  // Balance de divs desde el div#refs hasta su cierre
+  let depth = 0;
+  let i = divStart;
+  while (i < html.length) {
+    const open = html.indexOf('<div', i);
+    const close = html.indexOf('</div>', i);
+    if (close < 0) break;
+    if (open >= 0 && open < close) {
+      depth++;
+      i = open + 4;
+    } else {
+      depth--;
+      i = close + 6;
+      if (depth === 0) break;
+    }
+  }
+  if (depth !== 0) return html; // HTML inesperado: no tocar
+  const end = i;
+
+  const block = html.slice(start, end);
+  const withoutBlock = html.slice(0, start) + html.slice(end);
+  if (!withoutBlock.includes(IDENTITY_END_ANCHOR)) return html;
+
+  // El h1 queda fuera del prose: se re-estiliza con la jerarquía del documento
+  const styledHeading = block.replace(
+    /<h1[^>]*id="referencias"[^>]*>/,
+    '<h1 id="referencias" class="text-2xl font-bold text-accent-950 dark:text-accent-50 mb-4">',
+  );
+  const card =
+    `<div class="break-inside-avoid pb-6">\n` +
+    `      <section class="rounded-xl border border-accent-500/25 bg-stone-50/80 dark:bg-stone-900/70 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [&_.csl-entry]:mb-3 [&_.csl-entry]:pl-4 [&_.csl-entry]:-indent-4">\n` +
+    `        ${styledHeading}\n` +
+    `      </section>\n` +
+    `    </div>\n    `;
+
+  return withoutBlock.replace(IDENTITY_END_ANCHOR, `${card}${IDENTITY_END_ANCHOR}`);
+}
+
 /**
  * Genera la página HTML completa desde el AST canónico con el template
  * system de pandoc (`--template template.html`), aplicando los filtros Lua
@@ -393,8 +449,11 @@ export async function renderHtmlPageFromAst(
   // citeproc inserta. El AST canónico no se modifica (LaTeX/EPUB/Markdown
   // intactos); el TOC incluye el item con enlace #referencias.
   const inputAst = bibOptions?.bibliography && hasCiteNodes(ast) ? withReferencesHeading(ast) : ast;
+  const html = await runPandoc({ input: JSON.stringify(inputAst), sourcePath: doc.filePath, from: 'json', to: 'html5', bibOptions, extraArgs });
 
-  return runPandoc({ input: JSON.stringify(inputAst), sourcePath: doc.filePath, from: 'json', to: 'html5', bibOptions, extraArgs });
+  // Post-procesamiento: las referencias salen del article y se convierten en
+  // una tarjeta propia del masonry, después de la tarjeta del índice.
+  return moveReferencesToCard(html);
 }
 
 /**
