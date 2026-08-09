@@ -164,10 +164,6 @@ Verifica que el entorno tenga todo lo necesario para ejecutar `iteraciones build
 iteraciones doctor [opciones]
 ```
 
-| Opción | Descripción |
-|--------|-------------|
-| `--fix` | Intenta corregir automáticamente los problemas detectados |
-
 Comprobaciones que realiza: pandoc disponible en PATH, configuración del proyecto (`iteraciones.config.yaml`) válida, pdflatex y KOMA-Script instalados (solo si el proyecto usa PDF o LaTeX), permisos de lectura y escritura.
 
 ### `iteraciones filters`

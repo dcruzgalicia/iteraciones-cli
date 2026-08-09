@@ -124,17 +124,15 @@ Ejemplos:
   program
     .command('doctor')
     .description('verifica el entorno de build')
-    .option('--fix', 'intenta corregir automáticamente los problemas detectados')
     .addHelpText(
       'after',
       `
 Ejemplos:
-  iteraciones doctor         verifica pandoc, pdflatex, Tailwind y permisos
-  iteraciones doctor --fix   intenta corregir los problemas automáticamente
+  iteraciones doctor         verifica pandoc, motor LaTeX y permisos
 `,
     )
-    .action(async (opts: { fix?: boolean }) => {
-      await runDoctor(projectRoot(), { fix: opts.fix });
+    .action(async () => {
+      await runDoctor(projectRoot());
     });
 
   program

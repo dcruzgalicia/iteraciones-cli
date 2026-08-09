@@ -164,9 +164,9 @@ export async function runValidate(cwd: string): Promise<void> {
   }
 }
 
-export async function runDoctor(cwd: string, options: { fix?: boolean } = {}): Promise<void> {
+export async function runDoctor(cwd: string): Promise<void> {
   try {
-    await doctor(cwd, options);
+    await doctor(cwd);
   } catch (err) {
     if (err instanceof Error) {
       logError(err.message, 'doctor');
