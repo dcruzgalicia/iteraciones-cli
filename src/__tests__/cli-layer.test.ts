@@ -777,6 +777,34 @@ describe('runInfo', () => {
       expect(output).toContain('(ninguno)');
     });
   });
+
+  it('--json emite un objeto JSON estable', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runInfo(dir, { json: true });
+      } finally {
+        output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      const parsed = JSON.parse(output) as {
+        lang: string;
+        documentCount: number;
+        outputDir: string;
+        activeFormats: string[];
+        html: { theme: string; accent: string };
+      };
+      expect(parsed.lang).toBe('es-MX');
+      expect(parsed.documentCount).toBe(1);
+      expect(parsed.outputDir).toContain('dist');
+      expect(parsed.activeFormats).toContain('html');
+      expect(parsed.html.theme).toBe('dark');
+    });
+  });
 });
 
 describe('runFilters', () => {
