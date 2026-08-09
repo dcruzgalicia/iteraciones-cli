@@ -69,14 +69,21 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
 
     await build(cwd, { ...options, concurrency, outputDir: output });
   } catch (err) {
+    // Los errores de frontmatter/config del build se resuelven con validate:
+    // la sugerencia conecta ambas herramientas (detalle completo por archivo).
+    const suggestValidate = (): void => {
+      process.stderr.write("  ejecuta 'iteraciones validate' para más detalle\n");
+    };
     if (err instanceof PandocError) {
       const location = err.sourcePath ? ` en "${err.sourcePath}"` : '';
       logError(`${err.message}${location}`);
       if (err.stderr) process.stderr.write(`${err.stderr}\n`);
     } else if (err instanceof ConfigError) {
       logError(err.message, 'config');
+      suggestValidate();
     } else if (err instanceof BuildError) {
       logError(err.message, 'build');
+      if (err.message.startsWith('frontmatter YAML inválido')) suggestValidate();
     } else if (err instanceof Error) {
       logError(err.message);
     } else {

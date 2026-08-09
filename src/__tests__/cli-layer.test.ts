@@ -315,6 +315,28 @@ describe('runBuild', () => {
       }
       expect(output).toContain('✖ [build] frontmatter YAML inválido en 1 documento:');
       expect(output).toContain('roto.md:');
+      expect(output).toContain("ejecuta 'iteraciones validate' para más detalle");
+      expect(process.exitCode).toBe(1);
+    });
+  });
+
+  it('un error de pandoc no sugiere validate (no es un problema de config/frontmatter)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nlua-filters: [filters/roto.lua]\n', 'utf8');
+      const { mkdir } = await import('node:fs/promises');
+      await mkdir(join(dir, 'filters'), { recursive: true });
+      await writeFile(join(dir, 'filters', 'roto.lua'), 'function ) sintaxis inválida\n', 'utf8');
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(output).not.toContain("ejecuta 'iteraciones validate'");
       expect(process.exitCode).toBe(1);
     });
   });
