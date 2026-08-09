@@ -341,7 +341,10 @@ export class ProgressTracker {
         this.nextLine++;
       } else {
         const up = this.nextLine - idx;
-        process.stdout.write(`\x1b[${up}A\x1b[2K${content}\x1b[${up}B`);
+        // El borrado de línea (2K) no mueve el cursor a la columna 0: el \r
+        // evita que la fila actualizada se escriba a la altura del ancho de
+        // la fila inferior (indentaciones fantasma en TTY).
+        process.stdout.write(`\x1b[${up}A\x1b[2K\r${content}\x1b[${up}B`);
       }
     } else if (idx === undefined && (row.status === 'done' || row.status === 'skipped' || row.status === 'failed')) {
       process.stdout.write(`${content}\n`);
