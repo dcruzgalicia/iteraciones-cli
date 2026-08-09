@@ -3,6 +3,7 @@ import { basename, dirname, join } from 'node:path';
 import type { ProgressTracker } from '../cli/progress.js';
 import { DEFAULT_SITE_CONFIG, type FormatConfig } from '../config/site-config.js';
 import { formatHumanDate } from '../lib/date.js';
+import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import type { BuildMetadata, WorkSets } from './build-planner.js';
@@ -310,7 +311,7 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
 
   // .tex completo (preámbulo + cuerpo) para LaTeX/PDF
   if ((latexOn || pdfOn) && pdfPaths.has(doc.relativePath)) {
-    if (!texBody || !flags) throw new Error(`sin cuerpo LaTeX para ${doc.relativePath}`);
+    if (!texBody || !flags) throw new BuildError(`sin cuerpo LaTeX para ${doc.relativePath}`);
     const entry = discoveryIndex.get(doc.relativePath);
     const fullTex = await composeFullTex(
       ctx.siteConfig,

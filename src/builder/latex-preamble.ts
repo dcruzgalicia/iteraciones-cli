@@ -13,6 +13,7 @@
  */
 import type { PdfFormatConfig, SiteConfig } from '../config/site-config.js';
 import { formatHumanDate } from '../lib/date.js';
+import { BuildError } from '../lib/errors.js';
 import { loadPreambleFilters, type PreambleFilter } from './preamble-loader.js';
 import { discoverBibFiles } from './state.js';
 import type { PreambleFlags } from './types.js';
@@ -144,7 +145,7 @@ export async function buildLatexPreamble(
   if (pageCommand) {
     preamble.push(pageCommand);
   } else {
-    throw new Error(`page-number inválido: "${pageNumber}". Valores válidos: ${Object.keys(PAGE_NUMBER_COMMANDS).join(', ')}`);
+    throw new BuildError(`page-number inválido: "${pageNumber}". Valores válidos: ${Object.keys(PAGE_NUMBER_COMMANDS).join(', ')}`);
   }
 
   return preamble;

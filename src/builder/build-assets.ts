@@ -2,6 +2,7 @@ import { cp, mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/site-config.js';
 import { ACCENT_PALETTES, type AccentColor, accentOverrideBlock } from '../lib/accent-palettes.js';
+import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 import { hashString } from './state.js';
 
@@ -43,7 +44,7 @@ async function assembleAccentCss(outputDir: string, accent: string): Promise<voi
   const targetCssDir = join(outputDir, 'css');
   await mkdir(targetCssDir, { recursive: true });
   const palette = ACCENT_PALETTES[accent as AccentColor];
-  if (palette === undefined) throw new Error(`acento desconocido: "${accent}"`);
+  if (palette === undefined) throw new BuildError(`acento desconocido: "${accent}"`);
   const base = await Bun.file(CSS_BASE).text();
   await Bun.write(join(targetCssDir, 'styles.css'), `${base}\n${accentOverrideBlock(accent as AccentColor)}`);
 }
@@ -65,13 +66,13 @@ async function copyLogo(outputDir: string, cwd: string, siteConfig: SiteConfig):
       if (err.code === 'ENOENT') logWarning(`logo por defecto no encontrado en "${defaultSrc}"`, 'assets');
       else {
         logWarning(`No se pudo copiar el logo por defecto: ${err.message}`, 'assets');
-        throw new Error(`No se pudo copiar el logo por defecto: ${err.message}`);
+        throw new BuildError(`No se pudo copiar el logo por defecto: ${err.message}`);
       }
     });
     return;
   }
   if (logo.split('/').includes('..') || logo.startsWith('/')) {
-    throw new Error(`logo: ruta inválida "${logo}" — debe ser relativa al proyecto`);
+    throw new BuildError(`logo: ruta inválida "${logo}" — debe ser relativa al proyecto`);
   }
   const src = join(cwd, logo);
   const dest = join(outputDir, logo);
@@ -80,7 +81,7 @@ async function copyLogo(outputDir: string, cwd: string, siteConfig: SiteConfig):
     if (err.code === 'ENOENT') logWarning(`logo no encontrado: "${logo}"`, 'assets');
     else {
       logWarning(`No se pudo copiar el logo "${logo}": ${err.message}`, 'assets');
-      throw new Error(`No se pudo copiar el logo "${logo}": ${err.message}`);
+      throw new BuildError(`No se pudo copiar el logo "${logo}": ${err.message}`);
     }
   });
 }
