@@ -162,7 +162,7 @@ docs(config): documenta bloque editorial y export en frontmatter
 - **TypeScript:** `verbatimModuleSyntax: true` — usar `import type` para solo tipos. Imports con extensión `.js`.
 - **Nombrado:** archivos en `kebab-case.ts`, funciones en `camelCase`, tipos/interfaces en `PascalCase`.
 - **Errores:** Usar `logError()` / `logWarning()` de `src/lib/logger.ts`. No usar `console.error`.
-- **Tests:** `bun test`. Los tests deben ser independientes y no requerir pandoc a menos que sea estrictamente necesario.
+- **Tests:** `bun test`. Los tests deben ser independientes y no requerir pandoc a menos que sea estrictamente necesario. La suite completa (incluidos `cli-layer` y `lua-filters`) requiere pandoc instalado; sin él, los tests que lo necesitan se marcan como skip y el resto corre.
 - **Linting:** Biome (espacios, `lineWidth: 150`, comillas simples). Se ejecuta automáticamente en pre-commit.
 
 ## Cómo invalidar la caché de outputs
