@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { buildAssets, computeCssInputHash } from '../builder/build-assets.js';
+import { buildAssets } from '../builder/build-assets.js';
 import { cleanupDeletedFiles, cleanupSlugChanges, copyToDist } from '../builder/cleanup.js';
 import type { BuildContext } from '../builder/types.js';
 import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
@@ -21,23 +21,6 @@ function makeCtx(cwd: string): BuildContext {
 }
 
 describe('build-assets', () => {
-  it('computeCssInputHash cambia con el acento y es estable para el mismo input', async () => {
-    const lime = await computeCssInputHash({
-      ...DEFAULT_SITE_CONFIG,
-      format: { ...DEFAULT_SITE_CONFIG.format, html: { ...DEFAULT_SITE_CONFIG.format.html, accent: 'lime' } },
-    });
-    const lime2 = await computeCssInputHash({
-      ...DEFAULT_SITE_CONFIG,
-      format: { ...DEFAULT_SITE_CONFIG.format, html: { ...DEFAULT_SITE_CONFIG.format.html, accent: 'lime' } },
-    });
-    const rose = await computeCssInputHash({
-      ...DEFAULT_SITE_CONFIG,
-      format: { ...DEFAULT_SITE_CONFIG.format, html: { ...DEFAULT_SITE_CONFIG.format.html, accent: 'rose' } },
-    });
-    expect(lime).toBe(lime2);
-    expect(lime).not.toBe(rose);
-  });
-
   it('buildAssets genera css/styles.css, fuentes y logo en el directorio de salida', async () => {
     await withTempDir(async (dir) => {
       const outDir = join(dir, 'dist', 'files');
@@ -47,7 +30,10 @@ describe('build-assets', () => {
       const fonts = [...new Bun.Glob('*.ttf').scanSync({ cwd: join(outDir, 'fonts') })];
       expect(fonts.length).toBeGreaterThan(0);
       const css = await Bun.file(join(outDir, 'css', 'styles.css')).text();
-      expect(css).toContain('--color-accent-');
+      // El CSS final incluye el CSS custom del input (fuentes y animaciones)
+      expect(css).toContain('@font-face');
+      expect(css).toContain('url(../fonts/'); // rutas relativas al css final → dist/files/fonts
+      expect(css).toContain('@keyframes scroll-reveal');
     });
   });
 

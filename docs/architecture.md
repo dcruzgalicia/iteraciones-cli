@@ -55,17 +55,18 @@ El pipeline convierte archivos Markdown en documentos en los formatos configurad
        │
        ▼
 ┌─────────────┐
-│  Assets      │  buildAssets()
-│             │  • Copia el CSS precompilado del acento (lib/resources/css/)
-│             │  • Copia fuentes y logo a dist/
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
 │  Distribución│  cleanup.ts
 │             │  • copyToDist() — rename de formats/ a dist/
 │             │  • Limpieza de formatos eliminados, archivos borrados,
 │             │    slugs cambiados y caché obsoleta
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  Assets      │  buildAssets()
+│             │  • Compila el CSS con Tailwind escaneando SOLO los HTML
+│             │    finales de dist/files (@source explícito, sin caché)
+│             │  • Copia fuentes y logo a dist/
 └─────────────┘
 ```
 
@@ -244,7 +245,7 @@ La configuración PDF es mínima y deliberada: `generate` (activa la compilació
 | `orchestrator.ts` | `build()`: coordina las fases del pipeline. Función principal. |
 | `discover.ts` | Fase 1: escanea archivos, lee frontmatter, detecta cambios. |
 | `render.ts` | Fase 2+3: filtros Lua + conversión pandoc a AST/LaTeX/HTML. |
-| `build-assets.ts` | Assets CSS (Tailwind), fonts, logo. |
+| `build-assets.ts` | Assets: compila el CSS con Tailwind sobre dist/files (acento del @theme), fonts, logo. |
 | `latex-preamble.ts` | Construcción del preámbulo LaTeX. |
 | `types.ts` | BuildDocument, Frontmatter, BuildContext. |
 | `export/runner.ts` | Ejecuta exportación a PDF, EPUB, Markdown con concurrencia limitada. |

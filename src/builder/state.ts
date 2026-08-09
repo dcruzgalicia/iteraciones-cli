@@ -44,8 +44,6 @@ export interface BuildState {
   bibHash?: string;
   /** Caché por archivo de bibliografía (mtime+size+hash) para evitar re-leer contenido. */
   bibFileCache?: BibFileCache;
-  /** Hash de los inputs del CSS (acento + estilos base) para decidir si regenerar Tailwind. */
-  cssInputHash?: string;
   /** Índice de descubrimiento: path relativo → entry con frontmatter y caché. */
   entries: Map<string, DiscoveryEntry>;
 }
@@ -75,7 +73,6 @@ export async function loadStateFile(cwd: string): Promise<BuildState | null> {
       configHashes: parsed.configHashes,
       bibHash: parsed.bibHash,
       bibFileCache: parsed.bibFileCache,
-      cssInputHash: parsed.cssInputHash,
       // En disco las entradas son un objeto; en runtime se usan como Map.
       entries: new Map(Object.entries((parsed.entries ?? {}) as Record<string, DiscoveryEntry>)),
     };
