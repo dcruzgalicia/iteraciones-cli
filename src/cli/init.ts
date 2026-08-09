@@ -125,10 +125,14 @@ export async function runInit(cwd: string): Promise<void> {
   ]);
 
   // Patrón unificado: los comandos que mutan el proyecto (init, new, clean)
-  // usan ✓ para lo creado/eliminado y sin glifo para lo omitido.
-  logSuccess(configCreated ? 'creado iteraciones.config.yaml' : 'omitido iteraciones.config.yaml (ya existe)', 'init');
-  logSuccess(indexCreated ? 'creado index.md' : 'omitido index.md (ya existe)', 'init');
-  logSuccess(bibCreated ? 'creado bibliography.bib' : 'omitido bibliography.bib (ya existe)', 'init');
+  // usan ✓ para lo creado/eliminado y sin glifo para lo omitido (no mutó).
+  const report = (created: boolean, file: string): void => {
+    if (created) logSuccess(`creado ${file}`, 'init');
+    else logInfo(`omitido ${file} (ya existe)`, 'init');
+  };
+  report(configCreated, 'iteraciones.config.yaml');
+  report(indexCreated, 'index.md');
+  report(bibCreated, 'bibliography.bib');
 }
 
 /**
