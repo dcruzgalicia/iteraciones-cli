@@ -190,4 +190,27 @@ describe('ProgressTracker', () => {
     expect(output).toContain('✔ Todo listo.');
     expect(output).not.toContain('✓ Todo listo.');
   });
+
+  it('al actualizar una fila en TTY resetea la columna antes de escribir (regresión: indentaciones fantasma)', async () => {
+    const output = await runTracker(
+      async (tracker) => {
+        tracker.startPhase('discovery', 2);
+        tracker.reportFile({ relativePath: 'a.md', phase: 'discovery' });
+        tracker.reportFile({ relativePath: 'b.md', phase: 'discovery' });
+        tracker.completePhase(2);
+      },
+      { renderer: 'default', tty: true },
+    );
+
+    // Toda re-escritura de fila en TTY (mover arriba + borrar) debe resetear
+    // la columna con \r antes del contenido: sin él, el texto se escribe a la
+    // altura del ancho de la fila inferior.
+    const esc = String.fromCharCode(27);
+    const rewriteRe = new RegExp(`${esc}\\[\\d+A${esc}\\[2K(.)`, 'g');
+    const reWrites = output.match(new RegExp(`${esc}\\[\\d+A${esc}\\[2K`, 'g')) ?? [];
+    expect(reWrites.length).toBeGreaterThan(0);
+    for (const m of output.matchAll(rewriteRe)) {
+      expect(m[1]).toBe('\r');
+    }
+  });
 });
