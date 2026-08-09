@@ -6,15 +6,12 @@ import { build } from '../builder/orchestrator.js';
 import { runInit } from '../cli/init.js';
 import { checkPandoc } from '../lib/pandoc-runner.js';
 
-describe('integration: init + build', () => {
-  it('genera HTML después de init + build', async () => {
-    // Verificar que pandoc está disponible; si no, omitir el test de integración
-    const pandocOk = await checkPandoc().catch(() => null);
-    if (!pandocOk) {
-      // pandoc no instalado en este entorno — no es un fallo del test
-      return;
-    }
+// Sin pandoc el test de integración no puede correr: se marca como skip real
+// (antes hacía return temprano y la suite reportaba "pass" sin probar nada).
+const pandocOk = await checkPandoc().catch(() => null);
 
+describe('integration: init + build', () => {
+  it.skipIf(!pandocOk)('genera HTML después de init + build', async () => {
     const cwd = join(tmpdir(), `iteraciones-integration-test-${Date.now()}`);
     await mkdir(cwd, { recursive: true });
     try {
