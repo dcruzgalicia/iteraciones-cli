@@ -263,6 +263,51 @@ describe('runBuild', () => {
     });
   });
 
+  it('un documento sin cuerpo después del frontmatter aborta el build con la ruta del archivo', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'vacio.md'), '---\ntitle: Vacío\n---\n', 'utf8');
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(output).toContain('✖ [build]');
+      expect(output).toContain('vacio.md');
+      expect(output).toContain('no tiene contenido después del frontmatter');
+      expect(process.exitCode).toBe(1);
+    });
+  });
+
+  it('el siguiente build reintenta el documento que falló (no envenena la caché)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'vacio.md'), '---\ntitle: Vacío\n---\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(1);
+
+      // Arreglar el documento y reconstruir: debe reprocesarlo, no reutilizarlo
+      await writeFile(join(dir, 'vacio.md'), '---\ntitle: Vacío\n---\n\nAhora sí tiene contenido.\n', 'utf8');
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir);
+      } finally {
+        output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      expect(output).toContain('Documentos procesados');
+      expect(output).not.toContain('Sin cambios (reutilizado)');
+    });
+  });
+
   it('un error de pandoc reporta la ruta del documento una sola vez', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);

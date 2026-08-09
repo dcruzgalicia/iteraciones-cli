@@ -64,9 +64,13 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     await runBuild(cwd, options, progress);
   } catch (err) {
     // Resolver las fases pendientes del tracker para que el proceso salga:
-    // en TTY el render loop de listr2 mantiene el proceso vivo mientras
-    // run() no termine (regresión #1211).
+    // en TTY el render loop mantiene el proceso vivo mientras run() no termine
+    // (regresión #1211).
     await progress.fail();
+    // El estado ya persistido durante discovery puede contener documentos cuyo
+    // render falló (mtime+size+hash nuevos): eliminarlo para que el siguiente
+    // build los reprocese en lugar de reutilizar contenido stale u omitirlos.
+    await rm(join(cwd, '.iteraciones', 'changes', 'state.json'), { force: true }).catch(() => {});
     throw err;
   }
 }

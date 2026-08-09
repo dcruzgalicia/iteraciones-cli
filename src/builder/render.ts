@@ -1,5 +1,6 @@
 import { basename, dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/site-config.js';
+import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 import { type BibOptions, runPandoc } from '../lib/pandoc-runner.js';
 import { splitFrontmatter } from './discover.js';
@@ -546,24 +547,28 @@ export async function renderHtmlPageFromAst(
 /**
  * Genera el AST canónico desde el markdown de un documento (sin frontmatter),
  * aplicando los filtros semánticos (string + ast) y los de usuario.
- * Retorna null si el archivo no se puede leer o el JSON no es válido.
+ * Lanza BuildError con la ruta del documento si el archivo no se puede leer,
+ * el body está vacío o pandoc devuelve JSON inválido: un documento que falla
+ * aborta el build (nunca se omite en silencio ni se publica contenido stale).
  */
 export async function markdownToAst(
   doc: BuildDocument,
   cwd: string,
   siteConfig: SiteConfig,
   luaFilters?: LuaFilterGroup,
-): Promise<Record<string, unknown> | null> {
+): Promise<Record<string, unknown>> {
   const filters = luaFilters ?? (await loadFilterGroups(siteConfig, siteConfig.disabledFilters, cwd));
 
   // Leer body del disco sin frontmatter (parser compartido con discovery)
   let body = '';
   try {
     body = splitFrontmatter(await Bun.file(doc.filePath).text()).body;
-  } catch {
-    return null;
+  } catch (err) {
+    throw new BuildError(`no se pudo leer "${doc.filePath}": ${String(err)}`);
   }
-  if (!body.trim()) return null;
+  if (!body.trim()) {
+    throw new BuildError(`"${doc.filePath}" no tiene contenido después del frontmatter`);
+  }
 
   // Convertir markdown a JSON AST con los filtros Lua semánticos + de usuario
   const semanticLuaArgs = [...filters.semantic, ...filters.user].flatMap((f) => ['--lua-filter', f]);
@@ -577,8 +582,7 @@ export async function markdownToAst(
   try {
     return JSON.parse(json) as Record<string, unknown>;
   } catch {
-    logWarning(`error al parsear AST JSON de ${doc.filePath}`, 'render');
-    return null;
+    throw new BuildError(`pandoc devolvió un AST JSON inválido para "${doc.filePath}"`);
   }
 }
 
