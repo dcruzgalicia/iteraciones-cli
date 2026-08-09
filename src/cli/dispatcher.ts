@@ -1,5 +1,6 @@
 import { mkdir, rm, stat, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, normalize } from 'node:path';
+import { stringify } from 'yaml';
 import { IGNORED_DIRS } from '../builder/discover.js';
 import { isHiddenPath, isIgnoredByRules, loadGitignoreRules } from '../builder/gitignore.js';
 import type { BuildOptions } from '../builder/orchestrator.js';
@@ -177,7 +178,7 @@ export async function runDoctor(cwd: string): Promise<void> {
   }
 }
 
-export async function runNew(cwd: string, path: string): Promise<void> {
+export async function runNew(cwd: string, path: string, options: { title?: string } = {}): Promise<void> {
   try {
     // Normalizar el nombre: espacios → guiones y separadores múltiples
     // colapsados ('mi articulo' → 'mi-articulo.md'). Coherente con
@@ -194,8 +195,11 @@ export async function runNew(cwd: string, path: string): Promise<void> {
 
     const now = new Date();
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const title = inferTitleFromPath(normalizedPath);
-    const content = `---\ntitle: '${title}'\ndate: ${today}\n---\n\nEscribe tu contenido aquí.\n`;
+    // --title tiene prioridad; sin él se infiere del nombre del archivo.
+    const title = options.title?.trim() || inferTitleFromPath(normalizedPath);
+    // stringify escapa apóstrofos y comillas: el frontmatter generado siempre
+    // es YAML válido (un title con comillas simples rompía el archivo).
+    const content = `---\n${stringify({ title, date: today }, { defaultKeyType: 'PLAIN', defaultStringType: 'QUOTE_DOUBLE' })}---\n\nEscribe tu contenido aquí.\n`;
 
     await writeFile(absPath, content, { encoding: 'utf8', flag: 'wx' });
     logSuccess(`creado ${normalizedPath}`, 'new');

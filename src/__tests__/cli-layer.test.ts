@@ -911,7 +911,41 @@ describe('runNew', () => {
       expect(process.exitCode).toBe(0);
       expect(await Bun.file(join(dir, 'mi-articulo-nuevo.md')).exists()).toBe(true);
       const content = await Bun.file(join(dir, 'mi-articulo-nuevo.md')).text();
-      expect(content).toContain("title: 'Mi articulo nuevo'");
+      expect(content).toContain('title: "Mi articulo nuevo"');
+    });
+  });
+
+  it('genera frontmatter YAML válido con apóstrofos y comillas en el título', async () => {
+    await withTempDir(async (dir) => {
+      process.exitCode = 0;
+      await runNew(dir, "d'artagnan");
+      await runNew(dir, 'comillas', { title: 'El "jardín" de las delicias' });
+      expect(process.exitCode).toBe(0);
+      const content = await Bun.file(join(dir, "d'artagnan.md")).text();
+      expect(content).toContain('title: "D\'artagnan"');
+      const quoted = await Bun.file(join(dir, 'comillas.md')).text();
+      expect(quoted).toContain('title: "El \\"jardín\\" de las delicias"');
+    });
+  });
+
+  it('el round-trip new → validate → build funciona con títulos difíciles', async () => {
+    await withTempDir(async (dir) => {
+      process.exitCode = 0;
+      await runNew(dir, 'articulo', { title: "Los tres mosqueteros: d'Artagnan" });
+      await runValidate(dir);
+      expect(process.exitCode).toBe(0);
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+    });
+  });
+
+  it('--title tiene prioridad sobre la inferencia del nombre', async () => {
+    await withTempDir(async (dir) => {
+      process.exitCode = 0;
+      await runNew(dir, 'mi-articulo', { title: 'Título explícito' });
+      expect(process.exitCode).toBe(0);
+      const content = await Bun.file(join(dir, 'mi-articulo.md')).text();
+      expect(content).toContain('title: "Título explícito"');
     });
   });
 
