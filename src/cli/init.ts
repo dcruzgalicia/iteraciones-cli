@@ -9,7 +9,7 @@ import {
   DEFAULT_PDF_FORMAT,
   DEFAULT_SITE_CONFIG,
 } from '../config/site-config.js';
-import { logInfo, logSuccess } from '../lib/logger.js';
+import { logInfo } from '../lib/logger.js';
 
 const DEFAULT_README = [
   '---',
@@ -72,7 +72,7 @@ function buildDefaultConfig(): string {
     markdown: { generate: DEFAULT_MARKDOWN_FORMAT.generate ?? false },
   };
 
-  let yaml = stringify({ lang: DEFAULT_SITE_CONFIG.lang, toc: DEFAULT_SITE_CONFIG.toc, format }, { indent: 2 }) + '\n';
+  let yaml = `${stringify({ lang: DEFAULT_SITE_CONFIG.lang, toc: DEFAULT_SITE_CONFIG.toc, format }, { indent: 2 })}\n`;
 
   // Añadir comentarios explicativos sobre los defaults
   yaml = yaml.replace('    theme: dark', '    # Tema visual del HTML: "light" o "dark". Por defecto: dark.\n    theme: dark');

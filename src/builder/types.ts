@@ -14,8 +14,6 @@ export interface DiscoveryEntry {
   hash?: string;
 }
 
-type DiscoveryIndex = Map<string, DiscoveryEntry>;
-
 export interface Frontmatter {
   title: string;
   subtitle?: string;

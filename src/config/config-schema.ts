@@ -1,13 +1,6 @@
 import { z } from 'zod';
 import type { SiteConfig } from './site-config.js';
-import {
-  DEFAULT_EPUB_FORMAT,
-  DEFAULT_HTML_BLOCKS,
-  DEFAULT_HTML_FORMAT,
-  DEFAULT_MARKDOWN_FORMAT,
-  DEFAULT_PDF_FORMAT,
-  DEFAULT_SITE_CONFIG,
-} from './site-config.js';
+import { DEFAULT_EPUB_FORMAT, DEFAULT_HTML_FORMAT, DEFAULT_MARKDOWN_FORMAT, DEFAULT_PDF_FORMAT, DEFAULT_SITE_CONFIG } from './site-config.js';
 
 // ── Constantes ────────────────────────────────────────────────────────────
 

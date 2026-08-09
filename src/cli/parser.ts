@@ -1,4 +1,4 @@
-import { Command, CommanderError } from 'commander';
+import { Command } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
 import { runBuild, runClean, runDoctor, runFilters, runInfo, runInit, runNew, runValidate } from './dispatcher.js';
 
@@ -79,18 +79,19 @@ Ejemplos:
           profile: opts.profile,
         });
       },
-    ),
-    program
-      .command('info')
-      .description('muestra información del proyecto y configuración')
-      .addHelpText(
-        'after',
-        `
+    );
+
+  program
+    .command('info')
+    .description('muestra información del proyecto y configuración')
+    .addHelpText(
+      'after',
+      `
 Ejemplos:
   iteraciones info    muestra idioma, salida, pandoc y formatos activos
 `,
-      )
-      .action(() => runInfo(projectRoot()));
+    )
+    .action(() => runInfo(projectRoot()));
 
   program
     .command('init')

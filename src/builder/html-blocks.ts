@@ -87,5 +87,5 @@ export function assembleHtmlBlocks(
     .map((key) => extracted.get(key))
     .join('\n');
 
-  return html.slice(0, mainTagEnd + 1) + '\n' + ordered + '\n' + html.slice(mainEnd);
+  return `${html.slice(0, mainTagEnd + 1)}\n${ordered}\n${html.slice(mainEnd)}`;
 }

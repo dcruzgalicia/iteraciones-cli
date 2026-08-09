@@ -113,7 +113,7 @@ export function isIgnoredByRules(relPath: string, rules: GitignoreRule[]): boole
     if (rule.dirOnly) {
       // Matchea el directorio o cualquier cosa dentro de él
       if (rule.anchored) {
-        matched = path === rule.pattern || path.startsWith(rule.pattern + '/');
+        matched = path === rule.pattern || path.startsWith(`${rule.pattern}/`);
       } else {
         matched = segments.some((seg, idx) => {
           if (!rule.regex.test(seg)) return false;

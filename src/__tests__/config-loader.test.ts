@@ -356,21 +356,23 @@ describe('loadSiteConfig', () => {
   });
 
   it('las tres vías de carga producen los mismos defaults de formato', async () => {
-    let defaultsSinArchivo: SiteConfig = null!;
-    let defaultsConArchivoVacio: SiteConfig = null!;
-    let defaultsConMinimo: SiteConfig = null!;
-
+    const results: (SiteConfig | null)[] = [];
     await withTempDir(async (dir) => {
-      defaultsSinArchivo = await loadSiteConfig(dir);
+      results.push(await loadSiteConfig(dir));
     });
     await withTempDir(async (dir) => {
       await writeConfig(dir, '');
-      defaultsConArchivoVacio = await loadSiteConfig(dir);
+      results.push(await loadSiteConfig(dir));
     });
     await withTempDir(async (dir) => {
       await writeConfig(dir, 'lang: es-MX');
-      defaultsConMinimo = await loadSiteConfig(dir);
+      results.push(await loadSiteConfig(dir));
     });
+
+    const [defaultsSinArchivo, defaultsConArchivoVacio, defaultsConMinimo] = results;
+    if (!defaultsSinArchivo || !defaultsConArchivoVacio || !defaultsConMinimo) {
+      throw new Error('falló la carga de defaults en alguna vía');
+    }
 
     // Los defaults de formato deben coincidir en las tres vías
     expect(defaultsConArchivoVacio.format.latex).toBe(defaultsSinArchivo.format.latex);
