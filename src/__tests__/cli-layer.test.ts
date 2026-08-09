@@ -7,7 +7,6 @@ import { runBuild, runClean, runDoctor, runFilters, runInfo, runInit, runNew, ru
 import { checkLatexEngine } from '../cli/doctor/system-checks.js';
 import { buildProgram } from '../cli/parser.js';
 import { DEFAULT_HTML_BLOCKS } from '../config/site-config.js';
-import { accentOverrideBlock } from '../lib/accent-palettes.js';
 import { initTestProject } from './helpers.js';
 
 // El smoke de PDF real solo corre si el motor LaTeX está disponible.
@@ -569,27 +568,26 @@ describe('runBuild', () => {
     });
   });
 
-  it('el CSS ensamblado del acento se genera sin invocar Tailwind ni escanear el proyecto', async () => {
+  it('el CSS se compila sobre los HTML finales: template, HTML de markdown y acento', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
       process.exitCode = 0;
       await runBuild(dir);
       const cssPath = join(dir, 'dist', 'files', 'css', 'styles.css');
       const css = await Bun.file(cssPath).text();
-      // El CSS es el base embarcado + el override del acento por defecto (lime)
-      const base = await Bun.file(join(import.meta.dir, '../lib/resources/css/base.css')).text();
-      const expected = `${base}\n${accentOverrideBlock('lime')}`;
-      expect(css).toBe(expected);
+      // Clases del template presentes y acento por defecto (lime) compilado directo
       expect(css).toContain('prose-xl');
+      expect(css).toContain('oklch(76.8% .233 130.85)'); // lime-500
 
-      // Archivos .md dentro de dist/ y .iteraciones/ no afectan el CSS
+      // Archivos .md dentro de dist/ y .iteraciones/ no afectan el CSS (el
+      // scan solo lee los HTML finales de dist/files)
       const { mkdir } = await import('node:fs/promises');
       await mkdir(join(dir, 'dist', 'files'), { recursive: true });
       await mkdir(join(dir, '.iteraciones', 'changes'), { recursive: true });
       await writeFile(join(dir, 'dist', 'files', 'basura.md'), 'bg-fuchsia-700\n', 'utf8');
       await writeFile(join(dir, '.iteraciones', 'changes', 'basura.md'), 'bg-indigo-700\n', 'utf8');
 
-      // Modificar el documento para forzar un build con trabajo
+      // HTML personalizado en markdown: queda estilizado por el CSS final
       await writeFile(
         join(dir, 'test.md'),
         '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\n<div class="bg-teal-300">x</div>\n\nNuevo contenido.\n',
@@ -598,7 +596,7 @@ describe('runBuild', () => {
       process.exitCode = 0;
       await runBuild(dir);
       const css2 = await Bun.file(cssPath).text();
-      expect(css2).toBe(expected);
+      expect(css2).toContain('bg-teal-300'); // HTML del markdown compilado
       expect(css2).not.toContain('bg-fuchsia-700');
       expect(css2).not.toContain('bg-indigo-700');
     });

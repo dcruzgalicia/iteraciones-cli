@@ -175,15 +175,18 @@ El hash de filters (`computeFiltersHash` en `src/builder/state.ts`) incluye las 
 
 Los cambios en el template HTML, en los archivos `.tex` de recursos y en `format.html.blocks` no requieren bump: ya participan en los hashes de configuración y de filters.
 
-## Cómo regenerar el CSS base
+## Cómo funciona el CSS generado
 
-El CSS base embarcado vive en `src/lib/resources/css/base.css` (compilado desde `src/lib/resources/styles.css` con Tailwind). La paleta de acentos (`src/lib/accent-palettes.ts`) se ensambla sobre el base en tiempo de build (`base.css` + bloque de variables del acento) — no hay un CSS por acento. Cuando cambies `styles.css`, el template HTML (`src/lib/resources/template.html`) o las clases del post-procesamiento de `render.ts`, regenera:
+El CSS final se **compila en cada build con HTML activo** (sin caché): `buildAssets` ejecuta Tailwind con un input efímero que importa `src/lib/resources/styles.css` (fuentes, `@plugin @tailwindcss/typography`, `@custom-variant dark` por `data-theme` y las `@utility` custom) y declara `@source` **solo a los HTML finales de `dist/files`**. El acento configurado se inyecta como `@theme` con los valores directos de `src/lib/accent-palettes.ts` (sin overrides): las utilities `accent-*` se generan con el color real.
 
-```bash
-bun run scripts/generate-css.ts
-```
+Implicaciones:
 
-El test `src/__tests__/css-integrity.test.ts` regenera el CSS de `lime` y lo compara byte a byte con el embarcado: falla si los inputs cambiaron sin regenerar.
+- El HTML personalizado en Markdown con clases de Tailwind queda estilizado: el scan lee los HTML finales.
+- Una clase eliminada de los HTML se purga del CSS en el siguiente build (no hay auto-referencia del CSS previo).
+- Los archivos fuera de `dist/files` (o que no sean `.html`) no aportan clases.
+- Cuando cambies `styles.css`, el template HTML (`src/lib/resources/template.html`) o las clases del post-procesamiento de `render.ts`, no hay que regenerar nada: el próximo build lo recoge.
+
+El test `src/__tests__/css-integrity.test.ts` compila el CSS sobre un fixture controlado y verifica clases presentes/ausentes y el acento aplicado.
 
 ## Cómo agregar un filter
 

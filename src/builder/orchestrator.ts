@@ -192,16 +192,21 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
       configHashes: plan.configHashes,
       bibHash: plan.bibHash,
       bibFileCache: plan.bibFileCache,
-      cssInputHash: plan.cssInputHash,
     },
   });
   const allDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
+
+  // El CSS se compila en cada build con HTML activo (sin caché): el scan de
+  // Tailwind corre sobre los HTML finales de dist/files, así que los assets se
+  // generan SIEMPRE que htmlOn && !noCss && !noExport, incluso sin trabajo.
+  const needsAssets = plan.htmlOn && !options.noCss && !noExport;
 
   if (allDocs.length === 0) {
     // Proyecto vacío: mensaje visible en stderr (advertencias del resumen) y
     // resumen con 0 formatos (sin "reutilizado"). Exit 0: no es un error.
     logWarning('No se encontraron documentos Markdown en el proyecto.', 'build');
     logWarning("Crea un archivo .md con frontmatter o ejecuta 'iteraciones init'.", 'build');
+    if (needsAssets) await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, { noCss: options.noCss });
     await progress.finish(0, 0, []);
     return;
   }
@@ -235,6 +240,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
 
   if (!work.anyWork) {
     log('Ningún documento modificado — sin cambios');
+    if (needsAssets) await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, { noCss: options.noCss });
     await progress.finish(
       0,
       allDocs.length,
@@ -259,6 +265,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
     work.exportSets.markdown.length === 0
   ) {
     log('Ningún documento modificado — sin cambios');
+    if (needsAssets) await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, { noCss: options.noCss });
     await progress.finish(
       0,
       allDocs.length,
@@ -291,13 +298,6 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
     noExport: options.noExport === true,
   });
 
-  // ── Build assets (css, fonts, logo) antes de copiar a dist/ ──
-  if (plan.htmlOn && !noExport) {
-    await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, {
-      noCss: options.noCss,
-    });
-  }
-
   // ── FASE 5: copiar de formats/ a dist/ ──
   if (!noExport) {
     await copyToDist(ctx, allDocs, formatsDir, {
@@ -306,6 +306,15 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
       htmlOn: plan.htmlOn,
       epubOn: plan.epubOn,
       mdOn: plan.mdOn,
+    });
+  }
+
+  // ── Build assets (css, fonts, logo) DESPUÉS de copiar: Tailwind escanea
+  // los HTML finales de dist/files para generar el CSS exacto (purga por
+  // clases presentes, sin auto-referencia del CSS previo). ──
+  if (needsAssets) {
+    await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, {
+      noCss: options.noCss,
     });
   }
 

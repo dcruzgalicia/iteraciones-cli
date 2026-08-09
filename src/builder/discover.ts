@@ -97,7 +97,6 @@ export async function discover(
       configHashes: Record<string, string>;
       bibHash: string;
       bibFileCache: BibFileCache;
-      cssInputHash: string;
     };
     /** Si false, no persiste state.json (--no-export: las salidas siguen desactualizadas). */
     persist?: boolean;
@@ -287,8 +286,7 @@ export async function discover(
     JSON.stringify(options.meta?.filterFileCache) !== JSON.stringify(prevState?.filterFileCache) ||
     JSON.stringify(options.meta?.configHashes) !== JSON.stringify(prevState?.configHashes) ||
     options.meta?.bibHash !== prevState?.bibHash ||
-    JSON.stringify(options.meta?.bibFileCache) !== JSON.stringify(prevState?.bibFileCache) ||
-    options.meta?.cssInputHash !== prevState?.cssInputHash;
+    JSON.stringify(options.meta?.bibFileCache) !== JSON.stringify(prevState?.bibFileCache);
 
   if (hasChanged && options.persist !== false) {
     await saveStateFile(cwd, {
@@ -298,7 +296,6 @@ export async function discover(
       entries: discoveryIndex,
       filtersHash: options.meta?.filtersHash,
       filterFileCache: options.meta?.filterFileCache,
-      cssInputHash: options.meta?.cssInputHash,
       configHashes: options.meta?.configHashes,
       bibHash: options.meta?.bibHash,
       bibFileCache: options.meta?.bibFileCache,

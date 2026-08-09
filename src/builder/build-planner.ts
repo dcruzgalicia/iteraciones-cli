@@ -1,6 +1,5 @@
 import type { SiteConfig } from '../config/site-config.js';
 import { computeActiveFormats } from '../config/site-config.js';
-import { computeCssInputHash } from './build-assets.js';
 import type { BuildState } from './state.js';
 import { type BibFileCache, computeBibHash, computeConfigHashes, computeFiltersHash, type FilterFileCache } from './state.js';
 import type { BuildDocument } from './types.js';
@@ -30,13 +29,9 @@ export interface BuildMetadata {
   bibHash: string;
   /** Caché de archivos de bibliografía (mtime+size+hash) para persistir en state.json. */
   bibFileCache: BibFileCache;
-  /** Hash de los inputs del CSS (acento + estilos) para decidir si regenerar Tailwind. */
-  cssInputHash: string;
   formatInvalidated: Record<FormatKey, boolean>;
   filtersInvalidated: boolean;
   bibInvalidated: boolean;
-  /** Los inputs del CSS (base.css/acento) cambiaron: hay que regenerar assets. */
-  cssInvalidated: boolean;
   pdfOn: boolean;
   latexOn: boolean;
   htmlOn: boolean;
@@ -68,11 +63,10 @@ export async function computeBuildMetadata(
 ): Promise<BuildMetadata> {
   const currentFormats = computeActiveFormats(siteConfig.format);
 
-  const [configHashes, filtersHashResult, bibHashResult, cssInputHash] = await Promise.all([
+  const [configHashes, filtersHashResult, bibHashResult] = await Promise.all([
     computeConfigHashes(cwd, siteConfig),
     computeFiltersHash(cwd, siteConfig, prevState?.filterFileCache),
     computeBibHash(cwd, siteConfig, prevState?.bibFileCache),
-    computeCssInputHash(siteConfig),
   ]);
   const filtersHash = filtersHashResult.hash;
   const filterFileCache = filtersHashResult.cache;
@@ -86,7 +80,6 @@ export async function computeBuildMetadata(
   };
   const filtersInvalidated = prevState !== null && prevState.filtersHash !== filtersHash;
   const bibInvalidated = prevState !== null && prevState.bibHash !== bibHashResult.hash;
-  const cssInvalidated = prevState !== null && prevState.cssInputHash !== cssInputHash;
 
   let newFormats: string[] = [];
   let removedFormats: string[] = [];
@@ -114,11 +107,9 @@ export async function computeBuildMetadata(
     filterFileCache,
     bibHash: bibHashResult.hash,
     bibFileCache: bibHashResult.cache,
-    cssInputHash,
     formatInvalidated,
     filtersInvalidated,
     bibInvalidated,
-    cssInvalidated,
     pdfOn,
     latexOn,
     htmlOn,
@@ -154,9 +145,7 @@ export function computeWorkSets(meta: BuildMetadata, allDocs: BuildDocument[], d
     (formatInvalidated.html && htmlOn) ||
     (formatInvalidated.epub && epubOn) ||
     (formatInvalidated.markdown && mdOn) ||
-    (meta.bibInvalidated && (pdfOn || latexOn || htmlOn || epubOn || mdOn)) ||
-    // Un cambio solo de CSS no toca documentos, pero debe ejecutar buildAssets
-    (meta.cssInvalidated && meta.needsCss);
+    (meta.bibInvalidated && (pdfOn || latexOn || htmlOn || epubOn || mdOn));
 
   const renderDocs = allDocs.filter((d) => astChanged.has(d.relativePath));
   const bibInvalidated = meta.bibInvalidated;
