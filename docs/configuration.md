@@ -15,8 +15,8 @@ format:
     generate: false               # genera PDF
     show-date: false               # muestra la fecha en la portada
     page-number: header-right      # posición del número de página
-    disabled-preamble-filters:    # preamble filters a desactivar (opcional)
-      # - 19-maketitle
+    # disabled-preamble-filters:   # preamble filters a desactivar (opcional)
+    #   - 19-maketitle
 
   html:
     title: iteraciones             # título del sitio
@@ -33,14 +33,14 @@ format:
   markdown:
     generate: false               # genera Markdown procesado
 
-disabled-filters:             # filters a desactivar (opcional)
-  # - semantic/string/01-double-colon
+# disabled-filters:             # filters a desactivar (opcional)
+#   - semantic/string/01-double-colon
 
 bibliography: refs/mi-libro.bib  # archivo .bib (opcional; auto-descubierto si falta)
 csl: styles/nature.csl           # estilo de citas CSL (opcional; APA-7 si falta)
 
-lua-filters:                      # filtros Lua de usuario (opcional)
-  # - filters/mi-filtro.lua
+# lua-filters:                      # filtros Lua de usuario (opcional)
+#   - filters/mi-filtro.lua
 ```
 
 ## Campos
@@ -198,13 +198,15 @@ La paleta vive en `src/lib/accent-palettes.ts` (valores oklch + reglas de opacid
 **Por defecto:**
 
 ```yaml
-blocks:
-  header: -1        # tarjeta identidad inicial
-  trayectura: 0     # tarjeta de contenido
-  formatos: 2       # tarjeta de formatos generados
-  indice: 3         # tabla de contenidos
-  referencias: 4    # citas bibliográficas
-  footer: 99        # tarjeta identidad final
+format:
+  html:
+    blocks:
+      header: -1        # tarjeta identidad inicial
+      trayectura: 0     # tarjeta de contenido
+      formatos: 2       # tarjeta de formatos generados
+      indice: 3         # tabla de contenidos
+      referencias: 4    # citas bibliográficas
+      footer: 99        # tarjeta identidad final
 ```
 
 Orden de los bloques del masonry: **más alto = más tarde**. Es un override **individual**: cada clave es opcional y puede moverse sin tocar las demás (p. ej. `formatos: 4` lo coloca después de `indice`). Los números iguales se desempatan por el orden canónico de claves (`header → trayectura → formatos → indice → referencias → footer`). Los bloques de tarjetas ausentes (TOC sin `toc`, referencias sin citas, formatos sin formatos activos) no se renderizan y no alteran el orden del resto.
