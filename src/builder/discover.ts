@@ -7,7 +7,7 @@ import { plural } from '../lib/plural.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import { isIgnoredByRules, isInsideIgnoredDir, loadGitignoreRules } from './gitignore.js';
 import { resolveSlugs } from './slug-resolver.js';
-import { type BuildState, type FilterFileCache, hashString, loadStateFile, saveStateFile } from './state.js';
+import { type BibFileCache, type BuildState, type FilterFileCache, hashString, loadStateFile, saveStateFile } from './state.js';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
 
 interface DiscoverResult {
@@ -88,7 +88,14 @@ export async function discover(
     /** Directorio de salida del build actual (se persiste para el comando info). */
     outputDir?: string;
     /** Hashes de invalidación calculados por el orchestrator, guardados en state.json. */
-    meta?: { filtersHash: string; filterFileCache: FilterFileCache; configHashes: Record<string, string>; bibHash: string; cssInputHash: string };
+    meta?: {
+      filtersHash: string;
+      filterFileCache: FilterFileCache;
+      configHashes: Record<string, string>;
+      bibHash: string;
+      bibFileCache: BibFileCache;
+      cssInputHash: string;
+    };
     /** Si false, no persiste state.json (--no-export: las salidas siguen desactualizadas). */
     persist?: boolean;
   } = {},
@@ -254,6 +261,7 @@ export async function discover(
     JSON.stringify(options.meta?.filterFileCache) !== JSON.stringify(prevState?.filterFileCache) ||
     JSON.stringify(options.meta?.configHashes) !== JSON.stringify(prevState?.configHashes) ||
     options.meta?.bibHash !== prevState?.bibHash ||
+    JSON.stringify(options.meta?.bibFileCache) !== JSON.stringify(prevState?.bibFileCache) ||
     options.meta?.cssInputHash !== prevState?.cssInputHash;
 
   if (hasChanged && options.persist !== false) {
@@ -267,6 +275,7 @@ export async function discover(
       cssInputHash: options.meta?.cssInputHash,
       configHashes: options.meta?.configHashes,
       bibHash: options.meta?.bibHash,
+      bibFileCache: options.meta?.bibFileCache,
     });
   }
 

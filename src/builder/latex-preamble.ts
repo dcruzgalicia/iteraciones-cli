@@ -13,7 +13,7 @@
  */
 import type { PdfFormatConfig, SiteConfig } from '../config/site-config.js';
 import { formatHumanDate } from '../lib/date.js';
-import { loadPreambleFilters } from './preamble-loader.js';
+import { loadPreambleFilters, type PreambleFilter } from './preamble-loader.js';
 import { discoverBibFiles } from './state.js';
 import type { PreambleFlags } from './types.js';
 
@@ -66,13 +66,16 @@ export async function buildLatexPreamble(
   meta?: PreambleMeta,
   disabledPreambleFilters?: string[],
   toc?: boolean,
+  preambleFilters?: PreambleFilter[],
+  bibFiles?: string[],
 ): Promise<string[]> {
   const preamble: string[] = [];
 
   // ── Preamble filters (archivos .tex en orden, con override del proyecto) ──
+  // Se resuelven una sola vez por build en el pipeline y se pasan aquí.
   const cwdForFilters = meta?.cwd;
-  const preambleFilters = await loadPreambleFilters(disabledPreambleFilters, cwdForFilters);
-  for (const filter of preambleFilters) {
+  const effectiveFilters = preambleFilters ?? (await loadPreambleFilters(disabledPreambleFilters, cwdForFilters));
+  for (const filter of effectiveFilters) {
     preamble.push(filter.content.trimEnd());
   }
 
@@ -80,9 +83,9 @@ export async function buildLatexPreamble(
   // Con bibliografía efectiva (configurada o auto-descubierta por el pipeline)
   // se referencia esa ruta; sin ella, se descubren los .bib del proyecto.
   if (meta?.bibliography || cwdForFilters) {
-    const bibFiles = meta?.bibliography ? [meta.bibliography] : await discoverBibFiles(cwdForFilters ?? '', ['bib']);
-    if (bibFiles.length > 0) {
-      for (const bib of bibFiles) {
+    const effectiveBibFiles = bibFiles ?? (meta?.bibliography ? [meta.bibliography] : await discoverBibFiles(cwdForFilters ?? '', ['bib']));
+    if (effectiveBibFiles.length > 0) {
+      for (const bib of effectiveBibFiles) {
         preamble.push(`\\addbibresource{${escapeLatexPath(bib)}}`);
       }
     }
@@ -164,7 +167,14 @@ const PAGE_NUMBER_COMMANDS: Record<string, string> = {
  * a partir del cuerpo LaTeX y los flags de preámbulo calculados del AST.
  * Si el primer bloque es un párrafo, antepone \\noindent.
  */
-export async function composeFullTex(siteConfig: SiteConfig, meta: PreambleMeta, texBody: string, flags: PreambleFlags): Promise<string> {
+export async function composeFullTex(
+  siteConfig: SiteConfig,
+  meta: PreambleMeta,
+  texBody: string,
+  flags: PreambleFlags,
+  preambleFilters?: PreambleFilter[],
+  bibFiles?: string[],
+): Promise<string> {
   let body = texBody.replace(/\n+$/, '');
   if (!flags.skipNoIndent) {
     body = `\\noindent ${body.trimStart()}`;
@@ -174,6 +184,8 @@ export async function composeFullTex(siteConfig: SiteConfig, meta: PreambleMeta,
     { ...meta, hasTocEntries: flags.hasTocEntries, skipNoIndent: flags.skipNoIndent, skipParagraphSpace: flags.skipParagraphSpace },
     siteConfig.format?.pdf?.disabledPreambleFilters,
     siteConfig.toc,
+    preambleFilters,
+    bibFiles,
   );
   return [...preamble, '', body, '', '\\end{document}'].join('\n');
 }
