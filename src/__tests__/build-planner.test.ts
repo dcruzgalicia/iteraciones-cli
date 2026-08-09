@@ -33,6 +33,7 @@ function meta(overrides: Partial<BuildMetadata> = {}): BuildMetadata {
     formatInvalidated: { pdf: false, html: false, epub: false, markdown: false },
     filtersInvalidated: false,
     bibInvalidated: false,
+    cssInvalidated: false,
     pdfOn: false,
     latexOn: true,
     htmlOn: false,
@@ -91,6 +92,18 @@ describe('computeWorkSets', () => {
 
   it('bibInvalidated sin formatos activos: anyWork false', () => {
     const work = computeWorkSets(meta({ bibInvalidated: true, latexOn: false }), DOCS, new Set());
+    expect(work.anyWork).toBe(false);
+  });
+
+  it('cssInvalidated con html activo: anyWork true sin tocar documentos', () => {
+    const work = computeWorkSets(meta({ cssInvalidated: true, htmlOn: true, needsCss: true }), DOCS, new Set());
+    expect(work.anyWork).toBe(true);
+    expect(work.renderDocs.length).toBe(0);
+    expect(work.exportSets.html.length).toBe(0);
+  });
+
+  it('cssInvalidated sin HTML: anyWork false', () => {
+    const work = computeWorkSets(meta({ cssInvalidated: true }), DOCS, new Set());
     expect(work.anyWork).toBe(false);
   });
 

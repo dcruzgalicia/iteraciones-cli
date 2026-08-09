@@ -35,6 +35,8 @@ export interface BuildMetadata {
   formatInvalidated: Record<FormatKey, boolean>;
   filtersInvalidated: boolean;
   bibInvalidated: boolean;
+  /** Los inputs del CSS (base.css/acento) cambiaron: hay que regenerar assets. */
+  cssInvalidated: boolean;
   pdfOn: boolean;
   latexOn: boolean;
   htmlOn: boolean;
@@ -84,6 +86,7 @@ export async function computeBuildMetadata(
   };
   const filtersInvalidated = prevState !== null && prevState.filtersHash !== filtersHash;
   const bibInvalidated = prevState !== null && prevState.bibHash !== bibHashResult.hash;
+  const cssInvalidated = prevState !== null && prevState.cssInputHash !== cssInputHash;
 
   let newFormats: string[] = [];
   let removedFormats: string[] = [];
@@ -115,6 +118,7 @@ export async function computeBuildMetadata(
     formatInvalidated,
     filtersInvalidated,
     bibInvalidated,
+    cssInvalidated,
     pdfOn,
     latexOn,
     htmlOn,
@@ -150,7 +154,9 @@ export function computeWorkSets(meta: BuildMetadata, allDocs: BuildDocument[], d
     (formatInvalidated.html && htmlOn) ||
     (formatInvalidated.epub && epubOn) ||
     (formatInvalidated.markdown && mdOn) ||
-    (meta.bibInvalidated && (pdfOn || latexOn || htmlOn || epubOn || mdOn));
+    (meta.bibInvalidated && (pdfOn || latexOn || htmlOn || epubOn || mdOn)) ||
+    // Un cambio solo de CSS no toca documentos, pero debe ejecutar buildAssets
+    (meta.cssInvalidated && meta.needsCss);
 
   const renderDocs = allDocs.filter((d) => astChanged.has(d.relativePath));
   const bibInvalidated = meta.bibInvalidated;

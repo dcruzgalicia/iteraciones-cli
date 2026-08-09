@@ -6,21 +6,21 @@ import { logWarning } from '../lib/logger.js';
 import { hashString } from './state.js';
 
 const PKG_ROOT = join(import.meta.dir, '../..');
-const CSS_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'styles.css');
 const FONTS_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'fonts');
 const CSS_BASE = join(PKG_ROOT, 'src', 'lib', 'resources', 'css', 'base.css');
 
 /**
- * Hash de los inputs del CSS (acento + estilos base del paquete). Si no cambió
- * respecto al build anterior y ningún documento fue modificado, el CSS generado
- * es idéntico y se reutiliza sin invocar Tailwind.
+ * Hash de los inputs del CSS (acento + base.css, el archivo que el build
+ * realmente consume: styles.css es solo la fuente Tailwind de scripts/).
+ * Si no cambió respecto al build anterior y ningún documento fue modificado,
+ * el CSS generado es idéntico y se reutiliza sin ensamblarlo de nuevo.
  */
 export async function computeCssInputHash(siteConfig: SiteConfig): Promise<string> {
   const accent = siteConfig.format?.html?.accent ?? 'lime';
-  const styles = await Bun.file(CSS_SRC)
+  const base = await Bun.file(CSS_BASE)
     .text()
     .catch(() => '');
-  return hashString(`${accent}\n${styles}`);
+  return hashString(`${accent}\n${base}`);
 }
 
 export async function buildAssets(outputDir: string, cwd: string, siteConfig: SiteConfig, options: { noCss?: boolean } = {}): Promise<string> {
