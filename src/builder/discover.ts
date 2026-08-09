@@ -139,7 +139,7 @@ export async function discover(
       mtimeMs = stat.mtimeMs;
       size = stat.size;
     } catch (err) {
-      throw new Error(`Error al leer "${relativePath}": ${String(err)}`, { cause: err });
+      throw new BuildError(`Error al leer "${relativePath}": ${String(err)}`);
     }
     const mtime = Math.round(mtimeMs);
     const cached = useCache ? discoveryIndex.get(relativePath) : undefined;
@@ -177,7 +177,7 @@ export async function discover(
         try {
           text = await Bun.file(filePath).text();
         } catch (err) {
-          throw new Error(`Error al leer "${relativePath}": ${String(err)}`, { cause: err });
+          throw new BuildError(`Error al leer "${relativePath}": ${String(err)}`);
         }
       }
       const hash = hashString(text);
@@ -242,7 +242,7 @@ export async function discover(
   const slugResult = await resolveSlugs(discoveryIndex, (meta, opts) => {
     // computeSlug solo retorna undefined sin fallbackPath; aqui siempre se provee
     const slug = computeSlug(meta, opts);
-    if (slug === undefined) throw new Error(`no se pudo resolver el slug de ${opts.fallbackPath}`);
+    if (slug === undefined) throw new BuildError(`no se pudo resolver el slug de ${opts.fallbackPath}`);
     return slug;
   });
   for (const [path, oldSlug] of slugResult.slugChangedEntries) slugChangedEntries.set(path, oldSlug);

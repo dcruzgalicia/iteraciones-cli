@@ -284,6 +284,26 @@ describe('runBuild', () => {
     });
   });
 
+  it('un page-number inválido se reporta como error de config con la ruta del campo (sin stack trace)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  pdf:\n    generate: true\n    page-number: raro\n', 'utf8');
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(output).toContain('✖ [config] format.pdf.page-number');
+      expect(output).not.toContain('at <anonymous>');
+      expect(output).not.toContain('.ts:');
+      expect(process.exitCode).toBe(1);
+    });
+  });
+
   it('un cambio de bibliografía regenera las exportaciones sin re-renderizar los ASTs', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
