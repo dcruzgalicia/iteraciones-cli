@@ -15,7 +15,7 @@ export function logError(message: string, context?: string): void {
 /**
  * Sink opcional para diferir warnings: cuando el ProgressTracker esta activo
  * (modo no verbose), los warnings se acumulan y se muestran en el resumen
- * final en lugar de emitirse en tiempo real (que interferiria con listr2).
+ * final en lugar de emitirse en tiempo real (que interferiría con el render).
  */
 let warningSink: ((message: string) => void) | null = null;
 

@@ -48,7 +48,7 @@ interface Row {
 }
 
 /**
- * Tracker de progreso del build con renderer propio (sin listr2).
+ * Tracker de progreso del build con renderer propio.
  *
  * - **TTY**: filas interactivas con conteo en vivo [i/N] y re-render en sitio.
  * - **Non-TTY (pipes, CI)**: cada fila se imprime al finalizar, en el orden en
