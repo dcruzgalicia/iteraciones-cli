@@ -1,28 +1,5 @@
-import { mkdir } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
-import { logWarning } from '../lib/logger.js';
+import { dirname } from 'node:path';
 import type { DiscoveryEntry } from './types.js';
-
-const SLUGS_CACHE_PATH = join('.iteraciones', 'changes', 'slugs.json');
-
-async function loadSlugsCounter(cwd: string): Promise<Map<string, number>> {
-  const file = Bun.file(join(cwd, SLUGS_CACHE_PATH));
-  if (!(await file.exists())) return new Map();
-  try {
-    const raw = await file.text();
-    const parsed: Record<string, number> = JSON.parse(raw);
-    return new Map(Object.entries(parsed));
-  } catch (err) {
-    logWarning(`no se pudo leer slugs.json; se reinicia el contador de slugs duplicados: ${String(err)}`, 'discover');
-    return new Map();
-  }
-}
-
-async function saveSlugsCounter(cwd: string, counter: Map<string, number>): Promise<void> {
-  const filePath = join(cwd, SLUGS_CACHE_PATH);
-  await mkdir(dirname(filePath), { recursive: true });
-  await Bun.write(filePath, JSON.stringify(Object.fromEntries(counter)));
-}
 
 interface SlugResolutionResult {
   /** Archivos cuyo slug cambio (relativePath -> slug anterior). */
@@ -90,7 +67,6 @@ function resolveByAuthorExpansion(
 }
 
 export async function resolveSlugs(
-  cwd: string,
   discoveryIndex: Map<string, DiscoveryEntry>,
   computeSlug: (meta: { title: string; author: string[] }, opts: { fallbackPath: string; maxAuthors?: number }) => string,
 ): Promise<SlugResolutionResult> {
@@ -108,10 +84,9 @@ export async function resolveSlugs(
     slugGroups.get(key)?.push(relPath);
   }
 
-  const hasDuplicateGroups = [...slugGroups.values()].some((paths) => paths.length > 1);
-  const slugsCounter = hasDuplicateGroups ? await loadSlugsCounter(cwd) : new Map<string, number>();
-
-  for (const [key, paths] of slugGroups) {
+  // Los grupos con colisión se resuelven con expansión de autores o sufijos
+  // -dN derivados del discovery index (sin estado persistente adicional).
+  for (const [_, paths] of slugGroups) {
     if (paths.length <= 1) {
       const path = paths[0];
       if (path === undefined) throw new Error('slug-resolver: grupo de slugs vacío');
@@ -182,12 +157,7 @@ export async function resolveSlugs(
           entry.slug = newSlug;
         }
       }
-      slugsCounter.set(key, nextN - 1);
     }
-  }
-
-  if (hasDuplicateGroups) {
-    await saveSlugsCounter(cwd, slugsCounter);
   }
 
   return { slugChangedEntries, changedPaths, newRecentFiles };

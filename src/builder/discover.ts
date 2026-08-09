@@ -294,7 +294,7 @@ export async function discover(
   }
 
   // Resolver slugs via slug-resolver
-  const slugResult = await resolveSlugs(cwd, discoveryIndex, (meta, opts) => {
+  const slugResult = await resolveSlugs(discoveryIndex, (meta, opts) => {
     // computeSlug solo retorna undefined sin fallbackPath; aqui siempre se provee
     const slug = computeSlug(meta, opts);
     if (slug === undefined) throw new Error(`no se pudo resolver el slug de ${opts.fallbackPath}`);
