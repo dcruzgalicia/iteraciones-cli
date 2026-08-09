@@ -53,40 +53,41 @@ Esto también crea un archivo `bibliography.bib` de ejemplo.
 ```yaml
 lang: "es-MX"                     # idioma del sitio (por defecto: "es-MX")
 
+toc: false                         # índice en cada documento (por defecto: false)
+
 format:
-  latex: false                      # genera archivos .tex (por defecto: false)
+  latex: false                     # genera archivos .tex (por defecto: false)
 
   pdf:
-    generate: false                 # genera PDF (por defecto: false)
-    # documentclass, geometry, babel, hyperref, microtype, etc.
-    # Ver docs/configuration.md para todas las opciones disponibles
+    generate: false                # genera PDF (por defecto: false)
+    # disabled-preamble-filters:    # preamble filters a desactivar (opcional)
+    #   - 24-eso-pic
 
   html:
-    title: "Mi sitio"               # título del sitio (por defecto: "iteraciones")
-    tagline: "mi tagline"           # frase corta (por defecto: "escribir, compartir, re-existir")
-    logo: ""                        # ruta al logo (por defecto: sin logo)
-    theme: dark                     # tema: "light" o "dark"
-    accent: lime                    # color de acento (lime, blue, rose, etc.)
-    generate: true                  # genera HTML (por defecto: true)
+    title: "Mi sitio"              # título del sitio (por defecto: "iteraciones")
+    tagline: "mi tagline"          # frase corta (por defecto: "escribir, compartir, re-existir")
+    logo: ""                       # ruta al logo (por defecto: sin logo)
+    theme: dark                    # tema: "light" o "dark"
+    accent: lime                   # color de acento (lime, blue, rose, etc.)
+    generate: true                 # genera HTML (por defecto: true)
 
   epub:
-    generate: false                 # genera EPUB (por defecto: false)
+    generate: false                # genera EPUB (por defecto: false)
 
   markdown:
-    generate: false                 # genera Markdown procesado (por defecto: false)
+    generate: false                # genera Markdown procesado (por defecto: false)
 
-disabled-filters:               # filters a desactivar por nombre completo (opcional)
-  # - latex/02-dictum
+# disabled-filters:                # filters a desactivar por nombre completo (opcional)
+#   - latex/02-dictum
 
-disabled-preamble-filters:      # preamble filters a desactivar (opcional)
-  # - 24-eso-pic
+bibliography: refs/mi-libro.bib   # archivo .bib (opcional; auto-descubierto si falta)
+csl: styles/nature.csl            # estilo de citas CSL (opcional; APA-7 si falta)
 
-bibliography: refs/mi-libro.bib  # archivo .bib (opcional; auto-descubierto si falta)
-csl: styles/nature.csl           # estilo de citas CSL (opcional; APA-7 si falta)
-
-lua-filters:                        # filtros Lua de usuario (opcional)
-  # - filters/mi-filtro.lua
+# lua-filters:                     # filtros Lua de usuario (opcional)
+#   - filters/mi-filtro.lua
 ```
+
+Todas las opciones y sus valores por defecto están en [docs/configuration.md](docs/configuration.md).
 
 ## Comandos
 
