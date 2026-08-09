@@ -120,7 +120,7 @@ iteraciones build [opciones]
 
 ### `iteraciones init`
 
-Crea `iteraciones.config.yaml`, `README.md` y `bibliography.bib` mínimos en el directorio actual. Si alguno de los archivos ya existe, lo omite sin sobreescribirlo.
+Crea `iteraciones.config.yaml`, `index.md` y `bibliography.bib` mínimos en el directorio actual. Si alguno de los archivos ya existe, lo omite sin sobreescribirlo. `index.md` es el documento de inicio: el primer build genera `index.html`, la página que enlazan las tarjetas de identidad del resto de documentos.
 
 ```
 iteraciones init

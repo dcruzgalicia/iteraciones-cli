@@ -11,21 +11,24 @@ import {
 } from '../config/site-config.js';
 import { logInfo } from '../lib/logger.js';
 
-const DEFAULT_README = [
+/** Fecha local actual en formato ISO (yyyy-mm-dd), como en `new`. */
+function todayIso(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+const DEFAULT_INDEX = [
   '---',
-  'title: "T\u00edtulo del documento"',
-  'subtitle: "Subt\u00edtulo del documento"',
-  'date: "2026-01-01"',
-  'author:',
-  '  - "Nombre del autor"',
-  '  - "Segundo autor"',
+  'title: "Inicio"',
+  `date: "${todayIso()}"`,
   '---',
   '',
-  '# T\u00edtulo del documento',
+  '# Inicio',
   '',
-  'Este es un p\u00e1rrafo de ejemplo. Sustit\u00fayelo por tu propio texto.',
+  'Este es el documento de inicio de tu sitio: se convierte en `index.html`,',
+  'la página que enlazan las tarjetas de identidad del resto de documentos.',
   '',
-  '## Ep\u00edgrafe (dictum)',
+  '## Epígrafe (dictum)',
   '',
   '::: {.dictum}',
   'La ciencia se compone de errores, que a su vez son los pasos',
@@ -36,81 +39,93 @@ const DEFAULT_README = [
   ':::',
   ':::',
   '',
-  '## Cita bibliogr\u00e1fica',
+  '## Cita bibliográfica',
   '',
-  'Seg\u00fan @ejemplo2024, el uso de citekeys facilita la gesti\u00f3n de referencias.',
+  'Según @ejemplo2024, el uso de citekeys facilita la gestión de referencias.',
   '',
-  '> Consulta docs/ejemplos.md para ver todos los elementos (verse, ::, listas, c\u00f3digo).',
+  '> Consulta docs/ejemplos.md para ver todos los elementos (verse, ::, listas, código).',
 ].join('\n');
+
+const quote = (value: string): string => JSON.stringify(value);
 
 /**
  * Genera un iteraciones.config.yaml completo con todas las opciones posibles
- * y sus valores por defecto. Útil como referencia para nuevos usuarios.
+ * y sus valores por defecto (constantes DEFAULT_*). Útil como referencia para
+ * nuevos usuarios.
  *
- * Se construye como objeto y se serializa con la libreria yaml (block style
- * legible); Bun.YAML.stringify no sirve aqui porque solo emite flow style.
+ * Se construye línea por línea: los valores vienen de las constantes y los
+ * comentarios son literales del template — sin reemplazos de string frágiles
+ * sobre la serialización de yaml.
  */
 function buildDefaultConfig(): string {
-  const format: Record<string, unknown> = {
-    latex: false,
-    html: {
-      title: DEFAULT_HTML_FORMAT.title,
-      tagline: DEFAULT_HTML_FORMAT.tagline,
-      logo: DEFAULT_HTML_FORMAT.logo,
-      theme: 'dark',
-      accent: DEFAULT_HTML_FORMAT.accent,
-      generate: DEFAULT_HTML_FORMAT.generate ?? true,
-      blocks: { ...DEFAULT_HTML_BLOCKS },
-    },
-    pdf: {
-      generate: DEFAULT_PDF_FORMAT.generate ?? false,
-      'show-date': DEFAULT_PDF_FORMAT.showDate ?? false,
-      'page-number': DEFAULT_PDF_FORMAT.pageNumber ?? 'header-right',
-      'disabled-preamble-filters': DEFAULT_PDF_FORMAT.disabledPreambleFilters,
-    },
-    epub: { generate: DEFAULT_EPUB_FORMAT.generate ?? false },
-    markdown: { generate: DEFAULT_MARKDOWN_FORMAT.generate ?? false },
-  };
+  const theme = DEFAULT_HTML_FORMAT.theme;
+  const blocks = stringify(DEFAULT_HTML_BLOCKS, { indent: 2 })
+    .split('\n')
+    .map((line) => `      ${line}`)
+    .join('\n');
+  const disabledPreamble = stringify(DEFAULT_PDF_FORMAT.disabledPreambleFilters)
+    .split('\n')
+    .map((line) => `      ${line}`)
+    .join('\n');
 
-  let yaml = `${stringify({ lang: DEFAULT_SITE_CONFIG.lang, toc: DEFAULT_SITE_CONFIG.toc, format }, { indent: 2 })}\n`;
-
-  // Añadir comentarios explicativos sobre los defaults
-  yaml = yaml.replace('    theme: dark', '    # Tema visual del HTML: "light" o "dark". Por defecto: dark.\n    theme: dark');
-  yaml = yaml.replace('    blocks:', '# Orden de los bloques del masonry: más alto = más tarde.\n' + '    blocks:');
-  yaml = yaml.replace(
+  return [
+    `lang: ${DEFAULT_SITE_CONFIG.lang}`,
+    `toc: ${DEFAULT_SITE_CONFIG.toc}`,
+    'format:',
+    `  latex: ${DEFAULT_SITE_CONFIG.format.latex}`,
+    '  html:',
+    `    title: ${quote(DEFAULT_HTML_FORMAT.title)}`,
+    `    tagline: ${quote(DEFAULT_HTML_FORMAT.tagline)}`,
+    `    logo: ${quote(DEFAULT_HTML_FORMAT.logo)}`,
+    `    # Tema visual del HTML: "light" o "dark". Por defecto: ${theme}.`,
+    `    theme: ${theme}`,
+    `    accent: ${DEFAULT_HTML_FORMAT.accent}`,
+    `    generate: ${DEFAULT_HTML_FORMAT.generate}`,
+    '# Orden de los bloques del masonry: más alto = más tarde.',
+    '    blocks:',
+    blocks,
+    '  pdf:',
+    `    generate: ${DEFAULT_PDF_FORMAT.generate}`,
+    `    show-date: ${DEFAULT_PDF_FORMAT.showDate}`,
+    `    page-number: ${DEFAULT_PDF_FORMAT.pageNumber}`,
+    '# Los preamble filters 24, 25 y 26 añaden funcionalidades para impresión',
+    '# profesional (fondo de página, PDF/X-1a y marcas de corte). Vienen',
+    '# desactivados por defecto. Elimina nombres de esta lista para activarlos.',
     '    disabled-preamble-filters:',
-    '# Los preamble filters 24, 25 y 26 añaden funcionalidades para impresión\n' +
-      '# profesional (fondo de página, PDF/X-1a y marcas de corte). Vienen\n' +
-      '# desactivados por defecto. Elimina nombres de esta lista para activarlos.\n' +
-      '    disabled-preamble-filters:',
-  );
-
-  return yaml;
+    disabledPreamble,
+    '  epub:',
+    `    generate: ${DEFAULT_EPUB_FORMAT.generate}`,
+    '  markdown:',
+    `    generate: ${DEFAULT_MARKDOWN_FORMAT.generate}`,
+    '',
+  ].join('\n');
 }
 
 /**
- * Crea `iteraciones.config.yaml` y `README.md` en el directorio indicado.
+ * Crea `iteraciones.config.yaml`, `index.md` y `bibliography.bib` en el
+ * directorio indicado. index.md es el documento de inicio: el primer build
+ * produce un index.html real (el home que enlazan las tarjetas de identidad).
  * Si alguno de los archivos ya existe, lo omite e informa al usuario.
  */
 export async function runInit(cwd: string): Promise<void> {
   const DEFAULT_BIB = [
     '@book{ejemplo2024,',
     '  author    = {Autor, Nombre del},',
-    '  title     = {T\u00edtulo del libro de ejemplo},',
+    '  title     = {Título del libro de ejemplo},',
     '  year      = {2024},',
     '  publisher = {Editorial de ejemplo},',
     '}',
     '',
   ].join('\n');
 
-  const [configCreated, readmeCreated, bibCreated] = await Promise.all([
+  const [configCreated, indexCreated, bibCreated] = await Promise.all([
     createExclusive(join(cwd, 'iteraciones.config.yaml'), buildDefaultConfig()),
-    createExclusive(join(cwd, 'README.md'), DEFAULT_README),
+    createExclusive(join(cwd, 'index.md'), DEFAULT_INDEX),
     createExclusive(join(cwd, 'bibliography.bib'), DEFAULT_BIB),
   ]);
 
   logInfo(configCreated ? 'creado iteraciones.config.yaml' : 'omitido iteraciones.config.yaml (ya existe)', 'init');
-  logInfo(readmeCreated ? 'creado README.md' : 'omitido README.md (ya existe)', 'init');
+  logInfo(indexCreated ? 'creado index.md' : 'omitido index.md (ya existe)', 'init');
   logInfo(bibCreated ? 'creado bibliography.bib' : 'omitido bibliography.bib (ya existe)', 'init');
 }
 

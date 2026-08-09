@@ -95,7 +95,7 @@ Ejemplos:
 
   program
     .command('init')
-    .description('crea iteraciones.config.yaml, README.md y bibliography.bib mínimos en el directorio actual')
+    .description('crea iteraciones.config.yaml, index.md y bibliography.bib mínimos en el directorio actual')
     .addHelpText(
       'after',
       `
