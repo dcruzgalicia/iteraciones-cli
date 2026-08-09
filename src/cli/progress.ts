@@ -163,9 +163,9 @@ export class ProgressTracker {
     }
   }
 
-  async finish(processed: number, cached: number, formats?: string[]): Promise<void> {
-    this.finalizePendingRows();
-    this.writeSummary(processed, cached, formats);
+  async finish(processed: number, cached: number, formats?: string[], outputDir?: string): Promise<void> {
+    this.finalizePendingRows(cached);
+    this.writeSummary(processed, cached, formats, outputDir);
     setWarningSink(null);
   }
 
@@ -286,7 +286,7 @@ export class ProgressTracker {
   }
 
   /** Cierra filas pendientes al final del tracker (finish/fail). */
-  private finalizePendingRows(): void {
+  private finalizePendingRows(cached = 0): void {
     const renderRow = this.getRow('phase:render');
     if (renderRow && renderRow.status === 'pending') {
       renderRow.status = 'skipped';
@@ -297,9 +297,11 @@ export class ProgressTracker {
     for (const f of this.formats) {
       const row = this.getRow(`fmt:${f.phase}`);
       if (row && row.status === 'pending' && f.active) {
-        row.status = 'done';
-        row.count = 0;
-        row.elapsed = 0;
+        // Sin trabajo para este formato en este build. Con salida previa
+        // reutilizada el estado es honesto; sin caché (proyecto vacío) no se
+        // afirma nada.
+        row.status = 'skipped';
+        if (cached > 0) row.label = `${PHASE_META[f.phase].label} (reutilizado)`;
         this.renderRow(row.key);
       }
     }
@@ -347,14 +349,17 @@ export class ProgressTracker {
     }
   }
 
-  private writeSummary(processed: number, cached: number, formats?: string[]): void {
+  private writeSummary(processed: number, cached: number, formats?: string[], outputDir?: string): void {
     const totalTime = performance.now() - this.t0;
     const formatCount = formats ? formats.length : 0;
-    // Sin trabajo y sin caché (proyecto vacío): 0 formatos. Con caché:
-    // "(reutilizado)". Con trabajo: el conteo real.
-    const formatLabel = processed > 0 ? String(formatCount) : cached > 0 ? '— (reutilizado)' : '0';
+    // "✔ Todo listo." solo sin advertencias: con warnings (p. ej. proyecto
+    // vacío) el cierre es neutral para no contradecir el estado del build.
+    if (this.warnings.length === 0) {
+      process.stdout.write(`\n✔ Todo listo.\n\n`);
+    } else {
+      process.stdout.write(`\n`);
+    }
 
-    process.stdout.write(`\n✔ Todo listo.\n\n`);
     process.stdout.write(`  ${padRight('Documentos procesados', LABEL_WIDTH)}${processed}\n`);
     if (cached > 0) {
       process.stdout.write(`  ${padRight('Sin cambios (reutilizado)', LABEL_WIDTH)}${cached}\n`);
@@ -362,7 +367,12 @@ export class ProgressTracker {
     if (this.noExport) {
       process.stdout.write(`  Salidas no modificadas (caché actualizada)\n`);
     } else {
-      process.stdout.write(`  ${padRight('Formatos generados', LABEL_WIDTH)}${formatLabel}\n`);
+      // Conteo honesto: formatos ACTIVOS de la configuración (no archivos
+      // generados, que dependen de cuántos documentos tengan salida).
+      process.stdout.write(`  ${padRight('Formatos activos', LABEL_WIDTH)}${formatCount}\n`);
+    }
+    if (outputDir) {
+      process.stdout.write(`  ${padRight('Salida', LABEL_WIDTH)}${outputDir}\n`);
     }
     process.stdout.write(`  ${padRight('Tiempo total', LABEL_WIDTH)}${formatTime(totalTime)}\n`);
     if (this.warnings.length > 0) {
