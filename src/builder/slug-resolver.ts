@@ -44,6 +44,9 @@ function resolveByAuthorExpansion(
   // Para cada slug que aparece más de una vez, intentar expandir autores
   const slugCount = new Map<string, number>();
   for (const [_, slug] of result) slugCount.set(slug, (slugCount.get(slug) ?? 0) + 1);
+  // Set de slugs en uso: la verificación de colisión es O(1) por entrada
+  // (en lugar de un filter sobre todo el resultado en cada intento).
+  const usedSlugs = new Set(result.map(([_, slug]) => slug));
   for (let tryAuthors = 2; tryAuthors <= 20; tryAuthors++) {
     let changed = false;
     for (const entry of result) {
@@ -51,14 +54,14 @@ function resolveByAuthorExpansion(
       if ((slugCount.get(slug) ?? 0) <= 1) continue;
       const meta = entryFor(discoveryIndex, path);
       const expanded = computeSlugFn({ title: meta.title, author: meta.author }, { fallbackPath: path, maxAuthors: tryAuthors });
-      if (expanded !== slug) {
-        // Verificar que no colisione con otro
-        const otherSlugs = result.filter(([p]) => p !== path).map(([_, s]) => s);
-        if (!otherSlugs.includes(expanded)) {
-          entry[1] = expanded;
-          slugCount.set(expanded, (slugCount.get(expanded) ?? 0) + 1);
-          changed = true;
-        }
+      if (expanded !== slug && !usedSlugs.has(expanded)) {
+        const remaining = (slugCount.get(slug) ?? 1) - 1;
+        slugCount.set(slug, remaining);
+        if (remaining === 0) usedSlugs.delete(slug);
+        slugCount.set(expanded, (slugCount.get(expanded) ?? 0) + 1);
+        usedSlugs.add(expanded);
+        entry[1] = expanded;
+        changed = true;
       }
     }
     if (!changed) break; // sin más resoluciones posibles
@@ -108,7 +111,6 @@ export async function resolveSlugs(
       paths.sort();
       // Intentar resolver la colisión expandiendo autores antes de usar -dN
       const expanded = resolveByAuthorExpansion(paths, discoveryIndex, computeSlug);
-      const _resolved = new Set(expanded.map(([_, slug]) => slug));
       // Los que quedaron sin resolver (mismo slug) usan -dN
       const stillColliding = new Map<string, string[]>();
       for (const [path, slug] of expanded) {
