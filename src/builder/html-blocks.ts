@@ -1,4 +1,5 @@
 import { DEFAULT_HTML_BLOCKS, type HtmlBlockKey } from '../config/site-config.js';
+import { BuildError } from '../lib/errors.js';
 
 /** Marcador de apertura de un bloque en el HTML (`<!-- block:KEY -->`). */
 export const blockMarker = (key: string): string => `<!-- block:${key} -->`;
@@ -71,7 +72,11 @@ export function assembleHtmlBlocks(
   const mainStart = html.indexOf('<main');
   const mainTagEnd = html.indexOf('>', mainStart);
   const mainEnd = html.lastIndexOf('</main>');
-  if (mainStart < 0 || mainTagEnd < 0 || mainEnd < 0) return html;
+  if (mainStart < 0 || mainTagEnd < 0 || mainEnd < 0) {
+    // Un template sin la estructura esperada produciría páginas sin tarjetas
+    // en silencio: el build debe fallar con contexto, no publicar degradado.
+    throw new BuildError('el template HTML no contiene la estructura <main> esperada (marcadores de bloques ausentes)');
+  }
 
   const extracted = new Map<HtmlBlockKey, string>();
   const canonical = Object.keys(DEFAULT_HTML_BLOCKS) as HtmlBlockKey[];
