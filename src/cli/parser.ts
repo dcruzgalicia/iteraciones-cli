@@ -138,15 +138,17 @@ Ejemplos:
   program
     .command('new <path>')
     .description('crea un archivo Markdown con frontmatter mínimo')
+    .option('-t, --title <title>', 'título del documento (por defecto: inferido del nombre del archivo)')
     .addHelpText(
       'after',
       `
 Ejemplos:
   iteraciones new posts/mi-articulo.md    crea el archivo con title, date y frontmatter
+  iteraciones new --title "Mi artículo" a.md   crea el archivo con un título explícito
 `,
     )
-    .action(async (path: string) => {
-      await runNew(projectRoot(), path);
+    .action(async (path: string, opts: { title?: string }) => {
+      await runNew(projectRoot(), path, { title: opts.title });
     });
 
   program
