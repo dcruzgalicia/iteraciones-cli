@@ -3,7 +3,7 @@ import { basename, dirname, isAbsolute, join } from 'node:path';
 import type { SiteConfig } from '../config/site-config.js';
 import { logWarning } from '../lib/logger.js';
 import type { BibOptions } from '../lib/pandoc-runner.js';
-import { isHiddenPath, isIgnoredByRules, loadGitignoreRules } from './gitignore.js';
+import { isIgnoredByRules, isInsideIgnoredDir, loadGitignoreRules } from './gitignore.js';
 import { MD_READER } from './render.js';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
 
@@ -213,8 +213,8 @@ export async function computeConfigHashes(cwd: string, siteConfig: SiteConfig): 
 
 /**
  * Descubre archivos de bibliografía del proyecto. Bun.Glob omite por defecto
- * los directorios ocultos (`.iteraciones/`, `.git/`), así que solo se excluyen
- * los directorios visibles no deseados (node_modules, dist).
+ * los directorios ocultos (`.iteraciones/`, `.git/`); los directorios visibles
+ * no deseados (node_modules, dist) se excluyen en cualquier profundidad.
  * @param extensions Extensiones a incluir (default: bib y csl).
  */
 export async function discoverBibFiles(cwd: string, extensions: string[] = ['bib', 'csl']): Promise<string[]> {
@@ -224,10 +224,8 @@ export async function discoverBibFiles(cwd: string, extensions: string[] = ['bib
     const glob = new Bun.Glob(`**/*.{${extensions.join(',')}}`);
     for (const file of glob.scanSync({ cwd, absolute: true })) {
       const rel = file.replace(cwd, '').replace(/^[/\\]+/, '');
-      const first = rel.split('/')[0];
-      if (first === 'node_modules' || first === 'dist') continue;
+      if (isInsideIgnoredDir(rel)) continue;
       if (isIgnoredByRules(rel, gitignoreRules)) continue;
-      if (isHiddenPath(rel)) continue;
       results.push(file);
     }
   } catch {

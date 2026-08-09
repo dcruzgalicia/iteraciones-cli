@@ -5,7 +5,7 @@ import { BuildError, formatUserError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
 import { mapWithConcurrency } from '../lib/run.js';
-import { isHiddenPath, isIgnoredByRules, loadGitignoreRules } from './gitignore.js';
+import { isIgnoredByRules, isInsideIgnoredDir, loadGitignoreRules } from './gitignore.js';
 import { resolveSlugs } from './slug-resolver.js';
 import { type BuildState, type FilterFileCache, hashString, loadStateFile, saveStateFile } from './state.js';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
@@ -32,7 +32,6 @@ export function splitFrontmatter(content: string): { yaml?: string; body: string
   if (!fmMatch) return { body: content };
   return { yaml: fmMatch[1], body: content.slice(fmMatch[0].length) };
 }
-
 /**
  * Convierte un texto a slug URL-safe. Usa la librería slugify (con `strict`
  * elimina lo que no sea [a-z0-9] y con `lower` normaliza a minúsculas);
@@ -99,10 +98,10 @@ export async function discover(
   // Respetar .gitignore: los archivos y carpetas ignorados no se procesan
   const gitignoreRules = await loadGitignoreRules(cwd);
   for await (const entry of new Bun.Glob('**/*.md').scan({ cwd })) {
-    const first = entry.split('/')[0];
-    if (first && IGNORED_DIRS.has(first)) continue;
+    // Bun.Glob omite los dotfiles por sí mismo; los directorios ignorados
+    // (node_modules, dist, ...) se excluyen en cualquier profundidad.
+    if (isInsideIgnoredDir(entry)) continue;
     if (isIgnoredByRules(entry, gitignoreRules)) continue;
-    if (isHiddenPath(entry)) continue;
     relativePaths.push(entry);
   }
 
@@ -273,9 +272,6 @@ export async function discover(
 
   return { relativePaths, changedPaths, discoveryIndex, deletedEntries, slugChangedEntries };
 }
-
-/** Directorios que el CLI ignora al escanear el proyecto. */
-export const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', '.iteraciones']);
 
 /**
  * Construye BuildDocument[] con frontmatter desde discoveryIndex.

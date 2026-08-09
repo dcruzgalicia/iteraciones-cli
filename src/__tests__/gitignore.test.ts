@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { discover } from '../builder/discover.js';
-import { isHiddenPath, isIgnoredByRules, loadGitignoreRules, parseGitignore } from '../builder/gitignore.js';
+import { isIgnoredByRules, isInsideIgnoredDir, loadGitignoreRules, parseGitignore } from '../builder/gitignore.js';
 
 async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
   const dir = await mkdtemp(join(tmpdir(), 'iteraciones-gitignore-'));
@@ -124,32 +124,22 @@ describe('discover respeta .gitignore', () => {
   });
 });
 
-describe('isHiddenPath', () => {
-  it('detecta archivos ocultos en la raíz', () => {
-    expect(isHiddenPath('.oculto.md')).toBe(true);
-    expect(isHiddenPath('.DS_Store')).toBe(true);
+describe('isInsideIgnoredDir', () => {
+  it('detecta directorios ignorados en la raíz', () => {
+    expect(isInsideIgnoredDir('node_modules/paquete/leeme.md')).toBe(true);
+    expect(isInsideIgnoredDir('dist/files/x.html')).toBe(true);
+    expect(isInsideIgnoredDir('.iteraciones/ast/x.json')).toBe(true);
   });
 
-  it('detecta archivos ocultos en subdirectorios', () => {
-    expect(isHiddenPath('visible/.privado.md')).toBe(true);
-    expect(isHiddenPath('a/b/.notas.md')).toBe(true);
-  });
-
-  it('detecta carpetas ocultas en cualquier nivel', () => {
-    expect(isHiddenPath('.borradores/nota.md')).toBe(true);
-    expect(isHiddenPath('visible/.oculto/nota.md')).toBe(true);
-    expect(isHiddenPath('.iteraciones/ast/x.md')).toBe(true);
+  it('detecta directorios ignorados en cualquier profundidad', () => {
+    expect(isInsideIgnoredDir('docs/node_modules/x.md')).toBe(true);
+    expect(isInsideIgnoredDir('a/b/c/dist/x.md')).toBe(true);
   });
 
   it('no marca archivos normales', () => {
-    expect(isHiddenPath('normal.md')).toBe(false);
-    expect(isHiddenPath('docs/normal.md')).toBe(false);
-    expect(isHiddenPath('docs/carpeta/normal.md')).toBe(false);
-  });
-
-  it('ignora segmentos . y ..', () => {
-    expect(isHiddenPath('./normal.md')).toBe(false);
-    expect(isHiddenPath('../normal.md')).toBe(false);
+    expect(isInsideIgnoredDir('normal.md')).toBe(false);
+    expect(isInsideIgnoredDir('docs/normal.md')).toBe(false);
+    expect(isInsideIgnoredDir('node-modules-falso/x.md')).toBe(false);
   });
 });
 
