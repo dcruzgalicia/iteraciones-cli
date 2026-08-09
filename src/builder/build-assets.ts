@@ -1,6 +1,7 @@
 import { cp, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { SiteConfig } from '../config/site-config.js';
 import { ACCENT_PALETTES, type AccentColor } from '../lib/accent-palettes.js';
 import { BuildError } from '../lib/errors.js';
@@ -10,10 +11,35 @@ const PKG_ROOT = join(import.meta.dir, '../..');
 const FONTS_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'fonts');
 /** Plantilla del CSS de entrada: fuentes, @plugin typography, @custom-variant dark y utilities custom. */
 const STYLES_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'styles.css');
-/** Binario local del CLI de Tailwind (dependency del paquete). */
-const TAILWIND_BIN = join(PKG_ROOT, 'node_modules', '@tailwindcss', 'cli', 'dist', 'index.mjs');
+/** Fallback: node_modules local del paquete (caso bun link, repo clonado). */
+const TAILWIND_BIN_DIRECT = join(PKG_ROOT, 'node_modules', '@tailwindcss', 'cli', 'dist', 'index.mjs');
 
 const SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
+
+/**
+ * Resuelve la ruta del binario del CLI de Tailwind por el algoritmo de módulos
+ * (sube por node_modules desde el código del paquete): robusto ante el
+ * hoisting de npm/bun en instalaciones globales o como dependency de otro
+ * proyecto. El paquete no expone entry principal (solo bin y
+ * exports: ["./package.json"]), así que se resuelve su package.json y se
+ * construye la ruta desde el campo bin.tailwindcss.
+ */
+export async function resolveTailwindBin(): Promise<string> {
+  try {
+    const pkgUrl = import.meta.resolve('@tailwindcss/cli/package.json');
+    const pkgPath = fileURLToPath(pkgUrl);
+    const pkg = JSON.parse(await Bun.file(pkgPath).text()) as { bin?: Record<string, string> | string };
+    const bin = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin?.tailwindcss;
+    if (bin) {
+      const resolved = join(dirname(pkgPath), bin);
+      if (await Bun.file(resolved).exists()) return resolved;
+    }
+  } catch {
+    // Resolución fallida: se prueba el fallback local
+  }
+  if (await Bun.file(TAILWIND_BIN_DIRECT).exists()) return TAILWIND_BIN_DIRECT;
+  throw new BuildError(`no se encontró el binario de Tailwind CSS (@tailwindcss/cli). Verifica que el paquete esté instalado (bun install).`);
+}
 
 /**
  * Compila el CSS final con Tailwind escaneando SOLO los HTML de `outputDir`
@@ -40,10 +66,11 @@ export async function compileTailwindCss(outputDir: string, accent: string): Pro
   await writeFile(inputPath, input, 'utf8');
   await mkdir(join(outputDir, 'css'), { recursive: true });
   try {
+    const tailwindBin = await resolveTailwindBin();
     // cwd = directorio del input (no dist/files): el auto-detection de Tailwind
     // escanea el cwd y vería los .md/css de dist/files, contaminando el scan.
     // La garantía de "solo dist/files" la da el @source explícito a *.html.
-    const proc = Bun.spawn([process.execPath, TAILWIND_BIN, '-i', inputPath, '-o', join(outputDir, 'css', 'styles.css'), '--minify'], {
+    const proc = Bun.spawn([process.execPath, tailwindBin, '-i', inputPath, '-o', join(outputDir, 'css', 'styles.css'), '--minify'], {
       cwd: tempDir,
       stdout: 'pipe',
       stderr: 'pipe',
@@ -54,7 +81,7 @@ export async function compileTailwindCss(outputDir: string, accent: string): Pro
     }
   } catch (err) {
     if (err instanceof BuildError) throw err;
-    throw new BuildError(`no se pudo ejecutar Tailwind CSS (${TAILWIND_BIN}). Verifica que el paquete esté instalado (bun install).`);
+    throw new BuildError(`no se pudo ejecutar Tailwind CSS. Verifica que el paquete esté instalado (bun install).`);
   } finally {
     await rm(tempDir, { recursive: true, force: true }).catch(() => {});
   }

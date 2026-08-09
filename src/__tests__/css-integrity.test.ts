@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { compileTailwindCss } from '../builder/build-assets.js';
+import { compileTailwindCss, resolveTailwindBin } from '../builder/build-assets.js';
 
 async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
   const dir = await mkdtemp(join(tmpdir(), 'iteraciones-cli-test-'));
@@ -19,6 +19,11 @@ async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
  * (ausentes, incluidas las de un CSS previo que no debe auto-referenciarse).
  */
 describe('compilación de Tailwind sobre dist/files', () => {
+  it('resuelve el binario del CLI por módulos y apunta a un archivo existente', async () => {
+    const bin = await resolveTailwindBin();
+    expect(bin).toContain('@tailwindcss');
+    expect(await Bun.file(bin).exists()).toBe(true);
+  });
   it('incluye las clases del HTML final y el acento configurado; purga las ausentes', async () => {
     await withTempDir(async (dir) => {
       await mkdir(join(dir, 'css'), { recursive: true });
