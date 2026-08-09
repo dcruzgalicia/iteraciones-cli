@@ -4,10 +4,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CommanderError } from 'commander';
 import { runBuild, runClean, runDoctor, runFilters, runInfo, runInit, runNew, runValidate } from '../cli/dispatcher.js';
+import { checkLatexEngine } from '../cli/doctor/system-checks.js';
 import { buildProgram } from '../cli/parser.js';
 import { DEFAULT_HTML_BLOCKS } from '../config/site-config.js';
 import { accentOverrideBlock } from '../lib/accent-palettes.js';
 import { initTestProject } from './helpers.js';
+
+// El smoke de PDF real solo corre si el motor LaTeX está disponible.
+const latexOk = (await checkLatexEngine()).ok;
 
 /**
  * Crea un directorio temporal y ejecuta la función de test. Lo limpia al final.
@@ -1160,6 +1164,28 @@ describe('runNew', () => {
       expect(process.exitCode).toBe(0);
     });
   });
+});
+
+describe('runBuild (smoke PDF real)', () => {
+  afterEach(resetExitCode);
+
+  it.skipIf(!latexOk)(
+    'genera un PDF válido de extremo a extremo',
+    async () => {
+      await withTempDir(async (dir) => {
+        await initTestProject(dir);
+        await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  pdf:\n    generate: true\n', 'utf8');
+        process.exitCode = 0;
+        await runBuild(dir);
+        expect(process.exitCode).toBe(0);
+        const pdfPath = join(dir, 'dist', 'files', 'test-document.pdf');
+        expect(await Bun.file(pdfPath).exists()).toBe(true);
+        const head = (await Bun.file(pdfPath).arrayBuffer()).slice(0, 4);
+        expect(new TextDecoder().decode(head)).toBe('%PDF');
+      });
+    },
+    { timeout: 120_000 },
+  );
 });
 
 describe('runBuild (copyToDist)', () => {
