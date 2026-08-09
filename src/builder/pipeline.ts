@@ -231,12 +231,25 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
     // Enlaces a los formatos generados (PDF/LaTeX/EPUB/Markdown); el HTML es la
     // página actual y no se enlaza a sí mismo. Solo formatos activos.
     const formats = [
-      ...(plan.pdfOn ? [{ href: relativeHref(dir, `${slug}.pdf`), name: 'PDF', description: 'Documento final para lectura e impresión' }] : []),
-      ...(plan.epubOn ? [{ href: relativeHref(dir, `${slug}.epub`), name: 'EPUB', description: 'Edición adaptable para lectura digital' }] : []),
-      ...(plan.latexOn
-        ? [{ href: relativeHref(dir, `${slug}.tex`), name: 'LaTeX', description: 'Archivo fuente para composición tipográfica' }]
+      ...(plan.pdfOn
+        ? [{ href: relativeHref(dir, `${slug}.pdf`), key: 'pdf' as const, name: 'PDF', description: 'Documento final para lectura e impresión' }]
         : []),
-      ...(plan.mdOn ? [{ href: relativeHref(dir, `${slug}.md`), name: 'Markdown', description: 'Texto fuente reutilizable y portable' }] : []),
+      ...(plan.epubOn
+        ? [{ href: relativeHref(dir, `${slug}.epub`), key: 'epub' as const, name: 'EPUB', description: 'Edición adaptable para lectura digital' }]
+        : []),
+      ...(plan.latexOn
+        ? [
+            {
+              href: relativeHref(dir, `${slug}.tex`),
+              key: 'latex' as const,
+              name: 'LaTeX',
+              description: 'Archivo fuente para composición tipográfica',
+            },
+          ]
+        : []),
+      ...(plan.mdOn
+        ? [{ href: relativeHref(dir, `${slug}.md`), key: 'markdown' as const, name: 'Markdown', description: 'Texto fuente reutilizable y portable' }]
+        : []),
     ];
     // La tarjeta identidad enlaza al home solo si existe index.html en la
     // raíz de salida (index.md en la raíz del proyecto); sin él, la tarjeta
