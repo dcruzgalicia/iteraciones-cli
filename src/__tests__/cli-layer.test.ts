@@ -185,6 +185,21 @@ describe('runBuild', () => {
     });
   });
 
+  it('el enlace al home desde un subdirectorio usa la ruta relativa unificada', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      const { mkdir } = await import('node:fs/promises');
+      await mkdir(join(dir, 'posts'), { recursive: true });
+      await writeFile(join(dir, 'index.md'), '---\ntitle: Inicio\n---\n\n# Bienvenida\n\nContenido.\n', 'utf8');
+      await writeFile(join(dir, 'posts', 'articulo.md'), '---\ntitle: Artículo\n---\n\nContenido.\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const html = await Bun.file(join(dir, 'dist', 'files', 'posts', 'articulo.html')).text();
+      expect(html).toContain('href="./../index.html"');
+    });
+  });
+
   it('build cacheado mantiene "(reutilizado)" en el resumen', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
