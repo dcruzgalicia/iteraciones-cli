@@ -79,6 +79,39 @@ describe('parser (errores de commander en español)', () => {
     expect(output).toContain("error: opción desconocida '--fix'");
     expect(exitCode).toBe(1);
   });
+
+  it('--help sale íntegro en español (opciones de ayuda y versión traducidas)', async () => {
+    const stdoutSpy = spyOn(process.stdout, 'write');
+    let output = '';
+    try {
+      // exitOverride hace que --help lance CommanderError (helpDisplayed)
+      await buildProgram()
+        .parseAsync(['bun', 'bin.ts', '--help'])
+        .catch(() => {});
+    } finally {
+      output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+      stdoutSpy.mockRestore();
+    }
+    expect(output).toContain('muestra la ayuda');
+    expect(output).toContain('muestra la versión');
+    expect(output).not.toContain('display help for command');
+    expect(output).not.toContain('output the version number');
+  });
+
+  it('el comando help se lista en español', async () => {
+    const stdoutSpy = spyOn(process.stdout, 'write');
+    let output = '';
+    try {
+      await buildProgram()
+        .parseAsync(['bun', 'bin.ts', '--help'])
+        .catch(() => {});
+    } finally {
+      output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+      stdoutSpy.mockRestore();
+    }
+    expect(output).toContain('help [comando]');
+    expect(output).toContain('muestra la ayuda de un comando');
+  });
 });
 
 describe('parser (errores de flags)', () => {
