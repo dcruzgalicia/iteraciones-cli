@@ -11,6 +11,7 @@ import { assembleExportDocument } from './export/assemble.js';
 import { convertToEpub, convertToMarkdown } from './export/runner.js';
 import { composeFullTex } from './latex-preamble.js';
 import { createPdfConsumer, type PdfJob } from './pdf-pool.js';
+import { loadPreambleFilters } from './preamble-loader.js';
 import { loadFilterGroups, markdownToAst, renderHtmlPageFromAst, resolveUserLuaFilters, texBodyFromAst } from './render.js';
 import { readAstFromCache, resolveBibOptions, writeCachedArtifacts } from './state.js';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
@@ -99,6 +100,9 @@ export async function runDocumentPipeline(
   const mdPaths = new Set(work.exportSets.markdown.map((d) => d.relativePath));
   const pdfPaths = new Set(work.exportSets.pdf.map((d) => d.relativePath));
   const filters = await loadFilterGroups(siteConfig, siteConfig.disabledFilters, ctx.cwd);
+  // Los preamble filters (.tex) se cargan una sola vez por build: no dependen
+  // del documento (antes se releían los 26 archivos por cada documento).
+  const preambleFilters = plan.generateLatex ? await loadPreambleFilters(siteConfig.format?.pdf?.disabledPreambleFilters, ctx.cwd) : undefined;
 
   progress.startLightFormats();
   try {
@@ -117,6 +121,7 @@ export async function runDocumentPipeline(
           filters,
           bibOptions,
           bibFiles,
+          preambleFilters,
           renderDocPaths,
           htmlPaths,
           epubPaths,
@@ -166,6 +171,7 @@ interface FormatPoolCtx {
   filters: Awaited<ReturnType<typeof loadFilterGroups>>;
   bibOptions: Awaited<ReturnType<typeof resolveBibOptions>>['bibOptions'];
   bibFiles: string[];
+  preambleFilters: Awaited<ReturnType<typeof loadPreambleFilters>> | undefined;
   renderDocPaths: Set<string>;
   htmlPaths: Set<string>;
   epubPaths: Set<string>;
@@ -189,6 +195,7 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
     filters,
     bibOptions,
     bibFiles,
+    preambleFilters,
     renderDocPaths,
     htmlPaths,
     epubPaths,
@@ -318,6 +325,8 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
       },
       texBody,
       flags,
+      preambleFilters,
+      bibFiles,
     );
     await writeOutput(join(formatsDir, 'pdf', dir, `${slug}.tex`), fullTex);
     if (pdfOn) {

@@ -191,6 +191,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
       filterFileCache: plan.filterFileCache,
       configHashes: plan.configHashes,
       bibHash: plan.bibHash,
+      bibFileCache: plan.bibFileCache,
       cssInputHash: plan.cssInputHash,
     },
   });

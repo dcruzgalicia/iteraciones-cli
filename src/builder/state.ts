@@ -42,6 +42,8 @@ export interface BuildState {
   configHashes?: Record<string, string>;
   /** Hash de los archivos .bib y .csl del proyecto. */
   bibHash?: string;
+  /** Caché por archivo de bibliografía (mtime+size+hash) para evitar re-leer contenido. */
+  bibFileCache?: BibFileCache;
   /** Hash de los inputs del CSS (acento + estilos base) para decidir si regenerar Tailwind. */
   cssInputHash?: string;
   /** Índice de descubrimiento: path relativo → entry con frontmatter y caché. */
@@ -72,6 +74,7 @@ export async function loadStateFile(cwd: string): Promise<BuildState | null> {
       filterFileCache: parsed.filterFileCache,
       configHashes: parsed.configHashes,
       bibHash: parsed.bibHash,
+      bibFileCache: parsed.bibFileCache,
       cssInputHash: parsed.cssInputHash,
       // En disco las entradas son un objeto; en runtime se usan como Map.
       entries: new Map(Object.entries((parsed.entries ?? {}) as Record<string, DiscoveryEntry>)),
@@ -234,44 +237,63 @@ export async function discoverBibFiles(cwd: string, extensions: string[] = ['bib
   return results.sort();
 }
 
+/** Entrada de caché de archivo de bibliografía (mtime+size evitan re-leer contenido). */
+interface BibFileCacheEntry {
+  mtime: number;
+  size: number;
+  hash: string;
+}
+
+export type BibFileCache = Record<string, BibFileCacheEntry>;
+
+/** Hash del contenido de un archivo de bibliografía, reutilizando el caché si mtime+size coinciden. */
+async function hashBibFile(abs: string, prevCache: BibFileCache | undefined, cache: BibFileCache): Promise<string> {
+  try {
+    const stat = await Bun.file(abs).stat();
+    const mtime = Math.round(stat.mtimeMs);
+    const size = stat.size;
+    const prev = prevCache?.[abs];
+    if (prev && prev.mtime === mtime && prev.size === size) {
+      cache[abs] = prev;
+      return prev.hash;
+    }
+    const content = await Bun.file(abs).text();
+    const hash = hashString(content);
+    cache[abs] = { mtime, size, hash };
+    return hash;
+  } catch {
+    // Archivo ausente/ilegible: hash de contenido vacío (mismo comportamiento anterior)
+    const empty = hashString('');
+    cache[abs] = { mtime: 0, size: 0, hash: empty };
+    return empty;
+  }
+}
+
 /**
  * Hash del contenido de los archivos de bibliografía efectivos (los que el
  * pipeline realmente usa). Con `bibliography` configurada: esa ruta y el CSL
  * configurado. Sin configurar: todos los .bib/.csl del proyecto (la capa
  * LaTeX referencia todos los .bib descubiertos).
+ *
+ * Con `prevCache` (de state.json), cada archivo se compara por mtime+size:
+ * si no cambió, se reutiliza su hash sin leer el contenido.
  */
-export async function computeBibHash(cwd: string, siteConfig?: SiteConfig): Promise<string> {
+export async function computeBibHash(cwd: string, siteConfig?: SiteConfig, prevCache?: BibFileCache): Promise<{ hash: string; cache: BibFileCache }> {
   const parts: string[] = [];
+  const cache: BibFileCache = {};
+  const files: string[] = [];
   const configuredBib = siteConfig?.bibliography?.trim();
   if (configuredBib) {
-    const bibPath = resolveConfiguredPath(cwd, configuredBib);
-    parts.push(
-      bibPath,
-      await Bun.file(bibPath)
-        .text()
-        .catch(() => ''),
-    );
+    files.push(resolveConfiguredPath(cwd, configuredBib));
     const configuredCsl = siteConfig?.csl?.trim();
-    if (configuredCsl) {
-      const cslPath = resolveConfiguredPath(cwd, configuredCsl);
-      parts.push(
-        cslPath,
-        await Bun.file(cslPath)
-          .text()
-          .catch(() => ''),
-      );
-    }
+    if (configuredCsl) files.push(resolveConfiguredPath(cwd, configuredCsl));
   } else {
-    for (const file of await discoverBibFiles(cwd)) {
-      parts.push(
-        file,
-        await Bun.file(file)
-          .text()
-          .catch(() => ''),
-      );
-    }
+    files.push(...(await discoverBibFiles(cwd)));
   }
-  return hashString(parts.join('\0'));
+  for (const file of files) {
+    parts.push(file, await hashBibFile(file, prevCache, cache));
+  }
+  return { hash: hashString(parts.join('\0')), cache };
 }
 
 /** Lee el AST canónico serializado de `.iteraciones/ast/{slug}.json`. */

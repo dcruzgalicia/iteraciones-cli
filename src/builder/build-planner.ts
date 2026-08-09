@@ -2,7 +2,7 @@ import type { SiteConfig } from '../config/site-config.js';
 import { computeActiveFormats } from '../config/site-config.js';
 import { computeCssInputHash } from './build-assets.js';
 import type { BuildState } from './state.js';
-import { computeBibHash, computeConfigHashes, computeFiltersHash, type FilterFileCache } from './state.js';
+import { type BibFileCache, computeBibHash, computeConfigHashes, computeFiltersHash, type FilterFileCache } from './state.js';
 import type { BuildDocument } from './types.js';
 
 /**
@@ -28,6 +28,8 @@ export interface BuildMetadata {
   /** Caché de archivos de filtro (mtime+size+hash) para persistir en state.json. */
   filterFileCache: FilterFileCache;
   bibHash: string;
+  /** Caché de archivos de bibliografía (mtime+size+hash) para persistir en state.json. */
+  bibFileCache: BibFileCache;
   /** Hash de los inputs del CSS (acento + estilos) para decidir si regenerar Tailwind. */
   cssInputHash: string;
   formatInvalidated: Record<FormatKey, boolean>;
@@ -64,10 +66,10 @@ export async function computeBuildMetadata(
 ): Promise<BuildMetadata> {
   const currentFormats = computeActiveFormats(siteConfig.format);
 
-  const [configHashes, filtersHashResult, bibHash, cssInputHash] = await Promise.all([
+  const [configHashes, filtersHashResult, bibHashResult, cssInputHash] = await Promise.all([
     computeConfigHashes(cwd, siteConfig),
     computeFiltersHash(cwd, siteConfig, prevState?.filterFileCache),
-    computeBibHash(cwd, siteConfig),
+    computeBibHash(cwd, siteConfig, prevState?.bibFileCache),
     computeCssInputHash(siteConfig),
   ]);
   const filtersHash = filtersHashResult.hash;
@@ -81,7 +83,7 @@ export async function computeBuildMetadata(
     markdown: prevState !== null && prevHashes?.markdown !== configHashes.markdown,
   };
   const filtersInvalidated = prevState !== null && prevState.filtersHash !== filtersHash;
-  const bibInvalidated = prevState !== null && prevState.bibHash !== bibHash;
+  const bibInvalidated = prevState !== null && prevState.bibHash !== bibHashResult.hash;
 
   let newFormats: string[] = [];
   let removedFormats: string[] = [];
@@ -107,7 +109,8 @@ export async function computeBuildMetadata(
     configHashes,
     filtersHash,
     filterFileCache,
-    bibHash,
+    bibHash: bibHashResult.hash,
+    bibFileCache: bibHashResult.cache,
     cssInputHash,
     formatInvalidated,
     filtersInvalidated,
