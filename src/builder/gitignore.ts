@@ -147,11 +147,17 @@ export async function loadGitignoreRules(cwd: string): Promise<GitignoreRule[]> 
 }
 
 /**
- * Retorna true si algún segmento del path relativo empieza con '.' (dotfile:
- * archivo o carpeta oculta). Es una regla independiente de .gitignore: los
- * nombres que empiezan con . son ocultos por convención de git/shell y nunca
- * deben procesarse como contenido editorial.
+ * Directorios que nunca se procesan como contenido editorial, en cualquier
+ * profundidad (como git): dependencias, metadatos de git, salidas y caché.
+ * Los directorios ocultos (prefijo .) los omite Bun.Glob por sí mismo.
  */
-export function isHiddenPath(relPath: string): boolean {
-  return relPath.split('/').some((segment) => segment !== '.' && segment !== '..' && segment.startsWith('.'));
+export const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', '.iteraciones']);
+
+/**
+ * Retorna true si algún segmento del path relativo es un directorio ignorado
+ * (node_modules, .git, dist, .iteraciones) en cualquier profundidad.
+ * Ej: 'docs/node_modules/x.md' → true.
+ */
+export function isInsideIgnoredDir(relPath: string): boolean {
+  return relPath.split('/').some((segment) => IGNORED_DIRS.has(segment));
 }
