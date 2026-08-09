@@ -66,6 +66,33 @@ describe('computeWorkSets', () => {
     expect(work.renderDocs.length).toBe(3);
   });
 
+  it('bibInvalidated: todos los docs van a los exportSets sin re-render (las citas se resuelven en export)', () => {
+    const work = computeWorkSets(
+      meta({
+        bibInvalidated: true,
+        pdfOn: true,
+        latexOn: true,
+        htmlOn: true,
+        epubOn: true,
+        mdOn: true,
+      }),
+      DOCS,
+      new Set(),
+    );
+    expect(work.anyWork).toBe(true);
+    expect(work.astChanged.size).toBe(0);
+    expect(work.renderDocs.length).toBe(0);
+    expect(work.exportSets.pdf.length).toBe(3);
+    expect(work.exportSets.html.length).toBe(3);
+    expect(work.exportSets.epub.length).toBe(3);
+    expect(work.exportSets.markdown.length).toBe(3);
+  });
+
+  it('bibInvalidated sin formatos activos: anyWork false', () => {
+    const work = computeWorkSets(meta({ bibInvalidated: true, latexOn: false }), DOCS, new Set());
+    expect(work.anyWork).toBe(false);
+  });
+
   it('formatInvalidated.html con htmlOn: todos los docs van al exportSet html sin re-render', () => {
     const work = computeWorkSets(
       meta({ htmlOn: true, formatInvalidated: { pdf: false, html: true, epub: false, markdown: false } }),

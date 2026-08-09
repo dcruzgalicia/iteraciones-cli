@@ -238,7 +238,7 @@ describe('filtros Lua de usuario', () => {
       expect(ast).not.toBeNull();
       if (ast === null) throw new Error('markdownToAst devolvió null');
       const filters = await loadFilterGroups(siteConfig, undefined, cwd);
-      const { body } = await texBodyFromAst(ast, doc, cwd, siteConfig, filters);
+      const { body } = await texBodyFromAst(ast, doc, filters, []);
       expect(body).toContain('\\fbox{Nota}');
     } finally {
       rmSync(cwd, { recursive: true, force: true });

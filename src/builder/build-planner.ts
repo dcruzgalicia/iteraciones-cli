@@ -130,9 +130,12 @@ export async function computeBuildMetadata(
 export function computeWorkSets(meta: BuildMetadata, allDocs: BuildDocument[], discoveredChanges: Set<string>): WorkSets {
   const { pdfOn, latexOn, htmlOn, epubOn, mdOn, formatInvalidated } = meta;
 
-  // astChanged: documentos cuyo AST debe regenerarse (markdown cambiado, filters o bibliografía)
+  // astChanged: documentos cuyo AST debe regenerarse (markdown o filters cambiados).
+  // La bibliografía NO re-renderiza ASTs: las citas se resuelven en la
+  // exportación (citeproc/biblatex), así que bibInvalidated solo llena los
+  // exportSets más abajo.
   const astChanged = new Set(discoveredChanges);
-  if (meta.filtersInvalidated || meta.bibInvalidated) {
+  if (meta.filtersInvalidated) {
     for (const doc of allDocs) {
       astChanged.add(doc.relativePath);
     }
@@ -143,14 +146,16 @@ export function computeWorkSets(meta: BuildMetadata, allDocs: BuildDocument[], d
     (formatInvalidated.pdf && (pdfOn || latexOn)) ||
     (formatInvalidated.html && htmlOn) ||
     (formatInvalidated.epub && epubOn) ||
-    (formatInvalidated.markdown && mdOn);
+    (formatInvalidated.markdown && mdOn) ||
+    (meta.bibInvalidated && (pdfOn || latexOn || htmlOn || epubOn || mdOn));
 
   const renderDocs = allDocs.filter((d) => astChanged.has(d.relativePath));
+  const bibInvalidated = meta.bibInvalidated;
   const exportSets: Record<FormatKey, BuildDocument[]> = {
-    pdf: pdfOn || latexOn ? allDocs.filter((d) => astChanged.has(d.relativePath) || formatInvalidated.pdf) : [],
-    html: htmlOn ? allDocs.filter((d) => astChanged.has(d.relativePath) || formatInvalidated.html) : [],
-    epub: epubOn ? allDocs.filter((d) => astChanged.has(d.relativePath) || formatInvalidated.epub) : [],
-    markdown: mdOn ? allDocs.filter((d) => astChanged.has(d.relativePath) || formatInvalidated.markdown) : [],
+    pdf: pdfOn || latexOn ? allDocs.filter((d) => astChanged.has(d.relativePath) || formatInvalidated.pdf || bibInvalidated) : [],
+    html: htmlOn ? allDocs.filter((d) => astChanged.has(d.relativePath) || formatInvalidated.html || bibInvalidated) : [],
+    epub: epubOn ? allDocs.filter((d) => astChanged.has(d.relativePath) || formatInvalidated.epub || bibInvalidated) : [],
+    markdown: mdOn ? allDocs.filter((d) => astChanged.has(d.relativePath) || formatInvalidated.markdown || bibInvalidated) : [],
   };
 
   return {
