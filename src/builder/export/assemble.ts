@@ -5,8 +5,7 @@ import type { ExportDocument, ExportMetadata } from './types.js';
 
 /**
  * Ensambla un ExportDocument a partir de un BuildDocument.
- * Los inputs de conversión (AST/LaTeX/HTML) se leen del caché en disco
- * (`.iteraciones/ast/`, `.iteraciones/tex/`) en el momento de exportar.
+ * Los metadatos provienen del frontmatter del documento y de la config del sitio.
  */
 export function assembleExportDocument(
   doc: BuildDocument,
