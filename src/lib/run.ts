@@ -44,7 +44,10 @@ export async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (i
   async function worker(): Promise<void> {
     while (nextIndex < items.length) {
       const index = nextIndex++;
-      results[index] = await fn(items[index]!);
+      // Invariante del while: items[index] siempre existe (el guard es defensivo)
+      const item = items[index];
+      if (item === undefined) throw new Error(`mapWithConcurrency: item ${index} sin definir`);
+      results[index] = await fn(item);
     }
   }
 

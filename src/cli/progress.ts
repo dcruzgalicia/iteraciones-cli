@@ -82,7 +82,6 @@ export class ProgressTracker {
   private usedPhases: Set<PipelinePhase> = new Set();
   /** Warnings diferidos (modo no verbose) para mostrar en el resumen final. */
   private warnings: string[] = [];
-  private finished = false;
 
   // ── Renderer: filas en orden de aparición ──
   private rows: Row[] = [];
@@ -135,7 +134,7 @@ export class ProgressTracker {
     if (file.phase !== this.currentPhase) return;
     this.currentPhaseCount++;
     const row = this.getRow(this.rowKeyFor(file.phase));
-    if (!row || row.status !== 'active') return;
+    if (row?.status !== 'active') return;
     const total = this.phaseCounts[file.phase] ?? 0;
     const live = total > 0 ? `[${Math.min(this.currentPhaseCount, total)}/${total}]` : '';
     this.renderRow(this.rowKeyFor(file.phase), live);
@@ -165,7 +164,6 @@ export class ProgressTracker {
   }
 
   async finish(processed: number, cached: number, formats?: string[]): Promise<void> {
-    this.finished = true;
     this.finalizePendingRows();
     this.writeSummary(processed, cached, formats);
     setWarningSink(null);
@@ -177,7 +175,6 @@ export class ProgressTracker {
    * iniciadas no muestran estado de éxito.
    */
   async fail(): Promise<void> {
-    this.finished = true;
     // La fase activa al fallar se marca como fallida, no como completada
     if (this.currentPhase) {
       const key = this.rowKeyFor(this.currentPhase);

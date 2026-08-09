@@ -167,7 +167,7 @@ const PAGE_NUMBER_COMMANDS: Record<string, string> = {
 export async function composeFullTex(siteConfig: SiteConfig, meta: PreambleMeta, texBody: string, flags: PreambleFlags): Promise<string> {
   let body = texBody.replace(/\n+$/, '');
   if (!flags.skipNoIndent) {
-    body = '\\noindent ' + body.trimStart();
+    body = `\\noindent ${body.trimStart()}`;
   }
   const preamble = await buildLatexPreamble(
     siteConfig.format?.pdf,

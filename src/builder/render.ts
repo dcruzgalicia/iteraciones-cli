@@ -2,7 +2,6 @@ import { basename, dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/site-config.js';
 import { logWarning } from '../lib/logger.js';
 import { type BibOptions, runPandoc } from '../lib/pandoc-runner.js';
-import { mapWithConcurrency } from '../lib/run.js';
 import { splitFrontmatter } from './discover.js';
 import { assembleHtmlBlocks, blockMarker } from './html-blocks.js';
 import { resolveBibOptions } from './state.js';

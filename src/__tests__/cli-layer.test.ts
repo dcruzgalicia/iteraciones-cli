@@ -134,13 +134,13 @@ describe('runBuild', () => {
       const stdoutSpy = spyOn(process.stdout, 'write');
       const stderrSpy = spyStderr();
       let out = '';
-      let err = '';
+      let _err = '';
       try {
         process.exitCode = 0;
         await runBuild(dir);
       } finally {
         out = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
-        err = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        _err = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
         stdoutSpy.mockRestore();
         stderrSpy.mockRestore();
       }

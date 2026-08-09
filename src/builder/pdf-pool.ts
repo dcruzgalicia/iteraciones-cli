@@ -32,7 +32,9 @@ export function createPdfConsumer(
     const worker = async (): Promise<void> => {
       while (true) {
         if (next < pdfJobs.length) {
-          const job = pdfJobs[next++]!;
+          // Invariante del guard: pdfJobs[next] siempre existe
+          const job = pdfJobs[next++];
+          if (job === undefined) throw new Error('pdf-pool: trabajo de PDF sin definir');
           const s = slot++ % maxSlots;
           const pdfDir = join(formatsDir, 'pdf', job.dir);
           const fullTexPath = join(pdfDir, `${job.slug}.tex`);

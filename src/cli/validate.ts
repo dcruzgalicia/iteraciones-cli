@@ -146,7 +146,7 @@ export async function runValidate(cwd: string): Promise<void> {
     if (!latexResult.ok) {
       configErrors.push({
         file: 'iteraciones.config.yaml',
-        message: 'format.pdf requiere pdflatex pero no esta disponible — ' + (latexResult.detail ?? ''),
+        message: `format.pdf requiere pdflatex pero no esta disponible — ${latexResult.detail ?? ''}`,
       });
     }
   }

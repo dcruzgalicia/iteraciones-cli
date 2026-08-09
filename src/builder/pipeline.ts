@@ -1,7 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import type { ProgressTracker } from '../cli/progress.js';
-import type { FormatConfig, SiteConfig } from '../config/site-config.js';
+import type { FormatConfig } from '../config/site-config.js';
 import { formatHumanDate } from '../lib/date.js';
 import { logWarning } from '../lib/logger.js';
 import { mapWithConcurrency } from '../lib/run.js';
@@ -55,7 +55,7 @@ export async function runDocumentPipeline(
   discoveryIndex: Map<string, DiscoveryEntry>,
   options: { noExport?: boolean } = {},
 ): Promise<{ processed: Set<string> }> {
-  const { pdfOn, generateLatex, latexOn, htmlOn, epubOn, mdOn } = plan;
+  const { pdfOn, latexOn, htmlOn, epubOn, mdOn } = plan;
   const noExport = options.noExport === true;
   const siteConfig = ctx.siteConfig;
   const userFilters = await resolveUserLuaFilters(ctx.cwd, siteConfig);
@@ -248,7 +248,7 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
         docTitle: doc.frontmatter.title && doc.frontmatter.title !== 'Sin t\u00edtulo' ? doc.frontmatter.title : undefined,
         subtitle: doc.frontmatter.subtitle,
         date: formatHumanDate(doc.frontmatter.date),
-        homeHref: hasHomePage ? (dir === '.' ? './index.html' : '../'.repeat(dir.split('/').length) + 'index.html') : undefined,
+        homeHref: hasHomePage ? (dir === '.' ? './index.html' : `${'../'.repeat(dir.split('/').length)}index.html`) : undefined,
         formats: formats.length > 0 ? formats : undefined,
       },
       ctx.siteConfig,

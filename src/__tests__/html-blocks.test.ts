@@ -23,13 +23,13 @@ describe('assembleHtmlBlocks', () => {
   const templateHtml = (): string =>
     [
       '<html><main class="m">',
-      '  ' + blockMarker('header'),
+      `  ${blockMarker('header')}`,
       '  <div class="c"><h2>Header</h2></div>',
-      '  ' + blockMarker('trayectura'),
+      `  ${blockMarker('trayectura')}`,
       '  <div class="c"><article>Contenido</article></div>',
-      '  ' + blockMarker('indice'),
+      `  ${blockMarker('indice')}`,
       '  <div class="c"><nav>Índice</nav></div>',
-      '  ' + blockMarker('footer'),
+      `  ${blockMarker('footer')}`,
       '  <div class="c"><h2>Footer</h2></div>',
       '</main></html>',
     ].join('\n');

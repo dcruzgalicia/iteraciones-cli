@@ -294,7 +294,12 @@ export async function discover(
   }
 
   // Resolver slugs via slug-resolver
-  const slugResult = await resolveSlugs(cwd, discoveryIndex, (meta, opts) => computeSlug(meta, opts)!);
+  const slugResult = await resolveSlugs(cwd, discoveryIndex, (meta, opts) => {
+    // computeSlug solo retorna undefined sin fallbackPath; aqui siempre se provee
+    const slug = computeSlug(meta, opts);
+    if (slug === undefined) throw new Error(`no se pudo resolver el slug de ${opts.fallbackPath}`);
+    return slug;
+  });
   for (const [path, oldSlug] of slugResult.slugChangedEntries) slugChangedEntries.set(path, oldSlug);
   for (const path of slugResult.changedPaths) changedPaths.add(path);
   for (const path of slugResult.newRecentFiles) {
