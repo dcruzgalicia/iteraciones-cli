@@ -25,9 +25,16 @@ function translateCommanderError(message: string): string {
 export function buildProgram(): Command {
   const program = new Command();
 
-  program.name(packageJson.name.replace(/-cli$/, '')).description(packageJson.description).version(packageJson.version);
+  program
+    .name(packageJson.name.replace(/-cli$/, ''))
+    .description(packageJson.description)
+    .version(packageJson.version, '-V, --version', 'muestra la versión')
+    .helpOption('-h, --help', 'muestra la ayuda')
+    .helpCommand('help [comando]', 'muestra la ayuda de un comando');
   program.option('--project-root <path>', 'directorio raíz del proyecto (por defecto: directorio actual)');
-  // Errores de uso en español y sin process.exit (el exit code lo fija bin.ts).
+  // Los errores de uso de commander llegan en inglés: se traducen los 4 casos
+  // conocidos (comando/opción desconocida, argumento faltante) con regex; la
+  // ayuda y la versión se configuran nativamente en español arriba.
   program.configureOutput({ outputError: (str, write) => write(translateCommanderError(str)) });
   program.exitOverride();
 
