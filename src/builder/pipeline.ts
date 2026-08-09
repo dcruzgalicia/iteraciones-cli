@@ -82,6 +82,10 @@ export async function runDocumentPipeline(
 
   // ── Pool 2 (PDF): consumidor de la cola, arranca en paralelo con el pool 1 ──
   const pdfConsumer = createPdfConsumer(formatsDir, biberBase, maxSlots, progress);
+  if (compilePdf && work.exportSets.pdf.length > 0) {
+    // Los workers arrancan antes del pool 1: latexmk se solapa con pandoc.
+    pdfConsumer.start();
+  }
 
   // ── Pool 1 (formatos ligeros) ──
   const processed = new Set<string>();
@@ -93,33 +97,41 @@ export async function runDocumentPipeline(
   const filters = await loadFilterGroups(siteConfig, siteConfig.disabledFilters, ctx.cwd);
 
   progress.startLightFormats();
-  await mapWithConcurrency(workDocList, ctx.concurrency, async (doc) => {
-    await processDocumentFormats(
-      doc,
-      {
-        ctx,
-        plan,
-        formatCfg,
-        formatsDir,
-        userFilters,
-        globalBibliography,
-        lang,
-        logoInline,
-        filters,
-        bibOptions,
-        renderDocPaths,
-        htmlPaths,
-        epubPaths,
-        mdPaths,
-        pdfPaths,
-        pdfJobs: pdfConsumer.pdfJobs,
-        noExport,
-      },
-      discoveryIndex,
-    );
-    processed.add(doc.relativePath);
-    progress.reportFile({ relativePath: doc.relativePath, phase: 'render' });
-  });
+  try {
+    await mapWithConcurrency(workDocList, ctx.concurrency, async (doc) => {
+      await processDocumentFormats(
+        doc,
+        {
+          ctx,
+          plan,
+          formatCfg,
+          formatsDir,
+          userFilters,
+          globalBibliography,
+          lang,
+          logoInline,
+          filters,
+          bibOptions,
+          renderDocPaths,
+          htmlPaths,
+          epubPaths,
+          mdPaths,
+          pdfPaths,
+          pdfJobs: pdfConsumer.pdfJobs,
+          noExport,
+        },
+        discoveryIndex,
+      );
+      processed.add(doc.relativePath);
+      progress.reportFile({ relativePath: doc.relativePath, phase: 'render' });
+    });
+    pdfConsumer.markProducerDone();
+  } catch (err) {
+    // Fallo del pool 1: cancelar la cola PDF para que los workers salgan sin
+    // compilar lo pendiente y el error se propague sin colgar el proceso.
+    pdfConsumer.cancel();
+    throw err;
+  }
 
   // Completar las subtareas de los formatos ligeros activos y la fase render:
   // su trabajo ocurre dentro del pool 1, así que el tracker avanza al grupo
