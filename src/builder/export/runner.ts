@@ -108,11 +108,23 @@ export async function convertToPdf(fullTexPath: string, sourcePath: string, pdfD
 
   const biberCache = biberCacheDir ?? join(pdfDir, 'biber', slug);
   await mkdir(biberCache, { recursive: true });
-  const proc = Bun.spawn(['latexmk', '-pdf', '-interaction=nonstopmode', `-outdir=${pdfDir}`, `-jobname=${slug}`, fullTexPath], {
-    stdout: 'pipe',
-    stderr: 'pipe',
-    env: { ...process.env, PAR_GLOBAL_TEMP: biberCache },
-  });
+  let proc: ReturnType<typeof Bun.spawn>;
+  try {
+    proc = Bun.spawn(['latexmk', '-pdf', '-interaction=nonstopmode', `-outdir=${pdfDir}`, `-jobname=${slug}`, fullTexPath], {
+      stdout: 'pipe',
+      stderr: 'pipe',
+      env: { ...process.env, PAR_GLOBAL_TEMP: biberCache },
+    });
+  } catch (err) {
+    // Error esperado: latexmk no está en PATH (ENOENT); mensaje accionable en español
+    throw new PandocError('latexmk no está disponible en PATH. Instala MacTeX full: https://tug.org/mactex/', sourcePath, String(err));
+  }
+  if (proc.stdout == null || typeof proc.stdout === 'number') {
+    throw new PandocError('No se pudo leer stdout de latexmk', sourcePath, '');
+  }
+  if (proc.stderr == null || typeof proc.stderr === 'number') {
+    throw new PandocError('No se pudo leer stderr de latexmk', sourcePath, '');
+  }
   const outputPromise = Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
   // Una compilación latexmk colgada no debe colgar el build: el kill del
   // timeout resuelve proc.exited y clearTimeout siempre corre.
