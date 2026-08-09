@@ -20,7 +20,7 @@ Verifica que todo funcione:
 
 ```bash
 bun run typecheck   # tsc --noEmit
-bun test            # bun test (210 tests en 14 archivos)
+bun test            # bun test (304 tests en 18 archivos)
 bun run src/bin.ts build --project-root /ruta/a/proyecto
 ```
 
@@ -175,9 +175,9 @@ El hash de filters (`computeFiltersHash` en `src/builder/state.ts`) incluye las 
 
 Los cambios en el template HTML, en los archivos `.tex` de recursos y en `format.html.blocks` no requieren bump: ya participan en los hashes de configuración y de filters.
 
-## Cómo regenerar el CSS precompilado
+## Cómo regenerar el CSS base
 
-El CSS de cada color de acento está precompilado en `src/lib/resources/css/<accent>.css` (un archivo por acento; el tema light/dark vive en el mismo archivo vía `data-theme`). Cuando cambies `styles.css`, el template HTML (`src/lib/resources/template.html`) o las clases del post-procesamiento de `render.ts`, regenera:
+El CSS base embarcado vive en `src/lib/resources/css/base.css` (compilado desde `src/lib/resources/styles.css` con Tailwind). La paleta de acentos (`src/lib/accent-palettes.ts`) se ensambla sobre el base en tiempo de build (`base.css` + bloque de variables del acento) — no hay un CSS por acento. Cuando cambies `styles.css`, el template HTML (`src/lib/resources/template.html`) o las clases del post-procesamiento de `render.ts`, regenera:
 
 ```bash
 bun run scripts/generate-css.ts
@@ -203,8 +203,9 @@ Para agregar uno:
    - El **nombre completo** es `<capa>/<prioridad>-<nombre>` (ej: `latex/02-dictum`); es el que se usa en `disabled-filters` y se muestra en `iteraciones filters`
 2. Escribe la primera línea como comentario `-- descripción corta`: se muestra en `iteraciones filters` (la lee `getBuiltinLuaFilterInfos()`)
 3. Implementa las funciones de filtro de pandoc (`Pandoc(doc)`, `Div(div)`, `Para(para)`, etc.) que transforman el AST
-4. Agrega el nombre del archivo a la lista `BUILTIN_*` correspondiente en `src/builder/render.ts` (`BUILTIN_SEMANTIC_STRING`, `BUILTIN_SEMANTIC_AST`, `BUILTIN_LATEX_FILTERS`, `BUILTIN_HTML_FILTERS`)
-5. Agrega tests en `src/__tests__/lua-filters.test.ts` (los tests que invocan pandoc requieren que esté instalado; los de resolución de nombres no)
+4. Agrega tests en `src/__tests__/lua-filters.test.ts` (los tests que invocan pandoc requieren que esté instalado; los de resolución de nombres no)
+
+> La lista de filters se deriva del filesystem (`getBuiltinLuaFilterInfos()` en `src/builder/render.ts`): crear el `.lua` es suficiente, no hay que registrar el nombre en ninguna lista. La descripción que muestra `iteraciones filters` es la primera línea de comentario del archivo (punto 2).
 
 ### Ejemplo mínimo
 
@@ -234,8 +235,9 @@ La variable global `FORMAT` de pandoc indica el formato de salida (`latex`, `htm
 Los preamble filters son archivos `.tex` con contenido LaTeX puro que se inserta en el preámbulo antes de `\begin{document}`. Se editan como LaTeX, sin escaping de strings TypeScript.
 
 1. Crea un archivo en `src/lib/resources/preamble/<prioridad>-<nombre>.tex`
-2. Agrega el nombre a `BUILTIN_PREAMBLE_FILTERS` en `src/builder/preamble-loader.ts` (la lista define el orden de aplicación)
-3. Agrega una descripción a `DESCRIPTIONS` en el mismo archivo (se muestra en `iteraciones filters`)
+2. Escribe la primera línea como comentario `% descripción corta`: se muestra en `iteraciones filters` (la lee `getBuiltinPreambleFilterInfos()`)
+
+> La lista de preamble filters se deriva del filesystem (`getBuiltinPreambleFilterNames()` en `src/builder/preamble-loader.ts`): el prefijo numérico del archivo define el orden de aplicación y crear un `.tex` nuevo no requiere tocar código.
 
 Un proyecto puede sobrescribir un preamble filter creando `<proyecto>/preamble/<nombre>.tex`, o desactivarlo con `disabled-preamble-filters:` en `iteraciones.config.yaml`.
 
