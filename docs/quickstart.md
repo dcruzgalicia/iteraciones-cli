@@ -7,12 +7,6 @@ Esta guía lleva un directorio vacío hasta documentos procesados en menos de 5 
 - **Bun** ≥ 1.0 — [bun.sh](https://bun.sh)
 - **Pandoc** disponible en `PATH` — [pandoc.org/installing.html](https://pandoc.org/installing.html)
 
-Verifica tu entorno con:
-
-```bash
-iteraciones doctor
-```
-
 ## 1. Instalación
 
 ```bash
@@ -28,6 +22,12 @@ En el directorio del proyecto que quieras construir:
 bun link iteraciones-cli
 ```
 
+Verifica que el comando esté disponible:
+
+```bash
+iteraciones --version
+```
+
 ## 2. Inicializar el proyecto
 
 ```bash
@@ -40,11 +40,21 @@ Esto crea tres archivos:
 ```
 mi-sitio/
   iteraciones.config.yaml       # configuración del sitio
-  README.md               # documento de ejemplo
-  bibliography.bib        # archivo de referencias bibliográficas
+  index.md                      # documento de inicio (se convierte en index.html)
+  bibliography.bib              # archivo de referencias bibliográficas
 ```
 
-## 3. Escribir contenido
+El primer `build` genera `index.html`: es la página de inicio que enlazan las tarjetas de identidad del resto de los documentos.
+
+## 3. Verificar el entorno
+
+```bash
+iteraciones doctor
+```
+
+Verifica pandoc, el motor LaTeX (solo si el proyecto usa PDF o LaTeX) y los permisos del directorio.
+
+## 4. Escribir contenido
 
 Crea documentos Markdown adicionales:
 
@@ -52,19 +62,20 @@ Crea documentos Markdown adicionales:
 iteraciones new posts/primer-articulo.md
 ```
 
-El comando crea `posts/primer-articulo.md` con el frontmatter mínimo correcto, infiriendo el título desde el nombre del archivo:
+El comando crea `posts/primer-articulo.md` con el frontmatter mínimo correcto, infiriendo el título desde el nombre del archivo (capitaliza solo la primera letra) y usando la fecha actual:
 
 ```markdown
 ---
-title: 'Primer Articulo'
-date: 2025-01-01
+title: "Primer articulo"
+date: "2026-08-09"
 ---
 
+Escribe tu contenido aquí.
 ```
 
 Edita el archivo y añade tu contenido después del bloque `---`.
 
-## 4. Construir los documentos
+## 5. Construir los documentos
 
 ```bash
 iteraciones build
@@ -78,7 +89,7 @@ Para ver qué documentos se procesarían sin generar salida:
 iteraciones build --dry-run
 ```
 
-## 5. Verificar el proyecto
+## 6. Verificar el proyecto
 
 Antes de publicar, valida la configuración y el frontmatter de todos los documentos:
 
@@ -88,7 +99,7 @@ iteraciones validate
 
 Los errores y advertencias se imprimen en `stderr` con la ruta del archivo y el campo afectado.
 
-## 6. Ciclo de trabajo habitual
+## 7. Ciclo de trabajo habitual
 
 ```bash
 # Verificar entorno
