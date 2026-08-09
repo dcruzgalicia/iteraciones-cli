@@ -403,6 +403,74 @@ describe('runBuild', () => {
     });
   });
 
+  it('un slug manual del frontmatter se respeta en las salidas', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\nslug: mi-url-fija\n---\n\nContenido.\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      expect(await Bun.file(join(dir, 'dist', 'files', 'mi-url-fija.html')).exists()).toBe(true);
+      expect(await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).exists()).toBe(false);
+    });
+  });
+
+  it('un slug manual inválido aborta el build con contexto', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\nslug: Mi URL Inválida\n---\n\nContenido.\n', 'utf8');
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(output).toContain('slug inválido');
+      expect(process.exitCode).toBe(1);
+    });
+  });
+
+  it('dos slugs manuales duplicados abortan el build (sobrescribirían las salidas)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'uno.md'), '---\ntitle: Uno\nslug: mismo\n---\n\nContenido.\n', 'utf8');
+      await writeFile(join(dir, 'dos.md'), '---\ntitle: Dos\nslug: mismo\n---\n\nContenido.\n', 'utf8');
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(output).toContain('slugs duplicados');
+      expect(process.exitCode).toBe(1);
+    });
+  });
+
+  it('validate reporta slugs manuales duplicados como error', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'uno.md'), '---\ntitle: Uno\nslug: mismo\n---\n\nContenido.\n', 'utf8');
+      await writeFile(join(dir, 'dos.md'), '---\ntitle: Dos\nslug: mismo\n---\n\nContenido.\n', 'utf8');
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(output).toContain('slug duplicado');
+      expect(process.exitCode).toBe(1);
+    });
+  });
+
   it('el EPUB generado incluye título, autor e idioma en sus metadatos', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
