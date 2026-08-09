@@ -1,5 +1,4 @@
 -- Convierte líneas con solo "::" en Div.spacer (semántico, sin formato específico).
--- Reemplaza al filter TS semantic/string/01-double-colon.
 -- Uso: pandoc --from markdown --to json --lua-filter semantic/string/01-double-colon.lua
 
 function Para(para)

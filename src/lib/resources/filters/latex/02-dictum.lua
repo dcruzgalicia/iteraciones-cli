@@ -89,7 +89,7 @@ local function process_dictum(div)
     }
   end
 
-  -- Mismo orden de RawInline/RawBlock que el filter TS
+  -- Mismo orden de RawInline/RawBlock
   local result = {}
   for i, block in ipairs(quote_blocks) do
     local is_first = i == 1
@@ -115,8 +115,8 @@ local function process_dictum(div)
   return result
 end
 
--- Filtro Pandoc: equivalente al loop de transform() del TS (solo nivel
--- superior, con last_was_dictum para el \noindent del párrafo siguiente)
+-- Solo transforma Divs de nivel superior y recuerda el último bloque para
+-- decidir el \noindent del párrafo siguiente.
 function Pandoc(doc)
   local result = {}
   local last_was_dictum = false

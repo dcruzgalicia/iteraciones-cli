@@ -1,5 +1,4 @@
 -- Convierte Div.dictum a <blockquote class="dictum"> (formato HTML).
--- Reemplaza al filter TS html/01-dictum.
 -- Uso: pandoc --from json --to html5 --lua-filter html/01-dictum.lua
 
 function Div(div)

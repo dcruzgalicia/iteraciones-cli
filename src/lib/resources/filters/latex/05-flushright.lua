@@ -1,5 +1,4 @@
 -- Convierte Div.flushright al entorno \begin{flushright}...\end{flushright} (formato LaTeX).
--- Reemplaza al filter TS latex/05-flushright.
 -- Uso: pandoc --from json --to latex --lua-filter latex/05-flushright.lua
 
 local function has_class(block, cls)
