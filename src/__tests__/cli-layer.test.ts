@@ -1040,6 +1040,38 @@ describe('runNew', () => {
   });
 });
 
+describe('runBuild (copyToDist)', () => {
+  afterEach(resetExitCode);
+
+  it('avisa si un archivo generado falta en la caché (dist no queda incompleto en silencio)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'otro.md'), '---\ntitle: Otro\n---\n\nContenido.\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+
+      // Eliminar el HTML generado de la caché para el documento NO modificado:
+      // el build siguiente (con trabajo en test.md) intenta copiarlo y falta.
+      await rm(join(dir, '.iteraciones', 'formats', 'html', 'otro.html'), { force: true });
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\nContenido modificado.\n', 'utf8');
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir);
+      } finally {
+        output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      // Los warnings se difieren al resumen final (bloque Advertencias en stdout)
+      expect(output).toContain('no se encontró el archivo generado');
+      expect(output).toContain('otro.html');
+      expect(process.exitCode).toBe(0);
+    });
+  });
+});
+
 describe('runClean', () => {
   afterEach(resetExitCode);
 

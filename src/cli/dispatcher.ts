@@ -17,13 +17,24 @@ import { runValidate as validate } from './validate.js';
 
 export async function runClean(cwd: string): Promise<void> {
   const targets = [join(cwd, 'dist'), join(cwd, '.iteraciones')];
-  await Promise.all(
-    targets.map((dir) =>
-      rm(dir, { recursive: true, force: true }).catch(() => {
-        // ignorar errores de directorios que no existen
-      }),
-    ),
+  // Reportar por directorio qué no se pudo eliminar: un fallo de clean no debe
+  // afirmar éxito (antes el catch traga cualquier error, EACCES incluido).
+  const results = await Promise.all(
+    targets.map(async (dir) => {
+      try {
+        await rm(dir, { recursive: true, force: true });
+        return null;
+      } catch (err) {
+        return `${dir}: ${err instanceof Error ? err.message : String(err)}`;
+      }
+    }),
   );
+  const failures = results.filter((r): r is string => r !== null);
+  if (failures.length > 0) {
+    logError(`no se pudo eliminar: ${failures.join('; ')}`, 'clean');
+    process.exitCode = 1;
+    return;
+  }
   logSuccess('eliminado dist/ y .iteraciones/', 'clean');
 }
 
