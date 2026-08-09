@@ -7,6 +7,11 @@ export interface RunResult {
 export interface RunOptions {
   /** Directorio de trabajo del proceso (por defecto: el del proceso actual). */
   cwd?: string;
+  /**
+   * Límite de tiempo en ms. Si el proceso no termina, se mata y run() lanza un
+   * error accionable. Sin timeout el proceso puede colgar el build para siempre.
+   */
+  timeoutMs?: number;
 }
 
 export async function run(command: string, args: string[], options: RunOptions = {}): Promise<RunResult> {
@@ -31,8 +36,26 @@ export async function run(command: string, args: string[], options: RunOptions =
     throw new Error(`No se pudo leer stderr del comando "${command}".`);
   }
 
-  const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+  const outputPromise = Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+  if (options.timeoutMs === undefined) {
+    const [stdout, stderr, exitCode] = await outputPromise;
+    return { stdout, stderr, exitCode };
+  }
 
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    proc.kill();
+  }, options.timeoutMs);
+  const [stdout, stderr, exitCode] = await outputPromise;
+  // El kill del timeout resuelve proc.exited: este clearTimeout siempre corre
+  // y no deja timers vivos que cuelguen el event loop tras el build.
+  clearTimeout(timer);
+  if (timedOut) {
+    throw new Error(
+      `el comando "${command}" no terminó en ${Math.round(options.timeoutMs / 1000)}s y fue terminado. Revisa procesos colgados o filtros Lua en loop.`,
+    );
+  }
   return { stdout, stderr, exitCode };
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { mapWithConcurrency } from '../lib/run.js';
+import { mapWithConcurrency, run } from '../lib/run.js';
 
 describe('mapWithConcurrency', () => {
   it('procesa todos los items', async () => {
@@ -44,5 +44,26 @@ describe('mapWithConcurrency', () => {
 
     expect(maxConcurrent).toBeLessThanOrEqual(2);
     expect(result).toEqual([1, 2, 3, 4, 5]);
+  });
+});
+
+describe('run (timeouts)', () => {
+  it('sin timeout espera a que el proceso termine', async () => {
+    const result = await run('echo', ['hola']);
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('hola');
+  });
+
+  it('termina un proceso que excede el timeout con error accionable', async () => {
+    // sleep 5 con timeout de 100ms: el proceso se mata y run() lanza
+    await expect(run('sleep', ['5'], { timeoutMs: 100 })).rejects.toThrow(
+      'no terminó en 0s y fue terminado. Revisa procesos colgados o filtros Lua en loop',
+    );
+  });
+
+  it('no lanza error si el proceso termina antes del timeout', async () => {
+    const result = await run('echo', ['rápido'], { timeoutMs: 2000 });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('rápido');
   });
 });

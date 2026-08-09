@@ -8,6 +8,9 @@ import { runPandoc } from '../../lib/pandoc-runner.js';
 import { metadataValue } from '../render.js';
 import type { ExportDocument } from './types.js';
 
+/** Límite de tiempo de una compilación latexmk: 10 minutos. */
+const LATEXMK_TIMEOUT_MS = 600_000;
+
 /**
  * Construye el bloque YAML de metadatos que Pandoc inyectará en el documento.
  * Solo usada para exportación a Markdown.
@@ -110,7 +113,23 @@ export async function convertToPdf(fullTexPath: string, sourcePath: string, pdfD
     stderr: 'pipe',
     env: { ...process.env, PAR_GLOBAL_TEMP: biberCache },
   });
-  const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+  const outputPromise = Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+  // Una compilación latexmk colgada no debe colgar el build: el kill del
+  // timeout resuelve proc.exited y clearTimeout siempre corre.
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    proc.kill();
+  }, LATEXMK_TIMEOUT_MS);
+  const [stdout, stderr, exitCode] = await outputPromise;
+  clearTimeout(timer);
+  if (timedOut) {
+    throw new PandocError(
+      `latexmk no terminó en ${LATEXMK_TIMEOUT_MS / 60000} minutos y fue terminado. Revisa el log en: ${join(pdfDir, `${slug}.log`)}`,
+      sourcePath,
+      `${stdout}\n${stderr}`,
+    );
+  }
 
   if (exitCode !== 0) {
     // El mensaje no incluye la ruta: el dispatcher la añade una sola vez
