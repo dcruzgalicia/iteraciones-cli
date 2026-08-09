@@ -1,5 +1,6 @@
 import { mkdir, rename, rm } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
+import { logWarning } from '../lib/logger.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import { htmlSlugFor } from './discover.js';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
@@ -113,7 +114,12 @@ export async function copyToDist(
   await mapWithConcurrency(copies, 20, async ({ srcPath, dstPath }) => {
     await mkdir(dirname(dstPath), { recursive: true });
     await rename(srcPath, dstPath).catch((err: NodeJS.ErrnoException) => {
-      if (err.code === 'ENOENT') return;
+      if (err.code === 'ENOENT') {
+        // Un archivo esperado no existe (p. ej. .iteraciones borrado a mano):
+        // avisar en lugar de dejar dist/ incompleto en silencio.
+        logWarning(`no se encontró el archivo generado: ${srcPath}`, 'build');
+        return;
+      }
       throw err;
     });
   });
