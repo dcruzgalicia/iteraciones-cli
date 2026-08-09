@@ -263,6 +263,35 @@ describe('runBuild', () => {
     });
   });
 
+  it('el EPUB generado incluye título, autor e idioma en sus metadatos', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'iteraciones.config.yaml'), ['lang: es-MX', 'format:', '  epub:', '    generate: true'].join('\n'), 'utf8');
+      await writeFile(
+        join(dir, 'test.md'),
+        '---\ntitle: Test Document\nauthor: María Pérez\ndate: 2026-01-01\n---\n\nContenido de prueba.\n',
+        'utf8',
+      );
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+
+      // El EPUB es un zip: desempaquetar content.opf y verificar dc:title,
+      // dc:creator, dc:date y dc:language (regresión: salía sin metadatos,
+      // "UNTITLED"). El nombre usa el slug title-por-author: se busca el .epub.
+      const [epubPath] = [...new Bun.Glob('dist/files/*.epub').scanSync({ cwd: dir })];
+      expect(epubPath).toBeDefined();
+      const proc = Bun.spawn(['unzip', '-p', join(dir, epubPath ?? ''), 'EPUB/content.opf'], { stdout: 'pipe', stderr: 'pipe' });
+      const [stdout, stderr, code] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+      expect(code).toBe(0);
+      expect(stderr).toBe('');
+      expect(stdout).toContain('Test Document</dc:title>');
+      expect(stdout).toContain('María Pérez</dc:creator>');
+      expect(stdout).toContain('>es-MX</dc:language>');
+      expect(stdout).toContain('>2026-01-01</dc:date>');
+    });
+  });
+
   it('un documento sin cuerpo después del frontmatter aborta el build con la ruta del archivo', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);

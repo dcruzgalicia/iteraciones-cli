@@ -317,7 +317,7 @@ const HTML_TEMPLATE_PATH = join(import.meta.dir, '../../src/lib/resources/templa
  * inyectar claves ni romper el parseo (un solo elemento de argv); el plegado
  * explícito hace el comportamiento determinista.
  */
-function metadataValue(value: string): string {
+export function metadataValue(value: string): string {
   return value.replace(/\n/g, ' ');
 }
 
