@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test';
+import { join } from 'node:path';
 import { assembleHtmlBlocks, blockMarker, resolveBlockOrder } from '../builder/html-blocks.js';
 
 describe('resolveBlockOrder', () => {
@@ -62,5 +63,22 @@ describe('assembleHtmlBlocks', () => {
     expect(out).not.toContain('Índice');
     expect(out.indexOf('Contenido')).toBeLessThan(out.indexOf('Footer'));
     expect(out.indexOf('Header')).toBeLessThan(out.indexOf('Contenido'));
+  });
+
+  it('lanza BuildError si falta la estructura main (template roto)', () => {
+    const html = templateHtml().replace('<main', '<div');
+    expect(() => assembleHtmlBlocks(html, {})).toThrow('no contiene la estructura <main> esperada');
+  });
+
+  it('el template embarcado contiene los marcadores de bloque del template (integridad)', async () => {
+    const templatePath = join(import.meta.dir, '../../src/lib/resources/template.html');
+    const template = await Bun.file(templatePath).text();
+    // Los bloques que viven en el template: header, trayectura, indice y footer.
+    // formatos y referencias se generan en TS (render.ts) y no deben existir aquí.
+    for (const key of ['header', 'trayectura', 'indice', 'footer']) {
+      expect(template).toContain(blockMarker(key));
+    }
+    expect(template).not.toContain(blockMarker('formatos'));
+    expect(template).not.toContain(blockMarker('referencias'));
   });
 });
