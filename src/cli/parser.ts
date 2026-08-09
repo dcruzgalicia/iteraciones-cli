@@ -91,14 +91,18 @@ Ejemplos:
   program
     .command('info')
     .description('muestra información del proyecto y configuración')
+    .option('--json', 'salida en JSON (para scripting)')
     .addHelpText(
       'after',
       `
 Ejemplos:
-  iteraciones info    muestra idioma, salida, pandoc y formatos activos
+  iteraciones info            muestra idioma, salida, pandoc y formatos activos
+  iteraciones info --json     misma información en JSON
 `,
     )
-    .action(() => runInfo(projectRoot()));
+    .action(async (opts: { json?: boolean }) => {
+      await runInfo(projectRoot(), { json: opts.json });
+    });
 
   program
     .command('init')

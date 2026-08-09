@@ -93,7 +93,7 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
   }
 }
 
-export async function runInfo(cwd: string): Promise<void> {
+export async function runInfo(cwd: string, options: { json?: boolean } = {}): Promise<void> {
   try {
     const config = await loadSiteConfig(cwd);
     const pandocVersion = await checkPandoc().catch(() => 'no disponible');
@@ -129,6 +129,28 @@ export async function runInfo(cwd: string): Promise<void> {
       `  preamble desactivados:   ${preambleDisabled.length > 0 ? preambleDisabled.join(', ') : '(ninguno)'}`,
       `  preamble adicionales:    ${userPreamble.length > 0 ? userPreamble.join(', ') : '(ninguno)'}`,
     ];
+    if (options.json) {
+      // Contrato JSON estable para scripting (no depende del texto alineado).
+      process.stdout.write(
+        `${JSON.stringify(
+          {
+            lang: config.lang,
+            toc: config.toc,
+            documentCount: docCount,
+            outputDir: distDir,
+            outputGenerated: distExists,
+            pandoc: pandocVersion,
+            activeFormats,
+            html: { theme, accent },
+            disabledFilters: config.disabledFilters ?? [],
+            disabledPreambleFilters: preambleDisabled,
+          },
+          null,
+          2,
+        )}\n`,
+      );
+      return;
+    }
     logInfo(lines.join('\n'), 'info');
   } catch (err) {
     if (err instanceof ConfigError) {
