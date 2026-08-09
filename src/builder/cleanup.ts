@@ -8,6 +8,9 @@ import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
 /** Extensiones de salida estándar por documento en dist/. */
 const OUTPUT_EXTENSIONS = ['.html', '.tex', '.pdf', '.epub', '.md'];
 
+/** Auxiliares de latexmk que se acumulan en .iteraciones/formats/pdf/. */
+export const LATEXMK_AUX_EXTENSIONS = ['.aux', '.bbl', '.bcf', '.blg', '.fls', '.run.xml', '.fdb_latexmk', '.out', '.toc', '.log'];
+
 const FORMAT_EXT_MAP: Record<string, string> = {
   latex: '.tex',
   pdf: '.pdf',
@@ -23,6 +26,11 @@ async function removeCachedArtifacts(cacheBase: string, dir: string, slug: strin
     for (const ext of ['.tex', '.html', '.epub']) {
       await rm(join(cacheBase, 'formats', sub, dir, `${slug}${ext}`), { force: true }).catch(() => {});
     }
+  }
+  // Auxiliares de latexmk (se acumulaban para siempre al eliminar un documento
+  // o cambiar su slug; el .log solo se referencia en errores de builds vivos).
+  for (const ext of LATEXMK_AUX_EXTENSIONS) {
+    await rm(join(cacheBase, 'formats', 'pdf', dir, `${slug}${ext}`), { force: true }).catch(() => {});
   }
 }
 

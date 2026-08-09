@@ -1,10 +1,11 @@
 import { existsSync } from 'node:fs';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, rm } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { stringify } from 'yaml';
 import { PandocError } from '../../lib/errors.js';
 import { logWarning } from '../../lib/logger.js';
 import { runPandoc } from '../../lib/pandoc-runner.js';
+import { LATEXMK_AUX_EXTENSIONS } from '../cleanup.js';
 import { metadataValue } from '../render.js';
 import type { ExportDocument } from './types.js';
 
@@ -152,4 +153,8 @@ export async function convertToPdf(fullTexPath: string, sourcePath: string, pdfD
     const detail = m ? m[0] : `exit ${exitCode}`;
     throw new PandocError(`latexmk falló al generar el PDF: ${detail}`, sourcePath, `Revisa el log completo en: ${join(pdfDir, `${slug}.log`)}`);
   }
+
+  // Éxito: eliminar los auxiliares de latexmk (el .log solo se referencia en
+  // errores). Sin esto, formats/pdf acumula basura indefinidamente.
+  await Promise.all(LATEXMK_AUX_EXTENSIONS.map((ext) => rm(join(pdfDir, `${slug}${ext}`), { force: true }).catch(() => {})));
 }
