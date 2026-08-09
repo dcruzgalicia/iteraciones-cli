@@ -22,6 +22,9 @@ interface DiscoverResult {
 
 const FM_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
 
+/** Formato seguro de un slug manual: minúsculas, números y guiones simples. */
+const SLUG_MANUAL_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 /**
  * Separa el frontmatter YAML del body del documento.
  * Única implementación del parser: discover la usa para el YAML y render
@@ -186,7 +189,8 @@ export async function discover(
       let title = '',
         subtitle: string | undefined,
         date: string | undefined,
-        authors: string[] = [];
+        authors: string[] = [],
+        manualSlug: string | undefined;
       try {
         const { yaml } = splitFrontmatter(text);
         if (yaml) {
@@ -196,6 +200,17 @@ export async function discover(
             subtitle = typeof parsed.subtitle === 'string' && parsed.subtitle.trim() ? parsed.subtitle.trim() : undefined;
             date = typeof parsed.date === 'string' && parsed.date.trim() ? parsed.date.trim() : undefined;
             authors = parseAuthors(parsed.author);
+            if (typeof parsed.slug === 'string' && parsed.slug.trim()) {
+              manualSlug = parsed.slug.trim();
+              // Formato seguro: mismo charset que los slugs generados
+              // (minúsculas, números y guiones), sin extremos ni dobles guiones.
+              if (!SLUG_MANUAL_RE.test(manualSlug)) {
+                frontmatterErrors.push({
+                  file: relativePath,
+                  error: `slug inválido: "${manualSlug}" — usa solo minúsculas, números y guiones (sin espacios, acentos ni guiones extremos)`,
+                });
+              }
+            }
           }
         }
       } catch (err) {
@@ -211,7 +226,18 @@ export async function discover(
       // cambio contra el slug final: comparar por prefijos aquí falla cuando el slug
       // nuevo es prefijo del viejo (quitar author, acortar título, sufijo -dN).
       const prevSlug = discoveryIndex.get(relativePath)?.slug;
-      discoveryIndex.set(relativePath, { title, subtitle, author: authors, date, mtime, size, hash, slug: prevSlug });
+      discoveryIndex.set(relativePath, {
+        title,
+        subtitle,
+        author: authors,
+        date,
+        mtime,
+        size,
+        hash,
+        slug: manualSlug ?? prevSlug,
+        slugFixed: manualSlug !== undefined,
+        manualSlug,
+      });
     }
     // Archivos sin cambios: conservan su entrada en discoveryIndex
   });

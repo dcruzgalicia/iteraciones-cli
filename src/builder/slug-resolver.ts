@@ -1,4 +1,5 @@
 import { dirname } from 'node:path';
+import { BuildError } from '../lib/errors.js';
 import type { DiscoveryEntry } from './types.js';
 
 interface SlugResolutionResult {
@@ -77,9 +78,26 @@ export async function resolveSlugs(
   const changedPaths: string[] = [];
   const newRecentFiles: string[] = [];
 
-  // Agrupar por slug base
+  // Slugs manuales (frontmatter slug:): se respetan tal cual y no participan
+  // en la resolución automática. El cambio contra el slug previo (de state.json)
+  // se reporta para limpiar los outputs del slug anterior.
+  for (const [relPath, entry] of discoveryIndex) {
+    if (!entry.slugFixed) continue;
+    const newSlug = entry.manualSlug;
+    if (newSlug === undefined) continue; // defensivo: slugFixed implica manualSlug
+    const prevSlug = entry.slug;
+    if (prevSlug && prevSlug !== newSlug) {
+      changedPaths.push(relPath);
+      newRecentFiles.push(relPath);
+      slugChangedEntries.set(relPath, prevSlug);
+    }
+    entry.slug = newSlug;
+  }
+
+  // Agrupar por slug base (solo entradas sin slug manual)
   const slugGroups = new Map<string, string[]>();
   for (const [relPath, entry] of discoveryIndex) {
+    if (entry.slugFixed) continue;
     const slugBase = computeSlug({ title: entry.title, author: entry.author }, { fallbackPath: relPath });
     const dir = dirname(relPath);
     const key = dir === '.' ? slugBase : `${dir}/${slugBase}`;
@@ -160,6 +178,27 @@ export async function resolveSlugs(
         }
       }
     }
+  }
+
+  // Colisión con slugs manuales (o entre manuales): dos entradas con la misma
+  // salida (directorio + slug) sobrescribirían sus archivos en dist/. Los slugs
+  // automáticos ya se resuelven sin duplicados por grupo; este check solo puede
+  // dispararse por un slug manual que coincida con otra salida.
+  const slugOwners = new Map<string, string>();
+  const collisions: string[] = [];
+  for (const [relPath, entry] of discoveryIndex) {
+    const s = entry.slug;
+    if (!s) continue;
+    const outputKey = `${dirname(relPath)}/${s}`;
+    const owner = slugOwners.get(outputKey);
+    if (owner !== undefined) {
+      collisions.push(`${owner} y ${relPath} → "${s}"`);
+    } else {
+      slugOwners.set(outputKey, relPath);
+    }
+  }
+  if (collisions.length > 0) {
+    throw new BuildError(`slugs duplicados: ${collisions.join('; ')}`);
   }
 
   return { slugChangedEntries, changedPaths, newRecentFiles };

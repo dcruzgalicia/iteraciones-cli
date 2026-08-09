@@ -6,6 +6,10 @@ export interface DiscoveryEntry {
   author: string[];
   date?: string;
   slug?: string;
+  /** Slug fijado por el usuario en el frontmatter (campo slug:). */
+  slugFixed?: boolean;
+  /** Valor del slug manual del frontmatter (resuelto por resolveSlugs). */
+  manualSlug?: string;
   /** mtime (ms) del archivo en el último build (caché content-addressed). */
   mtime?: number;
   /** Tamaño del archivo en el último build. */

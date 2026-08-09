@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { isAbsolute, join, relative } from 'node:path';
+import { dirname, isAbsolute, join, relative } from 'node:path';
 import { isIgnoredByRules, isInsideIgnoredDir, loadGitignoreRules } from '../builder/gitignore.js';
 import { validateDisabledPreambleFilters } from '../builder/preamble-loader.js';
 import { validateDisabledFilters } from '../builder/render.js';
@@ -17,7 +17,10 @@ const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
  * Campos del frontmatter que el pipeline consume. Cualquier otro campo se
  * descarta en todos los formatos: validate advierte para que no sea silencioso.
  */
-const KNOWN_FRONTMATTER_FIELDS = ['title', 'subtitle', 'date', 'author'];
+const KNOWN_FRONTMATTER_FIELDS = ['title', 'subtitle', 'date', 'author', 'slug'];
+
+/** Formato seguro de un slug manual (mismo regex que discover). */
+const SLUG_MANUAL_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /** Devuelve los campos del frontmatter que el pipeline ignorará. */
 function unknownFrontmatterFields(parsed: Record<string, unknown>): string[] {
@@ -46,6 +49,7 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
 
   const errors: ValidationError[] = [];
   const warnings: ValidationError[] = [];
+  const slugs = new Map<string, string>();
   for (const entry of entries) {
     const absPath = join(cwd, entry);
     let raw: string;
@@ -71,12 +75,32 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
           message: 'frontmatter YAML inválido: debe ser un objeto',
         });
       } else {
-        const unknown = unknownFrontmatterFields(result as Record<string, unknown>);
+        const parsed = result as Record<string, unknown>;
+        const unknown = unknownFrontmatterFields(parsed);
         if (unknown.length > 0) {
           warnings.push({
             file: entry,
             message: `campos de frontmatter ignorados por el pipeline: ${unknown.join(', ')}`,
           });
+        }
+        // Slug manual: formato seguro y sin duplicados (los duplicados
+        // sobrescribirían las salidas en dist/).
+        const slug = typeof parsed.slug === 'string' ? parsed.slug.trim() : undefined;
+        if (slug) {
+          if (!SLUG_MANUAL_RE.test(slug)) {
+            errors.push({
+              file: entry,
+              message: `slug inválido: "${slug}" — usa solo minúsculas, números y guiones (sin espacios, acentos ni guiones extremos)`,
+            });
+          } else {
+            const outputKey = `${dirname(entry)}/${slug}`;
+            const owner = slugs.get(outputKey);
+            if (owner !== undefined) {
+              errors.push({ file: entry, message: `slug duplicado: "${slug}" ya lo usa ${owner}` });
+            } else {
+              slugs.set(outputKey, entry);
+            }
+          }
         }
       }
     } catch (err) {
