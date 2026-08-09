@@ -7,7 +7,6 @@ export type CheckResult = {
   label: string;
   ok: boolean;
   detail?: string;
-  fixAction?: () => Promise<string>;
 };
 
 export async function checkPandoc(): Promise<CheckResult> {

@@ -73,6 +73,12 @@ describe('parser (errores de commander en español)', () => {
     expect(output).toContain("error: falta el argumento requerido 'path'");
     expect(exitCode).toBe(1);
   });
+
+  it('la bandera eliminada doctor --fix se reporta como opción desconocida', async () => {
+    const { output, exitCode } = await parseUsageError(['doctor', '--fix']);
+    expect(output).toContain("error: opción desconocida '--fix'");
+    expect(exitCode).toBe(1);
+  });
 });
 
 describe('parser (errores de flags)', () => {
