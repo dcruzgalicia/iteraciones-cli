@@ -255,7 +255,7 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
         lang,
         theme: htmlConfig?.theme,
         accent: htmlConfig?.accent,
-        css: ctx.cssPath ? relativeHref(dir, 'css/styles.css') : undefined,
+        css: ctx.needsCss ? relativeHref(dir, 'css/styles.css') : undefined,
         authorMeta: doc.frontmatter.author.join(', '),
         logoInline,
         docTitle: doc.frontmatter.title && doc.frontmatter.title !== 'Sin t\u00edtulo' ? doc.frontmatter.title : undefined,

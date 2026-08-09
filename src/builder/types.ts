@@ -40,7 +40,7 @@ export interface BuildContext {
   siteConfig: SiteConfig;
   cwd: string;
   outputDir: string;
-  cssPath: string;
+  needsCss: boolean;
   /** Máximo de invocaciones pandoc simultáneas. Default: CPU - 1. */
   concurrency: number;
 }
