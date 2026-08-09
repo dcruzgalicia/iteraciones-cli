@@ -1,7 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import type { ProgressTracker } from '../cli/progress.js';
-import type { FormatConfig } from '../config/site-config.js';
+import { DEFAULT_SITE_CONFIG, type FormatConfig } from '../config/site-config.js';
 import { formatHumanDate } from '../lib/date.js';
 import { logWarning } from '../lib/logger.js';
 import { mapWithConcurrency } from '../lib/run.js';
@@ -66,7 +66,9 @@ export async function runDocumentPipeline(
   const bibOptions = bib.bibOptions;
   const bibFiles = bib.bibFiles;
   const globalBibliography = bibOptions?.bibliography;
-  const lang = siteConfig.lang ?? 'es';
+  // El default vive en DEFAULT_SITE_CONFIG (es-MX): el fallback local no debe
+  // divergir de la configuración (un lang distinto emite --metadata distinto).
+  const lang = siteConfig.lang ?? DEFAULT_SITE_CONFIG.lang;
   const htmlConfig = formatCfg?.html;
   const logoInline = await loadLogoInline(ctx.cwd, htmlConfig?.logo?.trim());
 

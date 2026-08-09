@@ -207,9 +207,11 @@ export async function computeConfigHashes(cwd: string, siteConfig: SiteConfig): 
     // pdf/latex/epub/markdown debe regenerar las páginas HTML.
     html: hashString(
       `${JSON.stringify(fmt?.html ?? {})}\n${htmlTemplate}\n${logo}\n${String(siteConfig.toc ?? false)}\n` +
-        `${String(fmt?.pdf?.generate ?? false)}\n${String(fmt?.latex ?? false)}\n${String(fmt?.epub?.generate ?? false)}\n${String(fmt?.markdown?.generate ?? false)}`,
+        `${String(fmt?.pdf?.generate ?? false)}\n${String(fmt?.latex ?? false)}\n${String(fmt?.epub?.generate ?? false)}\n${String(fmt?.markdown?.generate ?? false)}\n` +
+        // lang se emite como --metadata=lang en el HTML: participar en el hash
+        `${String(siteConfig.lang ?? '')}`,
     ),
-    epub: hashString(`${JSON.stringify(fmt?.epub ?? {})}\n${String(siteConfig.toc ?? false)}`),
+    epub: hashString(`${JSON.stringify(fmt?.epub ?? {})}\n${String(siteConfig.toc ?? false)}\n${String(siteConfig.lang ?? '')}`),
     markdown: hashString(`${JSON.stringify(fmt?.markdown ?? {})}\n${String(siteConfig.lang ?? '')}`),
   };
 }
