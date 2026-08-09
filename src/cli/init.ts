@@ -9,7 +9,7 @@ import {
   DEFAULT_PDF_FORMAT,
   DEFAULT_SITE_CONFIG,
 } from '../config/site-config.js';
-import { logInfo } from '../lib/logger.js';
+import { logInfo, logSuccess } from '../lib/logger.js';
 
 /** Fecha local actual en formato ISO (yyyy-mm-dd), como en `new`. */
 function todayIso(): string {
@@ -124,9 +124,11 @@ export async function runInit(cwd: string): Promise<void> {
     createExclusive(join(cwd, 'bibliography.bib'), DEFAULT_BIB),
   ]);
 
-  logInfo(configCreated ? 'creado iteraciones.config.yaml' : 'omitido iteraciones.config.yaml (ya existe)', 'init');
-  logInfo(indexCreated ? 'creado index.md' : 'omitido index.md (ya existe)', 'init');
-  logInfo(bibCreated ? 'creado bibliography.bib' : 'omitido bibliography.bib (ya existe)', 'init');
+  // Patrón unificado: los comandos que mutan el proyecto (init, new, clean)
+  // usan ✓ para lo creado/eliminado y sin glifo para lo omitido.
+  logSuccess(configCreated ? 'creado iteraciones.config.yaml' : 'omitido iteraciones.config.yaml (ya existe)', 'init');
+  logSuccess(indexCreated ? 'creado index.md' : 'omitido index.md (ya existe)', 'init');
+  logSuccess(bibCreated ? 'creado bibliography.bib' : 'omitido bibliography.bib (ya existe)', 'init');
 }
 
 /**
