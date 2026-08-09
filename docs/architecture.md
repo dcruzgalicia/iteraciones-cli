@@ -110,7 +110,7 @@ Los filters son filtros Lua que transforman el contenido. Se organizan en **capa
 2. **Capa de formato** (`latex/`, `html/`) — corre en cada exportación y convierte los nodos semánticos a su formato (RawBlocks de apertura/cierre alrededor de los bloques nativos). La capa `html/` se aplica al generar la página HTML con el template de pandoc.
 3. **Filtros Lua**: todos los filters son filtros Lua (`lib/resources/filters/<grupo>/<nombre>.lua`) que corren **dentro** de las invocaciones pandoc (`--lua-filter`), en el orden numérico de su capa. Override: `<proyecto>/filters/<grupo>/<nombre>.lua` reemplaza al del paquete; `disabled-filters` (nombres completos) los desactiva.
 
-Además, existen los **preamble filters** (`lib/resources/preamble/*.tex`) que modifican el preámbulo LaTeX.
+Además, existen los **preamble filters** (`src/lib/resources/preamble/*.tex`) que modifican el preámbulo LaTeX.
 
 ### Filters integrados
 
@@ -135,8 +135,8 @@ Además, existen los **preamble filters** (`lib/resources/preamble/*.tex`) que m
 
 | Nombre | Archivo | Propósito |
 |--------|---------|-----------|
-| 01-documentclass | `lib/resources/preamble/01-documentclass.tex` | \documentclass con clase KOMA-Script |
-| 02-fonts | `lib/resources/preamble/02-fonts.tex` | Codificación y fuente principal |
+| 01-documentclass | `src/lib/resources/preamble/01-documentclass.tex` | \documentclass con clase KOMA-Script |
+| 02-fonts | `src/lib/resources/preamble/02-fonts.tex` | Codificación y fuente principal |
 | 03-spacing | `lib/resources/preamble/03-spacing.tex` | Interlineado con setspace |
 | 04-margins | `lib/resources/preamble/04-margins.tex` | Márgenes con geometry |
 | 05-language | `lib/resources/preamble/05-language.tex` | Idioma con babel |
@@ -300,9 +300,9 @@ El archivo `config-loader.ts` usa esquemas Zod en lugar de parseo manual campo p
 - Defaults declarativos con `.default()` (consumidos desde las constantes `DEFAULT_*`)
 - Documentación viva del esquema
 
-### ¿Por qué el tracker de progreso es propio (sin listr2)?
+### ¿Por qué el tracker de progreso es propio?
 
-El tracker del build (`src/cli/progress.ts`) es un renderer propio y síncrono: filas interactivas en TTY (conteo en vivo `[i/N]`), impresión de estados finales en pipes y texto plano en `--verbose`. La integración anterior con listr2 causó dos regresiones de cuelgue del proceso en TTY; el renderer propio no tiene bucles de render ni promesas de coordinación, así que un error del build no puede dejar el proceso colgado. listr2 se conserva únicamente en `doctor` (uso trivial).
+El tracker del build (`src/cli/progress.ts`) es un renderer propio y síncrono: filas interactivas en TTY (conteo en vivo `[i/N]`), impresión de estados finales en pipes y texto plano en `--verbose`. La integración anterior con una librería de tareas causó dos regresiones de cuelgue del proceso en TTY; el renderer propio no tiene bucles de render ni promesas de coordinación, así que un error del build no puede dejar el proceso colgado.
 
 ### ¿Por qué las listas de filters se derivan del filesystem?
 

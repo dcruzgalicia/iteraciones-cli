@@ -269,7 +269,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   }
 
   // Declarar al tracker las fases que se ejecutarán (TTY: libera discovery para
-  // que listr2 evalúe los skips con la información completa). Las subtareas de
+  // que el tracker evalúe los skips con la información completa). Las subtareas de
   // formato se controlan por setFormats; aquí solo se declaran las fases de
   // pipeline (render se salta en early returns sin trabajo).
   await progress.planPhases(['discovery', 'render']);
