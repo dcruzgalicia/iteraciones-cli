@@ -5,7 +5,7 @@ import { logWarning } from '../lib/logger.js';
 import type { BibOptions } from '../lib/pandoc-runner.js';
 import { isHiddenPath, isIgnoredByRules, loadGitignoreRules } from './gitignore.js';
 import { MD_READER } from './render.js';
-import type { BuildDocument, DiscoveryEntry, PreambleFlags } from './types.js';
+import type { BuildDocument, DiscoveryEntry } from './types.js';
 
 /** Ruta relativa del archivo de estado del build dentro del proyecto. */
 const STATE_PATH = join('.iteraciones', 'changes', 'state.json');
@@ -286,26 +286,12 @@ export async function readAstFromCache(cwd: string, doc: BuildDocument): Promise
   }
 }
 
-/** Escribe el AST canónico y los outputs cacheados según los formatos activos. */
-export async function writeCachedArtifacts(
-  cwd: string,
-  doc: BuildDocument,
-  slug: string,
-  ast: Record<string, unknown>,
-  processedBody?: string,
-  flags?: PreambleFlags,
-): Promise<void> {
+/** Escribe el AST canónico en la caché en disco (.iteraciones/ast/). */
+export async function writeCachedArtifacts(cwd: string, doc: BuildDocument, slug: string, ast: Record<string, unknown>): Promise<void> {
   const dir = dirname(doc.relativePath);
-  const cacheBase = join(cwd, '.iteraciones');
-  const astDir = join(cacheBase, 'ast', dir);
+  const astDir = join(cwd, '.iteraciones', 'ast', dir);
   await mkdir(astDir, { recursive: true });
   await Bun.write(join(astDir, `${slug}.json`), JSON.stringify(ast));
-  if (processedBody !== undefined && flags !== undefined) {
-    const texDir = join(cacheBase, 'tex', dir);
-    await mkdir(texDir, { recursive: true });
-    await Bun.write(join(texDir, `${slug}.tex`), processedBody);
-    await Bun.write(join(texDir, `${slug}.flags.json`), JSON.stringify(flags));
-  }
 }
 
 /** Resuelve una ruta configurada (bibliography/csl) contra la raíz del proyecto. */

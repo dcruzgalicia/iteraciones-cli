@@ -17,10 +17,7 @@ const FORMAT_EXT_MAP: Record<string, string> = {
 
 /** Elimina los artefactos cacheados de un documento (`.iteraciones/`). */
 async function removeCachedArtifacts(cacheBase: string, dir: string, slug: string): Promise<void> {
-  await rm(join(cacheBase, 'tex', dir, `${slug}.tex`), { force: true }).catch(() => {});
-  await rm(join(cacheBase, 'html', dir, `${slug}.html`), { force: true }).catch(() => {});
   await rm(join(cacheBase, 'ast', dir, `${slug}.json`), { force: true }).catch(() => {});
-  await rm(join(cacheBase, 'tex', dir, `${slug}.flags.json`), { force: true }).catch(() => {});
   for (const sub of ['pdf', 'html']) {
     for (const ext of ['.tex', '.html', '.epub']) {
       await rm(join(cacheBase, 'formats', sub, dir, `${slug}${ext}`), { force: true }).catch(() => {});

@@ -190,7 +190,7 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
     pdfJobs,
     noExport,
   } = pool;
-  const { htmlOn, epubOn, mdOn, latexOn, pdfOn, generateLatex } = plan;
+  const { htmlOn, epubOn, mdOn, latexOn, pdfOn } = plan;
   const htmlConfig = formatCfg?.html;
   const cwd = ctx.cwd;
   const slug = doc.slug ?? basename(doc.relativePath, '.md');
@@ -207,15 +207,16 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
     ast = (await readAstFromCache(cwd, doc)) ?? (await markdownToAst(doc, cwd, ctx.siteConfig, filters)); // caché vacío (p. ej. --no-cache previo)
   }
 
-  // Cuerpo LaTeX + flags (si LaTeX/PDF activo), persistidos como caché
+  // Cuerpo LaTeX + flags: solo si el documento tiene exportación LaTeX/PDF
+  // pendiente en este build (el body no se cachea: nadie lo relee).
   let texBody: string | undefined;
   let flags: Awaited<ReturnType<typeof texBodyFromAst>>['flags'] | undefined;
-  if (generateLatex) {
+  if ((latexOn || pdfOn) && pdfPaths.has(doc.relativePath)) {
     const result = await texBodyFromAst(ast, doc, cwd, ctx.siteConfig, filters);
     texBody = result.body;
     flags = result.flags;
   }
-  await writeCachedArtifacts(cwd, doc, slug, ast, texBody, flags);
+  await writeCachedArtifacts(cwd, doc, slug, ast);
 
   // --no-export: solo actualizar el caché (AST + tex body), sin salidas.
   if (noExport) return;

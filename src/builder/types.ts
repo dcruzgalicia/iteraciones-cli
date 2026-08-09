@@ -23,8 +23,8 @@ export interface Frontmatter {
 
 /**
  * Documento que acumula datos a través del pipeline.
- * Creado en discovery; los exports leen sus inputs (AST/LaTeX/HTML) del caché
- * en disco (`.iteraciones/ast/`, `.iteraciones/tex/`, `.iteraciones/html/`).
+ * Creado en discovery; el export lee el AST del caché en disco
+ * (`.iteraciones/ast/`) cuando el documento no se re-renderizó en el build.
  */
 export interface BuildDocument {
   filePath: string;
