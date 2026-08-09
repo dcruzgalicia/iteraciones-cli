@@ -38,7 +38,7 @@ async function setupBuildEnvironment(cwd: string, siteConfig: SiteConfig, option
     siteConfig,
     cwd,
     outputDir: options.outputDir ?? defaultOutputDir,
-    cssPath: '',
+    needsCss: false,
     concurrency,
   };
 
@@ -159,7 +159,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   }
 
   const ctx = await setupBuildEnvironment(cwd, siteConfig, options);
-  ctx.cssPath = plan.needsCss ? '/css/styles.css' : '';
+  ctx.needsCss = plan.needsCss;
 
   // Los 5 formatos configurados se muestran siempre en el tracker: activos con
   // ✔ (su trabajo se completa en el pipeline), desactivados con ✗.
