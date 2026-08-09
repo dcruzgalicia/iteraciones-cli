@@ -5,6 +5,7 @@ import { stringify } from 'yaml';
 import { PandocError } from '../../lib/errors.js';
 import { logWarning } from '../../lib/logger.js';
 import { runPandoc } from '../../lib/pandoc-runner.js';
+import { metadataValue } from '../render.js';
 import type { ExportDocument } from './types.js';
 
 /**
@@ -60,6 +61,19 @@ export async function convertToEpub(
     extraArgs.push('--citeproc');
   }
   if (toc) extraArgs.push('--toc');
+
+  // Metadatos del documento: el AST canónico no lleva meta (el frontmatter se
+  // separó antes de convertirlo), y sin ellos pandoc genera un EPUB sin
+  // dc:title ni dc:creator y con idioma incorrecto. Las claves repetidas
+  // (--metadata=author:...) forman una lista en pandoc. dc:date exige ISO:
+  // la fecha humana se omite por pandoc (la cruda del frontmatter es ISO).
+  extraArgs.push(`--metadata=title:${metadataValue(doc.metadata.title)}`);
+  for (const author of doc.metadata.author) {
+    extraArgs.push(`--metadata=author:${metadataValue(author)}`);
+  }
+  const date = doc.metadata.dateIso ?? doc.metadata.date;
+  if (date) extraArgs.push(`--metadata=date:${metadataValue(date)}`);
+  extraArgs.push(`--metadata=lang:${doc.metadata.lang}`);
 
   await runPandoc({ input: JSON.stringify(ast), sourcePath: doc.filePath, from: 'json', to: 'epub3', outputPath, extraArgs });
 }

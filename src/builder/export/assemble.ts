@@ -24,6 +24,7 @@ export function assembleExportDocument(
     title: doc.frontmatter.title || 'Sin título',
     author: doc.frontmatter.author,
     date: formatHumanDate(doc.frontmatter.date) ?? undefined,
+    dateIso: doc.frontmatter.date,
     lang,
     bibliography,
     csl,
