@@ -59,7 +59,11 @@ export async function runDocumentPipeline(
   const noExport = options.noExport === true;
   const siteConfig = ctx.siteConfig;
   const userFilters = await resolveUserLuaFilters(ctx.cwd, siteConfig);
-  const bibOptions = (await resolveBibOptions(ctx.cwd, siteConfig)).bibOptions;
+  // La bibliografía se resuelve una sola vez por build y se comparte con todos
+  // los documentos (antes cada texBodyFromAst re-ejecutaba el glob completo).
+  const bib = await resolveBibOptions(ctx.cwd, siteConfig);
+  const bibOptions = bib.bibOptions;
+  const bibFiles = bib.bibFiles;
   const globalBibliography = bibOptions?.bibliography;
   const lang = siteConfig.lang ?? 'es';
   const htmlConfig = formatCfg?.html;
@@ -112,6 +116,7 @@ export async function runDocumentPipeline(
           logoInline,
           filters,
           bibOptions,
+          bibFiles,
           renderDocPaths,
           htmlPaths,
           epubPaths,
@@ -160,6 +165,7 @@ interface FormatPoolCtx {
   logoInline: string | undefined;
   filters: Awaited<ReturnType<typeof loadFilterGroups>>;
   bibOptions: Awaited<ReturnType<typeof resolveBibOptions>>['bibOptions'];
+  bibFiles: string[];
   renderDocPaths: Set<string>;
   htmlPaths: Set<string>;
   epubPaths: Set<string>;
@@ -182,6 +188,7 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
     logoInline,
     filters,
     bibOptions,
+    bibFiles,
     renderDocPaths,
     htmlPaths,
     epubPaths,
@@ -212,7 +219,7 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
   let texBody: string | undefined;
   let flags: Awaited<ReturnType<typeof texBodyFromAst>>['flags'] | undefined;
   if ((latexOn || pdfOn) && pdfPaths.has(doc.relativePath)) {
-    const result = await texBodyFromAst(ast, doc, cwd, ctx.siteConfig, filters);
+    const result = await texBodyFromAst(ast, doc, filters, bibFiles);
     texBody = result.body;
     flags = result.flags;
   }

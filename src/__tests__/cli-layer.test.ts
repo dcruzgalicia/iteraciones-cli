@@ -284,6 +284,44 @@ describe('runBuild', () => {
     });
   });
 
+  it('un cambio de bibliografía regenera las exportaciones sin re-renderizar los ASTs', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nbibliography: refs/libro.bib\n', 'utf8');
+      const { mkdir } = await import('node:fs/promises');
+      await mkdir(join(dir, 'refs'), { recursive: true });
+      await writeFile(
+        join(dir, 'refs', 'libro.bib'),
+        '@book{ejemplo2024,\n  title = {Título original},\n  author = {Autor},\n  year = {2024},\n}\n',
+        'utf8',
+      );
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\nSegún @ejemplo2024, las citas funcionan.\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const { readdirSync } = await import('node:fs');
+      const astFiles = readdirSync(join(dir, '.iteraciones', 'ast'));
+      expect(astFiles.length).toBeGreaterThan(0);
+      const astBefore = await Bun.file(join(dir, '.iteraciones', 'ast', astFiles[0] ?? '')).text();
+      const htmlBefore = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
+      expect(htmlBefore).toContain('Título original');
+
+      // Cambiar la bibliografía: las exportaciones se regeneran, el AST no
+      await writeFile(
+        join(dir, 'refs', 'libro.bib'),
+        '@book{ejemplo2024,\n  title = {Título nuevo},\n  author = {Autor},\n  year = {2024},\n}\n',
+        'utf8',
+      );
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const astAfter = await Bun.file(join(dir, '.iteraciones', 'ast', astFiles[0] ?? '')).text();
+      expect(astAfter).toBe(astBefore);
+      const htmlAfter = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
+      expect(htmlAfter).toContain('Título nuevo');
+    });
+  });
+
   it('el EPUB generado incluye título, autor e idioma en sus metadatos', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);

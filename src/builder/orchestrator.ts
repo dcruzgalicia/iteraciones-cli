@@ -147,7 +147,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
     log(`Formatos eliminados: ${plan.removedFormats.join(', ')}. Limpiando archivos de dist.`);
   }
   if (plan.filtersInvalidated) log('Filters modificados — reprocesando todos los documentos');
-  if (plan.bibInvalidated) log('Bibliografía modificada — reprocesando todos los documentos');
+  if (plan.bibInvalidated) log('Bibliografía modificada — regenerando las exportaciones');
   if (plan.formatInvalidated.pdf) log('Configuración PDF/LaTeX modificada — regenerando LaTeX/PDF');
   if (plan.formatInvalidated.html) log('Configuración HTML modificada — regenerando páginas HTML');
   if (plan.formatInvalidated.epub) log('Configuración EPUB modificada — regenerando EPUBs');

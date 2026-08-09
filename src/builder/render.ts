@@ -5,7 +5,6 @@ import { logWarning } from '../lib/logger.js';
 import { type BibOptions, runPandoc } from '../lib/pandoc-runner.js';
 import { splitFrontmatter } from './discover.js';
 import { assembleHtmlBlocks, blockMarker } from './html-blocks.js';
-import { resolveBibOptions } from './state.js';
 import type { BuildDocument, PreambleFlags } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -600,16 +599,16 @@ export async function markdownToAst(
 
 /**
  * Genera el cuerpo LaTeX + flags de preámbulo desde el AST canónico.
- * Se usa en el pipeline por documento y para formatos nuevos desde el AST en disco.
+ * Los archivos .bib se resuelven una sola vez por build (ver pipeline) y se
+ * pasan aquí: la detección de citas corre sobre el AST, sin re-descubrir
+ * la bibliografía por documento.
  */
 export async function texBodyFromAst(
   ast: Record<string, unknown>,
   doc: BuildDocument,
-  cwd: string,
-  siteConfig: SiteConfig,
   filters: LuaFilterGroup,
+  bibFiles: string[],
 ): Promise<{ body: string; flags: PreambleFlags }> {
-  const { bibFiles } = await resolveBibOptions(cwd, siteConfig);
   const flags = computePreambleFlags(ast);
   // Detección de citas desde el AST (nodos Cite reales, sin regex sobre el markdown)
   const hasCiteKeys = bibFiles.length > 0 && hasCiteNodes(ast);
