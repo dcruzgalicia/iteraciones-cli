@@ -186,14 +186,14 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
 
   // AST: fresco desde markdown si el documento fue re-renderizado; si no,
   // desde el caché en disco (una sola lectura, sin re-lecturas por formato).
-  let ast: Record<string, unknown> | null = null;
+  // markdownToAst lanza BuildError si el documento falla: el build aborta con
+  // la ruta del archivo (nunca se omite un documento en silencio).
+  let ast: Record<string, unknown>;
   if (renderDocPaths.has(doc.relativePath)) {
     ast = await markdownToAst(doc, cwd, ctx.siteConfig, filters);
   } else {
-    ast = await readAstFromCache(cwd, doc);
-    if (!ast) ast = await markdownToAst(doc, cwd, ctx.siteConfig, filters); // caché vacío (p. ej. --no-cache previo)
+    ast = (await readAstFromCache(cwd, doc)) ?? (await markdownToAst(doc, cwd, ctx.siteConfig, filters)); // caché vacío (p. ej. --no-cache previo)
   }
-  if (!ast) return;
 
   // Cuerpo LaTeX + flags (si LaTeX/PDF activo), persistidos como caché
   let texBody: string | undefined;
