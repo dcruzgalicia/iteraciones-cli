@@ -927,8 +927,45 @@ describe('runInit', () => {
       await runInit(dir);
       expect(process.exitCode).toBe(0);
       expect(await Bun.file(join(dir, 'iteraciones.config.yaml')).exists()).toBe(true);
-      expect(await Bun.file(join(dir, 'README.md')).exists()).toBe(true);
+      expect(await Bun.file(join(dir, 'index.md')).exists()).toBe(true);
       expect(await Bun.file(join(dir, 'bibliography.bib')).exists()).toBe(true);
+    });
+  });
+
+  it('el primer build tras init produce un index.html real', async () => {
+    await withTempDir(async (dir) => {
+      process.exitCode = 0;
+      await runInit(dir);
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      expect(await Bun.file(join(dir, 'dist', 'files', 'index.html')).exists()).toBe(true);
+      // La tarjeta identidad del resto de documentos enlaza al home
+      const html = await Bun.file(join(dir, 'dist', 'files', 'index.html')).text();
+      expect(html).toContain('Inicio');
+    });
+  });
+
+  it('el config generado incluye los comentarios y parsea sin warnings', async () => {
+    await withTempDir(async (dir) => {
+      process.exitCode = 0;
+      await runInit(dir);
+      const yaml = await Bun.file(join(dir, 'iteraciones.config.yaml')).text();
+      expect(yaml).toContain('# Tema visual del HTML:');
+      expect(yaml).toContain('# Orden de los bloques del masonry:');
+      expect(yaml).toContain('# Los preamble filters 24, 25 y 26');
+      expect(yaml).toContain('theme: dark');
+      // El config generado debe pasar validate sin errores
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(output).not.toContain('✖');
+      expect(process.exitCode).toBe(0);
     });
   });
 

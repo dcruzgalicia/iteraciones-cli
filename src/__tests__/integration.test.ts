@@ -24,13 +24,14 @@ describe('integration: init + build', () => {
       // Verificar que se crearon los archivos base
       const configFile = Bun.file(join(cwd, 'iteraciones.config.yaml'));
       expect(await configFile.exists()).toBe(true);
-      const readmeFile = Bun.file(join(cwd, 'README.md'));
-      expect(await readmeFile.exists()).toBe(true);
+      const indexFile = Bun.file(join(cwd, 'index.md'));
+      expect(await indexFile.exists()).toBe(true);
 
       // 2. Build (solo HTML por defecto, sin caché)
       await build(cwd, { noCache: true });
 
-      // 3. Verificar que se generó HTML (el slug depende del frontmatter de README.md)
+      // 3. Verificar que se generó el home (index.md → index.html) y HTML en general
+      expect(await Bun.file(join(cwd, 'dist', 'files', 'index.html')).exists()).toBe(true);
       let found = false;
       for await (const _entry of new Bun.Glob('*.html').scan({ cwd: join(cwd, 'dist', 'files') })) {
         found = true;
