@@ -7,7 +7,7 @@ import { plural } from '../lib/plural.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import { isHiddenPath, isIgnoredByRules, loadGitignoreRules } from './gitignore.js';
 import { resolveSlugs } from './slug-resolver.js';
-import { type FilterFileCache, hashString, loadStateFile, saveStateFile } from './state.js';
+import { type BuildState, type FilterFileCache, hashString, loadStateFile, saveStateFile } from './state.js';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
 
 interface DiscoverResult {
@@ -20,68 +20,7 @@ interface DiscoverResult {
   slugChangedEntries: Map<string, string>;
 }
 
-/**
- * Estado del build anterior, leído de state.json.
- * Combina el report (startedAt, activeFormats) con el discovery index (entries)
- * y los hashes de invalidación (filters, config por formato, bibliografía).
- */
-export interface BuildState {
-  /** Timestamp del build anterior. */
-  startedAt: number;
-  /** Formatos que estaban activos en el build anterior. */
-  activeFormats: string[];
-  /** Directorio de salida del build anterior (para el comando info). */
-  outputDir?: string;
-  /** Hash de los filters efectivos del build anterior. */
-  filtersHash?: string;
-  /** Caché de archivos de filtro del build anterior (mtime+size+hash). */
-  filterFileCache?: FilterFileCache;
-  /** Hash de los inputs del CSS del build anterior. */
-  cssInputHash?: string;
-  /** Hash de configuración por formato del build anterior. */
-  configHashes?: Record<string, string>;
-  /** Hash de los .bib/.csl del build anterior. */
-  bibHash?: string;
-  /** Entradas del discovery index (path → frontmatter + caché content-addressed). */
-  entries: Map<string, DiscoveryEntry>;
-}
-
 const FM_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
-
-export async function loadBuildState(cwd: string): Promise<BuildState | null> {
-  const state = await loadStateFile(cwd);
-  if (!state) return null;
-  return {
-    startedAt: state.startedAt,
-    activeFormats: state.activeFormats,
-    outputDir: state.outputDir,
-    filtersHash: state.filtersHash,
-    filterFileCache: state.filterFileCache,
-    cssInputHash: state.cssInputHash,
-    configHashes: state.configHashes,
-    bibHash: state.bibHash,
-    entries: new Map(Object.entries(state.entries)),
-  };
-}
-
-/**
- * Guarda el estado del build actual en state.json (escritura atómica).
- * Combina el report (startedAt, activeFormats), los hashes de invalidación
- * y el discovery index (entries).
- */
-async function saveBuildState(cwd: string, state: BuildState): Promise<void> {
-  await saveStateFile(cwd, {
-    startedAt: state.startedAt,
-    activeFormats: state.activeFormats,
-    outputDir: state.outputDir,
-    filtersHash: state.filtersHash,
-    filterFileCache: state.filterFileCache,
-    cssInputHash: state.cssInputHash,
-    configHashes: state.configHashes,
-    bibHash: state.bibHash,
-    entries: Object.fromEntries(state.entries),
-  });
-}
 
 /**
  * Separa el frontmatter YAML del body del documento.
@@ -171,7 +110,7 @@ export async function discover(
 
   const useCache = !options.noCache;
   // Si orchestrator ya pasó el estado, no leer state.json otra vez
-  const prevState = options.prevState !== undefined ? options.prevState : useCache ? await loadBuildState(cwd) : null;
+  const prevState = options.prevState !== undefined ? options.prevState : useCache ? await loadStateFile(cwd) : null;
   const discoveryIndex = useCache ? (prevState?.entries ?? new Map<string, DiscoveryEntry>()) : new Map<string, DiscoveryEntry>();
 
   const currentSet = new Set(relativePaths);
@@ -319,7 +258,7 @@ export async function discover(
     options.meta?.cssInputHash !== prevState?.cssInputHash;
 
   if (hasChanged && options.persist !== false) {
-    await saveBuildState(cwd, {
+    await saveStateFile(cwd, {
       startedAt: thisBuildStartedAt,
       activeFormats: options.activeFormats ?? [],
       outputDir: options.outputDir,

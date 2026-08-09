@@ -22,9 +22,15 @@ interface FilterFileCacheEntry {
 
 export type FilterFileCache = Record<string, FilterFileCacheEntry>;
 
-/** Contenido completo de state.json (caché content-addressed del build). */
-export interface StateFile {
+/**
+ * Estado del build (caché content-addressed), leído y guardado en state.json.
+ * Combina el report (startedAt, activeFormats), el discovery index (entries)
+ * y los hashes de invalidación (filters, config por formato, bibliografía).
+ */
+export interface BuildState {
+  /** Timestamp del build anterior. */
   startedAt: number;
+  /** Formatos que estaban activos en el build anterior. */
   activeFormats: string[];
   /** Directorio de salida usado por el último build (para el comando info). */
   outputDir?: string;
@@ -39,7 +45,7 @@ export interface StateFile {
   /** Hash de los inputs del CSS (acento + estilos base) para decidir si regenerar Tailwind. */
   cssInputHash?: string;
   /** Índice de descubrimiento: path relativo → entry con frontmatter y caché. */
-  entries: Record<string, DiscoveryEntry>;
+  entries: Map<string, DiscoveryEntry>;
 }
 
 export function hashString(input: string): string {
@@ -51,12 +57,12 @@ async function hashFileContent(path: string): Promise<string> {
   return Bun.CryptoHasher.hash('sha256', bytes, 'hex');
 }
 
-export async function loadStateFile(cwd: string): Promise<StateFile | null> {
+export async function loadStateFile(cwd: string): Promise<BuildState | null> {
   const file = Bun.file(join(cwd, STATE_PATH));
   if (!(await file.exists())) return null;
   try {
     const raw = await file.text();
-    const parsed = JSON.parse(raw) as Partial<StateFile>;
+    const parsed = JSON.parse(raw) as Partial<BuildState>;
     if (typeof parsed.startedAt !== 'number') return null;
     return {
       startedAt: parsed.startedAt,
@@ -67,7 +73,8 @@ export async function loadStateFile(cwd: string): Promise<StateFile | null> {
       configHashes: parsed.configHashes,
       bibHash: parsed.bibHash,
       cssInputHash: parsed.cssInputHash,
-      entries: (parsed.entries ?? {}) as Record<string, DiscoveryEntry>,
+      // En disco las entradas son un objeto; en runtime se usan como Map.
+      entries: new Map(Object.entries((parsed.entries ?? {}) as Record<string, DiscoveryEntry>)),
     };
   } catch (err) {
     // state.json corrupto (build interrumpido a mitad de escritura): se ignora y se hará build completo
@@ -80,11 +87,11 @@ export async function loadStateFile(cwd: string): Promise<StateFile | null> {
  * Guarda state.json de forma atómica (temp + rename): un build interrumpido
  * nunca deja el caché a medias.
  */
-export async function saveStateFile(cwd: string, state: StateFile): Promise<void> {
+export async function saveStateFile(cwd: string, state: BuildState): Promise<void> {
   const filePath = join(cwd, STATE_PATH);
   await mkdir(dirname(filePath), { recursive: true });
   const tmpPath = `${filePath}.tmp`;
-  await Bun.write(tmpPath, JSON.stringify(state));
+  await Bun.write(tmpPath, JSON.stringify({ ...state, entries: Object.fromEntries(state.entries) }));
   try {
     await rename(tmpPath, filePath);
   } catch {
