@@ -100,6 +100,22 @@ export async function checkLatexEngine(): Promise<CheckResult> {
         detail: 'pdflatex encontrado pero KOMA-Script no instalado. Instala MacTeX full: https://tug.org/mactex/',
       };
     }
+    // El PDF real se compila con latexmk (no con pdflatex directo): verificarlo
+    // evita que doctor diga "todo en orden" y el build reviente después.
+    let latexmkOk = false;
+    try {
+      const latexmkResult = await run('latexmk', ['-v']);
+      latexmkOk = latexmkResult.exitCode === 0;
+    } catch {
+      latexmkOk = false;
+    }
+    if (!latexmkOk) {
+      return {
+        label: 'pdflatex disponible',
+        ok: false,
+        detail: 'pdflatex y KOMA-Script encontrados pero latexmk no está en PATH. Instala MacTeX full: https://tug.org/mactex/',
+      };
+    }
     const versionLine = engineResult.stdout.split('\n')[0]?.trim() ?? 'pdflatex';
     return { label: 'pdflatex disponible', ok: true, detail: versionLine };
   } catch {
