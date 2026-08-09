@@ -105,7 +105,10 @@ export async function runValidate(cwd: string): Promise<void> {
   const configWarnings: ValidationError[] = [];
   try {
     const config = await loadSiteConfig(cwd, { mode: 'validate' });
-    hasPdf = !!config.format?.pdf;
+    // El transform del schema materializa siempre format.pdf con defaults, así
+    // que su presencia no indica que el proyecto use PDF: el criterio real es
+    // generate:true o LaTeX activo (mismo criterio que doctor).
+    hasPdf = config.format?.pdf?.generate === true || config.format?.latex === true;
     disabledFiltersCount = config.disabledFilters?.length ?? 0;
     luaFiltersCount = config.luaFilters?.length ?? 0;
     // Validar nombres de filters desactivados (warnings, no errores)
