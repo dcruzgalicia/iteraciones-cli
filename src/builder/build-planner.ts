@@ -1,7 +1,7 @@
 import type { SiteConfig } from '../config/site-config.js';
 import { computeActiveFormats } from '../config/site-config.js';
 import { computeCssInputHash } from './build-assets.js';
-import type { BuildState } from './discover.js';
+import type { BuildState } from './state.js';
 import { computeBibHash, computeConfigHashes, computeFiltersHash, type FilterFileCache } from './state.js';
 import type { BuildDocument } from './types.js';
 

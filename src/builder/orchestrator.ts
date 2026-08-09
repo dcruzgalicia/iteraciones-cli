@@ -8,10 +8,11 @@ import { logInfo, logWarning } from '../lib/logger.js';
 import { buildAssets } from './build-assets.js';
 import { computeBuildMetadata, computeWorkSets } from './build-planner.js';
 import { buildFormatsList, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges, copyToDist } from './cleanup.js';
-import { buildDocsFromIndex, discover, loadBuildState } from './discover.js';
+import { buildDocsFromIndex, discover } from './discover.js';
 import { runDocumentPipeline } from './pipeline.js';
 import { validateDisabledPreambleFilters } from './preamble-loader.js';
 import { validateDisabledFilters } from './render.js';
+import { loadStateFile } from './state.js';
 import type { BuildContext } from './types.js';
 
 export interface BuildOptions {
@@ -82,7 +83,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
  */
 async function dryRun(cwd: string): Promise<void> {
   const siteConfig = await loadSiteConfig(cwd);
-  const prevState = await loadBuildState(cwd);
+  const prevState = await loadStateFile(cwd);
 
   // Computar la metadata de invalidación igual que el build
   const plan = await computeBuildMetadata(cwd, siteConfig, prevState, false);
@@ -136,7 +137,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   // Con --no-cache no hay estado previo con qué comparar (la caché se borra en
   // setupBuildEnvironment): no cargar prevState evita mensajes de invalidación
   // engañosos y fuerza el reprocesamiento completo.
-  const prevState = options.noCache ? null : await loadBuildState(cwd);
+  const prevState = options.noCache ? null : await loadStateFile(cwd);
   const plan = await computeBuildMetadata(cwd, siteConfig, prevState, options.noCss);
 
   if (plan.newFormats.length > 0) {
