@@ -152,10 +152,12 @@ describe('runBuild', () => {
         stderrSpy.mockRestore();
       }
       expect(process.exitCode).toBe(0);
-      expect(out).toMatch(/Formatos generados\s+0/);
+      expect(out).toMatch(/Formatos activos\s+0/);
       expect(out).not.toContain('reutilizado');
       // El aviso es un warning diferido al bloque Advertencias del resumen
       expect(out).toContain('⚠ [build] No se encontraron documentos Markdown en el proyecto.');
+      // Con advertencias no hay "Todo listo.": el cierre es neutral
+      expect(out).not.toContain('✔ Todo listo.');
     });
   });
 
@@ -648,7 +650,7 @@ describe('runBuild', () => {
         expect(process.exitCode).toBe(0);
         const output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
         expect(output).toContain('Salidas no modificadas');
-        expect(output).not.toContain('Formatos generados');
+        expect(output).not.toContain('Formatos activos');
       } finally {
         stdoutSpy.mockRestore();
       }

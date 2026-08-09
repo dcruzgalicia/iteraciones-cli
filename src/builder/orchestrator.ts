@@ -235,7 +235,12 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
 
   if (!work.anyWork) {
     log('Ningún documento modificado — sin cambios');
-    await progress.finish(0, allDocs.length, []);
+    await progress.finish(
+      0,
+      allDocs.length,
+      buildFormatsList({ latexOn: plan.latexOn, pdfOn: plan.pdfOn, htmlOn: plan.htmlOn, epubOn: plan.epubOn, mdOn: plan.mdOn }),
+      ctx.outputDir,
+    );
     return;
   }
 
@@ -254,7 +259,12 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
     work.exportSets.markdown.length === 0
   ) {
     log('Ningún documento modificado — sin cambios');
-    await progress.finish(0, allDocs.length, []);
+    await progress.finish(
+      0,
+      allDocs.length,
+      buildFormatsList({ latexOn: plan.latexOn, pdfOn: plan.pdfOn, htmlOn: plan.htmlOn, epubOn: plan.epubOn, mdOn: plan.mdOn }),
+      ctx.outputDir,
+    );
     return;
   }
 
@@ -306,5 +316,6 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
     processedCount,
     cachedCount,
     buildFormatsList({ latexOn: plan.latexOn, pdfOn: plan.pdfOn, htmlOn: plan.htmlOn, epubOn: plan.epubOn, mdOn: plan.mdOn }),
+    ctx.outputDir,
   );
 }
