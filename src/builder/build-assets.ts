@@ -1,12 +1,14 @@
 import { cp, mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/site-config.js';
+import { ACCENT_PALETTES, type AccentColor, accentOverrideBlock } from '../lib/accent-palettes.js';
 import { logWarning } from '../lib/logger.js';
 import { hashString } from './state.js';
 
 const PKG_ROOT = join(import.meta.dir, '../..');
 const CSS_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'styles.css');
 const FONTS_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'fonts');
+const CSS_BASE = join(PKG_ROOT, 'src', 'lib', 'resources', 'css', 'base.css');
 
 /**
  * Hash de los inputs del CSS (acento + estilos base del paquete). Si no cambió
@@ -25,18 +27,25 @@ export async function buildAssets(outputDir: string, cwd: string, siteConfig: Si
   const tasks: Promise<void>[] = [copyFonts(outputDir), copyLogo(outputDir, cwd, siteConfig)];
   if (!options.noCss) {
     const accent = siteConfig.format?.html?.accent ?? 'lime';
-    tasks.push(copyPrecompiledCss(outputDir, accent));
+    tasks.push(assembleAccentCss(outputDir, accent));
   }
   await Promise.all(tasks);
   return options.noCss ? '' : '/css/styles.css';
 }
 
-/** Copia el CSS precompilado del acento (src/lib/resources/css/<accent>.css). */
-async function copyPrecompiledCss(outputDir: string, accent: string): Promise<void> {
+/**
+ * Ensambla el CSS del acento: el CSS base embarcado (placeholder lime) más un
+ * bloque final con las variables de la paleta del acento. Las variables sin
+ * capa ganan a las de @layer theme, así que el render es idéntico al que
+ * Tailwind generaría compilando directamente con ese acento.
+ */
+async function assembleAccentCss(outputDir: string, accent: string): Promise<void> {
   const targetCssDir = join(outputDir, 'css');
   await mkdir(targetCssDir, { recursive: true });
-  const src = join(PKG_ROOT, 'src', 'lib', 'resources', 'css', `${accent}.css`);
-  await cp(src, join(targetCssDir, 'styles.css'));
+  const palette = ACCENT_PALETTES[accent as AccentColor];
+  if (palette === undefined) throw new Error(`acento desconocido: "${accent}"`);
+  const base = await Bun.file(CSS_BASE).text();
+  await Bun.write(join(targetCssDir, 'styles.css'), `${base}\n${accentOverrideBlock(accent as AccentColor)}`);
 }
 
 async function copyFonts(outputDir: string): Promise<void> {

@@ -6,6 +6,7 @@ import { CommanderError } from 'commander';
 import { runBuild, runClean, runDoctor, runFilters, runInfo, runInit, runNew, runValidate } from '../cli/dispatcher.js';
 import { buildProgram } from '../cli/parser.js';
 import { DEFAULT_HTML_BLOCKS } from '../config/site-config.js';
+import { accentOverrideBlock } from '../lib/accent-palettes.js';
 import { initTestProject } from './helpers.js';
 
 /**
@@ -286,16 +287,17 @@ describe('runBuild', () => {
     });
   });
 
-  it('el CSS precompilado del acento se copia sin invocar Tailwind ni escanear el proyecto', async () => {
+  it('el CSS ensamblado del acento se genera sin invocar Tailwind ni escanear el proyecto', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
       process.exitCode = 0;
       await runBuild(dir);
       const cssPath = join(dir, 'dist', 'files', 'css', 'styles.css');
       const css = await Bun.file(cssPath).text();
-      // El CSS es exactamente el precompilado embarcado del acento por defecto (lime)
-      const committed = await Bun.file(join(import.meta.dir, '../lib/resources/css/lime.css')).text();
-      expect(css).toBe(committed);
+      // El CSS es el base embarcado + el override del acento por defecto (lime)
+      const base = await Bun.file(join(import.meta.dir, '../lib/resources/css/base.css')).text();
+      const expected = `${base}\n${accentOverrideBlock('lime')}`;
+      expect(css).toBe(expected);
       expect(css).toContain('prose-xl');
 
       // Archivos .md dentro de dist/ y .iteraciones/ no afectan el CSS
@@ -314,7 +316,7 @@ describe('runBuild', () => {
       process.exitCode = 0;
       await runBuild(dir);
       const css2 = await Bun.file(cssPath).text();
-      expect(css2).toBe(committed);
+      expect(css2).toBe(expected);
       expect(css2).not.toContain('bg-fuchsia-700');
       expect(css2).not.toContain('bg-indigo-700');
     });

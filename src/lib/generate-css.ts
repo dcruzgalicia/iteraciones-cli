@@ -1,16 +1,11 @@
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { KNOWN_ACCENT_COLORS } from '../config/config-schema.js';
 import { run } from './run.js';
 
 /** Raíz del paquete (src/lib/ → raíz del repo). */
 const PKG_ROOT = join(import.meta.dir, '..', '..');
 const CSS_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'styles.css');
-
-/** Acentos Tailwind v4 con escala completa (misma lista que el esquema de config). */
-export const ACCENT_COLORS: readonly string[] = KNOWN_ACCENT_COLORS;
-
 const SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
 
 /**
@@ -20,7 +15,11 @@ const SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
  * `data-theme` en el mismo archivo: un CSS por acento cubre light y dark.
  */
 export async function generateAccentCss(accent: string, targetPath: string): Promise<void> {
-  const tempInputPath = join(tmpdir(), `_iteraciones-css-${accent}.css`);
+  // Directorio temporal dedicado (vacío salvo el input): Tailwind 4.3 escanea
+  // el cwd además de @source, y el repo del paquete o /tmp (scripts con
+  // clases en strings) contaminaría el CSS. El input y el cwd viven aquí.
+  const tempDir = await mkdtemp(join(tmpdir(), '_iteraciones-css-'));
+  const tempInputPath = join(tempDir, `input-${accent}.css`);
   const accentTheme = SHADES.map((s) => `  --color-accent-${s}: var(--color-${accent}-${s});`).join('\n');
   const tempContent = [
     `@import "${CSS_SRC}";`,
@@ -38,18 +37,16 @@ export async function generateAccentCss(accent: string, targetPath: string): Pro
   ].join('\n');
   await writeFile(tempInputPath, tempContent, 'utf8');
   try {
-    const result = await run('bun', ['x', '--bun', '@tailwindcss/cli', '-i', tempInputPath, '-o', targetPath, '--minify']);
+    const result = await run('bun', ['x', '--bun', '@tailwindcss/cli', '-i', tempInputPath, '-o', targetPath, '--minify'], {
+      cwd: tempDir,
+    });
     if (result.exitCode !== 0) throw new Error(`Tailwind CSS falló para el acento ${accent}:\n${result.stderr}`);
   } finally {
-    await rm(tempInputPath, { force: true });
+    await rm(tempDir, { recursive: true, force: true });
   }
 }
 
-/** Regenera los CSS precompilados de los 23 acentos en src/lib/resources/css/. */
-export async function generateAllCss(): Promise<void> {
-  const outDir = join(PKG_ROOT, 'src', 'lib', 'resources', 'css');
-  await mkdir(outDir, { recursive: true });
-  for (const accent of ACCENT_COLORS) {
-    await generateAccentCss(accent, join(outDir, `${accent}.css`));
-  }
+/** Regenera el CSS base embarcado (placeholder lime) en src/lib/resources/css/base.css. */
+export async function generateBaseCss(): Promise<void> {
+  await generateAccentCss('lime', join(PKG_ROOT, 'src', 'lib', 'resources', 'css', 'base.css'));
 }

@@ -188,7 +188,9 @@ Tema visual del HTML (atributo `data-theme` del `<html>`).
 **Tipo:** `string`
 **Por defecto:** `'lime'`
 
-Color de acento del tema. Debe ser un color de la paleta Tailwind CSS v4 con escala completa (50–950). Colores válidos: `slate`, `gray`, `zinc`, `neutral`, `stone`, `red`, `orange`, `amber`, `yellow`, `lime`, `green`, `emerald`, `teal`, `cyan`, `sky`, `blue`, `indigo`, `violet`, `purple`, `fuchsia`, `pink`, `rose`.
+Color de acento del tema. Debe ser un color de la paleta Tailwind CSS v4 con escala completa (50–950). Colores válidos: `slate`, `gray`, `zinc`, `neutral`, `stone`, `red`, `orange`, `amber`, `yellow`, `lime`, `green`, `emerald`, `teal`, `cyan`, `sky`, `blue`, `indigo`, `violet`, `purple`, `fuchsia`, `pink`, `rose`, `olive`.
+
+La paleta vive en `src/lib/accent-palettes.ts` (valores oklch + reglas de opacidad por acento): para añadir un color nuevo de Tailwind basta con añadir ahí sus valores y reglas (regenerables con el pipeline de `scripts/generate-css.ts`).
 
 #### `format.html.blocks`
 
