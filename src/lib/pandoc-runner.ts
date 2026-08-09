@@ -1,6 +1,9 @@
 import { PandocError } from './errors.js';
 import { type RunResult, run } from './run.js';
 
+/** Límite de tiempo de una invocación de pandoc: 2 minutos. */
+const PANDOC_TIMEOUT_MS = 120_000;
+
 export interface BibOptions {
   /** Ruta absoluta al archivo .bib. */
   bibliography: string;
@@ -78,7 +81,23 @@ export async function runPandoc(options: PandocOptions): Promise<string> {
     throw new PandocError('No se pudo leer stderr de pandoc', options.sourcePath, '');
   }
 
-  const [stdout, stderr, exitCode] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+  const outputPromise = Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+  // Un pandoc colgado (p. ej. un filtro Lua en loop) no debe colgar el build:
+  // el kill del timeout resuelve proc.exited y clearTimeout siempre corre.
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    proc.kill();
+  }, PANDOC_TIMEOUT_MS);
+  const [stdout, stderr, exitCode] = await outputPromise;
+  clearTimeout(timer);
+  if (timedOut) {
+    throw new PandocError(
+      `pandoc no terminó en ${PANDOC_TIMEOUT_MS / 1000}s y fue terminado. Revisa tus filtros Lua (posible loop infinito).`,
+      options.sourcePath,
+      stderr,
+    );
+  }
 
   if (exitCode !== 0) {
     // El mensaje no incluye la ruta: el dispatcher la añade una sola vez.
