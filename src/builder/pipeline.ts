@@ -261,7 +261,7 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
         docTitle: doc.frontmatter.title && doc.frontmatter.title !== 'Sin t\u00edtulo' ? doc.frontmatter.title : undefined,
         subtitle: doc.frontmatter.subtitle,
         date: formatHumanDate(doc.frontmatter.date),
-        homeHref: hasHomePage ? (dir === '.' ? './index.html' : `${'../'.repeat(dir.split('/').length)}index.html`) : undefined,
+        homeHref: hasHomePage ? relativeHref(dir, 'index.html') : undefined,
         formats: formats.length > 0 ? formats : undefined,
       },
       ctx.siteConfig,
