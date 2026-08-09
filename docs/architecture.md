@@ -108,7 +108,7 @@ Los filters son filtros Lua que transforman el contenido. Se organizan en **capa
 
 1. **Capa semántica** (`semantic/`) — corre en la invocación `markdown → json` y deja el **AST canónico** sin contenido de formato específico: `::` → `Div.spacer`, `:;` → `Div.spacer noindent`. Los `Div.dictum/verse/center/flushright` quedan sin transformar.
 2. **Capa de formato** (`latex/`, `html/`) — corre en cada exportación y convierte los nodos semánticos a su formato (RawBlocks de apertura/cierre alrededor de los bloques nativos). La capa `html/` se aplica al generar la página HTML con el template de pandoc.
-3. **Filtros Lua**: todos los filters son filtros Lua (`lib/resources/filters/<grupo>/<nombre>.lua`) que corren **dentro** de las invocaciones pandoc (`--lua-filter`), en el orden numérico de su capa. Override: `<proyecto>/filters/<grupo>/<nombre>.lua` reemplaza al del paquete; `disabled-filters` (nombres completos) los desactiva.
+3. **Filtros Lua**: todos los filters son filtros Lua (`src/lib/resources/filters/<grupo>/<nombre>.lua`) que corren **dentro** de las invocaciones pandoc (`--lua-filter`), en el orden numérico de su capa. Override: `<proyecto>/filters/<grupo>/<nombre>.lua` reemplaza al del paquete; `disabled-filters` (nombres completos) los desactiva.
 
 Además, existen los **preamble filters** (`src/lib/resources/preamble/*.tex`) que modifican el preámbulo LaTeX.
 
@@ -137,30 +137,30 @@ Además, existen los **preamble filters** (`src/lib/resources/preamble/*.tex`) q
 |--------|---------|-----------|
 | 01-documentclass | `src/lib/resources/preamble/01-documentclass.tex` | \documentclass con clase KOMA-Script |
 | 02-fonts | `src/lib/resources/preamble/02-fonts.tex` | Codificación y fuente principal |
-| 03-spacing | `lib/resources/preamble/03-spacing.tex` | Interlineado con setspace |
-| 04-margins | `lib/resources/preamble/04-margins.tex` | Márgenes con geometry |
-| 05-language | `lib/resources/preamble/05-language.tex` | Idioma con babel |
-| 06-headers | `lib/resources/preamble/06-headers.tex` | Encabezados con scrlayer-scrpage |
-| 07-typography | `lib/resources/preamble/07-typography.tex` | Microtipografía y penalizaciones |
-| 08-hyperref | `lib/resources/preamble/08-hyperref.tex` | Enlaces PDF |
-| 09-tables | `lib/resources/preamble/09-tables.tex` | Paquetes de tablas |
-| 10-lists | `lib/resources/preamble/10-lists.tex` | Listas con enumitem |
-| 11-bibliography | `lib/resources/preamble/11-bibliography.tex` | Bibliografía con biblatex |
-| 12-counters | `lib/resources/preamble/12-counters.tex` | Contadores de secciones |
-| 13-setkomafont | `lib/resources/preamble/13-setkomafont.tex` | Fuentes de la portada |
-| 14-sectioning | `lib/resources/preamble/14-sectioning.tex` | Estilo de secciones |
-| 15-hyphenation-rules | `lib/resources/preamble/15-hyphenation-rules.tex` | Reglas de partición de palabras |
-| 16-toc-styling | `lib/resources/preamble/16-toc-styling.tex` | Estilo del índice |
-| 17-toc-section | `lib/resources/preamble/17-toc-section.tex` | TOC como \subsubsection* |
-| 18-bibliography-heading | `lib/resources/preamble/18-bibliography-heading.tex` | Título de bibliografía como subsubsection |
-| 19-maketitle | `lib/resources/preamble/19-maketitle.tex` | Personaliza \maketitle |
-| 20-alignment | `lib/resources/preamble/20-alignment.tex` | Redefine center/flushright/flushleft |
-| 21-dictum | `lib/resources/preamble/21-dictum.tex` | Configuración de epígrafes |
-| 22-verse | `lib/resources/preamble/22-verse.tex` | Redefine el entorno verse |
-| 23-quote | `lib/resources/preamble/23-quote.tex` | Redefine el entorno quote |
-| 24-eso-pic | `lib/resources/preamble/24-eso-pic.tex` | Fondo de página (desactivado por defecto) |
-| 25-pdfx | `lib/resources/preamble/25-pdfx.tex` | PDF/X-1a (desactivado por defecto) |
-| 26-crop | `lib/resources/preamble/26-crop.tex` | Marcas de corte (desactivado por defecto) |
+| 03-spacing | `src/lib/resources/preamble/03-spacing.tex` | Interlineado con setspace |
+| 04-margins | `src/lib/resources/preamble/04-margins.tex` | Márgenes con geometry |
+| 05-language | `src/lib/resources/preamble/05-language.tex` | Idioma con babel |
+| 06-headers | `src/lib/resources/preamble/06-headers.tex` | Encabezados con scrlayer-scrpage |
+| 07-typography | `src/lib/resources/preamble/07-typography.tex` | Microtipografía y penalizaciones |
+| 08-hyperref | `src/lib/resources/preamble/08-hyperref.tex` | Enlaces PDF |
+| 09-tables | `src/lib/resources/preamble/09-tables.tex` | Paquetes de tablas |
+| 10-lists | `src/lib/resources/preamble/10-lists.tex` | Listas con enumitem |
+| 11-bibliography | `src/lib/resources/preamble/11-bibliography.tex` | Bibliografía con biblatex |
+| 12-counters | `src/lib/resources/preamble/12-counters.tex` | Contadores de secciones |
+| 13-setkomafont | `src/lib/resources/preamble/13-setkomafont.tex` | Fuentes de la portada |
+| 14-sectioning | `src/lib/resources/preamble/14-sectioning.tex` | Estilo de secciones |
+| 15-hyphenation-rules | `src/lib/resources/preamble/15-hyphenation-rules.tex` | Reglas de partición de palabras |
+| 16-toc-styling | `src/lib/resources/preamble/16-toc-styling.tex` | Estilo del índice |
+| 17-toc-section | `src/lib/resources/preamble/17-toc-section.tex` | TOC como \subsubsection* |
+| 18-bibliography-heading | `src/lib/resources/preamble/18-bibliography-heading.tex` | Título de bibliografía como subsubsection |
+| 19-maketitle | `src/lib/resources/preamble/19-maketitle.tex` | Personaliza \maketitle |
+| 20-alignment | `src/lib/resources/preamble/20-alignment.tex` | Redefine center/flushright/flushleft |
+| 21-dictum | `src/lib/resources/preamble/21-dictum.tex` | Configuración de epígrafes |
+| 22-verse | `src/lib/resources/preamble/22-verse.tex` | Redefine el entorno verse |
+| 23-quote | `src/lib/resources/preamble/23-quote.tex` | Redefine el entorno quote |
+| 24-eso-pic | `src/lib/resources/preamble/24-eso-pic.tex` | Fondo de página (desactivado por defecto) |
+| 25-pdfx | `src/lib/resources/preamble/25-pdfx.tex` | PDF/X-1a (desactivado por defecto) |
+| 26-crop | `src/lib/resources/preamble/26-crop.tex` | Marcas de corte (desactivado por defecto) |
 
 ### Extensibilidad
 
