@@ -1,33 +1,12 @@
 import { z } from 'zod';
+import { ACCENT_PALETTES, type AccentColor } from '../lib/accent-palettes.js';
 import type { SiteConfig } from './site-config.js';
 import { DEFAULT_EPUB_FORMAT, DEFAULT_HTML_FORMAT, DEFAULT_MARKDOWN_FORMAT, DEFAULT_PDF_FORMAT, DEFAULT_SITE_CONFIG } from './site-config.js';
 
 // ── Constantes ────────────────────────────────────────────────────────────
 
-export const KNOWN_ACCENT_COLORS = [
-  'slate',
-  'gray',
-  'zinc',
-  'neutral',
-  'stone',
-  'red',
-  'orange',
-  'amber',
-  'yellow',
-  'lime',
-  'green',
-  'emerald',
-  'teal',
-  'cyan',
-  'sky',
-  'blue',
-  'indigo',
-  'violet',
-  'purple',
-  'fuchsia',
-  'pink',
-  'rose',
-] as const;
+/** Colores de acento validados por config; fuente única: ACCENT_PALETTES. */
+export const KNOWN_ACCENT_COLORS = Object.keys(ACCENT_PALETTES) as AccentColor[];
 
 /**
  * Todos los sub-esquemas usan `.strict()`: las claves desconocidas en
@@ -56,7 +35,10 @@ const HtmlFormatSchema = z
     tagline: z.string().default(DEFAULT_HTML_FORMAT.tagline),
     logo: z.string().default(DEFAULT_HTML_FORMAT.logo),
     theme: z.enum(['light', 'dark']).optional().default(DEFAULT_HTML_FORMAT.theme),
-    accent: z.enum(KNOWN_ACCENT_COLORS).optional().default(DEFAULT_HTML_FORMAT.accent),
+    accent: z
+      .enum(KNOWN_ACCENT_COLORS as [AccentColor, ...AccentColor[]])
+      .optional()
+      .default(DEFAULT_HTML_FORMAT.accent),
     generate: z.boolean().default(DEFAULT_HTML_FORMAT.generate),
     blocks: HtmlBlocksSchema.optional(),
   })

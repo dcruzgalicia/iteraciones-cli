@@ -4,13 +4,19 @@ export interface RunResult {
   exitCode: number;
 }
 
-export async function run(command: string, args: string[]): Promise<RunResult> {
+export interface RunOptions {
+  /** Directorio de trabajo del proceso (por defecto: el del proceso actual). */
+  cwd?: string;
+}
+
+export async function run(command: string, args: string[], options: RunOptions = {}): Promise<RunResult> {
   let proc: ReturnType<typeof Bun.spawn>;
 
   try {
     proc = Bun.spawn([command, ...args], {
       stdout: 'pipe',
       stderr: 'pipe',
+      cwd: options.cwd,
     });
   } catch {
     // Error esperado: ENOENT al spawnear; el mensaje accionable es más útil que la causa técnica
