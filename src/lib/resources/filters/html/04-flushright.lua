@@ -1,5 +1,4 @@
 -- Convierte Div.flushright a <div class="flushright"> (formato HTML).
--- Reemplaza al filter TS html/04-flushright.
 -- Uso: pandoc --from json --to html5 --lua-filter html/04-flushright.lua
 
 function Div(div)
