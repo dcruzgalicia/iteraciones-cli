@@ -321,7 +321,7 @@ Reglas del esquema (implementadas en `src/builder/slug-resolver.ts`):
 1. Slug base: `title` transliterado (acentos eliminados, símbolos mapeados: `&` → `y`, `%` → `por-ciento`).
 2. Con autor: `title-por-author` usando el primer autor; si el título se repite, se expanden progresivamente los autores (`-y-`) hasta 20.
 3. Si la expansión de autores no resuelve la colisión, se aplica un sufijo `-dN` (N incremental).
-4. El contador de `-dN` persiste en `.iteraciones/changes/slugs.json` para que los números no se reasignen al eliminar documentos del grupo en colisión.
+4. Los sufijos `-dN` se derivan del discovery index (`existingSlugs`): eliminar un documento del grupo en colisión no renumera los restantes.
 
 Motivos de la decisión:
 
@@ -344,3 +344,23 @@ Alcance del soporte (`src/builder/gitignore.ts`):
 - La última regla que coincide gana (estándar git).
 
 Límites conocidos (aceptados): semántica aproximada en casos límite del estándar git (p. ej. `**` en medio de patrones, escapes exóticos) y ausencia de reglas heredadas de `.gitignore` superiores. Es el único mecanismo de exclusión de contenido; no se ampliará su alcance.
+
+### Congelación de la superficie pública (pre-1.0)
+
+Decisión registrada en el issue #1542 (2026-08): **la superficie pública queda congelada hasta 1.0**. Cualquier cambio incompatible requiere un issue que lo justifique y debe actualizar este documento en el mismo trabajo.
+
+Superficie estable:
+
+- **Comandos**: `build`, `info`, `init`, `validate`, `doctor`, `new`, `clean`, `filters`.
+- **Opciones globales**: `--project-root`, `-V/--version`, `-h/--help`.
+- **Opciones de build**: `--concurrency`, `--no-cache`, `--output`, `--no-css`, `--no-export`, `--dry-run`, `--verbose`, `--profile`.
+- **Configuración** (`iteraciones.config.yaml`): `lang`, `toc`, `format.latex`, `format.html.{title, tagline, logo, theme, accent, generate, blocks}`, `format.pdf.{generate, show-date, page-number, disabled-preamble-filters}`, `format.epub.generate`, `format.markdown.generate`, `disabled-filters`, `lua-filters`, `bibliography`, `csl`.
+- **Frontmatter**: `title`, `subtitle`, `date`, `author`.
+- **Filtros**: nombres completos de los filters del paquete (capas `semantic/`, `latex/`, `html/`) y de los preamble filters numerados; override por archivo y listas `disabled-*`.
+- **Salidas**: HTML, PDF, LaTeX, EPUB y Markdown; esquema de slugs `title-por-author` con sufijos `-dN`.
+
+Decisiones confirmadas en este pase (sin cambios de código):
+
+- `--no-export` conserva su semántica ("solo actualiza la caché; no genera ni copia salidas a dist").
+- La terminología `filters` / `preamble filters` / `lua-filters` se conserva tal cual.
+- Los nombres numerados de preamble filters expuestos en config (`24-eso-pic`, …) se conservan: renumerarlos rompería configs existentes sin beneficio.
