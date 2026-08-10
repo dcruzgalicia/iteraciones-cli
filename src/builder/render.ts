@@ -219,9 +219,6 @@ function readLuaDescription(content: string): string {
 // el orden dentro de cada grupo lo da el número (el body es el cero).
 // ---------------------------------------------------------------------------
 
-/** Marcador de apertura de un bloque en el HTML (`<!-- block:KEY -->`). */
-export const blockMarker = (key: string): string => `<!-- block:${key} -->`;
-
 /** Recursos del template HTML del paquete. */
 const HTML_RESOURCES_DIR = join(import.meta.dir, '../lib/resources/html');
 
@@ -234,9 +231,6 @@ const HTML_CARDS: Record<HtmlBlockKey, string> = {
   referencias: 'card-referencias.html',
   footer: 'card-identity-footer.html',
 };
-
-/** Tarjetas cuyo marcador antepone el CLI (las demás lo llevan dentro). */
-const CLI_MARKER_KEYS: readonly HtmlBlockKey[] = ['header', 'trayectura', 'footer'];
 
 /**
  * Resuelve el orden de los bloques del masonry: merge de los defaults con los
@@ -263,7 +257,7 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig): Promise<strin
   const blocks: string[] = [];
   for (const key of order) {
     const card = await Bun.file(join(HTML_RESOURCES_DIR, HTML_CARDS[key])).text();
-    blocks.push(CLI_MARKER_KEYS.includes(key) ? `${blockMarker(key)}\n${card}` : card);
+    blocks.push(card);
   }
   return skeleton.replace('<!-- cards -->', blocks.join('\n'));
 }
@@ -362,8 +356,6 @@ function buildFormatsBlock(formats: FormatsLink[]): string | undefined {
   const chipClass =
     'inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-12 text-accent-600 dark:text-accent-400';
   return (
-    blockMarker('formatos') +
-    '\n' +
     `<div class="break-inside-avoid pb-6">\n` +
     `      <section class="relative [&::before]:pointer-events-none [&::before]:absolute [&::before]:left-2 [&::before]:top-2 [&::before]:h-3 [&::before]:w-3 [&::before]:border-l [&::before]:border-t [&::before]:border-accent-500/30 [&::before]:content-[''] [&::after]:pointer-events-none [&::after]:absolute [&::after]:bottom-2 [&::after]:right-2 [&::after]:h-3 [&::after]:w-3 [&::after]:border-b [&::after]:border-r [&::after]:border-accent-500/30 [&::after]:content-[''] rounded-xl border border-accent-500/25 bg-stone-50/70 dark:bg-stone-900/60 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5">\n` +
     `        <h2 class="${chipClass}">Formatos</h2>\n` +
@@ -441,8 +433,6 @@ export function extractReferencesBlock(html: string): { html: string; block?: st
     'inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-12 text-accent-600 dark:text-accent-400';
   const styledHeading = block.replace(/<h1[^>]*id="referencias"[^>]*>/, `<h2 id="referencias" class="${chipClass}">`).replace('</h1>', '</h2>');
   const card =
-    blockMarker('referencias') +
-    '\n' +
     `<div class="break-inside-avoid pb-6">\n` +
     `      <section class="relative [&::before]:pointer-events-none [&::before]:absolute [&::before]:left-2 [&::before]:top-2 [&::before]:h-3 [&::before]:w-3 [&::before]:border-l [&::before]:border-t [&::before]:border-accent-500/30 [&::before]:content-[''] [&::after]:pointer-events-none [&::after]:absolute [&::after]:bottom-2 [&::after]:right-2 [&::after]:h-3 [&::after]:w-3 [&::after]:border-b [&::after]:border-r [&::after]:border-accent-500/30 [&::after]:content-[''] rounded-xl border border-accent-500/25 bg-stone-50/80 dark:bg-stone-900/70 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [&_.csl-entry]:mb-3 [&_.csl-entry]:pl-4 [&_.csl-entry]:-indent-4">\n` +
     `        ${styledHeading}\n` +

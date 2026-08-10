@@ -3,7 +3,6 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-  blockMarker,
   composeHtmlTemplate,
   getBuiltinFilterNames,
   loadFilterGroups,
@@ -33,16 +32,16 @@ describe('resolveBlockOrder', () => {
 });
 
 describe('composeHtmlTemplate', () => {
-  it('compone el template efectivo con los bloques en orden (marcadores del output actual)', async () => {
+  it('compone el template efectivo con los bloques en orden', async () => {
     const tpl = await composeHtmlTemplate(DEFAULT_SITE_CONFIG);
     const pos = (s: string): number => tpl.indexOf(s);
-    expect(pos(blockMarker('header'))).toBeGreaterThan(-1);
-    expect(pos(blockMarker('trayectura'))).toBeGreaterThan(pos(blockMarker('header')));
-    // La tarjeta formatos se inserta por variable (sin marcador en el template)
-    expect(pos('$formats$')).toBeGreaterThan(pos(blockMarker('trayectura')));
-    expect(pos(blockMarker('indice'))).toBeGreaterThan(pos('$formats$'));
-    expect(pos(blockMarker('referencias'))).toBeGreaterThan(pos(blockMarker('indice')));
-    expect(pos(blockMarker('footer'))).toBeGreaterThan(pos(blockMarker('referencias')));
+    // Contenido distintivo de cada tarjeta (sin marcadores internos)
+    expect(pos('Tarjeta identidad')).toBeGreaterThan(-1); // header
+    expect(pos('Tarjeta documento')).toBeGreaterThan(pos('Tarjeta identidad')); // trayectura
+    expect(pos('$formats$')).toBeGreaterThan(pos('Tarjeta documento')); // formatos (variable)
+    expect(pos('$if(toc)$')).toBeGreaterThan(pos('$formats$')); // indice
+    expect(pos('$if(has-references)$')).toBeGreaterThan(pos('$if(toc)$')); // referencias
+    expect(tpl.lastIndexOf('$if(home-href)$')).toBeGreaterThan(pos('$if(has-references)$')); // footer
   });
 
   it('el marcador de referencias es condicional (solo si el filtro detecta citas)', async () => {
@@ -63,7 +62,7 @@ describe('composeHtmlTemplate', () => {
       format: { ...DEFAULT_SITE_CONFIG.format, html: { ...DEFAULT_SITE_CONFIG.format.html, blocks: { formatos: 4 } } },
     };
     const tpl = await composeHtmlTemplate(siteConfig);
-    expect(tpl.indexOf('$formats$')).toBeGreaterThan(tpl.indexOf(blockMarker('indice')));
+    expect(tpl.indexOf('$formats$')).toBeGreaterThan(tpl.indexOf('$if(toc)$'));
   });
 });
 
