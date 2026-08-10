@@ -624,6 +624,22 @@ describe('runBuild', () => {
     });
   });
 
+  it('el bloque de referencias conserva el orden heading antes de div#refs (orden de argv de citeproc)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'bibliography.bib'), '@book{key1, author = {García, Lucía}, title = {Libro}, year = {2024}}\n', 'utf8');
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\nCita [@key1].\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
+      // Si --citeproc se moviera antes de los --lua-filter, citeproc insertaría
+      // div#refs DESPUÉS del heading sintético y la extracción fallaría: este
+      // orden (heading antes de refs) es parte del contrato de argv.
+      expect(html.indexOf('id="referencias"')).toBeLessThan(html.indexOf('<div id="refs"'));
+    });
+  });
+
   it('citas sin entrada en la bibliografía no dejan la sección de referencias huérfana', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
