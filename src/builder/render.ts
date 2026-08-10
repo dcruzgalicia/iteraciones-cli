@@ -506,6 +506,7 @@ export async function htmlPageFromMarkdown(
   // referencias (internal/flags) debe quedar ANTES del div#refs que citeproc
   // inserta al final (si citeproc corre antes, div#refs queda después del
   // heading y el post-procesamiento no puede extraerlo).
+  // NO reordenar: protegido por test de regresión (orden referencias < refs).
   if (bibOptions) {
     extraArgs.push('--citeproc', '--bibliography', bibOptions.bibliography);
     if (bibOptions.csl) extraArgs.push('--csl', bibOptions.csl);
