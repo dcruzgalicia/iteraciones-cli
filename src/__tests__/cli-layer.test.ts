@@ -658,8 +658,8 @@ describe('runBuild', () => {
       expect(process.exitCode).toBe(0);
       const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
       // El bloque del índice no contiene el enlace a referencias
-      const indiceStart = html.indexOf('block:indice');
-      const indiceEnd = html.indexOf('block:referencias');
+      const indiceStart = html.indexOf('<nav id="TOC"');
+      const indiceEnd = html.indexOf('</nav>', indiceStart);
       const indiceBlock = html.slice(indiceStart, indiceEnd);
       expect(indiceBlock).not.toContain('href="#referencias"');
       // La tarjeta de referencias conserva su chip y sus entradas
@@ -727,12 +727,13 @@ describe('runBuild', () => {
       expect(process.exitCode).toBe(0);
       const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
       const pos = (s: string): number => html.indexOf(s);
-      expect(pos('block:header')).toBeGreaterThanOrEqual(0);
-      expect(pos('block:header')).toBeLessThan(pos('block:trayectura'));
-      expect(pos('block:trayectura')).toBeLessThan(pos('block:formatos'));
-      expect(pos('block:formatos')).toBeLessThan(pos('block:indice'));
-      expect(pos('block:indice')).toBeLessThan(pos('block:referencias'));
-      expect(pos('block:referencias')).toBeLessThan(pos('block:footer'));
+      // Contenido distintivo de cada tarjeta (sin marcadores internos)
+      expect(pos('Tarjeta identidad')).toBeGreaterThanOrEqual(0); // header
+      expect(pos('Tarjeta identidad')).toBeLessThan(pos('<article')); // trayectura
+      expect(pos('<article')).toBeLessThan(pos('>Formatos</h2>'));
+      expect(pos('>Formatos</h2>')).toBeLessThan(pos('id="TOC"'));
+      expect(pos('id="TOC"')).toBeLessThan(pos('id="referencias"'));
+      expect(pos('id="referencias"')).toBeLessThan(html.lastIndexOf('class="break-inside-avoid pb-6"')); // footer
     });
   });
 
@@ -750,10 +751,10 @@ describe('runBuild', () => {
       expect(process.exitCode).toBe(0);
       const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
       const pos = (s: string): number => html.indexOf(s);
-      expect(pos('block:formatos')).toBeGreaterThan(pos('block:indice'));
+      expect(pos('>Formatos</h2>')).toBeGreaterThan(pos('id="TOC"'));
       // Empate formatos 4 / referencias 4 → desempate canónico: formatos antes
-      expect(pos('block:formatos')).toBeLessThan(pos('block:footer'));
-      expect(pos('block:header')).toBeLessThan(pos('block:trayectura'));
+      expect(pos('>Formatos</h2>')).toBeLessThan(html.lastIndexOf('class="break-inside-avoid pb-6"'));
+      expect(pos('Tarjeta identidad')).toBeLessThan(pos('<article'));
     });
   });
 
@@ -764,12 +765,12 @@ describe('runBuild', () => {
       await runBuild(dir);
       expect(process.exitCode).toBe(0);
       const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
-      expect(html).not.toContain('block:formatos');
-      expect(html).not.toContain('block:indice');
-      expect(html).not.toContain('block:referencias');
+      expect(html).not.toContain('>Formatos</h2>');
+      expect(html).not.toContain('id="TOC"');
+      expect(html).not.toContain('id="referencias"');
       const pos = (s: string): number => html.indexOf(s);
-      expect(pos('block:header')).toBeLessThan(pos('block:trayectura'));
-      expect(pos('block:trayectura')).toBeLessThan(pos('block:footer'));
+      expect(pos('Tarjeta identidad')).toBeLessThan(pos('<article'));
+      expect(pos('<article')).toBeLessThan(html.lastIndexOf('class="break-inside-avoid pb-6"'));
     });
   });
 
