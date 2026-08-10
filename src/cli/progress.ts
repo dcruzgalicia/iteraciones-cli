@@ -85,6 +85,8 @@ export class ProgressTracker {
   private rows: Row[] = [];
   private rowIndex = new Map<string, number>();
   private nextLine = 0;
+  /** Línea real del cursor (0-based). Invariante: toda operación termina con el cursor en la última línea escrita y columna 0. */
+  private cursorLine = 0;
   private formatsShown = false;
 
   constructor(options: { renderer?: 'default' | 'verbose' | 'test'; profile?: boolean } = {}) {
@@ -325,6 +327,14 @@ export class ProgressTracker {
   /**
    * Escribe (o actualiza) la fila. En TTY las filas activas se re-renderizan en
    * sitio; en non-TTY solo se imprimen los estados finales (done/skipped).
+   *
+   * El posicionamiento TTY usa `cursorLine` (la línea real del cursor), no
+   * `nextLine`: tras una actualización en sitio el cursor NO está al final, y
+   * un `up` calculado contra nextLine subiría de más (la fila se escribía en
+   * una línea equivocada). El `\r` final restaura la columna 0 tras `B`
+   * (`2K` no mueve el cursor y `B` tampoco): sin él, la siguiente escritura
+   * empezaba en la columna residual del contenido anterior (indentaciones
+   * fantasma en TTY, regresión #1536 incompleta).
    */
   private renderRow(key: string, live?: string): void {
     const row = this.getRow(key);
@@ -336,12 +346,12 @@ export class ProgressTracker {
         process.stdout.write(`${content}\n`);
         this.rowIndex.set(key, this.nextLine);
         this.nextLine++;
+        this.cursorLine = this.nextLine;
       } else {
-        const up = this.nextLine - idx;
-        // El borrado de línea (2K) no mueve el cursor a la columna 0: el \r
-        // evita que la fila actualizada se escriba a la altura del ancho de
-        // la fila inferior (indentaciones fantasma en TTY).
-        process.stdout.write(`\x1b[${up}A\x1b[2K\r${content}\x1b[${up}B`);
+        // Invariante: el cursor está en la última línea escrita, que es >= la
+        // fila actualizada (la fila ya fue escrita antes).
+        const up = this.cursorLine - idx;
+        process.stdout.write(`\x1b[${up}A\x1b[2K\r${content}\x1b[${up}B\r`);
       }
     } else if (idx === undefined && (row.status === 'done' || row.status === 'skipped' || row.status === 'failed')) {
       process.stdout.write(`${content}\n`);

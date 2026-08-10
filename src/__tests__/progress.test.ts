@@ -3,6 +3,52 @@ import { ProgressTracker } from '../cli/progress.js';
 import { setWarningSink } from '../lib/logger.js';
 
 /**
+ * Mini-emulador de terminal: reconstruye la pantalla final a partir del
+ * byte-stream capturado (maneja \x1b[nA/B, \x1b[2K, \r y \n con ONLCR).
+ * Verifica el resultado visual real del renderer, no secuencias aisladas.
+ */
+function renderScreen(output: string): string[] {
+  const screen: string[] = [];
+  let x = 0;
+  let y = 0;
+  let i = 0;
+  const ensure = (line: number): void => {
+    while (screen.length <= line) screen.push('');
+  };
+  while (i < output.length) {
+    const ch = output[i];
+    if (ch === '\x1b' && output[i + 1] === '[') {
+      const m = /^\[(\d*)([A-Za-z])/.exec(output.slice(i + 1));
+      if (m) {
+        const n = (m[1] ?? '') === '' ? 1 : Number.parseInt(m[1] ?? '', 10);
+        const cmd = m[2] ?? '';
+        if (cmd === 'A') y = Math.max(0, y - n);
+        else if (cmd === 'B') y += n;
+        else if (cmd === 'K') {
+          ensure(y);
+          screen[y] = '';
+        }
+        i += m[0].length + 1;
+        continue;
+      }
+    }
+    if (ch === '\r') x = 0;
+    else if (ch === '\n') {
+      // ONLCR del terminal real: newline + retorno de columna
+      y++;
+      x = 0;
+    } else {
+      ensure(y);
+      const line = screen[y] ?? '';
+      screen[y] = line.slice(0, x) + ch + line.slice(x + 1);
+      x++;
+    }
+    i++;
+  }
+  return screen;
+}
+
+/**
  * Verifica el ProgressTracker con el renderer propio: captura la salida de
  * stdout y permite asertar sobre las líneas de estado finales (non-TTY).
  */
@@ -217,5 +263,44 @@ describe('ProgressTracker', () => {
     for (const m of output.matchAll(rewriteRe)) {
       expect(m[1]).toBe('\r');
     }
+  });
+
+  it('la pantalla final TTY mantiene cada fila en su línea y columna (regresión: indentaciones fantasma)', async () => {
+    const output = await runTracker(
+      async (tracker) => {
+        tracker.setFormats([
+          { phase: 'latex', active: false },
+          { phase: 'pdf', active: true },
+          { phase: 'html', active: true },
+          { phase: 'epub', active: false },
+          { phase: 'markdown', active: false },
+        ]);
+        tracker.startPhase('discovery', 1);
+        tracker.reportFile({ relativePath: 'a.md', phase: 'discovery' });
+        tracker.completePhase(1);
+        await tracker.planPhases(['discovery', 'render']);
+        // Intercalado real: live update en sitio + update final + filas nuevas
+        tracker.startPhase('render', 1);
+        tracker.reportFile({ relativePath: 'a.md', phase: 'render' });
+        tracker.completePhase(1);
+        tracker.completePhase(1, 'html');
+        tracker.startPhase('pdf', 1);
+        tracker.completePhase(1);
+      },
+      { renderer: 'default', tty: true },
+    );
+
+    const screen = renderScreen(output);
+    const doneRow = (label: string): RegExp => new RegExp(`^${label}  \\d+ms$`);
+    // Orden de filas: discovery, render, latex, epub, markdown, html, pdf
+    expect(screen[0]).toMatch(doneRow('✔ Documentos encontrados 1'));
+    expect(screen[1]).toMatch(doneRow('✔ Renderizando contenido 1'));
+    expect(screen[2]).toBe('  – LaTeX (desactivado)');
+    expect(screen[3]).toBe('  – EPUB (desactivado)');
+    expect(screen[4]).toBe('  – Markdown (desactivado)');
+    // Las filas nuevas tras un update en sitio NO heredan la columna residual
+    // (sin el \r de restauración, estas líneas mezclaban ambos contenidos).
+    expect(screen[5]).toMatch(doneRow('  ✔ HTML 1'));
+    expect(screen[6]).toMatch(doneRow('  ✔ PDF 1'));
   });
 });
