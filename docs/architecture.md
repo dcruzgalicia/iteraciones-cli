@@ -341,7 +341,7 @@ Decisión registrada en el issue #1542 (2026-08): **la superficie pública queda
 
 Superficie estable:
 
-- **Comandos**: `build`, `info`, `init`, `validate`, `doctor`, `new`, `clean`, `filters`.
+- **Comandos**: `build`, `init`, `validate`, `doctor`, `new`, `clean`, `filters`.
 - **Opciones globales**: `--project-root`, `-V/--version`, `-h/--help`.
 - **Opciones de build**: `--concurrency`, `--full`, `--output`, `--dry-run`, `--verbose`, `--profile`.
 - **Configuración** (`iteraciones.config.yaml`): `lang`, `toc`, `format.latex`, `format.html.{title, tagline, logo, theme, accent, generate, blocks}`, `format.pdf.{generate, show-date, page-number, disabled-preamble-filters}`, `format.epub.generate`, `format.markdown.generate`, `disabled-filters`, `lua-filters`, `bibliography`, `csl`.

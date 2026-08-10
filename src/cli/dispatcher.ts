@@ -93,75 +93,55 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
   }
 }
 
-export async function runInfo(cwd: string, options: { json?: boolean } = {}): Promise<void> {
-  try {
-    const config = await loadSiteConfig(cwd);
-    const pandocVersion = await checkPandoc().catch(() => 'no disponible');
-    // El directorio de salida real es el del último build (state.json);
-    // sin estado previo, el default.
-    const state = await loadStateFile(cwd);
-    const distDir = state?.outputDir ?? join(cwd, 'dist', 'files');
-    const distExists = await stat(distDir)
-      .then((s) => s.isDirectory())
-      .catch(() => false);
-    const activeFormats = computeActiveFormats(config.format);
-    const disabledFilters = config.disabledFilters?.length ? config.disabledFilters.join(', ') : '(ninguno)';
-    // Distinguir los preamble desactivados por defecto (defaults del paquete)
-    // de los que el usuario agregó explícitamente.
-    const defaultPreamble = DEFAULT_PDF_FORMAT.disabledPreambleFilters;
-    const preambleDisabled = config.format?.pdf?.disabledPreambleFilters ?? [];
-    const userPreamble = preambleDisabled.filter((name) => !defaultPreamble.includes(name));
-    const docCount = await countMarkdownDocuments(cwd);
-    const html = config.format?.html;
-    const theme = html?.theme ?? '(por defecto)';
-    const accent = html?.accent ?? '(por defecto)';
+/** Información del proyecto para doctor --verbose/--json (antes comando info). */
+async function buildProjectInfo(cwd: string): Promise<{ lines: string[]; json: Record<string, unknown> }> {
+  const config = await loadSiteConfig(cwd);
+  const pandocVersion = await checkPandoc().catch(() => 'no disponible');
+  // El directorio de salida real es el del último build (state.json);
+  // sin estado previo, el default.
+  const state = await loadStateFile(cwd);
+  const distDir = state?.outputDir ?? join(cwd, 'dist', 'files');
+  const distExists = await stat(distDir)
+    .then((s) => s.isDirectory())
+    .catch(() => false);
+  const activeFormats = computeActiveFormats(config.format);
+  const disabledFilters = config.disabledFilters?.length ? config.disabledFilters.join(', ') : '(ninguno)';
+  // Distinguir los preamble desactivados por defecto (defaults del paquete)
+  // de los que el usuario agregó explícitamente.
+  const defaultPreamble = DEFAULT_PDF_FORMAT.disabledPreambleFilters;
+  const preambleDisabled = config.format?.pdf?.disabledPreambleFilters ?? [];
+  const userPreamble = preambleDisabled.filter((name) => !defaultPreamble.includes(name));
+  const docCount = await countMarkdownDocuments(cwd);
+  const html = config.format?.html;
+  const theme = html?.theme ?? '(por defecto)';
+  const accent = html?.accent ?? '(por defecto)';
 
-    const lines = [
-      `  lang:                    ${config.lang}`,
-      `  toc:                     ${config.toc ? 'sí' : 'no'}`,
-      `  documentos:              ${docCount}`,
-      `  salida:                  ${distDir}${distExists ? ' (generado)' : ' (no generado)'}`,
-      `  pandoc:                  ${pandocVersion}`,
-      `  formatos activos:        ${activeFormats.length > 0 ? activeFormats.join(', ') : '(ninguno)'}`,
-      `  tema HTML:               ${theme}`,
-      `  acento HTML:             ${accent}`,
-      `  filters desactivados:    ${disabledFilters}`,
-      `  preamble desactivados:   ${preambleDisabled.length > 0 ? preambleDisabled.join(', ') : '(ninguno)'}`,
-      `  preamble desactivados extra: ${userPreamble.length > 0 ? userPreamble.join(', ') : '(ninguno)'}`,
-    ];
-    if (options.json) {
-      // Contrato JSON estable para scripting (no depende del texto alineado).
-      process.stdout.write(
-        `${JSON.stringify(
-          {
-            lang: config.lang,
-            toc: config.toc,
-            documentCount: docCount,
-            outputDir: distDir,
-            outputGenerated: distExists,
-            pandoc: pandocVersion,
-            activeFormats,
-            html: { theme, accent },
-            disabledFilters: config.disabledFilters ?? [],
-            disabledPreambleFilters: preambleDisabled,
-          },
-          null,
-          2,
-        )}\n`,
-      );
-      return;
-    }
-    logInfo(lines.join('\n'), 'info');
-  } catch (err) {
-    if (err instanceof ConfigError) {
-      logError(err.message, 'config');
-    } else if (err instanceof Error) {
-      logError(err.message, 'info');
-    } else {
-      logError('Error desconocido al obtener información.');
-    }
-    process.exitCode = 1;
-  }
+  const lines = [
+    `  lang:                    ${config.lang}`,
+    `  toc:                     ${config.toc ? 'sí' : 'no'}`,
+    `  documentos:              ${docCount}`,
+    `  salida:                  ${distDir}${distExists ? ' (generado)' : ' (no generado)'}`,
+    `  pandoc:                  ${pandocVersion}`,
+    `  formatos activos:        ${activeFormats.length > 0 ? activeFormats.join(', ') : '(ninguno)'}`,
+    `  tema HTML:               ${theme}`,
+    `  acento HTML:             ${accent}`,
+    `  filters desactivados:    ${disabledFilters}`,
+    `  preamble desactivados:   ${preambleDisabled.length > 0 ? preambleDisabled.join(', ') : '(ninguno)'}`,
+    `  preamble desactivados extra: ${userPreamble.length > 0 ? userPreamble.join(', ') : '(ninguno)'}`,
+  ];
+  const json = {
+    lang: config.lang,
+    toc: config.toc,
+    documentCount: docCount,
+    outputDir: distDir,
+    outputGenerated: distExists,
+    pandoc: pandocVersion,
+    activeFormats,
+    html: { theme, accent },
+    disabledFilters: config.disabledFilters ?? [],
+    disabledPreambleFilters: preambleDisabled,
+  };
+  return { lines, json };
 }
 
 /** Cuenta los documentos Markdown del proyecto, excluyendo directorios ignorados. */
@@ -202,8 +182,18 @@ export async function runValidate(cwd: string): Promise<void> {
   }
 }
 
-export async function runDoctor(cwd: string): Promise<void> {
+export async function runDoctor(cwd: string, options: { verbose?: boolean; json?: boolean } = {}): Promise<void> {
   try {
+    // --verbose/--json muestran la información del proyecto (antes comando info)
+    if (options.json) {
+      const { json } = await buildProjectInfo(cwd);
+      process.stdout.write(`${JSON.stringify(json, null, 2)}\n`);
+      return;
+    }
+    if (options.verbose) {
+      const { lines } = await buildProjectInfo(cwd);
+      logInfo(lines.join('\n'), 'doctor');
+    }
     await doctor(cwd);
   } catch (err) {
     if (err instanceof Error) {

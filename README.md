@@ -148,14 +148,6 @@ Valida `iteraciones.config.yaml` y el frontmatter de todos los documentos Markdo
 iteraciones validate
 ```
 
-### `iteraciones info`
-
-Muestra información básica del proyecto: título, tagline, idioma, estado de pandoc y del directorio de salida.
-
-```
-iteraciones info
-```
-
 ### `iteraciones doctor`
 
 Verifica que el entorno tenga todo lo necesario para ejecutar `iteraciones build`.
@@ -164,7 +156,14 @@ Verifica que el entorno tenga todo lo necesario para ejecutar `iteraciones build
 iteraciones doctor [opciones]
 ```
 
-Comprobaciones que realiza: pandoc disponible en PATH, configuración del proyecto (`iteraciones.config.yaml`) válida, pdflatex y KOMA-Script instalados (solo si el proyecto usa PDF o LaTeX), permisos de lectura y escritura.
+Comprobaciones que realiza: versión de Bun, pandoc disponible en PATH, configuración del proyecto (`iteraciones.config.yaml`) válida, pdflatex y KOMA-Script instalados (solo si el proyecto compila PDF), permisos de lectura y escritura.
+
+Con `--verbose` también muestra la configuración del proyecto (idioma, documentos, salida, formatos activos, tema HTML, filtros desactivados). Con `--json` emite esa misma información en JSON para scripting.
+
+```
+iteraciones doctor --verbose
+iteraciones doctor --json
+```
 
 ### `iteraciones filters`
 
