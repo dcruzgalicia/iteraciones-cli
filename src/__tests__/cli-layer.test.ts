@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, spyOn } from 'bun:test';
+import { afterEach, beforeAll, describe, expect, it, spyOn } from 'bun:test';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -6,7 +6,19 @@ import { CommanderError } from 'commander';
 import { runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from '../cli/dispatcher.js';
 import { checkLatexEngine } from '../cli/doctor/system-checks.js';
 import { buildProgram } from '../cli/parser.js';
+import { logWarning, setLoggerColorEnabled } from '../lib/logger.js';
+import { checkPandoc } from '../lib/pandoc-runner.js';
 import { initTestProject } from './helpers.js';
+
+// Los tests que invocan pandoc real se marcan como skip si no está instalado
+// (mismo patrón que integration.test.ts): sin pandoc la suite pasa con skips.
+const pandocOk = await checkPandoc().catch(() => null);
+// unzip se usa para inspeccionar EPUBs generados: skip real si no está en PATH.
+const unzipOk = (await Bun.which('unzip')) !== null;
+
+// La suite aserta strings exactos de la salida: la colorización ANSI se fuerza
+// off aunque el stream sea un TTY (los asserts no dependen del entorno).
+beforeAll(() => setLoggerColorEnabled(false));
 
 // El smoke de PDF real solo corre si el motor LaTeX está disponible.
 const latexOk = (await checkLatexEngine()).ok;
@@ -159,7 +171,7 @@ describe('parser (errores de flags)', () => {
   });
 });
 
-describe('runBuild', () => {
+describe.skipIf(!pandocOk)('runBuild', () => {
   afterEach(resetExitCode);
 
   it('termina con exit 0 en un proyecto vacío (sin documentos)', async () => {
@@ -554,7 +566,7 @@ describe('runBuild', () => {
     });
   });
 
-  it('el EPUB generado incluye título, autor e idioma en sus metadatos', async () => {
+  it.skipIf(!pandocOk || !unzipOk)('el EPUB generado incluye título, autor e idioma en sus metadatos', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
       await writeFile(join(dir, 'iteraciones.config.yaml'), ['lang: es-MX', 'format:', '  epub:', '    generate: true'].join('\n'), 'utf8');
@@ -898,7 +910,7 @@ describe('doctor --verbose/--json (antes runInfo)', () => {
     return output;
   }
 
-  it('refleja el directorio de salida real del último build', async () => {
+  it.skipIf(!pandocOk)('refleja el directorio de salida real del último build', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
       process.exitCode = 0;
@@ -1142,7 +1154,7 @@ describe('runDoctor', () => {
     return output;
   }
 
-  it('no verifica el motor LaTeX cuando el proyecto no usa PDF ni LaTeX', async () => {
+  it.skipIf(!pandocOk)('no verifica el motor LaTeX cuando el proyecto no usa PDF ni LaTeX', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir); // config html-only
       const output = await doctorOutput(dir);
@@ -1195,7 +1207,7 @@ describe('runInit', () => {
     });
   });
 
-  it('el primer build tras init produce un index.html real', async () => {
+  it.skipIf(!pandocOk)('el primer build tras init produce un index.html real', async () => {
     await withTempDir(async (dir) => {
       process.exitCode = 0;
       await runInit(dir);
@@ -1300,7 +1312,7 @@ describe('runNew', () => {
     });
   });
 
-  it('el round-trip new → validate → build funciona con títulos difíciles', async () => {
+  it.skipIf(!pandocOk)('el round-trip new → validate → build funciona con títulos difíciles', async () => {
     await withTempDir(async (dir) => {
       process.exitCode = 0;
       await runNew(dir, 'articulo', { title: "Los tres mosqueteros: d'Artagnan" });
@@ -1342,7 +1354,7 @@ describe('runNew', () => {
 describe('runBuild (smoke PDF real)', () => {
   afterEach(resetExitCode);
 
-  it.skipIf(!latexOk)(
+  it.skipIf(!latexOk || !pandocOk)(
     'genera un PDF válido de extremo a extremo',
     async () => {
       await withTempDir(async (dir) => {
@@ -1359,6 +1371,25 @@ describe('runBuild (smoke PDF real)', () => {
     },
     { timeout: 120_000 },
   );
+});
+
+describe('logger (color hermético en tests)', () => {
+  it('no emite códigos ANSI aunque el stream sea un TTY', () => {
+    const original = Object.getOwnPropertyDescriptor(process.stderr, 'isTTY');
+    Object.defineProperty(process.stderr, 'isTTY', { value: true, configurable: true });
+    const stderrSpy = spyStderr();
+    let output = '';
+    try {
+      logWarning('mensaje de prueba', 'test');
+    } finally {
+      output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+      stderrSpy.mockRestore();
+      if (original) Object.defineProperty(process.stderr, 'isTTY', original);
+      else delete (process.stderr as { isTTY?: boolean }).isTTY;
+    }
+    expect(output).toContain('⚠ [test] mensaje de prueba');
+    expect(output).not.toContain('\x1b');
+  });
 });
 
 describe('runClean', () => {

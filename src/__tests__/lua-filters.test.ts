@@ -5,7 +5,11 @@ import { join } from 'node:path';
 import { loadFilterGroups, markdownToLatex, readDocumentBody } from '../builder/render.js';
 import type { BuildDocument } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
-import { runPandoc } from '../lib/pandoc-runner.js';
+import { checkPandoc, runPandoc } from '../lib/pandoc-runner.js';
+
+// Todos los tests de este archivo invocan pandoc real: sin pandoc instalado
+// la suite pasa con skips reales en lugar de fallar (objetivo M9).
+const pandocOk = await checkPandoc().catch(() => null);
 
 const RESOURCES = join(import.meta.dir, '..', 'lib', 'resources', 'filters');
 const SEMANTIC_FILTERS = [
@@ -19,7 +23,7 @@ async function toJson(markdown: string): Promise<Record<string, unknown>> {
   return JSON.parse(stdout) as Record<string, unknown>;
 }
 
-describe('filtros Lua semánticos', () => {
+describe.skipIf(!pandocOk)('filtros Lua semánticos', () => {
   it('convierte :: sola en una línea a Div.spacer', async () => {
     const ast = await toJson('texto antes\n\n::\n\ntexto después');
     expect(ast.blocks).toEqual([
@@ -66,7 +70,7 @@ async function toHtml5(markdown: string, extraFilters: string[] = []): Promise<s
   return runPandoc({ input: markdown, sourcePath: 'test.md', to: 'html5', extraArgs });
 }
 
-describe('filtros Lua html', () => {
+describe.skipIf(!pandocOk)('filtros Lua html', () => {
   it('envuelve Div.dictum en blockquote con bloques nativos', async () => {
     const html = await toHtml5('::: {.dictum}\nCita de prueba\n:::\n');
     expect(html).toContain('<blockquote class="dictum">');
@@ -119,7 +123,7 @@ async function toLatex(markdown: string): Promise<string> {
   return runPandoc({ input: markdown, sourcePath: 'test.md', to: 'latex', extraArgs });
 }
 
-describe('filtros Lua latex', () => {
+describe.skipIf(!pandocOk)('filtros Lua latex', () => {
   it('convierte :: en \\vspace{\\baselineskip}', async () => {
     const tex = await toLatex('texto\n\n::\n\ntexto');
     expect(tex).toContain('\\vspace{\\baselineskip}');
@@ -192,7 +196,7 @@ describe('filtros Lua latex', () => {
   });
 });
 
-describe('filtro interno internal/flags (detección estructural)', () => {
+describe.skipIf(!pandocOk)('filtro interno internal/flags (detección estructural)', () => {
   const FLAGS = join(RESOURCES, 'internal', 'flags.lua');
   let dir: string;
   let tplLatex: string;
@@ -309,7 +313,7 @@ describe('filtro interno internal/flags (detección estructural)', () => {
   });
 });
 
-describe('filtros Lua de usuario', () => {
+describe.skipIf(!pandocOk)('filtros Lua de usuario', () => {
   const USER_FILTER = [
     '-- Convierte Div.nota según el formato de salida',
     'function Div(div)',

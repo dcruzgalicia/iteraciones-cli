@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, spyOn } from 'bun:test';
 import { ProgressTracker } from '../cli/progress.js';
+import { setWarningSink } from '../lib/logger.js';
 
 /**
  * Verifica el ProgressTracker con el renderer propio: captura la salida de
@@ -23,6 +24,10 @@ async function runTracker(
     const tracker = new ProgressTracker({ renderer: options.renderer ?? 'test' });
     await fn(tracker);
   } finally {
+    // Un tracker con renderer 'default' activa el warningSink; el test de
+    // re-escritura TTY nunca llama a finish()/fail(), así que el sink debe
+    // limpiarse aquí para no contaminar los tests posteriores (suite hermética).
+    setWarningSink(null);
     if (origTty) Object.defineProperty(process.stdout, 'isTTY', origTty);
     else delete (process.stdout as { isTTY?: boolean }).isTTY;
     spy.mockRestore();
