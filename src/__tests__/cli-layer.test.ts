@@ -408,6 +408,85 @@ describe('runBuild', () => {
     });
   });
 
+  it('el frontmatter lang sobreescribe el de la configuración', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir); // config sin lang → es-MX por defecto
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\nlang: en\n---\n\nContenido.\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
+      expect(html).toContain('<html lang="en"');
+    });
+  });
+
+  it('el frontmatter toc activa el TOC sin configuración y lo desactiva con ella', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir); // toc: false por defecto
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ntoc: true\n---\n\n# Sección\n\nContenido.\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const conToc = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
+      expect(conToc).toContain('<nav');
+      expect(conToc).toContain('id="TOC"');
+
+      // Config con toc: true y frontmatter toc: false → sin TOC en ese documento
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\ntoc: true\n', 'utf8');
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ntoc: false\n---\n\n# Sección\n\nContenido.\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const sinToc = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
+      expect(sinToc).not.toContain('id="TOC"');
+    });
+  });
+
+  it('show-date false con date en el frontmatter: la portada del .tex no muestra fecha', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(
+        join(dir, 'iteraciones.config.yaml'),
+        'lang: es-MX\nformat:\n  latex: true\n  pdf:\n    generate: false\n    show-date: false\n',
+        'utf8',
+      );
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\nContenido.\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const tex = await Bun.file(join(dir, 'dist', 'files', 'test-document.tex')).text();
+      expect(tex).toContain('\\date{}');
+      expect(tex).not.toContain('1 de enero de 2026');
+    });
+  });
+
+  it('un documento sin frontmatter usa \\title{Sin título} en LaTeX', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  latex: true\n', 'utf8');
+      await writeFile(join(dir, 'test.md'), 'Contenido sin frontmatter.\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const tex = await Bun.file(join(dir, 'dist', 'files', 'test.tex')).text();
+      expect(tex).toContain('\\title{Sin título}');
+    });
+  });
+
+  it('un párrafo de 2-3 palabras al inicio no recibe \\mbox (umbral de palabras reales)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  latex: true\n', 'utf8');
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\n---\n\nContenido corto.\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const tex = await Bun.file(join(dir, 'dist', 'files', 'test-document.tex')).text();
+      expect(tex).toContain('\\noindent Contenido corto.');
+      expect(tex).not.toContain('\\mbox{Contenido}');
+    });
+  });
+
   it('dry-run no persiste state.json', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
