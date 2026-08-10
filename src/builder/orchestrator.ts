@@ -13,7 +13,7 @@ import { buildDocsFromIndex, discover } from './discover.js';
 import { runDocumentPipeline } from './pipeline.js';
 import { validateDisabledPreambleFilters } from './preamble-loader.js';
 import { validateDisabledFilters } from './render.js';
-import { clearStateFile, loadStateFile, migrateLegacyCache } from './state.js';
+import { clearStateFile, loadStateFile, migrateLegacyCache, updateCssHash } from './state.js';
 import type { BuildContext } from './types.js';
 
 export interface BuildOptions {
@@ -202,17 +202,23 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   });
   const allDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
 
-  // El CSS se compila en cada build con HTML activo (sin caché): el scan de
-  // Tailwind corre sobre los HTML finales de dist/files, así que los assets se
-  // generan SIEMPRE que htmlOn, incluso sin trabajo.
+  // El CSS se compila con HTML activo: el scan de Tailwind corre sobre los HTML
+  // finales de dist/files. Con prevCssHash idéntico (ningún HTML ni recurso
+  // cambió), la compilación se omite y se reutiliza el CSS existente.
   const needsAssets = plan.htmlOn;
+
+  /** Genera assets y persiste el nuevo cssHash (solo si cambió). */
+  const runAssets = async (): Promise<void> => {
+    const cssHash = await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, prevState?.cssHash);
+    await updateCssHash(cwd, cssHash);
+  };
 
   if (allDocs.length === 0) {
     // Proyecto vacío: mensaje visible en stderr (advertencias del resumen) y
     // resumen con 0 formatos (sin "reutilizado"). Exit 0: no es un error.
     logWarning('No se encontraron documentos Markdown en el proyecto.', 'build');
     logWarning("Crea un archivo .md con frontmatter o ejecuta 'iteraciones init'.", 'build');
-    if (needsAssets) await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig);
+    if (needsAssets) await runAssets();
     await progress.finish(0, 0, []);
     return;
   }
@@ -243,7 +249,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
 
   if (!work.anyWork) {
     log('Ningún documento modificado — sin cambios');
-    if (needsAssets) await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig);
+    if (needsAssets) await runAssets();
     await progress.finish(
       0,
       allDocs.length,
@@ -266,7 +272,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
     work.exportSets.markdown.length === 0
   ) {
     log('Ningún documento modificado — sin cambios');
-    if (needsAssets) await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig);
+    if (needsAssets) await runAssets();
     await progress.finish(
       0,
       allDocs.length,
@@ -300,7 +306,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   // Tailwind escanea los HTML finales de dist/files para generar el CSS exacto
   // (purga por clases presentes, sin auto-referencia del CSS previo). ──
   if (needsAssets) {
-    await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig);
+    await runAssets();
   }
 
   const totalDocs = plan.htmlOn || plan.pdfOn || plan.epubOn || plan.mdOn || plan.latexOn ? allDocs.length : 0;

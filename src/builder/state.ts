@@ -56,6 +56,8 @@ export interface BuildState {
   bibHash?: string;
   /** Caché por archivo de bibliografía (mtime+size+hash) para evitar re-leer contenido. */
   bibFileCache?: BibFileCache;
+  /** Hash de los HTML finales + recursos CSS: invalida la compilación de Tailwind. */
+  cssHash?: string;
   /** Índice de descubrimiento: path relativo → entry con frontmatter y caché. */
   entries: Map<string, DiscoveryEntry>;
 }
@@ -95,6 +97,7 @@ export async function loadStateFile(cwd: string): Promise<BuildState | null> {
       configHashes: parsed.configHashes,
       bibHash: parsed.bibHash,
       bibFileCache: parsed.bibFileCache,
+      cssHash: parsed.cssHash,
       // En disco las entradas son un objeto; en runtime se usan como Map.
       entries: new Map(Object.entries((parsed.entries ?? {}) as Record<string, DiscoveryEntry>)),
     };
@@ -146,6 +149,17 @@ export async function saveStateFile(cwd: string, state: BuildState): Promise<voi
     await rm(filePath, { force: true });
     await rename(tmpPath, filePath);
   }
+}
+
+/**
+ * Actualiza solo el cssHash del estado persistido (el resto lo escribió
+ * discover con el índice actual). No escribe si el hash no cambió.
+ */
+export async function updateCssHash(cwd: string, cssHash: string): Promise<void> {
+  const state = await loadStateFile(cwd);
+  if (!state || state.cssHash === cssHash) return;
+  state.cssHash = cssHash;
+  await saveStateFile(cwd, state);
 }
 
 /**
