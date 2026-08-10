@@ -1,24 +1,34 @@
 import { basename, dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/site-config.js';
+import { DEFAULT_HTML_BLOCKS, type HtmlBlockKey } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 import { type BibOptions, runPandoc } from '../lib/pandoc-runner.js';
 import { splitFrontmatter } from './discover.js';
-import { assembleHtmlBlocks, blockMarker } from './html-blocks.js';
-import type { BuildDocument, PreambleFlags } from './types.js';
+import { type ReproCtx, writeHtmlReproScript, writeLatexReproScripts } from './repro.js';
+import type { BuildDocument } from './types.js';
 
 // ---------------------------------------------------------------------------
 // Sistema de filters por capas: filtros Lua que corren dentro de pandoc.
-//   semantic/string y semantic/ast: en markdown → json (AST canónico).
-//   latex/ y html/: en cada exportación (json → latex, json → html5).
+//   semantic/string y semantic/ast: en cada conversión, sobre el markdown
+//     de entrada (dejan el contenido semántico sin formato específico).
+//   internal/flags: filtro interno de detección estructural (preámbulo LaTeX
+//     y heading de referencias HTML); no es un filter de usuario.
+//   latex/ y html/: en cada exportación (markdown → latex, markdown → html5).
 //
 // Pipeline:
-//   markdown → pandoc --to json [--lua-filter semantic/*] → AST canónico
-//     → pandoc --from json --to latex [--lua-filter latex/*] → tex
-//     → pandoc --from json --to html5 [--lua-filter html/*] → página HTML
+//   markdown → pandoc --to latex [--lua-filter semantic/*, user, flags, latex/*]
+//            → pandoc --to html5 [--lua-filter semantic/*, user, flags, html/*]
+//            → pandoc --to epub3/markdown [--lua-filter semantic/*, user]
+//   No hay AST intermedio: cada conversión es una invocación directa de pandoc
+//   desde el markdown original, con el template efectivo compuesto por el CLI.
+// ---------------------------------------------------------------------------
 
 /** Raíz de los filtros Lua del paquete. */
 const LUA_FILTERS_ROOT = join(import.meta.dir, '../lib/resources/filters');
+
+/** Filtro interno de detección estructural (flags de preámbulo y referencias). */
+const FLAGS_FILTER = join(LUA_FILTERS_ROOT, 'internal', 'flags.lua');
 
 /** Capas de filtros Lua del paquete: directorio → grupo de resolución. */
 const LUA_GROUPS: Array<{ dir: string; target: 'semantic' | 'latex' | 'html' }> = [
@@ -29,10 +39,12 @@ const LUA_GROUPS: Array<{ dir: string; target: 'semantic' | 'latex' | 'html' }> 
 ];
 
 /** Filtros Lua resueltos por capa (rutas absolutas, en orden de aplicación). */
-interface LuaFilterGroup {
+export interface LuaFilterGroup {
   semantic: string[];
   latex: string[];
   html: string[];
+  /** Filtro interno de detección estructural (flags), en pasadas latex/html. */
+  flags: string[];
   /** Filtros Lua de usuario (`lua-filters:` del proyecto), corren en todas las invocaciones. */
   user: string[];
   /** Nombres completos resueltos como .lua (los .ts equivalentes se omiten). */
@@ -65,7 +77,7 @@ function builtinNamesForGroup(dir: string): string[] {
  */
 export async function resolveLuaFilters(disabledList?: string[], cwd?: string): Promise<LuaFilterGroup> {
   const excluded = new Set(disabledList ?? []);
-  const result: LuaFilterGroup = { semantic: [], latex: [], html: [], user: [], resolvedNames: new Set() };
+  const result: LuaFilterGroup = { semantic: [], latex: [], html: [], flags: [], user: [], resolvedNames: new Set() };
 
   for (const { dir, target } of LUA_GROUPS) {
     for (const name of builtinNamesForGroup(dir)) {
@@ -135,15 +147,13 @@ export async function resolveUserLuaFilters(cwd: string, siteConfig: SiteConfig)
 }
 
 /**
- * Resuelve los filtros Lua por capa: los nombres con un .lua disponible
- * (paquete o override del proyecto) se pasan como `--lua-filter` en la
- * invocación pandoc de su capa. Incluye los filtros de usuario
- * (`lua-filters:`), que corren en todas las invocaciones.
- * @param disabledList Lista de filters a desactivar (nombres completos). undefined = todos activos.
- * @param cwd Directorio del proyecto para buscar overrides.
+ * Resuelve los filtros Lua por capa, incluyendo el filtro interno de flags
+ * y los filtros de usuario (`lua-filters:`), que corren en todas las
+ * invocaciones.
  */
 export async function loadFilterGroups(siteConfig: SiteConfig, disabledList?: string[], cwd?: string): Promise<LuaFilterGroup> {
   const group = await resolveLuaFilters(disabledList, cwd);
+  group.flags = [FLAGS_FILTER];
   group.user = cwd ? await resolveUserLuaFilters(cwd, siteConfig) : [];
   return group;
 }
@@ -165,6 +175,7 @@ async function dirExists(path: string): Promise<boolean> {
 
 /**
  * Escanea los filtros Lua built-in del paquete (`lib/resources/filters`).
+ * El directorio internal/ (filtros del pipeline, no de usuario) se excluye.
  * La descripción se toma de la primera línea de comentario `-- ...` del archivo.
  */
 export async function getBuiltinLuaFilterInfos(): Promise<LuaFilterInfo[]> {
@@ -172,6 +183,7 @@ export async function getBuiltinLuaFilterInfos(): Promise<LuaFilterInfo[]> {
   if (!(await dirExists(LUA_FILTERS_ROOT))) return infos;
   const glob = new Bun.Glob('**/*.lua');
   for await (const rel of glob.scan({ cwd: LUA_FILTERS_ROOT, onlyFiles: true })) {
+    if (rel.startsWith('internal/')) continue;
     const group = dirname(rel);
     const full = `${group}/${basename(rel, '.lua')}`;
     const content = await Bun.file(join(LUA_FILTERS_ROOT, rel)).text();
@@ -200,114 +212,72 @@ function readLuaDescription(content: string): string {
   return lines.join(' ');
 }
 
-function isHeader(block: unknown): boolean {
-  return typeof block === 'object' && block !== null && (block as Record<string, unknown>).t === 'Header';
-}
+// ---------------------------------------------------------------------------
+// Template HTML efectivo: composición desde recursos por build.
+// El orden de las tarjetas se deriva de format.html.blocks: los bloques con
+// número negativo van antes del body (trayectura), los positivos después;
+// el orden dentro de cada grupo lo da el número (el body es el cero).
+// ---------------------------------------------------------------------------
 
-/** Comandos de sección LaTeX reconocidos como inicio de documento. */
-const SECTION_COMMAND_RE = /^\\(subsubsection|subsection|section|subparagraph|paragraph|chapter|part)\*?(?:\[|\{|\s*$)/;
+/** Marcador de apertura de un bloque en el HTML (`<!-- block:KEY -->`). */
+export const blockMarker = (key: string): string => `<!-- block:${key} -->`;
 
-/**
- * Detecta un RawBlock LaTeX que sea un comando de sección (`\chapter{...}`,
- * `\section*{...}`, etc.) escrito directamente en markdown. Pandoc lo
- * representa como RawBlock, no como Header, pero tipográficamente inicia
- * una sección y debe tratarse igual.
- */
-function isSectionRawBlock(block: unknown): boolean {
-  if (typeof block !== 'object' || block === null) return false;
-  const b = block as Record<string, unknown>;
-  if (b.t !== 'RawBlock') return false;
-  const c = b.c as unknown[];
-  // pandoc usa 'tex' para raw TeX en markdown y 'latex' en otros contextos
-  if (!Array.isArray(c) || (c[0] !== 'tex' && c[0] !== 'latex') || typeof c[1] !== 'string') return false;
-  return SECTION_COMMAND_RE.test(c[1].trim());
-}
+/** Recursos del template HTML del paquete. */
+const HTML_RESOURCES_DIR = join(import.meta.dir, '../lib/resources/html');
 
-/** BlockQuote nativo de markdown (`> cita`), que pandoc convierte a \begin{quote} en LaTeX. */
-function isBlockQuote(block: unknown): boolean {
-  return typeof block === 'object' && block !== null && (block as Record<string, unknown>).t === 'BlockQuote';
-}
+/** Archivo de tarjeta por bloque (footer usa la variante sin comentario del header). */
+const HTML_CARDS: Record<HtmlBlockKey, string> = {
+  header: 'card-identity.html',
+  trayectura: 'card-trayectura.html',
+  formatos: 'card-formatos.html',
+  indice: 'card-indice.html',
+  referencias: 'card-referencias.html',
+  footer: 'card-identity-footer.html',
+};
 
-function isDivWithClass(block: unknown, cls: string): boolean {
-  if (typeof block !== 'object' || block === null) return false;
-  const b = block as Record<string, unknown>;
-  if (b.t !== 'Div') return false;
-  const c = b.c as unknown[];
-  if (!Array.isArray(c) || c.length < 1) return false;
-  const attrs = c[0] as unknown[];
-  if (!Array.isArray(attrs) || attrs.length < 2) return false;
-  const classes = attrs[1] as string[];
-  return Array.isArray(classes) && classes.includes(cls);
-}
+/** Tarjetas cuyo marcador antepone el CLI (las demás lo llevan dentro). */
+const CLI_MARKER_KEYS: readonly HtmlBlockKey[] = ['header', 'trayectura', 'footer'];
 
 /**
- * Calcula los flags de preámbulo desde el AST canónico (después de los
- * filters semánticos, sin contenido de formato). Reemplaza la detección
- * por regex/startsWith sobre el LaTeX.
+ * Resuelve el orden de los bloques del masonry: merge de los defaults con los
+ * overrides individuales (`format.html.blocks`). Cada clave es opcional; sin
+ * ella usa su default. Los empates de número se desempatan por el orden
+ * canónico de claves (header → trayectura → formatos → indice → referencias →
+ * footer), de modo que el resultado es determinista.
  */
-export function computePreambleFlags(ast: Record<string, unknown>): PreambleFlags {
-  const blocks = ast.blocks as unknown[];
-  const list = Array.isArray(blocks) ? blocks : [];
-  const first = list[0];
-  const isSectionStart = isHeader(first) || isSectionRawBlock(first);
-  // dictum, verse y quote (Div o BlockQuote nativo) abren entornos list
-  const isDictumStart = isDivWithClass(first, 'dictum') || isDivWithClass(first, 'verse') || isDivWithClass(first, 'quote') || isBlockQuote(first);
-  return {
-    hasTocEntries: list.some(isHeader) || list.some(isSectionRawBlock),
-    skipNoIndent: isSectionStart || isDictumStart,
-    skipParagraphSpace: isSectionStart || isDictumStart,
-  };
-}
-
-/** Retorna true si el AST contiene nodos Cite (citas con bibliografía). */
-export function hasCiteNodes(ast: Record<string, unknown>): boolean {
-  return walkAst(ast, (node) => typeof node === 'object' && node !== null && (node as Record<string, unknown>).t === 'Cite');
+export function resolveBlockOrder(overrides?: Partial<Record<HtmlBlockKey, number>>): HtmlBlockKey[] {
+  const canonical = Object.keys(DEFAULT_HTML_BLOCKS) as HtmlBlockKey[];
+  const order: Record<HtmlBlockKey, number> = { ...DEFAULT_HTML_BLOCKS, ...overrides };
+  return [...canonical].sort((a, b) => order[a] - order[b] || canonical.indexOf(a) - canonical.indexOf(b));
 }
 
 /**
- * Camina un árbol de nodos (AST de pandoc) aplicando un predicado.
- * Evita serializar el AST a string (JSON.stringify) solo para buscar un nodo.
+ * Compone el template HTML efectivo del build: skeleton + tarjetas ordenadas
+ * según format.html.blocks. Las tarjetas dinámicas (formatos) y el marcador
+ * de referencias se resuelven por variables del template en cada documento;
+ * el TOC lo genera pandoc con --toc en la posición de la tarjeta indice.
  */
-function walkAst(node: unknown, predicate: (node: unknown) => boolean): boolean {
-  if (predicate(node)) return true;
-  if (Array.isArray(node)) {
-    return node.some((item) => walkAst(item, predicate));
+export async function composeHtmlTemplate(siteConfig: SiteConfig): Promise<string> {
+  const skeleton = await Bun.file(join(HTML_RESOURCES_DIR, 'skeleton.html')).text();
+  const order = resolveBlockOrder(siteConfig.format?.html?.blocks);
+  const blocks: string[] = [];
+  for (const key of order) {
+    const card = await Bun.file(join(HTML_RESOURCES_DIR, HTML_CARDS[key])).text();
+    blocks.push(CLI_MARKER_KEYS.includes(key) ? `${blockMarker(key)}\n${card}` : card);
   }
-  if (typeof node === 'object' && node !== null) {
-    return Object.values(node as Record<string, unknown>).some((value) => walkAst(value, predicate));
-  }
-  return false;
+  return skeleton.replace('<!-- cards -->', blocks.join('\n'));
 }
 
-/** Convierte el AST canónico a body LaTeX aplicando los filtros Lua de la capa latex. */
-async function renderTexBody(
-  ast: Record<string, unknown>,
-  doc: BuildDocument,
-  bibFiles: string[],
-  hasCiteKeys: boolean,
-  luaFilters: string[],
-  userFilters: string[],
-): Promise<string> {
-  const pandocArgs: string[] = ['--top-level-division', 'section', '--shift-heading-level-by=2'];
-  // Filtros de usuario primero: pueden transformar los nodos semánticos antes de la capa latex
-  for (const filter of [...userFilters, ...luaFilters]) {
-    pandocArgs.push('--lua-filter', filter);
-  }
-  if (bibFiles.length > 0) {
-    pandocArgs.push('--biblatex');
-    for (const bib of bibFiles) {
-      pandocArgs.push('--bibliography', bib);
-    }
-  }
-  let processedBody = await runPandoc({ input: JSON.stringify(ast), sourcePath: doc.filePath, from: 'json', to: 'latex', extraArgs: pandocArgs });
-  if (bibFiles.length > 0 && hasCiteKeys) {
-    processedBody = `${processedBody.replace(/\n+$/, '\n\n')}\\printbibliography[heading=bibintoc]\n`;
-  }
-  return processedBody;
-}
+// ---------------------------------------------------------------------------
+// Conversión markdown → formato (una invocación de pandoc por formato).
+// ---------------------------------------------------------------------------
 
-/** Ruta de la plantilla HTML (template system de pandoc). */
-const HTML_TEMPLATE_PATH = join(import.meta.dir, '../../src/lib/resources/template.html');
+/**
+ * Reader de markdown con auto-identifiers activos: los headings llevan `id`
+ * y el TOC puede generar enlaces `#`. Participa en el hash de filters para
+ * invalidar las salidas cacheadas si cambia (ver state.ts).
+ */
+export const MD_READER = 'markdown+auto_identifiers';
 
 /**
  * Normaliza un valor string para `--metadata=clave:valor` de pandoc: los
@@ -318,43 +288,6 @@ const HTML_TEMPLATE_PATH = join(import.meta.dir, '../../src/lib/resources/templa
  */
 export function metadataValue(value: string): string {
   return value.replace(/\n/g, ' ');
-}
-
-/**
- * Reader de markdown con auto-identifiers activos: los headings llevan `id`
- * y el TOC puede generar enlaces `#`. Participa en el hash de filters para
- * invalidar los ASTs cacheados si cambia (ver state.ts).
- */
-export const MD_READER = 'markdown+auto_identifiers';
-
-/** Id y título de la sección de referencias (citeproc). */
-const REFERENCES_HEADING_ID = 'referencias';
-const REFERENCES_HEADING_TEXT = 'Referencias';
-
-/**
- * Clona el AST agregando al final el heading de referencias (nivel 1).
- * Citeproc lo necesita para enlazar las citas del texto (link-citations) y
- * deja el h1 justo antes del div#refs; el ítem que genera en el TOC se
- * elimina en el post-procesamiento (removeTocReferencesLink).
- */
-function withReferencesHeading(ast: Record<string, unknown>): Record<string, unknown> {
-  const clone = JSON.parse(JSON.stringify(ast)) as Record<string, unknown>;
-  const blocks = Array.isArray(clone.blocks) ? (clone.blocks as unknown[]) : [];
-  blocks.push({
-    t: 'Header',
-    c: [1, [REFERENCES_HEADING_ID, [], []], [{ t: 'Str', c: REFERENCES_HEADING_TEXT }]],
-  });
-  clone.blocks = blocks;
-  return clone;
-}
-
-/**
- * Elimina del TOC el ítem que enlaza a #referencias (el header sintético que
- * citeproc necesita para link-citations; sin él, el TOC lo incluiría). El
- * ítem es el último li del TOC y no contiene sublistas (header de nivel 1).
- */
-function removeTocReferencesLink(html: string): string {
-  return html.replace(/<li>\s*<a href="#referencias"[^>]*>.*?<\/a>\s*<\/li>/gs, '');
 }
 
 /** Variables de la plantilla HTML (template system de pandoc). */
@@ -405,7 +338,8 @@ const FORMAT_ICONS: Record<FormatKey, string> = {
 /**
  * Genera el bloque de la tarjeta Formatos (enlaces a los formatos generados)
  * con su marcador. Sin formatos activos no se genera nada: el bloque queda
- * ausente y el resto del masonry no se altera.
+ * ausente y el resto del masonry no se altera. El resultado se pasa al
+ * template como variable `formats`.
  */
 function buildFormatsBlock(formats: FormatsLink[]): string | undefined {
   if (formats.length === 0) return undefined;
@@ -442,19 +376,43 @@ function buildFormatsBlock(formats: FormatsLink[]): string | undefined {
 }
 
 /**
+ * Elimina del TOC el ítem que enlaza a #referencias (el header sintético que
+ * inyecta el filtro internal/flags para link-citations; sin él, el TOC lo
+ * incluiría). El ítem es el último li del TOC y no contiene sublistas
+ * (header de nivel 1).
+ */
+export function removeTocReferencesLink(html: string): string {
+  return html.replace(/<li>\s*<a href="#referencias"[^>]*>.*?<\/a>\s*<\/li>/gs, '');
+}
+
+/**
  * Extrae el bloque de referencias (h1#referencias + div#refs) del article y lo
  * devuelve como bloque del masonry con su marcador. El parse del cierre es
  * balanceado: las entradas csl-entry son divs anidados, el primer `</div>` no
  * cierra el bloque. Sin citas, no se genera bloque.
  */
-function extractReferencesBlock(html: string): { html: string; block?: string } {
+export function extractReferencesBlock(html: string): { html: string; block?: string } {
   const refsIdPos = html.indexOf('id="referencias"');
   const refsDivPos = html.indexOf('<div id="refs"');
   if (refsIdPos < 0 && refsDivPos < 0) return { html };
 
   const start = refsIdPos >= 0 ? html.lastIndexOf('<h1', refsIdPos) : refsDivPos;
   const divStart = html.indexOf('<div id="refs"', start);
-  if (divStart < 0) return { html };
+  if (divStart < 0) {
+    // El marcador solo se renderiza si el filtro internal/flags detectó citas
+    // y bibliografía: si está presente pero citeproc no generó div#refs (citas
+    // sin entrada en la bibliografía), el heading sintético queda huérfano
+    // dentro del article y se elimina (no hay nada que mostrar). Sin marcador
+    // el heading es del autor: no se toca.
+    if (html.includes('<!-- block:referencias -->')) {
+      if (refsIdPos >= 0 && start >= 0) {
+        const h1End = html.indexOf('</h1>', start);
+        if (h1End >= 0) html = html.slice(0, start) + html.slice(h1End + 5);
+      }
+      return { html: html.replace('<!-- block:referencias -->', '') };
+    }
+    return { html };
+  }
 
   let depth = 0;
   let i = divStart;
@@ -495,123 +453,146 @@ function extractReferencesBlock(html: string): { html: string; block?: string } 
 }
 
 /**
- * Genera la página HTML completa desde el AST canónico con el template
- * system de pandoc (`--template template.html`), aplicando los filtros Lua
- * de la capa html a los nodos semánticos dentro de la misma invocación.
+ * Genera la página HTML completa desde el markdown original en una sola
+ * invocación de pandoc (reader markdown + filtros semánticos/de usuario/flags
+ * + capa html + template efectivo). Post-procesamiento mínimo: solo las
+ * referencias (extraerlas del article y reinsertarlas en su marcador, que es
+ * la única forma de sacarlas del body correctamente).
  */
-export async function renderHtmlPageFromAst(
-  ast: Record<string, unknown>,
+export async function htmlPageFromMarkdown(
+  content: string,
   doc: BuildDocument,
   cwd: string,
   vars: HtmlPageVars,
   siteConfig: SiteConfig,
+  templatePath: string,
+  fm: Record<string, unknown>,
   bibOptions?: BibOptions,
   luaFilters?: LuaFilterGroup,
+  repro?: ReproCtx,
 ): Promise<string> {
   const filters = luaFilters ?? (await loadFilterGroups(siteConfig, siteConfig.disabledFilters, cwd));
+  // Valores efectivos: el frontmatter del documento manda; la config aporta defaults
+  const lang = typeof fm.lang === 'string' && fm.lang ? fm.lang : vars.lang;
+  const siteTitle = typeof fm['site-title'] === 'string' && fm['site-title'] ? (fm['site-title'] as string) : vars.siteTitle;
+  const tagline = typeof fm.tagline === 'string' && fm.tagline ? (fm.tagline as string) : vars.tagline;
+  const theme = typeof fm.theme === 'string' && fm.theme ? (fm.theme as string) : vars.theme;
+  const accent = typeof fm.accent === 'string' && fm.accent ? (fm.accent as string) : vars.accent;
+  const css = typeof fm.css === 'string' && fm.css ? (fm.css as string) : vars.css;
+  // El TOC: el frontmatter (toc:) manda; la config aporta el default
+  const tocActive = typeof fm.toc === 'boolean' ? fm.toc : siteConfig.toc;
 
   const extraArgs = [
     '--template',
-    HTML_TEMPLATE_PATH,
+    templatePath,
     `--metadata=title:${metadataValue(vars.title)}`,
-    `--metadata=site-title:${metadataValue(vars.siteTitle)}`,
-    `--metadata=lang:${vars.lang}`,
+    `--metadata=site-title:${metadataValue(siteTitle)}`,
+    `--metadata=lang:${lang}`,
     // Las citas del texto enlazan a sus entradas en la tarjeta de referencias
     '--metadata=link-citations:true',
   ];
-  if (siteConfig.toc) extraArgs.push('--toc');
-  // Filtros de usuario primero, luego la capa html
-  for (const filter of [...filters.user, ...filters.html]) {
+  if (tocActive) extraArgs.push('--toc');
+  // Filtros semánticos y de usuario primero, luego el filtro interno de flags
+  // (heading sintético de referencias) y la capa html.
+  for (const filter of [...filters.semantic, ...filters.user, ...filters.flags, ...filters.html]) {
     extraArgs.push('--lua-filter', filter);
   }
-  if (vars.tagline) extraArgs.push(`--metadata=tagline:${metadataValue(vars.tagline)}`);
+  if (tagline) extraArgs.push(`--metadata=tagline:${metadataValue(tagline)}`);
   if (vars.docTitle) extraArgs.push(`--metadata=doc-title:${metadataValue(vars.docTitle)}`);
   if (vars.subtitle) extraArgs.push(`--metadata=subtitle:${metadataValue(vars.subtitle)}`);
   if (vars.date) extraArgs.push(`--metadata=date:${metadataValue(vars.date)}`);
   if (vars.homeHref) extraArgs.push(`--metadata=home-href:${vars.homeHref}`);
-  if (vars.theme) extraArgs.push(`--metadata=theme:${vars.theme}`);
-  if (vars.accent) extraArgs.push(`--metadata=accent:${vars.accent}`);
-  if (vars.css) extraArgs.push(`--metadata=css:${vars.css}`);
+  if (theme) extraArgs.push(`--metadata=theme:${theme}`);
+  if (accent) extraArgs.push(`--metadata=accent:${accent}`);
+  if (css) extraArgs.push(`--metadata=css:${css}`);
   if (vars.authorMeta) extraArgs.push(`--metadata=author-meta:${vars.authorMeta}`);
   // -V (template variable): se inserta cruda, sin escape HTML (el logo es SVG)
   if (vars.logoInline) extraArgs.push(`--variable=logo-inline:${vars.logoInline}`);
+  // Tarjeta de formatos: HTML generado por el CLI (hrefs relativos por doc).
+  const formatsBlock = buildFormatsBlock(vars.formats ?? []);
+  if (formatsBlock) extraArgs.push(`--variable=formats:${formatsBlock}`);
 
-  // Sección de referencias: si hay citas y bibliografía, el AST HTML lleva un
-  // heading h1 'Referencias' (id referencias) justo antes del div#refs que
-  // citeproc inserta — necesario para que link-citations enlace las citas del
-  // texto. El AST canónico no se modifica (LaTeX/EPUB/Markdown intactos).
-  const inputAst = bibOptions?.bibliography && hasCiteNodes(ast) ? withReferencesHeading(ast) : ast;
-  const html = await runPandoc({ input: JSON.stringify(inputAst), sourcePath: doc.filePath, from: 'json', to: 'html5', bibOptions, extraArgs });
+  // citeproc se pasa DESPUÉS de los --lua-filter: el orden de los filtros en
+  // argv determina el orden de aplicación, y el heading sintético de
+  // referencias (internal/flags) debe quedar ANTES del div#refs que citeproc
+  // inserta al final (si citeproc corre antes, div#refs queda después del
+  // heading y el post-procesamiento no puede extraerlo).
+  if (bibOptions) {
+    extraArgs.push('--citeproc', '--bibliography', bibOptions.bibliography);
+    if (bibOptions.csl) extraArgs.push('--csl', bibOptions.csl);
+  }
 
-  // El TOC incluiría el ítem 'Referencias' (el header sintético): se elimina.
+  // El filtro internal/flags agrega el heading sintético de referencias solo
+  // si hay citas y bibliografía (necesario para link-citations); el TOC lo
+  // incluiría, así que el ítem se elimina en el post-procesamiento.
+  const html = await runPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'html5', extraArgs });
+
   const htmlWithoutTocRefs = removeTocReferencesLink(html);
 
-  // Post-procesamiento: las referencias salen del article y se convierten en
-  // un bloque del masonry; la tarjeta Formatos es otro bloque generado. Ambos
-  // se ordenan junto con los bloques del template (header, trayectura, indice,
-  // footer) según format.html.blocks (sistema de bloques: sin anclas de texto).
+  // Post-procesamiento mínimo: las referencias salen del article y se
+  // convierten en un bloque del masonry, insertado en su marcador (la única
+  // posición que no puede resolver el template: no existen hasta que pandoc
+  // las genera). Sin citas, el marcador no se renderiza ($if(has-references)$).
   const { html: htmlWithoutRefs, block: referencesBlock } = extractReferencesBlock(htmlWithoutTocRefs);
-  const formatsBlock = buildFormatsBlock(vars.formats ?? []);
-  return assembleHtmlBlocks(htmlWithoutRefs, { formatos: formatsBlock, referencias: referencesBlock }, siteConfig.format?.html?.blocks);
+  if (referencesBlock) {
+    if (repro) await writeHtmlReproScript(repro, doc, extraArgs);
+    return htmlWithoutRefs.replace('<!-- block:referencias -->', referencesBlock);
+  }
+  if (repro) await writeHtmlReproScript(repro, doc, extraArgs);
+  return htmlWithoutRefs;
 }
 
 /**
- * Genera el AST canónico desde el markdown de un documento (sin frontmatter),
- * aplicando los filtros semánticos (string + ast) y los de usuario.
- * Lanza BuildError con la ruta del documento si el archivo no se puede leer,
- * el body está vacío o pandoc devuelve JSON inválido: un documento que falla
- * aborta el build (nunca se omite en silencio ni se publica contenido stale).
+ * Genera el cuerpo LaTeX completo (.tex final: preámbulo + cuerpo) desde el
+ * markdown original en una sola invocación de pandoc, con el template
+ * efectivo compuesto por el CLI. El filtro internal/flags calcula los flags
+ * del preámbulo (TOC, espaciado, \noindent) y agrega \printbibliography.
  */
-export async function markdownToAst(
-  doc: BuildDocument,
-  cwd: string,
-  siteConfig: SiteConfig,
-  luaFilters?: LuaFilterGroup,
-): Promise<Record<string, unknown>> {
-  const filters = luaFilters ?? (await loadFilterGroups(siteConfig, siteConfig.disabledFilters, cwd));
-
-  // Leer body del disco sin frontmatter (parser compartido con discovery)
-  let body = '';
-  try {
-    body = splitFrontmatter(await Bun.file(doc.filePath).text()).body;
-  } catch (err) {
-    throw new BuildError(`no se pudo leer "${doc.filePath}": ${String(err)}`);
-  }
-  if (!body.trim()) {
-    throw new BuildError(`"${doc.filePath}" no tiene contenido después del frontmatter`);
-  }
-
-  // Convertir markdown a JSON AST con los filtros Lua semánticos + de usuario
-  const semanticLuaArgs = [...filters.semantic, ...filters.user].flatMap((f) => ['--lua-filter', f]);
-  const json = await runPandoc({
-    input: body,
-    sourcePath: doc.filePath,
-    from: MD_READER,
-    to: 'json',
-    extraArgs: semanticLuaArgs,
-  });
-  try {
-    return JSON.parse(json) as Record<string, unknown>;
-  } catch {
-    throw new BuildError(`pandoc devolvió un AST JSON inválido para "${doc.filePath}"`);
-  }
-}
-
-/**
- * Genera el cuerpo LaTeX + flags de preámbulo desde el AST canónico.
- * Los archivos .bib se resuelven una sola vez por build (ver pipeline) y se
- * pasan aquí: la detección de citas corre sobre el AST, sin re-descubrir
- * la bibliografía por documento.
- */
-export async function texBodyFromAst(
-  ast: Record<string, unknown>,
+export async function markdownToLatex(
+  content: string,
   doc: BuildDocument,
   filters: LuaFilterGroup,
   bibFiles: string[],
-): Promise<{ body: string; flags: PreambleFlags }> {
-  const flags = computePreambleFlags(ast);
-  // Detección de citas desde el AST (nodos Cite reales, sin regex sobre el markdown)
-  const hasCiteKeys = bibFiles.length > 0 && hasCiteNodes(ast);
-  const body = await renderTexBody(ast, doc, bibFiles, hasCiteKeys, filters.latex, filters.user);
-  return { body, flags };
+  templatePath: string,
+  vars: { title: string; subtitle?: string; author: string[]; date?: string },
+  repro?: ReproCtx,
+): Promise<string> {
+  const extraArgs = ['--template', templatePath, '--top-level-division', 'section', '--shift-heading-level-by=2'];
+  // Filtros semánticos y de usuario primero, luego flags y la capa latex
+  for (const filter of [...filters.semantic, ...filters.user, ...filters.flags, ...filters.latex]) {
+    extraArgs.push('--lua-filter', filter);
+  }
+  if (bibFiles.length > 0) {
+    extraArgs.push('--biblatex');
+    for (const bib of bibFiles) {
+      extraArgs.push('--bibliography', bib);
+    }
+  }
+  extraArgs.push(`--metadata=title:${metadataValue(vars.title)}`);
+  if (vars.subtitle) extraArgs.push(`--metadata=subtitle:${metadataValue(vars.subtitle)}`);
+  for (const author of vars.author) {
+    extraArgs.push(`--metadata=author:${metadataValue(author)}`);
+  }
+  // date: la fecha efectiva (formateada o birthtime); '' neutraliza el date del
+  // frontmatter cuando show-date está desactivado (la portada no muestra fecha).
+  if (vars.date !== undefined) extraArgs.push(`--metadata=date:${metadataValue(vars.date)}`);
+
+  if (repro) await writeLatexReproScripts(repro, doc, extraArgs);
+
+  return runPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'latex', extraArgs });
+}
+
+/** Lanza BuildError con la ruta del documento si el body no se puede leer. */
+export async function readDocumentBody(doc: BuildDocument): Promise<string> {
+  let content: string;
+  try {
+    content = await Bun.file(doc.filePath).text();
+  } catch (err) {
+    throw new BuildError(`no se pudo leer "${doc.filePath}": ${String(err)}`);
+  }
+  const { body } = splitFrontmatter(content);
+  if (!body.trim()) {
+    throw new BuildError(`"${doc.filePath}" no tiene contenido después del frontmatter`);
+  }
+  return body;
 }

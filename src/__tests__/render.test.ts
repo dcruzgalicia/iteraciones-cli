@@ -3,10 +3,11 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-  computePreambleFlags,
+  blockMarker,
+  composeHtmlTemplate,
   getBuiltinFilterNames,
-  hasCiteNodes,
   loadFilterGroups,
+  resolveBlockOrder,
   resolveLuaFilters,
   resolveUserLuaFilters,
   suggestFilterName,
@@ -16,211 +17,53 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import * as logger from '../lib/logger.js';
 
-describe('computePreambleFlags (desde el AST)', () => {
-  it('detecta hasTocEntries con nodos Header', () => {
-    const ast = {
-      'pandoc-api-version': [1, 23],
-      meta: {},
-      blocks: [
-        { t: 'Para', c: [] },
-        { t: 'Header', c: [1, ['', [], []], [{ t: 'Str', c: 'T' }]] },
-      ],
-    };
-    expect(computePreambleFlags(ast).hasTocEntries).toBe(true);
+describe('resolveBlockOrder', () => {
+  it('sin overrides usa el orden por defecto', () => {
+    expect(resolveBlockOrder()).toEqual(['header', 'trayectura', 'formatos', 'indice', 'referencias', 'footer']);
   });
 
-  it('retorna hasTocEntries false sin Headers', () => {
-    const ast = { 'pandoc-api-version': [1, 23], meta: {}, blocks: [{ t: 'Para', c: [] }] };
-    expect(computePreambleFlags(ast).hasTocEntries).toBe(false);
+  it('un override individual mueve solo esa tarjeta', () => {
+    // formatos: 4 lo mueve después de índice (3)
+    expect(resolveBlockOrder({ formatos: 4 })).toEqual(['header', 'trayectura', 'indice', 'formatos', 'referencias', 'footer']);
   });
 
-  it('primer bloque Header: skipNoIndent y skipParagraphSpace true', () => {
-    const ast = {
-      'pandoc-api-version': [1, 23],
-      meta: {},
-      blocks: [
-        { t: 'Header', c: [1, ['', [], []], [{ t: 'Str', c: 'T' }]] },
-        { t: 'Para', c: [] },
-      ],
-    };
-    const flags = computePreambleFlags(ast);
-    expect(flags.skipNoIndent).toBe(true);
-    expect(flags.skipParagraphSpace).toBe(true);
-  });
-
-  it('primer bloque Para normal: skipNoIndent y skipParagraphSpace false', () => {
-    const ast = { 'pandoc-api-version': [1, 23], meta: {}, blocks: [{ t: 'Para', c: [{ t: 'Str', c: 'Texto' }] }] };
-    const flags = computePreambleFlags(ast);
-    expect(flags.skipNoIndent).toBe(false);
-    expect(flags.skipParagraphSpace).toBe(false);
-  });
-
-  it('RawBlock tex \\chapter: skipNoIndent y skipParagraphSpace true, y cuenta para hasTocEntries', () => {
-    const ast = {
-      'pandoc-api-version': [1, 23],
-      meta: {},
-      blocks: [{ t: 'RawBlock', c: ['tex', '\\chapter{Capitulo directo}'] }],
-    };
-    const flags = computePreambleFlags(ast);
-    expect(flags.skipNoIndent).toBe(true);
-    expect(flags.skipParagraphSpace).toBe(true);
-    expect(flags.hasTocEntries).toBe(true);
-  });
-
-  it('RawBlock tex \\section*, \\part y \\subsection: skipParagraphSpace true', () => {
-    const astStar = {
-      'pandoc-api-version': [1, 23],
-      meta: {},
-      blocks: [{ t: 'RawBlock', c: ['tex', '\\section*{Intro}'] }],
-    };
-    const astPart = {
-      'pandoc-api-version': [1, 23],
-      meta: {},
-      blocks: [{ t: 'RawBlock', c: ['tex', '\\part[Primera]{Parte Uno}'] }],
-    };
-    const astSub = {
-      'pandoc-api-version': [1, 23],
-      meta: {},
-      blocks: [{ t: 'RawBlock', c: ['latex', '\\subsection{Sub}'] }],
-    };
-    expect(computePreambleFlags(astStar).skipParagraphSpace).toBe(true);
-    expect(computePreambleFlags(astPart).skipParagraphSpace).toBe(true);
-    expect(computePreambleFlags(astSub).skipParagraphSpace).toBe(true);
-  });
-
-  it('RawBlock tex con prefijo section (\\sectionmark) no se confunde con sección', () => {
-    const ast = {
-      'pandoc-api-version': [1, 23],
-      meta: {},
-      blocks: [{ t: 'RawBlock', c: ['tex', '\\sectionmark{Texto}'] }],
-    };
-    const flags = computePreambleFlags(ast);
-    expect(flags.skipParagraphSpace).toBe(false);
-    expect(flags.hasTocEntries).toBe(false);
-  });
-
-  it('RawBlock tex no seccional (\\textit) y RawBlock html: flags false', () => {
-    const astIt = {
-      'pandoc-api-version': [1, 23],
-      meta: {},
-      blocks: [{ t: 'RawBlock', c: ['tex', '\\textit{Texto}'] }],
-    };
-    const astHtml = {
-      'pandoc-api-version': [1, 23],
-      meta: {},
-      blocks: [{ t: 'RawBlock', c: ['html', '<div>Hola</div>'] }],
-    };
-    expect(computePreambleFlags(astIt).skipParagraphSpace).toBe(false);
-    expect(computePreambleFlags(astHtml).skipParagraphSpace).toBe(false);
-  });
-
-  it('dictum (Div.dictum como primer bloque): skipNoIndent y skipParagraphSpace true', () => {
-    const ast = {
-      'pandoc-api-version': [1, 23],
-      meta: {},
-      blocks: [
-        { t: 'Div', c: [['', ['dictum'], []], [{ t: 'Para', c: [{ t: 'Str', c: 'Cita' }] }]] },
-        { t: 'Para', c: [] },
-      ],
-    };
-    const flags = computePreambleFlags(ast);
-    expect(flags.skipNoIndent).toBe(true);
-    expect(flags.skipParagraphSpace).toBe(true);
-  });
-
-  it('verse (Div.verse como primer bloque): skipNoIndent y skipParagraphSpace true', () => {
-    const ast = {
-      'pandoc-api-version': [1, 23],
-      meta: {},
-      blocks: [
-        { t: 'Div', c: [['', ['verse'], []], [{ t: 'Para', c: [] }]] },
-        { t: 'Para', c: [] },
-      ],
-    };
-    const flags = computePreambleFlags(ast);
-    expect(flags.skipNoIndent).toBe(true);
-    expect(flags.skipParagraphSpace).toBe(true);
-  });
-
-  it('quote (Div.quote como primer bloque): skipNoIndent y skipParagraphSpace true', () => {
-    const ast = {
-      'pandoc-api-version': [1, 23],
-      meta: {},
-      blocks: [
-        { t: 'Div', c: [['', ['quote'], []], [{ t: 'Para', c: [] }]] },
-        { t: 'Para', c: [] },
-      ],
-    };
-    const flags = computePreambleFlags(ast);
-    expect(flags.skipNoIndent).toBe(true);
-    expect(flags.skipParagraphSpace).toBe(true);
-  });
-
-  it('BlockQuote de markdown como primer bloque: skipNoIndent y skipParagraphSpace true', () => {
-    const ast = {
-      'pandoc-api-version': [1, 23],
-      meta: {},
-      blocks: [{ t: 'BlockQuote', c: [{ t: 'Para', c: [{ t: 'Str', c: 'Cita' }] }] }],
-    };
-    const flags = computePreambleFlags(ast);
-    expect(flags.skipNoIndent).toBe(true);
-    expect(flags.skipParagraphSpace).toBe(true);
-  });
-
-  it('center (Div.center) no cuenta como dictum-start', () => {
-    const ast = {
-      'pandoc-api-version': [1, 23],
-      meta: {},
-      blocks: [
-        { t: 'Div', c: [['', ['center'], []], [{ t: 'Para', c: [] }]] },
-        { t: 'Para', c: [] },
-      ],
-    };
-    expect(computePreambleFlags(ast).skipNoIndent).toBe(false);
-  });
-
-  it('spacer (Div.spacer) no cuenta como dictum-start', () => {
-    const ast = {
-      'pandoc-api-version': [1, 23],
-      meta: {},
-      blocks: [
-        { t: 'Div', c: [['', ['spacer'], []], []] },
-        { t: 'Para', c: [] },
-      ],
-    };
-    expect(computePreambleFlags(ast).skipNoIndent).toBe(false);
-  });
-
-  it('maneja blocks que no es un array', () => {
-    const ast = { 'pandoc-api-version': [1, 23], meta: {}, blocks: 'no-array' };
-    const flags = computePreambleFlags(ast);
-    expect(flags).toEqual({ hasTocEntries: false, skipNoIndent: false, skipParagraphSpace: false });
+  it('desempata números iguales por el orden canónico de claves', () => {
+    expect(resolveBlockOrder({ header: 100 })).toEqual(['trayectura', 'formatos', 'indice', 'referencias', 'footer', 'header']);
   });
 });
 
-describe('hasCiteNodes (detección de citas en el AST)', () => {
-  it('retorna true si el AST contiene un nodo Cite', () => {
-    const ast = {
-      'pandoc-api-version': [1, 23],
-      meta: {},
-      blocks: [
-        {
-          t: 'Para',
-          c: [{ t: 'Cite', c: [[{ citationId: 'einstein', citationPrefix: [], citationSuffix: [] }], [{ t: 'Str', c: 'x' }]] }],
-        },
-      ],
+describe('composeHtmlTemplate', () => {
+  it('compone el template efectivo con los bloques en orden (marcadores del output actual)', async () => {
+    const tpl = await composeHtmlTemplate(DEFAULT_SITE_CONFIG);
+    const pos = (s: string): number => tpl.indexOf(s);
+    expect(pos(blockMarker('header'))).toBeGreaterThan(-1);
+    expect(pos(blockMarker('trayectura'))).toBeGreaterThan(pos(blockMarker('header')));
+    // La tarjeta formatos se inserta por variable (sin marcador en el template)
+    expect(pos('$formats$')).toBeGreaterThan(pos(blockMarker('trayectura')));
+    expect(pos(blockMarker('indice'))).toBeGreaterThan(pos('$formats$'));
+    expect(pos(blockMarker('referencias'))).toBeGreaterThan(pos(blockMarker('indice')));
+    expect(pos(blockMarker('footer'))).toBeGreaterThan(pos(blockMarker('referencias')));
+  });
+
+  it('el marcador de referencias es condicional (solo si el filtro detecta citas)', async () => {
+    const tpl = await composeHtmlTemplate(DEFAULT_SITE_CONFIG);
+    expect(tpl).toContain('$if(has-references)$');
+    expect(tpl).toContain('<!-- block:referencias -->');
+  });
+
+  it('la tarjeta formatos se inserta por variable de template', async () => {
+    const tpl = await composeHtmlTemplate(DEFAULT_SITE_CONFIG);
+    expect(tpl).toContain('$if(formats)$');
+    expect(tpl).toContain('$formats$');
+  });
+
+  it('respeta overrides de format.html.blocks', async () => {
+    const siteConfig = {
+      ...DEFAULT_SITE_CONFIG,
+      format: { ...DEFAULT_SITE_CONFIG.format, html: { ...DEFAULT_SITE_CONFIG.format.html, blocks: { formatos: 4 } } },
     };
-    expect(hasCiteNodes(ast)).toBe(true);
-  });
-
-  it('retorna false sin nodos Cite', () => {
-    const ast = { 'pandoc-api-version': [1, 23], meta: {}, blocks: [{ t: 'Para', c: [{ t: 'Str', c: 'Texto' }] }] };
-    expect(hasCiteNodes(ast)).toBe(false);
-  });
-
-  it('retorna false para AST sin bloques', () => {
-    const ast = { 'pandoc-api-version': [1, 23], meta: {}, blocks: [] };
-    expect(hasCiteNodes(ast)).toBe(false);
+    const tpl = await composeHtmlTemplate(siteConfig);
+    expect(tpl.indexOf('$formats$')).toBeGreaterThan(tpl.indexOf(blockMarker('indice')));
   });
 });
 
@@ -346,6 +189,14 @@ describe('loadFilterGroups (solo resolución de filtros Lua)', () => {
     expect(latexCount).toBeGreaterThan(0);
     expect(groups.latex).toHaveLength(latexCount);
     expect(groups.latex[1]).toContain('02-dictum.lua');
+  });
+
+  it('incluye el filtro interno de flags (no expuesto a disabled-filters)', async () => {
+    const groups = await loadFilterGroups(DEFAULT_SITE_CONFIG);
+    expect(groups.flags).toHaveLength(1);
+    expect(groups.flags[0]).toContain('internal');
+    expect(groups.flags[0]).toContain('flags.lua');
+    expect(getBuiltinFilterNames().some((n) => n.startsWith('internal/'))).toBe(false);
   });
 
   it('el override .lua del proyecto reemplaza al del paquete', async () => {

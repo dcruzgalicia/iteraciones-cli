@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildAssets } from '../builder/build-assets.js';
-import { cleanupDeletedFiles, cleanupSlugChanges, copyToDist } from '../builder/cleanup.js';
+import { cleanupDeletedFiles, cleanupSlugChanges } from '../builder/cleanup.js';
 import type { BuildContext } from '../builder/types.js';
 import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 
@@ -48,28 +48,26 @@ describe('build-assets', () => {
 });
 
 describe('cleanup (eliminaciones y slugs)', () => {
-  it('cleanupDeletedFiles elimina la caché, los auxiliares de latexmk y la salida del documento', async () => {
+  it('cleanupDeletedFiles elimina el área de trabajo del PDF, la caché de repro y la salida del documento', async () => {
     await withTempDir(async (dir) => {
       const ctx = makeCtx(dir);
       // Simular artefactos de un documento 'perdido.md' (slug 'perdido')
-      await mkdir(join(dir, '.iteraciones', 'ast'), { recursive: true });
-      await mkdir(join(dir, '.iteraciones', 'formats', 'pdf'), { recursive: true });
-      await mkdir(join(dir, '.iteraciones', 'formats', 'html'), { recursive: true });
+      await mkdir(join(dir, '.iteraciones', 'tmp', 'pdf'), { recursive: true });
+      await mkdir(join(dir, '.iteraciones', 'repro', 'html'), { recursive: true });
       await mkdir(join(ctx.outputDir), { recursive: true });
-      await writeFile(join(dir, '.iteraciones', 'ast', 'perdido.json'), '{}');
-      await writeFile(join(dir, '.iteraciones', 'formats', 'pdf', 'perdido.tex'), 'tex');
-      await writeFile(join(dir, '.iteraciones', 'formats', 'pdf', 'perdido.aux'), 'aux');
-      await writeFile(join(dir, '.iteraciones', 'formats', 'pdf', 'perdido.log'), 'log');
-      await writeFile(join(dir, '.iteraciones', 'formats', 'html', 'perdido.html'), 'html');
+      await writeFile(join(dir, '.iteraciones', 'tmp', 'pdf', 'perdido.tex'), 'tex');
+      await writeFile(join(dir, '.iteraciones', 'tmp', 'pdf', 'perdido.aux'), 'aux');
+      await writeFile(join(dir, '.iteraciones', 'tmp', 'pdf', 'perdido.log'), 'log');
+      await writeFile(join(dir, '.iteraciones', 'repro', 'html', 'perdido.sh'), 'sh');
       await writeFile(join(ctx.outputDir, 'perdido.html'), 'html');
 
       const deletedEntries = new Map([['perdido.md', { title: 'Perdido', author: [], date: '', mtime: 0, size: 0, hash: '', slug: 'perdido' }]]);
       await cleanupDeletedFiles(ctx, new Set(['perdido.md']), [], deletedEntries);
 
-      expect(await Bun.file(join(dir, '.iteraciones', 'ast', 'perdido.json')).exists()).toBe(false);
-      expect(await Bun.file(join(dir, '.iteraciones', 'formats', 'pdf', 'perdido.tex')).exists()).toBe(false);
-      expect(await Bun.file(join(dir, '.iteraciones', 'formats', 'pdf', 'perdido.aux')).exists()).toBe(false);
-      expect(await Bun.file(join(dir, '.iteraciones', 'formats', 'pdf', 'perdido.log')).exists()).toBe(false);
+      expect(await Bun.file(join(dir, '.iteraciones', 'tmp', 'pdf', 'perdido.tex')).exists()).toBe(false);
+      expect(await Bun.file(join(dir, '.iteraciones', 'tmp', 'pdf', 'perdido.aux')).exists()).toBe(false);
+      expect(await Bun.file(join(dir, '.iteraciones', 'tmp', 'pdf', 'perdido.log')).exists()).toBe(false);
+      expect(await Bun.file(join(dir, '.iteraciones', 'repro', 'html', 'perdido.sh')).exists()).toBe(false);
       expect(await Bun.file(join(ctx.outputDir, 'perdido.html')).exists()).toBe(false);
     });
   });
@@ -77,28 +75,12 @@ describe('cleanup (eliminaciones y slugs)', () => {
   it('cleanupSlugChanges elimina los artefactos del slug anterior', async () => {
     await withTempDir(async (dir) => {
       const ctx = makeCtx(dir);
-      await mkdir(join(dir, '.iteraciones', 'ast'), { recursive: true });
       await mkdir(join(ctx.outputDir), { recursive: true });
-      await writeFile(join(dir, '.iteraciones', 'ast', 'slug-viejo.json'), '{}');
       await writeFile(join(ctx.outputDir, 'slug-viejo.html'), 'html');
 
       await cleanupSlugChanges(ctx, new Map([['doc.md', 'slug-viejo']]));
 
-      expect(await Bun.file(join(dir, '.iteraciones', 'ast', 'slug-viejo.json')).exists()).toBe(false);
       expect(await Bun.file(join(ctx.outputDir, 'slug-viejo.html')).exists()).toBe(false);
-    });
-  });
-
-  it('copyToDist mueve los formatos activos a dist', async () => {
-    await withTempDir(async (dir) => {
-      const ctx = makeCtx(dir);
-      const formatsDir = join(dir, '.iteraciones', 'formats');
-      await mkdir(join(formatsDir, 'html'), { recursive: true });
-      await writeFile(join(formatsDir, 'html', 'doc.html'), '<html>ok</html>');
-      const doc = { filePath: join(dir, 'doc.md'), relativePath: 'doc.md', frontmatter: { title: 'Doc', date: '', author: [] }, slug: 'doc' };
-      await copyToDist(ctx, [doc], formatsDir, { latexOn: false, pdfOn: false, htmlOn: true, epubOn: false, mdOn: false });
-      expect(await Bun.file(join(ctx.outputDir, 'doc.html')).exists()).toBe(true);
-      expect(await Bun.file(join(formatsDir, 'html', 'doc.html')).exists()).toBe(false); // rename: se movió
     });
   });
 });

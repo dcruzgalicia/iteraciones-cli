@@ -2,7 +2,7 @@ import { describe, expect, it, spyOn } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { buildLatexPreamble } from '../builder/latex-preamble.js';
+import { composeLatexTemplate } from '../builder/latex-preamble.js';
 import {
   getBuiltinPreambleFilterInfos,
   getBuiltinPreambleFilterNames,
@@ -10,6 +10,9 @@ import {
   validateDisabledPreambleFilters,
 } from '../builder/preamble-loader.js';
 import * as logger from '../lib/logger.js';
+import { checkPandoc, runPandoc } from '../lib/pandoc-runner.js';
+
+const pandocOk = await checkPandoc().catch(() => null);
 
 describe('preamble-loader', () => {
   it('lista los preamble filters built-in con descripción', async () => {
@@ -51,66 +54,79 @@ describe('preamble-loader', () => {
   });
 });
 
-describe('buildLatexPreamble', () => {
-  it('emite \\author{} con los autores del documento', async () => {
-    const preamble = await buildLatexPreamble(undefined, { title: 'Título', author: ['Juan Pérez', 'Ana López'] });
-    const authorLine = preamble.find((line) => line.startsWith('\\author{'));
-    expect(authorLine).toBe('\\author{Juan Pérez \\and Ana López}');
+describe('composeLatexTemplate', () => {
+  const opts = { pageNumber: 'header-right', toc: true, preambleFilters: [], bibFiles: [] };
+
+  it('compone la portada con fragmentos de template (variables de pandoc)', async () => {
+    const tpl = await composeLatexTemplate(opts);
+    expect(tpl).toContain('\\title{$title$}');
+    expect(tpl).toContain('$if(subtitle)$\n\\subtitle{$subtitle$}\n$endif$');
+    expect(tpl).toContain('\\author{$for(author)$$author$$sep$ \\and $endfor$}');
+    expect(tpl).toContain('\\date{$date$}');
+    expect(tpl).toContain('\\maketitle');
   });
 
-  it('emite \\author{} vacío cuando no hay author para mantener la posición del título', async () => {
-    const preamble = await buildLatexPreamble(undefined, { title: 'Título' });
-    const authorLine = preamble.find((line) => line.startsWith('\\author{'));
-    expect(authorLine).toBe('\\author{}');
+  it('emite \\tableofcontents condicional solo con toc configurado', async () => {
+    const withToc = await composeLatexTemplate(opts);
+    const withoutToc = await composeLatexTemplate({ ...opts, toc: false });
+    expect(withToc).toContain('$if(has-toc-entries)$\n\\tableofcontents\n$endif$');
+    expect(withoutToc).not.toContain('\\tableofcontents');
   });
 
-  it('emite \\author{} vacío cuando author es una lista vacía', async () => {
-    const preamble = await buildLatexPreamble(undefined, { title: 'Título', author: [] });
-    const authorLine = preamble.find((line) => line.startsWith('\\author{'));
-    expect(authorLine).toBe('\\author{}');
+  it('emite el vspace post-portada condicional por skip-paragraph-space', async () => {
+    const tpl = await composeLatexTemplate(opts);
+    expect(tpl).toContain('$if(skip-paragraph-space)$\n$else$\n\\vspace*{2\\baselineskip}\n$endif$');
   });
 
-  it('emite \\author{} después de \\title y antes de \\date', async () => {
-    const preamble = await buildLatexPreamble(undefined, { title: 'Título' });
-    const titleIdx = preamble.findIndex((line) => line.startsWith('\\title{'));
-    const authorIdx = preamble.findIndex((line) => line.startsWith('\\author{'));
-    const dateIdx = preamble.findIndex((line) => line.startsWith('\\date{'));
-    expect(authorIdx).toBeGreaterThan(titleIdx);
-    expect(dateIdx).toBeGreaterThan(authorIdx);
+  it('incluye el comando de número de página configurado', async () => {
+    const tpl = await composeLatexTemplate({ ...opts, pageNumber: 'footer-center' });
+    expect(tpl).toContain('\\cfoot*{\\pagemark}');
   });
 
-  it('escapa caracteres especiales LaTeX en title y subtitle', async () => {
-    const preamble = await buildLatexPreamble(undefined, {
-      title: 'Resultados 100% & Análisis',
-      subtitle: 'Tema: {ciencia} $y$ #1 _nota_',
-    });
-    const titleLine = preamble.find((line) => line.startsWith('\\title{'));
-    const subtitleLine = preamble.find((line) => line.startsWith('\\subtitle{'));
-    expect(titleLine).toBe('\\title{Resultados 100\\% \\& Análisis}');
-    expect(subtitleLine).toBe('\\subtitle{Tema: \\{ciencia\\} \\$y\\$ \\#1 \\_nota\\_}');
-  });
-
-  it('escapa caracteres especiales LaTeX en author', async () => {
-    const preamble = await buildLatexPreamble(undefined, { title: 'Título', author: ['Ana & Torres', 'Juan 100%'] });
-    const authorLine = preamble.find((line) => line.startsWith('\\author{'));
-    expect(authorLine).toBe('\\author{Ana \\& Torres \\and Juan 100\\%}');
-  });
-
-  it('escapa tilde, caret y backslash como comandos de texto', async () => {
-    const preamble = await buildLatexPreamble(undefined, { title: 'Tilde ~ y caret ^ y backslash \\' });
-    const titleLine = preamble.find((line) => line.startsWith('\\title{'));
-    expect(titleLine).toBe('\\title{Tilde \\textasciitilde{} y caret \\textasciicircum{} y backslash \\textbackslash{}}');
+  it('lanza BuildError con page-number inválido', async () => {
+    await expect(composeLatexTemplate({ ...opts, pageNumber: 'raro' })).rejects.toThrow('page-number inválido');
   });
 
   it('escapa rutas de bibliografía en \\addbibresource sin tocar guiones bajos', async () => {
     const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-preamble-'));
     try {
       writeFileSync(join(cwd, 'mi_bib%1.bib'), '@book{k1, title={T}, year={2020}}\n');
-      const preamble = await buildLatexPreamble(undefined, { title: 'Título', cwd });
-      const bibLine = preamble.find((line) => line.startsWith('\\addbibresource'));
-      expect(bibLine).toBe(`\\addbibresource{${join(cwd, 'mi_bib%1.bib').replace('%', '\\%')}}`);
+      const tpl = await composeLatexTemplate({ ...opts, bibFiles: [join(cwd, 'mi_bib%1.bib')] });
+      expect(tpl).toContain(`\\addbibresource{${join(cwd, 'mi_bib%1.bib').replace('%', '\\%')}}`);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('concilia el $body$ con líneas en blanco (formato del .tex final)', async () => {
+    const tpl = await composeLatexTemplate(opts);
+    const lines = tpl.split('\n');
+    const bodyIdx = lines.indexOf('$body$');
+    expect(lines[bodyIdx - 1]).toBe('');
+    expect(lines[bodyIdx + 1]).toBe('');
+  });
+
+  it('no contiene caracteres de control (escapado correcto de backslashes)', async () => {
+    const tpl = await composeLatexTemplate(opts);
+    expect(tpl).not.toContain('\u0008');
+    expect(tpl).not.toContain('\t');
+  });
+
+  it.skipIf(!pandocOk)('pandoc escapa los metadatos al renderizar el template (título y autor)', async () => {
+    const tpl = await composeLatexTemplate({ ...opts, toc: false });
+    const dir = mkdtempSync(join(tmpdir(), 'iteraciones-latex-tpl-'));
+    try {
+      writeFileSync(join(dir, 'tpl.tex'), tpl);
+      const out = await runPandoc({
+        input: 'Texto.',
+        sourcePath: 'test.md',
+        to: 'latex',
+        extraArgs: ['--template', join(dir, 'tpl.tex'), '--metadata=title:Resultados 100% & Análisis', '--metadata=author:Ana & Torres'],
+      });
+      expect(out).toContain('\\title{Resultados 100\\% \\& Análisis}');
+      expect(out).toContain('\\author{Ana \\& Torres}');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 });

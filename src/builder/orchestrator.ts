@@ -7,12 +7,12 @@ import { computeActiveFormats, type SiteConfig } from '../config/site-config.js'
 import { logInfo, logWarning } from '../lib/logger.js';
 import { buildAssets } from './build-assets.js';
 import { computeBuildMetadata, computeWorkSets } from './build-planner.js';
-import { buildFormatsList, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges, copyToDist } from './cleanup.js';
+import { buildFormatsList, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges } from './cleanup.js';
 import { buildDocsFromIndex, discover } from './discover.js';
 import { runDocumentPipeline } from './pipeline.js';
 import { validateDisabledPreambleFilters } from './preamble-loader.js';
 import { validateDisabledFilters } from './render.js';
-import { loadStateFile } from './state.js';
+import { clearStateFile, loadStateFile, migrateLegacyCache } from './state.js';
 import type { BuildContext } from './types.js';
 
 export interface BuildOptions {
@@ -71,7 +71,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     // El estado ya persistido durante discovery puede contener documentos cuyo
     // render falló (mtime+size+hash nuevos): eliminarlo para que el siguiente
     // build los reprocese en lugar de reutilizar contenido stale u omitirlos.
-    await rm(join(cwd, '.iteraciones', 'changes', 'state.json'), { force: true }).catch(() => {});
+    await clearStateFile(cwd);
     throw err;
   }
 }
@@ -138,6 +138,8 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   // setupBuildEnvironment): no cargar prevState evita mensajes de invalidación
   // engañosos y fuerza el reprocesamiento completo.
   const prevState = options.noCache ? null : await loadStateFile(cwd);
+  // Migrar el caché de versiones anteriores (ast/, changes/, epub en formats/html)
+  await migrateLegacyCache(cwd);
   const plan = await computeBuildMetadata(cwd, siteConfig, prevState, options.noCss);
 
   if (plan.newFormats.length > 0) {
@@ -284,7 +286,6 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   const formatCfg = siteConfig.format;
 
   // ── FASE 2-6: pipeline por documento (AST → formatos ligeros → .tex → PDF) ──
-  const formatsDir = join(cwd, '.iteraciones', 'formats');
   const workDocCount = new Set([
     ...work.renderDocs.map((d) => d.relativePath),
     ...work.exportSets.html.map((d) => d.relativePath),
@@ -294,24 +295,13 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   ]).size;
 
   progress.startPhase('render', workDocCount);
-  const { processed } = await runDocumentPipeline(progress, ctx, plan, work, formatCfg, formatsDir, discoveryIndex, {
+  const { processed } = await runDocumentPipeline(progress, ctx, plan, work, formatCfg, discoveryIndex, {
     noExport: options.noExport === true,
   });
 
-  // ── FASE 5: copiar de formats/ a dist/ ──
-  if (!noExport) {
-    await copyToDist(ctx, allDocs, formatsDir, {
-      latexOn: plan.latexOn,
-      pdfOn: plan.pdfOn,
-      htmlOn: plan.htmlOn,
-      epubOn: plan.epubOn,
-      mdOn: plan.mdOn,
-    });
-  }
-
-  // ── Build assets (css, fonts, logo) DESPUÉS de copiar: Tailwind escanea
-  // los HTML finales de dist/files para generar el CSS exacto (purga por
-  // clases presentes, sin auto-referencia del CSS previo). ──
+  // ── Build assets (css, fonts, logo) DESPUÉS de los HTML finales en dist:
+  // Tailwind escanea los HTML finales de dist/files para generar el CSS exacto
+  // (purga por clases presentes, sin auto-referencia del CSS previo). ──
   if (needsAssets) {
     await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, {
       noCss: options.noCss,

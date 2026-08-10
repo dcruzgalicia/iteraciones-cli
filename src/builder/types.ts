@@ -10,6 +10,8 @@ export interface DiscoveryEntry {
   slugFixed?: boolean;
   /** Valor del slug manual del frontmatter (resuelto por resolveSlugs). */
   manualSlug?: string;
+  /** Frontmatter YAML completo parseado: fluye a pandoc como metadata del documento. */
+  fm?: Record<string, unknown>;
   /** mtime (ms) del archivo en el último build (caché content-addressed). */
   mtime?: number;
   /** Tamaño del archivo en el último build. */

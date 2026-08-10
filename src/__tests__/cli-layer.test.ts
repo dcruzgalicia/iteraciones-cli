@@ -364,7 +364,7 @@ describe('runBuild', () => {
     });
   });
 
-  it('un cambio de bibliografía regenera las exportaciones sin re-renderizar los ASTs', async () => {
+  it('un cambio de bibliografía regenera las exportaciones', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
       await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nbibliography: refs/libro.bib\n', 'utf8');
@@ -379,14 +379,10 @@ describe('runBuild', () => {
       process.exitCode = 0;
       await runBuild(dir);
       expect(process.exitCode).toBe(0);
-      const { readdirSync } = await import('node:fs');
-      const astFiles = readdirSync(join(dir, '.iteraciones', 'ast'));
-      expect(astFiles.length).toBeGreaterThan(0);
-      const astBefore = await Bun.file(join(dir, '.iteraciones', 'ast', astFiles[0] ?? '')).text();
       const htmlBefore = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
       expect(htmlBefore).toContain('Título original');
 
-      // Cambiar la bibliografía: las exportaciones se regeneran, el AST no
+      // Cambiar la bibliografía: las exportaciones se regeneran
       await writeFile(
         join(dir, 'refs', 'libro.bib'),
         '@book{ejemplo2024,\n  title = {Título nuevo},\n  author = {Autor},\n  year = {2024},\n}\n',
@@ -395,8 +391,6 @@ describe('runBuild', () => {
       process.exitCode = 0;
       await runBuild(dir);
       expect(process.exitCode).toBe(0);
-      const astAfter = await Bun.file(join(dir, '.iteraciones', 'ast', astFiles[0] ?? '')).text();
-      expect(astAfter).toBe(astBefore);
       const htmlAfter = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
       expect(htmlAfter).toContain('Título nuevo');
     });
@@ -615,6 +609,29 @@ describe('runBuild', () => {
       expect(html).toContain('"especial"');
       expect(html).toContain('con salto');
       expect(html).toContain('<title>Título: "especial" y más con salto · Test</title>');
+    });
+  });
+
+  it('citas sin entrada en la bibliografía no dejan la sección de referencias huérfana', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'bibliography.bib'), '@book{key1, author = {García, Lucía}, title = {Libro}, year = {2024}}\n', 'utf8');
+      // El citekey no existe en el .bib: citeproc no genera div#refs y el heading
+      // sintético quedaría huérfano dentro del contenido.
+      await writeFile(
+        join(dir, 'test.md'),
+        '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\n# Sección\n\nCita rota [@key-inexistente].\n',
+        'utf8',
+      );
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
+      // Ni el heading sintético ni el marcador quedan en el output final
+      expect(html).not.toContain('<h1 id="referencias">');
+      expect(html).not.toContain('block:referencias');
+      // El contenido normal sí está
+      expect(html).toContain('<h1 id="sección">Sección</h1>');
     });
   });
 
@@ -1252,38 +1269,6 @@ describe('runBuild (smoke PDF real)', () => {
     },
     { timeout: 120_000 },
   );
-});
-
-describe('runBuild (copyToDist)', () => {
-  afterEach(resetExitCode);
-
-  it('avisa si un archivo generado falta en la caché (dist no queda incompleto en silencio)', async () => {
-    await withTempDir(async (dir) => {
-      await initTestProject(dir);
-      await writeFile(join(dir, 'otro.md'), '---\ntitle: Otro\n---\n\nContenido.\n', 'utf8');
-      process.exitCode = 0;
-      await runBuild(dir);
-      expect(process.exitCode).toBe(0);
-
-      // Eliminar el HTML generado de la caché para el documento NO modificado:
-      // el build siguiente (con trabajo en test.md) intenta copiarlo y falta.
-      await rm(join(dir, '.iteraciones', 'formats', 'html', 'otro.html'), { force: true });
-      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\nContenido modificado.\n', 'utf8');
-      const stdoutSpy = spyOn(process.stdout, 'write');
-      let output = '';
-      try {
-        process.exitCode = 0;
-        await runBuild(dir);
-      } finally {
-        output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
-        stdoutSpy.mockRestore();
-      }
-      // Los warnings se difieren al resumen final (bloque Advertencias en stdout)
-      expect(output).toContain('no se encontró el archivo generado');
-      expect(output).toContain('otro.html');
-      expect(process.exitCode).toBe(0);
-    });
-  });
 });
 
 describe('runClean', () => {

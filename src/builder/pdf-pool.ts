@@ -6,6 +6,10 @@ export interface PdfJob {
   dir: string;
   slug: string;
   relativePath: string;
+  /** Ruta absoluta del .tex completo (en dist/ si latexOn, si no en el área de trabajo). */
+  texPath: string;
+  /** Ruta absoluta del .pdf final en dist/. */
+  pdfDest: string;
 }
 
 /**
@@ -22,7 +26,7 @@ export interface PdfJob {
  *   cancel()           — fallo del pool 1: los workers salen sin compilar lo pendiente
  */
 export function createPdfConsumer(
-  formatsDir: string,
+  pdfWorkBase: string,
   biberBase: string,
   maxSlots: number,
   progress: ProgressTracker,
@@ -40,9 +44,9 @@ export function createPdfConsumer(
         const job = pdfJobs[next++];
         if (job === undefined) throw new Error('pdf-pool: trabajo de PDF sin definir');
         const s = slot++ % maxSlots;
-        const pdfDir = join(formatsDir, 'pdf', job.dir);
-        const fullTexPath = join(pdfDir, `${job.slug}.tex`);
-        await convertToPdf(fullTexPath, job.relativePath, pdfDir, job.slug, join(biberBase, `cache-${s}`));
+        // latexmk compila con -outdir en el área de trabajo (auxiliares y .pdf ahí)
+        const pdfDir = join(pdfWorkBase, job.dir);
+        await convertToPdf(job.texPath, job.relativePath, pdfDir, job.slug, join(biberBase, `cache-${s}`), job.pdfDest);
         progress.reportFile({ relativePath: job.relativePath, phase: 'pdf' });
       } else if (producerDone) {
         return;
