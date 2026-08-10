@@ -70,8 +70,6 @@ export class ProgressTracker {
   private currentPhaseCount = 0;
   /** Si true, escribe el desglose de tiempos por fase tras el resumen (--profile). */
   private profile: boolean;
-  /** Con --no-export las salidas no se generan: el resumen lo indica. */
-  private noExport: boolean;
   /** Modo --verbose: texto plano con etiquetas. */
   private verbose: boolean;
   /** Render interactivo (TTY) o impresión de estados finales. */
@@ -89,11 +87,10 @@ export class ProgressTracker {
   private nextLine = 0;
   private formatsShown = false;
 
-  constructor(options: { renderer?: 'default' | 'verbose' | 'test'; profile?: boolean; noExport?: boolean } = {}) {
+  constructor(options: { renderer?: 'default' | 'verbose' | 'test'; profile?: boolean } = {}) {
     this.verbose = options.renderer === 'verbose';
     this.tty = options.renderer === 'default' && process.stdout.isTTY === true;
     this.profile = options.profile ?? false;
-    this.noExport = options.noExport ?? false;
     this.t0 = performance.now();
     if (options.renderer === 'default') {
       // Restaurar el cursor si el proceso sale sin completar (errores del build)
@@ -367,13 +364,9 @@ export class ProgressTracker {
     if (cached > 0) {
       process.stdout.write(`  ${padRight('Sin cambios (reutilizado)', LABEL_WIDTH)}${cached}\n`);
     }
-    if (this.noExport) {
-      process.stdout.write(`  Salidas no modificadas (caché actualizada)\n`);
-    } else {
-      // Conteo honesto: formatos ACTIVOS de la configuración (no archivos
-      // generados, que dependen de cuántos documentos tengan salida).
-      process.stdout.write(`  ${padRight('Formatos activos', LABEL_WIDTH)}${formatCount}\n`);
-    }
+    // Conteo honesto: formatos ACTIVOS de la configuración (no archivos
+    // generados, que dependen de cuántos documentos tengan salida).
+    process.stdout.write(`  ${padRight('Formatos activos', LABEL_WIDTH)}${formatCount}\n`);
     if (outputDir) {
       process.stdout.write(`  ${padRight('Salida', LABEL_WIDTH)}${outputDir}\n`);
     }

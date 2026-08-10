@@ -48,7 +48,6 @@ export function buildProgram(): Command {
     .option('--no-cache', 'omite la caché y elimina la salida anterior (dist/); hace build completo')
     .option('--output <path>', 'directorio de salida (por defecto: dist/files)')
     .option('--no-css', 'omite la generación de CSS')
-    .option('--no-export', 'solo actualiza la caché; no genera ni copia salidas a dist')
     .option('--dry-run', 'muestra los documentos que se procesarían sin generar salida')
     .option('--verbose', 'muestra información adicional de progreso')
     .option('--profile', 'muestra el tiempo de cada fase del pipeline al final del build')
@@ -68,7 +67,6 @@ Ejemplos:
         cache: boolean;
         output?: string;
         css: boolean;
-        export: boolean;
         dryRun?: boolean;
         verbose?: boolean;
         profile?: boolean;
@@ -80,7 +78,6 @@ Ejemplos:
           noCache: !opts.cache,
           outputDir: opts.output,
           noCss: !opts.css,
-          noExport: !opts.export,
           dryRun: opts.dryRun,
           verbose: opts.verbose,
           profile: opts.profile,

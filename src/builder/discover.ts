@@ -98,7 +98,7 @@ export async function discover(
       bibHash: string;
       bibFileCache: BibFileCache;
     };
-    /** Si false, no persiste state.json (--no-export: las salidas siguen desactualizadas). */
+    /** Si false, no persiste state.json (lo usa el dry-run: no genera salidas). */
     persist?: boolean;
   } = {},
 ): Promise<DiscoverResult> {

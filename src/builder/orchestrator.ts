@@ -20,7 +20,6 @@ export interface BuildOptions {
   concurrency?: number | string;
   noCache?: boolean;
   noCss?: boolean;
-  noExport?: boolean;
   dryRun?: boolean;
   verbose?: boolean;
   profile?: boolean;
@@ -59,7 +58,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   const progress = new ProgressTracker({
     renderer: options.verbose ? 'verbose' : 'default',
     profile: options.profile,
-    noExport: options.noExport === true,
   });
   try {
     await runBuild(cwd, options, progress);
@@ -92,6 +90,8 @@ async function dryRun(cwd: string): Promise<void> {
   const { relativePaths, changedPaths, discoveryIndex } = await discover(cwd, {
     prevState,
     activeFormats: plan.currentFormats,
+    // El dry-run nunca persiste el estado (no genera salidas)
+    persist: false,
   });
   const allDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
   for (const doc of allDocs) {
@@ -125,7 +125,6 @@ async function dryRun(cwd: string): Promise<void> {
 
 async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTracker): Promise<void> {
   const log = (msg: string) => progress.log(msg);
-  const noExport = options.noExport === true;
 
   // Cargar config primero para detectar cambios de formato antes de setupBuildEnvironment
   const siteConfig = await loadSiteConfig(cwd);
@@ -185,9 +184,6 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
     activeFormats: plan.currentFormats,
     prevState,
     outputDir: ctx.outputDir,
-    // Con --no-export el estado no se avanza: las salidas de dist/ siguen
-    // desactualizadas y el siguiente build normal debe regenerarlas.
-    persist: !noExport,
     meta: {
       filtersHash: plan.filtersHash,
       filterFileCache: plan.filterFileCache,
@@ -200,8 +196,8 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
 
   // El CSS se compila en cada build con HTML activo (sin caché): el scan de
   // Tailwind corre sobre los HTML finales de dist/files, así que los assets se
-  // generan SIEMPRE que htmlOn && !noCss && !noExport, incluso sin trabajo.
-  const needsAssets = plan.htmlOn && !options.noCss && !noExport;
+  // generan SIEMPRE que htmlOn && !noCss, incluso sin trabajo.
+  const needsAssets = plan.htmlOn && !options.noCss;
 
   if (allDocs.length === 0) {
     // Proyecto vacío: mensaje visible en stderr (advertencias del resumen) y
@@ -232,10 +228,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   // formatInvalidated, que cambia al activarse un formato).
 
   // ── FASE 6: limpiar de dist/ archivos de formatos eliminados ──
-  // Con --no-export no se toca dist/ (cleanup, assets y copia se omiten).
-  if (!noExport) {
-    await cleanupRemovedFormats(ctx, allDocs, plan.removedFormats);
-  }
+  await cleanupRemovedFormats(ctx, allDocs, plan.removedFormats);
 
   // ── Planificación: conjuntos de trabajo (caché content-addressed) ──
   const work = computeWorkSets(plan, allDocs, discoveredChanges);
@@ -253,10 +246,8 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   }
 
   // Cleanup de archivos eliminados y slugs cambiados
-  if (!noExport) {
-    await cleanupDeletedFiles(ctx, discoveredChanges, allDocs, deletedEntries);
-    await cleanupSlugChanges(ctx, slugChangedEntries);
-  }
+  await cleanupDeletedFiles(ctx, discoveredChanges, allDocs, deletedEntries);
+  await cleanupSlugChanges(ctx, slugChangedEntries);
 
   // Solo hubo eliminaciones o slugs cambiados: el cleanup ya corrió
   if (
@@ -295,9 +286,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   ]).size;
 
   progress.startPhase('render', workDocCount);
-  const { processed } = await runDocumentPipeline(progress, ctx, plan, work, formatCfg, discoveryIndex, {
-    noExport: options.noExport === true,
-  });
+  const { processed } = await runDocumentPipeline(progress, ctx, plan, work, formatCfg, discoveryIndex);
 
   // ── Build assets (css, fonts, logo) DESPUÉS de los HTML finales en dist:
   // Tailwind escanea los HTML finales de dist/files para generar el CSS exacto

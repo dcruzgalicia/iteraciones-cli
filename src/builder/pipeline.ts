@@ -41,10 +41,8 @@ export async function runDocumentPipeline(
   work: WorkSets,
   formatCfg: FormatConfig | undefined,
   discoveryIndex: Map<string, DiscoveryEntry>,
-  options: { noExport?: boolean } = {},
 ): Promise<{ processed: Set<string> }> {
   const { pdfOn, latexOn, htmlOn, epubOn, mdOn } = plan;
-  const noExport = options.noExport === true;
   const siteConfig = ctx.siteConfig;
   // La bibliografía se resuelve una sola vez por build y se comparte con todos
   // los documentos.
@@ -97,17 +95,16 @@ export async function runDocumentPipeline(
   await mkdir(repro.reproDir, { recursive: true });
 
   // Pre-crear directorios de caché de biber (uno por slot de concurrencia de PDF).
-  const compilePdf = pdfOn && !noExport;
-  const maxSlots = compilePdf ? Math.max(1, ctx.concurrency) : 0;
+  const maxSlots = pdfOn ? Math.max(1, ctx.concurrency) : 0;
   const biberBase = join(ctx.cwd, '.iteraciones', 'biber');
-  if (compilePdf && maxSlots > 0) {
+  if (pdfOn && maxSlots > 0) {
     await Promise.all(Array.from({ length: maxSlots }, (_, i) => mkdir(join(biberBase, `cache-${i}`), { recursive: true })));
   }
 
   // ── Pool 2 (PDF): consumidor de la cola, arranca en paralelo con el pool 1 ──
   const pdfWorkBase = join(ctx.cwd, '.iteraciones', 'tmp', 'pdf');
   const pdfConsumer = createPdfConsumer(pdfWorkBase, biberBase, maxSlots, progress);
-  if (compilePdf && work.exportSets.pdf.length > 0) {
+  if (pdfOn && work.exportSets.pdf.length > 0) {
     // Los workers arrancan antes del pool 1: latexmk se solapa con pandoc.
     pdfConsumer.start();
   }
@@ -144,7 +141,6 @@ export async function runDocumentPipeline(
           mdPaths,
           pdfPaths,
           pdfJobs: pdfConsumer.pdfJobs,
-          noExport,
         },
         discoveryIndex,
       );
@@ -194,7 +190,6 @@ interface FormatPoolCtx {
   mdPaths: Set<string>;
   pdfPaths: Set<string>;
   pdfJobs: PdfJob[];
-  noExport: boolean;
 }
 
 /** Procesa todos los formatos de un documento: markdown → tex/HTML/EPUB/MD → cola PDF. */
@@ -218,7 +213,6 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
     mdPaths,
     pdfPaths,
     pdfJobs,
-    noExport,
   } = pool;
   const { htmlOn, epubOn, mdOn, latexOn, pdfOn } = plan;
   const htmlConfig = formatCfg?.html;
@@ -238,9 +232,6 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
   if (!splitFrontmatter(content).body.trim()) {
     throw new BuildError(`"${doc.filePath}" no tiene contenido después del frontmatter`);
   }
-
-  // --no-export: no se toca dist/ (el estado no se avanza en discover)
-  if (noExport) return;
 
   const entry = discoveryIndex.get(doc.relativePath);
   const fm = entry?.fm ?? {};
