@@ -71,6 +71,14 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     // render falló (mtime+size+hash nuevos): eliminarlo para que el siguiente
     // build los reprocese en lugar de reutilizar contenido stale u omitirlos.
     await clearStateFile(cwd);
+    // Con --no-cache, la salida se eliminó al inicio del build: si el build
+    // falló a mitad, los archivos parciales de dist/ no son salidas válidas.
+    // Limpiarlos evita que el siguiente build (sin --no-cache) reutilice
+    // archivos huérfanos como si fueran resultados completos.
+    if (options.noCache) {
+      const outputDir = options.outputDir ?? join(cwd, 'dist', 'files');
+      await rm(outputDir, { recursive: true, force: true });
+    }
     throw err;
   }
 }
