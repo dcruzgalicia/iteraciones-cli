@@ -15,12 +15,24 @@ const ANSI = {
 
 type AnsiColor = keyof typeof ANSI;
 
+/**
+ * Override de la colorización para tests: `false` fuerza salida sin ANSI
+ * aunque el stream sea un TTY (la suite aserta strings exactos).
+ * `undefined` = decisión por TTY (comportamiento normal).
+ */
+let colorEnabledOverride: boolean | undefined;
+
+export function setLoggerColorEnabled(enabled: boolean): void {
+  colorEnabledOverride = enabled;
+}
+
 /** ¿El stream es un TTY? Solo en TTY se emiten colores (pipes/CI limpios). */
 const isTty = (stream: NodeJS.WriteStream): boolean => stream.isTTY === true;
 
 /** Envuelve texto con un color ANSI solo si el stream es un TTY. */
 function colorize(text: string, color: AnsiColor, stream: NodeJS.WriteStream): string {
-  return isTty(stream) ? `${ANSI[color]}${text}${ANSI.reset}` : text;
+  const colored = isTty(stream) && colorEnabledOverride !== false;
+  return colored ? `${ANSI[color]}${text}${ANSI.reset}` : text;
 }
 
 /** Formatea un prefijo [contexto] en dim (solo TTY). */

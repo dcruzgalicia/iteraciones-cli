@@ -36,6 +36,8 @@ async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
 }
 
 const pandocOk = await checkPandoc().catch(() => null);
+// unzip se usa para inspeccionar el EPUB generado: skip real si no está en PATH.
+const unzipOk = (await Bun.which('unzip')) !== null;
 
 describe('export/runner (convertToMarkdown)', () => {
   it.skipIf(!pandocOk)('emite el YAML con el frontmatter del documento y los metadatos complementarios', async () => {
@@ -75,7 +77,7 @@ describe('export/runner (convertToMarkdown)', () => {
 });
 
 describe('export/runner (convertToEpub)', () => {
-  it.skipIf(!pandocOk)('genera un EPUB con los metadatos del documento', async () => {
+  it.skipIf(!pandocOk || !unzipOk)('genera un EPUB con los metadatos del documento', async () => {
     await withTempDir(async (dir) => {
       const out = join(dir, 'libro.epub');
       await convertToEpub(BODY, out, EXPORT_DOC, NO_FILTERS);
