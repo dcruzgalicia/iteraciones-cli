@@ -4,7 +4,7 @@ Gracias por tu interés en contribuir. Este documento describe cómo configurar 
 
 ## Requisitos
 
-- [Bun](https://bun.sh) ≥ 1.0 — runtime, package manager, test runner y bundler
+- [Bun](https://bun.sh) ≥ 1.2.0 — runtime, package manager, test runner y bundler
 - [Pandoc](https://pandoc.org/installing.html) — conversión de documentos, debe estar disponible en `PATH`
 - (Opcional) [MacTeX](https://tug.org/mactex/) o TeX Live — para exportación PDF con LaTeX
 
@@ -20,7 +20,7 @@ Verifica que todo funcione:
 
 ```bash
 bun run typecheck   # tsc --noEmit
-bun test            # bun test (323 tests en 21 archivos)
+bun test            # bun test (332+ tests en 22 archivos)
 bun run src/bin.ts build --project-root /ruta/a/proyecto
 ```
 
@@ -35,7 +35,10 @@ src/
 ├── builder/                 # Pipeline de construcción
 │   ├── orchestrator.ts      # Orquestador principal (build())
 │   ├── discover.ts          # Fase 1: discovery y detección de cambios
-│   ├── render.ts            # Fase 2+3: filtros Lua + conversión pandoc
+│   ├── render.ts            # Fachada: htmlPageFromMarkdown + readDocumentBody
+│   ├── filter-resolver.ts    # Resolución y validación de filtros Lua
+│   ├── html-composer.ts      # Template HTML, masonry, extracción de referencias
+│   ├── latex-composer.ts     # Generación LaTeX y fecha de portada PDF
 │   ├── cleanup.ts           # Limpieza de archivos (formatos, caché, slugs)
 │   ├── build-assets.ts      # Assets (CSS, fuentes, logo)
 │   ├── latex-preamble.ts    # Constructor de preámbulo LaTeX
@@ -103,12 +106,12 @@ tipo(scope): verbo en imperativo
 
 ### Scopes activos
 
-`builder`, `cache`, `cli`, `config`, `css`, `export`, `frontmatter`, `orchestrator`, `preamble`, `render`, `state`
+`builder`, `cache`, `cli`, `cleanup`, `commitlint`, `config`, `css`, `discover`, `export`, `frontmatter`, `github`, `html`, `init`, `latex`, `orchestrator`, `pipeline`, `preamble`, `progress`, `render`, `state`, `test`
 
 ### Ejemplos
 
 ```
-feat(filter): agrega filtro Lua para Div.nota
+feat(html): agrega filtro Lua para Div.nota
 fix(cache): agrega separador \0 en hash() para evitar colisiones
 refactor(cli): extrae reportBuildError para evitar duplicación
 docs(config): documenta bloque editorial y export en frontmatter
@@ -170,7 +173,7 @@ docs(config): documenta bloque editorial y export en frontmatter
 El hash de filters (`computeFiltersHash` en `src/builder/state.ts`) incluye las versiones de esquema de `CACHE_SCHEMA_VERSIONS`. **Sube la versión de un área cuando cambie su lógica de generación**; si no lo haces, las salidas cacheadas (HTML, cuerpos LaTeX) quedan obsoletas silenciosamente:
 
 - `humanDate`: cambios en `src/lib/date.ts` (formato de fecha legible).
-- `htmlPage`: cambios en la generación de la página HTML (`pipeline.ts`) o en el post-procesamiento de referencias (`render.ts`).
+- `htmlPage`: cambios en la generación de la página HTML (`pipeline.ts`) o en el post-procesamiento de referencias (`html-composer.ts`).
 - `latexTemplate`: cambios en la composición del template LaTeX efectivo (`latex-preamble.ts`).
 - `linkCitations`: cambios en el enlazado de citas del HTML.
 
@@ -187,7 +190,7 @@ Implicaciones:
 - El HTML personalizado en Markdown con clases de Tailwind queda estilizado: el scan lee los HTML finales.
 - Una clase eliminada de los HTML se purga del CSS en el siguiente build (no hay auto-referencia del CSS previo).
 - Los archivos fuera de `dist/files` (o que no sean `.html`) no aportan clases.
-- Cuando cambies `styles.css`, el template HTML (`src/lib/resources/template.html`) o las clases del post-procesamiento de `render.ts`, no hay que regenerar nada: el próximo build lo recoge.
+- Cuando cambies `styles.css`, el template HTML (`src/lib/resources/html/skeleton.html`) o las clases del post-procesamiento de `html-composer.ts`, no hay que regenerar nada: el próximo build lo recoge.
 
 El test `src/__tests__/css-integrity.test.ts` compila el CSS sobre un fixture controlado y verifica clases presentes/ausentes y el acento aplicado.
 
@@ -213,7 +216,7 @@ Para agregar uno:
 3. Implementa las funciones de filtro de pandoc (`Pandoc(doc)`, `Div(div)`, `Para(para)`, etc.) que transforman el AST
 4. Agrega tests en `src/__tests__/lua-filters.test.ts` (los tests que invocan pandoc requieren que esté instalado; los de resolución de nombres no)
 
-> La lista de filters se deriva del filesystem (`getBuiltinLuaFilterInfos()` en `src/builder/render.ts`): crear el `.lua` es suficiente, no hay que registrar el nombre en ninguna lista. La descripción que muestra `iteraciones filters` es la primera línea de comentario del archivo (punto 2).
+> La lista de filters se deriva del filesystem (`getBuiltinLuaFilterInfos()` en `src/builder/filter-resolver.ts`): crear el `.lua` es suficiente, no hay que registrar el nombre en ninguna lista. La descripción que muestra `iteraciones filters` es la primera línea de comentario del archivo (punto 2).
 
 ### Ejemplo mínimo
 
