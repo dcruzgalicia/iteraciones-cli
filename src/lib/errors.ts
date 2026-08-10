@@ -31,6 +31,13 @@ export class BuildError extends Error {
 }
 
 /**
+ * Prefijos de clase de error conocidos que se eliminan del mensaje.
+ * Lista explícita: solo se recorta si el mensaje comienza exactamente
+ * con uno de estos prefijos (evita truncar información útil en medio).
+ */
+const KNOWN_ERROR_PREFIXES = ['SyntaxError', 'YAMLException', 'TypeError', 'ConfigError', 'BuildError', 'Error'];
+
+/**
  * Normaliza un mensaje de error para el usuario: elimina prefijos de clase
  * (SyntaxError:, Error:) y ruido interno como stacks o causas.
  * Los errores de YAML se traducen a formato legible.
@@ -38,8 +45,13 @@ export class BuildError extends Error {
 export function formatUserError(err: unknown): string {
   if (err instanceof Error) {
     let msg = err.message;
-    // Eliminar prefijos de clase: "SyntaxError: ...", "Error: ..."
-    msg = msg.replace(/^\w*Error:\s*/, '');
+    // Eliminar prefijos de clase conocidos: "SyntaxError: ...", "Error: ..."
+    for (const prefix of KNOWN_ERROR_PREFIXES) {
+      if (msg.startsWith(`${prefix}: `)) {
+        msg = msg.slice(prefix.length + 2);
+        break;
+      }
+    }
     // Eliminar nombres de funciones internas (p.ej. "clean()")
     // y otros detalles de implementación
     return msg;
