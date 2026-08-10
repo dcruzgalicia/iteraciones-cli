@@ -55,12 +55,7 @@ export interface WorkSets {
  * formatos activos/nuevos/eliminados y flags de formato. No tiene efectos
  * secundarios (los mensajes de invalidación los emite el orquestador).
  */
-export async function computeBuildMetadata(
-  cwd: string,
-  siteConfig: SiteConfig,
-  prevState: BuildState | null,
-  noCss?: boolean,
-): Promise<BuildMetadata> {
+export async function computeBuildMetadata(cwd: string, siteConfig: SiteConfig, prevState: BuildState | null): Promise<BuildMetadata> {
   const currentFormats = computeActiveFormats(siteConfig.format);
 
   const [configHashes, filtersHashResult, bibHashResult] = await Promise.all([
@@ -96,7 +91,7 @@ export async function computeBuildMetadata(
   const epubOn = formatCfg?.epub?.generate === true;
   const mdOn = formatCfg?.markdown?.generate === true;
   const generateLatex = pdfOn || latexOn;
-  const needsCss = htmlOn && !noCss;
+  const needsCss = htmlOn;
 
   return {
     currentFormats,

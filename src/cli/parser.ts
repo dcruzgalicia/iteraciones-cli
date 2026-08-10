@@ -47,7 +47,6 @@ export function buildProgram(): Command {
     .option('-c, --concurrency <n>', 'máximo de invocaciones pandoc simultáneas (por defecto: CPU − 1)')
     .option('--no-cache', 'omite la caché y elimina la salida anterior (dist/); hace build completo')
     .option('--output <path>', 'directorio de salida (por defecto: dist/files)')
-    .option('--no-css', 'omite la generación de CSS')
     .option('--dry-run', 'muestra los documentos que se procesarían sin generar salida')
     .option('--verbose', 'muestra información adicional de progreso')
     .option('--profile', 'muestra el tiempo de cada fase del pipeline al final del build')
@@ -61,29 +60,18 @@ Ejemplos:
   iteraciones build --verbose      muestra información adicional de progreso
 `,
     )
-    .action(
-      async (opts: {
-        concurrency?: string;
-        cache: boolean;
-        output?: string;
-        css: boolean;
-        dryRun?: boolean;
-        verbose?: boolean;
-        profile?: boolean;
-      }) => {
-        // La validación de --concurrency y --output ocurre en runBuild, donde
-        // los errores se reportan con el formato unificado (sin stack traces).
-        await runBuild(projectRoot(), {
-          concurrency: opts.concurrency,
-          noCache: !opts.cache,
-          outputDir: opts.output,
-          noCss: !opts.css,
-          dryRun: opts.dryRun,
-          verbose: opts.verbose,
-          profile: opts.profile,
-        });
-      },
-    );
+    .action(async (opts: { concurrency?: string; cache: boolean; output?: string; dryRun?: boolean; verbose?: boolean; profile?: boolean }) => {
+      // La validación de --concurrency y --output ocurre en runBuild, donde
+      // los errores se reportan con el formato unificado (sin stack traces).
+      await runBuild(projectRoot(), {
+        concurrency: opts.concurrency,
+        noCache: !opts.cache,
+        outputDir: opts.output,
+        dryRun: opts.dryRun,
+        verbose: opts.verbose,
+        profile: opts.profile,
+      });
+    });
 
   program
     .command('info')
