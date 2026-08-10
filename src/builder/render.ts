@@ -5,7 +5,6 @@ import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 import { type BibOptions, runPandoc } from '../lib/pandoc-runner.js';
 import { splitFrontmatter } from './discover.js';
-import { type ReproCtx, writeHtmlReproScript, writeLatexReproScripts } from './repro.js';
 import type { BuildDocument } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -459,7 +458,6 @@ export async function htmlPageFromMarkdown(
   fm: Record<string, unknown>,
   bibOptions?: BibOptions,
   luaFilters?: LuaFilterGroup,
-  repro?: ReproCtx,
 ): Promise<string> {
   const filters = luaFilters ?? (await loadFilterGroups(siteConfig, siteConfig.disabledFilters, cwd));
   // Valores efectivos: el frontmatter del documento manda; la config aporta defaults
@@ -525,10 +523,8 @@ export async function htmlPageFromMarkdown(
   // las genera). Sin citas, el marcador no se renderiza ($if(has-references)$).
   const { html: htmlWithoutRefs, block: referencesBlock } = extractReferencesBlock(htmlWithoutTocRefs);
   if (referencesBlock) {
-    if (repro) await writeHtmlReproScript(repro, doc, extraArgs);
     return htmlWithoutRefs.replace('<!-- block:referencias -->', referencesBlock);
   }
-  if (repro) await writeHtmlReproScript(repro, doc, extraArgs);
   return htmlWithoutRefs;
 }
 
@@ -545,7 +541,6 @@ export async function markdownToLatex(
   bibFiles: string[],
   templatePath: string,
   vars: { title: string; subtitle?: string; author: string[]; date?: string },
-  repro?: ReproCtx,
 ): Promise<string> {
   const extraArgs = ['--template', templatePath, '--top-level-division', 'section', '--shift-heading-level-by=2'];
   // Filtros semánticos y de usuario primero, luego flags y la capa latex
@@ -566,8 +561,6 @@ export async function markdownToLatex(
   // date: la fecha efectiva (formateada o birthtime); '' neutraliza el date del
   // frontmatter cuando show-date está desactivado (la portada no muestra fecha).
   if (vars.date !== undefined) extraArgs.push(`--metadata=date:${metadataValue(vars.date)}`);
-
-  if (repro) await writeLatexReproScripts(repro, doc, extraArgs);
 
   return runPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'latex', extraArgs });
 }

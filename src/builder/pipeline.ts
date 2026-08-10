@@ -14,7 +14,6 @@ import { composeLatexTemplate } from './latex-preamble.js';
 import { createPdfConsumer, type PdfJob } from './pdf-pool.js';
 import { loadPreambleFilters } from './preamble-loader.js';
 import { composeHtmlTemplate, htmlPageFromMarkdown, loadFilterGroups, markdownToLatex } from './render.js';
-import type { ReproCtx } from './repro.js';
 import { resolveBibOptions } from './state.js';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
 
@@ -84,16 +83,6 @@ export async function runDocumentPipeline(
     );
   }
 
-  // ── Reproducibilidad manual (experimento): scripts y archivos en .iteraciones/repro ──
-  const repro: ReproCtx = {
-    reproDir: join(ctx.cwd, '.iteraciones', 'repro'),
-    distDir: ctx.outputDir,
-    pdfWorkDir: join(ctx.cwd, '.iteraciones', 'tmp', 'pdf'),
-    latexOn,
-    pdfOn,
-  };
-  await mkdir(repro.reproDir, { recursive: true });
-
   // Pre-crear directorios de caché de biber (uno por slot de concurrencia de PDF).
   const maxSlots = pdfOn ? Math.max(1, ctx.concurrency) : 0;
   const biberBase = join(ctx.cwd, '.iteraciones', 'biber');
@@ -135,7 +124,6 @@ export async function runDocumentPipeline(
           bibFiles,
           htmlTemplatePath,
           latexTemplatePath,
-          repro,
           htmlPaths,
           epubPaths,
           mdPaths,
@@ -184,7 +172,6 @@ interface FormatPoolCtx {
   bibFiles: string[];
   htmlTemplatePath: string;
   latexTemplatePath: string;
-  repro: ReproCtx;
   htmlPaths: Set<string>;
   epubPaths: Set<string>;
   mdPaths: Set<string>;
@@ -207,7 +194,6 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
     bibFiles,
     htmlTemplatePath,
     latexTemplatePath,
-    repro,
     htmlPaths,
     epubPaths,
     mdPaths,
@@ -242,20 +228,12 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
   // .tex completo (preámbulo + cuerpo) en UNA invocación markdown → latex,
   // escrito directamente en dist/ (o en el área de trabajo del PDF si solo pdfOn)
   if (needsLatex) {
-    const fullTex = await markdownToLatex(
-      content,
-      doc,
-      filters,
-      bibFiles,
-      latexTemplatePath,
-      {
-        title: entry?.title || doc.frontmatter.title,
-        subtitle: entry?.subtitle ?? doc.frontmatter.subtitle,
-        author: entry?.author ?? doc.frontmatter.author,
-        date: await computePdfDate(ctx.siteConfig, doc, entry, fm),
-      },
-      repro,
-    );
+    const fullTex = await markdownToLatex(content, doc, filters, bibFiles, latexTemplatePath, {
+      title: entry?.title || doc.frontmatter.title,
+      subtitle: entry?.subtitle ?? doc.frontmatter.subtitle,
+      author: entry?.author ?? doc.frontmatter.author,
+      date: await computePdfDate(ctx.siteConfig, doc, entry, fm),
+    });
     if (latexOn) {
       await writeOutput(texDistPath, fullTex);
     }
@@ -326,17 +304,16 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
       fm,
       bibOptions,
       filters,
-      repro,
     );
     await writeOutput(outBase(`${htmlSlug}.html`), html);
   }
 
   // EPUB y Markdown desde el markdown original, directo a dist/
   if (epubOn && epubPaths.has(doc.relativePath)) {
-    await convertToEpub(content, outBase(`${slug}.epub`), exportDoc, filters, ctx.siteConfig.toc, fm, repro);
+    await convertToEpub(content, outBase(`${slug}.epub`), exportDoc, filters, ctx.siteConfig.toc, fm);
   }
   if (mdOn && mdPaths.has(doc.relativePath)) {
-    await convertToMarkdown(content, outBase(`${slug}.md`), exportDoc, filters, fm, repro);
+    await convertToMarkdown(content, outBase(`${slug}.md`), exportDoc, filters, fm);
   }
 }
 
