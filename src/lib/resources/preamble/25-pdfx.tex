@@ -1,3 +1,8 @@
 % PDF/X-1a para impresión profesional (desactivado por defecto)
+% pdfx escribe /TrimBox, /BleedBox y /CropBox vía \pdfpagesattr en cada
+% shipout y solo si el atributo está vacío: la línea \pdfpagesattr{} que
+% había aquí vaciaba esos boxes y producía un PDF/X-1a inválido sin TrimBox.
+% Nota: PDF/X-1a excluye funciones interactivas por especificación: pdfx
+% desactiva los enlaces (draft mode) — es el comportamiento correcto para
+% imprenta, no un fallo.
 \usepackage[x-1a]{pdfx}
-\pdfpagesattr{}
