@@ -69,11 +69,11 @@ export async function runDocumentPipeline(
   const htmlTemplatePath = join(templatesDir, 'html.html');
   const latexTemplatePath = join(templatesDir, 'latex.tex');
   if (htmlOn) {
-    await Bun.write(htmlTemplatePath, await composeHtmlTemplate(siteConfig));
+    await writeIfChanged(htmlTemplatePath, await composeHtmlTemplate(siteConfig));
   }
   if (plan.generateLatex) {
     const preambleFilters = await loadPreambleFilters(siteConfig.format?.pdf?.disabledPreambleFilters, ctx.cwd);
-    await Bun.write(
+    await writeIfChanged(
       latexTemplatePath,
       await composeLatexTemplate({
         pageNumber: siteConfig.format?.pdf?.pageNumber ?? DEFAULT_SITE_CONFIG.format.pdf.pageNumber,
@@ -331,6 +331,23 @@ function relativeHref(dir: string, file: string): string {
 async function writeOutput(path: string, content: string): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
   await Bun.write(path, content);
+}
+
+/**
+ * Escribe el archivo solo si el contenido cambió respecto al existente.
+ * Evita tocar el disco cuando el contenido es idéntico (consistente con la
+ * filosofía de caché del resto del pipeline: nada se escribe sin necesidad).
+ */
+async function writeIfChanged(path: string, content: string): Promise<void> {
+  if (await Bun.file(path).exists()) {
+    try {
+      const existing = await Bun.file(path).text();
+      if (existing === content) return;
+    } catch {
+      // Archivo ilegible: se reescribe
+    }
+  }
+  await writeOutput(path, content);
 }
 
 /** Lee el logo inline (del proyecto o el por defecto del paquete). */
