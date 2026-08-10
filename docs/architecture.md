@@ -353,3 +353,65 @@ Decisiones confirmadas en este pase (sin cambios de código):
 
 - La terminología `filters` / `preamble filters` / `lua-filters` se conserva tal cual.
 - Los nombres numerados de preamble filters expuestos en config (`24-eso-pic`, …) se conservan: renumerarlos rompería configs existentes sin beneficio.
+
+---
+
+## API programática
+
+El proyecto expone algunas funciones como API estable para scripting. **Todo lo demás son internos** y pueden cambiar sin aviso mientras la versión sea < 1.0.0.
+
+### `build(cwd, options)` — `src/builder/orchestrator.ts`
+
+Ejecuta el build completo (discovery → pipeline → assets).
+
+```typescript
+import { build } from './src/builder/orchestrator.js';
+
+await build('/ruta/al/proyecto', { full: true });
+```
+
+Opciones (`BuildOptions`):
+
+| Opción | Tipo | Descripción |
+|--------|------|-------------|
+| `outputDir` | `string` | Directorio de salida (default: `dist/files`).
+| `concurrency` | `number \| string` | Máximo de invocaciones pandoc simultáneas (default: CPU − 1, máx. 16).
+| `full` | `boolean` | Build completo desde cero: elimina salida y caché.
+| `dryRun` | `boolean` | Muestra los documentos a procesar sin generar salida.
+| `verbose` | `boolean` | Salida verbose del tracker.
+| `profile` | `boolean` | Desglose de tiempos por fase al final.
+
+### `loadSiteConfig(cwd)` — `src/config/config-loader.ts`
+
+Carga y valida `iteraciones.config.yaml` aplicando defaults. Retorna un objeto tipado como `SiteConfig` (derivado del schema Zod).
+
+```typescript
+import { loadSiteConfig } from './src/config/config-loader.js';
+
+const config = await loadSiteConfig('/ruta/al/proyecto');
+console.log(config.format.html?.title);
+```
+
+### `discover(cwd, options)` — `src/builder/discover.ts`
+
+Fase 1 del pipeline: escanea los `.md` del proyecto, detecta cambios contra la caché content-addressed (mtime+size+hash) y resuelve slugs. Retorna los paths relativos, los modificados y el índice de discovery.
+
+```typescript
+import { discover } from './src/builder/discover.js';
+
+const { relativePaths, changedPaths, discoveryIndex } = await discover('/ruta/al/proyecto');
+```
+
+### `splitFrontmatter(content)` — `src/lib/frontmatter.ts`
+
+Separa el frontmatter YAML del body de un documento Markdown.
+
+```typescript
+import { splitFrontmatter } from './src/lib/frontmatter.js';
+
+const { yaml, body } = splitFrontmatter('---\ntitle: Mi documento\n---\n\nContenido.');
+```
+
+### Convención
+
+Ninguna de estas funciones escribe en `stdout`/`stderr` por sí misma (excepto los warnings de `discover` vía logger): el CLI es el responsable de la presentación. Para integrar el pipeline en otra herramienta, usar estas funciones directamente con el manejo de errores propio.
