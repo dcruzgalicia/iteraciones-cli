@@ -158,7 +158,10 @@ export async function runDocumentPipeline(
   return { processed };
 }
 
-/** Contexto compartido por el pool de formatos ligeros. */
+/**
+ * Contexto compartido por el pool de formatos ligeros: rutas, config y
+ * conjuntos de trabajo por formato para un build. Inmutable durante el pool.
+ */
 interface FormatPoolCtx {
   ctx: BuildContext;
   plan: BuildMetadata;
@@ -228,12 +231,7 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
   // .tex completo (preámbulo + cuerpo) en UNA invocación markdown → latex,
   // escrito directamente en dist/ (o en el área de trabajo del PDF si solo pdfOn)
   if (needsLatex) {
-    const fullTex = await markdownToLatex(content, doc, filters, bibFiles, latexTemplatePath, {
-      title: entry?.title || doc.frontmatter.title,
-      subtitle: entry?.subtitle ?? doc.frontmatter.subtitle,
-      author: entry?.author ?? doc.frontmatter.author,
-      date: await computePdfDate(ctx.siteConfig, doc, entry, fm),
-    });
+    const fullTex = await markdownToLatex(content, doc, filters, bibFiles, latexTemplatePath, fm, ctx.siteConfig);
     if (latexOn) {
       await writeOutput(texDistPath, fullTex);
     }
@@ -315,39 +313,6 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
   if (mdOn && mdPaths.has(doc.relativePath)) {
     await convertToMarkdown(content, outBase(`${slug}.md`), exportDoc, filters, fm);
   }
-}
-
-/**
- * Fecha de la portada del PDF: con show-date, la formateada del frontmatter (o
- * la creación del archivo); sin show-date, '' neutraliza el date del frontmatter
- * (la portada no muestra fecha). undefined = no hay nada que pasar.
- */
-async function computePdfDate(
-  siteConfig: BuildContext['siteConfig'],
-  doc: BuildDocument,
-  entry: DiscoveryEntry | undefined,
-  fm: Record<string, unknown>,
-): Promise<string | undefined> {
-  const rawDate = entry?.date ?? doc.frontmatter.date;
-  if (siteConfig.format?.pdf?.showDate === true) {
-    if (rawDate) return formatHumanDate(rawDate);
-    try {
-      const fileStat = await Bun.file(doc.filePath).stat();
-      const btime = fileStat.birthtime || fileStat.mtime;
-      if (btime) {
-        const y = btime.getFullYear();
-        const m = String(btime.getMonth() + 1).padStart(2, '0');
-        const d = String(btime.getDate()).padStart(2, '0');
-        return formatHumanDate(`${y}-${m}-${d}`);
-      }
-    } catch {
-      // Si no se puede leer el archivo, no agregar fecha
-    }
-    return undefined;
-  }
-  // Sin show-date: el frontmatter no debe mostrar fecha en la portada
-  if (rawDate || fm.date !== undefined) return '';
-  return undefined;
 }
 
 /**
