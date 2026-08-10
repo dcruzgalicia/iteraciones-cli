@@ -24,6 +24,11 @@ export interface PdfJob {
  *   markProducerDone() — el pool 1 terminó: los workers salen al vaciar la cola
  *   drain()            — espera a los workers y cierra la fase PDF
  *   cancel()           — fallo del pool 1: los workers salen sin compilar lo pendiente
+ *
+ * Contrato de errores: un fallo de compilación en cualquier worker se guarda
+ * como primer error, cancela la cola (los demás workers salen sin tomar más
+ * jobs) y drain() lo propaga exactamente una vez. Nunca quedan rechazos no
+ * manejados: cada worker devuelve siempre, y el error viaja por `firstError`.
  */
 export function createPdfConsumer(
   pdfWorkBase: string,
@@ -33,20 +38,36 @@ export function createPdfConsumer(
 ): { pdfJobs: PdfJob[]; start: () => void; markProducerDone: () => void; cancel: () => void; drain: () => Promise<void> } {
   const pdfJobs: PdfJob[] = [];
   let producerDone = false;
+  let started = false;
   let next = 0;
   let slot = 0;
   let workerPromises: Promise<void>[] = [];
+  /** Primer error de compilación: se propaga una sola vez desde drain(). */
+  let firstError: unknown = null;
 
   const worker = async (): Promise<void> => {
     while (true) {
+      // Un fallo en cualquier worker cancela la cola: los demás salen en su
+      // siguiente iteración sin compilar lo pendiente (una causa, un error).
+      if (firstError !== null) return;
       if (next < pdfJobs.length) {
         // Invariante del guard: pdfJobs[next] siempre existe
         const job = pdfJobs[next++];
-        if (job === undefined) throw new Error('pdf-pool: trabajo de PDF sin definir');
+        if (job === undefined) {
+          firstError = new Error('pdf-pool: trabajo de PDF sin definir');
+          cancel();
+          return;
+        }
         const s = slot++ % maxSlots;
         // latexmk compila con -outdir en el área de trabajo (auxiliares y .pdf ahí)
         const pdfDir = join(pdfWorkBase, job.dir);
-        await convertToPdf(job.texPath, job.relativePath, pdfDir, job.slug, join(biberBase, `cache-${s}`), job.pdfDest);
+        try {
+          await convertToPdf(job.texPath, job.relativePath, pdfDir, job.slug, join(biberBase, `cache-${s}`), job.pdfDest);
+        } catch (err) {
+          firstError = err;
+          cancel();
+          return;
+        }
         progress.reportFile({ relativePath: job.relativePath, phase: 'pdf' });
       } else if (producerDone) {
         return;
@@ -59,7 +80,8 @@ export function createPdfConsumer(
 
   /** Arranca los workers consumidores (antes del pool 1). No espera. */
   const start = (): void => {
-    if (workerPromises.length > 0) return;
+    if (started) return;
+    started = true;
     workerPromises = Array.from({ length: maxSlots }, () => worker());
   };
 
@@ -69,9 +91,9 @@ export function createPdfConsumer(
   };
 
   /**
-   * Cancela el trabajo pendiente (fallo del pool 1): los workers salen sin
-   * compilar los jobs restantes, para que el error se propague sin dejar
-   * procesos vivos que cuelguen el build.
+   * Cancela el trabajo pendiente (fallo del pool 1 o de un worker): los
+   * workers salen sin compilar los jobs restantes, para que el error se
+   * propague sin dejar procesos vivos que cuelguen el build.
    */
   const cancel = (): void => {
     producerDone = true;
@@ -80,14 +102,31 @@ export function createPdfConsumer(
 
   /** Espera a que los workers terminen la cola y cierra la fase PDF. */
   const drain = async (): Promise<void> => {
+    // Sin workers no hay trabajo que esperar (nunca se encoló un PDF).
+    if (!started) return;
+    // Contrato defensivo: si el productor nunca cerró la cola, los workers
+    // harían polling para siempre. Cerrarla aquí evita el hang (el pipeline
+    // real siempre llama markProducerDone o cancel antes de drain).
+    if (!producerDone) cancel();
     // Los workers consumen con next y no remueven del array: la cantidad total
     // de jobs encolados es pdfJobs.length (consumidos + pendientes). Con el
     // solape activo los workers pueden haber consumido todo antes de drain.
     const total = pdfJobs.length;
-    if (total === 0) return;
-    progress.startPhase('pdf', total);
+    if (total > 0 && firstError === null) {
+      progress.startPhase('pdf', total);
+    }
+    // Esperar a todos los workers (incluidos los que salen por cancelación):
+    // un error nunca puede dejar rechazos no manejados que el runtime imprima.
     await Promise.all(workerPromises);
-    progress.completePhase();
+    if (total > 0 && firstError === null) {
+      progress.completePhase();
+    }
+    if (firstError !== null) {
+      // El error original (p. ej. PandocError con sourcePath) se propaga una
+      // sola vez; la fase PDF queda activa para que el tracker la marque como
+      // fallida (✖) en fail().
+      throw firstError;
+    }
   };
 
   return { pdfJobs, start, markProducerDone, cancel, drain };
