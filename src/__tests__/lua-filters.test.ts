@@ -239,7 +239,7 @@ describe('filtros Lua de usuario', () => {
       const templatePath = join(cwd, 'tpl.tex');
       writeFileSync(templatePath, '\\documentclass{article}\n\\begin{document}\n$body$\n\\end{document}\n');
       const body = await readDocumentBody(doc);
-      const tex = await markdownToLatex(body, doc, filters, [], templatePath, { title: 'Prueba', author: [] });
+      const tex = await markdownToLatex(body, doc, filters, [], templatePath, { title: 'Prueba' }, siteConfig);
       expect(tex).toContain('\\fbox{Nota}');
     } finally {
       rmSync(cwd, { recursive: true, force: true });

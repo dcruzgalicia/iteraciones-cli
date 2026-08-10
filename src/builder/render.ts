@@ -1,10 +1,11 @@
 import { basename, dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/site-config.js';
 import { DEFAULT_HTML_BLOCKS, type HtmlBlockKey } from '../config/site-config.js';
+import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 import { type BibOptions, runPandoc } from '../lib/pandoc-runner.js';
-import { splitFrontmatter } from './discover.js';
+import { parseAuthors, splitFrontmatter } from './discover.js';
 import type { BuildDocument } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -529,10 +530,42 @@ export async function htmlPageFromMarkdown(
 }
 
 /**
+ * Fecha de la portada del PDF: con show-date, la formateada del frontmatter (o
+ * la creación del archivo); sin show-date, '' neutraliza el date del frontmatter
+ * (la portada no muestra fecha). undefined = no hay nada que pasar.
+ */
+async function pdfDate(fm: Record<string, unknown>, siteConfig: SiteConfig, doc: BuildDocument): Promise<string | undefined> {
+  const rawDate = typeof fm.date === 'string' && fm.date.trim() ? fm.date.trim() : undefined;
+  if (siteConfig.format?.pdf?.showDate === true) {
+    if (rawDate) return formatHumanDate(rawDate);
+    try {
+      const fileStat = await Bun.file(doc.filePath).stat();
+      const btime = fileStat.birthtime || fileStat.mtime;
+      if (btime) {
+        const y = btime.getFullYear();
+        const m = String(btime.getMonth() + 1).padStart(2, '0');
+        const d = String(btime.getDate()).padStart(2, '0');
+        return formatHumanDate(`${y}-${m}-${d}`);
+      }
+    } catch {
+      // Si no se puede leer el archivo, no agregar fecha
+    }
+    return undefined;
+  }
+  // Sin show-date: el frontmatter no debe mostrar fecha en la portada
+  if (rawDate || fm.date !== undefined) return '';
+  return undefined;
+}
+
+/**
  * Genera el cuerpo LaTeX completo (.tex final: preámbulo + cuerpo) desde el
  * markdown original en una sola invocación de pandoc, con el template
  * efectivo compuesto por el CLI. El filtro internal/flags calcula los flags
  * del preámbulo (TOC, espaciado, \noindent) y agrega \printbibliography.
+ *
+ * Contrato de metadatos: el frontmatter del documento (fm) es la fuente y la
+ * config aporta defaults (lang, show-date); aquí se derivan los valores
+ * efectivos (título, autores, fecha de portada).
  */
 export async function markdownToLatex(
   content: string,
@@ -540,8 +573,13 @@ export async function markdownToLatex(
   filters: LuaFilterGroup,
   bibFiles: string[],
   templatePath: string,
-  vars: { title: string; subtitle?: string; author: string[]; date?: string },
+  fm: Record<string, unknown>,
+  siteConfig: SiteConfig,
 ): Promise<string> {
+  const title = typeof fm.title === 'string' && fm.title.trim() ? fm.title : 'Sin título';
+  const subtitle = typeof fm.subtitle === 'string' && fm.subtitle.trim() ? fm.subtitle.trim() : undefined;
+  const author = parseAuthors(fm.author);
+
   const extraArgs = ['--template', templatePath, '--top-level-division', 'section', '--shift-heading-level-by=2'];
   // Filtros semánticos y de usuario primero, luego flags y la capa latex
   for (const filter of [...filters.semantic, ...filters.user, ...filters.flags, ...filters.latex]) {
@@ -553,14 +591,15 @@ export async function markdownToLatex(
       extraArgs.push('--bibliography', bib);
     }
   }
-  extraArgs.push(`--metadata=title:${metadataValue(vars.title)}`);
-  if (vars.subtitle) extraArgs.push(`--metadata=subtitle:${metadataValue(vars.subtitle)}`);
-  for (const author of vars.author) {
-    extraArgs.push(`--metadata=author:${metadataValue(author)}`);
+  extraArgs.push(`--metadata=title:${metadataValue(title)}`);
+  if (subtitle) extraArgs.push(`--metadata=subtitle:${metadataValue(subtitle)}`);
+  for (const a of author) {
+    extraArgs.push(`--metadata=author:${metadataValue(a)}`);
   }
   // date: la fecha efectiva (formateada o birthtime); '' neutraliza el date del
   // frontmatter cuando show-date está desactivado (la portada no muestra fecha).
-  if (vars.date !== undefined) extraArgs.push(`--metadata=date:${metadataValue(vars.date)}`);
+  const date = await pdfDate(fm, siteConfig, doc);
+  if (date !== undefined) extraArgs.push(`--metadata=date:${metadataValue(date)}`);
 
   return runPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'latex', extraArgs });
 }

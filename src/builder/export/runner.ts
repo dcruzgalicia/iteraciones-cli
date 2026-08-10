@@ -15,6 +15,10 @@ const LATEXMK_TIMEOUT_MS = 600_000;
  * Convierte el markdown original a EPUB3 usando pandoc (sin intermediario).
  * Los filtros semánticos y de usuario corren en la misma invocación, como en
  * el resto de las conversiones.
+ *
+ * Contrato de metadatos: doc.metadata (ExportMetadata) lleva los valores
+ * efectivos del documento y fm el frontmatter crudo; lang y toc del
+ * frontmatter sobreescriben los defaults.
  */
 export async function convertToEpub(
   content: string,
@@ -51,7 +55,12 @@ export async function convertToEpub(
 
 /**
  * Exporta un documento a Markdown via pandoc (markdown → markdown con los
- * filtros semánticos y de usuario, sin round-trip por otro formato).
+ * filtros semánticos y de usuario, sin round-trip por otro formato). El
+ * writer emite el YAML de los metadatos (frontmatter + complementos) con
+ * --standalone.
+ *
+ * Contrato de metadatos: fm es el frontmatter crudo; lang, toc, bibliography
+ * y csl del documento se complementan con los defaults de la configuración.
  */
 export async function convertToMarkdown(
   content: string,
