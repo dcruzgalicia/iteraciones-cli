@@ -343,7 +343,7 @@ Superficie estable:
 
 - **Comandos**: `build`, `info`, `init`, `validate`, `doctor`, `new`, `clean`, `filters`.
 - **Opciones globales**: `--project-root`, `-V/--version`, `-h/--help`.
-- **Opciones de build**: `--concurrency`, `--no-cache`, `--output`, `--no-css`, `--no-export`, `--dry-run`, `--verbose`, `--profile`.
+- **Opciones de build**: `--concurrency`, `--full`, `--output`, `--dry-run`, `--verbose`, `--profile`.
 - **Configuración** (`iteraciones.config.yaml`): `lang`, `toc`, `format.latex`, `format.html.{title, tagline, logo, theme, accent, generate, blocks}`, `format.pdf.{generate, show-date, page-number, disabled-preamble-filters}`, `format.epub.generate`, `format.markdown.generate`, `disabled-filters`, `lua-filters`, `bibliography`, `csl`.
 - **Frontmatter**: `title`, `subtitle`, `date`, `author`.
 - **Filtros**: nombres completos de los filters del paquete (capas `semantic/`, `latex/`, `html/`) y de los preamble filters numerados; override por archivo y listas `disabled-*`.
@@ -351,6 +351,5 @@ Superficie estable:
 
 Decisiones confirmadas en este pase (sin cambios de código):
 
-- `--no-export` conserva su semántica ("solo actualiza la caché; no genera ni copia salidas a dist").
 - La terminología `filters` / `preamble filters` / `lua-filters` se conserva tal cual.
 - Los nombres numerados de preamble filters expuestos en config (`24-eso-pic`, …) se conservan: renumerarlos rompería configs existentes sin beneficio.

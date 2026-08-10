@@ -61,7 +61,7 @@ export async function checkReadPermissions(cwd: string): Promise<CheckResult> {
 export async function checkWritePermissions(cwd: string): Promise<CheckResult> {
   // Escribir el probe dentro de .iteraciones/, el directorio de caché del build.
   // Si el proceso muere, el archivo queda en un directorio que se limpia con
-  // clean o --no-cache, no en la raíz del proyecto.
+  // clean o --full, no en la raíz del proyecto.
   const probeDir = join(cwd, '.iteraciones');
   const probe = join(probeDir, `doctor-probe-${Date.now()}`);
   try {

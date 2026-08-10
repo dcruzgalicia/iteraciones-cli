@@ -129,11 +129,11 @@ describe('discover (cambios de slug por metadatos)', () => {
     }
   });
 
-  it('asigna el slug limpio sin estado previo (noCache)', async () => {
+  it('asigna el slug limpio sin estado previo (full)', async () => {
     const cwd = makeProject('---\ntitle: Prueba\n---\n\nContenido');
     try {
       await discover(cwd);
-      const result = await discover(cwd, { noCache: true });
+      const result = await discover(cwd, { full: true });
       expect(result.discoveryIndex.get('doc.md')?.slug).toBe('prueba');
     } finally {
       rmSync(cwd, { recursive: true, force: true });

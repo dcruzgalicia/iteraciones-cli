@@ -25,7 +25,7 @@ describe('integration: init + build', () => {
       const indexFile = Bun.file(join(cwd, 'index.md'));
       expect(await indexFile.exists()).toBe(true);
 
-      await build(cwd, { noCache: true });
+      await build(cwd, { full: true });
 
       expect(await Bun.file(join(cwd, 'dist', 'files', 'index.html')).exists()).toBe(true);
       let found = false;
@@ -45,7 +45,7 @@ describe('integration: init + build', () => {
     try {
       await initTestProject(cwd);
       // Primer build
-      await build(cwd, { noCache: true });
+      await build(cwd, { full: true });
       expect(await Bun.file(join(cwd, 'dist', 'files', 'test-document.html')).exists()).toBe(true);
 
       // Segundo build sin cambios: el archivo no debe reescribirse
@@ -63,7 +63,7 @@ describe('integration: init + build', () => {
     await mkdir(cwd, { recursive: true });
     try {
       await initTestProject(cwd);
-      await build(cwd, { noCache: true });
+      await build(cwd, { full: true });
 
       // Cambiar el theme en la config - reescribir el archivo completo
       const newConfig = ['lang: es-MX', 'format:', '  html:', '    title: Test', '    generate: true', '    theme: light'].join('\n');
@@ -86,7 +86,7 @@ describe('integration: init + build', () => {
       await runNew(cwd, 'capitulo-1.md', { title: 'Capítulo 1' });
       await runNew(cwd, 'capitulo-2.md', { title: 'Capítulo 2' });
 
-      await build(cwd, { noCache: true });
+      await build(cwd, { full: true });
 
       // Verificar que todos los HTML existen
       expect(await Bun.file(join(cwd, 'dist', 'files', 'index.html')).exists()).toBe(true);
