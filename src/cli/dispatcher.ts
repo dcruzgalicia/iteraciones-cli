@@ -127,7 +127,7 @@ export async function runInfo(cwd: string, options: { json?: boolean } = {}): Pr
       `  acento HTML:             ${accent}`,
       `  filters desactivados:    ${disabledFilters}`,
       `  preamble desactivados:   ${preambleDisabled.length > 0 ? preambleDisabled.join(', ') : '(ninguno)'}`,
-      `  preamble adicionales:    ${userPreamble.length > 0 ? userPreamble.join(', ') : '(ninguno)'}`,
+      `  preamble desactivados extra: ${userPreamble.length > 0 ? userPreamble.join(', ') : '(ninguno)'}`,
     ];
     if (options.json) {
       // Contrato JSON estable para scripting (no depende del texto alineado).

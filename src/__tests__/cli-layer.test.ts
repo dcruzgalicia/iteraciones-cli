@@ -922,15 +922,15 @@ describe('runInfo', () => {
       const output = await infoOutput(dir);
       expect(output).toContain('preamble desactivados:');
       expect(output).toContain('19-maketitle');
-      expect(output).toContain('preamble adicionales:');
+      expect(output).toContain('preamble desactivados extra:');
     });
   });
 
-  it('sin desactivaciones de usuario, preamble adicionales es (ninguno)', async () => {
+  it('sin desactivaciones de usuario, preamble desactivados extra es (ninguno)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
       const output = await infoOutput(dir);
-      expect(output).toContain('preamble adicionales:');
+      expect(output).toContain('preamble desactivados extra:');
       expect(output).toContain('(ninguno)');
     });
   });
