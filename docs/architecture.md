@@ -146,7 +146,7 @@ Además, existen los **preamble filters** (`src/lib/resources/preamble/*.tex`) q
 
 - Un filter del proyecto con el mismo nombre completo (p. ej. `<proyecto>/filters/latex/02-dictum.lua`) reemplaza al del paquete (override).
 - Para desactivar uno se usa `disabled-filters` (nombres completos, p. ej. `latex/02-dictum`) en `iteraciones.config.yaml`.
-- **Filtros Lua de usuario** (`lua-filters:`): lista de rutas relativas al proyecto que corren en todas las invocaciones pandoc (markdown → AST, latex, html, epub, markdown). En las exportaciones corren antes de la capa de formato; en la conversión markdown → AST, después de los filtros semánticos. La variable global `FORMAT` de pandoc permite ramificar el comportamiento por formato de salida. Si una ruta no existe se advierte y se omite.
+- **Filtros Lua de usuario** (`lua-filters:`): lista de rutas relativas al proyecto que corren en todas las invocaciones pandoc (latex, html5, epub3 y markdown), antes de la capa de formato, para poder transformar los nodos semánticos antes de la exportación. Los filtros semánticos corren antes que los de usuario, para que estos vean los nodos ya resueltos (por ejemplo, `Div.spacer`). La variable global `FORMAT` de pandoc permite ramificar el comportamiento por formato de salida. Si una ruta no existe se advierte y se omite.
 - Los preamble filters del proyecto (`<proyecto>/preamble/<nombre>.tex`) reemplazan a los del paquete; se desactivan con `format.pdf.disabled-preamble-filters`.
 
 ---
@@ -163,6 +163,8 @@ El build incremental evita reprocesar documentos que no han cambiado:
 6. **Migración**: los directorios del flujo anterior (`ast/`, `changes/`, `formats/`) se eliminan automáticamente en cada build.
 
 Solo los documentos modificados (o con slug cambiado) pasan por el pipeline; el resto reutiliza sus salidas en `dist/`. Los formatos se escriben directamente en `dist/files/` (sin staging intermedio) y el PDF compila en `.iteraciones/tmp/pdf/`.
+
+**Coste del re-parseo incremental (medido y aceptado):** re-exportar tras una invalidación implica re-parsear el markdown (cada formato vuelve a ejecutar pandoc desde el origen). Medido con `--profile` en el proyecto de integración (2 documentos, 5 formatos): el re-parseo de ambos documentos cuesta ~270-290 ms en el pool 1, indistinguible frente al PDF (~7 s de latexmk), y un build sin cambios no reprocesa nada (~120 ms). Se acepta el coste: reintroducir un AST en disco para evitarlo añadiría complejidad sin beneficio medible, y el build completo es más rápido que v0.18.0 al no existir la pasada markdown → json.
 
 ---
 
