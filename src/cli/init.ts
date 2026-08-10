@@ -1,14 +1,6 @@
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { stringify } from 'yaml';
-import {
-  DEFAULT_EPUB_FORMAT,
-  DEFAULT_HTML_BLOCKS,
-  DEFAULT_HTML_FORMAT,
-  DEFAULT_MARKDOWN_FORMAT,
-  DEFAULT_PDF_FORMAT,
-  DEFAULT_SITE_CONFIG,
-} from '../config/site-config.js';
+import { DEFAULT_EPUB_FORMAT, DEFAULT_HTML_FORMAT, DEFAULT_MARKDOWN_FORMAT, DEFAULT_PDF_FORMAT, DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { logInfo, logSuccess } from '../lib/logger.js';
 
 /** Fecha local actual en formato ISO (yyyy-mm-dd), como en `new`. */
@@ -49,26 +41,14 @@ const DEFAULT_INDEX = [
 const quote = (value: string): string => JSON.stringify(value);
 
 /**
- * Genera un iteraciones.config.yaml completo con todas las opciones posibles
- * y sus valores por defecto (constantes DEFAULT_*). Útil como referencia para
- * nuevos usuarios.
- *
- * Se construye línea por línea: los valores vienen de las constantes y los
- * comentarios son literales del template — sin reemplazos de string frágiles
- * sobre la serialización de yaml.
+ * Genera un iteraciones.config.yaml mínimo con los campos esenciales y sus
+ * valores por defecto (constantes DEFAULT_*). El resto de opciones (blocks,
+ * show-date, page-number, disabled-preamble-filters, disabled-filters,
+ * lua-filters, bibliography, csl) viven en docs/configuration.md.
  */
 function buildDefaultConfig(): string {
-  const theme = DEFAULT_HTML_FORMAT.theme;
-  const blocks = stringify(DEFAULT_HTML_BLOCKS, { indent: 2 })
-    .split('\n')
-    .map((line) => `      ${line}`)
-    .join('\n');
-  const disabledPreamble = stringify(DEFAULT_PDF_FORMAT.disabledPreambleFilters)
-    .split('\n')
-    .map((line) => `      ${line}`)
-    .join('\n');
-
   return [
+    '# Configuración del sitio. Consulta docs/configuration.md para ver todas las opciones.',
     `lang: ${DEFAULT_SITE_CONFIG.lang}`,
     `toc: ${DEFAULT_SITE_CONFIG.toc}`,
     'format:',
@@ -76,23 +56,11 @@ function buildDefaultConfig(): string {
     '  html:',
     `    title: ${quote(DEFAULT_HTML_FORMAT.title)}`,
     `    tagline: ${quote(DEFAULT_HTML_FORMAT.tagline)}`,
-    `    logo: ${quote(DEFAULT_HTML_FORMAT.logo)}`,
-    `    # Tema visual del HTML: "light" o "dark". Por defecto: ${theme}.`,
-    `    theme: ${theme}`,
+    `    theme: ${DEFAULT_HTML_FORMAT.theme}`,
     `    accent: ${DEFAULT_HTML_FORMAT.accent}`,
     `    generate: ${DEFAULT_HTML_FORMAT.generate}`,
-    '# Orden de los bloques del masonry: más alto = más tarde.',
-    '    blocks:',
-    blocks,
     '  pdf:',
     `    generate: ${DEFAULT_PDF_FORMAT.generate}`,
-    `    show-date: ${DEFAULT_PDF_FORMAT.showDate}`,
-    `    page-number: ${DEFAULT_PDF_FORMAT.pageNumber}`,
-    '# Los preamble filters 24, 25 y 26 añaden funcionalidades para impresión',
-    '# profesional (fondo de página, PDF/X-1a y marcas de corte). Vienen',
-    '# desactivados por defecto. Elimina nombres de esta lista para activarlos.',
-    '    disabled-preamble-filters:',
-    disabledPreamble,
     '  epub:',
     `    generate: ${DEFAULT_EPUB_FORMAT.generate}`,
     '  markdown:',
