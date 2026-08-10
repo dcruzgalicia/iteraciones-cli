@@ -3,14 +3,8 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loadSiteConfig } from '../config/config-loader.js';
-import {
-  DEFAULT_EPUB_FORMAT,
-  DEFAULT_HTML_FORMAT,
-  DEFAULT_MARKDOWN_FORMAT,
-  DEFAULT_PDF_FORMAT,
-  DEFAULT_SITE_CONFIG,
-  type SiteConfig,
-} from '../config/site-config.js';
+import type { SiteConfig } from '../config/config-schema.js';
+import { DEFAULT_EPUB_FORMAT, DEFAULT_HTML_FORMAT, DEFAULT_MARKDOWN_FORMAT, DEFAULT_PDF_FORMAT, DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { ConfigError } from '../lib/errors.js';
 
 async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {

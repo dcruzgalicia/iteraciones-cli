@@ -47,12 +47,12 @@ export interface PdfFormatConfig {
   disabledPreambleFilters?: string[];
 }
 
-interface EpubFormatConfig {
+export interface EpubFormatConfig {
   /** Si true, genera EPUB en el build. */
   generate?: boolean;
 }
 
-interface MarkdownFormatConfig {
+export interface MarkdownFormatConfig {
   /** Si true, genera Markdown en el build. */
   generate?: boolean;
 }
@@ -67,44 +67,11 @@ export interface FormatConfig {
 }
 
 // ── SiteConfig ──
-
-export interface SiteConfig {
-  lang: string;
-  /** Si true, genera tabla de contenidos en PDF, LaTeX, HTML y EPUB. */
-  toc: boolean;
-  /** Configuracion por formato de salida. */
-  format: FormatConfig;
-  /**
-   * Archivo .bib del proyecto (ruta relativa o absoluta). Sin configurar,
-   * se auto-descubre el primero .bib del proyecto.
-   */
-  bibliography?: string;
-  /**
-   * Archivo CSL (ruta relativa o absoluta). Sin configurar, se usa el
-   * estilo APA-7 empaquetado.
-   */
-  csl?: string;
-  /**
-   * Lista de filters a desactivar (blacklist), por nombre completo.
-   * Por defecto undefined = todos activos.
-   * Para desactivar uno, agrega su nombre completo aqui. Ej:
-   *   disabled-filters:
-   *     - latex/02-dictum
-   * Para sobrescribir un filter, crea un archivo con el mismo
-   * nombre completo en <proyecto>/filters/<grupo>/<nombre>.lua.
-   */
-  disabledFilters?: string[];
-  /**
-   * Filtros Lua de usuario (rutas relativas al proyecto). Se pasan como
-   * `--lua-filter` en TODAS las invocaciones pandoc del documento
-   * (markdown→json, json→latex, json→html5, json→epub3, json→markdown).
-   * Dentro del filtro, la variable global `FORMAT` permite condicionar por
-   * formato de salida (latex, html5, epub3, markdown, json). Ej:
-   *   lua-filters:
-   *     - filters/mi-filtro.lua
-   */
-  luaFilters?: string[];
-}
+// El tipo SiteConfig se deriva del schema Zod en config-schema.ts:
+//   export type SiteConfig = z.infer<typeof SiteConfigSchema>
+// La interfaz manual ya no existe aquí. Las sub-interfaces
+// (HtmlFormatConfig, PdfFormatConfig, etc.) se conservan para
+// que los DEFAULT_* usen satisfies y para los casts del transform.
 
 /**
  * Colores Tailwind v4 con escala completa 50-950 válidos como acento.
@@ -158,6 +125,8 @@ export const DEFAULT_SITE_CONFIG = {
   toc: false,
   disabledFilters: undefined,
   luaFilters: undefined,
+  bibliography: undefined,
+  csl: undefined,
   format: {
     html: DEFAULT_HTML_FORMAT,
     pdf: DEFAULT_PDF_FORMAT,
@@ -165,4 +134,4 @@ export const DEFAULT_SITE_CONFIG = {
     markdown: DEFAULT_MARKDOWN_FORMAT,
     latex: false,
   },
-} satisfies SiteConfig;
+};

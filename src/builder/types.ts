@@ -1,4 +1,4 @@
-import type { SiteConfig } from '../config/site-config.js';
+import type { SiteConfig } from '../config/config-schema.js';
 
 export interface DiscoveryEntry {
   title: string;

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ACCENT_PALETTES, type AccentColor } from '../lib/accent-palettes.js';
-import type { SiteConfig } from './site-config.js';
+import type { EpubFormatConfig, HtmlFormatConfig, MarkdownFormatConfig, PdfFormatConfig } from './site-config.js';
 import { DEFAULT_EPUB_FORMAT, DEFAULT_HTML_FORMAT, DEFAULT_MARKDOWN_FORMAT, DEFAULT_PDF_FORMAT, DEFAULT_SITE_CONFIG } from './site-config.js';
 
 // ── Constantes ────────────────────────────────────────────────────────────
@@ -136,10 +136,10 @@ export const SiteConfigSchema = RawSiteConfigSchema.transform((raw) => {
     toc: raw.toc,
     format: {
       latex: (f.latex as boolean | undefined) ?? DEFAULT_SITE_CONFIG.format.latex,
-      html: htmlRaw ? (camelizeKeys(htmlRaw) as SiteConfig['format']['html']) : { ...DEFAULT_HTML_FORMAT },
-      pdf: pdfRaw ? (camelizeKeys(pdfRaw) as SiteConfig['format']['pdf']) : { ...DEFAULT_PDF_FORMAT },
-      epub: epubRaw ? (camelizeKeys(epubRaw) as SiteConfig['format']['epub']) : { ...DEFAULT_EPUB_FORMAT },
-      markdown: mdRaw ? (camelizeKeys(mdRaw) as SiteConfig['format']['markdown']) : { ...DEFAULT_MARKDOWN_FORMAT },
+      html: htmlRaw ? (camelizeKeys(htmlRaw) as HtmlFormatConfig) : { ...DEFAULT_HTML_FORMAT },
+      pdf: pdfRaw ? (camelizeKeys(pdfRaw) as PdfFormatConfig) : { ...DEFAULT_PDF_FORMAT },
+      epub: epubRaw ? (camelizeKeys(epubRaw) as EpubFormatConfig) : { ...DEFAULT_EPUB_FORMAT },
+      markdown: mdRaw ? (camelizeKeys(mdRaw) as MarkdownFormatConfig) : { ...DEFAULT_MARKDOWN_FORMAT },
     },
     disabledFilters: raw['disabled-filters'],
     luaFilters: raw['lua-filters'],
@@ -147,3 +147,6 @@ export const SiteConfigSchema = RawSiteConfigSchema.transform((raw) => {
     csl: raw.csl,
   };
 });
+
+/** Tipo de configuración derivado del schema Zod — única fuente de verdad. */
+export type SiteConfig = z.infer<typeof SiteConfigSchema>;
