@@ -36,15 +36,6 @@ describe('build-assets', () => {
       expect(css).toContain('@keyframes scroll-reveal');
     });
   });
-
-  it('buildAssets con noCss no genera el CSS pero sí logo y fuentes', async () => {
-    await withTempDir(async (dir) => {
-      const outDir = join(dir, 'dist', 'files');
-      await buildAssets(outDir, dir, DEFAULT_SITE_CONFIG, { noCss: true });
-      expect(await Bun.file(join(outDir, 'css', 'styles.css')).exists()).toBe(false);
-      expect(await Bun.file(join(outDir, 'logo.svg')).exists()).toBe(true);
-    });
-  });
 });
 
 describe('cleanup (eliminaciones y slugs)', () => {

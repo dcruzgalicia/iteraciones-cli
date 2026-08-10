@@ -87,14 +87,12 @@ export async function compileTailwindCss(outputDir: string, accent: string): Pro
   }
 }
 
-export async function buildAssets(outputDir: string, cwd: string, siteConfig: SiteConfig, options: { noCss?: boolean } = {}): Promise<string> {
+export async function buildAssets(outputDir: string, cwd: string, siteConfig: SiteConfig): Promise<string> {
   const tasks: Promise<void>[] = [copyFonts(outputDir), copyLogo(outputDir, cwd, siteConfig)];
-  if (!options.noCss) {
-    const accent = siteConfig.format?.html?.accent ?? 'lime';
-    tasks.push(compileTailwindCss(outputDir, accent));
-  }
+  const accent = siteConfig.format?.html?.accent ?? 'lime';
+  tasks.push(compileTailwindCss(outputDir, accent));
   await Promise.all(tasks);
-  return options.noCss ? '' : '/css/styles.css';
+  return '/css/styles.css';
 }
 
 async function copyFonts(outputDir: string): Promise<void> {

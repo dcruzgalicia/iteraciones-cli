@@ -20,7 +20,6 @@ export interface BuildOptions {
   outputDir?: string;
   concurrency?: number | string;
   noCache?: boolean;
-  noCss?: boolean;
   dryRun?: boolean;
   verbose?: boolean;
   profile?: boolean;
@@ -93,7 +92,7 @@ async function dryRun(cwd: string): Promise<void> {
   const prevState = await loadStateFile(cwd);
 
   // Computar la metadata de invalidación igual que el build
-  const plan = await computeBuildMetadata(cwd, siteConfig, prevState, false);
+  const plan = await computeBuildMetadata(cwd, siteConfig, prevState);
 
   // Descubrir documentos con el estado anterior (sin escribir state.json)
   const { relativePaths, changedPaths, discoveryIndex } = await discover(cwd, {
@@ -148,7 +147,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   const prevState = options.noCache ? null : await loadStateFile(cwd);
   // Migrar el caché de versiones anteriores (ast/, changes/, epub en formats/html)
   await migrateLegacyCache(cwd);
-  const plan = await computeBuildMetadata(cwd, siteConfig, prevState, options.noCss);
+  const plan = await computeBuildMetadata(cwd, siteConfig, prevState);
 
   if (plan.newFormats.length > 0) {
     log(`Nuevos formatos detectados: ${plan.newFormats.join(', ')}. Generando sus salidas para todos los documentos.`);
@@ -205,15 +204,15 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
 
   // El CSS se compila en cada build con HTML activo (sin caché): el scan de
   // Tailwind corre sobre los HTML finales de dist/files, así que los assets se
-  // generan SIEMPRE que htmlOn && !noCss, incluso sin trabajo.
-  const needsAssets = plan.htmlOn && !options.noCss;
+  // generan SIEMPRE que htmlOn, incluso sin trabajo.
+  const needsAssets = plan.htmlOn;
 
   if (allDocs.length === 0) {
     // Proyecto vacío: mensaje visible en stderr (advertencias del resumen) y
     // resumen con 0 formatos (sin "reutilizado"). Exit 0: no es un error.
     logWarning('No se encontraron documentos Markdown en el proyecto.', 'build');
     logWarning("Crea un archivo .md con frontmatter o ejecuta 'iteraciones init'.", 'build');
-    if (needsAssets) await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, { noCss: options.noCss });
+    if (needsAssets) await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig);
     await progress.finish(0, 0, []);
     return;
   }
@@ -244,7 +243,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
 
   if (!work.anyWork) {
     log('Ningún documento modificado — sin cambios');
-    if (needsAssets) await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, { noCss: options.noCss });
+    if (needsAssets) await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig);
     await progress.finish(
       0,
       allDocs.length,
@@ -267,7 +266,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
     work.exportSets.markdown.length === 0
   ) {
     log('Ningún documento modificado — sin cambios');
-    if (needsAssets) await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, { noCss: options.noCss });
+    if (needsAssets) await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig);
     await progress.finish(
       0,
       allDocs.length,
@@ -301,9 +300,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   // Tailwind escanea los HTML finales de dist/files para generar el CSS exacto
   // (purga por clases presentes, sin auto-referencia del CSS previo). ──
   if (needsAssets) {
-    await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, {
-      noCss: options.noCss,
-    });
+    await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig);
   }
 
   const totalDocs = plan.htmlOn || plan.pdfOn || plan.epubOn || plan.mdOn || plan.latexOn ? allDocs.length : 0;
