@@ -24,8 +24,7 @@ export async function runDoctor(cwd: string): Promise<void> {
     checkReadPermissions(cwd),
     checkWritePermissions(cwd),
   ]);
-  const needsLatex =
-    configResult.siteConfig !== null && (configResult.siteConfig.format?.pdf?.generate === true || configResult.siteConfig.format?.latex === true);
+  const needsLatex = configResult.siteConfig !== null && configResult.siteConfig.format?.pdf?.generate === true;
   const latex = needsLatex ? await checkLatexEngine() : undefined;
 
   const checks: CheckResult[] = [
