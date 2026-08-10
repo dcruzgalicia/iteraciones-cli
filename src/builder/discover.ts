@@ -2,6 +2,7 @@ import { cpus } from 'node:os';
 import { basename, join } from 'node:path';
 import slugifyLib from 'slugify';
 import { BuildError, formatUserError } from '../lib/errors.js';
+import { splitFrontmatter } from '../lib/frontmatter.js';
 import { logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
 import { mapWithConcurrency } from '../lib/run.js';
@@ -20,21 +21,9 @@ interface DiscoverResult {
   slugChangedEntries: Map<string, string>;
 }
 
-const FM_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
-
 /** Formato seguro de un slug manual: minúsculas, números y guiones simples. */
 const SLUG_MANUAL_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-/**
- * Separa el frontmatter YAML del body del documento.
- * Única implementación del parser: discover la usa para el YAML y render
- * para obtener el body sin frontmatter (sin strip duplicado).
- */
-export function splitFrontmatter(content: string): { yaml?: string; body: string } {
-  const fmMatch = FM_RE.exec(content);
-  if (!fmMatch) return { body: content };
-  return { yaml: fmMatch[1], body: content.slice(fmMatch[0].length) };
-}
 /**
  * Convierte un texto a slug URL-safe. Usa la librería slugify (con `strict`
  * elimina lo que no sea [a-z0-9] y con `lower` normaliza a minúsculas);

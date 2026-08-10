@@ -5,13 +5,12 @@ import { validateDisabledPreambleFilters } from '../builder/preamble-loader.js';
 import { validateDisabledFilters } from '../builder/render.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { ConfigError } from '../lib/errors.js';
+import { splitFrontmatter } from '../lib/frontmatter.js';
 import { logError, logInfo, logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
 import { checkLatexEngine } from './doctor/system-checks.js';
 
 type ValidationError = { file: string; message: string };
-
-const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
 
 /**
  * Campos del frontmatter que el pipeline consume: los del pipeline
@@ -80,12 +79,12 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
       continue;
     }
 
-    const match = FRONTMATTER_RE.exec(raw);
-    if (!match) continue; // sin frontmatter → válido
+    const { yaml } = splitFrontmatter(raw);
+    if (!yaml) continue; // sin frontmatter → válido
 
     // Validar sintaxis YAML del frontmatter.
     try {
-      const result = Bun.YAML.parse(match[1] ?? '');
+      const result = Bun.YAML.parse(yaml);
       if (!result || typeof result !== 'object' || Array.isArray(result)) {
         errors.push({
           file: entry,
