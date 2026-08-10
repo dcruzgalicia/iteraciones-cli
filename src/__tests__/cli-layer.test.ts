@@ -1395,6 +1395,29 @@ describe('runBuild (smoke PDF real)', () => {
     },
     { timeout: 120_000 },
   );
+
+  it.skipIf(!latexOk || !pandocOk)(
+    '25-pdfx activo produce un PDF/X-1a real con /TrimBox (regresión: \\pdfpagesattr{} lo vaciaba)',
+    async () => {
+      await withTempDir(async (dir) => {
+        await initTestProject(dir);
+        // 25-pdfx activo: se quita de la disabled list por defecto (24 y 26 siguen desactivados)
+        await writeFile(
+          join(dir, 'iteraciones.config.yaml'),
+          'lang: es-MX\nformat:\n  pdf:\n    generate: true\n    disabled-preamble-filters:\n      - 24-eso-pic\n      - 26-crop\n',
+          'utf8',
+        );
+        process.exitCode = 0;
+        await runBuild(dir);
+        expect(process.exitCode).toBe(0);
+        const pdfPath = join(dir, 'dist', 'files', 'test-document.pdf');
+        const pdf = await Bun.file(pdfPath).text();
+        // pdfx escribe los boxes en el catálogo: /TrimBox es obligatorio en PDF/X-1a
+        expect(pdf).toContain('/TrimBox');
+      });
+    },
+    { timeout: 120_000 },
+  );
 });
 
 describe('logger (color hermético en tests)', () => {
