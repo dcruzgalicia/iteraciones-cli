@@ -1,8 +1,7 @@
 import { join } from 'node:path';
 import type { ZodIssue } from 'zod';
 import { ConfigError, formatUserError } from '../lib/errors.js';
-import { KNOWN_ACCENT_COLORS, SiteConfigSchema } from './config-schema.js';
-import type { SiteConfig } from './site-config.js';
+import { KNOWN_ACCENT_COLORS, type SiteConfig, SiteConfigSchema } from './config-schema.js';
 
 const CONFIG_FILE = 'iteraciones.config.yaml';
 
@@ -41,7 +40,7 @@ export async function loadSiteConfig(cwd: string, options?: { mode?: 'build' | '
   const file = Bun.file(configPath);
 
   if (!(await file.exists())) {
-    return SiteConfigSchema.parse({}) as unknown as SiteConfig;
+    return SiteConfigSchema.parse({}) as SiteConfig;
   }
 
   let raw: string;
@@ -59,7 +58,7 @@ export async function loadSiteConfig(cwd: string, options?: { mode?: 'build' | '
   }
 
   if (!parsed || typeof parsed !== 'object') {
-    return SiteConfigSchema.parse({}) as unknown as SiteConfig;
+    return SiteConfigSchema.parse({}) as SiteConfig;
   }
 
   const root = parsed as Record<string, unknown>;
@@ -109,10 +108,10 @@ export async function loadSiteConfig(cwd: string, options?: { mode?: 'build' | '
       const first = retry.error.issues[0];
       throw new ConfigError(`${first?.path.join('.') ?? ''}: ${first?.message ?? 'Error de validación'}`, configPath);
     }
-    return retry.data as unknown as SiteConfig;
+    return retry.data as SiteConfig;
   }
 
-  const config = result.data as unknown as SiteConfig;
+  const config = result.data as SiteConfig;
 
   return config;
 }

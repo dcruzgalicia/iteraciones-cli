@@ -1,5 +1,5 @@
 import { loadSiteConfig } from '../config/config-loader.js';
-import type { SiteConfig } from '../config/site-config.js';
+import type { SiteConfig } from '../config/config-schema.js';
 import { ConfigError } from '../lib/errors.js';
 import { logInfo } from '../lib/logger.js';
 import { type CheckResult, checkLatexEngine, checkPandoc, checkReadPermissions, checkWritePermissions } from './doctor/system-checks.js';

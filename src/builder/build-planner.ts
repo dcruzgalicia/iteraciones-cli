@@ -1,4 +1,4 @@
-import type { SiteConfig } from '../config/site-config.js';
+import type { SiteConfig } from '../config/config-schema.js';
 import { computeActiveFormats } from '../config/site-config.js';
 import type { BuildState } from './state.js';
 import { type BibFileCache, computeBibHash, computeConfigHashes, computeFiltersHash, type FilterFileCache } from './state.js';

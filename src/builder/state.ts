@@ -1,6 +1,6 @@
 import { mkdir, rename, rm } from 'node:fs/promises';
 import { dirname, isAbsolute, join } from 'node:path';
-import type { SiteConfig } from '../config/site-config.js';
+import type { SiteConfig } from '../config/config-schema.js';
 import { logWarning } from '../lib/logger.js';
 import type { BibOptions } from '../lib/pandoc-runner.js';
 import { isIgnoredByRules, isInsideIgnoredDir, loadGitignoreRules } from './gitignore.js';
