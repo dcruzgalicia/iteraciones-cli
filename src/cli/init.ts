@@ -133,6 +133,7 @@ export async function runInit(cwd: string): Promise<void> {
   report(configCreated, 'iteraciones.config.yaml');
   report(indexCreated, 'index.md');
   report(bibCreated, 'bibliography.bib');
+  logSuccess("proyecto inicializado. Ejecuta 'iteraciones build' para generar el sitio.", 'init');
 }
 
 /**
