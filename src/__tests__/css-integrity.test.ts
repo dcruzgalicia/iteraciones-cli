@@ -45,6 +45,9 @@ describe('compilación de Tailwind sobre dist/files', () => {
       // El acento configurado (rose) se compila directamente, sin overrides
       expect(css).toContain('oklch(64.5% .246 16.439)'); // rose-500
       expect(css).not.toContain('clase-fantasma');
+      // El marcador :: (Div.spacer) tiene regla propia: no es una utilidad de
+      // Tailwind, viene del CSS base de entrada.
+      expect(css).toContain('.spacer');
     });
   });
 

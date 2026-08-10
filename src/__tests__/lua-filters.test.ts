@@ -61,6 +61,24 @@ describe.skipIf(!pandocOk)('filtros Lua semánticos', () => {
     const ast = await toJson('```\n::\n```');
     expect(ast.blocks).toEqual([{ t: 'CodeBlock', c: [['', [], []], '::'] }]);
   });
+
+  it('convierte :: dentro de un item de lista (bloque Plain) a Div.spacer', async () => {
+    const ast = await toJson('- ::\n- texto');
+    const blocks = ast.blocks as unknown[];
+    const list = blocks[0] as { t: string; c: unknown[][] } | undefined;
+    expect(list?.t).toBe('BulletList');
+    // Primer bloque del primer item (pandoc 3.x: c = [items], item = [blocks])
+    const item = list?.c[0]?.[0] as { t: string; c: unknown[] } | undefined;
+    expect(item?.t).toBe('Div');
+    // attr del Div = [id, classes, kvs]
+    expect((item?.c[0] as unknown[] | undefined)?.[1]).toContain('spacer');
+  });
+
+  it('convierte :: con espacio trailing (pandoc normaliza el AST)', async () => {
+    const ast = await toJson(':: \n\ntexto');
+    const spacer = (ast.blocks as unknown[]).find((b) => (b as { t: string }).t === 'Div');
+    expect(spacer).toEqual({ t: 'Div', c: [['', ['spacer'], []], []] });
+  });
 });
 
 const HTML_FILTERS = ['01-dictum', '02-verse', '03-center', '04-flushright', '05-spacer'].map((n) => join(RESOURCES, 'html', `${n}.lua`));
@@ -82,6 +100,12 @@ describe.skipIf(!pandocOk)('filtros Lua html', () => {
     const html = await toHtml5('::: {.verse}\nPoema\n:::\n');
     expect(html).toContain('<div class="verse">');
     expect(html).toContain('</div>');
+  });
+
+  it('convierte :: dentro de una lista a div.spacer (nunca literal)', async () => {
+    const html = await toHtml5('- ::\n- texto', SEMANTIC_FILTERS);
+    expect(html).not.toContain('>::');
+    expect(html).toContain('<div class="spacer"></div>');
   });
 
   it('envuelve Div.center en div', async () => {
@@ -127,6 +151,19 @@ describe.skipIf(!pandocOk)('filtros Lua latex', () => {
   it('convierte :: en \\vspace{\\baselineskip}', async () => {
     const tex = await toLatex('texto\n\n::\n\ntexto');
     expect(tex).toContain('\\vspace{\\baselineskip}');
+  });
+
+  it('convierte :: dentro de una lista en vspace (antes se imprimía literal)', async () => {
+    const tex = await toLatex('- ::\n- texto');
+    expect(tex).not.toContain('::');
+    expect(tex).toContain('\\vspace{\\baselineskip}');
+  });
+
+  it('convierte :: dentro de un blockquote en vspace (antes desaparecía)', async () => {
+    const tex = await toLatex('> ::\n>\n> texto');
+    expect(tex).toContain('\\begin{quote}');
+    expect(tex).toContain('\\vspace{\\baselineskip}');
+    expect(tex).not.toContain('::');
   });
 
   it('convierte :; en vspace + \noindent al párrafo siguiente', async () => {

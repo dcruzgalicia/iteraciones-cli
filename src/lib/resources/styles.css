@@ -152,3 +152,11 @@
     pointer-events: auto;
   }
 }
+
+/* Separador vertical del marcador :: (Div.spacer). En LaTeX equivale a
+   \vspace{\baselineskip}; en HTML se materializa con esta altura (~1.5em
+   del tamaño base text-xl). Regla CSS directa: .spacer no es una utilidad
+   de Tailwind y no se puede generar desde el scan de clases. */
+.spacer {
+  height: 1.5em;
+}

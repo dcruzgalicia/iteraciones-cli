@@ -11,6 +11,15 @@ local function has_class(block, cls)
   return false
 end
 
+-- Los spacers "::" se convierten en cualquier profundidad (items de lista,
+-- celdas de tabla, blockquotes): sin este handler, el Div anidado se perdía
+-- en silencio. Los spacers con noindent (:;) los gestiona Pandoc() a nivel
+-- superior, porque el \noindent necesita el párrafo siguiente (hermano).
+function Div(div)
+  if not has_class(div, 'spacer') or has_class(div, 'noindent') then return nil end
+  return pandoc.RawBlock('latex', '\\vspace{\\baselineskip}')
+end
+
 function Pandoc(doc)
   local blocks = {}
   local pending_noindent = false
