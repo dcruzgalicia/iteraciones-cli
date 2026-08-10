@@ -7,7 +7,7 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!src/lib/resources/template.html", "!src/lib/resources/css"]
+    "includes": ["**", "!src/lib/resources/html"]
   },
   "formatter": {
     "enabled": true,

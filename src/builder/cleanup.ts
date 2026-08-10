@@ -1,8 +1,5 @@
-import { mkdir, rename, rm } from 'node:fs/promises';
+import { rm } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
-import { logWarning } from '../lib/logger.js';
-import { mapWithConcurrency } from '../lib/run.js';
-import { htmlSlugFor } from './discover.js';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
 
 /** Extensiones de salida estándar por documento en dist/. */
@@ -21,17 +18,20 @@ const FORMAT_EXT_MAP: Record<string, string> = {
 
 /** Elimina los artefactos cacheados de un documento (`.iteraciones/`). */
 async function removeCachedArtifacts(cacheBase: string, dir: string, slug: string): Promise<void> {
-  await rm(join(cacheBase, 'ast', dir, `${slug}.json`), { force: true }).catch(() => {});
-  for (const sub of ['pdf', 'html']) {
-    for (const ext of ['.tex', '.html', '.epub']) {
-      await rm(join(cacheBase, 'formats', sub, dir, `${slug}${ext}`), { force: true }).catch(() => {});
+  // Área de trabajo del PDF: .tex (sin latexOn) y auxiliares de latexmk
+  // (el .log solo se referencia en errores de builds vivos).
+  await rm(join(cacheBase, 'tmp', 'pdf', dir, `${slug}.tex`), { force: true }).catch(() => {});
+  for (const ext of LATEXMK_AUX_EXTENSIONS) {
+    await rm(join(cacheBase, 'tmp', 'pdf', dir, `${slug}${ext}`), { force: true }).catch(() => {});
+  }
+  // Reproducibilidad manual (experimento): scripts, raw y variables
+  const reproBase = join(cacheBase, 'repro');
+  for (const fmt of ['html', 'latex', 'pdf', 'epub', 'markdown']) {
+    for (const name of [`${slug}.sh`, `${slug}.raw.html`, `${slug}.yaml`, `${slug}.md`]) {
+      await rm(join(reproBase, fmt, dir, name), { force: true }).catch(() => {});
     }
   }
-  // Auxiliares de latexmk (se acumulaban para siempre al eliminar un documento
-  // o cambiar su slug; el .log solo se referencia en errores de builds vivos).
-  for (const ext of LATEXMK_AUX_EXTENSIONS) {
-    await rm(join(cacheBase, 'formats', 'pdf', dir, `${slug}${ext}`), { force: true }).catch(() => {});
-  }
+  await rm(join(reproBase, 'html', dir, slug), { recursive: true, force: true }).catch(() => {});
 }
 
 /** Elimina archivos de salida de un documento en dist/ (por extensiones). */
@@ -93,44 +93,6 @@ export async function cleanupSlugChanges(ctx: BuildContext, slugChangedEntries: 
 
   const entries = [...slugChangedEntries].map(([relPath, oldSlug]) => ({ dir: dirname(relPath), slug: oldSlug }));
   await cleanupBySlug(ctx, entries);
-}
-
-export async function copyToDist(
-  ctx: BuildContext,
-  allDocs: BuildDocument[],
-  formatsDir: string,
-  active: { latexOn: boolean; pdfOn: boolean; htmlOn: boolean; epubOn: boolean; mdOn: boolean },
-): Promise<void> {
-  const copySpec: Array<[boolean, string, string]> = [
-    [active.latexOn, 'pdf', 'tex'],
-    [active.pdfOn, 'pdf', 'pdf'],
-    [active.htmlOn, 'html', 'html'],
-    [active.epubOn, 'html', 'epub'],
-    [active.mdOn, 'markdown', 'md'],
-  ];
-  const copies: Array<{ srcPath: string; dstPath: string }> = [];
-  for (const doc of allDocs) {
-    const slug = doc.slug ?? basename(doc.relativePath, '.md');
-    const htmlSlug = htmlSlugFor(doc.relativePath, slug);
-    const dir = dirname(doc.relativePath);
-    for (const [isActive, format, ext] of copySpec) {
-      if (!isActive) continue;
-      const outSlug = format === 'html' ? htmlSlug : slug;
-      copies.push({ srcPath: join(formatsDir, format, dir, `${outSlug}.${ext}`), dstPath: join(ctx.outputDir, dir, `${outSlug}.${ext}`) });
-    }
-  }
-  await mapWithConcurrency(copies, 20, async ({ srcPath, dstPath }) => {
-    await mkdir(dirname(dstPath), { recursive: true });
-    await rename(srcPath, dstPath).catch((err: NodeJS.ErrnoException) => {
-      if (err.code === 'ENOENT') {
-        // Un archivo esperado no existe (p. ej. .iteraciones borrado a mano):
-        // avisar en lugar de dejar dist/ incompleto en silencio.
-        logWarning(`no se encontró el archivo generado: ${srcPath}`, 'build');
-        return;
-      }
-      throw err;
-    });
-  });
 }
 
 export function buildFormatsList(active: { latexOn: boolean; pdfOn: boolean; htmlOn: boolean; epubOn: boolean; mdOn: boolean }): string[] {

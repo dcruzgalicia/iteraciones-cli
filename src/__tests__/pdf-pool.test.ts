@@ -12,7 +12,7 @@ function progressStub() {
 }
 
 function job(i: number): PdfJob {
-  return { dir: '.', slug: `doc-${i}`, relativePath: `doc-${i}.md` };
+  return { dir: '.', slug: `doc-${i}`, relativePath: `doc-${i}.md`, texPath: `/tmp/work/doc-${i}.tex`, pdfDest: `/tmp/out/doc-${i}.pdf` };
 }
 
 describe('pdf-pool (consumidor con solape real)', () => {
@@ -23,7 +23,7 @@ describe('pdf-pool (consumidor con solape real)', () => {
       await Bun.sleep(20);
     });
     try {
-      const consumer = createPdfConsumer('/tmp/formats', '/tmp/biber', 2, progressStub());
+      const consumer = createPdfConsumer('/tmp/work', '/tmp/biber', 2, progressStub());
       consumer.start();
 
       // Producir jobs DESPUÉS de start (simula el pool 1 encolando en vivo)
@@ -50,7 +50,7 @@ describe('pdf-pool (consumidor con solape real)', () => {
       calls.push(sourcePath);
     });
     try {
-      const consumer = createPdfConsumer('/tmp/formats', '/tmp/biber', 3, progressStub());
+      const consumer = createPdfConsumer('/tmp/work', '/tmp/biber', 3, progressStub());
       consumer.start();
       for (let i = 0; i < 6; i++) consumer.pdfJobs.push(job(i));
       consumer.markProducerDone();
@@ -67,7 +67,7 @@ describe('pdf-pool (consumidor con solape real)', () => {
       calls.push(sourcePath);
     });
     try {
-      const consumer = createPdfConsumer('/tmp/formats', '/tmp/biber', 2, progressStub());
+      const consumer = createPdfConsumer('/tmp/work', '/tmp/biber', 2, progressStub());
       consumer.start();
       consumer.pdfJobs.push(job(1), job(2));
       consumer.cancel();
@@ -80,7 +80,7 @@ describe('pdf-pool (consumidor con solape real)', () => {
   });
 
   it('sin jobs, drain no abre la fase PDF', async () => {
-    const consumer = createPdfConsumer('/tmp/formats', '/tmp/biber', 2, progressStub());
+    const consumer = createPdfConsumer('/tmp/work', '/tmp/biber', 2, progressStub());
     consumer.start();
     consumer.markProducerDone();
     await consumer.drain();

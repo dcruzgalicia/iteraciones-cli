@@ -1,97 +1,110 @@
 import { existsSync } from 'node:fs';
-import { mkdir, rm } from 'node:fs/promises';
+import { mkdir, rename, rm } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { stringify } from 'yaml';
 import { PandocError } from '../../lib/errors.js';
 import { logWarning } from '../../lib/logger.js';
 import { runPandoc } from '../../lib/pandoc-runner.js';
 import { LATEXMK_AUX_EXTENSIONS } from '../cleanup.js';
-import { metadataValue } from '../render.js';
+import { type LuaFilterGroup, MD_READER, metadataValue } from '../render.js';
+import { type ReproCtx, writeEpubReproScript, writeMarkdownReproScript } from '../repro.js';
 import type { ExportDocument } from './types.js';
 
 /** Límite de tiempo de una compilación latexmk: 10 minutos. */
 const LATEXMK_TIMEOUT_MS = 600_000;
 
 /**
- * Construye el bloque YAML de metadatos que Pandoc inyectará en el documento.
- * Solo usada para exportación a Markdown.
- */
-function buildYamlHeader(doc: ExportDocument): string {
-  const { metadata } = doc;
-  const header: Record<string, unknown> = { title: metadata.title };
-
-  if (metadata.author.length > 0) {
-    header.author = metadata.author.length === 1 ? metadata.author[0] : metadata.author;
-  }
-
-  if (metadata.date) header.date = metadata.date;
-  header.lang = metadata.lang;
-  header.documentclass = metadata.documentclass;
-  if (metadata.toc) header.toc = true;
-  if (metadata.tocDepth !== undefined && metadata.tocDepth > 0) {
-    header['toc-depth'] = metadata.tocDepth;
-  }
-
-  // Bibliografía global (auto-descubierta de archivos .bib del proyecto)
-  if (metadata.bibliography) {
-    header.bibliography = metadata.bibliography;
-  }
-  if (metadata.csl) {
-    if (existsSync(metadata.csl)) {
-      header.csl = metadata.csl;
-    } else {
-      logWarning(`archivo CSL no encontrado: "${metadata.csl}"`, 'export');
-    }
-  }
-
-  return `---\n${stringify(header, { defaultKeyType: 'PLAIN', defaultStringType: 'QUOTE_DOUBLE' })}---\n`;
-}
-
-/**
- * Convierte el AST canónico a EPUB3 usando pandoc (sin intermediario HTML).
+ * Convierte el markdown original a EPUB3 usando pandoc (sin intermediario).
+ * Los filtros semánticos y de usuario corren en la misma invocación, como en
+ * el resto de las conversiones.
  */
 export async function convertToEpub(
-  ast: Record<string, unknown>,
+  content: string,
   outputPath: string,
   doc: ExportDocument,
-  userFilters: string[],
+  filters: LuaFilterGroup,
   toc?: boolean,
+  fm: Record<string, unknown> = {},
+  repro?: ReproCtx,
 ): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
   const extraArgs: string[] = [];
-  for (const f of userFilters) extraArgs.push('--lua-filter', f);
+  for (const f of [...filters.semantic, ...filters.user]) extraArgs.push('--lua-filter', f);
   if (doc.metadata.bibliography) {
     extraArgs.push('--citeproc');
   }
-  if (toc) extraArgs.push('--toc');
+  // El TOC: el frontmatter (toc:) manda; la config aporta el default
+  const tocActive = typeof fm.toc === 'boolean' ? fm.toc : toc;
+  if (tocActive) extraArgs.push('--toc');
 
-  // Metadatos del documento: el AST canónico no lleva meta (el frontmatter se
-  // separó antes de convertirlo), y sin ellos pandoc genera un EPUB sin
-  // dc:title ni dc:creator y con idioma incorrecto. Las claves repetidas
-  // (--metadata=author:...) forman una lista en pandoc. dc:date exige ISO:
-  // la fecha humana se omite por pandoc (la cruda del frontmatter es ISO).
+  // Metadatos efectivos: el frontmatter del documento fluye a pandoc; aquí solo
+  // se complementa lo que no está en él o necesita un valor por defecto.
+  const lang = typeof fm.lang === 'string' && fm.lang ? (fm.lang as string) : doc.metadata.lang;
+  extraArgs.push(`--metadata=lang:${lang}`);
   extraArgs.push(`--metadata=title:${metadataValue(doc.metadata.title)}`);
   for (const author of doc.metadata.author) {
     extraArgs.push(`--metadata=author:${metadataValue(author)}`);
   }
   const date = doc.metadata.dateIso ?? doc.metadata.date;
   if (date) extraArgs.push(`--metadata=date:${metadataValue(date)}`);
-  extraArgs.push(`--metadata=lang:${doc.metadata.lang}`);
 
-  await runPandoc({ input: JSON.stringify(ast), sourcePath: doc.filePath, from: 'json', to: 'epub3', outputPath, extraArgs });
+  if (repro) {
+    // El orden real de runPandoc: --citeproc/--bibliography/--csl antes de extraArgs
+    const reproArgs = [...extraArgs];
+    if (doc.metadata.bibliography) {
+      reproArgs.unshift('--bibliography', doc.metadata.bibliography);
+      if (doc.metadata.csl) reproArgs.unshift('--csl', doc.metadata.csl);
+      reproArgs.unshift('--citeproc');
+    }
+    await writeEpubReproScript(repro, doc, reproArgs);
+  }
+
+  await runPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'epub3', outputPath, extraArgs });
 }
 
 /**
- * Exporta un documento a Markdown via pandoc (json → markdown, sin round-trip por LaTeX).
+ * Exporta un documento a Markdown via pandoc (markdown → markdown con los
+ * filtros semánticos y de usuario, sin round-trip por otro formato).
  */
-export async function convertToMarkdown(ast: Record<string, unknown>, outputPath: string, doc: ExportDocument, userFilters: string[]): Promise<void> {
+export async function convertToMarkdown(
+  content: string,
+  outputPath: string,
+  doc: ExportDocument,
+  filters: LuaFilterGroup,
+  fm: Record<string, unknown> = {},
+  repro?: ReproCtx,
+): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
   const extraArgs: string[] = [];
-  for (const f of userFilters) extraArgs.push('--lua-filter', f);
-  const stdout = await runPandoc({ input: JSON.stringify(ast), sourcePath: doc.filePath, from: 'json', to: 'markdown', extraArgs });
-  const yamlHeader = buildYamlHeader(doc);
-  await Bun.write(outputPath, yamlHeader + stdout);
+  for (const f of [...filters.semantic, ...filters.user]) extraArgs.push('--lua-filter', f);
+
+  // Metadatos complementarios: el frontmatter del documento fluye a pandoc y el
+  // writer markdown emite el YAML resultante (frontmatter + estos campos) con
+  // --standalone (sin él, el writer omite el metadata en la salida).
+  const lang = typeof fm.lang === 'string' && fm.lang ? (fm.lang as string) : doc.metadata.lang;
+  extraArgs.push('--standalone');
+  extraArgs.push(`--metadata=lang:${lang}`);
+  extraArgs.push(`--metadata=documentclass:${doc.metadata.documentclass}`);
+  if (doc.metadata.date) extraArgs.push(`--metadata=date:${metadataValue(doc.metadata.date)}`);
+  const tocActive = typeof fm.toc === 'boolean' ? fm.toc : doc.metadata.toc;
+  if (tocActive) {
+    extraArgs.push('--metadata=toc:true');
+    if (doc.metadata.tocDepth && doc.metadata.tocDepth > 0) extraArgs.push(`--metadata=toc-depth:${doc.metadata.tocDepth}`);
+  }
+  if (doc.metadata.bibliography) {
+    extraArgs.push(`--metadata=bibliography:${doc.metadata.bibliography}`);
+  }
+  if (doc.metadata.csl) {
+    if (existsSync(doc.metadata.csl)) {
+      extraArgs.push(`--metadata=csl:${doc.metadata.csl}`);
+    } else {
+      logWarning(`archivo CSL no encontrado: "${doc.metadata.csl}"`, 'export');
+    }
+  }
+
+  const stdout = await runPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'markdown', extraArgs });
+  if (repro) await writeMarkdownReproScript(repro, doc, extraArgs);
+  await Bun.write(outputPath, stdout);
 }
 
 /**
@@ -102,7 +115,14 @@ export async function convertToMarkdown(ast: Record<string, unknown>, outputPath
  * @param slug Jobname de latexmk.
  * @param biberCacheDir Directorio de caché de biber (por slot de concurrencia).
  */
-export async function convertToPdf(fullTexPath: string, sourcePath: string, pdfDir: string, slug: string, biberCacheDir?: string): Promise<void> {
+export async function convertToPdf(
+  fullTexPath: string,
+  sourcePath: string,
+  pdfDir: string,
+  slug: string,
+  biberCacheDir?: string,
+  pdfDest?: string,
+): Promise<void> {
   if (!(await Bun.file(fullTexPath).exists())) {
     throw new PandocError('no se encontró el archivo .tex generado', sourcePath, '');
   }
@@ -155,6 +175,12 @@ export async function convertToPdf(fullTexPath: string, sourcePath: string, pdfD
   }
 
   // Éxito: eliminar los auxiliares de latexmk (el .log solo se referencia en
-  // errores). Sin esto, formats/pdf acumula basura indefinidamente.
+  // errores). Sin esto, el área de trabajo acumula basura indefinidamente.
   await Promise.all(LATEXMK_AUX_EXTENSIONS.map((ext) => rm(join(pdfDir, `${slug}${ext}`), { force: true }).catch(() => {})));
+
+  // El .pdf final se publica en dist/ (el área de trabajo es efímera).
+  if (pdfDest) {
+    await mkdir(dirname(pdfDest), { recursive: true });
+    await rename(join(pdfDir, `${slug}.pdf`), pdfDest);
+  }
 }

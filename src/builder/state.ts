@@ -1,17 +1,29 @@
 import { mkdir, rename, rm } from 'node:fs/promises';
-import { basename, dirname, isAbsolute, join } from 'node:path';
+import { dirname, isAbsolute, join } from 'node:path';
 import type { SiteConfig } from '../config/site-config.js';
 import { logWarning } from '../lib/logger.js';
 import type { BibOptions } from '../lib/pandoc-runner.js';
 import { isIgnoredByRules, isInsideIgnoredDir, loadGitignoreRules } from './gitignore.js';
 import { MD_READER } from './render.js';
-import type { BuildDocument, DiscoveryEntry } from './types.js';
+import type { DiscoveryEntry } from './types.js';
 
 /** Ruta relativa del archivo de estado del build dentro del proyecto. */
-const STATE_PATH = join('.iteraciones', 'changes', 'state.json');
+const STATE_PATH = join('.iteraciones', 'state.json');
 
-/** Plantilla HTML del paquete (participa en la invalidación del formato HTML). */
-const TEMPLATE_PATH = join(import.meta.dir, '../../src/lib/resources/template.html');
+/** Ruta del estado en versiones anteriores (se migra una sola vez). */
+const LEGACY_STATE_PATH = join('.iteraciones', 'changes', 'state.json');
+
+/** Recursos del template HTML del paquete (participan en la invalidación del formato HTML). */
+const HTML_RESOURCES_DIR = join(import.meta.dir, '../lib/resources/html');
+const HTML_RESOURCE_FILES = [
+  'skeleton.html',
+  'card-identity.html',
+  'card-identity-footer.html',
+  'card-trayectura.html',
+  'card-indice.html',
+  'card-formatos.html',
+  'card-referencias.html',
+];
 
 /** Entrada de caché de archivo de filtro (mtime+size evitan re-leer contenido). */
 interface FilterFileCacheEntry {
@@ -58,6 +70,16 @@ async function hashFileContent(path: string): Promise<string> {
 }
 
 export async function loadStateFile(cwd: string): Promise<BuildState | null> {
+  // Migración única: el estado vivía en .iteraciones/changes/state.json
+  const legacy = Bun.file(join(cwd, LEGACY_STATE_PATH));
+  if (!(await Bun.file(join(cwd, STATE_PATH)).exists()) && (await legacy.exists())) {
+    try {
+      await mkdir(dirname(join(cwd, STATE_PATH)), { recursive: true });
+      await rename(join(cwd, LEGACY_STATE_PATH), join(cwd, STATE_PATH));
+    } catch {
+      // Si la migración falla, se lee el estado viejo directamente
+    }
+  }
   const file = Bun.file(join(cwd, STATE_PATH));
   if (!(await file.exists())) return null;
   try {
@@ -84,6 +106,29 @@ export async function loadStateFile(cwd: string): Promise<BuildState | null> {
 }
 
 /**
+ * Elimina el estado del build (tras un fallo): el siguiente build no tiene
+ * índice de invalidación y reprocesa todo (nunca reutiliza contenido stale).
+ */
+export async function clearStateFile(cwd: string): Promise<void> {
+  await rm(join(cwd, STATE_PATH), { force: true }).catch(() => {});
+}
+
+/**
+ * Migración del caché de versiones anteriores (se ejecuta en cada build):
+ * elimina los artefactos que el flujo actual ya no escribe ni consume.
+ * Idempotente: sin efectos en proyectos ya migrados.
+ * - .iteraciones/ast/       (ASTs del flujo markdown → json, eliminado)
+ * - .iteraciones/changes/   (estado migrado a state.json en la raíz)
+ * - .iteraciones/formats/   (staging intermedio: los formatos se escriben
+ *                            directamente en dist/ desde el build actual)
+ */
+export async function migrateLegacyCache(cwd: string): Promise<void> {
+  await rm(join(cwd, '.iteraciones', 'ast'), { recursive: true, force: true }).catch(() => {});
+  await rm(join(cwd, '.iteraciones', 'changes'), { recursive: true, force: true }).catch(() => {});
+  await rm(join(cwd, '.iteraciones', 'formats'), { recursive: true, force: true }).catch(() => {});
+}
+
+/**
  * Guarda state.json de forma atómica (temp + rename): un build interrumpido
  * nunca deja el caché a medias.
  */
@@ -102,16 +147,18 @@ export async function saveStateFile(cwd: string, state: BuildState): Promise<voi
 }
 
 /**
- * Versiones de esquema de los outputs cacheados. Subir la versión de un área
- * cuando cambie su lógica de generación (invalida los outputs cacheados en el
- * próximo build). La lista completa de cuándo subir cada versión está en
+ * Versiones de esquema de los outputs generados. Subir la versión de un área
+ * cuando cambie su lógica de generación (invalida los outputs en el próximo
+ * build). La lista completa de cuándo subir cada versión está en
  * CONTRIBUTING.md (sección "Cómo invalidar la caché de outputs").
  */
 const CACHE_SCHEMA_VERSIONS = {
   /** Conversión yyyy-mm-dd → fecha legible (src/lib/date.ts). */
   humanDate: 'human-date-v1',
-  /** Generación de la página HTML (pipeline.ts) y ensamblado de bloques (html-blocks.ts, render.ts). */
-  htmlBlocks: 'html-blocks-v3',
+  /** Generación de la página HTML (pipeline.ts) y su post-procesamiento de referencias (render.ts). */
+  htmlPage: 'html-page-v1',
+  /** Composición del template LaTeX efectivo (latex-preamble.ts). */
+  latexTemplate: 'latex-template-v1',
   /** Enlazado de citas del HTML (--metadata=link-citations). */
   linkCitations: 'link-citations-v1',
 } as const;
@@ -193,9 +240,15 @@ async function hashFilterFile(abs: string, prevCache: FilterFileCache | undefine
 export async function computeConfigHashes(cwd: string, siteConfig: SiteConfig): Promise<Record<string, string>> {
   const fmt = siteConfig.format;
   const htmlConfig = fmt?.html;
-  const htmlTemplate = await Bun.file(TEMPLATE_PATH)
-    .text()
-    .catch(() => '');
+  const htmlResources = (
+    await Promise.all(
+      HTML_RESOURCE_FILES.map((f) =>
+        Bun.file(join(HTML_RESOURCES_DIR, f))
+          .text()
+          .catch(() => ''),
+      ),
+    )
+  ).join('\n');
   const logoPath = htmlConfig?.logo?.trim();
   const logo = logoPath ? await hashFileContent(join(cwd, logoPath)).catch(() => '') : '';
   return {
@@ -203,7 +256,7 @@ export async function computeConfigHashes(cwd: string, siteConfig: SiteConfig): 
     // El HTML muestra la tarjeta Formatos con los formatos activos: cambiar
     // pdf/latex/epub/markdown debe regenerar las páginas HTML.
     html: hashString(
-      `${JSON.stringify(fmt?.html ?? {})}\n${htmlTemplate}\n${logo}\n${String(siteConfig.toc ?? false)}\n` +
+      `${JSON.stringify(fmt?.html ?? {})}\n${htmlResources}\n${logo}\n${String(siteConfig.toc ?? false)}\n` +
         `${String(fmt?.pdf?.generate ?? false)}\n${String(fmt?.latex ?? false)}\n${String(fmt?.epub?.generate ?? false)}\n${String(fmt?.markdown?.generate ?? false)}\n` +
         // lang se emite como --metadata=lang en el HTML: participar en el hash
         `${String(siteConfig.lang ?? '')}`,
@@ -293,31 +346,6 @@ export async function computeBibHash(cwd: string, siteConfig?: SiteConfig, prevC
     parts.push(file, await hashBibFile(file, prevCache, cache));
   }
   return { hash: hashString(parts.join('\0')), cache };
-}
-
-/** Lee el AST canónico serializado de `.iteraciones/ast/{slug}.json`. */
-export async function readAstFromCache(cwd: string, doc: BuildDocument): Promise<Record<string, unknown> | null> {
-  const slug = doc.slug ?? basename(doc.relativePath, '.md');
-  const dir = dirname(doc.relativePath);
-  const astPath = join(cwd, '.iteraciones', 'ast', dir, `${slug}.json`);
-  const raw = await Bun.file(astPath)
-    .text()
-    .catch(() => '');
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as Record<string, unknown>;
-  } catch {
-    logWarning(`error al parsear AST en disco de ${doc.relativePath}`, 'render');
-    return null;
-  }
-}
-
-/** Escribe el AST canónico en la caché en disco (.iteraciones/ast/). */
-export async function writeCachedArtifacts(cwd: string, doc: BuildDocument, slug: string, ast: Record<string, unknown>): Promise<void> {
-  const dir = dirname(doc.relativePath);
-  const astDir = join(cwd, '.iteraciones', 'ast', dir);
-  await mkdir(astDir, { recursive: true });
-  await Bun.write(join(astDir, `${slug}.json`), JSON.stringify(ast));
 }
 
 /** Resuelve una ruta configurada (bibliography/csl) contra la raíz del proyecto. */

@@ -189,12 +189,15 @@ export async function discover(
         subtitle: string | undefined,
         date: string | undefined,
         authors: string[] = [],
-        manualSlug: string | undefined;
+        manualSlug: string | undefined,
+        fm: Record<string, unknown> | undefined;
       try {
         const { yaml } = splitFrontmatter(text);
         if (yaml) {
           const parsed = Bun.YAML.parse(yaml) as Record<string, unknown>;
           if (parsed && !Array.isArray(parsed)) {
+            // El frontmatter completo fluye a pandoc como metadata del documento
+            fm = parsed;
             title = typeof parsed.title === 'string' ? parsed.title : '';
             subtitle = typeof parsed.subtitle === 'string' && parsed.subtitle.trim() ? parsed.subtitle.trim() : undefined;
             date = typeof parsed.date === 'string' && parsed.date.trim() ? parsed.date.trim() : undefined;
@@ -230,6 +233,7 @@ export async function discover(
         subtitle,
         author: authors,
         date,
+        fm,
         mtime,
         size,
         hash,

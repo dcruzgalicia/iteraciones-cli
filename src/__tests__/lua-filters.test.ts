@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { loadFilterGroups, markdownToAst, texBodyFromAst } from '../builder/render.js';
+import { loadFilterGroups, markdownToLatex, readDocumentBody } from '../builder/render.js';
 import type { BuildDocument } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { runPandoc } from '../lib/pandoc-runner.js';
@@ -125,11 +125,12 @@ describe('filtros Lua latex', () => {
     expect(tex).toContain('\\vspace{\\baselineskip}');
   });
 
-  it('convierte :; en vspace + \\noindent al párrafo siguiente', async () => {
+  it('convierte :; en vspace + \noindent al párrafo siguiente', async () => {
     const tex = await toLatex('texto\n\n:;\n\ntexto siguiente');
     expect(tex).toContain('\\vspace{\\baselineskip}');
-    // el mbox-start envuelve la primera palabra después del \\noindent
-    expect(tex).toContain('\\noindent \\mbox{texto} siguiente');
+    // El umbral de 4 del mbox cuenta palabras reales (el \noindent inline no
+    // es una palabra): un párrafo de 2 palabras no recibe mbox.
+    expect(tex).toContain('\\noindent texto siguiente');
   });
 
   it('convierte Div.dictum sin autor', async () => {
@@ -220,7 +221,7 @@ describe('filtros Lua de usuario', () => {
     }
   });
 
-  it('el pipeline (markdownToAst + texBodyFromAst) aplica los lua-filters del proyecto', async () => {
+  it('el pipeline (markdownToLatex) aplica los lua-filters del proyecto', async () => {
     const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-user-lua-'));
     try {
       mkdirSync(join(cwd, 'filters'), { recursive: true });
@@ -234,12 +235,12 @@ describe('filtros Lua de usuario', () => {
         slug: 'prueba',
       };
       const siteConfig = await loadSiteConfig(cwd);
-      const ast = await markdownToAst(doc, cwd, siteConfig);
-      expect(ast).not.toBeNull();
-      if (ast === null) throw new Error('markdownToAst devolvió null');
       const filters = await loadFilterGroups(siteConfig, undefined, cwd);
-      const { body } = await texBodyFromAst(ast, doc, filters, []);
-      expect(body).toContain('\\fbox{Nota}');
+      const templatePath = join(cwd, 'tpl.tex');
+      writeFileSync(templatePath, '\\documentclass{article}\n\\begin{document}\n$body$\n\\end{document}\n');
+      const body = await readDocumentBody(doc);
+      const tex = await markdownToLatex(body, doc, filters, [], templatePath, { title: 'Prueba', author: [] });
+      expect(tex).toContain('\\fbox{Nota}');
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
