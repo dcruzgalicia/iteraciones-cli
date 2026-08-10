@@ -9,6 +9,19 @@ export type CheckResult = {
   detail?: string;
 };
 
+/** Versión mínima de Bun requerida por el proyecto. */
+const MIN_BUN_VERSION = '1.2.0';
+
+export function checkBunVersion(): CheckResult {
+  const version = Bun.version;
+  const ok = version.localeCompare(MIN_BUN_VERSION, undefined, { numeric: true }) >= 0;
+  return {
+    label: 'bun instalado',
+    ok,
+    detail: ok ? `v${version}` : `v${version} — se requiere >= ${MIN_BUN_VERSION}`,
+  };
+}
+
 export async function checkPandoc(): Promise<CheckResult> {
   try {
     const version = await pandocVersion();
