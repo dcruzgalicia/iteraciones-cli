@@ -20,7 +20,7 @@ Verifica que todo funcione:
 
 ```bash
 bun run typecheck   # tsc --noEmit
-bun test            # bun test (304 tests en 18 archivos)
+bun test            # bun test (319 tests en 20 archivos)
 bun run src/bin.ts build --project-root /ruta/a/proyecto
 ```
 
@@ -82,10 +82,10 @@ src/
 ### Pipeline de construcción
 
 ```
-discover → runDocumentPipeline (AST → LaTeX/HTML/EPUB/Markdown/PDF) → copyToDist
+discover → runDocumentPipeline (markdown → latex/html5/epub3/markdown, templates efectivos) → buildAssets
 ```
 
-El pipeline por documento usa dos pools: el pool 1 genera los formatos ligeros y encola el PDF; el pool 2 compila PDF en paralelo. Ver `orchestrator.ts` para la secuencia completa.
+El pipeline por documento usa dos pools: el pool 1 genera los formatos ligeros con invocaciones directas de pandoc y encola el PDF; el pool 2 compila PDF en paralelo. Los formatos se escriben directamente en `dist/files/` (sin staging intermedio). Ver `orchestrator.ts` para la secuencia completa.
 
 ## Commits
 
@@ -167,13 +167,16 @@ docs(config): documenta bloque editorial y export en frontmatter
 
 ## Cómo invalidar la caché de outputs
 
-El hash de filters (`computeFiltersHash` en `src/builder/state.ts`) incluye las versiones de esquema de `CACHE_SCHEMA_VERSIONS`. **Sube la versión de un área cuando cambie su lógica de generación**; si no lo haces, los outputs cacheados (HTML, cuerpos LaTeX) quedan obsoletos silenciosamente:
+El hash de filters (`computeFiltersHash` en `src/builder/state.ts`) incluye las versiones de esquema de `CACHE_SCHEMA_VERSIONS`. **Sube la versión de un área cuando cambie su lógica de generación**; si no lo haces, las salidas cacheadas (HTML, cuerpos LaTeX) quedan obsoletas silenciosamente:
 
 - `humanDate`: cambios en `src/lib/date.ts` (formato de fecha legible).
-- `htmlBlocks`: cambios en la generación de la página HTML (`src/builder/pipeline.ts`) o en el ensamblado de bloques del masonry (`src/builder/html-blocks.ts` / el post-procesamiento de `render.ts`).
+- `htmlPage`: cambios en la generación de la página HTML (`pipeline.ts`) o en el post-procesamiento de referencias (`render.ts`).
+- `latexTemplate`: cambios en la composición del template LaTeX efectivo (`latex-preamble.ts`).
 - `linkCitations`: cambios en el enlazado de citas del HTML.
 
-Los cambios en el template HTML, en los archivos `.tex` de recursos y en `format.html.blocks` no requieren bump: ya participan en los hashes de configuración y de filters.
+Los cambios en los recursos del template HTML, en los archivos `.tex` de recursos y en `format.html.blocks` no requieren bump: ya participan en los hashes de configuración y de filters.
+
+**Orden de argv de pandoc:** en `htmlPageFromMarkdown` los filtros `--lua-filter` deben ir ANTES de `--citeproc` (el orden de argv determina el orden de aplicación de los filtros). Está protegido por test de regresión: no reordenar.
 
 ## Cómo funciona el CSS generado
 
@@ -194,10 +197,12 @@ Los filters son **filtros Lua** que corren dentro de las invocaciones de pandoc 
 
 | Capa | Ubicación | Cuándo corre | Ejemplos |
 |------|-----------|--------------|----------|
-| `semantic/string` | `src/lib/resources/filters/semantic/string/` | En `markdown → json`, antes del parseo | `01-double-colon` (`::` → `Div.spacer`) |
-| `semantic/ast` | `src/lib/resources/filters/semantic/ast/` | En `markdown → json`, después del parseo | `02-double-colon-noindent` (`:;` → `Div.spacer noindent`) |
-| `latex/` | `src/lib/resources/filters/latex/` | En `json → latex` | `02-dictum`, `03-verse`, `06-mbox-sentence-end` |
-| `html/` | `src/lib/resources/filters/html/` | En `json → html5` | `01-dictum`, `02-verse`, `05-spacer` |
+| `semantic/string` | `src/lib/resources/filters/semantic/string/` | En cada conversión (markdown → latex/html5/epub3/markdown), antes del parseo | `01-double-colon` (`::` → `Div.spacer`) |
+| `semantic/ast` | `src/lib/resources/filters/semantic/ast/` | En cada conversión, después del parseo | `02-double-colon-noindent` (`:;` → `Div.spacer noindent`) |
+| `latex/` | `src/lib/resources/filters/latex/` | En `markdown → latex` | `02-dictum`, `03-verse`, `06-mbox-sentence-end` |
+| `html/` | `src/lib/resources/filters/html/` | En `markdown → html5` | `01-dictum`, `02-verse`, `05-spacer` |
+
+Las capas `semantic/` y los filtros de usuario (`lua-filters:`) corren en **todas** las invocaciones de pandoc (latex, html5, epub3 y markdown); las capas `latex/` y `html/` solo en su conversión. Además existe un filtro interno (`internal/flags`) de detección estructural que corre en las pasadas latex y html y expone condiciones al template vía metadata; no es un filter de usuario.
 
 Para agregar uno:
 

@@ -20,14 +20,14 @@ iteraciones-cli es un static site generator (SSG) orientado a publicación edito
 
 ## Pipeline de construcción
 
-El pipeline convierte archivos Markdown en documentos en los formatos configurados. Se ejecuta en estas fases:
+El pipeline convierte archivos Markdown en documentos en los formatos configurados. Cada formato se genera con una invocación directa de pandoc desde el markdown original (sin AST intermedio) y se escribe directamente en `dist/files/`:
 
 ```
 ┌─────────────┐
 │  FASE 1     │  discover()
 │  Discovery   │  • Escanea archivos .md con Bun.Glob
 │             │  • Caché content-addressed (mtime+size+hash)
-│             │  • Lee frontmatter (title, author)
+│             │  • Lee frontmatter (title, author) y lo conserva completo (fm)
 │             │  • Calcula slugs (title-por-author con colisiones)
 │             │  • Detecta archivos nuevos, modificados y eliminados
 └──────┬──────┘
@@ -44,22 +44,14 @@ El pipeline convierte archivos Markdown en documentos en los formatos configurad
 ┌──────────────────────────────┐
 │  Pipeline por documento       │  runDocumentPipeline()
 │                              │
-│  Pool 1 (formatos ligeros)   │  • AST fresco o desde caché (.iteraciones/ast/)
-│  • markdown → json           │  • Cuerpo LaTeX + flags de preámbulo
-│  • json → HTML/EPUB/Markdown │  • .tex completo (preámbulo + cuerpo)
-│  • .tex → cola PDF           │  • Concurrencia: ctx.concurrency
-│                              │
-│  Pool 2 (PDF, en paralelo)   │  • Consume cola del pool 1
-│  • latexmk -pdf              │  • Concurrencia independiente
+│  Pool 1 (formatos ligeros)   │  • Templates efectivos (compuestos 1× por build)
+│  • markdown → latex          │  • Filtros: semantic/*, user/*, internal/flags, capa
+│  • markdown → html5          │  • Frontmatter como metadata (fm ?? config)
+│  • markdown → epub3          │  • Post-procesamiento único: referencias (HTML)
+│  • markdown → markdown       │  • Salidas directas a dist/files/
+│                              │  • Concurrencia: ctx.concurrency
+│  Pool 2 (PDF, en paralelo)   │  • latexmk en .iteraciones/tmp/pdf → dist/
 └──────┬───────────────────────┘
-       │
-       ▼
-┌─────────────┐
-│  Distribución│  cleanup.ts
-│             │  • copyToDist() — rename de formats/ a dist/
-│             │  • Limpieza de formatos eliminados, archivos borrados,
-│             │    slugs cambiados y caché obsoleta
-└──────┬──────┘
        │
        ▼
 ┌─────────────┐
@@ -74,32 +66,19 @@ El pipeline convierte archivos Markdown en documentos en los formatos configurad
 
 ## Sistema de filters
 ```
-Archivo .md
+Archivo .md (con frontmatter)
   │
   ▼
-Frontmatter YAML        → SiteConfig (Zod schema)
+Frontmatter YAML        → SiteConfig (Zod schema) y metadata de pandoc
   │
   ▼
-Body Markdown
-  │
-  ▼
-Filters semánticos string → Transformaciones regex
-  │                              (:: → Div.spacer, etc.)
-  ▼
-pandoc --to json        → AST JSON
-  │
-  ▼
-Filters semánticos ast → AST canónico
-  │                          (Div.dictum/verse/spacer… sin formato)
-  │
-  ▼
-AST canónico (memoria + .iteraciones/ast/{slug}.json)
-  │
-  ├─ pandoc --from json --to latex   → .tex (LaTeX/PDF)
-  ├─ pandoc --from json --to html5 --template → .html (HTML)
-  ├─ pandoc --from json --to epub3   → .epub (EPUB)
-  └─ pandoc --from json --to markdown → .md (Markdown)
+Cada conversión (una invocación pandoc desde el markdown original):
+  pandoc --to latex  [semantic/string, semantic/ast, user/*, internal/flags, latex/*]
+  pandoc --to html5  [semantic/string, semantic/ast, user/*, internal/flags, html/*]
+  pandoc --to epub3  [semantic/string, semantic/ast, user/*]
+  pandoc --to markdown [semantic/string, semantic/ast, user/*]
 ```
+El frontmatter fluye como metadata del documento (el CLI complementa con defaults); el filtro interno `internal/flags` expone las condiciones del preámbulo al template vía metadata y el único post-procesamiento es la extracción de referencias del HTML.
 
 ---
 
@@ -107,7 +86,7 @@ AST canónico (memoria + .iteraciones/ast/{slug}.json)
 
 Los filters son filtros Lua que transforman el contenido. Se organizan en **capas**:
 
-1. **Capa semántica** (`semantic/`) — corre en la invocación `markdown → json` y deja el **AST canónico** sin contenido de formato específico: `::` → `Div.spacer`, `:;` → `Div.spacer noindent`. Los `Div.dictum/verse/center/flushright` quedan sin transformar.
+1. **Capa semántica** (`semantic/`) — corre en cada conversión y deja el contenido sin formato específico: `::` → `Div.spacer`, `:;` → `Div.spacer noindent`. Los `Div.dictum/verse/center/flushright` quedan sin transformar. La subcapa `string/` corre antes del parseo de pandoc y la `ast/` después, dentro de la misma invocación.
 2. **Capa de formato** (`latex/`, `html/`) — corre en cada exportación y convierte los nodos semánticos a su formato (RawBlocks de apertura/cierre alrededor de los bloques nativos). La capa `html/` se aplica al generar la página HTML con el template de pandoc.
 3. **Filtros Lua**: todos los filters son filtros Lua (`src/lib/resources/filters/<grupo>/<nombre>.lua`) que corren **dentro** de las invocaciones pandoc (`--lua-filter`), en el orden numérico de su capa. Override: `<proyecto>/filters/<grupo>/<nombre>.lua` reemplaza al del paquete; `disabled-filters` (nombres completos) los desactiva.
 
@@ -176,13 +155,14 @@ Además, existen los **preamble filters** (`src/lib/resources/preamble/*.tex`) q
 
 El build incremental evita reprocesar documentos que no han cambiado:
 
-1. **state.json** (`.iteraciones/changes/`): guarda el timestamp del build anterior y los metadatos de cada archivo (title, author, slug)
-2. **Detección por mtime**: cada archivo .md se compara contra el timestamp del build anterior
-3. **Formatos activos**: si cambia la configuración de formatos entre builds, se fuerza el reprocesamiento completo
-4. **Slugs duplicados**: contador persistente para slugs con sufijo `-dN`
-5. **AST canónico** (`.iteraciones/ast/{slug}.json`): el AST de pandoc (JSON nativo, sin contenido de formato) se serializa en cada render. Cuando se activa un formato nuevo, sus salidas se exportan desde el AST en disco sin re-ejecutar markdown → json; si no hay AST (primer build o caché limpiada), el documento vuelve al pipeline completo.
+1. **state.json** (`.iteraciones/state.json`): guarda el timestamp del build anterior, los formatos activos y los metadatos de cada archivo (title, author, slug, frontmatter completo `fm`).
+2. **Detección content-addressed**: cada archivo .md se compara contra el caché por mtime+size+sha256 (sin AST intermedio que conservar).
+3. **Invalidación**: filtros (incluido `internal/flags`), configuración por formato, bibliografía y versiones de esquema de los outputs; al invalidarse un formato, sus salidas se regeneran re-ejecutando pandoc desde el markdown (re-parseo).
+4. **Formatos activos**: si cambia la configuración de formatos entre builds, se fuerza el reprocesamiento completo de ese formato.
+5. **Slugs duplicados**: contador derivado del discovery index para slugs con sufijo `-dN`.
+6. **Migración**: los directorios del flujo anterior (`ast/`, `changes/`, `formats/`) se eliminan automáticamente en cada build.
 
-Solo los documentos modificados (o con slug cambiado) pasan por el pipeline completo. El resto se copia desde el caché.
+Solo los documentos modificados (o con slug cambiado) pasan por el pipeline; el resto reutiliza sus salidas en `dist/`. Los formatos se escriben directamente en `dist/files/` (sin staging intermedio) y el PDF compila en `.iteraciones/tmp/pdf/`.
 
 ---
 
@@ -243,21 +223,20 @@ La configuración PDF es mínima y deliberada: `generate` (activa la compilació
 | Archivo | Responsabilidad |
 |---------|----------------|
 | `orchestrator.ts` | `build()`: coordina las fases del pipeline. Función principal. |
-| `discover.ts` | Fase 1: escanea archivos, lee frontmatter, detecta cambios. |
-| `render.ts` | Fase 2+3: filtros Lua + conversión pandoc a AST/LaTeX/HTML. |
-| `build-assets.ts` | Assets: compila el CSS con Tailwind sobre dist/files (acento del @theme), fonts, logo. |
-| `latex-preamble.ts` | Construcción del preámbulo LaTeX. |
-| `types.ts` | BuildDocument, Frontmatter, BuildContext. |
-| `export/runner.ts` | Ejecuta exportación a PDF, EPUB, Markdown con concurrencia limitada. |
-| `export/assemble.ts` | Ensambla ExportDocument desde BuildDocument. |
+| `discover.ts` | Fase 1: escanea archivos, lee frontmatter (y lo conserva completo), detecta cambios. |
+| `render.ts` | Conversiones pandoc-directo (markdown → latex/html5), sistema de filters, post-procesamiento de referencias. |
+| `pipeline.ts` | Pipeline por documento (pools 1 y 2) con templates efectivos y salidas directas a dist. |
 | `build-planner.ts` | Planificador: metadatos de invalidación y conjuntos de trabajo. |
-| `pipeline.ts` | Pipeline por documento (pools 1 y 2) con generación HTML desde AST. |
-| `pdf-pool.ts` | Pool consumidor de compilación PDF (cola de jobs, slots biber). |
+| `build-assets.ts` | Assets: compila el CSS con Tailwind sobre dist/files (acento del @theme), fonts, logo. |
+| `latex-preamble.ts` | Compositor del template LaTeX efectivo (una vez por build). |
 | `preamble-loader.ts` | Carga de preamble filters (.tex) con override por proyecto. |
-| `state.ts` | Caché content-addressed (state.json, hashes de invalidación). |
-| `cleanup.ts` | Limpieza de archivos: copyToDist, formatos eliminados, slugs cambiados. |
+| `state.ts` | Caché content-addressed (state.json, hashes de invalidación, migración). |
+| `cleanup.ts` | Limpieza de salidas: formatos eliminados, archivos borrados, slugs cambiados. |
+| `pdf-pool.ts` | Pool consumidor de compilación PDF (cola de jobs, slots biber). |
 | `slug-resolver.ts` | Resolución de slugs con colisiones y sufijos -dN. |
 | `gitignore.ts` | Reglas de .gitignore del proyecto y exclusión de paths ocultos. |
+| `types.ts` | BuildDocument, Frontmatter, BuildContext, DiscoveryEntry. |
+| `export/` | Primitivas de conversión EPUB/Markdown (runner) y ensamblado de metadatos (assemble). |
 
 ### `src/config/`
 
@@ -291,7 +270,15 @@ La configuración PDF es mínima y deliberada: `generate` (activa la compilació
 
 ### ¿Por qué el pipeline usa dos pools de concurrencia?
 
-Cada documento atraviesa su pipeline completo (AST → formatos ligeros → .tex → cola PDF) en el **pool 1**, con concurrencia `ctx.concurrency` (CPU − 1, máx. 16). El **pool 2** consume la cola de compilación PDF en paralelo, solapando latexmk con pandoc: el PDF no bloquea al resto de formatos. Cada instancia de latexmk consume ~300-600 MB de RAM, por eso su concurrencia está acotada.
+Cada documento genera sus formatos con invocaciones directas de pandoc (markdown → latex/html5/epub3/markdown) en el **pool 1**, con concurrencia `ctx.concurrency` (CPU − 1, máx. 16). El **pool 2** consume la cola de compilación PDF en paralelo, solapando latexmk con pandoc: el PDF no bloquea al resto de formatos. Cada instancia de latexmk consume ~300-600 MB de RAM, por eso su concurrencia está acotada.
+
+### ¿Por qué templates efectivos y un único post-procesamiento?
+
+El CLI compone los templates HTML y LaTeX efectivos una vez por build (tarjetas ordenadas según `format.html.blocks`; preámbulo con condicionales expuestos por el filtro `internal/flags` vía metadata). Así pandoc genera cada formato directamente desde el markdown original y el único post-procesamiento es la extracción de referencias del HTML (el único bloque que no puede resolver el template: no existe hasta que citeproc lo genera). Esto elimina el ensamblado de bloques y el AST intermedio del flujo anterior, y la verificación de identidad queda a cargo de la suite de tests.
+
+### ¿Por qué el frontmatter fluye como metadata?
+
+El frontmatter completo se pasa a pandoc como metadata del documento (yaml_metadata_block); el CLI solo complementa con defaults (`fm ?? config`) y transformaciones (fecha humana, author-meta). El contrato de campos efectivos está documentado en `docs/frontmatter-reference.md` y `validate` advierte sobre campos sin efecto.
 
 ### ¿Por qué Zod en lugar de parseo manual?
 
