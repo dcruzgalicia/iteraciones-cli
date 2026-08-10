@@ -175,7 +175,8 @@ async function dirExists(path: string): Promise<boolean> {
 
 /**
  * Escanea los filtros Lua built-in del paquete (`lib/resources/filters`).
- * El directorio internal/ (filtros del pipeline, no de usuario) se excluye.
+ * El directorio internal/ (filtros del pipeline, no de usuario) y los módulos
+ * compartidos de una capa (shared/) se excluyen.
  * La descripción se toma de la primera línea de comentario `-- ...` del archivo.
  */
 export async function getBuiltinLuaFilterInfos(): Promise<LuaFilterInfo[]> {
@@ -183,7 +184,7 @@ export async function getBuiltinLuaFilterInfos(): Promise<LuaFilterInfo[]> {
   if (!(await dirExists(LUA_FILTERS_ROOT))) return infos;
   const glob = new Bun.Glob('**/*.lua');
   for await (const rel of glob.scan({ cwd: LUA_FILTERS_ROOT, onlyFiles: true })) {
-    if (rel.startsWith('internal/')) continue;
+    if (rel.startsWith('internal/') || rel.includes('/shared/')) continue;
     const group = dirname(rel);
     const full = `${group}/${basename(rel, '.lua')}`;
     const content = await Bun.file(join(LUA_FILTERS_ROOT, rel)).text();
