@@ -114,7 +114,7 @@ export async function resolveSlugs(
       const entry = entryFor(discoveryIndex, path);
       const slugBase = computeSlug({ title: entry.title, author: entry.author }, { fallbackPath: path });
       // Un doc que queda único conserva su sufijo -dN: la renumeración a slug
-      // limpio solo corresponde a builds sin estado previo (--no-cache).
+      // limpio solo corresponde a builds sin estado previo (--full).
       const prevSlug = entry.slug;
       const dnMatch = prevSlug?.match(/^(.*)-d(\d+)$/);
       if (!(dnMatch && dnMatch[1] === slugBase)) {

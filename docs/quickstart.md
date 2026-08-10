@@ -112,7 +112,7 @@ iteraciones validate
 iteraciones build
 
 # Build completo sin caché
-iteraciones build --no-cache
+iteraciones build --full
 
 # Build con información detallada
 iteraciones build --verbose

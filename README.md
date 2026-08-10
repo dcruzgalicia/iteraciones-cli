@@ -111,7 +111,7 @@ iteraciones build [opciones]
 | Opción | Descripción | Por defecto |
 |--------|-------------|-------------|
 | `-c, --concurrency <n>` | Máximo de invocaciones pandoc simultáneas | `CPU − 1` (máx. 16) |
-| `--no-cache` | Omite la caché y **elimina la salida anterior** (`dist/`); siempre hace build completo | — |
+| `--full` | Build completo desde cero: elimina la salida anterior (`dist/`) y la caché | — |
 | `--output <path>` | Directorio de salida | `dist/files` |
 | `--no-css` | Omite la generación de CSS | — |
 | `--dry-run` | Muestra los documentos a procesar sin generar salida | — |

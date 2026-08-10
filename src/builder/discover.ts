@@ -74,7 +74,7 @@ export function computeSlug(
 export async function discover(
   cwd: string,
   options: {
-    noCache?: boolean;
+    full?: boolean;
     activeFormats?: string[];
     prevState?: BuildState | null;
     /** Directorio de salida del build actual (se persiste para el comando info). */
@@ -105,7 +105,7 @@ export async function discover(
 
   relativePaths.sort();
 
-  const useCache = !options.noCache;
+  const useCache = !options.full;
   // Si orchestrator ya pasó el estado, no leer state.json otra vez
   const prevState = options.prevState !== undefined ? options.prevState : useCache ? await loadStateFile(cwd) : null;
   const discoveryIndex = useCache ? (prevState?.entries ?? new Map<string, DiscoveryEntry>()) : new Map<string, DiscoveryEntry>();

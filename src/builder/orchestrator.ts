@@ -19,7 +19,7 @@ import type { BuildContext } from './types.js';
 export interface BuildOptions {
   outputDir?: string;
   concurrency?: number | string;
-  noCache?: boolean;
+  full?: boolean;
   dryRun?: boolean;
   verbose?: boolean;
   profile?: boolean;
@@ -41,7 +41,7 @@ async function setupBuildEnvironment(cwd: string, siteConfig: SiteConfig, option
     concurrency,
   };
 
-  if (options.noCache) {
+  if (options.full) {
     await rm(ctx.outputDir, { recursive: true, force: true });
     await rm(join(cwd, '.iteraciones'), { recursive: true, force: true });
   }
@@ -70,11 +70,11 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     // render falló (mtime+size+hash nuevos): eliminarlo para que el siguiente
     // build los reprocese en lugar de reutilizar contenido stale u omitirlos.
     await clearStateFile(cwd);
-    // Con --no-cache, la salida se eliminó al inicio del build: si el build
+    // Con --full, la salida se eliminó al inicio del build: si el build
     // falló a mitad, los archivos parciales de dist/ no son salidas válidas.
-    // Limpiarlos evita que el siguiente build (sin --no-cache) reutilice
+    // Limpiarlos evita que el siguiente build (sin --full) reutilice
     // archivos huérfanos como si fueran resultados completos.
-    if (options.noCache) {
+    if (options.full) {
       const outputDir = options.outputDir ?? join(cwd, 'dist', 'files');
       await rm(outputDir, { recursive: true, force: true });
     }
@@ -141,10 +141,10 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   validateDisabledPreambleFilters(siteConfig.format?.pdf?.disabledPreambleFilters);
 
   // ── Planificación: hashes de invalidación + formatos (caché content-addressed) ──
-  // Con --no-cache no hay estado previo con qué comparar (la caché se borra en
+  // Con --full no hay estado previo con qué comparar (la caché se borra en
   // setupBuildEnvironment): no cargar prevState evita mensajes de invalidación
   // engañosos y fuerza el reprocesamiento completo.
-  const prevState = options.noCache ? null : await loadStateFile(cwd);
+  const prevState = options.full ? null : await loadStateFile(cwd);
   // Migrar el caché de versiones anteriores (ast/, changes/, epub en formats/html)
   await migrateLegacyCache(cwd);
   const plan = await computeBuildMetadata(cwd, siteConfig, prevState);
@@ -162,8 +162,8 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   if (plan.formatInvalidated.epub) log('Configuración EPUB modificada — regenerando EPUBs');
   if (plan.formatInvalidated.markdown) log('Configuración Markdown modificada — regenerando exports Markdown');
 
-  if (options.noCache) {
-    log('--no-cache: se eliminaron la caché y la salida anterior');
+  if (options.full) {
+    log('--full: se eliminaron la caché y la salida anterior');
     progress.showCleanup();
   }
 
@@ -188,7 +188,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
     deletedEntries,
     slugChangedEntries,
   } = await discover(cwd, {
-    noCache: options.noCache,
+    full: options.full,
     activeFormats: plan.currentFormats,
     prevState,
     outputDir: ctx.outputDir,

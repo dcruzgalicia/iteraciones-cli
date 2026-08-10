@@ -45,7 +45,7 @@ export function buildProgram(): Command {
     .command('build')
     .description('construye el sitio a partir de los archivos Markdown')
     .option('-c, --concurrency <n>', 'máximo de invocaciones pandoc simultáneas (por defecto: CPU − 1)')
-    .option('--no-cache', 'omite la caché y elimina la salida anterior (dist/); hace build completo')
+    .option('--full', 'build completo desde cero: elimina la salida anterior y la caché')
     .option('--output <path>', 'directorio de salida (por defecto: dist/files)')
     .option('--dry-run', 'muestra los documentos que se procesarían sin generar salida')
     .option('--verbose', 'muestra información adicional de progreso')
@@ -55,17 +55,17 @@ export function buildProgram(): Command {
       `
 Ejemplos:
   iteraciones build                build incremental (solo archivos modificados)
-  iteraciones build --no-cache     build completo sin caché
+  iteraciones build --full         build completo desde cero (sin caché)
   iteraciones build --dry-run      muestra los documentos a procesar sin generar salida
   iteraciones build --verbose      muestra información adicional de progreso
 `,
     )
-    .action(async (opts: { concurrency?: string; cache: boolean; output?: string; dryRun?: boolean; verbose?: boolean; profile?: boolean }) => {
+    .action(async (opts: { concurrency?: string; full?: boolean; output?: string; dryRun?: boolean; verbose?: boolean; profile?: boolean }) => {
       // La validación de --concurrency y --output ocurre en runBuild, donde
       // los errores se reportan con el formato unificado (sin stack traces).
       await runBuild(projectRoot(), {
         concurrency: opts.concurrency,
-        noCache: !opts.cache,
+        full: opts.full,
         outputDir: opts.output,
         dryRun: opts.dryRun,
         verbose: opts.verbose,
