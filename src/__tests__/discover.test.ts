@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import { buildDocsFromIndex, computeSlug, htmlSlugFor, parseAuthors, splitFrontmatter } from '../builder/discover.js';
+import { buildDocsFromIndex, computeSlug, htmlSlugFor, parseAuthors } from '../builder/discover.js';
+import { splitFrontmatter } from '../lib/frontmatter.js';
 
 describe('computeSlug', () => {
   it('genera slug desde el título', () => {

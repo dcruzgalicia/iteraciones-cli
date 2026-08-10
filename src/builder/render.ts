@@ -3,9 +3,10 @@ import type { SiteConfig } from '../config/config-schema.js';
 import { DEFAULT_HTML_BLOCKS, type HtmlBlockKey } from '../config/site-config.js';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
+import { splitFrontmatter } from '../lib/frontmatter.js';
 import { logWarning } from '../lib/logger.js';
 import { type BibOptions, runPandoc } from '../lib/pandoc-runner.js';
-import { parseAuthors, splitFrontmatter } from './discover.js';
+import { parseAuthors } from './discover.js';
 import type { BuildDocument } from './types.js';
 
 // ---------------------------------------------------------------------------
