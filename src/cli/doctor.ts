@@ -2,7 +2,14 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
 import { ConfigError } from '../lib/errors.js';
 import { logInfo } from '../lib/logger.js';
-import { type CheckResult, checkLatexEngine, checkPandoc, checkReadPermissions, checkWritePermissions } from './doctor/system-checks.js';
+import {
+  type CheckResult,
+  checkBunVersion,
+  checkLatexEngine,
+  checkPandoc,
+  checkReadPermissions,
+  checkWritePermissions,
+} from './doctor/system-checks.js';
 
 /**
  * Verifica que el entorno tenga todo lo necesario para correr `iteraciones build`.
@@ -28,6 +35,7 @@ export async function runDoctor(cwd: string): Promise<void> {
   const latex = needsLatex ? await checkLatexEngine() : undefined;
 
   const checks: CheckResult[] = [
+    checkBunVersion(),
     pandoc,
     { label: 'iteraciones.config.yaml', ok: configResult.ok, detail: configResult.detail },
     read,
