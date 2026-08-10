@@ -62,7 +62,7 @@ describe('runValidate (criterio del motor LaTeX)', () => {
     });
   });
 
-  it('con format.latex: true exige el motor LaTeX y falla sin él', async () => {
+  it('con format.latex: true no exige el motor LaTeX (solo generar .tex)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
       await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  latex: true\n', 'utf8');
@@ -77,7 +77,7 @@ describe('runValidate (criterio del motor LaTeX)', () => {
       } finally {
         spy.mockRestore();
       }
-      expect(process.exitCode).toBe(1);
+      expect(process.exitCode).toBe(0);
     });
   });
 
