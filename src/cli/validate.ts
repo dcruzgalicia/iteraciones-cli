@@ -14,10 +14,27 @@ type ValidationError = { file: string; message: string };
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
 
 /**
- * Campos del frontmatter que el pipeline consume. Cualquier otro campo se
- * descarta en todos los formatos: validate advierte para que no sea silencioso.
+ * Campos del frontmatter que el pipeline consume: los del pipeline
+ * (title/subtitle/date/author/slug) y los que fluyen a pandoc o al template
+ * efectivo con efecto visible (lang, toc, description, site-title, tagline,
+ * theme, accent, css). Cualquier otro campo se descarta en todos los formatos:
+ * validate advierte para que no sea silencioso.
  */
-const KNOWN_FRONTMATTER_FIELDS = ['title', 'subtitle', 'date', 'author', 'slug'];
+const KNOWN_FRONTMATTER_FIELDS = [
+  'title',
+  'subtitle',
+  'date',
+  'author',
+  'slug',
+  'lang',
+  'toc',
+  'description',
+  'site-title',
+  'tagline',
+  'theme',
+  'accent',
+  'css',
+];
 
 /** Formato seguro de un slug manual (mismo regex que discover). */
 const SLUG_MANUAL_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;

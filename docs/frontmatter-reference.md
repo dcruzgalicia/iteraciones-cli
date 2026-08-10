@@ -27,6 +27,19 @@ El pipeline consume **5 campos** del frontmatter:
 | `author` | `string \| string[]` | `[]` | Uno o varios autores. El slug usa `title-por-author`: por defecto solo el primer autor; en caso de colisión se van añadiendo autores (`-y-`) y, si se agotan, se aplica un sufijo `-dN`. |
 | `slug` | `string` | — | **Slug manual** (opcional): fija la URL del documento en lugar del esquema automático. Formato seguro: solo minúsculas, números y guiones simples (`^[a-z0-9]+(-[a-z0-9]+)*$`). Dos documentos con la misma salida (mismo directorio + slug) son un error de build y de `validate`. |
 
+## Campos que fluyen a pandoc
+
+El frontmatter completo se pasa a pandoc como metadata del documento. Los campos que el template y el pipeline consumen con efecto visible son:
+
+| Campo | Efecto |
+|-------|--------|
+| `lang` | Idioma del documento (sobreescribe `lang` de la configuración) |
+| `toc` | Activa/desactiva la tabla de contenidos de ese documento (sobreescribe `toc` de la configuración) |
+| `description` | Meta description del HTML |
+| `site-title`, `tagline`, `theme`, `accent`, `css` | Sobreescriben los valores de `format.html` para ese documento |
+
+`validate` advierte sobre cualquier otro campo del frontmatter que no tenga efecto.
+
 ## Citas bibliográficas
 
 Cuando se encuentran archivos `.bib` en el proyecto (auto-descubrimiento), las citas en Markdown siguen el formato pandoc `[@clave]`:

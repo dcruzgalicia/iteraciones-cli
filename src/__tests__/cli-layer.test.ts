@@ -973,6 +973,28 @@ describe('runValidate', () => {
     });
   });
 
+  it('no advierte sobre los campos que fluyen a pandoc/template (toc, lang, description, etc.)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(
+        join(dir, 'efectivos.md'),
+        '---\ntitle: Efectivos\nlang: en\ntoc: true\ndescription: Resumen\nsite-title: Mi sitio\ntheme: light\naccent: rose\n---\n\nContenido.\n',
+        'utf8',
+      );
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(output).not.toContain('campos de frontmatter ignorados');
+      expect(process.exitCode).toBe(0);
+    });
+  });
+
   it('no advierte con solo campos conocidos', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
