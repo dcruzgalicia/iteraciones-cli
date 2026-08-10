@@ -186,16 +186,24 @@ iteraciones clean
 
 Los filters transforman el contenido Markdown. Se organizan en **capas**:
 
-1. **Capa semántica** (`semantic/`) — corre una vez por documento y deja el **AST canónico** sin contenido de formato específico (`::` → `Div.spacer`, `:;` → `Div.spacer noindent`; los `Div.dictum/verse/center/flushright` quedan sin transformar).
+1. **Capa semántica** (`semantic/`) — corre en cada conversión y deja el contenido sin formato específico (`::` → `Div.spacer`, `:;` → `Div.spacer noindent`; los `Div.dictum/verse/center/flushright` quedan sin transformar).
 2. **Capa de formato** (`latex/`, `html/`) — corre en cada exportación y convierte los nodos semánticos a su formato.
+
+Además, un **filtro interno** (`internal/flags.lua`) detecta la estructura del documento (TOC, espaciado post-portada, citas) y expone las condiciones al template efectivo vía metadata.
 
 ### Pipeline
 
+Cada formato se genera con una invocación directa de pandoc desde el markdown original (sin AST intermedio):
+
 ```
-markdown → semantic/string → pandoc --to json → semantic/ast → AST canónico
-  → latex/ → pandoc --from json --to latex → .tex
-  → html/  → pandoc --from json --to html5 → .html
+markdown (con frontmatter)
+  → pandoc --to latex  [semantic/*, user/*, flags, latex/*] → .tex
+  → pandoc --to html5 [semantic/*, user/*, flags, html/*]  → .html
+  → pandoc --to epub3 [semantic/*, user/*]                 → .epub
+  → pandoc --to markdown [semantic/*, user/*]              → .md
 ```
+
+El CLI compone los templates efectivos (una vez por build), los filtros y los metadatos; el único post-procesamiento es la extracción de referencias del HTML.
 
 ### Filters integrados
 
@@ -266,9 +274,9 @@ lua-filters:
   - filters/nota.lua
 ```
 
-Los filtros corren en **todas** las invocaciones de pandoc (markdown → AST, latex, html, epub y markdown). En las exportaciones (latex, html) corren **antes** de los filters del paquete, para poder transformar los nodos semánticos antes de la capa de formato; en la conversión markdown → AST corren **después** de los filtros semánticos, para ver los nodos ya resueltos (por ejemplo, `Div.spacer`).
+Los filtros corren en **todas** las invocaciones de pandoc (latex, html, epub y markdown). En las exportaciones corren **antes** de los filters del paquete, para poder transformar los nodos semánticos antes de la capa de formato; los filtros semánticos corren antes que los de usuario, para que estos vean los nodos ya resueltos (por ejemplo, `Div.spacer`).
 
-Dentro del filtro, la variable global `FORMAT` de pandoc indica el formato de salida (`latex`, `html5`, `epub3`, `markdown`, `json`), lo que permite que un mismo filtro ramifique su comportamiento:
+Dentro del filtro, la variable global `FORMAT` de pandoc indica el formato de salida (`latex`, `html5`, `epub3`, `markdown`), lo que permite que un mismo filtro ramifique su comportamiento:
 
 ```lua
 -- filters/nota.lua

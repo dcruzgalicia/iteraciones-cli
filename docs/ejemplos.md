@@ -1,6 +1,6 @@
 # Ejemplos de Markdown — iteraciones-cli
 
-Documento de ejemplo que muestra todos los elementos soportados. El comando `iteraciones init` genera un README.md reducido; este archivo es la referencia completa.
+Documento de ejemplo que muestra todos los elementos soportados. El comando `iteraciones init` genera un index.md reducido; este archivo es la referencia completa.
 
 ## Encabezados
 
