@@ -6,7 +6,6 @@ import { CommanderError } from 'commander';
 import { runBuild, runClean, runDoctor, runFilters, runInfo, runInit, runNew, runValidate } from '../cli/dispatcher.js';
 import { checkLatexEngine } from '../cli/doctor/system-checks.js';
 import { buildProgram } from '../cli/parser.js';
-import { DEFAULT_HTML_BLOCKS } from '../config/site-config.js';
 import { initTestProject } from './helpers.js';
 
 // El smoke de PDF real solo corre si el motor LaTeX está disponible.
@@ -1209,15 +1208,14 @@ describe('runInit', () => {
     });
   });
 
-  it('el config generado incluye los comentarios y parsea sin warnings', async () => {
+  it('el config generado es mínimo, parsea sin warnings y remite a la documentación', async () => {
     await withTempDir(async (dir) => {
       process.exitCode = 0;
       await runInit(dir);
       const yaml = await Bun.file(join(dir, 'iteraciones.config.yaml')).text();
-      expect(yaml).toContain('# Tema visual del HTML:');
-      expect(yaml).toContain('# Orden de los bloques del masonry:');
-      expect(yaml).toContain('# Los preamble filters 24, 25 y 26');
+      expect(yaml).toContain('# Configuración del sitio. Consulta docs/configuration.md');
       expect(yaml).toContain('theme: dark');
+      expect(yaml.split('\n').length).toBeLessThanOrEqual(25);
       // El config generado debe pasar validate sin errores
       const stderrSpy = spyStderr();
       let output = '';
@@ -1243,14 +1241,14 @@ describe('runInit', () => {
     });
   });
 
-  it('el config generado incluye los defaults de format.html.blocks', async () => {
+  it('el config generado omite blocks (los defaults viven en código)', async () => {
     await withTempDir(async (dir) => {
       process.exitCode = 0;
       await runInit(dir);
       expect(process.exitCode).toBe(0);
       const yaml = await Bun.file(join(dir, 'iteraciones.config.yaml')).text();
       const parsed = Bun.YAML.parse(yaml) as { format?: { html?: { blocks?: Record<string, number> } } };
-      expect(parsed.format?.html?.blocks).toEqual(DEFAULT_HTML_BLOCKS);
+      expect(parsed.format?.html?.blocks).toBeUndefined();
     });
   });
 });
