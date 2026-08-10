@@ -116,7 +116,9 @@ export async function clearStateFile(cwd: string): Promise<void> {
 /**
  * Migración del caché de versiones anteriores (se ejecuta en cada build):
  * elimina los artefactos que el flujo actual ya no escribe ni consume.
- * Idempotente: sin efectos en proyectos ya migrados.
+ * Idempotente y barata; se conserva como red de seguridad para proyectos que
+ * aún no hayan ejecutado un build con el flujo nuevo (la transición ya ocurrió
+ * en los proyectos existentes).
  * - .iteraciones/ast/       (ASTs del flujo markdown → json, eliminado)
  * - .iteraciones/changes/   (estado migrado a state.json en la raíz)
  * - .iteraciones/formats/   (staging intermedio: los formatos se escriben
