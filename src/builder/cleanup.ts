@@ -21,17 +21,11 @@ async function removeCachedArtifacts(cacheBase: string, dir: string, slug: strin
   // Área de trabajo del PDF: .tex (sin latexOn) y auxiliares de latexmk
   // (el .log solo se referencia en errores de builds vivos).
   await rm(join(cacheBase, 'tmp', 'pdf', dir, `${slug}.tex`), { force: true }).catch(() => {});
+  // Auxiliares de latexmk (se acumulaban para siempre al eliminar un documento
+  // o cambiar su slug; el .log solo se referencia en errores de builds vivos).
   for (const ext of LATEXMK_AUX_EXTENSIONS) {
     await rm(join(cacheBase, 'tmp', 'pdf', dir, `${slug}${ext}`), { force: true }).catch(() => {});
   }
-  // Reproducibilidad manual (experimento): scripts, raw y variables
-  const reproBase = join(cacheBase, 'repro');
-  for (const fmt of ['html', 'latex', 'pdf', 'epub', 'markdown']) {
-    for (const name of [`${slug}.sh`, `${slug}.raw.html`, `${slug}.yaml`, `${slug}.md`]) {
-      await rm(join(reproBase, fmt, dir, name), { force: true }).catch(() => {});
-    }
-  }
-  await rm(join(reproBase, 'html', dir, slug), { recursive: true, force: true }).catch(() => {});
 }
 
 /** Elimina archivos de salida de un documento en dist/ (por extensiones). */

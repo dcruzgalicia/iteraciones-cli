@@ -6,7 +6,6 @@ import { logWarning } from '../../lib/logger.js';
 import { runPandoc } from '../../lib/pandoc-runner.js';
 import { LATEXMK_AUX_EXTENSIONS } from '../cleanup.js';
 import { type LuaFilterGroup, MD_READER, metadataValue } from '../render.js';
-import { type ReproCtx, writeEpubReproScript, writeMarkdownReproScript } from '../repro.js';
 import type { ExportDocument } from './types.js';
 
 /** Límite de tiempo de una compilación latexmk: 10 minutos. */
@@ -24,7 +23,6 @@ export async function convertToEpub(
   filters: LuaFilterGroup,
   toc?: boolean,
   fm: Record<string, unknown> = {},
-  repro?: ReproCtx,
 ): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
@@ -48,17 +46,6 @@ export async function convertToEpub(
   const date = doc.metadata.dateIso ?? doc.metadata.date;
   if (date) extraArgs.push(`--metadata=date:${metadataValue(date)}`);
 
-  if (repro) {
-    // El orden real de runPandoc: --citeproc/--bibliography/--csl antes de extraArgs
-    const reproArgs = [...extraArgs];
-    if (doc.metadata.bibliography) {
-      reproArgs.unshift('--bibliography', doc.metadata.bibliography);
-      if (doc.metadata.csl) reproArgs.unshift('--csl', doc.metadata.csl);
-      reproArgs.unshift('--citeproc');
-    }
-    await writeEpubReproScript(repro, doc, reproArgs);
-  }
-
   await runPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'epub3', outputPath, extraArgs });
 }
 
@@ -72,7 +59,6 @@ export async function convertToMarkdown(
   doc: ExportDocument,
   filters: LuaFilterGroup,
   fm: Record<string, unknown> = {},
-  repro?: ReproCtx,
 ): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
   const extraArgs: string[] = [];
@@ -103,7 +89,6 @@ export async function convertToMarkdown(
   }
 
   const stdout = await runPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'markdown', extraArgs });
-  if (repro) await writeMarkdownReproScript(repro, doc, extraArgs);
   await Bun.write(outputPath, stdout);
 }
 

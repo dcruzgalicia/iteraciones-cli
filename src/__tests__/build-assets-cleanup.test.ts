@@ -48,17 +48,15 @@ describe('build-assets', () => {
 });
 
 describe('cleanup (eliminaciones y slugs)', () => {
-  it('cleanupDeletedFiles elimina el área de trabajo del PDF, la caché de repro y la salida del documento', async () => {
+  it('cleanupDeletedFiles elimina el área de trabajo del PDF y la salida del documento', async () => {
     await withTempDir(async (dir) => {
       const ctx = makeCtx(dir);
       // Simular artefactos de un documento 'perdido.md' (slug 'perdido')
       await mkdir(join(dir, '.iteraciones', 'tmp', 'pdf'), { recursive: true });
-      await mkdir(join(dir, '.iteraciones', 'repro', 'html'), { recursive: true });
       await mkdir(join(ctx.outputDir), { recursive: true });
       await writeFile(join(dir, '.iteraciones', 'tmp', 'pdf', 'perdido.tex'), 'tex');
       await writeFile(join(dir, '.iteraciones', 'tmp', 'pdf', 'perdido.aux'), 'aux');
       await writeFile(join(dir, '.iteraciones', 'tmp', 'pdf', 'perdido.log'), 'log');
-      await writeFile(join(dir, '.iteraciones', 'repro', 'html', 'perdido.sh'), 'sh');
       await writeFile(join(ctx.outputDir, 'perdido.html'), 'html');
 
       const deletedEntries = new Map([['perdido.md', { title: 'Perdido', author: [], date: '', mtime: 0, size: 0, hash: '', slug: 'perdido' }]]);
@@ -67,7 +65,6 @@ describe('cleanup (eliminaciones y slugs)', () => {
       expect(await Bun.file(join(dir, '.iteraciones', 'tmp', 'pdf', 'perdido.tex')).exists()).toBe(false);
       expect(await Bun.file(join(dir, '.iteraciones', 'tmp', 'pdf', 'perdido.aux')).exists()).toBe(false);
       expect(await Bun.file(join(dir, '.iteraciones', 'tmp', 'pdf', 'perdido.log')).exists()).toBe(false);
-      expect(await Bun.file(join(dir, '.iteraciones', 'repro', 'html', 'perdido.sh')).exists()).toBe(false);
       expect(await Bun.file(join(ctx.outputDir, 'perdido.html')).exists()).toBe(false);
     });
   });
