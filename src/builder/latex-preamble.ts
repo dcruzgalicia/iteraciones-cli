@@ -13,7 +13,53 @@
  * .iteraciones/templates/latex.tex.
  */
 import { BuildError } from '../lib/errors.js';
+import { logWarning } from '../lib/logger.js';
 import type { PreambleFilter } from './preamble-loader.js';
+
+/**
+ * Opciones de babel por código BCP 47 (lang de configuración).
+ * Las variantes de español conservan las opciones históricas del paquete
+ * (es-noshorthands, es-noindentfirst y mexico para es-MX).
+ */
+const BABEL_LANG_OPTIONS: Record<string, string> = {
+  es: 'spanish,es-noshorthands,es-noindentfirst',
+  'es-MX': 'spanish,mexico,es-noshorthands,es-noindentfirst',
+  'es-ES': 'spanish,es-noshorthands,es-noindentfirst',
+  en: 'english',
+  'en-US': 'english',
+  'en-GB': 'english',
+  fr: 'french',
+  de: 'german',
+  it: 'italian',
+  pt: 'portuguese',
+  'pt-BR': 'brazilian',
+  ca: 'catalan',
+  eu: 'basque',
+  gl: 'galician',
+  nl: 'dutch',
+  ru: 'russian',
+};
+
+/** Idiomas ya advertidos (el template se compone una vez por build, pero la conversión corre por documento). */
+const warnedLangs = new Set<string>();
+
+/**
+ * Resuelve las opciones de babel para un código BCP 47: match exacto, luego
+ * idioma base (fr-CA → french) y finalmente español con warning (una vez por
+ * idioma: el sink difiere los warnings al resumen del build).
+ */
+export function babelOptionsForLang(lang: string): string {
+  const direct = BABEL_LANG_OPTIONS[lang];
+  if (direct) return direct;
+  const base = lang.split('-')[0] ?? '';
+  const byBase = BABEL_LANG_OPTIONS[base];
+  if (byBase) return byBase;
+  if (!warnedLangs.has(lang)) {
+    warnedLangs.add(lang);
+    logWarning(`lang "${lang}" sin opciones babel conocidas; se usa español por defecto`, 'latex');
+  }
+  return BABEL_LANG_OPTIONS.es ?? 'spanish';
+}
 
 /**
  * Escapa los caracteres que romperían el parseo TeX en rutas de archivo

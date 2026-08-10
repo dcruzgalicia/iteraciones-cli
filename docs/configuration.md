@@ -50,11 +50,13 @@ csl: styles/nature.csl           # estilo de citas CSL (opcional; APA-7 si falta
 **Tipo:** `string`
 **Por defecto:** `'es-MX'`
 
-Código de idioma BCP 47. Se usa como valor del atributo `lang` en el elemento `<html>` y en la configuración de `babel` para LaTeX.
+Código de idioma BCP 47. Se usa como valor del atributo `lang` en el elemento `<html>`, en los metadatos de EPUB y Markdown, y en la configuración de `babel` para LaTeX (PDF).
 
 ```yaml
 lang: es-MX
 ```
+
+El `lang` del frontmatter de un documento sí sobreescribe el de la configuración en el HTML, el EPUB y el Markdown; **no** altera la configuración de `babel` del PDF, que se resuelve siempre desde el `lang` de la configuración (o su valor por defecto).
 
 ### `format.latex`
 

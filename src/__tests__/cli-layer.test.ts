@@ -566,6 +566,30 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
+  it.skipIf(!pandocOk)('el lang de la configuración configura babel en el PDF (contrato lang → babel)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: en\nformat:\n  latex: true\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const tex = await Bun.file(join(dir, 'dist', 'files', 'test-document.tex')).text();
+      expect(tex).toContain('\\usepackage[english]{babel}');
+    });
+  });
+
+  it.skipIf(!pandocOk)('el lang por defecto es-MX mantiene las opciones históricas de babel', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  latex: true\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const tex = await Bun.file(join(dir, 'dist', 'files', 'test-document.tex')).text();
+      expect(tex).toContain('\\usepackage[spanish,mexico,es-noshorthands,es-noindentfirst]{babel}');
+    });
+  });
+
   it.skipIf(!pandocOk || !unzipOk)('el EPUB generado incluye título, autor e idioma en sus metadatos', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
