@@ -9,7 +9,6 @@ import {
   loadPreambleFilters,
   validateDisabledPreambleFilters,
 } from '../builder/preamble-loader.js';
-import * as logger from '../lib/logger.js';
 import { checkPandoc, runPandoc } from '../lib/pandoc-runner.js';
 
 const pandocOk = await checkPandoc().catch(() => null);
@@ -132,25 +131,18 @@ describe('composeLatexTemplate', () => {
 });
 
 describe('validateDisabledPreambleFilters', () => {
-  it('no advierte con undefined o lista vacía', () => {
-    const spy = spyOn(logger, 'logWarning');
-    validateDisabledPreambleFilters(undefined);
-    validateDisabledPreambleFilters([]);
-    expect(spy).not.toHaveBeenCalled();
-    spy.mockRestore();
+  it('no lanza con undefined o lista vacía', () => {
+    expect(() => validateDisabledPreambleFilters(undefined)).not.toThrow();
+    expect(() => validateDisabledPreambleFilters([])).not.toThrow();
   });
 
-  it('no advierte con nombres válidos', () => {
-    const spy = spyOn(logger, 'logWarning');
-    validateDisabledPreambleFilters(['15-hyphenation-rules']);
-    expect(spy).not.toHaveBeenCalled();
-    spy.mockRestore();
+  it('no lanza con nombres válidos', () => {
+    expect(() => validateDisabledPreambleFilters(['15-hyphenation-rules'])).not.toThrow();
   });
 
-  it('advierte con un nombre desconocido', () => {
-    const spy = spyOn(logger, 'logWarning');
-    validateDisabledPreambleFilters(['99-no-existe']);
-    expect(spy).toHaveBeenCalledWith('disabled-preamble-filters: "99-no-existe" no coincide con ningún preamble filter', 'config');
-    spy.mockRestore();
+  it('lanza BuildError con un nombre desconocido', () => {
+    expect(() => validateDisabledPreambleFilters(['99-no-existe'])).toThrow(
+      'disabled-preamble-filters: "99-no-existe" no coincide con ningún preamble filter',
+    );
   });
 });
