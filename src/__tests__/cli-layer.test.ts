@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CommanderError } from 'commander';
-import { runBuild, runClean, runDoctor, runFilters, runInfo, runInit, runNew, runValidate } from '../cli/dispatcher.js';
+import { runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from '../cli/dispatcher.js';
 import { checkLatexEngine } from '../cli/doctor/system-checks.js';
 import { buildProgram } from '../cli/parser.js';
 import { initTestProject } from './helpers.js';
@@ -881,16 +881,16 @@ describe('runBuild', () => {
   });
 });
 
-describe('runInfo', () => {
+describe('doctor --verbose/--json (antes runInfo)', () => {
   afterEach(resetExitCode);
 
-  /** Ejecuta info y captura stdout. */
+  /** Ejecuta doctor --verbose y captura stdout. */
   async function infoOutput(dir: string): Promise<string> {
     const stdoutSpy = spyOn(process.stdout, 'write');
     let output = '';
     try {
       process.exitCode = 0;
-      await runInfo(dir);
+      await runDoctor(dir, { verbose: true });
     } finally {
       output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
       stdoutSpy.mockRestore();
@@ -941,7 +941,7 @@ describe('runInfo', () => {
       let output = '';
       try {
         process.exitCode = 0;
-        await runInfo(dir, { json: true });
+        await runDoctor(dir, { json: true });
       } finally {
         output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
         stdoutSpy.mockRestore();

@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
-import { runBuild, runClean, runDoctor, runFilters, runInfo, runInit, runNew, runValidate } from './dispatcher.js';
+import { runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from './dispatcher.js';
 
 /**
  * Traduce los mensajes de error conocidos de commander al español.
@@ -74,22 +74,6 @@ Ejemplos:
     });
 
   program
-    .command('info')
-    .description('muestra información del proyecto y configuración')
-    .option('--json', 'salida en JSON (para scripting)')
-    .addHelpText(
-      'after',
-      `
-Ejemplos:
-  iteraciones info            muestra idioma, salida, pandoc y formatos activos
-  iteraciones info --json     misma información en JSON
-`,
-    )
-    .action(async (opts: { json?: boolean }) => {
-      await runInfo(projectRoot(), { json: opts.json });
-    });
-
-  program
     .command('init')
     .description('crea iteraciones.config.yaml, index.md y bibliography.bib mínimos en el directorio actual')
     .addHelpText(
@@ -120,15 +104,19 @@ Ejemplos:
   program
     .command('doctor')
     .description('verifica el entorno de build')
+    .option('--verbose', 'muestra también la configuración del proyecto')
+    .option('--json', 'salida en JSON (para scripting)')
     .addHelpText(
       'after',
       `
 Ejemplos:
-  iteraciones doctor         verifica pandoc, motor LaTeX y permisos
+  iteraciones doctor               verifica pandoc, motor LaTeX y permisos
+  iteraciones doctor --verbose     además, muestra la configuración del proyecto
+  iteraciones doctor --json        toda la información en JSON
 `,
     )
-    .action(async () => {
-      await runDoctor(projectRoot());
+    .action(async (opts: { verbose?: boolean; json?: boolean }) => {
+      await runDoctor(projectRoot(), { verbose: opts.verbose, json: opts.json });
     });
 
   program
