@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -189,6 +189,123 @@ describe('filtros Lua latex', () => {
   it('no modifica párrafos de menos de 4 palabras', async () => {
     const tex = await toLatex('Hola mundo.');
     expect(tex).not.toContain('\\mbox');
+  });
+});
+
+describe('filtro interno internal/flags (detección estructural)', () => {
+  const FLAGS = join(RESOURCES, 'internal', 'flags.lua');
+  let dir: string;
+  let tplLatex: string;
+  let bib: string;
+
+  beforeAll(() => {
+    dir = mkdtempSync(join(tmpdir(), 'iteraciones-flags-'));
+    // Template mínimo con los condicionales que el filtro expone vía metadata
+    tplLatex = join(dir, 'tpl.tex');
+    writeFileSync(
+      tplLatex,
+      '\\documentclass{article}\n' +
+        '$if(has-toc-entries)$\\tableofcontents$endif$\n' +
+        '$if(skip-paragraph-space)$$else$\\vspace*{2\\baselineskip}$endif$\n' +
+        '$body$\n' +
+        '\\end{document}\n',
+    );
+    bib = join(dir, 'refs.bib');
+    writeFileSync(bib, '@book{key1, author = {García, Lucía}, title = {Libro}, year = {2024}}\n');
+  });
+
+  afterAll(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  async function toLatexFlags(md: string, extra: string[] = []): Promise<string> {
+    return runPandoc({
+      input: md,
+      sourcePath: 'test.md',
+      to: 'latex',
+      extraArgs: ['--template', tplLatex, '--lua-filter', FLAGS, ...extra],
+    });
+  }
+
+  it('con el primer bloque Header: TOC presente, sin vspace ni noindent', async () => {
+    const tex = await toLatexFlags('# Título\n\nPrimer párrafo.');
+    expect(tex).toContain('\\tableofcontents');
+    expect(tex).not.toContain('\\vspace*{2\\baselineskip}');
+    expect(tex).not.toContain('\\noindent');
+  });
+
+  it('con el primer bloque Para: sin TOC, con vspace y noindent', async () => {
+    const tex = await toLatexFlags('Primer párrafo.\n\nSegundo párrafo.');
+    expect(tex).not.toContain('\\tableofcontents');
+    expect(tex).toContain('\\vspace*{2\\baselineskip}');
+    expect(tex).toContain('\\noindent Primer párrafo.');
+  });
+
+  it('un RawBlock \\chapter cuenta como inicio de sección (TOC y sin vspace)', async () => {
+    const tex = await toLatexFlags('\\chapter{Capítulo directo}\n\nTexto.');
+    expect(tex).toContain('\\tableofcontents');
+    expect(tex).not.toContain('\\vspace*{2\\baselineskip}');
+  });
+
+  it('\\sectionmark no se confunde con un inicio de sección', async () => {
+    const tex = await toLatexFlags('\\sectionmark{Texto}\n\nPárrafo.');
+    expect(tex).not.toContain('\\tableofcontents');
+    expect(tex).toContain('\\vspace*{2\\baselineskip}');
+  });
+
+  it('un dictum inicial omite el vspace y no aplica noindent', async () => {
+    const tex = await toLatexFlags('::: {.dictum}\nCita\n:::\n\nTexto.');
+    expect(tex).not.toContain('\\vspace*{2\\baselineskip}');
+    expect(tex).not.toContain('\\noindent');
+  });
+
+  it('un BlockQuote inicial omite el vspace', async () => {
+    const tex = await toLatexFlags('> Cita\n\nTexto.');
+    expect(tex).not.toContain('\\vspace*{2\\baselineskip}');
+  });
+
+  it('Div.center no cuenta como inicio de lista (el vspace se mantiene)', async () => {
+    const tex = await toLatexFlags('::: {.center}\nCentrado\n:::\n\nTexto.');
+    expect(tex).toContain('\\vspace*{2\\baselineskip}');
+  });
+
+  it('agrega \\printbibliography solo con citas y bibliografía', async () => {
+    const conCitas = await toLatexFlags('Cita [@key1].', ['--biblatex', '--bibliography', bib]);
+    expect(conCitas).toContain('\\printbibliography[heading=bibintoc]');
+    const sinBib = await toLatexFlags('Cita [@key1].');
+    expect(sinBib).not.toContain('\\printbibliography');
+  });
+
+  it('no agrega \\printbibliography sin nodos Cite aunque haya bibliografía', async () => {
+    const tex = await toLatexFlags('Texto sin citas.', ['--biblatex', '--bibliography', bib]);
+    expect(tex).not.toContain('\\printbibliography');
+  });
+
+  it('en HTML agrega el heading sintético de referencias solo con citas y bibliografía', async () => {
+    const conCitas = await runPandoc({
+      input: 'Cita [@key1].',
+      sourcePath: 'test.md',
+      to: 'html5',
+      extraArgs: ['--lua-filter', FLAGS, '--citeproc', '--bibliography', bib],
+    });
+    expect(conCitas).toContain('id="referencias"');
+    const sinCitas = await runPandoc({
+      input: 'Texto.',
+      sourcePath: 'test.md',
+      to: 'html5',
+      extraArgs: ['--lua-filter', FLAGS, '--citeproc', '--bibliography', bib],
+    });
+    expect(sinCitas).not.toContain('id="referencias"');
+  });
+
+  it('en HTML el heading aparece incluso con citas rotas (los nodos Cite existen)', async () => {
+    const html = await runPandoc({
+      input: 'Cita rota [@no-existe-key].',
+      sourcePath: 'test.md',
+      to: 'html5',
+      extraArgs: ['--lua-filter', FLAGS, '--citeproc', '--bibliography', bib],
+    });
+    expect(html).toContain('id="referencias"');
   });
 });
 
