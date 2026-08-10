@@ -2,7 +2,7 @@ import { describe, expect, it, spyOn } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { composeLatexTemplate } from '../builder/latex-preamble.js';
+import { babelOptionsForLang, composeLatexTemplate } from '../builder/latex-preamble.js';
 import {
   getBuiltinPreambleFilterInfos,
   getBuiltinPreambleFilterNames,
@@ -30,6 +30,11 @@ describe('preamble-loader', () => {
     expect(biblio?.content).toContain('\\defbibheading{bibintoc}[\\refname]{%');
     const maketitle = filters.find((t) => t.name === '19-maketitle');
     expect(maketitle?.content).toContain('\\renewcommand{\\maketitle}{%');
+    // 05-language expone el idioma como variable de template (la interpola
+    // pandoc con el metadata babel-lang que pasa el CLI)
+    const language = filters.find((t) => t.name === '05-language');
+    expect(language?.content).toContain('$if(babel-lang)$');
+    expect(language?.content).toContain('\\usepackage[$babel-lang$]{babel}');
   });
 
   it('respeta la disabled list', async () => {
@@ -49,6 +54,42 @@ describe('preamble-loader', () => {
       expect(hyphen?.content).not.toContain('Separacion silabica');
     } finally {
       rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('babelOptionsForLang (contrato lang → babel en el PDF)', () => {
+  it('mapea es-MX a las opciones históricas de español de México', () => {
+    expect(babelOptionsForLang('es-MX')).toBe('spanish,mexico,es-noshorthands,es-noindentfirst');
+  });
+
+  it('mapea es a español sin la variante de México', () => {
+    expect(babelOptionsForLang('es')).toBe('spanish,es-noshorthands,es-noindentfirst');
+  });
+
+  it('mapea en y sus variantes a english', () => {
+    expect(babelOptionsForLang('en')).toBe('english');
+    expect(babelOptionsForLang('en-US')).toBe('english');
+  });
+
+  it('resuelve por idioma base las variantes no listadas (fr-CA → french)', () => {
+    expect(babelOptionsForLang('fr-CA')).toBe('french');
+  });
+
+  it('cae a español con warning único para idiomas desconocidos', async () => {
+    const warnSpy = spyOn(console, 'warn');
+    // El warning usa logWarning (stderr): se captura por el spy de stderr
+    const stderrSpy = spyOn(process.stderr, 'write');
+    try {
+      expect(babelOptionsForLang('xx-YY')).toBe('spanish,es-noshorthands,es-noindentfirst');
+      // Solo un warning aunque se consulte dos veces (por documento)
+      expect(babelOptionsForLang('xx-YY')).toBe('spanish,es-noshorthands,es-noindentfirst');
+      const output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+      expect((output.match(/sin opciones babel conocidas/g) ?? []).length).toBe(1);
+      expect(warnSpy).not.toHaveBeenCalled();
+    } finally {
+      stderrSpy.mockRestore();
+      warnSpy.mockRestore();
     }
   });
 });
@@ -109,6 +150,13 @@ describe('composeLatexTemplate', () => {
     const tpl = await composeLatexTemplate(opts);
     expect(tpl).not.toContain('\u0008');
     expect(tpl).not.toContain('\t');
+  });
+
+  it('05-language compone el condicional babel por el metadata babel-lang', async () => {
+    const filters = await loadPreambleFilters();
+    const tpl = await composeLatexTemplate({ ...opts, preambleFilters: filters.filter((f) => f.name === '05-language') });
+    expect(tpl).toContain('$if(babel-lang)$\n\\usepackage[$babel-lang$]{babel}\n$else$');
+    expect(tpl).toContain('$endif$');
   });
 
   it.skipIf(!pandocOk)('pandoc escapa los metadatos al renderizar el template (título y autor)', async () => {

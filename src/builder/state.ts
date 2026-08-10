@@ -268,7 +268,9 @@ export async function computeConfigHashes(cwd: string, siteConfig: SiteConfig): 
   const logoPath = htmlConfig?.logo?.trim();
   const logo = logoPath ? await hashFileContent(join(cwd, logoPath)).catch(() => '') : '';
   return {
-    pdf: hashString(`${JSON.stringify(fmt?.pdf ?? {})}\n${String(fmt?.latex ?? false)}\n${String(siteConfig.toc ?? false)}`),
+    pdf: hashString(
+      `${JSON.stringify(fmt?.pdf ?? {})}\n${String(fmt?.latex ?? false)}\n${String(siteConfig.toc ?? false)}\n${String(siteConfig.lang ?? '')}`,
+    ),
     // El HTML muestra la tarjeta Formatos con los formatos activos: cambiar
     // pdf/latex/epub/markdown debe regenerar las páginas HTML.
     html: hashString(

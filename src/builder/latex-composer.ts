@@ -5,6 +5,7 @@ import { runPandoc } from '../lib/pandoc-runner.js';
 import { parseAuthors } from './discover.js';
 import type { LuaFilterGroup } from './filter-resolver.js';
 import { MD_READER, metadataValue } from './html-composer.js';
+import { babelOptionsForLang } from './latex-preamble.js';
 import type { BuildDocument } from './types.js';
 
 /**
@@ -67,6 +68,10 @@ export async function markdownToLatex(
   const author = parseAuthors(fm.author);
 
   const extraArgs = ['--template', templatePath, '--top-level-division', 'section', '--shift-heading-level-by=2'];
+  // El fragmento babel del template efectivo se resuelve por el lang de la
+  // configuración (el frontmatter lang no altera babel en el PDF: contrato
+  // documentado en configuration.md).
+  extraArgs.push(`--metadata=babel-lang:${babelOptionsForLang(siteConfig.lang)}`);
   for (const filter of [...filters.semantic, ...filters.user, ...filters.flags, ...filters.latex]) {
     extraArgs.push('--lua-filter', filter);
   }
