@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { logWarning } from '../lib/logger.js';
+import { BuildError } from '../lib/errors.js';
 
 // ---------------------------------------------------------------------------
 // Sistema de filters para el preámbulo LaTeX
@@ -70,13 +70,17 @@ export async function getBuiltinPreambleFilterInfos(): Promise<PreambleFilterInf
 
 /**
  * Valida los nombres de `disabled-preamble-filters` contra los preamble
- * filters built-in. Los nombres desconocidos emiten un warning sin romper
- * el build.
+ * filters built-in. Un nombre desconocido es un error bloqueante: el usuario
+ * cree que desactivó un filtro que sigue activo (p. ej. marcas de corte en un
+ * PDF digital), así que el build no puede continuar silenciosamente.
  */
 export function validateDisabledPreambleFilters(disabled: string[] | undefined): void {
   if (!disabled || disabled.length === 0) return;
+  const unknown: string[] = [];
   for (const name of disabled) {
-    if (getBuiltinPreambleFilterNames().includes(name)) continue;
-    logWarning(`disabled-preamble-filters: "${name}" no coincide con ningún preamble filter`, 'config');
+    if (!getBuiltinPreambleFilterNames().includes(name)) unknown.push(name);
+  }
+  if (unknown.length > 0) {
+    throw new BuildError(`disabled-preamble-filters: "${unknown.join(', ')}" no coincide con ningún preamble filter`);
   }
 }
