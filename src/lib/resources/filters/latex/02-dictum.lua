@@ -33,6 +33,13 @@ local function inlines_to_latex(inlines)
       table.insert(out, '\\emph{' .. inlines_to_latex(inl.content) .. '}')
     elseif inl.t == 'Strong' then
       table.insert(out, '\\textbf{' .. inlines_to_latex(inl.content) .. '}')
+    elseif inl.t == 'Code' then
+      table.insert(out, escape_latex(inl.text))
+    elseif inl.t == 'Link' or inl.t == 'Quoted' or inl.t == 'Cite' then
+      -- Enlaces, comillas tipográficas y citas en el autor: se renderiza su
+      -- contenido. Antes se descartaban en silencio y el autor desaparecía
+      -- del PDF (en HTML sí aparecía: asimetría entre formatos).
+      table.insert(out, inlines_to_latex(inl.content))
     elseif inl.t == 'RawInline' and inl.format == 'latex' then
       table.insert(out, inl.text)
     end
@@ -55,8 +62,15 @@ local function process_dictum(div)
     if has_class(block, 'author') then
       local all_paras = true
       local inlines = {}
+      local para_count = 0
       for _, b in ipairs(block.content) do
         if b.t == 'Para' then
+          if para_count > 0 and #inlines > 0 then
+            -- Varios párrafos de autor: separarlos con espacio (antes se
+            -- concatenaban sin separador: "Autor UnoAutor Dos")
+            table.insert(inlines, pandoc.Space())
+          end
+          para_count = para_count + 1
           for _, inl in ipairs(b.content) do table.insert(inlines, inl) end
         else
           all_paras = false

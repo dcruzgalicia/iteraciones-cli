@@ -118,9 +118,9 @@ const LATEX_FILTERS = [
   '08-quote-noindent',
 ].map((n) => join(RESOURCES, 'latex', `${n}.lua`));
 
-async function toLatex(markdown: string): Promise<string> {
+async function toLatex(markdown: string, from?: string): Promise<string> {
   const extraArgs = [...SEMANTIC_FILTERS, ...LATEX_FILTERS].flatMap((f) => ['--lua-filter', f]);
-  return runPandoc({ input: markdown, sourcePath: 'test.md', to: 'latex', extraArgs });
+  return runPandoc({ input: markdown, sourcePath: 'test.md', from, to: 'latex', extraArgs });
 }
 
 describe.skipIf(!pandocOk)('filtros Lua latex', () => {
@@ -146,6 +146,22 @@ describe.skipIf(!pandocOk)('filtros Lua latex', () => {
   it('convierte Div.dictum con autor', async () => {
     const tex = await toLatex('::: {.dictum}\nCita\n\n::: {.author}\nJulio Verne\n::: \n:::\n');
     expect(tex).toContain('\\dictum[Julio Verne]{Cita}');
+  });
+
+  it('dictum con autor enlazado conserva el autor (antes desaparecía del PDF)', async () => {
+    const tex = await toLatex('::: {.dictum}\nCita\n\n::: {.author}\n[Jane Doe](https://x.com)\n::: \n:::\n');
+    expect(tex).toContain('\\dictum[Jane Doe]{Cita}');
+  });
+
+  it('dictum con autor entre comillas tipográficas conserva el autor', async () => {
+    // Con smart, "Nombre" se parsea como Quoted: antes el autor desaparecía
+    const tex = await toLatex('::: {.dictum}\nCita\n\n::: {.author}\n"Nombre"\n::: \n:::\n', 'markdown+smart');
+    expect(tex).toContain('\\dictum[Nombre]{Cita}');
+  });
+
+  it('dictum con autor de dos párrafos los separa con espacio', async () => {
+    const tex = await toLatex('::: {.dictum}\nCita\n\n::: {.author}\nAutor Uno\n\nAutor Dos\n::: \n:::\n');
+    expect(tex).toContain('\\dictum[Autor Uno Autor Dos]{Cita}');
   });
 
   it('convierte Div.verse sin vspace externo', async () => {
