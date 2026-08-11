@@ -54,7 +54,7 @@ interface Row {
  * - **Non-TTY (pipes, CI)**: cada fila se imprime al finalizar, en el orden en
  *   que se cierra.
  * - **--verbose**: texto plano: las filas finales (con conteo y tiempo) y los [info] del orquestador.
- * - El resumen final (tabla alineada, advertencias, --profile) es idéntico.
+ * - El resumen final (tabla alineada, advertencias) es idéntico.
  *
  * El renderer es síncrono y sin bucles de render: un error del build nunca
  * puede dejar el proceso colgado (regresiones #1211 resueltas por diseño,
@@ -68,8 +68,6 @@ export class ProgressTracker {
   private phaseStart: Partial<Record<PipelinePhase, number>> = {};
   private phaseDone: Set<PipelinePhase> = new Set();
   private currentPhaseCount = 0;
-  /** Si true, escribe el desglose de tiempos por fase tras el resumen (--profile). */
-  private profile: boolean;
   /** Modo --verbose: texto plano con etiquetas. */
   private verbose: boolean;
   /** Render interactivo (TTY) o impresión de estados finales. */
@@ -89,10 +87,9 @@ export class ProgressTracker {
   private cursorLine = 0;
   private formatsShown = false;
 
-  constructor(options: { renderer?: 'default' | 'verbose' | 'test'; profile?: boolean } = {}) {
+  constructor(options: { renderer?: 'default' | 'verbose' | 'test' } = {}) {
     this.verbose = options.renderer === 'verbose';
     this.tty = options.renderer === 'default' && process.stdout.isTTY === true;
-    this.profile = options.profile ?? false;
     this.t0 = performance.now();
     if (options.renderer === 'default') {
       // Restaurar el cursor si el proceso sale sin completar (errores del build)
@@ -386,16 +383,6 @@ export class ProgressTracker {
       process.stdout.write(`\nAdvertencias:\n`);
       for (const warning of this.warnings) {
         process.stdout.write(`  ${warning}\n`);
-      }
-    }
-    if (this.profile) {
-      process.stdout.write(`\nPerfil de fases:\n`);
-      const order: PipelinePhase[] = ['discovery', 'render', 'latex', 'pdf', 'html', 'epub', 'markdown'];
-      for (const phase of order) {
-        const ms = this.phaseDurations[phase];
-        if (ms !== undefined) {
-          process.stdout.write(`  ${padRight(PHASE_META[phase].label, LABEL_WIDTH)}${formatTime(ms)}\n`);
-        }
       }
     }
   }

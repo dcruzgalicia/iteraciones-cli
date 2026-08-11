@@ -121,19 +121,4 @@ describe('integration: init + build', () => {
       await rm(cwd, { recursive: true, force: true });
     }
   });
-
-  it.skipIf(!pandocOk)('--dry-run no genera archivos de salida', async () => {
-    const cwd = join(tmpdir(), `iteraciones-dry-${Date.now()}`);
-    await mkdir(cwd, { recursive: true });
-    try {
-      await initTestProject(cwd);
-      await build(cwd, { dryRun: true });
-
-      // dry-run no debe crear dist/
-      const distExists = await Bun.file(join(cwd, 'dist', 'files', 'test-document.html')).exists();
-      expect(distExists).toBe(false);
-    } finally {
-      await rm(cwd, { recursive: true, force: true });
-    }
-  });
 });

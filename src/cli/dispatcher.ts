@@ -10,8 +10,7 @@ import { computeActiveFormats, DEFAULT_PDF_FORMAT } from '../config/site-config.
 import { BuildError, ConfigError, PandocError } from '../lib/errors.js';
 import { logError, logInfo, logSuccess } from '../lib/logger.js';
 import { checkPandoc } from '../lib/pandoc-runner.js';
-import { run } from '../lib/run.js';
-import { collectChecks, runDoctor as doctor } from './doctor.js';
+import { runDoctor as doctor } from './doctor.js';
 import { runFilters as filters } from './filters.js';
 import { runInit as init } from './init.js';
 import { runValidate as validate } from './validate.js';
@@ -41,18 +40,6 @@ export async function runClean(cwd: string): Promise<void> {
 
 export async function runBuild(cwd: string, options: BuildOptions = {}): Promise<void> {
   try {
-    // Validar y normalizar --concurrency (llega como string crudo desde el parser).
-    // La validación vive aquí y no en parser.ts para que el error use el
-    // formato unificado (logError) en lugar de un stack trace.
-    let concurrency = options.concurrency;
-    if (concurrency !== undefined) {
-      const parsed = typeof concurrency === 'string' ? Number.parseInt(concurrency, 10) : concurrency;
-      if (!Number.isInteger(parsed) || parsed < 1) {
-        throw new Error(`--concurrency debe ser un entero positivo (recibido: "${concurrency}")`);
-      }
-      concurrency = parsed;
-    }
-
     // Validar y resolver --output: las rutas relativas se resuelven contra la
     // raíz del proyecto (--project-root), no contra el cwd del proceso.
     let output = options.outputDir;
@@ -71,7 +58,7 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
       output = resolved;
     }
 
-    await build(cwd, { ...options, concurrency, outputDir: output });
+    await build(cwd, { ...options, outputDir: output });
   } catch (err) {
     // Los errores de frontmatter/config del build se resuelven con validate:
     // la sugerencia conecta ambas herramientas (detalle completo por archivo).
@@ -97,8 +84,8 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
   }
 }
 
-/** Información del proyecto para doctor --verbose/--json (antes comando info). */
-async function buildProjectInfo(cwd: string): Promise<{ lines: string[]; json: Record<string, unknown> }> {
+/** Información del proyecto para doctor --verbose (antes comando info). */
+async function buildProjectInfo(cwd: string): Promise<string[]> {
   const config = await loadSiteConfig(cwd);
   const pandocVersion = await checkPandoc().catch(() => 'no disponible');
   // El directorio de salida real es el del último build (state.json);
@@ -133,19 +120,7 @@ async function buildProjectInfo(cwd: string): Promise<{ lines: string[]; json: R
     `  preamble desactivados:   ${preambleDisabled.length > 0 ? preambleDisabled.join(', ') : '(ninguno)'}`,
     `  preamble desactivados extra: ${userPreamble.length > 0 ? userPreamble.join(', ') : '(ninguno)'}`,
   ];
-  const json = {
-    lang: config.lang,
-    toc: config.toc,
-    documentCount: docCount,
-    outputDir: distDir,
-    outputGenerated: distExists,
-    pandoc: pandocVersion,
-    activeFormats,
-    html: { theme, accent },
-    disabledFilters: config.disabledFilters ?? [],
-    disabledPreambleFilters: preambleDisabled,
-  };
-  return { lines, json };
+  return lines;
 }
 
 export async function runInit(cwd: string): Promise<void> {
@@ -174,28 +149,11 @@ export async function runValidate(cwd: string): Promise<void> {
   }
 }
 
-export async function runDoctor(cwd: string, options: { verbose?: boolean; json?: boolean } = {}): Promise<void> {
+export async function runDoctor(cwd: string, options: { verbose?: boolean } = {}): Promise<void> {
   try {
-    // --verbose/--json muestran la información del proyecto (antes comando info)
-    if (options.json) {
-      // doctor --json ejecuta los checks reales: antes devolvía solo la info y
-      // un script obtenía exit 0 con pandoc ausente (semántica contradictoria).
-      const checks = await collectChecks(cwd);
-      const ok = checks.every((c) => c.ok);
-      // La info del proyecto es complementaria: si la config está rota (ya
-      // reportada en checks), el JSON sale igual con info: null (scripting).
-      let info: Record<string, unknown> | null = null;
-      try {
-        info = (await buildProjectInfo(cwd)).json;
-      } catch {
-        info = null;
-      }
-      process.stdout.write(`${JSON.stringify({ ok, checks, info }, null, 2)}\n`);
-      if (!ok) process.exitCode = 1;
-      return;
-    }
+    // --verbose muestra la información del proyecto (antes comando info)
     if (options.verbose) {
-      const { lines } = await buildProjectInfo(cwd);
+      const lines = await buildProjectInfo(cwd);
       logInfo(lines.join('\n'), 'doctor');
     }
     await doctor(cwd);
@@ -270,40 +228,6 @@ export async function runFilters(cwd: string): Promise<void> {
     if (err instanceof Error) {
       logError(err.message, 'filters');
     }
-    process.exitCode = 1;
-  }
-}
-
-/**
- * Abre la salida generada (index.html del output real) en el navegador por
- * defecto. Es un disparo único — no es serve, watch ni reload: la filosofía
- * del proyecto es compilar a demanda y abrir el resultado.
- */
-export async function runOpen(cwd: string): Promise<void> {
-  // El directorio de salida real es el del último build (state.json); sin
-  // estado previo, el default.
-  const state = await loadStateFile(cwd);
-  const outputDir = state?.outputDir ?? join(cwd, 'dist', 'files');
-  const indexHtml = join(outputDir, 'index.html');
-  if (!(await Bun.file(indexHtml).exists())) {
-    logError(`no hay salida generada en ${indexHtml}. Ejecuta 'iteraciones build' primero.`, 'open');
-    process.exitCode = 1;
-    return;
-  }
-  try {
-    // Abridor por plataforma: `open` (macOS), `xdg-open` (Linux), `start` (Windows)
-    const result =
-      process.platform === 'win32'
-        ? await run('cmd', ['/c', 'start', '', indexHtml])
-        : await run(process.platform === 'darwin' ? 'open' : 'xdg-open', [indexHtml]);
-    if (result.exitCode !== 0) {
-      logError(`no se pudo abrir el navegador: ${result.stderr}`, 'open');
-      process.exitCode = 1;
-      return;
-    }
-    logSuccess(`abriendo ${indexHtml}`, 'open');
-  } catch (err) {
-    logError(`no se pudo abrir el navegador: ${err instanceof Error ? err.message : String(err)}`, 'open');
     process.exitCode = 1;
   }
 }

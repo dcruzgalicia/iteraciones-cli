@@ -111,12 +111,9 @@ iteraciones build [opciones]
 
 | Opción | Descripción | Por defecto |
 |--------|-------------|-------------|
-| `-c, --concurrency <n>` | Máximo de invocaciones pandoc simultáneas | `CPU − 1` (máx. 16) |
 | `--full` | Build completo desde cero: elimina la salida anterior (`dist/`) y la caché | — |
 | `--output <path>` | Directorio de salida | `dist/files` |
-| `--dry-run` | Muestra los documentos a procesar sin generar salida | — |
 | `--verbose` | Muestra información adicional de progreso | — |
-| `--profile` | Muestra el tiempo de cada fase del pipeline | — |
 
 ### `iteraciones init`
 
@@ -136,10 +133,6 @@ iteraciones new posts/mi-articulo.md
 
 El archivo se crea con `title`, `date` y el bloque `---`. Si no se incluye extensión `.md`, se agrega automáticamente.
 
-### `iteraciones build --dry-run`
-
-Muestra los documentos que se procesarían sin generar salida. Útil para verificar qué archivos están incluidos antes de un build completo.
-
 ### `iteraciones validate`
 
 Valida `iteraciones.config.yaml` y el frontmatter de todos los documentos Markdown del proyecto.
@@ -158,11 +151,10 @@ iteraciones doctor [opciones]
 
 Comprobaciones que realiza: versión de Bun, pandoc disponible en PATH, configuración del proyecto (`iteraciones.config.yaml`) válida, pdflatex y KOMA-Script instalados (solo si el proyecto compila PDF), permisos de lectura y escritura.
 
-Con `--verbose` también muestra la configuración del proyecto (idioma, documentos, salida, formatos activos, tema HTML, filtros desactivados). Con `--json` emite las comprobaciones y esa misma información en JSON para scripting (exit code real: 1 si algún check falla).
+Con `--verbose` también muestra la configuración del proyecto (idioma, documentos, salida, formatos activos, tema HTML, filtros desactivados).
 
 ```
 iteraciones doctor --verbose
-iteraciones doctor --json
 ```
 
 ### `iteraciones filters`
@@ -179,14 +171,6 @@ Elimina el directorio de salida (`dist/`) y la caché (`.iteraciones/`).
 
 ```
 iteraciones clean
-```
-
-### `iteraciones open`
-
-Abre la salida generada (`index.html` del directorio de salida real) en el navegador por defecto. Es un disparo único — no observa archivos ni recarga nada.
-
-```
-iteraciones open
 ```
 
 ## Filters

@@ -4,13 +4,12 @@ import { basename, join } from 'node:path';
 import { ProgressTracker } from '../cli/progress.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
-import { computeActiveFormats } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
-import { logInfo, logWarning } from '../lib/logger.js';
+import { logWarning } from '../lib/logger.js';
 import { buildAssets } from './build-assets.js';
 import { computeBuildMetadata, computeWorkSets } from './build-planner.js';
 import { buildFormatsList, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges } from './cleanup.js';
-import { buildDocsFromIndex, discover, htmlSlugFor } from './discover.js';
+import { buildDocsFromIndex, discover } from './discover.js';
 import { runDocumentPipeline } from './pipeline.js';
 import { validateDisabledPreambleFilters, validatePreambleDependencies } from './preamble-loader.js';
 import { validateDisabledFilters } from './render.js';
@@ -19,21 +18,15 @@ import type { BuildContext } from './types.js';
 
 export interface BuildOptions {
   outputDir?: string;
-  concurrency?: number | string;
   full?: boolean;
-  dryRun?: boolean;
   verbose?: boolean;
-  profile?: boolean;
 }
 
 async function setupBuildEnvironment(cwd: string, siteConfig: SiteConfig, options: BuildOptions): Promise<BuildContext> {
   const defaultOutputDir = join(cwd, 'dist', 'files');
   // Límite superior de 16: en máquinas con muchos núcleos, demasiados procesos
   // simultáneos saturan el sistema de archivos y degradan el rendimiento.
-  // Solo aplica al default automático: `--concurrency` explícito se respeta.
-  const defaultConcurrency = Math.min(Math.max(1, cpus().length - 1), 16);
-  const rawConcurrency = options.concurrency ?? defaultConcurrency;
-  const concurrency = typeof rawConcurrency === 'number' ? rawConcurrency : Number.parseInt(rawConcurrency, 10);
+  const concurrency = Math.min(Math.max(1, cpus().length - 1), 16);
   const ctx: BuildContext = {
     siteConfig,
     cwd,
@@ -51,14 +44,8 @@ async function setupBuildEnvironment(cwd: string, siteConfig: SiteConfig, option
 }
 
 export async function build(cwd: string, options: BuildOptions = {}): Promise<void> {
-  if (options.dryRun) {
-    await dryRun(cwd);
-    return;
-  }
-
   const progress = new ProgressTracker({
     renderer: options.verbose ? 'verbose' : 'default',
-    profile: options.profile,
   });
   try {
     await runBuild(cwd, options, progress);
@@ -80,58 +67,6 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
       await rm(outputDir, { recursive: true, force: true });
     }
     throw err;
-  }
-}
-
-/**
- * Muestra los documentos que se procesarían sin generar salida.
- * Utiliza la misma lógica de invalidación que el build real
- * (mtime/size/hash, filtros, bibliografía y configuración).
- */
-async function dryRun(cwd: string): Promise<void> {
-  const siteConfig = await loadSiteConfig(cwd);
-  const prevState = await loadStateFile(cwd);
-
-  // Computar la metadata de invalidación igual que el build
-  const plan = await computeBuildMetadata(cwd, siteConfig, prevState);
-
-  // Descubrir documentos con el estado anterior (sin escribir state.json)
-  const { relativePaths, changedPaths, discoveryIndex } = await discover(cwd, {
-    prevState,
-    activeFormats: plan.currentFormats,
-    // El dry-run nunca persiste el estado (no genera salidas)
-    persist: false,
-  });
-  const allDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
-  for (const doc of allDocs) {
-    doc.slug = discoveryIndex.get(doc.relativePath)?.slug ?? basename(doc.relativePath, '.md');
-  }
-
-  const formats = computeActiveFormats(siteConfig.format);
-  const formatStr = formats.length > 0 ? formats.join(', ') : '(ninguno)';
-  logInfo(`Se procesarían ${allDocs.length} documentos`, 'dry-run');
-  logInfo(`Formatos activos: ${formatStr}`, 'dry-run');
-  if (allDocs.length === 0) return;
-
-  // Conjuntos de trabajo reales (igual que el build)
-  const work = computeWorkSets(plan, allDocs, changedPaths);
-  const reprocessPaths = new Set(work.renderDocs.map((d) => d.relativePath));
-
-  const rows = allDocs.map((doc) => {
-    const status = reprocessPaths.has(doc.relativePath) ? 'se reprocesará' : 'reutilizado';
-    // La salida real del HTML (index.md → index.html): el slug por título
-    // (inicio) no es el nombre de archivo que se genera.
-    const outputName = `${htmlSlugFor(doc.relativePath, doc.slug ?? '')}.html`;
-    return { path: doc.relativePath, outputName, status };
-  });
-
-  const pathWidth = Math.max(...rows.map((r) => r.path.length), 'DOCUMENTO'.length);
-  const outputWidth = Math.max(...rows.map((r) => r.outputName.length), 'SALIDA'.length);
-
-  logInfo('');
-  logInfo(`  ${'DOCUMENTO'.padEnd(pathWidth)}  ${'SALIDA'.padEnd(outputWidth)}  ESTADO`);
-  for (const row of rows) {
-    logInfo(`  ${row.path.padEnd(pathWidth)}  ${row.outputName.padEnd(outputWidth)}  ${row.status}`);
   }
 }
 

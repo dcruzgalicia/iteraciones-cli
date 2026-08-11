@@ -3,12 +3,11 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CommanderError } from 'commander';
-import { runBuild, runClean, runDoctor, runFilters, runInit, runNew, runOpen, runValidate } from '../cli/dispatcher.js';
+import { runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from '../cli/dispatcher.js';
 import { checkLatexEngine } from '../cli/doctor/system-checks.js';
 import { buildProgram } from '../cli/parser.js';
 import { logWarning, setLoggerColorEnabled } from '../lib/logger.js';
 import { checkPandoc } from '../lib/pandoc-runner.js';
-import * as runModule from '../lib/run.js';
 import { initTestProject, withTempDir } from './helpers.js';
 
 // Los tests que invocan pandoc real se marcan como skip si no está instalado
@@ -133,24 +132,6 @@ describe('parser (errores de flags)', () => {
     return output;
   }
 
-  it('--concurrency 0 produce mensaje amigable sin stack trace', async () => {
-    process.exitCode = 0;
-    const output = await parseWithStderr(['build', '--concurrency', '0']);
-    expect(output).toContain('✖');
-    expect(output).toContain('--concurrency debe ser un entero positivo (recibido: "0")');
-    expect(output).not.toContain('at <anonymous>');
-    expect(output).not.toContain('.ts:');
-    expect(process.exitCode).toBe(1);
-  });
-
-  it('--concurrency abc produce mensaje amigable sin stack trace', async () => {
-    process.exitCode = 0;
-    const output = await parseWithStderr(['build', '--concurrency', 'abc']);
-    expect(output).toContain('--concurrency debe ser un entero positivo (recibido: "abc")');
-    expect(output).not.toContain('at <anonymous>');
-    expect(process.exitCode).toBe(1);
-  });
-
   it('--output fuera del proyecto produce mensaje amigable sin stack trace', async () => {
     process.exitCode = 0;
     const output = await parseWithStderr(['build', '--output', '../fuera']);
@@ -257,15 +238,6 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
-  it('termina con exit 1 con --concurrency inválido', async () => {
-    await withTempDir(async (dir) => {
-      await initTestProject(dir);
-      process.exitCode = 0;
-      await runBuild(dir, { concurrency: 0 });
-      expect(process.exitCode).toBe(1);
-    });
-  });
-
   it('termina con exit 1 con --output fuera del proyecto', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
@@ -285,22 +257,6 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       // No escribe en el cwd del proceso
       expect(await Bun.file(join(tmpdir(), 'salida')).exists()).toBe(false);
     });
-  });
-
-  it('rechaza --concurrency no entero con mensaje en stderr', async () => {
-    const stderrSpy = spyStderr();
-    let output = '';
-    try {
-      await withTempDir(async (dir) => {
-        await initTestProject(dir);
-        process.exitCode = 0;
-        await runBuild(dir, { concurrency: 0 });
-      });
-    } finally {
-      output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
-      stderrSpy.mockRestore();
-    }
-    expect(output).toContain('concurrency');
   });
 
   it('frontmatter YAML inválido se reporta con contexto [build]', async () => {
@@ -484,41 +440,6 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       const tex = await Bun.file(join(dir, 'dist', 'files', 'test-document.tex')).text();
       expect(tex).toContain('\\noindent Contenido corto.');
       expect(tex).not.toContain('\\mbox{Contenido}');
-    });
-  });
-
-  it('dry-run no persiste state.json', async () => {
-    await withTempDir(async (dir) => {
-      await initTestProject(dir);
-      process.exitCode = 0;
-      await runBuild(dir, { dryRun: true });
-      expect(process.exitCode).toBe(0);
-      // El dry-run descubre sin escribir estado: el siguiente build real
-      // reprocesa todo (nunca reutiliza contenido stale).
-      expect(await Bun.file(join(dir, '.iteraciones', 'state.json')).exists()).toBe(false);
-    });
-  });
-
-  it('dry-run muestra la salida real (index.md → index.html, no el slug por título)', async () => {
-    await withTempDir(async (dir) => {
-      await initTestProject(dir);
-      await writeFile(join(dir, 'index.md'), '---\ntitle: Inicio\ndate: 2026-01-01\n---\n\nInicio.\n', 'utf8');
-      const stdoutSpy = spyOn(process.stdout, 'write');
-      let out = '';
-      try {
-        process.exitCode = 0;
-        await runBuild(dir, { dryRun: true });
-      } finally {
-        out = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
-        stdoutSpy.mockRestore();
-      }
-      expect(process.exitCode).toBe(0);
-      // El encabezado es SALIDA y la fila de index.md muestra index.html
-      expect(out).toContain('SALIDA');
-      expect(out).toContain('index.md');
-      expect(out).toContain('index.html');
-      // El resto de documentos conserva su salida con slug (test-document.html)
-      expect(out).toContain('test-document.html');
     });
   });
 
@@ -997,7 +918,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
   });
 });
 
-describe('doctor --verbose/--json (antes runInfo)', () => {
+describe('doctor --verbose (antes runInfo)', () => {
   afterEach(resetExitCode);
 
   /** Ejecuta doctor --verbose y captura stdout. */
@@ -1047,62 +968,6 @@ describe('doctor --verbose/--json (antes runInfo)', () => {
       const output = await infoOutput(dir);
       expect(output).toContain('preamble desactivados extra:');
       expect(output).toContain('(ninguno)');
-    });
-  });
-
-  it('--json emite un objeto JSON estable', async () => {
-    await withTempDir(async (dir) => {
-      await initTestProject(dir);
-      const stdoutSpy = spyOn(process.stdout, 'write');
-      let output = '';
-      try {
-        process.exitCode = 0;
-        await runDoctor(dir, { json: true });
-      } finally {
-        output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
-        stdoutSpy.mockRestore();
-      }
-      expect(process.exitCode).toBe(0);
-      const parsed = JSON.parse(output) as {
-        ok: boolean;
-        checks: Array<{ label: string; ok: boolean }>;
-        info: {
-          lang: string;
-          documentCount: number;
-          outputDir: string;
-          activeFormats: string[];
-          html: { theme: string; accent: string };
-        };
-      };
-      // doctor --json ejecuta los checks reales (contrato de scripting)
-      expect(parsed.ok).toBe(true);
-      expect(parsed.checks.length).toBeGreaterThan(0);
-      expect(parsed.checks[0]?.label).toBe('bun instalado');
-      expect(parsed.info.lang).toBe('es-MX');
-      expect(parsed.info.documentCount).toBe(1);
-      expect(parsed.info.outputDir).toContain('dist');
-      expect(parsed.info.activeFormats).toContain('html');
-      expect(parsed.info.html.theme).toBe('dark');
-    });
-  });
-
-  it('--json con config inválida reporta los checks con ok false y sale con código 1', async () => {
-    await withTempDir(async (dir) => {
-      await writeFile(join(dir, 'iteraciones.config.yaml'), ':: yaml inválido ::', 'utf8');
-      const stdoutSpy = spyOn(process.stdout, 'write');
-      let output = '';
-      try {
-        process.exitCode = 0;
-        await runDoctor(dir, { json: true });
-      } finally {
-        output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
-        stdoutSpy.mockRestore();
-      }
-      const parsed = JSON.parse(output) as { ok: boolean; checks: Array<{ label: string; ok: boolean }> };
-      expect(parsed.ok).toBe(false);
-      const configCheck = parsed.checks.find((c) => c.label === 'iteraciones.config.yaml');
-      expect(configCheck?.ok).toBe(false);
-      expect(process.exitCode).toBe(1);
     });
   });
 });
@@ -1723,24 +1588,6 @@ describe('wiring parser → dispatcher (argv reales)', () => {
     });
   });
 
-  it('--profile muestra el desglose de fases en el resumen', async () => {
-    await withTempDir(async (dir) => {
-      await initTestProject(dir);
-      const stdoutSpy = spyOn(process.stdout, 'write');
-      let out = '';
-      try {
-        process.exitCode = 0;
-        await runBuild(dir, { profile: true });
-      } finally {
-        out = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
-        stdoutSpy.mockRestore();
-      }
-      expect(process.exitCode).toBe(0);
-      expect(out).toContain('Perfil de fases:');
-      expect(out).toContain('Documentos encontrados');
-    });
-  });
-
   it('clean con fallo (EACCES) reporta el directorio y sale con código 1', async () => {
     await withTempDir(async (dir) => {
       await mkdir(join(dir, 'dist', 'bloqueado'), { recursive: true });
@@ -1758,49 +1605,6 @@ describe('wiring parser → dispatcher (argv reales)', () => {
       }
       expect(process.exitCode).toBe(1);
       expect(output).toContain('no se pudo eliminar');
-    });
-  });
-
-  it('open sin salida generada: mensaje accionable y exit 1', async () => {
-    await withTempDir(async (dir) => {
-      await initTestProject(dir);
-      const stderrSpy = spyStderr();
-      let output = '';
-      try {
-        process.exitCode = 0;
-        await runOpen(dir);
-      } finally {
-        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
-        stderrSpy.mockRestore();
-      }
-      expect(process.exitCode).toBe(1);
-      expect(output).toContain("Ejecuta 'iteraciones build' primero");
-    });
-  });
-
-  it('open con salida generada abre el index.html del output real', async () => {
-    await withTempDir(async (dir) => {
-      await initTestProject(dir);
-      await mkdir(join(dir, 'dist', 'files'), { recursive: true });
-      await writeFile(join(dir, 'dist', 'files', 'index.html'), '<p>ok</p>', 'utf8');
-      const runSpy = spyOn(runModule, 'run').mockResolvedValue({ stdout: '', stderr: '', exitCode: 0 });
-      const stdoutSpy = spyOn(process.stdout, 'write');
-      let out = '';
-      let openedPath = '';
-      try {
-        process.exitCode = 0;
-        await runOpen(dir);
-        out = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
-        openedPath = String(runSpy.mock.calls[0]?.[1]?.[0] ?? '');
-      } finally {
-        stdoutSpy.mockRestore();
-        runSpy.mockRestore();
-      }
-      expect(process.exitCode).toBe(0);
-      expect(out).toContain('abriendo');
-      expect(out).toContain('index.html');
-      // Se abrió el index.html del output real
-      expect(openedPath).toContain('index.html');
     });
   });
 });

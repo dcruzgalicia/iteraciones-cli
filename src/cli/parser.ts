@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
-import { runBuild, runClean, runDoctor, runFilters, runInit, runNew, runOpen, runValidate } from './dispatcher.js';
+import { runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from './dispatcher.js';
 
 /**
  * Traduce los mensajes de error conocidos de commander al español.
@@ -44,32 +44,25 @@ export function buildProgram(): Command {
   program
     .command('build')
     .description('construye el sitio a partir de los archivos Markdown')
-    .option('-c, --concurrency <n>', 'máximo de invocaciones pandoc simultáneas (por defecto: CPU − 1)')
     .option('--full', 'build completo desde cero: elimina la salida anterior y la caché')
     .option('--output <path>', 'directorio de salida (por defecto: dist/files)')
-    .option('--dry-run', 'muestra los documentos que se procesarían sin generar salida')
     .option('--verbose', 'muestra información adicional de progreso')
-    .option('--profile', 'muestra el tiempo de cada fase del pipeline al final del build')
     .addHelpText(
       'after',
       `
 Ejemplos:
   iteraciones build                build incremental (solo archivos modificados)
   iteraciones build --full         build completo desde cero (sin caché)
-  iteraciones build --dry-run      muestra los documentos a procesar sin generar salida
   iteraciones build --verbose      muestra información adicional de progreso
 `,
     )
-    .action(async (opts: { concurrency?: string; full?: boolean; output?: string; dryRun?: boolean; verbose?: boolean; profile?: boolean }) => {
-      // La validación de --concurrency y --output ocurre en runBuild, donde
+    .action(async (opts: { full?: boolean; output?: string; verbose?: boolean }) => {
+      // La validación de --output ocurre en runBuild, donde
       // los errores se reportan con el formato unificado (sin stack traces).
       await runBuild(projectRoot(), {
-        concurrency: opts.concurrency,
         full: opts.full,
         outputDir: opts.output,
-        dryRun: opts.dryRun,
         verbose: opts.verbose,
-        profile: opts.profile,
       });
     });
 
@@ -105,18 +98,16 @@ Ejemplos:
     .command('doctor')
     .description('verifica el entorno de build')
     .option('--verbose', 'muestra también la configuración del proyecto')
-    .option('--json', 'salida en JSON (para scripting)')
     .addHelpText(
       'after',
       `
 Ejemplos:
   iteraciones doctor               verifica pandoc, motor LaTeX y permisos
   iteraciones doctor --verbose     además, muestra la configuración del proyecto
-  iteraciones doctor --json        toda la información en JSON
 `,
     )
-    .action(async (opts: { verbose?: boolean; json?: boolean }) => {
-      await runDoctor(projectRoot(), { verbose: opts.verbose, json: opts.json });
+    .action(async (opts: { verbose?: boolean }) => {
+      await runDoctor(projectRoot(), { verbose: opts.verbose });
     });
 
   program
@@ -160,20 +151,6 @@ Ejemplos:
 `,
     )
     .action(() => runFilters(projectRoot()));
-
-  program
-    .command('open')
-    .description('abre la salida generada (index.html) en el navegador por defecto')
-    .addHelpText(
-      'after',
-      `
-Ejemplos:
-  iteraciones open    abre dist/files/index.html en el navegador
-`,
-    )
-    .action(async () => {
-      await runOpen(projectRoot());
-    });
 
   return program;
 }
