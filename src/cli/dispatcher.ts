@@ -1,7 +1,7 @@
 import { mkdir, rm, stat, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, normalize } from 'node:path';
 import { stringify } from 'yaml';
-import { isIgnoredByRules, isInsideIgnoredDir, loadGitignoreRules } from '../builder/gitignore.js';
+import { listMarkdownDocuments } from '../builder/gitignore.js';
 import type { BuildOptions } from '../builder/orchestrator.js';
 import { build } from '../builder/orchestrator.js';
 import { loadStateFile } from '../builder/state.js';
@@ -111,7 +111,7 @@ async function buildProjectInfo(cwd: string): Promise<{ lines: string[]; json: R
   const defaultPreamble = DEFAULT_PDF_FORMAT.disabledPreambleFilters;
   const preambleDisabled = config.format?.pdf?.disabledPreambleFilters ?? [];
   const userPreamble = preambleDisabled.filter((name) => !defaultPreamble.includes(name));
-  const docCount = await countMarkdownDocuments(cwd);
+  const docCount = (await listMarkdownDocuments(cwd)).length;
   const html = config.format?.html;
   const theme = html?.theme ?? '(por defecto)';
   const accent = html?.accent ?? '(por defecto)';
@@ -142,18 +142,6 @@ async function buildProjectInfo(cwd: string): Promise<{ lines: string[]; json: R
     disabledPreambleFilters: preambleDisabled,
   };
   return { lines, json };
-}
-
-/** Cuenta los documentos Markdown del proyecto, excluyendo directorios ignorados. */
-async function countMarkdownDocuments(cwd: string): Promise<number> {
-  let count = 0;
-  const gitignoreRules = await loadGitignoreRules(cwd);
-  for await (const entry of new Bun.Glob('**/*.md').scan({ cwd })) {
-    if (isInsideIgnoredDir(entry)) continue;
-    if (isIgnoredByRules(entry, gitignoreRules)) continue;
-    count++;
-  }
-  return count;
 }
 
 export async function runInit(cwd: string): Promise<void> {
