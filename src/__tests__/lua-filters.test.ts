@@ -247,6 +247,42 @@ describe.skipIf(!pandocOk)('filtros Lua latex', () => {
     const tex = await toLatex('Hola mundo.');
     expect(tex).not.toContain('\\mbox');
   });
+
+  it('no corta la oración en abreviaturas de meses ni en p.ej.', async () => {
+    const tex = await toLatex('El 3 de mar. Llegó tarde. Y el 5 de abr. También.');
+    expect(tex).not.toContain('\\mbox{mar.}');
+    expect(tex).not.toContain('\\mbox{abr.}');
+    const tex2 = await toLatex('Usa p.ej. Valor. Luego sigue.');
+    expect(tex2).not.toContain('\\mbox{p.ej.}');
+  });
+
+  it('el override del proyecto de 06-mbox-sentence-end no rompe la pasada (helpers del paquete por env)', async () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-mbox-'));
+    try {
+      mkdirSync(join(cwd, 'filters', 'latex'), { recursive: true });
+      // Copia del filter del paquete como override del proyecto: sin la ruta
+      // del helper inyectada por env, el require relativo a PANDOC_SCRIPT_FILE
+      // apuntaría al proyecto y fallaría.
+      const pkg06 = await Bun.file(join(RESOURCES, 'latex', '06-mbox-sentence-end.lua')).text();
+      writeFileSync(join(cwd, 'filters', 'latex', '06-mbox-sentence-end.lua'), pkg06);
+      // El resto de la capa latex del paquete (sin el 06, que es el override)
+      const latexSin06 = LATEX_FILTERS.filter((f) => !f.endsWith('06-mbox-sentence-end.lua'));
+      const extraArgs = [...SEMANTIC_FILTERS, join(cwd, 'filters', 'latex', '06-mbox-sentence-end.lua'), ...latexSin06].flatMap((f) => [
+        '--lua-filter',
+        f,
+      ]);
+      const tex = await runPandoc({
+        input: 'Primera oración de ejemplo. Segunda aquí.',
+        sourcePath: 'test.md',
+        to: 'latex',
+        extraArgs,
+        env: { ITERACIONES_MBOX_HELPERS: join(RESOURCES, 'latex', 'shared', 'mbox-helpers.lua') },
+      });
+      expect(tex).toContain('\\mbox{');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
 });
 
 describe.skipIf(!pandocOk)('filtro interno internal/flags (detección estructural)', () => {
