@@ -267,6 +267,10 @@ La configuración PDF es mínima y deliberada: `generate` (activa la compilació
 
 Medido (macOS arm64, Bun 1.3.x, sin pandoc en PATH, `--version`): **~55 ms de media** (10 ejecuciones; la primera incluye cold start de ~0.18 s). Decisión: no optimizar el arranque — está muy por debajo del umbral perceptible y cualquier carga diferida complicaría el código sin beneficio medible. Re-medir si alguna vez el arranque supera los ~200 ms.
 
+### ¿Por qué no hay configuración dinámica del PDF (papel, márgenes, fuente)?
+
+La tipografía del PDF (papel, márgenes, interlineado, fuente, estilos de sección) vive en los preamble filters (`src/lib/resources/preamble/*.tex`) y se personaliza por proyecto con el override `<proyecto>/preamble/<nombre>.tex` (documentado en configuration.md). Decisión pre-1.0: **no** añadir opciones dinámicas (`format.pdf.margins`, `format.pdf.paper`, `format.pdf.font-size`): duplicarían el mecanismo de override, ampliarían la superficie pública sin necesidad y fragmentarían la configuración en dos lugares. El override por `.tex` es la vía soportada; re-evaluar solo si el uso real lo justifica tras 1.0.
+
 ### ¿Por qué Bun?
 
 - **Sin Node.js**: Bun es runtime + package manager + test runner + bundler. Una sola dependencia.
