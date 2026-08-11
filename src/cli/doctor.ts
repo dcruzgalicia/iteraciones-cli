@@ -13,8 +13,7 @@ import {
 
 /**
  * Ejecuta las comprobaciones de doctor y las devuelve estructuradas.
- * Comparte la lógica con runDoctor: el dispatcher las usa para el JSON
- * (doctor --json ejecuta los checks reales, no solo la info del proyecto).
+ * Comparte la lógica con runDoctor (checks del entorno).
  */
 export async function collectChecks(cwd: string): Promise<CheckResult[]> {
   // La config se carga una sola vez (en paralelo con las verificaciones de
