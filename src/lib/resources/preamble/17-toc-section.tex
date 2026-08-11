@@ -1,4 +1,10 @@
 % Redefine \tableofcontents para usar \subsubsection* en lugar de \chapter*
+% (el pipeline usa --top-level-division=section: un \chapter* crearía un salto
+% de página fantasma). Riesgo conocido: \tocbasic@listhead@toc es un comando
+% interno de KOMA-Script (el manual lo documenta como interno pero estable);
+% no existe equivalente público para cambiar el nivel del heading de una lista.
+% Guardia: el smoke PDF de cli-layer compila con toc: true (regresión ante
+% cambios de KOMA). Revisar en cada actualización de TeX Live.
 \makeatletter
 \newcommand*{\tocbasic@listhead@toc}[1]{%
   \subsubsection*{#1}%
