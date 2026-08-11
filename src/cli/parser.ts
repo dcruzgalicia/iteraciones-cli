@@ -53,6 +53,9 @@ Documentación:
 `,
   );
   program.option('--project-root <path>', 'directorio raíz del proyecto (por defecto: directorio actual)');
+  // Las opciones globales (--project-root) se muestran también en el help de
+  // cada subcomando, no solo en el help raíz.
+  program.configureHelp({ showGlobalOptions: true });
   // Los errores de uso de commander llegan en inglés: se traducen los 4 casos
   // conocidos (comando/opción desconocida, argumento faltante) con regex; la
   // ayuda y la versión se configuran nativamente en español arriba.

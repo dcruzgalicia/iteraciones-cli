@@ -134,6 +134,21 @@ describe('parser (errores de commander en español)', () => {
     expect(output).toContain('docs/ejemplos.md');
     expect(output).toContain('list-filters');
   });
+
+  it('el help de subcomandos muestra --project-root (opción global visible)', async () => {
+    const stdoutSpy = spyOn(process.stdout, 'write');
+    let output = '';
+    try {
+      await buildProgram()
+        .parseAsync(['bun', 'bin.ts', 'build', '--help'])
+        .catch(() => {});
+    } finally {
+      output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+      stdoutSpy.mockRestore();
+    }
+    expect(output).toContain('--project-root');
+    expect(output).toContain('directorio raíz del proyecto');
+  });
 });
 
 describe('parser (errores de flags)', () => {
