@@ -9,7 +9,8 @@ lang: es-MX                       # código de idioma BCP 47
 toc: false                        # tabla de contenidos (PDF, LaTeX, HTML, EPUB)
 
 format:
-  latex: false                     # genera archivos .tex
+  latex:
+    generate: false               # genera archivos .tex
 
   pdf:
     generate: false               # genera PDF
@@ -60,10 +61,18 @@ El `lang` del frontmatter de un documento sí sobreescribe el de la configuraci�
 
 ### `format.latex`
 
-**Tipo:** `boolean`
-**Por defecto:** `false`
+**Tipo:** `object` con `generate`
+**Por defecto:** `generate: false`
 
 Genera archivos `.tex` (LaTeX) para cada documento procesado en el directorio de salida.
+
+```yaml
+format:
+  latex:
+    generate: true
+```
+
+Antes de la versión 0.19.x, `format.latex` era un booleano simple (`latex: true`). Ese formato ya no se acepta: se advierte y se usa el valor por defecto.
 
 ### `format.pdf`
 

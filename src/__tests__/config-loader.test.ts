@@ -21,7 +21,7 @@ describe('loadSiteConfig', () => {
       expect(config.format.html?.logo).toBe('');
       expect(config.disabledFilters).toBeUndefined();
       expect(config.format?.pdf?.disabledPreambleFilters).toEqual(['24-eso-pic', '25-pdfx', '26-crop']);
-      expect(config.format.latex).toBe(false);
+      expect(config.format.latex?.generate).toBe(false);
       expect(config.format.html?.generate).toBe(true);
       expect(config.format.pdf?.generate).toBe(false);
       expect(config.format.epub?.generate).toBe(false);
@@ -139,19 +139,27 @@ describe('loadSiteConfig', () => {
     });
   });
 
-  it('activa format.latex con true', async () => {
+  it('activa format.latex con generate: true', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'format:\n  latex: true');
+      await writeConfig(dir, 'format:\n  latex:\n    generate: true');
       const config = await loadSiteConfig(dir);
-      expect(config.format.latex).toBe(true);
+      expect(config.format.latex?.generate).toBe(true);
     });
   });
 
-  it('desactiva format.latex con false', async () => {
+  it('desactiva format.latex con generate: false', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'format:\n  latex: false');
+      await writeConfig(dir, 'format:\n  latex:\n    generate: false');
       const config = await loadSiteConfig(dir);
-      expect(config.format.latex).toBe(false);
+      expect(config.format.latex?.generate).toBe(false);
+    });
+  });
+
+  it('el formato booleano antiguo latex: true genera warning y usa el default', async () => {
+    await withTempDir(async (dir) => {
+      await writeConfig(dir, 'format:\n  latex: true');
+      const config = await loadSiteConfig(dir);
+      expect(config.format.latex?.generate).toBe(false);
     });
   });
 
@@ -196,7 +204,8 @@ describe('loadSiteConfig', () => {
         [
           'lang: es-MX',
           'format:',
-          '  latex: true',
+          '  latex:',
+          '    generate: true',
           '  pdf:',
           '    generate: true',
           '    toc: true',
@@ -222,7 +231,7 @@ describe('loadSiteConfig', () => {
       expect(config.format.html?.tagline).toBe('mi tagline');
       expect(config.lang).toBe('es-MX');
       expect(config.format.html?.logo).toBe('logo.svg');
-      expect(config.format.latex).toBe(true);
+      expect(config.format.latex?.generate).toBe(true);
       expect(config.format.pdf?.generate).toBe(true);
       expect(config.format.pdf?.showDate).toBe(true);
       expect(config.toc).toBe(true);
@@ -306,11 +315,11 @@ describe('loadSiteConfig', () => {
 
   // ── Tests de las tres vías de carga (cubren la unificación de defaults) ──
 
-  it('format.latex es false con config presente sin clave latex (vía 1)', async () => {
+  it('format.latex.generate es false con config presente sin clave latex (vía 1)', async () => {
     await withTempDir(async (dir) => {
       await writeConfig(dir, 'lang: es-MX');
       const config = await loadSiteConfig(dir);
-      expect(config.format.latex).toBe(false);
+      expect(config.format.latex?.generate).toBe(false);
     });
   });
 
@@ -383,8 +392,8 @@ describe('loadSiteConfig', () => {
     }
 
     // Los defaults de formato deben coincidir en las tres vías
-    expect(defaultsConArchivoVacio.format.latex).toBe(defaultsSinArchivo.format.latex);
-    expect(defaultsConMinimo.format.latex).toBe(defaultsSinArchivo.format.latex);
+    expect(defaultsConArchivoVacio.format.latex).toEqual(defaultsSinArchivo.format.latex);
+    expect(defaultsConMinimo.format.latex).toEqual(defaultsSinArchivo.format.latex);
     expect(defaultsConArchivoVacio.format.html?.generate).toBe(defaultsSinArchivo.format.html?.generate);
     expect(defaultsConMinimo.format.html?.generate).toBe(defaultsSinArchivo.format.html?.generate);
     expect(defaultsConArchivoVacio.format?.pdf?.disabledPreambleFilters).toEqual(defaultsSinArchivo.format?.pdf?.disabledPreambleFilters);
@@ -396,7 +405,7 @@ describe('loadSiteConfig', () => {
       const config = await loadSiteConfig(dir);
       expect(config.lang).toBe(DEFAULT_SITE_CONFIG.lang);
       expect(config.toc).toBe(DEFAULT_SITE_CONFIG.toc);
-      expect(config.format.latex).toBe(DEFAULT_SITE_CONFIG.format.latex);
+      expect(config.format.latex).toEqual(DEFAULT_SITE_CONFIG.format.latex);
       expect(config.format.html).toEqual(DEFAULT_HTML_FORMAT);
       expect(config.format.pdf).toEqual(DEFAULT_PDF_FORMAT);
       expect(config.format.epub).toEqual(DEFAULT_EPUB_FORMAT);

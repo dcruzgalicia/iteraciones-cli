@@ -3,7 +3,7 @@ import { computeActiveFormats, type FormatConfig } from '../config/site-config.j
 
 describe('computeActiveFormats', () => {
   const empty: FormatConfig = {
-    latex: false,
+    latex: { generate: false },
     html: { generate: false },
     pdf: { generate: false },
     epub: { generate: false },
@@ -14,8 +14,8 @@ describe('computeActiveFormats', () => {
     expect(computeActiveFormats(empty)).toEqual([]);
   });
 
-  it('incluye latex cuando es true', () => {
-    expect(computeActiveFormats({ ...empty, latex: true })).toEqual(['latex']);
+  it('incluye latex cuando generate: true', () => {
+    expect(computeActiveFormats({ ...empty, latex: { generate: true } })).toEqual(['latex']);
   });
 
   it('incluye pdf cuando generate: true', () => {
@@ -37,7 +37,7 @@ describe('computeActiveFormats', () => {
   it('incluye múltiples formatos activos simultáneamente', () => {
     const cfg: FormatConfig = {
       ...empty,
-      latex: true,
+      latex: { generate: true },
       pdf: { generate: true },
       html: { generate: true },
     };

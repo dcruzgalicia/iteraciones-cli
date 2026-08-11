@@ -47,6 +47,11 @@ export interface PdfFormatConfig {
   disabledPreambleFilters?: string[];
 }
 
+export interface LatexFormatConfig {
+  /** Si true, genera archivos .tex en el output. */
+  generate?: boolean;
+}
+
 export interface EpubFormatConfig {
   /** Si true, genera EPUB en el build. */
   generate?: boolean;
@@ -63,7 +68,7 @@ export interface FormatConfig {
   epub?: EpubFormatConfig;
   markdown?: MarkdownFormatConfig;
   /** Si true (por defecto: false), genera archivos .tex en el output. */
-  latex?: boolean;
+  latex?: LatexFormatConfig;
 }
 
 // ── SiteConfig ──
@@ -92,6 +97,10 @@ export const DEFAULT_HTML_FORMAT = {
   generate: true,
 } satisfies HtmlFormatConfig;
 
+export const DEFAULT_LATEX_FORMAT = {
+  generate: false,
+} satisfies LatexFormatConfig;
+
 export const DEFAULT_PDF_FORMAT = {
   generate: false,
   showDate: false,
@@ -112,7 +121,7 @@ export const DEFAULT_MARKDOWN_FORMAT = {
  */
 export function computeActiveFormats(format: FormatConfig): string[] {
   const formats: string[] = [];
-  if (format.latex === true) formats.push('latex');
+  if (format.latex?.generate === true) formats.push('latex');
   if (format.pdf?.generate === true) formats.push('pdf');
   if (format.html?.generate === true) formats.push('html');
   if (format.epub?.generate === true) formats.push('epub');
@@ -132,6 +141,6 @@ export const DEFAULT_SITE_CONFIG = {
     pdf: DEFAULT_PDF_FORMAT,
     epub: DEFAULT_EPUB_FORMAT,
     markdown: DEFAULT_MARKDOWN_FORMAT,
-    latex: false,
+    latex: DEFAULT_LATEX_FORMAT,
   },
 };

@@ -123,7 +123,7 @@ describe('computeWorkSets', () => {
 describe('computeBuildMetadata', () => {
   it('calcula hashes y flags de formato desde la configuración', async () => {
     await withTempDir(async (dir) => {
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'format:\n  latex: true\n  html:\n    generate: true\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'format:\n  latex:\n    generate: true\n  html:\n    generate: true\n', 'utf8');
       const siteConfig = await loadSiteConfig(dir);
       const plan = await computeBuildMetadata(dir, siteConfig, null);
       expect(plan.currentFormats).toEqual(['latex', 'html']);
@@ -149,7 +149,7 @@ describe('computeBuildMetadata', () => {
 
   it('con prevState de otros formatos: newFormats y removedFormats se calculan', async () => {
     await withTempDir(async (dir) => {
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'format:\n  latex: true\n  html:\n    generate: true\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'format:\n  latex:\n    generate: true\n  html:\n    generate: true\n', 'utf8');
       const siteConfig = await loadSiteConfig(dir);
       const prevState = {
         startedAt: 0,

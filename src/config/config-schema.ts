@@ -1,7 +1,14 @@
 import { z } from 'zod';
 import { ACCENT_PALETTES, type AccentColor } from '../lib/accent-palettes.js';
-import type { EpubFormatConfig, HtmlFormatConfig, MarkdownFormatConfig, PdfFormatConfig } from './site-config.js';
-import { DEFAULT_EPUB_FORMAT, DEFAULT_HTML_FORMAT, DEFAULT_MARKDOWN_FORMAT, DEFAULT_PDF_FORMAT, DEFAULT_SITE_CONFIG } from './site-config.js';
+import type { EpubFormatConfig, HtmlFormatConfig, LatexFormatConfig, MarkdownFormatConfig, PdfFormatConfig } from './site-config.js';
+import {
+  DEFAULT_EPUB_FORMAT,
+  DEFAULT_HTML_FORMAT,
+  DEFAULT_LATEX_FORMAT,
+  DEFAULT_MARKDOWN_FORMAT,
+  DEFAULT_PDF_FORMAT,
+  DEFAULT_SITE_CONFIG,
+} from './site-config.js';
 
 // ── Constantes ────────────────────────────────────────────────────────────
 
@@ -87,6 +94,14 @@ const PdfFormatSchema = z
   })
   .strict();
 
+// ── LatexFormatConfig ────────────────────────────────────────────────────────
+
+const LatexFormatSchema = z
+  .object({
+    generate: z.boolean().default(DEFAULT_LATEX_FORMAT.generate),
+  })
+  .strict();
+
 // ── Epub, Markdown ─────────────────────────────────────────────────────────
 
 const EpubFormatSchema = z
@@ -105,7 +120,7 @@ const MarkdownFormatSchema = z
 
 const FormatSchema = z
   .object({
-    latex: z.boolean().default(DEFAULT_SITE_CONFIG.format.latex),
+    latex: LatexFormatSchema.optional(),
     html: HtmlFormatSchema.optional(),
     pdf: PdfFormatSchema.optional(),
     epub: EpubFormatSchema.optional(),
@@ -157,12 +172,13 @@ export const SiteConfigSchema = RawSiteConfigSchema.transform((raw) => {
   const htmlRaw = f.html as Record<string, unknown> | undefined;
   const epubRaw = f.epub as Record<string, unknown> | undefined;
   const mdRaw = f.markdown as Record<string, unknown> | undefined;
+  const latexRaw = f.latex as Record<string, unknown> | undefined;
 
   return {
     lang: raw.lang,
     toc: raw.toc,
     format: {
-      latex: (f.latex as boolean | undefined) ?? DEFAULT_SITE_CONFIG.format.latex,
+      latex: latexRaw ? (camelizeKeys(latexRaw) as LatexFormatConfig) : { ...DEFAULT_LATEX_FORMAT },
       html: htmlRaw ? (camelizeKeys(htmlRaw) as HtmlFormatConfig) : { ...DEFAULT_HTML_FORMAT },
       pdf: pdfRaw ? (camelizeKeys(pdfRaw) as PdfFormatConfig) : { ...DEFAULT_PDF_FORMAT },
       epub: epubRaw ? (camelizeKeys(epubRaw) as EpubFormatConfig) : { ...DEFAULT_EPUB_FORMAT },
