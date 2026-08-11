@@ -29,7 +29,8 @@ function M.classify(inl)
   if inl.t == 'Str' then return 'word' end
   if inl.t == 'Space' or inl.t == 'SoftBreak' then return 'space' end
   if inl.t == 'Emph' or inl.t == 'Strong' or inl.t == 'Underline' or inl.t == 'Superscript' or
-     inl.t == 'Subscript' or inl.t == 'SmallCaps' or inl.t == 'Span' or inl.t == 'Link' or inl.t == 'Cite' then
+     inl.t == 'Subscript' or inl.t == 'SmallCaps' or inl.t == 'Span' or inl.t == 'Link' or inl.t == 'Cite' or
+     inl.t == 'Quoted' then
     return 'word-group'
   end
   return 'skip'
@@ -39,7 +40,7 @@ function M.inline_text(inl)
   if inl.t == 'Str' then return inl.text end
   if inl.t == 'Space' or inl.t == 'SoftBreak' then return ' ' end
   if inl.t == 'Emph' or inl.t == 'Strong' or inl.t == 'Underline' or inl.t == 'Superscript' or
-     inl.t == 'Subscript' or inl.t == 'SmallCaps' or inl.t == 'Span' then
+     inl.t == 'Subscript' or inl.t == 'SmallCaps' or inl.t == 'Span' or inl.t == 'Quoted' then
     local parts = {}
     for _, c in ipairs(inl.content) do
       local t = M.inline_text(c)
@@ -125,6 +126,13 @@ function M.group_word_count(inl)
     end
   end
   return n
+end
+
+-- true si el Str es SOLO puntuación (p. ej. "." tras una comilla de cierre o
+-- un grupo: "descansa". o **propia**.). La puntuación suelta no es una
+-- palabra para el conteo del mbox: no debe robar la última posición del wrap.
+function M.is_punct_str(text)
+  return #text > 0 and text:match('^%p+$') ~= nil
 end
 
 return M
