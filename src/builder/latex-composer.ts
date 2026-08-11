@@ -4,6 +4,7 @@ import { logWarning } from '../lib/logger.js';
 import { runPandoc } from '../lib/pandoc-runner.js';
 import { parseAuthors } from './discover.js';
 import type { LuaFilterGroup } from './filter-resolver.js';
+import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
 import { MD_READER, metadataValue } from './html-composer.js';
 import { babelOptionsForLang } from './latex-preamble.js';
 import type { BuildDocument } from './types.js';
@@ -89,5 +90,15 @@ export async function markdownToLatex(
   const date = await pdfDate(fm, siteConfig, doc);
   if (date !== undefined) extraArgs.push(`--metadata=date:${metadataValue(date)}`);
 
-  return runPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'latex', extraArgs });
+  return runPandoc({
+    input: content,
+    sourcePath: doc.filePath,
+    from: MD_READER,
+    to: 'latex',
+    extraArgs,
+    // Ruta absoluta del helper compartido de mbox: los filters 06/07 la usan
+    // con dofile (el require relativo a PANDOC_SCRIPT_FILE falla si el
+    // proyecto sobrescribe 06/07).
+    env: { ITERACIONES_MBOX_HELPERS: MBOX_HELPERS_FILTER },
+  });
 }

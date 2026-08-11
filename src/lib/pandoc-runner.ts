@@ -26,6 +26,8 @@ interface PandocOptions {
   bibOptions?: BibOptions;
   /** Argumentos adicionales para pandoc (ej: --lua-filter, --template). */
   extraArgs?: string[];
+  /** Variables de entorno adicionales para el proceso (p. ej. rutas de helpers Lua). */
+  env?: Record<string, string>;
 }
 
 export async function checkPandoc(): Promise<string> {
@@ -63,7 +65,7 @@ export async function runPandoc(options: PandocOptions): Promise<string> {
 
   let proc: ReturnType<typeof Bun.spawn>;
   try {
-    proc = Bun.spawn(args, { stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' });
+    proc = Bun.spawn(args, { stdin: 'pipe', stdout: 'pipe', stderr: 'pipe', env: options.env ? { ...process.env, ...options.env } : undefined });
   } catch (err) {
     throw new PandocError(`pandoc no está disponible en PATH: ${String(err)}`, options.sourcePath, '');
   }

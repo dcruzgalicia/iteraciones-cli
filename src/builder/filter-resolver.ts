@@ -24,6 +24,17 @@ const LUA_FILTERS_ROOT = join(import.meta.dir, '../lib/resources/filters');
 /** Filtro interno de detección estructural (flags de preámbulo y referencias). */
 const FLAGS_FILTER = join(LUA_FILTERS_ROOT, 'internal', 'flags.lua');
 
+/**
+ * Helpers compartidos de la capa latex (mbox-helpers). No es un filter ni se
+ * pasa como --lua-filter (pandoc aísla el estado Lua de cada filtro): el
+ * pipeline inyecta su ruta absoluta como variable de entorno
+ * ITERACIONES_MBOX_HELPERS en las invocaciones markdown → latex, y los
+ * filtros 06/07 la cargan con dofile. Sin el env (ejecución suelta, tests),
+ * usan el require relativo a PANDOC_SCRIPT_FILE, que funciona para los
+ * filters del paquete pero no para overrides del proyecto.
+ */
+export const MBOX_HELPERS_FILTER = join(LUA_FILTERS_ROOT, 'latex', 'shared', 'mbox-helpers.lua');
+
 /** Capas de filtros Lua del paquete: directorio → grupo de resolución. */
 const LUA_GROUPS: Array<{ dir: string; target: 'semantic' | 'latex' | 'html' }> = [
   { dir: 'semantic/string', target: 'semantic' },

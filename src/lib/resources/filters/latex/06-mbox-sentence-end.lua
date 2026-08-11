@@ -3,10 +3,20 @@
 -- Uso: pandoc --from markdown --to latex --lua-filter latex/06-mbox-sentence-end.lua
 
 -- Helpers de oraciones compartidos con latex/07-mbox-sentence-start
--- (ver shared/mbox-helpers.lua; la ruta del script es absoluta en el pipeline).
-local script_dir = PANDOC_SCRIPT_FILE:match('^(.*[\\/])')
-package.path = package.path .. ';' .. script_dir .. '?.lua'
-local mbox = require 'shared.mbox-helpers'
+-- (ver shared/mbox-helpers.lua). El pipeline inyecta la ruta absoluta del
+-- helper como ITERACIONES_MBOX_HELPERS (env): el require relativo a
+-- PANDOC_SCRIPT_FILE fallaría si el proyecto sobrescribe este filter (el
+-- script apuntaría al proyecto, donde no hay shared/). El require se
+-- conserva como fallback para la ejecución suelta (tests).
+local mbox
+local helpers_path = os.getenv('ITERACIONES_MBOX_HELPERS')
+if helpers_path and helpers_path ~= '' then
+  mbox = dofile(helpers_path)
+else
+  local script_dir = PANDOC_SCRIPT_FILE:match('^(.*[\\/])')
+  package.path = package.path .. ';' .. script_dir .. '?.lua'
+  mbox = require 'shared.mbox-helpers'
+end
 
 -- ── Procesamiento del párrafo ─────────────────────────────────────────────
 

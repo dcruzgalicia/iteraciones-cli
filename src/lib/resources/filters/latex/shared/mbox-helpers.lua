@@ -1,8 +1,8 @@
 -- Helpers compartidos por latex/06-mbox-sentence-end y latex/07-mbox-sentence-start
 -- (detección de oraciones, abreviaturas y conteo de inlines reales). No es un
 -- filter: no define handlers de pandoc y no aparece en `iteraciones filters`.
--- Se carga con `require 'shared.mbox-helpers'` desde los filtros 06/07; ambos
--- resuelven el directorio del propio script con PANDOC_SCRIPT_FILE.
+-- El pipeline lo carga con dofile desde 06/07 (ruta inyectada por env); el
+-- require relativo a PANDOC_SCRIPT_FILE falla si el proyecto sobrescribe 06/07.
 
 local M = {}
 
@@ -13,6 +13,12 @@ local ABBREVIATIONS = {
   ['vs.'] = true, ['aprox.'] = true, ['ed.'] = true, ['trad.'] = true, ['coord.'] = true,
   ['cols.'] = true, ['no.'] = true, ['cap.'] = true, ['art.'] = true, ['sec.'] = true,
   ['fig.'] = true, ['tab.'] = true, ['etc.'] = true,
+  -- Meses y formas comunes del español (sin ellas, el mbox partía la oración
+  -- en posiciones tipográficamente erróneas: "El 3 de mar. Llegó tarde.")
+  ['ene.'] = true, ['feb.'] = true, ['mar.'] = true, ['abr.'] = true, ['may.'] = true,
+  ['jun.'] = true, ['jul.'] = true, ['ago.'] = true, ['sep.'] = true, ['sept.'] = true,
+  ['oct.'] = true, ['nov.'] = true, ['dic.'] = true,
+  ['núm.'] = true, ['nro.'] = true, ['apdo.'] = true, ['p.ej.'] = true,
 }
 
 function M.trim(s)
