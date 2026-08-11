@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, spyOn } from 'bun:test';
+import { describe, expect, it, spyOn } from 'bun:test';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -103,7 +103,7 @@ describe('saveStateFile (atomicidad)', () => {
     await withTempDir(async (dir) => {
       await saveStateFile(dir, makeState({ 'a.md': { title: 'A' } }));
       const loaded = await loadStateFile(dir);
-      loaded!.entries.set('b.md', { title: 'B' } as never);
+      loaded?.entries.set('b.md', { title: 'B' } as never);
       await saveStateFile(dir, loaded!);
       const again = await loadStateFile(dir);
       expect(again?.entries.get('b.md')?.title).toBe('B');

@@ -30,6 +30,18 @@ describe('parseGitignore', () => {
     expect(rules[1]?.anchored).toBe(false);
   });
 
+  it('soporta ? y clases [..] en los patrones', () => {
+    const q = parseGitignore('doc?.md');
+    expect(isIgnoredByRules('doc1.md', q)).toBe(true);
+    expect(isIgnoredByRules('doc12.md', q)).toBe(false);
+    expect(isIgnoredByRules('doc.md', q)).toBe(false);
+
+    const cls = parseGitignore('[abc].md');
+    expect(isIgnoredByRules('a.md', cls)).toBe(true);
+    expect(isIgnoredByRules('c.md', cls)).toBe(true);
+    expect(isIgnoredByRules('d.md', cls)).toBe(false);
+  });
+
   it('escapa ! literal con backslash', () => {
     const rules = parseGitignore('\\!importante.md');
     expect(rules[0]?.negated).toBe(false);

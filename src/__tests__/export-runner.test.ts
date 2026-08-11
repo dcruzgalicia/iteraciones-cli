@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'bun:test';
+import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { convertToEpub, convertToMarkdown } from '../builder/export/runner.js';
+import { convertToEpub, convertToMarkdown, convertToPdf } from '../builder/export/runner.js';
 import type { LuaFilterGroup } from '../builder/render.js';
+import { checkLatexEngine } from '../cli/doctor/system-checks.js';
 import { checkPandoc } from '../lib/pandoc-runner.js';
 import { withTempDir } from './helpers.js';
 
@@ -28,6 +30,7 @@ const EXPORT_DOC = {
 const pandocOk = await checkPandoc().catch(() => null);
 // unzip se usa para inspeccionar el EPUB generado: skip real si no está en PATH.
 const unzipOk = (await Bun.which('unzip')) !== null;
+const latexOk = (await checkLatexEngine()).ok;
 
 describe('export/runner (convertToMarkdown)', () => {
   it.skipIf(!pandocOk)('emite el YAML con el frontmatter del documento y los metadatos complementarios', async () => {
@@ -78,6 +81,18 @@ describe('export/runner (convertToEpub)', () => {
       expect(stdout).toContain('Autor Uno');
       expect(stdout).toContain('>es-MX</dc:language>');
       expect(stdout).toContain('>2026-08-08</dc:date>');
+    });
+  });
+});
+
+describe('export/runner (convertToPdf)', () => {
+  it.skipIf(!latexOk)('con un .tex roto lanza PandocError con la ruta del log para diagnóstico', async () => {
+    await withTempDir(async (dir) => {
+      const tex = join(dir, 'roto.tex');
+      await writeFile(tex, '\\documentclass{article}\n\\usepackage{paquete-inexistente-xyz}\n\\begin{document}\nHola\n\\end{document}\n', 'utf8');
+      await expect(convertToPdf(tex, 'doc.md', dir, 'roto')).rejects.toThrow('latexmk falló al generar el PDF');
+      // El log completo queda en el área de trabajo para diagnóstico
+      expect(await Bun.file(join(dir, 'roto.log')).exists()).toBe(true);
     });
   });
 });
