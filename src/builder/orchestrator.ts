@@ -13,7 +13,7 @@ import { buildDocsFromIndex, discover } from './discover.js';
 import { runDocumentPipeline } from './pipeline.js';
 import { validateDisabledPreambleFilters } from './preamble-loader.js';
 import { validateDisabledFilters } from './render.js';
-import { clearStateFile, loadStateFile, migrateLegacyCache, updateCssHash } from './state.js';
+import { clearStateFile, loadStateFile, updateCssHash } from './state.js';
 import type { BuildContext } from './types.js';
 
 export interface BuildOptions {
@@ -145,8 +145,6 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   // setupBuildEnvironment): no cargar prevState evita mensajes de invalidación
   // engañosos y fuerza el reprocesamiento completo.
   const prevState = options.full ? null : await loadStateFile(cwd);
-  // Migrar el caché de versiones anteriores (ast/, changes/, epub en formats/html)
-  await migrateLegacyCache(cwd);
   const plan = await computeBuildMetadata(cwd, siteConfig, prevState);
 
   if (plan.newFormats.length > 0) {

@@ -117,23 +117,6 @@ export async function clearStateFile(cwd: string): Promise<void> {
 }
 
 /**
- * Migración del caché de versiones anteriores (se ejecuta en cada build):
- * elimina los artefactos que el flujo actual ya no escribe ni consume.
- * Idempotente y barata; se conserva como red de seguridad para proyectos que
- * aún no hayan ejecutado un build con el flujo nuevo (la transición ya ocurrió
- * en los proyectos existentes).
- * - .iteraciones/ast/       (ASTs del flujo markdown → json, eliminado)
- * - .iteraciones/changes/   (estado migrado a state.json en la raíz)
- * - .iteraciones/formats/   (staging intermedio: los formatos se escriben
- *                            directamente en dist/ desde el build actual)
- */
-export async function migrateLegacyCache(cwd: string): Promise<void> {
-  await rm(join(cwd, '.iteraciones', 'ast'), { recursive: true, force: true }).catch(() => {});
-  await rm(join(cwd, '.iteraciones', 'changes'), { recursive: true, force: true }).catch(() => {});
-  await rm(join(cwd, '.iteraciones', 'formats'), { recursive: true, force: true }).catch(() => {});
-}
-
-/**
  * Guarda state.json de forma atómica (temp + rename): un build interrumpido
  * nunca deja el caché a medias.
  */
