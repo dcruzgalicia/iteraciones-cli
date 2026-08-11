@@ -16,6 +16,19 @@ const ANSI = {
 type AnsiColor = keyof typeof ANSI;
 
 /**
+ * Glifos unificados de toda la CLI (logger, tracker de progreso y doctor):
+ * una sola familia de símbolos de estado. El éxito es ✔ (U+2714) en todas
+ * partes (antes logger usaba ✓ y el tracker ✔).
+ */
+export const GLYPHS = {
+  success: '✔',
+  error: '✖',
+  warning: '⚠',
+  info: 'ℹ',
+  skipped: '–',
+} as const;
+
+/**
  * Override de la colorización para tests: `false` fuerza salida sin ANSI
  * aunque el stream sea un TTY (la suite aserta strings exactos).
  * `undefined` = decisión por TTY (comportamiento normal).
@@ -46,7 +59,7 @@ function formatContext(context: string | undefined, stream: NodeJS.WriteStream):
  */
 export function logError(message: string, context?: string): void {
   const prefix = formatContext(context, process.stderr);
-  process.stderr.write(`${colorize('✖', 'red', process.stderr)} ${prefix}${message}\n`);
+  process.stderr.write(`${colorize(GLYPHS.error, 'red', process.stderr)} ${prefix}${message}\n`);
 }
 
 /**
@@ -66,7 +79,7 @@ export function setWarningSink(sink: ((message: string) => void) | null): void {
  */
 export function logWarning(message: string, context?: string): void {
   const prefix = formatContext(context, process.stderr);
-  const formatted = `${colorize('⚠', 'yellow', process.stderr)} ${prefix}${message}`;
+  const formatted = `${colorize(GLYPHS.warning, 'yellow', process.stderr)} ${prefix}${message}`;
   if (warningSink) {
     warningSink(formatted);
   } else {
@@ -80,14 +93,14 @@ export function logWarning(message: string, context?: string): void {
  */
 export function logInfo(message: string, context?: string): void {
   const prefix = formatContext(context, process.stdout);
-  process.stdout.write(`${colorize('ℹ', 'dim', process.stdout)} ${prefix}${message}\n`);
+  process.stdout.write(`${colorize(GLYPHS.info, 'dim', process.stdout)} ${prefix}${message}\n`);
 }
 
 /**
  * Escribe un mensaje de éxito en stdout.
- * Formato: ✓ [contexto] mensaje
+ * Formato: ✔ [contexto] mensaje
  */
 export function logSuccess(message: string, context?: string): void {
   const prefix = formatContext(context, process.stdout);
-  process.stdout.write(`${colorize('✓', 'green', process.stdout)} ${prefix}${message}\n`);
+  process.stdout.write(`${colorize(GLYPHS.success, 'green', process.stdout)} ${prefix}${message}\n`);
 }

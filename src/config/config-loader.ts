@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import type { ZodIssue } from 'zod';
 import { ConfigError, formatUserError } from '../lib/errors.js';
+import { logWarning } from '../lib/logger.js';
 import { KNOWN_ACCENT_COLORS, type SiteConfig, SiteConfigSchema } from './config-schema.js';
 
 const CONFIG_FILE = 'iteraciones.config.yaml';
@@ -71,7 +72,9 @@ export async function loadSiteConfig(cwd: string, options?: { mode?: 'build' | '
     if (isValidate) {
       throw new ConfigError(`format.html.accent: "${accentRaw}" no es un color válido. Usa uno de: ${KNOWN_ACCENT_COLORS.join(', ')}`, configPath);
     }
-    process.stderr.write(`[iteraciones] color de acento desconocido: "${accentRaw}". Usando "lime" por defecto.\n`);
+    // logWarning pasa por el sink del tracker: en builds TTY el warning se
+    // difiere al resumen (antes escribía a stderr directo e interrumpía el render).
+    logWarning(`color de acento desconocido: "${accentRaw}". Usando "lime" por defecto.`, 'config');
     (root.format as Record<string, unknown>).html = { ...((htmlRaw as Record<string, unknown>) ?? {}), accent: 'lime' };
   }
 
@@ -94,7 +97,7 @@ export async function loadSiteConfig(cwd: string, options?: { mode?: 'build' | '
       for (const issue of unknownKeyIssues) {
         const path = issue.path.length > 0 ? `"${issue.path.join('.')}"` : 'la raíz';
         const keys = issue.keys.map((k) => `"${k}"`).join(', ');
-        process.stderr.write(`[iteraciones] iteraciones.config.yaml: claves sin efecto en ${path}: ${keys}. Revisa docs/configuration.md\n`);
+        logWarning(`iteraciones.config.yaml: claves sin efecto en ${path}: ${keys}. Revisa docs/configuration.md`, 'config');
       }
     }
     const realIssues = result.error.issues.filter((issue) => issue.code !== 'unrecognized_keys');

@@ -1,7 +1,7 @@
 import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
 import { ConfigError } from '../lib/errors.js';
-import { logInfo } from '../lib/logger.js';
+import { GLYPHS, logInfo } from '../lib/logger.js';
 import {
   type CheckResult,
   checkBunVersion,
@@ -66,6 +66,6 @@ export async function runDoctor(cwd: string): Promise<void> {
 function renderChecks(checks: CheckResult[]): void {
   for (const check of checks) {
     const detail = check.ok || !check.detail ? '' : ` — ${check.detail}`;
-    process.stdout.write(`${check.ok ? '✔' : '✖'} ${check.label}${detail}\n`);
+    process.stdout.write(`${check.ok ? GLYPHS.success : GLYPHS.error} ${check.label}${detail}\n`);
   }
 }
