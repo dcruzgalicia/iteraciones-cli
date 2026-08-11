@@ -177,16 +177,20 @@ export async function discover(
         if (yaml) {
           const yamlResult = parseYamlWithPosition(yaml);
           if (yamlResult.error) throw new Error(yamlResult.error);
-          const parsed = yamlResult.value as Record<string, unknown> | undefined;
-          if (parsed && !Array.isArray(parsed)) {
+          const parsed = yamlResult.value;
+          if (parsed && Array.isArray(parsed)) {
+            // Mismo criterio que validate: el frontmatter debe ser un objeto.
+            frontmatterErrors.push({ file: relativePath, error: 'frontmatter YAML inválido: debe ser un objeto' });
+          } else if (parsed && typeof parsed === 'object') {
+            const record = parsed as Record<string, unknown>;
             // El frontmatter completo fluye a pandoc como metadata del documento
-            fm = parsed;
-            title = typeof parsed.title === 'string' ? parsed.title : '';
-            subtitle = typeof parsed.subtitle === 'string' && parsed.subtitle.trim() ? parsed.subtitle.trim() : undefined;
-            date = typeof parsed.date === 'string' && parsed.date.trim() ? parsed.date.trim() : undefined;
-            authors = parseAuthors(parsed.author);
-            if (typeof parsed.slug === 'string' && parsed.slug.trim()) {
-              manualSlug = parsed.slug.trim();
+            fm = record;
+            title = typeof record.title === 'string' ? record.title : '';
+            subtitle = typeof record.subtitle === 'string' && record.subtitle.trim() ? record.subtitle.trim() : undefined;
+            date = typeof record.date === 'string' && record.date.trim() ? record.date.trim() : undefined;
+            authors = parseAuthors(record.author);
+            if (typeof record.slug === 'string' && record.slug.trim()) {
+              manualSlug = record.slug.trim();
               // Formato seguro: mismo charset que los slugs generados
               // (minúsculas, números y guiones), sin extremos ni dobles guiones.
               if (!SLUG_MANUAL_RE.test(manualSlug)) {
