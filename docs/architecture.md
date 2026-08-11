@@ -261,6 +261,10 @@ La configuración PDF es mínima y deliberada: `generate` (activa la compilació
 
 ## Decisiones de diseño
 
+### Presupuesto de arranque
+
+Medido (macOS arm64, Bun 1.3.x, sin pandoc en PATH, `--version`): **~55 ms de media** (10 ejecuciones; la primera incluye cold start de ~0.18 s). Decisión: no optimizar el arranque — está muy por debajo del umbral perceptible y cualquier carga diferida complicaría el código sin beneficio medible. Re-medir si alguna vez el arranque supera los ~200 ms.
+
 ### ¿Por qué Bun?
 
 - **Sin Node.js**: Bun es runtime + package manager + test runner + bundler. Una sola dependencia.
