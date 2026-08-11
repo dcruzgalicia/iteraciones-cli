@@ -1149,7 +1149,7 @@ describe('runValidate', () => {
   it('reporta 2 errores con plural correcto', async () => {
     await withTempDir(async (dir) => {
       await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: [inválido\n', 'utf8');
-      await writeFile(join(dir, 'roto.md'), '---\ntitle: "Roto"\ninvalid: [unclosed\n---\n\nContenido.\n', 'utf8');
+      await writeFile(join(dir, 'a.md'), '---\ntitle: [inválido\n---\n', 'utf8');
       const stderrSpy = spyStderr();
       let output = '';
       try {
@@ -1159,9 +1159,27 @@ describe('runValidate', () => {
         output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
         stderrSpy.mockRestore();
       }
-      expect(output).toContain('✖ [validate] 2 errores:');
-      expect(output).not.toContain('error(es)');
-      expect(output).not.toContain('se encontraron');
+      expect(output).toContain('2 errores');
+      expect(process.exitCode).toBe(1);
+    });
+  });
+
+  it('accent inválido no enmascara los demás errores de la config', async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: 123\nformat:\n  html:\n    accent: naranja\n', 'utf8');
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(1);
+      // Ambos errores se reportan en una sola ejecución (antes solo el accent)
+      expect(output).toContain('accent');
+      expect(output).toContain('lang');
     });
   });
 

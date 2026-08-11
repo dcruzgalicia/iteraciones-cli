@@ -59,23 +59,28 @@ export async function loadSiteConfig(cwd: string, options?: { mode?: 'build' | '
   }
 
   if (!parsed || typeof parsed !== 'object') {
+    // Un archivo vacío (null) es equivalente a defaults, sin aviso; una config
+    // con forma de escalar o lista se ignoraba en silencio: warning explícito.
+    if (parsed !== null && parsed !== undefined) {
+      logWarning('iteraciones.config.yaml no es un objeto YAML (se esperaba un mapa); se usan los valores por defecto', 'config');
+    }
     return SiteConfigSchema.parse({}) as SiteConfig;
   }
 
   const root = parsed as Record<string, unknown>;
 
-  // Advertir sobre accent inválido: en modo validate es error, en build es
-  // fallback a "lime" con warning (el esquema Zod ya no aplica .catch()).
+  // Advertir sobre accent inválido: en build es fallback a "lime" con warning
+  // (el esquema Zod ya no aplica .catch()). En modo validate NO se corta aquí:
+  // el schema lo reporta como issue junto a los demás errores.
   const htmlRaw = (root.format as Record<string, unknown> | undefined)?.html;
   const accentRaw = (htmlRaw as Record<string, unknown> | undefined)?.accent;
   if (typeof accentRaw === 'string' && !KNOWN_ACCENT_COLORS.includes(accentRaw as (typeof KNOWN_ACCENT_COLORS)[number])) {
-    if (isValidate) {
-      throw new ConfigError(`format.html.accent: "${accentRaw}" no es un color válido. Usa uno de: ${KNOWN_ACCENT_COLORS.join(', ')}`, configPath);
+    if (!isValidate) {
+      // logWarning pasa por el sink del tracker: en builds TTY el warning se
+      // difiere al resumen (antes escribía a stderr directo e interrumpía el render).
+      logWarning(`color de acento desconocido: "${accentRaw}". Usando "lime" por defecto.`, 'config');
+      (root.format as Record<string, unknown>).html = { ...((htmlRaw as Record<string, unknown>) ?? {}), accent: 'lime' };
     }
-    // logWarning pasa por el sink del tracker: en builds TTY el warning se
-    // difiere al resumen (antes escribía a stderr directo e interrumpía el render).
-    logWarning(`color de acento desconocido: "${accentRaw}". Usando "lime" por defecto.`, 'config');
-    (root.format as Record<string, unknown>).html = { ...((htmlRaw as Record<string, unknown>) ?? {}), accent: 'lime' };
   }
 
   // Las claves desconocidas (issues unrecognized_keys de los esquemas strict)
@@ -102,8 +107,15 @@ export async function loadSiteConfig(cwd: string, options?: { mode?: 'build' | '
     }
     const realIssues = result.error.issues.filter((issue) => issue.code !== 'unrecognized_keys');
     if (realIssues.length > 0) {
-      const first = realIssues[0];
-      throw new ConfigError(`${first?.path.join('.') ?? ''}: ${first?.message ?? 'Error de validación'}`, configPath);
+      // Reportar TODOS los errores de tipo en una sola ejecución (antes solo el
+      // primero: el usuario iteraba una vez por error en validate).
+      const details = realIssues
+        .map((issue) => {
+          const path = issue.path.length > 0 ? issue.path.join('.') : 'config';
+          return `${path}: ${issue.message}`;
+        })
+        .join('; ');
+      throw new ConfigError(details, configPath);
     }
     // Solo había claves desconocidas: limpiarlas y re-parsear para obtener defaults
     const retry = SiteConfigSchema.safeParse(removeUnknownKeys(root, result.error.issues));
