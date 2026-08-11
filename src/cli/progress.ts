@@ -1,4 +1,4 @@
-import { setWarningSink } from '../lib/logger.js';
+import { GLYPHS, setWarningSink } from '../lib/logger.js';
 
 function formatTime(ms: number): string {
   return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${Math.round(ms)}ms`;
@@ -317,7 +317,14 @@ export class ProgressTracker {
 
   private rowContent(row: Row, live?: string): string {
     const indent = '  '.repeat(row.indent);
-    const prefix = row.status === 'done' ? '✔ ' : row.status === 'failed' ? '✖ ' : row.status === 'skipped' ? '– ' : '';
+    const prefix =
+      row.status === 'done'
+        ? `${GLYPHS.success} `
+        : row.status === 'failed'
+          ? `${GLYPHS.error} `
+          : row.status === 'skipped'
+            ? `${GLYPHS.skipped} `
+            : '';
     const countPart = row.count > 0 ? ` ${row.count}` : '';
     const timePart = row.elapsed !== undefined ? `  ${formatTime(row.elapsed)}` : '';
     const livePart = live !== undefined ? ` ${live}` : '';
@@ -365,7 +372,7 @@ export class ProgressTracker {
     // "✔ Todo listo." solo sin advertencias: con warnings (p. ej. proyecto
     // vacío) el cierre es neutral para no contradecir el estado del build.
     if (this.warnings.length === 0) {
-      process.stdout.write(`\n✔ Todo listo.\n\n`);
+      process.stdout.write(`\n${GLYPHS.success} Todo listo.\n\n`);
     } else {
       process.stdout.write(`\n`);
     }
