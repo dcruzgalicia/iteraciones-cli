@@ -74,10 +74,13 @@ export async function cleanupDeletedFiles(
     slug: deletedEntries.get(relPath)?.slug ?? basename(relPath, '.md'),
   }));
   await cleanupBySlug(ctx, entries);
-  // Un index.md eliminado deja su index.html huérfano en dist/
+  // Un index.md eliminado deja sus salidas index.* huérfanas en dist/
   for (const relPath of deletedMdPaths) {
     if (basename(relPath) === 'index.md') {
-      await rm(join(ctx.outputDir, dirname(relPath), 'index.html'), { force: true }).catch(() => {});
+      const targetDir = join(ctx.outputDir, dirname(relPath));
+      for (const ext of OUTPUT_EXTENSIONS) {
+        await rm(join(targetDir, `index${ext}`), { force: true }).catch(() => {});
+      }
     }
   }
 }

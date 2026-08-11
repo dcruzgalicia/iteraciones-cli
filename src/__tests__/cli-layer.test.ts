@@ -577,6 +577,32 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
+  it.skipIf(!pandocOk)(
+    'index.md genera index.* en todos los formatos (naming coherente)',
+    async () => {
+      await withTempDir(async (dir) => {
+        await initTestProject(dir);
+        await writeFile(
+          join(dir, 'iteraciones.config.yaml'),
+          'lang: es-MX\nformat:\n  latex: true\n  pdf:\n    generate: true\n  html:\n    generate: true\n  epub:\n    generate: true\n  markdown:\n    generate: true\n',
+          'utf8',
+        );
+        await writeFile(join(dir, 'index.md'), '---\ntitle: Inicio\ndate: 2026-01-01\n---\n\nInicio.\n', 'utf8');
+        process.exitCode = 0;
+        await runBuild(dir);
+        expect(process.exitCode).toBe(0);
+        for (const ext of ['html', 'pdf', 'tex', 'epub', 'md']) {
+          expect(await Bun.file(join(dir, 'dist', 'files', `index.${ext}`)).exists()).toBe(true);
+        }
+        // Ninguna salida con el slug por título (antes: inicio.pdf, inicio.tex...)
+        for (const ext of ['pdf', 'tex', 'epub', 'md']) {
+          expect(await Bun.file(join(dir, 'dist', 'files', `inicio.${ext}`)).exists()).toBe(false);
+        }
+      });
+    },
+    { timeout: 120_000 },
+  );
+
   it.skipIf(!pandocOk)('el lang de la configuración configura babel en el PDF (contrato lang → babel)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
