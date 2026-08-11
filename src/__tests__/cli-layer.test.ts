@@ -1398,6 +1398,21 @@ describe('runNew', () => {
     });
   });
 
+  it('incluye ejemplos del lenguaje (:: y dictum) que el usuario borra', async () => {
+    await withTempDir(async (dir) => {
+      process.exitCode = 0;
+      await runNew(dir, 'con-ejemplos');
+      expect(process.exitCode).toBe(0);
+      const content = await Bun.file(join(dir, 'con-ejemplos.md')).text();
+      expect(content).toContain('::');
+      expect(content).toContain('::: {.dictum}');
+      // El frontmatter sigue siendo el bloque YAML inicial (los ejemplos van
+      // en el cuerpo, nunca dentro del frontmatter)
+      const frontmatter = content.split('---')[1] ?? '';
+      expect(frontmatter).not.toContain('dictum');
+    });
+  });
+
   it('añade extensión .md si no se especifica', async () => {
     await withTempDir(async (dir) => {
       await runNew(dir, 'ensayo');
