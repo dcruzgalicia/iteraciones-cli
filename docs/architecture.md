@@ -64,7 +64,7 @@ El pipeline convierte archivos Markdown en documentos en los formatos configurad
 
 ---
 
-## Sistema de filters
+## Filtros en cada conversión
 ```
 Archivo .md (con frontmatter)
   │
@@ -79,6 +79,8 @@ Cada conversión (una invocación pandoc desde el markdown original):
   pandoc --to markdown [semantic/string, semantic/ast, user/*]
 ```
 El frontmatter fluye como metadata del documento (el CLI complementa con defaults); el filtro interno `internal/flags` expone las condiciones del preámbulo al template vía metadata y el único post-procesamiento es la extracción de referencias del HTML.
+
+El sistema de filtros completo (capas, descripciones y override) se describe abajo.
 
 ---
 

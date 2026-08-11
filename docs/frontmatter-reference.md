@@ -52,4 +52,4 @@ Según @ejemplo2024, el uso de citekeys facilita la gestión de referencias.
 
 ## Campos personalizados
 
-El frontmatter acepta campos arbitrarios. Los campos no reconocidos se ignoran en el procesamiento estándar.
+El frontmatter acepta campos arbitrarios. Los campos no reconocidos se ignoran en el procesamiento estándar; `validate` advierte sobre ellos (ver la sección Campos).

@@ -20,7 +20,7 @@ Verifica que todo funcione:
 
 ```bash
 bun run typecheck   # tsc --noEmit
-bun test            # bun test (332+ tests en 22 archivos)
+bun test            # bun test (426 tests en 24 archivos)
 bun run src/bin.ts build --project-root /ruta/a/proyecto
 ```
 
@@ -72,11 +72,11 @@ src/
     ├── logger.ts            # Funciones helper para mensajes (logError, logWarning)
     ├── pandoc-runner.ts     # Invocación de pandoc
     ├── run.ts               # mapWithConcurrency y utilidades de procesos
-    └── resources/           # Recursos empaquetados
-        ├── filters/     # Filtros Lua por capa (semantic/, latex/, html/)
-        ├── preamble/        # Preamble filters (.tex)
-        ├── template.html    # Template HTML (sistema de templates de pandoc)
-        ├── styles.css       # CSS entry point de Tailwind
+    ├── resources/           # Recursos empaquetados
+    ├── filters/     # Filtros Lua por capa (semantic/, latex/, html/)
+    ├── preamble/        # Preamble filters (.tex)
+    ├── html/          # Plantillas del HTML (skeleton + tarjetas)
+    ├── styles.css       # CSS entry point de Tailwind
         ├── fonts/           # Fuentes para HTML
         ├── logo.svg         # Logo por defecto
         └── apa-7.csl        # Estilo de citas APA 7ª edición
