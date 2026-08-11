@@ -77,9 +77,12 @@ function buildDefaultConfig(): string {
   ].join('\n');
 }
 
+/** Contenido sugerido del .gitignore para un proyecto nuevo (directorios generados). */
+const DEFAULT_GITIGNORE = ['# Generados por iteraciones (build y caché)', 'dist/', '.iteraciones/', '.DS_Store', ''].join('\n');
+
 /**
- * Crea `iteraciones.config.yaml`, `index.md` y `bibliography.bib` en el
- * directorio indicado. index.md es el documento de inicio: el primer build
+ * Crea `iteraciones.config.yaml`, `index.md`, `bibliography.bib` y `.gitignore`
+ * en el directorio indicado. index.md es el documento de inicio: el primer build
  * produce un index.html real (el home que enlazan las tarjetas de identidad).
  * Si alguno de los archivos ya existe, lo omite e informa al usuario.
  */
@@ -94,10 +97,11 @@ export async function runInit(cwd: string): Promise<void> {
     '',
   ].join('\n');
 
-  const [configCreated, indexCreated, bibCreated] = await Promise.all([
+  const [configCreated, indexCreated, bibCreated, gitignoreCreated] = await Promise.all([
     createExclusive(join(cwd, 'iteraciones.config.yaml'), buildDefaultConfig()),
     createExclusive(join(cwd, 'index.md'), DEFAULT_INDEX),
     createExclusive(join(cwd, 'bibliography.bib'), DEFAULT_BIB),
+    createExclusive(join(cwd, '.gitignore'), DEFAULT_GITIGNORE),
   ]);
 
   // Patrón unificado: los comandos que mutan el proyecto (init, new, clean)
@@ -109,6 +113,7 @@ export async function runInit(cwd: string): Promise<void> {
   report(configCreated, 'iteraciones.config.yaml');
   report(indexCreated, 'index.md');
   report(bibCreated, 'bibliography.bib');
+  report(gitignoreCreated, '.gitignore');
   logSuccess("proyecto inicializado. Ejecuta 'iteraciones build' para generar el sitio.", 'init');
 }
 

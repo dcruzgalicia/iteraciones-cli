@@ -1311,7 +1311,7 @@ describe('runDoctor', () => {
 describe('runInit', () => {
   afterEach(resetExitCode);
 
-  it('crea los tres archivos en un directorio vacío', async () => {
+  it('crea los cuatro archivos en un directorio vacío (incluye .gitignore)', async () => {
     await withTempDir(async (dir) => {
       process.exitCode = 0;
       await runInit(dir);
@@ -1319,6 +1319,20 @@ describe('runInit', () => {
       expect(await Bun.file(join(dir, 'iteraciones.config.yaml')).exists()).toBe(true);
       expect(await Bun.file(join(dir, 'index.md')).exists()).toBe(true);
       expect(await Bun.file(join(dir, 'bibliography.bib')).exists()).toBe(true);
+      const gitignore = await Bun.file(join(dir, '.gitignore')).text();
+      expect(gitignore).toContain('dist/');
+      expect(gitignore).toContain('.iteraciones/');
+    });
+  });
+
+  it('no sobreescribe un .gitignore preexistente', async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(join(dir, '.gitignore'), 'node_modules/\n', 'utf8');
+      process.exitCode = 0;
+      await runInit(dir);
+      expect(process.exitCode).toBe(0);
+      const gitignore = await Bun.file(join(dir, '.gitignore')).text();
+      expect(gitignore).toBe('node_modules/\n');
     });
   });
 
