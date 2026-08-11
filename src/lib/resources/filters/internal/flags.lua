@@ -57,11 +57,33 @@ local function is_list_opener(b)
 end
 
 function Pandoc(doc)
-  -- Detección de citas (nodos Cite reales, sin regex sobre el markdown)
+  -- Detección estructural con recorrido COMPLETO del árbol (walk_block):
+  -- las citas y los headings cuentan aunque estén dentro de un Div (p. ej.
+  -- todo el contenido en ::: {.verse}): antes, los headings anidados no
+  -- activaban has-toc-entries y el \\tableofcontents se omitía aunque pandoc
+  -- los listaría en el TOC. El inicio de sección (primer bloque) se evalúa
+  -- aparte, solo a nivel superior.
   local has_cites = false
-  local detect = { Cite = function(c) has_cites = true return c end }
+  local has_toc_entries = false
+  local detect = {
+    Cite = function(c)
+      has_cites = true
+      return c
+    end,
+    Header = function(h)
+      has_toc_entries = true
+      return h
+    end,
+    RawBlock = function(b)
+      if is_section_raw(b) then has_toc_entries = true end
+      return b
+    end,
+  }
   local nb = {}
   for _, b in ipairs(doc.blocks) do
+    -- walk_block no aplica los handlers al bloque raíz: los headers/RawBlock
+    -- top-level se evalúan aquí; los anidados los detecta el walk.
+    if is_header(b) or is_section_raw(b) then has_toc_entries = true end
     table.insert(nb, pandoc.walk_block(b, detect))
   end
   doc.blocks = nb
@@ -70,13 +92,6 @@ function Pandoc(doc)
     local first = doc.blocks[1]
     local section_start = first ~= nil and (is_header(first) or is_section_raw(first))
     local list_start = first ~= nil and is_list_opener(first)
-    local has_toc_entries = false
-    for _, b in ipairs(doc.blocks) do
-      if is_header(b) or is_section_raw(b) then
-        has_toc_entries = true
-        break
-      end
-    end
     local skip = section_start or list_start
 
     -- \noindent al primer párrafo (mismo criterio que skipNoIndent)
