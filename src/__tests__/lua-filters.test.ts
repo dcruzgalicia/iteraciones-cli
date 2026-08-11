@@ -334,6 +334,13 @@ describe.skipIf(!pandocOk)('filtro interno internal/flags (detección estructura
     expect(tex).toContain('\\noindent Primer párrafo.');
   });
 
+  it('headings dentro de un Div activan el TOC (recorrido completo del árbol)', async () => {
+    const tex = await toLatexFlags('::: {.center}\n# Título anidado\n\nTexto.\n::: ');
+    expect(tex).toContain('\\tableofcontents');
+    // .center no abre entorno list (a diferencia de verse/dictum): el vspace se conserva
+    expect(tex).toContain('\\vspace*{2\\baselineskip}');
+  });
+
   it('un RawBlock \\chapter cuenta como inicio de sección (TOC y sin vspace)', async () => {
     const tex = await toLatexFlags('\\chapter{Capítulo directo}\n\nTexto.');
     expect(tex).toContain('\\tableofcontents');
