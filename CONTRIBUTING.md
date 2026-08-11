@@ -211,12 +211,12 @@ Para agregar uno:
 
 1. Crea un archivo en `src/lib/resources/filters/<capa>/<prioridad>-<nombre>.lua`
    - El prefijo numérico (`01-`, `02-`, …) define el **orden de ejecución** dentro de la capa
-   - El **nombre completo** es `<capa>/<prioridad>-<nombre>` (ej: `latex/02-dictum`); es el que se usa en `disabled-filters` y se muestra en `iteraciones filters`
-2. Escribe la primera línea como comentario `-- descripción corta`: se muestra en `iteraciones filters` (la lee `getBuiltinLuaFilterInfos()`)
+   - El **nombre completo** es `<capa>/<prioridad>-<nombre>` (ej: `latex/02-dictum`); es el que se usa en `disabled-filters` y se muestra en `iteraciones list-filters`
+2. Escribe la primera línea como comentario `-- descripción corta`: se muestra en `iteraciones list-filters` (la lee `getBuiltinLuaFilterInfos()`)
 3. Implementa las funciones de filtro de pandoc (`Pandoc(doc)`, `Div(div)`, `Para(para)`, etc.) que transforman el AST
 4. Agrega tests en `src/__tests__/lua-filters.test.ts` (los tests que invocan pandoc requieren que esté instalado; los de resolución de nombres no)
 
-> La lista de filters se deriva del filesystem (`getBuiltinLuaFilterInfos()` en `src/builder/filter-resolver.ts`): crear el `.lua` es suficiente, no hay que registrar el nombre en ninguna lista. La descripción que muestra `iteraciones filters` es la primera línea de comentario del archivo (punto 2).
+> La lista de filters se deriva del filesystem (`getBuiltinLuaFilterInfos()` en `src/builder/filter-resolver.ts`): crear el `.lua` es suficiente, no hay que registrar el nombre en ninguna lista. La descripción que muestra `iteraciones list-filters` es la primera línea de comentario del archivo (punto 2).
 
 ### Ejemplo mínimo
 
@@ -246,7 +246,7 @@ La variable global `FORMAT` de pandoc indica el formato de salida (`latex`, `htm
 Los preamble filters son archivos `.tex` con contenido LaTeX puro que se inserta en el preámbulo antes de `\begin{document}`. Se editan como LaTeX, sin escaping de strings TypeScript.
 
 1. Crea un archivo en `src/lib/resources/preamble/<prioridad>-<nombre>.tex`
-2. Escribe la primera línea como comentario `% descripción corta`: se muestra en `iteraciones filters` (la lee `getBuiltinPreambleFilterInfos()`)
+2. Escribe la primera línea como comentario `% descripción corta`: se muestra en `iteraciones list-filters` (la lee `getBuiltinPreambleFilterInfos()`)
 
 > La lista de preamble filters se deriva del filesystem (`getBuiltinPreambleFilterNames()` en `src/builder/preamble-loader.ts`): el prefijo numérico del archivo define el orden de aplicación y crear un `.tex` nuevo no requiere tocar código.
 

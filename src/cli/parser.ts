@@ -141,13 +141,13 @@ Ejemplos:
     });
 
   program
-    .command('filters')
+    .command('list-filters')
     .description('lista los filtros Lua disponibles y su estado')
     .addHelpText(
       'after',
       `
 Ejemplos:
-  iteraciones filters    lista filters y preamble filters con su estado
+  iteraciones list-filters    lista filters y preamble filters con su estado
 `,
     )
     .action(() => runFilters(projectRoot()));
