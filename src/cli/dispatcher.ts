@@ -238,7 +238,26 @@ export async function runNew(cwd: string, path: string, options: { title?: strin
     const title = options.title?.trim() || inferTitleFromPath(normalizedPath);
     // stringify escapa apóstrofos y comillas: el frontmatter generado siempre
     // es YAML válido (un title con comillas simples rompía el archivo).
-    const content = `---\n${stringify({ title, date: today }, { defaultKeyType: 'PLAIN', defaultStringType: 'QUOTE_DOUBLE' })}---\n\nEscribe tu contenido aquí.\n`;
+    // El cuerpo incluye ejemplos del vocabulario semántico (:: y dictum) que
+    // el usuario borra: la forma más barata de descubrir el lenguaje.
+    const content = [
+      '---',
+      stringify({ title, date: today }, { defaultKeyType: 'PLAIN', defaultStringType: 'QUOTE_DOUBLE' }).trimEnd(),
+      '---',
+      '',
+      'Escribe tu contenido aquí.',
+      '',
+      '<!-- Espacio vertical extra entre párrafos: una línea con solo :: -->',
+      '',
+      '::',
+      '',
+      '<!-- Epígrafe: fenced div con clase .dictum (opcional: autor con .author) -->',
+      '',
+      '::: {.dictum}',
+      'La ciencia se compone de errores, que a su vez son los pasos hacia la verdad.',
+      '::: ',
+      '',
+    ].join('\n');
 
     await writeFile(absPath, content, { encoding: 'utf8', flag: 'wx' });
     logSuccess(`creado ${normalizedPath}`, 'new');
