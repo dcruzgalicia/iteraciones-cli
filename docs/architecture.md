@@ -312,15 +312,15 @@ Los nombres de los filters Lua y de los preamble filters se derivan de un glob o
 
 El proyecto comenzó con una arquitectura muy ambiciosa (plugins ESM, 8 tipos de documento, paginación, temas, layouts) que fue simplificada drásticamente entre v0.8 y v0.10. La eliminación de ~3000+ líneas de código muerto mejoró la mantenibilidad, velocidad y predictibilidad del pipeline. Ver `CHANGELOG.md` para los detalles de cada release.
 
-### ¿Por qué el esquema de slugs conserva la expansión de autores y el contador `-dN`?
+### ¿Por qué el esquema de slugs usa el contador `-dN` para colisiones?
 
-Decisión registrada en el issue #1434 (2026-08): **se conserva el esquema actual**.
+Decisión registrada en el issue #1434 (2026-08), simplificada en el issue #1761: **las colisiones se resuelven solo con sufijos `-dN`**.
 
 Reglas del esquema (implementadas en `src/builder/slug-resolver.ts`):
 
 1. Slug base: `title` transliterado (acentos eliminados, símbolos mapeados: `&` → `y`, `%` → `por-ciento`).
-2. Con autor: `title-por-author` usando el primer autor; si el título se repite, se expanden progresivamente los autores (`-y-`) hasta 20.
-3. Si la expansión de autores no resuelve la colisión, se aplica un sufijo `-dN` (N incremental).
+2. Con autor: `title-por-author` usando el primer autor.
+3. Si el título se repite, se aplica un sufijo `-dN` (N incremental).
 4. Los sufijos `-dN` se derivan del discovery index (`existingSlugs`): eliminar un documento del grupo en colisión no renumera los restantes.
 
 Motivos de la decisión:
@@ -329,7 +329,7 @@ Motivos de la decisión:
 - La estabilidad de nombres entre builds protege enlaces, notas y bookmarks del usuario: eliminar un documento no renumera los restantes.
 - El esquema está cubierto por tests de casos límite (`slug-changes.test.ts`: títulos duplicados, cambio/quita de autor, acortar título, sufijos `-dN`).
 
-Coste aceptado: ~180 líneas y un archivo de estado por proyecto. La alternativa simple (slug por título + sufijo numérico sin contador) fue descartada porque renumera archivos al eliminar documentos y rompe la convención documentada; la simplicidad del código no compensa la pérdida de estabilidad para el usuario.
+La expansión progresiva de autores (2, 3… hasta 20 autores para desambiguar) se eliminó en el issue #1761: añadía ~40 líneas de complejidad para un caso que ocurre en menos del 1% de los proyectos, y producía slugs largos (`titulo-por-autor1-y-autor2`). `-dN` es más simple y predecible.
 
 ### ¿Cómo se excluyen documentos del build? (alcance de `.gitignore`)
 
@@ -351,9 +351,9 @@ Decisión registrada en el issue #1542 (2026-08): **la superficie pública queda
 
 Superficie estable:
 
-- **Comandos**: `build`, `init`, `validate`, `doctor`, `new`, `clean`, `filters`.
+- **Comandos**: `build`, `init`, `validate`, `doctor`, `new`, `clean`, `list-filters`.
 - **Opciones globales**: `--project-root`, `-V/--version`, `-h/--help`.
-- **Opciones de build**: `--concurrency`, `--full`, `--output`, `--dry-run`, `--verbose`, `--profile`.
+- **Opciones de build**: `--full`, `--output`, `--verbose`.
 - **Configuración** (`iteraciones.config.yaml`): `lang`, `toc`, `format.latex`, `format.html.{title, tagline, logo, theme, accent, generate, blocks}`, `format.pdf.{generate, show-date, page-number, disabled-preamble-filters}`, `format.epub.generate`, `format.markdown.generate`, `disabled-filters`, `lua-filters`, `bibliography`, `csl`.
 - **Frontmatter**: `title`, `subtitle`, `date`, `author`.
 - **Filtros**: nombres completos de los filters del paquete (capas `semantic/`, `latex/`, `html/`) y de los preamble filters numerados; override por archivo y listas `disabled-*`.
@@ -361,8 +361,17 @@ Superficie estable:
 
 Decisiones confirmadas en este pase (sin cambios de código):
 
-- La terminología `filters` / `preamble filters` / `lua-filters` se conserva tal cual.
+- La terminología `filters` / `preamble filters` / `lua-filters` se conserva tal cual (el comando que los lista es `list-filters`).
 - Los nombres numerados de preamble filters expuestos en config (`24-eso-pic`, …) se conservan: renumerarlos rompería configs existentes sin beneficio.
+
+### ¿Por qué un color de acento inválido es warning en build pero error en validate?
+
+Decisión registrada en el issue #1770 (2026-08): **el comportamiento es intencional y distinto según el contexto**.
+
+- **`build`** (tolerante): un `accent` desconocido genera una advertencia y usa `lime` por defecto. El build no debe bloquearse por un color: la prioridad es que el usuario vea su contenido.
+- **`validate`** (estricto): el acento desconocido es un error que rompe la validación. `validate` es una herramienta de diagnóstico: su trabajo es señalar exactamente qué está mal.
+
+Ambos caminos se implementan en `src/config/config-loader.ts`: en build se intercepta el valor y se advierte antes del parseo del schema; en validate no se corta y el schema Zod lo reporta como issue junto con los demás errores de la configuración.
 
 ---
 
