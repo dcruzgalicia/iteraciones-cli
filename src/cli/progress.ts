@@ -53,7 +53,7 @@ interface Row {
  * - **TTY**: filas interactivas con conteo en vivo [i/N] y re-render en sitio.
  * - **Non-TTY (pipes, CI)**: cada fila se imprime al finalizar, en el orden en
  *   que se cierra.
- * - **--verbose**: texto plano con etiquetas [iniciado]/[completado]/[omitido].
+ * - **--verbose**: texto plano: las filas finales (con conteo y tiempo) y los [info] del orquestador.
  * - El resumen final (tabla alineada, advertencias, --profile) es idéntico.
  *
  * El renderer es síncrono y sin bucles de render: un error del build nunca
@@ -125,7 +125,6 @@ export class ProgressTracker {
     if (phase !== 'discovery' && phase !== 'render') this.ensureFormatsBlock();
     this.setRowStatus(this.rowKeyFor(phase), 'active');
     this.renderRow(this.rowKeyFor(phase));
-    if (this.verbose) process.stdout.write(`[iniciado] ${PHASE_META[phase].label}\n`);
   }
 
   reportFile(file: RenderFileReport): void {
@@ -157,9 +156,6 @@ export class ProgressTracker {
     this.setRowStatus(key, 'done', count, elapsed);
     this.renderRow(key);
     if (phase === 'pdf') this.maybeFinishGroup();
-    if (this.verbose) {
-      process.stdout.write(`[completado] ${PHASE_META[phase].label}${count > 0 ? ` ${count}` : ''}  ${formatTime(elapsed)}\n`);
-    }
   }
 
   async finish(processed: number, cached: number, formats?: string[], outputDir?: string): Promise<void> {
@@ -183,7 +179,6 @@ export class ProgressTracker {
         const st = this.phaseStart[this.currentPhase];
         row.elapsed = st !== undefined ? performance.now() - st : 0;
         this.renderRow(key);
-        if (this.verbose) process.stdout.write(`[fallido] ${PHASE_META[this.currentPhase].label}\n`);
       }
     }
     // Fases no iniciadas: nunca muestran estado de éxito
@@ -191,7 +186,6 @@ export class ProgressTracker {
     if (renderRow && renderRow.status === 'pending') {
       renderRow.status = 'skipped';
       this.renderRow('phase:render');
-      if (this.verbose) process.stdout.write(`[omitido] ${PHASE_META.render.label}\n`);
     }
     this.ensureFormatsBlock();
     // Las filas de formato pendientes quedan sin imprimir: no son un éxito
@@ -280,7 +274,6 @@ export class ProgressTracker {
     if (allClosed) {
       group.status = 'done';
       this.renderRow('group');
-      if (this.verbose) process.stdout.write('[completado] Generando formatos\n');
     }
   }
 
@@ -290,7 +283,6 @@ export class ProgressTracker {
     if (renderRow && renderRow.status === 'pending') {
       renderRow.status = 'skipped';
       this.renderRow('phase:render');
-      if (this.verbose) process.stdout.write(`[omitido] ${PHASE_META.render.label}\n`);
     }
     this.ensureFormatsBlock();
     for (const f of this.formats) {
@@ -382,8 +374,10 @@ export class ProgressTracker {
       process.stdout.write(`  ${padRight('Sin cambios (reutilizado)', LABEL_WIDTH)}${cached}\n`);
     }
     // Conteo honesto: formatos ACTIVOS de la configuración (no archivos
-    // generados, que dependen de cuántos documentos tengan salida).
-    process.stdout.write(`  ${padRight('Formatos activos', LABEL_WIDTH)}${formatCount}\n`);
+    // generados, que dependen de cuántos documentos tengan salida), con el
+    // desglose de documentos procesados por formato (solo si hubo trabajo).
+    const formatDetail = processed > 0 && formats ? formats.map((f) => `${f} ${this.phaseCounts[f as PipelinePhase] ?? 0}`).join(', ') : '';
+    process.stdout.write(`  ${padRight('Formatos activos', LABEL_WIDTH)}${formatCount}${formatDetail ? ` — ${formatDetail}` : ''}\n`);
     if (outputDir) {
       process.stdout.write(`  ${padRight('Salida', LABEL_WIDTH)}${outputDir}\n`);
     }
