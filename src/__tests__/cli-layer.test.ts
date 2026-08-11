@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it, spyOn } from 'bun:test';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CommanderError } from 'commander';
@@ -8,7 +8,7 @@ import { checkLatexEngine } from '../cli/doctor/system-checks.js';
 import { buildProgram } from '../cli/parser.js';
 import { logWarning, setLoggerColorEnabled } from '../lib/logger.js';
 import { checkPandoc } from '../lib/pandoc-runner.js';
-import { initTestProject } from './helpers.js';
+import { initTestProject, withTempDir } from './helpers.js';
 
 // Los tests que invocan pandoc real se marcan como skip si no está instalado
 // (mismo patrón que integration.test.ts): sin pandoc la suite pasa con skips.
@@ -22,18 +22,6 @@ beforeAll(() => setLoggerColorEnabled(false));
 
 // El smoke de PDF real solo corre si el motor LaTeX está disponible.
 const latexOk = (await checkLatexEngine()).ok;
-
-/**
- * Crea un directorio temporal y ejecuta la función de test. Lo limpia al final.
- */
-async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
-  const dir = await mkdtemp(join(tmpdir(), 'iteraciones-cli-test-'));
-  try {
-    await fn(dir);
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
-}
 
 /**
  * Restaura exitCode y el spy de stderr después de cada test que los toque.

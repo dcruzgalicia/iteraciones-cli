@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'bun:test';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { convertToEpub, convertToMarkdown } from '../builder/export/runner.js';
 import type { LuaFilterGroup } from '../builder/render.js';
 import { checkPandoc } from '../lib/pandoc-runner.js';
+import { withTempDir } from './helpers.js';
 
 /** Markdown original de entrada con frontmatter (el frontmatter fluye a pandoc). */
 const BODY = '---\ntitle: "Mi título"\nauthor: [Autor Uno, Autor Dos]\ndate: 2026-08-08\n---\n\nHola.\n';
@@ -25,15 +24,6 @@ const EXPORT_DOC = {
     toc: false,
   },
 };
-
-async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
-  const dir = await mkdtemp(join(tmpdir(), 'iteraciones-cli-test-'));
-  try {
-    await fn(dir);
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
-}
 
 const pandocOk = await checkPandoc().catch(() => null);
 // unzip se usa para inspeccionar el EPUB generado: skip real si no está en PATH.

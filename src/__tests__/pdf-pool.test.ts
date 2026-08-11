@@ -80,11 +80,17 @@ describe('pdf-pool (consumidor con solape real)', () => {
   });
 
   it('sin jobs, drain no abre la fase PDF', async () => {
-    const consumer = createPdfConsumer('/tmp/work', '/tmp/biber', 2, progressStub());
+    const progress = {
+      startPhase: () => {
+        throw new Error('startPhase no debe llamarse sin jobs');
+      },
+      completePhase: () => {},
+      reportFile: () => {},
+    } as never;
+    const consumer = createPdfConsumer('/tmp/work', '/tmp/biber', 2, progress);
     consumer.start();
     consumer.markProducerDone();
     await consumer.drain();
-    expect(true).toBe(true);
   });
 
   it('un fallo de compilación se propaga una sola vez y cancela la cola', async () => {

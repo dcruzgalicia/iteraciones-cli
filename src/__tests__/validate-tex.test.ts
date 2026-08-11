@@ -1,20 +1,11 @@
 import { afterEach, describe, expect, it, spyOn } from 'bun:test';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import * as systemChecks from '../cli/doctor/system-checks.js';
+import { withTempDir } from './helpers.js';
 
 const { runValidate } = await import('../cli/validate.js');
 const { initTestProject } = await import('./helpers.js');
-
-async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
-  const dir = await mkdtemp(join(tmpdir(), 'iteraciones-cli-test-'));
-  try {
-    await fn(dir);
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
-}
 
 describe('runValidate (criterio del motor LaTeX)', () => {
   afterEach(() => {

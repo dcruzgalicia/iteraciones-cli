@@ -1,20 +1,11 @@
 import { describe, expect, it, spyOn } from 'bun:test';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
 import { DEFAULT_EPUB_FORMAT, DEFAULT_HTML_FORMAT, DEFAULT_MARKDOWN_FORMAT, DEFAULT_PDF_FORMAT, DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { ConfigError } from '../lib/errors.js';
-
-async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
-  const dir = await mkdtemp(join(tmpdir(), 'iteraciones-test-'));
-  try {
-    await fn(dir);
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
-}
+import { withTempDir } from './helpers.js';
 
 async function writeConfig(dir: string, content: string): Promise<void> {
   await writeFile(join(dir, 'iteraciones.config.yaml'), content, 'utf8');
@@ -57,7 +48,7 @@ describe('loadSiteConfig', () => {
   it('lanza ConfigError cuando el YAML tiene sintaxis inválida', async () => {
     await withTempDir(async (dir) => {
       await writeConfig(dir, 'format: [mal formado');
-      expect(loadSiteConfig(dir)).rejects.toThrow(ConfigError);
+      await expect(loadSiteConfig(dir)).rejects.toThrow(ConfigError);
     });
   });
 
