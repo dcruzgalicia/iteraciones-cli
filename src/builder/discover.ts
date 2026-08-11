@@ -2,7 +2,7 @@ import { cpus } from 'node:os';
 import { basename, join } from 'node:path';
 import slugifyLib from 'slugify';
 import { BuildError, formatUserError } from '../lib/errors.js';
-import { splitFrontmatter } from '../lib/frontmatter.js';
+import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 import { logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
 import { mapWithConcurrency } from '../lib/run.js';
@@ -183,7 +183,9 @@ export async function discover(
       try {
         const { yaml } = splitFrontmatter(text);
         if (yaml) {
-          const parsed = Bun.YAML.parse(yaml) as Record<string, unknown>;
+          const yamlResult = parseYamlWithPosition(yaml);
+          if (yamlResult.error) throw new Error(yamlResult.error);
+          const parsed = yamlResult.value as Record<string, unknown> | undefined;
           if (parsed && !Array.isArray(parsed)) {
             // El frontmatter completo fluye a pandoc como metadata del documento
             fm = parsed;

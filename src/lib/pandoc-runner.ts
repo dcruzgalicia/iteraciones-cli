@@ -34,8 +34,8 @@ export async function checkPandoc(): Promise<string> {
   let result: RunResult;
   try {
     result = await run('pandoc', ['--version']);
-  } catch (err) {
-    throw new PandocError(`pandoc no está disponible en PATH: ${String(err)}`, '', '');
+  } catch {
+    throw new PandocError('pandoc no está disponible en PATH. Instálalo desde https://pandoc.org/installing.html', '', '');
   }
   if (result.exitCode !== 0) throw new PandocError('pandoc no está disponible en PATH', '', result.stderr);
   const version = result.stdout.split('\n')[0]?.trim() ?? 'pandoc unknown';
@@ -66,8 +66,10 @@ export async function runPandoc(options: PandocOptions): Promise<string> {
   let proc: ReturnType<typeof Bun.spawn>;
   try {
     proc = Bun.spawn(args, { stdin: 'pipe', stdout: 'pipe', stderr: 'pipe', env: options.env ? { ...process.env, ...options.env } : undefined });
-  } catch (err) {
-    throw new PandocError(`pandoc no está disponible en PATH: ${String(err)}`, options.sourcePath, '');
+  } catch {
+    // Error esperado: ENOENT al spawnear; el mensaje accionable es más útil
+    // que la causa técnica de Bun (duplicada en el mensaje).
+    throw new PandocError('pandoc no está disponible en PATH. Instálalo desde https://pandoc.org/installing.html', options.sourcePath, '');
   }
 
   if (proc.stdin == null || typeof proc.stdin === 'number') {

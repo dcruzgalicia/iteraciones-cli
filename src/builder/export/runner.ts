@@ -130,9 +130,9 @@ export async function convertToPdf(
       stderr: 'pipe',
       env: { ...process.env, PAR_GLOBAL_TEMP: biberCache },
     });
-  } catch (err) {
+  } catch {
     // Error esperado: latexmk no está en PATH (ENOENT); mensaje accionable en español
-    throw new PandocError('latexmk no está disponible en PATH. Instala MacTeX full: https://tug.org/mactex/', sourcePath, String(err));
+    throw new PandocError('latexmk no está disponible en PATH. Instala MacTeX full: https://tug.org/mactex/', sourcePath, '');
   }
   if (proc.stdout == null || typeof proc.stdout === 'number') {
     throw new PandocError('No se pudo leer stdout de latexmk', sourcePath, '');

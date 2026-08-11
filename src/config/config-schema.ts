@@ -5,6 +5,33 @@ import { DEFAULT_EPUB_FORMAT, DEFAULT_HTML_FORMAT, DEFAULT_MARKDOWN_FORMAT, DEFA
 
 // ── Constantes ────────────────────────────────────────────────────────────
 
+/**
+ * Mensajes de error de Zod en español (la CLI es íntegramente en español).
+ * Configuración global del proceso: solo se usa para la config del proyecto.
+ * Los accesos a campos específicos de cada issue usan casts acotados (los
+ * tipos internos de Zod v4 no exponen todos los campos del runtime).
+ */
+z.setErrorMap(((issue: z.ZodIssue) => {
+  if (issue.code === 'invalid_type') {
+    const expected = (issue as { expected?: string }).expected ?? 'valor';
+    const input = (issue as { input?: unknown }).input;
+    const received = typeof input === 'string' ? input : JSON.stringify(input ?? 'desconocido');
+    return { message: `se esperaba ${expected}, se recibió ${received}` };
+  }
+  if (issue.code === 'invalid_value') {
+    const values = (issue as { values?: unknown[] }).values ?? [];
+    const list = values.map((o) => JSON.stringify(o)).join(', ');
+    return { message: list ? `valor no válido: se esperaba uno de ${list}` : 'valor no válido' };
+  }
+  if (issue.code === 'too_small') {
+    return { message: `muy corto: mínimo ${issue.minimum}` };
+  }
+  if (issue.code === 'too_big') {
+    return { message: `muy largo: máximo ${issue.maximum}` };
+  }
+  return { message: issue.message };
+}) as unknown as z.ZodErrorMap);
+
 /** Colores de acento validados por config; fuente única: ACCENT_PALETTES. */
 export const KNOWN_ACCENT_COLORS = Object.keys(ACCENT_PALETTES) as AccentColor[];
 
