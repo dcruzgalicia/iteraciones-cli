@@ -97,17 +97,17 @@ Ejemplos:
   program
     .command('doctor')
     .description('verifica el entorno de build')
-    .option('--verbose', 'muestra también la configuración del proyecto')
+    .option('--info', 'muestra también la configuración del proyecto')
     .addHelpText(
       'after',
       `
 Ejemplos:
   iteraciones doctor               verifica pandoc, motor LaTeX y permisos
-  iteraciones doctor --verbose     además, muestra la configuración del proyecto
+  iteraciones doctor --info        además, muestra la configuración del proyecto
 `,
     )
-    .action(async (opts: { verbose?: boolean }) => {
-      await runDoctor(projectRoot(), { verbose: opts.verbose });
+    .action(async (opts: { info?: boolean }) => {
+      await runDoctor(projectRoot(), { info: opts.info });
     });
 
   program
