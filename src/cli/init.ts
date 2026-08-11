@@ -1,6 +1,13 @@
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { DEFAULT_EPUB_FORMAT, DEFAULT_HTML_FORMAT, DEFAULT_MARKDOWN_FORMAT, DEFAULT_PDF_FORMAT, DEFAULT_SITE_CONFIG } from '../config/site-config.js';
+import {
+  DEFAULT_EPUB_FORMAT,
+  DEFAULT_HTML_FORMAT,
+  DEFAULT_LATEX_FORMAT,
+  DEFAULT_MARKDOWN_FORMAT,
+  DEFAULT_PDF_FORMAT,
+  DEFAULT_SITE_CONFIG,
+} from '../config/site-config.js';
 import { logInfo, logSuccess } from '../lib/logger.js';
 
 /** Fecha local actual en formato ISO (yyyy-mm-dd), como en `new`. */
@@ -52,7 +59,8 @@ function buildDefaultConfig(): string {
     `lang: ${DEFAULT_SITE_CONFIG.lang}`,
     `toc: ${DEFAULT_SITE_CONFIG.toc}`,
     'format:',
-    `  latex: ${DEFAULT_SITE_CONFIG.format.latex}`,
+    '  latex:',
+    `    generate: ${DEFAULT_LATEX_FORMAT.generate}`,
     '  html:',
     `    title: ${quote(DEFAULT_HTML_FORMAT.title)}`,
     `    tagline: ${quote(DEFAULT_HTML_FORMAT.tagline)}`,

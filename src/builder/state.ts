@@ -253,13 +253,13 @@ export async function computeConfigHashes(cwd: string, siteConfig: SiteConfig): 
   const logo = logoPath ? await hashFileContent(join(cwd, logoPath)).catch(() => '') : '';
   return {
     pdf: hashString(
-      `${JSON.stringify(fmt?.pdf ?? {})}\n${String(fmt?.latex ?? false)}\n${String(siteConfig.toc ?? false)}\n${String(siteConfig.lang ?? '')}`,
+      `${JSON.stringify(fmt?.pdf ?? {})}\n${String(fmt?.latex?.generate ?? false)}\n${String(siteConfig.toc ?? false)}\n${String(siteConfig.lang ?? '')}`,
     ),
     // El HTML muestra la tarjeta Formatos con los formatos activos: cambiar
     // pdf/latex/epub/markdown debe regenerar las páginas HTML.
     html: hashString(
       `${JSON.stringify(fmt?.html ?? {})}\n${htmlResources}\n${logo}\n${String(siteConfig.toc ?? false)}\n` +
-        `${String(fmt?.pdf?.generate ?? false)}\n${String(fmt?.latex ?? false)}\n${String(fmt?.epub?.generate ?? false)}\n${String(fmt?.markdown?.generate ?? false)}\n` +
+        `${String(fmt?.pdf?.generate ?? false)}\n${String(fmt?.latex?.generate ?? false)}\n${String(fmt?.epub?.generate ?? false)}\n${String(fmt?.markdown?.generate ?? false)}\n` +
         // lang se emite como --metadata=lang en el HTML: participar en el hash
         `${String(siteConfig.lang ?? '')}`,
     ),

@@ -84,6 +84,19 @@ export async function loadSiteConfig(cwd: string, options?: { mode?: 'build' | '
     }
   }
 
+  // El formato antiguo `latex: true|false` (booleano) se reemplazó por el
+  // sub-objeto `latex: { generate: true|false }` (pre-1.0, sin fallback). Un
+  // booleano es un error de tipo para el schema: se intercepta aquí, se
+  // advierte y se usa el default, igual que el acento desconocido.
+  const formatRaw = root.format as Record<string, unknown> | undefined;
+  const latexRaw = formatRaw?.latex;
+  if (typeof latexRaw === 'boolean') {
+    if (!isValidate) {
+      logWarning('format.latex ahora es un objeto: usa "format.latex: { generate: true|false }". Se usa el valor por defecto (false).', 'config');
+      delete formatRaw?.latex;
+    }
+  }
+
   // Las claves desconocidas (issues unrecognized_keys de los esquemas strict)
   // son warnings, no errores: el build continúa. Los errores de tipo sí rompen.
   const result = SiteConfigSchema.safeParse(root);

@@ -56,7 +56,7 @@ describe('runValidate (criterio del motor LaTeX)', () => {
   it('con format.latex: true no exige el motor LaTeX (solo generar .tex)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  latex: true\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  latex:\n    generate: true\n', 'utf8');
       const spy = spyOn(systemChecks, 'checkLatexEngine').mockImplementation(async () => ({
         label: 'pdflatex disponible',
         ok: false,

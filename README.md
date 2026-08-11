@@ -56,7 +56,8 @@ lang: "es-MX"                     # idioma del sitio (por defecto: "es-MX")
 toc: false                         # índice en cada documento (por defecto: false)
 
 format:
-  latex: false                     # genera archivos .tex (por defecto: false)
+  latex:
+    generate: false                # genera archivos .tex (por defecto: false)
 
   pdf:
     generate: false                # genera PDF (por defecto: false)

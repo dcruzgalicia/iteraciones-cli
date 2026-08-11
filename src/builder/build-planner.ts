@@ -90,7 +90,7 @@ export async function computeBuildMetadata(cwd: string, siteConfig: SiteConfig, 
 
   const formatCfg = siteConfig.format;
   const pdfOn = formatCfg?.pdf?.generate === true;
-  const latexOn = formatCfg?.latex === true;
+  const latexOn = formatCfg?.latex?.generate === true;
   const htmlOn = formatCfg?.html?.generate === true;
   const epubOn = formatCfg?.epub?.generate === true;
   const mdOn = formatCfg?.markdown?.generate === true;
