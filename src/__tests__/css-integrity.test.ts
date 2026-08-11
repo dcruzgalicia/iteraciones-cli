@@ -1,17 +1,8 @@
 import { describe, expect, it } from 'bun:test';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { compileTailwindCss, resolveTailwindBin } from '../builder/build-assets.js';
-
-async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
-  const dir = await mkdtemp(join(tmpdir(), 'iteraciones-cli-test-'));
-  try {
-    await fn(dir);
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
-}
+import { withTempDir } from './helpers.js';
 
 /**
  * El CSS se compila escaneando SOLO los HTML de dist/files: el fixture

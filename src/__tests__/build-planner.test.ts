@@ -1,19 +1,10 @@
 import { describe, expect, it } from 'bun:test';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { type BuildMetadata, computeBuildMetadata, computeWorkSets } from '../builder/build-planner.js';
 import type { BuildDocument } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
-
-async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
-  const dir = await mkdtemp(join(tmpdir(), 'iteraciones-planner-'));
-  try {
-    await fn(dir);
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
-}
+import { withTempDir } from './helpers.js';
 
 function doc(relativePath: string): BuildDocument {
   return { filePath: join('/proyecto', relativePath), relativePath, frontmatter: { title: relativePath, date: '', author: [] } };

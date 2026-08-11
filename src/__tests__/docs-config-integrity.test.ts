@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'bun:test';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { DEFAULT_HTML_BLOCKS, DEFAULT_SITE_CONFIG } from '../config/site-config.js';
+import { withTempDir } from './helpers.js';
 
 const DOCS_FILES = ['docs/configuration.md', 'README.md'];
 
@@ -41,15 +41,6 @@ function expectedKeys(): string[] {
   walk(DEFAULT_SITE_CONFIG, '');
   walk(DEFAULT_HTML_BLOCKS, 'format.html.blocks');
   return [...keys];
-}
-
-async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
-  const dir = await mkdtemp(join(tmpdir(), 'iteraciones-cli-test-'));
-  try {
-    await fn(dir);
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
 }
 
 describe('integridad docs ↔ schema de configuración', () => {

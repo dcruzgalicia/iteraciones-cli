@@ -24,9 +24,9 @@ describe('mapWithConcurrency', () => {
   });
 
   it('lanza error si limit no es entero positivo', async () => {
-    expect(mapWithConcurrency([1], 0, async (n) => n)).rejects.toThrow('entero >= 1');
-    expect(mapWithConcurrency([1], -1, async (n) => n)).rejects.toThrow('entero >= 1');
-    expect(mapWithConcurrency([1], 1.5, async (n) => n)).rejects.toThrow('entero >= 1');
+    await expect(mapWithConcurrency([1], 0, async (n) => n)).rejects.toThrow('entero >= 1');
+    await expect(mapWithConcurrency([1], -1, async (n) => n)).rejects.toThrow('entero >= 1');
+    await expect(mapWithConcurrency([1], 1.5, async (n) => n)).rejects.toThrow('entero >= 1');
   });
 
   it('no excede el límite de concurrencia', async () => {

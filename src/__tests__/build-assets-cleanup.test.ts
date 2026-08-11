@@ -1,21 +1,12 @@
 import { describe, expect, it, spyOn } from 'bun:test';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import * as buildAssetsModule from '../builder/build-assets.js';
 import { buildAssets, computeCssHash } from '../builder/build-assets.js';
 import { cleanupDeletedFiles, cleanupSlugChanges } from '../builder/cleanup.js';
 import type { BuildContext } from '../builder/types.js';
 import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
-
-async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
-  const dir = await mkdtemp(join(tmpdir(), 'iteraciones-cli-test-'));
-  try {
-    await fn(dir);
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
-}
+import { withTempDir } from './helpers.js';
 
 function makeCtx(cwd: string): BuildContext {
   return { cwd, siteConfig: DEFAULT_SITE_CONFIG, outputDir: join(cwd, 'dist', 'files'), concurrency: 2, needsCss: false };

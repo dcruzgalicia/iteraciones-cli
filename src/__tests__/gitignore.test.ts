@@ -1,18 +1,9 @@
 import { describe, expect, it } from 'bun:test';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { discover } from '../builder/discover.js';
 import { isIgnoredByRules, isInsideIgnoredDir, loadGitignoreRules, parseGitignore } from '../builder/gitignore.js';
-
-async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
-  const dir = await mkdtemp(join(tmpdir(), 'iteraciones-gitignore-'));
-  try {
-    await fn(dir);
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
-}
+import { withTempDir } from './helpers.js';
 
 describe('parseGitignore', () => {
   it('ignora líneas vacías y comentarios', () => {
