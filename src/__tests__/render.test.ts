@@ -7,6 +7,7 @@ import {
   getBuiltinFilterNames,
   htmlPageFromMarkdown,
   loadFilterGroups,
+  markdownToLatex,
   resolveBlockOrder,
   resolveLuaFilters,
   resolveUserLuaFilters,
@@ -54,6 +55,50 @@ describe('extractReferencesBlock (sin marcador en el template)', () => {
       } finally {
         warnSpy.mockRestore();
       }
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('pdfDate (fecha de portada del PDF)', () => {
+  it.skipIf(!pandocOk)('con show-date y date en el frontmatter, la portada usa la fecha legible', async () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-render-'));
+    try {
+      const tpl = join(cwd, 'tpl.tex');
+      writeFileSync(tpl, '\\date{$date$}\n$body$');
+      const content = '---\ntitle: T\ndate: 2026-08-08\n---\n\nTexto.\n';
+      const filePath = join(cwd, 'test.md');
+      writeFileSync(filePath, content);
+      const doc: BuildDocument = {
+        filePath,
+        relativePath: 'test.md',
+        frontmatter: { title: 'T', date: '2026-08-08', author: [] },
+      };
+      const siteConfig = await loadSiteConfig(cwd);
+      const withShowDate = { ...siteConfig, format: { ...siteConfig.format, pdf: { ...siteConfig.format.pdf, showDate: true } } };
+      const tex = await markdownToLatex(
+        content,
+        doc,
+        await loadFilterGroups(withShowDate, undefined, cwd),
+        [],
+        tpl,
+        { date: '2026-08-08' },
+        withShowDate,
+      );
+      expect(tex).toContain('\\date{8 de agosto de 2026}');
+
+      // Sin show-date, la fecha del frontmatter se neutraliza en la portada
+      const sinShowDate = await markdownToLatex(
+        content,
+        doc,
+        await loadFilterGroups(siteConfig, undefined, cwd),
+        [],
+        tpl,
+        { date: '2026-08-08' },
+        siteConfig,
+      );
+      expect(sinShowDate).toContain('\\date{}');
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }

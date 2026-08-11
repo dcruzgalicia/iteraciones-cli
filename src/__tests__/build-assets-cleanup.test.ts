@@ -3,7 +3,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import * as buildAssetsModule from '../builder/build-assets.js';
 import { buildAssets, computeCssHash } from '../builder/build-assets.js';
-import { cleanupDeletedFiles, cleanupSlugChanges } from '../builder/cleanup.js';
+import { buildFormatsList, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges } from '../builder/cleanup.js';
 import type { BuildContext } from '../builder/types.js';
 import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { withTempDir } from './helpers.js';
@@ -86,5 +86,42 @@ describe('cleanup (eliminaciones y slugs)', () => {
 
       expect(await Bun.file(join(ctx.outputDir, 'slug-viejo.html')).exists()).toBe(false);
     });
+  });
+
+  it('cleanupRemovedFormats elimina las salidas del formato y los assets de html', async () => {
+    await withTempDir(async (dir) => {
+      const ctx = makeCtx(dir);
+      await mkdir(join(ctx.outputDir, 'css'), { recursive: true });
+      await mkdir(join(ctx.outputDir, 'fonts'), { recursive: true });
+      await writeFile(join(ctx.outputDir, 'doc.html'), 'html');
+      await writeFile(join(ctx.outputDir, 'doc.pdf'), 'pdf');
+      await writeFile(join(ctx.outputDir, 'doc.tex'), 'tex');
+      await writeFile(join(ctx.outputDir, 'css', 'styles.css'), 'css');
+      await writeFile(join(ctx.outputDir, 'fonts', 'x.ttf'), 'font');
+      await writeFile(join(ctx.outputDir, 'logo.svg'), 'logo');
+      const doc = { relativePath: 'doc.md', slug: 'doc' } as never;
+
+      await cleanupRemovedFormats(ctx, [doc], ['html']);
+
+      expect(await Bun.file(join(ctx.outputDir, 'doc.html')).exists()).toBe(false);
+      expect(await Bun.file(join(ctx.outputDir, 'doc.pdf')).exists()).toBe(true);
+      expect(await Bun.file(join(ctx.outputDir, 'doc.tex')).exists()).toBe(true);
+      // Los assets de HTML se limpian junto con el formato
+      expect(await Bun.file(join(ctx.outputDir, 'css')).exists()).toBe(false);
+      expect(await Bun.file(join(ctx.outputDir, 'fonts')).exists()).toBe(false);
+      expect(await Bun.file(join(ctx.outputDir, 'logo.svg')).exists()).toBe(false);
+    });
+  });
+
+  it('buildFormatsList refleja los formatos activos en el orden canónico', () => {
+    expect(buildFormatsList({ latexOn: false, pdfOn: false, htmlOn: false, epubOn: false, mdOn: false })).toEqual([]);
+    expect(buildFormatsList({ latexOn: true, pdfOn: true, htmlOn: true, epubOn: true, mdOn: true })).toEqual([
+      'latex',
+      'pdf',
+      'html',
+      'epub',
+      'markdown',
+    ]);
+    expect(buildFormatsList({ latexOn: true, pdfOn: false, htmlOn: true, epubOn: false, mdOn: false })).toEqual(['latex', 'html']);
   });
 });

@@ -18,6 +18,14 @@ function makeProject(content: string): string {
   return dir;
 }
 
+/** Proyecto con dos documentos (a.md y b.md) con el contenido dado. */
+function makeTwoDocProject(contentA: string, contentB: string): string {
+  const dir = mkdtempSync(join(tmpdir(), 'iteraciones-slug-'));
+  writeFileSync(join(dir, 'a.md'), contentA);
+  writeFileSync(join(dir, 'b.md'), contentB);
+  return dir;
+}
+
 /** Fuerza mtime futuro para detectar cambios de mismo tamaño (misma resolución de ms). */
 function touchFuture(file: string): void {
   utimesSync(file, new Date(Date.now() + 60_000), new Date(Date.now() + 60_000));
@@ -152,6 +160,28 @@ describe('discover (cambios de slug por metadatos)', () => {
       const result = await discover(cwd);
       expect(result.slugChangedEntries.size).toBe(0);
       expect(result.discoveryIndex.get('doc.md')?.slug).toBe('prueba-d1');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('resuelve la colisión expandiendo autores (resolveByAuthorExpansion) sin -dN', async () => {
+    // Dos documentos con el mismo título y autores distintos: la expansión
+    // de autores produce slugs únicos sin recurrir al sufijo -dN
+    const cwd = makeTwoDocProject(
+      '---\ntitle: Mismo Título\nauthor: [Ana García]\n---\n\nContenido',
+      '---\ntitle: Mismo Título\nauthor: [Luis Pérez]\n---\n\nContenido',
+    );
+    try {
+      const result = await discover(cwd);
+      const slugA = result.discoveryIndex.get('a.md')?.slug;
+      const slugB = result.discoveryIndex.get('b.md')?.slug;
+      expect(slugA).toBe('mismo-titulo-por-ana-garcia');
+      expect(slugB).toBe('mismo-titulo-por-luis-perez');
+      expect(slugA).not.toBe(slugB);
+      // Ninguno usa el sufijo -dN (la expansión de autores lo resolvió)
+      expect(slugA).not.toMatch(/-d\d+$/);
+      expect(slugB).not.toMatch(/-d\d+$/);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
