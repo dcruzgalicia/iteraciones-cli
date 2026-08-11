@@ -52,6 +52,29 @@ describe('loadSiteConfig', () => {
     });
   });
 
+  it('reporta TODOS los errores de tipo en una sola ejecución (no solo el primero)', async () => {
+    await withTempDir(async (dir) => {
+      await writeConfig(dir, 'lang: 123\nformat:\n  html:\n    theme: raro\n  pdf:\n    page-number: medio\n');
+      await expect(loadSiteConfig(dir, { mode: 'validate' })).rejects.toThrow(/lang: .*format\.html\.theme: .*format\.pdf\.page-number:/s);
+    });
+  });
+
+  it('una config con forma de escalar se ignora con warning explícito', async () => {
+    await withTempDir(async (dir) => {
+      await writeConfig(dir, 'hola mundo');
+      const stderrSpy = spyOn(process.stderr, 'write');
+      let output = '';
+      try {
+        const config = await loadSiteConfig(dir);
+        expect(config.lang).toBe('es-MX'); // defaults
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(output).toContain('no es un objeto YAML');
+    });
+  });
+
   it('lee format.html.title correctamente', async () => {
     await withTempDir(async (dir) => {
       await writeConfig(dir, 'format:\n  html:\n    title: Mi Título');
