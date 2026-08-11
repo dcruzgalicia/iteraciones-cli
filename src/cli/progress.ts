@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { GLYPHS } from '../lib/logger.js';
 
 function formatTime(ms: number): string {
@@ -383,6 +384,14 @@ export class ProgressTracker {
       process.stdout.write(`  ${padRight('Salida', LABEL_WIDTH)}${outputDir}\n`);
     }
     process.stdout.write(`  ${padRight('Tiempo total', LABEL_WIDTH)}${formatTime(totalTime)}\n`);
+    // Guía post-build: sustituye al comando open eliminado. Solo cuando hubo
+    // trabajo real (processed > 0) hay algo nuevo que abrir; el index.html
+    // es la página de entrada cuando existe (index.md en la raíz).
+    if (outputDir && processed > 0) {
+      const opener = process.platform === 'win32' ? 'start' : process.platform === 'darwin' ? 'open' : 'xdg-open';
+      const indexHtml = join(outputDir, 'index.html');
+      process.stdout.write(`  ${padRight('Abre el resultado', LABEL_WIDTH)}${opener} ${indexHtml}\n`);
+    }
     if (this.warnings.length > 0) {
       process.stdout.write(`\nAdvertencias:\n`);
       for (const warning of this.warnings) {
