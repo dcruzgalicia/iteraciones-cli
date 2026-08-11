@@ -63,6 +63,8 @@ export async function markdownToLatex(
   templatePath: string,
   fm: Record<string, unknown>,
   siteConfig: SiteConfig,
+  /** false si 11-bibliography está desactivado: flags.lua no inyecta \\printbibliography. */
+  biblatexAvailable = true,
 ): Promise<string> {
   const title = typeof fm.title === 'string' && fm.title.trim() ? fm.title : 'Sin título';
   const subtitle = typeof fm.subtitle === 'string' && fm.subtitle.trim() ? fm.subtitle.trim() : undefined;
@@ -73,6 +75,7 @@ export async function markdownToLatex(
   // configuración (el frontmatter lang no altera babel en el PDF: contrato
   // documentado en configuration.md).
   extraArgs.push(`--metadata=babel-lang:${babelOptionsForLang(siteConfig.lang)}`);
+  extraArgs.push(`--metadata=biblatex-available:${biblatexAvailable}`);
   for (const filter of [...filters.semantic, ...filters.user, ...filters.flags, ...filters.latex]) {
     extraArgs.push('--lua-filter', filter);
   }

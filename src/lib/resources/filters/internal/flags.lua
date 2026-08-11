@@ -87,7 +87,7 @@ function Pandoc(doc)
     doc.meta['has-toc-entries'] = pandoc.MetaBool(has_toc_entries)
     doc.meta['skip-paragraph-space'] = pandoc.MetaBool(skip)
 
-    if has_cites and doc.meta.bibliography ~= nil then
+    if has_cites and doc.meta.bibliography ~= nil and doc.meta['biblatex-available'] ~= false then
       table.insert(doc.blocks, pandoc.RawBlock('latex', '\\printbibliography[heading=bibintoc]'))
     end
   elseif FORMAT == 'html5' then

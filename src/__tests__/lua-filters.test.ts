@@ -369,6 +369,11 @@ describe.skipIf(!pandocOk)('filtro interno internal/flags (detección estructura
     expect(sinBib).not.toContain('\\printbibliography');
   });
 
+  it('no agrega \\printbibliography si biblatex no está disponible (11-bibliography desactivado)', async () => {
+    const tex = await toLatexFlags('Cita [@key1].', ['--biblatex', '--bibliography', bib, '--metadata=biblatex-available:false']);
+    expect(tex).not.toContain('\\printbibliography');
+  });
+
   it('no agrega \\printbibliography sin nodos Cite aunque haya bibliografía', async () => {
     const tex = await toLatexFlags('Texto sin citas.', ['--biblatex', '--bibliography', bib]);
     expect(tex).not.toContain('\\printbibliography');
