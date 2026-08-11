@@ -4,4 +4,5 @@ dist/
 *.js.map
 AGENTS.md
 .DS_Store
+# Borradores locales de bodies de issues/PRs (nunca se versionan).
 .gh-issue-bodies/
