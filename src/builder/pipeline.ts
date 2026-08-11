@@ -119,32 +119,21 @@ export async function runDocumentPipeline(
   const filters = await loadFilterGroups(siteConfig, siteConfig.disabledFilters, ctx.cwd);
 
   progress.startLightFormats();
+  const renderCtx = { ctx, plan, formatCfg, lang, logoInline };
+  const exportCtx = {
+    filters,
+    bibOptions,
+    bibFiles,
+    biblatexAvailable,
+    globalBibliography,
+    pdfWorkDir: pdfWorkBase,
+    htmlTemplatePath,
+    latexTemplatePath,
+  };
+  const formatWorkSets = { htmlPaths, epubPaths, mdPaths, latexPaths, pdfJobs: pdfConsumer.pdfJobs };
   try {
     await mapWithConcurrency(workDocList, ctx.concurrency, async (doc) => {
-      await processDocumentFormats(
-        doc,
-        {
-          ctx,
-          plan,
-          formatCfg,
-          pdfWorkDir: pdfWorkBase,
-          globalBibliography,
-          lang,
-          logoInline,
-          filters,
-          bibOptions,
-          bibFiles,
-          htmlTemplatePath,
-          latexTemplatePath,
-          biblatexAvailable,
-          htmlPaths,
-          epubPaths,
-          mdPaths,
-          latexPaths,
-          pdfJobs: pdfConsumer.pdfJobs,
-        },
-        discoveryIndex,
-      );
+      await processDocumentFormats(doc, renderCtx, exportCtx, formatWorkSets, discoveryIndex);
       processed.add(doc.relativePath);
       progress.reportFile({ relativePath: doc.relativePath, phase: 'render' });
     });
@@ -172,24 +161,35 @@ export async function runDocumentPipeline(
 }
 
 /**
- * Contexto compartido por el pool de formatos ligeros: rutas, config y
- * conjuntos de trabajo por formato para un build. Inmutable durante el pool.
+ * Contexto de render por documento: build, plan y config de formato.
+ * Inmutable durante el pool.
  */
-interface FormatPoolCtx {
+interface RenderContext {
   ctx: BuildContext;
   plan: BuildMetadata;
   formatCfg: FormatConfig | undefined;
-  pdfWorkDir: string;
-  globalBibliography: string | undefined;
   lang: string;
   logoInline: string | undefined;
+}
+
+/**
+ * Contexto de exportación compartido: filtros, bibliografía, templates y
+ * área de trabajo del PDF. Inmutable durante el pool.
+ */
+interface ExportContext {
   filters: Awaited<ReturnType<typeof loadFilterGroups>>;
   bibOptions: Awaited<ReturnType<typeof resolveBibOptions>>['bibOptions'];
   bibFiles: string[];
-  htmlTemplatePath: string;
-  latexTemplatePath: string;
   /** true si el preamble filter 11-bibliography está activo (flags.lua lo consulta). */
   biblatexAvailable: boolean;
+  globalBibliography: string | undefined;
+  pdfWorkDir: string;
+  htmlTemplatePath: string;
+  latexTemplatePath: string;
+}
+
+/** Conjuntos de trabajo por formato del build actual. Inmutable durante el pool. */
+interface FormatWorkSets {
   htmlPaths: Set<string>;
   epubPaths: Set<string>;
   mdPaths: Set<string>;
@@ -198,27 +198,16 @@ interface FormatPoolCtx {
 }
 
 /** Procesa todos los formatos de un documento: markdown → tex/HTML/EPUB/MD → cola PDF. */
-async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, discoveryIndex: Map<string, DiscoveryEntry>): Promise<void> {
-  const {
-    ctx,
-    plan,
-    formatCfg,
-    pdfWorkDir,
-    globalBibliography,
-    lang,
-    logoInline,
-    filters,
-    bibOptions,
-    bibFiles,
-    htmlTemplatePath,
-    latexTemplatePath,
-    biblatexAvailable,
-    htmlPaths,
-    epubPaths,
-    mdPaths,
-    latexPaths,
-    pdfJobs,
-  } = pool;
+async function processDocumentFormats(
+  doc: BuildDocument,
+  renderCtx: RenderContext,
+  exportCtx: ExportContext,
+  formatWorkSets: FormatWorkSets,
+  discoveryIndex: Map<string, DiscoveryEntry>,
+): Promise<void> {
+  const { ctx, plan, formatCfg, lang, logoInline } = renderCtx;
+  const { filters, bibOptions, bibFiles, biblatexAvailable, globalBibliography, pdfWorkDir, htmlTemplatePath, latexTemplatePath } = exportCtx;
+  const { htmlPaths, epubPaths, mdPaths, latexPaths, pdfJobs } = formatWorkSets;
   const { activeFormats } = plan;
   const htmlOn = activeFormats.html;
   const epubOn = activeFormats.epub;
