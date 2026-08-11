@@ -93,8 +93,11 @@ function Pandoc(doc)
   elseif FORMAT == 'html5' then
     -- Heading sintético que citeproc necesita para enlazar las citas
     -- (link-citations); el post-procesamiento lo convierte en tarjeta.
+    -- El id es sintético (refs-heading) para no colisionar con un heading
+    -- "Referencias" propio del documento (id referencias): antes, el
+    -- post-procesamiento borraba o duplicaba el del usuario.
     if has_cites and doc.meta.bibliography ~= nil then
-      table.insert(doc.blocks, pandoc.Header(1, pandoc.Str('Referencias'), pandoc.Attr('referencias', {}, {})))
+      table.insert(doc.blocks, pandoc.Header(1, pandoc.Str('Referencias'), pandoc.Attr('refs-heading', {}, {})))
       doc.meta['has-references'] = pandoc.MetaBool(true)
     end
   end

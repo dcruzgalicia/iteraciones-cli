@@ -345,14 +345,14 @@ describe.skipIf(!pandocOk)('filtro interno internal/flags (detección estructura
       to: 'html5',
       extraArgs: ['--lua-filter', FLAGS, '--citeproc', '--bibliography', bib],
     });
-    expect(conCitas).toContain('id="referencias"');
+    expect(conCitas).toContain('id="refs-heading"');
     const sinCitas = await runPandoc({
       input: 'Texto.',
       sourcePath: 'test.md',
       to: 'html5',
       extraArgs: ['--lua-filter', FLAGS, '--citeproc', '--bibliography', bib],
     });
-    expect(sinCitas).not.toContain('id="referencias"');
+    expect(sinCitas).not.toContain('refs-heading');
   });
 
   it('en HTML el heading aparece incluso con citas rotas (los nodos Cite existen)', async () => {
@@ -362,7 +362,7 @@ describe.skipIf(!pandocOk)('filtro interno internal/flags (detección estructura
       to: 'html5',
       extraArgs: ['--lua-filter', FLAGS, '--citeproc', '--bibliography', bib],
     });
-    expect(html).toContain('id="referencias"');
+    expect(html).toContain('id="refs-heading"');
   });
 });
 

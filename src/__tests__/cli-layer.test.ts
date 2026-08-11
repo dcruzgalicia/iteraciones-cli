@@ -722,6 +722,48 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
+  it('un heading Referencias propio del documento se conserva (sin citas)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(
+        join(dir, 'test.md'),
+        '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\nTexto.\n\n# Referencias {#referencias}\n\nManual.\n',
+        'utf8',
+      );
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
+      // El heading del usuario se conserva (antes el post-procesamiento lo eliminaba)
+      expect(html).toContain('<h1 id="referencias">Referencias</h1>');
+      expect(html).toContain('Manual.');
+      // Sin citas no hay heading sintético ni tarjeta
+      expect(html).not.toContain('refs-heading');
+    });
+  });
+
+  it('un heading Referencias propio se conserva aunque haya citas (sin ids duplicados)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'bibliography.bib'), '@book{key1, author = {García, Lucía}, title = {Libro}, year = {2024}}\n', 'utf8');
+      await writeFile(
+        join(dir, 'test.md'),
+        '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\nCita [@key1].\n\n# Referencias {#referencias}\n\nManual.\n',
+        'utf8',
+      );
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
+      // El heading del usuario se conserva en el body y el sintético usa su id
+      expect(html).toContain('<h1 id="referencias">Referencias</h1>');
+      expect(html).toContain('id="refs-heading"');
+      // Un solo id referencias (el del usuario): sin duplicados
+      expect((html.match(/id="referencias"/g) ?? []).length).toBe(1);
+      expect(html).toContain('csl-entry');
+    });
+  });
+
   it('títulos con comillas, dos puntos y saltos de línea no rompen el HTML', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
@@ -750,7 +792,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       // Si --citeproc se moviera antes de los --lua-filter, citeproc insertaría
       // div#refs DESPUÉS del heading sintético y la extracción fallaría: este
       // orden (heading antes de refs) es parte del contrato de argv.
-      expect(html.indexOf('id="referencias"')).toBeLessThan(html.indexOf('<div id="refs"'));
+      expect(html.indexOf('id="refs-heading"')).toBeLessThan(html.indexOf('<div id="refs"'));
     });
   });
 
@@ -770,7 +812,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       expect(process.exitCode).toBe(0);
       const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
       // Ni el heading sintético ni el marcador quedan en el output final
-      expect(html).not.toContain('<h1 id="referencias">');
+      expect(html).not.toContain('<h1 id="refs-heading">');
       expect(html).not.toContain('block:referencias');
       // El contenido normal sí está
       expect(html).toContain('<h1 id="sección">Sección</h1>');
@@ -791,9 +833,9 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       const indiceStart = html.indexOf('<nav id="TOC"');
       const indiceEnd = html.indexOf('</nav>', indiceStart);
       const indiceBlock = html.slice(indiceStart, indiceEnd);
-      expect(indiceBlock).not.toContain('href="#referencias"');
+      expect(indiceBlock).not.toContain('href="#refs-heading"');
       // La tarjeta de referencias conserva su chip y sus entradas
-      expect(html).toContain('id="referencias"');
+      expect(html).toContain('id="refs-heading"');
       expect(html).toContain('>Referencias</h2>');
       expect(html).toContain('csl-entry');
       // Las citas del texto siguen enlazando a sus entradas (link-citations)
@@ -814,7 +856,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       // La tarjeta Formatos va después de la tarjeta de contenido
       expect(html.indexOf('>Formatos</h2>')).toBeGreaterThan(html.indexOf('<article'));
       // Las referencias viven en su propia tarjeta, fuera del article
-      expect(html.indexOf('id="referencias"')).toBeGreaterThan(html.indexOf('</article>'));
+      expect(html.indexOf('id="refs-heading"')).toBeGreaterThan(html.indexOf('</article>'));
     });
   });
 
@@ -862,8 +904,8 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       expect(pos('Tarjeta identidad')).toBeLessThan(pos('<article')); // trayectura
       expect(pos('<article')).toBeLessThan(pos('>Formatos</h2>'));
       expect(pos('>Formatos</h2>')).toBeLessThan(pos('id="TOC"'));
-      expect(pos('id="TOC"')).toBeLessThan(pos('id="referencias"'));
-      expect(pos('id="referencias"')).toBeLessThan(html.lastIndexOf('class="break-inside-avoid pb-6"')); // footer
+      expect(pos('id="TOC"')).toBeLessThan(pos('id="refs-heading"'));
+      expect(pos('id="refs-heading"')).toBeLessThan(html.lastIndexOf('class="break-inside-avoid pb-6"')); // footer
     });
   });
 
@@ -897,7 +939,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
       expect(html).not.toContain('>Formatos</h2>');
       expect(html).not.toContain('id="TOC"');
-      expect(html).not.toContain('id="referencias"');
+      expect(html).not.toContain('refs-heading');
       const pos = (s: string): number => html.indexOf(s);
       expect(pos('Tarjeta identidad')).toBeLessThan(pos('<article'));
       expect(pos('<article')).toBeLessThan(html.lastIndexOf('class="break-inside-avoid pb-6"'));
