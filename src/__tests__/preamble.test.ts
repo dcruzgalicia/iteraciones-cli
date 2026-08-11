@@ -30,6 +30,10 @@ describe('preamble-loader', () => {
     expect(biblio?.content).toContain('\\defbibheading{bibintoc}[\\refname]{%');
     const maketitle = filters.find((t) => t.name === '19-maketitle');
     expect(maketitle?.content).toContain('\\renewcommand{\\maketitle}{%');
+    // 02-fonts usa newtxtext (versalitas reales; mathptmx las degeneraba)
+    const fonts = filters.find((t) => t.name === '02-fonts');
+    expect(fonts?.content).toContain('\\usepackage{newtxtext}');
+    expect(fonts?.content).not.toContain('\\usepackage{mathptmx}');
     // 05-language expone el idioma como variable de template (la interpola
     // pandoc con el metadata babel-lang que pasa el CLI)
     const language = filters.find((t) => t.name === '05-language');
