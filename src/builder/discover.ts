@@ -1,7 +1,7 @@
 import { cpus } from 'node:os';
 import { basename, join } from 'node:path';
 import slugifyLib from 'slugify';
-import { BuildError, formatUserError } from '../lib/errors.js';
+import { BuildError, formatUserError, translateSystemError } from '../lib/errors.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 import { logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
@@ -122,7 +122,7 @@ export async function discover(
       mtimeMs = stat.mtimeMs;
       size = stat.size;
     } catch (err) {
-      throw new BuildError(`Error al leer "${relativePath}": ${String(err)}`);
+      throw new BuildError(`Error al leer "${relativePath}": ${translateSystemError(err)}`);
     }
     const mtime = Math.round(mtimeMs);
     const cached = useCache ? discoveryIndex.get(relativePath) : undefined;
@@ -160,7 +160,7 @@ export async function discover(
         try {
           text = await Bun.file(filePath).text();
         } catch (err) {
-          throw new BuildError(`Error al leer "${relativePath}": ${String(err)}`);
+          throw new BuildError(`Error al leer "${relativePath}": ${translateSystemError(err)}`);
         }
       }
       const hash = hashString(text);

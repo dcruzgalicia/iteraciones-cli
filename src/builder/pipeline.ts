@@ -3,7 +3,7 @@ import { basename, dirname, join } from 'node:path';
 import type { ProgressTracker } from '../cli/progress.js';
 import { DEFAULT_SITE_CONFIG, type FormatConfig } from '../config/site-config.js';
 import { formatHumanDate } from '../lib/date.js';
-import { BuildError } from '../lib/errors.js';
+import { BuildError, translateSystemError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
 import { logWarning } from '../lib/logger.js';
 import { mapWithConcurrency } from '../lib/run.js';
@@ -228,7 +228,7 @@ async function processDocumentFormats(
   try {
     content = await Bun.file(doc.filePath).text();
   } catch (err) {
-    throw new BuildError(`no se pudo leer "${doc.filePath}": ${String(err)}`);
+    throw new BuildError(`no se pudo leer "${doc.filePath}": ${translateSystemError(err)}`);
   }
   // Validación: el documento debe tener cuerpo después del frontmatter
   if (!splitFrontmatter(content).body.trim()) {
@@ -377,7 +377,7 @@ async function loadLogoInline(cwd: string, logoRel?: string): Promise<string | u
   try {
     return await Bun.file(logoSrc).text();
   } catch (err) {
-    logWarning(`no se pudo leer el logo: ${String(err)}`, 'html');
+    logWarning(`no se pudo leer el logo: ${translateSystemError(err)}`, 'html');
     return undefined;
   }
 }
