@@ -2,6 +2,7 @@ import { describe, expect, it, spyOn } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { getBuiltinPreambleFilterNames } from '../builder/preamble-loader.js';
 import {
   composeHtmlTemplate,
   getBuiltinFilterNames,
@@ -152,6 +153,22 @@ describe('composeHtmlTemplate', () => {
     };
     const tpl = await composeHtmlTemplate(siteConfig);
     expect(tpl.indexOf('$formats$')).toBeGreaterThan(tpl.indexOf('$if(toc)$'));
+  });
+});
+
+describe('memoización de nombres (un escaneo por proceso)', () => {
+  it('getBuiltinFilterNames devuelve la misma referencia en llamadas sucesivas', () => {
+    const a = getBuiltinFilterNames();
+    const b = getBuiltinFilterNames();
+    expect(a).toBe(b); // misma referencia → escaneo único del filesystem
+    expect(a.length).toBeGreaterThan(0);
+  });
+
+  it('getBuiltinPreambleFilterNames devuelve la misma referencia en llamadas sucesivas', () => {
+    const a = getBuiltinPreambleFilterNames();
+    const b = getBuiltinPreambleFilterNames();
+    expect(a).toBe(b);
+    expect(a.length).toBeGreaterThan(0);
   });
 });
 
