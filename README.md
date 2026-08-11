@@ -158,7 +158,7 @@ iteraciones doctor [opciones]
 
 Comprobaciones que realiza: versión de Bun, pandoc disponible en PATH, configuración del proyecto (`iteraciones.config.yaml`) válida, pdflatex y KOMA-Script instalados (solo si el proyecto compila PDF), permisos de lectura y escritura.
 
-Con `--verbose` también muestra la configuración del proyecto (idioma, documentos, salida, formatos activos, tema HTML, filtros desactivados). Con `--json` emite esa misma información en JSON para scripting.
+Con `--verbose` también muestra la configuración del proyecto (idioma, documentos, salida, formatos activos, tema HTML, filtros desactivados). Con `--json` emite las comprobaciones y esa misma información en JSON para scripting (exit code real: 1 si algún check falla).
 
 ```
 iteraciones doctor --verbose

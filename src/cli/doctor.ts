@@ -12,9 +12,11 @@ import {
 } from './doctor/system-checks.js';
 
 /**
- * Verifica que el entorno tenga todo lo necesario para correr `iteraciones build`.
+ * Ejecuta las comprobaciones de doctor y las devuelve estructuradas.
+ * Comparte la lógica con runDoctor: el dispatcher las usa para el JSON
+ * (doctor --json ejecuta los checks reales, no solo la info del proyecto).
  */
-export async function runDoctor(cwd: string): Promise<void> {
+export async function collectChecks(cwd: string): Promise<CheckResult[]> {
   // La config se carga una sola vez (en paralelo con las verificaciones de
   // entorno): el motor LaTeX solo se verifica si el proyecto lo necesita
   // (format.pdf o format.latex activos), mismo criterio que validate.
@@ -34,7 +36,7 @@ export async function runDoctor(cwd: string): Promise<void> {
   const needsLatex = configResult.siteConfig !== null && configResult.siteConfig.format?.pdf?.generate === true;
   const latex = needsLatex ? await checkLatexEngine() : undefined;
 
-  const checks: CheckResult[] = [
+  return [
     checkBunVersion(),
     pandoc,
     { label: 'iteraciones.config.yaml', ok: configResult.ok, detail: configResult.detail },
@@ -42,6 +44,13 @@ export async function runDoctor(cwd: string): Promise<void> {
     write,
     ...(latex ? [latex] : []),
   ];
+}
+
+/**
+ * Verifica que el entorno tenga todo lo necesario para correr `iteraciones build`.
+ */
+export async function runDoctor(cwd: string): Promise<void> {
+  const checks = await collectChecks(cwd);
 
   renderChecks(checks);
 
