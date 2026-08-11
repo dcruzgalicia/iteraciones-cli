@@ -91,7 +91,7 @@ La configuración tipográfica del PDF (márgenes, fuentes, interlineado, idioma
 
 Los preamble filters se encuentran en `src/lib/resources/preamble/` del paquete y pueden sobrescribirse por proyecto creando archivos con el mismo nombre en `<proyecto>/preamble/`. Para desactivar uno, se usa `format.pdf.disabled-preamble-filters`.
 
-Usa `iteraciones filters` para ver la lista completa con sus descripciones y estado.
+Usa `iteraciones list-filters` para ver la lista completa con sus descripciones y estado.
 
 ### Personalizar la tipografía del PDF (override por proyecto)
 
@@ -263,7 +263,7 @@ Habilita la exportación a Markdown procesado (con los filters aplicados).
 **Tipo:** `string[]`
 **Por defecto:** `undefined` (ninguno desactivado)
 
-Lista de filters a desactivar. Cada elemento es el **nombre completo** del filter (ej: `semantic/string/01-double-colon`, `latex/02-dictum`). Usa `iteraciones filters` para ver la lista con sus nombres.
+Lista de filters a desactivar. Cada elemento es el **nombre completo** del filter (ej: `semantic/string/01-double-colon`, `latex/02-dictum`). Usa `iteraciones list-filters` para ver la lista con sus nombres.
 
 ```yaml
 disabled-filters:

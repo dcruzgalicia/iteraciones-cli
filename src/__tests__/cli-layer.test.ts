@@ -1505,13 +1505,13 @@ describe('wiring parser → dispatcher (argv reales)', () => {
     });
   });
 
-  it('filters vía parseAsync termina con exit 0 y lista los filters', async () => {
+  it('list-filters vía parseAsync termina con exit 0 y lista los filters', async () => {
     await withTempDir(async (dir) => {
       const stdoutSpy = spyOn(process.stdout, 'write');
       let out = '';
       try {
         process.exitCode = 0;
-        await buildProgram().parseAsync(['bun', 'bin.ts', 'filters', '--project-root', dir]);
+        await buildProgram().parseAsync(['bun', 'bin.ts', 'list-filters', '--project-root', dir]);
       } finally {
         out = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
         stdoutSpy.mockRestore();

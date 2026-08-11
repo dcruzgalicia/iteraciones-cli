@@ -157,12 +157,12 @@ Con `--info` también muestra la configuración del proyecto (idioma, documentos
 iteraciones doctor --info
 ```
 
-### `iteraciones filters`
+### `iteraciones list-filters`
 
 Lista los filtros Lua disponibles con su tipo, descripción y estado (activo/desactivado).
 
 ```
-iteraciones filters
+iteraciones list-filters
 ```
 
 ### `iteraciones clean`
