@@ -1487,11 +1487,12 @@ describe('runBuild (smoke PDF real)', () => {
   afterEach(resetExitCode);
 
   it.skipIf(!latexOk || !pandocOk)(
-    'genera un PDF válido de extremo a extremo',
+    'genera un PDF válido de extremo a extremo (con TOC: guardia del hook tocbasic)',
     async () => {
       await withTempDir(async (dir) => {
         await initTestProject(dir);
-        await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  pdf:\n    generate: true\n', 'utf8');
+        // toc: true ejercita el hook \tocbasic@listhead@toc de 17-toc-section
+        await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\ntoc: true\nformat:\n  pdf:\n    generate: true\n', 'utf8');
         process.exitCode = 0;
         await runBuild(dir);
         expect(process.exitCode).toBe(0);
