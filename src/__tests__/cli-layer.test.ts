@@ -7,6 +7,7 @@ import { runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate
 import { checkLatexEngine } from '../cli/doctor/system-checks.js';
 import { buildProgram } from '../cli/parser.js';
 import { logWarning, setLoggerColorEnabled } from '../lib/logger.js';
+import * as pandocRunner from '../lib/pandoc-runner.js';
 import { checkPandoc } from '../lib/pandoc-runner.js';
 import { initTestProject, withTempDir } from './helpers.js';
 
@@ -312,6 +313,31 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       expect(output).toContain("ejecuta 'iteraciones validate' para más detalle");
       expect(process.exitCode).toBe(1);
     });
+  });
+
+  it('sin pandoc en PATH, el build aborta al inicio con mensaje accionable', async () => {
+    const spy = spyOn(pandocRunner, 'checkPandoc').mockRejectedValue(
+      new (class extends Error {
+        sourcePath = '';
+        stderr = '';
+      })('pandoc no está disponible en PATH. Instálalo desde https://pandoc.org/installing.html'),
+    );
+    const stderrSpy = spyStderr();
+    let output = '';
+    try {
+      await withTempDir(async (dir) => {
+        await initTestProject(dir);
+        process.exitCode = 0;
+        await runBuild(dir);
+      });
+    } finally {
+      output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+      stderrSpy.mockRestore();
+      spy.mockRestore();
+    }
+    expect(process.exitCode).toBe(1);
+    expect(output).toContain('pandoc no está disponible en PATH');
+    expect(output).toContain('https://pandoc.org/installing.html');
   });
 
   it('un error de pandoc no sugiere validate (no es un problema de config/frontmatter)', async () => {

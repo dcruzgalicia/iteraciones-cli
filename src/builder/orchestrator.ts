@@ -7,6 +7,7 @@ import type { SiteConfig } from '../config/config-schema.js';
 import { computeActiveFormats } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
 import { logWarning, runWithWarningSink } from '../lib/logger.js';
+import { checkPandoc } from '../lib/pandoc-runner.js';
 import { buildAssets } from './build-assets.js';
 import { computeBuildMetadata, computeWorkSets } from './build-planner.js';
 import { cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges } from './cleanup.js';
@@ -45,6 +46,10 @@ async function setupBuildEnvironment(cwd: string, siteConfig: SiteConfig, option
 }
 
 export async function build(cwd: string, options: BuildOptions = {}): Promise<void> {
+  // Verificar pandoc al inicio: si no está en PATH, el error es inmediato y
+  // accionable en lugar de un ENOENT técnico en la primera invocación.
+  await checkPandoc();
+
   const progress = new ProgressTracker({
     renderer: options.verbose ? 'verbose' : 'default',
   });
