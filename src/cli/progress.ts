@@ -1,4 +1,4 @@
-import { GLYPHS, setWarningSink } from '../lib/logger.js';
+import { GLYPHS } from '../lib/logger.js';
 
 function formatTime(ms: number): string {
   return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${Math.round(ms)}ms`;
@@ -94,9 +94,15 @@ export class ProgressTracker {
     if (options.renderer === 'default') {
       // Restaurar el cursor si el proceso sale sin completar (errores del build)
       process.once('exit', () => process.stdout.write('\x1b[?25h'));
-      // Diferir warnings al resumen final para no interferir con el render
-      setWarningSink((message) => this.warnings.push(message));
     }
+  }
+
+  /**
+   * Acumula un warning para el resumen final (modo no verbose). El orquestador
+   * conecta este método como sink de logWarning vía runWithWarningSink.
+   */
+  addWarning(message: string): void {
+    this.warnings.push(message);
   }
 
   /** Mensajes informativos del orquestador (visibles en --verbose). */
@@ -158,7 +164,6 @@ export class ProgressTracker {
   async finish(processed: number, cached: number, formats?: string[], outputDir?: string): Promise<void> {
     this.finalizePendingRows(cached);
     this.writeSummary(processed, cached, formats, outputDir);
-    setWarningSink(null);
   }
 
   /**
@@ -186,7 +191,6 @@ export class ProgressTracker {
     }
     this.ensureFormatsBlock();
     // Las filas de formato pendientes quedan sin imprimir: no son un éxito
-    setWarningSink(null);
   }
 
   showCleanup(): void {
