@@ -10,6 +10,7 @@ import { computeActiveFormats, DEFAULT_PDF_FORMAT } from '../config/site-config.
 import { BuildError, ConfigError, PandocError } from '../lib/errors.js';
 import { logError, logInfo, logSuccess } from '../lib/logger.js';
 import { checkPandoc } from '../lib/pandoc-runner.js';
+import { run } from '../lib/run.js';
 import { collectChecks, runDoctor as doctor } from './doctor.js';
 import { runFilters as filters } from './filters.js';
 import { runInit as init } from './init.js';
@@ -269,6 +270,40 @@ export async function runFilters(cwd: string): Promise<void> {
     if (err instanceof Error) {
       logError(err.message, 'filters');
     }
+    process.exitCode = 1;
+  }
+}
+
+/**
+ * Abre la salida generada (index.html del output real) en el navegador por
+ * defecto. Es un disparo único — no es serve, watch ni reload: la filosofía
+ * del proyecto es compilar a demanda y abrir el resultado.
+ */
+export async function runOpen(cwd: string): Promise<void> {
+  // El directorio de salida real es el del último build (state.json); sin
+  // estado previo, el default.
+  const state = await loadStateFile(cwd);
+  const outputDir = state?.outputDir ?? join(cwd, 'dist', 'files');
+  const indexHtml = join(outputDir, 'index.html');
+  if (!(await Bun.file(indexHtml).exists())) {
+    logError(`no hay salida generada en ${indexHtml}. Ejecuta 'iteraciones build' primero.`, 'open');
+    process.exitCode = 1;
+    return;
+  }
+  try {
+    // Abridor por plataforma: `open` (macOS), `xdg-open` (Linux), `start` (Windows)
+    const result =
+      process.platform === 'win32'
+        ? await run('cmd', ['/c', 'start', '', indexHtml])
+        : await run(process.platform === 'darwin' ? 'open' : 'xdg-open', [indexHtml]);
+    if (result.exitCode !== 0) {
+      logError(`no se pudo abrir el navegador: ${result.stderr}`, 'open');
+      process.exitCode = 1;
+      return;
+    }
+    logSuccess(`abriendo ${indexHtml}`, 'open');
+  } catch (err) {
+    logError(`no se pudo abrir el navegador: ${err instanceof Error ? err.message : String(err)}`, 'open');
     process.exitCode = 1;
   }
 }

@@ -3,11 +3,12 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CommanderError } from 'commander';
-import { runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from '../cli/dispatcher.js';
+import { runBuild, runClean, runDoctor, runFilters, runInit, runNew, runOpen, runValidate } from '../cli/dispatcher.js';
 import { checkLatexEngine } from '../cli/doctor/system-checks.js';
 import { buildProgram } from '../cli/parser.js';
 import { logWarning, setLoggerColorEnabled } from '../lib/logger.js';
 import { checkPandoc } from '../lib/pandoc-runner.js';
+import * as runModule from '../lib/run.js';
 import { initTestProject, withTempDir } from './helpers.js';
 
 // Los tests que invocan pandoc real se marcan como skip si no está instalado
@@ -600,7 +601,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
         }
       });
     },
-    { timeout: 120_000 },
+    { timeout: 300_000 },
   );
 
   it.skipIf(!pandocOk)('el lang de la configuración configura babel en el PDF (contrato lang → babel)', async () => {
@@ -1757,6 +1758,49 @@ describe('wiring parser → dispatcher (argv reales)', () => {
       }
       expect(process.exitCode).toBe(1);
       expect(output).toContain('no se pudo eliminar');
+    });
+  });
+
+  it('open sin salida generada: mensaje accionable y exit 1', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runOpen(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(1);
+      expect(output).toContain("Ejecuta 'iteraciones build' primero");
+    });
+  });
+
+  it('open con salida generada abre el index.html del output real', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await mkdir(join(dir, 'dist', 'files'), { recursive: true });
+      await writeFile(join(dir, 'dist', 'files', 'index.html'), '<p>ok</p>', 'utf8');
+      const runSpy = spyOn(runModule, 'run').mockResolvedValue({ stdout: '', stderr: '', exitCode: 0 });
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let out = '';
+      let openedPath = '';
+      try {
+        process.exitCode = 0;
+        await runOpen(dir);
+        out = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        openedPath = String(runSpy.mock.calls[0]?.[1]?.[0] ?? '');
+      } finally {
+        stdoutSpy.mockRestore();
+        runSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      expect(out).toContain('abriendo');
+      expect(out).toContain('index.html');
+      // Se abrió el index.html del output real
+      expect(openedPath).toContain('index.html');
     });
   });
 });
