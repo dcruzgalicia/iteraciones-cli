@@ -10,7 +10,7 @@ import { computeActiveFormats, DEFAULT_PDF_FORMAT } from '../config/site-config.
 import { BuildError, ConfigError, PandocError } from '../lib/errors.js';
 import { logError, logInfo, logSuccess } from '../lib/logger.js';
 import { checkPandoc } from '../lib/pandoc-runner.js';
-import { runDoctor as doctor } from './doctor.js';
+import { collectChecks, runDoctor as doctor } from './doctor.js';
 import { runFilters as filters } from './filters.js';
 import { runInit as init } from './init.js';
 import { runValidate as validate } from './validate.js';
@@ -186,8 +186,20 @@ export async function runDoctor(cwd: string, options: { verbose?: boolean; json?
   try {
     // --verbose/--json muestran la información del proyecto (antes comando info)
     if (options.json) {
-      const { json } = await buildProjectInfo(cwd);
-      process.stdout.write(`${JSON.stringify(json, null, 2)}\n`);
+      // doctor --json ejecuta los checks reales: antes devolvía solo la info y
+      // un script obtenía exit 0 con pandoc ausente (semántica contradictoria).
+      const checks = await collectChecks(cwd);
+      const ok = checks.every((c) => c.ok);
+      // La info del proyecto es complementaria: si la config está rota (ya
+      // reportada en checks), el JSON sale igual con info: null (scripting).
+      let info: Record<string, unknown> | null = null;
+      try {
+        info = (await buildProjectInfo(cwd)).json;
+      } catch {
+        info = null;
+      }
+      process.stdout.write(`${JSON.stringify({ ok, checks, info }, null, 2)}\n`);
+      if (!ok) process.exitCode = 1;
       return;
     }
     if (options.verbose) {

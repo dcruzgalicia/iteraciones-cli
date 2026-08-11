@@ -1026,17 +1026,45 @@ describe('doctor --verbose/--json (antes runInfo)', () => {
       }
       expect(process.exitCode).toBe(0);
       const parsed = JSON.parse(output) as {
-        lang: string;
-        documentCount: number;
-        outputDir: string;
-        activeFormats: string[];
-        html: { theme: string; accent: string };
+        ok: boolean;
+        checks: Array<{ label: string; ok: boolean }>;
+        info: {
+          lang: string;
+          documentCount: number;
+          outputDir: string;
+          activeFormats: string[];
+          html: { theme: string; accent: string };
+        };
       };
-      expect(parsed.lang).toBe('es-MX');
-      expect(parsed.documentCount).toBe(1);
-      expect(parsed.outputDir).toContain('dist');
-      expect(parsed.activeFormats).toContain('html');
-      expect(parsed.html.theme).toBe('dark');
+      // doctor --json ejecuta los checks reales (contrato de scripting)
+      expect(parsed.ok).toBe(true);
+      expect(parsed.checks.length).toBeGreaterThan(0);
+      expect(parsed.checks[0]?.label).toBe('bun instalado');
+      expect(parsed.info.lang).toBe('es-MX');
+      expect(parsed.info.documentCount).toBe(1);
+      expect(parsed.info.outputDir).toContain('dist');
+      expect(parsed.info.activeFormats).toContain('html');
+      expect(parsed.info.html.theme).toBe('dark');
+    });
+  });
+
+  it('--json con config inválida reporta los checks con ok false y sale con código 1', async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(join(dir, 'iteraciones.config.yaml'), ':: yaml inválido ::', 'utf8');
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runDoctor(dir, { json: true });
+      } finally {
+        output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      const parsed = JSON.parse(output) as { ok: boolean; checks: Array<{ label: string; ok: boolean }> };
+      expect(parsed.ok).toBe(false);
+      const configCheck = parsed.checks.find((c) => c.label === 'iteraciones.config.yaml');
+      expect(configCheck?.ok).toBe(false);
+      expect(process.exitCode).toBe(1);
     });
   });
 });
