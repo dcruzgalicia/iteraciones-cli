@@ -1,5 +1,5 @@
 import type { SiteConfig } from '../config/config-schema.js';
-import { BuildError } from '../lib/errors.js';
+import { BuildError, translateSystemError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
 import { logWarning } from '../lib/logger.js';
 import { type BibOptions, runPandoc } from '../lib/pandoc-runner.js';
@@ -91,7 +91,7 @@ export async function readDocumentBody(doc: BuildDocument): Promise<string> {
   try {
     content = await Bun.file(doc.filePath).text();
   } catch (err) {
-    throw new BuildError(`no se pudo leer "${doc.filePath}": ${String(err)}`);
+    throw new BuildError(`no se pudo leer "${doc.filePath}": ${translateSystemError(err)}`);
   }
   const { body } = splitFrontmatter(content);
   if (!body.trim()) {

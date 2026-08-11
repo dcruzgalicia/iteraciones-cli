@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { formatUserError } from '../lib/errors.js';
+import { formatUserError, translateSystemError } from '../lib/errors.js';
 
 describe('formatUserError', () => {
   it('elimina prefijos de clase conocidos', () => {
@@ -26,5 +26,29 @@ describe('formatUserError', () => {
   it('retorna String(err) para valores no-Error', () => {
     expect(formatUserError('texto plano')).toBe('texto plano');
     expect(formatUserError(42)).toBe('42');
+  });
+});
+
+describe('translateSystemError', () => {
+  const sysErr = (code: string): NodeJS.ErrnoException => {
+    const err = new Error(code) as NodeJS.ErrnoException;
+    err.code = code;
+    return err;
+  };
+
+  it('traduce códigos comunes a mensajes en español', () => {
+    expect(translateSystemError(sysErr('EACCES'))).toBe('sin permisos de lectura');
+    expect(translateSystemError(sysErr('ENOENT'))).toBe('archivo no encontrado (posiblemente eliminado durante el build)');
+    expect(translateSystemError(sysErr('EISDIR'))).toBe('es un directorio, no un archivo');
+    expect(translateSystemError(sysErr('ENOTDIR'))).toBe('una ruta intermedia no es un directorio');
+  });
+
+  it('conserva el mensaje para códigos desconocidos y errores sin code', () => {
+    expect(translateSystemError(sysErr('EUNKNOWN'))).toBe('EUNKNOWN');
+    expect(translateSystemError(new Error('algo falló'))).toBe('algo falló');
+  });
+
+  it('retorna String(err) para valores no-Error', () => {
+    expect(translateSystemError('texto plano')).toBe('texto plano');
   });
 });

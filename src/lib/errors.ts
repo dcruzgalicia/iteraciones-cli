@@ -58,3 +58,32 @@ export function formatUserError(err: unknown): string {
   }
   return String(err);
 }
+
+/**
+ * Traduce códigos de error del sistema operativo a mensajes en español
+ * accionables. Los códigos crudos (EACCES, ENOENT...) son incomprensibles
+ * para usuarios no técnicos; el path se añade en el call site.
+ */
+export function translateSystemError(err: unknown): string {
+  if (err instanceof Error) {
+    if ('code' in err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      switch (code) {
+        case 'EACCES':
+          return 'sin permisos de lectura';
+        case 'ENOENT':
+          return 'archivo no encontrado (posiblemente eliminado durante el build)';
+        case 'EISDIR':
+          return 'es un directorio, no un archivo';
+        case 'ENOTDIR':
+          return 'una ruta intermedia no es un directorio';
+        case 'EMFILE':
+          return 'demasiados archivos abiertos; reduce la concurrencia o cierra otros programas';
+        default:
+          return err.message;
+      }
+    }
+    return err.message;
+  }
+  return String(err);
+}
