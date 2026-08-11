@@ -1,5 +1,5 @@
+import { getBuiltinLuaFilterInfos, LUA_GROUP_ORDER, validateDisabledFilters } from '../builder/filter-resolver.js';
 import { getBuiltinPreambleFilterInfos, validateDisabledPreambleFilters } from '../builder/preamble-loader.js';
-import { getBuiltinLuaFilterInfos, LUA_GROUP_ORDER, validateDisabledFilters } from '../builder/render.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { logInfo } from '../lib/logger.js';
 

@@ -7,33 +7,6 @@ import { type LuaFilterGroup, loadFilterGroups } from './filter-resolver.js';
 import { buildFormatsBlock, extractReferencesBlock, type HtmlPageVars, MD_READER, metadataValue, removeTocReferencesLink } from './html-composer.js';
 import type { BuildDocument } from './types.js';
 
-// Re-export public API desde los módulos especializados
-export {
-  getBuiltinFilterNames,
-  getBuiltinLuaFilterInfos,
-  LUA_GROUP_ORDER,
-  type LuaFilterGroup,
-  type LuaFilterInfo,
-  loadFilterGroups,
-  resolveLuaFilters,
-  resolveUserLuaFilters,
-  suggestFilterName,
-  validateDisabledFilters,
-} from './filter-resolver.js';
-export {
-  buildFormatsBlock,
-  composeHtmlTemplate,
-  extractReferencesBlock,
-  type FormatKey,
-  type FormatsLink,
-  type HtmlPageVars,
-  MD_READER,
-  metadataValue,
-  removeTocReferencesLink,
-  resolveBlockOrder,
-} from './html-composer.js';
-export { markdownToLatex } from './latex-composer.js';
-
 /**
  * Genera la página HTML completa desde el markdown original en una sola
  * invocación de pandoc (reader markdown + filtros semánticos/de usuario/flags

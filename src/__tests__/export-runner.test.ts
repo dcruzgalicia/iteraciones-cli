@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { convertToEpub, convertToMarkdown, convertToPdf } from '../builder/export/runner.js';
-import type { LuaFilterGroup } from '../builder/render.js';
+import type { LuaFilterGroup } from '../builder/filter-resolver.js';
 import { checkLatexEngine } from '../cli/doctor/system-checks.js';
 import { checkPandoc } from '../lib/pandoc-runner.js';
 import { withTempDir } from './helpers.js';

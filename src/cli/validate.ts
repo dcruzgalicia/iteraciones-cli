@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative } from 'node:path';
+import { validateDisabledFilters } from '../builder/filter-resolver.js';
 import { listMarkdownDocuments } from '../builder/gitignore.js';
 import { validateDisabledPreambleFilters, validatePreambleDependencies } from '../builder/preamble-loader.js';
-import { validateDisabledFilters } from '../builder/render.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { ConfigError } from '../lib/errors.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';

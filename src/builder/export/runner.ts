@@ -5,7 +5,8 @@ import { PandocError } from '../../lib/errors.js';
 import { logWarning } from '../../lib/logger.js';
 import { runPandoc } from '../../lib/pandoc-runner.js';
 import { LATEXMK_AUX_EXTENSIONS } from '../cleanup.js';
-import { type LuaFilterGroup, MD_READER, metadataValue } from '../render.js';
+import type { LuaFilterGroup } from '../filter-resolver.js';
+import { MD_READER, metadataValue } from '../html-composer.js';
 import type { ExportDocument } from './types.js';
 
 /** Límite de tiempo de una compilación latexmk: 10 minutos. */

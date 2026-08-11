@@ -11,9 +11,9 @@ import { buildAssets } from './build-assets.js';
 import { computeBuildMetadata, computeWorkSets } from './build-planner.js';
 import { cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges } from './cleanup.js';
 import { buildDocsFromIndex, discover } from './discover.js';
+import { validateDisabledFilters } from './filter-resolver.js';
 import { runDocumentPipeline } from './pipeline.js';
 import { validateDisabledPreambleFilters, validatePreambleDependencies } from './preamble-loader.js';
-import { validateDisabledFilters } from './render.js';
 import { clearStateFile, loadStateFile, updateCssHash } from './state.js';
 import type { BuildContext } from './types.js';
 

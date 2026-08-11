@@ -2,19 +2,18 @@ import { describe, expect, it, spyOn } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { getBuiltinPreambleFilterNames } from '../builder/preamble-loader.js';
 import {
-  composeHtmlTemplate,
   getBuiltinFilterNames,
-  htmlPageFromMarkdown,
   loadFilterGroups,
-  markdownToLatex,
-  resolveBlockOrder,
   resolveLuaFilters,
   resolveUserLuaFilters,
   suggestFilterName,
   validateDisabledFilters,
-} from '../builder/render.js';
+} from '../builder/filter-resolver.js';
+import { composeHtmlTemplate, resolveBlockOrder } from '../builder/html-composer.js';
+import { markdownToLatex } from '../builder/latex-composer.js';
+import { getBuiltinPreambleFilterNames } from '../builder/preamble-loader.js';
+import { htmlPageFromMarkdown } from '../builder/render.js';
 import type { BuildDocument } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
