@@ -114,6 +114,26 @@ describe('parser (errores de commander en español)', () => {
     expect(output).toContain('help [comando]');
     expect(output).toContain('muestra la ayuda de un comando');
   });
+
+  it('el help raíz muestra el slogan, el ejemplo rápido y el enlace a docs', async () => {
+    const stdoutSpy = spyOn(process.stdout, 'write');
+    let output = '';
+    try {
+      await buildProgram()
+        .parseAsync(['bun', 'bin.ts', '--help'])
+        .catch(() => {});
+    } finally {
+      output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+      stdoutSpy.mockRestore();
+    }
+    expect(output).toContain('escribir, compartir, re-existir');
+    expect(output).toContain('iteraciones init');
+    expect(output).toContain('iteraciones new posts/doc.md');
+    expect(output).toContain('iteraciones build');
+    expect(output).toContain('docs/configuration.md');
+    expect(output).toContain('docs/ejemplos.md');
+    expect(output).toContain('list-filters');
+  });
 });
 
 describe('parser (errores de flags)', () => {
