@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it, spyOn } from 'bun:test';
-import { writeFile } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CommanderError } from 'commander';
@@ -1555,6 +1555,165 @@ describe('logger (color hermético en tests)', () => {
     }
     expect(output).toContain('⚠ [test] mensaje de prueba');
     expect(output).not.toContain('\x1b');
+  });
+});
+
+describe('wiring parser → dispatcher (argv reales)', () => {
+  afterEach(resetExitCode);
+
+  it('init vía parseAsync crea los tres archivos', async () => {
+    await withTempDir(async (dir) => {
+      process.exitCode = 0;
+      await buildProgram().parseAsync(['bun', 'bin.ts', 'init', '--project-root', dir]);
+      expect(process.exitCode).toBe(0);
+      expect(await Bun.file(join(dir, 'iteraciones.config.yaml')).exists()).toBe(true);
+      expect(await Bun.file(join(dir, 'index.md')).exists()).toBe(true);
+      expect(await Bun.file(join(dir, 'bibliography.bib')).exists()).toBe(true);
+    });
+  });
+
+  it('new vía parseAsync crea el documento con el título pasado', async () => {
+    await withTempDir(async (dir) => {
+      process.exitCode = 0;
+      await buildProgram().parseAsync(['bun', 'bin.ts', 'new', '--title', 'Título CLI', 'posts/articulo', '--project-root', dir]);
+      expect(process.exitCode).toBe(0);
+      const content = await Bun.file(join(dir, 'posts', 'articulo.md')).text();
+      expect(content).toContain('title: "Título CLI"');
+    });
+  });
+
+  it('clean vía parseAsync elimina dist/ y .iteraciones/', async () => {
+    await withTempDir(async (dir) => {
+      await mkdir(join(dir, 'dist', 'files'), { recursive: true });
+      await mkdir(join(dir, '.iteraciones'), { recursive: true });
+      await writeFile(join(dir, 'dist', 'files', 'x.html'), 'x', 'utf8');
+      process.exitCode = 0;
+      await buildProgram().parseAsync(['bun', 'bin.ts', 'clean', '--project-root', dir]);
+      expect(process.exitCode).toBe(0);
+      expect(await Bun.file(join(dir, 'dist')).exists()).toBe(false);
+      expect(await Bun.file(join(dir, '.iteraciones')).exists()).toBe(false);
+    });
+  });
+
+  it('filters vía parseAsync termina con exit 0 y lista los filters', async () => {
+    await withTempDir(async (dir) => {
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let out = '';
+      try {
+        process.exitCode = 0;
+        await buildProgram().parseAsync(['bun', 'bin.ts', 'filters', '--project-root', dir]);
+      } finally {
+        out = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      expect(out).toContain('latex/02-dictum');
+    });
+  });
+
+  it('--version sale con exit code 0', async () => {
+    process.exitCode = 0;
+    let exitCode = 0;
+    try {
+      await buildProgram().parseAsync(['bun', 'bin.ts', '--version']);
+    } catch (err) {
+      exitCode = err instanceof CommanderError ? err.exitCode : 1;
+    }
+    expect(exitCode).toBe(0);
+  });
+
+  it('--project-root en uso positivo: build con root explícito genera la salida', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      process.exitCode = 0;
+      await buildProgram().parseAsync(['bun', 'bin.ts', 'build', '--project-root', dir]);
+      expect(process.exitCode).toBe(0);
+      expect(await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).exists()).toBe(true);
+    });
+  });
+
+  it('--output . (la raíz del proyecto) se rechaza', async () => {
+    await withTempDir(async (dir) => {
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await buildProgram().parseAsync(['bun', 'bin.ts', 'build', '--output', '.', '--project-root', dir]);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(1);
+      expect(output).toContain('--output');
+    });
+  });
+
+  it('--full reporta la eliminación de caché y salida (verbose)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let out = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir, { full: true, verbose: true });
+      } finally {
+        out = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      expect(out).toContain('--full: se eliminaron la caché y la salida anterior');
+    });
+  });
+
+  it('--full con build fallido limpia la salida parcial de dist/', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await mkdir(join(dir, 'dist', 'files'), { recursive: true });
+      await writeFile(join(dir, 'dist', 'files', 'parcial.html'), 'basura', 'utf8');
+      await writeFile(join(dir, 'test.md'), '---\ntitle: [roto\n---\n\nCuerpo.\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir, { full: true });
+      expect(process.exitCode).toBe(1);
+      expect(await Bun.file(join(dir, 'dist', 'files')).exists()).toBe(false);
+    });
+  });
+
+  it('--profile muestra el desglose de fases en el resumen', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let out = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir, { profile: true });
+      } finally {
+        out = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      expect(out).toContain('Perfil de fases:');
+      expect(out).toContain('Documentos encontrados');
+    });
+  });
+
+  it('clean con fallo (EACCES) reporta el directorio y sale con código 1', async () => {
+    await withTempDir(async (dir) => {
+      await mkdir(join(dir, 'dist', 'bloqueado'), { recursive: true });
+      await writeFile(join(dir, 'dist', 'bloqueado', 'x.txt'), 'x', 'utf8');
+      await Bun.$`chmod 000 ${join(dir, 'dist', 'bloqueado')}`;
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runClean(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+        await Bun.$`chmod 700 ${join(dir, 'dist', 'bloqueado')}`;
+      }
+      expect(process.exitCode).toBe(1);
+      expect(output).toContain('no se pudo eliminar');
+    });
   });
 });
 
