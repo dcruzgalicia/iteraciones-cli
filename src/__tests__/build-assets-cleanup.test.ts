@@ -76,6 +76,25 @@ describe('cleanup (eliminaciones y slugs)', () => {
     });
   });
 
+  it('cleanupDeletedFiles limpia todas las salidas index.* de un index.md eliminado', async () => {
+    await withTempDir(async (dir) => {
+      const ctx = makeCtx(dir);
+      await mkdir(join(ctx.outputDir), { recursive: true });
+      for (const ext of ['html', 'pdf', 'tex', 'epub', 'md']) {
+        await writeFile(join(ctx.outputDir, `index.${ext}`), ext, 'utf8');
+      }
+      await writeFile(join(ctx.outputDir, 'otro.html'), 'otro', 'utf8');
+
+      const deletedEntries = new Map([['index.md', { title: 'Inicio', author: [], date: '', mtime: 0, size: 0, hash: '', slug: 'inicio' }]]);
+      await cleanupDeletedFiles(ctx, new Set(['index.md']), [], deletedEntries);
+
+      for (const ext of ['html', 'pdf', 'tex', 'epub', 'md']) {
+        expect(await Bun.file(join(ctx.outputDir, `index.${ext}`)).exists()).toBe(false);
+      }
+      expect(await Bun.file(join(ctx.outputDir, 'otro.html')).exists()).toBe(true);
+    });
+  });
+
   it('cleanupSlugChanges elimina los artefactos del slug anterior', async () => {
     await withTempDir(async (dir) => {
       const ctx = makeCtx(dir);

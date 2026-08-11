@@ -237,25 +237,27 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
   const fm = entry?.fm ?? {};
   const needsLatex = (latexOn || pdfOn) && latexPaths.has(doc.relativePath);
   const outBase = (name: string): string => join(ctx.outputDir, dir === '.' ? '' : dir, name);
-  const texDistPath = outBase(`${slug}.tex`);
+  // Nombre de salida coherente en todos los formatos: index.md → index.* (el
+  // caso especial de htmlSlugFor aplica a todo el documento, no solo al HTML;
+  // antes, index.md generaba index.html pero inicio.pdf/tex/epub/md).
+  const outSlug = htmlSlugFor(doc.relativePath, slug);
+  const texDistPath = outBase(`${outSlug}.tex`);
 
   // .tex completo (preámbulo + cuerpo) en UNA invocación markdown → latex,
   // escrito directamente en dist/ (o en el área de trabajo del PDF si solo pdfOn)
   if (needsLatex) {
-    const fullTex = await markdownToLatex(content, doc, filters, bibFiles, latexTemplatePath, fm, ctx.siteConfig, pool.biblatexAvailable);
+    const fullTex = await markdownToLatex(content, doc, filters, bibFiles, latexTemplatePath, fm, ctx.siteConfig, biblatexAvailable);
     if (latexOn) {
       await writeOutput(texDistPath, fullTex);
     }
     if (pdfOn) {
-      const texPath = latexOn ? texDistPath : join(pdfWorkDir, dir, `${slug}.tex`);
+      const texPath = latexOn ? texDistPath : join(pdfWorkDir, dir, `${outSlug}.tex`);
       if (!latexOn) await writeOutput(texPath, fullTex);
-      pdfJobs.push({ dir, slug, relativePath: doc.relativePath, texPath, pdfDest: outBase(`${slug}.pdf`) });
+      pdfJobs.push({ dir, slug: outSlug, relativePath: doc.relativePath, texPath, pdfDest: outBase(`${outSlug}.pdf`) });
     }
   }
 
   const exportDoc = assembleExportDocument(doc, lang, globalBibliography, undefined, ctx.siteConfig.toc);
-  // El HTML tiene un caso especial: un archivo index.md se convierte a index.html
-  const htmlSlug = htmlSlugFor(doc.relativePath, slug);
 
   // HTML
   if (htmlOn && htmlPaths.has(doc.relativePath)) {
@@ -263,15 +265,15 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
     // página actual y no se enlaza a sí mismo. Solo formatos activos.
     const formats = [
       ...(plan.pdfOn
-        ? [{ href: relativeHref(dir, `${slug}.pdf`), key: 'pdf' as const, name: 'PDF', description: 'Documento final para lectura e impresión' }]
+        ? [{ href: relativeHref(dir, `${outSlug}.pdf`), key: 'pdf' as const, name: 'PDF', description: 'Documento final para lectura e impresión' }]
         : []),
       ...(plan.epubOn
-        ? [{ href: relativeHref(dir, `${slug}.epub`), key: 'epub' as const, name: 'EPUB', description: 'Edición adaptable para lectura digital' }]
+        ? [{ href: relativeHref(dir, `${outSlug}.epub`), key: 'epub' as const, name: 'EPUB', description: 'Edición adaptable para lectura digital' }]
         : []),
       ...(plan.latexOn
         ? [
             {
-              href: relativeHref(dir, `${slug}.tex`),
+              href: relativeHref(dir, `${outSlug}.tex`),
               key: 'latex' as const,
               name: 'LaTeX',
               description: 'Archivo fuente para composición tipográfica',
@@ -279,7 +281,14 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
           ]
         : []),
       ...(plan.mdOn
-        ? [{ href: relativeHref(dir, `${slug}.md`), key: 'markdown' as const, name: 'Markdown', description: 'Texto fuente reutilizable y portable' }]
+        ? [
+            {
+              href: relativeHref(dir, `${outSlug}.md`),
+              key: 'markdown' as const,
+              name: 'Markdown',
+              description: 'Texto fuente reutilizable y portable',
+            },
+          ]
         : []),
     ];
     // La tarjeta identidad enlaza al home solo si existe index.html en la
@@ -314,15 +323,15 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
       bibOptions,
       filters,
     );
-    await writeOutput(outBase(`${htmlSlug}.html`), html);
+    await writeOutput(outBase(`${outSlug}.html`), html);
   }
 
   // EPUB y Markdown desde el markdown original, directo a dist/
   if (epubOn && epubPaths.has(doc.relativePath)) {
-    await convertToEpub(content, outBase(`${slug}.epub`), exportDoc, filters, ctx.siteConfig.toc, fm);
+    await convertToEpub(content, outBase(`${outSlug}.epub`), exportDoc, filters, ctx.siteConfig.toc, fm);
   }
   if (mdOn && mdPaths.has(doc.relativePath)) {
-    await convertToMarkdown(content, outBase(`${slug}.md`), exportDoc, filters, fm);
+    await convertToMarkdown(content, outBase(`${outSlug}.md`), exportDoc, filters, fm);
   }
 }
 
