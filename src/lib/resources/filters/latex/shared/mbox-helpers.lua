@@ -109,4 +109,22 @@ function M.count_real_inlines(inlines)
   return n
 end
 
+-- Palabras reales (Str) dentro de un word-group, en orden de recorrido.
+-- Recursivo: los grupos anidados aportan sus palabras. El mbox de la oración
+-- final cuenta palabras REALES (un \emph{...} con varias palabras no es una
+-- sola palabra), y el wrap interno recorre el mismo orden para insertar el
+-- \mbox en las posiciones correctas.
+function M.group_word_count(inl)
+  local n = 0
+  for _, c in ipairs(inl.content) do
+    local cls = M.classify(c)
+    if cls == 'word' then
+      n = n + 1
+    elseif cls == 'word-group' then
+      n = n + M.group_word_count(c)
+    end
+  end
+  return n
+end
+
 return M

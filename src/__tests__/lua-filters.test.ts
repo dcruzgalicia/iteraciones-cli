@@ -233,11 +233,30 @@ describe.skipIf(!pandocOk)('filtros Lua latex', () => {
     expect(tex).toContain('\\end{flushright}');
   });
 
-  it('mbox-sentence-end envuelve las últimas palabras (1 por oración, 3 en la final)', async () => {
+  it('mbox-sentence-end envuelve las últimas palabras (1 por oración, 2 en la final)', async () => {
     const tex = await toLatex('Primera oración de ejemplo. Segunda aquí. Tercera oración de ejemplo final.');
     expect(tex).toContain('oración de \\mbox{ejemplo.}');
     expect(tex).toContain('\\mbox{aquí.}');
-    expect(tex).toContain('oración \\mbox{de ejemplo final.}');
+    expect(tex).toContain('oración de \\mbox{ejemplo final.}');
+  });
+
+  it('mbox-sentence-end con énfasis final: wrap interno dentro del \\emph (caso B)', async () => {
+    const tex = await toLatex('Como ya lo había hecho en el primer libro de Histórikas: *Mi primera vez. Historias de mujeres en carne propia.*');
+    // El wrap interno deja el mbox dentro del \\emph, envolviendo solo las
+    // últimas 2 palabras reales (pandoc envuelve la salida a ~72 columnas:
+    // se compara sobre el texto sin saltos de wrap).
+    expect(tex.replace(/\n/g, ' ')).toContain('\\emph{Mi primera vez. Historias de mujeres en \\mbox{carne propia.}}');
+    expect(tex).not.toContain('\\mbox{de Histórikas');
+  });
+
+  it('mbox-sentence-end con énfasis de 2 palabras al final: el mbox envuelve el grupo (caso C)', async () => {
+    const tex = await toLatex('Esto termina en *carne propia.*');
+    expect(tex).toContain('en \\mbox{\\emph{carne propia.}}');
+  });
+
+  it('mbox-sentence-end con énfasis de 1 palabra al final: extiende hacia atrás (caso D)', async () => {
+    const tex = await toLatex('Como lo dice *ella.*');
+    expect(tex).toContain('\\mbox{dice \\emph{ella.}}');
   });
 
   it('mbox-sentence-start envuelve la primera palabra de cada oración', async () => {
