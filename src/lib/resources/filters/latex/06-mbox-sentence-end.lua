@@ -64,13 +64,21 @@ end
 
 -- Unidades virtuales de la oración final: cada palabra real es una unidad.
 -- Un Str es 1 unidad; un grupo aporta group_word_count unidades (con su
--- posición interna, para el wrap interno).
+-- posición interna, para el wrap interno). La puntuación suelta (Str de solo
+-- puntuación, p. ej. "." tras "descansa". o **propia**.) no es una palabra:
+-- se omite del conteo y, si está al final de la oración, se recuerda como
+-- trailing_punct para adjuntarla al wrap normal.
 local function expand_units(inlines, from_idx, to_idx)
   local units = {}
+  local trailing_punct = nil
   for i = from_idx, to_idx - 1 do
     local c = mbox.classify(inlines[i])
     if c == 'word' then
-      table.insert(units, { idx = i, inner = nil })
+      if mbox.is_punct_str(inlines[i].text) then
+        trailing_punct = i
+      else
+        table.insert(units, { idx = i, inner = nil })
+      end
     elseif c == 'word-group' then
       local total = mbox.group_word_count(inlines[i])
       for k = 1, total do
@@ -78,7 +86,7 @@ local function expand_units(inlines, from_idx, to_idx)
       end
     end
   end
-  return units
+  return units, trailing_punct
 end
 
 local function process_para_inlines(inlines)
@@ -95,26 +103,34 @@ local function process_para_inlines(inlines)
       -- Si la última unidad es un grupo de >= 2 palabras, las últimas 2 caen
       -- dentro del grupo (u1.idx == u2.idx); el caso "cruza el inicio" solo
       -- ocurre con un grupo de 1 palabra al final.
-      local units = expand_units(inlines, sb.start, sb.finish)
+      local units, trailing_punct = expand_units(inlines, sb.start, sb.finish)
       if #units >= 2 then
         local wrap_count = math.min(2, #units - 1)
         local u1 = units[#units - wrap_count + 1]
         local u2 = units[#units]
+        local wrap = nil
         if u1.idx == u2.idx then
           if u1.inner == 1 then
             -- Toca el inicio del grupo (caso C): envolver el grupo completo
-            table.insert(wraps, { start_idx = u1.idx, finish_idx = u1.idx })
+            wrap = { start_idx = u1.idx, finish_idx = u1.idx }
           else
-            -- Wrap interno dentro del grupo (caso B)
-            table.insert(wraps, { start_idx = u1.idx, finish_idx = u1.idx, inner_from = u1.inner, inner_to = u2.inner })
+            -- Wrap interno dentro del grupo (caso B): la puntuación externa
+            -- al grupo (trailing) queda fuera del mbox (limitación del AST)
+            wrap = { start_idx = u1.idx, finish_idx = u1.idx, inner_from = u1.inner, inner_to = u2.inner }
           end
         elseif u2.inner ~= nil then
           -- Grupo de 1 palabra al final (caso D): extender hacia atrás
-          table.insert(wraps, { start_idx = u1.idx, finish_idx = u2.idx })
+          wrap = { start_idx = u1.idx, finish_idx = u2.idx }
         else
           -- Sin grupos (caso A): wrap normal
-          table.insert(wraps, { start_idx = u1.idx, finish_idx = u2.idx })
+          wrap = { start_idx = u1.idx, finish_idx = u2.idx }
         end
+        -- La puntuación final suelta (p. ej. "." tras **propia**.) acompaña
+        -- al wrap normal: sin ella, el mbox terminaría antes del punto.
+        if wrap.inner_from == nil and trailing_punct ~= nil and wrap.finish_idx <= trailing_punct then
+          wrap.finish_idx = trailing_punct
+        end
+        table.insert(wraps, wrap)
       end
     else
       -- Oraciones no finales: última unidad, mínimo 2 (comportamiento previo)

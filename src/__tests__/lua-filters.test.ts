@@ -259,6 +259,37 @@ describe.skipIf(!pandocOk)('filtros Lua latex', () => {
     expect(tex).toContain('\\mbox{dice \\emph{ella.}}');
   });
 
+  it('mbox-sentence-end con comillas tipográficas: wrap interno dentro del Quoted', async () => {
+    const tex = await toLatex(
+      'un "dame tus cosas, métete a bañar mientras caliento la comida, te preparé algo rico y ligero porque casi no has comido, cuéntame, desahógate, descansa".',
+    );
+    const flat = tex.replace(/\n/g, ' ');
+    // El mbox queda dentro de las comillas, envolviendo solo las últimas 2
+    // palabras internas; la comilla de cierre y el punto quedan fuera.
+    expect(flat).toContain('\\mbox{desahógate, descansa}');
+    expect(flat).not.toContain('\\mbox{un ``dame');
+    expect(flat).not.toContain('\\mbox{``dame');
+  });
+
+  it('mbox-sentence-end con negritas de 4+ palabras: wrap interno dentro del Strong', async () => {
+    const tex = await toLatex('El final termina con **una frase de carne propia**.');
+    const flat = tex.replace(/\n/g, ' ');
+    expect(flat).toContain('\\textbf{una frase de \\mbox{carne propia}}.');
+    expect(flat).not.toContain('\\mbox{\\textbf{una frase');
+  });
+
+  it('mbox-sentence-end con negritas de 2 palabras: grupo completo con el punto (caso C)', async () => {
+    const tex = await toLatex('Esto termina en **carne propia**.');
+    const flat = tex.replace(/\n/g, ' ');
+    expect(flat).toContain('en \\mbox{\\textbf{carne propia}.}');
+  });
+
+  it('mbox-sentence-end con negritas de 1 palabra: extiende hacia atrás con el punto (caso D)', async () => {
+    const tex = await toLatex('Como lo dice **ella**.');
+    const flat = tex.replace(/\n/g, ' ');
+    expect(flat).toContain('\\mbox{dice \\textbf{ella}.}');
+  });
+
   it('mbox-sentence-start envuelve la primera palabra de cada oración', async () => {
     const tex = await toLatex('Principio de la oración. Otra oración aquí.');
     expect(tex).toContain('\\mbox{Principio} de la');
