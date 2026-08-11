@@ -1,5 +1,59 @@
 # Changelog
 
+## [0.19.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.18.0...v0.19.0) (2026-08-11)
+
+
+### Features
+
+* **builder:** migra el pipeline a pandoc-directo sin AST intermedio ([d797cf6](https://github.com/dcruzgalicia/iteraciones-cli/commit/d797cf63515e3a6dd42c7c431b5fcdba6b8387bf))
+* **builder:** verifica pandoc al inicio del build ([0cad098](https://github.com/dcruzgalicia/iteraciones-cli/commit/0cad0981915f119c9e50703afae085eb2bd1b3bf)), closes [#1765](https://github.com/dcruzgalicia/iteraciones-cli/issues/1765)
+* **cli:** agrega el comando iteraciones open (abre la salida en el navegador) ([97f47f5](https://github.com/dcruzgalicia/iteraciones-cli/commit/97f47f57801b692b8e836a98ff0f8224d10d4cc9)), closes [#1714](https://github.com/dcruzgalicia/iteraciones-cli/issues/1714)
+* **cli:** añade colores ANSI y glifo en logInfo ([3e0f17b](https://github.com/dcruzgalicia/iteraciones-cli/commit/3e0f17b4df589ab3f8be7e47350eb9939eca58a4))
+* **cli:** doctor verifica la versión mínima de Bun ([e928130](https://github.com/dcruzgalicia/iteraciones-cli/commit/e92813046908338e8cd391173086edc9bb1c03f9)), closes [#1646](https://github.com/dcruzgalicia/iteraciones-cli/issues/1646)
+* **cli:** init sugiere el siguiente paso al usuario ([b90d903](https://github.com/dcruzgalicia/iteraciones-cli/commit/b90d903daa5a0f9bfbb9e6b141ea601461ff2a89)), closes [#1652](https://github.com/dcruzgalicia/iteraciones-cli/issues/1652)
+* **cli:** init sugiere el siguiente paso al usuario ([911e542](https://github.com/dcruzgalicia/iteraciones-cli/commit/911e542da8cf2231c7c60f262387b282cf04772a)), closes [#1652](https://github.com/dcruzgalicia/iteraciones-cli/issues/1652)
+* **cli:** muestra --project-root en el help de subcomandos ([faa2c1a](https://github.com/dcruzgalicia/iteraciones-cli/commit/faa2c1a8e7398ef2b8c43f7d9c513bf9d8d11b44)), closes [#1752](https://github.com/dcruzgalicia/iteraciones-cli/issues/1752)
+* **cli:** new genera una plantilla con ejemplos del lenguaje (:: y dictum) ([c2949d6](https://github.com/dcruzgalicia/iteraciones-cli/commit/c2949d60be5cf7f1c13281d8c05b3c00e8b66e99)), closes [#1693](https://github.com/dcruzgalicia/iteraciones-cli/issues/1693)
+* **cli:** rediseña el help raíz con slogan y primeros pasos ([ee3f10e](https://github.com/dcruzgalicia/iteraciones-cli/commit/ee3f10efdabf3e9c598ff00feefcc460f38627c9)), closes [#1755](https://github.com/dcruzgalicia/iteraciones-cli/issues/1755)
+* **cli:** sugiere cómo abrir la salida en el resumen post-build ([be5ed46](https://github.com/dcruzgalicia/iteraciones-cli/commit/be5ed46d39e4db9ec7527d6cfda6c4c3b7c6d6b5)), closes [#1764](https://github.com/dcruzgalicia/iteraciones-cli/issues/1764)
+* **config:** unifica format.latex como objeto generate ([95660a8](https://github.com/dcruzgalicia/iteraciones-cli/commit/95660a8641be0c3be1b1a379188c0d532a3ceb59)), closes [#1750](https://github.com/dcruzgalicia/iteraciones-cli/issues/1750)
+* **init:** genera config mínimo de 18 líneas en lugar de 86 ([4810ad9](https://github.com/dcruzgalicia/iteraciones-cli/commit/4810ad963468cd0d94db326a9f68d623b73e3abf)), closes [#1651](https://github.com/dcruzgalicia/iteraciones-cli/issues/1651)
+* **latex:** parametriza babel por el lang de la configuración en el PDF ([53cda38](https://github.com/dcruzgalicia/iteraciones-cli/commit/53cda38ad057aa4a111d48d4ded859a536fa2ee9)), closes [#1683](https://github.com/dcruzgalicia/iteraciones-cli/issues/1683)
+
+
+### Bug Fixes
+
+* **builder:** detecta frontmatter array en discover y test de aborto pre-pandoc ([546f8d2](https://github.com/dcruzgalicia/iteraciones-cli/commit/546f8d2731c33f502a751999e46cdf160d27a8f2)), closes [#1768](https://github.com/dcruzgalicia/iteraciones-cli/issues/1768)
+* **builder:** index.md genera index.* en todos los formatos ([092b458](https://github.com/dcruzgalicia/iteraciones-cli/commit/092b458104f6d2f368991de6b3c2a5f975502c6b)), closes [#1710](https://github.com/dcruzgalicia/iteraciones-cli/issues/1710)
+* **builder:** limpia dist/ si el build con --no-cache falla ([e5aea8e](https://github.com/dcruzgalicia/iteraciones-cli/commit/e5aea8eaf69f146d09f3b61ea1d69b30649256e3)), closes [#1644](https://github.com/dcruzgalicia/iteraciones-cli/issues/1644)
+* **builder:** traduce errores de sistema a mensajes accionables ([ad6f556](https://github.com/dcruzgalicia/iteraciones-cli/commit/ad6f5561f690adc461e4102f1ce7b3d23deae698)), closes [#1767](https://github.com/dcruzgalicia/iteraciones-cli/issues/1767)
+* **builder:** valida las dependencias entre preamble filters y protege flags.lua ([bfed5da](https://github.com/dcruzgalicia/iteraciones-cli/commit/bfed5da5def55fe8c07f67a63fc5ad63fa398c33)), closes [#1702](https://github.com/dcruzgalicia/iteraciones-cli/issues/1702)
+* **cache:** invalida el CSS cuando se actualiza el binario de Tailwind ([67ae7e0](https://github.com/dcruzgalicia/iteraciones-cli/commit/67ae7e0c3d3e628249508dd9038d4688e4da5633)), closes [#1690](https://github.com/dcruzgalicia/iteraciones-cli/issues/1690)
+* **cli:** dry-run muestra la salida real (index.md → index.html) ([8eacb46](https://github.com/dcruzgalicia/iteraciones-cli/commit/8eacb469590c9c631bf17a1ac0fb0cb2f01fced7)), closes [#1692](https://github.com/dcruzgalicia/iteraciones-cli/issues/1692)
+* **cli:** restaura la columna del cursor al actualizar filas del tracker TTY ([5f67709](https://github.com/dcruzgalicia/iteraciones-cli/commit/5f67709e4f0178e99ec0dd93c42a671f06e01a28)), closes [#1682](https://github.com/dcruzgalicia/iteraciones-cli/issues/1682)
+* **config:** mensajes de error en español y con posición en el YAML ([b01e89d](https://github.com/dcruzgalicia/iteraciones-cli/commit/b01e89da6cd0846689a093b4a78ba7075e163b8f)), closes [#1707](https://github.com/dcruzgalicia/iteraciones-cli/issues/1707)
+* **config:** reporta todos los errores de configuración en una sola ejecución ([726ff79](https://github.com/dcruzgalicia/iteraciones-cli/commit/726ff7961e7bbb9ea21ba690983bf10fe9a86d04)), closes [#1706](https://github.com/dcruzgalicia/iteraciones-cli/issues/1706)
+* **errors:** formatUserError usa lista explícita de prefijos conocidos ([86d5423](https://github.com/dcruzgalicia/iteraciones-cli/commit/86d542383872ea4955ce52d987706f7f3c744bd5)), closes [#1648](https://github.com/dcruzgalicia/iteraciones-cli/issues/1648)
+* **html:** protege el orden de --citeproc después de --lua-filter ([464971b](https://github.com/dcruzgalicia/iteraciones-cli/commit/464971b33f8cb4244d3d341198988c7814536fe7)), closes [#1616](https://github.com/dcruzgalicia/iteraciones-cli/issues/1616)
+* **html:** usa id sintético para las referencias y advierte si la tarjeta falta ([9996891](https://github.com/dcruzgalicia/iteraciones-cli/commit/9996891f3261129825bd4274d27df597bca9a538)), closes [#1687](https://github.com/dcruzgalicia/iteraciones-cli/issues/1687)
+* **latex:** conserva el autor del dictum con enlaces y separa sus párrafos ([a6f4b2b](https://github.com/dcruzgalicia/iteraciones-cli/commit/a6f4b2b56438a7077fed0629858467d8bd824131)), closes [#1685](https://github.com/dcruzgalicia/iteraciones-cli/issues/1685)
+* **latex:** convierte :: en listas y blockquotes y estiliza .spacer en HTML ([816bf1e](https://github.com/dcruzgalicia/iteraciones-cli/commit/816bf1eea875587f02f2744c40e8b8374949ffcb)), closes [#1686](https://github.com/dcruzgalicia/iteraciones-cli/issues/1686)
+* **latex:** documenta el hook interno de KOMA y guarda el TOC con smoke ([80fc150](https://github.com/dcruzgalicia/iteraciones-cli/commit/80fc150055e07031f1a7d700442a38237fbad3f0)), closes [#1695](https://github.com/dcruzgalicia/iteraciones-cli/issues/1695)
+* **latex:** flags.lua recorre el árbol completo para has-toc-entries ([343ee63](https://github.com/dcruzgalicia/iteraciones-cli/commit/343ee6379efa7e136c330a7f0d2faa9d199d26c3)), closes [#1704](https://github.com/dcruzgalicia/iteraciones-cli/issues/1704)
+* **latex:** pdfDate usa mtime como último recurso cuando falta birthtime ([8ebf02c](https://github.com/dcruzgalicia/iteraciones-cli/commit/8ebf02cafc677060e8d1e63c0180d06821ba32a7)), closes [#1649](https://github.com/dcruzgalicia/iteraciones-cli/issues/1649)
+* **latex:** restaura los boxes de PDF/X-1a en el filter 25-pdfx ([9777189](https://github.com/dcruzgalicia/iteraciones-cli/commit/977718900443ada42d940bfc86d4ca6520146038)), closes [#1684](https://github.com/dcruzgalicia/iteraciones-cli/issues/1684)
+* **latex:** resuelve mbox-helpers por ruta del paquete y amplía abreviaturas ([a9153ee](https://github.com/dcruzgalicia/iteraciones-cli/commit/a9153ee8f61f4a6bded98113734716ceb397b580)), closes [#1688](https://github.com/dcruzgalicia/iteraciones-cli/issues/1688)
+* **pipeline:** propaga un solo error del pool PDF y cancela la cola ([cc48f44](https://github.com/dcruzgalicia/iteraciones-cli/commit/cc48f443b65f4336c0d560d6def7a89abfaa494c)), closes [#1681](https://github.com/dcruzgalicia/iteraciones-cli/issues/1681)
+* **preamble:** nombres desconocidos en disabled-preamble-filters rompen el build ([23fc32e](https://github.com/dcruzgalicia/iteraciones-cli/commit/23fc32eb2ec3ec1fb3fa77057730031d64ee0e92)), closes [#1647](https://github.com/dcruzgalicia/iteraciones-cli/issues/1647)
+
+
+### Performance Improvements
+
+* **builder:** memoiza los nombres de filters y preamble filters por proceso ([0fc613d](https://github.com/dcruzgalicia/iteraciones-cli/commit/0fc613d11ac5bb9b9c7cd0b84233cf0b7cc865a4)), closes [#1713](https://github.com/dcruzgalicia/iteraciones-cli/issues/1713)
+* **builder:** solo escribe templates HTML/LaTeX si su contenido cambió ([f6de3f8](https://github.com/dcruzgalicia/iteraciones-cli/commit/f6de3f8339fc71cb453f63321d96b59c656d168c)), closes [#1655](https://github.com/dcruzgalicia/iteraciones-cli/issues/1655)
+* **css:** cachea la compilación de Tailwind con hash de invalidación ([b5ff5c1](https://github.com/dcruzgalicia/iteraciones-cli/commit/b5ff5c1590a69da9ffbbf972110ea2edc002cab2)), closes [#1654](https://github.com/dcruzgalicia/iteraciones-cli/issues/1654)
+* **performance:** documenta el presupuesto de arranque medido (~55 ms) ([c44e895](https://github.com/dcruzgalicia/iteraciones-cli/commit/c44e895d74b12aa9a6ea2c2af322a620b61be7fd)), closes [#1696](https://github.com/dcruzgalicia/iteraciones-cli/issues/1696)
+
 ## [0.18.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.17.0...v0.18.0) (2026-08-09)
 
 
