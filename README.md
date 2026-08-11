@@ -180,6 +180,14 @@ Elimina el directorio de salida (`dist/`) y la caché (`.iteraciones/`).
 iteraciones clean
 ```
 
+### `iteraciones open`
+
+Abre la salida generada (`index.html` del directorio de salida real) en el navegador por defecto. Es un disparo único — no observa archivos ni recarga nada.
+
+```
+iteraciones open
+```
+
 ## Filters
 
 Los filters transforman el contenido Markdown. Se organizan en **capas**:

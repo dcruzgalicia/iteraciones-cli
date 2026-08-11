@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
-import { runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from './dispatcher.js';
+import { runBuild, runClean, runDoctor, runFilters, runInit, runNew, runOpen, runValidate } from './dispatcher.js';
 
 /**
  * Traduce los mensajes de error conocidos de commander al español.
@@ -160,6 +160,20 @@ Ejemplos:
 `,
     )
     .action(() => runFilters(projectRoot()));
+
+  program
+    .command('open')
+    .description('abre la salida generada (index.html) en el navegador por defecto')
+    .addHelpText(
+      'after',
+      `
+Ejemplos:
+  iteraciones open    abre dist/files/index.html en el navegador
+`,
+    )
+    .action(async () => {
+      await runOpen(projectRoot());
+    });
 
   return program;
 }
