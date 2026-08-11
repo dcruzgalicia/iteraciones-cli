@@ -11,6 +11,7 @@ import type { BuildDocument } from './types.js';
 export {
   getBuiltinFilterNames,
   getBuiltinLuaFilterInfos,
+  LUA_GROUP_ORDER,
   type LuaFilterGroup,
   type LuaFilterInfo,
   loadFilterGroups,

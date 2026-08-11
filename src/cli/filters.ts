@@ -1,10 +1,7 @@
 import { getBuiltinPreambleFilterInfos, validateDisabledPreambleFilters } from '../builder/preamble-loader.js';
-import { getBuiltinLuaFilterInfos, validateDisabledFilters } from '../builder/render.js';
+import { getBuiltinLuaFilterInfos, LUA_GROUP_ORDER, validateDisabledFilters } from '../builder/render.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { logInfo } from '../lib/logger.js';
-
-/** Orden de ejecución real de los grupos de filtros Lua. */
-const LUA_GROUP_ORDER = ['semantic/string', 'semantic/ast', 'latex', 'html'];
 
 function sortLuaInfos(infos: Awaited<ReturnType<typeof getBuiltinLuaFilterInfos>>) {
   return infos.sort((a, b) => {

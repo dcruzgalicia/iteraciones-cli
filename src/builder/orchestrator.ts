@@ -158,7 +158,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   }
   if (plan.filtersInvalidated) log('Filters modificados — reprocesando todos los documentos');
   if (plan.bibInvalidated) log('Bibliografía modificada — regenerando las exportaciones');
-  if (plan.formatInvalidated.pdf) log('Configuración PDF/LaTeX modificada — regenerando LaTeX/PDF');
+  if (plan.formatInvalidated.latex) log('Configuración PDF/LaTeX modificada — regenerando LaTeX/PDF');
   if (plan.formatInvalidated.html) log('Configuración HTML modificada — regenerando páginas HTML');
   if (plan.formatInvalidated.epub) log('Configuración EPUB modificada — regenerando EPUBs');
   if (plan.formatInvalidated.markdown) log('Configuración Markdown modificada — regenerando exports Markdown');
@@ -237,12 +237,11 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
     doc.slug = entry?.slug ?? basename(doc.relativePath, '.md');
   }
 
-  // Los formatos nuevos no fuerzan re-render: el AST canónico en disco
-  // (`.iteraciones/ast/`) permite exportar sus salidas sin re-ejecutar
-  // markdown → json (los exportSets ya incluyen todos los docs vía
-  // formatInvalidated, que cambia al activarse un formato).
+  // Los formatos nuevos no fuerzan re-render: cada conversión sale del
+  // markdown original (pandoc-directo) y los exportSets ya incluyen todos los
+  // docs vía formatInvalidated (cambia al activarse un formato).
 
-  // ── FASE 6: limpiar de dist/ archivos de formatos eliminados ──
+  // ── Limpieza de dist/: archivos de formatos eliminados ──
   await cleanupRemovedFormats(ctx, allDocs, plan.removedFormats);
 
   // ── Planificación: conjuntos de trabajo (caché content-addressed) ──
@@ -267,7 +266,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   // Solo hubo eliminaciones o slugs cambiados: el cleanup ya corrió
   if (
     work.renderDocs.length === 0 &&
-    work.exportSets.pdf.length === 0 &&
+    work.exportSets.latex.length === 0 &&
     work.exportSets.html.length === 0 &&
     work.exportSets.epub.length === 0 &&
     work.exportSets.markdown.length === 0
@@ -291,13 +290,13 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
 
   const formatCfg = siteConfig.format;
 
-  // ── FASE 2-6: pipeline por documento (AST → formatos ligeros → .tex → PDF) ──
+  // ── Pipeline por documento: formatos ligeros + .tex/PDF encolado ──
   const workDocCount = new Set([
     ...work.renderDocs.map((d) => d.relativePath),
     ...work.exportSets.html.map((d) => d.relativePath),
     ...work.exportSets.epub.map((d) => d.relativePath),
     ...work.exportSets.markdown.map((d) => d.relativePath),
-    ...work.exportSets.pdf.map((d) => d.relativePath),
+    ...work.exportSets.latex.map((d) => d.relativePath),
   ]).size;
 
   progress.startPhase('render', workDocCount);

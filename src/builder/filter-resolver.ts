@@ -43,6 +43,13 @@ const LUA_GROUPS: Array<{ dir: string; target: 'semantic' | 'latex' | 'html' }> 
   { dir: 'html', target: 'html' },
 ];
 
+/**
+ * Orden de ejecución real de los grupos de filtros Lua. Fuente única: deriva
+ * de LUA_GROUPS (el CLI lo consume para ordenar la salida de `iteraciones
+ * filters`; antes se duplicaba en cli/filters.ts).
+ */
+export const LUA_GROUP_ORDER = LUA_GROUPS.map((g) => g.dir);
+
 /** Filtros Lua resueltos por capa (rutas absolutas, en orden de aplicación). */
 export interface LuaFilterGroup {
   semantic: string[];

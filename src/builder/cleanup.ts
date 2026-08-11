@@ -5,7 +5,7 @@ import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
 /** Extensiones de salida estándar por documento en dist/. */
 const OUTPUT_EXTENSIONS = ['.html', '.tex', '.pdf', '.epub', '.md'];
 
-/** Auxiliares de latexmk que se acumulan en .iteraciones/formats/pdf/. */
+/** Auxiliares de latexmk que se acumulan en .iteraciones/tmp/pdf/. */
 export const LATEXMK_AUX_EXTENSIONS = ['.aux', '.bbl', '.bcf', '.blg', '.fls', '.run.xml', '.fdb_latexmk', '.out', '.toc', '.log'];
 
 const FORMAT_EXT_MAP: Record<string, string> = {
