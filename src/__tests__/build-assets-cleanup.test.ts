@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, spyOn } from 'bun:test';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { buildAssets } from '../builder/build-assets.js';
+import * as buildAssetsModule from '../builder/build-assets.js';
+import { buildAssets, computeCssHash } from '../builder/build-assets.js';
 import { cleanupDeletedFiles, cleanupSlugChanges } from '../builder/cleanup.js';
 import type { BuildContext } from '../builder/types.js';
 import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
@@ -34,6 +35,30 @@ describe('build-assets', () => {
       expect(css).toContain('@font-face');
       expect(css).toContain('url(../fonts/'); // rutas relativas al css final → dist/files/fonts
       expect(css).toContain('@keyframes scroll-reveal');
+    });
+  });
+
+  it('computeCssHash incluye el binario de Tailwind (una actualización invalida el CSS)', async () => {
+    await withTempDir(async (dir) => {
+      const outDir = join(dir, 'dist', 'files');
+      await mkdir(outDir, { recursive: true });
+      await writeFile(join(outDir, 'index.html'), '<p class="text-stone-500">Hola</p>', 'utf8');
+      const fakeBin = join(dir, 'tailwind-bin.mjs');
+      await writeFile(fakeBin, 'a', 'utf8');
+      const spy = spyOn(buildAssetsModule, 'resolveTailwindBin').mockResolvedValue(fakeBin);
+      try {
+        const h1 = await computeCssHash(outDir, DEFAULT_SITE_CONFIG);
+        // "Actualizar" el binario: otro contenido (otro mtime y tamaño)
+        await Bun.sleep(5);
+        await writeFile(fakeBin, 'bb', 'utf8');
+        const h2 = await computeCssHash(outDir, DEFAULT_SITE_CONFIG);
+        expect(h1).not.toBe(h2);
+        // Sin cambios en el binario, el hash es estable (misma salida)
+        const h3 = await computeCssHash(outDir, DEFAULT_SITE_CONFIG);
+        expect(h2).toBe(h3);
+      } finally {
+        spy.mockRestore();
+      }
     });
   });
 });

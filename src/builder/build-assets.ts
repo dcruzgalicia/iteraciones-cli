@@ -90,7 +90,7 @@ export async function compileTailwindCss(outputDir: string, accent: string): Pro
 /**
  * Hash de invalidación del CSS: contenido de los HTML finales de dist/files
  * (las clases que Tailwind debe incluir/purgar) + CSS base + paleta del acento
- * + versión del binario de Tailwind. Si nada cambió, el CSS no se recompila.
+ * + binario de Tailwind (mtime+size). Si nada cambió, el CSS no se recompila.
  */
 export async function computeCssHash(outputDir: string, siteConfig: SiteConfig): Promise<string> {
   const hasher = new Bun.CryptoHasher('sha256');
@@ -117,6 +117,20 @@ export async function computeCssHash(outputDir: string, siteConfig: SiteConfig):
   hasher.update(stylesSrc);
   const accent = siteConfig.format?.html?.accent ?? 'lime';
   hasher.update(JSON.stringify(ACCENT_PALETTES[accent as AccentColor] ?? {}));
+  // El binario de Tailwind (mtime+size, patrón content-addressed del proyecto):
+  // una actualización del paquete debe invalidar el CSS cacheado, aunque los
+  // HTML no hayan cambiado.
+  const tailwindBin = await resolveTailwindBin().catch(() => '');
+  if (tailwindBin) {
+    const binStat = await Bun.file(tailwindBin)
+      .stat()
+      .catch(() => null);
+    if (binStat) {
+      hasher.update('tailwind-bin');
+      hasher.update(String(Math.round(binStat.mtimeMs)));
+      hasher.update(String(binStat.size));
+    }
+  }
   return hasher.digest('hex');
 }
 
