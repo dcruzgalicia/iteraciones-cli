@@ -142,6 +142,7 @@ const LATEX_FILTERS = [
   '06-mbox-sentence-end',
   '07-mbox-sentence-start',
   '08-quote-noindent',
+  '09-cjk',
 ].map((n) => join(RESOURCES, 'latex', `${n}.lua`));
 
 async function toLatex(markdown: string, from?: string): Promise<string> {
@@ -284,6 +285,21 @@ describe.skipIf(!pandocOk)('filtros Lua latex', () => {
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
+  });
+
+  it('convierte .japanese al entorno CJK con encoding min', async () => {
+    const tex = await toLatex('::: {.japanese}\n花見は春の風物詩です。\n::: ');
+    expect(tex).toContain('\\begin{CJK}{UTF8}{min}');
+    expect(tex).toContain('花見は春の風物詩です。');
+    expect(tex).toContain('\\end{CJK}');
+  });
+
+  it('convierte .chinese y .korean con sus encodings (gbsn, ksc)', async () => {
+    const tex = await toLatex('::: {.chinese}\n这是中文。\n::: \n\n::: {.korean}\n한국어입니다.\n::: ');
+    expect(tex).toContain('\\begin{CJK}{UTF8}{gbsn}');
+    expect(tex).toContain('这是中文。');
+    expect(tex).toContain('\\begin{CJK}{UTF8}{ksc}');
+    expect(tex).toContain('한국어입니다.');
   });
 });
 

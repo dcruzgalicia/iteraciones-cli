@@ -88,6 +88,22 @@ luminosa y efímera,
 florece en el aire.
 :::
 
+## Texto en japonés, chino o coreano (CJK)
+
+Para escribir texto CJK en el PDF (japonés, chino simplificado o coreano), rodea el párrafo con un fenced div de idioma. En HTML el texto se muestra directamente (UTF-8 nativo); en el PDF se activa el entorno CJKutf8.
+
+::: {.japanese}
+花見は春の風物詩です。
+:::
+
+::: {.chinese}
+这是中文。
+:::
+
+::: {.korean}
+한국어입니다.
+:::
+
 ## Citas y referencias
 
 Puedes usar citas con pandoc citekeys. Por ejemplo:

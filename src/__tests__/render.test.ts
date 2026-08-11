@@ -226,6 +226,7 @@ describe('resolveLuaFilters (resolución de filtros)', () => {
     '06-mbox-sentence-end',
     '07-mbox-sentence-start',
     '08-quote-noindent',
+    '09-cjk',
   ].map((n) => join(PKG, 'latex', `${n}.lua`));
 
   it('resuelve los filtros del paquete por capa sin overrides', async () => {
@@ -266,6 +267,7 @@ describe('resolveLuaFilters (resolución de filtros)', () => {
           'latex/06-mbox-sentence-end',
           'latex/07-mbox-sentence-start',
           'latex/08-quote-noindent',
+          'latex/09-cjk',
           'html/01-dictum',
           'html/02-verse',
           'html/03-center',
@@ -281,7 +283,7 @@ describe('resolveLuaFilters (resolución de filtros)', () => {
   it('excluye filtros desactivados por nombre completo', async () => {
     const f = await resolveLuaFilters(['semantic/string/01-double-colon']);
     expect(f.semantic).toEqual([join(PKG, 'semantic', 'ast', '02-double-colon-noindent.lua')]);
-    expect(f.resolvedNames.size).toBe(14);
+    expect(f.resolvedNames.size).toBe(15);
     expect(f.resolvedNames.has('semantic/string/01-double-colon')).toBe(false);
   });
 });

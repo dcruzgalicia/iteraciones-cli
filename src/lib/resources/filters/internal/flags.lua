@@ -45,12 +45,12 @@ local function is_section_raw(b)
   return c == '[' or c == '{' or c == ' ' or c == '\t'
 end
 
--- BlockQuote nativo o Div.dictum/verse/quote: abren entorno list.
+-- BlockQuote nativo o Div.dictum/verse/quote/cjk: abren entorno list.
 local function is_list_opener(b)
   if b.t == 'BlockQuote' then return true end
   if b.t == 'Div' then
     for _, cls in ipairs(b.classes or {}) do
-      if cls == 'dictum' or cls == 'verse' or cls == 'quote' then return true end
+      if cls == 'dictum' or cls == 'verse' or cls == 'quote' or cls == 'japanese' or cls == 'chinese' or cls == 'korean' then return true end
     end
   end
   return false
