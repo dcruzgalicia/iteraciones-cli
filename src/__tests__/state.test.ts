@@ -103,8 +103,9 @@ describe('saveStateFile (atomicidad)', () => {
     await withTempDir(async (dir) => {
       await saveStateFile(dir, makeState({ 'a.md': { title: 'A' } }));
       const loaded = await loadStateFile(dir);
+      expect(loaded).not.toBeNull();
       loaded?.entries.set('b.md', { title: 'B' } as never);
-      await saveStateFile(dir, loaded!);
+      if (loaded) await saveStateFile(dir, loaded);
       const again = await loadStateFile(dir);
       expect(again?.entries.get('b.md')?.title).toBe('B');
       expect(again?.entries.get('a.md')?.title).toBe('A');

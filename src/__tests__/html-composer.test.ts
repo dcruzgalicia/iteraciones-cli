@@ -84,7 +84,7 @@ describe('buildFormatsBlock', () => {
   });
 
   it('con un formato genera el enlace con su nombre', () => {
-    const block = buildFormatsBlock([formats[0]!]);
+    const block = buildFormatsBlock([formats[0] ?? { href: '', key: 'pdf', name: '', description: '' }]);
     expect(block).toContain('href="./doc.pdf"');
     expect(block).toContain('>PDF</span>');
     expect(block).toContain('Documento final');
