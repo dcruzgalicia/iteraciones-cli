@@ -91,13 +91,3 @@ export async function cleanupSlugChanges(ctx: BuildContext, slugChangedEntries: 
   const entries = [...slugChangedEntries].map(([relPath, oldSlug]) => ({ dir: dirname(relPath), slug: oldSlug }));
   await cleanupBySlug(ctx, entries);
 }
-
-export function buildFormatsList(active: { latexOn: boolean; pdfOn: boolean; htmlOn: boolean; epubOn: boolean; mdOn: boolean }): string[] {
-  const formats: string[] = [];
-  if (active.latexOn) formats.push('latex');
-  if (active.pdfOn) formats.push('pdf');
-  if (active.htmlOn) formats.push('html');
-  if (active.epubOn) formats.push('epub');
-  if (active.mdOn) formats.push('markdown');
-  return formats;
-}

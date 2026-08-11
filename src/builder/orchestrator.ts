@@ -4,11 +4,12 @@ import { basename, join } from 'node:path';
 import { ProgressTracker } from '../cli/progress.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
+import { computeActiveFormats } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 import { buildAssets } from './build-assets.js';
 import { computeBuildMetadata, computeWorkSets } from './build-planner.js';
-import { buildFormatsList, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges } from './cleanup.js';
+import { cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges } from './cleanup.js';
 import { buildDocsFromIndex, discover } from './discover.js';
 import { runDocumentPipeline } from './pipeline.js';
 import { validateDisabledPreambleFilters, validatePreambleDependencies } from './preamble-loader.js';
@@ -193,12 +194,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   if (!work.anyWork) {
     log('Ningún documento modificado — sin cambios');
     if (needsAssets) await runAssets();
-    await progress.finish(
-      0,
-      allDocs.length,
-      buildFormatsList({ latexOn: plan.latexOn, pdfOn: plan.pdfOn, htmlOn: plan.htmlOn, epubOn: plan.epubOn, mdOn: plan.mdOn }),
-      ctx.outputDir,
-    );
+    await progress.finish(0, allDocs.length, computeActiveFormats(ctx.siteConfig.format), ctx.outputDir);
     return;
   }
 
@@ -216,12 +212,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   ) {
     log('Ningún documento modificado — sin cambios');
     if (needsAssets) await runAssets();
-    await progress.finish(
-      0,
-      allDocs.length,
-      buildFormatsList({ latexOn: plan.latexOn, pdfOn: plan.pdfOn, htmlOn: plan.htmlOn, epubOn: plan.epubOn, mdOn: plan.mdOn }),
-      ctx.outputDir,
-    );
+    await progress.finish(0, allDocs.length, computeActiveFormats(ctx.siteConfig.format), ctx.outputDir);
     return;
   }
 
@@ -255,10 +246,5 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   const totalDocs = plan.htmlOn || plan.pdfOn || plan.epubOn || plan.mdOn || plan.latexOn ? allDocs.length : 0;
   const processedCount = processed.size;
   const cachedCount = totalDocs - processedCount;
-  await progress.finish(
-    processedCount,
-    cachedCount,
-    buildFormatsList({ latexOn: plan.latexOn, pdfOn: plan.pdfOn, htmlOn: plan.htmlOn, epubOn: plan.epubOn, mdOn: plan.mdOn }),
-    ctx.outputDir,
-  );
+  await progress.finish(processedCount, cachedCount, computeActiveFormats(ctx.siteConfig.format), ctx.outputDir);
 }

@@ -3,7 +3,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import * as buildAssetsModule from '../builder/build-assets.js';
 import { buildAssets, computeCssHash } from '../builder/build-assets.js';
-import { buildFormatsList, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges } from '../builder/cleanup.js';
+import { cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges } from '../builder/cleanup.js';
 import type { BuildContext } from '../builder/types.js';
 import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { withTempDir } from './helpers.js';
@@ -130,17 +130,5 @@ describe('cleanup (eliminaciones y slugs)', () => {
       expect(await Bun.file(join(ctx.outputDir, 'fonts')).exists()).toBe(false);
       expect(await Bun.file(join(ctx.outputDir, 'logo.svg')).exists()).toBe(false);
     });
-  });
-
-  it('buildFormatsList refleja los formatos activos en el orden canónico', () => {
-    expect(buildFormatsList({ latexOn: false, pdfOn: false, htmlOn: false, epubOn: false, mdOn: false })).toEqual([]);
-    expect(buildFormatsList({ latexOn: true, pdfOn: true, htmlOn: true, epubOn: true, mdOn: true })).toEqual([
-      'latex',
-      'pdf',
-      'html',
-      'epub',
-      'markdown',
-    ]);
-    expect(buildFormatsList({ latexOn: true, pdfOn: false, htmlOn: true, epubOn: false, mdOn: false })).toEqual(['latex', 'html']);
   });
 });
