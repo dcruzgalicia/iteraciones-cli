@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { discover } from '../builder/discover.js';
-import { isIgnoredByRules, isInsideIgnoredDir, loadGitignoreRules, parseGitignore } from '../builder/gitignore.js';
+import { isIgnoredByRules, isInsideIgnoredDir, listMarkdownDocuments, loadGitignoreRules, parseGitignore } from '../builder/gitignore.js';
 import { withTempDir } from './helpers.js';
 
 describe('parseGitignore', () => {
@@ -86,6 +86,26 @@ describe('isIgnoredByRules', () => {
 
   it('retorna false sin reglas', () => {
     expect(isIgnoredByRules('cualquiera.md', [])).toBe(false);
+  });
+});
+
+describe('listMarkdownDocuments (descubrimiento compartido)', () => {
+  it('lista ordenada excluyendo dotfiles, ignorados y .gitignore', async () => {
+    await withTempDir(async (dir) => {
+      await mkdir(join(dir, 'posts'), { recursive: true });
+      await mkdir(join(dir, 'node_modules', 'x'), { recursive: true });
+      await mkdir(join(dir, 'borradores'), { recursive: true });
+      await writeFile(join(dir, 'z.md'), 'z', 'utf8');
+      await writeFile(join(dir, 'a.md'), 'a', 'utf8');
+      await writeFile(join(dir, 'posts', 'b.md'), 'b', 'utf8');
+      await writeFile(join(dir, '.oculto.md'), 'oculto', 'utf8');
+      await writeFile(join(dir, 'node_modules', 'x', 'dep.md'), 'dep', 'utf8');
+      await writeFile(join(dir, 'borradores', 'draft.md'), 'draft', 'utf8');
+      await writeFile(join(dir, '.gitignore'), 'borradores/\n', 'utf8');
+
+      const docs = await listMarkdownDocuments(dir);
+      expect(docs).toEqual(['a.md', 'posts/b.md', 'z.md']);
+    });
   });
 });
 

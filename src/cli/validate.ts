@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative } from 'node:path';
-import { isIgnoredByRules, isInsideIgnoredDir, loadGitignoreRules } from '../builder/gitignore.js';
+import { listMarkdownDocuments } from '../builder/gitignore.js';
 import { validateDisabledPreambleFilters, validatePreambleDependencies } from '../builder/preamble-loader.js';
 import { validateDisabledFilters } from '../builder/render.js';
 import { loadSiteConfig } from '../config/config-loader.js';
@@ -53,15 +53,8 @@ type ValidationResult = {
 };
 
 async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
-  const entries: string[] = [];
-  const gitignoreRules = await loadGitignoreRules(cwd);
-  for await (const entry of new Bun.Glob('**/*.md').scan({ cwd })) {
-    if (isInsideIgnoredDir(entry)) continue;
-    if (isIgnoredByRules(entry, gitignoreRules)) continue;
-    entries.push(entry);
-  }
-  // Ordenar para salida determinista independiente del sistema de archivos.
-  entries.sort();
+  // Descubrimiento compartido con discover y doctor (única fuente de exclusión)
+  const entries = await listMarkdownDocuments(cwd);
 
   const errors: ValidationError[] = [];
   const warnings: ValidationError[] = [];

@@ -161,3 +161,21 @@ export const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', '.iteracion
 export function isInsideIgnoredDir(relPath: string): boolean {
   return relPath.split('/').some((segment) => IGNORED_DIRS.has(segment));
 }
+
+/**
+ * Lista los documentos Markdown del proyecto: orden determinista (alfabético),
+ * excluyendo dotfiles (Bun.Glob), directorios ignorados y las reglas del
+ * .gitignore de la raíz. Única implementación del descubrimiento: discover,
+ * validate y el conteo de doctor la consumen (antes se triplicaba el patrón).
+ */
+export async function listMarkdownDocuments(cwd: string): Promise<string[]> {
+  const entries: string[] = [];
+  const gitignoreRules = await loadGitignoreRules(cwd);
+  for await (const entry of new Bun.Glob('**/*.md').scan({ cwd })) {
+    if (isInsideIgnoredDir(entry)) continue;
+    if (isIgnoredByRules(entry, gitignoreRules)) continue;
+    entries.push(entry);
+  }
+  entries.sort();
+  return entries;
+}

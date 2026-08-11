@@ -6,7 +6,7 @@ import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 import { logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
 import { mapWithConcurrency } from '../lib/run.js';
-import { isIgnoredByRules, isInsideIgnoredDir, loadGitignoreRules } from './gitignore.js';
+import { listMarkdownDocuments } from './gitignore.js';
 import { resolveSlugs } from './slug-resolver.js';
 import { type BibFileCache, type BuildState, type FilterFileCache, hashString, loadStateFile, saveStateFile } from './state.js';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
@@ -93,17 +93,9 @@ export async function discover(
 ): Promise<DiscoverResult> {
   const relativePaths: string[] = [];
 
-  // Respetar .gitignore: los archivos y carpetas ignorados no se procesan
-  const gitignoreRules = await loadGitignoreRules(cwd);
-  for await (const entry of new Bun.Glob('**/*.md').scan({ cwd })) {
-    // Bun.Glob omite los dotfiles por sí mismo; los directorios ignorados
-    // (node_modules, dist, ...) se excluyen en cualquier profundidad.
-    if (isInsideIgnoredDir(entry)) continue;
-    if (isIgnoredByRules(entry, gitignoreRules)) continue;
-    relativePaths.push(entry);
-  }
-
-  relativePaths.sort();
+  // Respetar .gitignore y directorios ignorados: descubrimiento compartido
+  // con validate y doctor (única fuente de exclusión de documentos).
+  relativePaths.push(...(await listMarkdownDocuments(cwd)));
 
   const useCache = !options.full;
   // Si orchestrator ya pasó el estado, no leer state.json otra vez
