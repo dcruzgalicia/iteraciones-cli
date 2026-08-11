@@ -5,7 +5,7 @@ import { validateDisabledPreambleFilters, validatePreambleDependencies } from '.
 import { validateDisabledFilters } from '../builder/render.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { ConfigError } from '../lib/errors.js';
-import { splitFrontmatter } from '../lib/frontmatter.js';
+import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 import { logError, logInfo, logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
 import { checkLatexEngine } from './doctor/system-checks.js';
@@ -83,8 +83,14 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
     if (!yaml) continue; // sin frontmatter → válido
 
     // Validar sintaxis YAML del frontmatter.
-    try {
-      const result = Bun.YAML.parse(yaml);
+    const yamlResult = parseYamlWithPosition(yaml);
+    if (yamlResult.error) {
+      errors.push({
+        file: entry,
+        message: `frontmatter YAML inválido: ${yamlResult.error}`,
+      });
+    } else {
+      const result = yamlResult.value;
       if (!result || typeof result !== 'object' || Array.isArray(result)) {
         errors.push({
           file: entry,
@@ -119,11 +125,6 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
           }
         }
       }
-    } catch (err) {
-      errors.push({
-        file: entry,
-        message: `frontmatter YAML inválido: ${err instanceof Error ? err.message : String(err)}`,
-      });
     }
   }
   return { errors, warnings, count: entries.length };

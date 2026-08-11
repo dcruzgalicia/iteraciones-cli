@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import type { ZodIssue } from 'zod';
 import { ConfigError, formatUserError } from '../lib/errors.js';
+import { parseYamlWithPosition } from '../lib/frontmatter.js';
 import { logWarning } from '../lib/logger.js';
 import { KNOWN_ACCENT_COLORS, type SiteConfig, SiteConfigSchema } from './config-schema.js';
 
@@ -52,11 +53,11 @@ export async function loadSiteConfig(cwd: string, options?: { mode?: 'build' | '
   }
 
   let parsed: unknown;
-  try {
-    parsed = Bun.YAML.parse(raw);
-  } catch (err) {
-    throw new ConfigError(`Error de sintaxis en ${CONFIG_FILE}: ${formatUserError(err)}`, configPath);
+  const yamlResult = parseYamlWithPosition(raw);
+  if (yamlResult.error) {
+    throw new ConfigError(`Error de sintaxis en ${CONFIG_FILE}: ${formatUserError(yamlResult.error)}`, configPath);
   }
+  parsed = yamlResult.value;
 
   if (!parsed || typeof parsed !== 'object') {
     // Un archivo vacío (null) es equivalente a defaults, sin aviso; una config
