@@ -4,7 +4,7 @@ import type { SiteConfig } from '../config/config-schema.js';
 import { logWarning } from '../lib/logger.js';
 import type { BibOptions } from '../lib/pandoc-runner.js';
 import { isIgnoredByRules, isInsideIgnoredDir, loadGitignoreRules } from './gitignore.js';
-import { MD_READER } from './render.js';
+import { MD_READER } from './html-composer.js';
 import type { DiscoveryEntry } from './types.js';
 
 /** Ruta relativa del archivo de estado del build dentro del proyecto. */

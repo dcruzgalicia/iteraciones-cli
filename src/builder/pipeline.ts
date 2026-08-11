@@ -11,10 +11,13 @@ import type { BuildMetadata, WorkSets } from './build-planner.js';
 import { htmlSlugFor } from './discover.js';
 import { assembleExportDocument } from './export/assemble.js';
 import { convertToEpub, convertToMarkdown } from './export/runner.js';
+import { loadFilterGroups } from './filter-resolver.js';
+import { composeHtmlTemplate } from './html-composer.js';
+import { markdownToLatex } from './latex-composer.js';
 import { composeLatexTemplate } from './latex-preamble.js';
 import { createPdfConsumer, type PdfJob } from './pdf-pool.js';
 import { loadPreambleFilters } from './preamble-loader.js';
-import { composeHtmlTemplate, htmlPageFromMarkdown, loadFilterGroups, markdownToLatex } from './render.js';
+import { htmlPageFromMarkdown } from './render.js';
 import { resolveBibOptions } from './state.js';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
 
