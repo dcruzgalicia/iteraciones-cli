@@ -16,7 +16,11 @@ import type { BuildDocument } from './types.js';
  * Ambas son deterministas: mismo input → mismo output, sin efectos secundarios.
  */
 
-type FormatKey = 'pdf' | 'html' | 'epub' | 'markdown';
+/**
+ * Formatos con conjunto de trabajo propio. La clave latex cubre la generación
+ * de .tex y PDF (el hash de configuración "pdf" de state.ts agrupa ambos).
+ */
+type FormatKey = 'latex' | 'html' | 'epub' | 'markdown';
 
 export interface BuildMetadata {
   currentFormats: string[];
@@ -68,7 +72,7 @@ export async function computeBuildMetadata(cwd: string, siteConfig: SiteConfig, 
 
   const prevHashes = prevState?.configHashes;
   const formatInvalidated: Record<FormatKey, boolean> = {
-    pdf: prevState !== null && prevHashes?.pdf !== configHashes.pdf,
+    latex: prevState !== null && prevHashes?.pdf !== configHashes.pdf,
     html: prevState !== null && prevHashes?.html !== configHashes.html,
     epub: prevState !== null && prevHashes?.epub !== configHashes.epub,
     markdown: prevState !== null && prevHashes?.markdown !== configHashes.markdown,
@@ -136,7 +140,7 @@ export function computeWorkSets(meta: BuildMetadata, allDocs: BuildDocument[], d
 
   const anyWork =
     astChanged.size > 0 ||
-    (formatInvalidated.pdf && (pdfOn || latexOn)) ||
+    (formatInvalidated.latex && (pdfOn || latexOn)) ||
     (formatInvalidated.html && htmlOn) ||
     (formatInvalidated.epub && epubOn) ||
     (formatInvalidated.markdown && mdOn) ||
@@ -145,7 +149,7 @@ export function computeWorkSets(meta: BuildMetadata, allDocs: BuildDocument[], d
   const renderDocs = allDocs.filter((d) => astChanged.has(d.relativePath));
   const bibInvalidated = meta.bibInvalidated;
   const exportSets: Record<FormatKey, BuildDocument[]> = {
-    pdf: pdfOn || latexOn ? allDocs.filter((d) => astChanged.has(d.relativePath) || formatInvalidated.pdf || bibInvalidated) : [],
+    latex: pdfOn || latexOn ? allDocs.filter((d) => astChanged.has(d.relativePath) || formatInvalidated.latex || bibInvalidated) : [],
     html: htmlOn ? allDocs.filter((d) => astChanged.has(d.relativePath) || formatInvalidated.html || bibInvalidated) : [],
     epub: epubOn ? allDocs.filter((d) => astChanged.has(d.relativePath) || formatInvalidated.epub || bibInvalidated) : [],
     markdown: mdOn ? allDocs.filter((d) => astChanged.has(d.relativePath) || formatInvalidated.markdown || bibInvalidated) : [],

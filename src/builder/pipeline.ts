@@ -58,7 +58,7 @@ export async function runDocumentPipeline(
 
   // Unión de todos los documentos con trabajo este build
   const workDocs = new Map<string, BuildDocument>();
-  for (const doc of [...work.renderDocs, ...work.exportSets.html, ...work.exportSets.epub, ...work.exportSets.markdown, ...work.exportSets.pdf]) {
+  for (const doc of [...work.renderDocs, ...work.exportSets.html, ...work.exportSets.epub, ...work.exportSets.markdown, ...work.exportSets.latex]) {
     workDocs.set(doc.relativePath, doc);
   }
   const workDocList = [...workDocs.values()];
@@ -94,7 +94,7 @@ export async function runDocumentPipeline(
   // ── Pool 2 (PDF): consumidor de la cola, arranca en paralelo con el pool 1 ──
   const pdfWorkBase = join(ctx.cwd, '.iteraciones', 'tmp', 'pdf');
   const pdfConsumer = createPdfConsumer(pdfWorkBase, biberBase, maxSlots, progress);
-  if (pdfOn && work.exportSets.pdf.length > 0) {
+  if (pdfOn && work.exportSets.latex.length > 0) {
     // Los workers arrancan antes del pool 1: latexmk se solapa con pandoc.
     pdfConsumer.start();
   }
@@ -104,7 +104,8 @@ export async function runDocumentPipeline(
   const htmlPaths = new Set(work.exportSets.html.map((d) => d.relativePath));
   const epubPaths = new Set(work.exportSets.epub.map((d) => d.relativePath));
   const mdPaths = new Set(work.exportSets.markdown.map((d) => d.relativePath));
-  const pdfPaths = new Set(work.exportSets.pdf.map((d) => d.relativePath));
+  // Documentos que generan .tex (para latexOn y/o pdfOn)
+  const latexPaths = new Set(work.exportSets.latex.map((d) => d.relativePath));
   const filters = await loadFilterGroups(siteConfig, siteConfig.disabledFilters, ctx.cwd);
 
   progress.startLightFormats();
@@ -128,7 +129,7 @@ export async function runDocumentPipeline(
           htmlPaths,
           epubPaths,
           mdPaths,
-          pdfPaths,
+          latexPaths,
           pdfJobs: pdfConsumer.pdfJobs,
         },
         discoveryIndex,
@@ -179,7 +180,7 @@ interface FormatPoolCtx {
   htmlPaths: Set<string>;
   epubPaths: Set<string>;
   mdPaths: Set<string>;
-  pdfPaths: Set<string>;
+  latexPaths: Set<string>;
   pdfJobs: PdfJob[];
 }
 
@@ -201,7 +202,7 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
     htmlPaths,
     epubPaths,
     mdPaths,
-    pdfPaths,
+    latexPaths,
     pdfJobs,
   } = pool;
   const { htmlOn, epubOn, mdOn, latexOn, pdfOn } = plan;
@@ -225,7 +226,7 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
 
   const entry = discoveryIndex.get(doc.relativePath);
   const fm = entry?.fm ?? {};
-  const needsLatex = (latexOn || pdfOn) && pdfPaths.has(doc.relativePath);
+  const needsLatex = (latexOn || pdfOn) && latexPaths.has(doc.relativePath);
   const outBase = (name: string): string => join(ctx.outputDir, dir === '.' ? '' : dir, name);
   const texDistPath = outBase(`${slug}.tex`);
 

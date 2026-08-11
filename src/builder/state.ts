@@ -202,8 +202,9 @@ export async function computeFiltersHash(
   }
   parts.push(JSON.stringify(siteConfig.disabledFilters ?? []));
   parts.push(JSON.stringify(siteConfig.format?.pdf?.disabledPreambleFilters ?? []));
-  // El reader del pipeline produce el AST canónico: si cambia, los ASTs
-  // cacheados quedan obsoletos y todos los documentos deben re-renderizarse.
+  // El reader (formato de entrada) de todas las conversiones: si cambia, las
+  // salidas cacheadas quedan obsoletas y todos los documentos deben
+  // re-renderizarse.
   parts.push(MD_READER);
   // Versiones de esquema de los outputs cacheados (ver CACHE_SCHEMA_VERSIONS).
   for (const version of Object.values(CACHE_SCHEMA_VERSIONS)) {

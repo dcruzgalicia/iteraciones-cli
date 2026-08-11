@@ -20,7 +20,7 @@ function meta(overrides: Partial<BuildMetadata> = {}): BuildMetadata {
     filterFileCache: {},
     bibHash: 'b',
     bibFileCache: {},
-    formatInvalidated: { pdf: false, html: false, epub: false, markdown: false },
+    formatInvalidated: { latex: false, html: false, epub: false, markdown: false },
     filtersInvalidated: false,
     bibInvalidated: false,
     pdfOn: false,
@@ -41,14 +41,14 @@ describe('computeWorkSets', () => {
     const work = computeWorkSets(meta(), DOCS, new Set());
     expect(work.anyWork).toBe(false);
     expect(work.renderDocs).toEqual([]);
-    expect(work.exportSets.pdf).toEqual([]);
+    expect(work.exportSets.latex).toEqual([]);
   });
 
   it('documentos modificados: entran en astChanged, renderDocs y los exportSets activos', () => {
     const work = computeWorkSets(meta(), DOCS, new Set(['a.md']));
     expect(work.anyWork).toBe(true);
     expect(work.renderDocs.map((d) => d.relativePath)).toEqual(['a.md']);
-    expect(work.exportSets.pdf.map((d) => d.relativePath)).toEqual(['a.md']);
+    expect(work.exportSets.latex.map((d) => d.relativePath)).toEqual(['a.md']);
   });
 
   it('filtersInvalidated: todos los documentos se re-renderizan', () => {
@@ -73,7 +73,7 @@ describe('computeWorkSets', () => {
     expect(work.anyWork).toBe(true);
     expect(work.astChanged.size).toBe(0);
     expect(work.renderDocs.length).toBe(0);
-    expect(work.exportSets.pdf.length).toBe(3);
+    expect(work.exportSets.latex.length).toBe(3);
     expect(work.exportSets.html.length).toBe(3);
     expect(work.exportSets.epub.length).toBe(3);
     expect(work.exportSets.markdown.length).toBe(3);
@@ -86,7 +86,7 @@ describe('computeWorkSets', () => {
 
   it('formatInvalidated.html con htmlOn: todos los docs van al exportSet html sin re-render', () => {
     const work = computeWorkSets(
-      meta({ htmlOn: true, formatInvalidated: { pdf: false, html: true, epub: false, markdown: false } }),
+      meta({ htmlOn: true, formatInvalidated: { latex: false, html: true, epub: false, markdown: false } }),
       DOCS,
       new Set(),
     );
@@ -94,14 +94,14 @@ describe('computeWorkSets', () => {
     expect(work.renderDocs.length).toBe(0);
   });
 
-  it('nuevo formato pdf: formatInvalidated incluye todos los docs en el exportSet pdf', () => {
+  it('nuevo formato pdf/latex: formatInvalidated incluye todos los docs en el exportSet latex', () => {
     // Al activar un formato nuevo, su hash de config cambia → formatInvalidated true
     const work = computeWorkSets(
-      meta({ newFormats: ['pdf'], pdfOn: true, latexOn: true, formatInvalidated: { pdf: true, html: false, epub: false, markdown: false } }),
+      meta({ newFormats: ['pdf'], pdfOn: true, latexOn: true, formatInvalidated: { latex: true, html: false, epub: false, markdown: false } }),
       DOCS,
       new Set(),
     );
-    expect(work.exportSets.pdf.length).toBe(3);
+    expect(work.exportSets.latex.length).toBe(3);
     expect(work.renderDocs.length).toBe(0);
   });
 
@@ -112,7 +112,7 @@ describe('computeWorkSets', () => {
       htmlOn: true,
       epubOn: true,
       mdOn: true,
-      formatInvalidated: { pdf: true, html: true, epub: true, markdown: true },
+      formatInvalidated: { latex: true, html: true, epub: true, markdown: true },
     });
     const work = computeWorkSets(m, DOCS, new Set(['b.md']));
     expect(work.exportSets.html.length).toBe(3);
@@ -133,7 +133,7 @@ describe('computeBuildMetadata', () => {
       expect(plan.needsCss).toBe(true);
       expect(plan.newFormats).toEqual([]);
       expect(plan.removedFormats).toEqual([]);
-      expect(plan.formatInvalidated).toEqual({ pdf: false, html: false, epub: false, markdown: false });
+      expect(plan.formatInvalidated).toEqual({ latex: false, html: false, epub: false, markdown: false });
     });
   });
 
@@ -143,7 +143,7 @@ describe('computeBuildMetadata', () => {
       const plan = await computeBuildMetadata(dir, siteConfig, null);
       expect(plan.filtersInvalidated).toBe(false);
       expect(plan.bibInvalidated).toBe(false);
-      expect(plan.formatInvalidated.pdf).toBe(false);
+      expect(plan.formatInvalidated.latex).toBe(false);
     });
   });
 
