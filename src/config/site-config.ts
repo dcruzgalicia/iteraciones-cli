@@ -144,3 +144,20 @@ export const DEFAULT_SITE_CONFIG = {
     latex: DEFAULT_LATEX_FORMAT,
   },
 };
+
+/** Claves de los 5 formatos soportados. */
+export type FormatKey = 'latex' | 'pdf' | 'html' | 'epub' | 'markdown';
+
+/** Mapa canónico de formatos activos (true = activo). */
+export type ActiveFormats = Record<FormatKey, boolean>;
+
+/** Convierte una lista de formatos activos (computeActiveFormats) al mapa canónico. */
+export function toActiveFormats(formats: FormatKey[]): ActiveFormats {
+  return {
+    latex: formats.includes('latex'),
+    pdf: formats.includes('pdf'),
+    html: formats.includes('html'),
+    epub: formats.includes('epub'),
+    markdown: formats.includes('markdown'),
+  };
+}

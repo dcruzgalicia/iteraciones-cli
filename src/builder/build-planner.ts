@@ -1,5 +1,5 @@
 import type { SiteConfig } from '../config/config-schema.js';
-import { computeActiveFormats } from '../config/site-config.js';
+import { type ActiveFormats, computeActiveFormats, type FormatKey, toActiveFormats } from '../config/site-config.js';
 import type { BuildState } from './state.js';
 import { type BibFileCache, computeBibHash, computeConfigHashes, computeFiltersHash, type FilterFileCache } from './state.js';
 import type { BuildDocument } from './types.js';
@@ -20,7 +20,7 @@ import type { BuildDocument } from './types.js';
  * Formatos con conjunto de trabajo propio. La clave latex cubre la generación
  * de .tex y PDF (el hash de configuración "pdf" de state.ts agrupa ambos).
  */
-type FormatKey = 'latex' | 'html' | 'epub' | 'markdown';
+type WorkFormatKey = 'latex' | 'html' | 'epub' | 'markdown';
 
 export interface BuildMetadata {
   currentFormats: string[];
@@ -33,15 +33,12 @@ export interface BuildMetadata {
   bibHash: string;
   /** Caché de archivos de bibliografía (mtime+size+hash) para persistir en state.json. */
   bibFileCache: BibFileCache;
-  formatInvalidated: Record<FormatKey, boolean>;
+  formatInvalidated: Record<WorkFormatKey, boolean>;
   filtersInvalidated: boolean;
   bibInvalidated: boolean;
-  pdfOn: boolean;
-  latexOn: boolean;
-  htmlOn: boolean;
-  epubOn: boolean;
-  mdOn: boolean;
-  /** EPUB, Markdown y HTML se exportan directamente desde el AST canónico. */
+  /** Mapa canónico de formatos activos (pdf, latex, html, epub, markdown). */
+  activeFormats: ActiveFormats;
+  /** true si se genera LaTeX intermedio (pdf o latex activos). */
   generateLatex: boolean;
   needsCss: boolean;
 }
@@ -51,7 +48,7 @@ export interface WorkSets {
   astChanged: Set<string>;
   anyWork: boolean;
   renderDocs: BuildDocument[];
-  exportSets: Record<FormatKey, BuildDocument[]>;
+  exportSets: Record<WorkFormatKey, BuildDocument[]>;
 }
 
 /**
@@ -71,7 +68,7 @@ export async function computeBuildMetadata(cwd: string, siteConfig: SiteConfig, 
   const filterFileCache = filtersHashResult.cache;
 
   const prevHashes = prevState?.configHashes;
-  const formatInvalidated: Record<FormatKey, boolean> = {
+  const formatInvalidated: Record<WorkFormatKey, boolean> = {
     latex: prevState !== null && prevHashes?.pdf !== configHashes.pdf,
     html: prevState !== null && prevHashes?.html !== configHashes.html,
     epub: prevState !== null && prevHashes?.epub !== configHashes.epub,
@@ -88,12 +85,12 @@ export async function computeBuildMetadata(cwd: string, siteConfig: SiteConfig, 
     removedFormats = prevState.activeFormats.filter((f) => !currentFormats.includes(f));
   }
 
-  const formatCfg = siteConfig.format;
-  const pdfOn = formatCfg?.pdf?.generate === true;
-  const latexOn = formatCfg?.latex?.generate === true;
-  const htmlOn = formatCfg?.html?.generate === true;
-  const epubOn = formatCfg?.epub?.generate === true;
-  const mdOn = formatCfg?.markdown?.generate === true;
+  const activeFormats = toActiveFormats(currentFormats as FormatKey[]);
+  const pdfOn = activeFormats.pdf;
+  const latexOn = activeFormats.latex;
+  const htmlOn = activeFormats.html;
+  const epubOn = activeFormats.epub;
+  const mdOn = activeFormats.markdown;
   const generateLatex = pdfOn || latexOn;
   const needsCss = htmlOn;
 
@@ -109,11 +106,7 @@ export async function computeBuildMetadata(cwd: string, siteConfig: SiteConfig, 
     formatInvalidated,
     filtersInvalidated,
     bibInvalidated,
-    pdfOn,
-    latexOn,
-    htmlOn,
-    epubOn,
-    mdOn,
+    activeFormats,
     generateLatex,
     needsCss,
   };
@@ -125,7 +118,12 @@ export async function computeBuildMetadata(cwd: string, siteConfig: SiteConfig, 
  * y qué early return tomar según `anyWork` y los tamaños de los conjuntos.
  */
 export function computeWorkSets(meta: BuildMetadata, allDocs: BuildDocument[], discoveredChanges: Set<string>): WorkSets {
-  const { pdfOn, latexOn, htmlOn, epubOn, mdOn, formatInvalidated } = meta;
+  const { activeFormats, formatInvalidated } = meta;
+  const pdfOn = activeFormats.pdf;
+  const latexOn = activeFormats.latex;
+  const htmlOn = activeFormats.html;
+  const epubOn = activeFormats.epub;
+  const mdOn = activeFormats.markdown;
 
   // astChanged: documentos cuyo AST debe regenerarse (markdown o filters cambiados).
   // La bibliografía NO re-renderiza ASTs: las citas se resuelven en la
@@ -148,7 +146,7 @@ export function computeWorkSets(meta: BuildMetadata, allDocs: BuildDocument[], d
 
   const renderDocs = allDocs.filter((d) => astChanged.has(d.relativePath));
   const bibInvalidated = meta.bibInvalidated;
-  const exportSets: Record<FormatKey, BuildDocument[]> = {
+  const exportSets: Record<WorkFormatKey, BuildDocument[]> = {
     latex: pdfOn || latexOn ? allDocs.filter((d) => astChanged.has(d.relativePath) || formatInvalidated.latex || bibInvalidated) : [],
     html: htmlOn ? allDocs.filter((d) => astChanged.has(d.relativePath) || formatInvalidated.html || bibInvalidated) : [],
     epub: epubOn ? allDocs.filter((d) => astChanged.has(d.relativePath) || formatInvalidated.epub || bibInvalidated) : [],

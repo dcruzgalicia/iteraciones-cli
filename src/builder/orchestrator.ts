@@ -118,11 +118,11 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   // Los 5 formatos configurados se muestran siempre en el tracker: activos con
   // ✔ (su trabajo se completa en el pipeline), desactivados con ✗.
   progress.setFormats([
-    { phase: 'latex', active: plan.latexOn },
-    { phase: 'pdf', active: plan.pdfOn },
-    { phase: 'html', active: plan.htmlOn },
-    { phase: 'epub', active: plan.epubOn },
-    { phase: 'markdown', active: plan.mdOn },
+    { phase: 'latex', active: plan.activeFormats.latex },
+    { phase: 'pdf', active: plan.activeFormats.pdf },
+    { phase: 'html', active: plan.activeFormats.html },
+    { phase: 'epub', active: plan.activeFormats.epub },
+    { phase: 'markdown', active: plan.activeFormats.markdown },
   ]);
 
   progress.startPhase('discovery');
@@ -150,7 +150,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   // El CSS se compila con HTML activo: el scan de Tailwind corre sobre los HTML
   // finales de dist/files. Con prevCssHash idéntico (ningún HTML ni recurso
   // cambió), la compilación se omite y se reutiliza el CSS existente.
-  const needsAssets = plan.htmlOn;
+  const needsAssets = plan.activeFormats.html;
 
   /** Genera assets y persiste el nuevo cssHash (solo si cambió). */
   const runAssets = async (): Promise<void> => {
@@ -243,7 +243,10 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
     await runAssets();
   }
 
-  const totalDocs = plan.htmlOn || plan.pdfOn || plan.epubOn || plan.mdOn || plan.latexOn ? allDocs.length : 0;
+  const totalDocs =
+    plan.activeFormats.html || plan.activeFormats.pdf || plan.activeFormats.epub || plan.activeFormats.markdown || plan.activeFormats.latex
+      ? allDocs.length
+      : 0;
   const processedCount = processed.size;
   const cachedCount = totalDocs - processedCount;
   await progress.finish(processedCount, cachedCount, computeActiveFormats(ctx.siteConfig.format), ctx.outputDir);

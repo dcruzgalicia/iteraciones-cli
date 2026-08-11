@@ -42,7 +42,12 @@ export async function runDocumentPipeline(
   formatCfg: FormatConfig | undefined,
   discoveryIndex: Map<string, DiscoveryEntry>,
 ): Promise<{ processed: Set<string> }> {
-  const { pdfOn, latexOn, htmlOn, epubOn, mdOn } = plan;
+  const { activeFormats } = plan;
+  const pdfOn = activeFormats.pdf;
+  const latexOn = activeFormats.latex;
+  const htmlOn = activeFormats.html;
+  const epubOn = activeFormats.epub;
+  const mdOn = activeFormats.markdown;
   const siteConfig = ctx.siteConfig;
   // La bibliografía se resuelve una sola vez por build y se comparte con todos
   // los documentos.
@@ -214,7 +219,12 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
     latexPaths,
     pdfJobs,
   } = pool;
-  const { htmlOn, epubOn, mdOn, latexOn, pdfOn } = plan;
+  const { activeFormats } = plan;
+  const htmlOn = activeFormats.html;
+  const epubOn = activeFormats.epub;
+  const mdOn = activeFormats.markdown;
+  const latexOn = activeFormats.latex;
+  const pdfOn = activeFormats.pdf;
   const htmlConfig = formatCfg?.html;
   const cwd = ctx.cwd;
   const slug = doc.slug ?? basename(doc.relativePath, '.md');
@@ -264,13 +274,13 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
     // Enlaces a los formatos generados (PDF/LaTeX/EPUB/Markdown); el HTML es la
     // página actual y no se enlaza a sí mismo. Solo formatos activos.
     const formats = [
-      ...(plan.pdfOn
+      ...(plan.activeFormats.pdf
         ? [{ href: relativeHref(dir, `${outSlug}.pdf`), key: 'pdf' as const, name: 'PDF', description: 'Documento final para lectura e impresión' }]
         : []),
-      ...(plan.epubOn
+      ...(plan.activeFormats.epub
         ? [{ href: relativeHref(dir, `${outSlug}.epub`), key: 'epub' as const, name: 'EPUB', description: 'Edición adaptable para lectura digital' }]
         : []),
-      ...(plan.latexOn
+      ...(plan.activeFormats.latex
         ? [
             {
               href: relativeHref(dir, `${outSlug}.tex`),
@@ -280,7 +290,7 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
             },
           ]
         : []),
-      ...(plan.mdOn
+      ...(plan.activeFormats.markdown
         ? [
             {
               href: relativeHref(dir, `${outSlug}.md`),

@@ -4,10 +4,16 @@ import { join } from 'node:path';
 import { type BuildMetadata, computeBuildMetadata, computeWorkSets } from '../builder/build-planner.js';
 import type { BuildDocument } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
+import { type ActiveFormats, type FormatKey, toActiveFormats } from '../config/site-config.js';
 import { withTempDir } from './helpers.js';
 
 function doc(relativePath: string): BuildDocument {
   return { filePath: join('/proyecto', relativePath), relativePath, frontmatter: { title: relativePath, date: '', author: [] } };
+}
+
+/** Convierte una lista de formatos activos al mapa canónico (mismo helper que el pipeline). */
+function active(formats: FormatKey[]): ActiveFormats {
+  return toActiveFormats(formats);
 }
 
 function meta(overrides: Partial<BuildMetadata> = {}): BuildMetadata {
@@ -23,11 +29,7 @@ function meta(overrides: Partial<BuildMetadata> = {}): BuildMetadata {
     formatInvalidated: { latex: false, html: false, epub: false, markdown: false },
     filtersInvalidated: false,
     bibInvalidated: false,
-    pdfOn: false,
-    latexOn: true,
-    htmlOn: false,
-    epubOn: false,
-    mdOn: false,
+    activeFormats: active(['latex']),
     generateLatex: true,
     needsCss: false,
     ...overrides,
@@ -61,11 +63,7 @@ describe('computeWorkSets', () => {
     const work = computeWorkSets(
       meta({
         bibInvalidated: true,
-        pdfOn: true,
-        latexOn: true,
-        htmlOn: true,
-        epubOn: true,
-        mdOn: true,
+        activeFormats: active(['pdf', 'latex', 'html', 'epub', 'markdown']),
       }),
       DOCS,
       new Set(),
@@ -80,13 +78,13 @@ describe('computeWorkSets', () => {
   });
 
   it('bibInvalidated sin formatos activos: anyWork false', () => {
-    const work = computeWorkSets(meta({ bibInvalidated: true, latexOn: false }), DOCS, new Set());
+    const work = computeWorkSets(meta({ bibInvalidated: true, activeFormats: active([]) }), DOCS, new Set());
     expect(work.anyWork).toBe(false);
   });
 
   it('formatInvalidated.html con htmlOn: todos los docs van al exportSet html sin re-render', () => {
     const work = computeWorkSets(
-      meta({ htmlOn: true, formatInvalidated: { latex: false, html: true, epub: false, markdown: false } }),
+      meta({ activeFormats: active(['html']), formatInvalidated: { latex: false, html: true, epub: false, markdown: false } }),
       DOCS,
       new Set(),
     );
@@ -97,7 +95,11 @@ describe('computeWorkSets', () => {
   it('nuevo formato pdf/latex: formatInvalidated incluye todos los docs en el exportSet latex', () => {
     // Al activar un formato nuevo, su hash de config cambia → formatInvalidated true
     const work = computeWorkSets(
-      meta({ newFormats: ['pdf'], pdfOn: true, latexOn: true, formatInvalidated: { latex: true, html: false, epub: false, markdown: false } }),
+      meta({
+        newFormats: ['pdf'],
+        activeFormats: active(['pdf', 'latex']),
+        formatInvalidated: { latex: true, html: false, epub: false, markdown: false },
+      }),
       DOCS,
       new Set(),
     );
@@ -107,11 +109,7 @@ describe('computeWorkSets', () => {
 
   it('todos los formatos activos: todos los docs van a los exportSets correspondientes', () => {
     const m = meta({
-      pdfOn: true,
-      latexOn: true,
-      htmlOn: true,
-      epubOn: true,
-      mdOn: true,
+      activeFormats: active(['pdf', 'latex', 'html', 'epub', 'markdown']),
       formatInvalidated: { latex: true, html: true, epub: true, markdown: true },
     });
     const work = computeWorkSets(m, DOCS, new Set(['b.md']));
@@ -127,8 +125,7 @@ describe('computeBuildMetadata', () => {
       const siteConfig = await loadSiteConfig(dir);
       const plan = await computeBuildMetadata(dir, siteConfig, null);
       expect(plan.currentFormats).toEqual(['latex', 'html']);
-      expect(plan.latexOn).toBe(true);
-      expect(plan.htmlOn).toBe(true);
+      expect(plan.activeFormats).toEqual(active(['latex', 'html']));
       expect(plan.generateLatex).toBe(true);
       expect(plan.needsCss).toBe(true);
       expect(plan.newFormats).toEqual([]);
