@@ -158,23 +158,25 @@ export function buildFormatsBlock(formats: FormatsLink[]): string | undefined {
 }
 
 /**
- * Elimina del TOC el ítem que enlaza a #referencias (el header sintético que
+ * Elimina del TOC el ítem que enlaza a #refs-heading (el header sintético que
  * inyecta el filtro internal/flags para link-citations; sin él, el TOC lo
  * incluiría). El ítem es el último li del TOC y no contiene sublistas
  * (header de nivel 1).
  */
 export function removeTocReferencesLink(html: string): string {
-  return html.replace(/<li>\s*<a href="#referencias"[^>]*>.*?<\/a>\s*<\/li>/gs, '');
+  return html.replace(/<li>\s*<a href="#refs-heading"[^>]*>.*?<\/a>\s*<\/li>/gs, '');
 }
 
 /**
- * Extrae el bloque de referencias (h1#referencias + div#refs) del article y lo
- * devuelve como bloque del masonry con su marcador. El parse del cierre es
+ * Extrae el bloque de referencias (h1#refs-heading + div#refs) del article y lo
+ * devuelve como bloque del masonry con su marcador. El id del heading es el
+ * sintético que inyecta internal/flags.lua: un heading "Referencias" propio
+ * del documento (id referencias) nunca se toca. El parse del cierre es
  * balanceado: las entradas csl-entry son divs anidados, el primer `</div>` no
  * cierra el bloque. Sin citas, no se genera bloque.
  */
 export function extractReferencesBlock(html: string): { html: string; block?: string } {
-  const refsIdPos = html.indexOf('id="referencias"');
+  const refsIdPos = html.indexOf('id="refs-heading"');
   const refsDivPos = html.indexOf('<div id="refs"');
   if (refsIdPos < 0 && refsDivPos < 0) return { html };
 
@@ -182,6 +184,8 @@ export function extractReferencesBlock(html: string): { html: string; block?: st
   const divStart = html.indexOf('<div id="refs"', start);
   if (divStart < 0) {
     if (html.includes('<!-- block:referencias -->')) {
+      // Heading sintético sin div#refs (citeproc sin entradas): eliminar el
+      // heading y el marcador, sin tocar ningún heading del documento.
       if (refsIdPos >= 0 && start >= 0) {
         const h1End = html.indexOf('</h1>', start);
         if (h1End >= 0) html = html.slice(0, start) + html.slice(h1End + 5);
@@ -214,7 +218,7 @@ export function extractReferencesBlock(html: string): { html: string; block?: st
 
   const chipClass =
     'inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-12 text-accent-600 dark:text-accent-400';
-  const styledHeading = block.replace(/<h1[^>]*id="referencias"[^>]*>/, `<h2 id="referencias" class="${chipClass}">`).replace('</h1>', '</h2>');
+  const styledHeading = block.replace(/<h1[^>]*id="refs-heading"[^>]*>/, `<h2 id="refs-heading" class="${chipClass}">`).replace('</h1>', '</h2>');
   const card =
     `<div class="break-inside-avoid pb-6">\n` +
     `      <section class="relative [&::before]:pointer-events-none [&::before]:absolute [&::before]:left-2 [&::before]:top-2 [&::before]:h-3 [&::before]:w-3 [&::before]:border-l [&::before]:border-t [&::before]:border-accent-500/30 [&::before]:content-[''] [&::after]:pointer-events-none [&::after]:absolute [&::after]:bottom-2 [&::after]:right-2 [&::after]:h-3 [&::after]:w-3 [&::after]:border-b [&::after]:border-r [&::after]:border-accent-500/30 [&::after]:content-[''] rounded-xl border border-accent-500/25 bg-stone-50/80 dark:bg-stone-900/70 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [&_.csl-entry]:mb-3 [&_.csl-entry]:pl-4 [&_.csl-entry]:-indent-4">\n` +

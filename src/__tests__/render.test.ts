@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import {
   composeHtmlTemplate,
   getBuiltinFilterNames,
+  htmlPageFromMarkdown,
   loadFilterGroups,
   resolveBlockOrder,
   resolveLuaFilters,
@@ -12,9 +13,52 @@ import {
   suggestFilterName,
   validateDisabledFilters,
 } from '../builder/render.js';
+import type { BuildDocument } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import * as logger from '../lib/logger.js';
+import { checkPandoc } from '../lib/pandoc-runner.js';
+
+const pandocOk = await checkPandoc().catch(() => null);
+
+describe('extractReferencesBlock (sin marcador en el template)', () => {
+  it.skipIf(!pandocOk)('sin el marcador de referencias, la bibliografía se descarta con warning visible', async () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-render-'));
+    try {
+      // Template efectivo SIN la tarjeta referencias (sin <!-- block:referencias -->)
+      writeFileSync(join(cwd, 'tpl.html'), '<html><body>$body$</body></html>');
+      writeFileSync(join(cwd, 'bibliography.bib'), '@book{key1, author = {García, Lucía}, title = {Libro}, year = {2024}}\n');
+      const content = '---\ntitle: T\nauthor: [Autor]\ndate: 2026-01-01\n---\n\nCita [@key1].\n';
+      const doc: BuildDocument = {
+        filePath: join(cwd, 'test.md'),
+        relativePath: 'test.md',
+        frontmatter: { title: 'T', date: '2026-01-01', author: ['Autor'] },
+      };
+      const siteConfig = await loadSiteConfig(cwd);
+      const warnSpy = spyOn(logger, 'logWarning');
+      try {
+        const html = await htmlPageFromMarkdown(
+          content,
+          doc,
+          cwd,
+          { title: 'T', siteTitle: 'test', lang: 'es-MX' },
+          siteConfig,
+          join(cwd, 'tpl.html'),
+          {},
+          { bibliography: join(cwd, 'bibliography.bib') },
+          await loadFilterGroups(siteConfig, undefined, cwd),
+        );
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('la tarjeta de referencias no está en format.html.blocks'), 'html');
+        // La bibliografía no se pierde en silencio: el warning lo hace visible
+        expect(html).not.toContain('csl-entry');
+      } finally {
+        warnSpy.mockRestore();
+      }
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+});
 
 describe('resolveBlockOrder', () => {
   it('sin overrides usa el orden por defecto', () => {

@@ -1,6 +1,7 @@
 import type { SiteConfig } from '../config/config-schema.js';
 import { BuildError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
+import { logWarning } from '../lib/logger.js';
 import { type BibOptions, runPandoc } from '../lib/pandoc-runner.js';
 import { type LuaFilterGroup, loadFilterGroups } from './filter-resolver.js';
 import { buildFormatsBlock, extractReferencesBlock, type HtmlPageVars, MD_READER, metadataValue, removeTocReferencesLink } from './html-composer.js';
@@ -98,7 +99,14 @@ export async function htmlPageFromMarkdown(
 
   const { html: htmlWithoutRefs, block: referencesBlock } = extractReferencesBlock(htmlWithoutTocRefs);
   if (referencesBlock) {
-    return htmlWithoutRefs.replace('<!-- block:referencias -->', referencesBlock);
+    // La tarjeta referencias puede no estar en format.html.blocks: sin
+    // marcador, la bibliografía se descartaría en silencio (regresión
+    // detectada en la revisión): el warning lo hace visible.
+    if (htmlWithoutRefs.includes('<!-- block:referencias -->')) {
+      return htmlWithoutRefs.replace('<!-- block:referencias -->', referencesBlock);
+    }
+    logWarning('la tarjeta de referencias no está en format.html.blocks; la bibliografía no se inserta en la página', 'html');
+    return htmlWithoutRefs;
   }
   return htmlWithoutRefs;
 }
