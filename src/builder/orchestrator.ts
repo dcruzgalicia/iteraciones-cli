@@ -9,7 +9,7 @@ import { logInfo, logWarning } from '../lib/logger.js';
 import { buildAssets } from './build-assets.js';
 import { computeBuildMetadata, computeWorkSets } from './build-planner.js';
 import { buildFormatsList, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges } from './cleanup.js';
-import { buildDocsFromIndex, discover } from './discover.js';
+import { buildDocsFromIndex, discover, htmlSlugFor } from './discover.js';
 import { runDocumentPipeline } from './pipeline.js';
 import { validateDisabledPreambleFilters } from './preamble-loader.js';
 import { validateDisabledFilters } from './render.js';
@@ -118,16 +118,19 @@ async function dryRun(cwd: string): Promise<void> {
 
   const rows = allDocs.map((doc) => {
     const status = reprocessPaths.has(doc.relativePath) ? 'se reprocesará' : 'reutilizado';
-    return { path: doc.relativePath, slug: doc.slug ?? '', status };
+    // La salida real del HTML (index.md → index.html): el slug por título
+    // (inicio) no es el nombre de archivo que se genera.
+    const outputName = `${htmlSlugFor(doc.relativePath, doc.slug ?? '')}.html`;
+    return { path: doc.relativePath, outputName, status };
   });
 
   const pathWidth = Math.max(...rows.map((r) => r.path.length), 'DOCUMENTO'.length);
-  const slugWidth = Math.max(...rows.map((r) => r.slug.length), 'SLUG'.length);
+  const outputWidth = Math.max(...rows.map((r) => r.outputName.length), 'SALIDA'.length);
 
   logInfo('');
-  logInfo(`  ${'DOCUMENTO'.padEnd(pathWidth)}  ${'SLUG'.padEnd(slugWidth)}  ESTADO`);
+  logInfo(`  ${'DOCUMENTO'.padEnd(pathWidth)}  ${'SALIDA'.padEnd(outputWidth)}  ESTADO`);
   for (const row of rows) {
-    logInfo(`  ${row.path.padEnd(pathWidth)}  ${row.slug.padEnd(slugWidth)}  ${row.status}`);
+    logInfo(`  ${row.path.padEnd(pathWidth)}  ${row.outputName.padEnd(outputWidth)}  ${row.status}`);
   }
 }
 

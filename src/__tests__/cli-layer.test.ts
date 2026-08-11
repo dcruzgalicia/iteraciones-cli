@@ -510,6 +510,29 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
+  it('dry-run muestra la salida real (index.md → index.html, no el slug por título)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'index.md'), '---\ntitle: Inicio\ndate: 2026-01-01\n---\n\nInicio.\n', 'utf8');
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let out = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir, { dryRun: true });
+      } finally {
+        out = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      // El encabezado es SALIDA y la fila de index.md muestra index.html
+      expect(out).toContain('SALIDA');
+      expect(out).toContain('index.md');
+      expect(out).toContain('index.html');
+      // El resto de documentos conserva su salida con slug (test-document.html)
+      expect(out).toContain('test-document.html');
+    });
+  });
+
   it('un slug manual inválido aborta el build con contexto', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
