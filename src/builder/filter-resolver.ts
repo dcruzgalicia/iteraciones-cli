@@ -76,10 +76,22 @@ async function resolveLuaFilter(group: string, name: string, cwd?: string): Prom
 /**
  * Nombres de los .lua de una capa del paquete, en orden de aplicación
  * (el prefijo numérico del archivo define el orden). Derivado del
- * filesystem: crear un .lua nuevo no requiere tocar código.
+ * filesystem: crear un .lua nuevo no requiere tocar código. El escaneo se
+ * memoiza por proceso (los recursos no cambian durante un build; antes se
+ * escaneaba el disco en cada llamada, 2-4 veces por build).
  */
+let builtinNamesCache: Record<string, string[]> | null = null;
+
 function builtinNamesForGroup(dir: string): string[] {
-  return [...new Bun.Glob('*.lua').scanSync({ cwd: join(LUA_FILTERS_ROOT, dir), onlyFiles: true })].sort().map((file) => file.replace(/\.lua$/, ''));
+  if (builtinNamesCache === null) {
+    builtinNamesCache = {};
+    for (const { dir: groupDir } of LUA_GROUPS) {
+      builtinNamesCache[groupDir] = [...new Bun.Glob('*.lua').scanSync({ cwd: join(LUA_FILTERS_ROOT, groupDir), onlyFiles: true })]
+        .sort()
+        .map((file) => file.replace(/\.lua$/, ''));
+    }
+  }
+  return builtinNamesCache[dir] ?? [];
 }
 
 /**
@@ -105,14 +117,19 @@ export async function resolveLuaFilters(disabledList?: string[], cwd?: string): 
 }
 
 /** Nombres completos (grupo/nombre) de todos los filters built-in del paquete. */
+let builtinFilterNamesCache: string[] | null = null;
+
 export function getBuiltinFilterNames(): string[] {
-  const names: string[] = [];
-  for (const { dir } of LUA_GROUPS) {
-    for (const name of builtinNamesForGroup(dir)) {
-      names.push(`${dir}/${name}`);
+  if (builtinFilterNamesCache === null) {
+    const names: string[] = [];
+    for (const { dir } of LUA_GROUPS) {
+      for (const name of builtinNamesForGroup(dir)) {
+        names.push(`${dir}/${name}`);
+      }
     }
+    builtinFilterNamesCache = names.sort();
   }
-  return names.sort();
+  return builtinFilterNamesCache;
 }
 
 /** Sugiere el nombre completo de un filter a partir de un nombre incompleto. */

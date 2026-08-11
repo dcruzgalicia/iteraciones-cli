@@ -19,10 +19,18 @@ const PKG_PREAMBLE_DIR = join(import.meta.dir, '../lib/resources/preamble');
 /**
  * Nombres de los preamble filters del paquete, en orden de aplicación
  * (el prefijo numérico del archivo define el orden). Derivado del
- * filesystem: crear un .tex nuevo no requiere tocar código.
+ * filesystem: crear un .tex nuevo no requiere tocar código. El escaneo se
+ * memoiza por proceso (los recursos no cambian durante un build).
  */
+let builtinPreambleNames: string[] | null = null;
+
 export function getBuiltinPreambleFilterNames(): string[] {
-  return [...new Bun.Glob('*.tex').scanSync({ cwd: PKG_PREAMBLE_DIR, onlyFiles: true })].sort().map((file) => file.replace(/\.tex$/, ''));
+  if (builtinPreambleNames === null) {
+    builtinPreambleNames = [...new Bun.Glob('*.tex').scanSync({ cwd: PKG_PREAMBLE_DIR, onlyFiles: true })]
+      .sort()
+      .map((file) => file.replace(/\.tex$/, ''));
+  }
+  return builtinPreambleNames;
 }
 
 export interface PreambleFilter {
