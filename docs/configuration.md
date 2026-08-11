@@ -84,6 +84,24 @@ Los preamble filters se encuentran en `src/lib/resources/preamble/` del paquete 
 
 Usa `iteraciones filters` para ver la lista completa con sus descripciones y estado.
 
+### Personalizar la tipografía del PDF (override por proyecto)
+
+Los valores tipográficos del PDF (papel, márgenes, fuente, interlineado, estilo de secciones...) viven en los archivos `.tex` de `src/lib/resources/preamble/` del paquete. Para personalizarlos, crea en tu proyecto un archivo con el **mismo nombre** en `<proyecto>/preamble/`: el tuyo reemplaza al del paquete por completo. Ejemplo — márgenes propios sobrescribiendo `04-margins.tex`:
+
+```bash
+mkdir -p preamble
+cat > preamble/04-margins.tex << 'EOF'
+% Márgenes propios (2cm en todos los lados)
+\usepackage[margin=2cm]{geometry}
+EOF
+```
+
+Consideraciones:
+- El prefijo numérico del nombre (`04-`) define el orden dentro del preámbulo: úsalo igual que en el paquete.
+- El override reemplaza el archivo **completo**: incluye todo lo que necesites (no hay herencia parcial).
+- Algunos filters tienen dependencias entre sí (`16-toc-styling` requiere `05-language`; `25-pdfx` desactiva los enlaces por especificación PDF/X-1a). `validate` las comprueba y avisa; no las rompas sin revisarlas.
+- Decisión de diseño (pre-1.0): **no** existe configuración dinámica para papel/márgenes/fuente en `iteraciones.config.yaml` — el mecanismo de override por `.tex` es la vía soportada (ver docs/architecture.md, Decisiones de diseño).
+
 Los campos de configuración que sí son dinámicos (viajan desde `iteraciones.config.yaml`) son:
 
 #### `format.pdf.page-number`
