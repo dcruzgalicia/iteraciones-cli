@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.19.0...v0.20.0) (2026-08-11)
+
+
+### Features
+
+* **init:** crea un .gitignore sugerido con dist/ e .iteraciones ([e046c0f](https://github.com/dcruzgalicia/iteraciones-cli/commit/e046c0fb0394a04935c481ab392af8dd683457d5)), closes [#1791](https://github.com/dcruzgalicia/iteraciones-cli/issues/1791)
+
 ## [0.19.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.18.0...v0.19.0) (2026-08-11)
 
 
