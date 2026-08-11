@@ -27,49 +27,6 @@ function entryFor(discoveryIndex: Map<string, DiscoveryEntry>, path: string): Di
   return entry;
 }
 
-/**
- * Intenta resolver colisiones de slugs expandiendo el número de autores.
- * Para cada documento en colisión, prueba con 2, 3... autores hasta
- * encontrar un slug único dentro del grupo. Los que no pueden expandirse
- * más (sin autores adicionales) conservan el slug base para -dN.
- */
-function resolveByAuthorExpansion(
-  paths: string[],
-  discoveryIndex: Map<string, DiscoveryEntry>,
-  computeSlugFn: (meta: { title: string; author: string[] }, opts: { fallbackPath: string; maxAuthors?: number }) => string,
-): Array<[string, string]> {
-  const result: Array<[string, string]> = paths.map((path) => {
-    const entry = entryFor(discoveryIndex, path);
-    return [path, computeSlugFn({ title: entry.title, author: entry.author }, { fallbackPath: path })];
-  });
-  // Para cada slug que aparece más de una vez, intentar expandir autores
-  const slugCount = new Map<string, number>();
-  for (const [_, slug] of result) slugCount.set(slug, (slugCount.get(slug) ?? 0) + 1);
-  // Set de slugs en uso: la verificación de colisión es O(1) por entrada
-  // (en lugar de un filter sobre todo el resultado en cada intento).
-  const usedSlugs = new Set(result.map(([_, slug]) => slug));
-  for (let tryAuthors = 2; tryAuthors <= 20; tryAuthors++) {
-    let changed = false;
-    for (const entry of result) {
-      const [path, slug] = entry;
-      if ((slugCount.get(slug) ?? 0) <= 1) continue;
-      const meta = entryFor(discoveryIndex, path);
-      const expanded = computeSlugFn({ title: meta.title, author: meta.author }, { fallbackPath: path, maxAuthors: tryAuthors });
-      if (expanded !== slug && !usedSlugs.has(expanded)) {
-        const remaining = (slugCount.get(slug) ?? 1) - 1;
-        slugCount.set(slug, remaining);
-        if (remaining === 0) usedSlugs.delete(slug);
-        slugCount.set(expanded, (slugCount.get(expanded) ?? 0) + 1);
-        usedSlugs.add(expanded);
-        entry[1] = expanded;
-        changed = true;
-      }
-    }
-    if (!changed) break; // sin más resoluciones posibles
-  }
-  return result;
-}
-
 export async function resolveSlugs(
   discoveryIndex: Map<string, DiscoveryEntry>,
   computeSlug: (meta: { title: string; author: string[] }, opts: { fallbackPath: string; maxAuthors?: number }) => string,
@@ -105,9 +62,11 @@ export async function resolveSlugs(
     slugGroups.get(key)?.push(relPath);
   }
 
-  // Los grupos con colisión se resuelven con expansión de autores o sufijos
-  // -dN derivados del discovery index (sin estado persistente adicional).
-  for (const [_, paths] of slugGroups) {
+  // Los grupos con colisión se resuelven con sufijos -dN derivados del
+  // discovery index (sin estado persistente adicional).
+  for (const [key, paths] of slugGroups) {
+    // El slug base del grupo es la parte final de la clave (dir/slugBase).
+    const slugBase = key.includes('/') ? key.slice(key.lastIndexOf('/') + 1) : key;
     if (paths.length <= 1) {
       const path = paths[0];
       if (path === undefined) throw new Error('slug-resolver: grupo de slugs vacío');
@@ -127,14 +86,9 @@ export async function resolveSlugs(
       }
     } else {
       paths.sort();
-      // Intentar resolver la colisión expandiendo autores antes de usar -dN
-      const expanded = resolveByAuthorExpansion(paths, discoveryIndex, computeSlug);
-      // Los que quedaron sin resolver (mismo slug) usan -dN
-      const stillColliding = new Map<string, string[]>();
-      for (const [path, slug] of expanded) {
-        if (!stillColliding.has(slug)) stillColliding.set(slug, []);
-        stillColliding.get(slug)?.push(path);
-      }
+      // Colisión: sufijos -dN secuenciales derivados del discovery index (sin
+      // estado persistente adicional). La renumeración solo ocurre en builds
+      // sin estado previo (--full): los -dN existentes se conservan.
       let maxN = 0;
       const existingSlugs = new Map<string, string>();
       for (const path of paths) {
@@ -149,33 +103,16 @@ export async function resolveSlugs(
         }
       }
       let nextN = maxN + 1;
-      for (const [slug, slugPaths] of stillColliding) {
-        for (const path of slugPaths) {
-          // Solo aplicar -dN si este path participa en la colisión real
-          const allForSlug = stillColliding.get(slug) ?? [];
-          if (allForSlug.length <= 1) {
-            // La expansión de autores lo resolvió
-            const entry = entryFor(discoveryIndex, path);
-            const currentSlug = expanded.find(([p]) => p === path)?.[1] ?? slug;
-            if (entry.slug && entry.slug !== currentSlug) {
-              changedPaths.push(path);
-              newRecentFiles.push(path);
-              slugChangedEntries.set(path, entry.slug);
-            }
-            entry.slug = currentSlug;
-            continue;
-          }
-          // Persiste la colisión: aplicar -dN
-          const entry = entryFor(discoveryIndex, path);
-          const newSlug = existingSlugs.get(path) ?? `${slug}-d${nextN}`;
-          if (!existingSlugs.has(path)) nextN++;
-          if (entry.slug && entry.slug !== newSlug) {
-            changedPaths.push(path);
-            newRecentFiles.push(path);
-            slugChangedEntries.set(path, entry.slug);
-          }
-          entry.slug = newSlug;
+      for (const path of paths) {
+        const entry = entryFor(discoveryIndex, path);
+        const newSlug = existingSlugs.get(path) ?? `${slugBase}-d${nextN}`;
+        if (!existingSlugs.has(path)) nextN++;
+        if (entry.slug && entry.slug !== newSlug) {
+          changedPaths.push(path);
+          newRecentFiles.push(path);
+          slugChangedEntries.set(path, entry.slug);
         }
+        entry.slug = newSlug;
       }
     }
   }
