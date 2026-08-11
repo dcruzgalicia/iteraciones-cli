@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative } from 'node:path';
 import { isIgnoredByRules, isInsideIgnoredDir, loadGitignoreRules } from '../builder/gitignore.js';
-import { validateDisabledPreambleFilters } from '../builder/preamble-loader.js';
+import { validateDisabledPreambleFilters, validatePreambleDependencies } from '../builder/preamble-loader.js';
 import { validateDisabledFilters } from '../builder/render.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { ConfigError } from '../lib/errors.js';
@@ -151,6 +151,14 @@ export async function runValidate(cwd: string): Promise<void> {
     // Validar nombres de filters desactivados (warnings, no errores)
     validateDisabledFilters(config.disabledFilters);
     validateDisabledPreambleFilters(config.format?.pdf?.disabledPreambleFilters);
+    // Dependencias entre preamble filters: errores y warnings semánticos
+    for (const issue of validatePreambleDependencies(config.format?.pdf?.disabledPreambleFilters)) {
+      if (issue.severity === 'error') {
+        configErrors.push({ file: 'iteraciones.config.yaml', message: issue.message });
+      } else {
+        configWarnings.push({ file: 'iteraciones.config.yaml', message: issue.message });
+      }
+    }
     // Verificar que las rutas de lua-filters existan en el proyecto
     for (const rel of config.luaFilters ?? []) {
       if (!(await Bun.file(join(cwd, rel)).exists())) {

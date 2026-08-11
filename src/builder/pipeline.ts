@@ -71,8 +71,13 @@ export async function runDocumentPipeline(
   if (htmlOn) {
     await writeIfChanged(htmlTemplatePath, await composeHtmlTemplate(siteConfig));
   }
+  // Preamble filters efectivos: determinan el flag biblatex-available que
+  // flags.lua consulta antes de inyectar \\printbibliography (desactivar
+  // 11-bibliography sin guarda produciría un comando indefinido).
+  let biblatexAvailable = true;
   if (plan.generateLatex) {
     const preambleFilters = await loadPreambleFilters(siteConfig.format?.pdf?.disabledPreambleFilters, ctx.cwd);
+    biblatexAvailable = preambleFilters.some((f) => f.name === '11-bibliography');
     await writeIfChanged(
       latexTemplatePath,
       await composeLatexTemplate({
@@ -126,6 +131,7 @@ export async function runDocumentPipeline(
           bibFiles,
           htmlTemplatePath,
           latexTemplatePath,
+          biblatexAvailable,
           htmlPaths,
           epubPaths,
           mdPaths,
@@ -177,6 +183,8 @@ interface FormatPoolCtx {
   bibFiles: string[];
   htmlTemplatePath: string;
   latexTemplatePath: string;
+  /** true si el preamble filter 11-bibliography está activo (flags.lua lo consulta). */
+  biblatexAvailable: boolean;
   htmlPaths: Set<string>;
   epubPaths: Set<string>;
   mdPaths: Set<string>;
@@ -199,6 +207,7 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
     bibFiles,
     htmlTemplatePath,
     latexTemplatePath,
+    biblatexAvailable,
     htmlPaths,
     epubPaths,
     mdPaths,
@@ -233,7 +242,7 @@ async function processDocumentFormats(doc: BuildDocument, pool: FormatPoolCtx, d
   // .tex completo (preámbulo + cuerpo) en UNA invocación markdown → latex,
   // escrito directamente en dist/ (o en el área de trabajo del PDF si solo pdfOn)
   if (needsLatex) {
-    const fullTex = await markdownToLatex(content, doc, filters, bibFiles, latexTemplatePath, fm, ctx.siteConfig);
+    const fullTex = await markdownToLatex(content, doc, filters, bibFiles, latexTemplatePath, fm, ctx.siteConfig, pool.biblatexAvailable);
     if (latexOn) {
       await writeOutput(texDistPath, fullTex);
     }

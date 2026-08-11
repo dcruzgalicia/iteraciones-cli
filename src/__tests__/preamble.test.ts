@@ -8,6 +8,7 @@ import {
   getBuiltinPreambleFilterNames,
   loadPreambleFilters,
   validateDisabledPreambleFilters,
+  validatePreambleDependencies,
 } from '../builder/preamble-loader.js';
 import { checkPandoc, runPandoc } from '../lib/pandoc-runner.js';
 
@@ -95,6 +96,33 @@ describe('babelOptionsForLang (contrato lang → babel en el PDF)', () => {
       stderrSpy.mockRestore();
       warnSpy.mockRestore();
     }
+  });
+});
+
+describe('validatePreambleDependencies (dependencias entre filters)', () => {
+  it('sin disabled list no produce issues', () => {
+    expect(validatePreambleDependencies(undefined)).toEqual([]);
+    expect(validatePreambleDependencies([])).toEqual([]);
+  });
+
+  it('desactivar 05-language sin 16-toc-styling es un error (renewcaptionname de babel)', () => {
+    const issues = validatePreambleDependencies(['05-language']);
+    expect(issues.some((i) => i.severity === 'error' && i.message.includes('16-toc-styling'))).toBe(true);
+  });
+
+  it('desactivar ambos (05 y 16) no produce el error', () => {
+    const issues = validatePreambleDependencies(['05-language', '16-toc-styling']);
+    expect(issues.some((i) => i.severity === 'error')).toBe(false);
+  });
+
+  it('25-pdfx con 08-hyperref activo es un warning (enlaces desactivados por PDF/X-1a)', () => {
+    const issues = validatePreambleDependencies(['24-eso-pic', '26-crop']); // 25 activo
+    expect(issues.some((i) => i.severity === 'warning' && i.message.includes('25-pdfx'))).toBe(true);
+  });
+
+  it('con 25-pdfx desactivado no hay warning de enlaces', () => {
+    const issues = validatePreambleDependencies(undefined);
+    expect(issues.some((i) => i.message.includes('25-pdfx'))).toBe(false);
   });
 });
 

@@ -1240,6 +1240,28 @@ describe('runValidate', () => {
       expect(process.exitCode).toBe(1);
     });
   });
+
+  it('desactivar 05-language sin 16-toc-styling es un error de dependencia', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(
+        join(dir, 'iteraciones.config.yaml'),
+        'lang: es-MX\nformat:\n  pdf:\n    disabled-preamble-filters:\n      - 05-language\n',
+        'utf8',
+      );
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(1);
+      expect(output).toContain('16-toc-styling usa');
+    });
+  });
 });
 
 describe('runDoctor', () => {

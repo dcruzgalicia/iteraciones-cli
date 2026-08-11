@@ -5,13 +5,14 @@ import { ProgressTracker } from '../cli/progress.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
 import { computeActiveFormats } from '../config/site-config.js';
+import { BuildError } from '../lib/errors.js';
 import { logInfo, logWarning } from '../lib/logger.js';
 import { buildAssets } from './build-assets.js';
 import { computeBuildMetadata, computeWorkSets } from './build-planner.js';
 import { buildFormatsList, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges } from './cleanup.js';
 import { buildDocsFromIndex, discover, htmlSlugFor } from './discover.js';
 import { runDocumentPipeline } from './pipeline.js';
-import { validateDisabledPreambleFilters } from './preamble-loader.js';
+import { validateDisabledPreambleFilters, validatePreambleDependencies } from './preamble-loader.js';
 import { validateDisabledFilters } from './render.js';
 import { clearStateFile, loadStateFile, updateCssHash } from './state.js';
 import type { BuildContext } from './types.js';
@@ -142,6 +143,13 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   // Validar nombres de filters desactivados (warning sin romper el build)
   validateDisabledFilters(siteConfig.disabledFilters);
   validateDisabledPreambleFilters(siteConfig.format?.pdf?.disabledPreambleFilters);
+  // Dependencias entre preamble filters: errores bloqueantes, warnings visibles
+  for (const issue of validatePreambleDependencies(siteConfig.format?.pdf?.disabledPreambleFilters)) {
+    if (issue.severity === 'error') {
+      throw new BuildError(`dependencia de preamble filters: ${issue.message}`);
+    }
+    logWarning(issue.message, 'config');
+  }
 
   // ── Planificación: hashes de invalidación + formatos (caché content-addressed) ──
   // Con --full no hay estado previo con qué comparar (la caché se borra en
