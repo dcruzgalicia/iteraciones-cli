@@ -58,7 +58,10 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
     if (output !== undefined) {
       const projectRoot = normalize(cwd);
       const resolved = isAbsolute(output) ? normalize(output) : join(projectRoot, output);
-      if (resolved === '/' || resolved === projectRoot || projectRoot.startsWith(`${resolved}/`)) {
+      if (resolved === projectRoot) {
+        throw new Error(`--output "${output}" es la raíz del proyecto: la salida sobrescribiría los archivos fuente.`);
+      }
+      if (projectRoot.startsWith(`${resolved}/`)) {
         throw new Error(`--output "${output}" apunta a un directorio padre del proyecto, lo que podría sobrescribir los archivos fuente.`);
       }
       if (!resolved.startsWith(`${projectRoot}/`)) {

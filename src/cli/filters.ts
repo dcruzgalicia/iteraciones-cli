@@ -56,10 +56,11 @@ export async function runFilters(cwd: string): Promise<void> {
     logInfo('Filtros de preámbulo (orden de ejecución):');
     logInfo('');
 
+    const preambleWidth = Math.max(...preambleInfos.map((info) => info.name.length));
     for (const info of preambleInfos) {
       const active = !preambleDisabled.has(info.name);
       const status = active ? 'activo' : 'desactivado';
-      logInfo(`  ${info.name}  ${info.description}  [${status}]`);
+      logInfo(`  ${info.name.padEnd(preambleWidth)}  ${info.description}  [${status}]`);
     }
 
     logInfo('');
