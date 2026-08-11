@@ -27,10 +27,31 @@ export function buildProgram(): Command {
 
   program
     .name(packageJson.name.replace(/-cli$/, ''))
-    .description(packageJson.description)
+    .description('construye documentos HTML, PDF, EPUB, LaTeX y Markdown desde Markdown')
     .version(packageJson.version, '-V, --version', 'muestra la versión')
     .helpOption('-h, --help', 'muestra la ayuda')
     .helpCommand('help [comando]', 'muestra la ayuda de un comando');
+  program.addHelpText(
+    'before',
+    `
+escribir, compartir, re-existir
+
+Construye documentos HTML, PDF, EPUB, LaTeX y Markdown a partir de archivos Markdown (pandoc + Tailwind CSS).
+
+Primeros pasos:
+  iteraciones init                 crea la estructura del proyecto
+  iteraciones new posts/doc.md     crea un documento
+  iteraciones build                construye el sitio
+`,
+  );
+  program.addHelpText(
+    'after',
+    `
+Documentación:
+  docs/configuration.md     todas las opciones de iteraciones.config.yaml
+  docs/ejemplos.md          elementos del lenguaje Markdown soportados
+`,
+  );
   program.option('--project-root <path>', 'directorio raíz del proyecto (por defecto: directorio actual)');
   // Los errores de uso de commander llegan en inglés: se traducen los 4 casos
   // conocidos (comando/opción desconocida, argumento faltante) con regex; la
