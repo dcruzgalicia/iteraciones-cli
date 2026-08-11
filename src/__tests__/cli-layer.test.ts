@@ -918,16 +918,16 @@ describe.skipIf(!pandocOk)('runBuild', () => {
   });
 });
 
-describe('doctor --verbose (antes runInfo)', () => {
+describe('doctor --info (antes runInfo)', () => {
   afterEach(resetExitCode);
 
-  /** Ejecuta doctor --verbose y captura stdout. */
+  /** Ejecuta doctor --info y captura stdout. */
   async function infoOutput(dir: string): Promise<string> {
     const stdoutSpy = spyOn(process.stdout, 'write');
     let output = '';
     try {
       process.exitCode = 0;
-      await runDoctor(dir, { verbose: true });
+      await runDoctor(dir, { info: true });
     } finally {
       output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
       stdoutSpy.mockRestore();

@@ -151,10 +151,10 @@ iteraciones doctor [opciones]
 
 Comprobaciones que realiza: versión de Bun, pandoc disponible en PATH, configuración del proyecto (`iteraciones.config.yaml`) válida, pdflatex y KOMA-Script instalados (solo si el proyecto compila PDF), permisos de lectura y escritura.
 
-Con `--verbose` también muestra la configuración del proyecto (idioma, documentos, salida, formatos activos, tema HTML, filtros desactivados).
+Con `--info` también muestra la configuración del proyecto (idioma, documentos, salida, formatos activos, tema HTML, filtros desactivados).
 
 ```
-iteraciones doctor --verbose
+iteraciones doctor --info
 ```
 
 ### `iteraciones filters`

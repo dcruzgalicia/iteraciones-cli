@@ -84,7 +84,7 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
   }
 }
 
-/** Información del proyecto para doctor --verbose (antes comando info). */
+/** Información del proyecto para doctor --info (antes comando info). */
 async function buildProjectInfo(cwd: string): Promise<string[]> {
   const config = await loadSiteConfig(cwd);
   const pandocVersion = await checkPandoc().catch(() => 'no disponible');
@@ -149,10 +149,10 @@ export async function runValidate(cwd: string): Promise<void> {
   }
 }
 
-export async function runDoctor(cwd: string, options: { verbose?: boolean } = {}): Promise<void> {
+export async function runDoctor(cwd: string, options: { info?: boolean } = {}): Promise<void> {
   try {
-    // --verbose muestra la información del proyecto (antes comando info)
-    if (options.verbose) {
+    // --info muestra la información del proyecto (antes comando info)
+    if (options.info) {
       const lines = await buildProjectInfo(cwd);
       logInfo(lines.join('\n'), 'doctor');
     }
