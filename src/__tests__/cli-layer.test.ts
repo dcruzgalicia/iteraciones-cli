@@ -340,6 +340,23 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     expect(output).toContain('https://pandoc.org/installing.html');
   });
 
+  it('un build con frontmatter YAML inválido aborta antes de invocar pandoc', async () => {
+    const pandocSpy = spyOn(pandocRunner, 'runPandoc');
+    try {
+      await withTempDir(async (dir) => {
+        await initTestProject(dir);
+        await writeFile(join(dir, 'roto.md'), '---\ntitle: "Roto"\ninvalid: [unclosed\n---\n\nContenido.\n', 'utf8');
+        process.exitCode = 0;
+        await runBuild(dir);
+        expect(process.exitCode).toBe(1);
+      });
+    } finally {
+      pandocSpy.mockRestore();
+    }
+    // La validación ocurre en discover, antes del pipeline: pandoc nunca se invoca.
+    expect(pandocSpy).not.toHaveBeenCalled();
+  });
+
   it('un error de pandoc no sugiere validate (no es un problema de config/frontmatter)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
