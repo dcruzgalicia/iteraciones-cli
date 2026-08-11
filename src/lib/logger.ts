@@ -66,11 +66,26 @@ export function logError(message: string, context?: string): void {
  * Sink opcional para diferir warnings: cuando el ProgressTracker esta activo
  * (modo no verbose), los warnings se acumulan y se muestran en el resumen
  * final en lugar de emitirse en tiempo real (que interferiría con el render).
+ *
+ * El estado solo se modifica desde runWithWarningSink: el sink se configura
+ * antes de ejecutar la función y se restaura en un finally, sin estado global
+ * que escape del scope de ejecución.
  */
 let warningSink: ((message: string) => void) | null = null;
 
-export function setWarningSink(sink: ((message: string) => void) | null): void {
+/**
+ * Ejecuta `fn` con el sink de warnings activo: los logWarning emitidos durante
+ * la ejecución se envían al sink en lugar de stderr. El sink se restaura
+ * siempre (try/finally), incluso si `fn` lanza.
+ */
+export async function runWithWarningSink<T>(sink: (message: string) => void, fn: () => Promise<T>): Promise<T> {
+  const previous = warningSink;
   warningSink = sink;
+  try {
+    return await fn();
+  } finally {
+    warningSink = previous;
+  }
 }
 
 /**

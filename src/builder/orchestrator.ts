@@ -6,7 +6,7 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
 import { computeActiveFormats } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
-import { logWarning } from '../lib/logger.js';
+import { logWarning, runWithWarningSink } from '../lib/logger.js';
 import { buildAssets } from './build-assets.js';
 import { computeBuildMetadata, computeWorkSets } from './build-planner.js';
 import { cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges } from './cleanup.js';
@@ -49,7 +49,18 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     renderer: options.verbose ? 'verbose' : 'default',
   });
   try {
-    await runBuild(cwd, options, progress);
+    // En modo no verbose los warnings se difieren al resumen final del tracker
+    // (en modo verbose se emiten a stderr en tiempo real). El sink se conecta
+    // con runWithWarningSink: queda activo solo durante el build y se restaura
+    // en un finally, sin estado global que escape de este scope.
+    if (options.verbose) {
+      await runBuild(cwd, options, progress);
+    } else {
+      await runWithWarningSink(
+        (message) => progress.addWarning(message),
+        () => runBuild(cwd, options, progress),
+      );
+    }
   } catch (err) {
     // Resolver las fases pendientes del tracker para que el proceso salga:
     // en TTY el render loop mantiene el proceso vivo mientras run() no termine
