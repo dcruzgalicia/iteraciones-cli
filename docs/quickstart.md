@@ -52,7 +52,7 @@ El primer `build` genera `index.html`: es la página de inicio que enlazan las t
 iteraciones doctor
 ```
 
-Verifica pandoc, el motor LaTeX (solo si el proyecto usa PDF o LaTeX) y los permisos del directorio.
+Verifica pandoc, el motor LaTeX (solo si el proyecto genera PDF) y los permisos del directorio.
 
 ## 4. Escribir contenido
 

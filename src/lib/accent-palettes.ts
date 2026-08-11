@@ -1,9 +1,10 @@
 /**
- * Paleta de acentos del tema HTML: valores oklch de la paleta por defecto de
- * Tailwind 4.3.x (11 shades). Se inyecta como @theme en el CSS de entrada
- * (build-assets.ts): las utilities accent-* se generan con estos valores
- * directos, sin overrides. Fuente única de la lista de acentos validados
- * por config: añadir un color nuevo = añadir sus 11 shades aquí.
+ * Paleta de acentos del tema HTML: valores oklch (11 shades). 22 colores son
+ * la paleta por defecto de Tailwind 4.3.x; taupe, mauve, mist y olive son
+ * paletas propias del proyecto (croma bajo, neutras). Se inyecta como @theme
+ * en el CSS de entrada (build-assets.ts): las utilities accent-* se generan
+ * con estos valores directos, sin overrides. Fuente única de la lista de
+ * acentos validados por config: añadir un color nuevo = añadir sus 11 shades.
  */
 export const ACCENT_PALETTES = {
   slate: {

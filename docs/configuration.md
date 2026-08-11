@@ -263,7 +263,7 @@ format:
 **Tipo:** `string[]`
 **Por defecto:** `undefined` (sin filtros de usuario)
 
-Lista de filtros Lua de usuario. Cada elemento es una ruta relativa al proyecto (ej: `filters/nota.lua`). Los filtros corren en todas las invocaciones de pandoc: en las exportaciones (latex, html) antes de los filters del paquete; en la conversión markdown → AST, después de los filtros semánticos. La variable global `FORMAT` de pandoc permite ramificar el comportamiento por formato de salida (`latex`, `html5`, `epub3`, `markdown`, `json`). Si una ruta no existe, se muestra una advertencia y se omite.
+Lista de filtros Lua de usuario. Cada elemento es una ruta relativa al proyecto (ej: `filters/nota.lua`). Los filtros corren en todas las invocaciones de pandoc (markdown → latex/html5/epub3/markdown), antes de los filters de la capa de formato y después de los filtros semánticos. La variable global `FORMAT` de pandoc permite ramificar el comportamiento por formato de salida (`latex`, `html5`, `epub3`, `markdown`). Si una ruta no existe, se muestra una advertencia y se omite.
 
 ```yaml
 lua-filters:
