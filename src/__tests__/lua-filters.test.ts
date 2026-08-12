@@ -290,6 +290,25 @@ describe.skipIf(!pandocOk)('filtros Lua latex', () => {
     expect(flat).toContain('\\mbox{dice \\textbf{ella}.}');
   });
 
+  it('mbox-sentence-end en oración NO final con comillas y énfasis: wrap interno de la última palabra', async () => {
+    const tex = await toLatex(
+      'Mientras trato de conciliar el sueño, pienso: "*lo que sostenemos las mujeres es mucho, es todo, es cansancio y tremenda desigual".* Doy vueltas en la cama y me encuentro con su cara.',
+    );
+    const flat = tex.replace(/\n/g, ' ');
+    // El mbox va dentro del \\emph envolviendo solo la última palabra real
+    // de la oración no final (antes envolvía el bloque completo).
+    expect(flat).toContain('\\mbox{desigual');
+    expect(flat).not.toContain('\\mbox{\\emph{lo que');
+    expect(flat).not.toContain('\\mbox{pienso:}');
+  });
+
+  it('mbox-sentence-end en oración NO final con comillas y punto suelto: no envuelve solo el punto', async () => {
+    const tex = await toLatex('porque, como ella dice: "también lo necesitas". Me prepara un desayuno porque yo siempre ando a las prisas.');
+    const flat = tex.replace(/\n/g, ' ');
+    expect(flat).toContain('\\mbox{necesitas}');
+    expect(flat).not.toContain('\\mbox{.}');
+  });
+
   it('mbox-sentence-start envuelve la primera palabra de cada oración', async () => {
     const tex = await toLatex('Principio de la oración. Otra oración aquí.');
     expect(tex).toContain('\\mbox{Principio} de la');
