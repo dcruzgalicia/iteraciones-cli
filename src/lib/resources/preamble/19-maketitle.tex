@@ -2,16 +2,18 @@
 % páginas de título internas (extratitle, uppertitleback, lowertitleback,
 % dedication) definidas en 28-titlepages.tex.
 %
-% Orden de páginas (mismo flujo que el \maketitle original de KOMA, sin
-% minipage: el \vfill ancla el lowertitleback al fondo):
-%   extratitle (pág 1) → portada (impar) → titlebacks (reverso, twoside)
-%   → dedication (página impar siguiente).
+% Orden de páginas:
+%   extratitle (pág 1, centrado con \vspace*{11\baselineskip} antes)
+%   → portada (impar) → titlebacks (reverso, twoside; el \vfill ancla el
+%   lowertitleback al fondo, sin minipage) → dedication (página impar
+%   siguiente, centrado con \vspace*{11\baselineskip} antes).
 % \next@tpage/\next@tdpage son de KOMA: \clearpage + \thispagestyle{empty}
 % (la variante 'd' asegura página impar en twoside).
 \makeatletter
 \renewcommand{\maketitle}{%
   \ifx\@extratitle\@empty\else
-    \noindent\@extratitle
+    \vspace*{11\baselineskip}%
+    {\centering\noindent\@extratitle\par}%
     \next@tdpage
   \fi
   \thispagestyle{empty}%
@@ -44,10 +46,10 @@
     \fi
   \fi
   \ifx\@dedication\@empty\else
-    \next@tdpage\null\vfill
-    {\centering\@dedication\par}%
-    \vskip \z@ \@plus3fill
-    \cleardoubleemptypage
+    \next@tdpage
+    \vspace*{11\baselineskip}%
+    {\centering\noindent\@dedication\par}%
+    \clearpage
   \fi
 }
 \makeatother
