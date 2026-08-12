@@ -1,0 +1,34 @@
+% Páginas de título internas (extratitle, dedication, uppertitleback,
+% lowertitleback) para el flujo del pipeline.
+%
+% Los comandos KOMA originales solo GUARDAN el contenido (\gdef): el
+% renderizado vive en el \maketitle original de KOMA. Como 19-maketitle.tex
+% lo redefine, este archivo re-expone los comandos (idénticos a KOMA) y
+% define \titlebackformat, el formato que 19-maketitle.tex aplica al
+% imprimir el contenido en sus páginas.
+%
+% El contenido llega serializado a LaTeX por el filter latex/10-titlepages.lua
+% (markdown → latex: el doble espacio al final de línea → \\, una línea con
+% solo :: → \vspace{\baselineskip}).
+\makeatletter
+\renewcommand{\extratitle}[1]{\gdef\@extratitle{%
+    #1%
+}}%
+\renewcommand{\dedication}[1]{\gdef\@dedication{%
+    #1%
+}}%
+\renewcommand{\uppertitleback}[1]{\gdef\@uppertitleback{%
+    #1%
+}}%
+\renewcommand{\lowertitleback}[1]{\gdef\@lowertitleback{%
+    #1%
+}}%
+\makeatother
+
+% Formato del contenido de las páginas internas: footnotesize, interlineado
+% 0.8 y sin indentación en ningún párrafo.
+\newcommand{\titlebackformat}{%
+  \footnotesize
+  \setstretch{0.8}%
+  \setlength{\parindent}{0pt}%
+}

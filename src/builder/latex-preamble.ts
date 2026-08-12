@@ -105,6 +105,21 @@ export async function composeLatexTemplate(opts: {
     lines.push(`\\addbibresource{${escapeLatexPath(bib)}}`);
   }
   lines.push('\\begin{document}');
+  // Páginas de título internas (frontmatter multilinea → LaTeX por el filter
+  // 10-titlepages): los comandos solo guardan con \gdef; 19-maketitle.tex
+  // los renderiza en el orden KOMA (extratitle → portada → titlebacks → dedication).
+  lines.push('$if(extratitle)$');
+  lines.push('\\extratitle{$extratitle$}');
+  lines.push('$endif$');
+  lines.push('$if(dedication)$');
+  lines.push('\\dedication{$dedication$}');
+  lines.push('$endif$');
+  lines.push('$if(uppertitleback)$');
+  lines.push('\\uppertitleback{$uppertitleback$}');
+  lines.push('$endif$');
+  lines.push('$if(lowertitleback)$');
+  lines.push('\\lowertitleback{$lowertitleback$}');
+  lines.push('$endif$');
   lines.push('\\title{$title$}');
   lines.push('$if(subtitle)$');
   lines.push('\\subtitle{$subtitle$}');
@@ -119,7 +134,12 @@ export async function composeLatexTemplate(opts: {
   }
   lines.push('$if(skip-paragraph-space)$');
   lines.push('$else$');
+  // Con titlebacks o dedication, el body empieza en página nueva: el vspace
+  // post-portada sobra (flag expuesto por el filter 10-titlepages).
+  lines.push('$if(has-titleback)$');
+  lines.push('$else$');
   lines.push('\\vspace*{2\\baselineskip}');
+  lines.push('$endif$');
   lines.push('$endif$');
   const pageCommand = PAGE_NUMBER_COMMANDS[opts.pageNumber];
   if (pageCommand) {

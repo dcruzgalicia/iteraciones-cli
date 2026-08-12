@@ -210,6 +210,7 @@ El CLI compone los templates efectivos (una vez por build), los filtros y los me
 | `latex/06-mbox-sentence-end` | ast | últimas 2 palabras de la oración final del párrafo → `\mbox{}` |
 | `latex/08-quote-noindent` | ast | `BlockQuote` seguido de párrafo → `\noindent` al párrafo |
 | `latex/09-cjk` | ast | `Div.japanese/chinese/korean` → `\begin{CJK}{UTF8}{min/gbsn/ksc}...\end{CJK}` |
+| `latex/10-titlepages` | meta | frontmatter multilinea (`extratitle`, `dedication`, `uppertitleback`, `lowertitleback`) → LaTeX para las páginas de título internas |
 | `html/01-dictum` | ast | `Div.dictum` → `<blockquote class="dictum">` |
 | `html/02-verse` | ast | `Div.verse` → `<div class="verse">` |
 | `html/03-center` | ast | `Div.center` → `<div class="center">` |

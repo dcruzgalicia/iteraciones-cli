@@ -40,6 +40,34 @@ El frontmatter completo se pasa a pandoc como metadata del documento. Los campos
 
 `validate` advierte sobre cualquier otro campo del frontmatter que no tenga efecto.
 
+## Páginas de título internas (PDF)
+
+Los campos `extratitle`, `dedication`, `uppertitleback` y `lowertitleback` definen las páginas de título internas del PDF (solo LaTeX/PDF; en HTML se ignoran). Son **metadatos multilinea**: se escriben con el bloque YAML literal (`|`), y el contenido se procesa como markdown normal:
+
+- El **doble espacio al final de línea** produce un salto de línea (`\\`).
+- Una línea con solo `::` produce un espacio vertical (`\vspace{\baselineskip}`).
+- El texto se compone en `footnotesize` con interlineado 0.8 y sin indentación.
+
+```yaml
+---
+title: 'Mi libro'
+extratitle: 'Colección Editorial'
+dedication: 'Para quienes sostienen la vida'
+uppertitleback: |
+  primera linea
+  segunda linea
+
+  ::
+
+  tercera línea
+lowertitleback: |
+  Pie de portada con
+  dos líneas
+---
+```
+
+Orden de páginas en el PDF (flujo KOMA-Script): `extratitle` (primera página) → portada → `uppertitleback` (arriba) y `lowertitleback` (abajo) en el reverso de la portada → `dedication` (página impar siguiente, centrado). El cuerpo comienza en una página nueva; si hay titlebacks o dedication, se omite el espacio vertical post-portada.
+
 ## Citas bibliográficas
 
 Cuando se encuentran archivos `.bib` en el proyecto (auto-descubrimiento), las citas en Markdown siguen el formato pandoc `[@clave]`:

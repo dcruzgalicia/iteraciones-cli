@@ -133,9 +133,17 @@ describe.skipIf(!pandocOk)('filtros Lua html', () => {
   });
 });
 
-const LATEX_FILTERS = ['01-spacer', '02-dictum', '03-verse', '04-center', '05-flushright', '06-mbox-sentence-end', '08-quote-noindent', '09-cjk'].map(
-  (n) => join(RESOURCES, 'latex', `${n}.lua`),
-);
+const LATEX_FILTERS = [
+  '01-spacer',
+  '02-dictum',
+  '03-verse',
+  '04-center',
+  '05-flushright',
+  '06-mbox-sentence-end',
+  '08-quote-noindent',
+  '09-cjk',
+  '10-titlepages',
+].map((n) => join(RESOURCES, 'latex', `${n}.lua`));
 
 async function toLatex(markdown: string, from?: string): Promise<string> {
   const extraArgs = [...SEMANTIC_FILTERS, ...LATEX_FILTERS].flatMap((f) => ['--lua-filter', f]);
@@ -529,5 +537,74 @@ describe.skipIf(!pandocOk)('filtros Lua de usuario', () => {
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
+  });
+});
+
+describe.skipIf(!pandocOk)('filter latex/10-titlepages (páginas de título internas)', () => {
+  const TITLEPAGES = join(RESOURCES, 'latex', '10-titlepages.lua');
+  let dir: string;
+  let tplLatex: string;
+
+  beforeAll(() => {
+    dir = mkdtempSync(join(tmpdir(), 'iteraciones-titlepages-'));
+    tplLatex = join(dir, 'tpl.tex');
+    writeFileSync(
+      tplLatex,
+      '\\documentclass{article}\n' +
+        '$if(extratitle)$\\extratitle{$extratitle$}$endif$\n' +
+        '$if(dedication)$\\dedication{$dedication$}$endif$\n' +
+        '$if(uppertitleback)$\\uppertitleback{$uppertitleback$}$endif$\n' +
+        '$if(lowertitleback)$\\lowertitleback{$lowertitleback$}$endif$\n' +
+        '$if(has-titleback)$HAS$else$NO$endif$\n' +
+        '$body$\n' +
+        '\\end{document}\n',
+    );
+  });
+
+  afterAll(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  async function toLatexTitleback(md: string): Promise<string> {
+    return runPandoc({
+      input: md,
+      sourcePath: 'test.md',
+      to: 'latex',
+      extraArgs: ['--template', tplLatex, '--lua-filter', TITLEPAGES],
+    });
+  }
+
+  it('convierte el frontmatter multilinea: doble espacio → \\\\ y :: → vspace', async () => {
+    const tex = await toLatexTitleback(
+      '---\ntitle: Prueba\nuppertitleback: |\n  primera linea  \n  segunda linea\n\n  ::\n\n  tercera línea\n---\n\nCuerpo.\n',
+    );
+    expect(tex).toContain('\\uppertitleback{primera linea\\\\\nsegunda linea');
+    expect(tex).toContain('\\vspace{\\baselineskip}');
+    expect(tex).toContain('tercera línea}');
+    expect(tex).toContain('HAS');
+  });
+
+  it('serializa campos simples (sin |) y expone has-titleback', async () => {
+    const tex = await toLatexTitleback(
+      '---\ntitle: Prueba\nextratitle: "Portada extra"\ndedication: "Para alguien"\nlowertitleback: "Pie de portada"\nuppertitleback: "Texto simple"\n---\n\nCuerpo.\n',
+    );
+    expect(tex).toContain('\\extratitle{Portada extra}');
+    expect(tex).toContain('\\dedication{Para alguien}');
+    expect(tex).toContain('\\lowertitleback{Pie de portada}');
+    expect(tex).toContain('\\uppertitleback{Texto simple}');
+    expect(tex).toContain('HAS');
+  });
+
+  it('no expone has-titleback con solo extratitle', async () => {
+    const tex = await toLatexTitleback('---\ntitle: Prueba\nextratitle: "Extra"\n---\n\nCuerpo.\n');
+    expect(tex).toContain('\\extratitle{Extra}');
+    expect(tex).toContain('NO');
+  });
+
+  it('sin campos de título internas: nada cambia', async () => {
+    const tex = await toLatexTitleback('---\ntitle: Prueba\n---\n\nCuerpo.\n');
+    expect(tex).not.toContain('\\extratitle');
+    expect(tex).not.toContain('\\uppertitleback');
+    expect(tex).toContain('NO');
   });
 });

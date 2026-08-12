@@ -1,6 +1,19 @@
-% Personaliza \maketitle: 1+2 baselineskip, titulo en mayusculas
+% Personaliza \maketitle: 1+2 baselineskip, titulo en mayusculas, y las
+% páginas de título internas (extratitle, uppertitleback, lowertitleback,
+% dedication) definidas en 28-titlepages.tex.
+%
+% Orden de páginas (mismo flujo que el \maketitle original de KOMA, sin
+% minipage: el \vfill ancla el lowertitleback al fondo):
+%   extratitle (pág 1) → portada (impar) → titlebacks (reverso, twoside)
+%   → dedication (página impar siguiente).
+% \next@tpage/\next@tdpage son de KOMA: \clearpage + \thispagestyle{empty}
+% (la variante 'd' asegura página impar en twoside).
 \makeatletter
 \renewcommand{\maketitle}{%
+  \ifx\@extratitle\@empty\else
+    \noindent\@extratitle
+    \next@tdpage
+  \fi
   \thispagestyle{empty}%
   \vspace*{1\baselineskip}%
   \ifx\@author\@empty
@@ -17,6 +30,24 @@
   \ifx\@date\@empty\else
     \vskip 1\baselineskip
     {\centering\usekomafont{date}{\@date\par}}%
+  \fi
+  \if@twoside
+    \@tempswatrue
+    \ifx\@uppertitleback\@empty\ifx\@lowertitleback\@empty
+      \@tempswafalse
+    \fi\fi
+    \if@tempswa
+      \next@tpage
+      {\titlebackformat\@uppertitleback\par}%
+      \vfill
+      {\titlebackformat\@lowertitleback\par}%
+    \fi
+  \fi
+  \ifx\@dedication\@empty\else
+    \next@tdpage\null\vfill
+    {\centering\@dedication\par}%
+    \vskip \z@ \@plus3fill
+    \cleardoubleemptypage
   \fi
 }
 \makeatother
