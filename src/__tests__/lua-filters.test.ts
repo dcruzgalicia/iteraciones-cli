@@ -447,6 +447,35 @@ describe.skipIf(!pandocOk)('filtro interno internal/flags (detección estructura
     expect(sinBib).not.toContain('\\printbibliography');
   });
 
+  it('inserta el comando de página DESPUÉS del primer title (numeración con el contenido)', async () => {
+    const tex = await toLatexFlags('# Título\n\nPrimer párrafo.', ['--metadata=page-number-command:\\ofoot*{\\pagemark}']);
+    // El comando va después del header, no antes del body
+    const posHeader = tex.indexOf('\\section{Título}');
+    const posCmd = tex.indexOf('\\ofoot*{\\pagemark}');
+    expect(posHeader).toBeGreaterThan(-1);
+    expect(posCmd).toBeGreaterThan(posHeader);
+  });
+
+  it('con RawBlocks de sección fusionados, el comando va después del PRIMERO (part, no section)', async () => {
+    const tex = await toLatexFlags('\\part{Uno}\n\\chapter{Dos}\n\\section{Tres}\n\nTexto.', ['--metadata=page-number-command:\\ofoot*{\\pagemark}']);
+    const posPart = tex.indexOf('\\part{Uno}');
+    const posCmd = tex.indexOf('\\ofoot*{\\pagemark}');
+    const posSection = tex.indexOf('\\section{Tres}');
+    expect(posPart).toBeGreaterThan(-1);
+    expect(posCmd).toBeGreaterThan(posPart);
+    expect(posCmd).toBeLessThan(posSection);
+  });
+
+  it('con el primer bloque Para, el comando de página NO se inserta (lo emite el template)', async () => {
+    const tex = await toLatexFlags('Primer párrafo.\n\nSegundo.', ['--metadata=page-number-command:\\ofoot*{\\pagemark}']);
+    expect(tex).not.toContain('\\ofoot*{\\pagemark}');
+  });
+
+  it('sin metadata de página, no inserta el comando aunque haya title inicial', async () => {
+    const tex = await toLatexFlags('# Título\n\nPrimer párrafo.');
+    expect(tex).not.toContain('\\ofoot*{\\pagemark}');
+  });
+
   it('no agrega \\printbibliography si biblatex no está disponible (11-bibliography desactivado)', async () => {
     const tex = await toLatexFlags('Cita [@key1].', ['--biblatex', '--bibliography', bib, '--metadata=biblatex-available:false']);
     expect(tex).not.toContain('\\printbibliography');

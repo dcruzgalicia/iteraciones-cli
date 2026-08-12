@@ -56,6 +56,41 @@ local function is_list_opener(b)
   return false
 end
 
+-- Divide el texto de un RawBlock después del PRIMER comando de sección
+-- (\part{Uno}\n\chapter{Dos} → "\part{Uno}", "\n\chapter{Dos}").
+-- Los RawBlocks consecutivos se fusionan en pandoc, así que varios comandos
+-- de sección escritos en líneas seguidas llegan como un solo bloque: el
+-- comando de página debe ir entre el primero y el resto. Retorna nil como
+-- segunda parte si no hay un segundo comando.
+local function split_first_section_command(text)
+  local cmd = text:match('^\\([%a]+)')
+  if cmd == nil then return text, nil end
+  local i = #cmd + 2 -- posición después de '\comando'
+  if text:sub(i, i) == '*' then i = i + 1 end
+  -- saltar espacios entre el comando y su argumento
+  while text:sub(i, i) == ' ' or text:sub(i, i) == '\t' do i = i + 1 end
+  local open = text:find('{', i)
+  if open == nil then return text, nil end
+  -- brace matching: el primer comando termina donde se cierra su brace
+  local depth = 0
+  for j = open, #text do
+    local c = text:sub(j, j)
+    if c == '{' then
+      depth = depth + 1
+    elseif c == '}' then
+      depth = depth - 1
+      if depth == 0 then
+        local rest = text:sub(j + 1)
+        if rest:find('\\[%a]') then
+          return text:sub(1, j), rest
+        end
+        return text, nil
+      end
+    end
+  end
+  return text, nil
+end
+
 function Pandoc(doc)
   -- Detección estructural con recorrido COMPLETO del árbol (walk_block):
   -- las citas y los headings cuentan aunque estén dentro de un Div (p. ej.
@@ -97,6 +132,37 @@ function Pandoc(doc)
     -- \noindent al primer párrafo (mismo criterio que skipNoIndent)
     if not skip and first ~= nil and first.t == 'Para' then
       table.insert(first.content, 1, pandoc.RawInline('latex', '\\noindent '))
+    end
+
+    -- Numeración de páginas: el CLI pasa el comando configurado como metadata
+    -- (page-number-command, string plano o MetaString). Si el primer bloque del
+    -- body es un title o un list-opener (skip), la numeración se activa DESPUÉS
+    -- de ese bloque (el template la omite): las páginas de la portada/TOC
+    -- previas quedan sin número (layers vacíos) y la del contenido empieza
+    -- numerada. Con un párrafo normal, el template la emite antes del body.
+    local page_cmd = doc.meta['page-number-command']
+    local page_cmd_text
+    if type(page_cmd) == 'string' then
+      page_cmd_text = page_cmd
+    elseif type(page_cmd) == 'table' and page_cmd.text ~= nil then
+      page_cmd_text = page_cmd.text
+    end
+    if skip and page_cmd_text ~= nil and page_cmd_text ~= '' then
+      -- Un RawBlock inicial puede contener varios comandos de sección fusionados
+      -- (\part{Uno}\n\chapter{Dos}\n\section{Tres} llegan como un solo bloque):
+      -- el comando de página debe ir DESPUÉS del PRIMERO, no al final del bloque.
+      if first.t == 'RawBlock' then
+        local head, rest = split_first_section_command(first.text)
+        if rest ~= nil then
+          first.text = head
+          table.insert(doc.blocks, 2, pandoc.RawBlock('latex', page_cmd_text))
+          table.insert(doc.blocks, 3, pandoc.RawBlock('latex', rest))
+        else
+          table.insert(doc.blocks, 2, pandoc.RawBlock('latex', page_cmd_text))
+        end
+      else
+        table.insert(doc.blocks, 2, pandoc.RawBlock('latex', page_cmd_text))
+      end
     end
 
     doc.meta['has-toc-entries'] = pandoc.MetaBool(has_toc_entries)
