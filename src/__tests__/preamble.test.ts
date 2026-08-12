@@ -164,9 +164,9 @@ describe('composeLatexTemplate', () => {
     expect(tpl).toContain('$if(lowertitleback)$\n\\lowertitleback{$lowertitleback$}\n$endif$');
   });
 
-  it('emite el vspace post-portada condicional por skip-paragraph-space y has-titleback', async () => {
+  it('emite el vspace post-portada solo con párrafo normal (skip-paragraph-space)', async () => {
     const tpl = await composeLatexTemplate(opts);
-    expect(tpl).toContain('$if(skip-paragraph-space)$\n$else$\n$if(has-titleback)$\n$else$\n\\vspace*{2\\baselineskip}\n$endif$\n$endif$');
+    expect(tpl).toContain('$if(skip-paragraph-space)$\n$else$\n\\vspace*{2\\baselineskip}\n$endif$');
   });
 
   it('emite \\tableofcontents condicional solo con toc configurado', async () => {

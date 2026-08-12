@@ -142,12 +142,11 @@ export async function composeLatexTemplate(opts: {
   }
   lines.push('$if(skip-paragraph-space)$');
   lines.push('$else$');
-  // Con titlebacks o dedication, el body empieza en página nueva: el vspace
-  // post-portada sobra (flag expuesto por el filter 10-titlepages).
-  lines.push('$if(has-titleback)$');
-  lines.push('$else$');
+  // El vspace separa la portada/TOC del contenido cuando este empieza pegado
+  // en la misma página (párrafo normal). Con titlebacks el body puede empezar
+  // en página nueva o compartir la página de los titlebacks: en ambos casos
+  // el criterio es el mismo — solo skip-paragraph-space decide.
   lines.push('\\vspace*{2\\baselineskip}');
-  lines.push('$endif$');
   lines.push('$endif$');
   const pageCommand = PAGE_NUMBER_COMMANDS[opts.pageNumber];
   if (pageCommand) {

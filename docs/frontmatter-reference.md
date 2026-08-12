@@ -67,7 +67,7 @@ lowertitleback: |
 ---
 ```
 
-Orden de páginas en el PDF (flujo KOMA-Script): `extratitle` (primera página) → portada → `uppertitleback` (arriba) y `lowertitleback` (abajo) en el reverso de la portada → `dedication` (página impar siguiente, centrado). El cuerpo comienza en una página nueva; si hay titlebacks o dedication, se omite el espacio vertical post-portada.
+Orden de páginas en el PDF (flujo KOMA-Script): `extratitle` (primera página) → portada → `uppertitleback` (arriba) y `lowertitleback` (abajo) en el reverso de la portada → `dedication` (página impar siguiente, centrado). El espacio vertical post-portada/índice sigue el mismo criterio que sin estas páginas: se aplica cuando al contenido le sigue un párrafo normal.
 
 ## Citas bibliográficas
 

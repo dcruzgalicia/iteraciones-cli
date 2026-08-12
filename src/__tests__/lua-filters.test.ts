@@ -584,7 +584,6 @@ describe.skipIf(!pandocOk)('filter latex/10-titlepages (páginas de título inte
         '$if(dedication)$\\dedication{$dedication$}$endif$\n' +
         '$if(uppertitleback)$\\uppertitleback{$uppertitleback$}$endif$\n' +
         '$if(lowertitleback)$\\lowertitleback{$lowertitleback$}$endif$\n' +
-        '$if(has-titleback)$HAS$else$NO$endif$\n' +
         '$body$\n' +
         '\\end{document}\n',
     );
@@ -610,10 +609,9 @@ describe.skipIf(!pandocOk)('filter latex/10-titlepages (páginas de título inte
     expect(tex).toContain('\\uppertitleback{primera linea\\\\\nsegunda linea');
     expect(tex).toContain('\\vspace{\\baselineskip}');
     expect(tex).toContain('tercera línea}');
-    expect(tex).toContain('HAS');
   });
 
-  it('serializa campos simples (sin |) y expone has-titleback', async () => {
+  it('serializa campos simples (sin |)', async () => {
     const tex = await toLatexTitleback(
       '---\ntitle: Prueba\nextratitle: "Portada extra"\ndedication: "Para alguien"\nlowertitleback: "Pie de portada"\nuppertitleback: "Texto simple"\n---\n\nCuerpo.\n',
     );
@@ -621,19 +619,11 @@ describe.skipIf(!pandocOk)('filter latex/10-titlepages (páginas de título inte
     expect(tex).toContain('\\dedication{Para alguien}');
     expect(tex).toContain('\\lowertitleback{Pie de portada}');
     expect(tex).toContain('\\uppertitleback{Texto simple}');
-    expect(tex).toContain('HAS');
-  });
-
-  it('no expone has-titleback con solo extratitle', async () => {
-    const tex = await toLatexTitleback('---\ntitle: Prueba\nextratitle: "Extra"\n---\n\nCuerpo.\n');
-    expect(tex).toContain('\\extratitle{Extra}');
-    expect(tex).toContain('NO');
   });
 
   it('sin campos de título internas: nada cambia', async () => {
     const tex = await toLatexTitleback('---\ntitle: Prueba\n---\n\nCuerpo.\n');
     expect(tex).not.toContain('\\extratitle');
     expect(tex).not.toContain('\\uppertitleback');
-    expect(tex).toContain('NO');
   });
 });
