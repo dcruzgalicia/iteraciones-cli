@@ -46,7 +46,8 @@ Los campos `extratitle`, `dedication`, `uppertitleback` y `lowertitleback` defin
 
 - El **doble espacio al final de línea** produce un salto de línea (`\\`).
 - Una línea con solo `::` produce un espacio vertical (`\vspace{\baselineskip}`).
-- El texto se compone en `footnotesize` con interlineado 0.8 y sin indentación.
+- `uppertitleback` y `lowertitleback`: texto en `footnotesize`, interlineado 1 y sin indentación.
+- `extratitle` y `dedication`: texto centrado con letra normal, con `\vspace*{11\baselineskip}` antes del contenido.
 
 ```yaml
 ---
