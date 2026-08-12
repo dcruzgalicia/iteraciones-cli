@@ -32,3 +32,18 @@
   \setstretch{1}%
   \setlength{\parindent}{0pt}%
 }
+
+% Saltos de página propios para las páginas internas. NO se usan
+% \next@tpage/\next@tdpage de KOMA: ejecutan \setparsizes{0}{0} que deja
+% \parindent a 0 de forma GLOBAL (el body perdería su indentación). Estos
+% solo hacen \clearpage + \thispagestyle{empty} (+ página impar en twoside).
+\makeatletter
+\newcommand{\titlepage@next}{%
+  \clearpage
+  \thispagestyle{empty}%
+}
+\newcommand{\titlepage@nextdouble}{%
+  \titlepage@next
+  \if@twoside\ifodd\value{page}\else\null\titlepage@next\fi\fi
+}
+\makeatother

@@ -42,6 +42,24 @@ describe('preamble-loader', () => {
     expect(language?.content).toContain('\\usepackage[$babel-lang$]{babel}');
   });
 
+  it('el maketitle usa los saltos propios (titlepage@next) y no el setparsizes de KOMA', async () => {
+    // Regresión: \\next@tpage/\\next@tdpage ejecutan \\setparsizes{0}{0} que
+    // deja \\parindent a 0 de forma global: el body pierde la indentación.
+    const filters = await loadPreambleFilters();
+    const maketitle = filters.find((t) => t.name === '19-maketitle')?.content ?? '';
+    const titlepages = filters.find((t) => t.name === '28-titlepages')?.content ?? '';
+    expect(titlepages).toContain('\\newcommand{\\titlepage@next}');
+    expect(titlepages).toContain('\\newcommand{\\titlepage@nextdouble}');
+    expect(maketitle).toContain('\\titlepage@next');
+    // Solo el código (sin los comentarios %, que explican la decisión)
+    const code = maketitle
+      .split('\n')
+      .filter((l) => !l.trim().startsWith('%'))
+      .join('\n');
+    expect(code).not.toContain('\\next@tpage');
+    expect(code).not.toContain('\\next@tdpage');
+  });
+
   it('respeta la disabled list', async () => {
     const filters = await loadPreambleFilters(['15-hyphenation-rules']);
     expect(filters.map((t) => t.name)).not.toContain('15-hyphenation-rules');

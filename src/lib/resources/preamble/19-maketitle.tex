@@ -7,14 +7,15 @@
 %   → portada (impar) → titlebacks (reverso, twoside; el \vfill ancla el
 %   lowertitleback al fondo, sin minipage) → dedication (página impar
 %   siguiente, centrado con \vspace*{11\baselineskip} antes).
-% \next@tpage/\next@tdpage son de KOMA: \clearpage + \thispagestyle{empty}
-% (la variante 'd' asegura página impar en twoside).
+% \titlepage@next/\titlepage@nextdouble (28-titlepages.tex): \clearpage +
+% \thispagestyle{empty} (+ página impar en twoside), SIN el \setparsizes
+% de \next@tpage (que dejaría \parindent a 0 en todo el documento).
 \makeatletter
 \renewcommand{\maketitle}{%
   \ifx\@extratitle\@empty\else
     \vspace*{11\baselineskip}%
     {\centering\noindent\@extratitle\par}%
-    \next@tdpage
+    \titlepage@nextdouble
   \fi
   \thispagestyle{empty}%
   \vspace*{1\baselineskip}%
@@ -39,14 +40,14 @@
       \@tempswafalse
     \fi\fi
     \if@tempswa
-      \next@tpage
+      \titlepage@next
       {\titlebackformat\@uppertitleback\par}%
       \vfill
       {\titlebackformat\@lowertitleback\par}%
     \fi
   \fi
   \ifx\@dedication\@empty\else
-    \next@tdpage
+    \titlepage@nextdouble
     \vspace*{11\baselineskip}%
     {\centering\noindent\@dedication\par}%
     \clearpage
