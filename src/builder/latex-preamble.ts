@@ -81,6 +81,11 @@ const PAGE_NUMBER_COMMANDS: Record<string, string> = {
   'footer-right': '\\ofoot*{\\pagemark}',
 };
 
+/** Comando de página para una posición configurada (o undefined si es inválida). */
+export function pageNumberCommandFor(pageNumber: string): string | undefined {
+  return PAGE_NUMBER_COMMANDS[pageNumber];
+}
+
 /**
  * Compone el template LaTeX efectivo del build:
  *   preamble filters (01-23…) → \addbibresource → \begin{document} →
@@ -105,6 +110,9 @@ export async function composeLatexTemplate(opts: {
     lines.push(`\\addbibresource{${escapeLatexPath(bib)}}`);
   }
   lines.push('\\begin{document}');
+  // Sin \pagestyle{empty} explícito: \clearpairofpagestyles (06-headers.tex)
+  // ya deja los layers vacíos, así que portada/TOC no muestran nada hasta que
+  // el comando de página se define (el pagestyle default headings los usa).
   // Páginas de título internas (frontmatter multilinea → LaTeX por el filter
   // 10-titlepages): los comandos solo guardan con \gdef; 19-maketitle.tex
   // los renderiza en el orden KOMA (extratitle → portada → titlebacks → dedication).
@@ -143,7 +151,18 @@ export async function composeLatexTemplate(opts: {
   lines.push('$endif$');
   const pageCommand = PAGE_NUMBER_COMMANDS[opts.pageNumber];
   if (pageCommand) {
+    // Activar la numeración: el pagestyle default (headings) ya muestra los
+    // layers de scrlayer-scrpage y los comandos con * (\ohead*{\pagemark}, ...)
+    // aplican también a plain. Si el primer bloque del body es un
+    // title/list-opener (skip-paragraph-space), el comando lo inserta
+    // flags.lua DESPUÉS de ese bloque (la numeración empieza con el
+    // contenido); con un párrafo normal, se emite aquí (antes del body) y la
+    // última página de la portada/TOC comparte la numeración con el primer
+    // párrafo.
+    lines.push('$if(skip-paragraph-space)$');
+    lines.push('$else$');
     lines.push(pageCommand);
+    lines.push('$endif$');
   } else {
     throw new BuildError(`page-number inválido: "${opts.pageNumber}". Valores válidos: ${Object.keys(PAGE_NUMBER_COMMANDS).join(', ')}`);
   }

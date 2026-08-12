@@ -176,14 +176,16 @@ describe('composeLatexTemplate', () => {
     expect(withoutToc).not.toContain('\\tableofcontents');
   });
 
-  it('emite el vspace post-portada condicional por skip-paragraph-space y has-titleback', async () => {
-    const tpl = await composeLatexTemplate(opts);
-    expect(tpl).toContain('$if(skip-paragraph-space)$\n$else$\n$if(has-titleback)$\n$else$\n\\vspace*{2\\baselineskip}\n$endif$\n$endif$');
-  });
-
   it('incluye el comando de número de página configurado', async () => {
     const tpl = await composeLatexTemplate({ ...opts, pageNumber: 'footer-center' });
     expect(tpl).toContain('\\cfoot*{\\pagemark}');
+  });
+
+  it('emite el comando de página solo con párrafo normal (sin pagestyle explícito)', async () => {
+    const tpl = await composeLatexTemplate({ ...opts, pageNumber: 'footer-right' });
+    expect(tpl).toContain('$if(skip-paragraph-space)$\n$else$\n\\ofoot*{\\pagemark}\n$endif$');
+    expect(tpl).not.toContain('\\pagestyle{empty}');
+    expect(tpl).not.toContain('\\pagestyle{headings}');
   });
 
   it('lanza BuildError con page-number inválido', async () => {

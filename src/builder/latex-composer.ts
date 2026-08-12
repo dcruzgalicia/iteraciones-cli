@@ -6,7 +6,7 @@ import { parseAuthors } from './discover.js';
 import type { LuaFilterGroup } from './filter-resolver.js';
 import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
 import { MD_READER, metadataValue } from './html-composer.js';
-import { babelOptionsForLang } from './latex-preamble.js';
+import { babelOptionsForLang, pageNumberCommandFor } from './latex-preamble.js';
 import type { BuildDocument } from './types.js';
 
 /**
@@ -76,6 +76,14 @@ export async function markdownToLatex(
   // documentado en configuration.md).
   extraArgs.push(`--metadata=babel-lang:${babelOptionsForLang(siteConfig.lang)}`);
   extraArgs.push(`--metadata=biblatex-available:${biblatexAvailable}`);
+  // Comando del número de página (posición configurada): flags.lua lo inserta
+  // después del primer bloque cuando el body empieza con un title/list-opener
+  // (la numeración empieza con el contenido); con un párrafo normal, el
+  // template lo emite antes del body.
+  const pageCommand = pageNumberCommandFor(siteConfig.format?.pdf?.pageNumber ?? 'header-right');
+  if (pageCommand) {
+    extraArgs.push(`--metadata=page-number-command:${pageCommand}`);
+  }
   for (const filter of [...filters.semantic, ...filters.user, ...filters.flags, ...filters.latex]) {
     extraArgs.push('--lua-filter', filter);
   }
