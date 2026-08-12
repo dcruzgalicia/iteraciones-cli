@@ -138,6 +138,19 @@ describe('composeLatexTemplate', () => {
     expect(tpl).toContain('\\maketitle');
   });
 
+  it('emite los condicionales de las páginas de título internas (frontmatter)', async () => {
+    const tpl = await composeLatexTemplate(opts);
+    expect(tpl).toContain('$if(extratitle)$\n\\extratitle{$extratitle$}\n$endif$');
+    expect(tpl).toContain('$if(dedication)$\n\\dedication{$dedication$}\n$endif$');
+    expect(tpl).toContain('$if(uppertitleback)$\n\\uppertitleback{$uppertitleback$}\n$endif$');
+    expect(tpl).toContain('$if(lowertitleback)$\n\\lowertitleback{$lowertitleback$}\n$endif$');
+  });
+
+  it('emite el vspace post-portada condicional por skip-paragraph-space y has-titleback', async () => {
+    const tpl = await composeLatexTemplate(opts);
+    expect(tpl).toContain('$if(skip-paragraph-space)$\n$else$\n$if(has-titleback)$\n$else$\n\\vspace*{2\\baselineskip}\n$endif$\n$endif$');
+  });
+
   it('emite \\tableofcontents condicional solo con toc configurado', async () => {
     const withToc = await composeLatexTemplate(opts);
     const withoutToc = await composeLatexTemplate({ ...opts, toc: false });
@@ -145,9 +158,9 @@ describe('composeLatexTemplate', () => {
     expect(withoutToc).not.toContain('\\tableofcontents');
   });
 
-  it('emite el vspace post-portada condicional por skip-paragraph-space', async () => {
+  it('emite el vspace post-portada condicional por skip-paragraph-space y has-titleback', async () => {
     const tpl = await composeLatexTemplate(opts);
-    expect(tpl).toContain('$if(skip-paragraph-space)$\n$else$\n\\vspace*{2\\baselineskip}\n$endif$');
+    expect(tpl).toContain('$if(skip-paragraph-space)$\n$else$\n$if(has-titleback)$\n$else$\n\\vspace*{2\\baselineskip}\n$endif$\n$endif$');
   });
 
   it('incluye el comando de número de página configurado', async () => {
