@@ -8,10 +8,6 @@
 -- solo :: (o :;) → \vspace{\baselineskip} (+ \noindent). El resultado se
 -- guarda como MetaInlines(RawInline('latex')): el template lo emite sin
 -- re-escape.
---
--- Exponer has-titleback cuando existe uppertitleback, lowertitleback o
--- dedication: el template omite el \vspace*{2\baselineskip} post-portada
--- (el body ya empieza en página nueva).
 -- Uso: pandoc --from markdown --to latex --lua-filter latex/10-titlepages.lua
 
 local TITLEBACK_FIELDS = { 'extratitle', 'dedication', 'uppertitleback', 'lowertitleback' }
@@ -73,22 +69,15 @@ end
 function Pandoc(doc)
   if FORMAT ~= 'latex' then return doc end
 
-  local has_titleback = false
   for _, field in ipairs(TITLEBACK_FIELDS) do
     local blocks = meta_to_blocks(doc.meta[field])
     if blocks ~= nil then
       local latex = serialize_titleback(blocks)
       if latex:match('%S') then
         doc.meta[field] = pandoc.MetaInlines({ pandoc.RawInline('latex', latex) })
-        if field ~= 'extratitle' then
-          has_titleback = true
-        end
       end
     end
   end
 
-  if has_titleback then
-    doc.meta['has-titleback'] = pandoc.MetaBool(true)
-  end
   return doc
 end
