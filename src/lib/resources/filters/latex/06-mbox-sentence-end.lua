@@ -1,19 +1,19 @@
--- Envuelve en \mbox{} la última palabra de cada oración (o las últimas 2 si
--- es la oración final del párrafo). Solo dentro de bloques Para.
+-- Envuelve en \mbox{} las últimas 2 palabras de la oración final del
+-- párrafo (únicas palabras que reciben mbox: sin mbox por oración no final
+-- ni de inicio de oración). Solo dentro de bloques Para.
 -- El conteo usa palabras REALES: un grupo de énfasis (\emph{...}) aporta sus
--- palabras internas individualmente. Regla del wrap final (últimas 2):
+-- palabras internas individualmente. Regla del wrap (últimas 2):
 --   A. sin énfasis      → \mbox{ejemplo final.}
 --   B. dentro del grupo → \emph{...en \mbox{carne propia.}} (wrap interno)
 --   C. toca el inicio   → en \mbox{\emph{carne propia.}} (grupo completo)
 --   D. grupo de 1       → \mbox{dice \emph{ella.}} (extiende hacia atrás)
 -- Uso: pandoc --from markdown --to latex --lua-filter latex/06-mbox-sentence-end.lua
 
--- Helpers de oraciones compartidos con latex/07-mbox-sentence-start
--- (ver shared/mbox-helpers.lua). El pipeline inyecta la ruta absoluta del
--- helper como ITERACIONES_MBOX_HELPERS (env): el require relativo a
--- PANDOC_SCRIPT_FILE fallaría si el proyecto sobrescribe este filter (el
--- script apuntaría al proyecto, donde no hay shared/). El require se
--- conserva como fallback para la ejecución suelta (tests).
+-- Helpers de oraciones (ver shared/mbox-helpers.lua). El pipeline inyecta la
+-- ruta absoluta del helper como ITERACIONES_MBOX_HELPERS (env): el require
+-- relativo a PANDOC_SCRIPT_FILE fallaría si el proyecto sobrescribe este
+-- filter (el script apuntaría al proyecto, donde no hay shared/). El require
+-- se conserva como fallback para la ejecución suelta (tests).
 local mbox
 local helpers_path = os.getenv('ITERACIONES_MBOX_HELPERS')
 if helpers_path and helpers_path ~= '' then
@@ -89,16 +89,18 @@ local function expand_units(inlines, from_idx, to_idx)
   return units, trailing_punct
 end
 
--- Calcula el wrap del mbox para una oración: las últimas `wrap_count`
--- palabras REALES (conteo expandido). Reglas:
---   A. sin grupos            → wrap normal de las últimas N unidades
+-- Calcula el wrap del mbox: las últimas 2 palabras REALES (conteo expandido)
+-- de la oración final del párrafo. Reglas:
+--   A. sin grupos            → wrap normal de las últimas 2 unidades
 --   B. dentro del grupo      → wrap interno (inner_from/inner_to)
 --   C. toca el inicio        → grupo completo desde su inicio
 --   D. grupo de 1 palabra    → extiende hacia atrás
 -- La puntuación final suelta (trailing) acompaña al wrap normal.
-local function build_wrap(units, trailing_punct, wrap_count)
+local function build_wrap(units, trailing_punct)
   if #units < 2 then return nil end
-  local uc = math.min(wrap_count, #units - 1)
+  -- No superar #units - 1: una oración de exactamente 2 palabras no se
+  -- envuelve completa (se conserva la protección histórica ante solapes).
+  local uc = math.min(2, #units - 1)
   local u1 = units[#units - uc + 1]
   local u2 = units[#units]
   local wrap
@@ -129,20 +131,18 @@ end
 local function process_para_inlines(inlines)
   if mbox.count_real_inlines(inlines) < 4 then return inlines end
 
+  -- Solo la oración final del párrafo recibe mbox (las últimas 2 palabras
+  -- reales). Las oraciones no finales quedan intactas.
   local sentence_bounds = mbox.find_sentence_bounds(inlines)
   local wraps = {}
 
   for _, sb in ipairs(sentence_bounds) do
-    local is_last_sentence = sb.finish == #inlines + 1
-    -- La oración final envuelve las últimas 2 palabras reales; las no
-    -- finales, la última (mismo conteo expandido: un grupo de énfasis o
-    -- comillas no es una sola palabra, y la puntuación suelta no roba la
-    -- posición — antes un \emph{...} final o un punto suelto se envolvían
-    -- completos o solos).
-    local units, trailing_punct = expand_units(inlines, sb.start, sb.finish)
-    local wrap = build_wrap(units, trailing_punct, is_last_sentence and 2 or 1)
-    if wrap ~= nil then
-      table.insert(wraps, wrap)
+    if sb.finish == #inlines + 1 then
+      local units, trailing_punct = expand_units(inlines, sb.start, sb.finish)
+      local wrap = build_wrap(units, trailing_punct)
+      if wrap ~= nil then
+        table.insert(wraps, wrap)
+      end
     end
   end
 
