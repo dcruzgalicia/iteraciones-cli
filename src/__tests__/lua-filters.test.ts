@@ -133,17 +133,9 @@ describe.skipIf(!pandocOk)('filtros Lua html', () => {
   });
 });
 
-const LATEX_FILTERS = [
-  '01-spacer',
-  '02-dictum',
-  '03-verse',
-  '04-center',
-  '05-flushright',
-  '06-mbox-sentence-end',
-  '07-mbox-sentence-start',
-  '08-quote-noindent',
-  '09-cjk',
-].map((n) => join(RESOURCES, 'latex', `${n}.lua`));
+const LATEX_FILTERS = ['01-spacer', '02-dictum', '03-verse', '04-center', '05-flushright', '06-mbox-sentence-end', '08-quote-noindent', '09-cjk'].map(
+  (n) => join(RESOURCES, 'latex', `${n}.lua`),
+);
 
 async function toLatex(markdown: string, from?: string): Promise<string> {
   const extraArgs = [...SEMANTIC_FILTERS, ...LATEX_FILTERS].flatMap((f) => ['--lua-filter', f]);
@@ -233,11 +225,13 @@ describe.skipIf(!pandocOk)('filtros Lua latex', () => {
     expect(tex).toContain('\\end{flushright}');
   });
 
-  it('mbox-sentence-end envuelve las últimas palabras (1 por oración, 2 en la final)', async () => {
+  it('mbox-sentence-end solo envuelve las últimas 2 palabras de la oración final', async () => {
     const tex = await toLatex('Primera oración de ejemplo. Segunda aquí. Tercera oración de ejemplo final.');
-    expect(tex).toContain('oración de \\mbox{ejemplo.}');
-    expect(tex).toContain('\\mbox{aquí.}');
-    expect(tex).toContain('oración de \\mbox{ejemplo final.}');
+    const flat = tex.replace(/\n/g, ' ');
+    expect(flat).toContain('oración de \\mbox{ejemplo final.}');
+    // Las oraciones no finales ya no reciben mbox
+    expect(flat).not.toContain('\\mbox{ejemplo.}');
+    expect(flat).not.toContain('\\mbox{aquí.}');
   });
 
   it('mbox-sentence-end con énfasis final: wrap interno dentro del \\emph (caso B)', async () => {
@@ -290,31 +284,6 @@ describe.skipIf(!pandocOk)('filtros Lua latex', () => {
     expect(flat).toContain('\\mbox{dice \\textbf{ella}.}');
   });
 
-  it('mbox-sentence-end en oración NO final con comillas y énfasis: wrap interno de la última palabra', async () => {
-    const tex = await toLatex(
-      'Mientras trato de conciliar el sueño, pienso: "*lo que sostenemos las mujeres es mucho, es todo, es cansancio y tremenda desigual".* Doy vueltas en la cama y me encuentro con su cara.',
-    );
-    const flat = tex.replace(/\n/g, ' ');
-    // El mbox va dentro del \\emph envolviendo solo la última palabra real
-    // de la oración no final (antes envolvía el bloque completo).
-    expect(flat).toContain('\\mbox{desigual');
-    expect(flat).not.toContain('\\mbox{\\emph{lo que');
-    expect(flat).not.toContain('\\mbox{pienso:}');
-  });
-
-  it('mbox-sentence-end en oración NO final con comillas y punto suelto: no envuelve solo el punto', async () => {
-    const tex = await toLatex('porque, como ella dice: "también lo necesitas". Me prepara un desayuno porque yo siempre ando a las prisas.');
-    const flat = tex.replace(/\n/g, ' ');
-    expect(flat).toContain('\\mbox{necesitas}');
-    expect(flat).not.toContain('\\mbox{.}');
-  });
-
-  it('mbox-sentence-start envuelve la primera palabra de cada oración', async () => {
-    const tex = await toLatex('Principio de la oración. Otra oración aquí.');
-    expect(tex).toContain('\\mbox{Principio} de la');
-    expect(tex).toContain('\\mbox{Otra}');
-  });
-
   it('no modifica párrafos de menos de 4 palabras', async () => {
     const tex = await toLatex('Hola mundo.');
     expect(tex).not.toContain('\\mbox');
@@ -326,6 +295,13 @@ describe.skipIf(!pandocOk)('filtros Lua latex', () => {
     expect(tex).not.toContain('\\mbox{abr.}');
     const tex2 = await toLatex('Usa p.ej. Valor. Luego sigue.');
     expect(tex2).not.toContain('\\mbox{p.ej.}');
+  });
+
+  it('detecta el punto final aunque la última palabra lleve un NBSP pegado', async () => {
+    const tex = await toLatex('Primera oración de ejemplo. Segunda oración que libera y que transforma.\u00a0');
+    const flat = tex.replace(/\n/g, ' ');
+    // El NBSP queda dentro del mbox (se renderiza como ~)
+    expect(flat).toContain('\\mbox{que transforma.~}');
   });
 
   it('el override del proyecto de 06-mbox-sentence-end no rompe la pasada (helpers del paquete por env)', async () => {

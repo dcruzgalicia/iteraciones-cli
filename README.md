@@ -207,8 +207,7 @@ El CLI compone los templates efectivos (una vez por build), los filtros y los me
 | `latex/03-verse` | ast | `Div.verse` → `\\begin{verse}...\\end{verse}` |
 | `latex/04-center` | ast | `Div.center` → `\\begin{center}...\\end{center}` |
 | `latex/05-flushright` | ast | `Div.flushright` → `\\begin{flushright}...\\end{flushright}` |
-| `latex/06-mbox-sentence-end` | ast | últimas palabras de cada oración → `\\mbox{}` |
-| `latex/07-mbox-sentence-start` | ast | primera palabra de cada oración → `\mbox{}` |
+| `latex/06-mbox-sentence-end` | ast | últimas 2 palabras de la oración final del párrafo → `\mbox{}` |
 | `latex/08-quote-noindent` | ast | `BlockQuote` seguido de párrafo → `\noindent` al párrafo |
 | `latex/09-cjk` | ast | `Div.japanese/chinese/korean` → `\begin{CJK}{UTF8}{min/gbsn/ksc}...\end{CJK}` |
 | `html/01-dictum` | ast | `Div.dictum` → `<blockquote class="dictum">` |

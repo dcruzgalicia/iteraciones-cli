@@ -1,8 +1,8 @@
--- Helpers compartidos por latex/06-mbox-sentence-end y latex/07-mbox-sentence-start
--- (detección de oraciones, abreviaturas y conteo de inlines reales). No es un
--- filter: no define handlers de pandoc y no aparece en `iteraciones filters`.
--- El pipeline lo carga con dofile desde 06/07 (ruta inyectada por env); el
--- require relativo a PANDOC_SCRIPT_FILE falla si el proyecto sobrescribe 06/07.
+-- Helpers compartidos del filter latex/06-mbox-sentence-end (detección de
+-- oraciones, abreviaturas y conteo de inlines reales). No es un filter: no
+-- define handlers de pandoc y no aparece en `iteraciones filters`.
+-- El pipeline lo carga con dofile desde 06 (ruta inyectada por env); el
+-- require relativo a PANDOC_SCRIPT_FILE falla si el proyecto sobrescribe 06.
 
 local M = {}
 
@@ -52,8 +52,14 @@ function M.inline_text(inl)
 end
 
 function M.is_sentence_end_punct(text)
-  if #text == 0 then return false end
-  local last = text:sub(-1)
+  -- Recorta espacios y NBSP del final: un Str como "transforma.\160" (espacio
+  -- no separable pegado por pandoc al final de línea) no debe impedir la
+  -- detección del punto final de la oración. \u{00A0} es la representación
+  -- UTF-8 completa del NBSP (C2 A0): \160 solo recortaría el byte A0 y
+  -- dejaría el byte C2 suelto al final.
+  local trimmed = text:gsub('[%s\u{00A0}]+$', '')
+  if #trimmed == 0 then return false end
+  local last = trimmed:sub(-1)
   return last == '.' or last == '!' or last == '?'
 end
 
