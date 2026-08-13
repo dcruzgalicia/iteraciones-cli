@@ -312,13 +312,15 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';
     expect(maketitle).toContain('\\newcommand*{\\extratitlewidth}{0.75\\textwidth}');
     expect(maketitle).toContain('\\newcommand*{\\dedicationwidth}{0.5\\textwidth}');
-    // Bloque compartido: márgenes como argumentos (centrado = iguales)
-    expect(maketitle).toContain('\\newcommand{\\titlepageblock}[3]{%');
+    // Bloque compartido: márgenes y estilo de párrafo como argumentos
+    expect(maketitle).toContain('\\newcommand{\\titlepageblock}[4]{%');
     expect(maketitle).toContain('\\leftmargin=#1');
     expect(maketitle).toContain('\\rightmargin=#2');
-    // extratitle: márgenes iguales (centrado); dedication: solo izquierdo
+    // extratitle: márgenes iguales (centrado) y texto centrado; dedication:
+    // solo margen izquierdo y texto justificado
     expect(maketitle).toContain('{\\dimexpr(\\linewidth-\\extratitlewidth)/2\\relax}%');
     expect(maketitle).toContain('{\\dimexpr\\linewidth-\\dedicationwidth\\relax}%');
+    expect(maketitle).toContain('{\\centering}%');
     expect(maketitle).toContain('\\titlepageblock');
   });
 
