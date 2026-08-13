@@ -10,11 +10,19 @@
 % \titlepage@next/\titlepage@nextdouble (28-titlepages.tex): \clearpage +
 % \thispagestyle{empty} (+ página impar en twoside), SIN el \setparsizes
 % de \next@tpage (que dejaría \parindent a 0 en todo el documento).
+%
+% KOMA define \subtitle con \newcommand* (no-long): una línea en blanco en el
+% argumento (párrafo del frontmatter |) rompe la compilación con 'Paragraph
+% ended before \subtitle was complete'. Se redefine como long (\renewcommand
+% sin estrella) para permitir subtítulos multilínea con párrafos.
 \makeatletter
+\renewcommand{\subtitle}[1]{\gdef\@subtitle{%
+    #1%
+}}%
 \renewcommand{\maketitle}{%
   \ifx\@extratitle\@empty\else
     \vspace*{7\baselineskip}%
-    {\centering\noindent\@extratitle\par}%
+    {\centering\parindent\z@\@extratitle\par}%
     \titlepage@nextdouble
   \fi
   \thispagestyle{empty}%
@@ -28,7 +36,7 @@
   {\centering\usekomafont{title}{\MakeUppercase{\@title}\par}}%
   \ifx\@subtitle\@empty\else
     \vskip 1\baselineskip
-    {\centering\usekomafont{subtitle}{\@subtitle\par}}%
+    {\centering\usekomafont{subtitle}\parindent\z@\@subtitle\par}%
   \fi
   \ifx\@date\@empty\else
     \vskip 1\baselineskip
@@ -49,7 +57,7 @@
   \ifx\@dedication\@empty\else
     \titlepage@nextdouble
     \vspace*{11\baselineskip}%
-    {\centering\noindent\@dedication\par}%
+    {\centering\parindent\z@\@dedication\par}%
     \clearpage
   \fi
 }

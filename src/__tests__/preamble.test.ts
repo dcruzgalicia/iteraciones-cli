@@ -295,6 +295,20 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(maketitle).toContain('\\vspace*{11\\baselineskip}');
   });
 
+  it('19-maketitle: subtitle long (parrafos con linea en blanco) y parindent cero en las paginas de titulo', async () => {
+    // Regresión: KOMA define \subtitle con \newcommand* (no-long); una línea en
+    // blanco en el argumento rompía la compilación ('Paragraph ended before
+    // \subtitle was complete'). \parindent\z@ evita la indentación del primer
+    // y siguientes párrafos (\noindent solo afecta al primero).
+    const filters = await loadPreambleFilters();
+    const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';
+    expect(maketitle).toContain('\\renewcommand{\\subtitle}[1]{\\gdef\\@subtitle{%');
+    expect(maketitle).toContain('\\parindent\\z@\\@extratitle\\par');
+    expect(maketitle).toContain('\\parindent\\z@\\@subtitle\\par');
+    expect(maketitle).toContain('\\parindent\\z@\\@dedication\\par');
+    expect(maketitle).not.toContain('\\centering\\noindent');
+  });
+
   it('16-toc-styling: BeforeTOCHead, líderes y pagenumberformat en las entradas', async () => {
     const filters = await loadPreambleFilters();
     const toc = filters.find((f) => f.name === '16-toc-styling')?.content ?? '';

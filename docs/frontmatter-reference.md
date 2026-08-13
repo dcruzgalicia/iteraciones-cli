@@ -45,6 +45,7 @@ El frontmatter completo se pasa a pandoc como metadata del documento. Los campos
 Los campos `extratitle`, `dedication`, `uppertitleback` y `lowertitleback` definen las páginas de título internas del PDF (solo LaTeX/PDF; en HTML se ignoran). Son **metadatos multilinea**: se escriben con el bloque YAML literal (`|`), y el contenido se procesa como markdown normal. El campo `subtitle` también admite el bloque literal (`|`) con las mismas reglas para escribir varias líneas en la portada:
 
 - El **doble espacio al final de línea** produce un salto de línea (`\\`).
+- Una **línea en blanco** separa párrafos: se renderizan sin indentación en la portada/páginas de título (en el subtitle, `\subtitle` se redefine como long para permitirlo).
 - Una línea con solo `::` produce un espacio vertical (`\vspace{\baselineskip}`).
 - `uppertitleback` y `lowertitleback`: texto en `footnotesize`, interlineado 1 y sin indentación.
 - `extratitle`: texto centrado con letra normal, con `\vspace*{7\baselineskip}` antes del contenido.
