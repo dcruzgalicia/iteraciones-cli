@@ -49,7 +49,7 @@ Los campos `extratitle`, `dedication`, `uppertitleback` y `lowertitleback` defin
 - Una línea con solo `::` produce un espacio vertical (`\vspace{\baselineskip}`).
 - `uppertitleback` y `lowertitleback`: texto en `footnotesize`, interlineado 1 y sin indentación.
 - `extratitle`: texto centrado con letra normal, con `\vspace*{7\baselineskip}` antes del contenido.
-- `dedication`: texto centrado con letra normal, con `\vspace*{11\baselineskip}` antes del contenido.
+- `dedication`: texto con letra normal alineado a la derecha ocupando el 50% del ancho (como el dictum), con `\vspace*{7\baselineskip}` antes del contenido.
 
 ```yaml
 ---
@@ -69,7 +69,7 @@ lowertitleback: |
 ---
 ```
 
-Orden de páginas en el PDF (flujo KOMA-Script): `extratitle` (primera página) → portada → `uppertitleback` (arriba) y `lowertitleback` (abajo) en el reverso de la portada → `dedication` (página impar siguiente, centrado). El espacio vertical post-portada/índice sigue el mismo criterio que sin estas páginas: se aplica cuando al contenido le sigue un párrafo normal.
+Orden de páginas en el PDF (flujo KOMA-Script): `extratitle` (primera página) → portada → `uppertitleback` (arriba) y `lowertitleback` (abajo) en el reverso de la portada → `dedication` (página impar siguiente, bloque del 50% del ancho alineado a la derecha). El espacio vertical post-portada/índice sigue el mismo criterio que sin estas páginas: se aplica cuando al contenido le sigue un párrafo normal.
 
 ## Citas bibliográficas
 
