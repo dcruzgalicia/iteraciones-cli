@@ -48,7 +48,7 @@ Los campos `extratitle`, `dedication`, `uppertitleback` y `lowertitleback` defin
 - Una **línea en blanco** separa párrafos: se renderizan sin indentación en la portada/páginas de título (en el subtitle, `\subtitle` se redefine como long para permitirlo).
 - Una línea con solo `::` produce un espacio vertical (`\vspace{\baselineskip}`).
 - `uppertitleback` y `lowertitleback`: texto en `footnotesize`, interlineado 1 y sin indentación.
-- `extratitle`: texto con letra normal en un bloque del 75% del ancho centrado (márgenes iguales), con `\vspace*{7\baselineskip}` antes del contenido.
+- `extratitle`: texto con letra normal en un bloque del 75% del ancho centrado (márgenes iguales), con el texto centrado dentro del bloque y `\vspace*{7\baselineskip}` antes del contenido.
 - `dedication`: texto con letra normal alineado a la derecha ocupando el 50% del ancho (como el dictum), con `\vspace*{7\baselineskip}` antes del contenido.
 
 ```yaml

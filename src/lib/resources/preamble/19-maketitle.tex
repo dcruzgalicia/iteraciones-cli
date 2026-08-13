@@ -24,10 +24,12 @@
 
 % Bloques de las páginas de título con la geometría del dictum (21-dictum.tex):
 % list con márgenes dados (#1 izquierdo, #2 derecho) y sin espaciado extra.
+% #3 es el estilo del párrafo (\centering, \raggedright o vacío = justificado):
+% el extratitle centra su texto, la dedication lo justifica.
 % Geometría propia para no crear dependencia con 21-dictum.tex.
 \newcommand*{\extratitlewidth}{0.75\textwidth}%
 \newcommand*{\dedicationwidth}{0.5\textwidth}%
-\newcommand{\titlepageblock}[3]{%
+\newcommand{\titlepageblock}[4]{%
   \par
   \begin{list}{}{%
       \leftmargin=#1
@@ -40,7 +42,7 @@
       \itemindent=\z@
     }%
     \item\relax
-    #3\par
+    {#3 #4\par}%
   \end{list}%
 }
 \renewcommand{\maketitle}{%
@@ -49,6 +51,7 @@
     \titlepageblock
       {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
       {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
+      {\centering}%
       {\@extratitle}%
     \titlepage@nextdouble
   \fi
@@ -87,6 +90,7 @@
     \titlepageblock
       {\dimexpr\linewidth-\dedicationwidth\relax}%
       {\z@}%
+      {}%
       {\@dedication}%
     \clearpage
   \fi
