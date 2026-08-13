@@ -53,7 +53,9 @@ async function pdfDate(fm: Record<string, unknown>, siteConfig: SiteConfig, doc:
  *
  * Contrato de metadatos: el frontmatter del documento (fm) es la fuente y la
  * config aporta defaults (lang, show-date); aquí se derivan los valores
- * efectivos (título, autores, fecha de portada).
+ * efectivos (título, autores, fecha de portada). El subtitle NO se deriva
+ * aquí: fluye del frontmatter a la metadata y el filtro latex/10-titlepages
+ * lo serializa (multilínea con |).
  */
 export async function markdownToLatex(
   content: string,
@@ -67,7 +69,6 @@ export async function markdownToLatex(
   biblatexAvailable = true,
 ): Promise<string> {
   const title = typeof fm.title === 'string' && fm.title.trim() ? fm.title : 'Sin título';
-  const subtitle = typeof fm.subtitle === 'string' && fm.subtitle.trim() ? fm.subtitle.trim() : undefined;
   const author = parseAuthors(fm.author);
 
   const extraArgs = ['--template', templatePath, '--top-level-division', 'section', '--shift-heading-level-by=2'];
@@ -94,7 +95,11 @@ export async function markdownToLatex(
     }
   }
   extraArgs.push(`--metadata=title:${metadataValue(title)}`);
-  if (subtitle) extraArgs.push(`--metadata=subtitle:${metadataValue(subtitle)}`);
+  // El subtitle NO se pasa por --metadata: el override aplanaría los \n con
+  // metadataValue y el filtro latex/10-titlepages no vería el valor multilínea
+  // (frontmatter con |). El filtro lo serializa desde la metadata del
+  // documento: el template $if(subtitle)$ emite el RawInline latex sin
+  // re-escape. En HTML el compositor sí lo aplana (render.ts).
   for (const a of author) {
     extraArgs.push(`--metadata=author:${metadataValue(a)}`);
   }
