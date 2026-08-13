@@ -3,7 +3,8 @@
 % dedication) definidas en 28-titlepages.tex.
 %
 % Orden de páginas:
-%   extratitle (pág 1, centrado con \vspace*{7\baselineskip} antes)
+%   extratitle (pág 1, bloque del 75% del ancho centrado con
+%   \vspace*{7\baselineskip} antes)
 %   → portada (impar) → titlebacks (reverso, twoside; el \vfill ancla el
 %   lowertitleback al fondo, sin minipage) → dedication (página impar
 %   siguiente, bloque del 50% del ancho alineado a la derecha como el dictum,
@@ -21,15 +22,16 @@
     #1%
 }}%
 
-% La dedication se compone como el dictum (21-dictum.tex): bloque del 50% del
-% ancho alineado a la derecha (\leftmargin empuja el bloque). Geometría propia
-% para no crear dependencia con 21-dictum.tex.
+% Bloques de las páginas de título con la geometría del dictum (21-dictum.tex):
+% list con márgenes dados (#1 izquierdo, #2 derecho) y sin espaciado extra.
+% Geometría propia para no crear dependencia con 21-dictum.tex.
+\newcommand*{\extratitlewidth}{0.75\textwidth}%
 \newcommand*{\dedicationwidth}{0.5\textwidth}%
-\newcommand{\dedicationblock}[1]{%
+\newcommand{\titlepageblock}[3]{%
   \par
   \begin{list}{}{%
-      \leftmargin=\dimexpr\linewidth-\dedicationwidth\relax
-      \rightmargin=\z@
+      \leftmargin=#1
+      \rightmargin=#2
       \itemsep=\z@
       \parsep=\z@
       \partopsep=\z@
@@ -38,13 +40,16 @@
       \itemindent=\z@
     }%
     \item\relax
-    #1\par
+    #3\par
   \end{list}%
 }
 \renewcommand{\maketitle}{%
   \ifx\@extratitle\@empty\else
     \vspace*{7\baselineskip}%
-    {\centering\parindent\z@\@extratitle\par}%
+    \titlepageblock
+      {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
+      {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
+      {\@extratitle}%
     \titlepage@nextdouble
   \fi
   \thispagestyle{empty}%
@@ -79,7 +84,10 @@
   \ifx\@dedication\@empty\else
     \titlepage@nextdouble
     \vspace*{7\baselineskip}%
-    \dedicationblock{\@dedication}%
+    \titlepageblock
+      {\dimexpr\linewidth-\dedicationwidth\relax}%
+      {\z@}%
+      {\@dedication}%
     \clearpage
   \fi
 }

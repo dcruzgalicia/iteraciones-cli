@@ -303,18 +303,23 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     const filters = await loadPreambleFilters();
     const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';
     expect(maketitle).toContain('\\renewcommand{\\subtitle}[1]{\\gdef\\@subtitle{%');
-    expect(maketitle).toContain('\\parindent\\z@\\@extratitle\\par');
     expect(maketitle).toContain('\\parindent\\z@\\@subtitle\\par');
-    expect(maketitle).toContain('\\dedicationblock{\\@dedication}');
     expect(maketitle).not.toContain('\\centering\\noindent');
   });
 
-  it('19-maketitle: dedication como dictum (50% ancho, alineada a la derecha)', async () => {
+  it('19-maketitle: bloques extratitle (75% centrado) y dedication (50% derecha) como el dictum', async () => {
     const filters = await loadPreambleFilters();
     const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';
+    expect(maketitle).toContain('\\newcommand*{\\extratitlewidth}{0.75\\textwidth}');
     expect(maketitle).toContain('\\newcommand*{\\dedicationwidth}{0.5\\textwidth}');
-    expect(maketitle).toContain('\\leftmargin=\\dimexpr\\linewidth-\\dedicationwidth\\relax');
-    expect(maketitle).toContain('\\dedicationblock{\\@dedication}');
+    // Bloque compartido: márgenes como argumentos (centrado = iguales)
+    expect(maketitle).toContain('\\newcommand{\\titlepageblock}[3]{%');
+    expect(maketitle).toContain('\\leftmargin=#1');
+    expect(maketitle).toContain('\\rightmargin=#2');
+    // extratitle: márgenes iguales (centrado); dedication: solo izquierdo
+    expect(maketitle).toContain('{\\dimexpr(\\linewidth-\\extratitlewidth)/2\\relax}%');
+    expect(maketitle).toContain('{\\dimexpr\\linewidth-\\dedicationwidth\\relax}%');
+    expect(maketitle).toContain('\\titlepageblock');
   });
 
   it('16-toc-styling: BeforeTOCHead, líderes y pagenumberformat en las entradas', async () => {
