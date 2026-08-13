@@ -288,11 +288,11 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(dictum).not.toContain('\\topsep=\\baselineskip');
   });
 
-  it('19-maketitle: extratitle con vspace de 7 baselineskips (dedication conserva 11)', async () => {
+  it('19-maketitle: extratitle y dedication con vspace de 7 baselineskips', async () => {
     const filters = await loadPreambleFilters();
     const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';
     expect(maketitle).toContain('\\vspace*{7\\baselineskip}');
-    expect(maketitle).toContain('\\vspace*{11\\baselineskip}');
+    expect(maketitle).not.toContain('\\vspace*{11\\baselineskip}');
   });
 
   it('19-maketitle: subtitle long (parrafos con linea en blanco) y parindent cero en las paginas de titulo', async () => {
@@ -305,8 +305,16 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(maketitle).toContain('\\renewcommand{\\subtitle}[1]{\\gdef\\@subtitle{%');
     expect(maketitle).toContain('\\parindent\\z@\\@extratitle\\par');
     expect(maketitle).toContain('\\parindent\\z@\\@subtitle\\par');
-    expect(maketitle).toContain('\\parindent\\z@\\@dedication\\par');
+    expect(maketitle).toContain('\\dedicationblock{\\@dedication}');
     expect(maketitle).not.toContain('\\centering\\noindent');
+  });
+
+  it('19-maketitle: dedication como dictum (50% ancho, alineada a la derecha)', async () => {
+    const filters = await loadPreambleFilters();
+    const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';
+    expect(maketitle).toContain('\\newcommand*{\\dedicationwidth}{0.5\\textwidth}');
+    expect(maketitle).toContain('\\leftmargin=\\dimexpr\\linewidth-\\dedicationwidth\\relax');
+    expect(maketitle).toContain('\\dedicationblock{\\@dedication}');
   });
 
   it('16-toc-styling: BeforeTOCHead, líderes y pagenumberformat en las entradas', async () => {
