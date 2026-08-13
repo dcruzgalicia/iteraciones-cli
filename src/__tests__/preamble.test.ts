@@ -259,3 +259,50 @@ describe('validateDisabledPreambleFilters', () => {
     );
   });
 });
+
+describe('valores de maquetación editorial (issue 1810)', () => {
+  it('07-typography: pretolerance 200, tolerance 300 y hyphenpenalty 100', async () => {
+    const filters = await loadPreambleFilters();
+    const typo = filters.find((f) => f.name === '07-typography')?.content ?? '';
+    expect(typo).toContain('\\pretolerance=200');
+    expect(typo).toContain('\\tolerance=300');
+    expect(typo).toContain('\\hyphenpenalty=100');
+    expect(typo).not.toContain('\\tolerance=400');
+  });
+
+  it('14-sectioning: beforeskip 2 para part/chapter/section/subsection y afterskip 2 para section/subsection', async () => {
+    const filters = await loadPreambleFilters();
+    const sectioning = filters.find((f) => f.name === '14-sectioning')?.content ?? '';
+    expect(sectioning).toContain('beforeskip=2\\baselineskip,afterskip=\\baselineskip,afterindent=false]{part}');
+    expect(sectioning).toContain('beforeskip=2\\baselineskip,afterskip=\\baselineskip,afterindent=false]{chapter}');
+    expect(sectioning).toContain('beforeskip=2\\baselineskip,afterskip=2\\baselineskip,afterindent=false]{section}');
+    expect(sectioning).toContain('beforeskip=2\\baselineskip,afterskip=2\\baselineskip,afterindent=false]{subsection}');
+    // subsubsection/paragraph/subparagraph conservan 1
+    expect(sectioning).toContain('beforeskip=\\baselineskip,afterskip=\\baselineskip,afterindent=false]{subsubsection}');
+  });
+
+  it('21-dictum: topsep de 2 baselineskips', async () => {
+    const filters = await loadPreambleFilters();
+    const dictum = filters.find((f) => f.name === '21-dictum')?.content ?? '';
+    expect(dictum).toContain('\\topsep=2\\baselineskip');
+    expect(dictum).not.toContain('\\topsep=\\baselineskip');
+  });
+
+  it('19-maketitle: extratitle con vspace de 7 baselineskips (dedication conserva 11)', async () => {
+    const filters = await loadPreambleFilters();
+    const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';
+    expect(maketitle).toContain('\\vspace*{7\\baselineskip}');
+    expect(maketitle).toContain('\\vspace*{11\\baselineskip}');
+  });
+
+  it('16-toc-styling: BeforeTOCHead, líderes y pagenumberformat en las entradas', async () => {
+    const filters = await loadPreambleFilters();
+    const toc = filters.find((f) => f.name === '16-toc-styling')?.content ?? '';
+    expect(toc).toContain(
+      '\\BeforeTOCHead{\\RedeclareSectionCommand[beforeskip=4\\baselineskip,afterskip=\\baselineskip,afterindent=false]{subsubsection}}',
+    );
+    expect(toc).toContain('linefill=\\TOCLineLeaderFill,beforeskip=\\baselineskip]{tocline}{part}');
+    expect(toc).toContain('pagenumberformat=\\normalsize\\normalfont');
+    expect(toc).not.toContain('pagenumberbox=\\phantom,indent=0pt,beforeskip=0pt]{tocline}{part}');
+  });
+});

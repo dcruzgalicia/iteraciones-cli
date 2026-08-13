@@ -580,6 +580,7 @@ describe.skipIf(!pandocOk)('filter latex/10-titlepages (páginas de título inte
     writeFileSync(
       tplLatex,
       '\\documentclass{article}\n' +
+        '$if(subtitle)$\\subtitle{$subtitle$}$endif$\n' +
         '$if(extratitle)$\\extratitle{$extratitle$}$endif$\n' +
         '$if(dedication)$\\dedication{$dedication$}$endif$\n' +
         '$if(uppertitleback)$\\uppertitleback{$uppertitleback$}$endif$\n' +
@@ -613,12 +614,18 @@ describe.skipIf(!pandocOk)('filter latex/10-titlepages (páginas de título inte
 
   it('serializa campos simples (sin |)', async () => {
     const tex = await toLatexTitleback(
-      '---\ntitle: Prueba\nextratitle: "Portada extra"\ndedication: "Para alguien"\nlowertitleback: "Pie de portada"\nuppertitleback: "Texto simple"\n---\n\nCuerpo.\n',
+      '---\ntitle: Prueba\nsubtitle: "Subtítulo simple"\nextratitle: "Portada extra"\ndedication: "Para alguien"\nlowertitleback: "Pie de portada"\nuppertitleback: "Texto simple"\n---\n\nCuerpo.\n',
     );
+    expect(tex).toContain('\\subtitle{Subtítulo simple}');
     expect(tex).toContain('\\extratitle{Portada extra}');
     expect(tex).toContain('\\dedication{Para alguien}');
     expect(tex).toContain('\\lowertitleback{Pie de portada}');
     expect(tex).toContain('\\uppertitleback{Texto simple}');
+  });
+
+  it('convierte el subtitle multilinea (|): doble espacio → \\ y :: → vspace', async () => {
+    const tex = await toLatexTitleback('---\ntitle: Prueba\nsubtitle: |\n  Línea uno  \n  Línea dos\n---\n\nCuerpo.\n');
+    expect(tex).toContain('\\subtitle{Línea uno\\\\\nLínea dos}');
   });
 
   it('sin campos de título internas: nada cambia', async () => {

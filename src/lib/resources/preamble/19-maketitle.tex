@@ -3,7 +3,7 @@
 % dedication) definidas en 28-titlepages.tex.
 %
 % Orden de páginas:
-%   extratitle (pág 1, centrado con \vspace*{11\baselineskip} antes)
+%   extratitle (pág 1, centrado con \vspace*{7\baselineskip} antes)
 %   → portada (impar) → titlebacks (reverso, twoside; el \vfill ancla el
 %   lowertitleback al fondo, sin minipage) → dedication (página impar
 %   siguiente, centrado con \vspace*{11\baselineskip} antes).
@@ -13,7 +13,7 @@
 \makeatletter
 \renewcommand{\maketitle}{%
   \ifx\@extratitle\@empty\else
-    \vspace*{11\baselineskip}%
+    \vspace*{7\baselineskip}%
     {\centering\noindent\@extratitle\par}%
     \titlepage@nextdouble
   \fi

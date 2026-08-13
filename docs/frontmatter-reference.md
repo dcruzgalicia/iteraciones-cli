@@ -22,7 +22,7 @@ El pipeline consume **5 campos** del frontmatter:
 | Campo | Tipo | Por defecto | Descripción |
 |-------|------|-------------|-------------|
 | `title` | `string` | `''` | Título del documento. Se usa para el slug y el maketitle del PDF. |
-| `subtitle` | `string` | — | Subtítulo del documento. Se muestra bajo el título en el maketitle del PDF. |
+| `subtitle` | `string` | — | Subtítulo del documento. Se muestra bajo el título en el maketitle del PDF. Admite el bloque YAML literal (`\|`) para varias líneas, con las mismas reglas que las páginas de título internas (ver más abajo). |
 | `date` | `string` | — | Fecha en formato `YYYY-MM-DD`. Con `pdf.show-date: true` se muestra en el maketitle; si no se declara, se usa la fecha de creación del archivo. |
 | `author` | `string \| string[]` | `[]` | Uno o varios autores. El slug usa `title-por-author`: por defecto solo el primer autor; en caso de colisión se van añadiendo autores (`-y-`) y, si se agotan, se aplica un sufijo `-dN`. |
 | `slug` | `string` | — | **Slug manual** (opcional): fija la URL del documento en lugar del esquema automático. Formato seguro: solo minúsculas, números y guiones simples (`^[a-z0-9]+(-[a-z0-9]+)*$`). Dos documentos con la misma salida (mismo directorio + slug) son un error de build y de `validate`. |
@@ -42,12 +42,13 @@ El frontmatter completo se pasa a pandoc como metadata del documento. Los campos
 
 ## Páginas de título internas (PDF)
 
-Los campos `extratitle`, `dedication`, `uppertitleback` y `lowertitleback` definen las páginas de título internas del PDF (solo LaTeX/PDF; en HTML se ignoran). Son **metadatos multilinea**: se escriben con el bloque YAML literal (`|`), y el contenido se procesa como markdown normal:
+Los campos `extratitle`, `dedication`, `uppertitleback` y `lowertitleback` definen las páginas de título internas del PDF (solo LaTeX/PDF; en HTML se ignoran). Son **metadatos multilinea**: se escriben con el bloque YAML literal (`|`), y el contenido se procesa como markdown normal. El campo `subtitle` también admite el bloque literal (`|`) con las mismas reglas para escribir varias líneas en la portada:
 
 - El **doble espacio al final de línea** produce un salto de línea (`\\`).
 - Una línea con solo `::` produce un espacio vertical (`\vspace{\baselineskip}`).
 - `uppertitleback` y `lowertitleback`: texto en `footnotesize`, interlineado 1 y sin indentación.
-- `extratitle` y `dedication`: texto centrado con letra normal, con `\vspace*{11\baselineskip}` antes del contenido.
+- `extratitle`: texto centrado con letra normal, con `\vspace*{7\baselineskip}` antes del contenido.
+- `dedication`: texto centrado con letra normal, con `\vspace*{11\baselineskip}` antes del contenido.
 
 ```yaml
 ---
