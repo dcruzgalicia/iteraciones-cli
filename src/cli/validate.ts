@@ -36,9 +36,13 @@ const KNOWN_FRONTMATTER_FIELDS = [
   // Páginas de título internas, colofón e imagen de portada (solo LaTeX;
   // HTML las ignora)
   'extratitle',
+  'frontispiece',
+  'titlehead',
+  'subject',
   'dedication',
   'uppertitleback',
   'lowertitleback',
+  'publishers',
   'colophon',
   'title-image',
 ];

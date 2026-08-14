@@ -13,7 +13,18 @@
 -- re-escape.
 -- Uso: pandoc --from markdown --to latex --lua-filter latex/10-titlepages.lua
 
-local TITLE_PAGE_FIELDS = { 'subtitle', 'extratitle', 'dedication', 'uppertitleback', 'lowertitleback', 'colophon' }
+local TITLE_PAGE_FIELDS = {
+  'subtitle',
+  'extratitle',
+  'frontispiece',
+  'titlehead',
+  'subject',
+  'dedication',
+  'uppertitleback',
+  'lowertitleback',
+  'publishers',
+  'colophon',
+}
 
 local BLOCK_TYPES = {
   Para = true, Plain = true, Header = true, BlockQuote = true, Div = true,

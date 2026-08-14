@@ -119,6 +119,15 @@ export async function composeLatexTemplate(opts: {
   lines.push('$if(extratitle)$');
   lines.push('\\extratitle{$extratitle$}');
   lines.push('$endif$');
+  lines.push('$if(frontispiece)$');
+  lines.push('\\frontispiece{$frontispiece$}');
+  lines.push('$endif$');
+  lines.push('$if(titlehead)$');
+  lines.push('\\titlehead{$titlehead$}');
+  lines.push('$endif$');
+  lines.push('$if(subject)$');
+  lines.push('\\subject{$subject$}');
+  lines.push('$endif$');
   lines.push('$if(dedication)$');
   lines.push('\\dedication{$dedication$}');
   lines.push('$endif$');
@@ -127,6 +136,9 @@ export async function composeLatexTemplate(opts: {
   lines.push('$endif$');
   lines.push('$if(lowertitleback)$');
   lines.push('\\lowertitleback{$lowertitleback$}');
+  lines.push('$endif$');
+  lines.push('$if(publishers)$');
+  lines.push('\\publishers{$publishers$}');
   lines.push('$endif$');
   lines.push('\\title{$title$}');
   lines.push('$if(title-image)$');
