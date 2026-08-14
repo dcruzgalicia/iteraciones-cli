@@ -168,6 +168,15 @@ export async function composeLatexTemplate(opts: {
   lines.push('');
   lines.push('$body$');
   lines.push('');
+  lines.push('$if(colophon)$');
+  // Colofón final: 28-titlepages.tex define \colophon (guarda el contenido
+  // serializado por 10-titlepages) y \colophonpage (siempre en una página
+  // par, la última del documento). Va después del body, así que queda
+  // incluso después de \printbibliography (inyectado al AST por flags.lua).
+  lines.push('\\colophon{$colophon$}');
+  lines.push('\\colophonpage');
+  lines.push('$endif$');
+  lines.push('');
   lines.push('\\end{document}');
   return lines.join('\n');
 }

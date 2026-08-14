@@ -47,3 +47,32 @@
   \if@twoside\ifodd\value{page}\else\null\titlepage@next\fi\fi
 }
 \makeatother
+
+% Colofón final: se imprime al final del documento (el template lo emite
+% después del body) y SIEMPRE ocupa solo una página par, la última del
+% documento. \titlepage@lasteven es el espejo de \titlepage@nextdouble
+% (par → impar): tras \clearpage, si la página actual es impar se inserta
+% una página en blanco y el colofón cae en la siguiente par. La página del
+% colofón y la insertada no muestran número de página.
+% Todo dentro de makeatletter: los reemplazos usan comandos con @
+% (\@colophon, \titlepage@lasteven) y fuera de él se tokenizarían como
+% \@ (spacefactor) y texto suelto.
+\makeatletter
+\newcommand{\colophon}[1]{\gdef\@colophon{%
+    #1%
+}}%
+\newcommand{\titlepage@lasteven}{%
+  \clearpage
+  \thispagestyle{empty}%
+  \if@twoside\ifodd\value{page}\null\titlepage@next\fi\fi
+}
+\newcommand{\colophonpage}{%
+  \titlepage@lasteven
+  \vspace*{7\baselineskip}%
+  \titlepageblock
+    {\dimexpr(\linewidth-\colophonwidth)/2\relax}%
+    {\dimexpr(\linewidth-\colophonwidth)/2\relax}%
+    {\centering}%
+    {\@colophon}%
+}
+\makeatother
