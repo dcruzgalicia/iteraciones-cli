@@ -359,8 +359,8 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(maketitle).toContain('\\titleimagerender{\\@titleimage}');
     expect(maketitle).toContain('\\publishersimage');
     expect(maketitle).toContain('\\ifx\\@publishersimage\\@empty');
-    // publishers-image: la imagen sustituye al texto (máx. 40% del textwidth)
-    expect(maketitle).toContain('\\titleimagerender[0.4\\textwidth]{\\@publishersimage}');
+    // publishers-image: la imagen sustituye al texto (máx. 150pt ≈ 150px)
+    expect(maketitle).toContain('\\titleimagerender[150pt]{\\@publishersimage}');
     // Max-width configurable: default 0.8 textwidth (portada) y
     // [\extratitlewidth] (100% del ancho del bloque) en la página de extratitle
     expect(maketitle).toContain('\\newcommand{\\titleimagerender}[2][0.8\\textwidth]{%');
