@@ -639,6 +639,17 @@ describe.skipIf(!pandocOk)('filter latex/10-titlepages (páginas de título inte
     expect(tex).toContain('\\colophon{Impreso en México\\\\\nPrimera edición}');
   });
 
+  it('subject y publishers aceptan array de strings (como author): se unen con coma', async () => {
+    const tex = await toLatexTitleback('---\ntitle: Prueba\nsubject: [Ensayo, Poesía]\npublishers: [Editorial A, Editorial B]\n---\n\nCuerpo.\n');
+    expect(tex).toContain('\\subject{Ensayo, Poesía}');
+    expect(tex).toContain('\\publishers{Editorial A, Editorial B}');
+  });
+
+  it('subject con array de un solo item se une sin coma extra', async () => {
+    const tex = await toLatexTitleback('---\ntitle: Prueba\nsubject: [Ensayo]\n---\n\nCuerpo.\n');
+    expect(tex).toContain('\\subject{Ensayo}');
+  });
+
   it('title-image pasa la ruta literal (sin escapar el guion bajo)', async () => {
     // El writer de pandoc escaparía mi_imagen.jpg como mi\_imagen.jpg y
     // rompería la búsqueda del archivo en \includegraphics.
