@@ -586,6 +586,7 @@ describe.skipIf(!pandocOk)('filter latex/10-titlepages (páginas de título inte
         '$if(uppertitleback)$\\uppertitleback{$uppertitleback$}$endif$\n' +
         '$if(lowertitleback)$\\lowertitleback{$lowertitleback$}$endif$\n' +
         '$if(colophon)$\\colophon{$colophon$}$endif$\n' +
+        '$if(title-image)$\\titleimage{$title-image$}$endif$\n' +
         '$body$\n' +
         '\\end{document}\n',
     );
@@ -628,6 +629,14 @@ describe.skipIf(!pandocOk)('filter latex/10-titlepages (páginas de título inte
   it('convierte el colophon multilinea (|): doble espacio → \\ y :: → vspace', async () => {
     const tex = await toLatexTitleback('---\ntitle: Prueba\ncolophon: |\n  Impreso en México  \n  Primera edición\n---\n\nCuerpo.\n');
     expect(tex).toContain('\\colophon{Impreso en México\\\\\nPrimera edición}');
+  });
+
+  it('title-image pasa la ruta literal (sin escapar el guion bajo)', async () => {
+    // El writer de pandoc escaparía mi_imagen.jpg como mi\_imagen.jpg y
+    // rompería la búsqueda del archivo en \includegraphics.
+    const tex = await toLatexTitleback('---\ntitle: Prueba\ntitle-image: ./mi_imagen.jpg\n---\n\nCuerpo.\n');
+    expect(tex).toContain('\\titleimage{./mi_imagen.jpg}');
+    expect(tex).not.toContain('\\_');
   });
 
   it('convierte el subtitle multilinea (|): doble espacio → \\ y :: → vspace', async () => {

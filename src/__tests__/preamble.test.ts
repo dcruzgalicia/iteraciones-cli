@@ -211,6 +211,15 @@ describe('composeLatexTemplate', () => {
     expect(lines[bodyIdx + 1]).toBe('');
   });
 
+  it('emite el condicional de title-image (imagen de portada) junto al título', async () => {
+    const tpl = await composeLatexTemplate(opts);
+    expect(tpl).toContain('$if(title-image)$\n\\titleimage{$title-image$}\n$endif$');
+    const lines = tpl.split('\n');
+    const titleIdx = lines.indexOf('\\title{$title$}');
+    const titleImageIdx = lines.indexOf('\\titleimage{$title-image$}');
+    expect(titleImageIdx).toBeGreaterThan(titleIdx);
+  });
+
   it('emite el colofón condicional DESPUÉS del $body$ (última página del documento)', async () => {
     const tpl = await composeLatexTemplate(opts);
     expect(tpl).toContain('$if(colophon)$\n\\colophon{$colophon$}\n\\colophonpage\n$endif$');
@@ -331,6 +340,20 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(maketitle).toContain('\\renewcommand{\\subtitle}[1]{\\gdef\\@subtitle{%');
     expect(maketitle).toContain('\\parindent\\z@\\@subtitle\\par');
     expect(maketitle).not.toContain('\\centering\\noindent');
+  });
+
+  it('19-maketitle: title-image con graphicx y ancho máximo del 80% (sin ampliar)', async () => {
+    const filters = await loadPreambleFilters();
+    const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';
+    expect(maketitle).toContain('\\usepackage{graphicx}');
+    expect(maketitle).toContain('\\newcommand{\\titleimage}[1]{\\gdef\\@titleimage{%');
+    expect(maketitle).toContain('\\ifx\\@titleimage\\@empty');
+    expect(maketitle).toContain('\\titleimagerender{\\@titleimage}');
+    // Max-width estricto: se mide el ancho natural y solo se escala si supera
+    // el 80% del textwidth (las imágenes pequeñas no se amplían).
+    expect(maketitle).toContain('\\ifdim\\wd\\titleimagebox>0.8\\textwidth');
+    expect(maketitle).toContain('width=0.8\\textwidth,keepaspectratio');
+    expect(maketitle).toContain('\\usebox{\\titleimagebox}');
   });
 
   it('19-maketitle: bloques extratitle (75% centrado) y dedication (50% derecha) como el dictum', async () => {

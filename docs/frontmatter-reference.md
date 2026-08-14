@@ -51,6 +51,7 @@ Los campos `extratitle`, `dedication`, `uppertitleback` y `lowertitleback` defin
 - `extratitle`: texto con letra normal en un bloque del 75% del ancho centrado (márgenes iguales), con el texto centrado dentro del bloque y `\vspace*{7\baselineskip}` antes del contenido.
 - `dedication`: texto con letra normal alineado a la derecha ocupando el 50% del ancho (como el dictum), con `\vspace*{7\baselineskip}` antes del contenido.
 - `colophon`: colofón final del documento (solo LaTeX/PDF). Texto con letra normal en un bloque del 75% del ancho centrado, con el texto centrado dentro del bloque y `\vspace*{7\baselineskip}` antes. Siempre ocupa solo una página **par** al final del documento (si el body termina en página impar, el colofón va en la siguiente par; si termina en par, se inserta una página impar en blanco y el colofón va en la siguiente par). La página del colofón no muestra número de página y es siempre la última del documento.
+- `title-image`: imagen que sustituye al texto del título en la portada del PDF (solo LaTeX/PDF; el resto de los formatos y el slug siguen usando `title`). Ruta relativa al directorio del documento (o absoluta). La imagen se muestra centrada con un **ancho máximo del 80%** de la caja de texto: si la imagen natural es más pequeña se muestra a tamaño natural (no se amplía); si es mayor, se escala conservando la proporción. Formatos soportados: `jpg`, `jpeg`, `png` y `pdf`. Nota: cambiar el archivo de imagen sin modificar el `.md` no invalida la caché.
 
 ```yaml
 ---
