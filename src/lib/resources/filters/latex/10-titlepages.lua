@@ -120,10 +120,13 @@ local function serialize_titleback(blocks)
   return latex:gsub('%s+$', '')
 end
 
--- title-image NO es contenido markdown: es una ruta de archivo que debe
--- llegar literal a \includegraphics. El writer de pandoc escaparía el guion
--- bajo (mi_imagen.jpg → mi\_imagen.jpg) y rompería la búsqueda del archivo.
--- Acepta MetaString (--metadata del CLI) o inlines Str/Space (frontmatter).
+-- title-image y publishers-image NO son contenido markdown: son rutas de
+-- archivo que deben llegar literal a \includegraphics. El writer de pandoc
+-- escaparía el guion bajo (mi_imagen.jpg → mi\_imagen.jpg) y rompería la
+-- búsqueda del archivo. Acepta MetaString (--metadata del CLI) o inlines
+-- Str/Space (frontmatter).
+local RAW_PATH_FIELDS = { 'title-image', 'publishers-image' }
+
 local function meta_to_rawpath(meta)
   if type(meta) == 'string' then
     return meta
@@ -164,9 +167,11 @@ function Pandoc(doc)
     end
   end
 
-  local raw = meta_to_rawpath(doc.meta['title-image'])
-  if raw ~= nil and raw ~= '' then
-    doc.meta['title-image'] = pandoc.MetaInlines({ pandoc.RawInline('latex', raw) })
+  for _, field in ipairs(RAW_PATH_FIELDS) do
+    local raw = meta_to_rawpath(doc.meta[field])
+    if raw ~= nil and raw ~= '' then
+      doc.meta[field] = pandoc.MetaInlines({ pandoc.RawInline('latex', raw) })
+    end
   end
 
   return doc

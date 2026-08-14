@@ -28,6 +28,10 @@
 \newcommand{\titleimage}[1]{\gdef\@titleimage{%
     #1%
 }}%
+\newcommand*{\@publishersimage}{}%
+\newcommand{\publishersimage}[1]{\gdef\@publishersimage{%
+    #1%
+}}%
 
 % Render de la imagen de portada con ancho MÁXIMO del 80% del textwidth: se
 % mide el ancho natural con un \sbox; si supera el 80% se escala conservando
@@ -171,9 +175,16 @@
     \vskip 1\baselineskip
     {\centering\usekomafont{date}{\@date\par}}%
   \fi
-  \ifx\@publishers\@empty\else
+  \ifx\@publishersimage\@empty
+    \ifx\@publishers\@empty\else
+      \vskip 1\baselineskip
+      {\centering\parindent\z@\@publishers\par}%
+    \fi
+  \else
+    % publishers-image definido: la imagen sustituye al texto de publishers
+    % (máx. 40% del textwidth, ajustable).
     \vskip 1\baselineskip
-    {\centering\parindent\z@\@publishers\par}%
+    {\centering\titleimagerender[0.4\textwidth]{\@publishersimage}\par}%
   \fi
   \if@twoside
     \@tempswatrue

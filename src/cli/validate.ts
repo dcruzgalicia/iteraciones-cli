@@ -45,6 +45,7 @@ const KNOWN_FRONTMATTER_FIELDS = [
   'publishers',
   'colophon',
   'title-image',
+  'publishers-image',
 ];
 
 /** Formato seguro de un slug manual (mismo regex que discover). */

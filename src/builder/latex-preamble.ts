@@ -140,6 +140,12 @@ export async function composeLatexTemplate(opts: {
   lines.push('$if(publishers)$');
   lines.push('\\publishers{$publishers$}');
   lines.push('$endif$');
+  lines.push('$if(publishers-image)$');
+  // publishers-image (solo LaTeX/PDF): el filter 10-titlepages la convierte a
+  // RawInline latex (ruta literal); 19-maketitle.tex renderiza la imagen en
+  // lugar del texto de publishers.
+  lines.push('\\publishersimage{$publishers-image$}');
+  lines.push('$endif$');
   lines.push('\\title{$title$}');
   lines.push('$if(title-image)$');
   // title-image (solo LaTeX/PDF): el filter 10-titlepages la convierte a
