@@ -146,6 +146,11 @@ export async function composeLatexTemplate(opts: {
   // lugar del texto de publishers.
   lines.push('\\publishersimage{$publishers-image$}');
   lines.push('$endif$');
+  lines.push('$if(endpapers)$');
+  // endpapers (solo LaTeX/PDF): imagen de fondo de todas las páginas
+  // (30-endpapers.tex la mide con pdfximage y cubre la hoja).
+  lines.push('\\setendpapers{$endpapers$}');
+  lines.push('$endif$');
   lines.push('\\title{$title$}');
   lines.push('$if(title-image)$');
   // title-image (solo LaTeX/PDF): el filter 10-titlepages la convierte a
