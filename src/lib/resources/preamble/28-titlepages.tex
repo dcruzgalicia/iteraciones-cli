@@ -84,10 +84,22 @@
 \newcommand{\colophonpage}{%
   \titlepage@lasteven
   \vspace*{7\baselineskip}%
+  % title-image definido: la imagen de portada también abre el colofón
+  % (máx. 50% del textwidth).
+  \ifx\@titleimage\@empty\else
+    {\centering\titleimagerender[0.5\textwidth]{\@titleimage}\par}%
+    \vskip 1\baselineskip
+  \fi
   \titlepageblock
     {\dimexpr(\linewidth-\colophonwidth)/2\relax}%
     {\dimexpr(\linewidth-\colophonwidth)/2\relax}%
     {\centering}%
     {\@colophon}%
+  % publishers-image definido: el logo del editor cierra el colofón
+  % (máx. 50pt).
+  \ifx\@publishersimage\@empty\else
+    \vskip 1\baselineskip
+    {\centering\titleimagerender[50pt]{\@publishersimage}\par}%
+  \fi
 }
 \makeatother
