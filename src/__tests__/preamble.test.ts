@@ -377,8 +377,10 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     // Extratitle por defecto: frontispiece sin extratitle ni title-image → título
     expect(maketitle).toContain('\\ifx\\@frontispiece\\@empty\n        % sin página de extratitle');
     expect(maketitle).toContain('{\\centering\\parindent\\z@\\@title\\par}%');
-    // Orden de la portada: titlehead → author → title → subtitle → subject → date → publishers
-    // (cadenas específicas: \@title también aparece dentro de \@titleimage)
+    // Orden de la portada: author → title → subtitle → subject → titlehead →
+    // publishers → date (titlehead va después de subject; date después de
+    // publishers). Cadenas específicas: \@title también aparece dentro de
+    // \@titleimage.
     const head = maketitle.indexOf('\\@titlehead\\par');
     const author = maketitle.indexOf('\\@author\\par');
     const title = maketitle.indexOf('\\MakeUppercase{\\@title}');
@@ -386,13 +388,13 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     const subject = maketitle.indexOf('\\@subject\\par');
     const date = maketitle.indexOf('\\@date\\par');
     const pub = maketitle.indexOf('\\@publishers\\par');
-    expect(head).toBeGreaterThan(-1);
-    expect(head).toBeLessThan(author);
+    expect(author).toBeGreaterThan(-1);
     expect(author).toBeLessThan(title);
     expect(title).toBeLessThan(sub);
     expect(sub).toBeLessThan(subject);
-    expect(subject).toBeLessThan(date);
-    expect(date).toBeLessThan(pub);
+    expect(subject).toBeLessThan(head);
+    expect(head).toBeLessThan(pub);
+    expect(pub).toBeLessThan(date);
   });
 
   it('19-maketitle: dos paginas en blanco antes de extratitle (hojas de guarda)', async () => {

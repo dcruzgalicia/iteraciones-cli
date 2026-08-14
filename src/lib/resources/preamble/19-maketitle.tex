@@ -144,10 +144,6 @@
   \fi
   \thispagestyle{empty}%
   \vspace*{1\baselineskip}%
-  \ifx\@titlehead\@empty\else
-    {\centering\parindent\z@\@titlehead\par}%
-    \vskip 1\baselineskip
-  \fi
   \ifx\@author\@empty
     \vskip 1\baselineskip%
   \else
@@ -167,13 +163,17 @@
     \vskip 1\baselineskip
     {\centering\parindent\z@\@subject\par}%
   \fi
-  \ifx\@date\@empty\else
+  \ifx\@titlehead\@empty\else
     \vskip 1\baselineskip
-    {\centering\usekomafont{date}{\@date\par}}%
+    {\centering\parindent\z@\@titlehead\par}%
   \fi
   \ifx\@publishers\@empty\else
     \vskip 1\baselineskip
     {\centering\parindent\z@\@publishers\par}%
+  \fi
+  \ifx\@date\@empty\else
+    \vskip 1\baselineskip
+    {\centering\usekomafont{date}{\@date\par}}%
   \fi
   \if@twoside
     \@tempswatrue
