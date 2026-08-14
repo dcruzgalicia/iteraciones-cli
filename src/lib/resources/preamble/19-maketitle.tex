@@ -167,13 +167,13 @@
     \vskip 1\baselineskip
     {\centering\parindent\z@\@titlehead\par}%
   \fi
-  \ifx\@publishers\@empty\else
-    \vskip 1\baselineskip
-    {\centering\parindent\z@\@publishers\par}%
-  \fi
   \ifx\@date\@empty\else
     \vskip 1\baselineskip
     {\centering\usekomafont{date}{\@date\par}}%
+  \fi
+  \ifx\@publishers\@empty\else
+    \vskip 1\baselineskip
+    {\centering\parindent\z@\@publishers\par}%
   \fi
   \if@twoside
     \@tempswatrue

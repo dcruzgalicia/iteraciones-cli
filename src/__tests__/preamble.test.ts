@@ -378,7 +378,7 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(maketitle).toContain('\\ifx\\@frontispiece\\@empty\n        % sin página de extratitle');
     expect(maketitle).toContain('{\\centering\\parindent\\z@\\@title\\par}%');
     // Orden de la portada: author → title → subtitle → subject → titlehead →
-    // publishers → date (titlehead va después de subject; date después de
+    // date → publishers (titlehead va después de subject; date antes de
     // publishers). Cadenas específicas: \@title también aparece dentro de
     // \@titleimage.
     const head = maketitle.indexOf('\\@titlehead\\par');
@@ -393,8 +393,8 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(title).toBeLessThan(sub);
     expect(sub).toBeLessThan(subject);
     expect(subject).toBeLessThan(head);
-    expect(head).toBeLessThan(pub);
-    expect(pub).toBeLessThan(date);
+    expect(head).toBeLessThan(date);
+    expect(date).toBeLessThan(pub);
   });
 
   it('19-maketitle: dos paginas en blanco antes de extratitle (hojas de guarda)', async () => {
