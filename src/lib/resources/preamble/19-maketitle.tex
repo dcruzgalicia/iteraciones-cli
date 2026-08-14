@@ -33,10 +33,16 @@
 % mide el ancho natural con un \sbox; si supera el 80% se escala conservando
 % la proporción, si no se muestra a tamaño natural (no se amplía).
 \newsavebox{\titleimagebox}
-\newcommand{\titleimagerender}[1]{%
-  \sbox{\titleimagebox}{\includegraphics{#1}}%
-  \ifdim\wd\titleimagebox>0.8\textwidth
-    \includegraphics[width=0.8\textwidth,keepaspectratio]{#1}%
+% Render de la imagen de portada con ancho MÁXIMO configurable: #1 (opcional,
+% por defecto 0.8\textwidth) es el ancho máximo y #2 la ruta. Se mide el ancho
+% natural con un \sbox; si supera el máximo se escala conservando la
+% proporción, si no se muestra a tamaño natural (no se amplía). La portada usa
+% el default; la página de extratitle pasa [\extratitlewidth] (100% del ancho
+% del bloque).
+\newcommand{\titleimagerender}[2][0.8\textwidth]{%
+  \sbox{\titleimagebox}{\includegraphics{#2}}%
+  \ifdim\wd\titleimagebox>#1
+    \includegraphics[width=#1,keepaspectratio]{#2}%
   \else
     \usebox{\titleimagebox}%
   \fi
@@ -67,13 +73,21 @@
   \end{list}%
 }
 \renewcommand{\maketitle}{%
-  \ifx\@extratitle\@empty\else
+  \ifx\@titleimage\@empty
+    \ifx\@extratitle\@empty\else
+      \vspace*{7\baselineskip}%
+      \titlepageblock
+        {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
+        {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
+        {\centering}%
+        {\@extratitle}%
+      \titlepage@nextdouble
+    \fi
+  \else
+    % title-image definido: la imagen sustituye al contenido de extratitle
+    % (hasta el 100% del ancho del bloque, \extratitlewidth).
     \vspace*{7\baselineskip}%
-    \titlepageblock
-      {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
-      {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
-      {\centering}%
-      {\@extratitle}%
+    {\centering\titleimagerender[\extratitlewidth]{\@titleimage}\par}%
     \titlepage@nextdouble
   \fi
   \thispagestyle{empty}%
