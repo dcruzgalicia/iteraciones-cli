@@ -361,6 +361,16 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(maketitle).toContain('\\ifx\\@titleimage\\@empty\n    \\ifx\\@extratitle\\@empty');
   });
 
+  it('19-maketitle: dos paginas en blanco antes de extratitle (hojas de guarda)', async () => {
+    const filters = await loadPreambleFilters();
+    const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';
+    expect(maketitle).toContain('\\newcommand{\\titlepageblanks}{%');
+    expect(maketitle).toContain('\\null\\clearpage\n  \\null\\clearpage');
+    // Ambas ramas (extratitle textual y con title-image) llaman a titlepageblanks
+    expect(maketitle).toContain('\\ifx\\@extratitle\\@empty\\else\n      \\titlepageblanks');
+    expect(maketitle).toContain('\\titlepageblanks\n    \\vspace*{7\\baselineskip}%');
+  });
+
   it('19-maketitle: bloques extratitle (75% centrado) y dedication (50% derecha) como el dictum', async () => {
     const filters = await loadPreambleFilters();
     const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';

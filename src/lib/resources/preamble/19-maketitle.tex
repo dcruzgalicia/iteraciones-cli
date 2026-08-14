@@ -72,9 +72,20 @@
     {#3 #4\par}%
   \end{list}%
 }
+
+% Dos páginas en blanco (1 y 2) antes de la página de extratitle: el libro
+% abre con hojas de guarda y la extratitle queda en la página 3 (impar).
+% Cada \null evita que la página sea vacía (\clearpage de una página sin
+% contenido no la emite en algunos casos). Sin número: los layers de
+% scrlayer-scrpage están vacíos hasta que el comando de página se define.
+\newcommand{\titlepageblanks}{%
+  \null\clearpage
+  \null\clearpage
+}
 \renewcommand{\maketitle}{%
   \ifx\@titleimage\@empty
     \ifx\@extratitle\@empty\else
+      \titlepageblanks
       \vspace*{7\baselineskip}%
       \titlepageblock
         {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
@@ -86,6 +97,7 @@
   \else
     % title-image definido: la imagen sustituye al contenido de extratitle
     % (hasta el 100% del ancho del bloque, \extratitlewidth).
+    \titlepageblanks
     \vspace*{7\baselineskip}%
     {\centering\titleimagerender[\extratitlewidth]{\@titleimage}\par}%
     \titlepage@nextdouble
