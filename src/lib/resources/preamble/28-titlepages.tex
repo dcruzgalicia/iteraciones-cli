@@ -96,10 +96,10 @@
     {\centering}%
     {\@colophon}%
   % publishers-image definido: el logo del editor cierra el colofón
-  % (máx. 50pt).
+  % (máx. 25% del textwidth).
   \ifx\@publishersimage\@empty\else
     \vskip 1\baselineskip
-    {\centering\titleimagerender[50pt]{\@publishersimage}\par}%
+    {\centering\titleimagerender[0.25\textwidth]{\@publishersimage}\par}%
   \fi
 }
 \makeatother
