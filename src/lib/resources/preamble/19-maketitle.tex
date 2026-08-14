@@ -17,10 +17,30 @@
 % argumento (párrafo del frontmatter |) rompe la compilación con 'Paragraph
 % ended before \subtitle was complete'. Se redefine como long (\renewcommand
 % sin estrella) para permitir subtítulos multilínea con párrafos.
+% title-image (campo del frontmatter, solo LaTeX/PDF): imagen que sustituye al
+% texto del título en la portada. graphicx NO venía cargado en el preamble.
+\usepackage{graphicx}
 \makeatletter
 \renewcommand{\subtitle}[1]{\gdef\@subtitle{%
     #1%
 }}%
+\newcommand*{\@titleimage}{}%
+\newcommand{\titleimage}[1]{\gdef\@titleimage{%
+    #1%
+}}%
+
+% Render de la imagen de portada con ancho MÁXIMO del 80% del textwidth: se
+% mide el ancho natural con un \sbox; si supera el 80% se escala conservando
+% la proporción, si no se muestra a tamaño natural (no se amplía).
+\newsavebox{\titleimagebox}
+\newcommand{\titleimagerender}[1]{%
+  \sbox{\titleimagebox}{\includegraphics{#1}}%
+  \ifdim\wd\titleimagebox>0.8\textwidth
+    \includegraphics[width=0.8\textwidth,keepaspectratio]{#1}%
+  \else
+    \usebox{\titleimagebox}%
+  \fi
+}
 
 % Bloques de las páginas de título con la geometría del dictum (21-dictum.tex):
 % list con márgenes dados (#1 izquierdo, #2 derecho) y sin espaciado extra.
@@ -64,7 +84,11 @@
     {\centering\usekomafont{author}{\renewcommand{\and}{\unskip, \ignorespaces}\@author\par}}%
   \fi
   \vskip 1\baselineskip
-  {\centering\usekomafont{title}{\MakeUppercase{\@title}\par}}%
+  \ifx\@titleimage\@empty
+    {\centering\usekomafont{title}{\MakeUppercase{\@title}\par}}%
+  \else
+    {\centering\titleimagerender{\@titleimage}\par}%
+  \fi
   \ifx\@subtitle\@empty\else
     \vskip 1\baselineskip
     {\centering\usekomafont{subtitle}\parindent\z@\@subtitle\par}%

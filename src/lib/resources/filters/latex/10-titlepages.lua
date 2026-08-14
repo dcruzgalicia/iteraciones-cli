@@ -2,7 +2,8 @@
 -- dedication, uppertitleback, lowertitleback, colophon) a LaTeX para la
 -- portada, las páginas de título internas y el colofón final. Solo corre en
 -- la pasada latex (en HTML los campos se ignoran o los serializa el
--- compositor HTML con \n → espacio).
+-- compositor HTML con \n → espacio). title-image (imagen de portada) no es
+-- contenido markdown: la ruta pasa literal como RawInline latex.
 --
 -- El valor llega como MetaBlocks (frontmatter YAML |: los párrafos ya son
 -- bloques markdown) o MetaInlines (string simple). Se serializa con
@@ -68,6 +69,30 @@ local function serialize_titleback(blocks)
   return latex:gsub('%s+$', '')
 end
 
+-- title-image NO es contenido markdown: es una ruta de archivo que debe
+-- llegar literal a \includegraphics. El writer de pandoc escaparía el guion
+-- bajo (mi_imagen.jpg → mi\_imagen.jpg) y rompería la búsqueda del archivo.
+-- Acepta MetaString (--metadata del CLI) o inlines Str/Space (frontmatter).
+local function meta_to_rawpath(meta)
+  if type(meta) == 'string' then
+    return meta
+  end
+  if type(meta) ~= 'table' or #meta == 0 then
+    return nil
+  end
+  local parts = {}
+  for _, inl in ipairs(meta) do
+    if inl.t == 'Str' then
+      table.insert(parts, inl.text)
+    elseif inl.t == 'Space' then
+      table.insert(parts, ' ')
+    else
+      return nil
+    end
+  end
+  return table.concat(parts)
+end
+
 function Pandoc(doc)
   if FORMAT ~= 'latex' then return doc end
 
@@ -79,6 +104,11 @@ function Pandoc(doc)
         doc.meta[field] = pandoc.MetaInlines({ pandoc.RawInline('latex', latex) })
       end
     end
+  end
+
+  local raw = meta_to_rawpath(doc.meta['title-image'])
+  if raw ~= nil and raw ~= '' then
+    doc.meta['title-image'] = pandoc.MetaInlines({ pandoc.RawInline('latex', raw) })
   end
 
   return doc

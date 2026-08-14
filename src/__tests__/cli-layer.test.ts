@@ -507,6 +507,43 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
+  it('title-image: ruta absoluta en el tex con el guion bajo sin escapar', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  latex:\n    generate: true\n', 'utf8');
+      // PNG 1x1 válido (base64)
+      const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+      await writeFile(join(dir, 'mi_portada.png'), png);
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ntitle-image: ./mi_portada.png\n---\n\nContenido.\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const tex = await Bun.file(join(dir, 'dist', 'files', 'test-document.tex')).text();
+      expect(tex).toContain(`\\titleimage{${join(dir, 'mi_portada.png')}}`);
+      expect(tex).not.toContain('\\_');
+    });
+  });
+
+  it('title-image: archivo inexistente falla con mensaje claro (no el de latexmk)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  latex:\n    generate: true\n', 'utf8');
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ntitle-image: ./no_existe.png\n---\n\nContenido.\n', 'utf8');
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(1);
+      expect(output).toContain('title-image no encontrado');
+      expect(output).toContain(join(dir, 'no_existe.png'));
+    });
+  });
+
   it('un párrafo de 2-3 palabras al inicio no recibe \\mbox (umbral de palabras reales)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);

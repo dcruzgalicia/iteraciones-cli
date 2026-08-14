@@ -129,6 +129,12 @@ export async function composeLatexTemplate(opts: {
   lines.push('\\lowertitleback{$lowertitleback$}');
   lines.push('$endif$');
   lines.push('\\title{$title$}');
+  lines.push('$if(title-image)$');
+  // title-image (solo LaTeX/PDF): el filter 10-titlepages la convierte a
+  // RawInline latex (ruta literal, sin escapes); 19-maketitle.tex renderiza
+  // la imagen en lugar del texto del título.
+  lines.push('\\titleimage{$title-image$}');
+  lines.push('$endif$');
   lines.push('$if(subtitle)$');
   lines.push('\\subtitle{$subtitle$}');
   lines.push('$endif$');

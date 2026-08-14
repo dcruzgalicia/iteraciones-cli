@@ -33,12 +33,14 @@ const KNOWN_FRONTMATTER_FIELDS = [
   'theme',
   'accent',
   'css',
-  // Páginas de título internas y colofón (solo LaTeX; HTML las ignora)
+  // Páginas de título internas, colofón e imagen de portada (solo LaTeX;
+  // HTML las ignora)
   'extratitle',
   'dedication',
   'uppertitleback',
   'lowertitleback',
   'colophon',
+  'title-image',
 ];
 
 /** Formato seguro de un slug manual (mismo regex que discover). */
