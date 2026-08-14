@@ -342,18 +342,23 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(maketitle).not.toContain('\\centering\\noindent');
   });
 
-  it('19-maketitle: title-image con graphicx y ancho máximo del 80% (sin ampliar)', async () => {
+  it('19-maketitle: title-image con graphicx, ancho maximo configurable y extratitle sustituido', async () => {
     const filters = await loadPreambleFilters();
     const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';
     expect(maketitle).toContain('\\usepackage{graphicx}');
     expect(maketitle).toContain('\\newcommand{\\titleimage}[1]{\\gdef\\@titleimage{%');
     expect(maketitle).toContain('\\ifx\\@titleimage\\@empty');
     expect(maketitle).toContain('\\titleimagerender{\\@titleimage}');
-    // Max-width estricto: se mide el ancho natural y solo se escala si supera
-    // el 80% del textwidth (las imágenes pequeñas no se amplían).
-    expect(maketitle).toContain('\\ifdim\\wd\\titleimagebox>0.8\\textwidth');
-    expect(maketitle).toContain('width=0.8\\textwidth,keepaspectratio');
+    // Max-width configurable: default 0.8 textwidth (portada) y
+    // [\extratitlewidth] (100% del ancho del bloque) en la página de extratitle
+    expect(maketitle).toContain('\\newcommand{\\titleimagerender}[2][0.8\\textwidth]{%');
+    expect(maketitle).toContain('\\ifdim\\wd\\titleimagebox>#1');
+    expect(maketitle).toContain('width=#1,keepaspectratio');
     expect(maketitle).toContain('\\usebox{\\titleimagebox}');
+    expect(maketitle).toContain('\\titleimagerender[\\extratitlewidth]{\\@titleimage}');
+    // Con title-image, el texto de extratitle se sustituye: la rama textual
+    // queda anidada bajo \\ifx\\@titleimage\\@empty
+    expect(maketitle).toContain('\\ifx\\@titleimage\\@empty\n    \\ifx\\@extratitle\\@empty');
   });
 
   it('19-maketitle: bloques extratitle (75% centrado) y dedication (50% derecha) como el dictum', async () => {
