@@ -97,18 +97,21 @@ export async function markdownToLatex(
     }
   }
   extraArgs.push(`--metadata=title:${metadataValue(title)}`);
-  // title-image: imagen de portada (solo LaTeX/PDF) que sustituye al texto del
-  // título en el maketitle. Ruta relativa al directorio del documento (o
-  // absoluta); se valida que exista para fallar con un mensaje claro en vez
-  // del críptico de latexmk. El filter 10-titlepages la pasa como RawInline
-  // latex (sin escapes: un guion bajo se rompería como \_ con el writer).
-  const titleImage = typeof fm['title-image'] === 'string' && fm['title-image'].trim() ? fm['title-image'].trim() : undefined;
-  if (titleImage) {
-    const titleImagePath = isAbsolute(titleImage) ? titleImage : resolve(dirname(doc.filePath), titleImage);
-    if (!(await Bun.file(titleImagePath).exists())) {
-      throw new BuildError(`title-image no encontrado: "${titleImagePath}" (resuelto desde "${titleImage}")`);
+  // title-image y publishers-image: imágenes de la portada (solo LaTeX/PDF)
+  // que sustituyen al texto del título y de publishers en el maketitle. Ruta
+  // relativa al directorio del documento (o absoluta); se valida que exista
+  // para fallar con un mensaje claro en vez del críptico de latexmk. El
+  // filter 10-titlepages las pasa como RawInline latex (sin escapes: un
+  // guion bajo se rompería como \_ con el writer).
+  for (const field of ['title-image', 'publishers-image']) {
+    const value = typeof fm[field] === 'string' && fm[field].trim() ? fm[field].trim() : undefined;
+    if (value) {
+      const imagePath = isAbsolute(value) ? value : resolve(dirname(doc.filePath), value);
+      if (!(await Bun.file(imagePath).exists())) {
+        throw new BuildError(`${field} no encontrado: "${imagePath}" (resuelto desde "${value}")`);
+      }
+      extraArgs.push(`--metadata=${field}:${imagePath}`);
     }
-    extraArgs.push(`--metadata=title-image:${titleImagePath}`);
   }
   // El subtitle NO se pasa por --metadata: el override aplanaría los \n con
   // metadataValue y el filtro latex/10-titlepages no vería el valor multilínea

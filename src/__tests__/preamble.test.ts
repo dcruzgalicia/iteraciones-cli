@@ -166,6 +166,7 @@ describe('composeLatexTemplate', () => {
     expect(tpl).toContain('$if(uppertitleback)$\n\\uppertitleback{$uppertitleback$}\n$endif$');
     expect(tpl).toContain('$if(lowertitleback)$\n\\lowertitleback{$lowertitleback$}\n$endif$');
     expect(tpl).toContain('$if(publishers)$\n\\publishers{$publishers$}\n$endif$');
+    expect(tpl).toContain('$if(publishers-image)$\n\\publishersimage{$publishers-image$}\n$endif$');
   });
 
   it('emite el vspace post-portada solo con párrafo normal (skip-paragraph-space)', async () => {
@@ -356,6 +357,10 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(maketitle).toContain('\\newcommand{\\titleimage}[1]{\\gdef\\@titleimage{%');
     expect(maketitle).toContain('\\ifx\\@titleimage\\@empty');
     expect(maketitle).toContain('\\titleimagerender{\\@titleimage}');
+    expect(maketitle).toContain('\\publishersimage');
+    expect(maketitle).toContain('\\ifx\\@publishersimage\\@empty');
+    // publishers-image: la imagen sustituye al texto (máx. 40% del textwidth)
+    expect(maketitle).toContain('\\titleimagerender[0.4\\textwidth]{\\@publishersimage}');
     // Max-width configurable: default 0.8 textwidth (portada) y
     // [\extratitlewidth] (100% del ancho del bloque) en la página de extratitle
     expect(maketitle).toContain('\\newcommand{\\titleimagerender}[2][0.8\\textwidth]{%');
