@@ -582,9 +582,13 @@ describe.skipIf(!pandocOk)('filter latex/10-titlepages (páginas de título inte
       '\\documentclass{article}\n' +
         '$if(subtitle)$\\subtitle{$subtitle$}$endif$\n' +
         '$if(extratitle)$\\extratitle{$extratitle$}$endif$\n' +
+        '$if(frontispiece)$\\frontispiece{$frontispiece$}$endif$\n' +
+        '$if(titlehead)$\\titlehead{$titlehead$}$endif$\n' +
+        '$if(subject)$\\subject{$subject$}$endif$\n' +
         '$if(dedication)$\\dedication{$dedication$}$endif$\n' +
         '$if(uppertitleback)$\\uppertitleback{$uppertitleback$}$endif$\n' +
         '$if(lowertitleback)$\\lowertitleback{$lowertitleback$}$endif$\n' +
+        '$if(publishers)$\\publishers{$publishers$}$endif$\n' +
         '$if(colophon)$\\colophon{$colophon$}$endif$\n' +
         '$if(title-image)$\\titleimage{$title-image$}$endif$\n' +
         '$body$\n' +
@@ -616,13 +620,17 @@ describe.skipIf(!pandocOk)('filter latex/10-titlepages (páginas de título inte
 
   it('serializa campos simples (sin |)', async () => {
     const tex = await toLatexTitleback(
-      '---\ntitle: Prueba\nsubtitle: "Subtítulo simple"\nextratitle: "Portada extra"\ndedication: "Para alguien"\nlowertitleback: "Pie de portada"\nuppertitleback: "Texto simple"\ncolophon: "Datos del colofón"\n---\n\nCuerpo.\n',
+      '---\ntitle: Prueba\nsubtitle: "Subtítulo simple"\nextratitle: "Portada extra"\nfrontispiece: "Frontispicio"\ntitlehead: "Cabecera"\nsubject: "Tema"\ndedication: "Para alguien"\nlowertitleback: "Pie de portada"\nuppertitleback: "Texto simple"\npublishers: "Editorial"\ncolophon: "Datos del colofón"\n---\n\nCuerpo.\n',
     );
     expect(tex).toContain('\\subtitle{Subtítulo simple}');
     expect(tex).toContain('\\extratitle{Portada extra}');
+    expect(tex).toContain('\\frontispiece{Frontispicio}');
+    expect(tex).toContain('\\titlehead{Cabecera}');
+    expect(tex).toContain('\\subject{Tema}');
     expect(tex).toContain('\\dedication{Para alguien}');
     expect(tex).toContain('\\lowertitleback{Pie de portada}');
     expect(tex).toContain('\\uppertitleback{Texto simple}');
+    expect(tex).toContain('\\publishers{Editorial}');
     expect(tex).toContain('\\colophon{Datos del colofón}');
   });
 

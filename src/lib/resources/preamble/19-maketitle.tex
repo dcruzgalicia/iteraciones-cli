@@ -83,33 +83,77 @@
   \null\clearpage
 }
 \renewcommand{\maketitle}{%
+  % Página de extratitle (pág 3, centrada horizontal y verticalmente): existe
+  % si hay extratitle, title-image o frontispiece. Con solo frontispiece, la
+  % página se llena por defecto con el título.
+  % Centrado vertical con \vbox to \textheight: el \vspace*{\fill} entre
+  % bloques dejaba el contenido ~9-17pt fuera del centro (interacción con el
+  % page builder y el strut); dentro del vbox los \vfill reparten el espacio
+  % exactamente. No confina el ancho (no es minipage).
   \ifx\@titleimage\@empty
-    \ifx\@extratitle\@empty\else
+    \ifx\@extratitle\@empty
+      \ifx\@frontispiece\@empty
+        % sin página de extratitle
+      \else
+        \titlepageblanks
+        \vbox to \textheight{%
+          \vfill
+          {\centering\parindent\z@\@title\par}%
+          \vfill
+        }%
+        \titlepage@next
+      \fi
+    \else
       \titlepageblanks
-      \vspace*{7\baselineskip}%
-      \titlepageblock
-        {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
-        {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
-        {\centering}%
-        {\@extratitle}%
-      \titlepage@nextdouble
+      \vbox to \textheight{%
+        \vfill
+        \titlepageblock
+          {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
+          {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
+          {\centering}%
+          {\@extratitle}%
+        \vfill
+      }%
+      \ifx\@frontispiece\@empty
+        \titlepage@nextdouble
+      \else
+        \titlepage@next
+      \fi
     \fi
   \else
     % title-image definido: la imagen sustituye al contenido de extratitle
     % (hasta el 100% del ancho del bloque, \extratitlewidth).
     \titlepageblanks
-    \vspace*{7\baselineskip}%
-    {\centering\titleimagerender[\extratitlewidth]{\@titleimage}\par}%
-    \titlepage@nextdouble
+    \vbox to \textheight{%
+      \vfill
+      {\centering\titleimagerender[\extratitlewidth]{\@titleimage}\par}%
+      \vfill
+    }%
+    \ifx\@frontispiece\@empty
+      \titlepage@nextdouble
+    \else
+      \titlepage@next
+    \fi
+  \fi
+  % Frontispicio: página anterior a la portada, con relleno vertical antes
+  % del contenido para que quede anclado al fondo.
+  \ifx\@frontispiece\@empty\else
+    \vspace*{\fill}%
+    {\centering\parindent\z@\@frontispiece\par}%
+    \titlepage@next
   \fi
   \thispagestyle{empty}%
   \vspace*{1\baselineskip}%
+  \ifx\@titlehead\@empty\else
+    {\centering\parindent\z@\@titlehead\par}%
+    \vskip 1\baselineskip
+  \fi
   \ifx\@author\@empty
     \vskip 1\baselineskip%
   \else
     {\centering\usekomafont{author}{\renewcommand{\and}{\unskip, \ignorespaces}\@author\par}}%
+    \vskip 1\baselineskip
   \fi
-  \vskip 1\baselineskip
   \ifx\@titleimage\@empty
     {\centering\usekomafont{title}{\MakeUppercase{\@title}\par}}%
   \else
@@ -119,9 +163,17 @@
     \vskip 1\baselineskip
     {\centering\usekomafont{subtitle}\parindent\z@\@subtitle\par}%
   \fi
+  \ifx\@subject\@empty\else
+    \vskip 1\baselineskip
+    {\centering\parindent\z@\@subject\par}%
+  \fi
   \ifx\@date\@empty\else
     \vskip 1\baselineskip
     {\centering\usekomafont{date}{\@date\par}}%
+  \fi
+  \ifx\@publishers\@empty\else
+    \vskip 1\baselineskip
+    {\centering\parindent\z@\@publishers\par}%
   \fi
   \if@twoside
     \@tempswatrue

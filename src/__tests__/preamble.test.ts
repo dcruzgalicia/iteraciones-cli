@@ -159,9 +159,13 @@ describe('composeLatexTemplate', () => {
   it('emite los condicionales de las páginas de título internas (frontmatter)', async () => {
     const tpl = await composeLatexTemplate(opts);
     expect(tpl).toContain('$if(extratitle)$\n\\extratitle{$extratitle$}\n$endif$');
+    expect(tpl).toContain('$if(frontispiece)$\n\\frontispiece{$frontispiece$}\n$endif$');
+    expect(tpl).toContain('$if(titlehead)$\n\\titlehead{$titlehead$}\n$endif$');
+    expect(tpl).toContain('$if(subject)$\n\\subject{$subject$}\n$endif$');
     expect(tpl).toContain('$if(dedication)$\n\\dedication{$dedication$}\n$endif$');
     expect(tpl).toContain('$if(uppertitleback)$\n\\uppertitleback{$uppertitleback$}\n$endif$');
     expect(tpl).toContain('$if(lowertitleback)$\n\\lowertitleback{$lowertitleback$}\n$endif$');
+    expect(tpl).toContain('$if(publishers)$\n\\publishers{$publishers$}\n$endif$');
   });
 
   it('emite el vspace post-portada solo con párrafo normal (skip-paragraph-space)', async () => {
@@ -323,11 +327,14 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(dictum).not.toContain('\\topsep=\\baselineskip');
   });
 
-  it('19-maketitle: extratitle y dedication con vspace de 7 baselineskips', async () => {
+  it('19-maketitle: dedication con vspace de 7 baselineskips (extratitle centrado vertical exacto)', async () => {
     const filters = await loadPreambleFilters();
     const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';
-    expect(maketitle).toContain('\\vspace*{7\\baselineskip}');
-    expect(maketitle).not.toContain('\\vspace*{11\\baselineskip}');
+    expect(maketitle).toContain('\\vspace*{7\\baselineskip}'); // dedication
+    // Centrado vertical con vbox to textheight: el \vspace*{\fill} entre
+    // bloques dejaba el contenido fuera del centro (page builder + strut)
+    expect(maketitle).toContain('\\vbox to \\textheight{%');
+    expect(maketitle).toContain('\\vfill');
   });
 
   it('19-maketitle: subtitle long (parrafos con linea en blanco) y parindent cero en las paginas de titulo', async () => {
@@ -361,14 +368,41 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(maketitle).toContain('\\ifx\\@titleimage\\@empty\n    \\ifx\\@extratitle\\@empty');
   });
 
+  it('19-maketitle: frontispiece, titlehead, subject y publishers en el maketitle', async () => {
+    const filters = await loadPreambleFilters();
+    const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';
+    // Frontispicio: página anterior a la portada con contenido anclado al fondo
+    expect(maketitle).toContain('\\ifx\\@frontispiece\\@empty\\else');
+    expect(maketitle).toContain('\\vspace*{\\fill}%\n    {\\centering\\parindent\\z@\\@frontispiece\\par}%');
+    // Extratitle por defecto: frontispiece sin extratitle ni title-image → título
+    expect(maketitle).toContain('\\ifx\\@frontispiece\\@empty\n        % sin página de extratitle');
+    expect(maketitle).toContain('{\\centering\\parindent\\z@\\@title\\par}%');
+    // Orden de la portada: titlehead → author → title → subtitle → subject → date → publishers
+    // (cadenas específicas: \@title también aparece dentro de \@titleimage)
+    const head = maketitle.indexOf('\\@titlehead\\par');
+    const author = maketitle.indexOf('\\@author\\par');
+    const title = maketitle.indexOf('\\MakeUppercase{\\@title}');
+    const sub = maketitle.indexOf('\\@subtitle\\par');
+    const subject = maketitle.indexOf('\\@subject\\par');
+    const date = maketitle.indexOf('\\@date\\par');
+    const pub = maketitle.indexOf('\\@publishers\\par');
+    expect(head).toBeGreaterThan(-1);
+    expect(head).toBeLessThan(author);
+    expect(author).toBeLessThan(title);
+    expect(title).toBeLessThan(sub);
+    expect(sub).toBeLessThan(subject);
+    expect(subject).toBeLessThan(date);
+    expect(date).toBeLessThan(pub);
+  });
+
   it('19-maketitle: dos paginas en blanco antes de extratitle (hojas de guarda)', async () => {
     const filters = await loadPreambleFilters();
     const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';
     expect(maketitle).toContain('\\newcommand{\\titlepageblanks}{%');
     expect(maketitle).toContain('\\null\\clearpage\n  \\null\\clearpage');
-    // Ambas ramas (extratitle textual y con title-image) llaman a titlepageblanks
-    expect(maketitle).toContain('\\ifx\\@extratitle\\@empty\\else\n      \\titlepageblanks');
-    expect(maketitle).toContain('\\titlepageblanks\n    \\vspace*{7\\baselineskip}%');
+    // Las tres ramas de extratitle (por defecto, textual y con title-image)
+    // llaman a titlepageblanks: definición + 3 llamadas
+    expect((maketitle.match(/\\titlepageblanks/g) ?? []).length).toBe(4);
   });
 
   it('19-maketitle: bloques extratitle (75% centrado) y dedication (50% derecha) como el dictum', async () => {

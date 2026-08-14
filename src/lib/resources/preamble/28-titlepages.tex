@@ -1,5 +1,6 @@
-% Páginas de título internas (extratitle, dedication, uppertitleback,
-% lowertitleback) para el flujo del pipeline.
+% Páginas de título (extratitle, frontispiece, titlehead, subject,
+% dedication, uppertitleback, lowertitleback, publishers) para el flujo del
+% pipeline.
 %
 % Los comandos KOMA originales solo GUARDAN el contenido (\gdef): el
 % renderizado vive en el \maketitle original de KOMA. Como 19-maketitle.tex
@@ -14,7 +15,21 @@
 \renewcommand{\extratitle}[1]{\gdef\@extratitle{%
     #1%
 }}%
+\renewcommand{\frontispiece}[1]{\gdef\@frontispiece{%
+    #1%
+}}%
+\renewcommand{\titlehead}[1]{\gdef\@titlehead{%
+    #1%
+}}%
 \renewcommand{\dedication}[1]{\gdef\@dedication{%
+    #1%
+}}%
+% KOMA define \subject con \newcommand* (no-long): una línea en blanco en el
+% argumento rompería la compilación (mismo problema que \subtitle). Long.
+\renewcommand{\subject}[1]{\gdef\@subject{%
+    #1%
+}}%
+\renewcommand{\publishers}[1]{\gdef\@publishers{%
     #1%
 }}%
 \renewcommand{\uppertitleback}[1]{\gdef\@uppertitleback{%
