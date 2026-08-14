@@ -1,9 +1,11 @@
 -- Convierte los campos de frontmatter multilinea (subtitle, extratitle,
--- dedication, uppertitleback, lowertitleback, colophon) a LaTeX para la
--- portada, las páginas de título internas y el colofón final. Solo corre en
--- la pasada latex (en HTML los campos se ignoran o los serializa el
--- compositor HTML con \n → espacio). title-image (imagen de portada) no es
--- contenido markdown: la ruta pasa literal como RawInline latex.
+-- frontispiece, titlehead, subject, dedication, uppertitleback,
+-- lowertitleback, publishers, colophon) a LaTeX para la portada, las páginas
+-- de título internas y el colofón final. subject y publishers aceptan un
+-- array de strings (como author): se unen con ', '. Solo corre en la pasada
+-- latex (en HTML los campos se ignoran o los serializa el compositor HTML
+-- con \n → espacio). title-image (imagen de portada) no es contenido
+-- markdown: la ruta pasa literal como RawInline latex.
 --
 -- El valor llega como MetaBlocks (frontmatter YAML |: los párrafos ya son
 -- bloques markdown) o MetaInlines (string simple). Se serializa con
@@ -25,6 +27,44 @@ local TITLE_PAGE_FIELDS = {
   'publishers',
   'colophon',
 }
+
+-- subject y publishers aceptan un solo valor o un array (como author): los
+-- items se unen con ', '. Pandoc parsea cada item del array como markdown
+-- (MetaInlines → lista de inlines) o lo deja como string (MetaString): se
+-- aceptan ambos, extrayendo el texto de inlines Str/Space. Si algún item es
+-- complejo (markdown con formato), se deja el valor original.
+local LIST_JOIN_FIELDS = { subject = true, publishers = true }
+
+local function append_inline_text(parts, inl)
+  if inl.t == 'Str' then
+    table.insert(parts, inl.text)
+  elseif inl.t == 'Space' then
+    table.insert(parts, ' ')
+  else
+    return false
+  end
+  return true
+end
+
+local function join_string_list(meta)
+  local parts = {}
+  for _, item in ipairs(meta) do
+    if type(item) == 'string' then
+      table.insert(parts, item)
+    elseif type(item) == 'table' and #item > 0 then
+      local item_parts = {}
+      for _, inl in ipairs(item) do
+        if not append_inline_text(item_parts, inl) then
+          return nil
+        end
+      end
+      table.insert(parts, table.concat(item_parts))
+    else
+      return nil
+    end
+  end
+  return table.concat(parts, ', ')
+end
 
 local BLOCK_TYPES = {
   Para = true, Plain = true, Header = true, BlockQuote = true, Div = true,
@@ -108,7 +148,14 @@ function Pandoc(doc)
   if FORMAT ~= 'latex' then return doc end
 
   for _, field in ipairs(TITLE_PAGE_FIELDS) do
-    local blocks = meta_to_blocks(doc.meta[field])
+    local meta = doc.meta[field]
+    if LIST_JOIN_FIELDS[field] and type(meta) == 'table' and #meta > 0 then
+      local joined = join_string_list(meta)
+      if joined ~= nil then
+        meta = { pandoc.Str(joined) }
+      end
+    end
+    local blocks = meta_to_blocks(meta)
     if blocks ~= nil then
       local latex = serialize_titleback(blocks)
       if latex:match('%S') then
