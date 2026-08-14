@@ -1,0 +1,33 @@
+% Endpapers (guardas): imagen de fondo que cubre la hoja completa en TODAS
+% las páginas (\AddToShipoutPictureBG*). La imagen se mide una sola vez en
+% \setendpapers con un \sbox (a tamaño natural: \wd = ancho, \ht = alto) y el
+% LADO MÁS CORTO decide la única dimensión fija: papel + 6mm. La otra
+% dimensión sigue la proporción (keepaspectratio): la imagen cubre sin
+% deformarse. El tamaño de la hoja se toma de \paperwidth/\paperheight
+% (documentclass o geometry, incluido el override del proyecto): no se
+% hardcodea. \put(-4mm,-3mm) deja un sangrado de ~2-3mm en los bordes derecho
+% e inferior (el +6mm compensa el offset).
+% Los comandos no pueden llamarse \endpapers: LaTeX prohíbe nombres que
+% empiecen con \end (colisión con el primitivo \end).
+\usepackage{eso-pic}
+\makeatletter
+\newsavebox{\papersbox}
+\newcommand*{\@endpapers}{}%
+\newcommand{\setendpapers}[1]{%
+  \gdef\@endpapers{#1}%
+  \sbox{\papersbox}{\includegraphics{#1}}%
+}%
+\newcommand{\drawendpapers}{%
+  \ifx\@endpapers\@empty
+  \else
+    \put(-4mm,-3mm){%
+      \ifdim\wd\papersbox<\ht\papersbox
+        \includegraphics[width=\dimexpr\paperwidth+6mm\relax,keepaspectratio]{\@endpapers}%
+      \else
+        \includegraphics[height=\dimexpr\paperheight+6mm\relax,keepaspectratio]{\@endpapers}%
+      \fi
+    }%
+  \fi
+}
+\AddToShipoutPictureBG*{\drawendpapers}
+\makeatother

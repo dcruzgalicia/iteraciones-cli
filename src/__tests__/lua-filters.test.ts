@@ -619,6 +619,7 @@ describe.skipIf(!pandocOk)('filter latex/10-titlepages (páginas de título inte
         '$if(lowertitleback)$\\lowertitleback{$lowertitleback$}$endif$\n' +
         '$if(publishers)$\\publishers{$publishers$}$endif$\n' +
         '$if(publishers-image)$\\publishersimage{$publishers-image$}$endif$\n' +
+        '$if(endpapers)$\\setendpapers{$endpapers$}$endif$\n' +
         '$if(colophon)$\\colophon{$colophon$}$endif$\n' +
         '$if(title-image)$\\titleimage{$title-image$}$endif$\n' +
         '$body$\n' +
@@ -691,6 +692,12 @@ describe.skipIf(!pandocOk)('filter latex/10-titlepages (páginas de título inte
   it('publishers-image pasa la ruta literal (sin escapar el guion bajo)', async () => {
     const tex = await toLatexTitleback('---\ntitle: Prueba\npublishers-image: ./logo_editorial.png\n---\n\nCuerpo.\n');
     expect(tex).toContain('\\publishersimage{./logo_editorial.png}');
+    expect(tex).not.toContain('\\_');
+  });
+
+  it('endpapers pasa la ruta literal (sin escapar el guion bajo)', async () => {
+    const tex = await toLatexTitleback('---\ntitle: Prueba\nendpapers: ./interior_guardas.pdf\n---\n\nCuerpo.\n');
+    expect(tex).toContain('\\setendpapers{./interior_guardas.pdf}');
     expect(tex).not.toContain('\\_');
   });
 

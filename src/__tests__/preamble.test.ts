@@ -463,4 +463,18 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(deco).toContain('\\usepackage{soul}');
     expect(deco).toContain('\\sethlcolor{yellow}');
   });
+
+  it('30-endpapers: imagen de fondo que cubre la hoja (lado más corto + 6mm)', async () => {
+    const filters = await loadPreambleFilters();
+    const endpapers = filters.find((f) => f.name === '30-endpapers')?.content ?? '';
+    expect(endpapers).toContain('\\usepackage{eso-pic}');
+    expect(endpapers).toContain('\\AddToShipoutPictureBG*{\\drawendpapers}');
+    // Medición a tamaño natural con un sbox (\wd = ancho, \ht = alto)
+    expect(endpapers).toContain('\\sbox{\\papersbox}{\\includegraphics{#1}}');
+    // Lado más corto decide la dimensión fija: papel + 6mm (paperwidth o
+    // paperheight reales de documentclass/geometry, no hardcodeados)
+    expect(endpapers).toContain('\\ifdim\\wd\\papersbox<\\ht\\papersbox');
+    expect(endpapers).toContain('width=\\dimexpr\\paperwidth+6mm\\relax,keepaspectratio');
+    expect(endpapers).toContain('height=\\dimexpr\\paperheight+6mm\\relax,keepaspectratio');
+  });
 });
