@@ -28,9 +28,13 @@ end
 function M.classify(inl)
   if inl.t == 'Str' then return 'word' end
   if inl.t == 'Space' or inl.t == 'SoftBreak' then return 'space' end
+  -- Span.uppercase como UNA palabra: el mbox debe envolver FUERA del span
+  -- (\mbox{y \MakeUppercase{...}}), porque \MakeUppercase no puede convertir
+  -- texto dentro de un \mbox (\uppercase no penetra cajas).
+  if inl.t == 'Span' and inl.classes:find('uppercase', 1, true) then return 'word' end
   if inl.t == 'Emph' or inl.t == 'Strong' or inl.t == 'Underline' or inl.t == 'Superscript' or
      inl.t == 'Subscript' or inl.t == 'SmallCaps' or inl.t == 'Span' or inl.t == 'Link' or inl.t == 'Cite' or
-     inl.t == 'Quoted' then
+     inl.t == 'Quoted' or inl.t == 'Mark' or inl.t == 'Strikeout' then
     return 'word-group'
   end
   return 'skip'
@@ -40,7 +44,8 @@ function M.inline_text(inl)
   if inl.t == 'Str' then return inl.text end
   if inl.t == 'Space' or inl.t == 'SoftBreak' then return ' ' end
   if inl.t == 'Emph' or inl.t == 'Strong' or inl.t == 'Underline' or inl.t == 'Superscript' or
-     inl.t == 'Subscript' or inl.t == 'SmallCaps' or inl.t == 'Span' or inl.t == 'Quoted' then
+     inl.t == 'Subscript' or inl.t == 'SmallCaps' or inl.t == 'Span' or inl.t == 'Quoted' or
+     inl.t == 'Mark' or inl.t == 'Strikeout' then
     local parts = {}
     for _, c in ipairs(inl.content) do
       local t = M.inline_text(c)

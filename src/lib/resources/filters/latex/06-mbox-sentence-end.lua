@@ -74,7 +74,9 @@ local function expand_units(inlines, from_idx, to_idx)
   for i = from_idx, to_idx - 1 do
     local c = mbox.classify(inlines[i])
     if c == 'word' then
-      if mbox.is_punct_str(inlines[i].text) then
+      -- Un Span.uppercase es 'word' pero no tiene .text (no es puntuación)
+      local text = inlines[i].text
+      if text ~= nil and mbox.is_punct_str(text) then
         trailing_punct = i
       else
         table.insert(units, { idx = i, inner = nil })

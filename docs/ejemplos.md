@@ -49,6 +49,18 @@ function saludar(nombre) {
 
 También se puede usar _cursiva_ y __negritas__ con guiones bajos.
 
+## Decoración de texto (versalitas, mayúsculas, subrayado, resaltado y tachado)
+
+Cinco decoraciones inline con la sintaxis estándar del ecosistema pandoc:
+
+- **Versalitas**: `[texto]{.smallcaps}` — `[Versalitas reales]{.smallcaps}`
+- **Mayúsculas**: `[texto]{.uppercase}` — `[Texto en mayúsculas]{.uppercase}`
+- **Subrayado**: `[texto]{.underline}` — `[Texto subrayado]{.underline}`
+- **Resaltado**: `==texto==` — `==Texto resaltado==`
+- **Tachado**: `~~texto~~` — `~~Texto tachado~~`
+
+En el PDF: versalitas con `\textsc{}` (glifos reales con newtxtext), mayúsculas con `\MakeUppercase{}`, subrayado y tachado con `ulem`, resaltado con fondo amarillo (`soul`). En el HTML: `<span class="smallcaps">`, `<span class="uppercase">`, `<u>`, `<mark>` y `<del>`.
+
 ## Espacio vertical extra (::)
 
 Para forzar un espacio vertical extra entre párrafos, usa una línea que contenga únicamente dos puntos dobles: `::`:

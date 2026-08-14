@@ -440,4 +440,12 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(toc).toContain('pagenumberformat=\\normalsize\\normalfont');
     expect(toc).not.toContain('pagenumberbox=\\phantom,indent=0pt,beforeskip=0pt]{tocline}{part}');
   });
+
+  it('29-text-decoration: ulem (subrayado/tachado) y soul (resaltado)', async () => {
+    const filters = await loadPreambleFilters();
+    const deco = filters.find((f) => f.name === '29-text-decoration')?.content ?? '';
+    expect(deco).toContain('\\usepackage[normalem]{ulem}');
+    expect(deco).toContain('\\usepackage{soul}');
+    expect(deco).toContain('\\sethlcolor{yellow}');
+  });
 });
