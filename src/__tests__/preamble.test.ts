@@ -471,6 +471,8 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(endpapers).toContain('\\AddToShipoutPictureBG*{\\drawendpapers}');
     // Medición a tamaño natural con un sbox (\wd = ancho, \ht = alto)
     expect(endpapers).toContain('\\sbox{\\papersbox}{\\includegraphics{#1}}');
+    // Solo la página 1 (la hoja de guarda en blanco antes de la extratitle)
+    expect(endpapers).toContain('\\ifnum\\value{page}=1');
     // Lado más corto decide la dimensión fija: papel + 6mm (paperwidth o
     // paperheight reales de documentclass/geometry, no hardcodeados)
     expect(endpapers).toContain('\\ifdim\\wd\\papersbox<\\ht\\papersbox');
