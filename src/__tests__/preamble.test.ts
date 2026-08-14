@@ -211,6 +211,32 @@ describe('composeLatexTemplate', () => {
     expect(lines[bodyIdx + 1]).toBe('');
   });
 
+  it('emite el colofón condicional DESPUÉS del $body$ (última página del documento)', async () => {
+    const tpl = await composeLatexTemplate(opts);
+    expect(tpl).toContain('$if(colophon)$\n\\colophon{$colophon$}\n\\colophonpage\n$endif$');
+    const lines = tpl.split('\n');
+    const bodyIdx = lines.indexOf('$body$');
+    const colophonIdx = lines.indexOf('\\colophonpage');
+    expect(colophonIdx).toBeGreaterThan(bodyIdx);
+    expect(lines[lines.length - 1]).toBe('\\end{document}');
+    expect(colophonIdx).toBeLessThan(lines.indexOf('\\end{document}'));
+  });
+
+  it('28-titlepages: colophon long y saltos a página par (titlepage@lasteven)', async () => {
+    const filters = await loadPreambleFilters();
+    const titlepages = filters.find((f) => f.name === '28-titlepages')?.content ?? '';
+    expect(titlepages).toContain('\\newcommand{\\colophon}[1]{\\gdef\\@colophon{%');
+    expect(titlepages).toContain('\\newcommand{\\titlepage@lasteven}{%');
+    // Espejo de nextdouble: si la página tras \clearpage es impar, se inserta
+    // una en blanco y el colofón cae en la siguiente par.
+    expect(titlepages).toContain('\\ifodd\\value{page}\\null\\titlepage@next');
+    expect(titlepages).toContain('\\vspace*{7\\baselineskip}');
+    // Regresión: un $body$ literal en un comentario se interpola por el
+    // template de pandoc (el preamble va dentro del template) y rompe el PDF
+    // con 'Missing \\begin{document}'.
+    expect(titlepages).not.toContain('$body$');
+  });
+
   it('no contiene caracteres de control (escapado correcto de backslashes)', async () => {
     const tpl = await composeLatexTemplate(opts);
     expect(tpl).not.toContain('\u0008');
@@ -312,6 +338,7 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';
     expect(maketitle).toContain('\\newcommand*{\\extratitlewidth}{0.75\\textwidth}');
     expect(maketitle).toContain('\\newcommand*{\\dedicationwidth}{0.5\\textwidth}');
+    expect(maketitle).toContain('\\newcommand*{\\colophonwidth}{0.75\\textwidth}');
     // Bloque compartido: márgenes y estilo de párrafo como argumentos
     expect(maketitle).toContain('\\newcommand{\\titlepageblock}[4]{%');
     expect(maketitle).toContain('\\leftmargin=#1');

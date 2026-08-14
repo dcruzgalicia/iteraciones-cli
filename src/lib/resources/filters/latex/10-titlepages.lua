@@ -1,7 +1,7 @@
 -- Convierte los campos de frontmatter multilinea (subtitle, extratitle,
--- dedication, uppertitleback, lowertitleback) a LaTeX para la portada y las
--- páginas de título internas. Solo corre en la pasada latex (en HTML los
--- campos de título internas se ignoran y el subtitle lo serializa el
+-- dedication, uppertitleback, lowertitleback, colophon) a LaTeX para la
+-- portada, las páginas de título internas y el colofón final. Solo corre en
+-- la pasada latex (en HTML los campos se ignoran o los serializa el
 -- compositor HTML con \n → espacio).
 --
 -- El valor llega como MetaBlocks (frontmatter YAML |: los párrafos ya son
@@ -12,7 +12,7 @@
 -- re-escape.
 -- Uso: pandoc --from markdown --to latex --lua-filter latex/10-titlepages.lua
 
-local TITLE_PAGE_FIELDS = { 'subtitle', 'extratitle', 'dedication', 'uppertitleback', 'lowertitleback' }
+local TITLE_PAGE_FIELDS = { 'subtitle', 'extratitle', 'dedication', 'uppertitleback', 'lowertitleback', 'colophon' }
 
 local BLOCK_TYPES = {
   Para = true, Plain = true, Header = true, BlockQuote = true, Div = true,

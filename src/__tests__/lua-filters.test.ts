@@ -585,6 +585,7 @@ describe.skipIf(!pandocOk)('filter latex/10-titlepages (páginas de título inte
         '$if(dedication)$\\dedication{$dedication$}$endif$\n' +
         '$if(uppertitleback)$\\uppertitleback{$uppertitleback$}$endif$\n' +
         '$if(lowertitleback)$\\lowertitleback{$lowertitleback$}$endif$\n' +
+        '$if(colophon)$\\colophon{$colophon$}$endif$\n' +
         '$body$\n' +
         '\\end{document}\n',
     );
@@ -614,13 +615,19 @@ describe.skipIf(!pandocOk)('filter latex/10-titlepages (páginas de título inte
 
   it('serializa campos simples (sin |)', async () => {
     const tex = await toLatexTitleback(
-      '---\ntitle: Prueba\nsubtitle: "Subtítulo simple"\nextratitle: "Portada extra"\ndedication: "Para alguien"\nlowertitleback: "Pie de portada"\nuppertitleback: "Texto simple"\n---\n\nCuerpo.\n',
+      '---\ntitle: Prueba\nsubtitle: "Subtítulo simple"\nextratitle: "Portada extra"\ndedication: "Para alguien"\nlowertitleback: "Pie de portada"\nuppertitleback: "Texto simple"\ncolophon: "Datos del colofón"\n---\n\nCuerpo.\n',
     );
     expect(tex).toContain('\\subtitle{Subtítulo simple}');
     expect(tex).toContain('\\extratitle{Portada extra}');
     expect(tex).toContain('\\dedication{Para alguien}');
     expect(tex).toContain('\\lowertitleback{Pie de portada}');
     expect(tex).toContain('\\uppertitleback{Texto simple}');
+    expect(tex).toContain('\\colophon{Datos del colofón}');
+  });
+
+  it('convierte el colophon multilinea (|): doble espacio → \\ y :: → vspace', async () => {
+    const tex = await toLatexTitleback('---\ntitle: Prueba\ncolophon: |\n  Impreso en México  \n  Primera edición\n---\n\nCuerpo.\n');
+    expect(tex).toContain('\\colophon{Impreso en México\\\\\nPrimera edición}');
   });
 
   it('convierte el subtitle multilinea (|): doble espacio → \\ y :: → vspace', async () => {
