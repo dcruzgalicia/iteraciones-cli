@@ -143,6 +143,7 @@ const LATEX_FILTERS = [
   '08-quote-noindent',
   '09-cjk',
   '10-titlepages',
+  '11-uppercase',
 ].map((n) => join(RESOURCES, 'latex', `${n}.lua`));
 
 async function toLatex(markdown: string, from?: string): Promise<string> {
@@ -154,6 +155,34 @@ describe.skipIf(!pandocOk)('filtros Lua latex', () => {
   it('convierte :: en \\vspace{\\baselineskip}', async () => {
     const tex = await toLatex('texto\n\n::\n\ntexto');
     expect(tex).toContain('\\vspace{\\baselineskip}');
+  });
+
+  it('[texto]{.uppercase} → \\MakeUppercase{texto} (LaTeX)', async () => {
+    const tex = await toLatex('[Texto en mayúsculas]{.uppercase}');
+    expect(tex).toContain('\\MakeUppercase{Texto en mayúsculas}');
+    // La clase se consume: no queda el span literal
+    expect(tex).not.toContain('uppercase');
+  });
+
+  it('decoración inline: versalitas, mayúsculas, subrayado, resaltado y tachado', async () => {
+    const tex = await toLatex('[Versalitas]{.smallcaps} [Mayúsculas]{.uppercase} [Subrayado]{.underline} ==Resaltado== ~~Tachado~~', 'markdown+mark');
+    expect(tex).toContain('\\textsc{Versalitas}');
+    expect(tex).toContain('\\MakeUppercase{Mayúsculas}');
+    expect(tex).toContain('\\ul{Subrayado}');
+    expect(tex).toContain('\\hl{Resaltado}');
+    expect(tex).toContain('\\st{Tachado}');
+  });
+
+  it('mbox envuelve FUERA del span uppercase (MakeUppercase no penetra cajas)', async () => {
+    const tex = await toLatex('Primera oración de ejemplo. Y termina con [texto en mayúsculas]{.uppercase}.');
+    expect(tex).toContain('\\mbox{con \\MakeUppercase{texto en mayúsculas}');
+    expect(tex).not.toContain('\\MakeUppercase{texto \\mbox{');
+  });
+
+  it('mbox cuenta las palabras de ==resaltado== (Mark) como grupo', async () => {
+    const tex = await toLatex('Primera oración de ejemplo. Y termina con ==texto resaltado con ñ==.', 'markdown+mark');
+    // pandoc envuelve la salida a 72 columnas: se normalizan los saltos
+    expect(tex.replace(/\n/g, ' ')).toContain('\\hl{texto resaltado \\mbox{con ñ}}');
   });
 
   it('convierte :: dentro de una lista en vspace (antes se imprimía literal)', async () => {

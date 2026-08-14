@@ -211,6 +211,7 @@ El CLI compone los templates efectivos (una vez por build), los filtros y los me
 | `latex/08-quote-noindent` | ast | `BlockQuote` seguido de párrafo → `\noindent` al párrafo |
 | `latex/09-cjk` | ast | `Div.japanese/chinese/korean` → `\begin{CJK}{UTF8}{min/gbsn/ksc}...\end{CJK}` |
 | `latex/10-titlepages` | meta | frontmatter multilinea (`extratitle`, `frontispiece`, `titlehead`, `subject`, `dedication`, `uppertitleback`, `lowertitleback`, `publishers`, `colophon`) → LaTeX para las páginas de título y el colofón final; `title-image` y `publishers-image` → imágenes de portada |
+| `latex/11-uppercase` | ast | `[texto]{.uppercase}` → `\MakeUppercase{texto}` (LaTeX; en HTML la clase la estiliza Tailwind) |
 | `html/01-dictum` | ast | `Div.dictum` → `<blockquote class="dictum">` |
 | `html/02-verse` | ast | `Div.verse` → `<div class="verse">` |
 | `html/03-center` | ast | `Div.center` → `<div class="center">` |

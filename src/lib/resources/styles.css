@@ -160,3 +160,11 @@
 .spacer {
   height: 1.5em;
 }
+
+/* Versalitas ([texto]{.smallcaps}): pandoc emite <span class="smallcaps">
+   y Tailwind no tiene una utilidad para font-variant: small-caps. Las
+   mayúsculas ([texto]{.uppercase}) usan la utilidad uppercase de Tailwind
+   (text-transform), que se genera al escanear el HTML final. */
+.smallcaps {
+  font-variant: small-caps;
+}

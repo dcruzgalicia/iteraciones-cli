@@ -57,11 +57,12 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig): Promise<strin
 // ---------------------------------------------------------------------------
 
 /**
- * Reader de markdown con auto-identifiers activos: los headings llevan `id`
- * y el TOC puede generar enlaces `#`. Participa en el hash de filters para
- * invalidar las salidas cacheadas si cambia (ver state.ts).
+ * Reader de markdown con auto-identifiers activos (headings con `id` para el
+ * TOC) y la extensión `mark` (`==texto==` → resaltado → \hl{} en LaTeX y
+ * <mark> en HTML; soul se carga en 29-text-decoration.tex). Participa en el
+ * hash de filters para invalidar las salidas cacheadas si cambia (state.ts).
  */
-export const MD_READER = 'markdown+auto_identifiers';
+export const MD_READER = 'markdown+auto_identifiers+mark';
 
 /**
  * Normaliza un valor string para `--metadata=clave:valor` de pandoc: los

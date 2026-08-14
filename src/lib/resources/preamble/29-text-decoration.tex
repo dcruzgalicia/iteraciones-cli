@@ -1,0 +1,7 @@
+% Decoración de texto inline (sintaxis markdown de pandoc): subrayado
+% ([texto]{.underline} → \ul), tachado (~~texto~~ → \st) y resaltado
+% (==texto== → \hl). ulem con [normalem] para no redefinir \emph; soul
+% para \hl con fondo amarillo (verificado con acentos en pdflatex).
+\usepackage[normalem]{ulem}
+\usepackage{soul}
+\sethlcolor{yellow}
