@@ -251,12 +251,12 @@ describe('composeLatexTemplate', () => {
     expect(titlepages).not.toContain('$body$');
   });
 
-  it('28-titlepages: title-image abre el colofón (50% textwidth) y publishers-image lo cierra (50pt)', async () => {
+  it('28-titlepages: title-image abre el colofón (50% textwidth) y publishers-image lo cierra (25% textwidth)', async () => {
     const filters = await loadPreambleFilters();
     const titlepages = filters.find((f) => f.name === '28-titlepages')?.content ?? '';
     const colophon = titlepages.slice(titlepages.indexOf('\\newcommand{\\colophonpage}{%'));
     expect(colophon).toContain('\\titleimagerender[0.5\\textwidth]{\\@titleimage}');
-    expect(colophon).toContain('\\titleimagerender[50pt]{\\@publishersimage}');
+    expect(colophon).toContain('\\titleimagerender[0.25\\textwidth]{\\@publishersimage}');
     // Orden: imagen de título → bloque de colophon → logo de publishers
     const titleImg = colophon.indexOf('\\@titleimage');
     const block = colophon.indexOf('\\@colophon');
