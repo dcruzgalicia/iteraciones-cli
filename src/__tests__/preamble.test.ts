@@ -425,6 +425,10 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     // Las tres ramas de extratitle (por defecto, textual y con title-image)
     // llaman a titlepageblanks: definición + 3 llamadas
     expect((maketitle.match(/\\titlepageblanks/g) ?? []).length).toBe(4);
+    // Bandera para 30-endpapers: las guardas existen (el endpaper solo se
+    // dibuja sobre la hoja en blanco de la página 1)
+    expect(maketitle).toContain('\\newif\\iftitlepageguards');
+    expect(maketitle).toContain('\\titlepageguardstrue');
   });
 
   it('19-maketitle: bloques extratitle (75% centrado) y dedication (50% derecha) como el dictum', async () => {
@@ -471,8 +475,10 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(endpapers).toContain('\\AddToShipoutPictureBG*{\\drawendpapers}');
     // Medición a tamaño natural con un sbox (\wd = ancho, \ht = alto)
     expect(endpapers).toContain('\\sbox{\\papersbox}{\\includegraphics{#1}}');
-    // Solo la página 1 (la hoja de guarda en blanco antes de la extratitle)
+    // Solo la página 1 Y solo con hojas de guarda (la hoja en blanco antes de
+    // la extratitle; sin guardas, el endpaper no se agrega en ningún caso)
     expect(endpapers).toContain('\\ifnum\\value{page}=1');
+    expect(endpapers).toContain('\\iftitlepageguards');
     // Lado más corto decide la dimensión fija: papel + 6mm (paperwidth o
     // paperheight reales de documentclass/geometry, no hardcodeados)
     expect(endpapers).toContain('\\ifdim\\wd\\papersbox<\\ht\\papersbox');
