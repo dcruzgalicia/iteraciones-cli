@@ -468,6 +468,12 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(deco).toContain('\\sethlcolor{yellow}');
   });
 
+  it('26-crop: solo marcas de corte (noinfo, sin el texto de información)', async () => {
+    const filters = await loadPreambleFilters();
+    const crop = filters.find((f) => f.name === '26-crop')?.content ?? '';
+    expect(crop).toContain('\\usepackage[width=230truemm,height=294truemm,center,cam,noinfo]{crop}');
+  });
+
   it('30-endpapers: imagen de fondo que cubre la hoja (cover recortado a papel+3mm por lado)', async () => {
     const filters = await loadPreambleFilters();
     const endpapers = filters.find((f) => f.name === '30-endpapers')?.content ?? '';
