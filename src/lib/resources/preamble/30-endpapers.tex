@@ -1,19 +1,19 @@
-% Endpapers (guardas): imagen de fondo que cubre la hoja completa SOLO en la
-% página 1 (la hoja de guarda en blanco que se inserta antes de la página de
-% extratitle, que está en la 3): en ninguna otra página. La imagen se mide una
-% sola vez en \setendpapers con un \sbox (a tamaño natural: \wd = ancho,
-% \ht = alto) y el LADO MÁS CORTO decide la única dimensión fija: papel +
-% 6mm. La otra dimensión sigue la proporción (keepaspectratio): la imagen
-% cubre la hoja sin deformarse. El tamaño de la hoja se toma de
-% \paperwidth/\paperheight (documentclass o geometry, incluido el override
-% del proyecto): no se hardcodea. \put(-4mm,-3mm) deja un sangrado de ~2-3mm
-% en los bordes derecho e inferior (el +6mm compensa el offset).
+% Endpapers (guardas): imagen de fondo SOLO en la página 1 (la hoja de guarda
+% en blanco que se inserta antes de la página de extratitle, que está en la
+% 3): en ninguna otra página. La imagen se mide una sola vez en \setendpapers
+% con un \sbox (a tamaño natural: \wd = ancho, \ht = alto).
 %
-% Compatibilidad con 24-eso-pic: el grid extiende el picture del shipout
-% hasta -\paperheight y desplaza el origen del \put (el endpaper quedaba fuera
-% de la hoja cuando el grid estaba activo). \ESO@HookIIIBG no vacío indica que
-% el grid está presente: en ese caso se ancla al fondo con \AtPageLowerLeft;
-% sin grid, el \put se mide desde el fondo de la misma forma.
+% Modo COVER centrado: la imagen cubre la hoja completa sin espacios en
+% blanco ni deformación. El LADO MÁS CORTO de la imagen define la dimensión
+% fija = papel + 6mm (el ancho si la imagen es más alta, el alto si es más
+% ancha); la otra dimensión crece según la proporción y sobra por ambos
+% lados. El centro de la imagen se alinea con el centro de la hoja: el \put
+% en (.5\paperwidth, .5\paperheight) cae en el centro con y sin el grid de
+% 24-eso-pic (el origen del \put se invierte entre ambos, pero la mitad del
+% papel desde cualquier borde es el centro). La caja 0×0 con \hss/\vss centra
+% la imagen sobre ese punto con el sobrante simétrico.
+% El tamaño de la hoja se toma de \paperwidth/\paperheight (documentclass o
+% geometry, incluido el override del proyecto): no se hardcodea.
 % Los comandos no pueden llamarse \endpapers: LaTeX prohíbe nombres que
 % empiecen con \end (colisión con el primitivo \end).
 \usepackage{eso-pic}
@@ -32,25 +32,27 @@
     \iftitlepageguards
       \ifx\@endpapers\@empty
       \else
-        \ifx\ESO@HookIIIBG\@empty
-          \put(-4mm,-3mm){%
-            \ifdim\wd\papersbox<\ht\papersbox
-              \includegraphics[width=\dimexpr\paperwidth+6mm\relax,keepaspectratio]{\@endpapers}%
-            \else
-              \includegraphics[height=\dimexpr\paperheight+6mm\relax,keepaspectratio]{\@endpapers}%
-            \fi
-          }%
-        \else
-          \AtPageLowerLeft{%
-            \put(-4mm,-3mm){%
+        % Modo COVER centrado: el centro de la imagen se alinea con el centro
+        % de la hoja. El \put x = .5\paperwidth vale en ambos casos; el y
+        % depende del grid de 24-eso-pic (desplaza el origen del \put al
+        % borde superior): sin grid +.5\paperheight, con grid -.5\paperheight.
+        % La caja 0×0 con \hss/\vss centra la imagen sobre ese punto con el
+        % sobrante simétrico (cubre la hoja sin espacios en blanco).
+        \put(.5\paperwidth,\ifx\ESO@HookIIIBG\@empty .5\paperheight\else -.5\paperheight\fi){%
+          \vbox to 0pt{%
+            \vss
+            \hbox to 0pt{%
+              \hss
               \ifdim\wd\papersbox<\ht\papersbox
                 \includegraphics[width=\dimexpr\paperwidth+6mm\relax,keepaspectratio]{\@endpapers}%
               \else
                 \includegraphics[height=\dimexpr\paperheight+6mm\relax,keepaspectratio]{\@endpapers}%
               \fi
+              \hss
             }%
+            \vss
           }%
-        \fi
+        }%
       \fi
     \fi
   \fi
