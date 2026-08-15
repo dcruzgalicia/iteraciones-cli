@@ -468,13 +468,20 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(deco).toContain('\\sethlcolor{yellow}');
   });
 
-  it('30-endpapers: imagen de fondo que cubre la hoja (lado más corto + 6mm)', async () => {
+  it('30-endpapers: imagen de fondo que cubre la hoja (cover recortado a papel+6mm por lado)', async () => {
     const filters = await loadPreambleFilters();
     const endpapers = filters.find((f) => f.name === '30-endpapers')?.content ?? '';
     expect(endpapers).toContain('\\usepackage{eso-pic}');
     expect(endpapers).toContain('\\AddToShipoutPictureBG*{\\drawendpapers}');
     // Medición a tamaño natural con un sbox (\wd = ancho, \ht = alto)
-    expect(endpapers).toContain('\\sbox{\\papersbox}{\\includegraphics{#1}}');
+    expect(endpapers).toContain('\\sbox \\papersbox');
+    // Cover recortado: escala y viewport central calculados con l3fp
+    expect(endpapers).toContain('\\fp_set:Nn \\l_ep_scale_fp');
+    expect(endpapers).toContain('12mm');
+    expect(endpapers).toContain('viewport={\\the\\ep@vx}');
+    expect(endpapers).toContain('clip,');
+    expect(endpapers).toContain('width=\\dimexpr\\paperwidth+12mm\\relax');
+    expect(endpapers).toContain('height=\\dimexpr\\paperheight+12mm\\relax');
     // Solo la página 1 Y solo con hojas de guarda (la hoja en blanco antes de
     // la extratitle; sin guardas, el endpaper no se agrega en ningún caso)
     expect(endpapers).toContain('\\ifnum\\value{page}=1');
@@ -484,10 +491,5 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(endpapers).toContain('\\put(.5\\paperwidth,\\ifx\\ESO@HookIIIBG\\@empty');
     expect(endpapers).toContain('\\vbox to 0pt{%');
     expect(endpapers).toContain('\\hss');
-    // Lado más corto decide la dimensión fija: papel + 6mm (paperwidth o
-    // paperheight reales de documentclass/geometry, no hardcodeados)
-    expect(endpapers).toContain('\\ifdim\\wd\\papersbox<\\ht\\papersbox');
-    expect(endpapers).toContain('width=\\dimexpr\\paperwidth+6mm\\relax,keepaspectratio');
-    expect(endpapers).toContain('height=\\dimexpr\\paperheight+6mm\\relax,keepaspectratio');
   });
 });
