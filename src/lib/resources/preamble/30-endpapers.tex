@@ -19,17 +19,21 @@
   \sbox{\papersbox}{\includegraphics{#1}}%
 }%
 \newcommand{\drawendpapers}{%
-  % Solo la página 1: el endpaper es el fondo de la hoja de guarda en blanco.
+  % Solo la página 1 Y solo si existen las hojas de guarda (\titlepageguards,
+  % activada por \titlepageblanks en 19-maketitle.tex): el endpaper es el
+  % fondo de la hoja en blanco; sin guardas, no se agrega en ningún caso.
   \ifnum\value{page}=1
-    \ifx\@endpapers\@empty
-    \else
-      \put(-4mm,-3mm){%
-        \ifdim\wd\papersbox<\ht\papersbox
-          \includegraphics[width=\dimexpr\paperwidth+6mm\relax,keepaspectratio]{\@endpapers}%
-        \else
-          \includegraphics[height=\dimexpr\paperheight+6mm\relax,keepaspectratio]{\@endpapers}%
-        \fi
-      }%
+    \iftitlepageguards
+      \ifx\@endpapers\@empty
+      \else
+        \put(-4mm,-3mm){%
+          \ifdim\wd\papersbox<\ht\papersbox
+            \includegraphics[width=\dimexpr\paperwidth+6mm\relax,keepaspectratio]{\@endpapers}%
+          \else
+            \includegraphics[height=\dimexpr\paperheight+6mm\relax,keepaspectratio]{\@endpapers}%
+          \fi
+        }%
+      \fi
     \fi
   \fi
 }

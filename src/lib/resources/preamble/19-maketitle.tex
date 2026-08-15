@@ -82,7 +82,12 @@
 % Cada \null evita que la página sea vacía (\clearpage de una página sin
 % contenido no la emite en algunos casos). Sin número: los layers de
 % scrlayer-scrpage están vacíos hasta que el comando de página se define.
+% \titlepageguards: true si las hojas de guarda existen — 30-endpapers.tex
+% la consulta para dibujar el endpaper SOLO sobre la página 1 cuando esta es
+% la hoja en blanco (sin guardas, sin endpaper en ningún caso).
+\newif\iftitlepageguards
 \newcommand{\titlepageblanks}{%
+  \titlepageguardstrue
   \null\clearpage
   \null\clearpage
 }
