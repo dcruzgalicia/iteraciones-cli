@@ -479,6 +479,10 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     // la extratitle; sin guardas, el endpaper no se agrega en ningún caso)
     expect(endpapers).toContain('\\ifnum\\value{page}=1');
     expect(endpapers).toContain('\\iftitlepageguards');
+    // Compatibilidad con 24-eso-pic: el grid desplaza el origen del \put;
+    // con grid (HookIIIBG no vacío) se ancla al fondo con AtPageLowerLeft
+    expect(endpapers).toContain('\\ifx\\ESO@HookIIIBG\\@empty');
+    expect(endpapers).toContain('\\AtPageLowerLeft{%');
     // Lado más corto decide la dimensión fija: papel + 6mm (paperwidth o
     // paperheight reales de documentclass/geometry, no hardcodeados)
     expect(endpapers).toContain('\\ifdim\\wd\\papersbox<\\ht\\papersbox');

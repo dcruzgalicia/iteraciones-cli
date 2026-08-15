@@ -8,6 +8,12 @@
 % \paperwidth/\paperheight (documentclass o geometry, incluido el override
 % del proyecto): no se hardcodea. \put(-4mm,-3mm) deja un sangrado de ~2-3mm
 % en los bordes derecho e inferior (el +6mm compensa el offset).
+%
+% Compatibilidad con 24-eso-pic: el grid extiende el picture del shipout
+% hasta -\paperheight y desplaza el origen del \put (el endpaper quedaba fuera
+% de la hoja cuando el grid estaba activo). \ESO@HookIIIBG no vacío indica que
+% el grid está presente: en ese caso se ancla al fondo con \AtPageLowerLeft;
+% sin grid, el \put se mide desde el fondo de la misma forma.
 % Los comandos no pueden llamarse \endpapers: LaTeX prohíbe nombres que
 % empiecen con \end (colisión con el primitivo \end).
 \usepackage{eso-pic}
@@ -26,13 +32,25 @@
     \iftitlepageguards
       \ifx\@endpapers\@empty
       \else
-        \put(-4mm,-3mm){%
-          \ifdim\wd\papersbox<\ht\papersbox
-            \includegraphics[width=\dimexpr\paperwidth+6mm\relax,keepaspectratio]{\@endpapers}%
-          \else
-            \includegraphics[height=\dimexpr\paperheight+6mm\relax,keepaspectratio]{\@endpapers}%
-          \fi
-        }%
+        \ifx\ESO@HookIIIBG\@empty
+          \put(-4mm,-3mm){%
+            \ifdim\wd\papersbox<\ht\papersbox
+              \includegraphics[width=\dimexpr\paperwidth+6mm\relax,keepaspectratio]{\@endpapers}%
+            \else
+              \includegraphics[height=\dimexpr\paperheight+6mm\relax,keepaspectratio]{\@endpapers}%
+            \fi
+          }%
+        \else
+          \AtPageLowerLeft{%
+            \put(-4mm,-3mm){%
+              \ifdim\wd\papersbox<\ht\papersbox
+                \includegraphics[width=\dimexpr\paperwidth+6mm\relax,keepaspectratio]{\@endpapers}%
+              \else
+                \includegraphics[height=\dimexpr\paperheight+6mm\relax,keepaspectratio]{\@endpapers}%
+              \fi
+            }%
+          }%
+        \fi
       \fi
     \fi
   \fi
