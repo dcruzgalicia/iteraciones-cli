@@ -4,7 +4,7 @@
 %
 % Modo COVER recortado: la imagen cubre la hoja sin espacios en blanco ni
 % deformación, y se RECORTA (viewport + clip de graphicx) para que el visible
-% sea exactamente papel + 6mm por lado (12mm por dimensión): nada de la
+% sea exactamente papel + 3mm por lado (6mm por dimensión): nada de la
 % imagen se ve más allá, incluso con 26-crop (el stock más grande de las
 % marcas de corte no revela sobrante). La escala cover y la ventana central
 % (en unidades naturales de la imagen) se calculan con l3fp en \setendpapers,
@@ -35,14 +35,14 @@
 \cs_new_protected:Npn \setendpapers #1 {
   \gdef \@endpapers {#1}
   \sbox \papersbox { \includegraphics {#1} }
-  % Escala cover contra papel+12mm (6mm por lado) y ventana central en
+  % Escala cover contra papel+6mm (3mm por lado) y ventana central en
   % unidades naturales de la imagen (para el viewport del recorte).
   \fp_set:Nn \l_ep_scale_fp {
-    max( ( \dim_to_fp:n { \the\paperwidth } + 12mm ) / \dim_to_fp:n { \the\wd\papersbox },
-         ( \dim_to_fp:n { \the\paperheight } + 12mm ) / \dim_to_fp:n { \the\ht\papersbox } )
+    max( ( \dim_to_fp:n { \the\paperwidth } + 6mm ) / \dim_to_fp:n { \the\wd\papersbox },
+         ( \dim_to_fp:n { \the\paperheight } + 6mm ) / \dim_to_fp:n { \the\ht\papersbox } )
   }
-  \fp_set:Nn \l_ep_winW_fp { ( \dim_to_fp:n { \the\paperwidth } + 12mm ) / \l_ep_scale_fp }
-  \fp_set:Nn \l_ep_winH_fp { ( \dim_to_fp:n { \the\paperheight } + 12mm ) / \l_ep_scale_fp }
+  \fp_set:Nn \l_ep_winW_fp { ( \dim_to_fp:n { \the\paperwidth } + 6mm ) / \l_ep_scale_fp }
+  \fp_set:Nn \l_ep_winH_fp { ( \dim_to_fp:n { \the\paperheight } + 6mm ) / \l_ep_scale_fp }
   \dim_set:Nn \ep@vx { \fp_to_dim:n { ( \dim_to_fp:n { \the\wd\papersbox } - \l_ep_winW_fp ) / 2 } }
   \dim_set:Nn \ep@vy { \fp_to_dim:n { ( \dim_to_fp:n { \the\ht\papersbox } - \l_ep_winH_fp ) / 2 } }
   \dim_set:Nn \ep@vxw { \fp_to_dim:n { ( \dim_to_fp:n { \the\wd\papersbox } + \l_ep_winW_fp ) / 2 } }
@@ -65,8 +65,8 @@
               \includegraphics[%
                 viewport={\the\ep@vx} {\the\ep@vy} {\the\ep@vxw} {\the\ep@vyh},%
                 clip,%
-                width=\dimexpr\paperwidth+12mm\relax,%
-                height=\dimexpr\paperheight+12mm\relax,%
+                width=\dimexpr\paperwidth+6mm\relax,%
+                height=\dimexpr\paperheight+6mm\relax,%
               ]{\@endpapers}%
               \hss
             }%
