@@ -1,29 +1,54 @@
 % Endpapers (guardas): imagen de fondo SOLO en la página 1 (la hoja de guarda
 % en blanco que se inserta antes de la página de extratitle, que está en la
-% 3): en ninguna otra página. La imagen se mide una sola vez en \setendpapers
-% con un \sbox (a tamaño natural: \wd = ancho, \ht = alto).
+% 3): en ninguna otra página.
 %
-% Modo COVER centrado: la imagen cubre la hoja completa sin espacios en
-% blanco ni deformación. El LADO MÁS CORTO de la imagen define la dimensión
-% fija = papel + 6mm (el ancho si la imagen es más alta, el alto si es más
-% ancha); la otra dimensión crece según la proporción y sobra por ambos
-% lados. El centro de la imagen se alinea con el centro de la hoja: el \put
-% en (.5\paperwidth, .5\paperheight) cae en el centro con y sin el grid de
-% 24-eso-pic (el origen del \put se invierte entre ambos, pero la mitad del
-% papel desde cualquier borde es el centro). La caja 0×0 con \hss/\vss centra
-% la imagen sobre ese punto con el sobrante simétrico.
-% El tamaño de la hoja se toma de \paperwidth/\paperheight (documentclass o
-% geometry, incluido el override del proyecto): no se hardcodea.
+% Modo COVER recortado: la imagen cubre la hoja sin espacios en blanco ni
+% deformación, y se RECORTA (viewport + clip de graphicx) para que el visible
+% sea exactamente papel + 6mm por lado (12mm por dimensión): nada de la
+% imagen se ve más allá, incluso con 26-crop (el stock más grande de las
+% marcas de corte no revela sobrante). La escala cover y la ventana central
+% (en unidades naturales de la imagen) se calculan con l3fp en \setendpapers,
+% a partir del \sbox (a tamaño natural: \wd = ancho, \ht = alto) y de
+% \paperwidth/\paperheight reales (documentclass o geometry, incluido el
+% override del proyecto): no se hardcodea.
+%
+% El centro de la imagen se alinea con el centro de la hoja: el \put en
+% (.5\paperwidth, ±.5\paperheight) — el signo depende del grid de 24-eso-pic
+% (desplaza el origen del \put al borde superior); la caja 0×0 con
+% \hss/\vss centra la imagen sobre ese punto.
 % Los comandos no pueden llamarse \endpapers: LaTeX prohíbe nombres que
 % empiecen con \end (colisión con el primitivo \end).
 \usepackage{eso-pic}
 \makeatletter
 \newsavebox{\papersbox}
+\newdimen\ep@vx \newdimen\ep@vy \newdimen\ep@vxw \newdimen\ep@vyh
+\ExplSyntaxOn
+\fp_new:N \l_ep_scale_fp
+\fp_new:N \l_ep_winW_fp
+\fp_new:N \l_ep_winH_fp
+\ExplSyntaxOff
 \newcommand*{\@endpapers}{}%
-\newcommand{\setendpapers}[1]{%
-  \gdef\@endpapers{#1}%
-  \sbox{\papersbox}{\includegraphics{#1}}%
-}%
+% Definido bajo \ExplSyntaxOn: el cuerpo usa funciones l3fp (\fp_set:Nn,
+% \dim_to_fp:n) que solo se tokenizan correctamente bajo la sintaxis expl3
+% (el \ExplSyntaxOn dentro del cuerpo no re-tokeniza los tokens ya leídos).
+\ExplSyntaxOn
+\cs_new_protected:Npn \setendpapers #1 {
+  \gdef \@endpapers {#1}
+  \sbox \papersbox { \includegraphics {#1} }
+  % Escala cover contra papel+12mm (6mm por lado) y ventana central en
+  % unidades naturales de la imagen (para el viewport del recorte).
+  \fp_set:Nn \l_ep_scale_fp {
+    max( ( \dim_to_fp:n { \the\paperwidth } + 12mm ) / \dim_to_fp:n { \the\wd\papersbox },
+         ( \dim_to_fp:n { \the\paperheight } + 12mm ) / \dim_to_fp:n { \the\ht\papersbox } )
+  }
+  \fp_set:Nn \l_ep_winW_fp { ( \dim_to_fp:n { \the\paperwidth } + 12mm ) / \l_ep_scale_fp }
+  \fp_set:Nn \l_ep_winH_fp { ( \dim_to_fp:n { \the\paperheight } + 12mm ) / \l_ep_scale_fp }
+  \dim_set:Nn \ep@vx { \fp_to_dim:n { ( \dim_to_fp:n { \the\wd\papersbox } - \l_ep_winW_fp ) / 2 } }
+  \dim_set:Nn \ep@vy { \fp_to_dim:n { ( \dim_to_fp:n { \the\ht\papersbox } - \l_ep_winH_fp ) / 2 } }
+  \dim_set:Nn \ep@vxw { \fp_to_dim:n { ( \dim_to_fp:n { \the\wd\papersbox } + \l_ep_winW_fp ) / 2 } }
+  \dim_set:Nn \ep@vyh { \fp_to_dim:n { ( \dim_to_fp:n { \the\ht\papersbox } + \l_ep_winH_fp ) / 2 } }
+}
+\ExplSyntaxOff
 \newcommand{\drawendpapers}{%
   % Solo la página 1 Y solo si existen las hojas de guarda (\titlepageguards,
   % activada por \titlepageblanks en 19-maketitle.tex): el endpaper es el
@@ -32,22 +57,17 @@
     \iftitlepageguards
       \ifx\@endpapers\@empty
       \else
-        % Modo COVER centrado: el centro de la imagen se alinea con el centro
-        % de la hoja. El \put x = .5\paperwidth vale en ambos casos; el y
-        % depende del grid de 24-eso-pic (desplaza el origen del \put al
-        % borde superior): sin grid +.5\paperheight, con grid -.5\paperheight.
-        % La caja 0×0 con \hss/\vss centra la imagen sobre ese punto con el
-        % sobrante simétrico (cubre la hoja sin espacios en blanco).
         \put(.5\paperwidth,\ifx\ESO@HookIIIBG\@empty .5\paperheight\else -.5\paperheight\fi){%
           \vbox to 0pt{%
             \vss
             \hbox to 0pt{%
               \hss
-              \ifdim\wd\papersbox<\ht\papersbox
-                \includegraphics[width=\dimexpr\paperwidth+6mm\relax,keepaspectratio]{\@endpapers}%
-              \else
-                \includegraphics[height=\dimexpr\paperheight+6mm\relax,keepaspectratio]{\@endpapers}%
-              \fi
+              \includegraphics[%
+                viewport={\the\ep@vx} {\the\ep@vy} {\the\ep@vxw} {\the\ep@vyh},%
+                clip,%
+                width=\dimexpr\paperwidth+12mm\relax,%
+                height=\dimexpr\paperheight+12mm\relax,%
+              ]{\@endpapers}%
               \hss
             }%
             \vss
