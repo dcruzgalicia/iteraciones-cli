@@ -22,6 +22,19 @@ import { resolveBibOptions } from './state.js';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
 
 /**
+ * Límite de compilaciones latexmk simultáneas del pool PDF: cada instancia
+ * consume ~300-600 MB de RAM (documentado en architecture.md), así que el
+ * pool tiene un tope propio, independiente de la concurrencia general, para
+ * que una máquina con muchos núcleos no sature la memoria.
+ */
+export const PDF_MAX_SLOTS = 4;
+
+/** Número de slots del pool PDF para una concurrencia general dada. */
+export function pdfSlotCount(concurrency: number): number {
+  return Math.max(1, Math.min(concurrency, PDF_MAX_SLOTS));
+}
+
+/**
  * Ejecuta el pipeline por documento (fases 2-6 fusionadas):
  *
  * Pool 1 (formatos ligeros, concurrencia general): para cada documento, lee
@@ -103,7 +116,7 @@ export async function runDocumentPipeline(
   }
 
   // Pre-crear directorios de caché de biber (uno por slot de concurrencia de PDF).
-  const maxSlots = pdfOn ? Math.max(1, ctx.concurrency) : 0;
+  const maxSlots = pdfOn ? pdfSlotCount(ctx.concurrency) : 0;
   const biberBase = join(ctx.cwd, '.iteraciones', 'biber');
   if (pdfOn && maxSlots > 0) {
     await Promise.all(Array.from({ length: maxSlots }, (_, i) => mkdir(join(biberBase, `cache-${i}`), { recursive: true })));

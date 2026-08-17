@@ -1,6 +1,7 @@
 import { describe, expect, it, spyOn } from 'bun:test';
 import * as runner from '../builder/export/runner.js';
 import { createPdfConsumer, type PdfJob } from '../builder/pdf-pool.js';
+import { pdfSlotCount } from '../builder/pipeline.js';
 
 /** Stub mínimo de ProgressTracker para aislar el pool. */
 function progressStub() {
@@ -14,6 +15,20 @@ function progressStub() {
 function job(i: number): PdfJob {
   return { dir: '.', slug: `doc-${i}`, relativePath: `doc-${i}.md`, texPath: `/tmp/work/doc-${i}.tex`, pdfDest: `/tmp/out/doc-${i}.pdf` };
 }
+
+describe('pdfSlotCount (tope de concurrencia del pool PDF)', () => {
+  it('acota la concurrencia a PDF_MAX_SLOTS en máquinas con muchos núcleos', () => {
+    expect(pdfSlotCount(32)).toBe(4);
+    expect(pdfSlotCount(16)).toBe(4);
+    expect(pdfSlotCount(5)).toBe(4);
+  });
+
+  it('respeta concurrencias menores sin subir el mínimo de 1', () => {
+    expect(pdfSlotCount(4)).toBe(4);
+    expect(pdfSlotCount(2)).toBe(2);
+    expect(pdfSlotCount(1)).toBe(1);
+  });
+});
 
 describe('pdf-pool (consumidor con solape real)', () => {
   it('los workers arrancados con start() consumen jobs mientras el productor sigue activo', async () => {
