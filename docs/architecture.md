@@ -350,13 +350,19 @@ Límites conocidos (aceptados): semántica aproximada en casos límite del está
 
 Decisión registrada en el issue #1542 (2026-08): **la superficie pública queda congelada hasta 1.0**. Cualquier cambio incompatible requiere un issue que lo justifique y debe actualizar este documento en el mismo trabajo.
 
+Cambios incompatibles ejecutados en la ventana pre-1.0 (agosto 2026, revisión integral + backlog):
+
+- `format.html.blocks` pasó de objeto con números a **lista ordenada** (`[header, contenido, formatos, indice, referencias, footer]`); la tarjeta de contenido se renombró de `trayectura` a `contenido`.
+- `accent` desconocido y `format.latex` booleano pasaron de tolerancia (warning + fallback) a **errores de validación** en build y validate.
+- El export Markdown usa **rutas relativas** de bibliografía/CSL y no incrusta el CSL del paquete ni `documentclass`.
+
 Superficie estable:
 
 - **Comandos**: `build`, `init`, `validate`, `doctor`, `new`, `clean`, `list-filters`.
 - **Opciones globales**: `--project-root`, `-V/--version`, `-h/--help`.
 - **Opciones de build**: `--full`, `--output`, `--verbose`.
 - **Configuración** (`iteraciones.config.yaml`): `lang`, `toc`, `format.latex`, `format.html.{title, tagline, logo, theme, accent, generate, blocks}`, `format.pdf.{generate, show-date, page-number, disabled-preamble-filters}`, `format.epub.generate`, `format.markdown.generate`, `disabled-filters`, `lua-filters`, `bibliography`, `csl`.
-- **Frontmatter**: `title`, `subtitle`, `date`, `author`.
+- **Frontmatter**: `title`, `subtitle`, `date`, `author`, `slug` (manual).
 - **Filtros**: nombres completos de los filters del paquete (capas `semantic/`, `latex/`, `html/`) y de los preamble filters numerados; override por archivo y listas `disabled-*`.
 - **Salidas**: HTML, PDF, LaTeX, EPUB y Markdown; esquema de slugs `title-por-author` con sufijos `-dN`.
 
