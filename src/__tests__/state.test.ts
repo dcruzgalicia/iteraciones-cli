@@ -74,17 +74,6 @@ describe('loadStateFile', () => {
       }
     });
   });
-
-  it('migra el estado legacy de .iteraciones/changes/state.json una sola vez', async () => {
-    await withTempDir(async (dir) => {
-      await mkdir(join(dir, '.iteraciones', 'changes'), { recursive: true });
-      await writeFile(join(dir, '.iteraciones', 'changes', 'state.json'), JSON.stringify({ startedAt: 7, activeFormats: [], entries: {} }), 'utf8');
-      const state = await loadStateFile(dir);
-      expect(state?.startedAt).toBe(7);
-      expect(await Bun.file(join(dir, '.iteraciones', 'changes', 'state.json')).exists()).toBe(false);
-      expect(await Bun.file(statePath(dir)).exists()).toBe(true);
-    });
-  });
 });
 
 describe('saveStateFile (atomicidad)', () => {

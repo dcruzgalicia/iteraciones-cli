@@ -8,9 +8,6 @@ import type { DiscoveryEntry } from './types.js';
 /** Ruta relativa del archivo de estado del build dentro del proyecto. */
 const STATE_PATH = join('.iteraciones', 'state.json');
 
-/** Ruta del estado en versiones anteriores (se migra una sola vez). */
-const LEGACY_STATE_PATH = join('.iteraciones', 'changes', 'state.json');
-
 /**
  * Estado del build (caché content-addressed), leído y guardado en state.json.
  * Combina el report (startedAt, activeFormats), el discovery index (entries)
@@ -49,16 +46,6 @@ export async function hashFileContent(path: string): Promise<string> {
 }
 
 export async function loadStateFile(cwd: string): Promise<BuildState | null> {
-  // Migración única: el estado vivía en .iteraciones/changes/state.json
-  const legacy = Bun.file(join(cwd, LEGACY_STATE_PATH));
-  if (!(await Bun.file(join(cwd, STATE_PATH)).exists()) && (await legacy.exists())) {
-    try {
-      await mkdir(dirname(join(cwd, STATE_PATH)), { recursive: true });
-      await rename(join(cwd, LEGACY_STATE_PATH), join(cwd, STATE_PATH));
-    } catch {
-      // Si la migración falla, se lee el estado viejo directamente
-    }
-  }
   const file = Bun.file(join(cwd, STATE_PATH));
   if (!(await file.exists())) return null;
   try {
