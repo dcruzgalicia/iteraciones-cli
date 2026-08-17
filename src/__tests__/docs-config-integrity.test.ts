@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'bun:test';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { buildProgram } from '../cli/parser.js';
+import { KNOWN_FRONTMATTER_FIELDS } from '../cli/validate.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { DEFAULT_HTML_BLOCKS, DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { withTempDir } from './helpers.js';
@@ -68,5 +70,79 @@ describe('integridad docs ↔ schema de configuración', () => {
       return !docs.includes(key) && (bare === undefined || !docs.includes(bare));
     });
     expect(missing).toEqual([]);
+  });
+});
+
+describe('integridad docs ↔ CLI (comandos, flags y API)', () => {
+  /** Comandos y flags reales de la CLI, derivados de buildProgram(). */
+  function realCliSurface(): { commands: Set<string>; flags: Set<string> } {
+    const program = buildProgram();
+    const commands = new Set(program.commands.map((c) => c.name()));
+    const flags = new Set<string>();
+    for (const opt of program.options) {
+      if (opt.long) flags.add(opt.long.slice(2));
+      if (opt.short) flags.add(opt.short);
+    }
+    for (const cmd of program.commands) {
+      for (const opt of cmd.options) {
+        if (opt.long) flags.add(opt.long.slice(2));
+        if (opt.short) flags.add(opt.short);
+      }
+    }
+    return { commands, flags };
+  }
+
+  it('todo comando y flag documentado en README.md y quickstart.md existe en la CLI', async () => {
+    const docs = (await Promise.all(['README.md', 'docs/quickstart.md'].map((f) => Bun.file(f).text()))).join('\n');
+    const { commands: realCommands, flags: realFlags } = realCliSurface();
+
+    // Comandos: cada invocación `iteraciones <comando>` debe existir. El token
+    // debe empezar por letra (excluye `iteraciones --version`).
+    for (const m of docs.matchAll(/iteraciones\s+([a-z][a-z0-9-]*)/g)) {
+      const name = m[1];
+      if (name !== undefined) expect(realCommands.has(name), `comando documentado \`${name}\` no existe`).toBe(true);
+    }
+
+    // Flags: solo los tokens backtick que son exactamente un flag (las tablas
+    // de opciones y los ejemplos envuelven los flags en backticks). Evita los
+    // guiones de la prosa ("KOMA-Script"), los separadores de tabla y el `--to`
+    // del diagrama del pipeline de pandoc.
+    const documentedFlags = new Set<string>();
+    for (const m of docs.matchAll(/`(--[a-zA-Z][a-z0-9-]*|-[A-Za-z])`/g)) {
+      if (m[1]) documentedFlags.add(m[1].replace(/^-+/, ''));
+    }
+    for (const flag of documentedFlags) {
+      expect(realFlags.has(flag), `flag documentado \`--${flag}\` no existe`).toBe(true);
+    }
+  });
+
+  it('las opciones de build() documentadas en architecture.md son exactamente BuildOptions', async () => {
+    const arch = await Bun.file('docs/architecture.md').text();
+    // Tabla "Opciones (BuildOptions):" — desde el encabezado hasta la siguiente
+    // sección; primera celda de cada fila
+    const start = arch.indexOf('Opciones (`BuildOptions`)');
+    const end = arch.indexOf('###', start);
+    const section = arch.slice(start, end);
+    const documented = new Set<string>();
+    for (const m of section.matchAll(/^\|\s*`([a-zA-Z]+)`/gm)) {
+      if (m[1] !== undefined) documented.add(m[1]);
+    }
+    // Superficie real de BuildOptions (orchestrator.ts). Lista explícita: si la
+    // API cambia, el test obliga a actualizar la lista y la doc a la vez.
+    const real = new Set(['outputDir', 'full', 'verbose']);
+    expect(documented).toEqual(real);
+  });
+
+  it('todo campo de frontmatter documentado en frontmatter-reference.md existe en KNOWN_FRONTMATTER_FIELDS', async () => {
+    const doc = await Bun.file('docs/frontmatter-reference.md').text();
+    const known = new Set(KNOWN_FRONTMATTER_FIELDS);
+    // Primera celda de cada fila de tabla (\`campo\`), anclada al inicio de línea
+    // para no capturar las columnas de tipo: las dos tablas de campos
+    for (const m of doc.matchAll(/^\|\s*`([a-z][a-z0-9-]*)`/gm)) {
+      const field = m[1];
+      if (field !== undefined && field !== 'Campo') {
+        expect(known.has(field), `campo de frontmatter documentado \`${field}\` no existe en KNOWN_FRONTMATTER_FIELDS`).toBe(true);
+      }
+    }
   });
 });
