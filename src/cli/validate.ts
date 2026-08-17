@@ -52,6 +52,12 @@ const KNOWN_FRONTMATTER_FIELDS = [
 /** Formato seguro de un slug manual (mismo regex que discover). */
 const SLUG_MANUAL_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+/** Campos del frontmatter que el pipeline consume como texto (string). */
+const STRING_FRONTMATTER_FIELDS = ['title', 'subtitle', 'date'];
+
+/** Formato ISO documentado para date (mismo criterio que formatHumanDate). */
+const DATE_ISO_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 /** Devuelve los campos del frontmatter que el pipeline ignorará. */
 function unknownFrontmatterFields(parsed: Record<string, unknown>): string[] {
   return Object.keys(parsed).filter((key) => !KNOWN_FRONTMATTER_FIELDS.includes(key));
@@ -87,7 +93,18 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
     }
 
     const { yaml } = splitFrontmatter(raw);
-    if (!yaml) continue; // sin frontmatter → válido
+    if (!yaml) {
+      // Un archivo que empieza con --- pero no cierra el bloque se trata como
+      // cuerpo en silencio (la regex de splitFrontmatter no matchea): el aviso
+      // hace visible el frontmatter malformado.
+      if (/^---\r?\n/.test(raw)) {
+        warnings.push({
+          file: entry,
+          message: 'frontmatter sin cerrar (falta el bloque "---" final); el contenido se tratará como cuerpo',
+        });
+      }
+      continue; // sin frontmatter → válido
+    }
 
     // Validar sintaxis YAML del frontmatter.
     const yamlResult = parseYamlWithPosition(yaml);
@@ -105,6 +122,26 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
         });
       } else {
         const parsed = result as Record<string, unknown>;
+        // Tipos de los campos conocidos: un tipo incorrecto es un error (el
+        // pipeline lo degradaría o lo ignoraría en silencio, p. ej. title: 123
+        // → "Sin título").
+        for (const field of STRING_FRONTMATTER_FIELDS) {
+          const value = parsed[field];
+          if (value !== undefined && typeof value !== 'string') {
+            errors.push({ file: entry, message: `frontmatter: "${field}" debe ser un texto (string), se recibió ${typeof value}` });
+          }
+        }
+        const author = parsed.author;
+        if (author !== undefined && typeof author !== 'string' && !(Array.isArray(author) && author.every((a) => typeof a === 'string'))) {
+          errors.push({ file: entry, message: 'frontmatter: "author" debe ser un texto o una lista de textos' });
+        }
+        // date con formato libre: el pipeline la acepta deliberadamente
+        // (formatHumanDate la deja pasar sin romper), pero el formato ISO es
+        // el documentado: advertencia, no error.
+        const date = parsed.date;
+        if (typeof date === 'string' && date.trim() !== '' && !DATE_ISO_RE.test(date.trim())) {
+          warnings.push({ file: entry, message: 'frontmatter: "date" no usa el formato ISO YYYY-MM-DD; se mostrará tal cual' });
+        }
         const unknown = unknownFrontmatterFields(parsed);
         if (unknown.length > 0) {
           warnings.push({
@@ -139,8 +176,11 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
 
 /**
  * Valida la configuración del proyecto y el frontmatter de los ficheros Markdown.
- * Incluye validación semántica: tipos, regiones, items de colecciones y templates.
- * No ejecuta la compilación completa.
+ * Comprueba: sintaxis YAML de la config con posición, tipos y campos conocidos
+ * del frontmatter (título, subtítulo, fecha, autor, slug), frontmatter sin
+ * cerrar, slugs manuales (formato y duplicados), dependencias entre preamble
+ * filters y existencia de bibliografía/CSL/lua-filters. No ejecuta la
+ * compilación completa.
  */
 export async function runValidate(cwd: string): Promise<void> {
   let hasPdf = false;

@@ -580,6 +580,26 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
+  it('un title no-texto se advierte con mensaje correcto (no "no tiene título")', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'malo.md'), '---\ntitle: 123\n---\n\n# Hola\n', 'utf8');
+      // Los warnings del build no-verbose se difieren al resumen final (stdout).
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir);
+      } finally {
+        output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      expect(output).toContain('no es texto');
+      expect(output).not.toContain('no tiene título');
+      expect(process.exitCode).toBe(0);
+    });
+  });
+
   it('title-image: ruta absoluta en el tex con el guion bajo sin escapar', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
@@ -1204,6 +1224,79 @@ describe('runValidate', () => {
       process.exitCode = 0;
       await runValidate(dir);
       expect(process.exitCode).toBe(1);
+    });
+  });
+
+  it('rechaza tipos incorrectos en campos conocidos del frontmatter (title: 123)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'malo.md'), '---\ntitle: 123\n---\n\n# Hola\n', 'utf8');
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(output).toContain('malo.md');
+      expect(output).toContain('"title" debe ser un texto');
+      expect(process.exitCode).toBe(1);
+    });
+  });
+
+  it('rechaza un author que no es texto ni lista de textos', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'malo.md'), '---\ntitle: "Ok"\nauthor: 5\n---\n\n# Hola\n', 'utf8');
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(output).toContain('"author" debe ser un texto o una lista de textos');
+      expect(process.exitCode).toBe(1);
+    });
+  });
+
+  it('advierte (exit 0) sobre date con formato no ISO', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'malo.md'), '---\ntitle: "Ok"\ndate: "no-es-fecha"\n---\n\n# Hola\n', 'utf8');
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(output).toContain('"date" no usa el formato ISO YYYY-MM-DD');
+      expect(process.exitCode).toBe(0);
+    });
+  });
+
+  it('advierte (exit 0) sobre frontmatter sin cerrar', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'abierto.md'), '---\ntitle: "x"\n\n# Hola\n', 'utf8');
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(output).toContain('frontmatter sin cerrar');
+      expect(process.exitCode).toBe(0);
     });
   });
 
