@@ -136,7 +136,9 @@ Ejemplos:
 
   program
     .command('new <path>')
-    .description('crea un archivo Markdown con frontmatter mínimo')
+    .description(
+      'crea un archivo Markdown con frontmatter mínimo (el título se infiere del nombre del archivo sin acentos; usa --title para títulos con acentos)',
+    )
     .option('-t, --title <title>', 'título del documento (por defecto: inferido del nombre del archivo)')
     .addHelpText(
       'after',
