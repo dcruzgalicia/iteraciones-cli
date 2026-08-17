@@ -19,7 +19,7 @@ type ValidationError = { file: string; message: string };
  * theme, accent, css). Cualquier otro campo se descarta en todos los formatos:
  * validate advierte para que no sea silencioso.
  */
-const KNOWN_FRONTMATTER_FIELDS = [
+export const KNOWN_FRONTMATTER_FIELDS = [
   'title',
   'subtitle',
   'date',
