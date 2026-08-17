@@ -221,22 +221,22 @@ La paleta vive en `src/lib/accent-palettes.ts` (valores oklch + reglas de opacid
 
 #### `format.html.blocks`
 
-**Tipo:** `object` (clave de bloque → número entero)
+**Tipo:** `string[]` (claves de bloque en orden)
 **Por defecto:**
 
 ```yaml
 format:
   html:
     blocks:
-      header: -1        # tarjeta identidad inicial
-      trayectura: 0     # tarjeta de contenido
-      formatos: 2       # tarjeta de formatos generados
-      indice: 3         # tabla de contenidos
-      referencias: 4    # citas bibliográficas
-      footer: 99        # tarjeta identidad final
+      - header        # tarjeta identidad inicial
+      - contenido     # tarjeta de contenido
+      - formatos      # tarjeta de formatos generados
+      - indice        # tabla de contenidos
+      - referencias   # citas bibliográficas
+      - footer        # tarjeta identidad final
 ```
 
-Orden de los bloques del masonry: **más alto = más tarde**. Es un override **individual**: cada clave es opcional y puede moverse sin tocar las demás (p. ej. `formatos: 4` lo coloca después de `indice`). Los números iguales se desempatan por el orden canónico de claves (`header → trayectura → formatos → indice → referencias → footer`). Los bloques de tarjetas ausentes (TOC sin `toc`, referencias sin citas, formatos sin formatos activos) no se renderizan y no alteran el orden del resto.
+Orden de los bloques del masonry: **la posición en la lista ES el orden**. Es una lista completa: los bloques que no aparecen no se renderizan (p. ej. omitir `referencias` quita la tarjeta de citas aunque el documento las tenga). Los bloques de tarjetas ausentes por contenido (TOC sin `toc`, referencias sin citas, formatos sin formatos activos) tampoco se renderizan y no alteran el orden del resto.
 
 ### `format.epub`
 

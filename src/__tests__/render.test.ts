@@ -16,7 +16,7 @@ import { getBuiltinPreambleFilterNames } from '../builder/preamble-loader.js';
 import { htmlPageFromMarkdown } from '../builder/render.js';
 import type { BuildDocument } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
-import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
+import { DEFAULT_SITE_CONFIG, type HtmlBlockKey } from '../config/site-config.js';
 import * as logger from '../lib/logger.js';
 import { checkPandoc } from '../lib/pandoc-runner.js';
 
@@ -106,17 +106,13 @@ describe('pdfDate (fecha de portada del PDF)', () => {
 });
 
 describe('resolveBlockOrder', () => {
-  it('sin overrides usa el orden por defecto', () => {
-    expect(resolveBlockOrder()).toEqual(['header', 'trayectura', 'formatos', 'indice', 'referencias', 'footer']);
+  it('sin lista explícita usa el orden por defecto', () => {
+    expect(resolveBlockOrder()).toEqual(['header', 'contenido', 'formatos', 'indice', 'referencias', 'footer']);
   });
 
-  it('un override individual mueve solo esa tarjeta', () => {
-    // formatos: 4 lo mueve después de índice (3)
-    expect(resolveBlockOrder({ formatos: 4 })).toEqual(['header', 'trayectura', 'indice', 'formatos', 'referencias', 'footer']);
-  });
-
-  it('desempata números iguales por el orden canónico de claves', () => {
-    expect(resolveBlockOrder({ header: 100 })).toEqual(['trayectura', 'formatos', 'indice', 'referencias', 'footer', 'header']);
+  it('una lista explícita ES el orden (reordenar y omitir bloques)', () => {
+    expect(resolveBlockOrder(['header', 'contenido', 'indice', 'formatos'])).toEqual(['header', 'contenido', 'indice', 'formatos']);
+    expect(resolveBlockOrder(['footer', 'header'])).toEqual(['footer', 'header']);
   });
 });
 
@@ -126,7 +122,7 @@ describe('composeHtmlTemplate', () => {
     const pos = (s: string): number => tpl.indexOf(s);
     // Contenido distintivo de cada tarjeta (sin marcadores internos)
     expect(pos('Tarjeta identidad')).toBeGreaterThan(-1); // header
-    expect(pos('Tarjeta documento')).toBeGreaterThan(pos('Tarjeta identidad')); // trayectura
+    expect(pos('Tarjeta documento')).toBeGreaterThan(pos('Tarjeta identidad')); // contenido
     expect(pos('$formats$')).toBeGreaterThan(pos('Tarjeta documento')); // formatos (variable)
     expect(pos('$if(toc)$')).toBeGreaterThan(pos('$formats$')); // indice
     expect(pos('$if(has-references)$')).toBeGreaterThan(pos('$if(toc)$')); // referencias
@@ -148,7 +144,10 @@ describe('composeHtmlTemplate', () => {
   it('respeta overrides de format.html.blocks', async () => {
     const siteConfig = {
       ...DEFAULT_SITE_CONFIG,
-      format: { ...DEFAULT_SITE_CONFIG.format, html: { ...DEFAULT_SITE_CONFIG.format.html, blocks: { formatos: 4 } } },
+      format: {
+        ...DEFAULT_SITE_CONFIG.format,
+        html: { ...DEFAULT_SITE_CONFIG.format.html, blocks: ['header', 'indice', 'contenido', 'formatos'] as HtmlBlockKey[] },
+      },
     };
     const tpl = await composeHtmlTemplate(siteConfig);
     expect(tpl.indexOf('$formats$')).toBeGreaterThan(tpl.indexOf('$if(toc)$'));
