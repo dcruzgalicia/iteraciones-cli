@@ -82,6 +82,9 @@ export function parseGitignore(content: string): GitignoreRule[] {
     }
     if (!line) continue;
 
+    // El anclaje incluye el / inicial (se elimina del patrón pero marca el
+    // anclaje: '/raiz.md' solo matchea 'raiz.md', no 'sub/raiz.md').
+    let anchored = line.startsWith('/');
     if (line.startsWith('/')) line = line.slice(1); // /patrón → anclado a la raíz
     let dirOnly = false;
     if (line.endsWith('/')) {
@@ -90,7 +93,7 @@ export function parseGitignore(content: string): GitignoreRule[] {
     }
     if (!line) continue;
 
-    const anchored = line.includes('/');
+    anchored = anchored || line.includes('/');
     rules.push({ pattern: line, negated, anchored, dirOnly, regex: new RegExp(`^${patternToRegex(line)}$`) });
   }
   return rules;
