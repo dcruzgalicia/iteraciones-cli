@@ -323,6 +323,8 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(typo).toContain('\\tolerance=300');
     expect(typo).toContain('\\hyphenpenalty=100');
     expect(typo).not.toContain('\\tolerance=400');
+    // microtype con más elasticidad de espaciado
+    expect(typo).toContain('stretch=20,shrink=20');
   });
 
   it('14-sectioning: beforeskip 2 para part/chapter/section/subsection y afterskip 2 para section/subsection', async () => {
@@ -472,6 +474,18 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     const filters = await loadPreambleFilters();
     const crop = filters.find((f) => f.name === '26-crop')?.content ?? '';
     expect(crop).toContain('\\usepackage[width=230truemm,height=294truemm,center,cam,noinfo]{crop}');
+  });
+
+  it('04-margins: headsep y footskip actualizados (headheight = baselineskip)', async () => {
+    const filters = await loadPreambleFilters();
+    const margins = filters.find((f) => f.name === '04-margins')?.content ?? '';
+    expect(margins).toContain('headheight=\\baselineskip,headsep=3.25pt,footskip=10.25pt');
+  });
+
+  it('24-eso-pic: gridunit en mm', async () => {
+    const filters = await loadPreambleFilters();
+    const esopic = filters.find((f) => f.name === '24-eso-pic')?.content ?? '';
+    expect(esopic).toContain('gridunit=mm');
   });
 
   it('30-endpapers: imagen de fondo que cubre la hoja (cover recortado a papel+3mm por lado)', async () => {
