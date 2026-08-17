@@ -4,9 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loadFilterGroups } from '../builder/filter-resolver.js';
 import { markdownToLatex } from '../builder/latex-composer.js';
-import { readDocumentBody } from '../builder/render.js';
 import type { BuildDocument } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
+import { splitFrontmatter } from '../lib/frontmatter.js';
 import { checkPandoc, runPandoc } from '../lib/pandoc-runner.js';
 
 // Todos los tests de este archivo invocan pandoc real: sin pandoc instalado
@@ -589,7 +589,8 @@ describe.skipIf(!pandocOk)('filtros Lua de usuario', () => {
       const filters = await loadFilterGroups(siteConfig, undefined, cwd);
       const templatePath = join(cwd, 'tpl.tex');
       writeFileSync(templatePath, '\\documentclass{article}\n\\begin{document}\n$body$\n\\end{document}\n');
-      const body = await readDocumentBody(doc);
+      const content = await Bun.file(doc.filePath).text();
+      const { body } = splitFrontmatter(content);
       const tex = await markdownToLatex(body, doc, filters, [], templatePath, { title: 'Prueba' }, siteConfig);
       expect(tex).toContain('\\fbox{Nota}');
     } finally {

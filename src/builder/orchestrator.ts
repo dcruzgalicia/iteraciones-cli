@@ -220,7 +220,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
 
   // Solo hubo eliminaciones o slugs cambiados: el cleanup ya corrió
   if (
-    work.renderDocs.length === 0 &&
+    work.docsChanged.size === 0 &&
     work.exportSets.latex.length === 0 &&
     work.exportSets.html.length === 0 &&
     work.exportSets.epub.length === 0 &&
@@ -242,7 +242,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
 
   // ── Pipeline por documento: formatos ligeros + .tex/PDF encolado ──
   const workDocCount = new Set([
-    ...work.renderDocs.map((d) => d.relativePath),
+    ...work.docsChanged,
     ...work.exportSets.html.map((d) => d.relativePath),
     ...work.exportSets.epub.map((d) => d.relativePath),
     ...work.exportSets.markdown.map((d) => d.relativePath),
@@ -250,7 +250,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   ]).size;
 
   progress.startPhase('render', workDocCount);
-  const { processed } = await runDocumentPipeline(progress, ctx, plan, work, formatCfg, discoveryIndex);
+  const { processed } = await runDocumentPipeline(progress, ctx, plan, work, allDocs, formatCfg, discoveryIndex);
 
   // ── Build assets (css, fonts, logo) DESPUÉS de los HTML finales en dist:
   // Tailwind escanea los HTML finales de dist/files para generar el CSS exacto

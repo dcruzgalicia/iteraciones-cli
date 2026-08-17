@@ -42,21 +42,20 @@ describe('computeWorkSets', () => {
   it('sin cambios ni invalidaciones: anyWork false y conjuntos vacíos', () => {
     const work = computeWorkSets(meta(), DOCS, new Set());
     expect(work.anyWork).toBe(false);
-    expect(work.renderDocs).toEqual([]);
+    expect(work.docsChanged.size).toBe(0);
     expect(work.exportSets.latex).toEqual([]);
   });
 
-  it('documentos modificados: entran en astChanged, renderDocs y los exportSets activos', () => {
+  it('documentos modificados: entran en docsChanged y los exportSets activos', () => {
     const work = computeWorkSets(meta(), DOCS, new Set(['a.md']));
     expect(work.anyWork).toBe(true);
-    expect(work.renderDocs.map((d) => d.relativePath)).toEqual(['a.md']);
+    expect(work.docsChanged).toEqual(new Set(['a.md']));
     expect(work.exportSets.latex.map((d) => d.relativePath)).toEqual(['a.md']);
   });
 
   it('filtersInvalidated: todos los documentos se re-renderizan', () => {
     const work = computeWorkSets(meta({ filtersInvalidated: true }), DOCS, new Set());
-    expect(work.astChanged.size).toBe(3);
-    expect(work.renderDocs.length).toBe(3);
+    expect(work.docsChanged.size).toBe(3);
   });
 
   it('bibInvalidated: todos los docs van a los exportSets sin re-render (las citas se resuelven en export)', () => {
@@ -69,8 +68,7 @@ describe('computeWorkSets', () => {
       new Set(),
     );
     expect(work.anyWork).toBe(true);
-    expect(work.astChanged.size).toBe(0);
-    expect(work.renderDocs.length).toBe(0);
+    expect(work.docsChanged.size).toBe(0);
     expect(work.exportSets.latex.length).toBe(3);
     expect(work.exportSets.html.length).toBe(3);
     expect(work.exportSets.epub.length).toBe(3);
@@ -89,7 +87,7 @@ describe('computeWorkSets', () => {
       new Set(),
     );
     expect(work.exportSets.html.length).toBe(3);
-    expect(work.renderDocs.length).toBe(0);
+    expect(work.docsChanged.size).toBe(0);
   });
 
   it('nuevo formato pdf/latex: formatInvalidated incluye todos los docs en el exportSet latex', () => {
@@ -104,7 +102,7 @@ describe('computeWorkSets', () => {
       new Set(),
     );
     expect(work.exportSets.latex.length).toBe(3);
-    expect(work.renderDocs.length).toBe(0);
+    expect(work.docsChanged.size).toBe(0);
   });
 
   it('todos los formatos activos: todos los docs van a los exportSets correspondientes', () => {

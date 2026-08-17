@@ -44,10 +44,9 @@ export interface BuildMetadata {
 }
 
 export interface WorkSets {
-  /** Documentos cuyo AST debe regenerarse (markdown cambiado, filters o bibliografía). */
-  astChanged: Set<string>;
+  /** Documentos cuyo contenido cambió (markdown o filters) y deben re-procesarse. */
+  docsChanged: Set<string>;
   anyWork: boolean;
-  renderDocs: BuildDocument[];
   exportSets: Record<WorkFormatKey, BuildDocument[]>;
 }
 
@@ -125,38 +124,36 @@ export function computeWorkSets(meta: BuildMetadata, allDocs: BuildDocument[], d
   const epubOn = activeFormats.epub;
   const mdOn = activeFormats.markdown;
 
-  // astChanged: documentos cuyo AST debe regenerarse (markdown o filters cambiados).
-  // La bibliografía NO re-renderiza ASTs: las citas se resuelven en la
-  // exportación (citeproc/biblatex), así que bibInvalidated solo llena los
-  // exportSets más abajo.
-  const astChanged = new Set(discoveredChanges);
+  // docsChanged: documentos cuyo markdown o filters cambiaron y deben
+  // re-convertirse desde el markdown original. La bibliografía NO los
+  // re-renderiza: las citas se resuelven en la exportación (citeproc/biblatex),
+  // así que bibInvalidated solo llena los exportSets más abajo.
+  const docsChanged = new Set(discoveredChanges);
   if (meta.filtersInvalidated) {
     for (const doc of allDocs) {
-      astChanged.add(doc.relativePath);
+      docsChanged.add(doc.relativePath);
     }
   }
 
   const anyWork =
-    astChanged.size > 0 ||
+    docsChanged.size > 0 ||
     (formatInvalidated.latex && (pdfOn || latexOn)) ||
     (formatInvalidated.html && htmlOn) ||
     (formatInvalidated.epub && epubOn) ||
     (formatInvalidated.markdown && mdOn) ||
     (meta.bibInvalidated && (pdfOn || latexOn || htmlOn || epubOn || mdOn));
 
-  const renderDocs = allDocs.filter((d) => astChanged.has(d.relativePath));
   const bibInvalidated = meta.bibInvalidated;
   const exportSets: Record<WorkFormatKey, BuildDocument[]> = {
-    latex: pdfOn || latexOn ? allDocs.filter((d) => astChanged.has(d.relativePath) || formatInvalidated.latex || bibInvalidated) : [],
-    html: htmlOn ? allDocs.filter((d) => astChanged.has(d.relativePath) || formatInvalidated.html || bibInvalidated) : [],
-    epub: epubOn ? allDocs.filter((d) => astChanged.has(d.relativePath) || formatInvalidated.epub || bibInvalidated) : [],
-    markdown: mdOn ? allDocs.filter((d) => astChanged.has(d.relativePath) || formatInvalidated.markdown || bibInvalidated) : [],
+    latex: pdfOn || latexOn ? allDocs.filter((d) => docsChanged.has(d.relativePath) || formatInvalidated.latex || bibInvalidated) : [],
+    html: htmlOn ? allDocs.filter((d) => docsChanged.has(d.relativePath) || formatInvalidated.html || bibInvalidated) : [],
+    epub: epubOn ? allDocs.filter((d) => docsChanged.has(d.relativePath) || formatInvalidated.epub || bibInvalidated) : [],
+    markdown: mdOn ? allDocs.filter((d) => docsChanged.has(d.relativePath) || formatInvalidated.markdown || bibInvalidated) : [],
   };
 
   return {
-    astChanged,
+    docsChanged,
     anyWork,
-    renderDocs,
     exportSets,
   };
 }
