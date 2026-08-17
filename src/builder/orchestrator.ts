@@ -132,7 +132,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   ctx.needsCss = plan.needsCss;
 
   // Los 5 formatos configurados se muestran siempre en el tracker: activos con
-  // ✔ (su trabajo se completa en el pipeline), desactivados con ✗.
+  // ✔ (su trabajo se completa en el pipeline), desactivados con – (omitidos).
   progress.setFormats([
     { phase: 'latex', active: plan.activeFormats.latex },
     { phase: 'pdf', active: plan.activeFormats.pdf },

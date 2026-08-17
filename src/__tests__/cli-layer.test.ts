@@ -134,6 +134,10 @@ describe('parser (errores de commander en español)', () => {
     expect(output).toContain('docs/configuration.md');
     expect(output).toContain('docs/ejemplos.md');
     expect(output).toContain('list-filters');
+    // La descripción no se duplica (bloque 'before' + .description() de commander)
+    expect(output.match(/Construye documentos HTML/g)?.length).toBe(1);
+    // El bloque 'before' no empieza con una línea en blanco
+    expect(output.startsWith('escribir, compartir, re-existir')).toBe(true);
   });
 
   it('el help de subcomandos muestra --project-root (opción global visible)', async () => {

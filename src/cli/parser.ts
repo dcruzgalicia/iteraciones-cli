@@ -27,14 +27,14 @@ export function buildProgram(): Command {
 
   program
     .name(packageJson.name.replace(/-cli$/, ''))
-    .description('construye documentos HTML, PDF, EPUB, LaTeX y Markdown desde Markdown')
     .version(packageJson.version, '-V, --version', 'muestra la versión')
     .helpOption('-h, --help', 'muestra la ayuda')
     .helpCommand('help [comando]', 'muestra la ayuda de un comando');
+  // La descripción vive en el bloque 'before' (slogan + primeros pasos): el
+  // .description() de commander la repetiría bajo "Usage" en el help raíz.
   program.addHelpText(
     'before',
-    `
-escribir, compartir, re-existir
+    `escribir, compartir, re-existir
 
 Construye documentos HTML, PDF, EPUB, LaTeX y Markdown a partir de archivos Markdown (pandoc + Tailwind CSS).
 
