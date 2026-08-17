@@ -3,7 +3,7 @@ import type { ZodIssue } from 'zod';
 import { ConfigError, formatUserError } from '../lib/errors.js';
 import { parseYamlWithPosition } from '../lib/frontmatter.js';
 import { logWarning } from '../lib/logger.js';
-import { KNOWN_ACCENT_COLORS, type SiteConfig, SiteConfigSchema } from './config-schema.js';
+import { type SiteConfig, SiteConfigSchema } from './config-schema.js';
 
 const CONFIG_FILE = 'iteraciones.config.yaml';
 
@@ -70,35 +70,10 @@ export async function loadSiteConfig(cwd: string, options?: { mode?: 'build' | '
 
   const root = parsed as Record<string, unknown>;
 
-  // Advertir sobre accent inválido: en build es fallback a "lime" con warning
-  // (el esquema Zod ya no aplica .catch()). En modo validate NO se corta aquí:
-  // el schema lo reporta como issue junto a los demás errores.
-  const htmlRaw = (root.format as Record<string, unknown> | undefined)?.html;
-  const accentRaw = (htmlRaw as Record<string, unknown> | undefined)?.accent;
-  if (typeof accentRaw === 'string' && !KNOWN_ACCENT_COLORS.includes(accentRaw as (typeof KNOWN_ACCENT_COLORS)[number])) {
-    if (!isValidate) {
-      // logWarning pasa por el sink del tracker: en builds TTY el warning se
-      // difiere al resumen (antes escribía a stderr directo e interrumpía el render).
-      logWarning(`color de acento desconocido: "${accentRaw}". Usando "lime" por defecto.`, 'config');
-      (root.format as Record<string, unknown>).html = { ...((htmlRaw as Record<string, unknown>) ?? {}), accent: 'lime' };
-    }
-  }
-
-  // El formato antiguo `latex: true|false` (booleano) se reemplazó por el
-  // sub-objeto `latex: { generate: true|false }` (pre-1.0, sin fallback). Un
-  // booleano es un error de tipo para el schema: se intercepta aquí, se
-  // advierte y se usa el default, igual que el acento desconocido.
-  const formatRaw = root.format as Record<string, unknown> | undefined;
-  const latexRaw = formatRaw?.latex;
-  if (typeof latexRaw === 'boolean') {
-    if (!isValidate) {
-      logWarning('format.latex ahora es un objeto: usa "format.latex: { generate: true|false }". Se usa el valor por defecto (false).', 'config');
-      delete formatRaw?.latex;
-    }
-  }
-
   // Las claves desconocidas (issues unrecognized_keys de los esquemas strict)
-  // son warnings, no errores: el build continúa. Los errores de tipo sí rompen.
+  // son warnings, no errores: el build continúa. Los errores de tipo sí rompen
+  // (incluido un accent desconocido o un latex booleano: el schema es la única
+  // fuente de verdad, sin fallbacks).
   const result = SiteConfigSchema.safeParse(root);
   if (!result.success) {
     const unknownKeyIssues = result.error.issues.filter((issue) => issue.code === 'unrecognized_keys');

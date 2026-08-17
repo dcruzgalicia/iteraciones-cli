@@ -155,11 +155,10 @@ describe('loadSiteConfig', () => {
     });
   });
 
-  it('el formato booleano antiguo latex: true genera warning y usa el default', async () => {
+  it('el formato booleano antiguo latex: true es un error de tipo (sin fallback)', async () => {
     await withTempDir(async (dir) => {
       await writeConfig(dir, 'format:\n  latex: true');
-      const config = await loadSiteConfig(dir);
-      expect(config.format.latex?.generate).toBe(false);
+      await expect(loadSiteConfig(dir)).rejects.toThrow(/latex/);
     });
   });
 
@@ -254,12 +253,10 @@ describe('loadSiteConfig', () => {
     });
   });
 
-  it('parsea color de acento inválido con valor por defecto', async () => {
+  it('un color de acento inválido es un error en build (sin fallback a lime)', async () => {
     await withTempDir(async (dir) => {
       await writeConfig(dir, 'format:\n  html:\n    accent: color-inventado');
-      const config = await loadSiteConfig(dir);
-      // El código existente usa 'lime' como fallback y escribe en stderr
-      expect(config.format.html?.accent).toBe('lime');
+      await expect(loadSiteConfig(dir)).rejects.toThrow(/accent|valor no válido/);
     });
   });
 
