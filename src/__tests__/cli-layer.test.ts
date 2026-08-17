@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CommanderError } from 'commander';
 import { runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from '../cli/dispatcher.js';
-import { checkLatexEngine } from '../cli/doctor/system-checks.js';
+import { checkLatexEngine, checkReadPermissions, checkWritePermissions } from '../cli/doctor/system-checks.js';
 import { buildProgram } from '../cli/parser.js';
 import { logWarning, setLoggerColorEnabled } from '../lib/logger.js';
 import * as pandocRunner from '../lib/pandoc-runner.js';
@@ -174,6 +174,79 @@ describe('parser (errores de flags)', () => {
     expect(output).toContain('--output no puede apuntar fuera del proyecto');
     expect(output).not.toContain('at <anonymous>');
     expect(process.exitCode).toBe(1);
+  });
+});
+
+describe('--project-root inexistente (mensajes accionables)', () => {
+  afterEach(resetExitCode);
+
+  const missingRoot = (suffix: string): string => join(tmpdir(), `no-existe-${suffix}-${Date.now()}`);
+
+  async function runWithStderr(fn: () => Promise<void>): Promise<string> {
+    const stderrSpy = spyStderr();
+    let output = '';
+    try {
+      process.exitCode = 0;
+      await fn();
+    } finally {
+      output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+      stderrSpy.mockRestore();
+    }
+    return output;
+  }
+
+  it('build falla con mensaje accionable (sin ENOENT crudo)', async () => {
+    const output = await runWithStderr(() => runBuild(missingRoot('build')));
+    expect(output).toContain('no existe');
+    expect(output).not.toContain('ENOENT');
+    expect(process.exitCode).toBe(1);
+  });
+
+  it('validate falla con mensaje accionable', async () => {
+    const output = await runWithStderr(() => runValidate(missingRoot('validate')));
+    expect(output).toContain('no existe');
+    expect(process.exitCode).toBe(1);
+  });
+
+  it('doctor falla con mensaje accionable (no "sin permisos")', async () => {
+    const output = await runWithStderr(() => runDoctor(missingRoot('doctor')));
+    expect(output).toContain('no existe');
+    expect(output).not.toContain('sin permisos');
+    expect(process.exitCode).toBe(1);
+  });
+
+  it('init falla con mensaje accionable', async () => {
+    const output = await runWithStderr(() => runInit(missingRoot('init')));
+    expect(output).toContain('no existe');
+    expect(process.exitCode).toBe(1);
+  });
+
+  it('new falla con mensaje accionable', async () => {
+    const output = await runWithStderr(() => runNew(missingRoot('new'), 'doc.md'));
+    expect(output).toContain('no existe');
+    expect(process.exitCode).toBe(1);
+  });
+
+  it('clean falla con mensaje accionable', async () => {
+    const output = await runWithStderr(() => runClean(missingRoot('clean')));
+    expect(output).toContain('no existe');
+    expect(process.exitCode).toBe(1);
+  });
+
+  it('list-filters falla con mensaje accionable', async () => {
+    const output = await runWithStderr(() => runFilters(missingRoot('filters')));
+    expect(output).toContain('no existe');
+    expect(process.exitCode).toBe(1);
+  });
+
+  it('los checks de permisos distinguen inexistencia de EACCES', async () => {
+    const root = missingRoot('checks');
+    const read = await checkReadPermissions(root);
+    const write = await checkWritePermissions(root);
+    expect(read.ok).toBe(false);
+    expect(read.detail).toContain('no existe');
+    expect(write.ok).toBe(false);
+    expect(write.detail).toContain('no existe');
   });
 });
 

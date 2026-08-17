@@ -1,4 +1,4 @@
-import { access, constants, mkdir, unlink, writeFile } from 'node:fs/promises';
+import { access, constants, mkdir, stat, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { checkPandoc as pandocVersion } from '../../lib/pandoc-runner.js';
 import { run } from '../../lib/run.js';
@@ -48,7 +48,16 @@ export async function checkReadPermissions(cwd: string): Promise<CheckResult> {
   try {
     await access(cwd, constants.R_OK);
     return { label: 'permisos de lectura en cwd', ok: true };
-  } catch {
+  } catch (err) {
+    // Un directorio inexistente no es un problema de permisos: distinguir
+    // ENOENT de EACCES evita el diagnóstico falso de "sin permisos".
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      return {
+        label: 'permisos de lectura en cwd',
+        ok: false,
+        detail: `el directorio ${cwd} no existe`,
+      };
+    }
     // Error esperado: EACCES en access(); el detalle accionable ya se reporta
     return {
       label: 'permisos de lectura en cwd',
@@ -59,6 +68,20 @@ export async function checkReadPermissions(cwd: string): Promise<CheckResult> {
 }
 
 export async function checkWritePermissions(cwd: string): Promise<CheckResult> {
+  // El mkdir recursivo del probe crearía el árbol si el directorio no existe
+  // (el probe reportaría éxito sobre un directorio recién creado): verificar
+  // la existencia antes, con el mismo criterio que checkReadPermissions.
+  try {
+    await stat(cwd);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      return {
+        label: 'permisos de escritura en cwd',
+        ok: false,
+        detail: `el directorio ${cwd} no existe`,
+      };
+    }
+  }
   // Escribir el probe dentro de .iteraciones/, el directorio de caché del build.
   // Si el proceso muere, el archivo queda en un directorio que se limpia con
   // clean o --full, no en la raíz del proyecto.
@@ -69,7 +92,15 @@ export async function checkWritePermissions(cwd: string): Promise<CheckResult> {
     await writeFile(probe, '');
     await unlink(probe);
     return { label: 'permisos de escritura en cwd', ok: true };
-  } catch {
+  } catch (err) {
+    // Mismo criterio que checkReadPermissions: inexistencia ≠ permisos.
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      return {
+        label: 'permisos de escritura en cwd',
+        ok: false,
+        detail: `el directorio ${cwd} no existe`,
+      };
+    }
     return {
       label: 'permisos de escritura en cwd',
       ok: false,
