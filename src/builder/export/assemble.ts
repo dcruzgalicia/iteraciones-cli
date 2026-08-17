@@ -1,4 +1,3 @@
-import { join } from 'node:path';
 import { formatHumanDate } from '../../lib/date.js';
 import type { BuildDocument } from '../types.js';
 import type { ExportDocument, ExportMetadata } from './types.js';
@@ -14,10 +13,11 @@ export function assembleExportDocument(
   globalCsl?: string,
   toc?: boolean,
 ): ExportDocument {
-  const documentclass: 'scrartcl' | 'scrbook' = 'scrbook';
-
   const bibliography = globalBibliography;
-  const csl = globalCsl ?? (bibliography ? join(import.meta.dir, '../../../src/lib/resources/apa-7.csl') : undefined);
+  // Sin fallback al apa-7 del paquete: el export Markdown no debe incrustar
+  // rutas internas del paquete en su frontmatter (el CSL empaquetado lo
+  // resuelve el pipeline al compilar; el export es portable).
+  const csl = globalCsl;
 
   const metadata: ExportMetadata = {
     title: doc.frontmatter.title || 'Sin título',
@@ -27,7 +27,6 @@ export function assembleExportDocument(
     lang,
     bibliography,
     csl,
-    documentclass,
     toc: toc ?? false,
     tocDepth: 1,
   };

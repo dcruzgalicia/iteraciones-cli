@@ -9,7 +9,6 @@ export interface ExportMetadata {
   lang: string;
   bibliography?: string;
   csl?: string;
-  documentclass: 'scrartcl' | 'scrbook';
   toc: boolean;
   tocDepth?: number;
 }
