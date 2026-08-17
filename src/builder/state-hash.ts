@@ -39,6 +39,8 @@ const CACHE_SCHEMA_VERSIONS = {
   latexTemplate: 'latex-template-v1',
   /** Enlazado de citas del HTML (--metadata=link-citations). */
   linkCitations: 'link-citations-v1',
+  /** Exportación Markdown (convertToMarkdown: metadatos y rutas del frontmatter de salida). */
+  markdownExport: 'markdown-export-v1',
 } as const;
 
 /**

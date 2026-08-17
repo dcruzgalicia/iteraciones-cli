@@ -338,7 +338,7 @@ async function processDocumentFormats(
     await convertToEpub(content, outBase(`${outSlug}.epub`), exportDoc, filters, ctx.siteConfig.toc, fm);
   }
   if (mdOn && mdPaths.has(doc.relativePath)) {
-    await convertToMarkdown(content, outBase(`${outSlug}.md`), exportDoc, filters, fm);
+    await convertToMarkdown(content, outBase(`${outSlug}.md`), exportDoc, filters, cwd, fm);
   }
 }
 

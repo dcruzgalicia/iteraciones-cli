@@ -51,13 +51,18 @@ describe('assembleExportDocument', () => {
     expect(exp.metadata.dateIso).toBe('2026-08-08');
     expect(exp.metadata.lang).toBe('es-MX');
     expect(exp.metadata.toc).toBe(true);
-    expect(exp.metadata.documentclass).toBe('scrbook');
   });
 
-  it('con bibliography global usa el CSL apa-7 del paquete como fallback', () => {
+  it('con bibliography global conserva el csl configurado sin fallback al paquete', () => {
+    const exp = assembleExportDocument(doc, 'es-MX', '/proyecto/refs.bib', '/proyecto/nature.csl');
+    expect(exp.metadata.bibliography).toBe('/proyecto/refs.bib');
+    expect(exp.metadata.csl).toBe('/proyecto/nature.csl');
+  });
+
+  it('con bibliography global y sin csl no incrusta el apa-7 del paquete (export portable)', () => {
     const exp = assembleExportDocument(doc, 'es-MX', '/proyecto/refs.bib');
     expect(exp.metadata.bibliography).toBe('/proyecto/refs.bib');
-    expect(exp.metadata.csl?.endsWith('apa-7.csl')).toBe(true);
+    expect(exp.metadata.csl).toBeUndefined();
   });
 
   it('sin bibliografía global no define csl', () => {

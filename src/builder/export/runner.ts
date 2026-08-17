@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { mkdir, rename, rm } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { PandocError } from '../../lib/errors.js';
 import { logWarning } from '../../lib/logger.js';
 import { runPandoc } from '../../lib/pandoc-runner.js';
@@ -68,6 +68,7 @@ export async function convertToMarkdown(
   outputPath: string,
   doc: ExportDocument,
   filters: LuaFilterGroup,
+  cwd: string,
   fm: Record<string, unknown> = {},
 ): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
@@ -76,11 +77,12 @@ export async function convertToMarkdown(
 
   // Metadatos complementarios: el frontmatter del documento fluye a pandoc y el
   // writer markdown emite el YAML resultante (frontmatter + estos campos) con
-  // --standalone (sin él, el writer omite el metadata en la salida).
+  // --standalone (sin él, el writer omite el metadata en la salida). Las rutas
+  // de bibliografía/CSL se emiten relativas al proyecto: el export es portable
+  // (mover el proyecto no rompe las citas; una ruta absoluta sí).
   const lang = typeof fm.lang === 'string' && fm.lang ? (fm.lang as string) : doc.metadata.lang;
   extraArgs.push('--standalone');
   extraArgs.push(`--metadata=lang:${lang}`);
-  extraArgs.push(`--metadata=documentclass:${doc.metadata.documentclass}`);
   if (doc.metadata.date) extraArgs.push(`--metadata=date:${metadataValue(doc.metadata.date)}`);
   const tocActive = typeof fm.toc === 'boolean' ? fm.toc : doc.metadata.toc;
   if (tocActive) {
@@ -88,11 +90,11 @@ export async function convertToMarkdown(
     if (doc.metadata.tocDepth && doc.metadata.tocDepth > 0) extraArgs.push(`--metadata=toc-depth:${doc.metadata.tocDepth}`);
   }
   if (doc.metadata.bibliography) {
-    extraArgs.push(`--metadata=bibliography:${doc.metadata.bibliography}`);
+    extraArgs.push(`--metadata=bibliography:${relative(cwd, doc.metadata.bibliography)}`);
   }
   if (doc.metadata.csl) {
     if (existsSync(doc.metadata.csl)) {
-      extraArgs.push(`--metadata=csl:${doc.metadata.csl}`);
+      extraArgs.push(`--metadata=csl:${relative(cwd, doc.metadata.csl)}`);
     } else {
       logWarning(`archivo CSL no encontrado: "${doc.metadata.csl}"`, 'export');
     }

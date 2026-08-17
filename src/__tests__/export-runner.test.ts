@@ -22,7 +22,6 @@ const EXPORT_DOC = {
     date: '8 de agosto de 2026',
     dateIso: '2026-08-08',
     lang: 'es-MX',
-    documentclass: 'scrbook' as const,
     toc: false,
   },
 };
@@ -36,7 +35,7 @@ describe('export/runner (convertToMarkdown)', () => {
   it.skipIf(!pandocOk)('emite el YAML con el frontmatter del documento y los metadatos complementarios', async () => {
     await withTempDir(async (dir) => {
       const out = join(dir, 'salida.md');
-      await convertToMarkdown(BODY, out, EXPORT_DOC, NO_FILTERS);
+      await convertToMarkdown(BODY, out, EXPORT_DOC, NO_FILTERS, '/proyecto');
       const content = await Bun.file(out).text();
       expect(content.startsWith('---\n')).toBe(true);
       // El frontmatter del documento fluye al YAML (emitido por pandoc)
@@ -45,10 +44,30 @@ describe('export/runner (convertToMarkdown)', () => {
       expect(content).toContain('- Autor Dos');
       // Los complementos del CLI (defaults que no vienen del frontmatter)
       expect(content).toContain('lang: es-MX');
-      expect(content).toContain('documentclass: scrbook');
       // La fecha formateada del CLI sobreescribe la cruda del frontmatter
       expect(content).toContain('date: 8 de agosto de 2026');
       expect(content).toContain('Hola.');
+    });
+  });
+
+  it.skipIf(!pandocOk)('no emite documentclass (detalle interno del PDF) ni rutas absolutas', async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(join(dir, 'refs.bib'), '@book{k, title = {K}}', 'utf8');
+      await writeFile(join(dir, 'nature.csl'), '<?xml version="1.0"?><style version="1.0"/>', 'utf8');
+      const out = join(dir, 'salida.md');
+      await convertToMarkdown(
+        BODY,
+        out,
+        { ...EXPORT_DOC, metadata: { ...EXPORT_DOC.metadata, bibliography: join(dir, 'refs.bib'), csl: join(dir, 'nature.csl') } },
+        NO_FILTERS,
+        dir,
+      );
+      const content = await Bun.file(out).text();
+      expect(content).not.toContain('documentclass');
+      expect(content).not.toContain(dir);
+      // Rutas relativas al proyecto: el export es portable
+      expect(content).toContain('bibliography: refs.bib');
+      expect(content).toContain('csl: nature.csl');
     });
   });
 
@@ -61,6 +80,7 @@ describe('export/runner (convertToMarkdown)', () => {
         out,
         { ...EXPORT_DOC, metadata: { ...EXPORT_DOC.metadata, author: [], date: undefined, dateIso: undefined } },
         NO_FILTERS,
+        '/proyecto',
       );
       const content = await Bun.file(out).text();
       expect(content).not.toContain('author:');
