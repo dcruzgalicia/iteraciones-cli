@@ -239,6 +239,36 @@ describe('ProgressTracker', () => {
     expect(output).not.toContain('✓ Todo listo.');
   });
 
+  it('con advertencias cierra con línea explícita, sugiere validate y lista las advertencias', async () => {
+    const output = await runTracker(async (tracker) => {
+      tracker.startPhase('discovery', 1);
+      tracker.completePhase(1);
+      await tracker.planPhases(['discovery']);
+      // El orquestador conecta el sink de warnings en modo no verbose
+      tracker.addWarning('⚠ [config] primera advertencia');
+      tracker.addWarning('⚠ [discover] segunda advertencia');
+      await tracker.finish(1, 0, []);
+    });
+
+    expect(output).not.toContain('✔ Todo listo.');
+    expect(output).toContain("⚠ Build completado con 2 advertencias. Ejecuta 'iteraciones validate' para más detalle.");
+    expect(output).toContain('Advertencias:');
+    expect(output).toContain('primera advertencia');
+    expect(output).toContain('segunda advertencia');
+  });
+
+  it('con una sola advertencia usa el singular', async () => {
+    const output = await runTracker(async (tracker) => {
+      tracker.startPhase('discovery', 1);
+      tracker.completePhase(1);
+      await tracker.planPhases(['discovery']);
+      tracker.addWarning('⚠ [config] única advertencia');
+      await tracker.finish(1, 0, []);
+    });
+
+    expect(output).toContain('Build completado con 1 advertencia.');
+  });
+
   it('al actualizar una fila en TTY resetea la columna antes de escribir (regresión: indentaciones fantasma)', async () => {
     const output = await runTracker(
       async (tracker) => {
