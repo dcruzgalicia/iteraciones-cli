@@ -133,6 +133,12 @@ iteraciones new posts/mi-articulo.md
 
 El archivo se crea con `title`, `date` y el bloque `---`. Si no se incluye extensión `.md`, se agrega automáticamente.
 
+El título se infiere del nombre del archivo **sin acentos** (`mi-articulo.md` → `title: "Mi articulo"`). Para títulos con acentos u otro texto, usa `--title`:
+
+```
+iteraciones new --title "Mi artículo" posts/mi-articulo.md
+```
+
 ### `iteraciones validate`
 
 Valida `iteraciones.config.yaml` y el frontmatter de todos los documentos Markdown del proyecto.
