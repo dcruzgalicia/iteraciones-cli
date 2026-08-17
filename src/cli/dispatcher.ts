@@ -15,31 +15,60 @@ import { runFilters as filters } from './filters.js';
 import { runInit as init } from './init.js';
 import { runValidate as validate } from './validate.js';
 
-export async function runClean(cwd: string): Promise<void> {
-  const targets = [join(cwd, 'dist'), join(cwd, '.iteraciones')];
-  // Reportar por directorio qué no se pudo eliminar: un fallo de clean no debe
-  // afirmar éxito (antes el catch traga cualquier error, EACCES incluido).
-  const results = await Promise.all(
-    targets.map(async (dir) => {
-      try {
-        await rm(dir, { recursive: true, force: true });
-        return null;
-      } catch (err) {
-        return `${dir}: ${err instanceof Error ? err.message : String(err)}`;
-      }
-    }),
-  );
-  const failures = results.filter((r): r is string => r !== null);
-  if (failures.length > 0) {
-    logError(`no se pudo eliminar: ${failures.join('; ')}`, 'clean');
-    process.exitCode = 1;
-    return;
+/**
+ * Verifica que el directorio raíz del proyecto exista y sea un directorio.
+ * Todos los comandos la ejecutan al inicio: un --project-root inexistente
+ * (o apuntando a un archivo) debe fallar con un mensaje accionable, no con
+ * un ENOENT técnico del pipeline de descubrimiento.
+ */
+async function assertProjectRoot(cwd: string): Promise<void> {
+  try {
+    const st = await stat(cwd);
+    if (!st.isDirectory()) throw new Error(`"${cwd}" no es un directorio`);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      throw new Error(`el directorio "${cwd}" no existe`);
+    }
+    throw err;
   }
-  logSuccess('eliminado dist/ y .iteraciones/', 'clean');
+}
+
+export async function runClean(cwd: string): Promise<void> {
+  try {
+    await assertProjectRoot(cwd);
+    const targets = [join(cwd, 'dist'), join(cwd, '.iteraciones')];
+    // Reportar por directorio qué no se pudo eliminar: un fallo de clean no debe
+    // afirmar éxito (antes el catch traga cualquier error, EACCES incluido).
+    const results = await Promise.all(
+      targets.map(async (dir) => {
+        try {
+          await rm(dir, { recursive: true, force: true });
+          return null;
+        } catch (err) {
+          return `${dir}: ${err instanceof Error ? err.message : String(err)}`;
+        }
+      }),
+    );
+    const failures = results.filter((r): r is string => r !== null);
+    if (failures.length > 0) {
+      logError(`no se pudo eliminar: ${failures.join('; ')}`, 'clean');
+      process.exitCode = 1;
+      return;
+    }
+    logSuccess('eliminado dist/ y .iteraciones/', 'clean');
+  } catch (err) {
+    if (err instanceof Error) {
+      logError(err.message, 'clean');
+    } else {
+      logError('Error desconocido al limpiar.', 'clean');
+    }
+    process.exitCode = 1;
+  }
 }
 
 export async function runBuild(cwd: string, options: BuildOptions = {}): Promise<void> {
   try {
+    await assertProjectRoot(cwd);
     // Validar y resolver --output: las rutas relativas se resuelven contra la
     // raíz del proyecto (--project-root), no contra el cwd del proceso.
     let output = options.outputDir;
@@ -125,6 +154,7 @@ async function buildProjectInfo(cwd: string): Promise<string[]> {
 
 export async function runInit(cwd: string): Promise<void> {
   try {
+    await assertProjectRoot(cwd);
     await init(cwd);
   } catch (err) {
     if (err instanceof Error) {
@@ -138,6 +168,7 @@ export async function runInit(cwd: string): Promise<void> {
 
 export async function runValidate(cwd: string): Promise<void> {
   try {
+    await assertProjectRoot(cwd);
     await validate(cwd);
   } catch (err) {
     if (err instanceof Error) {
@@ -151,6 +182,7 @@ export async function runValidate(cwd: string): Promise<void> {
 
 export async function runDoctor(cwd: string, options: { info?: boolean } = {}): Promise<void> {
   try {
+    await assertProjectRoot(cwd);
     // --info muestra la información del proyecto (antes comando info)
     if (options.info) {
       const lines = await buildProjectInfo(cwd);
@@ -169,6 +201,7 @@ export async function runDoctor(cwd: string, options: { info?: boolean } = {}): 
 
 export async function runNew(cwd: string, path: string, options: { title?: string } = {}): Promise<void> {
   try {
+    await assertProjectRoot(cwd);
     // Normalizar el nombre: espacios → guiones y separadores múltiples
     // colapsados ('mi articulo' → 'mi-articulo.md'). Coherente con
     // inferTitleFromPath, que convierte guiones en espacios para el título.
@@ -223,6 +256,7 @@ export async function runNew(cwd: string, path: string, options: { title?: strin
 
 export async function runFilters(cwd: string): Promise<void> {
   try {
+    await assertProjectRoot(cwd);
     await filters(cwd);
   } catch (err) {
     if (err instanceof Error) {
