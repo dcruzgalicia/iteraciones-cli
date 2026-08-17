@@ -16,7 +16,27 @@ function sortLuaInfos(infos: Awaited<ReturnType<typeof getBuiltinLuaFilterInfos>
 }
 
 /**
+ * Ancho de terminal disponible (solo TTY). En pipes no hay ancho conocido:
+ * las descripciones se muestran completas (el usuario puede desplazarse).
+ */
+function terminalColumns(): number | undefined {
+  return process.stdout.isTTY === true && process.stdout.columns ? process.stdout.columns : undefined;
+}
+
+/** Trunca un texto con elipsis al ancho dado (nunca corta a media palabra). */
+function truncateWithEllipsis(text: string, width: number): string {
+  if (text.length <= width) return text;
+  const cut = Math.max(0, width - 1);
+  // Cortar en el último espacio antes del límite: sin palabras partidas
+  const lastSpace = text.lastIndexOf(' ', cut);
+  const end = lastSpace > 0 ? lastSpace : cut;
+  return `${text.slice(0, end)}…`;
+}
+
+/**
  * Muestra la lista de filtros (filters) disponibles y su estado (activo/inactivo).
+ * Las filas se imprimen sin prefijo (formato tabla); solo los encabezados de
+ * sección y las pistas usan el prefijo ℹ del logger.
  */
 export async function runFilters(cwd: string): Promise<void> {
   const config = await loadSiteConfig(cwd);
@@ -32,10 +52,14 @@ export async function runFilters(cwd: string): Promise<void> {
 
   // Columna de nombres alineada (padEnd sobre el ancho máximo)
   const nameWidth = Math.max(...allInfos.map((info) => info.name.length));
+  // 2 (indent) + nameWidth + 2 + 'lua' (3) + 2 + desc + 2 + '[estado]' (8)
+  const columns = terminalColumns();
+  const descWidth = columns === undefined ? undefined : Math.max(10, columns - 2 - nameWidth - 2 - 3 - 2 - 8);
   for (const info of allInfos) {
     const active = !disabled.has(info.name);
     const status = active ? 'activo' : 'desactivado';
-    logInfo(`  ${info.name.padEnd(nameWidth)}  lua  ${info.description}  [${status}]`);
+    const description = descWidth !== undefined ? truncateWithEllipsis(info.description, descWidth) : info.description;
+    process.stdout.write(`  ${info.name.padEnd(nameWidth)}  lua  ${description}  [${status}]\n`);
   }
 
   logInfo('');
@@ -57,10 +81,12 @@ export async function runFilters(cwd: string): Promise<void> {
     logInfo('');
 
     const preambleWidth = Math.max(...preambleInfos.map((info) => info.name.length));
+    const preambleDescWidth = columns === undefined ? undefined : Math.max(10, columns - 2 - preambleWidth - 2 - 2 - 8);
     for (const info of preambleInfos) {
       const active = !preambleDisabled.has(info.name);
       const status = active ? 'activo' : 'desactivado';
-      logInfo(`  ${info.name.padEnd(preambleWidth)}  ${info.description}  [${status}]`);
+      const description = preambleDescWidth !== undefined ? truncateWithEllipsis(info.description, preambleDescWidth) : info.description;
+      process.stdout.write(`  ${info.name.padEnd(preambleWidth)}  ${description}  [${status}]\n`);
     }
 
     logInfo('');
