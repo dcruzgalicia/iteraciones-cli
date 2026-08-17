@@ -52,6 +52,48 @@ describe('build-assets', () => {
       }
     });
   });
+
+  it('una segunda llamada no reescribe fuentes ni logo (mtime estable)', async () => {
+    await withTempDir(async (dir) => {
+      const outDir = join(dir, 'dist', 'files');
+      await buildAssets(outDir, dir, DEFAULT_SITE_CONFIG);
+      const fonts = [...new Bun.Glob('*.ttf').scanSync({ cwd: join(outDir, 'fonts') })].sort();
+      expect(fonts.length).toBeGreaterThan(0);
+      const logoStat = await Bun.file(join(outDir, 'logo.svg')).stat();
+      const fontMtimes = new Map<string, number>();
+      for (const f of fonts) {
+        fontMtimes.set(f, (await Bun.file(join(outDir, 'fonts', f)).stat()).mtimeMs);
+      }
+      await Bun.sleep(10);
+      await buildAssets(outDir, dir, DEFAULT_SITE_CONFIG);
+      for (const f of fonts) {
+        const s = await Bun.file(join(outDir, 'fonts', f)).stat();
+        const prev = fontMtimes.get(f);
+        if (prev === undefined) throw new Error(`sin mtime previo para ${f}`);
+        expect(s.mtimeMs).toBe(prev);
+      }
+      const logoStat2 = await Bun.file(join(outDir, 'logo.svg')).stat();
+      expect(logoStat2.mtimeMs).toBe(logoStat.mtimeMs);
+    });
+  });
+
+  it('un logo de proyecto modificado se re-copia', async () => {
+    await withTempDir(async (dir) => {
+      const outDir = join(dir, 'dist', 'files');
+      await mkdir(join(dir, 'assets'), { recursive: true });
+      await writeFile(join(dir, 'assets', 'mi-logo.svg'), '<svg>A</svg>', 'utf8');
+      const config = {
+        ...DEFAULT_SITE_CONFIG,
+        format: { ...DEFAULT_SITE_CONFIG.format, html: { ...DEFAULT_SITE_CONFIG.format.html, logo: 'assets/mi-logo.svg' } },
+      };
+      await buildAssets(outDir, dir, config);
+      expect(await Bun.file(join(outDir, 'assets', 'mi-logo.svg')).text()).toBe('<svg>A</svg>');
+      await Bun.sleep(5);
+      await writeFile(join(dir, 'assets', 'mi-logo.svg'), '<svg>B</svg>', 'utf8');
+      await buildAssets(outDir, dir, config);
+      expect(await Bun.file(join(outDir, 'assets', 'mi-logo.svg')).text()).toBe('<svg>B</svg>');
+    });
+  });
 });
 
 describe('cleanup (eliminaciones y slugs)', () => {
