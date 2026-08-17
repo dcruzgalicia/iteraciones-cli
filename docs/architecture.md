@@ -179,7 +179,8 @@ lang: es-MX
 toc: false
 
 format:
-  latex: false
+  latex:
+    generate: false
   pdf:
     generate: false
     show-date: false
@@ -343,7 +344,7 @@ Alcance del soporte (`src/builder/gitignore.ts`):
 - Patrones comunes de git: negación (`!`), anclaje a la raíz (`/` inicial o interior), directorios (barra final `/`), `*`, `**`, `?` y clases `[..]`.
 - La última regla que coincide gana (estándar git).
 
-Límites conocidos (aceptados): semántica aproximada en casos límite del estándar git (p. ej. `**` en medio de patrones, escapes exóticos) y ausencia de reglas heredadas de `.gitignore` superiores. Es el único mecanismo de exclusión de contenido; no se ampliará su alcance.
+Límites conocidos (aceptados): semántica aproximada en casos límite del estándar git (p. ej. `**` en medio de patrones, escapes exóticos), ausencia de reglas heredadas de `.gitignore` superiores, y el matcher no distingue archivos de directorios (no hace stat: un patrón `dir/` no ignora el directorio en sí en niveles superiores; discovery solo verifica archivos `.md` existentes, así que no afecta al descubrimiento real). La suite de paridad (`src/__tests__/gitignore-parity.test.ts`) compara `isIgnoredByRules` contra `git check-ignore` y lista las divergencias conocidas en `KNOWN_DIVERGENCES`: solo una divergencia nueva falla. Es el único mecanismo de exclusión de contenido; no se ampliará su alcance.
 
 ### Congelación de la superficie pública (pre-1.0)
 
@@ -389,11 +390,8 @@ Opciones (`BuildOptions`):
 | Opción | Tipo | Descripción |
 |--------|------|-------------|
 | `outputDir` | `string` | Directorio de salida (default: `dist/files`).
-| `concurrency` | `number \| string` | Máximo de invocaciones pandoc simultáneas (default: CPU − 1, máx. 16).
 | `full` | `boolean` | Build completo desde cero: elimina salida y caché.
-| `dryRun` | `boolean` | Muestra los documentos a procesar sin generar salida.
 | `verbose` | `boolean` | Salida verbose del tracker.
-| `profile` | `boolean` | Desglose de tiempos por fase al final.
 
 ### `loadSiteConfig(cwd)` — `src/config/config-loader.ts`
 
