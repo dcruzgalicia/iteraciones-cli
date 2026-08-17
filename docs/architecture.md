@@ -282,7 +282,7 @@ La tipografía del PDF (papel, márgenes, interlineado, fuente, estilos de secci
 
 ### ¿Por qué el pipeline usa dos pools de concurrencia?
 
-Cada documento genera sus formatos con invocaciones directas de pandoc (markdown → latex/html5/epub3/markdown) en el **pool 1**, con concurrencia `ctx.concurrency` (CPU − 1, máx. 16). El **pool 2** consume la cola de compilación PDF en paralelo, solapando latexmk con pandoc: el PDF no bloquea al resto de formatos. Cada instancia de latexmk consume ~300-600 MB de RAM, por eso su concurrencia está acotada.
+Cada documento genera sus formatos con invocaciones directas de pandoc (markdown → latex/html5/epub3/markdown) en el **pool 1**, con concurrencia `ctx.concurrency` (CPU − 1, máx. 16). El **pool 2** consume la cola de compilación PDF en paralelo, solapando latexmk con pandoc: el PDF no bloquea al resto de formatos. Cada instancia de latexmk consume ~300-600 MB de RAM, por eso su concurrencia está acotada a un máximo de **4 slots** (`PDF_MAX_SLOTS` en `pipeline.ts`), independiente de la concurrencia general.
 
 ### ¿Por qué templates efectivos y un único post-procesamiento?
 
