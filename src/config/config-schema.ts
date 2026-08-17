@@ -1,8 +1,9 @@
 import { z } from 'zod';
 import { ACCENT_PALETTES, type AccentColor } from '../lib/accent-palettes.js';
-import type { EpubFormatConfig, HtmlFormatConfig, LatexFormatConfig, MarkdownFormatConfig, PdfFormatConfig } from './site-config.js';
+import type { EpubFormatConfig, HtmlBlockKey, HtmlFormatConfig, LatexFormatConfig, MarkdownFormatConfig, PdfFormatConfig } from './site-config.js';
 import {
   DEFAULT_EPUB_FORMAT,
+  DEFAULT_HTML_BLOCKS,
   DEFAULT_HTML_FORMAT,
   DEFAULT_LATEX_FORMAT,
   DEFAULT_MARKDOWN_FORMAT,
@@ -51,17 +52,30 @@ export const KNOWN_ACCENT_COLORS = Object.keys(ACCENT_PALETTES) as AccentColor[]
 
 // ── HtmlFormatConfig ───────────────────────────────────────────────────────
 
-/** Orden de bloques del masonry: enteros, claves conocidas (strict). */
+/**
+ * Orden de bloques del masonry: lista de claves conocidas; la posición ES el
+ * orden. Mensajes accionables: la sintaxis anterior (objeto con números) y un
+ * nombre desconocido explican cómo corregir la configuración.
+ */
 const HtmlBlocksSchema = z
-  .object({
-    header: z.number().int().optional(),
-    trayectura: z.number().int().optional(),
-    formatos: z.number().int().optional(),
-    indice: z.number().int().optional(),
-    referencias: z.number().int().optional(),
-    footer: z.number().int().optional(),
+  .unknown()
+  .superRefine((value, ctx) => {
+    if (value === undefined) return;
+    if (!Array.isArray(value)) {
+      ctx.addIssue({
+        code: 'custom',
+        message:
+          'debe ser una lista de bloques en orden (p. ej. [header, contenido, formatos, indice, referencias, footer]) — antes era un objeto con números',
+      });
+      return;
+    }
+    for (const item of value) {
+      if (typeof item !== 'string' || !DEFAULT_HTML_BLOCKS.includes(item as HtmlBlockKey)) {
+        ctx.addIssue({ code: 'custom', message: `"${String(item)}" no es un bloque conocido: usa solo ${DEFAULT_HTML_BLOCKS.join(', ')}` });
+      }
+    }
   })
-  .strict();
+  .transform((value): HtmlBlockKey[] | undefined => (Array.isArray(value) ? (value as HtmlBlockKey[]) : undefined));
 
 const HtmlFormatSchema = z
   .object({

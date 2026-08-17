@@ -1,19 +1,9 @@
 // ── Schema `format:` (estilo Quarto) ──
 
-/**
- * Bloques del masonry HTML. Cada clave es una tarjeta; el número indica el
- * orden (más alto = más tarde). El 1 queda sin asignar.
- */
-export const DEFAULT_HTML_BLOCKS = {
-  header: -1,
-  trayectura: 0,
-  formatos: 2,
-  indice: 3,
-  referencias: 4,
-  footer: 99,
-} as const;
+/** Claves de los bloques del masonry HTML, en su orden por defecto. */
+export const DEFAULT_HTML_BLOCKS = ['header', 'contenido', 'formatos', 'indice', 'referencias', 'footer'] as const;
 
-export type HtmlBlockKey = keyof typeof DEFAULT_HTML_BLOCKS;
+export type HtmlBlockKey = (typeof DEFAULT_HTML_BLOCKS)[number];
 
 export interface HtmlFormatConfig {
   /** Título del sitio. Se usa en el <title> de cada página HTML. */
@@ -27,10 +17,11 @@ export interface HtmlFormatConfig {
   /** Si true, genera HTML en el build. */
   generate?: boolean;
   /**
-   * Orden de los bloques del masonry (override individual: cada clave
-   * opcional; sin ella, usa el default de DEFAULT_HTML_BLOCKS).
+   * Orden de los bloques del masonry: la posición en la lista ES el orden
+   * (los bloques ausentes no se renderizan). Sin configurar, se usa
+   * DEFAULT_HTML_BLOCKS.
    */
-  blocks?: Partial<Record<HtmlBlockKey, number>>;
+  blocks?: HtmlBlockKey[];
 }
 
 export interface PdfFormatConfig {

@@ -345,27 +345,25 @@ describe('loadSiteConfig', () => {
     });
   });
 
-  it('parsea format.html.blocks con override individual', async () => {
+  it('parsea format.html.blocks como lista ordenada', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'format:\n  html:\n    blocks:\n      formatos: 4');
+      await writeConfig(dir, 'format:\n  html:\n    blocks:\n      - header\n      - indice\n      - contenido');
       const config = await loadSiteConfig(dir);
-      expect(config.format.html?.blocks).toEqual({ formatos: 4 });
+      expect(config.format.html?.blocks).toEqual(['header', 'indice', 'contenido']);
     });
   });
 
-  it('adviierte sobre claves desconocidas en format.html.blocks', async () => {
+  it('un nombre de bloque desconocido en format.html.blocks es un error accionable', async () => {
     await withTempDir(async (dir) => {
-      const writeSpy = spyOn(process.stderr, 'write');
-      let output = '';
-      try {
-        await writeConfig(dir, 'format:\n  html:\n    blocks:\n      tarjeta-rara: 1');
-        await loadSiteConfig(dir);
-        output = writeSpy.mock.calls.map((c) => String(c[0])).join('');
-      } finally {
-        writeSpy.mockRestore();
-      }
-      expect(output).toContain('claves sin efecto');
-      expect(output).toContain('tarjeta-rara');
+      await writeConfig(dir, 'format:\n  html:\n    blocks:\n      - tarjeta-rara');
+      await expect(loadSiteConfig(dir)).rejects.toThrow(/no es un bloque conocido/);
+    });
+  });
+
+  it('la sintaxis antigua de format.html.blocks (objeto con números) es un error accionable', async () => {
+    await withTempDir(async (dir) => {
+      await writeConfig(dir, 'format:\n  html:\n    blocks:\n      formatos: 4');
+      await expect(loadSiteConfig(dir)).rejects.toThrow(/debe ser una lista de bloques/);
     });
   });
 

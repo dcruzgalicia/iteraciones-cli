@@ -4,9 +4,8 @@ import { DEFAULT_HTML_BLOCKS, type HtmlBlockKey } from '../config/site-config.js
 
 // ---------------------------------------------------------------------------
 // Template HTML efectivo: composición desde recursos por build.
-// El orden de las tarjetas se deriva de format.html.blocks: los bloques con
-// número negativo van antes del body (trayectura), los positivos después;
-// el orden dentro de cada grupo lo da el número (el body es el cero).
+// El orden de las tarjetas es format.html.blocks: la posición en la lista ES
+// el orden (los bloques ausentes no se renderizan).
 // ---------------------------------------------------------------------------
 
 /** Recursos del template HTML del paquete. */
@@ -15,7 +14,7 @@ const HTML_RESOURCES_DIR = join(import.meta.dir, '../lib/resources/html');
 /** Archivo de tarjeta por bloque (footer usa la variante sin comentario del header). */
 const HTML_CARDS: Record<HtmlBlockKey, string> = {
   header: 'card-identity.html',
-  trayectura: 'card-trayectura.html',
+  contenido: 'card-contenido.html',
   formatos: 'card-formatos.html',
   indice: 'card-indice.html',
   referencias: 'card-referencias.html',
@@ -23,16 +22,12 @@ const HTML_CARDS: Record<HtmlBlockKey, string> = {
 };
 
 /**
- * Resuelve el orden de los bloques del masonry: merge de los defaults con los
- * overrides individuales (`format.html.blocks`). Cada clave es opcional; sin
- * ella usa su default. Los empates de número se desempatan por el orden
- * canónico de claves (header → trayectura → formatos → indice → referencias →
- * footer), de modo que el resultado es determinista.
+ * Resuelve el orden de los bloques del masonry. Una lista explícita en
+ * `format.html.blocks` ES el orden (los bloques ausentes no se renderizan);
+ * sin configurar, se usa DEFAULT_HTML_BLOCKS.
  */
-export function resolveBlockOrder(overrides?: Partial<Record<HtmlBlockKey, number>>): HtmlBlockKey[] {
-  const canonical = Object.keys(DEFAULT_HTML_BLOCKS) as HtmlBlockKey[];
-  const order: Record<HtmlBlockKey, number> = { ...DEFAULT_HTML_BLOCKS, ...overrides };
-  return [...canonical].sort((a, b) => order[a] - order[b] || canonical.indexOf(a) - canonical.indexOf(b));
+export function resolveBlockOrder(overrides?: HtmlBlockKey[]): HtmlBlockKey[] {
+  return overrides ?? [...DEFAULT_HTML_BLOCKS];
 }
 
 /**

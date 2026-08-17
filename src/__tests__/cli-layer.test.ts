@@ -1059,7 +1059,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
-  it('el masonry sigue el orden de bloques por defecto (header, trayectura, formatos, indice, referencias, footer)', async () => {
+  it('el masonry sigue el orden de bloques por defecto (header, contenido, formatos, indice, referencias, footer)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
       await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\ntoc: true\nformat:\n  latex:\n    generate: true\n', 'utf8');
@@ -1072,7 +1072,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       const pos = (s: string): number => html.indexOf(s);
       // Contenido distintivo de cada tarjeta (sin marcadores internos)
       expect(pos('Tarjeta identidad')).toBeGreaterThanOrEqual(0); // header
-      expect(pos('Tarjeta identidad')).toBeLessThan(pos('<article')); // trayectura
+      expect(pos('Tarjeta identidad')).toBeLessThan(pos('<article')); // contenido
       expect(pos('<article')).toBeLessThan(pos('>Formatos</h2>'));
       expect(pos('>Formatos</h2>')).toBeLessThan(pos('id="TOC"'));
       expect(pos('id="TOC"')).toBeLessThan(pos('id="refs-heading"'));
@@ -1080,12 +1080,12 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
-  it('format.html.blocks: un override individual mueve la tarjeta (formatos después de índice)', async () => {
+  it('format.html.blocks: una lista explícita ES el orden (formato después de índice)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
       await writeFile(
         join(dir, 'iteraciones.config.yaml'),
-        'lang: es-MX\ntoc: true\nformat:\n  latex:\n    generate: true\n  html:\n    blocks:\n      formatos: 4\n',
+        'lang: es-MX\ntoc: true\nformat:\n  latex:\n    generate: true\n  html:\n    blocks:\n      - header\n      - contenido\n      - indice\n      - formatos\n      - referencias\n      - footer\n',
         'utf8',
       );
       await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\n# Sección\n\nContenido.\n', 'utf8');
@@ -1095,8 +1095,6 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
       const pos = (s: string): number => html.indexOf(s);
       expect(pos('>Formatos</h2>')).toBeGreaterThan(pos('id="TOC"'));
-      // Empate formatos 4 / referencias 4 → desempate canónico: formatos antes
-      expect(pos('>Formatos</h2>')).toBeLessThan(html.lastIndexOf('class="break-inside-avoid pb-6"'));
       expect(pos('Tarjeta identidad')).toBeLessThan(pos('<article'));
     });
   });
@@ -1117,14 +1115,15 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
-  it('el chip del contenido dice Trayectura (neologismo)', async () => {
+  it('el chip del contenido dice Contenido', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
       process.exitCode = 0;
       await runBuild(dir);
       expect(process.exitCode).toBe(0);
       const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
-      expect(html).toContain('>Trayectura</h2>');
+      expect(html).toContain('>Contenido</h2>');
+      expect(html).not.toContain('>Trayectura</h2>');
       expect(html).not.toContain('>Trayectoria</h2>');
     });
   });

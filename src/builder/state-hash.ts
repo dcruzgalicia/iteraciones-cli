@@ -9,7 +9,7 @@ const HTML_RESOURCE_FILES = [
   'skeleton.html',
   'card-identity.html',
   'card-identity-footer.html',
-  'card-trayectura.html',
+  'card-contenido.html',
   'card-indice.html',
   'card-formatos.html',
   'card-referencias.html',
