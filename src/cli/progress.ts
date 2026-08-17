@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import { GLYPHS } from '../lib/logger.js';
+import { plural } from '../lib/plural.js';
 
 function formatTime(ms: number): string {
   return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${Math.round(ms)}ms`;
@@ -393,6 +394,12 @@ export class ProgressTracker {
       process.stdout.write(`  ${padRight('Abre el resultado', LABEL_WIDTH)}${opener} ${indexHtml}\n`);
     }
     if (this.warnings.length > 0) {
+      // Cierre explícito con el conteo y el siguiente paso: sin él, el build
+      // con advertencias termina sin que el usuario sepa si "terminó bien"
+      // (exit 0) y sin conectar con la herramienta de diagnóstico.
+      process.stdout.write(
+        `\n${GLYPHS.warning} Build completado con ${plural(this.warnings.length, 'advertencia')}. Ejecuta 'iteraciones validate' para más detalle.\n`,
+      );
       process.stdout.write(`\nAdvertencias:\n`);
       for (const warning of this.warnings) {
         process.stdout.write(`  ${warning}\n`);
