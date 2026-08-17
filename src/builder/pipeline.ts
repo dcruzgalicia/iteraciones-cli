@@ -42,6 +42,7 @@ export async function runDocumentPipeline(
   ctx: BuildContext,
   plan: BuildMetadata,
   work: WorkSets,
+  allDocs: BuildDocument[],
   formatCfg: FormatConfig | undefined,
   discoveryIndex: Map<string, DiscoveryEntry>,
 ): Promise<{ processed: Set<string> }> {
@@ -64,10 +65,14 @@ export async function runDocumentPipeline(
   const htmlConfig = formatCfg?.html;
   const logoInline = await loadLogoInline(ctx.cwd, htmlConfig?.logo?.trim());
 
-  // Unión de todos los documentos con trabajo este build
+  // Unión de todos los documentos con trabajo este build: los de los exportSets
+  // (formatos activos) y los de docsChanged (markdown/filters modificados).
   const workDocs = new Map<string, BuildDocument>();
-  for (const doc of [...work.renderDocs, ...work.exportSets.html, ...work.exportSets.epub, ...work.exportSets.markdown, ...work.exportSets.latex]) {
+  for (const doc of [...work.exportSets.latex, ...work.exportSets.html, ...work.exportSets.epub, ...work.exportSets.markdown]) {
     workDocs.set(doc.relativePath, doc);
+  }
+  for (const doc of allDocs) {
+    if (work.docsChanged.has(doc.relativePath)) workDocs.set(doc.relativePath, doc);
   }
   const workDocList = [...workDocs.values()];
 

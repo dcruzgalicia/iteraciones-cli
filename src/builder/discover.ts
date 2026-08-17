@@ -87,8 +87,6 @@ export async function discover(
       bibHash: string;
       bibFileCache: BibFileCache;
     };
-    /** Si false, no persiste state.json (lo usa el dry-run: no genera salidas). */
-    persist?: boolean;
   } = {},
 ): Promise<DiscoverResult> {
   const relativePaths: string[] = [];
@@ -284,7 +282,7 @@ export async function discover(
     options.meta?.bibHash !== prevState?.bibHash ||
     JSON.stringify(options.meta?.bibFileCache) !== JSON.stringify(prevState?.bibFileCache);
 
-  if (hasChanged && options.persist !== false) {
+  if (hasChanged) {
     await saveStateFile(cwd, {
       startedAt: thisBuildStartedAt,
       activeFormats: options.activeFormats ?? [],
