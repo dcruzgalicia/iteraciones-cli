@@ -42,7 +42,9 @@ const DEFAULT_INDEX = [
   '',
   'Según @ejemplo2024, el uso de citekeys facilita la gestión de referencias.',
   '',
-  '> Consulta docs/ejemplos.md para ver todos los elementos (verse, ::, listas, código).',
+  '> Consulta docs/ejemplos.md en el repositorio de iteraciones-cli',
+  '> (https://github.com/dcruzgalicia/iteraciones-cli) para ver todos los elementos',
+  '> (verse, ::, listas, código).',
 ].join('\n');
 
 const quote = (value: string): string => JSON.stringify(value);
