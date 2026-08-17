@@ -364,14 +364,9 @@ Decisiones confirmadas en este pase (sin cambios de código):
 - La terminología `filters` / `preamble filters` / `lua-filters` se conserva tal cual (el comando que los lista es `list-filters`).
 - Los nombres numerados de preamble filters expuestos en config (`24-eso-pic`, …) se conservan: renumerarlos rompería configs existentes sin beneficio.
 
-### ¿Por qué un color de acento inválido es warning en build pero error en validate?
+### ¿Por qué un color de acento inválido es un error (no un warning)?
 
-Decisión registrada en el issue #1770 (2026-08): **el comportamiento es intencional y distinto según el contexto**.
-
-- **`build`** (tolerante): un `accent` desconocido genera una advertencia y usa `lime` por defecto. El build no debe bloquearse por un color: la prioridad es que el usuario vea su contenido.
-- **`validate`** (estricto): el acento desconocido es un error que rompe la validación. `validate` es una herramienta de diagnóstico: su trabajo es señalar exactamente qué está mal.
-
-Ambos caminos se implementan en `src/config/config-loader.ts`: en build se intercepta el valor y se advierte antes del parseo del schema; en validate no se corta y el schema Zod lo reporta como issue junto con los demás errores de la configuración.
+La tolerancia original (decisión #1770: warning + fallback a `lime` en build) se **revirtió**: un `accent` desconocido es ahora un error de validación tanto en `build` como en `validate`. Motivos: era la única clave del schema con comportamiento tolerante (cualquier otro typo, p. ej. `toc: "true"`, ya rompía el build), y un fallback silencioso producía una salida que no era la solicitada. El schema Zod es la única fuente de verdad: no hay interceptaciones previas en `config-loader.ts`.
 
 ---
 

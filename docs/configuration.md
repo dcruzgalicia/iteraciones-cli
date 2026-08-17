@@ -72,8 +72,6 @@ format:
     generate: true
 ```
 
-Antes de la versión 0.19.x, `format.latex` era un booleano simple (`latex: true`). Ese formato ya no se acepta: se advierte y se usa el valor por defecto.
-
 ### `format.pdf`
 
 Configuración de la exportación a PDF. Se compila con `latexmk` + `pdflatex` + `biber` (para citas bibliográficas).
