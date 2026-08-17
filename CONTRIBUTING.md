@@ -24,7 +24,7 @@ bun test            # bun test (426 tests en 24 archivos)
 bun run src/bin.ts build --project-root /ruta/a/proyecto
 ```
 
-Los hooks de pre-commit (Husky + lint-staged) ejecutan Biome, typecheck y tests automáticamente antes de cada commit.
+Los hooks de Husky ejecutan Biome (lint-staged) y typecheck automáticamente antes de cada commit; la suite completa de tests (`bun test`) corre en el hook de pre-push, antes de publicar la rama.
 
 ## Estructura del proyecto
 
