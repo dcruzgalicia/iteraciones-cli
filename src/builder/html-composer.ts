@@ -120,6 +120,10 @@ const FORMAT_ICONS: Record<FormatKey, string> = {
     '<svg class="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6h14M5 10h10M5 14h14M5 18h8"/></svg>',
 };
 
+/** Clase de los títulos-chip de las tarjetas (se usa en formatos y referencias). */
+const CHIP_CLASS =
+  'inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-12 text-accent-600 dark:text-accent-400';
+
 /**
  * Genera el bloque de la tarjeta Formatos (enlaces a los formatos generados)
  * con su marcador. Sin formatos activos no se genera nada: el bloque queda
@@ -144,8 +148,7 @@ export function buildFormatsBlock(formats: FormatsLink[]): string | undefined {
     )
     .join('\n');
 
-  const chipClass =
-    'inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-12 text-accent-600 dark:text-accent-400';
+  const chipClass = CHIP_CLASS;
   return (
     `<div class="break-inside-avoid pb-6">\n` +
     `      <section class="relative [&::before]:pointer-events-none [&::before]:absolute [&::before]:left-2 [&::before]:top-2 [&::before]:h-3 [&::before]:w-3 [&::before]:border-l [&::before]:border-t [&::before]:border-accent-500/30 [&::before]:content-[''] [&::after]:pointer-events-none [&::after]:absolute [&::after]:bottom-2 [&::after]:right-2 [&::after]:h-3 [&::after]:w-3 [&::after]:border-b [&::after]:border-r [&::after]:border-accent-500/30 [&::after]:content-[''] rounded-xl border border-accent-500/25 bg-stone-50/70 dark:bg-stone-900/60 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5">\n` +
@@ -217,8 +220,7 @@ export function extractReferencesBlock(html: string): { html: string; block?: st
   const block = html.slice(start, end);
   const withoutBlock = html.slice(0, start) + html.slice(end);
 
-  const chipClass =
-    'inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-12 text-accent-600 dark:text-accent-400';
+  const chipClass = CHIP_CLASS;
   const styledHeading = block.replace(/<h1[^>]*id="refs-heading"[^>]*>/, `<h2 id="refs-heading" class="${chipClass}">`).replace('</h1>', '</h2>');
   const card =
     `<div class="break-inside-avoid pb-6">\n` +

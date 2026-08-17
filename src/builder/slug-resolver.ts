@@ -12,11 +12,6 @@ interface SlugResolutionResult {
 }
 
 /**
- * Resuelve slugs para todas las entradas del discovery index.
- * Asigna sufijos -dN para duplicados, preserva slugs existentes,
- * y detecta cambios de slug que requieren reprocesamiento.
- */
-/**
  * Entrada del discovery index para un path. El path siempre existe: los
  * grupos se construyen iterando el index y los callers solo pasan paths del
  * mismo index (el guard es defensivo ante bugs de refactor).
@@ -27,6 +22,11 @@ function entryFor(discoveryIndex: Map<string, DiscoveryEntry>, path: string): Di
   return entry;
 }
 
+/**
+ * Resuelve slugs para todas las entradas del discovery index.
+ * Asigna sufijos -dN para duplicados, preserva slugs existentes,
+ * y detecta cambios de slug que requieren reprocesamiento.
+ */
 export async function resolveSlugs(
   discoveryIndex: Map<string, DiscoveryEntry>,
   computeSlug: (meta: { title: string; author: string[] }, opts: { fallbackPath: string; maxAuthors?: number }) => string,

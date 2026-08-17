@@ -125,7 +125,7 @@ export async function checkLatexEngine(): Promise<CheckResult> {
       return {
         label: 'pdflatex disponible',
         ok: false,
-        detail: 'pdflatex no encontrado en PATH. Instala MacTeX: https://tug.org/mactex/',
+        detail: 'pdflatex no encontrado en PATH. Instala MacTeX full: https://tug.org/mactex/',
       };
     }
     // Verificar que KOMA-Script esté instalado (scrartcl.cls).
@@ -167,7 +167,7 @@ export async function checkLatexEngine(): Promise<CheckResult> {
     return {
       label: 'pdflatex disponible',
       ok: false,
-      detail: 'pdflatex no encontrado en PATH. Instala MacTeX: https://tug.org/mactex/',
+      detail: 'pdflatex no encontrado en PATH. Instala MacTeX full: https://tug.org/mactex/',
     };
   }
 }
