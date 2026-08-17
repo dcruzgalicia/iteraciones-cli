@@ -83,6 +83,13 @@ Configuración de la exportación a PDF. Se compila con `latexmk` + `pdflatex` +
 
 Habilita la generación de PDF.
 
+#### `format.pdf.show-date`
+
+**Tipo:** `boolean`
+**Por defecto:** `false`
+
+Muestra la fecha en la portada del PDF. Si es `true` y el frontmatter del documento no declara `date`, se usa la fecha de creación del archivo.
+
 ### Configuración del preámbulo LaTeX
 
 La configuración tipográfica del PDF (márgenes, fuentes, interlineado, idioma, penalizaciones, estilo de secciones, epígrafes, etc.) se gestiona mediante **preamble filters**: archivos `.tex` con contenido LaTeX puro que se insertan en el preámbulo antes de `\begin{document}`.
@@ -152,14 +159,6 @@ csl: styles/nature.csl
 ```
 
 `validate` reporta un error si alguna de las dos rutas no existe. Si una ruta configurada no existe al construir, se advierte y se vuelve al auto-descubrimiento (mismo comportamiento que `lua-filters`).
-
-
-#### `format.pdf.show-date`
-
-**Tipo:** `boolean`
-**Por defecto:** `false`
-
-Muestra la fecha en la portada del PDF. Si es `true` y el frontmatter del documento no declara `date`, se usa la fecha de creación del archivo.
 
 ### `format.html`
 

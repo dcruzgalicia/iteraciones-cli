@@ -83,12 +83,6 @@ iteraciones build
 
 Los documentos procesados se generan en `dist/files/`. Los formatos activos dependen de la configuración en `iteraciones.config.yaml` (`format.latex`, `format.pdf.generate`, `format.html.generate`, etc.).
 
-Para ver qué documentos se procesarían sin generar salida:
-
-```bash
-iteraciones build --dry-run
-```
-
 ## 6. Verificar el proyecto
 
 Antes de publicar, valida la configuración y el frontmatter de todos los documentos:

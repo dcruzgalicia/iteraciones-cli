@@ -20,7 +20,7 @@ Verifica que todo funcione:
 
 ```bash
 bun run typecheck   # tsc --noEmit
-bun test            # bun test (426 tests en 24 archivos)
+bun test            # suite completa (508 tests en 25 archivos)
 bun run src/bin.ts build --project-root /ruta/a/proyecto
 ```
 
@@ -28,27 +28,29 @@ Los hooks de Husky ejecutan Biome (lint-staged) y typecheck automáticamente ant
 
 ## Estructura del proyecto
 
-```
 src/
 ├── bin.ts                   # Entry point (#!/usr/bin/env bun)
 ├── __tests__/               # Tests unitarios (bun test)
 ├── builder/                 # Pipeline de construcción
 │   ├── orchestrator.ts      # Orquestador principal (build())
+│   ├── build-planner.ts     # Planificador: metadatos de invalidación
 │   ├── discover.ts          # Fase 1: discovery y detección de cambios
-│   ├── render.ts            # Fachada: htmlPageFromMarkdown + readDocumentBody
+│   ├── slug-resolver.ts     # Resolución de slugs y colisiones
+│   ├── render.ts            # Conversión markdown → HTML (htmlPageFromMarkdown)
 │   ├── filter-resolver.ts    # Resolución y validación de filtros Lua
 │   ├── html-composer.ts      # Template HTML, masonry, extracción de referencias
 │   ├── latex-composer.ts     # Generación LaTeX y fecha de portada PDF
-│   ├── cleanup.ts           # Limpieza de archivos (formatos, caché, slugs)
-│   ├── build-assets.ts      # Assets (CSS, fuentes, logo)
 │   ├── latex-preamble.ts    # Constructor de preámbulo LaTeX
 │   ├── preamble-loader.ts   # Carga de preamble filters (.tex)
-│   ├── build-planner.ts     # Planificador: metadatos de invalidación
-│   ├── state.ts             # Caché content-addressed (state.json)
+│   ├── cleanup.ts           # Limpieza de archivos (formatos, caché, slugs)
+│   ├── build-assets.ts      # Assets (CSS, fuentes, logo)
+│   ├── state.ts             # Re-exports del estado del build (caché)
+│   ├── state-serialize.ts   # state.json (lectura/escritura atómica)
+│   ├── state-hash.ts        # Hashes de invalidación (CACHE_SCHEMA_VERSIONS)
+│   ├── state-bib.ts         # Caché de bibliografía (.bib/.csl)
 │   ├── pipeline.ts          # Pipeline por documento (pools 1 y 2)
 │   ├── pdf-pool.ts          # Pool consumidor de compilación PDF
 │   ├── gitignore.ts         # Reglas de .gitignore y paths ocultos
-│   ├── slug-resolver.ts     # Resolución de slugs y colisiones
 │   ├── types.ts             # BuildDocument, Frontmatter, BuildContext
 │   └── export/              # Exportación a PDF, EPUB, Markdown
 │       ├── runner.ts        # Ejecutor de exportación
@@ -62,24 +64,24 @@ src/
 │   ├── doctor.ts            # Comando doctor
 │   ├── doctor/system-checks.ts  # Verificaciones del sistema
 │   ├── validate.ts          # Comando validate
-│   └── filters.ts         # Comando filters
+│   └── filters.ts           # Comando list-filters
 ├── config/                  # Configuración del sitio
 │   ├── config-loader.ts     # Carga de iteraciones.config.yaml
 │   ├── config-schema.ts     # Esquemas Zod de validación
 │   └── site-config.ts       # Tipos y defaults de SiteConfig
 └── lib/                     # Utilidades compartidas
-    ├── errors.ts            # Clases de error (PandocError, ConfigError)
+    ├── errors.ts            # Clases de error (PandocError, ConfigError, BuildError)
     ├── logger.ts            # Funciones helper para mensajes (logError, logWarning)
     ├── pandoc-runner.ts     # Invocación de pandoc
     ├── run.ts               # mapWithConcurrency y utilidades de procesos
     ├── resources/           # Recursos empaquetados
-    ├── filters/     # Filtros Lua por capa (semantic/, latex/, html/)
-    ├── preamble/        # Preamble filters (.tex)
-    ├── html/          # Plantillas del HTML (skeleton + tarjetas)
-    ├── styles.css       # CSS entry point de Tailwind
-        ├── fonts/           # Fuentes para HTML
-        ├── logo.svg         # Logo por defecto
-        └── apa-7.csl        # Estilo de citas APA 7ª edición
+    │   ├── filters/         # Filtros Lua por capa (semantic/, latex/, html/)
+    │   ├── preamble/        # Preamble filters (.tex)
+    │   ├── html/            # Plantillas del HTML (skeleton + tarjetas)
+    │   ├── styles.css       # CSS entry point de Tailwind
+    │   ├── fonts/           # Fuentes para HTML
+    │   ├── logo.svg         # Logo por defecto
+    │   └── apa-7.csl        # Estilo de citas APA 7ª edición
 ```
 
 ### Pipeline de construcción
@@ -170,7 +172,7 @@ docs(config): documenta bloque editorial y export en frontmatter
 
 ## Cómo invalidar la caché de outputs
 
-El hash de filters (`computeFiltersHash` en `src/builder/state.ts`) incluye las versiones de esquema de `CACHE_SCHEMA_VERSIONS`. **Sube la versión de un área cuando cambie su lógica de generación**; si no lo haces, las salidas cacheadas (HTML, cuerpos LaTeX) quedan obsoletas silenciosamente:
+El hash de filters (`computeFiltersHash` en `src/builder/state-hash.ts`) incluye las versiones de esquema de `CACHE_SCHEMA_VERSIONS`. **Sube la versión de un área cuando cambie su lógica de generación**; si no lo haces, las salidas cacheadas (HTML, cuerpos LaTeX) quedan obsoletas silenciosamente:
 
 - `humanDate`: cambios en `src/lib/date.ts` (formato de fecha legible).
 - `htmlPage`: cambios en la generación de la página HTML (`pipeline.ts`) o en el post-procesamiento de referencias (`html-composer.ts`).
@@ -216,7 +218,7 @@ Para agregar uno:
 3. Implementa las funciones de filtro de pandoc (`Pandoc(doc)`, `Div(div)`, `Para(para)`, etc.) que transforman el AST
 4. Agrega tests en `src/__tests__/lua-filters.test.ts` (los tests que invocan pandoc requieren que esté instalado; los de resolución de nombres no)
 
-> La lista de filters se deriva del filesystem (`getBuiltinLuaFilterInfos()` en `src/builder/filter-resolver.ts`): crear el `.lua` es suficiente, no hay que registrar el nombre en ninguna lista. La descripción que muestra `iteraciones list-filters` es la primera línea de comentario del archivo (punto 2).
+> La lista de filters se deriva del filesystem (`getBuiltinLuaFilterInfos()` en `src/builder/filter-resolver.ts`): crear el `.lua` es suficiente, no hay que registrar el nombre en ninguna lista. La descripción que muestra `iteraciones list-filters` son las líneas de comentario iniciales del archivo (unidas con espacio, punto 2).
 
 ### Ejemplo mínimo
 
@@ -246,7 +248,7 @@ La variable global `FORMAT` de pandoc indica el formato de salida (`latex`, `htm
 Los preamble filters son archivos `.tex` con contenido LaTeX puro que se inserta en el preámbulo antes de `\begin{document}`. Se editan como LaTeX, sin escaping de strings TypeScript.
 
 1. Crea un archivo en `src/lib/resources/preamble/<prioridad>-<nombre>.tex`
-2. Escribe la primera línea como comentario `% descripción corta`: se muestra en `iteraciones list-filters` (la lee `getBuiltinPreambleFilterInfos()`)
+2. Escribe la primera línea como comentario `% descripción corta`: se muestra en `iteraciones list-filters` (las líneas de comentario iniciales se unen; la lee `getBuiltinPreambleFilterInfos()`)
 
 > La lista de preamble filters se deriva del filesystem (`getBuiltinPreambleFilterNames()` en `src/builder/preamble-loader.ts`): el prefijo numérico del archivo define el orden de aplicación y crear un `.tex` nuevo no requiere tocar código.
 

@@ -24,7 +24,7 @@ El pipeline consume **5 campos** del frontmatter:
 | `title` | `string` | `''` | Título del documento. Se usa para el slug y el maketitle del PDF. |
 | `subtitle` | `string` | — | Subtítulo del documento. Se muestra bajo el título en el maketitle del PDF. Admite el bloque YAML literal (`\|`) para varias líneas, con las mismas reglas que las páginas de título internas (ver más abajo). |
 | `date` | `string` | — | Fecha en formato `YYYY-MM-DD`. Con `pdf.show-date: true` se muestra en el maketitle; si no se declara, se usa la fecha de creación del archivo. |
-| `author` | `string \| string[]` | `[]` | Uno o varios autores. El slug usa `title-por-author`: por defecto solo el primer autor; en caso de colisión se van añadiendo autores (`-y-`) y, si se agotan, se aplica un sufijo `-dN`. |
+| `author` | `string \| string[]` | `[]` | Uno o varios autores. El slug usa `title-por-author`: **solo el primer autor**; en caso de colisión (dos documentos con el mismo título y autor) se aplica un sufijo `-dN`. |
 | `slug` | `string` | — | **Slug manual** (opcional): fija la URL del documento en lugar del esquema automático. Formato seguro: solo minúsculas, números y guiones simples (`^[a-z0-9]+(-[a-z0-9]+)*$`). Dos documentos con la misma salida (mismo directorio + slug) son un error de build y de `validate`. |
 
 ## Campos que fluyen a pandoc
