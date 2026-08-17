@@ -1,4 +1,4 @@
-import { cp, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -151,11 +151,44 @@ export async function buildAssets(outputDir: string, cwd: string, siteConfig: Si
   return cssHash;
 }
 
+/**
+ * Copia un archivo solo si el destino no existe o su mtime/size difieren del
+ * origen (mismo patrón content-addressed del resto del pipeline: nada se
+ * escribe sin necesidad). La copia preserva el mtime del origen
+ * (preserveTimestamps; el cp de Bun lo trunca a milisegundos enteros, por eso
+ * la comparación usa floor) y sobrescribe el destino (force: Bun no sobrescribe
+ * por defecto, a diferencia de Node).
+ */
+async function copyIfChanged(src: string, dest: string): Promise<void> {
+  let srcStat: Awaited<ReturnType<typeof stat>> | null = null;
+  try {
+    srcStat = await stat(src);
+  } catch {
+    // Origen ilegible: se deja que cp reporte el error real en el call site
+  }
+  if (srcStat !== null) {
+    const destStat = await stat(dest).catch(() => null);
+    if (destStat !== null && destStat.size === srcStat.size && Math.floor(destStat.mtimeMs) === Math.floor(srcStat.mtimeMs)) {
+      return;
+    }
+  }
+  await mkdir(dirname(dest), { recursive: true });
+  await cp(src, dest, { force: true, preserveTimestamps: true });
+}
+
 async function copyFonts(outputDir: string): Promise<void> {
   const target = join(outputDir, 'fonts');
-  await cp(FONTS_SRC, target, { recursive: true }).catch((err: NodeJS.ErrnoException) => {
-    if (err.code !== 'ENOENT') throw err;
-  });
+  let entries: string[];
+  try {
+    entries = [...new Bun.Glob('*.ttf').scanSync({ cwd: FONTS_SRC, onlyFiles: true })].sort();
+  } catch (err) {
+    // Directorio de fuentes ausente: nada que copiar (mismo criterio que el cp anterior)
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return;
+    throw err;
+  }
+  for (const entry of entries) {
+    await copyIfChanged(join(FONTS_SRC, entry), join(target, entry));
+  }
 }
 
 async function copyLogo(outputDir: string, cwd: string, siteConfig: SiteConfig): Promise<void> {
@@ -163,14 +196,15 @@ async function copyLogo(outputDir: string, cwd: string, siteConfig: SiteConfig):
   if (!logo) {
     const defaultSrc = join(PKG_ROOT, 'src', 'lib', 'resources', 'logo.svg');
     const dest = join(outputDir, 'logo.svg');
-    await mkdir(dirname(dest), { recursive: true });
-    await cp(defaultSrc, dest).catch((err: NodeJS.ErrnoException) => {
-      if (err.code === 'ENOENT') logWarning(`logo por defecto no encontrado en "${defaultSrc}"`, 'assets');
+    try {
+      await copyIfChanged(defaultSrc, dest);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') logWarning(`logo por defecto no encontrado en "${defaultSrc}"`, 'assets');
       else {
-        logWarning(`No se pudo copiar el logo por defecto: ${err.message}`, 'assets');
-        throw new BuildError(`No se pudo copiar el logo por defecto: ${err.message}`);
+        logWarning(`No se pudo copiar el logo por defecto: ${(err as Error).message}`, 'assets');
+        throw new BuildError(`No se pudo copiar el logo por defecto: ${(err as Error).message}`);
       }
-    });
+    }
     return;
   }
   if (logo.split('/').includes('..') || logo.startsWith('/')) {
@@ -178,12 +212,13 @@ async function copyLogo(outputDir: string, cwd: string, siteConfig: SiteConfig):
   }
   const src = join(cwd, logo);
   const dest = join(outputDir, logo);
-  await mkdir(dirname(dest), { recursive: true });
-  await cp(src, dest).catch((err: NodeJS.ErrnoException) => {
-    if (err.code === 'ENOENT') logWarning(`logo no encontrado: "${logo}"`, 'assets');
+  try {
+    await copyIfChanged(src, dest);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') logWarning(`logo no encontrado: "${logo}"`, 'assets');
     else {
-      logWarning(`No se pudo copiar el logo "${logo}": ${err.message}`, 'assets');
-      throw new BuildError(`No se pudo copiar el logo "${logo}": ${err.message}`);
+      logWarning(`No se pudo copiar el logo "${logo}": ${(err as Error).message}`, 'assets');
+      throw new BuildError(`No se pudo copiar el logo "${logo}": ${(err as Error).message}`);
     }
-  });
+  }
 }
