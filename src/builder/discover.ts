@@ -171,6 +171,7 @@ export async function discover(
         date: string | undefined,
         authors: string[] = [],
         manualSlug: string | undefined,
+        rawTitle: unknown,
         fm: Record<string, unknown> | undefined;
       try {
         const { yaml } = splitFrontmatter(text);
@@ -185,7 +186,11 @@ export async function discover(
             const record = parsed as Record<string, unknown>;
             // El frontmatter completo fluye a pandoc como metadata del documento
             fm = record;
-            title = typeof record.title === 'string' ? record.title : '';
+            rawTitle = record.title;
+            if (rawTitle !== undefined && typeof rawTitle !== 'string') {
+              logWarning(`"${relativePath}" tiene un título que no es texto; se usará "Sin título"`, 'discover');
+            }
+            title = typeof rawTitle === 'string' ? rawTitle : '';
             subtitle = typeof record.subtitle === 'string' && record.subtitle.trim() ? record.subtitle.trim() : undefined;
             date = typeof record.date === 'string' && record.date.trim() ? record.date.trim() : undefined;
             authors = parseAuthors(record.author);
@@ -206,7 +211,7 @@ export async function discover(
         frontmatterErrors.push({ file: relativePath, error: formatUserError(err) });
       }
 
-      if (!title) {
+      if (!title && (rawTitle === undefined || rawTitle === '')) {
         logWarning(`"${relativePath}" no tiene título en el frontmatter; se usará "Sin título"`, 'discover');
       }
 
