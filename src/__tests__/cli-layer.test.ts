@@ -1199,8 +1199,14 @@ describe('runFilters', () => {
       // frase completa termina en "si es Para." (antes se truncaba a mitad).
       expect(output).toContain('si es Para.');
       expect(output).not.toContain('(formato LaTeX), con  [');
+      // Las descripciones de los preamble filters unen sus líneas % (antes solo
+      // la primera línea: 05-language quedaba en "el valor lo").
+      expect(output).toContain('expone el CLI como metadata babel-lang');
+      expect(output).toContain('sin el texto de información');
       // Columnas alineadas: el nombre padded seguido de la columna lua
       expect(output).toMatch(/latex\/02-dictum {2,}lua {2}Convierte/);
+      // El prefijo ℹ solo aparece en los encabezados de sección, no en las filas
+      expect(output).not.toMatch(/^ℹ {2}latex\//m);
       expect(process.exitCode).toBe(0);
     });
   });

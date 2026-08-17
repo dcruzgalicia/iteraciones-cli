@@ -65,13 +65,30 @@ export async function loadPreambleFilters(disabledList?: string[], cwd?: string)
   return result;
 }
 
-/** Retorna información de todos los preamble filters built-in (descripción de la primera línea %). */
+/**
+ * Descripción de un preamble filter: las líneas de comentario % consecutivas
+ * del inicio del archivo, unidas con espacio (mismo patrón que las
+ * descripciones de los filters Lua).
+ */
+function readPreambleDescription(content: string): string {
+  const lines: string[] = [];
+  for (const rawLine of content.split('\n')) {
+    const line = rawLine.trim();
+    if (line.startsWith('%')) {
+      lines.push(line.replace(/^%\s*/, '').trim());
+    } else if (lines.length > 0) {
+      break;
+    }
+  }
+  return lines.filter(Boolean).join(' ');
+}
+
+/** Retorna información de todos los preamble filters built-in (descripción de las líneas % iniciales). */
 export async function getBuiltinPreambleFilterInfos(): Promise<PreambleFilterInfo[]> {
   const infos: PreambleFilterInfo[] = [];
   for (const name of getBuiltinPreambleFilterNames()) {
     const content = await Bun.file(join(PKG_PREAMBLE_DIR, `${name}.tex`)).text();
-    const descLine = content.split('\n').find((line) => line.trim().startsWith('%'));
-    infos.push({ name, description: descLine?.replace(/^%\s*/, '').trim() ?? '' });
+    infos.push({ name, description: readPreambleDescription(content) });
   }
   return infos;
 }
