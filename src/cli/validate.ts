@@ -3,7 +3,7 @@ import { dirname, join, relative } from 'node:path';
 import { validateDisabledFilters } from '../builder/filter-resolver.js';
 import { listMarkdownDocuments } from '../builder/gitignore.js';
 import { validateDisabledPreambleFilters, validatePreambleDependencies } from '../builder/preamble-loader.js';
-import { validateConfigFilePaths, validateFrontmatterFields } from '../builder/project-validator.js';
+import { looseColonLines, looseColonsMessage, validateConfigFilePaths, validateFrontmatterFields } from '../builder/project-validator.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { ConfigError } from '../lib/errors.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
@@ -40,6 +40,15 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
     }
 
     const { yaml, body } = splitFrontmatter(raw);
+    // Líneas de ":" sueltas en el cuerpo: warning conservador, mismo contrato
+    // que los checks de frontmatter (build y validate lo comparten via
+    // project-validator). El offset suma las líneas del frontmatter para que el
+    // número apunte al archivo completo (lo que ve el usuario en el editor).
+    const lineOffset = raw.slice(0, raw.length - body.length).split('\n').length - 1;
+    const looseColons = looseColonLines(body, lineOffset);
+    if (looseColons.length > 0) {
+      warnings.push({ file: entry, message: looseColonsMessage(looseColons) });
+    }
     if (!yaml) {
       // Sin frontmatter (o frontmatter cerrado vacío: yaml === ''): un
       // documento sin contenido se omite con warning (mismo criterio que el

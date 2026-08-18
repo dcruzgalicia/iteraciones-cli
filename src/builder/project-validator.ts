@@ -117,6 +117,54 @@ export function validateFrontmatterFields(parsed: Record<string, unknown>): Vali
 }
 
 /**
+ * Detecta líneas de ":" sueltas en el cuerpo de un documento: líneas cuyo
+ * único contenido son dos puntos (uno o varios) y que no usan el vocabulario
+ * semántico del proyecto ("::" espaciador vertical, ":;" sin indentación, o
+ * el cierre de un fenced div con ":::"). Ignora bloques de código (```/~) y
+ * líneas con texto (fechas, URLs, emojis, etc.). Retorna los números de línea
+ * (1-based, orden ascendente) que disparan el warning.
+ *
+ * `lineOffset` suma líneas al resultado: los consumidores pasan las líneas del
+ * frontmatter para que el número apunte al archivo completo y no solo al body
+ * (un editor muestra la línea del archivo, no la del fragmento).
+ */
+export function looseColonLines(body: string, lineOffset = 0): number[] {
+  const hits: number[] = [];
+  let inCode = false;
+  let divDepth = 0;
+  const lines = body.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = (lines[i] ?? '').trimEnd();
+    // Bloques de código: se saltan por completo (delimitadores incluidos)
+    if (/^(```|~~~)/.test(trimmed)) {
+      inCode = !inCode;
+      continue;
+    }
+    if (inCode) continue;
+    // Fenced div: '::: {.attrs}' abre; ':::' solo cierra un div abierto
+    if (/^:::\s*\{/.test(trimmed)) {
+      divDepth += 1;
+      continue;
+    }
+    if (trimmed === ':::' && divDepth > 0) {
+      divDepth -= 1;
+      continue;
+    }
+    // Uso legítimo del vocabulario: espaciador e inicio sin indentación
+    if (trimmed === '::' || trimmed === ':;') continue;
+    // Caso claro: solo dos puntos sueltos en su propia línea
+    if (/^:+$/.test(trimmed)) hits.push(i + 1 + lineOffset);
+  }
+  return hits;
+}
+
+/** Mensaje de warning para líneas con ":" suelta (lista de números de línea). */
+export function looseColonsMessage(lines: number[]): string {
+  const where = lines.length === 1 ? `línea ${lines[0]}` : `líneas ${lines.join(', ')}`;
+  return `${where} con ":" suelta: ¿querías escribir "::" (espacio vertical) o ":;" (sin indentación)?`;
+}
+
+/**
  * Verifica que las rutas configuradas del proyecto existan. bibliography y csl
  * configurados e inexistentes son un error (config inválida; el
  * auto-descubrimiento solo aplica cuando no se configuró nada); lua-filters

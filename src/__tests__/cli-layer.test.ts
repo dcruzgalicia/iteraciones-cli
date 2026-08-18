@@ -856,6 +856,42 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
+  it('el warning de ":" suelta en el cuerpo se emite en build y validate (mismo contrato)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'suelta.md'), '---\ntitle: Ok\n---\n\ntexto\n\n:\n\ntexto\n', 'utf8');
+      // build: warning en el resumen (stdout) sin romper
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let buildOutput = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir);
+      } finally {
+        buildOutput = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      expect(buildOutput).toContain('suelta.md');
+      expect(buildOutput).toContain('línea 7 con ":" suelta');
+      expect(buildOutput).toContain('"::" (espacio vertical) o ":;" (sin indentación)');
+
+      // validate: mismos warnings, exit 0
+      const vSpy = spyStderr();
+      let validateOutput = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        validateOutput = vSpy.mock.calls.map((c) => String(c[0])).join('');
+        vSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      expect(validateOutput).toContain('suelta.md');
+      expect(validateOutput).toContain('línea 7 con ":" suelta');
+      expect(validateOutput).toContain('"::" (espacio vertical) o ":;" (sin indentación)');
+    });
+  });
+
   it('title-image: ruta absoluta en el tex con el guion bajo sin escapar', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
@@ -1712,6 +1748,49 @@ describe('runValidate', () => {
       }
       expect(output).toContain('frontmatter sin cerrar');
       expect(process.exitCode).toBe(0);
+    });
+  });
+
+  it('advierte (exit 0) sobre ":" suelta en el cuerpo con sugerencia del vocabulario', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'suelta.md'), '---\ntitle: "Ok"\n---\n\ntexto\n\n:\n\ntexto\n', 'utf8');
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      expect(output).toContain('suelta.md');
+      expect(output).toContain('línea 7 con ":" suelta');
+      expect(output).toContain('"::" (espacio vertical) o ":;" (sin indentación)');
+    });
+  });
+
+  it('no advierte con el vocabulario correcto (::, :; y fenced divs cierran en silencio)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'limpio.md'), '---\ntitle: "Ok"\n---\n\ntexto\n\n::\n\ntexto\n\n:;\n\ntexto\n\n::: {.dictum}\nCita\n:::\n', 'utf8');
+      const stderrSpy = spyStderr();
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let output = '';
+      let stdout = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdout = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+        stdoutSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      expect(output).not.toContain('con ":" suelta');
+      expect(stdout).toContain('sin errores');
     });
   });
 

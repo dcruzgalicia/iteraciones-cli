@@ -7,7 +7,7 @@ import { logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import { listMarkdownDocuments } from './gitignore.js';
-import { validateFrontmatterFields } from './project-validator.js';
+import { looseColonLines, looseColonsMessage, validateFrontmatterFields } from './project-validator.js';
 import { resolveSlugs } from './slug-resolver.js';
 import { type BibFileCache, type BuildState, type FilterFileCache, hashString, loadStateFile, saveStateFile } from './state.js';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
@@ -172,8 +172,8 @@ export async function discover(
         manualSlug: string | undefined,
         rawTitle: unknown,
         fm: Record<string, unknown> | undefined;
+      const { yaml, body } = splitFrontmatter(text);
       try {
-        const { yaml } = splitFrontmatter(text);
         if (yaml) {
           const yamlResult = parseYamlWithPosition(yaml);
           if (yamlResult.error) throw new Error(yamlResult.error);
@@ -207,6 +207,15 @@ export async function discover(
         }
       } catch (err) {
         frontmatterIssues.push({ file: relativePath, error: formatUserError(err), kind: 'syntax' });
+      }
+
+      // Líneas de ":" sueltas en el cuerpo: warning compartido con validate
+      // (módulo project-validator), emitido solo para documentos reprocesados.
+      // El offset suma las líneas del frontmatter (el número apunta al archivo).
+      const lineOffset = text.slice(0, text.length - body.length).split('\n').length - 1;
+      const looseColons = looseColonLines(body, lineOffset);
+      if (looseColons.length > 0) {
+        logWarning(`${relativePath}: ${looseColonsMessage(looseColons)}`, 'discover');
       }
 
       if (!title && (rawTitle === undefined || rawTitle === '')) {
