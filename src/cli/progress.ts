@@ -74,6 +74,8 @@ export class ProgressTracker {
   private verbose: boolean;
   /** Render interactivo (TTY) o impresión de estados finales. */
   private tty: boolean;
+  /** Stream de salida (inyectable en tests; por defecto stdout). */
+  private stream: NodeJS.WriteStream;
   /** Formatos configurados del proyecto (para las filas del grupo de formatos). */
   private formats: FormatState[] = [];
   /** Fases que el build ejecutará (declaradas por planPhases). */
@@ -89,13 +91,15 @@ export class ProgressTracker {
   private cursorLine = 0;
   private formatsShown = false;
 
-  constructor(options: { renderer?: 'default' | 'verbose' | 'test' } = {}) {
+  constructor(options: { renderer?: 'default' | 'verbose' | 'test'; stream?: NodeJS.WriteStream; tty?: boolean } = {}) {
     this.verbose = options.renderer === 'verbose';
-    this.tty = options.renderer === 'default' && process.stdout.isTTY === true;
+    this.stream = options.stream ?? process.stdout;
+    // tty forzado en tests (sin tocar process.stdout.isTTY) o derivado del stream
+    this.tty = options.tty ?? (options.renderer === 'default' && this.stream.isTTY === true);
     this.t0 = performance.now();
     if (options.renderer === 'default') {
       // Restaurar el cursor si el proceso sale sin completar (errores del build)
-      process.once('exit', () => process.stdout.write('\x1b[?25h'));
+      process.once('exit', () => this.stream.write('\x1b[?25h'));
     }
   }
 
@@ -109,7 +113,7 @@ export class ProgressTracker {
 
   /** Mensajes informativos del orquestador (visibles en --verbose). */
   log(msg: string): void {
-    if (this.verbose) process.stdout.write(`[info] ${msg}\n`);
+    if (this.verbose) this.stream.write(`[info] ${msg}\n`);
   }
 
   /**
@@ -196,7 +200,7 @@ export class ProgressTracker {
   }
 
   showCleanup(): void {
-    if (this.verbose) process.stdout.write('[info] Archivos temporales limpiados\n');
+    if (this.verbose) this.stream.write('[info] Archivos temporales limpiados\n');
   }
 
   /**
@@ -345,7 +349,7 @@ export class ProgressTracker {
     const idx = this.rowIndex.get(key);
     if (this.tty) {
       if (idx === undefined) {
-        process.stdout.write(`${content}\n`);
+        this.stream.write(`${content}\n`);
         this.rowIndex.set(key, this.nextLine);
         this.nextLine++;
         this.cursorLine = this.nextLine;
@@ -353,10 +357,10 @@ export class ProgressTracker {
         // Invariante: el cursor está en la última línea escrita, que es >= la
         // fila actualizada (la fila ya fue escrita antes).
         const up = this.cursorLine - idx;
-        process.stdout.write(`\x1b[${up}A\x1b[2K\r${content}\x1b[${up}B\r`);
+        this.stream.write(`\x1b[${up}A\x1b[2K\r${content}\x1b[${up}B\r`);
       }
     } else if (idx === undefined && (row.status === 'done' || row.status === 'skipped' || row.status === 'failed')) {
-      process.stdout.write(`${content}\n`);
+      this.stream.write(`${content}\n`);
       this.rowIndex.set(key, this.nextLine++);
     }
   }
@@ -367,24 +371,24 @@ export class ProgressTracker {
     // "✔ Todo listo." solo sin advertencias: con warnings (p. ej. proyecto
     // vacío) el cierre es neutral para no contradecir el estado del build.
     if (this.warnings.length === 0) {
-      process.stdout.write(`\n${GLYPHS.success} Todo listo.\n\n`);
+      this.stream.write(`\n${GLYPHS.success} Todo listo.\n\n`);
     } else {
-      process.stdout.write(`\n`);
+      this.stream.write(`\n`);
     }
 
-    process.stdout.write(`  ${padRight('Documentos procesados', LABEL_WIDTH)}${processed}\n`);
+    this.stream.write(`  ${padRight('Documentos procesados', LABEL_WIDTH)}${processed}\n`);
     if (cached > 0) {
-      process.stdout.write(`  ${padRight('Sin cambios (reutilizado)', LABEL_WIDTH)}${cached}\n`);
+      this.stream.write(`  ${padRight('Sin cambios (reutilizado)', LABEL_WIDTH)}${cached}\n`);
     }
     // Conteo honesto: formatos ACTIVOS de la configuración (no archivos
     // generados, que dependen de cuántos documentos tengan salida), con el
     // desglose de documentos procesados por formato (solo si hubo trabajo).
     const formatDetail = processed > 0 && formats ? formats.map((f) => `${f} ${this.phaseCounts[f as PipelinePhase] ?? 0}`).join(', ') : '';
-    process.stdout.write(`  ${padRight('Formatos activos', LABEL_WIDTH)}${formatCount}${formatDetail ? ` — ${formatDetail}` : ''}\n`);
+    this.stream.write(`  ${padRight('Formatos activos', LABEL_WIDTH)}${formatCount}${formatDetail ? ` — ${formatDetail}` : ''}\n`);
     if (outputDir) {
-      process.stdout.write(`  ${padRight('Salida', LABEL_WIDTH)}${outputDir}\n`);
+      this.stream.write(`  ${padRight('Salida', LABEL_WIDTH)}${outputDir}\n`);
     }
-    process.stdout.write(`  ${padRight('Tiempo total', LABEL_WIDTH)}${formatTime(totalTime)}\n`);
+    this.stream.write(`  ${padRight('Tiempo total', LABEL_WIDTH)}${formatTime(totalTime)}\n`);
     // Guía post-build: sustituye al comando open eliminado. Solo cuando hubo
     // trabajo real (processed > 0) hay algo nuevo que abrir; el index.html es
     // la página de entrada cuando existe (index.md en la raíz) — sin él, se
@@ -397,18 +401,18 @@ export class ProgressTracker {
       // start de Windows necesita el título de ventana como primer argumento
       // (vacío) y las comillas protegen rutas con espacios.
       const command = process.platform === 'win32' ? `start "" "${target}"` : `${opener} "${target}"`;
-      process.stdout.write(`  ${padRight('Abre el resultado', LABEL_WIDTH)}${command}\n`);
+      this.stream.write(`  ${padRight('Abre el resultado', LABEL_WIDTH)}${command}\n`);
     }
     if (this.warnings.length > 0) {
       // Cierre explícito con el conteo y el siguiente paso: sin él, el build
       // con advertencias termina sin que el usuario sepa si "terminó bien"
       // (exit 0) y sin conectar con la herramienta de diagnóstico.
-      process.stdout.write(
+      this.stream.write(
         `\n${GLYPHS.warning} Build completado con ${plural(this.warnings.length, 'advertencia')}. Ejecuta 'iteraciones validate' para más detalle.\n`,
       );
-      process.stdout.write(`\nAdvertencias:\n`);
+      this.stream.write(`\nAdvertencias:\n`);
       for (const warning of this.warnings) {
-        process.stdout.write(`  ${warning}\n`);
+        this.stream.write(`  ${warning}\n`);
       }
     }
   }
