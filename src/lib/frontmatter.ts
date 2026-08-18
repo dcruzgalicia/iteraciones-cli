@@ -22,6 +22,10 @@ export function splitFrontmatter(content: string): { yaml?: string; body: string
  * expone linePos en sus errores de parseo; Bun.YAML.parse no. Retorna el
  * valor parseado o un mensaje de error con la posición cuando el parser la
  * produce.
+ *
+ * El mensaje se recorta a una sola línea: la librería incluye el snippet
+ * ofensivo (línea + caret) y la posición en el texto; aquí solo se conserva la
+ * causa y la posición, una única vez.
  */
 export function parseYamlWithPosition(raw: string): { value?: unknown; error?: string } {
   const doc = parseDocument(raw);
@@ -30,7 +34,10 @@ export function parseYamlWithPosition(raw: string): { value?: unknown; error?: s
     if (!first) return { error: 'Error de sintaxis YAML' };
     const linePos = first.linePos?.[0];
     const position = linePos ? ` (línea ${linePos.line}, columna ${linePos.col})` : '';
-    return { error: `${first.message}${position}` };
+    // La primera línea de la librería termina con "at line N, column M:" cuando
+    // tiene posición: se elimina para que no se duplique con la nuestra.
+    const cause = (first.message.split('\n')[0] ?? first.message).replace(/ at line \d+, column \d+:$/, '');
+    return { error: `${cause}${position}` };
   }
   return { value: doc.toJS() };
 }
