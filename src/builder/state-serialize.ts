@@ -32,6 +32,13 @@ export interface BuildState {
   bibFileCache?: BibFileCache;
   /** Hash de los HTML finales + recursos CSS: invalida la compilación de Tailwind. */
   cssHash?: string;
+  /**
+   * true solo si el build terminó limpiamente. Un estado sin este flag (o con
+   * false) proviene de un build interrumpido (Ctrl-C, SIGKILL, corte de
+   * energía): el build lo ignora y reprocesa todo (nunca reutiliza entradas
+   * cuyo render nunca terminó).
+   */
+  completed?: boolean;
   /** Índice de descubrimiento: path relativo → entry con frontmatter y caché. */
   entries: Map<string, DiscoveryEntry>;
 }
@@ -62,6 +69,7 @@ export async function loadStateFile(cwd: string): Promise<BuildState | null> {
       bibHash: parsed.bibHash,
       bibFileCache: parsed.bibFileCache,
       cssHash: parsed.cssHash,
+      completed: parsed.completed,
       // En disco las entradas son un objeto; en runtime se usan como Map.
       entries: new Map(Object.entries((parsed.entries ?? {}) as Record<string, DiscoveryEntry>)),
     };
@@ -70,6 +78,30 @@ export async function loadStateFile(cwd: string): Promise<BuildState | null> {
     logWarning(`no se pudo leer state.json; se hará build completo: ${String(err)}`, 'cache');
     return null;
   }
+}
+
+/**
+ * Filtra el estado para el build: solo un estado con `completed: true` es
+ * válido como caché incremental. Un estado sin flag (o con false) proviene de
+ * un build interrumpido: retornar null fuerza el reprocesamiento completo.
+ * Los consumidores informativos (doctor --info) leen el estado sin este
+ * filtro; solo el build exige el flag.
+ */
+export function stateUsableForBuild(state: BuildState | null): BuildState | null {
+  return state !== null && state.completed === true ? state : null;
+}
+
+/**
+ * Marca el estado persistido como build completo. Se llama al final de un
+ * build exitoso: el estado que escribió discover (sin flag) pasa a ser válido
+ * como caché para el siguiente build. No escribe si el estado no existe o ya
+ * está completo (el camino "sin cambios" no debe tocar el disco).
+ */
+export async function markStateCompleted(cwd: string): Promise<void> {
+  const state = await loadStateFile(cwd);
+  if (!state || state.completed === true) return;
+  state.completed = true;
+  await saveStateFile(cwd, state);
 }
 
 /**

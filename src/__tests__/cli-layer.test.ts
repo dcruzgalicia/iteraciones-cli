@@ -835,6 +835,54 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
+  it('un estado sin completed se ignora y el siguiente build reprocesa (interrupción simulada)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+
+      // Simular un build interrumpido a mitad de render: el estado persistido
+      // por discover no tiene completed (el marcado final nunca ocurrió) y el
+      // documento cambió después de discovery.
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Contenido nuevo\ndate: 2026-01-02\n---\n\nContenido nuevo.\n', 'utf8');
+      const statePath = join(dir, '.iteraciones', 'state.json');
+      const raw = JSON.parse(await Bun.file(statePath).text()) as Record<string, unknown>;
+      delete raw.completed;
+      await Bun.write(statePath, JSON.stringify(raw));
+
+      // El build debe reprocesar todo (el estado no es caché válida) y dejar
+      // el estado marcado como completo para el siguiente build.
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir);
+      } finally {
+        output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      expect(output).toContain('Documentos procesados');
+      expect(output).not.toContain('Sin cambios (reutilizado)');
+      const finalState = JSON.parse(await Bun.file(statePath).text()) as { completed?: boolean };
+      expect(finalState.completed).toBe(true);
+
+      // Un build posterior sin cambios reutiliza la caché (camino normal).
+      const cachedSpy = spyOn(process.stdout, 'write');
+      let cachedOutput = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir);
+      } finally {
+        cachedOutput = cachedSpy.mock.calls.map((c) => String(c[0])).join('');
+        cachedSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      expect(cachedOutput).toContain('(reutilizado)');
+    });
+  });
+
   it('un error de pandoc reporta la ruta del documento una sola vez', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
