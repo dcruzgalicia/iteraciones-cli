@@ -631,6 +631,37 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       expect(output).toContain('malo.md');
       expect(output).toContain('debe ser un texto (string), se recibió number');
       expect(output).not.toContain('no tiene título');
+      // El YAML es válido: el rótulo no debe decir "YAML inválido" y la
+      // sugerencia de validate es para errores de sintaxis (issue #1920)
+      expect(output).toContain('✖ [build] frontmatter inválido en 1 documento:');
+      expect(output).not.toContain('frontmatter YAML inválido');
+      expect(output).not.toContain("ejecuta 'iteraciones validate'");
+    });
+  });
+
+  it('con sintaxis YAML rota y campos inválidos el build separa los bloques por clase', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'roto.md'), '---\ntitle: "sin cerrar\n---\n\nContenido.\n', 'utf8');
+      await writeFile(join(dir, 'malo.md'), '---\ntitle: 123\n---\n\n# Hola\n', 'utf8');
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(1);
+      // Cada clase con su rótulo y su detalle (el glifo solo antecede a la
+      // primera línea del mensaje multi-bloque)
+      expect(output).toContain('✖ [build] frontmatter YAML inválido en 1 documento:');
+      expect(output).toContain('roto.md:');
+      expect(output).toContain('frontmatter inválido en 1 documento:');
+      expect(output).toContain('malo.md:');
+      // Hay sintaxis rota: la sugerencia de validate sí aplica
+      expect(output).toContain("ejecuta 'iteraciones validate'");
     });
   });
 

@@ -103,6 +103,10 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
       suggestValidate();
     } else if (err instanceof BuildError) {
       logError(err.message, 'build');
+      // La sugerencia de validate solo aplica a errores de sintaxis YAML del
+      // frontmatter (el bloque "frontmatter YAML inválido" va primero cuando
+      // existe): los errores de validación de campos ya muestran su detalle
+      // completo en el mensaje del build.
       if (err.message.startsWith('frontmatter YAML inválido')) suggestValidate();
     } else if (err instanceof Error) {
       logError(err.message);
