@@ -81,6 +81,81 @@ async function runTracker(
   return output;
 }
 
+describe('renderer TTY (stream inyectado)', () => {
+  /** Stream de captura: los tests no dependen de process.stdout global. */
+  function fakeStream(): { stream: NodeJS.WriteStream; chunks: string[] } {
+    const chunks: string[] = [];
+    const stream = {
+      isTTY: true,
+      write(chunk: string | Uint8Array): boolean {
+        chunks.push(String(chunk));
+        return true;
+      },
+    } as unknown as NodeJS.WriteStream;
+    return { stream, chunks };
+  }
+
+  it('re-renderiza en sitio con secuencias de posicionamiento (up + borrado + down)', async () => {
+    const { stream, chunks } = fakeStream();
+    const tracker = new ProgressTracker({ renderer: 'default', stream, tty: true });
+    tracker.startPhase('discovery', 1);
+    tracker.completePhase(1);
+    await tracker.planPhases(['discovery', 'render']);
+    tracker.startPhase('render', 1);
+    tracker.reportFile({ relativePath: 'a.md', phase: 'render' });
+    await tracker.finish(1, 0, ['html']);
+    const output = chunks.join('');
+    // Actualización en sitio: subir a la fila, borrarla, reescribir y volver
+    expect(output).toContain('\x1b[1A\x1b[2K\r');
+    expect(output).toContain('\x1b[1B\r');
+    expect(output).toContain('[1/1]');
+  });
+
+  it('invariante del cursor: tras una actualización en sitio termina en la última línea, columna 0', async () => {
+    const { stream, chunks } = fakeStream();
+    const tracker = new ProgressTracker({ renderer: 'default', stream, tty: true });
+    tracker.startPhase('discovery', 1);
+    tracker.completePhase(1);
+    await tracker.planPhases(['discovery', 'render']);
+    tracker.startPhase('render', 1);
+    tracker.reportFile({ relativePath: 'a.md', phase: 'render' });
+    tracker.reportFile({ relativePath: 'b.md', phase: 'render' });
+    // Tras cada actualización en sitio, la última escritura termina en \r
+    // (columna 0 de la fila reescrita) y el cursor queda en la última línea.
+    for (const chunk of chunks) {
+      if (chunk.includes('\x1b[')) {
+        expect(chunk.endsWith('\r')).toBe(true);
+      }
+    }
+    await tracker.finish(2, 0, ['html']);
+  });
+
+  it('restaura el cursor en el evento exit (\x1b[?25h al stream del tracker)', async () => {
+    const { stream, chunks } = fakeStream();
+    // eslint-disable-next-line no-new
+    new ProgressTracker({ renderer: 'default', stream, tty: true });
+    process.emit('exit');
+    const output = chunks.join('');
+    expect(output).toContain('\x1b[?25h');
+  });
+
+  it('en no-TTY imprime estados finales sin ANSI al stream inyectado', async () => {
+    const { stream, chunks } = fakeStream();
+    const tracker = new ProgressTracker({ renderer: 'default', stream, tty: false });
+    tracker.startPhase('discovery', 1);
+    tracker.completePhase(1);
+    await tracker.planPhases(['discovery', 'render']);
+    tracker.startPhase('render', 1);
+    tracker.reportFile({ relativePath: 'a.md', phase: 'render' });
+    tracker.completePhase(1);
+    await tracker.finish(1, 0, ['html']);
+    const output = chunks.join('');
+    expect(output).not.toContain('\x1b[');
+    expect(output).toContain('✔ Documentos encontrados 1');
+    expect(output).toContain('✔ Renderizando contenido 1');
+  });
+});
+
 describe('ProgressTracker', () => {
   afterEach(() => {
     process.exitCode = 0;
