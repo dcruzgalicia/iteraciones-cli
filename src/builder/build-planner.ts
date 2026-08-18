@@ -115,8 +115,12 @@ export async function computeBuildMetadata(cwd: string, siteConfig: SiteConfig, 
  * Calcula los conjuntos de trabajo del build a partir de la metadata y el
  * resultado de discover. Función pura: el orquestador solo decide si ejecuta
  * y qué early return tomar según `anyWork` y los tamaños de los conjuntos.
+ *
+ * `outputDirChanged` fuerza el reprocesamiento completo: un cambio del
+ * directorio de salida entre builds invalida toda la caché (los documentos
+ * deben regenerarse en el directorio nuevo, y la vuelta al anterior también).
  */
-export function computeWorkSets(meta: BuildMetadata, allDocs: BuildDocument[], discoveredChanges: Set<string>): WorkSets {
+export function computeWorkSets(meta: BuildMetadata, allDocs: BuildDocument[], discoveredChanges: Set<string>, outputDirChanged = false): WorkSets {
   const { activeFormats, formatInvalidated } = meta;
   const pdfOn = activeFormats.pdf;
   const latexOn = activeFormats.latex;
@@ -129,7 +133,7 @@ export function computeWorkSets(meta: BuildMetadata, allDocs: BuildDocument[], d
   // re-renderiza: las citas se resuelven en la exportación (citeproc/biblatex),
   // así que bibInvalidated solo llena los exportSets más abajo.
   const docsChanged = new Set(discoveredChanges);
-  if (meta.filtersInvalidated) {
+  if (meta.filtersInvalidated || outputDirChanged) {
     for (const doc of allDocs) {
       docsChanged.add(doc.relativePath);
     }
