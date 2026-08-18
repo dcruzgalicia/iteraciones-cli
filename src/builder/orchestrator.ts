@@ -232,10 +232,23 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   }
   const work = computeWorkSets(plan, allDocs, discoveredChanges, outputDirChanged);
 
+  // Razones de invalidación para el resumen final (modo default): las mismas
+  // señales que deciden los conjuntos de trabajo, sin heurística aparte. Un
+  // array vacío + trabajo real significa documentos modificados por mtime.
+  const invalidations: string[] = [];
+  if (outputDirChanged) invalidations.push('directorio de salida');
+  if (plan.filtersInvalidated) invalidations.push('filters');
+  if (plan.bibInvalidated) invalidations.push('bibliografía');
+  if (plan.formatInvalidated.latex) invalidations.push('configuración PDF/LaTeX');
+  if (plan.formatInvalidated.html) invalidations.push('configuración HTML');
+  if (plan.formatInvalidated.epub) invalidations.push('configuración EPUB');
+  if (plan.formatInvalidated.markdown) invalidations.push('configuración Markdown');
+  for (const format of plan.newFormats) invalidations.push(`formato nuevo: ${format}`);
+
   if (!work.anyWork) {
     log('Ningún documento modificado — sin cambios');
     if (needsAssets) await runAssets();
-    await progress.finish(0, allDocs.length, computeActiveFormats(ctx.siteConfig.format), ctx.outputDir);
+    await progress.finish(0, allDocs.length, computeActiveFormats(ctx.siteConfig.format), ctx.outputDir, invalidations);
     return;
   }
 
@@ -253,7 +266,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   ) {
     log('Ningún documento modificado — sin cambios');
     if (needsAssets) await runAssets();
-    await progress.finish(0, allDocs.length, computeActiveFormats(ctx.siteConfig.format), ctx.outputDir);
+    await progress.finish(0, allDocs.length, computeActiveFormats(ctx.siteConfig.format), ctx.outputDir, invalidations);
     return;
   }
 
@@ -290,5 +303,10 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
       : 0;
   const processedCount = processed.size;
   const cachedCount = totalDocs - processedCount;
-  await progress.finish(processedCount, cachedCount, computeActiveFormats(ctx.siteConfig.format), ctx.outputDir);
+  // Reprocesamiento por contenido (mtime/hash de fuentes) sin señal de
+  // invalidación de configuración: la razón es honesta y cubre el caso común.
+  if (invalidations.length === 0 && processedCount > 0) {
+    invalidations.push('documentos modificados');
+  }
+  await progress.finish(processedCount, cachedCount, computeActiveFormats(ctx.siteConfig.format), ctx.outputDir, invalidations);
 }

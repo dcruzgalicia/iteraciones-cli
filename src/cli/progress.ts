@@ -106,9 +106,9 @@ export class ProgressTracker {
     if (phase === 'pdf' && this.state.maybeFinishGroup()) this.renderer.renderRow(this.state, 'group');
   }
 
-  async finish(processed: number, cached: number, formats?: string[], outputDir?: string): Promise<void> {
+  async finish(processed: number, cached: number, formats?: string[], outputDir?: string, invalidations?: string[]): Promise<void> {
     for (const key of this.state.finalizePending(cached)) this.renderer.renderRow(this.state, key);
-    await this.writeSummary(processed, cached, formats, outputDir);
+    await this.writeSummary(processed, cached, formats, outputDir, invalidations);
   }
 
   /**
@@ -153,7 +153,7 @@ export class ProgressTracker {
 
   // ── Resumen final (texto plano, sin ANSI) ─────────────────────────────────
 
-  private async writeSummary(processed: number, cached: number, formats?: string[], outputDir?: string): Promise<void> {
+  private async writeSummary(processed: number, cached: number, formats?: string[], outputDir?: string, invalidations?: string[]): Promise<void> {
     const totalTime = performance.now() - this.t0;
     const formatCount = formats ? formats.length : 0;
     // "✔ Todo listo." solo sin advertencias: con warnings (p. ej. proyecto
@@ -167,6 +167,17 @@ export class ProgressTracker {
     this.stream.write(`  ${padRight('Documentos procesados', LABEL_WIDTH)}${processed}\n`);
     if (cached > 0) {
       this.stream.write(`  ${padRight('Sin cambios (reutilizado)', LABEL_WIDTH)}${cached}\n`);
+    }
+    // Razón de invalidación en modo default: la caché es opaca si el usuario no
+    // sabe por qué se reprocesaron (o no) los documentos. `undefined` conserva
+    // el comportamiento previo (llamadas sin la información, p. ej. proyecto
+    // vacío); una lista vacía significa caché completa.
+    if (invalidations !== undefined) {
+      const value =
+        invalidations.length > 0
+          ? `${invalidations.join(', ')} — reprocesados ${plural(processed, 'documento')}`
+          : 'sin invalidaciones — todo desde caché';
+      this.stream.write(`  ${padRight('Invalidación', LABEL_WIDTH)}${value}\n`);
     }
     // Conteo honesto: formatos ACTIVOS de la configuración (no archivos
     // generados, que dependen de cuántos documentos tengan salida), con el

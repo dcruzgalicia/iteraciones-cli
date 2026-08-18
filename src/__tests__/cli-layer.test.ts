@@ -351,6 +351,43 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
+  it('el resumen muestra la razón de invalidación en modo default (y "sin invalidaciones" con caché completa)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      process.exitCode = 0;
+      await runBuild(dir);
+
+      // Caché completa: el resumen lo dice explícitamente en modo default
+      let stdoutSpy = spyOn(process.stdout, 'write');
+      let out = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir);
+      } finally {
+        out = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      expect(out).toContain('sin invalidaciones — todo desde caché');
+
+      // Configuración HTML modificada: la razón aparece en el resumen
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  html:\n    title: Otro\n    generate: true\n', 'utf8');
+      stdoutSpy = spyOn(process.stdout, 'write');
+      out = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir);
+      } finally {
+        out = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      expect(out).toContain('Invalidación');
+      expect(out).toContain('configuración HTML');
+      expect(out).not.toContain('sin invalidaciones');
+      expect(out).toContain('reprocesados 1 documento');
+    });
+  });
+
   it('termina con exit 1 con --output fuera del proyecto y contexto [build]', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
