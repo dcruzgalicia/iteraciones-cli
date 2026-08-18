@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, spyOn } from 'bun:test';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { ProgressTracker } from '../cli/progress.js';
+import { withTempDir } from './helpers.js';
 
 /**
  * Mini-emulador de terminal: reconstruye la pantalla final a partir del
@@ -101,6 +104,37 @@ describe('ProgressTracker', () => {
     expect(output).toContain('✔ Renderizando contenido 1');
     expect(output).toContain('✔ PDF 3');
     expect(output).toContain('✔ Generando formatos');
+  });
+
+  it('con index.html la sugerencia post-build apunta al archivo', async () => {
+    await withTempDir(async (dir) => {
+      await mkdir(join(dir, 'out'), { recursive: true });
+      await writeFile(join(dir, 'out', 'index.html'), '<html></html>', 'utf8');
+      const output = await runTracker(async (tracker) => {
+        await tracker.finish(1, 0, ['html'], join(dir, 'out'));
+      });
+      expect(output).toContain(`open "${join(dir, 'out', 'index.html')}"`);
+    });
+  });
+
+  it('sin index.html la sugerencia post-build apunta al directorio de salida', async () => {
+    await withTempDir(async (dir) => {
+      await mkdir(join(dir, 'out'), { recursive: true });
+      const output = await runTracker(async (tracker) => {
+        await tracker.finish(1, 0, ['html'], join(dir, 'out'));
+      });
+      expect(output).toContain(`open "${join(dir, 'out')}"`);
+      expect(output).not.toContain('index.html');
+    });
+  });
+
+  it('sin trabajo (processed 0) no muestra la sugerencia post-build', async () => {
+    await withTempDir(async (dir) => {
+      const output = await runTracker(async (tracker) => {
+        await tracker.finish(0, 1, ['html'], join(dir, 'out'));
+      });
+      expect(output).not.toContain('Abre el resultado');
+    });
   });
 
   it('muestra el conteo en vivo [i/N] en TTY', async () => {
