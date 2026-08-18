@@ -43,10 +43,10 @@ describe('build-assets', () => {
         await Bun.sleep(5);
         await writeFile(fakeBin, 'bb', 'utf8');
         const h2 = await computeCssHash(outDir, DEFAULT_SITE_CONFIG);
-        expect(h1).not.toBe(h2);
+        expect(h1.hash).not.toBe(h2.hash);
         // Sin cambios en el binario, el hash es estable (misma salida)
         const h3 = await computeCssHash(outDir, DEFAULT_SITE_CONFIG);
-        expect(h2).toBe(h3);
+        expect(h2.hash).toBe(h3.hash);
       } finally {
         spy.mockRestore();
       }
