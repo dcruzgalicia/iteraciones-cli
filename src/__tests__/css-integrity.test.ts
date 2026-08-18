@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'bun:test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { compileTailwindCss, resolveTailwindBin } from '../builder/build-assets.js';
+import { compileTailwindCss, computeCssHash, resolveTailwindBin } from '../builder/build-assets.js';
+import type { SiteConfig } from '../config/config-schema.js';
+import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { withTempDir } from './helpers.js';
 
 /**
@@ -55,6 +57,71 @@ describe('compilación de Tailwind sobre dist/files', () => {
   it('un acento desconocido produce error de build', async () => {
     await withTempDir(async (dir) => {
       await expect(compileTailwindCss(dir, 'color-inventado')).rejects.toThrow('acento desconocido');
+    });
+  });
+});
+
+describe('computeCssHash (caché por archivo mtime+size)', () => {
+  const config = (): SiteConfig => ({
+    ...DEFAULT_SITE_CONFIG,
+    format: { ...DEFAULT_SITE_CONFIG.format, html: { title: 'T', generate: true } },
+  });
+
+  it('es estable con la caché intacta (mtime+size iguales: sin releer)', async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(join(dir, 'a.html'), '<p class="x">A</p>', 'utf8');
+      const first = await computeCssHash(dir, config());
+      const second = await computeCssHash(dir, config(), first.cache);
+      expect(second.hash).toBe(first.hash);
+      expect(second.cache).toEqual(first.cache);
+    });
+  });
+
+  it('un touch (mtime distinto, size igual) no cambia el hash (caso ambiguo resuelto por contenido)', async () => {
+    await withTempDir(async (dir) => {
+      const file = join(dir, 'a.html');
+      await writeFile(file, '<p class="x">A</p>', 'utf8');
+      const first = await computeCssHash(dir, config());
+      // Asegurar mtime distinto (fs con resolución de 1s) y contenido idéntico
+      await Bun.sleep(1100);
+      await Bun.write(file, '<p class="x">A</p>');
+      const touched = await computeCssHash(dir, config(), first.cache);
+      expect(touched.hash).toBe(first.hash);
+    });
+  });
+
+  it('un cambio de contenido con el mismo tamaño cambia el hash', async () => {
+    await withTempDir(async (dir) => {
+      const file = join(dir, 'a.html');
+      await writeFile(file, '<p class="x">A</p>', 'utf8');
+      const first = await computeCssHash(dir, config());
+      await Bun.sleep(1100);
+      await writeFile(file, '<p class="y">A</p>', 'utf8'); // mismo size, distinto contenido
+      const changed = await computeCssHash(dir, config(), first.cache);
+      expect(changed.hash).not.toBe(first.hash);
+    });
+  });
+
+  it('un cambio de tamaño cambia el hash', async () => {
+    await withTempDir(async (dir) => {
+      const file = join(dir, 'a.html');
+      await writeFile(file, '<p>A</p>', 'utf8');
+      const first = await computeCssHash(dir, config());
+      await Bun.sleep(1100);
+      await writeFile(file, '<p class="x">Contenido más largo</p>', 'utf8');
+      const changed = await computeCssHash(dir, config(), first.cache);
+      expect(changed.hash).not.toBe(first.hash);
+    });
+  });
+
+  it('los HTML eliminados dejan de participar en el hash', async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(join(dir, 'a.html'), '<p class="x">A</p>', 'utf8');
+      const first = await computeCssHash(dir, config());
+      await Bun.sleep(1100);
+      await Bun.file(join(dir, 'a.html')).delete();
+      const removed = await computeCssHash(dir, config(), first.cache);
+      expect(removed.hash).not.toBe(first.hash);
     });
   });
 });

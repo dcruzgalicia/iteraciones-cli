@@ -5,6 +5,9 @@ import type { BibFileCache } from './state-bib.js';
 import type { FilterFileCache } from './state-hash.js';
 import type { DiscoveryEntry } from './types.js';
 
+/** Caché por archivo HTML de dist: mtime+size evitan re-leer contenido (mismo patrón que FilterFileCache). */
+export type CssFileCache = Record<string, { mtime: number; size: number; hash: string }>;
+
 /** Ruta relativa del archivo de estado del build dentro del proyecto. */
 const STATE_PATH = join('.iteraciones', 'state.json');
 
@@ -32,6 +35,9 @@ export interface BuildState {
   bibFileCache?: BibFileCache;
   /** Hash de los HTML finales + recursos CSS: invalida la compilación de Tailwind. */
   cssHash?: string;
+  /** Caché por archivo HTML de dist (mtime+size+hash) para el cálculo del cssHash. */
+  cssFileCache?: CssFileCache;
+
   /**
    * true solo si el build terminó limpiamente. Un estado sin este flag (o con
    * false) proviene de un build interrumpido (Ctrl-C, SIGKILL, corte de
@@ -69,6 +75,7 @@ export async function loadStateFile(cwd: string): Promise<BuildState | null> {
       bibHash: parsed.bibHash,
       bibFileCache: parsed.bibFileCache,
       cssHash: parsed.cssHash,
+      cssFileCache: parsed.cssFileCache,
       completed: parsed.completed,
       // En disco las entradas son un objeto; en runtime se usan como Map.
       entries: new Map(Object.entries((parsed.entries ?? {}) as Record<string, DiscoveryEntry>)),
@@ -131,12 +138,17 @@ export async function saveStateFile(cwd: string, state: BuildState): Promise<voi
 }
 
 /**
- * Actualiza solo el cssHash del estado persistido (el resto lo escribió
- * discover con el índice actual). No escribe si el hash no cambió.
+ * Actualiza el cssHash y la caché por archivo de HTML del estado persistido
+ * (el resto lo escribió discover con el índice actual). No escribe si nada
+ * cambió.
  */
-export async function updateCssHash(cwd: string, cssHash: string): Promise<void> {
+export async function updateCssHash(cwd: string, cssHash: string, cssFileCache?: CssFileCache): Promise<void> {
   const state = await loadStateFile(cwd);
-  if (!state || state.cssHash === cssHash) return;
+  if (!state) return;
+  if (state.cssHash === cssHash && (cssFileCache === undefined || JSON.stringify(state.cssFileCache) === JSON.stringify(cssFileCache))) {
+    return;
+  }
   state.cssHash = cssHash;
+  if (cssFileCache !== undefined) state.cssFileCache = cssFileCache;
   await saveStateFile(cwd, state);
 }

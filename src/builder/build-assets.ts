@@ -6,6 +6,8 @@ import type { SiteConfig } from '../config/config-schema.js';
 import { ACCENT_PALETTES, type AccentColor } from '../lib/accent-palettes.js';
 import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
+import type { CssFileCache } from './state-serialize.js';
+import { hashString } from './state-serialize.js';
 
 const PKG_ROOT = join(import.meta.dir, '../..');
 const FONTS_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'fonts');
@@ -91,9 +93,19 @@ export async function compileTailwindCss(outputDir: string, accent: string): Pro
  * Hash de invalidación del CSS: contenido de los HTML finales de dist/files
  * (las clases que Tailwind debe incluir/purgar) + CSS base + paleta del acento
  * + binario de Tailwind (mtime+size). Si nada cambió, el CSS no se recompila.
+ *
+ * La caché por archivo (mtime+size+hash) evita releer el contenido de los
+ * HTML sin cambios (mismo patrón content-addressed de discover): con mtime y
+ * size intactos se reutiliza el hash; si solo cambió el mtime (touch), se
+ * relee y se hashea para decidir (caso ambiguo); si cambió el size, se relee.
  */
-export async function computeCssHash(outputDir: string, siteConfig: SiteConfig): Promise<string> {
+export async function computeCssHash(
+  outputDir: string,
+  siteConfig: SiteConfig,
+  prevCache?: CssFileCache,
+): Promise<{ hash: string; cache: CssFileCache }> {
   const hasher = new Bun.CryptoHasher('sha256');
+  const cache: CssFileCache = {};
   // HTML finales: orden determinista (paths relativos ordenados).
   // Sin directorio de salida (proyecto vacío) no hay HTMLs: hash base.
   const htmlPaths: string[] = [];
@@ -108,9 +120,22 @@ export async function computeCssHash(outputDir: string, siteConfig: SiteConfig):
   }
   htmlPaths.sort();
   for (const rel of htmlPaths) {
-    const bytes = new Uint8Array(await Bun.file(join(outputDir, rel)).arrayBuffer());
+    const st = await Bun.file(join(outputDir, rel)).stat();
+    const mtime = Math.round(st.mtimeMs);
+    const size = st.size;
+    const prev = prevCache?.[rel];
+    let contentHash: string;
+    if (prev !== undefined && prev.mtime === mtime && prev.size === size) {
+      // Sin cambios: reutilizar el hash sin releer el contenido
+      contentHash = prev.hash;
+    } else {
+      // Cambiado (o ambiguo: mtime distinto con size igual): releer y hashear
+      const bytes = new Uint8Array(await Bun.file(join(outputDir, rel)).arrayBuffer());
+      contentHash = Bun.CryptoHasher.hash('sha256', bytes, 'hex');
+    }
+    cache[rel] = { mtime, size, hash: contentHash };
     hasher.update(rel);
-    hasher.update(bytes);
+    hasher.update(contentHash);
   }
   // CSS base + paleta del acento configurado
   const stylesSrc = await Bun.file(STYLES_SRC).text();
@@ -131,24 +156,31 @@ export async function computeCssHash(outputDir: string, siteConfig: SiteConfig):
       hasher.update(String(binStat.size));
     }
   }
-  return hasher.digest('hex');
+  return { hash: hasher.digest('hex'), cache };
 }
 
 /**
  * Genera los assets (fuentes, logo y CSS). Retorna el hash de invalidación
- * del CSS ('' si el CSS no se compiló). Si `prevCssHash` coincide con el hash
- * actual y el CSS ya existe, la compilación de Tailwind se omite.
+ * del CSS y la caché por archivo que lo produjo ('' si el CSS no se compiló).
+ * Si `prevCssHash` coincide con el hash actual y el CSS ya existe, la
+ * compilación de Tailwind se omite.
  */
-export async function buildAssets(outputDir: string, cwd: string, siteConfig: SiteConfig, prevCssHash?: string): Promise<string> {
+export async function buildAssets(
+  outputDir: string,
+  cwd: string,
+  siteConfig: SiteConfig,
+  prevCssHash?: string,
+  prevCssFileCache?: CssFileCache,
+): Promise<{ cssHash: string; cssFileCache: CssFileCache }> {
   const tasks: Promise<void>[] = [copyFonts(outputDir), copyLogo(outputDir, cwd, siteConfig)];
-  const cssHash = await computeCssHash(outputDir, siteConfig);
+  const { hash: cssHash, cache: cssFileCache } = await computeCssHash(outputDir, siteConfig, prevCssFileCache);
   const cssExists = await Bun.file(join(outputDir, 'css', 'styles.css')).exists();
   if (prevCssHash !== cssHash || !cssExists) {
     const accent = siteConfig.format?.html?.accent ?? 'lime';
     tasks.push(compileTailwindCss(outputDir, accent));
   }
   await Promise.all(tasks);
-  return cssHash;
+  return { cssHash, cssFileCache };
 }
 
 /**

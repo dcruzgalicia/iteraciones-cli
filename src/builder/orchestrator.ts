@@ -184,10 +184,10 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   // cambió), la compilación se omite y se reutiliza el CSS existente.
   const needsAssets = plan.activeFormats.html;
 
-  /** Genera assets y persiste el nuevo cssHash (solo si cambió). */
+  /** Genera assets y persiste el nuevo cssHash y su caché por archivo (solo si cambiaron). */
   const runAssets = async (): Promise<void> => {
-    const cssHash = await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, prevState?.cssHash);
-    await updateCssHash(cwd, cssHash);
+    const { cssHash, cssFileCache } = await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, prevState?.cssHash, prevState?.cssFileCache);
+    await updateCssHash(cwd, cssHash, cssFileCache);
   };
 
   if (allDocs.length === 0) {
