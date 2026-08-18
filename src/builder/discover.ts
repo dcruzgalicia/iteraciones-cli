@@ -103,7 +103,10 @@ export async function discover(
   const recentFiles: string[] = [];
   const deletedFiles: string[] = [];
   const slugChangedEntries = new Map<string, string>();
-  const frontmatterErrors: Array<{ file: string; error: string }> = [];
+  // Acumulador de problemas de frontmatter con su clase: 'syntax' (YAML
+  // inválido) o 'field' (validación de campos). El nombre refleja ambas
+  // clases; antes se llamaba frontmatterErrors y solo describía la primera.
+  const frontmatterIssues: Array<{ file: string; error: string; kind: 'syntax' | 'field' }> = [];
 
   const thisBuildStartedAt = Date.now();
 
@@ -177,7 +180,7 @@ export async function discover(
           const parsed = yamlResult.value;
           if (parsed && Array.isArray(parsed)) {
             // Mismo criterio que validate: el frontmatter debe ser un objeto.
-            frontmatterErrors.push({ file: relativePath, error: 'frontmatter YAML inválido: debe ser un objeto' });
+            frontmatterIssues.push({ file: relativePath, error: 'frontmatter YAML inválido: debe ser un objeto', kind: 'syntax' });
           } else if (parsed && typeof parsed === 'object') {
             const record = parsed as Record<string, unknown>;
             fm = record;
@@ -188,7 +191,7 @@ export async function discover(
             // muestran en ambos comandos sin romper.
             for (const issue of validateFrontmatterFields(record)) {
               if (issue.severity === 'error') {
-                frontmatterErrors.push({ file: relativePath, error: issue.message });
+                frontmatterIssues.push({ file: relativePath, error: issue.message, kind: 'field' });
               } else {
                 logWarning(`${relativePath}: ${issue.message}`, 'discover');
               }
@@ -203,7 +206,7 @@ export async function discover(
           }
         }
       } catch (err) {
-        frontmatterErrors.push({ file: relativePath, error: formatUserError(err) });
+        frontmatterIssues.push({ file: relativePath, error: formatUserError(err), kind: 'syntax' });
       }
 
       if (!title && (rawTitle === undefined || rawTitle === '')) {
@@ -248,10 +251,20 @@ export async function discover(
     discoveryIndex.delete(p);
   }
 
-  // Frontmatter YAML inválido: error de build (no publicar degradado)
-  if (frontmatterErrors.length > 0) {
-    const msg = frontmatterErrors.map((e) => `  ${e.file}: ${e.error}`).join('\n');
-    throw new BuildError(`frontmatter YAML inválido en ${plural(frontmatterErrors.length, 'documento')}:\n${msg}`);
+  // Frontmatter inválido: error de build (no publicar degradado). El rótulo
+  // distingue la clase real: "YAML inválido" solo para problemas de sintaxis;
+  // los errores de validación de campos (tipos, slug) no son un problema de
+  // YAML. Con ambas clases se emite un bloque por cada una.
+  if (frontmatterIssues.length > 0) {
+    const blocks: string[] = [];
+    for (const kind of ['syntax', 'field'] as const) {
+      const issues = frontmatterIssues.filter((e) => e.kind === kind);
+      if (issues.length === 0) continue;
+      const label = kind === 'syntax' ? 'frontmatter YAML inválido' : 'frontmatter inválido';
+      const msg = issues.map((e) => `  ${e.file}: ${e.error}`).join('\n');
+      blocks.push(`${label} en ${plural(issues.length, 'documento')}:\n${msg}`);
+    }
+    throw new BuildError(blocks.join('\n'));
   }
 
   // Resolver slugs via slug-resolver
