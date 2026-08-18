@@ -25,23 +25,34 @@ interface FilterFileCacheEntry {
 export type FilterFileCache = Record<string, FilterFileCacheEntry>;
 
 /**
- * Versiones de esquema de los outputs generados. Subir la versión de un área
- * cuando cambie su lógica de generación (invalida los outputs en el próximo
- * build). La lista completa de cuándo subir cada versión está en
- * CONTRIBUTING.md (sección "Cómo invalidar la caché de outputs").
+ * Archivos fuente cuya lógica gobierna la generación de los outputs cacheados.
+ * Su contenido participa en el hash de filters como versión de esquema: si la
+ * lógica cambia entre builds, el hash cambia y las salidas se regeneran.
+ * Invalidaciones conservadoras (un refactor sin efecto en la salida re-renderiza
+ * una vez) son el precio aceptado: nunca stale.
  */
-const CACHE_SCHEMA_VERSIONS = {
-  /** Conversión yyyy-mm-dd → fecha legible (src/lib/date.ts). */
-  humanDate: 'human-date-v1',
-  /** Generación de la página HTML (pipeline.ts) y su post-procesamiento de referencias (render.ts). */
-  htmlPage: 'html-page-v1',
-  /** Composición del template LaTeX efectivo (latex-preamble.ts). */
-  latexTemplate: 'latex-template-v1',
-  /** Enlazado de citas del HTML (--metadata=link-citations). */
-  linkCitations: 'link-citations-v1',
-  /** Exportación Markdown (convertToMarkdown: metadatos y rutas del frontmatter de salida). */
-  markdownExport: 'markdown-export-v1',
-} as const;
+export const SCHEMA_SOURCE_FILES = [
+  '../lib/date.ts', // humanDate: conversión yyyy-mm-dd → fecha legible
+  './pipeline.ts', // htmlPage: generación de la página HTML
+  './render.ts', // htmlPage: post-procesamiento de referencias
+  './html-composer.ts', // htmlPage + linkCitations: template HTML y enlazado de citas
+  './latex-preamble.ts', // latexTemplate: composición del template LaTeX efectivo
+  './export/runner.ts', // markdownExport: metadatos y rutas del export Markdown
+  './export/assemble.ts', // markdownExport: ensamblado de ExportDocument
+] as const;
+
+/**
+ * Hash del contenido de los archivos fuente que gobiernan un área de
+ * generación (versión de esquema automática). Un archivo ilegible se hashea
+ * como vacío (sin romper el build: el hash cambia si el archivo reaparece).
+ */
+export async function computeSchemaSourceHash(files: readonly string[], baseDir: string): Promise<string> {
+  const parts: string[] = [];
+  for (const file of files) {
+    parts.push(file, await hashFileContent(join(baseDir, file)).catch(() => ''));
+  }
+  return hashString(parts.join('\0'));
+}
 
 /**
  * Hashea los filtros efectivos (paquete + proyecto) y de los preamble
@@ -87,10 +98,10 @@ export async function computeFiltersHash(
   // salidas cacheadas quedan obsoletas y todos los documentos deben
   // re-renderizarse.
   parts.push(MD_READER);
-  // Versiones de esquema de los outputs cacheados (ver CACHE_SCHEMA_VERSIONS).
-  for (const version of Object.values(CACHE_SCHEMA_VERSIONS)) {
-    parts.push(version);
-  }
+  // Versiones de esquema de los outputs cacheados: derivadas del contenido de
+  // los archivos fuente que gobiernan cada área (nunca stale, sin protocolo
+  // manual).
+  parts.push('schema', await computeSchemaSourceHash(SCHEMA_SOURCE_FILES, import.meta.dir));
   return { hash: hashString(parts.join('\0')), cache };
 }
 

@@ -170,16 +170,9 @@ docs(config): documenta bloque editorial y export en frontmatter
 - **Tests:** `bun test`. Los tests deben ser independientes y no requerir pandoc a menos que sea estrictamente necesario. La suite completa (incluidos `cli-layer` y `lua-filters`) requiere pandoc instalado; sin él, los tests que lo necesitan se marcan como skip y el resto corre.
 - **Linting:** Biome (espacios, `lineWidth: 150`, comillas simples). Se ejecuta automáticamente en pre-commit.
 
-## Cómo invalidar la caché de outputs
+## Cómo se invalida la caché de outputs
 
-El hash de filters (`computeFiltersHash` en `src/builder/state-hash.ts`) incluye las versiones de esquema de `CACHE_SCHEMA_VERSIONS`. **Sube la versión de un área cuando cambie su lógica de generación**; si no lo haces, las salidas cacheadas (HTML, cuerpos LaTeX) quedan obsoletas silenciosamente:
-
-- `humanDate`: cambios en `src/lib/date.ts` (formato de fecha legible).
-- `htmlPage`: cambios en la generación de la página HTML (`pipeline.ts`) o en el post-procesamiento de referencias (`html-composer.ts`).
-- `latexTemplate`: cambios en la composición del template LaTeX efectivo (`latex-preamble.ts`).
-- `linkCitations`: cambios en el enlazado de citas del HTML.
-
-Los cambios en los recursos del template HTML, en los archivos `.tex` de recursos y en `format.html.blocks` no requieren bump: ya participan en los hashes de configuración y de filters.
+La invalidación de outputs cacheados es **automática y por contenido**: el hash de filters (`computeFiltersHash` en `src/builder/state-hash.ts`) incluye el contenido de los archivos fuente que gobiernan cada área de generación (`SCHEMA_SOURCE_FILES` en `state-hash.ts` — fecha legible, página HTML, template LaTeX, export Markdown). Si cambia la lógica de un área, las salidas se regeneran en el siguiente build. **No hay versiones de esquema que subir a mano**; los refactors sin efecto en la salida producen una re-renderización conservadora (aceptada: nunca stale).
 
 **Orden de argv de pandoc:** en `htmlPageFromMarkdown` los filtros `--lua-filter` deben ir ANTES de `--citeproc` (el orden de argv determina el orden de aplicación de los filtros). Está protegido por test de regresión: no reordenar.
 

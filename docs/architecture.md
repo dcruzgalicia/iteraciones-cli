@@ -159,7 +159,7 @@ El build incremental evita reprocesar documentos que no han cambiado:
 
 1. **state.json** (`.iteraciones/state.json`): guarda el timestamp del build anterior, los formatos activos y los metadatos de cada archivo (title, author, slug, frontmatter completo `fm`).
 2. **Detección content-addressed**: cada archivo .md se compara contra el caché por mtime+size+sha256 (sin AST intermedio que conservar).
-3. **Invalidación**: filtros (incluido `internal/flags`), configuración por formato, bibliografía y versiones de esquema de los outputs; al invalidarse un formato, sus salidas se regeneran re-ejecutando pandoc desde el markdown (re-parseo).
+3. **Invalidación**: filtros (incluido `internal/flags`), configuración por formato, bibliografía y **versiones de esquema derivadas del contenido de los archivos fuente** (`SCHEMA_SOURCE_FILES` en `state-hash.ts`): si cambia la lógica de generación de un área (fecha legible, página HTML, template LaTeX, export Markdown), su hash cambia y las salidas se regeneran automáticamente — sin protocolo manual. Los refactors sin efecto en la salida producen una re-renderización conservadora (precio aceptado: nunca stale); al invalidarse un formato, sus salidas se regeneran re-ejecutando pandoc desde el markdown (re-parseo).
 4. **Formatos activos**: si cambia la configuración de formatos entre builds, se fuerza el reprocesamiento completo de ese formato.
 5. **Slugs duplicados**: contador derivado del discovery index para slugs con sufijo `-dN`.
 6. **Migración**: los directorios del flujo anterior (`ast/`, `changes/`, `formats/`) se eliminan automáticamente en cada build.
