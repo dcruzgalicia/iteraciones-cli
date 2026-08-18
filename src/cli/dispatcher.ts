@@ -126,8 +126,11 @@ async function buildProjectInfo(cwd: string): Promise<string[]> {
     .catch(() => false);
   const activeFormats = computeActiveFormats(config.format);
   const disabledFilters = config.disabledFilters?.length ? config.disabledFilters.join(', ') : '(ninguno)';
-  // Distinguir los preamble desactivados por defecto (defaults del paquete)
-  // de los que el usuario agregó explícitamente.
+  // Distinguir lo que el usuario configuró de los defaults del paquete: el
+  // schema materializa los defaults en format.pdf.disabledPreambleFilters, así
+  // que la línea de config muestra solo los que NO son defaults del paquete
+  // (el proyecto no "desactiva" 24-eso-pic/25-pdfx/26-crop — vienen
+  // desactivados por defecto en DEFAULT_PDF_FORMAT).
   const defaultPreamble = DEFAULT_PDF_FORMAT.disabledPreambleFilters;
   const preambleDisabled = config.format?.pdf?.disabledPreambleFilters ?? [];
   const userPreamble = preambleDisabled.filter((name) => !defaultPreamble.includes(name));
@@ -146,8 +149,8 @@ async function buildProjectInfo(cwd: string): Promise<string[]> {
     `  tema HTML:               ${theme}`,
     `  acento HTML:             ${accent}`,
     `  filters desactivados:    ${disabledFilters}`,
-    `  preamble desactivados:   ${preambleDisabled.length > 0 ? preambleDisabled.join(', ') : '(ninguno)'}`,
-    `  preamble desactivados extra: ${userPreamble.length > 0 ? userPreamble.join(', ') : '(ninguno)'}`,
+    `  preamble desactivados (config):          ${userPreamble.length > 0 ? userPreamble.join(', ') : '(ninguno)'}`,
+    `  preamble desactivados (defaults del paquete): ${defaultPreamble.join(', ')}`,
   ];
   return lines;
 }
@@ -183,10 +186,13 @@ export async function runValidate(cwd: string): Promise<void> {
 export async function runDoctor(cwd: string, options: { info?: boolean } = {}): Promise<void> {
   try {
     await assertProjectRoot(cwd);
-    // --info muestra la información del proyecto (antes comando info)
+    // --info muestra la información del proyecto (antes comando info). Cada
+    // línea lleva el prefijo y el glifo (formato unificado de la CLI).
     if (options.info) {
       const lines = await buildProjectInfo(cwd);
-      logInfo(lines.join('\n'), 'doctor');
+      for (const line of lines) {
+        logInfo(line, 'doctor');
+      }
     }
     await doctor(cwd);
   } catch (err) {
