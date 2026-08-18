@@ -468,6 +468,16 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(deco).toContain('\\sethlcolor{yellow}');
   });
 
+  it('09-tables: contador dummy none para tablas sin caption (pandoc + longtable)', async () => {
+    // pandoc envuelve las tablas sin caption en \def\LTcaptype{none} y
+    // longtable ejecuta \refstepcounter{none}: sin el contador, falla con
+    // 'No counter "none" defined' (la tabla del CV del proyecto de
+    // integración rompía el PDF) y hyperref avisaba 'Counter none ...'
+    const filters = await loadPreambleFilters();
+    const tables = filters.find((f) => f.name === '09-tables')?.content ?? '';
+    expect(tables).toContain('\\newcounter{none}');
+  });
+
   it('26-crop: solo marcas de corte (noinfo, sin el texto de información)', async () => {
     const filters = await loadPreambleFilters();
     const crop = filters.find((f) => f.name === '26-crop')?.content ?? '';
