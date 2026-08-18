@@ -13,6 +13,7 @@ const HTML_RESOURCE_FILES = [
   'card-indice.html',
   'card-formatos.html',
   'card-referencias.html',
+  'card-referencias-block.html',
 ];
 
 /** Entrada de caché de archivo de filtro (mtime+size evitan re-leer contenido). */

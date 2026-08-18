@@ -115,20 +115,17 @@ const FORMAT_ICONS: Record<FormatKey, string> = {
     '<svg class="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6h14M5 10h10M5 14h14M5 18h8"/></svg>',
 };
 
-/** Clase de los títulos-chip de las tarjetas (se usa en formatos y referencias). */
-const CHIP_CLASS =
-  'inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-12 text-accent-600 dark:text-accent-400';
-
 /**
- * Genera el bloque de la tarjeta Formatos (enlaces a los formatos generados)
- * con su marcador. Sin formatos activos no se genera nada: el bloque queda
- * ausente y el resto del masonry no se altera. El resultado se pasa al
- * template como variable `formats`.
+ * Genera los elementos de la tarjeta Formatos (enlaces a los formatos
+ * generados). El wrapper de la tarjeta vive en el recurso card-formatos.html
+ * (diseño en recursos, sin clases en TS); aquí solo se sustituye la variable
+ * `formats` del template. Sin formatos activos retorna undefined y el
+ * $if(formats)$ del recurso omite el bloque.
  */
-export function buildFormatsBlock(formats: FormatsLink[]): string | undefined {
+export function buildFormatsItems(formats: FormatsLink[]): string | undefined {
   if (formats.length === 0) return undefined;
 
-  const items = formats
+  return formats
     .map(
       (f) =>
         `        <li>\n` +
@@ -142,18 +139,6 @@ export function buildFormatsBlock(formats: FormatsLink[]): string | undefined {
         `        </li>`,
     )
     .join('\n');
-
-  const chipClass = CHIP_CLASS;
-  return (
-    `<div class="break-inside-avoid pb-6">\n` +
-    `      <section class="relative [&::before]:pointer-events-none [&::before]:absolute [&::before]:left-2 [&::before]:top-2 [&::before]:h-3 [&::before]:w-3 [&::before]:border-l [&::before]:border-t [&::before]:border-accent-500/30 [&::before]:content-[''] [&::after]:pointer-events-none [&::after]:absolute [&::after]:bottom-2 [&::after]:right-2 [&::after]:h-3 [&::after]:w-3 [&::after]:border-b [&::after]:border-r [&::after]:border-accent-500/30 [&::after]:content-[''] rounded-xl border border-accent-500/25 bg-stone-50/70 dark:bg-stone-900/60 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5">\n` +
-    `        <h2 class="${chipClass}">Formatos</h2>\n` +
-    `        <ul class="list-none m-0 p-0 space-y-3">\n` +
-    items +
-    `\n        </ul>\n` +
-    `      </section>\n` +
-    `    </div>`
-  );
 }
 
 /**
@@ -167,14 +152,25 @@ export function removeTocReferencesLink(html: string): string {
 }
 
 /**
+ * Carga el wrapper de la tarjeta Referencias (diseño en recurso, sin clases en
+ * TS). Se compone una vez por build y se sustituye en cada página: el marcador
+ * {{refs-list}} recibe el bloque extraído de citeproc.
+ */
+export function loadReferencesCardTemplate(): Promise<string> {
+  return Bun.file(join(HTML_RESOURCES_DIR, 'card-referencias-block.html')).text();
+}
+
+/**
  * Extrae el bloque de referencias (h1#refs-heading + div#refs) del article y lo
- * devuelve como bloque del masonry con su marcador. El id del heading es el
+ * devuelve como bloque del masonry con su marcador. El wrapper de la tarjeta
+ * viene en `cardTemplate` (recurso card-referencias-block.html): aquí solo se
+ * sustituye la lista extraída en `{{refs-list}}`. El id del heading es el
  * sintético que inyecta internal/flags.lua: un heading "Referencias" propio
  * del documento (id referencias) nunca se toca. El parse del cierre es
  * balanceado: las entradas csl-entry son divs anidados, el primer `</div>` no
  * cierra el bloque. Sin citas, no se genera bloque.
  */
-export function extractReferencesBlock(html: string): { html: string; block?: string } {
+export function extractReferencesBlock(html: string, cardTemplate: string): { html: string; block?: string } {
   const refsIdPos = html.indexOf('id="refs-heading"');
   const refsDivPos = html.indexOf('<div id="refs"');
   if (refsIdPos < 0 && refsDivPos < 0) return { html };
@@ -212,17 +208,10 @@ export function extractReferencesBlock(html: string): { html: string; block?: st
   if (depth !== 0) return { html };
   const end = i;
 
-  const block = html.slice(start, end);
+  // La lista extraída (el div#refs completo) es el contenido dinámico; el
+  // wrapper y el chip del heading viven en el recurso (cardTemplate).
+  const listChunk = html.slice(divStart, end);
   const withoutBlock = html.slice(0, start) + html.slice(end);
 
-  const chipClass = CHIP_CLASS;
-  const styledHeading = block.replace(/<h1[^>]*id="refs-heading"[^>]*>/, `<h2 id="refs-heading" class="${chipClass}">`).replace('</h1>', '</h2>');
-  const card =
-    `<div class="break-inside-avoid pb-6">\n` +
-    `      <section class="relative [&::before]:pointer-events-none [&::before]:absolute [&::before]:left-2 [&::before]:top-2 [&::before]:h-3 [&::before]:w-3 [&::before]:border-l [&::before]:border-t [&::before]:border-accent-500/30 [&::before]:content-[''] [&::after]:pointer-events-none [&::after]:absolute [&::after]:bottom-2 [&::after]:right-2 [&::after]:h-3 [&::after]:w-3 [&::after]:border-b [&::after]:border-r [&::after]:border-accent-500/30 [&::after]:content-[''] rounded-xl border border-accent-500/25 bg-stone-50/80 dark:bg-stone-900/70 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [&_.csl-entry]:mb-3 [&_.csl-entry]:pl-4 [&_.csl-entry]:-indent-4">\n` +
-    `        ${styledHeading}\n` +
-    `      </section>\n` +
-    `    </div>`;
-
-  return { html: withoutBlock, block: card };
+  return { html: withoutBlock, block: cardTemplate.replace('{{refs-list}}', listChunk) };
 }

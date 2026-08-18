@@ -45,6 +45,7 @@ describe('extractReferencesBlock (sin marcador en el template)', () => {
           { title: 'T', siteTitle: 'test', lang: 'es-MX' },
           siteConfig,
           join(cwd, 'tpl.html'),
+          '<div class="wrap"><h2 id="refs-heading">Referencias</h2>{{refs-list}}</div>',
           {},
           { bibliography: join(cwd, 'bibliography.bib') },
           await loadFilterGroups(siteConfig, undefined, cwd),

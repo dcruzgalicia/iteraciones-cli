@@ -13,7 +13,7 @@ import { assembleExportDocument } from './export/assemble.js';
 import { generateCoverImages } from './export/cover-image.js';
 import { convertToEpub, convertToMarkdown } from './export/runner.js';
 import { loadFilterGroups } from './filter-resolver.js';
-import { composeHtmlTemplate } from './html-composer.js';
+import { composeHtmlTemplate, loadReferencesCardTemplate } from './html-composer.js';
 import { markdownToLatex } from './latex-composer.js';
 import { composeLatexTemplate } from './latex-preamble.js';
 import { createPdfConsumer, type PdfJob } from './pdf-pool.js';
@@ -95,6 +95,9 @@ export async function runDocumentPipeline(
   await mkdir(templatesDir, { recursive: true });
   const htmlTemplatePath = join(templatesDir, 'html.html');
   const latexTemplatePath = join(templatesDir, 'latex.tex');
+  // Wrapper de la tarjeta Referencias: recurso estático compuesto una vez por
+  // build (el marcador {{refs-list}} recibe la lista extraída por documento).
+  const refsCardTemplate = await loadReferencesCardTemplate();
   if (htmlOn) {
     await writeIfChanged(htmlTemplatePath, await composeHtmlTemplate(siteConfig));
   }
@@ -151,6 +154,7 @@ export async function runDocumentPipeline(
     pdfWorkDir: pdfWorkBase,
     htmlTemplatePath,
     latexTemplatePath,
+    refsCardTemplate,
   };
   const formatWorkSets = { htmlPaths, epubPaths, mdPaths, latexPaths, pdfJobs: pdfConsumer.pdfJobs };
   try {
@@ -219,6 +223,8 @@ interface ExportContext {
   pdfWorkDir: string;
   htmlTemplatePath: string;
   latexTemplatePath: string;
+  /** Wrapper de la tarjeta Referencias (recurso card-referencias-block.html). */
+  refsCardTemplate: string;
 }
 
 /** Conjuntos de trabajo por formato del build actual. Inmutable durante el pool. */
@@ -239,7 +245,8 @@ async function processDocumentFormats(
   discoveryIndex: Map<string, DiscoveryEntry>,
 ): Promise<void> {
   const { ctx, plan, formatCfg, lang, logoInline, warnedLangs } = renderCtx;
-  const { filters, bibOptions, bibFiles, biblatexAvailable, globalBibliography, pdfWorkDir, htmlTemplatePath, latexTemplatePath } = exportCtx;
+  const { filters, bibOptions, bibFiles, biblatexAvailable, globalBibliography, pdfWorkDir, htmlTemplatePath, latexTemplatePath, refsCardTemplate } =
+    exportCtx;
   const { htmlPaths, epubPaths, mdPaths, latexPaths, pdfJobs } = formatWorkSets;
   const { activeFormats } = plan;
   const htmlOn = activeFormats.html;
@@ -360,6 +367,7 @@ async function processDocumentFormats(
       },
       ctx.siteConfig,
       htmlTemplatePath,
+      refsCardTemplate,
       fm,
       bibOptions,
       filters,
