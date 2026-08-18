@@ -39,12 +39,19 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
       continue;
     }
 
-    const { yaml } = splitFrontmatter(raw);
+    const { yaml, body } = splitFrontmatter(raw);
     if (!yaml) {
-      // Un archivo que empieza con --- pero no cierra el bloque se trata como
-      // cuerpo en silencio (la regex de splitFrontmatter no matchea): el aviso
-      // hace visible el frontmatter malformado.
-      if (/^---\r?\n/.test(raw)) {
+      // Sin frontmatter (o frontmatter cerrado vacío: yaml === ''): un
+      // documento sin contenido se omite con warning (mismo criterio que el
+      // pipeline); un archivo que empieza con --- pero no cierra el bloque se
+      // trata como cuerpo en silencio (la regex no matcheó) — el aviso lo hace
+      // visible.
+      if (!body.trim()) {
+        warnings.push({
+          file: entry,
+          message: yaml === '' ? 'no tiene contenido después del frontmatter; se omite' : 'documento vacío; se omite',
+        });
+      } else if (/^---\r?\n/.test(raw)) {
         warnings.push({
           file: entry,
           message: 'frontmatter sin cerrar (falta el bloque "---" final); el contenido se tratará como cuerpo',
@@ -53,9 +60,13 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
       continue; // sin frontmatter → válido
     }
 
-    // Validar sintaxis YAML del frontmatter.
+    // Validar la sintaxis YAML del frontmatter ANTES del warning de documento
+    // sin cuerpo: un frontmatter inválido es un error aunque el documento no
+    // tenga contenido (el error manda sobre el warning de omisión).
+    let fmError = false;
     const yamlResult = parseYamlWithPosition(yaml);
     if (yamlResult.error) {
+      fmError = true;
       errors.push({
         file: entry,
         message: `frontmatter YAML inválido: ${yamlResult.error}`,
@@ -63,6 +74,7 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
     } else {
       const result = yamlResult.value;
       if (!result || typeof result !== 'object' || Array.isArray(result)) {
+        fmError = true;
         errors.push({
           file: entry,
           message: 'frontmatter YAML inválido: debe ser un objeto',
@@ -74,6 +86,7 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
         // muestran en ambos sin romper.
         for (const issue of validateFrontmatterFields(parsed)) {
           if (issue.severity === 'error') {
+            fmError = true;
             errors.push({ file: entry, message: issue.message });
           } else {
             warnings.push({ file: entry, message: issue.message });
@@ -87,12 +100,20 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
           const outputKey = `${dirname(entry)}/${slug}`;
           const owner = slugs.get(outputKey);
           if (owner !== undefined) {
+            fmError = true;
             errors.push({ file: entry, message: `slug duplicado: "${slug}" ya lo usa ${owner}` });
           } else {
             slugs.set(outputKey, entry);
           }
         }
       }
+    }
+    // Frontmatter válido pero sin contenido: warning de omisión (no error).
+    if (!body.trim() && !fmError) {
+      warnings.push({
+        file: entry,
+        message: 'no tiene contenido después del frontmatter; se omite',
+      });
     }
   }
   return { errors, warnings, count: entries.length };
