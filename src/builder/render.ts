@@ -2,7 +2,7 @@ import type { SiteConfig } from '../config/config-schema.js';
 import { logWarning } from '../lib/logger.js';
 import { type BibOptions, runPandoc } from '../lib/pandoc-runner.js';
 import { type LuaFilterGroup, loadFilterGroups } from './filter-resolver.js';
-import { buildFormatsBlock, extractReferencesBlock, type HtmlPageVars, MD_READER, metadataValue, removeTocReferencesLink } from './html-composer.js';
+import { buildFormatsItems, extractReferencesBlock, type HtmlPageVars, MD_READER, metadataValue, removeTocReferencesLink } from './html-composer.js';
 import type { BuildDocument } from './types.js';
 
 /**
@@ -19,6 +19,7 @@ export async function htmlPageFromMarkdown(
   vars: HtmlPageVars,
   siteConfig: SiteConfig,
   templatePath: string,
+  refsCardTemplate: string,
   fm: Record<string, unknown>,
   bibOptions?: BibOptions,
   luaFilters?: LuaFilterGroup,
@@ -56,8 +57,8 @@ export async function htmlPageFromMarkdown(
   if (css) extraArgs.push(`--metadata=css:${css}`);
   if (vars.authorMeta) extraArgs.push(`--metadata=author-meta:${vars.authorMeta}`);
   if (vars.logoInline) extraArgs.push(`--variable=logo-inline:${vars.logoInline}`);
-  const formatsBlock = buildFormatsBlock(vars.formats ?? []);
-  if (formatsBlock) extraArgs.push(`--variable=formats:${formatsBlock}`);
+  const formatsItems = buildFormatsItems(vars.formats ?? []);
+  if (formatsItems) extraArgs.push(`--variable=formats:${formatsItems}`);
 
   // citeproc DESPUÉS de --lua-filter (orden protegido por test de regresión)
   if (bibOptions) {
@@ -69,7 +70,7 @@ export async function htmlPageFromMarkdown(
 
   const htmlWithoutTocRefs = removeTocReferencesLink(html);
 
-  const { html: htmlWithoutRefs, block: referencesBlock } = extractReferencesBlock(htmlWithoutTocRefs);
+  const { html: htmlWithoutRefs, block: referencesBlock } = extractReferencesBlock(htmlWithoutTocRefs, refsCardTemplate);
   if (referencesBlock) {
     // La tarjeta referencias puede no estar en format.html.blocks: sin
     // marcador, la bibliografía se descartaría en silencio (regresión
