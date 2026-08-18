@@ -167,6 +167,8 @@ Solo los documentos modificados (o con slug cambiado) pasan por el pipeline; el 
 
 **Coste del re-parseo incremental (medido y aceptado):** re-exportar tras una invalidación implica re-parsear el markdown (cada formato vuelve a ejecutar pandoc desde el origen). Medido en el proyecto de integración (2 documentos, 5 formatos): el re-parseo de ambos documentos cuesta ~270-290 ms en el pool 1, indistinguible frente al PDF (~7 s de latexmk), y un build sin cambios no reprocesa nada (~120 ms). Se acepta el coste: reintroducir un AST en disco para evitarlo añadiría complejidad sin beneficio medible, y el build completo es más rápido que v0.18.0 al no existir la pasada markdown → json.
 
+**Coste de la compilación de Tailwind (medido y aceptado, issue #1926):** con HTML activo, Tailwind se compila en cada build en cuanto un solo HTML cambia (el `cssHash` cubre el contenido completo de `dist/files`, no solo sus clases). Medido (macOS, Bun 1.3.14, Tailwind CLI v4.3.3): con un proyecto de 25 documentos (~2 MB de HTML final, ~80 KB por documento — tamaño de libro), la compilación cuesta **~116 ms** (dominada por el arranque del binario; el escaneo es lineal y rápido) y un cambio de solo texto cuesta **~333 ms** en total. El umbral propuesto por el issue para justificar una caché por conjunto de clases era ~1 s: se está muy por debajo, así que **se documenta el coste como decisión aceptada**. No se implementa la caché por clases porque añadiría un riesgo de CSS stale (una clase nueva en el contenido requeriría un test explícito de regeneración) y parsing de HTML, sin beneficio medible.
+
 ---
 
 ## Sistema de configuración
