@@ -874,30 +874,35 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
-  it('un documento sin cuerpo después del frontmatter aborta el build con la ruta del archivo', async () => {
+  it('un documento sin cuerpo se omite con warning (no aborta el build)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
       await writeFile(join(dir, 'vacio.md'), '---\ntitle: Vacío\n---\n', 'utf8');
-      const stderrSpy = spyStderr();
+      await writeFile(join(dir, 'hueco.md'), '', 'utf8');
+      const stdoutSpy = spyOn(process.stdout, 'write');
       let output = '';
       try {
         process.exitCode = 0;
         await runBuild(dir);
       } finally {
-        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
-        stderrSpy.mockRestore();
+        output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
       }
-      expect(output).toContain('✖ [build]');
+      expect(process.exitCode).toBe(0);
       expect(output).toContain('vacio.md');
-      expect(output).toContain('no tiene contenido después del frontmatter');
-      expect(process.exitCode).toBe(1);
+      expect(output).toContain('no tiene contenido después del frontmatter; se omite del build');
+      expect(output).toContain('hueco.md');
+      expect(output).toContain('está vacío; se omite del build');
+      // El documento válido sí se genera (slug derivado del título)
+      expect(await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).exists()).toBe(true);
     });
   });
 
   it('el siguiente build reintenta el documento que falló (no envenena la caché)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
-      await writeFile(join(dir, 'vacio.md'), '---\ntitle: Vacío\n---\n', 'utf8');
+      // Frontmatter YAML inválido: el build falla en discovery
+      await writeFile(join(dir, 'vacio.md'), '---\ntitle: [roto\n---\n\nContenido.\n', 'utf8');
       process.exitCode = 0;
       await runBuild(dir);
       expect(process.exitCode).toBe(1);
@@ -1356,6 +1361,28 @@ describe('runValidate', () => {
       process.exitCode = 0;
       await runValidate(dir);
       expect(process.exitCode).toBe(0);
+    });
+  });
+
+  it('advierte sobre documentos vacíos y frontmatter sin cuerpo (exit 0)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'vacio.md'), '---\ntitle: Vacío\n---\n', 'utf8');
+      await writeFile(join(dir, 'hueco.md'), '', 'utf8');
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      expect(output).toContain('vacio.md');
+      expect(output).toContain('no tiene contenido después del frontmatter; se omite');
+      expect(output).toContain('hueco.md');
+      expect(output).toContain('documento vacío; se omite');
     });
   });
 

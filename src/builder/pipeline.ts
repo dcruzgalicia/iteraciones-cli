@@ -248,9 +248,18 @@ async function processDocumentFormats(
   } catch (err) {
     throw new BuildError(`no se pudo leer "${doc.filePath}": ${translateSystemError(err)}`);
   }
-  // Validación: el documento debe tener cuerpo después del frontmatter
-  if (!splitFrontmatter(content).body.trim()) {
-    throw new BuildError(`"${doc.filePath}" no tiene contenido después del frontmatter`);
+  // Validación: el documento debe tener cuerpo después del frontmatter. Un
+  // documento vacío (o con frontmatter sin cuerpo) se omite con un warning:
+  // un accidente de 0 bytes no debe cancelar el build completo.
+  const { yaml, body } = splitFrontmatter(content);
+  if (!body.trim()) {
+    logWarning(
+      yaml !== undefined
+        ? `"${doc.filePath}" no tiene contenido después del frontmatter; se omite del build`
+        : `"${doc.filePath}" está vacío; se omite del build`,
+      'build',
+    );
+    return;
   }
 
   const entry = discoveryIndex.get(doc.relativePath);
