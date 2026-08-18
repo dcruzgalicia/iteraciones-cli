@@ -205,9 +205,19 @@ export class ProgressTracker {
     if (this.state.warnings.length > 0) {
       // Cierre explícito con el conteo y el siguiente paso: sin él, el build
       // con advertencias termina sin que el usuario sepa si "terminó bien"
-      // (exit 0) y sin conectar con la herramienta de diagnóstico.
+      // (exit 0) y sin conectar con la herramienta de diagnóstico. La guía
+      // genérica de validate se omite cuando las advertencias son las
+      // autosuficientes de proyecto vacío: ya proponen 'iteraciones init' y
+      // validate respondería "sin errores — 0 documentos", un paso que no
+      // aporta. Si hay cualquier otra advertencia (frontmatter/config), la
+      // guía sigue apareciendo.
+      const emptyProjectWarnings = [
+        'No se encontraron documentos Markdown en el proyecto.',
+        "Crea un archivo .md con frontmatter o ejecuta 'iteraciones init'.",
+      ];
+      const suggestsValidate = this.state.warnings.some((w) => !emptyProjectWarnings.some((empty) => w.includes(empty)));
       this.stream.write(
-        `\n${GLYPHS.warning} Build completado con ${plural(this.state.warnings.length, 'advertencia')}. Ejecuta 'iteraciones validate' para más detalle.\n`,
+        `\n${GLYPHS.warning} Build completado con ${plural(this.state.warnings.length, 'advertencia')}${suggestsValidate ? `. Ejecuta 'iteraciones validate' para más detalle.` : '.'}\n`,
       );
       this.stream.write(`\nAdvertencias:\n`);
       for (const warning of this.state.warnings) {

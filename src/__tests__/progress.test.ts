@@ -378,6 +378,36 @@ describe('ProgressTracker', () => {
     expect(output).toContain('Build completado con 1 advertencia.');
   });
 
+  it('solo con advertencias de proyecto vacío (autosuficientes) no sugiere validate', async () => {
+    const output = await runTracker(async (tracker) => {
+      tracker.startPhase('discovery', 1);
+      tracker.completePhase(1);
+      await tracker.planPhases(['discovery']);
+      tracker.addWarning('⚠ [build] No se encontraron documentos Markdown en el proyecto.');
+      tracker.addWarning("⚠ [build] Crea un archivo .md con frontmatter o ejecuta 'iteraciones init'.");
+      await tracker.finish(0, 0, []);
+    });
+
+    expect(output).toContain('Build completado con 2 advertencias.');
+    expect(output).not.toContain("ejecuta 'iteraciones validate'");
+    expect(output).toContain('Advertencias:');
+    expect(output).toContain("ejecuta 'iteraciones init'");
+  });
+
+  it('con una advertencia de config junto a las de proyecto vacío, la guía de validate sí aparece', async () => {
+    const output = await runTracker(async (tracker) => {
+      tracker.startPhase('discovery', 1);
+      tracker.completePhase(1);
+      await tracker.planPhases(['discovery']);
+      tracker.addWarning('⚠ [config] 25-pdfx desactiva los enlaces del PDF');
+      tracker.addWarning('⚠ [build] No se encontraron documentos Markdown en el proyecto.');
+      tracker.addWarning("⚠ [build] Crea un archivo .md con frontmatter o ejecuta 'iteraciones init'.");
+      await tracker.finish(0, 0, []);
+    });
+
+    expect(output).toContain("Build completado con 3 advertencias. Ejecuta 'iteraciones validate' para más detalle.");
+  });
+
   it('al actualizar una fila en TTY resetea la columna antes de escribir (regresión: indentaciones fantasma)', async () => {
     const output = await runTracker(
       async (tracker) => {

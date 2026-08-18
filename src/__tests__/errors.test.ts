@@ -48,6 +48,14 @@ describe('translateSystemError', () => {
     expect(translateSystemError(new Error('algo falló'))).toBe('algo falló');
   });
 
+  it('con hint de ENOENT para documentos del usuario sugiere verificar el nombre', () => {
+    expect(translateSystemError(sysErr('ENOENT'), 'verifica que el nombre del archivo sea correcto')).toBe(
+      'archivo no encontrado: verifica que el nombre del archivo sea correcto',
+    );
+    // Sin hint (rutas de sistema: logo, recursos) conserva el texto actual
+    expect(translateSystemError(sysErr('ENOENT'))).toBe('archivo no encontrado (posiblemente eliminado durante el build)');
+  });
+
   it('retorna String(err) para valores no-Error', () => {
     expect(translateSystemError('texto plano')).toBe('texto plano');
   });

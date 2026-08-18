@@ -121,7 +121,9 @@ export async function discover(
       mtimeMs = stat.mtimeMs;
       size = stat.size;
     } catch (err) {
-      throw new BuildError(`Error al leer "${relativePath}": ${translateSystemError(err)}`);
+      // Con hint de ENOENT: al leer un documento del usuario el motivo común
+      // es un nombre mal escrito o un archivo que nunca existió.
+      throw new BuildError(`Error al leer "${relativePath}": ${translateSystemError(err, 'verifica que el nombre del archivo sea correcto')}`);
     }
     const mtime = Math.round(mtimeMs);
     const cached = useCache ? discoveryIndex.get(relativePath) : undefined;
@@ -159,7 +161,7 @@ export async function discover(
         try {
           text = await Bun.file(filePath).text();
         } catch (err) {
-          throw new BuildError(`Error al leer "${relativePath}": ${translateSystemError(err)}`);
+          throw new BuildError(`Error al leer "${relativePath}": ${translateSystemError(err, 'verifica que el nombre del archivo sea correcto')}`);
         }
       }
       const hash = hashString(text);
