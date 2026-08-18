@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { buildDocsFromIndex, computeSlug, htmlSlugFor, parseAuthors } from '../builder/discover.js';
-import { splitFrontmatter } from '../lib/frontmatter.js';
+import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 
 describe('computeSlug', () => {
   it('genera slug desde el título', () => {
@@ -189,5 +189,22 @@ describe('splitFrontmatter', () => {
     const { yaml, body } = splitFrontmatter('---\r\ntitle: Prueba\r\n---\r\n\r\nContenido');
     expect(yaml).toBe('title: Prueba');
     expect(body).toBe('\r\nContenido');
+  });
+});
+
+describe('parseYamlWithPosition', () => {
+  it('reporta causa y posición en una sola línea (sin snippet ni caret)', () => {
+    const result = parseYamlWithPosition('lang: [unclosed');
+    expect(result.value).toBeUndefined();
+    expect(result.error).toMatch(/^[^\n]+ \(línea 1, columna \d+\)$/);
+    expect(result.error).not.toContain('\n');
+    // La posición de la librería no se duplica
+    expect(result.error).not.toContain('at line');
+  });
+
+  it('retorna el valor parseado para YAML válido', () => {
+    const result = parseYamlWithPosition('lang: es-MX\ntoc: true');
+    expect(result.error).toBeUndefined();
+    expect(result.value).toEqual({ lang: 'es-MX', toc: true });
   });
 });
