@@ -8,7 +8,6 @@ import { ConfigError } from '../lib/errors.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 import { logError, logInfo, logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
-import { checkLatexEngine } from './doctor/system-checks.js';
 
 type ValidationError = { file: string; message: string };
 
@@ -183,17 +182,12 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
  * compilación completa.
  */
 export async function runValidate(cwd: string): Promise<void> {
-  let hasPdf = false;
   let disabledFiltersCount = 0;
   let luaFiltersCount = 0;
   const configErrors: ValidationError[] = [];
   const configWarnings: ValidationError[] = [];
   try {
     const config = await loadSiteConfig(cwd, { mode: 'validate' });
-    // El transform del schema materializa siempre format.pdf con defaults, así
-    // que su presencia no indica que el proyecto use PDF: el criterio real es
-    // generate:true (generar .tex no requiere motor LaTeX).
-    hasPdf = config.format?.pdf?.generate === true;
     disabledFiltersCount = config.disabledFilters?.length ?? 0;
     luaFiltersCount = config.luaFilters?.length ?? 0;
     // Validar nombres de filters desactivados (warnings, no errores)
@@ -232,17 +226,6 @@ export async function runValidate(cwd: string): Promise<void> {
       configErrors.push({
         file: 'iteraciones.config.yaml',
         message: err instanceof Error ? err.message : String(err),
-      });
-    }
-  }
-
-  // Si format.pdf esta configurado, verificar que el motor LaTeX este disponible.
-  if (hasPdf) {
-    const latexResult = await checkLatexEngine();
-    if (!latexResult.ok) {
-      configErrors.push({
-        file: 'iteraciones.config.yaml',
-        message: `format.pdf requiere pdflatex pero no esta disponible — ${latexResult.detail ?? ''}`,
       });
     }
   }
