@@ -15,12 +15,22 @@ function sortLuaInfos(infos: Awaited<ReturnType<typeof getBuiltinLuaFilterInfos>
   });
 }
 
+export interface RunFiltersOptions {
+  /** Stream de salida (inyectable en tests; por defecto stdout). */
+  stream?: NodeJS.WriteStream;
+  /** Ancho de terminal fijo (inyectable en tests; por defecto se consulta el stream). */
+  columns?: number;
+}
+
 /**
  * Ancho de terminal disponible (solo TTY). En pipes no hay ancho conocido:
  * las descripciones se muestran completas (el usuario puede desplazarse).
+ * El stream y el ancho son inyectables: la suite fija un ancho conocido y no
+ * depende del terminal real (patrón del constructor de ProgressTracker).
  */
-function terminalColumns(): number | undefined {
-  return process.stdout.isTTY === true && process.stdout.columns ? process.stdout.columns : undefined;
+function terminalColumns(stream: NodeJS.WriteStream, fixedColumns?: number): number | undefined {
+  if (fixedColumns !== undefined) return fixedColumns > 0 ? fixedColumns : undefined;
+  return stream.isTTY === true && stream.columns ? stream.columns : undefined;
 }
 
 /** Trunca un texto con elipsis al ancho dado (nunca corta a media palabra). */
@@ -38,7 +48,8 @@ function truncateWithEllipsis(text: string, width: number): string {
  * Las filas se imprimen sin prefijo (formato tabla); solo los encabezados de
  * sección y las pistas usan el prefijo ℹ del logger.
  */
-export async function runFilters(cwd: string): Promise<void> {
+export async function runFilters(cwd: string, options: RunFiltersOptions = {}): Promise<void> {
+  const stream = options.stream ?? process.stdout;
   const config = await loadSiteConfig(cwd);
   // Advertir sobre nombres desconocidos antes de listar el estado
   validateDisabledFilters(config.disabledFilters);
@@ -53,13 +64,13 @@ export async function runFilters(cwd: string): Promise<void> {
   // Columna de nombres alineada (padEnd sobre el ancho máximo)
   const nameWidth = Math.max(...allInfos.map((info) => info.name.length));
   // 2 (indent) + nameWidth + 2 + 'lua' (3) + 2 + desc + 2 + '[estado]' (8)
-  const columns = terminalColumns();
+  const columns = terminalColumns(stream, options.columns);
   const descWidth = columns === undefined ? undefined : Math.max(10, columns - 2 - nameWidth - 2 - 3 - 2 - 8);
   for (const info of allInfos) {
     const active = !disabled.has(info.name);
     const status = active ? 'activo' : 'desactivado';
     const description = descWidth !== undefined ? truncateWithEllipsis(info.description, descWidth) : info.description;
-    process.stdout.write(`  ${info.name.padEnd(nameWidth)}  lua  ${description}  [${status}]\n`);
+    stream.write(`  ${info.name.padEnd(nameWidth)}  lua  ${description}  [${status}]\n`);
   }
 
   logInfo('');
@@ -86,7 +97,7 @@ export async function runFilters(cwd: string): Promise<void> {
       const active = !preambleDisabled.has(info.name);
       const status = active ? 'activo' : 'desactivado';
       const description = preambleDescWidth !== undefined ? truncateWithEllipsis(info.description, preambleDescWidth) : info.description;
-      process.stdout.write(`  ${info.name.padEnd(preambleWidth)}  ${description}  [${status}]\n`);
+      stream.write(`  ${info.name.padEnd(preambleWidth)}  ${description}  [${status}]\n`);
     }
 
     logInfo('');

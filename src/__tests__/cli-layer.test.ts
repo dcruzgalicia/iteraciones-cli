@@ -1374,7 +1374,10 @@ describe('runFilters', () => {
       let output = '';
       try {
         process.exitCode = 0;
-        await runFilters(dir);
+        // Columnas fijas y holgadas: la suite no depende del ancho real del
+        // terminal (regresión: en un TTY estrecho las descripciones se truncaban
+        // y la aserción fallaba según el entorno de ejecución)
+        await runFilters(dir, { columns: 400 });
       } finally {
         output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
         stdoutSpy.mockRestore();
@@ -1391,6 +1394,25 @@ describe('runFilters', () => {
       expect(output).toMatch(/latex\/02-dictum {2,}lua {2}Convierte/);
       // El prefijo ℹ solo aparece en los encabezados de sección, no en las filas
       expect(output).not.toMatch(/^ℹ {2}latex\//m);
+      expect(process.exitCode).toBe(0);
+    });
+  });
+
+  it('en un TTY estrecho las descripciones se truncan con elipsis (por diseño)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runFilters(dir, { columns: 40 });
+      } finally {
+        output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      // Ancho forzado de 40 columnas: las descripciones largas se recortan con …
+      expect(output).toContain('…');
+      expect(output).not.toContain('si es Para.');
       expect(process.exitCode).toBe(0);
     });
   });
