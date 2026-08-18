@@ -1295,7 +1295,7 @@ describe('doctor --info (antes runInfo)', () => {
     });
   });
 
-  it('distingue preamble desactivados por defecto de los del usuario', async () => {
+  it('distingue preamble desactivados de la config de los defaults del paquete', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
       await writeFile(
@@ -1304,18 +1304,32 @@ describe('doctor --info (antes runInfo)', () => {
         'utf8',
       );
       const output = await infoOutput(dir);
-      expect(output).toContain('preamble desactivados:');
+      expect(output).toContain('preamble desactivados (config):');
       expect(output).toContain('19-maketitle');
-      expect(output).toContain('preamble desactivados extra:');
+      expect(output).toContain('preamble desactivados (defaults del paquete):');
+      expect(output).toContain('24-eso-pic, 25-pdfx, 26-crop');
     });
   });
 
-  it('sin desactivaciones de usuario, preamble desactivados extra es (ninguno)', async () => {
+  it('sin desactivaciones de usuario, la línea de config muestra (ninguno) y la de defaults los del paquete', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
       const output = await infoOutput(dir);
-      expect(output).toContain('preamble desactivados extra:');
-      expect(output).toContain('(ninguno)');
+      expect(output).toContain('preamble desactivados (config):          (ninguno)');
+      expect(output).toContain('preamble desactivados (defaults del paquete): 24-eso-pic, 25-pdfx, 26-crop');
+    });
+  });
+
+  it('cada línea del bloque de información lleva el prefijo [doctor]', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      const output = await infoOutput(dir);
+      // El prefijo y el glifo se repiten en cada línea (formato unificado)
+      const prefixed = output.split('\n').filter((l) => l.includes('lang:') || l.includes('toc:') || l.includes('documentos:'));
+      expect(prefixed.length).toBeGreaterThanOrEqual(3);
+      for (const line of prefixed) {
+        expect(line).toContain('[doctor]');
+      }
     });
   });
 });
