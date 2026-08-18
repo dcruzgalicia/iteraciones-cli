@@ -55,7 +55,7 @@ describe('loadSiteConfig', () => {
   it('reporta TODOS los errores de tipo en una sola ejecución (no solo el primero)', async () => {
     await withTempDir(async (dir) => {
       await writeConfig(dir, 'lang: 123\nformat:\n  html:\n    theme: raro\n  pdf:\n    page-number: medio\n');
-      await expect(loadSiteConfig(dir, { mode: 'validate' })).rejects.toThrow(/lang: .*format\.html\.theme: .*format\.pdf\.page-number:/s);
+      await expect(loadSiteConfig(dir)).rejects.toThrow(/lang: .*format\.html\.theme: .*format\.pdf\.page-number:/s);
     });
   });
 
@@ -207,7 +207,6 @@ describe('loadSiteConfig', () => {
           '    generate: true',
           '  pdf:',
           '    generate: true',
-          '    toc: true',
           '    show-date: true',
           '  html:',
           '    title: Mi Sitio',
@@ -260,39 +259,19 @@ describe('loadSiteConfig', () => {
     });
   });
 
-  it('advierte sobre claves desconocidas en format.pdf sin romper el build', async () => {
-    const stderrSpy = spyOn(process.stderr, 'write');
-    let output = '';
-    try {
-      await withTempDir(async (dir) => {
-        // mathptmx es la clave de la documentación antigua; ya no existe en el esquema
-        await writeConfig(dir, 'format:\n  pdf:\n    mathptmx: true\n    generate: true');
-        const config = await loadSiteConfig(dir);
-        expect(config.format.pdf?.generate).toBe(true);
-      });
-    } finally {
-      output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
-      stderrSpy.mockRestore();
-    }
-    expect(output).toContain('claves sin efecto');
-    expect(output).toContain('format.pdf');
-    expect(output).toContain('mathptmx');
+  it('claves desconocidas en format.pdf son un error (contrato build/validate)', async () => {
+    await withTempDir(async (dir) => {
+      // mathptmx es la clave de la documentación antigua; ya no existe en el esquema
+      await writeConfig(dir, 'format:\n  pdf:\n    mathptmx: true\n    generate: true');
+      await expect(loadSiteConfig(dir)).rejects.toThrow(/claves desconocidas.*format\.pdf.*mathptmx/s);
+    });
   });
 
-  it('advierte sobre claves desconocidas en la raíz sin romper el build', async () => {
-    const stderrSpy = spyOn(process.stderr, 'write');
-    let output = '';
-    try {
-      await withTempDir(async (dir) => {
-        await writeConfig(dir, 'clave-inventada: 1\nformat:\n  html:\n    title: ok');
-        const config = await loadSiteConfig(dir);
-        expect(config.format.html?.title).toBe('ok');
-      });
-    } finally {
-      output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
-      stderrSpy.mockRestore();
-    }
-    expect(output).toContain('claves sin efecto');
+  it('claves desconocidas en la raíz son un error (contrato build/validate)', async () => {
+    await withTempDir(async (dir) => {
+      await writeConfig(dir, 'clave-inventada: 1\nformat:\n  html:\n    title: ok');
+      await expect(loadSiteConfig(dir)).rejects.toThrow(/claves desconocidas.*clave-inventada/s);
+    });
   });
 
   it('no emite warnings para una configuración válida', async () => {

@@ -1,5 +1,4 @@
 import { join } from 'node:path';
-import type { ZodIssue } from 'zod';
 import { ConfigError, formatUserError } from '../lib/errors.js';
 import { parseYamlWithPosition } from '../lib/frontmatter.js';
 import { logWarning } from '../lib/logger.js';
@@ -7,37 +6,7 @@ import { type SiteConfig, SiteConfigSchema } from './config-schema.js';
 
 const CONFIG_FILE = 'iteraciones.config.yaml';
 
-/**
- * Elimina del objeto crudo las claves desconocidas reportadas por los issues
- * de `unrecognized_keys` de los esquemas strict, para poder re-parsear y
- * obtener el valor con defaults aplicados. No modifica el valor original.
- */
-function removeUnknownKeys(value: unknown, issues: ZodIssue[]): unknown {
-  const unknownIssues = issues.filter((issue) => issue.code === 'unrecognized_keys');
-  if (unknownIssues.length === 0) return value;
-
-  const result = structuredClone(value);
-  for (const issue of unknownIssues) {
-    let target: unknown = result;
-    for (const segment of issue.path) {
-      if (typeof target !== 'object' || target === null) {
-        target = undefined;
-        break;
-      }
-      // Los paths de unrecognized_keys solo contienen claves (string) e índices (number)
-      target = (target as Record<string | number, unknown>)[segment as string | number];
-    }
-    if (typeof target === 'object' && target !== null && !Array.isArray(target)) {
-      for (const key of issue.keys) {
-        delete (target as Record<string, unknown>)[key];
-      }
-    }
-  }
-  return result;
-}
-
-export async function loadSiteConfig(cwd: string, options?: { mode?: 'build' | 'validate' }): Promise<SiteConfig> {
-  const isValidate = options?.mode === 'validate';
+export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
   const configPath = join(cwd, CONFIG_FILE);
   const file = Bun.file(configPath);
 
@@ -70,49 +39,33 @@ export async function loadSiteConfig(cwd: string, options?: { mode?: 'build' | '
 
   const root = parsed as Record<string, unknown>;
 
-  // Las claves desconocidas (issues unrecognized_keys de los esquemas strict)
-  // son warnings, no errores: el build continúa. Los errores de tipo sí rompen
-  // (incluido un accent desconocido o un latex booleano: el schema es la única
-  // fuente de verdad, sin fallbacks).
+  // Errores duros: las claves desconocidas (issues unrecognized_keys de los
+  // esquemas strict) y los errores de tipo rompen el build y validate con el
+  // mismo mensaje (contrato registrado en docs/architecture.md). El schema es
+  // la única fuente de verdad de las claves válidas — no hay listas paralelas
+  // que sincronizar ni fallbacks.
   const result = SiteConfigSchema.safeParse(root);
   if (!result.success) {
     const unknownKeyIssues = result.error.issues.filter((issue) => issue.code === 'unrecognized_keys');
     if (unknownKeyIssues.length > 0) {
-      if (isValidate) {
-        const details = unknownKeyIssues
-          .map((issue) => {
-            const path = issue.path.length > 0 ? `"${issue.path.join('.')}"` : 'la raíz';
-            const keys = issue.keys.map((k) => `"${k}"`).join(', ');
-            return `en ${path}: ${keys}`;
-          })
-          .join('; ');
-        throw new ConfigError(`claves desconocidas: ${details}`, configPath);
-      }
-      for (const issue of unknownKeyIssues) {
-        const path = issue.path.length > 0 ? `"${issue.path.join('.')}"` : 'la raíz';
-        const keys = issue.keys.map((k) => `"${k}"`).join(', ');
-        logWarning(`iteraciones.config.yaml: claves sin efecto en ${path}: ${keys}. Revisa docs/configuration.md`, 'config');
-      }
-    }
-    const realIssues = result.error.issues.filter((issue) => issue.code !== 'unrecognized_keys');
-    if (realIssues.length > 0) {
-      // Reportar TODOS los errores de tipo en una sola ejecución (antes solo el
-      // primero: el usuario iteraba una vez por error en validate).
-      const details = realIssues
+      const details = unknownKeyIssues
         .map((issue) => {
-          const path = issue.path.length > 0 ? issue.path.join('.') : 'config';
-          return `${path}: ${issue.message}`;
+          const path = issue.path.length > 0 ? `"${issue.path.join('.')}"` : 'la raíz';
+          const keys = issue.keys.map((k) => `"${k}"`).join(', ');
+          return `en ${path}: ${keys}`;
         })
         .join('; ');
-      throw new ConfigError(details, configPath);
+      throw new ConfigError(`claves desconocidas: ${details}`, configPath);
     }
-    // Solo había claves desconocidas: limpiarlas y re-parsear para obtener defaults
-    const retry = SiteConfigSchema.safeParse(removeUnknownKeys(root, result.error.issues));
-    if (!retry.success) {
-      const first = retry.error.issues[0];
-      throw new ConfigError(`${first?.path.join('.') ?? ''}: ${first?.message ?? 'Error de validación'}`, configPath);
-    }
-    return retry.data as SiteConfig;
+    // Reportar TODOS los errores de tipo en una sola ejecución (antes solo el
+    // primero: el usuario iteraba una vez por error en validate).
+    const details = result.error.issues
+      .map((issue) => {
+        const path = issue.path.length > 0 ? issue.path.join('.') : 'config';
+        return `${path}: ${issue.message}`;
+      })
+      .join('; ');
+    throw new ConfigError(details, configPath);
   }
 
   const config = result.data as SiteConfig;

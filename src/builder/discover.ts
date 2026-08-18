@@ -7,6 +7,7 @@ import { logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import { listMarkdownDocuments } from './gitignore.js';
+import { validateFrontmatterFields } from './project-validator.js';
 import { resolveSlugs } from './slug-resolver.js';
 import { type BibFileCache, type BuildState, type FilterFileCache, hashString, loadStateFile, saveStateFile } from './state.js';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
@@ -20,9 +21,6 @@ interface DiscoverResult {
   /** Archivos cuyo slug cambio (relativePath -> slug anterior). */
   slugChangedEntries: Map<string, string>;
 }
-
-/** Formato seguro de un slug manual: minúsculas, números y guiones simples. */
-const SLUG_MANUAL_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /**
  * Convierte un texto a slug URL-safe. Usa la librería slugify (con `strict`
@@ -182,11 +180,18 @@ export async function discover(
             frontmatterErrors.push({ file: relativePath, error: 'frontmatter YAML inválido: debe ser un objeto' });
           } else if (parsed && typeof parsed === 'object') {
             const record = parsed as Record<string, unknown>;
-            // El frontmatter completo fluye a pandoc como metadata del documento
             fm = record;
             rawTitle = record.title;
-            if (rawTitle !== undefined && typeof rawTitle !== 'string') {
-              logWarning(`"${relativePath}" tiene un título que no es texto; se usará "Sin título"`, 'discover');
+            // Checks compartidos con validate (módulo project-validator): los
+            // errores de tipos y de slug manual abortan el build igual que
+            // validate; los warnings (date no ISO, campos ignorados) se
+            // muestran en ambos comandos sin romper.
+            for (const issue of validateFrontmatterFields(record)) {
+              if (issue.severity === 'error') {
+                frontmatterErrors.push({ file: relativePath, error: issue.message });
+              } else {
+                logWarning(`${relativePath}: ${issue.message}`, 'discover');
+              }
             }
             title = typeof rawTitle === 'string' ? rawTitle : '';
             subtitle = typeof record.subtitle === 'string' && record.subtitle.trim() ? record.subtitle.trim() : undefined;
@@ -194,14 +199,6 @@ export async function discover(
             authors = parseAuthors(record.author);
             if (typeof record.slug === 'string' && record.slug.trim()) {
               manualSlug = record.slug.trim();
-              // Formato seguro: mismo charset que los slugs generados
-              // (minúsculas, números y guiones), sin extremos ni dobles guiones.
-              if (!SLUG_MANUAL_RE.test(manualSlug)) {
-                frontmatterErrors.push({
-                  file: relativePath,
-                  error: `slug inválido: "${manualSlug}" — usa solo minúsculas, números y guiones (sin espacios, acentos ni guiones extremos)`,
-                });
-              }
             }
           }
         }

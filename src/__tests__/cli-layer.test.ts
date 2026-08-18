@@ -584,23 +584,107 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
-  it('un title no-texto se advierte con mensaje correcto (no "no tiene título")', async () => {
+  it('un title no-texto es un error de build (paridad con validate)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
       await writeFile(join(dir, 'malo.md'), '---\ntitle: 123\n---\n\n# Hola\n', 'utf8');
-      // Los warnings del build no-verbose se difieren al resumen final (stdout).
-      const stdoutSpy = spyOn(process.stdout, 'write');
+      const stderrSpy = spyStderr();
       let output = '';
       try {
         process.exitCode = 0;
         await runBuild(dir);
       } finally {
-        output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(1);
+      expect(output).toContain('malo.md');
+      expect(output).toContain('debe ser un texto (string), se recibió number');
+      expect(output).not.toContain('no tiene título');
+    });
+  });
+
+  it('bibliography configurada e inexistente falla el build (paridad con validate)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'bibliography: refs/no-existe.bib\n', 'utf8');
+      const stderrSpy = spyStderr();
+      let buildOutput = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir);
+      } finally {
+        buildOutput = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(1);
+      expect(buildOutput).toContain('bibliography: "refs/no-existe.bib" no encontrado en el proyecto');
+
+      // validate falla con el mismo texto del problema
+      const vSpy = spyStderr();
+      let validateOutput = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        validateOutput = vSpy.mock.calls.map((c) => String(c[0])).join('');
+        vSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(1);
+      expect(validateOutput).toContain('bibliography: "refs/no-existe.bib" no encontrado en el proyecto');
+    });
+  });
+
+  it('claves desconocidas en config fallan el build igual que validate', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'clave-inventada: 1\n', 'utf8');
+      const stderrSpy = spyStderr();
+      let buildOutput = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir);
+      } finally {
+        buildOutput = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(1);
+      expect(buildOutput).toContain('claves desconocidas');
+      expect(buildOutput).toContain('clave-inventada');
+    });
+  });
+
+  it('el frontmatter con date no ISO y campos ignorados advierte en build y en validate (mismos warnings)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Ok\ndate: 2026/01/01\ncampo-raro: x\n---\n\nContenido.\n', 'utf8');
+      // build: warnings en el resumen (stdout) sin romper
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let buildOutput = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir);
+      } finally {
+        buildOutput = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
         stdoutSpy.mockRestore();
       }
-      expect(output).toContain('no es texto');
-      expect(output).not.toContain('no tiene título');
       expect(process.exitCode).toBe(0);
+      expect(buildOutput).toContain('date" no usa el formato ISO');
+      expect(buildOutput).toContain('campos de frontmatter ignorados');
+
+      // validate: mismos warnings, exit 0
+      const vSpy = spyStderr();
+      let validateOutput = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        validateOutput = vSpy.mock.calls.map((c) => String(c[0])).join('');
+        vSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      expect(validateOutput).toContain('date" no usa el formato ISO');
+      expect(validateOutput).toContain('campos de frontmatter ignorados');
     });
   });
 
