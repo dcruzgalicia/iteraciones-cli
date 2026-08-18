@@ -388,6 +388,76 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
+  it('build --json imprime el resultado como JSON válido en stdout y nada más', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let out = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir, { json: true });
+      } finally {
+        out = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      // Solo el objeto JSON en stdout: sin filas de progreso ni resumen humano
+      const parsed = JSON.parse(out.trim()) as {
+        processed: number;
+        cached: number;
+        formats: string[];
+        outputDir: string;
+        durationMs: number;
+        invalidations: string[];
+      };
+      expect(parsed.processed).toBe(1);
+      expect(parsed.cached).toBe(0);
+      expect(parsed.formats).toEqual(['html']);
+      expect(parsed.outputDir).toBe(join(dir, 'dist', 'files'));
+      expect(typeof parsed.durationMs).toBe('number');
+      expect(parsed.invalidations).toEqual(['documentos modificados']);
+    });
+  });
+
+  it('build --json con error emite un objeto JSON con el error y exit 1', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'roto.md'), '---\ntitle: "sin cerrar\n---\n\nContenido.\n', 'utf8');
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      const stderrSpy = spyStderr();
+      let out = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir, { json: true });
+      } finally {
+        out = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+        stderrSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(1);
+      const parsed = JSON.parse(out.trim()) as { error: string };
+      expect(typeof parsed.error).toBe('string');
+      expect(parsed.error).toContain('frontmatter YAML inválido');
+    });
+  });
+
+  it('--json y --verbose son mutuamente excluyentes', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir, { json: true, verbose: true });
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(1);
+      expect(output).toContain('--json y --verbose son mutuamente excluyentes');
+    });
+  });
+
   it('termina con exit 1 con --output fuera del proyecto y contexto [build]', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);

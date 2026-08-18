@@ -71,6 +71,7 @@ Documentación:
     .option('--full', 'build completo desde cero: elimina la salida anterior y la caché')
     .option('--output <path>', 'directorio de salida (por defecto: dist/files)')
     .option('--verbose', 'muestra información adicional de progreso')
+    .option('--json', 'imprime el resultado como JSON en stdout (consumo programático)')
     .addHelpText(
       'after',
       `
@@ -78,15 +79,18 @@ Ejemplos:
   iteraciones build                build incremental (solo archivos modificados)
   iteraciones build --full         build completo desde cero (sin caché)
   iteraciones build --verbose      muestra información adicional de progreso
+  iteraciones build --json         imprime el resultado como JSON en stdout
 `,
     )
-    .action(async (opts: { full?: boolean; output?: string; verbose?: boolean }) => {
-      // La validación de --output ocurre en runBuild, donde
-      // los errores se reportan con el formato unificado (sin stack traces).
+    .action(async (opts: { full?: boolean; output?: string; verbose?: boolean; json?: boolean }) => {
+      // La validación de --output y la exclusión mutua --json/--verbose ocurren
+      // en runBuild, donde los errores se reportan con el formato unificado
+      // (sin stack traces).
       await runBuild(projectRoot(), {
         full: opts.full,
         outputDir: opts.output,
         verbose: opts.verbose,
+        json: opts.json,
       });
     });
 
