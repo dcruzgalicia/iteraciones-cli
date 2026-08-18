@@ -1829,6 +1829,54 @@ describe('runNew', () => {
     });
   });
 
+  it('rechaza un path sin nombre de archivo (posts/) con mensaje accionable', async () => {
+    await withTempDir(async (dir) => {
+      process.exitCode = 0;
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        await runNew(dir, 'posts/');
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(1);
+      expect(await Bun.file(join(dir, 'posts', '.md')).exists()).toBe(false);
+      expect(output).toContain('nombre de archivo');
+      expect(output).toContain('posts/mi-articulo.md');
+    });
+  });
+
+  it('rechaza nombres de archivo ocultos (.oculto.md y .)', async () => {
+    await withTempDir(async (dir) => {
+      process.exitCode = 0;
+      await runNew(dir, '.oculto.md');
+      expect(process.exitCode).toBe(1);
+      expect(await Bun.file(join(dir, '.oculto.md')).exists()).toBe(false);
+      process.exitCode = 0;
+      await runNew(dir, '.');
+      expect(process.exitCode).toBe(1);
+    });
+  });
+
+  it('infiere el título conservando acentos y ñ (sin warning falso)', async () => {
+    await withTempDir(async (dir) => {
+      process.exitCode = 0;
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        await runNew(dir, 'mi-artículo');
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      const content = await Bun.file(join(dir, 'mi-artículo.md')).text();
+      expect(content).toContain('title: "Mi artículo"');
+      expect(output).not.toContain('⚠');
+    });
+  });
+
   it('no falla si el archivo ya existe', async () => {
     await withTempDir(async (dir) => {
       await runNew(dir, 'doc');
