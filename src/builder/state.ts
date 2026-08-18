@@ -16,6 +16,7 @@ export {
 export {
   computeConfigHashes,
   computeFiltersHash,
+  computeSchemaSourceHash,
   type FilterFileCache,
 } from './state-hash.js';
 export {

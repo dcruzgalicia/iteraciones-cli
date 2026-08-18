@@ -8,6 +8,7 @@ import {
   computeBibHash,
   computeConfigHashes,
   computeFiltersHash,
+  computeSchemaSourceHash,
   discoverBibFiles,
   loadStateFile,
   markStateCompleted,
@@ -174,6 +175,50 @@ describe('stateUsableForBuild y markStateCompleted (integridad de caché)', () =
       await markStateCompleted(dir);
       expect(await Bun.file(statePath(dir)).exists()).toBe(false);
     });
+  });
+});
+
+describe('computeSchemaSourceHash (versiones de esquema por contenido)', () => {
+  it('el hash cambia cuando cambia el contenido de un archivo fuente', async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(join(dir, 'gen.ts'), 'export const a = 1;', 'utf8');
+      const hash1 = await computeSchemaSourceHash(['gen.ts'], dir);
+      await writeFile(join(dir, 'gen.ts'), 'export const a = 2;', 'utf8');
+      const hash2 = await computeSchemaSourceHash(['gen.ts'], dir);
+      expect(hash1).not.toBe(hash2);
+    });
+  });
+
+  it('el hash es estable para contenido y orden dados', async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(join(dir, 'a.ts'), 'x', 'utf8');
+      await writeFile(join(dir, 'b.ts'), 'y', 'utf8');
+      const hash1 = await computeSchemaSourceHash(['a.ts', 'b.ts'], dir);
+      const hash2 = await computeSchemaSourceHash(['a.ts', 'b.ts'], dir);
+      expect(hash1).toBe(hash2);
+    });
+  });
+
+  it('un archivo ilegible no rompe el hash (se hashea como vacío)', async () => {
+    await withTempDir(async (dir) => {
+      const hash = await computeSchemaSourceHash(['no-existe.ts'], dir);
+      expect(hash).toBeTypeOf('string');
+      expect(hash.length).toBeGreaterThan(0);
+    });
+  });
+
+  it('los archivos de esquema incluyen la lógica de fecha, HTML, LaTeX y export Markdown (contrato)', async () => {
+    // Contrato del criterio "cambiar date.ts invalida sin tocar nada más": si
+    // un área deja de participar en los hashes de esquema, este test falla.
+    const { SCHEMA_SOURCE_FILES } = await import('../builder/state-hash.js');
+    const files = SCHEMA_SOURCE_FILES.join('\n');
+    expect(files).toContain('../lib/date.ts');
+    expect(files).toContain('./pipeline.ts');
+    expect(files).toContain('./render.ts');
+    expect(files).toContain('./html-composer.ts');
+    expect(files).toContain('./latex-preamble.ts');
+    expect(files).toContain('./export/runner.ts');
+    expect(files).toContain('./export/assemble.ts');
   });
 });
 
