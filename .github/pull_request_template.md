@@ -15,7 +15,7 @@ Riesgos conocidos y cómo se mitigaron. Si no hay, decirlo explícitamente.
 
 - `bun run typecheck` ✓/✗
 - `bun test` — N pass / M fail ✓/✗
-- Build de integración (`~/Proyectos/mi primera vez`, --no-cache): formatos generados y archivos vacíos ✓/✗
+- Build de integración (`--project-root /ruta/al/proyecto`, `--full`): formatos generados y archivos vacíos ✓/✗
 - Otras verificaciones manuales relevantes
 
 Closes #N

@@ -162,11 +162,10 @@ El build incremental evita reprocesar documentos que no han cambiado:
 3. **Invalidación**: filtros (incluido `internal/flags`), configuración por formato, bibliografía y **versiones de esquema derivadas del contenido de los archivos fuente** (`SCHEMA_SOURCE_FILES` en `state-hash.ts`): si cambia la lógica de generación de un área (fecha legible, página HTML, template LaTeX, export Markdown), su hash cambia y las salidas se regeneran automáticamente — sin protocolo manual. Los refactors sin efecto en la salida producen una re-renderización conservadora (precio aceptado: nunca stale); al invalidarse un formato, sus salidas se regeneran re-ejecutando pandoc desde el markdown (re-parseo).
 4. **Formatos activos**: si cambia la configuración de formatos entre builds, se fuerza el reprocesamiento completo de ese formato.
 5. **Slugs duplicados**: contador derivado del discovery index para slugs con sufijo `-dN`.
-6. **Migración**: los directorios del flujo anterior (`ast/`, `changes/`, `formats/`) se eliminan automáticamente en cada build.
 
 Solo los documentos modificados (o con slug cambiado) pasan por el pipeline; el resto reutiliza sus salidas en `dist/`. Los formatos se escriben directamente en `dist/files/` (sin staging intermedio) y el PDF compila en `.iteraciones/tmp/pdf/`.
 
-**Coste del re-parseo incremental (medido y aceptado):** re-exportar tras una invalidación implica re-parsear el markdown (cada formato vuelve a ejecutar pandoc desde el origen). Medido con `--profile` en el proyecto de integración (2 documentos, 5 formatos): el re-parseo de ambos documentos cuesta ~270-290 ms en el pool 1, indistinguible frente al PDF (~7 s de latexmk), y un build sin cambios no reprocesa nada (~120 ms). Se acepta el coste: reintroducir un AST en disco para evitarlo añadiría complejidad sin beneficio medible, y el build completo es más rápido que v0.18.0 al no existir la pasada markdown → json.
+**Coste del re-parseo incremental (medido y aceptado):** re-exportar tras una invalidación implica re-parsear el markdown (cada formato vuelve a ejecutar pandoc desde el origen). Medido en el proyecto de integración (2 documentos, 5 formatos): el re-parseo de ambos documentos cuesta ~270-290 ms en el pool 1, indistinguible frente al PDF (~7 s de latexmk), y un build sin cambios no reprocesa nada (~120 ms). Se acepta el coste: reintroducir un AST en disco para evitarlo añadiría complejidad sin beneficio medible, y el build completo es más rápido que v0.18.0 al no existir la pasada markdown → json.
 
 ---
 
