@@ -20,7 +20,7 @@ Verifica que todo funcione:
 
 ```bash
 bun run typecheck   # tsc --noEmit
-bun test            # suite completa (508 tests en 25 archivos)
+bun test            # suite completa
 bun run src/bin.ts build --project-root /ruta/a/proyecto
 ```
 
