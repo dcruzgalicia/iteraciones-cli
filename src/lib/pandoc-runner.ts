@@ -1,5 +1,5 @@
 import { PandocError } from './errors.js';
-import { type RunResult, run } from './run.js';
+import { ProcessSpawnError, ProcessTimeoutError, type RunResult, run } from './run.js';
 
 /** Límite de tiempo de una invocación de pandoc: 2 minutos. */
 const PANDOC_TIMEOUT_MS = 120_000;
@@ -46,9 +46,12 @@ export async function checkPandoc(): Promise<string> {
  * Invoca pandoc con stdin y retorna stdout. Con `outputPath`, pandoc escribe
  * el resultado al archivo y stdout queda vacío.
  * Lanza PandocError si pandoc no está disponible o el proceso falla.
+ * La ejecución del proceso (spawn, pipes, timeout) la provee run().
  */
 export async function runPandoc(options: PandocOptions): Promise<string> {
-  const args = ['pandoc', '--from', options.from ?? 'markdown', '--to', options.to];
+  // run() añade el comando; aquí solo los argumentos (antes el array incluía
+  // 'pandoc' como argv[0] del spawn directo).
+  const args = ['--from', options.from ?? 'markdown', '--to', options.to];
 
   if (options.bibOptions) {
     args.push('--citeproc', '--bibliography', options.bibOptions.bibliography);
@@ -63,49 +66,30 @@ export async function runPandoc(options: PandocOptions): Promise<string> {
     args.push('--output', options.outputPath);
   }
 
-  let proc: ReturnType<typeof Bun.spawn>;
+  let result: RunResult;
   try {
-    proc = Bun.spawn(args, { stdin: 'pipe', stdout: 'pipe', stderr: 'pipe', env: options.env ? { ...process.env, ...options.env } : undefined });
-  } catch {
-    // Error esperado: ENOENT al spawnear; el mensaje accionable es más útil
-    // que la causa técnica de Bun (duplicada en el mensaje).
-    throw new PandocError('pandoc no está disponible en PATH. Instálalo desde https://pandoc.org/installing.html', options.sourcePath, '');
+    result = await run('pandoc', args, { input: options.input, timeoutMs: PANDOC_TIMEOUT_MS, env: options.env });
+  } catch (err) {
+    if (err instanceof ProcessSpawnError) {
+      // Error esperado: pandoc no está en PATH; el mensaje accionable es más
+      // útil que la causa técnica.
+      throw new PandocError('pandoc no está disponible en PATH. Instálalo desde https://pandoc.org/installing.html', options.sourcePath, '');
+    }
+    if (err instanceof ProcessTimeoutError) {
+      // Un pandoc colgado (p. ej. un filtro Lua en loop) no debe colgar el
+      // build: el timeout de run() lo terminó.
+      throw new PandocError(
+        `pandoc no terminó en ${PANDOC_TIMEOUT_MS / 1000}s y fue terminado. Revisa tus filtros Lua (posible loop infinito).`,
+        options.sourcePath,
+        '',
+      );
+    }
+    throw err;
   }
 
-  if (proc.stdin == null || typeof proc.stdin === 'number') {
-    throw new PandocError('No se pudo escribir stdin de pandoc', options.sourcePath, '');
-  }
-  proc.stdin.write(options.input);
-  proc.stdin.end();
-
-  if (proc.stdout == null || typeof proc.stdout === 'number') {
-    throw new PandocError('No se pudo leer stdout de pandoc', options.sourcePath, '');
-  }
-  if (proc.stderr == null || typeof proc.stderr === 'number') {
-    throw new PandocError('No se pudo leer stderr de pandoc', options.sourcePath, '');
-  }
-
-  const outputPromise = Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
-  // Un pandoc colgado (p. ej. un filtro Lua en loop) no debe colgar el build:
-  // el kill del timeout resuelve proc.exited y clearTimeout siempre corre.
-  let timedOut = false;
-  const timer = setTimeout(() => {
-    timedOut = true;
-    proc.kill();
-  }, PANDOC_TIMEOUT_MS);
-  const [stdout, stderr, exitCode] = await outputPromise;
-  clearTimeout(timer);
-  if (timedOut) {
-    throw new PandocError(
-      `pandoc no terminó en ${PANDOC_TIMEOUT_MS / 1000}s y fue terminado. Revisa tus filtros Lua (posible loop infinito).`,
-      options.sourcePath,
-      stderr,
-    );
-  }
-
-  if (exitCode !== 0) {
+  if (result.exitCode !== 0) {
     // El mensaje no incluye la ruta: el dispatcher la añade una sola vez.
-    throw new PandocError('pandoc falló al convertir el documento', options.sourcePath, stderr);
+    throw new PandocError('pandoc falló al convertir el documento', options.sourcePath, result.stderr);
   }
-  return stdout;
+  return result.stdout;
 }

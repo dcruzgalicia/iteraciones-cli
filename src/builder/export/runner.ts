@@ -4,6 +4,7 @@ import { dirname, join, relative } from 'node:path';
 import { PandocError } from '../../lib/errors.js';
 import { logWarning } from '../../lib/logger.js';
 import { runPandoc } from '../../lib/pandoc-runner.js';
+import { ProcessSpawnError, ProcessTimeoutError, run } from '../../lib/run.js';
 import { LATEXMK_AUX_EXTENSIONS } from '../cleanup.js';
 import type { LuaFilterGroup } from '../filter-resolver.js';
 import { MD_READER, metadataValue } from '../html-composer.js';
@@ -126,49 +127,40 @@ export async function convertToPdf(
 
   const biberCache = biberCacheDir ?? join(pdfDir, 'biber', slug);
   await mkdir(biberCache, { recursive: true });
-  let proc: ReturnType<typeof Bun.spawn>;
+  const logPath = join(pdfDir, `${slug}.log`);
+
+  let result: Awaited<ReturnType<typeof run>>;
   try {
-    proc = Bun.spawn(['latexmk', '-pdf', '-interaction=nonstopmode', `-outdir=${pdfDir}`, `-jobname=${slug}`, fullTexPath], {
-      stdout: 'pipe',
-      stderr: 'pipe',
-      env: { ...process.env, PAR_GLOBAL_TEMP: biberCache },
+    result = await run('latexmk', ['-pdf', '-interaction=nonstopmode', `-outdir=${pdfDir}`, `-jobname=${slug}`, fullTexPath], {
+      timeoutMs: LATEXMK_TIMEOUT_MS,
+      // La caché de biber se aísla por slot de concurrencia
+      env: { PAR_GLOBAL_TEMP: biberCache },
     });
-  } catch {
-    // Error esperado: latexmk no está en PATH (ENOENT); mensaje accionable en español
-    throw new PandocError('latexmk no está disponible en PATH. Instala MacTeX full: https://tug.org/mactex/', sourcePath, '');
-  }
-  if (proc.stdout == null || typeof proc.stdout === 'number') {
-    throw new PandocError('No se pudo leer stdout de latexmk', sourcePath, '');
-  }
-  if (proc.stderr == null || typeof proc.stderr === 'number') {
-    throw new PandocError('No se pudo leer stderr de latexmk', sourcePath, '');
-  }
-  const outputPromise = Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
-  // Una compilación latexmk colgada no debe colgar el build: el kill del
-  // timeout resuelve proc.exited y clearTimeout siempre corre.
-  let timedOut = false;
-  const timer = setTimeout(() => {
-    timedOut = true;
-    proc.kill();
-  }, LATEXMK_TIMEOUT_MS);
-  const [stdout, stderr, exitCode] = await outputPromise;
-  clearTimeout(timer);
-  if (timedOut) {
-    throw new PandocError(
-      `latexmk no terminó en ${LATEXMK_TIMEOUT_MS / 60000} minutos y fue terminado. Revisa el log en: ${join(pdfDir, `${slug}.log`)}`,
-      sourcePath,
-      `${stdout}\n${stderr}`,
-    );
+  } catch (err) {
+    if (err instanceof ProcessSpawnError) {
+      // Error esperado: latexmk no está en PATH; mensaje accionable en español
+      throw new PandocError('latexmk no está disponible en PATH. Instala MacTeX full: https://tug.org/mactex/', sourcePath, '');
+    }
+    if (err instanceof ProcessTimeoutError) {
+      // Una compilación latexmk colgada no debe colgar el build: el timeout
+      // de run() la terminó.
+      throw new PandocError(
+        `latexmk no terminó en ${LATEXMK_TIMEOUT_MS / 60000} minutos y fue terminado. Revisa el log en: ${logPath}`,
+        sourcePath,
+        '',
+      );
+    }
+    throw err;
   }
 
-  if (exitCode !== 0) {
+  if (result.exitCode !== 0) {
     // El mensaje no incluye la ruta: el dispatcher la añade una sola vez
     // ("en \"<sourcePath>\""). El stderr se recorta a la línea clave del
     // error de TeX más la referencia al log completo.
-    const log = `${stdout}\n${stderr}`;
+    const log = `${result.stdout}\n${result.stderr}`;
     const m = log.match(/^! .*$/m);
-    const detail = m ? m[0] : `exit ${exitCode}`;
-    throw new PandocError(`latexmk falló al generar el PDF: ${detail}`, sourcePath, `Revisa el log completo en: ${join(pdfDir, `${slug}.log`)}`);
+    const detail = m ? m[0] : `exit ${result.exitCode}`;
+    throw new PandocError(`latexmk falló al generar el PDF: ${detail}`, sourcePath, `Revisa el log completo en: ${logPath}`);
   }
 
   // Éxito: eliminar los auxiliares de latexmk (el .log solo se referencia en

@@ -12,20 +12,64 @@ export interface RunOptions {
    * error accionable. Sin timeout el proceso puede colgar el build para siempre.
    */
   timeoutMs?: number;
+  /** Contenido a escribir en stdin (el pipe se cierra al terminar). */
+  input?: string;
+  /** Variables de entorno adicionales (merge sobre process.env). */
+  env?: Record<string, string>;
 }
 
+/**
+ * El comando no se pudo lanzar (ENOENT: no está en PATH o no es ejecutable).
+ * Los call sites lo capturan para traducirlo a su mensaje específico
+ * (p. ej. PandocError con instrucciones de instalación).
+ */
+export class ProcessSpawnError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ProcessSpawnError';
+  }
+}
+
+/**
+ * El proceso no terminó dentro de timeoutMs y fue terminado. Los call sites lo
+ * capturan para traducirlo a su mensaje específico con contexto (p. ej. la
+ * ruta del log de latexmk).
+ */
+export class ProcessTimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ProcessTimeoutError';
+  }
+}
+
+/**
+ * Primitive de ejecución de procesos con pipes y timeout: única
+ * implementación de spawn + stdin/stdout/stderr + timeout de todo el
+ * pipeline (pandoc, latexmk y cualquier binario futuro). Los call sites
+ * traducen ProcessSpawnError/ProcessTimeoutError a sus mensajes accionables.
+ */
 export async function run(command: string, args: string[], options: RunOptions = {}): Promise<RunResult> {
   let proc: ReturnType<typeof Bun.spawn>;
 
   try {
     proc = Bun.spawn([command, ...args], {
+      stdin: options.input !== undefined ? 'pipe' : 'ignore',
       stdout: 'pipe',
       stderr: 'pipe',
       cwd: options.cwd,
+      env: options.env ? { ...process.env, ...options.env } : undefined,
     });
   } catch {
     // Error esperado: ENOENT al spawnear; el mensaje accionable es más útil que la causa técnica
-    throw new Error(`No se encontró el comando "${command}". Verifica que esté instalado y disponible en PATH.`);
+    throw new ProcessSpawnError(`No se encontró el comando "${command}". Verifica que esté instalado y disponible en PATH.`);
+  }
+
+  if (options.input !== undefined) {
+    if (proc.stdin == null || typeof proc.stdin === 'number') {
+      throw new Error(`No se pudo escribir stdin del comando "${command}".`);
+    }
+    proc.stdin.write(options.input);
+    proc.stdin.end();
   }
 
   if (proc.stdout == null || typeof proc.stdout === 'number') {
@@ -52,7 +96,7 @@ export async function run(command: string, args: string[], options: RunOptions =
   // y no deja timers vivos que cuelguen el event loop tras el build.
   clearTimeout(timer);
   if (timedOut) {
-    throw new Error(
+    throw new ProcessTimeoutError(
       `el comando "${command}" no terminó en ${Math.round(options.timeoutMs / 1000)}s y fue terminado. Revisa procesos colgados o filtros Lua en loop.`,
     );
   }
