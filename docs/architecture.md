@@ -333,17 +333,17 @@ La expansión progresiva de autores (2, 3… hasta 20 autores para desambiguar) 
 
 ### ¿Cómo se excluyen documentos del build? (alcance de `.gitignore`)
 
-Decisión registrada en el issue #1436 (2026-08): **se mantiene el soporte propio de `.gitignore`** y se documentan sus límites.
+Decisión registrada en los issues #1436 (2026-08) y #1928 (2026-08): **el matcheo de `.gitignore` delega en la librería `ignore`** (la misma que usa eslint, 0 dependencias) y se documentan sus límites.
 
 El descubrimiento de documentos (`src/builder/discover.ts`) procesa **todo** `.md` del proyecto salvo lo que se excluya por: directorios fijos (`node_modules/`, `.git/`, `dist/`, `.iteraciones/`), rutas ocultas (cualquier segmento que empiece por `.`) y reglas de `.gitignore`.
 
-Alcance del soporte (`src/builder/gitignore.ts`):
+Soporte (`src/builder/gitignore.ts`):
 
 - Solo el `.gitignore` de la **raíz** del proyecto (sin `.gitignore` anidados en subdirectorios).
-- Patrones comunes de git: negación (`!`), anclaje a la raíz (`/` inicial o interior), directorios (barra final `/`), `*`, `**`, `?` y clases `[..]`.
-- La última regla que coincide gana (estándar git).
+- `parseGitignore` conserva la forma pública de las reglas (`pattern`, `negated`, `anchored`, `dirOnly`) y `isIgnoredByRules` consulta el matcher de la librería, que implementa la semántica completa de git (última regla gana, negación, anclajes, `**`, escapes, precedencia de directorios excluidos).
+- La sustitución (issue #1928) se validó con la suite de paridad contra `git check-ignore`: 10 casos del alcance soportado con 0 divergencias tanto del matcher propio como de `ignore`; en casos extendidos del estándar (escape `\#`, negación de directorio anclado) el matcher propio divergía en 2 casos y la librería en 0.
 
-Límites conocidos (aceptados): semántica aproximada en casos límite del estándar git (p. ej. `**` en medio de patrones, escapes exóticos), ausencia de reglas heredadas de `.gitignore` superiores, y el matcher no distingue archivos de directorios (no hace stat: un patrón `dir/` no ignora el directorio en sí en niveles superiores; discovery solo verifica archivos `.md` existentes, así que no afecta al descubrimiento real). La suite de paridad (`src/__tests__/gitignore-parity.test.ts`) compara `isIgnoredByRules` contra `git check-ignore` y lista las divergencias conocidas en `KNOWN_DIVERGENCES`: solo una divergencia nueva falla. Es el único mecanismo de exclusión de contenido; no se ampliará su alcance.
+Límites conocidos (aceptados): sin reglas heredadas de `.gitignore` superiores (solo raíz del proyecto), y la librería no distingue archivos de directorios (no hace stat: un patrón `dir/` no ignora el directorio en sí cuando aparece como segmento no final de un path; discovery solo verifica archivos `.md` existentes, así que no afecta al descubrimiento real). La suite de paridad (`src/__tests__/gitignore-parity.test.ts`) compara `isIgnoredByRules` contra `git check-ignore` y lista las divergencias conocidas en `KNOWN_DIVERGENCES`: solo una divergencia nueva falla. Es el único mecanismo de exclusión de contenido; no se ampliará su alcance.
 
 ### Congelación de la superficie pública (pre-1.0)
 

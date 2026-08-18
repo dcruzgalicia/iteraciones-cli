@@ -1,10 +1,12 @@
 import { join } from 'node:path';
+import ignore from 'ignore';
 
 /**
  * Soporte de reglas de .gitignore para el descubrimiento de documentos.
  *
- * Implementa los patrones comunes de git: negación (!), directorios (trailing
- * /), anclaje a la raíz (/ o slash interior), * ** ? y clases [..].
+ * El parseo de reglas (forma expuesta a la API) es propio; el matcheo delega en
+ * la librería `ignore` (la misma que usa eslint), que implementa la semántica
+ * completa de git (última regla gana, negación, anclajes, `**`, escapes).
  * Alcance: solo el .gitignore de la raíz del proyecto.
  */
 
@@ -17,54 +19,22 @@ export interface GitignoreRule {
   anchored: boolean;
   /** true si el patrón termina con / (solo directorios). */
   dirOnly: boolean;
-  /** Regex compilada del patrón (sin anclas). */
-  regex: RegExp;
 }
 
-/** Convierte un patrón de gitignore a una expresión regular (sin anclas). */
-function patternToRegex(pattern: string): string {
-  let out = '';
-  let i = 0;
-  while (i < pattern.length) {
-    const c = pattern[i];
-    if (c === '*') {
-      if (pattern[i + 1] === '*') {
-        if (pattern[i + 2] === '/') {
-          out += '(?:.*/)?'; // **/ — cualquier número de directorios
-          i += 3;
-        } else {
-          out += '.*'; // ** — cualquier cosa, incluyendo /
-          i += 2;
-        }
-      } else {
-        out += '[^/]*';
-        i += 1;
-      }
-    } else if (c === '?') {
-      out += '[^/]';
-      i += 1;
-    } else if (c === '[') {
-      const end = pattern.indexOf(']', i + 1);
-      if (end === -1) {
-        out += '\\[';
-        i += 1;
-      } else {
-        out += pattern.slice(i, end + 1);
-        i = end + 1;
-      }
-    } else {
-      const ch = pattern[i];
-      if (ch === undefined) break;
-      out += ch.replace(/[.+^${}()|\\]/g, '\\$&');
-      i += 1;
-    }
-  }
-  return out;
+/** Reglas con el matcher `ignore` compilado, en una propiedad no enumerable. */
+interface GitignoreRules extends Array<GitignoreRule> {
+  __gitignoreMatcher?: ignore.Ignore;
 }
+
+/** Propiedad no enumerable que guarda el matcher compilado del contenido. */
+const MATCHER_KEY = '__gitignoreMatcher';
 
 /**
  * Parsea el contenido de un .gitignore en reglas ordenadas.
  * Las líneas vacías y los comentarios (#) se ignoran.
+ * El matcher de la librería `ignore` queda compilado en una propiedad no
+ * enumerable del array: cada elemento conserva su forma pública y las
+ * comparaciones de longitud/campos en los tests no se ven afectadas.
  */
 export function parseGitignore(content: string): GitignoreRule[] {
   const rules: GitignoreRule[] = [];
@@ -94,45 +64,29 @@ export function parseGitignore(content: string): GitignoreRule[] {
     if (!line) continue;
 
     anchored = anchored || line.includes('/');
-    rules.push({ pattern: line, negated, anchored, dirOnly, regex: new RegExp(`^${patternToRegex(line)}$`) });
+    rules.push({ pattern: line, negated, anchored, dirOnly });
   }
+
+  Object.defineProperty(rules, MATCHER_KEY, { value: ignore().add(content) });
   return rules;
+}
+
+/** Retorna el matcher compilado si las reglas provienen de parseGitignore. */
+function matcherOf(rules: GitignoreRule[]): ignore.Ignore | undefined {
+  return (rules as GitignoreRules).__gitignoreMatcher;
 }
 
 /**
  * Determina si un path relativo está ignorado por las reglas.
- * La última regla que matchea gana (estándar git).
+ * La última regla que matchea gana (semántica de git, implementada por
+ * `ignore`, incluyendo la precedencia de directorios excluidos).
  */
 export function isIgnoredByRules(relPath: string, rules: GitignoreRule[]): boolean {
   if (rules.length === 0) return false;
-
-  const path = relPath.replace(/^\.\//, '');
-  const segments = path.split('/');
-
-  let ignored = false;
-  for (const rule of rules) {
-    let matched = false;
-
-    if (rule.dirOnly) {
-      // Matchea el directorio o cualquier cosa dentro de él
-      if (rule.anchored) {
-        matched = path === rule.pattern || path.startsWith(`${rule.pattern}/`);
-      } else {
-        matched = segments.some((seg, idx) => {
-          if (!rule.regex.test(seg)) return false;
-          return idx < segments.length - 1 || path === rule.pattern;
-        });
-      }
-    } else if (rule.anchored) {
-      matched = rule.regex.test(path);
-    } else {
-      // No anclado: matchea contra el nombre de cualquier componente (archivo o dir)
-      matched = segments.some((seg) => rule.regex.test(seg));
-    }
-
-    if (matched) ignored = !rule.negated;
-  }
-  return ignored;
+  const matcher = matcherOf(rules);
+  if (matcher === undefined) return false;
+  // La librería no normaliza el prefijo './' ('./a.md' con '*.md' → false).
+  return matcher.ignores(relPath.replace(/^\.\//, ''));
 }
 
 /**

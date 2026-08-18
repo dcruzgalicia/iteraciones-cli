@@ -24,6 +24,7 @@
     "@tailwindcss/cli": "4.3.3",
     "@tailwindcss/typography": "0.5.20",
     "commander": "^15.0.0",
+    "ignore": "^7.0.6",
     "slugify": "^1.6.9",
     "yaml": "^2.9.0",
     "zod": "^4.4.3"

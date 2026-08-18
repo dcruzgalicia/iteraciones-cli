@@ -8,11 +8,12 @@ import { run } from '../lib/run.js';
 /**
  * Paridad de isIgnoredByRules contra la semántica real de git (git check-ignore).
  *
- * El descubrimiento de documentos usa una reimplementación propia de las reglas
- * de .gitignore (src/builder/gitignore.ts) con límites documentados en
+ * El descubrimiento de documentos delega el matcheo de las reglas de .gitignore
+ * en la librería `ignore` (src/builder/gitignore.ts), que implementa la
+ * semántica completa de git; la decisión y los datos de la evaluación están en
  * docs/architecture.md ("¿Cómo se excluyen documentos del build?"). Este test
  * compara contra git los casos del alcance soportado, sobre archivos reales
- * (el matcher no hace stat: las rutas que verifica discovery siempre son
+ * (la librería no hace stat: las rutas que verifica discovery siempre son
  * archivos .md existentes).
  *
  * Las divergencias conocidas se listan en KNOWN_DIVERGENCES: si el matcher
