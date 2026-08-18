@@ -1,7 +1,7 @@
 import { describe, expect, it, spyOn } from 'bun:test';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { loadSiteConfig } from '../config/config-loader.js';
+import { loadSiteConfig, loadSiteConfigWithPresence } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
 import { DEFAULT_EPUB_FORMAT, DEFAULT_HTML_FORMAT, DEFAULT_MARKDOWN_FORMAT, DEFAULT_PDF_FORMAT, DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { ConfigError } from '../lib/errors.js';
@@ -419,6 +419,49 @@ describe('loadSiteConfig', () => {
     await withTempDir(async (dir) => {
       await writeConfig(dir, 'format:\n  html:\n    theme: light');
       expect((await loadSiteConfig(dir)).format.html?.theme).toBe('light');
+    });
+  });
+});
+
+describe('loadSiteConfigWithPresence', () => {
+  it('la clave escrita con valor idéntico al default se distingue de la ausente', async () => {
+    await withTempDir(async (dir) => {
+      await writeConfig(dir, 'format:\n  pdf:\n    disabled-preamble-filters:\n      - 24-eso-pic\n');
+      const { config, presentKeys } = await loadSiteConfigWithPresence(dir);
+      // La clave aparece como presente aunque su valor coincida con un default
+      // del paquete (el caso que la sustracción de doctor --info no distinguía).
+      expect(presentKeys.has('format.pdf.disabled-preamble-filters')).toBe(true);
+      expect(config.format?.pdf?.disabledPreambleFilters).toEqual(['24-eso-pic']);
+    });
+  });
+
+  it('sin la clave, el conjunto de presencia no la incluye y el valor es el default', async () => {
+    await withTempDir(async (dir) => {
+      await writeConfig(dir, 'lang: es-MX');
+      const { config, presentKeys } = await loadSiteConfigWithPresence(dir);
+      expect(presentKeys.has('format.pdf.disabled-preamble-filters')).toBe(false);
+      expect(config.format?.pdf?.disabledPreambleFilters).toEqual(['24-eso-pic', '25-pdfx', '26-crop']);
+    });
+  });
+
+  it('recoge rutas punteadas de todos los niveles del YAML', async () => {
+    await withTempDir(async (dir) => {
+      await writeConfig(dir, 'lang: en-US\nformat:\n  pdf:\n    generate: true\n    show-date: true\n');
+      const { presentKeys } = await loadSiteConfigWithPresence(dir);
+      expect(presentKeys.has('lang')).toBe(true);
+      expect(presentKeys.has('format')).toBe(true);
+      expect(presentKeys.has('format.pdf')).toBe(true);
+      expect(presentKeys.has('format.pdf.generate')).toBe(true);
+      expect(presentKeys.has('format.pdf.show-date')).toBe(true);
+      expect(presentKeys.has('format.pdf.disabled-preamble-filters')).toBe(false);
+    });
+  });
+
+  it('sin archivo de config el conjunto de presencia está vacío', async () => {
+    await withTempDir(async (dir) => {
+      const { config, presentKeys } = await loadSiteConfigWithPresence(dir);
+      expect(presentKeys.size).toBe(0);
+      expect(config.lang).toBe('es-MX');
     });
   });
 });

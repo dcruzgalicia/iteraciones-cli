@@ -5,7 +5,7 @@ import { listMarkdownDocuments } from '../builder/gitignore.js';
 import type { BuildOptions } from '../builder/orchestrator.js';
 import { build } from '../builder/orchestrator.js';
 import { loadStateFile } from '../builder/state.js';
-import { loadSiteConfig } from '../config/config-loader.js';
+import { loadSiteConfigWithPresence } from '../config/config-loader.js';
 import { computeActiveFormats, DEFAULT_PDF_FORMAT } from '../config/site-config.js';
 import { BuildError, ConfigError, PandocError } from '../lib/errors.js';
 import { logError, logInfo, logSuccess } from '../lib/logger.js';
@@ -150,7 +150,7 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
 
 /** Información del proyecto para doctor --info (antes comando info). */
 async function buildProjectInfo(cwd: string): Promise<string[]> {
-  const config = await loadSiteConfig(cwd);
+  const { config, presentKeys } = await loadSiteConfigWithPresence(cwd);
   const pandocVersion = await checkPandoc().catch(() => 'no disponible');
   // El directorio de salida real es el del último build (state.json);
   // sin estado previo, el default.
@@ -162,13 +162,12 @@ async function buildProjectInfo(cwd: string): Promise<string[]> {
   const activeFormats = computeActiveFormats(config.format);
   const disabledFilters = config.disabledFilters?.length ? config.disabledFilters.join(', ') : '(ninguno)';
   // Distinguir lo que el usuario configuró de los defaults del paquete: el
-  // schema materializa los defaults en format.pdf.disabledPreambleFilters, así
-  // que la línea de config muestra solo los que NO son defaults del paquete
-  // (el proyecto no "desactiva" 24-eso-pic/25-pdfx/26-crop — vienen
-  // desactivados por defecto en DEFAULT_PDF_FORMAT).
-  const defaultPreamble = DEFAULT_PDF_FORMAT.disabledPreambleFilters;
-  const preambleDisabled = config.format?.pdf?.disabledPreambleFilters ?? [];
-  const userPreamble = preambleDisabled.filter((name) => !defaultPreamble.includes(name));
+  // conjunto de claves presentes en el YAML crudo (antes de que el schema
+  // materialice los defaults) decide si la línea de config muestra la lista
+  // materializada o (ninguno). Sin presencia, una clave escrita con valor
+  // idéntico al default sería indistinguible de la ausente (workaround
+  // anterior: sustraer DEFAULT_PDF_FORMAT.disabledPreambleFilters).
+  const preambleDisabled = presentKeys.has('format.pdf.disabled-preamble-filters') ? (config.format?.pdf?.disabledPreambleFilters ?? []) : [];
   const docCount = (await listMarkdownDocuments(cwd)).length;
   const html = config.format?.html;
   const theme = html?.theme ?? '(por defecto)';
@@ -184,8 +183,8 @@ async function buildProjectInfo(cwd: string): Promise<string[]> {
     `  tema HTML:               ${theme}`,
     `  acento HTML:             ${accent}`,
     `  filters desactivados:    ${disabledFilters}`,
-    `  preamble desactivados (config):          ${userPreamble.length > 0 ? userPreamble.join(', ') : '(ninguno)'}`,
-    `  preamble desactivados (defaults del paquete): ${defaultPreamble.join(', ')}`,
+    `  preamble desactivados (config):          ${preambleDisabled.length > 0 ? preambleDisabled.join(', ') : '(ninguno)'}`,
+    `  preamble desactivados (defaults del paquete): ${DEFAULT_PDF_FORMAT.disabledPreambleFilters.join(', ')}`,
   ];
   return lines;
 }
