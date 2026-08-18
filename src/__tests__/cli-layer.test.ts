@@ -1454,9 +1454,34 @@ describe('runValidate', () => {
 
   it('termina con exit 1 con YAML de config inválido', async () => {
     await withTempDir(async (dir) => {
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: [inválido\n', 'utf8');
+      await initTestProject(dir);
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'format: [mal formado', 'utf8');
       process.exitCode = 0;
       await runValidate(dir);
+      expect(process.exitCode).toBe(1);
+    });
+  });
+
+  it('las causas YAML en inglés se traducen al español y el nombre del archivo no se duplica', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      // Indentación inconsistente: la causa del issue original era "All mapping
+      // items must start at the same column"
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'format:\n  html: true\n latex:\n  generate: true\n', 'utf8');
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      // Causa en español, con posición y sin duplicación del nombre del archivo
+      expect(output).toContain('✖ [validate] iteraciones.config.yaml: Error de sintaxis: los items del mapeo');
+      expect(output).toMatch(/\(línea \d+, columna \d+\)/);
+      expect(output.match(/iteraciones\.config\.yaml/g)).toHaveLength(1);
+      expect(output).not.toContain('All mapping items');
       expect(process.exitCode).toBe(1);
     });
   });

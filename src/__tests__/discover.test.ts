@@ -207,4 +207,10 @@ describe('parseYamlWithPosition', () => {
     expect(result.error).toBeUndefined();
     expect(result.value).toEqual({ lang: 'es-MX', toc: true });
   });
+
+  it('traduce a español las causas conocidas de la librería (frontmatter de documento)', () => {
+    expect(parseYamlWithPosition('title: A\ntitle: B\n').error).toContain('las claves del mapeo deben ser únicas');
+    expect(parseYamlWithPosition('title: [roto\n').error).toContain('la secuencia de flujo debe estar bien indentada');
+    expect(parseYamlWithPosition('title: "sin cerrar\n').error).toContain('falta la comilla de cierre');
+  });
 });

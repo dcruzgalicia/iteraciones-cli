@@ -24,7 +24,9 @@ export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
   let parsed: unknown;
   const yamlResult = parseYamlWithPosition(raw);
   if (yamlResult.error) {
-    throw new ConfigError(`Error de sintaxis en ${CONFIG_FILE}: ${formatUserError(yamlResult.error)}`, configPath);
+    // El nombre del archivo lo antepone el caller (validate/doctor muestran
+    // el path como prefijo): incluirlo aquí duplicaría "iteraciones.config.yaml:".
+    throw new ConfigError(`Error de sintaxis: ${formatUserError(yamlResult.error)}`, configPath);
   }
   parsed = yamlResult.value;
 

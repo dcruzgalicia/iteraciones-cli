@@ -52,6 +52,27 @@ describe('loadSiteConfig', () => {
     });
   });
 
+  it('traduce las causas YAML conocidas al español (indentación inconsistente)', async () => {
+    await withTempDir(async (dir) => {
+      await writeConfig(dir, 'format:\n  html: true\n latex:\n  generate: true\n');
+      await expect(loadSiteConfig(dir)).rejects.toThrow(/los items del mapeo deben empezar en la misma columna/);
+    });
+  });
+
+  it('traduce las causas YAML conocidas al español (claves duplicadas)', async () => {
+    await withTempDir(async (dir) => {
+      await writeConfig(dir, 'lang: es-MX\nlang: es-MX\n');
+      await expect(loadSiteConfig(dir)).rejects.toThrow(/las claves del mapeo deben ser únicas/);
+    });
+  });
+
+  it('traduce las causas YAML conocidas al español (secuencia de flujo sin cerrar)', async () => {
+    await withTempDir(async (dir) => {
+      await writeConfig(dir, 'disabled-filters: [01-dictum\n');
+      await expect(loadSiteConfig(dir)).rejects.toThrow(/la secuencia de flujo debe estar bien indentada y terminar con ]/);
+    });
+  });
+
   it('reporta TODOS los errores de tipo en una sola ejecución (no solo el primero)', async () => {
     await withTempDir(async (dir) => {
       await writeConfig(dir, 'lang: 123\nformat:\n  html:\n    theme: raro\n  pdf:\n    page-number: medio\n');

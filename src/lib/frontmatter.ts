@@ -8,6 +8,36 @@ import { parseDocument } from 'yaml';
 const FM_RE = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
 
 /**
+ * Causas de error de la librería `yaml` que se traducen al español. Lista
+ * corta y explícita por substring: los mensajes no reconocidos se conservan
+ * tal cual (con su posición), sin tabla exhaustiva que mantener.
+ */
+const YAML_CAUSE_TRANSLATIONS: Array<{ match: string; es: string }> = [
+  {
+    match: 'All mapping items must start at the same column',
+    es: 'los items del mapeo deben empezar en la misma columna (indentación inconsistente)',
+  },
+  { match: 'Map keys must be unique', es: 'las claves del mapeo deben ser únicas' },
+  {
+    match: 'Nested mappings are not allowed in compact mappings',
+    es: 'no se admiten mapeos anidados dentro de mapeos compactos',
+  },
+  { match: 'bad indentation', es: 'indentación inválida' },
+  {
+    match: 'Flow sequence in block collection must be sufficiently indented and end with a ]',
+    es: 'la secuencia de flujo debe estar bien indentada y terminar con ]',
+  },
+  { match: 'Unexpected flow-seq-end token in YAML stream', es: 'hay un ] de más en el YAML' },
+  { match: 'Missing closing "quote', es: 'falta la comilla de cierre' },
+  { match: 'unexpected end of stream', es: 'el YAML termina de forma inesperada' },
+];
+
+/** Traduce una causa conocida de la librería `yaml`; si no coincide, la conserva. */
+function translateYamlCause(cause: string): string {
+  return YAML_CAUSE_TRANSLATIONS.find((t) => cause.includes(t.match))?.es ?? cause;
+}
+
+/**
  * Separa el frontmatter YAML del body del documento.
  * Si no hay frontmatter, retorna solo el body completo.
  */
@@ -37,7 +67,7 @@ export function parseYamlWithPosition(raw: string): { value?: unknown; error?: s
     // La primera línea de la librería termina con "at line N, column M:" cuando
     // tiene posición: se elimina para que no se duplique con la nuestra.
     const cause = (first.message.split('\n')[0] ?? first.message).replace(/ at line \d+, column \d+:$/, '');
-    return { error: `${cause}${position}` };
+    return { error: `${translateYamlCause(cause)}${position}` };
   }
   return { value: doc.toJS() };
 }
