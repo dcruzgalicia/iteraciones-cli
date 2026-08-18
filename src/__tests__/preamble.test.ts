@@ -83,36 +83,37 @@ describe('preamble-loader', () => {
 
 describe('babelOptionsForLang (contrato lang → babel en el PDF)', () => {
   it('mapea es-MX a las opciones históricas de español de México', () => {
-    expect(babelOptionsForLang('es-MX')).toBe('spanish,mexico,es-noshorthands,es-noindentfirst');
+    expect(babelOptionsForLang('es-MX', new Set())).toBe('spanish,mexico,es-noshorthands,es-noindentfirst');
   });
 
   it('mapea es a español sin la variante de México', () => {
-    expect(babelOptionsForLang('es')).toBe('spanish,es-noshorthands,es-noindentfirst');
+    expect(babelOptionsForLang('es', new Set())).toBe('spanish,es-noshorthands,es-noindentfirst');
   });
 
   it('mapea en y sus variantes a english', () => {
-    expect(babelOptionsForLang('en')).toBe('english');
-    expect(babelOptionsForLang('en-US')).toBe('english');
+    expect(babelOptionsForLang('en', new Set())).toBe('english');
+    expect(babelOptionsForLang('en-US', new Set())).toBe('english');
   });
 
   it('resuelve por idioma base las variantes no listadas (fr-CA → french)', () => {
-    expect(babelOptionsForLang('fr-CA')).toBe('french');
+    expect(babelOptionsForLang('fr-CA', new Set())).toBe('french');
   });
 
-  it('cae a español con warning único para idiomas desconocidos', async () => {
-    const warnSpy = spyOn(console, 'warn');
-    // El warning usa logWarning (stderr): se captura por el spy de stderr
+  it('cae a español con warning único por build para idiomas desconocidos', async () => {
     const stderrSpy = spyOn(process.stderr, 'write');
     try {
-      expect(babelOptionsForLang('xx-YY')).toBe('spanish,es-noshorthands,es-noindentfirst');
-      // Solo un warning aunque se consulte dos veces (por documento)
-      expect(babelOptionsForLang('xx-YY')).toBe('spanish,es-noshorthands,es-noindentfirst');
-      const output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+      // Mismo registro (mismo build): un solo warning aunque se consulte dos veces
+      const warned = new Set<string>();
+      expect(babelOptionsForLang('xx-YY', warned)).toBe('spanish,es-noshorthands,es-noindentfirst');
+      expect(babelOptionsForLang('xx-YY', warned)).toBe('spanish,es-noshorthands,es-noindentfirst');
+      let output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
       expect((output.match(/sin opciones babel conocidas/g) ?? []).length).toBe(1);
-      expect(warnSpy).not.toHaveBeenCalled();
+      // Registro distinto (segundo build en el mismo proceso): warning de nuevo
+      expect(babelOptionsForLang('xx-YY', new Set())).toBe('spanish,es-noshorthands,es-noindentfirst');
+      output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+      expect((output.match(/sin opciones babel conocidas/g) ?? []).length).toBe(2);
     } finally {
       stderrSpy.mockRestore();
-      warnSpy.mockRestore();
     }
   });
 });

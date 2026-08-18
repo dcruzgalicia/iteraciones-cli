@@ -140,7 +140,7 @@ export async function runDocumentPipeline(
   const filters = await loadFilterGroups(siteConfig, siteConfig.disabledFilters, ctx.cwd);
 
   progress.startLightFormats();
-  const renderCtx = { ctx, plan, formatCfg, lang, logoInline };
+  const renderCtx = { ctx, plan, formatCfg, lang, logoInline, warnedLangs: new Set<string>() };
   const exportCtx = {
     filters,
     bibOptions,
@@ -183,7 +183,8 @@ export async function runDocumentPipeline(
 
 /**
  * Contexto de render por documento: build, plan y config de formato.
- * Inmutable durante el pool.
+ * Inmutable durante el pool (el Set de langs advertidos es el registro mutable
+ * deliberado del build: una vez por build, no por proceso).
  */
 interface RenderContext {
   ctx: BuildContext;
@@ -191,6 +192,8 @@ interface RenderContext {
   formatCfg: FormatConfig | undefined;
   lang: string;
   logoInline: string | undefined;
+  /** Registro de langs advertidos (babelOptionsForLang): una vez por build. */
+  warnedLangs: Set<string>;
 }
 
 /**
@@ -226,7 +229,7 @@ async function processDocumentFormats(
   formatWorkSets: FormatWorkSets,
   discoveryIndex: Map<string, DiscoveryEntry>,
 ): Promise<void> {
-  const { ctx, plan, formatCfg, lang, logoInline } = renderCtx;
+  const { ctx, plan, formatCfg, lang, logoInline, warnedLangs } = renderCtx;
   const { filters, bibOptions, bibFiles, biblatexAvailable, globalBibliography, pdfWorkDir, htmlTemplatePath, latexTemplatePath } = exportCtx;
   const { htmlPaths, epubPaths, mdPaths, latexPaths, pdfJobs } = formatWorkSets;
   const { activeFormats } = plan;
@@ -275,7 +278,7 @@ async function processDocumentFormats(
   // .tex completo (preámbulo + cuerpo) en UNA invocación markdown → latex,
   // escrito directamente en dist/ (o en el área de trabajo del PDF si solo pdfOn)
   if (needsLatex) {
-    const fullTex = await markdownToLatex(content, doc, filters, bibFiles, latexTemplatePath, fm, ctx.siteConfig, biblatexAvailable);
+    const fullTex = await markdownToLatex(content, doc, filters, bibFiles, latexTemplatePath, fm, ctx.siteConfig, biblatexAvailable, warnedLangs);
     if (latexOn) {
       await writeOutput(texDistPath, fullTex);
     }
