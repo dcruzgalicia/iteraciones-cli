@@ -15,7 +15,7 @@ import { buildDocsFromIndex, discover } from './discover.js';
 import { validateDisabledFilters } from './filter-resolver.js';
 import { runDocumentPipeline } from './pipeline.js';
 import { validateDisabledPreambleFilters, validatePreambleDependencies } from './preamble-loader.js';
-import { clearStateFile, loadStateFile, updateCssHash } from './state.js';
+import { clearStateFile, loadStateFile, markStateCompleted, stateUsableForBuild, updateCssHash } from './state.js';
 import type { BuildContext } from './types.js';
 
 export interface BuildOptions {
@@ -66,6 +66,10 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
         () => runBuild(cwd, options, progress),
       );
     }
+    // Build exitoso: el estado que persistió discover (sin flag) pasa a ser
+    // válido como caché. Sin este marcado, un estado sin completed sería
+    // tratado como interrumpido por el siguiente build (build completo).
+    await markStateCompleted(cwd);
   } catch (err) {
     // Resolver las fases pendientes del tracker para que el proceso salga:
     // en TTY el render loop mantiene el proceso vivo mientras run() no termine
@@ -106,8 +110,10 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   // ── Planificación: hashes de invalidación + formatos (caché content-addressed) ──
   // Con --full no hay estado previo con qué comparar (la caché se borra en
   // setupBuildEnvironment): no cargar prevState evita mensajes de invalidación
-  // engañosos y fuerza el reprocesamiento completo.
-  const prevState = options.full ? null : await loadStateFile(cwd);
+  // engañosos y fuerza el reprocesamiento completo. Sin --full, solo un estado
+  // con completed:true es caché válida (stateUsableForBuild): un estado de un
+  // build interrumpido se ignora y se reprocesa todo.
+  const prevState = options.full ? null : stateUsableForBuild(await loadStateFile(cwd));
   const plan = await computeBuildMetadata(cwd, siteConfig, prevState);
 
   if (plan.newFormats.length > 0) {
