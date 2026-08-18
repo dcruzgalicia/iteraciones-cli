@@ -90,6 +90,14 @@ csl: styles/nature.csl            # estilo de citas CSL (opcional; APA-7 si falt
 
 Todas las opciones y sus valores por defecto están en [docs/configuration.md](docs/configuration.md).
 
+## Documentación
+
+- [docs/configuration.md](docs/configuration.md) — todas las opciones de `iteraciones.config.yaml`, valores por defecto y contratos de formato.
+- [docs/ejemplos.md](docs/ejemplos.md) — elementos del lenguaje Markdown soportados (incluye la tabla de mapeo de encabezados a PDF y HTML).
+- [docs/frontmatter-reference.md](docs/frontmatter-reference.md) — campos del frontmatter y páginas de título.
+- [docs/architecture.md](docs/architecture.md) — arquitectura del pipeline, decisiones y contratos.
+- [docs/quickstart.md](docs/quickstart.md) — primeros pasos.
+
 ## Comandos
 
 ### Opción global `--project-root`

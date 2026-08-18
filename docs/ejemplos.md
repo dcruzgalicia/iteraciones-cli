@@ -16,6 +16,21 @@ Documento de ejemplo que muestra todos los elementos soportados. El comando `ite
 
 ###### Título de nivel 6 (h6)
 
+### Cómo se traducen los encabezados
+
+La jerarquía del PDF es **distinta de la de Markdown por decisión editorial**: el documento completo es la unidad (su título viene del frontmatter) y los títulos internos son niveles de sub-subsección. La conversión usa `--top-level-division=section` con `--shift-heading-level-by=2` (verificado con una build de prueba):
+
+| Markdown | PDF (LaTeX) | HTML |
+|----------|-------------|------|
+| `#` (h1) | `\subsubsection` | `<h1>` |
+| `##` (h2) | `\paragraph` | `<h2>` |
+| `###` (h3) | `\subparagraph` | `<h3>` |
+| `####` (h4) | texto normal | `<h4>` |
+| `#####` (h5) | texto normal | `<h5>` |
+| `######` (h6) | texto normal | `<h6>` |
+
+En HTML el mapeo es directo (`#` → `<h1>` … `######` → `<h6>`). En el PDF, `#` no es un capítulo ni una sección: se imprime como `\subsubsection` y los niveles se agotan pronto (`####` en adelante se imprimen como texto normal). Si necesitas estructura de capítulos real, usa el frontmatter para el título del documento y limita los encabezados internos a tres niveles (`#`, `##`, `###`).
+
 ## Listas
 
 - Elemento de lista no ordenada
