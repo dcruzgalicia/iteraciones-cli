@@ -69,6 +69,11 @@ export async function runClean(cwd: string): Promise<void> {
 export async function runBuild(cwd: string, options: BuildOptions = {}): Promise<void> {
   try {
     await assertProjectRoot(cwd);
+    // El JSON es la única salida de stdout: mezclarlo con el detalle humano
+    // de --verbose rompería el contrato (docs/architecture.md).
+    if (options.json && options.verbose) {
+      throw new BuildError('--json y --verbose son mutuamente excluyentes: el JSON es la única salida de stdout');
+    }
     // Validar y resolver --output: las rutas relativas se resuelven contra la
     // raíz del proyecto (--project-root), no contra el cwd del proceso.
     let output = options.outputDir;
@@ -89,6 +94,13 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
 
     await build(cwd, { ...options, outputDir: output });
   } catch (err) {
+    // Con --json el fallo se reporta también como JSON válido en stdout: quien
+    // consume el build programáticamente recibe siempre un objeto parseable
+    // (el detalle humano sigue en stderr).
+    if (options.json) {
+      const message = err instanceof Error ? err.message : String(err);
+      process.stdout.write(`${JSON.stringify({ error: message })}\n`);
+    }
     // Los errores de frontmatter/config del build se resuelven con validate:
     // la sugerencia conecta ambas herramientas (detalle completo por archivo).
     const suggestValidate = (): void => {

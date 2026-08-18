@@ -416,6 +416,43 @@ Opciones (`BuildOptions`):
 | `outputDir` | `string` | Directorio de salida (default: `dist/files`).
 | `full` | `boolean` | Build completo desde cero: elimina salida y caché.
 | `verbose` | `boolean` | Salida verbose del tracker.
+| `json` | `boolean` | Emite el resultado como JSON en stdout (ver contrato abajo).
+
+### Contrato de `build --json`
+
+`build --json` imprime en **stdout** un único objeto JSON con las métricas del build, para consumo programático. La salida humana por defecto no cambia: la opción es explícita y no duplica lógica (los datos son exactamente los que el resumen humano ya calcula).
+
+```json
+{
+  "processed": 3,
+  "cached": 2,
+  "formats": ["pdf", "html", "epub", "markdown"],
+  "outputDir": "/ruta/al/proyecto/dist/files",
+  "durationMs": 420,
+  "invalidations": ["filters", "format"]
+}
+```
+
+Semántica de los campos:
+
+| Campo | Tipo | Semántica |
+|-------|------|-----------|
+| `processed` | `number` | Documentos renderizados en este build (no servidos de caché).
+| `cached` | `number` | Documentos servidos de caché sin re-renderizar.
+| `formats` | `string[]` | Formatos activos en la configuración (`pdf`, `html`, `epub`, `markdown`).
+| `outputDir` | `string` | Directorio de salida absoluto del proyecto.
+| `durationMs` | `number` | Duración del build en milisegundos (redondeada).
+| `invalidations` | `string[]` | Razones que invalidaron la caché; usa el mismo cálculo que el resumen humano (issue #1930): `filters`, `preamble`, `bibliography`, `format`, `lang`, `config` y `documentos modificados` cuando procede.
+
+Reglas del contrato:
+
+- **Salida pura**: en stdout solo aparece el objeto JSON y un salto de línea final; el progreso y los colores quedan suprimidos y las advertencias van a stderr.
+- **Exit code**: idéntico al build normal (0 éxito, 1 error). Ante error el objeto sigue siendo JSON válido e incluye el error en un campo `error` (el detalle humano se mantiene en stderr):
+  ```json
+  { "error": "frontmatter YAML inválido en cap-01.md" }
+  ```
+- **Exclusión mutua**: `--json` y `--verbose` son incompatibles (error de uso claro); el JSON es la única salida de stdout y no puede mezclarse con detalle humano.
+- **Builds sin trabajo**: si no hay documentos modificados o el proyecto está vacío, el objeto refleja el estado real (`processed: 0`, `formats` y `outputDir` según corresponda) y el exit code sigue siendo 0.
 
 ### `loadSiteConfig(cwd)` — `src/config/config-loader.ts`
 

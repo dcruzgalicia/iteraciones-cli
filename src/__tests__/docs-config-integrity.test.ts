@@ -130,7 +130,7 @@ describe('integridad docs ↔ CLI (comandos, flags y API)', () => {
     }
     // Superficie real de BuildOptions (orchestrator.ts). Lista explícita: si la
     // API cambia, el test obliga a actualizar la lista y la doc a la vez.
-    const real = new Set(['outputDir', 'full', 'verbose']);
+    const real = new Set(['outputDir', 'full', 'verbose', 'json']);
     expect(documented).toEqual(real);
   });
 

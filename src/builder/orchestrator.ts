@@ -23,6 +23,17 @@ export interface BuildOptions {
   outputDir?: string;
   full?: boolean;
   verbose?: boolean;
+  /** Salida JSON del resultado en stdout (consumo programático). Mutuamente exclusivo con --verbose. */
+  json?: boolean;
+}
+
+/** Resultado del build para consumo programático (--json). Contrato en docs/architecture.md. */
+export interface BuildSummary {
+  processed: number;
+  cached: number;
+  formats: string[];
+  outputDir: string;
+  invalidations: string[];
 }
 
 async function setupBuildEnvironment(cwd: string, siteConfig: SiteConfig, options: BuildOptions): Promise<BuildContext> {
@@ -51,18 +62,25 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   // accionable en lugar de un ENOENT técnico en la primera invocación.
   await checkPandoc();
 
+  const startedAt = performance.now();
+  // Con --json el tracker escribe a un stream mudo: stdout queda reservado
+  // para el objeto JSON final (el resumen humano solo sale a stderr por los
+  // errores/warnings, nunca a stdout).
+  const jsonStream = options.json ? ({ write: (): boolean => true, isTTY: false } as unknown as NodeJS.WriteStream) : undefined;
   const progress = new ProgressTracker({
     renderer: options.verbose ? 'verbose' : 'default',
+    stream: jsonStream,
   });
+  let result: BuildSummary | null = null;
   try {
     // En modo no verbose los warnings se difieren al resumen final del tracker
     // (en modo verbose se emiten a stderr en tiempo real). El sink se conecta
     // con runWithWarningSink: queda activo solo durante el build y se restaura
     // en un finally, sin estado global que escape de este scope.
     if (options.verbose) {
-      await runBuild(cwd, options, progress);
+      result = await runBuild(cwd, options, progress);
     } else {
-      await runWithWarningSink(
+      result = await runWithWarningSink(
         (message) => progress.addWarning(message),
         () => runBuild(cwd, options, progress),
       );
@@ -90,9 +108,12 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
     }
     throw err;
   }
+  if (options.json && result !== null) {
+    process.stdout.write(`${JSON.stringify({ ...result, durationMs: Math.round(performance.now() - startedAt) })}\n`);
+  }
 }
 
-async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTracker): Promise<void> {
+async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTracker): Promise<BuildSummary> {
   const log = (msg: string) => progress.log(msg);
 
   // Cargar config primero para detectar cambios de formato antes de setupBuildEnvironment
@@ -197,7 +218,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
     logWarning("Crea un archivo .md con frontmatter o ejecuta 'iteraciones init'.", 'build');
     if (needsAssets) await runAssets();
     await progress.finish(0, 0, []);
-    return;
+    return { processed: 0, cached: 0, formats: [], outputDir: ctx.outputDir, invalidations: [] };
   }
 
   if (options.verbose) {
@@ -248,8 +269,9 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   if (!work.anyWork) {
     log('Ningún documento modificado — sin cambios');
     if (needsAssets) await runAssets();
-    await progress.finish(0, allDocs.length, computeActiveFormats(ctx.siteConfig.format), ctx.outputDir, invalidations);
-    return;
+    const formats = computeActiveFormats(ctx.siteConfig.format);
+    await progress.finish(0, allDocs.length, formats, ctx.outputDir, invalidations);
+    return { processed: 0, cached: allDocs.length, formats, outputDir: ctx.outputDir, invalidations };
   }
 
   // Cleanup de archivos eliminados y slugs cambiados
@@ -266,8 +288,9 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   ) {
     log('Ningún documento modificado — sin cambios');
     if (needsAssets) await runAssets();
-    await progress.finish(0, allDocs.length, computeActiveFormats(ctx.siteConfig.format), ctx.outputDir, invalidations);
-    return;
+    const formats = computeActiveFormats(ctx.siteConfig.format);
+    await progress.finish(0, allDocs.length, formats, ctx.outputDir, invalidations);
+    return { processed: 0, cached: allDocs.length, formats, outputDir: ctx.outputDir, invalidations };
   }
 
   // Declarar al tracker las fases que se ejecutarán (TTY: libera discovery para
@@ -308,5 +331,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   if (invalidations.length === 0 && processedCount > 0) {
     invalidations.push('documentos modificados');
   }
-  await progress.finish(processedCount, cachedCount, computeActiveFormats(ctx.siteConfig.format), ctx.outputDir, invalidations);
+  const formats = computeActiveFormats(ctx.siteConfig.format);
+  await progress.finish(processedCount, cachedCount, formats, ctx.outputDir, invalidations);
+  return { processed: processedCount, cached: cachedCount, formats, outputDir: ctx.outputDir, invalidations };
 }
