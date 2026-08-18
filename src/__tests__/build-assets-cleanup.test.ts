@@ -29,6 +29,18 @@ describe('build-assets', () => {
     });
   });
 
+  it('buildAssets copia las licencias OFL de las fuentes junto a los .ttf', async () => {
+    await withTempDir(async (dir) => {
+      const outDir = join(dir, 'dist', 'files');
+      await buildAssets(outDir, dir, DEFAULT_SITE_CONFIG);
+      const exo2 = await Bun.file(join(outDir, 'fonts', 'OFL-Exo2.txt')).text();
+      const spaceMono = await Bun.file(join(outDir, 'fonts', 'OFL-SpaceMono.txt')).text();
+      expect(exo2).toContain('Copyright 2013 The Exo 2 Project Authors');
+      expect(exo2).toContain('SIL OPEN FONT LICENSE Version 1.1');
+      expect(spaceMono).toContain('Copyright 2016 The Space Mono Project Authors');
+    });
+  });
+
   it('computeCssHash incluye el binario de Tailwind (una actualización invalida el CSS)', async () => {
     await withTempDir(async (dir) => {
       const outDir = join(dir, 'dist', 'files');

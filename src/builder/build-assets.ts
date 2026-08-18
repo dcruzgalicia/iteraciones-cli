@@ -212,7 +212,13 @@ async function copyFonts(outputDir: string): Promise<void> {
   const target = join(outputDir, 'fonts');
   let entries: string[];
   try {
-    entries = [...new Bun.Glob('*.ttf').scanSync({ cwd: FONTS_SRC, onlyFiles: true })].sort();
+    // Fuentes (.ttf) y sus licencias OFL (OFL-*.txt): las licencias SIL Open
+    // Font acompañan a las fuentes al redistribuirlas (la salida dist/ se
+    // publica tal cual). Misino patrón de copia condicional (mtime/size).
+    entries = [
+      ...[...new Bun.Glob('*.ttf').scanSync({ cwd: FONTS_SRC, onlyFiles: true })],
+      ...[...new Bun.Glob('OFL-*.txt').scanSync({ cwd: FONTS_SRC, onlyFiles: true })],
+    ].sort();
   } catch (err) {
     // Directorio de fuentes ausente: nada que copiar (mismo criterio que el cp anterior)
     if ((err as NodeJS.ErrnoException).code === 'ENOENT') return;

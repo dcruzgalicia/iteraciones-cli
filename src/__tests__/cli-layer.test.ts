@@ -1459,6 +1459,22 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
+  it('sin HTML activo, el build no copia fuentes ni sus licencias a la salida', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(
+        join(dir, 'iteraciones.config.yaml'),
+        'lang: es-MX\nformat:\n  html:\n    generate: false\n  latex:\n    generate: true\n',
+        'utf8',
+      );
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      // Las fuentes (y sus licencias) son assets de HTML: sin HTML no se copian
+      expect(await Bun.file(join(dir, 'dist', 'files', 'fonts')).exists()).toBe(false);
+    });
+  });
+
   it('el chip del contenido dice Contenido', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
