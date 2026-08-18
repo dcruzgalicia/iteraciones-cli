@@ -165,7 +165,7 @@ export class ProgressTracker {
 
   async finish(processed: number, cached: number, formats?: string[], outputDir?: string): Promise<void> {
     this.finalizePendingRows(cached);
-    this.writeSummary(processed, cached, formats, outputDir);
+    await this.writeSummary(processed, cached, formats, outputDir);
   }
 
   /**
@@ -361,7 +361,7 @@ export class ProgressTracker {
     }
   }
 
-  private writeSummary(processed: number, cached: number, formats?: string[], outputDir?: string): void {
+  private async writeSummary(processed: number, cached: number, formats?: string[], outputDir?: string): Promise<void> {
     const totalTime = performance.now() - this.t0;
     const formatCount = formats ? formats.length : 0;
     // "✔ Todo listo." solo sin advertencias: con warnings (p. ej. proyecto
@@ -386,12 +386,18 @@ export class ProgressTracker {
     }
     process.stdout.write(`  ${padRight('Tiempo total', LABEL_WIDTH)}${formatTime(totalTime)}\n`);
     // Guía post-build: sustituye al comando open eliminado. Solo cuando hubo
-    // trabajo real (processed > 0) hay algo nuevo que abrir; el index.html
-    // es la página de entrada cuando existe (index.md en la raíz).
+    // trabajo real (processed > 0) hay algo nuevo que abrir; el index.html es
+    // la página de entrada cuando existe (index.md en la raíz) — sin él, se
+    // abre el directorio de salida (la sugerencia nunca apunta a un archivo
+    // inexistente).
     if (outputDir && processed > 0) {
       const opener = process.platform === 'win32' ? 'start' : process.platform === 'darwin' ? 'open' : 'xdg-open';
       const indexHtml = join(outputDir, 'index.html');
-      process.stdout.write(`  ${padRight('Abre el resultado', LABEL_WIDTH)}${opener} ${indexHtml}\n`);
+      const target = (await Bun.file(indexHtml).exists()) ? indexHtml : outputDir;
+      // start de Windows necesita el título de ventana como primer argumento
+      // (vacío) y las comillas protegen rutas con espacios.
+      const command = process.platform === 'win32' ? `start "" "${target}"` : `${opener} "${target}"`;
+      process.stdout.write(`  ${padRight('Abre el resultado', LABEL_WIDTH)}${command}\n`);
     }
     if (this.warnings.length > 0) {
       // Cierre explícito con el conteo y el siguiente paso: sin él, el build
