@@ -2,18 +2,19 @@ import { rm } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
 
-/** Extensiones de salida estándar por documento en dist/. */
-const OUTPUT_EXTENSIONS = ['.html', '.tex', '.pdf', '.epub', '.md'];
+/** Extensiones de salida estándar por documento en dist/ (incluye la portada PDF). */
+const OUTPUT_EXTENSIONS = ['.html', '.tex', '.pdf', '.epub', '.md', '.png'];
 
 /** Auxiliares de latexmk que se acumulan en .iteraciones/tmp/pdf/. */
 export const LATEXMK_AUX_EXTENSIONS = ['.aux', '.bbl', '.bcf', '.blg', '.fls', '.run.xml', '.fdb_latexmk', '.out', '.toc', '.log'];
 
-const FORMAT_EXT_MAP: Record<string, string> = {
-  latex: '.tex',
-  pdf: '.pdf',
-  html: '.html',
-  epub: '.epub',
-  markdown: '.md',
+const FORMAT_EXT_MAP: Record<string, string[]> = {
+  latex: ['.tex'],
+  // .png = imagen de portada opcional (format.pdf.cover-image)
+  pdf: ['.pdf', '.png'],
+  html: ['.html'],
+  epub: ['.epub'],
+  markdown: ['.md'],
 };
 
 /** Elimina los artefactos cacheados de un documento (`.iteraciones/`). */
@@ -47,7 +48,7 @@ async function cleanupBySlug(ctx: BuildContext, entries: Iterable<{ dir: string;
 export async function cleanupRemovedFormats(ctx: BuildContext, allDocs: BuildDocument[], removedFormats: string[]): Promise<void> {
   if (removedFormats.length === 0) return;
 
-  const extensions = removedFormats.map((fmt) => FORMAT_EXT_MAP[fmt]).filter((ext): ext is string => ext !== undefined);
+  const extensions = removedFormats.flatMap((fmt) => FORMAT_EXT_MAP[fmt] ?? []);
   for (const doc of allDocs) {
     await removeOutputFiles(ctx.outputDir, dirname(doc.relativePath), doc.slug ?? basename(doc.relativePath, '.md'), extensions);
   }
@@ -56,6 +57,13 @@ export async function cleanupRemovedFormats(ctx: BuildContext, allDocs: BuildDoc
     await rm(join(ctx.outputDir, 'css'), { recursive: true, force: true }).catch(() => {});
     await rm(join(ctx.outputDir, 'fonts'), { recursive: true, force: true }).catch(() => {});
     await rm(join(ctx.outputDir, 'logo.svg'), { force: true }).catch(() => {});
+  }
+}
+
+export async function cleanupCoverImages(ctx: BuildContext, allDocs: BuildDocument[]): Promise<void> {
+  for (const doc of allDocs) {
+    const slug = doc.slug ?? basename(doc.relativePath, '.md');
+    await rm(join(ctx.outputDir, dirname(doc.relativePath), `${slug}.png`), { force: true }).catch(() => {});
   }
 }
 

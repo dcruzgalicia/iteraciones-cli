@@ -105,6 +105,7 @@ const PdfFormatSchema = z
       .array(z.string())
       .default(DEFAULT_PDF_FORMAT.disabledPreambleFilters)
       .transform((v) => (v?.length ? v : undefined)),
+    'cover-image': z.boolean().default(DEFAULT_PDF_FORMAT.coverImage ?? false),
   })
   .strict();
 

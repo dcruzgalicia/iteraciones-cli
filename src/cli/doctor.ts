@@ -7,6 +7,7 @@ import {
   checkBunVersion,
   checkLatexEngine,
   checkPandoc,
+  checkPdfToPpm,
   checkReadPermissions,
   checkWritePermissions,
 } from './doctor/system-checks.js';
@@ -34,6 +35,9 @@ export async function collectChecks(cwd: string): Promise<CheckResult[]> {
   ]);
   const needsLatex = configResult.siteConfig !== null && configResult.siteConfig.format?.pdf?.generate === true;
   const latex = needsLatex ? await checkLatexEngine() : undefined;
+  // La portada del PDF (pdftoppm) solo interesa a proyectos que generan PDF
+  // (mismo criterio que el motor LaTeX); es un check opcional (warn).
+  const pdfToPpm = needsLatex ? await checkPdfToPpm() : undefined;
 
   return [
     checkBunVersion(),
@@ -42,6 +46,7 @@ export async function collectChecks(cwd: string): Promise<CheckResult[]> {
     read,
     write,
     ...(latex ? [latex] : []),
+    ...(pdfToPpm ? [pdfToPpm] : []),
   ];
 }
 
@@ -53,7 +58,7 @@ export async function runDoctor(cwd: string): Promise<void> {
 
   renderChecks(checks);
 
-  const allOk = checks.every((c) => c.ok);
+  const allOk = checks.filter((c) => !c.warn).every((c) => c.ok);
   logInfo(allOk ? 'Todo en orden.' : 'Hay problemas que corregir.', 'doctor');
   if (!allOk) process.exitCode = 1;
 }
@@ -65,6 +70,7 @@ export async function runDoctor(cwd: string): Promise<void> {
 function renderChecks(checks: CheckResult[]): void {
   for (const check of checks) {
     const detail = check.ok || !check.detail ? '' : ` — ${check.detail}`;
-    process.stdout.write(`${check.ok ? GLYPHS.success : GLYPHS.error} ${check.label}${detail}\n`);
+    const glyph = check.ok ? GLYPHS.success : check.warn ? GLYPHS.warning : GLYPHS.error;
+    process.stdout.write(`${glyph} ${check.label}${detail}\n`);
   }
 }
