@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import type { Command } from 'commander';
 import { KNOWN_FRONTMATTER_FIELDS } from '../builder/project-validator.js';
 import { buildProgram } from '../cli/parser.js';
 import { loadSiteConfig } from '../config/config-loader.js';
@@ -79,7 +80,18 @@ describe('integridad docs ↔ CLI (comandos, flags y API)', () => {
   function realCliSurface(): { commands: Set<string>; flags: Set<string> } {
     const program = buildProgram();
     const commands = new Set(program.commands.map((c) => c.name()));
+    // El comando `help` no vive en program.commands: commander lo configura
+    // con helpCommand() y lo guarda en _helpCommand. La CLI lo admite
+    // igualmente (iteraciones help [comando]), así que forma parte de la
+    // superficie real; sin esto, documentarlo en README rompería el test.
+    const helpCommand = (program as { _helpCommand?: Command })._helpCommand;
+    if (helpCommand?.name()) commands.add(helpCommand.name());
     const flags = new Set<string>();
+    // La opción de ayuda (-h/--help) tampoco vive en program.options: commander
+    // la configura con helpOption() y la guarda en _helpOption.
+    const helpOption = (program as { _helpOption?: { short?: string; long?: string } })._helpOption;
+    if (helpOption?.long) flags.add(helpOption.long.slice(2));
+    if (helpOption?.short) flags.add(helpOption.short.slice(1));
     for (const opt of program.options) {
       if (opt.long) flags.add(opt.long.slice(2));
       if (opt.short) flags.add(opt.short);
