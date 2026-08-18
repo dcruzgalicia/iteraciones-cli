@@ -122,6 +122,7 @@ iteraciones build [opciones]
 | `--full` | Build completo desde cero: elimina la salida anterior (`dist/`) y la caché | — |
 | `--output <path>` | Directorio de salida | `dist/files` |
 | `--verbose` | Muestra información adicional de progreso | — |
+| `--json` | Imprime el resultado como JSON en stdout (consumo programático) | — |
 
 ### `iteraciones init`
 
@@ -185,6 +186,15 @@ Elimina el directorio de salida (`dist/`) y la caché (`.iteraciones/`).
 
 ```
 iteraciones clean
+```
+
+### `iteraciones help [comando]`
+
+Muestra la ayuda general o la de un comando concreto. Equivale a `--help` (o `-h`):
+
+```
+iteraciones help
+iteraciones help build
 ```
 
 ## Filters

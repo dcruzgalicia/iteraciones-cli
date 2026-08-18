@@ -357,15 +357,29 @@ Cambios incompatibles ejecutados en la ventana pre-1.0 (agosto 2026, revisión i
 - `accent` desconocido y `format.latex` booleano pasaron de tolerancia (warning + fallback) a **errores de validación** en build y validate.
 - El export Markdown usa **rutas relativas** de bibliografía/CSL y no incrusta el CSL del paquete ni `documentclass`.
 
-Superficie estable:
+Superficie estable (lista congelada; revisada desde el código en el issue #1934):
 
-- **Comandos**: `build`, `init`, `validate`, `doctor`, `new`, `clean`, `list-filters`.
+- **Comandos**: `build`, `init`, `validate`, `doctor`, `new`, `clean`, `list-filters`, `help`.
 - **Opciones globales**: `--project-root`, `-V/--version`, `-h/--help`.
-- **Opciones de build**: `--full`, `--output`, `--verbose`.
-- **Configuración** (`iteraciones.config.yaml`): `lang`, `toc`, `format.latex`, `format.html.{title, tagline, logo, theme, accent, generate, blocks}`, `format.pdf.{generate, show-date, page-number, disabled-preamble-filters}`, `format.epub.generate`, `format.markdown.generate`, `disabled-filters`, `lua-filters`, `bibliography`, `csl`.
-- **Frontmatter**: `title`, `subtitle`, `date`, `author`, `slug` (manual).
+- **Opciones de build**: `--full`, `--output`, `--verbose`, `--json`.
+- **Opciones de doctor**: `--info`.
+- **Opciones de new**: `-t/--title`.
+- **Configuración** (`iteraciones.config.yaml`): `lang`, `toc`, `format.latex.generate`, `format.html.{title, tagline, logo, theme, accent, generate, blocks}`, `format.pdf.{generate, show-date, page-number, cover-image, disabled-preamble-filters}`, `format.epub.generate`, `format.markdown.generate`, `disabled-filters`, `lua-filters`, `bibliography`, `csl`.
+- **Frontmatter**: `title`, `subtitle`, `date`, `author`, `slug` (manual); los que fluyen a pandoc o al template efectivo con efecto visible (`lang`, `toc`, `description`, `site-title`, `tagline`, `theme`, `accent`, `css`); y las páginas de título internas y la portada (`extratitle`, `frontispiece`, `titlehead`, `subject`, `dedication`, `uppertitleback`, `lowertitleback`, `publishers`, `colophon`, `title-image`, `publishers-image`, `endpapers`).
 - **Filtros**: nombres completos de los filters del paquete (capas `semantic/`, `latex/`, `html/`) y de los preamble filters numerados; override por archivo y listas `disabled-*`.
-- **Salidas**: HTML, PDF, LaTeX, EPUB y Markdown; esquema de slugs `title-por-author` con sufijos `-dN`.
+- **Salidas**: HTML, PDF, LaTeX, EPUB y Markdown; esquema de slugs `title-por-author` con sufijos `-dN`; portada PNG junto al PDF cuando `format.pdf.cover-image` está activo.
+
+#### Inventario y veredicto (issue #1934)
+
+La lista anterior se obtuvo del **código** (no de la memoria): comandos y opciones de `src/cli/parser.ts`, claves del schema de `src/config/`, campos de frontmatter de `KNOWN_FRONTMATTER_FIELDS` (`src/builder/project-validator.ts`) y filtros del pipeline. El veredicto por elemento, registrado en el issue #1934 (2026-08):
+
+- **Soportado en 1.0**: todo lo listado entra en la lista congelada. No quedan elementos marcados para eliminar: el pase de simplificación del backlog no dejó superficie pública pendiente de retirar.
+- **Fuera de alcance** (documentado explícitamente como no soportado): los flujos `watch`/`serve`/`dev` (rechazados por diseño), la publicación en registros de paquetes y cualquier formato distinto de los cinco listados. Que algo no aparezca en la lista congelada es una omisión deliberada, no un vacío.
+
+Incorporaciones de la fase de estabilización registradas antes de congelar (issues #1931 y #1932):
+
+- `build --json` (resultado como JSON en stdout para consumo programático).
+- `format.pdf.cover-image` (config) y `title-image`, `publishers-image`, `endpapers` (frontmatter): la portada PDF y las imágenes de guarda entraron durante esta misma fase y quedan congeladas con el resto de la superficie.
 
 Decisiones confirmadas en este pase (sin cambios de código):
 
