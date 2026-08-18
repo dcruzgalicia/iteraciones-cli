@@ -1,8 +1,9 @@
 import { readFile } from 'node:fs/promises';
-import { dirname, isAbsolute, join, relative } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { validateDisabledFilters } from '../builder/filter-resolver.js';
 import { listMarkdownDocuments } from '../builder/gitignore.js';
 import { validateDisabledPreambleFilters, validatePreambleDependencies } from '../builder/preamble-loader.js';
+import { validateConfigFilePaths, validateFrontmatterFields } from '../builder/project-validator.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { ConfigError } from '../lib/errors.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
@@ -11,59 +12,6 @@ import { plural } from '../lib/plural.js';
 
 type ValidationError = { file: string; message: string };
 
-/**
- * Campos del frontmatter que el pipeline consume: los del pipeline
- * (title/subtitle/date/author/slug) y los que fluyen a pandoc o al template
- * efectivo con efecto visible (lang, toc, description, site-title, tagline,
- * theme, accent, css). Cualquier otro campo se descarta en todos los formatos:
- * validate advierte para que no sea silencioso.
- */
-export const KNOWN_FRONTMATTER_FIELDS = [
-  'title',
-  'subtitle',
-  'date',
-  'author',
-  'slug',
-  'lang',
-  'toc',
-  'description',
-  'site-title',
-  'tagline',
-  'theme',
-  'accent',
-  'css',
-  // Páginas de título internas, colofón e imagen de portada (solo LaTeX;
-  // HTML las ignora)
-  'extratitle',
-  'frontispiece',
-  'titlehead',
-  'subject',
-  'dedication',
-  'uppertitleback',
-  'lowertitleback',
-  'publishers',
-  'colophon',
-  'title-image',
-  'publishers-image',
-  'endpapers',
-];
-
-/** Formato seguro de un slug manual (mismo regex que discover). */
-const SLUG_MANUAL_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-/** Campos del frontmatter que el pipeline consume como texto (string). */
-const STRING_FRONTMATTER_FIELDS = ['title', 'subtitle', 'date'];
-
-/** Formato ISO documentado para date (mismo criterio que formatHumanDate). */
-const DATE_ISO_RE = /^\d{4}-\d{2}-\d{2}$/;
-
-/** Devuelve los campos del frontmatter que el pipeline ignorará. */
-function unknownFrontmatterFields(parsed: Record<string, unknown>): string[] {
-  return Object.keys(parsed).filter((key) => !KNOWN_FRONTMATTER_FIELDS.includes(key));
-}
-
-// theme se pasa desde runValidate para evitar que loadSiteConfig se llame dos veces
-// (una en validateConfig + otra aquí), lo que duplicaría los warnings de stderr.
 type ValidationResult = {
   errors: ValidationError[];
   warnings: ValidationError[];
@@ -121,50 +69,27 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
         });
       } else {
         const parsed = result as Record<string, unknown>;
-        // Tipos de los campos conocidos: un tipo incorrecto es un error (el
-        // pipeline lo degradaría o lo ignoraría en silencio, p. ej. title: 123
-        // → "Sin título").
-        for (const field of STRING_FRONTMATTER_FIELDS) {
-          const value = parsed[field];
-          if (value !== undefined && typeof value !== 'string') {
-            errors.push({ file: entry, message: `frontmatter: "${field}" debe ser un texto (string), se recibió ${typeof value}` });
+        // Checks compartidos con el build (módulo project-validator): los
+        // errores rompen ambos comandos con el mismo mensaje; los warnings se
+        // muestran en ambos sin romper.
+        for (const issue of validateFrontmatterFields(parsed)) {
+          if (issue.severity === 'error') {
+            errors.push({ file: entry, message: issue.message });
+          } else {
+            warnings.push({ file: entry, message: issue.message });
           }
         }
-        const author = parsed.author;
-        if (author !== undefined && typeof author !== 'string' && !(Array.isArray(author) && author.every((a) => typeof a === 'string'))) {
-          errors.push({ file: entry, message: 'frontmatter: "author" debe ser un texto o una lista de textos' });
-        }
-        // date con formato libre: el pipeline la acepta deliberadamente
-        // (formatHumanDate la deja pasar sin romper), pero el formato ISO es
-        // el documentado: advertencia, no error.
-        const date = parsed.date;
-        if (typeof date === 'string' && date.trim() !== '' && !DATE_ISO_RE.test(date.trim())) {
-          warnings.push({ file: entry, message: 'frontmatter: "date" no usa el formato ISO YYYY-MM-DD; se mostrará tal cual' });
-        }
-        const unknown = unknownFrontmatterFields(parsed);
-        if (unknown.length > 0) {
-          warnings.push({
-            file: entry,
-            message: `campos de frontmatter ignorados por el pipeline: ${unknown.join(', ')}`,
-          });
-        }
-        // Slug manual: formato seguro y sin duplicados (los duplicados
-        // sobrescribirían las salidas en dist/).
+        // Slug manual duplicado: requiere estado entre documentos (los
+        // duplicados sobrescribirían las salidas en dist/). En el build lo
+        // cubre slug-resolver con todas las colisiones.
         const slug = typeof parsed.slug === 'string' ? parsed.slug.trim() : undefined;
         if (slug) {
-          if (!SLUG_MANUAL_RE.test(slug)) {
-            errors.push({
-              file: entry,
-              message: `slug inválido: "${slug}" — usa solo minúsculas, números y guiones (sin espacios, acentos ni guiones extremos)`,
-            });
+          const outputKey = `${dirname(entry)}/${slug}`;
+          const owner = slugs.get(outputKey);
+          if (owner !== undefined) {
+            errors.push({ file: entry, message: `slug duplicado: "${slug}" ya lo usa ${owner}` });
           } else {
-            const outputKey = `${dirname(entry)}/${slug}`;
-            const owner = slugs.get(outputKey);
-            if (owner !== undefined) {
-              errors.push({ file: entry, message: `slug duplicado: "${slug}" ya lo usa ${owner}` });
-            } else {
-              slugs.set(outputKey, entry);
-            }
+            slugs.set(outputKey, entry);
           }
         }
       }
@@ -187,7 +112,7 @@ export async function runValidate(cwd: string): Promise<void> {
   const configErrors: ValidationError[] = [];
   const configWarnings: ValidationError[] = [];
   try {
-    const config = await loadSiteConfig(cwd, { mode: 'validate' });
+    const config = await loadSiteConfig(cwd);
     disabledFiltersCount = config.disabledFilters?.length ?? 0;
     luaFiltersCount = config.luaFilters?.length ?? 0;
     // Validar nombres de filters desactivados (warnings, no errores)
@@ -201,19 +126,13 @@ export async function runValidate(cwd: string): Promise<void> {
         configWarnings.push({ file: 'iteraciones.config.yaml', message: issue.message });
       }
     }
-    // Verificar que las rutas de lua-filters existan en el proyecto
-    for (const rel of config.luaFilters ?? []) {
-      if (!(await Bun.file(join(cwd, rel)).exists())) {
-        configWarnings.push({ file: 'iteraciones.config.yaml', message: `lua-filters: "${rel}" no encontrado en el proyecto` });
-      }
-    }
-    // Las rutas de bibliografía/CSL configuradas deben existir (error, no warning)
-    for (const key of ['bibliography', 'csl'] as const) {
-      const rel = config[key];
-      if (!rel) continue;
-      const abs = isAbsolute(rel) ? rel : join(cwd, rel);
-      if (!(await Bun.file(abs).exists())) {
-        configErrors.push({ file: 'iteraciones.config.yaml', message: `${key}: "${rel}" no encontrado en el proyecto` });
+    // Rutas configuradas (bibliography/csl/lua-filters): checks compartidos
+    // con el build (módulo project-validator).
+    for (const issue of await validateConfigFilePaths(cwd, config)) {
+      if (issue.severity === 'error') {
+        configErrors.push({ file: 'iteraciones.config.yaml', message: issue.message });
+      } else {
+        configWarnings.push({ file: 'iteraciones.config.yaml', message: issue.message });
       }
     }
   } catch (err) {

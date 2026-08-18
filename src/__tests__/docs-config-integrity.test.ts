@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'bun:test';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { KNOWN_FRONTMATTER_FIELDS } from '../builder/project-validator.js';
 import { buildProgram } from '../cli/parser.js';
-import { KNOWN_FRONTMATTER_FIELDS } from '../cli/validate.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { DEFAULT_HTML_BLOCKS, DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { withTempDir } from './helpers.js';
@@ -54,8 +54,9 @@ describe('integridad docs ↔ schema de configuración', () => {
         expect(blocks.length).toBeGreaterThan(0);
         for (const block of blocks) {
           await writeFile(join(dir, 'iteraciones.config.yaml'), block, 'utf8');
-          // mode validate: cualquier clave sin efecto (o inválida) lanza ConfigError
-          await loadSiteConfig(dir, { mode: 'validate' });
+          // Cualquier clave sin efecto (o inválida) lanza ConfigError, igual en
+          // build y validate.
+          await loadSiteConfig(dir);
         }
       }
     });

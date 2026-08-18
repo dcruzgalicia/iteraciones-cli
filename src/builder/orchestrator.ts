@@ -5,7 +5,7 @@ import { ProgressTracker } from '../cli/progress.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
 import { computeActiveFormats } from '../config/site-config.js';
-import { BuildError } from '../lib/errors.js';
+import { BuildError, ConfigError } from '../lib/errors.js';
 import { logWarning, runWithWarningSink } from '../lib/logger.js';
 import { checkPandoc } from '../lib/pandoc-runner.js';
 import { buildAssets } from './build-assets.js';
@@ -15,6 +15,7 @@ import { buildDocsFromIndex, discover } from './discover.js';
 import { validateDisabledFilters } from './filter-resolver.js';
 import { runDocumentPipeline } from './pipeline.js';
 import { validateDisabledPreambleFilters, validatePreambleDependencies } from './preamble-loader.js';
+import { validateConfigFilePaths } from './project-validator.js';
 import { clearStateFile, loadStateFile, markStateCompleted, stateUsableForBuild, updateCssHash } from './state.js';
 import type { BuildContext } from './types.js';
 
@@ -99,6 +100,15 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   // Validar nombres de filters desactivados (warning sin romper el build)
   validateDisabledFilters(siteConfig.disabledFilters);
   validateDisabledPreambleFilters(siteConfig.format?.pdf?.disabledPreambleFilters);
+  // Rutas configuradas (bibliography/csl): inexistentes son error de config,
+  // mismo contrato que validate (módulo project-validator); lua-filters
+  // inexistentes se advierten y se omiten.
+  for (const issue of await validateConfigFilePaths(cwd, siteConfig)) {
+    if (issue.severity === 'error') {
+      throw new ConfigError(`iteraciones.config.yaml: ${issue.message}`, join(cwd, 'iteraciones.config.yaml'));
+    }
+    logWarning(`iteraciones.config.yaml: ${issue.message}`, 'config');
+  }
   // Dependencias entre preamble filters: errores bloqueantes, warnings visibles
   for (const issue of validatePreambleDependencies(siteConfig.format?.pdf?.disabledPreambleFilters)) {
     if (issue.severity === 'error') {
