@@ -221,7 +221,16 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   await cleanupRemovedFormats(ctx, allDocs, plan.removedFormats);
 
   // ── Planificación: conjuntos de trabajo (caché content-addressed) ──
-  const work = computeWorkSets(plan, allDocs, discoveredChanges);
+  // Un cambio del directorio de salida (--output) entre builds fuerza el
+  // reprocesamiento completo: la caché vivía en el directorio anterior y los
+  // documentos deben regenerarse donde se pide ahora (y al volver al default,
+  // regenerar dist/files). discover ya persiste outputDir en el estado; esta
+  // comparación propaga la señal al cálculo de trabajo.
+  const outputDirChanged = prevState !== null && ctx.outputDir !== prevState.outputDir;
+  if (outputDirChanged) {
+    log('Directorio de salida modificado — reprocesando todos los documentos');
+  }
+  const work = computeWorkSets(plan, allDocs, discoveredChanges, outputDirChanged);
 
   if (!work.anyWork) {
     log('Ningún documento modificado — sin cambios');

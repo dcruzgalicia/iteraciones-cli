@@ -76,13 +76,13 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
       const projectRoot = normalize(cwd);
       const resolved = isAbsolute(output) ? normalize(output) : join(projectRoot, output);
       if (resolved === projectRoot) {
-        throw new Error(`--output "${output}" es la raíz del proyecto: la salida sobrescribiría los archivos fuente.`);
+        throw new BuildError(`--output "${output}" es la raíz del proyecto: la salida sobrescribiría los archivos fuente.`);
       }
       if (projectRoot.startsWith(`${resolved}/`)) {
-        throw new Error(`--output "${output}" apunta a un directorio padre del proyecto, lo que podría sobrescribir los archivos fuente.`);
+        throw new BuildError(`--output "${output}" apunta a un directorio padre del proyecto, lo que podría sobrescribir los archivos fuente.`);
       }
       if (!resolved.startsWith(`${projectRoot}/`)) {
-        throw new Error(`--output no puede apuntar fuera del proyecto (recibido: "${output}")`);
+        throw new BuildError(`--output no puede apuntar fuera del proyecto (recibido: "${output}")`);
       }
       output = resolved;
     }

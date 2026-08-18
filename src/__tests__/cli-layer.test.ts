@@ -351,12 +351,42 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
-  it('termina con exit 1 con --output fuera del proyecto', async () => {
+  it('termina con exit 1 con --output fuera del proyecto y contexto [build]', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir, { outputDir: '../fuera' });
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(1);
+      expect(output).toContain('✖ [build] --output');
+    });
+  });
+
+  it('un cambio de directorio de salida entre builds regenera los documentos (regresión caché --output)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
       process.exitCode = 0;
-      await runBuild(dir, { outputDir: '../fuera' });
-      expect(process.exitCode).toBe(1);
+      await runBuild(dir); // build inicial en dist/files
+      expect(process.exitCode).toBe(0);
+      expect(await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).exists()).toBe(true);
+
+      // Mismo contenido, distinto directorio: la caché no puede dejar salida2 sin documentos
+      process.exitCode = 0;
+      await runBuild(dir, { outputDir: 'salida2' });
+      expect(process.exitCode).toBe(0);
+      expect(await Bun.file(join(dir, 'salida2', 'test-document.html')).exists()).toBe(true);
+
+      // Variante inversa: volver al directorio por defecto tras un --output previo
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      expect(await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).exists()).toBe(true);
     });
   });
 
