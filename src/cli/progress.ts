@@ -1,13 +1,10 @@
 import { join } from 'node:path';
 import { GLYPHS } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
+import { formatTime, TrackerRenderer } from './progress-render.js';
 import { type FormatState, type PipelinePhase, type RowState, TrackerState } from './progress-state.js';
 
 export type { FormatState, PipelinePhase, RowState, RowStatus } from './progress-state.js';
-
-function formatTime(ms: number): string {
-  return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${Math.round(ms)}ms`;
-}
 
 /** Ancho mínimo para la columna de etiquetas en el resumen final. */
 const LABEL_WIDTH = 30;
@@ -31,8 +28,10 @@ interface RenderFileReport {
  * no por coordinación de promesas).
  *
  * El estado de las filas (modelo declarativo puro) vive en `TrackerState`
- * (progress-state.ts): el renderer solo decide cuándo y cómo escribir, cada
- * transición de estado devuelve exactamente las claves que debe re-renderizar.
+ * (progress-state.ts) y la escritura ANSI en `TrackerRenderer`
+ * (progress-render.ts): el tracker delega ambas, conservando solo el resumen
+ * final y las decisiones de qué renderizar (cada transición de estado
+ * devuelve exactamente las claves a re-renderizar).
  */
 export class ProgressTracker {
   private t0: number;
@@ -44,12 +43,8 @@ export class ProgressTracker {
   private stream: NodeJS.WriteStream;
   /** Modelo declarativo del tracker: filas, fases, formatos y warnings. */
   private state: TrackerState;
-
-  // ── Marcas de escritura del renderer (líneas reales del terminal) ──
-  private rowIndex = new Map<string, number>();
-  private nextLine = 0;
-  /** Línea real del cursor (0-based). Invariante: toda operación termina con el cursor en la última línea escrita y columna 0. */
-  private cursorLine = 0;
+  /** Único punto de escritura ANSI del tracker. */
+  private renderer: TrackerRenderer;
 
   constructor(options: { renderer?: 'default' | 'verbose' | 'test'; stream?: NodeJS.WriteStream; tty?: boolean } = {}) {
     this.verbose = options.renderer === 'verbose';
@@ -57,6 +52,7 @@ export class ProgressTracker {
     // tty forzado en tests (sin tocar process.stdout.isTTY) o derivado del stream
     this.tty = options.tty ?? (options.renderer === 'default' && this.stream.isTTY === true);
     this.state = new TrackerState();
+    this.renderer = new TrackerRenderer(this.stream, this.tty);
     this.t0 = performance.now();
     if (options.renderer === 'default') {
       // Restaurar el cursor si el proceso sale sin completar (errores del build)
@@ -88,8 +84,8 @@ export class ProgressTracker {
   startPhase(phase: PipelinePhase, total: number = 0): void {
     const created = this.state.startPhase(phase, total);
     // El bloque de formatos se imprime al materializarse (filas desactivadas)
-    if (created) this.renderInactiveFormatRows();
-    this.renderRow(this.state.rowKeyFor(phase));
+    if (created) this.renderer.renderInactiveFormats(this.state);
+    this.renderer.renderRow(this.state, this.state.rowKeyFor(phase));
   }
 
   reportFile(file: RenderFileReport): void {
@@ -98,20 +94,20 @@ export class ProgressTracker {
     if (!this.state.reportFile(file.phase)) return;
     const total = this.state.phaseCount(file.phase);
     const live = total > 0 ? `[${Math.min(this.state.currentPhaseCount, total)}/${total}]` : '';
-    this.renderRow(this.state.rowKeyFor(file.phase), live);
+    this.renderer.renderRow(this.state, this.state.rowKeyFor(file.phase), live);
   }
 
   completePhase(actualCount?: number, phaseOverride?: PipelinePhase): void {
     const phase = phaseOverride ?? this.state.currentPhase;
     if (!phase || this.state.isPhaseDone(phase)) return;
     const created = this.state.completePhase(phase, actualCount);
-    if (created) this.renderInactiveFormatRows();
-    this.renderRow(this.state.rowKeyFor(phase));
-    if (phase === 'pdf' && this.state.maybeFinishGroup()) this.renderRow('group');
+    if (created) this.renderer.renderInactiveFormats(this.state);
+    this.renderer.renderRow(this.state, this.state.rowKeyFor(phase));
+    if (phase === 'pdf' && this.state.maybeFinishGroup()) this.renderer.renderRow(this.state, 'group');
   }
 
   async finish(processed: number, cached: number, formats?: string[], outputDir?: string): Promise<void> {
-    for (const key of this.state.finalizePending(cached)) this.renderRow(key);
+    for (const key of this.state.finalizePending(cached)) this.renderer.renderRow(this.state, key);
     await this.writeSummary(processed, cached, formats, outputDir);
   }
 
@@ -124,12 +120,12 @@ export class ProgressTracker {
     // La fase activa al fallar se marca como fallida, no como completada
     if (this.state.currentPhase) {
       const key = this.state.rowKeyFor(this.state.currentPhase);
-      if (this.state.failActiveRow(this.state.currentPhase)) this.renderRow(key);
+      if (this.state.failActiveRow(this.state.currentPhase)) this.renderer.renderRow(this.state, key);
     }
     // Fases no iniciadas: nunca muestran estado de éxito
-    if (this.state.skipPendingRenderRow()) this.renderRow('phase:render');
+    if (this.state.skipPendingRenderRow()) this.renderer.renderRow(this.state, 'phase:render');
     const created = this.state.createFormatsBlock();
-    if (created) this.renderInactiveFormatRows();
+    if (created) this.renderer.renderInactiveFormats(this.state);
     // Las filas de formato pendientes quedan sin imprimir: no son un éxito
   }
 
@@ -155,66 +151,7 @@ export class ProgressTracker {
     this.state.startLightFormats(performance.now());
   }
 
-  // ── Renderer ──────────────────────────────────────────────────────────────
-
-  /** Imprime las filas de formatos desactivados al materializarse el bloque. */
-  private renderInactiveFormatRows(): void {
-    for (const f of this.state.formats) {
-      const row = this.state.getRow(`fmt:${f.phase}`);
-      if (row && row.status === 'skipped') this.renderRow(row.key);
-    }
-  }
-
-  private rowContent(row: RowState, live?: string): string {
-    const indent = '  '.repeat(row.indent);
-    const prefix =
-      row.status === 'done'
-        ? `${GLYPHS.success} `
-        : row.status === 'failed'
-          ? `${GLYPHS.error} `
-          : row.status === 'skipped'
-            ? `${GLYPHS.skipped} `
-            : '';
-    const countPart = row.count > 0 ? ` ${row.count}` : '';
-    const timePart = row.elapsed !== undefined ? `  ${formatTime(row.elapsed)}` : '';
-    const livePart = live !== undefined ? ` ${live}` : '';
-    return `${indent}${prefix}${row.label}${countPart}${timePart}${livePart}`;
-  }
-
-  /**
-   * Escribe (o actualiza) la fila. En TTY las filas activas se re-renderizan en
-   * sitio; en non-TTY solo se imprimen los estados finales (done/skipped).
-   *
-   * El posicionamiento TTY usa `cursorLine` (la línea real del cursor), no
-   * `nextLine`: tras una actualización en sitio el cursor NO está al final, y
-   * un `up` calculado contra nextLine subiría de más (la fila se escribía en
-   * una línea equivocada). El `\r` final restaura la columna 0 tras `B`
-   * (`2K` no mueve el cursor y `B` tampoco): sin él, la siguiente escritura
-   * empezaba en la columna residual del contenido anterior (indentaciones
-   * fantasma en TTY, regresión #1536 incompleta).
-   */
-  private renderRow(key: string, live?: string): void {
-    const row = this.state.getRow(key);
-    if (!row || row.status === 'pending') return;
-    const content = this.rowContent(row, live);
-    const idx = this.rowIndex.get(key);
-    if (this.tty) {
-      if (idx === undefined) {
-        this.stream.write(`${content}\n`);
-        this.rowIndex.set(key, this.nextLine);
-        this.nextLine++;
-        this.cursorLine = this.nextLine;
-      } else {
-        // Invariante: el cursor está en la última línea escrita, que es >= la
-        // fila actualizada (la fila ya fue escrita antes).
-        const up = this.cursorLine - idx;
-        this.stream.write(`\x1b[${up}A\x1b[2K\r${content}\x1b[${up}B\r`);
-      }
-    } else if (idx === undefined && (row.status === 'done' || row.status === 'skipped' || row.status === 'failed')) {
-      this.stream.write(`${content}\n`);
-      this.rowIndex.set(key, this.nextLine++);
-    }
-  }
+  // ── Resumen final (texto plano, sin ANSI) ─────────────────────────────────
 
   private async writeSummary(processed: number, cached: number, formats?: string[], outputDir?: string): Promise<void> {
     const totalTime = performance.now() - this.t0;

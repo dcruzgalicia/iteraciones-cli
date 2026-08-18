@@ -440,3 +440,97 @@ describe('ProgressTracker', () => {
     expect(screen[6]).toMatch(doneRow('  ✔ PDF 1'));
   });
 });
+
+describe('invariantes de cursor (parte 2 del refactor)', () => {
+  /** Stream de captura (mismo patrón que el primer describe). */
+  function fakeStream(): { stream: NodeJS.WriteStream; chunks: string[] } {
+    const chunks: string[] = [];
+    const stream = {
+      isTTY: true,
+      write(chunk: string | Uint8Array): boolean {
+        chunks.push(String(chunk));
+        return true;
+      },
+    } as unknown as NodeJS.WriteStream;
+    return { stream, chunks };
+  }
+
+  it('tras una secuencia completa, cada actualización ANSI termina en columna 0 y la pantalla queda íntegra', async () => {
+    const { stream, chunks } = fakeStream();
+    const tracker = new ProgressTracker({ renderer: 'default', stream, tty: true });
+    tracker.setFormats([
+      { phase: 'latex', active: false },
+      { phase: 'pdf', active: true },
+      { phase: 'html', active: true },
+      { phase: 'epub', active: false },
+      { phase: 'markdown', active: false },
+    ]);
+    tracker.startPhase('discovery', 2);
+    tracker.reportFile({ relativePath: 'a.md', phase: 'discovery' });
+    tracker.reportFile({ relativePath: 'b.md', phase: 'discovery' });
+    tracker.completePhase(2);
+    await tracker.planPhases(['discovery', 'render']);
+    tracker.startPhase('render', 3);
+    tracker.reportFile({ relativePath: 'd1.md', phase: 'render' });
+    tracker.reportFile({ relativePath: 'd2.md', phase: 'render' });
+    tracker.reportFile({ relativePath: 'd3.md', phase: 'render' });
+    tracker.completePhase(3);
+    tracker.completePhase(3, 'html');
+    tracker.startPhase('pdf', 3);
+    tracker.reportFile({ relativePath: 'd1.md', phase: 'pdf' });
+    tracker.reportFile({ relativePath: 'd2.md', phase: 'pdf' });
+    tracker.reportFile({ relativePath: 'd3.md', phase: 'pdf' });
+    tracker.completePhase(3);
+    await tracker.finish(5, 1, ['pdf', 'html']);
+
+    const output = chunks.join('');
+    // Invariante 1: toda actualización en sitio termina en \r (columna 0)
+    for (const chunk of chunks) {
+      if (chunk.includes('\x1b[')) {
+        expect(chunk.endsWith('\r')).toBe(true);
+      }
+    }
+    // Invariante 2: la pantalla final reconstruida no tiene residuos ni
+    // filas fuera de lugar (mismo criterio visual que la regresión #1536)
+    const screen = renderScreen(output);
+    const doneRow = (label: string): RegExp => new RegExp(`^${label}  \\d+ms$`);
+    expect(screen[0]).toMatch(doneRow('✔ Documentos encontrados 2'));
+    expect(screen[1]).toMatch(doneRow('✔ Renderizando contenido 3'));
+    expect(screen[2]).toBe('  – LaTeX (desactivado)');
+    expect(screen[3]).toBe('  – EPUB (desactivado)');
+    expect(screen[4]).toBe('  – Markdown (desactivado)');
+    expect(screen[5]).toMatch(doneRow('  ✔ HTML 3'));
+    expect(screen[6]).toMatch(doneRow('  ✔ PDF 3'));
+    // El grupo se completa cuando todas las filas de formato se cerraron
+    expect(screen[7]).toBe('✔ Generando formatos');
+    // El resumen sigue a las filas (el cursor termina en la última línea)
+    expect(output).toContain('Todo listo.');
+  });
+
+  it('tras fail(), la fila activa queda marcada con ✖ y las filas posteriores no muestran éxito', async () => {
+    const { stream, chunks } = fakeStream();
+    const tracker = new ProgressTracker({ renderer: 'default', stream, tty: true });
+    tracker.setFormats([
+      { phase: 'html', active: true },
+      { phase: 'pdf', active: false },
+    ]);
+    tracker.startPhase('discovery', 1);
+    tracker.reportFile({ relativePath: 'a.md', phase: 'discovery' });
+    tracker.completePhase(1);
+    await tracker.planPhases(['discovery', 'render']);
+    tracker.startPhase('render', 1);
+    tracker.reportFile({ relativePath: 'a.md', phase: 'render' });
+    // El build falla durante render: la fase activa se marca fallida y las
+    // filas de formato pendientes NUNCA muestran estado de éxito
+    await tracker.fail();
+
+    const screen = renderScreen(chunks.join(''));
+    expect(screen[0]).toMatch(/^✔ Documentos encontrados 1/);
+    expect(screen[1]).toMatch(/^✖ Renderizando contenido/);
+    expect(screen[2]).toBe('  – PDF (desactivado)');
+    // html quedó pendiente: no debe verse como éxito ni como fallo
+    expect(screen[3]).toBeUndefined();
+    // No hay resumen tras un fallo (el error ya se reportó)
+    expect(chunks.join('')).not.toContain('Todo listo.');
+  });
+});
