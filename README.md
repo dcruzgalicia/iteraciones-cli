@@ -141,7 +141,7 @@ iteraciones new --title "Mi artículo" posts/mi-articulo.md
 
 ### `iteraciones validate`
 
-Valida `iteraciones.config.yaml` y el frontmatter de todos los documentos Markdown del proyecto.
+Valida `iteraciones.config.yaml` y el frontmatter de todos los documentos Markdown del proyecto. `validate` y `build` comparten la misma semántica de errores: todo lo que validate reporta como error es error de build (que falla antes de renderizar, con el mismo mensaje); los warnings son los mismos en ambos comandos. `validate` no comprueba el entorno — eso es trabajo de `doctor`.
 
 ```
 iteraciones validate
