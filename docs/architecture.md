@@ -375,6 +375,24 @@ Decisiones confirmadas en este pase (sin cambios de código):
 
 La tolerancia original (decisión #1770: warning + fallback a `lime` en build) se **revirtió**: un `accent` desconocido es ahora un error de validación tanto en `build` como en `validate`. Motivos: era la única clave del schema con comportamiento tolerante (cualquier otro typo, p. ej. `toc: "true"`, ya rompía el build), y un fallback silencioso producía una salida que no era la solicitada. El schema Zod es la única fuente de verdad: no hay interceptaciones previas en `config-loader.ts`.
 
+### ¿Cuál es el contrato entre `build` y `validate`?
+
+Decisión registrada en el issue #1882 (2026-08): **una sola semántica de validación**. La regla:
+
+> **Todo lo que `validate` reporta como error es error de `build`**: el build falla antes de renderizar, con el mismo mensaje. Los warnings se mantienen como warnings en ambos comandos. `validate` no ejecuta el pipeline y no comprueba el entorno (eso es trabajo de `doctor`).
+
+Motivos: antes del acuerdo, `build` degradaba con warning lo que `validate` consideraba error (`title: 123` producía "Sin título" con exit 0 en build y error en validate), y el resumen del build sugería ejecutar `validate` donde este fallaba. La dirección de errores duros es la misma que ya se aplicó a `accent` y a `format.latex` booleano: una salida degradada silenciosa no es la salida solicitada.
+
+Inventario de divergencias conocidas y su veredicto (implementado en el issue #1883):
+
+| Divergencia | `build` (antes) | `validate` (antes) | Veredicto |
+|---|---|---|---|
+| Tipos inválidos de campos del frontmatter (`title: 123`) | warning + "Sin título" | error | **error en ambos** (mismo mensaje, fallo antes de renderizar) |
+| Claves desconocidas en `iteraciones.config.yaml` | warning, continúa | error | **error en ambos** |
+| `bibliography`/`csl` configurados e inexistentes | warning + auto-descubrimiento | error | **error en ambos** (una ruta configurada inexistente es config inválida; el auto-descubrimiento solo aplica cuando no se configuró nada) |
+
+Casos que permanecen como **warning en ambos** (no rompen el build): `date` sin formato ISO, campos de frontmatter ignorados por el pipeline, `lua-filters` inexistentes, documentos sin título o sin contenido.
+
 ---
 
 ## API programática
