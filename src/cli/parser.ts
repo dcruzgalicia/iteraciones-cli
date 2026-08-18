@@ -149,7 +149,7 @@ Ejemplos:
       `
 Ejemplos:
   iteraciones new posts/mi-articulo.md    crea el archivo con title, date y frontmatter
-  iteraciones new --title "Mi artículo" a.md   crea el archivo con un título explícito
+  iteraciones new --title "Mi artículo" posts/mi-articulo.md   crea el archivo con un título explícito
 `,
     )
     .action(async (path: string, opts: { title?: string }) => {

@@ -173,6 +173,11 @@ async function buildProjectInfo(cwd: string): Promise<string[]> {
   const theme = html?.theme ?? '(por defecto)';
   const accent = html?.accent ?? '(por defecto)';
 
+  // Etiquetas de los preamble filters con valor alineado: la columna la fija
+  // la etiqueta más larga (padEnd), sin espacios a mano que se desalinean.
+  const preambleConfigLabel = 'filters de preámbulo desactivados (config):';
+  const preambleDefaultsLabel = 'filters de preámbulo desactivados (defaults del paquete):';
+  const preambleWidth = preambleDefaultsLabel.length;
   const lines = [
     `  lang:                    ${config.lang}`,
     `  toc:                     ${config.toc ? 'sí' : 'no'}`,
@@ -183,8 +188,8 @@ async function buildProjectInfo(cwd: string): Promise<string[]> {
     `  tema HTML:               ${theme}`,
     `  acento HTML:             ${accent}`,
     `  filters desactivados:    ${disabledFilters}`,
-    `  preamble desactivados (config):          ${preambleDisabled.length > 0 ? preambleDisabled.join(', ') : '(ninguno)'}`,
-    `  preamble desactivados (defaults del paquete): ${DEFAULT_PDF_FORMAT.disabledPreambleFilters.join(', ')}`,
+    `  ${preambleConfigLabel.padEnd(preambleWidth)} ${preambleDisabled.length > 0 ? preambleDisabled.join(', ') : '(ninguno)'}`,
+    `  ${preambleDefaultsLabel} ${DEFAULT_PDF_FORMAT.disabledPreambleFilters.join(', ')}`,
   ];
   return lines;
 }

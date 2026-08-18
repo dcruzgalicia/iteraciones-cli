@@ -63,8 +63,14 @@ export function formatUserError(err: unknown): string {
  * Traduce códigos de error del sistema operativo a mensajes en español
  * accionables. Los códigos crudos (EACCES, ENOENT...) son incomprensibles
  * para usuarios no técnicos; el path se añade en el call site.
+ *
+ * `missingHint` distingue el ENOENT por contexto: al leer un documento del
+ * usuario, el motivo habitual es un nombre mal escrito o un archivo que nunca
+ * existió (no una eliminación durante el build), así que el call site pasa la
+ * sugerencia "verifica el nombre" y el mensaje deja de suponer culpa del
+ * build; las rutas de sistema (logo, recursos) conservan el texto actual.
  */
-export function translateSystemError(err: unknown): string {
+export function translateSystemError(err: unknown, missingHint?: string): string {
   if (err instanceof Error) {
     if ('code' in err) {
       const code = (err as NodeJS.ErrnoException).code;
@@ -72,7 +78,9 @@ export function translateSystemError(err: unknown): string {
         case 'EACCES':
           return 'sin permisos de lectura';
         case 'ENOENT':
-          return 'archivo no encontrado (posiblemente eliminado durante el build)';
+          return missingHint === undefined
+            ? 'archivo no encontrado (posiblemente eliminado durante el build)'
+            : `archivo no encontrado: ${missingHint}`;
         case 'EISDIR':
           return 'es un directorio, no un archivo';
         case 'ENOTDIR':

@@ -288,6 +288,9 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       expect(out).toContain('⚠ [build] No se encontraron documentos Markdown en el proyecto.');
       // Con advertencias no hay "Todo listo.": el cierre es neutral
       expect(out).not.toContain('✔ Todo listo.');
+      // El warning ya propone 'iteraciones init': la guía genérica de validate
+      // no debe aparecer (validate respondería "sin errores — 0 documentos")
+      expect(out).not.toContain("ejecuta 'iteraciones validate'");
     });
   });
 
@@ -1508,9 +1511,9 @@ describe('doctor --info (antes runInfo)', () => {
         'utf8',
       );
       const output = await infoOutput(dir);
-      expect(output).toContain('preamble desactivados (config):');
+      expect(output).toContain('filters de preámbulo desactivados (config):');
       expect(output).toContain('19-maketitle');
-      expect(output).toContain('preamble desactivados (defaults del paquete):');
+      expect(output).toContain('filters de preámbulo desactivados (defaults del paquete):');
       expect(output).toContain('24-eso-pic, 25-pdfx, 26-crop');
     });
   });
@@ -1526,7 +1529,7 @@ describe('doctor --info (antes runInfo)', () => {
         'utf8',
       );
       const output = await infoOutput(dir);
-      const configLine = output.split('\n').find((l) => l.includes('preamble desactivados (config):'));
+      const configLine = output.split('\n').find((l) => l.includes('filters de preámbulo desactivados (config):'));
       expect(configLine).toBeDefined();
       expect(configLine).toContain('24-eso-pic');
       expect(configLine).not.toContain('(ninguno)');
@@ -1537,8 +1540,12 @@ describe('doctor --info (antes runInfo)', () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
       const output = await infoOutput(dir);
-      expect(output).toContain('preamble desactivados (config):          (ninguno)');
-      expect(output).toContain('preamble desactivados (defaults del paquete): 24-eso-pic, 25-pdfx, 26-crop');
+      // La columna de valores la fija la etiqueta más larga (padEnd): la línea
+      // de config alinea su valor con la de defaults del paquete.
+      const configLabel = 'filters de preámbulo desactivados (config):';
+      const defaultsLabel = 'filters de preámbulo desactivados (defaults del paquete):';
+      expect(output).toContain(`${configLabel.padEnd(defaultsLabel.length)} (ninguno)`);
+      expect(output).toContain('filters de preámbulo desactivados (defaults del paquete): 24-eso-pic, 25-pdfx, 26-crop');
     });
   });
 

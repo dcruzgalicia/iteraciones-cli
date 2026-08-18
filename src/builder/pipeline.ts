@@ -265,7 +265,9 @@ async function processDocumentFormats(
   try {
     content = await Bun.file(doc.filePath).text();
   } catch (err) {
-    throw new BuildError(`no se pudo leer "${doc.filePath}": ${translateSystemError(err)}`);
+    // Con hint de ENOENT: al leer el documento del usuario el motivo común es
+    // un nombre mal escrito o un archivo que nunca existió.
+    throw new BuildError(`no se pudo leer "${doc.filePath}": ${translateSystemError(err, 'verifica que el nombre del archivo sea correcto')}`);
   }
   // Validación: el documento debe tener cuerpo después del frontmatter. Un
   // documento vacío (o con frontmatter sin cuerpo) se omite con un warning:
