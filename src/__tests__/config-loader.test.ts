@@ -421,6 +421,18 @@ describe('loadSiteConfig', () => {
       expect((await loadSiteConfig(dir)).format.html?.theme).toBe('light');
     });
   });
+
+  it('lee format.pdf.cover-image y su default es false', async () => {
+    await withTempDir(async (dir) => {
+      await writeConfig(dir, 'format:\n  pdf:\n    cover-image: true');
+      const config = await loadSiteConfig(dir);
+      expect(config.format.pdf?.coverImage).toBe(true);
+    });
+    await withTempDir(async (dir) => {
+      const config = await loadSiteConfig(dir);
+      expect(config.format.pdf?.coverImage).toBe(false);
+    });
+  });
 });
 
 describe('loadSiteConfigWithPresence', () => {

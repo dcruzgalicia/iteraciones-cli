@@ -36,6 +36,12 @@ export interface PdfFormatConfig {
    * Por defecto undefined = todos activos.
    */
   disabledPreambleFilters?: string[];
+  /**
+   * Si true, genera junto a cada PDF una imagen PNG de su primera página
+   * (portada) usando pdftoppm. La imagen es un extra: un pdftoppm ausente
+   * se advierte y no bloquea el PDF.
+   */
+  coverImage?: boolean;
 }
 
 export interface LatexFormatConfig {
@@ -97,6 +103,7 @@ export const DEFAULT_PDF_FORMAT = {
   showDate: false,
   pageNumber: 'header-right' as const,
   disabledPreambleFilters: ['24-eso-pic', '25-pdfx', '26-crop'],
+  coverImage: false,
 } satisfies PdfFormatConfig;
 
 export const DEFAULT_EPUB_FORMAT = {

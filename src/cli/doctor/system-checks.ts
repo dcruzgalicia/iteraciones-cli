@@ -7,6 +7,11 @@ export type CheckResult = {
   label: string;
   ok: boolean;
   detail?: string;
+  /**
+   * Check opcional: se muestra con ⚠ si falla pero no rompe el exit code de
+   * doctor (p. ej. pdftoppm — la portada del PDF es un extra, no un requisito).
+   */
+  warn?: boolean;
 };
 
 /** Versión mínima de Bun requerida por el proyecto. */
@@ -118,6 +123,30 @@ export async function checkWritePermissions(cwd: string): Promise<CheckResult> {
  * `validate` (donde un resultado negativo se trata como error bloqueante).
  * La semántica de informacional vs. bloqueante la determina cada punto de uso.
  */
+/**
+ * Verifica que pdftoppm (poppler) esté disponible para la imagen de portada
+ * del PDF (format.pdf.cover-image). Check opcional: un fallo no bloquea el
+ * build (la portada se omite con warning) y tampoco falla doctor.
+ */
+export async function checkPdfToPpm(): Promise<CheckResult> {
+  try {
+    // pdftoppm imprime su versión en stderr (y en poppler reciente sale con
+    // exit 1): basta con que el proceso se lance para considerar el binario
+    // disponible, sin depender del exit code.
+    const result = await run('pdftoppm', ['-v']);
+    const version = `${result.stdout}\n${result.stderr}`.split('\n')[0]?.trim() ?? 'pdftoppm';
+    return { label: 'pdftoppm disponible', ok: true, detail: version, warn: true };
+  } catch {
+    // Error esperado: pdftoppm no está en PATH (ENOENT)
+    return {
+      label: 'pdftoppm disponible',
+      ok: false,
+      detail: 'pdftoppm no encontrado en PATH. Instala poppler (por ejemplo: brew install poppler)',
+      warn: true,
+    };
+  }
+}
+
 export async function checkLatexEngine(): Promise<CheckResult> {
   try {
     const engineResult = await run('pdflatex', ['--version']);

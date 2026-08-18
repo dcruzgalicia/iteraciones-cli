@@ -10,6 +10,7 @@ import { mapWithConcurrency } from '../lib/run.js';
 import type { BuildMetadata, WorkSets } from './build-planner.js';
 import { htmlSlugFor } from './discover.js';
 import { assembleExportDocument } from './export/assemble.js';
+import { generateCoverImages } from './export/cover-image.js';
 import { convertToEpub, convertToMarkdown } from './export/runner.js';
 import { loadFilterGroups } from './filter-resolver.js';
 import { composeHtmlTemplate } from './html-composer.js';
@@ -178,6 +179,14 @@ export async function runDocumentPipeline(
   progress.completePhase(count, 'render');
 
   await pdfConsumer.drain();
+
+  // Portada PDF opcional (format.pdf.cover-image): tras el vaciado del pool, la
+  // imagen se extrae del PDF ya publicado en dist/ con pdftoppm. El PDF no se
+  // toca: la portada es derivada y un fallo solo advierte (extra, no bloquea).
+  if (pdfOn && formatCfg?.pdf?.coverImage === true) {
+    await generateCoverImages(pdfConsumer.pdfJobs.map((job) => ({ pdfPath: job.pdfDest, pngPath: join(dirname(job.pdfDest), `${job.slug}.png`) })));
+  }
+
   return { processed };
 }
 

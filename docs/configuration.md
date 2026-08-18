@@ -16,6 +16,7 @@ format:
     generate: false               # genera PDF
     show-date: false               # muestra la fecha en la portada
     page-number: header-right      # posición del número de página
+    cover-image: false             # genera PNG de la primera página junto al PDF
     # disabled-preamble-filters:   # preamble filters a desactivar (opcional)
     #   - 19-maketitle
 
@@ -89,6 +90,20 @@ Habilita la generación de PDF.
 **Por defecto:** `false`
 
 Muestra la fecha en la portada del PDF. Si es `true` y el frontmatter del documento no declara `date`, se usa la fecha de creación del archivo.
+
+#### `format.pdf.cover-image`
+
+**Tipo:** `boolean`
+**Por defecto:** `false`
+
+Genera, junto a cada PDF, una imagen PNG de su primera página (portada) para previsualizar, compartir o reutilizar el resultado. La extracción usa `pdftoppm` (poppler): si no está instalado, el build continúa con un aviso (la imagen es un extra, no bloquea el PDF) y `doctor` lo reporta como check opcional. La imagen se elimina al desactivar la opción o al cambiar el slug del documento.
+
+```yaml
+format:
+  pdf:
+    generate: true
+    cover-image: true
+```
 
 ### Configuración del preámbulo LaTeX
 

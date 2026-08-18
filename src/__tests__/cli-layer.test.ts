@@ -1905,6 +1905,28 @@ describe('runDoctor', () => {
     });
   });
 
+  it('pdftoppm ausente se reporta con ⚠ y no rompe el exit code (check opcional)', async () => {
+    const runModule = await import('../lib/run.js');
+    const realRun = runModule.run;
+    const spy = spyOn(runModule, 'run').mockImplementation(async (cmd: string, args: string[], opts?: Parameters<typeof runModule.run>[2]) => {
+      if (cmd === 'pdftoppm') throw new runModule.ProcessSpawnError('pdftoppm no encontrado');
+      return realRun(cmd, args, opts);
+    });
+    try {
+      await withTempDir(async (dir) => {
+        await initTestProject(dir);
+        await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  pdf:\n    generate: true\n', 'utf8');
+        const output = await doctorOutput(dir);
+        // El check opcional falla con ⚠ pero doctor sigue en exit 0
+        expect(process.exitCode).toBe(0);
+        expect(output).toContain('⚠ pdftoppm disponible');
+        expect(output).toContain('Instala poppler');
+      });
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it('renderiza cada check con ✔/✖ y sin códigos de escape', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir); // config html-only válida
@@ -2204,6 +2226,47 @@ describe('runBuild (smoke PDF real)', () => {
       });
     },
     { timeout: 120_000 },
+  );
+  it.skipIf(!latexOk || !pandocOk)(
+    'cover-image: true genera la portada PNG junto a cada PDF',
+    async () => {
+      await withTempDir(async (dir) => {
+        await initTestProject(dir);
+        await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  pdf:\n    generate: true\n    cover-image: true\n', 'utf8');
+        process.exitCode = 0;
+        await runBuild(dir);
+        expect(process.exitCode).toBe(0);
+        const pngPath = join(dir, 'dist', 'files', 'test-document.png');
+        expect(await Bun.file(pngPath).exists()).toBe(true);
+        // Firma PNG: bytes 1-3 son "PNG" (el byte 0 es 0x89)
+        const bytes = new Uint8Array(await Bun.file(pngPath).arrayBuffer());
+        expect(new TextDecoder().decode(bytes.subarray(1, 4))).toBe('PNG');
+      });
+    },
+    { timeout: 120_000 },
+  );
+
+  it.skipIf(!latexOk || !pandocOk)(
+    'desactivar cover-image elimina las portadas PNG huérfanas',
+    async () => {
+      await withTempDir(async (dir) => {
+        await initTestProject(dir);
+        const coverConfig = 'lang: es-MX\nformat:\n  pdf:\n    generate: true\n    cover-image: true\n';
+        await writeFile(join(dir, 'iteraciones.config.yaml'), coverConfig, 'utf8');
+        process.exitCode = 0;
+        await runBuild(dir);
+        const pngPath = join(dir, 'dist', 'files', 'test-document.png');
+        expect(await Bun.file(pngPath).exists()).toBe(true);
+        // Desactivar la portada: el hash del formato PDF cambia, re-renderiza y el
+        // barrido del orquestador elimina los PNG huérfanos del build anterior.
+        await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  pdf:\n    generate: true\n', 'utf8');
+        process.exitCode = 0;
+        await runBuild(dir);
+        expect(process.exitCode).toBe(0);
+        expect(await Bun.file(pngPath).exists()).toBe(false);
+      });
+    },
+    { timeout: 180_000 },
   );
 });
 

@@ -10,7 +10,7 @@ import { logWarning, runWithWarningSink } from '../lib/logger.js';
 import { checkPandoc } from '../lib/pandoc-runner.js';
 import { buildAssets } from './build-assets.js';
 import { computeBuildMetadata, computeWorkSets } from './build-planner.js';
-import { cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges } from './cleanup.js';
+import { cleanupCoverImages, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges } from './cleanup.js';
 import { buildDocsFromIndex, discover } from './discover.js';
 import { validateDisabledFilters } from './filter-resolver.js';
 import { runDocumentPipeline } from './pipeline.js';
@@ -240,6 +240,13 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
 
   // ── Limpieza de dist/: archivos de formatos eliminados ──
   await cleanupRemovedFormats(ctx, allDocs, plan.removedFormats);
+
+  // Portadas PDF huérfanas: si la opción está desactivada, se eliminan los
+  // .png que quedaron de builds anteriores (activar/desactivar invalida el
+  // hash del formato PDF y re-renderiza, pero nadie más borraría la imagen).
+  if (plan.activeFormats.pdf && siteConfig.format?.pdf?.coverImage !== true) {
+    await cleanupCoverImages(ctx, allDocs);
+  }
 
   // ── Planificación: conjuntos de trabajo (caché content-addressed) ──
   // Un cambio del directorio de salida (--output) entre builds fuerza el
