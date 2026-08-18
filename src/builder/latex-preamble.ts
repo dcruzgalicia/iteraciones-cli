@@ -40,15 +40,14 @@ const BABEL_LANG_OPTIONS: Record<string, string> = {
   ru: 'russian',
 };
 
-/** Idiomas ya advertidos (el template se compone una vez por build, pero la conversión corre por documento). */
-const warnedLangs = new Set<string>();
-
 /**
  * Resuelve las opciones de babel para un código BCP 47: match exacto, luego
- * idioma base (fr-CA → french) y finalmente español con warning (una vez por
- * idioma: el sink difiere los warnings al resumen del build).
+ * idioma base (fr-CA → french) y finalmente español con warning. `warnedLangs`
+ * es el registro del build (una vez por build, no por proceso): la API
+ * programática documentada permite llamadas repetidas a build() en el mismo
+ * proceso sin suprimir warnings entre llamadas.
  */
-export function babelOptionsForLang(lang: string): string {
+export function babelOptionsForLang(lang: string, warnedLangs: Set<string>): string {
   const direct = BABEL_LANG_OPTIONS[lang];
   if (direct) return direct;
   const base = lang.split('-')[0] ?? '';

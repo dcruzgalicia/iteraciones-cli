@@ -85,6 +85,8 @@ describe('pdfDate (fecha de portada del PDF)', () => {
         tpl,
         { date: '2026-08-08' },
         withShowDate,
+        true,
+        new Set(),
       );
       expect(tex).toContain('\\date{8 de agosto de 2026}');
 
@@ -97,6 +99,8 @@ describe('pdfDate (fecha de portada del PDF)', () => {
         tpl,
         { date: '2026-08-08' },
         siteConfig,
+        true,
+        new Set(),
       );
       expect(sinShowDate).toContain('\\date{}');
     } finally {

@@ -69,6 +69,8 @@ export async function markdownToLatex(
   siteConfig: SiteConfig,
   /** false si 11-bibliography está desactivado: flags.lua no inyecta \\printbibliography. */
   biblatexAvailable = true,
+  /** Registro de langs advertidos del build (babelOptionsForLang): una vez por build, no por proceso. */
+  warnedLangs: Set<string>,
 ): Promise<string> {
   const title = typeof fm.title === 'string' && fm.title.trim() ? fm.title : 'Sin título';
   const author = parseAuthors(fm.author);
@@ -77,7 +79,7 @@ export async function markdownToLatex(
   // El fragmento babel del template efectivo se resuelve por el lang de la
   // configuración (el frontmatter lang no altera babel en el PDF: contrato
   // documentado en configuration.md).
-  extraArgs.push(`--metadata=babel-lang:${babelOptionsForLang(siteConfig.lang)}`);
+  extraArgs.push(`--metadata=babel-lang:${babelOptionsForLang(siteConfig.lang, warnedLangs)}`);
   extraArgs.push(`--metadata=biblatex-available:${biblatexAvailable}`);
   // Comando del número de página (posición configurada): flags.lua lo inserta
   // después del primer bloque cuando el body empieza con un title/list-opener

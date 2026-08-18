@@ -451,3 +451,10 @@ const { yaml, body } = splitFrontmatter('---\ntitle: Mi documento\n---\n\nConten
 ### Convención
 
 Ninguna de estas funciones escribe en `stdout`/`stderr` por sí misma (excepto los warnings de `discover` vía logger): el CLI es el responsable de la presentación. Para integrar el pipeline en otra herramienta, usar estas funciones directamente con el manejo de errores propio.
+
+### Límites del estado por proceso
+
+La API programática es segura para llamadas repetidas a `build()` en el mismo proceso, con dos salvedades documentadas:
+
+- Los **registros por build** (p. ej. el Set de langs advertidos por `babelOptionsForLang`) viven en el contexto del build (`RenderContext.warnedLangs`): cada llamada a `build()` emite sus propios warnings, sin supresión entre llamadas.
+- Los **caches de nombres derivados del filesystem** (`builtinNamesCache` en `filter-resolver.ts`, `builtinPreambleNames` en `preamble-loader.ts`) se memoizan por proceso: asumen que los resources del paquete no cambian durante la vida del proceso. Son invariantes del runtime: si un host de la API modificara los resources entre llamadas, debería recargar el proceso.
