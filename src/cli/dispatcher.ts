@@ -212,6 +212,14 @@ export async function runNew(cwd: string, path: string, options: { title?: strin
       throw new Error(`la ruta debe ser relativa al directorio del proyecto (recibido: "${path}")`);
     }
 
+    // El basename debe ser un nombre de archivo real: 'posts/' produce
+    // 'posts/.md' y '.' produce '.md' (archivo oculto que el discovery nunca
+    // procesa); un basename vacío u oculto crearía basura en el proyecto.
+    const fileName = basename(normalizedPath);
+    if (!fileName || fileName === '.md' || fileName.startsWith('.')) {
+      throw new Error(`la ruta debe incluir un nombre de archivo (recibido: "${path}"); por ejemplo "posts/mi-articulo.md"`);
+    }
+
     const absPath = join(cwd, normalizedPath);
     await mkdir(dirname(absPath), { recursive: true });
 
