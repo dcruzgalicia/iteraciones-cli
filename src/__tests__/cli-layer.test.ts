@@ -1479,6 +1479,24 @@ describe('doctor --info (antes runInfo)', () => {
     });
   });
 
+  it('clave escrita con valor idéntico al default aparece como config (sin sustracción)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      // 24-eso-pic es un default del paquete: la sustracción anterior lo
+      // ocultaba de la línea de config; la presencia en el YAML lo hace visible.
+      await writeFile(
+        join(dir, 'iteraciones.config.yaml'),
+        'lang: es-MX\nformat:\n  pdf:\n    disabled-preamble-filters:\n      - 24-eso-pic\n',
+        'utf8',
+      );
+      const output = await infoOutput(dir);
+      const configLine = output.split('\n').find((l) => l.includes('preamble desactivados (config):'));
+      expect(configLine).toBeDefined();
+      expect(configLine).toContain('24-eso-pic');
+      expect(configLine).not.toContain('(ninguno)');
+    });
+  });
+
   it('sin desactivaciones de usuario, la línea de config muestra (ninguno) y la de defaults los del paquete', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
