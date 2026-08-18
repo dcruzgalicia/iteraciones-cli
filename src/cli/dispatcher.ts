@@ -33,37 +33,56 @@ async function assertProjectRoot(cwd: string): Promise<void> {
   }
 }
 
-export async function runClean(cwd: string): Promise<void> {
+/**
+ * Patrón de ejecución común de los comandos de la CLI: verifica la raíz del
+ * proyecto, ejecuta la función y reporta cualquier error con logError fijando
+ * process.exitCode = 1. `context` es el prefijo del logger y `unknownMessage`
+ * el fallback cuando el error no es una instancia de Error (ningún throw del
+ * código lanza otras cosas; la rama es defensiva). `runBuild` y `runNew`
+ * conservan variantes propias: clasificación de errores y manejo de EEXIST.
+ */
+async function runCliCommand(cwd: string, context: string, fn: () => Promise<void>, unknownMessage: string): Promise<void> {
   try {
     await assertProjectRoot(cwd);
-    const targets = [join(cwd, 'dist'), join(cwd, '.iteraciones')];
-    // Reportar por directorio qué no se pudo eliminar: un fallo de clean no debe
-    // afirmar éxito (antes el catch traga cualquier error, EACCES incluido).
-    const results = await Promise.all(
-      targets.map(async (dir) => {
-        try {
-          await rm(dir, { recursive: true, force: true });
-          return null;
-        } catch (err) {
-          return `${dir}: ${err instanceof Error ? err.message : String(err)}`;
-        }
-      }),
-    );
-    const failures = results.filter((r): r is string => r !== null);
-    if (failures.length > 0) {
-      logError(`no se pudo eliminar: ${failures.join('; ')}`, 'clean');
-      process.exitCode = 1;
-      return;
-    }
-    logSuccess('eliminado dist/ y .iteraciones/', 'clean');
+    await fn();
   } catch (err) {
     if (err instanceof Error) {
-      logError(err.message, 'clean');
+      logError(err.message, context);
     } else {
-      logError('Error desconocido al limpiar.', 'clean');
+      logError(unknownMessage, context);
     }
     process.exitCode = 1;
   }
+}
+
+export async function runClean(cwd: string): Promise<void> {
+  await runCliCommand(
+    cwd,
+    'clean',
+    async () => {
+      const targets = [join(cwd, 'dist'), join(cwd, '.iteraciones')];
+      // Reportar por directorio qué no se pudo eliminar: un fallo de clean no debe
+      // afirmar éxito (antes el catch traga cualquier error, EACCES incluido).
+      const results = await Promise.all(
+        targets.map(async (dir) => {
+          try {
+            await rm(dir, { recursive: true, force: true });
+            return null;
+          } catch (err) {
+            return `${dir}: ${err instanceof Error ? err.message : String(err)}`;
+          }
+        }),
+      );
+      const failures = results.filter((r): r is string => r !== null);
+      if (failures.length > 0) {
+        logError(`no se pudo eliminar: ${failures.join('; ')}`, 'clean');
+        process.exitCode = 1;
+        return;
+      }
+      logSuccess('eliminado dist/ y .iteraciones/', 'clean');
+    },
+    'Error desconocido al limpiar.',
+  );
 }
 
 export async function runBuild(cwd: string, options: BuildOptions = {}): Promise<void> {
@@ -172,56 +191,36 @@ async function buildProjectInfo(cwd: string): Promise<string[]> {
 }
 
 export async function runInit(cwd: string): Promise<void> {
-  try {
-    await assertProjectRoot(cwd);
-    await init(cwd);
-  } catch (err) {
-    if (err instanceof Error) {
-      logError(err.message, 'init');
-    } else {
-      logError('Error desconocido al inicializar.');
-    }
-    process.exitCode = 1;
-  }
+  await runCliCommand(cwd, 'init', () => init(cwd), 'Error desconocido al inicializar.');
 }
 
 export async function runValidate(cwd: string): Promise<void> {
-  try {
-    await assertProjectRoot(cwd);
-    await validate(cwd);
-  } catch (err) {
-    if (err instanceof Error) {
-      logError(err.message, 'validate');
-    } else {
-      logError('Error desconocido al validar.');
-    }
-    process.exitCode = 1;
-  }
+  await runCliCommand(cwd, 'validate', () => validate(cwd), 'Error desconocido al validar.');
 }
 
 export async function runDoctor(cwd: string, options: { info?: boolean } = {}): Promise<void> {
-  try {
-    await assertProjectRoot(cwd);
-    // --info muestra la información del proyecto (antes comando info). Cada
-    // línea lleva el prefijo y el glifo (formato unificado de la CLI).
-    if (options.info) {
-      const lines = await buildProjectInfo(cwd);
-      for (const line of lines) {
-        logInfo(line, 'doctor');
+  await runCliCommand(
+    cwd,
+    'doctor',
+    async () => {
+      // --info muestra la información del proyecto (antes comando info). Cada
+      // línea lleva el prefijo y el glifo (formato unificado de la CLI).
+      if (options.info) {
+        const lines = await buildProjectInfo(cwd);
+        for (const line of lines) {
+          logInfo(line, 'doctor');
+        }
       }
-    }
-    await doctor(cwd);
-  } catch (err) {
-    if (err instanceof Error) {
-      logError(err.message, 'doctor');
-    } else {
-      logError('Error desconocido al ejecutar doctor.');
-    }
-    process.exitCode = 1;
-  }
+      await doctor(cwd);
+    },
+    'Error desconocido al ejecutar doctor.',
+  );
 }
 
 export async function runNew(cwd: string, path: string, options: { title?: string } = {}): Promise<void> {
+  // Variante del patrón común (runCliCommand): el mensaje de error lleva el
+  // path del usuario como prefijo y EEXIST no es un error, se informa y se
+  // omite sin fijar exit code. El resto del patrón coincide con el helper.
   try {
     await assertProjectRoot(cwd);
     // Normalizar el nombre: espacios → guiones y separadores múltiples
@@ -285,15 +284,7 @@ export async function runNew(cwd: string, path: string, options: { title?: strin
 }
 
 export async function runFilters(cwd: string, options: RunFiltersOptions = {}): Promise<void> {
-  try {
-    await assertProjectRoot(cwd);
-    await filters(cwd, options);
-  } catch (err) {
-    if (err instanceof Error) {
-      logError(err.message, 'filters');
-    }
-    process.exitCode = 1;
-  }
+  await runCliCommand(cwd, 'filters', () => filters(cwd, options), 'Error desconocido al listar los filtros.');
 }
 
 /**
