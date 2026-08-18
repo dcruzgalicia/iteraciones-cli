@@ -11,7 +11,7 @@ import { BuildError, ConfigError, PandocError } from '../lib/errors.js';
 import { logError, logInfo, logSuccess } from '../lib/logger.js';
 import { checkPandoc } from '../lib/pandoc-runner.js';
 import { runDoctor as doctor } from './doctor.js';
-import { runFilters as filters } from './filters.js';
+import { runFilters as filters, type RunFiltersOptions } from './filters.js';
 import { runInit as init } from './init.js';
 import { runValidate as validate } from './validate.js';
 
@@ -268,10 +268,10 @@ export async function runNew(cwd: string, path: string, options: { title?: strin
   }
 }
 
-export async function runFilters(cwd: string): Promise<void> {
+export async function runFilters(cwd: string, options: RunFiltersOptions = {}): Promise<void> {
   try {
     await assertProjectRoot(cwd);
-    await filters(cwd);
+    await filters(cwd, options);
   } catch (err) {
     if (err instanceof Error) {
       logError(err.message, 'filters');
