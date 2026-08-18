@@ -369,6 +369,7 @@ Decisiones confirmadas en este pase (sin cambios de código):
 
 - La terminología `filters` / `preamble filters` / `lua-filters` se conserva tal cual (el comando que los lista es `list-filters`).
 - Los nombres numerados de preamble filters expuestos en config (`24-eso-pic`, …) se conservan: renumerarlos rompería configs existentes sin beneficio.
+- El comando `list-filters` se **mantiene** (decisión registrada en el issue #1896, 2026-08): es el único comando nominal/compuesto de la superficie, pero renombrarlo a `filters` es un cambio puramente cosmético que tocaría parser, docs, tests de integridad y la lista congelada de comandos sin beneficio funcional; la superficie está congelada pre-1.0 (#1542) y la ambigüedad queda cerrada con esta decisión.
 
 ### ¿Por qué un color de acento inválido es un error (no un warning)?
 
