@@ -25,6 +25,12 @@ const BIN_NAME: &str = "iteraciones-pdfcheck";
 /// certifica el estándar fijado por el proyecto: 2001 (issue #1964).
 const LEVEL: PdfXLevel = PdfXLevel::X1a2001;
 
+/// Warning codes que la norma PDF/X exige y que se tratan como ERRORES
+/// (issue #1966): la identificación XMP `pdfxid:GTS_PDFXVersion` es un requisito
+/// — si falta (o el XMP es inválido), el PDF no está completo. El resto de
+/// warnings permanecen como advertencias.
+const PROMOTED_WARNING_CODES: &[&str] = &["XmpMetadataInvalid", "MissingXmpIdentification"];
+
 #[derive(Serialize)]
 struct Issue {
     code: String,
@@ -84,13 +90,27 @@ fn validate(path: &str) -> Result<Report, String> {
 }
 
 fn to_report(path: &str, result: &XValidationResult) -> Report {
+    let mut errors: Vec<Issue> = result.errors.iter().map(to_issue).collect();
+    let warnings: Vec<Issue> = result.warnings.iter().map(to_issue).collect();
+    // Promover a error las deficiencias de identificación; el resto quedan como
+    // warnings. `valid` depende de errors (ver PROMOTED_WARNING_CODES).
+    let (promoted, remaining) = partition_promoted(warnings);
+    errors.extend(promoted);
     Report {
         file: path.to_string(),
-        valid: !result.has_errors(),
+        valid: errors.is_empty(),
         level: LEVEL.gts_pdfx_version().to_string(),
-        errors: result.errors.iter().map(to_issue).collect(),
-        warnings: result.warnings.iter().map(to_issue).collect(),
+        errors,
+        warnings: remaining,
     }
+}
+
+/// Separa los warnings entre (promovidos a error, advertencias) según
+/// PROMOTED_WARNING_CODES. Función pura, testeada.
+fn partition_promoted(warnings: Vec<Issue>) -> (Vec<Issue>, Vec<Issue>) {
+    warnings
+        .into_iter()
+        .partition(|w| PROMOTED_WARNING_CODES.contains(&w.code.as_str()))
 }
 
 fn to_issue(error: &XComplianceError) -> Issue {
@@ -100,5 +120,42 @@ fn to_issue(error: &XComplianceError) -> Issue {
         page: error.page,
         object_id: error.object_id,
         clause: error.clause.clone(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn issue(code: &str) -> Issue {
+        Issue {
+            code: code.to_string(),
+            message: String::new(),
+            page: None,
+            object_id: None,
+            clause: None,
+        }
+    }
+
+    #[test]
+    fn promueve_los_warnings_de_identificacion() {
+        let warnings = vec![
+            issue("XmpMetadataInvalid"),
+            issue("AnnotationNotAllowed"),
+            issue("MissingXmpIdentification"),
+        ];
+        let (promoted, kept) = partition_promoted(warnings);
+        let mut codes: Vec<&str> = promoted.iter().map(|w| w.code.as_str()).collect();
+        codes.sort_unstable();
+        assert_eq!(codes, ["MissingXmpIdentification", "XmpMetadataInvalid"]);
+        let kept_codes: Vec<&str> = kept.iter().map(|w| w.code.as_str()).collect();
+        assert_eq!(kept_codes, ["AnnotationNotAllowed"]);
+    }
+
+    #[test]
+    fn sin_warnings_no_promueve_nada() {
+        let (promoted, kept) = partition_promoted(vec![]);
+        assert!(promoted.is_empty());
+        assert!(kept.is_empty());
     }
 }
