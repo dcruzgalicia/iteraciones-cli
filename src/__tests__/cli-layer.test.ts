@@ -2374,19 +2374,28 @@ describe('runBuild (smoke PDF real)', () => {
           'utf8',
         );
         process.exitCode = 0;
-        await runBuild(dir);
+        const stdoutSpy = spyOn(process.stdout, 'write');
+        let buildOutput = '';
+        try {
+          await runBuild(dir);
+          buildOutput = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        } finally {
+          stdoutSpy.mockRestore();
+        }
         expect(process.exitCode).toBe(0);
         const pdfPath = join(dir, 'dist', 'files', 'test-document.pdf');
         const pdf = await Bun.file(pdfPath).text();
         // pdfx escribe los boxes en el catálogo: /TrimBox es obligatorio en PDF/X-1a
         expect(pdf).toContain('/TrimBox');
         // Validación real con pdf-oxide (issue #1953): solo cuando el binario
-        // está disponible (la suite no compila Rust; el binario se resuelve del
-        // directorio gestionado o PATH).
-        const binary = await resolvePdfCheckBinary(dir);
+        // está disponible (la suite no compila Rust; el binario se resuelve de
+        // la caché de usuario o PATH).
+        const binary = await resolvePdfCheckBinary();
         if (binary) {
           const check = await validatePdfX1a(pdfPath, binary);
           expect(check.valid).toBe(true);
+          // Confirmación positiva en el resumen final (issue #1960)
+          expect(buildOutput).toContain('Validación PDF/X-1a: 1 PDF certifica PDF/X-1a');
         }
       });
     },

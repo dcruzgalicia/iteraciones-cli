@@ -348,6 +348,23 @@ describe('ProgressTracker', () => {
     expect(output).not.toContain('✓ Todo listo.');
   });
 
+  it('las líneas de confirmación se imprimen tras la tabla del resumen (antes de las advertencias)', async () => {
+    const output = await runTracker(async (tracker) => {
+      tracker.startPhase('discovery', 1);
+      tracker.completePhase(1);
+      await tracker.planPhases(['discovery']);
+      tracker.addSummaryLine('✔ Validación PDF/X-1a: 1 PDF certifica PDF/X-1a');
+      tracker.addWarning('⚠ [config] primera advertencia');
+      await tracker.finish(1, 0, []);
+    });
+
+    // La confirmación aparece en el resumen y antes del bloque de advertencias
+    const summaryIndex = output.indexOf('Validación PDF/X-1a: 1 PDF certifica PDF/X-1a');
+    const warningsIndex = output.indexOf('Advertencias:');
+    expect(summaryIndex).toBeGreaterThan(-1);
+    expect(warningsIndex).toBeGreaterThan(summaryIndex);
+  });
+
   it('con advertencias cierra con línea explícita, sugiere validate y lista las advertencias', async () => {
     const output = await runTracker(async (tracker) => {
       tracker.startPhase('discovery', 1);

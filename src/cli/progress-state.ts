@@ -64,6 +64,8 @@ export class TrackerState {
   formats: FormatState[] = [];
   /** Warnings diferidos (modo no verbose) para mostrar en el resumen final. */
   warnings: string[] = [];
+  /** Líneas de confirmación extra del resumen final (p. ej. validación PDF/X-1a). */
+  summaryLines: string[] = [];
   /** Fase activa del pipeline (iniciada con startPhase). */
   currentPhase: PipelinePhase | null = null;
   /** Conteo en vivo de documentos completados en la fase activa. */
@@ -113,6 +115,10 @@ export class TrackerState {
 
   addWarning(message: string): void {
     this.warnings.push(message);
+  }
+
+  addSummaryLine(line: string): void {
+    this.summaryLines.push(line);
   }
 
   /** Marca el inicio de los formatos ligeros (su trabajo ocurre dentro de render). */

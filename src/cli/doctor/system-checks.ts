@@ -150,12 +150,13 @@ export async function checkPdfToPpm(): Promise<CheckResult> {
 
 /**
  * Verifica que el binario de validación PDF/X-1a (iteraciones-pdfcheck) esté
- * disponible: en el directorio gestionado del proyecto o en PATH. Check
- * opcional (warn): sin él el build genera los PDFs normalmente, solo omite la
- * certificación PDF/X-1a (y la CLI lo intenta compilar con cargo si existe).
+ * disponible: en el directorio gestionado (caché de usuario, `~/.cache/iteraciones/bin`)
+ * o en PATH. Check opcional (warn): sin él el build genera los PDFs normalmente,
+ * solo omite la certificación PDF/X-1a (y la CLI lo intenta compilar con cargo
+ * si existe).
  */
-export async function checkPdfCheck(cwd: string): Promise<CheckResult> {
-  const binary = await resolvePdfCheckBinary(cwd);
+export async function checkPdfCheck(): Promise<CheckResult> {
+  const binary = await resolvePdfCheckBinary();
   if (!binary) {
     return {
       label: 'iteraciones-pdfcheck disponible',
@@ -173,7 +174,7 @@ export async function checkPdfCheck(cwd: string): Promise<CheckResult> {
     return {
       label: 'iteraciones-pdfcheck disponible',
       ok: false,
-      detail: 'el binario no responde; elimínalo de .iteraciones/bin para que el build lo reconstruya',
+      detail: 'el binario no responde; elimínalo de la caché (~/.cache/iteraciones/bin) para que el build lo reconstruya',
       warn: true,
     };
   }

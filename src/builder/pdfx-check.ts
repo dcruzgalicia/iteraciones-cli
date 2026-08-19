@@ -1,8 +1,9 @@
 import { existsSync } from 'node:fs';
 import { chmod, copyFile, mkdir } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
-import { logWarning } from '../lib/logger.js';
+import { GLYPHS, logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
 import { run } from '../lib/run.js';
 
@@ -26,28 +27,35 @@ const CARGO_BUILD_TIMEOUT_MS = 600_000;
 /** Tiempo máximo de una validación individual (pdf-oxide valida en ms). */
 const PDFCHECK_TIMEOUT_MS = 30_000;
 
-/** Directorio gestionado del binario: <proyecto>/.iteraciones/bin/. */
-function managedBinDir(cwd: string): string {
-  return join(cwd, '.iteraciones', 'bin');
+/**
+ * Directorio gestionado del binario, **compartido entre proyectos** y a salvo
+ * de `clean`/`--full` (que borran `dist/` y `.iteraciones/` del proyecto):
+ * `$XDG_CACHE_HOME/iteraciones/bin` o `~/.cache/iteraciones/bin`.
+ */
+function managedBinDir(): string {
+  const xdg = process.env.XDG_CACHE_HOME?.trim();
+  const base = xdg && xdg.length > 0 ? xdg : join(homedir(), '.cache');
+  return join(base, 'iteraciones', 'bin');
 }
 
 /**
- * Resuelve la ruta del binario sin construir: directorio gestionado
- * (<proyecto>/.iteraciones/bin/) primero y luego PATH. Retorna null si no está.
+ * Resuelve la ruta del binario sin construir: directorio gestionado (caché de
+ * usuario) primero y luego PATH. Retorna null si no está.
  */
-export async function resolvePdfCheckBinary(cwd: string): Promise<string | null> {
-  const managed = join(managedBinDir(cwd), PDFCHECK_BIN_NAME);
+export async function resolvePdfCheckBinary(): Promise<string | null> {
+  const managed = join(managedBinDir(), PDFCHECK_BIN_NAME);
   if (existsSync(managed)) return managed;
   return (await Bun.which(PDFCHECK_BIN_NAME)) ?? null;
 }
 
 /**
  * Compila el binario con cargo desde la fuente del crate (tools/pdfx-validator,
- * incluida en el paquete) y lo coloca en el directorio gestionado. Retorna la
- * ruta del binario o null si no se pudo obtener (cargo ausente o compilación
- * fallida); el llamador informa cómo obtenerlo sin romper el build.
+ * incluida en el paquete) y lo coloca en el directorio gestionado (caché de
+ * usuario). Retorna la ruta del binario o null si no se pudo obtener (cargo
+ * ausente o compilación fallida); el llamador informa cómo obtenerlo sin
+ * romper el build.
  */
-export async function buildPdfCheckBinary(cwd: string): Promise<string | null> {
+export async function buildPdfCheckBinary(): Promise<string | null> {
   const manifest = join(import.meta.dir, '../../tools/pdfx-validator/Cargo.toml');
   if (!existsSync(manifest)) return null;
   try {
@@ -60,7 +68,7 @@ export async function buildPdfCheckBinary(cwd: string): Promise<string | null> {
   }
   const built = join(dirname(manifest), 'target', 'release', PDFCHECK_BIN_NAME);
   if (!existsSync(built)) return null;
-  const destDir = managedBinDir(cwd);
+  const destDir = managedBinDir();
   await mkdir(destDir, { recursive: true });
   const dest = join(destDir, PDFCHECK_BIN_NAME);
   await copyFile(built, dest);
@@ -126,7 +134,12 @@ export async function validatePdfX1a(pdfPath: string, binaryPath: string): Promi
   }
 }
 
-export type PdfxOutputValidationResult = { validated: number; failed: number };
+export type PdfxOutputValidationResult = {
+  validated: number;
+  failed: number;
+  /** Línea de confirmación del resumen final en éxito (undefined si no aplica). */
+  summaryLine: string | undefined;
+};
 
 /**
  * Fase final del build: valida PDF/X-1a los PDFs de la salida cuando el
@@ -136,25 +149,24 @@ export type PdfxOutputValidationResult = { validated: number; failed: number };
  * romper el build.
  */
 export async function runPdfxOutputValidation(
-  cwd: string,
   outputDir: string,
   siteConfig: SiteConfig,
   options: { allowBuild?: boolean } = {},
 ): Promise<PdfxOutputValidationResult> {
   const disabled = siteConfig.format?.pdf?.disabledPreambleFilters ?? [];
-  if (disabled.includes('99-pdfx')) return { validated: 0, failed: 0 };
-  if (!existsSync(outputDir)) return { validated: 0, failed: 0 };
+  if (disabled.includes('99-pdfx')) return { validated: 0, failed: 0, summaryLine: undefined };
+  if (!existsSync(outputDir)) return { validated: 0, failed: 0, summaryLine: undefined };
   const pdfs = [...new Bun.Glob('*.pdf').scanSync({ cwd: outputDir, onlyFiles: true })].sort();
-  if (pdfs.length === 0) return { validated: 0, failed: 0 };
+  if (pdfs.length === 0) return { validated: 0, failed: 0, summaryLine: undefined };
 
-  let binary = await resolvePdfCheckBinary(cwd);
-  if (!binary && options.allowBuild) binary = await buildPdfCheckBinary(cwd);
+  let binary = await resolvePdfCheckBinary();
+  if (!binary && options.allowBuild) binary = await buildPdfCheckBinary();
   if (!binary) {
     logWarning(
       'el binario de validación PDF/X-1a no está disponible y no se pudo compilar (instala Rust con rustup: https://doc.rust-lang.org/book/ch01-01-installation.html, o descarga el precompilado): los PDF no se validaron',
       'pdfx',
     );
-    return { validated: 0, failed: 0 };
+    return { validated: 0, failed: 0, summaryLine: undefined };
   }
 
   let validated = 0;
@@ -179,6 +191,12 @@ export async function runPdfxOutputValidation(
   }
   if (failed > 0) {
     logWarning(`${failed} de ${validated} PDFs no certifican PDF/X-1a.`, 'pdfx');
+    return { validated, failed, summaryLine: undefined };
   }
-  return { validated, failed };
+  // Éxito: confirmación explícita en el resumen final (issue #1960).
+  return {
+    validated,
+    failed,
+    summaryLine: `${GLYPHS.success} Validación PDF/X-1a: ${validated} ${validated === 1 ? 'PDF certifica' : 'PDFs certifican'} PDF/X-1a`,
+  };
 }
