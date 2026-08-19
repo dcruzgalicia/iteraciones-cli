@@ -175,19 +175,19 @@ export async function runPdfxOutputValidation(
   for (const file of pdfs) {
     const result = await validatePdfX1a(join(outputDir, file), binary);
     validated += 1;
+    const where = (iss: PdfCheckIssue): string => (iss.page !== null && iss.page !== undefined ? ` — página ${iss.page + 1}` : '');
+    // Se reportan TODOS los fallos (errors ya incluyen los warnings de
+    // identificación promovidos a error) y TODOS los warnings restantes, para
+    // que ningún incumplimiento u advertencia quede oculto (issue #1971).
     if (!result.valid) {
       failed += 1;
-      const first = result.errors[0];
-      let where = '';
-      if (first && first.page !== null && first.page !== undefined) {
-        where = ` — página ${first.page + 1}`;
+      logWarning(`${file}: no cumple PDF/X-1a (${plural(result.errors.length, 'fallo', 'fallos')})`, 'pdfx');
+      for (const e of result.errors) {
+        logWarning(`  [${e.code}] ${e.message}${where(e)}`, 'pdfx');
       }
-      logWarning(
-        `${file}: no cumple PDF/X-1a (${plural(result.errors.length, 'fallo', 'fallos')}${
-          first ? `, primero [${first.code}] ${first.message}${where}` : ''
-        })`,
-        'pdfx',
-      );
+    }
+    for (const w of result.warnings) {
+      logWarning(`${file}: advertencia PDF/X-1a — [${w.code}] ${w.message}${where(w)}`, 'pdfx');
     }
   }
   if (failed > 0) {

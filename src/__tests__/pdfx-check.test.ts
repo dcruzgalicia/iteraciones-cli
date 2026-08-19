@@ -103,7 +103,7 @@ describe('runPdfxOutputValidation (fase final del build)', () => {
       await writeFile(join(dir, 'dist', 'files', 'doc.pdf'), '%PDF-1.4 fake', 'utf8');
       await writeFakeBinary(
         dir,
-        '{"valid": false, "level": "PDF/X-1a:2001", "errors": [{"code":"MissingTrimBox","message":"falta TrimBox","page":0,"object_id":null,"clause":"6.1.1"}], "warnings": []}',
+        '{"valid": false, "level": "PDF/X-1a:2001", "errors": [{"code":"MissingTrimBox","message":"falta TrimBox","page":0,"object_id":null,"clause":"6.1.1"},{"code":"FontNotEmbedded","message":"fuente no incrustada","page":2,"object_id":null,"clause":"6.2"}], "warnings": [{"code":"ProducerNotSet","message":"sin Producer","page":null,"object_id":null,"clause":null}]}',
       );
       const config = await loadSiteConfig(dir);
       const stderrSpy = spyStderr();
@@ -115,10 +115,15 @@ describe('runPdfxOutputValidation (fase final del build)', () => {
       } finally {
         stderrSpy.mockRestore();
       }
+      // Se reportan TODOS los fallos y warnings por PDF, no solo el primero (issue #1971).
       expect(output).toContain('doc.pdf');
       expect(output).toContain('MissingTrimBox');
-      expect(output).toContain('(1 fallo, primero');
+      expect(output).toContain('FontNotEmbedded');
+      expect(output).toContain('(2 fallos)');
       expect(output).toContain('página 1');
+      expect(output).toContain('página 3');
+      expect(output).toContain('ProducerNotSet');
+      expect(output).toContain('advertencia PDF/X-1a');
       expect(output).toContain('1 de 1 PDFs no certifican PDF/X-1a.');
     });
   });
