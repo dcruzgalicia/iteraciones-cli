@@ -3,6 +3,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CommanderError } from 'commander';
+import { resolvePdfCheckBinary, validatePdfX1a } from '../builder/pdfx-check.js';
 import { runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from '../cli/dispatcher.js';
 import { checkLatexEngine, checkReadPermissions, checkWritePermissions } from '../cli/doctor/system-checks.js';
 import { buildProgram } from '../cli/parser.js';
@@ -2379,6 +2380,14 @@ describe('runBuild (smoke PDF real)', () => {
         const pdf = await Bun.file(pdfPath).text();
         // pdfx escribe los boxes en el catálogo: /TrimBox es obligatorio en PDF/X-1a
         expect(pdf).toContain('/TrimBox');
+        // Validación real con pdf-oxide (issue #1953): solo cuando el binario
+        // está disponible (la suite no compila Rust; el binario se resuelve del
+        // directorio gestionado o PATH).
+        const binary = await resolvePdfCheckBinary(dir);
+        if (binary) {
+          const check = await validatePdfX1a(pdfPath, binary);
+          expect(check.valid).toBe(true);
+        }
       });
     },
     { timeout: 120_000 },

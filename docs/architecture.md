@@ -215,6 +215,14 @@ El esquema Zod (`config-schema.ts`) valida tipos, aplica defaults y transforma c
 
 La configuración PDF es mínima y deliberada: `generate` (activa la compilación con latexmk), `show-date` (fecha en la portada), `page-number` (posición del número de página) y `disabled-preamble-filters` (lista negra de preamble filters, con `97-eso-pic`, `98-crop` y `99-pdfx` desactivados por defecto; son siempre los últimos preámbulos, ver cola de imprenta). Todo el diseño tipográfico (márgenes, fuentes, interlineado, secciones, epígrafes, portada) se gestiona con **preamble filters** `.tex` sobrescribibles por proyecto (`<proyecto>/preamble/<nombre>.tex`) y no es configuración YAML.
 
+### Validación PDF/X-1a del PDF generado
+
+Cuando `99-pdfx` está **activo** (se eliminó de `disabled-preamble-filters`), el build valida en su **fase final** que los PDFs generados certifican PDF/X-1a (ISO 15930-1 / ISO 15930-4), usando el binario `iteraciones-pdfcheck` (crate Rust en `tools/pdfx-validator/` con pdf-oxide; las condiciones completas y el contrato JSON viven en `src/builder/pdfx-check.ts`):
+
+- **Cuándo**: solo si `99-pdfx` está activo **y** hay PDFs en la salida (`dist/files`). Un PDF normal no se valida contra X-1a (fallaría por diseño).
+- **Obtención del binario (en orden)**: directorio gestionado `<proyecto>/.iteraciones/bin/` → PATH → compilar con `cargo build --release` (requiere Rust; fuente en el repo) → si no se obtiene, el build **no falla**: advierte que el PDF no se validó (instalar Rust con rustup o descargar el precompilado de GitHub Releases).
+- **Resultado**: los fallos de certificación se reportan como advertencias en el resumen del build (código + página), sin romper el build (herramienta opcional). `doctor` lo reporta como check opcional (`iteraciones-pdfcheck disponible`).
+
 ## Módulos principales
 
 ### `src/cli/`
