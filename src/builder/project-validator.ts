@@ -20,6 +20,18 @@ export interface ValidationIssue {
 }
 
 /**
+ * Warning compartido build/validate cuando un documento no tiene título en el
+ * frontmatter (clave ausente o vacía, o documento sin frontmatter): todos los
+ * formatos del pipeline usan "Sin título" como fallback. Un título mal tipado
+ * (p. ej. title: 123) NO dispara este warning: eso lo reporta
+ * validateFrontmatterFields como error de tipo.
+ */
+export const MISSING_TITLE_WARNING: ValidationIssue = {
+  severity: 'warning',
+  message: 'no tiene título en el frontmatter; se usará "Sin título"',
+};
+
+/**
  * Campos del frontmatter que el pipeline consume: los del pipeline
  * (title/subtitle/date/author/slug) y los que fluyen a pandoc o al template
  * efectivo con efecto visible (lang, toc, description, site-title, tagline,

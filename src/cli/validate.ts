@@ -3,7 +3,13 @@ import { dirname, join, relative } from 'node:path';
 import { validateDisabledFilters } from '../builder/filter-resolver.js';
 import { listMarkdownDocuments } from '../builder/gitignore.js';
 import { validateDisabledPreambleFilters, validatePreambleDependencies } from '../builder/preamble-loader.js';
-import { looseColonLines, looseColonsMessage, validateConfigFilePaths, validateFrontmatterFields } from '../builder/project-validator.js';
+import {
+  looseColonLines,
+  looseColonsMessage,
+  MISSING_TITLE_WARNING,
+  validateConfigFilePaths,
+  validateFrontmatterFields,
+} from '../builder/project-validator.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { ConfigError } from '../lib/errors.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
@@ -65,6 +71,10 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
           file: entry,
           message: 'frontmatter sin cerrar (falta el bloque "---" final); el contenido se tratará como cuerpo',
         });
+      } else {
+        // Documento con contenido y sin frontmatter: mismo warning que el build
+        // (el pipeline usa "Sin título" como fallback).
+        warnings.push({ file: entry, message: MISSING_TITLE_WARNING.message });
       }
       continue; // sin frontmatter → válido
     }
@@ -114,6 +124,12 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
           } else {
             slugs.set(outputKey, entry);
           }
+        }
+        // Documento sin título (clave ausente o vacía): mismo warning que el
+        // build (discover). Un title mal tipado no dispara este warning: es un
+        // error de tipo ya reportado por validateFrontmatterFields.
+        if (parsed.title === undefined || parsed.title === '') {
+          warnings.push({ file: entry, message: MISSING_TITLE_WARNING.message });
         }
       }
     }
