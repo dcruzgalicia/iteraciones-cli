@@ -1,11 +1,11 @@
-import { rm } from 'node:fs/promises';
+import { readdir, rm } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
 
 /** Extensiones de salida estándar por documento en dist/ (incluye la portada PDF). */
 const OUTPUT_EXTENSIONS = ['.html', '.tex', '.pdf', '.epub', '.md', '.png'];
 
-/** Auxiliares de latexmk que se acumulan en .iteraciones/tmp/pdf/. */
+/** Auxiliares de latexmk que se acumulan en .iteraciones/tmp/pdf/ (por slot de concurrencia). */
 export const LATEXMK_AUX_EXTENSIONS = ['.aux', '.bbl', '.bcf', '.blg', '.fls', '.run.xml', '.fdb_latexmk', '.out', '.toc', '.log'];
 
 const FORMAT_EXT_MAP: Record<string, string[]> = {
@@ -22,10 +22,21 @@ async function removeCachedArtifacts(cacheBase: string, dir: string, slug: strin
   // Área de trabajo del PDF: .tex (sin latexOn) y auxiliares de latexmk
   // (el .log solo se referencia en errores de builds vivos).
   await rm(join(cacheBase, 'tmp', 'pdf', dir, `${slug}.tex`), { force: true }).catch(() => {});
-  // Auxiliares de latexmk (se acumulaban para siempre al eliminar un documento
-  // o cambiar su slug; el .log solo se referencia en errores de builds vivos).
-  for (const ext of LATEXMK_AUX_EXTENSIONS) {
-    await rm(join(cacheBase, 'tmp', 'pdf', dir, `${slug}${ext}`), { force: true }).catch(() => {});
+  // Auxiliares de latexmk en el directorio directo y en cada slot de
+  // concurrencia (se acumulaban para siempre al eliminar un documento o cambiar
+  // su slug; el .log solo se referencia en errores de builds vivos).
+  const workDir = join(cacheBase, 'tmp', 'pdf', dir);
+  const targets: string[] = [''];
+  try {
+    const entries = await readdir(workDir, { withFileTypes: true });
+    for (const e of entries) if (e.isDirectory() && e.name.startsWith('slot-')) targets.push(e.name);
+  } catch {
+    // El directorio de trabajo puede no existir todavía (nunca se compiló PDF).
+  }
+  for (const sub of targets) {
+    for (const ext of LATEXMK_AUX_EXTENSIONS) {
+      await rm(join(workDir, sub, `${slug}${ext}`), { force: true }).catch(() => {});
+    }
   }
 }
 
