@@ -2401,6 +2401,29 @@ describe('runBuild (smoke PDF real)', () => {
     },
     { timeout: 120_000 },
   );
+
+  it.skipIf(!latexOk || !pandocOk)(
+    '97-eso-pic activo compila sin option clash con 30-endpapers (grid en runtime)',
+    async () => {
+      await withTempDir(async (dir) => {
+        await initTestProject(dir);
+        // 97-eso-pic activo (grid): solo se quita de la disabled list por defecto.
+        // 30-endpapers sigue cargando \usepackage{eso-pic} plano: antes esto
+        // fallaba con "! LaTeX Error: Option clash for package eso-pic." (#1962).
+        await writeFile(
+          join(dir, 'iteraciones.config.yaml'),
+          'lang: es-MX\nformat:\n  pdf:\n    generate: true\n    disabled-preamble-filters:\n      - 98-crop\n      - 99-pdfx\n',
+          'utf8',
+        );
+        process.exitCode = 0;
+        await runBuild(dir);
+        expect(process.exitCode).toBe(0);
+        expect(await Bun.file(join(dir, 'dist', 'files', 'test-document.pdf')).exists()).toBe(true);
+      });
+    },
+    { timeout: 120_000 },
+  );
+
   it.skipIf(!latexOk || !pandocOk)(
     'cover-image: true genera la portada PNG junto a cada PDF',
     async () => {

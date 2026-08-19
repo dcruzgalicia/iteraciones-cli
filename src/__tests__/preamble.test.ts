@@ -506,10 +506,22 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(margins).toContain('headheight=\\baselineskip,headsep=3.25pt,footskip=10.25pt');
   });
 
-  it('97-eso-pic: gridunit en mm', async () => {
+  it('97-eso-pic: el grid se activa en runtime (sin option clash con 30-endpapers)', async () => {
     const filters = await loadPreambleFilters();
     const esopic = filters.find((f) => f.name === '97-eso-pic')?.content ?? '';
-    expect(esopic).toContain('gridunit=mm');
+    const endpapers = filters.find((f) => f.name === '30-endpapers')?.content ?? '';
+    // La cola de imprenta va al final (#1952): 30-endpapers carga eso-pic plano
+    // primero y LaTeX fija opciones en el primer \usepackage, así que 97 no puede
+    // volver a cargarlo con opciones (option clash, issue #1962). 97 activa el
+    // grid en runtime con los mismos parámetros que tenían sus opciones.
+    expect(endpapers).toContain('\\usepackage{eso-pic}');
+    expect(esopic).not.toContain('\\usepackage[');
+    expect(esopic).toContain('\\ESO@gridtrue');
+    expect(esopic).toContain('\\ESO@gridBGtrue');
+    expect(esopic).toContain('\\ESO@texcoordtrue');
+    expect(esopic).toContain('\\ESO@gridcolor{teal!50}');
+    expect(esopic).toContain('\\ESO@subgridcolor{teal!30}');
+    expect(esopic).toContain('\\g@addto@macro\\ESO@HookIIIBG{\\ESO@gridpicture}');
   });
 
   it('30-endpapers: imagen de fondo que cubre la hoja (cover recortado a papel+3mm por lado)', async () => {

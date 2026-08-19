@@ -145,6 +145,8 @@ Además, existen los **preamble filters** (`src/lib/resources/preamble/*.tex`) q
 | 99-pdfx | `src/lib/resources/preamble/99-pdfx.tex` | PDF/X-1a (desactivado por defecto) |
 
 > **Cola de imprenta (siempre últimos).** `97-eso-pic`, `98-crop` y `99-pdfx` ocupan deliberadamente la cola de la numeración (97-99): son los últimos preámbulos en el orden derivado del filesystem y no puede existir ningún preamble filter con prefijo numérico mayor (ver `preamble-loader.ts` y su test).
+>
+> **Nota (issue #1962):** `97-eso-pic` activa el grid de `eso-pic` **en runtime** y no vuelve a cargar el paquete con opciones: `30-endpapers.tex` ya carga `\usepackage{eso-pic}` plano de forma incondicional y LaTeX fija las opciones en el primer `\usepackage` (un segundo load con opciones dispara *option clash*). Como la cola de imprenta es la última, 97 nunca puede ser el primer cargador.
 
 ### Extensibilidad
 
