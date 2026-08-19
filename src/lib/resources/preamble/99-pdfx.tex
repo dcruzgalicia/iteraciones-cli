@@ -5,4 +5,9 @@
 % Nota: PDF/X-1a excluye funciones interactivas por especificación: pdfx
 % desactiva los enlaces (draft mode) — es el comportamiento correcto para
 % imprenta, no un fallo.
-\usepackage[x-1a]{pdfx}
+% El estándar del proyecto es estrictamente PDF/X-1a:2001 (#1964): se usa la
+% opción `x-1a1` (ISO 15930-1:2001). La opción desnuda `x-1a` del paquete
+% equivale a `x-1a3` (PDF/X-1a:2003) — no 2001.
+% La identificación XMP (pdfxid:GTS_PDFXVersion) la completa el template
+% override de src/lib/resources/xmp/pdfx.xmp (#1967).
+\usepackage[x-1a1]{pdfx}

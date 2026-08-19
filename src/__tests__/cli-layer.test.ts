@@ -2374,7 +2374,14 @@ describe('runBuild (smoke PDF real)', () => {
           'utf8',
         );
         process.exitCode = 0;
-        await runBuild(dir);
+        const stdoutSpy = spyOn(process.stdout, 'write');
+        let buildOutput = '';
+        try {
+          await runBuild(dir);
+          buildOutput = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        } finally {
+          stdoutSpy.mockRestore();
+        }
         expect(process.exitCode).toBe(0);
         const pdfPath = join(dir, 'dist', 'files', 'test-document.pdf');
         const pdf = await Bun.file(pdfPath).text();
@@ -2386,14 +2393,11 @@ describe('runBuild (smoke PDF real)', () => {
         const binary = await resolvePdfCheckBinary();
         if (binary) {
           const check = await validatePdfX1a(pdfPath, binary);
-          // Hasta que el pipeline genere la identificación XMP pdfxid completa
-          // (issue #1967), el único fallo esperado es la identificación (promovido
-          // a error en #1966); cualquier otro error es una regresión real.
-          const identificationOnly =
-            check.errors.length > 0 && check.errors.every((e) => e.code === 'XmpMetadataInvalid' || e.code === 'MissingXmpIdentification');
-          expect(identificationOnly).toBe(true);
-          // La deficiencia de identificación ya no queda como warning
-          expect(check.warnings.every((w) => w.code !== 'XmpMetadataInvalid' && w.code !== 'MissingXmpIdentification')).toBe(true);
+          // Estricto PDF/X-1a:2001 (issues #1964/#1967): el pipeline emite la
+          // identificación x-1a1 + pdfxid:GTS_PDFXVersion → el PDF certifica.
+          expect(check.valid).toBe(true);
+          // Confirmación positiva en el resumen final (issue #1960)
+          expect(buildOutput).toContain('Validación PDF/X-1a: 1 PDF certifica PDF/X-1a');
         }
       });
     },

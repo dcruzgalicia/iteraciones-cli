@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdir, rename, rm } from 'node:fs/promises';
+import { copyFile, mkdir, rename, rm } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
 import { PandocError } from '../../lib/errors.js';
 import { logWarning } from '../../lib/logger.js';
@@ -12,6 +12,15 @@ import type { ExportDocument } from './types.js';
 
 /** Límite de tiempo de una compilación latexmk: 10 minutos. */
 const LATEXMK_TIMEOUT_MS = 600_000;
+
+/**
+ * Template XMP de override del paquete pdfx (recurso del paquete): incluye la
+ * identificación `pdfxid:GTS_PDFXVersion` para PDF/X-1a (issue #1967). El
+ * paquete la lee con `\includexmp{pdfx}` por la ruta de entrada (TEXINPUTS); al
+ * copiarla al directorio de trabajo latexmk la encuentra antes que la del
+ * sistema.
+ */
+const XMP_TEMPLATE_RESOURCE = join(import.meta.dir, '../../lib/resources/xmp/pdfx.xmp');
 
 /**
  * Convierte el markdown original a EPUB3 usando pandoc (sin intermediario).
@@ -129,12 +138,21 @@ export async function convertToPdf(
   await mkdir(biberCache, { recursive: true });
   const logPath = join(pdfDir, `${slug}.log`);
 
+  // Override del template XMP de pdfx: el paquete lo lee con `\includexmp{pdfx}`
+  // por la ruta de entrada, así que el recurso se copia al directorio de trabajo
+  // y se expone vía TEXINPUTS (la ':' final conserva los paths default). Solo
+  // afecta a builds con 99-pdfx activo (que es quien carga el paquete pdfx).
+  if (existsSync(XMP_TEMPLATE_RESOURCE)) {
+    await mkdir(pdfDir, { recursive: true });
+    await copyFile(XMP_TEMPLATE_RESOURCE, join(pdfDir, 'pdfx.xmp'));
+  }
+
   let result: Awaited<ReturnType<typeof run>>;
   try {
     result = await run('latexmk', ['-pdf', '-interaction=nonstopmode', `-outdir=${pdfDir}`, `-jobname=${slug}`, fullTexPath], {
       timeoutMs: LATEXMK_TIMEOUT_MS,
       // La caché de biber se aísla por slot de concurrencia
-      env: { PAR_GLOBAL_TEMP: biberCache },
+      env: { PAR_GLOBAL_TEMP: biberCache, TEXINPUTS: `${pdfDir}:` },
     });
   } catch (err) {
     if (err instanceof ProcessSpawnError) {
