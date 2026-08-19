@@ -118,7 +118,8 @@ export async function convertToMarkdown(
  * Compila el .tex completo de un documento con latexmk.
  * @param fullTexPath Ruta absoluta al .tex completo (preámbulo + cuerpo).
  * @param sourcePath Ruta del .md original (solo para mensajes de error).
- * @param pdfDir Directorio de salida de latexmk (`.iteraciones/formats/pdf/<dir>`).
+ * @param pdfDir Directorio de salida de latexmk (`.iteraciones/tmp/pdf/<dir>/slot-<n>`),
+ * aislado por slot de concurrencia para evitar carreras del XMP (issue #1967).
  * @param slug Jobname de latexmk.
  * @param biberCacheDir Directorio de caché de biber (por slot de concurrencia).
  */
@@ -142,15 +143,23 @@ export async function convertToPdf(
   // por la ruta de entrada, así que el recurso se copia al directorio de trabajo
   // y se expone vía TEXINPUTS (la ':' final conserva los paths default). Solo
   // afecta a builds con 99-pdfx activo (que es quien carga el paquete pdfx).
+  // latexmk exige que el -outdir exista; el directorio se crea siempre (el pool
+  // lo aísla por slot de concurrencia).
+  await mkdir(pdfDir, { recursive: true });
   if (existsSync(XMP_TEMPLATE_RESOURCE)) {
-    await mkdir(pdfDir, { recursive: true });
     await copyFile(XMP_TEMPLATE_RESOURCE, join(pdfDir, 'pdfx.xmp'));
   }
 
   let result: Awaited<ReturnType<typeof run>>;
   try {
+    // `cwd` y `-outdir` apuntan al mismo directorio de trabajo aislado por slot:
+    // el override pdfx.xmp y el pdfx.xmpi parcheado por \includexmp/xmpincl se
+    // resuelven y escriben ahí, sin competir con otros slots paralelos (el nombre
+    // pdfx.xmpi es fijo — issue #1967). Las rutas del .tex (bibliografía) son
+    // absolutas, así que el cwd nuevo es seguro.
     result = await run('latexmk', ['-pdf', '-interaction=nonstopmode', `-outdir=${pdfDir}`, `-jobname=${slug}`, fullTexPath], {
       timeoutMs: LATEXMK_TIMEOUT_MS,
+      cwd: pdfDir,
       // La caché de biber se aísla por slot de concurrencia
       env: { PAR_GLOBAL_TEMP: biberCache, TEXINPUTS: `${pdfDir}:` },
     });
@@ -182,8 +191,13 @@ export async function convertToPdf(
   }
 
   // Éxito: eliminar los auxiliares de latexmk (el .log solo se referencia en
-  // errores). Sin esto, el área de trabajo acumula basura indefinidamente.
-  await Promise.all(LATEXMK_AUX_EXTENSIONS.map((ext) => rm(join(pdfDir, `${slug}${ext}`), { force: true }).catch(() => {})));
+  // errores) y el parche XMP (pdfx.xmpi) ya embebido en el PDF. Sin esto, el
+  // área de trabajo acumula basura indefinidamente.
+  await Promise.all(
+    [...LATEXMK_AUX_EXTENSIONS.map((ext) => join(pdfDir, `${slug}${ext}`)), join(pdfDir, 'pdfx.xmp'), join(pdfDir, 'pdfx.xmpi')].map((p) =>
+      rm(p, { force: true }).catch(() => {}),
+    ),
+  );
 
   // El .pdf final se publica en dist/ (el área de trabajo es efímera).
   if (pdfDest) {

@@ -59,8 +59,14 @@ export function createPdfConsumer(
           return;
         }
         const s = slot++ % maxSlots;
-        // latexmk compila con -outdir en el área de trabajo (auxiliares y .pdf ahí)
-        const pdfDir = join(pdfWorkBase, job.dir);
+        // latexmk compila con -outdir en el área de trabajo (auxiliares y .pdf ahí).
+        // El outdir se aísla por slot (una carpeta por proceso concurrente): el
+        // paquete pdfx escribe un patch XMP de nombre fijo (pdfx.xmpi) en el
+        // directorio de trabajo de pdflatex (== outdir), así que un outdir
+        // compartido entre slots paralelos provoca carreras de escritura que
+        // corrompen la identificación PDF/X (issue #1967). Mismo patrón de
+        // aislamiento que la caché de biber (cache-<slot>).
+        const pdfDir = join(pdfWorkBase, job.dir, `slot-${s}`);
         try {
           await convertToPdf(job.texPath, job.relativePath, pdfDir, job.slug, join(biberBase, `cache-${s}`), job.pdfDest);
         } catch (err) {
