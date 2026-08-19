@@ -66,6 +66,7 @@ export const KNOWN_FRONTMATTER_FIELDS = [
   'title-image',
   'publishers-image',
   'endpapers',
+  'keywords',
 ];
 
 /** Formato seguro de un slug manual (mismo regex que discover). */
