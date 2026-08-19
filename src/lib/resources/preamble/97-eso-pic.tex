@@ -1,2 +1,26 @@
 % Fondo de página con eso-pic (desactivado por defecto)
-\usepackage[grid, gridunit=mm,texcoord,gridBG,gridcolor=teal!50,subgridcolor=teal!30]{eso-pic}
+%
+% La activación del grid se hace en RUNTIME y no cargando el paquete con
+% opciones: 30-endpapers.tex ya carga \usepackage{eso-pic} sin opciones de
+% forma incondicional, y en LaTeX las opciones se fijan en el PRIMER
+% \usepackage (un segundo load con opciones distinta dispara "option clash").
+% Como la cola de imprenta (97-99) es deliberadamente la última (issue #1952),
+% 97 nunca puede ser el primer cargador de eso-pic.
+%
+% Aquí se reproduce exactamente lo que hace la opción grid del paquete
+% (ESO@gridtrue + añadir \ESO@gridpicture al hook de fondo) con gridBG y
+% texcoord, y los colores por defecto del filter; gridunit queda en mm, el
+% default del paquete. Es el mismo tipo de acceso a internos que ya usa
+% 30-endpapers.tex (\ESO@HookIIIBG).
+%
+% El override por proyecto (preamble/97-eso-pic.tex) lo reemplaza por completo
+% si se quieren parámetros distintos.
+\makeatletter
+\@ifpackageloaded{eso-pic}{}{\usepackage{eso-pic}}%
+\ESO@gridtrue
+\ESO@gridBGtrue
+\ESO@texcoordtrue
+\def\ESO@gridcolor{teal!50}%
+\def\ESO@subgridcolor{teal!30}%
+\g@addto@macro\ESO@HookIIIBG{\ESO@gridpicture}%
+\makeatother
