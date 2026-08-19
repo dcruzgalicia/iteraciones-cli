@@ -1,12 +1,13 @@
 //! Validador PDF/X-1a para iteraciones-cli.
 //!
 //! Binario auxiliar invocado por la CLI (Bun) para certificar que los PDF
-//! generados con el preamble filter 99-pdfx cumplen PDF/X-1a (ISO 15930-1 /
-//! ISO 15930-4). Contrato con la CLI:
+//! generados con el preamble filter 99-pdfx cumplen **estrictamente**
+//! PDF/X-1a:2001 (ISO 15930-1). Contrato con la CLI:
 //!
-//! - `iteraciones-pdfcheck <archivo.pdf>`: valida el PDF contra los niveles
-//!   X-1a (2001 y 2003) y acepta si cualquiera pasa; imprime un informe JSON
-//!   en stdout y devuelve exit 0 (válido), 2 (no conforme) o 1 (error).
+//! - `iteraciones-pdfcheck <archivo.pdf>`: valida el PDF contra PDF/X-1a:2001;
+//!   un PDF es válido SOLO si cumple todo lo requerido por 2001 (no hay
+//!   fallback a :2003). Imprime un informe JSON en stdout y devuelve exit 0
+//!   (válido), 2 (no conforme) o 1 (error).
 //! - `iteraciones-pdfcheck --version`: imprime la versión del binario.
 
 use std::env;
@@ -18,6 +19,11 @@ use pdf_oxide::PdfDocument;
 use serde::Serialize;
 
 const BIN_NAME: &str = "iteraciones-pdfcheck";
+
+/// Nivel que obliga el proyecto: estrictamente PDF/X-1a:2001. El paquete LaTeX
+/// `pdfx` puede declarar :2001 o :2003 según su versión, pero este validador
+/// certifica el estándar fijado por el proyecto: 2001 (issue #1964).
+const LEVEL: PdfXLevel = PdfXLevel::X1a2001;
 
 #[derive(Serialize)]
 struct Issue {
@@ -63,43 +69,25 @@ fn main() -> ExitCode {
     }
 }
 
-/// Valida contra ambos niveles PDF/X-1a: si cualquiera pasa, el PDF es válido
-/// (el paquete LaTeX `pdfx` puede declarar :2001 o :2003 según su versión).
-/// Si ninguno pasa, se reporta el informe del primer nivel evaluado (2001).
+/// Valida el PDF contra PDF/X-1a:2001 (único nivel). `valid` es true solo si
+/// la validación estricta de 2001 no reporta errores.
 fn validate(path: &str) -> Result<Report, String> {
     let mut doc =
         PdfDocument::open(Path::new(path)).map_err(|err| format!("no se pudo abrir el PDF: {err}"))?;
 
-    let mut first_failed: Option<Report> = None;
-    for level in [PdfXLevel::X1a2001, PdfXLevel::X1a2003] {
-        let result = PdfXValidator::new(level)
-            .stop_on_first_error(false)
-            .include_warnings(true)
-            .validate(&mut doc)
-            .map_err(|err| format!("error al validar PDF/X-1a: {err}"))?;
-        let report = to_report(path, level, &result);
-        if report.valid {
-            return Ok(report);
-        }
-        if first_failed.is_none() {
-            first_failed = Some(report);
-        }
-    }
-    // Ninguno de los dos niveles pasó: reportar el primero evaluado.
-    Ok(first_failed.unwrap_or_else(|| Report {
-        file: path.to_string(),
-        valid: false,
-        level: "PDF/X-1a".to_string(),
-        errors: vec![],
-        warnings: vec![],
-    }))
+    let result = PdfXValidator::new(LEVEL)
+        .stop_on_first_error(false)
+        .include_warnings(true)
+        .validate(&mut doc)
+        .map_err(|err| format!("error al validar PDF/X-1a:2001: {err}"))?;
+    Ok(to_report(path, &result))
 }
 
-fn to_report(path: &str, level: PdfXLevel, result: &XValidationResult) -> Report {
+fn to_report(path: &str, result: &XValidationResult) -> Report {
     Report {
         file: path.to_string(),
         valid: !result.has_errors(),
-        level: level.gts_pdfx_version().to_string(),
+        level: LEVEL.gts_pdfx_version().to_string(),
         errors: result.errors.iter().map(to_issue).collect(),
         warnings: result.warnings.iter().map(to_issue).collect(),
     }

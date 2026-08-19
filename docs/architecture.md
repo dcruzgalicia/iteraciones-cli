@@ -219,7 +219,7 @@ La configuración PDF es mínima y deliberada: `generate` (activa la compilació
 
 ### Validación PDF/X-1a del PDF generado
 
-Cuando `99-pdfx` está **activo** (se eliminó de `disabled-preamble-filters`), el build valida en su **fase final** que los PDFs generados certifican PDF/X-1a (ISO 15930-1 / ISO 15930-4), usando el binario `iteraciones-pdfcheck` (crate Rust en `tools/pdfx-validator/` con pdf-oxide; las condiciones completas y el contrato JSON viven en `src/builder/pdfx-check.ts`):
+Cuando `99-pdfx` está **activo** (se eliminó de `disabled-preamble-filters`), el build valida en su **fase final** que los PDFs generados certifican **estrictamente PDF/X-1a:2001** (ISO 15930-1; sin fallback a :2003), usando el binario `iteraciones-pdfcheck` (crate Rust en `tools/pdfx-validator/` con pdf-oxide; las condiciones completas y el contrato JSON viven en `src/builder/pdfx-check.ts`):
 
 - **Cuándo**: solo si `99-pdfx` está activo **y** hay PDFs en la salida (`dist/files`). Un PDF normal no se valida contra X-1a (fallaría por diseño).
 - **Obtención del binario (en orden)**: directorio gestionado en la caché de usuario (`$XDG_CACHE_HOME/iteraciones/bin` o `~/.cache/iteraciones/bin`, a salvo de `clean`/`--full`) → PATH → compilar con `cargo build --release` (requiere Rust; fuente en el repo) → si no se obtiene, el build **no falla**: advierte que el PDF no se validó (instalar Rust con rustup o descargar el precompilado de GitHub Releases).
