@@ -7,6 +7,7 @@ import {
   checkBunVersion,
   checkLatexEngine,
   checkPandoc,
+  checkPdfCheck,
   checkPdfToPpm,
   checkReadPermissions,
   checkWritePermissions,
@@ -42,6 +43,9 @@ export async function collectChecks(cwd: string): Promise<CheckResult[]> {
   return [
     checkBunVersion(),
     pandoc,
+    // Binario opcional de certificación PDF/X-1a (warn): sin él el build sigue
+    // funcionando, solo se omite la validación de los PDF con 99-pdfx activo.
+    await checkPdfCheck(cwd),
     { label: 'iteraciones.config.yaml', ok: configResult.ok, detail: configResult.detail },
     read,
     write,

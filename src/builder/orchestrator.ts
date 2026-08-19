@@ -13,6 +13,7 @@ import { computeBuildMetadata, computeWorkSets } from './build-planner.js';
 import { cleanupCoverImages, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges } from './cleanup.js';
 import { buildDocsFromIndex, discover } from './discover.js';
 import { validateDisabledFilters } from './filter-resolver.js';
+import { runPdfxOutputValidation } from './pdfx-check.js';
 import { runDocumentPipeline } from './pipeline.js';
 import { validateDisabledPreambleFilters, validatePreambleDependencies } from './preamble-loader.js';
 import { validateConfigFilePaths } from './project-validator.js';
@@ -276,6 +277,9 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   if (!work.anyWork) {
     log('Ningún documento modificado — sin cambios');
     if (needsAssets) await runAssets();
+    // Validación PDF/X-1a (fase final): los PDFs ya presentes en la salida
+    // también certifican; se omite si 99-pdfx no está activo o no hay binario.
+    await runPdfxOutputValidation(cwd, ctx.outputDir, siteConfig, { allowBuild: true });
     const formats = computeActiveFormats(ctx.siteConfig.format);
     await progress.finish(0, allDocs.length, formats, ctx.outputDir, invalidations);
     return { processed: 0, cached: allDocs.length, formats, outputDir: ctx.outputDir, invalidations };
@@ -295,6 +299,8 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   ) {
     log('Ningún documento modificado — sin cambios');
     if (needsAssets) await runAssets();
+    // Validación PDF/X-1a (fase final): mismo criterio que el camino principal.
+    await runPdfxOutputValidation(cwd, ctx.outputDir, siteConfig, { allowBuild: true });
     const formats = computeActiveFormats(ctx.siteConfig.format);
     await progress.finish(0, allDocs.length, formats, ctx.outputDir, invalidations);
     return { processed: 0, cached: allDocs.length, formats, outputDir: ctx.outputDir, invalidations };
@@ -326,6 +332,11 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   if (needsAssets) {
     await runAssets();
   }
+
+  // ── Validación PDF/X-1a (fase final): solo con 99-pdfx activo y PDFs en la
+  // salida; el binario se resuelve (directorio gestionado → PATH → cargo) y, si
+  // no se obtiene, se advierte sin romper el build (herramienta opcional). ──
+  await runPdfxOutputValidation(cwd, ctx.outputDir, siteConfig, { allowBuild: true });
 
   const totalDocs =
     plan.activeFormats.html || plan.activeFormats.pdf || plan.activeFormats.epub || plan.activeFormats.markdown || plan.activeFormats.latex

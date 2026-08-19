@@ -290,6 +290,8 @@ disabled-filters:
 
 Lista de preamble filters a desactivar. Los defaults del paquete desactivan `97-eso-pic` (fondo de página), `98-crop` (marcas de corte) y `99-pdfx` (PDF/X-1a), la cola de imprenta — son siempre los últimos preámbulos, en ese orden; agrega nombres a la lista para desactivar más, o elimínalos para activarlos.
 
+> **Validación PDF/X-1a.** Si activas `99-pdfx` (eliminándolo de la lista), el build valida en su fase final que los PDFs certifican PDF/X-1a con el binario `iteraciones-pdfcheck` (se compila con cargo si hace falta; `doctor` lo verifica como check opcional). Sin el binario, el build **no falla**: solo advierte que el PDF no se validó. Ver `docs/architecture.md` → Validación PDF/X-1a del PDF generado.
+
 ```yaml
 format:
   pdf:

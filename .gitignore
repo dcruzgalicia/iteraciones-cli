@@ -4,5 +4,7 @@ dist/
 *.js.map
 AGENTS.md
 .DS_Store
+# Artefactos de compilación del binario Rust (tools/pdfx-validator).
+tools/pdfx-validator/target/
 # Borradores locales de bodies de issues/PRs (nunca se versionan).
 .gh-issue-bodies/

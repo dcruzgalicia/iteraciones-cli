@@ -1,5 +1,6 @@
 import { access, constants, mkdir, stat, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { resolvePdfCheckBinary } from '../../builder/pdfx-check.js';
 import { checkPandoc as pandocVersion } from '../../lib/pandoc-runner.js';
 import { run } from '../../lib/run.js';
 
@@ -142,6 +143,37 @@ export async function checkPdfToPpm(): Promise<CheckResult> {
       label: 'pdftoppm disponible',
       ok: false,
       detail: 'pdftoppm no encontrado en PATH. Instala poppler (por ejemplo: brew install poppler)',
+      warn: true,
+    };
+  }
+}
+
+/**
+ * Verifica que el binario de validación PDF/X-1a (iteraciones-pdfcheck) esté
+ * disponible: en el directorio gestionado del proyecto o en PATH. Check
+ * opcional (warn): sin él el build genera los PDFs normalmente, solo omite la
+ * certificación PDF/X-1a (y la CLI lo intenta compilar con cargo si existe).
+ */
+export async function checkPdfCheck(cwd: string): Promise<CheckResult> {
+  const binary = await resolvePdfCheckBinary(cwd);
+  if (!binary) {
+    return {
+      label: 'iteraciones-pdfcheck disponible',
+      ok: false,
+      detail:
+        'no encontrado — la validación PDF/X-1a se omite. Instala Rust con rustup: https://doc.rust-lang.org/book/ch01-01-installation.html (el build lo compila) o descarga el precompilado de GitHub Releases',
+      warn: true,
+    };
+  }
+  try {
+    const result = await run(binary, ['--version']);
+    const version = result.stdout.trim();
+    return { label: 'iteraciones-pdfcheck disponible', ok: true, detail: version, warn: true };
+  } catch {
+    return {
+      label: 'iteraciones-pdfcheck disponible',
+      ok: false,
+      detail: 'el binario no responde; elimínalo de .iteraciones/bin para que el build lo reconstruya',
       warn: true,
     };
   }
