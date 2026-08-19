@@ -11,7 +11,8 @@ import { run } from '../lib/run.js';
  * Validación PDF/X-1a de los PDF generados (fase final del build).
  *
  * El binario `iteraciones-pdfcheck` (crate en tools/pdfx-validator, pdf-oxide)
- * certifica un PDF contra PDF/X-1a:2001 y :2003 y emite un informe JSON. La
+ * certifica un PDF contra PDF/X-1a:2001 (estricto, único nivel) y emite un
+ * informe JSON. La
  * validación es opcional: se corre solo cuando el preamble filter 99-pdfx está
  * activo y, si el binario no existe, se intenta compilar con cargo; si no se
  * obtiene, se advierte sin romper el build (mismo patrón que las herramientas
