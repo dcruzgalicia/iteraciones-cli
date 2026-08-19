@@ -279,7 +279,8 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
     if (needsAssets) await runAssets();
     // Validación PDF/X-1a (fase final): los PDFs ya presentes en la salida
     // también certifican; se omite si 99-pdfx no está activo o no hay binario.
-    await runPdfxOutputValidation(cwd, ctx.outputDir, siteConfig, { allowBuild: true });
+    const pdfx = await runPdfxOutputValidation(ctx.outputDir, siteConfig, { allowBuild: true });
+    if (pdfx.summaryLine) progress.addSummaryLine(pdfx.summaryLine);
     const formats = computeActiveFormats(ctx.siteConfig.format);
     await progress.finish(0, allDocs.length, formats, ctx.outputDir, invalidations);
     return { processed: 0, cached: allDocs.length, formats, outputDir: ctx.outputDir, invalidations };
@@ -300,7 +301,8 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
     log('Ningún documento modificado — sin cambios');
     if (needsAssets) await runAssets();
     // Validación PDF/X-1a (fase final): mismo criterio que el camino principal.
-    await runPdfxOutputValidation(cwd, ctx.outputDir, siteConfig, { allowBuild: true });
+    const pdfx = await runPdfxOutputValidation(ctx.outputDir, siteConfig, { allowBuild: true });
+    if (pdfx.summaryLine) progress.addSummaryLine(pdfx.summaryLine);
     const formats = computeActiveFormats(ctx.siteConfig.format);
     await progress.finish(0, allDocs.length, formats, ctx.outputDir, invalidations);
     return { processed: 0, cached: allDocs.length, formats, outputDir: ctx.outputDir, invalidations };
@@ -336,7 +338,8 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   // ── Validación PDF/X-1a (fase final): solo con 99-pdfx activo y PDFs en la
   // salida; el binario se resuelve (directorio gestionado → PATH → cargo) y, si
   // no se obtiene, se advierte sin romper el build (herramienta opcional). ──
-  await runPdfxOutputValidation(cwd, ctx.outputDir, siteConfig, { allowBuild: true });
+  const pdfx = await runPdfxOutputValidation(ctx.outputDir, siteConfig, { allowBuild: true });
+  if (pdfx.summaryLine) progress.addSummaryLine(pdfx.summaryLine);
 
   const totalDocs =
     plan.activeFormats.html || plan.activeFormats.pdf || plan.activeFormats.epub || plan.activeFormats.markdown || plan.activeFormats.latex

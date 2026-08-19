@@ -68,6 +68,15 @@ export class ProgressTracker {
     this.state.addWarning(message);
   }
 
+  /**
+   * Acumula una línea de confirmación para el resumen final (modo no verbose),
+   * p. ej. "✔ Validación PDF/X-1a: …". Se imprime tras la tabla del resumen,
+   * antes de las advertencias.
+   */
+  addSummaryLine(line: string): void {
+    this.state.addSummaryLine(line);
+  }
+
   /** Mensajes informativos del orquestador (visibles en --verbose). */
   log(msg: string): void {
     if (this.verbose) this.stream.write(`[info] ${msg}\n`);
@@ -201,6 +210,11 @@ export class ProgressTracker {
       // (vacío) y las comillas protegen rutas con espacios.
       const command = process.platform === 'win32' ? `start "" "${target}"` : `${opener} "${target}"`;
       this.stream.write(`  ${padRight('Abre el resultado', LABEL_WIDTH)}${command}\n`);
+    }
+    // Líneas de confirmación del resumen (p. ej. validación PDF/X-1a), tras la
+    // tabla y antes de las advertencias: éxito explícito cuando corresponde.
+    for (const line of this.state.summaryLines) {
+      this.stream.write(`${line}\n`);
     }
     if (this.state.warnings.length > 0) {
       // Cierre explícito con el conteo y el siguiente paso: sin él, el build
