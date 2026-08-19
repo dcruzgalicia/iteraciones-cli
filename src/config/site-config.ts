@@ -102,7 +102,7 @@ export const DEFAULT_PDF_FORMAT = {
   generate: false,
   showDate: false,
   pageNumber: 'header-right' as const,
-  disabledPreambleFilters: ['24-eso-pic', '25-pdfx', '26-crop'],
+  disabledPreambleFilters: ['97-eso-pic', '98-crop', '99-pdfx'],
   coverImage: false,
 } satisfies PdfFormatConfig;
 

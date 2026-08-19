@@ -23,6 +23,19 @@ describe('preamble-loader', () => {
     expect(infos.every((i) => i.description.length > 0)).toBe(true);
   });
 
+  it('la cola de imprenta (97-eso-pic, 98-crop, 99-pdfx) es siempre la última en el orden derivado', () => {
+    const names = getBuiltinPreambleFilterNames();
+    // La cola de imprenta (fondo, marcas de corte, PDF/X-1a) ocupa
+    // deliberadamente los últimos tres preámbulos, en ese orden: ningún filter
+    // futuro puede quedar después (issue #1952).
+    expect(names.slice(-3)).toEqual(['97-eso-pic', '98-crop', '99-pdfx']);
+    const maxNumeric = names.reduce((max, n) => {
+      const m = n.match(/^(\d+)-/);
+      return m ? Math.max(max, Number(m[1])) : max;
+    }, 0);
+    expect(maxNumeric).toBe(99);
+  });
+
   it('carga el contenido .tex del paquete para todos los filters', async () => {
     const filters = await loadPreambleFilters();
     expect(filters).toHaveLength(getBuiltinPreambleFilterNames().length);
@@ -134,14 +147,14 @@ describe('validatePreambleDependencies (dependencias entre filters)', () => {
     expect(issues.some((i) => i.severity === 'error')).toBe(false);
   });
 
-  it('25-pdfx con 08-hyperref activo es un warning (enlaces desactivados por PDF/X-1a)', () => {
-    const issues = validatePreambleDependencies(['24-eso-pic', '26-crop']); // 25 activo
-    expect(issues.some((i) => i.severity === 'warning' && i.message.includes('25-pdfx'))).toBe(true);
+  it('99-pdfx con 08-hyperref activo es un warning (enlaces desactivados por PDF/X-1a)', () => {
+    const issues = validatePreambleDependencies(['97-eso-pic', '98-crop']); // 99 activo
+    expect(issues.some((i) => i.severity === 'warning' && i.message.includes('99-pdfx'))).toBe(true);
   });
 
-  it('con 25-pdfx desactivado no hay warning de enlaces', () => {
+  it('con 99-pdfx desactivado no hay warning de enlaces', () => {
     const issues = validatePreambleDependencies(undefined);
-    expect(issues.some((i) => i.message.includes('25-pdfx'))).toBe(false);
+    expect(issues.some((i) => i.message.includes('99-pdfx'))).toBe(false);
   });
 });
 
@@ -481,9 +494,9 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(tables).toContain('\\newcounter{none}');
   });
 
-  it('26-crop: solo marcas de corte (noinfo, sin el texto de información)', async () => {
+  it('98-crop: solo marcas de corte (noinfo, sin el texto de información)', async () => {
     const filters = await loadPreambleFilters();
-    const crop = filters.find((f) => f.name === '26-crop')?.content ?? '';
+    const crop = filters.find((f) => f.name === '98-crop')?.content ?? '';
     expect(crop).toContain('\\usepackage[width=230truemm,height=294truemm,center,cam,noinfo]{crop}');
   });
 
@@ -493,9 +506,9 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(margins).toContain('headheight=\\baselineskip,headsep=3.25pt,footskip=10.25pt');
   });
 
-  it('24-eso-pic: gridunit en mm', async () => {
+  it('97-eso-pic: gridunit en mm', async () => {
     const filters = await loadPreambleFilters();
-    const esopic = filters.find((f) => f.name === '24-eso-pic')?.content ?? '';
+    const esopic = filters.find((f) => f.name === '97-eso-pic')?.content ?? '';
     expect(esopic).toContain('gridunit=mm');
   });
 
@@ -517,7 +530,7 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(endpapers).toContain('\\ifnum\\value{page}=1');
     expect(endpapers).toContain('\\iftitlepageguards');
     // Cover centrado: el centro de la imagen en el centro de la hoja
-    // (el y del put depende del grid de 24-eso-pic, que desplaza el origen)
+    // (el y del put depende del grid de 97-eso-pic, que desplaza el origen)
     expect(endpapers).toContain('\\put(.5\\paperwidth,\\ifx\\ESO@HookIIIBG\\@empty');
     expect(endpapers).toContain('\\vbox to 0pt{%');
     expect(endpapers).toContain('\\hss');

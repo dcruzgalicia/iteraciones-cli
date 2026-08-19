@@ -5,7 +5,7 @@
 % Modo COVER recortado: la imagen cubre la hoja sin espacios en blanco ni
 % deformación, y se RECORTA (viewport + clip de graphicx) para que el visible
 % sea exactamente papel + 3mm por lado (6mm por dimensión): nada de la
-% imagen se ve más allá, incluso con 26-crop (el stock más grande de las
+% imagen se ve más allá, incluso con 98-crop (el stock más grande de las
 % marcas de corte no revela sobrante). La escala cover y la ventana central
 % (en unidades naturales de la imagen) se calculan con l3fp en \setendpapers,
 % a partir del \sbox (a tamaño natural: \wd = ancho, \ht = alto) y de
@@ -13,7 +13,7 @@
 % override del proyecto): no se hardcodea.
 %
 % El centro de la imagen se alinea con el centro de la hoja: el \put en
-% (.5\paperwidth, ±.5\paperheight) — el signo depende del grid de 24-eso-pic
+% (.5\paperwidth, ±.5\paperheight) — el signo depende del grid de 97-eso-pic
 % (desplaza el origen del \put al borde superior); la caja 0×0 con
 % \hss/\vss centra la imagen sobre ese punto.
 % Los comandos no pueden llamarse \endpapers: LaTeX prohíbe nombres que

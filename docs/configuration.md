@@ -128,7 +128,7 @@ EOF
 Consideraciones:
 - El prefijo numérico del nombre (`04-`) define el orden dentro del preámbulo: úsalo igual que en el paquete.
 - El override reemplaza el archivo **completo**: incluye todo lo que necesites (no hay herencia parcial).
-- Algunos filters tienen dependencias entre sí (`16-toc-styling` requiere `05-language`; `25-pdfx` desactiva los enlaces por especificación PDF/X-1a). `validate` las comprueba y avisa; no las rompas sin revisarlas.
+- Algunos filters tienen dependencias entre sí (`16-toc-styling` requiere `05-language`; `99-pdfx` desactiva los enlaces por especificación PDF/X-1a). `validate` las comprueba y avisa; no las rompas sin revisarlas.
 - Decisión de diseño (pre-1.0): **no** existe configuración dinámica para papel/márgenes/fuente en `iteraciones.config.yaml` — el mecanismo de override por `.tex` es la vía soportada (ver docs/architecture.md, Decisiones de diseño).
 
 Los campos de configuración que sí son dinámicos (viajan desde `iteraciones.config.yaml`) son:
@@ -286,9 +286,9 @@ disabled-filters:
 ### `format.pdf.disabled-preamble-filters`
 
 **Tipo:** `string[]`
-**Por defecto:** `['24-eso-pic', '25-pdfx', '26-crop']`
+**Por defecto:** `['97-eso-pic', '98-crop', '99-pdfx']`
 
-Lista de preamble filters a desactivar. Los defaults del paquete desactivan `24-eso-pic` (fondo de página), `25-pdfx` (PDF/X-1a) y `26-crop` (marcas de corte), pensados para impresión profesional; agrega nombres a la lista para desactivar más, o elimínalos para activarlos.
+Lista de preamble filters a desactivar. Los defaults del paquete desactivan `97-eso-pic` (fondo de página), `98-crop` (marcas de corte) y `99-pdfx` (PDF/X-1a), la cola de imprenta — son siempre los últimos preámbulos, en ese orden; agrega nombres a la lista para desactivar más, o elimínalos para activarlos.
 
 ```yaml
 format:

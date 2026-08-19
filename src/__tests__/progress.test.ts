@@ -399,7 +399,7 @@ describe('ProgressTracker', () => {
       tracker.startPhase('discovery', 1);
       tracker.completePhase(1);
       await tracker.planPhases(['discovery']);
-      tracker.addWarning('⚠ [config] 25-pdfx desactiva los enlaces del PDF');
+      tracker.addWarning('⚠ [config] 99-pdfx desactiva los enlaces del PDF');
       tracker.addWarning('⚠ [build] No se encontraron documentos Markdown en el proyecto.');
       tracker.addWarning("⚠ [build] Crea un archivo .md con frontmatter o ejecuta 'iteraciones init'.");
       await tracker.finish(0, 0, []);
