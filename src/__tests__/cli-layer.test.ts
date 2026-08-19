@@ -1941,7 +1941,9 @@ describe('runValidate', () => {
         output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
         stderrSpy.mockRestore();
       }
-      expect(output).toContain('campos de frontmatter ignorados por el pipeline: abstract, keywords');
+      // keywords ahora es consumido por el pipeline (XMP/Info, issue #1970):
+      // ya no se lista como ignorado; abstract sí.
+      expect(output).toContain('campos de frontmatter ignorados por el pipeline: abstract');
       expect(output).toContain('extra.md');
       expect(process.exitCode).toBe(0);
     });

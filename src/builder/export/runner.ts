@@ -191,12 +191,16 @@ export async function convertToPdf(
   }
 
   // Éxito: eliminar los auxiliares de latexmk (el .log solo se referencia en
-  // errores) y el parche XMP (pdfx.xmpi) ya embebido en el PDF. Sin esto, el
-  // área de trabajo acumula basura indefinidamente.
+  // errores), el parche XMP (pdfx.xmpi) ya embebido, el pdfx.xmp de entrada y el
+  // .xmpdata que escribe el bloque filecontents del .tex (issue #1970). Sin esto,
+  // el área de trabajo acumula basura indefinidamente.
   await Promise.all(
-    [...LATEXMK_AUX_EXTENSIONS.map((ext) => join(pdfDir, `${slug}${ext}`)), join(pdfDir, 'pdfx.xmp'), join(pdfDir, 'pdfx.xmpi')].map((p) =>
-      rm(p, { force: true }).catch(() => {}),
-    ),
+    [
+      ...LATEXMK_AUX_EXTENSIONS.map((ext) => join(pdfDir, `${slug}${ext}`)),
+      join(pdfDir, 'pdfx.xmp'),
+      join(pdfDir, 'pdfx.xmpi'),
+      join(pdfDir, `${slug}.xmpdata`),
+    ].map((p) => rm(p, { force: true }).catch(() => {})),
   );
 
   // El .pdf final se publica en dist/ (el área de trabajo es efímera).

@@ -21,6 +21,8 @@ import { loadPreambleFilters } from './preamble-loader.js';
 import { htmlPageFromMarkdown } from './render.js';
 import { resolveBibOptions } from './state.js';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
+import type { PdfXmpMetadata } from './xmpdata.js';
+import { injectXmpMetadataIntoLatex } from './xmpdata.js';
 
 /**
  * Límite de compilaciones latexmk simultáneas del pool PDF: cada instancia
@@ -105,9 +107,13 @@ export async function runDocumentPipeline(
   // flags.lua consulta antes de inyectar \\printbibliography (desactivar
   // 11-bibliography sin guarda produciría un comando indefinido).
   let biblatexAvailable = true;
+  // 99-pdfx activo: señal de "quiero certificar PDF/X"; activa la inyección de
+  // los metadatos XMP/Info en el .tex (issue #1970).
+  let pdfxActive = false;
   if (plan.generateLatex) {
     const preambleFilters = await loadPreambleFilters(siteConfig.format?.pdf?.disabledPreambleFilters, ctx.cwd);
     biblatexAvailable = preambleFilters.some((f) => f.name === '11-bibliography');
+    pdfxActive = preambleFilters.some((f) => f.name === '99-pdfx');
     await writeIfChanged(
       latexTemplatePath,
       await composeLatexTemplate({
@@ -144,7 +150,7 @@ export async function runDocumentPipeline(
   const filters = await loadFilterGroups(siteConfig, siteConfig.disabledFilters, ctx.cwd);
 
   progress.startLightFormats();
-  const renderCtx = { ctx, plan, formatCfg, lang, logoInline, warnedLangs: new Set<string>() };
+  const renderCtx = { ctx, plan, formatCfg, lang, logoInline, warnedLangs: new Set<string>(), pdfxActive };
   const exportCtx = {
     filters,
     bibOptions,
@@ -207,6 +213,8 @@ interface RenderContext {
   logoInline: string | undefined;
   /** Registro de langs advertidos (babelOptionsForLang): una vez por build. */
   warnedLangs: Set<string>;
+  /** 99-pdfx activo: el .tex se inyecta con los metadatos XMP/Info (issue #1970). */
+  pdfxActive: boolean;
 }
 
 /**
@@ -236,6 +244,39 @@ interface FormatWorkSets {
   pdfJobs: PdfJob[];
 }
 
+/**
+ * Normaliza un campo del frontmatter crudo aceptando un string o una lista de
+ * strings (como author); devuelve undefined si no hay valores útiles.
+ */
+function frontmatterStringList(value: unknown): string[] | undefined {
+  if (typeof value === 'string') return value.trim() ? [value] : undefined;
+  if (Array.isArray(value)) {
+    const items = value
+      .filter((v): v is string => typeof v === 'string')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    return items.length > 0 ? items : undefined;
+  }
+  return undefined;
+}
+
+/**
+ * Metadatos XMP/Info del documento desde el frontmatter crudo y el lang efectivo
+ * (el que usa el pipeline para el PDF, no el lang del frontmatter). Solo los
+ * campos presentes se emiten en el .tex (issue #1970).
+ */
+function xmpMetadataFor(fm: Record<string, unknown>, lang: string): PdfXmpMetadata {
+  return {
+    title: typeof fm.title === 'string' && fm.title.trim() ? fm.title : undefined,
+    authors: frontmatterStringList(fm.author),
+    lang,
+    dateIso: typeof fm.date === 'string' && fm.date.trim() ? fm.date : undefined,
+    subject: frontmatterStringList(fm.subject)?.join(', '),
+    publishers: frontmatterStringList(fm.publishers),
+    keywords: frontmatterStringList(fm.keywords),
+  };
+}
+
 /** Procesa todos los formatos de un documento: markdown → tex/HTML/EPUB/MD → cola PDF. */
 async function processDocumentFormats(
   doc: BuildDocument,
@@ -244,7 +285,7 @@ async function processDocumentFormats(
   formatWorkSets: FormatWorkSets,
   discoveryIndex: Map<string, DiscoveryEntry>,
 ): Promise<void> {
-  const { ctx, plan, formatCfg, lang, logoInline, warnedLangs } = renderCtx;
+  const { ctx, plan, formatCfg, lang, logoInline, warnedLangs, pdfxActive } = renderCtx;
   const { filters, bibOptions, bibFiles, biblatexAvailable, globalBibliography, pdfWorkDir, htmlTemplatePath, latexTemplatePath, refsCardTemplate } =
     exportCtx;
   const { htmlPaths, epubPaths, mdPaths, latexPaths, pdfJobs } = formatWorkSets;
@@ -297,12 +338,15 @@ async function processDocumentFormats(
   // escrito directamente en dist/ (o en el área de trabajo del PDF si solo pdfOn)
   if (needsLatex) {
     const fullTex = await markdownToLatex(content, doc, filters, bibFiles, latexTemplatePath, fm, ctx.siteConfig, biblatexAvailable, warnedLangs);
+    // Con 99-pdfx activo se inyectan los metadatos XMP e Info en el .tex
+    // (filecontents + \pdfinfo): el tex de dist/ queda autocontenido (issue #1970).
+    const texWithXmp = pdfxActive ? injectXmpMetadataIntoLatex(fullTex, xmpMetadataFor(fm, lang)) : fullTex;
     if (latexOn) {
-      await writeOutput(texDistPath, fullTex);
+      await writeOutput(texDistPath, texWithXmp);
     }
     if (pdfOn) {
       const texPath = latexOn ? texDistPath : join(pdfWorkDir, dir, `${outSlug}.tex`);
-      if (!latexOn) await writeOutput(texPath, fullTex);
+      if (!latexOn) await writeOutput(texPath, texWithXmp);
       pdfJobs.push({ dir, slug: outSlug, relativePath: doc.relativePath, texPath, pdfDest: outBase(`${outSlug}.pdf`) });
     }
   }
