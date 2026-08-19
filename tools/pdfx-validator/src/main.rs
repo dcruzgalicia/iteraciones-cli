@@ -61,6 +61,26 @@ fn main() -> ExitCode {
     }
     match validate(&args[1]) {
         Ok(report) => {
+            // Resumen legible en stderr (el JSON de stdout es el contrato con la
+            // CLI): muestra TODOS los fallos y advertencias, no solo el primero
+            // (issue #1971). Al usarlo a mano, la salida es completa y accionable.
+            if report.valid {
+                eprintln!("{}: OK PDF/X-1a:2001", report.file);
+            } else {
+                let n = report.errors.len();
+                eprintln!(
+                    "{}: no cumple PDF/X-1a:2001 ({} {})",
+                    report.file,
+                    n,
+                    if n == 1 { "fallo" } else { "fallos" }
+                );
+            }
+            for e in &report.errors {
+                eprintln!("  [{}] {}{}", e.code, e.message, page_suffix(e.page));
+            }
+            for w in &report.warnings {
+                eprintln!("  [{}] (advertencia) {}{}", w.code, w.message, page_suffix(w.page));
+            }
             println!("{}", serde_json::to_string_pretty(&report).unwrap_or_default());
             if report.valid {
                 ExitCode::SUCCESS
@@ -72,6 +92,14 @@ fn main() -> ExitCode {
             eprintln!("{BIN_NAME}: {err}");
             ExitCode::FAILURE
         }
+    }
+}
+
+/// Sufijo legible de página para el resumen de stderr (la página es 0-based).
+fn page_suffix(page: Option<usize>) -> String {
+    match page {
+        Some(p) => format!(" — página {}", p + 1),
+        None => String::new(),
     }
 }
 
