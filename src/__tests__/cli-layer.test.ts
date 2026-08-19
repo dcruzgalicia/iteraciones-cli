@@ -895,6 +895,38 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
+  it('el warning de documento sin título se emite en build y validate (mismo contrato)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'sin-titulo.md'), '---\ndate: 2026-01-01\n---\n\nContenido.\n', 'utf8');
+      // build: warning en el resumen (stdout) sin romper
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let buildOutput = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir);
+      } finally {
+        buildOutput = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      expect(buildOutput).toContain('sin-titulo.md: no tiene título en el frontmatter; se usará "Sin título"');
+
+      // validate: mismo warning (mismo texto), exit 0
+      const vSpy = spyStderr();
+      let validateOutput = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        validateOutput = vSpy.mock.calls.map((c) => String(c[0])).join('');
+        vSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      expect(validateOutput).toContain('sin-titulo.md: no tiene título en el frontmatter; se usará "Sin título"');
+    });
+  });
+
   it('title-image: ruta absoluta en el tex con el guion bajo sin escapar', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
@@ -1664,6 +1696,28 @@ describe('runValidate', () => {
       expect(output).toContain('no tiene contenido después del frontmatter; se omite');
       expect(output).toContain('hueco.md');
       expect(output).toContain('documento vacío; se omite');
+    });
+  });
+
+  it('advierte cuando un documento no tiene título en el frontmatter (sin frontmatter, sin clave o title vacío) — exit 0', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'sin-fm.md'), 'Solo contenido, sin frontmatter.\n', 'utf8');
+      await writeFile(join(dir, 'sin-clave.md'), '---\ndate: 2026-01-01\n---\n\nContenido.\n', 'utf8');
+      await writeFile(join(dir, 'titulo-vacio.md'), '---\ntitle: ""\n---\n\nContenido.\n', 'utf8');
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      for (const file of ['sin-fm.md', 'sin-clave.md', 'titulo-vacio.md']) {
+        expect(output).toContain(`${file}: no tiene título en el frontmatter; se usará "Sin título"`);
+      }
     });
   });
 

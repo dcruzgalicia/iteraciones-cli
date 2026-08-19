@@ -7,7 +7,7 @@ import { logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import { listMarkdownDocuments } from './gitignore.js';
-import { looseColonLines, looseColonsMessage, validateFrontmatterFields } from './project-validator.js';
+import { looseColonLines, looseColonsMessage, MISSING_TITLE_WARNING, validateFrontmatterFields } from './project-validator.js';
 import { resolveSlugs } from './slug-resolver.js';
 import { type BibFileCache, type BuildState, type FilterFileCache, hashString, loadStateFile, saveStateFile } from './state.js';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
@@ -221,7 +221,9 @@ export async function discover(
       }
 
       if (!title && (rawTitle === undefined || rawTitle === '')) {
-        logWarning(`"${relativePath}" no tiene título en el frontmatter; se usará "Sin título"`, 'discover');
+        // Documento sin título: warning compartido con validate (el pipeline
+        // usa "Sin título" como fallback en todos los formatos).
+        logWarning(`${relativePath}: ${MISSING_TITLE_WARNING.message}`, 'discover');
       }
 
       // Store base data (slug resolution happens later, after all files are processed)
