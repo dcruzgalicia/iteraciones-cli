@@ -117,7 +117,7 @@ export type PreambleDependencyIssue = { severity: 'error' | 'warning'; message: 
  * Valida las dependencias entre preamble filters para una disabled list:
  * - 16-toc-styling usa \\renewcaptionname (definido por babel): desactivar
  *   05-language lo rompe con un error TeX oscuro → error bloqueante.
- * - 25-pdfx con 08-hyperref activo: pdfx desactiva los enlaces por
+ * - 99-pdfx con 08-hyperref activo: pdfx desactiva los enlaces por
  *   especificación PDF/X-1a (draft mode) → warning informativo.
  * La lista vacía/undefined no produce issues (todos los filters activos).
  */
@@ -132,10 +132,10 @@ export function validatePreambleDependencies(disabled: string[] | undefined): Pr
         '16-toc-styling usa \\renewcaptionname (definido por babel): desactivar 05-language rompe el índice del PDF. Desactiva también 16-toc-styling.',
     });
   }
-  if (!disabledSet.has('25-pdfx') && !disabledSet.has('08-hyperref')) {
+  if (!disabledSet.has('99-pdfx') && !disabledSet.has('08-hyperref')) {
     issues.push({
       severity: 'warning',
-      message: '25-pdfx desactiva los enlaces del PDF por especificación PDF/X-1a (draft mode): si los necesitas, desactiva 25-pdfx.',
+      message: '99-pdfx desactiva los enlaces del PDF por especificación PDF/X-1a (draft mode): si los necesitas, desactiva 99-pdfx.',
     });
   }
   return issues;

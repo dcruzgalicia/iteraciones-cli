@@ -20,7 +20,7 @@ describe('loadSiteConfig', () => {
       expect(config.lang).toBe('es-MX');
       expect(config.format.html?.logo).toBe('');
       expect(config.disabledFilters).toBeUndefined();
-      expect(config.format?.pdf?.disabledPreambleFilters).toEqual(['24-eso-pic', '25-pdfx', '26-crop']);
+      expect(config.format?.pdf?.disabledPreambleFilters).toEqual(['97-eso-pic', '98-crop', '99-pdfx']);
       expect(config.format.latex?.generate).toBe(false);
       expect(config.format.html?.generate).toBe(true);
       expect(config.format.pdf?.generate).toBe(false);
@@ -332,7 +332,7 @@ describe('loadSiteConfig', () => {
     await withTempDir(async (dir) => {
       await writeConfig(dir, 'lang: es-MX\nformat:\n  html:\n    title: ok');
       const config = await loadSiteConfig(dir);
-      expect(config.format?.pdf?.disabledPreambleFilters).toEqual(['24-eso-pic', '25-pdfx', '26-crop']);
+      expect(config.format?.pdf?.disabledPreambleFilters).toEqual(['97-eso-pic', '98-crop', '99-pdfx']);
     });
   });
 
@@ -438,12 +438,12 @@ describe('loadSiteConfig', () => {
 describe('loadSiteConfigWithPresence', () => {
   it('la clave escrita con valor idéntico al default se distingue de la ausente', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'format:\n  pdf:\n    disabled-preamble-filters:\n      - 24-eso-pic\n');
+      await writeConfig(dir, 'format:\n  pdf:\n    disabled-preamble-filters:\n      - 97-eso-pic\n');
       const { config, presentKeys } = await loadSiteConfigWithPresence(dir);
       // La clave aparece como presente aunque su valor coincida con un default
       // del paquete (el caso que la sustracción de doctor --info no distinguía).
       expect(presentKeys.has('format.pdf.disabled-preamble-filters')).toBe(true);
-      expect(config.format?.pdf?.disabledPreambleFilters).toEqual(['24-eso-pic']);
+      expect(config.format?.pdf?.disabledPreambleFilters).toEqual(['97-eso-pic']);
     });
   });
 
@@ -452,7 +452,7 @@ describe('loadSiteConfigWithPresence', () => {
       await writeConfig(dir, 'lang: es-MX');
       const { config, presentKeys } = await loadSiteConfigWithPresence(dir);
       expect(presentKeys.has('format.pdf.disabled-preamble-filters')).toBe(false);
-      expect(config.format?.pdf?.disabledPreambleFilters).toEqual(['24-eso-pic', '25-pdfx', '26-crop']);
+      expect(config.format?.pdf?.disabledPreambleFilters).toEqual(['97-eso-pic', '98-crop', '99-pdfx']);
     });
   });
 

@@ -1562,24 +1562,24 @@ describe('doctor --info (antes runInfo)', () => {
       expect(output).toContain('filters de preámbulo desactivados (config):');
       expect(output).toContain('19-maketitle');
       expect(output).toContain('filters de preámbulo desactivados (defaults del paquete):');
-      expect(output).toContain('24-eso-pic, 25-pdfx, 26-crop');
+      expect(output).toContain('97-eso-pic, 98-crop, 99-pdfx');
     });
   });
 
   it('clave escrita con valor idéntico al default aparece como config (sin sustracción)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
-      // 24-eso-pic es un default del paquete: la sustracción anterior lo
+      // 97-eso-pic es un default del paquete: la sustracción anterior lo
       // ocultaba de la línea de config; la presencia en el YAML lo hace visible.
       await writeFile(
         join(dir, 'iteraciones.config.yaml'),
-        'lang: es-MX\nformat:\n  pdf:\n    disabled-preamble-filters:\n      - 24-eso-pic\n',
+        'lang: es-MX\nformat:\n  pdf:\n    disabled-preamble-filters:\n      - 97-eso-pic\n',
         'utf8',
       );
       const output = await infoOutput(dir);
       const configLine = output.split('\n').find((l) => l.includes('filters de preámbulo desactivados (config):'));
       expect(configLine).toBeDefined();
-      expect(configLine).toContain('24-eso-pic');
+      expect(configLine).toContain('97-eso-pic');
       expect(configLine).not.toContain('(ninguno)');
     });
   });
@@ -1593,7 +1593,7 @@ describe('doctor --info (antes runInfo)', () => {
       const configLabel = 'filters de preámbulo desactivados (config):';
       const defaultsLabel = 'filters de preámbulo desactivados (defaults del paquete):';
       expect(output).toContain(`${configLabel.padEnd(defaultsLabel.length)} (ninguno)`);
-      expect(output).toContain('filters de preámbulo desactivados (defaults del paquete): 24-eso-pic, 25-pdfx, 26-crop');
+      expect(output).toContain('filters de preámbulo desactivados (defaults del paquete): 97-eso-pic, 98-crop, 99-pdfx');
     });
   });
 
@@ -2362,14 +2362,14 @@ describe('runBuild (smoke PDF real)', () => {
   );
 
   it.skipIf(!latexOk || !pandocOk)(
-    '25-pdfx activo produce un PDF/X-1a real con /TrimBox (regresión: \\pdfpagesattr{} lo vaciaba)',
+    '99-pdfx activo produce un PDF/X-1a real con /TrimBox (regresión: \\pdfpagesattr{} lo vaciaba)',
     async () => {
       await withTempDir(async (dir) => {
         await initTestProject(dir);
-        // 25-pdfx activo: se quita de la disabled list por defecto (24 y 26 siguen desactivados)
+        // 99-pdfx activo: se quita de la disabled list por defecto (97 y 98 siguen desactivados)
         await writeFile(
           join(dir, 'iteraciones.config.yaml'),
-          'lang: es-MX\nformat:\n  pdf:\n    generate: true\n    disabled-preamble-filters:\n      - 24-eso-pic\n      - 26-crop\n',
+          'lang: es-MX\nformat:\n  pdf:\n    generate: true\n    disabled-preamble-filters:\n      - 97-eso-pic\n      - 98-crop\n',
           'utf8',
         );
         process.exitCode = 0;

@@ -140,9 +140,11 @@ Además, existen los **preamble filters** (`src/lib/resources/preamble/*.tex`) q
 | 21-dictum | `src/lib/resources/preamble/21-dictum.tex` | Configuración de epígrafes |
 | 22-verse | `src/lib/resources/preamble/22-verse.tex` | Redefine el entorno verse |
 | 23-quote | `src/lib/resources/preamble/23-quote.tex` | Redefine el entorno quote |
-| 24-eso-pic | `src/lib/resources/preamble/24-eso-pic.tex` | Fondo de página (desactivado por defecto) |
-| 25-pdfx | `src/lib/resources/preamble/25-pdfx.tex` | PDF/X-1a (desactivado por defecto) |
-| 26-crop | `src/lib/resources/preamble/26-crop.tex` | Marcas de corte (desactivado por defecto) |
+| 97-eso-pic | `src/lib/resources/preamble/97-eso-pic.tex` | Fondo de página (desactivado por defecto) |
+| 98-crop | `src/lib/resources/preamble/98-crop.tex` | Marcas de corte (desactivado por defecto) |
+| 99-pdfx | `src/lib/resources/preamble/99-pdfx.tex` | PDF/X-1a (desactivado por defecto) |
+
+> **Cola de imprenta (siempre últimos).** `97-eso-pic`, `98-crop` y `99-pdfx` ocupan deliberadamente la cola de la numeración (97-99): son los últimos preámbulos en el orden derivado del filesystem y no puede existir ningún preamble filter con prefijo numérico mayor (ver `preamble-loader.ts` y su test).
 
 ### Extensibilidad
 
@@ -187,9 +189,9 @@ format:
     show-date: false
     page-number: header-right
     disabled-preamble-filters:
-      - 24-eso-pic
-      - 25-pdfx
-      - 26-crop
+      - 97-eso-pic
+      - 98-crop
+      - 99-pdfx
   html:
     title: "Mi sitio"
     tagline: "escribir, compartir, re-existir"
@@ -211,7 +213,7 @@ El esquema Zod (`config-schema.ts`) valida tipos, aplica defaults y transforma c
 
 ### PdfFormatConfig (campos reales)
 
-La configuración PDF es mínima y deliberada: `generate` (activa la compilación con latexmk), `show-date` (fecha en la portada), `page-number` (posición del número de página) y `disabled-preamble-filters` (lista negra de preamble filters, con `24-eso-pic`, `25-pdfx` y `26-crop` desactivados por defecto). Todo el diseño tipográfico (márgenes, fuentes, interlineado, secciones, epígrafes, portada) se gestiona con **preamble filters** `.tex` sobrescribibles por proyecto (`<proyecto>/preamble/<nombre>.tex`) y no es configuración YAML.
+La configuración PDF es mínima y deliberada: `generate` (activa la compilación con latexmk), `show-date` (fecha en la portada), `page-number` (posición del número de página) y `disabled-preamble-filters` (lista negra de preamble filters, con `97-eso-pic`, `98-crop` y `99-pdfx` desactivados por defecto; son siempre los últimos preámbulos, ver cola de imprenta). Todo el diseño tipográfico (márgenes, fuentes, interlineado, secciones, epígrafes, portada) se gestiona con **preamble filters** `.tex` sobrescribibles por proyecto (`<proyecto>/preamble/<nombre>.tex`) y no es configuración YAML.
 
 ## Módulos principales
 
@@ -384,7 +386,7 @@ Incorporaciones de la fase de estabilización registradas antes de congelar (iss
 Decisiones confirmadas en este pase (sin cambios de código):
 
 - La terminología `filters` / `preamble filters` / `lua-filters` se conserva tal cual (el comando que los lista es `list-filters`).
-- Los nombres numerados de preamble filters expuestos en config (`24-eso-pic`, …) se conservan: renumerarlos rompería configs existentes sin beneficio.
+- Los nombres numerados de preamble filters expuestos en config se conservan, con una **única excepción deliberada**: la cola de imprenta se renumeró a `97-eso-pic`, `98-crop` y `99-pdfx` (issue #1952) para garantizar que sean siempre los últimos preámbulos (ver cola de imprenta).
 - El comando `list-filters` se **mantiene** (decisión registrada en el issue #1896, 2026-08): es el único comando nominal/compuesto de la superficie, pero renombrarlo a `filters` es un cambio puramente cosmético que tocaría parser, docs, tests de integridad y la lista congelada de comandos sin beneficio funcional; la superficie está congelada pre-1.0 (#1542) y la ambigüedad queda cerrada con esta decisión.
 
 ### ¿Por qué un color de acento inválido es un error (no un warning)?
