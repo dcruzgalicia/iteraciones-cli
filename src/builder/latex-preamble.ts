@@ -16,6 +16,112 @@ import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 import type { PreambleFilter } from './preamble-loader.js';
 
+// ── Crop / PDF-X: cálculo dinámico de dimensiones ──────────────────────────
+
+/** Conversión mm → pt (estándar PDF: 1pt = 0.352778mm). */
+const MM_TO_PT = 2.834639;
+
+/** Tamaños de papel estándar en mm (ancho × alto). */
+const PAPER_SIZES: Record<string, { w: number; h: number }> = {
+  letter: { w: 215.9, h: 279.4 },
+  a4: { w: 210, h: 297 },
+  a5: { w: 148, h: 210 },
+  legal: { w: 215.9, h: 355.6 },
+  executive: { w: 184.1, h: 266.7 },
+  '11x17': { w: 279.4, h: 431.8 },
+};
+
+/**
+ * Detecta el tamaño de página (mm) a partir de los preamble filters.
+ * Orden de prioridad:
+ *   1. paperwidth / paperheight en geometry (04-margins)
+ *   2. paper= en documentclass (01-documentclass)
+ *   3. Fallback: letter
+ */
+export function detectPageSize(filters: PreambleFilter[]): { w: number; h: number } {
+  const margins = filters.find((f) => f.name === '04-margins')?.content ?? '';
+  const pwMatch = margins.match(/paperwidth\s*=\s*([\d.]+)\s*mm/);
+  const phMatch = margins.match(/paperheight\s*=\s*([\d.]+)\s*mm/);
+  const pw = pwMatch?.[1];
+  const ph = phMatch?.[1];
+  if (pw && ph) {
+    return { w: Number.parseFloat(pw), h: Number.parseFloat(ph) };
+  }
+
+  const docclass = filters.find((f) => f.name === '01-documentclass')?.content ?? '';
+  const paperMatch = docclass.match(/paper\s*=\s*(\w[\w-]*)/);
+  const paperKey = paperMatch?.[1];
+  if (paperKey) {
+    const size = PAPER_SIZES[paperKey.toLowerCase()];
+    if (size) return size;
+  }
+
+  return { w: 215.9, h: 279.4 };
+}
+
+/** Genera el contenido LaTeX del filter 98-crop para un tamaño dado. */
+export function buildCropContent(widthMm: number, heightMm: number): string {
+  const w = (widthMm + 6).toFixed(1);
+  const h = (heightMm + 6).toFixed(1);
+  return `% Marcas de corte con crop (desactivado por defecto). noinfo: solo las
+% líneas de corte, sin el texto de información ("jobname" — fecha — hora —
+% page N — #índice) que este paquete crop imprime por defecto en el área
+% de marcas.
+\\usepackage[width=${w}truemm,height=${h}truemm,center,cam,noinfo]{crop}`;
+}
+
+/** Genera el bloque \\pdfpagesattr del filter 99-pdfx para un tamaño dado. */
+export function buildPdfxPagesattr(widthMm: number, heightMm: number, cropActive: boolean): string {
+  const boxW = (cropActive ? widthMm + 6 : widthMm) * MM_TO_PT;
+  const boxH = (cropActive ? heightMm + 6 : heightMm) * MM_TO_PT;
+  const w = boxW.toFixed(7);
+  const h = boxH.toFixed(7);
+
+  if (!cropActive) {
+    return `\\pdfpagesattr{%
+  /MediaBox [0 0 ${w} ${h}]
+  /CropBox [0 0 ${w} ${h}]
+  /BleedBox [0 0 ${w} ${h}]
+  /TrimBox [0 0 ${w} ${h}]
+}`;
+  }
+
+  const off = (3 * MM_TO_PT).toFixed(6);
+  const trimMaxX = (boxW - 3 * MM_TO_PT).toFixed(6);
+  const trimMaxY = (boxH - 3 * MM_TO_PT).toFixed(6);
+  return `\\pdfpagesattr{%
+  /MediaBox [0 0 ${w} ${h}]
+  /CropBox [0 0 ${w} ${h}]
+  /BleedBox [0 0 ${w} ${h}]
+  /TrimBox [${off} ${off} ${trimMaxX} ${trimMaxY}]
+}`;
+}
+
+/**
+ * Aplica generación dinámica a los filters de la cola de imprenta (98-crop,
+ * 99-pdfx) según el tamaño de página detectado y qué filters están activos.
+ * Modifica el array in-place y retorna el mismo puntero para encadenamiento.
+ */
+export function applyPrintQueueDynamics(filters: PreambleFilter[]): PreambleFilter[] {
+  const cropActive = filters.some((f) => f.name === '98-crop');
+  const pdfxActive = filters.some((f) => f.name === '99-pdfx');
+  if (!cropActive && !pdfxActive) return filters;
+
+  const { w, h } = detectPageSize(filters);
+
+  for (const f of filters) {
+    if (f.name === '98-crop' && cropActive) {
+      f.content = buildCropContent(w, h);
+    } else if (f.name === '99-pdfx' && pdfxActive) {
+      const pkgLine = f.content.match(/^(\\usepackage\[.*?\]\{pdfx\})/m)?.[0] ?? '\\usepackage[x-1a1]{pdfx}';
+      const pagesattr = buildPdfxPagesattr(w, h, cropActive);
+      f.content = `${pkgLine}\n\n${pagesattr}`;
+    }
+  }
+
+  return filters;
+}
+
 /**
  * Opciones de babel por código BCP 47 (lang de configuración).
  * Las variantes de español conservan las opciones históricas del paquete

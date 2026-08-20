@@ -15,7 +15,7 @@ import { convertToEpub, convertToMarkdown } from './export/runner.js';
 import { loadFilterGroups } from './filter-resolver.js';
 import { composeHtmlTemplate, loadReferencesCardTemplate } from './html-composer.js';
 import { markdownToLatex } from './latex-composer.js';
-import { composeLatexTemplate } from './latex-preamble.js';
+import { applyPrintQueueDynamics, composeLatexTemplate } from './latex-preamble.js';
 import { createPdfConsumer, type PdfJob } from './pdf-pool.js';
 import { loadPreambleFilters } from './preamble-loader.js';
 import { htmlPageFromMarkdown } from './render.js';
@@ -114,6 +114,8 @@ export async function runDocumentPipeline(
     const preambleFilters = await loadPreambleFilters(siteConfig.format?.pdf?.disabledPreambleFilters, ctx.cwd);
     biblatexAvailable = preambleFilters.some((f) => f.name === '11-bibliography');
     pdfxActive = preambleFilters.some((f) => f.name === '99-pdfx');
+    // Generación dinámica de 98-crop y 99-pdfx según tamaño de página (#1975).
+    applyPrintQueueDynamics(preambleFilters);
     await writeIfChanged(
       latexTemplatePath,
       await composeLatexTemplate({
