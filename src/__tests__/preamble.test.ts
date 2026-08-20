@@ -363,10 +363,10 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     const filters = await loadPreambleFilters();
     const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';
     expect(maketitle).toContain('\\vspace*{7\\baselineskip}'); // dedication
-    // Centrado vertical con vbox to textheight: el \vspace*{\fill} entre
-    // bloques dejaba el contenido fuera del centro (page builder + strut)
+    // Posicionamiento fijo con vbox to textheight: \vspace*{10\baselineskip}
+    // ancla el bloque de contenido con espacio fijo desde arriba
     expect(maketitle).toContain('\\vbox to \\textheight{%');
-    expect(maketitle).toContain('\\vfill');
+    expect(maketitle).toContain('\\vspace*{10\\baselineskip}');
   });
 
   it('19-maketitle: subtitle long (parrafos con linea en blanco) y parindent cero en las paginas de titulo', async () => {
@@ -428,9 +428,9 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(author).toBeLessThan(title);
     expect(title).toBeLessThan(sub);
     expect(sub).toBeLessThan(subject);
-    expect(subject).toBeLessThan(head);
-    expect(head).toBeLessThan(date);
-    expect(date).toBeLessThan(pub);
+    expect(subject).toBeLessThan(date);
+    expect(date).toBeLessThan(head);
+    expect(head).toBeLessThan(pub);
   });
 
   it('19-maketitle: dos paginas en blanco antes de extratitle (hojas de guarda)', async () => {
@@ -469,7 +469,7 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     const filters = await loadPreambleFilters();
     const toc = filters.find((f) => f.name === '16-toc-styling')?.content ?? '';
     expect(toc).toContain(
-      '\\BeforeTOCHead{\\RedeclareSectionCommand[beforeskip=4\\baselineskip,afterskip=\\baselineskip,afterindent=false]{subsubsection}}',
+      '\\BeforeTOCHead{\\RedeclareSectionCommand[beforeskip=2\\baselineskip,afterskip=\\baselineskip,afterindent=false]{subsubsection}}',
     );
     expect(toc).toContain('linefill=\\TOCLineLeaderFill,beforeskip=\\baselineskip]{tocline}{part}');
     expect(toc).toContain('pagenumberformat=\\normalsize\\normalfont');
