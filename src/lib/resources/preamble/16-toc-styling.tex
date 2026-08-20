@@ -3,7 +3,7 @@
 % un PDF con lang no-español fallaba con 'not defined at language spanish'.
 % \BeforeTOCHead ajusta solo la apariencia del TOC: el subsubsection del cuerpo
 % mantiene sus propios skips (14-sectioning.tex).
-\BeforeTOCHead{\RedeclareSectionCommand[beforeskip=4\baselineskip,afterskip=\baselineskip,afterindent=false]{subsubsection}}
+\BeforeTOCHead{\RedeclareSectionCommand[beforeskip=2\baselineskip,afterskip=\baselineskip,afterindent=false]{subsubsection}}
 \renewcaptionname{\languagename}{\contentsname}{\normalsize\normalfont\bfseries Índice}
 \renewcommand*{\addparttocentry}[2]{%
   \addtocentrydefault{part}{#1}{\MakeUppercase{#2}}%

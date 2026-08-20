@@ -115,7 +115,7 @@
     \else
       \titlepageblanks
       \vbox to \textheight{%
-        \vfill
+        \vspace*{10\baselineskip}%
         \titlepageblock
           {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
           {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
@@ -134,7 +134,7 @@
     % (hasta el 100% del ancho del bloque, \extratitlewidth).
     \titlepageblanks
     \vbox to \textheight{%
-      \vfill
+      \vspace*{10\baselineskip}%
       {\centering\titleimagerender[\extratitlewidth]{\@titleimage}\par}%
       \vfill
     }%
@@ -152,9 +152,9 @@
     \titlepage@next
   \fi
   \thispagestyle{empty}%
-  \vspace*{1\baselineskip}%
+  \vspace*{\baselineskip}%
   \ifx\@author\@empty
-    \vskip 1\baselineskip%
+    \vskip 2\baselineskip%
   \else
     {\centering\usekomafont{author}{\renewcommand{\and}{\unskip, \ignorespaces}\@author\par}}%
     \vskip 1\baselineskip
@@ -172,23 +172,23 @@
     \vskip 1\baselineskip
     {\centering\parindent\z@\@subject\par}%
   \fi
-  \ifx\@titlehead\@empty\else
-    \vskip 1\baselineskip
-    {\centering\parindent\z@\@titlehead\par}%
-  \fi
   \ifx\@date\@empty\else
     \vskip 1\baselineskip
     {\centering\usekomafont{date}{\@date\par}}%
   \fi
+  \ifx\@titlehead\@empty\else
+    \vskip 2\baselineskip
+    {\centering\parindent\z@\@titlehead\par}%
+  \fi
   \ifx\@publishersimage\@empty
     \ifx\@publishers\@empty\else
-      \vskip 1\baselineskip
+      \vskip 2\baselineskip
       {\centering\parindent\z@\@publishers\par}%
     \fi
   \else
     % publishers-image definido: la imagen sustituye al texto de publishers
     % (máx. 150pt ≈ 150px a 72dpi, ajustable).
-    \vskip 1\baselineskip
+    \vskip 2\baselineskip
     {\centering\titleimagerender[150pt]{\@publishersimage}\par}%
   \fi
   \if@twoside
