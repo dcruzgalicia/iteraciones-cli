@@ -2,7 +2,14 @@ import { describe, expect, it, spyOn } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { babelOptionsForLang, composeLatexTemplate } from '../builder/latex-preamble.js';
+import {
+  applyPrintQueueDynamics,
+  babelOptionsForLang,
+  buildCropContent,
+  buildPdfxPagesattr,
+  composeLatexTemplate,
+  detectPageSize,
+} from '../builder/latex-preamble.js';
 import {
   getBuiltinPreambleFilterInfos,
   getBuiltinPreambleFilterNames,
@@ -497,7 +504,7 @@ describe('valores de maquetación editorial (issue 1810)', () => {
   it('98-crop: solo marcas de corte (noinfo, sin el texto de información)', async () => {
     const filters = await loadPreambleFilters();
     const crop = filters.find((f) => f.name === '98-crop')?.content ?? '';
-    expect(crop).toContain('\\usepackage[width=230truemm,height=294truemm,center,cam,noinfo]{crop}');
+    expect(crop).toContain('\\usepackage[width=221.9truemm,height=285.4truemm,center,cam,noinfo]{crop}');
   });
 
   it('04-margins: headsep y footskip actualizados (headheight = baselineskip)', async () => {
@@ -546,5 +553,110 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(endpapers).toContain('\\put(.5\\paperwidth,\\ifx\\ESO@HookIIIBG\\@empty');
     expect(endpapers).toContain('\\vbox to 0pt{%');
     expect(endpapers).toContain('\\hss');
+  });
+});
+
+describe('crop / pdfx dinámico (#1975)', () => {
+  const MM_TO_PT = 2.834639;
+
+  describe('detectPageSize', () => {
+    it('detecta paperwidth/paperheight de geometry', () => {
+      const filters = [
+        { name: '01-documentclass', content: '\\documentclass[paper=letter]{scrbook}' },
+        { name: '04-margins', content: '\\usepackage[paperwidth=200mm,paperheight=260mm]{geometry}' },
+      ];
+      expect(detectPageSize(filters)).toEqual({ w: 200, h: 260 });
+    });
+
+    it('detecta paper= de documentclass cuando geometry no define paperwidth', () => {
+      const filters = [
+        { name: '01-documentclass', content: '\\documentclass[paper=a4]{scrbook}' },
+        { name: '04-margins', content: '\\usepackage[top=2.54cm]{geometry}' },
+      ];
+      expect(detectPageSize(filters)).toEqual({ w: 210, h: 297 });
+    });
+
+    it('fallback a letter cuando no hay definición', () => {
+      const filters = [{ name: '01-documentclass', content: '\\documentclass{scrbook}' }];
+      expect(detectPageSize(filters)).toEqual({ w: 215.9, h: 279.4 });
+    });
+
+    it('geometry tiene prioridad sobre documentclass', () => {
+      const filters = [
+        { name: '01-documentclass', content: '\\documentclass[paper=a4]{scrbook}' },
+        { name: '04-margins', content: '\\usepackage[paperwidth=148mm,paperheight=210mm]{geometry}' },
+      ];
+      expect(detectPageSize(filters)).toEqual({ w: 148, h: 210 });
+    });
+  });
+
+  describe('buildCropContent', () => {
+    it('agrega 6mm a width y height', () => {
+      const content = buildCropContent(215.9, 279.4);
+      expect(content).toContain('width=221.9truemm,height=285.4truemm');
+    });
+
+    it('funciona con a4', () => {
+      const content = buildCropContent(210, 297);
+      expect(content).toContain('width=216.0truemm,height=303.0truemm');
+    });
+  });
+
+  describe('buildPdfxPagesattr', () => {
+    it('sin crop: las 4 boxes son iguales al tamaño de página en pt', () => {
+      const attr = buildPdfxPagesattr(215.9, 279.4, false);
+      const w = (215.9 * MM_TO_PT).toFixed(7);
+      const h = (279.4 * MM_TO_PT).toFixed(7);
+      expect(attr).toContain(`/MediaBox [0 0 ${w} ${h}]`);
+      expect(attr).toContain(`/TrimBox [0 0 ${w} ${h}]`);
+    });
+
+    it('con crop: MediaBox/CropBox/BleedBox = page+6mm, TrimBox con offset 3mm', () => {
+      const attr = buildPdfxPagesattr(215.9, 279.4, true);
+      const boxW = ((215.9 + 6) * MM_TO_PT).toFixed(7);
+      const boxH = ((279.4 + 6) * MM_TO_PT).toFixed(7);
+      const off = (3 * MM_TO_PT).toFixed(6);
+      const trimMaxX = ((215.9 + 6) * MM_TO_PT - 3 * MM_TO_PT).toFixed(6);
+      const trimMaxY = ((279.4 + 6) * MM_TO_PT - 3 * MM_TO_PT).toFixed(6);
+      expect(attr).toContain(`/MediaBox [0 0 ${boxW} ${boxH}]`);
+      expect(attr).toContain(`/TrimBox [${off} ${off} ${trimMaxX} ${trimMaxY}]`);
+    });
+  });
+
+  describe('applyPrintQueueDynamics', () => {
+    it('sin crop ni pdfx: no modifica nada', () => {
+      const filters = [{ name: '01-documentclass', content: '\\documentclass{scrbook}' }];
+      applyPrintQueueDynamics(filters);
+      expect(filters[0]?.content).toBe('\\documentclass{scrbook}');
+    });
+
+    it('solo crop activo: modifica 98-crop, no toca pdfx', () => {
+      const filters = [
+        { name: '98-crop', content: 'old' },
+        { name: '99-pdfx', content: '\\usepackage[x-1a1]{pdfx}\n\n\\pdfpagesattr{old}' },
+      ];
+      applyPrintQueueDynamics(filters);
+      expect(filters[0]?.content).toContain('width=221.9truemm');
+      expect(filters[1]?.content).toContain('\\usepackage[x-1a1]{pdfx}');
+    });
+
+    it('solo pdfx activo: no toca crop, genera boxes sin offset', () => {
+      const filters = [{ name: '99-pdfx', content: '\\usepackage[x-1a1]{pdfx}\n\n\\pdfpagesattr{old}' }];
+      applyPrintQueueDynamics(filters);
+      const attr = filters[0]?.content ?? '';
+      const w = (215.9 * MM_TO_PT).toFixed(7);
+      expect(attr).toContain(`/TrimBox [0 0 ${w}`);
+    });
+
+    it('ambos activos: crop + pdfx con boxes de page+6mm y trim offset', () => {
+      const filters = [
+        { name: '98-crop', content: 'old' },
+        { name: '99-pdfx', content: '\\usepackage[x-1a1]{pdfx}\n\n\\pdfpagesattr{old}' },
+      ];
+      applyPrintQueueDynamics(filters);
+      expect(filters[0]?.content).toContain('width=221.9truemm');
+      const off = (3 * MM_TO_PT).toFixed(6);
+      expect(filters[1]?.content).toContain(`/TrimBox [${off} ${off}`);
+    });
   });
 });
