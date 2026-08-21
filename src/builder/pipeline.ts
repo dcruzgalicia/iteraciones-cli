@@ -273,19 +273,63 @@ function frontmatterStringList(value: unknown): string[] | undefined {
 }
 
 /**
+ * Resuelve el valor de un metadato con precedencia: frontmatter > format config > root config.
+ * @param fm Frontmatter del documento
+ * @param formatCfg Config del formato actual (e.g., format.pdf)
+ * @param rootCfg Config raíz del sitio
+ * @param field Nombre del campo DC
+ * @returns El valor resuelto o undefined si no existe en ningún nivel
+ */
+function resolveMetadata(
+  fm: Record<string, unknown>,
+  formatCfg: Record<string, unknown> | undefined,
+  rootCfg: Record<string, unknown>,
+  field: string,
+): string | string[] | undefined {
+  // 1. Frontmatter tiene prioridad
+  const fmValue = fm[field];
+  if (fmValue !== undefined) {
+    if (typeof fmValue === 'string' || Array.isArray(fmValue)) return fmValue;
+    return undefined;
+  }
+  // 2. Config por formato
+  if (formatCfg) {
+    const fmtValue = formatCfg[field];
+    if (fmtValue !== undefined) {
+      if (typeof fmtValue === 'string' || Array.isArray(fmtValue)) return fmtValue;
+      return undefined;
+    }
+  }
+  // 3. Config raíz
+  const rootValue = rootCfg[field];
+  if (rootValue !== undefined) {
+    if (typeof rootValue === 'string' || Array.isArray(rootValue)) return rootValue;
+    return undefined;
+  }
+  return undefined;
+}
+
+/**
  * Metadatos XMP/Info del documento desde el frontmatter crudo y el lang efectivo
  * (el que usa el pipeline para el PDF, no el lang del frontmatter). Solo los
  * campos presentes se emiten en el .tex (issue #1970).
  */
-function xmpMetadataFor(fm: Record<string, unknown>, lang: string): PdfXmpMetadata {
+function xmpMetadataFor(
+  fm: Record<string, unknown>,
+  lang: string,
+  formatCfg: Record<string, unknown> | undefined,
+  rootCfg: Record<string, unknown>,
+): PdfXmpMetadata {
   return {
-    title: typeof fm.title === 'string' && fm.title.trim() ? fm.title : undefined,
-    authors: frontmatterStringList(fm.creator),
+    title:
+      typeof resolveMetadata(fm, formatCfg, rootCfg, 'title') === 'string' ? (resolveMetadata(fm, formatCfg, rootCfg, 'title') as string) : undefined,
+    authors: frontmatterStringList(resolveMetadata(fm, formatCfg, rootCfg, 'creator')),
     lang,
-    dateIso: typeof fm.date === 'string' && fm.date.trim() ? fm.date : undefined,
-    subject: frontmatterStringList(fm.subject)?.join(', '),
-    publishers: frontmatterStringList(fm.publisher),
-    keywords: frontmatterStringList(fm.keywords),
+    dateIso:
+      typeof resolveMetadata(fm, formatCfg, rootCfg, 'date') === 'string' ? (resolveMetadata(fm, formatCfg, rootCfg, 'date') as string) : undefined,
+    subject: frontmatterStringList(resolveMetadata(fm, formatCfg, rootCfg, 'subject'))?.join(', '),
+    publishers: frontmatterStringList(resolveMetadata(fm, formatCfg, rootCfg, 'publisher')),
+    keywords: frontmatterStringList(resolveMetadata(fm, formatCfg, rootCfg, 'keywords')),
   };
 }
 
@@ -364,7 +408,12 @@ async function processDocumentFormats(
     );
     // Con 99-pdfx activo se inyectan los metadatos XMP e Info en el .tex
     // (filecontents + \pdfinfo): el tex de dist/ queda autocontenido (issue #1970).
-    const texWithXmp = pdfxActive ? injectXmpMetadataIntoLatex(fullTex, xmpMetadataFor(fm, lang)) : fullTex;
+    const texWithXmp = pdfxActive
+      ? injectXmpMetadataIntoLatex(
+          fullTex,
+          xmpMetadataFor(fm, lang, formatCfg?.pdf as Record<string, unknown> | undefined, ctx.siteConfig as Record<string, unknown>),
+        )
+      : fullTex;
     if (latexOn) {
       await writeOutput(texDistPath, texWithXmp);
       // Copiar imágenes procesadas a dist/ para distribución con LaTeX.

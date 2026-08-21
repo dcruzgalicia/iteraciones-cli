@@ -106,6 +106,23 @@ const PdfFormatSchema = z
       .default(DEFAULT_PDF_FORMAT.disabledPreambleFilters)
       .transform((v) => (v?.length ? v : undefined)),
     'cover-image': z.boolean().default(DEFAULT_PDF_FORMAT.coverImage ?? false),
+    // Dublin Core fields (defaults for PDF format)
+    title: z.string().optional(),
+    creator: z.union([z.string(), z.array(z.string())]).optional(),
+    subject: z.union([z.string(), z.array(z.string())]).optional(),
+    description: z.string().optional(),
+    publisher: z.union([z.string(), z.array(z.string())]).optional(),
+    contributor: z.union([z.string(), z.array(z.string())]).optional(),
+    date: z.string().optional(),
+    identifier: z.string().optional(),
+    source: z.string().optional(),
+    relation: z.union([z.string(), z.array(z.string())]).optional(),
+    coverage: z.string().optional(),
+    rights: z.string().optional(),
+    license: z.string().optional(),
+    doi: z.string().optional(),
+    isbn: z.string().optional(),
+    abstract: z.string().optional(),
   })
   .strict();
 
@@ -161,6 +178,23 @@ const RawSiteConfigSchema = z
       .array(z.string())
       .optional()
       .transform((v) => (v?.length ? v : undefined)),
+    // Dublin Core fields (defaults for all documents)
+    title: z.string().optional(),
+    creator: z.union([z.string(), z.array(z.string())]).optional(),
+    subject: z.union([z.string(), z.array(z.string())]).optional(),
+    description: z.string().optional(),
+    publisher: z.union([z.string(), z.array(z.string())]).optional(),
+    contributor: z.union([z.string(), z.array(z.string())]).optional(),
+    date: z.string().optional(),
+    identifier: z.string().optional(),
+    source: z.string().optional(),
+    relation: z.union([z.string(), z.array(z.string())]).optional(),
+    coverage: z.string().optional(),
+    rights: z.string().optional(),
+    license: z.string().optional(),
+    doi: z.string().optional(),
+    isbn: z.string().optional(),
+    abstract: z.string().optional(),
   })
   .strict();
 
@@ -203,6 +237,23 @@ export const SiteConfigSchema = RawSiteConfigSchema.transform((raw) => {
     luaFilters: raw['lua-filters'],
     bibliography: raw.bibliography,
     csl: raw.csl,
+    // Dublin Core fields
+    title: raw.title,
+    creator: raw.creator,
+    subject: raw.subject,
+    description: raw.description,
+    publisher: raw.publisher,
+    contributor: raw.contributor,
+    date: raw.date,
+    identifier: raw.identifier,
+    source: raw.source,
+    relation: raw.relation,
+    coverage: raw.coverage,
+    rights: raw.rights,
+    license: raw.license,
+    doi: raw.doi,
+    isbn: raw.isbn,
+    abstract: raw.abstract,
   };
 });
 
