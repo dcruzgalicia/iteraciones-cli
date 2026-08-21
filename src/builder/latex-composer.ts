@@ -1,4 +1,4 @@
-import { dirname, isAbsolute, resolve } from 'node:path';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
@@ -8,6 +8,8 @@ import { parseAuthors } from './discover.js';
 import type { LuaFilterGroup } from './filter-resolver.js';
 import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
 import { MD_READER, metadataValue } from './html-composer.js';
+import type { PageDimensions } from './image-processor.js';
+import { processDocumentImages, rewriteImagePaths, scanInlineImages } from './image-processor.js';
 import { babelOptionsForLang, pageNumberCommandFor } from './latex-preamble.js';
 import type { BuildDocument } from './types.js';
 
@@ -71,9 +73,29 @@ export async function markdownToLatex(
   biblatexAvailable = true,
   /** Registro de langs advertidos del build (babelOptionsForLang): una vez por build, no por proceso. */
   warnedLangs: Set<string>,
-): Promise<string> {
+  /** Dimensiones de página en mm (para preprocesamiento de imágenes). undefined = sin preprocesar. */
+  pageDimensions?: PageDimensions,
+  /** Si true, endpapers usa +6mm (crop activo). */
+  cropActive = false,
+): Promise<{ tex: string; processedImages: string[] }> {
   const title = typeof fm.title === 'string' && fm.title.trim() ? fm.title : 'Sin título';
   const author = parseAuthors(fm.author);
+
+  // ── Preprocesamiento de imágenes (CMYK 300dpi JPG) ──
+  let processedImages: string[] = [];
+  let imageMap = new Map<string, string>();
+  let finalContent = content;
+  if (pageDimensions) {
+    const docDir = dirname(doc.filePath);
+    const outputDir = join(docDir, '.iteraciones', 'processed-images');
+    const inlineImages = scanInlineImages(content, docDir);
+    const result = await processDocumentImages(inlineImages, fm, docDir, pageDimensions, cropActive, outputDir);
+    imageMap = result.imageMap;
+    processedImages = result.processedFiles;
+    if (imageMap.size > 0) {
+      finalContent = rewriteImagePaths(content, imageMap);
+    }
+  }
 
   const extraArgs = ['--template', templatePath, '--top-level-division', 'section', '--shift-heading-level-by=2'];
   // El fragmento babel del template efectivo se resuelve por el lang de la
@@ -113,7 +135,8 @@ export async function markdownToLatex(
       if (!(await Bun.file(imagePath).exists())) {
         throw new BuildError(`${field} no encontrado: "${imagePath}" (resuelto desde "${value}")`);
       }
-      extraArgs.push(`--metadata=${field}:${imagePath}`);
+      const finalPath = imageMap.get(imagePath) ?? imagePath;
+      extraArgs.push(`--metadata=${field}:${finalPath}`);
     }
   }
   // El subtitle NO se pasa por --metadata: el override aplanaría los \n con
@@ -127,8 +150,8 @@ export async function markdownToLatex(
   const date = await pdfDate(fm, siteConfig, doc);
   if (date !== undefined) extraArgs.push(`--metadata=date:${metadataValue(date)}`);
 
-  return runPandoc({
-    input: content,
+  const tex = await runPandoc({
+    input: finalContent,
     sourcePath: doc.filePath,
     from: MD_READER,
     to: 'latex',
@@ -138,4 +161,6 @@ export async function markdownToLatex(
     // proyecto sobrescribe 06/07).
     env: { ITERACIONES_MBOX_HELPERS: MBOX_HELPERS_FILTER },
   });
+
+  return { tex, processedImages };
 }

@@ -1,5 +1,6 @@
 import { access, constants, mkdir, stat, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { detectMagick } from '../../builder/image-processor.js';
 import { resolvePdfCheckBinary } from '../../builder/pdfx-check.js';
 import { checkPandoc as pandocVersion } from '../../lib/pandoc-runner.js';
 import { run } from '../../lib/run.js';
@@ -232,4 +233,22 @@ export async function checkLatexEngine(): Promise<CheckResult> {
       detail: 'pdflatex no encontrado en PATH. Instala MacTeX full: https://tug.org/mactex/',
     };
   }
+}
+
+/**
+ * Verifica que ImageMagick v7 (`magick`) esté disponible para el
+ * preprocesamiento de imágenes (CMYK 300dpi JPG). Check opcional (warn):
+ * sin él las imágenes no se preprocesan y se usan las originales.
+ */
+export async function checkMagick(): Promise<CheckResult> {
+  const ok = await detectMagick();
+  if (ok) {
+    return { label: 'ImageMagick disponible', ok: true, warn: true };
+  }
+  return {
+    label: 'ImageMagick disponible',
+    ok: false,
+    detail: 'magick no encontrado en PATH. Instala ImageMagick (por ejemplo: brew install imagemagick). Las imágenes no se preprocesarán a CMYK.',
+    warn: true,
+  };
 }

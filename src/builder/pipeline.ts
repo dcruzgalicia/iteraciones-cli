@@ -15,7 +15,7 @@ import { convertToEpub, convertToMarkdown } from './export/runner.js';
 import { loadFilterGroups } from './filter-resolver.js';
 import { composeHtmlTemplate, loadReferencesCardTemplate } from './html-composer.js';
 import { markdownToLatex } from './latex-composer.js';
-import { applyPrintQueueDynamics, composeLatexTemplate } from './latex-preamble.js';
+import { applyPrintQueueDynamics, composeLatexTemplate, detectPageSize } from './latex-preamble.js';
 import { createPdfConsumer, type PdfJob } from './pdf-pool.js';
 import { loadPreambleFilters } from './preamble-loader.js';
 import { htmlPageFromMarkdown } from './render.js';
@@ -110,10 +110,16 @@ export async function runDocumentPipeline(
   // 99-pdfx activo: señal de "quiero certificar PDF/X"; activa la inyección de
   // los metadatos XMP/Info en el .tex (issue #1970).
   let pdfxActive = false;
+  // 98-crop activo: controla el bleed (+6mm) en endpapers y crop/pdfx.
+  let cropActive = false;
+  // Dimensiones de página en mm (para preprocesamiento de imágenes).
+  let pageDimensions: { w: number; h: number } | undefined;
   if (plan.generateLatex) {
     const preambleFilters = await loadPreambleFilters(siteConfig.format?.pdf?.disabledPreambleFilters, ctx.cwd);
     biblatexAvailable = preambleFilters.some((f) => f.name === '11-bibliography');
     pdfxActive = preambleFilters.some((f) => f.name === '99-pdfx');
+    cropActive = preambleFilters.some((f) => f.name === '98-crop');
+    pageDimensions = detectPageSize(preambleFilters);
     // Generación dinámica de 98-crop y 99-pdfx según tamaño de página (#1975).
     applyPrintQueueDynamics(preambleFilters);
     await writeIfChanged(
@@ -152,7 +158,7 @@ export async function runDocumentPipeline(
   const filters = await loadFilterGroups(siteConfig, siteConfig.disabledFilters, ctx.cwd);
 
   progress.startLightFormats();
-  const renderCtx = { ctx, plan, formatCfg, lang, logoInline, warnedLangs: new Set<string>(), pdfxActive };
+  const renderCtx = { ctx, plan, formatCfg, lang, logoInline, warnedLangs: new Set<string>(), pdfxActive, cropActive, pageDimensions };
   const exportCtx = {
     filters,
     bibOptions,
@@ -217,6 +223,10 @@ interface RenderContext {
   warnedLangs: Set<string>;
   /** 99-pdfx activo: el .tex se inyecta con los metadatos XMP/Info (issue #1970). */
   pdfxActive: boolean;
+  /** 98-crop activo: controla bleed (+6mm) en endpapers y crop/pdfx. */
+  cropActive: boolean;
+  /** Dimensiones de página en mm (para preprocesamiento de imágenes). */
+  pageDimensions: { w: number; h: number } | undefined;
 }
 
 /**
@@ -287,7 +297,7 @@ async function processDocumentFormats(
   formatWorkSets: FormatWorkSets,
   discoveryIndex: Map<string, DiscoveryEntry>,
 ): Promise<void> {
-  const { ctx, plan, formatCfg, lang, logoInline, warnedLangs, pdfxActive } = renderCtx;
+  const { ctx, plan, formatCfg, lang, logoInline, warnedLangs, pdfxActive, cropActive, pageDimensions } = renderCtx;
   const { filters, bibOptions, bibFiles, biblatexAvailable, globalBibliography, pdfWorkDir, htmlTemplatePath, latexTemplatePath, refsCardTemplate } =
     exportCtx;
   const { htmlPaths, epubPaths, mdPaths, latexPaths, pdfJobs } = formatWorkSets;
@@ -339,12 +349,28 @@ async function processDocumentFormats(
   // .tex completo (preámbulo + cuerpo) en UNA invocación markdown → latex,
   // escrito directamente en dist/ (o en el área de trabajo del PDF si solo pdfOn)
   if (needsLatex) {
-    const fullTex = await markdownToLatex(content, doc, filters, bibFiles, latexTemplatePath, fm, ctx.siteConfig, biblatexAvailable, warnedLangs);
+    const { tex: fullTex, processedImages } = await markdownToLatex(
+      content,
+      doc,
+      filters,
+      bibFiles,
+      latexTemplatePath,
+      fm,
+      ctx.siteConfig,
+      biblatexAvailable,
+      warnedLangs,
+      pageDimensions,
+      cropActive,
+    );
     // Con 99-pdfx activo se inyectan los metadatos XMP e Info en el .tex
     // (filecontents + \pdfinfo): el tex de dist/ queda autocontenido (issue #1970).
     const texWithXmp = pdfxActive ? injectXmpMetadataIntoLatex(fullTex, xmpMetadataFor(fm, lang)) : fullTex;
     if (latexOn) {
       await writeOutput(texDistPath, texWithXmp);
+      // Copiar imágenes procesadas a dist/ para distribución con LaTeX.
+      for (const imgPath of processedImages) {
+        await Bun.write(join(ctx.outputDir, basename(imgPath)), imgPath);
+      }
     }
     if (pdfOn) {
       const texPath = latexOn ? texDistPath : join(pdfWorkDir, dir, `${outSlug}.tex`);

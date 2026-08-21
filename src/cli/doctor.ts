@@ -6,6 +6,7 @@ import {
   type CheckResult,
   checkBunVersion,
   checkLatexEngine,
+  checkMagick,
   checkPandoc,
   checkPdfCheck,
   checkPdfToPpm,
@@ -39,6 +40,8 @@ export async function collectChecks(cwd: string): Promise<CheckResult[]> {
   // La portada del PDF (pdftoppm) solo interesa a proyectos que generan PDF
   // (mismo criterio que el motor LaTeX); es un check opcional (warn).
   const pdfToPpm = needsLatex ? await checkPdfToPpm() : undefined;
+  // ImageMagick (magick) para preprocesamiento de imágenes CMYK 300dpi.
+  const magick = needsLatex ? await checkMagick() : undefined;
 
   return [
     checkBunVersion(),
@@ -51,6 +54,7 @@ export async function collectChecks(cwd: string): Promise<CheckResult[]> {
     write,
     ...(latex ? [latex] : []),
     ...(pdfToPpm ? [pdfToPpm] : []),
+    ...(magick ? [magick] : []),
   ];
 }
 

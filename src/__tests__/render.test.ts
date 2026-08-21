@@ -78,7 +78,7 @@ describe('pdfDate (fecha de portada del PDF)', () => {
       };
       const siteConfig = await loadSiteConfig(cwd);
       const withShowDate = { ...siteConfig, format: { ...siteConfig.format, pdf: { ...siteConfig.format.pdf, showDate: true } } };
-      const tex = await markdownToLatex(
+      const { tex } = await markdownToLatex(
         content,
         doc,
         await loadFilterGroups(withShowDate, undefined, cwd),
@@ -92,7 +92,7 @@ describe('pdfDate (fecha de portada del PDF)', () => {
       expect(tex).toContain('\\date{8 de agosto de 2026}');
 
       // Sin show-date, la fecha del frontmatter se neutraliza en la portada
-      const sinShowDate = await markdownToLatex(
+      const sinShowDateResult = await markdownToLatex(
         content,
         doc,
         await loadFilterGroups(siteConfig, undefined, cwd),
@@ -103,7 +103,7 @@ describe('pdfDate (fecha de portada del PDF)', () => {
         true,
         new Set(),
       );
-      expect(sinShowDate).toContain('\\date{}');
+      expect(sinShowDateResult.tex).toContain('\\date{}');
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
