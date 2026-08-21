@@ -94,11 +94,46 @@ export function buildXmpdataContent(meta: PdfXmpMetadata): string {
 }
 
 /**
+ * Tabla de conversión de caracteres Unicode a comandos LaTeX de acentos.
+ * Usada para el Info dict (`\pdfescapestring`): pdftex expande los comandos
+ * y escribe el byte T1/Latin-1 correcto, en vez del multibyte UTF-8 que
+ * produciría un carácter crudo (y que los lectores de PDF interpretan como
+ * Latin-1, causando mojibake).
+ */
+const LATEX_ACCENT_MAP: Record<string, string> = {
+  á: "\\'{a}",
+  é: "\\'{e}",
+  í: "\\'{i}",
+  ó: "\\'{o}",
+  ú: "\\'{u}",
+  Á: "\\'{A}",
+  É: "\\'{E}",
+  Í: "\\'{I}",
+  Ó: "\\'{O}",
+  Ú: "\\'{U}",
+  ñ: '\\~{n}',
+  Ñ: '\\~{N}',
+  ü: '\\"{u}',
+  Ü: '\\"{U}',
+};
+
+/**
+ * Convierte caracteres non-ASCII a comandos LaTeX de acentos para que
+ * `\pdfescapestring` produzca el byte Latin-1 correcto en el Info dict.
+ * Los caracteres ASCII pasan sin cambios; los no mapeados se dejan crudos
+ * (fallback seguro para scripts que no estén en la tabla).
+ */
+function latexAccentEncode(value: string): string {
+  return value.replace(/./gu, (ch) => LATEX_ACCENT_MAP[ch] ?? ch);
+}
+
+/**
  * Normaliza un valor antes de `\pdfescapestring` (que escapa `( ) \` y espacios)
- * y, si puede, deja los acentos como UTF-8 (visible para los lectores).
+ * y convierte caracteres non-ASCII a comandos LaTeX para encoding correcto
+ * en el Info dict (Latin-1, no UTF-8 multibyte).
  */
 function toPdfInfoValue(value: string): string {
-  return value.replace(/[\r\n\t]+/g, ' ');
+  return latexAccentEncode(value.replace(/[\r\n\t]+/g, ' '));
 }
 
 /**
@@ -110,8 +145,8 @@ function toPdfInfoValue(value: string): string {
  */
 export function buildPdfInfoBlock(meta: PdfXmpMetadata): string {
   const entries: string[] = [];
-  if (meta.authors && meta.authors.length > 0) entries.push(`/Author (\\pdfescapestring{${toPdfInfoValue(meta.authors.join('; '))}})`);
-  if (meta.keywords && meta.keywords.length > 0) entries.push(`/Keywords (\\pdfescapestring{${toPdfInfoValue(meta.keywords.join('; '))}})`);
+  if (meta.authors && meta.authors.length > 0) entries.push(`/Author (\\pdfescapestring{${toPdfInfoValue(meta.authors.join(', '))}})`);
+  if (meta.keywords && meta.keywords.length > 0) entries.push(`/Keywords (\\pdfescapestring{${toPdfInfoValue(meta.keywords.join(', '))}})`);
   if (meta.rights) entries.push(`/Rights (\\pdfescapestring{${toPdfInfoValue(meta.rights)}})`);
   if (meta.license) entries.push(`/License (\\pdfescapestring{${toPdfInfoValue(meta.license)}})`);
   if (entries.length === 0) return '';
