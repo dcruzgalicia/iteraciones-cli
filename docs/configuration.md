@@ -8,6 +8,25 @@ El archivo `iteraciones.config.yaml` en la raíz del proyecto es la única fuent
 language: es-MX                       # código de idioma BCP 47
 toc: false                        # tabla de contenidos (PDF, LaTeX, HTML, EPUB)
 
+# Metadatos Dublin Core (opcional; valores por defecto para todos los documentos)
+# title: ''
+# creator: ''
+# subject: ''
+# description: ''
+# publisher: ''
+# contributor: ''
+# date: ''
+# identifier: ''
+# source: ''
+# relation: ''
+# coverage: ''
+# rights: ''
+# license: ''
+# doi: ''
+# isbn: ''
+# abstract: ''
+# keywords: ''
+
 format:
   latex:
     generate: false               # genera archivos .tex
@@ -19,6 +38,10 @@ format:
     cover-image: false             # genera PNG de la primera página junto al PDF
     # disabled-preamble-filters:   # preamble filters a desactivar (opcional)
     #   - 19-maketitle
+    # Dublin Core por formato (sobreescribe los valores de la raíz para PDF)
+    # creator: ''
+    # publisher: ''
+    # license: ''
 
   html:
     site:
@@ -60,6 +83,8 @@ language: es-MX
 ```
 
 El `language` del frontmatter de un documento sí sobreescribe el de la configuración en el HTML, el EPUB y el Markdown; **no** altera la configuración de `babel` del PDF, que se resuelve siempre desde el `language` de la configuración (o su valor por defecto).
+
+> **Nota:** El campo se llama `language` tanto en la configuración como en el frontmatter. El nombre anterior `lang` ya no es válido.
 
 ### `format.latex`
 
@@ -326,9 +351,15 @@ Los errores se imprimen en `stderr`. El comando devuelve código de salida `1` s
 
 ## Metadatos Dublin Core
 
-Los metadatos Dublin Core se pueden definir en tres niveles con la siguiente precedencia:
+Los metadatos Dublin Core (ISO 15836-1:2017) se pueden definir en **tres niveles** con la siguiente precedencia:
 
-**frontmatter > format config > root config**
+```
+frontmatter > format config > root config
+```
+
+- **Root config** (`iteraciones.config.yaml`): valores por defecto para todos los documentos y formatos.
+- **Format config** (`format.pdf`, etc.): sobreescribe la raíz solo para ese formato. Actualmente solo `format.pdf` acepta campos DC.
+- **Frontmatter**: sobreescribe cualquier configuración para el documento individual.
 
 ### Campos disponibles
 
@@ -340,7 +371,7 @@ Los metadatos Dublin Core se pueden definir en tres niveles con la siguiente pre
 | `description` | `string` | Descripción del documento |
 | `publisher` | `string \| string[]` | Editorial(es) |
 | `contributor` | `string \| string[]` | Otros contribuidores |
-| `date` | `string` | Fecha (ISO YYYY-MM-DD) |
+| `date` | `string` | Fecha (ISO `YYYY-MM-DD`) |
 | `identifier` | `string` | Identificador único (DOI, ISBN, URL) |
 | `source` | `string` | Fuente del documento |
 | `relation` | `string \| string[]` | Recursos relacionados |
@@ -350,26 +381,27 @@ Los metadatos Dublin Core se pueden definir en tres niveles con la siguiente pre
 | `doi` | `string` | Digital Object Identifier |
 | `isbn` | `string` | International Standard Book Number |
 | `abstract` | `string` | Resumen del documento |
+| `keywords` | `string \| string[]` | Palabras clave |
 
-### Ejemplo de precedencia
+Los campos se admiten tanto en la raíz de la configuración como en `format.pdf`:
 
 ```yaml
-# Config raíz (valores por defecto para todos los formatos)
+# Raíz — valores por defecto globales
 title: 'Mi Libro'
 creator: 'Ana García'
 publisher: 'Editorial Ejemplo'
-language: 'es-MX'
+license: 'https://creativecommons.org/licenses/by/4.0/'
 
 format:
   pdf:
-    # Config por formato (sobreescribe la raíz para PDF)
+    # PDF — sobreescribe la raíz para exportación a PDF
     creator: 'Juan Pérez'
     publisher: 'Editorial PDF'
 ```
 
 ```markdown
 ---
-# Frontmatter (sobreescribe cualquier config)
+# Frontmatter — sobreescribe cualquier configuración
 title: 'Capítulo 1'
 creator: 'María López'
 ---
@@ -379,4 +411,17 @@ Resultado efectivo:
 - `title` → "Capítulo 1" (frontmatter)
 - `creator` → "María López" (frontmatter)
 - `publisher` → "Editorial PDF" (format.pdf)
-- `language` → "es-MX" (raíz)
+- `license` → "https://creativecommons.org/licenses/by/4.0/" (raíz)
+
+### Flujo a PDF
+
+En la exportación a PDF, los campos DC se inyectan en el `.tex` compilado de dos formas:
+
+1. **Archivo lateral `.xmpdata`** — para el paquete `pdfx`, que rellena los metadatos XMP del PDF (estándar ISO 19005).
+2. **Bloque `\pdfinfo{}`** — el Info dict del PDF, visible en cualquier lector.
+
+Los campos `doi` e `isbn` se emiten como valores adicionales de `dc:identifier` en el XMP (con prefijos `doi:` y `ISBN:`). El campo `abstract` no es soportado por `pdfx` y se omite del XMP.
+
+### Nota sobre `keywords`
+
+El campo `keywords` no es estrictamente Dublin Core, pero se comporta igual que los campos DC: se admite en frontmatter, `format.pdf` y raíz con la misma precedencia. Se emite como `pdf:Keywords` en el XMP y `/Keywords` en el Info dict.

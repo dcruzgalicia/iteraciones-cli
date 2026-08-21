@@ -17,7 +17,7 @@ Contenido del artículo...
 
 ## Campos
 
-El pipeline consume **5 campos** del frontmatter:
+El pipeline consume los siguientes campos del frontmatter:
 
 | Campo | Tipo | Por defecto | Descripción |
 |-------|------|-------------|-------------|
@@ -26,6 +26,79 @@ El pipeline consume **5 campos** del frontmatter:
 | `date` | `string` | — | Fecha en formato `YYYY-MM-DD`. Con `pdf.show-date: true` se muestra en el maketitle; si no se declara, se usa la fecha de creación del archivo. |
 | `creator` | `string \| string[]` | `[]` | Uno o varios autores. El slug usa `title-por-creator`: **solo el primer autor**; en caso de colisión (dos documentos con el mismo título y autor) se aplica un sufijo `-dN`. |
 | `slug` | `string` | — | **Slug manual** (opcional): fija la URL del documento en lugar del esquema automático. Formato seguro: solo minúsculas, números y guiones simples (`^[a-z0-9]+(-[a-z0-9]+)*$`). Dos documentos con la misma salida (mismo directorio + slug) son un error de build y de `validate`. |
+| `language` | `string` | `'es-MX'` | Código de idioma BCP 47. Sobreescribe `language` de la configuración para HTML, EPUB y Markdown; **no** altera la configuración de `babel` del PDF. |
+
+## Metadatos Dublin Core
+
+Los campos del frontmatter siguen el estándar **Dublin Core** (ISO 15836-1:2017). Los campos DC se pueden definir en **tres niveles** con la siguiente precedencia:
+
+```
+frontmatter > format config > root config
+```
+
+Esto significa que un valor definido en el frontmatter sobreescribe el de `format.pdf` (u otro formato), que a su vez sobreescribe el de la raíz de `iteraciones.config.yaml`.
+
+### Campos DC disponibles
+
+| Campo | Tipo | Descripción | Flujo a PDF (XMP/Info dict) |
+|-------|------|-------------|----------------------------|
+| `title` | `string` | Título del documento | `\Title{}` → XMP `dc:title` |
+| `creator` | `string \| string[]` | Autor(es) del documento | `\Author{}` → XMP `dc:creator` + `/Author` Info dict |
+| `subject` | `string \| string[]` | Tema(s) del documento | `\Subject{}` → XMP `dc:subject` |
+| `description` | `string` | Descripción del documento | `\Description{}` → XMP `dc:description` |
+| `publisher` | `string \| string[]` | Editorial(es) | `\Publisher{}` → XMP `dc:publisher` |
+| `contributor` | `string \| string[]` | Otros contribuidores | `\Contributor{}` → XMP `dc:contributor` |
+| `date` | `string` | Fecha (ISO `YYYY-MM-DD`) | `\Date{}` → XMP `dc:date` |
+| `identifier` | `string` | Identificador único (DOI, ISBN, URL) | `\Identifier{}` → XMP `dc:identifier` |
+| `source` | `string` | Fuente del documento | `\Source{}` → XMP `dc:source` |
+| `relation` | `string \| string[]` | Recursos relacionados | `\Relation{}` → XMP `dc:relation` |
+| `coverage` | `string` | Cobertura espacial/temporal | `\Coverage{}` → XMP `dc:coverage` |
+| `rights` | `string` | Información de derechos/licencia | `\Rights{}` → XMP `dc:rights` + `/Rights` Info dict |
+| `license` | `string` | URI del documento de licencia | `\License{}` → XMP `xmpRights:WebStatement` + `/License` Info dict |
+| `doi` | `string` | Digital Object Identifier | `\Identifier{doi:...}` → XMP `dc:identifier` |
+| `isbn` | `string` | International Standard Book Number | `\Identifier{ISBN:...}` → XMP `dc:identifier` |
+| `abstract` | `string` | Resumen del documento | No emitido en XMP (no soportado por pdfx) |
+| `keywords` | `string \| string[]` | Palabras clave | `\Keywords{}` → XMP `pdf:Keywords` + `/Keywords` Info dict |
+
+> **Nota sobre `doi` e `isbn`:** Ambos campos se emiten como valores adicionales de `dc:identifier` en el XMP (con prefijos `doi:` y `ISBN:` respectivamente), no como campos separados.
+
+### Ejemplo de precedencia tres niveles
+
+```yaml
+# iteraciones.config.yaml — config raíz (valores por defecto para todos los formatos)
+title: 'Mi Libro'
+creator: 'Ana García'
+publisher: 'Editorial Ejemplo'
+license: 'https://creativecommons.org/licenses/by/4.0/'
+```
+
+```yaml
+format:
+  pdf:
+    # Config por formato (sobreescribe la raíz solo para PDF)
+    creator: 'Juan Pérez'
+    publisher: 'Editorial PDF'
+```
+
+```markdown
+---
+# Frontmatter (sobreescribe cualquier config)
+title: 'Capítulo 1'
+creator: 'María López'
+---
+```
+
+Resultado efectivo:
+- `title` → "Capítulo 1" (frontmatter)
+- `creator` → "María López" (frontmatter)
+- `publisher` → "Editorial PDF" (format.pdf)
+- `license` → "https://creativecommons.org/licenses/by/4.0/" (raíz)
+
+### Flujo por formato
+
+- **PDF:** Todos los campos DC se inyectan en el `.tex` compilado como archivo lateral `.xmpdata` (para el paquete `pdfx`) y como bloque `\pdfinfo{}` (Info dict). Esto garantiza metadatos completos en el PDF resultante.
+- **HTML:** Los campos DC no se emiten directamente como meta tags HTML. Los campos `description`, `site-title`, `tagline`, `theme`, `accent` y `css` se usan para el template HTML.
+- **EPUB:** Los campos DC se pasan como metadata de pandoc (`--metadata`), lo que los incluye en los metadatos del EPUB.
 
 ## Campos que fluyen a pandoc
 
@@ -33,7 +106,7 @@ El frontmatter completo se pasa a pandoc como metadata del documento. Los campos
 
 | Campo | Efecto |
 |-------|--------|
-| `language` | Idioma del documento (sobreescribe `lang` de la configuración) |
+| `language` | Idioma del documento (sobreescribe `language` de la configuración) |
 | `toc` | Activa/desactiva la tabla de contenidos de ese documento (sobreescribe `toc` de la configuración) |
 | `description` | Meta description del HTML |
 | `site-title`, `tagline`, `theme`, `accent`, `css` | Sobreescriben los valores de `format.html` para ese documento |
