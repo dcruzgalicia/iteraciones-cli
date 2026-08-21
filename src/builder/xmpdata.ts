@@ -7,17 +7,40 @@
 export interface PdfXmpMetadata {
   /** Título efectivo (sin el fallback 'Sin título': si no existe, se omite). */
   title?: string;
+  /** Autores (dc:creator). */
   authors?: string[];
   /** Idioma efectivo (BCP-47) para dc:language. */
   lang?: string;
   /** Fecha ISO (yyyy-mm-dd) para dc:date. */
   dateIso?: string;
-  /** Asunto (dc:description). */
+  /** Asunto (dc:subject). */
   subject?: string;
   /** Editoriales (dc:publisher, valores múltiples con \sep). */
   publishers?: string[];
-  /** Palabras clave (dc:subject + pdf:Keywords). */
+  /** Palabras clave (pdf:Keywords). */
   keywords?: string[];
+  /** Descripción (dc:description). */
+  description?: string;
+  /** Contribuidores (dc:contributor). */
+  contributors?: string[];
+  /** Identificador (dc:identifier). */
+  identifier?: string;
+  /** Fuente (dc:source). */
+  source?: string;
+  /** Relaciones (dc:relation). */
+  relations?: string[];
+  /** Cobertura (dc:coverage). */
+  coverage?: string;
+  /** Derechos (dc:rights). */
+  rights?: string;
+  /** Licencia (xmpRights:WebStatement). */
+  license?: string;
+  /** DOI. */
+  doi?: string;
+  /** ISBN. */
+  isbn?: string;
+  /** Resumen (no soportado por pdfx, se omite del XMP). */
+  abstract?: string;
 }
 
 /**
@@ -56,6 +79,17 @@ export function buildXmpdataContent(meta: PdfXmpMetadata): string {
   if (meta.dateIso) lines.push(`\\Date{${escapeXmpValue(meta.dateIso)}}`);
   if (meta.publishers && meta.publishers.length > 0) lines.push(`\\Publisher{${meta.publishers.map(escapeXmpValue).join('\\sep ')}}`);
   if (meta.keywords && meta.keywords.length > 0) lines.push(`\\Keywords{${meta.keywords.map(escapeXmpValue).join('\\sep ')}}`);
+  if (meta.description) lines.push(`\\Description{${escapeXmpValue(meta.description)}}`);
+  if (meta.contributors && meta.contributors.length > 0) lines.push(`\\Contributor{${meta.contributors.map(escapeXmpValue).join('\\sep ')}}`);
+  if (meta.identifier) lines.push(`\\Identifier{${escapeXmpValue(meta.identifier)}}`);
+  if (meta.source) lines.push(`\\Source{${escapeXmpValue(meta.source)}}`);
+  if (meta.relations && meta.relations.length > 0) lines.push(`\\Relation{${meta.relations.map(escapeXmpValue).join('\\sep ')}}`);
+  if (meta.coverage) lines.push(`\\Coverage{${escapeXmpValue(meta.coverage)}}`);
+  if (meta.rights) lines.push(`\\Rights{${escapeXmpValue(meta.rights)}}`);
+  if (meta.license) lines.push(`\\License{${escapeXmpValue(meta.license)}}`);
+  if (meta.doi) lines.push(`\\Identifier{doi:${escapeXmpValue(meta.doi)}}`);
+  if (meta.isbn) lines.push(`\\Identifier{ISBN:${escapeXmpValue(meta.isbn)}}`);
+  // abstract no es soportado por pdfx, se omite del XMP
   return lines.length === 0 ? '' : `${lines.join('\n')}\n`;
 }
 
@@ -78,6 +112,8 @@ export function buildPdfInfoBlock(meta: PdfXmpMetadata): string {
   const entries: string[] = [];
   if (meta.authors && meta.authors.length > 0) entries.push(`/Author (\\pdfescapestring{${toPdfInfoValue(meta.authors.join('; '))}})`);
   if (meta.keywords && meta.keywords.length > 0) entries.push(`/Keywords (\\pdfescapestring{${toPdfInfoValue(meta.keywords.join('; '))}})`);
+  if (meta.rights) entries.push(`/Rights (\\pdfescapestring{${toPdfInfoValue(meta.rights)}})`);
+  if (meta.license) entries.push(`/License (\\pdfescapestring{${toPdfInfoValue(meta.license)}})`);
   if (entries.length === 0) return '';
   return `\\AtBeginDocument{%\n  \\pdfinfo{%\n${entries.map((e) => `    ${e}%`).join('\n')}\n  }%\n}%\n`;
 }
