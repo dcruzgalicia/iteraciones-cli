@@ -99,8 +99,9 @@ export function buildPdfxPagesattr(widthMm: number, heightMm: number, cropActive
 
 /**
  * Aplica generación dinámica a los filters de la cola de imprenta (98-crop,
- * 99-pdfx) según el tamaño de página detectado y qué filters están activos.
- * Modifica el array in-place y retorna el mismo puntero para encadenamiento.
+ * 99-pdfx) y a 30-endpapers según el tamaño de página detectado y qué
+ * filters están activos. Modifica el array in-place y retorna el mismo
+ * puntero para encadenamiento.
  */
 export function applyPrintQueueDynamics(filters: PreambleFilter[]): PreambleFilter[] {
   const cropActive = filters.some((f) => f.name === '98-crop');
@@ -116,6 +117,20 @@ export function applyPrintQueueDynamics(filters: PreambleFilter[]): PreambleFilt
       const pkgLine = f.content.match(/^(\\usepackage\[.*?\]\{pdfx\})/m)?.[0] ?? '\\usepackage[x-1a1]{pdfx}';
       const pagesattr = buildPdfxPagesattr(w, h, cropActive);
       f.content = `${pkgLine}\n\n${pagesattr}`;
+    }
+  }
+
+  // Endpapers: cuando crop está activo, la imagen necesita +6mm (3mm por
+  // lado) para cubrir el stock más grande de las marcas de corte.
+  if (cropActive) {
+    const ep = filters.find((f) => f.name === '30-endpapers');
+    if (ep) {
+      ep.content = ep.content
+        .replaceAll(') / \\dim_to_fp:n { \\the\\wd\\papersbox', '+ 6mm ) / \\dim_to_fp:n { \\the\\wd\\papersbox')
+        .replaceAll(') / \\dim_to_fp:n { \\the\\ht\\papersbox', '+ 6mm ) / \\dim_to_fp:n { \\the\\ht\\papersbox')
+        .replaceAll(') / \\l_ep_scale_fp', '+ 6mm ) / \\l_ep_scale_fp')
+        .replaceAll('width=\\dimexpr\\paperwidth\\relax', 'width=\\dimexpr\\paperwidth+6mm\\relax')
+        .replaceAll('height=\\dimexpr\\paperheight\\relax', 'height=\\dimexpr\\paperheight+6mm\\relax');
     }
   }
 

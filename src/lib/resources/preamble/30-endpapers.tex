@@ -4,13 +4,13 @@
 %
 % Modo COVER recortado: la imagen cubre la hoja sin espacios en blanco ni
 % deformación, y se RECORTA (viewport + clip de graphicx) para que el visible
-% sea exactamente papel + 3mm por lado (6mm por dimensión): nada de la
-% imagen se ve más allá, incluso con 98-crop (el stock más grande de las
-% marcas de corte no revela sobrante). La escala cover y la ventana central
-% (en unidades naturales de la imagen) se calculan con l3fp en \setendpapers,
-% a partir del \sbox (a tamaño natural: \wd = ancho, \ht = alto) y de
-% \paperwidth/\paperheight reales (documentclass o geometry, incluido el
-% override del proyecto): no se hardcodea.
+% sea exactamente el tamaño del papel. Cuando 98-crop está activo, el
+% preamble dinámico agrega +6mm (3mm por lado) al cálculo para cubrir el
+% stock más grande de las marcas de corte. La escala cover y la ventana
+% central (en unidades naturales de la imagen) se calculan con l3fp en
+% \setendpapers, a partir del \sbox (a tamaño natural: \wd = ancho, \ht =
+% alto) y de \paperwidth/\paperheight reales (documentclass o geometry,
+% incluido el override del proyecto): no se hardcodea.
 %
 % El centro de la imagen se alinea con el centro de la hoja: el \put en
 % (.5\paperwidth, ±.5\paperheight) — el signo depende del grid de 97-eso-pic
@@ -35,14 +35,15 @@
 \cs_new_protected:Npn \setendpapers #1 {
   \gdef \@endpapers {#1}
   \sbox \papersbox { \includegraphics {#1} }
-  % Escala cover contra papel+6mm (3mm por lado) y ventana central en
-  % unidades naturales de la imagen (para el viewport del recorte).
+  % Escala cover contra papel y ventana central en unidades naturales de la
+  % imagen (para el viewport del recorte). Cuando 98-crop está activo,
+  % applyPrintQueueDynamics agrega +6mm dinámicamente.
   \fp_set:Nn \l_ep_scale_fp {
-    max( ( \dim_to_fp:n { \the\paperwidth } + 6mm ) / \dim_to_fp:n { \the\wd\papersbox },
-         ( \dim_to_fp:n { \the\paperheight } + 6mm ) / \dim_to_fp:n { \the\ht\papersbox } )
+    max( ( \dim_to_fp:n { \the\paperwidth } ) / \dim_to_fp:n { \the\wd\papersbox },
+         ( \dim_to_fp:n { \the\paperheight } ) / \dim_to_fp:n { \the\ht\papersbox } )
   }
-  \fp_set:Nn \l_ep_winW_fp { ( \dim_to_fp:n { \the\paperwidth } + 6mm ) / \l_ep_scale_fp }
-  \fp_set:Nn \l_ep_winH_fp { ( \dim_to_fp:n { \the\paperheight } + 6mm ) / \l_ep_scale_fp }
+  \fp_set:Nn \l_ep_winW_fp { ( \dim_to_fp:n { \the\paperwidth } ) / \l_ep_scale_fp }
+  \fp_set:Nn \l_ep_winH_fp { ( \dim_to_fp:n { \the\paperheight } ) / \l_ep_scale_fp }
   \dim_set:Nn \ep@vx { \fp_to_dim:n { ( \dim_to_fp:n { \the\wd\papersbox } - \l_ep_winW_fp ) / 2 } }
   \dim_set:Nn \ep@vy { \fp_to_dim:n { ( \dim_to_fp:n { \the\ht\papersbox } - \l_ep_winH_fp ) / 2 } }
   \dim_set:Nn \ep@vxw { \fp_to_dim:n { ( \dim_to_fp:n { \the\wd\papersbox } + \l_ep_winW_fp ) / 2 } }
@@ -65,8 +66,8 @@
               \includegraphics[%
                 viewport={\the\ep@vx} {\the\ep@vy} {\the\ep@vxw} {\the\ep@vyh},%
                 clip,%
-                width=\dimexpr\paperwidth+6mm\relax,%
-                height=\dimexpr\paperheight+6mm\relax,%
+                width=\dimexpr\paperwidth\relax,%
+                height=\dimexpr\paperheight\relax,%
               ]{\@endpapers}%
               \hss
             }%
