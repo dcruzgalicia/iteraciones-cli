@@ -141,6 +141,23 @@ export const DEFAULT_SITE_CONFIG = {
     markdown: DEFAULT_MARKDOWN_FORMAT,
     latex: DEFAULT_LATEX_FORMAT,
   },
+  // Dublin Core fields (all undefined by default)
+  title: undefined,
+  creator: undefined,
+  subject: undefined,
+  description: undefined,
+  publisher: undefined,
+  contributor: undefined,
+  date: undefined,
+  identifier: undefined,
+  source: undefined,
+  relation: undefined,
+  coverage: undefined,
+  rights: undefined,
+  license: undefined,
+  doi: undefined,
+  isbn: undefined,
+  abstract: undefined,
 };
 
 /** Claves de los 5 formatos soportados. */

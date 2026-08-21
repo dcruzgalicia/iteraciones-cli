@@ -320,3 +320,60 @@ iteraciones validate
 ```
 
 Los errores se imprimen en `stderr`. El comando devuelve código de salida `1` si hay errores, `0` si todo es válido.
+
+## Metadatos Dublin Core
+
+Los metadatos Dublin Core se pueden definir en tres niveles con la siguiente precedencia:
+
+**frontmatter > format config > root config**
+
+### Campos disponibles
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `title` | `string` | Título del documento |
+| `creator` | `string \| string[]` | Autor(es) del documento |
+| `subject` | `string \| string[]` | Tema(s) del documento |
+| `description` | `string` | Descripción del documento |
+| `publisher` | `string \| string[]` | Editorial(es) |
+| `contributor` | `string \| string[]` | Otros contribuidores |
+| `date` | `string` | Fecha (ISO YYYY-MM-DD) |
+| `identifier` | `string` | Identificador único (DOI, ISBN, URL) |
+| `source` | `string` | Fuente del documento |
+| `relation` | `string \| string[]` | Recursos relacionados |
+| `coverage` | `string` | Cobertura espacial/temporal |
+| `rights` | `string` | Información de derechos/licencia |
+| `license` | `string` | URI del documento de licencia |
+| `doi` | `string` | Digital Object Identifier |
+| `isbn` | `string` | International Standard Book Number |
+| `abstract` | `string` | Resumen del documento |
+
+### Ejemplo de precedencia
+
+```yaml
+# Config raíz (valores por defecto para todos los formatos)
+title: 'Mi Libro'
+creator: 'Ana García'
+publisher: 'Editorial Ejemplo'
+language: 'es-MX'
+
+format:
+  pdf:
+    # Config por formato (sobreescribe la raíz para PDF)
+    creator: 'Juan Pérez'
+    publisher: 'Editorial PDF'
+```
+
+```markdown
+---
+# Frontmatter (sobreescribe cualquier config)
+title: 'Capítulo 1'
+creator: 'María López'
+---
+```
+
+Resultado efectivo:
+- `title` → "Capítulo 1" (frontmatter)
+- `creator` → "María López" (frontmatter)
+- `publisher` → "Editorial PDF" (format.pdf)
+- `language` → "es-MX" (raíz)
