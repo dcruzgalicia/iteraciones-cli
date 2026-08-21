@@ -80,7 +80,22 @@ export async function processImage(inputPath: string, targetWmm: number, targetH
     args.push('-gravity', 'center', '-extent', `${targetW}x${targetH}`);
   }
 
-  args.push('-colorspace', 'CMYK', '-density', '300', '-units', 'PixelsPerInch', '-quality', '100', '-background', 'white', '-flatten', outPath);
+  args.push(
+    '-colorspace',
+    'Gray',
+    '-colorspace',
+    'CMYK',
+    '-density',
+    '300',
+    '-units',
+    'PixelsPerInch',
+    '-quality',
+    '100',
+    '-background',
+    'white',
+    '-flatten',
+    outPath,
+  );
 
   const proc = Bun.spawn(args, { stdout: 'ignore', stderr: 'pipe' });
   const exitCode = await proc.exited;
