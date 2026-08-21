@@ -371,7 +371,7 @@ async function processDocumentFormats(
       // Solo copiar archivos que fueron efectivamente procesados (no los originales).
       for (const imgPath of processedImages) {
         if (await Bun.file(imgPath).exists()) {
-          await Bun.write(join(ctx.outputDir, basename(imgPath)), imgPath);
+          await Bun.write(join(ctx.outputDir, basename(imgPath)), Bun.file(imgPath));
         }
       }
     }
