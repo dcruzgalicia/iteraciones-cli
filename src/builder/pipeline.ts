@@ -368,8 +368,11 @@ async function processDocumentFormats(
     if (latexOn) {
       await writeOutput(texDistPath, texWithXmp);
       // Copiar imágenes procesadas a dist/ para distribución con LaTeX.
+      // Solo copiar archivos que fueron efectivamente procesados (no los originales).
       for (const imgPath of processedImages) {
-        await Bun.write(join(ctx.outputDir, basename(imgPath)), imgPath);
+        if (await Bun.file(imgPath).exists()) {
+          await Bun.write(join(ctx.outputDir, basename(imgPath)), imgPath);
+        }
       }
     }
     if (pdfOn) {
