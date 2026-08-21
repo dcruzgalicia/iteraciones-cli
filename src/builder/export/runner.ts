@@ -55,8 +55,8 @@ export async function convertToEpub(
   const lang = typeof fm.lang === 'string' && fm.lang ? (fm.lang as string) : doc.metadata.lang;
   extraArgs.push(`--metadata=lang:${lang}`);
   extraArgs.push(`--metadata=title:${metadataValue(doc.metadata.title)}`);
-  for (const author of doc.metadata.author) {
-    extraArgs.push(`--metadata=author:${metadataValue(author)}`);
+  for (const creator of doc.metadata.creator) {
+    extraArgs.push(`--metadata=creator:${metadataValue(creator)}`);
   }
   const date = doc.metadata.dateIso ?? doc.metadata.date;
   if (date) extraArgs.push(`--metadata=date:${metadataValue(date)}`);

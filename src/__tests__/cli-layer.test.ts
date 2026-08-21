@@ -1778,10 +1778,10 @@ describe('runValidate', () => {
     });
   });
 
-  it('rechaza un author que no es texto ni lista de textos', async () => {
+  it('rechaza un creator que no es texto ni lista de textos', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
-      await writeFile(join(dir, 'malo.md'), '---\ntitle: "Ok"\nauthor: 5\n---\n\n# Hola\n', 'utf8');
+      await writeFile(join(dir, 'malo.md'), '---\ntitle: "Ok"\ncreator: 5\n---\n\n# Hola\n', 'utf8');
       const stderrSpy = spyStderr();
       let output = '';
       try {
@@ -1791,7 +1791,7 @@ describe('runValidate', () => {
         output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
         stderrSpy.mockRestore();
       }
-      expect(output).toContain('"author" debe ser un texto o una lista de textos');
+      expect(output).toContain('"creator" debe ser un texto o una lista de textos');
       expect(process.exitCode).toBe(1);
     });
   });
@@ -1934,7 +1934,7 @@ describe('runValidate', () => {
   it('advierte sobre campos de frontmatter ignorados sin romper el exit code', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
-      await writeFile(join(dir, 'extra.md'), '---\ntitle: Extra\nabstract: Resumen del trabajo\nkeywords: [uno, dos]\n---\n\nContenido.\n', 'utf8');
+      await writeFile(join(dir, 'extra.md'), '---\ntitle: Extra\nabstract: Resumen del trabajo\ncustom-field: valor\n---\n\nContenido.\n', 'utf8');
       const stderrSpy = spyStderr();
       let output = '';
       try {
@@ -1944,20 +1944,18 @@ describe('runValidate', () => {
         output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
         stderrSpy.mockRestore();
       }
-      // keywords ahora es consumido por el pipeline (XMP/Info, issue #1970):
-      // ya no se lista como ignorado; abstract sí.
-      expect(output).toContain('campos de frontmatter ignorados por el pipeline: abstract');
+      expect(output).toContain('campos de frontmatter ignorados por el pipeline: custom-field');
       expect(output).toContain('extra.md');
       expect(process.exitCode).toBe(0);
     });
   });
 
-  it('no advierte sobre los campos que fluyen a pandoc/template (toc, lang, description, etc.)', async () => {
+  it('no advierte sobre los campos que fluyen a pandoc/template (toc, language, description, etc.)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
       await writeFile(
         join(dir, 'efectivos.md'),
-        '---\ntitle: Efectivos\nlang: en\ntoc: true\ndescription: Resumen\nsite-title: Mi sitio\ntheme: light\naccent: rose\n---\n\nContenido.\n',
+        '---\ntitle: Efectivos\nlanguage: en\ntoc: true\ndescription: Resumen\nsite-title: Mi sitio\ntheme: light\naccent: rose\n---\n\nContenido.\n',
         'utf8',
       );
       const stderrSpy = spyStderr();

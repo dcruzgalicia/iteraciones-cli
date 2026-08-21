@@ -582,7 +582,7 @@ describe.skipIf(!pandocOk)('filtros Lua de usuario', () => {
       const doc: BuildDocument = {
         filePath: join(cwd, 'doc.md'),
         relativePath: 'doc.md',
-        frontmatter: { title: 'Prueba', date: '', author: [] },
+        frontmatter: { title: 'Prueba', date: '', creator: [] },
         slug: 'prueba',
       };
       const siteConfig = await loadSiteConfig(cwd);

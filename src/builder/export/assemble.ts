@@ -21,7 +21,7 @@ export function assembleExportDocument(
 
   const metadata: ExportMetadata = {
     title: doc.frontmatter.title || 'Sin título',
-    author: doc.frontmatter.author,
+    creator: doc.frontmatter.creator,
     date: formatHumanDate(doc.frontmatter.date) ?? undefined,
     dateIso: doc.frontmatter.date,
     lang,

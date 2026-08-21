@@ -280,11 +280,11 @@ function frontmatterStringList(value: unknown): string[] | undefined {
 function xmpMetadataFor(fm: Record<string, unknown>, lang: string): PdfXmpMetadata {
   return {
     title: typeof fm.title === 'string' && fm.title.trim() ? fm.title : undefined,
-    authors: frontmatterStringList(fm.author),
+    authors: frontmatterStringList(fm.creator),
     lang,
     dateIso: typeof fm.date === 'string' && fm.date.trim() ? fm.date : undefined,
     subject: frontmatterStringList(fm.subject)?.join(', '),
-    publishers: frontmatterStringList(fm.publishers),
+    publishers: frontmatterStringList(fm.publisher),
     keywords: frontmatterStringList(fm.keywords),
   };
 }
@@ -434,7 +434,7 @@ async function processDocumentFormats(
         theme: htmlConfig?.theme,
         accent: htmlConfig?.accent,
         css: ctx.needsCss ? relativeHref(dir, 'css/styles.css') : undefined,
-        authorMeta: doc.frontmatter.author.join(', '),
+        authorMeta: doc.frontmatter.creator.join(', '),
         logoInline,
         docTitle: doc.frontmatter.title && doc.frontmatter.title !== 'Sin t\u00edtulo' ? doc.frontmatter.title : undefined,
         subtitle: doc.frontmatter.subtitle,

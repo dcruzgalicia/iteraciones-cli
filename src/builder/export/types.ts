@@ -1,7 +1,7 @@
 /** Metadatos que se inyectan en el YAML header del documento Pandoc. */
 export interface ExportMetadata {
   title: string;
-  author: string[];
+  creator: string[];
   /** Fecha legible (formato humano, para el YAML del export Markdown). */
   date?: string;
   /** Fecha cruda del frontmatter (ISO yyyy-mm-dd, para dc:date del EPUB). */

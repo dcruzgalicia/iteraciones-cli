@@ -29,7 +29,7 @@ function entryFor(discoveryIndex: Map<string, DiscoveryEntry>, path: string): Di
  */
 export async function resolveSlugs(
   discoveryIndex: Map<string, DiscoveryEntry>,
-  computeSlug: (meta: { title: string; author: string[] }, opts: { fallbackPath: string; maxAuthors?: number }) => string,
+  computeSlug: (meta: { title: string; creator: string[] }, opts: { fallbackPath: string; maxCreators?: number }) => string,
 ): Promise<SlugResolutionResult> {
   const slugChangedEntries = new Map<string, string>();
   const changedPaths: string[] = [];
@@ -55,7 +55,7 @@ export async function resolveSlugs(
   const slugGroups = new Map<string, string[]>();
   for (const [relPath, entry] of discoveryIndex) {
     if (entry.slugFixed) continue;
-    const slugBase = computeSlug({ title: entry.title, author: entry.author }, { fallbackPath: relPath });
+    const slugBase = computeSlug({ title: entry.title, creator: entry.creator }, { fallbackPath: relPath });
     const dir = dirname(relPath);
     const key = dir === '.' ? slugBase : `${dir}/${slugBase}`;
     if (!slugGroups.has(key)) slugGroups.set(key, []);
@@ -71,7 +71,7 @@ export async function resolveSlugs(
       const path = paths[0];
       if (path === undefined) throw new Error('slug-resolver: grupo de slugs vacío');
       const entry = entryFor(discoveryIndex, path);
-      const slugBase = computeSlug({ title: entry.title, author: entry.author }, { fallbackPath: path });
+      const slugBase = computeSlug({ title: entry.title, creator: entry.creator }, { fallbackPath: path });
       // Un doc que queda único conserva su sufijo -dN: la renumeración a slug
       // limpio solo corresponde a builds sin estado previo (--full).
       const prevSlug = entry.slug;

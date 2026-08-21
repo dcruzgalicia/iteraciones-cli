@@ -8,7 +8,7 @@ import { checkPandoc } from '../lib/pandoc-runner.js';
 import { withTempDir } from './helpers.js';
 
 /** Markdown original de entrada con frontmatter (el frontmatter fluye a pandoc). */
-const BODY = '---\ntitle: "Mi título"\nauthor: [Autor Uno, Autor Dos]\ndate: 2026-08-08\n---\n\nHola.\n';
+const BODY = '---\ntitle: "Mi título"\ncreator: [Autor Uno, Autor Dos]\ndate: 2026-08-08\n---\n\nHola.\n';
 
 /** Grupo de filtros vacío: las conversiones corren sin filtros en estos tests. */
 const NO_FILTERS: LuaFilterGroup = { semantic: [], latex: [], html: [], flags: [], user: [], resolvedNames: new Set() };
@@ -18,7 +18,7 @@ const EXPORT_DOC = {
   relativePath: 'test.md',
   metadata: {
     title: 'Mi título',
-    author: ['Autor Uno', 'Autor Dos'],
+    creator: ['Autor Uno', 'Autor Dos'],
     date: '8 de agosto de 2026',
     dateIso: '2026-08-08',
     lang: 'es-MX',
@@ -78,7 +78,7 @@ describe('export/runner (convertToMarkdown)', () => {
       await convertToMarkdown(
         bodySin,
         out,
-        { ...EXPORT_DOC, metadata: { ...EXPORT_DOC.metadata, author: [], date: undefined, dateIso: undefined } },
+        { ...EXPORT_DOC, metadata: { ...EXPORT_DOC.metadata, creator: [], date: undefined, dateIso: undefined } },
         NO_FILTERS,
         '/proyecto',
       );
