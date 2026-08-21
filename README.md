@@ -51,7 +51,7 @@ Esto también crea un archivo `bibliography.bib` de ejemplo.
 ## Configuración (`iteraciones.config.yaml`)
 
 ```yaml
-lang: "es-MX"                     # idioma del sitio (por defecto: "es-MX")
+language: "es-MX"                     # idioma del sitio (por defecto: "es-MX")
 
 toc: false                         # índice en cada documento (por defecto: false)
 

@@ -128,7 +128,7 @@ export function computeActiveFormats(format: FormatConfig): string[] {
 }
 
 export const DEFAULT_SITE_CONFIG = {
-  lang: 'es-MX',
+  language: 'es-MX',
   toc: false,
   disabledFilters: undefined,
   luaFilters: undefined,

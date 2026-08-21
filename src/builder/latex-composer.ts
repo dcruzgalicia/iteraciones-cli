@@ -101,7 +101,7 @@ export async function markdownToLatex(
   // El fragmento babel del template efectivo se resuelve por el lang de la
   // configuración (el frontmatter lang no altera babel en el PDF: contrato
   // documentado en configuration.md).
-  extraArgs.push(`--metadata=babel-lang:${babelOptionsForLang(siteConfig.lang, warnedLangs)}`);
+  extraArgs.push(`--metadata=babel-lang:${babelOptionsForLang(siteConfig.language, warnedLangs)}`);
   extraArgs.push(`--metadata=biblatex-available:${biblatexAvailable}`);
   // Comando del número de página (posición configurada): flags.lua lo inserta
   // después del primer bloque cuando el body empieza con un title/list-opener

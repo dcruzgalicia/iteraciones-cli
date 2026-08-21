@@ -15,7 +15,7 @@ describe('runValidate (separación de entorno y validez)', () => {
   it('validate nunca consulta el motor LaTeX, ni con pdf.generate: true (el entorno es trabajo de doctor)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  pdf:\n    generate: true\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nformat:\n  pdf:\n    generate: true\n', 'utf8');
       const spy = spyOn(systemChecks, 'checkLatexEngine').mockImplementation(async () => ({
         label: 'pdflatex disponible',
         ok: false,

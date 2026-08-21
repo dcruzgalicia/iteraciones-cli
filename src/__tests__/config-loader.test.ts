@@ -17,7 +17,7 @@ describe('loadSiteConfig', () => {
       const config = await loadSiteConfig(dir);
       expect(config.format.html?.title).toBe('iteraciones');
       expect(config.format.html?.tagline).toBe('escribir, compartir, re-existir');
-      expect(config.lang).toBe('es-MX');
+      expect(config.language).toBe('es-MX');
       expect(config.format.html?.logo).toBe('');
       expect(config.disabledFilters).toBeUndefined();
       expect(config.format?.pdf?.disabledPreambleFilters).toEqual(['97-eso-pic', '98-crop', '99-pdfx']);
@@ -61,7 +61,7 @@ describe('loadSiteConfig', () => {
 
   it('traduce las causas YAML conocidas al español (claves duplicadas)', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'lang: es-MX\nlang: es-MX\n');
+      await writeConfig(dir, 'language: es-MX\nlanguage: es-MX\n');
       await expect(loadSiteConfig(dir)).rejects.toThrow(/las claves del mapeo deben ser únicas/);
     });
   });
@@ -75,8 +75,8 @@ describe('loadSiteConfig', () => {
 
   it('reporta TODOS los errores de tipo en una sola ejecución (no solo el primero)', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'lang: 123\nformat:\n  html:\n    theme: raro\n  pdf:\n    page-number: medio\n');
-      await expect(loadSiteConfig(dir)).rejects.toThrow(/lang: .*format\.html\.theme: .*format\.pdf\.page-number:/s);
+      await writeConfig(dir, 'language: 123\nformat:\n  html:\n    theme: raro\n  pdf:\n    page-number: medio\n');
+      await expect(loadSiteConfig(dir)).rejects.toThrow(/language: .*format\.html\.theme: .*format\.pdf\.page-number:/s);
     });
   });
 
@@ -87,7 +87,7 @@ describe('loadSiteConfig', () => {
       let output = '';
       try {
         const config = await loadSiteConfig(dir);
-        expect(config.lang).toBe('es-MX'); // defaults
+        expect(config.language).toBe('es-MX'); // defaults
       } finally {
         output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
         stderrSpy.mockRestore();
@@ -112,11 +112,11 @@ describe('loadSiteConfig', () => {
     });
   });
 
-  it('lee lang correctamente', async () => {
+  it('lee language correctamente', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'lang: en-US');
+      await writeConfig(dir, 'language: en-US');
       const config = await loadSiteConfig(dir);
-      expect(config.lang).toBe('en-US');
+      expect(config.language).toBe('en-US');
     });
   });
 
@@ -222,7 +222,7 @@ describe('loadSiteConfig', () => {
       await writeConfig(
         dir,
         [
-          'lang: es-MX',
+          'language: es-MX',
           'format:',
           '  latex:',
           '    generate: true',
@@ -248,7 +248,7 @@ describe('loadSiteConfig', () => {
       const config = await loadSiteConfig(dir);
       expect(config.format.html?.title).toBe('Mi Sitio');
       expect(config.format.html?.tagline).toBe('mi tagline');
-      expect(config.lang).toBe('es-MX');
+      expect(config.language).toBe('es-MX');
       expect(config.format.html?.logo).toBe('logo.svg');
       expect(config.format.latex?.generate).toBe(true);
       expect(config.format.pdf?.generate).toBe(true);
@@ -314,7 +314,7 @@ describe('loadSiteConfig', () => {
 
   it('format.latex.generate es false con config presente sin clave latex (vía 1)', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'lang: es-MX');
+      await writeConfig(dir, 'language: es-MX');
       const config = await loadSiteConfig(dir);
       expect(config.format.latex?.generate).toBe(false);
     });
@@ -330,7 +330,7 @@ describe('loadSiteConfig', () => {
 
   it('disabled-preamble-filters tiene los 3 defaults con config presente sin la clave (vía 3)', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'lang: es-MX\nformat:\n  html:\n    title: ok');
+      await writeConfig(dir, 'language: es-MX\nformat:\n  html:\n    title: ok');
       const config = await loadSiteConfig(dir);
       expect(config.format?.pdf?.disabledPreambleFilters).toEqual(['97-eso-pic', '98-crop', '99-pdfx']);
     });
@@ -338,7 +338,7 @@ describe('loadSiteConfig', () => {
 
   it('parsea la bibliografía y el CSL configurados a nivel raíz', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'lang: es-MX\nbibliography: refs/mi-libro.bib\ncsl: styles/nature.csl');
+      await writeConfig(dir, 'language: es-MX\nbibliography: refs/mi-libro.bib\ncsl: styles/nature.csl');
       const config = await loadSiteConfig(dir);
       expect(config.bibliography).toBe('refs/mi-libro.bib');
       expect(config.csl).toBe('styles/nature.csl');
@@ -377,7 +377,7 @@ describe('loadSiteConfig', () => {
       results.push(await loadSiteConfig(dir));
     });
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'lang: es-MX');
+      await writeConfig(dir, 'language: es-MX');
       results.push(await loadSiteConfig(dir));
     });
 
@@ -398,7 +398,7 @@ describe('loadSiteConfig', () => {
   it('los defaults del esquema coinciden con las constantes DEFAULT_* (fuente única)', async () => {
     await withTempDir(async (dir) => {
       const config = await loadSiteConfig(dir);
-      expect(config.lang).toBe(DEFAULT_SITE_CONFIG.lang);
+      expect(config.language).toBe(DEFAULT_SITE_CONFIG.language);
       expect(config.toc).toBe(DEFAULT_SITE_CONFIG.toc);
       expect(config.format.latex).toEqual(DEFAULT_SITE_CONFIG.format.latex);
       expect(config.format.html).toEqual(DEFAULT_HTML_FORMAT);
@@ -449,7 +449,7 @@ describe('loadSiteConfigWithPresence', () => {
 
   it('sin la clave, el conjunto de presencia no la incluye y el valor es el default', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'lang: es-MX');
+      await writeConfig(dir, 'language: es-MX');
       const { config, presentKeys } = await loadSiteConfigWithPresence(dir);
       expect(presentKeys.has('format.pdf.disabled-preamble-filters')).toBe(false);
       expect(config.format?.pdf?.disabledPreambleFilters).toEqual(['97-eso-pic', '98-crop', '99-pdfx']);
@@ -458,9 +458,9 @@ describe('loadSiteConfigWithPresence', () => {
 
   it('recoge rutas punteadas de todos los niveles del YAML', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'lang: en-US\nformat:\n  pdf:\n    generate: true\n    show-date: true\n');
+      await writeConfig(dir, 'language: en-US\nformat:\n  pdf:\n    generate: true\n    show-date: true\n');
       const { presentKeys } = await loadSiteConfigWithPresence(dir);
-      expect(presentKeys.has('lang')).toBe(true);
+      expect(presentKeys.has('language')).toBe(true);
       expect(presentKeys.has('format')).toBe(true);
       expect(presentKeys.has('format.pdf')).toBe(true);
       expect(presentKeys.has('format.pdf.generate')).toBe(true);
@@ -473,7 +473,7 @@ describe('loadSiteConfigWithPresence', () => {
     await withTempDir(async (dir) => {
       const { config, presentKeys } = await loadSiteConfigWithPresence(dir);
       expect(presentKeys.size).toBe(0);
-      expect(config.lang).toBe('es-MX');
+      expect(config.language).toBe('es-MX');
     });
   });
 });

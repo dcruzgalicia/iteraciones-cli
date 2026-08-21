@@ -250,10 +250,10 @@ describe('computeFiltersHash', () => {
 });
 
 describe('computeConfigHashes', () => {
-  it('el hash pdf incluye lang (contrato lang → PDF)', async () => {
+  it('el hash pdf incluye language (contrato language → PDF)', async () => {
     const base = { ...DEFAULT_SITE_CONFIG, format: { ...DEFAULT_SITE_CONFIG.format } };
     const h1 = await computeConfigHashes('/tmp', base);
-    const h2 = await computeConfigHashes('/tmp', { ...base, lang: 'en' });
+    const h2 = await computeConfigHashes('/tmp', { ...base, language: 'en' });
     expect(h1.pdf).not.toBe(h2.pdf);
   });
 

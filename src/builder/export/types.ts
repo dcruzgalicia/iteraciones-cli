@@ -6,7 +6,7 @@ export interface ExportMetadata {
   date?: string;
   /** Fecha cruda del frontmatter (ISO yyyy-mm-dd, para dc:date del EPUB). */
   dateIso?: string;
-  lang: string;
+  language: string;
   bibliography?: string;
   csl?: string;
   toc: boolean;
