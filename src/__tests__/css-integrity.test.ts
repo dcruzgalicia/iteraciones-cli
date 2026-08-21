@@ -64,7 +64,7 @@ describe('compilación de Tailwind sobre dist/files', () => {
 describe('computeCssHash (caché por archivo mtime+size)', () => {
   const config = (): SiteConfig => ({
     ...DEFAULT_SITE_CONFIG,
-    format: { ...DEFAULT_SITE_CONFIG.format, html: { title: 'T', generate: true } },
+    format: { ...DEFAULT_SITE_CONFIG.format, html: { site: { title: 'T' }, generate: true } },
   });
 
   it('es estable con la caché intacta (mtime+size iguales: sin releer)', async () => {

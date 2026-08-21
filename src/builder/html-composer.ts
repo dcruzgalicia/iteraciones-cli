@@ -38,7 +38,7 @@ export function resolveBlockOrder(overrides?: HtmlBlockKey[]): HtmlBlockKey[] {
  */
 export async function composeHtmlTemplate(siteConfig: SiteConfig): Promise<string> {
   const skeleton = await Bun.file(join(HTML_RESOURCES_DIR, 'skeleton.html')).text();
-  const order = resolveBlockOrder(siteConfig.format?.html?.blocks);
+  const order = resolveBlockOrder((siteConfig.format?.html as { blocks?: HtmlBlockKey[] })?.blocks);
   const blocks: string[] = [];
   for (const key of order) {
     const card = await Bun.file(join(HTML_RESOURCES_DIR, HTML_CARDS[key])).text();

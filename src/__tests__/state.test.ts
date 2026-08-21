@@ -262,7 +262,7 @@ describe('computeConfigHashes', () => {
     const h1 = await computeConfigHashes('/tmp', base);
     const h2 = await computeConfigHashes('/tmp', {
       ...base,
-      format: { ...base.format, html: { ...base.format.html, accent: 'blue' } },
+      format: { ...base.format, html: { ...base.format.html, site: { ...base.format.html?.site, color: 'blue' } } },
     });
     expect(h1.html).not.toBe(h2.html);
   });

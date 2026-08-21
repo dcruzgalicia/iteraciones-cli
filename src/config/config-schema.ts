@@ -77,16 +77,26 @@ const HtmlBlocksSchema = z
   })
   .transform((value): HtmlBlockKey[] | undefined => (Array.isArray(value) ? (value as HtmlBlockKey[]) : undefined));
 
-const HtmlFormatSchema = z
+const HtmlSiteSchema = z
   .object({
-    title: z.string().default(DEFAULT_HTML_FORMAT.title),
-    tagline: z.string().default(DEFAULT_HTML_FORMAT.tagline),
-    logo: z.string().default(DEFAULT_HTML_FORMAT.logo),
-    theme: z.enum(['light', 'dark']).optional().default(DEFAULT_HTML_FORMAT.theme),
-    accent: z
+    title: z.string().default(DEFAULT_HTML_FORMAT.site?.title ?? 'iteraciones'),
+    description: z.string().default(DEFAULT_HTML_FORMAT.site?.description ?? 'escribir, compartir, re-existir'),
+    logo: z.string().default(DEFAULT_HTML_FORMAT.site?.logo ?? ''),
+    theme: z
+      .enum(['light', 'dark'])
+      .optional()
+      .default(DEFAULT_HTML_FORMAT.site?.theme ?? 'dark'),
+    color: z
       .enum(KNOWN_ACCENT_COLORS as [AccentColor, ...AccentColor[]])
       .optional()
-      .default(DEFAULT_HTML_FORMAT.accent),
+      .default(DEFAULT_HTML_FORMAT.site?.color ?? 'lime'),
+    css: z.string().optional(),
+  })
+  .strict();
+
+const HtmlFormatSchema = z
+  .object({
+    site: HtmlSiteSchema.optional(),
     generate: z.boolean().default(DEFAULT_HTML_FORMAT.generate),
     blocks: HtmlBlocksSchema.optional(),
   })

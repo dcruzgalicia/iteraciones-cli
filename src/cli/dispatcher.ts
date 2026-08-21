@@ -170,8 +170,8 @@ async function buildProjectInfo(cwd: string): Promise<string[]> {
   const preambleDisabled = presentKeys.has('format.pdf.disabled-preamble-filters') ? (config.format?.pdf?.disabledPreambleFilters ?? []) : [];
   const docCount = (await listMarkdownDocuments(cwd)).length;
   const html = config.format?.html;
-  const theme = html?.theme ?? '(por defecto)';
-  const accent = html?.accent ?? '(por defecto)';
+  const theme = html?.site?.theme ?? '(por defecto)';
+  const accent = html?.site?.color ?? '(por defecto)';
 
   // Etiquetas de los preamble filters con valor alineado: la columna la fija
   // la etiqueta más larga (padEnd), sin espacios a mano que se desalinean.

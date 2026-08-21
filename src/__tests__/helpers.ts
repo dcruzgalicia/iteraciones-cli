@@ -9,7 +9,7 @@ import { join } from 'node:path';
 export async function initTestProject(dir: string): Promise<void> {
   await writeFile(
     join(dir, 'iteraciones.config.yaml'),
-    ['language: es-MX', 'format:', '  html:', '    title: Test', '    generate: true'].join('\n'),
+    ['language: es-MX', 'format:', '  html:', '    site:', '      title: Test', '    generate: true'].join('\n'),
     'utf8',
   );
   await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\nContenido de prueba.\n', 'utf8');

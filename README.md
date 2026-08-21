@@ -65,11 +65,12 @@ format:
     #   - 24-eso-pic
 
   html:
-    title: "Mi sitio"              # título del sitio (por defecto: "iteraciones")
-    tagline: "mi tagline"          # frase corta (por defecto: "escribir, compartir, re-existir")
-    logo: ""                       # ruta al logo (por defecto: sin logo)
-    theme: dark                    # tema: "light" o "dark"
-    accent: lime                   # color de acento (lime, blue, rose, etc.)
+    site:
+      title: "Mi sitio"              # título del sitio (por defecto: "iteraciones")
+      description: "mi tagline"          # frase corta (por defecto: "escribir, compartir, re-existir")
+      logo: ""                       # ruta al logo (por defecto: sin logo)
+      theme: dark                    # tema: "light" o "dark"
+      color: lime                   # color de acento (lime, blue, rose, etc.)
     generate: true                 # genera HTML (por defecto: true)
 
   epub:

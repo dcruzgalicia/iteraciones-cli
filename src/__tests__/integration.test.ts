@@ -66,7 +66,9 @@ describe('integration: init + build', () => {
       await build(cwd, { full: true });
 
       // Cambiar el theme en la config - reescribir el archivo completo
-      const newConfig = ['language: es-MX', 'format:', '  html:', '    title: Test', '    generate: true', '    theme: light'].join('\n');
+      const newConfig = ['language: es-MX', 'format:', '  html:', '    site:', '      title: Test', '      theme: light', '    generate: true'].join(
+        '\n',
+      );
       await Bun.write(join(cwd, 'iteraciones.config.yaml'), newConfig);
 
       // El segundo build debe reprocesar por cambio de config
