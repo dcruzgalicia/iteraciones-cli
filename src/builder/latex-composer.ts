@@ -93,7 +93,7 @@ export async function markdownToLatex(
     imageMap = result.imageMap;
     processedImages = result.processedFiles;
     if (imageMap.size > 0) {
-      finalContent = rewriteImagePaths(content, imageMap);
+      finalContent = rewriteImagePaths(content, imageMap, docDir);
     }
   }
 

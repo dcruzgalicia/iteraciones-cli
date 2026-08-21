@@ -57,6 +57,7 @@ function processedName(filePath: string): string {
 
 /**
  * Procesa una imagen con ImageMagick: CMYK, 300dpi, 100% calidad JPG.
+ * @param cover Si true, resize fill + center-crop (endpapers). Si false, resize fit.
  * @returns Ruta de la imagen procesada, o la original si falló.
  */
 export async function processImage(inputPath: string, targetWmm: number, targetHmm: number, cover: boolean, outputDir: string): Promise<string> {
@@ -67,26 +68,19 @@ export async function processImage(inputPath: string, targetWmm: number, targetH
 
   const targetW = mmToPx(targetWmm);
   const targetH = mmToPx(targetHmm);
-  const resizeArg = cover ? `${targetW}x${targetH}!` : `${targetW}x${targetH}`;
 
-  const args = [
-    'magick',
-    inputPath,
-    '-resize',
-    resizeArg,
-    '-colorspace',
-    'CMYK',
-    '-density',
-    '300',
-    '-units',
-    'PixelsPerInch',
-    '-quality',
-    '100',
-    '-background',
-    'white',
-    '-flatten',
-    outPath,
-  ];
+  // cover: resize fill (Rellena el target manteniendo proporción) + center-crop
+  // fit: resize fit (Cabe dentro del target manteniendo proporción)
+  const resizeArg = cover ? `${targetW}x${targetH}^` : `${targetW}x${targetH}`;
+
+  const args = ['magick', inputPath, '-resize', resizeArg];
+
+  if (cover) {
+    // Center-crop a dimensiones exactas después del resize fill
+    args.push('-gravity', 'center', '-extent', `${targetW}x${targetH}`);
+  }
+
+  args.push('-colorspace', 'CMYK', '-density', '300', '-units', 'PixelsPerInch', '-quality', '100', '-background', 'white', '-flatten', outPath);
 
   const proc = Bun.spawn(args, { stdout: 'ignore', stderr: 'pipe' });
   const exitCode = await proc.exited;
@@ -118,11 +112,17 @@ export function scanInlineImages(content: string, docDir: string): string[] {
 
 /**
  * Preprocesa un markdown: reemplaza rutas de imágenes inline con versiones procesadas.
+ * El imageMap tiene claves absolutas; el markdown tiene rutas relativas.
+ * Para cada par (absolute → processed), busca la ruta relativa original en el
+ * contenido y la reemplaza con la ruta absoluta procesada.
  */
-export function rewriteImagePaths(content: string, imageMap: Map<string, string>): string {
+export function rewriteImagePaths(content: string, imageMap: Map<string, string>, docDir: string): string {
   let result = content;
-  for (const [original, processed] of imageMap) {
-    result = result.replaceAll(original, processed);
+  for (const [absoluteOriginal, processed] of imageMap) {
+    // Calcular la ruta relativa que aparece en el markdown
+    const relPath = absoluteOriginal.startsWith(docDir + '/') ? absoluteOriginal.slice(docDir.length + 1) : absoluteOriginal;
+    // Reemplazar ruta relativa con la ruta absoluta de la imagen procesada
+    result = result.replaceAll(relPath, processed);
   }
   return result;
 }
