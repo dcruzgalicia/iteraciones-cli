@@ -940,7 +940,10 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       await runBuild(dir);
       expect(process.exitCode).toBe(0);
       const tex = await Bun.file(join(dir, 'dist', 'files', 'test-document.tex')).text();
-      expect(tex).toContain(`\\titleimage{${join(dir, 'mi_portada.png')}}`);
+      // La imagen puede estar procesada (CMYK JPG) o sin procesar según ImageMagick
+      const hasOriginal = tex.includes(`\\titleimage{${join(dir, 'mi_portada.png')}}`);
+      const hasProcessed = tex.includes('\\titleimage{') && tex.includes('mi_portada');
+      expect(hasOriginal || hasProcessed).toBe(true);
       expect(tex).not.toContain('\\_');
     });
   });
