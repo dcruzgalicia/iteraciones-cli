@@ -14,6 +14,7 @@ import {
   getBuiltinPreambleFilterInfos,
   getBuiltinPreambleFilterNames,
   loadPreambleFilters,
+  resolveEffectiveDisabledPreamble,
   validateDisabledPreambleFilters,
   validatePreambleDependencies,
 } from '../builder/preamble-loader.js';
@@ -154,14 +155,48 @@ describe('validatePreambleDependencies (dependencias entre filters)', () => {
     expect(issues.some((i) => i.severity === 'error')).toBe(false);
   });
 
-  it('99-pdfx con 08-hyperref activo es un warning (enlaces desactivados por PDF/X-1a)', () => {
-    const issues = validatePreambleDependencies(['97-eso-pic', '98-crop']); // 99 activo
-    expect(issues.some((i) => i.severity === 'warning' && i.message.includes('99-pdfx'))).toBe(true);
+  it('con 99-pdfx activo y 08-hyperref desactivado no produce issues', () => {
+    // 08-hyperref ya no genera warning aquí porque resolveEffectiveDisabledPreamble lo desactiva
+    const issues = validatePreambleDependencies(['97-eso-pic', '98-crop', '08-hyperref']);
+    expect(issues.some((i) => i.message.includes('99-pdfx'))).toBe(false);
+  });
+});
+
+describe('resolveEffectiveDisabledPreamble (resolución de dependencias)', () => {
+  it('sin disabled list agrega 08-hyperref (99-pdfx activo por defecto)', () => {
+    const effective = resolveEffectiveDisabledPreamble(undefined);
+    expect(effective).toContain('08-hyperref');
   });
 
-  it('con 99-pdfx desactivado no hay warning de enlaces', () => {
-    const issues = validatePreambleDependencies(undefined);
-    expect(issues.some((i) => i.message.includes('99-pdfx'))).toBe(false);
+  it('con 99-pdfx desactivado no agrega 08-hyperref', () => {
+    const effective = resolveEffectiveDisabledPreamble(['99-pdfx']);
+    expect(effective).not.toContain('08-hyperref');
+  });
+
+  it('con 08-hyperref ya desactivado no lo duplica', () => {
+    const effective = resolveEffectiveDisabledPreamble(['08-hyperref']);
+    expect(effective.filter((n) => n === '08-hyperref')).toHaveLength(1);
+  });
+
+  it('con ambos 99-pdfx y 08-hyperref desactivados no agrega nada', () => {
+    const effective = resolveEffectiveDisabledPreamble(['99-pdfx', '08-hyperref']);
+    // 08-hyperref ya está en la lista, no se duplica
+    expect(effective.filter((n) => n === '08-hyperref')).toHaveLength(1);
+    expect(effective).toContain('99-pdfx');
+  });
+
+  it('no muta la lista original', () => {
+    const original = ['97-eso-pic', '98-crop'];
+    const effective = resolveEffectiveDisabledPreamble(original);
+    expect(original).toEqual(['97-eso-pic', '98-crop']);
+    expect(effective).not.toBe(original);
+  });
+
+  it('preserva otros filters en la lista', () => {
+    const effective = resolveEffectiveDisabledPreamble(['97-eso-pic', '98-crop']);
+    expect(effective).toContain('97-eso-pic');
+    expect(effective).toContain('98-crop');
+    expect(effective).toContain('08-hyperref');
   });
 });
 

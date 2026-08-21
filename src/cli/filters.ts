@@ -1,5 +1,5 @@
 import { getBuiltinLuaFilterInfos, LUA_GROUP_ORDER, validateDisabledFilters } from '../builder/filter-resolver.js';
-import { getBuiltinPreambleFilterInfos, validateDisabledPreambleFilters } from '../builder/preamble-loader.js';
+import { getBuiltinPreambleFilterInfos, resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters } from '../builder/preamble-loader.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { logInfo } from '../lib/logger.js';
 
@@ -53,7 +53,9 @@ export async function runFilters(cwd: string, options: RunFiltersOptions = {}): 
   const config = await loadSiteConfig(cwd);
   // Advertir sobre nombres desconocidos antes de listar el estado
   validateDisabledFilters(config.disabledFilters);
-  validateDisabledPreambleFilters(config.format?.pdf?.disabledPreambleFilters);
+  // Resolver dependencias implícitas (08-hyperref se desactiva con 99-pdfx)
+  const effectiveDisabledPreamble = resolveEffectiveDisabledPreamble(config.format?.pdf?.disabledPreambleFilters);
+  validateDisabledPreambleFilters(effectiveDisabledPreamble);
   const disabled = new Set(config.disabledFilters ?? []);
   const allInfos = sortLuaInfos(await getBuiltinLuaFilterInfos());
   const hasDisabled = config.disabledFilters !== undefined && config.disabledFilters.length > 0;
@@ -84,8 +86,8 @@ export async function runFilters(cwd: string, options: RunFiltersOptions = {}): 
   // Preamble filters
   const preambleInfos = await getBuiltinPreambleFilterInfos();
   if (preambleInfos.length > 0) {
-    const preambleDisabled = new Set(config.format?.pdf?.disabledPreambleFilters ?? []);
-    const hasPreambleDisabled = config.format?.pdf?.disabledPreambleFilters !== undefined && config.format?.pdf?.disabledPreambleFilters.length > 0;
+    const preambleDisabled = new Set(effectiveDisabledPreamble);
+    const hasPreambleDisabled = effectiveDisabledPreamble.length > 0;
 
     logInfo('');
     logInfo('Filtros de preámbulo (orden de ejecución):');
