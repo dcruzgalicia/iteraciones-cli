@@ -207,7 +207,7 @@ describe('composeLatexTemplate', () => {
     const tpl = await composeLatexTemplate(opts);
     expect(tpl).toContain('\\title{$title$}');
     expect(tpl).toContain('$if(subtitle)$\n\\subtitle{$subtitle$}\n$endif$');
-    expect(tpl).toContain('\\author{$for(author)$$author$$sep$ \\and $endfor$}');
+    expect(tpl).toContain('\\author{$for(creator)$$creator$$sep$ \\and $endfor$}');
     expect(tpl).toContain('\\date{$date$}');
     expect(tpl).toContain('\\maketitle');
   });
@@ -344,7 +344,7 @@ describe('composeLatexTemplate', () => {
         input: 'Texto.',
         sourcePath: 'test.md',
         to: 'latex',
-        extraArgs: ['--template', join(dir, 'tpl.tex'), '--metadata=title:Resultados 100% & Análisis', '--metadata=author:Ana & Torres'],
+        extraArgs: ['--template', join(dir, 'tpl.tex'), '--metadata=title:Resultados 100% & Análisis', '--metadata=creator:Ana & Torres'],
       });
       expect(out).toContain('\\title{Resultados 100\\% \\& Análisis}');
       expect(out).toContain('\\author{Ana \\& Torres}');
