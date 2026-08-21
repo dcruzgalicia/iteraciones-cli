@@ -31,7 +31,7 @@ describe('buildPdfInfoBlock', () => {
     expect(buildPdfInfoBlock({ title: 'T', authors: ['Ana', 'Bet'], subject: 'S', keywords: ['k'] })).toBe(
       '\\AtBeginDocument{%\n' +
         '  \\pdfinfo{%\n' +
-        '    /Author (\\pdfescapestring{Ana; Bet})%\n' +
+        '    /Author (\\pdfescapestring{Ana, Bet})%\n' +
         '    /Keywords (\\pdfescapestring{k})%\n' +
         '  }%\n' +
         '}%\n',
@@ -52,7 +52,7 @@ describe('injectXmpMetadataIntoLatex', () => {
     const tex = '\\documentclass{article}\n\\begin{document}\nHola\n\\end{document}\n';
     const out = injectXmpMetadataIntoLatex(tex, { title: 'T', authors: ['Ana', 'Bet'] });
     expect(out).toContain('\\begin{filecontents}[overwrite]{\\jobname.xmpdata}\n\\Title{T}\n\\Author{Ana\\sep Bet}\n\\end{filecontents}\n');
-    expect(out).toContain('/Author (\\pdfescapestring{Ana; Bet})%');
+    expect(out).toContain('/Author (\\pdfescapestring{Ana, Bet})%');
     expect(out.indexOf('\\begin{filecontents}')).toBeLessThan(out.indexOf('\\begin{document}'));
   });
 
