@@ -330,6 +330,39 @@ function xmpMetadataFor(
     subject: frontmatterStringList(resolveMetadata(fm, formatCfg, rootCfg, 'subject'))?.join(', '),
     publishers: frontmatterStringList(resolveMetadata(fm, formatCfg, rootCfg, 'publisher')),
     keywords: frontmatterStringList(resolveMetadata(fm, formatCfg, rootCfg, 'keywords')),
+    description:
+      typeof resolveMetadata(fm, formatCfg, rootCfg, 'description') === 'string'
+        ? (resolveMetadata(fm, formatCfg, rootCfg, 'description') as string)
+        : undefined,
+    contributors: frontmatterStringList(resolveMetadata(fm, formatCfg, rootCfg, 'contributor')),
+    identifier:
+      typeof resolveMetadata(fm, formatCfg, rootCfg, 'identifier') === 'string'
+        ? (resolveMetadata(fm, formatCfg, rootCfg, 'identifier') as string)
+        : undefined,
+    source:
+      typeof resolveMetadata(fm, formatCfg, rootCfg, 'source') === 'string'
+        ? (resolveMetadata(fm, formatCfg, rootCfg, 'source') as string)
+        : undefined,
+    relations: frontmatterStringList(resolveMetadata(fm, formatCfg, rootCfg, 'relation')),
+    coverage:
+      typeof resolveMetadata(fm, formatCfg, rootCfg, 'coverage') === 'string'
+        ? (resolveMetadata(fm, formatCfg, rootCfg, 'coverage') as string)
+        : undefined,
+    rights:
+      typeof resolveMetadata(fm, formatCfg, rootCfg, 'rights') === 'string'
+        ? (resolveMetadata(fm, formatCfg, rootCfg, 'rights') as string)
+        : undefined,
+    license:
+      typeof resolveMetadata(fm, formatCfg, rootCfg, 'license') === 'string'
+        ? (resolveMetadata(fm, formatCfg, rootCfg, 'license') as string)
+        : undefined,
+    doi: typeof resolveMetadata(fm, formatCfg, rootCfg, 'doi') === 'string' ? (resolveMetadata(fm, formatCfg, rootCfg, 'doi') as string) : undefined,
+    isbn:
+      typeof resolveMetadata(fm, formatCfg, rootCfg, 'isbn') === 'string' ? (resolveMetadata(fm, formatCfg, rootCfg, 'isbn') as string) : undefined,
+    abstract:
+      typeof resolveMetadata(fm, formatCfg, rootCfg, 'abstract') === 'string'
+        ? (resolveMetadata(fm, formatCfg, rootCfg, 'abstract') as string)
+        : undefined,
   };
 }
 
