@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import { BuildError } from '../lib/errors.js';
+import { logWarning } from '../lib/logger.js';
 
 // ---------------------------------------------------------------------------
 // Sistema de filters para el preámbulo LaTeX
@@ -66,6 +67,25 @@ export async function loadPreambleFilters(disabledList?: string[], cwd?: string)
 }
 
 /**
+ * Resuelve la lista efectiva de preamble filters desactivados, aplicando
+ * dependencias implícitas:
+ * - 99-pdfx activo → 08-hyperref se desactiva automáticamente (pdfx
+ *   desactiva los enlaces por especificación PDF/X-1a).
+ *
+ * Retorna la lista efectiva (nueva referencia, no muta el original).
+ */
+export function resolveEffectiveDisabledPreamble(disabled?: string[]): string[] {
+  const effective = disabled ? [...disabled] : [];
+  const effectiveSet = new Set(effective);
+  // 99-pdfx activo (no está en la lista) → auto-desactivar 08-hyperref
+  if (!effectiveSet.has('99-pdfx') && !effectiveSet.has('08-hyperref')) {
+    effective.push('08-hyperref');
+    logWarning('08-hyperref desactivado automáticamente: 99-pdfx requiere enlaces desactivados (PDF/X-1a)', 'config');
+  }
+  return effective;
+}
+
+/**
  * Descripción de un preamble filter: las líneas de comentario % consecutivas
  * del inicio del archivo, unidas con espacio (mismo patrón que las
  * descripciones de los filters Lua).
@@ -117,9 +137,10 @@ export type PreambleDependencyIssue = { severity: 'error' | 'warning'; message: 
  * Valida las dependencias entre preamble filters para una disabled list:
  * - 16-toc-styling usa \\renewcaptionname (definido por babel): desactivar
  *   05-language lo rompe con un error TeX oscuro → error bloqueante.
- * - 99-pdfx con 08-hyperref activo: pdfx desactiva los enlaces por
- *   especificación PDF/X-1a (draft mode) → warning informativo.
  * La lista vacía/undefined no produce issues (todos los filters activos).
+ *
+ * Nota: 99-pdfx con 08-hyperref ya no genera warning aquí porque
+ * resolveEffectiveDisabledPreamble desactiva 08-hyperref automáticamente.
  */
 export function validatePreambleDependencies(disabled: string[] | undefined): PreambleDependencyIssue[] {
   const issues: PreambleDependencyIssue[] = [];
@@ -130,12 +151,6 @@ export function validatePreambleDependencies(disabled: string[] | undefined): Pr
       severity: 'error',
       message:
         '16-toc-styling usa \\renewcaptionname (definido por babel): desactivar 05-language rompe el índice del PDF. Desactiva también 16-toc-styling.',
-    });
-  }
-  if (!disabledSet.has('99-pdfx') && !disabledSet.has('08-hyperref')) {
-    issues.push({
-      severity: 'warning',
-      message: '99-pdfx desactiva los enlaces del PDF por especificación PDF/X-1a (draft mode): si los necesitas, desactiva 99-pdfx.',
     });
   }
   return issues;

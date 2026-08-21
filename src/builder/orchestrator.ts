@@ -15,7 +15,7 @@ import { buildDocsFromIndex, discover } from './discover.js';
 import { validateDisabledFilters } from './filter-resolver.js';
 import { runPdfxOutputValidation } from './pdfx-check.js';
 import { runDocumentPipeline } from './pipeline.js';
-import { validateDisabledPreambleFilters, validatePreambleDependencies } from './preamble-loader.js';
+import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, validatePreambleDependencies } from './preamble-loader.js';
 import { validateConfigFilePaths } from './project-validator.js';
 import { clearStateFile, loadStateFile, markStateCompleted, stateUsableForBuild, updateCssHash } from './state.js';
 import type { BuildContext } from './types.js';
@@ -121,7 +121,13 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
   const siteConfig = await loadSiteConfig(cwd);
   // Validar nombres de filters desactivados (warning sin romper el build)
   validateDisabledFilters(siteConfig.disabledFilters);
-  validateDisabledPreambleFilters(siteConfig.format?.pdf?.disabledPreambleFilters);
+  // Resolver dependencias implícitas (08-hyperref se desactiva con 99-pdfx)
+  const effectiveDisabledPreamble = resolveEffectiveDisabledPreamble(siteConfig.format?.pdf?.disabledPreambleFilters);
+  validateDisabledPreambleFilters(effectiveDisabledPreamble);
+  // Actualizar la config con la lista efectiva para que el pipeline la use
+  if (siteConfig.format?.pdf) {
+    siteConfig.format.pdf.disabledPreambleFilters = effectiveDisabledPreamble;
+  }
   // Rutas configuradas (bibliography/csl): inexistentes son error de config,
   // mismo contrato que validate (módulo project-validator); lua-filters
   // inexistentes se advierten y se omiten.
@@ -132,7 +138,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTr
     logWarning(`iteraciones.config.yaml: ${issue.message}`, 'config');
   }
   // Dependencias entre preamble filters: errores bloqueantes, warnings visibles
-  for (const issue of validatePreambleDependencies(siteConfig.format?.pdf?.disabledPreambleFilters)) {
+  for (const issue of validatePreambleDependencies(effectiveDisabledPreamble)) {
     if (issue.severity === 'error') {
       throw new BuildError(`dependencia de preamble filters: ${issue.message}`);
     }

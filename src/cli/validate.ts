@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
 import { validateDisabledFilters } from '../builder/filter-resolver.js';
 import { listMarkdownDocuments } from '../builder/gitignore.js';
-import { validateDisabledPreambleFilters, validatePreambleDependencies } from '../builder/preamble-loader.js';
+import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, validatePreambleDependencies } from '../builder/preamble-loader.js';
 import {
   looseColonLines,
   looseColonsMessage,
@@ -163,9 +163,11 @@ export async function runValidate(cwd: string): Promise<void> {
     luaFiltersCount = config.luaFilters?.length ?? 0;
     // Validar nombres de filters desactivados (warnings, no errores)
     validateDisabledFilters(config.disabledFilters);
-    validateDisabledPreambleFilters(config.format?.pdf?.disabledPreambleFilters);
+    // Resolver dependencias implícitas (08-hyperref se desactiva con 99-pdfx)
+    const effectiveDisabledPreamble = resolveEffectiveDisabledPreamble(config.format?.pdf?.disabledPreambleFilters);
+    validateDisabledPreambleFilters(effectiveDisabledPreamble);
     // Dependencias entre preamble filters: errores y warnings semánticos
-    for (const issue of validatePreambleDependencies(config.format?.pdf?.disabledPreambleFilters)) {
+    for (const issue of validatePreambleDependencies(effectiveDisabledPreamble)) {
       if (issue.severity === 'error') {
         configErrors.push({ file: 'iteraciones.config.yaml', message: issue.message });
       } else {
