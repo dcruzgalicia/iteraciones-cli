@@ -21,11 +21,12 @@ format:
     #   - 19-maketitle
 
   html:
-    title: iteraciones             # título del sitio
-    tagline: escribir, compartir, re-existir
-    logo: ''                        # ruta al logo, relativa al proyecto
-    theme: dark                   # tema: "light" o "dark"
-    accent: lime                  # color de acento (lime, blue, rose, etc.)
+    site:
+      title: iteraciones             # título del sitio
+      description: escribir, compartir, re-existir
+      logo: ''                        # ruta al logo, relativa al proyecto
+      theme: dark                   # tema: "light" o "dark"
+      color: lime                  # color de acento (lime, blue, rose, etc.)
     generate: true                 # genera HTML
     # blocks: orden del masonry (ver format.html.blocks)
 
@@ -177,7 +178,7 @@ csl: styles/nature.csl
 
 ### `format.html`
 
-#### `format.html.title`
+#### `format.html.site.title`
 
 **Tipo:** `string`
 **Por defecto:** `'iteraciones'`
@@ -187,17 +188,18 @@ Título del sitio. Se usa en el `<title>` de cada página HTML y en el encabezad
 ```yaml
 format:
   html:
-    title: Mi sitio
+    site:
+      title: Mi sitio
 ```
 
-#### `format.html.tagline`
+#### `format.html.site.description`
 
 **Tipo:** `string`
 **Por defecto:** `'escribir, compartir, re-existir'`
 
 Frase corta que acompaña al título en el encabezado HTML.
 
-#### `format.html.logo`
+#### `format.html.site.logo`
 
 **Tipo:** `string`
 **Por defecto:** `''` (usa el logo integrado)
@@ -207,7 +209,8 @@ Ruta al archivo de logo, relativa al directorio raíz del proyecto. Si se omite 
 ```yaml
 format:
   html:
-    logo: assets/mi-logo.svg
+    site:
+      logo: assets/mi-logo.svg
 ```
 
 #### `format.html.generate`
@@ -217,14 +220,14 @@ format:
 
 Habilita la generación de páginas HTML.
 
-#### `format.html.theme`
+#### `format.html.site.theme`
 
 **Tipo:** `'light' | 'dark'`
 **Por defecto:** `'dark'`
 
 Tema visual del HTML (atributo `data-theme` del `<html>`).
 
-#### `format.html.accent`
+#### `format.html.site.color`
 
 **Tipo:** `string`
 **Por defecto:** `'lime'`

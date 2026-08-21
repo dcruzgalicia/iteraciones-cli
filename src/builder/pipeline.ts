@@ -79,7 +79,7 @@ export async function runDocumentPipeline(
   // divergir de la configuración (un lang distinto emite --metadata distinto).
   const lang = siteConfig.language ?? DEFAULT_SITE_CONFIG.language;
   const htmlConfig = formatCfg?.html;
-  const logoInline = await loadLogoInline(ctx.cwd, htmlConfig?.logo?.trim());
+  const logoInline = await loadLogoInline(ctx.cwd, htmlConfig?.site?.logo?.trim());
 
   // Unión de todos los documentos con trabajo este build: los de los exportSets
   // (formatos activos) y los de docsChanged (markdown/filters modificados).
@@ -477,11 +477,11 @@ async function processDocumentFormats(
       cwd,
       {
         title: doc.frontmatter.title || slug,
-        siteTitle: htmlConfig?.title ?? 'iteraciones',
-        tagline: htmlConfig?.tagline ?? 'escribir, compartir, re-existir',
+        siteTitle: htmlConfig?.site?.title ?? 'iteraciones',
+        tagline: htmlConfig?.site?.description ?? 'escribir, compartir, re-existir',
         lang,
-        theme: htmlConfig?.theme,
-        accent: htmlConfig?.accent,
+        theme: htmlConfig?.site?.theme,
+        accent: htmlConfig?.site?.color,
         css: ctx.needsCss ? relativeHref(dir, 'css/styles.css') : undefined,
         authorMeta: doc.frontmatter.creator.join(', '),
         logoInline,

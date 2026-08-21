@@ -140,7 +140,7 @@ export async function computeCssHash(
   // CSS base + paleta del acento configurado
   const stylesSrc = await Bun.file(STYLES_SRC).text();
   hasher.update(stylesSrc);
-  const accent = siteConfig.format?.html?.accent ?? 'lime';
+  const accent = siteConfig.format?.html?.site?.color ?? 'lime';
   hasher.update(JSON.stringify(ACCENT_PALETTES[accent as AccentColor] ?? {}));
   // El binario de Tailwind (mtime+size, patrón content-addressed del proyecto):
   // una actualización del paquete debe invalidar el CSS cacheado, aunque los
@@ -176,7 +176,7 @@ export async function buildAssets(
   const { hash: cssHash, cache: cssFileCache } = await computeCssHash(outputDir, siteConfig, prevCssFileCache);
   const cssExists = await Bun.file(join(outputDir, 'css', 'styles.css')).exists();
   if (prevCssHash !== cssHash || !cssExists) {
-    const accent = siteConfig.format?.html?.accent ?? 'lime';
+    const accent = siteConfig.format?.html?.site?.color ?? 'lime';
     tasks.push(compileTailwindCss(outputDir, accent));
   }
   await Promise.all(tasks);
@@ -230,7 +230,7 @@ async function copyFonts(outputDir: string): Promise<void> {
 }
 
 async function copyLogo(outputDir: string, cwd: string, siteConfig: SiteConfig): Promise<void> {
-  const logo = siteConfig.format?.html?.logo?.trim();
+  const logo = siteConfig.format?.html?.site?.logo?.trim();
   if (!logo) {
     const defaultSrc = join(PKG_ROOT, 'src', 'lib', 'resources', 'logo.svg');
     const dest = join(outputDir, 'logo.svg');

@@ -5,15 +5,24 @@ export const DEFAULT_HTML_BLOCKS = ['header', 'contenido', 'formatos', 'indice',
 
 export type HtmlBlockKey = (typeof DEFAULT_HTML_BLOCKS)[number];
 
-export interface HtmlFormatConfig {
+export interface HtmlSiteConfig {
   /** Título del sitio. Se usa en el <title> de cada página HTML. */
   title?: string;
-  /** Frase corta que acompaña al título en el encabezado HTML. */
-  tagline?: string;
+  /** Descripción/tagline del sitio. */
+  description?: string;
   /** Ruta al logo, relativa al proyecto. */
   logo?: string;
+  /** Tema visual (light/dark). */
   theme?: string;
-  accent?: string;
+  /** Color de acento. */
+  color?: string;
+  /** Ruta a CSS personalizado. */
+  css?: string;
+}
+
+export interface HtmlFormatConfig {
+  /** Configuración del sitio (título, tagline, logo, tema, color, css). */
+  site?: HtmlSiteConfig;
   /** Si true, genera HTML en el build. */
   generate?: boolean;
   /**
@@ -86,11 +95,13 @@ export interface FormatConfig {
 // tipos concretos (p. ej. theme: undefined, accent literal) para que el
 // esquema pueda leerlos sin fallbacks adicionales.
 export const DEFAULT_HTML_FORMAT = {
-  title: 'iteraciones',
-  tagline: 'escribir, compartir, re-existir',
-  logo: '',
-  theme: 'dark' as const,
-  accent: 'lime' as const,
+  site: {
+    title: 'iteraciones',
+    description: 'escribir, compartir, re-existir',
+    logo: '',
+    theme: 'dark' as const,
+    color: 'lime' as const,
+  },
   generate: true,
 } satisfies HtmlFormatConfig;
 

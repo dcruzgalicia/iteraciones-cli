@@ -96,7 +96,10 @@ describe('build-assets', () => {
       await writeFile(join(dir, 'assets', 'mi-logo.svg'), '<svg>A</svg>', 'utf8');
       const config = {
         ...DEFAULT_SITE_CONFIG,
-        format: { ...DEFAULT_SITE_CONFIG.format, html: { ...DEFAULT_SITE_CONFIG.format.html, logo: 'assets/mi-logo.svg' } },
+        format: {
+          ...DEFAULT_SITE_CONFIG.format,
+          html: { ...DEFAULT_SITE_CONFIG.format.html, site: { ...DEFAULT_SITE_CONFIG.format.html?.site, logo: 'assets/mi-logo.svg' } },
+        },
       };
       await buildAssets(outDir, dir, config);
       expect(await Bun.file(join(outDir, 'assets', 'mi-logo.svg')).text()).toBe('<svg>A</svg>');

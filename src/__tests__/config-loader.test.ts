@@ -3,6 +3,7 @@ import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { loadSiteConfig, loadSiteConfigWithPresence } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
+import type { HtmlFormatConfig } from '../config/site-config.js';
 import { DEFAULT_EPUB_FORMAT, DEFAULT_HTML_FORMAT, DEFAULT_MARKDOWN_FORMAT, DEFAULT_PDF_FORMAT, DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { ConfigError } from '../lib/errors.js';
 import { withTempDir } from './helpers.js';
@@ -15,10 +16,10 @@ describe('loadSiteConfig', () => {
   it('retorna defaults cuando no existe iteraciones.config.yaml', async () => {
     await withTempDir(async (dir) => {
       const config = await loadSiteConfig(dir);
-      expect(config.format.html?.title).toBe('iteraciones');
-      expect(config.format.html?.tagline).toBe('escribir, compartir, re-existir');
+      expect(config.format.html?.site?.title).toBe('iteraciones');
+      expect(config.format.html?.site?.description).toBe('escribir, compartir, re-existir');
       expect(config.language).toBe('es-MX');
-      expect(config.format.html?.logo).toBe('');
+      expect(config.format.html?.site?.logo).toBe('');
       expect(config.disabledFilters).toBeUndefined();
       expect(config.format?.pdf?.disabledPreambleFilters).toEqual(['97-eso-pic', '98-crop', '99-pdfx']);
       expect(config.format.latex?.generate).toBe(false);
@@ -33,7 +34,7 @@ describe('loadSiteConfig', () => {
     await withTempDir(async (dir) => {
       await writeConfig(dir, '');
       const config = await loadSiteConfig(dir);
-      expect(config.format.html?.title).toBe('iteraciones');
+      expect(config.format.html?.site?.title).toBe('iteraciones');
     });
   });
 
@@ -41,7 +42,7 @@ describe('loadSiteConfig', () => {
     await withTempDir(async (dir) => {
       await writeConfig(dir, 'solo-un-string');
       const config = await loadSiteConfig(dir);
-      expect(config.format.html?.title).toBe('iteraciones');
+      expect(config.format.html?.site?.title).toBe('iteraciones');
     });
   });
 
@@ -75,8 +76,8 @@ describe('loadSiteConfig', () => {
 
   it('reporta TODOS los errores de tipo en una sola ejecución (no solo el primero)', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'language: 123\nformat:\n  html:\n    theme: raro\n  pdf:\n    page-number: medio\n');
-      await expect(loadSiteConfig(dir)).rejects.toThrow(/language: .*format\.html\.theme: .*format\.pdf\.page-number:/s);
+      await writeConfig(dir, 'language: 123\nformat:\n  html:\n    site:\n      theme: raro\n  pdf:\n    page-number: medio\n');
+      await expect(loadSiteConfig(dir)).rejects.toThrow(/language: .*format\.html\.site\.theme: .*format\.pdf\.page-number:/s);
     });
   });
 
@@ -96,19 +97,19 @@ describe('loadSiteConfig', () => {
     });
   });
 
-  it('lee format.html.title correctamente', async () => {
+  it('lee format.html.site.title correctamente', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'format:\n  html:\n    title: Mi Título');
+      await writeConfig(dir, 'format:\n  html:\n    site:\n      title: Mi Título');
       const config = await loadSiteConfig(dir);
-      expect(config.format.html?.title).toBe('Mi Título');
+      expect(config.format.html?.site?.title).toBe('Mi Título');
     });
   });
 
-  it('lee format.html.tagline correctamente', async () => {
+  it('lee format.html.site.description correctamente', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'format:\n  html:\n    tagline: mi frase');
+      await writeConfig(dir, 'format:\n  html:\n    site:\n      description: mi frase');
       const config = await loadSiteConfig(dir);
-      expect(config.format.html?.tagline).toBe('mi frase');
+      expect(config.format.html?.site?.description).toBe('mi frase');
     });
   });
 
@@ -120,11 +121,11 @@ describe('loadSiteConfig', () => {
     });
   });
 
-  it('lee format.html.logo correctamente', async () => {
+  it('lee format.html.site.logo correctamente', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'format:\n  html:\n    logo: assets/logo.svg');
+      await writeConfig(dir, 'format:\n  html:\n    site:\n      logo: assets/logo.svg');
       const config = await loadSiteConfig(dir);
-      expect(config.format.html?.logo).toBe('assets/logo.svg');
+      expect(config.format.html?.site?.logo).toBe('assets/logo.svg');
     });
   });
 
@@ -185,11 +186,11 @@ describe('loadSiteConfig', () => {
 
   it('activa format.html con generate: true', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'format:\n  html:\n    generate: true\n    theme: light\n    accent: blue');
+      await writeConfig(dir, 'format:\n  html:\n    generate: true\n    site:\n      theme: light\n      color: blue');
       const config = await loadSiteConfig(dir);
       expect(config.format.html?.generate).toBe(true);
-      expect(config.format.html?.theme).toBe('light');
-      expect(config.format.html?.accent).toBe('blue');
+      expect(config.format.html?.site?.theme).toBe('light');
+      expect(config.format.html?.site?.color).toBe('blue');
     });
   });
 
@@ -230,12 +231,13 @@ describe('loadSiteConfig', () => {
           '    generate: true',
           '    show-date: true',
           '  html:',
-          '    title: Mi Sitio',
-          '    tagline: mi tagline',
-          '    logo: logo.svg',
+          '    site:',
+          '      title: Mi Sitio',
+          '      description: mi tagline',
+          '      logo: logo.svg',
+          '      theme: dark',
+          '      color: rose',
           '    generate: true',
-          '    theme: dark',
-          '    accent: rose',
           '  epub:',
           '    generate: true',
           '  markdown:',
@@ -246,17 +248,17 @@ describe('loadSiteConfig', () => {
         ].join('\n'),
       );
       const config = await loadSiteConfig(dir);
-      expect(config.format.html?.title).toBe('Mi Sitio');
-      expect(config.format.html?.tagline).toBe('mi tagline');
+      expect(config.format.html?.site?.title).toBe('Mi Sitio');
+      expect(config.format.html?.site?.description).toBe('mi tagline');
       expect(config.language).toBe('es-MX');
-      expect(config.format.html?.logo).toBe('logo.svg');
+      expect(config.format.html?.site?.logo).toBe('logo.svg');
       expect(config.format.latex?.generate).toBe(true);
       expect(config.format.pdf?.generate).toBe(true);
       expect(config.format.pdf?.showDate).toBe(true);
       expect(config.toc).toBe(true);
       expect(config.format.html?.generate).toBe(true);
-      expect(config.format.html?.theme).toBe('dark');
-      expect(config.format.html?.accent).toBe('rose');
+      expect(config.format.html?.site?.theme).toBe('dark');
+      expect(config.format.html?.site?.color).toBe('rose');
       expect(config.format.epub?.generate).toBe(true);
       expect(config.format.markdown?.generate).toBe(false);
       expect(config.disabledFilters).toEqual(['semantic/string/01-double-colon']);
@@ -275,7 +277,7 @@ describe('loadSiteConfig', () => {
 
   it('un color de acento inválido es un error en build (sin fallback a lime)', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'format:\n  html:\n    accent: color-inventado');
+      await writeConfig(dir, 'format:\n  html:\n    site:\n      color: color-inventado');
       await expect(loadSiteConfig(dir)).rejects.toThrow(/accent|valor no válido/);
     });
   });
@@ -290,7 +292,7 @@ describe('loadSiteConfig', () => {
 
   it('claves desconocidas en la raíz son un error (contrato build/validate)', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'clave-inventada: 1\nformat:\n  html:\n    title: ok');
+      await writeConfig(dir, 'clave-inventada: 1\nformat:\n  html:\n    site:\n      title: ok');
       await expect(loadSiteConfig(dir)).rejects.toThrow(/claves desconocidas.*clave-inventada/s);
     });
   });
@@ -300,7 +302,7 @@ describe('loadSiteConfig', () => {
     let callCount = 0;
     try {
       await withTempDir(async (dir) => {
-        await writeConfig(dir, 'format:\n  html:\n    title: ok\n  pdf:\n    generate: true');
+        await writeConfig(dir, 'format:\n  html:\n    site:\n      title: ok\n  pdf:\n    generate: true');
         await loadSiteConfig(dir);
       });
     } finally {
@@ -330,7 +332,7 @@ describe('loadSiteConfig', () => {
 
   it('disabled-preamble-filters tiene los 3 defaults con config presente sin la clave (vía 3)', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'language: es-MX\nformat:\n  html:\n    title: ok');
+      await writeConfig(dir, 'language: es-MX\nformat:\n  html:\n    site:\n      title: ok');
       const config = await loadSiteConfig(dir);
       expect(config.format?.pdf?.disabledPreambleFilters).toEqual(['97-eso-pic', '98-crop', '99-pdfx']);
     });
@@ -349,7 +351,7 @@ describe('loadSiteConfig', () => {
     await withTempDir(async (dir) => {
       await writeConfig(dir, 'format:\n  html:\n    blocks:\n      - header\n      - indice\n      - contenido');
       const config = await loadSiteConfig(dir);
-      expect(config.format.html?.blocks).toEqual(['header', 'indice', 'contenido']);
+      expect((config.format.html as HtmlFormatConfig)?.blocks).toEqual(['header', 'indice', 'contenido']);
     });
   });
 
@@ -410,15 +412,15 @@ describe('loadSiteConfig', () => {
 
   it('el tema por defecto es dark sin config y con config sin la clave', async () => {
     await withTempDir(async (dir) => {
-      expect((await loadSiteConfig(dir)).format.html?.theme).toBe('dark');
+      expect((await loadSiteConfig(dir)).format.html?.site?.theme).toBe('dark');
     });
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'format:\n  html:\n    title: ok');
-      expect((await loadSiteConfig(dir)).format.html?.theme).toBe('dark');
+      await writeConfig(dir, 'format:\n  html:\n    site:\n      title: ok');
+      expect((await loadSiteConfig(dir)).format.html?.site?.theme).toBe('dark');
     });
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'format:\n  html:\n    theme: light');
-      expect((await loadSiteConfig(dir)).format.html?.theme).toBe('light');
+      await writeConfig(dir, 'format:\n  html:\n    site:\n      theme: light');
+      expect((await loadSiteConfig(dir)).format.html?.site?.theme).toBe('light');
     });
   });
 

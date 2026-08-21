@@ -374,7 +374,11 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       expect(out).toContain('sin invalidaciones — todo desde caché');
 
       // Configuración HTML modificada: la razón aparece en el resumen
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nformat:\n  html:\n    title: Otro\n    generate: true\n', 'utf8');
+      await writeFile(
+        join(dir, 'iteraciones.config.yaml'),
+        'language: es-MX\nformat:\n  html:\n    site:\n      title: Otro\n    generate: true\n',
+        'utf8',
+      );
       stdoutSpy = spyOn(process.stdout, 'write');
       out = '';
       try {
@@ -1914,7 +1918,7 @@ describe('runValidate', () => {
 
   it('accent inválido no enmascara los demás errores de la config', async () => {
     await withTempDir(async (dir) => {
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: 123\nformat:\n  html:\n    accent: naranja\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: 123\nformat:\n  html:\n    site:\n      color: naranja\n', 'utf8');
       const stderrSpy = spyStderr();
       let output = '';
       try {
@@ -1926,8 +1930,8 @@ describe('runValidate', () => {
       }
       expect(process.exitCode).toBe(1);
       // Ambos errores se reportan en una sola ejecución (antes solo el accent)
-      expect(output).toContain('accent');
-      expect(output).toContain('lang');
+      expect(output).toContain('color');
+      expect(output).toContain('language');
     });
   });
 

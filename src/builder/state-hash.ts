@@ -142,7 +142,7 @@ export async function computeConfigHashes(cwd: string, siteConfig: SiteConfig): 
       ),
     )
   ).join('\n');
-  const logoPath = htmlConfig?.logo?.trim();
+  const logoPath = htmlConfig?.site?.logo?.trim();
   const logo = logoPath ? await hashFileContent(join(cwd, logoPath)).catch(() => '') : '';
   return {
     pdf: hashString(
