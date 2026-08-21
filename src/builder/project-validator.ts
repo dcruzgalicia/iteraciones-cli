@@ -129,6 +129,14 @@ export function validateFrontmatterFields(parsed: Record<string, unknown>): Vali
   if (typeof date === 'string' && date.trim() !== '' && !DATE_ISO_RE.test(date.trim())) {
     issues.push({ severity: 'warning', message: 'frontmatter: "date" no usa el formato ISO YYYY-MM-DD; se mostrará tal cual' });
   }
+  // Campos vacíos: advertencia para campos que existen pero están vacíos
+  for (const [key, value] of Object.entries(parsed)) {
+    if (!KNOWN_FRONTMATTER_FIELDS.includes(key)) continue;
+    if (value === undefined) continue;
+    if (value === null || value === '' || (Array.isArray(value) && value.length === 0)) {
+      issues.push({ severity: 'warning', message: `frontmatter: "${key}" está vacío; se omitirá del metadato` });
+    }
+  }
   const unknown = unknownFrontmatterFields(parsed);
   if (unknown.length > 0) {
     issues.push({ severity: 'warning', message: `campos de frontmatter ignorados por el pipeline: ${unknown.join(', ')}` });
