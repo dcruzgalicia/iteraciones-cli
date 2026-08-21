@@ -281,7 +281,7 @@ export async function composeLatexTemplate(opts: {
   lines.push('$if(subtitle)$');
   lines.push('\\subtitle{$subtitle$}');
   lines.push('$endif$');
-  lines.push('\\author{$for(creator)$$creator$$sep$ \\and $endfor$}');
+  lines.push('\\author{$for(creator)$\\mbox{$creator$}$sep$ \\and $endfor$}');
   lines.push('\\date{$date$}');
   lines.push('\\maketitle');
   if (opts.toc) {
