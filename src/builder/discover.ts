@@ -16,7 +16,7 @@ interface DiscoverResult {
   relativePaths: string[];
   changedPaths: Set<string>;
   discoveryIndex: Map<string, DiscoveryEntry>;
-  /** Entradas de archivos eliminados (title/author/slug para calcular slugs). */
+  /** Entradas de archivos eliminados (title/creator/slug para calcular slugs). */
   deletedEntries: Map<string, DiscoveryEntry>;
   /** Archivos cuyo slug cambio (relativePath -> slug anterior). */
   slugChangedEntries: Map<string, string>;
@@ -35,26 +35,26 @@ function slugify(text: string): string {
 }
 
 /**
- * Calcula el slug de un documento desde su frontmatter: `title[-por-author]`.
- * Por defecto solo usa el primer autor; en caso de colisión se expande.
+ * Calcula el slug de un documento desde su frontmatter: `title[-por-creator]`.
+ * Por defecto solo usa el primer creador; en caso de colisión se expande.
  * Si no hay title y se provee `fallbackPath`, usa el nombre del archivo
  * (sin extensión .md) como base.
  * Sin title ni fallbackPath, retorna undefined.
  */
 export function computeSlug(
-  frontmatter: { title?: string; author?: string[] },
-  options?: { fallbackPath?: string; maxAuthors?: number },
+  frontmatter: { title?: string; creator?: string[] },
+  options?: { fallbackPath?: string; maxCreators?: number },
 ): string | undefined {
-  const maxAuthors = options?.maxAuthors ?? 1;
-  const authors = frontmatter.author?.filter(Boolean).slice(0, maxAuthors);
+  const maxCreators = options?.maxCreators ?? 1;
+  const creators = frontmatter.creator?.filter(Boolean).slice(0, maxCreators);
 
   const base = frontmatter.title ? slugify(frontmatter.title) : options?.fallbackPath ? slugify(basename(options.fallbackPath, '.md')) : undefined;
   if (!base) return undefined;
 
-  if (!authors || authors.length === 0) return base;
+  if (!creators || creators.length === 0) return base;
 
-  const authorSlug = authors.map((a) => slugify(a)).join('-y-');
-  return `${base}-por-${authorSlug}`;
+  const creatorSlug = creators.map((a) => slugify(a)).join('-y-');
+  return `${base}-por-${creatorSlug}`;
 }
 
 /**
@@ -170,7 +170,7 @@ export async function discover(
       let title = '',
         subtitle: string | undefined,
         date: string | undefined,
-        authors: string[] = [],
+        creators: string[] = [],
         manualSlug: string | undefined,
         rawTitle: unknown,
         fm: Record<string, unknown> | undefined;
@@ -201,7 +201,7 @@ export async function discover(
             title = typeof rawTitle === 'string' ? rawTitle : '';
             subtitle = typeof record.subtitle === 'string' && record.subtitle.trim() ? record.subtitle.trim() : undefined;
             date = typeof record.date === 'string' && record.date.trim() ? record.date.trim() : undefined;
-            authors = parseAuthors(record.author);
+            creators = parseAuthors(record.creator);
             if (typeof record.slug === 'string' && record.slug.trim()) {
               manualSlug = record.slug.trim();
             }
@@ -234,7 +234,7 @@ export async function discover(
       discoveryIndex.set(relativePath, {
         title,
         subtitle,
-        author: authors,
+        creator: creators,
         date,
         fm,
         mtime,
@@ -324,7 +324,7 @@ export async function discover(
 
 /**
  * Construye BuildDocument[] con frontmatter desde discoveryIndex.
- * Solo title y author — el resto usa valores por defecto.
+ * Solo title y creator — el resto usa valores por defecto.
  */
 export function buildDocsFromIndex(relativePaths: string[], discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): BuildDocument[] {
   return relativePaths.map((relativePath) => {
@@ -336,14 +336,14 @@ export function buildDocsFromIndex(relativePaths: string[], discoveryIndex: Map<
         title: entry?.title || 'Sin t\u00edtulo',
         subtitle: entry?.subtitle,
         date: entry?.date ?? '',
-        author: entry?.author ?? [],
+        creator: entry?.creator ?? [],
       },
     };
   });
 }
 
 /**
- * Parsea el campo author del frontmatter. Acepta tanto string simple
+ * Parsea el campo creator del frontmatter. Acepta tanto string simple
  * como array de strings; filtra valores que no sean texto y retorna un
  * array vacío si el campo está ausente, es nulo o está vacío.
  */

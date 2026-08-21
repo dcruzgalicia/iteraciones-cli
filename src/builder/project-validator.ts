@@ -33,20 +33,38 @@ export const MISSING_TITLE_WARNING: ValidationIssue = {
 
 /**
  * Campos del frontmatter que el pipeline consume: los del pipeline
- * (title/subtitle/date/author/slug) y los que fluyen a pandoc o al template
- * efectivo con efecto visible (lang, toc, description, site-title, tagline,
+ * (title/subtitle/date/creator/slug) y los que fluyen a pandoc o al template
+ * efectivo con efecto visible (language, toc, description, site-title, tagline,
  * theme, accent, css). Cualquier otro campo se descarta en todos los formatos:
  * validate y el build advierten para que no sea silencioso.
+ *
+ * Los nombres siguen el estándar Dublin Core (ISO 15836-1:2017).
  */
 export const KNOWN_FRONTMATTER_FIELDS = [
+  // Dublin Core
   'title',
-  'subtitle',
-  'date',
-  'author',
-  'slug',
-  'lang',
-  'toc',
+  'creator',
+  'subject',
   'description',
+  'publisher',
+  'contributor',
+  'date',
+  'identifier',
+  'source',
+  'language',
+  'relation',
+  'coverage',
+  'rights',
+  // Campos del pipeline (no DC)
+  'subtitle',
+  'slug',
+  'toc',
+  'keywords',
+  'license',
+  'doi',
+  'isbn',
+  'abstract',
+  // Campos de estilo HTML
   'site-title',
   'tagline',
   'theme',
@@ -57,16 +75,13 @@ export const KNOWN_FRONTMATTER_FIELDS = [
   'extratitle',
   'frontispiece',
   'titlehead',
-  'subject',
   'dedication',
   'uppertitleback',
   'lowertitleback',
-  'publishers',
   'colophon',
   'title-image',
   'publishers-image',
   'endpapers',
-  'keywords',
 ];
 
 /** Formato seguro de un slug manual (mismo regex que discover). */
@@ -103,9 +118,9 @@ export function validateFrontmatterFields(parsed: Record<string, unknown>): Vali
       issues.push({ severity: 'error', message: `frontmatter: "${field}" debe ser un texto (string), se recibió ${typeof value}` });
     }
   }
-  const author = parsed.author;
-  if (author !== undefined && typeof author !== 'string' && !(Array.isArray(author) && author.every((a) => typeof a === 'string'))) {
-    issues.push({ severity: 'error', message: 'frontmatter: "author" debe ser un texto o una lista de textos' });
+  const creator = parsed.creator;
+  if (creator !== undefined && typeof creator !== 'string' && !(Array.isArray(creator) && creator.every((a) => typeof a === 'string'))) {
+    issues.push({ severity: 'error', message: 'frontmatter: "creator" debe ser un texto o una lista de textos' });
   }
   // date con formato libre: el pipeline la acepta deliberadamente
   // (formatHumanDate la deja pasar sin romper), pero el formato ISO es

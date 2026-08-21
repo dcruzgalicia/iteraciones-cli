@@ -7,7 +7,7 @@ Todos los archivos Markdown pueden declarar metadatos en un bloque YAML al inici
 title: 'Mi artículo'
 subtitle: 'Subtítulo opcional'
 date: 2025-01-15
-author:
+creator:
   - Sofia García
   - Juan Pérez
 ---
@@ -24,7 +24,7 @@ El pipeline consume **5 campos** del frontmatter:
 | `title` | `string` | `''` | Título del documento. Se usa para el slug y el maketitle del PDF. |
 | `subtitle` | `string` | — | Subtítulo del documento. Se muestra bajo el título en el maketitle del PDF. Admite el bloque YAML literal (`\|`) para varias líneas, con las mismas reglas que las páginas de título internas (ver más abajo). |
 | `date` | `string` | — | Fecha en formato `YYYY-MM-DD`. Con `pdf.show-date: true` se muestra en el maketitle; si no se declara, se usa la fecha de creación del archivo. |
-| `author` | `string \| string[]` | `[]` | Uno o varios autores. El slug usa `title-por-author`: **solo el primer autor**; en caso de colisión (dos documentos con el mismo título y autor) se aplica un sufijo `-dN`. |
+| `creator` | `string \| string[]` | `[]` | Uno o varios autores. El slug usa `title-por-creator`: **solo el primer autor**; en caso de colisión (dos documentos con el mismo título y autor) se aplica un sufijo `-dN`. |
 | `slug` | `string` | — | **Slug manual** (opcional): fija la URL del documento en lugar del esquema automático. Formato seguro: solo minúsculas, números y guiones simples (`^[a-z0-9]+(-[a-z0-9]+)*$`). Dos documentos con la misma salida (mismo directorio + slug) son un error de build y de `validate`. |
 
 ## Campos que fluyen a pandoc
@@ -33,7 +33,7 @@ El frontmatter completo se pasa a pandoc como metadata del documento. Los campos
 
 | Campo | Efecto |
 |-------|--------|
-| `lang` | Idioma del documento (sobreescribe `lang` de la configuración) |
+| `language` | Idioma del documento (sobreescribe `lang` de la configuración) |
 | `toc` | Activa/desactiva la tabla de contenidos de ese documento (sobreescribe `toc` de la configuración) |
 | `description` | Meta description del HTML |
 | `site-title`, `tagline`, `theme`, `accent`, `css` | Sobreescriben los valores de `format.html` para ese documento |
@@ -50,7 +50,7 @@ Los campos `extratitle`, `frontispiece`, `titlehead`, `subject`, `dedication`, `
 - `uppertitleback` y `lowertitleback`: texto en `footnotesize`, interlineado 1 y sin indentación.
 - `extratitle`: texto con letra normal en un bloque del 75% del ancho centrado, centrado **horizontal y verticalmente** en su página.
 - `frontispiece`: página anterior a la portada, con el contenido anclado al fondo (relleno vertical antes). Si no hay `extratitle` ni `title-image`, la página de extratitle se llena por defecto con el `title`.
-- `titlehead`, `subject`, `publishers`: elementos de la portada en letra normal. `subject` y `publishers` aceptan un solo valor o un array de strings (como `author`): los items se unen con ", ". Orden de la portada: `author` → `title` → `subtitle` → `subject` → `titlehead` → `date` → `publishers`, con espaciado normal de 1 baselineskip.
+- `titlehead`, `subject`, `publishers`: elementos de la portada en letra normal. `subject` y `publishers` aceptan un solo valor o un array de strings (como `creator`): los items se unen con ", ". Orden de la portada: `creator` → `title` → `subtitle` → `subject` → `titlehead` → `date` → `publishers`, con espaciado normal de 1 baselineskip.
 - `publishers-image`: imagen que sustituye al texto de `publishers` en la portada (solo LaTeX/PDF; si existe, el texto se ignora). Mismo mecanismo que `title-image`: ruta relativa al directorio del documento (o absoluta), centrada, con un **ancho máximo de 150px** (150pt a 72dpi; si la imagen natural es más pequeña se muestra a tamaño natural; si es mayor, se escala conservando la proporción). Formatos soportados: `jpg`, `jpeg`, `png` y `pdf`.
 - `endpapers`: imagen de fondo (guardas) que cubre la hoja completa **solo en la primera página** del PDF, y **solo si esa página es la hoja de guarda en blanco** que se inserta antes de la página de extratitle (extratitle en la 3): si no existe esa página en blanco, el endpaper no se agrega en ningún caso. Solo LaTeX/PDF. Ruta relativa al directorio del documento (o absoluta). La imagen se mide y el **lado más corto** define la única dimensión fija (ancho o alto) = **tamaño de la hoja + 6mm**; la otra dimensión sigue la proporción (`keepaspectratio`): la imagen cubre la hoja sin deformarse. El tamaño de la hoja se toma del `documentclass`/`geometry` reales (incluido el override por proyecto), no se hardcodea. Formatos soportados: `jpg`, `jpeg`, `png` y `pdf`.
 - `dedication`: texto con letra normal alineado a la derecha ocupando el 50% del ancho (como el dictum), con `\vspace*{7\baselineskip}` antes del contenido.
@@ -75,7 +75,7 @@ lowertitleback: |
 ---
 ```
 
-Orden de páginas en el PDF (flujo KOMA-Script): dos páginas en blanco (1 y 2) → `extratitle` (página 3, centrada) → `frontispiece` (página 4, contenido al fondo) → portada (impar: `author`, `title`, `subtitle`, `subject`, `titlehead`, `date`, `publishers`) → `uppertitleback` (arriba) y `lowertitleback` (abajo) en el reverso de la portada → `dedication` (página impar siguiente, bloque del 50% del ancho alineado a la derecha) → contenido → `colophon` (página par final, bloque del 75% del ancho centrado). Sin `extratitle`, `frontispiece`, `title-image` ni `titlebacks`, el documento abre con la portada en la página 1 (sin páginas en blanco). El espacio vertical post-portada/índice sigue el mismo criterio que sin estas páginas: se aplica cuando al contenido le sigue un párrafo normal.
+Orden de páginas en el PDF (flujo KOMA-Script): dos páginas en blanco (1 y 2) → `extratitle` (página 3, centrada) → `frontispiece` (página 4, contenido al fondo) → portada (impar: `creator`, `title`, `subtitle`, `subject`, `titlehead`, `date`, `publishers`) → `uppertitleback` (arriba) y `lowertitleback` (abajo) en el reverso de la portada → `dedication` (página impar siguiente, bloque del 50% del ancho alineado a la derecha) → contenido → `colophon` (página par final, bloque del 75% del ancho centrado). Sin `extratitle`, `frontispiece`, `title-image` ni `titlebacks`, el documento abre con la portada en la página 1 (sin páginas en blanco). El espacio vertical post-portada/índice sigue el mismo criterio que sin estas páginas: se aplica cuando al contenido le sigue un párrafo normal.
 
 ## Citas bibliográficas
 

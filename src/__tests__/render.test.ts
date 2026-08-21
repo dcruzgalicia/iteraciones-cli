@@ -29,11 +29,11 @@ describe('extractReferencesBlock (sin marcador en el template)', () => {
       // Template efectivo SIN la tarjeta referencias (sin <!-- block:referencias -->)
       writeFileSync(join(cwd, 'tpl.html'), '<html><body>$body$</body></html>');
       writeFileSync(join(cwd, 'bibliography.bib'), '@book{key1, author = {García, Lucía}, title = {Libro}, year = {2024}}\n');
-      const content = '---\ntitle: T\nauthor: [Autor]\ndate: 2026-01-01\n---\n\nCita [@key1].\n';
+      const content = '---\ntitle: T\ncreator: [Autor]\ndate: 2026-01-01\n---\n\nCita [@key1].\n';
       const doc: BuildDocument = {
         filePath: join(cwd, 'test.md'),
         relativePath: 'test.md',
-        frontmatter: { title: 'T', date: '2026-01-01', author: ['Autor'] },
+        frontmatter: { title: 'T', date: '2026-01-01', creator: ['Autor'] },
       };
       const siteConfig = await loadSiteConfig(cwd);
       const warnSpy = spyOn(logger, 'logWarning');
@@ -74,7 +74,7 @@ describe('pdfDate (fecha de portada del PDF)', () => {
       const doc: BuildDocument = {
         filePath,
         relativePath: 'test.md',
-        frontmatter: { title: 'T', date: '2026-08-08', author: [] },
+        frontmatter: { title: 'T', date: '2026-08-08', creator: [] },
       };
       const siteConfig = await loadSiteConfig(cwd);
       const withShowDate = { ...siteConfig, format: { ...siteConfig.format, pdf: { ...siteConfig.format.pdf, showDate: true } } };

@@ -120,7 +120,7 @@ describe('cleanup (eliminaciones y slugs)', () => {
       await writeFile(join(dir, '.iteraciones', 'tmp', 'pdf', 'perdido.log'), 'log');
       await writeFile(join(ctx.outputDir, 'perdido.html'), 'html');
 
-      const deletedEntries = new Map([['perdido.md', { title: 'Perdido', author: [], date: '', mtime: 0, size: 0, hash: '', slug: 'perdido' }]]);
+      const deletedEntries = new Map([['perdido.md', { title: 'Perdido', creator: [], date: '', mtime: 0, size: 0, hash: '', slug: 'perdido' }]]);
       await cleanupDeletedFiles(ctx, new Set(['perdido.md']), [], deletedEntries);
 
       expect(await Bun.file(join(dir, '.iteraciones', 'tmp', 'pdf', 'perdido.tex')).exists()).toBe(false);
@@ -139,7 +139,7 @@ describe('cleanup (eliminaciones y slugs)', () => {
       }
       await writeFile(join(ctx.outputDir, 'otro.html'), 'otro', 'utf8');
 
-      const deletedEntries = new Map([['index.md', { title: 'Inicio', author: [], date: '', mtime: 0, size: 0, hash: '', slug: 'inicio' }]]);
+      const deletedEntries = new Map([['index.md', { title: 'Inicio', creator: [], date: '', mtime: 0, size: 0, hash: '', slug: 'inicio' }]]);
       await cleanupDeletedFiles(ctx, new Set(['index.md']), [], deletedEntries);
 
       for (const ext of ['html', 'pdf', 'tex', 'epub', 'md']) {

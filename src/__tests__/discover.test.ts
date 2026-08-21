@@ -9,25 +9,25 @@ describe('computeSlug', () => {
   });
 
   it('incluye el primer autor: title-por-author', () => {
-    const result = computeSlug({ title: 'Mi Artículo', author: ['Juan Pérez'] });
+    const result = computeSlug({ title: 'Mi Artículo', creator: ['Juan Pérez'] });
     expect(result).toBe('mi-articulo-por-juan-perez');
   });
 
   it('usa solo el primer autor por defecto', () => {
     const result = computeSlug({
       title: 'Mi Artículo',
-      author: ['Sofia García', 'Juan Pérez', 'Ana López'],
+      creator: ['Sofia García', 'Juan Pérez', 'Ana López'],
     });
     expect(result).toBe('mi-articulo-por-sofia-garcia');
   });
 
-  it('permite expandir autores con maxAuthors', () => {
-    const result = computeSlug({ title: 'Test', author: ['A', 'B', 'C'] }, { maxAuthors: 3 });
+  it('permite expandir autores con maxCreators', () => {
+    const result = computeSlug({ title: 'Test', creator: ['A', 'B', 'C'] }, { maxCreators: 3 });
     expect(result).toBe('test-por-a-y-b-y-c');
   });
 
-  it('usa 2 autores cuando se especifica maxAuthors', () => {
-    const result = computeSlug({ title: 'Doc', author: ['Ana', 'Luis'] }, { maxAuthors: 2 });
+  it('usa 2 autores cuando se especifica maxCreators', () => {
+    const result = computeSlug({ title: 'Doc', creator: ['Ana', 'Luis'] }, { maxCreators: 2 });
     expect(result).toBe('doc-por-ana-y-luis');
   });
 
@@ -52,7 +52,7 @@ describe('computeSlug', () => {
   });
 
   it('ignora autores vacíos', () => {
-    const result = computeSlug({ title: 'Test', author: [] });
+    const result = computeSlug({ title: 'Test', creator: [] });
     expect(result).toBe('test');
   });
 
@@ -67,7 +67,7 @@ describe('computeSlug', () => {
   });
 
   it('genera filename-by-author con fallbackPath y autor', () => {
-    const result = computeSlug({ author: ['Juan Pérez'] }, { fallbackPath: 'notas/apuntes.md' });
+    const result = computeSlug({ creator: ['Juan Pérez'] }, { fallbackPath: 'notas/apuntes.md' });
     expect(result).toBe('apuntes-por-juan-perez');
   });
 
@@ -135,14 +135,14 @@ describe('buildDocsFromIndex', () => {
   it('construye BuildDocument[] desde paths e index', () => {
     const paths = ['a.md', 'b.md'];
     const index = new Map([
-      ['a.md', { title: 'Artículo A', author: ['Autor1'] }],
-      ['b.md', { title: 'Artículo B', author: ['Autor2'] }],
+      ['a.md', { title: 'Artículo A', creator: ['Autor1'] }],
+      ['b.md', { title: 'Artículo B', creator: ['Autor2'] }],
     ]);
     const docs = buildDocsFromIndex(paths, index, '/proyecto');
     expect(docs).toHaveLength(2);
     expect(docs[0]?.relativePath).toBe('a.md');
     expect(docs[0]?.frontmatter.title).toBe('Artículo A');
-    expect(docs[0]?.frontmatter.author).toEqual(['Autor1']);
+    expect(docs[0]?.frontmatter.creator).toEqual(['Autor1']);
     expect(docs[1]?.relativePath).toBe('b.md');
     expect(docs[1]?.frontmatter.title).toBe('Artículo B');
   });
@@ -150,7 +150,7 @@ describe('buildDocsFromIndex', () => {
   it('usa valores por defecto cuando no hay entrada en el index', () => {
     const docs = buildDocsFromIndex(['x.md'], new Map(), '/proyecto');
     expect(docs[0]?.frontmatter.title).toBe('Sin título');
-    expect(docs[0]?.frontmatter.author).toEqual([]);
+    expect(docs[0]?.frontmatter.creator).toEqual([]);
     expect(docs[0]?.frontmatter.date).toBe('');
   });
 

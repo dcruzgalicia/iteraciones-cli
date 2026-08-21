@@ -41,7 +41,7 @@ describe('assembleExportDocument', () => {
   const doc: BuildDocument = {
     filePath: '/proyecto/test.md',
     relativePath: 'test.md',
-    frontmatter: { title: 'Título', date: '2026-08-08', author: ['Ana', 'Luis'] },
+    frontmatter: { title: 'Título', date: '2026-08-08', creator: ['Ana', 'Luis'] },
   };
 
   it('ensambla los metadatos efectivos con la fecha legible y el lang', () => {

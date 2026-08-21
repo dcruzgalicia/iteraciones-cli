@@ -9,7 +9,7 @@ import { discover } from '../builder/discover.js';
  * slugChangedEntries alimenta la limpieza de archivos del slug anterior
  * en dist y en la caché (cleanupSlugChanges del orchestrator).
  * La comparación contra el slug final debe cubrir los casos donde el
- * slug nuevo es prefijo del viejo: quitar author, acortar título, -dN.
+ * slug nuevo es prefijo del viejo: quitar creator, acortar título, -dN.
  */
 
 function makeProject(content: string): string {
@@ -32,8 +32,8 @@ function touchFuture(file: string): void {
 }
 
 describe('discover (cambios de slug por metadatos)', () => {
-  it('registra el slug anterior al quitar author', async () => {
-    const cwd = makeProject('---\ntitle: Prueba\nauthor: Juan Pérez\n---\n\nContenido');
+  it('registra el slug anterior al quitar creator', async () => {
+    const cwd = makeProject('---\ntitle: Prueba\ncreator: Juan Pérez\n---\n\nContenido');
     try {
       await discover(cwd);
       writeFileSync(join(cwd, 'doc.md'), '---\ntitle: Prueba\n---\n\nContenido');
@@ -45,11 +45,11 @@ describe('discover (cambios de slug por metadatos)', () => {
     }
   });
 
-  it('registra el slug anterior al agregar author', async () => {
+  it('registra el slug anterior al agregar creator', async () => {
     const cwd = makeProject('---\ntitle: Prueba\n---\n\nContenido');
     try {
       await discover(cwd);
-      writeFileSync(join(cwd, 'doc.md'), '---\ntitle: Prueba\nauthor: Juan Pérez\n---\n\nContenido');
+      writeFileSync(join(cwd, 'doc.md'), '---\ntitle: Prueba\ncreator: Juan Pérez\n---\n\nContenido');
       const result = await discover(cwd);
       expect(result.slugChangedEntries.get('doc.md')).toBe('prueba');
       expect(result.discoveryIndex.get('doc.md')?.slug).toBe('prueba-por-juan-perez');
@@ -71,11 +71,11 @@ describe('discover (cambios de slug por metadatos)', () => {
     }
   });
 
-  it('registra el slug anterior al cambiar de author', async () => {
-    const cwd = makeProject('---\ntitle: Prueba\nauthor: Autor A\n---\n\nContenido');
+  it('registra el slug anterior al cambiar de creator', async () => {
+    const cwd = makeProject('---\ntitle: Prueba\ncreator: Autor A\n---\n\nContenido');
     try {
       await discover(cwd);
-      writeFileSync(join(cwd, 'doc.md'), '---\ntitle: Prueba\nauthor: Autor B\n---\n\nContenido');
+      writeFileSync(join(cwd, 'doc.md'), '---\ntitle: Prueba\ncreator: Autor B\n---\n\nContenido');
       touchFuture(join(cwd, 'doc.md'));
       const result = await discover(cwd);
       expect(result.slugChangedEntries.get('doc.md')).toBe('prueba-por-autor-a');
@@ -85,16 +85,16 @@ describe('discover (cambios de slug por metadatos)', () => {
     }
   });
 
-  it('registra el slug anterior en cada paso de cambiar author y luego quitarlo', async () => {
-    const cwd = makeProject('---\ntitle: Prueba\nauthor: Autor A\n---\n\nContenido');
+  it('registra el slug anterior en cada paso de cambiar creator y luego quitarlo', async () => {
+    const cwd = makeProject('---\ntitle: Prueba\ncreator: Autor A\n---\n\nContenido');
     try {
       await discover(cwd);
-      // Cambiar de author: limpia el slug del author anterior
-      writeFileSync(join(cwd, 'doc.md'), '---\ntitle: Prueba\nauthor: Autor B\n---\n\nContenido');
+      // Cambiar de creator: limpia el slug del creator anterior
+      writeFileSync(join(cwd, 'doc.md'), '---\ntitle: Prueba\ncreator: Autor B\n---\n\nContenido');
       touchFuture(join(cwd, 'doc.md'));
       const pasoCambio = await discover(cwd);
       expect(pasoCambio.slugChangedEntries.get('doc.md')).toBe('prueba-por-autor-a');
-      // Quitar el author: limpia el slug del author actual
+      // Quitar el creator: limpia el slug del creator actual
       writeFileSync(join(cwd, 'doc.md'), '---\ntitle: Prueba\n---\n\nContenido');
       const pasoQuitar = await discover(cwd);
       expect(pasoQuitar.slugChangedEntries.get('doc.md')).toBe('prueba-por-autor-b');
@@ -105,10 +105,10 @@ describe('discover (cambios de slug por metadatos)', () => {
   });
 
   it('no registra cambios de slug cuando el archivo cambia sin cambiar metadatos', async () => {
-    const cwd = makeProject('---\ntitle: Prueba\nauthor: Juan Pérez\n---\n\nContenido');
+    const cwd = makeProject('---\ntitle: Prueba\ncreator: Juan Pérez\n---\n\nContenido');
     try {
       await discover(cwd);
-      writeFileSync(join(cwd, 'doc.md'), '---\ntitle: Prueba\nauthor: Juan Pérez\n---\n\nOtro contenido');
+      writeFileSync(join(cwd, 'doc.md'), '---\ntitle: Prueba\ncreator: Juan Pérez\n---\n\nOtro contenido');
       const result = await discover(cwd);
       expect(result.changedPaths.has('doc.md')).toBe(true);
       expect(result.slugChangedEntries.size).toBe(0);
@@ -165,12 +165,12 @@ describe('discover (cambios de slug por metadatos)', () => {
     }
   });
 
-  it('resuelve la colisión expandiendo autores (resolveByAuthorExpansion) sin -dN', async () => {
-    // Dos documentos con el mismo título y autores distintos: la expansión
-    // de autores produce slugs únicos sin recurrir al sufijo -dN
+  it('resuelve la colisión expandiendo autores (resolveByCreatorExpansion) sin -dN', async () => {
+    // Dos documentos con el mismo título y creators distintos: la expansión
+    // de creators produce slugs únicos sin recurrir al sufijo -dN
     const cwd = makeTwoDocProject(
-      '---\ntitle: Mismo Título\nauthor: [Ana García]\n---\n\nContenido',
-      '---\ntitle: Mismo Título\nauthor: [Luis Pérez]\n---\n\nContenido',
+      '---\ntitle: Mismo Título\ncreator: [Ana García]\n---\n\nContenido',
+      '---\ntitle: Mismo Título\ncreator: [Luis Pérez]\n---\n\nContenido',
     );
     try {
       const result = await discover(cwd);
@@ -179,7 +179,7 @@ describe('discover (cambios de slug por metadatos)', () => {
       expect(slugA).toBe('mismo-titulo-por-ana-garcia');
       expect(slugB).toBe('mismo-titulo-por-luis-perez');
       expect(slugA).not.toBe(slugB);
-      // Ninguno usa el sufijo -dN (la expansión de autores lo resolvió)
+      // Ninguno usa el sufijo -dN (la expansión de creators lo resolvió)
       expect(slugA).not.toMatch(/-d\d+$/);
       expect(slugB).not.toMatch(/-d\d+$/);
     } finally {

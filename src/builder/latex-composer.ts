@@ -79,7 +79,7 @@ export async function markdownToLatex(
   cropActive = false,
 ): Promise<{ tex: string; processedImages: string[] }> {
   const title = typeof fm.title === 'string' && fm.title.trim() ? fm.title : 'Sin título';
-  const author = parseAuthors(fm.author);
+  const creator = parseAuthors(fm.creator);
 
   // ── Preprocesamiento de imágenes (CMYK 300dpi JPG) ──
   let processedImages: string[] = [];
@@ -144,8 +144,8 @@ export async function markdownToLatex(
   // (frontmatter con |). El filtro lo serializa desde la metadata del
   // documento: el template $if(subtitle)$ emite el RawInline latex sin
   // re-escape. En HTML el compositor sí lo aplana (render.ts).
-  for (const a of author) {
-    extraArgs.push(`--metadata=author:${metadataValue(a)}`);
+  for (const a of creator) {
+    extraArgs.push(`--metadata=creator:${metadataValue(a)}`);
   }
   const date = await pdfDate(fm, siteConfig, doc);
   if (date !== undefined) extraArgs.push(`--metadata=date:${metadataValue(date)}`);

@@ -3,7 +3,7 @@ import type { SiteConfig } from '../config/config-schema.js';
 export interface DiscoveryEntry {
   title: string;
   subtitle?: string;
-  author: string[];
+  creator: string[];
   date?: string;
   slug?: string;
   /** Slug fijado por el usuario en el frontmatter (campo slug:). */
@@ -24,7 +24,7 @@ export interface Frontmatter {
   title: string;
   subtitle?: string;
   date: string;
-  author: string[];
+  creator: string[];
 }
 
 /**

@@ -8,7 +8,7 @@ import { type ActiveFormats, type FormatKey, toActiveFormats } from '../config/s
 import { withTempDir } from './helpers.js';
 
 function doc(relativePath: string): BuildDocument {
-  return { filePath: join('/proyecto', relativePath), relativePath, frontmatter: { title: relativePath, date: '', author: [] } };
+  return { filePath: join('/proyecto', relativePath), relativePath, frontmatter: { title: relativePath, date: '', creator: [] } };
 }
 
 /** Convierte una lista de formatos activos al mapa canónico (mismo helper que el pipeline). */
