@@ -2,8 +2,9 @@
  * Preprocesamiento de imágenes para LaTeX/PDF con ImageMagick (v7).
  *
  * Convierte todas las imágenes (endpapers, title-image, publishers-image,
- * inline) a CMYK 300dpi JPG antes de pasarlas a pandoc. Esto elimina el
- * overflow de imagen en los metadatos del PDF (MediaBox/CropBox/TrimBox).
+ * inline) a escala de grises 300dpi JPG antes de pasarlas a pandoc.
+ * Esto produce imágenes monocromáticas (1 canal K) para impresión a
+ * una sola tinta y elimina el overflow de imagen en los metadatos del PDF.
  *
  * Si ImageMagick no está disponible, se usa la imagen original (fallback
  * silencioso — no rompe el build).
@@ -56,7 +57,7 @@ function processedName(filePath: string): string {
 }
 
 /**
- * Procesa una imagen con ImageMagick: CMYK, 300dpi, 100% calidad JPG.
+ * Procesa una imagen con ImageMagick: escala de grises, 300dpi, 100% calidad JPG.
  * @param cover Si true, resize fill + center-crop (endpapers). Si false, resize fit.
  * @returns Ruta de la imagen procesada, o la original si falló.
  */
@@ -80,22 +81,7 @@ export async function processImage(inputPath: string, targetWmm: number, targetH
     args.push('-gravity', 'center', '-extent', `${targetW}x${targetH}`);
   }
 
-  args.push(
-    '-colorspace',
-    'Gray',
-    '-colorspace',
-    'CMYK',
-    '-density',
-    '300',
-    '-units',
-    'PixelsPerInch',
-    '-quality',
-    '100',
-    '-background',
-    'white',
-    '-flatten',
-    outPath,
-  );
+  args.push('-colorspace', 'Gray', '-density', '300', '-units', 'PixelsPerInch', '-quality', '100', '-background', 'white', '-flatten', outPath);
 
   const proc = Bun.spawn(args, { stdout: 'ignore', stderr: 'pipe' });
   const exitCode = await proc.exited;
