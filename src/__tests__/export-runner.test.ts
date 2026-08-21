@@ -21,7 +21,7 @@ const EXPORT_DOC = {
     creator: ['Autor Uno', 'Autor Dos'],
     date: '8 de agosto de 2026',
     dateIso: '2026-08-08',
-    lang: 'es-MX',
+    language: 'es-MX',
     toc: false,
   },
 };
@@ -43,7 +43,7 @@ describe('export/runner (convertToMarkdown)', () => {
       expect(content).toContain('- Autor Uno');
       expect(content).toContain('- Autor Dos');
       // Los complementos del CLI (defaults que no vienen del frontmatter)
-      expect(content).toContain('lang: es-MX');
+      expect(content).toContain('language: es-MX');
       // La fecha formateada del CLI sobreescribe la cruda del frontmatter
       expect(content).toContain('date: 8 de agosto de 2026');
       expect(content).toContain('Hola.');

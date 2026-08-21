@@ -77,7 +77,7 @@ export async function runDocumentPipeline(
   const globalBibliography = bibOptions?.bibliography;
   // El default vive en DEFAULT_SITE_CONFIG (es-MX): el fallback local no debe
   // divergir de la configuración (un lang distinto emite --metadata distinto).
-  const lang = siteConfig.lang ?? DEFAULT_SITE_CONFIG.lang;
+  const lang = siteConfig.language ?? DEFAULT_SITE_CONFIG.language;
   const htmlConfig = formatCfg?.html;
   const logoInline = await loadLogoInline(ctx.cwd, htmlConfig?.logo?.trim());
 

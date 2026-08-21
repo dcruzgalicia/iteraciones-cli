@@ -179,7 +179,7 @@ async function buildProjectInfo(cwd: string): Promise<string[]> {
   const preambleDefaultsLabel = 'filters de preámbulo desactivados (defaults del paquete):';
   const preambleWidth = preambleDefaultsLabel.length;
   const lines = [
-    `  lang:                    ${config.lang}`,
+    `  language:                ${config.language}`,
     `  toc:                     ${config.toc ? 'sí' : 'no'}`,
     `  documentos:              ${docCount}`,
     `  salida:                  ${distDir}${distExists ? ' (generado)' : ' (no generado)'}`,

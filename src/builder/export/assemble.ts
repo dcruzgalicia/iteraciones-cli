@@ -8,7 +8,7 @@ import type { ExportDocument, ExportMetadata } from './types.js';
  */
 export function assembleExportDocument(
   doc: BuildDocument,
-  lang: string,
+  language: string,
   globalBibliography?: string,
   globalCsl?: string,
   toc?: boolean,
@@ -24,7 +24,7 @@ export function assembleExportDocument(
     creator: doc.frontmatter.creator,
     date: formatHumanDate(doc.frontmatter.date) ?? undefined,
     dateIso: doc.frontmatter.date,
-    lang,
+    language,
     bibliography,
     csl,
     toc: toc ?? false,

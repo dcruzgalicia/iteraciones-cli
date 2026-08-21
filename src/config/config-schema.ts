@@ -148,7 +148,7 @@ const FormatSchema = z
 // Esquema intermedio que refleja la estructura del YAML
 const RawSiteConfigSchema = z
   .object({
-    lang: z.string().default(DEFAULT_SITE_CONFIG.lang),
+    language: z.string().default(DEFAULT_SITE_CONFIG.language),
     toc: z.boolean().default(DEFAULT_SITE_CONFIG.toc),
     format: FormatSchema.optional(),
     bibliography: z.string().optional(),
@@ -190,7 +190,7 @@ export const SiteConfigSchema = RawSiteConfigSchema.transform((raw) => {
   const latexRaw = f.latex as Record<string, unknown> | undefined;
 
   return {
-    lang: raw.lang,
+    language: raw.language,
     toc: raw.toc,
     format: {
       latex: latexRaw ? (camelizeKeys(latexRaw) as LatexFormatConfig) : { ...DEFAULT_LATEX_FORMAT },

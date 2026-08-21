@@ -58,7 +58,7 @@ const quote = (value: string): string => JSON.stringify(value);
 function buildDefaultConfig(): string {
   return [
     '# Configuración del sitio. Consulta docs/configuration.md para ver todas las opciones.',
-    `lang: ${DEFAULT_SITE_CONFIG.lang}`,
+    `language: ${DEFAULT_SITE_CONFIG.language}`,
     `toc: ${DEFAULT_SITE_CONFIG.toc}`,
     'format:',
     '  latex:',

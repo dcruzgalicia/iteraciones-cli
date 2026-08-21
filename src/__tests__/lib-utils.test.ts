@@ -49,7 +49,7 @@ describe('assembleExportDocument', () => {
     expect(exp.metadata.title).toBe('Título');
     expect(exp.metadata.date).toBe('8 de agosto de 2026');
     expect(exp.metadata.dateIso).toBe('2026-08-08');
-    expect(exp.metadata.lang).toBe('es-MX');
+    expect(exp.metadata.language).toBe('es-MX');
     expect(exp.metadata.toc).toBe(true);
   });
 

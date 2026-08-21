@@ -5,7 +5,7 @@ El archivo `iteraciones.config.yaml` en la raíz del proyecto es la única fuent
 ## Estructura completa
 
 ```yaml
-lang: es-MX                       # código de idioma BCP 47
+language: es-MX                       # código de idioma BCP 47
 toc: false                        # tabla de contenidos (PDF, LaTeX, HTML, EPUB)
 
 format:
@@ -47,7 +47,7 @@ csl: styles/nature.csl           # estilo de citas CSL (opcional; APA-7 si falta
 
 ## Campos
 
-### `lang`
+### `language`
 
 **Tipo:** `string`
 **Por defecto:** `'es-MX'`
@@ -55,10 +55,10 @@ csl: styles/nature.csl           # estilo de citas CSL (opcional; APA-7 si falta
 Código de idioma BCP 47. Se usa como valor del atributo `lang` en el elemento `<html>`, en los metadatos de EPUB y Markdown, y en la configuración de `babel` para LaTeX (PDF).
 
 ```yaml
-lang: es-MX
+language: es-MX
 ```
 
-El `lang` del frontmatter de un documento sí sobreescribe el de la configuración en el HTML, el EPUB y el Markdown; **no** altera la configuración de `babel` del PDF, que se resuelve siempre desde el `lang` de la configuración (o su valor por defecto).
+El `language` del frontmatter de un documento sí sobreescribe el de la configuración en el HTML, el EPUB y el Markdown; **no** altera la configuración de `babel` del PDF, que se resuelve siempre desde el `language` de la configuración (o su valor por defecto).
 
 ### `format.latex`
 

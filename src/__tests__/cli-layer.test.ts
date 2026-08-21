@@ -374,7 +374,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       expect(out).toContain('sin invalidaciones — todo desde caché');
 
       // Configuración HTML modificada: la razón aparece en el resumen
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  html:\n    title: Otro\n    generate: true\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nformat:\n  html:\n    title: Otro\n    generate: true\n', 'utf8');
       stdoutSpy = spyOn(process.stdout, 'write');
       out = '';
       try {
@@ -578,7 +578,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
   it('un error de pandoc no sugiere validate (no es un problema de config/frontmatter)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nlua-filters: [filters/roto.lua]\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nlua-filters: [filters/roto.lua]\n', 'utf8');
       const { mkdir } = await import('node:fs/promises');
       await mkdir(join(dir, 'filters'), { recursive: true });
       await writeFile(join(dir, 'filters', 'roto.lua'), 'function ) sintaxis inválida\n', 'utf8');
@@ -599,7 +599,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
   it('un page-number inválido se reporta como error de config con la ruta del campo (sin stack trace)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  pdf:\n    generate: true\n    page-number: raro\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nformat:\n  pdf:\n    generate: true\n    page-number: raro\n', 'utf8');
       const stderrSpy = spyStderr();
       let output = '';
       try {
@@ -619,7 +619,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
   it('un cambio de bibliografía regenera las exportaciones', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nbibliography: refs/libro.bib\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nbibliography: refs/libro.bib\n', 'utf8');
       const { mkdir } = await import('node:fs/promises');
       await mkdir(join(dir, 'refs'), { recursive: true });
       await writeFile(
@@ -684,7 +684,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       expect(conToc).toContain('id="TOC"');
 
       // Config con toc: true y frontmatter toc: false → sin TOC en ese documento
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\ntoc: true\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\ntoc: true\n', 'utf8');
       await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ntoc: false\n---\n\n# Sección\n\nContenido.\n', 'utf8');
       process.exitCode = 0;
       await runBuild(dir);
@@ -699,7 +699,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       await initTestProject(dir);
       await writeFile(
         join(dir, 'iteraciones.config.yaml'),
-        'lang: es-MX\nformat:\n  latex:\n    generate: true\n  pdf:\n    generate: false\n    show-date: false\n',
+        'language: es-MX\nformat:\n  latex:\n    generate: true\n  pdf:\n    generate: false\n    show-date: false\n',
         'utf8',
       );
       await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\nContenido.\n', 'utf8');
@@ -715,7 +715,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
   it('un documento sin frontmatter usa \\title{Sin título} en LaTeX', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  latex:\n    generate: true\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nformat:\n  latex:\n    generate: true\n', 'utf8');
       await writeFile(join(dir, 'test.md'), 'Contenido sin frontmatter.\n', 'utf8');
       process.exitCode = 0;
       await runBuild(dir);
@@ -931,7 +931,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
   it('title-image: ruta absoluta en el tex con el guion bajo sin escapar', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  latex:\n    generate: true\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nformat:\n  latex:\n    generate: true\n', 'utf8');
       // PNG 1x1 válido (base64)
       const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
       await writeFile(join(dir, 'mi_portada.png'), png);
@@ -951,7 +951,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
   it('title-image: archivo inexistente falla con mensaje claro (no el de latexmk)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  latex:\n    generate: true\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nformat:\n  latex:\n    generate: true\n', 'utf8');
       await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ntitle-image: ./no_existe.png\n---\n\nContenido.\n', 'utf8');
       const stderrSpy = spyStderr();
       let output = '';
@@ -971,7 +971,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
   it('un párrafo de 2-3 palabras al inicio no recibe \\mbox (umbral de palabras reales)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  latex:\n    generate: true\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nformat:\n  latex:\n    generate: true\n', 'utf8');
       await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\n---\n\nContenido corto.\n', 'utf8');
       process.exitCode = 0;
       await runBuild(dir);
@@ -1045,7 +1045,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
         await initTestProject(dir);
         await writeFile(
           join(dir, 'iteraciones.config.yaml'),
-          'lang: es-MX\nformat:\n  latex:\n    generate: true\n  pdf:\n    generate: true\n  html:\n    generate: true\n  epub:\n    generate: true\n  markdown:\n    generate: true\n',
+          'language: es-MX\nformat:\n  latex:\n    generate: true\n  pdf:\n    generate: true\n  html:\n    generate: true\n  epub:\n    generate: true\n  markdown:\n    generate: true\n',
           'utf8',
         );
         await writeFile(join(dir, 'index.md'), '---\ntitle: Inicio\ndate: 2026-01-01\n---\n\nInicio.\n', 'utf8');
@@ -1067,7 +1067,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
   it.skipIf(!pandocOk)('el lang de la configuración configura babel en el PDF (contrato lang → babel)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: en\nformat:\n  latex:\n    generate: true\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: en\nformat:\n  latex:\n    generate: true\n', 'utf8');
       process.exitCode = 0;
       await runBuild(dir);
       expect(process.exitCode).toBe(0);
@@ -1079,7 +1079,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
   it.skipIf(!pandocOk)('el lang por defecto es-MX mantiene las opciones históricas de babel', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  latex:\n    generate: true\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nformat:\n  latex:\n    generate: true\n', 'utf8');
       process.exitCode = 0;
       await runBuild(dir);
       expect(process.exitCode).toBe(0);
@@ -1091,7 +1091,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
   it.skipIf(!pandocOk || !unzipOk)('el EPUB generado incluye título, autor e idioma en sus metadatos', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), ['lang: es-MX', 'format:', '  epub:', '    generate: true'].join('\n'), 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), ['language: es-MX', 'format:', '  epub:', '    generate: true'].join('\n'), 'utf8');
       await writeFile(
         join(dir, 'test.md'),
         '---\ntitle: Test Document\nauthor: María Pérez\ndate: 2026-01-01\n---\n\nContenido de prueba.\n',
@@ -1218,7 +1218,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
   it('un error de pandoc reporta la ruta del documento una sola vez', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nlua-filters: [filters/roto.lua]\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nlua-filters: [filters/roto.lua]\n', 'utf8');
       const { mkdir } = await import('node:fs/promises');
       await mkdir(join(dir, 'filters'), { recursive: true });
       await writeFile(join(dir, 'filters', 'roto.lua'), 'function ) sintaxis inválida\n', 'utf8');
@@ -1373,7 +1373,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
   it('el índice no enlaza a referencias y la tarjeta conserva su chip', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\ntoc: true\nformat:\n  latex:\n    generate: true\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\ntoc: true\nformat:\n  latex:\n    generate: true\n', 'utf8');
       await writeFile(join(dir, 'bibliography.bib'), '@book{key1, author = {García, Lucía}, title = {Libro}, year = {2024}}\n', 'utf8');
       await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\n# Sección\n\nCita [@key1].\n', 'utf8');
       process.exitCode = 0;
@@ -1397,7 +1397,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
   it('las tarjetas de formatos y referencias se insertan fuera de la tarjeta de contenido (regresión #1445)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  latex:\n    generate: true\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nformat:\n  latex:\n    generate: true\n', 'utf8');
       await writeFile(join(dir, 'bibliography.bib'), '@book{key1, author = {García, Lucía}, title = {Libro}, year = {2024}}\n', 'utf8');
       await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\n# Sección\n\nCita [@key1].\n', 'utf8');
       process.exitCode = 0;
@@ -1442,7 +1442,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
   it('el masonry sigue el orden de bloques por defecto (header, contenido, formatos, indice, referencias, footer)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\ntoc: true\nformat:\n  latex:\n    generate: true\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\ntoc: true\nformat:\n  latex:\n    generate: true\n', 'utf8');
       await writeFile(join(dir, 'bibliography.bib'), '@book{key1, author = {García, Lucía}, title = {Libro}, year = {2024}}\n', 'utf8');
       await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\n# Sección\n\nCita [@key1].\n', 'utf8');
       process.exitCode = 0;
@@ -1465,7 +1465,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       await initTestProject(dir);
       await writeFile(
         join(dir, 'iteraciones.config.yaml'),
-        'lang: es-MX\ntoc: true\nformat:\n  latex:\n    generate: true\n  html:\n    blocks:\n      - header\n      - contenido\n      - indice\n      - formatos\n      - referencias\n      - footer\n',
+        'language: es-MX\ntoc: true\nformat:\n  latex:\n    generate: true\n  html:\n    blocks:\n      - header\n      - contenido\n      - indice\n      - formatos\n      - referencias\n      - footer\n',
         'utf8',
       );
       await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\n# Sección\n\nContenido.\n', 'utf8');
@@ -1500,7 +1500,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       await initTestProject(dir);
       await writeFile(
         join(dir, 'iteraciones.config.yaml'),
-        'lang: es-MX\nformat:\n  html:\n    generate: false\n  latex:\n    generate: true\n',
+        'language: es-MX\nformat:\n  html:\n    generate: false\n  latex:\n    generate: true\n',
         'utf8',
       );
       process.exitCode = 0;
@@ -1559,7 +1559,7 @@ describe('doctor --info (antes runInfo)', () => {
       await initTestProject(dir);
       await writeFile(
         join(dir, 'iteraciones.config.yaml'),
-        'lang: es-MX\nformat:\n  pdf:\n    disabled-preamble-filters:\n      - 19-maketitle\n',
+        'language: es-MX\nformat:\n  pdf:\n    disabled-preamble-filters:\n      - 19-maketitle\n',
         'utf8',
       );
       const output = await infoOutput(dir);
@@ -1577,7 +1577,7 @@ describe('doctor --info (antes runInfo)', () => {
       // ocultaba de la línea de config; la presencia en el YAML lo hace visible.
       await writeFile(
         join(dir, 'iteraciones.config.yaml'),
-        'lang: es-MX\nformat:\n  pdf:\n    disabled-preamble-filters:\n      - 97-eso-pic\n',
+        'language: es-MX\nformat:\n  pdf:\n    disabled-preamble-filters:\n      - 97-eso-pic\n',
         'utf8',
       );
       const output = await infoOutput(dir);
@@ -1606,7 +1606,7 @@ describe('doctor --info (antes runInfo)', () => {
       await initTestProject(dir);
       const output = await infoOutput(dir);
       // El prefijo y el glifo se repiten en cada línea (formato unificado)
-      const prefixed = output.split('\n').filter((l) => l.includes('lang:') || l.includes('toc:') || l.includes('documentos:'));
+      const prefixed = output.split('\n').filter((l) => l.includes('language:') || l.includes('toc:') || l.includes('documentos:'));
       expect(prefixed.length).toBeGreaterThanOrEqual(3);
       for (const line of prefixed) {
         expect(line).toContain('[doctor]');
@@ -1877,7 +1877,7 @@ describe('runValidate', () => {
 
   it('reporta una sola línea de resumen con plural correcto (1 error)', async () => {
     await withTempDir(async (dir) => {
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: [inválido\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: [inválido\n', 'utf8');
       const stderrSpy = spyStderr();
       let output = '';
       try {
@@ -1896,7 +1896,7 @@ describe('runValidate', () => {
 
   it('reporta 2 errores con plural correcto', async () => {
     await withTempDir(async (dir) => {
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: [inválido\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: [inválido\n', 'utf8');
       await writeFile(join(dir, 'a.md'), '---\ntitle: [inválido\n---\n', 'utf8');
       const stderrSpy = spyStderr();
       let output = '';
@@ -1914,7 +1914,7 @@ describe('runValidate', () => {
 
   it('accent inválido no enmascara los demás errores de la config', async () => {
     await withTempDir(async (dir) => {
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: 123\nformat:\n  html:\n    accent: naranja\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: 123\nformat:\n  html:\n    accent: naranja\n', 'utf8');
       const stderrSpy = spyStderr();
       let output = '';
       try {
@@ -1992,7 +1992,7 @@ describe('runValidate', () => {
   it('reporta error con rutas de bibliografía o CSL inexistentes', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nbibliography: refs/no-existe.bib\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nbibliography: refs/no-existe.bib\n', 'utf8');
       const stderrSpy = spyStderr();
       let output = '';
       try {
@@ -2012,7 +2012,7 @@ describe('runValidate', () => {
       await initTestProject(dir);
       await writeFile(
         join(dir, 'iteraciones.config.yaml'),
-        'lang: es-MX\nformat:\n  pdf:\n    disabled-preamble-filters:\n      - 05-language\n',
+        'language: es-MX\nformat:\n  pdf:\n    disabled-preamble-filters:\n      - 05-language\n',
         'utf8',
       );
       const stderrSpy = spyStderr();
@@ -2059,7 +2059,7 @@ describe('runDoctor', () => {
   it('verifica el motor LaTeX cuando format.pdf está activo', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  pdf:\n    generate: true\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nformat:\n  pdf:\n    generate: true\n', 'utf8');
       const output = await doctorOutput(dir);
       expect(output).toContain('pdflatex disponible');
     });
@@ -2075,7 +2075,7 @@ describe('runDoctor', () => {
     try {
       await withTempDir(async (dir) => {
         await initTestProject(dir);
-        await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  pdf:\n    generate: true\n', 'utf8');
+        await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nformat:\n  pdf:\n    generate: true\n', 'utf8');
         const output = await doctorOutput(dir);
         // El check opcional falla con ⚠ pero doctor sigue en exit 0
         expect(process.exitCode).toBe(0);
@@ -2352,7 +2352,7 @@ describe('runBuild (smoke PDF real)', () => {
       await withTempDir(async (dir) => {
         await initTestProject(dir);
         // toc: true ejercita el hook \tocbasic@listhead@toc de 17-toc-section
-        await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\ntoc: true\nformat:\n  pdf:\n    generate: true\n', 'utf8');
+        await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\ntoc: true\nformat:\n  pdf:\n    generate: true\n', 'utf8');
         process.exitCode = 0;
         await runBuild(dir);
         expect(process.exitCode).toBe(0);
@@ -2373,7 +2373,7 @@ describe('runBuild (smoke PDF real)', () => {
         // 99-pdfx activo: se quita de la disabled list por defecto (97 y 98 siguen desactivados)
         await writeFile(
           join(dir, 'iteraciones.config.yaml'),
-          'lang: es-MX\nformat:\n  pdf:\n    generate: true\n    disabled-preamble-filters:\n      - 97-eso-pic\n      - 98-crop\n',
+          'language: es-MX\nformat:\n  pdf:\n    generate: true\n    disabled-preamble-filters:\n      - 97-eso-pic\n      - 98-crop\n',
           'utf8',
         );
         process.exitCode = 0;
@@ -2417,7 +2417,7 @@ describe('runBuild (smoke PDF real)', () => {
         // fallaba con "! LaTeX Error: Option clash for package eso-pic." (#1962).
         await writeFile(
           join(dir, 'iteraciones.config.yaml'),
-          'lang: es-MX\nformat:\n  pdf:\n    generate: true\n    disabled-preamble-filters:\n      - 98-crop\n      - 99-pdfx\n',
+          'language: es-MX\nformat:\n  pdf:\n    generate: true\n    disabled-preamble-filters:\n      - 98-crop\n      - 99-pdfx\n',
           'utf8',
         );
         process.exitCode = 0;
@@ -2434,7 +2434,11 @@ describe('runBuild (smoke PDF real)', () => {
     async () => {
       await withTempDir(async (dir) => {
         await initTestProject(dir);
-        await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  pdf:\n    generate: true\n    cover-image: true\n', 'utf8');
+        await writeFile(
+          join(dir, 'iteraciones.config.yaml'),
+          'language: es-MX\nformat:\n  pdf:\n    generate: true\n    cover-image: true\n',
+          'utf8',
+        );
         process.exitCode = 0;
         await runBuild(dir);
         expect(process.exitCode).toBe(0);
@@ -2453,7 +2457,7 @@ describe('runBuild (smoke PDF real)', () => {
     async () => {
       await withTempDir(async (dir) => {
         await initTestProject(dir);
-        const coverConfig = 'lang: es-MX\nformat:\n  pdf:\n    generate: true\n    cover-image: true\n';
+        const coverConfig = 'language: es-MX\nformat:\n  pdf:\n    generate: true\n    cover-image: true\n';
         await writeFile(join(dir, 'iteraciones.config.yaml'), coverConfig, 'utf8');
         process.exitCode = 0;
         await runBuild(dir);
@@ -2461,7 +2465,7 @@ describe('runBuild (smoke PDF real)', () => {
         expect(await Bun.file(pngPath).exists()).toBe(true);
         // Desactivar la portada: el hash del formato PDF cambia, re-renderiza y el
         // barrido del orquestador elimina los PNG huérfanos del build anterior.
-        await writeFile(join(dir, 'iteraciones.config.yaml'), 'lang: es-MX\nformat:\n  pdf:\n    generate: true\n', 'utf8');
+        await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nformat:\n  pdf:\n    generate: true\n', 'utf8');
         process.exitCode = 0;
         await runBuild(dir);
         expect(process.exitCode).toBe(0);
