@@ -531,7 +531,7 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(esopic).toContain('\\g@addto@macro\\ESO@HookIIIBG{\\ESO@gridpicture}');
   });
 
-  it('30-endpapers: imagen de fondo que cubre la hoja (cover recortado a papel+3mm por lado)', async () => {
+  it('30-endpapers: imagen de fondo que cubre la hoja (cover recortado al tamaño del papel)', async () => {
     const filters = await loadPreambleFilters();
     const endpapers = filters.find((f) => f.name === '30-endpapers')?.content ?? '';
     expect(endpapers).toContain('\\usepackage{eso-pic}');
@@ -542,8 +542,9 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(endpapers).toContain('\\fp_set:Nn \\l_ep_scale_fp');
     expect(endpapers).toContain('viewport={\\the\\ep@vx}');
     expect(endpapers).toContain('clip,');
-    expect(endpapers).toContain('width=\\dimexpr\\paperwidth+6mm\\relax');
-    expect(endpapers).toContain('height=\\dimexpr\\paperheight+6mm\\relax');
+    // Sin crop: la imagen mide exactamente el tamaño del papel (sin +6mm)
+    expect(endpapers).toContain('width=\\dimexpr\\paperwidth\\relax');
+    expect(endpapers).toContain('height=\\dimexpr\\paperheight\\relax');
     // Solo la página 1 Y solo con hojas de guarda (la hoja en blanco antes de
     // la extratitle; sin guardas, el endpaper no se agrega en ningún caso)
     expect(endpapers).toContain('\\ifnum\\value{page}=1');
@@ -657,6 +658,30 @@ describe('crop / pdfx dinámico (#1975)', () => {
       expect(filters[0]?.content).toContain('width=221.9truemm');
       const off = (3 * MM_TO_PT).toFixed(6);
       expect(filters[1]?.content).toContain(`/TrimBox [${off} ${off}`);
+    });
+
+    it('crop activo: endpapers agrega +6mm a paperwidth y paperheight', () => {
+      const epContent =
+        '\\fp_set:Nn \\l_ep_winW_fp { ( \\dim_to_fp:n { \\the\\paperwidth } ) / \\l_ep_scale_fp }\n' +
+        'width=\\dimexpr\\paperwidth\\relax,\nheight=\\dimexpr\\paperheight\\relax,';
+      const filters = [
+        { name: '98-crop', content: 'old' },
+        { name: '30-endpapers', content: epContent },
+      ];
+      applyPrintQueueDynamics(filters);
+      const ep = filters[1]?.content ?? '';
+      expect(ep).toContain('+ 6mm ) / \\l_ep_scale_fp');
+      expect(ep).toContain('width=\\dimexpr\\paperwidth+6mm\\relax');
+      expect(ep).toContain('height=\\dimexpr\\paperheight+6mm\\relax');
+    });
+
+    it('sin crop: endpapers mide exactamente el tamaño del papel (sin +6mm)', () => {
+      const epContent = 'width=\\dimexpr\\paperwidth\\relax,\nheight=\\dimexpr\\paperheight\\relax,';
+      const filters = [{ name: '30-endpapers', content: epContent }];
+      applyPrintQueueDynamics(filters);
+      const ep = filters[0]?.content ?? '';
+      expect(ep).toContain('width=\\dimexpr\\paperwidth\\relax');
+      expect(ep).not.toContain('+6mm');
     });
   });
 });
