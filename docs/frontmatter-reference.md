@@ -130,6 +130,28 @@ Los campos `extratitle`, `frontispiece`, `titlehead`, `subject`, `dedication`, `
 - `colophon`: colofón final del documento (solo LaTeX/PDF). Texto con letra normal en un bloque del 75% del ancho centrado, con el texto centrado dentro del bloque y `\vspace*{7\baselineskip}` antes. Con `title-image` definido, la imagen de portada también **abre el colofón** (antes del texto, centrada, máx. 50% del textwidth); con `publishers-image`, el logo **cierra el colofón** (después del texto, máx. 25% del textwidth). Siempre ocupa solo una página **par** al final del documento (si el body termina en página impar, el colofón va en la siguiente par; si termina en par, se inserta una página impar en blanco y el colofón va en la siguiente par). La página del colofón no muestra número de página y es siempre la última del documento.
 - `title-image`: imagen que sustituye al texto del título en la portada del PDF (solo LaTeX/PDF; el resto de los formatos y el slug siguen usando `title`). Si está definido, también **sustituye el contenido de `extratitle`**: la página de extratitle (la tercera, tras dos páginas en blanco) muestra la imagen en lugar del texto (el campo `extratitle` se ignora). Ruta relativa al directorio del documento (o absoluta). En la portada la imagen se muestra centrada con un **ancho máximo del 80%** de la caja de texto; en la página de extratitle, hasta el **100% del ancho del bloque** (`0.75\textwidth`). Si la imagen natural es más pequeña se muestra a tamaño natural (no se amplía); si es mayor, se escala conservando la proporción. Formatos soportados: `jpg`, `jpeg`, `png` y `pdf`. Nota: cambiar el archivo de imagen sin modificar el `.md` no invalida la caché.
 
+### Imágenes en campos multilinea
+
+Los campos multilinea (`lowertitleback`, `uppertitleback`, `dedication`, `extratitle`, `frontispiece`, `titlehead`, `colophon`) soportan imágenes inline con la sintaxis markdown `![alt](path)`. Las imágenes pasan por el mismo preprocesamiento que las imágenes del body: conversión a escala de grises 300dpi JPG.
+
+```yaml
+lowertitleback: |
+  Texto en la contraportada
+
+  ![logo](Images/logo.jpg)
+
+  Más texto
+```
+
+**SVGs**: las imágenes SVG requieren `{width=...}` para especificar el tamaño de rasterización:
+
+```yaml
+lowertitleback: |
+  ![logo](Images/logo.svg){width=100pt}
+```
+
+Si una imagen referenciada no existe, el build falla con un error.
+
 ```yaml
 ---
 title: 'Mi libro'
