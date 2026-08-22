@@ -88,6 +88,8 @@ end
 
 -- Convierte el valor de metadata a una lista de bloques: MetaBlocks
 -- (frontmatter |) tal cual; MetaInlines (string simple) envuelto en Para.
+-- Los elementos Image se convierten a RawInline(\includegraphics) para
+-- que pandoc.write los serialize correctamente.
 local function meta_to_blocks(meta)
   if type(meta) ~= 'table' or #meta == 0 then return nil end
   local blocks = {}
@@ -95,7 +97,21 @@ local function meta_to_blocks(meta)
     for i = 1, #meta do blocks[i] = meta[i] end
   else
     local inlines = {}
-    for i = 1, #meta do inlines[i] = meta[i] end
+    for i = 1, #meta do
+      local el = meta[i]
+      if el.t == 'Image' then
+        -- Convertir Image a \includegraphics con path y attributes
+        local path = el.src
+        local attrs = ''
+        if el.attributes and el.attributes['width'] then
+          attrs = '[width=' .. el.attributes['width'] .. ']'
+        end
+        local latex = '\\includegraphics' .. attrs .. '{' .. path .. '}'
+        inlines[i] = pandoc.RawInline('latex', latex)
+      else
+        inlines[i] = el
+      end
+    end
     return { pandoc.Para(inlines) }
   end
   return blocks
