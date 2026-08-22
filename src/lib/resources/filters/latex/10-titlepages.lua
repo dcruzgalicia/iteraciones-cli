@@ -100,25 +100,42 @@ local function image_to_latex(el)
   return '\\includegraphics' .. attrs .. '{' .. path .. '}'
 end
 
+local function extract_image_from_figure(el)
+  if el.t ~= 'Figure' or not el.content or #el.content == 0 then return nil end
+  local inner = el.content[1]
+  if inner.t == 'Image' then
+    return inner
+  elseif inner.t == 'Plain' and inner.content and #inner.content > 0 then
+    local inline = inner.content[1]
+    if inline.t == 'Image' then
+      return inline
+    end
+  end
+  return nil
+end
+
 local function meta_to_blocks(meta)
   if type(meta) ~= 'table' or #meta == 0 then return nil end
   local blocks = {}
   if BLOCK_TYPES[meta[1].t] then
-    for i = 1, #meta do blocks[i] = meta[i] end
+    for i = 1, #meta do
+      local el = meta[i]
+      local img = extract_image_from_figure(el)
+      if img then
+        blocks[i] = pandoc.RawBlock('latex', image_to_latex(img))
+      else
+        blocks[i] = el
+      end
+    end
   else
     local inlines = {}
     for i = 1, #meta do
       local el = meta[i]
-      if el.t == 'Image' then
+      local img = extract_image_from_figure(el)
+      if img then
+        inlines[i] = pandoc.RawInline('latex', image_to_latex(img))
+      elseif el.t == 'Image' then
         inlines[i] = pandoc.RawInline('latex', image_to_latex(el))
-      elseif el.t == 'Figure' and el.content and #el.content > 0 then
-        -- Figure block (pandoc 3.10+): extraer Image del contenido
-        local inner = el.content[1]
-        if inner.t == 'Image' then
-          inlines[i] = pandoc.RawInline('latex', image_to_latex(inner))
-        else
-          inlines[i] = el
-        end
       else
         inlines[i] = el
       end
