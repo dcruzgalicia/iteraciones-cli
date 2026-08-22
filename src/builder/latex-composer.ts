@@ -9,7 +9,7 @@ import type { LuaFilterGroup } from './filter-resolver.js';
 import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
 import { MD_READER, metadataValue } from './html-composer.js';
 import type { PageDimensions } from './image-processor.js';
-import { processDocumentImages, rewriteImagePaths, scanInlineImages } from './image-processor.js';
+import { processDocumentImages, rewriteImagePaths, scanInlineImages, scanTitlePageFieldImages } from './image-processor.js';
 import { babelOptionsForLang, pageNumberCommandFor } from './latex-preamble.js';
 import type { BuildDocument } from './types.js';
 
@@ -89,10 +89,13 @@ export async function markdownToLatex(
     const docDir = dirname(doc.filePath);
     const outputDir = join(docDir, '.iteraciones', 'processed-images');
     const inlineImages = scanInlineImages(content, docDir);
-    const result = await processDocumentImages(inlineImages, fm, docDir, pageDimensions, cropActive, outputDir);
+    const multilineImages = await scanTitlePageFieldImages(fm, docDir);
+    const result = await processDocumentImages(inlineImages, fm, docDir, pageDimensions, cropActive, outputDir, multilineImages);
     imageMap = result.imageMap;
     processedImages = result.processedFiles;
     if (imageMap.size > 0) {
+      // rewriteImagePaths reemplaza rutas en TODO el contenido (frontmatter + body),
+      // incluyendo campos multilinea como lowertitleback que pueden contener imágenes.
       finalContent = rewriteImagePaths(content, imageMap, docDir);
     }
   }

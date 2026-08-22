@@ -2,15 +2,17 @@
  * Preprocesamiento de imágenes para LaTeX/PDF con ImageMagick (v7).
  *
  * Convierte todas las imágenes (endpapers, title-image, publishers-image,
- * inline) a escala de grises 300dpi JPG antes de pasarlas a pandoc.
- * Esto produce imágenes monocromáticas (1 canal K) para impresión a
- * una sola tinta y elimina el overflow de imagen en los metadatos del PDF.
+ * inline, campos multilinea de portada) a escala de grises 300dpi JPG
+ * antes de pasarlas a pandoc. Esto produce imágenes monocromáticas
+ * (1 canal K) para impresión a una sola tinta y elimina el overflow de
+ * imagen en los metadatos del PDF.
  *
  * Si ImageMagick no está disponible, se usa la imagen original (fallback
  * silencioso — no rompe el build).
  */
 import { mkdir } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
+import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 
 /** Conversión mm → px a 300 DPI: 300px / 25.4mm ≈ 11.811. */
@@ -94,11 +96,15 @@ export async function processImage(inputPath: string, targetWmm: number, targetH
   return outPath;
 }
 
-/** Patrón para imágenes inline: ![alt](path) */
-const MD_IMAGE_RE = /!\[([^\]]*)\]\(([^)]+)\)/g;
+/** Patrón para imágenes inline: ![alt](path) con attributes opcionales */
+const MD_IMAGE_RE = /!\[([^\]]*)\]\(([^)]+)\)(\{[^}]*\})?/g;
+
+/** Campos multilinea de portada que pueden contener imágenes. */
+const MULTILINE_IMAGE_FIELDS = ['lowertitleback', 'uppertitleback', 'dedication', 'extratitle', 'frontispiece', 'titlehead', 'colophon'];
 
 /**
  * Escanea un markdown y retorna las rutas de imágenes inline (relativas, no URLs).
+ * Lanza BuildError si una imagen referenciada no existe.
  */
 export function scanInlineImages(content: string, docDir: string): string[] {
   const paths: string[] = [];
@@ -109,6 +115,59 @@ export function scanInlineImages(content: string, docDir: string): string[] {
     paths.push(abs);
   }
   return paths;
+}
+
+/**
+ * Escanea campos multilinea de portada y retorna las rutas de imágenes
+ * encontradas (relativas, no URLs). Valida que:
+ * - La imagen exista en disco (BuildError si no)
+ * - Los SVGs tengan {width=...} especificado (BuildError si no)
+ */
+export async function scanTitlePageFieldImages(
+  fm: Record<string, unknown>,
+  docDir: string,
+): Promise<{ absPath: string; isSvg: boolean; attrs?: string }[]> {
+  const results: { absPath: string; isSvg: boolean; attrs?: string }[] = [];
+
+  for (const field of MULTILINE_IMAGE_FIELDS) {
+    const raw = fm[field];
+    if (raw === undefined || raw === null) continue;
+
+    // Convertir a string: string directo o bloque YAML
+    let text: string;
+    if (typeof raw === 'string') {
+      text = raw;
+    } else if (Array.isArray(raw)) {
+      // Bloque YAML multilinea: array de líneas
+      text = raw.join('\n');
+    } else {
+      continue;
+    }
+
+    // Escanear imágenes en el contenido markdown
+    for (const match of text.matchAll(MD_IMAGE_RE)) {
+      const imgPath = match[2];
+      const attrs = match[3];
+      if (!imgPath || isAbsolute(imgPath) || imgPath.startsWith('http')) continue;
+
+      const abs = resolve(docDir, imgPath);
+      const isSvg = imgPath.toLowerCase().endsWith('.svg');
+
+      // Validar que la imagen exista
+      if (!(await Bun.file(abs).exists())) {
+        throw new BuildError(`imagen no encontrada en "${field}": "${abs}" (resuelto desde "${imgPath}")`);
+      }
+
+      // Validar que SVGs tengan width especificado
+      if (isSvg && (!attrs || !attrs.includes('width'))) {
+        throw new BuildError(`imagen SVG en "${field}" requiere {width=...}: "${imgPath}"`);
+      }
+
+      results.push({ absPath: abs, isSvg, attrs });
+    }
+  }
+
+  return results;
 }
 
 /**
@@ -129,14 +188,26 @@ export function rewriteImagePaths(content: string, imageMap: Map<string, string>
 }
 
 /**
+ * Reescribe rutas de imágenes en el valor de un campo multilinea de portada.
+ * Busca todas las imágenes `![alt](path)` y reemplaza rutas relativas con
+ * rutas absolutas procesadas del imageMap.
+ */
+export function rewriteMultilineFieldValue(value: string | string[], imageMap: Map<string, string>, docDir: string): string | string[] {
+  const text = Array.isArray(value) ? value.join('\n') : value;
+  const rewritten = rewriteImagePaths(text, imageMap, docDir);
+  return Array.isArray(value) ? rewritten.split('\n') : rewritten;
+}
+
+/**
  * Procesa todas las imágenes de un documento para LaTeX/PDF.
  *
  * @param inlineImages Rutas absolutas de imágenes inline del markdown.
- * @param fm frontmatter (para extraer title-image, publishers-image, endpapers)
+ * @param fm frontmatter (para extraer title-image, publishers-image, endpapers, campos multilinea)
  * @param docDir Directorio del documento.
  * @param pageDims Dimensiones de página en mm.
  * @param cropActive Si true, endpapers usa +6mm.
  * @param outputDir Directorio de salida para imágenes procesadas.
+ * @param multilineImages Imágenes de campos multilinea de portada (scanTitlePageFieldImages).
  * @returns Mapa de ruta original → ruta procesada, y lista de archivos generados.
  */
 export async function processDocumentImages(
@@ -146,6 +217,7 @@ export async function processDocumentImages(
   pageDims: PageDimensions,
   cropActive: boolean,
   outputDir: string,
+  multilineImages?: { absPath: string; isSvg: boolean; attrs?: string }[],
 ): Promise<{ imageMap: Map<string, string>; processedFiles: string[] }> {
   if (!(await detectMagick())) {
     return { imageMap: new Map(), processedFiles: [] };
@@ -156,7 +228,7 @@ export async function processDocumentImages(
   const targetW = pageDims.w + (cropActive ? 6 : 0);
   const targetH = pageDims.h + (cropActive ? 6 : 0);
 
-  // 1. Imágenes de frontmatter
+  // 1. Imágenes de frontmatter dedicadas
   for (const field of ['title-image', 'publishers-image', 'endpapers']) {
     const value = typeof fm[field] === 'string' && (fm[field] as string).trim() ? (fm[field] as string).trim() : undefined;
     if (!value) continue;
@@ -171,10 +243,20 @@ export async function processDocumentImages(
     if (processed !== absPath) processedFiles.push(processed);
   }
 
+  // 1.5. Imágenes de campos multilinea de portada
+  if (multilineImages) {
+    for (const img of multilineImages) {
+      if (imageMap.has(img.absPath)) continue;
+
+      const processed = await processImage(img.absPath, targetW, targetH, false, outputDir);
+      imageMap.set(img.absPath, processed);
+      if (processed !== img.absPath) processedFiles.push(processed);
+    }
+  }
+
   // 2. Imágenes inline del markdown
   for (const absPath of inlineImages) {
     if (imageMap.has(absPath)) continue;
-    if (!(await Bun.file(absPath).exists())) continue;
 
     const processed = await processImage(absPath, targetW, targetH, false, outputDir);
     imageMap.set(absPath, processed);
