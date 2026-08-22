@@ -113,7 +113,7 @@ export async function runDocumentPipeline(
   // 98-crop activo: controla el bleed (+6mm) en endpapers y crop/pdfx.
   let cropActive = false;
   // Dimensiones de página en mm (para preprocesamiento de imágenes).
-  let pageDimensions: { w: number; h: number } | undefined;
+  let pageDimensions: { w: number; h: number; textW: number } | undefined;
   if (plan.generateLatex) {
     const preambleFilters = await loadPreambleFilters(siteConfig.format?.pdf?.disabledPreambleFilters, ctx.cwd);
     biblatexAvailable = preambleFilters.some((f) => f.name === '11-bibliography');
@@ -226,7 +226,7 @@ interface RenderContext {
   /** 98-crop activo: controla bleed (+6mm) en endpapers y crop/pdfx. */
   cropActive: boolean;
   /** Dimensiones de página en mm (para preprocesamiento de imágenes). */
-  pageDimensions: { w: number; h: number } | undefined;
+  pageDimensions: { w: number; h: number; textW: number } | undefined;
 }
 
 /**

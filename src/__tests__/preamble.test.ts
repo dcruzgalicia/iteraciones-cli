@@ -601,7 +601,8 @@ describe('crop / pdfx dinámico (#1975)', () => {
         { name: '01-documentclass', content: '\\documentclass[paper=letter]{scrbook}' },
         { name: '04-margins', content: '\\usepackage[paperwidth=200mm,paperheight=260mm]{geometry}' },
       ];
-      expect(detectPageSize(filters)).toEqual({ w: 200, h: 260 });
+      const result = detectPageSize(filters);
+      expect(result).toEqual({ w: 200, h: 260, textW: expect.closeTo(149.2, 1) });
     });
 
     it('detecta paper= de documentclass cuando geometry no define paperwidth', () => {
@@ -609,12 +610,14 @@ describe('crop / pdfx dinámico (#1975)', () => {
         { name: '01-documentclass', content: '\\documentclass[paper=a4]{scrbook}' },
         { name: '04-margins', content: '\\usepackage[top=2.54cm]{geometry}' },
       ];
-      expect(detectPageSize(filters)).toEqual({ w: 210, h: 297 });
+      const result = detectPageSize(filters);
+      expect(result).toEqual({ w: 210, h: 297, textW: expect.closeTo(159.2, 1) });
     });
 
     it('fallback a letter cuando no hay definición', () => {
       const filters = [{ name: '01-documentclass', content: '\\documentclass{scrbook}' }];
-      expect(detectPageSize(filters)).toEqual({ w: 215.9, h: 279.4 });
+      const result = detectPageSize(filters);
+      expect(result).toEqual({ w: 215.9, h: 279.4, textW: expect.closeTo(165.1, 1) });
     });
 
     it('geometry tiene prioridad sobre documentclass', () => {
@@ -622,7 +625,8 @@ describe('crop / pdfx dinámico (#1975)', () => {
         { name: '01-documentclass', content: '\\documentclass[paper=a4]{scrbook}' },
         { name: '04-margins', content: '\\usepackage[paperwidth=148mm,paperheight=210mm]{geometry}' },
       ];
-      expect(detectPageSize(filters)).toEqual({ w: 148, h: 210 });
+      const result = detectPageSize(filters);
+      expect(result).toEqual({ w: 148, h: 210, textW: expect.closeTo(97.2, 1) });
     });
   });
 

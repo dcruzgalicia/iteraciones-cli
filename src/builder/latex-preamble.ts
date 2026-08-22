@@ -38,14 +38,27 @@ const PAPER_SIZES: Record<string, { w: number; h: number }> = {
  *   2. paper= en documentclass (01-documentclass)
  *   3. Fallback: letter
  */
-export function detectPageSize(filters: PreambleFilter[]): { w: number; h: number } {
+/**
+ * Detecta dimensiones de página y caja de texto a partir de los preamble filters.
+ * Extrae paperwidth/paperheight y left/right de geometry para calcular
+ * el ancho de la caja de texto (paperwidth - left - right).
+ */
+export function detectPageSize(filters: PreambleFilter[]): { w: number; h: number; textW: number } {
   const margins = filters.find((f) => f.name === '04-margins')?.content ?? '';
   const pwMatch = margins.match(/paperwidth\s*=\s*([\d.]+)\s*mm/);
   const phMatch = margins.match(/paperheight\s*=\s*([\d.]+)\s*mm/);
+  const leftMatch = margins.match(/left\s*=\s*([\d.]+)\s*(mm|cm|pt)/);
+  const rightMatch = margins.match(/right\s*=\s*([\d.]+)\s*(mm|cm|pt)/);
   const pw = pwMatch?.[1];
   const ph = phMatch?.[1];
   if (pw && ph) {
-    return { w: Number.parseFloat(pw), h: Number.parseFloat(ph) };
+    const pwMm = Number.parseFloat(pw);
+    const phMm = Number.parseFloat(ph);
+    // Calcular ancho de caja de texto
+    const leftMm = leftMatch ? parseMarginMm(leftMatch[1], leftMatch[2]) : 25.4;
+    const rightMm = rightMatch ? parseMarginMm(rightMatch[1], rightMatch[2]) : 25.4;
+    const textW = pwMm - leftMm - rightMm;
+    return { w: pwMm, h: phMm, textW };
   }
 
   const docclass = filters.find((f) => f.name === '01-documentclass')?.content ?? '';
@@ -53,10 +66,28 @@ export function detectPageSize(filters: PreambleFilter[]): { w: number; h: numbe
   const paperKey = paperMatch?.[1];
   if (paperKey) {
     const size = PAPER_SIZES[paperKey.toLowerCase()];
-    if (size) return size;
+    if (size) {
+      // Margen default: 2.54cm = 25.4mm
+      return { w: size.w, h: size.h, textW: size.w - 50.8 };
+    }
   }
 
-  return { w: 215.9, h: 279.4 };
+  return { w: 215.9, h: 279.4, textW: 165.1 };
+}
+
+function parseMarginMm(value: string | undefined, unit: string | undefined): number {
+  if (!value || !unit) return 25.4;
+  const v = Number.parseFloat(value);
+  switch (unit) {
+    case 'mm':
+      return v;
+    case 'cm':
+      return v * 10;
+    case 'pt':
+      return v * 0.352778;
+    default:
+      return 25.4;
+  }
 }
 
 /** Genera el contenido LaTeX del filter 98-crop para un tamaño dado. */
