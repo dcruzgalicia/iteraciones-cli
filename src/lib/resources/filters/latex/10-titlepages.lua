@@ -69,6 +69,7 @@ end
 local BLOCK_TYPES = {
   Para = true, Plain = true, Header = true, BlockQuote = true, Div = true,
   BulletList = true, OrderedList = true, CodeBlock = true, RawBlock = true,
+  Figure = true,
 }
 
 -- true si el párrafo es exactamente '::' o ':;' (espacio vertical del
@@ -88,14 +89,57 @@ end
 
 -- Convierte el valor de metadata a una lista de bloques: MetaBlocks
 -- (frontmatter |) tal cual; MetaInlines (string simple) envuelto en Para.
+-- Los elementos Image se convierten a RawInline(\includegraphics) para
+-- que pandoc.write los serialize correctamente.
+local function image_to_latex(el)
+  local path = el.src
+  local attrs = ''
+  if el.attributes and el.attributes['width'] then
+    attrs = '[width=' .. el.attributes['width'] .. ']'
+  end
+  return '\\includegraphics' .. attrs .. '{' .. path .. '}'
+end
+
+local function extract_image_from_figure(el)
+  if el.t ~= 'Figure' or not el.content or #el.content == 0 then return nil end
+  local inner = el.content[1]
+  if inner.t == 'Image' then
+    return inner
+  elseif inner.t == 'Plain' and inner.content and #inner.content > 0 then
+    local inline = inner.content[1]
+    if inline.t == 'Image' then
+      return inline
+    end
+  end
+  return nil
+end
+
 local function meta_to_blocks(meta)
   if type(meta) ~= 'table' or #meta == 0 then return nil end
   local blocks = {}
   if BLOCK_TYPES[meta[1].t] then
-    for i = 1, #meta do blocks[i] = meta[i] end
+    for i = 1, #meta do
+      local el = meta[i]
+      local img = extract_image_from_figure(el)
+      if img then
+        blocks[i] = pandoc.RawBlock('latex', image_to_latex(img))
+      else
+        blocks[i] = el
+      end
+    end
   else
     local inlines = {}
-    for i = 1, #meta do inlines[i] = meta[i] end
+    for i = 1, #meta do
+      local el = meta[i]
+      local img = extract_image_from_figure(el)
+      if img then
+        inlines[i] = pandoc.RawInline('latex', image_to_latex(img))
+      elseif el.t == 'Image' then
+        inlines[i] = pandoc.RawInline('latex', image_to_latex(el))
+      else
+        inlines[i] = el
+      end
+    end
     return { pandoc.Para(inlines) }
   end
   return blocks
