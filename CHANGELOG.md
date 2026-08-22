@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.22.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.21.0...v0.22.0) (2026-08-22)
+
+
+### Features
+
+* **config:** reestructura format.html bajo site ([756c673](https://github.com/dcruzgalicia/iteraciones-cli/commit/756c6731922a0ad25576ce56bdb08cbe9485e3c3)), closes [#1984](https://github.com/dcruzgalicia/iteraciones-cli/issues/1984)
+* **latex:** agrega macro pandocbounded para imágenes de pandoc 3.2.1+ ([49873c0](https://github.com/dcruzgalicia/iteraciones-cli/commit/49873c0284e7ff7f2e58040dad829b79211d3cf6))
+* **latex:** envuelve nombres de creator en mbox para evitar ruptura en author ([7794a44](https://github.com/dcruzgalicia/iteraciones-cli/commit/7794a4427ad9d2b44cee4dbb21339faeecd4223f))
+* **metadata:** agrega precedencia tres niveles frontmatter &gt; format &gt; root ([8bba4d3](https://github.com/dcruzgalicia/iteraciones-cli/commit/8bba4d338847a2b0348ed78526adb23a1d0bc6e0)), closes [#1983](https://github.com/dcruzgalicia/iteraciones-cli/issues/1983)
+* **metadata:** renombra campos del frontmatter a nombres Dublin Core ([695ad92](https://github.com/dcruzgalicia/iteraciones-cli/commit/695ad9201655523a9e57a4dd8fefef048003039b)), closes [#1982](https://github.com/dcruzgalicia/iteraciones-cli/issues/1982)
+* **metadata:** renombra lang → language en config y frontmatter ([3ec7659](https://github.com/dcruzgalicia/iteraciones-cli/commit/3ec7659d173976da457c5994ff1125d76f27fe14))
+* **pdf:** inyecta metadatos Dublin Core completos en XMP e Info dict ([e6617f6](https://github.com/dcruzgalicia/iteraciones-cli/commit/e6617f69d8eb558280b1f1855086db8ca1445aa2)), closes [#1986](https://github.com/dcruzgalicia/iteraciones-cli/issues/1986)
+* **validation:** warnings para campos vacíos en frontmatter ([5c85792](https://github.com/dcruzgalicia/iteraciones-cli/commit/5c857928aed78a51314278296c2aff682b7c4fcf)), closes [#1985](https://github.com/dcruzgalicia/iteraciones-cli/issues/1985)
+
+
+### Bug Fixes
+
+* **builder:** corrige mojibake de acentos en Info dict del PDF ([99e0ad3](https://github.com/dcruzgalicia/iteraciones-cli/commit/99e0ad3675cef2ead44d4f9666c2cd0270b4dc88)), closes [#1996](https://github.com/dcruzgalicia/iteraciones-cli/issues/1996)
+* **latex:** corrige template para usar creator en lugar de author ([ed2a769](https://github.com/dcruzgalicia/iteraciones-cli/commit/ed2a769cc1ac8c4e1ed89d4ed11782a727520178))
+* **preamble:** auto-desactiva 08-hyperref cuando 99-pdfx está activo ([cdc26b5](https://github.com/dcruzgalicia/iteraciones-cli/commit/cdc26b54ba3d838a0921d1c18107b1beb4cfdd64)), closes [#1981](https://github.com/dcruzgalicia/iteraciones-cli/issues/1981)
+
 ## [0.21.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.20.0...v0.21.0) (2026-08-21)
 
 
