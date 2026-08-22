@@ -69,6 +69,7 @@ end
 local BLOCK_TYPES = {
   Para = true, Plain = true, Header = true, BlockQuote = true, Div = true,
   BulletList = true, OrderedList = true, CodeBlock = true, RawBlock = true,
+  Figure = true,
 }
 
 -- true si el párrafo es exactamente '::' o ':;' (espacio vertical del
@@ -90,6 +91,15 @@ end
 -- (frontmatter |) tal cual; MetaInlines (string simple) envuelto en Para.
 -- Los elementos Image se convierten a RawInline(\includegraphics) para
 -- que pandoc.write los serialize correctamente.
+local function image_to_latex(el)
+  local path = el.src
+  local attrs = ''
+  if el.attributes and el.attributes['width'] then
+    attrs = '[width=' .. el.attributes['width'] .. ']'
+  end
+  return '\\includegraphics' .. attrs .. '{' .. path .. '}'
+end
+
 local function meta_to_blocks(meta)
   if type(meta) ~= 'table' or #meta == 0 then return nil end
   local blocks = {}
@@ -100,14 +110,15 @@ local function meta_to_blocks(meta)
     for i = 1, #meta do
       local el = meta[i]
       if el.t == 'Image' then
-        -- Convertir Image a \includegraphics con path y attributes
-        local path = el.src
-        local attrs = ''
-        if el.attributes and el.attributes['width'] then
-          attrs = '[width=' .. el.attributes['width'] .. ']'
+        inlines[i] = pandoc.RawInline('latex', image_to_latex(el))
+      elseif el.t == 'Figure' and el.content and #el.content > 0 then
+        -- Figure block (pandoc 3.10+): extraer Image del contenido
+        local inner = el.content[1]
+        if inner.t == 'Image' then
+          inlines[i] = pandoc.RawInline('latex', image_to_latex(inner))
+        else
+          inlines[i] = el
         end
-        local latex = '\\includegraphics' .. attrs .. '{' .. path .. '}'
-        inlines[i] = pandoc.RawInline('latex', latex)
       else
         inlines[i] = el
       end
