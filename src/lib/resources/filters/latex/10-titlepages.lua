@@ -145,6 +145,39 @@ local function meta_to_blocks(meta)
   return blocks
 end
 
+-- Convierte Span con clase .mbox a \mbox{...} (RawInline). pandoc.write no
+-- conoce esta clase y la descarta; se pre-procesa antes de serializar.
+local function mbox_span_to_rawlatex(span)
+  local body = pandoc.write(pandoc.Pandoc({ pandoc.Para(span.content) }), 'latex')
+  body = body:gsub('%s+$', '')
+  return pandoc.RawInline('latex', '\\mbox{' .. body .. '}')
+end
+
+local function walk_inlines(inls)
+  local out = {}
+  for _, el in ipairs(inls) do
+    if el.t == 'Span' and el.classes:find('mbox', 1, true) then
+      table.insert(out, mbox_span_to_rawlatex(el))
+    else
+      table.insert(out, el)
+    end
+  end
+  return out
+end
+
+local function preprocess_blocks(blocks)
+  local out = {}
+  for _, b in ipairs(blocks) do
+    if b.content and (b.t == 'Para' or b.t == 'Plain') then
+      local cloned = pandoc[b.t](walk_inlines(b.content))
+      table.insert(out, cloned)
+    else
+      table.insert(out, b)
+    end
+  end
+  return out
+end
+
 -- Serializa los bloques a LaTeX: los párrafos "::" se convierten a RawBlock
 -- antes de escribir (pandoc.write maneja los escapes, los LineBreak del
 -- doble espacio y las comillas).
@@ -160,6 +193,7 @@ local function serialize_titleback(blocks)
       table.insert(out, b)
     end
   end
+  out = preprocess_blocks(out)
   local latex = pandoc.write(pandoc.Pandoc(out), 'latex')
   return latex:gsub('%s+$', '')
 end
