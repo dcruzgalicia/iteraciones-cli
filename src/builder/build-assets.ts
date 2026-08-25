@@ -6,8 +6,8 @@ import type { SiteConfig } from '../config/config-schema.js';
 import { ACCENT_PALETTES, type AccentColor } from '../lib/accent-palettes.js';
 import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
+import { cacheHitFor } from './state-hash.js';
 import type { CssFileCache } from './state-serialize.js';
-import { hashString } from './state-serialize.js';
 
 const PKG_ROOT = join(import.meta.dir, '../..');
 const FONTS_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'fonts');
@@ -125,9 +125,11 @@ export async function computeCssHash(
     const size = st.size;
     const prev = prevCache?.[rel];
     let contentHash: string;
-    if (prev !== undefined && prev.mtime === mtime && prev.size === size) {
-      // Sin cambios: reutilizar el hash sin releer el contenido
-      contentHash = prev.hash;
+    // Decisión única de caché (#2020): sin cambios ⇒ reutilizar el hash sin
+    // releer el contenido
+    const hit = cacheHitFor(prev, mtime, size);
+    if (hit !== null) {
+      contentHash = hit;
     } else {
       // Cambiado (o ambiguo: mtime distinto con size igual): releer y hashear
       const bytes = new Uint8Array(await Bun.file(join(outputDir, rel)).arrayBuffer());

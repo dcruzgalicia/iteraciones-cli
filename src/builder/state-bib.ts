@@ -3,6 +3,7 @@ import type { SiteConfig } from '../config/config-schema.js';
 import { logWarning } from '../lib/logger.js';
 import type { BibOptions } from '../lib/pandoc-runner.js';
 import { isIgnoredByRules, isInsideIgnoredDir, loadGitignoreRules } from './gitignore.js';
+import { type FileCacheEntry, hashFileCached } from './state-hash.js';
 import { hashString } from './state-serialize.js';
 
 /**
@@ -39,25 +40,20 @@ export type BibFileCache = Record<string, BibFileCacheEntry>;
 
 /** Hash del contenido de un archivo de bibliografía, reutilizando el caché si mtime+size coinciden. */
 async function hashBibFile(abs: string, prevCache: BibFileCache | undefined, cache: BibFileCache): Promise<string> {
-  try {
-    const stat = await Bun.file(abs).stat();
-    const mtime = Math.round(stat.mtimeMs);
-    const size = stat.size;
-    const prev = prevCache?.[abs];
-    if (prev && prev.mtime === mtime && prev.size === size) {
-      cache[abs] = prev;
-      return prev.hash;
-    }
-    const content = await Bun.file(abs).text();
-    const hash = hashString(content);
-    cache[abs] = { mtime, size, hash };
-    return hash;
-  } catch {
-    // Archivo ausente/ilegible: hash de contenido vacío (mismo comportamiento anterior)
-    const empty = hashString('');
-    cache[abs] = { mtime: 0, size: 0, hash: empty };
-    return empty;
-  }
+  // Núcleo único (#2020). Cambio de contrato documentado (decisión del issue):
+  // antes CUALQUIER error se tragaba devolviendo hash de contenido vacío;
+  // ahora solo ENOENT es tolerado (⇒ parte vacía en el hash, señal
+  // determinista de ausencia) y cualquier otro error se propaga.
+  const hash = await hashFileCached(abs, abs, prevCache, cache);
+  const entry = hash !== null ? hash : hashString('');
+  cache[abs] =
+    cache[abs] ??
+    ({
+      mtime: 0,
+      size: 0,
+      hash: entry,
+    } as FileCacheEntry);
+  return entry;
 }
 
 /**

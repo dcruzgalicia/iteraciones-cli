@@ -3,6 +3,63 @@ import type { SiteConfig } from '../config/config-schema.js';
 import { MD_READER } from '../lib/pandoc-runner.js';
 import { hashFileContent, hashString } from './state-serialize.js';
 
+// ── Núcleo content-addressed único (issue #2020) ───────────────────────────
+
+/** Entrada de caché por archivo: mtime+size evitan releer el contenido. */
+export interface FileCacheEntry {
+  mtime: number;
+  size: number;
+  hash: string;
+}
+
+/**
+ * Decisión única de caché: ¿el par (mtime, size) coincide con la entrada
+ * previa? Si hay hit, devuelve el hash reutilizable; si no, null (hay que
+ * releer). Único lugar donde vive esta comparación — antes estaba copiada a
+ * mano en seis módulos con comentarios «mismo patrón que…».
+ */
+export function cacheHitFor(prev: FileCacheEntry | undefined, mtime: number, size: number): string | null {
+  if (prev && prev.mtime === mtime && prev.size === size) return prev.hash;
+  return null;
+}
+
+/**
+ * Hash de un archivo con caché mtime+size+hash-previo (patrón completo para
+ * caches planas clave→entrada).
+ *
+ * Política única de ENOENT (decisión del issue #2020): archivo desaparecido ⇒
+ * null (trabajo necesario; el caller decide cómo señalizarlo). Cualquier otro
+ * error se propaga — tragar errores no-ENOENT ocultaba problemas reales.
+ */
+export async function hashFileCached(
+  abs: string,
+  key: string,
+  prevCache: Record<string, FileCacheEntry> | undefined,
+  cacheOut: Record<string, FileCacheEntry>,
+): Promise<string | null> {
+  const file = Bun.file(abs);
+  let mtime: number;
+  let size: number;
+  try {
+    const st = await file.stat();
+    mtime = Math.round(st.mtimeMs);
+    size = st.size;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException)?.code === 'ENOENT') return null;
+    throw err;
+  }
+  const prev = prevCache?.[key];
+  const hit = cacheHitFor(prev, mtime, size);
+  if (prev !== undefined && hit !== null) {
+    cacheOut[key] = prev;
+    return hit;
+  }
+  const content = await file.text();
+  const entry: FileCacheEntry = { mtime, size, hash: hashString(content) };
+  cacheOut[key] = entry;
+  return entry.hash;
+}
+
 /** Recursos del template HTML del paquete (participan en la invalidación del formato HTML). */
 const HTML_RESOURCES_DIR = join(import.meta.dir, '../lib/resources/html');
 const HTML_RESOURCE_FILES = [
@@ -82,15 +139,22 @@ export async function computeFiltersHash(
     try {
       const files = [...new Bun.Glob(glob).scanSync({ cwd: dir })].sort();
       for (const file of files) {
-        parts.push(file, await hashFilterFile(join(dir, file), prevCache, cache));
+        const hash = await hashFileCached(join(dir, file), file, prevCache, cache);
+        // Recurso del paquete o del proyecto listado por el glob pero
+        // desaparecido entre scan y stat: error, no señal de invalidación.
+        if (hash === null) throw new Error(`archivo de filters/preamble desaparecido: ${join(dir, file)}`);
+        parts.push(file, hash);
       }
-    } catch {
-      // Directorio inexistente (filters/preamble del proyecto son opcionales)
+    } catch (err) {
+      // Directorio inexistente (filters/preamble del proyecto son opcionales);
+      // cualquier otro error (p. ej. archivo desaparecido arriba) se propaga.
+      if ((err as NodeJS.ErrnoException)?.code !== 'ENOENT') throw err;
     }
   }
-  // Filtros Lua de usuario (`lua-filters:`) — pueden estar en cualquier directorio
+  // Filtros Lua de usuario (`lua-filters:`) — pueden estar en cualquier directorio.
+  // Ausente ⇒ null ⇒ parte vacía (misma tolerancia previa al catch).
   for (const rel of siteConfig.luaFilters ?? []) {
-    const content = await hashFilterFile(join(cwd, rel), prevCache, cache).catch(() => '');
+    const content = (await hashFileCached(join(cwd, rel), rel, prevCache, cache)) ?? '';
     parts.push(rel, content);
   }
   parts.push(JSON.stringify(siteConfig.disabledFilters ?? []));
@@ -107,21 +171,6 @@ export async function computeFiltersHash(
 }
 
 /** Hash del contenido de un archivo de filtro, reutilizando el caché si mtime+size coinciden. */
-async function hashFilterFile(abs: string, prevCache: FilterFileCache | undefined, cache: FilterFileCache): Promise<string> {
-  const stat = await Bun.file(abs).stat();
-  const mtime = Math.round(stat.mtimeMs);
-  const size = stat.size;
-  const prev = prevCache?.[abs];
-  if (prev && prev.mtime === mtime && prev.size === size) {
-    cache[abs] = prev;
-    return prev.hash;
-  }
-  const content = await Bun.file(abs).text();
-  const hash = hashString(content);
-  cache[abs] = { mtime, size, hash };
-  return hash;
-}
-
 /**
  * Hash de configuración por formato. Cada hash agrupa solo los inputs que
  * afectan a ese formato: cambiar format.pdf no invalida los outputs HTML.
