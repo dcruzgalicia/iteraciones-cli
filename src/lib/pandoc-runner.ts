@@ -1,5 +1,5 @@
 import { PandocError } from './errors.js';
-import { ProcessSpawnError, ProcessTimeoutError, type RunResult, run } from './run.js';
+import { exec, ProcessSpawnError, ProcessTimeoutError, type RunResult } from './run.js';
 
 /** Límite de tiempo de una invocación de pandoc: 2 minutos. */
 const PANDOC_TIMEOUT_MS = 120_000;
@@ -40,10 +40,10 @@ interface PandocOptions {
   env?: Record<string, string>;
 }
 
-export async function checkPandoc(): Promise<string> {
+export async function getPandocVersion(): Promise<string> {
   let result: RunResult;
   try {
-    result = await run('pandoc', ['--version']);
+    result = await exec('pandoc', ['--version']);
   } catch {
     throw new PandocError('pandoc no está disponible en PATH. Instálalo desde https://pandoc.org/installing.html', '', '');
   }
@@ -56,10 +56,10 @@ export async function checkPandoc(): Promise<string> {
  * Invoca pandoc con stdin y retorna stdout. Con `outputPath`, pandoc escribe
  * el resultado al archivo y stdout queda vacío.
  * Lanza PandocError si pandoc no está disponible o el proceso falla.
- * La ejecución del proceso (spawn, pipes, timeout) la provee run().
+ * La ejecución del proceso (spawn, pipes, timeout) la provee exec().
  */
-export async function runPandoc(options: PandocOptions): Promise<string> {
-  // run() añade el comando; aquí solo los argumentos (antes el array incluía
+export async function execPandoc(options: PandocOptions): Promise<string> {
+  // exec() añade el comando; aquí solo los argumentos (antes el array incluía
   // 'pandoc' como argv[0] del spawn directo).
   const args = ['--from', options.from ?? 'markdown', '--to', options.to];
 
@@ -78,7 +78,7 @@ export async function runPandoc(options: PandocOptions): Promise<string> {
 
   let result: RunResult;
   try {
-    result = await run('pandoc', args, { input: options.input, timeoutMs: PANDOC_TIMEOUT_MS, env: options.env });
+    result = await exec('pandoc', args, { input: options.input, timeoutMs: PANDOC_TIMEOUT_MS, env: options.env });
   } catch (err) {
     if (err instanceof ProcessSpawnError) {
       // Error esperado: pandoc no está en PATH; el mensaje accionable es más
@@ -87,7 +87,7 @@ export async function runPandoc(options: PandocOptions): Promise<string> {
     }
     if (err instanceof ProcessTimeoutError) {
       // Un pandoc colgado (p. ej. un filtro Lua en loop) no debe colgar el
-      // build: el timeout de run() lo terminó.
+      // build: el timeout de exec() lo terminó.
       throw new PandocError(
         `pandoc no terminó en ${PANDOC_TIMEOUT_MS / 1000}s y fue terminado. Revisa tus filtros Lua (posible loop infinito).`,
         options.sourcePath,

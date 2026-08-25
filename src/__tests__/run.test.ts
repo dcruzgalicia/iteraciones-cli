@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { mapWithConcurrency, ProcessTimeoutError, run } from '../lib/run.js';
+import { exec, mapWithConcurrency, ProcessTimeoutError } from '../lib/run.js';
 
 describe('mapWithConcurrency', () => {
   it('procesa todos los items', async () => {
@@ -52,14 +52,14 @@ describe('mapWithConcurrency', () => {
 
 describe('run (timeouts)', () => {
   it('sin timeout espera a que el proceso termine', async () => {
-    const result = await run('echo', ['hola']);
+    const result = await exec('echo', ['hola']);
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain('hola');
   });
 
   it('termina un proceso que excede el timeout con error accionable', async () => {
-    // sleep 5 con timeout de 100ms: el árbol se mata y run() lanza
-    await expect(run('sleep', ['5'], { timeoutMs: 100 })).rejects.toThrow('no terminó en 0s y fue terminado junto con sus procesos hijos');
+    // sleep 5 con timeout de 100ms: el árbol se mata y exec() lanza
+    await expect(exec('sleep', ['5'], { timeoutMs: 100 })).rejects.toThrow('no terminó en 0s y fue terminado junto con sus procesos hijos');
   });
 
   it('al expirar el timeout mata el árbol completo: ni el proceso ni sus hijos sobreviven (#2014)', async () => {
@@ -69,7 +69,7 @@ describe('run (timeouts)', () => {
       // Árbol de dos niveles: sh (hijo directo de run) → sleep (nieto).
       // El script escribe ambos pids y queda bloqueado en wait.
       const pidsFile = join(dir, 'pids.txt');
-      const promise = run('sh', ['-c', `sleep 30 & echo $$ $! > '${pidsFile}'; wait`], { timeoutMs: 300 });
+      const promise = exec('sh', ['-c', `sleep 30 & echo $$ $! > '${pidsFile}'; wait`], { timeoutMs: 300 });
       // Esperar a que el árbol esté armado (el archivo de pids existe)
       const setupDeadline = Date.now() + 2_000;
       while (!existsSync(pidsFile) && Date.now() < setupDeadline) await new Promise((r) => setTimeout(r, 20));
@@ -105,7 +105,7 @@ describe('run (timeouts)', () => {
   });
 
   it('no lanza error si el proceso termina antes del timeout', async () => {
-    const result = await run('echo', ['rápido'], { timeoutMs: 2000 });
+    const result = await exec('echo', ['rápido'], { timeoutMs: 2000 });
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain('rápido');
   });

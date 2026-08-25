@@ -3,8 +3,8 @@ import { copyFile, mkdir, rename, rm } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
 import { PandocError } from '../../lib/errors.js';
 import { logWarning } from '../../lib/logger.js';
-import { MD_READER, runPandoc } from '../../lib/pandoc-runner.js';
-import { ProcessSpawnError, ProcessTimeoutError, run } from '../../lib/run.js';
+import { execPandoc, MD_READER } from '../../lib/pandoc-runner.js';
+import { exec, ProcessSpawnError, ProcessTimeoutError } from '../../lib/run.js';
 import type { LuaFilterGroup } from '../filter-resolver.js';
 import { metadataValue } from '../html-composer.js';
 import type { ExportDocument } from './types.js';
@@ -72,7 +72,7 @@ export async function convertToEpub(
   const date = doc.metadata.dateIso ?? doc.metadata.date;
   if (date) extraArgs.push(`--metadata=date:${metadataValue(date)}`);
 
-  await runPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'epub3', outputPath, extraArgs });
+  await execPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'epub3', outputPath, extraArgs });
 }
 
 /**
@@ -121,7 +121,7 @@ export async function convertToMarkdown(
     }
   }
 
-  const stdout = await runPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'markdown', extraArgs });
+  const stdout = await execPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'markdown', extraArgs });
   await Bun.write(outputPath, stdout);
 }
 
@@ -161,14 +161,14 @@ export async function convertToPdf(
     await copyFile(XMP_TEMPLATE_RESOURCE, join(pdfDir, 'pdfx.xmp'));
   }
 
-  let result: Awaited<ReturnType<typeof run>>;
+  let result: Awaited<ReturnType<typeof exec>>;
   try {
     // `cwd` y `-outdir` apuntan al mismo directorio de trabajo aislado por slot:
     // el override pdfx.xmp y el pdfx.xmpi parcheado por \includexmp/xmpincl se
     // resuelven y escriben ahí, sin competir con otros slots paralelos (el nombre
     // pdfx.xmpi es fijo — issue #1967). Las rutas del .tex (bibliografía) son
     // absolutas, así que el cwd nuevo es seguro.
-    result = await run('latexmk', ['-pdf', '-interaction=nonstopmode', `-outdir=${pdfDir}`, `-jobname=${slug}`, fullTexPath], {
+    result = await exec('latexmk', ['-pdf', '-interaction=nonstopmode', `-outdir=${pdfDir}`, `-jobname=${slug}`, fullTexPath], {
       timeoutMs: LATEXMK_TIMEOUT_MS,
       cwd: pdfDir,
       // La caché de biber se aísla por slot de concurrencia
@@ -181,7 +181,7 @@ export async function convertToPdf(
     }
     if (err instanceof ProcessTimeoutError) {
       // Una compilación latexmk colgada no debe colgar el build: el timeout
-      // de run() la terminó.
+      // de exec() la terminó.
       throw new PandocError(
         `latexmk no terminó en ${LATEXMK_TIMEOUT_MS / 60000} minutos y fue terminado. Revisa el log en: ${logPath}`,
         sourcePath,

@@ -1,6 +1,6 @@
 import type { SiteConfig } from '../config/config-schema.js';
 import { logWarning } from '../lib/logger.js';
-import { type BibOptions, MD_READER, runPandoc } from '../lib/pandoc-runner.js';
+import { type BibOptions, execPandoc, MD_READER } from '../lib/pandoc-runner.js';
 import { type LuaFilterGroup, loadFilterGroups } from './filter-resolver.js';
 import { buildFormatsItems, type HtmlPageVars, metadataValue } from './html-composer.js';
 import { extractReferencesBlock, removeTocReferencesLink } from './html-postprocess.js';
@@ -72,7 +72,7 @@ export async function htmlPageFromMarkdown(
     if (bibOptions.csl) extraArgs.push('--csl', bibOptions.csl);
   }
 
-  const html = await runPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'html5', extraArgs });
+  const html = await execPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'html5', extraArgs });
 
   const htmlWithoutTocRefs = removeTocReferencesLink(html);
 

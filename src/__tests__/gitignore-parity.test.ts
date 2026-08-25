@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { isIgnoredByRules, parseGitignore } from '../builder/gitignore.js';
-import { run } from '../lib/run.js';
+import { exec } from '../lib/run.js';
 
 /**
  * Paridad de isIgnoredByRules contra la semántica real de git (git check-ignore).
@@ -101,13 +101,13 @@ describe('paridad de .gitignore con git check-ignore', () => {
           writeFileSync(join(dir, f), 'x', 'utf8');
         }
         writeFileSync(join(dir, '.gitignore'), c.gitignore, 'utf8');
-        const init = await run('git', ['init', '-q'], { cwd: dir });
+        const init = await exec('git', ['init', '-q'], { cwd: dir });
         expect(init.exitCode).toBe(0);
 
         const rules = parseGitignore(c.gitignore);
         for (const file of c.files) {
           const ours = isIgnoredByRules(file, rules);
-          const git = await run('git', ['check-ignore', '-q', '--no-index', file], { cwd: dir });
+          const git = await exec('git', ['check-ignore', '-q', '--no-index', file], { cwd: dir });
           expect(ours, `${file} (ours=${ours}, git=${git.exitCode === 0})`).toBe(git.exitCode === 0);
         }
       } finally {
@@ -124,10 +124,10 @@ describe('paridad de .gitignore con git check-ignore', () => {
         if (parents) mkdirSync(join(dir, parents), { recursive: true });
         mkdirSync(join(dir, d.path), { recursive: true });
         writeFileSync(join(dir, '.gitignore'), d.gitignore, 'utf8');
-        await run('git', ['init', '-q'], { cwd: dir });
+        await exec('git', ['init', '-q'], { cwd: dir });
         const rules = parseGitignore(d.gitignore);
         const ours = isIgnoredByRules(d.path, rules);
-        const git = await run('git', ['check-ignore', '-q', '--no-index', d.path], { cwd: dir });
+        const git = await exec('git', ['check-ignore', '-q', '--no-index', d.path], { cwd: dir });
         // La divergencia debe seguir existiendo: si desaparece, el matcher ya
         // distingue directorios y la lista debe vaciarse.
         expect(ours).not.toBe(git.exitCode === 0);

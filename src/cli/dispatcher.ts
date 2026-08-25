@@ -9,7 +9,7 @@ import { loadSiteConfigWithPresence } from '../config/config-loader.js';
 import { computeActiveFormats, DEFAULT_PDF_FORMAT } from '../config/site-config.js';
 import { BuildError, ConfigError, PandocError } from '../lib/errors.js';
 import { logError, logInfo, logSuccess } from '../lib/logger.js';
-import { checkPandoc } from '../lib/pandoc-runner.js';
+import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { runDoctor as doctor } from './doctor.js';
 import { runFilters as filters, type RunFiltersOptions } from './filters.js';
 import { runInit as init } from './init.js';
@@ -161,7 +161,7 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
 /** Información del proyecto para doctor --info (antes comando info). */
 async function buildProjectInfo(cwd: string): Promise<string[]> {
   const { config, presentKeys } = await loadSiteConfigWithPresence(cwd);
-  const pandocVersion = await checkPandoc().catch(() => 'no disponible');
+  const pandocVersion = await getPandocVersion().catch(() => 'no disponible');
   // El directorio de salida real es el del último build (state.json);
   // sin estado previo, el default.
   const state = await loadStateFile(cwd);

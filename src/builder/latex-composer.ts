@@ -3,7 +3,7 @@ import type { SiteConfig } from '../config/config-schema.js';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
-import { MD_READER, runPandoc } from '../lib/pandoc-runner.js';
+import { execPandoc, MD_READER } from '../lib/pandoc-runner.js';
 import { parseAuthors } from './discover.js';
 import type { LuaFilterGroup } from './filter-resolver.js';
 import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
@@ -153,7 +153,7 @@ export async function markdownToLatex(
   const date = await pdfDate(fm, siteConfig, doc);
   if (date !== undefined) extraArgs.push(`--metadata=date:${metadataValue(date)}`);
 
-  const tex = await runPandoc({
+  const tex = await execPandoc({
     input: finalContent,
     sourcePath: doc.filePath,
     from: MD_READER,
