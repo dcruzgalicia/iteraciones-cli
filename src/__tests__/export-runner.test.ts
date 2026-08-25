@@ -5,6 +5,7 @@ import { convertToEpub, convertToMarkdown, convertToPdf } from '../builder/expor
 import type { LuaFilterGroup } from '../builder/filter-resolver.js';
 import { checkLatexEngine } from '../cli/doctor/system-checks.js';
 import { checkPandoc } from '../lib/pandoc-runner.js';
+import { run } from '../lib/run.js';
 import { withTempDir } from './helpers.js';
 
 /** Markdown original de entrada con frontmatter (el frontmatter fluye a pandoc). */
@@ -127,4 +128,40 @@ describe('export/runner (convertToPdf)', () => {
       expect(await Bun.file(join(dir, 'roto.log')).exists()).toBe(true);
     });
   });
+
+  // Smoke con compilación real: latexmk+biber tardan más que el timeout por defecto
+  it.skipIf(!latexOk)(
+    'compila con espacios en bibliografía e imagen: cita e incrusta sin error (#2015)',
+    async () => {
+      await withTempDir(async (dir) => {
+        await writeFile(join(dir, 'mi bibliografia.bib'), '@book{autor2020, title={Libro}, author={Autora}, year={2020}}\n', 'utf8');
+        // PNG válido de 1×1 px (base64): suficiente para \includegraphics
+        const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+        await writeFile(join(dir, 'mi imagen.png'), png);
+        const bibPath = join(dir, 'mi bibliografia.bib').replaceAll('\\', '/');
+        const imgPath = join(dir, 'mi imagen.png').replaceAll('\\', '/');
+        const tex = [
+          '\\documentclass{article}',
+          '\\usepackage[backend=biber]{biblatex}',
+          `\\addbibresource{${bibPath}}`,
+          '\\usepackage{graphicx}',
+          '\\begin{document}',
+          'Hola \\cite{autor2020}.',
+          `\\includegraphics{${imgPath}}`,
+          '\\printbibliography',
+          '\\end{document}',
+        ].join('\n');
+        const texPath = join(dir, 'con espacios.tex');
+        await writeFile(texPath, tex, 'utf8');
+        // convertToPdf publica el PDF en pdfDir con el nombre del slug
+        await convertToPdf(texPath, 'doc.md', dir, 'salida');
+        const pdfPath = join(dir, 'salida.pdf');
+        expect(await Bun.file(pdfPath).exists()).toBe(true);
+        // La cita resolvió vía biber a través de la ruta con espacios
+        const text = await run('pdftotext', [pdfPath, '-']);
+        expect(text.stdout).toContain('Autora');
+      });
+    },
+    120_000,
+  );
 });

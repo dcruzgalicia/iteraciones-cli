@@ -217,6 +217,11 @@ export function babelOptionsForLang(lang: string, warnedLangs: Set<string>): str
  * (\addbibresource): % inicia un comentario y # es un carácter de parámetro.
  * No escapa _ ni ~ porque biblatex usa la ruta literalmente y el escape
  * rompería nombres de archivo comunes (p. ej. mi_bibliografia.bib).
+ *
+ * Los espacios NO requieren escape: el argumento va entre llaves y TeX los
+ * tokeniza literalmente (biber resuelve la ruta con espacios sin queja;
+ * cubierto por el smoke de rutas con espacios en export-runner.test.ts,
+ * issue #2015).
  */
 function escapeLatexPath(s: string): string {
   return s.replace(/([%#\\])/g, '\\$1');
