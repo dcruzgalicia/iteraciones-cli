@@ -158,8 +158,9 @@ export function validateDisabledFilters(disabled: string[] | undefined): void {
 
 /**
  * Resuelve los filtros Lua de usuario (`lua-filters:` en iteraciones.config.yaml,
- * rutas relativas al proyecto). Las rutas inexistentes emiten un warning sin
- * romper el build.
+ * rutas relativas al proyecto). Las rutas inexistentes se omiten sin romper el
+ * build; el warning lo emite `validateConfigFilePaths` (fuente única de
+ * reporte de problemas de configuración, compartida por build y validate).
  */
 export async function resolveUserLuaFilters(cwd: string, siteConfig: SiteConfig): Promise<string[]> {
   const filters = siteConfig.luaFilters ?? [];
@@ -168,8 +169,6 @@ export async function resolveUserLuaFilters(cwd: string, siteConfig: SiteConfig)
     const abs = join(cwd, rel);
     if (await Bun.file(abs).exists()) {
       resolved.push(abs);
-    } else {
-      logWarning(`lua-filters: "${rel}" no encontrado en el proyecto`, 'config');
     }
   }
   return resolved;
