@@ -159,3 +159,28 @@ describe('integridad docs ↔ CLI (comandos, flags y API)', () => {
     }
   });
 });
+
+describe('guard schema↔uso: hojas de configuración de formato (#2016)', () => {
+  it('toda clave de format.html.site tiene consumidor en builder/cli', async () => {
+    // Extraer las claves del bloque HtmlSiteSchema directamente del fuente:
+    // una clave añadida al schema sin consumidor rompe este guard (patrón
+    // "opción fantasma" que ya ocurrió con site.css).
+    const schemaSrc = await Bun.file('src/config/config-schema.ts').text();
+    const block = schemaSrc.match(/const HtmlSiteSchema = z\s*\.object\(\{([\s\S]*?)\n {2}\}\)/)?.[1];
+    expect(block).toBeDefined();
+    const keys = [...(block ?? '').matchAll(/^\s{4}(?:'([a-z-]+)'|([a-z][a-z0-9]*)):/gm)].map((m) => m[1] ?? m[2]);
+    expect(keys.length).toBeGreaterThanOrEqual(4);
+
+    const dirs = ['src/builder', 'src/cli'];
+    let consumers = '';
+    for (const dir of dirs) {
+      for (const f of await Array.fromAsync(new Bun.Glob('**/*.ts').scan({ cwd: dir }))) {
+        consumers += await Bun.file(join(dir, f)).text();
+      }
+    }
+    const consumed = (key: string | undefined): boolean => key !== undefined && (consumers.includes(`.${key}`) || consumers.includes(`'${key}'`));
+    for (const key of keys) {
+      expect(consumed(key), `clave de format.html.site sin consumidor: "${key}"`).toBe(true);
+    }
+  });
+});

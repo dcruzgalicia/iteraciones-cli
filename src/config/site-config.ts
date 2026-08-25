@@ -16,12 +16,10 @@ export interface HtmlSiteConfig {
   theme?: string;
   /** Color de acento. */
   color?: string;
-  /** Ruta a CSS personalizado. */
-  css?: string;
 }
 
 export interface HtmlFormatConfig {
-  /** Configuración del sitio (título, tagline, logo, tema, color, css). */
+  /** Configuración del sitio (título, descripción, logo, tema, color). */
   site?: HtmlSiteConfig;
   /** Si true, genera HTML en el build. */
   generate?: boolean;

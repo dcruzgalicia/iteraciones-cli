@@ -479,3 +479,13 @@ describe('loadSiteConfigWithPresence', () => {
     });
   });
 });
+
+describe('guard schema↔uso de format.html.site (#2016)', () => {
+  it('format.html.site.css ya no existe en el schema: configurarla es un error', async () => {
+    await withTempDir(async (dir) => {
+      // Opción fantasma eliminada (ningún módulo la consumía)
+      await writeConfig(dir, 'format:\n  html:\n    site:\n      css: styles/custom.css\n    generate: true');
+      await expect(loadSiteConfig(dir)).rejects.toThrow(/claves desconocidas.*site.*css/s);
+    });
+  });
+});
