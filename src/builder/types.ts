@@ -50,3 +50,41 @@ export interface BuildContext {
   /** Máximo de invocaciones pandoc simultáneas. Default: CPU - 1. */
   concurrency: number;
 }
+
+// ── Reporteo de progreso (inversión builder→cli, issue #2017) ──────────────
+
+/** Fases del pipeline que el reporter puede declarar y actualizar. */
+export type PipelinePhase = 'discovery' | 'render' | 'latex' | 'markdown' | 'pdf' | 'epub' | 'html';
+
+/** Formato configurado (generate true/false) declarado al tracker. */
+export interface FormatState {
+  phase: PipelinePhase;
+  active: boolean;
+}
+
+/** Aviso de un archivo procesado (fila del tracker). */
+export interface RenderFileReport {
+  relativePath: string;
+  phase: PipelinePhase;
+}
+
+/**
+ * Contrato de reporteo del build: el builder emite eventos; la CLI decide
+ * cómo presentarlos (tracker interactivo, verbose, JSON) inyectando su
+ * implementación en `build()`. Dirección de dependencia: cli → builder.
+ * Sin reporter inyectado, `build()` usa `silentReporter` (headless).
+ */
+export interface BuildReporter {
+  setFormats(formats: FormatState[]): void;
+  planPhases(phases: PipelinePhase[]): Promise<void>;
+  startPhase(phase: PipelinePhase, total?: number): void;
+  reportFile(file: RenderFileReport): void;
+  completePhase(actualCount?: number, phaseOverride?: PipelinePhase): void;
+  log(message: string): void;
+  addWarning(message: string): void;
+  addSummaryLine(line: string): void;
+  showCleanup(): void;
+  startLightFormats(): void;
+  finish(processed: number, cached: number, formats?: string[], outputDir?: string, invalidations?: string[]): Promise<void>;
+  fail(): Promise<void>;
+}

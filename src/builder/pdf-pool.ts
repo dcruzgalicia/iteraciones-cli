@@ -1,6 +1,7 @@
 import { join } from 'node:path';
-import type { ProgressTracker } from '../cli/progress.js';
+
 import { convertToPdf } from './export/runner.js';
+import type { BuildReporter } from './types.js';
 
 export interface PdfJob {
   dir: string;
@@ -34,7 +35,7 @@ export function createPdfConsumer(
   pdfWorkBase: string,
   biberBase: string,
   maxSlots: number,
-  progress: ProgressTracker,
+  progress: BuildReporter,
 ): { pdfJobs: PdfJob[]; start: () => void; markProducerDone: () => void; cancel: () => void; drain: () => Promise<void> } {
   const pdfJobs: PdfJob[] = [];
   let producerDone = false;

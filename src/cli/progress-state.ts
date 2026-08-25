@@ -13,9 +13,15 @@
  * Las transiciones devuelven datos (claves a renderizar, booleanos de
  * cambio) en lugar de escribir: cada llamada al estado produce exactamente
  * una decisión de render en el caller, sin duplicar escrituras.
+ *
+ * PipelinePhase y FormatState viven en `builder/types.ts` (fuente única del
+ * contrato BuildReporter, issue #2017); aquí se re-exportan para los
+ * consumidores de la capa CLI.
  */
 
-export type PipelinePhase = 'discovery' | 'render' | 'latex' | 'markdown' | 'pdf' | 'epub' | 'html';
+import type { FormatState, PipelinePhase } from '../builder/types.js';
+
+export type { FormatState, PipelinePhase };
 
 export interface PhaseMeta {
   label: string;
@@ -33,11 +39,6 @@ export const PHASE_META: Record<PipelinePhase, PhaseMeta> = {
 
 /** Formatos ligeros generados dentro del pool 1 del pipeline (no fase separada). */
 export const LIGHT_FORMAT_PHASES: PipelinePhase[] = ['latex', 'html', 'epub', 'markdown'];
-
-export interface FormatState {
-  phase: PipelinePhase;
-  active: boolean;
-}
 
 export type RowStatus = 'pending' | 'active' | 'done' | 'skipped' | 'failed';
 

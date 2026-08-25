@@ -13,6 +13,7 @@ import { checkPandoc } from '../lib/pandoc-runner.js';
 import { runDoctor as doctor } from './doctor.js';
 import { runFilters as filters, type RunFiltersOptions } from './filters.js';
 import { runInit as init } from './init.js';
+import { ProgressTracker } from './progress.js';
 import { runValidate as validate } from './validate.js';
 
 /**
@@ -111,7 +112,16 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
       output = resolved;
     }
 
-    await build(cwd, { ...options, outputDir: output });
+    // El tracker (presentación) vive en la CLI y se inyecta en el build:
+    // el builder no conoce la UI (inversión builder→cli, issue #2017).
+    // Con --json el tracker escribe a un stream mudo: stdout queda reservado
+    // para el objeto JSON final.
+    const jsonStream = options.json ? ({ write: (): boolean => true, isTTY: false } as unknown as NodeJS.WriteStream) : undefined;
+    const tracker = new ProgressTracker({
+      renderer: options.verbose ? 'verbose' : 'default',
+      stream: jsonStream,
+    });
+    await build(cwd, { ...options, outputDir: output }, tracker);
   } catch (err) {
     // Con --json el fallo se reporta también como JSON válido en stdout: quien
     // consume el build programáticamente recibe siempre un objeto parseable
