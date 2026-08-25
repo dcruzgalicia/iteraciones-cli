@@ -378,7 +378,7 @@ Superficie estable (lista congelada; revisada desde el código en el issue #1934
 - **Opciones de doctor**: `--info`.
 - **Opciones de new**: `-t/--title`.
 - **Configuración** (`iteraciones.config.yaml`): `lang`, `toc`, `format.latex.generate`, `format.html.{title, tagline, logo, theme, accent, generate, blocks}`, `format.pdf.{generate, show-date, page-number, cover-image, disabled-preamble-filters}`, `format.epub.generate`, `format.markdown.generate`, `disabled-filters`, `lua-filters`, `bibliography`, `csl`.
-- **Frontmatter**: `title`, `subtitle`, `date`, `author`, `slug` (manual); los que fluyen a pandoc o al template efectivo con efecto visible (`lang`, `toc`, `description`, `site-title`, `tagline`, `theme`, `accent`, `css`); y las páginas de título internas y la portada (`extratitle`, `frontispiece`, `titlehead`, `subject`, `dedication`, `uppertitleback`, `lowertitleback`, `publishers`, `colophon`, `title-image`, `publishers-image`, `endpapers`).
+- **Frontmatter**: `title`, `subtitle`, `date`, `author`, `slug` (manual); los que fluyen a pandoc o al template efectivo con efecto visible (`language`, `toc`, `description`, `site-title`, `tagline`, `theme`, `accent`, `css`); y las páginas de título internas y la portada (`extratitle`, `frontispiece`, `titlehead`, `subject`, `dedication`, `uppertitleback`, `lowertitleback`, `publishers`, `colophon`, `title-image`, `publishers-image`, `endpapers`).
 - **Filtros**: nombres completos de los filters del paquete (capas `semantic/`, `latex/`, `html/`) y de los preamble filters numerados; override por archivo y listas `disabled-*`.
 - **Salidas**: HTML, PDF, LaTeX, EPUB y Markdown; esquema de slugs `title-por-author` con sufijos `-dN`; portada PNG junto al PDF cuando `format.pdf.cover-image` está activo.
 
