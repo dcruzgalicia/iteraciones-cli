@@ -6,6 +6,7 @@ import type { SiteConfig } from '../config/config-schema.js';
 import { ACCENT_PALETTES, type AccentColor } from '../lib/accent-palettes.js';
 import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
+import { mapWithConcurrency } from '../lib/run.js';
 import { cacheHitFor } from './state-hash.js';
 import type { CssFileCache } from './state-serialize.js';
 
@@ -226,9 +227,9 @@ async function copyFonts(outputDir: string): Promise<void> {
     if ((err as NodeJS.ErrnoException).code === 'ENOENT') return;
     throw err;
   }
-  for (const entry of entries) {
+  await mapWithConcurrency(entries, 8, async (entry) => {
     await copyIfChanged(join(FONTS_SRC, entry), join(target, entry));
-  }
+  });
 }
 
 async function copyLogo(outputDir: string, cwd: string, siteConfig: SiteConfig): Promise<void> {

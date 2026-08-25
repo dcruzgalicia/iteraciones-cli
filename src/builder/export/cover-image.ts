@@ -1,7 +1,8 @@
 import { mkdir, readdir, rename, rm } from 'node:fs/promises';
+import { cpus } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { logWarning } from '../../lib/logger.js';
-import { exec } from '../../lib/run.js';
+import { exec, mapWithConcurrency } from '../../lib/run.js';
 
 /** Timeout de una extracción de portada: pdftoppm es rápido; 30s es un límite defensivo. */
 const COVER_TIMEOUT_MS = 30_000;
@@ -23,7 +24,9 @@ export interface CoverImageEntry {
  * depender del formato exacto del sufijo.
  */
 export async function generateCoverImages(entries: CoverImageEntry[]): Promise<void> {
-  for (const { pdfPath, pngPath } of entries) {
+  // Portadas concurrentes con límite prudente (#2026): pdftoppm es rápido
+  // pero serial escalaba linealmente con el número de PDFs.
+  await mapWithConcurrency(entries, Math.min(4, Math.max(1, cpus().length)), async ({ pdfPath, pngPath }) => {
     try {
       const dir = dirname(pngPath);
       await mkdir(dir, { recursive: true });
@@ -33,7 +36,7 @@ export async function generateCoverImages(entries: CoverImageEntry[]): Promise<v
       const produced = (await readdir(dir)).find((f) => f.startsWith(basename(prefix)));
       if (produced === undefined) {
         logWarning(`pdftoppm no produjo la imagen de portada de "${basename(pdfPath)}"`, 'build');
-        continue;
+        return;
       }
       await rename(join(dir, produced), pngPath);
       // Defensivo: eliminar cualquier sobrante del prefijo temporal (varias
@@ -48,5 +51,5 @@ export async function generateCoverImages(entries: CoverImageEntry[]): Promise<v
       // extra, el PDF ya está publicado y el build no debe fallar por esto.
       logWarning(`no se pudo generar la imagen de portada de "${basename(pdfPath)}" (¿pdftoppm instalado?)`, 'build');
     }
-  }
+  });
 }

@@ -1,11 +1,11 @@
 import { existsSync } from 'node:fs';
 import { chmod, copyFile, mkdir } from 'node:fs/promises';
-import { homedir } from 'node:os';
+import { cpus, homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { GLYPHS, logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
-import { exec } from '../lib/run.js';
+import { exec, mapWithConcurrency } from '../lib/run.js';
 
 /**
  * Validación PDF/X-1a de los PDF generados (fase final del build).
@@ -174,8 +174,11 @@ export async function runPdfxOutputValidation(
 
   let validated = 0;
   let failed = 0;
-  for (const file of pdfs) {
-    const result = await validatePdfX1a(join(outputDir, file), binary);
+  // Validación concurrente con límite prudente (#2026): saturar CPU/disco
+  // degrada; la SALIDA se emite en el orden determinista del glob ordenado.
+  const results = await mapWithConcurrency(pdfs, Math.min(4, Math.max(1, cpus().length)), (file) => validatePdfX1a(join(outputDir, file), binary));
+  for (const [i, result] of results.entries()) {
+    const file = pdfs[i]!;
     validated += 1;
     const where = (iss: PdfCheckIssue): string => (iss.page !== null && iss.page !== undefined ? ` — página ${iss.page + 1}` : '');
     // Se reportan TODOS los fallos (errors ya incluyen los warnings de
