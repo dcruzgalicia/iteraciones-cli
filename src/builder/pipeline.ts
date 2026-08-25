@@ -61,6 +61,8 @@ export async function runDocumentPipeline(
   allDocs: BuildDocument[],
   formatCfg: FormatConfig | undefined,
   discoveryIndex: Map<string, DiscoveryEntry>,
+  /** Lista efectiva de preamble filters desactivados (la config del usuario no se muta, #2022). */
+  effectiveDisabledPreamble: string[],
 ): Promise<{ processed: Set<string> }> {
   const { activeFormats } = plan;
   const pdfOn = activeFormats.pdf;
@@ -115,7 +117,7 @@ export async function runDocumentPipeline(
   // Dimensiones de página en mm (para preprocesamiento de imágenes).
   let pageDimensions: { w: number; h: number; textW: number } | undefined;
   if (plan.generateLatex) {
-    const preambleFilters = await loadPreambleFilters(siteConfig.format?.pdf?.disabledPreambleFilters, ctx.cwd);
+    const preambleFilters = await loadPreambleFilters(effectiveDisabledPreamble, ctx.cwd);
     biblatexAvailable = preambleFilters.some((f) => f.name === '11-bibliography');
     pdfxActive = preambleFilters.some((f) => f.name === '99-pdfx');
     cropActive = preambleFilters.some((f) => f.name === '98-crop');

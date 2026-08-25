@@ -125,6 +125,8 @@ export async function computeFiltersHash(
   cwd: string,
   siteConfig: SiteConfig,
   prevCache?: FilterFileCache,
+  /** Lista efectiva (post resolución de dependencias); si no viene, se lee la cruda de la config. */
+  effectiveDisabledPreamble?: string[],
 ): Promise<{ hash: string; cache: FilterFileCache }> {
   const parts: string[] = [];
   const cache: FilterFileCache = {};
@@ -158,7 +160,7 @@ export async function computeFiltersHash(
     parts.push(rel, content);
   }
   parts.push(JSON.stringify(siteConfig.disabledFilters ?? []));
-  parts.push(JSON.stringify(siteConfig.format?.pdf?.disabledPreambleFilters ?? []));
+  parts.push(JSON.stringify(effectiveDisabledPreamble ?? siteConfig.format?.pdf?.disabledPreambleFilters ?? []));
   // El reader (formato de entrada) de todas las conversiones: si cambia, las
   // salidas cacheadas quedan obsoletas y todos los documentos deben
   // re-renderizarse.

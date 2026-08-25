@@ -108,3 +108,13 @@ describe('constantes de dominio (#2018)', () => {
     }
   });
 });
+
+describe('config sin mutación (#2022)', () => {
+  it('el orquestador no asigna disabledPreambleFilters sobre la config del usuario', async () => {
+    const src = await Bun.file('src/builder/orchestrator.ts').text();
+    // La lista efectiva viaja como parámetro explícito (pipeline/pdfx/hash);
+    // una asignación in-place sobre siteConfig reintroduciría el efecto
+    // secundario oculto que este issue elimina.
+    expect(src).not.toMatch(/siteConfig\.format(\?)?\.pdf(\?)?\.disabledPreambleFilters\s*=/);
+  });
+});
