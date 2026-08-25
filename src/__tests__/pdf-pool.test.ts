@@ -192,3 +192,66 @@ describe('pdf-pool (consumidor con solape real)', () => {
     }
   });
 });
+
+describe('quiesce tras cancel (#2013)', () => {
+  it('espera a los workers en vuelo antes de resolver: ninguno escribe después', async () => {
+    const escrituras: string[] = [];
+    let liberar!: () => void;
+    const enVuelo = new Promise<void>((r) => {
+      liberar = r;
+    });
+    const spy = spyOn(runner, 'convertToPdf').mockImplementation(async (_tex, sourcePath) => {
+      if (sourcePath === 'slow.md') {
+        await enVuelo;
+        // El "latexmk" termina su trabajo DESPUÉS del cancel: el drenaje debe
+        // haber esperado a que esta escritura (inofensiva ya) ocurriera ANTES
+        // de que el proceso propague el error.
+        await Bun.sleep(10);
+        escrituras.push(sourcePath);
+        return;
+      }
+      escrituras.push(sourcePath);
+    });
+    try {
+      const consumer = createPdfConsumer('/tmp/work', '/tmp/biber', 2, progressStub());
+      consumer.start();
+      consumer.pdfJobs.push({ dir: '.', slug: 'slow', relativePath: 'slow.md', texPath: '/tmp/w/slow.tex', pdfDest: '/tmp/o/slow.pdf' });
+      await Bun.sleep(20); // el worker tomó el job y está bloqueado en vuelo
+
+      consumer.cancel();
+      const quiescePromise = consumer.quiesce(2_000);
+      liberar(); // el latexmk en vuelo termina
+      await quiescePromise;
+      // Todos los workers terminaron ANTES de que quiesce resolviera
+      expect(escrituras).toContain('slow.md');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('no cuelga si un worker se atasca: timeout de seguridad (#2013)', async () => {
+    const spy = spyOn(runner, 'convertToPdf').mockImplementation(
+      () =>
+        new Promise<void>(() => {
+          // Worker zombi: nunca resuelve
+        }),
+    );
+    try {
+      const consumer = createPdfConsumer('/tmp/work', '/tmp/biber', 1, progressStub());
+      consumer.start();
+      consumer.pdfJobs.push({ dir: '.', slug: 'zombi', relativePath: 'zombi.md', texPath: '/tmp/w/z.tex', pdfDest: '/tmp/o/z.pdf' });
+      await Bun.sleep(20);
+      consumer.cancel();
+      const t0 = performance.now();
+      await consumer.quiesce(50); // resuelve por timeout, sin lanzar
+      expect(performance.now() - t0).toBeLessThan(5_000);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('quiesce sin start() es no-op', async () => {
+    const consumer = createPdfConsumer('/tmp/work', '/tmp/biber', 1, progressStub());
+    await consumer.quiesce();
+  });
+});

@@ -1,7 +1,12 @@
 import { join } from 'node:path';
 
+import { logWarning } from '../lib/logger.js';
+
 import { convertToPdf } from './export/runner.js';
 import type { BuildReporter } from './types.js';
+
+/** Tope de espera del quiesce tras un fallo: nunca colgar el proceso. */
+const QUIESCE_TIMEOUT_MS = 30_000;
 
 export interface PdfJob {
   dir: string;
@@ -36,7 +41,14 @@ export function createPdfConsumer(
   biberBase: string,
   maxSlots: number,
   progress: BuildReporter,
-): { pdfJobs: PdfJob[]; start: () => void; markProducerDone: () => void; cancel: () => void; drain: () => Promise<void> } {
+): {
+  pdfJobs: PdfJob[];
+  start: () => void;
+  markProducerDone: () => void;
+  cancel: () => void;
+  drain: () => Promise<void>;
+  quiesce: (timeoutMs?: number) => Promise<void>;
+} {
   const pdfJobs: PdfJob[] = [];
   let producerDone = false;
   let started = false;
@@ -107,6 +119,31 @@ export function createPdfConsumer(
     pdfJobs.length = 0;
   };
 
+  /**
+   * Espera a que los workers EN VUELO terminen tras un cancel() (#2013):
+   * un latexmk ya compilando ejecutaría su rename final hacia dist/ después
+   * de que el build haya fallado — PDF parcial o renombrado sobre un
+   * directorio recién recreado con --full. Timeout de seguridad para no
+   * colgar el proceso si un worker se atasca: en ese caso se procede con el
+   * error original y el SO reclama al huérfano a la salida.
+   */
+  const quiesce = async (timeoutMs: number = QUIESCE_TIMEOUT_MS): Promise<void> => {
+    if (!started || workerPromises.length === 0) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        Promise.allSettled(workerPromises),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error('pdf-pool: workers vivos tras cancel()')), timeoutMs);
+        }),
+      ]);
+    } catch (err) {
+      logWarning(`no se pudo esperar la finalización de los workers del pool PDF: ${String(err)}`, 'pdf');
+    } finally {
+      if (timer !== undefined) clearTimeout(timer);
+    }
+  };
+
   /** Espera a que los workers terminen la cola y cierra la fase PDF. */
   const drain = async (): Promise<void> => {
     // Sin workers no hay trabajo que esperar (nunca se encoló un PDF).
@@ -136,5 +173,5 @@ export function createPdfConsumer(
     }
   };
 
-  return { pdfJobs, start, markProducerDone, cancel, drain };
+  return { pdfJobs, start, markProducerDone, cancel, drain, quiesce };
 }

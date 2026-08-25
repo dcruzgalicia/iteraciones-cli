@@ -189,3 +189,13 @@ describe('escritura única de state.json (#2025)', () => {
     });
   });
 });
+
+describe('drenaje del pool PDF (#2013)', () => {
+  it('el catch del pool 1 cancela y espera workers en vuelo antes de propagar', async () => {
+    const src = await Bun.file('src/builder/pipeline.ts').text();
+    const catchIdx = src.indexOf('pdfConsumer.cancel();');
+    expect(catchIdx).toBeGreaterThan(0);
+    const after = src.slice(catchIdx, catchIdx + 200);
+    expect(after).toContain('await pdfConsumer.quiesce()');
+  });
+});
