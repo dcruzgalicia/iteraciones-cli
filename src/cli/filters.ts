@@ -15,9 +15,17 @@ function sortLuaInfos(infos: Awaited<ReturnType<typeof getBuiltinLuaFilterInfos>
   });
 }
 
+/** Primera oración de la descripción, con tope de 100 caracteres (#2027). */
+function shortDescription(description: string): string {
+  const sentence = description.split(/(?<=\.)\s/, 1)[0] ?? description;
+  return sentence.length <= 100 ? sentence : `${sentence.slice(0, 99)}…`;
+}
+
 export interface RunFiltersOptions {
   /** Stream de salida (inyectable en tests; por defecto stdout). */
   stream?: NodeJS.WriteStream;
+  /** Descripción completa por filtro (por defecto: primera oración, ≤100 chars). */
+  verbose?: boolean;
   /** Ancho de terminal fijo (inyectable en tests; por defecto se consulta el stream). */
   columns?: number;
 }
@@ -71,7 +79,8 @@ export async function runFilters(cwd: string, options: RunFiltersOptions = {}): 
   for (const info of allInfos) {
     const active = !disabled.has(info.name);
     const status = active ? 'activo' : 'desactivado';
-    const description = descWidth !== undefined ? truncateWithEllipsis(info.description, descWidth) : info.description;
+    const full = options.verbose === true ? info.description : shortDescription(info.description);
+    const description = descWidth !== undefined && !options.verbose ? truncateWithEllipsis(full, descWidth) : full;
     stream.write(`  ${info.name.padEnd(nameWidth)}  lua  ${description}  [${status}]\n`);
   }
 
@@ -98,7 +107,8 @@ export async function runFilters(cwd: string, options: RunFiltersOptions = {}): 
     for (const info of preambleInfos) {
       const active = !preambleDisabled.has(info.name);
       const status = active ? 'activo' : 'desactivado';
-      const description = preambleDescWidth !== undefined ? truncateWithEllipsis(info.description, preambleDescWidth) : info.description;
+      const full = options.verbose === true ? info.description : shortDescription(info.description);
+      const description = preambleDescWidth !== undefined && !options.verbose ? truncateWithEllipsis(full, preambleDescWidth) : full;
       stream.write(`  ${info.name.padEnd(preambleWidth)}  ${description}  [${status}]\n`);
     }
 
