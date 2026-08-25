@@ -40,6 +40,7 @@ export const SKIP_REASONS = {
   pandoc: 'requiere pandoc',
   latex: 'requiere motor LaTeX (latexmk)',
   unzip: 'requiere unzip',
+  fixtures: 'requieren fixtures de pandoc para este major',
 } as const;
 
 export type SkipReasonKey = keyof typeof SKIP_REASONS;
