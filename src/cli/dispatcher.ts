@@ -299,6 +299,9 @@ export async function runFilters(cwd: string, options: RunFiltersOptions = {}): 
 function inferTitleFromPath(path: string): string {
   const base = basename(path, '.md').replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
   if (!base) return 'Título del documento';
-  // Capitalizar solo la primera letra
-  return base.charAt(0).toUpperCase() + base.slice(1);
+  // Capitalizar la primera letra de cada palabra
+  return base
+    .split(' ')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
 }
