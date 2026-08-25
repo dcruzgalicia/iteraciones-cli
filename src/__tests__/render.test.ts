@@ -18,9 +18,9 @@ import type { BuildDocument } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { DEFAULT_SITE_CONFIG, type HtmlBlockKey } from '../config/site-config.js';
 import * as logger from '../lib/logger.js';
-import { checkPandoc } from '../lib/pandoc-runner.js';
+import { getPandocVersion } from '../lib/pandoc-runner.js';
 
-const pandocOk = await checkPandoc().catch(() => null);
+const pandocOk = await getPandocVersion().catch(() => null);
 
 describe('extractReferencesBlock (sin marcador en el template)', () => {
   it.skipIf(!pandocOk)('sin el marcador de referencias, la bibliografía se descarta con warning visible', async () => {

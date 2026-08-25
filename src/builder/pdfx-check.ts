@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { GLYPHS, logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
-import { run } from '../lib/run.js';
+import { exec } from '../lib/run.js';
 
 /**
  * Validación PDF/X-1a de los PDF generados (fase final del build).
@@ -60,7 +60,7 @@ export async function buildPdfCheckBinary(): Promise<string | null> {
   const manifest = join(import.meta.dir, '../../tools/pdfx-validator/Cargo.toml');
   if (!existsSync(manifest)) return null;
   try {
-    await run('cargo', ['build', '--release', '--quiet', '--manifest-path', manifest], {
+    await exec('cargo', ['build', '--release', '--quiet', '--manifest-path', manifest], {
       timeoutMs: CARGO_BUILD_TIMEOUT_MS,
     });
   } catch {
@@ -96,9 +96,9 @@ export interface PdfCheckResult {
 
 /** Ejecuta el binario sobre un PDF y parsea su informe JSON. */
 export async function validatePdfX1a(pdfPath: string, binaryPath: string): Promise<PdfCheckResult> {
-  let result: Awaited<ReturnType<typeof run>>;
+  let result: Awaited<ReturnType<typeof exec>>;
   try {
-    result = await run(binaryPath, [pdfPath], { timeoutMs: PDFCHECK_TIMEOUT_MS });
+    result = await exec(binaryPath, [pdfPath], { timeoutMs: PDFCHECK_TIMEOUT_MS });
   } catch (err) {
     return {
       valid: false,

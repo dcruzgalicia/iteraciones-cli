@@ -2,8 +2,8 @@ import { access, constants, mkdir, stat, unlink, writeFile } from 'node:fs/promi
 import { join } from 'node:path';
 import { detectMagick } from '../../builder/image-processor.js';
 import { resolvePdfCheckBinary } from '../../builder/pdfx-check.js';
-import { checkPandoc as pandocVersion } from '../../lib/pandoc-runner.js';
-import { run } from '../../lib/run.js';
+import { getPandocVersion } from '../../lib/pandoc-runner.js';
+import { exec } from '../../lib/run.js';
 
 export type CheckResult = {
   label: string;
@@ -31,7 +31,7 @@ export function checkBunVersion(): CheckResult {
 
 export async function checkPandoc(): Promise<CheckResult> {
   try {
-    const version = await pandocVersion();
+    const version = await getPandocVersion();
     // pandocVersion retorna "pandoc X.Y.Z"; verificar versión mínima 3.0
     const match = version.match(/pandoc\s+([\d.]+)/i);
     const versionStr = match?.[1] ?? '';
@@ -135,7 +135,7 @@ export async function checkPdfToPpm(): Promise<CheckResult> {
     // pdftoppm imprime su versión en stderr (y en poppler reciente sale con
     // exit 1): basta con que el proceso se lance para considerar el binario
     // disponible, sin depender del exit code.
-    const result = await run('pdftoppm', ['-v']);
+    const result = await exec('pdftoppm', ['-v']);
     const version = `${result.stdout}\n${result.stderr}`.split('\n')[0]?.trim() ?? 'pdftoppm';
     return { label: 'pdftoppm disponible', ok: true, detail: version, warn: true };
   } catch {
@@ -168,7 +168,7 @@ export async function checkPdfCheck(): Promise<CheckResult> {
     };
   }
   try {
-    const result = await run(binary, ['--version']);
+    const result = await exec(binary, ['--version']);
     const version = result.stdout.trim();
     return { label: 'iteraciones-pdfcheck disponible', ok: true, detail: version, warn: true };
   } catch {
@@ -183,7 +183,7 @@ export async function checkPdfCheck(): Promise<CheckResult> {
 
 export async function checkLatexEngine(): Promise<CheckResult> {
   try {
-    const engineResult = await run('pdflatex', ['--version']);
+    const engineResult = await exec('pdflatex', ['--version']);
     if (engineResult.exitCode !== 0) {
       return {
         label: 'pdflatex disponible',
@@ -194,7 +194,7 @@ export async function checkLatexEngine(): Promise<CheckResult> {
     // Verificar que KOMA-Script esté instalado (scrartcl.cls).
     let komaOk = false;
     try {
-      const komaResult = await run('kpsewhich', ['scrartcl.cls']);
+      const komaResult = await exec('kpsewhich', ['scrartcl.cls']);
       komaOk = komaResult.exitCode === 0 && komaResult.stdout.trim().length > 0;
     } catch {
       // kpsewhich no disponible o KOMA-Script ausente: lo reporta el check principal
@@ -211,7 +211,7 @@ export async function checkLatexEngine(): Promise<CheckResult> {
     // evita que doctor diga "todo en orden" y el build reviente después.
     let latexmkOk = false;
     try {
-      const latexmkResult = await run('latexmk', ['-v']);
+      const latexmkResult = await exec('latexmk', ['-v']);
       latexmkOk = latexmkResult.exitCode === 0;
     } catch {
       latexmkOk = false;

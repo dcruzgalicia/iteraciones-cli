@@ -4,8 +4,8 @@ import { join } from 'node:path';
 import { convertToEpub, convertToMarkdown, convertToPdf } from '../builder/export/runner.js';
 import type { LuaFilterGroup } from '../builder/filter-resolver.js';
 import { checkLatexEngine } from '../cli/doctor/system-checks.js';
-import { checkPandoc } from '../lib/pandoc-runner.js';
-import { run } from '../lib/run.js';
+import { getPandocVersion } from '../lib/pandoc-runner.js';
+import { exec } from '../lib/run.js';
 import { withTempDir } from './helpers.js';
 
 /** Markdown original de entrada con frontmatter (el frontmatter fluye a pandoc). */
@@ -27,7 +27,7 @@ const EXPORT_DOC = {
   },
 };
 
-const pandocOk = await checkPandoc().catch(() => null);
+const pandocOk = await getPandocVersion().catch(() => null);
 // unzip se usa para inspeccionar el EPUB generado: skip real si no está en PATH.
 const unzipOk = (await Bun.which('unzip')) !== null;
 const latexOk = (await checkLatexEngine()).ok;
@@ -158,7 +158,7 @@ describe('export/runner (convertToPdf)', () => {
         const pdfPath = join(dir, 'salida.pdf');
         expect(await Bun.file(pdfPath).exists()).toBe(true);
         // La cita resolvió vía biber a través de la ruta con espacios
-        const text = await run('pdftotext', [pdfPath, '-']);
+        const text = await exec('pdftotext', [pdfPath, '-']);
         expect(text.stdout).toContain('Autora');
       });
     },

@@ -106,7 +106,7 @@ async function killProcessTree(rootPid: number): Promise<void> {
  * pipeline (pandoc, latexmk y cualquier binario futuro). Los call sites
  * traducen ProcessSpawnError/ProcessTimeoutError a sus mensajes accionables.
  */
-export async function run(command: string, args: string[], options: RunOptions = {}): Promise<RunResult> {
+export async function exec(command: string, args: string[], options: RunOptions = {}): Promise<RunResult> {
   let proc: ReturnType<typeof Bun.spawn>;
 
   try {

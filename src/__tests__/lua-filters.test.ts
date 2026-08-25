@@ -7,11 +7,11 @@ import { markdownToLatex } from '../builder/latex-composer.js';
 import type { BuildDocument } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
-import { checkPandoc, runPandoc } from '../lib/pandoc-runner.js';
+import { execPandoc, getPandocVersion } from '../lib/pandoc-runner.js';
 
 // Todos los tests de este archivo invocan pandoc real: sin pandoc instalado
 // la suite pasa con skips reales en lugar de fallar (objetivo M9).
-const pandocOk = await checkPandoc().catch(() => null);
+const pandocOk = await getPandocVersion().catch(() => null);
 
 const RESOURCES = join(import.meta.dir, '..', 'lib', 'resources', 'filters');
 const SEMANTIC_FILTERS = [
@@ -21,7 +21,7 @@ const SEMANTIC_FILTERS = [
 
 async function toJson(markdown: string): Promise<Record<string, unknown>> {
   const extraArgs = SEMANTIC_FILTERS.flatMap((f) => ['--lua-filter', f]);
-  const stdout = await runPandoc({ input: markdown, sourcePath: 'test.md', to: 'json', extraArgs });
+  const stdout = await execPandoc({ input: markdown, sourcePath: 'test.md', to: 'json', extraArgs });
   return JSON.parse(stdout) as Record<string, unknown>;
 }
 
@@ -87,7 +87,7 @@ const HTML_FILTERS = ['01-dictum', '02-verse', '03-center', '04-flushright', '05
 
 async function toHtml5(markdown: string, extraFilters: string[] = []): Promise<string> {
   const extraArgs = [...extraFilters, ...HTML_FILTERS].flatMap((f) => ['--lua-filter', f]);
-  return runPandoc({ input: markdown, sourcePath: 'test.md', to: 'html5', extraArgs });
+  return execPandoc({ input: markdown, sourcePath: 'test.md', to: 'html5', extraArgs });
 }
 
 describe.skipIf(!pandocOk)('filtros Lua html', () => {
@@ -148,7 +148,7 @@ const LATEX_FILTERS = [
 
 async function toLatex(markdown: string, from?: string): Promise<string> {
   const extraArgs = [...SEMANTIC_FILTERS, ...LATEX_FILTERS].flatMap((f) => ['--lua-filter', f]);
-  return runPandoc({ input: markdown, sourcePath: 'test.md', from, to: 'latex', extraArgs });
+  return execPandoc({ input: markdown, sourcePath: 'test.md', from, to: 'latex', extraArgs });
 }
 
 describe.skipIf(!pandocOk)('filtros Lua latex', () => {
@@ -356,7 +356,7 @@ describe.skipIf(!pandocOk)('filtros Lua latex', () => {
         '--lua-filter',
         f,
       ]);
-      const tex = await runPandoc({
+      const tex = await execPandoc({
         input: 'Primera oración de ejemplo. Segunda aquí.',
         sourcePath: 'test.md',
         to: 'latex',
@@ -412,7 +412,7 @@ describe.skipIf(!pandocOk)('filtro interno internal/flags (detección estructura
   });
 
   async function toLatexFlags(md: string, extra: string[] = []): Promise<string> {
-    return runPandoc({
+    return execPandoc({
       input: md,
       sourcePath: 'test.md',
       to: 'latex',
@@ -516,14 +516,14 @@ describe.skipIf(!pandocOk)('filtro interno internal/flags (detección estructura
   });
 
   it('en HTML agrega el heading sintético de referencias solo con citas y bibliografía', async () => {
-    const conCitas = await runPandoc({
+    const conCitas = await execPandoc({
       input: 'Cita [@key1].',
       sourcePath: 'test.md',
       to: 'html5',
       extraArgs: ['--lua-filter', FLAGS, '--citeproc', '--bibliography', bib],
     });
     expect(conCitas).toContain('id="refs-heading"');
-    const sinCitas = await runPandoc({
+    const sinCitas = await execPandoc({
       input: 'Texto.',
       sourcePath: 'test.md',
       to: 'html5',
@@ -533,7 +533,7 @@ describe.skipIf(!pandocOk)('filtro interno internal/flags (detección estructura
   });
 
   it('en HTML el heading aparece incluso con citas rotas (los nodos Cite existen)', async () => {
-    const html = await runPandoc({
+    const html = await execPandoc({
       input: 'Cita rota [@no-existe-key].',
       sourcePath: 'test.md',
       to: 'html5',
@@ -563,9 +563,9 @@ describe.skipIf(!pandocOk)('filtros Lua de usuario', () => {
       mkdirSync(join(cwd, 'filters'), { recursive: true });
       writeFileSync(join(cwd, 'filters', 'nota.lua'), USER_FILTER);
       const md = '::: {.nota}\nImportante\n:::\n';
-      const tex = await runPandoc({ input: md, sourcePath: 'test.md', to: 'latex', extraArgs: ['--lua-filter', join(cwd, 'filters', 'nota.lua')] });
+      const tex = await execPandoc({ input: md, sourcePath: 'test.md', to: 'latex', extraArgs: ['--lua-filter', join(cwd, 'filters', 'nota.lua')] });
       expect(tex).toContain('\\fbox{Nota}');
-      const html = await runPandoc({ input: md, sourcePath: 'test.md', to: 'html5', extraArgs: ['--lua-filter', join(cwd, 'filters', 'nota.lua')] });
+      const html = await execPandoc({ input: md, sourcePath: 'test.md', to: 'html5', extraArgs: ['--lua-filter', join(cwd, 'filters', 'nota.lua')] });
       expect(html).toContain('<aside class="nota">');
     } finally {
       rmSync(cwd, { recursive: true, force: true });
@@ -633,7 +633,7 @@ describe.skipIf(!pandocOk)('filter latex/10-titlepages (páginas de título inte
   });
 
   async function toLatexTitleback(md: string): Promise<string> {
-    return runPandoc({
+    return execPandoc({
       input: md,
       sourcePath: 'test.md',
       to: 'latex',

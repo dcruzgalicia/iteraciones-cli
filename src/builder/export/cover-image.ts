@@ -1,7 +1,7 @@
 import { mkdir, readdir, rename, rm } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { logWarning } from '../../lib/logger.js';
-import { run } from '../../lib/run.js';
+import { exec } from '../../lib/run.js';
 
 /** Timeout de una extracción de portada: pdftoppm es rápido; 30s es un límite defensivo. */
 const COVER_TIMEOUT_MS = 30_000;
@@ -29,7 +29,7 @@ export async function generateCoverImages(entries: CoverImageEntry[]): Promise<v
       await mkdir(dir, { recursive: true });
       const prefix = join(dir, `.cover-${basename(pngPath, '.png')}`);
       // -f 1 -l 1: solo la primera página; la portada es la página 1.
-      await run('pdftoppm', ['-png', '-f', '1', '-l', '1', pdfPath, prefix], { timeoutMs: COVER_TIMEOUT_MS });
+      await exec('pdftoppm', ['-png', '-f', '1', '-l', '1', pdfPath, prefix], { timeoutMs: COVER_TIMEOUT_MS });
       const produced = (await readdir(dir)).find((f) => f.startsWith(basename(prefix)));
       if (produced === undefined) {
         logWarning(`pdftoppm no produjo la imagen de portada de "${basename(pdfPath)}"`, 'build');

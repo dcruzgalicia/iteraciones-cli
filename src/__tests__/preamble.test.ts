@@ -18,9 +18,9 @@ import {
   validateDisabledPreambleFilters,
   validatePreambleDependencies,
 } from '../builder/preamble-loader.js';
-import { checkPandoc, runPandoc } from '../lib/pandoc-runner.js';
+import { execPandoc, getPandocVersion } from '../lib/pandoc-runner.js';
 
-const pandocOk = await checkPandoc().catch(() => null);
+const pandocOk = await getPandocVersion().catch(() => null);
 
 describe('preamble-loader', () => {
   it('lista los preamble filters built-in con descripción', async () => {
@@ -340,7 +340,7 @@ describe('composeLatexTemplate', () => {
     const dir = mkdtempSync(join(tmpdir(), 'iteraciones-latex-tpl-'));
     try {
       writeFileSync(join(dir, 'tpl.tex'), tpl);
-      const out = await runPandoc({
+      const out = await execPandoc({
         input: 'Texto.',
         sourcePath: 'test.md',
         to: 'latex',

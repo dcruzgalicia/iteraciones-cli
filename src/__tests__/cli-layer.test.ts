@@ -9,12 +9,12 @@ import { checkLatexEngine, checkReadPermissions, checkWritePermissions } from '.
 import { buildProgram } from '../cli/parser.js';
 import { logWarning, setLoggerColorEnabled } from '../lib/logger.js';
 import * as pandocRunner from '../lib/pandoc-runner.js';
-import { checkPandoc } from '../lib/pandoc-runner.js';
+import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { initTestProject, withTempDir } from './helpers.js';
 
 // Los tests que invocan pandoc real se marcan como skip si no está instalado
 // (mismo patrón que integration.test.ts): sin pandoc la suite pasa con skips.
-const pandocOk = await checkPandoc().catch(() => null);
+const pandocOk = await getPandocVersion().catch(() => null);
 // unzip se usa para inspeccionar EPUBs generados: skip real si no está en PATH.
 const unzipOk = (await Bun.which('unzip')) !== null;
 
@@ -538,7 +538,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
   });
 
   it('sin pandoc en PATH, el build aborta al inicio con mensaje accionable', async () => {
-    const spy = spyOn(pandocRunner, 'checkPandoc').mockRejectedValue(
+    const spy = spyOn(pandocRunner, 'getPandocVersion').mockRejectedValue(
       new (class extends Error {
         sourcePath = '';
         stderr = '';
@@ -563,7 +563,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
   });
 
   it('un build con frontmatter YAML inválido aborta antes de invocar pandoc', async () => {
-    const pandocSpy = spyOn(pandocRunner, 'runPandoc');
+    const pandocSpy = spyOn(pandocRunner, 'execPandoc');
     try {
       await withTempDir(async (dir) => {
         await initTestProject(dir);
@@ -2143,8 +2143,8 @@ describe('runDoctor', () => {
 
   it('pdftoppm ausente se reporta con ⚠ y no rompe el exit code (check opcional)', async () => {
     const runModule = await import('../lib/run.js');
-    const realRun = runModule.run;
-    const spy = spyOn(runModule, 'run').mockImplementation(async (cmd: string, args: string[], opts?: Parameters<typeof runModule.run>[2]) => {
+    const realRun = runModule.exec;
+    const spy = spyOn(runModule, 'exec').mockImplementation(async (cmd: string, args: string[], opts?: Parameters<typeof runModule.exec>[2]) => {
       if (cmd === 'pdftoppm') throw new runModule.ProcessSpawnError('pdftoppm no encontrado');
       return realRun(cmd, args, opts);
     });

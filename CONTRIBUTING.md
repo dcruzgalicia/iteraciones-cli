@@ -165,7 +165,7 @@ docs(config): documenta bloque editorial y export en frontmatter
 
 - **Runtime:** Bun APIs (`Bun.file()`, `Bun.write()`, `Bun.spawn()`) para I/O. Solo usar `node:fs/promises` para operaciones de sistema (mkdir, rm).
 - **TypeScript:** `verbatimModuleSyntax: true` — usar `import type` para solo tipos. Imports con extensión `.js`.
-- **Nombrado:** archivos en `kebab-case.ts`, funciones en `camelCase`, tipos/interfaces en `PascalCase`.
+- **Nombrado:** archivos en `kebab-case.ts`, funciones en `camelCase`, tipos/interfaces en `PascalCase`. Prefijos: `run*` (handlers de comandos CLI), `exec*` (ejecución de procesos con captura de salida), `check*` (checks de doctor con `CheckResult`), `get*` (lectores simples), `build*` (constructores de contexto) y `resolve*` (path resolvers).
 - **Errores:** Usar `logError()` / `logWarning()` de `src/lib/logger.ts`. No usar `console.error`.
 - **Tests:** `bun test`. Los tests deben ser independientes y no requerir pandoc a menos que sea estrictamente necesario. La suite completa (incluidos `cli-layer` y `lua-filters`) requiere pandoc instalado; sin él, los tests que lo necesitan se marcan como skip y el resto corre.
 - **Linting:** Biome (espacios, `lineWidth: 150`, comillas simples). Se ejecuta automáticamente en pre-commit.
