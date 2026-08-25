@@ -24,6 +24,15 @@ const LATEXMK_TIMEOUT_MS = 600_000;
  */
 const XMP_TEMPLATE_RESOURCE = join(import.meta.dir, '../../lib/resources/xmp/pdfx.xmp');
 
+/** Resolución frontmatter > default para los campos que la exportación complementa (#2021). */
+function fmString(value: unknown, fallback: string): string {
+  return typeof value === 'string' && value ? value : fallback;
+}
+
+function fmBool(value: unknown, fallback: boolean): boolean {
+  return typeof value === 'boolean' ? value : fallback;
+}
+
 /**
  * Convierte el markdown original a EPUB3 usando pandoc (sin intermediario).
  * Los filtros semánticos y de usuario corren en la misma invocación, como en
@@ -49,12 +58,12 @@ export async function convertToEpub(
     extraArgs.push('--citeproc');
   }
   // El TOC: el frontmatter (toc:) manda; la config aporta el default
-  const tocActive = typeof fm.toc === 'boolean' ? fm.toc : toc;
+  const tocActive = fmBool(fm.toc, toc ?? false);
   if (tocActive) extraArgs.push('--toc');
 
   // Metadatos efectivos: el frontmatter del documento fluye a pandoc; aquí solo
   // se complementa lo que no está en él o necesita un valor por defecto.
-  const language = typeof fm.language === 'string' && fm.language ? (fm.language as string) : doc.metadata.language;
+  const language = fmString(fm.language, doc.metadata.language);
   extraArgs.push(`--metadata=language:${language}`);
   extraArgs.push(`--metadata=title:${metadataValue(doc.metadata.title)}`);
   for (const creator of doc.metadata.creator) {
@@ -92,11 +101,11 @@ export async function convertToMarkdown(
   // --standalone (sin él, el writer omite el metadata en la salida). Las rutas
   // de bibliografía/CSL se emiten relativas al proyecto: el export es portable
   // (mover el proyecto no rompe las citas; una ruta absoluta sí).
-  const language = typeof fm.language === 'string' && fm.language ? (fm.language as string) : doc.metadata.language;
+  const language = fmString(fm.language, doc.metadata.language);
   extraArgs.push('--standalone');
   extraArgs.push(`--metadata=language:${language}`);
   if (doc.metadata.date) extraArgs.push(`--metadata=date:${metadataValue(doc.metadata.date)}`);
-  const tocActive = typeof fm.toc === 'boolean' ? fm.toc : doc.metadata.toc;
+  const tocActive = fmBool(fm.toc, doc.metadata.toc);
   if (tocActive) {
     extraArgs.push('--metadata=toc:true');
     if (doc.metadata.tocDepth && doc.metadata.tocDepth > 0) extraArgs.push(`--metadata=toc-depth:${doc.metadata.tocDepth}`);

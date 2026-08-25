@@ -25,15 +25,19 @@ export async function htmlPageFromMarkdown(
   luaFilters?: LuaFilterGroup,
 ): Promise<string> {
   const filters = luaFilters ?? (await loadFilterGroups(siteConfig, siteConfig.disabledFilters, cwd));
-  // Valores efectivos: el frontmatter del documento manda; la config aporta defaults
-  // Contrato de idioma unificado: `language` en HTML, EPUB y Markdown (issue #2010)
-  const lang = typeof fm.language === 'string' && fm.language ? (fm.language as string) : vars.lang;
-  const siteTitle = typeof fm['site-title'] === 'string' && fm['site-title'] ? (fm['site-title'] as string) : vars.siteTitle;
-  const tagline = typeof fm.tagline === 'string' && fm.tagline ? (fm.tagline as string) : vars.tagline;
-  const theme = typeof fm.theme === 'string' && fm.theme ? (fm.theme as string) : vars.theme;
-  const accent = typeof fm.accent === 'string' && fm.accent ? (fm.accent as string) : vars.accent;
-  const css = typeof fm.css === 'string' && fm.css ? (fm.css as string) : vars.css;
-  // El TOC: el frontmatter (toc:) manda; la config aporta el default
+  // Valores efectivos: el frontmatter del documento manda; la config aporta defaults.
+  // Contrato de idioma unificado: `language` en HTML, EPUB y Markdown (#2010).
+  // Mecanismo único de resolución de vars de página (#2021): una evaluación por campo.
+  const pick = (key: string, fallback: string): string => {
+    const value = fm[key];
+    return typeof value === 'string' && value ? value : fallback;
+  };
+  const lang = pick('language', vars.lang);
+  const siteTitle = pick('site-title', vars.siteTitle);
+  const tagline = pick('tagline', vars.tagline ?? '');
+  const theme = pick('theme', vars.theme ?? '');
+  const accent = pick('accent', vars.accent ?? '');
+  const css = pick('css', vars.css ?? '');
   const tocActive = typeof fm.toc === 'boolean' ? fm.toc : siteConfig.toc;
 
   const extraArgs = [

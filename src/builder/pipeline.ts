@@ -311,6 +311,28 @@ function resolveMetadata(
   return undefined;
 }
 
+/** Resolución string con jerarquía frontmatter > config de formato > config raíz (una sola evaluación). */
+function resolveStringField(
+  fm: Record<string, unknown>,
+  formatCfg: Record<string, unknown> | undefined,
+  rootCfg: Record<string, unknown>,
+  field: string,
+): string | undefined {
+  const value = resolveMetadata(fm, formatCfg, rootCfg, field);
+  return typeof value === 'string' ? value : undefined;
+}
+
+/** Resolución lista-de-strings con la misma jerarquía (una sola evaluación). */
+function resolveListField(
+  fm: Record<string, unknown>,
+  formatCfg: Record<string, unknown> | undefined,
+  rootCfg: Record<string, unknown>,
+  field: string,
+): string[] | undefined {
+  const value = resolveMetadata(fm, formatCfg, rootCfg, field);
+  return Array.isArray(value) && value.every((v) => typeof v === 'string') ? (value as string[]) : undefined;
+}
+
 /**
  * Metadatos XMP/Info del documento desde el frontmatter crudo y el lang efectivo
  * (el que usa el pipeline para el PDF, no el lang del frontmatter). Solo los
@@ -323,48 +345,24 @@ function xmpMetadataFor(
   rootCfg: Record<string, unknown>,
 ): PdfXmpMetadata {
   return {
-    title:
-      typeof resolveMetadata(fm, formatCfg, rootCfg, 'title') === 'string' ? (resolveMetadata(fm, formatCfg, rootCfg, 'title') as string) : undefined,
+    title: resolveStringField(fm, formatCfg, rootCfg, 'title'),
     authors: frontmatterStringList(resolveMetadata(fm, formatCfg, rootCfg, 'creator')),
     lang,
-    dateIso:
-      typeof resolveMetadata(fm, formatCfg, rootCfg, 'date') === 'string' ? (resolveMetadata(fm, formatCfg, rootCfg, 'date') as string) : undefined,
+    dateIso: resolveStringField(fm, formatCfg, rootCfg, 'date'),
     subject: frontmatterStringList(resolveMetadata(fm, formatCfg, rootCfg, 'subject'))?.join(', '),
     publishers: frontmatterStringList(resolveMetadata(fm, formatCfg, rootCfg, 'publisher')),
     keywords: frontmatterStringList(resolveMetadata(fm, formatCfg, rootCfg, 'keywords')),
-    description:
-      typeof resolveMetadata(fm, formatCfg, rootCfg, 'description') === 'string'
-        ? (resolveMetadata(fm, formatCfg, rootCfg, 'description') as string)
-        : undefined,
+    description: resolveStringField(fm, formatCfg, rootCfg, 'description'),
     contributors: frontmatterStringList(resolveMetadata(fm, formatCfg, rootCfg, 'contributor')),
-    identifier:
-      typeof resolveMetadata(fm, formatCfg, rootCfg, 'identifier') === 'string'
-        ? (resolveMetadata(fm, formatCfg, rootCfg, 'identifier') as string)
-        : undefined,
-    source:
-      typeof resolveMetadata(fm, formatCfg, rootCfg, 'source') === 'string'
-        ? (resolveMetadata(fm, formatCfg, rootCfg, 'source') as string)
-        : undefined,
+    identifier: resolveStringField(fm, formatCfg, rootCfg, 'identifier'),
+    source: resolveStringField(fm, formatCfg, rootCfg, 'source'),
     relations: frontmatterStringList(resolveMetadata(fm, formatCfg, rootCfg, 'relation')),
-    coverage:
-      typeof resolveMetadata(fm, formatCfg, rootCfg, 'coverage') === 'string'
-        ? (resolveMetadata(fm, formatCfg, rootCfg, 'coverage') as string)
-        : undefined,
-    rights:
-      typeof resolveMetadata(fm, formatCfg, rootCfg, 'rights') === 'string'
-        ? (resolveMetadata(fm, formatCfg, rootCfg, 'rights') as string)
-        : undefined,
-    license:
-      typeof resolveMetadata(fm, formatCfg, rootCfg, 'license') === 'string'
-        ? (resolveMetadata(fm, formatCfg, rootCfg, 'license') as string)
-        : undefined,
-    doi: typeof resolveMetadata(fm, formatCfg, rootCfg, 'doi') === 'string' ? (resolveMetadata(fm, formatCfg, rootCfg, 'doi') as string) : undefined,
-    isbn:
-      typeof resolveMetadata(fm, formatCfg, rootCfg, 'isbn') === 'string' ? (resolveMetadata(fm, formatCfg, rootCfg, 'isbn') as string) : undefined,
-    abstract:
-      typeof resolveMetadata(fm, formatCfg, rootCfg, 'abstract') === 'string'
-        ? (resolveMetadata(fm, formatCfg, rootCfg, 'abstract') as string)
-        : undefined,
+    coverage: resolveStringField(fm, formatCfg, rootCfg, 'coverage'),
+    rights: resolveStringField(fm, formatCfg, rootCfg, 'rights'),
+    license: resolveStringField(fm, formatCfg, rootCfg, 'license'),
+    doi: resolveStringField(fm, formatCfg, rootCfg, 'doi'),
+    isbn: resolveStringField(fm, formatCfg, rootCfg, 'isbn'),
+    abstract: resolveStringField(fm, formatCfg, rootCfg, 'abstract'),
   };
 }
 
