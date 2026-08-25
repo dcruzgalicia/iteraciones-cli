@@ -63,7 +63,7 @@ async function setupBuildEnvironment(cwd: string, siteConfig: SiteConfig, option
 export async function build(cwd: string, options: BuildOptions = {}, reporter: BuildReporter = silentReporter): Promise<void> {
   // Verificar pandoc al inicio: si no está en PATH, el error es inmediato y
   // accionable en lugar de un ENOENT técnico en la primera invocación.
-  await getPandocVersion();
+  const pandocVersion = await getPandocVersion();
 
   const startedAt = performance.now();
   const progress = reporter;
@@ -74,11 +74,11 @@ export async function build(cwd: string, options: BuildOptions = {}, reporter: B
     // con runWithWarningSink: queda activo solo durante el build y se restaura
     // en un finally, sin estado global que escape de este scope.
     if (options.verbose) {
-      result = await runBuild(cwd, options, progress);
+      result = await runBuild(cwd, options, progress, pandocVersion);
     } else {
       result = await runWithWarningSink(
         (message) => progress.addWarning(message),
-        () => runBuild(cwd, options, progress),
+        () => runBuild(cwd, options, progress, pandocVersion),
       );
     }
     // Build exitoso: el estado que persistió discover (sin flag) pasa a ser
@@ -367,7 +367,7 @@ async function runPipelinePhases(
   return { processedCount, cachedCount, invalidations };
 }
 
-async function runBuild(cwd: string, options: BuildOptions, progress: BuildReporter): Promise<BuildSummary> {
+async function runBuild(cwd: string, options: BuildOptions, progress: BuildReporter, pandocVersion: string): Promise<BuildSummary> {
   const log = (msg: string) => progress.log(msg);
 
   // Cargar config primero para detectar cambios de formato antes de setupBuildEnvironment
@@ -380,7 +380,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
   // con completed:true es caché válida (stateUsableForBuild): un estado de un
   // build interrumpido se ignora y se reprocesa todo.
   const prevState = options.full ? noPrevState() : await loadPrevState(cwd);
-  const plan = await computeBuildMetadata(cwd, siteConfig, prevState, effectiveDisabledPreamble);
+  const plan = await computeBuildMetadata(cwd, siteConfig, prevState, effectiveDisabledPreamble, pandocVersion);
   logInvalidations(plan, log);
 
   const ctx = await prepareEnvironment(cwd, options, siteConfig, plan, progress);

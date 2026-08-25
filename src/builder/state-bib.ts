@@ -69,16 +69,27 @@ export async function computeBibHash(cwd: string, siteConfig?: SiteConfig, prevC
   const parts: string[] = [];
   const cache: BibFileCache = {};
   const files: string[] = [];
+  let usesPackagedCsl = true;
   const configuredBib = siteConfig?.bibliography?.trim();
   if (configuredBib) {
     files.push(resolveConfiguredPath(cwd, configuredBib));
     const configuredCsl = siteConfig?.csl?.trim();
-    if (configuredCsl) files.push(resolveConfiguredPath(cwd, configuredCsl));
+    if (configuredCsl) {
+      files.push(resolveConfiguredPath(cwd, configuredCsl));
+      usesPackagedCsl = false;
+    }
   } else {
     files.push(...(await discoverBibFiles(cwd)));
   }
   for (const file of files) {
     parts.push(file, await hashBibFile(file, prevCache, cache));
+  }
+  // Sin CSL configurado las citas usan el APA-7 empaquetado: su contenido
+  // participa en la invalidación — actualizar el paquete cambia el estilo y
+  // las exportaciones deben regenerarse (#2024).
+  if (usesPackagedCsl) {
+    const packagedCsl = join(import.meta.dir, '../lib/resources/apa-7.csl');
+    parts.push('packaged-csl', await hashBibFile(packagedCsl, prevCache, cache));
   }
   return { hash: hashString(parts.join('\0')), cache };
 }

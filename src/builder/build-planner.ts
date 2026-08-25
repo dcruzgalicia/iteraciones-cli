@@ -60,12 +60,13 @@ export async function computeBuildMetadata(
   siteConfig: SiteConfig,
   prevState: BuildState | null,
   effectiveDisabledPreamble?: string[],
+  pandocVersion?: string,
 ): Promise<BuildMetadata> {
   const currentFormats = computeActiveFormats(siteConfig.format);
 
   const [configHashes, filtersHashResult, bibHashResult] = await Promise.all([
     computeConfigHashes(cwd, siteConfig),
-    computeFiltersHash(cwd, siteConfig, prevState?.filterFileCache, effectiveDisabledPreamble),
+    computeFiltersHash(cwd, siteConfig, prevState?.filterFileCache, effectiveDisabledPreamble, pandocVersion),
     computeBibHash(cwd, siteConfig, prevState?.bibFileCache),
   ]);
   const filtersHash = filtersHashResult.hash;
