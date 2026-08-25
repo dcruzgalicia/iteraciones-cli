@@ -118,3 +118,46 @@ describe('config sin mutación (#2022)', () => {
     expect(src).not.toMatch(/siteConfig\.format(\?)?\.pdf(\?)?\.disabledPreambleFilters\s*=/);
   });
 });
+
+describe('invalidación por entorno (#2024)', () => {
+  it('computeFiltersHash cambia con la versión de pandoc y es estable sin ella', async () => {
+    const { computeFiltersHash } = await import('../builder/state-hash.js');
+    const { DEFAULT_SITE_CONFIG } = await import('../config/site-config.js');
+    const dir = await mkdtemp(join(tmpdir(), 'iteraciones-pandoc-'));
+    try {
+      const base = await computeFiltersHash(dir, DEFAULT_SITE_CONFIG);
+      const again = await computeFiltersHash(dir, DEFAULT_SITE_CONFIG);
+      expect(base.hash).toBe(again.hash);
+      const v3 = await computeFiltersHash(dir, DEFAULT_SITE_CONFIG, undefined, undefined, 'pandoc 3.1.9');
+      const v4 = await computeFiltersHash(dir, DEFAULT_SITE_CONFIG, undefined, undefined, 'pandoc 3.2.0');
+      expect(v3.hash).not.toBe(base.hash);
+      expect(v4.hash).not.toBe(v3.hash);
+      // La caché de archivos no se contamina entre llamadas: misma entrada
+      expect(Object.keys(base.cache).length).toBeGreaterThan(0);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('computeBibHash incluye el CSL empaquetado solo cuando no hay csl configurado', async () => {
+    const { writeFile } = await import('node:fs/promises');
+    const { join } = await import('node:path');
+    const { computeBibHash } = await import('../builder/state-bib.js');
+    const { DEFAULT_SITE_CONFIG } = await import('../config/site-config.js');
+    const dir = await mkdtemp(join(tmpdir(), 'iteraciones-csl-'));
+    try {
+      await writeFile(join(dir, 'refs.bib'), '@book{a, title={T}, author={A}, year={2020}}\n', 'utf8');
+      await writeFile(join(dir, 'custom.csl'), '<style/>\n', 'utf8');
+      const base = { ...DEFAULT_SITE_CONFIG, bibliography: 'refs.bib' } as unknown as typeof DEFAULT_SITE_CONFIG;
+      // Sin csl configurado participa el empaquetado
+      const withoutCsl = await computeBibHash(dir, base);
+      const withoutCslAgain = await computeBibHash(dir, base);
+      expect(withoutCsl.hash).toBe(withoutCslAgain.hash);
+      // Con csl configurado el empaquetado deja de participar ⇒ hash distinto
+      const withCsl = await computeBibHash(dir, { ...base, csl: 'custom.csl' });
+      expect(withCsl.hash).not.toBe(withoutCsl.hash);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});

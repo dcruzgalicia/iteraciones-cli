@@ -290,7 +290,8 @@ describe('discoverBibFiles y computeBibHash', () => {
       await writeFile(join(dir, 'otro.bib'), '@book{k2}\n', 'utf8');
       const config = { ...DEFAULT_SITE_CONFIG, bibliography: 'libro.bib' };
       const result = await computeBibHash(dir, config);
-      expect(Object.keys(result.cache).length).toBe(1);
+      // libro.bib + el APA-7 empaquetado que participa en la invalidación (#2024)
+      expect(Object.keys(result.cache).length).toBe(2);
       const h1 = result.hash;
       await writeFile(join(dir, 'libro.bib'), '@book{k1, title={Cambio}}\n', 'utf8');
       const h2 = (await computeBibHash(dir, config)).hash;

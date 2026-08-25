@@ -127,6 +127,8 @@ export async function computeFiltersHash(
   prevCache?: FilterFileCache,
   /** Lista efectiva (post resolución de dependencias); si no viene, se lee la cruda de la config. */
   effectiveDisabledPreamble?: string[],
+  /** Versión de pandoc (getPandocVersion): actualizar el binario invalida las conversiones (#2024). */
+  pandocVersion?: string,
 ): Promise<{ hash: string; cache: FilterFileCache }> {
   const parts: string[] = [];
   const cache: FilterFileCache = {};
@@ -165,6 +167,9 @@ export async function computeFiltersHash(
   // salidas cacheadas quedan obsoletas y todos los documentos deben
   // re-renderizarse.
   parts.push(MD_READER);
+  // Versión de pandoc: una actualización del binario puede cambiar cualquier
+  // conversión; sin este input, los PDFs/HTML viejos se servirían sin aviso.
+  if (pandocVersion) parts.push('pandoc', pandocVersion);
   // Versiones de esquema de los outputs cacheados: derivadas del contenido de
   // los archivos fuente que gobiernan cada área (nunca stale, sin protocolo
   // manual).
