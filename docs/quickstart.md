@@ -35,7 +35,7 @@ mkdir mi-sitio && cd mi-sitio
 iteraciones init
 ```
 
-Esto crea tres archivos:
+Esto crea cuatro archivos:
 
 ```
 mi-sitio/
