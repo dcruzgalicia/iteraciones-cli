@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import { GLYPHS } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
 import { formatTime, TrackerRenderer } from './progress-render.js';
-import { type FormatState, type PipelinePhase, type RowState, TrackerState } from './progress-state.js';
+import { type FormatState, type PipelinePhase, TrackerState } from './progress-state.js';
 
 export type { FormatState, PipelinePhase, RowState, RowStatus } from './progress-state.js';
 
@@ -55,8 +55,10 @@ export class ProgressTracker {
     this.renderer = new TrackerRenderer(this.stream, this.tty);
     this.t0 = performance.now();
     if (options.renderer === 'default') {
-      // Restaurar el cursor si el proceso sale sin completar (errores del build)
-      process.once('exit', () => this.stream.write('\x1b[?25h'));
+      // Restaurar el cursor si el proceso sale sin completar (errores del
+      // build). Solo en TTY: en pipes escribir códigos de control ensuciaría
+      // la salida capturada (issue #2029).
+      if (this.tty) process.once('exit', () => this.stream.write('\x1b[?25h'));
     }
   }
 

@@ -42,9 +42,16 @@ export function setLoggerColorEnabled(enabled: boolean): void {
 /** ¿El stream es un TTY? Solo en TTY se emiten colores (pipes/CI limpios). */
 const isTty = (stream: NodeJS.WriteStream): boolean => stream.isTTY === true;
 
-/** Envuelve texto con un color ANSI solo si el stream es un TTY. */
+/**
+ * Convención NO_COLOR (https://no-color.org): su presencia desactiva los
+ * colores aunque el stream sea TTY. Los códigos de control del tracker
+ * (cursor) se rigen por TTY, no por NO_COLOR.
+ */
+const noColorRequested = (): boolean => process.env.NO_COLOR !== undefined;
+
+/** Envuelve texto con un color ANSI solo si el stream es un TTY y sin NO_COLOR. */
 function colorize(text: string, color: AnsiColor, stream: NodeJS.WriteStream): string {
-  const colored = isTty(stream) && colorEnabledOverride !== false;
+  const colored = isTty(stream) && colorEnabledOverride !== false && !noColorRequested();
   return colored ? `${ANSI[color]}${text}${ANSI.reset}` : text;
 }
 
