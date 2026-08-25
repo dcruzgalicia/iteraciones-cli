@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
-import { MD_READER } from './html-composer.js';
+import { MD_READER } from '../lib/pandoc-runner.js';
 import { hashFileContent, hashString } from './state-serialize.js';
 
 /** Recursos del template HTML del paquete (participan en la invalidación del formato HTML). */

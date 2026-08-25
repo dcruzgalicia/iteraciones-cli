@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import { readdir } from 'node:fs/promises';
+import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { initTestProject, withTempDir } from './helpers.js';
 
@@ -78,5 +79,32 @@ describe('aislamiento builder↔cli (#2017)', () => {
     const entries = await readdir('src/builder');
     expect(entries.includes('reporter.ts')).toBe(true);
     expect(entries.includes('types.ts')).toBe(true);
+  });
+});
+
+describe('constantes de dominio (#2018)', () => {
+  it('state-hash no importa de ningún compositor', async () => {
+    const src = await Bun.file('src/builder/state-hash.ts').text();
+    for (const line of src.split('\n')) {
+      if (line.trim().startsWith('import ')) {
+        expect(line.includes('-composer'), `import prohibido en state-hash: ${line}`).toBe(false);
+      }
+    }
+    // La constante vive en el módulo de dominio de pandoc
+    expect(await Bun.file('src/lib/pandoc-runner.ts').text()).toContain('export const MD_READER');
+    expect(await Bun.file('src/builder/html-composer.ts').text()).not.toContain('export const MD_READER');
+  });
+
+  it('computeFiltersHash es determinista: mismo input ⇒ mismo hash (reubicación de MD_READER no cambia valores)', async () => {
+    const { computeFiltersHash } = await import('../builder/state-hash.js');
+    const { DEFAULT_SITE_CONFIG } = await import('../config/site-config.js');
+    const dir = await mkdtemp(join(tmpdir(), 'iteraciones-hash-'));
+    try {
+      const a = await computeFiltersHash(dir, DEFAULT_SITE_CONFIG);
+      const b = await computeFiltersHash(dir, DEFAULT_SITE_CONFIG);
+      expect(a.hash).toBe(b.hash);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 });
