@@ -1,6 +1,5 @@
 import { describe, expect, it, spyOn } from 'bun:test';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
   type BuildState,
@@ -20,6 +19,7 @@ import {
 import type { DiscoveryEntry } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
+import { withTempDir } from './helpers.js';
 
 function makeState(entries: Record<string, unknown> = {}): BuildState {
   return {
@@ -28,15 +28,6 @@ function makeState(entries: Record<string, unknown> = {}): BuildState {
     activeFormats: ['html'],
     entries: new Map(Object.entries(entries)) as Map<string, DiscoveryEntry>,
   };
-}
-
-async function withTempDir(fn: (dir: string) => Promise<void>): Promise<void> {
-  const dir = await mkdtemp(join(tmpdir(), 'iteraciones-cli-test-'));
-  try {
-    await fn(dir);
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
 }
 
 const statePath = (cwd: string): string => join(cwd, '.iteraciones', 'state.json');
