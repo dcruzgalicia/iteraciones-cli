@@ -149,6 +149,19 @@ describe('discover (cambios de slug por metadatos)', () => {
     }
   });
 
+  it('registra el slug anterior al cambiar el slug manual (#2012)', async () => {
+    const cwd = makeProject('---\ntitle: Test Document\nslug: vieja\n---\n\nContenido');
+    try {
+      await buildStep(cwd);
+      writeFileSync(join(cwd, 'doc.md'), '---\ntitle: Test Document\nslug: nueva\n---\n\nContenido');
+      const result = await buildStep(cwd);
+      expect(result.slugChangedEntries.get('doc.md')).toBe('vieja');
+      expect(result.discoveryIndex.get('doc.md')?.slug).toBe('nueva');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
   it('asigna el slug limpio sin estado previo (full)', async () => {
     const cwd = makeProject('---\ntitle: Prueba\n---\n\nContenido');
     try {

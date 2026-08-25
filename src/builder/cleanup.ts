@@ -1,8 +1,9 @@
 import { readdir, rm } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
+import { htmlSlugFor } from './discover.js';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
 
-/** Extensiones de salida estándar por documento en dist/ (incluye la portada PDF). */
+/** Extensiones de salida estática por documento en dist/ (incluye la portada PDF). */
 const OUTPUT_EXTENSIONS = ['.html', '.tex', '.pdf', '.epub', '.md', '.png'];
 
 /** Auxiliares de latexmk que se acumulan en .iteraciones/tmp/pdf/ (por slot de concurrencia). */
@@ -17,11 +18,47 @@ const FORMAT_EXT_MAP: Record<string, string[]> = {
   markdown: ['.md'],
 };
 
+/**
+ * Slug de salida efectivo (#2012): ÚNICA fuente usada tanto para GENERAR las
+ * rutas en dist/ (pipeline) como para LIMPIARLAS. Desajustarse aquí deja
+ * huérfanos — p. ej. index.md produce index.* pero su slug de título es otro.
+ */
+function outSlugFor(relativePath: string, slug: string | undefined): string {
+  return htmlSlugFor(relativePath, slug);
+}
+
+/** Elimina un archivo si existe; devuelve si existía (para el informe). */
+async function removeIfExists(path: string): Promise<boolean> {
+  if (!(await Bun.file(path).exists())) return false;
+  await rm(path, { force: true }).catch(() => {});
+  return true;
+}
+
+/** Elimina directorios vacíos bajo outputDir (bottom-up, nunca la raíz). */
+async function pruneEmptyDirs(outputDir: string): Promise<void> {
+  const dirs: string[] = [];
+  const walk = async (rel: string): Promise<void> => {
+    for (const entry of await readdir(join(outputDir, rel), { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const childRel = rel === '.' ? entry.name : `${rel}/${entry.name}`;
+      dirs.push(childRel);
+      await walk(childRel);
+    }
+  };
+  await walk('.');
+  // Bottom-up: los padres se vacían tras eliminar los hijos
+  for (const dir of dirs.reverse()) {
+    const remaining = await readdir(join(outputDir, dir)).catch(() => ['x']);
+    if (remaining.length === 0) await rm(join(outputDir, dir), { force: true }).catch(() => {});
+  }
+}
+
 /** Elimina los artefactos cacheados de un documento (`.iteraciones/`). */
-async function removeCachedArtifacts(cacheBase: string, dir: string, slug: string): Promise<void> {
+async function removeCachedArtifacts(cacheBase: string, dir: string, slug: string): Promise<number> {
+  let removed = 0;
   // Área de trabajo del PDF: .tex (sin latexOn) y auxiliares de latexmk
   // (el .log solo se referencia en errores de builds vivos).
-  await rm(join(cacheBase, 'tmp', 'pdf', dir, `${slug}.tex`), { force: true }).catch(() => {});
+  if (await removeIfExists(join(cacheBase, 'tmp', 'pdf', dir, `${slug}.tex`))) removed++;
   // Auxiliares de latexmk en el directorio directo y en cada slot de
   // concurrencia (se acumulaban para siempre al eliminar un documento o cambiar
   // su slug; el .log solo se referencia en errores de builds vivos).
@@ -35,33 +72,48 @@ async function removeCachedArtifacts(cacheBase: string, dir: string, slug: strin
   }
   for (const sub of targets) {
     for (const ext of LATEXMK_AUX_EXTENSIONS) {
-      await rm(join(workDir, sub, `${slug}${ext}`), { force: true }).catch(() => {});
+      if (await removeIfExists(join(workDir, sub, `${slug}${ext}`))) removed++;
     }
   }
+  return removed;
 }
 
 /** Elimina archivos de salida de un documento en dist/ (por extensiones). */
-async function removeOutputFiles(outputDir: string, dir: string, slug: string, extensions: string[]): Promise<void> {
+async function removeOutputFiles(outputDir: string, dir: string, slug: string, extensions: string[]): Promise<number> {
+  let removed = 0;
   for (const ext of extensions) {
-    await rm(join(outputDir, dir, `${slug}${ext}`), { force: true }).catch(() => {});
+    if (await removeIfExists(join(outputDir, dir, `${slug}${ext}`))) removed++;
   }
+  return removed;
 }
 
-/** Limpia caché y salida de documentos identificados por (directorio, slug). */
-async function cleanupBySlug(ctx: BuildContext, entries: Iterable<{ dir: string; slug: string }>): Promise<void> {
+interface CleanupEntry {
+  relativePath: string;
+  /** Slug PREVIO a limpiar (el viejo en cambios de slug; el del documento borrado). */
+  slug: string | undefined;
+}
+
+/** Limpia caché y salida de documentos identificados por su ruta y slug previo. */
+async function cleanupBySlug(ctx: BuildContext, entries: Iterable<CleanupEntry>): Promise<number> {
   const cacheBase = join(ctx.cwd, '.iteraciones');
-  for (const { dir, slug } of entries) {
-    await removeCachedArtifacts(cacheBase, dir, slug);
-    await removeOutputFiles(ctx.outputDir, dir, slug, OUTPUT_EXTENSIONS);
+  let removed = 0;
+  for (const { relativePath, slug } of entries) {
+    const dir = dirname(relativePath);
+    const outSlug = outSlugFor(relativePath, slug);
+    removed += await removeCachedArtifacts(cacheBase, dir, outSlug);
+    removed += await removeOutputFiles(ctx.outputDir, dir, outSlug, OUTPUT_EXTENSIONS);
   }
+  await pruneEmptyDirs(ctx.outputDir);
+  return removed;
 }
 
-export async function cleanupRemovedFormats(ctx: BuildContext, allDocs: BuildDocument[], removedFormats: string[]): Promise<void> {
-  if (removedFormats.length === 0) return;
+export async function cleanupRemovedFormats(ctx: BuildContext, allDocs: BuildDocument[], removedFormats: string[]): Promise<number> {
+  if (removedFormats.length === 0) return 0;
 
   const extensions = removedFormats.flatMap((fmt) => FORMAT_EXT_MAP[fmt] ?? []);
+  let removed = 0;
   for (const doc of allDocs) {
-    await removeOutputFiles(ctx.outputDir, dirname(doc.relativePath), doc.slug ?? basename(doc.relativePath, '.md'), extensions);
+    removed += await removeOutputFiles(ctx.outputDir, dirname(doc.relativePath), outSlugFor(doc.relativePath, doc.slug), extensions);
   }
 
   if (removedFormats.includes('html')) {
@@ -69,13 +121,16 @@ export async function cleanupRemovedFormats(ctx: BuildContext, allDocs: BuildDoc
     await rm(join(ctx.outputDir, 'fonts'), { recursive: true, force: true }).catch(() => {});
     await rm(join(ctx.outputDir, 'logo.svg'), { force: true }).catch(() => {});
   }
+  return removed;
 }
 
-export async function cleanupCoverImages(ctx: BuildContext, allDocs: BuildDocument[]): Promise<void> {
+export async function cleanupCoverImages(ctx: BuildContext, allDocs: BuildDocument[]): Promise<number> {
+  let removed = 0;
   for (const doc of allDocs) {
-    const slug = doc.slug ?? basename(doc.relativePath, '.md');
-    await rm(join(ctx.outputDir, dirname(doc.relativePath), `${slug}.png`), { force: true }).catch(() => {});
+    const png = join(ctx.outputDir, dirname(doc.relativePath), `${outSlugFor(doc.relativePath, doc.slug)}.png`);
+    if (await removeIfExists(png)) removed++;
   }
+  return removed;
 }
 
 export async function cleanupDeletedFiles(
@@ -83,30 +138,22 @@ export async function cleanupDeletedFiles(
   changedPaths: Set<string>,
   allDocs: BuildDocument[],
   deletedEntries: Map<string, DiscoveryEntry>,
-): Promise<void> {
+): Promise<number> {
   const allDocPathsSet = new Set(allDocs.map((d) => d.relativePath));
   const deletedMdPaths = [...changedPaths].filter((p) => p.endsWith('.md') && !allDocPathsSet.has(p));
-  if (deletedMdPaths.length === 0) return;
+  if (deletedMdPaths.length === 0) return 0;
 
   const entries = deletedMdPaths.map((relPath) => ({
-    dir: dirname(relPath),
+    relativePath: relPath,
     slug: deletedEntries.get(relPath)?.slug ?? basename(relPath, '.md'),
   }));
-  await cleanupBySlug(ctx, entries);
-  // Un index.md eliminado deja sus salidas index.* huérfanas en dist/
-  for (const relPath of deletedMdPaths) {
-    if (basename(relPath) === 'index.md') {
-      const targetDir = join(ctx.outputDir, dirname(relPath));
-      for (const ext of OUTPUT_EXTENSIONS) {
-        await rm(join(targetDir, `index${ext}`), { force: true }).catch(() => {});
-      }
-    }
-  }
+  // htmlSlugFor dentro de cleanupBySlug cubre el caso index.md sin bloque especial
+  return cleanupBySlug(ctx, entries);
 }
 
-export async function cleanupSlugChanges(ctx: BuildContext, slugChangedEntries: Map<string, string>): Promise<void> {
-  if (slugChangedEntries.size === 0) return;
+export async function cleanupSlugChanges(ctx: BuildContext, slugChangedEntries: Map<string, string>): Promise<number> {
+  if (slugChangedEntries.size === 0) return 0;
 
-  const entries = [...slugChangedEntries].map(([relPath, oldSlug]) => ({ dir: dirname(relPath), slug: oldSlug }));
-  await cleanupBySlug(ctx, entries);
+  const entries = [...slugChangedEntries].map(([relativePath, oldSlug]) => ({ relativePath, slug: oldSlug }));
+  return cleanupBySlug(ctx, entries);
 }
