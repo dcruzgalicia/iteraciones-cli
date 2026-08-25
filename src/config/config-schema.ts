@@ -90,7 +90,6 @@ const HtmlSiteSchema = z
       .enum(KNOWN_ACCENT_COLORS as [AccentColor, ...AccentColor[]])
       .optional()
       .default(DEFAULT_HTML_FORMAT.site?.color ?? 'lime'),
-    css: z.string().optional(),
   })
   .strict();
 
