@@ -579,6 +579,40 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     expect(pandocSpy).not.toHaveBeenCalled();
   });
 
+  it('lua-filters inexistente emite exactamente un warning en build y en validate (#2011)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nlua-filters: [filters/no-existe.lua]\n', 'utf8');
+      // La advertencia del resumen del build pasa por el tracker (stdout);
+      // validate la emite directo a stderr.
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let buildOutput = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir);
+      } finally {
+        buildOutput = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      const buildWarnings = buildOutput.split('no encontrado en el proyecto').length - 1;
+      expect(buildWarnings).toBe(1);
+
+      const validateSpy = spyStderr();
+      let validateOutput = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        validateOutput = validateSpy.mock.calls.map((c) => String(c[0])).join('');
+        validateSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      const validateWarnings = validateOutput.split('no encontrado en el proyecto').length - 1;
+      expect(validateWarnings).toBe(1);
+    });
+  });
+
   it('un error de pandoc no sugiere validate (no es un problema de config/frontmatter)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);

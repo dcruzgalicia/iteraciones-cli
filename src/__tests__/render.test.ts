@@ -343,7 +343,7 @@ describe('resolveUserLuaFilters (lua-filters de usuario)', () => {
     }
   });
 
-  it('advierte y omite rutas inexistentes', async () => {
+  it('omite rutas inexistentes sin advertir (el warning lo emite validateConfigFilePaths)', async () => {
     const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-lua-'));
     try {
       writeFileSync(join(cwd, 'iteraciones.config.yaml'), 'lua-filters:\n  - filters/no-existe.lua\n');
@@ -351,7 +351,8 @@ describe('resolveUserLuaFilters (lua-filters de usuario)', () => {
       const config = await loadSiteConfig(cwd);
       const resolved = await resolveUserLuaFilters(cwd, config);
       expect(resolved).toEqual([]);
-      expect(spy).toHaveBeenCalledWith('lua-filters: "filters/no-existe.lua" no encontrado en el proyecto', 'config');
+      // Fuente única de reporte (#2011): el resolver solo omite, no emite
+      expect(spy).not.toHaveBeenCalled();
       spy.mockRestore();
     } finally {
       rmSync(cwd, { recursive: true, force: true });
