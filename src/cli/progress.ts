@@ -160,6 +160,27 @@ export class ProgressTracker implements BuildReporter {
 
   // ── Resumen final (texto plano, sin ANSI) ─────────────────────────────────
 
+  /**
+   * Compacta la lista de invalidaciones para el resumen (#2028): máximo 3
+   * razones visibles; el resto se resume. El detalle completo sigue
+   * disponible en --verbose y en el contrato --json (que no cambia).
+   */
+  static compactInvalidations(list: string[], max = 3, budget = 72): string {
+    const parts: string[] = [];
+    let used = 0;
+    let included = 0;
+    for (const reason of list) {
+      const add = (included > 0 ? 2 : 0) + reason.length;
+      // La primera razón entra siempre (aun larga): la línea nunca queda vacía
+      if (included >= max || (included > 0 && used + add > budget)) break;
+      parts.push(reason);
+      used += add;
+      included++;
+    }
+    const rest = list.length - included;
+    return rest > 0 ? `${parts.join(', ')} … y ${rest} más (--verbose)` : parts.join(', ');
+  }
+
   private async writeSummary(processed: number, cached: number, formats?: string[], outputDir?: string, invalidations?: string[]): Promise<void> {
     const totalTime = performance.now() - this.t0;
     const formatCount = formats ? formats.length : 0;
@@ -182,7 +203,7 @@ export class ProgressTracker implements BuildReporter {
     if (invalidations !== undefined) {
       const value =
         invalidations.length > 0
-          ? `${invalidations.join(', ')} — reprocesados ${plural(processed, 'documento')}`
+          ? `${ProgressTracker.compactInvalidations(invalidations)} — reprocesados ${plural(processed, 'documento')}`
           : 'sin invalidaciones — todo desde caché';
       this.stream.write(`  ${padRight('Invalidación', LABEL_WIDTH)}${value}\n`);
     }

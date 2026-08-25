@@ -633,3 +633,17 @@ describe('invariantes de cursor (parte 2 del refactor)', () => {
     expect(chunks.join('')).not.toContain('Todo listo.');
   });
 });
+
+describe('compactación de la línea de Invalidación (#2028)', () => {
+  it('muestra máximo 3 razones y resume el resto', () => {
+    const list = ['filters', 'bibliografía', 'configuración PDF/LaTeX', 'configuración HTML', 'formato nuevo: epub'];
+    expect(ProgressTracker.compactInvalidations(list)).toBe('filters, bibliografía, configuración PDF/LaTeX … y 2 más (--verbose)');
+    expect(ProgressTracker.compactInvalidations(list.slice(0, 3))).toBe('filters, bibliografía, configuración PDF/LaTeX');
+  });
+
+  it('la línea compactada nunca supera ~100 caracteres con razones largas', () => {
+    const long = Array.from({ length: 6 }, (_, i) => `razón de invalidación bastante descriptiva número ${i + 1}`);
+    const line = `${ProgressTracker.compactInvalidations(long)} — reprocesados 12 documentos`;
+    expect(line.length).toBeLessThanOrEqual(120);
+  });
+});
