@@ -26,7 +26,7 @@ export {
   hashString,
   loadStateFile,
   markStateCompleted,
+  persistCompletedState,
   saveStateFile,
   stateUsableForBuild,
-  updateCssHash,
 } from './state-serialize.js';

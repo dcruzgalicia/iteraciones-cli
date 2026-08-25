@@ -12,10 +12,10 @@ import {
   discoverBibFiles,
   loadStateFile,
   markStateCompleted,
+  persistCompletedState,
   resolveBibOptions,
   saveStateFile,
   stateUsableForBuild,
-  updateCssHash,
 } from '../builder/state.js';
 import type { DiscoveryEntry } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
@@ -23,6 +23,7 @@ import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 
 function makeState(entries: Record<string, unknown> = {}): BuildState {
   return {
+    schemaVersion: 2,
     startedAt: 1000,
     activeFormats: ['html'],
     entries: new Map(Object.entries(entries)) as Map<string, DiscoveryEntry>,
@@ -52,7 +53,7 @@ describe('loadStateFile', () => {
       await mkdir(join(dir, '.iteraciones'), { recursive: true });
       await writeFile(
         statePath(dir),
-        JSON.stringify({ startedAt: 42, activeFormats: ['pdf'], entries: { 'a.md': { title: 'A', slug: 'a' } } }),
+        JSON.stringify({ schemaVersion: 2, startedAt: 42, activeFormats: ['pdf'], entries: { 'a.md': { title: 'A', slug: 'a' } } }),
         'utf8',
       );
       const state = await loadStateFile(dir);
@@ -105,7 +106,7 @@ describe('saveStateFile (atomicidad)', () => {
   });
 });
 
-describe('clearStateFile y updateCssHash', () => {
+describe('clearStateFile y persistCompletedState (#2025)', () => {
   it('clearStateFile elimina el estado sin fallar si no existe', async () => {
     await withTempDir(async (dir) => {
       await saveStateFile(dir, makeState());
@@ -115,24 +116,40 @@ describe('clearStateFile y updateCssHash', () => {
     });
   });
 
-  it('updateCssHash persiste el cssHash', async () => {
+  it('persistCompletedState persiste el cssHash acumulado y marca completado', async () => {
     await withTempDir(async (dir) => {
-      await saveStateFile(dir, makeState());
-      await updateCssHash(dir, 'hash-1');
+      const pending = { ...makeState(), cssHash: 'hash-1' };
+      await persistCompletedState(dir, pending);
       const state = await loadStateFile(dir);
       expect(state?.cssHash).toBe('hash-1');
+      expect(state?.completed).toBe(true);
     });
   });
 
-  it('updateCssHash no reescribe si el hash no cambió', async () => {
+  it('persistCompletedState sin pendiente no escribe; con pendiente ya completo tampoco', async () => {
     await withTempDir(async (dir) => {
-      await saveStateFile(dir, makeState());
-      await updateCssHash(dir, 'hash-1');
+      // Sin pendiente: nada que escribir y sin error
+      await persistCompletedState(dir, null);
+
+      // Pendiente ya completo: no reescribe (mtime intacto)
+      const done = { ...makeState({ 'a.md': {} as never }), completed: true };
+      await saveStateFile(dir, done);
       const mtime1 = (await Bun.file(statePath(dir)).stat()).mtimeMs;
       await Bun.sleep(5);
-      await updateCssHash(dir, 'hash-1');
+      await persistCompletedState(dir, done);
       const mtime2 = (await Bun.file(statePath(dir)).stat()).mtimeMs;
       expect(mtime2).toBe(mtime1);
+    });
+  });
+
+  it('round-trip: el estado escrito por un build lo lee correctamente el siguiente', async () => {
+    await withTempDir(async (dir) => {
+      const pending = { ...makeState({ 'a.md': { title: 'A', creator: [], date: '', mtime: 1, size: 2, hash: 'h' } }) };
+      await persistCompletedState(dir, pending);
+      const state = await loadStateFile(dir);
+      expect(state?.schemaVersion).toBe(2);
+      expect(state?.completed).toBe(true);
+      expect(state?.entries.get('a.md')?.title).toBe('A');
     });
   });
 });

@@ -147,6 +147,7 @@ describe('computeBuildMetadata', () => {
       await writeFile(join(dir, 'iteraciones.config.yaml'), 'format:\n  latex:\n    generate: true\n  html:\n    generate: true\n', 'utf8');
       const siteConfig = await loadSiteConfig(dir);
       const prevState = {
+        schemaVersion: 2,
         startedAt: 0,
         activeFormats: ['latex', 'pdf'],
         entries: new Map(),

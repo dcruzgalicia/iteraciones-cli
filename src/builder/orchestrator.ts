@@ -19,7 +19,8 @@ import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, vali
 import { validateConfigFilePaths } from './project-validator.js';
 import { silentReporter } from './reporter.js';
 import type { BuildState } from './state.js';
-import { clearStateFile, markStateCompleted, updateCssHash } from './state.js';
+import { clearStateFile } from './state.js';
+import { persistCompletedState } from './state-serialize.js';
 import type { BuildContext, BuildDocument, BuildReporter, DiscoveryEntry } from './types.js';
 
 export interface BuildOptions {
@@ -81,10 +82,6 @@ export async function build(cwd: string, options: BuildOptions = {}, reporter: B
         () => runBuild(cwd, options, progress, pandocVersion),
       );
     }
-    // Build exitoso: el estado que persistió discover (sin flag) pasa a ser
-    // válido como caché. Sin este marcado, un estado sin completed sería
-    // tratado como interrumpido por el siguiente build (build completo).
-    await markStateCompleted(cwd);
   } catch (err) {
     // Resolver las fases pendientes del tracker para que el proceso salga:
     // en TTY el render loop mantiene el proceso vivo mientras run() no termine
@@ -187,6 +184,7 @@ async function discoverDocuments(
   discoveredChanges: Set<string>;
   deletedEntries: Map<string, DiscoveryEntry>;
   slugChangedEntries: Map<string, string>;
+  pendingState: BuildState | null;
 }> {
   progress.startPhase('discovery');
   const {
@@ -195,6 +193,7 @@ async function discoverDocuments(
     discoveryIndex,
     deletedEntries,
     slugChangedEntries,
+    pendingState,
   } = await discover(cwd, {
     full: options.full,
     activeFormats: plan.currentFormats,
@@ -219,7 +218,7 @@ async function discoverDocuments(
     const entry = discoveryIndex.get(doc.relativePath);
     doc.slug = entry?.slug ?? basename(doc.relativePath, '.md');
   }
-  return { allDocs, discoveryIndex, discoveredChanges, deletedEntries, slugChangedEntries };
+  return { allDocs, discoveryIndex, discoveredChanges, deletedEntries, slugChangedEntries, pendingState };
 }
 
 /**
@@ -237,6 +236,8 @@ async function finishBuild(
     effectiveDisabledPreamble: string[];
     needsAssets: boolean;
     runAssets: () => Promise<void>;
+    cwd: string;
+    pendingState: BuildState | null;
   },
   params: { processedCount: number; cachedCount: number; invalidations: string[]; empty?: boolean },
 ): Promise<BuildSummary> {
@@ -253,6 +254,9 @@ async function finishBuild(
     params.empty ? undefined : deps.outputDir,
     params.empty ? undefined : params.invalidations,
   );
+  // ÚNICA escritura de state.json por build (#2025): en el cierre común,
+  // con el índice de discovery y el cssHash ya acumulados en memoria.
+  await persistCompletedState(deps.cwd, deps.pendingState);
   return {
     processed: params.processedCount,
     cached: params.cachedCount,
@@ -385,7 +389,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
 
   const ctx = await prepareEnvironment(cwd, options, siteConfig, plan, progress);
 
-  const { allDocs, discoveryIndex, discoveredChanges, deletedEntries, slugChangedEntries } = await discoverDocuments(
+  const { allDocs, discoveryIndex, discoveredChanges, deletedEntries, slugChangedEntries, pendingState } = await discoverDocuments(
     cwd,
     options,
     plan,
@@ -399,10 +403,18 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
   // cambió), la compilación se omite y se reutiliza el CSS existente.
   const needsAssets = plan.activeFormats.html;
 
-  /** Genera assets y persiste el nuevo cssHash y su caché por archivo (solo si cambiaron). */
+  /**
+   * Genera assets y ACUMULA el nuevo cssHash/caché en el estado pendiente
+   * (#2025): nada escribe aquí — la única escritura ocurre en el cierre.
+   * Sin estado pendiente (build sin cambios) los valores no se acumulan:
+   * el disco conserva los vigentes.
+   */
   const runAssets = async (): Promise<void> => {
     const { cssHash, cssFileCache } = await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, prevState?.cssHash, prevState?.cssFileCache);
-    await updateCssHash(cwd, cssHash, cssFileCache);
+    if (pendingState) {
+      pendingState.cssHash = cssHash;
+      if (cssFileCache !== undefined) pendingState.cssFileCache = cssFileCache;
+    }
   };
 
   if (allDocs.length === 0) {
@@ -411,7 +423,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
     logWarning('No se encontraron documentos Markdown en el proyecto.', 'build');
     logWarning("Crea un archivo .md con frontmatter o ejecuta 'iteraciones init'.", 'build');
     return finishBuild(
-      { progress, siteConfig, outputDir: ctx.outputDir, effectiveDisabledPreamble, needsAssets, runAssets },
+      { progress, siteConfig, outputDir: ctx.outputDir, effectiveDisabledPreamble, needsAssets, runAssets, cwd, pendingState },
       {
         processedCount: 0,
         cachedCount: 0,
@@ -432,7 +444,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
   if (!work.anyWork) {
     log('Ningún documento modificado — sin cambios');
     return finishBuild(
-      { progress, siteConfig, outputDir: ctx.outputDir, effectiveDisabledPreamble, needsAssets, runAssets },
+      { progress, siteConfig, outputDir: ctx.outputDir, effectiveDisabledPreamble, needsAssets, runAssets, cwd, pendingState },
       {
         processedCount: 0,
         cachedCount: allDocs.length,
@@ -455,7 +467,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
   ) {
     log('Ningún documento modificado — sin cambios');
     return finishBuild(
-      { progress, siteConfig, outputDir: ctx.outputDir, effectiveDisabledPreamble, needsAssets, runAssets },
+      { progress, siteConfig, outputDir: ctx.outputDir, effectiveDisabledPreamble, needsAssets, runAssets, cwd, pendingState },
       {
         processedCount: 0,
         cachedCount: allDocs.length,
@@ -465,7 +477,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
   }
 
   return finishBuild(
-    { progress, siteConfig, outputDir: ctx.outputDir, effectiveDisabledPreamble, needsAssets, runAssets },
+    { progress, siteConfig, outputDir: ctx.outputDir, effectiveDisabledPreamble, needsAssets, runAssets, cwd, pendingState },
     await runPipelinePhases(progress, ctx, plan, work, allDocs, discoveryIndex, effectiveDisabledPreamble, siteConfig.format, invalidations),
   );
 }
