@@ -106,7 +106,11 @@ Además, existen los **preamble filters** (`src/lib/resources/preamble/*.tex`) q
 | `latex/04-center` | ast | `Div.center` → `\begin{center}...\end{center}` |
 | `latex/05-flushright` | ast | `Div.flushright` → `\begin{flushright}...\end{flushright}` |
 | `latex/06-mbox-sentence-end` | ast | últimas palabras de cada oración → `\mbox{}` |
-| `latex/07-mbox-sentence-start` | ast | primera palabra de cada oración → `\mbox{}` |
+| `latex/08-quote-noindent` | ast | BlockQuote → `quote` + `\noindent` al primer párrafo siguiente |
+| `latex/09-cjk` | ast | `Div.japanese/.chinese/.korean` → entorno CJKutf8 |
+| `latex/10-titlepages` | ast | campos multilinea de portada → LaTeX (extratitle, colofón, guardas…) |
+| `latex/11-uppercase` | ast | span `.uppercase` → `\MakeUppercase{texto}` |
+| `latex/12-mbox` | ast | span `.mbox` → `\mbox{texto}` |
 | `html/01-dictum` | ast | `Div.dictum` → `<blockquote class="dictum">` |
 | `html/02-verse` | ast | `Div.verse` → `<div class="verse">` |
 | `html/03-center` | ast | `Div.center` → `<div class="center">` |
@@ -136,10 +140,15 @@ Además, existen los **preamble filters** (`src/lib/resources/preamble/*.tex`) q
 | 17-toc-section | `src/lib/resources/preamble/17-toc-section.tex` | TOC como \subsubsection* |
 | 18-bibliography-heading | `src/lib/resources/preamble/18-bibliography-heading.tex` | Título de bibliografía como subsubsection |
 | 19-maketitle | `src/lib/resources/preamble/19-maketitle.tex` | Personaliza \maketitle |
+| 20-pandocbounded | `src/lib/resources/preamble/20-pandocbounded.tex` | Macro pandocbounded: imágenes sin tamaño a natural size, acotadas a \linewidth/\textheight (pandoc 3.2.1+) |
 | 20-alignment | `src/lib/resources/preamble/20-alignment.tex` | Redefine center/flushright/flushleft |
 | 21-dictum | `src/lib/resources/preamble/21-dictum.tex` | Configuración de epígrafes |
 | 22-verse | `src/lib/resources/preamble/22-verse.tex` | Redefine el entorno verse |
 | 23-quote | `src/lib/resources/preamble/23-quote.tex` | Redefine el entorno quote |
+| 27-cjk | `src/lib/resources/preamble/27-cjk.tex` | Soporte CJK con pdflatex (rodear con fenced div .japanese/.chinese/.korean) |
+| 28-titlepages | `src/lib/resources/preamble/28-titlepages.tex` | Entornos y cajas para las páginas de título y guardas |
+| 29-text-decoration | `src/lib/resources/preamble/29-text-decoration.tex` | soul y subrayado/resaltado (\hl para ==marca==) |
+| 30-endpapers | `src/lib/resources/preamble/30-endpapers.tex` | Guardas con imagen a página completa |
 | 97-eso-pic | `src/lib/resources/preamble/97-eso-pic.tex` | Fondo de página (desactivado por defecto) |
 | 98-crop | `src/lib/resources/preamble/98-crop.tex` | Marcas de corte (desactivado por defecto) |
 | 99-pdfx | `src/lib/resources/preamble/99-pdfx.tex` | PDF/X-1a (desactivado por defecto) |
@@ -180,7 +189,7 @@ Solo los documentos modificados (o con slug cambiado) pasan por el pipeline; el 
 La configuración se lee de `iteraciones.config.yaml` y se valida con **Zod**:
 
 ```yaml
-lang: es-MX
+language: es-MX
 toc: false
 
 format:
@@ -377,8 +386,8 @@ Superficie estable (lista congelada; revisada desde el código en el issue #1934
 - **Opciones de build**: `--full`, `--output`, `--verbose`, `--json`.
 - **Opciones de doctor**: `--info`.
 - **Opciones de new**: `-t/--title`.
-- **Configuración** (`iteraciones.config.yaml`): `lang`, `toc`, `format.latex.generate`, `format.html.{title, tagline, logo, theme, accent, generate, blocks}`, `format.pdf.{generate, show-date, page-number, cover-image, disabled-preamble-filters}`, `format.epub.generate`, `format.markdown.generate`, `disabled-filters`, `lua-filters`, `bibliography`, `csl`.
-- **Frontmatter**: `title`, `subtitle`, `date`, `author`, `slug` (manual); los que fluyen a pandoc o al template efectivo con efecto visible (`language`, `toc`, `description`, `site-title`, `tagline`, `theme`, `accent`, `css`); y las páginas de título internas y la portada (`extratitle`, `frontispiece`, `titlehead`, `subject`, `dedication`, `uppertitleback`, `lowertitleback`, `publishers`, `colophon`, `title-image`, `publishers-image`, `endpapers`).
+- **Configuración** (`iteraciones.config.yaml`): `language`, `toc`, campos Dublin Core raíz (`title`, `creator`, `description`, …), `format.latex.generate`, `format.html.{site.{title, description, logo, theme, color}, generate, blocks}`, `format.pdf.{generate, show-date, page-number, cover-image, disabled-preamble-filters}`, `format.epub.generate`, `format.markdown.generate`, `disabled-filters`, `lua-filters`, `bibliography`, `csl`.
+- **Frontmatter**: `title`, `subtitle`, `date`, `creator`, `slug` (manual); los que fluyen a pandoc o al template efectivo con efecto visible (`language`, `toc`, `description`, `site-title`, `tagline`, `theme`, `accent`, `css`); y las páginas de título internas y la portada (`extratitle`, `frontispiece`, `titlehead`, `subject`, `dedication`, `uppertitleback`, `lowertitleback`, `publishers`, `colophon`, `title-image`, `publishers-image`, `endpapers`).
 - **Filtros**: nombres completos de los filters del paquete (capas `semantic/`, `latex/`, `html/`) y de los preamble filters numerados; override por archivo y listas `disabled-*`.
 - **Salidas**: HTML, PDF, LaTeX, EPUB y Markdown; esquema de slugs `title-por-author` con sufijos `-dN`; portada PNG junto al PDF cuando `format.pdf.cover-image` está activo.
 

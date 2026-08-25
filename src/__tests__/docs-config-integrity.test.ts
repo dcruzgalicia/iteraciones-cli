@@ -184,3 +184,42 @@ describe('guard schema↔uso: hojas de configuración de formato (#2016)', () =>
     }
   });
 });
+
+describe('guard tablas derivables del filesystem (#2035)', () => {
+  it('la tabla de filters de architecture.md coincide exactamente con los recursos', async () => {
+    const doc = await Bun.file('docs/architecture.md').text();
+    const documented = new Set([...doc.matchAll(/^\| `([a-z]+(?:\/[a-z]+)*\/\d{2}-[a-z0-9-]+)` \|/gm)].map((m) => m[1]!));
+    expect(documented.size).toBeGreaterThan(10);
+
+    const real = new Set<string>();
+    for (const group of ['latex', 'html']) {
+      for await (const f of new Bun.Glob('*.lua').scan({ cwd: `src/lib/resources/filters/${group}` })) {
+        real.add(`${group}/${f.replace(/\.lua$/, '')}`);
+      }
+    }
+    for await (const f of new Bun.Glob('**/*.lua').scan({ cwd: 'src/lib/resources/filters/semantic' })) {
+      real.add(`semantic/${f.replace(/\.lua$/, '')}`);
+    }
+
+    const extra = [...documented].filter((d) => !real.has(d));
+    const missing = [...real].filter((r) => !documented.has(r));
+    expect(extra, `filters documentados que NO existen: ${extra.join(', ')}`).toEqual([]);
+    expect(missing, `filters reales sin documentar: ${missing.join(', ')}`).toEqual([]);
+  });
+
+  it('la tabla de preamble filters de architecture.md coincide con los recursos', async () => {
+    const doc = await Bun.file('docs/architecture.md').text();
+    const section = doc.slice(doc.indexOf('### Preamble filters integrados'), doc.indexOf('### Extensibilidad'));
+    const documented = new Set([...section.matchAll(/^\| (\d{2}-[a-z0-9-]+) \|/gm)].map((m) => m[1]!));
+    expect(documented.size).toBeGreaterThan(20);
+
+    const real = new Set<string>();
+    for await (const f of new Bun.Glob('*.tex').scan({ cwd: 'src/lib/resources/preamble' })) {
+      real.add(f.replace(/\.tex$/, ''));
+    }
+    const extra = [...documented].filter((d) => !real.has(d));
+    const missing = [...real].filter((r) => !documented.has(r));
+    expect(extra, `preamble filters documentados que NO existen: ${extra.join(', ')}`).toEqual([]);
+    expect(missing, `preamble filters reales sin documentar: ${missing.join(', ')}`).toEqual([]);
+  });
+});
