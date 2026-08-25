@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'bun:test';
-import { mapWithConcurrency, run } from '../lib/run.js';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { mapWithConcurrency, ProcessTimeoutError, run } from '../lib/run.js';
 
 describe('mapWithConcurrency', () => {
   it('procesa todos los items', async () => {
@@ -55,10 +58,50 @@ describe('run (timeouts)', () => {
   });
 
   it('termina un proceso que excede el timeout con error accionable', async () => {
-    // sleep 5 con timeout de 100ms: el proceso se mata y run() lanza
-    await expect(run('sleep', ['5'], { timeoutMs: 100 })).rejects.toThrow(
-      'no terminó en 0s y fue terminado. Revisa procesos colgados o filtros Lua en loop',
-    );
+    // sleep 5 con timeout de 100ms: el árbol se mata y run() lanza
+    await expect(run('sleep', ['5'], { timeoutMs: 100 })).rejects.toThrow('no terminó en 0s y fue terminado junto con sus procesos hijos');
+  });
+
+  it('al expirar el timeout mata el árbol completo: ni el proceso ni sus hijos sobreviven (#2014)', async () => {
+    if (process.platform === 'win32') return; // camino Windows se valida por revisión
+    const dir = mkdtempSync(join(tmpdir(), 'iteraciones-tree-'));
+    try {
+      // Árbol de dos niveles: sh (hijo directo de run) → sleep (nieto).
+      // El script escribe ambos pids y queda bloqueado en wait.
+      const pidsFile = join(dir, 'pids.txt');
+      const promise = run('sh', ['-c', `sleep 30 & echo $$ $! > '${pidsFile}'; wait`], { timeoutMs: 300 });
+      // Esperar a que el árbol esté armado (el archivo de pids existe)
+      const setupDeadline = Date.now() + 2_000;
+      while (!existsSync(pidsFile) && Date.now() < setupDeadline) await new Promise((r) => setTimeout(r, 20));
+      expect(existsSync(pidsFile)).toBe(true);
+
+      await expect(promise).rejects.toThrow(ProcessTimeoutError);
+
+      const [shellPid, sleepPid] = readFileSync(pidsFile, 'utf8').trim().split(/\s+/);
+      const isAlive = (pid: string | undefined): boolean => {
+        if (!pid) return false;
+        try {
+          process.kill(Number.parseInt(pid, 10), 0);
+          return true;
+        } catch {
+          return false;
+        }
+      };
+      // Poll corto: la muerte es inmediata (SIGKILL), solo esperamos al reap
+      let shellDead = false;
+      let sleepDead = false;
+      const deadline = Date.now() + 3_000;
+      while (Date.now() < deadline) {
+        shellDead = !isAlive(shellPid);
+        sleepDead = !isAlive(sleepPid);
+        if (shellDead && sleepDead) break;
+        await new Promise((r) => setTimeout(r, 50));
+      }
+      expect(shellDead).toBe(true);
+      expect(sleepDead).toBe(true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it('no lanza error si el proceso termina antes del timeout', async () => {
