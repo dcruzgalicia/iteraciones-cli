@@ -8,10 +8,12 @@ import type { BuildDocument } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
 import { execPandoc, getPandocVersion } from '../lib/pandoc-runner.js';
+import { registerSkip, SKIP_REASONS } from './helpers.js';
 
 // Todos los tests de este archivo invocan pandoc real: sin pandoc instalado
 // la suite pasa con skips reales en lugar de fallar (objetivo M9).
 const pandocOk = await getPandocVersion().catch(() => null);
+if (!pandocOk) registerSkip('lua-filters.test.ts', SKIP_REASONS.pandoc);
 
 const RESOURCES = join(import.meta.dir, '..', 'lib', 'resources', 'filters');
 const SEMANTIC_FILTERS = [

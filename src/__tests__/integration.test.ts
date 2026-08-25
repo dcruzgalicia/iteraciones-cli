@@ -7,11 +7,12 @@ import { runNew } from '../cli/dispatcher.js';
 import { runInit } from '../cli/init.js';
 import { runValidate } from '../cli/validate.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
-import { initTestProject } from './helpers.js';
+import { initTestProject, registerSkip, SKIP_REASONS } from './helpers.js';
 
 // Sin pandoc el test de integración no puede correr: se marca como skip real
 // (antes hacía return temprano y la suite reportaba "pass" sin probar nada).
 const pandocOk = await getPandocVersion().catch(() => null);
+if (!pandocOk) registerSkip('integration.test.ts', SKIP_REASONS.pandoc);
 
 describe('integration: init + build', () => {
   it.skipIf(!pandocOk)('genera HTML después de init + build', async () => {

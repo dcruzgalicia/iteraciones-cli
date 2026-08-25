@@ -2,9 +2,10 @@ import { describe, expect, it } from 'bun:test';
 import { readdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
-import { initTestProject, withTempDir } from './helpers.js';
+import { initTestProject, registerSkip, SKIP_REASONS, withTempDir } from './helpers.js';
 
 const pandocOk = await getPandocVersion().catch(() => null);
+if (!pandocOk) registerSkip('cleanup-golden.test.ts', SKIP_REASONS.pandoc);
 
 /**
  * Árboles dorados de dist/ (issue #2012): definen el contenido EXACTO que

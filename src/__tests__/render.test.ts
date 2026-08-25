@@ -19,8 +19,10 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import { DEFAULT_SITE_CONFIG, type HtmlBlockKey } from '../config/site-config.js';
 import * as logger from '../lib/logger.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
+import { registerSkip, SKIP_REASONS } from './helpers.js';
 
 const pandocOk = await getPandocVersion().catch(() => null);
+if (!pandocOk) registerSkip('render.test.ts', SKIP_REASONS.pandoc);
 
 describe('extractReferencesBlock (sin marcador en el template)', () => {
   it.skipIf(!pandocOk)('sin el marcador de referencias, la bibliografía se descarta con warning visible', async () => {

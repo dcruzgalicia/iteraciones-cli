@@ -10,11 +10,12 @@ import { buildProgram } from '../cli/parser.js';
 import { logWarning, setLoggerColorEnabled } from '../lib/logger.js';
 import * as pandocRunner from '../lib/pandoc-runner.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
-import { initTestProject, withTempDir } from './helpers.js';
+import { initTestProject, registerSkip, SKIP_REASONS, withTempDir } from './helpers.js';
 
 // Los tests que invocan pandoc real se marcan como skip si no está instalado
 // (mismo patrón que integration.test.ts): sin pandoc la suite pasa con skips.
 const pandocOk = await getPandocVersion().catch(() => null);
+if (!pandocOk) registerSkip('cli-layer.test.ts', SKIP_REASONS.pandoc);
 // unzip se usa para inspeccionar EPUBs generados: skip real si no está en PATH.
 const unzipOk = (await Bun.which('unzip')) !== null;
 

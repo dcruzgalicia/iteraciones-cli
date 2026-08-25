@@ -6,7 +6,7 @@ import type { LuaFilterGroup } from '../builder/filter-resolver.js';
 import { checkLatexEngine } from '../cli/doctor/system-checks.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { exec } from '../lib/run.js';
-import { withTempDir } from './helpers.js';
+import { registerSkip, SKIP_REASONS, withTempDir } from './helpers.js';
 
 /** Markdown original de entrada con frontmatter (el frontmatter fluye a pandoc). */
 const BODY = '---\ntitle: "Mi título"\ncreator: [Autor Uno, Autor Dos]\ndate: 2026-08-08\n---\n\nHola.\n';
@@ -28,6 +28,7 @@ const EXPORT_DOC = {
 };
 
 const pandocOk = await getPandocVersion().catch(() => null);
+if (!pandocOk) registerSkip('export-runner.test.ts', SKIP_REASONS.pandoc);
 // unzip se usa para inspeccionar el EPUB generado: skip real si no está en PATH.
 const unzipOk = (await Bun.which('unzip')) !== null;
 const latexOk = (await checkLatexEngine()).ok;
