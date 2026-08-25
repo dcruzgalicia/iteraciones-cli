@@ -6,7 +6,7 @@ import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
 const OUTPUT_EXTENSIONS = ['.html', '.tex', '.pdf', '.epub', '.md', '.png'];
 
 /** Auxiliares de latexmk que se acumulan en .iteraciones/tmp/pdf/ (por slot de concurrencia). */
-export const LATEXMK_AUX_EXTENSIONS = ['.aux', '.bbl', '.bcf', '.blg', '.fls', '.run.xml', '.fdb_latexmk', '.out', '.toc', '.log'];
+import { LATEXMK_AUX_EXTENSIONS } from './export/runner.js';
 
 const FORMAT_EXT_MAP: Record<string, string[]> = {
   latex: ['.tex'],

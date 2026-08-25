@@ -1,8 +1,8 @@
 import type { SiteConfig } from '../config/config-schema.js';
 import { logWarning } from '../lib/logger.js';
-import { type BibOptions, runPandoc } from '../lib/pandoc-runner.js';
+import { type BibOptions, MD_READER, runPandoc } from '../lib/pandoc-runner.js';
 import { type LuaFilterGroup, loadFilterGroups } from './filter-resolver.js';
-import { buildFormatsItems, extractReferencesBlock, type HtmlPageVars, MD_READER, metadataValue, removeTocReferencesLink } from './html-composer.js';
+import { buildFormatsItems, extractReferencesBlock, type HtmlPageVars, metadataValue, removeTocReferencesLink } from './html-composer.js';
 import type { BuildDocument } from './types.js';
 
 /**

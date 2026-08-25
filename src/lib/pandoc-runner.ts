@@ -4,6 +4,16 @@ import { ProcessSpawnError, ProcessTimeoutError, type RunResult, run } from './r
 /** Límite de tiempo de una invocación de pandoc: 2 minutos. */
 const PANDOC_TIMEOUT_MS = 120_000;
 
+/**
+ * Reader de markdown con auto-identifiers activos (headings con `id` para el
+ * TOC) y la extensión `mark` (`==texto==` → resaltado → \hl{} en LaTeX y
+ * <mark> en HTML; soul se carga en 29-text-decoration.tex). Es el formato de
+ * entrada de TODAS las conversiones; participa en el hash de filters para
+ * invalidar las salidas cacheadas si cambia (issue #2018: vive aquí, módulo
+ * de dominio de pandoc, no en un compositor).
+ */
+export const MD_READER = 'markdown+auto_identifiers+mark';
+
 export interface BibOptions {
   /** Ruta absoluta al archivo .bib. */
   bibliography: string;

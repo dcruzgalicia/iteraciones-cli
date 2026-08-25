@@ -3,12 +3,14 @@ import { copyFile, mkdir, rename, rm } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
 import { PandocError } from '../../lib/errors.js';
 import { logWarning } from '../../lib/logger.js';
-import { runPandoc } from '../../lib/pandoc-runner.js';
+import { MD_READER, runPandoc } from '../../lib/pandoc-runner.js';
 import { ProcessSpawnError, ProcessTimeoutError, run } from '../../lib/run.js';
-import { LATEXMK_AUX_EXTENSIONS } from '../cleanup.js';
 import type { LuaFilterGroup } from '../filter-resolver.js';
-import { MD_READER, metadataValue } from '../html-composer.js';
+import { metadataValue } from '../html-composer.js';
 import type { ExportDocument } from './types.js';
+
+/** Extensiones auxiliares que latexmk deja junto al .tex compilado. */
+export const LATEXMK_AUX_EXTENSIONS = ['.aux', '.bbl', '.bcf', '.blg', '.fls', '.run.xml', '.fdb_latexmk', '.out', '.toc', '.log'];
 
 /** Límite de tiempo de una compilación latexmk: 10 minutos. */
 const LATEXMK_TIMEOUT_MS = 600_000;
