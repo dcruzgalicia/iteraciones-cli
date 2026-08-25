@@ -173,6 +173,7 @@ Ejemplos:
   program
     .command('list-filters')
     .description('lista los filtros Lua disponibles y su estado')
+    .option('--verbose', 'incluye la descripción completa de cada filtro')
     .addHelpText(
       'after',
       `
@@ -180,7 +181,7 @@ Ejemplos:
   iteraciones list-filters    lista filters y preamble filters con su estado
 `,
     )
-    .action(() => runFilters(projectRoot()));
+    .action((options: { verbose?: boolean }) => runFilters(projectRoot(), options));
 
   return program;
 }

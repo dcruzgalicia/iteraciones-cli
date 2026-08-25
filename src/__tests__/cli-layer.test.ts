@@ -1694,34 +1694,42 @@ describe('doctor --info (antes runInfo)', () => {
 describe('runFilters', () => {
   afterEach(resetExitCode);
 
-  it('muestra descripciones completas (líneas de comentario unidas) y columnas alineadas', async () => {
+  it('por defecto muestra una línea por filtro: primera oración, ≤100 chars (#2027)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
       const stdoutSpy = spyOn(process.stdout, 'write');
       let output = '';
       try {
         process.exitCode = 0;
-        // Columnas fijas y holgadas: la suite no depende del ancho real del
-        // terminal (regresión: en un TTY estrecho las descripciones se truncaban
-        // y la aserción fallaba según el entorno de ejecución)
         await runFilters(dir, { columns: 400 });
       } finally {
         output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
         stdoutSpy.mockRestore();
       }
-      // La descripción de latex/02-dictum tiene 3 líneas de comentario: la
-      // frase completa termina en "si es Para." (antes se truncaba a mitad).
+      // Primera oración de latex/02-dictum (la descripción completa sigue en el registro)
+      expect(output).toMatch(/latex\/02-dictum {2,}lua {2}Convierte [^\n]*\.[^\n]*\[activo\]/);
+      // El detalle largo NO aparece por defecto
+      expect(output).not.toContain('si es Para.');
+      expect(output).not.toContain('expone el CLI como metadata babel-lang');
+    });
+  });
+
+  it('--verbose conserva las descripciones completas (#2027)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runFilters(dir, { columns: 400, verbose: true });
+      } finally {
+        output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
       expect(output).toContain('si es Para.');
-      expect(output).not.toContain('(formato LaTeX), con  [');
-      // Las descripciones de los preamble filters unen sus líneas % (antes solo
-      // la primera línea: 05-language quedaba en "el valor lo").
       expect(output).toContain('expone el CLI como metadata babel-lang');
       expect(output).toContain('sin el texto de información');
-      // Columnas alineadas: el nombre padded seguido de la columna lua
       expect(output).toMatch(/latex\/02-dictum {2,}lua {2}Convierte/);
-      // El prefijo ℹ solo aparece en los encabezados de sección, no en las filas
-      expect(output).not.toMatch(/^ℹ {2}latex\//m);
-      expect(process.exitCode).toBe(0);
     });
   });
 
