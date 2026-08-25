@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import {
-  buildFormatsItems,
-  extractReferencesBlock,
-  type FormatsLink,
-  loadReferencesCardTemplate,
-  removeTocReferencesLink,
-} from '../builder/html-composer.js';
+import { buildFormatsItems, type FormatsLink } from '../builder/html-composer.js';
+import { extractReferencesBlock, loadReferencesCardTemplate, removeTocReferencesLink } from '../builder/html-postprocess.js';
 
 /** Wrapper representativo de la tarjeta (la estructura real vive en el recurso). */
 const CARD_TEMPLATE = '<div class="wrap"><h2 id="refs-heading" class="chip">Referencias</h2>{{refs-list}}</div>';
