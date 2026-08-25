@@ -8,6 +8,7 @@ import { computeActiveFormats } from '../config/site-config.js';
 import { BuildError, ConfigError } from '../lib/errors.js';
 import { logWarning, runWithWarningSink } from '../lib/logger.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
+import { plural } from '../lib/plural.js';
 import { buildAssets } from './build-assets.js';
 import { type BuildMetadata, computeBuildMetadata, computeWorkSets } from './build-planner.js';
 import { cleanupCoverImages, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges } from './cleanup.js';
@@ -295,15 +296,16 @@ async function prepareEnvironment(
   return ctx;
 }
 
-/** Limpieza de dist/ por cambios de formatos y portadas huérfanas. */
-async function runFormatCleanup(ctx: BuildContext, plan: BuildMetadata, allDocs: BuildDocument[], siteConfig: SiteConfig): Promise<void> {
-  await cleanupRemovedFormats(ctx, allDocs, plan.removedFormats);
+/** Limpieza de dist/ por cambios de formatos y portadas huérfanas (#2012). Devuelve archivos eliminados. */
+async function runFormatCleanup(ctx: BuildContext, plan: BuildMetadata, allDocs: BuildDocument[], siteConfig: SiteConfig): Promise<number> {
+  let removed = await cleanupRemovedFormats(ctx, allDocs, plan.removedFormats);
   // Portadas PDF huérfanas: si la opción está desactivada, se eliminan los
   // .png que quedaron de builds anteriores (activar/desactivar invalida el
   // hash del formato PDF y re-renderiza, pero nadie más borraría la imagen).
   if (plan.activeFormats.pdf && siteConfig.format?.pdf?.coverImage !== true) {
-    await cleanupCoverImages(ctx, allDocs);
+    removed += await cleanupCoverImages(ctx, allDocs);
   }
+  return removed;
 }
 
 /** Conjuntos de trabajo + razones de invalidación (fuente única, #2022). */
@@ -437,7 +439,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
   // markdown original (pandoc-directo) y los exportSets ya incluyen todos los
   // docs vía formatInvalidated (cambia al activarse un formato).
 
-  await runFormatCleanup(ctx, plan, allDocs, siteConfig);
+  let cleanedFiles = await runFormatCleanup(ctx, plan, allDocs, siteConfig);
 
   const { work, invalidations } = planWork(plan, ctx, prevState, allDocs, discoveredChanges, log);
 
@@ -454,8 +456,12 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
   }
 
   // Cleanup de archivos eliminados y slugs cambiados
-  await cleanupDeletedFiles(ctx, discoveredChanges, allDocs, deletedEntries);
-  await cleanupSlugChanges(ctx, slugChangedEntries);
+  cleanedFiles += await cleanupDeletedFiles(ctx, discoveredChanges, allDocs, deletedEntries);
+  cleanedFiles += await cleanupSlugChanges(ctx, slugChangedEntries);
+  // Informe en UNA línea del tracker (#2012)
+  if (cleanedFiles > 0) {
+    log(`Limpieza de dist: ${plural(cleanedFiles, 'archivo residual eliminado', 'archivos residuales eliminados')}.`);
+  }
 
   // Solo hubo eliminaciones o slugs cambiados: el cleanup ya corrió
   if (

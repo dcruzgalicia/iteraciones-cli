@@ -255,9 +255,10 @@ export async function discover(
       }
 
       // Store base data (slug resolution happens later, after all files are processed)
-      // Preservar el slug anterior en la entrada para que resolveSlugs detecte el
-      // cambio contra el slug final: comparar por prefijos aquí falla cuando el slug
-      // nuevo es prefijo del viejo (quitar author, acortar título, sufijo -dN).
+      // Preservar el slug anterior SIN aplicarle el manualSlug: resolveSlugs
+      // compara el slug final contra este valor para registrar cambios —
+      // sobrescribirlo aquí con manualSlug hacía que los cambios de slug
+      // manual nunca se registraran y dejaran huérfanos en dist (#2012).
       const prevSlug = discoveryIndex.get(relativePath)?.slug;
       discoveryIndex.set(relativePath, {
         title,
@@ -268,7 +269,7 @@ export async function discover(
         mtime,
         size,
         hash,
-        slug: manualSlug ?? prevSlug,
+        slug: prevSlug,
         manualSlug,
       });
     }
