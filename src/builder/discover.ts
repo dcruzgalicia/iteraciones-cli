@@ -10,6 +10,7 @@ import { listMarkdownDocuments } from './gitignore.js';
 import { looseColonLines, looseColonsMessage, MISSING_TITLE_WARNING, validateFrontmatterFields } from './project-validator.js';
 import { resolveSlugs } from './slug-resolver.js';
 import { type BibFileCache, type BuildState, type FilterFileCache, hashString, loadStateFile, saveStateFile } from './state.js';
+import { cacheHitFor } from './state-hash.js';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
 
 interface DiscoverResult {
@@ -133,8 +134,11 @@ export async function discover(
     let text: string | null = null;
 
     if (cacheValid) {
-      if (mtime === cached.mtime && size === cached.size) {
-        // UNCHANGED: mismo mtime y tamaño → sin leer, sin hash (~stat puro)
+      // Decisión única de caché (#2020): mismo mtime y tamaño → UNCHANGED
+      // (sin leer, sin hash: ~stat puro). El caso ambiguo (mtime distinto,
+      // size igual) conserva su manejo especial abajo: releer y hashear para
+      // detectar touches sin reprocesar.
+      if (cacheHitFor({ mtime: cached.mtime as number, size: cached.size as number, hash: cached.hash as string }, mtime, size) !== null) {
         needsProcessing = false;
       } else if (size !== cached.size) {
         // CHANGED: el tamaño cambió → no hace falta hash

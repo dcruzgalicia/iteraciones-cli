@@ -346,3 +346,52 @@ describe('resolveBibOptions', () => {
     });
   });
 });
+
+describe('núcleo content-addressed: hashFileCached (#2020)', () => {
+  it('archivo desaparecido ⇒ null (política única de ENOENT)', async () => {
+    await withTempDir(async (dir) => {
+      const { join } = await import('node:path');
+      const { hashFileCached } = await import('../builder/state-hash.js');
+      const out: Record<string, { mtime: number; size: number; hash: string }> = {};
+      const result = await hashFileCached(join(dir, 'no-existe.bib'), 'k', undefined, out);
+      expect(result).toBeNull();
+      expect(Object.keys(out).length).toBe(0);
+    });
+  });
+
+  it('error no-ENOENT se propaga (directorio leído como texto)', async () => {
+    await withTempDir(async (dir) => {
+      const { join } = await import('node:path');
+      const { mkdir } = await import('node:fs/promises');
+      const { hashFileCached } = await import('../builder/state-hash.js');
+      await mkdir(join(dir, 'subdir'));
+      // stat() tiene éxito sobre un directorio; text() falla con EISDIR
+      await expect(hashFileCached(join(dir, 'subdir'), 'k', undefined, {})).rejects.toThrow();
+    });
+  });
+
+  it('hit de caché reutiliza la entrada previa sin releer; miss recalcula y persiste', async () => {
+    await withTempDir(async (dir) => {
+      const { join } = await import('node:path');
+      const { writeFile } = await import('node:fs/promises');
+      const { hashFileCached } = await import('../builder/state-hash.js');
+      const file = join(dir, 'f.lua');
+      await writeFile(file, '-- contenido\n', 'utf8');
+      const prev = { [file]: { mtime: 0, size: 999, hash: 'viejo' } };
+      const out: Record<string, { mtime: number; size: number; hash: string }> = {};
+      const first = await hashFileCached(file, file, prev, out);
+      expect(first).not.toBeNull();
+      expect(first).not.toBe('viejo');
+      expect(out[file]?.hash).toBe(first as string);
+
+      // Hit exacto: la entrada previa (con hash correcto) se reutiliza tal cual
+      const prevEntry = out[file];
+      if (prevEntry === undefined) throw new Error('entrada de caché esperada');
+      const prevOk = { [file]: prevEntry };
+      const out2: typeof out = {};
+      const second = await hashFileCached(file, file, prevOk, out2);
+      expect(second).toBe(prevEntry.hash);
+      expect(out2[file]).toBe(prevOk[file]);
+    });
+  });
+});
