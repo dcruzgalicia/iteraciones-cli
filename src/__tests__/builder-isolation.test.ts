@@ -161,3 +161,31 @@ describe('invalidación por entorno (#2024)', () => {
     }
   });
 });
+
+describe('escritura única de state.json (#2025)', () => {
+  it('solo persistCompletedState escribe estado: cero escritores a mitad de build', async () => {
+    // La propiedad "una sola escritura" es arquitectónica: discovery ya no
+    // persiste, y el orquestador no marca completado fuera del cierre común.
+    const orchSrc = await Bun.file('src/builder/orchestrator.ts').text();
+    expect(orchSrc).not.toMatch(/markStateCompleted|updateCssHash|saveStateFile/);
+    const discSrc = await Bun.file('src/builder/discover.ts').text();
+    expect(discSrc).not.toMatch(/saveStateFile/);
+    // El cierre común contiene la única llamada
+    expect(orchSrc).toContain('await persistCompletedState(deps.cwd, deps.pendingState)');
+    expect((orchSrc.match(/await persistCompletedState/g) ?? []).length).toBe(1);
+  });
+
+  it('round-trip: un build sin cambios después de uno con trabajo no reescribe ni reprocesa', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      process.exitCode = 0;
+      const { build } = await import('../builder/orchestrator.js');
+      await build(dir);
+      const mtime1 = (await Bun.file(join(dir, '.iteraciones/state.json')).stat()).mtimeMs;
+      await Bun.sleep(5);
+      await build(dir);
+      const mtime2 = (await Bun.file(join(dir, '.iteraciones/state.json')).stat()).mtimeMs;
+      expect(mtime2).toBe(mtime1);
+    });
+  });
+});

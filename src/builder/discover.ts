@@ -9,9 +9,20 @@ import { mapWithConcurrency } from '../lib/run.js';
 import { listMarkdownDocuments } from './gitignore.js';
 import { looseColonLines, looseColonsMessage, MISSING_TITLE_WARNING, validateFrontmatterFields } from './project-validator.js';
 import { resolveSlugs } from './slug-resolver.js';
-import { type BibFileCache, type BuildState, type FilterFileCache, hashString, loadStateFile, saveStateFile, stateUsableForBuild } from './state.js';
 import { cacheHitFor } from './state-hash.js';
+import {
+  type BibFileCache,
+  type BuildState,
+  type FilterFileCache,
+  hashString,
+  loadStateFile,
+  STATE_SCHEMA_VERSION,
+  stateUsableForBuild,
+} from './state-serialize.js';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
+
+/** Resultado de discovery + estado pendiente para la única escritura del cierre (#2025). */
+export type DiscoverResultAndPending = DiscoverResult & { pendingState: BuildState | null };
 
 interface DiscoverResult {
   relativePaths: string[];
@@ -101,7 +112,7 @@ export async function discover(
       bibFileCache: BibFileCache;
     };
   },
-): Promise<DiscoverResult> {
+): Promise<DiscoverResultAndPending> {
   const relativePaths: string[] = [];
 
   // Respetar .gitignore y directorios ignorados: descubrimiento compartido
@@ -309,8 +320,10 @@ export async function discover(
     if (!recentFiles.includes(path)) recentFiles.push(path);
   }
 
-  // Solo persistir state.json si hubo cambios (archivos nuevos/modificados/eliminados
-  // o los hashes de invalidación cambiaron). En builds sin cambios, evitar I/O innecesario.
+  // Estado pendiente (#2025): discovery NO escribe; el cierre común del
+  // orquestador persiste UNA vez (persistCompletedState). Pendiente solo si
+  // hubo cambios (nuevos/modificados/eliminados o hashes de invalidación);
+  // sin pendiente, el estado en disco ya está completo y vigente.
   const hasChanged =
     changedPaths.size > 0 ||
     !useCache ||
@@ -321,21 +334,22 @@ export async function discover(
     options.meta?.bibHash !== prevState?.bibHash ||
     JSON.stringify(options.meta?.bibFileCache) !== JSON.stringify(prevState?.bibFileCache);
 
-  if (hasChanged) {
-    await saveStateFile(cwd, {
-      startedAt: thisBuildStartedAt,
-      activeFormats: options.activeFormats ?? [],
-      outputDir: options.outputDir,
-      entries: discoveryIndex,
-      filtersHash: options.meta?.filtersHash,
-      filterFileCache: options.meta?.filterFileCache,
-      configHashes: options.meta?.configHashes,
-      bibHash: options.meta?.bibHash,
-      bibFileCache: options.meta?.bibFileCache,
-    });
-  }
+  const pendingState: BuildState | null = hasChanged
+    ? {
+        schemaVersion: STATE_SCHEMA_VERSION,
+        startedAt: thisBuildStartedAt,
+        activeFormats: options.activeFormats ?? [],
+        outputDir: options.outputDir,
+        entries: discoveryIndex,
+        filtersHash: options.meta?.filtersHash,
+        filterFileCache: options.meta?.filterFileCache,
+        configHashes: options.meta?.configHashes,
+        bibHash: options.meta?.bibHash,
+        bibFileCache: options.meta?.bibFileCache,
+      }
+    : null;
 
-  return { relativePaths, changedPaths, discoveryIndex, deletedEntries, slugChangedEntries };
+  return { relativePaths, changedPaths, discoveryIndex, deletedEntries, slugChangedEntries, pendingState };
 }
 
 /**

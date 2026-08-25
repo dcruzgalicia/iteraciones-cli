@@ -3,6 +3,9 @@ import { dirname, join } from 'node:path';
 import { logWarning } from '../lib/logger.js';
 import type { BibFileCache } from './state-bib.js';
 import type { FilterFileCache } from './state-hash.js';
+
+export type { BibFileCache, FilterFileCache };
+
 import type { DiscoveryEntry } from './types.js';
 
 /** Caché por archivo HTML de dist: mtime+size evitan re-leer contenido (mismo patrón que FilterFileCache). */
@@ -16,7 +19,12 @@ const STATE_PATH = join('.iteraciones', 'state.json');
  * Combina el report (startedAt, activeFormats), el discovery index (entries)
  * y los hashes de invalidación (filters, config por formato, bibliografía).
  */
+/** Versión del schema de state.json: incompatible ⇒ rebuild completo (una vez por bump). */
+export const STATE_SCHEMA_VERSION = 2;
+
 export interface BuildState {
+  /** Versión del schema con la que se escribió el estado. */
+  schemaVersion: number;
   /** Timestamp del build anterior. */
   startedAt: number;
   /** Formatos que estaban activos en el build anterior. */
@@ -65,7 +73,10 @@ export async function loadStateFile(cwd: string): Promise<BuildState | null> {
     const raw = await file.text();
     const parsed = JSON.parse(raw) as Partial<BuildState>;
     if (typeof parsed.startedAt !== 'number') return null;
+    // Schema incompatible (estado de una versión anterior): rebuild completo
+    if (parsed.schemaVersion !== STATE_SCHEMA_VERSION) return null;
     return {
+      schemaVersion: parsed.schemaVersion,
       startedAt: parsed.startedAt,
       activeFormats: Array.isArray(parsed.activeFormats) ? parsed.activeFormats : [],
       outputDir: parsed.outputDir,
@@ -99,10 +110,20 @@ export function stateUsableForBuild(state: BuildState | null): BuildState | null
 }
 
 /**
- * Marca el estado persistido como build completo. Se llama al final de un
- * build exitoso: el estado que escribió discover (sin flag) pasa a ser válido
- * como caché para el siguiente build. No escribe si el estado no existe o ya
- * está completo (el camino "sin cambios" no debe tocar el disco).
+ * ÚNICA escritura de state.json por build (#2025): persiste el estado
+ * pendiente que acumuló discovery + assets, marcado como completo. Se llama
+ * desde el cierre común del orquestador; sin pendiente (build sin cambios)
+ * no escribe — el estado en disco ya está completo y vigente.
+ */
+export async function persistCompletedState(cwd: string, pending: BuildState | null): Promise<void> {
+  if (!pending || pending.completed === true) return;
+  pending.completed = true;
+  await saveStateFile(cwd, pending);
+}
+
+/**
+ * Marca como completo el estado en disco (flujo legacy de tests y comando info:
+ * el build real usa persistCompletedState en su cierre único).
  */
 export async function markStateCompleted(cwd: string): Promise<void> {
   const state = await loadStateFile(cwd);
@@ -127,7 +148,7 @@ export async function saveStateFile(cwd: string, state: BuildState): Promise<voi
   const filePath = join(cwd, STATE_PATH);
   await mkdir(dirname(filePath), { recursive: true });
   const tmpPath = `${filePath}.tmp`;
-  await Bun.write(tmpPath, JSON.stringify({ ...state, entries: Object.fromEntries(state.entries) }));
+  await Bun.write(tmpPath, JSON.stringify({ ...state, schemaVersion: STATE_SCHEMA_VERSION, entries: Object.fromEntries(state.entries) }));
   try {
     await rename(tmpPath, filePath);
   } catch {
@@ -135,20 +156,4 @@ export async function saveStateFile(cwd: string, state: BuildState): Promise<voi
     await rm(filePath, { force: true });
     await rename(tmpPath, filePath);
   }
-}
-
-/**
- * Actualiza el cssHash y la caché por archivo de HTML del estado persistido
- * (el resto lo escribió discover con el índice actual). No escribe si nada
- * cambió.
- */
-export async function updateCssHash(cwd: string, cssHash: string, cssFileCache?: CssFileCache): Promise<void> {
-  const state = await loadStateFile(cwd);
-  if (!state) return;
-  if (state.cssHash === cssHash && (cssFileCache === undefined || JSON.stringify(state.cssFileCache) === JSON.stringify(cssFileCache))) {
-    return;
-  }
-  state.cssHash = cssHash;
-  if (cssFileCache !== undefined) state.cssFileCache = cssFileCache;
-  await saveStateFile(cwd, state);
 }
