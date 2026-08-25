@@ -183,8 +183,11 @@ export async function runDocumentPipeline(
     pdfConsumer.markProducerDone();
   } catch (err) {
     // Fallo del pool 1: cancelar la cola PDF para que los workers salgan sin
-    // compilar lo pendiente y el error se propague sin colgar el proceso.
+    // compilar lo pendiente, ESPERAR a los que están en vuelo (#2013: un
+    // latexmk vivo ejecutaría su rename hacia dist/ después del fallo) y
+    // recién entonces propagar el error.
     pdfConsumer.cancel();
+    await pdfConsumer.quiesce();
     throw err;
   }
 
