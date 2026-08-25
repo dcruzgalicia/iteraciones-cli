@@ -2279,6 +2279,71 @@ describe('runInit', () => {
   });
 });
 
+describe('huecos transversales (#2032)', () => {
+  afterEach(resetExitCode);
+
+  it('state.json corrupto ⇒ rebuild completo sin crash y estado válido después', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      process.exitCode = 0;
+      await runBuild(dir); // primer build: caché válida
+      expect(process.exitCode).toBe(0);
+
+      // Corromper/truncar el estado a mitad de escritura simulado
+      const { writeFile } = await import('node:fs/promises');
+      await writeFile(join(dir, '.iteraciones', 'state.json'), '{"startedAt":42,"activeFor', 'utf8');
+
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir);
+      } finally {
+        output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      // Rebuild completo: el documento se procesó, no se sirvió de caché
+      expect(output).toContain('Documentos procesados         1');
+      expect(output).not.toContain('Sin cambios');
+      // El estado quedó re-escrito válido y completo por la escritura única
+      const state = JSON.parse(await Bun.file(join(dir, '.iteraciones', 'state.json')).text());
+      expect(state.completed).toBe(true);
+      expect(state.schemaVersion).toBe(2);
+    });
+  });
+
+  it('humo del contrato --json contra docs/architecture.md', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let raw = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir, { json: true });
+      } finally {
+        raw = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      // Una única línea en stdout y es JSON válido con EXACTAMENTE las claves documentadas
+      const lines = raw
+        .trim()
+        .split('\n')
+        .filter((l) => l.trim() !== '');
+      expect(lines.length).toBe(1);
+      const parsed = JSON.parse(lines[0]!) as Record<string, unknown>;
+      expect(Object.keys(parsed).sort()).toEqual(['cached', 'durationMs', 'formats', 'invalidations', 'outputDir', 'processed'].sort());
+      expect(typeof parsed['processed']).toBe('number');
+      expect(typeof parsed['cached']).toBe('number');
+      expect(Array.isArray(parsed['formats'])).toBe(true);
+      expect(typeof parsed['outputDir']).toBe('string');
+      expect(typeof parsed['durationMs']).toBe('number');
+      expect(Array.isArray(parsed['invalidations'])).toBe(true);
+    });
+  });
+});
+
 describe('runNew', () => {
   afterEach(resetExitCode);
 
