@@ -81,6 +81,58 @@ async function runTracker(
   return output;
 }
 
+describe('salida non-TTY sin bytes de control (#2029)', () => {
+  function pipeStream(): { stream: NodeJS.WriteStream; chunks: string[] } {
+    const chunks: string[] = [];
+    const stream = {
+      isTTY: false,
+      write(chunk: string | Uint8Array): boolean {
+        chunks.push(String(chunk));
+        return true;
+      },
+    } as unknown as NodeJS.WriteStream;
+    return { stream, chunks };
+  }
+
+  it('no emite ninguna secuencia de escape ANSI en todo el ciclo del build', async () => {
+    const { stream, chunks } = pipeStream();
+    const tracker = new ProgressTracker({ renderer: 'default', stream, tty: false });
+    tracker.setFormats([
+      { phase: 'html', active: true },
+      { phase: 'pdf', active: false },
+    ]);
+    tracker.planPhases(['discovery']);
+    tracker.startPhase('discovery');
+    tracker.completePhase(2, 'discovery');
+    tracker.log('mensaje informativo');
+    tracker.addWarning('advertencia de prueba');
+    tracker.startLightFormats();
+    await tracker.finish(2, 0, ['html'], '/tmp/salida', ['documentos modificados']);
+    // fail() también debe ser limpio en pipes
+    const chunksAntes = chunks.length;
+    await tracker.fail();
+
+    const output = chunks.join('');
+    const ESC = String.fromCharCode(27);
+    expect(output.includes(ESC)).toBe(false);
+    expect(chunks.length).toBeGreaterThanOrEqual(chunksAntes);
+  });
+
+  it('el hook de restauración de cursor solo se registra en TTY', () => {
+    const antes = [...process.listeners('exit')];
+    const ttyStream = pipeStream();
+    new ProgressTracker({ renderer: 'default', stream: ttyStream.stream, tty: true });
+    const añadidos = process.listeners('exit').filter((l) => !antes.includes(l));
+    expect(añadidos.length).toBe(1);
+    // Restauración quirúrgica: solo el listener que este test provocó
+    for (const l of añadidos) process.removeListener('exit', l);
+
+    const pipe = pipeStream();
+    new ProgressTracker({ renderer: 'default', stream: pipe.stream, tty: false });
+    expect(process.listeners('exit').filter((l) => !antes.includes(l)).length).toBe(0);
+  });
+});
+
 describe('renderer TTY (stream inyectado)', () => {
   /** Stream de captura: los tests no dependen de process.stdout global. */
   function fakeStream(): { stream: NodeJS.WriteStream; chunks: string[] } {
