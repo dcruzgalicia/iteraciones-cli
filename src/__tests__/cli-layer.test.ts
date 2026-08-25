@@ -2281,8 +2281,18 @@ describe('runNew', () => {
       const file = Bun.file(join(dir, 'posts/mi-articulo.md'));
       expect(await file.exists()).toBe(true);
       const content = await file.text();
-      expect(content).toContain('title:');
+      expect(content).toContain('title: "Mi Articulo"');
       expect(content).toContain('date:');
+    });
+  });
+
+  it('capitaliza cada palabra del título inferido (#2036)', async () => {
+    await withTempDir(async (dir) => {
+      process.exitCode = 0;
+      await runNew(dir, 'posts/una-larga-historia.md');
+      expect(await Bun.file(join(dir, 'posts/una-larga-historia.md')).text()).toContain('title: "Una Larga Historia"');
+      await runNew(dir, 'hola');
+      expect(await Bun.file(join(dir, 'hola.md')).text()).toContain('title: "Hola"');
     });
   });
 
@@ -2315,7 +2325,7 @@ describe('runNew', () => {
       expect(process.exitCode).toBe(0);
       expect(await Bun.file(join(dir, 'mi-articulo-nuevo.md')).exists()).toBe(true);
       const content = await Bun.file(join(dir, 'mi-articulo-nuevo.md')).text();
-      expect(content).toContain('title: "Mi articulo nuevo"');
+      expect(content).toContain('title: "Mi Articulo Nuevo"');
     });
   });
 
@@ -2404,7 +2414,7 @@ describe('runNew', () => {
       }
       expect(process.exitCode).toBe(0);
       const content = await Bun.file(join(dir, 'mi-artículo.md')).text();
-      expect(content).toContain('title: "Mi artículo"');
+      expect(content).toContain('title: "Mi Artículo"');
       expect(output).not.toContain('⚠');
     });
   });
