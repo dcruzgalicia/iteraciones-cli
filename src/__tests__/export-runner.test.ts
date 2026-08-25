@@ -103,6 +103,18 @@ describe('export/runner (convertToEpub)', () => {
       expect(stdout).toContain('>2026-08-08</dc:date>');
     });
   });
+
+  it.skipIf(!pandocOk || !unzipOk)('el frontmatter language sobreescribe el idioma del EPUB (contrato unificado #2010)', async () => {
+    await withTempDir(async (dir) => {
+      const out = join(dir, 'libro.epub');
+      await convertToEpub(BODY, out, EXPORT_DOC, NO_FILTERS, undefined, { language: 'en' });
+      const proc = Bun.spawn(['unzip', '-p', out, 'EPUB/content.opf'], { stdout: 'pipe', stderr: 'pipe' });
+      const [stdout, , code] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+      expect(code).toBe(0);
+      expect(stdout).toContain('>en</dc:language>');
+      expect(stdout).not.toContain('>es-MX</dc:language>');
+    });
+  });
 });
 
 describe('export/runner (convertToPdf)', () => {

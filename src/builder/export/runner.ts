@@ -28,7 +28,7 @@ const XMP_TEMPLATE_RESOURCE = join(import.meta.dir, '../../lib/resources/xmp/pdf
  * el resto de las conversiones.
  *
  * Contrato de metadatos: doc.metadata (ExportMetadata) lleva los valores
- * efectivos del documento y fm el frontmatter crudo; lang y toc del
+ * efectivos del documento y fm el frontmatter crudo; language y toc del
  * frontmatter sobreescriben los defaults.
  */
 export async function convertToEpub(

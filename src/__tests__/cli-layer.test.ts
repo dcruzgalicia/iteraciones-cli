@@ -664,15 +664,53 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
-  it('el frontmatter lang sobreescribe el de la configuración', async () => {
+  it('el frontmatter language sobreescribe el de la configuración en HTML, EPUB y Markdown', async () => {
     await withTempDir(async (dir) => {
-      await initTestProject(dir); // config sin lang → es-MX por defecto
-      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\nlang: en\n---\n\nContenido.\n', 'utf8');
+      await initTestProject(dir); // config sin language → es-MX por defecto
+      // Habilitar los tres formatos ligeros: el contrato de idioma es común
+      await writeFile(
+        join(dir, 'iteraciones.config.yaml'),
+        [
+          'language: es-MX',
+          'format:',
+          '  html:',
+          '    site:',
+          '      title: Test',
+          '    generate: true',
+          '  epub:',
+          '    generate: true',
+          '  markdown:',
+          '    generate: true',
+        ].join('\n'),
+        'utf8',
+      );
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\nlanguage: en\n---\n\nContenido.\n', 'utf8');
       process.exitCode = 0;
       await runBuild(dir);
       expect(process.exitCode).toBe(0);
       const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
       expect(html).toContain('<html lang="en"');
+      // Contrato unificado (#2010): el mismo campo gobierna EPUB y export Markdown
+      expect(await Bun.file(join(dir, 'dist', 'files', 'test-document.epub')).exists()).toBe(true);
+      expect(await Bun.file(join(dir, 'dist', 'files', 'test-document.md')).exists()).toBe(true);
+    });
+  });
+
+  it('el frontmatter lang es un campo ignorado (contrato unificado en language)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\nlang: en\n---\n\nContenido.\n', 'utf8');
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      expect(output).toContain('campos de frontmatter ignorados por el pipeline: lang');
     });
   });
 

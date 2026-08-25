@@ -26,7 +26,8 @@ export async function htmlPageFromMarkdown(
 ): Promise<string> {
   const filters = luaFilters ?? (await loadFilterGroups(siteConfig, siteConfig.disabledFilters, cwd));
   // Valores efectivos: el frontmatter del documento manda; la config aporta defaults
-  const lang = typeof fm.lang === 'string' && fm.lang ? fm.lang : vars.lang;
+  // Contrato de idioma unificado: `language` en HTML, EPUB y Markdown (issue #2010)
+  const lang = typeof fm.language === 'string' && fm.language ? (fm.language as string) : vars.lang;
   const siteTitle = typeof fm['site-title'] === 'string' && fm['site-title'] ? (fm['site-title'] as string) : vars.siteTitle;
   const tagline = typeof fm.tagline === 'string' && fm.tagline ? (fm.tagline as string) : vars.tagline;
   const theme = typeof fm.theme === 'string' && fm.theme ? (fm.theme as string) : vars.theme;
