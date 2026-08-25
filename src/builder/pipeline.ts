@@ -442,6 +442,7 @@ async function processDocumentFormats(
       warnedLangs,
       pageDimensions,
       cropActive,
+      pdfxActive,
     );
     // Con 99-pdfx activo se inyectan los metadatos XMP e Info en el .tex
     // (filecontents + \pdfinfo): el tex de dist/ queda autocontenido (issue #1970).
