@@ -39,9 +39,8 @@ export async function resolveSlugs(
   // en la resolución automática. El cambio contra el slug previo (de state.json)
   // se reporta para limpiar los outputs del slug anterior.
   for (const [relPath, entry] of discoveryIndex) {
-    if (!entry.slugFixed) continue;
     const newSlug = entry.manualSlug;
-    if (newSlug === undefined) continue; // defensivo: slugFixed implica manualSlug
+    if (newSlug === undefined) continue;
     const prevSlug = entry.slug;
     if (prevSlug && prevSlug !== newSlug) {
       changedPaths.push(relPath);
@@ -54,7 +53,7 @@ export async function resolveSlugs(
   // Agrupar por slug base (solo entradas sin slug manual)
   const slugGroups = new Map<string, string[]>();
   for (const [relPath, entry] of discoveryIndex) {
-    if (entry.slugFixed) continue;
+    if (entry.manualSlug !== undefined) continue;
     const slugBase = computeSlug({ title: entry.title, creator: entry.creator }, { fallbackPath: relPath });
     const dir = dirname(relPath);
     const key = dir === '.' ? slugBase : `${dir}/${slugBase}`;
