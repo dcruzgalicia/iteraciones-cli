@@ -11,7 +11,7 @@ import { checkPandoc } from '../lib/pandoc-runner.js';
 import { buildAssets } from './build-assets.js';
 import { type BuildMetadata, computeBuildMetadata, computeWorkSets } from './build-planner.js';
 import { cleanupCoverImages, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges } from './cleanup.js';
-import { buildDocsFromIndex, discover } from './discover.js';
+import { buildDocsFromIndex, discover, loadPrevState, noPrevState } from './discover.js';
 import { validateDisabledFilters } from './filter-resolver.js';
 import { runPdfxOutputValidation } from './pdfx-check.js';
 import { runDocumentPipeline } from './pipeline.js';
@@ -19,7 +19,7 @@ import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, vali
 import { validateConfigFilePaths } from './project-validator.js';
 import { silentReporter } from './reporter.js';
 import type { BuildState } from './state.js';
-import { clearStateFile, loadStateFile, markStateCompleted, stateUsableForBuild, updateCssHash } from './state.js';
+import { clearStateFile, markStateCompleted, updateCssHash } from './state.js';
 import type { BuildContext, BuildDocument, BuildReporter, DiscoveryEntry } from './types.js';
 
 export interface BuildOptions {
@@ -379,7 +379,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
   // engañosos y fuerza el reprocesamiento completo. Sin --full, solo un estado
   // con completed:true es caché válida (stateUsableForBuild): un estado de un
   // build interrumpido se ignora y se reprocesa todo.
-  const prevState = options.full ? null : stateUsableForBuild(await loadStateFile(cwd));
+  const prevState = options.full ? noPrevState() : await loadPrevState(cwd);
   const plan = await computeBuildMetadata(cwd, siteConfig, prevState, effectiveDisabledPreamble);
   logInvalidations(plan, log);
 

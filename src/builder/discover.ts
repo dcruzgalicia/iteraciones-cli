@@ -9,7 +9,7 @@ import { mapWithConcurrency } from '../lib/run.js';
 import { listMarkdownDocuments } from './gitignore.js';
 import { looseColonLines, looseColonsMessage, MISSING_TITLE_WARNING, validateFrontmatterFields } from './project-validator.js';
 import { resolveSlugs } from './slug-resolver.js';
-import { type BibFileCache, type BuildState, type FilterFileCache, hashString, loadStateFile, saveStateFile } from './state.js';
+import { type BibFileCache, type BuildState, type FilterFileCache, hashString, loadStateFile, saveStateFile, stateUsableForBuild } from './state.js';
 import { cacheHitFor } from './state-hash.js';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
 
@@ -70,12 +70,26 @@ export function computeSlug(
  *     hash igual al caché          → unchanged (fue un touch) → actualizar mtime
  *     hash distinto                → changed
  */
+/**
+ * Estado previo para `discover`: lee state.json y lo valida como caché
+ * utilizable. Constructor explícito del contrato post-tri-state (#2023).
+ */
+export async function loadPrevState(cwd: string): Promise<BuildState | null> {
+  return stateUsableForBuild(await loadStateFile(cwd));
+}
+
+/** Sin estado previo (--full o primer build): constructor explícito (#2023). */
+export function noPrevState(): BuildState | null {
+  return null;
+}
+
 export async function discover(
   cwd: string,
   options: {
     full?: boolean;
     activeFormats?: string[];
-    prevState?: BuildState | null;
+    /** Estado previo explícito: loadPrevState(cwd) o noPrevState() — sin tri-state (#2023). */
+    prevState: BuildState | null;
     /** Directorio de salida del build actual (se persiste para el comando info). */
     outputDir?: string;
     /** Hashes de invalidación calculados por el orchestrator, guardados en state.json. */
@@ -86,7 +100,7 @@ export async function discover(
       bibHash: string;
       bibFileCache: BibFileCache;
     };
-  } = {},
+  },
 ): Promise<DiscoverResult> {
   const relativePaths: string[] = [];
 
@@ -95,8 +109,7 @@ export async function discover(
   relativePaths.push(...(await listMarkdownDocuments(cwd)));
 
   const useCache = !options.full;
-  // Si orchestrator ya pasó el estado, no leer state.json otra vez
-  const prevState = options.prevState !== undefined ? options.prevState : useCache ? await loadStateFile(cwd) : null;
+  const prevState = options.prevState;
   const discoveryIndex = useCache ? (prevState?.entries ?? new Map<string, DiscoveryEntry>()) : new Map<string, DiscoveryEntry>();
 
   const currentSet = new Set(relativePaths);
@@ -245,7 +258,6 @@ export async function discover(
         size,
         hash,
         slug: manualSlug ?? prevSlug,
-        slugFixed: manualSlug !== undefined,
         manualSlug,
       });
     }

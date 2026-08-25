@@ -6,9 +6,7 @@ export interface DiscoveryEntry {
   creator: string[];
   date?: string;
   slug?: string;
-  /** Slug fijado por el usuario en el frontmatter (campo slug:). */
-  slugFixed?: boolean;
-  /** Valor del slug manual del frontmatter (resuelto por resolveSlugs). */
+  /** Valor del slug manual del frontmatter (campo slug:); undefined = automático. */
   manualSlug?: string;
   /** Frontmatter YAML completo parseado: fluye a pandoc como metadata del documento. */
   fm?: Record<string, unknown>;

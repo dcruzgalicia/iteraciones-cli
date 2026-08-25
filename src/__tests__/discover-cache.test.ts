@@ -2,7 +2,8 @@ import { describe, expect, it, spyOn } from 'bun:test';
 import { mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { discover } from '../builder/discover.js';
+import { discover, loadPrevState, noPrevState } from '../builder/discover.js';
+import { markStateCompleted } from '../builder/state.js';
 
 /**
  * Caché content-addressed de discovery:
@@ -25,7 +26,7 @@ describe('discover (caché content-addressed)', () => {
   it('primer build marca todos los documentos como changed', async () => {
     const cwd = makeProject();
     try {
-      const result = await discover(cwd);
+      const result = await discover(cwd, { prevState: await loadPrevState(cwd) });
       expect(result.changedPaths).toEqual(new Set(['doc.md']));
     } finally {
       rmSync(cwd, { recursive: true, force: true });
@@ -38,7 +39,8 @@ describe('discover (caché content-addressed)', () => {
     const stderrSpy = spyOn(process.stderr, 'write');
     let output = '';
     try {
-      await discover(cwd);
+      await markStateCompleted(cwd); // build exitoso: la caché pasa a válida
+      await discover(cwd, { prevState: await loadPrevState(cwd) });
     } finally {
       output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
       stderrSpy.mockRestore();
@@ -51,8 +53,9 @@ describe('discover (caché content-addressed)', () => {
   it('build sin cambios no reprocesa nada (solo stat)', async () => {
     const cwd = makeProject();
     try {
-      await discover(cwd);
-      const result = await discover(cwd);
+      await discover(cwd, { prevState: await loadPrevState(cwd) });
+      await markStateCompleted(cwd); // build exitoso: la caché pasa a válida
+      const result = await discover(cwd, { prevState: await loadPrevState(cwd) });
       expect(result.changedPaths.size).toBe(0);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
@@ -62,12 +65,15 @@ describe('discover (caché content-addressed)', () => {
   it('touch de un archivo no dispara rebuild (mismo contenido → hash igual)', async () => {
     const cwd = makeProject();
     try {
-      await discover(cwd);
+      await markStateCompleted(cwd); // build exitoso: la caché pasa a válida
+      await discover(cwd, { prevState: await loadPrevState(cwd) });
       touch(join(cwd, 'doc.md'), Date.now() + 60_000);
-      const result = await discover(cwd);
+      await markStateCompleted(cwd); // build exitoso: la caché pasa a válida
+      const result = await discover(cwd, { prevState: await loadPrevState(cwd) });
       expect(result.changedPaths.size).toBe(0);
       // El mtime actualizado se persiste: el siguiente build tampoco reprocesa
-      const next = await discover(cwd);
+      await markStateCompleted(cwd); // build exitoso: la caché pasa a válida
+      const next = await discover(cwd, { prevState: await loadPrevState(cwd) });
       expect(next.changedPaths.size).toBe(0);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
@@ -77,11 +83,13 @@ describe('discover (caché content-addressed)', () => {
   it('cambio de contenido con el mismo tamaño se detecta vía hash', async () => {
     const cwd = makeProject();
     try {
-      await discover(cwd);
+      await markStateCompleted(cwd); // build exitoso: la caché pasa a válida
+      await discover(cwd, { prevState: await loadPrevState(cwd) });
       // Mismo largo que "Contenido" (9 caracteres), distinto contenido
       writeFileSync(join(cwd, 'doc.md'), '---\ntitle: Prueba\n---\n\nCambiado');
       touch(join(cwd, 'doc.md'), Date.now() + 120_000);
-      const result = await discover(cwd);
+      await markStateCompleted(cwd); // build exitoso: la caché pasa a válida
+      const result = await discover(cwd, { prevState: await loadPrevState(cwd) });
       expect(result.changedPaths).toEqual(new Set(['doc.md']));
     } finally {
       rmSync(cwd, { recursive: true, force: true });
@@ -91,9 +99,11 @@ describe('discover (caché content-addressed)', () => {
   it('cambio de tamaño se detecta sin necesidad de hash', async () => {
     const cwd = makeProject();
     try {
-      await discover(cwd);
+      await markStateCompleted(cwd); // build exitoso: la caché pasa a válida
+      await discover(cwd, { prevState: await loadPrevState(cwd) });
       writeFileSync(join(cwd, 'doc.md'), '---\ntitle: Prueba\n---\n\nContenido mucho más largo');
-      const result = await discover(cwd);
+      await markStateCompleted(cwd); // build exitoso: la caché pasa a válida
+      const result = await discover(cwd, { prevState: await loadPrevState(cwd) });
       expect(result.changedPaths).toEqual(new Set(['doc.md']));
     } finally {
       rmSync(cwd, { recursive: true, force: true });
@@ -103,9 +113,11 @@ describe('discover (caché content-addressed)', () => {
   it('un archivo nuevo agregado se detecta como changed', async () => {
     const cwd = makeProject();
     try {
-      await discover(cwd);
+      await markStateCompleted(cwd); // build exitoso: la caché pasa a válida
+      await discover(cwd, { prevState: await loadPrevState(cwd) });
       writeFileSync(join(cwd, 'nuevo.md'), '---\ntitle: Nuevo\n---\n\nTexto');
-      const result = await discover(cwd);
+      await markStateCompleted(cwd); // build exitoso: la caché pasa a válida
+      const result = await discover(cwd, { prevState: await loadPrevState(cwd) });
       expect(result.changedPaths).toEqual(new Set(['nuevo.md']));
     } finally {
       rmSync(cwd, { recursive: true, force: true });
@@ -115,9 +127,11 @@ describe('discover (caché content-addressed)', () => {
   it('un archivo eliminado se detecta como changed y entra en deletedFiles', async () => {
     const cwd = makeProject();
     try {
-      await discover(cwd);
+      await markStateCompleted(cwd); // build exitoso: la caché pasa a válida
+      await discover(cwd, { prevState: await loadPrevState(cwd) });
       rmSync(join(cwd, 'doc.md'));
-      const result = await discover(cwd);
+      await markStateCompleted(cwd); // build exitoso: la caché pasa a válida
+      const result = await discover(cwd, { prevState: await loadPrevState(cwd) });
       expect(result.changedPaths).toEqual(new Set(['doc.md']));
       expect(result.deletedEntries.has('doc.md')).toBe(true);
     } finally {
@@ -128,14 +142,16 @@ describe('discover (caché content-addressed)', () => {
   it('persiste mtime/size/hash en state.json para builds entre máquinas (mismos contenidos → unchanged)', async () => {
     const cwd = makeProject();
     try {
-      await discover(cwd);
+      await markStateCompleted(cwd); // build exitoso: la caché pasa a válida
+      await discover(cwd, { prevState: await loadPrevState(cwd) });
       // Simula git clone: todos los archivos se reescriben con mtime nuevo,
       // mismo contenido y mismo tamaño → hash igual → unchanged
       const original = Bun.file(join(cwd, 'doc.md')).text();
       const content = await original;
       writeFileSync(join(cwd, 'doc.md'), content);
       touch(join(cwd, 'doc.md'), Date.now() + 240_000);
-      const result = await discover(cwd);
+      await markStateCompleted(cwd); // build exitoso: la caché pasa a válida
+      const result = await discover(cwd, { prevState: await loadPrevState(cwd) });
       expect(result.changedPaths.size).toBe(0);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
