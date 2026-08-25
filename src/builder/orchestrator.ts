@@ -3,12 +3,13 @@ import { cpus } from 'node:os';
 import { basename, join } from 'node:path';
 import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
+import type { FormatConfig } from '../config/site-config.js';
 import { computeActiveFormats } from '../config/site-config.js';
 import { BuildError, ConfigError } from '../lib/errors.js';
 import { logWarning, runWithWarningSink } from '../lib/logger.js';
 import { checkPandoc } from '../lib/pandoc-runner.js';
 import { buildAssets } from './build-assets.js';
-import { computeBuildMetadata, computeWorkSets } from './build-planner.js';
+import { type BuildMetadata, computeBuildMetadata, computeWorkSets } from './build-planner.js';
 import { cleanupCoverImages, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges } from './cleanup.js';
 import { buildDocsFromIndex, discover } from './discover.js';
 import { validateDisabledFilters } from './filter-resolver.js';
@@ -17,8 +18,9 @@ import { runDocumentPipeline } from './pipeline.js';
 import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, validatePreambleDependencies } from './preamble-loader.js';
 import { validateConfigFilePaths } from './project-validator.js';
 import { silentReporter } from './reporter.js';
+import type { BuildState } from './state.js';
 import { clearStateFile, loadStateFile, markStateCompleted, stateUsableForBuild, updateCssHash } from './state.js';
-import type { BuildContext, BuildReporter } from './types.js';
+import type { BuildContext, BuildDocument, BuildReporter, DiscoveryEntry } from './types.js';
 
 export interface BuildOptions {
   outputDir?: string;
@@ -107,20 +109,18 @@ export async function build(cwd: string, options: BuildOptions = {}, reporter: B
   }
 }
 
-async function runBuild(cwd: string, options: BuildOptions, progress: BuildReporter): Promise<BuildSummary> {
-  const log = (msg: string) => progress.log(msg);
-
-  // Cargar config primero para detectar cambios de formato antes de setupBuildEnvironment
+/**
+ * Config efectiva sin mutar el objeto del usuario (issue #2022): la lista
+ * efectiva de preamble filters viaja como valor explícito hasta pipeline,
+ * pdfx y hashing; `siteConfig` permanece intacto.
+ */
+async function resolveEffectiveConfig(cwd: string): Promise<{ siteConfig: SiteConfig; effectiveDisabledPreamble: string[] }> {
   const siteConfig = await loadSiteConfig(cwd);
   // Validar nombres de filters desactivados (warning sin romper el build)
   validateDisabledFilters(siteConfig.disabledFilters);
   // Resolver dependencias implícitas (08-hyperref se desactiva con 99-pdfx)
   const effectiveDisabledPreamble = resolveEffectiveDisabledPreamble(siteConfig.format?.pdf?.disabledPreambleFilters);
   validateDisabledPreambleFilters(effectiveDisabledPreamble);
-  // Actualizar la config con la lista efectiva para que el pipeline la use
-  if (siteConfig.format?.pdf) {
-    siteConfig.format.pdf.disabledPreambleFilters = effectiveDisabledPreamble;
-  }
   // Rutas configuradas (bibliography/csl): inexistentes son error de config,
   // mismo contrato que validate (módulo project-validator); lua-filters
   // inexistentes se advierten y se omiten.
@@ -137,16 +137,11 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
     }
     logWarning(issue.message, 'config');
   }
+  return { siteConfig, effectiveDisabledPreamble };
+}
 
-  // ── Planificación: hashes de invalidación + formatos (caché content-addressed) ──
-  // Con --full no hay estado previo con qué comparar (la caché se borra en
-  // setupBuildEnvironment): no cargar prevState evita mensajes de invalidación
-  // engañosos y fuerza el reprocesamiento completo. Sin --full, solo un estado
-  // con completed:true es caché válida (stateUsableForBuild): un estado de un
-  // build interrumpido se ignora y se reprocesa todo.
-  const prevState = options.full ? null : stateUsableForBuild(await loadStateFile(cwd));
-  const plan = await computeBuildMetadata(cwd, siteConfig, prevState);
-
+/** Fuente única de los mensajes de invalidación temprana (mismo orden histórico). */
+function logInvalidations(plan: BuildMetadata, log: (msg: string) => void): void {
   if (plan.newFormats.length > 0) {
     log(`Nuevos formatos detectados: ${plan.newFormats.join(', ')}. Generando sus salidas para todos los documentos.`);
   }
@@ -159,25 +154,40 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
   if (plan.formatInvalidated.html) log('Configuración HTML modificada — regenerando páginas HTML');
   if (plan.formatInvalidated.epub) log('Configuración EPUB modificada — regenerando EPUBs');
   if (plan.formatInvalidated.markdown) log('Configuración Markdown modificada — regenerando exports Markdown');
+}
 
-  if (options.full) {
-    log('--full: se eliminaron la caché y la salida anterior');
-    progress.showCleanup();
-  }
+/** Fuente única del array de invalidaciones del resumen (--json incluido). */
+function collectInvalidations(plan: BuildMetadata, outputDirChanged: boolean): string[] {
+  const invalidations: string[] = [];
+  if (outputDirChanged) invalidations.push('directorio de salida');
+  if (plan.filtersInvalidated) invalidations.push('filters');
+  if (plan.bibInvalidated) invalidations.push('bibliografía');
+  if (plan.formatInvalidated.latex) invalidations.push('configuración PDF/LaTeX');
+  if (plan.formatInvalidated.html) invalidations.push('configuración HTML');
+  if (plan.formatInvalidated.epub) invalidations.push('configuración EPUB');
+  if (plan.formatInvalidated.markdown) invalidations.push('configuración Markdown');
+  for (const format of plan.newFormats) invalidations.push(`formato nuevo: ${format}`);
+  return invalidations;
+}
 
-  const ctx = await setupBuildEnvironment(cwd, siteConfig, options);
-  ctx.needsCss = plan.needsCss;
-
-  // Los 5 formatos configurados se muestran siempre en el tracker: activos con
-  // ✔ (su trabajo se completa en el pipeline), desactivados con – (omitidos).
-  progress.setFormats([
-    { phase: 'latex', active: plan.activeFormats.latex },
-    { phase: 'pdf', active: plan.activeFormats.pdf },
-    { phase: 'html', active: plan.activeFormats.html },
-    { phase: 'epub', active: plan.activeFormats.epub },
-    { phase: 'markdown', active: plan.activeFormats.markdown },
-  ]);
-
+/**
+ * Fase de discovery: escanea documentos, reporta filas en verbose, asigna
+ * slugs desde el índice y completa la fase (#2022).
+ */
+async function discoverDocuments(
+  cwd: string,
+  options: BuildOptions,
+  plan: BuildMetadata,
+  prevState: BuildState | null,
+  ctx: BuildContext,
+  progress: BuildReporter,
+): Promise<{
+  allDocs: BuildDocument[];
+  discoveryIndex: Map<string, DiscoveryEntry>;
+  discoveredChanges: Set<string>;
+  deletedEntries: Map<string, DiscoveryEntry>;
+  slugChangedEntries: Map<string, string>;
+}> {
   progress.startPhase('discovery');
   const {
     relativePaths,
@@ -199,6 +209,190 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
     },
   });
   const allDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
+  if (options.verbose) {
+    for (const doc of allDocs) {
+      progress.reportFile({ relativePath: doc.relativePath, phase: 'discovery' });
+    }
+  }
+  progress.completePhase(allDocs.length);
+  for (const doc of allDocs) {
+    const entry = discoveryIndex.get(doc.relativePath);
+    doc.slug = entry?.slug ?? basename(doc.relativePath, '.md');
+  }
+  return { allDocs, discoveryIndex, discoveredChanges, deletedEntries, slugChangedEntries };
+}
+
+/**
+ * Cierre común de TODO build (issue #2019): assets + validación PDF/X +
+ * cómputo de formatos + resumen. Un único final garantiza que un fix futuro
+ * no toque dos de tres ramas. Las sutilezas de conteo por rama entran como
+ * parámetros; el proyecto vacío usa modo `empty` (formatos [] y sin líneas
+ * de salida/invalidación en el resumen, como siempre).
+ */
+async function finishBuild(
+  deps: {
+    progress: BuildReporter;
+    siteConfig: SiteConfig;
+    outputDir: string;
+    effectiveDisabledPreamble: string[];
+    needsAssets: boolean;
+    runAssets: () => Promise<void>;
+  },
+  params: { processedCount: number; cachedCount: number; invalidations: string[]; empty?: boolean },
+): Promise<BuildSummary> {
+  if (deps.needsAssets) await deps.runAssets();
+  // Validación PDF/X-1a (fase final): los PDFs ya presentes en la salida
+  // también certifican; se omite si 99-pdfx no está activo o no hay binario.
+  const pdfx = await runPdfxOutputValidation(deps.outputDir, deps.siteConfig, { allowBuild: true }, deps.effectiveDisabledPreamble);
+  if (pdfx.summaryLine) deps.progress.addSummaryLine(pdfx.summaryLine);
+  const formats = params.empty ? [] : computeActiveFormats(deps.siteConfig.format);
+  await deps.progress.finish(
+    params.processedCount,
+    params.cachedCount,
+    formats,
+    params.empty ? undefined : deps.outputDir,
+    params.empty ? undefined : params.invalidations,
+  );
+  return {
+    processed: params.processedCount,
+    cached: params.cachedCount,
+    formats,
+    outputDir: deps.outputDir,
+    invalidations: params.empty ? [] : params.invalidations,
+  };
+}
+
+/**
+ * Prepara el entorno del build: mensajes de --full, directorio de salida,
+ * señal de CSS y declaración de los cinco formatos en el tracker (#2022).
+ */
+async function prepareEnvironment(
+  cwd: string,
+  options: BuildOptions,
+  siteConfig: SiteConfig,
+  plan: BuildMetadata,
+  progress: BuildReporter,
+): Promise<BuildContext> {
+  if (options.full) {
+    progress.log('--full: se eliminaron la caché y la salida anterior');
+    progress.showCleanup();
+  }
+  const ctx = await setupBuildEnvironment(cwd, siteConfig, options);
+  ctx.needsCss = plan.needsCss;
+  // Los 5 formatos configurados se muestran siempre en el tracker: activos con
+  // ✔ (su trabajo se completa en el pipeline), desactivados con – (omitidos).
+  progress.setFormats([
+    { phase: 'latex', active: plan.activeFormats.latex },
+    { phase: 'pdf', active: plan.activeFormats.pdf },
+    { phase: 'html', active: plan.activeFormats.html },
+    { phase: 'epub', active: plan.activeFormats.epub },
+    { phase: 'markdown', active: plan.activeFormats.markdown },
+  ]);
+  return ctx;
+}
+
+/** Limpieza de dist/ por cambios de formatos y portadas huérfanas. */
+async function runFormatCleanup(ctx: BuildContext, plan: BuildMetadata, allDocs: BuildDocument[], siteConfig: SiteConfig): Promise<void> {
+  await cleanupRemovedFormats(ctx, allDocs, plan.removedFormats);
+  // Portadas PDF huérfanas: si la opción está desactivada, se eliminan los
+  // .png que quedaron de builds anteriores (activar/desactivar invalida el
+  // hash del formato PDF y re-renderiza, pero nadie más borraría la imagen).
+  if (plan.activeFormats.pdf && siteConfig.format?.pdf?.coverImage !== true) {
+    await cleanupCoverImages(ctx, allDocs);
+  }
+}
+
+/** Conjuntos de trabajo + razones de invalidación (fuente única, #2022). */
+function planWork(
+  plan: BuildMetadata,
+  ctx: BuildContext,
+  prevState: BuildState | null,
+  allDocs: BuildDocument[],
+  discoveredChanges: Set<string>,
+  log: (msg: string) => void,
+): { work: ReturnType<typeof computeWorkSets>; invalidations: string[] } {
+  // Un cambio del directorio de salida (--output) entre builds fuerza el
+  // reprocesamiento completo: la caché vivía en el directorio anterior y los
+  // documentos deben regenerarse donde se pide ahora (y al volver al default,
+  // regenerar dist/files). discover ya persiste outputDir en el estado; esta
+  // comparación propaga la señal al cálculo de trabajo.
+  const outputDirChanged = prevState !== null && ctx.outputDir !== prevState.outputDir;
+  if (outputDirChanged) {
+    log('Directorio de salida modificado — reprocesando todos los documentos');
+  }
+  const work = computeWorkSets(plan, allDocs, discoveredChanges, outputDirChanged);
+  return { work, invalidations: collectInvalidations(plan, outputDirChanged) };
+}
+
+/** Fase de pipeline por documento: planificación de fases, ejecución y conteos finales. */
+async function runPipelinePhases(
+  progress: BuildReporter,
+  ctx: BuildContext,
+  plan: BuildMetadata,
+  work: ReturnType<typeof computeWorkSets>,
+  allDocs: BuildDocument[],
+  discoveryIndex: Map<string, DiscoveryEntry>,
+  effectiveDisabledPreamble: string[],
+  formatCfg: FormatConfig | undefined,
+  invalidations: string[],
+): Promise<{ processedCount: number; cachedCount: number; invalidations: string[] }> {
+  // Declarar al tracker las fases que se ejecutarán (TTY: libera discovery para
+  // que el tracker evalúe los skips con la información completa). Las subtareas de
+  // formato se controlan por setFormats; aquí solo se declaran las fases de
+  // pipeline (render se salta en early returns sin trabajo).
+  await progress.planPhases(['discovery', 'render']);
+
+  const workDocCount = new Set([
+    ...work.docsChanged,
+    ...work.exportSets.html.map((d) => d.relativePath),
+    ...work.exportSets.epub.map((d) => d.relativePath),
+    ...work.exportSets.markdown.map((d) => d.relativePath),
+    ...work.exportSets.latex.map((d) => d.relativePath),
+  ]).size;
+
+  progress.startPhase('render', workDocCount);
+  const { processed } = await runDocumentPipeline(progress, ctx, plan, work, allDocs, formatCfg, discoveryIndex, effectiveDisabledPreamble);
+
+  const totalDocs =
+    plan.activeFormats.html || plan.activeFormats.pdf || plan.activeFormats.epub || plan.activeFormats.markdown || plan.activeFormats.latex
+      ? allDocs.length
+      : 0;
+  const processedCount = processed.size;
+  const cachedCount = totalDocs - processedCount;
+  // Reprocesamiento por contenido (mtime/hash de fuentes) sin señal de
+  // invalidación de configuración: la razón es honesta y cubre el caso común.
+  if (invalidations.length === 0 && processedCount > 0) {
+    invalidations.push('documentos modificados');
+  }
+  return { processedCount, cachedCount, invalidations };
+}
+
+async function runBuild(cwd: string, options: BuildOptions, progress: BuildReporter): Promise<BuildSummary> {
+  const log = (msg: string) => progress.log(msg);
+
+  // Cargar config primero para detectar cambios de formato antes de setupBuildEnvironment
+  const { siteConfig, effectiveDisabledPreamble } = await resolveEffectiveConfig(cwd);
+
+  // ── Planificación: hashes de invalidación + formatos (caché content-addressed) ──
+  // Con --full no hay estado previo con qué comparar (la caché se borra en
+  // setupBuildEnvironment): no cargar prevState evita mensajes de invalidación
+  // engañosos y fuerza el reprocesamiento completo. Sin --full, solo un estado
+  // con completed:true es caché válida (stateUsableForBuild): un estado de un
+  // build interrumpido se ignora y se reprocesa todo.
+  const prevState = options.full ? null : stateUsableForBuild(await loadStateFile(cwd));
+  const plan = await computeBuildMetadata(cwd, siteConfig, prevState, effectiveDisabledPreamble);
+  logInvalidations(plan, log);
+
+  const ctx = await prepareEnvironment(cwd, options, siteConfig, plan, progress);
+
+  const { allDocs, discoveryIndex, discoveredChanges, deletedEntries, slugChangedEntries } = await discoverDocuments(
+    cwd,
+    options,
+    plan,
+    prevState,
+    ctx,
+    progress,
+  );
 
   // El CSS se compila con HTML activo: el scan de Tailwind corre sobre los HTML
   // finales de dist/files. Con prevCssHash idéntico (ningún HTML ni recurso
@@ -211,105 +405,40 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
     await updateCssHash(cwd, cssHash, cssFileCache);
   };
 
-  /**
-   * Cierre común de TODO build (issue #2019): assets + validación PDF/X +
-   * cómputo de formatos + resumen. Un único final garantiza que un fix futuro
-   * no toque dos de tres ramas (el motivo de este issue). Las sutilezas de
-   * conteo por rama entran como parámetros; el proyecto vacío usa el modo
-   * `empty` (formatos [] y sin líneas de salida/invalidación en el resumen,
-   * como siempre).
-   */
-  const finishBuild = async (params: {
-    processedCount: number;
-    cachedCount: number;
-    invalidations: string[];
-    empty?: boolean;
-  }): Promise<BuildSummary> => {
-    if (needsAssets) await runAssets();
-    // Validación PDF/X-1a (fase final): los PDFs ya presentes en la salida
-    // también certifican; se omite si 99-pdfx no está activo o no hay binario.
-    const pdfx = await runPdfxOutputValidation(ctx.outputDir, siteConfig, { allowBuild: true });
-    if (pdfx.summaryLine) progress.addSummaryLine(pdfx.summaryLine);
-    const formats = params.empty ? [] : computeActiveFormats(ctx.siteConfig.format);
-    await progress.finish(
-      params.processedCount,
-      params.cachedCount,
-      formats,
-      params.empty ? undefined : ctx.outputDir,
-      params.empty ? undefined : params.invalidations,
-    );
-    return {
-      processed: params.processedCount,
-      cached: params.cachedCount,
-      formats,
-      outputDir: ctx.outputDir,
-      invalidations: params.empty ? [] : params.invalidations,
-    };
-  };
-
   if (allDocs.length === 0) {
     // Proyecto vacío: mensaje visible en stderr (advertencias del resumen) y
     // resumen con 0 formatos (sin "reutilizado"). Exit 0: no es un error.
     logWarning('No se encontraron documentos Markdown en el proyecto.', 'build');
     logWarning("Crea un archivo .md con frontmatter o ejecuta 'iteraciones init'.", 'build');
-    return finishBuild({ processedCount: 0, cachedCount: 0, invalidations: [], empty: true });
-  }
-
-  if (options.verbose) {
-    for (const doc of allDocs) {
-      progress.reportFile({ relativePath: doc.relativePath, phase: 'discovery' });
-    }
-  }
-  progress.completePhase(allDocs.length);
-
-  // Assign slugs from discoveryIndex
-  for (const doc of allDocs) {
-    const entry = discoveryIndex.get(doc.relativePath);
-    doc.slug = entry?.slug ?? basename(doc.relativePath, '.md');
+    return finishBuild(
+      { progress, siteConfig, outputDir: ctx.outputDir, effectiveDisabledPreamble, needsAssets, runAssets },
+      {
+        processedCount: 0,
+        cachedCount: 0,
+        invalidations: [],
+        empty: true,
+      },
+    );
   }
 
   // Los formatos nuevos no fuerzan re-render: cada conversión sale del
   // markdown original (pandoc-directo) y los exportSets ya incluyen todos los
   // docs vía formatInvalidated (cambia al activarse un formato).
 
-  // ── Limpieza de dist/: archivos de formatos eliminados ──
-  await cleanupRemovedFormats(ctx, allDocs, plan.removedFormats);
+  await runFormatCleanup(ctx, plan, allDocs, siteConfig);
 
-  // Portadas PDF huérfanas: si la opción está desactivada, se eliminan los
-  // .png que quedaron de builds anteriores (activar/desactivar invalida el
-  // hash del formato PDF y re-renderiza, pero nadie más borraría la imagen).
-  if (plan.activeFormats.pdf && siteConfig.format?.pdf?.coverImage !== true) {
-    await cleanupCoverImages(ctx, allDocs);
-  }
-
-  // ── Planificación: conjuntos de trabajo (caché content-addressed) ──
-  // Un cambio del directorio de salida (--output) entre builds fuerza el
-  // reprocesamiento completo: la caché vivía en el directorio anterior y los
-  // documentos deben regenerarse donde se pide ahora (y al volver al default,
-  // regenerar dist/files). discover ya persiste outputDir en el estado; esta
-  // comparación propaga la señal al cálculo de trabajo.
-  const outputDirChanged = prevState !== null && ctx.outputDir !== prevState.outputDir;
-  if (outputDirChanged) {
-    log('Directorio de salida modificado — reprocesando todos los documentos');
-  }
-  const work = computeWorkSets(plan, allDocs, discoveredChanges, outputDirChanged);
-
-  // Razones de invalidación para el resumen final (modo default): las mismas
-  // señales que deciden los conjuntos de trabajo, sin heurística aparte. Un
-  // array vacío + trabajo real significa documentos modificados por mtime.
-  const invalidations: string[] = [];
-  if (outputDirChanged) invalidations.push('directorio de salida');
-  if (plan.filtersInvalidated) invalidations.push('filters');
-  if (plan.bibInvalidated) invalidations.push('bibliografía');
-  if (plan.formatInvalidated.latex) invalidations.push('configuración PDF/LaTeX');
-  if (plan.formatInvalidated.html) invalidations.push('configuración HTML');
-  if (plan.formatInvalidated.epub) invalidations.push('configuración EPUB');
-  if (plan.formatInvalidated.markdown) invalidations.push('configuración Markdown');
-  for (const format of plan.newFormats) invalidations.push(`formato nuevo: ${format}`);
+  const { work, invalidations } = planWork(plan, ctx, prevState, allDocs, discoveredChanges, log);
 
   if (!work.anyWork) {
     log('Ningún documento modificado — sin cambios');
-    return finishBuild({ processedCount: 0, cachedCount: allDocs.length, invalidations });
+    return finishBuild(
+      { progress, siteConfig, outputDir: ctx.outputDir, effectiveDisabledPreamble, needsAssets, runAssets },
+      {
+        processedCount: 0,
+        cachedCount: allDocs.length,
+        invalidations,
+      },
+    );
   }
 
   // Cleanup de archivos eliminados y slugs cambiados
@@ -325,39 +454,18 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
     work.exportSets.markdown.length === 0
   ) {
     log('Ningún documento modificado — sin cambios');
-    return finishBuild({ processedCount: 0, cachedCount: allDocs.length, invalidations });
+    return finishBuild(
+      { progress, siteConfig, outputDir: ctx.outputDir, effectiveDisabledPreamble, needsAssets, runAssets },
+      {
+        processedCount: 0,
+        cachedCount: allDocs.length,
+        invalidations,
+      },
+    );
   }
 
-  // Declarar al tracker las fases que se ejecutarán (TTY: libera discovery para
-  // que el tracker evalúe los skips con la información completa). Las subtareas de
-  // formato se controlan por setFormats; aquí solo se declaran las fases de
-  // pipeline (render se salta en early returns sin trabajo).
-  await progress.planPhases(['discovery', 'render']);
-
-  const formatCfg = siteConfig.format;
-
-  // ── Pipeline por documento: formatos ligeros + .tex/PDF encolado ──
-  const workDocCount = new Set([
-    ...work.docsChanged,
-    ...work.exportSets.html.map((d) => d.relativePath),
-    ...work.exportSets.epub.map((d) => d.relativePath),
-    ...work.exportSets.markdown.map((d) => d.relativePath),
-    ...work.exportSets.latex.map((d) => d.relativePath),
-  ]).size;
-
-  progress.startPhase('render', workDocCount);
-  const { processed } = await runDocumentPipeline(progress, ctx, plan, work, allDocs, formatCfg, discoveryIndex);
-
-  const totalDocs =
-    plan.activeFormats.html || plan.activeFormats.pdf || plan.activeFormats.epub || plan.activeFormats.markdown || plan.activeFormats.latex
-      ? allDocs.length
-      : 0;
-  const processedCount = processed.size;
-  const cachedCount = totalDocs - processedCount;
-  // Reprocesamiento por contenido (mtime/hash de fuentes) sin señal de
-  // invalidación de configuración: la razón es honesta y cubre el caso común.
-  if (invalidations.length === 0 && processedCount > 0) {
-    invalidations.push('documentos modificados');
-  }
-  return finishBuild({ processedCount, cachedCount, invalidations });
+  return finishBuild(
+    { progress, siteConfig, outputDir: ctx.outputDir, effectiveDisabledPreamble, needsAssets, runAssets },
+    await runPipelinePhases(progress, ctx, plan, work, allDocs, discoveryIndex, effectiveDisabledPreamble, siteConfig.format, invalidations),
+  );
 }

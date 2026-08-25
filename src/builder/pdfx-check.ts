@@ -153,8 +153,10 @@ export async function runPdfxOutputValidation(
   outputDir: string,
   siteConfig: SiteConfig,
   options: { allowBuild?: boolean } = {},
+  /** Lista efectiva de preamble filters desactivados (issue #2022: la config del usuario no se muta). */
+  effectiveDisabledPreamble?: string[],
 ): Promise<PdfxOutputValidationResult> {
-  const disabled = siteConfig.format?.pdf?.disabledPreambleFilters ?? [];
+  const disabled = effectiveDisabledPreamble ?? siteConfig.format?.pdf?.disabledPreambleFilters ?? [];
   if (disabled.includes('99-pdfx')) return { validated: 0, failed: 0, summaryLine: undefined };
   if (!existsSync(outputDir)) return { validated: 0, failed: 0, summaryLine: undefined };
   const pdfs = [...new Bun.Glob('*.pdf').scanSync({ cwd: outputDir, onlyFiles: true })].sort();
