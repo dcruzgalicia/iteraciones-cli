@@ -71,3 +71,24 @@ describe('assembleExportDocument', () => {
     expect(exp.metadata.csl).toBeUndefined();
   });
 });
+
+describe('formatSkipReport (#2030)', () => {
+  it('agrupa por razón y lista los archivos afectados', async () => {
+    const { formatSkipReport, SKIP_REASONS } = await import('./helpers.js');
+    const registry = new Map<string, Set<string>>([
+      ['cli-layer.test.ts', new Set([SKIP_REASONS.pandoc])],
+      ['render.test.ts', new Set([SKIP_REASONS.pandoc])],
+      ['export-runner.test.ts', new Set([SKIP_REASONS.latex, SKIP_REASONS.unzip])],
+    ]);
+    const report = formatSkipReport(registry);
+    expect(report).toContain('bloques omitidos por entorno');
+    expect(report).toContain('requiere pandoc: cli-layer.test.ts, render.test.ts');
+    expect(report).toContain('requiere motor LaTeX (latexmk): export-runner.test.ts');
+    expect(report).toContain('requiere unzip: export-runner.test.ts');
+  });
+
+  it('sin skips el informe es vacío (corrida limpia silenciosa)', async () => {
+    const { formatSkipReport } = await import('./helpers.js');
+    expect(formatSkipReport(new Map())).toBe('');
+  });
+});

@@ -19,8 +19,10 @@ import {
   validatePreambleDependencies,
 } from '../builder/preamble-loader.js';
 import { execPandoc, getPandocVersion } from '../lib/pandoc-runner.js';
+import { registerSkip, SKIP_REASONS } from './helpers.js';
 
 const pandocOk = await getPandocVersion().catch(() => null);
+if (!pandocOk) registerSkip('preamble.test.ts', SKIP_REASONS.pandoc);
 
 describe('preamble-loader', () => {
   it('lista los preamble filters built-in con descripción', async () => {
