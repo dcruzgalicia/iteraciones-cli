@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import type { BuildReporter, RenderFileReport } from '../builder/types.js';
 import { GLYPHS } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
 import { formatTime, TrackerRenderer } from './progress-render.js';
@@ -8,11 +9,6 @@ export type { FormatState, PipelinePhase, RowState, RowStatus } from './progress
 
 /** Ancho mínimo para la columna de etiquetas en el resumen final. */
 const LABEL_WIDTH = 30;
-
-interface RenderFileReport {
-  relativePath: string;
-  phase: PipelinePhase;
-}
 
 /**
  * Tracker de progreso del build con renderer propio.
@@ -33,7 +29,7 @@ interface RenderFileReport {
  * final y las decisiones de qué renderizar (cada transición de estado
  * devuelve exactamente las claves a re-renderizar).
  */
-export class ProgressTracker {
+export class ProgressTracker implements BuildReporter {
   private t0: number;
   /** Modo --verbose: texto plano con etiquetas. */
   private verbose: boolean;

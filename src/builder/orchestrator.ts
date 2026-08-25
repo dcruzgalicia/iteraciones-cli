@@ -1,7 +1,6 @@
 import { rm } from 'node:fs/promises';
 import { cpus } from 'node:os';
 import { basename, join } from 'node:path';
-import { ProgressTracker } from '../cli/progress.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
 import { computeActiveFormats } from '../config/site-config.js';
@@ -17,8 +16,9 @@ import { runPdfxOutputValidation } from './pdfx-check.js';
 import { runDocumentPipeline } from './pipeline.js';
 import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, validatePreambleDependencies } from './preamble-loader.js';
 import { validateConfigFilePaths } from './project-validator.js';
+import { silentReporter } from './reporter.js';
 import { clearStateFile, loadStateFile, markStateCompleted, stateUsableForBuild, updateCssHash } from './state.js';
-import type { BuildContext } from './types.js';
+import type { BuildContext, BuildReporter } from './types.js';
 
 export interface BuildOptions {
   outputDir?: string;
@@ -58,20 +58,13 @@ async function setupBuildEnvironment(cwd: string, siteConfig: SiteConfig, option
   return ctx;
 }
 
-export async function build(cwd: string, options: BuildOptions = {}): Promise<void> {
+export async function build(cwd: string, options: BuildOptions = {}, reporter: BuildReporter = silentReporter): Promise<void> {
   // Verificar pandoc al inicio: si no está en PATH, el error es inmediato y
   // accionable en lugar de un ENOENT técnico en la primera invocación.
   await checkPandoc();
 
   const startedAt = performance.now();
-  // Con --json el tracker escribe a un stream mudo: stdout queda reservado
-  // para el objeto JSON final (el resumen humano solo sale a stderr por los
-  // errores/warnings, nunca a stdout).
-  const jsonStream = options.json ? ({ write: (): boolean => true, isTTY: false } as unknown as NodeJS.WriteStream) : undefined;
-  const progress = new ProgressTracker({
-    renderer: options.verbose ? 'verbose' : 'default',
-    stream: jsonStream,
-  });
+  const progress = reporter;
   let result: BuildSummary | null = null;
   try {
     // En modo no verbose los warnings se difieren al resumen final del tracker
@@ -114,7 +107,7 @@ export async function build(cwd: string, options: BuildOptions = {}): Promise<vo
   }
 }
 
-async function runBuild(cwd: string, options: BuildOptions, progress: ProgressTracker): Promise<BuildSummary> {
+async function runBuild(cwd: string, options: BuildOptions, progress: BuildReporter): Promise<BuildSummary> {
   const log = (msg: string) => progress.log(msg);
 
   // Cargar config primero para detectar cambios de formato antes de setupBuildEnvironment

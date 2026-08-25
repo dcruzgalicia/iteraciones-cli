@@ -1,6 +1,6 @@
 import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
-import type { ProgressTracker } from '../cli/progress.js';
+
 import { DEFAULT_SITE_CONFIG, type FormatConfig } from '../config/site-config.js';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError, translateSystemError } from '../lib/errors.js';
@@ -20,7 +20,7 @@ import { createPdfConsumer, type PdfJob } from './pdf-pool.js';
 import { loadPreambleFilters } from './preamble-loader.js';
 import { htmlPageFromMarkdown } from './render.js';
 import { resolveBibOptions } from './state.js';
-import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
+import type { BuildContext, BuildDocument, BuildReporter, DiscoveryEntry } from './types.js';
 import type { PdfXmpMetadata } from './xmpdata.js';
 import { injectXmpMetadataIntoLatex } from './xmpdata.js';
 
@@ -54,7 +54,7 @@ export function pdfSlotCount(concurrency: number): number {
  * Retorna los relativePath procesados y el total de documentos.
  */
 export async function runDocumentPipeline(
-  progress: ProgressTracker,
+  progress: BuildReporter,
   ctx: BuildContext,
   plan: BuildMetadata,
   work: WorkSets,
