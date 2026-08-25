@@ -211,14 +211,48 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
     await updateCssHash(cwd, cssHash, cssFileCache);
   };
 
+  /**
+   * Cierre común de TODO build (issue #2019): assets + validación PDF/X +
+   * cómputo de formatos + resumen. Un único final garantiza que un fix futuro
+   * no toque dos de tres ramas (el motivo de este issue). Las sutilezas de
+   * conteo por rama entran como parámetros; el proyecto vacío usa el modo
+   * `empty` (formatos [] y sin líneas de salida/invalidación en el resumen,
+   * como siempre).
+   */
+  const finishBuild = async (params: {
+    processedCount: number;
+    cachedCount: number;
+    invalidations: string[];
+    empty?: boolean;
+  }): Promise<BuildSummary> => {
+    if (needsAssets) await runAssets();
+    // Validación PDF/X-1a (fase final): los PDFs ya presentes en la salida
+    // también certifican; se omite si 99-pdfx no está activo o no hay binario.
+    const pdfx = await runPdfxOutputValidation(ctx.outputDir, siteConfig, { allowBuild: true });
+    if (pdfx.summaryLine) progress.addSummaryLine(pdfx.summaryLine);
+    const formats = params.empty ? [] : computeActiveFormats(ctx.siteConfig.format);
+    await progress.finish(
+      params.processedCount,
+      params.cachedCount,
+      formats,
+      params.empty ? undefined : ctx.outputDir,
+      params.empty ? undefined : params.invalidations,
+    );
+    return {
+      processed: params.processedCount,
+      cached: params.cachedCount,
+      formats,
+      outputDir: ctx.outputDir,
+      invalidations: params.empty ? [] : params.invalidations,
+    };
+  };
+
   if (allDocs.length === 0) {
     // Proyecto vacío: mensaje visible en stderr (advertencias del resumen) y
     // resumen con 0 formatos (sin "reutilizado"). Exit 0: no es un error.
     logWarning('No se encontraron documentos Markdown en el proyecto.', 'build');
     logWarning("Crea un archivo .md con frontmatter o ejecuta 'iteraciones init'.", 'build');
-    if (needsAssets) await runAssets();
-    await progress.finish(0, 0, []);
-    return { processed: 0, cached: 0, formats: [], outputDir: ctx.outputDir, invalidations: [] };
+    return finishBuild({ processedCount: 0, cachedCount: 0, invalidations: [], empty: true });
   }
 
   if (options.verbose) {
@@ -275,14 +309,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
 
   if (!work.anyWork) {
     log('Ningún documento modificado — sin cambios');
-    if (needsAssets) await runAssets();
-    // Validación PDF/X-1a (fase final): los PDFs ya presentes en la salida
-    // también certifican; se omite si 99-pdfx no está activo o no hay binario.
-    const pdfx = await runPdfxOutputValidation(ctx.outputDir, siteConfig, { allowBuild: true });
-    if (pdfx.summaryLine) progress.addSummaryLine(pdfx.summaryLine);
-    const formats = computeActiveFormats(ctx.siteConfig.format);
-    await progress.finish(0, allDocs.length, formats, ctx.outputDir, invalidations);
-    return { processed: 0, cached: allDocs.length, formats, outputDir: ctx.outputDir, invalidations };
+    return finishBuild({ processedCount: 0, cachedCount: allDocs.length, invalidations });
   }
 
   // Cleanup de archivos eliminados y slugs cambiados
@@ -298,13 +325,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
     work.exportSets.markdown.length === 0
   ) {
     log('Ningún documento modificado — sin cambios');
-    if (needsAssets) await runAssets();
-    // Validación PDF/X-1a (fase final): mismo criterio que el camino principal.
-    const pdfx = await runPdfxOutputValidation(ctx.outputDir, siteConfig, { allowBuild: true });
-    if (pdfx.summaryLine) progress.addSummaryLine(pdfx.summaryLine);
-    const formats = computeActiveFormats(ctx.siteConfig.format);
-    await progress.finish(0, allDocs.length, formats, ctx.outputDir, invalidations);
-    return { processed: 0, cached: allDocs.length, formats, outputDir: ctx.outputDir, invalidations };
+    return finishBuild({ processedCount: 0, cachedCount: allDocs.length, invalidations });
   }
 
   // Declarar al tracker las fases que se ejecutarán (TTY: libera discovery para
@@ -327,19 +348,6 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
   progress.startPhase('render', workDocCount);
   const { processed } = await runDocumentPipeline(progress, ctx, plan, work, allDocs, formatCfg, discoveryIndex);
 
-  // ── Build assets (css, fonts, logo) DESPUÉS de los HTML finales en dist:
-  // Tailwind escanea los HTML finales de dist/files para generar el CSS exacto
-  // (purga por clases presentes, sin auto-referencia del CSS previo). ──
-  if (needsAssets) {
-    await runAssets();
-  }
-
-  // ── Validación PDF/X-1a (fase final): solo con 99-pdfx activo y PDFs en la
-  // salida; el binario se resuelve (directorio gestionado → PATH → cargo) y, si
-  // no se obtiene, se advierte sin romper el build (herramienta opcional). ──
-  const pdfx = await runPdfxOutputValidation(ctx.outputDir, siteConfig, { allowBuild: true });
-  if (pdfx.summaryLine) progress.addSummaryLine(pdfx.summaryLine);
-
   const totalDocs =
     plan.activeFormats.html || plan.activeFormats.pdf || plan.activeFormats.epub || plan.activeFormats.markdown || plan.activeFormats.latex
       ? allDocs.length
@@ -351,7 +359,5 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
   if (invalidations.length === 0 && processedCount > 0) {
     invalidations.push('documentos modificados');
   }
-  const formats = computeActiveFormats(ctx.siteConfig.format);
-  await progress.finish(processedCount, cachedCount, formats, ctx.outputDir, invalidations);
-  return { processed: processedCount, cached: cachedCount, formats, outputDir: ctx.outputDir, invalidations };
+  return finishBuild({ processedCount, cachedCount, invalidations });
 }
