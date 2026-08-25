@@ -1,8 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it, spyOn } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { resetMagickCache, scanTitlePageFieldImages } from '../builder/image-processor.js';
+import { processDocumentImages, resetMagickCache, scanTitlePageFieldImages } from '../builder/image-processor.js';
 
 describe('scanTitlePageFieldImages', () => {
   let cwd: string;
@@ -117,5 +117,48 @@ describe('scanTitlePageFieldImages', () => {
     const fm = { subject: '![logo](Images/logo.jpg)' };
     const result = await scanTitlePageFieldImages(fm, cwd);
     expect(result).toEqual([]);
+  });
+});
+
+describe('correlación magick ausente ↔ PDF/X (#2040)', () => {
+  it('sin magick: un único warning por build, con mención PDF/X solo si 99-pdfx activo', async () => {
+    resetMagickCache();
+    const stderrSpy = spyOn(process.stderr, 'write');
+    try {
+      const noImages = await processDocumentImages(
+        [],
+        {},
+        '/tmp',
+        { w: 100, h: 150, textW: 80 },
+        false,
+        '/tmp/out',
+        undefined,
+        true,
+        async () => false,
+      );
+      expect(noImages.imageMap.size).toBe(0);
+      // Segundo documento: sin segundo warning (memoizado por proceso)
+      await processDocumentImages([], {}, '/tmp', { w: 100, h: 150, textW: 80 }, false, '/tmp/out', undefined, true, async () => false);
+      const output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+      expect((output.match(/ImageMagick no disponible/g) ?? []).length).toBe(1);
+      expect(output).toContain('pueden fallar la certificación PDF/X');
+    } finally {
+      stderrSpy.mockRestore();
+      resetMagickCache();
+    }
+  });
+
+  it('con 99-pdfx inactivo el warning omite la mención de certificación', async () => {
+    resetMagickCache();
+    const stderrSpy = spyOn(process.stderr, 'write');
+    try {
+      await processDocumentImages([], {}, '/tmp', { w: 100, h: 150, textW: 80 }, false, '/tmp/out', undefined, false, async () => false);
+      const output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+      expect(output).toContain('ImageMagick no disponible');
+      expect(output).not.toContain('certificación PDF/X');
+    } finally {
+      stderrSpy.mockRestore();
+      resetMagickCache();
+    }
   });
 });

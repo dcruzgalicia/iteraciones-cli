@@ -36,9 +36,13 @@ export async function detectMagick(): Promise<boolean> {
   return magickAvailable;
 }
 
-/** Resetear cache (para tests). */
+/** Warning ya emitido por ausencia de magick en este proceso (#2040): uno solo por build. */
+let warnedMissingMagick = false;
+
+/** Resetear cache y avisos (para tests). */
 export function resetMagickCache(): void {
   magickAvailable = null;
+  warnedMissingMagick = false;
 }
 
 /** Dimensiones de página y caja de texto en mm. */
@@ -277,8 +281,22 @@ export async function processDocumentImages(
   cropActive: boolean,
   outputDir: string,
   multilineImages?: { absPath: string; isSvg: boolean; attrs?: string; widthMm?: number }[],
+  /** 99-pdfx activo: sin magick, las imágenes pueden fallar la certificación (#2040). */
+  pdfxActive = false,
+  /** Inyectable para tests. */
+  detector: () => Promise<boolean> = detectMagick,
 ): Promise<{ imageMap: Map<string, string>; processedFiles: string[] }> {
-  if (!(await detectMagick())) {
+  if (!(await detector())) {
+    // Correlación explícita causa↔efecto (#2040): sin aviso, un fallo posterior
+    // de certificación PDF/X sería críptico (imágenes RGB sin convertir).
+    if (!warnedMissingMagick) {
+      warnedMissingMagick = true;
+      logWarning(
+        'ImageMagick no disponible; las imágenes no se preprocesaron a escala de grises 300dpi' +
+          (pdfxActive ? '; pueden fallar la certificación PDF/X' : ''),
+        'images',
+      );
+    }
     return { imageMap: new Map(), processedFiles: [] };
   }
 

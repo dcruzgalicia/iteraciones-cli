@@ -77,6 +77,8 @@ export async function markdownToLatex(
   pageDimensions?: PageDimensions,
   /** Si true, endpapers usa +6mm (crop activo). */
   cropActive = false,
+  /** 99-pdfx activo (#2040): correlaciona el warning de magick con la certificación. */
+  pdfxActive = false,
 ): Promise<{ tex: string; processedImages: string[] }> {
   const title = typeof fm.title === 'string' && fm.title.trim() ? fm.title : 'Sin título';
   const creator = parseAuthors(fm.creator);
@@ -90,7 +92,7 @@ export async function markdownToLatex(
     const outputDir = join(docDir, '.iteraciones', 'processed-images');
     const inlineImages = scanInlineImages(content, docDir);
     const multilineImages = await scanTitlePageFieldImages(fm, docDir, pageDimensions.w);
-    const result = await processDocumentImages(inlineImages, fm, docDir, pageDimensions, cropActive, outputDir, multilineImages);
+    const result = await processDocumentImages(inlineImages, fm, docDir, pageDimensions, cropActive, outputDir, multilineImages, pdfxActive);
     imageMap = result.imageMap;
     processedImages = result.processedFiles;
     if (imageMap.size > 0) {
