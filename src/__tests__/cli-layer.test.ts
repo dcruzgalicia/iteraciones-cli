@@ -1822,6 +1822,23 @@ describe('runValidate', () => {
     });
   });
 
+  it('config sin documentos sugiere init (#2089)', async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\n', 'utf8');
+      const spy = spyOn(process.stdout, 'write');
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        output = spy.mock.calls.map((c) => String(c[0])).join('');
+        spy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+      expect(output).toContain("ejecuta 'iteraciones init'");
+    });
+  });
+
   it('advierte sobre documentos vacíos y frontmatter sin cuerpo (exit 0)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
