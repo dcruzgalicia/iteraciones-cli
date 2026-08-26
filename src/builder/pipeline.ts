@@ -126,7 +126,7 @@ export async function runDocumentPipeline(
     cropActive = preambleFilters.some((f) => f.name === '98-crop');
     pageDimensions = detectPageSize(preambleFilters);
     // Generación dinámica de 98-crop y 99-pdfx según tamaño de página (#1975).
-    applyPrintQueueDynamics(preambleFilters);
+    applyPrintQueueDynamics(preambleFilters, pageDimensions);
     await writeIfChanged(
       latexTemplatePath,
       await composeLatexTemplate({

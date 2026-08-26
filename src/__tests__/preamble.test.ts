@@ -690,6 +690,17 @@ describe('crop / pdfx dinámico (#1975)', () => {
       expect(attr).toContain(`/TrimBox [0 0 ${w}`);
     });
 
+    it('reusa las dimensiones provistas: resultado idéntico a calcularlas internamente (#2092)', () => {
+      const make = () => [
+        { name: '98-crop', content: 'old' },
+        { name: '99-pdfx', content: '\\usepackage[x-1a1]{pdfx}\n\\pdfpagesattr{old}' },
+      ];
+      const auto = applyPrintQueueDynamics(make());
+      const precomputed = detectPageSize(make());
+      const reused = applyPrintQueueDynamics(make(), precomputed);
+      expect(JSON.stringify(reused)).toBe(JSON.stringify(auto));
+    });
+
     it('ambos activos: crop + pdfx con boxes de page+6mm y trim offset', () => {
       const filters = [
         { name: '98-crop', content: 'old' },

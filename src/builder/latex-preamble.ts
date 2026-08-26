@@ -131,12 +131,13 @@ export function buildPdfxPagesattr(widthMm: number, heightMm: number, cropActive
  * filters están activos. Modifica el array in-place y retorna el mismo
  * puntero para encadenamiento.
  */
-export function applyPrintQueueDynamics(filters: PreambleFilter[]): PreambleFilter[] {
+export function applyPrintQueueDynamics(filters: PreambleFilter[], pageDimensions?: { w: number; h: number; textW: number }): PreambleFilter[] {
   const cropActive = filters.some((f) => f.name === '98-crop');
   const pdfxActive = filters.some((f) => f.name === '99-pdfx');
   if (!cropActive && !pdfxActive) return filters;
 
-  const { w, h } = detectPageSize(filters);
+  // Dimensiones ya detectadas por el pipeline (#2092): una sola evaluación.
+  const { w, h } = pageDimensions ?? detectPageSize(filters);
 
   for (const f of filters) {
     if (f.name === '98-crop' && cropActive) {
