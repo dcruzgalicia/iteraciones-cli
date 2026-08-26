@@ -1,7 +1,7 @@
 import { describe, expect, it, spyOn } from 'bun:test';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { loadSiteConfig, loadSiteConfigWithPresence } from '../config/config-loader.js';
+import { loadSiteConfig, loadSiteConfigIfPresent, loadSiteConfigWithPresence } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
 import type { HtmlFormatConfig } from '../config/site-config.js';
 import { DEFAULT_EPUB_FORMAT, DEFAULT_HTML_FORMAT, DEFAULT_MARKDOWN_FORMAT, DEFAULT_PDF_FORMAT, DEFAULT_SITE_CONFIG } from '../config/site-config.js';
@@ -13,20 +13,16 @@ async function writeConfig(dir: string, content: string): Promise<void> {
 }
 
 describe('loadSiteConfig', () => {
-  it('retorna defaults cuando no existe iteraciones.config.yaml', async () => {
+  it('lanza ConfigError cuando no existe iteraciones.config.yaml (fail-fast, #2071)', async () => {
     await withTempDir(async (dir) => {
-      const config = await loadSiteConfig(dir);
-      expect(config.format.html?.site?.title).toBe('iteraciones');
-      expect(config.format.html?.site?.description).toBe('escribir, compartir, re-existir');
-      expect(config.language).toBe('es-MX');
-      expect(config.format.html?.site?.logo).toBe('');
-      expect(config.disabledFilters).toBeUndefined();
-      expect(config.format?.pdf?.disabledPreambleFilters).toEqual(['97-eso-pic', '98-crop', '99-pdfx']);
-      expect(config.format.latex?.generate).toBe(false);
-      expect(config.format.html?.generate).toBe(true);
-      expect(config.format.pdf?.generate).toBe(false);
-      expect(config.format.epub?.generate).toBe(false);
-      expect(config.format.markdown?.generate).toBe(false);
+      const err: unknown = await loadSiteConfig(dir).then(
+        () => null,
+        (e: unknown) => e,
+      );
+      expect(err).toBeInstanceOf(ConfigError);
+      const message = err instanceof ConfigError ? err.message : '';
+      expect(message).toContain("ejecuta 'iteraciones init'");
+      expect(message).toContain('un archivo vacío usa los valores por defecto');
     });
   });
 
@@ -369,11 +365,8 @@ describe('loadSiteConfig', () => {
     });
   });
 
-  it('las tres vías de carga producen los mismos defaults de formato', async () => {
-    const results: (SiteConfig | null)[] = [];
-    await withTempDir(async (dir) => {
-      results.push(await loadSiteConfig(dir));
-    });
+  it('las vías de carga (vacío, mínimo) producen los mismos defaults de formato', async () => {
+    const results: SiteConfig[] = [];
     await withTempDir(async (dir) => {
       await writeConfig(dir, '');
       results.push(await loadSiteConfig(dir));
@@ -383,22 +376,20 @@ describe('loadSiteConfig', () => {
       results.push(await loadSiteConfig(dir));
     });
 
-    const [defaultsSinArchivo, defaultsConArchivoVacio, defaultsConMinimo] = results;
-    if (!defaultsSinArchivo || !defaultsConArchivoVacio || !defaultsConMinimo) {
+    const [defaultsConArchivoVacio, defaultsConMinimo] = results;
+    if (!defaultsConArchivoVacio || !defaultsConMinimo) {
       throw new Error('falló la carga de defaults en alguna vía');
     }
 
-    // Los defaults de formato deben coincidir en las tres vías
-    expect(defaultsConArchivoVacio.format.latex).toEqual(defaultsSinArchivo.format.latex);
-    expect(defaultsConMinimo.format.latex).toEqual(defaultsSinArchivo.format.latex);
-    expect(defaultsConArchivoVacio.format.html?.generate).toBe(defaultsSinArchivo.format.html?.generate);
-    expect(defaultsConMinimo.format.html?.generate).toBe(defaultsSinArchivo.format.html?.generate);
-    expect(defaultsConArchivoVacio.format?.pdf?.disabledPreambleFilters).toEqual(defaultsSinArchivo.format?.pdf?.disabledPreambleFilters);
-    expect(defaultsConMinimo.format?.pdf?.disabledPreambleFilters).toEqual(defaultsSinArchivo.format?.pdf?.disabledPreambleFilters);
+    // Los defaults de formato deben coincidir en todas las vías
+    expect(defaultsConMinimo.format.latex).toEqual(defaultsConArchivoVacio.format.latex);
+    expect(defaultsConMinimo.format.html?.generate).toBe(defaultsConArchivoVacio.format.html?.generate);
+    expect(defaultsConMinimo.format?.pdf?.disabledPreambleFilters).toEqual(defaultsConArchivoVacio.format?.pdf?.disabledPreambleFilters);
   });
 
   it('los defaults del esquema coinciden con las constantes DEFAULT_* (fuente única)', async () => {
     await withTempDir(async (dir) => {
+      await writeConfig(dir, '');
       const config = await loadSiteConfig(dir);
       expect(config.language).toBe(DEFAULT_SITE_CONFIG.language);
       expect(config.toc).toBe(DEFAULT_SITE_CONFIG.toc);
@@ -410,8 +401,9 @@ describe('loadSiteConfig', () => {
     });
   });
 
-  it('el tema por defecto es dark sin config y con config sin la clave', async () => {
+  it('el tema por defecto es dark con config vacía y con config sin la clave', async () => {
     await withTempDir(async (dir) => {
+      await writeConfig(dir, '');
       expect((await loadSiteConfig(dir)).format.html?.site?.theme).toBe('dark');
     });
     await withTempDir(async (dir) => {
@@ -431,8 +423,34 @@ describe('loadSiteConfig', () => {
       expect(config.format.pdf?.coverImage).toBe(true);
     });
     await withTempDir(async (dir) => {
+      await writeConfig(dir, '');
       const config = await loadSiteConfig(dir);
       expect(config.format.pdf?.coverImage).toBe(false);
+    });
+  });
+});
+
+describe('loadSiteConfigIfPresent', () => {
+  it('retorna null cuando no existe iteraciones.config.yaml', async () => {
+    await withTempDir(async (dir) => {
+      expect(await loadSiteConfigIfPresent(dir)).toBeNull();
+    });
+  });
+
+  it('carga defaults cuando el archivo existe pero está vacío', async () => {
+    await withTempDir(async (dir) => {
+      await writeConfig(dir, '');
+      const loaded = await loadSiteConfigIfPresent(dir);
+      expect(loaded).not.toBeNull();
+      expect(loaded?.config.language).toBe('es-MX');
+      expect(loaded?.presentKeys.size).toBe(0);
+    });
+  });
+
+  it('propaga errores de validación aunque el archivo exista', async () => {
+    await withTempDir(async (dir) => {
+      await writeConfig(dir, 'clave-inventada: 1\n');
+      await expect(loadSiteConfigIfPresent(dir)).rejects.toThrow(ConfigError);
     });
   });
 });
@@ -471,8 +489,12 @@ describe('loadSiteConfigWithPresence', () => {
     });
   });
 
-  it('sin archivo de config el conjunto de presencia está vacío', async () => {
+  it('sin archivo de config falla; con archivo vacío el conjunto de presencia está vacío (#2071)', async () => {
     await withTempDir(async (dir) => {
+      await expect(loadSiteConfigWithPresence(dir)).rejects.toThrow(ConfigError);
+    });
+    await withTempDir(async (dir) => {
+      await writeConfig(dir, '');
       const { config, presentKeys } = await loadSiteConfigWithPresence(dir);
       expect(presentKeys.size).toBe(0);
       expect(config.language).toBe('es-MX');

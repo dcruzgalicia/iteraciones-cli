@@ -270,6 +270,12 @@ describe.skipIf(!pandocOk)('runBuild', () => {
 
   it('proyecto vacío reporta 0 formatos sin "(reutilizado)" y avisa en stderr', async () => {
     await withTempDir(async (dir) => {
+      // Proyecto con config pero sin documentos (#2071: sin config el build falla antes)
+      await writeFile(
+        join(dir, 'iteraciones.config.yaml'),
+        ['language: es-MX', 'format:', '  html:', '    site:', '      title: Test', '    generate: true'].join('\n'),
+        'utf8',
+      );
       const stdoutSpy = spyOn(process.stdout, 'write');
       const stderrSpy = spyStderr();
       let out = '';
@@ -900,6 +906,24 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       expect(process.exitCode).toBe(1);
       expect(buildOutput).toContain('claves desconocidas');
       expect(buildOutput).toContain('clave-inventada');
+    });
+  });
+
+  it('build falla sin iteraciones.config.yaml sugiriendo init (#2071)', async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(join(dir, 'doc.md'), '---\ntitle: Doc\ndate: 2026-01-01\n---\n\nTexto.\n', 'utf8');
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(1);
+      expect(output).toContain('falta el archivo de configuración');
+      expect(output).toContain("ejecuta 'iteraciones init'");
     });
   });
 
@@ -1695,6 +1719,19 @@ describe('doctor --info (antes runInfo)', () => {
 describe('runFilters', () => {
   afterEach(resetExitCode);
 
+  it('funciona sin iteraciones.config.yaml mostrando el estado por defecto (#2071)', async () => {
+    await withTempDir(async (dir) => {
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      try {
+        process.exitCode = 0;
+        runFilters(dir);
+      } finally {
+        stdoutSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(0);
+    });
+  });
+
   it('por defecto muestra una línea por filtro: primera oración, ≤100 chars (#2027)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
@@ -1756,6 +1793,24 @@ describe('runFilters', () => {
 
 describe('runValidate', () => {
   afterEach(resetExitCode);
+
+  it('falla sin iteraciones.config.yaml sugiriendo init (#2071)', async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(join(dir, 'doc.md'), '---\ntitle: Doc\ndate: 2026-01-01\n---\n\nTexto.\n', 'utf8');
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        process.exitCode = 0;
+        await runValidate(dir);
+      } finally {
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        stderrSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(1);
+      expect(output).toContain('falta el archivo de configuración');
+      expect(output).toContain("ejecuta 'iteraciones init'");
+    });
+  });
 
   it('termina con exit 0 con config válida y documentos con frontmatter', async () => {
     await withTempDir(async (dir) => {
@@ -2418,6 +2473,8 @@ describe('runNew', () => {
 
   it.skipIf(!pandocOk)('el round-trip new → validate → build funciona con títulos difíciles', async () => {
     await withTempDir(async (dir) => {
+      // #2071: validate y build exigen iteraciones.config.yaml
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\n', 'utf8');
       process.exitCode = 0;
       await runNew(dir, 'articulo', { title: "Los tres mosqueteros: d'Artagnan" });
       await runValidate(dir);

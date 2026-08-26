@@ -37,7 +37,13 @@ export async function loadSiteConfigWithPresence(cwd: string): Promise<LoadedSit
   const file = Bun.file(configPath);
 
   if (!(await file.exists())) {
-    return { config: SiteConfigSchema.parse({}) as SiteConfig, presentKeys: new Set() };
+    // Fail-fast: build y validate exigen el archivo. Antes se construía con
+    // defaults en silencio, lo que producía "éxitos" que ignoraban toda la
+    // configuración del usuario (revisión integral 2026-08, issue #2071).
+    throw new ConfigError(
+      "falta el archivo de configuración del proyecto; ejecuta 'iteraciones init' para crearlo (un archivo vacío usa los valores por defecto)",
+      configPath,
+    );
   }
 
   let raw: string;
@@ -106,4 +112,14 @@ export async function loadSiteConfigWithPresence(cwd: string): Promise<LoadedSit
 /** Carga y valida la configuración con los defaults materializados (API pública). */
 export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
   return (await loadSiteConfigWithPresence(cwd)).config;
+}
+
+/**
+ * Carga la configuración solo si el archivo existe; null en ausencia.
+ * Para los comandos cuyo contrato tolera proyectos sin config (doctor,
+ * list-filters): build y validate exigen el archivo vía loadSiteConfig.
+ */
+export async function loadSiteConfigIfPresent(cwd: string): Promise<LoadedSiteConfig | null> {
+  if (!(await Bun.file(join(cwd, CONFIG_FILE)).exists())) return null;
+  return loadSiteConfigWithPresence(cwd);
 }

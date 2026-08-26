@@ -134,6 +134,7 @@ describe('computeBuildMetadata', () => {
 
   it('sin prevState: nada se considera invalidado', async () => {
     await withTempDir(async (dir) => {
+      await writeFile(join(dir, 'iteraciones.config.yaml'), '', 'utf8');
       const siteConfig = await loadSiteConfig(dir);
       const plan = await computeBuildMetadata(dir, siteConfig, null);
       expect(plan.filtersInvalidated).toBe(false);

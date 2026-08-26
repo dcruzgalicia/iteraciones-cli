@@ -31,6 +31,7 @@ describe('extractReferencesBlock (sin marcador en el template)', () => {
       // Template efectivo SIN la tarjeta referencias (sin <!-- block:referencias -->)
       writeFileSync(join(cwd, 'tpl.html'), '<html><body>$body$</body></html>');
       writeFileSync(join(cwd, 'bibliography.bib'), '@book{key1, author = {García, Lucía}, title = {Libro}, year = {2024}}\n');
+      writeFileSync(join(cwd, 'iteraciones.config.yaml'), '');
       const content = '---\ntitle: T\ncreator: [Autor]\ndate: 2026-01-01\n---\n\nCita [@key1].\n';
       const doc: BuildDocument = {
         filePath: join(cwd, 'test.md'),
@@ -70,6 +71,7 @@ describe('pdfDate (fecha de portada del PDF)', () => {
     try {
       const tpl = join(cwd, 'tpl.tex');
       writeFileSync(tpl, '\\date{$date$}\n$body$');
+      writeFileSync(join(cwd, 'iteraciones.config.yaml'), '');
       const content = '---\ntitle: T\ndate: 2026-08-08\n---\n\nTexto.\n';
       const filePath = join(cwd, 'test.md');
       writeFileSync(filePath, content);
