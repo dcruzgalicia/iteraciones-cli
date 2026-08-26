@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { copyFile, mkdir, rename, rm } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
 import { PandocError } from '../../lib/errors.js';
+import { fmBool, fmString } from '../../lib/frontmatter-fields.js';
 import { logWarning } from '../../lib/logger.js';
 import { execPandoc, MD_READER } from '../../lib/pandoc-runner.js';
 import { exec, ProcessSpawnError, ProcessTimeoutError } from '../../lib/run.js';
@@ -23,15 +24,6 @@ const LATEXMK_TIMEOUT_MS = 600_000;
  * sistema.
  */
 const XMP_TEMPLATE_RESOURCE = join(import.meta.dir, '../../lib/resources/xmp/pdfx.xmp');
-
-/** Resolución frontmatter > default para los campos que la exportación complementa (#2021). */
-function fmString(value: unknown, fallback: string): string {
-  return typeof value === 'string' && value ? value : fallback;
-}
-
-function fmBool(value: unknown, fallback: boolean): boolean {
-  return typeof value === 'boolean' ? value : fallback;
-}
 
 /**
  * Convierte el markdown original a EPUB3 usando pandoc (sin intermediario).

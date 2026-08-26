@@ -6,6 +6,7 @@ import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError, translateSystemError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
+import { fmStringList, resolveListField, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import type { BuildMetadata, WorkSets } from './build-planner.js';
@@ -264,79 +265,9 @@ interface FormatWorkSets {
 }
 
 /**
- * Normaliza un campo del frontmatter crudo aceptando un string o una lista de
- * strings (como author); devuelve undefined si no hay valores útiles.
- */
-function frontmatterStringList(value: unknown): string[] | undefined {
-  if (typeof value === 'string') return value.trim() ? [value] : undefined;
-  if (Array.isArray(value)) {
-    const items = value
-      .filter((v): v is string => typeof v === 'string')
-      .map((s) => s.trim())
-      .filter(Boolean);
-    return items.length > 0 ? items : undefined;
-  }
-  return undefined;
-}
-
-/**
  * Resuelve el valor de un metadato con precedencia: frontmatter > format config > root config.
- * @param fm Frontmatter del documento
- * @param formatCfg Config del formato actual (e.g., format.pdf)
- * @param rootCfg Config raíz del sitio
- * @param field Nombre del campo DC
- * @returns El valor resuelto o undefined si no existe en ningún nivel
+ * Contrato único en lib/frontmatter-fields.ts (#2073).
  */
-function resolveMetadata(
-  fm: Record<string, unknown>,
-  formatCfg: Record<string, unknown> | undefined,
-  rootCfg: Record<string, unknown>,
-  field: string,
-): string | string[] | undefined {
-  // 1. Frontmatter tiene prioridad
-  const fmValue = fm[field];
-  if (fmValue !== undefined) {
-    if (typeof fmValue === 'string' || Array.isArray(fmValue)) return fmValue;
-    return undefined;
-  }
-  // 2. Config por formato
-  if (formatCfg) {
-    const fmtValue = formatCfg[field];
-    if (fmtValue !== undefined) {
-      if (typeof fmtValue === 'string' || Array.isArray(fmtValue)) return fmtValue;
-      return undefined;
-    }
-  }
-  // 3. Config raíz
-  const rootValue = rootCfg[field];
-  if (rootValue !== undefined) {
-    if (typeof rootValue === 'string' || Array.isArray(rootValue)) return rootValue;
-    return undefined;
-  }
-  return undefined;
-}
-
-/** Resolución string con jerarquía frontmatter > config de formato > config raíz (una sola evaluación). */
-function resolveStringField(
-  fm: Record<string, unknown>,
-  formatCfg: Record<string, unknown> | undefined,
-  rootCfg: Record<string, unknown>,
-  field: string,
-): string | undefined {
-  const value = resolveMetadata(fm, formatCfg, rootCfg, field);
-  return typeof value === 'string' ? value : undefined;
-}
-
-/** Resolución lista-de-strings con la misma jerarquía (una sola evaluación). */
-function resolveListField(
-  fm: Record<string, unknown>,
-  formatCfg: Record<string, unknown> | undefined,
-  rootCfg: Record<string, unknown>,
-  field: string,
-): string[] | undefined {
-  const value = resolveMetadata(fm, formatCfg, rootCfg, field);
-  return Array.isArray(value) && value.every((v) => typeof v === 'string') ? (value as string[]) : undefined;
-}
 
 /**
  * Metadatos XMP/Info del documento desde el frontmatter crudo y el lang efectivo
@@ -351,17 +282,17 @@ function xmpMetadataFor(
 ): PdfXmpMetadata {
   return {
     title: resolveStringField(fm, formatCfg, rootCfg, 'title'),
-    authors: frontmatterStringList(resolveMetadata(fm, formatCfg, rootCfg, 'creator')),
+    authors: fmStringList(resolveMetadataField(fm, formatCfg, rootCfg, 'creator')),
     lang,
     dateIso: resolveStringField(fm, formatCfg, rootCfg, 'date'),
-    subject: frontmatterStringList(resolveMetadata(fm, formatCfg, rootCfg, 'subject'))?.join(', '),
-    publishers: frontmatterStringList(resolveMetadata(fm, formatCfg, rootCfg, 'publisher')),
-    keywords: frontmatterStringList(resolveMetadata(fm, formatCfg, rootCfg, 'keywords')),
+    subject: fmStringList(resolveMetadataField(fm, formatCfg, rootCfg, 'subject'))?.join(', '),
+    publishers: fmStringList(resolveMetadataField(fm, formatCfg, rootCfg, 'publisher')),
+    keywords: fmStringList(resolveMetadataField(fm, formatCfg, rootCfg, 'keywords')),
     description: resolveStringField(fm, formatCfg, rootCfg, 'description'),
-    contributors: frontmatterStringList(resolveMetadata(fm, formatCfg, rootCfg, 'contributor')),
+    contributors: fmStringList(resolveMetadataField(fm, formatCfg, rootCfg, 'contributor')),
     identifier: resolveStringField(fm, formatCfg, rootCfg, 'identifier'),
     source: resolveStringField(fm, formatCfg, rootCfg, 'source'),
-    relations: frontmatterStringList(resolveMetadata(fm, formatCfg, rootCfg, 'relation')),
+    relations: fmStringList(resolveMetadataField(fm, formatCfg, rootCfg, 'relation')),
     coverage: resolveStringField(fm, formatCfg, rootCfg, 'coverage'),
     rights: resolveStringField(fm, formatCfg, rootCfg, 'rights'),
     license: resolveStringField(fm, formatCfg, rootCfg, 'license'),
