@@ -207,25 +207,25 @@ async function buildProjectInfo(cwd: string): Promise<string[]> {
   const theme = html?.site?.theme ?? '(por defecto)';
   const accent = html?.site?.color ?? '(por defecto)';
 
-  // Etiquetas de los preamble filters con valor alineado: la columna la fija
-  // la etiqueta más larga (padEnd), sin espacios a mano que se desalinean.
   const preambleConfigLabel = 'filters de preámbulo desactivados (config):';
   const preambleDefaultsLabel = 'filters de preámbulo desactivados (defaults del paquete):';
-  const preambleWidth = preambleDefaultsLabel.length;
-  const lines = [
-    `  language:                ${config.language}`,
-    `  toc:                     ${config.toc ? 'sí' : 'no'}`,
-    `  documentos:              ${docCount}`,
-    `  salida:                  ${distDir}${distExists ? ' (generado)' : ' (no generado)'}`,
-    `  pandoc:                  ${pandocVersion}`,
-    `  formatos activos:        ${activeFormats.length > 0 ? activeFormats.join(', ') : '(ninguno)'}`,
-    `  tema HTML:               ${theme}`,
-    `  acento HTML:             ${accent}`,
-    `  filters desactivados:    ${disabledFilters}`,
-    `  ${preambleConfigLabel.padEnd(preambleWidth)} ${preambleDisabled.length > 0 ? preambleDisabled.join(', ') : '(ninguno)'}`,
-    `  ${preambleDefaultsLabel} ${DEFAULT_PDF_FORMAT.disabledPreambleFilters.join(', ')}`,
+  // Una sola cuadrícula para TODO el bloque (#2087): el ancho lo fija la
+  // etiqueta más larga, no espacios manuales por fila.
+  const rows: [string, string][] = [
+    ['language:', config.language],
+    ['toc:', config.toc ? 'sí' : 'no'],
+    ['documentos:', String(docCount)],
+    ['salida:', `${distDir}${distExists ? ' (generado)' : ' (no generado)'}`],
+    ['pandoc:', pandocVersion],
+    ['formatos activos:', activeFormats.length > 0 ? activeFormats.join(', ') : '(ninguno)'],
+    ['tema HTML:', theme],
+    ['acento HTML:', accent],
+    ['filters desactivados:', disabledFilters],
+    [preambleConfigLabel, preambleDisabled.length > 0 ? preambleDisabled.join(', ') : '(ninguno)'],
+    [preambleDefaultsLabel, DEFAULT_PDF_FORMAT.disabledPreambleFilters.join(', ')],
   ];
-  return lines;
+  const labelWidth = Math.max(...rows.map(([label]) => label.length));
+  return rows.map(([label, value]) => `  ${label.padEnd(labelWidth)} ${value}`);
 }
 
 export async function runInit(cwd: string): Promise<void> {
