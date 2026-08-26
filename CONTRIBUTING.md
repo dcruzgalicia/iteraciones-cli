@@ -161,6 +161,16 @@ docs(config): documenta bloque editorial y export en frontmatter
 
 7. **Responde comentarios** — cada observación debe recibir respuesta explícita
 
+8. **Merge** — el repositorio está configurado como **rebase-only** (`gh pr merge --rebase`). Los PRs de release-please (`chore(main): release …`) **nunca** se mergean en este flujo: los gestiona el mantenedor manualmente.
+
+### Prototipos arquitectónicos
+
+Las decisiones de arquitectura se validan **en rama y contra contenido real** antes de llegar a `main`. El historial temprano acumuló varios ciclos adoptar→eliminar en menos de dos semanas (un motor de templates propio, plugins, un AST canónico serializado que vivió 10 días); esta política existe para no repetirlos:
+
+- Un cambio de arquitectura (pipeline, formatos, sistema de filtros, modelo de estado) comienza como rama de prototipo con su issue.
+- El prototipo se demuestra sobre proyectos reales de contenido antes de abrir el PR definitivo.
+- Si la demo convence, el PR llega con el ADR o decisión documentada en el issue; si no, se descarta sin costo para `main`.
+
 ## Convenciones de código
 
 - **Runtime:** Bun APIs (`Bun.file()`, `Bun.write()`, `Bun.spawn()`) para I/O. Solo usar `node:fs/promises` para operaciones de sistema (mkdir, rm).
