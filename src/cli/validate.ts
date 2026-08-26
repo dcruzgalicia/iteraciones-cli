@@ -11,7 +11,7 @@ import {
   validateFrontmatterFields,
 } from '../builder/project-validator.js';
 import { loadSiteConfig } from '../config/config-loader.js';
-import { ConfigError } from '../lib/errors.js';
+import { ConfigError, translateSystemError } from '../lib/errors.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 import { logError, logInfo, logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
@@ -40,7 +40,7 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
     } catch (err) {
       errors.push({
         file: entry,
-        message: `no se pudo leer: ${err instanceof Error ? err.message : String(err)}`,
+        message: `no se pudo leer: ${translateSystemError(err, 'verifica que el nombre del archivo sea correcto')}`,
       });
       continue;
     }
