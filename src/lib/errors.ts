@@ -24,11 +24,21 @@ export class ConfigError extends Error {
  * etc.). El dispatcher lo reporta con el prefijo [build].
  */
 export class BuildError extends Error {
-  constructor(message: string) {
+  /** Código estructural opcional: clasificación del error sin matchear texto (#2074). */
+  readonly code?: string;
+
+  constructor(message: string, code?: string) {
     super(message);
     this.name = 'BuildError';
+    this.code = code;
   }
 }
+
+/** Códigos estructurales de BuildError usados por la CLI para decidir hints. */
+export const BUILD_ERROR_CODES = {
+  /** Sintaxis YAML del frontmatter inválida: el detalle completo lo da validate. */
+  frontmatterSyntax: 'frontmatter-syntax',
+} as const;
 
 /**
  * Prefijos de clase de error conocidos que se eliminan del mensaje.

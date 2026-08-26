@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { EMPTY_PROJECT_WARNING_INIT, EMPTY_PROJECT_WARNING_NO_DOCS } from '../builder/orchestrator.js';
 import type { BuildReporter, RenderFileReport } from '../builder/types.js';
 import { GLYPHS } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
@@ -243,12 +244,9 @@ export class ProgressTracker implements BuildReporter {
       // autosuficientes de proyecto vacío: ya proponen 'iteraciones init' y
       // validate respondería "sin errores — 0 documentos", un paso que no
       // aporta. Si hay cualquier otra advertencia (frontmatter/config), la
-      // guía sigue apareciendo.
-      const emptyProjectWarnings = [
-        'No se encontraron documentos Markdown en el proyecto.',
-        "Crea un archivo .md con frontmatter o ejecuta 'iteraciones init'.",
-      ];
-      const suggestsValidate = this.state.warnings.some((w) => !emptyProjectWarnings.some((empty) => w.includes(empty)));
+      // guía sigue apareciendo. Constantes compartidas con el emisor (#2074):
+      // sin literales replicados que se desincronicen.
+      const suggestsValidate = this.state.warnings.some((w) => !w.includes(EMPTY_PROJECT_WARNING_NO_DOCS) && !w.includes(EMPTY_PROJECT_WARNING_INIT));
       this.stream.write(
         `\n${GLYPHS.warning} Build completado con ${plural(this.state.warnings.length, 'advertencia')}${suggestsValidate ? `. Ejecuta 'iteraciones validate' para más detalle.` : '.'}\n`,
       );
