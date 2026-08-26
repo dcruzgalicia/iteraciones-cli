@@ -264,6 +264,20 @@ describe('discoverBibFiles y computeBibHash', () => {
     });
   });
 
+  it('propaga errores no-ENOENT del escaneo (política ENOENT-only, #2078)', async () => {
+    await withTempDir(async (dir) => {
+      // cwd que es un archivo: el escaneo falla con ENOTDIR (no ENOENT)
+      await writeFile(join(dir, 'archivo'), 'x', 'utf8');
+      await expect(discoverBibFiles(join(dir, 'archivo'))).rejects.toMatchObject({ code: 'ENOTDIR' });
+    });
+  });
+
+  it('un cwd inexistente equivale a sin bibliografía (ENOENT tolerado)', async () => {
+    await withTempDir(async (dir) => {
+      await expect(discoverBibFiles(join(dir, 'no-existe'))).resolves.toEqual([]);
+    });
+  });
+
   it('computeBibHash con bibliography configurada solo hashea esa ruta', async () => {
     await withTempDir(async (dir) => {
       await writeFile(join(dir, 'libro.bib'), '@book{k1}\n', 'utf8');
