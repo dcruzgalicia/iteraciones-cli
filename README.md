@@ -6,9 +6,24 @@ CLI para construir documentos HTML, PDF, EPUB, LaTeX y Markdown a partir de arch
 
 ## Requisitos
 
-- [bun](https://bun.sh) ≥ 1.0
-- [pandoc](https://pandoc.org/installing.html) disponible en `PATH`
-- (para PDF) TeX Live o MacTeX con KOMA-Script instalado
+| Para generar | Necesitas |
+|--------------|-----------|
+| HTML (siempre) | [bun](https://bun.sh) ≥ 1.0 · [pandoc](https://pandoc.org/installing.html) en `PATH` |
+| PDF | TeX Live o **MacTeX full** (latexmk + KOMA-Script) · [ImageMagick](https://imagemagick.org) (`magick`) para preprocesar imágenes a CMYK 300 dpi |
+| PDF/X-1a (imprenta) | Todo lo anterior + [Rust](https://rustup.rs): el primer build compila el validador `iteraciones-pdfcheck` automáticamente |
+
+Notas:
+
+- Sin ImageMagick, los PDF se generan igual; solo se omite el preproceso de imágenes (con advertencia).
+- `iteraciones-pdfcheck` es opcional: sin él se salta la certificación PDF/X-1a (con advertencia). Compilación manual si prefieres no instalar Rust ahora:
+
+  ```bash
+  cd tools/pdfx-validator
+  cargo build --release
+  cp target/release/iteraciones-pdfcheck /usr/local/bin/   # o cualquier directorio en PATH
+  ```
+
+`iteraciones doctor` comprueba solo lo que tu proyecto activa y te dice cómo instalar lo que falte.
 
 ## Instalación
 
@@ -165,7 +180,7 @@ Verifica que el entorno tenga todo lo necesario para ejecutar `iteraciones build
 iteraciones doctor [opciones]
 ```
 
-Comprobaciones que realiza: versión de Bun, pandoc disponible en PATH, configuración del proyecto (`iteraciones.config.yaml`) válida, pdflatex y KOMA-Script instalados (solo si el proyecto compila PDF), permisos de lectura y escritura.
+Comprobaciones que realiza: versión de Bun, pandoc disponible en PATH, configuración del proyecto (`iteraciones.config.yaml`) válida, permisos de lectura y escritura; y, según lo que el proyecto active: pdflatex/KOMA-Script, ImageMagick (PDF) e `iteraciones-pdfcheck` (PDF/X-1a). Cada fallo incluye cómo instalar lo que falta.
 
 Con `--info` también muestra la configuración del proyecto (idioma, documentos, salida, formatos activos, tema HTML, filtros desactivados).
 
