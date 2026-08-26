@@ -129,6 +129,8 @@ iteraciones --project-root /ruta/al/proyecto validate
 
 Construye los documentos a partir de los archivos Markdown.
 
+La salida vive en `dist/files/`: ahí se escriben todos los formatos (`index.html`, `libro.pdf`, …) junto a CSS, fuentes, logo y —con LaTeX activo— el bundle portable `.tex` + imágenes (véase [docs/quickstart.md](docs/quickstart.md)). `iteraciones clean` elimina `dist/` completo; la caché de invalidación vive aparte en `.iteraciones/`.
+
 ```
 iteraciones build [opciones]
 ```
@@ -136,7 +138,7 @@ iteraciones build [opciones]
 | Opción | Descripción | Por defecto |
 |--------|-------------|-------------|
 | `--full` | Build completo desde cero: elimina la salida anterior (`dist/`) y la caché | — |
-| `--output <path>` | Directorio de salida | `dist/files` |
+| `--output <path>` | Directorio de salida, relativo a la raíz del proyecto (o absoluta) | `dist/files` |
 | `--verbose` | Muestra información adicional de progreso | — |
 | `--json` | Imprime el resultado como JSON en stdout (consumo programático) | — |
 
