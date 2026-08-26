@@ -383,11 +383,13 @@ async function processDocumentFormats(
       // filenames — compila fuera del árbol del proyecto. El tex del área de
       // trabajo de latexmk (abajo) conserva las rutas absolutas procesadas.
       const distribution = buildTexDistribution(processedImages, outSlug);
-      for (const [absSrc, fileName] of distribution) {
-        if (await Bun.file(absSrc).exists()) {
-          await Bun.write(outBase(fileName), Bun.file(absSrc));
-        }
-      }
+      // Copias concurrentes (#2093): la fase corre dentro del pool del pipeline;
+      // serializarlas domina la latencia de documentos ricos en imágenes.
+      await Promise.all(
+        [...distribution].map(async ([absSrc, fileName]) => {
+          if (await Bun.file(absSrc).exists()) await Bun.write(outBase(fileName), Bun.file(absSrc));
+        }),
+      );
       await writeOutput(texDistPath, rewriteTexForDist(texWithXmp, distribution));
     }
     if (pdfOn) {
