@@ -1,4 +1,4 @@
-import { PandocError } from './errors.js';
+import { PANDOC_ERROR_CODES, PandocError } from './errors.js';
 import { exec, ProcessSpawnError, ProcessTimeoutError, type RunResult } from './run.js';
 
 /** Límite de tiempo de una invocación de pandoc: 2 minutos. */
@@ -45,9 +45,14 @@ export async function getPandocVersion(): Promise<string> {
   try {
     result = await exec('pandoc', ['--version']);
   } catch {
-    throw new PandocError('pandoc no está disponible en PATH. Instálalo desde https://pandoc.org/installing.html', '', '');
+    throw new PandocError(
+      'pandoc no está disponible en PATH. Instálalo desde https://pandoc.org/installing.html',
+      '',
+      '',
+      PANDOC_ERROR_CODES.envMissing,
+    );
   }
-  if (result.exitCode !== 0) throw new PandocError('pandoc no está disponible en PATH', '', result.stderr);
+  if (result.exitCode !== 0) throw new PandocError('pandoc no está disponible en PATH', '', result.stderr, PANDOC_ERROR_CODES.envMissing);
   const version = result.stdout.split('\n')[0]?.trim() ?? 'pandoc unknown';
   return version;
 }
@@ -83,7 +88,12 @@ export async function execPandoc(options: PandocOptions): Promise<string> {
     if (err instanceof ProcessSpawnError) {
       // Error esperado: pandoc no está en PATH; el mensaje accionable es más
       // útil que la causa técnica.
-      throw new PandocError('pandoc no está disponible en PATH. Instálalo desde https://pandoc.org/installing.html', options.sourcePath, '');
+      throw new PandocError(
+        'pandoc no está disponible en PATH. Instálalo desde https://pandoc.org/installing.html',
+        options.sourcePath,
+        '',
+        PANDOC_ERROR_CODES.envMissing,
+      );
     }
     if (err instanceof ProcessTimeoutError) {
       // Un pandoc colgado (p. ej. un filtro Lua en loop) no debe colgar el

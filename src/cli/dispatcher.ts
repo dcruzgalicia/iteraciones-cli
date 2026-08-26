@@ -7,9 +7,10 @@ import { build } from '../builder/orchestrator.js';
 import { loadStateFile } from '../builder/state.js';
 import { loadSiteConfigIfPresent } from '../config/config-loader.js';
 import { computeActiveFormats, DEFAULT_PDF_FORMAT } from '../config/site-config.js';
-import { BUILD_ERROR_CODES, BuildError, ConfigError, PandocError } from '../lib/errors.js';
+import { BUILD_ERROR_CODES, BuildError, ConfigError, PANDOC_ERROR_CODES, PandocError } from '../lib/errors.js';
 import { logError, logInfo, logSuccess } from '../lib/logger.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
+import { ProcessSpawnError } from '../lib/run.js';
 import { runDoctor as doctor } from './doctor.js';
 import { runFilters as filters, type RunFiltersOptions } from './filters.js';
 import { runInit as init } from './init.js';
@@ -123,10 +124,22 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
     });
     await build(cwd, { ...options, outputDir: output }, tracker);
   } catch (err) {
+    reportBuildError(err, options.json);
+    process.exitCode = 1;
+  }
+}
+
+/**
+ * Reporta un error de build con el formato unificado y las sugerencias que
+ * conectan con las herramientas de diagnóstico (#2082). Exportado para tests:
+ * la clasificación usa códigos estructurales, nunca el texto del mensaje.
+ */
+export function reportBuildError(err: unknown, json = false): void {
+  {
     // Con --json el fallo se reporta también como JSON válido en stdout: quien
     // consume el build programáticamente recibe siempre un objeto parseable
     // (el detalle humano sigue en stderr).
-    if (options.json) {
+    if (json) {
       const message = err instanceof Error ? err.message : String(err);
       process.stdout.write(`${JSON.stringify({ error: message })}\n`);
     }
@@ -135,10 +148,19 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
     const suggestValidate = (): void => {
       process.stderr.write("  ejecuta 'iteraciones validate' para más detalle\n");
     };
+    // Los errores de entorno (herramienta ausente en PATH) se diagnostican
+    // con doctor: la sugerencia conecta build ↔ diagnóstico (#2082).
+    const suggestDoctor = (): void => {
+      process.stderr.write("  ejecuta 'iteraciones doctor' para diagnosticar el entorno\n");
+    };
     if (err instanceof PandocError) {
       const location = err.sourcePath ? ` en "${err.sourcePath}"` : '';
       logError(`${err.message}${location}`);
       if (err.stderr) process.stderr.write(`${err.stderr}\n`);
+      if (err.code === PANDOC_ERROR_CODES.envMissing) suggestDoctor();
+    } else if (err instanceof ProcessSpawnError) {
+      logError(err.message);
+      suggestDoctor();
     } else if (err instanceof ConfigError) {
       logError(err.message, 'config');
       suggestValidate();
@@ -153,7 +175,6 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
     } else {
       logError('Error desconocido al construir el sitio.');
     }
-    process.exitCode = 1;
   }
 }
 
