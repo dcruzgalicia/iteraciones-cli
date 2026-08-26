@@ -212,6 +212,7 @@ async function discoverDocuments(
       filtersHash: plan.filtersHash,
       filterFileCache: plan.filterFileCache,
       configHashes: plan.configHashes,
+      configFileCache: plan.configFileCache,
       bibHash: plan.bibHash,
       bibFileCache: plan.bibFileCache,
     },

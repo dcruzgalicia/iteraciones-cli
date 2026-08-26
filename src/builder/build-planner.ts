@@ -27,6 +27,8 @@ export interface BuildMetadata {
   newFormats: string[];
   removedFormats: string[];
   configHashes: Record<string, string>;
+  /** Caché mtime+size de recursos de config (recursos HTML, logo) para persistir (#2091). */
+  configFileCache: Record<string, import('./state-hash.js').FileCacheEntry>;
   filtersHash: string;
   /** Caché de archivos de filtro (mtime+size+hash) para persistir en state.json. */
   filterFileCache: FilterFileCache;
@@ -64,11 +66,12 @@ export async function computeBuildMetadata(
 ): Promise<BuildMetadata> {
   const currentFormats = computeActiveFormats(siteConfig.format);
 
-  const [configHashes, filtersHashResult, bibHashResult] = await Promise.all([
-    computeConfigHashes(cwd, siteConfig),
+  const [configResult, filtersHashResult, bibHashResult] = await Promise.all([
+    computeConfigHashes(cwd, siteConfig, prevState?.configFileCache),
     computeFiltersHash(cwd, siteConfig, prevState?.filterFileCache, effectiveDisabledPreamble, pandocVersion),
     computeBibHash(cwd, siteConfig, prevState?.bibFileCache),
   ]);
+  const { hashes: configHashes, cache: configFileCache } = configResult;
   const filtersHash = filtersHashResult.hash;
   const filterFileCache = filtersHashResult.cache;
 
@@ -104,6 +107,7 @@ export async function computeBuildMetadata(
     newFormats,
     removedFormats,
     configHashes,
+    configFileCache,
     filtersHash,
     filterFileCache,
     bibHash: bibHashResult.hash,

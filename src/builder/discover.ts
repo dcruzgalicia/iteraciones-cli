@@ -109,6 +109,7 @@ export async function discover(
       filtersHash: string;
       filterFileCache: FilterFileCache;
       configHashes: Record<string, string>;
+      configFileCache?: Record<string, import('./state-hash.js').FileCacheEntry>;
       bibHash: string;
       bibFileCache: BibFileCache;
     };
@@ -348,6 +349,7 @@ export async function discover(
         filtersHash: options.meta?.filtersHash,
         filterFileCache: options.meta?.filterFileCache,
         configHashes: options.meta?.configHashes,
+        configFileCache: options.meta?.configFileCache,
         bibHash: options.meta?.bibHash,
         bibFileCache: options.meta?.bibFileCache,
       }

@@ -186,21 +186,36 @@ export async function computeFiltersHash(
  * - epub: format.epub
  * - markdown: format.markdown + lang
  */
-export async function computeConfigHashes(cwd: string, siteConfig: SiteConfig): Promise<Record<string, string>> {
+/**
+ * Caché mtime+size de los recursos empaquetados y del logo (#2091): evita
+ * releer completos los recursos en builds sin cambios, mismo patrón que
+ * filters/bib. ENOENT (logo ausente) ⇒ '' sin entrada.
+ */
+async function resourceHash(
+  abs: string,
+  key: string,
+  prevCache: Record<string, FileCacheEntry> | undefined,
+  cacheOut: Record<string, FileCacheEntry>,
+): Promise<string> {
+  return (await hashFileCached(abs, key, prevCache, cacheOut)) ?? '';
+}
+
+export async function computeConfigHashes(
+  cwd: string,
+  siteConfig: SiteConfig,
+  prevFileCache?: Record<string, FileCacheEntry>,
+  fileCacheOut: Record<string, FileCacheEntry> = {},
+): Promise<{ hashes: Record<string, string>; cache: Record<string, FileCacheEntry> }> {
   const fmt = siteConfig.format;
   const htmlConfig = fmt?.html;
+  // Recursos empaquetados vía caché mtime+size (#2091): solo re-lee contenido
+  // cuando cambian; si no, reutiliza el hash previo.
   const htmlResources = (
-    await Promise.all(
-      HTML_RESOURCE_FILES.map((f) =>
-        Bun.file(join(HTML_RESOURCES_DIR, f))
-          .text()
-          .catch(() => ''),
-      ),
-    )
+    await Promise.all(HTML_RESOURCE_FILES.map((f) => resourceHash(join(HTML_RESOURCES_DIR, f), `html-res:${f}`, prevFileCache, fileCacheOut)))
   ).join('\n');
   const logoPath = htmlConfig?.site?.logo?.trim();
-  const logo = logoPath ? await hashFileContent(join(cwd, logoPath)).catch(() => '') : '';
-  return {
+  const logo = logoPath ? await resourceHash(join(cwd, logoPath), 'html-res:logo', prevFileCache, fileCacheOut) : '';
+  const hashes = {
     pdf: hashString(
       `${JSON.stringify(fmt?.pdf ?? {})}\n${String(fmt?.latex?.generate ?? false)}\n${String(siteConfig.toc ?? false)}\n${String(siteConfig.language ?? '')}`,
     ),
@@ -215,4 +230,5 @@ export async function computeConfigHashes(cwd: string, siteConfig: SiteConfig): 
     epub: hashString(`${JSON.stringify(fmt?.epub ?? {})}\n${String(siteConfig.toc ?? false)}\n${String(siteConfig.language ?? '')}`),
     markdown: hashString(`${JSON.stringify(fmt?.markdown ?? {})}\n${String(siteConfig.language ?? '')}`),
   };
+  return { hashes, cache: fileCacheOut };
 }

@@ -22,6 +22,7 @@ function meta(overrides: Partial<BuildMetadata> = {}): BuildMetadata {
     newFormats: [],
     removedFormats: [],
     configHashes: {},
+    configFileCache: {},
     filtersHash: 'h',
     filterFileCache: {},
     bibHash: 'b',
