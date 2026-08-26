@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, spyOn } from 'bun:test';
 import { mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -210,5 +210,34 @@ describe('discover (cambios de slug por metadatos)', () => {
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
+  });
+});
+
+describe('aviso por diacríticos en slug (#2090)', () => {
+  it('título con ñ: avisa con la sustitución y el slug', async () => {
+    const cwd = makeProject('---\ntitle: Año del jalapeño\n---\n\nContenido');
+    const errSpy = spyOn(process.stderr, 'write');
+    let out = '';
+    try {
+      await buildStep(cwd);
+    } finally {
+      out = errSpy.mock.calls.map((c) => String(c[0])).join('');
+      errSpy.mockRestore();
+    }
+    expect(out).toContain('altera palabras del título');
+    expect(out).toContain('ano-del-jalapeno');
+  });
+
+  it('acentos agudos inocuos no avisan', async () => {
+    const cwd = makeProject('---\ntitle: Corazón profundo\n---\n\nContenido');
+    const errSpy = spyOn(process.stderr, 'write');
+    let out = '';
+    try {
+      await buildStep(cwd);
+    } finally {
+      out = errSpy.mock.calls.map((c) => String(c[0])).join('');
+      errSpy.mockRestore();
+    }
+    expect(out).not.toContain('altera palabras del título');
   });
 });
