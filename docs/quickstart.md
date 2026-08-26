@@ -62,7 +62,7 @@ Crea documentos Markdown adicionales:
 iteraciones new posts/primer-articulo.md
 ```
 
-El comando crea `posts/primer-articulo.md` con el frontmatter mínimo correcto, infiriendo el título desde el nombre del archivo (capitaliza solo la primera letra) y usando la fecha actual:
+El comando crea `posts/primer-articulo.md` con el frontmatter mínimo correcto, infiriendo el título desde el nombre del archivo (capitaliza cada palabra) y usando la fecha actual:
 
 ```markdown
 ---

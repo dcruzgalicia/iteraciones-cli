@@ -2403,6 +2403,16 @@ describe('huecos transversales (#2032)', () => {
 describe('runNew', () => {
   afterEach(resetExitCode);
 
+  it('la inferencia conserva los acentos del nombre de archivo (#2088)', async () => {
+    await withTempDir(async (dir) => {
+      process.exitCode = 0;
+      await runNew(dir, 'corazón-profundo');
+      expect(process.exitCode).toBe(0);
+      const content = await Bun.file(join(dir, 'corazón-profundo.md')).text();
+      expect(content).toContain('title: "Corazón Profundo"');
+    });
+  });
+
   it('crea un archivo .md con frontmatter mínimo', async () => {
     await withTempDir(async (dir) => {
       process.exitCode = 0;

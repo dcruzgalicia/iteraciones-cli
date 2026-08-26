@@ -158,7 +158,7 @@ iteraciones new posts/mi-articulo.md
 
 El archivo se crea con `title`, `date` y el bloque `---`. Si no se incluye extensión `.md`, se agrega automáticamente.
 
-El título se infiere del nombre del archivo **sin acentos** (`mi-articulo.md` → `title: "Mi articulo"`). Para títulos con acentos u otro texto, usa `--title`:
+El título se infiere del nombre del archivo capitalizando cada palabra y conservando los acentos que tenga (`corazon.md` → `title: "Corazon"`, `corazón.md` → `title: "Corazón"`). Para un título distinto del nombre —o con acentos que el nombre no tiene—, usa `--title`:
 
 ```
 iteraciones new --title "Mi artículo" posts/mi-articulo.md
