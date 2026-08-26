@@ -1,4 +1,5 @@
 import type { SiteConfig } from '../config/config-schema.js';
+import { fmString } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { type BibOptions, execPandoc, MD_READER } from '../lib/pandoc-runner.js';
 import { type LuaFilterGroup, loadFilterGroups } from './filter-resolver.js';
@@ -29,16 +30,12 @@ export async function htmlPageFromMarkdown(
   // Valores efectivos: el frontmatter del documento manda; la config aporta defaults.
   // Contrato de idioma unificado: `language` en HTML, EPUB y Markdown (#2010).
   // Mecanismo único de resolución de vars de página (#2021): una evaluación por campo.
-  const pick = (key: string, fallback: string): string => {
-    const value = fm[key];
-    return typeof value === 'string' && value ? value : fallback;
-  };
-  const lang = pick('language', vars.lang);
-  const siteTitle = pick('site-title', vars.siteTitle);
-  const tagline = pick('tagline', vars.tagline ?? '');
-  const theme = pick('theme', vars.theme ?? '');
-  const accent = pick('accent', vars.accent ?? '');
-  const css = pick('css', vars.css ?? '');
+  const lang = fmString(fm['language'], vars.lang);
+  const siteTitle = fmString(fm['site-title'], vars.siteTitle);
+  const tagline = fmString(fm['tagline'], vars.tagline ?? '');
+  const theme = fmString(fm['theme'], vars.theme ?? '');
+  const accent = fmString(fm['accent'], vars.accent ?? '');
+  const css = fmString(fm['css'], vars.css ?? '');
   const tocActive = typeof fm.toc === 'boolean' ? fm.toc : siteConfig.toc;
 
   const extraArgs = [

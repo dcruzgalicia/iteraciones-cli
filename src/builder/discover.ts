@@ -3,6 +3,7 @@ import { basename, join } from 'node:path';
 import slugifyLib from 'slugify';
 import { BuildError, formatUserError, translateSystemError } from '../lib/errors.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
+import { fmStringList, fmTrimmedString } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
 import { mapWithConcurrency } from '../lib/run.js';
@@ -227,12 +228,10 @@ export async function discover(
               }
             }
             title = typeof rawTitle === 'string' ? rawTitle : '';
-            subtitle = typeof record.subtitle === 'string' && record.subtitle.trim() ? record.subtitle.trim() : undefined;
-            date = typeof record.date === 'string' && record.date.trim() ? record.date.trim() : undefined;
+            subtitle = fmTrimmedString(record.subtitle);
+            date = fmTrimmedString(record.date);
             creators = parseAuthors(record.creator);
-            if (typeof record.slug === 'string' && record.slug.trim()) {
-              manualSlug = record.slug.trim();
-            }
+            manualSlug = fmTrimmedString(record.slug);
           }
         }
       } catch (err) {
@@ -379,13 +378,7 @@ export function buildDocsFromIndex(relativePaths: string[], discoveryIndex: Map<
  * array vacío si el campo está ausente, es nulo o está vacío.
  */
 export function parseAuthors(raw: unknown): string[] {
-  if (Array.isArray(raw)) {
-    return raw.filter((a: unknown): a is string => typeof a === 'string');
-  }
-  if (typeof raw === 'string' && raw.trim()) {
-    return [raw.trim()];
-  }
-  return [];
+  return fmStringList(raw) ?? [];
 }
 
 /**
