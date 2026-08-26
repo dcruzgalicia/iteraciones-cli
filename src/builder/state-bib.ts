@@ -23,8 +23,11 @@ export async function discoverBibFiles(cwd: string, extensions: string[] = ['bib
       if (isIgnoredByRules(rel, gitignoreRules)) continue;
       results.push(file);
     }
-  } catch {
-    // Sin archivos de bibliografía
+  } catch (err) {
+    // Política única de ENOENT (#2020, aplicada a bib en #2078): solo la
+    // ausencia es "sin bibliografía"; cualquier otro error de escaneo se
+    // propaga — tragarlo convertía EACCES/EMFILE en un build sin citas.
+    if ((err as NodeJS.ErrnoException)?.code !== 'ENOENT') throw err;
   }
   return results.sort();
 }
