@@ -5,7 +5,7 @@ import { listMarkdownDocuments } from '../builder/gitignore.js';
 import type { BuildOptions } from '../builder/orchestrator.js';
 import { build } from '../builder/orchestrator.js';
 import { loadStateFile } from '../builder/state.js';
-import { loadSiteConfigWithPresence } from '../config/config-loader.js';
+import { loadSiteConfigIfPresent } from '../config/config-loader.js';
 import { computeActiveFormats, DEFAULT_PDF_FORMAT } from '../config/site-config.js';
 import { BuildError, ConfigError, PandocError } from '../lib/errors.js';
 import { logError, logInfo, logSuccess } from '../lib/logger.js';
@@ -160,7 +160,11 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
 
 /** Información del proyecto para doctor --info (antes comando info). */
 async function buildProjectInfo(cwd: string): Promise<string[]> {
-  const { config, presentKeys } = await loadSiteConfigWithPresence(cwd);
+  const loaded = await loadSiteConfigIfPresent(cwd);
+  if (!loaded) {
+    return ["sin iteraciones.config.yaml — ejecuta 'iteraciones init' para crear la estructura del proyecto"];
+  }
+  const { config, presentKeys } = loaded;
   const pandocVersion = await getPandocVersion().catch(() => 'no disponible');
   // El directorio de salida real es el del último build (state.json);
   // sin estado previo, el default.

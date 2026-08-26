@@ -235,6 +235,7 @@ describe('computeFiltersHash', () => {
     await withTempDir(async (dir) => {
       await mkdir(join(dir, 'filters', 'latex'), { recursive: true });
       await writeFile(join(dir, 'filters', 'latex', '99-test.lua'), '-- v1\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), '', 'utf8');
       const config = await loadSiteConfig(dir);
       const h1 = await computeFiltersHash(dir, config);
       await writeFile(join(dir, 'filters', 'latex', '99-test.lua'), '-- v2\n', 'utf8');
@@ -247,6 +248,7 @@ describe('computeFiltersHash', () => {
 
   it('el caché retorna hash estables con prevCache (mtime+size iguales)', async () => {
     await withTempDir(async (dir) => {
+      await writeFile(join(dir, 'iteraciones.config.yaml'), '', 'utf8');
       const config = await loadSiteConfig(dir);
       const first = await computeFiltersHash(dir, config);
       expect(Object.keys(first.cache).length).toBeGreaterThan(0);

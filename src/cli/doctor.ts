@@ -1,6 +1,5 @@
-import { loadSiteConfig } from '../config/config-loader.js';
+import { loadSiteConfigIfPresent } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
-import { ConfigError } from '../lib/errors.js';
 import { GLYPHS, logInfo } from '../lib/logger.js';
 import {
   type CheckResult,
@@ -23,12 +22,21 @@ export async function collectChecks(cwd: string): Promise<CheckResult[]> {
   // entorno): el motor LaTeX solo se verifica si el proyecto lo necesita
   // (format.pdf o format.latex activos), mismo criterio que validate.
   const [configResult, pandoc, read, write] = await Promise.all([
-    loadSiteConfig(cwd).then(
-      (siteConfig: SiteConfig) => ({ siteConfig, ok: true, detail: undefined as string | undefined }),
+    loadSiteConfigIfPresent(cwd).then(
+      (loaded): { siteConfig: SiteConfig | null; ok: boolean; detail: string | undefined } =>
+        loaded
+          ? { siteConfig: loaded.config, ok: true, detail: undefined }
+          : // Sin iteraciones.config.yaml el check falla con salida accionable.
+            {
+              siteConfig: null,
+              ok: false,
+              detail: "no se encontró iteraciones.config.yaml; ejecuta 'iteraciones init' para crearlo",
+            },
       (err: unknown) => ({
-        siteConfig: null,
+        // Errores de parseo/validación: el detalle es el mensaje del loader.
+        siteConfig: null as SiteConfig | null,
         ok: false,
-        detail: err instanceof ConfigError ? err.message : err instanceof Error ? err.message : String(err),
+        detail: err instanceof Error ? err.message : String(err),
       }),
     ),
     checkPandoc(),

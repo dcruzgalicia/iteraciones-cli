@@ -1,6 +1,7 @@
 import { getBuiltinLuaFilterInfos, LUA_GROUP_ORDER, validateDisabledFilters } from '../builder/filter-resolver.js';
 import { getBuiltinPreambleFilterInfos, resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters } from '../builder/preamble-loader.js';
-import { loadSiteConfig } from '../config/config-loader.js';
+import { loadSiteConfigIfPresent } from '../config/config-loader.js';
+import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { logInfo } from '../lib/logger.js';
 
 function sortLuaInfos(infos: Awaited<ReturnType<typeof getBuiltinLuaFilterInfos>>) {
@@ -58,7 +59,8 @@ function truncateWithEllipsis(text: string, width: number): string {
  */
 export async function runFilters(cwd: string, options: RunFiltersOptions = {}): Promise<void> {
   const stream = options.stream ?? process.stdout;
-  const config = await loadSiteConfig(cwd);
+  // list-filters tolera proyectos sin config: muestra el estado por defecto.
+  const config = (await loadSiteConfigIfPresent(cwd))?.config ?? DEFAULT_SITE_CONFIG;
   // Advertir sobre nombres desconocidos antes de listar el estado
   validateDisabledFilters(config.disabledFilters);
   // Resolver dependencias implícitas (08-hyperref se desactiva con 99-pdfx)

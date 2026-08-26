@@ -1,6 +1,6 @@
 # Configuración — `iteraciones.config.yaml`
 
-El archivo `iteraciones.config.yaml` en la raíz del proyecto es la única fuente de configuración. Es opcional: si no existe, se usan todos los valores por defecto.
+El archivo `iteraciones.config.yaml` en la raíz del proyecto es la única fuente de configuración. `build` y `validate` exigen que exista: si falta, el comando falla y sugiere `iteraciones init`. Un archivo **vacío** equivale a todos los valores por defecto; crearlo vacío es la forma explícita de compilar sin personalización.
 
 ## Estructura completa
 
