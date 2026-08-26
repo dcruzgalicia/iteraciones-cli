@@ -38,7 +38,7 @@ export function resolveBlockOrder(overrides?: HtmlBlockKey[]): HtmlBlockKey[] {
  */
 export async function composeHtmlTemplate(siteConfig: SiteConfig): Promise<string> {
   const skeleton = await Bun.file(join(HTML_RESOURCES_DIR, 'skeleton.html')).text();
-  const order = resolveBlockOrder((siteConfig.format?.html as { blocks?: HtmlBlockKey[] })?.blocks);
+  const order = resolveBlockOrder(siteConfig.format?.html?.blocks);
   const blocks: string[] = [];
   for (const key of order) {
     const card = await Bun.file(join(HTML_RESOURCES_DIR, HTML_CARDS[key])).text();
@@ -86,19 +86,19 @@ export interface HtmlPageVars {
 }
 
 /** Clave canónica de un formato generado (los iconos se resuelven por ella). */
-export type FormatKey = 'pdf' | 'epub' | 'latex' | 'markdown';
+export type ExportFormatKey = 'pdf' | 'epub' | 'latex' | 'markdown';
 
 export interface FormatsLink {
   href: string;
   /** Clave canónica: resuelve el icono sin depender del nombre visible. */
-  key: FormatKey;
+  key: ExportFormatKey;
   /** Nombre visible (PDF, EPUB, LaTeX, Markdown). */
   name: string;
   description: string;
 }
 
 /** Iconos SVG de los formatos (trazo geométrico, mismo lenguaje del logo). */
-const FORMAT_ICONS: Record<FormatKey, string> = {
+const FORMAT_ICONS: Record<ExportFormatKey, string> = {
   pdf: '<svg class="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M10 12h4M10 15h4"/></svg>',
   epub: '<svg class="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6c-2-1.5-5-2-8-2v14c3 0 6 .5 8 2 2-1.5 5-2 8-2V4c-3 0-6 .5-8 2z"/><path d="M12 6v14"/></svg>',
   latex:

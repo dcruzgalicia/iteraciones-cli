@@ -1,7 +1,8 @@
 import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 
-import { DEFAULT_SITE_CONFIG, type FormatConfig } from '../config/site-config.js';
+import type { SiteConfig } from '../config/config-schema.js';
+import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError, translateSystemError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
@@ -60,7 +61,7 @@ export async function runDocumentPipeline(
   plan: BuildMetadata,
   work: WorkSets,
   allDocs: BuildDocument[],
-  formatCfg: FormatConfig | undefined,
+  formatCfg: SiteConfig['format'] | undefined,
   discoveryIndex: Map<string, DiscoveryEntry>,
   /** Lista efectiva de preamble filters desactivados (la config del usuario no se muta, #2022). */
   effectiveDisabledPreamble: string[],
@@ -222,7 +223,7 @@ export async function runDocumentPipeline(
 interface RenderContext {
   ctx: BuildContext;
   plan: BuildMetadata;
-  formatCfg: FormatConfig | undefined;
+  formatCfg: SiteConfig['format'] | undefined;
   lang: string;
   logoInline: string | undefined;
   /** Registro de langs advertidos (babelOptionsForLang): una vez por build. */
@@ -446,12 +447,7 @@ async function processDocumentFormats(
     );
     // Con 99-pdfx activo se inyectan los metadatos XMP e Info en el .tex
     // (filecontents + \pdfinfo): el tex de dist/ queda autocontenido (issue #1970).
-    const texWithXmp = pdfxActive
-      ? injectXmpMetadataIntoLatex(
-          fullTex,
-          xmpMetadataFor(fm, lang, formatCfg?.pdf as Record<string, unknown> | undefined, ctx.siteConfig as Record<string, unknown>),
-        )
-      : fullTex;
+    const texWithXmp = pdfxActive ? injectXmpMetadataIntoLatex(fullTex, xmpMetadataFor(fm, lang, formatCfg?.pdf, ctx.siteConfig)) : fullTex;
     if (latexOn) {
       await writeOutput(texDistPath, texWithXmp);
       // Copiar imágenes procesadas a dist/ para distribución con LaTeX.

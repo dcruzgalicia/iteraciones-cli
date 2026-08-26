@@ -68,7 +68,7 @@ export async function loadSiteConfigWithPresence(cwd: string): Promise<LoadedSit
     if (parsed !== null && parsed !== undefined) {
       logWarning('iteraciones.config.yaml no es un objeto YAML (se esperaba un mapa); se usan los valores por defecto', 'config');
     }
-    return { config: SiteConfigSchema.parse({}) as SiteConfig, presentKeys: new Set() };
+    return { config: SiteConfigSchema.parse({}), presentKeys: new Set() };
   }
 
   const root = parsed as Record<string, unknown>;
@@ -106,7 +106,7 @@ export async function loadSiteConfigWithPresence(cwd: string): Promise<LoadedSit
     throw new ConfigError(details, configPath);
   }
 
-  return { config: result.data as SiteConfig, presentKeys };
+  return { config: result.data, presentKeys };
 }
 
 /** Carga y valida la configuración con los defaults materializados (API pública). */

@@ -78,9 +78,12 @@ export interface FormatConfig {
 // ── SiteConfig ──
 // El tipo SiteConfig se deriva del schema Zod en config-schema.ts:
 //   export type SiteConfig = z.infer<typeof SiteConfigSchema>
-// La interfaz manual ya no existe aquí. Las sub-interfaces
-// (HtmlFormatConfig, PdfFormatConfig, etc.) se conservan para
-// que los DEFAULT_* usen satisfies y para los casts del transform.
+// No hay interfaz manual del sitio: el transform camelize con tipos reales
+// (Camelize<T>, #2072) produce directamente la forma final, y las
+// sub-interfaces de este archivo (HtmlFormatConfig, PdfFormatConfig…)
+// documentan los campos y tipan a los DEFAULT_* con satisfies. Un test de
+// paridad (config-schema-parity.test.ts) impide que schema e interfaces
+// diverjan.
 
 /**
  * Colores Tailwind v4 con escala completa 50-950 válidos como acento.

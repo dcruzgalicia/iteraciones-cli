@@ -3,7 +3,6 @@ import { cpus } from 'node:os';
 import { basename, join } from 'node:path';
 import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
-import type { FormatConfig } from '../config/site-config.js';
 import { computeActiveFormats } from '../config/site-config.js';
 import { BuildError, ConfigError } from '../lib/errors.js';
 import { logWarning, runWithWarningSink } from '../lib/logger.js';
@@ -339,7 +338,7 @@ async function runPipelinePhases(
   allDocs: BuildDocument[],
   discoveryIndex: Map<string, DiscoveryEntry>,
   effectiveDisabledPreamble: string[],
-  formatCfg: FormatConfig | undefined,
+  formatCfg: SiteConfig['format'] | undefined,
   invalidations: string[],
 ): Promise<{ processedCount: number; cachedCount: number; invalidations: string[] }> {
   // Declarar al tracker las fases que se ejecutarán (TTY: libera discovery para
