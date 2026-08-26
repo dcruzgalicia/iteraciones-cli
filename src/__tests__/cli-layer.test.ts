@@ -378,9 +378,9 @@ describe.skipIf(!pandocOk)('runBuild', () => {
         out = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
         stdoutSpy.mockRestore();
       }
-      expect(out).toContain('sin invalidaciones — todo desde caché');
+      expect(out).toContain('(todos reutilizados)');
 
-      // Configuración HTML modificada: la razón aparece en el resumen
+      // Configuración HTML modificada: la razón aparece plegada en la línea de documentos
       await writeFile(
         join(dir, 'iteraciones.config.yaml'),
         'language: es-MX\nformat:\n  html:\n    site:\n      title: Otro\n    generate: true\n',
@@ -396,10 +396,9 @@ describe.skipIf(!pandocOk)('runBuild', () => {
         stdoutSpy.mockRestore();
       }
       expect(process.exitCode).toBe(0);
-      expect(out).toContain('Invalidación');
-      expect(out).toContain('configuración HTML');
-      expect(out).not.toContain('sin invalidaciones');
-      expect(out).toContain('reprocesados 1 documento');
+      expect(out).toMatch(/Documentos\s+1 — configuración HTML/);
+      expect(out).not.toContain('(todos reutilizados)');
+      expect(out).not.toContain('reprocesados');
     });
   });
 
@@ -1263,7 +1262,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
         stdoutSpy.mockRestore();
       }
       expect(process.exitCode).toBe(0);
-      expect(output).toContain('Documentos procesados');
+      expect(output).toContain('Documentos');
       expect(output).not.toContain('Sin cambios (reutilizado)');
     });
   });
@@ -1296,7 +1295,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
         stdoutSpy.mockRestore();
       }
       expect(process.exitCode).toBe(0);
-      expect(output).toContain('Documentos procesados');
+      expect(output).toContain('Documentos');
       expect(output).not.toContain('Sin cambios (reutilizado)');
       const finalState = JSON.parse(await Bun.file(statePath).text()) as { completed?: boolean };
       expect(finalState.completed).toBe(true);
@@ -2359,7 +2358,7 @@ describe('huecos transversales (#2032)', () => {
       }
       expect(process.exitCode).toBe(0);
       // Rebuild completo: el documento se procesó, no se sirvió de caché
-      expect(output).toContain('Documentos procesados         1');
+      expect(output).toMatch(/Documentos\s+1 — documentos modificados/);
       expect(output).not.toContain('Sin cambios');
       // El estado quedó re-escrito válido y completo por la escritura única
       const state = JSON.parse(await Bun.file(join(dir, '.iteraciones', 'state.json')).text());

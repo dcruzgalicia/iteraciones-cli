@@ -193,20 +193,22 @@ export class ProgressTracker implements BuildReporter {
       this.stream.write(`\n`);
     }
 
-    this.stream.write(`  ${padRight('Documentos procesados', LABEL_WIDTH)}${processed}\n`);
-    if (cached > 0) {
-      this.stream.write(`  ${padRight('Sin cambios (reutilizado)', LABEL_WIDTH)}${cached}\n`);
+    // Línea única de documentos sin cifras duplicadas (#2086): antes se
+    // repetían tres veces (procesados / reutilizados / invalidación). La
+    // razón de invalidación con causa única se pliega aquí; con causas
+    // múltiples lleva línea propia para no ocultar ninguna.
+    const total = processed + cached;
+    let docsLine = `${padRight('Documentos', LABEL_WIDTH)}${total}`;
+    if (processed > 0 && cached > 0) {
+      docsLine += ` (${processed} ${plural(processed, 'modificado', 'modificados')} · ${cached} ${plural(cached, 'reutilizado', 'reutilizados')})`;
+    } else if (total > 0 && processed === 0) {
+      docsLine += ' (todos reutilizados)';
+    } else if (cached === 0 && invalidations !== undefined && invalidations.length === 1) {
+      docsLine += ` — ${ProgressTracker.compactInvalidations(invalidations)}`;
     }
-    // Razón de invalidación en modo default: la caché es opaca si el usuario no
-    // sabe por qué se reprocesaron (o no) los documentos. `undefined` conserva
-    // el comportamiento previo (llamadas sin la información, p. ej. proyecto
-    // vacío); una lista vacía significa caché completa.
-    if (invalidations !== undefined) {
-      const value =
-        invalidations.length > 0
-          ? `${ProgressTracker.compactInvalidations(invalidations)} — reprocesados ${plural(processed, 'documento')}`
-          : 'sin invalidaciones — todo desde caché';
-      this.stream.write(`  ${padRight('Invalidación', LABEL_WIDTH)}${value}\n`);
+    this.stream.write(`  ${docsLine}\n`);
+    if (invalidations !== undefined && invalidations.length > 1) {
+      this.stream.write(`  ${padRight('Invalidaciones', LABEL_WIDTH)}${ProgressTracker.compactInvalidations(invalidations)}\n`);
     }
     // Conteo honesto: formatos ACTIVOS de la configuración (no archivos
     // generados, que dependen de cuántos documentos tengan salida), con el
