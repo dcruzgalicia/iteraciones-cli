@@ -152,7 +152,7 @@ describe('renderer TTY (stream inyectado)', () => {
     const tracker = new ProgressTracker({ renderer: 'default', stream, tty: true });
     tracker.startPhase('discovery', 1);
     tracker.completePhase(1);
-    await tracker.planPhases(['discovery', 'render']);
+    tracker.planPhases(['discovery', 'render']);
     tracker.startPhase('render', 1);
     tracker.reportFile({ relativePath: 'a.md', phase: 'render' });
     await tracker.finish(1, 0, ['html']);
@@ -168,7 +168,7 @@ describe('renderer TTY (stream inyectado)', () => {
     const tracker = new ProgressTracker({ renderer: 'default', stream, tty: true });
     tracker.startPhase('discovery', 1);
     tracker.completePhase(1);
-    await tracker.planPhases(['discovery', 'render']);
+    tracker.planPhases(['discovery', 'render']);
     tracker.startPhase('render', 1);
     tracker.reportFile({ relativePath: 'a.md', phase: 'render' });
     tracker.reportFile({ relativePath: 'b.md', phase: 'render' });
@@ -196,7 +196,7 @@ describe('renderer TTY (stream inyectado)', () => {
     const tracker = new ProgressTracker({ renderer: 'default', stream, tty: false });
     tracker.startPhase('discovery', 1);
     tracker.completePhase(1);
-    await tracker.planPhases(['discovery', 'render']);
+    tracker.planPhases(['discovery', 'render']);
     tracker.startPhase('render', 1);
     tracker.reportFile({ relativePath: 'a.md', phase: 'render' });
     tracker.completePhase(1);
@@ -218,7 +218,7 @@ describe('ProgressTracker', () => {
       tracker.setFormats([{ phase: 'pdf', active: true }]);
       tracker.startPhase('discovery', 2);
       tracker.completePhase(2);
-      await tracker.planPhases(['discovery', 'render']);
+      tracker.planPhases(['discovery', 'render']);
       tracker.startPhase('render', 1);
       tracker.completePhase(1);
       tracker.startPhase('pdf', 3);
@@ -270,7 +270,7 @@ describe('ProgressTracker', () => {
         tracker.setFormats([{ phase: 'pdf', active: true }]);
         tracker.startPhase('discovery', 1);
         tracker.completePhase(1);
-        await tracker.planPhases(['discovery']);
+        tracker.planPhases(['discovery']);
         tracker.startPhase('pdf', 3);
         tracker.reportFile({ relativePath: 'a.md', phase: 'pdf' });
         tracker.reportFile({ relativePath: 'b.md', phase: 'pdf' });
@@ -291,7 +291,7 @@ describe('ProgressTracker', () => {
       tracker.startPhase('discovery', 1);
       tracker.completePhase(1);
       // Solo discovery se planifica (early return del orquestador)
-      await tracker.planPhases(['discovery']);
+      tracker.planPhases(['discovery']);
       await tracker.finish(1, 0, []);
     });
 
@@ -310,7 +310,7 @@ describe('ProgressTracker', () => {
       ]);
       tracker.startPhase('discovery', 1);
       tracker.completePhase(1);
-      await tracker.planPhases(['discovery']);
+      tracker.planPhases(['discovery']);
       await tracker.finish(0, 1, ['pdf']);
     });
 
@@ -324,7 +324,7 @@ describe('ProgressTracker', () => {
     const output = await runTracker(async (tracker) => {
       tracker.startPhase('discovery', 1);
       tracker.completePhase(1);
-      await tracker.planPhases(['discovery', 'render']);
+      tracker.planPhases(['discovery', 'render']);
       tracker.startPhase('render', 1);
       tracker.completePhase(1);
       await tracker.finish(1, 0, []);
@@ -339,7 +339,7 @@ describe('ProgressTracker', () => {
       tracker.setFormats([{ phase: 'pdf', active: true }]);
       tracker.startPhase('discovery', 2);
       tracker.completePhase(2);
-      await tracker.planPhases(['discovery', 'render']);
+      tracker.planPhases(['discovery', 'render']);
       tracker.startPhase('render', 1);
       tracker.completePhase(1);
       tracker.startPhase('pdf', 2);
@@ -356,7 +356,7 @@ describe('ProgressTracker', () => {
       tracker.setFormats([{ phase: 'pdf', active: true }]);
       tracker.startPhase('discovery', 2);
       tracker.completePhase(2);
-      await tracker.planPhases(['discovery', 'render']);
+      tracker.planPhases(['discovery', 'render']);
       tracker.startPhase('render', 1);
       tracker.completePhase(1);
       tracker.startPhase('pdf', 2);
@@ -377,7 +377,7 @@ describe('ProgressTracker', () => {
       ]);
       tracker.startPhase('discovery', 1);
       tracker.completePhase(1);
-      await tracker.planPhases(['discovery', 'render']);
+      tracker.planPhases(['discovery', 'render']);
       tracker.startPhase('render', 1);
       await tracker.fail();
     });
@@ -392,7 +392,7 @@ describe('ProgressTracker', () => {
     const output = await runTracker(async (tracker) => {
       tracker.startPhase('discovery', 1);
       tracker.completePhase(1);
-      await tracker.planPhases(['discovery']);
+      tracker.planPhases(['discovery']);
       await tracker.finish(1, 0, []);
     });
 
@@ -404,7 +404,7 @@ describe('ProgressTracker', () => {
     const output = await runTracker(async (tracker) => {
       tracker.startPhase('discovery', 1);
       tracker.completePhase(1);
-      await tracker.planPhases(['discovery']);
+      tracker.planPhases(['discovery']);
       tracker.addSummaryLine('✔ Validación PDF/X-1a: 1 PDF certifica PDF/X-1a');
       tracker.addWarning('⚠ [config] primera advertencia');
       await tracker.finish(1, 0, []);
@@ -421,7 +421,7 @@ describe('ProgressTracker', () => {
     const output = await runTracker(async (tracker) => {
       tracker.startPhase('discovery', 1);
       tracker.completePhase(1);
-      await tracker.planPhases(['discovery']);
+      tracker.planPhases(['discovery']);
       // El orquestador conecta el sink de warnings en modo no verbose
       tracker.addWarning('⚠ [config] primera advertencia');
       tracker.addWarning('⚠ [discover] segunda advertencia');
@@ -439,7 +439,7 @@ describe('ProgressTracker', () => {
     const output = await runTracker(async (tracker) => {
       tracker.startPhase('discovery', 1);
       tracker.completePhase(1);
-      await tracker.planPhases(['discovery']);
+      tracker.planPhases(['discovery']);
       tracker.addWarning('⚠ [config] única advertencia');
       await tracker.finish(1, 0, []);
     });
@@ -451,7 +451,7 @@ describe('ProgressTracker', () => {
     const output = await runTracker(async (tracker) => {
       tracker.startPhase('discovery', 1);
       tracker.completePhase(1);
-      await tracker.planPhases(['discovery']);
+      tracker.planPhases(['discovery']);
       tracker.addWarning('⚠ [build] No se encontraron documentos Markdown en el proyecto.');
       tracker.addWarning("⚠ [build] Crea un archivo .md con frontmatter o ejecuta 'iteraciones init'.");
       await tracker.finish(0, 0, []);
@@ -467,7 +467,7 @@ describe('ProgressTracker', () => {
     const output = await runTracker(async (tracker) => {
       tracker.startPhase('discovery', 1);
       tracker.completePhase(1);
-      await tracker.planPhases(['discovery']);
+      tracker.planPhases(['discovery']);
       tracker.addWarning('⚠ [config] 99-pdfx desactiva los enlaces del PDF');
       tracker.addWarning('⚠ [build] No se encontraron documentos Markdown en el proyecto.');
       tracker.addWarning("⚠ [build] Crea un archivo .md con frontmatter o ejecuta 'iteraciones init'.");
@@ -513,7 +513,7 @@ describe('ProgressTracker', () => {
         tracker.startPhase('discovery', 1);
         tracker.reportFile({ relativePath: 'a.md', phase: 'discovery' });
         tracker.completePhase(1);
-        await tracker.planPhases(['discovery', 'render']);
+        tracker.planPhases(['discovery', 'render']);
         // Intercalado real: live update en sitio + update final + filas nuevas
         tracker.startPhase('render', 1);
         tracker.reportFile({ relativePath: 'a.md', phase: 'render' });
@@ -568,7 +568,7 @@ describe('invariantes de cursor (parte 2 del refactor)', () => {
     tracker.reportFile({ relativePath: 'a.md', phase: 'discovery' });
     tracker.reportFile({ relativePath: 'b.md', phase: 'discovery' });
     tracker.completePhase(2);
-    await tracker.planPhases(['discovery', 'render']);
+    tracker.planPhases(['discovery', 'render']);
     tracker.startPhase('render', 3);
     tracker.reportFile({ relativePath: 'd1.md', phase: 'render' });
     tracker.reportFile({ relativePath: 'd2.md', phase: 'render' });
@@ -616,7 +616,7 @@ describe('invariantes de cursor (parte 2 del refactor)', () => {
     tracker.startPhase('discovery', 1);
     tracker.reportFile({ relativePath: 'a.md', phase: 'discovery' });
     tracker.completePhase(1);
-    await tracker.planPhases(['discovery', 'render']);
+    tracker.planPhases(['discovery', 'render']);
     tracker.startPhase('render', 1);
     tracker.reportFile({ relativePath: 'a.md', phase: 'render' });
     // El build falla durante render: la fase activa se marca fallida y las

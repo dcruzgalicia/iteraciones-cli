@@ -19,13 +19,11 @@ const FORMAT_EXT_MAP: Record<string, string[]> = {
 };
 
 /**
- * Slug de salida efectivo (#2012): ÚNICA fuente usada tanto para GENERAR las
- * rutas en dist/ (pipeline) como para LIMPIARLAS. Desajustarse aquí deja
- * huérfanos — p. ej. index.md produce index.* pero su slug de título es otro.
+ * Slug de salida efectivo (#2012): htmlSlugFor es la ÚNICA fuente usada tanto
+ * para GENERAR las rutas en dist/ (pipeline) como para LIMPIARLAS. Desajustarse
+ * aquí deja huérfanos — p. ej. index.md produce index.* pero su slug de título
+ * es otro.
  */
-function outSlugFor(relativePath: string, slug: string | undefined): string {
-  return htmlSlugFor(relativePath, slug);
-}
 
 /** Elimina un archivo si existe; devuelve si existía (para el informe). */
 async function removeIfExists(path: string): Promise<boolean> {
@@ -99,7 +97,7 @@ async function cleanupBySlug(ctx: BuildContext, entries: Iterable<CleanupEntry>)
   let removed = 0;
   for (const { relativePath, slug } of entries) {
     const dir = dirname(relativePath);
-    const outSlug = outSlugFor(relativePath, slug);
+    const outSlug = htmlSlugFor(relativePath, slug);
     removed += await removeCachedArtifacts(cacheBase, dir, outSlug);
     removed += await removeOutputFiles(ctx.outputDir, dir, outSlug, OUTPUT_EXTENSIONS);
   }
@@ -113,7 +111,7 @@ export async function cleanupRemovedFormats(ctx: BuildContext, allDocs: BuildDoc
   const extensions = removedFormats.flatMap((fmt) => FORMAT_EXT_MAP[fmt] ?? []);
   let removed = 0;
   for (const doc of allDocs) {
-    removed += await removeOutputFiles(ctx.outputDir, dirname(doc.relativePath), outSlugFor(doc.relativePath, doc.slug), extensions);
+    removed += await removeOutputFiles(ctx.outputDir, dirname(doc.relativePath), htmlSlugFor(doc.relativePath, doc.slug), extensions);
   }
 
   if (removedFormats.includes('html')) {
@@ -127,7 +125,7 @@ export async function cleanupRemovedFormats(ctx: BuildContext, allDocs: BuildDoc
 export async function cleanupCoverImages(ctx: BuildContext, allDocs: BuildDocument[]): Promise<number> {
   let removed = 0;
   for (const doc of allDocs) {
-    const png = join(ctx.outputDir, dirname(doc.relativePath), `${outSlugFor(doc.relativePath, doc.slug)}.png`);
+    const png = join(ctx.outputDir, dirname(doc.relativePath), `${htmlSlugFor(doc.relativePath, doc.slug)}.png`);
     if (await removeIfExists(png)) removed++;
   }
   return removed;

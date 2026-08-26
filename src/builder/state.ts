@@ -25,7 +25,6 @@ export {
   hashFileContent,
   hashString,
   loadStateFile,
-  markStateCompleted,
   persistCompletedState,
   saveStateFile,
   stateUsableForBuild,

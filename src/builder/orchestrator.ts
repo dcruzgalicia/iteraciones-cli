@@ -354,7 +354,7 @@ async function runPipelinePhases(
   // que el tracker evalúe los skips con la información completa). Las subtareas de
   // formato se controlan por setFormats; aquí solo se declaran las fases de
   // pipeline (render se salta en early returns sin trabajo).
-  await progress.planPhases(['discovery', 'render']);
+  progress.planPhases(['discovery', 'render']);
 
   const workDocCount = new Set([
     ...work.docsChanged,

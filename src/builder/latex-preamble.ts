@@ -32,16 +32,13 @@ const PAPER_SIZES: Record<string, { w: number; h: number }> = {
 };
 
 /**
- * Detecta el tamaño de página (mm) a partir de los preamble filters.
+ * Detecta dimensiones de página y caja de texto (mm) a partir de los preamble filters.
  * Orden de prioridad:
  *   1. paperwidth / paperheight en geometry (04-margins)
  *   2. paper= en documentclass (01-documentclass)
  *   3. Fallback: letter
- */
-/**
- * Detecta dimensiones de página y caja de texto a partir de los preamble filters.
- * Extrae paperwidth/paperheight y left/right de geometry para calcular
- * el ancho de la caja de texto (paperwidth - left - right).
+ * Extrae además left/right de geometry para calcular el ancho de la caja
+ * de texto (paperwidth - left - right).
  */
 export function detectPageSize(filters: PreambleFilter[]): { w: number; h: number; textW: number } {
   const margins = filters.find((f) => f.name === '04-margins')?.content ?? '';

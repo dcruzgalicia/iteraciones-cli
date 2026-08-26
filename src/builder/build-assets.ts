@@ -217,7 +217,7 @@ async function copyFonts(outputDir: string): Promise<void> {
   try {
     // Fuentes (.ttf) y sus licencias OFL (OFL-*.txt): las licencias SIL Open
     // Font acompañan a las fuentes al redistribuirlas (la salida dist/ se
-    // publica tal cual). Misino patrón de copia condicional (mtime/size).
+    // publica tal cual). Mismo patrón de copia condicional (mtime/size).
     entries = [
       ...[...new Bun.Glob('*.ttf').scanSync({ cwd: FONTS_SRC, onlyFiles: true })],
       ...[...new Bun.Glob('OFL-*.txt').scanSync({ cwd: FONTS_SRC, onlyFiles: true })],

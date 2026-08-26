@@ -27,10 +27,10 @@ function entryFor(discoveryIndex: Map<string, DiscoveryEntry>, path: string): Di
  * Asigna sufijos -dN para duplicados, preserva slugs existentes,
  * y detecta cambios de slug que requieren reprocesamiento.
  */
-export async function resolveSlugs(
+export function resolveSlugs(
   discoveryIndex: Map<string, DiscoveryEntry>,
   computeSlug: (meta: { title: string; creator: string[] }, opts: { fallbackPath: string; maxCreators?: number }) => string,
-): Promise<SlugResolutionResult> {
+): SlugResolutionResult {
   const slugChangedEntries = new Map<string, string>();
   const changedPaths: string[] = [];
   const newRecentFiles: string[] = [];
