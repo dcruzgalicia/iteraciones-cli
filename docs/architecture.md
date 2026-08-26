@@ -224,7 +224,7 @@ El esquema Zod (`config-schema.ts`) valida tipos, aplica defaults y transforma c
 
 ### PdfFormatConfig (campos reales)
 
-La configuración PDF es mínima y deliberada: `generate` (activa la compilación con latexmk), `show-date` (fecha en la portada), `page-number` (posición del número de página) y `disabled-preamble-filters` (lista negra de preamble filters, con `97-eso-pic`, `98-crop` y `99-pdfx` desactivados por defecto; son siempre los últimos preámbulos, ver cola de imprenta). Todo el diseño tipográfico (márgenes, fuentes, interlineado, secciones, epígrafes, portada) se gestiona con **preamble filters** `.tex` sobrescribibles por proyecto (`<proyecto>/preamble/<nombre>.tex`) y no es configuración YAML.
+La configuración PDF es mínima y deliberada: `generate` (activa la compilación con latexmk), `show-date` (fecha en la portada), `page-number` (posición del número de página) y `disabled-preamble-filters` (lista negra de preamble filters, con `97-eso-pic`, `98-crop` y `99-pdfx` desactivados por defecto; son siempre los últimos preámbulos, ver cola de imprenta). Todo el diseño tipográfico (márgenes, fuentes, interlineado, secciones, epígrafes, portada) se gestiona con **preamble filters** `.tex` sobrescribibles por proyecto (`<proyecto>/preamble/<nombre>.tex`) y no es configuración YAML. El flujo de usuario end-to-end (requisitos, activación y certificación) está en [quickstart.md](quickstart.md) §7.
 
 ### Validación PDF/X-1a del PDF generado
 

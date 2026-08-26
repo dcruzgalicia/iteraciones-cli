@@ -93,7 +93,37 @@ iteraciones validate
 
 Los errores y advertencias se imprimen en `stderr` con la ruta del archivo y el campo afectado.
 
-## 7. Ciclo de trabajo habitual
+## 7. Publicar con certificación PDF/X-1a (opcional)
+
+Para enviar los PDF a imprenta, activa el paquete PDF/X vaciando la lista de preamble filters desactivados (por defecto apaga `97-eso-pic`, `98-crop` y `99-pdfx`):
+
+```yaml
+format:
+  pdf:
+    generate: true
+    disabled-preamble-filters: []
+```
+
+Requisitos adicionales de este flujo:
+
+- **MacTeX full / TeX Live** (latexmk) e **ImageMagick**: `brew install imagemagick`
+- **Rust** ([rustup](https://rustup.rs)): el primer build compila el validador `iteraciones-pdfcheck` y lo deja en caché de usuario; a partir de ahí no vuelve a compilar.
+
+Comprueba que tu entorno está completo antes del primer build:
+
+```bash
+iteraciones doctor
+```
+
+Con todo en orden, cada build termina con la confirmación de certificación:
+
+```
+✔ Validación PDF/X-1a: 2 PDFs certifican PDF/X-1a
+```
+
+Si algún PDF no certificara, el resumen lista los fallos (código y página) sin romper el build. Las condiciones exactas que valida el binario están documentadas en [docs/architecture.md](architecture.md).
+
+## 8. Ciclo de trabajo habitual
 
 ```bash
 # Verificar entorno
