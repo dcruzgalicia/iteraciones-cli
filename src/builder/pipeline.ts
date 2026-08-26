@@ -56,7 +56,7 @@ export function pdfSlotCount(concurrency: number): number {
  *
  * Retorna los relativePath procesados y el total de documentos.
  */
-export async function runDocumentPipeline(
+export async function documentPipeline(
   progress: BuildReporter,
   ctx: BuildContext,
   plan: BuildMetadata,

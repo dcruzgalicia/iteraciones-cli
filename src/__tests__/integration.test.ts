@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { build } from '../builder/orchestrator.js';
 import { runNew } from '../cli/dispatcher.js';
-import { runInit } from '../cli/init.js';
-import { runValidate } from '../cli/validate.js';
+import { initProject } from '../cli/init.js';
+import { validateProject } from '../cli/validate.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { initTestProject, registerSkip, SKIP_REASONS } from './helpers.js';
 
@@ -19,7 +19,7 @@ describe('integration: init + build', () => {
     const cwd = join(tmpdir(), `iteraciones-integration-test-${Date.now()}`);
     await mkdir(cwd, { recursive: true });
     try {
-      await runInit(cwd);
+      await initProject(cwd);
 
       const configFile = Bun.file(join(cwd, 'iteraciones.config.yaml'));
       expect(await configFile.exists()).toBe(true);
@@ -84,7 +84,7 @@ describe('integration: init + build', () => {
     const cwd = join(tmpdir(), `iteraciones-multi-${Date.now()}`);
     await mkdir(cwd, { recursive: true });
     try {
-      await runInit(cwd);
+      await initProject(cwd);
       // Crear documentos adicionales con el comando new
       await runNew(cwd, 'capitulo-1.md', { title: 'Capítulo 1' });
       await runNew(cwd, 'capitulo-2.md', { title: 'Capítulo 2' });
@@ -112,7 +112,7 @@ describe('integration: init + build', () => {
       const prevExitCode = process.exitCode;
       process.exitCode = undefined;
       try {
-        await runValidate(cwd);
+        await validateProject(cwd);
       } catch {
         // ignorado
       }

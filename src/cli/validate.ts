@@ -152,7 +152,7 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
  * filters y existencia de bibliografía/CSL/lua-filters. No ejecuta la
  * compilación completa.
  */
-export async function runValidate(cwd: string): Promise<void> {
+export async function validateProject(cwd: string): Promise<void> {
   let disabledFiltersCount = 0;
   let luaFiltersCount = 0;
   const configErrors: ValidationError[] = [];

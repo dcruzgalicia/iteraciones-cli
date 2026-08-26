@@ -14,7 +14,7 @@ import { cleanupCoverImages, cleanupDeletedFiles, cleanupRemovedFormats, cleanup
 import { buildDocsFromIndex, discover, loadPrevState, noPrevState } from './discover.js';
 import { validateDisabledFilters } from './filter-resolver.js';
 import { runPdfxOutputValidation } from './pdfx-check.js';
-import { runDocumentPipeline } from './pipeline.js';
+import { documentPipeline } from './pipeline.js';
 import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, validatePreambleDependencies } from './preamble-loader.js';
 import { validateConfigFilePaths } from './project-validator.js';
 import { silentReporter } from './reporter.js';
@@ -306,7 +306,7 @@ async function prepareEnvironment(
 }
 
 /** Limpieza de dist/ por cambios de formatos y portadas huérfanas (#2012). Devuelve archivos eliminados. */
-async function runFormatCleanup(ctx: BuildContext, plan: BuildMetadata, allDocs: BuildDocument[], siteConfig: SiteConfig): Promise<number> {
+async function formatCleanup(ctx: BuildContext, plan: BuildMetadata, allDocs: BuildDocument[], siteConfig: SiteConfig): Promise<number> {
   let removed = await cleanupRemovedFormats(ctx, allDocs, plan.removedFormats);
   // Portadas PDF huérfanas: si la opción está desactivada, se eliminan los
   // .png que quedaron de builds anteriores (activar/desactivar invalida el
@@ -340,7 +340,7 @@ function planWork(
 }
 
 /** Fase de pipeline por documento: planificación de fases, ejecución y conteos finales. */
-async function runPipelinePhases(
+async function pipelinePhases(
   progress: BuildReporter,
   ctx: BuildContext,
   plan: BuildMetadata,
@@ -366,7 +366,7 @@ async function runPipelinePhases(
   ]).size;
 
   progress.startPhase('render', workDocCount);
-  const { processed } = await runDocumentPipeline(progress, ctx, plan, work, allDocs, formatCfg, discoveryIndex, effectiveDisabledPreamble);
+  const { processed } = await documentPipeline(progress, ctx, plan, work, allDocs, formatCfg, discoveryIndex, effectiveDisabledPreamble);
 
   const totalDocs =
     plan.activeFormats.html || plan.activeFormats.pdf || plan.activeFormats.epub || plan.activeFormats.markdown || plan.activeFormats.latex
@@ -449,7 +449,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
   // markdown original (pandoc-directo) y los exportSets ya incluyen todos los
   // docs vía formatInvalidated (cambia al activarse un formato).
 
-  let cleanedFiles = await runFormatCleanup(ctx, plan, allDocs, siteConfig);
+  let cleanedFiles = await formatCleanup(ctx, plan, allDocs, siteConfig);
 
   const { work, invalidations } = planWork(plan, ctx, prevState, allDocs, discoveredChanges, log);
 
@@ -488,6 +488,6 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
 
   return finishBuild(
     closeDeps,
-    await runPipelinePhases(progress, ctx, plan, work, allDocs, discoveryIndex, effectiveDisabledPreamble, siteConfig.format, invalidations),
+    await pipelinePhases(progress, ctx, plan, work, allDocs, discoveryIndex, effectiveDisabledPreamble, siteConfig.format, invalidations),
   );
 }

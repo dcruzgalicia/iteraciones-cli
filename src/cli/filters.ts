@@ -57,7 +57,7 @@ function truncateWithEllipsis(text: string, width: number): string {
  * Las filas se imprimen sin prefijo (formato tabla); solo los encabezados de
  * sección y las pistas usan el prefijo ℹ del logger.
  */
-export async function runFilters(cwd: string, options: RunFiltersOptions = {}): Promise<void> {
+export async function listFilters(cwd: string, options: RunFiltersOptions = {}): Promise<void> {
   const stream = options.stream ?? process.stdout;
   // list-filters tolera proyectos sin config: muestra el estado por defecto.
   const config = (await loadSiteConfigIfPresent(cwd))?.config ?? DEFAULT_SITE_CONFIG;
