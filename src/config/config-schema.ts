@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ACCENT_PALETTES, type AccentColor } from '../lib/accent-palettes.js';
-import type { EpubFormatConfig, HtmlBlockKey, HtmlFormatConfig, LatexFormatConfig, MarkdownFormatConfig, PdfFormatConfig } from './site-config.js';
+import type { HtmlBlockKey } from './site-config.js';
 import {
   DEFAULT_EPUB_FORMAT,
   DEFAULT_HTML_BLOCKS,
@@ -93,7 +93,7 @@ const HtmlSiteSchema = z
   })
   .strict();
 
-const HtmlFormatSchema = z
+export const HtmlFormatSchema = z
   .object({
     site: HtmlSiteSchema.optional(),
     generate: z.boolean().default(DEFAULT_HTML_FORMAT.generate),
@@ -103,7 +103,7 @@ const HtmlFormatSchema = z
 
 // ── PdfFormatConfig ────────────────────────────────────────────────────────
 
-const PdfFormatSchema = z
+export const PdfFormatSchema = z
   .object({
     generate: z.boolean().default(DEFAULT_PDF_FORMAT.generate),
     'show-date': z.boolean().default(DEFAULT_PDF_FORMAT.showDate),
@@ -137,7 +137,7 @@ const PdfFormatSchema = z
 
 // ── LatexFormatConfig ────────────────────────────────────────────────────────
 
-const LatexFormatSchema = z
+export const LatexFormatSchema = z
   .object({
     generate: z.boolean().default(DEFAULT_LATEX_FORMAT.generate),
   })
@@ -145,13 +145,13 @@ const LatexFormatSchema = z
 
 // ── Epub, Markdown ─────────────────────────────────────────────────────────
 
-const EpubFormatSchema = z
+export const EpubFormatSchema = z
   .object({
     generate: z.boolean().default(DEFAULT_EPUB_FORMAT.generate),
   })
   .strict();
 
-const MarkdownFormatSchema = z
+export const MarkdownFormatSchema = z
   .object({
     generate: z.boolean().default(DEFAULT_MARKDOWN_FORMAT.generate),
   })
@@ -207,40 +207,50 @@ const RawSiteConfigSchema = z
   })
   .strict();
 
+/** Convierte kebab-case a camelCase a nivel de tipo (issue #2072). */
+export type CamelKey<K extends string> = K extends `${infer Head}-${infer Rest}` ? `${Head}${Capitalize<CamelKey<Rest>>}` : K;
+
+/** Mapea las claves kebab-case de T a camelCase conservando los tipos de valor. */
+export type Camelize<T> = { [K in keyof T as K extends string ? CamelKey<K> : K]: T[K] };
+
 /** Convierte kebab-case a camelCase. */
 function toCamel(key: string): string {
-  return key.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+  return key.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
 }
 
-/** Aplica toCamel a todas las claves de un objeto (1 nivel). */
-function camelizeKeys(obj: Record<string, unknown>): Record<string, unknown> {
+/** Aplica toCamel a todas las claves de un objeto (1 nivel), con tipos reales. */
+function camelizeKeys<T extends object>(obj: T): Camelize<T> {
   const result: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(obj)) {
     result[toCamel(k)] = v;
   }
-  return result;
+  return result as Camelize<T>;
+}
+
+/**
+ * Sección `format.<x>` materializada: la salida camelizada del schema si el
+ * usuario configuró el bloque, o el default del paquete si no. El tipo único
+ * Camelize<T> evita el union entre rama configurada y rama default y elimina
+ * los casts que antes puenteaban Zod hacia las interfaces manuales (#2072).
+ */
+function formatSection<T extends object>(raw: T | undefined, fallback: Camelize<T>): Camelize<T> {
+  return raw ? camelizeKeys(raw) : fallback;
 }
 
 // Transformar a SiteConfig (aplanar format:, camelizar claves).
 // Los defaults del schema Zod y del transform son la única fuente de verdad.
 export const SiteConfigSchema = RawSiteConfigSchema.transform((raw) => {
-  const f = raw.format ?? ({} as Record<string, unknown>);
-
-  const pdfRaw = f.pdf as Record<string, unknown> | undefined;
-  const htmlRaw = f.html as Record<string, unknown> | undefined;
-  const epubRaw = f.epub as Record<string, unknown> | undefined;
-  const mdRaw = f.markdown as Record<string, unknown> | undefined;
-  const latexRaw = f.latex as Record<string, unknown> | undefined;
+  const f = raw.format ?? {};
 
   return {
     language: raw.language,
     toc: raw.toc,
     format: {
-      latex: latexRaw ? (camelizeKeys(latexRaw) as LatexFormatConfig) : { ...DEFAULT_LATEX_FORMAT },
-      html: htmlRaw ? (camelizeKeys(htmlRaw) as HtmlFormatConfig) : { ...DEFAULT_HTML_FORMAT },
-      pdf: pdfRaw ? (camelizeKeys(pdfRaw) as PdfFormatConfig) : { ...DEFAULT_PDF_FORMAT },
-      epub: epubRaw ? (camelizeKeys(epubRaw) as EpubFormatConfig) : { ...DEFAULT_EPUB_FORMAT },
-      markdown: mdRaw ? (camelizeKeys(mdRaw) as MarkdownFormatConfig) : { ...DEFAULT_MARKDOWN_FORMAT },
+      latex: formatSection(f.latex, { ...DEFAULT_LATEX_FORMAT }),
+      html: formatSection(f.html, { ...DEFAULT_HTML_FORMAT }),
+      pdf: formatSection(f.pdf, { ...DEFAULT_PDF_FORMAT }),
+      epub: formatSection(f.epub, { ...DEFAULT_EPUB_FORMAT }),
+      markdown: formatSection(f.markdown, { ...DEFAULT_MARKDOWN_FORMAT }),
     },
     disabledFilters: raw['disabled-filters'],
     luaFilters: raw['lua-filters'],

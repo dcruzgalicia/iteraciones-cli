@@ -62,9 +62,13 @@ describe('compilación de Tailwind sobre dist/files', () => {
 });
 
 describe('computeCssHash (caché por archivo mtime+size)', () => {
+  // Defaults materializados por el schema: tras parse, site es completo (#2072)
   const config = (): SiteConfig => ({
     ...DEFAULT_SITE_CONFIG,
-    format: { ...DEFAULT_SITE_CONFIG.format, html: { site: { title: 'T' }, generate: true } },
+    format: {
+      ...DEFAULT_SITE_CONFIG.format,
+      html: { site: { title: 'T', description: 'd', logo: '', theme: 'dark', color: 'lime' }, generate: true },
+    },
   });
 
   it('es estable con la caché intacta (mtime+size iguales: sin releer)', async () => {
