@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, spyOn } from 'bun:test';
 import { buildFormatsItems, type FormatsLink } from '../builder/html-composer.js';
 import { extractReferencesBlock, loadReferencesCardTemplate, removeTocReferencesLink } from '../builder/html-postprocess.js';
+import * as logger from '../lib/logger.js';
 
 /** Wrapper representativo de la tarjeta (la estructura real vive en el recurso). */
 const CARD_TEMPLATE = '<div class="wrap"><h2 id="refs-heading" class="chip">Referencias</h2>{{refs-list}}</div>';
@@ -59,6 +60,20 @@ describe('extractReferencesBlock', () => {
     const result = extractReferencesBlock(html, CARD_TEMPLATE);
     expect(result.block).toBeUndefined();
     expect(result.html).toBe(html);
+  });
+
+  it('HTML mal balanceado: avisa y devuelve el html intacto (#2080)', () => {
+    const warnSpy = spyOn(logger, 'logWarning');
+    // Un div interior sin cerrar deja depth≠0 al agotarse los cierres
+    const html = '<article><h1 id="refs-heading">Refs</h1><div id="refs"><div class="filtro"><p>roto</p></div>';
+    try {
+      const result = extractReferencesBlock(html, CARD_TEMPLATE);
+      expect(result.block).toBeUndefined();
+      expect(result.html).toBe(html); // salida no corrupta: sin tocar
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('HTML mal balanceado'), 'html');
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   it('el recurso real compone la tarjeta con el chip del heading (sin clases en TS)', async () => {
