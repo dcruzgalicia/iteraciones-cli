@@ -10,7 +10,6 @@ import {
   computeSchemaSourceHash,
   discoverBibFiles,
   loadStateFile,
-  markStateCompleted,
   persistCompletedState,
   resolveBibOptions,
   saveStateFile,
@@ -145,8 +144,8 @@ describe('clearStateFile y persistCompletedState (#2025)', () => {
   });
 });
 
-describe('stateUsableForBuild y markStateCompleted (integridad de caché)', () => {
-  it('stateUsableForBuild solo acepta estados con completed:true', () => {
+describe('stateUsableForBuild (integridad de caché)', () => {
+  it('solo acepta estados con completed:true', () => {
     expect(stateUsableForBuild(null)).toBeNull();
     expect(stateUsableForBuild(makeState())).toBeNull(); // sin flag = interrumpido
     const complete = makeState();
@@ -154,35 +153,6 @@ describe('stateUsableForBuild y markStateCompleted (integridad de caché)', () =
     expect(stateUsableForBuild(complete)).toBeNull();
     complete.completed = true;
     expect(stateUsableForBuild(complete)).toBe(complete);
-  });
-
-  it('markStateCompleted persiste el flag en un estado sin él (build interrumpido)', async () => {
-    await withTempDir(async (dir) => {
-      await saveStateFile(dir, makeState({ 'a.md': { title: 'A', mtime: 1, size: 1, hash: 'h' } }));
-      await markStateCompleted(dir);
-      const state = await loadStateFile(dir);
-      expect(state?.completed).toBe(true);
-      expect(state?.entries.get('a.md')?.title).toBe('A'); // resto intacto
-    });
-  });
-
-  it('markStateCompleted no reescribe si el estado ya está completo', async () => {
-    await withTempDir(async (dir) => {
-      await saveStateFile(dir, makeState());
-      await markStateCompleted(dir);
-      const mtime1 = (await Bun.file(statePath(dir)).stat()).mtimeMs;
-      await Bun.sleep(5);
-      await markStateCompleted(dir);
-      const mtime2 = (await Bun.file(statePath(dir)).stat()).mtimeMs;
-      expect(mtime2).toBe(mtime1);
-    });
-  });
-
-  it('markStateCompleted no crea el archivo si no hay estado', async () => {
-    await withTempDir(async (dir) => {
-      await markStateCompleted(dir);
-      expect(await Bun.file(statePath(dir)).exists()).toBe(false);
-    });
   });
 });
 

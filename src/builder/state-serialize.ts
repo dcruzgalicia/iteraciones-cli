@@ -122,17 +122,6 @@ export async function persistCompletedState(cwd: string, pending: BuildState | n
 }
 
 /**
- * Marca como completo el estado en disco (flujo legacy de tests y comando info:
- * el build real usa persistCompletedState en su cierre único).
- */
-export async function markStateCompleted(cwd: string): Promise<void> {
-  const state = await loadStateFile(cwd);
-  if (!state || state.completed === true) return;
-  state.completed = true;
-  await saveStateFile(cwd, state);
-}
-
-/**
  * Elimina el estado del build (tras un fallo): el siguiente build no tiene
  * índice de invalidación y reprocesa todo (nunca reutiliza contenido stale).
  */

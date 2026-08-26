@@ -251,17 +251,6 @@ export function rewriteImagePaths(content: string, imageMap: Map<string, string>
 }
 
 /**
- * Reescribe rutas de imágenes en el valor de un campo multilinea de portada.
- * Busca todas las imágenes `![alt](path)` y reemplaza rutas relativas con
- * rutas absolutas procesadas del imageMap.
- */
-export function rewriteMultilineFieldValue(value: string | string[], imageMap: Map<string, string>, docDir: string): string | string[] {
-  const text = Array.isArray(value) ? value.join('\n') : value;
-  const rewritten = rewriteImagePaths(text, imageMap, docDir);
-  return Array.isArray(value) ? rewritten.split('\n') : rewritten;
-}
-
-/**
  * Procesa todas las imágenes de un documento para LaTeX/PDF.
  *
  * @param inlineImages Rutas absolutas de imágenes inline del markdown.

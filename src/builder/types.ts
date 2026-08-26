@@ -74,7 +74,7 @@ export interface RenderFileReport {
  */
 export interface BuildReporter {
   setFormats(formats: FormatState[]): void;
-  planPhases(phases: PipelinePhase[]): Promise<void>;
+  planPhases(phases: PipelinePhase[]): void;
   startPhase(phase: PipelinePhase, total?: number): void;
   reportFile(file: RenderFileReport): void;
   completePhase(actualCount?: number, phaseOverride?: PipelinePhase): void;

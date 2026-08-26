@@ -9,9 +9,7 @@ import type { BuildReporter } from './types.js';
  */
 export const silentReporter: BuildReporter = {
   setFormats(): void {},
-  planPhases(): Promise<void> {
-    return Promise.resolve();
-  },
+  planPhases(): void {},
   startPhase(): void {},
   reportFile(): void {},
   completePhase(): void {},

@@ -85,7 +85,7 @@ export class ProgressTracker implements BuildReporter {
    * Declara las fases que el build ejecutará. Debe llamarse antes de que el
    * render finalice: las fases no declaradas se muestran como omitidas.
    */
-  async planPhases(phases: PipelinePhase[]): Promise<void> {
+  planPhases(phases: PipelinePhase[]): void {
     this.state.planPhases(phases);
   }
 
