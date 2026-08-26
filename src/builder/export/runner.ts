@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { copyFile, mkdir, rename, rm } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
-import { PandocError } from '../../lib/errors.js';
+import { PANDOC_ERROR_CODES, PandocError } from '../../lib/errors.js';
 import { fmBool, fmString } from '../../lib/frontmatter-fields.js';
 import { logWarning } from '../../lib/logger.js';
 import { execPandoc, MD_READER } from '../../lib/pandoc-runner.js';
@@ -169,7 +169,12 @@ export async function convertToPdf(
   } catch (err) {
     if (err instanceof ProcessSpawnError) {
       // Error esperado: latexmk no está en PATH; mensaje accionable en español
-      throw new PandocError('latexmk no está disponible en PATH. Instala MacTeX full: https://tug.org/mactex/', sourcePath, '');
+      throw new PandocError(
+        'latexmk no está disponible en PATH. Instala MacTeX full: https://tug.org/mactex/',
+        sourcePath,
+        '',
+        PANDOC_ERROR_CODES.envMissing,
+      );
     }
     if (err instanceof ProcessTimeoutError) {
       // Una compilación latexmk colgada no debe colgar el build: el timeout

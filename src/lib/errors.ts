@@ -1,13 +1,24 @@
 export class PandocError extends Error {
+  /** Código estructural opcional: clasificación sin matchear texto (#2082). */
+  public readonly code?: string;
+
   constructor(
     message: string,
     public readonly sourcePath: string,
     public readonly stderr: string,
+    code?: string,
   ) {
     super(message);
     this.name = 'PandocError';
+    this.code = code;
   }
 }
+
+/** Códigos estructurales de PandocError (clasificación sin matchear texto, #2082). */
+export const PANDOC_ERROR_CODES = {
+  /** Herramienta externa ausente en PATH (pandoc, latexmk): el entorno es el problema. */
+  envMissing: 'env-missing',
+} as const;
 
 export class ConfigError extends Error {
   constructor(

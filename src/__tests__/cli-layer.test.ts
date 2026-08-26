@@ -4,12 +4,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CommanderError } from 'commander';
 import { resolvePdfCheckBinary, validatePdfX1a } from '../builder/pdfx-check.js';
-import { runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from '../cli/dispatcher.js';
+import { reportBuildError, runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from '../cli/dispatcher.js';
 import { checkLatexEngine, checkReadPermissions, checkWritePermissions } from '../cli/doctor/system-checks.js';
 import { buildProgram } from '../cli/parser.js';
+import { BUILD_ERROR_CODES, PANDOC_ERROR_CODES, PandocError } from '../lib/errors.js';
 import { logWarning, setLoggerColorEnabled } from '../lib/logger.js';
 import * as pandocRunner from '../lib/pandoc-runner.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
+import { ProcessSpawnError } from '../lib/run.js';
 import { initTestProject, registerSkip, SKIP_REASONS, withTempDir } from './helpers.js';
 
 // Los tests que invocan pandoc real se marcan como skip si no está instalado
@@ -2868,5 +2870,91 @@ describe('runClean', () => {
       expect(await Bun.file(join(dir, 'dist')).exists()).toBe(false);
       expect(await Bun.file(join(dir, '.iteraciones')).exists()).toBe(false);
     });
+  });
+});
+
+describe('doctor condicionado al proyecto (#2082)', () => {
+  afterEach(resetExitCode);
+
+  /** Ejecuta doctor y captura stdout (mismo patrón del describe runDoctor). */
+  async function doctorOut(dir: string): Promise<string> {
+    const spy = spyOn(process.stdout, 'write');
+    let output = '';
+    try {
+      process.exitCode = 0;
+      await runDoctor(dir);
+    } finally {
+      output = spy.mock.calls.map((c) => String(c[0])).join('');
+      spy.mockRestore();
+    }
+    return output;
+  }
+
+  it.skipIf(!pandocOk)('un proyecto HTML-only no lista pdfcheck ni ImageMagick', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir); // html-only
+      const output = await doctorOut(dir);
+      expect(output).not.toContain('iteraciones-pdfcheck');
+      expect(output).not.toContain('ImageMagick');
+    });
+  });
+
+  it('PDF sin 99-pdfx activo (defaults) no lista el check de certificación', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nformat:\n  pdf:\n    generate: true\n', 'utf8');
+      const output = await doctorOut(dir);
+      expect(output).toContain('pdflatex');
+      expect(output).not.toContain('iteraciones-pdfcheck');
+    });
+  });
+
+  it('PDF con 99-pdfx activo (disabled-preamble-filters: []) lista el check de certificación', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(
+        join(dir, 'iteraciones.config.yaml'),
+        'language: es-MX\nformat:\n  pdf:\n    generate: true\n    disabled-preamble-filters: []\n',
+        'utf8',
+      );
+      const output = await doctorOut(dir);
+      expect(output).toContain('iteraciones-pdfcheck');
+    });
+  });
+});
+
+describe('reportBuildError: sugerencias por código estructural (#2082)', () => {
+  afterEach(resetExitCode);
+
+  function stderrOf(fn: () => void): string {
+    const spy = spyOn(process.stderr, 'write');
+    let output = '';
+    try {
+      fn();
+    } finally {
+      output = spy.mock.calls.map((c) => String(c[0])).join('');
+      spy.mockRestore();
+    }
+    return output;
+  }
+
+  it('PandocError env-missing sugiere doctor', () => {
+    const out = stderrOf(() =>
+      reportBuildError(
+        new PandocError('latexmk no está disponible en PATH. Instala MacTeX full: https://tug.org/mactex/', '', '', PANDOC_ERROR_CODES.envMissing),
+      ),
+    );
+    expect(out).toContain("ejecuta 'iteraciones doctor'");
+    expect(out).not.toContain("'iteraciones validate'");
+  });
+
+  it('ProcessSpawnError sugiere doctor', () => {
+    const out = stderrOf(() => reportBuildError(new ProcessSpawnError('No se encontró el comando "magick".')));
+    expect(out).toContain("ejecuta 'iteraciones doctor'");
+  });
+
+  it('errores que no son de entorno no sugieren doctor', () => {
+    const out = stderrOf(() => reportBuildError(new Error('algo raro')));
+    expect(out).not.toContain('iteraciones doctor');
   });
 });
