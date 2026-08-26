@@ -76,17 +76,14 @@ describe('composers sobre fixtures de pandoc (#2031 PR1)', () => {
     const warnedLangs = new Set<string>();
     const { calls, restore } = spyPandoc(fixtureLatex);
     try {
-      const result = await markdownToLatex(
-        'Contenido',
-        DOC,
-        NO_FILTERS,
-        ['refs/biblio.bib'],
-        '/build/template.tex',
-        { title: 'Documento' },
-        SITE_CONFIG,
-        true,
+      const result = await markdownToLatex('Contenido', DOC, {
+        filters: NO_FILTERS,
+        bibFiles: ['refs/biblio.bib'],
+        templatePath: '/build/template.tex',
+        fm: { title: 'Documento' },
+        siteConfig: SITE_CONFIG,
         warnedLangs,
-      );
+      });
       expect(result.tex).toBe(fixtureLatex); // passthrough del writer
       expect(result.processedImages).toEqual([]);
       expect(calls.length).toBe(1);
@@ -133,7 +130,14 @@ describe('composers sobre fixtures de pandoc (#2031 PR1)', () => {
     };
     const { calls, restore } = spyPandoc(fixtureLatex);
     try {
-      await markdownToLatex('Contenido', DOC, group, [], '/t.tex', {}, SITE_CONFIG, true, new Set());
+      await markdownToLatex('Contenido', DOC, {
+        filters: group,
+        bibFiles: [],
+        templatePath: '/t.tex',
+        fm: {},
+        siteConfig: SITE_CONFIG,
+        warnedLangs: new Set(),
+      });
       const args = calls[0]?.extraArgs ?? [];
       const positions = ['/f/semantic.lua', '/f/user.lua', '/f/flags.lua', '/f/latex.lua'].map((p) => args.indexOf(p));
       for (let i = 1; i < positions.length; i++) {
@@ -150,7 +154,14 @@ describe('composers sobre fixtures de pandoc (#2031 PR1)', () => {
     const { calls, restore } = spyPandoc(fixtureLatex);
     try {
       await expect(
-        markdownToLatex('Contenido', DOC, NO_FILTERS, [], '/t.tex', { title: 'D', 'title-image': 'no-existe.png' }, SITE_CONFIG, true, new Set()),
+        markdownToLatex('Contenido', DOC, {
+          filters: NO_FILTERS,
+          bibFiles: [],
+          templatePath: '/t.tex',
+          fm: { title: 'D', 'title-image': 'no-existe.png' },
+          siteConfig: SITE_CONFIG,
+          warnedLangs: new Set(),
+        }),
       ).rejects.toThrow(BuildError);
       expect(calls.length).toBe(0); // falla ANTES de invocar pandoc
     } finally {
@@ -163,16 +174,14 @@ describe('composers sobre fixtures de pandoc (#2031 PR1)', () => {
     const cardTemplate = '<section class="refs-card">{{refs-list}}</section>';
     const { calls, restore } = spyPandoc(fixtureHtmlRefs);
     try {
-      const html = await htmlPageFromMarkdown(
-        'Contenido',
-        DOC as never,
-        '/proyecto',
-        { title: 'T', siteTitle: 'S', lang: 'es-MX' },
-        SITE_CONFIG,
-        '/build/template.html',
-        cardTemplate,
-        {},
-      );
+      const html = await htmlPageFromMarkdown('Contenido', DOC as never, {
+        cwd: '/proyecto',
+        vars: { title: 'T', siteTitle: 'S', lang: 'es-MX' },
+        siteConfig: SITE_CONFIG,
+        templatePath: '/build/template.html',
+        refsCardTemplate: cardTemplate,
+        fm: {},
+      });
       // Post-procesado sobre la SALIDA del fixture:
       // 1) el ítem del TOC hacia #refs-heading se elimina
       expect(html).not.toContain('<a href="#refs-heading">');
@@ -197,16 +206,14 @@ describe('composers sobre fixtures de pandoc (#2031 PR1)', () => {
     if (fixtureHtml === '') return;
     const { calls, restore } = spyPandoc(fixtureHtml);
     try {
-      const html = await htmlPageFromMarkdown(
-        'Contenido',
-        DOC as never,
-        '/proyecto',
-        { title: 'T', siteTitle: 'S', lang: 'es-MX' },
-        SITE_CONFIG,
-        '/t.html',
-        '<section>{{refs-list}}</section>',
-        {},
-      );
+      const html = await htmlPageFromMarkdown('Contenido', DOC as never, {
+        cwd: '/proyecto',
+        vars: { title: 'T', siteTitle: 'S', lang: 'es-MX' },
+        siteConfig: SITE_CONFIG,
+        templatePath: '/t.html',
+        refsCardTemplate: '<section>{{refs-list}}</section>',
+        fm: {},
+      });
       expect(html).toBe(fixtureHtml);
       expect(calls.length).toBe(1);
     } finally {
@@ -218,17 +225,15 @@ describe('composers sobre fixtures de pandoc (#2031 PR1)', () => {
     if (fixtureHtml === '') return;
     const { calls, restore } = spyPandoc(fixtureHtml);
     try {
-      await htmlPageFromMarkdown(
-        'Contenido',
-        DOC as never,
-        '/proyecto',
-        { title: 'T', siteTitle: 'S', lang: 'es-MX' },
-        SITE_CONFIG,
-        '/t.html',
-        '<section>{{refs-list}}</section>',
-        {},
-        { bibliography: '/abs/refs.bib', csl: '/abs/apa.csl' },
-      );
+      await htmlPageFromMarkdown('Contenido', DOC as never, {
+        cwd: '/proyecto',
+        vars: { title: 'T', siteTitle: 'S', lang: 'es-MX' },
+        siteConfig: SITE_CONFIG,
+        templatePath: '/t.html',
+        refsCardTemplate: '<section>{{refs-list}}</section>',
+        fm: {},
+        bibOptions: { bibliography: '/abs/refs.bib', csl: '/abs/apa.csl' },
+      });
       const args = calls[0]?.extraArgs ?? [];
       expect(args).toContain('--citeproc');
       const bibIdx = args.indexOf('--bibliography');
@@ -237,17 +242,14 @@ describe('composers sobre fixtures de pandoc (#2031 PR1)', () => {
       expect(args[cslIdx + 1]).toBe('/abs/apa.csl');
 
       // Sin bibOptions: nada de citeproc
-      await htmlPageFromMarkdown(
-        'Contenido',
-        DOC as never,
-        '/proyecto',
-        { title: 'T', siteTitle: 'S', lang: 'es-MX' },
-        SITE_CONFIG,
-        '/t.html',
-        '<section>{{refs-list}}</section>',
-        {},
-        undefined,
-      );
+      await htmlPageFromMarkdown('Contenido', DOC as never, {
+        cwd: '/proyecto',
+        vars: { title: 'T', siteTitle: 'S', lang: 'es-MX' },
+        siteConfig: SITE_CONFIG,
+        templatePath: '/t.html',
+        refsCardTemplate: '<section>{{refs-list}}</section>',
+        fm: {},
+      });
       expect(calls[1]?.extraArgs ?? []).not.toContain('--citeproc');
     } finally {
       restore();

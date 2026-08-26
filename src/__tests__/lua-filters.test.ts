@@ -593,7 +593,14 @@ describe.skipIf(!pandocOk)('filtros Lua de usuario', () => {
       writeFileSync(templatePath, '\\documentclass{article}\n\\begin{document}\n$body$\n\\end{document}\n');
       const content = await Bun.file(doc.filePath).text();
       const { body } = splitFrontmatter(content);
-      const { tex } = await markdownToLatex(body, doc, filters, [], templatePath, { title: 'Prueba' }, siteConfig, true, new Set());
+      const { tex } = await markdownToLatex(body, doc, {
+        filters,
+        bibFiles: [],
+        templatePath,
+        fm: { title: 'Prueba' },
+        siteConfig,
+        warnedLangs: new Set(),
+      });
       expect(tex).toContain('\\fbox{Nota}');
     } finally {
       rmSync(cwd, { recursive: true, force: true });

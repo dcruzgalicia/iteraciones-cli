@@ -61,25 +61,45 @@ async function pdfDate(fm: Record<string, unknown>, siteConfig: SiteConfig, doc:
  * aquí: fluye del frontmatter a la metadata y el filtro latex/10-titlepages
  * lo serializa (multilínea con |).
  */
+/**
+ * Opciones de markdownToLatex (#2076): campos nombrados en vez de parámetros
+ * posicionales largos con booleans al final.
+ */
+export interface LatexComposerOptions {
+  filters: LuaFilterGroup;
+  bibFiles: string[];
+  templatePath: string;
+  fm: Record<string, unknown>;
+  siteConfig: SiteConfig;
+  /** false si 11-bibliography está desactivado: flags.lua no inyecta \\printbibliography. */
+  biblatexAvailable?: boolean;
+  /** Registro de langs advertidos del build (babelOptionsForLang): una vez por build, no por proceso. */
+  warnedLangs: Set<string>;
+  /** Dimensiones de página en mm (para preprocesamiento de imágenes). undefined = sin preprocesar. */
+  pageDimensions?: PageDimensions;
+  /** Si true, endpapers usa +6mm (crop activo). */
+  cropActive?: boolean;
+  /** 99-pdfx activo (#2040): correlaciona el warning de magick con la certificación. */
+  pdfxActive?: boolean;
+}
+
 export async function markdownToLatex(
   content: string,
   doc: BuildDocument,
-  filters: LuaFilterGroup,
-  bibFiles: string[],
-  templatePath: string,
-  fm: Record<string, unknown>,
-  siteConfig: SiteConfig,
-  /** false si 11-bibliography está desactivado: flags.lua no inyecta \\printbibliography. */
-  biblatexAvailable = true,
-  /** Registro de langs advertidos del build (babelOptionsForLang): una vez por build, no por proceso. */
-  warnedLangs: Set<string>,
-  /** Dimensiones de página en mm (para preprocesamiento de imágenes). undefined = sin preprocesar. */
-  pageDimensions?: PageDimensions,
-  /** Si true, endpapers usa +6mm (crop activo). */
-  cropActive = false,
-  /** 99-pdfx activo (#2040): correlaciona el warning de magick con la certificación. */
-  pdfxActive = false,
+  opts: LatexComposerOptions,
 ): Promise<{ tex: string; processedImages: string[] }> {
+  const {
+    filters,
+    bibFiles,
+    templatePath,
+    fm,
+    siteConfig,
+    biblatexAvailable = true,
+    warnedLangs,
+    pageDimensions,
+    cropActive = false,
+    pdfxActive = false,
+  } = opts;
   const title = typeof fm.title === 'string' && fm.title.trim() ? fm.title : 'Sin título';
   const creator = parseAuthors(fm.creator);
 
