@@ -17,7 +17,7 @@ import { convertToEpub, convertToMarkdown } from './export/runner.js';
 import { loadFilterGroups } from './filter-resolver.js';
 import { composeHtmlTemplate } from './html-composer.js';
 import { loadReferencesCardTemplate } from './html-postprocess.js';
-import { markdownToLatex } from './latex-composer.js';
+import { buildTexDistribution, markdownToLatex, rewriteTexForDist } from './latex-composer.js';
 import { applyPrintQueueDynamics, composeLatexTemplate, detectPageSize } from './latex-preamble.js';
 import { createPdfConsumer, type PdfJob } from './pdf-pool.js';
 import { loadPreambleFilters } from './preamble-loader.js';
@@ -378,14 +378,17 @@ async function processDocumentFormats(
     // (filecontents + \pdfinfo): el tex de dist/ queda autocontenido (issue #1970).
     const texWithXmp = pdfxActive ? injectXmpMetadataIntoLatex(fullTex, xmpMetadataFor(fm, lang, formatCfg?.pdf, ctx.siteConfig)) : fullTex;
     if (latexOn) {
-      await writeOutput(texDistPath, texWithXmp);
-      // Copiar imágenes procesadas a dist/ para distribución con LaTeX.
-      // Solo copiar archivos que fueron efectivamente procesados (no los originales).
-      for (const imgPath of processedImages) {
-        if (await Bun.file(imgPath).exists()) {
-          await Bun.write(join(ctx.outputDir, basename(imgPath)), Bun.file(imgPath));
+      // Distribución portátil (ADR #2084): las copias viajan JUNTO al .tex de
+      // dist/ con nombre namespaced, y el .tex distribuido referencia esos
+      // filenames — compila fuera del árbol del proyecto. El tex del área de
+      // trabajo de latexmk (abajo) conserva las rutas absolutas procesadas.
+      const distribution = buildTexDistribution(processedImages, outSlug);
+      for (const [absSrc, fileName] of distribution) {
+        if (await Bun.file(absSrc).exists()) {
+          await Bun.write(outBase(fileName), Bun.file(absSrc));
         }
       }
+      await writeOutput(texDistPath, rewriteTexForDist(texWithXmp, distribution));
     }
     if (pdfOn) {
       const texPath = latexOn ? texDistPath : join(pdfWorkDir, dir, `${outSlug}.tex`);
