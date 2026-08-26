@@ -3,6 +3,7 @@ import { assembleExportDocument } from '../builder/export/assemble.js';
 import type { BuildDocument } from '../builder/types.js';
 import { formatHumanDate } from '../lib/date.js';
 import { plural } from '../lib/plural.js';
+import { exec, ProcessTimeoutError } from '../lib/run.js';
 
 describe('formatHumanDate', () => {
   it('convierte yyyy-mm-dd a formato legible en español', () => {
@@ -91,4 +92,15 @@ describe('formatSkipReport (#2030)', () => {
     const { formatSkipReport } = await import('./helpers.js');
     expect(formatSkipReport(new Map())).toBe('');
   });
+});
+
+describe('blindaje timeout kill tree (#2085, fix 6fab3550)', () => {
+  it('el timeout termina el proceso y sus hijos (sh → sleep nieto)', async () => {
+    // sh es el hijo directo; sleep su nieto. Si solo se matara a sh, sleep
+    // quedaría huérfano vivo: el árbol completo debe desaparecer.
+    await expect(exec('sh', ['-c', 'sleep 30'], { timeoutMs: 200 })).rejects.toThrow(ProcessTimeoutError);
+    // Nada llamado "sleep 30" del test debe seguir vivo
+    const probe = Bun.spawnSync(['pgrep', '-f', 'sleep 30']);
+    expect(probe.stdout.toString().trim()).toBe('');
+  }, 5000);
 });
