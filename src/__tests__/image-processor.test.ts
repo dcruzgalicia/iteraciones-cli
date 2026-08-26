@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { processDocumentImages, resetMagickCache, scanTitlePageFieldImages } from '../builder/image-processor.js';
+import { processDocumentImages, processImage, resetMagickCache, scanTitlePageFieldImages } from '../builder/image-processor.js';
 
 describe('scanTitlePageFieldImages', () => {
   let cwd: string;
@@ -158,6 +158,37 @@ describe('correlación magick ausente ↔ PDF/X (#2040)', () => {
       expect(output).not.toContain('certificación PDF/X');
     } finally {
       stderrSpy.mockRestore();
+      resetMagickCache();
+    }
+  });
+});
+
+describe('blindaje pipeline magick (#2085, fixes ecba990a/3b7d7a97)', () => {
+  it('los argumentos incluyen -colorspace Gray antes del output y -density 300 (sin binario real)', async () => {
+    resetMagickCache();
+    const realSpawn = Bun.spawn;
+    const calls: string[][] = [];
+    Bun.spawn = ((args: string[]) => {
+      calls.push(args as string[]);
+      return { exited: Promise.resolve(0), stderr: new Response('').body } as unknown as ReturnType<typeof realSpawn>;
+    }) as typeof Bun.spawn;
+    try {
+      const outDir = mkdtempSync(join(tmpdir(), 'magick-args-'));
+      const src = join(outDir, 'orig.png');
+      writeFileSync(src, Buffer.from('89504e47', 'hex'));
+      const result = await processImage(src, 80, 120, false, outDir);
+      expect(result).toEndWith('.jpg');
+      expect(calls).toHaveLength(1);
+      const args = calls[0]!;
+      expect(args[0]).toBe('magick');
+      expect(args).toContain('-colorspace');
+      expect(args[args.indexOf('-colorspace') + 1]).toBe('Gray'); // 1 canal, no CMYK (fix ecba990a)
+      expect(args).not.toContain('CMYK');
+      expect(args).toContain('-density');
+      expect(args).toContain('-quality');
+      rmSync(outDir, { recursive: true, force: true });
+    } finally {
+      Bun.spawn = realSpawn;
       resetMagickCache();
     }
   });

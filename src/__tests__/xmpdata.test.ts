@@ -66,3 +66,17 @@ describe('injectXmpMetadataIntoLatex', () => {
     expect(injectXmpMetadataIntoLatex(tex, { title: 'T' })).toBe(tex);
   });
 });
+
+describe('blindaje mojibake Info dict (#2085, fix 99e0ad36)', () => {
+  it('autores con acentos y eñes usan comandos LaTeX, no bytes UTF-8 crudos', () => {
+    const block = buildPdfInfoBlock({ title: 'T', authors: ['Muñoz', 'José Ángel'], subject: 'S' });
+    expect(block).toContain("\\pdfescapestring{Mu\\~{n}oz, Jos\\'{e} \\'{A}ngel}");
+    expect(block).not.toMatch(/[\u00f1\u00e1\u00e9\u00ed\u00f3\u00fa]/); // cero bytes acentuados crudos
+  });
+
+  it('el XMP data conserva el UTF-8 real (es XML: no se convierte a comandos)', () => {
+    const xmp = buildXmpdataContent({ title: 'Año del jalapeño', authors: ['Núñez'] });
+    expect(xmp).toContain('Año del jalapeño');
+    expect(xmp).toContain('Núñez');
+  });
+});
