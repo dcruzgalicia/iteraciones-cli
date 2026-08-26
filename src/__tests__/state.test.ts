@@ -232,15 +232,15 @@ describe('computeFiltersHash', () => {
 describe('computeConfigHashes', () => {
   it('el hash pdf incluye language (contrato language → PDF)', async () => {
     const base = { ...DEFAULT_SITE_CONFIG, format: { ...DEFAULT_SITE_CONFIG.format } };
-    const h1 = await computeConfigHashes('/tmp', base);
-    const h2 = await computeConfigHashes('/tmp', { ...base, language: 'en' });
+    const { hashes: h1 } = await computeConfigHashes('/tmp', base);
+    const { hashes: h2 } = await computeConfigHashes('/tmp', { ...base, language: 'en' });
     expect(h1.pdf).not.toBe(h2.pdf);
   });
 
   it('el hash html cambia con el acento configurado', async () => {
     const base = { ...DEFAULT_SITE_CONFIG, format: { ...DEFAULT_SITE_CONFIG.format } };
-    const h1 = await computeConfigHashes('/tmp', base);
-    const h2 = await computeConfigHashes('/tmp', {
+    const { hashes: h1 } = await computeConfigHashes('/tmp', base);
+    const { hashes: h2 } = await computeConfigHashes('/tmp', {
       ...base,
       format: { ...base.format, html: { ...base.format.html, site: { ...base.format.html?.site, color: 'blue' } } },
     });
@@ -388,5 +388,22 @@ describe('núcleo content-addressed: hashFileCached (#2020)', () => {
       expect(second).toBe(prevEntry.hash);
       expect(out2[file]).toBe(prevOk[file]);
     });
+  });
+});
+
+describe('caché mtime de recursos de config (#2091)', () => {
+  it('segunda pasada con caché intacta: hashes idénticos y sin releer contenido', async () => {
+    const base = { ...DEFAULT_SITE_CONFIG, format: { ...DEFAULT_SITE_CONFIG.format } };
+    const prev: Record<string, { mtime: number; size: number; hash: string }> = {};
+    const out1: typeof prev = {};
+    const first = await computeConfigHashes('/tmp', base, prev, out1);
+    // Los recursos empaquetados quedaron cacheados
+    expect(Object.keys(out1).some((k) => k.startsWith('html-res:'))).toBe(true);
+    const captured = out1;
+    // Segunda pasada con la caché recién poblada (mtime+size idénticos):
+    // el hash debe provenir de la caché (idéntico) sin releer contenido.
+    const second = await computeConfigHashes('/tmp', base, captured, {});
+    expect(second.hashes).toEqual(first.hashes);
+    expect(second.cache).toEqual(captured);
   });
 });
