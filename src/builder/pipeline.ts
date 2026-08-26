@@ -362,20 +362,18 @@ async function processDocumentFormats(
   // .tex completo (preámbulo + cuerpo) en UNA invocación markdown → latex,
   // escrito directamente en dist/ (o en el área de trabajo del PDF si solo pdfOn)
   if (needsLatex) {
-    const { tex: fullTex, processedImages } = await markdownToLatex(
-      content,
-      doc,
+    const { tex: fullTex, processedImages } = await markdownToLatex(content, doc, {
       filters,
       bibFiles,
-      latexTemplatePath,
+      templatePath: latexTemplatePath,
       fm,
-      ctx.siteConfig,
+      siteConfig: ctx.siteConfig,
       biblatexAvailable,
       warnedLangs,
       pageDimensions,
       cropActive,
       pdfxActive,
-    );
+    });
     // Con 99-pdfx activo se inyectan los metadatos XMP e Info en el .tex
     // (filecontents + \pdfinfo): el tex de dist/ queda autocontenido (issue #1970).
     const texWithXmp = pdfxActive ? injectXmpMetadataIntoLatex(fullTex, xmpMetadataFor(fm, lang, formatCfg?.pdf, ctx.siteConfig)) : fullTex;
@@ -436,11 +434,9 @@ async function processDocumentFormats(
     // explícitamente a index.html (./index.html, ../index.html, ...):
     // determinista con file:// y en servidores sin directory index.
     const hasHomePage = discoveryIndex.has('index.md');
-    const html = await htmlPageFromMarkdown(
-      content,
-      doc,
+    const html = await htmlPageFromMarkdown(content, doc, {
       cwd,
-      {
+      vars: {
         title: doc.frontmatter.title || slug,
         siteTitle: htmlConfig?.site?.title ?? 'iteraciones',
         tagline: htmlConfig?.site?.description ?? 'escribir, compartir, re-existir',
@@ -450,19 +446,19 @@ async function processDocumentFormats(
         css: ctx.needsCss ? relativeHref(dir, 'css/styles.css') : undefined,
         authorMeta: doc.frontmatter.creator.join(', '),
         logoInline,
-        docTitle: doc.frontmatter.title && doc.frontmatter.title !== 'Sin t\u00edtulo' ? doc.frontmatter.title : undefined,
+        docTitle: doc.frontmatter.title && doc.frontmatter.title !== 'Sin título' ? doc.frontmatter.title : undefined,
         subtitle: doc.frontmatter.subtitle,
         date: formatHumanDate(doc.frontmatter.date),
         homeHref: hasHomePage ? relativeHref(dir, 'index.html') : undefined,
         formats: formats.length > 0 ? formats : undefined,
       },
-      ctx.siteConfig,
-      htmlTemplatePath,
+      siteConfig: ctx.siteConfig,
+      templatePath: htmlTemplatePath,
       refsCardTemplate,
       fm,
       bibOptions,
-      filters,
-    );
+      luaFilters: filters,
+    });
     await writeOutput(outBase(`${outSlug}.html`), html);
   }
 

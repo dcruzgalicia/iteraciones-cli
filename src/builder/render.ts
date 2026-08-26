@@ -14,18 +14,23 @@ import type { BuildDocument } from './types.js';
  * referencias (extraerlas del article y reinsertarlas en su marcador, que es
  * la única forma de sacarlas del body correctamente).
  */
-export async function htmlPageFromMarkdown(
-  content: string,
-  doc: BuildDocument,
-  cwd: string,
-  vars: HtmlPageVars,
-  siteConfig: SiteConfig,
-  templatePath: string,
-  refsCardTemplate: string,
-  fm: Record<string, unknown>,
-  bibOptions?: BibOptions,
-  luaFilters?: LuaFilterGroup,
-): Promise<string> {
+/**
+ * Opciones de htmlPageFromMarkdown (#2076): campos nombrados en vez de diez
+ * parámetros posicionales.
+ */
+export interface HtmlPageOptions {
+  cwd: string;
+  vars: HtmlPageVars;
+  siteConfig: SiteConfig;
+  templatePath: string;
+  refsCardTemplate: string;
+  fm: Record<string, unknown>;
+  bibOptions?: BibOptions;
+  luaFilters?: LuaFilterGroup;
+}
+
+export async function htmlPageFromMarkdown(content: string, doc: BuildDocument, opts: HtmlPageOptions): Promise<string> {
+  const { cwd, vars, siteConfig, templatePath, refsCardTemplate, fm, bibOptions, luaFilters } = opts;
   const filters = luaFilters ?? (await loadFilterGroups(siteConfig, siteConfig.disabledFilters, cwd));
   // Valores efectivos: el frontmatter del documento manda; la config aporta defaults.
   // Contrato de idioma unificado: `language` en HTML, EPUB y Markdown (#2010).

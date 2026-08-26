@@ -41,18 +41,16 @@ describe('extractReferencesBlock (sin marcador en el template)', () => {
       const siteConfig = await loadSiteConfig(cwd);
       const warnSpy = spyOn(logger, 'logWarning');
       try {
-        const html = await htmlPageFromMarkdown(
-          content,
-          doc,
+        const html = await htmlPageFromMarkdown(content, doc, {
           cwd,
-          { title: 'T', siteTitle: 'test', lang: 'es-MX' },
+          vars: { title: 'T', siteTitle: 'test', lang: 'es-MX' },
           siteConfig,
-          join(cwd, 'tpl.html'),
-          '<div class="wrap"><h2 id="refs-heading">Referencias</h2>{{refs-list}}</div>',
-          {},
-          { bibliography: join(cwd, 'bibliography.bib') },
-          await loadFilterGroups(siteConfig, undefined, cwd),
-        );
+          templatePath: join(cwd, 'tpl.html'),
+          refsCardTemplate: '<div class="wrap"><h2 id="refs-heading">Referencias</h2>{{refs-list}}</div>',
+          fm: {},
+          bibOptions: { bibliography: join(cwd, 'bibliography.bib') },
+          luaFilters: await loadFilterGroups(siteConfig, undefined, cwd),
+        });
         expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('la tarjeta de referencias no está en format.html.blocks'), 'html');
         // La bibliografía no se pierde en silencio: el warning lo hace visible
         expect(html).not.toContain('csl-entry');
@@ -82,31 +80,25 @@ describe('pdfDate (fecha de portada del PDF)', () => {
       };
       const siteConfig = await loadSiteConfig(cwd);
       const withShowDate = { ...siteConfig, format: { ...siteConfig.format, pdf: { ...siteConfig.format.pdf, showDate: true } } };
-      const { tex } = await markdownToLatex(
-        content,
-        doc,
-        await loadFilterGroups(withShowDate, undefined, cwd),
-        [],
-        tpl,
-        { date: '2026-08-08' },
-        withShowDate,
-        true,
-        new Set(),
-      );
+      const { tex } = await markdownToLatex(content, doc, {
+        filters: await loadFilterGroups(withShowDate, undefined, cwd),
+        bibFiles: [],
+        templatePath: tpl,
+        fm: { date: '2026-08-08' },
+        siteConfig: withShowDate,
+        warnedLangs: new Set(),
+      });
       expect(tex).toContain('\\date{8 de agosto de 2026}');
 
       // Sin show-date, la fecha del frontmatter se neutraliza en la portada
-      const sinShowDateResult = await markdownToLatex(
-        content,
-        doc,
-        await loadFilterGroups(siteConfig, undefined, cwd),
-        [],
-        tpl,
-        { date: '2026-08-08' },
+      const sinShowDateResult = await markdownToLatex(content, doc, {
+        filters: await loadFilterGroups(siteConfig, undefined, cwd),
+        bibFiles: [],
+        templatePath: tpl,
+        fm: { date: '2026-08-08' },
         siteConfig,
-        true,
-        new Set(),
-      );
+        warnedLangs: new Set(),
+      });
       expect(sinShowDateResult.tex).toContain('\\date{}');
     } finally {
       rmSync(cwd, { recursive: true, force: true });

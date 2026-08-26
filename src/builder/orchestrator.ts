@@ -427,20 +427,21 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
     }
   };
 
+  // Dependencias del cierre común (#2076): los valores son estables tras
+  // prepareEnvironment; se construyen una vez para las 4 invocaciones.
+  const closeDeps = { progress, siteConfig, outputDir: ctx.outputDir, effectiveDisabledPreamble, needsAssets, runAssets, cwd, pendingState };
+
   if (allDocs.length === 0) {
     // Proyecto vacío: mensaje visible en stderr (advertencias del resumen) y
     // resumen con 0 formatos (sin "reutilizado"). Exit 0: no es un error.
     logWarning(EMPTY_PROJECT_WARNING_NO_DOCS, 'build');
     logWarning(EMPTY_PROJECT_WARNING_INIT, 'build');
-    return finishBuild(
-      { progress, siteConfig, outputDir: ctx.outputDir, effectiveDisabledPreamble, needsAssets, runAssets, cwd, pendingState },
-      {
-        processedCount: 0,
-        cachedCount: 0,
-        invalidations: [],
-        empty: true,
-      },
-    );
+    return finishBuild(closeDeps, {
+      processedCount: 0,
+      cachedCount: 0,
+      invalidations: [],
+      empty: true,
+    });
   }
 
   // Los formatos nuevos no fuerzan re-render: cada conversión sale del
@@ -453,14 +454,11 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
 
   if (!work.anyWork) {
     log('Ningún documento modificado — sin cambios');
-    return finishBuild(
-      { progress, siteConfig, outputDir: ctx.outputDir, effectiveDisabledPreamble, needsAssets, runAssets, cwd, pendingState },
-      {
-        processedCount: 0,
-        cachedCount: allDocs.length,
-        invalidations,
-      },
-    );
+    return finishBuild(closeDeps, {
+      processedCount: 0,
+      cachedCount: allDocs.length,
+      invalidations,
+    });
   }
 
   // Cleanup de archivos eliminados y slugs cambiados
@@ -480,18 +478,15 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
     work.exportSets.markdown.length === 0
   ) {
     log('Ningún documento modificado — sin cambios');
-    return finishBuild(
-      { progress, siteConfig, outputDir: ctx.outputDir, effectiveDisabledPreamble, needsAssets, runAssets, cwd, pendingState },
-      {
-        processedCount: 0,
-        cachedCount: allDocs.length,
-        invalidations,
-      },
-    );
+    return finishBuild(closeDeps, {
+      processedCount: 0,
+      cachedCount: allDocs.length,
+      invalidations,
+    });
   }
 
   return finishBuild(
-    { progress, siteConfig, outputDir: ctx.outputDir, effectiveDisabledPreamble, needsAssets, runAssets, cwd, pendingState },
+    closeDeps,
     await runPipelinePhases(progress, ctx, plan, work, allDocs, discoveryIndex, effectiveDisabledPreamble, siteConfig.format, invalidations),
   );
 }
