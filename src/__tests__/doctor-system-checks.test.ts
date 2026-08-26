@@ -4,10 +4,10 @@ import { join } from 'node:path';
 import * as systemChecks from '../cli/doctor/system-checks.js';
 import { withTempDir } from './helpers.js';
 
-const { runValidate } = await import('../cli/validate.js');
+const { validateProject } = await import('../cli/validate.js');
 const { initTestProject } = await import('./helpers.js');
 
-describe('runValidate (separación de entorno y validez)', () => {
+describe('validateProject (separación de entorno y validez)', () => {
   afterEach(() => {
     process.exitCode = 0;
   });
@@ -23,7 +23,7 @@ describe('runValidate (separación de entorno y validez)', () => {
       }));
       try {
         process.exitCode = 0;
-        await runValidate(dir);
+        await validateProject(dir);
       } finally {
         spy.mockRestore();
       }

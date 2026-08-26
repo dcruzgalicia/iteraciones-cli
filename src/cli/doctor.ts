@@ -16,7 +16,7 @@ import {
 
 /**
  * Ejecuta las comprobaciones de doctor y las devuelve estructuradas.
- * Comparte la lógica con runDoctor (checks del entorno).
+ * Comparte la lógica con doctorEnvironment (checks del entorno).
  */
 export async function collectChecks(cwd: string): Promise<CheckResult[]> {
   // La config se carga una sola vez (en paralelo con las verificaciones de
@@ -80,7 +80,7 @@ export async function collectChecks(cwd: string): Promise<CheckResult[]> {
 /**
  * Verifica que el entorno tenga todo lo necesario para correr `iteraciones build`.
  */
-export async function runDoctor(cwd: string): Promise<void> {
+export async function doctorEnvironment(cwd: string): Promise<void> {
   const checks = await collectChecks(cwd);
 
   renderChecks(checks);

@@ -11,11 +11,11 @@ import { BUILD_ERROR_CODES, BuildError, ConfigError, PANDOC_ERROR_CODES, PandocE
 import { logError, logInfo, logSuccess } from '../lib/logger.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { ProcessSpawnError } from '../lib/run.js';
-import { runDoctor as doctor } from './doctor.js';
-import { runFilters as filters, type RunFiltersOptions } from './filters.js';
-import { runInit as init } from './init.js';
+import { doctorEnvironment } from './doctor.js';
+import { listFilters, type RunFiltersOptions } from './filters.js';
+import { initProject } from './init.js';
 import { ProgressTracker } from './progress.js';
-import { runValidate as validate } from './validate.js';
+import { validateProject } from './validate.js';
 
 /**
  * Verifica que el directorio raíz del proyecto exista y sea un directorio.
@@ -229,11 +229,11 @@ async function buildProjectInfo(cwd: string): Promise<string[]> {
 }
 
 export async function runInit(cwd: string): Promise<void> {
-  await runCliCommand(cwd, 'init', () => init(cwd), 'Error desconocido al inicializar.');
+  await runCliCommand(cwd, 'init', () => initProject(cwd), 'Error desconocido al inicializar.');
 }
 
 export async function runValidate(cwd: string): Promise<void> {
-  await runCliCommand(cwd, 'validate', () => validate(cwd), 'Error desconocido al validar.');
+  await runCliCommand(cwd, 'validate', () => validateProject(cwd), 'Error desconocido al validar.');
 }
 
 export async function runDoctor(cwd: string, options: { info?: boolean } = {}): Promise<void> {
@@ -249,7 +249,7 @@ export async function runDoctor(cwd: string, options: { info?: boolean } = {}): 
           logInfo(line, 'doctor');
         }
       }
-      await doctor(cwd);
+      await doctorEnvironment(cwd);
     },
     'Error desconocido al ejecutar doctor.',
   );
@@ -322,7 +322,7 @@ export async function runNew(cwd: string, path: string, options: { title?: strin
 }
 
 export async function runFilters(cwd: string, options: RunFiltersOptions = {}): Promise<void> {
-  await runCliCommand(cwd, 'filters', () => filters(cwd, options), 'Error desconocido al listar los filtros.');
+  await runCliCommand(cwd, 'filters', () => listFilters(cwd, options), 'Error desconocido al listar los filtros.');
 }
 
 /**

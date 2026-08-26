@@ -89,7 +89,7 @@ const DEFAULT_GITIGNORE = ['# Generados por iteraciones (build y caché)', 'dist
  * produce un index.html real (el home que enlazan las tarjetas de identidad).
  * Si alguno de los archivos ya existe, lo omite e informa al usuario.
  */
-export async function runInit(cwd: string): Promise<void> {
+export async function initProject(cwd: string): Promise<void> {
   const DEFAULT_BIB = [
     '@book{ejemplo2024,',
     '  author    = {Autor, Nombre del},',
