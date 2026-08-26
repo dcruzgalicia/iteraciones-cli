@@ -189,3 +189,45 @@ export async function markdownToLatex(
 
   return { tex, processedImages };
 }
+
+/**
+ * Distribución LaTeX portátil (ADR del issue #2084): el `.tex` de dist/ debe
+ * compilar fuera del árbol del proyecto, así que cada imagen procesada viaja
+ * a su lado con nombre namespaced por slug y el `.tex` distribuido referencia
+ * esas copias con el filename pelado (el pipeline escribe las copias en el
+ * mismo directorio que el .tex). El `.tex` del área de trabajo de latexmk
+ * NO se reescribe: para compilar necesita las rutas absolutas procesadas.
+ *
+ * Basenames duplicados dentro de un mismo documento reciben sufijo `-2`,
+ * `-3`… antes de la extensión.
+ */
+export function buildTexDistribution(processedImages: string[], outSlug: string): Map<string, string> {
+  const map = new Map<string, string>();
+  const taken = new Set<string>();
+  for (const abs of processedImages) {
+    const sep = abs.lastIndexOf('/');
+    const base = sep >= 0 ? abs.slice(sep + 1) : abs;
+    let name = `${outSlug}-${base}`;
+    if (taken.has(name)) {
+      const dot = base.lastIndexOf('.');
+      name = dot > 0 ? `${outSlug}-${base.slice(0, dot)}-2${base.slice(dot)}` : `${outSlug}-${base}-2`;
+      let n = 2;
+      while (taken.has(name)) {
+        n++;
+        name = dot > 0 ? `${outSlug}-${base.slice(0, dot)}-${n}${base.slice(dot)}` : `${outSlug}-${base}-${n}`;
+      }
+    }
+    taken.add(name);
+    map.set(abs, name);
+  }
+  return map;
+}
+
+/** Reemplaza cada ruta absoluta procesada por el filename relativo de la distribución. */
+export function rewriteTexForDist(tex: string, distribution: Map<string, string>): string {
+  let result = tex;
+  for (const [abs, name] of distribution) {
+    result = result.split(abs).join(name);
+  }
+  return result;
+}
