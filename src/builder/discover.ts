@@ -1,7 +1,7 @@
 import { cpus } from 'node:os';
 import { basename, join } from 'node:path';
 import slugifyLib from 'slugify';
-import { BuildError, formatUserError, translateSystemError } from '../lib/errors.js';
+import { BUILD_ERROR_CODES, BuildError, formatUserError, translateSystemError } from '../lib/errors.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 import { fmStringList, fmTrimmedString } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
@@ -304,7 +304,11 @@ export async function discover(
       const msg = issues.map((e) => `  ${e.file}: ${e.error}`).join('\n');
       blocks.push(`${label} en ${plural(issues.length, 'documento')}:\n${msg}`);
     }
-    throw new BuildError(blocks.join('\n'));
+    // El código estructural marca SOLO presencia de problemas de sintaxis:
+    // es lo que la CLI usa para sugerir validate (los errores de campos ya
+    // muestran su detalle completo en el mensaje).
+    const hasSyntax = frontmatterIssues.some((e) => e.kind === 'syntax');
+    throw new BuildError(blocks.join('\n'), hasSyntax ? BUILD_ERROR_CODES.frontmatterSyntax : undefined);
   }
 
   // Resolver slugs via slug-resolver

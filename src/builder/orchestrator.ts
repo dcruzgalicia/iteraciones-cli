@@ -23,6 +23,15 @@ import { clearStateFile } from './state.js';
 import { persistCompletedState } from './state-serialize.js';
 import type { BuildContext, BuildDocument, BuildReporter, DiscoveryEntry } from './types.js';
 
+/**
+ * Advertencias autosuficientes de proyecto vacío (#2074): únicas fuente de los
+ * literales que emite el build y que el resumen del tracker usa para decidir
+ * si añade la guía genérica "ejecuta 'iteraciones validate'" (validate no
+ * aporta en un proyecto vacío). Cambiar aquí cambia también el filtro.
+ */
+export const EMPTY_PROJECT_WARNING_NO_DOCS = 'No se encontraron documentos Markdown en el proyecto.';
+export const EMPTY_PROJECT_WARNING_INIT = "Crea un archivo .md con frontmatter o ejecuta 'iteraciones init'.";
+
 export interface BuildOptions {
   outputDir?: string;
   full?: boolean;
@@ -421,8 +430,8 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
   if (allDocs.length === 0) {
     // Proyecto vacío: mensaje visible en stderr (advertencias del resumen) y
     // resumen con 0 formatos (sin "reutilizado"). Exit 0: no es un error.
-    logWarning('No se encontraron documentos Markdown en el proyecto.', 'build');
-    logWarning("Crea un archivo .md con frontmatter o ejecuta 'iteraciones init'.", 'build');
+    logWarning(EMPTY_PROJECT_WARNING_NO_DOCS, 'build');
+    logWarning(EMPTY_PROJECT_WARNING_INIT, 'build');
     return finishBuild(
       { progress, siteConfig, outputDir: ctx.outputDir, effectiveDisabledPreamble, needsAssets, runAssets, cwd, pendingState },
       {

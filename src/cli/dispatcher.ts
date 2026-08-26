@@ -7,7 +7,7 @@ import { build } from '../builder/orchestrator.js';
 import { loadStateFile } from '../builder/state.js';
 import { loadSiteConfigIfPresent } from '../config/config-loader.js';
 import { computeActiveFormats, DEFAULT_PDF_FORMAT } from '../config/site-config.js';
-import { BuildError, ConfigError, PandocError } from '../lib/errors.js';
+import { BUILD_ERROR_CODES, BuildError, ConfigError, PandocError } from '../lib/errors.js';
 import { logError, logInfo, logSuccess } from '../lib/logger.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { runDoctor as doctor } from './doctor.js';
@@ -144,11 +144,10 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
       suggestValidate();
     } else if (err instanceof BuildError) {
       logError(err.message, 'build');
-      // La sugerencia de validate solo aplica a errores de sintaxis YAML del
-      // frontmatter (el bloque "frontmatter YAML inválido" va primero cuando
-      // existe): los errores de validación de campos ya muestran su detalle
-      // completo en el mensaje del build.
-      if (err.message.startsWith('frontmatter YAML inválido')) suggestValidate();
+      // La sugerencia de validate solo aplica a errores clasificados como
+      // sintaxis YAML del frontmatter (código estructural, sin matchear el
+      // texto del mensaje): los demás errores ya muestran su detalle completo.
+      if (err.code === BUILD_ERROR_CODES.frontmatterSyntax) suggestValidate();
     } else if (err instanceof Error) {
       logError(err.message);
     } else {
