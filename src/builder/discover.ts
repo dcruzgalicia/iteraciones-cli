@@ -71,6 +71,20 @@ export function computeSlug(
 }
 
 /**
+ * Diacríticos que alteran el sentido de la palabra al transliterarse en el
+ * slug (ñ→n: año/ano). Heurística sin diccionario (#2090): avisa una vez por
+ * título afectado para que el autor decida. Los acentos agudos inocuos
+ * (á→a) no avisaban ni avisan.
+ */
+export function slugDiacriticWarning(title: string, slug: string): string | undefined {
+  if (!/[ñü]/i.test(title)) return undefined;
+  // El slug ya no contiene ñ/ü (strict las elimina): si el título las tenía,
+  // hubo sustitución por n/u con posible cambio de palabra.
+  if (slug.includes('ñ') || slug.includes('ü')) return undefined;
+  return `el slug "${slug}" altera palabras del título "${title}" (ñ→n, ü→u): revísalo o fija uno manual con "slug:" en el frontmatter`;
+}
+
+/**
  * Fase 1 — discover: detecta cambios y actualiza el estado del build.
  * Si se proporciona prevState (desde orchestrator), evita la segunda
  * lectura de state.json.
@@ -128,6 +142,8 @@ export async function discover(
   const currentSet = new Set(relativePaths);
   const changedPaths = new Set<string>();
   const recentFiles: string[] = [];
+  // Dedup de avisos de diacríticos por build (#2090): una vez por title+slug.
+  const slugWarningsSeen = new Set<string>();
   const deletedFiles: string[] = [];
   const slugChangedEntries = new Map<string, string>();
   // Acumulador de problemas de frontmatter con su clase: 'syntax' (YAML
@@ -317,6 +333,13 @@ export async function discover(
     // computeSlug solo retorna undefined sin fallbackPath; aqui siempre se provee
     const slug = computeSlug(meta, opts);
     if (slug === undefined) throw new BuildError(`no se pudo resolver el slug de ${opts.fallbackPath}`);
+    if (meta.title) {
+      const diacriticHint = slugDiacriticWarning(meta.title, slug);
+      if (diacriticHint && !slugWarningsSeen.has(diacriticHint)) {
+        slugWarningsSeen.add(diacriticHint);
+        logWarning(diacriticHint, 'discover');
+      }
+    }
     return slug;
   });
   for (const [path, oldSlug] of slugResult.slugChangedEntries) slugChangedEntries.set(path, oldSlug);
