@@ -5,6 +5,7 @@
  */
 
 import { join } from 'node:path';
+import { logWarning } from '../lib/logger.js';
 
 const HTML_RESOURCES_DIR = join(import.meta.dir, '../lib/resources/html');
 
@@ -72,7 +73,13 @@ export function extractReferencesBlock(html: string, cardTemplate: string): { ht
       if (depth === 0) break;
     }
   }
-  if (depth !== 0) return { html };
+  if (depth !== 0) {
+    // HTML mal balanceado (causa típica: un filtro Lua propio que abre <div>
+    // sin cerrarlo): extraer el bloque partiría la página. Se devuelve intacta
+    // y el desbalance se hace visible (#2080).
+    logWarning(`HTML mal balanceado: las referencias no se extrajeron del documento; revisa los filtros Lua propios (div sin cerrar)`, 'html');
+    return { html };
+  }
   const end = i;
 
   // La lista extraída (el div#refs completo) es el contenido dinámico; el
