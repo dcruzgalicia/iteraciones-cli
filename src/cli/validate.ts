@@ -212,6 +212,11 @@ export async function runValidate(cwd: string): Promise<void> {
     if (disabledFiltersCount > 0) detail.push(`${plural(disabledFiltersCount, 'filter', 'filters')} desactivados`);
     if (luaFiltersCount > 0) detail.push(`${plural(luaFiltersCount, 'lua-filter', 'lua-filters')}`);
     logInfo(`sin errores — ${detail.join(', ')}.`, 'validate');
+    // Proyecto con config pero sin documentos: orientar al que está empezando
+    // (init omite los archivos existentes, así que la sugerencia es segura).
+    if (docCount === 0) {
+      logInfo("si estás empezando, ejecuta 'iteraciones init' para crear el documento inicial", 'validate');
+    }
     return;
   }
 
