@@ -242,7 +242,7 @@ async function copyLogo(outputDir: string, cwd: string, siteConfig: SiteConfig):
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === 'ENOENT') logWarning(`logo por defecto no encontrado en "${defaultSrc}"`, 'assets');
       else {
-        logWarning(`No se pudo copiar el logo por defecto: ${(err as Error).message}`, 'assets');
+        // El dispatcher ya reporta el error lanzado: sin logWarning duplicado (#2081).
         throw new BuildError(`No se pudo copiar el logo por defecto: ${(err as Error).message}`);
       }
     }
@@ -258,7 +258,7 @@ async function copyLogo(outputDir: string, cwd: string, siteConfig: SiteConfig):
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === 'ENOENT') logWarning(`logo no encontrado: "${logo}"`, 'assets');
     else {
-      logWarning(`No se pudo copiar el logo "${logo}": ${(err as Error).message}`, 'assets');
+      // El dispatcher ya reporta el error lanzado: sin logWarning duplicado (#2081).
       throw new BuildError(`No se pudo copiar el logo "${logo}": ${(err as Error).message}`);
     }
   }
