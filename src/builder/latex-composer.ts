@@ -7,10 +7,10 @@ import { execPandoc, MD_READER } from '../lib/pandoc-runner.js';
 import { parseAuthors } from './discover.js';
 import type { LuaFilterGroup } from './filter-resolver.js';
 import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
-import { metadataValue } from './html-composer.js';
 import type { PageDimensions } from './image-processor.js';
 import { processDocumentImages, rewriteImagePaths, scanInlineImages, scanTitlePageFieldImages } from './image-processor.js';
 import { babelOptionsForLang, pageNumberCommandFor } from './latex-preamble.js';
+import { creatorArgs, dateArg, titleArg } from './pandoc-metadata.js';
 import type { BuildDocument } from './types.js';
 
 /** Fecha cruda del frontmatter si es string no vacío tras recortar. */
@@ -204,18 +204,16 @@ export async function markdownToLatex(
       extraArgs.push('--bibliography', bib);
     }
   }
-  extraArgs.push(`--metadata=title:${metadataValue(title)}`);
+  extraArgs.push(titleArg(title));
   await pushCoverImageMetadata(extraArgs, fm, doc, imageMap);
   // El subtitle NO se pasa por --metadata: el override aplanaría los \n con
   // metadataValue y el filtro latex/10-titlepages no vería el valor multilínea
   // (frontmatter con |). El filtro lo serializa desde la metadata del
   // documento: el template $if(subtitle)$ emite el RawInline latex sin
   // re-escape. En HTML el compositor sí lo aplana (render.ts).
-  for (const a of creator) {
-    extraArgs.push(`--metadata=creator:${metadataValue(a)}`);
-  }
+  extraArgs.push(...creatorArgs(creator));
   const date = await pdfDate(fm, siteConfig, doc);
-  if (date !== undefined) extraArgs.push(`--metadata=date:${metadataValue(date)}`);
+  extraArgs.push(...dateArg(date));
 
   const tex = await execPandoc({
     input: finalContent,

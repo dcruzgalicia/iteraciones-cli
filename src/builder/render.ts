@@ -3,8 +3,9 @@ import { fmString } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { type BibOptions, execPandoc, MD_READER } from '../lib/pandoc-runner.js';
 import { type LuaFilterGroup, loadFilterGroups } from './filter-resolver.js';
-import { buildFormatsItems, type HtmlPageVars, metadataValue } from './html-composer.js';
+import { buildFormatsItems, type HtmlPageVars } from './html-composer.js';
 import { extractReferencesBlock, removeTocReferencesLink } from './html-postprocess.js';
+import { citationCompileArgs, languageArg, metadataValue, titleArg } from './pandoc-metadata.js';
 import type { BuildDocument } from './types.js';
 
 /**
@@ -46,9 +47,9 @@ export async function htmlPageFromMarkdown(content: string, doc: BuildDocument, 
   const extraArgs = [
     '--template',
     templatePath,
-    `--metadata=title:${metadataValue(vars.title)}`,
+    titleArg(vars.title),
     `--metadata=site-title:${metadataValue(siteTitle)}`,
-    `--metadata=lang:${lang}`,
+    languageArg(lang, 'lang'),
     '--metadata=link-citations:true',
   ];
   if (tocActive) extraArgs.push('--toc');
@@ -68,11 +69,9 @@ export async function htmlPageFromMarkdown(content: string, doc: BuildDocument, 
   const formatsItems = buildFormatsItems(vars.formats ?? []);
   if (formatsItems) extraArgs.push(`--variable=formats:${formatsItems}`);
 
-  // citeproc DESPUÉS de --lua-filter (orden protegido por test de regresión)
-  if (bibOptions) {
-    extraArgs.push('--citeproc', '--bibliography', bibOptions.bibliography);
-    if (bibOptions.csl) extraArgs.push('--csl', bibOptions.csl);
-  }
+  // citeproc DESPUÉS de --lua-filter (orden protegido por test de regresión):
+  // la composición de citas vive en pandoc-metadata (ÚNICA fuente, #2175)
+  extraArgs.push(...citationCompileArgs(bibOptions?.bibliography, bibOptions?.csl));
 
   const html = await execPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'html5', extraArgs });
 

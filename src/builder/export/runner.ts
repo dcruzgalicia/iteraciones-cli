@@ -1,14 +1,20 @@
 import { existsSync } from 'node:fs';
 import { copyFile, mkdir, rename, rm } from 'node:fs/promises';
-import { dirname, join, relative } from 'node:path';
+import { dirname, join } from 'node:path';
 import { PANDOC_ERROR_CODES, PandocError } from '../../lib/errors.js';
-import { fmBool, fmString } from '../../lib/frontmatter-fields.js';
-import { logWarning } from '../../lib/logger.js';
+import { fmBool } from '../../lib/frontmatter-fields.js';
 import { execPandoc, MD_READER } from '../../lib/pandoc-runner.js';
 import { exec, ProcessSpawnError, ProcessTimeoutError } from '../../lib/run.js';
 import type { LuaFilterGroup } from '../filter-resolver.js';
-import { metadataValue } from '../html-composer.js';
-import { PACKAGED_APA7_CSL } from '../state-bib.js';
+import {
+  citationCompileArgs,
+  citationPortableMetadataArgs,
+  creatorArgs,
+  dateArg,
+  effectiveLanguage,
+  languageArg,
+  titleArg,
+} from '../pandoc-metadata.js';
 import type { ExportDocument } from './types.js';
 
 /** Extensiones auxiliares que latexmk deja junto al .tex compilado. */
@@ -47,27 +53,18 @@ export async function convertToEpub(
 
   const extraArgs: string[] = [];
   for (const f of [...filters.semantic, ...filters.user]) extraArgs.push('--lua-filter', f);
-  if (doc.metadata.bibliography) {
-    extraArgs.push('--citeproc');
-    // Paridad con HTML (render.ts): el CSL configurado si existe; si no, el
-    // APA-7 empaquetado — antes el EPUB citaba con el default de pandoc,
-    // divergiendo silenciosamente del HTML (issue #2165).
-    extraArgs.push('--csl', doc.metadata.csl ?? PACKAGED_APA7_CSL);
-  }
+  extraArgs.push(...citationCompileArgs(doc.metadata.bibliography, doc.metadata.csl));
   // El TOC: el frontmatter (toc:) manda; la config aporta el default
   const tocActive = fmBool(fm.toc, toc ?? false);
   if (tocActive) extraArgs.push('--toc');
 
   // Metadatos efectivos: el frontmatter del documento fluye a pandoc; aquí solo
-  // se complementa lo que no está en él o necesita un valor por defecto.
-  const language = fmString(fm.language, doc.metadata.language);
-  extraArgs.push(`--metadata=language:${language}`);
-  extraArgs.push(`--metadata=title:${metadataValue(doc.metadata.title)}`);
-  for (const creator of doc.metadata.creator) {
-    extraArgs.push(`--metadata=creator:${metadataValue(creator)}`);
-  }
-  const date = doc.metadata.dateIso ?? doc.metadata.date;
-  if (date) extraArgs.push(`--metadata=date:${metadataValue(date)}`);
+  // se complementa lo que no está en él o necesita un valor por defecto
+  // (composición compartida en pandoc-metadata, #2175).
+  extraArgs.push(languageArg(effectiveLanguage(fm, doc.metadata.language)));
+  extraArgs.push(titleArg(doc.metadata.title));
+  extraArgs.push(...creatorArgs(doc.metadata.creator));
+  extraArgs.push(...dateArg((doc.metadata.dateIso ?? doc.metadata.date) || undefined));
 
   await execPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'epub3', outputPath, extraArgs });
 }
@@ -98,25 +95,15 @@ export async function convertToMarkdown(
   // --standalone (sin él, el writer omite el metadata en la salida). Las rutas
   // de bibliografía/CSL se emiten relativas al proyecto: el export es portable
   // (mover el proyecto no rompe las citas; una ruta absoluta sí).
-  const language = fmString(fm.language, doc.metadata.language);
   extraArgs.push('--standalone');
-  extraArgs.push(`--metadata=language:${language}`);
-  if (doc.metadata.date) extraArgs.push(`--metadata=date:${metadataValue(doc.metadata.date)}`);
+  extraArgs.push(languageArg(effectiveLanguage(fm, doc.metadata.language)));
+  extraArgs.push(...dateArg(doc.metadata.date || undefined));
   const tocActive = fmBool(fm.toc, doc.metadata.toc);
   if (tocActive) {
     extraArgs.push('--metadata=toc:true');
     if (doc.metadata.tocDepth && doc.metadata.tocDepth > 0) extraArgs.push(`--metadata=toc-depth:${doc.metadata.tocDepth}`);
   }
-  if (doc.metadata.bibliography) {
-    extraArgs.push(`--metadata=bibliography:${relative(cwd, doc.metadata.bibliography)}`);
-  }
-  if (doc.metadata.csl) {
-    if (existsSync(doc.metadata.csl)) {
-      extraArgs.push(`--metadata=csl:${relative(cwd, doc.metadata.csl)}`);
-    } else {
-      logWarning(`archivo CSL no encontrado: "${doc.metadata.csl}"`, 'export');
-    }
-  }
+  extraArgs.push(...citationPortableMetadataArgs(doc.metadata.bibliography, doc.metadata.csl, cwd));
 
   const stdout = await execPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'markdown', extraArgs });
   await Bun.write(outputPath, stdout);
