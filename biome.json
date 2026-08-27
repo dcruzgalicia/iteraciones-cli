@@ -59,7 +59,6 @@
         "src/builder/latex-composer.ts",
         "src/builder/pdf-pool.ts",
         "src/builder/pdfx-check.ts",
-        "src/builder/pipeline.ts",
         "src/builder/project-validator.ts",
         "src/builder/render.ts",
         "src/builder/state-hash.ts",
