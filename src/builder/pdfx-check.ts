@@ -4,7 +4,7 @@ import { cpus, homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { BuildError } from '../lib/errors.js';
-import { GLYPHS, logWarning } from '../lib/logger.js';
+import { GLYPHS, logNotice, logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
 import { exec, mapWithConcurrency } from '../lib/run.js';
 
@@ -60,6 +60,11 @@ export async function resolvePdfCheckBinary(): Promise<string | null> {
 async function buildPdfCheckBinary(): Promise<string | null> {
   const manifest = join(import.meta.dir, '../../tools/pdfx-validator/Cargo.toml');
   if (!existsSync(manifest)) return null;
+  // El primer build con PDF/X compila el validador Rust: sin este aviso el
+  // usuario ve el build congelado hasta 10 minutos sin explicación (#2163).
+  // stderr en tiempo real: stdout es el contrato --json y el sink diferiría
+  // el mensaje hasta el resumen, cuando la espera ya pasó.
+  logNotice('compilando iteraciones-pdfcheck (primer build, puede tardar varios minutos)…', 'pdfx');
   try {
     await exec('cargo', ['build', '--release', '--quiet', '--manifest-path', manifest], {
       timeoutMs: CARGO_BUILD_TIMEOUT_MS,

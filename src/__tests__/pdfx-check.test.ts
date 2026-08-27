@@ -3,6 +3,8 @@ import { chmod, mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { runPdfxOutputValidation } from '../builder/pdfx-check.js';
 import { loadSiteConfig } from '../config/config-loader.js';
+import * as runLib from '../lib/run.js';
+import { ProcessSpawnError } from '../lib/run.js';
 import { withTempDir } from './helpers.js';
 
 /** Valor original para restaurar el directorio gestionado del binario en tests. */
@@ -166,6 +168,31 @@ describe('runPdfxOutputValidation (fase final del build)', () => {
       }
       expect(mensaje).toContain('capitulos/doc.pdf');
       expect(mensaje).toContain('MissingTrimBox');
+    });
+  });
+
+  it('anuncia la compilación del binario antes de intentar construirla (#2163)', async () => {
+    await withTempDir(async (dir) => {
+      useIsolatedManagedBin(dir);
+      await initPdfxProject(dir);
+      await mkdir(join(dir, 'dist', 'files'), { recursive: true });
+      await writeFile(join(dir, 'dist', 'files', 'doc.pdf'), '%PDF-1.4 fake', 'utf8');
+      const config = await loadSiteConfig(dir);
+      // cargo ausente: buildPdfCheckBinary retorna null y la validación se
+      // omite con aviso. El anuncio debe aparecer ANTES de ese aviso.
+      const execSpy = spyOn(runLib, 'exec').mockRejectedValue(new ProcessSpawnError('cargo'));
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        const result = await runPdfxOutputValidation(join(dir, 'dist', 'files'), config, { allowBuild: true });
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        expect(result).toEqual({ validated: 0, failed: 0, summaryLine: undefined });
+      } finally {
+        stderrSpy.mockRestore();
+        execSpy.mockRestore();
+      }
+      expect(output).toContain('compilando iteraciones-pdfcheck');
+      expect(output.indexOf('compilando iteraciones-pdfcheck')).toBeLessThan(output.indexOf('no se validaron'));
     });
   });
 
