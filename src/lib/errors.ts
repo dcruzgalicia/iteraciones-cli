@@ -60,8 +60,7 @@ const KNOWN_ERROR_PREFIXES = ['SyntaxError', 'YAMLException', 'TypeError', 'Conf
 
 /**
  * Normaliza un mensaje de error para el usuario: elimina prefijos de clase
- * (SyntaxError:, Error:) y ruido interno como stacks o causas.
- * Los errores de YAML se traducen a formato legible.
+ * (SyntaxError:, Error:). Los errores de YAML se traducen a formato legible.
  */
 export function formatUserError(err: unknown): string {
   if (err instanceof Error) {

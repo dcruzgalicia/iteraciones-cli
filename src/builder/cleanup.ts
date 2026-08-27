@@ -18,13 +18,6 @@ const FORMAT_EXT_MAP: Record<string, string[]> = {
   markdown: ['.md'],
 };
 
-/**
- * Slug de salida efectivo (#2012): htmlSlugFor es la ÚNICA fuente usada tanto
- * para GENERAR las rutas en dist/ (pipeline) como para LIMPIARLAS. Desajustarse
- * aquí deja huérfanos — p. ej. index.md produce index.* pero su slug de título
- * es otro.
- */
-
 /** Elimina un archivo si existe; devuelve si existía (para el informe). */
 async function removeIfExists(path: string): Promise<boolean> {
   if (!(await Bun.file(path).exists())) return false;

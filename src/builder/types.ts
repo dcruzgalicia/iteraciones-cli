@@ -26,9 +26,7 @@ interface Frontmatter {
 }
 
 /**
- * Documento que acumula datos a través del pipeline.
- * Creado en discovery; el export lee el AST del caché en disco
- * (`.iteraciones/ast/`) cuando el documento no se re-renderizó en el build.
+ * Documento que acumula datos a través del pipeline. Creado en discovery.
  */
 export interface BuildDocument {
   filePath: string;

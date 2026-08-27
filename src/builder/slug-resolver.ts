@@ -7,15 +7,12 @@ interface SlugResolutionResult {
   slugChangedEntries: Map<string, string>;
   /** Paths que deben reprocesarse por cambio de slug. */
   changedPaths: string[];
-  /** Paths que deben agregarse a recentFiles. */
-  newRecentFiles: string[];
 }
 
 /** Acumulador interno de cambios de slug durante la resolución. */
 interface SlugChangeAccumulator {
   slugChangedEntries: Map<string, string>;
   changedPaths: string[];
-  newRecentFiles: string[];
 }
 
 /** Firma de cálculo de slug inyectada (computeSlug de discover.ts). */
@@ -33,12 +30,11 @@ function entryFor(discoveryIndex: Map<string, DiscoveryEntry>, path: string): Di
 }
 
 /**
- * Registra un cambio de slug: el path queda marcado para reproceso, se añade
- * a recentFiles y se retiene el slug anterior para limpieza de outputs (#2012).
+ * Registra un cambio de slug: el path queda marcado para reproceso y se
+ * retiene el slug anterior para limpieza de outputs (#2012).
  */
 function recordSlugChange(acc: SlugChangeAccumulator, relPath: string, prevSlug: string): void {
   acc.changedPaths.push(relPath);
-  acc.newRecentFiles.push(relPath);
   acc.slugChangedEntries.set(relPath, prevSlug);
 }
 
@@ -155,7 +151,7 @@ function assertNoOutputCollisions(discoveryIndex: Map<string, DiscoveryEntry>): 
  * y detecta cambios de slug que requieren reprocesamiento.
  */
 export function resolveSlugs(discoveryIndex: Map<string, DiscoveryEntry>, computeSlug: SlugComputer): SlugResolutionResult {
-  const acc: SlugChangeAccumulator = { slugChangedEntries: new Map(), changedPaths: [], newRecentFiles: [] };
+  const acc: SlugChangeAccumulator = { slugChangedEntries: new Map(), changedPaths: [] };
 
   applyManualSlugs(discoveryIndex, acc);
 
