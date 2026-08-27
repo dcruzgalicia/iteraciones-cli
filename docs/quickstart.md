@@ -121,7 +121,7 @@ Con todo en orden, cada build termina con la confirmación de certificación:
 ✔ Validación PDF/X-1a: 2 PDFs certifican PDF/X-1a
 ```
 
-Si algún PDF no certificara, el resumen lista los fallos (código y página) sin romper el build. Las condiciones exactas que valida el binario están documentadas en [docs/architecture.md](architecture.md).
+Si algún PDF no certificara, el build **falla** (exit 1) con el detalle por PDF: archivo, código, página y mensaje. Con `99-pdfx` activo la certificación es una garantía, no una sugerencia: quien no quiere bloqueo puede desactivar el filter en `disabled-preamble-filters`. Las condiciones exactas que valida el binario están documentadas en [docs/architecture.md](architecture.md).
 
 ## 8. Ciclo de trabajo habitual
 

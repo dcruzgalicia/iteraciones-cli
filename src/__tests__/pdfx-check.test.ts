@@ -95,7 +95,7 @@ describe('runPdfxOutputValidation (fase final del build)', () => {
     });
   });
 
-  it('muestra el fallo por PDF cuando el binario reporta errores de certificación', async () => {
+  it('un PDF que no certifica lanza BuildError con archivo/página/código (decisión D2)', async () => {
     await withTempDir(async (dir) => {
       useIsolatedManagedBin(dir);
       await initPdfxProject(dir);
@@ -106,25 +106,25 @@ describe('runPdfxOutputValidation (fase final del build)', () => {
         '{"valid": false, "level": "PDF/X-1a:2001", "errors": [{"code":"MissingTrimBox","message":"falta TrimBox","page":0,"object_id":null,"clause":"6.1.1"},{"code":"FontNotEmbedded","message":"fuente no incrustada","page":2,"object_id":null,"clause":"6.2"}], "warnings": [{"code":"ProducerNotSet","message":"sin Producer","page":null,"object_id":null,"clause":null}]}',
       );
       const config = await loadSiteConfig(dir);
-      const stderrSpy = spyStderr();
-      let output = '';
+      let mensaje = '';
       try {
-        const result = await runPdfxOutputValidation(join(dir, 'dist', 'files'), config, { allowBuild: false });
-        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
-        expect(result).toEqual({ validated: 1, failed: 1, summaryLine: undefined });
-      } finally {
-        stderrSpy.mockRestore();
+        await runPdfxOutputValidation(join(dir, 'dist', 'files'), config, { allowBuild: false });
+        expect.unreachable();
+      } catch (err) {
+        mensaje = err instanceof Error ? err.message : String(err);
       }
-      // Se reportan TODOS los fallos y warnings por PDF, no solo el primero (issue #1971).
-      expect(output).toContain('doc.pdf');
-      expect(output).toContain('MissingTrimBox');
-      expect(output).toContain('FontNotEmbedded');
-      expect(output).toContain('(2 fallos)');
-      expect(output).toContain('página 1');
-      expect(output).toContain('página 3');
-      expect(output).toContain('ProducerNotSet');
-      expect(output).toContain('advertencia PDF/X-1a');
-      expect(output).toContain('1 de 1 PDFs no certifican PDF/X-1a.');
+      // El fallo bloquea el build (99-pdfx activo = señal de imprenta) y el
+      // mensaje muestra TODOS los fallos y warnings por PDF (issue #1971):
+      // la ruta de fallo del build no imprime los warnings acumulados.
+      expect(mensaje).toContain('1 de 1 PDFs no certifican PDF/X-1a.');
+      expect(mensaje).toContain('doc.pdf');
+      expect(mensaje).toContain('MissingTrimBox');
+      expect(mensaje).toContain('FontNotEmbedded');
+      expect(mensaje).toContain('(2 fallos)');
+      expect(mensaje).toContain('página 1');
+      expect(mensaje).toContain('página 3');
+      expect(mensaje).toContain('ProducerNotSet');
+      expect(mensaje).toContain('advertencia —');
     });
   });
 
@@ -146,7 +146,7 @@ describe('runPdfxOutputValidation (fase final del build)', () => {
     });
   });
 
-  it('reporta la ruta relativa del PDF anidado que no certifica', async () => {
+  it('un PDF anidado que no certifica lanza el error con su ruta relativa', async () => {
     await withTempDir(async (dir) => {
       useIsolatedManagedBin(dir);
       await initPdfxProject(dir);
@@ -157,17 +157,15 @@ describe('runPdfxOutputValidation (fase final del build)', () => {
         '{"valid": false, "level": "PDF/X-1a:2001", "errors": [{"code":"MissingTrimBox","message":"falta TrimBox","page":0,"object_id":null,"clause":"6.1.1"}], "warnings": []}',
       );
       const config = await loadSiteConfig(dir);
-      const stderrSpy = spyStderr();
-      let output = '';
+      let mensaje = '';
       try {
-        const result = await runPdfxOutputValidation(join(dir, 'dist', 'files'), config, { allowBuild: false });
-        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
-        expect(result).toEqual({ validated: 1, failed: 1, summaryLine: undefined });
-      } finally {
-        stderrSpy.mockRestore();
+        await runPdfxOutputValidation(join(dir, 'dist', 'files'), config, { allowBuild: false });
+        expect.unreachable();
+      } catch (err) {
+        mensaje = err instanceof Error ? err.message : String(err);
       }
-      expect(output).toContain('capitulos/doc.pdf');
-      expect(output).toContain('MissingTrimBox');
+      expect(mensaje).toContain('capitulos/doc.pdf');
+      expect(mensaje).toContain('MissingTrimBox');
     });
   });
 
