@@ -52,7 +52,6 @@
       "includes": [
         "src/__tests__/docs-config-integrity.test.ts",
         "src/__tests__/progress.test.ts",
-        "src/builder/html-postprocess.ts",
         "src/builder/pdf-pool.ts",
         "src/builder/pdfx-check.ts",
         "src/builder/project-validator.ts",
