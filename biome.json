@@ -54,7 +54,6 @@
         "src/__tests__/progress.test.ts",
         "src/builder/build-planner.ts",
         "src/builder/html-postprocess.ts",
-        "src/builder/latex-composer.ts",
         "src/builder/pdf-pool.ts",
         "src/builder/pdfx-check.ts",
         "src/builder/project-validator.ts",

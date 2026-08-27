@@ -13,36 +13,47 @@ import { processDocumentImages, rewriteImagePaths, scanInlineImages, scanTitlePa
 import { babelOptionsForLang, pageNumberCommandFor } from './latex-preamble.js';
 import type { BuildDocument } from './types.js';
 
+/** Fecha cruda del frontmatter si es string no vacío tras recortar. */
+function rawFrontmatterDate(fm: Record<string, unknown>): string | undefined {
+  return typeof fm.date === 'string' && fm.date.trim() ? fm.date.trim() : undefined;
+}
+
+/**
+ * Fecha efectiva como fallback cuando el frontmatter no trae fecha: birthtime
+ * del documento. birthtime puede ser 0/epoch o NaN en filesystems que no lo
+ * soportan (algunos Linux, NFS): en ese caso se usa mtime como último recurso
+ * y se advierte para que el usuario sepa que la fecha es de modificación.
+ */
+async function fileCreationDate(doc: BuildDocument): Promise<string | undefined> {
+  try {
+    const fileStat = await Bun.file(doc.filePath).stat();
+    const birthMs = fileStat.birthtimeMs;
+    const noBirthtime = !Number.isFinite(birthMs) || birthMs <= 0;
+    const btime = noBirthtime ? fileStat.mtime : fileStat.birthtime;
+    if (!btime) return undefined;
+    const y = btime.getFullYear();
+    const m = String(btime.getMonth() + 1).padStart(2, '0');
+    const d = String(btime.getDate()).padStart(2, '0');
+    if (noBirthtime) {
+      logWarning(`"${doc.filePath}" sin fecha de creación (birthtime); se usó la fecha de modificación`, 'latex');
+    }
+    return formatHumanDate(`${y}-${m}-${d}`);
+  } catch {
+    // Si no se puede leer el archivo, no agregar fecha
+    return undefined;
+  }
+}
+
 /**
  * Fecha de la portada del PDF: con show-date, la formateada del frontmatter (o
  * la creación del archivo); sin show-date, '' neutraliza el date del frontmatter
  * (la portada no muestra fecha). undefined = no hay nada que pasar.
  */
 async function pdfDate(fm: Record<string, unknown>, siteConfig: SiteConfig, doc: BuildDocument): Promise<string | undefined> {
-  const rawDate = typeof fm.date === 'string' && fm.date.trim() ? fm.date.trim() : undefined;
+  const rawDate = rawFrontmatterDate(fm);
   if (siteConfig.format?.pdf?.showDate === true) {
     if (rawDate) return formatHumanDate(rawDate);
-    try {
-      const fileStat = await Bun.file(doc.filePath).stat();
-      // birthtime puede ser 0/epoch o NaN en filesystems que no lo soportan
-      // (algunos Linux, NFS): en ese caso se usa mtime como último recurso y
-      // se advierte para que el usuario sepa que la fecha es de modificación.
-      const birthMs = fileStat.birthtimeMs;
-      const noBirthtime = !Number.isFinite(birthMs) || birthMs <= 0;
-      const btime = noBirthtime ? fileStat.mtime : fileStat.birthtime;
-      if (btime) {
-        const y = btime.getFullYear();
-        const m = String(btime.getMonth() + 1).padStart(2, '0');
-        const d = String(btime.getDate()).padStart(2, '0');
-        if (noBirthtime) {
-          logWarning(`"${doc.filePath}" sin fecha de creación (birthtime); se usó la fecha de modificación`, 'latex');
-        }
-        return formatHumanDate(`${y}-${m}-${d}`);
-      }
-    } catch {
-      // Si no se puede leer el archivo, no agregar fecha
-    }
-    return undefined;
+    return fileCreationDate(doc);
   }
   // Sin show-date: el frontmatter no debe mostrar fecha en la portada
   if (rawDate || fm.date !== undefined) return '';
@@ -83,6 +94,65 @@ export interface LatexComposerOptions {
   pdfxActive?: boolean;
 }
 
+/** Resultado del preprocesamiento de imágenes del documento. */
+interface ImagePreprocessResult {
+  imageMap: Map<string, string>;
+  processedImages: string[];
+  finalContent: string;
+}
+
+/**
+ * Preprocesamiento de imágenes (CMYK 300dpi JPG): escanea inline y campos
+ * multilinea de portada, procesa con ImageMagick y reescribe rutas en TODO
+ * el contenido (frontmatter + body) si hubo cambios.
+ */
+async function preprocessDocumentImages(
+  content: string,
+  doc: BuildDocument,
+  fm: Record<string, unknown>,
+  pageDimensions: PageDimensions,
+  cropActive: boolean,
+  pdfxActive: boolean,
+): Promise<ImagePreprocessResult> {
+  const docDir = dirname(doc.filePath);
+  const outputDir = join(docDir, '.iteraciones', 'processed-images');
+  const inlineImages = scanInlineImages(content, docDir);
+  const multilineImages = await scanTitlePageFieldImages(fm, docDir, pageDimensions.w);
+  const result = await processDocumentImages(inlineImages, fm, docDir, pageDimensions, cropActive, outputDir, multilineImages, pdfxActive);
+  if (result.imageMap.size === 0) return { imageMap: result.imageMap, processedImages: result.processedFiles, finalContent: content };
+  return { imageMap: result.imageMap, processedImages: result.processedFiles, finalContent: rewriteImagePaths(content, result.imageMap, docDir) };
+}
+
+/** Valor string recortado de un campo frontmatter (undefined si vacío/otro tipo). */
+function trimmedStringValue(raw: unknown): string | undefined {
+  return typeof raw === 'string' && raw.trim() ? raw.trim() : undefined;
+}
+
+/** Valida y añade la metadata de portada (title-image/publishers-image/endpapers). */
+async function pushCoverImageMetadata(
+  extraArgs: string[],
+  fm: Record<string, unknown>,
+  doc: BuildDocument,
+  imageMap: Map<string, string>,
+): Promise<void> {
+  // title-image, publishers-image y endpapers: imágenes de la portada, del
+  // logo del editor y de las guardas (solo LaTeX/PDF) que sustituyen o
+  // decoran elementos del documento. Ruta relativa al directorio del
+  // documento (o absoluta); se valida que exista para fallar con un mensaje
+  // claro en vez del críptico de latexmk. El filter 10-titlepages las pasa
+  // como RawInline latex (sin escapes: un guion bajo se rompería como \_ con
+  // el writer).
+  for (const field of ['title-image', 'publishers-image', 'endpapers']) {
+    const value = trimmedStringValue(fm[field]);
+    if (!value) continue;
+    const imagePath = isAbsolute(value) ? value : resolve(dirname(doc.filePath), value);
+    if (!(await Bun.file(imagePath).exists())) {
+      throw new BuildError(`${field} no encontrado: "${imagePath}" (resuelto desde "${value}")`);
+    }
+    extraArgs.push(`--metadata=${field}:${imageMap.get(imagePath) ?? imagePath}`);
+  }
+}
+
 export async function markdownToLatex(
   content: string,
   doc: BuildDocument,
@@ -104,22 +174,11 @@ export async function markdownToLatex(
   const creator = parseAuthors(fm.creator);
 
   // ── Preprocesamiento de imágenes (CMYK 300dpi JPG) ──
-  let processedImages: string[] = [];
   let imageMap = new Map<string, string>();
+  let processedImages: string[] = [];
   let finalContent = content;
   if (pageDimensions) {
-    const docDir = dirname(doc.filePath);
-    const outputDir = join(docDir, '.iteraciones', 'processed-images');
-    const inlineImages = scanInlineImages(content, docDir);
-    const multilineImages = await scanTitlePageFieldImages(fm, docDir, pageDimensions.w);
-    const result = await processDocumentImages(inlineImages, fm, docDir, pageDimensions, cropActive, outputDir, multilineImages, pdfxActive);
-    imageMap = result.imageMap;
-    processedImages = result.processedFiles;
-    if (imageMap.size > 0) {
-      // rewriteImagePaths reemplaza rutas en TODO el contenido (frontmatter + body),
-      // incluyendo campos multilinea como lowertitleback que pueden contener imágenes.
-      finalContent = rewriteImagePaths(content, imageMap, docDir);
-    }
+    ({ imageMap, processedImages, finalContent } = await preprocessDocumentImages(content, doc, fm, pageDimensions, cropActive, pdfxActive));
   }
 
   const extraArgs = ['--template', templatePath, '--top-level-division', 'section', '--shift-heading-level-by=2'];
@@ -146,24 +205,7 @@ export async function markdownToLatex(
     }
   }
   extraArgs.push(`--metadata=title:${metadataValue(title)}`);
-  // title-image, publishers-image y endpapers: imágenes de la portada, del
-  // logo del editor y de las guardas (solo LaTeX/PDF) que sustituyen o
-  // decoran elementos del documento. Ruta relativa al directorio del
-  // documento (o absoluta); se valida que exista para fallar con un mensaje
-  // claro en vez del críptico de latexmk. El filter 10-titlepages las pasa
-  // como RawInline latex (sin escapes: un guion bajo se rompería como \_ con
-  // el writer).
-  for (const field of ['title-image', 'publishers-image', 'endpapers']) {
-    const value = typeof fm[field] === 'string' && fm[field].trim() ? fm[field].trim() : undefined;
-    if (value) {
-      const imagePath = isAbsolute(value) ? value : resolve(dirname(doc.filePath), value);
-      if (!(await Bun.file(imagePath).exists())) {
-        throw new BuildError(`${field} no encontrado: "${imagePath}" (resuelto desde "${value}")`);
-      }
-      const finalPath = imageMap.get(imagePath) ?? imagePath;
-      extraArgs.push(`--metadata=${field}:${finalPath}`);
-    }
-  }
+  await pushCoverImageMetadata(extraArgs, fm, doc, imageMap);
   // El subtitle NO se pasa por --metadata: el override aplanaría los \n con
   // metadataValue y el filtro latex/10-titlepages no vería el valor multilínea
   // (frontmatter con |). El filtro lo serializa desde la metadata del
