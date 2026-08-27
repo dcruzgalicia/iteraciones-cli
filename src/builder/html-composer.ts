@@ -58,10 +58,6 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig): Promise<strin
  * inyectar claves ni romper el parseo (un solo elemento de argv); el plegado
  * explícito hace el comportamiento determinista.
  */
-export function metadataValue(value: string): string {
-  return value.replace(/\n/g, ' ');
-}
-
 /** Variables de la plantilla HTML (template system de pandoc). */
 export interface HtmlPageVars {
   title: string;
