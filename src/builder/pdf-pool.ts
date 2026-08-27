@@ -53,12 +53,17 @@ export function createPdfConsumer(
   let producerDone = false;
   let started = false;
   let next = 0;
-  let slot = 0;
   let workerPromises: Promise<void>[] = [];
   /** Primer error de compilación: se propaga una sola vez desde drain(). */
   let firstError: unknown = null;
 
-  const worker = async (): Promise<void> => {
+  /** Cada worker es dueño de un slot fijo: el worker `slotIndex` compila
+   * siempre en `slot-${slotIndex}` con la caché de biber `cache-${slotIndex}`.
+   * Como un worker ejecuta un job cada vez, dos compilaciones concurrentes
+   * nunca comparten outdir ni caché: el aislamiento es estructural, no
+   * dependiente del orden de asignación.
+   */
+  const worker = async (slotIndex: number): Promise<void> => {
     while (true) {
       // Un fallo en cualquier worker cancela la cola: los demás salen en su
       // siguiente iteración sin compilar lo pendiente (una causa, un error).
@@ -71,17 +76,16 @@ export function createPdfConsumer(
           cancel();
           return;
         }
-        const s = slot++ % maxSlots;
         // latexmk compila con -outdir en el área de trabajo (auxiliares y .pdf ahí).
         // El outdir se aísla por slot (una carpeta por proceso concurrente): el
         // paquete pdfx escribe un patch XMP de nombre fijo (pdfx.xmpi) en el
         // directorio de trabajo de pdflatex (== outdir), así que un outdir
-        // compartido entre slots paralelos provoca carreras de escritura que
-        // corrompen la identificación PDF/X (issue #1967). Mismo patrón de
-        // aislamiento que la caché de biber (cache-<slot>).
-        const pdfDir = join(pdfWorkBase, job.dir, `slot-${s}`);
+        // compartido entre compilaciones paralelas provoca carreras de
+        // escritura que corrompen la identificación PDF/X (issue #1967).
+        // Mismo patrón de aislamiento que la caché de biber (cache-<slot>).
+        const pdfDir = join(pdfWorkBase, job.dir, `slot-${slotIndex}`);
         try {
-          await convertToPdf(job.texPath, job.relativePath, pdfDir, job.slug, join(biberBase, `cache-${s}`), job.pdfDest);
+          await convertToPdf(job.texPath, job.relativePath, pdfDir, job.slug, join(biberBase, `cache-${slotIndex}`), job.pdfDest);
         } catch (err) {
           firstError = err;
           cancel();
@@ -101,7 +105,7 @@ export function createPdfConsumer(
   const start = (): void => {
     if (started) return;
     started = true;
-    workerPromises = Array.from({ length: maxSlots }, () => worker());
+    workerPromises = Array.from({ length: maxSlots }, (_, i) => worker(i));
   };
 
   /** Marca el fin de la producción: los workers salen al vaciar la cola. */
