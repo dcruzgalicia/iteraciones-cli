@@ -60,6 +60,8 @@ export function createPdfConsumer(
   let workerPromises: Promise<void>[] = [];
   /** Primer error de compilación: se propaga una sola vez desde drain(). */
   let firstError: unknown = null;
+  /** Fase PDF ya anunciada al tracker: el progreso en vivo arranca con el primer job (#2171). */
+  let pdfPhaseStarted = false;
   /**
    * Pid del proceso latexmk en vuelo por worker (null si no compila). Cada
    * worker escribe solo su entrada: sin carreras. quiesce lo usa para matar
@@ -86,6 +88,14 @@ export function createPdfConsumer(
           firstError = new Error('pdf-pool: trabajo de PDF sin definir');
           cancel();
           return;
+        }
+        // El progreso en vivo del PDF arranca con el PRIMER job (durante el
+        // solape), no en drain: el tracker muestra el avance real del pool 2
+        // mientras el pool 1 sigue renderizando (#2171). El total es aún
+        // desconocido (el productor sigue encolando).
+        if (!pdfPhaseStarted) {
+          pdfPhaseStarted = true;
+          progress.startPhase('pdf', 0);
         }
         // latexmk compila con -outdir en el área de trabajo (auxiliares y .pdf ahí).
         // El outdir se aísla por slot (una carpeta por proceso concurrente): el
@@ -188,14 +198,16 @@ export function createPdfConsumer(
     // de jobs encolados es pdfJobs.length (consumidos + pendientes). Con el
     // solape activo los workers pueden haber consumido todo antes de drain.
     const total = pdfJobs.length;
-    if (total > 0 && firstError === null) {
+    if (total > 0 && firstError === null && !pdfPhaseStarted) {
+      // Ningún job llegó a arrancar durante el solape: la fase se abre aquí
       progress.startPhase('pdf', total);
     }
     // Esperar a todos los workers (incluidos los que salen por cancelación):
     // un error nunca puede dejar rechazos no manejados que el runtime imprima.
     await Promise.all(workerPromises);
     if (total > 0 && firstError === null) {
-      progress.completePhase();
+      // Conteo real al cierre, aunque la fase se hubiera abierto sin total
+      progress.completePhase(total, 'pdf');
     }
     if (firstError !== null) {
       // El error original (p. ej. PandocError con sourcePath) se propaga una

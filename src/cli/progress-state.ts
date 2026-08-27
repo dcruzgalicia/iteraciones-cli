@@ -55,6 +55,8 @@ export interface RowState {
 interface PhaseTiming {
   start?: number;
   count?: number;
+  /** Documentos completados en vivo (progreso durante la fase, #2171). */
+  live?: number;
   done: boolean;
 }
 
@@ -183,12 +185,21 @@ export class TrackerState {
     return created;
   }
 
+  /** Conteo en vivo de una fase (documentos completados durante la fase). */
+  phaseLive(phase: PipelinePhase): number {
+    return this.phases.get(phase)?.live ?? 0;
+  }
+
   /**
-   * Cuenta un documento completado de la fase activa. Retorna true si la fila
-   * de la fase está activa (el renderer muestra entonces el progreso en vivo).
+   * Cuenta un documento completado de una fase. Retorna true si la fila de la
+   * fase está activa (el renderer muestra entonces el progreso en vivo). El
+   * conteo es POR FASE: durante el solape render y pdf están activas a la vez
+   * y cada una lleva su propio avance (#2171).
    */
   reportFile(phase: PipelinePhase): boolean {
-    this.currentPhaseCount++;
+    const t = this.timing(phase);
+    t.live = (t.live ?? 0) + 1;
+    if (phase === this.currentPhase) this.currentPhaseCount++;
     const row = this.getRow(this.rowKeyFor(phase));
     return row?.status === 'active';
   }
@@ -215,14 +226,22 @@ export class TrackerState {
     return created;
   }
 
-  /** Marca la fase activa como fallida (✖). Retorna true si hubo cambio. */
-  failActiveRow(phase: PipelinePhase): boolean {
-    const row = this.getRow(this.rowKeyFor(phase));
-    if (row?.status !== 'active') return false;
-    row.status = 'failed';
-    const st = this.phases.get(phase)?.start;
-    row.elapsed = st !== undefined ? performance.now() - st : 0;
-    return true;
+  /**
+   * Marca TODAS las filas de fase activas como fallidas (✖) y retorna sus
+   * claves. Durante el solape hay dos fases activas a la vez (render + pdf):
+   * el fallo se atribuye a todas, no solo a la última iniciada (#2171).
+   */
+  failActiveRows(): string[] {
+    const keys: string[] = [];
+    for (const row of this.rows) {
+      if (row.status !== 'active' || row.key === 'group') continue;
+      row.status = 'failed';
+      const phase = (row.key.startsWith('phase:') ? row.key.slice(6) : row.key.slice(4)) as PipelinePhase;
+      const st = this.phases.get(phase)?.start;
+      row.elapsed = st !== undefined ? performance.now() - st : 0;
+      keys.push(row.key);
+    }
+    return keys;
   }
 
   /** Marca la fila de render pendiente como omitida (nunca un éxito). */

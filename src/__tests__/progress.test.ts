@@ -647,3 +647,53 @@ describe('compactación de la línea de Invalidación (#2028)', () => {
     expect(line.length).toBeLessThanOrEqual(120);
   });
 });
+
+describe('progreso en vivo durante el solape render+pdf (#2171)', () => {
+  it('acepta reportes de pdf mientras render sigue activa y viceversa', async () => {
+    const output = await runTracker(async (tracker) => {
+      tracker.setFormats([{ phase: 'pdf', active: true }]);
+      tracker.planPhases(['discovery', 'render']);
+      tracker.startPhase('render', 2);
+      // El pool 2 arranca su primer job DURANTE el solape: fase pdf activa
+      // con total desconocido, mientras render sigue en curso
+      tracker.startPhase('pdf', 0);
+      tracker.reportFile({ relativePath: 'a.md', phase: 'render' });
+      tracker.reportFile({ relativePath: 'doc-1.pdf', phase: 'pdf' });
+      tracker.reportFile({ relativePath: 'b.md', phase: 'render' });
+      tracker.reportFile({ relativePath: 'doc-2.pdf', phase: 'pdf' });
+      tracker.completePhase(2, 'render');
+      tracker.completePhase(2, 'pdf');
+      await tracker.finish(2, 0, ['pdf']);
+    });
+    expect(output).toContain('✔ Renderizando contenido 2');
+    expect(output).toContain('✔ PDF 2');
+    expect(output).toContain('✔ Generando formatos');
+  });
+
+  it('con total desconocido muestra el avance sin inventar un N', async () => {
+    const output = await runTracker(async (tracker) => {
+      tracker.setFormats([{ phase: 'pdf', active: true }]);
+      tracker.planPhases(['discovery', 'render']);
+      tracker.startPhase('render', 1);
+      tracker.startPhase('pdf', 0);
+      tracker.reportFile({ relativePath: 'doc-1.pdf', phase: 'pdf' });
+      tracker.completePhase(1, 'pdf');
+      await tracker.finish(1, 0, ['pdf']);
+    });
+    // La fila del PDF en vivo mostró [1] (sin total); al cierre el conteo real
+    expect(output).toContain('✔ PDF 1');
+  });
+
+  it('un fallo marca ✖ todas las fases activas (render y pdf en solape)', async () => {
+    const output = await runTracker(async (tracker) => {
+      tracker.setFormats([{ phase: 'pdf', active: true }]);
+      tracker.planPhases(['discovery', 'render']);
+      tracker.startPhase('render', 2);
+      tracker.startPhase('pdf', 0);
+      tracker.reportFile({ relativePath: 'doc-1.pdf', phase: 'pdf' });
+      await tracker.fail();
+    });
+    expect(output).toContain('✖ Renderizando contenido');
+    expect(output).toContain('✖ PDF');
+  });
+});

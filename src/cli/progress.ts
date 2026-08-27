@@ -95,12 +95,18 @@ export class ProgressTracker implements BuildReporter {
   }
 
   reportFile(file: RenderFileReport): void {
-    // Progreso en vivo: cada documento completado actualiza la fila de su fase
-    if (file.phase !== this.state.currentPhase) return;
+    // Progreso en vivo POR FASE (#2171): el reporte se acepta si la fila de su
+    // propia fase está activa — durante el solape render y pdf avanzan a la
+    // vez; filtrar por la fase global descartaba el progreso del PDF.
+    const row = this.state.getRow(this.state.rowKeyFor(file.phase));
+    if (row?.status !== 'active') return;
     if (!this.state.reportFile(file.phase)) return;
     const total = this.state.phaseCount(file.phase);
-    const live = total > 0 ? `[${Math.min(this.state.currentPhaseCount, total)}/${total}]` : '';
-    this.renderer.renderRow(this.state, this.state.rowKeyFor(file.phase), live);
+    const live = this.state.phaseLive(file.phase);
+    // Con el total aún desconocido (el pool 2 encola en vivo) se muestra solo
+    // el avance: honesto, sin inventar un N.
+    const label = total > 0 ? `[${Math.min(live, total)}/${total}]` : `[${live}]`;
+    this.renderer.renderRow(this.state, this.state.rowKeyFor(file.phase), label);
   }
 
   completePhase(actualCount?: number, phaseOverride?: PipelinePhase): void {
@@ -123,10 +129,10 @@ export class ProgressTracker implements BuildReporter {
    * iniciadas no muestran estado de éxito.
    */
   async fail(): Promise<void> {
-    // La fase activa al fallar se marca como fallida, no como completada
-    if (this.state.currentPhase) {
-      const key = this.state.rowKeyFor(this.state.currentPhase);
-      if (this.state.failActiveRow(this.state.currentPhase)) this.renderer.renderRow(this.state, key);
+    // Todas las fases activas se marcan fallidas: durante el solape hay dos
+    // (render + pdf) y el fallo se atribuye a cada una (#2171).
+    for (const key of this.state.failActiveRows()) {
+      this.renderer.renderRow(this.state, key);
     }
     // Fases no iniciadas: nunca muestran estado de éxito
     if (this.state.skipPendingRenderRow()) this.renderer.renderRow(this.state, 'phase:render');
