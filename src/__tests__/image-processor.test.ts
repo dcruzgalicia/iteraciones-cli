@@ -38,8 +38,8 @@ describe('scanTitlePageFieldImages', () => {
     expect(result).toHaveLength(1);
     const img = result[0];
     expect(img).toBeDefined();
-    expect(img!.absPath).toEndWith('Images/logo.jpg');
-    expect(img!.isSvg).toBe(false);
+    expect(img?.absPath).toEndWith('Images/logo.jpg');
+    expect(img?.isSvg).toBe(false);
   });
 
   it('encuentra imágenes en lowertitleback (array multilinea)', async () => {
@@ -52,7 +52,7 @@ describe('scanTitlePageFieldImages', () => {
     expect(result).toHaveLength(1);
     const img = result[0];
     expect(img).toBeDefined();
-    expect(img!.absPath).toEndWith('Images/logo.jpg');
+    expect(img?.absPath).toEndWith('Images/logo.jpg');
   });
 
   it('lanza BuildError si la imagen no existe', async () => {
@@ -79,8 +79,8 @@ describe('scanTitlePageFieldImages', () => {
     expect(result).toHaveLength(1);
     const img = result[0];
     expect(img).toBeDefined();
-    expect(img!.isSvg).toBe(true);
-    expect(img!.attrs).toBe('{width=100pt}');
+    expect(img?.isSvg).toBe(true);
+    expect(img?.attrs).toBe('{width=100pt}');
   });
 
   it('escanea múltiples campos', async () => {
@@ -179,7 +179,8 @@ describe('blindaje pipeline magick (#2085, fixes ecba990a/3b7d7a97)', () => {
       const result = await processImage(src, 80, 120, false, outDir);
       expect(result).toEndWith('.jpg');
       expect(calls).toHaveLength(1);
-      const args = calls[0]!;
+      const args = calls[0];
+      if (args === undefined) throw new Error('se esperaba una invocación registrada de magick');
       expect(args[0]).toBe('magick');
       expect(args).toContain('-colorspace');
       expect(args[args.indexOf('-colorspace') + 1]).toBe('Gray'); // 1 canal, no CMYK (fix ecba990a)

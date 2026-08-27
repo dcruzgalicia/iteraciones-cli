@@ -94,13 +94,8 @@ export async function computeBuildMetadata(
   }
 
   const activeFormats = toActiveFormats(currentFormats as FormatKey[]);
-  const pdfOn = activeFormats.pdf;
-  const latexOn = activeFormats.latex;
-  const htmlOn = activeFormats.html;
-  const epubOn = activeFormats.epub;
-  const mdOn = activeFormats.markdown;
-  const generateLatex = pdfOn || latexOn;
-  const needsCss = htmlOn;
+  const generateLatex = activeFormats.pdf || activeFormats.latex;
+  const needsCss = activeFormats.html;
 
   return {
     currentFormats,

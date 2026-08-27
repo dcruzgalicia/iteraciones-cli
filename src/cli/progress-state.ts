@@ -218,7 +218,7 @@ export class TrackerState {
   /** Marca la fase activa como fallida (✖). Retorna true si hubo cambio. */
   failActiveRow(phase: PipelinePhase): boolean {
     const row = this.getRow(this.rowKeyFor(phase));
-    if (!row || row.status !== 'active') return false;
+    if (row?.status !== 'active') return false;
     row.status = 'failed';
     const st = this.phases.get(phase)?.start;
     row.elapsed = st !== undefined ? performance.now() - st : 0;

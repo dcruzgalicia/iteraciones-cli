@@ -6,7 +6,7 @@ import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError, translateSystemError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
-import { fmStringList, resolveListField, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
+import { fmStringList, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import type { BuildMetadata, WorkSets } from './build-planner.js';

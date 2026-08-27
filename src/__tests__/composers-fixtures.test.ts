@@ -274,7 +274,7 @@ describe('distribución LaTeX portátil (#2084)', () => {
   it('rewrite sustituye las rutas absolutas procesadas por el filename relativo', () => {
     const abs = '/proy/.iteraciones/processed-images/portada-cmyk.jpg';
     const map = buildTexDistribution([abs], 'ensayo');
-    const tex = '\\includegraphics{' + abs + '}\n\\mbox{' + abs + '}';
+    const tex = `\\includegraphics{${abs}}\n\\mbox{${abs}}`;
     expect(rewriteTexForDist(tex, map)).toBe('\\includegraphics{ensayo-portada-cmyk.jpg}\n\\mbox{ensayo-portada-cmyk.jpg}');
   });
 });

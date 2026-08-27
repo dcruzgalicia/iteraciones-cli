@@ -11,7 +11,7 @@
  * silencioso — no rompe el build).
  */
 import { mkdir } from 'node:fs/promises';
-import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
+import { basename, isAbsolute, join, resolve } from 'node:path';
 import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 
@@ -221,7 +221,7 @@ export async function scanTitlePageFieldImages(
       }
 
       // Validar que SVGs tengan width especificado
-      if (isSvg && (!attrs || !attrs.includes('width'))) {
+      if (isSvg && !attrs?.includes('width')) {
         throw new BuildError(`imagen SVG en "${field}" requiere {width=...}: "${imgPath}"`);
       }
 
@@ -243,7 +243,7 @@ export function rewriteImagePaths(content: string, imageMap: Map<string, string>
   let result = content;
   for (const [absoluteOriginal, processed] of imageMap) {
     // Calcular la ruta relativa que aparece en el markdown
-    const relPath = absoluteOriginal.startsWith(docDir + '/') ? absoluteOriginal.slice(docDir.length + 1) : absoluteOriginal;
+    const relPath = absoluteOriginal.startsWith(`${docDir}/`) ? absoluteOriginal.slice(docDir.length + 1) : absoluteOriginal;
     // Reemplazar ruta relativa con la ruta absoluta de la imagen procesada
     result = result.replaceAll(relPath, processed);
   }
