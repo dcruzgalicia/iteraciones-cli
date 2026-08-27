@@ -29,35 +29,26 @@ export function loadReferencesCardTemplate(): Promise<string> {
 }
 
 /**
- * Extrae el bloque de referencias (h1#refs-heading + div#refs) del article y lo
- * devuelve como bloque del masonry con su marcador. El wrapper de la tarjeta
- * viene en `cardTemplate` (recurso card-referencias-block.html): aquí solo se
- * sustituye la lista extraída en `{{refs-list}}`. El id del heading es el
- * sintético que inyecta internal/flags.lua: un heading "Referencias" propio
- * del documento (id referencias) nunca se toca. El parse del cierre es
- * balanceado: las entradas csl-entry son divs anidados, el primer `</div>` no
- * cierra el bloque. Sin citas, no se genera bloque.
+ * Caso citeproc sin entradas: existe el marcador pero no hay div#refs.
+ * Elimina el heading sintético (sin tocar headings propios del documento)
+ * y el marcador de bloque.
  */
-export function extractReferencesBlock(html: string, cardTemplate: string): { html: string; block?: string } {
-  const refsIdPos = html.indexOf('id="refs-heading"');
-  const refsDivPos = html.indexOf('<div id="refs"');
-  if (refsIdPos < 0 && refsDivPos < 0) return { html };
-
-  const start = refsIdPos >= 0 ? html.lastIndexOf('<h1', refsIdPos) : refsDivPos;
-  const divStart = html.indexOf('<div id="refs"', start);
-  if (divStart < 0) {
-    if (html.includes('<!-- block:referencias -->')) {
-      // Heading sintético sin div#refs (citeproc sin entradas): eliminar el
-      // heading y el marcador, sin tocar ningún heading del documento.
-      if (refsIdPos >= 0 && start >= 0) {
-        const h1End = html.indexOf('</h1>', start);
-        if (h1End >= 0) html = html.slice(0, start) + html.slice(h1End + 5);
-      }
-      return { html: html.replace('<!-- block:referencias -->', '') };
-    }
-    return { html };
+function stripSyntheticReferencesMarker(html: string, refsIdPos: number, start: number): string {
+  let cleaned = html;
+  if (refsIdPos >= 0 && start >= 0) {
+    const h1End = cleaned.indexOf('</h1>', start);
+    if (h1End >= 0) cleaned = cleaned.slice(0, start) + cleaned.slice(h1End + 5);
   }
+  return cleaned.replace('<!-- block:referencias -->', '');
+}
 
+/**
+ * Escaneo balanceado desde el inicio de div#refs hasta su cierre (las entradas
+ * csl-entry son divs anidados: el primer </div> no cierra el bloque).
+ * Retorna la posición del fin; si el HTML está mal balanceado advierte (#2080)
+ * y retorna undefined para que la página quede intacta.
+ */
+function findBalancedDivEnd(html: string, divStart: number): number | undefined {
   let depth = 0;
   let i = divStart;
   while (i < html.length) {
@@ -78,14 +69,36 @@ export function extractReferencesBlock(html: string, cardTemplate: string): { ht
     // sin cerrarlo): extraer el bloque partiría la página. Se devuelve intacta
     // y el desbalance se hace visible (#2080).
     logWarning(`HTML mal balanceado: las referencias no se extrajeron del documento; revisa los filtros Lua propios (div sin cerrar)`, 'html');
-    return { html };
+    return undefined;
   }
-  const end = i;
+  return i;
+}
+
+/**
+ * Extrae el bloque de referencias (h1#refs-heading + div#refs) del article y lo
+ * devuelve como bloque del masonry con su marcador. El wrapper de la tarjeta
+ * viene en `cardTemplate` (recurso card-referencias-block.html): aquí solo se
+ * sustituye la lista extraída en `{{refs-list}}`. El id del heading es el
+ * sintético que inyecta internal/flags.lua: un heading "Referencias" propio
+ * del documento (id referencias) nunca se toca. Sin citas, no se genera bloque.
+ */
+export function extractReferencesBlock(html: string, cardTemplate: string): { html: string; block?: string } {
+  const refsIdPos = html.indexOf('id="refs-heading"');
+  const refsDivPos = html.indexOf('<div id="refs"');
+  if (refsIdPos < 0 && refsDivPos < 0) return { html };
+
+  const start = refsIdPos >= 0 ? html.lastIndexOf('<h1', refsIdPos) : refsDivPos;
+  const divStart = html.indexOf('<div id="refs"', start);
+  if (divStart < 0) {
+    if (!html.includes('<!-- block:referencias -->')) return { html };
+    return { html: stripSyntheticReferencesMarker(html, refsIdPos, start) };
+  }
+
+  const end = findBalancedDivEnd(html, divStart);
+  if (end === undefined) return { html };
 
   // La lista extraída (el div#refs completo) es el contenido dinámico; el
   // wrapper y el chip del heading viven en el recurso (cardTemplate).
   const listChunk = html.slice(divStart, end);
-  const withoutBlock = html.slice(0, start) + html.slice(end);
-
-  return { html: withoutBlock, block: cardTemplate.replace('{{refs-list}}', listChunk) };
+  return { html: html.slice(0, start) + html.slice(end), block: cardTemplate.replace('{{refs-list}}', listChunk) };
 }
