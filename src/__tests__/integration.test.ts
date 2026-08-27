@@ -124,4 +124,31 @@ describe('integration: init + build', () => {
       await rm(cwd, { recursive: true, force: true });
     }
   });
+
+  it.skipIf(!pandocOk)('un build que falla preserva el state.json del último build completo (#2168)', async () => {
+    const cwd = join(tmpdir(), `iteraciones-cache-preserve-${Date.now()}`);
+    await mkdir(cwd, { recursive: true });
+    try {
+      await initTestProject(cwd);
+      await build(cwd, { full: true });
+      const stateFile = join(cwd, '.iteraciones', 'state.json');
+      const estadoPrevio = await Bun.file(stateFile).text();
+      expect(estadoPrevio.length).toBeGreaterThan(0);
+
+      // El build siguiente falla (bibliografía configurada inexistente: error
+      // de config previo a discovery) y el estado debe seguir intacto.
+      const config = await Bun.file(join(cwd, 'iteraciones.config.yaml')).text();
+      await writeFile(join(cwd, 'iteraciones.config.yaml'), `${config}\nbibliography: refs/no-existe.bib\n`, 'utf8');
+      await expect(build(cwd, {})).rejects.toThrow();
+      expect(await Bun.file(stateFile).text()).toBe(estadoPrevio);
+
+      // Corregida la config, el build siguiente reutiliza la caché preservada
+      await writeFile(join(cwd, 'iteraciones.config.yaml'), config, 'utf8');
+      await build(cwd, {});
+      const htmls = [...new Bun.Glob('*.html').scanSync({ cwd: join(cwd, 'dist', 'files') })];
+      expect(htmls.length).toBeGreaterThan(0);
+    } finally {
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
 });
