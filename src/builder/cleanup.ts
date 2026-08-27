@@ -1,22 +1,11 @@
 import { readdir, rm } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
+import type { FormatKey } from '../config/site-config.js';
 import { htmlSlugFor } from './discover.js';
-import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
-
-/** Extensiones de salida estática por documento en dist/ (incluye la portada PDF). */
-const OUTPUT_EXTENSIONS = ['.html', '.tex', '.pdf', '.epub', '.md', '.png'];
-
 /** Auxiliares de latexmk que se acumulan en .iteraciones/tmp/pdf/ (por slot de concurrencia). */
 import { LATEXMK_AUX_EXTENSIONS } from './export/runner.js';
-
-const FORMAT_EXT_MAP: Record<string, string[]> = {
-  latex: ['.tex'],
-  // .png = imagen de portada opcional (format.pdf.cover-image)
-  pdf: ['.pdf', '.png'],
-  html: ['.html'],
-  epub: ['.epub'],
-  markdown: ['.md'],
-};
+import { ALL_OUTPUT_EXTENSIONS, FORMAT_OUTPUT_EXTENSIONS } from './output-layout.js';
+import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
 
 /** Elimina un archivo si existe; devuelve si existía (para el informe). */
 async function removeIfExists(path: string): Promise<boolean> {
@@ -92,7 +81,7 @@ async function cleanupBySlug(ctx: BuildContext, entries: Iterable<CleanupEntry>)
     const dir = dirname(relativePath);
     const outSlug = htmlSlugFor(relativePath, slug);
     removed += await removeCachedArtifacts(cacheBase, dir, outSlug);
-    removed += await removeOutputFiles(ctx.outputDir, dir, outSlug, OUTPUT_EXTENSIONS);
+    removed += await removeOutputFiles(ctx.outputDir, dir, outSlug, ALL_OUTPUT_EXTENSIONS);
   }
   await pruneEmptyDirs(ctx.outputDir);
   return removed;
@@ -101,7 +90,7 @@ async function cleanupBySlug(ctx: BuildContext, entries: Iterable<CleanupEntry>)
 export async function cleanupRemovedFormats(ctx: BuildContext, allDocs: BuildDocument[], removedFormats: string[]): Promise<number> {
   if (removedFormats.length === 0) return 0;
 
-  const extensions = removedFormats.flatMap((fmt) => FORMAT_EXT_MAP[fmt] ?? []);
+  const extensions = removedFormats.flatMap((fmt) => FORMAT_OUTPUT_EXTENSIONS[fmt as FormatKey] ?? []);
   let removed = 0;
   for (const doc of allDocs) {
     removed += await removeOutputFiles(ctx.outputDir, dirname(doc.relativePath), htmlSlugFor(doc.relativePath, doc.slug), extensions);
