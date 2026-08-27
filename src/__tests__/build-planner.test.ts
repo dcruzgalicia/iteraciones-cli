@@ -30,6 +30,8 @@ function meta(overrides: Partial<BuildMetadata> = {}): BuildMetadata {
     formatInvalidated: { latex: false, html: false, epub: false, markdown: false },
     filtersInvalidated: false,
     bibInvalidated: false,
+    bibFiles: [],
+    bibOptions: undefined,
     activeFormats: active(['latex']),
     generateLatex: true,
     needsCss: false,

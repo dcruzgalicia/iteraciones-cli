@@ -283,19 +283,19 @@ describe('discoverBibFiles y computeBibHash', () => {
     await withTempDir(async (dir) => {
       await writeFile(join(dir, 'refs.bib'), '@book{k1, title={Original}}\n', 'utf8');
       // Sin `bibliography` configurada el pipeline usa el primer .bib descubierto
-      const h1 = (await computeBibHash(dir)).hash;
+      const h1 = (await computeBibHash(await resolveBibOptions(dir))).hash;
       await writeFile(join(dir, 'refs.bib'), '@book{k1, title={Editado}}\n', 'utf8');
-      const h2 = (await computeBibHash(dir)).hash;
+      const h2 = (await computeBibHash(await resolveBibOptions(dir))).hash;
       expect(h1).not.toBe(h2);
     });
   });
 
   it('invariante #2166: sin bibliografía no hay citas y el CSL no participa en el hash', async () => {
     await withTempDir(async (dir) => {
-      const sinBib = await computeBibHash(dir);
+      const sinBib = await computeBibHash(await resolveBibOptions(dir));
       // Sin citas el CSL empaquetado no se hashea: sin entradas en el caché
       expect(Object.keys(sinBib.cache)).toHaveLength(0);
-      const sinBibOtraVez = await computeBibHash(dir);
+      const sinBibOtraVez = await computeBibHash(await resolveBibOptions(dir));
       expect(sinBib.hash).toBe(sinBibOtraVez.hash);
     });
   });
@@ -305,12 +305,12 @@ describe('discoverBibFiles y computeBibHash', () => {
       await writeFile(join(dir, 'libro.bib'), '@book{k1}\n', 'utf8');
       await writeFile(join(dir, 'otro.bib'), '@book{k2}\n', 'utf8');
       const config = { ...DEFAULT_SITE_CONFIG, bibliography: 'libro.bib' };
-      const result = await computeBibHash(dir, config);
+      const result = await computeBibHash(await resolveBibOptions(dir, config));
       // libro.bib + el APA-7 empaquetado que participa en la invalidación (#2024)
       expect(Object.keys(result.cache).length).toBe(2);
       const h1 = result.hash;
       await writeFile(join(dir, 'libro.bib'), '@book{k1, title={Cambio}}\n', 'utf8');
-      const h2 = (await computeBibHash(dir, config)).hash;
+      const h2 = (await computeBibHash(await resolveBibOptions(dir, config))).hash;
       expect(h1).not.toBe(h2);
     });
   });
@@ -319,7 +319,7 @@ describe('discoverBibFiles y computeBibHash', () => {
     await withTempDir(async (dir) => {
       const config = { ...DEFAULT_SITE_CONFIG, bibliography: 'no-existe.bib' };
       try {
-        await computeBibHash(dir, config);
+        await computeBibHash(await resolveBibOptions(dir, config));
         expect.unreachable();
       } catch (err) {
         expect(err).toBeInstanceOf(ConfigError);

@@ -22,7 +22,7 @@ import { applyPrintQueueDynamics, composeLatexTemplate, detectPageSize } from '.
 import { createPdfConsumer, type PdfJob } from './pdf-pool.js';
 import { loadPreambleFilters } from './preamble-loader.js';
 import { htmlPageFromMarkdown } from './render.js';
-import { resolveBibOptions, resolveConfiguredPath } from './state.js';
+import { type resolveBibOptions, resolveConfiguredPath } from './state.js';
 import type { BuildContext, BuildDocument, BuildReporter, DiscoveryEntry } from './types.js';
 import type { PdfXmpMetadata } from './xmpdata.js';
 import { injectXmpMetadataIntoLatex } from './xmpdata.js';
@@ -51,18 +51,18 @@ interface PipelineSetup {
   logoInline: string | undefined;
 }
 
-/** Resuelve lo compartido: bibliografía una vez por build, lang efectivo y logo inline. */
-async function resolvePipelineSetup(ctx: BuildContext, formatCfg: SiteConfig['format'] | undefined): Promise<PipelineSetup> {
+/**
+ * Resuelve lo compartido del pipeline. La bibliografía ya se resolvió UNA vez
+ * por build en la planificación (#2167): aquí solo se redistribuye.
+ */
+async function resolvePipelineSetup(ctx: BuildContext, plan: BuildMetadata, formatCfg: SiteConfig['format'] | undefined): Promise<PipelineSetup> {
   const siteConfig = ctx.siteConfig;
-  // La bibliografía se resuelve una sola vez por build y se comparte con todos
-  // los documentos.
-  const bib = await resolveBibOptions(ctx.cwd, siteConfig);
   // El default vive en DEFAULT_SITE_CONFIG (es-MX): el fallback local no debe
   // divergir de la configuración (un lang distinto emite --metadata distinto).
   return {
-    bibOptions: bib.bibOptions,
-    bibFiles: bib.bibFiles,
-    globalBibliography: bib.bibOptions?.bibliography,
+    bibOptions: plan.bibOptions,
+    bibFiles: plan.bibFiles,
+    globalBibliography: plan.bibOptions?.bibliography,
     globalCsl: siteConfig.csl?.trim() ? resolveConfiguredPath(ctx.cwd, siteConfig.csl.trim()) : undefined,
     lang: siteConfig.language ?? DEFAULT_SITE_CONFIG.language,
     logoInline: await loadLogoInline(ctx.cwd, formatCfg?.html?.site?.logo?.trim()),
@@ -192,7 +192,7 @@ export async function documentPipeline(
   const pdfOn = activeFormats.pdf;
 
   // ── Configuración compartida (bibliografía, lang, logo) ──
-  const setup = await resolvePipelineSetup(ctx, formatCfg);
+  const setup = await resolvePipelineSetup(ctx, plan, formatCfg);
 
   // Documentos con trabajo este build
   const workDocList = collectWorkDocs(work, allDocs);
