@@ -177,7 +177,6 @@ export async function computeFiltersHash(
   return { hash: hashString(parts.join('\0')), cache };
 }
 
-/** Hash del contenido de un archivo de filtro, reutilizando el caché si mtime+size coinciden. */
 /**
  * Hash de configuración por formato. Cada hash agrupa solo los inputs que
  * afectan a ese formato: cambiar format.pdf no invalida los outputs HTML.

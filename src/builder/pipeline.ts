@@ -205,7 +205,7 @@ export async function documentPipeline(
   if (pdfOn && maxSlots > 0) {
     await ensureBiberCaches(ctx.cwd, maxSlots);
   }
-  const pdfWorkBase = join(ctx.cwd, '.iteraciones', 'tmp', 'pdf');
+  const pdfWorkBase = join(ctx.cwd, PDF_WORK_BASE);
   const biberBase = join(ctx.cwd, '.iteraciones', 'biber');
   const pdfConsumer = createPdfConsumer(pdfWorkBase, biberBase, maxSlots, progress);
   if (pdfOn && work.exportSets.latex.length > 0) {
@@ -328,7 +328,7 @@ async function runLightFormatsPool(
     biblatexAvailable: args.biblatexAvailable,
     globalBibliography: args.globalBibliography,
     globalCsl: args.globalCsl,
-    pdfWorkDir: join(ctx.cwd, '.iteraciones', 'tmp', 'pdf'),
+    pdfWorkDir: join(ctx.cwd, PDF_WORK_BASE),
     htmlTemplatePath: args.htmlTemplatePath,
     latexTemplatePath: args.latexTemplatePath,
     refsCardTemplate: args.refsCardTemplate,
@@ -405,6 +405,9 @@ interface ExportContext {
   refsCardTemplate: string;
 }
 
+/** Área de trabajo de compilación PDF, relativa a la raíz del proyecto. */
+const PDF_WORK_BASE = join('.iteraciones', 'tmp', 'pdf');
+
 /** Conjuntos de trabajo por formato del build actual. Inmutable durante el pool. */
 interface FormatWorkSets {
   htmlPaths: Set<string>;
@@ -413,11 +416,6 @@ interface FormatWorkSets {
   latexPaths: Set<string>;
   pdfJobs: PdfJob[];
 }
-
-/**
- * Resuelve el valor de un metadato con precedencia: frontmatter > format config > root config.
- * Contrato único en lib/frontmatter-fields.ts (#2073).
- */
 
 /**
  * Metadatos XMP/Info del documento desde el frontmatter crudo y el lang efectivo

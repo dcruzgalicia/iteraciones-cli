@@ -185,7 +185,6 @@ const MULTILINE_IMAGE_FIELDS = ['lowertitleback', 'uppertitleback', 'dedication'
 
 /**
  * Escanea un markdown y retorna las rutas de imágenes inline (relativas, no URLs).
- * Lanza BuildError si una imagen referenciada no existe.
  */
 export function scanInlineImages(content: string, docDir: string): string[] {
   const paths: string[] = [];

@@ -116,18 +116,6 @@ function slugDiacriticWarning(title: string, slug: string): string | undefined {
 }
 
 /**
- * Fase 1 — discover: detecta cambios y actualiza el estado del build.
- * Si se proporciona prevState (desde orchestrator), evita la segunda
- * lectura de state.json.
- *
- * Detección de cambios content-addressed (por archivo):
- *   mtime y size iguales al caché  → unchanged (sin leer, sin hash)
- *   size distinto                  → changed (no hace falta hash)
- *   mtime distinto con size igual  → leer + sha256
- *     hash igual al caché          → unchanged (fue un touch) → actualizar mtime
- *     hash distinto                → changed
- */
-/**
  * Estado previo para `discover`: lee state.json y lo valida como caché
  * utilizable. Constructor explícito del contrato post-tri-state (#2023).
  */
@@ -336,7 +324,7 @@ function takeDeletedEntries(
   for (const key of index.keys()) {
     if (!currentSet.has(key)) {
       const entry = index.get(key);
-      if (entry) entries.set(key, entry); // entry now has slug!
+      if (entry) entries.set(key, entry); // la entrada ya lleva el slug resuelto
       removed.push(key);
     }
   }
@@ -431,7 +419,6 @@ export async function discover(cwd: string, options: DiscoverOptions): Promise<D
 
   const currentSet = new Set(relativePaths);
   const changedPaths = new Set<string>();
-  const recentFiles: string[] = [];
   // Dedup de avisos de diacríticos por build (#2090): una vez por title+slug.
   const slugWarningsSeen = new Set<string>();
   // Acumulador de problemas de frontmatter con su clase: 'syntax' (YAML
@@ -449,7 +436,6 @@ export async function discover(cwd: string, options: DiscoverOptions): Promise<D
     if (!decision.process) return; // Archivos sin cambios: conservan su entrada en discoveryIndex
 
     changedPaths.add(relativePath);
-    recentFiles.push(relativePath);
     await ingestChangedDocument({
       cwd,
       relativePath,
@@ -485,9 +471,6 @@ export async function discover(cwd: string, options: DiscoverOptions): Promise<D
   });
   const slugChangedEntries = new Map<string, string>(slugResult.slugChangedEntries);
   for (const path of slugResult.changedPaths) changedPaths.add(path);
-  for (const path of slugResult.newRecentFiles) {
-    if (!recentFiles.includes(path)) recentFiles.push(path);
-  }
 
   const pendingState = computePendingState(useCache, prevState, thisBuildStartedAt, discoveryIndex, options, changedPaths.size > 0);
 
