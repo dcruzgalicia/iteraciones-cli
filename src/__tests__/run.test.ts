@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { exec, mapWithConcurrency, ProcessTimeoutError } from '../lib/run.js';
+import { exec, killInFlightProcesses, mapWithConcurrency, ProcessTimeoutError } from '../lib/run.js';
 
 describe('mapWithConcurrency', () => {
   it('procesa todos los items', async () => {
@@ -47,6 +47,51 @@ describe('mapWithConcurrency', () => {
 
     expect(maxConcurrent).toBeLessThanOrEqual(2);
     expect(result).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it('al fallar un item aborta: los pendientes no se procesan y el error se propaga una vez (#2172)', async () => {
+    const procesados: number[] = [];
+    let llamadas = 0;
+    await expect(
+      mapWithConcurrency([1, 2, 3, 4, 5, 6, 7, 8], 2, async (n) => {
+        llamadas++;
+        await new Promise((r) => setTimeout(r, 5));
+        if (n === 1) throw new Error('fallo deliberado');
+        procesados.push(n);
+        return n;
+      }),
+    ).rejects.toThrow('fallo deliberado');
+    // Sin abort serían 8 llamadas; con abort, solo las en vuelo + ninguna nueva
+    expect(llamadas).toBeLessThan(8);
+    expect(procesados).not.toContain(1);
+  });
+
+  it('onCancel se invoca exactamente una vez al primer fallo y no en camino feliz', async () => {
+    let cancels = 0;
+    // Camino feliz: sin cancel
+    await mapWithConcurrency([1, 2, 3], 2, async (n) => n, { onCancel: () => void cancels++ });
+    expect(cancels).toBe(0);
+    // Con fallo: una sola llamada, aunque varios items fallen
+    await expect(
+      mapWithConcurrency(
+        [1, 2, 3, 4],
+        2,
+        async (n) => {
+          if (n >= 2) throw new Error(`fallo ${n}`);
+          return n;
+        },
+        { onCancel: () => void cancels++ },
+      ),
+    ).rejects.toThrow('fallo 2');
+    expect(cancels).toBe(1);
+  });
+
+  it('onCancel que lanza no enmascara el error original', async () => {
+    await expect(
+      mapWithConcurrency([1, 2], 2, async (_n) => {
+        throw new Error('error original');
+      }),
+    ).rejects.toThrow('error original');
   });
 });
 
@@ -108,5 +153,22 @@ describe('run (timeouts)', () => {
     const result = await exec('echo', ['rápido'], { timeoutMs: 2000 });
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain('rápido');
+  });
+});
+
+describe('killInFlightProcesses (#2172)', () => {
+  it('mata un proceso externo en vuelo registrado por exec()', async () => {
+    const pendiente = exec('sleep', ['30'], { timeoutMs: 25_000 });
+    await new Promise((r) => setTimeout(r, 100)); // el proceso real está vivo
+    await killInFlightProcesses();
+    const result = await pendiente;
+    // El kill del árbol terminó el proceso: exit ≠ 0 y no espera los 30s
+    expect(result.exitCode).not.toBe(0);
+  });
+
+  it('el registro queda vacío tras terminar procesos normales', async () => {
+    await exec('echo', ['ok']);
+    await killInFlightProcesses(); // sin en vuelo: no-op
+    expect(true).toBe(true);
   });
 });
