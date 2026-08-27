@@ -14,8 +14,8 @@ use std::env;
 use std::path::Path;
 use std::process::ExitCode;
 
-use pdf_oxide::compliance::{PdfXLevel, PdfXValidator, XComplianceError, XValidationResult};
 use pdf_oxide::PdfDocument;
+use pdf_oxide::compliance::{PdfXLevel, PdfXValidator, XComplianceError, XValidationResult};
 use serde::Serialize;
 
 const BIN_NAME: &str = "iteraciones-pdfcheck";
@@ -82,11 +82,7 @@ fn main() -> ExitCode {
                 eprintln!("  [{}] (advertencia) {}{}", w.code, w.message, page_suffix(w.page));
             }
             println!("{}", serde_json::to_string_pretty(&report).unwrap_or_default());
-            if report.valid {
-                ExitCode::SUCCESS
-            } else {
-                ExitCode::from(2)
-            }
+            if report.valid { ExitCode::SUCCESS } else { ExitCode::from(2) }
         }
         Err(err) => {
             eprintln!("{BIN_NAME}: {err}");
@@ -106,8 +102,7 @@ fn page_suffix(page: Option<usize>) -> String {
 /// Valida el PDF contra PDF/X-1a:2001 (único nivel). `valid` es true solo si
 /// la validación estricta de 2001 no reporta errores.
 fn validate(path: &str) -> Result<Report, String> {
-    let mut doc =
-        PdfDocument::open(Path::new(path)).map_err(|err| format!("no se pudo abrir el PDF: {err}"))?;
+    let mut doc = PdfDocument::open(Path::new(path)).map_err(|err| format!("no se pudo abrir el PDF: {err}"))?;
 
     let result = PdfXValidator::new(LEVEL)
         .stop_on_first_error(false)
@@ -136,9 +131,7 @@ fn to_report(path: &str, result: &XValidationResult) -> Report {
 /// Separa los warnings entre (promovidos a error, advertencias) según
 /// PROMOTED_WARNING_CODES. Función pura, testeada.
 fn partition_promoted(warnings: Vec<Issue>) -> (Vec<Issue>, Vec<Issue>) {
-    warnings
-        .into_iter()
-        .partition(|w| PROMOTED_WARNING_CODES.contains(&w.code.as_str()))
+    warnings.into_iter().partition(|w| PROMOTED_WARNING_CODES.contains(&w.code.as_str()))
 }
 
 fn to_issue(error: &XComplianceError) -> Issue {

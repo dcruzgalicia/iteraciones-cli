@@ -257,6 +257,18 @@ Los preamble filters son archivos `.tex` con contenido LaTeX puro que se inserta
 
 Un proyecto puede sobrescribir un preamble filter creando `<proyecto>/preamble/<nombre>.tex`, o desactivarlo con `disabled-preamble-filters:` en `iteraciones.config.yaml`.
 
+## Componente auxiliar en Rust (`tools/pdfx-validator`)
+
+El binario PDF/X (`iteraciones-pdfcheck`) es un crate Rust aparte, fuera del arnés JS/Biome. Antes de tocar su código, verifica las guarderías básicas (requieren `rustup component add rustfmt clippy`):
+
+```bash
+cd tools/pdfx-validator
+cargo fmt --check           # formato (convención: rustfmt.toml con max_width 150)
+cargo clippy -- -D warnings # lint estricto
+```
+
+Verificación manual, sin integración con los hooks JS.
+
 ## Reportar bugs
 
 Si encuentras un error:
