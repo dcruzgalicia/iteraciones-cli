@@ -159,7 +159,9 @@ export async function runPdfxOutputValidation(
   const disabled = effectiveDisabledPreamble ?? siteConfig.format?.pdf?.disabledPreambleFilters ?? [];
   if (disabled.includes('99-pdfx')) return { validated: 0, failed: 0, summaryLine: undefined };
   if (!existsSync(outputDir)) return { validated: 0, failed: 0, summaryLine: undefined };
-  const pdfs = [...new Bun.Glob('*.pdf').scanSync({ cwd: outputDir, onlyFiles: true })].sort();
+  // Glob recursivo: los PDFs se escriben anidados por subdirectorio según la
+  // ruta del documento (pipeline.ts outBase), no solo en la raíz de dist/.
+  const pdfs = [...new Bun.Glob('**/*.pdf').scanSync({ cwd: outputDir, onlyFiles: true })].sort();
   if (pdfs.length === 0) return { validated: 0, failed: 0, summaryLine: undefined };
 
   let binary = await resolvePdfCheckBinary();
