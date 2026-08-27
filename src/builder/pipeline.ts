@@ -540,8 +540,9 @@ async function emitLatexAndQueuePdf(
   const { dir, outBase, outSlug, fm } = outputs;
   const texDistPath = outBase(`${outSlug}.tex`);
 
-  // .tex completo (preámbulo + cuerpo) en UNA invocación markdown → latex,
-  // escrito directamente en dist/ (o en el área de trabajo del PDF si solo pdfOn)
+  // .tex completo (preámbulo + cuerpo) en UNA invocación markdown → latex: el
+  // artefacto de dist/ es el bundle portable (si latexOn) y la copia de
+  // compilación vive en el área de trabajo del pool PDF (si pdfOn) (#2156).
   const { tex: fullTex, processedImages } = await markdownToLatex(outputs.content, doc, {
     filters: exportCtx.filters,
     bibFiles: exportCtx.bibFiles,
@@ -561,8 +562,8 @@ async function emitLatexAndQueuePdf(
   if (latexOn) {
     // Distribución portátil (ADR #2084): las copias viajan JUNTO al .tex de
     // dist/ con nombre namespaced, y el .tex distribuido referencia esos
-    // filenames — compila fuera del árbol del proyecto. El tex del área de
-    // trabajo de latexmk (abajo) conserva las rutas absolutas procesadas.
+    // filenames — compila fuera del árbol del proyecto. Ese bundle es un
+    // artefacto de DISTRIBUCIÓN, no de compilación: el pool PDF nunca lo usa.
     const distribution = buildTexDistribution(processedImages, outSlug);
     // Copias concurrentes (#2093): la fase corre dentro del pool del pipeline;
     // serializarlas domina la latencia de documentos ricos en imágenes.
@@ -575,9 +576,12 @@ async function emitLatexAndQueuePdf(
   }
 
   if (pdfOn) {
-    // Solo PDF: el .tex vive en el área de trabajo de latexmk (fuera de dist/)
-    const texPath = latexOn ? texDistPath : join(exportCtx.pdfWorkDir, dir, `${outSlug}.tex`);
-    if (!latexOn) await writeOutput(texPath, texWithXmp);
+    // El pool compila SIEMPRE desde el área de trabajo con rutas absolutas:
+    // latexmk corre con cwd/-outdir en el slot aislado (#1967), así que un tex
+    // con nombres relativos no resolvería los gráficos ahí (#2156 — antes se
+    // le entregaba el tex reescrito de dist y fallaba pdftex.def).
+    const texPath = join(exportCtx.pdfWorkDir, dir, `${outSlug}.tex`);
+    await writeOutput(texPath, texWithXmp);
     // ── FRONTERA pool 1 → pool 2: desde aquí ejecuta pdf-pool.ts ──
     sets.pdfJobs.push({ dir, slug: outSlug, relativePath: doc.relativePath, texPath, pdfDest: outBase(`${outSlug}.pdf`) });
   }
