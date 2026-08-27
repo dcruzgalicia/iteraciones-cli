@@ -1,3 +1,3 @@
 export default {
-  '*': ['bunx --bun @biomejs/biome check --write --no-errors-on-unmatched'],
+  '**/*.{ts,js,mjs,cjs,json,jsonc,css}': ['bunx --bun --no-install @biomejs/biome check --write --error-on-warnings'],
 };
