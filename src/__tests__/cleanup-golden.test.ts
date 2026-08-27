@@ -38,7 +38,7 @@ function expectNoOrphans(tree: string[], allowedDocs: string[], extensions: stri
   const known = new Set<string>(['css/styles.css', 'fonts/OFL.txt', 'index.html']);
   for (const path of tree) {
     const belongs = allowedDocs.some((doc) => extensions.some((ext) => path === `${doc}${ext}`));
-    const isAsset = [...known].some((k) => path.startsWith(k.split('/')[0]!));
+    const isAsset = [...known].map((k) => k.split('/')[0]).some((root) => root !== undefined && path.startsWith(root));
     expect(belongs || isAsset || path.endsWith('.svg')).toBe(true);
   }
 }

@@ -178,7 +178,9 @@ export async function runPdfxOutputValidation(
   // degrada; la SALIDA se emite en el orden determinista del glob ordenado.
   const results = await mapWithConcurrency(pdfs, Math.min(4, Math.max(1, cpus().length)), (file) => validatePdfX1a(join(outputDir, file), binary));
   for (const [i, result] of results.entries()) {
-    const file = pdfs[i]!;
+    // Invariante: mapWithConcurrency preserva el orden y la longitud de su entrada.
+    const file = pdfs[i];
+    if (file === undefined) continue;
     validated += 1;
     const where = (iss: PdfCheckIssue): string => (iss.page !== null && iss.page !== undefined ? ` — página ${iss.page + 1}` : '');
     // Se reportan TODOS los fallos (errors ya incluyen los warnings de

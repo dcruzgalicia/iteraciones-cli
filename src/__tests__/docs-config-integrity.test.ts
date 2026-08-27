@@ -188,7 +188,9 @@ describe('guard schema↔uso: hojas de configuración de formato (#2016)', () =>
 describe('guard tablas derivables del filesystem (#2035)', () => {
   it('la tabla de filters de architecture.md coincide exactamente con los recursos', async () => {
     const doc = await Bun.file('docs/architecture.md').text();
-    const documented = new Set([...doc.matchAll(/^\| `([a-z]+(?:\/[a-z]+)*\/\d{2}-[a-z0-9-]+)` \|/gm)].map((m) => m[1]!));
+    const documented = new Set(
+      [...doc.matchAll(/^\| `([a-z]+(?:\/[a-z]+)*\/\d{2}-[a-z0-9-]+)` \|/gm)].map((m) => m[1]).filter((s): s is string => s !== undefined),
+    );
     expect(documented.size).toBeGreaterThan(10);
 
     const real = new Set<string>();
@@ -210,7 +212,7 @@ describe('guard tablas derivables del filesystem (#2035)', () => {
   it('la tabla de preamble filters de architecture.md coincide con los recursos', async () => {
     const doc = await Bun.file('docs/architecture.md').text();
     const section = doc.slice(doc.indexOf('### Preamble filters integrados'), doc.indexOf('### Extensibilidad'));
-    const documented = new Set([...section.matchAll(/^\| (\d{2}-[a-z0-9-]+) \|/gm)].map((m) => m[1]!));
+    const documented = new Set([...section.matchAll(/^\| (\d{2}-[a-z0-9-]+) \|/gm)].map((m) => m[1]).filter((s): s is string => s !== undefined));
     expect(documented.size).toBeGreaterThan(20);
 
     const real = new Set<string>();

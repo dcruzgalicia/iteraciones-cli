@@ -35,12 +35,12 @@ export async function htmlPageFromMarkdown(content: string, doc: BuildDocument, 
   // Valores efectivos: el frontmatter del documento manda; la config aporta defaults.
   // Contrato de idioma unificado: `language` en HTML, EPUB y Markdown (#2010).
   // Mecanismo único de resolución de vars de página (#2021): una evaluación por campo.
-  const lang = fmString(fm['language'], vars.lang);
+  const lang = fmString(fm.language, vars.lang);
   const siteTitle = fmString(fm['site-title'], vars.siteTitle);
-  const tagline = fmString(fm['tagline'], vars.tagline ?? '');
-  const theme = fmString(fm['theme'], vars.theme ?? '');
-  const accent = fmString(fm['accent'], vars.accent ?? '');
-  const css = fmString(fm['css'], vars.css ?? '');
+  const tagline = fmString(fm.tagline, vars.tagline ?? '');
+  const theme = fmString(fm.theme, vars.theme ?? '');
+  const accent = fmString(fm.accent, vars.accent ?? '');
+  const css = fmString(fm.css, vars.css ?? '');
   const tocActive = typeof fm.toc === 'boolean' ? fm.toc : siteConfig.toc;
 
   const extraArgs = [

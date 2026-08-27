@@ -7,7 +7,7 @@ import { resolvePdfCheckBinary, validatePdfX1a } from '../builder/pdfx-check.js'
 import { reportBuildError, runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from '../cli/dispatcher.js';
 import { checkLatexEngine, checkReadPermissions, checkWritePermissions } from '../cli/doctor/system-checks.js';
 import { buildProgram } from '../cli/parser.js';
-import { BUILD_ERROR_CODES, PANDOC_ERROR_CODES, PandocError } from '../lib/errors.js';
+import { PANDOC_ERROR_CODES, PandocError } from '../lib/errors.js';
 import { logWarning, setLoggerColorEnabled } from '../lib/logger.js';
 import * as pandocRunner from '../lib/pandoc-runner.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
@@ -2405,14 +2405,14 @@ describe('huecos transversales (#2032)', () => {
         .split('\n')
         .filter((l) => l.trim() !== '');
       expect(lines.length).toBe(1);
-      const parsed = JSON.parse(lines[0]!) as Record<string, unknown>;
+      const parsed = JSON.parse(lines[0] ?? '') as Record<string, unknown>;
       expect(Object.keys(parsed).sort()).toEqual(['cached', 'durationMs', 'formats', 'invalidations', 'outputDir', 'processed'].sort());
-      expect(typeof parsed['processed']).toBe('number');
-      expect(typeof parsed['cached']).toBe('number');
-      expect(Array.isArray(parsed['formats'])).toBe(true);
-      expect(typeof parsed['outputDir']).toBe('string');
-      expect(typeof parsed['durationMs']).toBe('number');
-      expect(Array.isArray(parsed['invalidations'])).toBe(true);
+      expect(typeof parsed.processed).toBe('number');
+      expect(typeof parsed.cached).toBe('number');
+      expect(Array.isArray(parsed.formats)).toBe(true);
+      expect(typeof parsed.outputDir).toBe('string');
+      expect(typeof parsed.durationMs).toBe('number');
+      expect(Array.isArray(parsed.invalidations)).toBe(true);
     });
   });
 });
