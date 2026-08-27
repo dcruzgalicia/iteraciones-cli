@@ -436,29 +436,8 @@ function xmpMetadataFor(
   };
 }
 
-/** Procesa todos los formatos de un documento: markdown → tex/HTML/EPUB/MD → cola PDF. */
-async function processDocumentFormats(
-  doc: BuildDocument,
-  renderCtx: RenderContext,
-  exportCtx: ExportContext,
-  formatWorkSets: FormatWorkSets,
-  discoveryIndex: Map<string, DiscoveryEntry>,
-): Promise<void> {
-  const { ctx, plan, formatCfg, lang, logoInline, warnedLangs, pdfxActive, cropActive, pageDimensions } = renderCtx;
-  const { filters, bibOptions, bibFiles, biblatexAvailable, globalBibliography, pdfWorkDir, htmlTemplatePath, latexTemplatePath, refsCardTemplate } =
-    exportCtx;
-  const { htmlPaths, epubPaths, mdPaths, latexPaths, pdfJobs } = formatWorkSets;
-  const { activeFormats } = plan;
-  const htmlOn = activeFormats.html;
-  const epubOn = activeFormats.epub;
-  const mdOn = activeFormats.markdown;
-  const latexOn = activeFormats.latex;
-  const pdfOn = activeFormats.pdf;
-  const htmlConfig = formatCfg?.html;
-  const cwd = ctx.cwd;
-  const slug = doc.slug ?? basename(doc.relativePath, '.md');
-  const dir = dirname(doc.relativePath);
-
+/** Lee el markdown del documento y valida el cuerpo; null = omitido (aviso emitido). */
+async function readMarkdownOrWarn(doc: BuildDocument): Promise<string | null> {
   // El markdown original completo (el frontmatter fluye a pandoc como metadata):
   // se lee una sola vez y se reutiliza en todas las conversiones del documento.
   let content: string;
@@ -480,136 +459,237 @@ async function processDocumentFormats(
         : `"${doc.filePath}" está vacío; se omite del build`,
       'build',
     );
-    return;
+    return null;
   }
+  return content;
+}
 
-  const entry = discoveryIndex.get(doc.relativePath);
-  const fm = entry?.fm ?? {};
-  const needsLatex = (latexOn || pdfOn) && latexPaths.has(doc.relativePath);
-  const outBase = (name: string): string => join(ctx.outputDir, dir === '.' ? '' : dir, name);
-  // Nombre de salida coherente en todos los formatos: index.md → index.* (el
-  // caso especial de htmlSlugFor aplica a todo el documento, no solo al HTML;
-  // antes, index.md generaba index.html pero inicio.pdf/tex/epub/md).
-  const outSlug = htmlSlugFor(doc.relativePath, slug);
+/** Enlaces a los formatos generados que aparecen en la página HTML. */
+function formatLinksFor(
+  plan: BuildMetadata,
+  dir: string,
+  outSlug: string,
+): { href: string; key: 'pdf' | 'epub' | 'latex' | 'markdown'; name: string; description: string }[] {
+  const formats = [];
+  if (plan.activeFormats.pdf) {
+    formats.push({
+      href: relativeHref(dir, `${outSlug}.pdf`),
+      key: 'pdf' as const,
+      name: 'PDF',
+      description: 'Documento final para lectura e impresión',
+    });
+  }
+  if (plan.activeFormats.epub) {
+    formats.push({
+      href: relativeHref(dir, `${outSlug}.epub`),
+      key: 'epub' as const,
+      name: 'EPUB',
+      description: 'Edición adaptable para lectura digital',
+    });
+  }
+  if (plan.activeFormats.latex) {
+    formats.push({
+      href: relativeHref(dir, `${outSlug}.tex`),
+      key: 'latex' as const,
+      name: 'LaTeX',
+      description: 'Archivo fuente para composición tipográfica',
+    });
+  }
+  if (plan.activeFormats.markdown) {
+    formats.push({
+      href: relativeHref(dir, `${outSlug}.md`),
+      key: 'markdown' as const,
+      name: 'Markdown',
+      description: 'Texto fuente reutilizable y portable',
+    });
+  }
+  return formats;
+}
+
+/** Artefactos de salida compartidos por todos los formatos de un documento. */
+interface DocumentOutputs {
+  /** Slug base del documento (para títulos). */
+  slug: string;
+  /** Slug efectivo de salida: index.md → index.* aplica a todo formato (#2087). */
+  outSlug: string;
+  dir: string;
+  fm: Record<string, unknown>;
+  content: string;
+  outBase(name: string): string;
+}
+
+/**
+ * Genera el .tex completo y publica según formatos activos: con LaTeX escribe
+ * el tex distribuido (portable, ADR #2084); si PDF está activo ENCOLA la
+ * compilación en la cola del pool 2.
+ *
+ * Esta función es la frontera explícita entre pools: aquí SOLO se produce el
+ * job de PDF — nada de latexmk ocurre en este hilo, lo consume pdf-pool.ts
+ * arrancado en paralelo por documentPipeline.
+ */
+async function emitLatexAndQueuePdf(
+  doc: BuildDocument,
+  outputs: DocumentOutputs,
+  renderCtx: RenderContext,
+  exportCtx: ExportContext,
+  sets: FormatWorkSets,
+): Promise<void> {
+  const { ctx, lang, warnedLangs, formatCfg, plan } = renderCtx;
+  const latexOn = plan.activeFormats.latex;
+  const pdfOn = plan.activeFormats.pdf;
+  const { dir, outBase, outSlug, fm } = outputs;
   const texDistPath = outBase(`${outSlug}.tex`);
 
   // .tex completo (preámbulo + cuerpo) en UNA invocación markdown → latex,
   // escrito directamente en dist/ (o en el área de trabajo del PDF si solo pdfOn)
-  if (needsLatex) {
-    const { tex: fullTex, processedImages } = await markdownToLatex(content, doc, {
-      filters,
-      bibFiles,
-      templatePath: latexTemplatePath,
-      fm,
-      siteConfig: ctx.siteConfig,
-      biblatexAvailable,
-      warnedLangs,
-      pageDimensions,
-      cropActive,
-      pdfxActive,
-    });
-    // Con 99-pdfx activo se inyectan los metadatos XMP e Info en el .tex
-    // (filecontents + \pdfinfo): el tex de dist/ queda autocontenido (issue #1970).
-    const texWithXmp = pdfxActive ? injectXmpMetadataIntoLatex(fullTex, xmpMetadataFor(fm, lang, formatCfg?.pdf, ctx.siteConfig)) : fullTex;
-    if (latexOn) {
-      // Distribución portátil (ADR #2084): las copias viajan JUNTO al .tex de
-      // dist/ con nombre namespaced, y el .tex distribuido referencia esos
-      // filenames — compila fuera del árbol del proyecto. El tex del área de
-      // trabajo de latexmk (abajo) conserva las rutas absolutas procesadas.
-      const distribution = buildTexDistribution(processedImages, outSlug);
-      // Copias concurrentes (#2093): la fase corre dentro del pool del pipeline;
-      // serializarlas domina la latencia de documentos ricos en imágenes.
-      await Promise.all(
-        [...distribution].map(async ([absSrc, fileName]) => {
-          if (await Bun.file(absSrc).exists()) await Bun.write(outBase(fileName), Bun.file(absSrc));
-        }),
-      );
-      await writeOutput(texDistPath, rewriteTexForDist(texWithXmp, distribution));
-    }
-    if (pdfOn) {
-      const texPath = latexOn ? texDistPath : join(pdfWorkDir, dir, `${outSlug}.tex`);
-      if (!latexOn) await writeOutput(texPath, texWithXmp);
-      pdfJobs.push({ dir, slug: outSlug, relativePath: doc.relativePath, texPath, pdfDest: outBase(`${outSlug}.pdf`) });
-    }
+  const { tex: fullTex, processedImages } = await markdownToLatex(outputs.content, doc, {
+    filters: exportCtx.filters,
+    bibFiles: exportCtx.bibFiles,
+    templatePath: exportCtx.latexTemplatePath,
+    fm,
+    siteConfig: ctx.siteConfig,
+    biblatexAvailable: exportCtx.biblatexAvailable,
+    warnedLangs,
+    pageDimensions: renderCtx.pageDimensions,
+    cropActive: renderCtx.cropActive,
+    pdfxActive: renderCtx.pdfxActive,
+  });
+  // Con 99-pdfx activo se inyectan los metadatos XMP e Info en el .tex
+  // (filecontents + \pdfinfo): el tex de dist/ queda autocontenido (issue #1970).
+  const texWithXmp = renderCtx.pdfxActive ? injectXmpMetadataIntoLatex(fullTex, xmpMetadataFor(fm, lang, formatCfg?.pdf, ctx.siteConfig)) : fullTex;
+
+  if (latexOn) {
+    // Distribución portátil (ADR #2084): las copias viajan JUNTO al .tex de
+    // dist/ con nombre namespaced, y el .tex distribuido referencia esos
+    // filenames — compila fuera del árbol del proyecto. El tex del área de
+    // trabajo de latexmk (abajo) conserva las rutas absolutas procesadas.
+    const distribution = buildTexDistribution(processedImages, outSlug);
+    // Copias concurrentes (#2093): la fase corre dentro del pool del pipeline;
+    // serializarlas domina la latencia de documentos ricos en imágenes.
+    await Promise.all(
+      [...distribution].map(async ([absSrc, fileName]) => {
+        if (await Bun.file(absSrc).exists()) await Bun.write(outBase(fileName), Bun.file(absSrc));
+      }),
+    );
+    await writeOutput(texDistPath, rewriteTexForDist(texWithXmp, distribution));
   }
 
-  const exportDoc = assembleExportDocument(doc, lang, globalBibliography, undefined, ctx.siteConfig.toc);
-
-  // HTML
-  if (htmlOn && htmlPaths.has(doc.relativePath)) {
-    // Enlaces a los formatos generados (PDF/LaTeX/EPUB/Markdown); el HTML es la
-    // página actual y no se enlaza a sí mismo. Solo formatos activos.
-    const formats = [
-      ...(plan.activeFormats.pdf
-        ? [{ href: relativeHref(dir, `${outSlug}.pdf`), key: 'pdf' as const, name: 'PDF', description: 'Documento final para lectura e impresión' }]
-        : []),
-      ...(plan.activeFormats.epub
-        ? [{ href: relativeHref(dir, `${outSlug}.epub`), key: 'epub' as const, name: 'EPUB', description: 'Edición adaptable para lectura digital' }]
-        : []),
-      ...(plan.activeFormats.latex
-        ? [
-            {
-              href: relativeHref(dir, `${outSlug}.tex`),
-              key: 'latex' as const,
-              name: 'LaTeX',
-              description: 'Archivo fuente para composición tipográfica',
-            },
-          ]
-        : []),
-      ...(plan.activeFormats.markdown
-        ? [
-            {
-              href: relativeHref(dir, `${outSlug}.md`),
-              key: 'markdown' as const,
-              name: 'Markdown',
-              description: 'Texto fuente reutilizable y portable',
-            },
-          ]
-        : []),
-    ];
-    // La tarjeta identidad enlaza al home solo si existe index.html en la
-    // raíz de salida (index.md en la raíz del proyecto); sin él, la tarjeta
-    // se renderiza sin enlace (template $if(home-href)$). El href apunta
-    // explícitamente a index.html (./index.html, ../index.html, ...):
-    // determinista con file:// y en servidores sin directory index.
-    const hasHomePage = discoveryIndex.has('index.md');
-    const html = await htmlPageFromMarkdown(content, doc, {
-      cwd,
-      vars: {
-        title: doc.frontmatter.title || slug,
-        siteTitle: htmlConfig?.site?.title ?? 'iteraciones',
-        tagline: htmlConfig?.site?.description ?? 'escribir, compartir, re-existir',
-        lang,
-        theme: htmlConfig?.site?.theme,
-        accent: htmlConfig?.site?.color,
-        css: ctx.needsCss ? relativeHref(dir, 'css/styles.css') : undefined,
-        authorMeta: doc.frontmatter.creator.join(', '),
-        logoInline,
-        docTitle: doc.frontmatter.title && doc.frontmatter.title !== 'Sin título' ? doc.frontmatter.title : undefined,
-        subtitle: doc.frontmatter.subtitle,
-        date: formatHumanDate(doc.frontmatter.date),
-        homeHref: hasHomePage ? relativeHref(dir, 'index.html') : undefined,
-        formats: formats.length > 0 ? formats : undefined,
-      },
-      siteConfig: ctx.siteConfig,
-      templatePath: htmlTemplatePath,
-      refsCardTemplate,
-      fm,
-      bibOptions,
-      luaFilters: filters,
-    });
-    await writeOutput(outBase(`${outSlug}.html`), html);
-  }
-
-  // EPUB y Markdown desde el markdown original, directo a dist/
-  if (epubOn && epubPaths.has(doc.relativePath)) {
-    await convertToEpub(content, outBase(`${outSlug}.epub`), exportDoc, filters, ctx.siteConfig.toc, fm);
-  }
-  if (mdOn && mdPaths.has(doc.relativePath)) {
-    await convertToMarkdown(content, outBase(`${outSlug}.md`), exportDoc, filters, cwd, fm);
+  if (pdfOn) {
+    // Solo PDF: el .tex vive en el área de trabajo de latexmk (fuera de dist/)
+    const texPath = latexOn ? texDistPath : join(exportCtx.pdfWorkDir, dir, `${outSlug}.tex`);
+    if (!latexOn) await writeOutput(texPath, texWithXmp);
+    // ── FRONTERA pool 1 → pool 2: desde aquí ejecuta pdf-pool.ts ──
+    sets.pdfJobs.push({ dir, slug: outSlug, relativePath: doc.relativePath, texPath, pdfDest: outBase(`${outSlug}.pdf`) });
   }
 }
 
+/** Renderiza y publica la página HTML del documento. */
+async function emitHtmlPage(
+  doc: BuildDocument,
+  outputs: DocumentOutputs,
+  renderCtx: RenderContext,
+  exportCtx: ExportContext,
+  discoveryIndex: Map<string, DiscoveryEntry>,
+): Promise<void> {
+  const { ctx, plan, formatCfg, lang, logoInline } = renderCtx;
+  const htmlConfig = formatCfg?.html;
+  const { dir, outBase, outSlug, slug, fm, content } = outputs;
+  const cwd = ctx.cwd;
+
+  // Enlaces a los formatos generados (PDF/LaTeX/EPUB/Markdown); el HTML es la
+  // página actual y no se enlaza a sí mismo. Solo formatos activos.
+  const formats = formatLinksFor(plan, dir, outSlug);
+  // La tarjeta identidad enlaza al home solo si existe index.html en la
+  // raíz de salida (index.md en la raíz del proyecto); sin él, la tarjeta
+  // se renderiza sin enlace (template $if(home-href)$). El href apunta
+  // explícitamente a index.html (./index.html, ../index.html, ...):
+  // determinista con file:// y en servidores sin directory index.
+  const hasHomePage = discoveryIndex.has('index.md');
+  const html = await htmlPageFromMarkdown(content, doc, {
+    cwd,
+    vars: {
+      title: doc.frontmatter.title || slug,
+      siteTitle: htmlConfig?.site?.title ?? 'iteraciones',
+      tagline: htmlConfig?.site?.description ?? 'escribir, compartir, re-existir',
+      lang,
+      theme: htmlConfig?.site?.theme,
+      accent: htmlConfig?.site?.color,
+      css: ctx.needsCss ? relativeHref(dir, 'css/styles.css') : undefined,
+      authorMeta: doc.frontmatter.creator.join(', '),
+      logoInline,
+      docTitle: doc.frontmatter.title && doc.frontmatter.title !== 'Sin título' ? doc.frontmatter.title : undefined,
+      subtitle: doc.frontmatter.subtitle,
+      date: formatHumanDate(doc.frontmatter.date),
+      homeHref: hasHomePage ? relativeHref(dir, 'index.html') : undefined,
+      formats: formats.length > 0 ? formats : undefined,
+    },
+    siteConfig: ctx.siteConfig,
+    templatePath: exportCtx.htmlTemplatePath,
+    refsCardTemplate: exportCtx.refsCardTemplate,
+    fm,
+    bibOptions: exportCtx.bibOptions,
+    luaFilters: exportCtx.filters,
+  });
+  await writeOutput(outBase(`${outSlug}.html`), html);
+}
+
+/** Procesa todos los formatos de un documento: markdown → tex/HTML/EPUB/MD → cola PDF. */
+async function processDocumentFormats(
+  doc: BuildDocument,
+  renderCtx: RenderContext,
+  exportCtx: ExportContext,
+  formatWorkSets: FormatWorkSets,
+  discoveryIndex: Map<string, DiscoveryEntry>,
+): Promise<void> {
+  const { ctx, plan } = renderCtx;
+  const { activeFormats } = plan;
+
+  const content = await readMarkdownOrWarn(doc);
+  if (content === null) return;
+
+  const entry = discoveryIndex.get(doc.relativePath);
+  const slug = doc.slug ?? basename(doc.relativePath, '.md');
+  // Nombre de salida coherente en todos los formatos: index.md → index.* (el
+  // caso especial de htmlSlugFor aplica a todo el documento, no solo al HTML;
+  // antes, index.md generaba index.html pero inicio.pdf/tex/epub/md).
+  const outSlug = htmlSlugFor(doc.relativePath, slug);
+  const dir = dirname(doc.relativePath);
+  const outputs: DocumentOutputs = {
+    slug,
+    outSlug,
+    dir,
+    fm: entry?.fm ?? {},
+    content,
+    outBase: (name: string): string => join(ctx.outputDir, dir === '.' ? '' : dir, name),
+  };
+
+  // Frontera explícita pool 1 → pool 2: genera los .tex de este build y
+  // ENCOLA los trabajos PDF; latexmk corre en pdf-pool.ts (pool 2).
+  if ((activeFormats.latex || activeFormats.pdf) && formatWorkSets.latexPaths.has(doc.relativePath)) {
+    await emitLatexAndQueuePdf(doc, outputs, renderCtx, exportCtx, formatWorkSets);
+  }
+
+  const exportDoc = assembleExportDocument(doc, renderCtx.lang, exportCtx.globalBibliography, undefined, ctx.siteConfig.toc);
+
+  if (activeFormats.html && formatWorkSets.htmlPaths.has(doc.relativePath)) {
+    await emitHtmlPage(doc, outputs, renderCtx, exportCtx, discoveryIndex);
+  }
+
+  // EPUB y Markdown desde el markdown original, directo a dist/
+  if (activeFormats.epub && formatWorkSets.epubPaths.has(doc.relativePath)) {
+    await convertToEpub(content, outputs.outBase(`${outSlug}.epub`), exportDoc, exportCtx.filters, ctx.siteConfig.toc, outputs.fm);
+  }
+  if (activeFormats.markdown && formatWorkSets.mdPaths.has(doc.relativePath)) {
+    await convertToMarkdown(content, outputs.outBase(`${outSlug}.md`), exportDoc, exportCtx.filters, ctx.cwd, outputs.fm);
+  }
+}
+
+/**
+ * Genera el .tex completo y PUBLICA según formatos: con LaTeX escribe el tex
+ * distribuido (portable, ADR #2084) y, si PDF está activo, ENCOLA la
+ * compilación al pool 2 — esta función es la frontera explícita entre pools:
+ * nada de latexmk ocurre aquí, solo producción de jobs para pdf-pool.ts.
+ */
 /**
  * Ruta relativa desde el directorio de un documento (en dist/files/) hasta
  * un archivo en la raíz de salida. Permite abrir el HTML con file:// sin
