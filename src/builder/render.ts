@@ -18,7 +18,7 @@ import type { BuildDocument } from './types.js';
  * Opciones de htmlPageFromMarkdown (#2076): campos nombrados en vez de diez
  * parámetros posicionales.
  */
-export interface HtmlPageOptions {
+interface HtmlPageOptions {
   cwd: string;
   vars: HtmlPageVars;
   siteConfig: SiteConfig;

@@ -86,7 +86,7 @@ export interface HtmlPageVars {
 }
 
 /** Clave canónica de un formato generado (los iconos se resuelven por ella). */
-export type ExportFormatKey = 'pdf' | 'epub' | 'latex' | 'markdown';
+type ExportFormatKey = 'pdf' | 'epub' | 'latex' | 'markdown';
 
 export interface FormatsLink {
   href: string;

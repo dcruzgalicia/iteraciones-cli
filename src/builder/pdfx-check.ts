@@ -20,7 +20,7 @@ import { exec, mapWithConcurrency } from '../lib/run.js';
  */
 
 /** Nombre del binario de validación PDF/X-1a. */
-export const PDFCHECK_BIN_NAME = 'iteraciones-pdfcheck';
+const PDFCHECK_BIN_NAME = 'iteraciones-pdfcheck';
 
 /** Tiempo máximo de una compilación release del binario (pdf-oxide es grande). */
 const CARGO_BUILD_TIMEOUT_MS = 600_000;
@@ -56,7 +56,7 @@ export async function resolvePdfCheckBinary(): Promise<string | null> {
  * ausente o compilación fallida); el llamador informa cómo obtenerlo sin
  * romper el build.
  */
-export async function buildPdfCheckBinary(): Promise<string | null> {
+async function buildPdfCheckBinary(): Promise<string | null> {
   const manifest = join(import.meta.dir, '../../tools/pdfx-validator/Cargo.toml');
   if (!existsSync(manifest)) return null;
   try {
@@ -78,7 +78,7 @@ export async function buildPdfCheckBinary(): Promise<string | null> {
 }
 
 /** Un fallo (o warning) de certificación reportado por el binario. */
-export interface PdfCheckIssue {
+interface PdfCheckIssue {
   code: string;
   message: string;
   page: number | null;
@@ -87,7 +87,7 @@ export interface PdfCheckIssue {
 }
 
 /** Informe JSON del binario (contrato del crate tools/pdfx-validator). */
-export interface PdfCheckResult {
+interface PdfCheckResult {
   valid: boolean;
   level: string;
   errors: PdfCheckIssue[];
@@ -135,7 +135,7 @@ export async function validatePdfX1a(pdfPath: string, binaryPath: string): Promi
   }
 }
 
-export type PdfxOutputValidationResult = {
+type PdfxOutputValidationResult = {
   validated: number;
   failed: number;
   /** Línea de confirmación del resumen final en éxito (undefined si no aplica). */

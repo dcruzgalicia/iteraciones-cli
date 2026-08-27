@@ -13,9 +13,9 @@ const CONFIG_FILE = 'iteraciones.config.yaml';
  * distinguir "clave no configurada" de "clave configurada con el valor por
  * defecto" (ambiguas al leer solo el SiteConfig materializado).
  */
-export type PresentKeyPaths = ReadonlySet<string>;
+type PresentKeyPaths = ReadonlySet<string>;
 
-export interface LoadedSiteConfig {
+interface LoadedSiteConfig {
   /** Configuración validada, con defaults materializados por el schema Zod. */
   config: SiteConfig;
   /** Rutas punteadas de las claves presentes en el YAML crudo del usuario. */

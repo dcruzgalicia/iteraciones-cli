@@ -107,7 +107,7 @@ export function computeSlug(
  * título afectado para que el autor decida. Los acentos agudos inocuos
  * (á→a) no avisaban ni avisan.
  */
-export function slugDiacriticWarning(title: string, slug: string): string | undefined {
+function slugDiacriticWarning(title: string, slug: string): string | undefined {
   if (!/[ñü]/i.test(title)) return undefined;
   // El slug ya no contiene ñ/ü (strict las elimina): si el título las tenía,
   // hubo sustitución por n/u con posible cambio de palabra.

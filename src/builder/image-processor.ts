@@ -136,7 +136,7 @@ const PX_TO_MM_96DPI = 25.4 / 96;
  * @param pageWidthmm ancho de página en mm (para porcentajes)
  * @returns ancho en mm, o undefined si no se pudo parsear
  */
-export function parseWidthMm(attrs: string | undefined, pageWidthmm: number): number | undefined {
+function parseWidthMm(attrs: string | undefined, pageWidthmm: number): number | undefined {
   if (!attrs) return undefined;
   const match = attrs.match(/width\s*=\s*([\d.]+)\s*(pt|mm|cm|px|%)/);
   if (!match) return undefined;
@@ -257,7 +257,7 @@ export function rewriteImagePaths(content: string, imageMap: Map<string, string>
 }
 
 /** Dimensiones objetivo (mm) derivadas de la página y el crop (#1975). */
-export interface ProcessTargets {
+interface ProcessTargets {
   /** Caja de texto (+6 bleed si cropActive). */
   targetW: number;
   targetH: number;

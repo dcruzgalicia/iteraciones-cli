@@ -13,7 +13,7 @@ import type { SiteConfig } from '../config/config-schema.js';
  * flujo. Este módulo valida el objeto YAML ya parseado.
  */
 
-export interface ValidationIssue {
+interface ValidationIssue {
   /** Error (rompe build/validate) o warning (no rompe). */
   severity: 'error' | 'warning';
   message: string;

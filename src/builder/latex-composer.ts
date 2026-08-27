@@ -76,7 +76,7 @@ async function pdfDate(fm: Record<string, unknown>, siteConfig: SiteConfig, doc:
  * Opciones de markdownToLatex (#2076): campos nombrados en vez de parámetros
  * posicionales largos con booleans al final.
  */
-export interface LatexComposerOptions {
+interface LatexComposerOptions {
   filters: LuaFilterGroup;
   bibFiles: string[];
   templatePath: string;

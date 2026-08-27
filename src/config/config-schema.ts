@@ -41,7 +41,7 @@ z.setErrorMap(((issue: z.ZodIssue) => {
 }) as unknown as z.ZodErrorMap);
 
 /** Colores de acento validados por config; fuente única: ACCENT_PALETTES. */
-export const KNOWN_ACCENT_COLORS = Object.keys(ACCENT_PALETTES) as AccentColor[];
+const KNOWN_ACCENT_COLORS = Object.keys(ACCENT_PALETTES) as AccentColor[];
 
 /**
  * Todos los sub-esquemas usan `.strict()`: las claves desconocidas en
@@ -208,7 +208,7 @@ const RawSiteConfigSchema = z
   .strict();
 
 /** Convierte kebab-case a camelCase a nivel de tipo (issue #2072). */
-export type CamelKey<K extends string> = K extends `${infer Head}-${infer Rest}` ? `${Head}${Capitalize<CamelKey<Rest>>}` : K;
+type CamelKey<K extends string> = K extends `${infer Head}-${infer Rest}` ? `${Head}${Capitalize<CamelKey<Rest>>}` : K;
 
 /** Mapea las claves kebab-case de T a camelCase conservando los tipos de valor. */
 export type Camelize<T> = { [K in keyof T as K extends string ? CamelKey<K> : K]: T[K] };

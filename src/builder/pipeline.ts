@@ -33,7 +33,7 @@ import { injectXmpMetadataIntoLatex } from './xmpdata.js';
  * pool tiene un tope propio, independiente de la concurrencia general, para
  * que una máquina con muchos núcleos no sature la memoria.
  */
-export const PDF_MAX_SLOTS = 4;
+const PDF_MAX_SLOTS = 4;
 
 /** Número de slots del pool PDF para una concurrencia general dada. */
 export function pdfSlotCount(concurrency: number): number {

@@ -44,7 +44,7 @@ export function fmStringList(value: unknown): string[] | undefined {
   return undefined;
 }
 
-export type MetadataValue = string | string[];
+type MetadataValue = string | string[];
 
 function metadataValue(value: unknown): MetadataValue | undefined {
   if (typeof value === 'string' || Array.isArray(value)) return value;

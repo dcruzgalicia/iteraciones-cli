@@ -43,9 +43,9 @@ export const SKIP_REASONS = {
   fixtures: 'requieren fixtures de pandoc para este major',
 } as const;
 
-export type SkipReasonKey = keyof typeof SKIP_REASONS;
+type SkipReasonKey = keyof typeof SKIP_REASONS;
 
-export type SkipReasonLabel = (typeof SKIP_REASONS)[SkipReasonKey];
+type SkipReasonLabel = (typeof SKIP_REASONS)[SkipReasonKey];
 
 /** archivo → conjunto de razones por las que se omitieron bloques. */
 const skipRegistry = new Map<string, Set<string>>();

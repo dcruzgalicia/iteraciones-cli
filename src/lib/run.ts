@@ -4,7 +4,7 @@ export interface RunResult {
   exitCode: number;
 }
 
-export interface RunOptions {
+interface RunOptions {
   /** Directorio de trabajo del proceso (por defecto: el del proceso actual). */
   cwd?: string;
   /**
