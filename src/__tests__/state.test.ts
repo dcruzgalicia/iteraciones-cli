@@ -18,6 +18,7 @@ import {
 import type { DiscoveryEntry } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
+import { ConfigError } from '../lib/errors.js';
 import { withTempDir } from './helpers.js';
 
 function makeState(entries: Record<string, unknown> = {}): BuildState {
@@ -313,19 +314,16 @@ describe('resolveBibOptions', () => {
     });
   });
 
-  it('con bibliography inexistente advierte y cae al auto-descubrimiento', async () => {
+  it('con bibliography inexistente lanza ConfigError (contrato único sin fallback, D1)', async () => {
     await withTempDir(async (dir) => {
       await writeFile(join(dir, 'libro.bib'), '@book{k1}\n', 'utf8');
-      const stderrSpy = spyOn(process.stderr, 'write');
-      let output = '';
       try {
-        const result = await resolveBibOptions(dir, { ...DEFAULT_SITE_CONFIG, bibliography: 'no-existe.bib' });
-        expect(result.bibFiles).toEqual([join(dir, 'libro.bib')]);
-      } finally {
-        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
-        stderrSpy.mockRestore();
+        await resolveBibOptions(dir, { ...DEFAULT_SITE_CONFIG, bibliography: 'no-existe.bib' });
+        expect.unreachable();
+      } catch (err) {
+        expect(err).toBeInstanceOf(ConfigError);
+        expect((err as Error).message).toContain('bibliography: "no-existe.bib" no encontrado en el proyecto');
       }
-      expect(output).toContain('no encontrado en el proyecto');
     });
   });
 

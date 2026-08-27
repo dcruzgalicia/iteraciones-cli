@@ -1,6 +1,6 @@
 import { isAbsolute, join } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
-import { logWarning } from '../lib/logger.js';
+import { ConfigError } from '../lib/errors.js';
 import type { BibOptions } from '../lib/pandoc-runner.js';
 import { isIgnoredByRules, isInsideIgnoredDir, loadGitignoreRules } from './gitignore.js';
 import { type FileCacheEntry, hashFileCached } from './state-hash.js';
@@ -107,19 +107,27 @@ function resolveConfiguredPath(cwd: string, rel: string): string {
  * Con `bibliography` configurada (raíz de la config) se usa esa ruta y el CSL
  * configurado (o el APA-7 empaquetado). Sin configurar: auto-descubrimiento
  * del primer .bib del proyecto con APA-7.
- * Si la ruta configurada no existe, se advierte y se vuelve al comportamiento
- * de auto-descubrimiento (mismo patrón que lua-filters inexistentes).
+ *
+ * Contrato único (decisión D1, issue #2164): una ruta configurada inexistente
+ * es config inválida y lanza ConfigError — sin fallback al auto-descubrimiento
+ * (el auto-descubrimiento solo aplica cuando no se configuró nada). El build
+ * real nunca llega aquí con ruta ausente: la validación de config
+ * (`validateConfigFilePaths`) falla antes; este guard mantiene la paridad si
+ * el orden de las fases cambiara.
  */
 export async function resolveBibOptions(cwd: string, siteConfig?: SiteConfig): Promise<{ bibFiles: string[]; bibOptions?: BibOptions }> {
   const configuredBib = siteConfig?.bibliography?.trim();
   if (configuredBib) {
     const bibPath = resolveConfiguredPath(cwd, configuredBib);
-    if (await Bun.file(bibPath).exists()) {
-      const configuredCsl = siteConfig?.csl?.trim();
-      const cslPath = configuredCsl ? resolveConfiguredPath(cwd, configuredCsl) : join(import.meta.dir, '../../src/lib/resources/apa-7.csl');
-      return { bibFiles: [bibPath], bibOptions: { bibliography: bibPath, csl: cslPath } };
+    if (!(await Bun.file(bibPath).exists())) {
+      throw new ConfigError(
+        `iteraciones.config.yaml: bibliography: "${configuredBib}" no encontrado en el proyecto`,
+        join(cwd, 'iteraciones.config.yaml'),
+      );
     }
-    logWarning(`bibliography: "${configuredBib}" no encontrado en el proyecto; se usa el auto-descubrimiento`, 'config');
+    const configuredCsl = siteConfig?.csl?.trim();
+    const cslPath = configuredCsl ? resolveConfiguredPath(cwd, configuredCsl) : join(import.meta.dir, '../../src/lib/resources/apa-7.csl');
+    return { bibFiles: [bibPath], bibOptions: { bibliography: bibPath, csl: cslPath } };
   }
   const bibFiles = cwd ? await discoverBibFiles(cwd, ['bib']) : [];
   const firstBib = bibFiles[0];
