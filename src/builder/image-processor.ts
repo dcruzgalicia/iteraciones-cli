@@ -11,7 +11,7 @@
  * silencioso — no rompe el build).
  */
 import { mkdir } from 'node:fs/promises';
-import { basename, isAbsolute, join, resolve } from 'node:path';
+import { basename, isAbsolute, join, relative, resolve } from 'node:path';
 import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 import { exec, ProcessSpawnError, ProcessTimeoutError } from '../lib/run.js';
@@ -265,13 +265,38 @@ export async function scanTitlePageFieldImages(
  * Para cada par (absolute → processed), busca la ruta relativa original en el
  * contenido y la reemplaza con la ruta absoluta procesada.
  */
+/**
+ * Reescribe las rutas de las imágenes procesadas en el contenido. Solo se
+ * tocan los DOS contextos donde las imágenes del imageMap aparecen
+ * legítimamente:
+ *   1. objetivo de imagen/enlace markdown `](ruta)` (scanInlineImages);
+ *   2. valor de los campos de portada `title-image|publishers-image|endpapers`
+ *      (scanTitlePageFieldImages), bare o entre comillas.
+ * El replaceAll por substring anterior reescribía cualquier aparición de la
+ * ruta en el documento — `img.png` dentro de `img.png.bak`, de un bloque de
+ * código o de una URL — corrompiendo el markdown en silencio (#2170).
+ */
 export function rewriteImagePaths(content: string, imageMap: Map<string, string>, docDir: string): string {
+  if (imageMap.size === 0) return content;
   let result = content;
   for (const [absoluteOriginal, processed] of imageMap) {
-    // Calcular la ruta relativa que aparece en el markdown
-    const relPath = absoluteOriginal.startsWith(`${docDir}/`) ? absoluteOriginal.slice(docDir.length + 1) : absoluteOriginal;
-    // Reemplazar ruta relativa con la ruta absoluta de la imagen procesada
-    result = result.replaceAll(relPath, processed);
+    if (processed === absoluteOriginal) continue;
+    // Candidatos de ruta relativa: relative() no asume que docDir es prefijo
+    // exacto (imágenes fuera del directorio del documento → '../...');
+    // se incluyen la variante './' y la absoluta por compatibilidad de formas.
+    const rel = relative(docDir, absoluteOriginal);
+    const candidates = [rel, `./${rel}`, absoluteOriginal];
+    for (const candidate of candidates) {
+      if (candidate === '') continue;
+      const escaped = candidate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // 1. Objetivo de imagen/enlace markdown
+      result = result.replace(new RegExp(`\\]\\(${escaped}\\)`, 'g'), () => `](${processed})`);
+      // 2. Campo de portada, preservando comillas si las hubiera
+      result = result.replace(
+        new RegExp(`^((?:title-image|publishers-image|endpapers):[ \\t]*)(["']?)${escaped}(["']?[ \\t]*)$`, 'gm'),
+        (_m, pre: string, openQuote: string, closeQuote: string) => `${pre}${openQuote}${processed}${closeQuote}`,
+      );
+    }
   }
   return result;
 }

@@ -7,6 +7,7 @@ import {
   processDocumentImages,
   processImage,
   resetMagickCache,
+  rewriteImagePaths,
   scanTitlePageFieldImages,
 } from '../builder/image-processor.js';
 
@@ -231,5 +232,46 @@ describe('computeProcessTargets (parte pura de processDocumentImages, #2132)', (
     const sinCrop = computeProcessTargets(dimsAsimetricas, false);
     expect(sinCrop.endpaperW).toBe(140);
     expect(sinCrop.targetW).toBe(110);
+  });
+});
+
+describe('rewriteImagePaths — reemplazo anclado (#2170)', () => {
+  const docDir = '/proyecto/capitulos';
+  const processed = '/proyecto/capitulos/.iteraciones/processed-images/img.jpg';
+  const map = new Map([['/proyecto/capitulos/img.png', processed]]);
+
+  it('reescribe el objetivo de la imagen markdown pero no colisiones de substring', () => {
+    const content = [
+      '![portada](img.png)',
+      'ver ![otra](./img.png) también',
+      'la referencia ![b](img.png.bak) no se toca',
+      'el texto suelto "img.png" tampoco',
+      '`code con img.png dentro` intacto',
+    ].join('\n');
+    const result = rewriteImagePaths(content, map, docDir);
+    expect(result).toContain(`![portada](${processed})`);
+    expect(result).toContain(`![otra](${processed})`);
+    expect(result).toContain('![b](img.png.bak)');
+    expect(result).toContain('el texto suelto "img.png" tampoco');
+    expect(result).toContain('`code con img.png dentro` intacto');
+  });
+
+  it('reescribe los campos de portada preservando comillas', () => {
+    const content = ['---', 'title-image: "img.png"', "publishers-image: 'img.png'", 'endpapers: img.png', 'otra-clave: img.png', '---'].join('\n');
+    const result = rewriteImagePaths(content, map, docDir);
+    expect(result).toContain(`title-image: "${processed}"`);
+    expect(result).toContain(`publishers-image: '${processed}'`);
+    expect(result).toContain(`endpapers: ${processed}`);
+    expect(result).toContain('otra-clave: img.png');
+  });
+
+  it('calcula la ruta relativa sin asumir prefijo (imagen fuera del directorio del doc)', () => {
+    const mapa = new Map([['/proyecto/shared/img.png', '/proyecto/shared/img.jpg']]);
+    const result = rewriteImagePaths('![x](../shared/img.png)', mapa, docDir);
+    expect(result).toBe('![x](/proyecto/shared/img.jpg)');
+  });
+
+  it('sin imágenes en el mapa retorna el contenido intacto', () => {
+    expect(rewriteImagePaths('![a](img.png)', new Map(), docDir)).toBe('![a](img.png)');
   });
 });
