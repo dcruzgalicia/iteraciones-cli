@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, spyOn } from 'bun:test';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { convertToEpub, convertToMarkdown, convertToPdf } from '../builder/export/runner.js';
 import type { LuaFilterGroup } from '../builder/filter-resolver.js';
 import { checkLatexEngine } from '../cli/doctor/system-checks.js';
+import * as pandocRunnerLib from '../lib/pandoc-runner.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { exec } from '../lib/run.js';
 import { registerSkip, SKIP_REASONS, withTempDir } from './helpers.js';
@@ -115,6 +116,36 @@ describe('export/runner (convertToEpub)', () => {
       expect(code).toBe(0);
       expect(stdout).toContain('>en</dc:language>');
       expect(stdout).not.toContain('>es-MX</dc:language>');
+    });
+  });
+
+  it('con citas aplica el CSL configurado y, sin él, el APA-7 empaquetado (paridad HTML, #2165)', async () => {
+    await withTempDir(async (dir) => {
+      const capturas: { extraArgs: string[] }[] = [];
+      const spy = spyOn(pandocRunnerLib, 'execPandoc').mockImplementation(async (opts) => {
+        capturas.push(opts as { extraArgs: string[] });
+        return '';
+      });
+      try {
+        const conCsl = { ...EXPORT_DOC, metadata: { ...EXPORT_DOC.metadata, bibliography: join(dir, 'refs.bib'), csl: join(dir, 'estilo.csl') } };
+        await convertToEpub(BODY, join(dir, 'a.epub'), conCsl, NO_FILTERS);
+        const sinCsl = { ...EXPORT_DOC, metadata: { ...EXPORT_DOC.metadata, bibliography: join(dir, 'refs.bib') } };
+        await convertToEpub(BODY, join(dir, 'b.epub'), sinCsl, NO_FILTERS);
+        // Sin bibliography no hay citeproc ni CSL
+        await convertToEpub(BODY, join(dir, 'c.epub'), EXPORT_DOC, NO_FILTERS);
+      } finally {
+        spy.mockRestore();
+      }
+      expect(capturas).toHaveLength(3);
+      const argsCon = capturas[0]?.extraArgs ?? [];
+      expect(argsCon).toContain('--citeproc');
+      expect(argsCon).toContain(join(dir, 'estilo.csl'));
+      const argsSin = capturas[1]?.extraArgs ?? [];
+      expect(argsSin).toContain('--citeproc');
+      expect(argsSin.filter((a) => a.endsWith('apa-7.csl'))).toHaveLength(1);
+      const argsSinBib = capturas[2]?.extraArgs ?? [];
+      expect(argsSinBib).not.toContain('--citeproc');
+      expect(argsSinBib.filter((a) => a.endsWith('.csl'))).toHaveLength(0);
     });
   });
 });

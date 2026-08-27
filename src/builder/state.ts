@@ -12,6 +12,7 @@ export {
   computeBibHash,
   discoverBibFiles,
   resolveBibOptions,
+  resolveConfiguredPath,
 } from './state-bib.js';
 export {
   computeConfigHashes,

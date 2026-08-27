@@ -22,7 +22,7 @@ import { applyPrintQueueDynamics, composeLatexTemplate, detectPageSize } from '.
 import { createPdfConsumer, type PdfJob } from './pdf-pool.js';
 import { loadPreambleFilters } from './preamble-loader.js';
 import { htmlPageFromMarkdown } from './render.js';
-import { resolveBibOptions } from './state.js';
+import { resolveBibOptions, resolveConfiguredPath } from './state.js';
 import type { BuildContext, BuildDocument, BuildReporter, DiscoveryEntry } from './types.js';
 import type { PdfXmpMetadata } from './xmpdata.js';
 import { injectXmpMetadataIntoLatex } from './xmpdata.js';
@@ -45,6 +45,8 @@ interface PipelineSetup {
   bibOptions: Awaited<ReturnType<typeof resolveBibOptions>>['bibOptions'];
   bibFiles: string[];
   globalBibliography: string | undefined;
+  /** CSL configurado (no el empaquetado): el export Markdown lo incrusta como ruta de proyecto portable. */
+  globalCsl: string | undefined;
   lang: string;
   logoInline: string | undefined;
 }
@@ -61,6 +63,7 @@ async function resolvePipelineSetup(ctx: BuildContext, formatCfg: SiteConfig['fo
     bibOptions: bib.bibOptions,
     bibFiles: bib.bibFiles,
     globalBibliography: bib.bibOptions?.bibliography,
+    globalCsl: siteConfig.csl?.trim() ? resolveConfiguredPath(ctx.cwd, siteConfig.csl.trim()) : undefined,
     lang: siteConfig.language ?? DEFAULT_SITE_CONFIG.language,
     logoInline: await loadLogoInline(ctx.cwd, formatCfg?.html?.site?.logo?.trim()),
   };
@@ -219,6 +222,7 @@ export async function documentPipeline(
     bibOptions: setup.bibOptions,
     bibFiles: setup.bibFiles,
     globalBibliography: setup.globalBibliography,
+    globalCsl: setup.globalCsl,
     biblatexAvailable: templates.biblatexAvailable,
     pdfxActive: templates.pdfxActive,
     cropActive: templates.cropActive,
@@ -276,6 +280,7 @@ interface LightPoolArgs {
   bibOptions: Awaited<ReturnType<typeof resolveBibOptions>>['bibOptions'];
   bibFiles: string[];
   globalBibliography: string | undefined;
+  globalCsl: string | undefined;
   biblatexAvailable: boolean;
   pdfxActive: boolean;
   cropActive: boolean;
@@ -322,6 +327,7 @@ async function runLightFormatsPool(
     bibFiles: args.bibFiles,
     biblatexAvailable: args.biblatexAvailable,
     globalBibliography: args.globalBibliography,
+    globalCsl: args.globalCsl,
     pdfWorkDir: join(ctx.cwd, '.iteraciones', 'tmp', 'pdf'),
     htmlTemplatePath: args.htmlTemplatePath,
     latexTemplatePath: args.latexTemplatePath,
@@ -382,6 +388,8 @@ interface ExportContext {
   /** true si el preamble filter 11-bibliography está activo (flags.lua lo consulta). */
   biblatexAvailable: boolean;
   globalBibliography: string | undefined;
+  /** CSL configurado del proyecto: viaja al ExportDocument (EPUB/Markdown). */
+  globalCsl: string | undefined;
   pdfWorkDir: string;
   htmlTemplatePath: string;
   latexTemplatePath: string;
@@ -673,7 +681,7 @@ async function processDocumentFormats(
     await emitLatexAndQueuePdf(doc, outputs, renderCtx, exportCtx, formatWorkSets);
   }
 
-  const exportDoc = assembleExportDocument(doc, renderCtx.lang, exportCtx.globalBibliography, undefined, ctx.siteConfig.toc);
+  const exportDoc = assembleExportDocument(doc, renderCtx.lang, exportCtx.globalBibliography, exportCtx.globalCsl, ctx.siteConfig.toc);
 
   if (activeFormats.html && formatWorkSets.htmlPaths.has(doc.relativePath)) {
     await emitHtmlPage(doc, outputs, renderCtx, exportCtx, discoveryIndex);
