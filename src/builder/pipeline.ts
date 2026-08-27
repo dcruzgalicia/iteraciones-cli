@@ -8,7 +8,7 @@ import { BuildError, translateSystemError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
 import { fmStringList, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
-import { mapWithConcurrency } from '../lib/run.js';
+import { killInFlightProcesses, mapWithConcurrency } from '../lib/run.js';
 import type { BuildMetadata, WorkSets } from './build-planner.js';
 import { htmlSlugFor } from './discover.js';
 import { assembleExportDocument } from './export/assemble.js';
@@ -344,11 +344,19 @@ async function runLightFormatsPool(
   const processed = new Set<string>();
   progress.startLightFormats();
   try {
-    await mapWithConcurrency(args.workDocList, ctx.concurrency, async (doc) => {
-      await processDocumentFormats(doc, renderCtx, exportCtx, formatWorkSets, discoveryIndex);
-      processed.add(doc.relativePath);
-      progress.reportFile({ relativePath: doc.relativePath, phase: 'render' });
-    });
+    await mapWithConcurrency(
+      args.workDocList,
+      ctx.concurrency,
+      async (doc) => {
+        await processDocumentFormats(doc, renderCtx, exportCtx, formatWorkSets, discoveryIndex);
+        processed.add(doc.relativePath);
+        progress.reportFile({ relativePath: doc.relativePath, phase: 'render' });
+      },
+      // Al fallar un documento: no más items nuevos y kill de los procesos
+      // en vuelo (pandoc/latexmk) para que ningún hermano escriba en dist/
+      // después del error (#2172).
+      { onCancel: () => killInFlightProcesses() },
+    );
   } catch (err) {
     await args.onFatalError();
     throw err;

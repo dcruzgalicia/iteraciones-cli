@@ -127,7 +127,31 @@ export async function exec(command: string, args: string[], options: RunOptions 
     throw new ProcessSpawnError(`No se encontró el comando "${command}". Verifica que esté instalado y disponible en PATH.`);
   }
   options.onSpawn?.(proc.pid);
+  inFlightPids.add(proc.pid);
+  try {
+    return await awaitProcess(command, proc, options);
+  } finally {
+    inFlightPids.delete(proc.pid);
+  }
+}
 
+/** Pids de procesos externos en vuelo de este proceso CLI (registro de exec()). */
+const inFlightPids = new Set<number>();
+
+/**
+ * Mata TODOS los procesos externos en vuelo (#2172). Se invoca cuando un
+ * documento falla en el pool 1: los hermanos en vuelo terminan al instante y
+ * dejan de escribir en dist/ después del error. Los pids vienen del registro
+ * de exec(), la única primitiva de spawn.
+ */
+export async function killInFlightProcesses(): Promise<void> {
+  const pids = [...inFlightPids];
+  await Promise.allSettled(pids.map((pid) => killProcessTree(pid)));
+  inFlightPids.clear();
+}
+
+/** Lectura de pipes, timeout y conversión a RunResult (extraído de exec()). */
+async function awaitProcess(command: string, proc: ReturnType<typeof Bun.spawn>, options: RunOptions): Promise<RunResult> {
   if (options.input !== undefined) {
     if (proc.stdin == null || typeof proc.stdin === 'number') {
       throw new Error(`No se pudo escribir stdin del comando "${command}".`);
@@ -169,28 +193,73 @@ export async function exec(command: string, args: string[], options: RunOptions 
   return { stdout, stderr, exitCode };
 }
 
+/** Opciones de cancelación de mapWithConcurrency. */
+export interface MapConcurrencyOptions {
+  /**
+   * Se invoca UNA vez al primer rechazo, antes de que los workers restantes
+   * terminen: mata los procesos en vuelo para que los items hermanos no
+   * sigan escribiendo después del error (#2172). Los errores del propio
+   * cancel se ignoran: el error original manda.
+   */
+  onCancel?: () => Promise<void> | void;
+}
+
 /**
  * Ejecuta `fn` sobre cada item con un máximo de `limit` promesas simultáneas.
  * Preserva el orden del array de resultados.
+ *
+ * Cancelación (#2172): al primer rechazo, los workers dejan de tomar items,
+ * se invoca `onCancel` una vez y se espera a que los en vuelo terminen antes
+ * de propagar el error original — nadie escribe después del throw.
  */
-export async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+export async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+  options: MapConcurrencyOptions = {},
+): Promise<R[]> {
   if (!Number.isInteger(limit) || limit < 1) {
     throw new Error(`mapWithConcurrency: limit debe ser un entero >= 1, recibido: ${limit}`);
   }
   const results: R[] = new Array(items.length);
   let nextIndex = 0;
+  let aborted = false;
+  let firstError: unknown = null;
+  let cancelStarted = false;
+
+  /** Registra el primer fallo y cancela el trabajo restante (una sola vez). */
+  const firstFailure = async (err: unknown): Promise<void> => {
+    if (firstError !== null) return;
+    firstError = err;
+    aborted = true;
+    if (options.onCancel && !cancelStarted) {
+      cancelStarted = true;
+      try {
+        await options.onCancel();
+      } catch {
+        // El cancel no enmascara el error original
+      }
+    }
+  };
 
   async function worker(): Promise<void> {
-    while (nextIndex < items.length) {
+    while (!aborted && nextIndex < items.length) {
       const index = nextIndex++;
       // Invariante del while: items[index] siempre existe (el guard es defensivo)
       const item = items[index];
       if (item === undefined) throw new Error(`mapWithConcurrency: item ${index} sin definir`);
-      results[index] = await fn(item);
+      try {
+        results[index] = await fn(item);
+      } catch (err) {
+        await firstFailure(err);
+        return; // el worker sale; el error se propaga una vez al final
+      }
     }
   }
 
   const workers = Array.from({ length: Math.min(limit, items.length) }, worker);
+  // Los workers ya no rechazan: capturan su error en firstError y salen
   await Promise.all(workers);
+  if (firstError !== null) throw firstError;
   return results;
 }
