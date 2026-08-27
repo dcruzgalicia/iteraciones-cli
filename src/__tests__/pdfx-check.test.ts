@@ -128,6 +128,49 @@ describe('runPdfxOutputValidation (fase final del build)', () => {
     });
   });
 
+  it('valida los PDFs anidados en subdirectorios de la salida', async () => {
+    await withTempDir(async (dir) => {
+      useIsolatedManagedBin(dir);
+      await initPdfxProject(dir);
+      await mkdir(join(dir, 'dist', 'files', 'capitulos'), { recursive: true });
+      // Un PDF en la raíz y otro anidado: el pipeline escribe los PDFs según
+      // la ruta del documento (pipeline.ts outBase), no solo en la raíz.
+      await writeFile(join(dir, 'dist', 'files', 'index.pdf'), '%PDF-1.4 fake', 'utf8');
+      await writeFile(join(dir, 'dist', 'files', 'capitulos', 'doc.pdf'), '%PDF-1.4 fake', 'utf8');
+      await writeFakeBinary(dir, '{"valid": true, "level": "PDF/X-1a:2001", "errors": [], "warnings": []}');
+      const config = await loadSiteConfig(dir);
+      const result = await runPdfxOutputValidation(join(dir, 'dist', 'files'), config, { allowBuild: false });
+      expect(result.validated).toBe(2);
+      expect(result.failed).toBe(0);
+      expect(result.summaryLine).toContain('Validación PDF/X-1a: 2 PDFs certifican PDF/X-1a');
+    });
+  });
+
+  it('reporta la ruta relativa del PDF anidado que no certifica', async () => {
+    await withTempDir(async (dir) => {
+      useIsolatedManagedBin(dir);
+      await initPdfxProject(dir);
+      await mkdir(join(dir, 'dist', 'files', 'capitulos'), { recursive: true });
+      await writeFile(join(dir, 'dist', 'files', 'capitulos', 'doc.pdf'), '%PDF-1.4 fake', 'utf8');
+      await writeFakeBinary(
+        dir,
+        '{"valid": false, "level": "PDF/X-1a:2001", "errors": [{"code":"MissingTrimBox","message":"falta TrimBox","page":0,"object_id":null,"clause":"6.1.1"}], "warnings": []}',
+      );
+      const config = await loadSiteConfig(dir);
+      const stderrSpy = spyStderr();
+      let output = '';
+      try {
+        const result = await runPdfxOutputValidation(join(dir, 'dist', 'files'), config, { allowBuild: false });
+        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+        expect(result).toEqual({ validated: 1, failed: 1, summaryLine: undefined });
+      } finally {
+        stderrSpy.mockRestore();
+      }
+      expect(output).toContain('capitulos/doc.pdf');
+      expect(output).toContain('MissingTrimBox');
+    });
+  });
+
   it('sin fallos de certificación confirma el éxito en la línea de resumen (issue #1960)', async () => {
     await withTempDir(async (dir) => {
       useIsolatedManagedBin(dir);
