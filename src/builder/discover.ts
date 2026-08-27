@@ -10,6 +10,7 @@ import { mapWithConcurrency } from '../lib/run.js';
 import { listMarkdownDocuments } from './gitignore.js';
 import { looseColonLines, looseColonsMessage, MISSING_TITLE_WARNING, validateFrontmatterFields } from './project-validator.js';
 import { resolveSlugs } from './slug-resolver.js';
+import type { FileCacheEntry } from './state-hash.js';
 import { cacheHitFor } from './state-hash.js';
 import {
   type BibFileCache,
@@ -34,6 +35,36 @@ interface DiscoverResult {
   /** Archivos cuyo slug cambio (relativePath -> slug anterior). */
   slugChangedEntries: Map<string, string>;
 }
+
+/** Hashes de invalidación calculados por el orchestrator, guardados en state.json. */
+interface DiscoverMeta {
+  filtersHash: string;
+  filterFileCache: FilterFileCache;
+  configHashes: Record<string, string>;
+  configFileCache?: Record<string, FileCacheEntry>;
+  bibHash: string;
+  bibFileCache: BibFileCache;
+}
+
+interface DiscoverOptions {
+  full?: boolean;
+  activeFormats?: string[];
+  /** Estado previo explícito: loadPrevState(cwd) o noPrevState() — sin tri-state (#2023). */
+  prevState: BuildState | null;
+  /** Directorio de salida del build actual (se persiste para el comando info). */
+  outputDir?: string;
+  /** Hashes de invalidación calculados por el orchestrator, guardados en state.json. */
+  meta?: DiscoverMeta;
+}
+
+/**
+ * Decisión content-addressed para un documento: reprocesarlo o saltarlo.
+ * `text` reutiliza la lectura hecha durante la resolución del caso ambiguo.
+ */
+type CacheDecision = { process: false } | { process: true; text: string | null };
+
+/** Problema acumulado de frontmatter, con su clase real. */
+type FrontmatterIssue = { file: string; error: string; kind: 'syntax' | 'field' };
 
 /**
  * Convierte un texto a slug URL-safe. Usa la librería slugify (con `strict`
@@ -109,31 +140,290 @@ export function noPrevState(): BuildState | null {
   return null;
 }
 
-export async function discover(
-  cwd: string,
-  options: {
-    full?: boolean;
-    activeFormats?: string[];
-    /** Estado previo explícito: loadPrevState(cwd) o noPrevState() — sin tri-state (#2023). */
-    prevState: BuildState | null;
-    /** Directorio de salida del build actual (se persiste para el comando info). */
-    outputDir?: string;
-    /** Hashes de invalidación calculados por el orchestrator, guardados en state.json. */
-    meta?: {
-      filtersHash: string;
-      filterFileCache: FilterFileCache;
-      configHashes: Record<string, string>;
-      configFileCache?: Record<string, import('./state-hash.js').FileCacheEntry>;
-      bibHash: string;
-      bibFileCache: BibFileCache;
-    };
-  },
-): Promise<DiscoverResultAndPending> {
-  const relativePaths: string[] = [];
+/**
+ * Decisión única de caché (#2020) para un documento, dado su stat actual:
+ *   mtime y size iguales al caché  → skip (sin leer, sin hash)
+ *   size distinto                  → process (sin leer todavía)
+ *   mtime distinto con size igual  → leer + sha256:
+ *     hash igual → touch: actualizar mtime en la entrada y skip
+ *     hash distinto → process reutilizando la lectura hecha
+ */
+async function resolveCacheDecision(cached: DiscoveryEntry | undefined, filePath: string, mtime: number, size: number): Promise<CacheDecision> {
+  if (cached === undefined || cached.mtime === undefined || cached.size === undefined || cached.hash === undefined) {
+    return { process: true, text: null };
+  }
+  if (cacheHitFor({ mtime: cached.mtime, size: cached.size, hash: cached.hash }, mtime, size) !== null) {
+    return { process: false };
+  }
+  if (size !== cached.size) {
+    // CHANGED: el tamaño cambió → no hace falta hash
+    return { process: true, text: null };
+  }
+  // AMBIGUO: mtime cambió pero el tamaño es igual → leer + sha256
+  const text = await Bun.file(filePath).text();
+  if (hashString(text) === cached.hash) {
+    // Fue un touch (o una copia con el mismo contenido): sin reprocesar;
+    // se actualiza el mtime para revalidar la próxima decisión.
+    cached.mtime = mtime;
+    return { process: false };
+  }
+  return { process: true, text };
+}
 
+/** Estadísticas actuales del documento; errores de lectura con hint de ENOENT. */
+async function statDocument(cwd: string, relativePath: string): Promise<{ mtime: number; size: number }> {
+  try {
+    const stat = await Bun.file(join(cwd, relativePath)).stat();
+    return { mtime: Math.round(stat.mtimeMs), size: stat.size };
+  } catch (err) {
+    // Con hint de ENOENT: al leer un documento del usuario el motivo común
+    // es un nombre mal escrito o un archivo que nunca existió.
+    throw new BuildError(`Error al leer "${relativePath}": ${translateSystemError(err, 'verifica que el nombre del archivo sea correcto')}`);
+  }
+}
+
+/** Datos normalizados de frontmatter tras procesar un documento cambiado. */
+interface IngestedFrontmatter {
+  title: string;
+  subtitle: string | undefined;
+  date: string | undefined;
+  creator: string[];
+  manualSlug: string | undefined;
+  fm: Record<string, unknown> | undefined;
+}
+
+/** Datos normalizados de un objeto frontmatter válido. */
+interface NormalizedRecord extends Omit<IngestedFrontmatter, 'fm'> {
+  rawTitle: unknown;
+}
+
+/**
+ * Normaliza el record ya parseado: checks compartidos con validate (módulo
+ * project-validator) — errores de tipos/slug acumulados aquí como 'field',
+ * warnings emitidos igual que validate — y extracción tipada de campos.
+ */
+function normalizeFrontmatterRecord(record: Record<string, unknown>, relativePath: string, issues: FrontmatterIssue[]): NormalizedRecord {
+  // Checks compartidos con validate (módulo project-validator): los
+  // errores de tipos y de slug manual abortan el build igual que
+  // validate; los warnings (date no ISO, campos ignorados) se
+  // muestran en ambos comandos sin romper.
+  for (const issue of validateFrontmatterFields(record)) {
+    if (issue.severity === 'error') {
+      issues.push({ file: relativePath, error: issue.message, kind: 'field' });
+    } else {
+      logWarning(`${relativePath}: ${issue.message}`, 'discover');
+    }
+  }
+  const rawTitle = record.title;
+  return {
+    title: typeof rawTitle === 'string' ? rawTitle : '',
+    subtitle: fmTrimmedString(record.subtitle),
+    date: fmTrimmedString(record.date),
+    creator: parseAuthors(record.creator),
+    manualSlug: fmTrimmedString(record.slug),
+    rawTitle,
+  };
+}
+
+/**
+ * Normaliza y valida el frontmatter de un documento cambiado: parseo YAML,
+ * checks compartidos con validate (errores acumulados, warnings emitidos),
+ * líneas de ":" sueltas y título ausente. Preserva mensajes y orden exactos.
+ */
+/** ¿Documento sin título efectivo? Misma condición que valida validate. */
+function lacksTitle(normalized: NormalizedRecord | undefined, title: string): boolean {
+  return !title && (!normalized || normalized.rawTitle === undefined || normalized.rawTitle === '');
+}
+
+function ingestFrontmatter(relativePath: string, text: string, issues: FrontmatterIssue[]): IngestedFrontmatter {
+  const { yaml, body } = splitFrontmatter(text);
+  let normalized: NormalizedRecord | undefined;
+  let fm: Record<string, unknown> | undefined;
+
+  try {
+    if (yaml) {
+      const yamlResult = parseYamlWithPosition(yaml);
+      if (yamlResult.error) throw new Error(yamlResult.error);
+      const parsed = yamlResult.value;
+      if (parsed && Array.isArray(parsed)) {
+        // Mismo criterio que validate: el frontmatter debe ser un objeto.
+        issues.push({ file: relativePath, error: 'frontmatter YAML inválido: debe ser un objeto', kind: 'syntax' });
+      } else if (parsed && typeof parsed === 'object') {
+        fm = parsed as Record<string, unknown>;
+        normalized = normalizeFrontmatterRecord(fm, relativePath, issues);
+      }
+    }
+  } catch (err) {
+    issues.push({ file: relativePath, error: formatUserError(err), kind: 'syntax' });
+  }
+
+  // Líneas de ":" sueltas en el cuerpo: warning compartido con validate
+  // (módulo project-validator), emitido solo para documentos reprocesados.
+  // El offset suma las líneas del frontmatter (el número apunta al archivo).
+  const lineOffset = text.slice(0, text.length - body.length).split('\n').length - 1;
+  const looseColons = looseColonLines(body, lineOffset);
+  if (looseColons.length > 0) {
+    logWarning(`${relativePath}: ${looseColonsMessage(looseColons)}`, 'discover');
+  }
+
+  const title = normalized?.title ?? '';
+  if (lacksTitle(normalized, title)) {
+    // Documento sin título: warning compartido con validate (el pipeline
+    // usa "Sin título" como fallback en todos los formatos).
+    logWarning(`${relativePath}: ${MISSING_TITLE_WARNING.message}`, 'discover');
+  }
+
+  return {
+    title,
+    subtitle: normalized?.subtitle,
+    date: normalized?.date,
+    creator: normalized?.creator ?? [],
+    manualSlug: normalized?.manualSlug,
+    fm,
+  };
+}
+
+/** Lee el contenido si aún no se tiene; errores de lectura idénticos a stat. */
+async function readDocumentText(filePath: string, relativePath: string, pending: string | null): Promise<string> {
+  if (pending !== null) return pending;
+  try {
+    return await Bun.file(filePath).text();
+  } catch (err) {
+    throw new BuildError(`Error al leer "${relativePath}": ${translateSystemError(err, 'verifica que el nombre del archivo sea correcto')}`);
+  }
+}
+
+/**
+ * Procesa un documento modificado: hashing, ingest de frontmatter y registro
+ * en el índice. El slug anterior se preserva SIN aplicar manualSlug:
+ * resolveSlugs compara el slug final contra este valor para registrar
+ * cambios — sobrescribirlo aquí hacía que los cambios de slug manual nunca
+ * se registraran y dejaran huérfanos en dist (#2012).
+ */
+async function ingestChangedDocument(args: {
+  cwd: string;
+  relativePath: string;
+  filePath: string;
+  mtime: number;
+  size: number;
+  cachedSlug: string | undefined;
+  decisionText: string | null;
+  index: Map<string, DiscoveryEntry>;
+  issues: FrontmatterIssue[];
+}): Promise<void> {
+  const { relativePath, filePath, mtime, size, decisionText } = args;
+  const text = await readDocumentText(filePath, relativePath, decisionText);
+  const ingested = ingestFrontmatter(relativePath, text, args.issues);
+  args.index.set(relativePath, {
+    ...ingested,
+    mtime,
+    size,
+    hash: hashString(text),
+    slug: args.cachedSlug,
+  });
+}
+
+/**
+ * Detecta documentos eliminados y captura sus entradas antes de borrarlas.
+ * Retorna las claves removidas (ya marcadas como changedPaths) y sus datos.
+ */
+function takeDeletedEntries(
+  index: Map<string, DiscoveryEntry>,
+  currentSet: Set<string>,
+): { entries: Map<string, DiscoveryEntry>; removed: string[] } {
+  const entries = new Map<string, DiscoveryEntry>();
+  const removed: string[] = [];
+  for (const key of index.keys()) {
+    if (!currentSet.has(key)) {
+      const entry = index.get(key);
+      if (entry) entries.set(key, entry); // entry now has slug!
+      removed.push(key);
+    }
+  }
+  for (const key of removed) index.delete(key);
+  return { entries, removed };
+}
+
+/**
+ * Frontmatter inválido: error de build (no publicar degradado). El rótulo
+ * distingue la clase real: "YAML inválido" solo para problemas de sintaxis;
+ * los errores de validación de campos (tipos, slug) no son un problema de
+ * YAML. Con ambas clases se emite un bloque por cada una.
+ */
+function throwIfInvalidFrontmatter(issues: FrontmatterIssue[]): void {
+  if (issues.length === 0) return;
+  const blocks: string[] = [];
+  for (const kind of ['syntax', 'field'] as const) {
+    const byKind = issues.filter((e) => e.kind === kind);
+    if (byKind.length === 0) continue;
+    const label = kind === 'syntax' ? 'frontmatter YAML inválido' : 'frontmatter inválido';
+    const msg = byKind.map((e) => `  ${e.file}: ${e.error}`).join('\n');
+    blocks.push(`${label} en ${plural(byKind.length, 'documento')}:\n${msg}`);
+  }
+  // El código estructural marca SOLO presencia de problemas de sintaxis:
+  // es lo que la CLI usa para sugerir validate (los errores de campos ya
+  // muestran su detalle completo en el mensaje).
+  const hasSyntax = issues.some((e) => e.kind === 'syntax');
+  throw new BuildError(blocks.join('\n'), hasSyntax ? BUILD_ERROR_CODES.frontmatterSyntax : undefined);
+}
+
+/** ¿Cambió algo que exija persistir estado? Cambios de docs o de hashes de invalidación (#2025). */
+function stateHasChanged(useCache: boolean, prevState: BuildState | null, options: DiscoverOptions, anyDocChanges: boolean): boolean {
+  return (
+    anyDocChanges ||
+    !useCache ||
+    options.outputDir !== prevState?.outputDir ||
+    options.meta?.filtersHash !== prevState?.filtersHash ||
+    JSON.stringify(options.meta?.filterFileCache) !== JSON.stringify(prevState?.filterFileCache) ||
+    JSON.stringify(options.meta?.configHashes) !== JSON.stringify(prevState?.configHashes) ||
+    options.meta?.bibHash !== prevState?.bibHash ||
+    JSON.stringify(options.meta?.bibFileCache) !== JSON.stringify(prevState?.bibFileCache)
+  );
+}
+
+/** Estado pendiente (#2025): discovery NO escribe; el cierre común persiste UNA vez (persistCompletedState). */
+function computePendingState(
+  useCache: boolean,
+  prevState: BuildState | null,
+  startedAt: number,
+  discoveryIndex: Map<string, DiscoveryEntry>,
+  options: DiscoverOptions,
+  anyDocChanges: boolean,
+): BuildState | null {
+  // Pendiente solo si hubo cambios (nuevos/modificados/eliminados o hashes
+  // de invalidación); sin pendiente, el estado en disco ya está completo y vigente.
+  if (!stateHasChanged(useCache, prevState, options, anyDocChanges)) return null;
+  return {
+    schemaVersion: STATE_SCHEMA_VERSION,
+    startedAt,
+    activeFormats: options.activeFormats ?? [],
+    outputDir: options.outputDir,
+    entries: discoveryIndex,
+    filtersHash: options.meta?.filtersHash,
+    filterFileCache: options.meta?.filterFileCache,
+    configHashes: options.meta?.configHashes,
+    configFileCache: options.meta?.configFileCache,
+    bibHash: options.meta?.bibHash,
+    bibFileCache: options.meta?.bibFileCache,
+  };
+}
+
+/**
+ * Fase 1 — discover: detecta cambios y actualiza el estado del build.
+ * Si se proporciona prevState (desde orchestrator), evita la segunda
+ * lectura de state.json.
+ *
+ * Detección de cambios content-addressed (por archivo):
+ *   mtime y size iguales al caché  → unchanged (sin leer, sin hash)
+ *   size distinto                  → changed (no hace falta hash)
+ *   mtime distinto con size igual  → leer + sha256
+ *     hash igual al caché          → unchanged (fue un touch) → actualizar mtime
+ *     hash distinto                → changed
+ */
+export async function discover(cwd: string, options: DiscoverOptions): Promise<DiscoverResultAndPending> {
   // Respetar .gitignore y directorios ignorados: descubrimiento compartido
   // con validate y doctor (única fuente de exclusión de documentos).
-  relativePaths.push(...(await listMarkdownDocuments(cwd)));
+  const relativePaths = await listMarkdownDocuments(cwd);
 
   const useCache = !options.full;
   const prevState = options.prevState;
@@ -144,189 +434,40 @@ export async function discover(
   const recentFiles: string[] = [];
   // Dedup de avisos de diacríticos por build (#2090): una vez por title+slug.
   const slugWarningsSeen = new Set<string>();
-  const deletedFiles: string[] = [];
-  const slugChangedEntries = new Map<string, string>();
   // Acumulador de problemas de frontmatter con su clase: 'syntax' (YAML
-  // inválido) o 'field' (validación de campos). El nombre refleja ambas
-  // clases; antes se llamaba frontmatterErrors y solo describía la primera.
-  const frontmatterIssues: Array<{ file: string; error: string; kind: 'syntax' | 'field' }> = [];
+  // inválido) o 'field' (validación de campos).
+  const frontmatterIssues: FrontmatterIssue[] = [];
 
   const thisBuildStartedAt = Date.now();
 
   // Detectar cambios por archivo con caché content-addressed (mtime+size+hash)
   const FILE_IO_CONCURRENCY = Math.max(1, cpus().length - 1);
   await mapWithConcurrency(relativePaths, FILE_IO_CONCURRENCY, async (relativePath) => {
-    const filePath = join(cwd, relativePath);
-    let mtimeMs: number;
-    let size: number;
-    try {
-      const stat = await Bun.file(filePath).stat();
-      mtimeMs = stat.mtimeMs;
-      size = stat.size;
-    } catch (err) {
-      // Con hint de ENOENT: al leer un documento del usuario el motivo común
-      // es un nombre mal escrito o un archivo que nunca existió.
-      throw new BuildError(`Error al leer "${relativePath}": ${translateSystemError(err, 'verifica que el nombre del archivo sea correcto')}`);
-    }
-    const mtime = Math.round(mtimeMs);
+    const { mtime, size } = await statDocument(cwd, relativePath);
     const cached = useCache ? discoveryIndex.get(relativePath) : undefined;
-    const cacheValid = cached !== undefined && cached.mtime !== undefined && cached.size !== undefined && cached.hash !== undefined;
+    const decision = await resolveCacheDecision(cached, join(cwd, relativePath), mtime, size);
+    if (!decision.process) return; // Archivos sin cambios: conservan su entrada en discoveryIndex
 
-    let needsProcessing = !cacheValid;
-    let text: string | null = null;
-
-    if (cacheValid) {
-      // Decisión única de caché (#2020): mismo mtime y tamaño → UNCHANGED
-      // (sin leer, sin hash: ~stat puro). El caso ambiguo (mtime distinto,
-      // size igual) conserva su manejo especial abajo: releer y hashear para
-      // detectar touches sin reprocesar.
-      if (cacheHitFor({ mtime: cached.mtime as number, size: cached.size as number, hash: cached.hash as string }, mtime, size) !== null) {
-        needsProcessing = false;
-      } else if (size !== cached.size) {
-        // CHANGED: el tamaño cambió → no hace falta hash
-        needsProcessing = true;
-      } else {
-        // AMBIGUO: mtime cambió pero el tamaño es igual → leer + sha256
-        text = await Bun.file(filePath).text();
-        if (hashString(text) === cached.hash) {
-          // Fue un touch (o una copia con el mismo contenido): sin reprocesar
-          needsProcessing = false;
-          cached.mtime = mtime;
-        } else {
-          needsProcessing = true;
-        }
-      }
-    }
-
-    if (needsProcessing) {
-      changedPaths.add(relativePath);
-      recentFiles.push(relativePath);
-
-      // Leer contenido (una sola vez) para hash + frontmatter
-      if (text === null) {
-        try {
-          text = await Bun.file(filePath).text();
-        } catch (err) {
-          throw new BuildError(`Error al leer "${relativePath}": ${translateSystemError(err, 'verifica que el nombre del archivo sea correcto')}`);
-        }
-      }
-      const hash = hashString(text);
-
-      // Read YAML frontmatter
-      let title = '',
-        subtitle: string | undefined,
-        date: string | undefined,
-        creators: string[] = [],
-        manualSlug: string | undefined,
-        rawTitle: unknown,
-        fm: Record<string, unknown> | undefined;
-      const { yaml, body } = splitFrontmatter(text);
-      try {
-        if (yaml) {
-          const yamlResult = parseYamlWithPosition(yaml);
-          if (yamlResult.error) throw new Error(yamlResult.error);
-          const parsed = yamlResult.value;
-          if (parsed && Array.isArray(parsed)) {
-            // Mismo criterio que validate: el frontmatter debe ser un objeto.
-            frontmatterIssues.push({ file: relativePath, error: 'frontmatter YAML inválido: debe ser un objeto', kind: 'syntax' });
-          } else if (parsed && typeof parsed === 'object') {
-            const record = parsed as Record<string, unknown>;
-            fm = record;
-            rawTitle = record.title;
-            // Checks compartidos con validate (módulo project-validator): los
-            // errores de tipos y de slug manual abortan el build igual que
-            // validate; los warnings (date no ISO, campos ignorados) se
-            // muestran en ambos comandos sin romper.
-            for (const issue of validateFrontmatterFields(record)) {
-              if (issue.severity === 'error') {
-                frontmatterIssues.push({ file: relativePath, error: issue.message, kind: 'field' });
-              } else {
-                logWarning(`${relativePath}: ${issue.message}`, 'discover');
-              }
-            }
-            title = typeof rawTitle === 'string' ? rawTitle : '';
-            subtitle = fmTrimmedString(record.subtitle);
-            date = fmTrimmedString(record.date);
-            creators = parseAuthors(record.creator);
-            manualSlug = fmTrimmedString(record.slug);
-          }
-        }
-      } catch (err) {
-        frontmatterIssues.push({ file: relativePath, error: formatUserError(err), kind: 'syntax' });
-      }
-
-      // Líneas de ":" sueltas en el cuerpo: warning compartido con validate
-      // (módulo project-validator), emitido solo para documentos reprocesados.
-      // El offset suma las líneas del frontmatter (el número apunta al archivo).
-      const lineOffset = text.slice(0, text.length - body.length).split('\n').length - 1;
-      const looseColons = looseColonLines(body, lineOffset);
-      if (looseColons.length > 0) {
-        logWarning(`${relativePath}: ${looseColonsMessage(looseColons)}`, 'discover');
-      }
-
-      if (!title && (rawTitle === undefined || rawTitle === '')) {
-        // Documento sin título: warning compartido con validate (el pipeline
-        // usa "Sin título" como fallback en todos los formatos).
-        logWarning(`${relativePath}: ${MISSING_TITLE_WARNING.message}`, 'discover');
-      }
-
-      // Store base data (slug resolution happens later, after all files are processed)
-      // Preservar el slug anterior SIN aplicarle el manualSlug: resolveSlugs
-      // compara el slug final contra este valor para registrar cambios —
-      // sobrescribirlo aquí con manualSlug hacía que los cambios de slug
-      // manual nunca se registraran y dejaran huérfanos en dist (#2012).
-      const prevSlug = discoveryIndex.get(relativePath)?.slug;
-      discoveryIndex.set(relativePath, {
-        title,
-        subtitle,
-        creator: creators,
-        date,
-        fm,
-        mtime,
-        size,
-        hash,
-        slug: prevSlug,
-        manualSlug,
-      });
-    }
-    // Archivos sin cambios: conservan su entrada en discoveryIndex
+    changedPaths.add(relativePath);
+    recentFiles.push(relativePath);
+    await ingestChangedDocument({
+      cwd,
+      relativePath,
+      filePath: join(cwd, relativePath),
+      mtime,
+      size,
+      cachedSlug: discoveryIndex.get(relativePath)?.slug,
+      decisionText: decision.text,
+      index: discoveryIndex,
+      issues: frontmatterIssues,
+    });
   });
 
-  // Detectar eliminados y capturar sus datos antes de borrarlos
-  const deletedEntries = new Map<string, DiscoveryEntry>();
-  for (const key of discoveryIndex.keys()) {
-    if (!currentSet.has(key)) {
-      changedPaths.add(key);
-      deletedFiles.push(key);
-      const entry = discoveryIndex.get(key);
-      if (entry) deletedEntries.set(key, entry); // entry now has slug!
-    }
-  }
+  // Detectar eliminados y capturar sus datos antes de borrarlos del índice
+  const { entries: deletedEntries, removed: deletedFiles } = takeDeletedEntries(discoveryIndex, currentSet);
+  for (const key of deletedFiles) changedPaths.add(key);
 
-  // Limpiar discoveryIndex de archivos eliminados
-  for (const p of deletedFiles) {
-    discoveryIndex.delete(p);
-  }
-
-  // Frontmatter inválido: error de build (no publicar degradado). El rótulo
-  // distingue la clase real: "YAML inválido" solo para problemas de sintaxis;
-  // los errores de validación de campos (tipos, slug) no son un problema de
-  // YAML. Con ambas clases se emite un bloque por cada una.
-  if (frontmatterIssues.length > 0) {
-    const blocks: string[] = [];
-    for (const kind of ['syntax', 'field'] as const) {
-      const issues = frontmatterIssues.filter((e) => e.kind === kind);
-      if (issues.length === 0) continue;
-      const label = kind === 'syntax' ? 'frontmatter YAML inválido' : 'frontmatter inválido';
-      const msg = issues.map((e) => `  ${e.file}: ${e.error}`).join('\n');
-      blocks.push(`${label} en ${plural(issues.length, 'documento')}:\n${msg}`);
-    }
-    // El código estructural marca SOLO presencia de problemas de sintaxis:
-    // es lo que la CLI usa para sugerir validate (los errores de campos ya
-    // muestran su detalle completo en el mensaje).
-    const hasSyntax = frontmatterIssues.some((e) => e.kind === 'syntax');
-    throw new BuildError(blocks.join('\n'), hasSyntax ? BUILD_ERROR_CODES.frontmatterSyntax : undefined);
-  }
+  throwIfInvalidFrontmatter(frontmatterIssues);
 
   // Resolver slugs via slug-resolver
   const slugResult = resolveSlugs(discoveryIndex, (meta, opts) => {
@@ -342,41 +483,13 @@ export async function discover(
     }
     return slug;
   });
-  for (const [path, oldSlug] of slugResult.slugChangedEntries) slugChangedEntries.set(path, oldSlug);
+  const slugChangedEntries = new Map<string, string>(slugResult.slugChangedEntries);
   for (const path of slugResult.changedPaths) changedPaths.add(path);
   for (const path of slugResult.newRecentFiles) {
     if (!recentFiles.includes(path)) recentFiles.push(path);
   }
 
-  // Estado pendiente (#2025): discovery NO escribe; el cierre común del
-  // orquestador persiste UNA vez (persistCompletedState). Pendiente solo si
-  // hubo cambios (nuevos/modificados/eliminados o hashes de invalidación);
-  // sin pendiente, el estado en disco ya está completo y vigente.
-  const hasChanged =
-    changedPaths.size > 0 ||
-    !useCache ||
-    options.outputDir !== prevState?.outputDir ||
-    options.meta?.filtersHash !== prevState?.filtersHash ||
-    JSON.stringify(options.meta?.filterFileCache) !== JSON.stringify(prevState?.filterFileCache) ||
-    JSON.stringify(options.meta?.configHashes) !== JSON.stringify(prevState?.configHashes) ||
-    options.meta?.bibHash !== prevState?.bibHash ||
-    JSON.stringify(options.meta?.bibFileCache) !== JSON.stringify(prevState?.bibFileCache);
-
-  const pendingState: BuildState | null = hasChanged
-    ? {
-        schemaVersion: STATE_SCHEMA_VERSION,
-        startedAt: thisBuildStartedAt,
-        activeFormats: options.activeFormats ?? [],
-        outputDir: options.outputDir,
-        entries: discoveryIndex,
-        filtersHash: options.meta?.filtersHash,
-        filterFileCache: options.meta?.filterFileCache,
-        configHashes: options.meta?.configHashes,
-        configFileCache: options.meta?.configFileCache,
-        bibHash: options.meta?.bibHash,
-        bibFileCache: options.meta?.bibFileCache,
-      }
-    : null;
+  const pendingState = computePendingState(useCache, prevState, thisBuildStartedAt, discoveryIndex, options, changedPaths.size > 0);
 
   return { relativePaths, changedPaths, discoveryIndex, deletedEntries, slugChangedEntries, pendingState };
 }
