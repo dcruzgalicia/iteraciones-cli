@@ -10,7 +10,7 @@ import ignore from 'ignore';
  * Alcance: solo el .gitignore de la raíz del proyecto.
  */
 
-export interface GitignoreRule {
+interface GitignoreRule {
   /** Patrón limpio (sin !, sin / final, sin / inicial). */
   pattern: string;
   /** true si la regla comienza con ! (re-incluye). */
@@ -37,7 +37,7 @@ const MATCHER_KEY = '__gitignoreMatcher';
  *   - '/' inicial o presencia de '/' interna → anclada a la raíz
  *   - '/' final → solo directorios
  */
-export function parseGitignoreLine(rawLine: string): GitignoreRule | undefined {
+function parseGitignoreLine(rawLine: string): GitignoreRule | undefined {
   let line = rawLine.trimEnd();
   if (!line || line.startsWith('#')) return undefined;
 
@@ -120,7 +120,7 @@ export async function loadGitignoreRules(cwd: string): Promise<GitignoreRule[]> 
  * profundidad (como git): dependencias, metadatos de git, salidas y caché.
  * Los directorios ocultos (prefijo .) los omite Bun.Glob por sí mismo.
  */
-export const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', '.iteraciones']);
+const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', '.iteraciones']);
 
 /**
  * Retorna true si algún segmento del path relativo es un directorio ignorado

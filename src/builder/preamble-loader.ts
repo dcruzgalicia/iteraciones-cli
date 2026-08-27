@@ -39,7 +39,7 @@ export interface PreambleFilter {
   content: string;
 }
 
-export interface PreambleFilterInfo {
+interface PreambleFilterInfo {
   name: string;
   description: string;
 }
@@ -131,7 +131,7 @@ export function validateDisabledPreambleFilters(disabled: string[] | undefined):
 }
 
 /** Resultado de la validación de dependencias entre preamble filters. */
-export type PreambleDependencyIssue = { severity: 'error' | 'warning'; message: string };
+type PreambleDependencyIssue = { severity: 'error' | 'warning'; message: string };
 
 /**
  * Valida las dependencias entre preamble filters para una disabled list:

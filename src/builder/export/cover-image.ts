@@ -8,7 +8,7 @@ import { exec, mapWithConcurrency } from '../../lib/run.js';
 const COVER_TIMEOUT_MS = 30_000;
 
 /** Entrada de portada: el PDF ya publicado y dónde escribir su imagen. */
-export interface CoverImageEntry {
+interface CoverImageEntry {
   pdfPath: string;
   pngPath: string;
 }

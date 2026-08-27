@@ -5,7 +5,7 @@ export const DEFAULT_HTML_BLOCKS = ['header', 'contenido', 'formatos', 'indice',
 
 export type HtmlBlockKey = (typeof DEFAULT_HTML_BLOCKS)[number];
 
-export interface HtmlSiteConfig {
+interface HtmlSiteConfig {
   /** Título del sitio. Se usa en el <title> de cada página HTML. */
   title?: string;
   /** Descripción/tagline del sitio. */

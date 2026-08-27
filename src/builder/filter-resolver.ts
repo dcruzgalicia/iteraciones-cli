@@ -187,7 +187,7 @@ export async function loadFilterGroups(siteConfig: SiteConfig, disabledList?: st
 }
 
 /** Información de un filtro Lua built-in para el CLI. */
-export interface LuaFilterInfo {
+interface LuaFilterInfo {
   name: string;
   description: string;
 }

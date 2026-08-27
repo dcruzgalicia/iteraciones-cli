@@ -23,11 +23,11 @@ import type { FormatState, PipelinePhase } from '../builder/types.js';
 
 export type { FormatState, PipelinePhase };
 
-export interface PhaseMeta {
+interface PhaseMeta {
   label: string;
 }
 
-export const PHASE_META: Record<PipelinePhase, PhaseMeta> = {
+const PHASE_META: Record<PipelinePhase, PhaseMeta> = {
   discovery: { label: 'Documentos encontrados' },
   render: { label: 'Renderizando contenido' },
   latex: { label: 'LaTeX' },
@@ -38,9 +38,9 @@ export const PHASE_META: Record<PipelinePhase, PhaseMeta> = {
 };
 
 /** Formatos ligeros generados dentro del pool 1 del pipeline (no fase separada). */
-export const LIGHT_FORMAT_PHASES: PipelinePhase[] = ['latex', 'html', 'epub', 'markdown'];
+const LIGHT_FORMAT_PHASES: PipelinePhase[] = ['latex', 'html', 'epub', 'markdown'];
 
-export type RowStatus = 'pending' | 'active' | 'done' | 'skipped' | 'failed';
+type RowStatus = 'pending' | 'active' | 'done' | 'skipped' | 'failed';
 
 export interface RowState {
   key: string;

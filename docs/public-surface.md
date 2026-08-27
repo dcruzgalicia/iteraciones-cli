@@ -41,6 +41,17 @@ Globales: `--version`, `--project-root <path>` (antes o después del subcomando)
 
 Bundle portable junto al `.tex` de dist (ADR #2084): imágenes `<slug>-<base>.jpg` namespaced, referencias relativas por filename.
 
+## API programática
+
+Consumo del builder como módulo (demo de referencia: `tools/headless-demo.ts`):
+
+- `build(options, reporter?) → Promise<BuildSummary>` (`src/builder/orchestrator.ts`) — única puerta de entrada. `BuildSummary` es el contrato tipado del resultado.
+- Eventos del reporter: ver `BuildReporter` (`src/builder/types.ts`) — `setFormats`, `planPhases`, `startPhase`, `reportFile`, `completePhase`.
+
+El resto de exports internos del paquete NO son superficie: los símbolos privados
+pueden cambiar sin salto mayor (triaje #2137; 30 huérfanos des-exportados,
+queda solo lo listado aquí).
+
 ## Estado interno
 
 `.iteraciones/state.json` — `schemaVersion` actual: ver `STATE_SCHEMA_VERSION` (`state-serialize.ts`). Campos documentados en architecture.md §estado.

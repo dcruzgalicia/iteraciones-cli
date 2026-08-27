@@ -18,7 +18,7 @@ export interface DiscoveryEntry {
   hash?: string;
 }
 
-export interface Frontmatter {
+interface Frontmatter {
   title: string;
   subtitle?: string;
   date: string;

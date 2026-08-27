@@ -6,8 +6,6 @@ import { plural } from '../lib/plural.js';
 import { formatTime, TrackerRenderer } from './progress-render.js';
 import { type FormatState, type PipelinePhase, TrackerState } from './progress-state.js';
 
-export type { FormatState, PipelinePhase, RowState, RowStatus } from './progress-state.js';
-
 /** Ancho mínimo para la columna de etiquetas en el resumen final. */
 const LABEL_WIDTH = 30;
 
