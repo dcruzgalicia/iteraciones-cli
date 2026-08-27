@@ -14,12 +14,16 @@ import { mkdir } from 'node:fs/promises';
 import { basename, isAbsolute, join, resolve } from 'node:path';
 import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
+import { exec, ProcessSpawnError, ProcessTimeoutError } from '../lib/run.js';
 
 /** Conversión mm → px a 300 DPI: 300px / 25.4mm ≈ 11.811. */
 const MM_TO_PX_300DPI = 300 / 25.4;
 
 /** Flag memoizado de ImageMagick v7. null = no verificado. */
 let magickAvailable: boolean | null = null;
+
+/** Tiempo máximo de una conversión ImageMagick (imágenes de libros: segundos, no minutos). */
+const MAGICK_TIMEOUT_MS = 120_000;
 
 /**
  * Detecta si ImageMagick v7 (`magick`) está disponible en el PATH.
@@ -92,7 +96,7 @@ export async function processImage(inputPath: string, targetWmm: number, targetH
   }
 
   const isSvg = inputPath.toLowerCase().endsWith('.svg');
-  const args = ['magick'];
+  const args: string[] = [];
 
   // Para SVGs: -density ANTES del input para rasterizar a 300dpi
   if (isSvg) {
@@ -110,11 +114,27 @@ export async function processImage(inputPath: string, targetWmm: number, targetH
   args.push('-density', '300', '-units', 'PixelsPerInch');
   args.push('-colorspace', 'Gray', '-quality', '100', '-background', 'white', '-flatten', outPath);
 
-  const proc = Bun.spawn(args, { stdout: 'ignore', stderr: 'pipe' });
-  const exitCode = await proc.exited;
-  if (exitCode !== 0) {
-    const stderr = await new Response(proc.stderr).text();
-    logWarning(`ImageMagick falló al procesar "${basename(inputPath)}": ${stderr.trim()}`, 'images');
+  // exec() añade timeout con kill de árbol (#2169): un magick colgado
+  // (imágenes gigantes, delegados externos) no cuelga el build para siempre.
+  let result: Awaited<ReturnType<typeof exec>>;
+  try {
+    result = await exec('magick', args, { timeoutMs: MAGICK_TIMEOUT_MS });
+  } catch (err) {
+    if (err instanceof ProcessSpawnError) {
+      logWarning(`ImageMagick no está disponible: se omite el preproceso de "${basename(inputPath)}"`, 'images');
+      return inputPath;
+    }
+    if (err instanceof ProcessTimeoutError) {
+      logWarning(
+        `ImageMagick no terminó en ${MAGICK_TIMEOUT_MS / 1000}s y fue terminado: se usa la imagen original "${basename(inputPath)}"`,
+        'images',
+      );
+      return inputPath;
+    }
+    throw err;
+  }
+  if (result.exitCode !== 0) {
+    logWarning(`ImageMagick falló al procesar "${basename(inputPath)}": ${result.stderr.trim()}`, 'images');
     return inputPath;
   }
 
