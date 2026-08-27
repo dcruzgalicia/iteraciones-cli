@@ -1,7 +1,8 @@
 import type { SiteConfig } from '../config/config-schema.js';
 import { type ActiveFormats, computeActiveFormats, type FormatKey, toActiveFormats } from '../config/site-config.js';
+import type { BibOptions } from '../lib/pandoc-runner.js';
 import type { BuildState } from './state.js';
-import { type BibFileCache, computeBibHash, computeConfigHashes, computeFiltersHash, type FilterFileCache } from './state.js';
+import { type BibFileCache, computeBibHash, computeConfigHashes, computeFiltersHash, type FilterFileCache, resolveBibOptions } from './state.js';
 import type { BuildDocument } from './types.js';
 
 /**
@@ -38,6 +39,9 @@ export interface BuildMetadata {
   formatInvalidated: Record<WorkFormatKey, boolean>;
   filtersInvalidated: boolean;
   bibInvalidated: boolean;
+  /** Bibliografía resuelta UNA vez por build (#2167): el pipeline la consume sin re-resolver. */
+  bibFiles: string[];
+  bibOptions?: BibOptions;
   /** Mapa canónico de formatos activos (pdf, latex, html, epub, markdown). */
   activeFormats: ActiveFormats;
   /** true si se genera LaTeX intermedio (pdf o latex activos). */
@@ -66,10 +70,14 @@ export async function computeBuildMetadata(
 ): Promise<BuildMetadata> {
   const currentFormats = computeActiveFormats(siteConfig.format);
 
+  // La bibliografía se resuelve UNA vez por build (#2167): el mismo resultado
+  // alimenta el hash de invalidación y el pipeline (documentPipeline consume
+  // plan.bibOptions/plan.bibFiles).
+  const bib = await resolveBibOptions(cwd, siteConfig);
   const [configResult, filtersHashResult, bibHashResult] = await Promise.all([
     computeConfigHashes(cwd, siteConfig, prevState?.configFileCache),
     computeFiltersHash(cwd, siteConfig, prevState?.filterFileCache, effectiveDisabledPreamble, pandocVersion),
-    computeBibHash(cwd, siteConfig, prevState?.bibFileCache),
+    computeBibHash(bib, prevState?.bibFileCache),
   ]);
   const { hashes: configHashes, cache: configFileCache } = configResult;
   const filtersHash = filtersHashResult.hash;
@@ -110,6 +118,8 @@ export async function computeBuildMetadata(
     formatInvalidated,
     filtersInvalidated,
     bibInvalidated,
+    bibFiles: bib.bibFiles,
+    bibOptions: bib.bibOptions,
     activeFormats,
     generateLatex,
     needsCss,

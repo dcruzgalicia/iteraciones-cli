@@ -142,7 +142,7 @@ describe('invalidación por entorno (#2024)', () => {
   it('computeBibHash incluye el CSL empaquetado solo cuando no hay csl configurado', async () => {
     const { writeFile } = await import('node:fs/promises');
     const { join } = await import('node:path');
-    const { computeBibHash } = await import('../builder/state-bib.js');
+    const { computeBibHash, resolveBibOptions } = await import('../builder/state-bib.js');
     const { DEFAULT_SITE_CONFIG } = await import('../config/site-config.js');
     const dir = await mkdtemp(join(tmpdir(), 'iteraciones-csl-'));
     try {
@@ -150,11 +150,11 @@ describe('invalidación por entorno (#2024)', () => {
       await writeFile(join(dir, 'custom.csl'), '<style/>\n', 'utf8');
       const base = { ...DEFAULT_SITE_CONFIG, bibliography: 'refs.bib' } as unknown as typeof DEFAULT_SITE_CONFIG;
       // Sin csl configurado participa el empaquetado
-      const withoutCsl = await computeBibHash(dir, base);
-      const withoutCslAgain = await computeBibHash(dir, base);
+      const withoutCsl = await computeBibHash(await resolveBibOptions(dir, base));
+      const withoutCslAgain = await computeBibHash(await resolveBibOptions(dir, base));
       expect(withoutCsl.hash).toBe(withoutCslAgain.hash);
       // Con csl configurado el empaquetado deja de participar ⇒ hash distinto
-      const withCsl = await computeBibHash(dir, { ...base, csl: 'custom.csl' });
+      const withCsl = await computeBibHash(await resolveBibOptions(dir, { ...base, csl: 'custom.csl' }));
       expect(withCsl.hash).not.toBe(withoutCsl.hash);
     } finally {
       await rm(dir, { recursive: true, force: true });

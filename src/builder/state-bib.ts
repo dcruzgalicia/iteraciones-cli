@@ -89,7 +89,7 @@ async function resolveBibSources(cwd: string, siteConfig?: SiteConfig): Promise<
 
 /**
  * Hash del contenido de los archivos de bibliografía EFECTIVOS: los mismos
- * `bibFiles` y CSL que resuelve `resolveBibOptions` para pandoc. Con
+ * `bibFiles` y CSL de la resolución única (`resolveBibOptions`, #2167). Con
  * `bibliography` configurada: esa ruta y el CSL efectivo. Sin configurar:
  * todos los .bib descubiertos (la capa LaTeX los referencia todos) y el
  * APA-7 empaquetado si hay citas.
@@ -97,18 +97,20 @@ async function resolveBibSources(cwd: string, siteConfig?: SiteConfig): Promise<
  * Con `prevCache` (de state.json), cada archivo se compara por mtime+size:
  * si no cambió, se reutiliza su hash sin leer el contenido.
  */
-export async function computeBibHash(cwd: string, siteConfig?: SiteConfig, prevCache?: BibFileCache): Promise<{ hash: string; cache: BibFileCache }> {
-  const { bibFiles, bibOptions } = await resolveBibSources(cwd, siteConfig);
+export async function computeBibHash(
+  bib: { bibFiles: string[]; bibOptions?: BibOptions },
+  prevCache?: BibFileCache,
+): Promise<{ hash: string; cache: BibFileCache }> {
   const parts: string[] = [];
   const cache: BibFileCache = {};
-  for (const file of bibFiles) {
+  for (const file of bib.bibFiles) {
     parts.push(file, await hashBibFile(file, prevCache, cache));
   }
   // El CSL efectivo (configurado o empaquetado) participa solo si hay citas:
   // actualizar el paquete cambia el estilo y las exportaciones deben
   // regenerarse (#2024); sin bibliografía no hay citas que invalidar.
-  if (bibOptions?.csl) {
-    parts.push('csl', bibOptions.csl, await hashBibFile(bibOptions.csl, prevCache, cache));
+  if (bib.bibOptions?.csl) {
+    parts.push('csl', bib.bibOptions.csl, await hashBibFile(bib.bibOptions.csl, prevCache, cache));
   }
   return { hash: hashString(parts.join('\0')), cache };
 }
@@ -130,23 +132,10 @@ export function resolveConfiguredPath(cwd: string, rel: string): string {
  * real nunca llega aquí con ruta ausente: la validación de config
  * (`validateConfigFilePaths`) falla antes; este guard mantiene la paridad si
  * el orden de las fases cambiara.
+ *
+ * Única resolución por build (#2167): computeBuildMetadata llama esto una vez
+ * y el pipeline consume el resultado vía BuildMetadata.
  */
 export async function resolveBibOptions(cwd: string, siteConfig?: SiteConfig): Promise<{ bibFiles: string[]; bibOptions?: BibOptions }> {
-  const configuredBib = siteConfig?.bibliography?.trim();
-  if (configuredBib) {
-    const bibPath = resolveConfiguredPath(cwd, configuredBib);
-    if (!(await Bun.file(bibPath).exists())) {
-      throw new ConfigError(
-        `iteraciones.config.yaml: bibliography: "${configuredBib}" no encontrado en el proyecto`,
-        join(cwd, 'iteraciones.config.yaml'),
-      );
-    }
-    const configuredCsl = siteConfig?.csl?.trim();
-    const cslPath = configuredCsl ? resolveConfiguredPath(cwd, configuredCsl) : join(import.meta.dir, '../../src/lib/resources/apa-7.csl');
-    return { bibFiles: [bibPath], bibOptions: { bibliography: bibPath, csl: cslPath } };
-  }
-  const bibFiles = cwd ? await discoverBibFiles(cwd, ['bib']) : [];
-  const firstBib = bibFiles[0];
-  const bibOptions = firstBib !== undefined ? { bibliography: firstBib, csl: join(import.meta.dir, '../../src/lib/resources/apa-7.csl') } : undefined;
-  return { bibFiles, bibOptions };
+  return resolveBibSources(cwd, siteConfig);
 }
