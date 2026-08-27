@@ -116,6 +116,41 @@ export async function computeBuildMetadata(
   };
 }
 
+/** Formatos activos agrupados: latex encapsula pdf+latex (hash "pdf" común). */
+interface ExportGroup {
+  key: WorkFormatKey;
+  /** El formato está activo en este build. */
+  enabled: boolean;
+}
+
+/** Grupos de exportación del build actual (orden determinista del Record final). */
+function exportGroupsFor(activeFormats: ActiveFormats): ExportGroup[] {
+  return [
+    // La clave latex cubre la generación de .tex y PDF.
+    { key: 'latex', enabled: activeFormats.pdf || activeFormats.latex },
+    { key: 'html', enabled: activeFormats.html },
+    { key: 'epub', enabled: activeFormats.epub },
+    { key: 'markdown', enabled: activeFormats.markdown },
+  ];
+}
+
+/**
+ * Documentos cuyo markdown o filters cambiaron y deben reconvertirse desde el
+ * markdown original. Si los filters se invalidaron (o cambió outputDir), TODOS
+ * re-procesan. La bibliografía NO entra aquí: las citas se resuelven en la
+ * exportación (citeproc/biblatex), así que bibInvalidated solo llena los
+ * exportSets.
+ */
+function computeDocsChanged(discoveredChanges: Set<string>, allDocs: BuildDocument[], addAllDocs: boolean): Set<string> {
+  const docsChanged = new Set(discoveredChanges);
+  if (addAllDocs) {
+    for (const doc of allDocs) {
+      docsChanged.add(doc.relativePath);
+    }
+  }
+  return docsChanged;
+}
+
 /**
  * Calcula los conjuntos de trabajo del build a partir de la metadata y el
  * resultado de discover. Función pura: el orquestador solo decide si ejecuta
@@ -126,43 +161,24 @@ export async function computeBuildMetadata(
  * deben regenerarse en el directorio nuevo, y la vuelta al anterior también).
  */
 export function computeWorkSets(meta: BuildMetadata, allDocs: BuildDocument[], discoveredChanges: Set<string>, outputDirChanged = false): WorkSets {
-  const { activeFormats, formatInvalidated } = meta;
-  const pdfOn = activeFormats.pdf;
-  const latexOn = activeFormats.latex;
-  const htmlOn = activeFormats.html;
-  const epubOn = activeFormats.epub;
-  const mdOn = activeFormats.markdown;
+  const groups = exportGroupsFor(meta.activeFormats);
 
-  // docsChanged: documentos cuyo markdown o filters cambiaron y deben
-  // re-convertirse desde el markdown original. La bibliografía NO los
-  // re-renderiza: las citas se resuelven en la exportación (citeproc/biblatex),
-  // así que bibInvalidated solo llena los exportSets más abajo.
-  const docsChanged = new Set(discoveredChanges);
-  if (meta.filtersInvalidated || outputDirChanged) {
-    for (const doc of allDocs) {
-      docsChanged.add(doc.relativePath);
-    }
-  }
+  const docsChanged = computeDocsChanged(discoveredChanges, allDocs, meta.filtersInvalidated || outputDirChanged);
 
   const anyWork =
     docsChanged.size > 0 ||
-    (formatInvalidated.latex && (pdfOn || latexOn)) ||
-    (formatInvalidated.html && htmlOn) ||
-    (formatInvalidated.epub && epubOn) ||
-    (formatInvalidated.markdown && mdOn) ||
-    (meta.bibInvalidated && (pdfOn || latexOn || htmlOn || epubOn || mdOn));
+    (meta.formatInvalidated.latex && (meta.activeFormats.pdf || meta.activeFormats.latex)) ||
+    (meta.formatInvalidated.html && meta.activeFormats.html) ||
+    (meta.formatInvalidated.epub && meta.activeFormats.epub) ||
+    (meta.formatInvalidated.markdown && meta.activeFormats.markdown) ||
+    (meta.bibInvalidated &&
+      (meta.activeFormats.pdf || meta.activeFormats.latex || meta.activeFormats.html || meta.activeFormats.epub || meta.activeFormats.markdown));
 
-  const bibInvalidated = meta.bibInvalidated;
-  const exportSets: Record<WorkFormatKey, BuildDocument[]> = {
-    latex: pdfOn || latexOn ? allDocs.filter((d) => docsChanged.has(d.relativePath) || formatInvalidated.latex || bibInvalidated) : [],
-    html: htmlOn ? allDocs.filter((d) => docsChanged.has(d.relativePath) || formatInvalidated.html || bibInvalidated) : [],
-    epub: epubOn ? allDocs.filter((d) => docsChanged.has(d.relativePath) || formatInvalidated.epub || bibInvalidated) : [],
-    markdown: mdOn ? allDocs.filter((d) => docsChanged.has(d.relativePath) || formatInvalidated.markdown || bibInvalidated) : [],
-  };
+  const exportSets: Record<WorkFormatKey, BuildDocument[]> = { latex: [], html: [], epub: [], markdown: [] };
+  for (const group of groups) {
+    if (!group.enabled) continue;
+    exportSets[group.key] = allDocs.filter((d) => docsChanged.has(d.relativePath) || meta.formatInvalidated[group.key] || meta.bibInvalidated);
+  }
 
-  return {
-    docsChanged,
-    anyWork,
-    exportSets,
-  };
+  return { docsChanged, anyWork, exportSets };
 }
