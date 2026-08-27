@@ -199,7 +199,7 @@ Archivo de estilo de citas (CSL). Solo tiene efecto junto con `bibliography`.
 csl: styles/nature.csl
 ```
 
-`validate` reporta un error si alguna de las dos rutas no existe. Si una ruta configurada no existe al construir, se advierte y se vuelve al auto-descubrimiento (mismo comportamiento que `lua-filters`).
+`validate` reporta un error si alguna de las dos rutas no existe. El mismo contrato aplica al construir: una ruta configurada inexistente es config inválida y el build falla con el mismo error (el auto-descubrimiento solo aplica cuando no se configuró nada).
 
 ### `format.html`
 
