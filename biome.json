@@ -20,6 +20,9 @@
       "preset": "recommended",
       "nursery": {
         "noFloatingPromises": "error"
+      },
+      "complexity": {
+        "noExcessiveCognitiveComplexity": "warn"
       }
     }
   },
@@ -43,5 +46,40 @@
         "organizeImports": "on"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": [
+        "src/__tests__/docs-config-integrity.test.ts",
+        "src/__tests__/progress.test.ts",
+        "src/builder/build-planner.ts",
+        "src/builder/discover.ts",
+        "src/builder/gitignore.ts",
+        "src/builder/html-postprocess.ts",
+        "src/builder/image-processor.ts",
+        "src/builder/latex-composer.ts",
+        "src/builder/pdf-pool.ts",
+        "src/builder/pdfx-check.ts",
+        "src/builder/pipeline.ts",
+        "src/builder/project-validator.ts",
+        "src/builder/render.ts",
+        "src/builder/slug-resolver.ts",
+        "src/builder/state-hash.ts",
+        "src/builder/xmpdata.ts",
+        "src/cli/dispatcher.ts",
+        "src/cli/doctor.ts",
+        "src/cli/filters.ts",
+        "src/cli/progress-state.ts",
+        "src/cli/progress.ts",
+        "src/cli/validate.ts"
+      ],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noExcessiveCognitiveComplexity": "off"
+          }
+        }
+      }
+    }
+  ]
 }
