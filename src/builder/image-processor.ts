@@ -178,6 +178,47 @@ export function scanInlineImages(content: string, docDir: string): string[] {
   return paths;
 }
 
+/** Texto escaneable de un campo: string directo o bloque YAML (array de líneas). */
+function fieldText(raw: unknown): string | undefined {
+  if (typeof raw === 'string') return raw;
+  if (Array.isArray(raw)) return raw.join('\n');
+  return undefined;
+}
+
+/**
+ * Recorre las imágenes de un campo, valida su existencia y reglas SVG,
+ * y añade los resultados tipados. Mensajes de BuildError idénticos al
+ * comportamiento previo (la RUTA resuelta apunta al archivo real).
+ */
+async function collectFieldImages(
+  field: string,
+  text: string,
+  docDir: string,
+  pageWidthmm: number,
+  results: { absPath: string; isSvg: boolean; attrs?: string; widthMm?: number }[],
+): Promise<void> {
+  for (const match of text.matchAll(MD_IMAGE_RE)) {
+    const imgPath = match[2];
+    const attrs = match[3];
+    if (!imgPath || isAbsolute(imgPath) || imgPath.startsWith('http')) continue;
+
+    const abs = resolve(docDir, imgPath);
+    const isSvg = imgPath.toLowerCase().endsWith('.svg');
+
+    // Validar que la imagen exista
+    if (!(await Bun.file(abs).exists())) {
+      throw new BuildError(`imagen no encontrada en "${field}": "${abs}" (resuelto desde "${imgPath}")`);
+    }
+
+    // Validar que SVGs tengan width especificado
+    if (isSvg && !attrs?.includes('width')) {
+      throw new BuildError(`imagen SVG en "${field}" requiere {width=...}: "${imgPath}"`);
+    }
+
+    results.push({ absPath: abs, isSvg, attrs, widthMm: parseWidthMm(attrs, pageWidthmm) });
+  }
+}
+
 /**
  * Escanea campos multilinea de portada y retorna las rutas de imágenes
  * encontradas (relativas, no URLs). Valida que:
@@ -190,46 +231,11 @@ export async function scanTitlePageFieldImages(
   pageWidthmm = 215.9,
 ): Promise<{ absPath: string; isSvg: boolean; attrs?: string; widthMm?: number }[]> {
   const results: { absPath: string; isSvg: boolean; attrs?: string; widthMm?: number }[] = [];
-
   for (const field of MULTILINE_IMAGE_FIELDS) {
-    const raw = fm[field];
-    if (raw === undefined || raw === null) continue;
-
-    // Convertir a string: string directo o bloque YAML
-    let text: string;
-    if (typeof raw === 'string') {
-      text = raw;
-    } else if (Array.isArray(raw)) {
-      // Bloque YAML multilinea: array de líneas
-      text = raw.join('\n');
-    } else {
-      continue;
-    }
-
-    // Escanear imágenes en el contenido markdown
-    for (const match of text.matchAll(MD_IMAGE_RE)) {
-      const imgPath = match[2];
-      const attrs = match[3];
-      if (!imgPath || isAbsolute(imgPath) || imgPath.startsWith('http')) continue;
-
-      const abs = resolve(docDir, imgPath);
-      const isSvg = imgPath.toLowerCase().endsWith('.svg');
-
-      // Validar que la imagen exista
-      if (!(await Bun.file(abs).exists())) {
-        throw new BuildError(`imagen no encontrada en "${field}": "${abs}" (resuelto desde "${imgPath}")`);
-      }
-
-      // Validar que SVGs tengan width especificado
-      if (isSvg && !attrs?.includes('width')) {
-        throw new BuildError(`imagen SVG en "${field}" requiere {width=...}: "${imgPath}"`);
-      }
-
-      const widthMm = parseWidthMm(attrs, pageWidthmm);
-      results.push({ absPath: abs, isSvg, attrs, widthMm });
-    }
+    const text = fieldText(fm[field]);
+    if (text === undefined) continue;
+    await collectFieldImages(field, text, docDir, pageWidthmm, results);
   }
-
   return results;
 }
 
@@ -248,6 +254,117 @@ export function rewriteImagePaths(content: string, imageMap: Map<string, string>
     result = result.replaceAll(relPath, processed);
   }
   return result;
+}
+
+/** Dimensiones objetivo (mm) derivadas de la página y el crop (#1975). */
+export interface ProcessTargets {
+  /** Caja de texto (+6 bleed si cropActive). */
+  targetW: number;
+  targetH: number;
+  /** Página completa (+6 bleed si cropActive) — endpapers. */
+  endpaperW: number;
+  endpaperH: number;
+}
+
+/** Cálculo puro de dimensiones objetivo: testeable sin ImageMagick. */
+export function computeProcessTargets(pageDims: PageDimensions, cropActive: boolean): ProcessTargets {
+  return {
+    targetW: pageDims.textW + (cropActive ? 6 : 0),
+    targetH: pageDims.h + (cropActive ? 6 : 0),
+    endpaperW: pageDims.w + (cropActive ? 6 : 0),
+    endpaperH: pageDims.h + (cropActive ? 6 : 0),
+  };
+}
+
+/** Registro único de una imagen procesada (processedFiles solo con cambios reales). */
+function recordProcessed(imageMap: Map<string, string>, processedFiles: string[], absPath: string, processed: string): void {
+  imageMap.set(absPath, processed);
+  if (processed !== absPath) processedFiles.push(processed);
+}
+
+/** Valor string recortado de un campo frontmatter (undefined si vacío/otro tipo). */
+function trimmedStringValue(raw: unknown): string | undefined {
+  return typeof raw === 'string' && raw.trim() !== '' ? raw.trim() : undefined;
+}
+
+/** 1. Imágenes de frontmatter dedicadas (title-image, publishers-image, endpapers). */
+async function processDedicatedFrontmatterImages(
+  fm: Record<string, unknown>,
+  docDir: string,
+  targets: ProcessTargets,
+  outputDir: string,
+  imageMap: Map<string, string>,
+  processedFiles: string[],
+): Promise<void> {
+  for (const field of ['title-image', 'publishers-image', 'endpapers']) {
+    const value = trimmedStringValue(fm[field]);
+    if (!value) continue;
+
+    const absPath = isAbsolute(value) ? value : resolve(docDir, value);
+    if (!(await Bun.file(absPath).exists())) continue;
+    if (imageMap.has(absPath)) continue;
+
+    const cover = field === 'endpapers';
+    // Endpapers: página completa; otros: caja de texto
+    const processed = await processImage(
+      absPath,
+      cover ? targets.endpaperW : targets.targetW,
+      cover ? targets.endpaperH : targets.targetH,
+      cover,
+      outputDir,
+    );
+    recordProcessed(imageMap, processedFiles, absPath, processed);
+  }
+}
+
+/**
+ * 1.5. Imágenes de campos multilinea de portada: si tienen width, se usa solo
+ * el ancho preservando proporción (targetH 0, no se fuerza cuadrado).
+ */
+async function processMultilineCoverImages(
+  multilineImages: { absPath: string; isSvg: boolean; attrs?: string; widthMm?: number }[],
+  targets: ProcessTargets,
+  outputDir: string,
+  imageMap: Map<string, string>,
+  processedFiles: string[],
+): Promise<void> {
+  for (const img of multilineImages) {
+    if (imageMap.has(img.absPath)) continue;
+
+    const imgTargetW = img.widthMm ?? targets.targetW;
+    // Semántica preservada del original: widthMm truthy (incluye 0 como
+    // "sin width efectivo" tras parsear {width=0}).
+    const imgTargetH = img.widthMm ? 0 : targets.targetH;
+    const processed = await processImage(img.absPath, imgTargetW, imgTargetH, false, outputDir);
+    recordProcessed(imageMap, processedFiles, img.absPath, processed);
+  }
+}
+
+/** 2. Imágenes inline del markdown. */
+async function processInlineImages(
+  inlineImages: string[],
+  targets: ProcessTargets,
+  outputDir: string,
+  imageMap: Map<string, string>,
+  processedFiles: string[],
+): Promise<void> {
+  for (const absPath of inlineImages) {
+    if (imageMap.has(absPath)) continue;
+    const processed = await processImage(absPath, targets.targetW, targets.targetH, false, outputDir);
+    recordProcessed(imageMap, processedFiles, absPath, processed);
+  }
+}
+
+/** Aviso único por build si magick falta; correlación explícita con PDF/X (#2040). */
+function warnMissingMagick(pdfxActive: boolean): void {
+  if (!warnedMissingMagick) {
+    warnedMissingMagick = true;
+    logWarning(
+      'ImageMagick no disponible; las imágenes no se preprocesaron a escala de grises 300dpi' +
+        (pdfxActive ? '; pueden fallar la certificación PDF/X' : ''),
+      'images',
+    );
+  }
 }
 
 /**
@@ -276,69 +393,17 @@ export async function processDocumentImages(
   detector: () => Promise<boolean> = detectMagick,
 ): Promise<{ imageMap: Map<string, string>; processedFiles: string[] }> {
   if (!(await detector())) {
-    // Correlación explícita causa↔efecto (#2040): sin aviso, un fallo posterior
-    // de certificación PDF/X sería críptico (imágenes RGB sin convertir).
-    if (!warnedMissingMagick) {
-      warnedMissingMagick = true;
-      logWarning(
-        'ImageMagick no disponible; las imágenes no se preprocesaron a escala de grises 300dpi' +
-          (pdfxActive ? '; pueden fallar la certificación PDF/X' : ''),
-        'images',
-      );
-    }
+    warnMissingMagick(pdfxActive);
     return { imageMap: new Map(), processedFiles: [] };
   }
 
   const imageMap = new Map<string, string>();
   const processedFiles: string[] = [];
-  const targetW = pageDims.textW + (cropActive ? 6 : 0);
-  const targetH = pageDims.h + (cropActive ? 6 : 0);
-  // Endpapers siempre usa dimensiones de página completa (no caja de texto)
-  const endpaperW = pageDims.w + (cropActive ? 6 : 0);
-  const endpaperH = pageDims.h + (cropActive ? 6 : 0);
+  const targets = computeProcessTargets(pageDims, cropActive);
 
-  // 1. Imágenes de frontmatter dedicadas
-  for (const field of ['title-image', 'publishers-image', 'endpapers']) {
-    const value = typeof fm[field] === 'string' && (fm[field] as string).trim() ? (fm[field] as string).trim() : undefined;
-    if (!value) continue;
-
-    const absPath = isAbsolute(value) ? value : resolve(docDir, value);
-    if (!(await Bun.file(absPath).exists())) continue;
-    if (imageMap.has(absPath)) continue;
-
-    const cover = field === 'endpapers';
-    // Endpapers: página completa; otros: caja de texto
-    const fieldW = cover ? endpaperW : targetW;
-    const fieldH = cover ? endpaperH : targetH;
-    const processed = await processImage(absPath, fieldW, fieldH, cover, outputDir);
-    imageMap.set(absPath, processed);
-    if (processed !== absPath) processedFiles.push(processed);
-  }
-
-  // 1.5. Imágenes de campos multilinea de portada
-  if (multilineImages) {
-    for (const img of multilineImages) {
-      if (imageMap.has(img.absPath)) continue;
-
-      // Si la imagen tiene width especificado, usar solo el ancho
-      // para preservar la proporción (no forzar cuadrado)
-      const imgTargetW = img.widthMm ?? targetW;
-      const imgTargetH = img.widthMm ? 0 : targetH;
-
-      const processed = await processImage(img.absPath, imgTargetW, imgTargetH, false, outputDir);
-      imageMap.set(img.absPath, processed);
-      if (processed !== img.absPath) processedFiles.push(processed);
-    }
-  }
-
-  // 2. Imágenes inline del markdown
-  for (const absPath of inlineImages) {
-    if (imageMap.has(absPath)) continue;
-
-    const processed = await processImage(absPath, targetW, targetH, false, outputDir);
-    imageMap.set(absPath, processed);
-    if (processed !== absPath) processedFiles.push(processed);
-  }
+  await processDedicatedFrontmatterImages(fm, docDir, targets, outputDir, imageMap, processedFiles);
+  if (multilineImages !== undefined) await processMultilineCoverImages(multilineImages, targets, outputDir, imageMap, processedFiles);
+  await processInlineImages(inlineImages, targets, outputDir, imageMap, processedFiles);
 
   return { imageMap, processedFiles };
 }
