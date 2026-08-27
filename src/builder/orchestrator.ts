@@ -19,7 +19,6 @@ import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, vali
 import { validateConfigFilePaths } from './project-validator.js';
 import { silentReporter } from './reporter.js';
 import type { BuildState } from './state.js';
-import { clearStateFile } from './state.js';
 import { persistCompletedState } from './state-serialize.js';
 import type { BuildContext, BuildDocument, BuildReporter, DiscoveryEntry } from './types.js';
 
@@ -96,14 +95,14 @@ export async function build(cwd: string, options: BuildOptions = {}, reporter: B
     // en TTY el render loop mantiene el proceso vivo mientras run() no termine
     // (regresión #1211).
     await progress.fail();
-    // El estado ya persistido durante discovery puede contener documentos cuyo
-    // render falló (mtime+size+hash nuevos): eliminarlo para que el siguiente
-    // build los reprocese en lugar de reutilizar contenido stale u omitirlos.
-    await clearStateFile(cwd);
-    // Con --full, la salida se eliminó al inicio del build: si el build
-    // falló a mitad, los archivos parciales de dist/ no son salidas válidas.
-    // Limpiarlos evita que el siguiente build (sin --full) reutilice
-    // archivos huérfanos como si fueran resultados completos.
+    // El estado NO se borra ante un fallo (#2168): desde #2025 state.json se
+    // escribe UNA sola vez, en el cierre, y siempre con completed:true
+    // (stateUsableForBuild) — cualquier state.json en disco es el de un build
+    // completo, último estado conocido bueno. El discovery content-addressed
+    // del siguiente build re-detecta los cambios contra él: borrarlo
+    // castigaría con un rebuild completo incluso a errores de config previos
+    // a discovery. Con --full, en cambio, la salida se eliminó al inicio:
+    // los archivos parciales de dist/ no son salidas válidas y se limpian.
     if (options.full) {
       const outputDir = options.outputDir ?? join(cwd, 'dist', 'files');
       await rm(outputDir, { recursive: true, force: true });
