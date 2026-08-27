@@ -1725,7 +1725,7 @@ describe('runFilters', () => {
       const stdoutSpy = spyOn(process.stdout, 'write');
       try {
         process.exitCode = 0;
-        runFilters(dir);
+        await runFilters(dir);
       } finally {
         stdoutSpy.mockRestore();
       }
