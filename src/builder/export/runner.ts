@@ -8,6 +8,7 @@ import { execPandoc, MD_READER } from '../../lib/pandoc-runner.js';
 import { exec, ProcessSpawnError, ProcessTimeoutError } from '../../lib/run.js';
 import type { LuaFilterGroup } from '../filter-resolver.js';
 import { metadataValue } from '../html-composer.js';
+import { PACKAGED_APA7_CSL } from '../state-bib.js';
 import type { ExportDocument } from './types.js';
 
 /** Extensiones auxiliares que latexmk deja junto al .tex compilado. */
@@ -24,9 +25,6 @@ const LATEXMK_TIMEOUT_MS = 600_000;
  * sistema.
  */
 const XMP_TEMPLATE_RESOURCE = join(import.meta.dir, '../../lib/resources/xmp/pdfx.xmp');
-
-/** APA-7 empaquetado: el default de citas del paquete (paridad HTML/EPUB). */
-const PACKAGED_APA7_CSL = join(import.meta.dir, '../../lib/resources/apa-7.csl');
 
 /**
  * Convierte el markdown original a EPUB3 usando pandoc (sin intermediario).

@@ -1,9 +1,9 @@
-import { isAbsolute, join } from 'node:path';
+import { isAbsolute, join, relative } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { ConfigError } from '../lib/errors.js';
 import type { BibOptions } from '../lib/pandoc-runner.js';
 import { isIgnoredByRules, isInsideIgnoredDir, loadGitignoreRules } from './gitignore.js';
-import { type FileCacheEntry, hashFileCached } from './state-hash.js';
+import { hashFileCached } from './state-hash.js';
 import { hashString } from './state-serialize.js';
 
 /**
@@ -18,7 +18,9 @@ export async function discoverBibFiles(cwd: string, extensions: string[] = ['bib
   try {
     const glob = new Bun.Glob(`**/*.{${extensions.join(',')}}`);
     for (const file of glob.scanSync({ cwd, absolute: true })) {
-      const rel = file.replace(cwd, '').replace(/^[/\\]+/, '');
+      // relative() en vez de replace(cwd, '') sin anclar: este último
+      // corrompía rutas que contienen cwd como substring en posición interna.
+      const rel = relative(cwd, file);
       if (isInsideIgnoredDir(rel)) continue;
       if (isIgnoredByRules(rel, gitignoreRules)) continue;
       results.push(file);
@@ -41,58 +43,72 @@ interface BibFileCacheEntry {
 
 export type BibFileCache = Record<string, BibFileCacheEntry>;
 
+/** APA-7 empaquetado: el default de citas del paquete (única definición del recurso). */
+export const PACKAGED_APA7_CSL = join(import.meta.dir, '../lib/resources/apa-7.csl');
+
 /** Hash del contenido de un archivo de bibliografía, reutilizando el caché si mtime+size coinciden. */
 async function hashBibFile(abs: string, prevCache: BibFileCache | undefined, cache: BibFileCache): Promise<string> {
-  // Núcleo único (#2020). Cambio de contrato documentado (decisión del issue):
-  // antes CUALQUIER error se tragaba devolviendo hash de contenido vacío;
-  // ahora solo ENOENT es tolerado (⇒ parte vacía en el hash, señal
-  // determinista de ausencia) y cualquier otro error se propaga.
+  // Núcleo único (#2020). Política de ENOENT: ausencia ⇒ hash de contenido
+  // vacío como señal determinista, SIN persistir entrada fantasma
+  // ({mtime:0, size:0}) en state.json (#2166); cualquier otro error se
+  // propaga. hashFileCached ya escribe la entrada del caché en el caso
+  // exitoso: aquí no queda nada que persistir a mano.
   const hash = await hashFileCached(abs, abs, prevCache, cache);
-  const entry = hash !== null ? hash : hashString('');
-  cache[abs] =
-    cache[abs] ??
-    ({
-      mtime: 0,
-      size: 0,
-      hash: entry,
-    } as FileCacheEntry);
-  return entry;
+  return hash ?? hashString('');
 }
 
 /**
- * Hash del contenido de los archivos de bibliografía efectivos (los que el
- * pipeline realmente usa). Con `bibliography` configurada: esa ruta y el CSL
- * configurado. Sin configurar: todos los .bib/.csl del proyecto (la capa
- * LaTeX referencia todos los .bib descubiertos).
+ * Resolución ÚNICA de bibliografía (invariante #2166): la misma fuente
+ * alimenta el hash de invalidación (computeBibHash) y las opciones de pandoc
+ * (resolveBibOptions) — el conjunto hasheado es exactamente el que consume el
+ * pipeline, así que editar el .bib efectivo siempre invalida la caché.
+ */
+async function resolveBibSources(cwd: string, siteConfig?: SiteConfig): Promise<{ bibFiles: string[]; bibOptions?: BibOptions }> {
+  const configuredBib = siteConfig?.bibliography?.trim();
+  if (configuredBib) {
+    const bibPath = resolveConfiguredPath(cwd, configuredBib);
+    // Contrato D1 (#2164): ruta configurada inexistente es config inválida
+    // (guard de paridad con el validador de config).
+    if (!(await Bun.file(bibPath).exists())) {
+      throw new ConfigError(
+        `iteraciones.config.yaml: bibliography: "${configuredBib}" no encontrado en el proyecto`,
+        join(cwd, 'iteraciones.config.yaml'),
+      );
+    }
+    const configuredCsl = siteConfig?.csl?.trim();
+    if (configuredCsl && !(await Bun.file(resolveConfiguredPath(cwd, configuredCsl)).exists())) {
+      throw new ConfigError(`iteraciones.config.yaml: csl: "${configuredCsl}" no encontrado en el proyecto`, join(cwd, 'iteraciones.config.yaml'));
+    }
+    const cslPath = configuredCsl ? resolveConfiguredPath(cwd, configuredCsl) : PACKAGED_APA7_CSL;
+    return { bibFiles: [bibPath], bibOptions: { bibliography: bibPath, csl: cslPath } };
+  }
+  const bibFiles = cwd ? await discoverBibFiles(cwd, ['bib']) : [];
+  const firstBib = bibFiles[0];
+  return { bibFiles, bibOptions: firstBib !== undefined ? { bibliography: firstBib, csl: PACKAGED_APA7_CSL } : undefined };
+}
+
+/**
+ * Hash del contenido de los archivos de bibliografía EFECTIVOS: los mismos
+ * `bibFiles` y CSL que resuelve `resolveBibOptions` para pandoc. Con
+ * `bibliography` configurada: esa ruta y el CSL efectivo. Sin configurar:
+ * todos los .bib descubiertos (la capa LaTeX los referencia todos) y el
+ * APA-7 empaquetado si hay citas.
  *
  * Con `prevCache` (de state.json), cada archivo se compara por mtime+size:
  * si no cambió, se reutiliza su hash sin leer el contenido.
  */
 export async function computeBibHash(cwd: string, siteConfig?: SiteConfig, prevCache?: BibFileCache): Promise<{ hash: string; cache: BibFileCache }> {
+  const { bibFiles, bibOptions } = await resolveBibSources(cwd, siteConfig);
   const parts: string[] = [];
   const cache: BibFileCache = {};
-  const files: string[] = [];
-  let usesPackagedCsl = true;
-  const configuredBib = siteConfig?.bibliography?.trim();
-  if (configuredBib) {
-    files.push(resolveConfiguredPath(cwd, configuredBib));
-    const configuredCsl = siteConfig?.csl?.trim();
-    if (configuredCsl) {
-      files.push(resolveConfiguredPath(cwd, configuredCsl));
-      usesPackagedCsl = false;
-    }
-  } else {
-    files.push(...(await discoverBibFiles(cwd)));
-  }
-  for (const file of files) {
+  for (const file of bibFiles) {
     parts.push(file, await hashBibFile(file, prevCache, cache));
   }
-  // Sin CSL configurado las citas usan el APA-7 empaquetado: su contenido
-  // participa en la invalidación — actualizar el paquete cambia el estilo y
-  // las exportaciones deben regenerarse (#2024).
-  if (usesPackagedCsl) {
-    const packagedCsl = join(import.meta.dir, '../lib/resources/apa-7.csl');
-    parts.push('packaged-csl', await hashBibFile(packagedCsl, prevCache, cache));
+  // El CSL efectivo (configurado o empaquetado) participa solo si hay citas:
+  // actualizar el paquete cambia el estilo y las exportaciones deben
+  // regenerarse (#2024); sin bibliografía no hay citas que invalidar.
+  if (bibOptions?.csl) {
+    parts.push('csl', bibOptions.csl, await hashBibFile(bibOptions.csl, prevCache, cache));
   }
   return { hash: hashString(parts.join('\0')), cache };
 }

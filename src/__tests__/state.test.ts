@@ -279,6 +279,27 @@ describe('discoverBibFiles y computeBibHash', () => {
     });
   });
 
+  it('invariante #2166: editar el .bib descubierto (sin configurar) invalida el hash', async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(join(dir, 'refs.bib'), '@book{k1, title={Original}}\n', 'utf8');
+      // Sin `bibliography` configurada el pipeline usa el primer .bib descubierto
+      const h1 = (await computeBibHash(dir)).hash;
+      await writeFile(join(dir, 'refs.bib'), '@book{k1, title={Editado}}\n', 'utf8');
+      const h2 = (await computeBibHash(dir)).hash;
+      expect(h1).not.toBe(h2);
+    });
+  });
+
+  it('invariante #2166: sin bibliografía no hay citas y el CSL no participa en el hash', async () => {
+    await withTempDir(async (dir) => {
+      const sinBib = await computeBibHash(dir);
+      // Sin citas el CSL empaquetado no se hashea: sin entradas en el caché
+      expect(Object.keys(sinBib.cache)).toHaveLength(0);
+      const sinBibOtraVez = await computeBibHash(dir);
+      expect(sinBib.hash).toBe(sinBibOtraVez.hash);
+    });
+  });
+
   it('computeBibHash con bibliography configurada solo hashea esa ruta', async () => {
     await withTempDir(async (dir) => {
       await writeFile(join(dir, 'libro.bib'), '@book{k1}\n', 'utf8');
@@ -294,11 +315,16 @@ describe('discoverBibFiles y computeBibHash', () => {
     });
   });
 
-  it('un archivo de bibliografía ausente hashea vacío sin romper', async () => {
+  it('con bibliography inexistente lanza ConfigError (contrato único sin fallback, D1) — el hash no se computa sobre rutas ausentes', async () => {
     await withTempDir(async (dir) => {
       const config = { ...DEFAULT_SITE_CONFIG, bibliography: 'no-existe.bib' };
-      const result = await computeBibHash(dir, config);
-      expect(result.hash).toBeTruthy();
+      try {
+        await computeBibHash(dir, config);
+        expect.unreachable();
+      } catch (err) {
+        expect(err).toBeInstanceOf(ConfigError);
+        expect((err as Error).message).toContain('bibliography: "no-existe.bib" no encontrado');
+      }
     });
   });
 });
