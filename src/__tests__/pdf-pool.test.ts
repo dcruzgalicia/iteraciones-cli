@@ -287,6 +287,36 @@ describe('quiesce tras cancel (#2013)', () => {
     }
   });
 
+  it('al vencer el timeout de quiesce mata el proceso en vuelo (sin escritura posterior)', async () => {
+    // Proceso REAL en vuelo (como un latexmk atascado): quiesce debe matarlo
+    // vía el pid registrado por onSpawn, no abandonarlo (#2013).
+    const proc = Bun.spawn(['sleep', '30'], { stdout: 'ignore', stderr: 'ignore' });
+    let murio = false;
+    void proc.exited.then(() => {
+      murio = true;
+    });
+    const spy = spyOn(runner, 'convertToPdf').mockImplementation(
+      (_tex, _src, _dir, _slug, _biber, _dest, onSpawn) =>
+        new Promise<void>((resolve) => {
+          onSpawn?.(proc.pid);
+          void proc.exited.then(() => resolve());
+        }),
+    );
+    try {
+      const consumer = createPdfConsumer('/tmp/work', '/tmp/biber', 1, progressStub());
+      consumer.start();
+      consumer.pdfJobs.push(job(1));
+      await Bun.sleep(30); // el worker tomó el job y el proceso real está en vuelo
+      consumer.cancel();
+      const t0 = performance.now();
+      await consumer.quiesce(200);
+      expect(performance.now() - t0).toBeLessThan(10_000);
+      expect(murio).toBe(true); // el kill del árbol terminó al proceso real
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it('quiesce sin start() es no-op', async () => {
     const consumer = createPdfConsumer('/tmp/work', '/tmp/biber', 1, progressStub());
     await consumer.quiesce();

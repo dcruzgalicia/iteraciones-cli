@@ -125,6 +125,9 @@ export async function convertToMarkdown(
  * aislado por slot de concurrencia para evitar carreras del XMP (issue #1967).
  * @param slug Jobname de latexmk.
  * @param biberCacheDir Directorio de caché de biber (por slot de concurrencia).
+ * @param pdfDest Ruta destino del .pdf en dist/ (rename final).
+ * @param onSpawn Notifica el pid de latexmk justo tras el spawn (el pool PDF
+ * lo registra para poder matar el árbol si quiesce vence su timeout).
  */
 export async function convertToPdf(
   fullTexPath: string,
@@ -133,6 +136,7 @@ export async function convertToPdf(
   slug: string,
   biberCacheDir?: string,
   pdfDest?: string,
+  onSpawn?: (pid: number) => void,
 ): Promise<void> {
   if (!(await Bun.file(fullTexPath).exists())) {
     throw new PandocError('no se encontró el archivo .tex generado', sourcePath, '');
@@ -165,6 +169,7 @@ export async function convertToPdf(
       cwd: pdfDir,
       // La caché de biber se aísla por slot de concurrencia
       env: { PAR_GLOBAL_TEMP: biberCache, TEXINPUTS: `${pdfDir}:` },
+      onSpawn,
     });
   } catch (err) {
     if (err instanceof ProcessSpawnError) {

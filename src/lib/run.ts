@@ -16,6 +16,11 @@ interface RunOptions {
   input?: string;
   /** Variables de entorno adicionales (merge sobre process.env). */
   env?: Record<string, string>;
+  /**
+   * Notifica el pid del proceso justo tras el spawn. Para gestión externa del
+   * ciclo de vida (p. ej. el pool PDF mata el latexmk en vuelo al quiescer).
+   */
+  onSpawn?: (pid: number) => void;
 }
 
 /**
@@ -71,7 +76,7 @@ async function childPids(pid: number): Promise<number[]> {
  *
  * Windows: taskkill /T /F hace lo propio en una invocación.
  */
-async function killProcessTree(rootPid: number): Promise<void> {
+export async function killProcessTree(rootPid: number): Promise<void> {
   if (process.platform === 'win32') {
     try {
       const proc = Bun.spawn(['taskkill', '/T', '/F', '/PID', String(rootPid)], { stdout: 'ignore', stderr: 'ignore' });
@@ -121,6 +126,7 @@ export async function exec(command: string, args: string[], options: RunOptions 
     // Error esperado: ENOENT al spawnear; el mensaje accionable es más útil que la causa técnica
     throw new ProcessSpawnError(`No se encontró el comando "${command}". Verifica que esté instalado y disponible en PATH.`);
   }
+  options.onSpawn?.(proc.pid);
 
   if (options.input !== undefined) {
     if (proc.stdin == null || typeof proc.stdin === 'number') {

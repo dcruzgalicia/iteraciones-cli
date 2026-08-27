@@ -1,12 +1,16 @@
 import { join } from 'node:path';
 
 import { logWarning } from '../lib/logger.js';
-
+import { plural } from '../lib/plural.js';
+import { killProcessTree } from '../lib/run.js';
 import { convertToPdf } from './export/runner.js';
 import type { BuildReporter } from './types.js';
 
 /** Tope de espera del quiesce tras un fallo: nunca colgar el proceso. */
 const QUIESCE_TIMEOUT_MS = 30_000;
+
+/** Margen extra tras matar los procesos en vuelo para que los workers salgan. */
+const QUIESCE_KILL_GRACE_MS = 2_000;
 
 export interface PdfJob {
   dir: string;
@@ -56,6 +60,13 @@ export function createPdfConsumer(
   let workerPromises: Promise<void>[] = [];
   /** Primer error de compilación: se propaga una sola vez desde drain(). */
   let firstError: unknown = null;
+  /**
+   * Pid del proceso latexmk en vuelo por worker (null si no compila). Cada
+   * worker escribe solo su entrada: sin carreras. quiesce lo usa para matar
+   * el árbol al vencer su timeout y que ningún huérfano renombre a dist/
+   * después del fallo (issue #2013).
+   */
+  const inFlightPids: (number | null)[] = Array.from({ length: maxSlots }, () => null);
 
   /** Cada worker es dueño de un slot fijo: el worker `slotIndex` compila
    * siempre en `slot-${slotIndex}` con la caché de biber `cache-${slotIndex}`.
@@ -85,11 +96,15 @@ export function createPdfConsumer(
         // Mismo patrón de aislamiento que la caché de biber (cache-<slot>).
         const pdfDir = join(pdfWorkBase, job.dir, `slot-${slotIndex}`);
         try {
-          await convertToPdf(job.texPath, job.relativePath, pdfDir, job.slug, join(biberBase, `cache-${slotIndex}`), job.pdfDest);
+          await convertToPdf(job.texPath, job.relativePath, pdfDir, job.slug, join(biberBase, `cache-${slotIndex}`), job.pdfDest, (pid) => {
+            inFlightPids[slotIndex] = pid;
+          });
         } catch (err) {
           firstError = err;
           cancel();
           return;
+        } finally {
+          inFlightPids[slotIndex] = null;
         }
         progress.reportFile({ relativePath: job.relativePath, phase: 'pdf' });
       } else if (producerDone) {
@@ -127,24 +142,37 @@ export function createPdfConsumer(
    * Espera a que los workers EN VUELO terminen tras un cancel() (#2013):
    * un latexmk ya compilando ejecutaría su rename final hacia dist/ después
    * de que el build haya fallado — PDF parcial o renombrado sobre un
-   * directorio recién recreado con --full. Timeout de seguridad para no
-   * colgar el proceso si un worker se atasca: en ese caso se procede con el
-   * error original y el SO reclama al huérfano a la salida.
+   * directorio recién recreado con --full. Si los workers no terminan en el
+   * timeout, se mata el árbol del latexmk en vuelo de cada worker (vía el pid
+   * registrado por onSpawn): convertToPdf ve una salida fallida y el worker
+   * termina sin renombrar; nada queda vivo escribiendo tras el fallo.
+   * Margen de gracia tras el kill para no colgar el proceso si un worker se
+   * atasca igualmente.
    */
   const quiesce = async (timeoutMs: number = QUIESCE_TIMEOUT_MS): Promise<void> => {
     if (!started || workerPromises.length === 0) return;
-    let timer: ReturnType<typeof setTimeout> | undefined;
+    const raceWithTimeout = (ms: number): Promise<void> =>
+      new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('pdf-pool: workers vivos tras cancel()')), ms);
+        void Promise.allSettled(workerPromises)
+          .then(() => resolve())
+          .finally(() => clearTimeout(timer));
+      });
     try {
-      await Promise.race([
-        Promise.allSettled(workerPromises),
-        new Promise<never>((_, reject) => {
-          timer = setTimeout(() => reject(new Error('pdf-pool: workers vivos tras cancel()')), timeoutMs);
-        }),
-      ]);
+      await raceWithTimeout(timeoutMs);
+      return;
+    } catch {
+      // Timeout: los workers siguen en vuelo. Matar el latexmk de cada uno.
+    }
+    const pids = inFlightPids.filter((pid): pid is number => pid !== null);
+    if (pids.length > 0) {
+      logWarning(`terminando ${plural(pids.length, 'compilación PDF en vuelo', 'compilaciones PDF en vuelo')} tras el fallo del build`, 'pdf');
+      await Promise.all(pids.map((pid) => killProcessTree(pid)));
+    }
+    try {
+      await raceWithTimeout(QUIESCE_KILL_GRACE_MS);
     } catch (err) {
       logWarning(`no se pudo esperar la finalización de los workers del pool PDF: ${String(err)}`, 'pdf');
-    } finally {
-      if (timer !== undefined) clearTimeout(timer);
     }
   };
 
