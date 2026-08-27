@@ -30,6 +30,42 @@ interface GitignoreRules extends Array<GitignoreRule> {
 const MATCHER_KEY = '__gitignoreMatcher';
 
 /**
+ * Motor de matching puro por línea: clasifica una línea cruda del
+ * .gitignore en su regla normalizada.
+ *   - vacías y comentarios (#) → undefined
+ *   - '!' inicial → negada; '\\!' → literal !
+ *   - '/' inicial o presencia de '/' interna → anclada a la raíz
+ *   - '/' final → solo directorios
+ */
+export function parseGitignoreLine(rawLine: string): GitignoreRule | undefined {
+  let line = rawLine.trimEnd();
+  if (!line || line.startsWith('#')) return undefined;
+
+  let negated = false;
+  if (line.startsWith('!')) {
+    negated = true;
+    line = line.slice(1);
+  } else if (line.startsWith('\\!')) {
+    // '\!' es un literal !, no negación
+    line = line.slice(1);
+  }
+  if (!line) return undefined;
+
+  // El anclaje incluye el / inicial (se elimina del patrón pero marca el
+  // anclaje: '/raiz.md' solo matchea 'raiz.md', no 'sub/raiz.md').
+  const anchoredAtRoot = line.startsWith('/');
+  if (line.startsWith('/')) line = line.slice(1); // /patrón → anclado a la raíz
+  let dirOnly = false;
+  if (line.endsWith('/')) {
+    dirOnly = true;
+    line = line.slice(0, -1);
+  }
+  if (!line) return undefined;
+
+  return { pattern: line, negated, anchored: anchoredAtRoot || line.includes('/'), dirOnly };
+}
+
+/**
  * Parsea el contenido de un .gitignore en reglas ordenadas.
  * Las líneas vacías y los comentarios (#) se ignoran.
  * El matcher de la librería `ignore` queda compilado en una propiedad no
@@ -39,32 +75,8 @@ const MATCHER_KEY = '__gitignoreMatcher';
 export function parseGitignore(content: string): GitignoreRule[] {
   const rules: GitignoreRule[] = [];
   for (const rawLine of content.split('\n')) {
-    let line = rawLine.trimEnd();
-    if (!line || line.startsWith('#')) continue;
-
-    let negated = false;
-    if (line.startsWith('!')) {
-      negated = true;
-      line = line.slice(1);
-    } else if (line.startsWith('\\!')) {
-      // '\!' es un literal !, no negación
-      line = line.slice(1);
-    }
-    if (!line) continue;
-
-    // El anclaje incluye el / inicial (se elimina del patrón pero marca el
-    // anclaje: '/raiz.md' solo matchea 'raiz.md', no 'sub/raiz.md').
-    let anchored = line.startsWith('/');
-    if (line.startsWith('/')) line = line.slice(1); // /patrón → anclado a la raíz
-    let dirOnly = false;
-    if (line.endsWith('/')) {
-      dirOnly = true;
-      line = line.slice(0, -1);
-    }
-    if (!line) continue;
-
-    anchored = anchored || line.includes('/');
-    rules.push({ pattern: line, negated, anchored, dirOnly });
+    const rule = parseGitignoreLine(rawLine);
+    if (rule) rules.push(rule);
   }
 
   Object.defineProperty(rules, MATCHER_KEY, { value: ignore().add(content) });

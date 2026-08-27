@@ -53,7 +53,6 @@
         "src/__tests__/docs-config-integrity.test.ts",
         "src/__tests__/progress.test.ts",
         "src/builder/build-planner.ts",
-        "src/builder/gitignore.ts",
         "src/builder/html-postprocess.ts",
         "src/builder/latex-composer.ts",
         "src/builder/pdf-pool.ts",
