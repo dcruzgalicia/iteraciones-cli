@@ -119,6 +119,18 @@ export function logInfo(message: string, context?: string): void {
 }
 
 /**
+ * Mensaje informativo del build en stderr, en tiempo real (sin sink diferido):
+ * stdout queda reservado para el contrato JSON de `build --json`, y los
+ * anuncios de larga espera (p. ej. la compilación del validador PDF/X) deben
+ * verse cuando ocurren, no en el resumen final.
+ * Formato: ℹ [contexto] mensaje
+ */
+export function logNotice(message: string, context?: string): void {
+  const prefix = formatContext(context, process.stderr);
+  process.stderr.write(`${colorize(GLYPHS.info, 'dim', process.stderr)} ${prefix}${message}\n`);
+}
+
+/**
  * Escribe un mensaje de éxito en stdout.
  * Formato: ✔ [contexto] mensaje
  */
