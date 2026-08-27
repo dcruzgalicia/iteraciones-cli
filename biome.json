@@ -55,7 +55,6 @@
         "src/builder/build-planner.ts",
         "src/builder/gitignore.ts",
         "src/builder/html-postprocess.ts",
-        "src/builder/image-processor.ts",
         "src/builder/latex-composer.ts",
         "src/builder/pdf-pool.ts",
         "src/builder/pdfx-check.ts",
