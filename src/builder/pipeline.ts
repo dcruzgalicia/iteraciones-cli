@@ -40,6 +40,124 @@ export function pdfSlotCount(concurrency: number): number {
   return Math.max(1, Math.min(concurrency, PDF_MAX_SLOTS));
 }
 
+/** Recursos compartidos resueltos una vez por build (bibliografía, lang, logo). */
+interface PipelineSetup {
+  bibOptions: Awaited<ReturnType<typeof resolveBibOptions>>['bibOptions'];
+  bibFiles: string[];
+  globalBibliography: string | undefined;
+  lang: string;
+  logoInline: string | undefined;
+}
+
+/** Resuelve lo compartido: bibliografía una vez por build, lang efectivo y logo inline. */
+async function resolvePipelineSetup(ctx: BuildContext, formatCfg: SiteConfig['format'] | undefined): Promise<PipelineSetup> {
+  const siteConfig = ctx.siteConfig;
+  // La bibliografía se resuelve una sola vez por build y se comparte con todos
+  // los documentos.
+  const bib = await resolveBibOptions(ctx.cwd, siteConfig);
+  // El default vive en DEFAULT_SITE_CONFIG (es-MX): el fallback local no debe
+  // divergir de la configuración (un lang distinto emite --metadata distinto).
+  return {
+    bibOptions: bib.bibOptions,
+    bibFiles: bib.bibFiles,
+    globalBibliography: bib.bibOptions?.bibliography,
+    lang: siteConfig.language ?? DEFAULT_SITE_CONFIG.language,
+    logoInline: await loadLogoInline(ctx.cwd, formatCfg?.html?.site?.logo?.trim()),
+  };
+}
+
+/** Unión de documentos con trabajo: exportSets (formatos activos) + docsChanged. */
+function collectWorkDocs(work: WorkSets, allDocs: BuildDocument[]): BuildDocument[] {
+  const workDocs = new Map<string, BuildDocument>();
+  for (const doc of [...work.exportSets.latex, ...work.exportSets.html, ...work.exportSets.epub, ...work.exportSets.markdown]) {
+    workDocs.set(doc.relativePath, doc);
+  }
+  for (const doc of allDocs) {
+    if (work.docsChanged.has(doc.relativePath)) workDocs.set(doc.relativePath, doc);
+  }
+  return [...workDocs.values()];
+}
+
+/** Estado derivado de los preamble filters activos (#1970/#1975) + artefactos escritos. */
+interface EffectiveTemplates {
+  /** true si 11-bibliography está activo (flags.lua consulta biblatex-available). */
+  biblatexAvailable: boolean;
+  /** true si 99-pdfx está activo: inyección de XMP/Info en el .tex. */
+  pdfxActive: boolean;
+  /** true si 98-crop está activo: bleed (+6mm) en endpapers y crop/pdfx. */
+  cropActive: boolean;
+  /** Dimensiones de página en mm (para preprocesamiento de imágenes). */
+  pageDimensions: { w: number; h: number; textW: number } | undefined;
+  htmlTemplatePath: string;
+  latexTemplatePath: string;
+  /** Wrapper de la tarjeta Referencias (recurso card-referencias-block.html). */
+  refsCardTemplate: string;
+}
+
+/**
+ * Escribe los templates efectivos (una vez por build, sin dependencia del
+ * documento): HTML y LaTeX con preamble filters dinámicos. Sin generación
+ * LaTeX devuelve el estado neutro (biblatex disponible, sin señal pdfx/crop).
+ */
+async function writeEffectiveTemplates(
+  ctx: BuildContext,
+  plan: BuildMetadata,
+  htmlOn: boolean,
+  siteConfig: SiteConfig,
+  bibFiles: string[],
+  effectiveDisabledPreamble: string[],
+): Promise<EffectiveTemplates> {
+  const state: EffectiveTemplates = {
+    biblatexAvailable: true,
+    pdfxActive: false,
+    cropActive: false,
+    pageDimensions: undefined,
+    htmlTemplatePath: '',
+    latexTemplatePath: '',
+    refsCardTemplate: '',
+  };
+
+  const templatesDir = join(ctx.cwd, '.iteraciones', 'templates');
+  await mkdir(templatesDir, { recursive: true });
+  state.htmlTemplatePath = join(templatesDir, 'html.html');
+  state.latexTemplatePath = join(templatesDir, 'latex.tex');
+  // Wrapper de la tarjeta Referencias: recurso estático compuesto una vez por
+  // build (el marcador {{refs-list}} recibe la lista extraída por documento).
+  state.refsCardTemplate = await loadReferencesCardTemplate();
+
+  if (htmlOn) {
+    await writeIfChanged(state.htmlTemplatePath, await composeHtmlTemplate(siteConfig));
+  }
+  // Preamble filters efectivos: determinan el flag biblatex-available que
+  // flags.lua consulta antes de inyectar \\printbibliography (desactivar
+  // 11-bibliography sin guarda produciría un comando indefinido).
+  if (plan.generateLatex) {
+    const preambleFilters = await loadPreambleFilters(effectiveDisabledPreamble, ctx.cwd);
+    state.biblatexAvailable = preambleFilters.some((f) => f.name === '11-bibliography');
+    state.pdfxActive = preambleFilters.some((f) => f.name === '99-pdfx');
+    state.cropActive = preambleFilters.some((f) => f.name === '98-crop');
+    state.pageDimensions = detectPageSize(preambleFilters);
+    // Generación dinámica de 98-crop y 99-pdfx según tamaño de página (#1975).
+    applyPrintQueueDynamics(preambleFilters, state.pageDimensions);
+    await writeIfChanged(
+      state.latexTemplatePath,
+      await composeLatexTemplate({
+        pageNumber: siteConfig.format?.pdf?.pageNumber ?? DEFAULT_SITE_CONFIG.format.pdf.pageNumber,
+        toc: siteConfig.toc,
+        preambleFilters,
+        bibFiles,
+      }),
+    );
+  }
+  return state;
+}
+
+/** Pre-crea los directorios de caché de biber (uno por slot del pool PDF). */
+async function ensureBiberCaches(cwd: string, maxSlots: number): Promise<void> {
+  const biberBase = join(cwd, '.iteraciones', 'biber');
+  await Promise.all(Array.from({ length: maxSlots }, (_, i) => mkdir(join(biberBase, `cache-${i}`), { recursive: true })));
+}
+
 /**
  * Ejecuta el pipeline por documento (fases 2-6 fusionadas):
  *
@@ -69,139 +187,72 @@ export async function documentPipeline(
 ): Promise<{ processed: Set<string> }> {
   const { activeFormats } = plan;
   const pdfOn = activeFormats.pdf;
-  const latexOn = activeFormats.latex;
-  const htmlOn = activeFormats.html;
-  const epubOn = activeFormats.epub;
-  const mdOn = activeFormats.markdown;
-  const siteConfig = ctx.siteConfig;
-  // La bibliografía se resuelve una sola vez por build y se comparte con todos
-  // los documentos.
-  const bib = await resolveBibOptions(ctx.cwd, siteConfig);
-  const bibOptions = bib.bibOptions;
-  const bibFiles = bib.bibFiles;
-  const globalBibliography = bibOptions?.bibliography;
-  // El default vive en DEFAULT_SITE_CONFIG (es-MX): el fallback local no debe
-  // divergir de la configuración (un lang distinto emite --metadata distinto).
-  const lang = siteConfig.language ?? DEFAULT_SITE_CONFIG.language;
-  const htmlConfig = formatCfg?.html;
-  const logoInline = await loadLogoInline(ctx.cwd, htmlConfig?.site?.logo?.trim());
 
-  // Unión de todos los documentos con trabajo este build: los de los exportSets
-  // (formatos activos) y los de docsChanged (markdown/filters modificados).
-  const workDocs = new Map<string, BuildDocument>();
-  for (const doc of [...work.exportSets.latex, ...work.exportSets.html, ...work.exportSets.epub, ...work.exportSets.markdown]) {
-    workDocs.set(doc.relativePath, doc);
-  }
-  for (const doc of allDocs) {
-    if (work.docsChanged.has(doc.relativePath)) workDocs.set(doc.relativePath, doc);
-  }
-  const workDocList = [...workDocs.values()];
+  // ── Configuración compartida (bibliografía, lang, logo) ──
+  const setup = await resolvePipelineSetup(ctx, formatCfg);
+
+  // Documentos con trabajo este build
+  const workDocList = collectWorkDocs(work, allDocs);
 
   // ── Templates efectivos (una vez por build, no dependen del documento) ──
-  const templatesDir = join(ctx.cwd, '.iteraciones', 'templates');
-  await mkdir(templatesDir, { recursive: true });
-  const htmlTemplatePath = join(templatesDir, 'html.html');
-  const latexTemplatePath = join(templatesDir, 'latex.tex');
-  // Wrapper de la tarjeta Referencias: recurso estático compuesto una vez por
-  // build (el marcador {{refs-list}} recibe la lista extraída por documento).
-  const refsCardTemplate = await loadReferencesCardTemplate();
-  if (htmlOn) {
-    await writeIfChanged(htmlTemplatePath, await composeHtmlTemplate(siteConfig));
-  }
-  // Preamble filters efectivos: determinan el flag biblatex-available que
-  // flags.lua consulta antes de inyectar \\printbibliography (desactivar
-  // 11-bibliography sin guarda produciría un comando indefinido).
-  let biblatexAvailable = true;
-  // 99-pdfx activo: señal de "quiero certificar PDF/X"; activa la inyección de
-  // los metadatos XMP/Info en el .tex (issue #1970).
-  let pdfxActive = false;
-  // 98-crop activo: controla el bleed (+6mm) en endpapers y crop/pdfx.
-  let cropActive = false;
-  // Dimensiones de página en mm (para preprocesamiento de imágenes).
-  let pageDimensions: { w: number; h: number; textW: number } | undefined;
-  if (plan.generateLatex) {
-    const preambleFilters = await loadPreambleFilters(effectiveDisabledPreamble, ctx.cwd);
-    biblatexAvailable = preambleFilters.some((f) => f.name === '11-bibliography');
-    pdfxActive = preambleFilters.some((f) => f.name === '99-pdfx');
-    cropActive = preambleFilters.some((f) => f.name === '98-crop');
-    pageDimensions = detectPageSize(preambleFilters);
-    // Generación dinámica de 98-crop y 99-pdfx según tamaño de página (#1975).
-    applyPrintQueueDynamics(preambleFilters, pageDimensions);
-    await writeIfChanged(
-      latexTemplatePath,
-      await composeLatexTemplate({
-        pageNumber: siteConfig.format?.pdf?.pageNumber ?? DEFAULT_SITE_CONFIG.format.pdf.pageNumber,
-        toc: siteConfig.toc,
-        preambleFilters,
-        bibFiles,
-      }),
-    );
-  }
+  const templates = await writeEffectiveTemplates(ctx, plan, activeFormats.html, ctx.siteConfig, setup.bibFiles, effectiveDisabledPreamble);
 
-  // Pre-crear directorios de caché de biber (uno por slot de concurrencia de PDF).
+  // ── Pool 2 (PDF): cachés de biber + consumidor arrancado en paralelo con el pool 1 ──
   const maxSlots = pdfOn ? pdfSlotCount(ctx.concurrency) : 0;
-  const biberBase = join(ctx.cwd, '.iteraciones', 'biber');
   if (pdfOn && maxSlots > 0) {
-    await Promise.all(Array.from({ length: maxSlots }, (_, i) => mkdir(join(biberBase, `cache-${i}`), { recursive: true })));
+    await ensureBiberCaches(ctx.cwd, maxSlots);
   }
-
-  // ── Pool 2 (PDF): consumidor de la cola, arranca en paralelo con el pool 1 ──
   const pdfWorkBase = join(ctx.cwd, '.iteraciones', 'tmp', 'pdf');
+  const biberBase = join(ctx.cwd, '.iteraciones', 'biber');
   const pdfConsumer = createPdfConsumer(pdfWorkBase, biberBase, maxSlots, progress);
   if (pdfOn && work.exportSets.latex.length > 0) {
     // Los workers arrancan antes del pool 1: latexmk se solapa con pandoc.
     pdfConsumer.start();
   }
 
-  // ── Pool 1 (formatos ligeros) ──
-  const processed = new Set<string>();
-  const htmlPaths = new Set(work.exportSets.html.map((d) => d.relativePath));
-  const epubPaths = new Set(work.exportSets.epub.map((d) => d.relativePath));
-  const mdPaths = new Set(work.exportSets.markdown.map((d) => d.relativePath));
-  // Documentos que generan .tex (para latexOn y/o pdfOn)
-  const latexPaths = new Set(work.exportSets.latex.map((d) => d.relativePath));
-  const filters = await loadFilterGroups(siteConfig, siteConfig.disabledFilters, ctx.cwd);
-
-  progress.startLightFormats();
-  const renderCtx = { ctx, plan, formatCfg, lang, logoInline, warnedLangs: new Set<string>(), pdfxActive, cropActive, pageDimensions };
-  const exportCtx = {
-    filters,
-    bibOptions,
-    bibFiles,
-    biblatexAvailable,
-    globalBibliography,
-    pdfWorkDir: pdfWorkBase,
-    htmlTemplatePath,
-    latexTemplatePath,
-    refsCardTemplate,
-  };
-  const formatWorkSets = { htmlPaths, epubPaths, mdPaths, latexPaths, pdfJobs: pdfConsumer.pdfJobs };
-  try {
-    await mapWithConcurrency(workDocList, ctx.concurrency, async (doc) => {
-      await processDocumentFormats(doc, renderCtx, exportCtx, formatWorkSets, discoveryIndex);
-      processed.add(doc.relativePath);
-      progress.reportFile({ relativePath: doc.relativePath, phase: 'render' });
-    });
-    pdfConsumer.markProducerDone();
-  } catch (err) {
+  // ── Pool 1 (formatos ligeros): ejecución concurrente por documento ──
+  const { processed } = await runLightFormatsPool(progress, ctx, plan, formatCfg, discoveryIndex, {
+    workDocList,
+    siteConfig: ctx.siteConfig,
+    lang: setup.lang,
+    logoInline: setup.logoInline,
+    bibOptions: setup.bibOptions,
+    bibFiles: setup.bibFiles,
+    globalBibliography: setup.globalBibliography,
+    biblatexAvailable: templates.biblatexAvailable,
+    pdfxActive: templates.pdfxActive,
+    cropActive: templates.cropActive,
+    pageDimensions: templates.pageDimensions,
+    htmlTemplatePath: templates.htmlTemplatePath,
+    latexTemplatePath: templates.latexTemplatePath,
+    refsCardTemplate: templates.refsCardTemplate,
+    htmlPaths: new Set(work.exportSets.html.map((d) => d.relativePath)),
+    epubPaths: new Set(work.exportSets.epub.map((d) => d.relativePath)),
+    mdPaths: new Set(work.exportSets.markdown.map((d) => d.relativePath)),
+    latexPaths: new Set(work.exportSets.latex.map((d) => d.relativePath)),
+    pdfJobs: pdfConsumer.pdfJobs,
     // Fallo del pool 1: cancelar la cola PDF para que los workers salgan sin
     // compilar lo pendiente, ESPERAR a los que están en vuelo (#2013: un
     // latexmk vivo ejecutaría su rename hacia dist/ después del fallo) y
     // recién entonces propagar el error.
-    pdfConsumer.cancel();
-    await pdfConsumer.quiesce();
-    throw err;
-  }
+    onFatalError: async () => {
+      pdfConsumer.cancel();
+      await pdfConsumer.quiesce();
+    },
+  });
+
+  // Pool 1 sin errores: se cierra la cola de producción del pool 2.
+  pdfConsumer.markProducerDone();
 
   // Completar las subtareas de los formatos ligeros activos y la fase render:
   // su trabajo ocurre dentro del pool 1, así que el tracker avanza al grupo
   // 'Generando formatos' mientras los PDFs siguen compilando en el pool 2
   // (con su propio progreso en vivo).
   const count = processed.size;
-  if (latexOn) progress.completePhase(count, 'latex');
-  if (htmlOn) progress.completePhase(count, 'html');
-  if (epubOn) progress.completePhase(count, 'epub');
-  if (mdOn) progress.completePhase(count, 'markdown');
+  if (activeFormats.latex) progress.completePhase(count, 'latex');
+  if (activeFormats.html) progress.completePhase(count, 'html');
+  if (activeFormats.epub) progress.completePhase(count, 'epub');
+  if (activeFormats.markdown) progress.completePhase(count, 'markdown');
   progress.completePhase(count, 'render');
 
   await pdfConsumer.drain();
@@ -213,6 +264,89 @@ export async function documentPipeline(
     await generateCoverImages(pdfConsumer.pdfJobs.map((job) => ({ pdfPath: job.pdfDest, pngPath: join(dirname(job.pdfDest), `${job.slug}.png`) })));
   }
 
+  return { processed };
+}
+
+/** Argumentos fijados una vez por build para el pool de formatos ligeros. */
+interface LightPoolArgs {
+  workDocList: BuildDocument[];
+  siteConfig: SiteConfig;
+  lang: string;
+  logoInline: string | undefined;
+  bibOptions: Awaited<ReturnType<typeof resolveBibOptions>>['bibOptions'];
+  bibFiles: string[];
+  globalBibliography: string | undefined;
+  biblatexAvailable: boolean;
+  pdfxActive: boolean;
+  cropActive: boolean;
+  pageDimensions: { w: number; h: number; textW: number } | undefined;
+  htmlTemplatePath: string;
+  latexTemplatePath: string;
+  refsCardTemplate: string;
+  htmlPaths: Set<string>;
+  epubPaths: Set<string>;
+  mdPaths: Set<string>;
+  latexPaths: Set<string>;
+  pdfJobs: PdfJob[];
+  onFatalError: () => Promise<void>;
+}
+
+/**
+ * Pool 1 — ejecuta processDocumentFormats con concurrencia general y registra
+ * progreso por documento. Si un documento falla se cancelan los PDFs vía
+ * onFatalError y el error se propaga tras quiescer los workers.
+ */
+async function runLightFormatsPool(
+  progress: BuildReporter,
+  ctx: BuildContext,
+  plan: BuildMetadata,
+  formatCfg: SiteConfig['format'] | undefined,
+  discoveryIndex: Map<string, DiscoveryEntry>,
+  args: LightPoolArgs,
+): Promise<{ processed: Set<string> }> {
+  const filters = await loadFilterGroups(args.siteConfig, args.siteConfig.disabledFilters, ctx.cwd);
+  const renderCtx: RenderContext = {
+    ctx,
+    plan,
+    formatCfg,
+    lang: args.lang,
+    logoInline: args.logoInline,
+    warnedLangs: new Set<string>(),
+    pdfxActive: args.pdfxActive,
+    cropActive: args.cropActive,
+    pageDimensions: args.pageDimensions,
+  };
+  const exportCtx: ExportContext = {
+    filters,
+    bibOptions: args.bibOptions,
+    bibFiles: args.bibFiles,
+    biblatexAvailable: args.biblatexAvailable,
+    globalBibliography: args.globalBibliography,
+    pdfWorkDir: join(ctx.cwd, '.iteraciones', 'tmp', 'pdf'),
+    htmlTemplatePath: args.htmlTemplatePath,
+    latexTemplatePath: args.latexTemplatePath,
+    refsCardTemplate: args.refsCardTemplate,
+  };
+  const formatWorkSets: FormatWorkSets = {
+    htmlPaths: args.htmlPaths,
+    epubPaths: args.epubPaths,
+    mdPaths: args.mdPaths,
+    latexPaths: args.latexPaths,
+    pdfJobs: args.pdfJobs,
+  };
+
+  const processed = new Set<string>();
+  progress.startLightFormats();
+  try {
+    await mapWithConcurrency(args.workDocList, ctx.concurrency, async (doc) => {
+      await processDocumentFormats(doc, renderCtx, exportCtx, formatWorkSets, discoveryIndex);
+      processed.add(doc.relativePath);
+      progress.reportFile({ relativePath: doc.relativePath, phase: 'render' });
+    });
+  } catch (err) {
+    await args.onFatalError();
+    throw err;
+  }
   return { processed };
 }
 
