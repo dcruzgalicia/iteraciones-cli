@@ -13,6 +13,7 @@ import { type BuildMetadata, computeBuildMetadata, computeWorkSets } from './bui
 import { cleanupCoverImages, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges } from './cleanup.js';
 import { buildDocsFromIndex, discover, loadPrevState, noPrevState } from './discover.js';
 import { validateDisabledFilters } from './filter-resolver.js';
+import { DIST_FILES_DIR } from './output-layout.js';
 import { runPdfxOutputValidation } from './pdfx-check.js';
 import { documentPipeline } from './pipeline.js';
 import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, validatePreambleDependencies } from './preamble-loader.js';
@@ -49,7 +50,7 @@ export interface BuildSummary {
 }
 
 async function setupBuildEnvironment(cwd: string, siteConfig: SiteConfig, options: BuildOptions): Promise<BuildContext> {
-  const defaultOutputDir = join(cwd, 'dist', 'files');
+  const defaultOutputDir = join(cwd, DIST_FILES_DIR);
   // Límite superior de 16: en máquinas con muchos núcleos, demasiados procesos
   // simultáneos saturan el sistema de archivos y degradan el rendimiento.
   const concurrency = Math.min(Math.max(1, cpus().length - 1), 16);
@@ -104,7 +105,7 @@ export async function build(cwd: string, options: BuildOptions = {}, reporter: B
     // a discovery. Con --full, en cambio, la salida se eliminó al inicio:
     // los archivos parciales de dist/ no son salidas válidas y se limpian.
     if (options.full) {
-      const outputDir = options.outputDir ?? join(cwd, 'dist', 'files');
+      const outputDir = options.outputDir ?? join(cwd, DIST_FILES_DIR);
       await rm(outputDir, { recursive: true, force: true });
     }
     throw err;

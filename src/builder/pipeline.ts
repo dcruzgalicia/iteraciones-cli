@@ -19,6 +19,7 @@ import { composeHtmlTemplate } from './html-composer.js';
 import { loadReferencesCardTemplate } from './html-postprocess.js';
 import { buildTexDistribution, markdownToLatex, rewriteTexForDist } from './latex-composer.js';
 import { applyPrintQueueDynamics, composeLatexTemplate, detectPageSize } from './latex-preamble.js';
+import { PDF_WORK_BASE, primaryOutputExtension } from './output-layout.js';
 import { createPdfConsumer, type PdfJob } from './pdf-pool.js';
 import { loadPreambleFilters } from './preamble-loader.js';
 import { htmlPageFromMarkdown } from './render.js';
@@ -405,9 +406,6 @@ interface ExportContext {
   refsCardTemplate: string;
 }
 
-/** Área de trabajo de compilación PDF, relativa a la raíz del proyecto. */
-const PDF_WORK_BASE = join('.iteraciones', 'tmp', 'pdf');
-
 /** Conjuntos de trabajo por formato del build actual. Inmutable durante el pool. */
 interface FormatWorkSets {
   htmlPaths: Set<string>;
@@ -487,7 +485,7 @@ function formatLinksFor(
   const formats = [];
   if (plan.activeFormats.pdf) {
     formats.push({
-      href: relativeHref(dir, `${outSlug}.pdf`),
+      href: relativeHref(dir, `${outSlug}${primaryOutputExtension('pdf')}`),
       key: 'pdf' as const,
       name: 'PDF',
       description: 'Documento final para lectura e impresión',
@@ -495,7 +493,7 @@ function formatLinksFor(
   }
   if (plan.activeFormats.epub) {
     formats.push({
-      href: relativeHref(dir, `${outSlug}.epub`),
+      href: relativeHref(dir, `${outSlug}${primaryOutputExtension('epub')}`),
       key: 'epub' as const,
       name: 'EPUB',
       description: 'Edición adaptable para lectura digital',
@@ -503,7 +501,7 @@ function formatLinksFor(
   }
   if (plan.activeFormats.latex) {
     formats.push({
-      href: relativeHref(dir, `${outSlug}.tex`),
+      href: relativeHref(dir, `${outSlug}${primaryOutputExtension('latex')}`),
       key: 'latex' as const,
       name: 'LaTeX',
       description: 'Archivo fuente para composición tipográfica',
@@ -511,7 +509,7 @@ function formatLinksFor(
   }
   if (plan.activeFormats.markdown) {
     formats.push({
-      href: relativeHref(dir, `${outSlug}.md`),
+      href: relativeHref(dir, `${outSlug}${primaryOutputExtension('markdown')}`),
       key: 'markdown' as const,
       name: 'Markdown',
       description: 'Texto fuente reutilizable y portable',
@@ -552,7 +550,7 @@ async function emitLatexAndQueuePdf(
   const latexOn = plan.activeFormats.latex;
   const pdfOn = plan.activeFormats.pdf;
   const { dir, outBase, outSlug, fm } = outputs;
-  const texDistPath = outBase(`${outSlug}.tex`);
+  const texDistPath = outBase(`${outSlug}${primaryOutputExtension('latex')}`);
 
   // .tex completo (preámbulo + cuerpo) en UNA invocación markdown → latex: el
   // artefacto de dist/ es el bundle portable (si latexOn) y la copia de
@@ -594,10 +592,16 @@ async function emitLatexAndQueuePdf(
     // latexmk corre con cwd/-outdir en el slot aislado (#1967), así que un tex
     // con nombres relativos no resolvería los gráficos ahí (#2156 — antes se
     // le entregaba el tex reescrito de dist y fallaba pdftex.def).
-    const texPath = join(exportCtx.pdfWorkDir, dir, `${outSlug}.tex`);
+    const texPath = join(exportCtx.pdfWorkDir, dir, `${outSlug}${primaryOutputExtension('latex')}`);
     await writeOutput(texPath, texWithXmp);
     // ── FRONTERA pool 1 → pool 2: desde aquí ejecuta pdf-pool.ts ──
-    sets.pdfJobs.push({ dir, slug: outSlug, relativePath: doc.relativePath, texPath, pdfDest: outBase(`${outSlug}.pdf`) });
+    sets.pdfJobs.push({
+      dir,
+      slug: outSlug,
+      relativePath: doc.relativePath,
+      texPath,
+      pdfDest: outBase(`${outSlug}${primaryOutputExtension('pdf')}`),
+    });
   }
 }
 
@@ -648,7 +652,7 @@ async function emitHtmlPage(
     bibOptions: exportCtx.bibOptions,
     luaFilters: exportCtx.filters,
   });
-  await writeOutput(outBase(`${outSlug}.html`), html);
+  await writeOutput(outBase(`${outSlug}${primaryOutputExtension('html')}`), html);
 }
 
 /** Procesa todos los formatos de un documento: markdown → tex/HTML/EPUB/MD → cola PDF. */
@@ -695,10 +699,24 @@ async function processDocumentFormats(
 
   // EPUB y Markdown desde el markdown original, directo a dist/
   if (activeFormats.epub && formatWorkSets.epubPaths.has(doc.relativePath)) {
-    await convertToEpub(content, outputs.outBase(`${outSlug}.epub`), exportDoc, exportCtx.filters, ctx.siteConfig.toc, outputs.fm);
+    await convertToEpub(
+      content,
+      outputs.outBase(`${outSlug}${primaryOutputExtension('epub')}`),
+      exportDoc,
+      exportCtx.filters,
+      ctx.siteConfig.toc,
+      outputs.fm,
+    );
   }
   if (activeFormats.markdown && formatWorkSets.mdPaths.has(doc.relativePath)) {
-    await convertToMarkdown(content, outputs.outBase(`${outSlug}.md`), exportDoc, exportCtx.filters, ctx.cwd, outputs.fm);
+    await convertToMarkdown(
+      content,
+      outputs.outBase(`${outSlug}${primaryOutputExtension('markdown')}`),
+      exportDoc,
+      exportCtx.filters,
+      ctx.cwd,
+      outputs.fm,
+    );
   }
 }
 

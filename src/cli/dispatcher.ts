@@ -4,6 +4,7 @@ import { stringify } from 'yaml';
 import { listMarkdownDocuments } from '../builder/gitignore.js';
 import type { BuildOptions } from '../builder/orchestrator.js';
 import { build } from '../builder/orchestrator.js';
+import { DIST_DIR, DIST_FILES_DIR } from '../builder/output-layout.js';
 import { loadStateFile } from '../builder/state.js';
 import { loadSiteConfigIfPresent } from '../config/config-loader.js';
 import { computeActiveFormats, DEFAULT_PDF_FORMAT } from '../config/site-config.js';
@@ -62,7 +63,7 @@ export async function runClean(cwd: string): Promise<void> {
     cwd,
     'clean',
     async () => {
-      const targets = [join(cwd, 'dist'), join(cwd, '.iteraciones')];
+      const targets = [join(cwd, DIST_DIR), join(cwd, '.iteraciones')];
       // Reportar por directorio qué no se pudo eliminar: un fallo de clean no debe
       // afirmar éxito (antes el catch traga cualquier error, EACCES incluido).
       const results = await Promise.all(
@@ -189,7 +190,7 @@ async function buildProjectInfo(cwd: string): Promise<string[]> {
   // El directorio de salida real es el del último build (state.json);
   // sin estado previo, el default.
   const state = await loadStateFile(cwd);
-  const distDir = state?.outputDir ?? join(cwd, 'dist', 'files');
+  const distDir = state?.outputDir ?? join(cwd, DIST_FILES_DIR);
   const distExists = await stat(distDir)
     .then((s) => s.isDirectory())
     .catch(() => false);
