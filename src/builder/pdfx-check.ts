@@ -3,6 +3,7 @@ import { chmod, copyFile, mkdir } from 'node:fs/promises';
 import { cpus, homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
+import { BuildError } from '../lib/errors.js';
 import { GLYPHS, logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
 import { exec, mapWithConcurrency } from '../lib/run.js';
@@ -148,6 +149,12 @@ type PdfxOutputValidationResult = {
  * imprenta"). Sin PDFs o sin 99-pdfx no hace nada; sin binario intenta
  * compilarlo con cargo (si `allowBuild`) y, si no se obtiene, advierte sin
  * romper el build.
+ *
+ * Contrato de fallo (decisión D2, issue #2162): con 99-pdfx activo, un PDF
+ * que no certifica hace FALLAR el build (BuildError con archivo/página/código
+ * de cada PDF incumplidor). El filter activo es la señal explícita de
+ * imprenta; quien no quiere bloqueo desactiva el filter. Los warnings de los
+ * PDFs que sí certifican quedan en advertencias sin bloquear.
  */
 export async function runPdfxOutputValidation(
   outputDir: string,
@@ -176,6 +183,7 @@ export async function runPdfxOutputValidation(
 
   let validated = 0;
   let failed = 0;
+  const fallos: string[] = [];
   // Validación concurrente con límite prudente (#2026): saturar CPU/disco
   // degrada; la SALIDA se emite en el orden determinista del glob ordenado.
   const results = await mapWithConcurrency(pdfs, Math.min(4, Math.max(1, cpus().length)), (file) => validatePdfX1a(join(outputDir, file), binary));
@@ -188,20 +196,25 @@ export async function runPdfxOutputValidation(
     // Se reportan TODOS los fallos (errors ya incluyen los warnings de
     // identificación promovidos a error) y TODOS los warnings restantes, para
     // que ningún incumplimiento u advertencia quede oculto (issue #1971).
+    // Los detalles de un PDF que no certifica viajan en el error (la ruta de
+    // fallo del build no imprime los warnings acumulados del tracker).
     if (!result.valid) {
       failed += 1;
-      logWarning(`${file}: no cumple PDF/X-1a (${plural(result.errors.length, 'fallo', 'fallos')})`, 'pdfx');
+      fallos.push(`${file}: no cumple PDF/X-1a (${plural(result.errors.length, 'fallo', 'fallos')})`);
       for (const e of result.errors) {
-        logWarning(`  [${e.code}] ${e.message}${where(e)}`, 'pdfx');
+        fallos.push(`  [${e.code}] ${e.message}${where(e)}`);
       }
-    }
-    for (const w of result.warnings) {
-      logWarning(`${file}: advertencia PDF/X-1a — [${w.code}] ${w.message}${where(w)}`, 'pdfx');
+      for (const w of result.warnings) {
+        fallos.push(`  advertencia — [${w.code}] ${w.message}${where(w)}`);
+      }
+    } else {
+      for (const w of result.warnings) {
+        logWarning(`${file}: advertencia PDF/X-1a — [${w.code}] ${w.message}${where(w)}`, 'pdfx');
+      }
     }
   }
   if (failed > 0) {
-    logWarning(`${failed} de ${validated} PDFs no certifican PDF/X-1a.`, 'pdfx');
-    return { validated, failed, summaryLine: undefined };
+    throw new BuildError(`${failed} de ${validated} PDFs no certifican PDF/X-1a.\n${fallos.map((l) => `  ${l}`).join('\n')}`);
   }
   // Éxito: confirmación explícita en el resumen final (issue #1960).
   return {
