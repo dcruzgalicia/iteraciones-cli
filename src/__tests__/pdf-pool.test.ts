@@ -153,6 +153,43 @@ describe('pdf-pool (consumidor con solape real)', () => {
     }
   });
 
+  it('invariante worker⇄slot: dos compilaciones concurrentes nunca comparten slot', async () => {
+    // Con asignación round-robin por job (slot++ % maxSlots), un job encolado
+    // mientras otro sigue en vuelo puede reutilizar el slot del primero: la
+    // carrera de XMP que el issue #1967 decidió prevenir. Con workers
+    // vinculados a slot fijo, la violación es estructuralmente imposible.
+    const enVuelo = new Map<number, number>();
+    let violacion = false;
+    let liberarA!: () => void;
+    const bloqueoA = new Promise<void>((r) => {
+      liberarA = r;
+    });
+    const spy = spyOn(runner, 'convertToPdf').mockImplementation(async (_tex, sourcePath, pdfDir) => {
+      const slot = Number(/slot-(\d+)$/.exec(pdfDir)?.[1] ?? -1);
+      enVuelo.set(slot, (enVuelo.get(slot) ?? 0) + 1);
+      if ((enVuelo.get(slot) ?? 0) > 1) violacion = true;
+      if (sourcePath === 'doc-1.md') await bloqueoA; // retiene a su worker
+      await Bun.sleep(10);
+      enVuelo.set(slot, (enVuelo.get(slot) ?? 1) - 1);
+    });
+    try {
+      const consumer = createPdfConsumer('/tmp/work', '/tmp/biber', 2, progressStub());
+      consumer.start();
+      consumer.pdfJobs.push(job(1));
+      await Bun.sleep(30); // worker 0 tomó doc-1 y está bloqueado en él (slot 0)
+      consumer.pdfJobs.push(job(2)); // worker 1 toma doc-2 (slot 1) y termina
+      await Bun.sleep(50);
+      consumer.pdfJobs.push(job(3)); // worker 1 (libre) toma doc-3 mientras doc-1 sigue en vuelo
+      await Bun.sleep(50);
+      expect(violacion).toBe(false);
+      liberarA();
+      await consumer.drain();
+      expect(violacion).toBe(false);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it('cancel con job en vuelo: el job tomado termina y lo pendiente se descarta', async () => {
     const calls: string[] = [];
     const spy = spyOn(runner, 'convertToPdf').mockImplementation(async (_tex, sourcePath) => {
