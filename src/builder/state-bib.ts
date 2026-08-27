@@ -98,7 +98,7 @@ export async function computeBibHash(cwd: string, siteConfig?: SiteConfig, prevC
 }
 
 /** Resuelve una ruta configurada (bibliography/csl) contra la raíz del proyecto. */
-function resolveConfiguredPath(cwd: string, rel: string): string {
+export function resolveConfiguredPath(cwd: string, rel: string): string {
   return isAbsolute(rel) ? rel : join(cwd, rel);
 }
 
