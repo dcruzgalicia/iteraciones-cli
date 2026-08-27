@@ -176,7 +176,13 @@ describe('blindaje pipeline magick (#2085, fixes ecba990a/3b7d7a97)', () => {
     const calls: string[][] = [];
     Bun.spawn = ((args: string[]) => {
       calls.push(args as string[]);
-      return { exited: Promise.resolve(0), stderr: new Response('').body } as unknown as ReturnType<typeof realSpawn>;
+      // Contrato mínimo que exec() consume: stdout/stderr legibles y exit 0
+      return {
+        exited: Promise.resolve(0),
+        stdout: new Response('').body,
+        stderr: new Response('').body,
+        pid: 12345,
+      } as unknown as ReturnType<typeof realSpawn>;
     }) as typeof Bun.spawn;
     try {
       const outDir = mkdtempSync(join(tmpdir(), 'magick-args-'));
