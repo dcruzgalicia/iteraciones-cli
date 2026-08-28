@@ -196,6 +196,60 @@ describe('runPdfxOutputValidation (fase final del build)', () => {
     });
   });
 
+  it('caché PDF/X: el segundo build no invoca el validador y hereda la certificación (#2190)', async () => {
+    await withTempDir(async (dir) => {
+      useIsolatedManagedBin(dir);
+      await initPdfxProject(dir);
+      await mkdir(join(dir, 'dist', 'files'), { recursive: true });
+      await writeFile(join(dir, 'dist', 'files', 'doc.pdf'), '%PDF-1.4 fake', 'utf8');
+      await writeFakeBinary(dir, '{"valid": true, "level": "PDF/X-1a:2001", "errors": [], "warnings": []}');
+      const config = await loadSiteConfig(dir);
+
+      // Primer run: valida e informa la clave en out
+      const prev: Record<string, string> = {};
+      const out: Record<string, string> = {};
+      let result = await runPdfxOutputValidation(join(dir, 'dist', 'files'), config, { allowBuild: false }, undefined, {
+        prev,
+        out,
+      });
+      expect(result.validated).toBe(1);
+      expect(Object.keys(out).length).toBe(1);
+
+      // Segundo run con la caché heredada: 1 validado SIN invocar binario
+      const out2: Record<string, string> = {};
+      result = await runPdfxOutputValidation(join(dir, 'dist', 'files'), config, { allowBuild: false }, undefined, {
+        prev: { ...out },
+        out: out2,
+      });
+      expect(result.validated).toBe(1);
+      expect(result.summaryLine).toContain('1 PDF certifica');
+      // La clave heredada se mantiene en out (los PDFs vigentes no pierden su certificación)
+      expect(Object.keys(out2)).toEqual(Object.keys(out));
+    });
+  });
+
+  it('caché PDF/X: cambiar la lista efectiva de preamble filters revalida (#2190)', async () => {
+    await withTempDir(async (dir) => {
+      useIsolatedManagedBin(dir);
+      await initPdfxProject(dir);
+      await mkdir(join(dir, 'dist', 'files'), { recursive: true });
+      await writeFile(join(dir, 'dist', 'files', 'doc.pdf'), '%PDF-1.4 fake', 'utf8');
+      await writeFakeBinary(dir, '{"valid": true, "level": "PDF/X-1a:2001", "errors": [], "warnings": []}');
+      const config = await loadSiteConfig(dir);
+      const prev: Record<string, string> = {};
+      const out: Record<string, string> = {};
+      await runPdfxOutputValidation(join(dir, 'dist', 'files'), config, { allowBuild: false }, undefined, { prev, out });
+      // Otra lista efectiva ⇒ claves distintas ⇒ revalida (out nuevo vacío)
+      const out2: Record<string, string> = {};
+      const result = await runPdfxOutputValidation(join(dir, 'dist', 'files'), config, { allowBuild: false }, ['98-crop', '99-otro'], {
+        prev: { ...out },
+        out: out2,
+      });
+      expect(result.validated).toBe(1);
+      expect(Object.keys(out2).length).toBe(1);
+    });
+  });
+
   it('sin fallos de certificación confirma el éxito en la línea de resumen (issue #1960)', async () => {
     await withTempDir(async (dir) => {
       useIsolatedManagedBin(dir);

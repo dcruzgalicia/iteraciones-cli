@@ -43,6 +43,8 @@ export interface BuildState {
   configFileCache?: Record<string, import('./state-hash.js').FileCacheEntry>;
   /** Hash de los archivos .bib y .csl del proyecto. */
   bibHash?: string;
+  /** Caché de certificaciones PDF/X válidas (clave compuesta #2190). */
+  pdfxCache?: Record<string, string>;
   /** Caché por archivo de bibliografía (mtime+size+hash) para evitar re-leer contenido. */
   bibFileCache?: BibFileCache;
   /** Hash de los HTML finales + recursos CSS: invalida la compilación de Tailwind. */
@@ -91,6 +93,7 @@ export async function loadStateFile(cwd: string): Promise<BuildState | null> {
       configFileCache: parsed.configFileCache,
       bibHash: parsed.bibHash,
       bibFileCache: parsed.bibFileCache,
+      pdfxCache: parsed.pdfxCache,
       cssHash: parsed.cssHash,
       cssFileCache: parsed.cssFileCache,
       completed: parsed.completed,

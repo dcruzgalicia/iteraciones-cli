@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { chmod, copyFile, mkdir } from 'node:fs/promises';
 import { cpus, homedir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -7,6 +7,7 @@ import { BuildError } from '../lib/errors.js';
 import { GLYPHS, logNotice, logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
 import { exec, mapWithConcurrency } from '../lib/run.js';
+import { hashFileContent } from './state-serialize.js';
 
 /**
  * Validación PDF/X-1a de los PDF generados (fase final del build).
@@ -149,6 +150,17 @@ type PdfxOutputValidationResult = {
 };
 
 /**
+ * Caché de validación PDF/X (#2190): clave = hash del PDF + huella del
+ * binario + lista efectiva de preamble filters desactivados. Solo se cachean
+ * los resultados VÁLIDOS y SIN warnings (los fallos se revalidan siempre:
+ * recompilar o corregir debe re-certificar; los warnings son aviso útil).
+ */
+export interface PdfxCacheHandle {
+  prev: Record<string, string>;
+  out: Record<string, string>;
+}
+
+/**
  * Fase final del build: valida PDF/X-1a los PDFs de la salida cuando el
  * preamble filter 99-pdfx está activo (la señal de "quiero certificar para
  * imprenta"). Sin PDFs o sin 99-pdfx no hace nada; sin binario intenta
@@ -167,6 +179,8 @@ export async function runPdfxOutputValidation(
   options: { allowBuild?: boolean } = {},
   /** Lista efectiva de preamble filters desactivados (issue #2022: la config del usuario no se muta). */
   effectiveDisabledPreamble?: string[],
+  /** Caché de resultados (#2190): prev se consulta, out acumula los nuevos válidos. */
+  cache?: PdfxCacheHandle,
 ): Promise<PdfxOutputValidationResult> {
   const disabled = effectiveDisabledPreamble ?? siteConfig.format?.pdf?.disabledPreambleFilters ?? [];
   if (disabled.includes('99-pdfx')) return { validated: 0, failed: 0, summaryLine: undefined };
@@ -189,13 +203,48 @@ export async function runPdfxOutputValidation(
   let validated = 0;
   let failed = 0;
   const fallos: string[] = [];
+  // Huella del binario en la clave: reconstruirlo (o actualizarlo) revalida.
+  let binFp = '';
+  try {
+    const st = statSync(binary);
+    binFp = `${Math.round(st.mtimeMs)}:${st.size}`;
+  } catch {
+    binFp = 'desconocido';
+  }
+  /** Clave de caché de un PDF: contenido + binario + configuración efectiva. */
+  const cacheKeyFor = async (file: string): Promise<string> =>
+    `${file}\0${await hashFileContent(join(outputDir, file)).catch(() => 'ilegible')}\0${binFp}\0${disabled.join(',')}`;
+  // Los PDFs con resultado cacheado no se envían al validador (#2190)
+  const pendientes: string[] = [];
+  const claves: string[] = [];
+  if (cache) {
+    for (const file of pdfs) {
+      const key = await cacheKeyFor(file);
+      claves.push(key);
+      if (cache.prev[key] === '1') validated++;
+      else pendientes.push(file);
+    }
+  } else {
+    pendientes.push(...pdfs);
+    claves.push(...pdfs.map(() => ''));
+  }
   // Validación concurrente con límite prudente (#2026): saturar CPU/disco
   // degrada; la SALIDA se emite en el orden determinista del glob ordenado.
-  const results = await mapWithConcurrency(pdfs, Math.min(4, Math.max(1, cpus().length)), (file) => validatePdfX1a(join(outputDir, file), binary));
+  const results = await mapWithConcurrency(pendientes, Math.min(4, Math.max(1, cpus().length)), (file) =>
+    validatePdfX1a(join(outputDir, file), binary),
+  );
+  // Mapa resultado por PDF para emitir en el orden determinista original.
+  const porFile = new Map<string, Awaited<ReturnType<typeof validatePdfX1a>>>();
   for (const [i, result] of results.entries()) {
-    // Invariante: mapWithConcurrency preserva el orden y la longitud de su entrada.
-    const file = pdfs[i];
-    if (file === undefined) continue;
+    const file = pendientes[i];
+    if (file !== undefined && result !== undefined) porFile.set(file, result);
+  }
+  for (const [i, file] of pdfs.entries()) {
+    // Los ya cacheados solo suman: no re-validar un PDF idéntico compilado
+    // con el mismo binario y configuración (#2190).
+    const cachedOk = cache !== undefined && claves[i] !== '' && cache.prev[claves[i] ?? ''] === '1';
+    if (cachedOk) continue; // ya contada en el pre-paso de caché (#2190)
+    const result = porFile.get(file);
     validated += 1;
     const where = (iss: PdfCheckIssue): string => (iss.page !== null && iss.page !== undefined ? ` — página ${iss.page + 1}` : '');
     // Se reportan TODOS los fallos (errors ya incluyen los warnings de
@@ -203,6 +252,10 @@ export async function runPdfxOutputValidation(
     // que ningún incumplimiento u advertencia quede oculto (issue #1971).
     // Los detalles de un PDF que no certifica viajan en el error (la ruta de
     // fallo del build no imprime los warnings acumulados del tracker).
+    if (result === undefined) {
+      fallos.push(`${file}: sin resultado del validador`);
+      continue;
+    }
     if (!result.valid) {
       failed += 1;
       fallos.push(`${file}: no cumple PDF/X-1a (${plural(result.errors.length, 'fallo', 'fallos')})`);
@@ -213,9 +266,22 @@ export async function runPdfxOutputValidation(
         fallos.push(`  advertencia — [${w.code}] ${w.message}${where(w)}`);
       }
     } else {
+      // Cacheable: válido y sin warnings (los warnings se re-avisan siempre)
+      if (cache && result.warnings.length === 0 && claves[i] !== undefined && claves[i] !== '') {
+        cache.out[claves[i] ?? ''] = '1';
+      }
       for (const w of result.warnings) {
         logWarning(`${file}: advertencia PDF/X-1a — [${w.code}] ${w.message}${where(w)}`, 'pdfx');
       }
+    }
+  }
+  // La caché nueva hereda las claves vigentes del estado previo: los PDFs que
+  // siguen existiendo conservan su certificación sin re-validar (#2190).
+  if (cache) {
+    const vigentes = new Set(claves.filter((k) => k !== ''));
+    for (const key of Object.keys(cache.prev)) {
+      const prev = cache.prev[key];
+      if (prev !== undefined && vigentes.has(key) && cache.out[key] === undefined) cache.out[key] = prev;
     }
   }
   if (failed > 0) {
