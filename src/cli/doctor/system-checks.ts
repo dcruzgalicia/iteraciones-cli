@@ -252,3 +252,26 @@ export async function checkMagick(): Promise<CheckResult> {
     warn: true,
   };
 }
+
+/**
+ * biber: backend de citas de biblatex (la doc del flujo PDF lo requiere
+ * cuando el proyecto tiene bibliografía, #2184). Check condicional: el
+ * llamador solo lo ejecuta cuando hay bibliografía + PDF activos.
+ *
+ * Presencia vía PATH (Bun.which), sin ejecutar el binario: `biber --version`
+ * tarda decenas de segundos por el arranque de Perl y doctor no debe
+ * penalizarse; el build fallará con mensaje propio si el binario no sirve.
+ */
+export function checkBiber(): CheckResult {
+  const path = Bun.which('biber');
+  if (path) {
+    return { label: 'biber disponible', ok: true, detail: path, warn: true };
+  }
+  return {
+    label: 'biber disponible',
+    ok: false,
+    detail:
+      'no encontrado — las citas PDF con biblatex fallarán al compilar. Viene con TeX Live/MacTeX full (tlmgr install biber) o: https://github.com/plk/biber',
+    warn: true,
+  };
+}
