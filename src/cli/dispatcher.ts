@@ -256,8 +256,8 @@ export async function runInit(cwd: string): Promise<void> {
   await runCliCommand(cwd, 'init', () => initProject(cwd), 'Error desconocido al inicializar.', { createRoot: true });
 }
 
-export async function runValidate(cwd: string): Promise<void> {
-  await runCliCommand(cwd, 'validate', () => validateProject(cwd), 'Error desconocido al validar.');
+export async function runValidate(cwd: string, options: { json?: boolean } = {}): Promise<void> {
+  await runCliCommand(cwd, 'validate', () => validateProject(cwd, options), 'Error desconocido al validar.');
 }
 
 export async function runDoctor(cwd: string, options: { info?: boolean } = {}): Promise<void> {
