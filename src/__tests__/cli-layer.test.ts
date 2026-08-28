@@ -41,6 +41,52 @@ function spyStderr() {
   return s;
 }
 
+describe('validate --json (#2182)', () => {
+  afterEach(resetExitCode);
+
+  it('proyecto válido: JSON único con ok:true y documentos contados', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      process.exitCode = 0;
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let output = '';
+      try {
+        await buildProgram().parseAsync(['bun', 'bin.ts', 'validate', '--json', '--project-root', dir]);
+      } finally {
+        output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      const parsed = JSON.parse(output) as { ok: boolean; documents: number; errors: unknown[]; warnings: unknown[] };
+      expect(parsed.ok).toBe(true);
+      expect(parsed.documents).toBe(1);
+      expect(parsed.errors).toEqual([]);
+      expect(process.exitCode).toBe(0);
+    });
+  });
+
+  it('proyecto con error de frontmatter: JSON con el error estructurado y exit 1', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'bad.md'), '---\ntitle: "sin cerrar\n---\n\nContenido.\n', 'utf8');
+      process.exitCode = 0;
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let output = '';
+      try {
+        await buildProgram().parseAsync(['bun', 'bin.ts', 'validate', '--json', '--project-root', dir]);
+      } finally {
+        output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      const parsed = JSON.parse(output) as { ok: boolean; errors: { file: string; message: string }[] };
+      expect(parsed.ok).toBe(false);
+      expect(parsed.errors.length).toBeGreaterThan(0);
+      expect(parsed.errors[0]?.file).toBe('bad.md');
+      expect(parsed.errors[0]?.message).toContain('frontmatter YAML inválido');
+      expect(process.exitCode).toBe(1);
+    });
+  });
+});
+
 describe('help <comando> valida el argumento (#2179)', () => {
   afterEach(() => {
     process.exitCode = 0;

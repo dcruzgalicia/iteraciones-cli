@@ -144,15 +144,18 @@ async function validateFrontmatter(cwd: string): Promise<ValidationResult> {
   return { errors, warnings, count: entries.length };
 }
 
+export interface ValidationSummary {
+  ok: boolean;
+  documents: number;
+  errors: ValidationError[];
+  warnings: ValidationError[];
+}
+
 /**
- * Valida la configuración del proyecto y el frontmatter de los ficheros Markdown.
- * Comprueba: sintaxis YAML de la config con posición, tipos y campos conocidos
- * del frontmatter (título, subtítulo, fecha, autor, slug), frontmatter sin
- * cerrar, slugs manuales (formato y duplicados), dependencias entre preamble
- * filters y existencia de bibliografía/CSL/lua-filters. No ejecuta la
- * compilación completa.
+ * Recolecta el resultado completo de la validación sin presentación: la
+ * comparte el modo humano y el contrato --json (#2182).
  */
-export async function validateProject(cwd: string): Promise<void> {
+async function collectValidation(cwd: string): Promise<{ summary: ValidationSummary; disabledFiltersCount: number; luaFiltersCount: number }> {
   let disabledFiltersCount = 0;
   let luaFiltersCount = 0;
   const configErrors: ValidationError[] = [];
@@ -199,6 +202,30 @@ export async function validateProject(cwd: string): Promise<void> {
   const { errors: fmErrors, warnings, count: docCount } = await validateFrontmatter(cwd);
   const errors = [...configErrors, ...fmErrors];
   const allWarnings = [...configWarnings, ...warnings];
+  return {
+    summary: { ok: errors.length === 0, documents: docCount, errors, warnings: allWarnings },
+    disabledFiltersCount,
+    luaFiltersCount,
+  };
+}
+
+/**
+ * Valida la configuración del proyecto y el frontmatter de los ficheros Markdown.
+ * Comprueba: sintaxis YAML de la config con posición, tipos y campos conocidos
+ * del frontmatter (título, subtítulo, fecha, autor, slug), frontmatter sin
+ * cerrar, slugs manuales (formato y duplicados), dependencias entre preamble
+ * filters y existencia de bibliografía/CSL/lua-filters. No ejecuta la
+ * compilación completa. Con `--json`, stdout lleva un único objeto con el
+ * mismo resultado estructurado (mismo contrato de errores que build, #2182).
+ */
+export async function validateProject(cwd: string, options: { json?: boolean } = {}): Promise<void> {
+  const { summary, disabledFiltersCount, luaFiltersCount } = await collectValidation(cwd);
+  if (options.json) {
+    process.stdout.write(`${JSON.stringify(summary)}\n`);
+    if (!summary.ok) process.exitCode = 1;
+    return;
+  }
+  const { errors, warnings: allWarnings, documents: docCount, ok } = summary;
 
   if (allWarnings.length > 0) {
     logWarning(`${plural(allWarnings.length, 'advertencia')}:`, 'validate');
@@ -207,7 +234,7 @@ export async function validateProject(cwd: string): Promise<void> {
     }
   }
 
-  if (errors.length === 0) {
+  if (ok) {
     const detail: string[] = [plural(docCount, 'documento')];
     if (disabledFiltersCount > 0) detail.push(`${plural(disabledFiltersCount, 'filter', 'filters')} desactivados`);
     if (luaFiltersCount > 0) detail.push(`${plural(luaFiltersCount, 'lua-filter', 'lua-filters')}`);

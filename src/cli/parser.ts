@@ -137,15 +137,17 @@ Ejemplos:
   program
     .command('validate')
     .description('valida iteraciones.config.yaml y el frontmatter de todos los documentos Markdown')
+    .option('--json', 'imprime el resultado como JSON en stdout (consumo programático)')
     .addHelpText(
       'after',
       `
 Ejemplos:
-  iteraciones validate    valida la configuración y el frontmatter del proyecto
+  iteraciones validate         valida la configuración y el frontmatter del proyecto
+  iteraciones validate --json  imprime el resultado como JSON en stdout
 `,
     )
-    .action(async () => {
-      await runValidate(projectRoot());
+    .action(async (opts: { json?: boolean }) => {
+      await runValidate(projectRoot(), { json: opts.json });
     });
 
   program
