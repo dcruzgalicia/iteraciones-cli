@@ -54,6 +54,13 @@ export interface WorkSets {
   docsChanged: Set<string>;
   anyWork: boolean;
   exportSets: Record<WorkFormatKey, BuildDocument[]>;
+  /**
+   * Representación DERIVADA única (#2176): los paths por formato y la lista
+   * unida de documentos con trabajo se calculan UNA vez aquí; ni el
+   * orquestador ni el pipeline reconstruyen Sets ni uniones.
+   */
+  workPaths: Record<WorkFormatKey, Set<string>>;
+  workDocList: BuildDocument[];
 }
 
 /**
@@ -144,6 +151,18 @@ function exportGroupsFor(activeFormats: ActiveFormats): ExportGroup[] {
   ];
 }
 
+/** Unión de documentos con trabajo: exportSets (formatos activos) + docsChanged. */
+function collectWorkDocs(exportSets: Record<WorkFormatKey, BuildDocument[]>, docsChanged: Set<string>, allDocs: BuildDocument[]): BuildDocument[] {
+  const workDocs = new Map<string, BuildDocument>();
+  for (const doc of [...exportSets.latex, ...exportSets.html, ...exportSets.epub, ...exportSets.markdown]) {
+    workDocs.set(doc.relativePath, doc);
+  }
+  for (const doc of allDocs) {
+    if (docsChanged.has(doc.relativePath)) workDocs.set(doc.relativePath, doc);
+  }
+  return [...workDocs.values()];
+}
+
 /**
  * Documentos cuyo markdown o filters cambiaron y deben reconvertirse desde el
  * markdown original. Si los filters se invalidaron (o cambió outputDir), TODOS
@@ -190,5 +209,14 @@ export function computeWorkSets(meta: BuildMetadata, allDocs: BuildDocument[], d
     exportSets[group.key] = allDocs.filter((d) => docsChanged.has(d.relativePath) || meta.formatInvalidated[group.key] || meta.bibInvalidated);
   }
 
-  return { docsChanged, anyWork, exportSets };
+  // Representación derivada única (#2176): paths por formato y unión de docs.
+  const workPaths: Record<WorkFormatKey, Set<string>> = {
+    latex: new Set(exportSets.latex.map((d) => d.relativePath)),
+    html: new Set(exportSets.html.map((d) => d.relativePath)),
+    epub: new Set(exportSets.epub.map((d) => d.relativePath)),
+    markdown: new Set(exportSets.markdown.map((d) => d.relativePath)),
+  };
+  const workDocList = collectWorkDocs(exportSets, docsChanged, allDocs);
+
+  return { docsChanged, anyWork, exportSets, workPaths, workDocList };
 }
