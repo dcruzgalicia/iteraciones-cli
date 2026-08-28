@@ -56,8 +56,10 @@ export class TrackerRenderer {
           : row.status === 'skipped'
             ? `${GLYPHS.skipped} `
             : '';
+    // Con conteo, el tiempo va doblemente separado (formato asertado);
+    // sin conteo, un solo espacio: «label  2ms» era ambiguo (#2192).
     const countPart = row.count > 0 ? ` ${row.count}` : '';
-    const timePart = row.elapsed !== undefined ? `  ${formatTime(row.elapsed)}` : '';
+    const timePart = row.elapsed !== undefined ? `${countPart === '' ? ' ' : '  '}${formatTime(row.elapsed)}` : '';
     const livePart = live !== undefined ? ` ${live}` : '';
     return `${indent}${prefix}${row.label}${countPart}${timePart}${livePart}`;
   }

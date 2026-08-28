@@ -1813,15 +1813,17 @@ describe('doctor --info (antes runInfo)', () => {
     });
   });
 
-  it('cada línea del bloque de información lleva el prefijo [doctor]', async () => {
+  it('el bloque de información va en un único bloque con encabezado (#2192)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
       const output = await infoOutput(dir);
-      // El prefijo y el glifo se repiten en cada línea (formato unificado)
-      const prefixed = output.split('\n').filter((l) => l.includes('language:') || l.includes('toc:') || l.includes('documentos:'));
-      expect(prefixed.length).toBeGreaterThanOrEqual(3);
-      for (const line of prefixed) {
-        expect(line).toContain('[doctor]');
+      // Un solo prefijo [doctor] para todo el bloque (antes: uno por línea)
+      const header = output.split('\n').find((l) => l.includes('configuración del proyecto:'));
+      expect(header).toContain('[doctor]');
+      const lineas = output.split('\n').filter((l) => l.includes('language:') || l.includes('toc:'));
+      expect(lineas.length).toBeGreaterThanOrEqual(2);
+      for (const line of lineas) {
+        expect(line).not.toContain('[doctor]');
       }
     });
   });
