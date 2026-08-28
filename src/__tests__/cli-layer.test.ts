@@ -1,8 +1,9 @@
 import { afterEach, beforeAll, describe, expect, it, spyOn } from 'bun:test';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CommanderError } from 'commander';
+import { build } from '../builder/orchestrator.js';
 import { resolvePdfCheckBinary, validatePdfX1a } from '../builder/pdfx-check.js';
 import { reportBuildError, runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from '../cli/dispatcher.js';
 import { checkLatexEngine, checkReadPermissions, checkWritePermissions } from '../cli/doctor/system-checks.js';
@@ -268,10 +269,15 @@ describe('--project-root inexistente (mensajes accionables)', () => {
     expect(process.exitCode).toBe(1);
   });
 
-  it('init falla con mensaje accionable', async () => {
-    const output = await runWithStderr(() => runInit(missingRoot('init')));
-    expect(output).toContain('no existe');
-    expect(process.exitCode).toBe(1);
+  it('init crea la raíz inexistente en lugar de fallar (#2180)', async () => {
+    const root = missingRoot('init');
+    try {
+      await runInit(root);
+      expect(process.exitCode).toBe(0);
+      expect(await Bun.file(join(root, 'iteraciones.config.yaml')).exists()).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   it('new falla con mensaje accionable', async () => {
@@ -2797,6 +2803,29 @@ describe('wiring parser → dispatcher (argv reales)', () => {
       expect(await Bun.file(join(dir, 'index.md')).exists()).toBe(true);
       expect(await Bun.file(join(dir, 'bibliography.bib')).exists()).toBe(true);
     });
+  });
+
+  it('init crea el directorio raíz si no existe (#2180)', async () => {
+    const root = join(tmpdir(), `iteraciones-init-nuevo-${Date.now()}`);
+    try {
+      process.exitCode = 0;
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      try {
+        await buildProgram().parseAsync(['bun', 'bin.ts', 'init', '--project-root', root]);
+      } finally {
+        const output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+        expect(output).toContain('creado el directorio');
+      }
+      expect(process.exitCode).toBe(0);
+      expect(await Bun.file(join(root, 'iteraciones.config.yaml')).exists()).toBe(true);
+      expect(await Bun.file(join(root, 'index.md')).exists()).toBe(true);
+      // Build posterior funciona sobre la raíz creada
+      await build(root, {});
+      expect([...new Bun.Glob('*.html').scanSync({ cwd: join(root, 'dist', 'files') })].length).toBeGreaterThan(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   it('new vía parseAsync crea el documento con el título pasado', async () => {
