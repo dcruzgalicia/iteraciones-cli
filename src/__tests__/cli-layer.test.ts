@@ -3072,12 +3072,27 @@ describe('doctor condicionado al proyecto (#2082)', () => {
     return output;
   }
 
-  it.skipIf(!pandocOk)('un proyecto HTML-only no lista pdfcheck ni ImageMagick', async () => {
+  it.skipIf(!pandocOk)('un proyecto HTML-only no lista pdfcheck ni ImageMagick ni biber', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir); // html-only
       const output = await doctorOut(dir);
       expect(output).not.toContain('iteraciones-pdfcheck');
       expect(output).not.toContain('ImageMagick');
+      expect(output).not.toContain('biber');
+    });
+  });
+
+  it('PDF sin bibliografía no lista el check de biber; con .bib sí (#2184)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nformat:\n  pdf:\n    generate: true\n', 'utf8');
+      const sinBib = await doctorOut(dir);
+      expect(sinBib).not.toContain('biber disponible');
+      // Un .bib descubierto activa el check condicional (mismo criterio que
+      // resolveBibOptions: auto-descubrimiento cuando no hay config)
+      await writeFile(join(dir, 'refs.bib'), '@book{k1, title={T}}\n', 'utf8');
+      const conBib = await doctorOut(dir);
+      expect(conBib).toContain('biber disponible');
     });
   });
 

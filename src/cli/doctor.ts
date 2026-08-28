@@ -1,9 +1,11 @@
+import { discoverBibFiles } from '../builder/state.js';
 import { loadSiteConfigIfPresent } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
 import { DEFAULT_PDF_FORMAT } from '../config/site-config.js';
 import { GLYPHS, logInfo } from '../lib/logger.js';
 import {
   type CheckResult,
+  checkBiber,
   checkBunVersion,
   checkLatexEngine,
   checkMagick,
@@ -60,6 +62,18 @@ async function collectChecks(cwd: string): Promise<CheckResult[]> {
   // ImageMagick (magick) para preprocesamiento de imágenes CMYK 300dpi.
   const magick = needsLatex ? await checkMagick() : undefined;
   const pdfCheck = needsPdfx ? await checkPdfCheck() : undefined;
+  // biber: backend de citas de biblatex — solo cuando el proyecto genera PDF
+  // y tiene bibliografía (configurada o .bib descubierto, el mismo criterio
+  // con el que resolveBibOptions arma las citas) (#2184).
+  const bibDiscovered =
+    configResult.siteConfig?.bibliography === undefined
+      ? await discoverBibFiles(cwd, ['bib']).then(
+          (files) => files.length > 0,
+          () => false,
+        )
+      : true;
+  const needsBiber = needsLatex && bibDiscovered;
+  const biber = needsBiber ? checkBiber() : undefined;
 
   return [
     checkBunVersion(),
@@ -74,6 +88,7 @@ async function collectChecks(cwd: string): Promise<CheckResult[]> {
     ...(latex ? [latex] : []),
     ...(pdfToPpm ? [pdfToPpm] : []),
     ...(magick ? [magick] : []),
+    ...(biber ? [biber] : []),
   ];
 }
 
