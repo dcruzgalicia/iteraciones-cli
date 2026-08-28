@@ -357,16 +357,11 @@ async function pipelinePhases(
   // pipeline (render se salta en early returns sin trabajo).
   progress.planPhases(['discovery', 'render']);
 
-  const workDocCount = new Set([
-    ...work.docsChanged,
-    ...work.exportSets.html.map((d) => d.relativePath),
-    ...work.exportSets.epub.map((d) => d.relativePath),
-    ...work.exportSets.markdown.map((d) => d.relativePath),
-    ...work.exportSets.latex.map((d) => d.relativePath),
-  ]).size;
+  // Representación única del trabajo (#2176): la unión la calculó el planner
+  const workDocCount = work.workDocList.length;
 
   progress.startPhase('render', workDocCount);
-  const { processed } = await documentPipeline(progress, ctx, plan, work, allDocs, formatCfg, discoveryIndex, effectiveDisabledPreamble);
+  const { processed } = await documentPipeline(progress, ctx, plan, work, formatCfg, discoveryIndex, effectiveDisabledPreamble);
 
   const totalDocs =
     plan.activeFormats.html || plan.activeFormats.pdf || plan.activeFormats.epub || plan.activeFormats.markdown || plan.activeFormats.latex
