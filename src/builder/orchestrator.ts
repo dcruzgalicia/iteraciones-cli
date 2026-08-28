@@ -211,6 +211,7 @@ async function discoverDocuments(
     meta: {
       filtersHash: plan.filtersHash,
       filterFileCache: plan.filterFileCache,
+      schemaFileCache: plan.schemaFileCache,
       configHashes: plan.configHashes,
       configFileCache: plan.configFileCache,
       bibHash: plan.bibHash,

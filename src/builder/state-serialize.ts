@@ -35,6 +35,8 @@ export interface BuildState {
   filtersHash?: string;
   /** Caché por archivo de filtro (mtime+size+hash) para evitar re-leer contenido. */
   filterFileCache?: FilterFileCache;
+  /** Caché mtime+size de los archivos fuente de esquema (computeSchemaSourceHash, #2189). */
+  schemaFileCache?: Record<string, import('./state-hash.js').FileCacheEntry>;
   /** Hash de configuración por formato (pdf, html, epub, markdown). */
   configHashes?: Record<string, string>;
   /** Caché mtime+size de recursos de config (recursos HTML, logo) (#2091). */
@@ -84,6 +86,7 @@ export async function loadStateFile(cwd: string): Promise<BuildState | null> {
       outputDir: parsed.outputDir,
       filtersHash: parsed.filtersHash,
       filterFileCache: parsed.filterFileCache,
+      schemaFileCache: parsed.schemaFileCache,
       configHashes: parsed.configHashes,
       configFileCache: parsed.configFileCache,
       bibHash: parsed.bibHash,

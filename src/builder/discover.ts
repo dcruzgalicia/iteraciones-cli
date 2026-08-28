@@ -40,6 +40,7 @@ interface DiscoverResult {
 interface DiscoverMeta {
   filtersHash: string;
   filterFileCache: FilterFileCache;
+  schemaFileCache?: Record<string, FileCacheEntry>;
   configHashes: Record<string, string>;
   configFileCache?: Record<string, FileCacheEntry>;
   bibHash: string;
@@ -395,6 +396,7 @@ function computePendingState(
     entries: discoveryIndex,
     filtersHash: options.meta?.filtersHash,
     filterFileCache: options.meta?.filterFileCache,
+    schemaFileCache: options.meta?.schemaFileCache,
     configHashes: options.meta?.configHashes,
     configFileCache: options.meta?.configFileCache,
     bibHash: options.meta?.bibHash,
