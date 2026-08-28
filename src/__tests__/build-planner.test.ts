@@ -27,7 +27,7 @@ function meta(overrides: Partial<BuildMetadata> = {}): BuildMetadata {
     filterFileCache: {},
     bibHash: 'b',
     bibFileCache: {},
-    formatInvalidated: { latex: false, html: false, epub: false, markdown: false },
+    formatInvalidated: { print: false, html: false, epub: false, markdown: false },
     filtersInvalidated: false,
     bibInvalidated: false,
     bibFiles: [],
@@ -46,14 +46,14 @@ describe('computeWorkSets', () => {
     const work = computeWorkSets(meta(), DOCS, new Set());
     expect(work.anyWork).toBe(false);
     expect(work.docsChanged.size).toBe(0);
-    expect(work.exportSets.latex).toEqual([]);
+    expect(work.exportSets.print).toEqual([]);
   });
 
   it('documentos modificados: entran en docsChanged y los exportSets activos', () => {
     const work = computeWorkSets(meta(), DOCS, new Set(['a.md']));
     expect(work.anyWork).toBe(true);
     expect(work.docsChanged).toEqual(new Set(['a.md']));
-    expect(work.exportSets.latex.map((d) => d.relativePath)).toEqual(['a.md']);
+    expect(work.exportSets.print.map((d) => d.relativePath)).toEqual(['a.md']);
   });
 
   it('filtersInvalidated: todos los documentos se re-renderizan', () => {
@@ -72,7 +72,7 @@ describe('computeWorkSets', () => {
     );
     expect(work.anyWork).toBe(true);
     expect(work.docsChanged.size).toBe(0);
-    expect(work.exportSets.latex.length).toBe(3);
+    expect(work.exportSets.print.length).toBe(3);
     expect(work.exportSets.html.length).toBe(3);
     expect(work.exportSets.epub.length).toBe(3);
     expect(work.exportSets.markdown.length).toBe(3);
@@ -85,7 +85,7 @@ describe('computeWorkSets', () => {
 
   it('formatInvalidated.html con htmlOn: todos los docs van al exportSet html sin re-render', () => {
     const work = computeWorkSets(
-      meta({ activeFormats: active(['html']), formatInvalidated: { latex: false, html: true, epub: false, markdown: false } }),
+      meta({ activeFormats: active(['html']), formatInvalidated: { print: false, html: true, epub: false, markdown: false } }),
       DOCS,
       new Set(),
     );
@@ -99,19 +99,19 @@ describe('computeWorkSets', () => {
       meta({
         newFormats: ['pdf'],
         activeFormats: active(['pdf', 'latex']),
-        formatInvalidated: { latex: true, html: false, epub: false, markdown: false },
+        formatInvalidated: { print: true, html: false, epub: false, markdown: false },
       }),
       DOCS,
       new Set(),
     );
-    expect(work.exportSets.latex.length).toBe(3);
+    expect(work.exportSets.print.length).toBe(3);
     expect(work.docsChanged.size).toBe(0);
   });
 
   it('todos los formatos activos: todos los docs van a los exportSets correspondientes', () => {
     const m = meta({
       activeFormats: active(['pdf', 'latex', 'html', 'epub', 'markdown']),
-      formatInvalidated: { latex: true, html: true, epub: true, markdown: true },
+      formatInvalidated: { print: true, html: true, epub: true, markdown: true },
     });
     const work = computeWorkSets(m, DOCS, new Set(['b.md']));
     expect(work.exportSets.html.length).toBe(3);
@@ -131,7 +131,7 @@ describe('computeBuildMetadata', () => {
       expect(plan.needsCss).toBe(true);
       expect(plan.newFormats).toEqual([]);
       expect(plan.removedFormats).toEqual([]);
-      expect(plan.formatInvalidated).toEqual({ latex: false, html: false, epub: false, markdown: false });
+      expect(plan.formatInvalidated).toEqual({ print: false, html: false, epub: false, markdown: false });
     });
   });
 
@@ -142,7 +142,7 @@ describe('computeBuildMetadata', () => {
       const plan = await computeBuildMetadata(dir, siteConfig, null);
       expect(plan.filtersInvalidated).toBe(false);
       expect(plan.bibInvalidated).toBe(false);
-      expect(plan.formatInvalidated.latex).toBe(false);
+      expect(plan.formatInvalidated.print).toBe(false);
     });
   });
 

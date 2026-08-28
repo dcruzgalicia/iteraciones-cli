@@ -8,7 +8,7 @@ import { DIST_DIR, DIST_FILES_DIR } from '../builder/output-layout.js';
 import { loadStateFile } from '../builder/state.js';
 import { loadSiteConfigIfPresent } from '../config/config-loader.js';
 import { computeActiveFormats, DEFAULT_PDF_FORMAT } from '../config/site-config.js';
-import { BUILD_ERROR_CODES, BuildError, ConfigError, PANDOC_ERROR_CODES, PandocError } from '../lib/errors.js';
+import { BUILD_ERROR_CODES, BuildError, ConfigError, ConversionError, PANDOC_ERROR_CODES } from '../lib/errors.js';
 import { logError, logInfo, logSuccess } from '../lib/logger.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { ProcessSpawnError } from '../lib/run.js';
@@ -154,7 +154,7 @@ export function reportBuildError(err: unknown, json = false): void {
     const suggestDoctor = (): void => {
       process.stderr.write("  ejecuta 'iteraciones doctor' para diagnosticar el entorno\n");
     };
-    if (err instanceof PandocError) {
+    if (err instanceof ConversionError) {
       const location = err.sourcePath ? ` en "${err.sourcePath}"` : '';
       logError(`${err.message}${location}`);
       if (err.stderr) process.stderr.write(`${err.stderr}\n`);

@@ -237,7 +237,7 @@ export async function buildPoolContexts(
     htmlPaths: work.workPaths.html,
     epubPaths: work.workPaths.epub,
     mdPaths: work.workPaths.markdown,
-    latexPaths: work.workPaths.latex,
+    latexPaths: work.workPaths.print,
     pdfJobs,
   };
   return { renderCtx, exportCtx, formatWorkSets };
