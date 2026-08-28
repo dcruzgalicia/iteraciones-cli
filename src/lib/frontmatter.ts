@@ -17,6 +17,15 @@ const YAML_CAUSE_TRANSLATIONS: Array<{ match: string; es: string }> = [
     match: 'All mapping items must start at the same column',
     es: 'los items del mapeo deben empezar en la misma columna (indentación inconsistente)',
   },
+  {
+    match: 'Implicit map keys need to be followed by map values',
+    es: 'cada clave del mapeo necesita un valor después de los dos puntos (revisa la indentación)',
+  },
+  {
+    match: 'Implicit keys need to be on a single line',
+    es: 'clave de mapeo inesperada: revisa que la línea anterior tenga su valor y que la indentación sea consistente',
+  },
+  { match: 'Unexpected scalar at node end', es: 'contenido inesperado: revisa la indentación y que cada línea sea «clave: valor»' },
   { match: 'Map keys must be unique', es: 'las claves del mapeo deben ser únicas' },
   {
     match: 'Nested mappings are not allowed in compact mappings',
@@ -29,6 +38,10 @@ const YAML_CAUSE_TRANSLATIONS: Array<{ match: string; es: string }> = [
   },
   { match: 'Unexpected flow-seq-end token in YAML stream', es: 'hay un ] de más en el YAML' },
   { match: 'Missing closing "quote', es: 'falta la comilla de cierre' },
+  {
+    match: 'Block collection cannot be used as implicit map key',
+    es: 'un bloque no puede usarse como clave del mapeo (falta un valor para la clave anterior)',
+  },
   { match: 'unexpected end of stream', es: 'el YAML termina de forma inesperada' },
 ];
 
