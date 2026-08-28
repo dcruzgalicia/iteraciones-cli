@@ -482,7 +482,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       expect(parsed.formats).toEqual(['html']);
       expect(parsed.outputDir).toBe(join(dir, 'dist', 'files'));
       expect(typeof parsed.durationMs).toBe('number');
-      expect(parsed.invalidations).toEqual(['documentos modificados']);
+      expect(parsed.invalidations).toEqual(['sin caché previa']);
     });
   });
 
@@ -2428,7 +2428,7 @@ describe('huecos transversales (#2032)', () => {
       }
       expect(process.exitCode).toBe(0);
       // Rebuild completo: el documento se procesó, no se sirvió de caché
-      expect(output).toMatch(/Documentos\s+1 — documentos modificados/);
+      expect(output).toMatch(/Documentos\s+1 — sin caché previa/);
       expect(output).not.toContain('Sin cambios');
       // El estado quedó re-escrito válido y completo por la escritura única
       const state = JSON.parse(await Bun.file(join(dir, '.iteraciones', 'state.json')).text());
