@@ -22,6 +22,29 @@ function translateCommanderError(message: string): string {
     .join('\n');
 }
 
+/**
+ * Sugerencia de comando cercano para `help <desconocido>`: coincidencia por
+ * prefijo (buil → build) o distancia de edición acotada. Suficiente para el
+ * caso de uso; sin dependencia de librerías de distancia.
+ */
+function suggestCommand(name: string, commands: string[]): string | undefined {
+  const prefix = name.slice(0, 3);
+  const byPrefix = commands.find((c) => c.startsWith(prefix));
+  if (byPrefix !== undefined) return byPrefix;
+  const distance = (a: string, b: string): number => {
+    let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+    for (let i = 1; i <= a.length; i++) {
+      const curr: number[] = [i];
+      for (let j = 1; j <= b.length; j++) {
+        curr[j] = Math.min((prev[j] ?? 0) + 1, (curr[j - 1] ?? 0) + 1, (prev[j - 1] ?? 0) + (a[i - 1] === b[j - 1] ? 0 : 1));
+      }
+      prev = curr;
+    }
+    return prev[b.length] ?? a.length + b.length;
+  };
+  return commands.find((c) => distance(c, name) <= 2);
+}
+
 export function buildProgram(): Command {
   const program = new Command();
 
@@ -29,7 +52,10 @@ export function buildProgram(): Command {
     .name(packageJson.name.replace(/-cli$/, ''))
     .version(packageJson.version, '-V, --version', 'muestra la versión')
     .helpOption('-h, --help', 'muestra la ayuda')
-    .helpCommand('help [comando]', 'muestra la ayuda de un comando');
+    // El help command nativo de commander imprime el help raíz sin error para
+    // un comando desconocido: se sustituye por uno propio que valida el
+    // argumento y sugiere comandos cercanos (#2179).
+    .helpCommand(false);
   // La descripción vive en el bloque 'before' (slogan + primeros pasos): el
   // .description() de commander la repetiría bajo "Usage" en el help raíz.
   program.addHelpText(
@@ -182,6 +208,27 @@ Ejemplos:
 `,
     )
     .action((options: { verbose?: boolean }) => runFilters(projectRoot(), options));
+
+  program
+    .command('help [comando]')
+    .description('muestra la ayuda de un comando')
+    .action((cmdName?: string) => {
+      if (cmdName === undefined) {
+        program.outputHelp();
+        return;
+      }
+      const target = program.commands.find((c) => c.name() === cmdName);
+      if (target === undefined) {
+        const suggestion = suggestCommand(
+          cmdName,
+          program.commands.map((c) => c.name()).filter((n) => n !== 'help'),
+        );
+        process.stderr.write(`error: comando desconocido '${cmdName}'${suggestion ? `\n(¿Quisiste decir ${suggestion}?)` : ''}\n`);
+        process.exitCode = 1;
+        return;
+      }
+      target.outputHelp();
+    });
 
   return program;
 }

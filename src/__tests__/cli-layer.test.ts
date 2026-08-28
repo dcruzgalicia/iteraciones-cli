@@ -40,6 +40,51 @@ function spyStderr() {
   return s;
 }
 
+describe('help <comando> valida el argumento (#2179)', () => {
+  afterEach(() => {
+    process.exitCode = 0;
+  });
+
+  it('help <desconocido> falla con error y sugerencia en español', async () => {
+    const stderrSpy = spyStderr();
+    const stdoutSpy = spyOn(process.stdout, 'write').mockImplementation(() => true);
+    try {
+      await buildProgram().parseAsync(['bun', 'bin.ts', 'help', 'buil']);
+    } finally {
+      const err = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
+      stderrSpy.mockRestore();
+      stdoutSpy.mockRestore();
+      expect(err).toContain("error: comando desconocido 'buil'");
+      expect(err).toContain('(¿Quisiste decir build?)');
+    }
+    expect(process.exitCode).toBe(1);
+  });
+
+  it('help <comando> muestra la ayuda del comando', async () => {
+    const stdoutSpy = spyOn(process.stdout, 'write');
+    try {
+      await buildProgram().parseAsync(['bun', 'bin.ts', 'help', 'build']);
+    } finally {
+      const out = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+      stdoutSpy.mockRestore();
+      expect(out).toContain('--full');
+    }
+    expect(process.exitCode).toBe(0);
+  });
+
+  it('help sin argumento muestra la ayuda raíz', async () => {
+    const stdoutSpy = spyOn(process.stdout, 'write');
+    try {
+      await buildProgram().parseAsync(['bun', 'bin.ts', 'help']);
+    } finally {
+      const out = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+      stdoutSpy.mockRestore();
+      expect(out).toContain('Primeros pasos');
+    }
+    expect(process.exitCode).toBe(0);
+  });
+});
+
 describe('parser (errores de commander en español)', () => {
   /** Ejecuta el parser con argv dados, captura stderr y el exit code del error. */
   async function parseUsageError(argv: string[]): Promise<{ output: string; exitCode: number }> {
