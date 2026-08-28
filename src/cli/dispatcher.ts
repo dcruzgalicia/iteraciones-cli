@@ -1,4 +1,4 @@
-import { mkdir, rm, stat, writeFile } from 'node:fs/promises';
+import { exists, mkdir, rm, stat, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, normalize } from 'node:path';
 import { stringify } from 'yaml';
 import { listMarkdownDocuments } from '../builder/gitignore.js';
@@ -44,9 +44,23 @@ async function assertProjectRoot(cwd: string): Promise<void> {
  * código lanza otras cosas; la rama es defensiva). `runBuild` y `runNew`
  * conservan variantes propias: clasificación de errores y manejo de EEXIST.
  */
-async function runCliCommand(cwd: string, context: string, fn: () => Promise<void>, unknownMessage: string): Promise<void> {
+async function runCliCommand(
+  cwd: string,
+  context: string,
+  fn: () => Promise<void>,
+  unknownMessage: string,
+  options: { createRoot?: boolean } = {},
+): Promise<void> {
   try {
-    await assertProjectRoot(cwd);
+    if (options.createRoot) {
+      // Primer contacto con la CLI (#2180): `init` crea la raíz si no existe
+      // en lugar de fallar. El resto de comandos la exige (assertProjectRoot).
+      const existed = await exists(cwd);
+      await mkdir(cwd, { recursive: true });
+      if (!existed) logInfo(`creado el directorio "${cwd}"`, context);
+    } else {
+      await assertProjectRoot(cwd);
+    }
     await fn();
   } catch (err) {
     if (err instanceof Error) {
@@ -230,7 +244,7 @@ async function buildProjectInfo(cwd: string): Promise<string[]> {
 }
 
 export async function runInit(cwd: string): Promise<void> {
-  await runCliCommand(cwd, 'init', () => initProject(cwd), 'Error desconocido al inicializar.');
+  await runCliCommand(cwd, 'init', () => initProject(cwd), 'Error desconocido al inicializar.', { createRoot: true });
 }
 
 export async function runValidate(cwd: string): Promise<void> {

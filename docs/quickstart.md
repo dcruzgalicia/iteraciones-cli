@@ -31,9 +31,10 @@ iteraciones --version
 ## 2. Inicializar el proyecto
 
 ```bash
-mkdir mi-sitio && cd mi-sitio
-iteraciones init
+iteraciones init --project-root mi-sitio
 ```
+
+Si el directorio no existe, se crea; si ya existe, se usa tal cual.
 
 Esto crea cuatro archivos:
 
