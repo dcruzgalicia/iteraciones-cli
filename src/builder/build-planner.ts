@@ -35,6 +35,8 @@ export interface BuildMetadata {
   filtersHash: string;
   /** Caché de archivos de filtro (mtime+size+hash) para persistir en state.json. */
   filterFileCache: FilterFileCache;
+  /** Caché de archivos fuente de esquema (mtime+size) para persistir (#2189). */
+  schemaFileCache: Record<string, import('./state-hash.js').FileCacheEntry>;
   bibHash: string;
   /** Caché de archivos de bibliografía (mtime+size+hash) para persistir en state.json. */
   bibFileCache: BibFileCache;
@@ -85,7 +87,7 @@ export async function computeBuildMetadata(
   const bib = await resolveBibOptions(cwd, siteConfig);
   const [configResult, filtersHashResult, bibHashResult] = await Promise.all([
     computeConfigHashes(cwd, siteConfig, prevState?.configFileCache),
-    computeFiltersHash(cwd, siteConfig, prevState?.filterFileCache, effectiveDisabledPreamble, pandocVersion),
+    computeFiltersHash(cwd, siteConfig, prevState?.filterFileCache, effectiveDisabledPreamble, pandocVersion, prevState?.schemaFileCache),
     computeBibHash(bib, prevState?.bibFileCache),
   ]);
   const { hashes: configHashes, cache: configFileCache } = configResult;
@@ -122,6 +124,7 @@ export async function computeBuildMetadata(
     configFileCache,
     filtersHash,
     filterFileCache,
+    schemaFileCache: filtersHashResult.schemaCache,
     bibHash: bibHashResult.hash,
     bibFileCache: bibHashResult.cache,
     formatInvalidated,

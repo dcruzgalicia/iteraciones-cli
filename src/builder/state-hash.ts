@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { MD_READER } from '../lib/pandoc-runner.js';
-import { hashFileContent, hashString } from './state-serialize.js';
+import { hashString } from './state-serialize.js';
 
 // ── Núcleo content-addressed único (issue #2020) ───────────────────────────
 
@@ -88,6 +88,14 @@ export type FilterFileCache = Record<string, FilterFileCacheEntry>;
  * lógica cambia entre builds, el hash cambia y las salidas se regeneran.
  * Invalidaciones conservadoras (un refactor sin efecto en la salida re-renderiza
  * una vez) son el precio aceptado: nunca stale.
+ *
+ * CONTRATO DE ALTA (#2189): entra aquí todo módulo cuya lógica afecta a los
+ * BYTES de una salida cacheada — composición de templates (HTML/LaTeX),
+ * args de pandoc (metadatos, citas), ensamblado del ExportDocument o rutas
+ * del export Markdown. Si un módulo que afecta la salida no está en la lista,
+ * cambiarlo NO invalida la caché y las salidas quedan stale en silencio.
+ * No hace falta para módulos cuya salida no se cachea ni para lógica que ya
+ * se refleja en otros hashes (p. ej. disabled lists).
  */
 export const SCHEMA_SOURCE_FILES = [
   '../lib/date.ts', // humanDate: conversión yyyy-mm-dd → fecha legible
@@ -104,10 +112,18 @@ export const SCHEMA_SOURCE_FILES = [
  * generación (versión de esquema automática). Un archivo ilegible se hashea
  * como vacío (sin romper el build: el hash cambia si el archivo reaparece).
  */
-export async function computeSchemaSourceHash(files: readonly string[], baseDir: string): Promise<string> {
+export async function computeSchemaSourceHash(
+  files: readonly string[],
+  baseDir: string,
+  prevCache?: Record<string, FileCacheEntry>,
+  cacheOut?: Record<string, FileCacheEntry>,
+): Promise<string> {
   const parts: string[] = [];
   for (const file of files) {
-    parts.push(file, await hashFileContent(join(baseDir, file)).catch(() => ''));
+    // mtime+size (#2189): sin re-lectura cuando el archivo no cambió.
+    // Cualquier error de lectura ⇒ hash vacío (comportamiento previo).
+    const hash = await hashFileCached(join(baseDir, file), file, prevCache, cacheOut ?? {}).catch(() => null);
+    parts.push(file, hash ?? '');
   }
   return hashString(parts.join('\0'));
 }
@@ -129,9 +145,12 @@ export async function computeFiltersHash(
   effectiveDisabledPreamble?: string[],
   /** Versión de pandoc (getPandocVersion): actualizar el binario invalida las conversiones (#2024). */
   pandocVersion?: string,
-): Promise<{ hash: string; cache: FilterFileCache }> {
+  /** Caché previa de los archivos fuente de esquema (#2189). */
+  schemaPrevCache?: Record<string, FileCacheEntry>,
+): Promise<{ hash: string; cache: FilterFileCache; schemaCache: Record<string, FileCacheEntry> }> {
   const parts: string[] = [];
   const cache: FilterFileCache = {};
+  const schemaCache: Record<string, FileCacheEntry> = {};
   // [directorio, glob]: filtros Lua del paquete y del proyecto, preamble .tex
   const specs: Array<[string, string]> = [
     [join(import.meta.dir, '../lib/resources/filters'), '**/*.lua'],
@@ -173,8 +192,8 @@ export async function computeFiltersHash(
   // Versiones de esquema de los outputs cacheados: derivadas del contenido de
   // los archivos fuente que gobiernan cada área (nunca stale, sin protocolo
   // manual).
-  parts.push('schema', await computeSchemaSourceHash(SCHEMA_SOURCE_FILES, import.meta.dir));
-  return { hash: hashString(parts.join('\0')), cache };
+  parts.push('schema', await computeSchemaSourceHash(SCHEMA_SOURCE_FILES, import.meta.dir, schemaPrevCache, schemaCache));
+  return { hash: hashString(parts.join('\0')), cache, schemaCache };
 }
 
 /**

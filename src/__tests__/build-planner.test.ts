@@ -25,6 +25,7 @@ function meta(overrides: Partial<BuildMetadata> = {}): BuildMetadata {
     configFileCache: {},
     filtersHash: 'h',
     filterFileCache: {},
+    schemaFileCache: {},
     bibHash: 'b',
     bibFileCache: {},
     formatInvalidated: { print: false, html: false, epub: false, markdown: false },
