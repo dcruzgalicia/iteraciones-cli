@@ -4,7 +4,7 @@ Esta guía lleva un directorio vacío hasta documentos procesados en menos de 5 
 
 ## Requisitos previos
 
-- **Bun** ≥ 1.0 — [bun.sh](https://bun.sh)
+- **Bun** ≥ 1.2 — [bun.sh](https://bun.sh)
 - **Pandoc** disponible en `PATH` — [pandoc.org/installing.html](https://pandoc.org/installing.html)
 
 ## 1. Instalación
@@ -40,9 +40,10 @@ Esto crea cuatro archivos:
 
 ```
 mi-sitio/
-  iteraciones.config.yaml       # configuración del sitio
+  iteraciones.config.yaml       # configuración del proyecto
   index.md                      # documento de inicio (se convierte en index.html)
   bibliography.bib              # archivo de referencias bibliográficas
+  .gitignore                    # con dist/ y .iteraciones/
 ```
 
 El primer `build` genera `index.html`: es la página de inicio que enlazan las tarjetas de identidad del resto de los documentos.
@@ -67,11 +68,23 @@ El comando crea `posts/primer-articulo.md` con el frontmatter mínimo correcto, 
 
 ```markdown
 ---
-title: "Primer articulo"
+title: "Primer Articulo"
 date: "2026-08-09"
 ---
 
-Escribe tu contenido aquí.
+<!-- Espacio vertical extra: una línea con solo :: -->
+
+::
+
+<!-- Epígrafe: fenced div con clase .dictum (autor opcional con .author) -->
+
+::: {.dictum}
+Epígrafe del capítulo.
+
+::: {.author}
+Autor
+:::
+:::
 ```
 
 Edita el archivo y añade tu contenido después del bloque `---`.
