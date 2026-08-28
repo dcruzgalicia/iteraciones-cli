@@ -2363,7 +2363,7 @@ describe('runInit', () => {
       process.exitCode = 0;
       await runInit(dir);
       const yaml = await Bun.file(join(dir, 'iteraciones.config.yaml')).text();
-      expect(yaml).toContain('# Configuración del sitio. Consulta docs/configuration.md');
+      expect(yaml).toContain('# Configuración del proyecto. Consulta docs/configuration.md');
       expect(yaml).toContain('theme: dark');
       expect(yaml.split('\n').length).toBeLessThanOrEqual(25);
       // El config generado debe pasar validate sin errores

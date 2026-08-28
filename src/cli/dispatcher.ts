@@ -188,7 +188,7 @@ export function reportBuildError(err: unknown, json = false): void {
     } else if (err instanceof Error) {
       logError(err.message);
     } else {
-      logError('Error desconocido al construir el sitio.');
+      logError('Error desconocido al construir el proyecto.');
     }
   }
 }
