@@ -24,7 +24,7 @@ const DEFAULT_INDEX = [
   '',
   '# Inicio',
   '',
-  'Este es el documento de inicio de tu sitio: se convierte en `index.html`,',
+  'Este es el documento de inicio de tu proyecto: se convierte en `index.html`,',
   'la página que enlazan las tarjetas de identidad del resto de documentos.',
   '',
   '## Epígrafe (dictum)',
@@ -57,7 +57,7 @@ const quote = (value: string): string => JSON.stringify(value);
  */
 function buildDefaultConfig(): string {
   return [
-    '# Configuración del sitio. Consulta docs/configuration.md para ver todas las opciones.',
+    '# Configuración del proyecto. Consulta docs/configuration.md para ver todas las opciones.',
     `language: ${DEFAULT_SITE_CONFIG.language}`,
     `toc: ${DEFAULT_SITE_CONFIG.toc}`,
     'format:',
@@ -117,7 +117,7 @@ export async function initProject(cwd: string): Promise<void> {
   report(indexCreated, 'index.md');
   report(bibCreated, 'bibliography.bib');
   report(gitignoreCreated, '.gitignore');
-  logSuccess("proyecto inicializado. Ejecuta 'iteraciones build' para generar el sitio.", 'init');
+  logSuccess("proyecto inicializado. Ejecuta 'iteraciones build' para generar los documentos.", 'init');
 }
 
 /**

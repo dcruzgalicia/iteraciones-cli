@@ -67,7 +67,7 @@ Construye documentos HTML, PDF, EPUB, LaTeX y Markdown a partir de archivos Mark
 Primeros pasos:
   iteraciones init                 crea la estructura del proyecto
   iteraciones new posts/doc.md     crea un documento
-  iteraciones build                construye el sitio
+  iteraciones build                 construye los documentos del proyecto
 `,
   );
   program.addHelpText(
@@ -93,7 +93,7 @@ Documentación:
 
   program
     .command('build')
-    .description('construye el sitio a partir de los archivos Markdown')
+    .description('construye los documentos del proyecto a partir de los archivos Markdown')
     .option('--full', 'build completo desde cero: elimina la salida anterior y la caché')
     .option('--output <path>', 'directorio de salida (por defecto: dist/files)')
     .option('--verbose', 'muestra información adicional de progreso')
