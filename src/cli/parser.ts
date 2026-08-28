@@ -73,6 +73,9 @@ Primeros pasos:
   program.addHelpText(
     'after',
     `
+Entorno:
+  NO_COLOR                  desactiva los colores (la salida no interactiva nunca los emite)
+
 Documentación:
   docs/configuration.md     todas las opciones de iteraciones.config.yaml
   docs/ejemplos.md          elementos del lenguaje Markdown soportados
@@ -200,7 +203,7 @@ Ejemplos:
 
   program
     .command('list-filters')
-    .description('lista los filtros Lua disponibles y su estado')
+    .description('lista los filters Lua y los filters de preámbulo disponibles con su estado')
     .option('--verbose', 'incluye la descripción completa de cada filtro')
     .addHelpText(
       'after',

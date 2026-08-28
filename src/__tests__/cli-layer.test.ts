@@ -149,6 +149,19 @@ describe('parser (errores de commander en español)', () => {
     return { output, exitCode };
   }
 
+  it('la ayuda raíz documenta NO_COLOR (#2183)', async () => {
+    const stdoutSpy = spyOn(process.stdout, 'write');
+    try {
+      await buildProgram().parseAsync(['bun', 'bin.ts', '--help']);
+    } catch {
+      // exitOverride lanza tras mostrar el help
+    } finally {
+      const out = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+      stdoutSpy.mockRestore();
+      expect(out).toContain('NO_COLOR');
+    }
+  });
+
   it('comando desconocido se reporta en español', async () => {
     const { output, exitCode } = await parseUsageError(['comando-inexistente']);
     expect(output).toContain("error: comando desconocido 'comando-inexistente'");
