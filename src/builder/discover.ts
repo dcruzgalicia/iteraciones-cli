@@ -61,7 +61,7 @@ interface DiscoverOptions {
  * Decisión content-addressed para un documento: reprocesarlo o saltarlo.
  * `text` reutiliza la lectura hecha durante la resolución del caso ambiguo.
  */
-type CacheDecision = { process: false } | { process: true; text: string | null };
+type CacheDecision = { process: false; touched?: boolean } | { process: true; text: string | null };
 
 /** Problema acumulado de frontmatter, con su clase real. */
 type FrontmatterIssue = { file: string; error: string; kind: 'syntax' | 'field' };
@@ -151,9 +151,12 @@ async function resolveCacheDecision(cached: DiscoveryEntry | undefined, filePath
   const text = await Bun.file(filePath).text();
   if (hashString(text) === cached.hash) {
     // Fue un touch (o una copia con el mismo contenido): sin reprocesar;
-    // se actualiza el mtime para revalidar la próxima decisión.
+    // se actualiza el mtime para revalidar la próxima decisión. El touch se
+    // señala para que el estado pendiente lo persista (#2188): sin señal,
+    // el mtime mutado en memoria nunca llegaba a state.json y el archivo se
+    // re-hasheaba en TODOS los builds siguientes.
     cached.mtime = mtime;
-    return { process: false };
+    return { process: false, touched: true };
   }
   return { process: true, text };
 }
@@ -377,10 +380,13 @@ function computePendingState(
   discoveryIndex: Map<string, DiscoveryEntry>,
   options: DiscoverOptions,
   anyDocChanges: boolean,
+  anyTouches = false,
 ): BuildState | null {
-  // Pendiente solo si hubo cambios (nuevos/modificados/eliminados o hashes
-  // de invalidación); sin pendiente, el estado en disco ya está completo y vigente.
-  if (!stateHasChanged(useCache, prevState, options, anyDocChanges)) return null;
+  // Pendiente si hubo cambios (nuevos/modificados/eliminados, hashes de
+  // invalidación) o touches (#2188): el mtime actualizado del touch vive solo
+  // en discoveryIndex y debe persistirse aunque nada más cambiara, o el
+  // archivo se re-hashearía en todos los builds siguientes.
+  if (!stateHasChanged(useCache, prevState, options, anyDocChanges || anyTouches)) return null;
   return {
     schemaVersion: STATE_SCHEMA_VERSION,
     startedAt,
@@ -426,6 +432,8 @@ export async function discover(cwd: string, options: DiscoverOptions): Promise<D
   const frontmatterIssues: FrontmatterIssue[] = [];
 
   const thisBuildStartedAt = Date.now();
+  /** Touches detectados (mtime cambió, contenido no): su mtime debe persistir (#2188). */
+  let touchedCount = 0;
 
   // Detectar cambios por archivo con caché content-addressed (mtime+size+hash)
   const FILE_IO_CONCURRENCY = Math.max(1, cpus().length - 1);
@@ -433,7 +441,10 @@ export async function discover(cwd: string, options: DiscoverOptions): Promise<D
     const { mtime, size } = await statDocument(cwd, relativePath);
     const cached = useCache ? discoveryIndex.get(relativePath) : undefined;
     const decision = await resolveCacheDecision(cached, join(cwd, relativePath), mtime, size);
-    if (!decision.process) return; // Archivos sin cambios: conservan su entrada en discoveryIndex
+    if (!decision.process) {
+      if (decision.touched) touchedCount++;
+      return; // Archivos sin cambios: conservan su entrada en discoveryIndex
+    }
 
     changedPaths.add(relativePath);
     await ingestChangedDocument({
@@ -472,7 +483,7 @@ export async function discover(cwd: string, options: DiscoverOptions): Promise<D
   const slugChangedEntries = new Map<string, string>(slugResult.slugChangedEntries);
   for (const path of slugResult.changedPaths) changedPaths.add(path);
 
-  const pendingState = computePendingState(useCache, prevState, thisBuildStartedAt, discoveryIndex, options, changedPaths.size > 0);
+  const pendingState = computePendingState(useCache, prevState, thisBuildStartedAt, discoveryIndex, options, changedPaths.size > 0, touchedCount > 0);
 
   return { relativePaths, changedPaths, discoveryIndex, deletedEntries, slugChangedEntries, pendingState };
 }

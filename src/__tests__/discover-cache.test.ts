@@ -33,6 +33,36 @@ async function buildStep(cwd: string) {
 }
 
 describe('discover (caché content-addressed)', () => {
+  it('el touch persiste su mtime: el build siguiente no re-hashea (#2188)', async () => {
+    const cwd = makeProject();
+    try {
+      // Build 1: estado inicial persistido
+      await buildStep(cwd);
+      const estadoInicial = JSON.parse(await Bun.file(join(cwd, '.iteraciones', 'state.json')).text()) as {
+        entries: Record<string, { mtime: number; hash: string }>;
+      };
+      const mtimeOriginal = estadoInicial.entries['doc.md']?.mtime ?? 0;
+
+      // Touch: mtime al futuro con el MISMO contenido
+      const futuro = mtimeOriginal + 60_000;
+      utimesSync(join(cwd, 'doc.md'), new Date(futuro), new Date(futuro));
+
+      // Build 2: detecta el touch (lee + hashea una vez) y PERSISTE el mtime
+      await buildStep(cwd);
+      const trasTouch = JSON.parse(await Bun.file(join(cwd, '.iteraciones', 'state.json')).text()) as {
+        entries: Record<string, { mtime: number; hash: string }>;
+      };
+      expect(trasTouch.entries['doc.md']?.mtime).toBe(futuro);
+      expect(trasTouch.entries['doc.md']?.hash).toBe(estadoInicial.entries['doc.md']?.hash);
+
+      // Build 3 sin tocar nada: mtime persistido → cache hit directo (sin releer)
+      const result3 = await buildStep(cwd);
+      expect(result3.changedPaths.size).toBe(0);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
   it('primer build marca todos los documentos como changed', async () => {
     const cwd = makeProject();
     try {
