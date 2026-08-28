@@ -2,6 +2,7 @@ import { dirname, isAbsolute, join, resolve } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
+import { trimmedStringValue } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { execPandoc, MD_READER } from '../lib/pandoc-runner.js';
 import { parseAuthors } from './discover.js';
@@ -124,10 +125,6 @@ async function preprocessDocumentImages(
 }
 
 /** Valor string recortado de un campo frontmatter (undefined si vacío/otro tipo). */
-function trimmedStringValue(raw: unknown): string | undefined {
-  return typeof raw === 'string' && raw.trim() ? raw.trim() : undefined;
-}
-
 /** Valida y añade la metadata de portada (title-image/publishers-image/endpapers). */
 async function pushCoverImageMetadata(
   extraArgs: string[],

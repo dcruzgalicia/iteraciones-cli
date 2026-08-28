@@ -14,6 +14,14 @@
  *   raíz, con una sola evaluación por campo.
  */
 
+/** Valor string recortado (undefined si vacío o no es string). Compartido por
+ * los consumidores de campos de portada (#2193: antes duplicado en
+ * latex-composer e image-processor).
+ */
+export function trimmedStringValue(raw: unknown): string | undefined {
+  return typeof raw === 'string' && raw.trim() !== '' ? raw.trim() : undefined;
+}
+
 /** String efectivo: valor no vacío del frontmatter o fallback. */
 export function fmString(value: unknown, fallback: string): string {
   return typeof value === 'string' && value ? value : fallback;

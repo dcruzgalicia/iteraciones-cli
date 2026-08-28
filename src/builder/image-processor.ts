@@ -14,6 +14,7 @@ import { mkdir } from 'node:fs/promises';
 import { cpus } from 'node:os';
 import { basename, isAbsolute, join, relative, resolve } from 'node:path';
 import { BuildError } from '../lib/errors.js';
+import { trimmedStringValue } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { exec, mapWithConcurrency, ProcessSpawnError, ProcessTimeoutError } from '../lib/run.js';
 
@@ -333,10 +334,6 @@ function magickConcurrency(): number {
 }
 
 /** Valor string recortado de un campo frontmatter (undefined si vacío/otro tipo). */
-function trimmedStringValue(raw: unknown): string | undefined {
-  return typeof raw === 'string' && raw.trim() !== '' ? raw.trim() : undefined;
-}
-
 /** 1. Imágenes de frontmatter dedicadas (title-image, publishers-image, endpapers). */
 async function processDedicatedFrontmatterImages(
   fm: Record<string, unknown>,
