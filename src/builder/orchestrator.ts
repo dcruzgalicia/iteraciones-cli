@@ -14,7 +14,7 @@ import { cleanupCoverImages, cleanupDeletedFiles, cleanupRemovedFormats, cleanup
 import { buildDocsFromIndex, discover, loadPrevState, noPrevState } from './discover.js';
 import { validateDisabledFilters } from './filter-resolver.js';
 import { DIST_FILES_DIR } from './output-layout.js';
-import { runPdfxOutputValidation } from './pdfx-check.js';
+import { type PdfxCacheHandle, runPdfxOutputValidation } from './pdfx-check.js';
 import { documentPipeline } from './pipeline.js';
 import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, validatePreambleDependencies } from './preamble-loader.js';
 import { validateConfigFilePaths } from './project-validator.js';
@@ -249,13 +249,18 @@ async function finishBuild(
     runAssets: () => Promise<void>;
     cwd: string;
     pendingState: BuildState | null;
+    prevPdfxCache: Record<string, string> | undefined;
   },
   params: { processedCount: number; cachedCount: number; invalidations: string[]; empty?: boolean },
 ): Promise<BuildSummary> {
   if (deps.needsAssets) await deps.runAssets();
   // Validación PDF/X-1a (fase final): los PDFs ya presentes en la salida
   // también certifican; se omite si 99-pdfx no está activo o no hay binario.
-  const pdfx = await runPdfxOutputValidation(deps.outputDir, deps.siteConfig, { allowBuild: true }, deps.effectiveDisabledPreamble);
+  // Caché por hash del PDF+binario+config (#2190): los resultados válidos se
+  // heredan entre builds vía state.json y se re-adjuntan al estado pendiente.
+  const cache: PdfxCacheHandle = { prev: deps.prevPdfxCache ?? {}, out: {} };
+  const pdfx = await runPdfxOutputValidation(deps.outputDir, deps.siteConfig, { allowBuild: true }, deps.effectiveDisabledPreamble, cache);
+  if (deps.pendingState) deps.pendingState.pdfxCache = cache.out;
   if (pdfx.summaryLine) deps.progress.addSummaryLine(pdfx.summaryLine);
   const formats = params.empty ? [] : computeActiveFormats(deps.siteConfig.format);
   await deps.progress.finish(
@@ -430,7 +435,17 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
 
   // Dependencias del cierre común (#2076): los valores son estables tras
   // prepareEnvironment; se construyen una vez para las 4 invocaciones.
-  const closeDeps = { progress, siteConfig, outputDir: ctx.outputDir, effectiveDisabledPreamble, needsAssets, runAssets, cwd, pendingState };
+  const closeDeps = {
+    progress,
+    siteConfig,
+    outputDir: ctx.outputDir,
+    effectiveDisabledPreamble,
+    needsAssets,
+    runAssets,
+    cwd,
+    pendingState,
+    prevPdfxCache: prevState?.pdfxCache,
+  };
 
   if (allDocs.length === 0) {
     // Proyecto vacío: mensaje visible en stderr (advertencias del resumen) y
