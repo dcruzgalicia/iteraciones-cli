@@ -11,10 +11,11 @@
  * silencioso — no rompe el build).
  */
 import { mkdir } from 'node:fs/promises';
+import { cpus } from 'node:os';
 import { basename, isAbsolute, join, relative, resolve } from 'node:path';
 import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
-import { exec, ProcessSpawnError, ProcessTimeoutError } from '../lib/run.js';
+import { exec, mapWithConcurrency, ProcessSpawnError, ProcessTimeoutError } from '../lib/run.js';
 
 /** Conversión mm → px a 300 DPI: 300px / 25.4mm ≈ 11.811. */
 const MM_TO_PX_300DPI = 300 / 25.4;
@@ -326,6 +327,11 @@ function recordProcessed(imageMap: Map<string, string>, processedFiles: string[]
   if (processed !== absPath) processedFiles.push(processed);
 }
 
+/** Tope de conversiones ImageMagick simultáneas (mismo criterio que la validación PDF/X). */
+function magickConcurrency(): number {
+  return Math.min(4, Math.max(1, cpus().length));
+}
+
 /** Valor string recortado de un campo frontmatter (undefined si vacío/otro tipo). */
 function trimmedStringValue(raw: unknown): string | undefined {
   return typeof raw === 'string' && raw.trim() !== '' ? raw.trim() : undefined;
@@ -340,6 +346,7 @@ async function processDedicatedFrontmatterImages(
   imageMap: Map<string, string>,
   processedFiles: string[],
 ): Promise<void> {
+  const tasks: { absPath: string; w: number; h: number; cover: boolean }[] = [];
   for (const field of ['title-image', 'publishers-image', 'endpapers']) {
     const value = trimmedStringValue(fm[field]);
     if (!value) continue;
@@ -350,15 +357,12 @@ async function processDedicatedFrontmatterImages(
 
     const cover = field === 'endpapers';
     // Endpapers: página completa; otros: caja de texto
-    const processed = await processImage(
-      absPath,
-      cover ? targets.endpaperW : targets.targetW,
-      cover ? targets.endpaperH : targets.targetH,
-      cover,
-      outputDir,
-    );
-    recordProcessed(imageMap, processedFiles, absPath, processed);
+    tasks.push({ absPath, w: cover ? targets.endpaperW : targets.targetW, h: cover ? targets.endpaperH : targets.targetH, cover });
   }
+  await mapWithConcurrency(tasks, magickConcurrency(), async (task) => {
+    const processed = await processImage(task.absPath, task.w, task.h, task.cover, outputDir);
+    recordProcessed(imageMap, processedFiles, task.absPath, processed);
+  });
 }
 
 /**
@@ -372,16 +376,22 @@ async function processMultilineCoverImages(
   imageMap: Map<string, string>,
   processedFiles: string[],
 ): Promise<void> {
+  const tasks: { absPath: string; w: number; h: number }[] = [];
+  const seen = new Set<string>();
   for (const img of multilineImages) {
-    if (imageMap.has(img.absPath)) continue;
+    if (imageMap.has(img.absPath) || seen.has(img.absPath)) continue;
+    seen.add(img.absPath);
 
     const imgTargetW = img.widthMm ?? targets.targetW;
     // Semántica preservada del original: widthMm truthy (incluye 0 como
     // "sin width efectivo" tras parsear {width=0}).
     const imgTargetH = img.widthMm ? 0 : targets.targetH;
-    const processed = await processImage(img.absPath, imgTargetW, imgTargetH, false, outputDir);
-    recordProcessed(imageMap, processedFiles, img.absPath, processed);
+    tasks.push({ absPath: img.absPath, w: imgTargetW, h: imgTargetH });
   }
+  await mapWithConcurrency(tasks, magickConcurrency(), async (task) => {
+    const processed = await processImage(task.absPath, task.w, task.h, false, outputDir);
+    recordProcessed(imageMap, processedFiles, task.absPath, processed);
+  });
 }
 
 /** 2. Imágenes inline del markdown. */
@@ -392,11 +402,11 @@ async function processInlineImages(
   imageMap: Map<string, string>,
   processedFiles: string[],
 ): Promise<void> {
-  for (const absPath of inlineImages) {
-    if (imageMap.has(absPath)) continue;
+  const tasks = [...new Set(inlineImages)].filter((absPath) => !imageMap.has(absPath));
+  await mapWithConcurrency(tasks, magickConcurrency(), async (absPath) => {
     const processed = await processImage(absPath, targets.targetW, targets.targetH, false, outputDir);
     recordProcessed(imageMap, processedFiles, absPath, processed);
-  }
+  });
 }
 
 /** Aviso único por build si magick falta; correlación explícita con PDF/X (#2040). */
