@@ -265,13 +265,11 @@ export async function runDoctor(cwd: string, options: { info?: boolean } = {}): 
     cwd,
     'doctor',
     async () => {
-      // --info muestra la información del proyecto (antes comando info). Cada
-      // línea lleva el prefijo y el glifo (formato unificado de la CLI).
+      // --info muestra la información del proyecto (antes comando info) en un
+      // único bloque con encabezado: un prefijo por línea era ruido (#2192).
       if (options.info) {
         const lines = await buildProjectInfo(cwd);
-        for (const line of lines) {
-          logInfo(line, 'doctor');
-        }
+        logInfo(`configuración del proyecto:\n${lines.join('\n')}`, 'doctor');
       }
       await doctorEnvironment(cwd);
     },
