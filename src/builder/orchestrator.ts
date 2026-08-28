@@ -156,7 +156,7 @@ function logInvalidations(plan: BuildMetadata, log: (msg: string) => void): void
   }
   if (plan.filtersInvalidated) log('Filters modificados — reprocesando todos los documentos');
   if (plan.bibInvalidated) log('Bibliografía modificada — regenerando las exportaciones');
-  if (plan.formatInvalidated.latex) log('Configuración PDF/LaTeX modificada — regenerando LaTeX/PDF');
+  if (plan.formatInvalidated.print) log('Configuración PDF/LaTeX modificada — regenerando LaTeX/PDF');
   if (plan.formatInvalidated.html) log('Configuración HTML modificada — regenerando páginas HTML');
   if (plan.formatInvalidated.epub) log('Configuración EPUB modificada — regenerando EPUBs');
   if (plan.formatInvalidated.markdown) log('Configuración Markdown modificada — regenerando exports Markdown');
@@ -168,7 +168,7 @@ function collectInvalidations(plan: BuildMetadata, outputDirChanged: boolean): s
   if (outputDirChanged) invalidations.push('directorio de salida');
   if (plan.filtersInvalidated) invalidations.push('filters');
   if (plan.bibInvalidated) invalidations.push('bibliografía');
-  if (plan.formatInvalidated.latex) invalidations.push('configuración PDF/LaTeX');
+  if (plan.formatInvalidated.print) invalidations.push('configuración PDF/LaTeX');
   if (plan.formatInvalidated.html) invalidations.push('configuración HTML');
   if (plan.formatInvalidated.epub) invalidations.push('configuración EPUB');
   if (plan.formatInvalidated.markdown) invalidations.push('configuración Markdown');
@@ -468,7 +468,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
   // Solo hubo eliminaciones o slugs cambiados: el cleanup ya corrió
   if (
     work.docsChanged.size === 0 &&
-    work.exportSets.latex.length === 0 &&
+    work.exportSets.print.length === 0 &&
     work.exportSets.html.length === 0 &&
     work.exportSets.epub.length === 0 &&
     work.exportSets.markdown.length === 0

@@ -1,4 +1,9 @@
-export class PandocError extends Error {
+/**
+ * Error de conversión con contexto de documento (clase base de PandocError y
+ * ExportError): el dispatcher lo reporta con ubicación, stderr y sugerencia
+ * conectada. Una sola forma para todas las conversiones externas (#2177).
+ */
+export class ConversionError extends Error {
   /** Código estructural opcional: clasificación sin matchear texto (#2082). */
   public readonly code?: string;
 
@@ -9,12 +14,28 @@ export class PandocError extends Error {
     code?: string,
   ) {
     super(message);
-    this.name = 'PandocError';
+    this.name = 'ConversionError';
     this.code = code;
   }
 }
 
-/** Códigos estructurales de PandocError (clasificación sin matchear texto, #2082). */
+/** Error de una conversión de pandoc (markdown → latex/html/epub/md). */
+export class PandocError extends ConversionError {
+  constructor(message: string, sourcePath: string, stderr: string, code?: string) {
+    super(message, sourcePath, stderr, code);
+    this.name = 'PandocError';
+  }
+}
+
+/** Error de la exportación LaTeX/PDF (latexmk): no es pandoc (#2177). */
+export class ExportError extends ConversionError {
+  constructor(message: string, sourcePath: string, stderr: string, code?: string) {
+    super(message, sourcePath, stderr, code);
+    this.name = 'ExportError';
+  }
+}
+
+/** Códigos estructurales de ConversionError (clasificación sin matchear texto, #2082). */
 export const PANDOC_ERROR_CODES = {
   /** Herramienta externa ausente en PATH (pandoc, latexmk): el entorno es el problema. */
   envMissing: 'env-missing',
@@ -56,7 +77,17 @@ export const BUILD_ERROR_CODES = {
  * Lista explícita: solo se recorta si el mensaje comienza exactamente
  * con uno de estos prefijos (evita truncar información útil en medio).
  */
-const KNOWN_ERROR_PREFIXES = ['SyntaxError', 'YAMLException', 'TypeError', 'ConfigError', 'BuildError', 'Error'];
+const KNOWN_ERROR_PREFIXES = [
+  'SyntaxError',
+  'YAMLException',
+  'TypeError',
+  'ConfigError',
+  'BuildError',
+  'PandocError',
+  'ExportError',
+  'ConversionError',
+  'Error',
+];
 
 /**
  * Normaliza un mensaje de error para el usuario: elimina prefijos de clase

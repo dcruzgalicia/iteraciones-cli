@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { copyFile, mkdir, rename, rm } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { PANDOC_ERROR_CODES, PandocError } from '../../lib/errors.js';
+import { ExportError, PANDOC_ERROR_CODES } from '../../lib/errors.js';
 import { fmBool } from '../../lib/frontmatter-fields.js';
 import { execPandoc, MD_READER } from '../../lib/pandoc-runner.js';
 import { exec, ProcessSpawnError, ProcessTimeoutError } from '../../lib/run.js';
@@ -131,7 +131,7 @@ export async function convertToPdf(
   onSpawn?: (pid: number) => void,
 ): Promise<void> {
   if (!(await Bun.file(fullTexPath).exists())) {
-    throw new PandocError('no se encontró el archivo .tex generado', sourcePath, '');
+    throw new ExportError('no se encontró el archivo .tex generado', sourcePath, '');
   }
 
   const biberCache = biberCacheDir ?? join(pdfDir, 'biber', slug);
@@ -166,7 +166,7 @@ export async function convertToPdf(
   } catch (err) {
     if (err instanceof ProcessSpawnError) {
       // Error esperado: latexmk no está en PATH; mensaje accionable en español
-      throw new PandocError(
+      throw new ExportError(
         'latexmk no está disponible en PATH. Instala MacTeX full: https://tug.org/mactex/',
         sourcePath,
         '',
@@ -176,7 +176,7 @@ export async function convertToPdf(
     if (err instanceof ProcessTimeoutError) {
       // Una compilación latexmk colgada no debe colgar el build: el timeout
       // de exec() la terminó.
-      throw new PandocError(
+      throw new ExportError(
         `latexmk no terminó en ${LATEXMK_TIMEOUT_MS / 60000} minutos y fue terminado. Revisa el log en: ${logPath}`,
         sourcePath,
         '',
@@ -192,7 +192,7 @@ export async function convertToPdf(
     const log = `${result.stdout}\n${result.stderr}`;
     const m = log.match(/^! .*$/m);
     const detail = m ? m[0] : `exit ${result.exitCode}`;
-    throw new PandocError(`latexmk falló al generar el PDF: ${detail}`, sourcePath, `Revisa el log completo en: ${logPath}`);
+    throw new ExportError(`latexmk falló al generar el PDF: ${detail}`, sourcePath, `Revisa el log completo en: ${logPath}`);
   }
 
   // Éxito: eliminar los auxiliares de latexmk (el .log solo se referencia en

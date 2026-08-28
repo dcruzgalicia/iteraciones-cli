@@ -18,10 +18,12 @@ import type { BuildDocument } from './types.js';
  */
 
 /**
- * Formatos con conjunto de trabajo propio. La clave latex cubre la generación
- * de .tex y PDF (el hash de configuración "pdf" de state.ts agrupa ambos).
+ * Formatos con conjunto de trabajo propio. La clave `print` cubre la
+ * generación de .tex y la compilación PDF (una sola frontera de trabajo: el
+ * hash de configuración "pdf" de state.ts agrupa ambos; la fase del tracker
+ * sigue llamándose `latex`).
  */
-type WorkFormatKey = 'latex' | 'html' | 'epub' | 'markdown';
+type WorkFormatKey = 'print' | 'html' | 'epub' | 'markdown';
 
 export interface BuildMetadata {
   currentFormats: string[];
@@ -92,7 +94,7 @@ export async function computeBuildMetadata(
 
   const prevHashes = prevState?.configHashes;
   const formatInvalidated: Record<WorkFormatKey, boolean> = {
-    latex: prevState !== null && prevHashes?.pdf !== configHashes.pdf,
+    print: prevState !== null && prevHashes?.pdf !== configHashes.pdf,
     html: prevState !== null && prevHashes?.html !== configHashes.html,
     epub: prevState !== null && prevHashes?.epub !== configHashes.epub,
     markdown: prevState !== null && prevHashes?.markdown !== configHashes.markdown,
@@ -144,7 +146,7 @@ interface ExportGroup {
 function exportGroupsFor(activeFormats: ActiveFormats): ExportGroup[] {
   return [
     // La clave latex cubre la generación de .tex y PDF.
-    { key: 'latex', enabled: activeFormats.pdf || activeFormats.latex },
+    { key: 'print', enabled: activeFormats.pdf || activeFormats.latex },
     { key: 'html', enabled: activeFormats.html },
     { key: 'epub', enabled: activeFormats.epub },
     { key: 'markdown', enabled: activeFormats.markdown },
@@ -154,7 +156,7 @@ function exportGroupsFor(activeFormats: ActiveFormats): ExportGroup[] {
 /** Unión de documentos con trabajo: exportSets (formatos activos) + docsChanged. */
 function collectWorkDocs(exportSets: Record<WorkFormatKey, BuildDocument[]>, docsChanged: Set<string>, allDocs: BuildDocument[]): BuildDocument[] {
   const workDocs = new Map<string, BuildDocument>();
-  for (const doc of [...exportSets.latex, ...exportSets.html, ...exportSets.epub, ...exportSets.markdown]) {
+  for (const doc of [...exportSets.print, ...exportSets.html, ...exportSets.epub, ...exportSets.markdown]) {
     workDocs.set(doc.relativePath, doc);
   }
   for (const doc of allDocs) {
@@ -196,14 +198,14 @@ export function computeWorkSets(meta: BuildMetadata, allDocs: BuildDocument[], d
 
   const anyWork =
     docsChanged.size > 0 ||
-    (meta.formatInvalidated.latex && (meta.activeFormats.pdf || meta.activeFormats.latex)) ||
+    (meta.formatInvalidated.print && (meta.activeFormats.pdf || meta.activeFormats.latex)) ||
     (meta.formatInvalidated.html && meta.activeFormats.html) ||
     (meta.formatInvalidated.epub && meta.activeFormats.epub) ||
     (meta.formatInvalidated.markdown && meta.activeFormats.markdown) ||
     (meta.bibInvalidated &&
       (meta.activeFormats.pdf || meta.activeFormats.latex || meta.activeFormats.html || meta.activeFormats.epub || meta.activeFormats.markdown));
 
-  const exportSets: Record<WorkFormatKey, BuildDocument[]> = { latex: [], html: [], epub: [], markdown: [] };
+  const exportSets: Record<WorkFormatKey, BuildDocument[]> = { print: [], html: [], epub: [], markdown: [] };
   for (const group of groups) {
     if (!group.enabled) continue;
     exportSets[group.key] = allDocs.filter((d) => docsChanged.has(d.relativePath) || meta.formatInvalidated[group.key] || meta.bibInvalidated);
@@ -211,7 +213,7 @@ export function computeWorkSets(meta: BuildMetadata, allDocs: BuildDocument[], d
 
   // Representación derivada única (#2176): paths por formato y unión de docs.
   const workPaths: Record<WorkFormatKey, Set<string>> = {
-    latex: new Set(exportSets.latex.map((d) => d.relativePath)),
+    print: new Set(exportSets.print.map((d) => d.relativePath)),
     html: new Set(exportSets.html.map((d) => d.relativePath)),
     epub: new Set(exportSets.epub.map((d) => d.relativePath)),
     markdown: new Set(exportSets.markdown.map((d) => d.relativePath)),

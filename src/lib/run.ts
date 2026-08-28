@@ -26,7 +26,7 @@ interface RunOptions {
 /**
  * El comando no se pudo lanzar (ENOENT: no está en PATH o no es ejecutable).
  * Los call sites lo capturan para traducirlo a su mensaje específico
- * (p. ej. PandocError con instrucciones de instalación).
+ * (p. ej. PandocError/ExportError con instrucciones de instalación).
  */
 export class ProcessSpawnError extends Error {
   constructor(message: string) {

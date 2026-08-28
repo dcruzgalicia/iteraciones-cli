@@ -122,7 +122,7 @@ export async function documentPipeline(
   const pdfWorkBase = join(ctx.cwd, PDF_WORK_BASE);
   const biberBase = join(ctx.cwd, '.iteraciones', 'biber');
   const pdfConsumer = createPdfConsumer(pdfWorkBase, biberBase, maxSlots, progress);
-  if (pdfOn && work.exportSets.latex.length > 0) {
+  if (pdfOn && work.exportSets.print.length > 0) {
     // Los workers arrancan antes del pool 1: latexmk se solapa con pandoc.
     pdfConsumer.start();
   }
