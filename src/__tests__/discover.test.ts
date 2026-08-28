@@ -213,4 +213,15 @@ describe('parseYamlWithPosition', () => {
     expect(parseYamlWithPosition('title: [roto\n').error).toContain('la secuencia de flujo debe estar bien indentada');
     expect(parseYamlWithPosition('title: "sin cerrar\n').error).toContain('falta la comilla de cierre');
   });
+
+  it('traduce las causas de indentación más comunes de un escritor (#2178)', () => {
+    // Clave sin valor / indentación rota: EL error más frecuente
+    const sinValor = parseYamlWithPosition('title: Test\nfoo\n  bar: 1');
+    expect(sinValor.error).toContain('clave de mapeo inesperada');
+    expect(sinValor.error).toContain('(línea 2, columna 1)');
+    // Guion de lista donde se esperaba «clave: valor»
+    expect(parseYamlWithPosition('- a\nb: 1').error).toContain('contenido inesperado');
+    // Mapeo anidado en compacto
+    expect(parseYamlWithPosition('a: 1\n  b: 2').error).toContain('no se admiten mapeos anidados');
+  });
 });
