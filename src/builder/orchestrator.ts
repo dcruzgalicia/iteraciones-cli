@@ -350,6 +350,8 @@ async function pipelinePhases(
   effectiveDisabledPreamble: string[],
   formatCfg: SiteConfig['format'] | undefined,
   invalidations: string[],
+  /** Razón explícita cuando no hay invalidación de config: primera build o --full (#2181). */
+  fallbackReason: string | null,
 ): Promise<{ processedCount: number; cachedCount: number; invalidations: string[] }> {
   // Declarar al tracker las fases que se ejecutarán (TTY: libera discovery para
   // que el tracker evalúe los skips con la información completa). Las subtareas de
@@ -370,9 +372,11 @@ async function pipelinePhases(
   const processedCount = processed.size;
   const cachedCount = totalDocs - processedCount;
   // Reprocesamiento por contenido (mtime/hash de fuentes) sin señal de
-  // invalidación de configuración: la razón es honesta y cubre el caso común.
+  // invalidación de configuración: la razón es honesta — «primera build» o
+  // «build completo desde cero» cuando no hay estado previo contra el que
+  // comparar (nada estaba "modificado"), y con plural correcto en incremental.
   if (invalidations.length === 0 && processedCount > 0) {
-    invalidations.push('documentos modificados');
+    invalidations.push(fallbackReason ?? plural(processedCount, 'documento modificado', 'documentos modificados'));
   }
   return { processedCount, cachedCount, invalidations };
 }
@@ -481,8 +485,21 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
     });
   }
 
+  // Sin estado previo no hay nada "modificado": la razón describe el origen
+  const fallbackReason = prevState === null ? (options.full ? 'build completo desde cero' : 'sin caché previa') : null;
   return finishBuild(
     closeDeps,
-    await pipelinePhases(progress, ctx, plan, work, allDocs, discoveryIndex, effectiveDisabledPreamble, siteConfig.format, invalidations),
+    await pipelinePhases(
+      progress,
+      ctx,
+      plan,
+      work,
+      allDocs,
+      discoveryIndex,
+      effectiveDisabledPreamble,
+      siteConfig.format,
+      invalidations,
+      fallbackReason,
+    ),
   );
 }
