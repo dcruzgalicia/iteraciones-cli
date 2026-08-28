@@ -28,6 +28,9 @@ export function assembleExportDocument(
     bibliography,
     csl,
     toc: toc ?? false,
+    // Profundidad del TOC del export Markdown/EPUB: un nivel (títulos de
+    // primer encabezado del documento) es el default del export; la
+    // profundidad completa configurable es feature del PDF (toc-depth).
     tocDepth: 1,
   };
 

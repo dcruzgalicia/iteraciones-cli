@@ -2,16 +2,24 @@ import { readdir, rm } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import type { FormatKey } from '../config/site-config.js';
 import { htmlSlugFor } from './discover.js';
-/** Auxiliares de latexmk que se acumulan en .iteraciones/tmp/pdf/ (por slot de concurrencia). */
 import { LATEXMK_AUX_EXTENSIONS } from './export/runner.js';
 import { ALL_OUTPUT_EXTENSIONS, FORMAT_OUTPUT_EXTENSIONS } from './output-layout.js';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
 
-/** Elimina un archivo si existe; devuelve si existía (para el informe). */
+/**
+ * Elimina un archivo si existe; devuelve si existió (para el informe).
+ * Sin TOCTOU (exists+rm separados) y sin catch silencioso: un fallo de
+ * borrado (EACCES) se propaga y el informe del cleanup no afirma eliminado
+ * lo que sigue en disco (#2193).
+ */
 async function removeIfExists(path: string): Promise<boolean> {
-  if (!(await Bun.file(path).exists())) return false;
-  await rm(path, { force: true }).catch(() => {});
-  return true;
+  try {
+    await rm(path, { force: true });
+    return true;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException)?.code === 'ENOENT') return false;
+    throw err;
+  }
 }
 
 /** Elimina directorios vacíos bajo outputDir (bottom-up, nunca la raíz). */
