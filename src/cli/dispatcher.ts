@@ -1,5 +1,5 @@
 import { exists, mkdir, rm, stat, writeFile } from 'node:fs/promises';
-import { basename, dirname, isAbsolute, join, normalize } from 'node:path';
+import { basename, dirname, isAbsolute, join, normalize, relative } from 'node:path';
 import { stringify } from 'yaml';
 import { listMarkdownDocuments } from '../builder/gitignore.js';
 import type { BuildOptions } from '../builder/orchestrator.js';
@@ -77,7 +77,15 @@ export async function runClean(cwd: string): Promise<void> {
     cwd,
     'clean',
     async () => {
-      const targets = [join(cwd, DIST_DIR), join(cwd, '.iteraciones')];
+      // La salida real es la del último build (state.json, #2183): con
+      // `build --output out`, clean elimina `out/`, no un dist/ que no existe.
+      // Sin estado (nunca hubo build): el default documentado (dist/).
+      const state = await loadStateFile(cwd);
+      const outputDir = state?.outputDir ?? join(cwd, DIST_DIR);
+      // .iteraciones/ se elimina siempre: es la caché del propio CLI.
+      // Solo se eliminan rutas declaradas por el estado o el default: nunca
+      // rutas arbitrarias.
+      const targets = [...new Set([outputDir, join(cwd, '.iteraciones')])];
       // Reportar por directorio qué no se pudo eliminar: un fallo de clean no debe
       // afirmar éxito (antes el catch traga cualquier error, EACCES incluido).
       const results = await Promise.all(
@@ -96,7 +104,8 @@ export async function runClean(cwd: string): Promise<void> {
         process.exitCode = 1;
         return;
       }
-      logSuccess('eliminado dist/ y .iteraciones/', 'clean');
+      const relativeOut = relative(cwd, outputDir) || outputDir;
+      logSuccess(`eliminado ${relativeOut}/ y .iteraciones/`, 'clean');
     },
     'Error desconocido al limpiar.',
   );

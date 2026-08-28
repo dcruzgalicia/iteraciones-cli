@@ -2958,7 +2958,7 @@ describe('wiring parser → dispatcher (argv reales)', () => {
 describe('runClean', () => {
   afterEach(resetExitCode);
 
-  it('elimina dist/ y .iteraciones/', async () => {
+  it('elimina dist/ y .iteraciones/ cuando el default es la salida', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
       // Crear directorios simulando un build previo
@@ -2970,6 +2970,28 @@ describe('runClean', () => {
       expect(process.exitCode).toBe(0);
       expect(await Bun.file(join(dir, 'dist')).exists()).toBe(false);
       expect(await Bun.file(join(dir, '.iteraciones')).exists()).toBe(false);
+    });
+  });
+
+  it('elimina la salida declarada por state.json (build --output out, #2183)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      const { mkdir, writeFile } = await import('node:fs/promises');
+      // Estado de un build previo con --output out
+      await mkdir(join(dir, '.iteraciones'), { recursive: true });
+      await writeFile(
+        join(dir, '.iteraciones', 'state.json'),
+        JSON.stringify({ schemaVersion: 2, startedAt: 1, completed: true, activeFormats: ['html'], entries: {}, outputDir: join(dir, 'out') }),
+        'utf8',
+      );
+      await mkdir(join(dir, 'out'), { recursive: true });
+      process.exitCode = 0;
+      await runClean(dir);
+      expect(process.exitCode).toBe(0);
+      // La salida declarada se elimina; dist/ (sin build) no existía y no se crea
+      expect(await Bun.file(join(dir, 'out')).exists()).toBe(false);
+      expect(await Bun.file(join(dir, '.iteraciones')).exists()).toBe(false);
+      expect(await Bun.file(join(dir, 'dist')).exists()).toBe(false);
     });
   });
 });
