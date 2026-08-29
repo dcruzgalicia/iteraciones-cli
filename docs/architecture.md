@@ -170,7 +170,7 @@ Además, existen los **preamble filters** (`src/lib/resources/preamble/*.tex`) q
 
 El build incremental evita reprocesar documentos que no han cambiado:
 
-1. **state.json** (`.iteraciones/state.json`): guarda el timestamp del build anterior, los formatos activos y los metadatos de cada archivo (title, author, slug, frontmatter completo `fm`).
+1. **state.json** (`.iteraciones/state.json`): guarda el timestamp del build anterior, los formatos activos, los metadatos de cada archivo (title, author, slug, frontmatter completo `fm`) y la caché de certificación PDF/X (claves compuestas de hash+binario+config).
 2. **Detección content-addressed**: cada archivo .md se compara contra el caché por mtime+size+sha256 (sin AST intermedio que conservar).
 3. **Invalidación**: filtros (incluido `internal/flags`), configuración por formato, bibliografía y **versiones de esquema derivadas del contenido de los archivos fuente** (`SCHEMA_SOURCE_FILES` en `state-hash.ts`): si cambia la lógica de generación de un área (fecha legible, página HTML, template LaTeX, export Markdown), su hash cambia y las salidas se regeneran automáticamente — sin protocolo manual. Los refactors sin efecto en la salida producen una re-renderización conservadora (precio aceptado: nunca stale); al invalidarse un formato, sus salidas se regeneran re-ejecutando pandoc desde el markdown (re-parseo).
 4. **Formatos activos**: si cambia la configuración de formatos entre builds, se fuerza el reprocesamiento completo de ese formato.
@@ -252,19 +252,39 @@ Cuando `99-pdfx` está **activo** (se eliminó de `disabled-preamble-filters`), 
 |---------|----------------|
 | `orchestrator.ts` | `build()`: coordina las fases del pipeline. Función principal. |
 | `discover.ts` | Fase 1: escanea archivos, lee frontmatter (y lo conserva completo), detecta cambios. |
-| `render.ts` | Conversiones pandoc-directo (markdown → latex/html5), sistema de filters, post-procesamiento de referencias. |
-| `pipeline.ts` | Pipeline por documento (pools 1 y 2) con templates efectivos y salidas directas a dist. |
-| `build-planner.ts` | Planificador: metadatos de invalidación y conjuntos de trabajo. |
+| `pipeline-setup.ts` | Setup compartido del pipeline: bibliografía (una vez por build), lang, logo inline, templates efectivos, constructores de contextos (RenderContext, ExportContext, FormatWorkSets). |
+| `pipeline-formats.ts` | Procesamiento por documento: emisión por formato (latex/html/epub/md), frontera pool 1→2, cola de jobs PDF. |
+| `pipeline-io.ts` | Helpers de I/O del pipeline: lectura de markdown, escritura con directorio padre, hrefs relativos, formatLinks. |
+| `pipeline.ts` | Orquestador puro de pools: documentPipeline, runLightFormatsPool, pdfSlotCount. |
+| `pandoc-metadata.ts` | Fuente única de metadatos pandoc: escape de valores, language, title/creator/date, composición de citas (paridad HTML/EPUB, fallo de cites para markdown portable). |
+| `output-layout.ts` | Contrato de rutas y extensiones de salida (DIST_DIR, DIST_FILES_DIR, FORMAT_OUTPUT_EXTENSIONS): pipeline, cleanup y dispatcher lo consumen. Fuente única para cambiar extensiones. |
+| `render.ts` | Conversión HTML: markdown → html5 con templates y sistema de filters. |
+| `latex-composer.ts` | Composición del .tex completo: markdown → latex con metadatos XMP y distribución portátil. |
+| `build-planner.ts` | Planificador: metadatos de invalidación, WorkSets con Paths + workDocList derivados, y hash de filters/config/bib/esquema. |
 | `build-assets.ts` | Assets: compila el CSS con Tailwind sobre dist/files (acento del @theme), fonts, logo. |
-| `latex-preamble.ts` | Compositor del template LaTeX efectivo (una vez por build). |
-| `preamble-loader.ts` | Carga de preamble filters (.tex) con override por proyecto. |
-| `state.ts` | Caché content-addressed (state.json, hashes de invalidación, migración). |
-| `cleanup.ts` | Limpieza de salidas: formatos eliminados, archivos borrados, slugs cambiados. |
-| `pdf-pool.ts` | Pool consumidor de compilación PDF (cola de jobs, slots biber). |
+| `latex-preamble.ts` | Constructor del template LaTeX efectivo (una vez por build): preamble filters dinámicos, crop/pdfx según tamaño. |
+| `preamble-loader.ts` | Carga de preamble filters (.tex) con override por proyecto y dependencias. |
+| `html-composer.ts` | Composición del template HTML efectivo (una vez por build). |
+| `html-postprocess.ts` | Post-procesamiento de referencias del HTML (citeproc). |
+| `project-validator.ts` | Validación de frontmatter y config compartida entre build y validate. |
+| `filter-resolver.ts` | Resolución de filters Lua por capa (semántico, formato, flags, usuario). |
+| `pdfx-check.ts` | Validación PDF/X-1a final con iteraciones-pdfcheck (caché por hash+binario+config). |
+| `pdf-pool.ts` | Pool consumidor de compilación PDF: slots worker-bound, quiesce mata en vuelo. |
+| `state.ts` | Barrel que re-exporta state-serialize, state-hash y state-bib. |
+| `state-hash.ts` | Núcleo content-addressed: cacheHitFor, hashFileCached, hashes de filters, config y SCHEMA_SOURCE_FILES. |
+| `state-bib.ts` | Descubrimiento y hash de bibliografía: resolveBibSources (fuente única), PACKAGED_APA7_CSL. |
+| `state-serialize.ts` | Persistencia y carga de state.json (hashFileContent, persistCompletedState, pdfxCache). |
+| `image-processor.ts` | Preproceso de imágenes a escala de grises 300dpi (ImageMagick, paralelo). |
+| `xmpdata.ts` | Metadatos XMP/Info Dublin Core inyectados en el .tex. |
+| `reporter.ts` | silentReporter: reporter nulo para uso headless de build(). |
+| `types.ts` | BuildDocument, Frontmatter, BuildContext. |
+| `cleanup.ts` | Limpieza de salidas: formatos eliminados, slugs cambiados (fuente única de extensiones: output-layout). |
 | `slug-resolver.ts` | Resolución de slugs con colisiones y sufijos -dN. |
 | `gitignore.ts` | Reglas de .gitignore del proyecto y exclusión de paths ocultos. |
-| `types.ts` | BuildDocument, Frontmatter, BuildContext, DiscoveryEntry. |
-| `export/` | Primitivas de conversión EPUB/Markdown (runner) y ensamblado de metadatos (assemble). |
+| `export/runner.ts` | Primitivas de conversión (convertToPdf, convertToEpub, convertToMarkdown) con paridad de metadatos. |
+| `export/assemble.ts` | Ensamblado de ExportDocument (metadataEffectiva por formato). |
+| `export/cover-image.ts` | Generación de portadas del PDF (pdftoppm). |
+| `export/types.ts` | Tipos del pipeline de export (ExportDocument, ExportMetadata). |
 
 ### `src/config/`
 
@@ -278,10 +298,15 @@ Cuando `99-pdfx` está **activo** (se eliminó de `disabled-preamble-filters`), 
 
 | Archivo | Responsabilidad |
 |---------|----------------|
-| `run.ts` | `mapWithConcurrency()`: ejecuta funciones con límite de concurrencia. |
-| `pandoc-runner.ts` | `runPandoc()`: invoca pandoc con pipes stdin/stdout. |
-| `logger.ts` | `logError()`, `logWarning()`: formato unificado de mensajes. |
-| `errors.ts` | `PandocError`, `ConfigError`: clases de error del sistema. |
+| `run.ts` | `exec()`: spawn de procesos con pipes, timeout y kill de árbol. `killProcessTree()`. `mapWithConcurrency()`: ejecuta funciones con límite de concurrencia y abort. |
+| `pandoc-runner.ts` | `execPandoc()`: invoca pandoc con pipes stdin/stdout. |
+| `logger.ts` | `logError()`, `logWarning()`, `logInfo()`, `logNotice()` (stderr), `logSuccess()`: formato unificado de mensajes. `runWithWarningSink()` para modo no-verbose. |
+| `errors.ts` | `ConversionError` (base compartida), `PandocError`, `ExportError`, `ConfigError`, `BuildError`, `ProcessSpawnError`, `ProcessTimeoutError`. |
+| `frontmatter.ts` | Parser de frontmatter YAML: `splitFrontmatter()`, `parseYamlWithPosition()` con traducciones de errores. |
+| `frontmatter-fields.ts` | Resolución de campos de frontmatter con precedencia (fm → config → root). |
+| `date.ts` | Conversión de fechas para metadatos. |
+| `plural.ts` | Pluralización en español. |
+| `resources/` | Recursos estáticos: filters Lua, preamble .tex, templates, fuentes, logo, APA-7 empaquetado. |
 
 ---
 
@@ -533,3 +558,11 @@ La API programática es segura para llamadas repetidas a `build()` en el mismo p
 
 - Los **registros por build** (p. ej. el Set de langs advertidos por `babelOptionsForLang`) viven en el contexto del build (`RenderContext.warnedLangs`): cada llamada a `build()` emite sus propios warnings, sin supresión entre llamadas.
 - Los **caches de nombres derivados del filesystem** (`builtinNamesCache` en `filter-resolver.ts`, `builtinPreambleNames` en `preamble-loader.ts`) se memoizan por proceso: asumen que los resources del paquete no cambian durante la vida del proceso. Son invariantes del runtime: si un host de la API modificara los resources entre llamadas, debería recargar el proceso.
+
+### Soporte por plataforma
+
+| Plataforma | Estado | Notas |
+|------------|--------|-------|
+| **macOS (darwin)** | Verificada | Build completo verificado manualmente; suite de tests. |
+| **Linux** | Sin verificar | `killProcessTree` usa `pgrep`/`SIGKILL` (POSIX), `xdg-open` para el opener — camino compatible. Sin testing real. |
+| **Windows (win32)** | Sin verificar | `killProcessTree` usa `taskkill /T /F` (#2014); `start` para el opener. El registro de slugs en `state.json` usa separadores `/` (compatible). Sin testing real.
