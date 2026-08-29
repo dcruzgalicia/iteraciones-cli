@@ -157,6 +157,11 @@ async function awaitProcess(command: string, proc: ReturnType<typeof Bun.spawn>,
       throw new Error(`No se pudo escribir stdin del comando "${command}".`);
     }
     proc.stdin.write(options.input);
+    // Asegurar que el buffer del pipe se vacía antes de cerrar (backpressure
+    // del kernel): para entradas de varios MB (libros con imágenes inline),
+    // el buffer interno de Bun se descarga al pipe y respeta el límite del
+    // SO antes de que end() cierre el stream (#2236).
+    await proc.stdin.flush();
     proc.stdin.end();
   }
 
