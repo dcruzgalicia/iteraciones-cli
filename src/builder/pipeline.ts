@@ -116,7 +116,7 @@ export async function documentPipeline(
 
   // ── Pool 2 (PDF): cachés de biber + consumidor arrancado en paralelo con el pool 1 ──
   const maxSlots = pdfOn ? pdfSlotCount(ctx.concurrency) : 0;
-  if (pdfOn && maxSlots > 0) {
+  if (pdfOn) {
     await ensureBiberCaches(ctx.cwd, maxSlots);
   }
   const pdfWorkBase = join(ctx.cwd, PDF_WORK_BASE);
