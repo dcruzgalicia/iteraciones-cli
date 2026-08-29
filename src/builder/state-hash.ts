@@ -99,10 +99,14 @@ export type FilterFileCache = Record<string, FilterFileCacheEntry>;
  */
 export const SCHEMA_SOURCE_FILES = [
   '../lib/date.ts', // humanDate: conversión yyyy-mm-dd → fecha legible
-  './pipeline.ts', // htmlPage: generación de la página HTML
+  './pipeline.ts', // orquestación de pools de formatos
+  './pipeline-formats.ts', // procesamiento por documento: emisión de formatos y cola PDF
   './render.ts', // htmlPage: post-procesamiento de referencias
   './html-composer.ts', // htmlPage + linkCitations: template HTML y enlazado de citas
   './latex-preamble.ts', // latexTemplate: composición del template LaTeX efectivo
+  './latex-composer.ts', // composición del .tex completo: markdown → latex
+  './pandoc-metadata.ts', // metadatos pandoc: escape, language, title/creator/date, citas
+  './xmpdata.ts', // inyección de metadatos XMP/Info en el .tex
   './export/runner.ts', // markdownExport: metadatos y rutas del export Markdown
   './export/assemble.ts', // markdownExport: ensamblado de ExportDocument
 ] as const;
