@@ -499,6 +499,24 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
+  it.skipIf(!pandocOk)('si se borra un output cacheado, el build lo regenera sin --full (#2240)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      process.exitCode = 0;
+      await runBuild(dir);
+      const htmlPath = join(dir, 'dist', 'files', 'test-document.html');
+      expect(await Bun.file(htmlPath).exists()).toBe(true);
+      // Borrar el HTML: el doc queda cacheado pero su output falta
+      await Bun.file(htmlPath).unlink();
+      expect(await Bun.file(htmlPath).exists()).toBe(false);
+      // Build incremental regenera el HTML (sin --full, ~rápido)
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      expect(await Bun.file(htmlPath).exists()).toBe(true);
+    });
+  });
+
   it('el resumen muestra la razón de invalidación en modo default (y "sin invalidaciones" con caché completa)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);

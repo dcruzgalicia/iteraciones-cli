@@ -1,19 +1,20 @@
-import { rm } from 'node:fs/promises';
+import { exists, rm } from 'node:fs/promises';
 import { cpus } from 'node:os';
-import { basename, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
-import { computeActiveFormats } from '../config/site-config.js';
+import type { FormatKey } from '../config/site-config.js';
+import { type ActiveFormats, computeActiveFormats } from '../config/site-config.js';
 import { BuildError, ConfigError } from '../lib/errors.js';
 import { logWarning, runWithWarningSink } from '../lib/logger.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { plural } from '../lib/plural.js';
 import { buildAssets } from './build-assets.js';
-import { type BuildMetadata, computeBuildMetadata, computeWorkSets } from './build-planner.js';
+import { type BuildMetadata, computeBuildMetadata, computeWorkSets, type WorkSets } from './build-planner.js';
 import { cleanupCoverImages, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges } from './cleanup.js';
-import { buildDocsFromIndex, discover, loadPrevState, noPrevState } from './discover.js';
+import { buildDocsFromIndex, discover, htmlSlugFor, loadPrevState, noPrevState } from './discover.js';
 import { validateDisabledFilters } from './filter-resolver.js';
-import { DIST_FILES_DIR } from './output-layout.js';
+import { DIST_FILES_DIR, FORMAT_OUTPUT_EXTENSIONS } from './output-layout.js';
 import { type PdfxCacheHandle, runPdfxOutputValidation } from './pdfx-check.js';
 import { documentPipeline } from './pipeline.js';
 import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, validatePreambleDependencies } from './preamble-loader.js';
@@ -350,6 +351,51 @@ function planWork(
   return { work, invalidations: collectInvalidations(plan, outputDirChanged) };
 }
 
+/**
+ * Verifica que documentos cacheados (fuera de workDocList) conserven sus salidas
+ * en dist/. Si algún output falta, el doc fuerza re-procesamiento (#2240).
+ *
+ * Solo se realiza I/O de metadatos (existsSync por archivo), no lectura de
+ * contenido: costo insignificante en incrementales normales.
+ */
+async function ensureCachedOutputsComplete(allDocs: BuildDocument[], work: WorkSets, activeFormats: ActiveFormats, outputDir: string): Promise<void> {
+  const inWork = new Set(work.workDocList.map((d) => d.relativePath));
+  const formatEntries = Object.entries(activeFormats) as [FormatKey, boolean][];
+  const fmtToWork: Record<FormatKey, string> = {
+    pdf: 'print',
+    latex: 'print',
+    html: 'html',
+    epub: 'epub',
+    markdown: 'markdown',
+  };
+
+  /** Verifica si falta algún output para un doc en un formato activo. */
+  const hasMissingOutput = async (slug: string, dir: string): Promise<boolean> => {
+    for (const [fmt, active] of formatEntries) {
+      if (!active) continue;
+      const exts = FORMAT_OUTPUT_EXTENSIONS[fmt] ?? [];
+      for (const ext of exts) {
+        if (!(await exists(join(outputDir, dir, `${slug}${ext}`)))) return true;
+      }
+    }
+    return false;
+  };
+
+  for (const doc of allDocs) {
+    if (inWork.has(doc.relativePath)) continue;
+    const slug = htmlSlugFor(doc.relativePath, doc.slug || basename(doc.relativePath, '.md'));
+    const dir = dirname(doc.relativePath);
+    if (!(await hasMissingOutput(slug, dir))) continue;
+    for (const [fmt, active] of formatEntries) {
+      if (!active) continue;
+      const key = fmtToWork[fmt] as keyof typeof work.exportSets;
+      work.exportSets[key].push(doc);
+      work.workPaths[key]?.add(doc.relativePath);
+    }
+    work.workDocList.push(doc);
+  }
+}
+
 /** Fase de pipeline por documento: planificación de fases, ejecución y conteos finales. */
 async function pipelinePhases(
   progress: BuildReporter,
@@ -473,7 +519,18 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
 
   const { work, invalidations } = planWork(plan, ctx, prevState, allDocs, discoveredChanges, log);
 
-  if (!work.anyWork) {
+  // Verificar integridad de salidas cacheadas (#2240): si un doc está
+  // cacheado pero su output falta en dist/, forzar re-procesamiento.
+  await ensureCachedOutputsComplete(allDocs, work, plan.activeFormats, ctx.outputDir);
+
+  if (
+    !work.anyWork &&
+    work.exportSets.print.length === 0 &&
+    work.exportSets.html.length === 0 &&
+    work.exportSets.epub.length === 0 &&
+    work.exportSets.markdown.length === 0 &&
+    work.docsChanged.size === 0
+  ) {
     log('Ningún documento modificado — sin cambios');
     return finishBuild(closeDeps, {
       processedCount: 0,
