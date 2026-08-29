@@ -1927,6 +1927,32 @@ describe('runFilters', () => {
       expect(process.exitCode).toBe(0);
     });
   });
+
+  it('list-filters --json emite {filters, preamble} con estado active/inactive', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      process.exitCode = 0;
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let output = '';
+      try {
+        await runFilters(dir, { json: true });
+      } finally {
+        output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      const parsed = JSON.parse(output) as {
+        filters: { name: string; type: string; description: string; active: boolean }[];
+        preamble: { name: string; type: string; description: string; active: boolean }[];
+      };
+      expect(parsed.filters.length).toBeGreaterThan(0);
+      expect(parsed.filters[0]?.name).toBeDefined();
+      expect(parsed.filters[0]?.type).toBe('lua');
+      expect(typeof parsed.filters[0]?.active).toBe('boolean');
+      expect(parsed.preamble.length).toBeGreaterThan(0);
+      expect(parsed.preamble[0]?.type).toBe('preamble');
+      expect(process.exitCode).toBe(0);
+    });
+  });
 });
 
 describe('runValidate', () => {
