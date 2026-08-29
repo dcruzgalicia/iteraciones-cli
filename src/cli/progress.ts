@@ -128,7 +128,18 @@ export class ProgressTracker implements BuildReporter {
    * reportó). La fase activa se marca como fallida (✖); las fases no
    * iniciadas no muestran estado de éxito.
    */
+  /** Retorna los warnings acumulados (para incluirlos en la respuesta JSON). */
+  getWarnings(): string[] {
+    return this.state.warnings;
+  }
+
   async fail(): Promise<void> {
+    // Warnings acumulados antes de la fase fallida (#2239): se escriben a
+    // stderr (humano) y se exponen via getWarnings() para JSON.
+    for (const w of this.state.warnings) {
+      process.stderr.write(`${w}
+`);
+    }
     // Todas las fases activas se marcan fallidas: durante el solape hay dos
     // (render + pdf) y el fallo se atribuye a cada una (#2171).
     for (const key of this.state.failActiveRows()) {

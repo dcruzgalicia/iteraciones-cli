@@ -592,6 +592,37 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
+  it('build --json con error + warnings previos incluye el array warnings (#2239)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      // Config válida pero con un filter desactivado inexistente: produce
+      // un warning antes de que el build falle por el frontmatter roto.
+      await writeFile(
+        join(dir, 'iteraciones.config.yaml'),
+        'language: es-MX\nformat:\n  html:\n    generate: true\ndisabled-filters:\n  - filtro-inexistente\n',
+        'utf8',
+      );
+      await writeFile(join(dir, 'roto.md'), '---\ntitle: "sin cerrar\n---\n\nContenido.\n', 'utf8');
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let out = '';
+      try {
+        process.exitCode = 0;
+        await runBuild(dir, { json: true });
+      } finally {
+        out = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      expect(process.exitCode).toBe(1);
+      const parsed = JSON.parse(out.trim()) as { error: string; warnings: string[] };
+      expect(typeof parsed.error).toBe('string');
+      expect(parsed.error).toContain('frontmatter YAML inválido');
+      // El warning del filter inexistente aparece en el array warnings
+      expect(parsed.warnings).toBeDefined();
+      expect(parsed.warnings.length).toBeGreaterThan(0);
+      expect(parsed.warnings.join(' ')).toContain('filtro-inexistente');
+    });
+  });
+
   it('--json y --verbose son mutuamente excluyentes', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
