@@ -157,16 +157,19 @@ Ejemplos:
     .command('doctor')
     .description('verifica el entorno de build')
     .option('--info', 'muestra también la configuración del proyecto')
+    .option('--json', 'imprime el resultado como JSON en stdout (consumo programático)')
     .addHelpText(
       'after',
       `
 Ejemplos:
-  iteraciones doctor               verifica pandoc, motor LaTeX y permisos
-  iteraciones doctor --info        además, muestra la configuración del proyecto
+  iteraciones doctor                verifica pandoc, motor LaTeX y permisos
+  iteraciones doctor --info         además, muestra la configuración del proyecto
+  iteraciones doctor --json         imprime el resultado como JSON en stdout
+  iteraciones doctor --info --json  incluye la configuración en el JSON
 `,
     )
-    .action(async (opts: { info?: boolean }) => {
-      await runDoctor(projectRoot(), { info: opts.info });
+    .action(async (opts: { info?: boolean; json?: boolean }) => {
+      await runDoctor(projectRoot(), { info: opts.info, json: opts.json });
     });
 
   program
