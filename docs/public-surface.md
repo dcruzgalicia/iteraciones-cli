@@ -29,6 +29,16 @@ Globales: `--version`, `--project-root <path>` (antes o después del subcomando)
   - **list-filters**: `{filters: [{name, type, description, active}], preamble: [{...}]}`.
 - Formato unificado de mensajes: glifo `[contexto]` mensaje + hint opcional. Íntegramente en español; errores OS traducidos. WARNING de PDF/X incluido en el objeto de error de `--json` (fila `warnings`).
 
+## Decisiones de congelación (D5–D9, #2247)
+
+- **D5**: superficie = estructura de mensajes (glifo + contexto + hint), no redacción literal — mejoras de redacción no son breaking.
+- **D6**: contratos JSON congelados en su forma actual; añadir campos es compatible, renombrar/eliminar es breaking.
+- **D7**: exit codes congelados (0 éxito, 1 error incluido PDF/X).
+- **D8**: claves de iteraciones.config.yaml congeladas; añadir nueva clave es compatible.
+- **D9**: state.json NO es superficie (formato interno; puede cambiar sin breaking).
+
+---
+
 ## Ciclo II — cambios de contrato (pre-congelación)
 
 Los elementos añadidos o modificados durante el ciclo II de revisión integral:
