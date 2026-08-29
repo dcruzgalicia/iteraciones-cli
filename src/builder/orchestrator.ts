@@ -29,6 +29,11 @@ import type { BuildContext, BuildDocument, BuildReporter, DiscoveryEntry } from 
  * si añade la guía genérica "ejecuta 'iteraciones validate'" (validate no
  * aporta en un proyecto vacío). Cambiar aquí cambia también el filtro.
  */
+export const EMPTY_PROJECT_WARNING_CODES = {
+  noDocs: '[empty-project]',
+  suggestInit: '[empty-project]',
+} as const;
+
 export const EMPTY_PROJECT_WARNING_NO_DOCS = 'No se encontraron documentos Markdown en el proyecto.';
 export const EMPTY_PROJECT_WARNING_INIT = "Crea un archivo .md con frontmatter o ejecuta 'iteraciones init'.";
 

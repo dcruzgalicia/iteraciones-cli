@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { EMPTY_PROJECT_WARNING_INIT, EMPTY_PROJECT_WARNING_NO_DOCS } from '../builder/orchestrator.js';
+import { EMPTY_PROJECT_WARNING_CODES } from '../builder/orchestrator.js';
 import type { BuildReporter, RenderFileReport } from '../builder/types.js';
 import { GLYPHS } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
@@ -263,7 +263,9 @@ export class ProgressTracker implements BuildReporter {
       // aporta. Si hay cualquier otra advertencia (frontmatter/config), la
       // guía sigue apareciendo. Constantes compartidas con el emisor (#2074):
       // sin literales replicados que se desincronicen.
-      const suggestsValidate = this.state.warnings.some((w) => !w.includes(EMPTY_PROJECT_WARNING_NO_DOCS) && !w.includes(EMPTY_PROJECT_WARNING_INIT));
+      // Código estructural [empty-project]: si TODOS los warnings son de
+      // proyecto vacío, la herramienta ya propuso init → no sugerir validate (#2243).
+      const suggestsValidate = this.state.warnings.some((w) => !w.includes(EMPTY_PROJECT_WARNING_CODES.noDocs));
       this.stream.write(
         `\n${GLYPHS.warning} Build completado con ${plural(this.state.warnings.length, 'advertencia')}${suggestsValidate ? `. Ejecuta 'iteraciones validate' para más detalle.` : '.'}\n`,
       );
