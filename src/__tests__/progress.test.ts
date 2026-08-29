@@ -452,8 +452,8 @@ describe('ProgressTracker', () => {
       tracker.startPhase('discovery', 1);
       tracker.completePhase(1);
       tracker.planPhases(['discovery']);
-      tracker.addWarning('⚠ [build] No se encontraron documentos Markdown en el proyecto.');
-      tracker.addWarning("⚠ [build] Crea un archivo .md con frontmatter o ejecuta 'iteraciones init'.");
+      tracker.addWarning('[empty-project] ⚠ [build] No se encontraron documentos Markdown en el proyecto.');
+      tracker.addWarning("[empty-project] ⚠ [build] Crea un archivo .md con frontmatter o ejecuta 'iteraciones init'.");
       await tracker.finish(0, 0, []);
     });
 
