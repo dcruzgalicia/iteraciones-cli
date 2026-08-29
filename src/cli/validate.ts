@@ -13,7 +13,7 @@ import {
 import { loadSiteConfig } from '../config/config-loader.js';
 import { ConfigError, translateSystemError } from '../lib/errors.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
-import { logError, logInfo, logWarning } from '../lib/logger.js';
+import { logError, logInfo, logWarning, runWithWarningSink } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
 
 type ValidationError = { file: string; message: string };
@@ -164,8 +164,21 @@ async function collectValidation(cwd: string): Promise<{ summary: ValidationSumm
     const config = await loadSiteConfig(cwd);
     disabledFiltersCount = config.disabledFilters?.length ?? 0;
     luaFiltersCount = config.luaFilters?.length ?? 0;
-    // Validar nombres de filters desactivados (warnings, no errores)
-    validateDisabledFilters(config.disabledFilters);
+    // Validar nombres de filters desactivados. validateDisabledFilters emite
+    // warnings vía logWarning que en modo humano se duplicarían (una vez por
+    // stderr y otra en el bloque de allWarnings) y en JSON se perderían. Se
+    // capturan temporalmente para paridad (#2234).
+    const strayFilterWarnings: string[] = [];
+    await runWithWarningSink(
+      (msg) => strayFilterWarnings.push(msg),
+      async () => {
+        validateDisabledFilters(config.disabledFilters);
+      },
+    );
+    for (const raw of strayFilterWarnings) {
+      const message = raw.replace(/^[^\]]*\]\s*/, '');
+      configWarnings.push({ file: 'config', message });
+    }
     // Resolver dependencias implícitas (08-hyperref se desactiva con 99-pdfx)
     const effectiveDisabledPreamble = resolveEffectiveDisabledPreamble(config.format?.pdf?.disabledPreambleFilters);
     validateDisabledPreambleFilters(effectiveDisabledPreamble);
