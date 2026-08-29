@@ -124,6 +124,7 @@ export async function runClean(cwd: string, options: { json?: boolean } = {}): P
 }
 
 export async function runBuild(cwd: string, options: BuildOptions = {}): Promise<void> {
+  let tracker: ProgressTracker | undefined;
   try {
     await assertProjectRoot(cwd);
     // El JSON es la única salida de stdout: mezclarlo con el detalle humano
@@ -154,13 +155,13 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
     // Con --json el tracker escribe a un stream mudo: stdout queda reservado
     // para el objeto JSON final.
     const jsonStream = options.json ? ({ write: (): boolean => true, isTTY: false } as unknown as NodeJS.WriteStream) : undefined;
-    const tracker = new ProgressTracker({
+    tracker = new ProgressTracker({
       renderer: options.verbose ? 'verbose' : 'default',
       stream: jsonStream,
     });
     await build(cwd, { ...options, outputDir: output }, tracker);
   } catch (err) {
-    reportBuildError(err, options.json);
+    reportBuildError(err, options.json, tracker?.getWarnings() ?? []);
     process.exitCode = 1;
   }
 }
@@ -170,14 +171,14 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
  * conectan con las herramientas de diagnóstico (#2082). Exportado para tests:
  * la clasificación usa códigos estructurales, nunca el texto del mensaje.
  */
-export function reportBuildError(err: unknown, json = false): void {
+export function reportBuildError(err: unknown, json = false, warnings: string[] = []): void {
   {
     // Con --json el fallo se reporta también como JSON válido en stdout: quien
     // consume el build programáticamente recibe siempre un objeto parseable
     // (el detalle humano sigue en stderr).
     if (json) {
       const message = err instanceof Error ? err.message : String(err);
-      process.stdout.write(`${JSON.stringify({ error: message })}\n`);
+      process.stdout.write(`${JSON.stringify({ error: message, ...(warnings.length > 0 ? { warnings } : {}) })}\n`);
     }
     // Los errores de frontmatter/config del build se resuelven con validate:
     // la sugerencia conecta ambas herramientas (detalle completo por archivo).
