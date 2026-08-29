@@ -72,7 +72,7 @@ async function runCliCommand(
   }
 }
 
-export async function runClean(cwd: string): Promise<void> {
+export async function runClean(cwd: string, options: { json?: boolean } = {}): Promise<void> {
   await runCliCommand(
     cwd,
     'clean',
@@ -91,16 +91,27 @@ export async function runClean(cwd: string): Promise<void> {
       const results = await Promise.all(
         targets.map(async (dir) => {
           try {
+            const existed = await exists(dir);
             await rm(dir, { recursive: true, force: true });
-            return null;
+            return { removed: existed ? dir : null, error: null };
           } catch (err) {
-            return `${dir}: ${err instanceof Error ? err.message : String(err)}`;
+            return { removed: null, error: `${dir}: ${err instanceof Error ? err.message : String(err)}` };
           }
         }),
       );
-      const failures = results.filter((r): r is string => r !== null);
+      const failures = results
+        .filter((r): r is { removed: null; error: string } => r.error !== null)
+        .map((r) => ({ dir: r.error.split(': ')[0], error: r.error.split(': ').slice(1).join(': ') }));
+      const removed = results.filter((r): r is { removed: string; error: null } => r.removed !== null).map((r) => r.removed);
+
+      if (options.json) {
+        process.stdout.write(`${JSON.stringify({ ok: failures.length === 0, removed, failures })}\n`);
+        if (failures.length > 0) process.exitCode = 1;
+        return;
+      }
+
       if (failures.length > 0) {
-        logError(`no se pudo eliminar: ${failures.join('; ')}`, 'clean');
+        logError(`no se pudo eliminar: ${failures.map((f) => (f.dir ? `${f.dir}: ${f.error}` : f.error)).join('; ')}`, 'clean');
         process.exitCode = 1;
         return;
       }

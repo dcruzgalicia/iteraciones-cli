@@ -3047,12 +3047,74 @@ describe('runClean', () => {
       );
       await mkdir(join(dir, 'out'), { recursive: true });
       process.exitCode = 0;
+
       await runClean(dir);
       expect(process.exitCode).toBe(0);
       // La salida declarada se elimina; dist/ (sin build) no existía y no se crea
       expect(await Bun.file(join(dir, 'out')).exists()).toBe(false);
       expect(await Bun.file(join(dir, '.iteraciones')).exists()).toBe(false);
       expect(await Bun.file(join(dir, 'dist')).exists()).toBe(false);
+    });
+  });
+
+  it('clean --json con éxito: objeto {ok:true, removed, failures vacío}', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      const { mkdir } = await import('node:fs/promises');
+      await mkdir(join(dir, 'dist', 'files'), { recursive: true });
+      await mkdir(join(dir, '.iteraciones'), { recursive: true });
+      process.exitCode = 0;
+
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let output = '';
+      try {
+        await runClean(dir, { json: true });
+      } finally {
+        output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      const parsed = JSON.parse(output) as { ok: boolean; removed: string[]; failures: unknown[] };
+      expect(parsed.ok).toBe(true);
+      expect(Array.isArray(parsed.removed)).toBe(true);
+      expect(parsed.removed.length).toBeGreaterThanOrEqual(2);
+      expect(parsed.failures).toEqual([]);
+      expect(process.exitCode).toBe(0);
+    });
+  });
+
+  it('clean --json sin nada que eliminar: removed vacío y ok true', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      process.exitCode = 0;
+
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let output = '';
+      try {
+        await runClean(dir, { json: true });
+      } finally {
+        output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      const parsed = JSON.parse(output) as { ok: boolean; removed: string[] };
+      expect(parsed.ok).toBe(true);
+      expect(parsed.removed).toEqual([]);
+      expect(process.exitCode).toBe(0);
+    });
+  });
+
+  it('clean vía parseAsync con --json imprime JSON en stdout', async () => {
+    await withTempDir(async (dir) => {
+      process.exitCode = 0;
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let output = '';
+      try {
+        await buildProgram().parseAsync(['bun', 'bin.ts', 'clean', '--json', '--project-root', dir]);
+      } finally {
+        output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      const parsed = JSON.parse(output) as { ok: boolean };
+      expect(parsed.ok).toBe(true);
     });
   });
 });
