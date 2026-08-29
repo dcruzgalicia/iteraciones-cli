@@ -29,6 +29,8 @@ export interface RunFiltersOptions {
   verbose?: boolean;
   /** Ancho de terminal fijo (inyectable en tests; por defecto se consulta el stream). */
   columns?: number;
+  /** Imprime JSON estructurado en stdout (consumo programático). */
+  json?: boolean;
 }
 
 /**
@@ -69,6 +71,26 @@ export async function listFilters(cwd: string, options: RunFiltersOptions = {}):
   const disabled = new Set(config.disabledFilters ?? []);
   const allInfos = sortLuaInfos(await getBuiltinLuaFilterInfos());
   const hasDisabled = config.disabledFilters !== undefined && config.disabledFilters.length > 0;
+
+  if (options.json) {
+    const filters = allInfos.map((info) => ({
+      name: info.name,
+      type: 'lua' as const,
+      description: info.description,
+      active: !disabled.has(info.name),
+    }));
+    const preambleInfos = await getBuiltinPreambleFilterInfos();
+    const preambleDisabled = new Set(effectiveDisabledPreamble);
+    const preamble = preambleInfos.map((info) => ({
+      name: info.name,
+      type: 'preamble' as const,
+      description: info.description,
+      active: !preambleDisabled.has(info.name),
+    }));
+    process.stdout.write(`${JSON.stringify({ filters, preamble })}
+`);
+    return;
+  }
 
   logInfo('Filtros disponibles (orden de ejecución):');
   logInfo('');

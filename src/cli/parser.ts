@@ -210,14 +210,16 @@ Ejemplos:
     .command('list-filters')
     .description('lista los filters Lua y los filters de preámbulo disponibles con su estado')
     .option('--verbose', 'incluye la descripción completa de cada filtro')
+    .option('--json', 'imprime el resultado como JSON en stdout (consumo programático)')
     .addHelpText(
       'after',
       `
 Ejemplos:
-  iteraciones list-filters    lista filters y preamble filters con su estado
+  iteraciones list-filters         lista filters y preamble filters con su estado
+  iteraciones list-filters --json  imprime el resultado como JSON en stdout
 `,
     )
-    .action((options: { verbose?: boolean }) => runFilters(projectRoot(), options));
+    .action((options: { verbose?: boolean; json?: boolean }) => runFilters(projectRoot(), options));
 
   program
     .command('help [comando]')
