@@ -85,6 +85,31 @@ describe('validate --json (#2182)', () => {
       expect(process.exitCode).toBe(1);
     });
   });
+
+  it('con disabled-filters inexistentes, el warning aparece en JSON y no se duplica (#2234)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      // Config con un filter desactivado que no existe
+      await writeFile(
+        join(dir, 'iteraciones.config.yaml'),
+        'language: es-MX\nformat:\n  html:\n    generate: true\ndisabled-filters:\n  - filtro-que-no-existe\n',
+        'utf8',
+      );
+      process.exitCode = 0;
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let output = '';
+      try {
+        await buildProgram().parseAsync(['bun', 'bin.ts', 'validate', '--json', '--project-root', dir]);
+      } finally {
+        output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      const parsed = JSON.parse(output) as { warnings: { file: string; message: string }[] };
+      const strayWarnings = parsed.warnings.filter((w: { message: string }) => w.message.includes('filtro-que-no-existe'));
+      expect(strayWarnings.length).toBe(1);
+      expect(strayWarnings[0]?.file).toBe('config');
+    });
+  });
 });
 
 describe('help <comando> valida el argumento (#2179)', () => {
