@@ -1,8 +1,8 @@
 # Superficie pública — inventario de congelación pre-1.0
 
-Inventario ejecutado del issue #2096 (puerta del hito M1). Cada elemento
-abajo es **contrato congelado**: cambios incompatibles posteriores exigen
-salto mayor en la versión.
+> **Estado: CONGELADA desde 2026-08-28 (commit del merge de este documento).** La superficie descrita abajo es contrato: los cambios incompatibles posteriores exigen issue propio justificado y documentación explícita. El código interno sigue libre.
+
+Inventario verificado contra la CLI real (issue #2096, checklist completada en #2248). Decisiones D5–D9 documentadas en #2247 y referenciadas más abajo.
 
 ## CLI (7 comandos)
 
@@ -91,4 +91,4 @@ queda solo lo listado aquí).
 4. [x] Constantes compartidas anti strings mágicos vigentes (#2074); clasificación de errores por códigos estructurales (`BUILD_ERROR_CODES`, `PANDOC_ERROR_CODES`).
 5. [x] Suite completa verde (777 tests) y contratos fixed por tests de regresión nombrados (hotfixes PDF/X #2085).
 6. [x] Documentación sincronizada con comportamiento real (#2094, #2230) + integridad automática docs↔schema docs-config-integrity.
-7. [ ] Decisión formal de congelación — se marca al hacer merge del milestone de congelación (#2249).
+7. [x] Decisión formal de congelación — cerrada el 2026-08-28 al merge de este documento. La superficie está congelada desde este commit.
