@@ -2376,6 +2376,64 @@ describe('runDoctor', () => {
       expect(process.exitCode).toBe(1);
     });
   });
+
+  it('doctor --json emite {ok, checks} y sale con 0 si todo está en orden', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      process.exitCode = 0;
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let output = '';
+      try {
+        await buildProgram().parseAsync(['bun', 'bin.ts', 'doctor', '--json', '--project-root', dir]);
+      } finally {
+        output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      const parsed = JSON.parse(output) as { ok: boolean; checks: { label: string; ok: boolean }[] };
+      expect(parsed.ok).toBe(true);
+      expect(Array.isArray(parsed.checks)).toBe(true);
+      expect(parsed.checks.length).toBeGreaterThan(0);
+      expect(process.exitCode).toBe(0);
+    });
+  });
+
+  it('doctor --json con config inválida sale con ok:false y exit 1', async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(join(dir, 'iteraciones.config.yaml'), ':: inválido ::', 'utf8');
+      process.exitCode = 0;
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let output = '';
+      try {
+        await buildProgram().parseAsync(['bun', 'bin.ts', 'doctor', '--json', '--project-root', dir]);
+      } finally {
+        output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      const parsed = JSON.parse(output) as { ok: boolean; checks: { ok: boolean; label: string }[] };
+      expect(parsed.ok).toBe(false);
+      expect(parsed.checks.some((c: { ok: boolean }) => !c.ok)).toBe(true);
+      expect(process.exitCode).toBe(1);
+    });
+  });
+
+  it('doctor --info --json incluye el array config', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      process.exitCode = 0;
+      const stdoutSpy = spyOn(process.stdout, 'write');
+      let output = '';
+      try {
+        await buildProgram().parseAsync(['bun', 'bin.ts', 'doctor', '--info', '--json', '--project-root', dir]);
+      } finally {
+        output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+        stdoutSpy.mockRestore();
+      }
+      const parsed = JSON.parse(output) as { ok: boolean; checks: unknown[]; config?: string[] };
+      expect(parsed.config).toBeDefined();
+      expect(parsed.config?.length).toBeGreaterThan(0);
+      expect(parsed.ok).toBe(true);
+    });
+  });
 });
 
 describe('runInit', () => {

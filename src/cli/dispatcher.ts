@@ -12,7 +12,8 @@ import { BUILD_ERROR_CODES, BuildError, ConfigError, ConversionError, PANDOC_ERR
 import { logError, logInfo, logSuccess } from '../lib/logger.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { ProcessSpawnError } from '../lib/run.js';
-import { doctorEnvironment } from './doctor.js';
+import type { CheckResult } from './doctor/system-checks.js';
+import { collectChecks, doctorEnvironment } from './doctor.js';
 import { listFilters, type RunFiltersOptions } from './filters.js';
 import { initProject } from './init.js';
 import { ProgressTracker } from './progress.js';
@@ -271,11 +272,25 @@ export async function runValidate(cwd: string, options: { json?: boolean } = {})
   await runCliCommand(cwd, 'validate', () => validateProject(cwd, options), 'Error desconocido al validar.');
 }
 
-export async function runDoctor(cwd: string, options: { info?: boolean } = {}): Promise<void> {
+export async function runDoctor(cwd: string, options: { json?: boolean; info?: boolean } = {}): Promise<void> {
   await runCliCommand(
     cwd,
     'doctor',
     async () => {
+      if (options.json) {
+        const checks = await collectChecks(cwd);
+        const ok = checks.filter((c) => !c.warn).every((c) => c.ok);
+        const result: Record<string, unknown> = {
+          ok,
+          checks: checks.map((c: CheckResult) => ({ label: c.label, ok: c.ok, detail: c.detail ?? null, warn: c.warn ?? false })),
+        };
+        if (options.info) {
+          result.config = await buildProjectInfo(cwd);
+        }
+        process.stdout.write(`${JSON.stringify(result)}\n`);
+        if (!ok) process.exitCode = 1;
+        return;
+      }
       // --info muestra la información del proyecto (antes comando info) en un
       // único bloque con encabezado: un prefijo por línea era ruido (#2192).
       if (options.info) {

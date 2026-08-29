@@ -20,7 +20,7 @@ import {
  * Ejecuta las comprobaciones de doctor y las devuelve estructuradas.
  * Comparte la lógica con doctorEnvironment (checks del entorno).
  */
-async function collectChecks(cwd: string): Promise<CheckResult[]> {
+export async function collectChecks(cwd: string): Promise<CheckResult[]> {
   // La config se carga una sola vez (en paralelo con las verificaciones de
   // entorno): el motor LaTeX solo se verifica si el proyecto lo necesita
   // (format.pdf o format.latex activos), mismo criterio que validate.
