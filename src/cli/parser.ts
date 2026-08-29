@@ -190,15 +190,17 @@ Ejemplos:
   program
     .command('clean')
     .description('elimina el directorio de salida (dist/) y la caché (.iteraciones)')
+    .option('--json', 'imprime el resultado como JSON en stdout (consumo programático)')
     .addHelpText(
       'after',
       `
 Ejemplos:
-  iteraciones clean    elimina dist/ y .iteraciones/ del proyecto
+  iteraciones clean         elimina dist/ y .iteraciones/ del proyecto
+  iteraciones clean --json  imprime el resultado como JSON en stdout
 `,
     )
-    .action(async () => {
-      await runClean(projectRoot());
+    .action(async (opts: { json?: boolean }) => {
+      await runClean(projectRoot(), { json: opts.json });
     });
 
   program
