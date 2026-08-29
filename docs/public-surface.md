@@ -10,19 +10,36 @@ salto mayor en la versión.
 |---------|-------|
 | `build` | `--full`, `--output <path>`, `--verbose`, `--json` |
 | `init` | — |
-| `validate` | — |
-| `doctor` | `--info` |
+| `validate` | `--json` |
+| `doctor` | `--info`, `--json` |
 | `new <path>` | `-t/--title` |
-| `clean` | — |
-| `list-filters` | `--verbose` |
+| `clean` | `--json` |
+| `list-filters` | `--verbose`, `--json` |
 
 Globales: `--version`, `--project-root <path>` (antes o después del subcomando).
 
 ## Contratos de salida
 
-- Exit codes: 0 éxito/advertencias no bloqueantes · 1 error (build, validate, doctor con check duro fallido).
-- `--json`: objeto único en stdout (`processed`, `cached`, `formats`, `outputDir`, `invalidations`, `durationMs`; o `{error}`), progreso suprimido.
-- Formato unificado de mensajes: glifo `[contexto]` mensaje + hint opcional (`validate` / `doctor`). Íntegramente en español; errores OS traducidos (`translateSystemError`).
+- Exit codes: 0 éxito/advertencias no bloqueantes · 1 error (build, validate, doctor con check duro fallido, **PDF/X con 99-pdfx activo** — decisión D2 #2162).
+- `--json`: objeto único en stdout, progreso suprimido. Contrato por comando:
+  - **build**: `{processed, cached, formats, outputDir, invalidations, durationMs}` en éxito; `{error, warnings?}` en fallo.
+  - **validate**: `{ok, documents, errors, warnings}`.
+  - **clean**: `{ok, removed: string[], failures: [{dir, error}]}`.
+  - **doctor**: `{ok, checks: [{label, ok, detail, warn}]}`; con `--info --json` añade `{config: string[]}`.
+  - **list-filters**: `{filters: [{name, type, description, active}], preamble: [{...}]}`.
+- Formato unificado de mensajes: glifo `[contexto]` mensaje + hint opcional. Íntegramente en español; errores OS traducidos. WARNING de PDF/X incluido en el objeto de error de `--json` (fila `warnings`).
+
+## Ciclo II — cambios de contrato (pre-congelación)
+
+Los elementos añadidos o modificados durante el ciclo II de revisión integral:
+
+- **CLI**: `clean --json` (#2183), `doctor --json` (#2184), `list-filters --json` (#2235) — familia JSON completa.
+- **PDF/X**: `99-pdfx` activo = fallo del build (exit 1) con detalle por PDF (decisión D2 #2162). `clean` elimina la salida declarada por el estado (#2183).
+- **init**: crea el directorio raíz si no existe (#2180).
+- **help**: `help <desconocido>` falla con sugerencia (#2179).
+- **doctor**: verifica biber con bibliografía + PDF (#2184).
+- **Vocabulario**: `sitio` → `proyecto/documentos` en strings de usuario (#2182).
+- **Warnings en fallo**: warnings acumulados visibles en stderr y en `--json` (#2239).
 
 ## Configuración — `iteraciones.config.yaml`
 
@@ -62,6 +79,6 @@ queda solo lo listado aquí).
 2. [x] Auditoría de residuos: cero aliases, modos legacy ni capas de compatibilidad en `src/` (grep dirigido; los "fallback" restantes son semántica de defaults legítima).
 3. [x] Paridad tipo-nivel schema↔interfaces vigente (`config-schema-parity.test.ts`, #2072) — fuente única verificada por compilación.
 4. [x] Constantes compartidas anti strings mágicos vigentes (#2074); clasificación de errores por códigos estructurales (`BUILD_ERROR_CODES`, `PANDOC_ERROR_CODES`).
-5. [x] Suite completa verde (730 tests) y contratos fixed por tests de regresión nombrados (hotfixes PDF/X #2085).
-6. [x] Documentación sincronizada con comportamiento real (#2094) + integridad automática docs↔schema docs-config-integrity.
-7. [ ] Decisión formal de congelación — se marca al hacer merge de este documento.
+5. [x] Suite completa verde (777 tests) y contratos fixed por tests de regresión nombrados (hotfixes PDF/X #2085).
+6. [x] Documentación sincronizada con comportamiento real (#2094, #2230) + integridad automática docs↔schema docs-config-integrity.
+7. [ ] Decisión formal de congelación — se marca al hacer merge del milestone de congelación (#2249).
