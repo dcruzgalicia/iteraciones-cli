@@ -62,7 +62,7 @@ interface DiscoverOptions {
  * Decisión content-addressed para un documento: reprocesarlo o saltarlo.
  * `text` reutiliza la lectura hecha durante la resolución del caso ambiguo.
  */
-type CacheDecision = { process: false; touched?: boolean } | { process: true; text: string | null };
+type CacheDecision = { process: false; touched?: boolean } | { process: true; text: string | null; hash?: string };
 
 /** Problema acumulado de frontmatter, con su clase real. */
 type FrontmatterIssue = { file: string; error: string; kind: 'syntax' | 'field' };
@@ -159,7 +159,7 @@ async function resolveCacheDecision(cached: DiscoveryEntry | undefined, filePath
     cached.mtime = mtime;
     return { process: false, touched: true };
   }
-  return { process: true, text };
+  return { process: true, text, hash: hashString(text) };
 }
 
 /** Estadísticas actuales del documento; errores de lectura con hint de ENOENT. */
@@ -300,17 +300,18 @@ async function ingestChangedDocument(args: {
   size: number;
   cachedSlug: string | undefined;
   decisionText: string | null;
+  decisionHash: string | undefined;
   index: Map<string, DiscoveryEntry>;
   issues: FrontmatterIssue[];
 }): Promise<void> {
-  const { relativePath, filePath, mtime, size, decisionText } = args;
+  const { relativePath, filePath, mtime, size, decisionText, decisionHash } = args;
   const text = await readDocumentText(filePath, relativePath, decisionText);
   const ingested = ingestFrontmatter(relativePath, text, args.issues);
   args.index.set(relativePath, {
     ...ingested,
     mtime,
     size,
-    hash: hashString(text),
+    hash: decisionHash ?? hashString(text),
     slug: args.cachedSlug,
   });
 }
@@ -457,6 +458,7 @@ export async function discover(cwd: string, options: DiscoverOptions): Promise<D
       size,
       cachedSlug: discoveryIndex.get(relativePath)?.slug,
       decisionText: decision.text,
+      decisionHash: decision.hash,
       index: discoveryIndex,
       issues: frontmatterIssues,
     });
