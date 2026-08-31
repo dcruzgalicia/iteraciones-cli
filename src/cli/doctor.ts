@@ -16,6 +16,23 @@ import {
   checkWritePermissions,
 } from './doctor/system-checks.js';
 
+function resolveConfigResult(loadedOrError: {
+  loaded?: ReturnType<typeof loadSiteConfigIfPresent> extends Promise<infer R> ? R : never;
+  error?: string;
+}) {
+  if ('error' in loadedOrError) return { siteConfig: null, ok: false, detail: loadedOrError.error } as const;
+  if (loadedOrError.loaded) return { siteConfig: loadedOrError.loaded.config, ok: true, detail: undefined } as const;
+  return { siteConfig: null, ok: false, detail: "no se encontró iteraciones.config.yaml; ejecuta 'iteraciones init' para crearlo" } as const;
+}
+
+function resolveEffectiveDisabled(
+  loadedOrError: { loaded?: { presentKeys: ReadonlySet<string> } | null; error?: string },
+  siteConfig: SiteConfig | null,
+): string[] {
+  const userWroteDisabledList = !('error' in loadedOrError) && loadedOrError.loaded?.presentKeys.has('format.pdf.disabled-preamble-filters') === true;
+  return userWroteDisabledList ? (siteConfig?.format?.pdf?.disabledPreambleFilters ?? []) : (DEFAULT_PDF_FORMAT.disabledPreambleFilters ?? []);
+}
+
 export async function collectChecks(cwd: string): Promise<CheckResult[]> {
   const [loadedOrError, pandoc, read, write] = await Promise.all([
     loadSiteConfigIfPresent(cwd).then(
@@ -26,24 +43,13 @@ export async function collectChecks(cwd: string): Promise<CheckResult[]> {
     checkReadPermissions(cwd),
     checkWritePermissions(cwd),
   ]);
-  const configResult: { siteConfig: SiteConfig | null; ok: boolean; detail: string | undefined } =
-    'error' in loadedOrError
-      ? { siteConfig: null, ok: false, detail: loadedOrError.error }
-      : loadedOrError.loaded
-        ? { siteConfig: loadedOrError.loaded.config, ok: true, detail: undefined }
-        : {
-            siteConfig: null,
-            ok: false,
-            detail: "no se encontró iteraciones.config.yaml; ejecuta 'iteraciones init' para crearlo",
-          };
-  const needsLatex = configResult.siteConfig !== null && configResult.siteConfig.format?.pdf?.generate === true;
-  const userWroteDisabledList = !('error' in loadedOrError) && loadedOrError.loaded?.presentKeys.has('format.pdf.disabled-preamble-filters') === true;
-  const disabledList = configResult.siteConfig?.format?.pdf?.disabledPreambleFilters;
-  const effectiveDisabled = userWroteDisabledList ? (disabledList ?? []) : (DEFAULT_PDF_FORMAT.disabledPreambleFilters ?? []);
+  const configResult = resolveConfigResult(loadedOrError);
+  const needsLatex = configResult.siteConfig?.format?.pdf?.generate === true;
+  const effectiveDisabled = resolveEffectiveDisabled(loadedOrError, configResult.siteConfig);
   const needsPdfx = needsLatex && !effectiveDisabled.includes('99-pdfx');
-  const latex = needsLatex ? await checkLatexEngine() : undefined;
-  const pdfToPpm = needsLatex ? await checkPdfToPpm() : undefined;
-  const magick = needsLatex ? await checkMagick() : undefined;
+  const [latex, pdfToPpm, magick] = needsLatex
+    ? await Promise.all([checkLatexEngine(), checkPdfToPpm(), checkMagick()])
+    : [undefined, undefined, undefined];
   const pdfCheck = needsPdfx ? await checkPdfCheck() : undefined;
   const bibDiscovered =
     configResult.siteConfig?.bibliography === undefined
@@ -52,8 +58,7 @@ export async function collectChecks(cwd: string): Promise<CheckResult[]> {
           () => false,
         )
       : true;
-  const needsBiber = needsLatex && bibDiscovered;
-  const biber = needsBiber ? checkBiber() : undefined;
+  const biber = needsLatex && bibDiscovered ? checkBiber() : undefined;
 
   return [
     checkBunVersion(),
