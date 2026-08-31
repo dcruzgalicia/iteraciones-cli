@@ -19,6 +19,41 @@ interface HtmlPageOptions {
   luaFilters?: LuaFilterGroup;
 }
 
+function buildHtmlMetadataArgs(
+  templatePath: string,
+  vars: HtmlPageVars,
+  lang: string,
+  siteTitle: string,
+  tagline: string,
+  theme: string,
+  accent: string,
+  css: string,
+  tocActive: boolean,
+): string[] {
+  const args = [
+    '--template',
+    templatePath,
+    titleArg(vars.title),
+    `--metadata=site-title:${metadataValue(siteTitle)}`,
+    languageArg(lang, 'lang'),
+    '--metadata=link-citations:true',
+  ];
+  if (tocActive) args.push('--toc');
+  if (tagline) args.push(`--metadata=tagline:${metadataValue(tagline)}`);
+  if (vars.docTitle) args.push(`--metadata=doc-title:${metadataValue(vars.docTitle)}`);
+  if (vars.subtitle) args.push(`--metadata=subtitle:${metadataValue(vars.subtitle)}`);
+  if (vars.date) args.push(`--metadata=date:${metadataValue(vars.date)}`);
+  if (vars.homeHref) args.push(`--metadata=home-href:${vars.homeHref}`);
+  if (theme) args.push(`--metadata=theme:${theme}`);
+  if (accent) args.push(`--metadata=accent:${accent}`);
+  if (css) args.push(`--metadata=css:${css}`);
+  if (vars.authorMeta) args.push(`--metadata=author-meta:${vars.authorMeta}`);
+  if (vars.logoInline) args.push(`--variable=logo-inline:${vars.logoInline}`);
+  const formatsItems = buildFormatsItems(vars.formats ?? []);
+  if (formatsItems) args.push(`--variable=formats:${formatsItems}`);
+  return args;
+}
+
 export async function htmlPageFromMarkdown(content: string, doc: BuildDocument, opts: HtmlPageOptions): Promise<string> {
   const { cwd, vars, siteConfig, templatePath, refsCardTemplate, fm, bibOptions, luaFilters } = opts;
   const filters = luaFilters ?? (await loadFilterGroups(siteConfig, siteConfig.disabledFilters, cwd));
@@ -30,44 +65,20 @@ export async function htmlPageFromMarkdown(content: string, doc: BuildDocument, 
   const css = fmString(fm.css, vars.css ?? '');
   const tocActive = typeof fm.toc === 'boolean' ? fm.toc : siteConfig.toc;
 
-  const extraArgs = [
-    '--template',
-    templatePath,
-    titleArg(vars.title),
-    `--metadata=site-title:${metadataValue(siteTitle)}`,
-    languageArg(lang, 'lang'),
-    '--metadata=link-citations:true',
-  ];
-  if (tocActive) extraArgs.push('--toc');
+  const extraArgs = buildHtmlMetadataArgs(templatePath, vars, lang, siteTitle, tagline, theme, accent, css, tocActive);
   for (const filter of [...filters.semantic, ...filters.user, ...filters.flags, ...filters.html]) {
     extraArgs.push('--lua-filter', filter);
   }
-  if (tagline) extraArgs.push(`--metadata=tagline:${metadataValue(tagline)}`);
-  if (vars.docTitle) extraArgs.push(`--metadata=doc-title:${metadataValue(vars.docTitle)}`);
-  if (vars.subtitle) extraArgs.push(`--metadata=subtitle:${metadataValue(vars.subtitle)}`);
-  if (vars.date) extraArgs.push(`--metadata=date:${metadataValue(vars.date)}`);
-  if (vars.homeHref) extraArgs.push(`--metadata=home-href:${vars.homeHref}`);
-  if (theme) extraArgs.push(`--metadata=theme:${theme}`);
-  if (accent) extraArgs.push(`--metadata=accent:${accent}`);
-  if (css) extraArgs.push(`--metadata=css:${css}`);
-  if (vars.authorMeta) extraArgs.push(`--metadata=author-meta:${vars.authorMeta}`);
-  if (vars.logoInline) extraArgs.push(`--variable=logo-inline:${vars.logoInline}`);
-  const formatsItems = buildFormatsItems(vars.formats ?? []);
-  if (formatsItems) extraArgs.push(`--variable=formats:${formatsItems}`);
-
   extraArgs.push(...citationCompileArgs(bibOptions?.bibliography, bibOptions?.csl));
 
   const html = await execPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'html5', extraArgs });
-
   const htmlWithoutTocRefs = removeTocReferencesLink(html);
-
   const { html: htmlWithoutRefs, block: referencesBlock } = extractReferencesBlock(htmlWithoutTocRefs, refsCardTemplate);
+  if (referencesBlock && htmlWithoutRefs.includes('<!-- block:referencias -->')) {
+    return htmlWithoutRefs.replace('<!-- block:referencias -->', referencesBlock);
+  }
   if (referencesBlock) {
-    if (htmlWithoutRefs.includes('<!-- block:referencias -->')) {
-      return htmlWithoutRefs.replace('<!-- block:referencias -->', referencesBlock);
-    }
     logWarning('la tarjeta de referencias no está en format.html.blocks; la bibliografía no se inserta en la página', 'html');
-    return htmlWithoutRefs;
   }
   return htmlWithoutRefs;
 }

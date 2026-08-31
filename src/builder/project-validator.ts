@@ -56,27 +56,35 @@ const STRING_FRONTMATTER_FIELDS = ['title', 'subtitle', 'date'];
 
 const DATE_ISO_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-function unknownFrontmatterFields(parsed: Record<string, unknown>): string[] {
-  return Object.keys(parsed).filter((key) => !KNOWN_FRONTMATTER_FIELDS.includes(key));
-}
-
-export function validateFrontmatterFields(parsed: Record<string, unknown>): ValidationIssue[] {
+function validateStringFields(parsed: Record<string, unknown>): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
-
   for (const field of STRING_FRONTMATTER_FIELDS) {
     const value = parsed[field];
     if (value !== undefined && typeof value !== 'string') {
       issues.push({ severity: 'error', message: `frontmatter: "${field}" debe ser un texto (string), se recibió ${typeof value}` });
     }
   }
+  return issues;
+}
+
+function validateCreatorField(parsed: Record<string, unknown>): ValidationIssue[] {
   const creator = parsed.creator;
   if (creator !== undefined && typeof creator !== 'string' && !(Array.isArray(creator) && creator.every((a) => typeof a === 'string'))) {
-    issues.push({ severity: 'error', message: 'frontmatter: "creator" debe ser un texto o una lista de textos' });
+    return [{ severity: 'error', message: 'frontmatter: "creator" debe ser un texto o una lista de textos' }];
   }
+  return [];
+}
+
+function validateDateFormat(parsed: Record<string, unknown>): ValidationIssue[] {
   const date = parsed.date;
   if (typeof date === 'string' && date.trim() !== '' && !DATE_ISO_RE.test(date.trim())) {
-    issues.push({ severity: 'warning', message: 'frontmatter: "date" no usa el formato ISO YYYY-MM-DD; se mostrará tal cual' });
+    return [{ severity: 'warning', message: 'frontmatter: "date" no usa el formato ISO YYYY-MM-DD; se mostrará tal cual' }];
   }
+  return [];
+}
+
+function validateEmptyFields(parsed: Record<string, unknown>): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
   for (const [key, value] of Object.entries(parsed)) {
     if (!KNOWN_FRONTMATTER_FIELDS.includes(key)) continue;
     if (value === undefined) continue;
@@ -84,42 +92,61 @@ export function validateFrontmatterFields(parsed: Record<string, unknown>): Vali
       issues.push({ severity: 'warning', message: `frontmatter: "${key}" está vacío; se omitirá del metadato` });
     }
   }
-  const unknown = unknownFrontmatterFields(parsed);
+  return issues;
+}
+
+function validateUnknownFields(parsed: Record<string, unknown>): ValidationIssue[] {
+  const unknown = Object.keys(parsed).filter((key) => !KNOWN_FRONTMATTER_FIELDS.includes(key));
   if (unknown.length > 0) {
-    issues.push({ severity: 'warning', message: `campos de frontmatter ignorados por el pipeline: ${unknown.join(', ')}` });
+    return [{ severity: 'warning', message: `campos de frontmatter ignorados por el pipeline: ${unknown.join(', ')}` }];
   }
+  return [];
+}
+
+function validateSlugField(parsed: Record<string, unknown>): ValidationIssue[] {
   const slug = typeof parsed.slug === 'string' ? parsed.slug.trim() : undefined;
   if (slug && !SLUG_MANUAL_RE.test(slug)) {
-    issues.push({
-      severity: 'error',
-      message: `slug inválido: "${slug}" — usa solo minúsculas, números y guiones (sin espacios, acentos ni guiones extremos)`,
-    });
+    return [
+      { severity: 'error', message: `slug inválido: "${slug}" — usa solo minúsculas, números y guiones (sin espacios, acentos ni guiones extremos)` },
+    ];
   }
-  return issues;
+  return [];
+}
+
+export function validateFrontmatterFields(parsed: Record<string, unknown>): ValidationIssue[] {
+  return [
+    ...validateStringFields(parsed),
+    ...validateCreatorField(parsed),
+    ...validateDateFormat(parsed),
+    ...validateEmptyFields(parsed),
+    ...validateUnknownFields(parsed),
+    ...validateSlugField(parsed),
+  ];
 }
 
 export function looseColonLines(body: string, lineOffset = 0): number[] {
   const hits: number[] = [];
   let inCode = false;
   let divDepth = 0;
-  const lines = body.split('\n');
-  for (let i = 0; i < lines.length; i++) {
-    const trimmed = (lines[i] ?? '').trimEnd();
+  let lineNum = 0;
+  for (const rawLine of body.split('\n')) {
+    lineNum++;
+    const trimmed = rawLine.trimEnd();
     if (/^(```|~~~)/.test(trimmed)) {
       inCode = !inCode;
       continue;
     }
     if (inCode) continue;
     if (/^:::\s*\{/.test(trimmed)) {
-      divDepth += 1;
+      divDepth++;
       continue;
     }
     if (trimmed === ':::' && divDepth > 0) {
-      divDepth -= 1;
+      divDepth--;
       continue;
     }
     if (trimmed === '::' || trimmed === ':;') continue;
-    if (/^:+$/.test(trimmed)) hits.push(i + 1 + lineOffset);
+    if (/^:+$/.test(trimmed)) hits.push(lineNum + lineOffset);
   }
   return hits;
 }
