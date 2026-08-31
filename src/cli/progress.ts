@@ -240,12 +240,10 @@ export class ProgressTracker implements BuildReporter {
     // abre el directorio de salida (la sugerencia nunca apunta a un archivo
     // inexistente).
     if (outputDir && processed > 0) {
-      const opener = process.platform === 'win32' ? 'start' : process.platform === 'darwin' ? 'open' : 'xdg-open';
+      const opener = process.platform === 'darwin' ? 'open' : 'xdg-open';
       const indexHtml = join(outputDir, 'index.html');
       const target = (await Bun.file(indexHtml).exists()) ? indexHtml : outputDir;
-      // start de Windows necesita el título de ventana como primer argumento
-      // (vacío) y las comillas protegen rutas con espacios.
-      const command = process.platform === 'win32' ? `start "" "${target}"` : `${opener} "${target}"`;
+      const command = `${opener} "${target}"`;
       this.stream.write(`  ${padRight('Abre el resultado', LABEL_WIDTH)}${command}\n`);
     }
     // Líneas de confirmación del resumen (p. ej. validación PDF/X-1a), tras la
