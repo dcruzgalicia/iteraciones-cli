@@ -49,22 +49,7 @@
   },
   "overrides": [
     {
-      "includes": [
-        "src/__tests__/docs-config-integrity.test.ts",
-        "src/__tests__/progress.test.ts",
-        "src/builder/pdf-pool.ts",
-        "src/builder/pdfx-check.ts",
-        "src/builder/project-validator.ts",
-        "src/builder/render.ts",
-        "src/builder/state-hash.ts",
-        "src/builder/xmpdata.ts",
-        "src/cli/dispatcher.ts",
-        "src/cli/doctor.ts",
-        "src/cli/filters.ts",
-        "src/cli/progress-state.ts",
-        "src/cli/progress.ts",
-        "src/cli/validate.ts"
-      ],
+      "includes": ["src/__tests__/docs-config-integrity.test.ts", "src/__tests__/progress.test.ts", "src/builder/pdf-pool.ts"],
       "linter": {
         "rules": {
           "complexity": {
