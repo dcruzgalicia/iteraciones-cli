@@ -6,23 +6,13 @@ import { type SiteConfig, SiteConfigSchema } from './config-schema.js';
 
 const CONFIG_FILE = 'iteraciones.config.yaml';
 
-/**
- * Rutas punteadas de las claves realmente escritas en el YAML del usuario
- * (p. ej. `format.pdf.disabled-preamble-filters`), antes de que el schema
- * materialice los defaults. API interna del módulo de configuración: permite
- * distinguir "clave no configurada" de "clave configurada con el valor por
- * defecto" (ambiguas al leer solo el SiteConfig materializado).
- */
 type PresentKeyPaths = ReadonlySet<string>;
 
 interface LoadedSiteConfig {
-  /** Configuración validada, con defaults materializados por el schema Zod. */
   config: SiteConfig;
-  /** Rutas punteadas de las claves presentes en el YAML crudo del usuario. */
   presentKeys: PresentKeyPaths;
 }
 
-/** Recoge rutas punteadas de las claves presentes recorriendo el objeto crudo. */
 function collectPresentKeys(value: unknown, prefix: string, out: Set<string>): void {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return;
   for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
@@ -37,9 +27,6 @@ export async function loadSiteConfigWithPresence(cwd: string): Promise<LoadedSit
   const file = Bun.file(configPath);
 
   if (!(await file.exists())) {
-    // Fail-fast: build y validate exigen el archivo. Antes se construía con
-    // defaults en silencio, lo que producía "éxitos" que ignoraban toda la
-    // configuración del usuario (revisión integral 2026-08, issue #2071).
     throw new ConfigError(
       "falta el archivo de configuración del proyecto; ejecuta 'iteraciones init' para crearlo (un archivo vacío usa los valores por defecto)",
       configPath,
@@ -56,15 +43,11 @@ export async function loadSiteConfigWithPresence(cwd: string): Promise<LoadedSit
   let parsed: unknown;
   const yamlResult = parseYamlWithPosition(raw);
   if (yamlResult.error) {
-    // El nombre del archivo lo antepone el caller (validate/doctor muestran
-    // el path como prefijo): incluirlo aquí duplicaría "iteraciones.config.yaml:".
     throw new ConfigError(`Error de sintaxis: ${formatUserError(yamlResult.error)}`, configPath);
   }
   parsed = yamlResult.value;
 
   if (!parsed || typeof parsed !== 'object') {
-    // Un archivo vacío (null) es equivalente a defaults, sin aviso; una config
-    // con forma de escalar o lista se ignoraba en silencio: warning explícito.
     if (parsed !== null && parsed !== undefined) {
       logWarning('iteraciones.config.yaml no es un objeto YAML (se esperaba un mapa); se usan los valores por defecto', 'config');
     }
@@ -72,16 +55,9 @@ export async function loadSiteConfigWithPresence(cwd: string): Promise<LoadedSit
   }
 
   const root = parsed as Record<string, unknown>;
-  // Presencia sobre el objeto crudo: el schema materializa defaults al validar
-  // y ya no se podría distinguir qué escribió el usuario.
   const presentKeys = new Set<string>();
   collectPresentKeys(root, '', presentKeys);
 
-  // Errores duros: las claves desconocidas (issues unrecognized_keys de los
-  // esquemas strict) y los errores de tipo rompen el build y validate con el
-  // mismo mensaje (contrato registrado en docs/architecture.md). El schema es
-  // la única fuente de verdad de las claves válidas — no hay listas paralelas
-  // que sincronizar ni fallbacks.
   const result = SiteConfigSchema.safeParse(root);
   if (!result.success) {
     const unknownKeyIssues = result.error.issues.filter((issue) => issue.code === 'unrecognized_keys');
@@ -95,8 +71,6 @@ export async function loadSiteConfigWithPresence(cwd: string): Promise<LoadedSit
         .join('; ');
       throw new ConfigError(`claves desconocidas: ${details}`, configPath);
     }
-    // Reportar TODOS los errores de tipo en una sola ejecución (antes solo el
-    // primero: el usuario iteraba una vez por error en validate).
     const details = result.error.issues
       .map((issue) => {
         const path = issue.path.length > 0 ? issue.path.join('.') : 'config';
@@ -109,16 +83,10 @@ export async function loadSiteConfigWithPresence(cwd: string): Promise<LoadedSit
   return { config: result.data, presentKeys };
 }
 
-/** Carga y valida la configuración con los defaults materializados (API pública). */
 export async function loadSiteConfig(cwd: string): Promise<SiteConfig> {
   return (await loadSiteConfigWithPresence(cwd)).config;
 }
 
-/**
- * Carga la configuración solo si el archivo existe; null en ausencia.
- * Para los comandos cuyo contrato tolera proyectos sin config (doctor,
- * list-filters): build y validate exigen el archivo vía loadSiteConfig.
- */
 export async function loadSiteConfigIfPresent(cwd: string): Promise<LoadedSiteConfig | null> {
   if (!(await Bun.file(join(cwd, CONFIG_FILE)).exists())) return null;
   return loadSiteConfigWithPresence(cwd);

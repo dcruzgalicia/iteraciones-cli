@@ -11,14 +11,6 @@ import {
   DEFAULT_SITE_CONFIG,
 } from './site-config.js';
 
-// ── Constantes ────────────────────────────────────────────────────────────
-
-/**
- * Mensajes de error de Zod en español (la CLI es íntegramente en español).
- * Configuración global del proceso: solo se usa para la config del proyecto.
- * Los accesos a campos específicos de cada issue usan casts acotados (los
- * tipos internos de Zod v4 no exponen todos los campos del runtime).
- */
 z.setErrorMap(((issue: z.ZodIssue) => {
   if (issue.code === 'invalid_type') {
     const expected = (issue as { expected?: string }).expected ?? 'valor';
@@ -40,23 +32,8 @@ z.setErrorMap(((issue: z.ZodIssue) => {
   return { message: issue.message };
 }) as unknown as z.ZodErrorMap);
 
-/** Colores de acento validados por config; fuente única: ACCENT_PALETTES. */
 const KNOWN_ACCENT_COLORS = Object.keys(ACCENT_PALETTES) as AccentColor[];
 
-/**
- * Todos los sub-esquemas usan `.strict()`: las claves desconocidas en
- * cualquier nivel generan issues `unrecognized_keys` que `config-loader.ts`
- * convierte en warnings (sin romper el build). El esquema es la única fuente
- * de verdad de las claves válidas — no hay listas paralelas que sincronizar.
- */
-
-// ── HtmlFormatConfig ───────────────────────────────────────────────────────
-
-/**
- * Orden de bloques del masonry: lista de claves conocidas; la posición ES el
- * orden. Mensajes accionables: la sintaxis anterior (objeto con números) y un
- * nombre desconocido explican cómo corregir la configuración.
- */
 const HtmlBlocksSchema = z
   .unknown()
   .superRefine((value, ctx) => {
@@ -101,8 +78,6 @@ export const HtmlFormatSchema = z
   })
   .strict();
 
-// ── PdfFormatConfig ────────────────────────────────────────────────────────
-
 export const PdfFormatSchema = z
   .object({
     generate: z.boolean().default(DEFAULT_PDF_FORMAT.generate),
@@ -115,7 +90,6 @@ export const PdfFormatSchema = z
       .default(DEFAULT_PDF_FORMAT.disabledPreambleFilters)
       .transform((v) => (v?.length ? v : undefined)),
     'cover-image': z.boolean().default(DEFAULT_PDF_FORMAT.coverImage ?? false),
-    // Dublin Core fields (defaults for PDF format)
     title: z.string().optional(),
     creator: z.union([z.string(), z.array(z.string())]).optional(),
     subject: z.union([z.string(), z.array(z.string())]).optional(),
@@ -135,15 +109,11 @@ export const PdfFormatSchema = z
   })
   .strict();
 
-// ── LatexFormatConfig ────────────────────────────────────────────────────────
-
 export const LatexFormatSchema = z
   .object({
     generate: z.boolean().default(DEFAULT_LATEX_FORMAT.generate),
   })
   .strict();
-
-// ── Epub, Markdown ─────────────────────────────────────────────────────────
 
 export const EpubFormatSchema = z
   .object({
@@ -157,8 +127,6 @@ export const MarkdownFormatSchema = z
   })
   .strict();
 
-// ── FormatConfig ───────────────────────────────────────────────────────────
-
 const FormatSchema = z
   .object({
     latex: LatexFormatSchema.optional(),
@@ -169,9 +137,6 @@ const FormatSchema = z
   })
   .strict();
 
-// ── SiteConfig ─────────────────────────────────────────────────────────────
-
-// Esquema intermedio que refleja la estructura del YAML
 const RawSiteConfigSchema = z
   .object({
     language: z.string().default(DEFAULT_SITE_CONFIG.language),
@@ -187,7 +152,6 @@ const RawSiteConfigSchema = z
       .array(z.string())
       .optional()
       .transform((v) => (v?.length ? v : undefined)),
-    // Dublin Core fields (defaults for all documents)
     title: z.string().optional(),
     creator: z.union([z.string(), z.array(z.string())]).optional(),
     subject: z.union([z.string(), z.array(z.string())]).optional(),
@@ -207,18 +171,14 @@ const RawSiteConfigSchema = z
   })
   .strict();
 
-/** Convierte kebab-case a camelCase a nivel de tipo (issue #2072). */
 type CamelKey<K extends string> = K extends `${infer Head}-${infer Rest}` ? `${Head}${Capitalize<CamelKey<Rest>>}` : K;
 
-/** Mapea las claves kebab-case de T a camelCase conservando los tipos de valor. */
 export type Camelize<T> = { [K in keyof T as K extends string ? CamelKey<K> : K]: T[K] };
 
-/** Convierte kebab-case a camelCase. */
 function toCamel(key: string): string {
   return key.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
 }
 
-/** Aplica toCamel a todas las claves de un objeto (1 nivel), con tipos reales. */
 function camelizeKeys<T extends object>(obj: T): Camelize<T> {
   const result: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(obj)) {
@@ -227,18 +187,10 @@ function camelizeKeys<T extends object>(obj: T): Camelize<T> {
   return result as Camelize<T>;
 }
 
-/**
- * Sección `format.<x>` materializada: la salida camelizada del schema si el
- * usuario configuró el bloque, o el default del paquete si no. El tipo único
- * Camelize<T> evita el union entre rama configurada y rama default y elimina
- * los casts que antes puenteaban Zod hacia las interfaces manuales (#2072).
- */
 function formatSection<T extends object>(raw: T | undefined, fallback: Camelize<T>): Camelize<T> {
   return raw ? camelizeKeys(raw) : fallback;
 }
 
-// Transformar a SiteConfig (aplanar format:, camelizar claves).
-// Los defaults del schema Zod y del transform son la única fuente de verdad.
 export const SiteConfigSchema = RawSiteConfigSchema.transform((raw) => {
   const f = raw.format ?? {};
 
@@ -256,7 +208,6 @@ export const SiteConfigSchema = RawSiteConfigSchema.transform((raw) => {
     luaFilters: raw['lua-filters'],
     bibliography: raw.bibliography,
     csl: raw.csl,
-    // Dublin Core fields
     title: raw.title,
     creator: raw.creator,
     subject: raw.subject,
@@ -276,5 +227,4 @@ export const SiteConfigSchema = RawSiteConfigSchema.transform((raw) => {
   };
 });
 
-/** Tipo de configuración derivado del schema Zod — única fuente de verdad. */
 export type SiteConfig = z.infer<typeof SiteConfigSchema>;

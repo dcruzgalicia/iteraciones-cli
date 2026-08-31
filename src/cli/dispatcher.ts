@@ -19,12 +19,6 @@ import { initProject } from './init.js';
 import { ProgressTracker } from './progress.js';
 import { validateProject } from './validate.js';
 
-/**
- * Verifica que el directorio raíz del proyecto exista y sea un directorio.
- * Todos los comandos la ejecutan al inicio: un --project-root inexistente
- * (o apuntando a un archivo) debe fallar con un mensaje accionable, no con
- * un ENOENT técnico del pipeline de descubrimiento.
- */
 async function assertProjectRoot(cwd: string): Promise<void> {
   try {
     const st = await stat(cwd);
@@ -37,14 +31,6 @@ async function assertProjectRoot(cwd: string): Promise<void> {
   }
 }
 
-/**
- * Patrón de ejecución común de los comandos de la CLI: verifica la raíz del
- * proyecto, ejecuta la función y reporta cualquier error con logError fijando
- * process.exitCode = 1. `context` es el prefijo del logger y `unknownMessage`
- * el fallback cuando el error no es una instancia de Error (ningún throw del
- * código lanza otras cosas; la rama es defensiva). `runBuild` y `runNew`
- * conservan variantes propias: clasificación de errores y manejo de EEXIST.
- */
 async function runCliCommand(
   cwd: string,
   context: string,
@@ -54,8 +40,6 @@ async function runCliCommand(
 ): Promise<void> {
   try {
     if (options.createRoot) {
-      // Primer contacto con la CLI (#2180): `init` crea la raíz si no existe
-      // en lugar de fallar. El resto de comandos la exige (assertProjectRoot).
       const existed = await exists(cwd);
       await mkdir(cwd, { recursive: true });
       if (!existed) logInfo(`creado el directorio "${cwd}"`, context);
@@ -78,17 +62,9 @@ export async function runClean(cwd: string, options: { json?: boolean } = {}): P
     cwd,
     'clean',
     async () => {
-      // La salida real es la del último build (state.json, #2183): con
-      // `build --output out`, clean elimina `out/`, no un dist/ que no existe.
-      // Sin estado (nunca hubo build): el default documentado (dist/).
       const state = await loadStateFile(cwd);
       const outputDir = state?.outputDir ?? join(cwd, DIST_DIR);
-      // .iteraciones/ se elimina siempre: es la caché del propio CLI.
-      // Solo se eliminan rutas declaradas por el estado o el default: nunca
-      // rutas arbitrarias.
       const targets = [...new Set([outputDir, join(cwd, '.iteraciones')])];
-      // Reportar por directorio qué no se pudo eliminar: un fallo de clean no debe
-      // afirmar éxito (antes el catch traga cualquier error, EACCES incluido).
       const results = await Promise.all(
         targets.map(async (dir) => {
           try {
@@ -127,13 +103,9 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
   let tracker: ProgressTracker | undefined;
   try {
     await assertProjectRoot(cwd);
-    // El JSON es la única salida de stdout: mezclarlo con el detalle humano
-    // de --verbose rompería el contrato (docs/architecture.md).
     if (options.json && options.verbose) {
       throw new BuildError('--json y --verbose son mutuamente excluyentes: el JSON es la única salida de stdout');
     }
-    // Validar y resolver --output: las rutas relativas se resuelven contra la
-    // raíz del proyecto (--project-root), no contra el cwd del proceso.
     let output = options.outputDir;
     if (output !== undefined) {
       const projectRoot = normalize(cwd);
@@ -150,10 +122,6 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
       output = resolved;
     }
 
-    // El tracker (presentación) vive en la CLI y se inyecta en el build:
-    // el builder no conoce la UI (inversión builder→cli, issue #2017).
-    // Con --json el tracker escribe a un stream mudo: stdout queda reservado
-    // para el objeto JSON final.
     const jsonStream = options.json ? ({ write: (): boolean => true, isTTY: false } as unknown as NodeJS.WriteStream) : undefined;
     tracker = new ProgressTracker({
       renderer: options.verbose ? 'verbose' : 'default',
@@ -166,27 +134,15 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
   }
 }
 
-/**
- * Reporta un error de build con el formato unificado y las sugerencias que
- * conectan con las herramientas de diagnóstico (#2082). Exportado para tests:
- * la clasificación usa códigos estructurales, nunca el texto del mensaje.
- */
 export function reportBuildError(err: unknown, json = false, warnings: string[] = []): void {
   {
-    // Con --json el fallo se reporta también como JSON válido en stdout: quien
-    // consume el build programáticamente recibe siempre un objeto parseable
-    // (el detalle humano sigue en stderr).
     if (json) {
       const message = err instanceof Error ? err.message : String(err);
       process.stdout.write(`${JSON.stringify({ error: message, ...(warnings.length > 0 ? { warnings } : {}) })}\n`);
     }
-    // Los errores de frontmatter/config del build se resuelven con validate:
-    // la sugerencia conecta ambas herramientas (detalle completo por archivo).
     const suggestValidate = (): void => {
       process.stderr.write("  ejecuta 'iteraciones validate' para más detalle\n");
     };
-    // Los errores de entorno (herramienta ausente en PATH) se diagnostican
-    // con doctor: la sugerencia conecta build ↔ diagnóstico (#2082).
     const suggestDoctor = (): void => {
       process.stderr.write("  ejecuta 'iteraciones doctor' para diagnosticar el entorno\n");
     };
@@ -203,9 +159,6 @@ export function reportBuildError(err: unknown, json = false, warnings: string[] 
       suggestValidate();
     } else if (err instanceof BuildError) {
       logError(err.message, 'build');
-      // La sugerencia de validate solo aplica a errores clasificados como
-      // sintaxis YAML del frontmatter (código estructural, sin matchear el
-      // texto del mensaje): los demás errores ya muestran su detalle completo.
       if (err.code === BUILD_ERROR_CODES.frontmatterSyntax) suggestValidate();
     } else if (err instanceof Error) {
       logError(err.message);
@@ -215,7 +168,6 @@ export function reportBuildError(err: unknown, json = false, warnings: string[] 
   }
 }
 
-/** Información del proyecto para doctor --info (antes comando info). */
 async function buildProjectInfo(cwd: string): Promise<string[]> {
   const loaded = await loadSiteConfigIfPresent(cwd);
   if (!loaded) {
@@ -223,8 +175,6 @@ async function buildProjectInfo(cwd: string): Promise<string[]> {
   }
   const { config, presentKeys } = loaded;
   const pandocVersion = await getPandocVersion().catch(() => 'no disponible');
-  // El directorio de salida real es el del último build (state.json);
-  // sin estado previo, el default.
   const state = await loadStateFile(cwd);
   const distDir = state?.outputDir ?? join(cwd, DIST_FILES_DIR);
   const distExists = await stat(distDir)
@@ -232,12 +182,6 @@ async function buildProjectInfo(cwd: string): Promise<string[]> {
     .catch(() => false);
   const activeFormats = computeActiveFormats(config.format);
   const disabledFilters = config.disabledFilters?.length ? config.disabledFilters.join(', ') : '(ninguno)';
-  // Distinguir lo que el usuario configuró de los defaults del paquete: el
-  // conjunto de claves presentes en el YAML crudo (antes de que el schema
-  // materialice los defaults) decide si la línea de config muestra la lista
-  // materializada o (ninguno). Sin presencia, una clave escrita con valor
-  // idéntico al default sería indistinguible de la ausente (workaround
-  // anterior: sustraer DEFAULT_PDF_FORMAT.disabledPreambleFilters).
   const preambleDisabled = presentKeys.has('format.pdf.disabled-preamble-filters') ? (config.format?.pdf?.disabledPreambleFilters ?? []) : [];
   const docCount = (await listMarkdownDocuments(cwd)).length;
   const html = config.format?.html;
@@ -246,8 +190,6 @@ async function buildProjectInfo(cwd: string): Promise<string[]> {
 
   const preambleConfigLabel = 'filters de preámbulo desactivados (config):';
   const preambleDefaultsLabel = 'filters de preámbulo desactivados (defaults del paquete):';
-  // Una sola cuadrícula para TODO el bloque (#2087): el ancho lo fija la
-  // etiqueta más larga, no espacios manuales por fila.
   const rows: [string, string][] = [
     ['language:', config.language],
     ['toc:', config.toc ? 'sí' : 'no'],
@@ -292,8 +234,6 @@ export async function runDoctor(cwd: string, options: { json?: boolean; info?: b
         if (!ok) process.exitCode = 1;
         return;
       }
-      // --info muestra la información del proyecto (antes comando info) en un
-      // único bloque con encabezado: un prefijo por línea era ruido (#2192).
       if (options.info) {
         const lines = await buildProjectInfo(cwd);
         logInfo(`configuración del proyecto:\n${lines.join('\n')}`, 'doctor');
@@ -305,14 +245,8 @@ export async function runDoctor(cwd: string, options: { json?: boolean; info?: b
 }
 
 export async function runNew(cwd: string, path: string, options: { title?: string } = {}): Promise<void> {
-  // Variante del patrón común (runCliCommand): el mensaje de error lleva el
-  // path del usuario como prefijo y EEXIST no es un error, se informa y se
-  // omite sin fijar exit code. El resto del patrón coincide con el helper.
   try {
     await assertProjectRoot(cwd);
-    // Normalizar el nombre: espacios → guiones y separadores múltiples
-    // colapsados ('mi articulo' → 'mi-articulo.md'). Coherente con
-    // inferTitleFromPath, que convierte guiones en espacios para el título.
     const base = path.endsWith('.md') ? path : `${path}.md`;
     const normalizedPath = base.replace(/\s+/g, '-').replace(/-+/g, '-');
 
@@ -320,9 +254,6 @@ export async function runNew(cwd: string, path: string, options: { title?: strin
       throw new Error(`la ruta debe ser relativa al directorio del proyecto (recibido: "${path}")`);
     }
 
-    // El basename debe ser un nombre de archivo real: 'posts/' produce
-    // 'posts/.md' y '.' produce '.md' (archivo oculto que el discovery nunca
-    // procesa); un basename vacío u oculto crearía basura en el proyecto.
     const fileName = basename(normalizedPath);
     if (!fileName || fileName === '.md' || fileName.startsWith('.')) {
       throw new Error(`la ruta debe incluir un nombre de archivo (recibido: "${path}"); por ejemplo "posts/mi-articulo.md"`);
@@ -333,12 +264,7 @@ export async function runNew(cwd: string, path: string, options: { title?: strin
 
     const now = new Date();
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    // --title tiene prioridad; sin él se infiere del nombre del archivo.
     const title = options.title?.trim() || inferTitleFromPath(normalizedPath);
-    // stringify escapa apóstrofos y comillas: el frontmatter generado siempre
-    // es YAML válido (un title con comillas simples rompía el archivo).
-    // El cuerpo incluye ejemplos del vocabulario semántico (:: y dictum) que
-    // el usuario borra: la forma más barata de descubrir el lenguaje.
     const content = [
       '---',
       stringify({ title, date: today }, { defaultKeyType: 'PLAIN', defaultStringType: 'QUOTE_DOUBLE' }).trimEnd(),
@@ -374,15 +300,9 @@ export async function runFilters(cwd: string, options: RunFiltersOptions = {}): 
   await runCliCommand(cwd, 'filters', () => listFilters(cwd, options), 'Error desconocido al listar los filtros.');
 }
 
-/**
- * Infiere un título legible desde la ruta del archivo: elimina la extensión
- * .md, reemplaza guiones y guiones bajos por espacios, y capitaliza la
- * primera letra de cada palabra. Ej: `posts/mi-articulo` → `Mi Articulo`.
- */
 function inferTitleFromPath(path: string): string {
   const base = basename(path, '.md').replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
   if (!base) return 'Título del documento';
-  // Capitalizar la primera letra de cada palabra
   return base
     .split(' ')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))

@@ -2,27 +2,8 @@ import { join } from 'node:path';
 import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 
-// ---------------------------------------------------------------------------
-// Sistema de filters para el preámbulo LaTeX
-// ---------------------------------------------------------------------------
-// Cada filter es un archivo de recurso preamble/<prioridad>-<nombre>.tex
-// con contenido LaTeX puro (se edita como LaTeX, sin escaping de strings TS).
-// El proyecto puede sobreescribir cualquiera con preamble/<nombre>.tex en su
-// raíz; si no existe, se usa el recurso del paquete.
-//
-// La lógica condicional real del proyecto vive en los filtros Lua
-// (src/lib/resources/filters/) y en los preamble filters (.tex).
-// ---------------------------------------------------------------------------
-
-/** Directorio de preamble filters del paquete. */
 const PKG_PREAMBLE_DIR = join(import.meta.dir, '../lib/resources/preamble');
 
-/**
- * Nombres de los preamble filters del paquete, en orden de aplicación
- * (el prefijo numérico del archivo define el orden). Derivado del
- * filesystem: crear un .tex nuevo no requiere tocar código. El escaneo se
- * memoiza por proceso (los recursos no cambian durante un build).
- */
 let builtinPreambleNames: string[] | null = null;
 
 export function getBuiltinPreambleFilterNames(): string[] {
@@ -44,12 +25,6 @@ interface PreambleFilterInfo {
   description: string;
 }
 
-/**
- * Carga preamble filters desde el paquete y desde <cwd>/preamble/.
- * Los .tex del proyecto con el mismo nombre reemplazan a los del paquete.
- * @param disabledList Lista de filters a desactivar (blacklist). undefined = todos activos.
- * @param cwd Directorio del proyecto para buscar overrides.
- */
 export async function loadPreambleFilters(disabledList?: string[], cwd?: string): Promise<PreambleFilter[]> {
   const excluded = new Set(disabledList ?? []);
   const result: PreambleFilter[] = [];
@@ -66,18 +41,9 @@ export async function loadPreambleFilters(disabledList?: string[], cwd?: string)
   return result;
 }
 
-/**
- * Resuelve la lista efectiva de preamble filters desactivados, aplicando
- * dependencias implícitas:
- * - 99-pdfx activo → 08-hyperref se desactiva automáticamente (pdfx
- *   desactiva los enlaces por especificación PDF/X-1a).
- *
- * Retorna la lista efectiva (nueva referencia, no muta el original).
- */
 export function resolveEffectiveDisabledPreamble(disabled?: string[]): string[] {
   const effective = disabled ? [...disabled] : [];
   const effectiveSet = new Set(effective);
-  // 99-pdfx activo (no está en la lista) → auto-desactivar 08-hyperref
   if (!effectiveSet.has('99-pdfx') && !effectiveSet.has('08-hyperref')) {
     effective.push('08-hyperref');
     logWarning('08-hyperref desactivado automáticamente: 99-pdfx requiere enlaces desactivados (PDF/X-1a)', 'config');
@@ -85,11 +51,6 @@ export function resolveEffectiveDisabledPreamble(disabled?: string[]): string[] 
   return effective;
 }
 
-/**
- * Descripción de un preamble filter: las líneas de comentario % consecutivas
- * del inicio del archivo, unidas con espacio (mismo patrón que las
- * descripciones de los filters Lua).
- */
 function readPreambleDescription(content: string): string {
   const lines: string[] = [];
   for (const rawLine of content.split('\n')) {
@@ -103,7 +64,6 @@ function readPreambleDescription(content: string): string {
   return lines.filter(Boolean).join(' ');
 }
 
-/** Retorna información de todos los preamble filters built-in (descripción de las líneas % iniciales). */
 export async function getBuiltinPreambleFilterInfos(): Promise<PreambleFilterInfo[]> {
   const infos: PreambleFilterInfo[] = [];
   for (const name of getBuiltinPreambleFilterNames()) {
@@ -113,12 +73,6 @@ export async function getBuiltinPreambleFilterInfos(): Promise<PreambleFilterInf
   return infos;
 }
 
-/**
- * Valida los nombres de `disabled-preamble-filters` contra los preamble
- * filters built-in. Un nombre desconocido es un error bloqueante: el usuario
- * cree que desactivó un filtro que sigue activo (p. ej. marcas de corte en un
- * PDF digital), así que el build no puede continuar silenciosamente.
- */
 export function validateDisabledPreambleFilters(disabled: string[] | undefined): void {
   if (!disabled || disabled.length === 0) return;
   const unknown: string[] = [];
@@ -130,18 +84,8 @@ export function validateDisabledPreambleFilters(disabled: string[] | undefined):
   }
 }
 
-/** Resultado de la validación de dependencias entre preamble filters. */
 type PreambleDependencyIssue = { severity: 'error' | 'warning'; message: string };
 
-/**
- * Valida las dependencias entre preamble filters para una disabled list:
- * - 16-toc-styling usa \\renewcaptionname (definido por babel): desactivar
- *   05-language lo rompe con un error TeX oscuro → error bloqueante.
- * La lista vacía/undefined no produce issues (todos los filters activos).
- *
- * Nota: 99-pdfx con 08-hyperref ya no genera warning aquí porque
- * resolveEffectiveDisabledPreamble desactiva 08-hyperref automáticamente.
- */
 export function validatePreambleDependencies(disabled: string[] | undefined): PreambleDependencyIssue[] {
   const issues: PreambleDependencyIssue[] = [];
   if (!disabled || disabled.length === 0) return issues;
