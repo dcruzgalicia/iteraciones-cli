@@ -36,25 +36,37 @@ function escapeXmpValue(value: string): string {
   return value.replace(/[\\{}%&#_$^~]/g, (ch) => XMP_ESCAPES[ch] ?? ch);
 }
 
+function xmpStringField(tag: string, value: string | undefined): string | null {
+  return value ? `\\${tag}{${escapeXmpValue(value)}}` : null;
+}
+
+function xmpListField(tag: string, values: string[] | undefined): string | null {
+  return values && values.length > 0 ? `\\${tag}{${values.map(escapeXmpValue).join('\\sep ')}}` : null;
+}
+
 export function buildXmpdataContent(meta: PdfXmpMetadata): string {
   const lines: string[] = [];
-  if (meta.title) lines.push(`\\Title{${escapeXmpValue(meta.title)}}`);
-  if (meta.authors && meta.authors.length > 0) lines.push(`\\Author{${meta.authors.map(escapeXmpValue).join('\\sep ')}}`);
-  if (meta.lang) lines.push(`\\Language{${escapeXmpValue(meta.lang)}}`);
-  if (meta.subject) lines.push(`\\Subject{${escapeXmpValue(meta.subject)}}`);
-  if (meta.dateIso) lines.push(`\\Date{${escapeXmpValue(meta.dateIso)}}`);
-  if (meta.publishers && meta.publishers.length > 0) lines.push(`\\Publisher{${meta.publishers.map(escapeXmpValue).join('\\sep ')}}`);
-  if (meta.keywords && meta.keywords.length > 0) lines.push(`\\Keywords{${meta.keywords.map(escapeXmpValue).join('\\sep ')}}`);
-  if (meta.description) lines.push(`\\Description{${escapeXmpValue(meta.description)}}`);
-  if (meta.contributors && meta.contributors.length > 0) lines.push(`\\Contributor{${meta.contributors.map(escapeXmpValue).join('\\sep ')}}`);
-  if (meta.identifier) lines.push(`\\Identifier{${escapeXmpValue(meta.identifier)}}`);
-  if (meta.source) lines.push(`\\Source{${escapeXmpValue(meta.source)}}`);
-  if (meta.relations && meta.relations.length > 0) lines.push(`\\Relation{${meta.relations.map(escapeXmpValue).join('\\sep ')}}`);
-  if (meta.coverage) lines.push(`\\Coverage{${escapeXmpValue(meta.coverage)}}`);
-  if (meta.rights) lines.push(`\\Rights{${escapeXmpValue(meta.rights)}}`);
-  if (meta.license) lines.push(`\\License{${escapeXmpValue(meta.license)}}`);
-  if (meta.doi) lines.push(`\\Identifier{doi:${escapeXmpValue(meta.doi)}}`);
-  if (meta.isbn) lines.push(`\\Identifier{ISBN:${escapeXmpValue(meta.isbn)}}`);
+  for (const line of [
+    xmpStringField('Title', meta.title),
+    xmpListField('Author', meta.authors),
+    xmpStringField('Language', meta.lang),
+    xmpStringField('Subject', meta.subject),
+    xmpStringField('Date', meta.dateIso),
+    xmpListField('Publisher', meta.publishers),
+    xmpListField('Keywords', meta.keywords),
+    xmpStringField('Description', meta.description),
+    xmpListField('Contributor', meta.contributors),
+    xmpStringField('Identifier', meta.identifier),
+    xmpStringField('Source', meta.source),
+    xmpListField('Relation', meta.relations),
+    xmpStringField('Coverage', meta.coverage),
+    xmpStringField('Rights', meta.rights),
+    xmpStringField('License', meta.license),
+    meta.doi ? `\\Identifier{doi:${escapeXmpValue(meta.doi)}}` : null,
+    meta.isbn ? `\\Identifier{ISBN:${escapeXmpValue(meta.isbn)}}` : null,
+  ]) {
+    if (line) lines.push(line);
+  }
   return lines.length === 0 ? '' : `${lines.join('\n')}\n`;
 }
 
