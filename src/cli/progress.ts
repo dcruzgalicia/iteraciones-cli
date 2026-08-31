@@ -118,6 +118,39 @@ export class ProgressTracker implements BuildReporter {
     return rest > 0 ? `${parts.join(', ')} … y ${rest} más (--verbose)` : parts.join(', ');
   }
 
+  private buildDocsLine(processed: number, cached: number, invalidations?: string[]): string {
+    const total = processed + cached;
+    let line = `${padRight('Documentos', LABEL_WIDTH)}${total}`;
+    if (processed > 0 && cached > 0) {
+      line += ` (${processed} ${plural(processed, 'modificado', 'modificados')} · ${cached} ${plural(cached, 'reutilizado', 'reutilizados')})`;
+    } else if (total > 0 && processed === 0) {
+      line += ' (todos reutilizados)';
+    } else if (cached === 0 && invalidations?.length === 1) {
+      line += ` — ${ProgressTracker.compactInvalidations(invalidations)}`;
+    }
+    return line;
+  }
+
+  private writeWarnings(): void {
+    if (this.state.warnings.length === 0) return;
+    const suggestsValidate = this.state.warnings.some((w) => !w.includes(EMPTY_PROJECT_WARNING_CODES.noDocs));
+    this.stream.write(
+      `\n${GLYPHS.warning} Build completado con ${plural(this.state.warnings.length, 'advertencia')}${suggestsValidate ? `. Ejecuta 'iteraciones validate' para más detalle.` : '.'}\n`,
+    );
+    this.stream.write(`\nAdvertencias:\n`);
+    for (const warning of this.state.warnings) {
+      this.stream.write(`  ${warning}\n`);
+    }
+  }
+
+  private async writeOpenerLine(outputDir: string, processed: number): Promise<void> {
+    if (processed === 0) return;
+    const opener = process.platform === 'darwin' ? 'open' : 'xdg-open';
+    const indexHtml = join(outputDir, 'index.html');
+    const target = (await Bun.file(indexHtml).exists()) ? indexHtml : outputDir;
+    this.stream.write(`  ${padRight('Abre el resultado', LABEL_WIDTH)}${opener} "${target}"\n`);
+  }
+
   private async writeSummary(processed: number, cached: number, formats?: string[], outputDir?: string, invalidations?: string[]): Promise<void> {
     const totalTime = performance.now() - this.t0;
     const formatCount = formats ? formats.length : 0;
@@ -126,17 +159,7 @@ export class ProgressTracker implements BuildReporter {
     } else {
       this.stream.write(`\n`);
     }
-
-    const total = processed + cached;
-    let docsLine = `${padRight('Documentos', LABEL_WIDTH)}${total}`;
-    if (processed > 0 && cached > 0) {
-      docsLine += ` (${processed} ${plural(processed, 'modificado', 'modificados')} · ${cached} ${plural(cached, 'reutilizado', 'reutilizados')})`;
-    } else if (total > 0 && processed === 0) {
-      docsLine += ' (todos reutilizados)';
-    } else if (cached === 0 && invalidations !== undefined && invalidations.length === 1) {
-      docsLine += ` — ${ProgressTracker.compactInvalidations(invalidations)}`;
-    }
-    this.stream.write(`  ${docsLine}\n`);
+    this.stream.write(`  ${this.buildDocsLine(processed, cached, invalidations)}\n`);
     if (invalidations !== undefined && invalidations.length > 1) {
       this.stream.write(`  ${padRight('Invalidaciones', LABEL_WIDTH)}${ProgressTracker.compactInvalidations(invalidations)}\n`);
     }
@@ -146,26 +169,11 @@ export class ProgressTracker implements BuildReporter {
       this.stream.write(`  ${padRight('Salida', LABEL_WIDTH)}${outputDir}\n`);
     }
     this.stream.write(`  ${padRight('Tiempo total', LABEL_WIDTH)}${formatTime(totalTime)}\n`);
-    if (outputDir && processed > 0) {
-      const opener = process.platform === 'darwin' ? 'open' : 'xdg-open';
-      const indexHtml = join(outputDir, 'index.html');
-      const target = (await Bun.file(indexHtml).exists()) ? indexHtml : outputDir;
-      const command = `${opener} "${target}"`;
-      this.stream.write(`  ${padRight('Abre el resultado', LABEL_WIDTH)}${command}\n`);
-    }
+    if (outputDir) await this.writeOpenerLine(outputDir, processed);
     for (const line of this.state.summaryLines) {
       this.stream.write(`${line}\n`);
     }
-    if (this.state.warnings.length > 0) {
-      const suggestsValidate = this.state.warnings.some((w) => !w.includes(EMPTY_PROJECT_WARNING_CODES.noDocs));
-      this.stream.write(
-        `\n${GLYPHS.warning} Build completado con ${plural(this.state.warnings.length, 'advertencia')}${suggestsValidate ? `. Ejecuta 'iteraciones validate' para más detalle.` : '.'}\n`,
-      );
-      this.stream.write(`\nAdvertencias:\n`);
-      for (const warning of this.state.warnings) {
-        this.stream.write(`  ${warning}\n`);
-      }
-    }
+    this.writeWarnings();
   }
 }
 
