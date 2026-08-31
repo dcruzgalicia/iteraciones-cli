@@ -5,29 +5,13 @@ export interface RunResult {
 }
 
 interface RunOptions {
-  /** Directorio de trabajo del proceso (por defecto: el del proceso actual). */
   cwd?: string;
-  /**
-   * Límite de tiempo en ms. Si el proceso no termina, se mata y run() lanza un
-   * error accionable. Sin timeout el proceso puede colgar el build para siempre.
-   */
   timeoutMs?: number;
-  /** Contenido a escribir en stdin (el pipe se cierra al terminar). */
   input?: string;
-  /** Variables de entorno adicionales (merge sobre process.env). */
   env?: Record<string, string>;
-  /**
-   * Notifica el pid del proceso justo tras el spawn. Para gestión externa del
-   * ciclo de vida (p. ej. el pool PDF mata el latexmk en vuelo al quiescer).
-   */
   onSpawn?: (pid: number) => void;
 }
 
-/**
- * El comando no se pudo lanzar (ENOENT: no está en PATH o no es ejecutable).
- * Los call sites lo capturan para traducirlo a su mensaje específico
- * (p. ej. PandocError/ExportError con instrucciones de instalación).
- */
 export class ProcessSpawnError extends Error {
   constructor(message: string) {
     super(message);
@@ -35,11 +19,6 @@ export class ProcessSpawnError extends Error {
   }
 }
 
-/**
- * El proceso no terminó dentro de timeoutMs y fue terminado junto con sus
- * procesos hijos. Los call sites lo capturan para traducirlo a su mensaje
- * específico con contexto (p. ej. la ruta del log de latexmk).
- */
 export class ProcessTimeoutError extends Error {
   constructor(message: string) {
     super(message);
@@ -47,11 +26,9 @@ export class ProcessTimeoutError extends Error {
   }
 }
 
-/** PIDs de los hijos directos de un proceso (pgrep -P). Sin pgrep: lista vacía. */
 async function childPids(pid: number): Promise<number[]> {
   try {
     const proc = Bun.spawn(['pgrep', '-P', String(pid)], { stdout: 'pipe', stderr: 'ignore' });
-    // Defensa contra un pgrep colgado: nunca debe superar los 2 s.
     const timer = setTimeout(() => proc.kill(), 2_000);
     const stdout = await new Response(proc.stdout).text();
     clearTimeout(timer);
@@ -79,18 +56,10 @@ export async function killProcessTree(rootPid: number): Promise<void> {
   for (const pid of order.reverse()) {
     try {
       process.kill(pid, 'SIGKILL');
-    } catch {
-      // ESRCH: ya murió (p. ej. por la muerte de su padre)
-    }
+    } catch {}
   }
 }
 
-/**
- * Primitive de ejecución de procesos con pipes y timeout: única
- * implementación de spawn + stdin/stdout/stderr + timeout de todo el
- * pipeline (pandoc, latexmk y cualquier binario futuro). Los call sites
- * traducen ProcessSpawnError/ProcessTimeoutError a sus mensajes accionables.
- */
 export async function exec(command: string, args: string[], options: RunOptions = {}): Promise<RunResult> {
   let proc: ReturnType<typeof Bun.spawn>;
 
@@ -103,7 +72,6 @@ export async function exec(command: string, args: string[], options: RunOptions 
       env: options.env ? { ...process.env, ...options.env } : undefined,
     });
   } catch {
-    // Error esperado: ENOENT al spawnear; el mensaje accionable es más útil que la causa técnica
     throw new ProcessSpawnError(`No se encontró el comando "${command}". Verifica que esté instalado y disponible en PATH.`);
   }
   options.onSpawn?.(proc.pid);
@@ -115,32 +83,20 @@ export async function exec(command: string, args: string[], options: RunOptions 
   }
 }
 
-/** Pids de procesos externos en vuelo de este proceso CLI (registro de exec()). */
 const inFlightPids = new Set<number>();
 
-/**
- * Mata TODOS los procesos externos en vuelo (#2172). Se invoca cuando un
- * documento falla en el pool 1: los hermanos en vuelo terminan al instante y
- * dejan de escribir en dist/ después del error. Los pids vienen del registro
- * de exec(), la única primitiva de spawn.
- */
 export async function killInFlightProcesses(): Promise<void> {
   const pids = [...inFlightPids];
   await Promise.allSettled(pids.map((pid) => killProcessTree(pid)));
   inFlightPids.clear();
 }
 
-/** Lectura de pipes, timeout y conversión a RunResult (extraído de exec()). */
 async function awaitProcess(command: string, proc: ReturnType<typeof Bun.spawn>, options: RunOptions): Promise<RunResult> {
   if (options.input !== undefined) {
     if (proc.stdin == null || typeof proc.stdin === 'number') {
       throw new Error(`No se pudo escribir stdin del comando "${command}".`);
     }
     proc.stdin.write(options.input);
-    // Asegurar que el buffer del pipe se vacía antes de cerrar (backpressure
-    // del kernel): para entradas de varios MB (libros con imágenes inline),
-    // el buffer interno de Bun se descarga al pipe y respeta el límite del
-    // SO antes de que end() cierre el stream (#2236).
     await proc.stdin.flush();
     proc.stdin.end();
   }
@@ -162,13 +118,9 @@ async function awaitProcess(command: string, proc: ReturnType<typeof Bun.spawn>,
   let timedOut = false;
   const timer = setTimeout(() => {
     timedOut = true;
-    // El árbol completo, no solo el hijo directo: latexmk deja pdflatex y
-    // pandoc deja filtros/perl vivos si se mata solo el padre (issue #2014).
     void killProcessTree(proc.pid);
   }, options.timeoutMs);
   const [stdout, stderr, exitCode] = await outputPromise;
-  // El kill del timeout resuelve proc.exited: este clearTimeout siempre corre
-  // y no deja timers vivos que cuelguen el event loop tras el build.
   clearTimeout(timer);
   if (timedOut) {
     throw new ProcessTimeoutError(
@@ -178,25 +130,10 @@ async function awaitProcess(command: string, proc: ReturnType<typeof Bun.spawn>,
   return { stdout, stderr, exitCode };
 }
 
-/** Opciones de cancelación de mapWithConcurrency. */
 export interface MapConcurrencyOptions {
-  /**
-   * Se invoca UNA vez al primer rechazo, antes de que los workers restantes
-   * terminen: mata los procesos en vuelo para que los items hermanos no
-   * sigan escribiendo después del error (#2172). Los errores del propio
-   * cancel se ignoran: el error original manda.
-   */
   onCancel?: () => Promise<void> | void;
 }
 
-/**
- * Ejecuta `fn` sobre cada item con un máximo de `limit` promesas simultáneas.
- * Preserva el orden del array de resultados.
- *
- * Cancelación (#2172): al primer rechazo, los workers dejan de tomar items,
- * se invoca `onCancel` una vez y se espera a que los en vuelo terminen antes
- * de propagar el error original — nadie escribe después del throw.
- */
 export async function mapWithConcurrency<T, R>(
   items: T[],
   limit: number,
@@ -212,7 +149,6 @@ export async function mapWithConcurrency<T, R>(
   let firstError: unknown = null;
   let cancelStarted = false;
 
-  /** Registra el primer fallo y cancela el trabajo restante (una sola vez). */
   const firstFailure = async (err: unknown): Promise<void> => {
     if (firstError !== null) return;
     firstError = err;
@@ -221,16 +157,13 @@ export async function mapWithConcurrency<T, R>(
       cancelStarted = true;
       try {
         await options.onCancel();
-      } catch {
-        // El cancel no enmascara el error original
-      }
+      } catch {}
     }
   };
 
   async function worker(): Promise<void> {
     while (!aborted && nextIndex < items.length) {
       const index = nextIndex++;
-      // Invariante del while: items[index] siempre existe (el guard es defensivo)
       const item = items[index];
       if (item === undefined) throw new Error(`mapWithConcurrency: item ${index} sin definir`);
       try {
@@ -243,7 +176,6 @@ export async function mapWithConcurrency<T, R>(
   }
 
   const workers = Array.from({ length: Math.min(limit, items.length) }, worker);
-  // Los workers ya no rechazan: capturan su error en firstError y salen
   await Promise.all(workers);
   if (firstError !== null) throw firstError;
   return results;

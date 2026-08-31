@@ -6,15 +6,10 @@ export interface DiscoveryEntry {
   creator: string[];
   date?: string;
   slug?: string;
-  /** Valor del slug manual del frontmatter (campo slug:); undefined = automático. */
   manualSlug?: string;
-  /** Frontmatter YAML completo parseado: fluye a pandoc como metadata del documento. */
   fm?: Record<string, unknown>;
-  /** mtime (ms) del archivo en el último build (caché content-addressed). */
   mtime?: number;
-  /** Tamaño del archivo en el último build. */
   size?: number;
-  /** sha256 del contenido (solo se calcula cuando el mtime cambió con el mismo tamaño). */
   hash?: string;
 }
 
@@ -25,9 +20,6 @@ interface Frontmatter {
   creator: string[];
 }
 
-/**
- * Documento que acumula datos a través del pipeline. Creado en discovery.
- */
 export interface BuildDocument {
   filePath: string;
   relativePath: string;
@@ -35,41 +27,26 @@ export interface BuildDocument {
   slug?: string;
 }
 
-/**
- * Contexto de ejecución del pipeline: config, rutas y opciones de build.
- */
 export interface BuildContext {
   siteConfig: SiteConfig;
   cwd: string;
   outputDir: string;
   needsCss: boolean;
-  /** Máximo de invocaciones pandoc simultáneas. Default: CPU - 1. */
   concurrency: number;
 }
 
-// ── Reporteo de progreso (inversión builder→cli, issue #2017) ──────────────
-
-/** Fases del pipeline que el reporter puede declarar y actualizar. */
 export type PipelinePhase = 'discovery' | 'render' | 'latex' | 'markdown' | 'pdf' | 'epub' | 'html';
 
-/** Formato configurado (generate true/false) declarado al tracker. */
 export interface FormatState {
   phase: PipelinePhase;
   active: boolean;
 }
 
-/** Aviso de un archivo procesado (fila del tracker). */
 export interface RenderFileReport {
   relativePath: string;
   phase: PipelinePhase;
 }
 
-/**
- * Contrato de reporteo del build: el builder emite eventos; la CLI decide
- * cómo presentarlos (tracker interactivo, verbose, JSON) inyectando su
- * implementación en `build()`. Dirección de dependencia: cli → builder.
- * Sin reporter inyectado, `build()` usa `silentReporter` (headless).
- */
 export interface BuildReporter {
   setFormats(formats: FormatState[]): void;
   planPhases(phases: PipelinePhase[]): void;

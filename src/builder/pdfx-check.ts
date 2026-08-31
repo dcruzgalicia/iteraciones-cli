@@ -9,69 +9,33 @@ import { plural } from '../lib/plural.js';
 import { exec, mapWithConcurrency } from '../lib/run.js';
 import { hashFileContent } from './state-serialize.js';
 
-/**
- * Validación PDF/X-1a de los PDF generados (fase final del build).
- *
- * El binario `iteraciones-pdfcheck` (crate en tools/pdfx-validator, pdf-oxide)
- * certifica un PDF contra PDF/X-1a:2001 (estricto, único nivel) y emite un
- * informe JSON. La
- * validación es opcional: se corre solo cuando el preamble filter 99-pdfx está
- * activo y, si el binario no existe, se intenta compilar con cargo; si no se
- * obtiene, se advierte sin romper el build (mismo patrón que las herramientas
- * opcionales de doctor).
- */
-
-/** Nombre del binario de validación PDF/X-1a. */
 const PDFCHECK_BIN_NAME = 'iteraciones-pdfcheck';
 
-/** Tiempo máximo de una compilación release del binario (pdf-oxide es grande). */
 const CARGO_BUILD_TIMEOUT_MS = 600_000;
 
-/** Tiempo máximo de una validación individual (pdf-oxide valida en ms). */
 const PDFCHECK_TIMEOUT_MS = 30_000;
 
-/**
- * Directorio gestionado del binario, **compartido entre proyectos** y a salvo
- * de `clean`/`--full` (que borran `dist/` y `.iteraciones/` del proyecto):
- * `$XDG_CACHE_HOME/iteraciones/bin` o `~/.cache/iteraciones/bin`.
- */
 function managedBinDir(): string {
   const xdg = process.env.XDG_CACHE_HOME?.trim();
   const base = xdg && xdg.length > 0 ? xdg : join(homedir(), '.cache');
   return join(base, 'iteraciones', 'bin');
 }
 
-/**
- * Resuelve la ruta del binario sin construir: directorio gestionado (caché de
- * usuario) primero y luego PATH. Retorna null si no está.
- */
 export async function resolvePdfCheckBinary(): Promise<string | null> {
   const managed = join(managedBinDir(), PDFCHECK_BIN_NAME);
   if (existsSync(managed)) return managed;
   return (await Bun.which(PDFCHECK_BIN_NAME)) ?? null;
 }
 
-/**
- * Compila el binario con cargo desde la fuente del crate (tools/pdfx-validator,
- * incluida en el paquete) y lo coloca en el directorio gestionado (caché de
- * usuario). Retorna la ruta del binario o null si no se pudo obtener (cargo
- * ausente o compilación fallida); el llamador informa cómo obtenerlo sin
- * romper el build.
- */
 async function buildPdfCheckBinary(): Promise<string | null> {
   const manifest = join(import.meta.dir, '../../tools/pdfx-validator/Cargo.toml');
   if (!existsSync(manifest)) return null;
-  // El primer build con PDF/X compila el validador Rust: sin este aviso el
-  // usuario ve el build congelado hasta 10 minutos sin explicación (#2163).
-  // stderr en tiempo real: stdout es el contrato --json y el sink diferiría
-  // el mensaje hasta el resumen, cuando la espera ya pasó.
   logNotice('compilando iteraciones-pdfcheck (primer build, puede tardar varios minutos)…', 'pdfx');
   try {
     await exec('cargo', ['build', '--release', '--quiet', '--manifest-path', manifest], {
       timeoutMs: CARGO_BUILD_TIMEOUT_MS,
     });
   } catch {
-    // cargo ausente (ProcessSpawnError) o compilación fallida.
     return null;
   }
   const built = join(dirname(manifest), 'target', 'release', PDFCHECK_BIN_NAME);
@@ -84,7 +48,6 @@ async function buildPdfCheckBinary(): Promise<string | null> {
   return dest;
 }
 
-/** Un fallo (o warning) de certificación reportado por el binario. */
 interface PdfCheckIssue {
   code: string;
   message: string;
@@ -93,7 +56,6 @@ interface PdfCheckIssue {
   clause: string | null;
 }
 
-/** Informe JSON del binario (contrato del crate tools/pdfx-validator). */
 interface PdfCheckResult {
   valid: boolean;
   level: string;
@@ -101,7 +63,6 @@ interface PdfCheckResult {
   warnings: PdfCheckIssue[];
 }
 
-/** Ejecuta el binario sobre un PDF y parsea su informe JSON. */
 export async function validatePdfX1a(pdfPath: string, binaryPath: string): Promise<PdfCheckResult> {
   let result: Awaited<ReturnType<typeof exec>>;
   try {
@@ -145,48 +106,24 @@ export async function validatePdfX1a(pdfPath: string, binaryPath: string): Promi
 type PdfxOutputValidationResult = {
   validated: number;
   failed: number;
-  /** Línea de confirmación del resumen final en éxito (undefined si no aplica). */
   summaryLine: string | undefined;
 };
 
-/**
- * Caché de validación PDF/X (#2190): clave = hash del PDF + huella del
- * binario + lista efectiva de preamble filters desactivados. Solo se cachean
- * los resultados VÁLIDOS y SIN warnings (los fallos se revalidan siempre:
- * recompilar o corregir debe re-certificar; los warnings son aviso útil).
- */
 export interface PdfxCacheHandle {
   prev: Record<string, string>;
   out: Record<string, string>;
 }
 
-/**
- * Fase final del build: valida PDF/X-1a los PDFs de la salida cuando el
- * preamble filter 99-pdfx está activo (la señal de "quiero certificar para
- * imprenta"). Sin PDFs o sin 99-pdfx no hace nada; sin binario intenta
- * compilarlo con cargo (si `allowBuild`) y, si no se obtiene, advierte sin
- * romper el build.
- *
- * Contrato de fallo (decisión D2, issue #2162): con 99-pdfx activo, un PDF
- * que no certifica hace FALLAR el build (BuildError con archivo/página/código
- * de cada PDF incumplidor). El filter activo es la señal explícita de
- * imprenta; quien no quiere bloqueo desactiva el filter. Los warnings de los
- * PDFs que sí certifican quedan en advertencias sin bloquear.
- */
 export async function runPdfxOutputValidation(
   outputDir: string,
   siteConfig: SiteConfig,
   options: { allowBuild?: boolean } = {},
-  /** Lista efectiva de preamble filters desactivados (issue #2022: la config del usuario no se muta). */
   effectiveDisabledPreamble?: string[],
-  /** Caché de resultados (#2190): prev se consulta, out acumula los nuevos válidos. */
   cache?: PdfxCacheHandle,
 ): Promise<PdfxOutputValidationResult> {
   const disabled = effectiveDisabledPreamble ?? siteConfig.format?.pdf?.disabledPreambleFilters ?? [];
   if (disabled.includes('99-pdfx')) return { validated: 0, failed: 0, summaryLine: undefined };
   if (!existsSync(outputDir)) return { validated: 0, failed: 0, summaryLine: undefined };
-  // Glob recursivo: los PDFs se escriben anidados por subdirectorio según la
-  // ruta del documento (pipeline.ts outBase), no solo en la raíz de dist/.
   const pdfs = [...new Bun.Glob('**/*.pdf').scanSync({ cwd: outputDir, onlyFiles: true })].sort();
   if (pdfs.length === 0) return { validated: 0, failed: 0, summaryLine: undefined };
 
@@ -203,7 +140,6 @@ export async function runPdfxOutputValidation(
   let validated = 0;
   let failed = 0;
   const fallos: string[] = [];
-  // Huella del binario en la clave: reconstruirlo (o actualizarlo) revalida.
   let binFp = '';
   try {
     const st = statSync(binary);
@@ -211,10 +147,8 @@ export async function runPdfxOutputValidation(
   } catch {
     binFp = 'desconocido';
   }
-  /** Clave de caché de un PDF: contenido + binario + configuración efectiva. */
   const cacheKeyFor = async (file: string): Promise<string> =>
     `${file}\0${await hashFileContent(join(outputDir, file)).catch(() => 'ilegible')}\0${binFp}\0${disabled.join(',')}`;
-  // Los PDFs con resultado cacheado no se envían al validador (#2190)
   const pendientes: string[] = [];
   const claves: string[] = [];
   if (cache) {
@@ -228,30 +162,20 @@ export async function runPdfxOutputValidation(
     pendientes.push(...pdfs);
     claves.push(...pdfs.map(() => ''));
   }
-  // Validación concurrente con límite prudente (#2026): saturar CPU/disco
-  // degrada; la SALIDA se emite en el orden determinista del glob ordenado.
   const results = await mapWithConcurrency(pendientes, Math.min(4, Math.max(1, cpus().length)), (file) =>
     validatePdfX1a(join(outputDir, file), binary),
   );
-  // Mapa resultado por PDF para emitir en el orden determinista original.
   const porFile = new Map<string, Awaited<ReturnType<typeof validatePdfX1a>>>();
   for (const [i, result] of results.entries()) {
     const file = pendientes[i];
     if (file !== undefined && result !== undefined) porFile.set(file, result);
   }
   for (const [i, file] of pdfs.entries()) {
-    // Los ya cacheados solo suman: no re-validar un PDF idéntico compilado
-    // con el mismo binario y configuración (#2190).
     const cachedOk = cache !== undefined && claves[i] !== '' && cache.prev[claves[i] ?? ''] === '1';
     if (cachedOk) continue; // ya contada en el pre-paso de caché (#2190)
     const result = porFile.get(file);
     validated += 1;
     const where = (iss: PdfCheckIssue): string => (iss.page !== null && iss.page !== undefined ? ` — página ${iss.page + 1}` : '');
-    // Se reportan TODOS los fallos (errors ya incluyen los warnings de
-    // identificación promovidos a error) y TODOS los warnings restantes, para
-    // que ningún incumplimiento u advertencia quede oculto (issue #1971).
-    // Los detalles de un PDF que no certifica viajan en el error (la ruta de
-    // fallo del build no imprime los warnings acumulados del tracker).
     if (result === undefined) {
       fallos.push(`${file}: sin resultado del validador`);
       continue;
@@ -266,7 +190,6 @@ export async function runPdfxOutputValidation(
         fallos.push(`  advertencia — [${w.code}] ${w.message}${where(w)}`);
       }
     } else {
-      // Cacheable: válido y sin warnings (los warnings se re-avisan siempre)
       if (cache && result.warnings.length === 0 && claves[i] !== undefined && claves[i] !== '') {
         cache.out[claves[i] ?? ''] = '1';
       }
@@ -275,8 +198,6 @@ export async function runPdfxOutputValidation(
       }
     }
   }
-  // La caché nueva hereda las claves vigentes del estado previo: los PDFs que
-  // siguen existiendo conservan su certificación sin re-validar (#2190).
   if (cache) {
     const vigentes = new Set(claves.filter((k) => k !== ''));
     for (const key of Object.keys(cache.prev)) {
@@ -287,7 +208,6 @@ export async function runPdfxOutputValidation(
   if (failed > 0) {
     throw new BuildError(`${failed} de ${validated} PDFs no certifican PDF/X-1a.\n${fallos.map((l) => `  ${l}`).join('\n')}`);
   }
-  // Éxito: confirmación explícita en el resumen final (issue #1960).
   return {
     validated,
     failed,

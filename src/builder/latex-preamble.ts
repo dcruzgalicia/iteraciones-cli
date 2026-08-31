@@ -1,27 +1,9 @@
-/**
- * Compositor del template LaTeX efectivo del build.
- *
- * El .tex final (preámbulo + cuerpo) se genera en UNA invocación de pandoc
- * (markdown → latex) usando este template: la configuración estática vive en
- * los archivos .tex bajo src/lib/resources/preamble/ (01-documentclass.tex,
- * 02-fonts.tex, …) y las condiciones estructurales (TOC, espaciado post-
- * portada) las expone el filtro interno internal/flags.lua vía metadata
- * ($if(has-toc-entries)$, $if(skip-paragraph-space)$).
- *
- * El template se compone una vez por build (los preamble filters y la
- * bibliografía no dependen del documento) y se escribe en
- * .iteraciones/templates/latex.tex.
- */
 import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 import type { PreambleFilter } from './preamble-loader.js';
 
-// ── Crop / PDF-X: cálculo dinámico de dimensiones ──────────────────────────
-
-/** Conversión mm → pt (estándar PDF: 1pt = 0.352778mm). */
 const MM_TO_PT = 2.834639;
 
-/** Tamaños de papel estándar en mm (ancho × alto). */
 const PAPER_SIZES: Record<string, { w: number; h: number }> = {
   letter: { w: 215.9, h: 279.4 },
   a4: { w: 210, h: 297 },
@@ -31,15 +13,6 @@ const PAPER_SIZES: Record<string, { w: number; h: number }> = {
   '11x17': { w: 279.4, h: 431.8 },
 };
 
-/**
- * Detecta dimensiones de página y caja de texto (mm) a partir de los preamble filters.
- * Orden de prioridad:
- *   1. paperwidth / paperheight en geometry (04-margins)
- *   2. paper= en documentclass (01-documentclass)
- *   3. Fallback: letter
- * Extrae además left/right de geometry para calcular el ancho de la caja
- * de texto (paperwidth - left - right).
- */
 export function detectPageSize(filters: PreambleFilter[]): { w: number; h: number; textW: number } {
   const margins = filters.find((f) => f.name === '04-margins')?.content ?? '';
   const pwMatch = margins.match(/paperwidth\s*=\s*([\d.]+)\s*mm/);
@@ -51,7 +24,6 @@ export function detectPageSize(filters: PreambleFilter[]): { w: number; h: numbe
   if (pw && ph) {
     const pwMm = Number.parseFloat(pw);
     const phMm = Number.parseFloat(ph);
-    // Calcular ancho de caja de texto
     const leftMm = leftMatch ? parseMarginMm(leftMatch[1], leftMatch[2]) : 25.4;
     const rightMm = rightMatch ? parseMarginMm(rightMatch[1], rightMatch[2]) : 25.4;
     const textW = pwMm - leftMm - rightMm;
@@ -64,7 +36,6 @@ export function detectPageSize(filters: PreambleFilter[]): { w: number; h: numbe
   if (paperKey) {
     const size = PAPER_SIZES[paperKey.toLowerCase()];
     if (size) {
-      // Margen default: 2.54cm = 25.4mm
       return { w: size.w, h: size.h, textW: size.w - 50.8 };
     }
   }
@@ -87,7 +58,6 @@ function parseMarginMm(value: string | undefined, unit: string | undefined): num
   }
 }
 
-/** Genera el contenido LaTeX del filter 98-crop para un tamaño dado. */
 export function buildCropContent(widthMm: number, heightMm: number): string {
   const w = (widthMm + 6).toFixed(1);
   const h = (heightMm + 6).toFixed(1);
@@ -98,7 +68,6 @@ export function buildCropContent(widthMm: number, heightMm: number): string {
 \\usepackage[width=${w}truemm,height=${h}truemm,center,cam,noinfo]{crop}`;
 }
 
-/** Genera el bloque \\pdfpagesattr del filter 99-pdfx para un tamaño dado. */
 export function buildPdfxPagesattr(widthMm: number, heightMm: number, cropActive: boolean): string {
   const boxW = (cropActive ? widthMm + 6 : widthMm) * MM_TO_PT;
   const boxH = (cropActive ? heightMm + 6 : heightMm) * MM_TO_PT;
@@ -125,18 +94,11 @@ export function buildPdfxPagesattr(widthMm: number, heightMm: number, cropActive
 }`;
 }
 
-/**
- * Aplica generación dinámica a los filters de la cola de imprenta (98-crop,
- * 99-pdfx) y a 30-endpapers según el tamaño de página detectado y qué
- * filters están activos. Modifica el array in-place y retorna el mismo
- * puntero para encadenamiento.
- */
 export function applyPrintQueueDynamics(filters: PreambleFilter[], pageDimensions?: { w: number; h: number; textW: number }): PreambleFilter[] {
   const cropActive = filters.some((f) => f.name === '98-crop');
   const pdfxActive = filters.some((f) => f.name === '99-pdfx');
   if (!cropActive && !pdfxActive) return filters;
 
-  // Dimensiones ya detectadas por el pipeline (#2092): una sola evaluación.
   const { w, h } = pageDimensions ?? detectPageSize(filters);
 
   for (const f of filters) {
@@ -149,8 +111,6 @@ export function applyPrintQueueDynamics(filters: PreambleFilter[], pageDimension
     }
   }
 
-  // Endpapers: cuando crop está activo, la imagen necesita +6mm (3mm por
-  // lado) para cubrir el stock más grande de las marcas de corte.
   if (cropActive) {
     const ep = filters.find((f) => f.name === '30-endpapers');
     if (ep) {
@@ -166,11 +126,6 @@ export function applyPrintQueueDynamics(filters: PreambleFilter[], pageDimension
   return filters;
 }
 
-/**
- * Opciones de babel por código BCP 47 (lang de configuración).
- * Las variantes de español conservan las opciones históricas del paquete
- * (es-noshorthands, es-noindentfirst y mexico para es-MX).
- */
 const BABEL_LANG_OPTIONS: Record<string, string> = {
   es: 'spanish,es-noshorthands,es-noindentfirst',
   'es-MX': 'spanish,mexico,es-noshorthands,es-noindentfirst',
@@ -190,13 +145,6 @@ const BABEL_LANG_OPTIONS: Record<string, string> = {
   ru: 'russian',
 };
 
-/**
- * Resuelve las opciones de babel para un código BCP 47: match exacto, luego
- * idioma base (fr-CA → french) y finalmente español con warning. `warnedLangs`
- * es el registro del build (una vez por build, no por proceso): la API
- * programática documentada permite llamadas repetidas a build() en el mismo
- * proceso sin suprimir warnings entre llamadas.
- */
 export function babelOptionsForLang(lang: string, warnedLangs: Set<string>): string {
   const direct = BABEL_LANG_OPTIONS[lang];
   if (direct) return direct;
@@ -210,22 +158,10 @@ export function babelOptionsForLang(lang: string, warnedLangs: Set<string>): str
   return BABEL_LANG_OPTIONS.es ?? 'spanish';
 }
 
-/**
- * Escapa los caracteres que romperían el parseo TeX en rutas de archivo
- * (\addbibresource): % inicia un comentario y # es un carácter de parámetro.
- * No escapa _ ni ~ porque biblatex usa la ruta literalmente y el escape
- * rompería nombres de archivo comunes (p. ej. mi_bibliografia.bib).
- *
- * Los espacios NO requieren escape: el argumento va entre llaves y TeX los
- * tokeniza literalmente (biber resuelve la ruta con espacios sin queja;
- * cubierto por el smoke de rutas con espacios en export-runner.test.ts,
- * issue #2015).
- */
 function escapeLatexPath(s: string): string {
   return s.replace(/([%#\\])/g, '\\$1');
 }
 
-/** Comandos scrlayer-scrpage por posición del número de página. */
 const PAGE_NUMBER_COMMANDS: Record<string, string> = {
   'header-left': '\\ihead*{\\pagemark}',
   'header-center': '\\chead*{\\pagemark}',
@@ -235,21 +171,10 @@ const PAGE_NUMBER_COMMANDS: Record<string, string> = {
   'footer-right': '\\ofoot*{\\pagemark}',
 };
 
-/** Comando de página para una posición configurada (o undefined si es inválida). */
 export function pageNumberCommandFor(pageNumber: string): string | undefined {
   return PAGE_NUMBER_COMMANDS[pageNumber];
 }
 
-/**
- * Compone el template LaTeX efectivo del build:
- *   preamble filters (01-23…) → \addbibresource → \begin{document} →
- *   \title/\subtitle/\author/\date/\maketitle → \tableofcontents (condicional
- *   por $if(has-toc-entries)$) → espaciado post-portada (condicional por
- *   $if(skip-paragraph-space)$) → número de página → $body$ → \end{document}.
- *
- * Los condicionales ocupan líneas completas: un $if$ en línea propia no deja
- * líneas en blanco en el .tex cuando es falso (a diferencia del $if$ inline).
- */
 export async function composeLatexTemplate(opts: {
   pageNumber: string;
   toc: boolean;
@@ -264,12 +189,6 @@ export async function composeLatexTemplate(opts: {
     lines.push(`\\addbibresource{${escapeLatexPath(bib)}}`);
   }
   lines.push('\\begin{document}');
-  // Sin \pagestyle{empty} explícito: \clearpairofpagestyles (06-headers.tex)
-  // ya deja los layers vacíos, así que portada/TOC no muestran nada hasta que
-  // el comando de página se define (el pagestyle default headings los usa).
-  // Páginas de título internas (frontmatter multilinea → LaTeX por el filter
-  // 10-titlepages): los comandos solo guardan con \gdef; 19-maketitle.tex
-  // los renderiza en el orden KOMA (extratitle → portada → titlebacks → dedication).
   lines.push('$if(extratitle)$');
   lines.push('\\extratitle{$extratitle$}');
   lines.push('$endif$');
@@ -295,21 +214,13 @@ export async function composeLatexTemplate(opts: {
   lines.push('\\publishers{$publishers$}');
   lines.push('$endif$');
   lines.push('$if(publishers-image)$');
-  // publishers-image (solo LaTeX/PDF): el filter 10-titlepages la convierte a
-  // RawInline latex (ruta literal); 19-maketitle.tex renderiza la imagen en
-  // lugar del texto de publishers.
   lines.push('\\publishersimage{$publishers-image$}');
   lines.push('$endif$');
   lines.push('$if(endpapers)$');
-  // endpapers (solo LaTeX/PDF): imagen de fondo de todas las páginas
-  // (30-endpapers.tex la mide con pdfximage y cubre la hoja).
   lines.push('\\setendpapers{$endpapers$}');
   lines.push('$endif$');
   lines.push('\\title{$title$}');
   lines.push('$if(title-image)$');
-  // title-image (solo LaTeX/PDF): el filter 10-titlepages la convierte a
-  // RawInline latex (ruta literal, sin escapes); 19-maketitle.tex renderiza
-  // la imagen en lugar del texto del título.
   lines.push('\\titleimage{$title-image$}');
   lines.push('$endif$');
   lines.push('$if(subtitle)$');
@@ -325,22 +236,10 @@ export async function composeLatexTemplate(opts: {
   }
   lines.push('$if(skip-paragraph-space)$');
   lines.push('$else$');
-  // El vspace separa la portada/TOC del contenido cuando este empieza pegado
-  // en la misma página (párrafo normal). Con titlebacks el body puede empezar
-  // en página nueva o compartir la página de los titlebacks: en ambos casos
-  // el criterio es el mismo — solo skip-paragraph-space decide.
   lines.push('\\vspace*{2\\baselineskip}');
   lines.push('$endif$');
   const pageCommand = PAGE_NUMBER_COMMANDS[opts.pageNumber];
   if (pageCommand) {
-    // Activar la numeración: el pagestyle default (headings) ya muestra los
-    // layers de scrlayer-scrpage y los comandos con * (\ohead*{\pagemark}, ...)
-    // aplican también a plain. Si el primer bloque del body es un
-    // title/list-opener (skip-paragraph-space), el comando lo inserta
-    // flags.lua DESPUÉS de ese bloque (la numeración empieza con el
-    // contenido); con un párrafo normal, se emite aquí (antes del body) y la
-    // última página de la portada/TOC comparte la numeración con el primer
-    // párrafo.
     lines.push('$if(skip-paragraph-space)$');
     lines.push('$else$');
     lines.push(pageCommand);
@@ -352,10 +251,6 @@ export async function composeLatexTemplate(opts: {
   lines.push('$body$');
   lines.push('');
   lines.push('$if(colophon)$');
-  // Colofón final: 28-titlepages.tex define \colophon (guarda el contenido
-  // serializado por 10-titlepages) y \colophonpage (siempre en una página
-  // par, la última del documento). Va después del body, así que queda
-  // incluso después de \printbibliography (inyectado al AST por flags.lua).
   lines.push('\\colophon{$colophon$}');
   lines.push('\\colophonpage');
   lines.push('$endif$');

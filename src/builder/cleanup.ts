@@ -6,12 +6,6 @@ import { LATEXMK_AUX_EXTENSIONS } from './export/runner.js';
 import { ALL_OUTPUT_EXTENSIONS, FORMAT_OUTPUT_EXTENSIONS } from './output-layout.js';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
 
-/**
- * Elimina un archivo si existe; devuelve si existió (para el informe).
- * Sin TOCTOU (exists+rm separados) y sin catch silencioso: un fallo de
- * borrado (EACCES) se propaga y el informe del cleanup no afirma eliminado
- * lo que sigue en disco (#2193).
- */
 async function removeIfExists(path: string): Promise<boolean> {
   try {
     await rm(path, { force: true });
@@ -22,7 +16,6 @@ async function removeIfExists(path: string): Promise<boolean> {
   }
 }
 
-/** Elimina directorios vacíos bajo outputDir (bottom-up, nunca la raíz). */
 async function pruneEmptyDirs(outputDir: string): Promise<void> {
   const dirs: string[] = [];
   const walk = async (rel: string): Promise<void> => {
@@ -34,30 +27,21 @@ async function pruneEmptyDirs(outputDir: string): Promise<void> {
     }
   };
   await walk('.');
-  // Bottom-up: los padres se vacían tras eliminar los hijos
   for (const dir of dirs.reverse()) {
     const remaining = await readdir(join(outputDir, dir)).catch(() => ['x']);
     if (remaining.length === 0) await rm(join(outputDir, dir), { force: true }).catch(() => {});
   }
 }
 
-/** Elimina los artefactos cacheados de un documento (`.iteraciones/`). */
 async function removeCachedArtifacts(cacheBase: string, dir: string, slug: string): Promise<number> {
   let removed = 0;
-  // Área de trabajo del PDF: .tex (sin latexOn) y auxiliares de latexmk
-  // (el .log solo se referencia en errores de builds vivos).
   if (await removeIfExists(join(cacheBase, 'tmp', 'pdf', dir, `${slug}.tex`))) removed++;
-  // Auxiliares de latexmk en el directorio directo y en cada slot de
-  // concurrencia (se acumulaban para siempre al eliminar un documento o cambiar
-  // su slug; el .log solo se referencia en errores de builds vivos).
   const workDir = join(cacheBase, 'tmp', 'pdf', dir);
   const targets: string[] = [''];
   try {
     const entries = await readdir(workDir, { withFileTypes: true });
     for (const e of entries) if (e.isDirectory() && e.name.startsWith('slot-')) targets.push(e.name);
-  } catch {
-    // El directorio de trabajo puede no existir todavía (nunca se compiló PDF).
-  }
+  } catch {}
   for (const sub of targets) {
     for (const ext of LATEXMK_AUX_EXTENSIONS) {
       if (await removeIfExists(join(workDir, sub, `${slug}${ext}`))) removed++;
@@ -66,7 +50,6 @@ async function removeCachedArtifacts(cacheBase: string, dir: string, slug: strin
   return removed;
 }
 
-/** Elimina archivos de salida de un documento en dist/ (por extensiones). */
 async function removeOutputFiles(outputDir: string, dir: string, slug: string, extensions: string[]): Promise<number> {
   let removed = 0;
   for (const ext of extensions) {
@@ -77,11 +60,9 @@ async function removeOutputFiles(outputDir: string, dir: string, slug: string, e
 
 interface CleanupEntry {
   relativePath: string;
-  /** Slug PREVIO a limpiar (el viejo en cambios de slug; el del documento borrado). */
   slug: string | undefined;
 }
 
-/** Limpia caché y salida de documentos identificados por su ruta y slug previo. */
 async function cleanupBySlug(ctx: BuildContext, entries: Iterable<CleanupEntry>): Promise<number> {
   const cacheBase = join(ctx.cwd, '.iteraciones');
   let removed = 0;
@@ -135,7 +116,6 @@ export async function cleanupDeletedFiles(
     relativePath: relPath,
     slug: deletedEntries.get(relPath)?.slug ?? basename(relPath, '.md'),
   }));
-  // htmlSlugFor dentro de cleanupBySlug cubre el caso index.md sin bloque especial
   return cleanupBySlug(ctx, entries);
 }
 

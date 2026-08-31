@@ -10,7 +10,6 @@ import {
 } from '../config/site-config.js';
 import { logInfo, logSuccess } from '../lib/logger.js';
 
-/** Fecha local actual en formato ISO (yyyy-mm-dd), como en `new`. */
 function todayIso(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -49,12 +48,6 @@ const DEFAULT_INDEX = [
 
 const quote = (value: string): string => JSON.stringify(value);
 
-/**
- * Genera un iteraciones.config.yaml mínimo con los campos esenciales y sus
- * valores por defecto (constantes DEFAULT_*). El resto de opciones (blocks,
- * show-date, page-number, disabled-preamble-filters, disabled-filters,
- * lua-filters, bibliography, csl) viven en docs/configuration.md.
- */
 function buildDefaultConfig(): string {
   return [
     '# Configuración del proyecto. Consulta docs/configuration.md para ver todas las opciones.',
@@ -80,15 +73,8 @@ function buildDefaultConfig(): string {
   ].join('\n');
 }
 
-/** Contenido sugerido del .gitignore para un proyecto nuevo (directorios generados). */
 const DEFAULT_GITIGNORE = ['# Generados por iteraciones (build y caché)', 'dist/', '.iteraciones/', '.DS_Store', ''].join('\n');
 
-/**
- * Crea `iteraciones.config.yaml`, `index.md`, `bibliography.bib` y `.gitignore`
- * en el directorio indicado. index.md es el documento de inicio: el primer build
- * produce un index.html real (el home que enlazan las tarjetas de identidad).
- * Si alguno de los archivos ya existe, lo omite e informa al usuario.
- */
 export async function initProject(cwd: string): Promise<void> {
   const DEFAULT_BIB = [
     '@book{ejemplo2024,',
@@ -107,8 +93,6 @@ export async function initProject(cwd: string): Promise<void> {
     createExclusive(join(cwd, '.gitignore'), DEFAULT_GITIGNORE),
   ]);
 
-  // Patrón unificado: los comandos que mutan el proyecto (init, new, clean)
-  // usan ✓ para lo creado/eliminado y sin glifo para lo omitido (no mutó).
   const report = (created: boolean, file: string): void => {
     if (created) logSuccess(`creado ${file}`, 'init');
     else logInfo(`omitido ${file} (ya existe)`, 'init');
@@ -120,11 +104,6 @@ export async function initProject(cwd: string): Promise<void> {
   logSuccess("proyecto inicializado. Ejecuta 'iteraciones build' para generar los documentos.", 'init');
 }
 
-/**
- * Intenta crear el archivo con la bandera exclusiva `wx`.
- * Retorna true si se creó, false si ya existía (EEXIST).
- * Re-lanza cualquier otro error (EACCES, ENOTDIR, etc.).
- */
 async function createExclusive(filePath: string, content: string): Promise<boolean> {
   try {
     await writeFile(filePath, content, { encoding: 'utf8', flag: 'wx' });

@@ -2,13 +2,7 @@ import { Command } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
 import { runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from './dispatcher.js';
 
-/**
- * Traduce los mensajes de error conocidos de commander al español.
- * Los mensajes no reconocidos se conservan tal cual.
- */
 function translateCommanderError(message: string): string {
-  // El mensaje puede traer varias líneas (p. ej. la sugerencia de comandos
-  // cercanos en una segunda línea): se traduce línea por línea.
   return message
     .split('\n')
     .map((line) =>
@@ -22,11 +16,6 @@ function translateCommanderError(message: string): string {
     .join('\n');
 }
 
-/**
- * Sugerencia de comando cercano para `help <desconocido>`: coincidencia por
- * prefijo (buil → build) o distancia de edición acotada. Suficiente para el
- * caso de uso; sin dependencia de librerías de distancia.
- */
 function suggestCommand(name: string, commands: string[]): string | undefined {
   const prefix = name.slice(0, 3);
   const byPrefix = commands.find((c) => c.startsWith(prefix));
@@ -52,12 +41,7 @@ export function buildProgram(): Command {
     .name(packageJson.name.replace(/-cli$/, ''))
     .version(packageJson.version, '-V, --version', 'muestra la versión')
     .helpOption('-h, --help', 'muestra la ayuda')
-    // El help command nativo de commander imprime el help raíz sin error para
-    // un comando desconocido: se sustituye por uno propio que valida el
-    // argumento y sugiere comandos cercanos (#2179).
     .helpCommand(false);
-  // La descripción vive en el bloque 'before' (slogan + primeros pasos): el
-  // .description() de commander la repetiría bajo "Usage" en el help raíz.
   program.addHelpText(
     'before',
     `escribir, compartir, re-existir
@@ -82,16 +66,10 @@ Documentación:
 `,
   );
   program.option('--project-root <path>', 'directorio raíz del proyecto (por defecto: directorio actual)');
-  // Las opciones globales (--project-root) se muestran también en el help de
-  // cada subcomando, no solo en el help raíz.
   program.configureHelp({ showGlobalOptions: true });
-  // Los errores de uso de commander llegan en inglés: se traducen los 4 casos
-  // conocidos (comando/opción desconocida, argumento faltante) con regex; la
-  // ayuda y la versión se configuran nativamente en español arriba.
   program.configureOutput({ outputError: (str, write) => write(translateCommanderError(str)) });
   program.exitOverride();
 
-  /** Resuelve el directorio raíz del proyecto: --project-root global o el directorio actual. */
   const projectRoot = (): string => program.opts().projectRoot ?? process.cwd();
 
   program
@@ -112,9 +90,6 @@ Ejemplos:
 `,
     )
     .action(async (opts: { full?: boolean; output?: string; verbose?: boolean; json?: boolean }) => {
-      // La validación de --output y la exclusión mutua --json/--verbose ocurren
-      // en runBuild, donde los errores se reportan con el formato unificado
-      // (sin stack traces).
       await runBuild(projectRoot(), {
         full: opts.full,
         outputDir: opts.output,

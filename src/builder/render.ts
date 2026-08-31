@@ -8,17 +8,6 @@ import { extractReferencesBlock, removeTocReferencesLink } from './html-postproc
 import { citationCompileArgs, languageArg, metadataValue, titleArg } from './pandoc-metadata.js';
 import type { BuildDocument } from './types.js';
 
-/**
- * Genera la página HTML completa desde el markdown original en una sola
- * invocación de pandoc (reader markdown + filtros semánticos/de usuario/flags
- * + capa html + template efectivo). Post-procesamiento mínimo: solo las
- * referencias (extraerlas del article y reinsertarlas en su marcador, que es
- * la única forma de sacarlas del body correctamente).
- */
-/**
- * Opciones de htmlPageFromMarkdown (#2076): campos nombrados en vez de diez
- * parámetros posicionales.
- */
 interface HtmlPageOptions {
   cwd: string;
   vars: HtmlPageVars;
@@ -33,9 +22,6 @@ interface HtmlPageOptions {
 export async function htmlPageFromMarkdown(content: string, doc: BuildDocument, opts: HtmlPageOptions): Promise<string> {
   const { cwd, vars, siteConfig, templatePath, refsCardTemplate, fm, bibOptions, luaFilters } = opts;
   const filters = luaFilters ?? (await loadFilterGroups(siteConfig, siteConfig.disabledFilters, cwd));
-  // Valores efectivos: el frontmatter del documento manda; la config aporta defaults.
-  // Contrato de idioma unificado: `language` en HTML, EPUB y Markdown (#2010).
-  // Mecanismo único de resolución de vars de página (#2021): una evaluación por campo.
   const lang = fmString(fm.language, vars.lang);
   const siteTitle = fmString(fm['site-title'], vars.siteTitle);
   const tagline = fmString(fm.tagline, vars.tagline ?? '');
@@ -69,8 +55,6 @@ export async function htmlPageFromMarkdown(content: string, doc: BuildDocument, 
   const formatsItems = buildFormatsItems(vars.formats ?? []);
   if (formatsItems) extraArgs.push(`--variable=formats:${formatsItems}`);
 
-  // citeproc DESPUÉS de --lua-filter (orden protegido por test de regresión):
-  // la composición de citas vive en pandoc-metadata (ÚNICA fuente, #2175)
   extraArgs.push(...citationCompileArgs(bibOptions?.bibliography, bibOptions?.csl));
 
   const html = await execPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'html5', extraArgs });
@@ -79,9 +63,6 @@ export async function htmlPageFromMarkdown(content: string, doc: BuildDocument, 
 
   const { html: htmlWithoutRefs, block: referencesBlock } = extractReferencesBlock(htmlWithoutTocRefs, refsCardTemplate);
   if (referencesBlock) {
-    // La tarjeta referencias puede no estar en format.html.blocks: sin
-    // marcador, la bibliografía se descartaría en silencio (regresión
-    // detectada en la revisión): el warning lo hace visible.
     if (htmlWithoutRefs.includes('<!-- block:referencias -->')) {
       return htmlWithoutRefs.replace('<!-- block:referencias -->', referencesBlock);
     }
