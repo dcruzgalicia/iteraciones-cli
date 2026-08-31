@@ -91,6 +91,23 @@ export async function computeSchemaSourceHash(
   return hashString(parts.join('\0'));
 }
 
+async function hashSpecFiles(specs: Array<[string, string]>, prevCache: FilterFileCache | undefined, cache: FilterFileCache): Promise<string[]> {
+  const parts: string[] = [];
+  for (const [dir, glob] of specs) {
+    try {
+      const files = [...new Bun.Glob(glob).scanSync({ cwd: dir })].sort();
+      for (const file of files) {
+        const hash = await hashFileCached(join(dir, file), file, prevCache, cache);
+        if (hash === null) throw new Error(`archivo de filters/preamble desaparecido: ${join(dir, file)}`);
+        parts.push(file, hash);
+      }
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException)?.code !== 'ENOENT') throw err;
+    }
+  }
+  return parts;
+}
+
 export async function computeFiltersHash(
   cwd: string,
   siteConfig: SiteConfig,
@@ -108,18 +125,7 @@ export async function computeFiltersHash(
     [join(cwd, 'filters'), '**/*.lua'],
     [join(cwd, 'preamble'), '*.tex'],
   ];
-  for (const [dir, glob] of specs) {
-    try {
-      const files = [...new Bun.Glob(glob).scanSync({ cwd: dir })].sort();
-      for (const file of files) {
-        const hash = await hashFileCached(join(dir, file), file, prevCache, cache);
-        if (hash === null) throw new Error(`archivo de filters/preamble desaparecido: ${join(dir, file)}`);
-        parts.push(file, hash);
-      }
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException)?.code !== 'ENOENT') throw err;
-    }
-  }
+  parts.push(...(await hashSpecFiles(specs, prevCache, cache)));
   for (const rel of siteConfig.luaFilters ?? []) {
     const content = (await hashFileCached(join(cwd, rel), rel, prevCache, cache)) ?? '';
     parts.push(rel, content);
@@ -141,6 +147,10 @@ async function resourceHash(
   return (await hashFileCached(abs, key, prevCache, cacheOut)) ?? '';
 }
 
+function computeFormatHash(configStr: string, extras: string[]): string {
+  return hashString([configStr, ...extras].join('\n'));
+}
+
 export async function computeConfigHashes(
   cwd: string,
   siteConfig: SiteConfig,
@@ -148,23 +158,27 @@ export async function computeConfigHashes(
   fileCacheOut: Record<string, FileCacheEntry> = {},
 ): Promise<{ hashes: Record<string, string>; cache: Record<string, FileCacheEntry> }> {
   const fmt = siteConfig.format;
-  const htmlConfig = fmt?.html;
   const htmlResources = (
     await Promise.all(HTML_RESOURCE_FILES.map((f) => resourceHash(join(HTML_RESOURCES_DIR, f), `html-res:${f}`, prevFileCache, fileCacheOut)))
   ).join('\n');
-  const logoPath = htmlConfig?.site?.logo?.trim();
+  const logoPath = fmt?.html?.site?.logo?.trim();
   const logo = logoPath ? await resourceHash(join(cwd, logoPath), 'html-res:logo', prevFileCache, fileCacheOut) : '';
+  const toc = String(siteConfig.toc ?? false);
+  const lang = String(siteConfig.language ?? '');
   const hashes = {
-    pdf: hashString(
-      `${JSON.stringify(fmt?.pdf ?? {})}\n${String(fmt?.latex?.generate ?? false)}\n${String(siteConfig.toc ?? false)}\n${String(siteConfig.language ?? '')}`,
-    ),
-    html: hashString(
-      `${JSON.stringify(fmt?.html ?? {})}\n${htmlResources}\n${logo}\n${String(siteConfig.toc ?? false)}\n` +
-        `${String(fmt?.pdf?.generate ?? false)}\n${String(fmt?.latex?.generate ?? false)}\n${String(fmt?.epub?.generate ?? false)}\n${String(fmt?.markdown?.generate ?? false)}\n` +
-        `${String(siteConfig.language ?? '')}`,
-    ),
-    epub: hashString(`${JSON.stringify(fmt?.epub ?? {})}\n${String(siteConfig.toc ?? false)}\n${String(siteConfig.language ?? '')}`),
-    markdown: hashString(`${JSON.stringify(fmt?.markdown ?? {})}\n${String(siteConfig.language ?? '')}`),
+    pdf: computeFormatHash(JSON.stringify(fmt?.pdf ?? {}), [String(fmt?.latex?.generate ?? false), toc, lang]),
+    html: computeFormatHash(JSON.stringify(fmt?.html ?? {}), [
+      htmlResources,
+      logo,
+      toc,
+      String(fmt?.pdf?.generate ?? false),
+      String(fmt?.latex?.generate ?? false),
+      String(fmt?.epub?.generate ?? false),
+      String(fmt?.markdown?.generate ?? false),
+      lang,
+    ]),
+    epub: computeFormatHash(JSON.stringify(fmt?.epub ?? {}), [toc, lang]),
+    markdown: computeFormatHash(JSON.stringify(fmt?.markdown ?? {}), [lang]),
   };
   return { hashes, cache: fileCacheOut };
 }
