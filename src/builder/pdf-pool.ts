@@ -36,6 +36,30 @@ async function waitForWorkers(promises: Promise<void>[], timeoutMs: number): Pro
   }
 }
 
+async function executePdfJob(
+  job: PdfJob,
+  slotIndex: number,
+  pdfWorkBase: string,
+  biberBase: string,
+  inFlightPids: (number | null)[],
+  progress: BuildReporter,
+  onError: (err: unknown) => void,
+): Promise<boolean> {
+  const pdfDir = join(pdfWorkBase, job.dir, `slot-${slotIndex}`);
+  try {
+    await convertToPdf(job.texPath, job.relativePath, pdfDir, job.slug, join(biberBase, `cache-${slotIndex}`), job.pdfDest, (pid) => {
+      inFlightPids[slotIndex] = pid;
+    });
+  } catch (err) {
+    onError(err);
+    return false;
+  } finally {
+    inFlightPids[slotIndex] = null;
+  }
+  progress.reportFile({ relativePath: job.relativePath, phase: 'pdf' });
+  return true;
+}
+
 export function createPdfConsumer(
   pdfWorkBase: string,
   biberBase: string,
@@ -58,25 +82,14 @@ export function createPdfConsumer(
   let pdfPhaseStarted = false;
   const inFlightPids: (number | null)[] = Array.from({ length: maxSlots }, () => null);
 
-  async function executeJob(job: PdfJob, slotIndex: number): Promise<void> {
-    const pdfDir = join(pdfWorkBase, job.dir, `slot-${slotIndex}`);
-    try {
-      await convertToPdf(job.texPath, job.relativePath, pdfDir, job.slug, join(biberBase, `cache-${slotIndex}`), job.pdfDest, (pid) => {
-        inFlightPids[slotIndex] = pid;
-      });
-    } catch (err) {
-      firstError = err;
-      cancel();
-      return;
-    } finally {
-      inFlightPids[slotIndex] = null;
-    }
-    progress.reportFile({ relativePath: job.relativePath, phase: 'pdf' });
-  }
+  const onError = (err: unknown): void => {
+    firstError = err;
+    producerDone = true;
+    pdfJobs.length = 0;
+  };
 
   const worker = async (slotIndex: number): Promise<void> => {
-    while (true) {
-      if (firstError !== null) return;
+    while (firstError === null) {
       if (next >= pdfJobs.length) {
         if (producerDone) return;
         await Bun.sleep(5);
@@ -84,12 +97,16 @@ export function createPdfConsumer(
       }
       const job = pdfJobs[next++];
       if (job === undefined) continue;
-      if (!pdfPhaseStarted) {
-        pdfPhaseStarted = true;
-        progress.startPhase('pdf', 0);
-      }
-      await executeJob(job, slotIndex);
-      if (firstError !== null) return;
+      ensurePdfPhaseStarted();
+      const ok = await executePdfJob(job, slotIndex, pdfWorkBase, biberBase, inFlightPids, progress, onError);
+      if (!ok) return;
+    }
+  };
+
+  const ensurePdfPhaseStarted = (): void => {
+    if (!pdfPhaseStarted) {
+      pdfPhaseStarted = true;
+      progress.startPhase('pdf', 0);
     }
   };
 
