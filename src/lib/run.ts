@@ -65,27 +65,7 @@ async function childPids(pid: number): Promise<number[]> {
   }
 }
 
-/**
- * Termina el árbol completo de un proceso (issue #2014). Un latexmk o pandoc
- * con filtros deja nietos vivos si solo se mata el hijo directo.
- *
- * POSIX: recolecta el árbol con pgrep -P ANTES de matar (al morir el padre,
- * los hijos se reparentan y dejarían de ser descubribles) y lanza SIGKILL de
- * los más profundos a la raíz. Sin pgrep disponible degrada a matar solo el
- * proceso raíz (comportamiento previo).
- *
- * Windows: taskkill /T /F hace lo propio en una invocación.
- */
 export async function killProcessTree(rootPid: number): Promise<void> {
-  if (process.platform === 'win32') {
-    try {
-      const proc = Bun.spawn(['taskkill', '/T', '/F', '/PID', String(rootPid)], { stdout: 'ignore', stderr: 'ignore' });
-      void proc.exited;
-    } catch {
-      // Ya murió o taskkill no está disponible: nada que hacer
-    }
-    return;
-  }
   const order: number[] = [];
   const seen = new Set<number>();
   const queue = [rootPid];

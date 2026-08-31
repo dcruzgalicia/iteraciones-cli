@@ -108,7 +108,6 @@ describe('run (timeouts)', () => {
   });
 
   it('al expirar el timeout mata el árbol completo: ni el proceso ni sus hijos sobreviven (#2014)', async () => {
-    if (process.platform === 'win32') return; // camino Windows se valida por revisión
     const dir = mkdtempSync(join(tmpdir(), 'iteraciones-tree-'));
     try {
       // Árbol de dos niveles: sh (hijo directo de run) → sleep (nieto).

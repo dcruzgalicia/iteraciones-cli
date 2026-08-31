@@ -564,5 +564,4 @@ La API programática es segura para llamadas repetidas a `build()` en el mismo p
 | Plataforma | Estado | Notas |
 |------------|--------|-------|
 | **macOS (darwin)** | Verificada | Build completo verificado manualmente; suite de tests. |
-| **Linux** | Sin verificar | `killProcessTree` usa `pgrep`/`SIGKILL` (POSIX), `xdg-open` para el opener — camino compatible. Sin testing real. |
-| **Windows (win32)** | Sin verificar | `killProcessTree` usa `taskkill /T /F` (#2014); `start` para el opener. El registro de slugs en `state.json` usa separadores `/` (compatible). Sin testing real.
+| **Linux** | Sin verificar | Usa el mismo camino POSIX que macOS (`pgrep`/`SIGKILL`, `xdg-open`). Sin testing real. |
