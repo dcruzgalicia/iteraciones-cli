@@ -18,6 +18,10 @@ const PHASE_META: Record<PipelinePhase, PhaseMeta> = {
 
 const LIGHT_FORMAT_PHASES: PipelinePhase[] = ['latex', 'html', 'epub', 'markdown'];
 
+function rowKeyToPhase(key: string): PipelinePhase {
+  return (key.startsWith('phase:') ? key.slice(6) : key.slice(4)) as PipelinePhase;
+}
+
 type RowStatus = 'pending' | 'active' | 'done' | 'skipped' | 'failed';
 
 export interface RowState {
@@ -167,7 +171,7 @@ export class TrackerState {
     for (const row of this.rows) {
       if (row.status !== 'active' || row.key === 'group') continue;
       row.status = 'failed';
-      const phase = (row.key.startsWith('phase:') ? row.key.slice(6) : row.key.slice(4)) as PipelinePhase;
+      const phase = rowKeyToPhase(row.key);
       const st = this.phases.get(phase)?.start;
       row.elapsed = st !== undefined ? performance.now() - st : 0;
       keys.push(row.key);
@@ -202,15 +206,12 @@ export class TrackerState {
     const toRender: string[] = [];
     if (this.skipPendingRenderRow()) toRender.push('phase:render');
     const created = this.createFormatsBlock();
-    if (created) {
-      for (const f of this.formats) {
-        const row = this.getRow(`fmt:${f.phase}`);
-        if (row && row.status === 'skipped' && !f.active) toRender.push(row.key);
-      }
-    }
     for (const f of this.formats) {
       const row = this.getRow(`fmt:${f.phase}`);
-      if (row && row.status === 'pending' && f.active) {
+      if (!row) continue;
+      if (created && row.status === 'skipped' && !f.active) {
+        toRender.push(row.key);
+      } else if (row.status === 'pending' && f.active) {
         row.status = 'skipped';
         if (cached > 0) row.label = `${PHASE_META[f.phase].label} (reutilizado)`;
         toRender.push(row.key);
