@@ -9,6 +9,22 @@ import { withTempDir } from './helpers.js';
  * byte-stream capturado (maneja \x1b[nA/B, \x1b[2K, \r y \n con ONLCR).
  * Verifica el resultado visual real del renderer, no secuencias aisladas.
  */
+function handleAnsiSequence(output: string, i: number, screen: string[], x: number, y: number): { newI: number; newX: number; newY: number } | null {
+  if (output[i] !== '\x1b' || output[i + 1] !== '[') return null;
+  const m = /^\[(\d*)([A-Za-z])/.exec(output.slice(i + 1));
+  if (!m) return null;
+  const n = (m[1] ?? '') === '' ? 1 : Number.parseInt(m[1] ?? '', 10);
+  const cmd = m[2] ?? '';
+  let newY = y;
+  if (cmd === 'A') newY = Math.max(0, y - n);
+  else if (cmd === 'B') newY = y + n;
+  else if (cmd === 'K') {
+    while (screen.length <= y) screen.push('');
+    screen[y] = '';
+  }
+  return { newI: i + m[0].length + 1, newX: x, newY };
+}
+
 function renderScreen(output: string): string[] {
   const screen: string[] = [];
   let x = 0;
@@ -19,24 +35,16 @@ function renderScreen(output: string): string[] {
   };
   while (i < output.length) {
     const ch = output[i];
-    if (ch === '\x1b' && output[i + 1] === '[') {
-      const m = /^\[(\d*)([A-Za-z])/.exec(output.slice(i + 1));
-      if (m) {
-        const n = (m[1] ?? '') === '' ? 1 : Number.parseInt(m[1] ?? '', 10);
-        const cmd = m[2] ?? '';
-        if (cmd === 'A') y = Math.max(0, y - n);
-        else if (cmd === 'B') y += n;
-        else if (cmd === 'K') {
-          ensure(y);
-          screen[y] = '';
-        }
-        i += m[0].length + 1;
-        continue;
-      }
+    const ansi = handleAnsiSequence(output, i, screen, x, y);
+    if (ansi) {
+      i = ansi.newI;
+      x = ansi.newX;
+      y = ansi.newY;
+      continue;
     }
-    if (ch === '\r') x = 0;
-    else if (ch === '\n') {
-      // ONLCR del terminal real: newline + retorno de columna
+    if (ch === '\r') {
+      x = 0;
+    } else if (ch === '\n') {
       y++;
       x = 0;
     } else {
