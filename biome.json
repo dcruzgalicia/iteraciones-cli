@@ -49,7 +49,7 @@
   },
   "overrides": [
     {
-      "includes": ["src/__tests__/docs-config-integrity.test.ts", "src/__tests__/progress.test.ts", "src/builder/pdf-pool.ts"],
+      "includes": ["src/builder/pdf-pool.ts"],
       "linter": {
         "rules": {
           "complexity": {
