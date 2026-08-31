@@ -40,6 +40,77 @@ function truncateWithEllipsis(text: string, width: number): string {
   return `${text.slice(0, end)}…`;
 }
 
+async function emitJsonOutput(
+  allInfos: Awaited<ReturnType<typeof getBuiltinLuaFilterInfos>>,
+  disabled: Set<string>,
+  effectiveDisabledPreamble: string[],
+): Promise<void> {
+  const filters = allInfos.map((info) => ({
+    name: info.name,
+    type: 'lua' as const,
+    description: info.description,
+    active: !disabled.has(info.name),
+  }));
+  const preambleDisabled = new Set(effectiveDisabledPreamble);
+  const preambleInfos = await getBuiltinPreambleFilterInfos();
+  const preamble = preambleInfos.map((info) => ({
+    name: info.name,
+    type: 'preamble' as const,
+    description: info.description,
+    active: !preambleDisabled.has(info.name),
+  }));
+  process.stdout.write(`${JSON.stringify({ filters, preamble })}\n`);
+}
+
+function emitFilterBlock(
+  stream: NodeJS.WriteStream,
+  allInfos: Awaited<ReturnType<typeof getBuiltinLuaFilterInfos>>,
+  disabled: Set<string>,
+  options: RunFiltersOptions,
+  columns: number | undefined,
+): void {
+  const nameWidth = Math.max(...allInfos.map((info) => info.name.length));
+  const descWidth = columns === undefined ? undefined : Math.max(10, columns - 2 - nameWidth - 2 - 3 - 2 - 8);
+  for (const info of allInfos) {
+    const active = !disabled.has(info.name);
+    const status = active ? 'activo' : 'desactivado';
+    const full = options.verbose === true ? info.description : shortDescription(info.description);
+    const description = descWidth !== undefined && !options.verbose ? truncateWithEllipsis(full, descWidth) : full;
+    stream.write(`  ${info.name.padEnd(nameWidth)}  lua  ${description}  [${status}]\n`);
+  }
+}
+
+async function emitPreambleBlock(
+  stream: NodeJS.WriteStream,
+  effectiveDisabledPreamble: string[],
+  options: RunFiltersOptions,
+  columns: number | undefined,
+): Promise<void> {
+  const preambleInfos = await getBuiltinPreambleFilterInfos();
+  if (preambleInfos.length === 0) return;
+  const preambleDisabled = new Set(effectiveDisabledPreamble);
+  const hasPreambleDisabled = effectiveDisabledPreamble.length > 0;
+  logInfo('');
+  logInfo('Filtros de preámbulo (orden de ejecución):');
+  logInfo('');
+  const preambleWidth = Math.max(...preambleInfos.map((info) => info.name.length));
+  const preambleDescWidth = columns === undefined ? undefined : Math.max(10, columns - 2 - preambleWidth - 2 - 2 - 8);
+  for (const info of preambleInfos) {
+    const active = !preambleDisabled.has(info.name);
+    const status = active ? 'activo' : 'desactivado';
+    const full = options.verbose === true ? info.description : shortDescription(info.description);
+    const description = preambleDescWidth !== undefined && !options.verbose ? truncateWithEllipsis(full, preambleDescWidth) : full;
+    stream.write(`  ${info.name.padEnd(preambleWidth)}  ${description}  [${status}]\n`);
+  }
+  logInfo('');
+  if (hasPreambleDisabled) {
+    logInfo('Para reactivar uno, elimínalo de la lista `disabled-preamble-filters:` en iteraciones.config.yaml.');
+  } else {
+    logInfo('Para desactivar uno, agrégalo a la lista `disabled-preamble-filters:` en iteraciones.config.yaml.');
+  }
+  logInfo('Para sobrescribir un filtro de preámbulo, crea `<proyecto>/preamble/<nombre>.tex` con contenido LaTeX.');
+}
+
 export async function listFilters(cwd: string, options: RunFiltersOptions = {}): Promise<void> {
   const stream = options.stream ?? process.stdout;
   const config = (await loadSiteConfigIfPresent(cwd))?.config ?? DEFAULT_SITE_CONFIG;
@@ -51,39 +122,13 @@ export async function listFilters(cwd: string, options: RunFiltersOptions = {}):
   const hasDisabled = config.disabledFilters !== undefined && config.disabledFilters.length > 0;
 
   if (options.json) {
-    const filters = allInfos.map((info) => ({
-      name: info.name,
-      type: 'lua' as const,
-      description: info.description,
-      active: !disabled.has(info.name),
-    }));
-    const preambleInfos = await getBuiltinPreambleFilterInfos();
-    const preambleDisabled = new Set(effectiveDisabledPreamble);
-    const preamble = preambleInfos.map((info) => ({
-      name: info.name,
-      type: 'preamble' as const,
-      description: info.description,
-      active: !preambleDisabled.has(info.name),
-    }));
-    process.stdout.write(`${JSON.stringify({ filters, preamble })}
-`);
+    await emitJsonOutput(allInfos, disabled, effectiveDisabledPreamble);
     return;
   }
 
   logInfo('Filtros disponibles (orden de ejecución):');
   logInfo('');
-
-  const nameWidth = Math.max(...allInfos.map((info) => info.name.length));
-  const columns = terminalColumns(stream, options.columns);
-  const descWidth = columns === undefined ? undefined : Math.max(10, columns - 2 - nameWidth - 2 - 3 - 2 - 8);
-  for (const info of allInfos) {
-    const active = !disabled.has(info.name);
-    const status = active ? 'activo' : 'desactivado';
-    const full = options.verbose === true ? info.description : shortDescription(info.description);
-    const description = descWidth !== undefined && !options.verbose ? truncateWithEllipsis(full, descWidth) : full;
-    stream.write(`  ${info.name.padEnd(nameWidth)}  lua  ${description}  [${status}]\n`);
-  }
-
+  emitFilterBlock(stream, allInfos, disabled, options, terminalColumns(stream, options.columns));
   logInfo('');
   if (hasDisabled) {
     logInfo('Para reactivar uno, elimínalo de la lista `disabled-filters:` en iteraciones.config.yaml.');
@@ -91,32 +136,5 @@ export async function listFilters(cwd: string, options: RunFiltersOptions = {}):
     logInfo('Para desactivar uno, agrégalo a la lista `disabled-filters:` en iteraciones.config.yaml.');
   }
   logInfo('Para sobrescribir un filtro, crea `<proyecto>/filters/<grupo>/<nombre>.lua` (p. ej. `filters/latex/02-dictum.lua`).');
-
-  const preambleInfos = await getBuiltinPreambleFilterInfos();
-  if (preambleInfos.length > 0) {
-    const preambleDisabled = new Set(effectiveDisabledPreamble);
-    const hasPreambleDisabled = effectiveDisabledPreamble.length > 0;
-
-    logInfo('');
-    logInfo('Filtros de preámbulo (orden de ejecución):');
-    logInfo('');
-
-    const preambleWidth = Math.max(...preambleInfos.map((info) => info.name.length));
-    const preambleDescWidth = columns === undefined ? undefined : Math.max(10, columns - 2 - preambleWidth - 2 - 2 - 8);
-    for (const info of preambleInfos) {
-      const active = !preambleDisabled.has(info.name);
-      const status = active ? 'activo' : 'desactivado';
-      const full = options.verbose === true ? info.description : shortDescription(info.description);
-      const description = preambleDescWidth !== undefined && !options.verbose ? truncateWithEllipsis(full, preambleDescWidth) : full;
-      stream.write(`  ${info.name.padEnd(preambleWidth)}  ${description}  [${status}]\n`);
-    }
-
-    logInfo('');
-    if (hasPreambleDisabled) {
-      logInfo('Para reactivar uno, elimínalo de la lista `disabled-preamble-filters:` en iteraciones.config.yaml.');
-    } else {
-      logInfo('Para desactivar uno, agrégalo a la lista `disabled-preamble-filters:` en iteraciones.config.yaml.');
-    }
-    logInfo('Para sobrescribir un filtro de preámbulo, crea `<proyecto>/preamble/<nombre>.tex` con contenido LaTeX.');
-  }
+  await emitPreambleBlock(stream, effectiveDisabledPreamble, options, terminalColumns(stream, options.columns));
 }
