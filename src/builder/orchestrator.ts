@@ -19,10 +19,29 @@ import { type PdfxCacheHandle, runPdfxOutputValidation } from './pdfx-check.js';
 import { documentPipeline } from './pipeline.js';
 import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, validatePreambleDependencies } from './preamble-loader.js';
 import { validateConfigFilePaths } from './project-validator.js';
-import { silentReporter } from './reporter.js';
+
 import type { BuildState } from './state-serialize.js';
 import { loadStateFile, persistCompletedState } from './state-serialize.js';
 import type { BuildContext, BuildDocument, BuildReporter, DiscoveryEntry } from './types.js';
+
+const silentReporter: BuildReporter = {
+  setFormats(): void {},
+  planPhases(): void {},
+  startPhase(): void {},
+  reportFile(): void {},
+  completePhase(): void {},
+  log(): void {},
+  addWarning(): void {},
+  addSummaryLine(): void {},
+  showCleanup(): void {},
+  startLightFormats(): void {},
+  finish(): Promise<void> {
+    return Promise.resolve();
+  },
+  fail(): Promise<void> {
+    return Promise.resolve();
+  },
+};
 
 export const EMPTY_PROJECT_WARNING_CODES = {
   noDocs: '[empty-project]',
