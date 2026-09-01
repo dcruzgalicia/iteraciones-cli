@@ -1,36 +1,13 @@
 import { describe, expect, it } from 'bun:test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import ignore from 'ignore';
 import { discover, noPrevState } from '../builder/discover.js';
 import { isIgnoredByRules, isInsideIgnoredDir, listMarkdownDocuments, loadGitignoreRules, parseGitignore } from '../builder/gitignore.js';
 import { withTempDir } from './helpers.js';
 
 describe('parseGitignore', () => {
-  it('ignora líneas vacías y comentarios', () => {
-    const rules = parseGitignore('\n# comentario\n\n*.md\n');
-    expect(rules).toHaveLength(1);
-    expect(rules[0]?.pattern).toBe('*.md');
-  });
-
-  it('distingue negación con !', () => {
-    const rules = parseGitignore('*.md\n!importante.md');
-    expect(rules[0]?.negated).toBe(false);
-    expect(rules[1]?.negated).toBe(true);
-  });
-
-  it('marca directorios con / final', () => {
-    const rules = parseGitignore('borradores/');
-    expect(rules[0]?.dirOnly).toBe(true);
-    expect(rules[0]?.pattern).toBe('borradores');
-  });
-
-  it('marca patrones anclados con /', () => {
-    const rules = parseGitignore('/docs/privado.md\nnotas.md');
-    expect(rules[0]?.anchored).toBe(true);
-    expect(rules[1]?.anchored).toBe(false);
-  });
-
-  it('soporta ? y clases [..] en los patrones', () => {
+  it('soporta wildcards ? y [..]', () => {
     const q = parseGitignore('doc?.md');
     expect(isIgnoredByRules('doc1.md', q)).toBe(true);
     expect(isIgnoredByRules('doc12.md', q)).toBe(false);
@@ -40,12 +17,6 @@ describe('parseGitignore', () => {
     expect(isIgnoredByRules('a.md', cls)).toBe(true);
     expect(isIgnoredByRules('c.md', cls)).toBe(true);
     expect(isIgnoredByRules('d.md', cls)).toBe(false);
-  });
-
-  it('escapa ! literal con backslash', () => {
-    const rules = parseGitignore('\\!importante.md');
-    expect(rules[0]?.negated).toBe(false);
-    expect(rules[0]?.pattern).toBe('!importante.md');
   });
 });
 
@@ -85,7 +56,7 @@ describe('isIgnoredByRules', () => {
   });
 
   it('retorna false sin reglas', () => {
-    expect(isIgnoredByRules('cualquiera.md', [])).toBe(false);
+    expect(isIgnoredByRules('cualquiera.md', ignore())).toBe(false);
   });
 });
 
@@ -184,18 +155,18 @@ describe('discover excluye dotfiles', () => {
 });
 
 describe('loadGitignoreRules', () => {
-  it('retorna lista vacía si no existe el archivo', async () => {
+  it('retorna matcher vacío si no existe el archivo', async () => {
     await withTempDir(async (dir) => {
-      const rules = await loadGitignoreRules(dir);
-      expect(rules).toHaveLength(0);
+      const matcher = await loadGitignoreRules(dir);
+      expect(isIgnoredByRules('anything.md', matcher)).toBe(false);
     });
   });
 
   it('carga el .gitignore del proyecto', async () => {
     await withTempDir(async (dir) => {
       await writeFile(join(dir, '.gitignore'), 'notas.md\n', 'utf8');
-      const rules = await loadGitignoreRules(dir);
-      expect(rules).toHaveLength(1);
+      const matcher = await loadGitignoreRules(dir);
+      expect(isIgnoredByRules('notas.md', matcher)).toBe(true);
     });
   });
 });
