@@ -38,7 +38,7 @@ async function hashBibFile(abs: string, prevCache: BibFileCache | undefined, cac
   return hash ?? hashString('');
 }
 
-async function resolveBibSources(cwd: string, siteConfig?: SiteConfig): Promise<{ bibFiles: string[]; bibOptions?: BibOptions }> {
+export async function resolveBibOptions(cwd: string, siteConfig?: SiteConfig): Promise<{ bibFiles: string[]; bibOptions?: BibOptions }> {
   const configuredBib = siteConfig?.bibliography?.trim();
   if (configuredBib) {
     const bibPath = resolveConfiguredPath(cwd, configuredBib);
@@ -77,8 +77,4 @@ export async function computeBibHash(
 
 export function resolveConfiguredPath(cwd: string, rel: string): string {
   return isAbsolute(rel) ? rel : join(cwd, rel);
-}
-
-export async function resolveBibOptions(cwd: string, siteConfig?: SiteConfig): Promise<{ bibFiles: string[]; bibOptions?: BibOptions }> {
-  return resolveBibSources(cwd, siteConfig);
 }
