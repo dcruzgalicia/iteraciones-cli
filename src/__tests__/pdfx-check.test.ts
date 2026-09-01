@@ -31,7 +31,7 @@ async function writeFakeBinary(dir: string, json: string): Promise<void> {
 async function initPdfxProject(dir: string): Promise<void> {
   await writeFile(
     join(dir, 'iteraciones.config.yaml'),
-    'language: es-MX\nformat:\n  pdf:\n    generate: true\n    disabled-preamble-filters:\n      - 97-eso-pic\n      - 98-crop\n',
+    'language: es-MX\nformat:\n  pdf:\n    generate: true\n    disabledPreambleFilters:\n      - 97-eso-pic\n      - 98-crop\n',
     'utf8',
   );
 }
@@ -47,7 +47,7 @@ describe('runPdfxOutputValidation (fase final del build)', () => {
       useIsolatedManagedBin(dir);
       await writeFile(
         join(dir, 'iteraciones.config.yaml'),
-        'language: es-MX\nformat:\n  pdf:\n    generate: true\n    disabled-preamble-filters:\n      - 97-eso-pic\n      - 98-crop\n      - 99-pdfx\n',
+        'language: es-MX\nformat:\n  pdf:\n    generate: true\n    disabledPreambleFilters:\n      - 97-eso-pic\n      - 98-crop\n      - 99-pdfx\n',
         'utf8',
       );
       await mkdir(join(dir, 'dist', 'files'), { recursive: true });

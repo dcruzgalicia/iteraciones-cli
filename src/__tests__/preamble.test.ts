@@ -251,8 +251,8 @@ describe('composeLatexTemplate', () => {
     expect(tpl).not.toContain('\\pagestyle{headings}');
   });
 
-  it('lanza BuildError con page-number inválido', async () => {
-    await expect(composeLatexTemplate({ ...opts, pageNumber: 'raro' })).rejects.toThrow('page-number inválido');
+  it('lanza BuildError con pageNumber inválido', async () => {
+    await expect(composeLatexTemplate({ ...opts, pageNumber: 'raro' })).rejects.toThrow('pageNumber inválido');
   });
 
   it('escapa rutas de bibliografía en \\addbibresource sin tocar guiones bajos', async () => {
@@ -368,7 +368,7 @@ describe('validateDisabledPreambleFilters', () => {
 
   it('lanza BuildError con un nombre desconocido', () => {
     expect(() => validateDisabledPreambleFilters(['99-no-existe'])).toThrow(
-      'disabled-preamble-filters: "99-no-existe" no coincide con ningún preamble filter',
+      'disabledPreambleFilters: "99-no-existe" no coincide con ningún preamble filter',
     );
   });
 });

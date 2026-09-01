@@ -245,7 +245,7 @@ export async function composeLatexTemplate(opts: {
     lines.push(pageCommand);
     lines.push('$endif$');
   } else {
-    throw new BuildError(`page-number inválido: "${opts.pageNumber}". Valores válidos: ${Object.keys(PAGE_NUMBER_COMMANDS).join(', ')}`);
+    throw new BuildError(`pageNumber inválido: "${opts.pageNumber}". Valores válidos: ${Object.keys(PAGE_NUMBER_COMMANDS).join(', ')}`);
   }
   lines.push('');
   lines.push('$body$');

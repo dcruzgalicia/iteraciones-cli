@@ -181,7 +181,7 @@ export async function validateConfigFilePaths(cwd: string, config: SiteConfig): 
   const issues: ValidationIssue[] = [];
   for (const rel of config.luaFilters ?? []) {
     if (!(await Bun.file(join(cwd, rel)).exists())) {
-      issues.push({ severity: 'warning', message: `lua-filters: "${rel}" no encontrado en el proyecto` });
+      issues.push({ severity: 'warning', message: `luaFilters: "${rel}" no encontrado en el proyecto` });
     }
   }
   for (const key of ['bibliography', 'csl'] as const) {

@@ -29,7 +29,7 @@ function resolveEffectiveDisabled(
   loadedOrError: { loaded?: { presentKeys: ReadonlySet<string> } | null; error?: string },
   siteConfig: SiteConfig | null,
 ): string[] {
-  const userWroteDisabledList = !('error' in loadedOrError) && loadedOrError.loaded?.presentKeys.has('format.pdf.disabled-preamble-filters') === true;
+  const userWroteDisabledList = !('error' in loadedOrError) && loadedOrError.loaded?.presentKeys.has('format.pdf.disabledPreambleFilters') === true;
   return userWroteDisabledList ? (siteConfig?.format?.pdf?.disabledPreambleFilters ?? []) : (DEFAULT_PDF_FORMAT.disabledPreambleFilters ?? []);
 }
 

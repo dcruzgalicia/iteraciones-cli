@@ -100,15 +100,15 @@ export const HtmlFormatSchema = z
 export const PdfFormatSchema = z
   .object({
     generate: z.boolean().default(DEFAULT_PDF_FORMAT.generate),
-    'show-date': z.boolean().default(DEFAULT_PDF_FORMAT.showDate),
-    'page-number': z
+    showDate: z.boolean().default(DEFAULT_PDF_FORMAT.showDate),
+    pageNumber: z
       .enum(['header-left', 'header-center', 'header-right', 'footer-left', 'footer-center', 'footer-right'])
       .default(DEFAULT_PDF_FORMAT.pageNumber),
-    'disabled-preamble-filters': z
+    disabledPreambleFilters: z
       .array(z.string())
       .default(DEFAULT_PDF_FORMAT.disabledPreambleFilters)
       .transform((v) => (v?.length ? v : undefined)),
-    'cover-image': z.boolean().default(DEFAULT_PDF_FORMAT.coverImage ?? false),
+    coverImage: z.boolean().default(DEFAULT_PDF_FORMAT.coverImage ?? false),
     ...DublinCoreFieldsSchema,
   })
   .strict();
@@ -141,79 +141,33 @@ const FormatSchema = z
   })
   .strict();
 
-const RawSiteConfigSchema = z
+export const SiteConfigSchema = z
   .object({
     language: z.string().default(DEFAULT_SITE_CONFIG.language),
     toc: z.boolean().default(DEFAULT_SITE_CONFIG.toc),
     format: FormatSchema.optional(),
     bibliography: z.string().optional(),
     csl: z.string().optional(),
-    'disabled-filters': z
+    disabledFilters: z
       .array(z.string())
       .optional()
       .transform((v) => (v?.length ? v : undefined)),
-    'lua-filters': z
+    luaFilters: z
       .array(z.string())
       .optional()
       .transform((v) => (v?.length ? v : undefined)),
     ...DublinCoreFieldsSchema,
   })
-  .strict();
-
-type CamelKey<K extends string> = K extends `${infer Head}-${infer Rest}` ? `${Head}${Capitalize<CamelKey<Rest>>}` : K;
-
-export type Camelize<T> = { [K in keyof T as K extends string ? CamelKey<K> : K]: T[K] };
-
-function toCamel(key: string): string {
-  return key.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
-}
-
-function camelizeKeys<T extends object>(obj: T): Camelize<T> {
-  const result: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(obj)) {
-    result[toCamel(k)] = v;
-  }
-  return result as Camelize<T>;
-}
-
-function formatSection<T extends object>(raw: T | undefined, fallback: Camelize<T>): Camelize<T> {
-  return raw ? camelizeKeys(raw) : fallback;
-}
-
-export const SiteConfigSchema = RawSiteConfigSchema.transform((raw) => {
-  const f = raw.format ?? {};
-
-  return {
-    language: raw.language,
-    toc: raw.toc,
+  .strict()
+  .transform((raw) => ({
+    ...raw,
     format: {
-      latex: formatSection(f.latex, { ...DEFAULT_LATEX_FORMAT }),
-      html: formatSection(f.html, { ...DEFAULT_HTML_FORMAT }),
-      pdf: formatSection(f.pdf, { ...DEFAULT_PDF_FORMAT }),
-      epub: formatSection(f.epub, { ...DEFAULT_EPUB_FORMAT }),
-      markdown: formatSection(f.markdown, { ...DEFAULT_MARKDOWN_FORMAT }),
+      latex: raw.format?.latex ?? { ...DEFAULT_LATEX_FORMAT },
+      html: raw.format?.html ?? { ...DEFAULT_HTML_FORMAT },
+      pdf: raw.format?.pdf ?? { ...DEFAULT_PDF_FORMAT },
+      epub: raw.format?.epub ?? { ...DEFAULT_EPUB_FORMAT },
+      markdown: raw.format?.markdown ?? { ...DEFAULT_MARKDOWN_FORMAT },
     },
-    disabledFilters: raw['disabled-filters'],
-    luaFilters: raw['lua-filters'],
-    bibliography: raw.bibliography,
-    csl: raw.csl,
-    title: raw.title,
-    creator: raw.creator,
-    subject: raw.subject,
-    description: raw.description,
-    publisher: raw.publisher,
-    contributor: raw.contributor,
-    date: raw.date,
-    identifier: raw.identifier,
-    source: raw.source,
-    relation: raw.relation,
-    coverage: raw.coverage,
-    rights: raw.rights,
-    license: raw.license,
-    doi: raw.doi,
-    isbn: raw.isbn,
-    abstract: raw.abstract,
-  };
-});
+  }));
 
 export type SiteConfig = z.infer<typeof SiteConfigSchema>;

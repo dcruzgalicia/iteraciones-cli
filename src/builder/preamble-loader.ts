@@ -80,7 +80,7 @@ export function validateDisabledPreambleFilters(disabled: string[] | undefined):
     if (!getBuiltinPreambleFilterNames().includes(name)) unknown.push(name);
   }
   if (unknown.length > 0) {
-    throw new BuildError(`disabled-preamble-filters: "${unknown.join(', ')}" no coincide con ningún preamble filter`);
+    throw new BuildError(`disabledPreambleFilters: "${unknown.join(', ')}" no coincide con ningún preamble filter`);
   }
 }
 

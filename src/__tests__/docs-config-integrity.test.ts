@@ -25,18 +25,13 @@ function extractYamlBlocks(markdown: string): string[] {
   return blocks;
 }
 
-/** Convierte camelCase a kebab-case (showDate → show-date). */
-function kebab(key: string): string {
-  return key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
-}
-
 /** Aplana los campos de la configuración (DEFAULT_SITE_CONFIG + bloques). */
 function expectedKeys(): string[] {
   const keys = new Set<string>();
   const walk = (obj: unknown, prefix: string): void => {
     if (obj === null || typeof obj !== 'object' || Array.isArray(obj)) return;
     for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-      const full = prefix ? `${prefix}.${kebab(key)}` : kebab(key);
+      const full = prefix ? `${prefix}.${key}` : key;
       keys.add(full);
       if (typeof value === 'object' && value !== null && !Array.isArray(value)) walk(value, full);
     }

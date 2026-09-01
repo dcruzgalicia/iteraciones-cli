@@ -579,7 +579,7 @@ describe.skipIf(!pandocOk)('filtros Lua de usuario', () => {
     try {
       mkdirSync(join(cwd, 'filters'), { recursive: true });
       writeFileSync(join(cwd, 'filters', 'nota.lua'), USER_FILTER);
-      writeFileSync(join(cwd, 'iteraciones.config.yaml'), 'lua-filters:\n  - filters/nota.lua\n');
+      writeFileSync(join(cwd, 'iteraciones.config.yaml'), 'luaFilters:\n  - filters/nota.lua\n');
       writeFileSync(join(cwd, 'doc.md'), '---\ntitle: Prueba\n---\n\n::: {.nota}\nImportante\n:::\n');
       const doc: BuildDocument = {
         filePath: join(cwd, 'doc.md'),

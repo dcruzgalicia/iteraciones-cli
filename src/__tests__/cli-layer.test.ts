@@ -92,7 +92,7 @@ describe('validate --json (#2182)', () => {
       // Config con un filter desactivado que no existe
       await writeFile(
         join(dir, 'iteraciones.config.yaml'),
-        'language: es-MX\nformat:\n  html:\n    generate: true\ndisabled-filters:\n  - filtro-que-no-existe\n',
+        'language: es-MX\nformat:\n  html:\n    generate: true\ndisabledFilters:\n  - filtro-que-no-existe\n',
         'utf8',
       );
       process.exitCode = 0;
@@ -617,7 +617,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       // un warning antes de que el build falle por el frontmatter roto.
       await writeFile(
         join(dir, 'iteraciones.config.yaml'),
-        'language: es-MX\nformat:\n  html:\n    generate: true\ndisabled-filters:\n  - filtro-inexistente\n',
+        'language: es-MX\nformat:\n  html:\n    generate: true\ndisabledFilters:\n  - filtro-inexistente\n',
         'utf8',
       );
       await writeFile(join(dir, 'roto.md'), '---\ntitle: "sin cerrar\n---\n\nContenido.\n', 'utf8');
@@ -774,7 +774,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
   it('lua-filters inexistente emite exactamente un warning en build y en validate (#2011)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nlua-filters: [filters/no-existe.lua]\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nluaFilters: [filters/no-existe.lua]\n', 'utf8');
       // La advertencia del resumen del build pasa por el tracker (stdout);
       // validate la emite directo a stderr.
       const stdoutSpy = spyOn(process.stdout, 'write');
@@ -808,7 +808,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
   it('un error de pandoc no sugiere validate (no es un problema de config/frontmatter)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nlua-filters: [filters/roto.lua]\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nluaFilters: [filters/roto.lua]\n', 'utf8');
       const { mkdir } = await import('node:fs/promises');
       await mkdir(join(dir, 'filters'), { recursive: true });
       await writeFile(join(dir, 'filters', 'roto.lua'), 'function ) sintaxis inválida\n', 'utf8');
@@ -826,10 +826,10 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
-  it('un page-number inválido se reporta como error de config con la ruta del campo (sin stack trace)', async () => {
+  it('un pageNumber inválido se reporta como error de config con la ruta del campo (sin stack trace)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nformat:\n  pdf:\n    generate: true\n    page-number: raro\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nformat:\n  pdf:\n    generate: true\n    pageNumber: raro\n', 'utf8');
       const stderrSpy = spyStderr();
       let output = '';
       try {
@@ -839,7 +839,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
         output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
         stderrSpy.mockRestore();
       }
-      expect(output).toContain('✖ [config] format.pdf.page-number');
+      expect(output).toContain('✖ [config] format.pdf.pageNumber');
       expect(output).not.toContain('at <anonymous>');
       expect(output).not.toContain('.ts:');
       expect(process.exitCode).toBe(1);
@@ -967,7 +967,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       await initTestProject(dir);
       await writeFile(
         join(dir, 'iteraciones.config.yaml'),
-        'language: es-MX\nformat:\n  latex:\n    generate: true\n  pdf:\n    generate: false\n    show-date: false\n',
+        'language: es-MX\nformat:\n  latex:\n    generate: true\n  pdf:\n    generate: false\n    showDate: false\n',
         'utf8',
       );
       await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\nContenido.\n', 'utf8');
@@ -1504,7 +1504,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
   it('un error de pandoc reporta la ruta del documento una sola vez', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nlua-filters: [filters/roto.lua]\n', 'utf8');
+      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nluaFilters: [filters/roto.lua]\n', 'utf8');
       const { mkdir } = await import('node:fs/promises');
       await mkdir(join(dir, 'filters'), { recursive: true });
       await writeFile(join(dir, 'filters', 'roto.lua'), 'function ) sintaxis inválida\n', 'utf8');
@@ -1845,7 +1845,7 @@ describe('doctor --info (antes runInfo)', () => {
       await initTestProject(dir);
       await writeFile(
         join(dir, 'iteraciones.config.yaml'),
-        'language: es-MX\nformat:\n  pdf:\n    disabled-preamble-filters:\n      - 19-maketitle\n',
+        'language: es-MX\nformat:\n  pdf:\n    disabledPreambleFilters:\n      - 19-maketitle\n',
         'utf8',
       );
       const output = await infoOutput(dir);
@@ -1863,7 +1863,7 @@ describe('doctor --info (antes runInfo)', () => {
       // ocultaba de la línea de config; la presencia en el YAML lo hace visible.
       await writeFile(
         join(dir, 'iteraciones.config.yaml'),
-        'language: es-MX\nformat:\n  pdf:\n    disabled-preamble-filters:\n      - 97-eso-pic\n',
+        'language: es-MX\nformat:\n  pdf:\n    disabledPreambleFilters:\n      - 97-eso-pic\n',
         'utf8',
       );
       const output = await infoOutput(dir);
@@ -2382,7 +2382,7 @@ describe('runValidate', () => {
       await initTestProject(dir);
       await writeFile(
         join(dir, 'iteraciones.config.yaml'),
-        'language: es-MX\nformat:\n  pdf:\n    disabled-preamble-filters:\n      - 05-language\n',
+        'language: es-MX\nformat:\n  pdf:\n    disabledPreambleFilters:\n      - 05-language\n',
         'utf8',
       );
       const stderrSpy = spyStderr();
@@ -2888,7 +2888,7 @@ describe('runBuild (smoke PDF real)', () => {
         // 99-pdfx activo: se quita de la disabled list por defecto (97 y 98 siguen desactivados)
         await writeFile(
           join(dir, 'iteraciones.config.yaml'),
-          'language: es-MX\nformat:\n  pdf:\n    generate: true\n    disabled-preamble-filters:\n      - 97-eso-pic\n      - 98-crop\n',
+          'language: es-MX\nformat:\n  pdf:\n    generate: true\n    disabledPreambleFilters:\n      - 97-eso-pic\n      - 98-crop\n',
           'utf8',
         );
         process.exitCode = 0;
@@ -2932,7 +2932,7 @@ describe('runBuild (smoke PDF real)', () => {
         // fallaba con "! LaTeX Error: Option clash for package eso-pic." (#1962).
         await writeFile(
           join(dir, 'iteraciones.config.yaml'),
-          'language: es-MX\nformat:\n  pdf:\n    generate: true\n    disabled-preamble-filters:\n      - 98-crop\n      - 99-pdfx\n',
+          'language: es-MX\nformat:\n  pdf:\n    generate: true\n    disabledPreambleFilters:\n      - 98-crop\n      - 99-pdfx\n',
           'utf8',
         );
         process.exitCode = 0;
@@ -2945,15 +2945,11 @@ describe('runBuild (smoke PDF real)', () => {
   );
 
   it.skipIf(!latexOk || !pandocOk)(
-    'cover-image: true genera la portada PNG junto a cada PDF',
+    'coverImage: true genera la portada PNG junto a cada PDF',
     async () => {
       await withTempDir(async (dir) => {
         await initTestProject(dir);
-        await writeFile(
-          join(dir, 'iteraciones.config.yaml'),
-          'language: es-MX\nformat:\n  pdf:\n    generate: true\n    cover-image: true\n',
-          'utf8',
-        );
+        await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nformat:\n  pdf:\n    generate: true\n    coverImage: true\n', 'utf8');
         process.exitCode = 0;
         await runBuild(dir);
         expect(process.exitCode).toBe(0);
@@ -2972,7 +2968,7 @@ describe('runBuild (smoke PDF real)', () => {
     async () => {
       await withTempDir(async (dir) => {
         await initTestProject(dir);
-        const coverConfig = 'language: es-MX\nformat:\n  pdf:\n    generate: true\n    cover-image: true\n';
+        const coverConfig = 'language: es-MX\nformat:\n  pdf:\n    generate: true\n    coverImage: true\n';
         await writeFile(join(dir, 'iteraciones.config.yaml'), coverConfig, 'utf8');
         process.exitCode = 0;
         await runBuild(dir);
@@ -3328,12 +3324,12 @@ describe('doctor condicionado al proyecto (#2082)', () => {
     });
   });
 
-  it('PDF con 99-pdfx activo (disabled-preamble-filters: []) lista el check de certificación', async () => {
+  it('PDF con 99-pdfx activo (disabledPreambleFilters: []) lista el check de certificación', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
       await writeFile(
         join(dir, 'iteraciones.config.yaml'),
-        'language: es-MX\nformat:\n  pdf:\n    generate: true\n    disabled-preamble-filters: []\n',
+        'language: es-MX\nformat:\n  pdf:\n    generate: true\n    disabledPreambleFilters: []\n',
         'utf8',
       );
       const output = await doctorOut(dir);

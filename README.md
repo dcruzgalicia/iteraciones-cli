@@ -94,7 +94,7 @@ format:
 
   pdf:
     generate: false                # genera PDF (por defecto: false)
-    # disabled-preamble-filters:    # preamble filters a desactivar (opcional)
+    # disabledPreambleFilters:    # preamble filters a desactivar (opcional)
     #   - 24-eso-pic
 
   html:
@@ -112,13 +112,13 @@ format:
   markdown:
     generate: false                # genera Markdown procesado (por defecto: false)
 
-# disabled-filters:                # filters a desactivar por nombre completo (opcional)
+# disabledFilters:                # filters a desactivar por nombre completo (opcional)
 #   - latex/02-dictum
 
 bibliography: refs/mi-libro.bib   # archivo .bib (opcional; auto-descubierto si falta)
 csl: styles/nature.csl            # estilo de citas CSL (opcional; APA-7 si falta)
 
-# lua-filters:                     # filtros Lua de usuario (opcional)
+# luaFilters:                     # filtros Lua de usuario (opcional)
 #   - filters/mi-filtro.lua
 ```
 
@@ -301,7 +301,7 @@ Julio Verne
 En `iteraciones.config.yaml`:
 
 ```yaml
-disabled-filters:
+disabledFilters:
   - semantic/string/01-double-colon   # desactiva la conversión de ::
 ```
 
@@ -321,10 +321,10 @@ EOF
 
 ### Filtros Lua de usuario
 
-Además de sobrescribir filters, puedes agregar filtros Lua propios con `lua-filters:` en `iteraciones.config.yaml`. Las rutas son relativas al proyecto:
+Además de sobrescribir filters, puedes agregar filtros Lua propios con `luaFilters:` en `iteraciones.config.yaml`. Las rutas son relativas al proyecto:
 
 ```yaml
-lua-filters:
+luaFilters:
   - filters/nota.lua
 ```
 

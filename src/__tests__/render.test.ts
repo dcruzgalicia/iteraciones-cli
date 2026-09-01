@@ -192,14 +192,14 @@ describe('validateDisabledFilters', () => {
   it('advierte con sugerencia para un nombre viejo (pre-D1)', () => {
     const spy = spyOn(logger, 'logWarning');
     validateDisabledFilters(['02-dictum']);
-    expect(spy).toHaveBeenCalledWith('disabled-filters: "02-dictum" no existe; ¿quisiste decir "latex/02-dictum"?', 'config');
+    expect(spy).toHaveBeenCalledWith('disabledFilters: "02-dictum" no existe; ¿quisiste decir "latex/02-dictum"?', 'config');
     spy.mockRestore();
   });
 
   it('advierte sin sugerencia para un nombre inexistente', () => {
     const spy = spyOn(logger, 'logWarning');
     validateDisabledFilters(['foo/bar']);
-    expect(spy).toHaveBeenCalledWith('disabled-filters: "foo/bar" no coincide con ningún filter', 'config');
+    expect(spy).toHaveBeenCalledWith('disabledFilters: "foo/bar" no coincide con ningún filter', 'config');
     spy.mockRestore();
   });
 });
@@ -324,7 +324,7 @@ describe('resolveUserLuaFilters (lua-filters de usuario)', () => {
     try {
       mkdirSync(join(cwd, 'filters'), { recursive: true });
       writeFileSync(join(cwd, 'filters', 'mi-filtro.lua'), '-- test\n');
-      writeFileSync(join(cwd, 'iteraciones.config.yaml'), 'lua-filters:\n  - filters/mi-filtro.lua\n');
+      writeFileSync(join(cwd, 'iteraciones.config.yaml'), 'luaFilters:\n  - filters/mi-filtro.lua\n');
       const config = await loadSiteConfig(cwd);
       const resolved = await resolveUserLuaFilters(cwd, config);
       expect(resolved).toEqual([join(cwd, 'filters', 'mi-filtro.lua')]);
@@ -336,7 +336,7 @@ describe('resolveUserLuaFilters (lua-filters de usuario)', () => {
   it('omite rutas inexistentes sin advertir (el warning lo emite validateConfigFilePaths)', async () => {
     const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-lua-'));
     try {
-      writeFileSync(join(cwd, 'iteraciones.config.yaml'), 'lua-filters:\n  - filters/no-existe.lua\n');
+      writeFileSync(join(cwd, 'iteraciones.config.yaml'), 'luaFilters:\n  - filters/no-existe.lua\n');
       const spy = spyOn(logger, 'logWarning');
       const config = await loadSiteConfig(cwd);
       const resolved = await resolveUserLuaFilters(cwd, config);
