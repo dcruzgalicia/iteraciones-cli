@@ -2,8 +2,8 @@ import { describe, expect, it, spyOn } from 'bun:test';
 import { mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { discover, loadPrevState } from '../builder/discover.js';
-import { persistCompletedState } from '../builder/state-serialize.js';
+import { discover } from '../builder/discover.js';
+import { loadStateFile, persistCompletedState, stateUsableForBuild } from '../builder/state-serialize.js';
 
 /**
  * Caché content-addressed de discovery:
@@ -27,7 +27,7 @@ function touch(file: string, mtimeMs: number): void {
 
 /** Un "build" completo en tests: discover + cierre único. */
 async function buildStep(cwd: string) {
-  const result = await discover(cwd, { prevState: await loadPrevState(cwd) });
+  const result = await discover(cwd, { prevState: stateUsableForBuild(await loadStateFile(cwd)) });
   await persistCompletedState(cwd, result.pendingState);
   return result;
 }

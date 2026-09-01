@@ -12,15 +12,7 @@ import { looseColonLines, looseColonsMessage, MISSING_TITLE_WARNING, validateFro
 import { resolveSlugs } from './slug-resolver.js';
 import type { FileCacheEntry } from './state-hash.js';
 import { cacheHitFor } from './state-hash.js';
-import {
-  type BibFileCache,
-  type BuildState,
-  type FilterFileCache,
-  hashString,
-  loadStateFile,
-  STATE_SCHEMA_VERSION,
-  stateUsableForBuild,
-} from './state-serialize.js';
+import { type BibFileCache, type BuildState, type FilterFileCache, hashString, STATE_SCHEMA_VERSION } from './state-serialize.js';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
 
 export type DiscoverResultAndPending = DiscoverResult & { pendingState: BuildState | null };
@@ -80,10 +72,6 @@ function slugDiacriticWarning(title: string, slug: string): string | undefined {
   if (!/[ñü]/i.test(title)) return undefined;
   if (slug.includes('ñ') || slug.includes('ü')) return undefined;
   return `el slug "${slug}" altera palabras del título "${title}" (ñ→n, ü→u): revísalo o fija uno manual con "slug:" en el frontmatter`;
-}
-
-export async function loadPrevState(cwd: string): Promise<BuildState | null> {
-  return stateUsableForBuild(await loadStateFile(cwd));
 }
 
 async function resolveCacheDecision(cached: DiscoveryEntry | undefined, filePath: string, mtime: number, size: number): Promise<CacheDecision> {
