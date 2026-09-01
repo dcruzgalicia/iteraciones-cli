@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
+import { listMarkdownDocuments } from '../builder/discover-files.js';
 import { validateDisabledFilters } from '../builder/filter-resolver.js';
-import { listMarkdownDocuments } from '../builder/gitignore.js';
 import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, validatePreambleDependencies } from '../builder/preamble-loader.js';
 import {
   looseColonLines,

@@ -1,7 +1,7 @@
 import { exists, mkdir, rm, stat, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, normalize, relative } from 'node:path';
 import { stringify } from 'yaml';
-import { listMarkdownDocuments } from '../builder/gitignore.js';
+import { listMarkdownDocuments } from '../builder/discover-files.js';
 import type { BuildOptions } from '../builder/orchestrator.js';
 import { build } from '../builder/orchestrator.js';
 import { DIST_DIR, DIST_FILES_DIR } from '../builder/output-layout.js';

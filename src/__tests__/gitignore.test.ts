@@ -3,7 +3,8 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import ignore from 'ignore';
 import { discover } from '../builder/discover.js';
-import { isIgnoredByRules, isInsideIgnoredDir, listMarkdownDocuments, loadGitignoreRules, parseGitignore } from '../builder/gitignore.js';
+import { listMarkdownDocuments } from '../builder/discover-files.js';
+import { isIgnoredByRules, isInsideIgnoredDir, loadGitignoreRules, parseGitignore } from '../builder/gitignore.js';
 import { withTempDir } from './helpers.js';
 
 describe('parseGitignore', () => {
