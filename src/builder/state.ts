@@ -4,7 +4,6 @@ export {
   discoverBibFiles,
   PACKAGED_APA7_CSL,
   resolveBibOptions,
-  resolveConfiguredPath,
 } from './state-bib.js';
 export {
   computeConfigHashes,

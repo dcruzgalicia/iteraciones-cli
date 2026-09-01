@@ -1,5 +1,5 @@
 import { mkdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
 import type { SiteConfig } from '../config/config-schema.js';
 import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
@@ -14,7 +14,7 @@ import { PDF_WORK_BASE } from './output-layout.js';
 import type { PdfJob } from './pdf-pool.js';
 import { writeIfChanged } from './pipeline-io.js';
 import { loadPreambleFilters } from './preamble-loader.js';
-import { type resolveBibOptions, resolveConfiguredPath } from './state.js';
+import type { resolveBibOptions } from './state.js';
 import type { BuildContext } from './types.js';
 
 export interface PipelineSetup {
@@ -36,7 +36,7 @@ export async function resolvePipelineSetup(
     bibOptions: plan.bibOptions,
     bibFiles: plan.bibFiles,
     globalBibliography: plan.bibOptions?.bibliography,
-    globalCsl: siteConfig.csl?.trim() ? resolveConfiguredPath(ctx.cwd, siteConfig.csl.trim()) : undefined,
+    globalCsl: siteConfig.csl?.trim() ? resolve(ctx.cwd, siteConfig.csl.trim()) : undefined,
     lang: siteConfig.language ?? DEFAULT_SITE_CONFIG.language,
     logoInline: await loadLogoInline(ctx.cwd, formatCfg?.html?.site?.logo?.trim()),
   };
