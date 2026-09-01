@@ -1,4 +1,4 @@
-import { isAbsolute, join, relative } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { ConfigError } from '../lib/errors.js';
 import type { BibOptions } from '../lib/pandoc-runner.js';
@@ -41,7 +41,7 @@ async function hashBibFile(abs: string, prevCache: BibFileCache | undefined, cac
 export async function resolveBibOptions(cwd: string, siteConfig?: SiteConfig): Promise<{ bibFiles: string[]; bibOptions?: BibOptions }> {
   const configuredBib = siteConfig?.bibliography?.trim();
   if (configuredBib) {
-    const bibPath = resolveConfiguredPath(cwd, configuredBib);
+    const bibPath = resolve(cwd, configuredBib);
     if (!(await Bun.file(bibPath).exists())) {
       throw new ConfigError(
         `iteraciones.config.yaml: bibliography: "${configuredBib}" no encontrado en el proyecto`,
@@ -49,10 +49,10 @@ export async function resolveBibOptions(cwd: string, siteConfig?: SiteConfig): P
       );
     }
     const configuredCsl = siteConfig?.csl?.trim();
-    if (configuredCsl && !(await Bun.file(resolveConfiguredPath(cwd, configuredCsl)).exists())) {
+    if (configuredCsl && !(await Bun.file(resolve(cwd, configuredCsl)).exists())) {
       throw new ConfigError(`iteraciones.config.yaml: csl: "${configuredCsl}" no encontrado en el proyecto`, join(cwd, 'iteraciones.config.yaml'));
     }
-    const cslPath = configuredCsl ? resolveConfiguredPath(cwd, configuredCsl) : PACKAGED_APA7_CSL;
+    const cslPath = configuredCsl ? resolve(cwd, configuredCsl) : PACKAGED_APA7_CSL;
     return { bibFiles: [bibPath], bibOptions: { bibliography: bibPath, csl: cslPath } };
   }
   const bibFiles = cwd ? await discoverBibFiles(cwd, ['bib']) : [];
@@ -73,8 +73,4 @@ export async function computeBibHash(
     parts.push('csl', bib.bibOptions.csl, await hashBibFile(bib.bibOptions.csl, prevCache, cache));
   }
   return { hash: hashString(parts.join('\0')), cache };
-}
-
-export function resolveConfiguredPath(cwd: string, rel: string): string {
-  return isAbsolute(rel) ? rel : join(cwd, rel);
 }
