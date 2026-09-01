@@ -1572,7 +1572,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       expect(process.exitCode).toBe(0);
       const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
       // El heading del usuario se conserva (antes el post-procesamiento lo eliminaba)
-      expect(html).toContain('<h1 id="referencias">Referencias</h1>');
+      expect(html).toContain('<h5 id="referencias">Referencias</h5>');
       expect(html).toContain('Manual.');
       // Sin citas no hay heading sintético ni tarjeta
       expect(html).not.toContain('refs-heading');
@@ -1593,7 +1593,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       expect(process.exitCode).toBe(0);
       const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
       // El heading del usuario se conserva en el body y el sintético usa su id
-      expect(html).toContain('<h1 id="referencias">Referencias</h1>');
+      expect(html).toContain('<h5 id="referencias">Referencias</h5>');
       expect(html).toContain('id="refs-heading"');
       // Un solo id referencias (el del usuario): sin duplicados
       expect((html.match(/id="referencias"/g) ?? []).length).toBe(1);
@@ -1652,7 +1652,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       expect(html).not.toContain('<h1 id="refs-heading">');
       expect(html).not.toContain('block:referencias');
       // El contenido normal sí está
-      expect(html).toContain('<h1 id="sección">Sección</h1>');
+      expect(html).toContain('<h5 id="sección">Sección</h5>');
     });
   });
 

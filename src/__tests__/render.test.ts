@@ -238,7 +238,9 @@ describe('resolveLuaFilters (resolución de filtros)', () => {
       join(PKG, 'semantic', 'ast', '02-double-colon-noindent.lua'),
     ]);
     expect(f.latex).toEqual(LATEX_PKG);
-    expect(f.html).toEqual(['01-dictum', '02-verse', '03-center', '04-flushright', '05-spacer'].map((n) => join(PKG, 'html', `${n}.lua`)));
+    expect(f.html).toEqual(
+      ['01-dictum', '02-verse', '03-center', '04-flushright', '05-spacer', '06-subparagraph'].map((n) => join(PKG, 'html', `${n}.lua`)),
+    );
   });
 
   it('el override del proyecto gana sobre el paquete para el mismo nombre', async () => {
@@ -256,7 +258,9 @@ describe('resolveLuaFilters (resolución de filtros)', () => {
       const expectedLatex = [...LATEX_PKG];
       expectedLatex[1] = join(cwd, 'filters', 'latex', '02-dictum.lua');
       expect(f.latex).toEqual(expectedLatex);
-      expect(f.html).toEqual(['01-dictum', '02-verse', '03-center', '04-flushright', '05-spacer'].map((n) => join(PKG, 'html', `${n}.lua`)));
+      expect(f.html).toEqual(
+        ['01-dictum', '02-verse', '03-center', '04-flushright', '05-spacer', '06-subparagraph'].map((n) => join(PKG, 'html', `${n}.lua`)),
+      );
       expect(f.resolvedNames).toEqual(
         new Set([
           'semantic/string/01-double-colon',
@@ -277,6 +281,7 @@ describe('resolveLuaFilters (resolución de filtros)', () => {
           'html/03-center',
           'html/04-flushright',
           'html/05-spacer',
+          'html/06-subparagraph',
         ]),
       );
     } finally {
@@ -287,7 +292,7 @@ describe('resolveLuaFilters (resolución de filtros)', () => {
   it('excluye filtros desactivados por nombre completo', async () => {
     const f = await resolveLuaFilters(['semantic/string/01-double-colon']);
     expect(f.semantic).toEqual([join(PKG, 'semantic', 'ast', '02-double-colon-noindent.lua')]);
-    expect(f.resolvedNames.size).toBe(17);
+    expect(f.resolvedNames.size).toBe(18);
     expect(f.resolvedNames.has('semantic/string/01-double-colon')).toBe(false);
   });
 });
