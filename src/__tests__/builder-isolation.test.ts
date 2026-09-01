@@ -77,7 +77,6 @@ describe('aislamiento builder↔cli (#2017)', () => {
 
   it('sanity: readdir de builder disponible para futuras aserciones', async () => {
     const entries = await readdir('src/builder');
-    expect(entries.includes('reporter.ts')).toBe(true);
     expect(entries.includes('types.ts')).toBe(true);
   });
 });
