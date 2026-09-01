@@ -34,6 +34,25 @@ z.setErrorMap(((issue: z.ZodIssue) => {
 
 const KNOWN_ACCENT_COLORS = Object.keys(ACCENT_PALETTES) as AccentColor[];
 
+const DublinCoreFieldsSchema = {
+  title: z.string().optional(),
+  creator: z.union([z.string(), z.array(z.string())]).optional(),
+  subject: z.union([z.string(), z.array(z.string())]).optional(),
+  description: z.string().optional(),
+  publisher: z.union([z.string(), z.array(z.string())]).optional(),
+  contributor: z.union([z.string(), z.array(z.string())]).optional(),
+  date: z.string().optional(),
+  identifier: z.string().optional(),
+  source: z.string().optional(),
+  relation: z.union([z.string(), z.array(z.string())]).optional(),
+  coverage: z.string().optional(),
+  rights: z.string().optional(),
+  license: z.string().optional(),
+  doi: z.string().optional(),
+  isbn: z.string().optional(),
+  abstract: z.string().optional(),
+};
+
 const HtmlBlocksSchema = z
   .unknown()
   .superRefine((value, ctx) => {
@@ -90,22 +109,7 @@ export const PdfFormatSchema = z
       .default(DEFAULT_PDF_FORMAT.disabledPreambleFilters)
       .transform((v) => (v?.length ? v : undefined)),
     'cover-image': z.boolean().default(DEFAULT_PDF_FORMAT.coverImage ?? false),
-    title: z.string().optional(),
-    creator: z.union([z.string(), z.array(z.string())]).optional(),
-    subject: z.union([z.string(), z.array(z.string())]).optional(),
-    description: z.string().optional(),
-    publisher: z.union([z.string(), z.array(z.string())]).optional(),
-    contributor: z.union([z.string(), z.array(z.string())]).optional(),
-    date: z.string().optional(),
-    identifier: z.string().optional(),
-    source: z.string().optional(),
-    relation: z.union([z.string(), z.array(z.string())]).optional(),
-    coverage: z.string().optional(),
-    rights: z.string().optional(),
-    license: z.string().optional(),
-    doi: z.string().optional(),
-    isbn: z.string().optional(),
-    abstract: z.string().optional(),
+    ...DublinCoreFieldsSchema,
   })
   .strict();
 
@@ -152,22 +156,7 @@ const RawSiteConfigSchema = z
       .array(z.string())
       .optional()
       .transform((v) => (v?.length ? v : undefined)),
-    title: z.string().optional(),
-    creator: z.union([z.string(), z.array(z.string())]).optional(),
-    subject: z.union([z.string(), z.array(z.string())]).optional(),
-    description: z.string().optional(),
-    publisher: z.union([z.string(), z.array(z.string())]).optional(),
-    contributor: z.union([z.string(), z.array(z.string())]).optional(),
-    date: z.string().optional(),
-    identifier: z.string().optional(),
-    source: z.string().optional(),
-    relation: z.union([z.string(), z.array(z.string())]).optional(),
-    coverage: z.string().optional(),
-    rights: z.string().optional(),
-    license: z.string().optional(),
-    doi: z.string().optional(),
-    isbn: z.string().optional(),
-    abstract: z.string().optional(),
+    ...DublinCoreFieldsSchema,
   })
   .strict();
 
