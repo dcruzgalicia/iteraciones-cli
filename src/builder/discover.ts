@@ -7,7 +7,7 @@ import { fmStringList, fmTrimmedString } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
 import { mapWithConcurrency } from '../lib/run.js';
-import { listMarkdownDocuments } from './gitignore.js';
+import { listMarkdownDocuments } from './discover-files.js';
 import { looseColonLines, looseColonsMessage, MISSING_TITLE_WARNING, validateFrontmatterFields } from './project-validator.js';
 import { resolveSlugs } from './slug-resolver.js';
 import type { FileCacheEntry } from './state-hash.js';
