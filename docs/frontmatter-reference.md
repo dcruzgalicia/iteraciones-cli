@@ -27,6 +27,42 @@ El pipeline consume los siguientes campos del frontmatter:
 | `creator` | `string \| string[]` | `[]` | Uno o varios autores. El slug usa `title-por-creator`: **solo el primer autor**; en caso de colisión (dos documentos con el mismo título y autor) se aplica un sufijo `-dN`. |
 | `slug` | `string` | — | **Slug manual** (opcional): fija la URL del documento en lugar del esquema automático. Formato seguro: solo minúsculas, números y guiones simples (`^[a-z0-9]+(-[a-z0-9]+)*$`). Dos documentos con la misma salida (mismo directorio + slug) son un error de build y de `validate`. |
 | `language` | `string` | `'es-MX'` | Código de idioma BCP 47. Sobreescribe `language` de la configuración para HTML, EPUB y Markdown; **no** altera la configuración de `babel` del PDF. |
+| `type` | `'file' \| 'collection'` | `'file'` | Tipo de documento. `file` es el comportamiento por defecto. `collection` fusiona el contenido de múltiples archivos en uno solo (ver más abajo). |
+| `files` | `string[]` | — | **Requerido para `type: collection`**. Lista de paths relativos de los archivos a fusionar. Los archivos listados no se procesan individualmente. |
+
+## Type: collection
+
+Un `type: collection` fusiona el contenido de múltiples archivos en un solo documento de salida. El frontmatter del collection (`title`, `creator`, `subtitle`, etc.) se comporta igual que en `type: file` (se usa como metadata del documento: `\title`, `\author`, etc. en LaTeX; portada en HTML).
+
+Cada archivo en `files` aporta sus propios encabezados estructurales antes de su contenido:
+
+| Archivo field | LaTeX | HTML/EPUB | Markdown |
+|---------------|-------|-----------|----------|
+| `creator` | `\chapter{}` | `<h2>` | `##` |
+| `title` | `\section{}` | `<h3>` | `###` |
+| `subtitle` | `\subsection{}` | `<h4>` | `####` |
+
+### Ejemplo
+
+```yaml
+# collection.md
+title: Mi colección
+creator:
+  - Autor Principal
+type: collection
+files:
+  - capitulo-1.md
+  - capitulo-2.md
+```
+
+```yaml
+# capitulo-1.md
+title: Primer capítulo
+creator:
+  - Autor del capítulo
+```
+
+El body de `collection.md` puede estar vacío; el contenido viene de los archivos en `files`. Si `files` está vacío o todos los archivos están vacíos, el build omite la collection con una advertencia.
 
 ## Metadatos Dublin Core
 

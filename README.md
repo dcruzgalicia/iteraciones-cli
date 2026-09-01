@@ -63,6 +63,24 @@ iteraciones init
 
 Esto también crea un archivo `bibliography.bib` de ejemplo.
 
+### Collections
+
+Un `type: collection` en el frontmatter fusiona múltiples archivos en un solo documento:
+
+```
+---
+title: Mi colección
+creator:
+  - Autor Principal
+type: collection
+files:
+  - capitulo-1.md
+  - capitulo-2.md
+---
+```
+
+Cada archivo en `files` aporta sus encabezados (creator → `\chapter`, title → `\section`, subtitle → `\subsection`). El frontmatter del collection se usa como metadata del documento (portada, título, etc.). Ver [docs/frontmatter-reference.md](docs/frontmatter-reference.md) para detalles.
+
 ## Configuración (`iteraciones.config.yaml`)
 
 ```yaml

@@ -49,6 +49,8 @@ El pipeline convierte archivos Markdown en documentos en los formatos configurad
 │  • markdown → html5          │  • Frontmatter como metadata (fm ?? config)
 │  • markdown → epub3          │  • Post-procesamiento único: referencias (HTML)
 │  • markdown → markdown       │  • Salidas directas a dist/files/
+│  • collections: fusión de    │  • type: collection lee files[] y concatena
+│    archivos antes de pandoc   │  • Encabezados por archivo según formato
 │                              │  • Concurrencia: ctx.concurrency
 │  Pool 2 (PDF, en paralelo)   │  • latexmk en .iteraciones/tmp/pdf → dist/
 └──────┬───────────────────────┘
@@ -254,8 +256,8 @@ Cuando `99-pdfx` está **activo** (se eliminó de `disabled-preamble-filters`), 
 | `orchestrator.ts` | `build()`: coordina las fases del pipeline. Función principal. |
 | `discover.ts` | Fase 1: escanea archivos, lee frontmatter (y lo conserva completo), detecta cambios. |
 | `pipeline-setup.ts` | Setup compartido del pipeline: bibliografía (una vez por build), lang, logo inline, templates efectivos, constructores de contextos (RenderContext, ExportContext, FormatWorkSets). |
-| `pipeline-formats.ts` | Procesamiento por documento: emisión por formato (latex/html/epub/md), frontera pool 1→2, cola de jobs PDF. |
-| `pipeline-io.ts` | Helpers de I/O del pipeline: lectura de markdown, escritura con directorio padre, hrefs relativos, formatLinks. |
+| `pipeline-formats.ts` | Procesamiento por documento: emisión por formato (latex/html/epub/md), fusión de collections, frontera pool 1→2, cola de jobs PDF. |
+| `pipeline-io.ts` | Helpers de I/O del pipeline: lectura de markdown, escritura con directorio padre, hrefs relativos, formatLinks, parseFileFrontmatter (collections). |
 | `pipeline.ts` | Orquestador puro de pools: documentPipeline, runLightFormatsPool, pdfSlotCount. |
 | `pandoc-metadata.ts` | Fuente única de metadatos pandoc: escape de valores, language, title/creator/date, composición de citas (paridad HTML/EPUB, fallo de cites para markdown portable). |
 | `output-layout.ts` | Contrato de rutas y extensiones de salida (DIST_DIR, DIST_FILES_DIR, FORMAT_OUTPUT_EXTENSIONS): pipeline, cleanup y dispatcher lo consumen. Fuente única para cambiar extensiones. |
@@ -361,6 +363,8 @@ Los nombres de los filters Lua y de los preamble filters se derivan de un glob o
 ### ¿Por qué no hay plugins/tipos de documento/paginación?
 
 El proyecto comenzó con una arquitectura muy ambiciosa (plugins ESM, 8 tipos de documento, paginación, temas, layouts) que fue simplificada drásticamente entre v0.8 y v0.10. La eliminación de ~3000+ líneas de código muerto mejoró la mantenibilidad, velocidad y predictibilidad del pipeline. Ver `CHANGELOG.md` para los detalles de cada release.
+
+El `type: collection` (issue #2277) es un mecanismo ligero para un caso concreto: fusionar archivos. No es un "tipo de documento" general — solo agrega una ruta de fusión en `pipeline-formats.ts` sin cambiar la arquitectura del pipeline.
 
 ### ¿Por qué el esquema de slugs usa el contador `-dN` para colisiones?
 
