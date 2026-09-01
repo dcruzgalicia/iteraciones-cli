@@ -2,19 +2,11 @@ import { existsSync } from 'node:fs';
 import { copyFile, mkdir, rename, rm } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { ExportError, PANDOC_ERROR_CODES } from '../../lib/errors.js';
-import { fmBool } from '../../lib/frontmatter-fields.js';
+import { fmBool, fmString } from '../../lib/frontmatter-fields.js';
 import { execPandoc, MD_READER } from '../../lib/pandoc-runner.js';
 import { exec, ProcessSpawnError, ProcessTimeoutError } from '../../lib/run.js';
 import type { LuaFilterGroup } from '../filter-resolver.js';
-import {
-  citationCompileArgs,
-  citationPortableMetadataArgs,
-  creatorArgs,
-  dateArg,
-  effectiveLanguage,
-  languageArg,
-  titleArg,
-} from '../pandoc-metadata.js';
+import { citationCompileArgs, citationPortableMetadataArgs, creatorArgs, dateArg, languageArg, titleArg } from '../pandoc-metadata.js';
 import type { ExportDocument } from './types.js';
 
 export const LATEXMK_AUX_EXTENSIONS = ['.aux', '.bbl', '.bcf', '.blg', '.fls', '.run.xml', '.fdb_latexmk', '.out', '.toc', '.log'];
@@ -43,7 +35,7 @@ export async function convertToEpub(
     extraArgs.push('--toc-depth=6');
   }
 
-  extraArgs.push(languageArg(effectiveLanguage(fm, doc.metadata.language)));
+  extraArgs.push(languageArg(fmString(fm.language, doc.metadata.language)));
   extraArgs.push(titleArg(doc.metadata.title));
   extraArgs.push(...creatorArgs(doc.metadata.creator));
   extraArgs.push(...dateArg((doc.metadata.dateIso ?? doc.metadata.date) || undefined));
@@ -65,7 +57,7 @@ export async function convertToMarkdown(
   for (const f of [...filters.semantic, ...filters.user]) extraArgs.push('--lua-filter', f);
 
   extraArgs.push('--standalone');
-  extraArgs.push(languageArg(effectiveLanguage(fm, doc.metadata.language)));
+  extraArgs.push(languageArg(fmString(fm.language, doc.metadata.language)));
   extraArgs.push(...dateArg(doc.metadata.date || undefined));
   const tocActive = fmBool(fm.toc, doc.metadata.toc);
   if (tocActive) {

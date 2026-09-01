@@ -86,10 +86,6 @@ export async function loadPrevState(cwd: string): Promise<BuildState | null> {
   return stateUsableForBuild(await loadStateFile(cwd));
 }
 
-export function noPrevState(): BuildState | null {
-  return null;
-}
-
 async function resolveCacheDecision(cached: DiscoveryEntry | undefined, filePath: string, mtime: number, size: number): Promise<CacheDecision> {
   if (cached === undefined || cached.mtime === undefined || cached.size === undefined || cached.hash === undefined) {
     return { process: true, text: null };

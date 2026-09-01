@@ -120,7 +120,7 @@ export class ProgressTracker implements BuildReporter {
 
   private buildDocsLine(processed: number, cached: number, invalidations?: string[]): string {
     const total = processed + cached;
-    let line = `${padRight('Documentos', LABEL_WIDTH)}${total}`;
+    let line = `${'Documentos'.padEnd(LABEL_WIDTH)}${total}`;
     if (processed > 0 && cached > 0) {
       line += ` (${processed} ${plural(processed, 'modificado', 'modificados')} · ${cached} ${plural(cached, 'reutilizado', 'reutilizados')})`;
     } else if (total > 0 && processed === 0) {
@@ -148,7 +148,7 @@ export class ProgressTracker implements BuildReporter {
     const opener = process.platform === 'darwin' ? 'open' : 'xdg-open';
     const indexHtml = join(outputDir, 'index.html');
     const target = (await Bun.file(indexHtml).exists()) ? indexHtml : outputDir;
-    this.stream.write(`  ${padRight('Abre el resultado', LABEL_WIDTH)}${opener} "${target}"\n`);
+    this.stream.write(`  ${'Abre el resultado'.padEnd(LABEL_WIDTH)}${opener} "${target}"\n`);
   }
 
   private async writeSummary(processed: number, cached: number, formats?: string[], outputDir?: string, invalidations?: string[]): Promise<void> {
@@ -161,22 +161,18 @@ export class ProgressTracker implements BuildReporter {
     }
     this.stream.write(`  ${this.buildDocsLine(processed, cached, invalidations)}\n`);
     if (invalidations !== undefined && invalidations.length > 1) {
-      this.stream.write(`  ${padRight('Invalidaciones', LABEL_WIDTH)}${ProgressTracker.compactInvalidations(invalidations)}\n`);
+      this.stream.write(`  ${'Invalidaciones'.padEnd(LABEL_WIDTH)}${ProgressTracker.compactInvalidations(invalidations)}\n`);
     }
     const formatDetail = processed > 0 && formats ? formats.map((f) => `${f} ${this.state.phaseCount(f as PipelinePhase)}`).join(', ') : '';
-    this.stream.write(`  ${padRight('Formatos activos', LABEL_WIDTH)}${formatCount}${formatDetail ? ` — ${formatDetail}` : ''}\n`);
+    this.stream.write(`  ${'Formatos activos'.padEnd(LABEL_WIDTH)}${formatCount}${formatDetail ? ` — ${formatDetail}` : ''}\n`);
     if (outputDir) {
-      this.stream.write(`  ${padRight('Salida', LABEL_WIDTH)}${outputDir}\n`);
+      this.stream.write(`  ${'Salida'.padEnd(LABEL_WIDTH)}${outputDir}\n`);
     }
-    this.stream.write(`  ${padRight('Tiempo total', LABEL_WIDTH)}${formatTime(totalTime)}\n`);
+    this.stream.write(`  ${'Tiempo total'.padEnd(LABEL_WIDTH)}${formatTime(totalTime)}\n`);
     if (outputDir) await this.writeOpenerLine(outputDir, processed);
     for (const line of this.state.summaryLines) {
       this.stream.write(`${line}\n`);
     }
     this.writeWarnings();
   }
-}
-
-function padRight(text: string, width: number): string {
-  return text.padEnd(width);
 }

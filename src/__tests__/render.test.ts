@@ -10,7 +10,7 @@ import {
   suggestFilterName,
   validateDisabledFilters,
 } from '../builder/filter-resolver.js';
-import { composeHtmlTemplate, resolveBlockOrder } from '../builder/html-composer.js';
+import { composeHtmlTemplate } from '../builder/html-composer.js';
 import { markdownToLatex } from '../builder/latex-composer.js';
 import { getBuiltinPreambleFilterNames } from '../builder/preamble-loader.js';
 import { htmlPageFromMarkdown } from '../builder/render.js';
@@ -103,17 +103,6 @@ describe('pdfDate (fecha de portada del PDF)', () => {
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
-  });
-});
-
-describe('resolveBlockOrder', () => {
-  it('sin lista explícita usa el orden por defecto', () => {
-    expect(resolveBlockOrder()).toEqual(['header', 'contenido', 'formatos', 'indice', 'referencias', 'footer']);
-  });
-
-  it('una lista explícita ES el orden (reordenar y omitir bloques)', () => {
-    expect(resolveBlockOrder(['header', 'contenido', 'indice', 'formatos'])).toEqual(['header', 'contenido', 'indice', 'formatos']);
-    expect(resolveBlockOrder(['footer', 'header'])).toEqual(['footer', 'header']);
   });
 });
 

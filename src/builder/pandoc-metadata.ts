@@ -1,15 +1,10 @@
 import { existsSync } from 'node:fs';
 import { relative } from 'node:path';
-import { fmString } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { PACKAGED_APA7_CSL } from './state-bib.js';
 
 export function metadataValue(value: string): string {
   return value.replace(/\n/g, ' ');
-}
-
-export function effectiveLanguage(fm: Record<string, unknown>, fallback: string): string {
-  return fmString(fm.language, fallback);
 }
 
 export function titleArg(title: string): string {

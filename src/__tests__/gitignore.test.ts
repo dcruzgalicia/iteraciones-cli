@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import ignore from 'ignore';
-import { discover, noPrevState } from '../builder/discover.js';
+import { discover } from '../builder/discover.js';
 import { isIgnoredByRules, isInsideIgnoredDir, listMarkdownDocuments, loadGitignoreRules, parseGitignore } from '../builder/gitignore.js';
 import { withTempDir } from './helpers.js';
 
@@ -90,7 +90,7 @@ describe('discover respeta .gitignore', () => {
       await writeFile(join(dir, 'borradores', 'secreto.md'), '# Secreto\n', 'utf8');
       await writeFile(join(dir, 'borradores', 'interno.md'), '# Interno\n', 'utf8');
 
-      const { relativePaths } = await discover(dir, { prevState: noPrevState() });
+      const { relativePaths } = await discover(dir, { prevState: null });
       expect(relativePaths).toEqual(['normal.md']);
     });
   });
@@ -101,7 +101,7 @@ describe('discover respeta .gitignore', () => {
       await writeFile(join(dir, 'privado.md'), '# Privado\n', 'utf8');
       await writeFile(join(dir, 'publicado.md'), '# Público\n', 'utf8');
 
-      const { relativePaths } = await discover(dir, { prevState: noPrevState() });
+      const { relativePaths } = await discover(dir, { prevState: null });
       expect(relativePaths).toEqual(['publicado.md']);
     });
   });
@@ -112,7 +112,7 @@ describe('discover respeta .gitignore', () => {
       await mkdir(join(dir, 'sub'), { recursive: true });
       await writeFile(join(dir, 'sub', 'b.md'), '# B\n', 'utf8');
 
-      const { relativePaths } = await discover(dir, { prevState: noPrevState() });
+      const { relativePaths } = await discover(dir, { prevState: null });
       expect(relativePaths.sort()).toEqual(['a.md', 'sub/b.md']);
     });
   });
@@ -148,7 +148,7 @@ describe('discover excluye dotfiles', () => {
       await mkdir(join(dir, 'visible', '.oculto'), { recursive: true });
       await writeFile(join(dir, 'visible', '.oculto', 'nota.md'), '# Nota\n', 'utf8');
 
-      const { relativePaths } = await discover(dir, { prevState: noPrevState() });
+      const { relativePaths } = await discover(dir, { prevState: null });
       expect(relativePaths.sort()).toEqual(['normal.md', 'visible/normal.md']);
     });
   });
