@@ -180,7 +180,14 @@ async function discoverDocuments(
       bibFileCache: plan.bibFileCache,
     },
   });
-  const allDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
+  const collectionFiles = new Set<string>();
+  for (const entry of discoveryIndex.values()) {
+    if (entry.type === 'collection' && entry.files) {
+      for (const f of entry.files) collectionFiles.add(f);
+    }
+  }
+  const filteredPaths = relativePaths.filter((p) => !collectionFiles.has(p));
+  const allDocs = buildDocsFromIndex(filteredPaths, discoveryIndex, cwd);
   if (options.verbose) {
     for (const doc of allDocs) {
       progress.reportFile({ relativePath: doc.relativePath, phase: 'discovery' });
