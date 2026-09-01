@@ -2,8 +2,8 @@ import { describe, expect, it, spyOn } from 'bun:test';
 import { mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { type DiscoverResultAndPending, discover, loadPrevState } from '../builder/discover.js';
-import { persistCompletedState } from '../builder/state-serialize.js';
+import { type DiscoverResultAndPending, discover } from '../builder/discover.js';
+import { loadStateFile, persistCompletedState, stateUsableForBuild } from '../builder/state-serialize.js';
 
 /**
  * Detección de cambios de slug por metadatos (discover → slug-resolver):
@@ -37,7 +37,7 @@ function touchFuture(file: string): void {
 /** Un "build" completo en tests: discover + cierre único (#2025). */
 async function buildStep(cwd: string, options?: { full?: boolean }): Promise<Step> {
   const result = await discover(cwd, {
-    ...(options?.full ? { full: true as const, prevState: null } : { prevState: await loadPrevState(cwd) }),
+    ...(options?.full ? { full: true as const, prevState: null } : { prevState: stateUsableForBuild(await loadStateFile(cwd)) }),
   });
   await persistCompletedState(cwd, result.pendingState);
   return result;
