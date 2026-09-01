@@ -116,6 +116,7 @@ Además, existen los **preamble filters** (`src/lib/resources/preamble/*.tex`) q
 | `html/03-center` | ast | `Div.center` → `<div class="center">` |
 | `html/04-flushright` | ast | `Div.flushright` → `<div class="flushright">` |
 | `html/05-spacer` | ast | `Div.spacer` → `<div class="spacer"></div>` |
+| `html/06-subparagraph` | ast | `Header` nivel 3 → `<div class="subparagraph">` |
 
 ### Preamble filters integrados
 

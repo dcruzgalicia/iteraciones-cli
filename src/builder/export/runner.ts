@@ -34,10 +34,14 @@ export async function convertToEpub(
   await mkdir(dirname(outputPath), { recursive: true });
 
   const extraArgs: string[] = [];
+  extraArgs.push('--shift-heading-level-by=4');
   for (const f of [...filters.semantic, ...filters.user]) extraArgs.push('--lua-filter', f);
   extraArgs.push(...citationCompileArgs(doc.metadata.bibliography, doc.metadata.csl));
   const tocActive = fmBool(fm.toc, toc ?? false);
-  if (tocActive) extraArgs.push('--toc');
+  if (tocActive) {
+    extraArgs.push('--toc');
+    extraArgs.push('--toc-depth=6');
+  }
 
   extraArgs.push(languageArg(effectiveLanguage(fm, doc.metadata.language)));
   extraArgs.push(titleArg(doc.metadata.title));
@@ -57,6 +61,7 @@ export async function convertToMarkdown(
 ): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
   const extraArgs: string[] = [];
+  extraArgs.push('--shift-heading-level-by=4');
   for (const f of [...filters.semantic, ...filters.user]) extraArgs.push('--lua-filter', f);
 
   extraArgs.push('--standalone');
@@ -70,7 +75,8 @@ export async function convertToMarkdown(
   extraArgs.push(...citationPortableMetadataArgs(doc.metadata.bibliography, doc.metadata.csl, cwd));
 
   const stdout = await execPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'markdown', extraArgs });
-  await Bun.write(outputPath, stdout);
+  const processed = stdout.replace(/^#{7,}\s+(.+)$/gm, '[]{.subparagraph}$1');
+  await Bun.write(outputPath, processed);
 }
 
 export async function convertToPdf(

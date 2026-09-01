@@ -14,8 +14,11 @@ export function loadReferencesCardTemplate(): Promise<string> {
 function stripSyntheticReferencesMarker(html: string, refsIdPos: number, start: number): string {
   let cleaned = html;
   if (refsIdPos >= 0 && start >= 0) {
-    const h1End = cleaned.indexOf('</h1>', start);
-    if (h1End >= 0) cleaned = cleaned.slice(0, start) + cleaned.slice(h1End + 5);
+    const headingEnd = cleaned.indexOf('</h', start);
+    if (headingEnd >= 0) {
+      const tagEnd = cleaned.indexOf('>', headingEnd);
+      if (tagEnd >= 0) cleaned = cleaned.slice(0, start) + cleaned.slice(tagEnd + 1);
+    }
   }
   return cleaned.replace('<!-- block:referencias -->', '');
 }
@@ -48,7 +51,7 @@ export function extractReferencesBlock(html: string, cardTemplate: string): { ht
   const refsDivPos = html.indexOf('<div id="refs"');
   if (refsIdPos < 0 && refsDivPos < 0) return { html };
 
-  const start = refsIdPos >= 0 ? html.lastIndexOf('<h1', refsIdPos) : refsDivPos;
+  const start = refsIdPos >= 0 ? Math.max(html.lastIndexOf('<h1', refsIdPos), html.lastIndexOf('<h5', refsIdPos)) : refsDivPos;
   const divStart = html.indexOf('<div id="refs"', start);
   if (divStart < 0) {
     if (!html.includes('<!-- block:referencias -->')) return { html };

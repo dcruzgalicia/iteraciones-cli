@@ -66,6 +66,8 @@ export async function htmlPageFromMarkdown(content: string, doc: BuildDocument, 
   const tocActive = typeof fm.toc === 'boolean' ? fm.toc : siteConfig.toc;
 
   const extraArgs = buildHtmlMetadataArgs(templatePath, vars, lang, siteTitle, tagline, theme, accent, css, tocActive);
+  extraArgs.push('--shift-heading-level-by=4');
+  if (tocActive) extraArgs.push('--toc-depth=6');
   for (const filter of [...filters.semantic, ...filters.user, ...filters.flags, ...filters.html]) {
     extraArgs.push('--lua-filter', filter);
   }
