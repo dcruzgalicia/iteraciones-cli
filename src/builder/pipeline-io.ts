@@ -4,6 +4,7 @@ import { BuildError, translateSystemError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
 import { logWarning } from '../lib/logger.js';
 import type { BuildMetadata } from './build-planner.js';
+import { parseAuthors } from './discover.js';
 import { primaryOutputExtension } from './output-layout.js';
 import type { BuildDocument } from './types.js';
 
@@ -35,7 +36,7 @@ export async function readMarkdownOrWarn(doc: BuildDocument): Promise<string | n
     throw new BuildError(`no se pudo leer "${doc.filePath}": ${translateSystemError(err, 'verifica que el nombre del archivo sea correcto')}`);
   }
   const { yaml, body } = splitFrontmatter(content);
-  if (!body.trim()) {
+  if (!body.trim() && doc.frontmatter.type !== 'collection') {
     logWarning(
       yaml !== undefined
         ? `"${doc.filePath}" no tiene contenido después del frontmatter; se omite del build`
@@ -86,4 +87,20 @@ export function formatLinksFor(
     });
   }
   return formats;
+}
+
+export function parseFileFrontmatter(content: string): { title: string; creator: string[]; subtitle: string | undefined; body: string } {
+  const { yaml, body } = splitFrontmatter(content);
+  if (!yaml) return { title: '', creator: [], subtitle: undefined, body };
+  try {
+    const parsed = Bun.YAML.parse(yaml) as Record<string, unknown>;
+    return {
+      title: typeof parsed.title === 'string' ? parsed.title : '',
+      creator: parseAuthors(parsed.creator),
+      subtitle: typeof parsed.subtitle === 'string' ? parsed.subtitle : undefined,
+      body,
+    };
+  } catch {
+    return { title: '', creator: [], subtitle: undefined, body };
+  }
 }
