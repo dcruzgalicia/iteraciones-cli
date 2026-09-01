@@ -48,6 +48,8 @@ export const KNOWN_FRONTMATTER_FIELDS = [
   'title-image',
   'publishers-image',
   'endpapers',
+  'type',
+  'files',
 ];
 
 const SLUG_MANUAL_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -113,6 +115,24 @@ function validateSlugField(parsed: Record<string, unknown>): ValidationIssue[] {
   return [];
 }
 
+function validateTypeField(parsed: Record<string, unknown>): ValidationIssue[] {
+  const type = parsed.type;
+  if (type === undefined) return [];
+  if (type !== 'file' && type !== 'collection') {
+    return [{ severity: 'error', message: 'frontmatter: "type" debe ser "file" o "collection"' }];
+  }
+  if (type === 'collection') {
+    const files = parsed.files;
+    if (files === undefined) {
+      return [{ severity: 'error', message: 'frontmatter: "type: collection" requiere el campo "files"' }];
+    }
+    if (!Array.isArray(files) || !files.every((f) => typeof f === 'string')) {
+      return [{ severity: 'error', message: 'frontmatter: "files" debe ser una lista de textos (strings)' }];
+    }
+  }
+  return [];
+}
+
 export function validateFrontmatterFields(parsed: Record<string, unknown>): ValidationIssue[] {
   return [
     ...validateStringFields(parsed),
@@ -121,6 +141,7 @@ export function validateFrontmatterFields(parsed: Record<string, unknown>): Vali
     ...validateEmptyFields(parsed),
     ...validateUnknownFields(parsed),
     ...validateSlugField(parsed),
+    ...validateTypeField(parsed),
   ];
 }
 

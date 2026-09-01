@@ -123,6 +123,8 @@ interface IngestedFrontmatter {
   date: string | undefined;
   creator: string[];
   manualSlug: string | undefined;
+  type: 'file' | 'collection' | undefined;
+  files: string[] | undefined;
   fm: Record<string, unknown> | undefined;
 }
 
@@ -139,12 +141,16 @@ function normalizeFrontmatterRecord(record: Record<string, unknown>, relativePat
     }
   }
   const rawTitle = record.title;
+  const type = record.type === 'file' || record.type === 'collection' ? record.type : undefined;
+  const files = Array.isArray(record.files) && record.files.every((f) => typeof f === 'string') ? (record.files as string[]) : undefined;
   return {
     title: typeof rawTitle === 'string' ? rawTitle : '',
     subtitle: fmTrimmedString(record.subtitle),
     date: fmTrimmedString(record.date),
     creator: parseAuthors(record.creator),
     manualSlug: fmTrimmedString(record.slug),
+    type,
+    files,
     rawTitle,
   };
 }
@@ -191,6 +197,8 @@ function ingestFrontmatter(relativePath: string, text: string, issues: Frontmatt
     date: normalized?.date,
     creator: normalized?.creator ?? [],
     manualSlug: normalized?.manualSlug,
+    type: normalized?.type,
+    files: normalized?.files,
     fm,
   };
 }
@@ -374,6 +382,8 @@ export function buildDocsFromIndex(relativePaths: string[], discoveryIndex: Map<
         subtitle: entry?.subtitle,
         date: entry?.date ?? '',
         creator: entry?.creator ?? [],
+        type: entry?.type,
+        files: entry?.files,
       },
     };
   });
