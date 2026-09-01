@@ -5,7 +5,7 @@ import { listMarkdownDocuments } from '../builder/gitignore.js';
 import type { BuildOptions } from '../builder/orchestrator.js';
 import { build } from '../builder/orchestrator.js';
 import { DIST_DIR, DIST_FILES_DIR } from '../builder/output-layout.js';
-import { loadStateFile } from '../builder/state.js';
+import { loadStateFile } from '../builder/state-serialize.js';
 import { loadSiteConfigIfPresent } from '../config/config-loader.js';
 import { computeActiveFormats, DEFAULT_PDF_FORMAT } from '../config/site-config.js';
 import { BUILD_ERROR_CODES, BuildError, ConfigError, ConversionError, PANDOC_ERROR_CODES } from '../lib/errors.js';

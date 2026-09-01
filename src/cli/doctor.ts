@@ -1,4 +1,4 @@
-import { discoverBibFiles } from '../builder/state.js';
+import { discoverBibFiles } from '../builder/state-bib.js';
 import { loadSiteConfigIfPresent } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
 import { DEFAULT_PDF_FORMAT } from '../config/site-config.js';

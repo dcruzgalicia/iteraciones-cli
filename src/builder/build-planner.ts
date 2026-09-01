@@ -1,8 +1,9 @@
 import type { SiteConfig } from '../config/config-schema.js';
 import { type ActiveFormats, computeActiveFormats, type FormatKey, toActiveFormats } from '../config/site-config.js';
 import type { BibOptions } from '../lib/pandoc-runner.js';
-import type { BuildState } from './state.js';
-import { type BibFileCache, computeBibHash, computeConfigHashes, computeFiltersHash, type FilterFileCache, resolveBibOptions } from './state.js';
+import { type BibFileCache, computeBibHash, resolveBibOptions } from './state-bib.js';
+import { computeConfigHashes, computeFiltersHash, type FilterFileCache } from './state-hash.js';
+import type { BuildState } from './state-serialize.js';
 import type { BuildDocument } from './types.js';
 
 type WorkFormatKey = 'print' | 'html' | 'epub' | 'markdown';

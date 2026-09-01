@@ -20,7 +20,7 @@ import { documentPipeline } from './pipeline.js';
 import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, validatePreambleDependencies } from './preamble-loader.js';
 import { validateConfigFilePaths } from './project-validator.js';
 import { silentReporter } from './reporter.js';
-import type { BuildState } from './state.js';
+import type { BuildState } from './state-serialize.js';
 import { persistCompletedState } from './state-serialize.js';
 import type { BuildContext, BuildDocument, BuildReporter, DiscoveryEntry } from './types.js';
 
