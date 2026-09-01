@@ -1,19 +1,9 @@
 import { describe, expect, it, spyOn } from 'bun:test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import {
-  type BuildState,
-  computeBibHash,
-  computeConfigHashes,
-  computeFiltersHash,
-  computeSchemaSourceHash,
-  discoverBibFiles,
-  loadStateFile,
-  persistCompletedState,
-  resolveBibOptions,
-  stateUsableForBuild,
-} from '../builder/state.js';
-import { saveStateFile } from '../builder/state-serialize.js';
+import { computeBibHash, discoverBibFiles, resolveBibOptions } from '../builder/state-bib.js';
+import { computeConfigHashes, computeFiltersHash, computeSchemaSourceHash } from '../builder/state-hash.js';
+import { type BuildState, loadStateFile, persistCompletedState, saveStateFile, stateUsableForBuild } from '../builder/state-serialize.js';
 import type { DiscoveryEntry } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';

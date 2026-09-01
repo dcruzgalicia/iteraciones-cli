@@ -14,7 +14,7 @@ import { PDF_WORK_BASE } from './output-layout.js';
 import type { PdfJob } from './pdf-pool.js';
 import { writeIfChanged } from './pipeline-io.js';
 import { loadPreambleFilters } from './preamble-loader.js';
-import type { resolveBibOptions } from './state.js';
+import type { resolveBibOptions } from './state-bib.js';
 import type { BuildContext } from './types.js';
 
 export interface PipelineSetup {
