@@ -13,13 +13,9 @@ const HTML_CARDS: Record<HtmlBlockKey, string> = {
   footer: 'card-identity-footer.html',
 };
 
-export function resolveBlockOrder(overrides?: HtmlBlockKey[]): HtmlBlockKey[] {
-  return overrides ?? [...DEFAULT_HTML_BLOCKS];
-}
-
 export async function composeHtmlTemplate(siteConfig: SiteConfig): Promise<string> {
   const skeleton = await Bun.file(join(HTML_RESOURCES_DIR, 'skeleton.html')).text();
-  const order = resolveBlockOrder(siteConfig.format?.html?.blocks);
+  const order = siteConfig.format?.html?.blocks ?? [...DEFAULT_HTML_BLOCKS];
   const blocks: string[] = [];
   for (const key of order) {
     const card = await Bun.file(join(HTML_RESOURCES_DIR, HTML_CARDS[key])).text();

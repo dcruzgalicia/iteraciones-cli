@@ -12,7 +12,7 @@ import { plural } from '../lib/plural.js';
 import { buildAssets } from './build-assets.js';
 import { type BuildMetadata, computeBuildMetadata, computeWorkSets, type WorkSets } from './build-planner.js';
 import { cleanupCoverImages, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges } from './cleanup.js';
-import { buildDocsFromIndex, discover, htmlSlugFor, loadPrevState, noPrevState } from './discover.js';
+import { buildDocsFromIndex, discover, htmlSlugFor, loadPrevState } from './discover.js';
 import { validateDisabledFilters } from './filter-resolver.js';
 import { DIST_FILES_DIR, FORMAT_OUTPUT_EXTENSIONS } from './output-layout.js';
 import { type PdfxCacheHandle, runPdfxOutputValidation } from './pdfx-check.js';
@@ -358,7 +358,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
 
   const { siteConfig, effectiveDisabledPreamble } = await resolveEffectiveConfig(cwd);
 
-  const prevState = options.full ? noPrevState() : await loadPrevState(cwd);
+  const prevState = options.full ? null : await loadPrevState(cwd);
   const plan = await computeBuildMetadata(cwd, siteConfig, prevState, effectiveDisabledPreamble, pandocVersion);
   logInvalidations(plan, log);
 

@@ -2,7 +2,7 @@ import { describe, expect, it, spyOn } from 'bun:test';
 import { mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { type DiscoverResultAndPending, discover, loadPrevState, noPrevState } from '../builder/discover.js';
+import { type DiscoverResultAndPending, discover, loadPrevState } from '../builder/discover.js';
 import { persistCompletedState } from '../builder/state-serialize.js';
 
 /**
@@ -37,7 +37,7 @@ function touchFuture(file: string): void {
 /** Un "build" completo en tests: discover + cierre único (#2025). */
 async function buildStep(cwd: string, options?: { full?: boolean }): Promise<Step> {
   const result = await discover(cwd, {
-    ...(options?.full ? { full: true as const, prevState: noPrevState() } : { prevState: await loadPrevState(cwd) }),
+    ...(options?.full ? { full: true as const, prevState: null } : { prevState: await loadPrevState(cwd) }),
   });
   await persistCompletedState(cwd, result.pendingState);
   return result;

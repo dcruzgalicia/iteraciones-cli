@@ -134,40 +134,38 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
   }
 }
 
-function reportClassifiedError(err: unknown, suggestValidate: () => void, suggestDoctor: () => void): void {
-  if (err instanceof ConversionError) {
-    const location = err.sourcePath ? ` en "${err.sourcePath}"` : '';
-    logError(`${err.message}${location}`);
-    if (err.stderr) process.stderr.write(`${err.stderr}\n`);
-    if (err.code === PANDOC_ERROR_CODES.envMissing) suggestDoctor();
-  } else if (err instanceof ProcessSpawnError) {
-    logError(err.message);
-    suggestDoctor();
-  } else if (err instanceof ConfigError) {
-    logError(err.message, 'config');
-    suggestValidate();
-  } else if (err instanceof BuildError) {
-    logError(err.message, 'build');
-    if (err.code === BUILD_ERROR_CODES.frontmatterSyntax) suggestValidate();
-  } else if (err instanceof Error) {
-    logError(err.message);
-  } else {
-    logError('Error desconocido al construir el proyecto.');
-  }
-}
-
 export function reportBuildError(err: unknown, json = false, warnings: string[] = []): void {
   if (json) {
     const message = err instanceof Error ? err.message : String(err);
     process.stdout.write(`${JSON.stringify({ error: message, ...(warnings.length > 0 ? { warnings } : {}) })}\n`);
   }
-  const suggestValidate = (): void => {
-    process.stderr.write("  ejecuta 'iteraciones validate' para más detalle\n");
-  };
-  const suggestDoctor = (): void => {
+  classifyAndReportError(err);
+}
+
+function classifyAndReportError(err: unknown): void {
+  if (err instanceof ConversionError) {
+    const location = err.sourcePath ? ` en "${err.sourcePath}"` : '';
+    logError(`${err.message}${location}`);
+    if (err.stderr) process.stderr.write(`${err.stderr}\n`);
+    if (err.code === PANDOC_ERROR_CODES.envMissing) {
+      process.stderr.write("  ejecuta 'iteraciones doctor' para diagnosticar el entorno\n");
+    }
+  } else if (err instanceof ProcessSpawnError) {
+    logError(err.message);
     process.stderr.write("  ejecuta 'iteraciones doctor' para diagnosticar el entorno\n");
-  };
-  reportClassifiedError(err, suggestValidate, suggestDoctor);
+  } else if (err instanceof ConfigError) {
+    logError(err.message, 'config');
+    process.stderr.write("  ejecuta 'iteraciones validate' para más detalle\n");
+  } else if (err instanceof BuildError) {
+    logError(err.message, 'build');
+    if (err.code === BUILD_ERROR_CODES.frontmatterSyntax) {
+      process.stderr.write("  ejecuta 'iteraciones validate' para más detalle\n");
+    }
+  } else if (err instanceof Error) {
+    logError(err.message);
+  } else {
+    logError('Error desconocido al construir el proyecto.');
+  }
 }
 
 async function buildProjectInfo(cwd: string): Promise<string[]> {
