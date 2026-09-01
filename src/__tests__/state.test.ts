@@ -11,9 +11,9 @@ import {
   loadStateFile,
   persistCompletedState,
   resolveBibOptions,
-  saveStateFile,
   stateUsableForBuild,
 } from '../builder/state.js';
+import { saveStateFile } from '../builder/state-serialize.js';
 import type { DiscoveryEntry } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';

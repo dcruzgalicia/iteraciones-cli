@@ -14,10 +14,7 @@ export {
 } from './state-hash.js';
 export {
   type BuildState,
-  hashFileContent,
-  hashString,
   loadStateFile,
   persistCompletedState,
-  saveStateFile,
   stateUsableForBuild,
 } from './state-serialize.js';
