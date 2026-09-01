@@ -168,3 +168,11 @@
 .smallcaps {
   font-variant: small-caps;
 }
+
+/* ### (h3) se convierte en <div class="subparagraph"> via filtro Lua
+   (html/06-subparagraph.lua). Estilo similar a \subparagraph en LaTeX
+   (KOMA-Script): negrita + itálica. */
+.subparagraph {
+  font-weight: bold;
+  font-style: italic;
+}

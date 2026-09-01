@@ -14,7 +14,6 @@ export {
 } from './state-hash.js';
 export {
   type BuildState,
-  clearStateFile,
   hashFileContent,
   hashString,
   loadStateFile,

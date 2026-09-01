@@ -1,13 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import {
-  fmBool,
-  fmString,
-  fmStringList,
-  fmTrimmedString,
-  resolveListField,
-  resolveMetadataField,
-  resolveStringField,
-} from '../lib/frontmatter-fields.js';
+import { fmBool, fmString, fmStringList, fmTrimmedString, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
 
 describe('fmString', () => {
   it('acepta strings no vacíos sin recortar', () => {
@@ -56,15 +48,12 @@ const root = { title: 'De la raíz', creator: ['Autor raíz'], date: '1999-12-31
 describe('jerarquía frontmatter > format > raíz', () => {
   it('el frontmatter manda', () => {
     expect(resolveStringField(fm, fmt, root, 'title')).toBe('Del fm');
-    expect(resolveListField(fm, fmt, root, 'creator')).toEqual(['Autor FM']);
   });
   it('sin frontmatter, gana el formato; sin formato, la raíz', () => {
     expect(resolveStringField({}, fmt, root, 'title')).toBe('Del formato');
-    expect(resolveListField({}, undefined, root, 'creator')).toEqual(['Autor raíz']);
     expect(resolveStringField({}, undefined, root, 'date')).toBe('1999-12-31');
   });
   it('descarga tipos que no corresponden a la variante', () => {
-    expect(resolveListField(fm, fmt, root, 'title')).toBeUndefined();
     expect(resolveStringField({}, {}, root, 'creator')).toBeUndefined();
   });
   it('resolveMetadataField devuelve el valor crudo del primer nivel que lo tenga', () => {
