@@ -3,7 +3,6 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
   type BuildState,
-  clearStateFile,
   computeBibHash,
   computeConfigHashes,
   computeFiltersHash,
@@ -97,16 +96,7 @@ describe('saveStateFile (atomicidad)', () => {
   });
 });
 
-describe('clearStateFile y persistCompletedState (#2025)', () => {
-  it('clearStateFile elimina el estado sin fallar si no existe', async () => {
-    await withTempDir(async (dir) => {
-      await saveStateFile(dir, makeState());
-      await clearStateFile(dir);
-      expect(await Bun.file(statePath(dir)).exists()).toBe(false);
-      await clearStateFile(dir); // idempotente
-    });
-  });
-
+describe('persistCompletedState (#2025)', () => {
   it('persistCompletedState persiste el cssHash acumulado y marca completado', async () => {
     await withTempDir(async (dir) => {
       const pending = { ...makeState(), cssHash: 'hash-1' };

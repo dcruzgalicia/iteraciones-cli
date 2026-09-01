@@ -59,13 +59,3 @@ export function resolveStringField(
   const value = resolveMetadataField(fm, formatCfg, rootCfg, field);
   return typeof value === 'string' ? value : undefined;
 }
-
-export function resolveListField(
-  fm: Record<string, unknown>,
-  formatCfg: Record<string, unknown> | undefined,
-  rootCfg: Record<string, unknown>,
-  field: string,
-): string[] | undefined {
-  const value = resolveMetadataField(fm, formatCfg, rootCfg, field);
-  return Array.isArray(value) && value.every((v) => typeof v === 'string') ? value : undefined;
-}

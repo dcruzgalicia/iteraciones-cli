@@ -85,10 +85,6 @@ export async function persistCompletedState(cwd: string, pending: BuildState | n
   await saveStateFile(cwd, pending);
 }
 
-export async function clearStateFile(cwd: string): Promise<void> {
-  await rm(join(cwd, STATE_PATH), { force: true }).catch(() => {});
-}
-
 export async function saveStateFile(cwd: string, state: BuildState): Promise<void> {
   const filePath = join(cwd, STATE_PATH);
   await mkdir(dirname(filePath), { recursive: true });
