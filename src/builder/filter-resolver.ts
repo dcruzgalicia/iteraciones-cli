@@ -92,8 +92,8 @@ export function validateDisabledFilters(disabled: string[] | undefined): void {
     const suggestion = suggestFilterName(name);
     logWarning(
       suggestion
-        ? `disabled-filters: "${name}" no existe; ¿quisiste decir "${suggestion}"?`
-        : `disabled-filters: "${name}" no coincide con ningún filter`,
+        ? `disabledFilters: "${name}" no existe; ¿quisiste decir "${suggestion}"?`
+        : `disabledFilters: "${name}" no coincide con ningún filter`,
       'config',
     );
   }

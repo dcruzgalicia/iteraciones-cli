@@ -76,8 +76,8 @@ const ALLOWLIST: Record<string, string> = {
   'pipeline-setup.ts': 'setup compartido y contextos, no composición directa de bytes',
   // pipeline.ts: orquestación de pools
   'pipeline.ts': 'orquestador puro de pools, no composición directa',
-  // cover-image.ts: generación de portadas (pdftoppm)
-  'cover-image.ts': 'generación de portadas con pdftoppm, output derivado no cacheado',
+  // coverImage.ts: generación de portadas (pdftoppm)
+  'coverImage.ts': 'generación de portadas con pdftoppm, output derivado no cacheado',
   // export/types.ts: tipos, sin lógica
   'export/types.ts': 'tipos de export, sin lógica',
   // frontmatter-fields.ts: resolución de campos con precedencia, utility

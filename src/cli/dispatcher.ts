@@ -182,7 +182,7 @@ async function buildProjectInfo(cwd: string): Promise<string[]> {
     .catch(() => false);
   const activeFormats = computeActiveFormats(config.format);
   const disabledFilters = config.disabledFilters?.length ? config.disabledFilters.join(', ') : '(ninguno)';
-  const preambleDisabled = presentKeys.has('format.pdf.disabled-preamble-filters') ? (config.format?.pdf?.disabledPreambleFilters ?? []) : [];
+  const preambleDisabled = presentKeys.has('format.pdf.disabledPreambleFilters') ? (config.format?.pdf?.disabledPreambleFilters ?? []) : [];
   const docCount = (await listMarkdownDocuments(cwd)).length;
   const html = config.format?.html;
   const theme = html?.site?.theme ?? '(por defecto)';

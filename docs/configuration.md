@@ -33,10 +33,10 @@ format:
 
   pdf:
     generate: false               # genera PDF
-    show-date: false               # muestra la fecha en la portada
-    page-number: header-right      # posición del número de página
-    cover-image: false             # genera PNG de la primera página junto al PDF
-    # disabled-preamble-filters:   # preamble filters a desactivar (opcional)
+    showDate: false               # muestra la fecha en la portada
+    pageNumber: header-right      # posición del número de página
+    coverImage: false             # genera PNG de la primera página junto al PDF
+    # disabledPreambleFilters:   # preamble filters a desactivar (opcional)
     #   - 19-maketitle
     # Dublin Core por formato (sobreescribe los valores de la raíz para PDF)
     # creator: ''
@@ -59,13 +59,13 @@ format:
   markdown:
     generate: false               # genera Markdown procesado
 
-# disabled-filters:             # filters a desactivar (opcional)
+# disabledFilters:             # filters a desactivar (opcional)
 #   - semantic/string/01-double-colon
 
 bibliography: refs/mi-libro.bib  # archivo .bib (opcional; auto-descubierto si falta)
 csl: styles/nature.csl           # estilo de citas CSL (opcional; APA-7 si falta)
 
-# lua-filters:                      # filtros Lua de usuario (opcional)
+# luaFilters:                      # filtros Lua de usuario (opcional)
 #   - filters/mi-filtro.lua
 ```
 
@@ -110,14 +110,14 @@ Configuración de la exportación a PDF. Se compila con `latexmk` + `pdflatex` +
 
 Habilita la generación de PDF.
 
-#### `format.pdf.show-date`
+#### `format.pdf.showDate`
 
 **Tipo:** `boolean`
 **Por defecto:** `false`
 
 Muestra la fecha en la portada del PDF. Si es `true` y el frontmatter del documento no declara `date`, se usa la fecha de creación del archivo.
 
-#### `format.pdf.cover-image`
+#### `format.pdf.coverImage`
 
 **Tipo:** `boolean`
 **Por defecto:** `false`
@@ -128,14 +128,14 @@ Genera, junto a cada PDF, una imagen PNG de su primera página (portada) para pr
 format:
   pdf:
     generate: true
-    cover-image: true
+    coverImage: true
 ```
 
 ### Configuración del preámbulo LaTeX
 
 La configuración tipográfica del PDF (márgenes, fuentes, interlineado, idioma, penalizaciones, estilo de secciones, epígrafes, etc.) se gestiona mediante **preamble filters**: archivos `.tex` con contenido LaTeX puro que se insertan en el preámbulo antes de `\begin{document}`.
 
-Los preamble filters se encuentran en `src/lib/resources/preamble/` del paquete y pueden sobrescribirse por proyecto creando archivos con el mismo nombre en `<proyecto>/preamble/`. Para desactivar uno, se usa `format.pdf.disabled-preamble-filters`.
+Los preamble filters se encuentran en `src/lib/resources/preamble/` del paquete y pueden sobrescribirse por proyecto creando archivos con el mismo nombre en `<proyecto>/preamble/`. Para desactivar uno, se usa `format.pdf.disabledPreambleFilters`.
 
 Usa `iteraciones list-filters` para ver la lista completa con sus descripciones y estado.
 
@@ -159,7 +159,7 @@ Consideraciones:
 
 Los campos de configuración que sí son dinámicos (viajan desde `iteraciones.config.yaml`) son:
 
-#### `format.pdf.page-number`
+#### `format.pdf.pageNumber`
 
 **Tipo:** `string`
 **Por defecto:** `'header-right'`
@@ -298,7 +298,7 @@ Habilita la generación de archivos EPUB.
 
 Habilita la exportación a Markdown procesado (con los filters aplicados).
 
-### `disabled-filters`
+### `disabledFilters`
 
 **Tipo:** `string[]`
 **Por defecto:** `undefined` (ninguno desactivado)
@@ -306,12 +306,12 @@ Habilita la exportación a Markdown procesado (con los filters aplicados).
 Lista de filters a desactivar. Cada elemento es el **nombre completo** del filter (ej: `semantic/string/01-double-colon`, `latex/02-dictum`). Usa `iteraciones list-filters` para ver la lista con sus nombres.
 
 ```yaml
-disabled-filters:
+disabledFilters:
   - semantic/string/01-double-colon
   - latex/02-dictum
 ```
 
-### `format.pdf.disabled-preamble-filters`
+### `format.pdf.disabledPreambleFilters`
 
 **Tipo:** `string[]`
 **Por defecto:** `['97-eso-pic', '98-crop', '99-pdfx']`
@@ -323,11 +323,11 @@ Lista de preamble filters a desactivar. Los defaults del paquete desactivan `97-
 ```yaml
 format:
   pdf:
-    disabled-preamble-filters:
+    disabledPreambleFilters:
       - 19-maketitle
 ```
 
-### `lua-filters`
+### `luaFilters`
 
 **Tipo:** `string[]`
 **Por defecto:** `undefined` (sin filtros de usuario)
@@ -335,7 +335,7 @@ format:
 Lista de filtros Lua de usuario. Cada elemento es una ruta relativa al proyecto (ej: `filters/nota.lua`). Los filtros corren en todas las invocaciones de pandoc (markdown → latex/html5/epub3/markdown), antes de los filters de la capa de formato y después de los filtros semánticos. La variable global `FORMAT` de pandoc permite ramificar el comportamiento por formato de salida (`latex`, `html5`, `epub3`, `markdown`). Si una ruta no existe, se muestra una advertencia y se omite.
 
 ```yaml
-lua-filters:
+luaFilters:
   - filters/nota.lua
 ```
 

@@ -65,15 +65,15 @@ describe('loadSiteConfig', () => {
 
   it('traduce las causas YAML conocidas al español (secuencia de flujo sin cerrar)', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'disabled-filters: [01-dictum\n');
+      await writeConfig(dir, 'disabledFilters: [01-dictum\n');
       await expect(loadSiteConfig(dir)).rejects.toThrow(/la secuencia de flujo debe estar bien indentada y terminar con ]/);
     });
   });
 
   it('reporta TODOS los errores de tipo en una sola ejecución (no solo el primero)', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'language: 123\nformat:\n  html:\n    site:\n      theme: raro\n  pdf:\n    page-number: medio\n');
-      await expect(loadSiteConfig(dir)).rejects.toThrow(/language: .*format\.html\.site\.theme: .*format\.pdf\.page-number:/s);
+      await writeConfig(dir, 'language: 123\nformat:\n  html:\n    site:\n      theme: raro\n  pdf:\n    pageNumber: medio\n');
+      await expect(loadSiteConfig(dir)).rejects.toThrow(/language: .*format\.html\.site\.theme: .*format\.pdf\.pageNumber:/s);
     });
   });
 
@@ -127,7 +127,7 @@ describe('loadSiteConfig', () => {
 
   it('lee disabled-filters', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'disabled-filters:\n  - semantic/string/01-double-colon\n  - latex/02-dictum');
+      await writeConfig(dir, 'disabledFilters:\n  - semantic/string/01-double-colon\n  - latex/02-dictum');
       const config = await loadSiteConfig(dir);
       expect(config.disabledFilters).toEqual(['semantic/string/01-double-colon', 'latex/02-dictum']);
     });
@@ -135,7 +135,7 @@ describe('loadSiteConfig', () => {
 
   it('ignora disabled-filters vacío', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'disabled-filters: []');
+      await writeConfig(dir, 'disabledFilters: []');
       const config = await loadSiteConfig(dir);
       expect(config.disabledFilters).toBeUndefined();
     });
@@ -143,7 +143,7 @@ describe('loadSiteConfig', () => {
 
   it('lee disabled-preamble-filters', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'format:\n  pdf:\n    disabled-preamble-filters:\n      - 19-maketitle');
+      await writeConfig(dir, 'format:\n  pdf:\n    disabledPreambleFilters:\n      - 19-maketitle');
       const config = await loadSiteConfig(dir);
       expect(config.format?.pdf?.disabledPreambleFilters).toEqual(['19-maketitle']);
     });
@@ -151,7 +151,7 @@ describe('loadSiteConfig', () => {
 
   it('lee lua-filters', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'lua-filters:\n  - filters/mi-filtro.lua');
+      await writeConfig(dir, 'luaFilters:\n  - filters/mi-filtro.lua');
       const config = await loadSiteConfig(dir);
       expect(config.luaFilters).toEqual(['filters/mi-filtro.lua']);
     });
@@ -225,7 +225,7 @@ describe('loadSiteConfig', () => {
           '    generate: true',
           '  pdf:',
           '    generate: true',
-          '    show-date: true',
+          '    showDate: true',
           '  html:',
           '    site:',
           '      title: Mi Sitio',
@@ -239,7 +239,7 @@ describe('loadSiteConfig', () => {
           '  markdown:',
           '    generate: false',
           'toc: true',
-          'disabled-filters:',
+          'disabledFilters:',
           '  - semantic/string/01-double-colon',
         ].join('\n'),
       );
@@ -418,7 +418,7 @@ describe('loadSiteConfig', () => {
 
   it('lee format.pdf.cover-image y su default es false', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'format:\n  pdf:\n    cover-image: true');
+      await writeConfig(dir, 'format:\n  pdf:\n    coverImage: true');
       const config = await loadSiteConfig(dir);
       expect(config.format.pdf?.coverImage).toBe(true);
     });
@@ -458,11 +458,11 @@ describe('loadSiteConfigIfPresent', () => {
 describe('loadSiteConfigWithPresence', () => {
   it('la clave escrita con valor idéntico al default se distingue de la ausente', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'format:\n  pdf:\n    disabled-preamble-filters:\n      - 97-eso-pic\n');
+      await writeConfig(dir, 'format:\n  pdf:\n    disabledPreambleFilters:\n      - 97-eso-pic\n');
       const { config, presentKeys } = await loadSiteConfigWithPresence(dir);
       // La clave aparece como presente aunque su valor coincida con un default
       // del paquete (el caso que la sustracción de doctor --info no distinguía).
-      expect(presentKeys.has('format.pdf.disabled-preamble-filters')).toBe(true);
+      expect(presentKeys.has('format.pdf.disabledPreambleFilters')).toBe(true);
       expect(config.format?.pdf?.disabledPreambleFilters).toEqual(['97-eso-pic']);
     });
   });
@@ -471,21 +471,21 @@ describe('loadSiteConfigWithPresence', () => {
     await withTempDir(async (dir) => {
       await writeConfig(dir, 'language: es-MX');
       const { config, presentKeys } = await loadSiteConfigWithPresence(dir);
-      expect(presentKeys.has('format.pdf.disabled-preamble-filters')).toBe(false);
+      expect(presentKeys.has('format.pdf.disabledPreambleFilters')).toBe(false);
       expect(config.format?.pdf?.disabledPreambleFilters).toEqual(['97-eso-pic', '98-crop', '99-pdfx']);
     });
   });
 
   it('recoge rutas punteadas de todos los niveles del YAML', async () => {
     await withTempDir(async (dir) => {
-      await writeConfig(dir, 'language: en-US\nformat:\n  pdf:\n    generate: true\n    show-date: true\n');
+      await writeConfig(dir, 'language: en-US\nformat:\n  pdf:\n    generate: true\n    showDate: true\n');
       const { presentKeys } = await loadSiteConfigWithPresence(dir);
       expect(presentKeys.has('language')).toBe(true);
       expect(presentKeys.has('format')).toBe(true);
       expect(presentKeys.has('format.pdf')).toBe(true);
       expect(presentKeys.has('format.pdf.generate')).toBe(true);
-      expect(presentKeys.has('format.pdf.show-date')).toBe(true);
-      expect(presentKeys.has('format.pdf.disabled-preamble-filters')).toBe(false);
+      expect(presentKeys.has('format.pdf.showDate')).toBe(true);
+      expect(presentKeys.has('format.pdf.disabledPreambleFilters')).toBe(false);
     });
   });
 

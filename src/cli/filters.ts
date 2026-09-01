@@ -104,9 +104,9 @@ async function emitPreambleBlock(
   }
   logInfo('');
   if (hasPreambleDisabled) {
-    logInfo('Para reactivar uno, elimínalo de la lista `disabled-preamble-filters:` en iteraciones.config.yaml.');
+    logInfo('Para reactivar uno, elimínalo de la lista `disabledPreambleFilters:` en iteraciones.config.yaml.');
   } else {
-    logInfo('Para desactivar uno, agrégalo a la lista `disabled-preamble-filters:` en iteraciones.config.yaml.');
+    logInfo('Para desactivar uno, agrégalo a la lista `disabledPreambleFilters:` en iteraciones.config.yaml.');
   }
   logInfo('Para sobrescribir un filtro de preámbulo, crea `<proyecto>/preamble/<nombre>.tex` con contenido LaTeX.');
 }
@@ -131,9 +131,9 @@ export async function listFilters(cwd: string, options: RunFiltersOptions = {}):
   emitFilterBlock(stream, allInfos, disabled, options, terminalColumns(stream, options.columns));
   logInfo('');
   if (hasDisabled) {
-    logInfo('Para reactivar uno, elimínalo de la lista `disabled-filters:` en iteraciones.config.yaml.');
+    logInfo('Para reactivar uno, elimínalo de la lista `disabledFilters:` en iteraciones.config.yaml.');
   } else {
-    logInfo('Para desactivar uno, agrégalo a la lista `disabled-filters:` en iteraciones.config.yaml.');
+    logInfo('Para desactivar uno, agrégalo a la lista `disabledFilters:` en iteraciones.config.yaml.');
   }
   logInfo('Para sobrescribir un filtro, crea `<proyecto>/filters/<grupo>/<nombre>.lua` (p. ej. `filters/latex/02-dictum.lua`).');
   await emitPreambleBlock(stream, effectiveDisabledPreamble, options, terminalColumns(stream, options.columns));
