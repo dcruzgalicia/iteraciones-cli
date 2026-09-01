@@ -7,6 +7,8 @@ export interface DiscoveryEntry {
   date?: string;
   slug?: string;
   manualSlug?: string;
+  type?: 'file' | 'collection';
+  files?: string[];
   fm?: Record<string, unknown>;
   mtime?: number;
   size?: number;
@@ -18,6 +20,8 @@ interface Frontmatter {
   subtitle?: string;
   date: string;
   creator: string[];
+  type?: 'file' | 'collection';
+  files?: string[];
 }
 
 export interface BuildDocument {
