@@ -107,7 +107,8 @@ export async function writeEffectiveTemplates(
     await writeIfChanged(state.latexTemplatePath, await composeLatexTemplate({ ...templateOpts, preambleFilters }));
 
     const collectionPreambleFilters = await loadPreambleFilters(effectiveDisabledPreamble, ctx.cwd, 'collection');
-    applyPrintQueueDynamics(collectionPreambleFilters, state.pageDimensions);
+    const collectionPageDimensions = detectPageSize(collectionPreambleFilters);
+    applyPrintQueueDynamics(collectionPreambleFilters, collectionPageDimensions);
     await writeIfChanged(
       state.latexCollectionTemplatePath,
       await composeLatexTemplate({ ...templateOpts, preambleFilters: collectionPreambleFilters }),
