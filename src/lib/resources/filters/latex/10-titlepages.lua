@@ -198,12 +198,12 @@ local function serialize_titleback(blocks)
   return latex:gsub('%s+$', '')
 end
 
--- title-image y publishers-image NO son contenido markdown: son rutas de
+-- title-image y publisher-image NO son contenido markdown: son rutas de
 -- archivo que deben llegar literal a \includegraphics. El writer de pandoc
 -- escaparía el guion bajo (mi_imagen.jpg → mi\_imagen.jpg) y rompería la
 -- búsqueda del archivo. Acepta MetaString (--metadata del CLI) o inlines
 -- Str/Space (frontmatter).
-local RAW_PATH_FIELDS = { 'title-image', 'publishers-image', 'endpapers' }
+local RAW_PATH_FIELDS = { 'title-image', 'publisher-image', 'endpapers' }
 
 local function meta_to_rawpath(meta)
   if type(meta) == 'string' then

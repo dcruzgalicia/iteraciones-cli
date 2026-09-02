@@ -46,7 +46,7 @@ export const KNOWN_FRONTMATTER_FIELDS = [
   'lowertitleback',
   'colophon',
   'title-image',
-  'publishers-image',
+  'publisher-image',
   'endpapers',
   'type',
   'files',

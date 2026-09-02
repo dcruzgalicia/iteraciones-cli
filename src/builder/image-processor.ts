@@ -207,7 +207,7 @@ export function rewriteImagePaths(content: string, imageMap: Map<string, string>
       const escaped = candidate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       result = result.replace(new RegExp(`\\]\\(${escaped}\\)`, 'g'), () => `](${processed})`);
       result = result.replace(
-        new RegExp(`^((?:title-image|publishers-image|endpapers):[ \\t]*)(["']?)${escaped}(["']?[ \\t]*)$`, 'gm'),
+        new RegExp(`^((?:title-image|publisher-image|endpapers):[ \\t]*)(["']?)${escaped}(["']?[ \\t]*)$`, 'gm'),
         (_m, pre: string, openQuote: string, closeQuote: string) => `${pre}${openQuote}${processed}${closeQuote}`,
       );
     }
@@ -249,7 +249,7 @@ async function processDedicatedFrontmatterImages(
   processedFiles: string[],
 ): Promise<void> {
   const tasks: { absPath: string; w: number; h: number; cover: boolean }[] = [];
-  for (const field of ['title-image', 'publishers-image', 'endpapers']) {
+  for (const field of ['title-image', 'publisher-image', 'endpapers']) {
     const value = trimmedStringValue(fm[field]);
     if (!value) continue;
 

@@ -213,8 +213,8 @@ export async function composeLatexTemplate(opts: {
   lines.push('$if(publishers)$');
   lines.push('\\publishers{$publishers$}');
   lines.push('$endif$');
-  lines.push('$if(publishers-image)$');
-  lines.push('\\publishersimage{$publishers-image$}');
+  lines.push('$if(publisher-image)$');
+  lines.push('\\publishersimage{$publisher-image$}');
   lines.push('$endif$');
   lines.push('$if(endpapers)$');
   lines.push('\\setendpapers{$endpapers$}');
