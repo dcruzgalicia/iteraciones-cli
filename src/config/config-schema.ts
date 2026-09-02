@@ -53,6 +53,17 @@ const DublinCoreFieldsSchema = {
   abstract: z.string().optional(),
 };
 
+const TitlePageFieldsSchema = {
+  subtitle: z.string().optional(),
+  extratitle: z.string().optional(),
+  frontispiece: z.string().optional(),
+  titlehead: z.string().optional(),
+  dedication: z.string().optional(),
+  uppertitleback: z.string().optional(),
+  lowertitleback: z.string().optional(),
+  colophon: z.string().optional(),
+};
+
 const HtmlBlocksSchema = z
   .unknown()
   .superRefine((value, ctx) => {
@@ -110,6 +121,7 @@ export const PdfFormatSchema = z
       .transform((v) => (v?.length ? v : undefined)),
     coverImage: z.boolean().default(DEFAULT_PDF_FORMAT.coverImage ?? false),
     ...DublinCoreFieldsSchema,
+    ...TitlePageFieldsSchema,
   })
   .strict();
 
@@ -157,6 +169,7 @@ export const SiteConfigSchema = z
       .optional()
       .transform((v) => (v?.length ? v : undefined)),
     ...DublinCoreFieldsSchema,
+    ...TitlePageFieldsSchema,
   })
   .strict()
   .transform((raw) => ({
