@@ -152,6 +152,16 @@ function buildTitlePageOverrides(
   return overrides;
 }
 
+function yamlScalar(value: string): string {
+  if (!value.includes('\n')) {
+    const escaped = value.replace(/'/g, "''");
+    return `'${escaped}'`;
+  }
+  const lines = value.split('\n');
+  const body = lines.map((l) => `  ${l}`).join('\n');
+  return `|\n${body}`;
+}
+
 function prependFrontmatterYaml(content: string, overrides: Record<string, string>, imageMap: Map<string, string>, docDir: string): string {
   const keys = Object.keys(overrides);
   if (keys.length === 0) return content;
@@ -159,8 +169,7 @@ function prependFrontmatterYaml(content: string, overrides: Record<string, strin
   for (const key of keys) {
     const value = overrides[key];
     if (value === undefined) continue;
-    const escaped = value.replace(/'/g, "''");
-    lines.push(`${key}: '${escaped}'`);
+    lines.push(`${key}: ${yamlScalar(value)}`);
   }
   lines.push('---');
   let yaml = lines.join('\n');
