@@ -170,8 +170,10 @@ async function readCollectionFiles(
 function buildCollectionSectionsLatex(entries: { creator: string[]; title: string; subtitle: string | undefined; body: string }[]): string {
   const parts: string[] = [];
   for (const e of entries) {
-    if (e.creator.length > 0) parts.push(`\\chapter{${e.creator.join(', ')}}`);
-    if (e.title) parts.push(`\\section{${e.title}}`);
+    const creator = e.creator.length > 0 ? e.creator.join(', ') : 'Anónima';
+    const title = e.title || 'Sin título';
+    parts.push(`\\chapter{${creator}}`);
+    parts.push(`\\section{${title}}`);
     if (e.subtitle) parts.push(`\\subsection{${e.subtitle}}`);
     parts.push(e.body.trim());
   }
@@ -181,8 +183,10 @@ function buildCollectionSectionsLatex(entries: { creator: string[]; title: strin
 function buildCollectionSectionsHtml(entries: { creator: string[]; title: string; subtitle: string | undefined; body: string }[]): string {
   const parts: string[] = [];
   for (const e of entries) {
-    if (e.creator.length > 0) parts.push(`<h2>${e.creator.join(', ')}</h2>`);
-    if (e.title) parts.push(`<h3>${e.title}</h3>`);
+    const creator = e.creator.length > 0 ? e.creator.join(', ') : 'Anónima';
+    const title = e.title || 'Sin título';
+    parts.push(`<h2>${creator}</h2>`);
+    parts.push(`<h3>${title}</h3>`);
     if (e.subtitle) parts.push(`<h4>${e.subtitle}</h4>`);
     parts.push(e.body.trim());
   }
@@ -192,8 +196,10 @@ function buildCollectionSectionsHtml(entries: { creator: string[]; title: string
 function buildCollectionSectionsMarkdown(entries: { creator: string[]; title: string; subtitle: string | undefined; body: string }[]): string {
   const parts: string[] = [];
   for (const e of entries) {
-    if (e.creator.length > 0) parts.push(`## ${e.creator.join(', ')}`);
-    if (e.title) parts.push(`### ${e.title}`);
+    const creator = e.creator.length > 0 ? e.creator.join(', ') : 'Anónima';
+    const title = e.title || 'Sin título';
+    parts.push(`## ${creator}`);
+    parts.push(`### ${title}`);
     if (e.subtitle) parts.push(`#### ${e.subtitle}`);
     parts.push(e.body.trim());
   }
