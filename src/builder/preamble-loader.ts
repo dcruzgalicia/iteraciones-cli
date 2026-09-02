@@ -41,12 +41,21 @@ export async function loadPreambleFilters(disabledList?: string[], cwd?: string,
   const result: PreambleFilter[] = [];
   const pkgDir = preamblePkgDir(docType);
   const projectDir = preambleProjectDir(docType);
+  const globalProjectDir = preambleProjectDir('file');
 
   for (const name of getBuiltinPreambleFilterNames()) {
     if (excluded.has(name)) continue;
-    const projectPath = join(cwd ?? '', projectDir, `${name}.tex`);
+    const typeProjectPath = join(cwd ?? '', projectDir, `${name}.tex`);
+    const globalProjectPath = join(cwd ?? '', globalProjectDir, `${name}.tex`);
     const pkgPath = join(pkgDir, `${name}.tex`);
-    const path = cwd && (await Bun.file(projectPath).exists()) ? projectPath : pkgPath;
+    let path = pkgPath;
+    if (cwd) {
+      if (await Bun.file(typeProjectPath).exists()) {
+        path = typeProjectPath;
+      } else if (await Bun.file(globalProjectPath).exists()) {
+        path = globalProjectPath;
+      }
+    }
     const content = await Bun.file(path).text();
     result.push({ name, content });
   }
