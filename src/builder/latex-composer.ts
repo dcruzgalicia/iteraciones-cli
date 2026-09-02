@@ -132,23 +132,37 @@ async function pushCoverImageMetadata(
   }
 }
 
-function pushTitlePageMetadata(
-  extraArgs: string[],
+function buildTitlePageOverrides(
   fm: Record<string, unknown>,
   formatCfg: Record<string, unknown> | undefined,
   siteConfig: SiteConfig,
   doc: BuildDocument,
-): void {
+): Record<string, string> {
+  const overrides: Record<string, string> = {};
   for (const field of TITLE_PAGE_FIELDS) {
     const resolved = resolveMetadataField(fm, formatCfg, siteConfig, field);
     if (resolved !== undefined) {
       const shouldInject = doc.frontmatter.type === 'collection' || fm[field] === undefined;
       if (shouldInject) {
         const joined = Array.isArray(resolved) ? resolved.join(', ') : resolved;
-        if (joined) extraArgs.push(`--metadata=${field}:${joined}`);
+        if (joined) overrides[field] = joined;
       }
     }
   }
+  return overrides;
+}
+
+function prependFrontmatterYaml(content: string, overrides: Record<string, string>, imageMap: Map<string, string>, docDir: string): string {
+  const keys = Object.keys(overrides);
+  if (keys.length === 0) return content;
+  const lines = ['---'];
+  for (const key of keys) {
+    lines.push(`${key}: "${overrides[key]}"`);
+  }
+  lines.push('---');
+  let yaml = lines.join('\n');
+  yaml = rewriteImagePaths(yaml, imageMap, docDir);
+  return `${yaml}\n${content}`;
 }
 
 export async function markdownToLatex(
@@ -202,10 +216,12 @@ export async function markdownToLatex(
   if (publishers) extraArgs.push(...publisherArg(publishers));
   const date = await pdfDate(fm, siteConfig, doc);
   extraArgs.push(...dateArg(date));
-  pushTitlePageMetadata(extraArgs, fm, formatCfg, siteConfig, doc);
+
+  const titleOverrides = buildTitlePageOverrides(fm, formatCfg, siteConfig, doc);
+  const pandocContent = prependFrontmatterYaml(finalContent, titleOverrides, imageMap, dirname(doc.filePath));
 
   const tex = await execPandoc({
-    input: finalContent,
+    input: pandocContent,
     sourcePath: doc.filePath,
     from: MD_READER,
     to: 'latex',
