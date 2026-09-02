@@ -14,6 +14,18 @@ import { babelOptionsForLang, pageNumberCommandFor } from './latex-preamble.js';
 import { creatorArgs, dateArg, publisherArg, titleArg } from './pandoc-metadata.js';
 import type { BuildDocument } from './types.js';
 
+const TITLE_PAGE_FIELDS = [
+  'subtitle',
+  'extratitle',
+  'frontispiece',
+  'titlehead',
+  'subject',
+  'dedication',
+  'uppertitleback',
+  'lowertitleback',
+  'colophon',
+];
+
 function rawFrontmatterDate(fm: Record<string, unknown>): string | undefined {
   return typeof fm.date === 'string' && fm.date.trim() ? fm.date.trim() : undefined;
 }
@@ -120,6 +132,25 @@ async function pushCoverImageMetadata(
   }
 }
 
+function pushTitlePageMetadata(
+  extraArgs: string[],
+  fm: Record<string, unknown>,
+  formatCfg: Record<string, unknown> | undefined,
+  siteConfig: SiteConfig,
+  doc: BuildDocument,
+): void {
+  for (const field of TITLE_PAGE_FIELDS) {
+    const resolved = resolveMetadataField(fm, formatCfg, siteConfig, field);
+    if (resolved !== undefined) {
+      const shouldInject = doc.frontmatter.type === 'collection' || fm[field] === undefined;
+      if (shouldInject) {
+        const joined = Array.isArray(resolved) ? resolved.join(', ') : resolved;
+        if (joined) extraArgs.push(`--metadata=${field}:${joined}`);
+      }
+    }
+  }
+}
+
 export async function markdownToLatex(
   content: string,
   doc: BuildDocument,
@@ -171,6 +202,7 @@ export async function markdownToLatex(
   if (publishers) extraArgs.push(...publisherArg(publishers));
   const date = await pdfDate(fm, siteConfig, doc);
   extraArgs.push(...dateArg(date));
+  pushTitlePageMetadata(extraArgs, fm, formatCfg, siteConfig, doc);
 
   const tex = await execPandoc({
     input: finalContent,
