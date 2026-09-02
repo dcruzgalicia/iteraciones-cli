@@ -71,6 +71,7 @@ async function emitLatexAndQueuePdf(
     templatePath: doc.frontmatter.type === 'collection' ? exportCtx.latexCollectionTemplatePath : exportCtx.latexTemplatePath,
     fm,
     siteConfig: ctx.siteConfig,
+    formatCfg: formatCfg?.pdf,
     biblatexAvailable: exportCtx.biblatexAvailable,
     warnedLangs,
     pageDimensions: renderCtx.pageDimensions,
