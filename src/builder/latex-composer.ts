@@ -89,7 +89,7 @@ async function pushCoverImageMetadata(
   doc: BuildDocument,
   imageMap: Map<string, string>,
 ): Promise<void> {
-  for (const field of ['title-image', 'publishers-image', 'endpapers']) {
+  for (const field of ['title-image', 'publisher-image', 'endpapers']) {
     const value = trimmedStringValue(fm[field]);
     if (!value) continue;
     const imagePath = isAbsolute(value) ? value : resolve(dirname(doc.filePath), value);

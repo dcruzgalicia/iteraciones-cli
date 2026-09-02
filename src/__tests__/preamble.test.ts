@@ -224,7 +224,7 @@ describe('composeLatexTemplate', () => {
     expect(tpl).toContain('$if(uppertitleback)$\n\\uppertitleback{$uppertitleback$}\n$endif$');
     expect(tpl).toContain('$if(lowertitleback)$\n\\lowertitleback{$lowertitleback$}\n$endif$');
     expect(tpl).toContain('$if(publishers)$\n\\publishers{$publishers$}\n$endif$');
-    expect(tpl).toContain('$if(publishers-image)$\n\\publishersimage{$publishers-image$}\n$endif$');
+    expect(tpl).toContain('$if(publisher-image)$\n\\publishersimage{$publisher-image$}\n$endif$');
   });
 
   it('emite el vspace post-portada solo con párrafo normal (skip-paragraph-space)', async () => {
@@ -309,7 +309,7 @@ describe('composeLatexTemplate', () => {
     expect(titlepages).not.toContain('$body$');
   });
 
-  it('28-titlepages: title-image abre el colofón (50% textwidth) y publishers-image lo cierra (25% textwidth)', async () => {
+  it('28-titlepages: title-image abre el colofón (50% textwidth) y publisher-image lo cierra (25% textwidth)', async () => {
     const filters = await loadPreambleFilters();
     const titlepages = filters.find((f) => f.name === '28-titlepages')?.content ?? '';
     const colophon = titlepages.slice(titlepages.indexOf('\\newcommand{\\colophonpage}{%'));
@@ -434,7 +434,7 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(maketitle).toContain('\\titleimagerender{\\@titleimage}');
     expect(maketitle).toContain('\\publishersimage');
     expect(maketitle).toContain('\\ifx\\@publishersimage\\@empty');
-    // publishers-image: la imagen sustituye al texto (máx. 150pt ≈ 150px)
+    // publisher-image: la imagen sustituye al texto (máx. 150pt ≈ 150px)
     expect(maketitle).toContain('\\titleimagerender[150pt]{\\@publishersimage}');
     // Max-width configurable: default 0.8 textwidth (portada) y
     // [\extratitlewidth] (100% del ancho del bloque) en la página de extratitle

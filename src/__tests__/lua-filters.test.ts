@@ -628,7 +628,7 @@ describe.skipIf(!pandocOk)('filter latex/10-titlepages (páginas de título inte
         '$if(uppertitleback)$\\uppertitleback{$uppertitleback$}$endif$\n' +
         '$if(lowertitleback)$\\lowertitleback{$lowertitleback$}$endif$\n' +
         '$if(publishers)$\\publishers{$publishers$}$endif$\n' +
-        '$if(publishers-image)$\\publishersimage{$publishers-image$}$endif$\n' +
+        '$if(publisher-image)$\\publishersimage{$publisher-image$}$endif$\n' +
         '$if(endpapers)$\\setendpapers{$endpapers$}$endif$\n' +
         '$if(colophon)$\\colophon{$colophon$}$endif$\n' +
         '$if(title-image)$\\titleimage{$title-image$}$endif$\n' +
@@ -699,8 +699,8 @@ describe.skipIf(!pandocOk)('filter latex/10-titlepages (páginas de título inte
     expect(tex).not.toContain('\\_');
   });
 
-  it('publishers-image pasa la ruta literal (sin escapar el guion bajo)', async () => {
-    const tex = await toLatexTitleback('---\ntitle: Prueba\npublishers-image: ./logo_editorial.png\n---\n\nCuerpo.\n');
+  it('publisher-image pasa la ruta literal (sin escapar el guion bajo)', async () => {
+    const tex = await toLatexTitleback('---\ntitle: Prueba\npublisher-image: ./logo_editorial.png\n---\n\nCuerpo.\n');
     expect(tex).toContain('\\publishersimage{./logo_editorial.png}');
     expect(tex).not.toContain('\\_');
   });
