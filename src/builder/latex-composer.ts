@@ -2,7 +2,7 @@ import { dirname, isAbsolute, join, resolve } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
-import { fmStringList, trimmedStringValue } from '../lib/frontmatter-fields.js';
+import { fmStringList, resolveMetadataField, trimmedStringValue } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { execPandoc, MD_READER } from '../lib/pandoc-runner.js';
 import { parseAuthors } from './discover.js';
@@ -53,6 +53,7 @@ interface LatexComposerOptions {
   templatePath: string;
   fm: Record<string, unknown>;
   siteConfig: SiteConfig;
+  formatCfg?: Record<string, unknown>;
   biblatexAvailable?: boolean;
   warnedLangs: Set<string>;
   pageDimensions?: PageDimensions;
@@ -130,6 +131,7 @@ export async function markdownToLatex(
     templatePath,
     fm,
     siteConfig,
+    formatCfg,
     biblatexAvailable = true,
     warnedLangs,
     pageDimensions,
@@ -165,7 +167,7 @@ export async function markdownToLatex(
   extraArgs.push(titleArg(title));
   await pushCoverImageMetadata(extraArgs, fm, doc, imageMap);
   extraArgs.push(...creatorArgs(creator));
-  const publishers = fmStringList(fm.publisher);
+  const publishers = fmStringList(resolveMetadataField(fm, formatCfg, siteConfig, 'publisher'));
   if (publishers) extraArgs.push(...publisherArg(publishers));
   const date = await pdfDate(fm, siteConfig, doc);
   extraArgs.push(...dateArg(date));
