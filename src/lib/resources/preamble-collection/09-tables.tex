@@ -1,0 +1,12 @@
+% Paquetes de tablas (longtable, booktabs, array, calc)
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{calc}
+
+% pandoc envuelve las tablas SIN caption en {\def\LTcaptype{none} ...} y
+% longtable ejecuta \refstepcounter{none}: sin el contador, falla con 'No
+% counter "none" defined' (y hyperref avisaba 'Counter none ... No target').
+% El contador dummy hace que la tabla sin caption compile; no se muestra
+% número (no hay caption).
+\newcounter{none}

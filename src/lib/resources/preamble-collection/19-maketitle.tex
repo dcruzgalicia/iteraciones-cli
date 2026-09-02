@@ -1,0 +1,217 @@
+% Personaliza \maketitle: 1+2 baselineskip, titulo en mayusculas, y las
+% páginas de título internas (extratitle, uppertitleback, lowertitleback,
+% dedication) definidas en 28-titlepages.tex.
+%
+% Orden de páginas:
+%   extratitle (pág 1, bloque del 75% del ancho centrado con
+%   \vspace*{7\baselineskip} antes)
+%   → portada (impar) → titlebacks (reverso, twoside; el \vfill ancla el
+%   lowertitleback al fondo, sin minipage) → dedication (página impar
+%   siguiente, bloque del 50% del ancho alineado a la derecha como el dictum,
+%   con \vspace*{7\baselineskip} antes).
+% \titlepage@next/\titlepage@nextdouble (28-titlepages.tex): \clearpage +
+% \thispagestyle{empty} (+ página impar en twoside), SIN el \setparsizes
+% de \next@tpage (que dejaría \parindent a 0 en todo el documento).
+%
+% KOMA define \subtitle con \newcommand* (no-long): una línea en blanco en el
+% argumento (párrafo del frontmatter |) rompe la compilación con 'Paragraph
+% ended before \subtitle was complete'. Se redefine como long (\renewcommand
+% sin estrella) para permitir subtítulos multilínea con párrafos.
+% title-image (campo del frontmatter, solo LaTeX/PDF): imagen que sustituye al
+% texto del título en la portada. graphicx NO venía cargado en el preamble.
+\usepackage{graphicx}
+\makeatletter
+\renewcommand{\subtitle}[1]{\gdef\@subtitle{%
+    #1%
+}}%
+\newcommand*{\@titleimage}{}%
+\newcommand{\titleimage}[1]{\gdef\@titleimage{%
+    #1%
+}}%
+\newcommand*{\@publishersimage}{}%
+\newcommand{\publishersimage}[1]{\gdef\@publishersimage{%
+    #1%
+}}%
+
+% Render de la imagen de portada con ancho MÁXIMO del 80% del textwidth: se
+% mide el ancho natural con un \sbox; si supera el 80% se escala conservando
+% la proporción, si no se muestra a tamaño natural (no se amplía).
+\newsavebox{\titleimagebox}
+% Render de la imagen de portada con ancho MÁXIMO configurable: #1 (opcional,
+% por defecto 0.8\textwidth) es el ancho máximo y #2 la ruta. Se mide el ancho
+% natural con un \sbox; si supera el máximo se escala conservando la
+% proporción, si no se muestra a tamaño natural (no se amplía). La portada usa
+% el default; la página de extratitle pasa [\extratitlewidth] (100% del ancho
+% del bloque).
+\newcommand{\titleimagerender}[2][0.8\textwidth]{%
+  \sbox{\titleimagebox}{\includegraphics{#2}}%
+  \ifdim\wd\titleimagebox>#1
+    \includegraphics[width=#1,keepaspectratio]{#2}%
+  \else
+    \usebox{\titleimagebox}%
+  \fi
+}
+
+% Bloques de las páginas de título con la geometría del dictum (21-dictum.tex):
+% list con márgenes dados (#1 izquierdo, #2 derecho) y sin espaciado extra.
+% #3 es el estilo del párrafo (\centering, \raggedright o vacío = justificado):
+% el extratitle centra su texto, la dedication lo justifica.
+% Geometría propia para no crear dependencia con 21-dictum.tex.
+\newcommand*{\extratitlewidth}{0.75\textwidth}%
+\newcommand*{\dedicationwidth}{0.5\textwidth}%
+\newcommand*{\colophonwidth}{0.75\textwidth}%
+\newcommand{\titlepageblock}[4]{%
+  \par
+  \begin{list}{}{%
+      \leftmargin=#1
+      \rightmargin=#2
+      \itemsep=\z@
+      \parsep=\z@
+      \partopsep=\z@
+      \topsep=\z@
+      \listparindent=\z@
+      \itemindent=\z@
+    }%
+    \item\relax
+    {#3 #4\par}%
+  \end{list}%
+}
+
+% Dos páginas en blanco (1 y 2) antes de la página de extratitle: el libro
+% abre con hojas de guarda y la extratitle queda en la página 3 (impar).
+% Cada \null evita que la página sea vacía (\clearpage de una página sin
+% contenido no la emite en algunos casos). Sin número: los layers de
+% scrlayer-scrpage están vacíos hasta que el comando de página se define.
+% \titlepageguards: true si las hojas de guarda existen — 30-endpapers.tex
+% la consulta para dibujar el endpaper SOLO sobre la página 1 cuando esta es
+% la hoja en blanco (sin guardas, sin endpaper en ningún caso).
+\newif\iftitlepageguards
+\newcommand{\titlepageblanks}{%
+  \titlepageguardstrue
+  \null\clearpage
+  \null\clearpage
+}
+\renewcommand{\maketitle}{%
+  % Página de extratitle (pág 3, centrada horizontal y verticalmente): existe
+  % si hay extratitle, title-image o frontispiece. Con solo frontispiece, la
+  % página se llena por defecto con el título.
+  % Centrado vertical con \vbox to \textheight: el \vspace*{\fill} entre
+  % bloques dejaba el contenido ~9-17pt fuera del centro (interacción con el
+  % page builder y el strut); dentro del vbox los \vfill reparten el espacio
+  % exactamente. No confina el ancho (no es minipage).
+  \ifx\@titleimage\@empty
+    \ifx\@extratitle\@empty
+      \ifx\@frontispiece\@empty
+        % sin página de extratitle
+      \else
+        \titlepageblanks
+        \vbox to \textheight{%
+          \vfill
+          {\centering\parindent\z@\@title\par}%
+          \vfill
+        }%
+        \titlepage@next
+      \fi
+    \else
+      \titlepageblanks
+      \vbox to \textheight{%
+        \vspace*{10\baselineskip}%
+        \titlepageblock
+          {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
+          {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
+          {\centering}%
+          {\@extratitle}%
+        \vfill
+      }%
+      \ifx\@frontispiece\@empty
+        \titlepage@nextdouble
+      \else
+        \titlepage@next
+      \fi
+    \fi
+  \else
+    % title-image definido: la imagen sustituye al contenido de extratitle
+    % (hasta el 100% del ancho del bloque, \extratitlewidth).
+    \titlepageblanks
+    \vbox to \textheight{%
+      \vspace*{10\baselineskip}%
+      {\centering\titleimagerender[\extratitlewidth]{\@titleimage}\par}%
+      \vfill
+    }%
+    \ifx\@frontispiece\@empty
+      \titlepage@nextdouble
+    \else
+      \titlepage@next
+    \fi
+  \fi
+  % Frontispicio: página anterior a la portada, con relleno vertical antes
+  % del contenido para que quede anclado al fondo.
+  \ifx\@frontispiece\@empty\else
+    \vspace*{\fill}%
+    {\centering\parindent\z@\@frontispiece\par}%
+    \titlepage@next
+  \fi
+  \thispagestyle{empty}%
+  \vspace*{\baselineskip}%
+  \ifx\@author\@empty
+    \vskip 2\baselineskip%
+  \else
+    {\centering\usekomafont{author}{\renewcommand{\and}{\unskip, \ignorespaces}\@author\par}}%
+    \vskip 1\baselineskip
+  \fi
+  \ifx\@titleimage\@empty
+    {\centering\usekomafont{title}{\MakeUppercase{\@title}\par}}%
+  \else
+    {\centering\titleimagerender{\@titleimage}\par}%
+  \fi
+  \ifx\@subtitle\@empty\else
+    \vskip 1\baselineskip
+    {\centering\usekomafont{subtitle}\parindent\z@\@subtitle\par}%
+  \fi
+  \ifx\@subject\@empty\else
+    \vskip 1\baselineskip
+    {\centering\parindent\z@\@subject\par}%
+  \fi
+  \ifx\@date\@empty\else
+    \vskip 1\baselineskip
+    {\centering\usekomafont{date}{\@date\par}}%
+  \fi
+  \ifx\@titlehead\@empty\else
+    \vskip 2\baselineskip
+    {\centering\parindent\z@\@titlehead\par}%
+  \fi
+  \ifx\@publishersimage\@empty
+    \ifx\@publishers\@empty\else
+      \vskip 2\baselineskip
+      {\centering\parindent\z@\@publishers\par}%
+    \fi
+  \else
+    % publishers-image definido: la imagen sustituye al texto de publishers
+    % (máx. 150pt ≈ 150px a 72dpi, ajustable).
+    \vskip 2\baselineskip
+    {\centering\titleimagerender[150pt]{\@publishersimage}\par}%
+  \fi
+  \if@twoside
+    \@tempswatrue
+    \ifx\@uppertitleback\@empty\ifx\@lowertitleback\@empty
+      \@tempswafalse
+    \fi\fi
+    \if@tempswa
+      \titlepage@next
+      {\titlebackformat\@uppertitleback\par}%
+      \vfill
+      {\titlebackformat\@lowertitleback\par}%
+    \fi
+  \fi
+  \ifx\@dedication\@empty\else
+    \titlepage@nextdouble
+    \vspace*{7\baselineskip}%
+    \titlepageblock
+      {\dimexpr\linewidth-\dedicationwidth\relax}%
+      {\z@}%
+      {}%
+      {\@dedication}%
+    \clearpage
+  \fi
+}
+\makeatother

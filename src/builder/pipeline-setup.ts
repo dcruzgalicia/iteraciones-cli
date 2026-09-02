@@ -59,6 +59,7 @@ export interface EffectiveTemplates {
   pageDimensions: { w: number; h: number; textW: number } | undefined;
   htmlTemplatePath: string;
   latexTemplatePath: string;
+  latexCollectionTemplatePath: string;
   refsCardTemplate: string;
 }
 
@@ -77,6 +78,7 @@ export async function writeEffectiveTemplates(
     pageDimensions: undefined,
     htmlTemplatePath: '',
     latexTemplatePath: '',
+    latexCollectionTemplatePath: '',
     refsCardTemplate: '',
   };
 
@@ -84,26 +86,31 @@ export async function writeEffectiveTemplates(
   await mkdir(templatesDir, { recursive: true });
   state.htmlTemplatePath = join(templatesDir, 'html.html');
   state.latexTemplatePath = join(templatesDir, 'latex.tex');
+  state.latexCollectionTemplatePath = join(templatesDir, 'latex-collection.tex');
   state.refsCardTemplate = await loadReferencesCardTemplate();
 
   if (htmlOn) {
     await writeIfChanged(state.htmlTemplatePath, await composeHtmlTemplate(siteConfig));
   }
   if (plan.generateLatex) {
-    const preambleFilters = await loadPreambleFilters(effectiveDisabledPreamble, ctx.cwd);
+    const preambleFilters = await loadPreambleFilters(effectiveDisabledPreamble, ctx.cwd, 'file');
     state.biblatexAvailable = preambleFilters.some((f) => f.name === '11-bibliography');
     state.pdfxActive = preambleFilters.some((f) => f.name === '99-pdfx');
     state.cropActive = preambleFilters.some((f) => f.name === '98-crop');
     state.pageDimensions = detectPageSize(preambleFilters);
     applyPrintQueueDynamics(preambleFilters, state.pageDimensions);
+    const templateOpts = {
+      pageNumber: siteConfig.format?.pdf?.pageNumber ?? DEFAULT_SITE_CONFIG.format.pdf.pageNumber,
+      toc: siteConfig.toc,
+      bibFiles,
+    };
+    await writeIfChanged(state.latexTemplatePath, await composeLatexTemplate({ ...templateOpts, preambleFilters }));
+
+    const collectionPreambleFilters = await loadPreambleFilters(effectiveDisabledPreamble, ctx.cwd, 'collection');
+    applyPrintQueueDynamics(collectionPreambleFilters, state.pageDimensions);
     await writeIfChanged(
-      state.latexTemplatePath,
-      await composeLatexTemplate({
-        pageNumber: siteConfig.format?.pdf?.pageNumber ?? DEFAULT_SITE_CONFIG.format.pdf.pageNumber,
-        toc: siteConfig.toc,
-        preambleFilters,
-        bibFiles,
-      }),
+      state.latexCollectionTemplatePath,
+      await composeLatexTemplate({ ...templateOpts, preambleFilters: collectionPreambleFilters }),
     );
   }
   return state;
@@ -136,6 +143,7 @@ export interface ExportContext {
   pdfWorkDir: string;
   htmlTemplatePath: string;
   latexTemplatePath: string;
+  latexCollectionTemplatePath: string;
   refsCardTemplate: string;
 }
 
@@ -178,6 +186,7 @@ export async function buildPoolContexts(
     pdfWorkDir: join(ctx.cwd, PDF_WORK_BASE),
     htmlTemplatePath: templates.htmlTemplatePath,
     latexTemplatePath: templates.latexTemplatePath,
+    latexCollectionTemplatePath: templates.latexCollectionTemplatePath,
     refsCardTemplate: templates.refsCardTemplate,
   };
   const formatWorkSets: FormatWorkSets = {

@@ -1,0 +1,17 @@
+% Redefine el entorno quote con margen izquierdo de 4em y espaciado tipográfico
+\makeatletter
+\renewenvironment{quote}{%
+  \@nobreakfalse
+  \list{}{%
+    \itemsep=\z@
+    \parsep=\z@
+    \partopsep=\z@
+    \topsep=\baselineskip
+    \leftmargin=4em
+    \rightmargin=0pt
+  }%
+  \item\relax
+}{%
+  \endlist
+}
+\makeatother

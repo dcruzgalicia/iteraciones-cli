@@ -2,7 +2,18 @@ import { join } from 'node:path';
 import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 
+export type PreambleDocType = 'file' | 'collection';
+
 const PKG_PREAMBLE_DIR = join(import.meta.dir, '../lib/resources/preamble');
+const PKG_PREAMBLE_COLLECTION_DIR = join(import.meta.dir, '../lib/resources/preamble-collection');
+
+function preamblePkgDir(docType: PreambleDocType): string {
+  return docType === 'collection' ? PKG_PREAMBLE_COLLECTION_DIR : PKG_PREAMBLE_DIR;
+}
+
+function preambleProjectDir(docType: PreambleDocType): string {
+  return docType === 'collection' ? 'preamble-collection' : 'preamble';
+}
 
 let builtinPreambleNames: string[] | null = null;
 
@@ -25,14 +36,16 @@ interface PreambleFilterInfo {
   description: string;
 }
 
-export async function loadPreambleFilters(disabledList?: string[], cwd?: string): Promise<PreambleFilter[]> {
+export async function loadPreambleFilters(disabledList?: string[], cwd?: string, docType: PreambleDocType = 'file'): Promise<PreambleFilter[]> {
   const excluded = new Set(disabledList ?? []);
   const result: PreambleFilter[] = [];
+  const pkgDir = preamblePkgDir(docType);
+  const projectDir = preambleProjectDir(docType);
 
   for (const name of getBuiltinPreambleFilterNames()) {
     if (excluded.has(name)) continue;
-    const projectPath = join(cwd ?? '', 'preamble', `${name}.tex`);
-    const pkgPath = join(PKG_PREAMBLE_DIR, `${name}.tex`);
+    const projectPath = join(cwd ?? '', projectDir, `${name}.tex`);
+    const pkgPath = join(pkgDir, `${name}.tex`);
     const path = cwd && (await Bun.file(projectPath).exists()) ? projectPath : pkgPath;
     const content = await Bun.file(path).text();
     result.push({ name, content });
