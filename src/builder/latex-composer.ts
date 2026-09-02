@@ -157,7 +157,10 @@ function prependFrontmatterYaml(content: string, overrides: Record<string, strin
   if (keys.length === 0) return content;
   const lines = ['---'];
   for (const key of keys) {
-    lines.push(`${key}: "${overrides[key]}"`);
+    const value = overrides[key];
+    if (value === undefined) continue;
+    const escaped = value.replace(/'/g, "''");
+    lines.push(`${key}: '${escaped}'`);
   }
   lines.push('---');
   let yaml = lines.join('\n');
