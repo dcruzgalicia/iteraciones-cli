@@ -36,23 +36,15 @@
     \g@addto@macro\@publishersimagelist{,#1}%
   \fi
 }%
-\def\@renderpublishersimages#1,{%
-  \ifx\@nil#1%
-    \let\next\relax
-  \else
-    \titleimagerender[150pt]{#1}%
-    \let\next\@renderpublishersimages
-  \fi
-  \next
+\newcommand{\@renderpublishersimages}{%
+  \@for\@img:=\@publishersimagelist\do{%
+    \titleimagerender[150pt]{\@img}%
+  }%
 }%
-\def\@renderpublishersimages@small#1,{%
-  \ifx\@nil#1%
-    \let\next\relax
-  \else
-    \titleimagerender[0.25\textwidth]{#1}%
-    \let\next\@renderpublishersimages@small
-  \fi
-  \next
+\newcommand{\@renderpublishersimages@small}{%
+  \@for\@img:=\@publishersimagelist\do{%
+    \titleimagerender[0.25\textwidth]{\@img}%
+  }%
 }%
 
 % Render de la imagen de portada con ancho MÁXIMO del 80% del textwidth: se
@@ -211,7 +203,7 @@
     % publisher-image definido: la imagen sustituye al texto de publishers
     % (máx. 150pt ≈ 150px a 72dpi, ajustable). Soporta múltiples imágenes.
     \vskip 2\baselineskip
-    {\centering\expandafter\@renderpublishersimages\@publishersimagelist,\@nil\par}%
+    {\centering\@renderpublishersimages\par}%
   \fi
   \if@twoside
     \@tempswatrue
