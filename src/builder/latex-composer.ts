@@ -83,20 +83,39 @@ async function preprocessDocumentImages(
   return { imageMap: result.imageMap, processedImages: result.processedFiles, finalContent: rewriteImagePaths(content, result.imageMap, docDir) };
 }
 
+async function resolveAndPushImage(
+  extraArgs: string[],
+  field: string,
+  value: string,
+  doc: BuildDocument,
+  imageMap: Map<string, string>,
+): Promise<void> {
+  const imagePath = isAbsolute(value) ? value : resolve(dirname(doc.filePath), value);
+  if (!(await Bun.file(imagePath).exists())) {
+    throw new BuildError(`${field} no encontrado: "${imagePath}" (resuelto desde "${value}")`);
+  }
+  extraArgs.push(`--metadata=${field}:${imageMap.get(imagePath) ?? imagePath}`);
+}
+
 async function pushCoverImageMetadata(
   extraArgs: string[],
   fm: Record<string, unknown>,
   doc: BuildDocument,
   imageMap: Map<string, string>,
 ): Promise<void> {
-  for (const field of ['title-image', 'publisher-image', 'endpapers']) {
+  for (const field of ['title-image', 'endpapers']) {
     const value = trimmedStringValue(fm[field]);
-    if (!value) continue;
-    const imagePath = isAbsolute(value) ? value : resolve(dirname(doc.filePath), value);
-    if (!(await Bun.file(imagePath).exists())) {
-      throw new BuildError(`${field} no encontrado: "${imagePath}" (resuelto desde "${value}")`);
-    }
-    extraArgs.push(`--metadata=${field}:${imageMap.get(imagePath) ?? imagePath}`);
+    if (value) await resolveAndPushImage(extraArgs, field, value, doc, imageMap);
+  }
+
+  const pubImageRaw = fm['publisher-image'];
+  const pubImages: string[] = Array.isArray(pubImageRaw)
+    ? pubImageRaw.filter((v): v is string => typeof v === 'string')
+    : typeof pubImageRaw === 'string' && pubImageRaw.trim()
+      ? [pubImageRaw]
+      : [];
+  for (const value of pubImages) {
+    await resolveAndPushImage(extraArgs, 'publisher-image', value, doc, imageMap);
   }
 }
 
