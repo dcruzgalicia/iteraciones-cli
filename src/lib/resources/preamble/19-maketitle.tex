@@ -28,10 +28,32 @@
 \newcommand{\titleimage}[1]{\gdef\@titleimage{%
     #1%
 }}%
-\newcommand*{\@publishersimage}{}%
-\newcommand{\publishersimage}[1]{\gdef\@publishersimage{%
-    #1%
-}}%
+\newcommand*{\@publishersimagelist}{}%
+\newcommand{\publishersimage}[1]{%
+  \ifx\@publishersimagelist\@empty
+    \gdef\@publishersimagelist{#1}%
+  \else
+    \g@addto@macro\@publishersimagelist{,#1}%
+  \fi
+}%
+\def\@renderpublishersimages#1,{%
+  \ifx\@nil#1%
+    \let\next\relax
+  \else
+    \titleimagerender[150pt]{#1}%
+    \let\next\@renderpublishersimages
+  \fi
+  \next
+}%
+\def\@renderpublishersimages@small#1,{%
+  \ifx\@nil#1%
+    \let\next\relax
+  \else
+    \titleimagerender[0.25\textwidth]{#1}%
+    \let\next\@renderpublishersimages@small
+  \fi
+  \next
+}%
 
 % Render de la imagen de portada con ancho MÁXIMO del 80% del textwidth: se
 % mide el ancho natural con un \sbox; si supera el 80% se escala conservando
@@ -180,16 +202,16 @@
     \vskip 2\baselineskip
     {\centering\parindent\z@\@titlehead\par}%
   \fi
-  \ifx\@publishersimage\@empty
+  \ifx\@publishersimagelist\@empty
     \ifx\@publishers\@empty\else
       \vskip 2\baselineskip
       {\centering\parindent\z@\@publishers\par}%
     \fi
   \else
     % publisher-image definido: la imagen sustituye al texto de publishers
-    % (máx. 150pt ≈ 150px a 72dpi, ajustable).
+    % (máx. 150pt ≈ 150px a 72dpi, ajustable). Soporta múltiples imágenes.
     \vskip 2\baselineskip
-    {\centering\titleimagerender[150pt]{\@publishersimage}\par}%
+    {\centering\expandafter\@renderpublishersimages\@publishersimagelist,\@nil\par}%
   \fi
   \if@twoside
     \@tempswatrue
