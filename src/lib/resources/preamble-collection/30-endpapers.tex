@@ -1,0 +1,82 @@
+% Endpapers (guardas): imagen de fondo SOLO en la página 1 (la hoja de guarda
+% en blanco que se inserta antes de la página de extratitle, que está en la
+% 3): en ninguna otra página.
+%
+% Modo COVER recortado: la imagen cubre la hoja sin espacios en blanco ni
+% deformación, y se RECORTA (viewport + clip de graphicx) para que el visible
+% sea exactamente el tamaño del papel. Cuando 98-crop está activo, el
+% preamble dinámico agrega +6mm (3mm por lado) al cálculo para cubrir el
+% stock más grande de las marcas de corte. La escala cover y la ventana
+% central (en unidades naturales de la imagen) se calculan con l3fp en
+% \setendpapers, a partir del \sbox (a tamaño natural: \wd = ancho, \ht =
+% alto) y de \paperwidth/\paperheight reales (documentclass o geometry,
+% incluido el override del proyecto): no se hardcodea.
+%
+% El centro de la imagen se alinea con el centro de la hoja: el \put en
+% (.5\paperwidth, ±.5\paperheight) — el signo depende del grid de 97-eso-pic
+% (desplaza el origen del \put al borde superior); la caja 0×0 con
+% \hss/\vss centra la imagen sobre ese punto.
+% Los comandos no pueden llamarse \endpapers: LaTeX prohíbe nombres que
+% empiecen con \end (colisión con el primitivo \end).
+\usepackage{eso-pic}
+\makeatletter
+\newsavebox{\papersbox}
+\newdimen\ep@vx \newdimen\ep@vy \newdimen\ep@vxw \newdimen\ep@vyh
+\ExplSyntaxOn
+\fp_new:N \l_ep_scale_fp
+\fp_new:N \l_ep_winW_fp
+\fp_new:N \l_ep_winH_fp
+\ExplSyntaxOff
+\newcommand*{\@endpapers}{}%
+% Definido bajo \ExplSyntaxOn: el cuerpo usa funciones l3fp (\fp_set:Nn,
+% \dim_to_fp:n) que solo se tokenizan correctamente bajo la sintaxis expl3
+% (el \ExplSyntaxOn dentro del cuerpo no re-tokeniza los tokens ya leídos).
+\ExplSyntaxOn
+\cs_new_protected:Npn \setendpapers #1 {
+  \gdef \@endpapers {#1}
+  \sbox \papersbox { \includegraphics {#1} }
+  % Escala cover contra papel y ventana central en unidades naturales de la
+  % imagen (para el viewport del recorte). Cuando 98-crop está activo,
+  % applyPrintQueueDynamics agrega +6mm dinámicamente.
+  \fp_set:Nn \l_ep_scale_fp {
+    max( ( \dim_to_fp:n { \the\paperwidth } ) / \dim_to_fp:n { \the\wd\papersbox },
+         ( \dim_to_fp:n { \the\paperheight } ) / \dim_to_fp:n { \the\ht\papersbox } )
+  }
+  \fp_set:Nn \l_ep_winW_fp { ( \dim_to_fp:n { \the\paperwidth } ) / \l_ep_scale_fp }
+  \fp_set:Nn \l_ep_winH_fp { ( \dim_to_fp:n { \the\paperheight } ) / \l_ep_scale_fp }
+  \dim_set:Nn \ep@vx { \fp_to_dim:n { ( \dim_to_fp:n { \the\wd\papersbox } - \l_ep_winW_fp ) / 2 } }
+  \dim_set:Nn \ep@vy { \fp_to_dim:n { ( \dim_to_fp:n { \the\ht\papersbox } - \l_ep_winH_fp ) / 2 } }
+  \dim_set:Nn \ep@vxw { \fp_to_dim:n { ( \dim_to_fp:n { \the\wd\papersbox } + \l_ep_winW_fp ) / 2 } }
+  \dim_set:Nn \ep@vyh { \fp_to_dim:n { ( \dim_to_fp:n { \the\ht\papersbox } + \l_ep_winH_fp ) / 2 } }
+}
+\ExplSyntaxOff
+\newcommand{\drawendpapers}{%
+  % Solo la página 1 Y solo si existen las hojas de guarda (\titlepageguards,
+  % activada por \titlepageblanks en 19-maketitle.tex): el endpaper es el
+  % fondo de la hoja en blanco; sin guardas, no se agrega en ningún caso.
+  \ifnum\value{page}=1
+    \iftitlepageguards
+      \ifx\@endpapers\@empty
+      \else
+        \put(.5\paperwidth,\ifx\ESO@HookIIIBG\@empty .5\paperheight\else -.5\paperheight\fi){%
+          \vbox to 0pt{%
+            \vss
+            \hbox to 0pt{%
+              \hss
+              \includegraphics[%
+                viewport={\the\ep@vx} {\the\ep@vy} {\the\ep@vxw} {\the\ep@vyh},%
+                clip,%
+                width=\dimexpr\paperwidth\relax,%
+                height=\dimexpr\paperheight\relax,%
+              ]{\@endpapers}%
+              \hss
+            }%
+            \vss
+          }%
+        }%
+      \fi
+    \fi
+  \fi
+}
+\AddToShipoutPictureBG*{\drawendpapers}
+\makeatother

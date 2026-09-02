@@ -68,7 +68,7 @@ async function emitLatexAndQueuePdf(
   const { tex: fullTex, processedImages } = await markdownToLatex(outputs.content, doc, {
     filters: exportCtx.filters,
     bibFiles: exportCtx.bibFiles,
-    templatePath: exportCtx.latexTemplatePath,
+    templatePath: doc.frontmatter.type === 'collection' ? exportCtx.latexCollectionTemplatePath : exportCtx.latexTemplatePath,
     fm,
     siteConfig: ctx.siteConfig,
     biblatexAvailable: exportCtx.biblatexAvailable,
