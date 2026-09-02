@@ -23,6 +23,10 @@ export function dateArg(date: string | undefined): string[] {
   return date !== undefined ? [`--metadata=date:${metadataValue(date)}`] : [];
 }
 
+export function publisherArg(publishers: string[]): string[] {
+  return publishers.map((p) => `--metadata=publishers:${metadataValue(p)}`);
+}
+
 export function citationCompileArgs(bibliography: string | undefined, csl: string | undefined): string[] {
   if (!bibliography) return [];
   return ['--citeproc', '--bibliography', bibliography, '--csl', csl ?? PACKAGED_APA7_CSL];

@@ -2,7 +2,7 @@ import { dirname, isAbsolute, join, resolve } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
-import { trimmedStringValue } from '../lib/frontmatter-fields.js';
+import { fmStringList, trimmedStringValue } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { execPandoc, MD_READER } from '../lib/pandoc-runner.js';
 import { parseAuthors } from './discover.js';
@@ -11,7 +11,7 @@ import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
 import type { PageDimensions } from './image-processor.js';
 import { processDocumentImages, rewriteImagePaths, scanInlineImages, scanTitlePageFieldImages } from './image-processor.js';
 import { babelOptionsForLang, pageNumberCommandFor } from './latex-preamble.js';
-import { creatorArgs, dateArg, titleArg } from './pandoc-metadata.js';
+import { creatorArgs, dateArg, publisherArg, titleArg } from './pandoc-metadata.js';
 import type { BuildDocument } from './types.js';
 
 function rawFrontmatterDate(fm: Record<string, unknown>): string | undefined {
@@ -165,6 +165,8 @@ export async function markdownToLatex(
   extraArgs.push(titleArg(title));
   await pushCoverImageMetadata(extraArgs, fm, doc, imageMap);
   extraArgs.push(...creatorArgs(creator));
+  const publishers = fmStringList(fm.publisher);
+  if (publishers) extraArgs.push(...publisherArg(publishers));
   const date = await pdfDate(fm, siteConfig, doc);
   extraArgs.push(...dateArg(date));
 
