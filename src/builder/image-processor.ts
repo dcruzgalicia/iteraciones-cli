@@ -2,7 +2,6 @@ import { mkdir } from 'node:fs/promises';
 import { cpus } from 'node:os';
 import { basename, isAbsolute, join, relative, resolve } from 'node:path';
 import { BuildError } from '../lib/errors.js';
-import { trimmedStringValue } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { exec, mapWithConcurrency, ProcessSpawnError, ProcessTimeoutError } from '../lib/run.js';
 
@@ -240,6 +239,32 @@ function magickConcurrency(): number {
   return Math.min(4, Math.max(1, cpus().length));
 }
 
+function resolveFmStringArray(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw.filter((v): v is string => typeof v === 'string');
+  if (typeof raw === 'string' && raw.trim()) return [raw.trim()];
+  return [];
+}
+
+async function collectFrontmatterImageTasks(
+  fm: Record<string, unknown>,
+  docDir: string,
+  targets: ProcessTargets,
+  imageMap: Map<string, string>,
+): Promise<{ absPath: string; w: number; h: number; cover: boolean }[]> {
+  const tasks: { absPath: string; w: number; h: number; cover: boolean }[] = [];
+  for (const field of ['title-image', 'publisher-image', 'endpapers']) {
+    const cover = field === 'endpapers';
+    const w = cover ? targets.endpaperW : targets.targetW;
+    const h = cover ? targets.endpaperH : targets.targetH;
+    for (const value of resolveFmStringArray(fm[field])) {
+      const absPath = isAbsolute(value) ? value : resolve(docDir, value);
+      if (!(await Bun.file(absPath).exists()) || imageMap.has(absPath)) continue;
+      tasks.push({ absPath, w, h, cover });
+    }
+  }
+  return tasks;
+}
+
 async function processDedicatedFrontmatterImages(
   fm: Record<string, unknown>,
   docDir: string,
@@ -248,18 +273,7 @@ async function processDedicatedFrontmatterImages(
   imageMap: Map<string, string>,
   processedFiles: string[],
 ): Promise<void> {
-  const tasks: { absPath: string; w: number; h: number; cover: boolean }[] = [];
-  for (const field of ['title-image', 'publisher-image', 'endpapers']) {
-    const value = trimmedStringValue(fm[field]);
-    if (!value) continue;
-
-    const absPath = isAbsolute(value) ? value : resolve(docDir, value);
-    if (!(await Bun.file(absPath).exists())) continue;
-    if (imageMap.has(absPath)) continue;
-
-    const cover = field === 'endpapers';
-    tasks.push({ absPath, w: cover ? targets.endpaperW : targets.targetW, h: cover ? targets.endpaperH : targets.targetH, cover });
-  }
+  const tasks = await collectFrontmatterImageTasks(fm, docDir, targets, imageMap);
   await mapWithConcurrency(tasks, magickConcurrency(), async (task) => {
     const processed = await processImage(task.absPath, task.w, task.h, task.cover, outputDir);
     recordProcessed(imageMap, processedFiles, task.absPath, processed);
