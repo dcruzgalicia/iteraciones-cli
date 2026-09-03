@@ -309,12 +309,12 @@ describe('composeLatexTemplate', () => {
     expect(titlepages).not.toContain('$body$');
   });
 
-  it('28-titlepages: publisher-image cierra el colofón (25% textwidth)', async () => {
+  it('28-titlepages: colofón no contiene title-image ni publisher-image automáticos', async () => {
     const filters = await loadPreambleFilters();
     const titlepages = filters.find((f) => f.name === '28-titlepages')?.content ?? '';
     const colophon = titlepages.slice(titlepages.indexOf('\\newcommand{\\colophonpage}{%'));
-    expect(colophon).toContain('\\@renderpublishersimages@small');
     expect(colophon).not.toContain('\\@titleimage');
+    expect(colophon).not.toContain('\\@renderpublishersimages@small');
   });
 
   it('no contiene caracteres de control (escapado correcto de backslashes)', async () => {
