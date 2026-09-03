@@ -89,11 +89,5 @@
     {\dimexpr(\linewidth-\colophonwidth)/2\relax}%
     {\centering\titlebackformat}%
     {\@colophon}%
-  % publisher-image definido: el logo del editor cierra el colofón
-  % (máx. 25% del textwidth). Soporta múltiples imágenes.
-  \ifx\@publishersimagelist\@empty\else
-    \vskip 1\baselineskip
-    {\centering\@renderpublishersimages@small\par}%
-  \fi
 }
 \makeatother
