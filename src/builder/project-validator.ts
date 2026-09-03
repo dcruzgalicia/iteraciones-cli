@@ -48,6 +48,7 @@ export const KNOWN_FRONTMATTER_FIELDS = [
   'title-image',
   'publisher-image',
   'endpapers',
+  'courtesyPage',
   'type',
   'files',
 ];
