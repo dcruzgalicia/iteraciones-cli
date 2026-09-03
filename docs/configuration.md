@@ -131,6 +131,25 @@ format:
     coverImage: true
 ```
 
+#### `format.pdf.courtesyPage`
+
+**Tipo:** `boolean`
+**Por defecto:** `false`
+
+Controla si se insertan courtesy pages (páginas en blanco) después de las páginas de título en modo `twoside+openright`. Cuando está activo, se inserta una página en blanco adicional para asegurar que la siguiente página sea impar. En `oneside` u `openany`, las courtesy pages nunca se insertan independientemente de este valor.
+
+```yaml
+format:
+  pdf:
+    courtesyPage: true
+```
+
+También se puede definir a nivel raíz:
+
+```yaml
+courtesyPage: true
+```
+
 ### Configuración del preámbulo LaTeX
 
 La configuración tipográfica del PDF (márgenes, fuentes, interlineado, idioma, penalizaciones, estilo de secciones, epígrafes, etc.) se gestiona mediante **preamble filters**: archivos `.tex` con contenido LaTeX puro que se insertan en el preámbulo antes de `\begin{document}`.

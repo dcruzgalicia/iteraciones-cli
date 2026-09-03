@@ -22,6 +22,7 @@ export interface PdfFormatConfig {
   pageNumber?: string;
   disabledPreambleFilters?: string[];
   coverImage?: boolean;
+  courtesyPage?: boolean;
 }
 
 export interface LatexFormatConfig {
@@ -65,6 +66,7 @@ export const DEFAULT_PDF_FORMAT = {
   pageNumber: 'header-right' as const,
   disabledPreambleFilters: ['97-eso-pic', '98-crop', '99-pdfx'],
   coverImage: false,
+  courtesyPage: false,
 } satisfies PdfFormatConfig;
 
 export const DEFAULT_EPUB_FORMAT = {
@@ -92,6 +94,7 @@ export const DEFAULT_SITE_CONFIG = {
   luaFilters: undefined,
   bibliography: undefined,
   csl: undefined,
+  courtesyPage: false,
   format: {
     html: DEFAULT_HTML_FORMAT,
     pdf: DEFAULT_PDF_FORMAT,
