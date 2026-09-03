@@ -448,10 +448,8 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     // Extratitle por defecto: frontispiece sin extratitle → título
     expect(maketitle).toContain('\\ifx\\@frontispiece\\@empty');
     expect(maketitle).toContain('{\\centering\\parindent\\z@\\@title\\par}%');
-    // Orden de la portada: author → title → subtitle → subject → titlehead →
-    // date → publishers (titlehead va después de subject; date antes de
-    // publishers). Cadenas específicas: \@title también aparece dentro de
-    // \@titleimage.
+    // Orden KOMA-Script: titlehead → subject → title → subtitle →
+    // author → date → publishers
     const head = maketitle.indexOf('\\@titlehead\\par');
     const author = maketitle.indexOf('\\@author\\par');
     const title = maketitle.indexOf('\\MakeUppercase{\\@title}');
@@ -459,13 +457,13 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     const subject = maketitle.indexOf('\\@subject\\par');
     const date = maketitle.indexOf('\\@date\\par');
     const pub = maketitle.indexOf('\\@publishers\\par');
-    expect(author).toBeGreaterThan(-1);
-    expect(author).toBeLessThan(title);
+    expect(head).toBeGreaterThan(-1);
+    expect(head).toBeLessThan(subject);
+    expect(subject).toBeLessThan(title);
     expect(title).toBeLessThan(sub);
-    expect(sub).toBeLessThan(subject);
-    expect(subject).toBeLessThan(date);
-    expect(date).toBeLessThan(head);
-    expect(head).toBeLessThan(pub);
+    expect(sub).toBeLessThan(author);
+    expect(author).toBeLessThan(date);
+    expect(date).toBeLessThan(pub);
   });
 
   it('19-maketitle: titlepageblanks inserta páginas según twoside/openright', async () => {
