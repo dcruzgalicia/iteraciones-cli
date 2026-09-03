@@ -120,6 +120,7 @@ export const PdfFormatSchema = z
       .default(DEFAULT_PDF_FORMAT.disabledPreambleFilters)
       .transform((v) => (v?.length ? v : undefined)),
     coverImage: z.boolean().default(DEFAULT_PDF_FORMAT.coverImage ?? false),
+    courtesyPage: z.boolean().default(false),
     ...DublinCoreFieldsSchema,
     ...TitlePageFieldsSchema,
   })
@@ -160,6 +161,7 @@ export const SiteConfigSchema = z
     format: FormatSchema.optional(),
     bibliography: z.string().optional(),
     csl: z.string().optional(),
+    courtesyPage: z.boolean().default(false),
     disabledFilters: z
       .array(z.string())
       .optional()

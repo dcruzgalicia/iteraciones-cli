@@ -219,6 +219,9 @@ export async function composeLatexTemplate(opts: {
   lines.push('$if(endpapers)$');
   lines.push('\\setendpapers{$endpapers$}');
   lines.push('$endif$');
+  lines.push('$if(courtesy-page)$');
+  lines.push('\\courtepagetrue');
+  lines.push('$endif$');
   lines.push('\\title{$title$}');
   lines.push('$if(title-image)$');
   lines.push('\\titleimage{$title-image$}');
