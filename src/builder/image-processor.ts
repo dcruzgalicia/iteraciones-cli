@@ -77,7 +77,7 @@ export async function processImage(inputPath: string, targetWmm: number, targetH
   }
 
   args.push('-density', '300', '-units', 'PixelsPerInch');
-  args.push('-background', 'white', '-flatten', '-colorspace', 'Gray', '-quality', '100', outPath);
+  args.push('-colorspace', 'Gray', '-quality', '100', '-background', 'white', '-flatten', outPath);
 
   let result: Awaited<ReturnType<typeof exec>>;
   try {
