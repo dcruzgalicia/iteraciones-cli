@@ -84,12 +84,6 @@
 \newcommand{\colophonpage}{%
   \titlepage@lasteven
   \vspace*{7\baselineskip}%
-  % title-image definido: la imagen de portada también abre el colofón
-  % (máx. 50% del textwidth).
-  \ifx\@titleimage\@empty\else
-    {\centering\titleimagerender[0.5\textwidth]{\@titleimage}\par}%
-    \vskip 1\baselineskip
-  \fi
   \titlepageblock
     {\dimexpr(\linewidth-\colophonwidth)/2\relax}%
     {\dimexpr(\linewidth-\colophonwidth)/2\relax}%
