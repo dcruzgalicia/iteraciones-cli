@@ -113,13 +113,8 @@
   \fi
 }
 \renewcommand{\maketitle}{%
-  % Página de extratitle (pág 3, centrada horizontal y verticalmente): existe
-  % si hay extratitle, title-image o frontispiece. Con solo frontispiece, la
-  % página se llena por defecto con el título.
-  % Centrado vertical con \vbox to \textheight: el \vspace*{\fill} entre
-  % bloques dejaba el contenido ~9-17pt fuera del centro (interacción con el
-  % page builder y el strut); dentro del vbox los \vfill reparten el espacio
-  % exactamente. No confina el ancho (no es minipage).
+  % Extratitle (pág 1, bloque del 75% del ancho centrado con
+  % \vspace*{7\baselineskip} antes).
   \ifx\@extratitle\@empty
     \ifx\@frontispiece\@empty
       % sin página de extratitle
@@ -156,14 +151,18 @@
     {\centering\parindent\z@\@frontispiece\par}%
     \titlepage@next
   \fi
+  % Portada (orden KOMA-Script: titlehead, subject, title, subtitle,
+  % author, date, publishers).
   \thispagestyle{empty}%
-  \vspace*{\baselineskip}%
-  \ifx\@author\@empty
-    \vskip 2\baselineskip%
-  \else
-    {\centering\usekomafont{author}{\renewcommand{\and}{\unskip, \ignorespaces}\@author\par}}%
-    \vskip 1\baselineskip
+  \ifx\@titlehead\@empty\else
+    \vspace*{\baselineskip}%
+    {\centering\parindent\z@\@titlehead\par}%
   \fi
+  \ifx\@subject\@empty\else
+    \vskip 1\baselineskip
+    {\centering\parindent\z@\@subject\par}%
+  \fi
+  \vspace*{\baselineskip}%
   \ifx\@titleimage\@empty
     {\centering\usekomafont{title}{\MakeUppercase{\@title}\par}}%
   \else
@@ -173,17 +172,15 @@
     \vskip 1\baselineskip
     {\centering\usekomafont{subtitle}\parindent\z@\@subtitle\par}%
   \fi
-  \ifx\@subject\@empty\else
+  \ifx\@author\@empty
+    \vskip 2\baselineskip%
+  \else
     \vskip 1\baselineskip
-    {\centering\parindent\z@\@subject\par}%
+    {\centering\usekomafont{author}{\renewcommand{\and}{\unskip, \ignorespaces}\@author\par}}%
   \fi
   \ifx\@date\@empty\else
     \vskip 1\baselineskip
     {\centering\usekomafont{date}{\@date\par}}%
-  \fi
-  \ifx\@titlehead\@empty\else
-    \vskip 2\baselineskip
-    {\centering\parindent\z@\@titlehead\par}%
   \fi
   \ifx\@publishersimagelist\@empty
     \ifx\@publishers\@empty\else
@@ -196,6 +193,7 @@
     \vskip 2\baselineskip
     {\centering\@renderpublishersimages\par}%
   \fi
+  % Titlebacks (reverso, twoside; el \vfill ancla el lowertitleback al fondo).
   \if@twoside
     \@tempswatrue
     \ifx\@uppertitleback\@empty\ifx\@lowertitleback\@empty
@@ -208,6 +206,8 @@
       {\titlebackformat\@lowertitleback\par}%
     \fi
   \fi
+  % Dedication (página impar siguiente, bloque del 50% del ancho
+  % alineado a la derecha como el dictum, con \vspace*{7\baselineskip} antes).
   \ifx\@dedication\@empty\else
     \titlepage@nextdouble
     \vspace*{7\baselineskip}%
