@@ -103,12 +103,14 @@
 \newif\ifcourtepage
 \newcommand{\titlepageblanks}{%
   \titlepageguardstrue
-  \null\clearpage
-  % twoside+openright+courtesyPage: segunda página en blanco para que
-  % extratitle caiga en página impar. Sin courtesyPage: solo 1 página.
-  \if@twoside\if@openright\ifcourtepage
+  \ifcourtepage
     \null\clearpage
-  \fi\fi\fi
+    % twoside+openright: segunda página en blanco para que
+    % extratitle caiga en página impar.
+    \if@twoside\if@openright
+      \null\clearpage
+    \fi\fi
+  \fi
 }
 \renewcommand{\maketitle}{%
   % Página de extratitle (pág 3, centrada horizontal y verticalmente): existe
