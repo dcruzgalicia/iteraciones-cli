@@ -468,11 +468,14 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(head).toBeLessThan(pub);
   });
 
-  it('19-maketitle: dos paginas en blanco antes de extratitle (hojas de guarda)', async () => {
+  it('19-maketitle: titlepageblanks inserta páginas según twoside/openright', async () => {
     const filters = await loadPreambleFilters();
     const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';
     expect(maketitle).toContain('\\newcommand{\\titlepageblanks}{%');
-    expect(maketitle).toContain('\\null\\clearpage\n  \\null\\clearpage');
+    // Primera página en blanco siempre presente
+    expect(maketitle).toContain('\\null\\clearpage');
+    // Segunda página solo condicional: twoside+openright
+    expect(maketitle).toContain('\\if@twoside\\if@openright');
     // Las dos ramas de extratitle (definido y no definido)
     // llaman a titlepageblanks: definición + 2 llamadas
     expect((maketitle.match(/\\titlepageblanks/g) ?? []).length).toBe(3);

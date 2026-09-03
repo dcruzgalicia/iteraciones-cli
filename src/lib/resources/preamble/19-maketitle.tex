@@ -103,7 +103,11 @@
 \newcommand{\titlepageblanks}{%
   \titlepageguardstrue
   \null\clearpage
-  \null\clearpage
+  % twoside+openright: 2 páginas en blanco para que extratitle caiga en
+  % página impar. oneside u openany: solo 1 página en blanco.
+  \if@twoside\if@openright
+    \null\clearpage
+  \fi\fi
 }
 \renewcommand{\maketitle}{%
   % Página de extratitle (pág 3, centrada horizontal y verticalmente): existe
