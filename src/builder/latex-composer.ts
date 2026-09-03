@@ -229,7 +229,7 @@ export async function markdownToLatex(
   const date = await pdfDate(fm, siteConfig, doc);
   extraArgs.push(...dateArg(date));
 
-  const courtesyPage = formatCfg?.courtesyPage ?? siteConfig.courtesyPage ?? false;
+  const courtesyPage = fm.courtesyPage === true || formatCfg?.courtesyPage === true || siteConfig.courtesyPage === true;
   if (courtesyPage) extraArgs.push('--metadata=courtesy-page:true');
 
   const titleOverrides = buildTitlePageOverrides(fm, formatCfg, siteConfig, doc);
