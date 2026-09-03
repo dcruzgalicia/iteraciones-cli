@@ -434,10 +434,9 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(maketitle).toContain('\\ifdim\\wd\\titleimagebox>#1');
     expect(maketitle).toContain('width=#1,keepaspectratio');
     expect(maketitle).toContain('\\usebox{\\titleimagebox}');
-    expect(maketitle).toContain('\\titleimagerender[\\extratitlewidth]{\\@titleimage}');
-    // Con title-image, el texto de extratitle se sustituye: la rama textual
-    // queda anidada bajo \\ifx\\@titleimage\\@empty
-    expect(maketitle).toContain('\\ifx\\@titleimage\\@empty\n    \\ifx\\@extratitle\\@empty');
+    // title-image solo afecta la portada, no crea extratitle
+    expect(maketitle).not.toContain('\\titleimagerender[\\extratitlewidth]{\\@titleimage}');
+    expect(maketitle).toContain('\\ifx\\@extratitle\\@empty');
   });
 
   it('19-maketitle: frontispiece, titlehead, subject y publishers en el maketitle', async () => {
@@ -446,8 +445,8 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     // Frontispicio: página anterior a la portada con contenido anclado al fondo
     expect(maketitle).toContain('\\ifx\\@frontispiece\\@empty\\else');
     expect(maketitle).toContain('\\vspace*{\\fill}%\n    {\\centering\\parindent\\z@\\@frontispiece\\par}%');
-    // Extratitle por defecto: frontispiece sin extratitle ni title-image → título
-    expect(maketitle).toContain('\\ifx\\@frontispiece\\@empty\n        % sin página de extratitle');
+    // Extratitle por defecto: frontispiece sin extratitle → título
+    expect(maketitle).toContain('\\ifx\\@frontispiece\\@empty');
     expect(maketitle).toContain('{\\centering\\parindent\\z@\\@title\\par}%');
     // Orden de la portada: author → title → subtitle → subject → titlehead →
     // date → publishers (titlehead va después de subject; date antes de
@@ -474,9 +473,9 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';
     expect(maketitle).toContain('\\newcommand{\\titlepageblanks}{%');
     expect(maketitle).toContain('\\null\\clearpage\n  \\null\\clearpage');
-    // Las tres ramas de extratitle (por defecto, textual y con title-image)
-    // llaman a titlepageblanks: definición + 3 llamadas
-    expect((maketitle.match(/\\titlepageblanks/g) ?? []).length).toBe(4);
+    // Las dos ramas de extratitle (definido y no definido)
+    // llaman a titlepageblanks: definición + 2 llamadas
+    expect((maketitle.match(/\\titlepageblanks/g) ?? []).length).toBe(3);
     // Bandera para 30-endpapers: las guardas existen (el endpaper solo se
     // dibuja sobre la hoja en blanco de la página 1)
     expect(maketitle).toContain('\\newif\\iftitlepageguards');

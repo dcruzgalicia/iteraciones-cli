@@ -113,43 +113,27 @@
   % bloques dejaba el contenido ~9-17pt fuera del centro (interacción con el
   % page builder y el strut); dentro del vbox los \vfill reparten el espacio
   % exactamente. No confina el ancho (no es minipage).
-  \ifx\@titleimage\@empty
-    \ifx\@extratitle\@empty
-      \ifx\@frontispiece\@empty
-        % sin página de extratitle
-      \else
-        \titlepageblanks
-        \vbox to \textheight{%
-          \vfill
-          {\centering\parindent\z@\@title\par}%
-          \vfill
-        }%
-        \titlepage@next
-      \fi
+  \ifx\@extratitle\@empty
+    \ifx\@frontispiece\@empty
+      % sin página de extratitle
     \else
       \titlepageblanks
       \vbox to \textheight{%
-        \vspace*{10\baselineskip}%
-        \titlepageblock
-          {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
-          {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
-          {\centering}%
-          {\@extratitle}%
+        \vfill
+        {\centering\parindent\z@\@title\par}%
         \vfill
       }%
-      \ifx\@frontispiece\@empty
-        \titlepage@nextdouble
-      \else
-        \titlepage@next
-      \fi
+      \titlepage@next
     \fi
   \else
-    % title-image definido: la imagen sustituye al contenido de extratitle
-    % (hasta el 100% del ancho del bloque, \extratitlewidth).
     \titlepageblanks
     \vbox to \textheight{%
       \vspace*{10\baselineskip}%
-      {\centering\titleimagerender[\extratitlewidth]{\@titleimage}\par}%
+      \titlepageblock
+        {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
+        {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
+        {\centering}%
+        {\@extratitle}%
       \vfill
     }%
     \ifx\@frontispiece\@empty
