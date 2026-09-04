@@ -54,14 +54,15 @@ Los elementos añadidos o modificados durante el ciclo II de revisión integral:
 ## Configuración — `iteraciones.config.yaml`
 
 - Exigido por `build` y `validate` (#2071); archivo vacío = defaults. Claves desconocidas: error estricto.
-- Raíz: `language`, `toc`, `format`, `disabled-filters`, `lua-filters`, `bibliography`, `csl` + campos Dublin Core (title…abstract).
-- `format.latex|pdf|epub|markdown`: `generate`; `pdf` añade `show-date`, `page-number`, `cover-image`, `disabled-preamble-filters` y DC por-formato; `html` añade `site.{title,description,logo,theme,color}` y `blocks`.
+- Raíz: `language`, `toc`, `format`, `disabled-filters`, `lua-filters`, `bibliography`, `csl` + campos Dublin Core (title…abstract) + páginas de título + imágenes de portada (`titleImage`, `publisherImage`, `endpapers`) + configuración de PDF (`showDate`, `pageNumber`, `coverImage`, `courtesyPage`, `disabledPreambleFilters`).
+- `format.latex|pdf|epub|markdown`: `generate`; `pdf` añade `showDate`, `pageNumber`, `coverImage`, `courtesyPage`, `disabledPreambleFilters`, DC, páginas de título e imágenes por-formato; `html` añade `site.{title,description,logo,theme,color}` y `blocks`.
+- Resolución en 3 niveles (`frontmatter > format > root`) para DC, páginas de título, imágenes de portada y configuración de PDF (#2354).
 - Fuente única tipada: schema Zod inferido con paridad compilación-tiempo contra las sub-interfaces (#2072).
 
 ## Filters
 
 - 18 filters Lua: `semantic/string/01-double-colon`, `semantic/ast/02-double-colon-noindent`, `latex/01…12`, `html/01…05`. Override por proyecto `filters/<grupo>/<nombre>.lua`; desactivación vía `disabled-filters`.
-- 31 preamble filters `.tex` (01-documentclass … cola de imprenta 97-eso-pic / 98-crop / 99-pdfx). Override `preamble/<nombre>.tex`; desactivación vía `disabled-preamble-filters`.
+- 31 preamble filters `.tex` (01-documentclass … cola de imprenta 97-eso-pic / 98-crop / 99-pdfx). Override `preamble/<nombre>.tex`; desactivación vía `disabledPreambleFilters`.
 - Interacción fija: 99-pdfx activo ⇒ 08-hyperref auto-desactivado (aviso visible).
 
 ## Distribución LaTeX

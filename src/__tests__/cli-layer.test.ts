@@ -980,6 +980,58 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
+  it('showDate desde la raíz de config muestra la fecha en la portada (3 niveles)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(
+        join(dir, 'iteraciones.config.yaml'),
+        'language: es-MX\nshowDate: true\nformat:\n  latex:\n    generate: true\n  pdf:\n    generate: false\n',
+        'utf8',
+      );
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\nContenido.\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const tex = await Bun.file(join(dir, 'dist', 'files', 'test-document.tex')).text();
+      expect(tex).toContain('1 de enero de 2026');
+    });
+  });
+
+  it('showDate del frontmatter sobreescribe format.pdf.showDate false (3 niveles)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(
+        join(dir, 'iteraciones.config.yaml'),
+        'language: es-MX\nformat:\n  latex:\n    generate: true\n  pdf:\n    generate: false\n    showDate: false\n',
+        'utf8',
+      );
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ndate: 2026-01-01\nshowDate: true\n---\n\nContenido.\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const tex = await Bun.file(join(dir, 'dist', 'files', 'test-document.tex')).text();
+      expect(tex).toContain('1 de enero de 2026');
+    });
+  });
+
+  it('pageNumber del frontmatter gana sobre la config (3 niveles)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(
+        join(dir, 'iteraciones.config.yaml'),
+        'language: es-MX\npageNumber: footer-center\nformat:\n  latex:\n    generate: true\n  pdf:\n    generate: false\n',
+        'utf8',
+      );
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\npageNumber: footer-right\n---\n\nContenido.\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const tex = await Bun.file(join(dir, 'dist', 'files', 'test-document.tex')).text();
+      expect(tex).toContain('\\ofoot*{\\pagemark}');
+      expect(tex).not.toContain('\\cfoot*{\\pagemark}');
+    });
+  });
+
   it('un documento sin frontmatter usa \\title{Sin título} en LaTeX', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
@@ -1251,6 +1303,46 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       expect(process.exitCode).toBe(1);
       expect(output).toContain('titleImage no encontrado');
       expect(output).toContain(join(dir, 'no_existe.png'));
+    });
+  });
+
+  it('titleImage desde la raíz de config se aplica a todos los documentos (3 niveles)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+      await writeFile(join(dir, 'portada.png'), png);
+      await writeFile(
+        join(dir, 'iteraciones.config.yaml'),
+        'language: es-MX\ntitleImage: ./portada.png\nformat:\n  latex:\n    generate: true\n',
+        'utf8',
+      );
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\n---\n\nContenido.\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const tex = await Bun.file(join(dir, 'dist', 'files', 'test-document.tex')).text();
+      expect(tex).toContain('\\titleimage{');
+    });
+  });
+
+  it('titleImage del frontmatter sobreescribe el de la config (3 niveles)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+      await writeFile(join(dir, 'portada.png'), png);
+      await writeFile(join(dir, 'portada-fm.png'), png);
+      await writeFile(
+        join(dir, 'iteraciones.config.yaml'),
+        'language: es-MX\ntitleImage: ./portada.png\nformat:\n  latex:\n    generate: true\n',
+        'utf8',
+      );
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ntitleImage: ./portada-fm.png\n---\n\nContenido.\n', 'utf8');
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const tex = await Bun.file(join(dir, 'dist', 'files', 'test-document.tex')).text();
+      expect(tex).toContain('\\titleimage{');
+      expect(tex).toContain('portada-fm');
     });
   });
 
@@ -2958,6 +3050,22 @@ describe('runBuild (smoke PDF real)', () => {
         // Firma PNG: bytes 1-3 son "PNG" (el byte 0 es 0x89)
         const bytes = new Uint8Array(await Bun.file(pngPath).arrayBuffer());
         expect(new TextDecoder().decode(bytes.subarray(1, 4))).toBe('PNG');
+      });
+    },
+    { timeout: 120_000 },
+  );
+
+  it.skipIf(!latexOk || !pandocOk)(
+    'coverImage desde la raíz de config genera la portada PNG (3 niveles)',
+    async () => {
+      await withTempDir(async (dir) => {
+        await initTestProject(dir);
+        await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\ncoverImage: true\nformat:\n  pdf:\n    generate: true\n', 'utf8');
+        process.exitCode = 0;
+        await runBuild(dir);
+        expect(process.exitCode).toBe(0);
+        const pngPath = join(dir, 'dist', 'files', 'test-document.png');
+        expect(await Bun.file(pngPath).exists()).toBe(true);
       });
     },
     { timeout: 120_000 },

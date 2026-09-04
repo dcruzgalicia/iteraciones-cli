@@ -27,6 +27,31 @@ toc: false                        # tabla de contenidos (PDF, LaTeX, HTML, EPUB)
 # abstract: ''
 # keywords: ''
 
+# Páginas de título (opcional; valores por defecto para todos los documentos)
+# subtitle: ''
+# extratitle: ''
+# frontispiece: ''
+# titlehead: ''
+# dedication: ''
+# uppertitleback: ''
+# lowertitleback: ''
+# colophon: ''
+
+# Imágenes de portada y guardas (opcional; para todos los documentos)
+# titleImage: ''
+# publisherImage: ''
+# endpapers: ''
+
+# Configuración específica de PDF (opcional; para todos los documentos)
+# showDate: false
+# pageNumber: header-right
+# coverImage: false
+# courtesyPage: false
+# disabledPreambleFilters:
+#   - 97-eso-pic
+#   - 98-crop
+#   - 99-pdfx
+
 format:
   latex:
     generate: false               # genera archivos .tex
@@ -70,6 +95,26 @@ csl: styles/nature.csl           # estilo de citas CSL (opcional; APA-7 si falta
 ```
 
 ## Campos
+
+### Resolución en 3 niveles
+
+Todos los atributos de metadatos y de configuración de PDF se pueden definir en **tres niveles** con precedencia:
+
+```
+frontmatter > format config > root config
+```
+
+- **Frontmatter**: sobreescribe cualquier configuración para el documento individual.
+- **Format config** (`format.pdf`, etc.): sobreescribe la raíz solo para ese formato.
+- **Root config** (raíz de `iteraciones.config.yaml`): valores por defecto para todos los documentos y formatos.
+
+Aplican a los tres niveles los campos Dublin Core, los campos de páginas de título, las imágenes de portada (`titleImage`, `publisherImage`, `endpapers`) y la configuración específica de PDF (`showDate`, `pageNumber`, `coverImage`, `courtesyPage`, `disabledPreambleFilters`).
+
+Excepciones (no aplican 3 niveles, se documentan como tales):
+
+- `slug`, `type`, `files`: estructurales del documento, solo frontmatter.
+- `bibliography`, `csl`, `luaFilters`, `disabledFilters`: rutas/recursos de proyecto, solo root (se resuelven una vez en el setup).
+- `generate` (por formato): solo dentro de `format.*`.
 
 ### `language`
 
@@ -117,12 +162,33 @@ Habilita la generación de PDF.
 
 Muestra la fecha en la portada del PDF. Si es `true` y el frontmatter del documento no declara `date`, se usa la fecha de creación del archivo.
 
+Se puede definir en los tres niveles: `format.pdf.showDate`, `showDate` (raíz) o en el frontmatter de un documento.
+
+```yaml
+format:
+  pdf:
+    showDate: true
+```
+
+```yaml
+showDate: true
+```
+
+```markdown
+---
+title: Mi documento
+showDate: true
+---
+```
+
 #### `format.pdf.coverImage`
 
 **Tipo:** `boolean`
 **Por defecto:** `false`
 
 Genera, junto a cada PDF, una imagen PNG de su primera página (portada) para previsualizar, compartir o reutilizar el resultado. La extracción usa `pdftoppm` (poppler): si no está instalado, el build continúa con un aviso (la imagen es un extra, no bloquea el PDF) y `doctor` lo reporta como check opcional. La imagen se elimina al desactivar la opción o al cambiar el slug del documento.
+
+Se puede definir en los tres niveles: `format.pdf.coverImage`, `coverImage` (raíz) o en el frontmatter de un documento (activa la portada solo para ese documento).
 
 ```yaml
 format:
@@ -138,16 +204,23 @@ format:
 
 Controla si se insertan courtesy pages (páginas en blanco) después de las páginas de título en modo `twoside+openright`. Cuando está activo, se inserta una página en blanco adicional para asegurar que la siguiente página sea impar. En `oneside` u `openany`, las courtesy pages nunca se insertan independientemente de este valor.
 
+Se puede definir en los tres niveles: `format.pdf.courtesyPage`, `courtesyPage` (raíz) o en el frontmatter de un documento.
+
 ```yaml
 format:
   pdf:
     courtesyPage: true
 ```
 
-También se puede definir a nivel raíz:
-
 ```yaml
 courtesyPage: true
+```
+
+```markdown
+---
+title: Mi documento
+courtesyPage: true
+---
 ```
 
 ### Configuración del preámbulo LaTeX
@@ -184,6 +257,58 @@ Los campos de configuración que sí son dinámicos (viajan desde `iteraciones.c
 **Por defecto:** `'header-right'`
 
 Posición del número de página. Valores: `footer-left`, `footer-center`, `footer-right`, `header-left`, `header-center`, `header-right`.
+
+Se puede definir en los tres niveles: `format.pdf.pageNumber`, `pageNumber` (raíz) o en el frontmatter de un documento.
+
+```yaml
+format:
+  pdf:
+    pageNumber: footer-center
+```
+
+```yaml
+pageNumber: footer-center
+```
+
+```markdown
+---
+title: Mi documento
+pageNumber: footer-left
+---
+```
+
+### `titleImage`, `publisherImage`, `endpapers` (imágenes de portada y guardas)
+
+**Tipo:** `string` (`publisherImage` también acepta `string[]`)
+**Por defecto:** `undefined` (sin imagen)
+
+Definen la imagen de portada, el logo del editor y las guardas del PDF. Se pueden definir en la raíz o en `format.pdf` (se aplican a todos los documentos) o en el frontmatter (por documento). Las rutas de la raíz y de `format.pdf` se resuelven relativas al directorio del proyecto; las del frontmatter, relativas al directorio del documento.
+
+- `titleImage`: imagen que sustituye al texto del título en la portada.
+- `publisherImage`: imagen que sustituye al texto de `publishers` en la portada.
+- `endpapers`: imagen de fondo (guardas) de la hoja completa en la primera página.
+
+```yaml
+# Raíz — misma portada para todos los documentos
+titleImage: assets/portada.png
+publisherImage: assets/logo.png
+endpapers: assets/guardas.pdf
+```
+
+```yaml
+format:
+  pdf:
+    titleImage: assets/portada.pdf
+```
+
+```markdown
+---
+title: Mi documento
+titleImage: ./portada.png
+---
+```
+
+> **Renombrado (contrato, #2354):** los campos anteriores `title-image` y `publisher-image` (kebab-case) fueron renombrados a `titleImage` y `publisherImage`. El kebab-case ya no se reconoce. `publishers-image` nunca existió en el código (era una inconsistencia de la documentación) y queda unificado en `publisherImage`.
 
 ### `toc`
 
@@ -337,6 +462,8 @@ disabledFilters:
 
 Lista de preamble filters a desactivar. Los defaults del paquete desactivan `97-eso-pic` (fondo de página), `98-crop` (marcas de corte) y `99-pdfx` (PDF/X-1a), la cola de imprenta — son siempre los últimos preámbulos, en ese orden; agrega nombres a la lista para desactivar más, o elimínalos para activarlos.
 
+Se puede definir en los tres niveles: `format.pdf.disabledPreambleFilters` o `disabledPreambleFilters` (raíz). Una lista vacía (`[]`) activa todos los preamble filters, incluida la cola de imprenta. **Nota:** no se define en el frontmatter; es una decisión de configuración global por proyecto.
+
 > **Validación PDF/X-1a.** Si activas `99-pdfx` (eliminándolo de la lista), el pipeline genera `PDF/X-1a:2001` estricto (identificación XMP `pdfxid:GTS_PDFXVersion` incluida) y el build valida en su fase final que los PDFs certifican con el binario `iteraciones-pdfcheck` (se compila con cargo si hace falta; `doctor` lo verifica como check opcional). Sin el binario, el build **no falla**: solo advierte que el PDF no se validó. Si algún PDF no certifica, el build **falla** con el detalle por PDF (archivo, código, página): el filter activo es la señal explícita de imprenta; para generar PDF sin certificación, desactiva `99-pdfx`. Ver `docs/architecture.md` → Validación PDF/X-1a del PDF generado.
 
 ```yaml
@@ -345,6 +472,12 @@ format:
     disabledPreambleFilters:
       - 19-maketitle
 ```
+
+```yaml
+disabledPreambleFilters:
+  - 19-maketitle
+```
+
 
 ### `luaFilters`
 
@@ -401,6 +534,8 @@ frontmatter > format config > root config
 | `isbn` | `string` | International Standard Book Number |
 | `abstract` | `string` | Resumen del documento |
 | `keywords` | `string \| string[]` | Palabras clave |
+
+Además de los campos DC, las **páginas de título** (`subtitle`, `extratitle`, `frontispiece`, `titlehead`, `dedication`, `uppertitleback`, `lowertitleback`, `colophon`) se admiten en los tres niveles con la misma precedencia: la raíz define valores por defecto, `format.pdf` los sobreescribe para el PDF, y el frontmatter para el documento individual.
 
 Los campos se admiten tanto en la raíz de la configuración como en `format.pdf`:
 

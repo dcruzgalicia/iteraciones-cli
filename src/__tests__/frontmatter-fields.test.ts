@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'bun:test';
-import { fmBool, fmString, fmStringList, fmTrimmedString, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
+import {
+  fmBool,
+  fmString,
+  fmStringList,
+  fmTrimmedString,
+  resolveBooleanField,
+  resolveMetadataField,
+  resolveStringField,
+} from '../lib/frontmatter-fields.js';
 
 describe('fmString', () => {
   it('acepta strings no vacíos sin recortar', () => {
@@ -59,5 +67,20 @@ describe('jerarquía frontmatter > format > raíz', () => {
   it('resolveMetadataField devuelve el valor crudo del primer nivel que lo tenga', () => {
     expect(resolveMetadataField(fm, fmt, root, 'creator')).toEqual(['Autor FM']);
     expect(resolveMetadataField({}, fmt, root, 'subject')).toBeUndefined();
+  });
+});
+
+describe('resolveBooleanField (booleanos en 3 niveles)', () => {
+  it('frontmatter > format > raíz con solo booleanos válidos', () => {
+    expect(resolveBooleanField({ showDate: true }, {}, {}, 'showDate')).toBe(true);
+    expect(resolveBooleanField({}, { showDate: false }, {}, 'showDate')).toBe(false);
+    expect(resolveBooleanField({}, {}, { showDate: true }, 'showDate')).toBe(true);
+  });
+  it('descarta valores no booleanos en cualquier nivel', () => {
+    expect(resolveBooleanField({ showDate: 'true' }, {}, {}, 'showDate')).toBeUndefined();
+    expect(resolveBooleanField({}, { showDate: 1 }, {}, 'showDate')).toBeUndefined();
+  });
+  it('undefined cuando ningún nivel lo define', () => {
+    expect(resolveBooleanField({}, {}, {}, 'courtesyPage')).toBeUndefined();
   });
 });

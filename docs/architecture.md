@@ -165,7 +165,7 @@ Además, existen los **preamble filters** (`src/lib/resources/preamble/*.tex`) q
 - Un filter del proyecto con el mismo nombre completo (p. ej. `<proyecto>/filters/latex/02-dictum.lua`) reemplaza al del paquete (override).
 - Para desactivar uno se usa `disabled-filters` (nombres completos, p. ej. `latex/02-dictum`) en `iteraciones.config.yaml`.
 - **Filtros Lua de usuario** (`lua-filters:`): lista de rutas relativas al proyecto que corren en todas las invocaciones pandoc (latex, html5, epub3 y markdown), antes de la capa de formato, para poder transformar los nodos semánticos antes de la exportación. Los filtros semánticos corren antes que los de usuario, para que estos vean los nodos ya resueltos (por ejemplo, `Div.spacer`). La variable global `FORMAT` de pandoc permite ramificar el comportamiento por formato de salida. Si una ruta no existe se advierte y se omite.
-- Los preamble filters del proyecto (`<proyecto>/preamble/<nombre>.tex`) reemplazan a los del paquete; se desactivan con `format.pdf.disabled-preamble-filters`.
+- Los preamble filters del proyecto (`<proyecto>/preamble/<nombre>.tex`) reemplazan a los del paquete; se desactivan con `format.pdf.disabledPreambleFilters` (o `disabledPreambleFilters` a nivel raíz).
 
 ---
 
@@ -200,18 +200,19 @@ format:
     generate: false
   pdf:
     generate: false
-    show-date: false
-    page-number: header-right
-    disabled-preamble-filters:
+    showDate: false
+    pageNumber: header-right
+    disabledPreambleFilters:
       - 97-eso-pic
       - 98-crop
       - 99-pdfx
   html:
-    title: "Mi sitio"
-    tagline: "escribir, compartir, re-existir"
+    site:
+      title: "Mi sitio"
+      description: "escribir, compartir, re-existir"
+      theme: dark
+      color: lime
     generate: true
-    theme: dark
-    accent: lime
   epub:
     generate: false
   markdown:
@@ -219,19 +220,19 @@ format:
 
 bibliography: refs/mi-libro.bib   # opcional: .bib del proyecto
 csl: styles/nature.csl            # opcional: estilo de citas
-disabled-filters: []
-lua-filters: []
+disabledFilters: []
+luaFilters: []
 ```
 
-El esquema Zod (`config-schema.ts`) valida tipos, aplica defaults y transforma claves kebab-case a camelCase para las interfaces TypeScript. Los valores por defecto viven en una única fuente: las constantes `DEFAULT_*` de `site-config.ts` (el esquema las consume con `.default()` y el transform las usa como fallback).
+El esquema Zod (`config-schema.ts`) valida tipos, aplica defaults y usa claves camelCase en el YAML (los nombres históricos kebab-case como `show-date`, `page-number` o `disabled-preamble-filters` ya no se reconocen). Los valores por defecto viven en una única fuente: las constantes `DEFAULT_*` de `site-config.ts` (el esquema las consume con `.default()` y el transform las usa como fallback).
 
 ### PdfFormatConfig (campos reales)
 
-La configuración PDF es mínima y deliberada: `generate` (activa la compilación con latexmk), `show-date` (fecha en la portada), `page-number` (posición del número de página) y `disabled-preamble-filters` (lista negra de preamble filters, con `97-eso-pic`, `98-crop` y `99-pdfx` desactivados por defecto; son siempre los últimos preámbulos, ver cola de imprenta). Todo el diseño tipográfico (márgenes, fuentes, interlineado, secciones, epígrafes, portada) se gestiona con **preamble filters** `.tex` sobrescribibles por proyecto (`<proyecto>/preamble/<nombre>.tex`) y no es configuración YAML. El flujo de usuario end-to-end (requisitos, activación y certificación) está en [quickstart.md](quickstart.md) §7.
+La configuración PDF es mínima y deliberada: `generate` (activa la compilación con latexmk), `showDate` (fecha en la portada), `pageNumber` (posición del número de página) y `disabledPreambleFilters` (lista negra de preamble filters, con `97-eso-pic`, `98-crop` y `99-pdfx` desactivados por defecto; son siempre los últimos preámbulos, ver cola de imprenta). Todos estos campos se resuelven en los tres niveles `frontmatter > format > root` (ver `docs/configuration.md`). Todo el diseño tipográfico (márgenes, fuentes, interlineado, secciones, epígrafes, portada) se gestiona con **preamble filters** `.tex` sobrescribibles por proyecto (`<proyecto>/preamble/<nombre>.tex`) y no es configuración YAML. El flujo de usuario end-to-end (requisitos, activación y certificación) está en [quickstart.md](quickstart.md) §7.
 
 ### Validación PDF/X-1a del PDF generado
 
-Cuando `99-pdfx` está **activo** (se eliminó de `disabled-preamble-filters`), el build valida en su **fase final** que los PDFs generados certifican **estrictamente PDF/X-1a:2001** (ISO 15930-1; sin fallback a :2003), usando el binario `iteraciones-pdfcheck` (crate Rust en `tools/pdfx-validator/` con pdf-oxide; las condiciones completas y el contrato JSON viven en `src/builder/pdfx-check.ts`):
+Cuando `99-pdfx` está **activo** (se eliminó de `disabledPreambleFilters`), el build valida en su **fase final** que los PDFs generados certifican **estrictamente PDF/X-1a:2001** (ISO 15930-1; sin fallback a :2003), usando el binario `iteraciones-pdfcheck` (crate Rust en `tools/pdfx-validator/` con pdf-oxide; las condiciones completas y el contrato JSON viven en `src/builder/pdfx-check.ts`):
 
 - **Cuándo**: solo si `99-pdfx` está activo **y** hay PDFs en la salida (`dist/files`). Un PDF normal no se valida contra X-1a (fallaría por diseño).
 - **Obtención del binario (en orden)**: directorio gestionado en la caché de usuario (`$XDG_CACHE_HOME/iteraciones/bin` o `~/.cache/iteraciones/bin`, a salvo de `clean`/`--full`) → PATH → compilar con `cargo build --release` (requiere Rust; fuente en el repo) → si no se obtiene, el build **no falla**: advierte que el PDF no se validó (instalar Rust con rustup o descargar el precompilado de GitHub Releases).
@@ -416,10 +417,10 @@ Superficie estable (lista congelada; revisada desde el código en el issue #1934
 - **Opciones de build**: `--full`, `--output`, `--verbose`, `--json`.
 - **Opciones de doctor**: `--info`.
 - **Opciones de new**: `-t/--title`.
-- **Configuración** (`iteraciones.config.yaml`): `language`, `toc`, campos Dublin Core raíz (`title`, `creator`, `description`, …), `format.latex.generate`, `format.html.{site.{title, description, logo, theme, color}, generate, blocks}`, `format.pdf.{generate, show-date, page-number, cover-image, disabled-preamble-filters}`, `format.epub.generate`, `format.markdown.generate`, `disabled-filters`, `lua-filters`, `bibliography`, `csl`.
-- **Frontmatter**: `title`, `subtitle`, `date`, `creator`, `slug` (manual); los que fluyen a pandoc o al template efectivo con efecto visible (`language`, `toc`, `description`, `site-title`, `tagline`, `theme`, `accent`, `css`); y las páginas de título internas y la portada (`extratitle`, `frontispiece`, `titlehead`, `subject`, `dedication`, `uppertitleback`, `lowertitleback`, `publishers`, `colophon`, `title-image`, `publishers-image`, `endpapers`).
+- **Configuración** (`iteraciones.config.yaml`): `language`, `toc`, campos Dublin Core raíz (`title`, `creator`, `description`, …), campos de páginas de título raíz (`subtitle`, `extratitle`, `frontispiece`, `titlehead`, `dedication`, `uppertitleback`, `lowertitleback`, `colophon`), imágenes de portada raíz (`titleImage`, `publisherImage`, `endpapers`), configuración de PDF raíz (`showDate`, `pageNumber`, `coverImage`, `courtesyPage`, `disabledPreambleFilters`), `format.latex.generate`, `format.html.{site.{title, description, logo, theme, color}, generate, blocks}`, `format.pdf.{generate, showDate, pageNumber, coverImage, courtesyPage, disabledPreambleFilters}`, `format.epub.generate`, `format.markdown.generate`, `disabledFilters`, `luaFilters`, `bibliography`, `csl`.
+- **Frontmatter**: `title`, `subtitle`, `date`, `creator`, `slug` (manual); los que fluyen a pandoc o al template efectivo con efecto visible (`language`, `toc`, `description`, `site-title`, `tagline`, `theme`, `accent`, `css`); la configuración de PDF por documento (`showDate`, `pageNumber`, `coverImage`, `courtesyPage`); y las páginas de título internas y la portada (`extratitle`, `frontispiece`, `titlehead`, `subject`, `dedication`, `uppertitleback`, `lowertitleback`, `publishers`, `colophon`, `titleImage`, `publisherImage`, `endpapers`).
 - **Filtros**: nombres completos de los filters del paquete (capas `semantic/`, `latex/`, `html/`) y de los preamble filters numerados; override por archivo y listas `disabled-*`.
-- **Salidas**: HTML, PDF, LaTeX, EPUB y Markdown; esquema de slugs `title-por-author` con sufijos `-dN`; portada PNG junto al PDF cuando `format.pdf.cover-image` está activo.
+- **Salidas**: HTML, PDF, LaTeX, EPUB y Markdown; esquema de slugs `title-por-author` con sufijos `-dN`; portada PNG junto al PDF cuando `coverImage` está activo (en `format.pdf`, raíz o frontmatter).
 
 #### Inventario y veredicto (issue #1934)
 
@@ -431,7 +432,8 @@ La lista anterior se obtuvo del **código** (no de la memoria): comandos y opcio
 Incorporaciones de la fase de estabilización registradas antes de congelar (issues #1931 y #1932):
 
 - `build --json` (resultado como JSON en stdout para consumo programático).
-- `format.pdf.cover-image` (config) y `title-image`, `publishers-image`, `endpapers` (frontmatter): la portada PDF y las imágenes de guarda entraron durante esta misma fase y quedan congeladas con el resto de la superficie.
+- `format.pdf.coverImage` (config) y `titleImage`, `publisherImage`, `endpapers` (frontmatter): la portada PDF y las imágenes de guarda entraron durante esta misma fase y quedan congeladas con el resto de la superficie.
+- `titleImage`/`publisherImage` (renombrados desde `title-image`/`publisher-image`, issue #2354): todos los atributos de metadatos, imágenes de portada y configuración de PDF se resuelven en los tres niveles `frontmatter > format > root` (ver `docs/configuration.md`).
 
 Decisiones confirmadas en este pase (sin cambios de código):
 
