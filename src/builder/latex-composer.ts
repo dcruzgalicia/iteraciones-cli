@@ -116,19 +116,19 @@ async function pushCoverImageMetadata(
   doc: BuildDocument,
   imageMap: Map<string, string>,
 ): Promise<void> {
-  for (const field of ['title-image', 'endpapers']) {
+  for (const field of ['titleImage', 'endpapers']) {
     const value = trimmedStringValue(fm[field]);
     if (value) await resolveAndPushImage(extraArgs, field, value, doc, imageMap);
   }
 
-  const pubImageRaw = fm['publisher-image'];
+  const pubImageRaw = fm['publisherImage'];
   const pubImages: string[] = Array.isArray(pubImageRaw)
     ? pubImageRaw.filter((v): v is string => typeof v === 'string')
     : typeof pubImageRaw === 'string' && pubImageRaw.trim()
       ? [pubImageRaw]
       : [];
   for (const value of pubImages) {
-    await resolveAndPushImage(extraArgs, 'publisher-image', value, doc, imageMap);
+    await resolveAndPushImage(extraArgs, 'publisherImage', value, doc, imageMap);
   }
 }
 

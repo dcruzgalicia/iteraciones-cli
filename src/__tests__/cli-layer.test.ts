@@ -1214,14 +1214,14 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
-  it('title-image: ruta absoluta en el tex con el guion bajo sin escapar', async () => {
+  it('titleImage: ruta absoluta en el tex con el guion bajo sin escapar', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
       await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nformat:\n  latex:\n    generate: true\n', 'utf8');
       // PNG 1x1 válido (base64)
       const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
       await writeFile(join(dir, 'mi_portada.png'), png);
-      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ntitle-image: ./mi_portada.png\n---\n\nContenido.\n', 'utf8');
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ntitleImage: ./mi_portada.png\n---\n\nContenido.\n', 'utf8');
       process.exitCode = 0;
       await runBuild(dir);
       expect(process.exitCode).toBe(0);
@@ -1234,11 +1234,11 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
-  it('title-image: archivo inexistente falla con mensaje claro (no el de latexmk)', async () => {
+  it('titleImage: archivo inexistente falla con mensaje claro (no el de latexmk)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
       await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nformat:\n  latex:\n    generate: true\n', 'utf8');
-      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ntitle-image: ./no_existe.png\n---\n\nContenido.\n', 'utf8');
+      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ntitleImage: ./no_existe.png\n---\n\nContenido.\n', 'utf8');
       const stderrSpy = spyStderr();
       let output = '';
       try {
@@ -1249,7 +1249,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
         stderrSpy.mockRestore();
       }
       expect(process.exitCode).toBe(1);
-      expect(output).toContain('title-image no encontrado');
+      expect(output).toContain('titleImage no encontrado');
       expect(output).toContain(join(dir, 'no_existe.png'));
     });
   });

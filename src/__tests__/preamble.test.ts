@@ -224,7 +224,7 @@ describe('composeLatexTemplate', () => {
     expect(tpl).toContain('$if(uppertitleback)$\n\\uppertitleback{$uppertitleback$}\n$endif$');
     expect(tpl).toContain('$if(lowertitleback)$\n\\lowertitleback{$lowertitleback$}\n$endif$');
     expect(tpl).toContain('$if(publishers)$\n\\publishers{$publishers$}\n$endif$');
-    expect(tpl).toContain('$if(publisher-image)$\n\\publishersimage{$publisher-image$}\n$endif$');
+    expect(tpl).toContain('$if(publisherImage)$\n\\publishersimage{$publisherImage$}\n$endif$');
   });
 
   it('emite el vspace post-portada solo con párrafo normal (skip-paragraph-space)', async () => {
@@ -274,12 +274,12 @@ describe('composeLatexTemplate', () => {
     expect(lines[bodyIdx + 1]).toBe('');
   });
 
-  it('emite el condicional de title-image (imagen de portada) junto al título', async () => {
+  it('emite el condicional de titleImage (imagen de portada) junto al título', async () => {
     const tpl = await composeLatexTemplate(opts);
-    expect(tpl).toContain('$if(title-image)$\n\\titleimage{$title-image$}\n$endif$');
+    expect(tpl).toContain('$if(titleImage)$\n\\titleimage{$titleImage$}\n$endif$');
     const lines = tpl.split('\n');
     const titleIdx = lines.indexOf('\\title{$title$}');
-    const titleImageIdx = lines.indexOf('\\titleimage{$title-image$}');
+    const titleImageIdx = lines.indexOf('\\titleimage{$titleImage$}');
     expect(titleImageIdx).toBeGreaterThan(titleIdx);
   });
 
@@ -309,7 +309,7 @@ describe('composeLatexTemplate', () => {
     expect(titlepages).not.toContain('$body$');
   });
 
-  it('28-titlepages: colofón no contiene title-image ni publisher-image automáticos', async () => {
+  it('28-titlepages: colofón no contiene titleImage ni publisherImage automáticos', async () => {
     const filters = await loadPreambleFilters();
     const titlepages = filters.find((f) => f.name === '28-titlepages')?.content ?? '';
     const colophon = titlepages.slice(titlepages.indexOf('\\newcommand{\\colophonpage}{%'));
@@ -432,7 +432,7 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(maketitle).not.toContain('\\centering\\noindent');
   });
 
-  it('19-maketitle: title-image con graphicx, ancho maximo configurable y extratitle sustituido', async () => {
+  it('19-maketitle: titleImage con graphicx, ancho maximo configurable y extratitle sustituido', async () => {
     const filters = await loadPreambleFilters();
     const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';
     expect(maketitle).toContain('\\usepackage{graphicx}');
@@ -448,7 +448,7 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(maketitle).toContain('\\ifdim\\wd\\titleimagebox>#1');
     expect(maketitle).toContain('width=#1,keepaspectratio');
     expect(maketitle).toContain('\\usebox{\\titleimagebox}');
-    // title-image solo afecta la portada, no crea extratitle
+    // titleImage solo afecta la portada, no crea extratitle
     expect(maketitle).not.toContain('\\titleimagerender[\\extratitlewidth]{\\@titleimage}');
     expect(maketitle).toContain('\\ifx\\@extratitle\\@empty');
   });
