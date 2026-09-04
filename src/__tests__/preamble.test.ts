@@ -300,7 +300,9 @@ describe('composeLatexTemplate', () => {
     // Espejo de nextdouble: si la página tras \clearpage es impar, se inserta
     // una en blanco y el colofón cae en la siguiente par.
     expect(titlepages).toContain('\\ifodd\\value{page}\\null\\titlepage@next');
-    expect(titlepages).toContain('\\vspace*{7\\baselineskip}');
+    // Centering vertical real con \vbox to \textheight + \vfill
+    expect(titlepages).toContain('\\vbox to \\textheight{%');
+    expect(titlepages).toContain('\\vfill');
     // Regresión: un $body$ literal en un comentario se interpola por el
     // template de pandoc (el preamble va dentro del template) y rompe el PDF
     // con 'Missing \\begin{document}'.
@@ -394,13 +396,14 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(dictum).not.toContain('\\topsep=\\baselineskip');
   });
 
-  it('19-maketitle: dedication con vspace de 7 baselineskips (extratitle centrado vertical exacto)', async () => {
+  it('19-maketitle: dedication centrada verticalmente con vbox to textheight', async () => {
     const filters = await loadPreambleFilters();
     const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';
-    expect(maketitle).toContain('\\vspace*{7\\baselineskip}'); // dedication
-    // Posicionamiento fijo con vbox to textheight: \vspace*{10\baselineskip}
-    // ancla el bloque de contenido con espacio fijo desde arriba
-    expect(maketitle).toContain('\\vbox to \\textheight{%');
+    // Centering vertical real: \vbox to \textheight con \vfill arriba y abajo
+    const dedication = maketitle.slice(maketitle.indexOf('\\ifx\\@dedication\\@empty\\else'));
+    expect(dedication).toContain('\\vbox to \\textheight{%');
+    expect(dedication).toContain('\\vfill');
+    // Posicionamiento fijo del extratitle: \vspace*{10\baselineskip}
     expect(maketitle).toContain('\\vspace*{10\\baselineskip}');
   });
 
@@ -413,7 +416,8 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     // Blank verso tras dedication solo en twoside+openright: el contenido
     // siguiente empieza en página impar
     const dedication = maketitle.slice(maketitle.indexOf('\\ifx\\@dedication\\@empty\\else'));
-    expect(dedication).toContain('{\\@dedication}%\n    \\clearpage');
+    expect(dedication).toContain('{\\@dedication}%');
+    expect(dedication).toContain('\\clearpage');
     expect(dedication).toContain('\\if@twoside\\if@openright');
     expect(dedication).toContain('\\null\\clearpage');
   });

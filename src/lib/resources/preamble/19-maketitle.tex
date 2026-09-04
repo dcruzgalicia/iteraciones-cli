@@ -10,7 +10,7 @@
 %   → portada (impar) → titlebacks (reverso de la portada; el \vfill ancla el
 %   lowertitleback al fondo, sin minipage) → dedication (página impar en
 %   twoside, bloque del 50% del ancho alineado a la derecha como el dictum,
-%   con \vspace*{7\baselineskip} antes) → blank verso (solo twoside+openright,
+%   con centering vertical) → blank verso (solo twoside+openright,
 %   el contenido siguiente empieza en página impar).
 % \titlepage@next/\titlepage@nextdouble (28-titlepages.tex): \clearpage +
 % \thispagestyle{empty} (+ página impar en twoside), SIN el \setparsizes
@@ -219,15 +219,18 @@
     {\titlebackformat\@lowertitleback\par}%
   \fi
   % Dedication (página impar en twoside, bloque del 50% del ancho
-  % alineado a la derecha como el dictum, con \vspace*{7\baselineskip} antes).
+  % alineado a la derecha como el dictum, centrado verticalmente).
   \ifx\@dedication\@empty\else
     \titlepage@nextdouble
-    \vspace*{7\baselineskip}%
-    \titlepageblock
-      {\dimexpr\linewidth-\dedicationwidth\relax}%
-      {\z@}%
-      {}%
-      {\@dedication}%
+    \vbox to \textheight{%
+      \vfill
+      \titlepageblock
+        {\dimexpr\linewidth-\dedicationwidth\relax}%
+        {\z@}%
+        {}%
+        {\@dedication}%
+      \vfill
+    }%
     \clearpage
     % Blank verso solo en twoside+openright: el contenido siguiente empieza
     % en página impar. oneside u openany: sin verso adicional.
