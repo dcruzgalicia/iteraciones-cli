@@ -130,6 +130,24 @@ describe.skipIf(!pandocOk)('árboles dorados de dist (#2012)', () => {
       expect(tree.some((p) => p.startsWith('posts/'))).toBe(false);
     });
   });
+
+  it('build fresco con collection no crashea en la limpieza (issue #2361)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await mkdir2(join(dir, 'contenido'));
+      await writeFile(
+        join(dir, 'contenido', 'portada.md'),
+        '---\ntitle: Mi Collection\ntype: collection\nfiles:\n  - contenido/cap1.md\n---\n\n',
+        'utf8',
+      );
+      await writeFile(join(dir, 'contenido', 'cap1.md'), '---\ntitle: Capítulo 1\n---\n\nContenido.\n', 'utf8');
+      process.exitCode = 0;
+      const { runBuild } = await import('../cli/dispatcher.js');
+      await runBuild(dir);
+      const tree = await distTree(join(dir, 'dist', 'files'));
+      expect(tree).toContain('contenido/mi-collection.html');
+    });
+  });
 });
 
 async function mkdir2(path: string): Promise<void> {
