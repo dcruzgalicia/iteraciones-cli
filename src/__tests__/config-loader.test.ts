@@ -261,13 +261,13 @@ describe('loadSiteConfig', () => {
     });
   });
 
-  it('parsea format.pdf con generate:true y aplica defaults para campos no especificados', async () => {
+  it('parsea format.pdf con generate:true y deja los campos PDF específicos sin materializar (resolución efectiva en consumidores)', async () => {
     await withTempDir(async (dir) => {
       await writeConfig(dir, 'format:\n  pdf:\n    generate: true');
       const config = await loadSiteConfig(dir);
       expect(config.format.pdf?.generate).toBe(true);
       expect(config.toc).toBe(false);
-      expect(config.format.pdf?.showDate).toBe(false);
+      expect(config.format.pdf?.showDate).toBeUndefined();
     });
   });
 
@@ -326,11 +326,11 @@ describe('loadSiteConfig', () => {
     });
   });
 
-  it('disabled-preamble-filters tiene los 3 defaults con config presente sin la clave (vía 3)', async () => {
+  it('disabled-preamble-filters queda sin materializar con config presente sin la clave (se resuelve en consumidores)', async () => {
     await withTempDir(async (dir) => {
       await writeConfig(dir, 'language: es-MX\nformat:\n  html:\n    site:\n      title: ok');
       const config = await loadSiteConfig(dir);
-      expect(config.format?.pdf?.disabledPreambleFilters).toEqual(['97-eso-pic', '98-crop', '99-pdfx']);
+      expect(config.format?.pdf?.disabledPreambleFilters).toBeUndefined();
     });
   });
 
@@ -387,7 +387,7 @@ describe('loadSiteConfig', () => {
     expect(defaultsConMinimo.format?.pdf?.disabledPreambleFilters).toEqual(defaultsConArchivoVacio.format?.pdf?.disabledPreambleFilters);
   });
 
-  it('los defaults del esquema coinciden con las constantes DEFAULT_* (fuente única)', async () => {
+  it('los defaults del esquema coinciden con las constantes DEFAULT_* (fuente única, sin materializar PDF)', async () => {
     await withTempDir(async (dir) => {
       await writeConfig(dir, '');
       const config = await loadSiteConfig(dir);
@@ -395,7 +395,7 @@ describe('loadSiteConfig', () => {
       expect(config.toc).toBe(DEFAULT_SITE_CONFIG.toc);
       expect(config.format.latex).toEqual(DEFAULT_SITE_CONFIG.format.latex);
       expect(config.format.html).toEqual(DEFAULT_HTML_FORMAT);
-      expect(config.format.pdf).toEqual(DEFAULT_PDF_FORMAT);
+      expect(config.format.pdf?.generate).toBe(DEFAULT_PDF_FORMAT.generate);
       expect(config.format.epub).toEqual(DEFAULT_EPUB_FORMAT);
       expect(config.format.markdown).toEqual(DEFAULT_MARKDOWN_FORMAT);
     });
@@ -416,7 +416,7 @@ describe('loadSiteConfig', () => {
     });
   });
 
-  it('lee format.pdf.cover-image y su default es false', async () => {
+  it('lee format.pdf.cover-image y queda sin materializar por defecto', async () => {
     await withTempDir(async (dir) => {
       await writeConfig(dir, 'format:\n  pdf:\n    coverImage: true');
       const config = await loadSiteConfig(dir);
@@ -425,7 +425,7 @@ describe('loadSiteConfig', () => {
     await withTempDir(async (dir) => {
       await writeConfig(dir, '');
       const config = await loadSiteConfig(dir);
-      expect(config.format.pdf?.coverImage).toBe(false);
+      expect(config.format.pdf?.coverImage).toBeUndefined();
     });
   });
 });
@@ -467,12 +467,12 @@ describe('loadSiteConfigWithPresence', () => {
     });
   });
 
-  it('sin la clave, el conjunto de presencia no la incluye y el valor es el default', async () => {
+  it('sin la clave, el conjunto de presencia no la incluye y el valor queda sin materializar', async () => {
     await withTempDir(async (dir) => {
       await writeConfig(dir, 'language: es-MX');
       const { config, presentKeys } = await loadSiteConfigWithPresence(dir);
       expect(presentKeys.has('format.pdf.disabledPreambleFilters')).toBe(false);
-      expect(config.format?.pdf?.disabledPreambleFilters).toEqual(['97-eso-pic', '98-crop', '99-pdfx']);
+      expect(config.format?.pdf?.disabledPreambleFilters).toBeUndefined();
     });
   });
 

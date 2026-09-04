@@ -3,8 +3,7 @@ import { cpus } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
-import type { FormatKey } from '../config/site-config.js';
-import { type ActiveFormats, computeActiveFormats } from '../config/site-config.js';
+import { type ActiveFormats, computeActiveFormats, type FormatKey, resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { BuildError, ConfigError } from '../lib/errors.js';
 import { logWarning, runWithWarningSink } from '../lib/logger.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
@@ -116,7 +115,7 @@ export async function build(cwd: string, options: BuildOptions = {}, reporter: B
 async function resolveEffectiveConfig(cwd: string): Promise<{ siteConfig: SiteConfig; effectiveDisabledPreamble: string[] }> {
   const siteConfig = await loadSiteConfig(cwd);
   validateDisabledFilters(siteConfig.disabledFilters);
-  const effectiveDisabledPreamble = resolveEffectiveDisabledPreamble(siteConfig.format?.pdf?.disabledPreambleFilters);
+  const effectiveDisabledPreamble = resolveEffectiveDisabledPreamble(resolveDisabledPreambleConfig(siteConfig));
   validateDisabledPreambleFilters(effectiveDisabledPreamble);
   for (const issue of await validateConfigFilePaths(cwd, siteConfig)) {
     if (issue.severity === 'error') {
@@ -280,10 +279,16 @@ async function prepareEnvironment(
   return ctx;
 }
 
-async function formatCleanup(ctx: BuildContext, plan: BuildMetadata, allDocs: BuildDocument[], siteConfig: SiteConfig): Promise<number> {
+async function formatCleanup(
+  ctx: BuildContext,
+  plan: BuildMetadata,
+  allDocs: BuildDocument[],
+  siteConfig: SiteConfig,
+  discoveryIndex: Map<string, DiscoveryEntry>,
+): Promise<number> {
   let removed = await cleanupRemovedFormats(ctx, allDocs, plan.removedFormats);
-  if (plan.activeFormats.pdf && siteConfig.format?.pdf?.coverImage !== true) {
-    removed += await cleanupCoverImages(ctx, allDocs);
+  if (plan.activeFormats.pdf) {
+    removed += await cleanupCoverImages(ctx, allDocs, siteConfig, discoveryIndex);
   }
   return removed;
 }
@@ -425,7 +430,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
     });
   }
 
-  let cleanedFiles = await formatCleanup(ctx, plan, allDocs, siteConfig);
+  let cleanedFiles = await formatCleanup(ctx, plan, allDocs, siteConfig, discoveryIndex);
 
   const { work, invalidations } = planWork(plan, ctx, prevState, allDocs, discoveredChanges, log);
 

@@ -59,3 +59,20 @@ export function resolveStringField(
   const value = resolveMetadataField(fm, formatCfg, rootCfg, field);
   return typeof value === 'string' ? value : undefined;
 }
+
+export function resolveBooleanField(
+  fm: Record<string, unknown>,
+  formatCfg: Record<string, unknown> | undefined,
+  rootCfg: Record<string, unknown>,
+  field: string,
+): boolean | undefined {
+  const fmValue = fm[field];
+  if (typeof fmValue === 'boolean') return fmValue;
+  if (formatCfg) {
+    const fmtValue = formatCfg[field];
+    if (typeof fmtValue === 'boolean') return fmtValue;
+  }
+  const rootValue = rootCfg[field];
+  if (typeof rootValue === 'boolean') return rootValue;
+  return undefined;
+}

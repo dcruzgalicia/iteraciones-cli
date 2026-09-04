@@ -11,6 +11,7 @@ import {
   validateFrontmatterFields,
 } from '../builder/project-validator.js';
 import { loadSiteConfig } from '../config/config-loader.js';
+import { resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { ConfigError, translateSystemError } from '../lib/errors.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 import { logError, logInfo, logWarning, runWithWarningSink } from '../lib/logger.js';
@@ -151,7 +152,7 @@ async function collectConfigIssues(
   for (const raw of strayFilterWarnings) {
     warnings.push({ file: 'config', message: raw.replace(/^[^\]]*\]\s*/, '') });
   }
-  const effectiveDisabledPreamble = resolveEffectiveDisabledPreamble(config.format?.pdf?.disabledPreambleFilters);
+  const effectiveDisabledPreamble = resolveEffectiveDisabledPreamble(resolveDisabledPreambleConfig(config));
   validateDisabledPreambleFilters(effectiveDisabledPreamble);
   for (const issue of validatePreambleDependencies(effectiveDisabledPreamble)) {
     if (issue.severity === 'error') {

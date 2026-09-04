@@ -86,6 +86,7 @@ describe('pdfDate (fecha de portada del PDF)', () => {
         templatePath: tpl,
         fm: { date: '2026-08-08' },
         siteConfig: withShowDate,
+        formatCfg: withShowDate.format.pdf,
         warnedLangs: new Set(),
       });
       expect(tex).toContain('\\date{8 de agosto de 2026}');

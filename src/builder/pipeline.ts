@@ -108,8 +108,11 @@ export async function documentPipeline(
 
   await pdfConsumer.drain();
 
-  if (pdfOn && formatCfg?.pdf?.coverImage === true) {
-    await generateCoverImages(pdfConsumer.pdfJobs.map((job) => ({ pdfPath: job.pdfDest, pngPath: join(dirname(job.pdfDest), `${job.slug}.png`) })));
+  if (pdfOn && work.exportSets.print.length > 0) {
+    const coverJobs = pdfConsumer.pdfJobs.filter((job) => job.cover);
+    if (coverJobs.length > 0) {
+      await generateCoverImages(coverJobs.map((job) => ({ pdfPath: job.pdfDest, pngPath: join(dirname(job.pdfDest), `${job.slug}.png`) })));
+    }
   }
 
   return { processed };

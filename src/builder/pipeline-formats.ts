@@ -1,7 +1,7 @@
 import { basename, dirname, join } from 'node:path';
 
 import { formatHumanDate } from '../lib/date.js';
-import { fmStringList, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
+import { fmStringList, resolveBooleanField, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { htmlSlugFor } from './discover.js';
 import { assembleExportDocument } from './export/assemble.js';
@@ -77,6 +77,7 @@ async function emitLatexAndQueuePdf(
     pageDimensions: renderCtx.pageDimensions,
     cropActive: renderCtx.cropActive,
     pdfxActive: renderCtx.pdfxActive,
+    cwd: ctx.cwd,
   });
   const texWithXmp = renderCtx.pdfxActive ? injectXmpMetadataIntoLatex(fullTex, xmpMetadataFor(fm, lang, formatCfg?.pdf, ctx.siteConfig)) : fullTex;
 
@@ -99,6 +100,7 @@ async function emitLatexAndQueuePdf(
       relativePath: doc.relativePath,
       texPath,
       pdfDest: outBase(`${outSlug}${primaryOutputExtension('pdf')}`),
+      cover: resolveBooleanField(fm, formatCfg?.pdf, ctx.siteConfig, 'coverImage') === true,
     });
   }
 }

@@ -3,6 +3,7 @@ import { chmod, copyFile, mkdir } from 'node:fs/promises';
 import { cpus, homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
+import { resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
 import { GLYPHS, logNotice, logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
@@ -218,7 +219,7 @@ export async function runPdfxOutputValidation(
   effectiveDisabledPreamble?: string[],
   cache?: PdfxCacheHandle,
 ): Promise<PdfxOutputValidationResult> {
-  const disabled = effectiveDisabledPreamble ?? siteConfig.format?.pdf?.disabledPreambleFilters ?? [];
+  const disabled = effectiveDisabledPreamble ?? resolveDisabledPreambleConfig(siteConfig);
   if (disabled.includes('99-pdfx')) return { validated: 0, failed: 0, summaryLine: undefined };
   if (!existsSync(outputDir)) return { validated: 0, failed: 0, summaryLine: undefined };
   const pdfs = [...new Bun.Glob('**/*.pdf').scanSync({ cwd: outputDir, onlyFiles: true })].sort();

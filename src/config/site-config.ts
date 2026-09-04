@@ -124,6 +124,61 @@ export type FormatKey = 'latex' | 'pdf' | 'html' | 'epub' | 'markdown';
 
 export type ActiveFormats = Record<FormatKey, boolean>;
 
+export interface DisabledPreambleConfigSource {
+  disabledPreambleFilters?: string[];
+  format?: { pdf?: { disabledPreambleFilters?: string[] } };
+}
+
+export function resolveDisabledPreambleConfig(siteConfig: DisabledPreambleConfigSource): string[] {
+  return siteConfig.disabledPreambleFilters ?? siteConfig.format?.pdf?.disabledPreambleFilters ?? DEFAULT_PDF_FORMAT.disabledPreambleFilters;
+}
+
+export interface EffectivePdfConfig {
+  showDate?: boolean;
+  pageNumber?: string;
+  coverImage?: boolean;
+  courtesyPage?: boolean;
+  disabledPreambleFilters?: string[];
+  titleImage?: string;
+  publisherImage?: string | string[];
+  endpapers?: string;
+}
+
+export interface PdfConfigSource {
+  showDate?: boolean;
+  pageNumber?: string;
+  coverImage?: boolean;
+  courtesyPage?: boolean;
+  disabledPreambleFilters?: string[];
+  titleImage?: string;
+  publisherImage?: string | string[];
+  endpapers?: string;
+}
+
+export function effectivePdfConfig(siteConfig: {
+  showDate?: boolean;
+  pageNumber?: string;
+  coverImage?: boolean;
+  courtesyPage?: boolean;
+  disabledPreambleFilters?: string[];
+  titleImage?: string;
+  publisherImage?: string | string[];
+  endpapers?: string;
+  format?: { pdf?: PdfConfigSource };
+}): EffectivePdfConfig {
+  const pdf: PdfConfigSource = siteConfig.format?.pdf ?? {};
+  return {
+    showDate: siteConfig.showDate ?? pdf.showDate,
+    pageNumber: siteConfig.pageNumber ?? pdf.pageNumber,
+    coverImage: siteConfig.coverImage ?? pdf.coverImage,
+    courtesyPage: siteConfig.courtesyPage ?? pdf.courtesyPage,
+    disabledPreambleFilters: siteConfig.disabledPreambleFilters ?? pdf.disabledPreambleFilters,
+    titleImage: siteConfig.titleImage ?? pdf.titleImage,
+    publisherImage: siteConfig.publisherImage ?? pdf.publisherImage,
+    endpapers: siteConfig.endpapers ?? pdf.endpapers,
+  };
+}
+
 export function toActiveFormats(formats: FormatKey[]): ActiveFormats {
   return {
     latex: formats.includes('latex'),
