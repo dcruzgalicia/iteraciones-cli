@@ -2,9 +2,11 @@
 % páginas de título internas (extratitle, uppertitleback, lowertitleback,
 % dedication) definidas en 28-titlepages.tex.
 %
-% Orden de páginas:
-%   extratitle (pág 1, bloque del 75% del ancho centrado con
-%   \vspace*{7\baselineskip} antes)
+% Orden de páginas (cada elemento en recto con verso en blanco solo en
+% twoside+openright; en oneside/openany van encadenados sin blanks):
+%   guarda del endpaper (pág 1, solo si endpapers) → courtesy page (solo si
+%   courtepage) → extratitle (pág impar, bloque del 75% del ancho centrado
+%   con \vspace*{7\baselineskip} antes)
 %   → portada (impar) → titlebacks (reverso, twoside; el \vfill ancla el
 %   lowertitleback al fondo, sin minipage) → dedication (página impar
 %   siguiente, bloque del 50% del ancho alineado a la derecha como el dictum,
@@ -91,35 +93,46 @@
   \end{list}%
 }
 
-% Dos páginas en blanco (1 y 2) antes de la página de extratitle: el libro
-% abre con hojas de guarda y la extratitle queda en la página 3 (impar).
-% Cada \null evita que la página sea vacía (\clearpage de una página sin
-% contenido no la emite en algunos casos). Sin número: los layers de
+% Página en blanco de los elementos previos a la portada (guarda del
+% endpaper, courtesy page): emite el recto y, solo en twoside+openright,
+% también el verso en blanco para que el elemento siguiente caiga en página
+% impar. Cada \null evita que la página sea vacía (\clearpage de una página
+% sin contenido no la emite en algunos casos). Sin número: los layers de
 % scrlayer-scrpage están vacíos hasta que el comando de página se define.
 % \titlepageguards: true si las hojas de guarda existen — 30-endpapers.tex
 % la consulta para dibujar el endpaper SOLO sobre la página 1 cuando esta es
 % la hoja en blanco (sin guardas, sin endpaper en ningún caso).
 \newif\iftitlepageguards
 \newif\ifcourtepage
-\newcommand{\titlepageblanks}{%
-  \titlepageguardstrue
-  \ifcourtepage
+\newcommand{\titlepage@blankpage}{%
+  \thispagestyle{empty}%
+  \null\clearpage
+  % twoside+openright: verso en blanco para que el elemento siguiente caiga
+  % en página impar. oneside u openany: sin verso adicional.
+  \if@twoside\if@openright
+    \thispagestyle{empty}%
     \null\clearpage
-    % twoside+openright: segunda página en blanco para que
-    % extratitle caiga en página impar.
-    \if@twoside\if@openright
-      \null\clearpage
-    \fi\fi
-  \fi
+  \fi\fi
 }
 \renewcommand{\maketitle}{%
-  % Extratitle (pág 1, bloque del 75% del ancho centrado con
+  % 1. Guarda del endpaper (pág 1) + verso en blanco si twoside+openright:
+  % solo cuando endpapers está definido. \titlepageguards activa el dibujo
+  % de la imagen en 30-endpapers.tex sobre la página 1.
+  \ifx\@endpapers\@empty\else
+    \titlepageguardstrue
+    \titlepage@blankpage
+  \fi
+  % 2. Courtesy page (recto) + verso en blanco si twoside+openright:
+  % autónoma, se emite aunque no haya extratitle.
+  \ifcourtepage
+    \titlepage@blankpage
+  \fi
+  % 3. Extratitle (pág 1, bloque del 75% del ancho centrado con
   % \vspace*{7\baselineskip} antes).
   \ifx\@extratitle\@empty
     \ifx\@frontispiece\@empty
       % sin página de extratitle
     \else
-      \titlepageblanks
       \vbox to \textheight{%
         \vfill
         {\centering\parindent\z@\@title\par}%
@@ -128,7 +141,6 @@
       \titlepage@next
     \fi
   \else
-    \titlepageblanks
     \vbox to \textheight{%
       \vspace*{10\baselineskip}%
       \titlepageblock

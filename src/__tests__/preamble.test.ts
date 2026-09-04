@@ -466,21 +466,23 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(date).toBeLessThan(pub);
   });
 
-  it('19-maketitle: titlepageblanks inserta páginas según twoside/openright', async () => {
+  it('19-maketitle: endpaper, courtesyPage y extratitle independientes (parejas recto+verso)', async () => {
     const filters = await loadPreambleFilters();
     const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';
-    expect(maketitle).toContain('\\newcommand{\\titlepageblanks}{%');
-    // Primera página en blanco siempre presente
-    expect(maketitle).toContain('\\null\\clearpage');
-    // Segunda página solo condicional: twoside+openright
+    // Página en blanco autónoma: recto + verso en blanco solo si twoside+openright
+    expect(maketitle).toContain('\\newcommand{\\titlepage@blankpage}{%');
+    expect(maketitle).toContain('\\thispagestyle{empty}%\n  \\null\\clearpage');
     expect(maketitle).toContain('\\if@twoside\\if@openright');
-    // Las dos ramas de extratitle (definido y no definido)
-    // llaman a titlepageblanks: definición + 2 llamadas
-    expect((maketitle.match(/\\titlepageblanks/g) ?? []).length).toBe(3);
-    // Bandera para 30-endpapers: las guardas existen (el endpaper solo se
-    // dibuja sobre la hoja en blanco de la página 1)
-    expect(maketitle).toContain('\\newif\\iftitlepageguards');
+    // Guarda del endpaper: blank inicial solo si endpapers definido
+    expect(maketitle).toContain('\\ifx\\@endpapers\\@empty\\else');
     expect(maketitle).toContain('\\titlepageguardstrue');
+    expect(maketitle).toContain('\\titlepage@blankpage');
+    // Courtesy page autónoma: se emite aunque no haya extratitle
+    expect(maketitle).toContain('\\ifcourtepage\n    \\titlepage@blankpage');
+    // titlepageblanks desaparece: nada acoplado a la rama de extratitle
+    expect(maketitle).not.toContain('titlepageblanks');
+    // El flag de guardas solo se activa cuando endpapers existe
+    expect((maketitle.match(/\\titlepageguardstrue/g) ?? []).length).toBe(1);
   });
 
   it('19-maketitle: bloques extratitle (75% centrado) y dedication (50% derecha) como el dictum', async () => {
