@@ -406,6 +406,20 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(maketitle).toContain('\\vspace*{10\\baselineskip}');
   });
 
+  it('19-maketitle: dedication en impar con blank verso (twoside+openright) y titlebacks en ambos modos', async () => {
+    const filters = await loadPreambleFilters();
+    const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';
+    // Titlebacks sin el \if@twoside envolvente: se imprimen también en oneside
+    expect(maketitle).toContain('\\@tempswatrue\n  \\ifx\\@uppertitleback\\@empty');
+    expect(maketitle).not.toContain('\\if@twoside\n  \\@tempswatrue');
+    // Blank verso tras dedication solo en twoside+openright: el contenido
+    // siguiente empieza en página impar
+    const dedication = maketitle.slice(maketitle.indexOf('\\ifx\\@dedication\\@empty\\else'));
+    expect(dedication).toContain('{\\@dedication}%\n    \\clearpage');
+    expect(dedication).toContain('\\if@twoside\\if@openright');
+    expect(dedication).toContain('\\null\\clearpage');
+  });
+
   it('19-maketitle: subtitle long (parrafos con linea en blanco) y parindent cero en las paginas de titulo', async () => {
     // Regresión: KOMA define \subtitle con \newcommand* (no-long); una línea en
     // blanco en el argumento rompía la compilación ('Paragraph ended before
