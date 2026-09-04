@@ -147,6 +147,10 @@ function Pandoc(doc)
     elseif type(page_cmd) == 'table' and page_cmd.text ~= nil then
       page_cmd_text = page_cmd.text
     end
+    if page_cmd_text ~= nil and page_cmd_text ~= '' then
+      -- El template interpola el comando como RawInline para que no lo re-escape.
+      doc.meta['page-number-command'] = pandoc.MetaInlines({ pandoc.RawInline('latex', page_cmd_text) })
+    end
     if skip and page_cmd_text ~= nil and page_cmd_text ~= '' then
       -- Un RawBlock inicial puede contener varios comandos de sección fusionados
       -- (\part{Uno}\n\chapter{Dos}\n\section{Tres} llegan como un solo bloque):
