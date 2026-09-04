@@ -13,7 +13,14 @@ function progressStub() {
 }
 
 function job(i: number): PdfJob {
-  return { dir: '.', slug: `doc-${i}`, relativePath: `doc-${i}.md`, texPath: `/tmp/work/doc-${i}.tex`, pdfDest: `/tmp/out/doc-${i}.pdf` };
+  return {
+    dir: '.',
+    slug: `doc-${i}`,
+    relativePath: `doc-${i}.md`,
+    texPath: `/tmp/work/doc-${i}.tex`,
+    pdfDest: `/tmp/out/doc-${i}.pdf`,
+    cover: false,
+  };
 }
 
 describe('pdfSlotCount (tope de concurrencia del pool PDF)', () => {
@@ -252,7 +259,14 @@ describe('quiesce tras cancel (#2013)', () => {
     try {
       const consumer = createPdfConsumer('/tmp/work', '/tmp/biber', 2, progressStub());
       consumer.start();
-      consumer.pdfJobs.push({ dir: '.', slug: 'slow', relativePath: 'slow.md', texPath: '/tmp/w/slow.tex', pdfDest: '/tmp/o/slow.pdf' });
+      consumer.pdfJobs.push({
+        dir: '.',
+        slug: 'slow',
+        relativePath: 'slow.md',
+        texPath: '/tmp/w/slow.tex',
+        pdfDest: '/tmp/o/slow.pdf',
+        cover: false,
+      });
       await Bun.sleep(20); // el worker tomó el job y está bloqueado en vuelo
 
       consumer.cancel();
@@ -276,7 +290,7 @@ describe('quiesce tras cancel (#2013)', () => {
     try {
       const consumer = createPdfConsumer('/tmp/work', '/tmp/biber', 1, progressStub());
       consumer.start();
-      consumer.pdfJobs.push({ dir: '.', slug: 'zombi', relativePath: 'zombi.md', texPath: '/tmp/w/z.tex', pdfDest: '/tmp/o/z.pdf' });
+      consumer.pdfJobs.push({ dir: '.', slug: 'zombi', relativePath: 'zombi.md', texPath: '/tmp/w/z.tex', pdfDest: '/tmp/o/z.pdf', cover: false });
       await Bun.sleep(20);
       consumer.cancel();
       const t0 = performance.now();

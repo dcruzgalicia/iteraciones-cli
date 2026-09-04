@@ -229,7 +229,7 @@ describe('composeLatexTemplate', () => {
 
   it('emite el vspace post-portada solo con párrafo normal (skip-paragraph-space)', async () => {
     const tpl = await composeLatexTemplate(opts);
-    expect(tpl).toContain('$if(skip-paragraph-space)$\n$else$\n\\vspace*{2\\baselineskip}\n$endif$');
+    expect(tpl).toContain('$if(skip-paragraph-space)$\n$else$\n\\vspace*{2\\baselineskip}');
   });
 
   it('emite \\tableofcontents condicional solo con toc configurado', async () => {
@@ -239,20 +239,18 @@ describe('composeLatexTemplate', () => {
     expect(withoutToc).not.toContain('\\tableofcontents');
   });
 
-  it('incluye el comando de número de página configurado', async () => {
-    const tpl = await composeLatexTemplate({ ...opts, pageNumber: 'footer-center' });
-    expect(tpl).toContain('\\cfoot*{\\pagemark}');
+  it('incluye el placeholder del comando de número de página (metadata page-number-command)', async () => {
+    const tpl = await composeLatexTemplate(opts);
+    expect(tpl).toContain('$if(page-number-command)$\n$page-number-command$\n$endif$');
   });
 
-  it('emite el comando de página solo con párrafo normal (sin pagestyle explícito)', async () => {
-    const tpl = await composeLatexTemplate({ ...opts, pageNumber: 'footer-right' });
-    expect(tpl).toContain('$if(skip-paragraph-space)$\n$else$\n\\ofoot*{\\pagemark}\n$endif$');
+  it('emite el comando de página solo con párrafo normal (dentro del else de skip-paragraph-space)', async () => {
+    const tpl = await composeLatexTemplate(opts);
+    expect(tpl).toContain(
+      '$if(skip-paragraph-space)$\n$else$\n\\vspace*{2\\baselineskip}\n$if(page-number-command)$\n$page-number-command$\n$endif$\n$endif$',
+    );
     expect(tpl).not.toContain('\\pagestyle{empty}');
     expect(tpl).not.toContain('\\pagestyle{headings}');
-  });
-
-  it('lanza BuildError con pageNumber inválido', async () => {
-    await expect(composeLatexTemplate({ ...opts, pageNumber: 'raro' })).rejects.toThrow('pageNumber inválido');
   });
 
   it('escapa rutas de bibliografía en \\addbibresource sin tocar guiones bajos', async () => {

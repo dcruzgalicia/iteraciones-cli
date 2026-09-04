@@ -2,7 +2,7 @@ import { dirname, isAbsolute, join, resolve } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
-import { fmStringList, resolveMetadataField, trimmedStringValue } from '../lib/frontmatter-fields.js';
+import { fmStringList, resolveBooleanField, resolveMetadataField, resolveStringField, trimmedStringValue } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { execPandoc, MD_READER } from '../lib/pandoc-runner.js';
 import { parseAuthors } from './discover.js';
@@ -26,10 +26,6 @@ const TITLE_PAGE_FIELDS = [
   'colophon',
 ];
 
-function rawFrontmatterDate(fm: Record<string, unknown>): string | undefined {
-  return typeof fm.date === 'string' && fm.date.trim() ? fm.date.trim() : undefined;
-}
-
 async function fileCreationDate(doc: BuildDocument): Promise<string | undefined> {
   try {
     const fileStat = await Bun.file(doc.filePath).stat();
@@ -49,13 +45,19 @@ async function fileCreationDate(doc: BuildDocument): Promise<string | undefined>
   }
 }
 
-async function pdfDate(fm: Record<string, unknown>, siteConfig: SiteConfig, doc: BuildDocument): Promise<string | undefined> {
-  const rawDate = rawFrontmatterDate(fm);
-  if (siteConfig.format?.pdf?.showDate === true) {
-    if (rawDate) return formatHumanDate(rawDate);
+async function pdfDate(
+  fm: Record<string, unknown>,
+  formatCfg: Record<string, unknown> | undefined,
+  siteConfig: SiteConfig,
+  doc: BuildDocument,
+): Promise<string | undefined> {
+  const resolvedDate = resolveStringField(fm, formatCfg, siteConfig, 'date');
+  const datePresent = fm.date !== undefined || formatCfg?.date !== undefined || siteConfig.date !== undefined;
+  if (resolveBooleanField(fm, formatCfg, siteConfig, 'showDate') === true) {
+    if (resolvedDate) return formatHumanDate(resolvedDate);
     return fileCreationDate(doc);
   }
-  if (rawDate || fm.date !== undefined) return '';
+  if (resolvedDate || datePresent) return '';
   return undefined;
 }
 
@@ -71,6 +73,7 @@ interface LatexComposerOptions {
   pageDimensions?: PageDimensions;
   cropActive?: boolean;
   pdfxActive?: boolean;
+  cwd?: string;
 }
 
 interface ImagePreprocessResult {
@@ -110,6 +113,29 @@ async function resolveAndPushImage(
   extraArgs.push(`--metadata=${field}:${imageMap.get(imagePath) ?? imagePath}`);
 }
 
+const COVER_IMAGE_FIELDS = ['titleImage', 'publisherImage', 'endpapers'] as const;
+
+function toAbsoluteImagePaths(value: string | string[], cwd: string): string | string[] {
+  if (Array.isArray(value)) return value.map((v) => (isAbsolute(v) ? v : resolve(cwd, v)));
+  return isAbsolute(value) ? value : resolve(cwd, value);
+}
+
+function mergeConfigImages(
+  fm: Record<string, unknown>,
+  formatCfg: Record<string, unknown> | undefined,
+  siteConfig: SiteConfig,
+  cwd: string,
+): Record<string, unknown> {
+  const merged = { ...fm };
+  for (const field of COVER_IMAGE_FIELDS) {
+    if (merged[field] !== undefined) continue;
+    const configValue = formatCfg?.[field] ?? siteConfig[field];
+    if (configValue === undefined) continue;
+    merged[field] = toAbsoluteImagePaths(configValue as string | string[], cwd);
+  }
+  return merged;
+}
+
 async function pushCoverImageMetadata(
   extraArgs: string[],
   fm: Record<string, unknown>,
@@ -121,7 +147,7 @@ async function pushCoverImageMetadata(
     if (value) await resolveAndPushImage(extraArgs, field, value, doc, imageMap);
   }
 
-  const pubImageRaw = fm['publisherImage'];
+  const pubImageRaw = fm.publisherImage;
   const pubImages: string[] = Array.isArray(pubImageRaw)
     ? pubImageRaw.filter((v): v is string => typeof v === 'string')
     : typeof pubImageRaw === 'string' && pubImageRaw.trim()
@@ -194,23 +220,28 @@ export async function markdownToLatex(
     pageDimensions,
     cropActive = false,
     pdfxActive = false,
+    cwd = '',
   } = opts;
-  const title = typeof fm.title === 'string' && fm.title.trim() ? fm.title : 'Sin título';
-  const creator = parseAuthors(fm.creator);
+  const effectiveFm = mergeConfigImages(fm, formatCfg, siteConfig, cwd);
+  const title = resolveStringField(fm, formatCfg, siteConfig, 'title') ?? 'Sin título';
+  const creator = parseAuthors(resolveMetadataField(fm, formatCfg, siteConfig, 'creator'));
 
   let imageMap = new Map<string, string>();
   let processedImages: string[] = [];
   let finalContent = content;
   if (pageDimensions) {
-    ({ imageMap, processedImages, finalContent } = await preprocessDocumentImages(content, doc, fm, pageDimensions, cropActive, pdfxActive));
+    ({ imageMap, processedImages, finalContent } = await preprocessDocumentImages(content, doc, effectiveFm, pageDimensions, cropActive, pdfxActive));
   }
 
   const extraArgs = ['--template', templatePath, '--top-level-division', 'section', '--shift-heading-level-by=2'];
   extraArgs.push(`--metadata=babel-lang:${babelOptionsForLang(siteConfig.language, warnedLangs)}`);
   extraArgs.push(`--metadata=biblatex-available:${biblatexAvailable}`);
-  const pageCommand = pageNumberCommandFor(siteConfig.format?.pdf?.pageNumber ?? 'header-right');
+  const pageNumber = resolveStringField(fm, formatCfg, siteConfig, 'pageNumber');
+  const pageCommand = pageNumberCommandFor(pageNumber ?? 'header-right');
   if (pageCommand) {
     extraArgs.push(`--metadata=page-number-command:${pageCommand}`);
+  } else if (pageNumber) {
+    logWarning(`pageNumber "${pageNumber}" no es una posición válida; se usa header-right`, 'latex');
   }
   for (const filter of [...filters.semantic, ...filters.user, ...filters.flags, ...filters.latex]) {
     extraArgs.push('--lua-filter', filter);
@@ -222,14 +253,14 @@ export async function markdownToLatex(
     }
   }
   extraArgs.push(titleArg(title));
-  await pushCoverImageMetadata(extraArgs, fm, doc, imageMap);
+  await pushCoverImageMetadata(extraArgs, effectiveFm, doc, imageMap);
   extraArgs.push(...creatorArgs(creator));
   const publishers = fmStringList(resolveMetadataField(fm, formatCfg, siteConfig, 'publisher'));
   if (publishers) extraArgs.push(...publisherArg(publishers));
-  const date = await pdfDate(fm, siteConfig, doc);
+  const date = await pdfDate(fm, formatCfg, siteConfig, doc);
   extraArgs.push(...dateArg(date));
 
-  const courtesyPage = fm.courtesyPage === true || formatCfg?.courtesyPage === true || siteConfig.courtesyPage === true;
+  const courtesyPage = resolveBooleanField(fm, formatCfg, siteConfig, 'courtesyPage') === true;
   if (courtesyPage) extraArgs.push('--metadata=courtesy-page:true');
 
   const titleOverrides = buildTitlePageOverrides(fm, formatCfg, siteConfig, doc);

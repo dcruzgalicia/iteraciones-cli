@@ -100,7 +100,6 @@ export async function writeEffectiveTemplates(
     state.pageDimensions = detectPageSize(preambleFilters);
     applyPrintQueueDynamics(preambleFilters, state.pageDimensions);
     const templateOpts = {
-      pageNumber: siteConfig.format?.pdf?.pageNumber ?? DEFAULT_SITE_CONFIG.format.pdf.pageNumber,
       toc: siteConfig.toc,
       bibFiles,
     };

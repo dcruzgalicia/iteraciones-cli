@@ -16,6 +16,7 @@ export interface PdfJob {
   relativePath: string;
   texPath: string;
   pdfDest: string;
+  cover: boolean;
 }
 
 function raceWithTimeout(promises: Promise<void>[], ms: number): Promise<void> {

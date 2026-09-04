@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
+import { resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { MD_READER } from '../lib/pandoc-runner.js';
 import { hashString } from './state-serialize.js';
 
@@ -131,7 +132,7 @@ export async function computeFiltersHash(
     parts.push(rel, content);
   }
   parts.push(JSON.stringify(siteConfig.disabledFilters ?? []));
-  parts.push(JSON.stringify(effectiveDisabledPreamble ?? siteConfig.format?.pdf?.disabledPreambleFilters ?? []));
+  parts.push(JSON.stringify(effectiveDisabledPreamble ?? resolveDisabledPreambleConfig(siteConfig)));
   parts.push(MD_READER);
   if (pandocVersion) parts.push('pandoc', pandocVersion);
   parts.push('schema', await computeSchemaSourceHash(SCHEMA_SOURCE_FILES, import.meta.dir, schemaPrevCache, schemaCache));

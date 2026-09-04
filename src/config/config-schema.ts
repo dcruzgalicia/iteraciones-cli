@@ -34,6 +34,8 @@ z.setErrorMap(((issue: z.ZodIssue) => {
 
 const KNOWN_ACCENT_COLORS = Object.keys(ACCENT_PALETTES) as AccentColor[];
 
+const PAGE_NUMBER_OPTIONS = ['header-left', 'header-center', 'header-right', 'footer-left', 'footer-center', 'footer-right'] as const;
+
 const DublinCoreFieldsSchema = {
   title: z.string().optional(),
   creator: z.union([z.string(), z.array(z.string())]).optional(),
@@ -62,6 +64,12 @@ const TitlePageFieldsSchema = {
   uppertitleback: z.string().optional(),
   lowertitleback: z.string().optional(),
   colophon: z.string().optional(),
+};
+
+const ImageFieldsSchema = {
+  titleImage: z.string().optional(),
+  publisherImage: z.union([z.string(), z.array(z.string())]).optional(),
+  endpapers: z.string().optional(),
 };
 
 const HtmlBlocksSchema = z
@@ -111,16 +119,12 @@ export const HtmlFormatSchema = z
 export const PdfFormatSchema = z
   .object({
     generate: z.boolean().default(DEFAULT_PDF_FORMAT.generate),
-    showDate: z.boolean().default(DEFAULT_PDF_FORMAT.showDate),
-    pageNumber: z
-      .enum(['header-left', 'header-center', 'header-right', 'footer-left', 'footer-center', 'footer-right'])
-      .default(DEFAULT_PDF_FORMAT.pageNumber),
-    disabledPreambleFilters: z
-      .array(z.string())
-      .default(DEFAULT_PDF_FORMAT.disabledPreambleFilters)
-      .transform((v) => (v?.length ? v : undefined)),
-    coverImage: z.boolean().default(DEFAULT_PDF_FORMAT.coverImage ?? false),
-    courtesyPage: z.boolean().default(false),
+    showDate: z.boolean().optional(),
+    pageNumber: z.enum(PAGE_NUMBER_OPTIONS).optional(),
+    disabledPreambleFilters: z.array(z.string()).optional(),
+    coverImage: z.boolean().optional(),
+    courtesyPage: z.boolean().optional(),
+    ...ImageFieldsSchema,
     ...DublinCoreFieldsSchema,
     ...TitlePageFieldsSchema,
   })
@@ -161,15 +165,20 @@ export const SiteConfigSchema = z
     format: FormatSchema.optional(),
     bibliography: z.string().optional(),
     csl: z.string().optional(),
-    courtesyPage: z.boolean().default(false),
+    showDate: z.boolean().optional(),
+    pageNumber: z.enum(PAGE_NUMBER_OPTIONS).optional(),
+    coverImage: z.boolean().optional(),
+    courtesyPage: z.boolean().optional(),
+    disabledPreambleFilters: z.array(z.string()).optional(),
     disabledFilters: z
       .array(z.string())
-      .optional()
-      .transform((v) => (v?.length ? v : undefined)),
+      .transform((v) => (v?.length ? v : undefined))
+      .optional(),
     luaFilters: z
       .array(z.string())
-      .optional()
-      .transform((v) => (v?.length ? v : undefined)),
+      .transform((v) => (v?.length ? v : undefined))
+      .optional(),
+    ...ImageFieldsSchema,
     ...DublinCoreFieldsSchema,
     ...TitlePageFieldsSchema,
   })
@@ -179,7 +188,7 @@ export const SiteConfigSchema = z
     format: {
       latex: raw.format?.latex ?? { ...DEFAULT_LATEX_FORMAT },
       html: raw.format?.html ?? { ...DEFAULT_HTML_FORMAT },
-      pdf: raw.format?.pdf ?? { ...DEFAULT_PDF_FORMAT },
+      pdf: raw.format?.pdf ?? ({ generate: DEFAULT_PDF_FORMAT.generate } as z.infer<typeof PdfFormatSchema>),
       epub: raw.format?.epub ?? { ...DEFAULT_EPUB_FORMAT },
       markdown: raw.format?.markdown ?? { ...DEFAULT_MARKDOWN_FORMAT },
     },

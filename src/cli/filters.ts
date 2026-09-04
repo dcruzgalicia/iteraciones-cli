@@ -1,7 +1,7 @@
 import { getBuiltinLuaFilterInfos, LUA_GROUP_ORDER, validateDisabledFilters } from '../builder/filter-resolver.js';
 import { getBuiltinPreambleFilterInfos, resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters } from '../builder/preamble-loader.js';
 import { loadSiteConfigIfPresent } from '../config/config-loader.js';
-import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
+import { DEFAULT_SITE_CONFIG, resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { logInfo } from '../lib/logger.js';
 
 function sortLuaInfos(infos: Awaited<ReturnType<typeof getBuiltinLuaFilterInfos>>) {
@@ -115,7 +115,7 @@ export async function listFilters(cwd: string, options: RunFiltersOptions = {}):
   const stream = options.stream ?? process.stdout;
   const config = (await loadSiteConfigIfPresent(cwd))?.config ?? DEFAULT_SITE_CONFIG;
   validateDisabledFilters(config.disabledFilters);
-  const effectiveDisabledPreamble = resolveEffectiveDisabledPreamble(config.format?.pdf?.disabledPreambleFilters);
+  const effectiveDisabledPreamble = resolveEffectiveDisabledPreamble(resolveDisabledPreambleConfig(config));
   validateDisabledPreambleFilters(effectiveDisabledPreamble);
   const disabled = new Set(config.disabledFilters ?? []);
   const allInfos = sortLuaInfos(await getBuiltinLuaFilterInfos());

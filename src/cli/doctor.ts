@@ -1,7 +1,7 @@
 import { discoverBibFiles } from '../builder/state-bib.js';
 import { loadSiteConfigIfPresent } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
-import { DEFAULT_PDF_FORMAT } from '../config/site-config.js';
+import { DEFAULT_PDF_FORMAT, resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { GLYPHS, logInfo } from '../lib/logger.js';
 import {
   type CheckResult,
@@ -29,8 +29,11 @@ function resolveEffectiveDisabled(
   loadedOrError: { loaded?: { presentKeys: ReadonlySet<string> } | null; error?: string },
   siteConfig: SiteConfig | null,
 ): string[] {
-  const userWroteDisabledList = !('error' in loadedOrError) && loadedOrError.loaded?.presentKeys.has('format.pdf.disabledPreambleFilters') === true;
-  return userWroteDisabledList ? (siteConfig?.format?.pdf?.disabledPreambleFilters ?? []) : (DEFAULT_PDF_FORMAT.disabledPreambleFilters ?? []);
+  const userWroteDisabledList =
+    !('error' in loadedOrError) &&
+    (loadedOrError.loaded?.presentKeys.has('format.pdf.disabledPreambleFilters') === true ||
+      loadedOrError.loaded?.presentKeys.has('disabledPreambleFilters') === true);
+  return userWroteDisabledList ? resolveDisabledPreambleConfig(siteConfig ?? {}) : (DEFAULT_PDF_FORMAT.disabledPreambleFilters ?? []);
 }
 
 export async function collectChecks(cwd: string): Promise<CheckResult[]> {

@@ -7,7 +7,7 @@ import { build } from '../builder/orchestrator.js';
 import { DIST_DIR, DIST_FILES_DIR } from '../builder/output-layout.js';
 import { loadStateFile } from '../builder/state-serialize.js';
 import { loadSiteConfigIfPresent } from '../config/config-loader.js';
-import { computeActiveFormats, DEFAULT_PDF_FORMAT } from '../config/site-config.js';
+import { computeActiveFormats, DEFAULT_PDF_FORMAT, resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { BUILD_ERROR_CODES, BuildError, ConfigError, ConversionError, PANDOC_ERROR_CODES } from '../lib/errors.js';
 import { logError, logInfo, logSuccess } from '../lib/logger.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
@@ -182,7 +182,8 @@ async function buildProjectInfo(cwd: string): Promise<string[]> {
     .catch(() => false);
   const activeFormats = computeActiveFormats(config.format);
   const disabledFilters = config.disabledFilters?.length ? config.disabledFilters.join(', ') : '(ninguno)';
-  const preambleDisabled = presentKeys.has('format.pdf.disabledPreambleFilters') ? (config.format?.pdf?.disabledPreambleFilters ?? []) : [];
+  const userWrotePreambleList = presentKeys.has('format.pdf.disabledPreambleFilters') === true || presentKeys.has('disabledPreambleFilters') === true;
+  const preambleDisabled = userWrotePreambleList ? resolveDisabledPreambleConfig(config) : [];
   const docCount = (await listMarkdownDocuments(cwd)).length;
   const html = config.format?.html;
   const theme = html?.site?.theme ?? '(por defecto)';

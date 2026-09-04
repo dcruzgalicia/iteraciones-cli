@@ -1,4 +1,3 @@
-import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 import type { PreambleFilter } from './preamble-loader.js';
 
@@ -175,12 +174,7 @@ export function pageNumberCommandFor(pageNumber: string): string | undefined {
   return PAGE_NUMBER_COMMANDS[pageNumber];
 }
 
-export async function composeLatexTemplate(opts: {
-  pageNumber: string;
-  toc: boolean;
-  preambleFilters: PreambleFilter[];
-  bibFiles: string[];
-}): Promise<string> {
+export async function composeLatexTemplate(opts: { toc: boolean; preambleFilters: PreambleFilter[]; bibFiles: string[] }): Promise<string> {
   const lines: string[] = [];
   for (const filter of opts.preambleFilters) {
     lines.push(filter.content.trimEnd());
@@ -240,16 +234,10 @@ export async function composeLatexTemplate(opts: {
   lines.push('$if(skip-paragraph-space)$');
   lines.push('$else$');
   lines.push('\\vspace*{2\\baselineskip}');
+  lines.push('$if(page-number-command)$');
+  lines.push('$page-number-command$');
   lines.push('$endif$');
-  const pageCommand = PAGE_NUMBER_COMMANDS[opts.pageNumber];
-  if (pageCommand) {
-    lines.push('$if(skip-paragraph-space)$');
-    lines.push('$else$');
-    lines.push(pageCommand);
-    lines.push('$endif$');
-  } else {
-    throw new BuildError(`pageNumber inválido: "${opts.pageNumber}". Valores válidos: ${Object.keys(PAGE_NUMBER_COMMANDS).join(', ')}`);
-  }
+  lines.push('$endif$');
   lines.push('');
   lines.push('$body$');
   lines.push('');

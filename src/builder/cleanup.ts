@@ -1,6 +1,8 @@
 import { readdir, rm } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
+import type { SiteConfig } from '../config/config-schema.js';
 import type { FormatKey } from '../config/site-config.js';
+import { resolveBooleanField } from '../lib/frontmatter-fields.js';
 import { htmlSlugFor } from './discover.js';
 import { LATEXMK_AUX_EXTENSIONS } from './export/runner.js';
 import { ALL_OUTPUT_EXTENSIONS, FORMAT_OUTPUT_EXTENSIONS } from './output-layout.js';
@@ -93,9 +95,16 @@ export async function cleanupRemovedFormats(ctx: BuildContext, allDocs: BuildDoc
   return removed;
 }
 
-export async function cleanupCoverImages(ctx: BuildContext, allDocs: BuildDocument[]): Promise<number> {
+export async function cleanupCoverImages(
+  ctx: BuildContext,
+  allDocs: BuildDocument[],
+  siteConfig: SiteConfig,
+  discoveryIndex: Map<string, DiscoveryEntry>,
+): Promise<number> {
   let removed = 0;
   for (const doc of allDocs) {
+    const rawFm = discoveryIndex.get(doc.relativePath)?.fm ?? {};
+    if (resolveBooleanField(rawFm, siteConfig.format?.pdf, siteConfig, 'coverImage') === true) continue;
     const png = join(ctx.outputDir, dirname(doc.relativePath), `${htmlSlugFor(doc.relativePath, doc.slug)}.png`);
     if (await removeIfExists(png)) removed++;
   }
