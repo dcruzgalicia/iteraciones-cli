@@ -257,10 +257,10 @@ describe('rewriteImagePaths — reemplazo anclado (#2170)', () => {
   });
 
   it('reescribe los campos de portada preservando comillas', () => {
-    const content = ['---', 'title-image: "img.png"', "publisher-image: 'img.png'", 'endpapers: img.png', 'otra-clave: img.png', '---'].join('\n');
+    const content = ['---', 'titleImage: "img.png"', "publisherImage: 'img.png'", 'endpapers: img.png', 'otra-clave: img.png', '---'].join('\n');
     const result = rewriteImagePaths(content, map, docDir);
-    expect(result).toContain(`title-image: "${processed}"`);
-    expect(result).toContain(`publisher-image: '${processed}'`);
+    expect(result).toContain(`titleImage: "${processed}"`);
+    expect(result).toContain(`publisherImage: '${processed}'`);
     expect(result).toContain(`endpapers: ${processed}`);
     expect(result).toContain('otra-clave: img.png');
   });

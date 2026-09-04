@@ -20,7 +20,7 @@
 % argumento (párrafo del frontmatter |) rompe la compilación con 'Paragraph
 % ended before \subtitle was complete'. Se redefine como long (\renewcommand
 % sin estrella) para permitir subtítulos multilínea con párrafos.
-% title-image (campo del frontmatter, solo LaTeX/PDF): imagen que sustituye al
+% titleImage (campo del frontmatter, solo LaTeX/PDF): imagen que sustituye al
 % texto del título en la portada. graphicx NO venía cargado en el preamble.
 \usepackage{graphicx}
 \makeatletter
@@ -201,7 +201,7 @@
       {\centering\parindent\z@\@publishers\par}%
     \fi
   \else
-    % publisher-image definido: la imagen sustituye al texto de publishers
+    % publisherImage definido: la imagen sustituye al texto de publishers
     % (máx. 150pt ≈ 150px a 72dpi, ajustable). Soporta múltiples imágenes.
     \vskip 2\baselineskip
     {\centering\@renderpublishersimages\par}%

@@ -4,7 +4,7 @@
 -- de título internas y el colofón final. subject y publishers aceptan un
 -- array de strings (como author): se unen con ', '. Solo corre en la pasada
 -- latex (en HTML los campos se ignoran o los serializa el compositor HTML
--- con \n → espacio). title-image (imagen de portada) no es contenido
+-- con \n → espacio). titleImage (imagen de portada) no es contenido
 -- markdown: la ruta pasa literal como RawInline latex.
 --
 -- El valor llega como MetaBlocks (frontmatter YAML |: los párrafos ya son
@@ -198,12 +198,12 @@ local function serialize_titleback(blocks)
   return latex:gsub('%s+$', '')
 end
 
--- title-image y publisher-image NO son contenido markdown: son rutas de
+-- titleImage y publisherImage NO son contenido markdown: son rutas de
 -- archivo que deben llegar literal a \includegraphics. El writer de pandoc
 -- escaparía el guion bajo (mi_imagen.jpg → mi\_imagen.jpg) y rompería la
 -- búsqueda del archivo. Acepta MetaString (--metadata del CLI) o inlines
 -- Str/Space (frontmatter).
-local RAW_PATH_FIELDS = { 'title-image', 'publisher-image', 'endpapers' }
+local RAW_PATH_FIELDS = { 'titleImage', 'publisherImage', 'endpapers' }
 
 local function meta_to_rawpath(meta)
   if type(meta) == 'string' then

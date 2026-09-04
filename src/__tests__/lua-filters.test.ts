@@ -628,10 +628,10 @@ describe.skipIf(!pandocOk)('filter latex/10-titlepages (páginas de título inte
         '$if(uppertitleback)$\\uppertitleback{$uppertitleback$}$endif$\n' +
         '$if(lowertitleback)$\\lowertitleback{$lowertitleback$}$endif$\n' +
         '$if(publishers)$\\publishers{$publishers$}$endif$\n' +
-        '$if(publisher-image)$\\publishersimage{$publisher-image$}$endif$\n' +
+        '$if(publisherImage)$\\publishersimage{$publisherImage$}$endif$\n' +
         '$if(endpapers)$\\setendpapers{$endpapers$}$endif$\n' +
         '$if(colophon)$\\colophon{$colophon$}$endif$\n' +
-        '$if(title-image)$\\titleimage{$title-image$}$endif$\n' +
+        '$if(titleImage)$\\titleimage{$titleImage$}$endif$\n' +
         '$body$\n' +
         '\\end{document}\n',
     );
@@ -691,16 +691,16 @@ describe.skipIf(!pandocOk)('filter latex/10-titlepages (páginas de título inte
     expect(tex).toContain('\\subject{Ensayo}');
   });
 
-  it('title-image pasa la ruta literal (sin escapar el guion bajo)', async () => {
+  it('titleImage pasa la ruta literal (sin escapar el guion bajo)', async () => {
     // El writer de pandoc escaparía mi_imagen.jpg como mi\_imagen.jpg y
     // rompería la búsqueda del archivo en \includegraphics.
-    const tex = await toLatexTitleback('---\ntitle: Prueba\ntitle-image: ./mi_imagen.jpg\n---\n\nCuerpo.\n');
+    const tex = await toLatexTitleback('---\ntitle: Prueba\ntitleImage: ./mi_imagen.jpg\n---\n\nCuerpo.\n');
     expect(tex).toContain('\\titleimage{./mi_imagen.jpg}');
     expect(tex).not.toContain('\\_');
   });
 
-  it('publisher-image pasa la ruta literal (sin escapar el guion bajo)', async () => {
-    const tex = await toLatexTitleback('---\ntitle: Prueba\npublisher-image: ./logo_editorial.png\n---\n\nCuerpo.\n');
+  it('publisherImage pasa la ruta literal (sin escapar el guion bajo)', async () => {
+    const tex = await toLatexTitleback('---\ntitle: Prueba\npublisherImage: ./logo_editorial.png\n---\n\nCuerpo.\n');
     expect(tex).toContain('\\publishersimage{./logo_editorial.png}');
     expect(tex).not.toContain('\\_');
   });

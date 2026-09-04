@@ -213,8 +213,8 @@ export async function composeLatexTemplate(opts: {
   lines.push('$if(publishers)$');
   lines.push('\\publishers{$publishers$}');
   lines.push('$endif$');
-  lines.push('$if(publisher-image)$');
-  lines.push('\\publishersimage{$publisher-image$}');
+  lines.push('$if(publisherImage)$');
+  lines.push('\\publishersimage{$publisherImage$}');
   lines.push('$endif$');
   lines.push('$if(endpapers)$');
   lines.push('\\setendpapers{$endpapers$}');
@@ -223,8 +223,8 @@ export async function composeLatexTemplate(opts: {
   lines.push('\\courtepagetrue');
   lines.push('$endif$');
   lines.push('\\title{$title$}');
-  lines.push('$if(title-image)$');
-  lines.push('\\titleimage{$title-image$}');
+  lines.push('$if(titleImage)$');
+  lines.push('\\titleimage{$titleImage$}');
   lines.push('$endif$');
   lines.push('$if(subtitle)$');
   lines.push('\\subtitle{$subtitle$}');

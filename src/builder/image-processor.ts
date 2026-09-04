@@ -206,7 +206,7 @@ export function rewriteImagePaths(content: string, imageMap: Map<string, string>
       const escaped = candidate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       result = result.replace(new RegExp(`\\]\\(${escaped}\\)`, 'g'), () => `](${processed})`);
       result = result.replace(
-        new RegExp(`^((?:title-image|publisher-image|endpapers):[ \\t]*)(["']?)${escaped}(["']?[ \\t]*)$`, 'gm'),
+        new RegExp(`^((?:titleImage|publisherImage|endpapers):[ \\t]*)(["']?)${escaped}(["']?[ \\t]*)$`, 'gm'),
         (_m, pre: string, openQuote: string, closeQuote: string) => `${pre}${openQuote}${processed}${closeQuote}`,
       );
     }
@@ -252,7 +252,7 @@ async function collectFrontmatterImageTasks(
   imageMap: Map<string, string>,
 ): Promise<{ absPath: string; w: number; h: number; cover: boolean }[]> {
   const tasks: { absPath: string; w: number; h: number; cover: boolean }[] = [];
-  for (const field of ['title-image', 'publisher-image', 'endpapers']) {
+  for (const field of ['titleImage', 'publisherImage', 'endpapers']) {
     const cover = field === 'endpapers';
     const w = cover ? targets.endpaperW : targets.targetW;
     const h = cover ? targets.endpaperH : targets.targetH;

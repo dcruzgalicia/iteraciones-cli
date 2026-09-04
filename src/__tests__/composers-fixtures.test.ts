@@ -148,7 +148,7 @@ describe('composers sobre fixtures de pandoc (#2031 PR1)', () => {
     }
   });
 
-  it('title-image inexistente lanza BuildError con la ruta resuelta (sin pandoc)', async () => {
+  it('titleImage inexistente lanza BuildError con la ruta resuelta (sin pandoc)', async () => {
     if (fixtureLatex === '') return;
     const { BuildError } = await import('../lib/errors.js');
     const { calls, restore } = spyPandoc(fixtureLatex);
@@ -158,7 +158,7 @@ describe('composers sobre fixtures de pandoc (#2031 PR1)', () => {
           filters: NO_FILTERS,
           bibFiles: [],
           templatePath: '/t.tex',
-          fm: { title: 'D', 'title-image': 'no-existe.png' },
+          fm: { title: 'D', titleImage: 'no-existe.png' },
           siteConfig: SITE_CONFIG,
           warnedLangs: new Set(),
         }),
