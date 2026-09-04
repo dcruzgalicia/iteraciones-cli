@@ -83,11 +83,14 @@
 }
 \newcommand{\colophonpage}{%
   \titlepage@lasteven
-  \vspace*{7\baselineskip}%
-  \titlepageblock
-    {\dimexpr(\linewidth-\colophonwidth)/2\relax}%
-    {\dimexpr(\linewidth-\colophonwidth)/2\relax}%
-    {\centering\titlebackformat}%
-    {\@colophon}%
+  \vbox to \textheight{%
+    \vfill
+    \titlepageblock
+      {\dimexpr(\linewidth-\colophonwidth)/2\relax}%
+      {\dimexpr(\linewidth-\colophonwidth)/2\relax}%
+      {\centering\titlebackformat}%
+      {\@colophon}%
+    \vfill
+  }%
 }
 \makeatother
