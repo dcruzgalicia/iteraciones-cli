@@ -7,10 +7,11 @@
 %   guarda del endpaper (pág 1, solo si endpapers) → courtesy page (solo si
 %   courtepage) → extratitle (pág impar, bloque del 75% del ancho centrado
 %   con \vspace*{7\baselineskip} antes)
-%   → portada (impar) → titlebacks (reverso, twoside; el \vfill ancla el
-%   lowertitleback al fondo, sin minipage) → dedication (página impar
-%   siguiente, bloque del 50% del ancho alineado a la derecha como el dictum,
-%   con \vspace*{7\baselineskip} antes).
+%   → portada (impar) → titlebacks (reverso de la portada; el \vfill ancla el
+%   lowertitleback al fondo, sin minipage) → dedication (página impar en
+%   twoside, bloque del 50% del ancho alineado a la derecha como el dictum,
+%   con \vspace*{7\baselineskip} antes) → blank verso (solo twoside+openright,
+%   el contenido siguiente empieza en página impar).
 % \titlepage@next/\titlepage@nextdouble (28-titlepages.tex): \clearpage +
 % \thispagestyle{empty} (+ página impar en twoside), SIN el \setparsizes
 % de \next@tpage (que dejaría \parindent a 0 en todo el documento).
@@ -205,20 +206,19 @@
     \vskip 2\baselineskip
     {\centering\@renderpublishersimages\par}%
   \fi
-  % Titlebacks (reverso, twoside; el \vfill ancla el lowertitleback al fondo).
-  \if@twoside
-    \@tempswatrue
-    \ifx\@uppertitleback\@empty\ifx\@lowertitleback\@empty
-      \@tempswafalse
-    \fi\fi
-    \if@tempswa
-      \titlepage@next
-      {\titlebackformat\@uppertitleback\par}%
-      \vfill
-      {\titlebackformat\@lowertitleback\par}%
-    \fi
+  % Titlebacks (reverso de la portada; el \vfill ancla el lowertitleback al
+  % fondo). En ambos modos: twoside (página par) y oneside (página siguiente).
+  \@tempswatrue
+  \ifx\@uppertitleback\@empty\ifx\@lowertitleback\@empty
+    \@tempswafalse
+  \fi\fi
+  \if@tempswa
+    \titlepage@next
+    {\titlebackformat\@uppertitleback\par}%
+    \vfill
+    {\titlebackformat\@lowertitleback\par}%
   \fi
-  % Dedication (página impar siguiente, bloque del 50% del ancho
+  % Dedication (página impar en twoside, bloque del 50% del ancho
   % alineado a la derecha como el dictum, con \vspace*{7\baselineskip} antes).
   \ifx\@dedication\@empty\else
     \titlepage@nextdouble
@@ -229,6 +229,12 @@
       {}%
       {\@dedication}%
     \clearpage
+    % Blank verso solo en twoside+openright: el contenido siguiente empieza
+    % en página impar. oneside u openany: sin verso adicional.
+    \if@twoside\if@openright
+      \thispagestyle{empty}%
+      \null\clearpage
+    \fi\fi
   \fi
 }
 \makeatother
