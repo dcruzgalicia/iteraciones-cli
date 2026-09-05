@@ -1,5 +1,56 @@
 # Changelog
 
+## [0.23.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.22.0...v0.23.0) (2026-09-05)
+
+
+### Features
+
+* **builder:** agrega creator de children en collections y extratitle automatico ([2a90e28](https://github.com/dcruzgalicia/iteraciones-cli/commit/2a90e28732d4e73d0c3453baf3c28fbf51327a13)), closes [#2366](https://github.com/dcruzgalicia/iteraciones-cli/issues/2366)
+* **builder:** agrega fallback Anónimo/Anónimas para children sin creator ([ee0661d](https://github.com/dcruzgalicia/iteraciones-cli/commit/ee0661d074286ee58c7c8f325c6ba3aaee6426bf)), closes [#2366](https://github.com/dcruzgalicia/iteraciones-cli/issues/2366)
+* **builder:** ordena creators aggregationados alfabeticamente y agrega tests ([33c2f18](https://github.com/dcruzgalicia/iteraciones-cli/commit/33c2f18df6c8fa810f3b2d3a0a5a688edd3cec6a)), closes [#2366](https://github.com/dcruzgalicia/iteraciones-cli/issues/2366)
+* **collection:** defaults para title y creator en files sin metadata ([86570b0](https://github.com/dcruzgalicia/iteraciones-cli/commit/86570b0bc299c075cb8bb3987d0d20288a8f8827))
+* **collection:** procesamiento de type: collection con fusion de archivos ([f50dd7e](https://github.com/dcruzgalicia/iteraciones-cli/commit/f50dd7e839cfe35a6d733f7a46e07050b39af396)), closes [#2277](https://github.com/dcruzgalicia/iteraciones-cli/issues/2277)
+* **config:** resuelve atributos en 3 niveles frontmatter &gt; format &gt; root ([f7b36f0](https://github.com/dcruzgalicia/iteraciones-cli/commit/f7b36f05ee27f8227a0eed883927b6121d03e15a))
+* **css:** agrega estilos para la clase .subparagraph en HTML ([99a1725](https://github.com/dcruzgalicia/iteraciones-cli/commit/99a1725bc30b40aabc0406192c18ea6a34cf0fa2)), closes [#2279](https://github.com/dcruzgalicia/iteraciones-cli/issues/2279)
+* **frontmatter:** agrega campo type (file/collection) y files al frontmatter ([e2d179f](https://github.com/dcruzgalicia/iteraciones-cli/commit/e2d179fab3e87f49b0f822d54592a8bd235b58cd)), closes [#2276](https://github.com/dcruzgalicia/iteraciones-cli/issues/2276)
+* **html:** cambia mapeo de encabezados via pandoc + filtro Lua ([267c4be](https://github.com/dcruzgalicia/iteraciones-cli/commit/267c4be223a1551bb01dd3aa8b9c769f5bfd2fed))
+* **latex:** centra verticalmente el colofón y la dedicatoria ([56dbde3](https://github.com/dcruzgalicia/iteraciones-cli/commit/56dbde3ce42790e61893356e5b568dcb76dc2cd2)), closes [#2364](https://github.com/dcruzgalicia/iteraciones-cli/issues/2364)
+* **latex:** courtesyPage — atributo para controlar hojas de cortesía ([d0e23d3](https://github.com/dcruzgalicia/iteraciones-cli/commit/d0e23d382565d32772f9b9a4095897f762522bc1)), closes [#2339](https://github.com/dcruzgalicia/iteraciones-cli/issues/2339)
+* **metadata:** agrega campos de title page al schema de config ([b17d26a](https://github.com/dcruzgalicia/iteraciones-cli/commit/b17d26ab17f3b1b9220360d010cd529257fd6de3)), closes [#2322](https://github.com/dcruzgalicia/iteraciones-cli/issues/2322)
+* **preamble:** agrega soporte de preambles por type ([7cd12a3](https://github.com/dcruzgalicia/iteraciones-cli/commit/7cd12a3683893b2f12efda624d8515fcfea2dc48)), closes [#2305](https://github.com/dcruzgalicia/iteraciones-cli/issues/2305)
+* **publisher:** publisher y publisher-image soportan arrays ([2aa45f2](https://github.com/dcruzgalicia/iteraciones-cli/commit/2aa45f230ccda4fe1b85c53ea21151e588f98877)), closes [#2326](https://github.com/dcruzgalicia/iteraciones-cli/issues/2326)
+
+
+### Bug Fixes
+
+* **builder:** aggregationa creators de children siempre en collections ([ee5cd32](https://github.com/dcruzgalicia/iteraciones-cli/commit/ee5cd32de3edddb5478393475669bf7f11cb976f)), closes [#2366](https://github.com/dcruzgalicia/iteraciones-cli/issues/2366)
+* **builder:** corrige creator y slug de collections ([dd43366](https://github.com/dcruzgalicia/iteraciones-cli/commit/dd43366ff3c67ec0ede889ab246f3f0a2243373f)), closes [#2366](https://github.com/dcruzgalicia/iteraciones-cli/issues/2366)
+* **builder:** preserva creator original del collection en state ([d81d052](https://github.com/dcruzgalicia/iteraciones-cli/commit/d81d0527da294abd5ada54090c5d40ec97ac08cb)), closes [#2366](https://github.com/dcruzgalicia/iteraciones-cli/issues/2366)
+* **builder:** usa Anónima siempre (sin variantes de género) ([a4964f9](https://github.com/dcruzgalicia/iteraciones-cli/commit/a4964f992b29086d17fbd79c8654af5f9b668ac0))
+* **builder:** usa titlehead en lugar de extratitle para collections con creator ([3ef5ada](https://github.com/dcruzgalicia/iteraciones-cli/commit/3ef5ada8351055c18f35cd6a18c2229689f6ce1f)), closes [#2366](https://github.com/dcruzgalicia/iteraciones-cli/issues/2366)
+* **cleanup:** tolera dist inexistente en pruneEmptyDirs ([b322257](https://github.com/dcruzgalicia/iteraciones-cli/commit/b3222574fdf9433f980efd20dceb08dea60ee9a8))
+* **config:** courtesyPage funciona en 3 niveles ([b23a120](https://github.com/dcruzgalicia/iteraciones-cli/commit/b23a12078a53cffc4f0eec084fa81c6a232031fd))
+* **images:** ordena -flatten antes de -colorspace Gray para RGBA ([4f2aee3](https://github.com/dcruzgalicia/iteraciones-cli/commit/4f2aee3ab2f23e17a54125e0c33980973ea9be90)), closes [#2345](https://github.com/dcruzgalicia/iteraciones-cli/issues/2345)
+* **images:** processDedicatedFrontmatterImages ahora maneja arrays ([7cde745](https://github.com/dcruzgalicia/iteraciones-cli/commit/7cde7456a610d76bd3ed1ea7379bf43b127c0156))
+* **images:** restaura orden original de ImageMagick args ([786baf3](https://github.com/dcruzgalicia/iteraciones-cli/commit/786baf385789b5c0df4fa5fd927428a3bee2255b))
+* **latex:** courtesyPage sin blank page cuando false ([c4e03be](https://github.com/dcruzgalicia/iteraciones-cli/commit/c4e03bedd1bea46fab2c5bf497d508d28506c31b))
+* **latex:** dedication con blank verso y titlebacks en oneside ([93c0f13](https://github.com/dcruzgalicia/iteraciones-cli/commit/93c0f138df2c0fddc1ee4d383cab2a8a30eef8ff)), closes [#2359](https://github.com/dcruzgalicia/iteraciones-cli/issues/2359)
+* **latex:** elimina publisher-image automático del colofón ([3dae349](https://github.com/dcruzgalicia/iteraciones-cli/commit/3dae349a372218acb6aabc2a542b1a2a27a6ec5a)), closes [#2342](https://github.com/dcruzgalicia/iteraciones-cli/issues/2342)
+* **latex:** elimina title-image automático del colofón ([4244d9d](https://github.com/dcruzgalicia/iteraciones-cli/commit/4244d9d197c7154e2fa6c3f9dd2b6ab51d7c4332)), closes [#2341](https://github.com/dcruzgalicia/iteraciones-cli/issues/2341)
+* **latex:** independiza endpaper, courtesyPage y extratitle en \maketitle ([ac25f17](https://github.com/dcruzgalicia/iteraciones-cli/commit/ac25f177669bceef6229ed8bc33b32186d7a7d73)), closes [#2357](https://github.com/dcruzgalicia/iteraciones-cli/issues/2357)
+* **latex:** interpola page-number-command como RawInline para no re-escapar ([4ffb820](https://github.com/dcruzgalicia/iteraciones-cli/commit/4ffb82083676cd3049d86972c5fa5bcda091b497))
+* **latex:** reescribe \[@renderpublishersimages](https://github.com/renderpublishersimages) con \[@for](https://github.com/for) para evitar delimited macro bug ([555af7f](https://github.com/dcruzgalicia/iteraciones-cli/commit/555af7f47ccfaa546fe6b68e9c6df8f9abd62698)), closes [#2345](https://github.com/dcruzgalicia/iteraciones-cli/issues/2345)
+* **latex:** reescribe paths de imágenes en YAML inyectado para collection ([4455935](https://github.com/dcruzgalicia/iteraciones-cli/commit/4455935064b6eb2dbc8943153581d6c6ba38d5ce)), closes [#2322](https://github.com/dcruzgalicia/iteraciones-cli/issues/2322)
+* **latex:** title-image no crea extratitle automáticamente ([a9113bd](https://github.com/dcruzgalicia/iteraciones-cli/commit/a9113bd0099d478e78e9f136918cbd50d05714bb)), closes [#2340](https://github.com/dcruzgalicia/iteraciones-cli/issues/2340)
+* **latex:** titlepageblanks condicional según twoside/openright ([25c0802](https://github.com/dcruzgalicia/iteraciones-cli/commit/25c0802bff7a3a49e8945da08b84e45eeb0252ad)), closes [#2337](https://github.com/dcruzgalicia/iteraciones-cli/issues/2337)
+* **latex:** usa comillas simples en YAML inyectado para evitar escapes Unicode ([ea8f68c](https://github.com/dcruzgalicia/iteraciones-cli/commit/ea8f68cf85afc7af72e442c8666a1fa517081dd4)), closes [#2322](https://github.com/dcruzgalicia/iteraciones-cli/issues/2322)
+* **latex:** usa YAML block scalar para metadata multilinea en collection ([215f89f](https://github.com/dcruzgalicia/iteraciones-cli/commit/215f89fe24804d62a9e29ae1a5f22c6cd73c1048)), closes [#2322](https://github.com/dcruzgalicia/iteraciones-cli/issues/2322)
+* **metadata:** resuelve publisher en los 3 niveles para LaTeX ([409ce8c](https://github.com/dcruzgalicia/iteraciones-cli/commit/409ce8cbcd08c5b271c251cda2aae67a2b4810d6)), closes [#2322](https://github.com/dcruzgalicia/iteraciones-cli/issues/2322)
+* **preamble:** corrige resolución de preambles para collection ([e0eb8b3](https://github.com/dcruzgalicia/iteraciones-cli/commit/e0eb8b32fec77d7fc4586da7944b698480718a96))
+* **preamble:** detecta pageDimensions independiente por type ([2998342](https://github.com/dcruzgalicia/iteraciones-cli/commit/2998342c144c4e3edccf2c66d9b5b382ddb08f07))
+* **preamble:** independiza resolución por type ([f2c021e](https://github.com/dcruzgalicia/iteraciones-cli/commit/f2c021e01df43bac2e27a1ca7a4ced4e7fad639a))
+* **publisher:** pasa publisher a Pandoc como metadata para LaTeX ([a56568c](https://github.com/dcruzgalicia/iteraciones-cli/commit/a56568cac3b8734363ce11a4f7d7d002bd567d0d)), closes [#2322](https://github.com/dcruzgalicia/iteraciones-cli/issues/2322)
+
 ## [0.22.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.21.0...v0.22.0) (2026-08-29)
 
 
