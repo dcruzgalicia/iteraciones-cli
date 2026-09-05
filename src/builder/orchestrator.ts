@@ -164,16 +164,44 @@ function collectInvalidations(plan: BuildMetadata, outputDirChanged: boolean): s
 
 async function aggregateCollectionCreators(entry: DiscoveryEntry, cwd: string): Promise<void> {
   const aggregated = new Set<string>();
-  for (const file of entry.files ?? []) {
+  const { with: withCreator, without: withoutCreator } = await countCreatorsByFile(entry.files ?? [], cwd);
+  for (const c of withCreator) aggregated.add(c);
+  addAnonymousFallback(aggregated, withoutCreator, entry.files?.length ?? 0);
+  entry.aggregatedCreator = [...aggregated].sort((a, b) => a.localeCompare(b, 'es'));
+}
+
+async function countCreatorsByFile(files: string[], cwd: string): Promise<{ with: string[]; without: number }> {
+  const withCreator: string[] = [];
+  let without = 0;
+  for (const file of files) {
     try {
       const text = await Bun.file(join(cwd, file)).text();
       const { yaml } = splitFrontmatter(text);
-      if (!yaml) continue;
+      if (!yaml) {
+        without++;
+        continue;
+      }
       const parsed = Bun.YAML.parse(yaml) as Record<string, unknown>;
-      for (const c of parseAuthors(parsed.creator)) aggregated.add(c);
-    } catch {}
+      const creators = parseAuthors(parsed.creator);
+      if (creators.length > 0) {
+        withCreator.push(...creators);
+      } else {
+        without++;
+      }
+    } catch {
+      without++;
+    }
   }
-  entry.aggregatedCreator = [...aggregated].sort((a, b) => a.localeCompare(b, 'es'));
+  return { with: withCreator, without };
+}
+
+function addAnonymousFallback(aggregated: Set<string>, filesWithoutCreator: number, totalFiles: number): void {
+  if (filesWithoutCreator === 0) return;
+  if (filesWithoutCreator === totalFiles) {
+    aggregated.add(totalFiles > 1 ? 'Anónimas' : 'Anónimo');
+  } else {
+    aggregated.add('Anónima');
+  }
 }
 
 export async function postProcessCollections(discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<void> {
