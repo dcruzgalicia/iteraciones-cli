@@ -5,13 +5,15 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
 import { type ActiveFormats, computeActiveFormats, type FormatKey, resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { BuildError, ConfigError } from '../lib/errors.js';
+import { splitFrontmatter } from '../lib/frontmatter.js';
 import { logWarning, runWithWarningSink } from '../lib/logger.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { plural } from '../lib/plural.js';
 import { buildAssets } from './build-assets.js';
 import { type BuildMetadata, computeBuildMetadata, computeWorkSets, type WorkSets } from './build-planner.js';
 import { cleanupCoverImages, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges } from './cleanup.js';
-import { buildDocsFromIndex, discover, htmlSlugFor } from './discover.js';
+import { buildDocsFromIndex, discover, htmlSlugFor, resolveDiscoverSlugs } from './discover.js';
+import { parseAuthors } from './discover-frontmatter.js';
 import { validateDisabledFilters } from './filter-resolver.js';
 import { DIST_FILES_DIR, FORMAT_OUTPUT_EXTENSIONS } from './output-layout.js';
 import { type PdfxCacheHandle, runPdfxOutputValidation } from './pdfx-check.js';
@@ -160,6 +162,39 @@ function collectInvalidations(plan: BuildMetadata, outputDirChanged: boolean): s
   return invalidations;
 }
 
+async function aggregateCollectionCreators(entry: DiscoveryEntry, cwd: string): Promise<void> {
+  const aggregated = new Set<string>();
+  for (const file of entry.files ?? []) {
+    try {
+      const text = await Bun.file(join(cwd, file)).text();
+      const { yaml } = splitFrontmatter(text);
+      if (!yaml) continue;
+      const parsed = Bun.YAML.parse(yaml) as Record<string, unknown>;
+      for (const c of parseAuthors(parsed.creator)) aggregated.add(c);
+    } catch {}
+  }
+  entry.creator = [...aggregated];
+}
+
+function injectExtratitleFromCreator(entry: DiscoveryEntry): void {
+  const fm = entry.fm ?? {};
+  if (fm.extratitle === undefined) {
+    fm.extratitle = entry.creator.join(', ');
+    entry.fm = fm;
+  }
+}
+
+async function postProcessCollections(discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<void> {
+  for (const entry of discoveryIndex.values()) {
+    if (entry.type !== 'collection' || !entry.files) continue;
+    if (entry.creator.length === 0) {
+      await aggregateCollectionCreators(entry, cwd);
+    } else {
+      injectExtratitleFromCreator(entry);
+    }
+  }
+}
+
 async function discoverDocuments(
   cwd: string,
   options: BuildOptions,
@@ -181,7 +216,7 @@ async function discoverDocuments(
     changedPaths: discoveredChanges,
     discoveryIndex,
     deletedEntries,
-    slugChangedEntries,
+    slugComputer,
     pendingState,
   } = await discover(cwd, {
     full: options.full,
@@ -198,6 +233,11 @@ async function discoverDocuments(
       bibFileCache: plan.bibFileCache,
     },
   });
+
+  await postProcessCollections(discoveryIndex, cwd);
+
+  const { slugChangedEntries, changedPaths: slugChangedPaths } = resolveDiscoverSlugs(discoveryIndex, slugComputer);
+  for (const path of slugChangedPaths) discoveredChanges.add(path);
   const collectionFiles = new Set<string>();
   for (const entry of discoveryIndex.values()) {
     if (entry.type === 'collection' && entry.files) {

@@ -305,6 +305,9 @@ export async function processDocumentFormats(
   const dir = dirname(doc.relativePath);
 
   const isCollection = doc.frontmatter.type === 'collection';
+  if (isCollection && entry?.creator) {
+    doc.frontmatter.creator = entry.creator;
+  }
   const collectionEntries = isCollection ? await readCollectionFiles(doc, ctx.cwd) : [];
   if (isCollection && collectionEntries.length === 0) {
     logWarning(`"${doc.relativePath}": collection sin contenido en files; se omite del build`, 'build');

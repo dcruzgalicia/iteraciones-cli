@@ -2,7 +2,7 @@ import { describe, expect, it, spyOn } from 'bun:test';
 import { mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { type DiscoverResultAndPending, discover } from '../builder/discover.js';
+import { type DiscoverResultAndPending, discover, resolveDiscoverSlugs } from '../builder/discover.js';
 import { loadStateFile, persistCompletedState, stateUsableForBuild } from '../builder/state-serialize.js';
 
 /**
@@ -13,7 +13,7 @@ import { loadStateFile, persistCompletedState, stateUsableForBuild } from '../bu
  * slug nuevo es prefijo del viejo: quitar creator, acortar título, -dN.
  */
 
-type Step = DiscoverResultAndPending;
+type Step = DiscoverResultAndPending & { slugChangedEntries: Map<string, string> };
 
 function makeProject(content: string): string {
   const dir = mkdtempSync(join(tmpdir(), 'iteraciones-slug-'));
@@ -34,13 +34,14 @@ function touchFuture(file: string): void {
   utimesSync(file, new Date(Date.now() + 60_000), new Date(Date.now() + 60_000));
 }
 
-/** Un "build" completo en tests: discover + cierre único (#2025). */
+/** Un "build" completo en tests: discover + resolveSlugs + cierre único (#2025). */
 async function buildStep(cwd: string, options?: { full?: boolean }): Promise<Step> {
   const result = await discover(cwd, {
     ...(options?.full ? { full: true as const, prevState: null } : { prevState: stateUsableForBuild(await loadStateFile(cwd)) }),
   });
+  const { slugChangedEntries } = resolveDiscoverSlugs(result.discoveryIndex, result.slugComputer);
   await persistCompletedState(cwd, result.pendingState);
-  return result;
+  return { ...result, slugChangedEntries };
 }
 
 describe('discover (cambios de slug por metadatos)', () => {
