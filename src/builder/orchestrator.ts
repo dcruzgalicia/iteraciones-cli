@@ -176,21 +176,15 @@ async function aggregateCollectionCreators(entry: DiscoveryEntry, cwd: string): 
   entry.creator = [...aggregated];
 }
 
-function injectTitleheadFromCreator(entry: DiscoveryEntry): void {
-  const fm = entry.fm ?? {};
-  if (fm.titlehead === undefined) {
-    fm.titlehead = entry.creator.join(', ');
-    entry.fm = fm;
-  }
-}
-
 async function postProcessCollections(discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<void> {
   for (const entry of discoveryIndex.values()) {
     if (entry.type !== 'collection' || !entry.files) continue;
-    if (entry.creator.length === 0) {
-      await aggregateCollectionCreators(entry, cwd);
-    } else {
-      injectTitleheadFromCreator(entry);
+    const ownCreator = entry.creator.length > 0 ? entry.creator.join(', ') : undefined;
+    await aggregateCollectionCreators(entry, cwd);
+    if (ownCreator && entry.fm?.titlehead === undefined) {
+      const fm = entry.fm ?? {};
+      fm.titlehead = ownCreator;
+      entry.fm = fm;
     }
   }
 }
