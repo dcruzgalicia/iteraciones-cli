@@ -17,6 +17,8 @@ export type { DiscoverMeta, DiscoverOptions } from './discover-cache.js';
 export type { FrontmatterIssue } from './discover-frontmatter.js';
 export { parseAuthors } from './discover-frontmatter.js';
 
+export type SlugComputer = (meta: { title: string; creator: string[] }, opts: { fallbackPath: string; maxCreators?: number }) => string;
+
 export type DiscoverResultAndPending = DiscoverResult & { pendingState: BuildState | null };
 
 interface DiscoverResult {
@@ -24,7 +26,7 @@ interface DiscoverResult {
   changedPaths: Set<string>;
   discoveryIndex: Map<string, DiscoveryEntry>;
   deletedEntries: Map<string, DiscoveryEntry>;
-  slugChangedEntries: Map<string, string>;
+  slugComputer: SlugComputer;
 }
 
 function slugify(text: string): string {
@@ -99,7 +101,7 @@ export async function discover(cwd: string, options: DiscoverOptions): Promise<D
 
   throwIfInvalidFrontmatter(frontmatterIssues);
 
-  const slugResult = resolveSlugs(discoveryIndex, (meta, opts) => {
+  const slugComputer = (meta: { title: string; creator: string[] }, opts: { fallbackPath: string; maxCreators?: number }) => {
     const slug = computeSlug(meta, opts);
     if (slug === undefined) throw new BuildError(`no se pudo resolver el slug de ${opts.fallbackPath}`);
     if (meta.title) {
@@ -110,13 +112,19 @@ export async function discover(cwd: string, options: DiscoverOptions): Promise<D
       }
     }
     return slug;
-  });
-  const slugChangedEntries = new Map<string, string>(slugResult.slugChangedEntries);
-  for (const path of slugResult.changedPaths) changedPaths.add(path);
+  };
 
   const pendingState = computePendingState(useCache, prevState, thisBuildStartedAt, discoveryIndex, options, changedPaths.size > 0, touchedCount > 0);
 
-  return { relativePaths, changedPaths, discoveryIndex, deletedEntries, slugChangedEntries, pendingState };
+  return { relativePaths, changedPaths, discoveryIndex, deletedEntries, slugComputer, pendingState };
+}
+
+export function resolveDiscoverSlugs(
+  discoveryIndex: Map<string, DiscoveryEntry>,
+  slugComputer: SlugComputer,
+): { slugChangedEntries: Map<string, string>; changedPaths: Set<string> } {
+  const slugResult = resolveSlugs(discoveryIndex, slugComputer);
+  return { slugChangedEntries: slugResult.slugChangedEntries, changedPaths: new Set(slugResult.changedPaths) };
 }
 
 export function buildDocsFromIndex(relativePaths: string[], discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): BuildDocument[] {
