@@ -62,7 +62,7 @@ describe('collection creator aggregation', () => {
     try {
       const result = await buildStep(cwd);
       const entry = result.discoveryIndex.get('collection.md');
-      expect(entry?.aggregatedCreator).toEqual(['Autor X']);
+      expect(entry?.aggregatedCreator).toEqual(['Anónima', 'Autor X']);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
@@ -166,6 +166,51 @@ describe('collection creator aggregation', () => {
       const result = await buildStep(cwd);
       const entry = result.discoveryIndex.get('collection.md');
       expect(entry?.aggregatedCreator).toEqual(['Ana García', 'Luis Pérez', 'María López']);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('un solo file sin creator → Anónimo', async () => {
+    const cwd = makeProject({
+      'collection.md': '---\ntitle: Antología\ntype: collection\nfiles:\n  - ./a.md\n---',
+      'a.md': '---\ntitle: A\n---\n\nContenido',
+    });
+    try {
+      const result = await buildStep(cwd);
+      const entry = result.discoveryIndex.get('collection.md');
+      expect(entry?.aggregatedCreator).toEqual(['Anónimo']);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('varios files sin creator → Anónimas', async () => {
+    const cwd = makeProject({
+      'collection.md': '---\ntitle: Antología\ntype: collection\nfiles:\n  - ./a.md\n  - ./b.md\n---',
+      'a.md': '---\ntitle: A\n---\n\nContenido',
+      'b.md': '---\ntitle: B\n---\n\nContenido',
+    });
+    try {
+      const result = await buildStep(cwd);
+      const entry = result.discoveryIndex.get('collection.md');
+      expect(entry?.aggregatedCreator).toEqual(['Anónimas']);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('mezcla de files con y sin creator → Anónima + creators', async () => {
+    const cwd = makeProject({
+      'collection.md': '---\ntitle: Antología\ntype: collection\nfiles:\n  - ./a.md\n  - ./b.md\n  - ./c.md\n---',
+      'a.md': '---\ntitle: A\ncreator: Luis Pérez\n---\n\nContenido',
+      'b.md': '---\ntitle: B\n---\n\nContenido sin creator',
+      'c.md': '---\ntitle: C\ncreator: Ana García\n---\n\nContenido',
+    });
+    try {
+      const result = await buildStep(cwd);
+      const entry = result.discoveryIndex.get('collection.md');
+      expect(entry?.aggregatedCreator).toEqual(['Ana García', 'Anónima', 'Luis Pérez']);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
