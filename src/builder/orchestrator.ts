@@ -173,10 +173,10 @@ async function aggregateCollectionCreators(entry: DiscoveryEntry, cwd: string): 
       for (const c of parseAuthors(parsed.creator)) aggregated.add(c);
     } catch {}
   }
-  entry.creator = [...aggregated];
+  entry.creator = [...aggregated].sort((a, b) => a.localeCompare(b, 'es'));
 }
 
-async function postProcessCollections(discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<void> {
+export async function postProcessCollections(discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<void> {
   for (const entry of discoveryIndex.values()) {
     if (entry.type !== 'collection' || !entry.files) continue;
     const ownCreator = entry.creator.length > 0 ? entry.creator.join(', ') : undefined;
