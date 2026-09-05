@@ -228,10 +228,10 @@ async function discoverDocuments(
     },
   });
 
-  await postProcessCollections(discoveryIndex, cwd);
-
   const { slugChangedEntries, changedPaths: slugChangedPaths } = resolveDiscoverSlugs(discoveryIndex, slugComputer);
   for (const path of slugChangedPaths) discoveredChanges.add(path);
+
+  await postProcessCollections(discoveryIndex, cwd);
   const collectionFiles = new Set<string>();
   for (const entry of discoveryIndex.values()) {
     if (entry.type === 'collection' && entry.files) {
