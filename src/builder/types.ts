@@ -4,6 +4,7 @@ export interface DiscoveryEntry {
   title: string;
   subtitle?: string;
   creator: string[];
+  aggregatedCreator?: string[];
   date?: string;
   slug?: string;
   manualSlug?: string;

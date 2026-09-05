@@ -32,7 +32,7 @@ describe('collection creator aggregation', () => {
     try {
       const result = await buildStep(cwd);
       const entry = result.discoveryIndex.get('collection.md');
-      expect(entry?.creator).toEqual(['Ana García', 'Luis Pérez']);
+      expect(entry?.aggregatedCreator).toEqual(['Ana García', 'Luis Pérez']);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
@@ -47,7 +47,7 @@ describe('collection creator aggregation', () => {
     try {
       const result = await buildStep(cwd);
       const entry = result.discoveryIndex.get('collection.md');
-      expect(entry?.creator).toEqual(['María López']);
+      expect(entry?.aggregatedCreator).toEqual(['María López']);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
@@ -62,7 +62,7 @@ describe('collection creator aggregation', () => {
     try {
       const result = await buildStep(cwd);
       const entry = result.discoveryIndex.get('collection.md');
-      expect(entry?.creator).toEqual(['Autor X']);
+      expect(entry?.aggregatedCreator).toEqual(['Autor X']);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
@@ -76,7 +76,7 @@ describe('collection creator aggregation', () => {
     try {
       const result = await buildStep(cwd);
       const entry = result.discoveryIndex.get('collection.md');
-      expect(entry?.creator).toEqual(['Autora Única']);
+      expect(entry?.aggregatedCreator).toEqual(['Autora Única']);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
@@ -92,7 +92,7 @@ describe('collection creator aggregation', () => {
       const result = await buildStep(cwd);
       const entry = result.discoveryIndex.get('collection.md');
       expect(entry?.slug).toBe('antologia-por-editora-principal');
-      expect(entry?.creator).toEqual(['Autora Alpha', 'Autora Beta']);
+      expect(entry?.aggregatedCreator).toEqual(['Autora Alpha', 'Autora Beta']);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
@@ -150,7 +150,7 @@ describe('collection creator aggregation', () => {
       const result = await buildStep(cwd);
       const entry = result.discoveryIndex.get('collection.md');
       expect(entry?.slug).toBe('antologia-por-editora-alpha');
-      expect(entry?.creator).toEqual(['Autora Delta', 'Autora Gamma']);
+      expect(entry?.aggregatedCreator).toEqual(['Autora Delta', 'Autora Gamma']);
       expect(entry?.fm?.titlehead).toBe('Editora Alpha, Editora Beta');
     } finally {
       rmSync(cwd, { recursive: true, force: true });
@@ -165,7 +165,7 @@ describe('collection creator aggregation', () => {
     try {
       const result = await buildStep(cwd);
       const entry = result.discoveryIndex.get('collection.md');
-      expect(entry?.creator).toEqual(['Ana García', 'Luis Pérez', 'María López']);
+      expect(entry?.aggregatedCreator).toEqual(['Ana García', 'Luis Pérez', 'María López']);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
