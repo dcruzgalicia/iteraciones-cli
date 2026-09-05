@@ -176,10 +176,10 @@ async function aggregateCollectionCreators(entry: DiscoveryEntry, cwd: string): 
   entry.creator = [...aggregated];
 }
 
-function injectExtratitleFromCreator(entry: DiscoveryEntry): void {
+function injectTitleheadFromCreator(entry: DiscoveryEntry): void {
   const fm = entry.fm ?? {};
-  if (fm.extratitle === undefined) {
-    fm.extratitle = entry.creator.join(', ');
+  if (fm.titlehead === undefined) {
+    fm.titlehead = entry.creator.join(', ');
     entry.fm = fm;
   }
 }
@@ -190,7 +190,7 @@ async function postProcessCollections(discoveryIndex: Map<string, DiscoveryEntry
     if (entry.creator.length === 0) {
       await aggregateCollectionCreators(entry, cwd);
     } else {
-      injectExtratitleFromCreator(entry);
+      injectTitleheadFromCreator(entry);
     }
   }
 }
