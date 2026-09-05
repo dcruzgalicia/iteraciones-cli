@@ -171,7 +171,7 @@ describe('collection creator aggregation', () => {
     }
   });
 
-  it('un solo file sin creator → Anónimo', async () => {
+  it('un solo file sin creator → Anónima', async () => {
     const cwd = makeProject({
       'collection.md': '---\ntitle: Antología\ntype: collection\nfiles:\n  - ./a.md\n---',
       'a.md': '---\ntitle: A\n---\n\nContenido',
@@ -179,7 +179,7 @@ describe('collection creator aggregation', () => {
     try {
       const result = await buildStep(cwd);
       const entry = result.discoveryIndex.get('collection.md');
-      expect(entry?.aggregatedCreator).toEqual(['Anónimo']);
+      expect(entry?.aggregatedCreator).toEqual(['Anónima']);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }

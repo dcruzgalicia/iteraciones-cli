@@ -198,7 +198,7 @@ async function countCreatorsByFile(files: string[], cwd: string): Promise<{ with
 function addAnonymousFallback(aggregated: Set<string>, filesWithoutCreator: number, totalFiles: number): void {
   if (filesWithoutCreator === 0) return;
   if (filesWithoutCreator === totalFiles) {
-    aggregated.add(totalFiles > 1 ? 'Anónimas' : 'Anónimo');
+    aggregated.add(totalFiles > 1 ? 'Anónimas' : 'Anónima');
   } else {
     aggregated.add('Anónima');
   }
