@@ -173,7 +173,7 @@ async function aggregateCollectionCreators(entry: DiscoveryEntry, cwd: string): 
       for (const c of parseAuthors(parsed.creator)) aggregated.add(c);
     } catch {}
   }
-  entry.creator = [...aggregated].sort((a, b) => a.localeCompare(b, 'es'));
+  entry.aggregatedCreator = [...aggregated].sort((a, b) => a.localeCompare(b, 'es'));
 }
 
 export async function postProcessCollections(discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<void> {

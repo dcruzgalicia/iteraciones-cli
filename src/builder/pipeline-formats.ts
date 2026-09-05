@@ -305,9 +305,9 @@ export async function processDocumentFormats(
   const dir = dirname(doc.relativePath);
 
   const isCollection = doc.frontmatter.type === 'collection';
-  if (isCollection && entry?.creator) {
-    doc.frontmatter.creator = entry.creator;
-    entry.fm = { ...entry.fm, creator: entry.creator };
+  if (isCollection && entry?.aggregatedCreator) {
+    doc.frontmatter.creator = entry.aggregatedCreator;
+    entry.fm = { ...entry.fm, creator: entry.aggregatedCreator };
   }
   const collectionEntries = isCollection ? await readCollectionFiles(doc, ctx.cwd) : [];
   if (isCollection && collectionEntries.length === 0) {
