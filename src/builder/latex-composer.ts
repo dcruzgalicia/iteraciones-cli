@@ -186,15 +186,10 @@ function buildTitlePageOverrides(
   }
   if (isCollection) {
     const prefix = resolveStringField(fm, formatCfg, siteConfig, 'collectionCreatorPrefix');
+    if (prefix) overrides.collectionCreatorPrefix = prefix;
     const raw = resolveMetadataField(fm, formatCfg, siteConfig, 'collectionCreator');
     const creators = parseAuthors(raw);
-    if (prefix && creators.length > 0) {
-      overrides.collectionCreator = `${prefix}\n${creators.join(', ')}`;
-    } else if (prefix) {
-      overrides.collectionCreator = prefix;
-    } else if (creators.length > 0) {
-      overrides.collectionCreator = creators.join(', ');
-    }
+    if (creators.length > 0) overrides.collectionCreator = creators.join(', ');
   }
   return overrides;
 }
