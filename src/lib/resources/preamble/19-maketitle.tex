@@ -1,12 +1,14 @@
-% Personaliza \maketitle: 1+2 baselineskip, titulo en mayusculas, y las
-% páginas de título internas (extratitle, uppertitleback, lowertitleback,
-% dedication) definidas en 28-titlepages.tex.
+% Personaliza \maketitle: 2 baselineskip antes de title/author/date, titulo en
+% mayusculas, y las páginas de título internas (extratitle, uppertitleback,
+% lowertitleback, dedication) definidas en 28-titlepages.tex.
 %
 % Orden de páginas (cada elemento en recto con verso en blanco solo en
 % twoside+openright; en oneside/openany van encadenados sin blanks):
 %   guarda del startpaper (pág 1, solo si startpaper) → courtesy page (solo si
-%   courtepage) → extratitle (pág impar, bloque del 75% del ancho centrado
-%   con \vspace*{7\baselineskip} antes)
+%   courtepage) → extratitle (pág impar, bloque del 75% del ancho centrado con
+%   \vspace*{7\baselineskip} antes, solo si definido) → frontispiece (pág
+%   par en twoside, siguiente a extratitle o con impar anterior en blanco si
+%   no hay extratitle)
 %   → portada (impar) → titlebacks (reverso de la portada; el \vfill ancla el
 %   lowertitleback al fondo, sin minipage) → dedication (página impar en
 %   twoside, ancho completo justificado, centrado verticalmente) → blank verso
@@ -126,22 +128,11 @@
   \ifcourtepage
     \titlepage@blankpage
   \fi
-  % 3. Extratitle (pág 1, bloque del 75% del ancho centrado con
+  % 3. Extratitle (pág impar, bloque del 75% del ancho centrado con
   % \vspace*{7\baselineskip} antes).
-  \ifx\@extratitle\@empty
-    \ifx\@frontispiece\@empty
-      % sin página de extratitle
-    \else
-      \vbox to \textheight{%
-        \vfill
-        {\centering\parindent\z@\@title\par}%
-        \vfill
-      }%
-      \titlepage@next
-    \fi
-  \else
+  \ifx\@extratitle\@empty\else
     \vbox to \textheight{%
-      \vspace*{10\baselineskip}%
+      \vspace*{7\baselineskip}%
       \titlepageblock
         {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
         {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
@@ -155,9 +146,13 @@
       \titlepage@next
     \fi
   \fi
-  % Frontispicio: página anterior a la portada, con relleno vertical antes
-  % del contenido para que quede anclado al fondo.
+  % Frontispicio: página propia antes de la portada. Si extratitle existe,
+  % va en la página siguiente a él (par en twoside); si no, se asegura
+  % página par con \titlepage@lasteven (el impar anterior queda en blanco).
   \ifx\@frontispiece\@empty\else
+    \ifx\@extratitle\@empty
+      \titlepage@lasteven
+    \fi
     \vspace*{\fill}%
     {\centering\parindent\z@\@frontispiece\par}%
     \titlepage@next
@@ -166,16 +161,15 @@
   % author, date, publishers).
   \thispagestyle{empty}%
   \ifx\@titlehead\@empty\else
-    \vspace*{\baselineskip}%
     {\centering\parindent\z@\@titlehead\par}%
   \fi
   \ifx\@subject\@empty\else
     \vskip 1\baselineskip
     {\centering\parindent\z@\@subject\par}%
   \fi
-  \vspace*{\baselineskip}%
+  \vspace*{2\baselineskip}%
   \ifx\@titleimage\@empty
-    {\centering\usekomafont{title}{\MakeUppercase{\@title}\par}}%
+    {\centering\parindent\z@\usekomafont{title}{\MakeUppercase{\@title}\par}}%
   \else
     {\centering\titleimagerender{\@titleimage}\par}%
   \fi
@@ -186,19 +180,19 @@
   \ifx\@author\@empty
     \vskip 2\baselineskip%
   \else
-    \vskip 1\baselineskip
-    {\centering\usekomafont{author}{\renewcommand{\and}{\unskip, \ignorespaces}\@author\par}}%
+    \vskip 2\baselineskip
+    {\centering\parindent\z@\usekomafont{author}{\renewcommand{\and}{\unskip, \ignorespaces}\@author\par}}%
   \fi
   \ifx\@collectionCreatorPrefix\@empty\else
-    \vskip 1\baselineskip
+    \vskip 2\baselineskip
     {\centering\parindent\z@\@collectionCreatorPrefix\par}%
   \fi
   \ifx\@collectionCreator\@empty\else
-    {\centering\usekomafont{author}{\renewcommand{\and}{\unskip, \ignorespaces}\@collectionCreator\par}}%
+    {\centering\parindent\z@\usekomafont{author}{\renewcommand{\and}{\unskip, \ignorespaces}\@collectionCreator\par}}%
   \fi
   \ifx\@date\@empty\else
-    \vskip 1\baselineskip
-    {\centering\usekomafont{date}{\@date\par}}%
+    \vskip 2\baselineskip
+    {\centering\parindent\z@\usekomafont{date}{\@date\par}}%
   \fi
   \ifx\@publishersimagelist\@empty
     \ifx\@publishers\@empty\else
