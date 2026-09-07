@@ -210,7 +210,7 @@ describe('composeLatexTemplate', () => {
     expect(tpl).toContain('\\title{$title$}');
     expect(tpl).toContain('$if(subtitle)$\n\\subtitle{$subtitle$}\n$endif$');
     expect(tpl).toContain('\\author{$for(creator)$\\mbox{$creator$}$sep$ \\and $endfor$}');
-    expect(tpl).toContain('$if(collectionCreatorPrefix)$\n$collectionCreatorPrefix$\n$endif$');
+    expect(tpl).toContain('$if(collectionCreatorPrefix)$\n\\collectionCreatorPrefix{$collectionCreatorPrefix$}\n$endif$');
     expect(tpl).toContain(
       '$if(collectionCreator)$\n\\collectionCreator{$for(collectionCreator)$\\mbox{$collectionCreator$}$sep$ \\and $endfor$}\n$endif$',
     );
