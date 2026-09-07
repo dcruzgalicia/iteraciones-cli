@@ -206,7 +206,7 @@ export function rewriteImagePaths(content: string, imageMap: Map<string, string>
       const escaped = candidate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       result = result.replace(new RegExp(`\\]\\(${escaped}\\)`, 'g'), () => `](${processed})`);
       result = result.replace(
-        new RegExp(`^((?:titleImage|publisherImage|endpapers):[ \\t]*)(["']?)${escaped}(["']?[ \\t]*)$`, 'gm'),
+        new RegExp(`^((?:titleImage|publisherImage|startpaper):[ \\t]*)(["']?)${escaped}(["']?[ \\t]*)$`, 'gm'),
         (_m, pre: string, openQuote: string, closeQuote: string) => `${pre}${openQuote}${processed}${closeQuote}`,
       );
     }
@@ -217,16 +217,16 @@ export function rewriteImagePaths(content: string, imageMap: Map<string, string>
 interface ProcessTargets {
   targetW: number;
   targetH: number;
-  endpaperW: number;
-  endpaperH: number;
+  startpaperW: number;
+  startpaperH: number;
 }
 
 export function computeProcessTargets(pageDims: PageDimensions, cropActive: boolean): ProcessTargets {
   return {
     targetW: pageDims.textW + (cropActive ? 6 : 0),
     targetH: pageDims.h + (cropActive ? 6 : 0),
-    endpaperW: pageDims.w + (cropActive ? 6 : 0),
-    endpaperH: pageDims.h + (cropActive ? 6 : 0),
+    startpaperW: pageDims.w + (cropActive ? 6 : 0),
+    startpaperH: pageDims.h + (cropActive ? 6 : 0),
   };
 }
 
@@ -252,10 +252,10 @@ async function collectFrontmatterImageTasks(
   imageMap: Map<string, string>,
 ): Promise<{ absPath: string; w: number; h: number; cover: boolean }[]> {
   const tasks: { absPath: string; w: number; h: number; cover: boolean }[] = [];
-  for (const field of ['titleImage', 'publisherImage', 'endpapers']) {
-    const cover = field === 'endpapers';
-    const w = cover ? targets.endpaperW : targets.targetW;
-    const h = cover ? targets.endpaperH : targets.targetH;
+  for (const field of ['titleImage', 'publisherImage', 'startpaper']) {
+    const cover = field === 'startpaper';
+    const w = cover ? targets.startpaperW : targets.targetW;
+    const h = cover ? targets.startpaperH : targets.targetH;
     for (const value of resolveFmStringArray(fm[field])) {
       const absPath = isAbsolute(value) ? value : resolve(docDir, value);
       if (!(await Bun.file(absPath).exists()) || imageMap.has(absPath)) continue;

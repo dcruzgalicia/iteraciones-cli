@@ -1,4 +1,4 @@
-% Endpapers (guardas): imagen de fondo SOLO en la página 1 (la hoja de guarda
+% Startpaper (guardas): imagen de fondo SOLO en la página 1 (la hoja de guarda
 % en blanco que se inserta antes de la página de extratitle, que está en la
 % 3): en ninguna otra página.
 %
@@ -8,7 +8,7 @@
 % preamble dinámico agrega +6mm (3mm por lado) al cálculo para cubrir el
 % stock más grande de las marcas de corte. La escala cover y la ventana
 % central (en unidades naturales de la imagen) se calculan con l3fp en
-% \setendpapers, a partir del \sbox (a tamaño natural: \wd = ancho, \ht =
+% \setstartpaper, a partir del \sbox (a tamaño natural: \wd = ancho, \ht =
 % alto) y de \paperwidth/\paperheight reales (documentclass o geometry,
 % incluido el override del proyecto): no se hardcodea.
 %
@@ -16,8 +16,6 @@
 % (.5\paperwidth, ±.5\paperheight) — el signo depende del grid de 97-eso-pic
 % (desplaza el origen del \put al borde superior); la caja 0×0 con
 % \hss/\vss centra la imagen sobre ese punto.
-% Los comandos no pueden llamarse \endpapers: LaTeX prohíbe nombres que
-% empiecen con \end (colisión con el primitivo \end).
 \usepackage{eso-pic}
 \makeatletter
 \newsavebox{\papersbox}
@@ -27,13 +25,13 @@
 \fp_new:N \l_ep_winW_fp
 \fp_new:N \l_ep_winH_fp
 \ExplSyntaxOff
-\newcommand*{\@endpapers}{}%
+\newcommand*{\@startpaper}{}%
 % Definido bajo \ExplSyntaxOn: el cuerpo usa funciones l3fp (\fp_set:Nn,
 % \dim_to_fp:n) que solo se tokenizan correctamente bajo la sintaxis expl3
 % (el \ExplSyntaxOn dentro del cuerpo no re-tokeniza los tokens ya leídos).
 \ExplSyntaxOn
-\cs_new_protected:Npn \setendpapers #1 {
-  \gdef \@endpapers {#1}
+\cs_new_protected:Npn \setstartpaper #1 {
+  \gdef \@startpaper {#1}
   \sbox \papersbox { \includegraphics {#1} }
   % Escala cover contra papel y ventana central en unidades naturales de la
   % imagen (para el viewport del recorte). Cuando 98-crop está activo,
@@ -50,13 +48,13 @@
   \dim_set:Nn \ep@vyh { \fp_to_dim:n { ( \dim_to_fp:n { \the\ht\papersbox } + \l_ep_winH_fp ) / 2 } }
 }
 \ExplSyntaxOff
-\newcommand{\drawendpapers}{%
+\newcommand{\drawstartpaper}{%
   % Solo la página 1 Y solo si existen las hojas de guarda (\titlepageguards,
-  % activada por \titlepageblanks en 19-maketitle.tex): el endpaper es el
+  % activada por \titlepageblanks en 19-maketitle.tex): el startpaper es el
   % fondo de la hoja en blanco; sin guardas, no se agrega en ningún caso.
   \ifnum\value{page}=1
     \iftitlepageguards
-      \ifx\@endpapers\@empty
+      \ifx\@startpaper\@empty
       \else
         \put(.5\paperwidth,\ifx\ESO@HookIIIBG\@empty .5\paperheight\else -.5\paperheight\fi){%
           \vbox to 0pt{%
@@ -68,7 +66,7 @@
                 clip,%
                 width=\dimexpr\paperwidth\relax,%
                 height=\dimexpr\paperheight\relax,%
-              ]{\@endpapers}%
+              ]{\@startpaper}%
               \hss
             }%
             \vss
@@ -78,5 +76,5 @@
     \fi
   \fi
 }
-\AddToShipoutPictureBG*{\drawendpapers}
+\AddToShipoutPictureBG*{\drawstartpaper}
 \makeatother

@@ -482,22 +482,22 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(date).toBeLessThan(pub);
   });
 
-  it('19-maketitle: endpaper, courtesyPage y extratitle independientes (parejas recto+verso)', async () => {
+  it('19-maketitle: startpaper, courtesyPage y extratitle independientes (parejas recto+verso)', async () => {
     const filters = await loadPreambleFilters();
     const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';
     // Página en blanco autónoma: recto + verso en blanco solo si twoside+openright
     expect(maketitle).toContain('\\newcommand{\\titlepage@blankpage}{%');
     expect(maketitle).toContain('\\thispagestyle{empty}%\n  \\null\\clearpage');
     expect(maketitle).toContain('\\if@twoside\\if@openright');
-    // Guarda del endpaper: blank inicial solo si endpapers definido
-    expect(maketitle).toContain('\\ifx\\@endpapers\\@empty\\else');
+    // Guarda del startpaper: blank inicial solo si startpaper definido
+    expect(maketitle).toContain('\\ifx\\@startpaper\\@empty\\else');
     expect(maketitle).toContain('\\titlepageguardstrue');
     expect(maketitle).toContain('\\titlepage@blankpage');
     // Courtesy page autónoma: se emite aunque no haya extratitle
     expect(maketitle).toContain('\\ifcourtepage\n    \\titlepage@blankpage');
     // titlepageblanks desaparece: nada acoplado a la rama de extratitle
     expect(maketitle).not.toContain('titlepageblanks');
-    // El flag de guardas solo se activa cuando endpapers existe
+    // El flag de guardas solo se activa cuando startpaper existe
     expect((maketitle.match(/\\titlepageguardstrue/g) ?? []).length).toBe(1);
   });
 
@@ -560,15 +560,15 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(margins).toContain('headheight=\\baselineskip,headsep=3.25pt,footskip=10.25pt');
   });
 
-  it('97-eso-pic: el grid se activa en runtime (sin option clash con 30-endpapers)', async () => {
+  it('97-eso-pic: el grid se activa en runtime (sin option clash con 30-startpaper)', async () => {
     const filters = await loadPreambleFilters();
     const esopic = filters.find((f) => f.name === '97-eso-pic')?.content ?? '';
-    const endpapers = filters.find((f) => f.name === '30-endpapers')?.content ?? '';
-    // La cola de imprenta va al final (#1952): 30-endpapers carga eso-pic plano
+    const startpaper = filters.find((f) => f.name === '30-startpaper')?.content ?? '';
+    // La cola de imprenta va al final (#1952): 30-startpaper carga eso-pic plano
     // primero y LaTeX fija opciones en el primer \usepackage, así que 97 no puede
     // volver a cargarlo con opciones (option clash, issue #1962). 97 activa el
     // grid en runtime con los mismos parámetros que tenían sus opciones.
-    expect(endpapers).toContain('\\usepackage{eso-pic}');
+    expect(startpaper).toContain('\\usepackage{eso-pic}');
     expect(esopic).not.toContain('\\usepackage[');
     expect(esopic).toContain('\\ESO@gridtrue');
     expect(esopic).toContain('\\ESO@gridBGtrue');
@@ -578,29 +578,29 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(esopic).toContain('\\g@addto@macro\\ESO@HookIIIBG{\\ESO@gridpicture}');
   });
 
-  it('30-endpapers: imagen de fondo que cubre la hoja (cover recortado al tamaño del papel)', async () => {
+  it('30-startpaper: imagen de fondo que cubre la hoja (cover recortado al tamaño del papel)', async () => {
     const filters = await loadPreambleFilters();
-    const endpapers = filters.find((f) => f.name === '30-endpapers')?.content ?? '';
-    expect(endpapers).toContain('\\usepackage{eso-pic}');
-    expect(endpapers).toContain('\\AddToShipoutPictureBG*{\\drawendpapers}');
+    const startpaper = filters.find((f) => f.name === '30-startpaper')?.content ?? '';
+    expect(startpaper).toContain('\\usepackage{eso-pic}');
+    expect(startpaper).toContain('\\AddToShipoutPictureBG*{\\drawstartpaper}');
     // Medición a tamaño natural con un sbox (\wd = ancho, \ht = alto)
-    expect(endpapers).toContain('\\sbox \\papersbox');
+    expect(startpaper).toContain('\\sbox \\papersbox');
     // Cover recortado: escala y viewport central calculados con l3fp
-    expect(endpapers).toContain('\\fp_set:Nn \\l_ep_scale_fp');
-    expect(endpapers).toContain('viewport={\\the\\ep@vx}');
-    expect(endpapers).toContain('clip,');
+    expect(startpaper).toContain('\\fp_set:Nn \\l_ep_scale_fp');
+    expect(startpaper).toContain('viewport={\\the\\ep@vx}');
+    expect(startpaper).toContain('clip,');
     // Sin crop: la imagen mide exactamente el tamaño del papel (sin +6mm)
-    expect(endpapers).toContain('width=\\dimexpr\\paperwidth\\relax');
-    expect(endpapers).toContain('height=\\dimexpr\\paperheight\\relax');
+    expect(startpaper).toContain('width=\\dimexpr\\paperwidth\\relax');
+    expect(startpaper).toContain('height=\\dimexpr\\paperheight\\relax');
     // Solo la página 1 Y solo con hojas de guarda (la hoja en blanco antes de
-    // la extratitle; sin guardas, el endpaper no se agrega en ningún caso)
-    expect(endpapers).toContain('\\ifnum\\value{page}=1');
-    expect(endpapers).toContain('\\iftitlepageguards');
+    // la extratitle; sin guardas, el startpaper no se agrega en ningún caso)
+    expect(startpaper).toContain('\\ifnum\\value{page}=1');
+    expect(startpaper).toContain('\\iftitlepageguards');
     // Cover centrado: el centro de la imagen en el centro de la hoja
     // (el y del put depende del grid de 97-eso-pic, que desplaza el origen)
-    expect(endpapers).toContain('\\put(.5\\paperwidth,\\ifx\\ESO@HookIIIBG\\@empty');
-    expect(endpapers).toContain('\\vbox to 0pt{%');
-    expect(endpapers).toContain('\\hss');
+    expect(startpaper).toContain('\\put(.5\\paperwidth,\\ifx\\ESO@HookIIIBG\\@empty');
+    expect(startpaper).toContain('\\vbox to 0pt{%');
+    expect(startpaper).toContain('\\hss');
   });
 });
 
@@ -722,13 +722,13 @@ describe('crop / pdfx dinámico (#1975)', () => {
       expect(filters[1]?.content).toContain(`/TrimBox [${off} ${off}`);
     });
 
-    it('crop activo: endpapers agrega +6mm a paperwidth y paperheight', () => {
+    it('crop activo: startpaper agrega +6mm a paperwidth y paperheight', () => {
       const epContent =
         '\\fp_set:Nn \\l_ep_winW_fp { ( \\dim_to_fp:n { \\the\\paperwidth } ) / \\l_ep_scale_fp }\n' +
         'width=\\dimexpr\\paperwidth\\relax,\nheight=\\dimexpr\\paperheight\\relax,';
       const filters = [
         { name: '98-crop', content: 'old' },
-        { name: '30-endpapers', content: epContent },
+        { name: '30-startpaper', content: epContent },
       ];
       applyPrintQueueDynamics(filters);
       const ep = filters[1]?.content ?? '';
@@ -737,9 +737,9 @@ describe('crop / pdfx dinámico (#1975)', () => {
       expect(ep).toContain('height=\\dimexpr\\paperheight+6mm\\relax');
     });
 
-    it('sin crop: endpapers mide exactamente el tamaño del papel (sin +6mm)', () => {
+    it('sin crop: startpaper mide exactamente el tamaño del papel (sin +6mm)', () => {
       const epContent = 'width=\\dimexpr\\paperwidth\\relax,\nheight=\\dimexpr\\paperheight\\relax,';
-      const filters = [{ name: '30-endpapers', content: epContent }];
+      const filters = [{ name: '30-startpaper', content: epContent }];
       applyPrintQueueDynamics(filters);
       const ep = filters[0]?.content ?? '';
       expect(ep).toContain('width=\\dimexpr\\paperwidth\\relax');

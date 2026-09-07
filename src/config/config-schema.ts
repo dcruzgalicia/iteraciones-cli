@@ -69,7 +69,7 @@ const TitlePageFieldsSchema = {
 const ImageFieldsSchema = {
   titleImage: z.string().optional(),
   publisherImage: z.union([z.string(), z.array(z.string())]).optional(),
-  endpapers: z.string().optional(),
+  startpaper: z.string().optional(),
 };
 
 const HtmlBlocksSchema = z

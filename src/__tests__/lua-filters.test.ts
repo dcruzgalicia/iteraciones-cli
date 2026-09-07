@@ -629,7 +629,7 @@ describe.skipIf(!pandocOk)('filter latex/10-titlepages (páginas de título inte
         '$if(lowertitleback)$\\lowertitleback{$lowertitleback$}$endif$\n' +
         '$if(publishers)$\\publishers{$publishers$}$endif$\n' +
         '$if(publisherImage)$\\publishersimage{$publisherImage$}$endif$\n' +
-        '$if(endpapers)$\\setendpapers{$endpapers$}$endif$\n' +
+        '$if(startpaper)$\\setstartpaper{$startpaper$}$endif$\n' +
         '$if(colophon)$\\colophon{$colophon$}$endif$\n' +
         '$if(titleImage)$\\titleimage{$titleImage$}$endif$\n' +
         '$body$\n' +
@@ -705,9 +705,9 @@ describe.skipIf(!pandocOk)('filter latex/10-titlepages (páginas de título inte
     expect(tex).not.toContain('\\_');
   });
 
-  it('endpapers pasa la ruta literal (sin escapar el guion bajo)', async () => {
-    const tex = await toLatexTitleback('---\ntitle: Prueba\nendpapers: ./interior_guardas.pdf\n---\n\nCuerpo.\n');
-    expect(tex).toContain('\\setendpapers{./interior_guardas.pdf}');
+  it('startpaper pasa la ruta literal (sin escapar el guion bajo)', async () => {
+    const tex = await toLatexTitleback('---\ntitle: Prueba\nstartpaper: ./interior_guardas.pdf\n---\n\nCuerpo.\n');
+    expect(tex).toContain('\\setstartpaper{./interior_guardas.pdf}');
     expect(tex).not.toContain('\\_');
   });
 

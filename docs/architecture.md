@@ -151,14 +151,14 @@ Además, existen los **preamble filters** (`src/lib/resources/preamble/*.tex`) q
 | 27-cjk | `src/lib/resources/preamble/27-cjk.tex` | Soporte CJK con pdflatex (rodear con fenced div .japanese/.chinese/.korean) |
 | 28-titlepages | `src/lib/resources/preamble/28-titlepages.tex` | Entornos y cajas para las páginas de título y guardas |
 | 29-text-decoration | `src/lib/resources/preamble/29-text-decoration.tex` | soul y subrayado/resaltado (\hl para ==marca==) |
-| 30-endpapers | `src/lib/resources/preamble/30-endpapers.tex` | Guardas con imagen a página completa |
+| 30-startpaper | `src/lib/resources/preamble/30-startpaper.tex` | Guardas con imagen a página completa |
 | 97-eso-pic | `src/lib/resources/preamble/97-eso-pic.tex` | Fondo de página (desactivado por defecto) |
 | 98-crop | `src/lib/resources/preamble/98-crop.tex` | Marcas de corte (desactivado por defecto) |
 | 99-pdfx | `src/lib/resources/preamble/99-pdfx.tex` | PDF/X-1a (desactivado por defecto) |
 
 > **Cola de imprenta (siempre últimos).** `97-eso-pic`, `98-crop` y `99-pdfx` ocupan deliberadamente la cola de la numeración (97-99): son los últimos preámbulos en el orden derivado del filesystem y no puede existir ningún preamble filter con prefijo numérico mayor (ver `preamble-loader.ts` y su test).
 >
-> **Nota (issue #1962):** `97-eso-pic` activa el grid de `eso-pic` **en runtime** y no vuelve a cargar el paquete con opciones: `30-endpapers.tex` ya carga `\usepackage{eso-pic}` plano de forma incondicional y LaTeX fija las opciones en el primer `\usepackage` (un segundo load con opciones dispara *option clash*). Como la cola de imprenta es la última, 97 nunca puede ser el primer cargador.
+> **Nota (issue #1962):** `97-eso-pic` activa el grid de `eso-pic` **en runtime** y no vuelve a cargar el paquete con opciones: `30-startpaper.tex` ya carga `\usepackage{eso-pic}` plano de forma incondicional y LaTeX fija las opciones en el primer `\usepackage` (un segundo load con opciones dispara *option clash*). Como la cola de imprenta es la última, 97 nunca puede ser el primer cargador.
 
 ### Extensibilidad
 
@@ -417,8 +417,8 @@ Superficie estable (lista congelada; revisada desde el código en el issue #1934
 - **Opciones de build**: `--full`, `--output`, `--verbose`, `--json`.
 - **Opciones de doctor**: `--info`.
 - **Opciones de new**: `-t/--title`.
-- **Configuración** (`iteraciones.config.yaml`): `language`, `toc`, campos Dublin Core raíz (`title`, `creator`, `description`, …), campos de páginas de título raíz (`subtitle`, `extratitle`, `frontispiece`, `titlehead`, `dedication`, `uppertitleback`, `lowertitleback`, `colophon`), imágenes de portada raíz (`titleImage`, `publisherImage`, `endpapers`), configuración de PDF raíz (`showDate`, `pageNumber`, `coverImage`, `courtesyPage`, `disabledPreambleFilters`), `format.latex.generate`, `format.html.{site.{title, description, logo, theme, color}, generate, blocks}`, `format.pdf.{generate, showDate, pageNumber, coverImage, courtesyPage, disabledPreambleFilters}`, `format.epub.generate`, `format.markdown.generate`, `disabledFilters`, `luaFilters`, `bibliography`, `csl`.
-- **Frontmatter**: `title`, `subtitle`, `date`, `creator`, `slug` (manual); los que fluyen a pandoc o al template efectivo con efecto visible (`language`, `toc`, `description`, `site-title`, `tagline`, `theme`, `accent`, `css`); la configuración de PDF por documento (`showDate`, `pageNumber`, `coverImage`, `courtesyPage`); y las páginas de título internas y la portada (`extratitle`, `frontispiece`, `titlehead`, `subject`, `dedication`, `uppertitleback`, `lowertitleback`, `publishers`, `colophon`, `titleImage`, `publisherImage`, `endpapers`).
+- **Configuración** (`iteraciones.config.yaml`): `language`, `toc`, campos Dublin Core raíz (`title`, `creator`, `description`, …), campos de páginas de título raíz (`subtitle`, `extratitle`, `frontispiece`, `titlehead`, `dedication`, `uppertitleback`, `lowertitleback`, `colophon`), imágenes de portada raíz (`titleImage`, `publisherImage`, `startpaper`), configuración de PDF raíz (`showDate`, `pageNumber`, `coverImage`, `courtesyPage`, `disabledPreambleFilters`), `format.latex.generate`, `format.html.{site.{title, description, logo, theme, color}, generate, blocks}`, `format.pdf.{generate, showDate, pageNumber, coverImage, courtesyPage, disabledPreambleFilters}`, `format.epub.generate`, `format.markdown.generate`, `disabledFilters`, `luaFilters`, `bibliography`, `csl`.
+- **Frontmatter**: `title`, `subtitle`, `date`, `creator`, `slug` (manual); los que fluyen a pandoc o al template efectivo con efecto visible (`language`, `toc`, `description`, `site-title`, `tagline`, `theme`, `accent`, `css`); la configuración de PDF por documento (`showDate`, `pageNumber`, `coverImage`, `courtesyPage`); y las páginas de título internas y la portada (`extratitle`, `frontispiece`, `titlehead`, `subject`, `dedication`, `uppertitleback`, `lowertitleback`, `publishers`, `colophon`, `titleImage`, `publisherImage`, `startpaper`).
 - **Filtros**: nombres completos de los filters del paquete (capas `semantic/`, `latex/`, `html/`) y de los preamble filters numerados; override por archivo y listas `disabled-*`.
 - **Salidas**: HTML, PDF, LaTeX, EPUB y Markdown; esquema de slugs `title-por-author` con sufijos `-dN`; portada PNG junto al PDF cuando `coverImage` está activo (en `format.pdf`, raíz o frontmatter).
 
@@ -432,7 +432,7 @@ La lista anterior se obtuvo del **código** (no de la memoria): comandos y opcio
 Incorporaciones de la fase de estabilización registradas antes de congelar (issues #1931 y #1932):
 
 - `build --json` (resultado como JSON en stdout para consumo programático).
-- `format.pdf.coverImage` (config) y `titleImage`, `publisherImage`, `endpapers` (frontmatter): la portada PDF y las imágenes de guarda entraron durante esta misma fase y quedan congeladas con el resto de la superficie.
+- `format.pdf.coverImage` (config) y `titleImage`, `publisherImage`, `startpaper` (frontmatter): la portada PDF y las imágenes de guarda entraron durante esta misma fase y quedan congeladas con el resto de la superficie.
 - `titleImage`/`publisherImage` (renombrados desde `title-image`/`publisher-image`, issue #2354): todos los atributos de metadatos, imágenes de portada y configuración de PDF se resuelven en los tres niveles `frontmatter > format > root` (ver `docs/configuration.md`).
 
 Decisiones confirmadas en este pase (sin cambios de código):

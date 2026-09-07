@@ -44,17 +44,17 @@ function silentReporterForTest() {
 describe('regresión #2156: el pool PDF compila un tex del work dir con rutas absolutas', () => {
   // Un build real con latexmk tarda ~15-20 s: timeout explícito.
   it.skipIf(!pandocOk || !magickOk)(
-    'build completo latex+pdf+endpapers genera el PDF y conserva el bundle portable en dist',
+    'build completo latex+pdf+startpaper genera el PDF y conserva el bundle portable en dist',
     async () => {
       await withTempDir(async (dir) => {
         await mkdir(dir, { recursive: true });
         // Config mínima con los dos formatos en conflicto.
         const config = ['language: es-MX', 'format:', '  latex:', '    generate: true', '  pdf:', '    generate: true'].join('\n');
         await Bun.write(join(dir, 'iteraciones.config.yaml'), `${config}\n`);
-        // PNG real vía ImageMagick (gated arriba): endpapers obliga a
+        // PNG real vía ImageMagick (gated arriba): startpaper obliga a
         // preprocesado y distribution non-vacía — la condición exacta del bug.
-        await Bun.spawnSync(['magick', '-size', '2x2', 'xc:white', join(dir, 'endpaper.png')]);
-        const doc = ['---', 'title: Cuidar-se', 'date: 2026-01-01', 'endpapers: ./endpaper.png', '---', '', '# Capítulo', '', 'Contenido.'].join(
+        await Bun.spawnSync(['magick', '-size', '2x2', 'xc:white', join(dir, 'startpaper.png')]);
+        const doc = ['---', 'title: Cuidar-se', 'date: 2026-01-01', 'startpaper: ./startpaper.png', '---', '', '# Capítulo', '', 'Contenido.'].join(
           '\n',
         );
         await Bun.write(join(dir, 'manuscrito.md'), `${doc}\n`);
@@ -66,14 +66,14 @@ describe('regresión #2156: el pool PDF compila un tex del work dir con rutas ab
         expect(await pdf.exists()).toBe(true);
         expect((await pdf.arrayBuffer()).byteLength).toBeGreaterThan(1000);
         // Bundle portable intacto (ADR #2084): copia namespaced junto al tex de dist.
-        expect(await Bun.file(join(dist, 'cuidar-se-endpaper.jpg')).exists()).toBe(true);
+        expect(await Bun.file(join(dist, 'cuidar-se-startpaper.jpg')).exists()).toBe(true);
 
         // El tex de compilación del pool vive en el área de trabajo y apunta a
         // la ruta absoluta procesada — NO al nombre namespaced de dist (#2156).
         const workTexPath = join(dir, '.iteraciones', 'tmp', 'pdf', 'cuidar-se.tex');
         const workTex = await Bun.file(workTexPath).text();
-        expect(workTex).toContain('processed-images/endpaper.jpg');
-        expect(workTex).not.toContain('cuidar-se-endpaper.jpg');
+        expect(workTex).toContain('processed-images/startpaper.jpg');
+        expect(workTex).not.toContain('cuidar-se-startpaper.jpg');
       });
     },
     120_000,

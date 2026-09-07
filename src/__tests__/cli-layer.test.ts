@@ -3015,12 +3015,12 @@ describe('runBuild (smoke PDF real)', () => {
   );
 
   it.skipIf(!latexOk || !pandocOk)(
-    '97-eso-pic activo compila sin option clash con 30-endpapers (grid en runtime)',
+    '97-eso-pic activo compila sin option clash con 30-startpaper (grid en runtime)',
     async () => {
       await withTempDir(async (dir) => {
         await initTestProject(dir);
         // 97-eso-pic activo (grid): solo se quita de la disabled list por defecto.
-        // 30-endpapers sigue cargando \usepackage{eso-pic} plano: antes esto
+        // 30-startpaper sigue cargando \usepackage{eso-pic} plano: antes esto
         // fallaba con "! LaTeX Error: Option clash for package eso-pic." (#1962).
         await writeFile(
           join(dir, 'iteraciones.config.yaml'),
