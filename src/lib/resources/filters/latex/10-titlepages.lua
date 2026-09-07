@@ -27,7 +27,6 @@ local TITLE_PAGE_FIELDS = {
   'publishers',
   'colophon',
   'collectionCreator',
-  'collectionCreatorPrefix',
 }
 
 -- subject y publishers aceptan un solo valor o un array (como author): los
