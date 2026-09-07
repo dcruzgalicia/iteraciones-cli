@@ -9,9 +9,8 @@
 %   con \vspace*{7\baselineskip} antes)
 %   → portada (impar) → titlebacks (reverso de la portada; el \vfill ancla el
 %   lowertitleback al fondo, sin minipage) → dedication (página impar en
-%   twoside, bloque del 50% del ancho alineado a la derecha como el dictum,
-%   con centering vertical) → blank verso (solo twoside+openright,
-%   el contenido siguiente empieza en página impar).
+%   twoside, ancho completo justificado, centrado verticalmente) → blank verso
+%   (solo twoside+openright, el contenido siguiente empieza en página impar).
 % \titlepage@next/\titlepage@nextdouble (28-titlepages.tex): \clearpage +
 % \thispagestyle{empty} (+ página impar en twoside), SIN el \setparsizes
 % de \next@tpage (que dejaría \parindent a 0 en todo el documento).
@@ -72,10 +71,9 @@
 % Bloques de las páginas de título con la geometría del dictum (21-dictum.tex):
 % list con márgenes dados (#1 izquierdo, #2 derecho) y sin espaciado extra.
 % #3 es el estilo del párrafo (\centering, \raggedright o vacío = justificado):
-% el extratitle centra su texto, la dedication lo justifica.
+% el extratitle centra su texto.
 % Geometría propia para no crear dependencia con 21-dictum.tex.
 \newcommand*{\extratitlewidth}{0.75\textwidth}%
-\newcommand*{\dedicationwidth}{0.5\textwidth}%
 \newcommand*{\colophonwidth}{0.75\textwidth}%
 \newcommand{\titlepageblock}[4]{%
   \par
@@ -219,17 +217,13 @@
     {\titlebackformat\@lowertitleback\par}%
     \clearpage
   \fi
-  % Dedication (página impar en twoside, bloque del 50% del ancho
-  % alineado a la derecha como el dictum, centrado verticalmente).
+  % Dedication (página impar en twoside, ancho completo justificado,
+  % centrado verticalmente).
   \ifx\@dedication\@empty\else
     \titlepage@nextdouble
     \vbox to \textheight{%
       \vfill
-      \titlepageblock
-        {\dimexpr\linewidth-\dedicationwidth\relax}%
-        {\z@}%
-        {}%
-        {\@dedication}%
+      {\@dedication\par}%
       \vfill
     }%
     \clearpage
