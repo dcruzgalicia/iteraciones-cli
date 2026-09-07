@@ -408,8 +408,8 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(dedication).toContain('\\vbox to \\textheight{%');
     expect(dedication).toContain('\\vfill');
     expect(dedication).toContain('{\\@dedication\\par}');
-    // Posicionamiento fijo del extratitle: \vspace*{10\baselineskip}
-    expect(maketitle).toContain('\\vspace*{10\\baselineskip}');
+    // Posicionamiento fijo del extratitle: \vspace*{7\baselineskip}
+    expect(maketitle).toContain('\\vspace*{7\\baselineskip}');
   });
 
   it('19-maketitle: dedication en impar con blank verso (twoside+openright) y titlebacks en ambos modos', async () => {
@@ -463,12 +463,10 @@ describe('valores de maquetación editorial (issue 1810)', () => {
   it('19-maketitle: frontispiece, titlehead, subject y publishers en el maketitle', async () => {
     const filters = await loadPreambleFilters();
     const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';
-    // Frontispicio: página anterior a la portada con contenido anclado al fondo
+    // Frontispiece es independiente: se renderiza siempre en página par
     expect(maketitle).toContain('\\ifx\\@frontispiece\\@empty\\else');
     expect(maketitle).toContain('\\vspace*{\\fill}%\n    {\\centering\\parindent\\z@\\@frontispiece\\par}%');
-    // Extratitle por defecto: frontispiece sin extratitle → título
-    expect(maketitle).toContain('\\ifx\\@frontispiece\\@empty');
-    expect(maketitle).toContain('{\\centering\\parindent\\z@\\@title\\par}%');
+    // Sin extratitle: frontispiece usa \titlepage@lasteven para asegurar página par
     // Orden KOMA-Script: titlehead → subject → title → subtitle →
     // author → date → publishers
     const head = maketitle.indexOf('\\@titlehead\\par');
