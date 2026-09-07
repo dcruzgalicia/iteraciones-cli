@@ -224,11 +224,8 @@ export async function composeLatexTemplate(opts: { toc: boolean; preambleFilters
   lines.push('\\subtitle{$subtitle$}');
   lines.push('$endif$');
   lines.push('\\author{$for(creator)$\\mbox{$creator$}$sep$ \\and $endfor$}');
-  lines.push('$if(collectionCreatorPrefix)$');
-  lines.push('$collectionCreatorPrefix$');
-  lines.push('$endif$');
   lines.push('$if(collectionCreator)$');
-  lines.push('\\collectionCreator{$for(collectionCreator)$\\mbox{$collectionCreator$}$sep$ \\and $endfor$}');
+  lines.push('\\collectionCreator{$collectionCreator$}');
   lines.push('$endif$');
   lines.push('\\date{$date$}');
   lines.push('\\maketitle');
