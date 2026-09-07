@@ -207,11 +207,10 @@ function addAnonymousFallback(aggregated: Set<string>, filesWithoutCreator: numb
 export async function postProcessCollections(discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<void> {
   for (const entry of discoveryIndex.values()) {
     if (entry.type !== 'collection' || !entry.files) continue;
-    const ownCreator = entry.creator.length > 0 ? entry.creator.join(', ') : undefined;
     await aggregateCollectionCreators(entry, cwd);
-    if (ownCreator && entry.fm?.titlehead === undefined) {
+    if (entry.creator.length > 0 && entry.fm?.collectionCreator === undefined) {
       const fm = entry.fm ?? {};
-      fm.titlehead = ownCreator;
+      fm.collectionCreator = entry.creator;
       entry.fm = fm;
     }
   }

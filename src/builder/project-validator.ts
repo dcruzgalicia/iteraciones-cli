@@ -41,7 +41,7 @@ export const KNOWN_FRONTMATTER_FIELDS = [
   'extratitle',
   'frontispiece',
   'titlehead',
-  'titleheadPrefix',
+  'collectionCreatorPrefix',
   'dedication',
   'uppertitleback',
   'lowertitleback',
