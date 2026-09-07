@@ -188,7 +188,8 @@ end
 
 -- Serializa los bloques a LaTeX: los párrafos "::" se convierten a RawBlock
 -- antes de escribir (pandoc.write maneja los escapes, los LineBreak del
--- doble espacio y las comillas).
+-- doble espacio y las comillas). Los Div con clase .dictum se convierten a
+-- \dictum[author]{text} de KOMA-Script.
 local function serialize_titleback(blocks)
   local out = {}
   for _, b in ipairs(blocks) do
@@ -197,6 +198,36 @@ local function serialize_titleback(blocks)
       local latex = '\\vspace{\\baselineskip}'
       if marker == ':;' then latex = latex .. '\\noindent' end
       table.insert(out, pandoc.RawBlock('latex', latex))
+    elseif b.t == 'Div' and b.classes and b.classes:find('dictum', 1, true) then
+      local text_parts = {}
+      local author = nil
+      for _, inner in ipairs(b.content) do
+        if inner.t == 'Div' and inner.classes and inner.classes:find('author', 1, true) then
+          local author_inls = {}
+          for _, bl in ipairs(inner.content) do
+            if (bl.t == 'Para' or bl.t == 'Plain') and bl.content then
+              for _, inl in ipairs(bl.content) do
+                table.insert(author_inls, inl)
+              end
+            end
+          end
+          author = pandoc.write(pandoc.Pandoc({ pandoc.Para(author_inls) }), 'latex')
+          author = author:gsub('%s+$', '')
+        else
+          table.insert(text_parts, inner)
+        end
+      end
+      local text_latex = ''
+      if #text_parts > 0 then
+        text_latex = pandoc.write(pandoc.Pandoc(text_parts), 'latex')
+        text_latex = text_latex:gsub('%s+$', '')
+      end
+      local cmd = '\\dictum'
+      if author and author:match('%S') then
+        cmd = cmd .. '[' .. author .. ']'
+      end
+      cmd = cmd .. '{' .. text_latex .. '}'
+      table.insert(out, pandoc.RawBlock('latex', cmd))
     else
       table.insert(out, b)
     end

@@ -403,6 +403,7 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     const dedication = maketitle.slice(maketitle.indexOf('\\ifx\\@dedication\\@empty\\else'));
     expect(dedication).toContain('\\vbox to \\textheight{%');
     expect(dedication).toContain('\\vfill');
+    expect(dedication).toContain('{\\@dedication\\par}');
     // Posicionamiento fijo del extratitle: \vspace*{10\baselineskip}
     expect(maketitle).toContain('\\vspace*{10\\baselineskip}');
   });
@@ -416,7 +417,7 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     // Blank verso tras dedication solo en twoside+openright: el contenido
     // siguiente empieza en página impar
     const dedication = maketitle.slice(maketitle.indexOf('\\ifx\\@dedication\\@empty\\else'));
-    expect(dedication).toContain('{\\@dedication}%');
+    expect(dedication).toContain('{\\@dedication\\par}');
     expect(dedication).toContain('\\clearpage');
     expect(dedication).toContain('\\if@twoside\\if@openright');
     expect(dedication).toContain('\\null\\clearpage');
@@ -501,20 +502,18 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect((maketitle.match(/\\titlepageguardstrue/g) ?? []).length).toBe(1);
   });
 
-  it('19-maketitle: bloques extratitle (75% centrado) y dedication (50% derecha) como el dictum', async () => {
+  it('19-maketitle: bloques extratitle (75% centrado) y dedication (ancho completo justificado)', async () => {
     const filters = await loadPreambleFilters();
     const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';
     expect(maketitle).toContain('\\newcommand*{\\extratitlewidth}{0.75\\textwidth}');
-    expect(maketitle).toContain('\\newcommand*{\\dedicationwidth}{0.5\\textwidth}');
+    expect(maketitle).not.toContain('\\dedicationwidth');
     expect(maketitle).toContain('\\newcommand*{\\colophonwidth}{0.75\\textwidth}');
     // Bloque compartido: márgenes y estilo de párrafo como argumentos
     expect(maketitle).toContain('\\newcommand{\\titlepageblock}[4]{%');
     expect(maketitle).toContain('\\leftmargin=#1');
     expect(maketitle).toContain('\\rightmargin=#2');
-    // extratitle: márgenes iguales (centrado) y texto centrado; dedication:
-    // solo margen izquierdo y texto justificado
+    // extratitle: márgenes iguales (centrado) y texto centrado
     expect(maketitle).toContain('{\\dimexpr(\\linewidth-\\extratitlewidth)/2\\relax}%');
-    expect(maketitle).toContain('{\\dimexpr\\linewidth-\\dedicationwidth\\relax}%');
     expect(maketitle).toContain('{\\centering}%');
     expect(maketitle).toContain('\\titlepageblock');
   });

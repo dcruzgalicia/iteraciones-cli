@@ -721,4 +721,29 @@ describe.skipIf(!pandocOk)('filter latex/10-titlepages (páginas de título inte
     expect(tex).not.toContain('\\extratitle');
     expect(tex).not.toContain('\\uppertitleback');
   });
+
+  it('dedication con raw LaTeX (dictum) se serializa sin escapar', async () => {
+    const tex = await toLatexTitleback('---\ntitle: Prueba\ndedication: |\n  \\dictum[Juan Pérez]{Este es un dictum de prueba}\n---\n\nCuerpo.\n');
+    expect(tex).toContain('\\dedication{\\dictum[Juan Pérez]{Este es un dictum de prueba}}');
+  });
+
+  it('dedication con div dictum se convierte a \\dictum[author]{text}', async () => {
+    const tex = await toLatexTitleback(
+      '---\ntitle: Prueba\ndedication: |\n  ::: {.dictum}\n  Texto del dictum.\n\n  ::: {.author}\n  Autor\n  :::\n  :::\n---\n\nCuerpo.\n',
+    );
+    expect(tex).toContain('\\dictum');
+    expect(tex).toContain('Texto del dictum.');
+    expect(tex).toContain('Autor');
+    expect(tex).not.toContain(':::');
+  });
+
+  it('dedication con div dictum multilinea y autor', async () => {
+    const tex = await toLatexTitleback(
+      '---\ntitle: Prueba\ndedication: |\n  ::: {.dictum}\n  Hoy vamos caminando juntas.\n\n  Acompañándonos, cuestionándonos,\n\n  porque es suficiente\n\n  de las violencias que hemos vivido,\n\n  ahora necesitamos construir\n\n  historias diferentes\n\n  donde nuestra voz importe.\n\n  Esas historias no contadas\n\n  que hoy vamos a gritar.\n\n  ::: {.author}\n\n  Mare Advertencia\n  :::\n  :::\n---\n\nCuerpo.\n',
+    );
+    expect(tex).toContain('\\dictum[');
+    expect(tex).toContain('Mare Advertencia');
+    expect(tex).toContain('Hoy vamos caminando juntas');
+    expect(tex).not.toContain(':::');
+  });
 });
