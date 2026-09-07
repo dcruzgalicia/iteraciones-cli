@@ -1,6 +1,7 @@
 % Páginas de título (extratitle, frontispiece, titlehead, subject,
 % dedication, uppertitleback, lowertitleback, publishers) para el flujo del
-% pipeline.
+% pipeline. collectionCreator: command propio para collections que se
+% comporta como \author.
 %
 % Los comandos KOMA originales solo GUARDAN el contenido (\gdef): el
 % renderizado vive en el \maketitle original de KOMA. Como 19-maketitle.tex
@@ -36,6 +37,9 @@
     #1%
 }}%
 \renewcommand{\lowertitleback}[1]{\gdef\@lowertitleback{%
+    #1%
+}}%
+\newcommand{\collectionCreator}[1]{\gdef\@collectionCreator{%
     #1%
 }}%
 \makeatother

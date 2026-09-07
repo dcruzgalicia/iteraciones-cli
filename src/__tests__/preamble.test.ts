@@ -210,6 +210,9 @@ describe('composeLatexTemplate', () => {
     expect(tpl).toContain('\\title{$title$}');
     expect(tpl).toContain('$if(subtitle)$\n\\subtitle{$subtitle$}\n$endif$');
     expect(tpl).toContain('\\author{$for(creator)$\\mbox{$creator$}$sep$ \\and $endfor$}');
+    expect(tpl).toContain(
+      '$if(collectionCreator)$\n\\collectionCreator{$for(collectionCreator)$\\mbox{$collectionCreator$}$sep$ \\and $endfor$}\n$endif$',
+    );
     expect(tpl).toContain('\\date{$date$}');
     expect(tpl).toContain('\\maketitle');
   });
@@ -481,6 +484,16 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(sub).toBeLessThan(author);
     expect(author).toBeLessThan(date);
     expect(date).toBeLessThan(pub);
+  });
+
+  it('19-maketitle collection: collectionCreator después de author', async () => {
+    const filters = await loadPreambleFilters(undefined, undefined, 'collection');
+    const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';
+    const author = maketitle.indexOf('\\@author\\par');
+    const collectionCreator = maketitle.indexOf('\\@collectionCreator\\par');
+    expect(author).toBeGreaterThan(-1);
+    expect(collectionCreator).toBeGreaterThan(author);
+    expect(maketitle).toContain('\\@collectionCreator');
   });
 
   it('19-maketitle: startpaper, courtesyPage y extratitle independientes (parejas recto+verso)', async () => {

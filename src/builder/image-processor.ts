@@ -134,7 +134,16 @@ function parseWidthMm(attrs: string | undefined, pageWidthmm: number): number | 
   }
 }
 
-const MULTILINE_IMAGE_FIELDS = ['lowertitleback', 'uppertitleback', 'dedication', 'extratitle', 'frontispiece', 'titlehead', 'colophon'];
+const MULTILINE_IMAGE_FIELDS = [
+  'lowertitleback',
+  'uppertitleback',
+  'dedication',
+  'extratitle',
+  'frontispiece',
+  'titlehead',
+  'collectionCreator',
+  'colophon',
+];
 
 export function scanInlineImages(content: string, docDir: string): string[] {
   const paths: string[] = [];

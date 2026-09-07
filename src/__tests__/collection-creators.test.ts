@@ -98,7 +98,7 @@ describe('collection creator aggregation', () => {
     }
   });
 
-  it('collection con creator propio inyecta titlehead', async () => {
+  it('collection con creator propio inyecta collectionCreator', async () => {
     const cwd = makeProject({
       'collection.md': '---\ntitle: Antología\ncreator: Editora Principal\ntype: collection\nfiles:\n  - ./a.md\n---',
       'a.md': '---\ntitle: A\n---\n\nContenido',
@@ -106,13 +106,13 @@ describe('collection creator aggregation', () => {
     try {
       const result = await buildStep(cwd);
       const entry = result.discoveryIndex.get('collection.md');
-      expect(entry?.fm?.titlehead).toBe('Editora Principal');
+      expect(entry?.fm?.collectionCreator).toEqual(['Editora Principal']);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
   });
 
-  it('collection sin creator propio no inyecta titlehead', async () => {
+  it('collection sin creator propio no inyecta collectionCreator', async () => {
     const cwd = makeProject({
       'collection.md': '---\ntitle: Antología\ntype: collection\nfiles:\n  - ./a.md\n---',
       'a.md': '---\ntitle: A\ncreator: Autora\n---\n\nContenido',
@@ -120,13 +120,13 @@ describe('collection creator aggregation', () => {
     try {
       const result = await buildStep(cwd);
       const entry = result.discoveryIndex.get('collection.md');
-      expect(entry?.fm?.titlehead).toBeUndefined();
+      expect(entry?.fm?.collectionCreator).toBeUndefined();
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
   });
 
-  it('titlehead explícito tiene preferencia sobre el auto-generado', async () => {
+  it('titlehead explícito no afecta collectionCreator', async () => {
     const cwd = makeProject({
       'collection.md': '---\ntitle: Antología\ncreator: Editora Principal\ntitlehead: Custom Titlehead\ntype: collection\nfiles:\n  - ./a.md\n---',
       'a.md': '---\ntitle: A\n---\n\nContenido',
@@ -135,12 +135,13 @@ describe('collection creator aggregation', () => {
       const result = await buildStep(cwd);
       const entry = result.discoveryIndex.get('collection.md');
       expect(entry?.fm?.titlehead).toBe('Custom Titlehead');
+      expect(entry?.fm?.collectionCreator).toEqual(['Editora Principal']);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
   });
 
-  it('collection con creator propio en多人数: titlehead es creator original, author es aggregationados', async () => {
+  it('collection con creator propio en多人数: collectionCreator es creator original, author es aggregationados', async () => {
     const cwd = makeProject({
       'collection.md': '---\ntitle: Antología\ncreator: [Editora Alpha, Editora Beta]\ntype: collection\nfiles:\n  - ./a.md\n  - ./b.md\n---',
       'a.md': '---\ntitle: A\ncreator: Autora Gamma\n---\n\nContenido',
@@ -151,7 +152,7 @@ describe('collection creator aggregation', () => {
       const entry = result.discoveryIndex.get('collection.md');
       expect(entry?.slug).toBe('antologia-por-editora-alpha');
       expect(entry?.aggregatedCreator).toEqual(['Autora Delta', 'Autora Gamma']);
-      expect(entry?.fm?.titlehead).toBe('Editora Alpha, Editora Beta');
+      expect(entry?.fm?.collectionCreator).toEqual(['Editora Alpha', 'Editora Beta']);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
