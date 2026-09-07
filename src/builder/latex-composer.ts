@@ -11,7 +11,7 @@ import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
 import type { PageDimensions } from './image-processor.js';
 import { processDocumentImages, rewriteImagePaths, scanInlineImages, scanTitlePageFieldImages } from './image-processor.js';
 import { babelOptionsForLang, pageNumberCommandFor } from './latex-preamble.js';
-import { creatorArgs, dateArg, metadataValue, publisherArg, titleArg } from './pandoc-metadata.js';
+import { creatorArgs, dateArg, publisherArg, titleArg } from './pandoc-metadata.js';
 import type { BuildDocument } from './types.js';
 
 const TITLE_PAGE_FIELDS = [
@@ -185,16 +185,8 @@ function buildTitlePageOverrides(
     if (value) overrides[field] = value;
   }
   if (isCollection) {
-    const collectionCreatorPrefix = resolveStringField(fm, formatCfg, siteConfig, 'collectionCreatorPrefix');
-    if (collectionCreatorPrefix) {
-      const raw = resolveMetadataField(fm, formatCfg, siteConfig, 'collectionCreator');
-      const creators = parseAuthors(raw);
-      if (creators.length > 0) {
-        overrides.collectionCreator = `${collectionCreatorPrefix}\n${creators.join(', ')}`;
-      } else {
-        overrides.collectionCreator = collectionCreatorPrefix;
-      }
-    }
+    const prefix = resolveStringField(fm, formatCfg, siteConfig, 'collectionCreatorPrefix');
+    if (prefix) overrides.collectionCreatorPrefix = prefix;
   }
   return overrides;
 }
@@ -246,7 +238,6 @@ export async function markdownToLatex(
   const effectiveFm = mergeConfigImages(fm, formatCfg, siteConfig, cwd);
   const title = resolveStringField(fm, formatCfg, siteConfig, 'title') ?? 'Sin título';
   const creator = parseAuthors(resolveMetadataField(fm, formatCfg, siteConfig, 'creator'));
-  const isCollection = doc.frontmatter.type === 'collection';
 
   let imageMap = new Map<string, string>();
   let processedImages: string[] = [];
@@ -277,10 +268,6 @@ export async function markdownToLatex(
   extraArgs.push(titleArg(title));
   await pushCoverImageMetadata(extraArgs, effectiveFm, doc, imageMap);
   extraArgs.push(...creatorArgs(creator));
-  if (isCollection) {
-    const collectionCreator = parseAuthors(resolveMetadataField(fm, formatCfg, siteConfig, 'collectionCreator'));
-    if (collectionCreator.length > 0) extraArgs.push(...collectionCreator.map((c) => `--metadata=collectionCreator:${metadataValue(c)}`));
-  }
   const publishers = fmStringList(resolveMetadataField(fm, formatCfg, siteConfig, 'publisher'));
   if (publishers) extraArgs.push(...publisherArg(publishers));
   const date = await pdfDate(fm, formatCfg, siteConfig, doc);
