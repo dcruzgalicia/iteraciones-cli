@@ -158,6 +158,20 @@ async function pushCoverImageMetadata(
   }
 }
 
+function resolveTitlePageValue(
+  fm: Record<string, unknown>,
+  formatCfg: Record<string, unknown> | undefined,
+  siteConfig: SiteConfig,
+  field: string,
+  isCollection: boolean,
+): string | undefined {
+  const resolved = resolveMetadataField(fm, formatCfg, siteConfig, field);
+  if (resolved === undefined) return undefined;
+  if (!isCollection && fm[field] !== undefined) return undefined;
+  const joined = Array.isArray(resolved) ? resolved.join(', ') : resolved;
+  return joined || undefined;
+}
+
 function buildTitlePageOverrides(
   fm: Record<string, unknown>,
   formatCfg: Record<string, unknown> | undefined,
@@ -165,15 +179,14 @@ function buildTitlePageOverrides(
   doc: BuildDocument,
 ): Record<string, string> {
   const overrides: Record<string, string> = {};
+  const isCollection = doc.frontmatter.type === 'collection';
   for (const field of TITLE_PAGE_FIELDS) {
-    const resolved = resolveMetadataField(fm, formatCfg, siteConfig, field);
-    if (resolved !== undefined) {
-      const shouldInject = doc.frontmatter.type === 'collection' || fm[field] === undefined;
-      if (shouldInject) {
-        const joined = Array.isArray(resolved) ? resolved.join(', ') : resolved;
-        if (joined) overrides[field] = joined;
-      }
-    }
+    const value = resolveTitlePageValue(fm, formatCfg, siteConfig, field, isCollection);
+    if (value) overrides[field] = value;
+  }
+  const prefix = resolveStringField(fm, formatCfg, siteConfig, 'titleheadPrefix');
+  if (prefix) {
+    overrides.titlehead = overrides.titlehead ? `${prefix}\n${overrides.titlehead}` : prefix;
   }
   return overrides;
 }

@@ -60,6 +60,7 @@ const TitlePageFieldsSchema = {
   extratitle: z.string().optional(),
   frontispiece: z.string().optional(),
   titlehead: z.string().optional(),
+  titleheadPrefix: z.string().optional(),
   dedication: z.string().optional(),
   uppertitleback: z.string().optional(),
   lowertitleback: z.string().optional(),
