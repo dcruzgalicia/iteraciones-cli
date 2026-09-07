@@ -161,6 +161,33 @@ local function uppercase_span_to_rawlatex(span)
   return pandoc.RawInline('latex', '\\MakeUppercase{' .. body .. '}')
 end
 
+local TEXTSIZE_CLASSES = {
+  tiny = true, scriptsize = true, footnotesize = true, small = true,
+  normalsize = true, large = true, Large = true, LARGE = true,
+  huge = true, Huge = true,
+}
+
+local function textsize_class(el)
+  for _, c in ipairs(el.classes) do
+    if TEXTSIZE_CLASSES[c] then return c end
+  end
+  return nil
+end
+
+local function textsize_span_to_rawlatex(span)
+  local cls = textsize_class(span)
+  local body = pandoc.write(pandoc.Pandoc({ pandoc.Para(span.content) }), 'latex')
+  body = body:gsub('%s+$', '')
+  return pandoc.RawInline('latex', '{\\' .. cls .. ' ' .. body .. '}')
+end
+
+local function textsize_div_to_rawlatex(div)
+  local cls = textsize_class(div)
+  local body = pandoc.write(pandoc.Pandoc(div.content), 'latex')
+  body = body:gsub('%s+$', '')
+  return pandoc.RawBlock('latex', '{\\' .. cls .. ' ' .. body .. '}')
+end
+
 local function walk_inlines(inls)
   local out = {}
   for _, el in ipairs(inls) do
@@ -168,6 +195,8 @@ local function walk_inlines(inls)
       table.insert(out, mbox_span_to_rawlatex(el))
     elseif el.t == 'Span' and el.classes:find('uppercase', 1, true) then
       table.insert(out, uppercase_span_to_rawlatex(el))
+    elseif el.t == 'Span' and textsize_class(el) then
+      table.insert(out, textsize_span_to_rawlatex(el))
     else
       table.insert(out, el)
     end
@@ -230,6 +259,8 @@ local function serialize_titleback(blocks)
       end
       cmd = cmd .. '{' .. text_latex .. '}'
       table.insert(out, pandoc.RawBlock('latex', cmd))
+    elseif b.t == 'Div' and b.classes and textsize_class(b) then
+      table.insert(out, textsize_div_to_rawlatex(b))
     else
       table.insert(out, b)
     end
