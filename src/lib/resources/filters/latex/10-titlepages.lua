@@ -153,11 +153,19 @@ local function mbox_span_to_rawlatex(span)
   return pandoc.RawInline('latex', '\\mbox{' .. body .. '}')
 end
 
+local function uppercase_span_to_rawlatex(span)
+  local body = pandoc.write(pandoc.Pandoc({ pandoc.Para(span.content) }), 'latex')
+  body = body:gsub('%s+$', '')
+  return pandoc.RawInline('latex', '\\MakeUppercase{' .. body .. '}')
+end
+
 local function walk_inlines(inls)
   local out = {}
   for _, el in ipairs(inls) do
     if el.t == 'Span' and el.classes:find('mbox', 1, true) then
       table.insert(out, mbox_span_to_rawlatex(el))
+    elseif el.t == 'Span' and el.classes:find('uppercase', 1, true) then
+      table.insert(out, uppercase_span_to_rawlatex(el))
     else
       table.insert(out, el)
     end
