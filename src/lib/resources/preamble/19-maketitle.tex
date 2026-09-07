@@ -189,6 +189,10 @@
     \vskip 1\baselineskip
     {\centering\usekomafont{author}{\renewcommand{\and}{\unskip, \ignorespaces}\@author\par}}%
   \fi
+  \ifx\@collectionCreator\@empty\else
+    \vskip 1\baselineskip
+    {\centering\usekomafont{author}{\renewcommand{\and}{\unskip, \ignorespaces}\@collectionCreator\par}}%
+  \fi
   \ifx\@date\@empty\else
     \vskip 1\baselineskip
     {\centering\usekomafont{date}{\@date\par}}%
