@@ -141,7 +141,7 @@ export interface EffectivePdfConfig {
   disabledPreambleFilters?: string[];
   titleImage?: string;
   publisherImage?: string | string[];
-  endpapers?: string;
+  startpaper?: string;
 }
 
 export interface PdfConfigSource {
@@ -152,7 +152,7 @@ export interface PdfConfigSource {
   disabledPreambleFilters?: string[];
   titleImage?: string;
   publisherImage?: string | string[];
-  endpapers?: string;
+  startpaper?: string;
 }
 
 export function effectivePdfConfig(siteConfig: {
@@ -163,7 +163,7 @@ export function effectivePdfConfig(siteConfig: {
   disabledPreambleFilters?: string[];
   titleImage?: string;
   publisherImage?: string | string[];
-  endpapers?: string;
+  startpaper?: string;
   format?: { pdf?: PdfConfigSource };
 }): EffectivePdfConfig {
   const pdf: PdfConfigSource = siteConfig.format?.pdf ?? {};
@@ -175,7 +175,7 @@ export function effectivePdfConfig(siteConfig: {
     disabledPreambleFilters: siteConfig.disabledPreambleFilters ?? pdf.disabledPreambleFilters,
     titleImage: siteConfig.titleImage ?? pdf.titleImage,
     publisherImage: siteConfig.publisherImage ?? pdf.publisherImage,
-    endpapers: siteConfig.endpapers ?? pdf.endpapers,
+    startpaper: siteConfig.startpaper ?? pdf.startpaper,
   };
 }
 

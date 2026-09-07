@@ -211,26 +211,26 @@ describe('blindaje pipeline magick (#2085, fixes ecba990a/3b7d7a97)', () => {
 describe('computeProcessTargets (parte pura de processDocumentImages, #2132)', () => {
   const pageDims = { w: 152.4, h: 228.6, textW: 128.6 };
 
-  it('sin crop: caja de texto para target y página completa para endpapers', () => {
+  it('sin crop: caja de texto para target y página completa para startpaper', () => {
     const t = computeProcessTargets(pageDims, false);
-    expect(t).toEqual({ targetW: pageDims.textW, targetH: pageDims.h, endpaperW: pageDims.w, endpaperH: pageDims.h });
+    expect(t).toEqual({ targetW: pageDims.textW, targetH: pageDims.h, startpaperW: pageDims.w, startpaperH: pageDims.h });
   });
 
   it('con crop activo: +6mm de bleed en las cuatro dimensiones', () => {
     const t = computeProcessTargets(pageDims, true);
     expect(t.targetW).toBeCloseTo(pageDims.textW + 6);
     expect(t.targetH).toBeCloseTo(pageDims.h + 6);
-    expect(t.endpaperW).toBeCloseTo(pageDims.w + 6);
-    expect(t.endpaperH).toBeCloseTo(pageDims.h + 6);
+    expect(t.startpaperW).toBeCloseTo(pageDims.w + 6);
+    expect(t.startpaperH).toBeCloseTo(pageDims.h + 6);
   });
 
-  it('endpapers SIEMPRE usa página completa aunque la caja difiera (#1975)', () => {
+  it('startpaper SIEMPRE usa página completa aunque la caja difiera (#1975)', () => {
     const dimsAsimetricas = { w: 140, h: 216, textW: 110 };
     const conCrop = computeProcessTargets(dimsAsimetricas, true);
-    expect(conCrop.endpaperW).toBe(146); // w + bleed
+    expect(conCrop.startpaperW).toBe(146); // w + bleed
     expect(conCrop.targetW).toBe(116); // textW + bleed
     const sinCrop = computeProcessTargets(dimsAsimetricas, false);
-    expect(sinCrop.endpaperW).toBe(140);
+    expect(sinCrop.startpaperW).toBe(140);
     expect(sinCrop.targetW).toBe(110);
   });
 });
@@ -257,11 +257,11 @@ describe('rewriteImagePaths — reemplazo anclado (#2170)', () => {
   });
 
   it('reescribe los campos de portada preservando comillas', () => {
-    const content = ['---', 'titleImage: "img.png"', "publisherImage: 'img.png'", 'endpapers: img.png', 'otra-clave: img.png', '---'].join('\n');
+    const content = ['---', 'titleImage: "img.png"', "publisherImage: 'img.png'", 'startpaper: img.png', 'otra-clave: img.png', '---'].join('\n');
     const result = rewriteImagePaths(content, map, docDir);
     expect(result).toContain(`titleImage: "${processed}"`);
     expect(result).toContain(`publisherImage: '${processed}'`);
-    expect(result).toContain(`endpapers: ${processed}`);
+    expect(result).toContain(`startpaper: ${processed}`);
     expect(result).toContain('otra-clave: img.png');
   });
 

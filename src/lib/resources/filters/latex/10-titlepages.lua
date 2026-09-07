@@ -203,7 +203,7 @@ end
 -- escaparía el guion bajo (mi_imagen.jpg → mi\_imagen.jpg) y rompería la
 -- búsqueda del archivo. Acepta MetaString (--metadata del CLI) o inlines
 -- Str/Space (frontmatter).
-local RAW_PATH_FIELDS = { 'titleImage', 'publisherImage', 'endpapers' }
+local RAW_PATH_FIELDS = { 'titleImage', 'publisherImage', 'startpaper' }
 
 local function meta_to_rawpath(meta)
   if type(meta) == 'string' then

@@ -47,7 +47,7 @@ export const KNOWN_FRONTMATTER_FIELDS = [
   'colophon',
   'titleImage',
   'publisherImage',
-  'endpapers',
+  'startpaper',
   'courtesyPage',
   'type',
   'files',

@@ -40,7 +40,7 @@ toc: false                        # tabla de contenidos (PDF, LaTeX, HTML, EPUB)
 # Imágenes de portada y guardas (opcional; para todos los documentos)
 # titleImage: ''
 # publisherImage: ''
-# endpapers: ''
+# startpaper: ''
 
 # Configuración específica de PDF (opcional; para todos los documentos)
 # showDate: false
@@ -108,7 +108,7 @@ frontmatter > format config > root config
 - **Format config** (`format.pdf`, etc.): sobreescribe la raíz solo para ese formato.
 - **Root config** (raíz de `iteraciones.config.yaml`): valores por defecto para todos los documentos y formatos.
 
-Aplican a los tres niveles los campos Dublin Core, los campos de páginas de título, las imágenes de portada (`titleImage`, `publisherImage`, `endpapers`) y la configuración específica de PDF (`showDate`, `pageNumber`, `coverImage`, `courtesyPage`, `disabledPreambleFilters`).
+Aplican a los tres niveles los campos Dublin Core, los campos de páginas de título, las imágenes de portada (`titleImage`, `publisherImage`, `startpaper`) y la configuración específica de PDF (`showDate`, `pageNumber`, `coverImage`, `courtesyPage`, `disabledPreambleFilters`).
 
 Excepciones (no aplican 3 niveles, se documentan como tales):
 
@@ -277,7 +277,7 @@ pageNumber: footer-left
 ---
 ```
 
-### `titleImage`, `publisherImage`, `endpapers` (imágenes de portada y guardas)
+### `titleImage`, `publisherImage`, `startpaper` (imágenes de portada y guardas)
 
 **Tipo:** `string` (`publisherImage` también acepta `string[]`)
 **Por defecto:** `undefined` (sin imagen)
@@ -286,13 +286,13 @@ Definen la imagen de portada, el logo del editor y las guardas del PDF. Se puede
 
 - `titleImage`: imagen que sustituye al texto del título en la portada.
 - `publisherImage`: imagen que sustituye al texto de `publishers` en la portada.
-- `endpapers`: imagen de fondo (guardas) de la hoja completa en la primera página.
+- `startpaper`: imagen de fondo (guardas) de la hoja completa en la primera página.
 
 ```yaml
 # Raíz — misma portada para todos los documentos
 titleImage: assets/portada.png
 publisherImage: assets/logo.png
-endpapers: assets/guardas.pdf
+startpaper: assets/guardas.pdf
 ```
 
 ```yaml

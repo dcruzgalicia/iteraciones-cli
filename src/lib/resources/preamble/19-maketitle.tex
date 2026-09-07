@@ -4,7 +4,7 @@
 %
 % Orden de páginas (cada elemento en recto con verso en blanco solo en
 % twoside+openright; en oneside/openany van encadenados sin blanks):
-%   guarda del endpaper (pág 1, solo si endpapers) → courtesy page (solo si
+%   guarda del startpaper (pág 1, solo si startpaper) → courtesy page (solo si
 %   courtepage) → extratitle (pág impar, bloque del 75% del ancho centrado
 %   con \vspace*{7\baselineskip} antes)
 %   → portada (impar) → titlebacks (reverso de la portada; el \vfill ancla el
@@ -95,14 +95,14 @@
 }
 
 % Página en blanco de los elementos previos a la portada (guarda del
-% endpaper, courtesy page): emite el recto y, solo en twoside+openright,
+% startpaper, courtesy page): emite el recto y, solo en twoside+openright,
 % también el verso en blanco para que el elemento siguiente caiga en página
 % impar. Cada \null evita que la página sea vacía (\clearpage de una página
 % sin contenido no la emite en algunos casos). Sin número: los layers de
 % scrlayer-scrpage están vacíos hasta que el comando de página se define.
-% \titlepageguards: true si las hojas de guarda existen — 30-endpapers.tex
-% la consulta para dibujar el endpaper SOLO sobre la página 1 cuando esta es
-% la hoja en blanco (sin guardas, sin endpaper en ningún caso).
+% \titlepageguards: true si las hojas de guarda existen — 30-startpaper.tex
+% la consulta para dibujar el startpaper SOLO sobre la página 1 cuando esta es
+% la hoja en blanco (sin guardas, sin startpaper en ningún caso).
 \newif\iftitlepageguards
 \newif\ifcourtepage
 \newcommand{\titlepage@blankpage}{%
@@ -116,10 +116,10 @@
   \fi\fi
 }
 \renewcommand{\maketitle}{%
-  % 1. Guarda del endpaper (pág 1) + verso en blanco si twoside+openright:
-  % solo cuando endpapers está definido. \titlepageguards activa el dibujo
-  % de la imagen en 30-endpapers.tex sobre la página 1.
-  \ifx\@endpapers\@empty\else
+  % 1. Guarda del startpaper (pág 1) + verso en blanco si twoside+openright:
+  % solo cuando startpaper está definido. \titlepageguards activa el dibujo
+  % de la imagen en 30-startpaper.tex sobre la página 1.
+  \ifx\@startpaper\@empty\else
     \titlepageguardstrue
     \titlepage@blankpage
   \fi

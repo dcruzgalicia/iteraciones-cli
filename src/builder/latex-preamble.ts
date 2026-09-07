@@ -111,7 +111,7 @@ export function applyPrintQueueDynamics(filters: PreambleFilter[], pageDimension
   }
 
   if (cropActive) {
-    const ep = filters.find((f) => f.name === '30-endpapers');
+    const ep = filters.find((f) => f.name === '30-startpaper');
     if (ep) {
       ep.content = ep.content
         .replaceAll(') / \\dim_to_fp:n { \\the\\wd\\papersbox', '+ 6mm ) / \\dim_to_fp:n { \\the\\wd\\papersbox')
@@ -210,8 +210,8 @@ export async function composeLatexTemplate(opts: { toc: boolean; preambleFilters
   lines.push('$if(publisherImage)$');
   lines.push('\\publishersimage{$publisherImage$}');
   lines.push('$endif$');
-  lines.push('$if(endpapers)$');
-  lines.push('\\setendpapers{$endpapers$}');
+  lines.push('$if(startpaper)$');
+  lines.push('\\setstartpaper{$startpaper$}');
   lines.push('$endif$');
   lines.push('$if(courtesy-page)$');
   lines.push('\\courtepagetrue');

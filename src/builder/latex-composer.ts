@@ -113,7 +113,7 @@ async function resolveAndPushImage(
   extraArgs.push(`--metadata=${field}:${imageMap.get(imagePath) ?? imagePath}`);
 }
 
-const COVER_IMAGE_FIELDS = ['titleImage', 'publisherImage', 'endpapers'] as const;
+const COVER_IMAGE_FIELDS = ['titleImage', 'publisherImage', 'startpaper'] as const;
 
 function toAbsoluteImagePaths(value: string | string[], cwd: string): string | string[] {
   if (Array.isArray(value)) return value.map((v) => (isAbsolute(v) ? v : resolve(cwd, v)));
@@ -142,7 +142,7 @@ async function pushCoverImageMetadata(
   doc: BuildDocument,
   imageMap: Map<string, string>,
 ): Promise<void> {
-  for (const field of ['titleImage', 'endpapers']) {
+  for (const field of ['titleImage', 'startpaper']) {
     const value = trimmedStringValue(fm[field]);
     if (value) await resolveAndPushImage(extraArgs, field, value, doc, imageMap);
   }

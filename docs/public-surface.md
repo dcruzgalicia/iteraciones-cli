@@ -54,7 +54,7 @@ Los elementos añadidos o modificados durante el ciclo II de revisión integral:
 ## Configuración — `iteraciones.config.yaml`
 
 - Exigido por `build` y `validate` (#2071); archivo vacío = defaults. Claves desconocidas: error estricto.
-- Raíz: `language`, `toc`, `format`, `disabled-filters`, `lua-filters`, `bibliography`, `csl` + campos Dublin Core (title…abstract) + páginas de título + imágenes de portada (`titleImage`, `publisherImage`, `endpapers`) + configuración de PDF (`showDate`, `pageNumber`, `coverImage`, `courtesyPage`, `disabledPreambleFilters`).
+- Raíz: `language`, `toc`, `format`, `disabled-filters`, `lua-filters`, `bibliography`, `csl` + campos Dublin Core (title…abstract) + páginas de título + imágenes de portada (`titleImage`, `publisherImage`, `startpaper`) + configuración de PDF (`showDate`, `pageNumber`, `coverImage`, `courtesyPage`, `disabledPreambleFilters`).
 - `format.latex|pdf|epub|markdown`: `generate`; `pdf` añade `showDate`, `pageNumber`, `coverImage`, `courtesyPage`, `disabledPreambleFilters`, DC, páginas de título e imágenes por-formato; `html` añade `site.{title,description,logo,theme,color}` y `blocks`.
 - Resolución en 3 niveles (`frontmatter > format > root`) para DC, páginas de título, imágenes de portada y configuración de PDF (#2354).
 - Fuente única tipada: schema Zod inferido con paridad compilación-tiempo contra las sub-interfaces (#2072).
