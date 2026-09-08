@@ -164,7 +164,22 @@
     \vskip 1\baselineskip
     {\centering\parindent\z@\@subject\par}%
   \fi
-  \vspace*{2\baselineskip}%
+  \ifx\@author\@empty
+    \vspace*{1\baselineskip}%
+  \else
+    \vspace*{2\baselineskip}%
+  \fi
+  \ifx\@author\@empty\else
+    {\centering\parindent\z@\usekomafont{author}{\renewcommand{\and}{\unskip, \ignorespaces}\@author\par}}%
+  \fi
+  \vskip 1\baselineskip
+  \ifx\@author\@empty
+    \ifx\@titlehead\@empty
+      \ifx\@subject\@empty
+        \vskip 1\baselineskip
+      \fi
+    \fi
+  \fi
   \ifx\@titleimage\@empty
     {\centering\parindent\z@\usekomafont{title}{\MakeUppercase{\@title}\par}}%
   \else
@@ -173,12 +188,6 @@
   \ifx\@subtitle\@empty\else
     \vskip 1\baselineskip
     {\centering\usekomafont{subtitle}\parindent\z@\@subtitle\par}%
-  \fi
-  \ifx\@author\@empty
-    \vskip 2\baselineskip%
-  \else
-    \vskip 2\baselineskip
-    {\centering\parindent\z@\usekomafont{author}{\renewcommand{\and}{\unskip, \ignorespaces}\@author\par}}%
   \fi
   \ifx\@collectionCreatorPrefix\@empty\else
     \vskip 2\baselineskip
@@ -193,7 +202,7 @@
   \fi
   \ifx\@publishersimagelist\@empty
     \ifx\@publishers\@empty\else
-      \vskip 2\baselineskip
+    \vskip 1\baselineskip
       {\centering\parindent\z@\@publishers\par}%
     \fi
   \else

@@ -164,7 +164,13 @@
     \vskip 1\baselineskip
     {\centering\parindent\z@\@subject\par}%
   \fi
-  \vspace*{2\baselineskip}%
+  \ifx\@titlehead\@empty
+    \ifx\@subject\@empty\else
+      \vspace*{2\baselineskip}%
+    \fi
+  \else
+    \vspace*{2\baselineskip}%
+  \fi
   \ifx\@titleimage\@empty
     {\centering\parindent\z@\usekomafont{title}{\MakeUppercase{\@title}\par}}%
   \else
@@ -174,10 +180,16 @@
     \vskip 1\baselineskip
     {\centering\usekomafont{subtitle}\parindent\z@\@subtitle\par}%
   \fi
-  \ifx\@author\@empty
-    \vskip 2\baselineskip%
-  \else
-    \vskip 2\baselineskip
+  \ifx\@author\@empty\else
+    \ifx\@subtitle\@empty
+      \ifx\@titleimage\@empty
+        \vskip 1\baselineskip
+      \else
+        \vskip 2\baselineskip
+      \fi
+    \else
+      \vskip 2\baselineskip
+    \fi
     {\centering\parindent\z@\usekomafont{author}{\renewcommand{\and}{\unskip, \ignorespaces}\@author\par}}%
   \fi
   \ifx\@collectionCreatorPrefix\@empty\else
