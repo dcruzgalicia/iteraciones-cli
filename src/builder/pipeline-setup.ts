@@ -60,6 +60,7 @@ export interface EffectiveTemplates {
   htmlTemplatePath: string;
   latexTemplatePath: string;
   latexCollectionTemplatePath: string;
+  latexCreatorTemplatePath: string;
   refsCardTemplate: string;
 }
 
@@ -79,6 +80,7 @@ export async function writeEffectiveTemplates(
     htmlTemplatePath: '',
     latexTemplatePath: '',
     latexCollectionTemplatePath: '',
+    latexCreatorTemplatePath: '',
     refsCardTemplate: '',
   };
 
@@ -87,6 +89,7 @@ export async function writeEffectiveTemplates(
   state.htmlTemplatePath = join(templatesDir, 'html.html');
   state.latexTemplatePath = join(templatesDir, 'latex.tex');
   state.latexCollectionTemplatePath = join(templatesDir, 'latex-collection.tex');
+  state.latexCreatorTemplatePath = join(templatesDir, 'latex-creator.tex');
   state.refsCardTemplate = await loadReferencesCardTemplate();
 
   if (htmlOn) {
@@ -112,6 +115,11 @@ export async function writeEffectiveTemplates(
       state.latexCollectionTemplatePath,
       await composeLatexTemplate({ ...templateOpts, preambleFilters: collectionPreambleFilters }),
     );
+
+    const creatorPreambleFilters = await loadPreambleFilters(effectiveDisabledPreamble, ctx.cwd, 'creator');
+    const creatorPageDimensions = detectPageSize(creatorPreambleFilters);
+    applyPrintQueueDynamics(creatorPreambleFilters, creatorPageDimensions);
+    await writeIfChanged(state.latexCreatorTemplatePath, await composeLatexTemplate({ ...templateOpts, preambleFilters: creatorPreambleFilters }));
   }
   return state;
 }
@@ -144,6 +152,7 @@ export interface ExportContext {
   htmlTemplatePath: string;
   latexTemplatePath: string;
   latexCollectionTemplatePath: string;
+  latexCreatorTemplatePath: string;
   refsCardTemplate: string;
 }
 
@@ -187,6 +196,7 @@ export async function buildPoolContexts(
     htmlTemplatePath: templates.htmlTemplatePath,
     latexTemplatePath: templates.latexTemplatePath,
     latexCollectionTemplatePath: templates.latexCollectionTemplatePath,
+    latexCreatorTemplatePath: templates.latexCreatorTemplatePath,
     refsCardTemplate: templates.refsCardTemplate,
   };
   const formatWorkSets: FormatWorkSets = {

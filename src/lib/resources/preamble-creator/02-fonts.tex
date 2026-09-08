@@ -1,0 +1,9 @@
+% Codificación (fontenc, inputenc) y fuente principal.
+% newtxtext + newtxmath (familia Times, incluida en TeX Live/MacTeX full):
+% mathptmx no tiene shape small-caps reales y \scshape degeneraba a regular
+% en silencio (autores del maketitle, TOC). newtx sí los provee.
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{textcomp}
+\usepackage{newtxtext}
+\usepackage{newtxmath}

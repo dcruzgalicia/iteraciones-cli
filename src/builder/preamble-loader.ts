@@ -2,17 +2,22 @@ import { join } from 'node:path';
 import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 
-export type PreambleDocType = 'file' | 'collection';
+export type PreambleDocType = 'file' | 'collection' | 'creator';
 
 const PKG_PREAMBLE_DIR = join(import.meta.dir, '../lib/resources/preamble');
 const PKG_PREAMBLE_COLLECTION_DIR = join(import.meta.dir, '../lib/resources/preamble-collection');
+const PKG_PREAMBLE_CREATOR_DIR = join(import.meta.dir, '../lib/resources/preamble-creator');
 
 function preamblePkgDir(docType: PreambleDocType): string {
-  return docType === 'collection' ? PKG_PREAMBLE_COLLECTION_DIR : PKG_PREAMBLE_DIR;
+  if (docType === 'collection') return PKG_PREAMBLE_COLLECTION_DIR;
+  if (docType === 'creator') return PKG_PREAMBLE_CREATOR_DIR;
+  return PKG_PREAMBLE_DIR;
 }
 
 function preambleProjectDir(docType: PreambleDocType): string {
-  return docType === 'collection' ? 'preamble-collection' : 'preamble';
+  if (docType === 'collection') return 'preamble-collection';
+  if (docType === 'creator') return 'preamble-creator';
+  return 'preamble';
 }
 
 let builtinPreambleNames: string[] | null = null;
