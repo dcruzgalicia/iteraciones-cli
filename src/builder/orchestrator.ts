@@ -188,9 +188,7 @@ async function countCreatorsByFile(files: string[], cwd: string): Promise<{ with
       } else {
         without++;
       }
-    } catch {
-      without++;
-    }
+    } catch {}
   }
   return { with: withCreator, without };
 }

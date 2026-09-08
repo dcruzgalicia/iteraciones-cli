@@ -201,6 +201,20 @@ describe('collection creator aggregation', () => {
     }
   });
 
+  it('file inexistente en files no agrega Anónima al aggregatedCreator', async () => {
+    const cwd = makeProject({
+      'collection.md': '---\ntitle: Antología\ntype: collection\nfiles:\n  - ./a.md\n  - ./no-existe.md\n---',
+      'a.md': '---\ntitle: A\ncreator: Autor X\n---\n\nContenido',
+    });
+    try {
+      const result = await buildStep(cwd);
+      const entry = result.discoveryIndex.get('collection.md');
+      expect(entry?.aggregatedCreator).toEqual(['Autor X']);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
   it('mezcla de files con y sin creator → Anónima + creators', async () => {
     const cwd = makeProject({
       'collection.md': '---\ntitle: Antología\ntype: collection\nfiles:\n  - ./a.md\n  - ./b.md\n  - ./c.md\n---',
