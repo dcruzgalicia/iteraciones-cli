@@ -1,0 +1,17 @@
+% Personaliza el indice (TOC): nombre, espaciado, fuentes y lideres
+% \languagename sigue al idioma activo de babel (configuración lang): sin él,
+% un PDF con lang no-español fallaba con 'not defined at language spanish'.
+% \BeforeTOCHead ajusta solo la apariencia del TOC: el subsubsection del cuerpo
+% mantiene sus propios skips (14-sectioning.tex).
+\BeforeTOCHead{\RedeclareSectionCommand[beforeskip=2\baselineskip,afterskip=\baselineskip,afterindent=false]{subsubsection}}
+\renewcaptionname{\languagename}{\contentsname}{\normalsize\normalfont\bfseries Índice}
+\renewcommand*{\addparttocentry}[2]{%
+  \addtocentrydefault{part}{#1}{\MakeUppercase{#2}}%
+}
+\DeclareTOCStyleEntry[pagenumberformat=\normalsize\normalfont,entryformat=\normalsize\normalfont,indent=0pt,linefill=\TOCLineLeaderFill,beforeskip=\baselineskip]{tocline}{part}
+\DeclareTOCStyleEntry[pagenumberformat=\normalsize\normalfont,entryformat=\normalsize\normalfont\scshape,pagenumberbox=\phantom,indent=0pt,beforeskip=\baselineskip]{tocline}{chapter}
+\DeclareTOCStyleEntry[pagenumberformat=\normalsize\normalfont,entryformat=\normalsize\normalfont,indent=0pt]{tocline}{section}
+\DeclareTOCStyleEntry[pagenumberformat=\normalsize\normalfont,entryformat=\normalsize\normalfont\itshape,indent=0pt]{tocline}{subsection}
+\DeclareTOCStyleEntry[pagenumberformat=\normalsize\normalfont,entryformat=\normalsize\normalfont\bfseries,indent=0pt]{tocline}{subsubsection}
+\DeclareTOCStyleEntry[pagenumberformat=\normalsize\normalfont,entryformat=\normalsize\normalfont\bfseries\itshape,indent=1em]{tocline}{paragraph}
+\DeclareTOCStyleEntry[pagenumberformat=\normalsize\normalfont,entryformat=\normalsize\normalfont,indent=2em]{tocline}{subparagraph}

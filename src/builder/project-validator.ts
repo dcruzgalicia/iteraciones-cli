@@ -52,6 +52,8 @@ export const KNOWN_FRONTMATTER_FIELDS = [
   'courtesyPage',
   'type',
   'files',
+  'name',
+  'links',
 ];
 
 const SLUG_MANUAL_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -117,21 +119,52 @@ function validateSlugField(parsed: Record<string, unknown>): ValidationIssue[] {
   return [];
 }
 
+function validateCollectionType(parsed: Record<string, unknown>): ValidationIssue[] {
+  const files = parsed.files;
+  if (files === undefined) {
+    return [{ severity: 'error', message: 'frontmatter: "type: collection" requiere el campo "files"' }];
+  }
+  if (!Array.isArray(files) || !files.every((f) => typeof f === 'string')) {
+    return [{ severity: 'error', message: 'frontmatter: "files" debe ser una lista de textos (strings)' }];
+  }
+  return [];
+}
+
+function validateCreatorType(parsed: Record<string, unknown>): ValidationIssue[] {
+  const name = parsed.name;
+  const title = parsed.title;
+  if (name !== undefined && typeof name !== 'string') {
+    return [{ severity: 'error', message: 'frontmatter: "name" debe ser un texto (string)' }];
+  }
+  if (name === undefined && (title === undefined || typeof title !== 'string' || title === '')) {
+    return [{ severity: 'error', message: 'frontmatter: "type: creator" requiere el campo "name" (o "title")' }];
+  }
+  const links = parsed.links;
+  if (links === undefined) return [];
+  if (!Array.isArray(links)) {
+    return [{ severity: 'error', message: 'frontmatter: "links" debe ser una lista de objetos con "name" y "url"' }];
+  }
+  for (const link of links) {
+    if (
+      typeof link !== 'object' ||
+      link === null ||
+      typeof (link as Record<string, unknown>).name !== 'string' ||
+      typeof (link as Record<string, unknown>).url !== 'string'
+    ) {
+      return [{ severity: 'error', message: 'frontmatter: "links" debe ser una lista de objetos con "name" (string) y "url" (string)' }];
+    }
+  }
+  return [];
+}
+
 function validateTypeField(parsed: Record<string, unknown>): ValidationIssue[] {
   const type = parsed.type;
   if (type === undefined) return [];
-  if (type !== 'file' && type !== 'collection') {
-    return [{ severity: 'error', message: 'frontmatter: "type" debe ser "file" o "collection"' }];
+  if (type !== 'file' && type !== 'collection' && type !== 'creator') {
+    return [{ severity: 'error', message: 'frontmatter: "type" debe ser "file", "collection" o "creator"' }];
   }
-  if (type === 'collection') {
-    const files = parsed.files;
-    if (files === undefined) {
-      return [{ severity: 'error', message: 'frontmatter: "type: collection" requiere el campo "files"' }];
-    }
-    if (!Array.isArray(files) || !files.every((f) => typeof f === 'string')) {
-      return [{ severity: 'error', message: 'frontmatter: "files" debe ser una lista de textos (strings)' }];
-    }
-  }
+  if (type === 'collection') return validateCollectionType(parsed);
+  if (type === 'creator') return validateCreatorType(parsed);
   return [];
 }
 

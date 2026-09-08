@@ -1,0 +1,19 @@
+% Redefine el entorno verse con márgenes y espaciado tipográfico
+\makeatletter
+\renewenvironment{verse}{%
+  \@nobreakfalse
+  \let\\=\@centercr
+  \list{}{\itemsep=\z@
+    \topsep=\baselineskip
+    \parsep=\z@
+    \partopsep=\z@
+    \itemindent=-2em
+    \listparindent=\itemindent
+    \leftmargin=4em
+    \rightmargin=\leftmargin
+  }%
+  \item\relax
+}{%
+  \endlist
+}
+\makeatother
