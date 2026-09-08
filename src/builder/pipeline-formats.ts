@@ -89,8 +89,8 @@ async function emitLatexAndQueuePdf(
   const texWithAuthors =
     authorsBlock && fullTex.includes('\\printbibliography')
       ? fullTex.replace('\\printbibliography', `${authorsBlock}\n\n\\printbibliography`)
-      : authorsBlock
-        ? `${fullTex}\n\n${authorsBlock}`
+      : authorsBlock && fullTex.includes('\\end{document}')
+        ? fullTex.replace('\\end{document}', `${authorsBlock}\n\n\\end{document}`)
         : fullTex;
   const texWithXmp = renderCtx.pdfxActive
     ? injectXmpMetadataIntoLatex(texWithAuthors, xmpMetadataFor(fm, lang, formatCfg?.pdf, ctx.siteConfig))
