@@ -143,6 +143,8 @@ function Pandoc(doc)
       table.insert(block.content, 1, pandoc.RawInline('latex', '\\noindent '))
       table.insert(result, block)
       last_was_dictum = false
+    elseif last_was_dictum and block.t == 'RawBlock' then
+      table.insert(result, block)
     else
       table.insert(result, block)
       last_was_dictum = false
