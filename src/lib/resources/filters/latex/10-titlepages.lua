@@ -261,6 +261,16 @@ local function serialize_titleback(blocks)
       table.insert(out, pandoc.RawBlock('latex', cmd))
     elseif b.t == 'Div' and b.classes and textsize_class(b) then
       table.insert(out, textsize_div_to_rawlatex(b))
+    elseif b.t == 'Div' and b.attributes and b.attributes['spacing'] then
+      local value = b.attributes['spacing']
+      local num = tonumber(value)
+      if num and num > 0 then
+        local body = pandoc.write(pandoc.Pandoc(b.content), 'latex')
+        body = body:gsub('%s+$', '')
+        table.insert(out, pandoc.RawBlock('latex', '\\begin{spacing}{' .. value .. '}\n' .. body .. '\n\\end{spacing}'))
+      else
+        table.insert(out, b)
+      end
     else
       table.insert(out, b)
     end
