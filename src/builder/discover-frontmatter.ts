@@ -37,6 +37,7 @@ function normalizeFrontmatterRecord(record: Record<string, unknown>, relativePat
   let rawTitle = record.title;
   if (type === 'creator' && (typeof rawTitle !== 'string' || rawTitle === '') && typeof record.name === 'string') {
     rawTitle = record.name;
+    record.title = rawTitle;
   }
   return {
     title: typeof rawTitle === 'string' ? rawTitle : '',
