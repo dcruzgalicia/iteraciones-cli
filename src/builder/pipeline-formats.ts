@@ -59,6 +59,7 @@ async function emitLatexAndQueuePdf(
   renderCtx: RenderContext,
   exportCtx: ExportContext,
   sets: FormatWorkSets,
+  authorsBlock = '',
 ): Promise<void> {
   const { ctx, lang, warnedLangs, formatCfg, plan } = renderCtx;
   const latexOn = plan.activeFormats.latex;
@@ -85,7 +86,15 @@ async function emitLatexAndQueuePdf(
     pdfxActive: renderCtx.pdfxActive,
     cwd: ctx.cwd,
   });
-  const texWithXmp = renderCtx.pdfxActive ? injectXmpMetadataIntoLatex(fullTex, xmpMetadataFor(fm, lang, formatCfg?.pdf, ctx.siteConfig)) : fullTex;
+  const texWithAuthors =
+    authorsBlock && fullTex.includes('\\printbibliography')
+      ? fullTex.replace('\\printbibliography', `${authorsBlock}\n\n\\printbibliography`)
+      : authorsBlock
+        ? `${fullTex}\n\n${authorsBlock}`
+        : fullTex;
+  const texWithXmp = renderCtx.pdfxActive
+    ? injectXmpMetadataIntoLatex(texWithAuthors, xmpMetadataFor(fm, lang, formatCfg?.pdf, ctx.siteConfig))
+    : texWithAuthors;
 
   if (latexOn) {
     const distribution = buildTexDistribution(processedImages, outSlug);
@@ -283,6 +292,93 @@ function prependLinksLatex(content: string, links: { name: string; url: string }
   return `${prefix}${latex}\n\n\\vspace*{2\\baselineskip}\n\n\\noindent ${body.trimEnd()}`;
 }
 
+interface CreatorDoc {
+  name: string;
+  body: string;
+  relativePath: string;
+}
+
+async function collectCreatorNamesFromFiles(files: string[], cwd: string): Promise<Set<string>> {
+  const names = new Set<string>();
+  for (const file of files) {
+    let text: string;
+    try {
+      text = await Bun.file(join(cwd, file)).text();
+    } catch {
+      continue;
+    }
+    const { yaml } = splitFrontmatter(text);
+    if (!yaml) continue;
+    try {
+      const parsed = Bun.YAML.parse(yaml) as Record<string, unknown>;
+      if (parsed.type !== 'creator') continue;
+      extractCreatorNames(parsed.creator, names);
+    } catch {
+      // skip unparseable files
+    }
+  }
+  return names;
+}
+
+function extractCreatorNames(raw: unknown, target: Set<string>): void {
+  const list = Array.isArray(raw) ? raw : typeof raw === 'string' ? [raw] : [];
+  for (const c of list) {
+    if (typeof c === 'string' && c.trim()) target.add(c.trim());
+  }
+}
+
+async function resolveSingleCreatorDoc(relativePath: string, cwd: string, collectionPath: string): Promise<CreatorDoc> {
+  const filePath = join(cwd, relativePath);
+  let text: string;
+  try {
+    text = await Bun.file(filePath).text();
+  } catch {
+    throw new BuildError(`collection "${collectionPath}": archivo de creator no encontrado: "${relativePath}"`);
+  }
+  const { yaml, body } = splitFrontmatter(text);
+  let name = '';
+  if (yaml) {
+    try {
+      const parsed = Bun.YAML.parse(yaml) as Record<string, unknown>;
+      name = typeof parsed.name === 'string' && parsed.name ? parsed.name : typeof parsed.title === 'string' ? parsed.title : '';
+    } catch {
+      // fall through
+    }
+  }
+  if (!body.trim()) {
+    throw new BuildError(`collection "${collectionPath}": creator "${name}" debe tener body (contenido después del frontmatter)`);
+  }
+  return { name, body, relativePath };
+}
+
+async function resolveCollectionCreatorDocs(doc: BuildDocument, discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<CreatorDoc[]> {
+  const files = doc.frontmatter.files;
+  if (!files || files.length === 0) return [];
+
+  const creatorNames = await collectCreatorNamesFromFiles(files, cwd);
+  if (creatorNames.size === 0) return [];
+
+  const result: CreatorDoc[] = [];
+  for (const [relativePath, entry] of discoveryIndex.entries()) {
+    if (entry.type !== 'creator') continue;
+    const name = (entry.fm?.name ?? entry.fm?.title ?? '') as string;
+    if (!name || !creatorNames.has(name)) continue;
+    result.push(await resolveSingleCreatorDoc(relativePath, cwd, doc.relativePath));
+  }
+
+  return result.sort((a, b) => a.name.localeCompare(b.name, 'es'));
+}
+
+function buildCollectionAuthorsLatex(creatorDocs: CreatorDoc[]): string {
+  if (creatorDocs.length === 0) return '';
+  const parts = ['\\part{Autoras y colaboradoras}'];
+  for (const doc of creatorDocs) {
+    parts.push(`\\subsubsection{${doc.name}}`);
+    parts.push(doc.body.trim());
+  }
+  return parts.join('\n\n');
+}
+
 function collectionBaseContent(
   collectionEntries: { creator: string[]; title: string; subtitle: string | undefined; body: string }[],
   format: 'latex' | 'html' | 'markdown',
@@ -307,11 +403,21 @@ async function emitCollectionFormats(
   const { formatCfg } = renderCtx;
 
   const creatorLinks = doc.frontmatter.type === 'creator' ? getCreatorLinks(outputs.fm) : [];
+  const isCollection = doc.frontmatter.type === 'collection';
 
   if ((activeFormats.latex || activeFormats.pdf) && formatWorkSets.latexPaths.has(doc.relativePath)) {
     const pageNumber = (outputs.fm.pageNumber ?? formatCfg?.pdf?.pageNumber ?? ctx.siteConfig.pageNumber) as string | undefined;
     const base = collectionBaseContent(collectionEntries, 'latex', content, pageNumber);
-    await emitLatexAndQueuePdf(doc, { ...outputs, content: prependLinksLatex(base, creatorLinks) }, renderCtx, exportCtx, formatWorkSets);
+    const creatorDocs = isCollection ? await resolveCollectionCreatorDocs(doc, discoveryIndex, ctx.cwd) : [];
+    const authorsBlock = buildCollectionAuthorsLatex(creatorDocs);
+    await emitLatexAndQueuePdf(
+      doc,
+      { ...outputs, content: prependLinksLatex(base, creatorLinks) },
+      renderCtx,
+      exportCtx,
+      formatWorkSets,
+      authorsBlock,
+    );
   }
 
   const exportDoc = assembleExportDocument(doc, renderCtx.lang, exportCtx.globalBibliography, exportCtx.globalCsl, ctx.siteConfig.toc);
