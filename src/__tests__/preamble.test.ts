@@ -465,8 +465,8 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(maketitle).toContain('\\ifx\\@frontispiece\\@empty\\else');
     expect(maketitle).toContain('\\vspace*{\\fill}%\n    {\\centering\\parindent\\z@\\@frontispiece\\par}%');
     // Sin extratitle: frontispiece usa \titlepage@lasteven para asegurar página par
-    // Orden KOMA-Script: titlehead → subject → title → subtitle →
-    // author → date → publishers
+    // Orden type files: titlehead → subject → author → title → subtitle →
+    // date → publishers
     const head = maketitle.indexOf('\\@titlehead\\par');
     const author = maketitle.indexOf('\\@author\\par');
     const title = maketitle.indexOf('\\MakeUppercase{\\@title}');
@@ -476,10 +476,10 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     const pub = maketitle.indexOf('\\@publishers\\par');
     expect(head).toBeGreaterThan(-1);
     expect(head).toBeLessThan(subject);
-    expect(subject).toBeLessThan(title);
+    expect(subject).toBeLessThan(author);
+    expect(author).toBeLessThan(title);
     expect(title).toBeLessThan(sub);
-    expect(sub).toBeLessThan(author);
-    expect(author).toBeLessThan(date);
+    expect(sub).toBeLessThan(date);
     expect(date).toBeLessThan(pub);
   });
 
