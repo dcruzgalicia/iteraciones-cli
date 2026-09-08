@@ -176,8 +176,14 @@ function buildCollectionSectionsLatex(entries: { creator: string[]; title: strin
     const creator = e.creator.length > 0 ? e.creator.join(', ') : 'Anónima';
     const title = e.title || 'Sin título';
     parts.push(`\\chapter{${creator}}`);
-    parts.push(`\\section{${title}}`);
-    if (e.subtitle) parts.push(`\\subsection{${e.subtitle}}`);
+    if (e.subtitle) {
+      parts.push(`\\RedeclareSectionCommand[style=section,beforeskip=2\\baselineskip,afterskip=1\\baselineskip,afterindent=false]{section}`);
+      parts.push(`\\section{${title}}`);
+      parts.push(`\\RedeclareSectionCommand[style=section,beforeskip=2\\baselineskip,afterskip=2\\baselineskip,afterindent=false]{section}`);
+      parts.push(`\\subsection{${e.subtitle}}`);
+    } else {
+      parts.push(`\\section{${title}}`);
+    }
     parts.push(e.body.trim());
   }
   return parts.join('\n\n');
