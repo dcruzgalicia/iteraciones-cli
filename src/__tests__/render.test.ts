@@ -220,6 +220,7 @@ describe('resolveLuaFilters (resolución de filtros)', () => {
     '10-titlepages',
     '11-uppercase',
     '12-mbox',
+    '13-spacing',
   ].map((n) => join(PKG, 'latex', `${n}.lua`));
 
   it('resuelve los filtros del paquete por capa sin overrides', async () => {
@@ -268,6 +269,7 @@ describe('resolveLuaFilters (resolución de filtros)', () => {
           'latex/10-titlepages',
           'latex/11-uppercase',
           'latex/12-mbox',
+          'latex/13-spacing',
           'html/01-dictum',
           'html/02-verse',
           'html/03-center',
@@ -284,7 +286,7 @@ describe('resolveLuaFilters (resolución de filtros)', () => {
   it('excluye filtros desactivados por nombre completo', async () => {
     const f = await resolveLuaFilters(['semantic/string/01-double-colon']);
     expect(f.semantic).toEqual([join(PKG, 'semantic', 'ast', '02-double-colon-noindent.lua')]);
-    expect(f.resolvedNames.size).toBe(19);
+    expect(f.resolvedNames.size).toBe(20);
     expect(f.resolvedNames.has('semantic/string/01-double-colon')).toBe(false);
   });
 });
