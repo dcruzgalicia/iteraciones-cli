@@ -131,15 +131,12 @@
   % 3. Extratitle (pág impar, bloque del 75% del ancho centrado con
   % \vspace*{7\baselineskip} antes).
   \ifx\@extratitle\@empty\else
-    \vbox to \textheight{%
-      \vspace*{7\baselineskip}%
-      \titlepageblock
-        {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
-        {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
-        {\centering}%
-        {\@extratitle}%
-      \vfill
-    }%
+    \vspace*{7\baselineskip}%
+    \titlepageblock
+      {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
+      {\dimexpr(\linewidth-\extratitlewidth)/2\relax}%
+      {\centering}%
+      {\@extratitle}%
     \ifx\@frontispiece\@empty
       \titlepage@nextdouble
     \else
@@ -222,11 +219,8 @@
   % centrado verticalmente).
   \ifx\@dedication\@empty\else
     \titlepage@nextdouble
-    \vbox to \textheight{%
-      \vskip 5\baselineskip
-      {\@dedication\par}%
-      \vfill
-    }%
+    \vspace*{5\baselineskip}%
+    {\@dedication\par}%
     \clearpage
     % Blank verso solo en twoside+openright: el contenido siguiente empieza
     % en página impar. oneside u openany: sin verso adicional.

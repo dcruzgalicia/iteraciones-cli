@@ -304,9 +304,8 @@ describe('composeLatexTemplate', () => {
     // Espejo de nextdouble: si la página tras \clearpage es impar, se inserta
     // una en blanco y el colofón cae en la siguiente par.
     expect(titlepages).toContain('\\ifodd\\value{page}\\null\\titlepage@next');
-    // Centering vertical real con \vbox to \textheight + \vfill
-    expect(titlepages).toContain('\\vbox to \\textheight{%');
-    expect(titlepages).toContain('\\vfill');
+    // Espaciado vertical fijo: \vspace*{5\baselineskip} antes del bloque
+    expect(titlepages).toContain('\\vspace*{5\\baselineskip}');
     // Regresión: un $body$ literal en un comentario se interpola por el
     // template de pandoc (el preamble va dentro del template) y rompe el PDF
     // con 'Missing \\begin{document}'.
@@ -403,10 +402,9 @@ describe('valores de maquetación editorial (issue 1810)', () => {
   it('19-maketitle: dedication centrada verticalmente con vbox to textheight', async () => {
     const filters = await loadPreambleFilters();
     const maketitle = filters.find((f) => f.name === '19-maketitle')?.content ?? '';
-    // Centering vertical real: \vbox to \textheight con \vfill arriba y abajo
+    // Espaciado vertical fijo: \vspace*{5\baselineskip} antes del contenido
     const dedication = maketitle.slice(maketitle.indexOf('\\ifx\\@dedication\\@empty\\else'));
-    expect(dedication).toContain('\\vbox to \\textheight{%');
-    expect(dedication).toContain('\\vfill');
+    expect(dedication).toContain('\\vspace*{5\\baselineskip}');
     expect(dedication).toContain('{\\@dedication\\par}');
     // Posicionamiento fijo del extratitle: \vspace*{7\baselineskip}
     expect(maketitle).toContain('\\vspace*{7\\baselineskip}');
