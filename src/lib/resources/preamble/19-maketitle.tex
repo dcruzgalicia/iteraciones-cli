@@ -167,7 +167,15 @@
   \ifx\@author\@empty
     \vspace*{1\baselineskip}%
   \else
-    \vspace*{2\baselineskip}%
+    \ifx\@titlehead\@empty
+      \ifx\@subject\@empty
+        \vspace*{1\baselineskip}%
+      \else
+        \vspace*{2\baselineskip}%
+      \fi
+    \else
+      \vspace*{2\baselineskip}%
+    \fi
   \fi
   \ifx\@author\@empty\else
     {\centering\parindent\z@\usekomafont{author}{\renewcommand{\and}{\unskip, \ignorespaces}\@author\par}}%
