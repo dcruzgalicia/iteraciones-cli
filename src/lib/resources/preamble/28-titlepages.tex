@@ -48,11 +48,10 @@
 \newcommand*{\@collectionCreatorPrefix}{}%
 \makeatother
 
-% Formato del contenido de las páginas internas: footnotesize, interlineado
-% 1 y sin indentación en ningún párrafo.
+% Formato del contenido de las páginas internas: normalsize y sin
+% indentación en ningún párrafo. El interlineado es el global (1.5).
 \newcommand{\titlebackformat}{%
-  \footnotesize
-  \setstretch{1}%
+  \normalsize
   \setlength{\parindent}{0pt}%
 }
 
@@ -91,14 +90,11 @@
 }
 \newcommand{\colophonpage}{%
   \titlepage@lasteven
-  \vbox to \textheight{%
-    \vskip 5\baselineskip
-    \titlepageblock
-      {\dimexpr(\linewidth-\colophonwidth)/2\relax}%
-      {\dimexpr(\linewidth-\colophonwidth)/2\relax}%
-      {\centering\titlebackformat}%
-      {\@colophon}%
-    \vfill
-  }%
+  \vspace*{5\baselineskip}%
+  \titlepageblock
+    {\dimexpr(\linewidth-\colophonwidth)/2\relax}%
+    {\dimexpr(\linewidth-\colophonwidth)/2\relax}%
+    {\centering\titlebackformat}%
+    {\@colophon}%
 }
 \makeatother
