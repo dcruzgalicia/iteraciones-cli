@@ -1,6 +1,7 @@
 import { basename, dirname, join } from 'node:path';
 
 import { formatHumanDate } from '../lib/date.js';
+import { BuildError } from '../lib/errors.js';
 import { fmStringList, resolveBooleanField, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { htmlSlugFor } from './discover.js';
@@ -161,8 +162,7 @@ async function readCollectionFiles(
     try {
       text = await Bun.file(filePath).text();
     } catch {
-      logWarning(`collection "${doc.relativePath}": no se pudo leer "${file}"`, 'build');
-      continue;
+      throw new BuildError(`collection "${doc.relativePath}": archivo configurado en files no encontrado: "${file}"`);
     }
     const parsed = parseFileFrontmatter(text);
     if (parsed.body.trim()) entries.push(parsed);
