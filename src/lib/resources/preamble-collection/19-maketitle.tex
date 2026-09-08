@@ -164,16 +164,25 @@
     \vskip 1\baselineskip
     {\centering\parindent\z@\@subject\par}%
   \fi
-  \ifx\@titlehead\@empty
-    \ifx\@subject\@empty\else
+  \ifx\@titleimage\@empty
+    \ifx\@titlehead\@empty
+      \ifx\@subject\@empty
+        \vspace*{3\baselineskip}%
+      \else
+        \vspace*{2\baselineskip}%
+      \fi
+    \else
       \vspace*{2\baselineskip}%
     \fi
-  \else
-    \vspace*{2\baselineskip}%
-  \fi
-  \ifx\@titleimage\@empty
     {\centering\parindent\z@\usekomafont{title}{\MakeUppercase{\@title}\par}}%
   \else
+    \ifx\@titlehead\@empty
+      \ifx\@subject\@empty\else
+        \vspace*{2\baselineskip}%
+      \fi
+    \else
+      \vspace*{2\baselineskip}%
+    \fi
     {\centering\titleimagerender{\@titleimage}\par}%
   \fi
   \ifx\@subtitle\@empty\else
