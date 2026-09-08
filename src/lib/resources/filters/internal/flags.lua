@@ -155,17 +155,25 @@ function Pandoc(doc)
       -- Un RawBlock inicial puede contener varios comandos de sección fusionados
       -- (\part{Uno}\n\chapter{Dos}\n\section{Tres} llegan como un solo bloque):
       -- el comando de página debe ir DESPUÉS del PRIMERO, no al final del bloque.
+      -- \thispagestyle: plain (footer) anula empty de \maketitle para mostrar
+      -- número; empty (header) refuerza que no aparezca en la portada.
+      local is_footer = page_cmd_text:find('foot', 1, true) ~= nil
+      local page_style = is_footer and '\\thispagestyle{plain}' or '\\thispagestyle{empty}'
+      local function insert_page_cmd(pos)
+        table.insert(doc.blocks, pos, pandoc.RawBlock('latex', page_style))
+        table.insert(doc.blocks, pos + 1, pandoc.RawBlock('latex', page_cmd_text))
+      end
       if first.t == 'RawBlock' then
         local head, rest = split_first_section_command(first.text)
         if rest ~= nil then
           first.text = head
-          table.insert(doc.blocks, 2, pandoc.RawBlock('latex', page_cmd_text))
-          table.insert(doc.blocks, 3, pandoc.RawBlock('latex', rest))
+          insert_page_cmd(2)
+          table.insert(doc.blocks, 4, pandoc.RawBlock('latex', rest))
         else
-          table.insert(doc.blocks, 2, pandoc.RawBlock('latex', page_cmd_text))
+          insert_page_cmd(2)
         end
       else
-        table.insert(doc.blocks, 2, pandoc.RawBlock('latex', page_cmd_text))
+        insert_page_cmd(2)
       end
     end
 
