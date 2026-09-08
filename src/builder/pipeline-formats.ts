@@ -170,12 +170,17 @@ async function readCollectionFiles(
   return entries;
 }
 
-function buildCollectionSectionsLatex(entries: { creator: string[]; title: string; subtitle: string | undefined; body: string }[]): string {
+function buildCollectionSectionsLatex(
+  entries: { creator: string[]; title: string; subtitle: string | undefined; body: string }[],
+  pageNumber?: string,
+): string {
+  const isHeader = pageNumber?.startsWith('header-');
   const parts: string[] = [];
   for (const e of entries) {
     const creator = e.creator.length > 0 ? e.creator.join(', ') : 'Anónima';
     const title = e.title || 'Sin título';
     parts.push(`\\chapter{${creator}}`);
+    if (isHeader) parts.push('\\thispagestyle{empty}');
     if (e.subtitle) {
       parts.push(`\\RedeclareSectionCommand[style=section,beforeskip=2\\baselineskip,afterskip=1\\baselineskip,afterindent=false]{section}`);
       parts.push(`\\section{${title}}`);
@@ -219,9 +224,10 @@ function resolveCollectionContent(
   collectionEntries: { creator: string[]; title: string; subtitle: string | undefined; body: string }[],
   format: 'latex' | 'html' | 'markdown',
   fallback: string,
+  pageNumber?: string,
 ): string {
   if (collectionEntries.length === 0) return fallback;
-  if (format === 'latex') return buildCollectionSectionsLatex(collectionEntries);
+  if (format === 'latex') return buildCollectionSectionsLatex(collectionEntries, pageNumber);
   if (format === 'html') return buildCollectionSectionsHtml(collectionEntries);
   return buildCollectionSectionsMarkdown(collectionEntries);
 }
@@ -256,10 +262,12 @@ async function emitCollectionFormats(
   const { ctx, plan } = renderCtx;
   const { activeFormats } = plan;
   const content = outputs.content;
+  const { formatCfg } = renderCtx;
 
   if ((activeFormats.latex || activeFormats.pdf) && formatWorkSets.latexPaths.has(doc.relativePath)) {
+    const pageNumber = (outputs.fm.pageNumber ?? formatCfg?.pdf?.pageNumber ?? ctx.siteConfig.pageNumber) as string | undefined;
     const latexOutputs =
-      collectionEntries.length > 0 ? { ...outputs, content: resolveCollectionContent(collectionEntries, 'latex', content) } : outputs;
+      collectionEntries.length > 0 ? { ...outputs, content: resolveCollectionContent(collectionEntries, 'latex', content, pageNumber) } : outputs;
     await emitLatexAndQueuePdf(doc, latexOutputs, renderCtx, exportCtx, formatWorkSets);
   }
 
