@@ -114,6 +114,7 @@ Además, existen los **preamble filters** (`src/lib/resources/preamble/*.tex`) q
 | `latex/10-titlepages` | ast | campos multilinea de portada → LaTeX (extratitle, colofón, guardas…) |
 | `latex/11-uppercase` | ast | span `.uppercase` → `\MakeUppercase{texto}` |
 | `latex/12-mbox` | ast | span `.mbox` → `\mbox{texto}` |
+| `latex/13-spacing` | ast | Div con atributo `spacing` → `\begin{spacing}{n}...\end{spacing}` |
 | `html/01-dictum` | ast | `Div.dictum` → `<blockquote class="dictum">` |
 | `html/02-verse` | ast | `Div.verse` → `<div class="verse">` |
 | `html/03-center` | ast | `Div.center` → `<div class="center">` |
