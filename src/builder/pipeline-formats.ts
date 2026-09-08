@@ -1,7 +1,7 @@
 import { basename, dirname, join } from 'node:path';
-
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
+import { splitFrontmatter } from '../lib/frontmatter.js';
 import { fmStringList, resolveBooleanField, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { htmlSlugFor } from './discover.js';
@@ -255,6 +255,43 @@ function buildOutputs(
   };
 }
 
+function getCreatorLinks(fm: Record<string, unknown>): { name: string; url: string }[] {
+  const links = fm.links;
+  if (!Array.isArray(links)) return [];
+  return links.filter(
+    (l: unknown): l is Record<string, unknown> =>
+      typeof l === 'object' &&
+      l !== null &&
+      typeof (l as Record<string, unknown>).name === 'string' &&
+      typeof (l as Record<string, unknown>).url === 'string',
+  ) as { name: string; url: string }[];
+}
+
+function prependLinksMarkdown(content: string, links: { name: string; url: string }[]): string {
+  if (links.length === 0) return content;
+  const md = links.map((l) => `**${l.name}**: ${l.url}`).join('\n');
+  const { yaml, body } = splitFrontmatter(content);
+  const prefix = yaml !== undefined ? `---\n${yaml}\n---\n` : '';
+  return `${prefix}${md}\n\n${body.trimEnd()}`;
+}
+
+function prependLinksLatex(content: string, links: { name: string; url: string }[]): string {
+  if (links.length === 0) return content;
+  const latex = links.map((l) => `\\noindent \\textbf{${l.name}}: ${l.url}`).join('\n\n');
+  const { yaml, body } = splitFrontmatter(content);
+  const prefix = yaml !== undefined ? `---\n${yaml}\n---\n` : '';
+  return `${prefix}${latex}\n\n\\vspace*{2\\baselineskip}\n\n\\noindent ${body.trimEnd()}`;
+}
+
+function collectionBaseContent(
+  collectionEntries: { creator: string[]; title: string; subtitle: string | undefined; body: string }[],
+  format: 'latex' | 'html' | 'markdown',
+  content: string,
+  pageNumber?: string,
+): string {
+  return collectionEntries.length > 0 ? resolveCollectionContent(collectionEntries, format, content, pageNumber) : content;
+}
+
 async function emitCollectionFormats(
   doc: BuildDocument,
   outputs: DocumentOutputs,
@@ -269,24 +306,25 @@ async function emitCollectionFormats(
   const content = outputs.content;
   const { formatCfg } = renderCtx;
 
+  const creatorLinks = doc.frontmatter.type === 'creator' ? getCreatorLinks(outputs.fm) : [];
+
   if ((activeFormats.latex || activeFormats.pdf) && formatWorkSets.latexPaths.has(doc.relativePath)) {
     const pageNumber = (outputs.fm.pageNumber ?? formatCfg?.pdf?.pageNumber ?? ctx.siteConfig.pageNumber) as string | undefined;
-    const latexOutputs =
-      collectionEntries.length > 0 ? { ...outputs, content: resolveCollectionContent(collectionEntries, 'latex', content, pageNumber) } : outputs;
-    await emitLatexAndQueuePdf(doc, latexOutputs, renderCtx, exportCtx, formatWorkSets);
+    const base = collectionBaseContent(collectionEntries, 'latex', content, pageNumber);
+    await emitLatexAndQueuePdf(doc, { ...outputs, content: prependLinksLatex(base, creatorLinks) }, renderCtx, exportCtx, formatWorkSets);
   }
 
   const exportDoc = assembleExportDocument(doc, renderCtx.lang, exportCtx.globalBibliography, exportCtx.globalCsl, ctx.siteConfig.toc);
 
   if (activeFormats.html && formatWorkSets.htmlPaths.has(doc.relativePath)) {
-    const htmlOutputs =
-      collectionEntries.length > 0 ? { ...outputs, content: resolveCollectionContent(collectionEntries, 'html', content) } : outputs;
-    await emitHtmlPage(doc, htmlOutputs, renderCtx, exportCtx, discoveryIndex);
+    const base = collectionBaseContent(collectionEntries, 'html', content);
+    await emitHtmlPage(doc, { ...outputs, content: prependLinksMarkdown(base, creatorLinks) }, renderCtx, exportCtx, discoveryIndex);
   }
 
   if (activeFormats.epub && formatWorkSets.epubPaths.has(doc.relativePath)) {
+    const base = collectionBaseContent(collectionEntries, 'html', content);
     await convertToEpub(
-      resolveCollectionContent(collectionEntries, 'html', content),
+      prependLinksMarkdown(base, creatorLinks),
       outputs.outBase(`${outputs.outSlug}${primaryOutputExtension('epub')}`),
       exportDoc,
       exportCtx.filters,
@@ -294,9 +332,11 @@ async function emitCollectionFormats(
       outputs.fm,
     );
   }
+
   if (activeFormats.markdown && formatWorkSets.mdPaths.has(doc.relativePath)) {
+    const base = collectionBaseContent(collectionEntries, 'markdown', content);
     await convertToMarkdown(
-      resolveCollectionContent(collectionEntries, 'markdown', content),
+      prependLinksMarkdown(base, creatorLinks),
       outputs.outBase(`${outputs.outSlug}${primaryOutputExtension('markdown')}`),
       exportDoc,
       exportCtx.filters,
