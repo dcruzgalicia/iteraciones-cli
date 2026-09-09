@@ -184,14 +184,18 @@ local function process_para_inlines(inlines)
   return result
 end
 
-function Pandoc(doc)
-  local blocks = {}
-  for _, block in ipairs(doc.blocks) do
+local function process_blocks(blocks)
+  for i, block in ipairs(blocks) do
     if block.t == 'Para' then
-      block.content = process_para_inlines(block.content)
+      blocks[i].content = process_para_inlines(block.content)
+    elseif block.t == 'Div' or block.t == 'BlockQuote' then
+      process_blocks(block.content)
     end
-    table.insert(blocks, block)
   end
-  doc.blocks = blocks
+  return blocks
+end
+
+function Pandoc(doc)
+  process_blocks(doc.blocks)
   return doc
 end
