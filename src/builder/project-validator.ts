@@ -244,6 +244,23 @@ export function dictumWidthWarnings(body: string, lineOffset = 0): DictumWidthWa
   return hits;
 }
 
+export function dictumWidthWarningsInYaml(yaml: string, lineOffset = 0): DictumWidthWarning[] {
+  const hits: DictumWidthWarning[] = [];
+  let lineNum = 0;
+  for (const rawLine of yaml.split('\n')) {
+    lineNum++;
+    const trimmed = rawLine.trimEnd();
+    const m = DICTUM_WIDTH_RE.exec(trimmed);
+    if (m?.[1]) {
+      const num = Number.parseFloat(m[1]);
+      if (!Number.isNaN(num) && (num < DICTUM_WIDTH_MIN || num > DICTUM_WIDTH_MAX)) {
+        hits.push({ line: lineNum + lineOffset, value: num });
+      }
+    }
+  }
+  return hits;
+}
+
 export function dictumWidthWarningsMessage(warnings: DictumWidthWarning[]): string {
   return warnings
     .map(

@@ -232,6 +232,13 @@ local function serialize_titleback(blocks)
     elseif b.t == 'Div' and b.classes and b.classes:find('dictum', 1, true) then
       local text_parts = {}
       local author = nil
+      local width = nil
+      if b.attributes and b.attributes['width'] then
+        local num = tonumber(b.attributes['width'])
+        if num and num >= 0.1 and num <= 1.0 then
+          width = num
+        end
+      end
       for _, inner in ipairs(b.content) do
         if inner.t == 'Div' and inner.classes and inner.classes:find('author', 1, true) then
           local author_inls = {}
@@ -252,6 +259,9 @@ local function serialize_titleback(blocks)
       if #text_parts > 0 then
         text_latex = pandoc.write(pandoc.Pandoc(text_parts), 'latex')
         text_latex = text_latex:gsub('%s+$', '')
+      end
+      if width then
+        table.insert(out, pandoc.RawBlock('latex', '\\renewcommand{\\dictumwidth}{' .. width .. '\\textwidth}'))
       end
       local cmd = '\\dictum'
       if author and author:match('%S') then

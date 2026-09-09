@@ -5,6 +5,7 @@ import { validateDisabledFilters } from '../builder/filter-resolver.js';
 import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, validatePreambleDependencies } from '../builder/preamble-loader.js';
 import {
   dictumWidthWarnings,
+  dictumWidthWarningsInYaml,
   dictumWidthWarningsMessage,
   looseColonLines,
   looseColonsMessage,
@@ -100,6 +101,12 @@ async function validateSingleEntry(
   const dictumWidths = dictumWidthWarnings(body, lineOffset);
   if (dictumWidths.length > 0) {
     warnings.push({ file: entry, message: dictumWidthWarningsMessage(dictumWidths) });
+  }
+  if (yaml) {
+    const yamlDictumWidths = dictumWidthWarningsInYaml(yaml, 1);
+    if (yamlDictumWidths.length > 0) {
+      warnings.push({ file: entry, message: dictumWidthWarningsMessage(yamlDictumWidths) });
+    }
   }
   if (!yaml) {
     handleNoFrontmatter(entry, body, raw, warnings);
