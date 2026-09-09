@@ -354,11 +354,17 @@ async function resolveSingleCreatorDoc(relativePath: string, cwd: string, collec
   return { name, body, relativePath, links };
 }
 
-async function resolveCollectionCreatorDocs(doc: BuildDocument, discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<CreatorDoc[]> {
+async function resolveCollectionCreatorDocs(
+  doc: BuildDocument,
+  discoveryIndex: Map<string, DiscoveryEntry>,
+  cwd: string,
+  collectionFm: Record<string, unknown>,
+): Promise<CreatorDoc[]> {
   const files = doc.frontmatter.files;
   if (!files || files.length === 0) return [];
 
   const creatorNames = await collectCreatorNamesFromFiles(files, cwd);
+  extractCreatorNames(collectionFm.contributor, creatorNames);
   if (creatorNames.size === 0) return [];
 
   const result: CreatorDoc[] = [];
@@ -416,7 +422,7 @@ async function emitCollectionFormats(
   if ((activeFormats.latex || activeFormats.pdf) && formatWorkSets.latexPaths.has(doc.relativePath)) {
     const pageNumber = (outputs.fm.pageNumber ?? formatCfg?.pdf?.pageNumber ?? ctx.siteConfig.pageNumber) as string | undefined;
     const base = collectionBaseContent(collectionEntries, 'latex', content, pageNumber);
-    const creatorDocs = isCollection ? await resolveCollectionCreatorDocs(doc, discoveryIndex, ctx.cwd) : [];
+    const creatorDocs = isCollection ? await resolveCollectionCreatorDocs(doc, discoveryIndex, ctx.cwd, outputs.fm) : [];
     const authorsBlock = buildCollectionAuthorsLatex(creatorDocs);
     await emitLatexAndQueuePdf(
       doc,
