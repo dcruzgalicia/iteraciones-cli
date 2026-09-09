@@ -378,7 +378,7 @@ function buildCollectionAuthorsLatex(creatorDocs: CreatorDoc[]): string {
     parts.push(`\\subsubsection{${doc.name}}`);
     if (doc.links.length > 0) {
       parts.push(doc.links.map((l) => `\\noindent \\textbf{${l.name}}: ${l.url}`).join('\n\n'));
-      parts.push(`\\vspace*{2\\baselineskip}\n\n\\noindent ${doc.body.trim()}`);
+      parts.push(`\\vspace*{\\baselineskip}\n\n\\noindent ${doc.body.trim()}`);
     } else {
       parts.push(doc.body.trim());
     }
