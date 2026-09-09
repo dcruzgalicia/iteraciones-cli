@@ -296,6 +296,7 @@ interface CreatorDoc {
   name: string;
   body: string;
   relativePath: string;
+  links: { name: string; url: string }[];
 }
 
 async function collectCreatorNamesFromFiles(files: string[], cwd: string): Promise<Set<string>> {
@@ -336,10 +337,12 @@ async function resolveSingleCreatorDoc(relativePath: string, cwd: string, collec
   }
   const { yaml, body } = splitFrontmatter(text);
   let name = '';
+  let links: { name: string; url: string }[] = [];
   if (yaml) {
     try {
       const parsed = Bun.YAML.parse(yaml) as Record<string, unknown>;
       name = typeof parsed.name === 'string' && parsed.name ? parsed.name : typeof parsed.title === 'string' ? parsed.title : '';
+      links = getCreatorLinks(parsed);
     } catch {
       // fall through
     }
@@ -347,7 +350,7 @@ async function resolveSingleCreatorDoc(relativePath: string, cwd: string, collec
   if (!body.trim()) {
     throw new BuildError(`collection "${collectionPath}": creator "${name}" debe tener body (contenido después del frontmatter)`);
   }
-  return { name, body, relativePath };
+  return { name, body, relativePath, links };
 }
 
 async function resolveCollectionCreatorDocs(doc: BuildDocument, discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<CreatorDoc[]> {
@@ -373,6 +376,10 @@ function buildCollectionAuthorsLatex(creatorDocs: CreatorDoc[]): string {
   const parts = ['\\part{Autoras y colaboradoras}'];
   for (const doc of creatorDocs) {
     parts.push(`\\subsubsection{${doc.name}}`);
+    if (doc.links.length > 0) {
+      parts.push(doc.links.map((l) => `\\noindent \\textbf{${l.name}}: ${l.url}`).join('\n\n'));
+      parts.push('\\vspace*{2\\baselineskip}');
+    }
     parts.push(doc.body.trim());
   }
   return parts.join('\n\n');
