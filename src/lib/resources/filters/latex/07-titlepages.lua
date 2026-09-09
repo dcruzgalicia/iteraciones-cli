@@ -13,7 +13,7 @@
 -- solo :: (o :;) → \vspace{\baselineskip} (+ \noindent). El resultado se
 -- guarda como MetaInlines(RawInline('latex')): el template lo emite sin
 -- re-escape.
--- Uso: pandoc --from markdown --to latex --lua-filter latex/10-titlepages.lua
+-- Uso: pandoc --from markdown --to latex --lua-filter latex/07-titlepages.lua
 
 local TITLE_PAGE_FIELDS = {
   'subtitle',

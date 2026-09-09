@@ -142,9 +142,9 @@ const LATEX_FILTERS = [
   '04-center',
   '05-flushright',
   '06-mbox-sentence-end',
-  '08-quote-noindent',
-  '09-cjk',
-  '06-titlepages',
+  '09-quote-noindent',
+  '10-cjk',
+  '07-titlepages',
   '11-uppercase',
 ].map((n) => join(RESOURCES, 'latex', `${n}.lua`));
 
@@ -608,8 +608,8 @@ describe.skipIf(!pandocOk)('filtros Lua de usuario', () => {
   });
 });
 
-describe.skipIf(!pandocOk)('filter latex/06-titlepages (páginas de título internas)', () => {
-  const TITLEPAGES = join(RESOURCES, 'latex', '06-titlepages.lua');
+describe.skipIf(!pandocOk)('filter latex/07-titlepages (páginas de título internas)', () => {
+  const TITLEPAGES = join(RESOURCES, 'latex', '07-titlepages.lua');
   let dir: string;
   let tplLatex: string;
 
