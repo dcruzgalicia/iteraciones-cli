@@ -183,7 +183,8 @@ end
 
 local function textsize_div_to_rawlatex(div)
   local cls = textsize_class(div)
-  local body = pandoc.write(pandoc.Pandoc(div.content), 'latex')
+  local preprocessed = preprocess_div_content(div.content)
+  local body = pandoc.write(pandoc.Pandoc(preprocessed), 'latex')
   body = body:gsub('%s+$', '')
   return pandoc.RawBlock('latex', '{\\' .. cls .. ' ' .. body .. '}')
 end
@@ -209,6 +210,24 @@ local function preprocess_blocks(blocks)
   for _, b in ipairs(blocks) do
     if b.content and (b.t == 'Para' or b.t == 'Plain') then
       local cloned = pandoc[b.t](walk_inlines(b.content))
+      table.insert(out, cloned)
+    else
+      table.insert(out, b)
+    end
+  end
+  return out
+end
+
+local function preprocess_div_content(blocks)
+  local out = {}
+  for _, b in ipairs(blocks) do
+    if b.content and (b.t == 'Para' or b.t == 'Plain') then
+      local cloned = pandoc[b.t](walk_inlines(b.content))
+      table.insert(out, cloned)
+    elseif b.t == 'Div' and b.content then
+      local cloned = pandoc.Div(preprocess_div_content(b.content))
+      cloned.classes = b.classes
+      cloned.attributes = b.attributes
       table.insert(out, cloned)
     else
       table.insert(out, b)
@@ -275,7 +294,8 @@ local function serialize_titleback(blocks)
       local value = b.attributes['spacing']
       local num = tonumber(value)
       if num and num > 0 then
-        local body = pandoc.write(pandoc.Pandoc(b.content), 'latex')
+        local preprocessed = preprocess_div_content(b.content)
+        local body = pandoc.write(pandoc.Pandoc(preprocessed), 'latex')
         body = body:gsub('%s+$', '')
         table.insert(out, pandoc.RawBlock('latex', '\\begin{spacing}{' .. value .. '}\n' .. body .. '\n\\end{spacing}'))
       else
