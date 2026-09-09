@@ -3,7 +3,14 @@ import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 import { fmStringList, fmTrimmedString } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
-import { looseColonLines, looseColonsMessage, MISSING_TITLE_WARNING, validateFrontmatterFields } from './project-validator.js';
+import {
+  dictumWidthWarnings,
+  dictumWidthWarningsMessage,
+  looseColonLines,
+  looseColonsMessage,
+  MISSING_TITLE_WARNING,
+  validateFrontmatterFields,
+} from './project-validator.js';
 import { hashString } from './state-serialize.js';
 import type { DiscoveryEntry } from './types.js';
 
@@ -80,6 +87,10 @@ function parseFrontmatter(relativePath: string, text: string, issues: Frontmatte
   const looseColons = looseColonLines(body, lineOffset);
   if (looseColons.length > 0) {
     logWarning(`${relativePath}: ${looseColonsMessage(looseColons)}`, 'discover');
+  }
+  const dictumWidths = dictumWidthWarnings(body, lineOffset);
+  if (dictumWidths.length > 0) {
+    logWarning(`${relativePath}: ${dictumWidthWarningsMessage(dictumWidths)}`, 'discover');
   }
 
   const title = normalized?.title ?? '';

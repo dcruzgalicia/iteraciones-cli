@@ -1,5 +1,6 @@
 -- Convierte Div.dictum a \dictum[author]{quote} (formato LaTeX), con
 -- \noindent al párrafo siguiente si es Para.
+-- Soporta atributo width (0.1–1.0) para ancho personalizado.
 -- El espaciado lo gestiona el entorno dictum (preamble 21-dictum.tex).
 -- Uso: pandoc --from json --to latex --lua-filter latex/02-dictum.lua
 
@@ -53,6 +54,18 @@ local function has_class(block, cls)
     if c == cls then return true end
   end
   return false
+end
+
+local DEFAULT_WIDTH = 0.5
+local MIN_WIDTH = 0.1
+local MAX_WIDTH = 1.0
+
+local function resolve_dictum_width(div)
+  local raw = div.attributes['width']
+  if not raw then return nil end
+  local num = tonumber(raw)
+  if not num or num < MIN_WIDTH or num > MAX_WIDTH then return nil end
+  return num
 end
 
 local function process_dictum(div)
@@ -136,6 +149,11 @@ function Pandoc(doc)
   local last_was_dictum = false
   for _, block in ipairs(doc.blocks) do
     if has_class(block, 'dictum') then
+      local width = resolve_dictum_width(block)
+      if width then
+        local renewcommand = '\\renewcommand{\\dictumwidth}{' .. width .. '\\textwidth}'
+        table.insert(result, pandoc.RawBlock('latex', renewcommand))
+      end
       local expanded = process_dictum(block)
       for _, b in ipairs(expanded) do table.insert(result, b) end
       last_was_dictum = true
