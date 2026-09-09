@@ -4,6 +4,8 @@ import { listMarkdownDocuments } from '../builder/discover-files.js';
 import { validateDisabledFilters } from '../builder/filter-resolver.js';
 import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, validatePreambleDependencies } from '../builder/preamble-loader.js';
 import {
+  dictumWidthWarnings,
+  dictumWidthWarningsMessage,
   looseColonLines,
   looseColonsMessage,
   MISSING_TITLE_WARNING,
@@ -94,6 +96,10 @@ async function validateSingleEntry(
   const looseColons = looseColonLines(body, lineOffset);
   if (looseColons.length > 0) {
     warnings.push({ file: entry, message: looseColonsMessage(looseColons) });
+  }
+  const dictumWidths = dictumWidthWarnings(body, lineOffset);
+  if (dictumWidths.length > 0) {
+    warnings.push({ file: entry, message: dictumWidthWarningsMessage(dictumWidths) });
   }
   if (!yaml) {
     handleNoFrontmatter(entry, body, raw, warnings);

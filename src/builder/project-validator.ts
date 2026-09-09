@@ -212,6 +212,47 @@ export function looseColonsMessage(lines: number[]): string {
   return `${where} con ":" suelta: ¿querías escribir "::" (espacio vertical) o ":;" (sin indentación)?`;
 }
 
+const DICTUM_WIDTH_RE = /^:::\s*\{[^}]*\.dictum[^}]*\bwidth\s*=\s*([0-9]*\.?[0-9]+)/;
+const DICTUM_WIDTH_MIN = 0.1;
+const DICTUM_WIDTH_MAX = 1.0;
+
+export interface DictumWidthWarning {
+  line: number;
+  value: number;
+}
+
+export function dictumWidthWarnings(body: string, lineOffset = 0): DictumWidthWarning[] {
+  const hits: DictumWidthWarning[] = [];
+  let inCode = false;
+  let lineNum = 0;
+  for (const rawLine of body.split('\n')) {
+    lineNum++;
+    const trimmed = rawLine.trimEnd();
+    if (/^(```|~~~)/.test(trimmed)) {
+      inCode = !inCode;
+      continue;
+    }
+    if (inCode) continue;
+    const m = DICTUM_WIDTH_RE.exec(trimmed);
+    if (m?.[1]) {
+      const num = Number.parseFloat(m[1]);
+      if (!Number.isNaN(num) && (num < DICTUM_WIDTH_MIN || num > DICTUM_WIDTH_MAX)) {
+        hits.push({ line: lineNum + lineOffset, value: num });
+      }
+    }
+  }
+  return hits;
+}
+
+export function dictumWidthWarningsMessage(warnings: DictumWidthWarning[]): string {
+  return warnings
+    .map(
+      (w) =>
+        `línea ${w.line}: dictum width=${w.value} fuera de rango (${DICTUM_WIDTH_MIN}–${DICTUM_WIDTH_MAX}); se usa ${DICTUM_WIDTH_MIN} por defecto`,
+    )
+    .join('; ');
+}
+
 export async function validateConfigFilePaths(cwd: string, config: SiteConfig): Promise<ValidationIssue[]> {
   const issues: ValidationIssue[] = [];
   for (const rel of config.luaFilters ?? []) {
