@@ -5,6 +5,7 @@ import { logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
 import {
   dictumWidthWarnings,
+  dictumWidthWarningsInYaml,
   dictumWidthWarningsMessage,
   looseColonLines,
   looseColonsMessage,
@@ -62,6 +63,19 @@ function lacksTitle(normalized: NormalizedRecord | undefined, title: string): bo
   return !title && (!normalized || normalized.rawTitle === undefined || normalized.rawTitle === '');
 }
 
+function warnDictumWidth(relativePath: string, body: string, yaml: string | undefined, lineOffset: number): void {
+  const bodyWarnings = dictumWidthWarnings(body, lineOffset);
+  if (bodyWarnings.length > 0) {
+    logWarning(`${relativePath}: ${dictumWidthWarningsMessage(bodyWarnings)}`, 'discover');
+  }
+  if (yaml) {
+    const yamlWarnings = dictumWidthWarningsInYaml(yaml, 1);
+    if (yamlWarnings.length > 0) {
+      logWarning(`${relativePath}: ${dictumWidthWarningsMessage(yamlWarnings)}`, 'discover');
+    }
+  }
+}
+
 function parseFrontmatter(relativePath: string, text: string, issues: FrontmatterIssue[]): IngestedFrontmatter {
   const { yaml, body } = splitFrontmatter(text);
   let normalized: NormalizedRecord | undefined;
@@ -88,10 +102,7 @@ function parseFrontmatter(relativePath: string, text: string, issues: Frontmatte
   if (looseColons.length > 0) {
     logWarning(`${relativePath}: ${looseColonsMessage(looseColons)}`, 'discover');
   }
-  const dictumWidths = dictumWidthWarnings(body, lineOffset);
-  if (dictumWidths.length > 0) {
-    logWarning(`${relativePath}: ${dictumWidthWarningsMessage(dictumWidths)}`, 'discover');
-  }
+  warnDictumWidth(relativePath, body, yaml, lineOffset);
 
   const title = normalized?.title ?? '';
   if (lacksTitle(normalized, title)) {
