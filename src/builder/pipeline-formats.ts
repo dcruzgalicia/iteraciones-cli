@@ -381,7 +381,11 @@ async function resolveCollectionCreatorDocs(
 
 async function buildCollectionAuthorsLatex(creatorDocs: CreatorDoc[], sourcePath: string): Promise<string> {
   if (creatorDocs.length === 0) return '';
-  const md = ['\\part{Autoras y colaboradoras}'];
+  const subsubsectionStyle =
+    '\\RedeclareSectionCommand[beforeskip=2\\baselineskip,afterskip=\\baselineskip,afterindent=false]{subsubsection}\n\\setkomafont{subsubsection}{\\raggedright\\normalsize\\normalfont\\scshape}';
+  const subsubsectionReset =
+    '\\RedeclareSectionCommand[beforeskip=\\baselineskip,afterskip=\\baselineskip,afterindent=false]{subsubsection}\n\\setkomafont{subsubsection}{\\normalsize\\normalfont\\bfseries}';
+  const md = [`\\part{Autoras y colaboradoras}\n\n${subsubsectionStyle}`];
   for (const doc of creatorDocs) {
     md.push(`\\subsubsection{${doc.name}}`);
     if (doc.links.length > 0) {
@@ -391,6 +395,7 @@ async function buildCollectionAuthorsLatex(creatorDocs: CreatorDoc[], sourcePath
       md.push(doc.body.trim());
     }
   }
+  md.push(subsubsectionReset);
   const input = md.join('\n\n');
   return execPandoc({ input, sourcePath, from: MD_READER, to: 'latex', extraArgs: ['--shift-heading-level-by=2'] });
 }
