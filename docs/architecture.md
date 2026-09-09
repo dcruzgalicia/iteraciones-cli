@@ -108,10 +108,10 @@ Además, existen los **preamble filters** (`src/lib/resources/preamble/*.tex`) q
 | `latex/04-center` | ast | `Div.center` → `\begin{center}...\end{center}` |
 | `latex/05-flushright` | ast | `Div.flushright` → `\begin{flushright}...\end{flushright}` |
 | `latex/06-mbox-sentence-end` | ast | últimas palabras de cada oración → `\mbox{}` |
+| `latex/06-titlepages` | ast | campos multilinea de portada → LaTeX (extratitle, colofón, guardas…) |
 | `latex/07-textsize` | ast | clases de tamaño (`.small`, `.footnotesize`, `.Large`…) → `{\small texto}` |
 | `latex/08-quote-noindent` | ast | BlockQuote → `quote` + `\noindent` al primer párrafo siguiente |
 | `latex/09-cjk` | ast | `Div.japanese/.chinese/.korean` → entorno CJKutf8 |
-| `latex/10-titlepages` | ast | campos multilinea de portada → LaTeX (extratitle, colofón, guardas…) |
 | `latex/11-uppercase` | ast | span `.uppercase` → `\MakeUppercase{texto}` |
 | `latex/12-mbox` | ast | span `.mbox` → `\mbox{texto}` |
 | `latex/13-spacing` | ast | Div con atributo `spacing` → `\begin{spacing}{n}...\end{spacing}` |
