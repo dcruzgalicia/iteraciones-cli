@@ -224,6 +224,12 @@ local function preprocess_div_content(blocks)
     if b.content and (b.t == 'Para' or b.t == 'Plain') then
       local cloned = pandoc[b.t](walk_inlines(b.content))
       table.insert(out, cloned)
+    elseif b.t == 'Div' and b.classes and textsize_class(b) then
+      local cls = textsize_class(b)
+      local inner = preprocess_div_content(b.content)
+      local body = pandoc.write(pandoc.Pandoc(inner), 'latex')
+      body = body:gsub('%s+$', '')
+      table.insert(out, pandoc.RawBlock('latex', '{\\' .. cls .. ' ' .. body .. '}'))
     elseif b.t == 'Div' and b.content then
       local cloned = pandoc.Div(preprocess_div_content(b.content))
       cloned.classes = b.classes
