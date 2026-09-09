@@ -313,6 +313,7 @@ async function collectCreatorNamesFromFiles(files: string[], cwd: string): Promi
     try {
       const parsed = Bun.YAML.parse(yaml) as Record<string, unknown>;
       extractCreatorNames(parsed.creator, names);
+      extractCreatorNames(parsed.contributor, names);
     } catch {
       // skip unparseable files
     }
