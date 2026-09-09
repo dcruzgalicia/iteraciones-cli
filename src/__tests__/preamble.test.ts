@@ -370,15 +370,15 @@ describe('validateDisabledPreambleFilters', () => {
 });
 
 describe('valores de maquetación editorial (issue 1810)', () => {
-  it('07-typography: pretolerance 200, tolerance 300 y hyphenpenalty 100', async () => {
+  it('07-typography: pretolerance 50, tolerance 1000 y hyphenpenalty 50', async () => {
     const filters = await loadPreambleFilters();
     const typo = filters.find((f) => f.name === '07-typography')?.content ?? '';
-    expect(typo).toContain('\\pretolerance=200');
-    expect(typo).toContain('\\tolerance=300');
-    expect(typo).toContain('\\hyphenpenalty=100');
+    expect(typo).toContain('\\pretolerance=50');
+    expect(typo).toContain('\\tolerance=1000');
+    expect(typo).toContain('\\hyphenpenalty=50');
     expect(typo).not.toContain('\\tolerance=400');
-    // microtype con más elasticidad de espaciado
-    expect(typo).toContain('stretch=20,shrink=20');
+    // microtype con elasticidad moderada de espaciado
+    expect(typo).toContain('stretch=10,shrink=10');
   });
 
   it('14-sectioning: beforeskip 2 para part/chapter/section/subsection y afterskip 2 para section/subsection', async () => {
