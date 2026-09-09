@@ -4,6 +4,7 @@ import { BuildError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
 import { fmStringList, resolveBooleanField, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
+import { execPandoc, MD_READER } from '../lib/pandoc-runner.js';
 import { htmlSlugFor } from './discover.js';
 import { assembleExportDocument } from './export/assemble.js';
 import { convertToEpub, convertToMarkdown } from './export/runner.js';
@@ -378,19 +379,20 @@ async function resolveCollectionCreatorDocs(
   return result.sort((a, b) => a.name.localeCompare(b.name, 'es'));
 }
 
-function buildCollectionAuthorsLatex(creatorDocs: CreatorDoc[]): string {
+async function buildCollectionAuthorsLatex(creatorDocs: CreatorDoc[], sourcePath: string): Promise<string> {
   if (creatorDocs.length === 0) return '';
-  const parts = ['\\part{Autoras y colaboradoras}'];
+  const md = ['\\part{Autoras y colaboradoras}'];
   for (const doc of creatorDocs) {
-    parts.push(`\\subsubsection{${doc.name}}`);
+    md.push(`\\subsubsection{${doc.name}}`);
     if (doc.links.length > 0) {
-      parts.push(doc.links.map((l) => `\\noindent \\textbf{${l.name}}: ${l.url}`).join('\n\n'));
-      parts.push(`\\vspace*{\\baselineskip}\n\n\\noindent ${doc.body.trim()}`);
+      md.push(doc.links.map((l) => `\\noindent \\textbf{${l.name}}: ${l.url}`).join('\n\n'));
+      md.push(`\\vspace*{\\baselineskip}\n\n\\noindent ${doc.body.trim()}`);
     } else {
-      parts.push(doc.body.trim());
+      md.push(doc.body.trim());
     }
   }
-  return parts.join('\n\n');
+  const input = md.join('\n\n');
+  return execPandoc({ input, sourcePath, from: MD_READER, to: 'latex', extraArgs: ['--shift-heading-level-by=2'] });
 }
 
 function collectionBaseContent(
@@ -423,7 +425,7 @@ async function emitCollectionFormats(
     const pageNumber = (outputs.fm.pageNumber ?? formatCfg?.pdf?.pageNumber ?? ctx.siteConfig.pageNumber) as string | undefined;
     const base = collectionBaseContent(collectionEntries, 'latex', content, pageNumber);
     const creatorDocs = isCollection ? await resolveCollectionCreatorDocs(doc, discoveryIndex, ctx.cwd, outputs.fm) : [];
-    const authorsBlock = buildCollectionAuthorsLatex(creatorDocs);
+    const authorsBlock = await buildCollectionAuthorsLatex(creatorDocs, doc.filePath);
     await emitLatexAndQueuePdf(
       doc,
       { ...outputs, content: prependLinksLatex(base, creatorLinks) },
