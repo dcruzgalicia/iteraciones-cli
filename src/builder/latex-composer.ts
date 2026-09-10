@@ -199,9 +199,9 @@ function applyInterventionOverrides(
   docType: string | undefined,
 ): { title: string; creator: string[]; subtitle: string; date: string; extraPages: number; intervention: boolean } | null {
   if (docType !== 'intervention') return null;
-  const lineLength = typeof fm.lineLength === 'number' && fm.lineLength > 0 ? fm.lineLength : 40;
+  const lineLength = typeof fm.lineLength === 'number' && fm.lineLength > 0 ? fm.lineLength : 0.5;
   const pages = typeof fm.pages === 'number' && fm.pages > 0 ? fm.pages : 1;
-  const rule = `$\\rule{${lineLength}cm}{0.4pt}$`;
+  const rule = `$\\rule{${lineLength}\\textwidth}{0.4pt}$`;
   return { title: rule, creator: [rule], subtitle: 'Título', date: 'Nombre', extraPages: pages, intervention: true };
 }
 

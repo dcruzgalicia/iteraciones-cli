@@ -180,6 +180,12 @@
   \fi
   \ifx\@author\@empty\else
     {\centering\parindent\z@\usekomafont{author}{\renewcommand{\and}{\unskip, \ignorespaces}\@author\par}}%
+    \ifx\interventionflag\@empty\else
+      \ifx\@date\@empty\else
+        \vskip 0.5\baselineskip
+        {\centering\parindent\z@\usekomafont{date}{\@date\par}}%
+      \fi
+    \fi
   \fi
   \vskip 1\baselineskip
   \ifx\@author\@empty
@@ -209,9 +215,11 @@
   \ifx\@collectionCreator\@empty\else
     {\centering\parindent\z@\usekomafont{author}{\renewcommand{\and}{\unskip, \ignorespaces}\@collectionCreator\par}}%
   \fi
-  \ifx\@date\@empty\else
-    \vskip 2\baselineskip
-    {\centering\parindent\z@\usekomafont{date}{\@date\par}}%
+  \ifx\interventionflag\@empty
+    \ifx\@date\@empty\else
+      \vskip 2\baselineskip
+      {\centering\parindent\z@\usekomafont{date}{\@date\par}}%
+    \fi
   \fi
   \ifx\@publishersimagelist\@empty
     \ifx\@publishers\@empty\else
