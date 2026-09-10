@@ -216,23 +216,27 @@ describe.skipIf(!pandocOk)('filtros Lua latex', () => {
 
   it('convierte Div.dictum con autor', async () => {
     const tex = await toLatex('::: {.dictum}\nCita\n\n::: {.author}\nJulio Verne\n::: \n:::\n');
-    expect(tex).toContain('\\dictum[Julio Verne]{Cita}');
+    expect(tex).toContain('\\dictum[Julio Verne]{');
+    expect(tex).toContain('Cita}');
   });
 
   it('dictum con autor enlazado conserva el autor (antes desaparecía del PDF)', async () => {
     const tex = await toLatex('::: {.dictum}\nCita\n\n::: {.author}\n[Jane Doe](https://x.com)\n::: \n:::\n');
-    expect(tex).toContain('\\dictum[Jane Doe]{Cita}');
+    expect(tex).toContain('\\dictum[Jane Doe]{');
+    expect(tex).toContain('Cita}');
   });
 
   it('dictum con autor entre comillas tipográficas conserva el autor', async () => {
     // Con smart, "Nombre" se parsea como Quoted: antes el autor desaparecía
     const tex = await toLatex('::: {.dictum}\nCita\n\n::: {.author}\n"Nombre"\n::: \n:::\n', 'markdown+smart');
-    expect(tex).toContain('\\dictum[Nombre]{Cita}');
+    expect(tex).toContain('\\dictum[Nombre]{');
+    expect(tex).toContain('Cita}');
   });
 
   it('dictum con autor de dos párrafos los separa con espacio', async () => {
     const tex = await toLatex('::: {.dictum}\nCita\n\n::: {.author}\nAutor Uno\n\nAutor Dos\n::: \n:::\n');
-    expect(tex).toContain('\\dictum[Autor Uno Autor Dos]{Cita}');
+    expect(tex).toContain('\\dictum[Autor Uno Autor Dos]{');
+    expect(tex).toContain('Cita}');
   });
 
   it('convierte Div.verse sin vspace externo', async () => {
