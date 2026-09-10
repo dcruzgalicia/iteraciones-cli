@@ -169,7 +169,15 @@ async function readCollectionFiles(
   doc: BuildDocument,
   cwd: string,
 ): Promise<
-  { creator: string[]; title: string; subtitle: string | undefined; type: string | undefined; lineLength: number | undefined; body: string }[]
+  {
+    creator: string[];
+    title: string;
+    subtitle: string | undefined;
+    type: string | undefined;
+    lineLength: number | undefined;
+    pages: number | undefined;
+    body: string;
+  }[]
 > {
   const files = doc.frontmatter.files;
   if (!files || files.length === 0) return [];
@@ -180,6 +188,7 @@ async function readCollectionFiles(
     subtitle: string | undefined;
     type: string | undefined;
     lineLength: number | undefined;
+    pages: number | undefined;
     body: string;
   }[] = [];
   for (const file of files) {
@@ -210,6 +219,43 @@ function interventionSectionRaw(lineLength = 0.5): string {
 \`\`\``;
 }
 
+function buildCollectionEntryLatex(
+  e: {
+    creator: string[];
+    title: string;
+    subtitle: string | undefined;
+    type: string | undefined;
+    lineLength: number | undefined;
+    pages: number | undefined;
+    body: string;
+  },
+  isHeader: boolean,
+): string[] {
+  const parts: string[] = [];
+  if (e.type === 'intervention') {
+    parts.push(interventionSectionRaw(e.lineLength));
+    parts.push(e.body.trim());
+    if (e.pages && e.pages > 0) {
+      parts.push('\\null\\newpage\n'.repeat(e.pages).trim());
+    }
+  } else {
+    const creator = e.creator.length > 0 ? e.creator.join(', ') : 'Anónima';
+    const title = e.title || 'Sin título';
+    parts.push(`\\chapter{${creator}}`);
+    if (isHeader) parts.push('\\thispagestyle{empty}');
+    if (e.subtitle) {
+      parts.push(`\\RedeclareSectionCommand[style=section,beforeskip=2\\baselineskip,afterskip=1\\baselineskip,afterindent=false]{section}`);
+      parts.push(`\\section{${title}}`);
+      parts.push(`\\RedeclareSectionCommand[style=section,beforeskip=2\\baselineskip,afterskip=2\\baselineskip,afterindent=false]{section}`);
+      parts.push(`\\subsection{${e.subtitle}}`);
+    } else {
+      parts.push(`\\section{${title}}`);
+    }
+    parts.push(e.body.trim());
+  }
+  return parts;
+}
+
 function buildCollectionSectionsLatex(
   entries: {
     creator: string[];
@@ -217,31 +263,15 @@ function buildCollectionSectionsLatex(
     subtitle: string | undefined;
     type: string | undefined;
     lineLength: number | undefined;
+    pages: number | undefined;
     body: string;
   }[],
   pageNumber?: string,
 ): string {
-  const isHeader = pageNumber?.startsWith('header-');
+  const isHeader = pageNumber?.startsWith('header-') ?? false;
   const parts: string[] = [];
   for (const e of entries) {
-    const isIntervention = e.type === 'intervention';
-    if (isIntervention) {
-      parts.push(interventionSectionRaw(e.lineLength));
-    } else {
-      const creator = e.creator.length > 0 ? e.creator.join(', ') : 'Anónima';
-      const title = e.title || 'Sin título';
-      parts.push(`\\chapter{${creator}}`);
-      if (isHeader) parts.push('\\thispagestyle{empty}');
-      if (e.subtitle) {
-        parts.push(`\\RedeclareSectionCommand[style=section,beforeskip=2\\baselineskip,afterskip=1\\baselineskip,afterindent=false]{section}`);
-        parts.push(`\\section{${title}}`);
-        parts.push(`\\RedeclareSectionCommand[style=section,beforeskip=2\\baselineskip,afterskip=2\\baselineskip,afterindent=false]{section}`);
-        parts.push(`\\subsection{${e.subtitle}}`);
-      } else {
-        parts.push(`\\section{${title}}`);
-      }
-    }
-    parts.push(e.body.trim());
+    parts.push(...buildCollectionEntryLatex(e, isHeader));
   }
   return parts.join('\n\n');
 }
@@ -253,6 +283,7 @@ function buildCollectionSectionsHtml(
     subtitle: string | undefined;
     type: string | undefined;
     lineLength: number | undefined;
+    pages: number | undefined;
     body: string;
   }[],
 ): string {
@@ -275,6 +306,7 @@ function buildCollectionSectionsMarkdown(
     subtitle: string | undefined;
     type: string | undefined;
     lineLength: number | undefined;
+    pages: number | undefined;
     body: string;
   }[],
 ): string {
@@ -297,6 +329,7 @@ function resolveCollectionContent(
     subtitle: string | undefined;
     type: string | undefined;
     lineLength: number | undefined;
+    pages: number | undefined;
     body: string;
   }[],
   format: 'latex' | 'html' | 'markdown',
@@ -469,6 +502,7 @@ function collectionBaseContent(
     subtitle: string | undefined;
     type: string | undefined;
     lineLength: number | undefined;
+    pages: number | undefined;
     body: string;
   }[],
   format: 'latex' | 'html' | 'markdown',
@@ -487,6 +521,7 @@ async function emitCollectionFormats(
     subtitle: string | undefined;
     type: string | undefined;
     lineLength: number | undefined;
+    pages: number | undefined;
     body: string;
   }[],
   renderCtx: RenderContext,
