@@ -183,7 +183,7 @@
       \ifx\interventionflag\@empty
         \@author%
       \else
-        \@author\par\vskip 0.5\baselineskip\textit{Nombre}%
+        \@author\par\vskip 0.25\baselineskip{\normalfont\footnotesize Nombre}%
       \fi
       \par}}%
   \fi
@@ -200,7 +200,7 @@
       {\centering\parindent\z@\usekomafont{title}{\MakeUppercase{\@title}\par}}%
     \else
       {\centering\parindent\z@\usekomafont{title}{%
-        \@title\par\vskip 0.5\baselineskip\textit{Título}\par}}%
+        \@title\par\vskip 0.25\baselineskip{\normalfont\footnotesize Título}\par}}%
     \fi
   \else
     {\centering\titleimagerender{\@titleimage}\par}%
