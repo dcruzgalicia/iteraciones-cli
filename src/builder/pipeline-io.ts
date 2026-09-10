@@ -95,10 +95,11 @@ export function parseFileFrontmatter(content: string): {
   subtitle: string | undefined;
   type: string | undefined;
   lineLength: number | undefined;
+  pages: number | undefined;
   body: string;
 } {
   const { yaml, body } = splitFrontmatter(content);
-  if (!yaml) return { title: '', creator: [], subtitle: undefined, type: undefined, lineLength: undefined, body };
+  if (!yaml) return { title: '', creator: [], subtitle: undefined, type: undefined, lineLength: undefined, pages: undefined, body };
   try {
     const parsed = Bun.YAML.parse(yaml) as Record<string, unknown>;
     return {
@@ -107,9 +108,10 @@ export function parseFileFrontmatter(content: string): {
       subtitle: typeof parsed.subtitle === 'string' ? parsed.subtitle : undefined,
       type: typeof parsed.type === 'string' ? parsed.type : undefined,
       lineLength: typeof parsed.lineLength === 'number' ? parsed.lineLength : undefined,
+      pages: typeof parsed.pages === 'number' ? parsed.pages : undefined,
       body,
     };
   } catch {
-    return { title: '', creator: [], subtitle: undefined, type: undefined, lineLength: undefined, body };
+    return { title: '', creator: [], subtitle: undefined, type: undefined, lineLength: undefined, pages: undefined, body };
   }
 }

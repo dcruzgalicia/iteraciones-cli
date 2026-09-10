@@ -21,8 +21,8 @@ describe('intervention type validation', () => {
     expect(errs).toHaveLength(0);
   });
 
-  it('accepts lineLength as positive integer', () => {
-    const errs = errors({ type: 'intervention', lineLength: 60 });
+  it('accepts lineLength as decimal between 0 and 1', () => {
+    const errs = errors({ type: 'intervention', lineLength: 0.6 });
     expect(errs).toHaveLength(0);
   });
 
@@ -63,7 +63,7 @@ describe('intervention type in other contexts', () => {
   });
 
   it('accepts pages and lineLength together', () => {
-    const errs = errors({ type: 'intervention', pages: 2, lineLength: 50 });
+    const errs = errors({ type: 'intervention', pages: 2, lineLength: 0.5 });
     expect(errs).toHaveLength(0);
   });
 });
