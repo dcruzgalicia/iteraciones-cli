@@ -534,7 +534,7 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     expect(toc).toContain(
       '\\BeforeTOCHead{\\RedeclareSectionCommand[beforeskip=2\\baselineskip,afterskip=\\baselineskip,afterindent=false]{subsubsection}}',
     );
-    expect(toc).toContain('linefill=\\TOCLineLeaderFill,beforeskip=\\baselineskip]{tocline}{part}');
+    expect(toc).toContain('linefill=\\TOCLineLeaderFill,beforeskip=2\\baselineskip]{tocline}{part}');
     expect(toc).toContain('pagenumberformat=\\normalsize\\normalfont');
     expect(toc).not.toContain('pagenumberbox=\\phantom,indent=0pt,beforeskip=0pt]{tocline}{part}');
   });
