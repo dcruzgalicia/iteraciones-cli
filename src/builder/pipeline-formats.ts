@@ -188,8 +188,8 @@ async function readCollectionFiles(
 }
 
 function interventionSectionEntry(): { creator: string; title: string } {
-  const creator = '$\\rule{8cm}{0.4pt}$\n\\textit{Nombre}';
-  const title = '$\\rule{12cm}{0.4pt}$\n\\textit{Título}';
+  const creator = '$\\rule{0.5\\textwidth}{0.4pt}$\n\\textit{Nombre}';
+  const title = '$\\rule{0.5\\textwidth}{0.4pt}$\n\\textit{Título}';
   return { creator, title };
 }
 

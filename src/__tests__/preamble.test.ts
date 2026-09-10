@@ -472,7 +472,7 @@ describe('valores de maquetación editorial (issue 1810)', () => {
     const title = maketitle.indexOf('\\MakeUppercase{\\@title}');
     const sub = maketitle.indexOf('\\@subtitle\\par');
     const subject = maketitle.indexOf('\\@subject\\par');
-    const date = maketitle.indexOf('\\@date\\par');
+    const date = maketitle.indexOf('\\@date\\par', title);
     const pub = maketitle.indexOf('\\@publishers\\par');
     expect(head).toBeGreaterThan(-1);
     expect(head).toBeLessThan(subject);
