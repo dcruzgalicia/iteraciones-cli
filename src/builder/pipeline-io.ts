@@ -89,18 +89,25 @@ export function formatLinksFor(
   return formats;
 }
 
-export function parseFileFrontmatter(content: string): { title: string; creator: string[]; subtitle: string | undefined; body: string } {
+export function parseFileFrontmatter(content: string): {
+  title: string;
+  creator: string[];
+  subtitle: string | undefined;
+  type: string | undefined;
+  body: string;
+} {
   const { yaml, body } = splitFrontmatter(content);
-  if (!yaml) return { title: '', creator: [], subtitle: undefined, body };
+  if (!yaml) return { title: '', creator: [], subtitle: undefined, type: undefined, body };
   try {
     const parsed = Bun.YAML.parse(yaml) as Record<string, unknown>;
     return {
       title: typeof parsed.title === 'string' ? parsed.title : '',
       creator: parseAuthors(parsed.creator),
       subtitle: typeof parsed.subtitle === 'string' ? parsed.subtitle : undefined,
+      type: typeof parsed.type === 'string' ? parsed.type : undefined,
       body,
     };
   } catch {
-    return { title: '', creator: [], subtitle: undefined, body };
+    return { title: '', creator: [], subtitle: undefined, type: undefined, body };
   }
 }

@@ -105,6 +105,7 @@
 % la hoja en blanco (sin guardas, sin startpaper en ningún caso).
 \newif\iftitlepageguards
 \newif\ifcourtepage
+\newcommand*{\interventionflag}{}
 \newcommand{\titlepage@blankpage}{%
   \thispagestyle{empty}%
   \null\clearpage
@@ -189,7 +190,11 @@
     \fi
   \fi
   \ifx\@titleimage\@empty
-    {\centering\parindent\z@\usekomafont{title}{\MakeUppercase{\@title}\par}}%
+    \ifx\interventionflag\@empty
+      {\centering\parindent\z@\usekomafont{title}{\MakeUppercase{\@title}\par}}%
+    \else
+      {\centering\parindent\z@\usekomafont{title}{\@title\par}}%
+    \fi
   \else
     {\centering\titleimagerender{\@titleimage}\par}%
   \fi

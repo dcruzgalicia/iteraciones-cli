@@ -197,12 +197,12 @@ function buildTitlePageOverrides(
 function applyInterventionOverrides(
   fm: Record<string, unknown>,
   docType: string | undefined,
-): { title: string; creator: string[]; extraPages: number } | null {
+): { title: string; creator: string[]; subtitle: string; date: string; extraPages: number; intervention: boolean } | null {
   if (docType !== 'intervention') return null;
   const lineLength = typeof fm.lineLength === 'number' && fm.lineLength > 0 ? fm.lineLength : 40;
-  const underscores = '\\_'.repeat(lineLength);
   const pages = typeof fm.pages === 'number' && fm.pages > 0 ? fm.pages : 1;
-  return { title: underscores, creator: [underscores], extraPages: pages };
+  const rule = `$\\rule{${lineLength}cm}{0.4pt}$`;
+  return { title: rule, creator: [rule], subtitle: 'Título', date: 'Nombre', extraPages: pages, intervention: true };
 }
 
 function yamlScalar(value: string): string {
@@ -230,6 +230,74 @@ function prependFrontmatterYaml(content: string, overrides: Record<string, strin
   return `${yaml}\n${content}`;
 }
 
+function buildPandocArgs(
+  templatePath: string,
+  siteConfig: SiteConfig,
+  warnedLangs: Set<string>,
+  biblatexAvailable: boolean,
+  filters: LuaFilterGroup,
+  bibFiles: string[],
+  fm: Record<string, unknown>,
+  formatCfg: Record<string, unknown> | undefined,
+  isIntervention: boolean,
+): string[] {
+  const extraArgs = ['--template', templatePath, '--top-level-division', 'section', '--shift-heading-level-by=2'];
+  extraArgs.push(`--metadata=babel-lang:${babelOptionsForLang(siteConfig.language, warnedLangs)}`);
+  extraArgs.push(`--metadata=biblatex-available:${biblatexAvailable}`);
+  const pageNumber = resolveStringField(fm, formatCfg, siteConfig, 'pageNumber');
+  const pageCommand = pageNumberCommandFor(pageNumber ?? 'header-right');
+  if (pageCommand) {
+    extraArgs.push(`--metadata=page-number-command:${pageCommand}`);
+  } else if (pageNumber) {
+    logWarning(`pageNumber "${pageNumber}" no es una posición válida; se usa header-right`, 'latex');
+  }
+  for (const filter of [...filters.semantic, ...filters.user, ...filters.flags, ...filters.latex]) {
+    extraArgs.push('--lua-filter', filter);
+  }
+  if (bibFiles.length > 0) {
+    extraArgs.push('--biblatex');
+    for (const bib of bibFiles) {
+      extraArgs.push('--bibliography', bib);
+    }
+  }
+  if (!isIntervention) {
+    const title = resolveStringField(fm, formatCfg, siteConfig, 'title') ?? 'Sin título';
+    extraArgs.push(titleArg(title));
+    const creator = parseAuthors(resolveMetadataField(fm, formatCfg, siteConfig, 'creator'));
+    extraArgs.push(...creatorArgs(creator));
+    const subtitle = resolveStringField(fm, formatCfg, siteConfig, 'subtitle');
+    if (subtitle) extraArgs.push(`--metadata=subtitle:${subtitle}`);
+    const dateStr = resolveStringField(fm, formatCfg, siteConfig, 'date');
+    if (dateStr) extraArgs.push(...dateArg(dateStr));
+  }
+  const publishers = fmStringList(resolveMetadataField(fm, formatCfg, siteConfig, 'publisher'));
+  if (publishers) extraArgs.push(...publisherArg(publishers));
+  return extraArgs;
+}
+
+function buildInterventionTitleOverrides(interventionOverrides: {
+  title: string;
+  creator: string[];
+  subtitle: string;
+  date: string;
+}): Record<string, string> {
+  return {
+    title: interventionOverrides.title,
+    creator: interventionOverrides.creator.join(' \\and '),
+    subtitle: interventionOverrides.subtitle,
+    date: interventionOverrides.date,
+  };
+}
+
+function buildNormalTitleOverrides(title: string, creator: string[], subtitle: string | undefined, date: string | undefined): Record<string, string> {
+  const overrides: Record<string, string> = {};
+  if (title) overrides.title = title;
+  if (creator.length > 0) overrides.creator = creator.join(' \\and ');
+  if (subtitle) overrides.subtitle = subtitle;
+  if (date) overrides.date = date;
+  return overrides;
+}
+
 export async function markdownToLatex(
   content: string,
   doc: BuildDocument,
@@ -253,6 +321,8 @@ export async function markdownToLatex(
   const interventionOverrides = applyInterventionOverrides(fm, doc.frontmatter.type);
   const title = interventionOverrides?.title ?? resolveStringField(fm, formatCfg, siteConfig, 'title') ?? 'Sin título';
   const creator = interventionOverrides?.creator ?? parseAuthors(resolveMetadataField(fm, formatCfg, siteConfig, 'creator'));
+  const subtitle = interventionOverrides?.subtitle ?? resolveStringField(fm, formatCfg, siteConfig, 'subtitle');
+  const date = interventionOverrides?.date ?? (await pdfDate(fm, formatCfg, siteConfig, doc));
 
   let imageMap = new Map<string, string>();
   let processedImages: string[] = [];
@@ -261,37 +331,28 @@ export async function markdownToLatex(
     ({ imageMap, processedImages, finalContent } = await preprocessDocumentImages(content, doc, effectiveFm, pageDimensions, cropActive, pdfxActive));
   }
 
-  const extraArgs = ['--template', templatePath, '--top-level-division', 'section', '--shift-heading-level-by=2'];
-  extraArgs.push(`--metadata=babel-lang:${babelOptionsForLang(siteConfig.language, warnedLangs)}`);
-  extraArgs.push(`--metadata=biblatex-available:${biblatexAvailable}`);
-  const pageNumber = resolveStringField(fm, formatCfg, siteConfig, 'pageNumber');
-  const pageCommand = pageNumberCommandFor(pageNumber ?? 'header-right');
-  if (pageCommand) {
-    extraArgs.push(`--metadata=page-number-command:${pageCommand}`);
-  } else if (pageNumber) {
-    logWarning(`pageNumber "${pageNumber}" no es una posición válida; se usa header-right`, 'latex');
-  }
-  for (const filter of [...filters.semantic, ...filters.user, ...filters.flags, ...filters.latex]) {
-    extraArgs.push('--lua-filter', filter);
-  }
-  if (bibFiles.length > 0) {
-    extraArgs.push('--biblatex');
-    for (const bib of bibFiles) {
-      extraArgs.push('--bibliography', bib);
-    }
-  }
-  extraArgs.push(titleArg(title));
+  const extraArgs = buildPandocArgs(
+    templatePath,
+    siteConfig,
+    warnedLangs,
+    biblatexAvailable,
+    filters,
+    bibFiles,
+    fm,
+    formatCfg,
+    !!interventionOverrides,
+  );
   await pushCoverImageMetadata(extraArgs, effectiveFm, doc, imageMap);
-  extraArgs.push(...creatorArgs(creator));
-  const publishers = fmStringList(resolveMetadataField(fm, formatCfg, siteConfig, 'publisher'));
-  if (publishers) extraArgs.push(...publisherArg(publishers));
-  const date = await pdfDate(fm, formatCfg, siteConfig, doc);
-  extraArgs.push(...dateArg(date));
 
   const courtesyPage = resolveBooleanField(fm, formatCfg, siteConfig, 'courtesyPage') === true;
   if (courtesyPage) extraArgs.push('--metadata=courtesy-page:true');
+  if (interventionOverrides?.intervention) extraArgs.push('--metadata=intervention:true');
 
   const titleOverrides = buildTitlePageOverrides(fm, formatCfg, siteConfig, doc);
+  const interventionTitleOverrides = interventionOverrides
+    ? buildInterventionTitleOverrides(interventionOverrides)
+    : buildNormalTitleOverrides(title, creator, subtitle, date);
+  Object.assign(titleOverrides, interventionTitleOverrides);
   let pandocContent = prependFrontmatterYaml(finalContent, titleOverrides, imageMap, dirname(doc.filePath));
 
   if (interventionOverrides && interventionOverrides.extraPages > 0) {
