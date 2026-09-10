@@ -22,7 +22,7 @@ const hash = createHash('md5').update(url).digest('hex');
 const svgPath = `${outDir}/qr-${hash}.svg`;
 const pngPath = `${outDir}/qr-${hash}.png`;
 
-const result = await writeBarcode(url, { format: 'QRCode', scale: 10 });
+const result = await writeBarcode(url, { format: 'QRCode', scale: 10, addQuietZones: false });
 if (!result.svg) process.exit(1);
 
 await Bun.write(svgPath, result.svg);
