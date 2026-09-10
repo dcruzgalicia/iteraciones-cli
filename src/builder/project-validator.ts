@@ -165,8 +165,8 @@ function validateInterventionType(parsed: Record<string, unknown>): ValidationIs
     return [{ severity: 'error', message: 'frontmatter: "pages" debe ser un entero positivo (1, 2, 3, ...)' }];
   }
   const lineLength = parsed.lineLength;
-  if (lineLength !== undefined && (typeof lineLength !== 'number' || !Number.isInteger(lineLength) || lineLength < 1)) {
-    return [{ severity: 'error', message: 'frontmatter: "lineLength" debe ser un entero positivo (1, 2, 3, ...)' }];
+  if (lineLength !== undefined && (typeof lineLength !== 'number' || lineLength <= 0 || lineLength > 1)) {
+    return [{ severity: 'error', message: 'frontmatter: "lineLength" debe ser un número entre 0 y 1 (ej. 0.5, 0.7, 1)' }];
   }
   return [];
 }
