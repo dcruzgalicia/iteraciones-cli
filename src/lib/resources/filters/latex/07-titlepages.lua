@@ -285,14 +285,11 @@ local function serialize_titleback(blocks)
         text_latex = pandoc.write(pandoc.Pandoc(text_parts), 'latex')
         text_latex = text_latex:gsub('%s+$', '')
       end
-      if width then
-        table.insert(out, pandoc.RawBlock('latex', '\\renewcommand{\\dictumwidth}{' .. width .. '\\textwidth}'))
-      end
       local cmd = '\\dictum'
       if author and author:match('%S') then
         cmd = cmd .. '[' .. author .. ']'
       end
-      cmd = cmd .. '{' .. text_latex .. '}'
+      cmd = cmd .. '{' .. text_latex .. '}{' .. (width or '') .. '}'
       table.insert(out, pandoc.RawBlock('latex', cmd))
     elseif b.t == 'Div' and b.classes and textsize_class(b) then
       table.insert(out, textsize_div_to_rawlatex(b))

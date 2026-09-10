@@ -10,10 +10,11 @@
   \leftmargin=\dimexpr\linewidth-\dictumwidth\relax
   \rightmargin=\z@
 }
-\renewcommand{\dictum}[2][]{%
+\renewcommand{\dictum}[3][]{%
   \par
   \@nobreakfalse
   \begingroup
+    \ifx\relax#3\relax\else\renewcommand{\dictumwidth}{#3\textwidth}\fi
     \list{}{%
       \itemsep=\z@
       \parsep=\z@
