@@ -189,39 +189,6 @@ local function textsize_div_to_rawlatex(div)
   return pandoc.RawBlock('latex', '{\\' .. cls .. ' ' .. body .. '}')
 end
 
-local function script_path()
-  local info = debug.getinfo(1, 'S')
-  local path = info.source:match('^@(.*)')
-  if not path then return nil end
-  return path:match('^(.*)/')
-end
-
-local FILTER_DIR = script_path()
-local QRCODE_SCRIPT = FILTER_DIR and (FILTER_DIR .. '/../../../qr-gen.ts') or nil
-
-local function qr_span_to_rawlatex(span)
-  if FORMAT ~= 'latex' then return nil end
-  local url = ''
-  for _, inl in ipairs(span.content) do
-    if inl.t == 'Str' then url = url .. inl.text
-    elseif inl.t == 'Space' then url = url .. ' ' end
-  end
-  if url == '' or not QRCODE_SCRIPT then return nil end
-  local width = span.attributes.width or '3cm'
-  local project_root = os.getenv('ITERACIONES_PROJECT_ROOT')
-  if not project_root or project_root == '' then return nil end
-  local outDir = project_root .. '/.iteraciones/processed-images'
-  local handle = io.popen('echo ' .. url .. ' | bun run ' .. QRCODE_SCRIPT .. ' ' .. outDir)
-  local pngPath = handle:read('*a')
-  handle:close()
-  pngPath = pngPath:gsub('%s+$', '')
-  if pngPath == '' or not pngPath:match('%.png$') then return nil end
-  local jpgPath = pngPath:gsub('%.png$', '.jpg')
-  os.execute('magick "' .. pngPath .. '" -density 300 -units PixelsPerInch -quality 100 "' .. jpgPath .. '"')
-  os.execute('rm -f "' .. pngPath .. '" "' .. pngPath:gsub('%.png$', '.svg') .. '"')
-  return pandoc.RawInline('latex', '\\includegraphics[width=' .. width .. ']{' .. jpgPath .. '}')
-end
-
 local function walk_inlines(inls)
   local out = {}
   for _, el in ipairs(inls) do
@@ -231,9 +198,6 @@ local function walk_inlines(inls)
       table.insert(out, uppercase_span_to_rawlatex(el))
     elseif el.t == 'Span' and textsize_class(el) then
       table.insert(out, textsize_span_to_rawlatex(el))
-    elseif el.t == 'Span' and el.classes:find('qr', 1, true) then
-      local raw = qr_span_to_rawlatex(el)
-      if raw then table.insert(out, raw) else table.insert(out, el) end
     else
       table.insert(out, el)
     end
