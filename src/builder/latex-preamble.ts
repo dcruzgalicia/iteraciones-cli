@@ -216,6 +216,9 @@ export async function composeLatexTemplate(opts: { toc: boolean; preambleFilters
   lines.push('$if(courtesy-page)$');
   lines.push('\\courtepagetrue');
   lines.push('$endif$');
+  lines.push('$if(intervention)$');
+  lines.push('\\def\\interventionflag{*}');
+  lines.push('$endif$');
   lines.push('\\title{$title$}');
   lines.push('$if(titleImage)$');
   lines.push('\\titleimage{$titleImage$}');
