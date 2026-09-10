@@ -191,9 +191,9 @@ function interventionSectionRaw(): string {
   const rule = '\\rule{0.5\\textwidth}{0.4pt}';
   return `\`\`\`{=latex}
 \\chapter{${rule}}
-{\\normalfont\\footnotesize\\centering Nombre\\par}
+\\raisebox{12pt}{\\normalfont\\footnotesize\\centering Nombre\\par}
 \\section{${rule}}
-{\\normalfont\\footnotesize\\centering Título\\par}
+\\raisebox{12pt}{\\normalfont\\footnotesize\\centering Título\\par}
 \`\`\``;
 }
 
