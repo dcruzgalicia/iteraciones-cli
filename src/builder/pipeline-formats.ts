@@ -192,6 +192,8 @@ function interventionSectionRaw(): string {
   return `\`\`\`{=latex}
 \\chapter{${rule}}
 \\raisebox{12pt}{\\makebox[\\textwidth][c]{\\normalfont\\footnotesize Nombre}}
+\\RedeclareSectionCommand[style=chapter,beforeskip=0pt,afterskip=0pt,afterindent=false]{chapter}
+\\RedeclareSectionCommand[style=section,beforeskip=0pt,afterskip=\\baselineskip,afterindent=false]{section}
 \\section{${rule}}
 \\raisebox{12pt}{\\makebox[\\textwidth][c]{\\normalfont\\footnotesize Título}}
 \`\`\``;
