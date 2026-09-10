@@ -50,8 +50,7 @@ function Span(span)
   os.execute('magick "' .. pngPath .. '" -density 300 -units PixelsPerInch -quality 100 "' .. jpgPath .. '"')
   os.execute('rm -f "' .. pngPath .. '" "' .. pngPath:gsub('%.png$', '.svg') .. '"')
 
-  local jpgName = jpgPath:match('([^/]+)$')
-  local img = pandoc.Image('', jpgName)
+  local img = pandoc.Image('', jpgPath)
   img.attr = pandoc.Attr('', {}, { { 'width', width } })
   return img
 end
