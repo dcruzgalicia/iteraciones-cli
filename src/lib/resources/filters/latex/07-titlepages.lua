@@ -210,7 +210,7 @@ local function qr_span_to_rawlatex(span)
   local width = span.attributes.width or '3cm'
   local project_root = os.getenv('ITERACIONES_PROJECT_ROOT')
   if not project_root or project_root == '' then return nil end
-  local outDir = project_root .. '/dist/files'
+  local outDir = project_root .. '/.iteraciones/processed-images'
   local handle = io.popen('echo ' .. url .. ' | bun run ' .. QRCODE_SCRIPT .. ' ' .. outDir)
   local pngPath = handle:read('*a')
   handle:close()
