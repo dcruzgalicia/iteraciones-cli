@@ -68,7 +68,7 @@ local function resolve_dictum_width(div)
   return num
 end
 
-local function process_dictum(div)
+local function process_dictum(div, width)
   local quote_blocks = {}
   local author_latex = ''
   for _, block in ipairs(div.content) do
@@ -79,8 +79,6 @@ local function process_dictum(div)
       for _, b in ipairs(block.content) do
         if b.t == 'Para' then
           if para_count > 0 and #inlines > 0 then
-            -- Varios párrafos de autor: separarlos con espacio (antes se
-            -- concatenaban sin separador: "Autor UnoAutor Dos")
             table.insert(inlines, pandoc.Space())
           end
           para_count = para_count + 1
@@ -92,7 +90,6 @@ local function process_dictum(div)
       if all_paras and #inlines > 0 then
         author_latex = inlines_to_latex(inlines)
       else
-        -- autor con estructura compleja: se conserva dentro de la cita
         table.insert(quote_blocks, block)
       end
     else
@@ -100,43 +97,44 @@ local function process_dictum(div)
     end
   end
 
-  -- Apertura: \dictum[autor]{  (sin vspace externo)
   local opening = '\\dictum'
   if author_latex ~= '' then
     opening = opening .. '[' .. author_latex .. ']'
   end
   opening = opening .. '{'
+  local width_arg = '{' .. width .. '}'
   local closing = '}'
 
-  -- Sin contenido: solo los RawBlocks
   if #quote_blocks == 0 then
     return {
       pandoc.RawBlock('latex', opening),
       pandoc.RawBlock('latex', closing),
+      pandoc.RawBlock('latex', width_arg),
     }
   end
 
-  -- Mismo orden de RawInline/RawBlock
   local result = {}
   for i, block in ipairs(quote_blocks) do
     local is_first = i == 1
     local is_last = i == #quote_blocks
     if block.t == 'Para' then
       if is_first then table.insert(block.content, 1, pandoc.RawInline('latex', opening)) end
-      if is_last then table.insert(block.content, pandoc.RawInline('latex', closing)) end
+      if is_last then
+        table.insert(block.content, pandoc.RawInline('latex', closing))
+        table.insert(block.content, pandoc.RawInline('latex', width_arg))
+      end
       table.insert(result, block)
-    elseif is_first and is_last then
-      table.insert(result, block)
-      table.insert(result, pandoc.RawBlock('latex', opening))
-      table.insert(result, pandoc.RawBlock('latex', closing))
-    elseif is_first then
-      table.insert(result, block)
-      table.insert(result, pandoc.RawBlock('latex', opening))
-    elseif is_last then
-      table.insert(result, block)
-      table.insert(result, pandoc.RawBlock('latex', closing))
     else
-      table.insert(result, block)
+      if is_first then
+        table.insert(result, block)
+        table.insert(result, pandoc.RawBlock('latex', opening))
+      elseif is_last then
+        table.insert(result, block)
+        table.insert(result, pandoc.RawBlock('latex', closing))
+        table.insert(result, pandoc.RawBlock('latex', width_arg))
+      else
+        table.insert(result, block)
+      end
     end
   end
   return result
@@ -149,12 +147,8 @@ function Pandoc(doc)
   local last_was_dictum = false
   for _, block in ipairs(doc.blocks) do
     if has_class(block, 'dictum') then
-      local width = resolve_dictum_width(block)
-      if width then
-        local renewcommand = '\\renewcommand{\\dictumwidth}{' .. width .. '\\textwidth}'
-        table.insert(result, pandoc.RawBlock('latex', renewcommand))
-      end
-      local expanded = process_dictum(block)
+      local width = resolve_dictum_width(block) or DEFAULT_WIDTH
+      local expanded = process_dictum(block, width)
       for _, b in ipairs(expanded) do table.insert(result, b) end
       last_was_dictum = true
     elseif last_was_dictum and block.t == 'Para' then
