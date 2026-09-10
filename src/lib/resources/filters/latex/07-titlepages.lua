@@ -219,8 +219,7 @@ local function qr_span_to_rawlatex(span)
   local jpgPath = pngPath:gsub('%.png$', '.jpg')
   os.execute('magick "' .. pngPath .. '" -density 300 -units PixelsPerInch -quality 100 "' .. jpgPath .. '"')
   os.execute('rm -f "' .. pngPath .. '" "' .. pngPath:gsub('%.png$', '.svg') .. '"')
-  local jpgName = jpgPath:match('([^/]+)$')
-  return pandoc.RawInline('latex', '\\includegraphics[width=' .. width .. ']{' .. jpgName .. '}')
+  return pandoc.RawInline('latex', '\\includegraphics[width=' .. width .. ']{' .. jpgPath .. '}')
 end
 
 local function walk_inlines(inls)
