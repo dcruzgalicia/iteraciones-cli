@@ -190,12 +190,14 @@ async function readCollectionFiles(
 function interventionSectionRaw(): string {
   const rule = '\\rule{0.5\\textwidth}{0.4pt}';
   return `\`\`\`{=latex}
+\\RedeclareSectionCommand[style=chapter,beforeskip=2\\baselineskip,afterskip=0pt,afterindent=false]{chapter}
+\\RedeclareSectionCommand[style=section,beforeskip=0pt,afterskip=1pt,afterindent=false]{section}
 \\chapter{${rule}}
 \\raisebox{12pt}{\\makebox[\\textwidth][c]{\\normalfont\\footnotesize Nombre}}
-\\RedeclareSectionCommand[style=chapter,beforeskip=0pt,afterskip=0pt,afterindent=false]{chapter}
-\\RedeclareSectionCommand[style=section,beforeskip=0pt,afterskip=\\baselineskip,afterindent=false]{section}
 \\section{${rule}}
 \\raisebox{12pt}{\\makebox[\\textwidth][c]{\\normalfont\\footnotesize Título}}
+\\RedeclareSectionCommand[style=chapter,beforeskip=2\\baselineskip,afterskip=\\baselineskip,afterindent=false]{chapter}
+\\RedeclareSectionCommand[style=section,beforeskip=2\\baselineskip,afterskip=2\\baselineskip,afterindent=false]{section}
 \`\`\``;
 }
 
