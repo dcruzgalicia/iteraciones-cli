@@ -38,7 +38,7 @@ function Span(span)
   local project_root = os.getenv('ITERACIONES_PROJECT_ROOT')
   if not project_root or project_root == '' then return nil end
 
-  local outDir = project_root .. '/dist/qr'
+  local outDir = project_root .. '/dist/files'
 
   local handle = io.popen('echo ' .. url .. ' | bun run ' .. QRCODE_SCRIPT .. ' ' .. outDir)
   local pngPath = handle:read('*a')
@@ -48,8 +48,10 @@ function Span(span)
 
   local jpgPath = pngPath:gsub('%.png$', '.jpg')
   os.execute('magick "' .. pngPath .. '" -density 300 -units PixelsPerInch -quality 100 "' .. jpgPath .. '"')
+  os.execute('rm -f "' .. pngPath .. '" "' .. pngPath:gsub('%.png$', '.svg') .. '"')
 
-  local img = pandoc.Image('', jpgPath)
+  local jpgName = jpgPath:match('([^/]+)$')
+  local img = pandoc.Image('', jpgName)
   img.attr = pandoc.Attr('', {}, { { 'width', width } })
   return img
 end
