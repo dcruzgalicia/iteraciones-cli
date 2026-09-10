@@ -179,7 +179,13 @@
     \fi
   \fi
   \ifx\@author\@empty\else
-    {\centering\parindent\z@\usekomafont{author}{\renewcommand{\and}{\unskip, \ignorespaces}\@author\par}}%
+    {\centering\parindent\z@\usekomafont{author}{\renewcommand{\and}{\unskip, \ignorespaces}%
+      \ifx\interventionflag\@empty
+        \@author%
+      \else
+        \@author\par\vskip 0.5\baselineskip\textit{Nombre}%
+      \fi
+      \par}}%
   \fi
   \vskip 1\baselineskip
   \ifx\@author\@empty
@@ -193,7 +199,8 @@
     \ifx\interventionflag\@empty
       {\centering\parindent\z@\usekomafont{title}{\MakeUppercase{\@title}\par}}%
     \else
-      {\centering\parindent\z@\usekomafont{title}{\@title\par}}%
+      {\centering\parindent\z@\usekomafont{title}{%
+        \@title\par\vskip 0.5\baselineskip\textit{Título}\par}}%
     \fi
   \else
     {\centering\titleimagerender{\@titleimage}\par}%
