@@ -36,7 +36,7 @@ export async function readMarkdownOrWarn(doc: BuildDocument): Promise<string | n
     throw new BuildError(`no se pudo leer "${doc.filePath}": ${translateSystemError(err, 'verifica que el nombre del archivo sea correcto')}`);
   }
   const { yaml, body } = splitFrontmatter(content);
-  if (!body.trim() && doc.frontmatter.type !== 'collection') {
+  if (!body.trim() && doc.frontmatter.type !== 'collection' && doc.frontmatter.type !== 'intervention') {
     logWarning(
       yaml !== undefined
         ? `"${doc.filePath}" no tiene contenido después del frontmatter; se omite del build`

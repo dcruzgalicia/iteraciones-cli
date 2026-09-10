@@ -2,21 +2,24 @@ import { join } from 'node:path';
 import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 
-export type PreambleDocType = 'file' | 'collection' | 'creator';
+export type PreambleDocType = 'file' | 'collection' | 'creator' | 'intervention';
 
 const PKG_PREAMBLE_DIR = join(import.meta.dir, '../lib/resources/preamble');
 const PKG_PREAMBLE_COLLECTION_DIR = join(import.meta.dir, '../lib/resources/preamble-collection');
 const PKG_PREAMBLE_CREATOR_DIR = join(import.meta.dir, '../lib/resources/preamble-creator');
+const PKG_PREAMBLE_INTERVENTION_DIR = join(import.meta.dir, '../lib/resources/preamble-intervention');
 
 function preamblePkgDir(docType: PreambleDocType): string {
   if (docType === 'collection') return PKG_PREAMBLE_COLLECTION_DIR;
   if (docType === 'creator') return PKG_PREAMBLE_CREATOR_DIR;
+  if (docType === 'intervention') return PKG_PREAMBLE_INTERVENTION_DIR;
   return PKG_PREAMBLE_DIR;
 }
 
 function preambleProjectDir(docType: PreambleDocType): string {
   if (docType === 'collection') return 'preamble-collection';
   if (docType === 'creator') return 'preamble-creator';
+  if (docType === 'intervention') return 'preamble-intervention';
   return 'preamble';
 }
 

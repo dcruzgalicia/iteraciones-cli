@@ -23,7 +23,7 @@ export interface IngestedFrontmatter {
   date: string | undefined;
   creator: string[];
   manualSlug: string | undefined;
-  type: 'file' | 'collection' | 'creator' | undefined;
+  type: 'file' | 'collection' | 'creator' | 'intervention' | undefined;
   files: string[] | undefined;
   fm: Record<string, unknown> | undefined;
 }
@@ -40,7 +40,8 @@ function normalizeFrontmatterRecord(record: Record<string, unknown>, relativePat
       logWarning(`${relativePath}: ${issue.message}`, 'discover');
     }
   }
-  const type = record.type === 'file' || record.type === 'collection' || record.type === 'creator' ? record.type : undefined;
+  const type =
+    record.type === 'file' || record.type === 'collection' || record.type === 'creator' || record.type === 'intervention' ? record.type : undefined;
   const files = Array.isArray(record.files) && record.files.every((f) => typeof f === 'string') ? (record.files as string[]) : undefined;
   let rawTitle = record.title;
   if (type === 'creator' && (typeof rawTitle !== 'string' || rawTitle === '') && typeof record.name === 'string') {

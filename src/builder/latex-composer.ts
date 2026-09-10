@@ -194,6 +194,17 @@ function buildTitlePageOverrides(
   return overrides;
 }
 
+function applyInterventionOverrides(
+  fm: Record<string, unknown>,
+  docType: string | undefined,
+): { title: string; creator: string[]; extraPages: number } | null {
+  if (docType !== 'intervention') return null;
+  const lineLength = typeof fm.lineLength === 'number' && fm.lineLength > 0 ? fm.lineLength : 40;
+  const underscores = '\\_'.repeat(lineLength);
+  const pages = typeof fm.pages === 'number' && fm.pages > 0 ? fm.pages : 1;
+  return { title: underscores, creator: [underscores], extraPages: pages };
+}
+
 function yamlScalar(value: string): string {
   if (!value.includes('\n')) {
     const escaped = value.replace(/'/g, "''");
@@ -239,8 +250,9 @@ export async function markdownToLatex(
     cwd = '',
   } = opts;
   const effectiveFm = mergeConfigImages(fm, formatCfg, siteConfig, cwd);
-  const title = resolveStringField(fm, formatCfg, siteConfig, 'title') ?? 'Sin título';
-  const creator = parseAuthors(resolveMetadataField(fm, formatCfg, siteConfig, 'creator'));
+  const interventionOverrides = applyInterventionOverrides(fm, doc.frontmatter.type);
+  const title = interventionOverrides?.title ?? resolveStringField(fm, formatCfg, siteConfig, 'title') ?? 'Sin título';
+  const creator = interventionOverrides?.creator ?? parseAuthors(resolveMetadataField(fm, formatCfg, siteConfig, 'creator'));
 
   let imageMap = new Map<string, string>();
   let processedImages: string[] = [];
@@ -280,7 +292,11 @@ export async function markdownToLatex(
   if (courtesyPage) extraArgs.push('--metadata=courtesy-page:true');
 
   const titleOverrides = buildTitlePageOverrides(fm, formatCfg, siteConfig, doc);
-  const pandocContent = prependFrontmatterYaml(finalContent, titleOverrides, imageMap, dirname(doc.filePath));
+  let pandocContent = prependFrontmatterYaml(finalContent, titleOverrides, imageMap, dirname(doc.filePath));
+
+  if (interventionOverrides && interventionOverrides.extraPages > 0) {
+    pandocContent += `\n\n${'\\clearpage\n'.repeat(interventionOverrides.extraPages)}`;
+  }
 
   const tex = await execPandoc({
     input: pandocContent,

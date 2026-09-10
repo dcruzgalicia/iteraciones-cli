@@ -61,6 +61,7 @@ export interface EffectiveTemplates {
   latexTemplatePath: string;
   latexCollectionTemplatePath: string;
   latexCreatorTemplatePath: string;
+  latexInterventionTemplatePath: string;
   refsCardTemplate: string;
 }
 
@@ -81,6 +82,7 @@ export async function writeEffectiveTemplates(
     latexTemplatePath: '',
     latexCollectionTemplatePath: '',
     latexCreatorTemplatePath: '',
+    latexInterventionTemplatePath: '',
     refsCardTemplate: '',
   };
 
@@ -90,6 +92,7 @@ export async function writeEffectiveTemplates(
   state.latexTemplatePath = join(templatesDir, 'latex.tex');
   state.latexCollectionTemplatePath = join(templatesDir, 'latex-collection.tex');
   state.latexCreatorTemplatePath = join(templatesDir, 'latex-creator.tex');
+  state.latexInterventionTemplatePath = join(templatesDir, 'latex-intervention.tex');
   state.refsCardTemplate = await loadReferencesCardTemplate();
 
   if (htmlOn) {
@@ -120,6 +123,14 @@ export async function writeEffectiveTemplates(
     const creatorPageDimensions = detectPageSize(creatorPreambleFilters);
     applyPrintQueueDynamics(creatorPreambleFilters, creatorPageDimensions);
     await writeIfChanged(state.latexCreatorTemplatePath, await composeLatexTemplate({ ...templateOpts, preambleFilters: creatorPreambleFilters }));
+
+    const interventionPreambleFilters = await loadPreambleFilters(effectiveDisabledPreamble, ctx.cwd, 'intervention');
+    const interventionPageDimensions = detectPageSize(interventionPreambleFilters);
+    applyPrintQueueDynamics(interventionPreambleFilters, interventionPageDimensions);
+    await writeIfChanged(
+      state.latexInterventionTemplatePath,
+      await composeLatexTemplate({ ...templateOpts, preambleFilters: interventionPreambleFilters }),
+    );
   }
   return state;
 }
@@ -153,6 +164,7 @@ export interface ExportContext {
   latexTemplatePath: string;
   latexCollectionTemplatePath: string;
   latexCreatorTemplatePath: string;
+  latexInterventionTemplatePath: string;
   refsCardTemplate: string;
 }
 
@@ -197,6 +209,7 @@ export async function buildPoolContexts(
     latexTemplatePath: templates.latexTemplatePath,
     latexCollectionTemplatePath: templates.latexCollectionTemplatePath,
     latexCreatorTemplatePath: templates.latexCreatorTemplatePath,
+    latexInterventionTemplatePath: templates.latexInterventionTemplatePath,
     refsCardTemplate: templates.refsCardTemplate,
   };
   const formatWorkSets: FormatWorkSets = {
