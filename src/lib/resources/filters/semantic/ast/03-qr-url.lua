@@ -3,7 +3,15 @@
 -- Requiere: zxing-wasm (bun add zxing-wasm) y ImageMagick (magick).
 -- Uso: pandoc --from markdown --to json --lua-filter semantic/ast/03-qr-url.lua
 
-local QRCODE_SCRIPT = 'src/lib/qr-gen.ts'
+local function script_path()
+  local info = debug.getinfo(1, 'S')
+  local path = info.source:match('^@(.*)')
+  if not path then return nil end
+  return path:match('^(.*)/')
+end
+
+local FILTER_DIR = script_path()
+local QRCODE_SCRIPT = FILTER_DIR and (FILTER_DIR .. '/../../../../qr-gen.ts') or nil
 
 function Span(span)
   local has_qr = false
