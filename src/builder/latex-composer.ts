@@ -356,7 +356,7 @@ export async function markdownToLatex(
   let pandocContent = prependFrontmatterYaml(finalContent, titleOverrides, imageMap, dirname(doc.filePath));
 
   if (interventionOverrides && interventionOverrides.extraPages > 0) {
-    pandocContent += `\n\n${'\\clearpage\n'.repeat(interventionOverrides.extraPages)}`;
+    pandocContent += `\n\n${'\\null\\newpage\n'.repeat(interventionOverrides.extraPages)}`;
   }
 
   const tex = await execPandoc({
