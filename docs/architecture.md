@@ -102,6 +102,7 @@ Además, existen los **preamble filters** (`src/lib/resources/preamble/*.tex`) q
 |--------|------|-------------------|
 | `semantic/string/01-double-colon` | string | `::` → `Div.spacer` |
 | `semantic/ast/02-double-colon-noindent` | ast | `:;` → `Div.spacer noindent` |
+| `semantic/ast/03-qr-url` | ast | `[url]{.qr}` → imagen JPG 300dpi (zxing-wasm + ImageMagick) |
 | `latex/01-spacer` | ast | `Div.spacer` → `\vspace{\baselineskip}` (+`\noindent` si noindent) |
 | `latex/02-dictum` | ast | `Div.dictum` → `\dictum[author]{quote}` |
 | `latex/03-verse` | ast | `Div.verse` → `\begin{verse}...\end{verse}` |
