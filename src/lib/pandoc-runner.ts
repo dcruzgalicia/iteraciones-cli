@@ -1,3 +1,4 @@
+import { dirname } from 'node:path';
 import { PANDOC_ERROR_CODES, PandocError } from './errors.js';
 import { exec, ProcessSpawnError, ProcessTimeoutError, type RunResult } from './run.js';
 
@@ -56,7 +57,9 @@ export async function execPandoc(options: PandocOptions): Promise<string> {
 
   let result: RunResult;
   try {
-    result = await exec('pandoc', args, { input: options.input, timeoutMs: PANDOC_TIMEOUT_MS, env: options.env });
+    const projectRoot = dirname(options.sourcePath);
+    const env = { ITERACIONES_PROJECT_ROOT: projectRoot, ...options.env };
+    result = await exec('pandoc', args, { input: options.input, timeoutMs: PANDOC_TIMEOUT_MS, env });
   } catch (err) {
     if (err instanceof ProcessSpawnError) {
       throw new PandocError(

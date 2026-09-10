@@ -1,4 +1,5 @@
 -- Genera código QR como imagen JPG 300dpi a partir de [url]{.qr width="Xcm"}.
+-- Imagen generada en dist/qr/ del proyecto (content-addressed por hash MD5 de la URL).
 -- Requiere: zxing-wasm (bun add zxing-wasm) y ImageMagick (magick).
 -- Uso: pandoc --from markdown --to json --lua-filter semantic/ast/03-qr-url.lua
 
@@ -26,7 +27,12 @@ function Span(span)
 
   local width = span.attributes.width or '3cm'
 
-  local handle = io.popen('echo ' .. url .. ' | bun run ' .. QRCODE_SCRIPT)
+  local project_root = os.getenv('ITERACIONES_PROJECT_ROOT')
+  if not project_root or project_root == '' then return nil end
+
+  local outDir = project_root .. '/dist/qr'
+
+  local handle = io.popen('echo ' .. url .. ' | bun run ' .. QRCODE_SCRIPT .. ' ' .. outDir)
   local pngPath = handle:read('*a')
   handle:close()
   pngPath = pngPath:gsub('%s+$', '')
