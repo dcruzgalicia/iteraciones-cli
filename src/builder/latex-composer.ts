@@ -201,8 +201,8 @@ function applyInterventionOverrides(
   if (docType !== 'intervention') return null;
   const lineLength = typeof fm.lineLength === 'number' && fm.lineLength > 0 ? fm.lineLength : 0.5;
   const pages = typeof fm.pages === 'number' && fm.pages > 0 ? fm.pages : 1;
-  const rule = `$\\rule{${lineLength}\\textwidth}{0.4pt}$`;
-  return { title: rule, creator: [rule], subtitle: 'Título', date: 'Nombre', extraPages: pages, intervention: true };
+  const rule = `\\rule{${lineLength}\\textwidth}{0.4pt}`;
+  return { title: rule, creator: [rule], subtitle: '', date: '', extraPages: pages, intervention: true };
 }
 
 function yamlScalar(value: string): string {
