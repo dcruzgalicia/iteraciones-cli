@@ -187,10 +187,14 @@ async function readCollectionFiles(
   return entries;
 }
 
-function interventionSectionEntry(): { creator: string; title: string } {
-  const creator = '$\\rule{0.5\\textwidth}{0.4pt}$\n\\textit{Nombre}';
-  const title = '$\\rule{0.5\\textwidth}{0.4pt}$\n\\textit{Título}';
-  return { creator, title };
+function interventionSectionRaw(): string {
+  const rule = '\\rule{0.5\\textwidth}{0.4pt}';
+  return `\`\`\`{=latex}
+\\chapter{${rule}}
+{\\normalfont\\footnotesize\\centering Nombre\\par}
+\\section{${rule}}
+{\\normalfont\\footnotesize\\centering Título\\par}
+\`\`\``;
 }
 
 function buildCollectionSectionsLatex(
@@ -201,18 +205,21 @@ function buildCollectionSectionsLatex(
   const parts: string[] = [];
   for (const e of entries) {
     const isIntervention = e.type === 'intervention';
-    const resolved = isIntervention
-      ? interventionSectionEntry()
-      : { creator: e.creator.length > 0 ? e.creator.join(', ') : 'Anónima', title: e.title || 'Sin título' };
-    parts.push(`\\chapter{${resolved.creator}}`);
-    if (isHeader) parts.push('\\thispagestyle{empty}');
-    if (e.subtitle) {
-      parts.push(`\\RedeclareSectionCommand[style=section,beforeskip=2\\baselineskip,afterskip=1\\baselineskip,afterindent=false]{section}`);
-      parts.push(`\\section{${resolved.title}}`);
-      parts.push(`\\RedeclareSectionCommand[style=section,beforeskip=2\\baselineskip,afterskip=2\\baselineskip,afterindent=false]{section}`);
-      parts.push(`\\subsection{${e.subtitle}}`);
+    if (isIntervention) {
+      parts.push(interventionSectionRaw());
     } else {
-      parts.push(`\\section{${resolved.title}}`);
+      const creator = e.creator.length > 0 ? e.creator.join(', ') : 'Anónima';
+      const title = e.title || 'Sin título';
+      parts.push(`\\chapter{${creator}}`);
+      if (isHeader) parts.push('\\thispagestyle{empty}');
+      if (e.subtitle) {
+        parts.push(`\\RedeclareSectionCommand[style=section,beforeskip=2\\baselineskip,afterskip=1\\baselineskip,afterindent=false]{section}`);
+        parts.push(`\\section{${title}}`);
+        parts.push(`\\RedeclareSectionCommand[style=section,beforeskip=2\\baselineskip,afterskip=2\\baselineskip,afterindent=false]{section}`);
+        parts.push(`\\subsection{${e.subtitle}}`);
+      } else {
+        parts.push(`\\section{${title}}`);
+      }
     }
     parts.push(e.body.trim());
   }
