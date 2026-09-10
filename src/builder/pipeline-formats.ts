@@ -76,7 +76,9 @@ async function emitLatexAndQueuePdf(
         ? exportCtx.latexCollectionTemplatePath
         : doc.frontmatter.type === 'creator'
           ? exportCtx.latexCreatorTemplatePath
-          : exportCtx.latexTemplatePath,
+          : doc.frontmatter.type === 'intervention'
+            ? exportCtx.latexInterventionTemplatePath
+            : exportCtx.latexTemplatePath,
     fm,
     siteConfig: ctx.siteConfig,
     formatCfg: formatCfg?.pdf,
@@ -443,12 +445,12 @@ async function emitCollectionFormats(
 
   const exportDoc = assembleExportDocument(doc, renderCtx.lang, exportCtx.globalBibliography, exportCtx.globalCsl, ctx.siteConfig.toc);
 
-  if (activeFormats.html && formatWorkSets.htmlPaths.has(doc.relativePath)) {
+  if (activeFormats.html && formatWorkSets.htmlPaths.has(doc.relativePath) && doc.frontmatter.type !== 'intervention') {
     const base = collectionBaseContent(collectionEntries, 'html', content);
     await emitHtmlPage(doc, { ...outputs, content: prependLinksMarkdown(base, creatorLinks) }, renderCtx, exportCtx, discoveryIndex);
   }
 
-  if (activeFormats.epub && formatWorkSets.epubPaths.has(doc.relativePath)) {
+  if (activeFormats.epub && formatWorkSets.epubPaths.has(doc.relativePath) && doc.frontmatter.type !== 'intervention') {
     const base = collectionBaseContent(collectionEntries, 'html', content);
     await convertToEpub(
       prependLinksMarkdown(base, creatorLinks),
@@ -460,7 +462,7 @@ async function emitCollectionFormats(
     );
   }
 
-  if (activeFormats.markdown && formatWorkSets.mdPaths.has(doc.relativePath)) {
+  if (activeFormats.markdown && formatWorkSets.mdPaths.has(doc.relativePath) && doc.frontmatter.type !== 'intervention') {
     const base = collectionBaseContent(collectionEntries, 'markdown', content);
     await convertToMarkdown(
       prependLinksMarkdown(base, creatorLinks),

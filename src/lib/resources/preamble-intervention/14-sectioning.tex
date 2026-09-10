@@ -1,0 +1,17 @@
+% Estilo de secciones (\RedeclareSectionCommand para todos los niveles)
+\RedeclareSectionCommand[style=section,beforeskip=2\baselineskip,afterskip=\baselineskip,afterindent=false]{part}
+\setkomafont{part}{\normalsize\normalfont\MakeUppercase}
+\RedeclareSectionCommand[style=section,beforeskip=2\baselineskip,afterskip=\baselineskip,afterindent=false]{chapter}
+\setkomafont{chapter}{\normalsize\normalfont\scshape}
+\renewcommand{\raggedchapter}{\centering}
+\RedeclareSectionCommand[style=section,beforeskip=2\baselineskip,afterskip=2\baselineskip,afterindent=false]{section}
+\setkomafont{section}{\normalsize\normalfont\bfseries\MakeUppercase}
+\renewcommand{\raggedsection}{\centering}
+\RedeclareSectionCommand[beforeskip=2\baselineskip,afterskip=2\baselineskip,afterindent=false]{subsection}
+\setkomafont{subsection}{\normalsize\normalfont\textit}
+\RedeclareSectionCommand[beforeskip=\baselineskip,afterskip=\baselineskip,afterindent=false]{subsubsection}
+\setkomafont{subsubsection}{\normalsize\normalfont\bfseries}
+\RedeclareSectionCommand[beforeskip=\baselineskip,afterskip=\baselineskip,afterindent=false]{paragraph}
+\setkomafont{paragraph}{\normalsize\normalfont\bfseries\itshape}
+\RedeclareSectionCommand[beforeskip=\baselineskip,afterskip=\baselineskip,afterindent=false]{subparagraph}
+\setkomafont{subparagraph}{\normalsize\normalfont}

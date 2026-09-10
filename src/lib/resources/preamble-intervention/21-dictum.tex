@@ -1,0 +1,48 @@
+% Configuración de epígrafes (\dictumwidth, fuente del autor)
+\setkomafont{dictum}{\normalsize\normalfont\itshape}
+\setkomafont{dictumauthor}{\normalsize\normalfont}
+\renewcommand*{\dictumwidth}{0.5\textwidth}
+\renewcommand*{\dictumrule}{}
+\renewcommand*{\dictumauthorformat}[1]{#1}
+\renewcommand*{\raggeddictumtext}{}
+\makeatletter
+\renewcommand*{\raggeddictum}{%
+  \leftmargin=\dimexpr\linewidth-\dictumwidth\relax
+  \rightmargin=\z@
+}
+\renewcommand{\dictum}[3][]{%
+  \par
+  \@nobreakfalse
+  \begingroup
+    \ifx\relax#3\relax\else\renewcommand{\dictumwidth}{#3\textwidth}\fi
+    \list{}{%
+      \itemsep=\z@
+      \parsep=\z@
+      \partopsep=\z@
+      \topsep=2\baselineskip
+      \raggeddictum
+      \listparindent=\z@
+      \itemindent=\z@
+    }%
+    \item\relax
+    \@dictumfont
+    {%
+      \raggeddictumtext
+      #2\strut\par
+    }%
+    \def\@tempa{#1}%
+    \ifx\@tempa\@empty
+    \else
+      {%
+        \raggeddictumtext
+        \dictumrule
+      }%
+      \raggeddictumauthor
+      \@dictumauthorfont
+      \dictumauthorformat{#1}%
+      \strut\par
+    \fi
+    \endlist
+  \endgroup
+}
+\makeatother

@@ -54,6 +54,8 @@ export const KNOWN_FRONTMATTER_FIELDS = [
   'files',
   'name',
   'links',
+  'pages',
+  'lineLength',
 ];
 
 const SLUG_MANUAL_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -157,14 +159,27 @@ function validateCreatorType(parsed: Record<string, unknown>): ValidationIssue[]
   return [];
 }
 
+function validateInterventionType(parsed: Record<string, unknown>): ValidationIssue[] {
+  const pages = parsed.pages;
+  if (pages !== undefined && (typeof pages !== 'number' || !Number.isInteger(pages) || pages < 1)) {
+    return [{ severity: 'error', message: 'frontmatter: "pages" debe ser un entero positivo (1, 2, 3, ...)' }];
+  }
+  const lineLength = parsed.lineLength;
+  if (lineLength !== undefined && (typeof lineLength !== 'number' || !Number.isInteger(lineLength) || lineLength < 1)) {
+    return [{ severity: 'error', message: 'frontmatter: "lineLength" debe ser un entero positivo (1, 2, 3, ...)' }];
+  }
+  return [];
+}
+
 function validateTypeField(parsed: Record<string, unknown>): ValidationIssue[] {
   const type = parsed.type;
   if (type === undefined) return [];
-  if (type !== 'file' && type !== 'collection' && type !== 'creator') {
-    return [{ severity: 'error', message: 'frontmatter: "type" debe ser "file", "collection" o "creator"' }];
+  if (type !== 'file' && type !== 'collection' && type !== 'creator' && type !== 'intervention') {
+    return [{ severity: 'error', message: 'frontmatter: "type" debe ser "file", "collection", "creator" o "intervention"' }];
   }
   if (type === 'collection') return validateCollectionType(parsed);
   if (type === 'creator') return validateCreatorType(parsed);
+  if (type === 'intervention') return validateInterventionType(parsed);
   return [];
 }
 

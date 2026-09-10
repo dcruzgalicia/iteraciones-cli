@@ -1,0 +1,6 @@
+% Cambia titulo de bibliografia de chapter a subsubsection
+\ifcsname ver@biblatex.sty\endcsname
+  \defbibheading{bibintoc}[\refname]{%
+    \subsubsection{#1}%
+  }
+\fi
