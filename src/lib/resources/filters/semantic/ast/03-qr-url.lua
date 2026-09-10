@@ -35,5 +35,7 @@ function Span(span)
   local jpgPath = pngPath:gsub('%.png$', '.jpg')
   os.execute('magick "' .. pngPath .. '" -density 300 -units PixelsPerInch -quality 100 "' .. jpgPath .. '"')
 
-  return pandoc.Image(pandoc.Attr('', {}, { { 'width', width } }), '', jpgPath)
+  local img = pandoc.Image('', jpgPath)
+  img.attr = pandoc.Attr('', {}, { { 'width', width } })
+  return img
 end
