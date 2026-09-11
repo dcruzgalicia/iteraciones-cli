@@ -243,7 +243,8 @@ export async function composeLatexTemplate(opts: { toc: boolean; preambleFilters
   lines.push('$if(skip-paragraph-space)$');
   lines.push('$else$');
   lines.push('\\vspace*{2\\baselineskip}');
-  lines.push('$if(page-number-command)$');
+  lines.push('$if(intervention)$');
+  lines.push('$elseif(page-number-command)$');
   lines.push('$page-number-command$');
   lines.push('$endif$');
   lines.push('$endif$');

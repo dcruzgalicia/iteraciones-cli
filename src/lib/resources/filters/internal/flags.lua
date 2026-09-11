@@ -124,6 +124,7 @@ function Pandoc(doc)
   doc.blocks = nb
 
   if FORMAT == 'latex' then
+    local is_intervention = doc.meta.intervention ~= nil
     local first = doc.blocks[1]
     local section_start = first ~= nil and (is_header(first) or is_section_raw(first))
     local list_start = first ~= nil and is_list_opener(first)
@@ -140,40 +141,38 @@ function Pandoc(doc)
     -- de ese bloque (el template la omite): las páginas de la portada/TOC
     -- previas quedan sin número (layers vacíos) y la del contenido empieza
     -- numerada. Con un párrafo normal, el template la emite antes del body.
-    local page_cmd = doc.meta['page-number-command']
-    local page_cmd_text
-    if type(page_cmd) == 'string' then
-      page_cmd_text = page_cmd
-    elseif type(page_cmd) == 'table' and page_cmd.text ~= nil then
-      page_cmd_text = page_cmd.text
-    end
-    if page_cmd_text ~= nil and page_cmd_text ~= '' then
-      -- El template interpola el comando como RawInline para que no lo re-escape.
-      doc.meta['page-number-command'] = pandoc.MetaInlines({ pandoc.RawInline('latex', page_cmd_text) })
-    end
-    if skip and page_cmd_text ~= nil and page_cmd_text ~= '' then
-      -- Un RawBlock inicial puede contener varios comandos de sección fusionados
-      -- (\part{Uno}\n\chapter{Dos}\n\section{Tres} llegan como un solo bloque):
-      -- el comando de página debe ir DESPUÉS del PRIMERO, no al final del bloque.
-      -- \thispagestyle: plain (footer) anula empty de \maketitle para mostrar
-      -- número; empty (header) refuerza que no aparezca en la portada.
-      local is_footer = page_cmd_text:find('foot', 1, true) ~= nil
-      local page_style = is_footer and '\\thispagestyle{plain}' or '\\thispagestyle{empty}'
-      local function insert_page_cmd(pos)
-        table.insert(doc.blocks, pos, pandoc.RawBlock('latex', page_style))
-        table.insert(doc.blocks, pos + 1, pandoc.RawBlock('latex', page_cmd_text))
+    -- Intervention: skip page numbering entirely — \pagestyle{empty} persists
+    -- from the preamble; no page-number-command is emitted by the template.
+    if not is_intervention then
+      local page_cmd = doc.meta['page-number-command']
+      local page_cmd_text
+      if type(page_cmd) == 'string' then
+        page_cmd_text = page_cmd
+      elseif type(page_cmd) == 'table' and page_cmd.text ~= nil then
+        page_cmd_text = page_cmd.text
       end
-      if first.t == 'RawBlock' then
-        local head, rest = split_first_section_command(first.text)
-        if rest ~= nil then
-          first.text = head
-          insert_page_cmd(2)
-          table.insert(doc.blocks, 4, pandoc.RawBlock('latex', rest))
+      if page_cmd_text ~= nil and page_cmd_text ~= '' then
+        doc.meta['page-number-command'] = pandoc.MetaInlines({ pandoc.RawInline('latex', page_cmd_text) })
+      end
+      if skip and page_cmd_text ~= nil and page_cmd_text ~= '' then
+        local is_footer = page_cmd_text:find('foot', 1, true) ~= nil
+        local page_style = is_footer and '\\thispagestyle{plain}' or '\\thispagestyle{empty}'
+        local function insert_page_cmd(pos)
+          table.insert(doc.blocks, pos, pandoc.RawBlock('latex', page_style))
+          table.insert(doc.blocks, pos + 1, pandoc.RawBlock('latex', page_cmd_text))
+        end
+        if first.t == 'RawBlock' then
+          local head, rest = split_first_section_command(first.text)
+          if rest ~= nil then
+            first.text = head
+            insert_page_cmd(2)
+            table.insert(doc.blocks, 4, pandoc.RawBlock('latex', rest))
+          else
+            insert_page_cmd(2)
+          end
         else
           insert_page_cmd(2)
         end
-      else
-        insert_page_cmd(2)
       end
     end
 
