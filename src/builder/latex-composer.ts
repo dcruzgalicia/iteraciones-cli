@@ -11,7 +11,7 @@ import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
 import type { PageDimensions } from './image-processor.js';
 import { processDocumentImages, rewriteImagePaths, scanInlineImages, scanTitlePageFieldImages } from './image-processor.js';
 import { babelOptionsForLang, pageNumberCommandFor } from './latex-preamble.js';
-import { creatorArgs, dateArg, publisherArg, titleArg } from './pandoc-metadata.js';
+import { creatorArgs, publisherArg, titleArg } from './pandoc-metadata.js';
 import type { BuildDocument } from './types.js';
 
 const TITLE_PAGE_FIELDS = [
@@ -227,6 +227,10 @@ function prependFrontmatterYaml(content: string, overrides: Record<string, strin
   lines.push('---');
   let yaml = lines.join('\n');
   yaml = rewriteImagePaths(yaml, imageMap, docDir);
+  const fmEnd = content.indexOf('\n---\n');
+  if (fmEnd >= 0) {
+    return `${content.slice(0, fmEnd + 5)}\n${yaml}${content.slice(fmEnd + 5)}`;
+  }
   return `${yaml}\n${content}`;
 }
 
@@ -267,8 +271,6 @@ function buildPandocArgs(
     extraArgs.push(...creatorArgs(creator));
     const subtitle = resolveStringField(fm, formatCfg, siteConfig, 'subtitle');
     if (subtitle) extraArgs.push(`--metadata=subtitle:${subtitle}`);
-    const dateStr = resolveStringField(fm, formatCfg, siteConfig, 'date');
-    if (dateStr) extraArgs.push(...dateArg(dateStr));
   }
   const publishers = fmStringList(resolveMetadataField(fm, formatCfg, siteConfig, 'publisher'));
   if (publishers) extraArgs.push(...publisherArg(publishers));
@@ -294,7 +296,7 @@ function buildNormalTitleOverrides(title: string, creator: string[], subtitle: s
   if (title) overrides.title = title;
   if (creator.length > 0) overrides.creator = creator.join(' \\and ');
   if (subtitle) overrides.subtitle = subtitle;
-  if (date) overrides.date = date;
+  if (date !== undefined) overrides.date = date;
   return overrides;
 }
 
