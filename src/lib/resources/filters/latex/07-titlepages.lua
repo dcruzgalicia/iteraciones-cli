@@ -181,14 +181,6 @@ local function textsize_span_to_rawlatex(span)
   return pandoc.RawInline('latex', '{\\' .. cls .. ' ' .. body .. '}')
 end
 
-local function textsize_div_to_rawlatex(div)
-  local cls = textsize_class(div)
-  local preprocessed = preprocess_div_content(div.content)
-  local body = pandoc.write(pandoc.Pandoc(preprocessed), 'latex')
-  body = body:gsub('%s+$', '')
-  return pandoc.RawBlock('latex', '{\\' .. cls .. ' ' .. body .. '}')
-end
-
 local function walk_inlines(inls)
   local out = {}
   for _, el in ipairs(inls) do
@@ -240,6 +232,14 @@ local function preprocess_div_content(blocks)
     end
   end
   return out
+end
+
+local function textsize_div_to_rawlatex(div)
+  local cls = textsize_class(div)
+  local preprocessed = preprocess_div_content(div.content)
+  local body = pandoc.write(pandoc.Pandoc(preprocessed), 'latex')
+  body = body:gsub('%s+$', '')
+  return pandoc.RawBlock('latex', '{\\' .. cls .. ' ' .. body .. '}')
 end
 
 -- Serializa los bloques a LaTeX: los párrafos "::" se convierten a RawBlock
