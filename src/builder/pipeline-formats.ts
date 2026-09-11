@@ -234,9 +234,10 @@ function buildCollectionEntryLatex(
   const parts: string[] = [];
   if (e.type === 'intervention') {
     parts.push(interventionSectionRaw(e.lineLength));
+    parts.push('\\thispagestyle{empty}');
     parts.push(e.body.trim());
     if (e.pages && e.pages > 0) {
-      parts.push('\\null\\newpage\n'.repeat(e.pages).trim());
+      parts.push('\\thispagestyle{empty}\n\\null\\newpage\n'.repeat(e.pages).trim());
     }
   } else {
     const creator = e.creator.length > 0 ? e.creator.join(', ') : 'Anónima';

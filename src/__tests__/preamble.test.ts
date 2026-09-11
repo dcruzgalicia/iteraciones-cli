@@ -245,13 +245,13 @@ describe('composeLatexTemplate', () => {
 
   it('incluye el placeholder del comando de número de página (metadata page-number-command)', async () => {
     const tpl = await composeLatexTemplate(opts);
-    expect(tpl).toContain('$if(page-number-command)$\n$page-number-command$\n$endif$');
+    expect(tpl).toContain('$if(intervention)$\n$elseif(page-number-command)$\n$page-number-command$\n$endif$');
   });
 
   it('emite el comando de página solo con párrafo normal (dentro del else de skip-paragraph-space)', async () => {
     const tpl = await composeLatexTemplate(opts);
     expect(tpl).toContain(
-      '$if(skip-paragraph-space)$\n$else$\n\\vspace*{2\\baselineskip}\n$if(page-number-command)$\n$page-number-command$\n$endif$\n$endif$',
+      '$if(skip-paragraph-space)$\n$else$\n\\vspace*{2\\baselineskip}\n$if(intervention)$\n$elseif(page-number-command)$\n$page-number-command$\n$endif$\n$endif$',
     );
     expect(tpl).not.toContain('\\pagestyle{empty}');
     expect(tpl).not.toContain('\\pagestyle{headings}');
