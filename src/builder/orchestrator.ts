@@ -182,6 +182,7 @@ async function countCreatorsByFile(files: string[], cwd: string): Promise<{ with
         continue;
       }
       const parsed = Bun.YAML.parse(yaml) as Record<string, unknown>;
+      if (parsed.type === 'intervention') continue;
       const creators = parseAuthors(parsed.creator);
       if (creators.length > 0) {
         withCreator.push(...creators);
