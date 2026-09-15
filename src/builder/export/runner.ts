@@ -78,6 +78,7 @@ export async function convertToPdf(
   slug: string,
   biberCacheDir?: string,
   pdfDest?: string,
+  skipBiber?: boolean,
   onSpawn?: (pid: number) => void,
 ): Promise<void> {
   if (!(await Bun.file(fullTexPath).exists())) {
@@ -91,6 +92,10 @@ export async function convertToPdf(
   await mkdir(pdfDir, { recursive: true });
   if (existsSync(XMP_TEMPLATE_RESOURCE)) {
     await copyFile(XMP_TEMPLATE_RESOURCE, join(pdfDir, 'pdfx.xmp'));
+  }
+
+  if (skipBiber) {
+    await Bun.write(join(pdfDir, '.latexmkrc'), '$bibtex_use = 0;\n');
   }
 
   let result: Awaited<ReturnType<typeof exec>>;
