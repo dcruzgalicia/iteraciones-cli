@@ -94,8 +94,14 @@ export async function convertToPdf(
     await copyFile(XMP_TEMPLATE_RESOURCE, join(pdfDir, 'pdfx.xmp'));
   }
 
+  const latexmkrcLines: string[] = [];
   if (skipBiber) {
-    await Bun.write(join(pdfDir, '.latexmkrc'), '$bibtex_use = 0;\n');
+    latexmkrcLines.push('$bibtex_use = 0;');
+  } else {
+    latexmkrcLines.push(`$biberargs = '--cache-dir "${biberCache}"';`);
+  }
+  if (latexmkrcLines.length > 0) {
+    await Bun.write(join(pdfDir, '.latexmkrc'), latexmkrcLines.join('\n') + '\n');
   }
 
   let result: Awaited<ReturnType<typeof exec>>;
