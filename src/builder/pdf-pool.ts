@@ -17,6 +17,7 @@ export interface PdfJob {
   texPath: string;
   pdfDest: string;
   cover: boolean;
+  skipBiber: boolean;
 }
 
 function raceWithTimeout(promises: Promise<void>[], ms: number): Promise<void> {
@@ -48,7 +49,7 @@ async function executePdfJob(
 ): Promise<boolean> {
   const pdfDir = join(pdfWorkBase, job.dir, `slot-${slotIndex}`);
   try {
-    await convertToPdf(job.texPath, job.relativePath, pdfDir, job.slug, join(biberBase, `cache-${slotIndex}`), job.pdfDest, (pid) => {
+    await convertToPdf(job.texPath, job.relativePath, pdfDir, job.slug, join(biberBase, `cache-${slotIndex}`), job.pdfDest, job.skipBiber, (pid) => {
       inFlightPids[slotIndex] = pid;
     });
   } catch (err) {

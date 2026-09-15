@@ -20,6 +20,7 @@ function job(i: number): PdfJob {
     texPath: `/tmp/work/doc-${i}.tex`,
     pdfDest: `/tmp/out/doc-${i}.pdf`,
     cover: false,
+    skipBiber: false,
   };
 }
 
@@ -266,6 +267,7 @@ describe('quiesce tras cancel (#2013)', () => {
         texPath: '/tmp/w/slow.tex',
         pdfDest: '/tmp/o/slow.pdf',
         cover: false,
+        skipBiber: false,
       });
       await Bun.sleep(20); // el worker tomó el job y está bloqueado en vuelo
 
@@ -290,7 +292,15 @@ describe('quiesce tras cancel (#2013)', () => {
     try {
       const consumer = createPdfConsumer('/tmp/work', '/tmp/biber', 1, progressStub());
       consumer.start();
-      consumer.pdfJobs.push({ dir: '.', slug: 'zombi', relativePath: 'zombi.md', texPath: '/tmp/w/z.tex', pdfDest: '/tmp/o/z.pdf', cover: false });
+      consumer.pdfJobs.push({
+        dir: '.',
+        slug: 'zombi',
+        relativePath: 'zombi.md',
+        texPath: '/tmp/w/z.tex',
+        pdfDest: '/tmp/o/z.pdf',
+        cover: false,
+        skipBiber: false,
+      });
       await Bun.sleep(20);
       consumer.cancel();
       const t0 = performance.now();
@@ -310,7 +320,7 @@ describe('quiesce tras cancel (#2013)', () => {
       murio = true;
     });
     const spy = spyOn(runner, 'convertToPdf').mockImplementation(
-      (_tex, _src, _dir, _slug, _biber, _dest, onSpawn) =>
+      (_tex, _src, _dir, _slug, _biber, _dest, _skipBiber, onSpawn) =>
         new Promise<void>((resolve) => {
           onSpawn?.(proc.pid);
           void proc.exited.then(() => resolve());
