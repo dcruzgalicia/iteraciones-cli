@@ -1,12 +1,13 @@
--- Envuelve en \mbox{} las últimas 2 palabras de la oración final del
+-- Envuelve en \mbox{} las últimas 3 palabras de la oración final del
 -- párrafo (únicas palabras que reciben mbox: sin mbox por oración no final
 -- ni de inicio de oración). Solo dentro de bloques Para.
 -- El conteo usa palabras REALES: un grupo de énfasis (\emph{...}) aporta sus
--- palabras internas individualmente. Regla del wrap (últimas 2):
+-- palabras internas individualmente. Regla del wrap (últimas 3):
 --   A. sin énfasis      → \mbox{ejemplo final.}
 --   B. dentro del grupo → \emph{...en \mbox{carne propia.}} (wrap interno)
 --   C. toca el inicio   → en \mbox{\emph{carne propia.}} (grupo completo)
 --   D. grupo de 1       → \mbox{dice \emph{ella.}} (extiende hacia atrás)
+-- Exclusión: []{.no-mbox} en el párrafo omite el mbox automático.
 -- Uso: pandoc --from markdown --to latex --lua-filter latex/06-mbox-sentence-end.lua
 
 -- Helpers de oraciones (ver shared/mbox-helpers.lua). El pipeline inyecta la
@@ -31,7 +32,7 @@ local function is_space(inl)
 end
 
 -- Inserta \mbox{...} dentro del grupo alrededor de las palabras internas
--- [from_inner, to_inner] (las últimas 2 palabras reales de la oración).
+-- [from_inner, to_inner] (las últimas 3 palabras reales de la oración).
 -- Recorre las palabras en el mismo orden que mbox.group_word_count, de modo
 -- que las posiciones internas coinciden incluso con grupos anidados.
 local function wrap_group_internally(inl, from_inner, to_inner)
@@ -91,18 +92,18 @@ local function expand_units(inlines, from_idx, to_idx)
   return units, trailing_punct
 end
 
--- Calcula el wrap del mbox: las últimas 2 palabras REALES (conteo expandido)
+-- Calcula el wrap del mbox: las últimas 3 palabras REALES (conteo expandido)
 -- de la oración final del párrafo. Reglas:
---   A. sin grupos            → wrap normal de las últimas 2 unidades
+--   A. sin grupos            → wrap normal de las últimas 3 unidades
 --   B. dentro del grupo      → wrap interno (inner_from/inner_to)
 --   C. toca el inicio        → grupo completo desde su inicio
 --   D. grupo de 1 palabra    → extiende hacia atrás
 -- La puntuación final suelta (trailing) acompaña al wrap normal.
 local function build_wrap(units, trailing_punct)
-  if #units < 2 then return nil end
+  if #units < 3 then return nil end
   -- No superar #units - 1: una oración de exactamente 2 palabras no se
   -- envuelve completa (se conserva la protección histórica ante solapes).
-  local uc = math.min(2, #units - 1)
+  local uc = math.min(3, #units - 1)
   local u1 = units[#units - uc + 1]
   local u2 = units[#units]
   local wrap
@@ -131,9 +132,31 @@ local function build_wrap(units, trailing_punct)
 end
 
 local function process_para_inlines(inlines)
-  if mbox.count_real_inlines(inlines) < 4 then return inlines end
+  if mbox.count_real_inlines(inlines) < 5 then return inlines end
 
-  -- Solo la oración final del párrafo recibe mbox (las últimas 2 palabras
+  -- []{.no-mbox} omite el mbox automático de este párrafo.
+  local has_nombox = false
+  for _, inl in ipairs(inlines) do
+    if inl.t == 'Span' and inl.classes:find('no-mbox', 1, true) then
+      has_nombox = true
+      break
+    end
+  end
+  if has_nombox then
+    local result = {}
+    for _, inl in ipairs(inlines) do
+      if inl.t == 'Span' and inl.classes:find('no-mbox', 1, true) then
+        for _, c in ipairs(inl.content) do
+          table.insert(result, c)
+        end
+      else
+        table.insert(result, inl)
+      end
+    end
+    return result
+  end
+
+  -- Solo la oración final del párrafo recibe mbox (las últimas 3 palabras
   -- reales). Las oraciones no finales quedan intactas.
   local sentence_bounds = mbox.find_sentence_bounds(inlines)
   local wraps = {}

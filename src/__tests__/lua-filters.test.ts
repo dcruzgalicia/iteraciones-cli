@@ -177,14 +177,14 @@ describe.skipIf(!pandocOk)('filtros Lua latex', () => {
 
   it('mbox envuelve FUERA del span uppercase (MakeUppercase no penetra cajas)', async () => {
     const tex = await toLatex('Primera oración de ejemplo. Y termina con [texto en mayúsculas]{.uppercase}.');
-    expect(tex).toContain('\\mbox{con \\MakeUppercase{texto en mayúsculas}');
+    expect(tex).toContain('\\mbox{termina con \\MakeUppercase{texto en mayúsculas}');
     expect(tex).not.toContain('\\MakeUppercase{texto \\mbox{');
   });
 
   it('mbox cuenta las palabras de ==resaltado== (Mark) como grupo', async () => {
     const tex = await toLatex('Primera oración de ejemplo. Y termina con ==texto resaltado con ñ==.', 'markdown+mark');
     // pandoc envuelve la salida a 72 columnas: se normalizan los saltos
-    expect(tex.replace(/\n/g, ' ')).toContain('\\hl{texto resaltado \\mbox{con ñ}}');
+    expect(tex.replace(/\n/g, ' ')).toContain('\\hl{texto \\mbox{resaltado con ñ}}');
   });
 
   it('convierte :: dentro de una lista en vspace (antes se imprimía literal)', async () => {
@@ -268,10 +268,10 @@ describe.skipIf(!pandocOk)('filtros Lua latex', () => {
     expect(tex).toContain('\\end{flushright}');
   });
 
-  it('mbox-sentence-end solo envuelve las últimas 2 palabras de la oración final', async () => {
+  it('mbox-sentence-end solo envuelve las últimas 3 palabras de la oración final', async () => {
     const tex = await toLatex('Primera oración de ejemplo. Segunda aquí. Tercera oración de ejemplo final.');
     const flat = tex.replace(/\n/g, ' ');
-    expect(flat).toContain('oración de \\mbox{ejemplo final.}');
+    expect(flat).toContain('\\mbox{de ejemplo final.}');
     // Las oraciones no finales ya no reciben mbox
     expect(flat).not.toContain('\\mbox{ejemplo.}');
     expect(flat).not.toContain('\\mbox{aquí.}');
@@ -280,30 +280,30 @@ describe.skipIf(!pandocOk)('filtros Lua latex', () => {
   it('mbox-sentence-end con énfasis final: wrap interno dentro del \\emph (caso B)', async () => {
     const tex = await toLatex('Como ya lo había hecho en el primer libro de Histórikas: *Mi primera vez. Historias de mujeres en carne propia.*');
     // El wrap interno deja el mbox dentro del \\emph, envolviendo solo las
-    // últimas 2 palabras reales (pandoc envuelve la salida a ~72 columnas:
+    // últimas 3 palabras reales (pandoc envuelve la salida a ~72 columnas:
     // se compara sobre el texto sin saltos de wrap).
-    expect(tex.replace(/\n/g, ' ')).toContain('\\emph{Mi primera vez. Historias de mujeres en \\mbox{carne propia.}}');
+    expect(tex.replace(/\n/g, ' ')).toContain('\\emph{Mi primera vez. Historias de mujeres \\mbox{en carne propia.}}');
     expect(tex).not.toContain('\\mbox{de Histórikas');
   });
 
   it('mbox-sentence-end con énfasis de 2 palabras al final: el mbox envuelve el grupo (caso C)', async () => {
     const tex = await toLatex('Esto termina en *carne propia.*');
-    expect(tex).toContain('en \\mbox{\\emph{carne propia.}}');
+    expect(tex).toContain('\\mbox{en \\emph{carne propia.}}');
   });
 
   it('mbox-sentence-end con énfasis de 1 palabra al final: extiende hacia atrás (caso D)', async () => {
     const tex = await toLatex('Como lo dice *ella.*');
-    expect(tex).toContain('\\mbox{dice \\emph{ella.}}');
+    expect(tex).toContain('\\mbox{lo dice \\emph{ella.}}');
   });
 
   it('mbox-sentence-end con comillas tipográficas: wrap interno dentro del Quoted', async () => {
     const tex = await toLatex(
-      'un "dame tus cosas, métete a bañar mientras caliento la comida, te preparé algo rico y ligero porque casi no has comido, cuéntame, desahógate, descansa".',
+      'Primera oración de ejemplo. un "dame tus cosas, métete a bañar mientras caliento la comida, te preparé algo rico y ligero porque casi no has comido, cuéntame, desahógate, descansa".',
     );
     const flat = tex.replace(/\n/g, ' ');
-    // El mbox queda dentro de las comillas, envolviendo solo las últimas 2
+    // El mbox queda dentro de las comillas, envolviendo solo las últimas 3
     // palabras internas; la comilla de cierre y el punto quedan fuera.
-    expect(flat).toContain('\\mbox{desahógate, descansa}');
+    expect(flat).toContain('\\mbox{cuéntame, desahógate, descansa}');
     expect(flat).not.toContain('\\mbox{un ``dame');
     expect(flat).not.toContain('\\mbox{``dame');
   });
@@ -311,24 +311,24 @@ describe.skipIf(!pandocOk)('filtros Lua latex', () => {
   it('mbox-sentence-end con negritas de 4+ palabras: wrap interno dentro del Strong', async () => {
     const tex = await toLatex('El final termina con **una frase de carne propia**.');
     const flat = tex.replace(/\n/g, ' ');
-    expect(flat).toContain('\\textbf{una frase de \\mbox{carne propia}}.');
+    expect(flat).toContain('\\textbf{una frase \\mbox{de carne propia}}.');
     expect(flat).not.toContain('\\mbox{\\textbf{una frase');
   });
 
   it('mbox-sentence-end con negritas de 2 palabras: grupo completo con el punto (caso C)', async () => {
     const tex = await toLatex('Esto termina en **carne propia**.');
     const flat = tex.replace(/\n/g, ' ');
-    expect(flat).toContain('en \\mbox{\\textbf{carne propia}.}');
+    expect(flat).toContain('\\mbox{en \\textbf{carne propia}.}');
   });
 
   it('mbox-sentence-end con negritas de 1 palabra: extiende hacia atrás con el punto (caso D)', async () => {
     const tex = await toLatex('Como lo dice **ella**.');
     const flat = tex.replace(/\n/g, ' ');
-    expect(flat).toContain('\\mbox{dice \\textbf{ella}.}');
+    expect(flat).toContain('\\mbox{lo dice \\textbf{ella}.}');
   });
 
-  it('no modifica párrafos de menos de 4 palabras', async () => {
-    const tex = await toLatex('Hola mundo.');
+  it('no modifica párrafos de menos de 5 palabras', async () => {
+    const tex = await toLatex('Hola.');
     expect(tex).not.toContain('\\mbox');
   });
 
@@ -344,7 +344,7 @@ describe.skipIf(!pandocOk)('filtros Lua latex', () => {
     const tex = await toLatex('Primera oración de ejemplo. Segunda oración que libera y que transforma.\u00a0');
     const flat = tex.replace(/\n/g, ' ');
     // El NBSP queda dentro del mbox (se renderiza como ~)
-    expect(flat).toContain('\\mbox{que transforma.~}');
+    expect(flat).toContain('\\mbox{y que transforma.~}');
   });
 
   it('el override del proyecto de 06-mbox-sentence-end no rompe la pasada (helpers del paquete por env)', async () => {
@@ -363,7 +363,7 @@ describe.skipIf(!pandocOk)('filtros Lua latex', () => {
         f,
       ]);
       const tex = await execPandoc({
-        input: 'Primera oración de ejemplo. Segunda aquí.',
+        input: 'Primera oración de ejemplo. Segunda oración aquí.',
         sourcePath: 'test.md',
         to: 'latex',
         extraArgs,
