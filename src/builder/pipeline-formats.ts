@@ -8,6 +8,7 @@ import { execPandoc, MD_READER } from '../lib/pandoc-runner.js';
 import { htmlSlugFor } from './discover.js';
 import { assembleExportDocument } from './export/assemble.js';
 import { convertToEpub, convertToMarkdown } from './export/runner.js';
+import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
 import { buildTexDistribution, markdownToLatex, rewriteTexForDist } from './latex-composer.js';
 import { primaryOutputExtension } from './output-layout.js';
 import { formatLinksFor, parseFileFrontmatter, readMarkdownOrWarn, relativeHref, writeOutput } from './pipeline-io.js';
@@ -475,7 +476,7 @@ async function resolveCollectionCreatorDocs(
   return result.sort((a, b) => a.name.localeCompare(b.name, 'es'));
 }
 
-async function buildCollectionAuthorsLatex(creatorDocs: CreatorDoc[], sourcePath: string): Promise<string> {
+async function buildCollectionAuthorsLatex(creatorDocs: CreatorDoc[], sourcePath: string, filters: ExportContext['filters']): Promise<string> {
   if (creatorDocs.length === 0) return '';
   const subsubsectionStyle =
     '\\RedeclareSectionCommand[beforeskip=2\\baselineskip,afterskip=\\baselineskip,afterindent=false]{subsubsection}\n\\setkomafont{subsubsection}{\\raggedright\\normalsize\\normalfont\\scshape}';
@@ -493,7 +494,18 @@ async function buildCollectionAuthorsLatex(creatorDocs: CreatorDoc[], sourcePath
   }
   md.push(subsubsectionReset);
   const input = md.join('\n\n');
-  return execPandoc({ input, sourcePath, from: MD_READER, to: 'latex', extraArgs: ['--shift-heading-level-by=2'] });
+  const extraArgs = ['--shift-heading-level-by=2'];
+  for (const f of [...filters.semantic, ...filters.latex]) {
+    extraArgs.push('--lua-filter', f);
+  }
+  return execPandoc({
+    input,
+    sourcePath,
+    from: MD_READER,
+    to: 'latex',
+    extraArgs,
+    env: { ITERACIONES_MBOX_HELPERS: MBOX_HELPERS_FILTER },
+  });
 }
 
 function collectionBaseContent(
@@ -542,7 +554,7 @@ async function emitCollectionFormats(
     const pageNumber = (outputs.fm.pageNumber ?? formatCfg?.pdf?.pageNumber ?? ctx.siteConfig.pageNumber) as string | undefined;
     const base = collectionBaseContent(collectionEntries, 'latex', content, pageNumber);
     const creatorDocs = isCollection ? await resolveCollectionCreatorDocs(doc, discoveryIndex, ctx.cwd, outputs.fm) : [];
-    const authorsBlock = await buildCollectionAuthorsLatex(creatorDocs, doc.filePath);
+    const authorsBlock = await buildCollectionAuthorsLatex(creatorDocs, doc.filePath, exportCtx.filters);
     await emitLatexAndQueuePdf(
       doc,
       { ...outputs, content: prependLinksLatex(base, creatorLinks) },
