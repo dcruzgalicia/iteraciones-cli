@@ -65,7 +65,7 @@ function M.is_sentence_end_punct(text)
   local trimmed = text:gsub('[%s\u{00A0}]+$', '')
   if #trimmed == 0 then return false end
   local last = trimmed:sub(-1)
-  return last == '.' or last == '!' or last == '?'
+  return last == '.' or last == '!' or last == '?' or last == ':'
 end
 
 function M.is_abbreviation(text)
@@ -112,7 +112,7 @@ end
 
 -- Cuenta solo los inlines "reales" (palabras, grupos, espacios): los RawInline
 -- (p. ej. el \noindent que inyecta el filtro internal/flags o latex/02-dictum)
--- no son palabras y no deben mover el umbral de 4.
+-- no son palabras y no deben mover el umbral de 5.
 function M.count_real_inlines(inlines)
   local n = 0
   for _, inl in ipairs(inlines) do
