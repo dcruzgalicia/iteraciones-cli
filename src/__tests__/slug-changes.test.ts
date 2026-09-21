@@ -155,6 +155,7 @@ describe('discover (cambios de slug por metadatos)', () => {
     try {
       await buildStep(cwd);
       writeFileSync(join(cwd, 'doc.md'), '---\ntitle: Test Document\nslug: nueva\n---\n\nContenido');
+      touchFuture(join(cwd, 'doc.md'));
       const result = await buildStep(cwd);
       expect(result.slugChangedEntries.get('doc.md')).toBe('vieja');
       expect(result.discoveryIndex.get('doc.md')?.slug).toBe('nueva');
