@@ -40,7 +40,7 @@ export async function getPandocVersion(): Promise<string> {
 }
 
 export async function execPandoc(options: PandocOptions): Promise<string> {
-  const args = ['--from', options.from ?? 'markdown', '--to', options.to];
+  const args = ['--from', options.from ?? 'markdown', '--to', options.to, '--wrap=none'];
 
   if (options.bibOptions) {
     args.push('--citeproc', '--bibliography', options.bibOptions.bibliography);
