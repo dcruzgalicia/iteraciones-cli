@@ -120,6 +120,7 @@ async function emitLatexAndQueuePdf(
       texPath,
       pdfDest: outBase(`${outSlug}${primaryOutputExtension('pdf')}`),
       cover: resolveBooleanField(fm, formatCfg?.pdf, ctx.siteConfig, 'coverImage') === true,
+      skipBiber: exportCtx.bibFiles.length === 0,
     });
   }
 }

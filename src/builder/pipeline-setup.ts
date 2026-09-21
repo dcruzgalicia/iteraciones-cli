@@ -99,7 +99,8 @@ export async function writeEffectiveTemplates(
     await writeIfChanged(state.htmlTemplatePath, await composeHtmlTemplate(siteConfig));
   }
   if (plan.generateLatex) {
-    const preambleFilters = await loadPreambleFilters(effectiveDisabledPreamble, ctx.cwd, 'file');
+    const preambleDisabled = bibFiles.length === 0 ? [...effectiveDisabledPreamble, '11-bibliography'] : effectiveDisabledPreamble;
+    const preambleFilters = await loadPreambleFilters(preambleDisabled, ctx.cwd, 'file');
     state.biblatexAvailable = preambleFilters.some((f) => f.name === '11-bibliography');
     state.pdfxActive = preambleFilters.some((f) => f.name === '99-pdfx');
     state.cropActive = preambleFilters.some((f) => f.name === '98-crop');
@@ -111,7 +112,7 @@ export async function writeEffectiveTemplates(
     };
     await writeIfChanged(state.latexTemplatePath, await composeLatexTemplate({ ...templateOpts, preambleFilters }));
 
-    const collectionPreambleFilters = await loadPreambleFilters(effectiveDisabledPreamble, ctx.cwd, 'collection');
+    const collectionPreambleFilters = await loadPreambleFilters(preambleDisabled, ctx.cwd, 'collection');
     const collectionPageDimensions = detectPageSize(collectionPreambleFilters);
     applyPrintQueueDynamics(collectionPreambleFilters, collectionPageDimensions);
     await writeIfChanged(
@@ -119,12 +120,12 @@ export async function writeEffectiveTemplates(
       await composeLatexTemplate({ ...templateOpts, preambleFilters: collectionPreambleFilters }),
     );
 
-    const creatorPreambleFilters = await loadPreambleFilters(effectiveDisabledPreamble, ctx.cwd, 'creator');
+    const creatorPreambleFilters = await loadPreambleFilters(preambleDisabled, ctx.cwd, 'creator');
     const creatorPageDimensions = detectPageSize(creatorPreambleFilters);
     applyPrintQueueDynamics(creatorPreambleFilters, creatorPageDimensions);
     await writeIfChanged(state.latexCreatorTemplatePath, await composeLatexTemplate({ ...templateOpts, preambleFilters: creatorPreambleFilters }));
 
-    const interventionPreambleFilters = await loadPreambleFilters(effectiveDisabledPreamble, ctx.cwd, 'intervention');
+    const interventionPreambleFilters = await loadPreambleFilters(preambleDisabled, ctx.cwd, 'intervention');
     const interventionPageDimensions = detectPageSize(interventionPreambleFilters);
     applyPrintQueueDynamics(interventionPreambleFilters, interventionPageDimensions);
     await writeIfChanged(
