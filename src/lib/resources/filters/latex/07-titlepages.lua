@@ -222,6 +222,16 @@ local function preprocess_div_content(blocks)
       local body = pandoc.write(pandoc.Pandoc(inner), 'latex')
       body = body:gsub('%s+$', '')
       table.insert(out, pandoc.RawBlock('latex', '{\\' .. cls .. ' ' .. body .. '}'))
+    elseif b.t == 'Div' and b.classes and b.classes:find('textls', 1, true) then
+      local value = b.attributes and b.attributes['value']
+      if value then
+        local inner = preprocess_div_content(b.content)
+        local body = pandoc.write(pandoc.Pandoc(inner), 'latex')
+        body = body:gsub('%s+$', '')
+        table.insert(out, pandoc.RawBlock('latex', '\\textls[' .. value .. ']{' .. body .. '}'))
+      else
+        table.insert(out, b)
+      end
     elseif b.t == 'Div' and b.content then
       local cloned = pandoc.Div(preprocess_div_content(b.content))
       cloned.classes = b.classes
@@ -293,6 +303,16 @@ local function serialize_titleback(blocks)
       table.insert(out, pandoc.RawBlock('latex', cmd))
     elseif b.t == 'Div' and b.classes and textsize_class(b) then
       table.insert(out, textsize_div_to_rawlatex(b))
+    elseif b.t == 'Div' and b.classes and b.classes:find('textls', 1, true) then
+      local value = b.attributes and b.attributes['value']
+      if value then
+        local preprocessed = preprocess_div_content(b.content)
+        local body = pandoc.write(pandoc.Pandoc(preprocessed), 'latex')
+        body = body:gsub('%s+$', '')
+        table.insert(out, pandoc.RawBlock('latex', '\\textls[' .. value .. ']{' .. body .. '}'))
+      else
+        table.insert(out, b)
+      end
     elseif b.t == 'Div' and b.attributes and b.attributes['spacing'] then
       local value = b.attributes['spacing']
       local num = tonumber(value)
