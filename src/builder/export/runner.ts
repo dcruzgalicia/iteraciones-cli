@@ -7,6 +7,7 @@ import { parseYamlWithPosition, splitFrontmatter } from '../../lib/frontmatter.j
 import { fmBool, fmString } from '../../lib/frontmatter-fields.js';
 import { execPandoc, MD_READER } from '../../lib/pandoc-runner.js';
 import { exec, ProcessSpawnError, ProcessTimeoutError } from '../../lib/run.js';
+import { recordSupportCommand } from '../../lib/script-recorder.js';
 import type { LuaFilterGroup } from '../filter-resolver.js';
 import { citationCompileArgs, creatorArgs, dateArg, languageArg, titleArg } from '../pandoc-metadata.js';
 import type { ExportDocument } from './types.js';
@@ -104,11 +105,14 @@ export async function convertToPdf(
 
   const biberCache = biberCacheDir ?? join(pdfDir, 'biber', slug);
   await mkdir(biberCache, { recursive: true });
+  recordSupportCommand('pdf', slug, ['mkdir', '-p', biberCache]);
   const logPath = join(pdfDir, `${slug}.log`);
 
   await mkdir(pdfDir, { recursive: true });
+  recordSupportCommand('pdf', slug, ['mkdir', '-p', pdfDir]);
   if (existsSync(XMP_TEMPLATE_RESOURCE)) {
     await copyFile(XMP_TEMPLATE_RESOURCE, join(pdfDir, 'pdfx.xmp'));
+    recordSupportCommand('pdf', slug, ['cp', XMP_TEMPLATE_RESOURCE, join(pdfDir, 'pdfx.xmp')]);
   }
 
   let result: Awaited<ReturnType<typeof exec>>;
@@ -145,17 +149,19 @@ export async function convertToPdf(
     throw new ExportError(`latexmk falló al generar el PDF: ${detail}`, sourcePath, `Revisa el log completo en: ${logPath}`);
   }
 
-  await Promise.all(
-    [
-      ...LATEXMK_AUX_EXTENSIONS.map((ext) => join(pdfDir, `${slug}${ext}`)),
-      join(pdfDir, 'pdfx.xmp'),
-      join(pdfDir, 'pdfx.xmpi'),
-      join(pdfDir, `${slug}.xmpdata`),
-    ].map((p) => rm(p, { force: true }).catch(() => {})),
-  );
+  const auxPaths = [
+    ...LATEXMK_AUX_EXTENSIONS.map((ext) => join(pdfDir, `${slug}${ext}`)),
+    join(pdfDir, 'pdfx.xmp'),
+    join(pdfDir, 'pdfx.xmpi'),
+    join(pdfDir, `${slug}.xmpdata`),
+  ];
+  await Promise.all(auxPaths.map((p) => rm(p, { force: true }).catch(() => {})));
+  recordSupportCommand('pdf', slug, ['rm', '-f', ...auxPaths]);
 
   if (pdfDest) {
     await mkdir(dirname(pdfDest), { recursive: true });
+    recordSupportCommand('pdf', slug, ['mkdir', '-p', dirname(pdfDest)]);
     await rename(join(pdfDir, `${slug}.pdf`), pdfDest);
+    recordSupportCommand('pdf', slug, ['mv', join(pdfDir, `${slug}.pdf`), pdfDest]);
   }
 }

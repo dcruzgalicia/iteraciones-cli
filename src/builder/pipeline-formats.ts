@@ -5,6 +5,7 @@ import { splitFrontmatter } from '../lib/frontmatter.js';
 import { fmStringList, resolveBooleanField, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { execPandoc, MD_READER } from '../lib/pandoc-runner.js';
+import { resolveScriptStdout } from '../lib/script-recorder.js';
 import { htmlSlugFor } from './discover.js';
 import { assembleExportDocument } from './export/assemble.js';
 import { convertToEpub, convertToMarkdown } from './export/runner.js';
@@ -116,7 +117,9 @@ async function emitLatexAndQueuePdf(
         if (await Bun.file(absSrc).exists()) await Bun.write(outBase(fileName), Bun.file(absSrc));
       }),
     );
-    await writeOutput(texDistPath, rewriteTexForDist(texWithXmp, distribution));
+    const distTex = rewriteTexForDist(texWithXmp, distribution);
+    resolveScriptStdout(fullTex, texDistPath, distTex);
+    await writeOutput(texDistPath, distTex);
   }
 
   if (pdfOn) {
@@ -147,6 +150,7 @@ async function emitHtmlPage(
 
   const formats = formatLinksFor(plan, dir, outSlug);
   const hasHomePage = discoveryIndex.has('index.md');
+  const htmlPath = outBase(`${outSlug}${primaryOutputExtension('html')}`);
   const html = await htmlPageFromMarkdown(content, doc, {
     cwd,
     vars: {
@@ -171,8 +175,9 @@ async function emitHtmlPage(
     fm,
     bibOptions: exportCtx.bibOptions,
     luaFilters: exportCtx.filters,
+    scriptOutputPath: htmlPath,
   });
-  await writeOutput(outBase(`${outSlug}${primaryOutputExtension('html')}`), html);
+  await writeOutput(htmlPath, html);
 }
 
 export type CollectionEntry = {

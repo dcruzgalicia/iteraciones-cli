@@ -2,6 +2,7 @@ import type { SiteConfig } from '../config/config-schema.js';
 import { fmString } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { type BibOptions, execPandoc, MD_READER } from '../lib/pandoc-runner.js';
+import { resolveScriptStdout } from '../lib/script-recorder.js';
 import { type LuaFilterGroup, loadFilterGroups } from './filter-resolver.js';
 import { buildFormatsItems, type HtmlPageVars } from './html-composer.js';
 import { extractReferencesBlock, removeTocReferencesLink } from './html-postprocess.js';
@@ -17,6 +18,8 @@ interface HtmlPageOptions {
   fm: Record<string, unknown>;
   bibOptions?: BibOptions;
   luaFilters?: LuaFilterGroup;
+  /** #2438: ruta final de dist; define adónde apunta el stdout de pandoc en build.sh. */
+  scriptOutputPath?: string;
 }
 
 function buildHtmlMetadataArgs(
@@ -76,11 +79,12 @@ export async function htmlPageFromMarkdown(content: string, doc: BuildDocument, 
   const html = await execPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'html5', extraArgs });
   const htmlWithoutTocRefs = removeTocReferencesLink(html);
   const { html: htmlWithoutRefs, block: referencesBlock } = extractReferencesBlock(htmlWithoutTocRefs, refsCardTemplate);
+  let final = htmlWithoutRefs;
   if (referencesBlock && htmlWithoutRefs.includes('<!-- block:referencias -->')) {
-    return htmlWithoutRefs.replace('<!-- block:referencias -->', referencesBlock);
-  }
-  if (referencesBlock) {
+    final = htmlWithoutRefs.replace('<!-- block:referencias -->', referencesBlock);
+  } else if (referencesBlock) {
     logWarning('la tarjeta de referencias no está en format.html.blocks; la bibliografía no se inserta en la página', 'html');
   }
-  return htmlWithoutRefs;
+  resolveScriptStdout(html, opts.scriptOutputPath, final);
+  return final;
 }

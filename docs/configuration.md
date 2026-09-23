@@ -84,6 +84,8 @@ format:
   markdown:
     generate: false               # genera Markdown procesado
 
+  script: false                   # genera build.sh en la raíz con los comandos externos
+
 # disabledFilters:             # filters a desactivar (opcional)
 #   - semantic/string/01-double-colon
 
@@ -458,6 +460,28 @@ format:
     generate: true
     merge: true
 ```
+
+### `format.script`
+
+**Tipo:** `boolean`
+**Por defecto:** `false`
+
+Cada build reescribe `build.sh` en la raíz del proyecto con los **comandos externos que corrieron en esa corrida**: pandoc, ImageMagick, latexmk y los `mkdir`/`cp`/`rm`/`mv` de soporte. El archivo es ejecutable y contiene solo comandos —sin lógica—, de modo que además de `iteraciones build` se puede reconstruir a mano con pandoc, ImageMagick y latexmk.
+
+```yaml
+format:
+  script: true
+```
+
+Alcance y límites:
+
+- **Solo en builds exitosos.** Si el build falla, el `build.sh` anterior queda intacto.
+- **Paso a paso y en orden de secciones**: imágenes, pandoc (LaTeX/HTML/EPUB), latexmk. Cada línea es reproducible por separado.
+- **Lo que iteraciones transforma no se escribe sobre dist.** Cuando el .tex o el .html final difiere de la salida cruda de pandoc (autores, XMP, imágenes, citas, tarjeta de referencias), la salida cruda va a `.iteraciones/script/out-NNNN.*` y el .sh lleva un comentario indicando que ese paso final es de iteraciones.
+- **No incluye `iteraciones merge` ni las salidas que solo produce TypeScript**: el markdown de dist (#2436), las copias de miembros de collections, la reescritura de rutas de imagen y el CSS compilado por Tailwind.
+- **Un build incremental solo registra lo que corrió en esa corrida**; si no corrió ningún comando externo, `build.sh` queda con la cabecera sin pasos.
+
+Los archivos de entrada que pandoc lee por stdin viven en `.iteraciones/script/in-NNNN.md` y se regeneran en cada build.
 
 ### `disabledFilters`
 
