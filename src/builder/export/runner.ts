@@ -55,8 +55,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * body, haciendo imposible la idempotencia. Se emite el frontmatter del
  * origen tal cual (solo se completa `language` desde el sitio) y el body
  * intacto, byte a byte.
+ *
+ * #2437: con `merge` (collections con format.markdown.merge) la salida deja de
+ * ser reprocesable: `type` pasa a `file` y `files[]` se elimina, el body ya
+ * viene fusionado.
  */
-export async function convertToMarkdown(content: string, outputPath: string, doc: ExportDocument, fm: Record<string, unknown> = {}): Promise<void> {
+export async function convertToMarkdown(
+  content: string,
+  outputPath: string,
+  doc: ExportDocument,
+  fm: Record<string, unknown> = {},
+  merge = false,
+): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
   const { yaml, body } = splitFrontmatter(content);
@@ -69,6 +79,10 @@ export async function convertToMarkdown(content: string, outputPath: string, doc
   }
 
   const outFm: Record<string, unknown> = { ...base, ...fm };
+  if (merge) {
+    outFm.type = 'file';
+    delete outFm.files;
+  }
   if (outFm.language === undefined) outFm.language = doc.metadata.language;
   // Si el origen no traía frontmatter, la línea en blanco separa el bloque del body.
   const separator = yaml === undefined ? '\n' : '';

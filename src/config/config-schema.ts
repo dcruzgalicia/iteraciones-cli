@@ -146,6 +146,7 @@ export const EpubFormatSchema = z
 export const MarkdownFormatSchema = z
   .object({
     generate: z.boolean().default(DEFAULT_MARKDOWN_FORMAT.generate),
+    merge: z.boolean().default(DEFAULT_MARKDOWN_FORMAT.merge),
   })
   .strict();
 

@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
 import { runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from './dispatcher.js';
+import { runMerge } from './merge.js';
 
 function translateCommanderError(message: string): string {
   return message
@@ -10,6 +11,7 @@ function translateCommanderError(message: string): string {
         .replace(/^error: unknown command '([^']+)'$/, "error: comando desconocido '$1'")
         .replace(/^\(Did you mean (.+)\?\)$/, '(¿Quisiste decir $1?)')
         .replace(/^error: option '([^']+)' argument missing$/, "error: falta el argumento de la opción '$1'")
+        .replace(/^error: required option '([^']+)' not specified$/, "error: falta la opción requerida '$1'")
         .replace(/^error: missing required argument '([^']+)'$/, "error: falta el argumento requerido '$1'")
         .replace(/^error: unknown option '([^']+)'$/, "error: opción desconocida '$1'"),
     )
@@ -96,6 +98,22 @@ Ejemplos:
         verbose: opts.verbose,
         json: opts.json,
       });
+    });
+
+  program
+    .command('merge <path>')
+    .description('fusiona los archivos files[] de una collection en un solo markdown (type: file)')
+    .requiredOption('-o, --output <path>', 'ruta del .md fusionado de salida')
+    .addHelpText(
+      'after',
+      `
+Ejemplos:
+  iteraciones merge collection.md -o .iteraciones/collection.md   fusiona la collection de origen
+  iteraciones merge dist/collection.md -o dist/collection.md      re-fusiona desde las copias en dist
+`,
+    )
+    .action(async (path: string, opts: { output: string }) => {
+      await runMerge(projectRoot(), path, opts);
     });
 
   program

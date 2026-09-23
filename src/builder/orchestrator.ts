@@ -1,6 +1,6 @@
 import { exists, rm } from 'node:fs/promises';
 import { cpus } from 'node:os';
-import { basename, dirname, join } from 'node:path';
+import { basename, dirname, join, normalize } from 'node:path';
 import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
 import { type ActiveFormats, computeActiveFormats, type FormatKey, resolveDisabledPreambleConfig } from '../config/site-config.js';
@@ -261,7 +261,10 @@ async function discoverDocuments(
   const collectionFiles = new Set<string>();
   for (const entry of discoveryIndex.values()) {
     if (entry.type === 'collection' && entry.files) {
-      for (const f of entry.files) collectionFiles.add(f);
+      // #2437: normalize para que "./doc.md" excluya igual que "doc.md";
+      // sin eso el miembro se construye como standalone en la ronda 1 y no
+      // en la siguiente, rompiendo la idempotencia.
+      for (const f of entry.files) collectionFiles.add(normalize(f));
     }
   }
   const filteredPaths = relativePaths.filter((p) => !collectionFiles.has(p));

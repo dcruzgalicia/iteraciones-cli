@@ -442,6 +442,23 @@ Habilita la generación de archivos EPUB.
 
 Habilita la exportación a Markdown procesado (con los filters aplicados).
 
+#### `format.markdown.merge`
+
+**Tipo:** `boolean`
+**Por defecto:** `false`
+
+Define cómo se exporta el Markdown de las collections:
+
+- `false` (por defecto): la salida es **re-procesable**. `dist/<collection>.md` conserva `type: collection`, reescribe `files[]` para apuntar a las copias de los miembros emitidas en dist y mantiene el body original de la collection (sin el contenido fusionado). Con `iteraciones merge` se vuelve a fusionar en cualquier momento.
+- `true`: la salida es el markdown **fusionado**. `dist/<collection>.md` lleva `type: file`, sin `files[]`, y con el contenido de todos los archivos de `files[]` inline. No es re-procesable.
+
+```yaml
+format:
+  markdown:
+    generate: true
+    merge: true
+```
+
 ### `disabledFilters`
 
 **Tipo:** `string[]`

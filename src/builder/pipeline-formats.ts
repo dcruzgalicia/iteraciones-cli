@@ -1,4 +1,4 @@
-import { basename, dirname, join } from 'node:path';
+import { basename, dirname, join, normalize, relative, resolve, sep } from 'node:path';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
@@ -8,6 +8,7 @@ import { execPandoc, MD_READER } from '../lib/pandoc-runner.js';
 import { htmlSlugFor } from './discover.js';
 import { assembleExportDocument } from './export/assemble.js';
 import { convertToEpub, convertToMarkdown } from './export/runner.js';
+import type { ExportDocument } from './export/types.js';
 import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
 import { rewriteFmImagePaths, rewriteImagePaths } from './image-processor.js';
 import {
@@ -174,44 +175,68 @@ async function emitHtmlPage(
   await writeOutput(outBase(`${outSlug}${primaryOutputExtension('html')}`), html);
 }
 
-async function readCollectionFiles(
-  doc: BuildDocument,
-  cwd: string,
-): Promise<
-  {
-    creator: string[];
-    title: string;
-    subtitle: string | undefined;
-    type: string | undefined;
-    lineLength: number | undefined;
-    pages: number | undefined;
-    body: string;
-  }[]
-> {
-  const files = doc.frontmatter.files;
-  if (!files || files.length === 0) return [];
+export type CollectionEntry = {
+  title: string;
+  creator: string[];
+  subtitle: string | undefined;
+  type: string | undefined;
+  lineLength: number | undefined;
+  pages: number | undefined;
+  body: string;
+};
 
-  const entries: {
-    creator: string[];
-    title: string;
-    subtitle: string | undefined;
-    type: string | undefined;
-    lineLength: number | undefined;
-    pages: number | undefined;
-    body: string;
-  }[] = [];
+/**
+ * Lee y parsea los archivos de una collection. Compartido entre el build
+ * (#2437) y el subcomando `iteraciones merge`, que resuelve los files
+ * relativos al .md de entrada (dist reescribe las rutas en files[]).
+ */
+export async function readCollectionEntries(files: string[], cwd: string, collectionPath: string): Promise<CollectionEntry[]> {
+  const entries: CollectionEntry[] = [];
   for (const file of files) {
     const filePath = join(cwd, file);
     let text: string;
     try {
       text = await Bun.file(filePath).text();
     } catch {
-      throw new BuildError(`collection "${doc.relativePath}": archivo configurado en files no encontrado: "${file}"`);
+      throw new BuildError(`collection "${collectionPath}": archivo configurado en files no encontrado: "${file}"`);
     }
     const parsed = parseFileFrontmatter(text);
     if (parsed.body.trim()) entries.push(parsed);
   }
   return entries;
+}
+
+async function readCollectionFiles(doc: BuildDocument, cwd: string): Promise<CollectionEntry[]> {
+  const files = doc.frontmatter.files;
+  if (!files || files.length === 0) return [];
+  return readCollectionEntries(files, cwd, doc.relativePath);
+}
+
+/**
+ * #2437: con `format.markdown.merge: false` cada miembro de la collection se
+ * copia a dist para que `iteraciones merge` y el re-proceso lean de ahí.
+ * Las imágenes se reescriben con el mismo mapa del cuerpo fusionado: las
+ * rutas ./assets/img son válidas desde cualquier .md del nivel.
+ */
+async function emitCollectionMemberCopies(
+  doc: BuildDocument,
+  cwd: string,
+  outRoot: string,
+  files: string[],
+  relImageMap: Map<string, string>,
+  docDir: string,
+  skipPath: string,
+): Promise<void> {
+  const root = resolve(outRoot);
+  for (const file of files) {
+    const dest = resolve(root, normalize(file));
+    if (dest === skipPath || (dest !== root && !dest.startsWith(`${root}${sep}`))) {
+      logWarning(`"${doc.relativePath}": files contiene "${file}", que apunta fuera de la salida; copia de miembro omitida`, 'build');
+      continue;
+    }
+    const text = await Bun.file(join(cwd, file)).text();
+    await Bun.write(dest, rewriteImagePaths(text, relImageMap, docDir));
+  }
 }
 
 function interventionSectionRaw(lineLength = 0.5): string {
@@ -309,7 +334,7 @@ function buildCollectionSectionsHtml(
   return parts.join('\n\n');
 }
 
-function buildCollectionSectionsMarkdown(
+export function buildCollectionSectionsMarkdown(
   entries: {
     creator: string[];
     title: string;
@@ -544,15 +569,7 @@ function collectionBaseContent(
 async function emitCollectionFormats(
   doc: BuildDocument,
   outputs: DocumentOutputs,
-  collectionEntries: {
-    creator: string[];
-    title: string;
-    subtitle: string | undefined;
-    type: string | undefined;
-    lineLength: number | undefined;
-    pages: number | undefined;
-    body: string;
-  }[],
+  collectionEntries: CollectionEntry[],
   renderCtx: RenderContext,
   exportCtx: ExportContext,
   formatWorkSets: FormatWorkSets,
@@ -579,9 +596,7 @@ async function emitCollectionFormats(
   );
   const docDir = dirname(doc.filePath);
   const relImageMap = new Map(
-    [...images.imageMap]
-      .filter(([src, dst]) => dst !== src)
-      .map(([src, dst]): [string, string] => [src, `./assets/img/${basename(dst)}`]),
+    [...images.imageMap].filter(([src, dst]) => dst !== src).map(([src, dst]): [string, string] => [src, `./assets/img/${basename(dst)}`]),
   );
   // #2441: el fm de los exports (html/markdown) debe apuntar a assets como el
   // body; outputs.fm no pasa por rewriteImagePaths y pisaba el contenido.
@@ -628,14 +643,55 @@ async function emitCollectionFormats(
     );
   }
 
-  if (activeFormats.markdown && formatWorkSets.mdPaths.has(doc.relativePath) && doc.frontmatter.type !== 'intervention') {
-    const base = collectionBaseContent(collectionEntries, 'markdown', content);
-    await convertToMarkdown(
-      rewriteImagePaths(prependLinksMarkdown(base, creatorLinks), relImageMap, docDir),
-      outputs.outBase(`${outputs.outSlug}${primaryOutputExtension('markdown')}`),
-      exportDoc,
-      fmAssets,
+  await emitCollectionMarkdown(doc, outputs, collectionEntries, renderCtx, exportDoc, formatWorkSets, creatorLinks, {
+    relImageMap,
+    docDir,
+    fmAssets,
+  });
+}
+
+/**
+ * #2437: export markdown de una collection. Con `format.markdown.merge`
+ * (mergeOut) emite el contenido fusionado con type: file; sin él, el .md es
+ * reprocesable: conserva type: collection, files[] reescrito a las copias de
+ * los miembros (emitidas aquí) y el body original de la collection.
+ */
+async function emitCollectionMarkdown(
+  doc: BuildDocument,
+  outputs: DocumentOutputs,
+  collectionEntries: CollectionEntry[],
+  renderCtx: RenderContext,
+  exportDoc: ExportDocument,
+  formatWorkSets: FormatWorkSets,
+  creatorLinks: { name: string; url: string }[],
+  assets: { relImageMap: Map<string, string>; docDir: string; fmAssets: Record<string, unknown> },
+): Promise<void> {
+  const { ctx, plan, formatCfg } = renderCtx;
+  if (!plan.activeFormats.markdown || !formatWorkSets.mdPaths.has(doc.relativePath) || doc.frontmatter.type === 'intervention') return;
+
+  const { relImageMap, docDir, fmAssets } = assets;
+  const content = outputs.content;
+  const outPath = outputs.outBase(`${outputs.outSlug}${primaryOutputExtension('markdown')}`);
+  const isCollection = doc.frontmatter.type === 'collection';
+  const mergeOut = isCollection && formatCfg?.markdown?.merge === true;
+
+  const mdFm: Record<string, unknown> = { ...fmAssets };
+  if (isCollection) {
+    // Los campos derivados (creator agregado / collectionCreator) se
+    // recalculan en cada build: no viajan al .md exportado.
+    delete mdFm.creator;
+    delete mdFm.collectionCreator;
+    const outDir = dirname(outPath);
+    mdFm.files = (doc.frontmatter.files ?? []).map((f) =>
+      relative(outDir, join(ctx.outputDir, normalize(f)))
+        .split(sep)
+        .join('/'),
     );
+  }
+  const base = mergeOut ? collectionBaseContent(collectionEntries, 'markdown', content) : content;
+  await convertToMarkdown(rewriteImagePaths(prependLinksMarkdown(base, creatorLinks), relImageMap, docDir), outPath, exportDoc, mdFm, mergeOut);
+  if (isCollection && !mergeOut) {
+    await emitCollectionMemberCopies(doc, ctx.cwd, ctx.outputDir, doc.frontmatter.files ?? [], relImageMap, docDir, outPath);
   }
 }
 

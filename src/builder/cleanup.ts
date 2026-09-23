@@ -1,5 +1,5 @@
 import { readdir, rm } from 'node:fs/promises';
-import { basename, dirname, join } from 'node:path';
+import { basename, dirname, join, normalize, resolve, sep } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import type { FormatKey } from '../config/site-config.js';
 import { resolveBooleanField } from '../lib/frontmatter-fields.js';
@@ -83,8 +83,17 @@ export async function cleanupRemovedFormats(ctx: BuildContext, allDocs: BuildDoc
 
   const extensions = removedFormats.flatMap((fmt) => FORMAT_OUTPUT_EXTENSIONS[fmt as FormatKey] ?? []);
   let removed = 0;
+  const root = resolve(ctx.outputDir);
   for (const doc of allDocs) {
     removed += await removeOutputFiles(ctx.outputDir, dirname(doc.relativePath), htmlSlugFor(doc.relativePath, doc.slug), extensions);
+    // #2437: al desactivar el markdown también se retiran las copias de los
+    // miembros de las collections (derivan de files[], no del slug).
+    if (removedFormats.includes('markdown') && doc.frontmatter.type === 'collection') {
+      for (const f of doc.frontmatter.files ?? []) {
+        const dest = resolve(root, normalize(f));
+        if (dest.startsWith(`${root}${sep}`) && (await removeIfExists(dest))) removed++;
+      }
+    }
   }
 
   if (removedFormats.includes('html')) {
@@ -118,7 +127,11 @@ export async function cleanupDeletedFiles(
   deletedEntries: Map<string, DiscoveryEntry>,
 ): Promise<number> {
   const allDocPathsSet = new Set(allDocs.map((d) => d.relativePath));
-  const deletedMdPaths = [...changedPaths].filter((p) => p.endsWith('.md') && !allDocPathsSet.has(p));
+  // #2437: solo un .md ausente porque su fuente fue borrada (deletedEntries)
+  // se limpia por slug. Los miembros de una collection están excluidos de
+  // allDocs aunque su fuente siga viva: sin el filtro, un miembro modificado
+  // se tomaría por borrado y se eliminaría su copia emitida en dist.
+  const deletedMdPaths = [...changedPaths].filter((p) => p.endsWith('.md') && !allDocPathsSet.has(p) && deletedEntries.has(p));
   if (deletedMdPaths.length === 0) return 0;
 
   const entries = deletedMdPaths.map((relPath) => ({
