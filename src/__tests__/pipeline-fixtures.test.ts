@@ -117,15 +117,17 @@ describe('pipeline sin procesos sobre fixtures (#2031 PR3)', () => {
         const renderStart = calls.find((c) => c.method === 'startPhase' && c.args[0] === 'render');
         expect(renderStart?.args[1]).toBe(1);
 
-        // ── pandoc espíado: una invocación por formato ligero activo ──
+        // ── pandoc espíado: una invocación por formato que aún lo usa ──
+        // (#2436: el markdown exportado ya no pasa por pandoc)
         expect(versionCalls).toBe(1); // una sola consulta de versión por build
         const tos = pandocCalls.map((c) => c.to).sort();
-        expect(tos).toEqual(['epub3', 'latex', 'markdown']);
+        expect(tos).toEqual(['epub3', 'latex']);
         const epub = pandocCalls.find((c) => c.to === 'epub3');
         expect(epub?.outputPath).toContain('test-document.epub');
 
-        // ── Salidas reales en dist: .tex y .md escritos por nuestro código a
-        // partir de los fixtures; el EPUB NO existe (la invocación fue espía)
+        // ── Salidas reales en dist: .tex y .md escritos por nuestro código
+        // (.md directo, desde el frontmatter/cuerpo de la fuente); el EPUB NO
+        // existe (la invocación fue espía)
         const files = (await readdir(join(dir, 'dist', 'files'), { recursive: true }))
           .map((f) => String(f))
           .filter((f) => f.startsWith('test-document'));

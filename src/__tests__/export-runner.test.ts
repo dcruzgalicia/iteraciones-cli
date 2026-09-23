@@ -35,59 +35,63 @@ const unzipOk = (await Bun.which('unzip')) !== null;
 const latexOk = (await checkLatexEngine()).ok;
 
 describe('export/runner (convertToMarkdown)', () => {
-  it.skipIf(!pandocOk)('emite el YAML con el frontmatter del documento y los metadatos complementarios', async () => {
+  it('emite el frontmatter del origen completo y el body tal cual (#2436)', async () => {
     await withTempDir(async (dir) => {
       const out = join(dir, 'salida.md');
-      await convertToMarkdown(BODY, out, EXPORT_DOC, NO_FILTERS, '/proyecto');
+      await convertToMarkdown(BODY, out, EXPORT_DOC);
       const content = await Bun.file(out).text();
       expect(content.startsWith('---\n')).toBe(true);
-      // El frontmatter del documento fluye al YAML (emitido por pandoc)
+      // Campos del frontmatter de origen tal cual: la fecha se preserva en crudo
+      // (humanizarla en cada export rompía la idempotencia del re-proceso)
       expect(content).toContain('title: Mi título');
       expect(content).toContain('- Autor Uno');
       expect(content).toContain('- Autor Dos');
-      // Los complementos del CLI (defaults que no vienen del frontmatter)
+      expect(content).toContain('date: 2026-08-08');
+      // language se completa desde la config del sitio cuando el origen no lo trae
       expect(content).toContain('language: es-MX');
-      // La fecha formateada del CLI sobreescribe la cruda del frontmatter
-      expect(content).toContain('date: 8 de agosto de 2026');
-      expect(content).toContain('Hola.');
+      // Body intacto, con la línea en blanco que lo separa del frontmatter
+      expect(content.endsWith('---\n\nHola.\n')).toBe(true);
     });
   });
 
-  it.skipIf(!pandocOk)('no emite documentclass (detalle interno del PDF) ni rutas absolutas', async () => {
+  it('no emite documentclass, rutas absolutas ni bibliography/csl (#2436)', async () => {
     await withTempDir(async (dir) => {
       await writeFile(join(dir, 'refs.bib'), '@book{k, title = {K}}', 'utf8');
       await writeFile(join(dir, 'nature.csl'), '<?xml version="1.0"?><style version="1.0"/>', 'utf8');
       const out = join(dir, 'salida.md');
-      await convertToMarkdown(
-        BODY,
-        out,
-        { ...EXPORT_DOC, metadata: { ...EXPORT_DOC.metadata, bibliography: join(dir, 'refs.bib'), csl: join(dir, 'nature.csl') } },
-        NO_FILTERS,
-        dir,
-      );
+      const doc = {
+        ...EXPORT_DOC,
+        metadata: { ...EXPORT_DOC.metadata, bibliography: join(dir, 'refs.bib'), csl: join(dir, 'nature.csl') },
+      };
+      await convertToMarkdown(BODY, out, doc, {});
       const content = await Bun.file(out).text();
       expect(content).not.toContain('documentclass');
       expect(content).not.toContain(dir);
-      // Rutas relativas al proyecto: el export es portable
-      expect(content).toContain('bibliography: refs.bib');
-      expect(content).toContain('csl: nature.csl');
+      // bib/csl no viajan en el md: al re-procesarlos vienen de la config del sitio
+      expect(content).not.toContain('bibliography:');
+      expect(content).not.toContain('csl:');
     });
   });
 
-  it.skipIf(!pandocOk)('sin autor ni fecha en el frontmatter omite los campos', async () => {
+  it('sin creator ni date en el frontmatter omite los campos', async () => {
     await withTempDir(async (dir) => {
       const out = join(dir, 'salida.md');
       const bodySin = '---\ntitle: "Mi título"\n---\n\nHola.\n';
-      await convertToMarkdown(
-        bodySin,
-        out,
-        { ...EXPORT_DOC, metadata: { ...EXPORT_DOC.metadata, creator: [], date: undefined, dateIso: undefined } },
-        NO_FILTERS,
-        '/proyecto',
-      );
+      await convertToMarkdown(bodySin, out, { ...EXPORT_DOC, metadata: { ...EXPORT_DOC.metadata, creator: [], date: undefined, dateIso: undefined } });
       const content = await Bun.file(out).text();
-      expect(content).not.toContain('author:');
+      expect(content).not.toContain('creator:');
       expect(content).not.toContain('date:');
+    });
+  });
+
+  it('re-procesar su propia salida es byte-idéntico (#2436)', async () => {
+    await withTempDir(async (dir) => {
+      const primera = join(dir, 'a.md');
+      await convertToMarkdown(BODY, primera, EXPORT_DOC);
+      const salida = await Bun.file(primera).text();
+      const segunda = join(dir, 'b.md');
+      await convertToMarkdown(salida, segunda, EXPORT_DOC);
+      expect(await Bun.file(segunda).text()).toBe(salida);
     });
   });
 });
