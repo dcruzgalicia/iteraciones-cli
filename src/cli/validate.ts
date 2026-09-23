@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
+import { resolveCollectionFile } from '../builder/collection-files.js';
 import { listMarkdownDocuments } from '../builder/discover-files.js';
 import { validateDisabledFilters } from '../builder/filter-resolver.js';
 import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, validatePreambleDependencies } from '../builder/preamble-loader.js';
@@ -77,6 +78,49 @@ function validateParsedFrontmatter(
   return fmError;
 }
 
+/**
+ * #2443: `files[]` de una collection debe existir; se resuelve con la misma
+ * regla que el build (relativo a la collection, fallback a la raíz) y el
+ * error lista las rutas intentadas.
+ */
+async function validateCollectionFiles(cwd: string, entry: string, parsed: Record<string, unknown>, errors: ValidationError[]): Promise<boolean> {
+  if (parsed.type !== 'collection' || !Array.isArray(parsed.files)) return false;
+  let failed = false;
+  for (const file of parsed.files) {
+    if (typeof file !== 'string') continue; // la forma la cubre validateFrontmatterFields
+    const resolution = await resolveCollectionFile(file, entry, cwd);
+    if (!resolution.ok) {
+      failed = true;
+      errors.push({ file: entry, message: `files: no encontrado "${file}" (probado: ${resolution.tried.join(', ')})` });
+    }
+  }
+  return failed;
+}
+
+/** Parsea el YAML del frontmatter y valida su contenido (objeto, campos y files[] de collections). */
+async function validateParsedYaml(
+  cwd: string,
+  entry: string,
+  yaml: string,
+  slugs: Map<string, string>,
+  errors: ValidationError[],
+  warnings: ValidationError[],
+): Promise<boolean> {
+  const yamlResult = parseYamlWithPosition(yaml);
+  if (yamlResult.error) {
+    errors.push({ file: entry, message: `frontmatter YAML inválido: ${yamlResult.error}` });
+    return true;
+  }
+  const result = yamlResult.value;
+  if (!result || typeof result !== 'object' || Array.isArray(result)) {
+    errors.push({ file: entry, message: 'frontmatter YAML inválido: debe ser un objeto' });
+    return true;
+  }
+  let fmError = validateParsedFrontmatter(entry, result as Record<string, unknown>, slugs, errors, warnings);
+  if (await validateCollectionFiles(cwd, entry, result as Record<string, unknown>, errors)) fmError = true;
+  return fmError;
+}
+
 async function validateSingleEntry(
   cwd: string,
   entry: string,
@@ -112,20 +156,7 @@ async function validateSingleEntry(
     handleNoFrontmatter(entry, body, raw, warnings);
     return false;
   }
-  let fmError = false;
-  const yamlResult = parseYamlWithPosition(yaml);
-  if (yamlResult.error) {
-    fmError = true;
-    errors.push({ file: entry, message: `frontmatter YAML inválido: ${yamlResult.error}` });
-  } else {
-    const result = yamlResult.value;
-    if (!result || typeof result !== 'object' || Array.isArray(result)) {
-      fmError = true;
-      errors.push({ file: entry, message: 'frontmatter YAML inválido: debe ser un objeto' });
-    } else {
-      fmError = validateParsedFrontmatter(entry, result as Record<string, unknown>, slugs, errors, warnings);
-    }
-  }
+  const fmError = await validateParsedYaml(cwd, entry, yaml, slugs, errors, warnings);
   if (!body.trim() && !fmError) {
     warnings.push({ file: entry, message: 'no tiene contenido después del frontmatter; se omite' });
   }

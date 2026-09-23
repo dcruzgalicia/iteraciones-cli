@@ -12,6 +12,7 @@ import { plural } from '../lib/plural.js';
 import { buildAssets } from './build-assets.js';
 import { type BuildMetadata, computeBuildMetadata, computeWorkSets, type WorkSets } from './build-planner.js';
 import { cleanupCoverImages, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges } from './cleanup.js';
+import { resolveCollectionFile } from './collection-files.js';
 import { buildDocsFromIndex, discover, htmlSlugFor, resolveDiscoverSlugs } from './discover.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import { validateDisabledFilters } from './filter-resolver.js';
@@ -204,8 +205,19 @@ function addAnonymousFallback(aggregated: Set<string>, filesWithoutCreator: numb
 }
 
 export async function postProcessCollections(discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<void> {
-  for (const entry of discoveryIndex.values()) {
+  for (const [relativePath, entry] of discoveryIndex) {
     if (entry.type !== 'collection' || !entry.files) continue;
+    // #2443: resolver y normalizar files[] UNA vez (relativo a la collection
+    // primero, raíz como fallback); aguas abajo todo consume rutas relativas
+    // a la raíz. Lo que no resuelve queda como está: el error (con las rutas
+    // intentadas) lo emiten readCollectionEntries (build) y validate.
+    const resolved: string[] = [];
+    for (const file of entry.files) {
+      const resolution = await resolveCollectionFile(file, relativePath, cwd);
+      resolved.push(resolution.ok ? resolution.rootRelative : file);
+    }
+    entry.files = resolved;
+    if (entry.fm) entry.fm.files = resolved;
     await aggregateCollectionCreators(entry, cwd);
     if (entry.creator.length > 0 && entry.fm?.collectionCreator === undefined) {
       const fm = entry.fm ?? {};

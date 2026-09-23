@@ -28,7 +28,7 @@ El pipeline consume los siguientes campos del frontmatter:
 | `slug` | `string` | — | **Slug manual** (opcional): fija la URL del documento en lugar del esquema automático. Formato seguro: solo minúsculas, números y guiones simples (`^[a-z0-9]+(-[a-z0-9]+)*$`). Dos documentos con la misma salida (mismo directorio + slug) son un error de build y de `validate`. |
 | `language` | `string` | `'es-MX'` | Código de idioma BCP 47. Sobreescribe `language` de la configuración para HTML, EPUB y Markdown; **no** altera la configuración de `babel` del PDF. |
 | `type` | `'file' \| 'collection'` | `'file'` | Tipo de documento. `file` es el comportamiento por defecto. `collection` fusiona el contenido de múltiples archivos en uno solo (ver más abajo). |
-| `files` | `string[]` | — | **Requerido para `type: collection`**. Lista de paths relativos de los archivos a fusionar. Los archivos listados no se procesan individualmente. |
+| `files` | `string[]` | — | **Requerido para `type: collection`**. Rutas de los archivos a fusionar: se resuelven relativas al directorio de la collection (se admite `../` y cualquier anidamiento) y, si no existen ahí, relativas a la raíz del proyecto (compatibilidad). `validate` y `build` fallan si alguna no existe, mostrando las rutas intentadas. Los archivos listados no se procesan individualmente. |
 
 ## Type: collection
 
@@ -62,7 +62,7 @@ creator:
   - Autor del capítulo
 ```
 
-El body de `collection.md` puede estar vacío; el contenido viene de los archivos en `files`. Si `files` está vacío o todos los archivos están vacíos, el build omite la collection con una advertencia.
+El body de `collection.md` puede estar vacío; el contenido viene de los archivos en `files`. Las rutas de `files` son relativas al archivo de la collection (se admite `../`, p. ej. `../capitulo-1.md` desde una collection en un subdir); si no existen ahí, se intentan relativas a la raíz del proyecto. Si `files` está vacío o todos los archivos están vacíos, el build omite la collection con una advertencia.
 
 ## Metadatos Dublin Core
 
