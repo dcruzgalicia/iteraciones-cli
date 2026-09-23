@@ -157,6 +157,8 @@ const FormatSchema = z
     pdf: PdfFormatSchema.optional(),
     epub: EpubFormatSchema.optional(),
     markdown: MarkdownFormatSchema.optional(),
+    // #2438: cada build escribe build.sh con los comandos externos que corrieron.
+    script: z.boolean().optional(),
   })
   .strict();
 
@@ -193,6 +195,7 @@ export const SiteConfigSchema = z
       pdf: raw.format?.pdf ?? ({ generate: DEFAULT_PDF_FORMAT.generate } as z.infer<typeof PdfFormatSchema>),
       epub: raw.format?.epub ?? { ...DEFAULT_EPUB_FORMAT },
       markdown: raw.format?.markdown ?? { ...DEFAULT_MARKDOWN_FORMAT },
+      script: raw.format?.script ?? false,
     },
   }));
 

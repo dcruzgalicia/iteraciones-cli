@@ -9,6 +9,7 @@ import { splitFrontmatter } from '../lib/frontmatter.js';
 import { logWarning, runWithWarningSink } from '../lib/logger.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { plural } from '../lib/plural.js';
+import { abortScriptCapture, beginScriptCapture, commitScriptCapture } from '../lib/script-recorder.js';
 import { buildAssets } from './build-assets.js';
 import { type BuildMetadata, computeBuildMetadata, computeWorkSets, type WorkSets } from './build-planner.js';
 import { cleanupCoverImages, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges } from './cleanup.js';
@@ -103,6 +104,7 @@ export async function build(cwd: string, options: BuildOptions = {}, reporter: B
       );
     }
   } catch (err) {
+    abortScriptCapture();
     await progress.fail();
     if (options.full) {
       const outputDir = options.outputDir ?? join(cwd, DIST_FILES_DIR);
@@ -110,6 +112,7 @@ export async function build(cwd: string, options: BuildOptions = {}, reporter: B
     }
     throw err;
   }
+  await commitScriptCapture();
   if (options.json && result !== null) {
     process.stdout.write(`${JSON.stringify({ ...result, durationMs: Math.round(performance.now() - startedAt) })}\n`);
   }
@@ -456,6 +459,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
   const log = (msg: string) => progress.log(msg);
 
   const { siteConfig, effectiveDisabledPreamble } = await resolveEffectiveConfig(cwd);
+  if (siteConfig.format.script === true) beginScriptCapture(cwd);
 
   const prevState = options.full ? null : await loadStateFile(cwd);
   const plan = await computeBuildMetadata(cwd, siteConfig, prevState, effectiveDisabledPreamble, pandocVersion);

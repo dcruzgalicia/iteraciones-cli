@@ -46,6 +46,8 @@ export interface FormatConfig {
   epub?: EpubFormatConfig;
   markdown?: MarkdownFormatConfig;
   latex?: LatexFormatConfig;
+  // #2438: si es true, cada build escribe build.sh con los comandos externos.
+  script?: boolean;
 }
 
 export const DEFAULT_HTML_FORMAT = {
@@ -105,6 +107,7 @@ export const DEFAULT_SITE_CONFIG = {
     epub: DEFAULT_EPUB_FORMAT,
     markdown: DEFAULT_MARKDOWN_FORMAT,
     latex: DEFAULT_LATEX_FORMAT,
+    script: false,
   },
   title: undefined,
   creator: undefined,

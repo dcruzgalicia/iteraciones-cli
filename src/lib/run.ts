@@ -1,3 +1,5 @@
+import { recordScriptExec } from './script-recorder.js';
+
 export interface RunResult {
   stdout: string;
   stderr: string;
@@ -10,6 +12,8 @@ interface RunOptions {
   input?: string;
   env?: Record<string, string>;
   onSpawn?: (pid: number) => void;
+  /** #2438: clave estable del documento (su ruta) para ordenar build.sh. */
+  scriptKey?: string;
 }
 
 export class ProcessSpawnError extends Error {
@@ -77,7 +81,9 @@ export async function exec(command: string, args: string[], options: RunOptions 
   options.onSpawn?.(proc.pid);
   inFlightPids.add(proc.pid);
   try {
-    return await awaitProcess(command, proc, options);
+    const result = await awaitProcess(command, proc, options);
+    if (result.exitCode === 0) recordScriptExec(command, args, options, result.stdout);
+    return result;
   } finally {
     inFlightPids.delete(proc.pid);
   }

@@ -59,7 +59,7 @@ export async function execPandoc(options: PandocOptions): Promise<string> {
   try {
     const projectRoot = dirname(options.sourcePath);
     const env = { ITERACIONES_PROJECT_ROOT: projectRoot, ...options.env };
-    result = await exec('pandoc', args, { input: options.input, timeoutMs: PANDOC_TIMEOUT_MS, env });
+    result = await exec('pandoc', args, { input: options.input, timeoutMs: PANDOC_TIMEOUT_MS, env, scriptKey: options.sourcePath });
   } catch (err) {
     if (err instanceof ProcessSpawnError) {
       throw new PandocError(
