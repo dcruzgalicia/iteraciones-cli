@@ -1,4 +1,4 @@
-import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { dirname, isAbsolute, resolve } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
@@ -70,33 +70,29 @@ interface LatexComposerOptions {
   formatCfg?: Record<string, unknown>;
   biblatexAvailable?: boolean;
   warnedLangs: Set<string>;
-  pageDimensions?: PageDimensions;
-  cropActive?: boolean;
-  pdfxActive?: boolean;
+  images?: ImagePreprocessResult;
   cwd?: string;
 }
 
-interface ImagePreprocessResult {
+export interface ImagePreprocessResult {
   imageMap: Map<string, string>;
   processedImages: string[];
-  finalContent: string;
 }
 
-async function preprocessDocumentImages(
+export async function preprocessDocumentImages(
   content: string,
   doc: BuildDocument,
   fm: Record<string, unknown>,
   pageDimensions: PageDimensions,
   cropActive: boolean,
   pdfxActive: boolean,
+  outputDir: string,
 ): Promise<ImagePreprocessResult> {
   const docDir = dirname(doc.filePath);
-  const outputDir = join(docDir, '.iteraciones', 'processed-images');
   const inlineImages = scanInlineImages(content, docDir);
   const multilineImages = await scanTitlePageFieldImages(fm, docDir, pageDimensions.w);
   const result = await processDocumentImages(inlineImages, fm, docDir, pageDimensions, cropActive, outputDir, multilineImages, pdfxActive);
-  if (result.imageMap.size === 0) return { imageMap: result.imageMap, processedImages: result.processedFiles, finalContent: content };
-  return { imageMap: result.imageMap, processedImages: result.processedFiles, finalContent: rewriteImagePaths(content, result.imageMap, docDir) };
+  return { imageMap: result.imageMap, processedImages: result.processedFiles };
 }
 
 async function resolveAndPushImage(
@@ -120,7 +116,7 @@ function toAbsoluteImagePaths(value: string | string[], cwd: string): string | s
   return isAbsolute(value) ? value : resolve(cwd, value);
 }
 
-function mergeConfigImages(
+export function mergeConfigImages(
   fm: Record<string, unknown>,
   formatCfg: Record<string, unknown> | undefined,
   siteConfig: SiteConfig,
@@ -314,9 +310,7 @@ export async function markdownToLatex(
     formatCfg,
     biblatexAvailable = true,
     warnedLangs,
-    pageDimensions,
-    cropActive = false,
-    pdfxActive = false,
+    images,
     cwd = '',
   } = opts;
   const effectiveFm = mergeConfigImages(fm, formatCfg, siteConfig, cwd);
@@ -326,12 +320,9 @@ export async function markdownToLatex(
   const subtitle = interventionOverrides?.subtitle ?? resolveStringField(fm, formatCfg, siteConfig, 'subtitle');
   const date = interventionOverrides?.date ?? (await pdfDate(fm, formatCfg, siteConfig, doc));
 
-  let imageMap = new Map<string, string>();
-  let processedImages: string[] = [];
-  let finalContent = content;
-  if (pageDimensions) {
-    ({ imageMap, processedImages, finalContent } = await preprocessDocumentImages(content, doc, effectiveFm, pageDimensions, cropActive, pdfxActive));
-  }
+  const imageMap = images?.imageMap ?? new Map<string, string>();
+  const processedImages = images?.processedImages ?? [];
+  const finalContent = rewriteImagePaths(content, imageMap, dirname(doc.filePath));
 
   const extraArgs = buildPandocArgs(
     templatePath,

@@ -38,6 +38,7 @@ export async function withTempDir(fn: (dir: string) => Promise<void>): Promise<v
  */
 export const SKIP_REASONS = {
   pandoc: 'requiere pandoc',
+  magick: 'requiere ImageMagick',
   latex: 'requiere motor LaTeX (latexmk)',
   unzip: 'requiere unzip',
   fixtures: 'requieren fixtures de pandoc para este major',

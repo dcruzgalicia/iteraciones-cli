@@ -67,12 +67,15 @@ describe('regresión #2156: el pool PDF compila un tex del work dir con rutas ab
         expect((await pdf.arrayBuffer()).byteLength).toBeGreaterThan(1000);
         // Bundle portable intacto (ADR #2084): copia namespaced junto al tex de dist.
         expect(await Bun.file(join(dist, 'cuidar-se-startpaper.jpg')).exists()).toBe(true);
+        // #2435: la imagen procesada vive además en dist/assets/img (relativo a las salidas).
+        expect(await Bun.file(join(dist, 'assets', 'img', 'startpaper.jpg')).exists()).toBe(true);
 
         // El tex de compilación del pool vive en el área de trabajo y apunta a
         // la ruta absoluta procesada — NO al nombre namespaced de dist (#2156).
         const workTexPath = join(dir, '.iteraciones', 'tmp', 'pdf', 'cuidar-se.tex');
         const workTex = await Bun.file(workTexPath).text();
-        expect(workTex).toContain('processed-images/startpaper.jpg');
+        expect(workTex).toContain('assets/img/startpaper.jpg');
+        expect(workTex).not.toContain('processed-images/');
         expect(workTex).not.toContain('cuidar-se-startpaper.jpg');
       });
     },
