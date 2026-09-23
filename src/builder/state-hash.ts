@@ -68,6 +68,7 @@ export const SCHEMA_SOURCE_FILES = [
   '../lib/date.ts', // humanDate: conversión yyyy-mm-dd → fecha legible
   './pipeline.ts', // orquestación de pools de formatos
   './pipeline-formats.ts', // procesamiento por documento: emisión de formatos y cola PDF
+  './collection-files.ts', // #2443: resolución de files[] de collections (collection-dir con fallback a raíz)
   './render.ts', // htmlPage: post-procesamiento de referencias
   './html-composer.ts', // htmlPage + linkCitations: template HTML y enlazado de citas
   './latex-preamble.ts', // latexTemplate: composición del template LaTeX efectivo

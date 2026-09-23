@@ -35,8 +35,9 @@ function assertCollectionFiles(fm: Record<string, unknown>, label: string): stri
 /**
  * #2437: `iteraciones merge <collection.md> -o <out.md>` fusiona los
  * archivos de files[] en un solo markdown con type: file (sin files[]).
- * Los files se resuelven relativos al .md de entrada: dist reescribe
- * files[] para apuntar a las copias de los miembros emitidas allí.
+ * Los files se resuelven relativos al .md de entrada (dist reescribe
+ * files[] hacia las copias en dist), con la raíz del proyecto como
+ * fallback (#2443: collections en subdir con files relativos a la raíz).
  */
 export async function runMerge(cwd: string, input: string, options: { output?: string }): Promise<void> {
   try {
@@ -46,7 +47,7 @@ export async function runMerge(cwd: string, input: string, options: { output?: s
     const inputPath = isAbsolute(input) ? normalize(input) : join(cwd, normalize(input));
     const fm = await readSourceFm(inputPath, input);
     const files = assertCollectionFiles(fm, input);
-    const entries = await readCollectionEntries(files, dirname(inputPath), input);
+    const entries = await readCollectionEntries(files, input, [dirname(inputPath), cwd]);
     if (entries.length === 0) throw new BuildError(`"${input}": los archivos de files no tienen contenido`);
 
     const output = isAbsolute(options.output) ? normalize(options.output) : join(cwd, options.output);

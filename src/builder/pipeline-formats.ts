@@ -187,18 +187,27 @@ export type CollectionEntry = {
 
 /**
  * Lee y parsea los archivos de una collection. Compartido entre el build
- * (#2437) y el subcomando `iteraciones merge`, que resuelve los files
- * relativos al .md de entrada (dist reescribe las rutas en files[]).
+ * (#2437) y el subcomando `iteraciones merge`. Cada caller pasa sus bases:
+ * el build va con [raíz, dir de la collection] (los files llegan normalizados
+ * relativos a la raíz desde postProcessCollections; lo irresoluble cae al dir
+ * de la collection y ambas rutas aparecen en el error) y merge con
+ * [dir del .md de entrada, raíz] (#2443).
  */
-export async function readCollectionEntries(files: string[], cwd: string, collectionPath: string): Promise<CollectionEntry[]> {
+export async function readCollectionEntries(files: string[], collectionPath: string, bases: string[]): Promise<CollectionEntry[]> {
   const entries: CollectionEntry[] = [];
   for (const file of files) {
-    const filePath = join(cwd, file);
-    let text: string;
-    try {
-      text = await Bun.file(filePath).text();
-    } catch {
-      throw new BuildError(`collection "${collectionPath}": archivo configurado en files no encontrado: "${file}"`);
+    const candidates = [...new Set(bases.map((base) => join(base, file)))];
+    let text: string | undefined;
+    for (const candidate of candidates) {
+      try {
+        text = await Bun.file(candidate).text();
+        break;
+      } catch {}
+    }
+    if (text === undefined) {
+      throw new BuildError(
+        `collection "${collectionPath}": archivo configurado en files no encontrado: "${file}" (probado: ${candidates.join(', ')})`,
+      );
     }
     const parsed = parseFileFrontmatter(text);
     if (parsed.body.trim()) entries.push(parsed);
@@ -209,7 +218,7 @@ export async function readCollectionEntries(files: string[], cwd: string, collec
 async function readCollectionFiles(doc: BuildDocument, cwd: string): Promise<CollectionEntry[]> {
   const files = doc.frontmatter.files;
   if (!files || files.length === 0) return [];
-  return readCollectionEntries(files, cwd, doc.relativePath);
+  return readCollectionEntries(files, doc.relativePath, [cwd, join(cwd, dirname(doc.relativePath))]);
 }
 
 /**
