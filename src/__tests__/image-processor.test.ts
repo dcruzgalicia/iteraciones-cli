@@ -7,7 +7,9 @@ import {
   processDocumentImages,
   processImage,
   resetMagickCache,
+  rewriteFmImagePaths,
   rewriteImagePaths,
+  scanInlineImages,
   scanTitlePageFieldImages,
 } from '../builder/image-processor.js';
 
@@ -273,5 +275,74 @@ describe('rewriteImagePaths — reemplazo anclado (#2170)', () => {
 
   it('sin imágenes en el mapa retorna el contenido intacto', () => {
     expect(rewriteImagePaths('![a](img.png)', new Map(), docDir)).toBe('![a](img.png)');
+  });
+
+  it('reescribe valor exacto, ítem de lista, definición de referencia y <img src> (#2441)', () => {
+    const content = [
+      'portada:',
+      '  - img.png',
+      "  - './img.png'",
+      '[r]: img.png',
+      '<img src="img.png" alt="x">',
+      'en prosa "img.png" no se toca',
+      'otra-clave: img.png',
+    ].join('\n');
+    const result = rewriteImagePaths(content, map, docDir);
+    expect(result).toContain(`  - ${processed}`);
+    expect(result).toContain(`  - '${processed}'`);
+    expect(result).toContain(`[r]: ${processed}`);
+    expect(result).toContain(`src="${processed}"`);
+    expect(result).toContain('en prosa "img.png" no se toca');
+    expect(result).toContain('otra-clave: img.png');
+  });
+});
+
+describe('rewriteFmImagePaths (#2441)', () => {
+  const docDir = '/proyecto/capitulos';
+  const processed = '/proyecto/capitulos/assets/img/img.jpg';
+  const map = new Map([['/proyecto/capitulos/img.png', processed]]);
+
+  it('reescribe campos de imagen escalar, lista y multilinea; deja intactos los demás', () => {
+    const fm = {
+      title: 'Img.png es el título',
+      slug: 'img.png',
+      titleImage: 'img.png',
+      publisherImage: ['img.png', 'otra.png'],
+      frontispiece: '![p](img.png)',
+    };
+    const out = rewriteFmImagePaths(fm, map, docDir);
+    expect(out.titleImage).toBe(processed);
+    expect(out.publisherImage).toEqual([processed, 'otra.png']);
+    expect(out.frontispiece).toBe(`![p](${processed})`);
+    expect(out.title).toBe('Img.png es el título');
+    expect(out.slug).toBe('img.png');
+  });
+
+  it('sin imágenes en el mapa retorna el fm intacto', () => {
+    const fm = { titleImage: 'img.png' };
+    expect(rewriteFmImagePaths(fm, new Map(), docDir)).toBe(fm);
+  });
+});
+
+describe('scanInlineImages (#2441)', () => {
+  const docDir = '/proyecto';
+
+  it('detecta ![](), definiciones [id]: y <img crudo; ignora links, http y data', () => {
+    const content = [
+      '![a](img.png)',
+      '![b][ref]',
+      '[ref]: portada.png',
+      '[nota]: ver.md',
+      '<img src="html.jpg" alt="x">',
+      '<img src="https://ejemplo.com/ext.png">',
+      '<img src="data:image/png;base64,xxx">',
+    ].join('\n');
+    const paths = scanInlineImages(content, docDir);
+    expect(paths).toContain('/proyecto/img.png');
+    expect(paths).toContain('/proyecto/portada.png');
+    expect(paths).toContain('/proyecto/html.jpg');
+    expect(paths.some((p) => p.includes('ver.md'))).toBe(false);
+    expect(paths.some((p) => p.includes('ejemplo.com'))).toBe(false);
+    expect(paths.some((p) => p.startsWith('data:'))).toBe(false);
   });
 });

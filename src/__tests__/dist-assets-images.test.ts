@@ -30,7 +30,34 @@ describe.skipIf(!pandocOk || !magickOk)('imágenes procesadas en dist (#2435)', 
       );
       await Bun.write(join(dir, 'iteraciones.config.yaml'), `${config}\n`);
       await Bun.spawnSync(['magick', '-size', '2x2', 'xc:white', join(dir, 'foto.png')]);
-      const doc = ['---', 'title: Ejemplo', 'slug: ejemplo', '---', '', '# Capítulo', '', '![foto](foto.png)', ''].join('\n');
+      await Bun.spawnSync(['magick', '-size', '2x2', 'xc:gray', join(dir, 'portada.png')]);
+      await Bun.spawnSync(['magick', '-size', '2x2', 'xc:gray', join(dir, 'editorial.png')]);
+      await Bun.spawnSync(['magick', '-size', '2x2', 'xc:gray', join(dir, 'frontis.png')]);
+      await Bun.spawnSync(['magick', '-size', '2x2', 'xc:gray', join(dir, 'referencia.png')]);
+      await Bun.spawnSync(['magick', '-size', '2x2', 'xc:gray', join(dir, 'crudo.png')]);
+      // #2441: fm escalar, lista y multilinea + referencia [id]: + <img crudo>.
+      const doc = [
+        '---',
+        'title: Ejemplo',
+        'slug: ejemplo',
+        'titleImage: portada.png',
+        'publisherImage:',
+        '  - editorial.png',
+        'frontispiece: |',
+        '  ![Frontis](frontis.png)',
+        '---',
+        '',
+        '# Capítulo',
+        '',
+        '![foto](foto.png)',
+        '',
+        'Referencia: ![ref][r]',
+        '',
+        '[r]: referencia.png',
+        '',
+        '<img src="crudo.png" alt="crudo">',
+        '',
+      ].join('\n');
       await Bun.write(join(dir, 'manuscrito.md'), `${doc}\n`);
       // Documento anidado con su imagen: su assets vive en su propio nivel.
       const anexo = ['---', 'title: Anexo', 'slug: anexo', '---', '', '# Anexo', '', '![gráfica](grafico.png)', ''].join('\n');
@@ -53,6 +80,22 @@ describe.skipIf(!pandocOk || !magickOk)('imágenes procesadas en dist (#2435)', 
       expect(await Bun.file(join(dist, 'sub', 'anexo.html')).text()).toContain('./assets/img/grafico.jpg');
       expect(await Bun.file(join(dist, 'sub', 'anexo.html')).text()).not.toContain('../assets/img/grafico.jpg');
       expect(await Bun.file(join(dist, 'sub', 'anexo.md')).text()).toContain('./assets/img/grafico.jpg');
+      // 4. #2441: el fm del markdown exportado (escalar, lista, multilinea) y
+      //    las formas ![ref][id] / <img crudo> del body apuntan a assets.
+      const md = await Bun.file(join(dist, 'ejemplo.md')).text();
+      expect(md).toContain('titleImage: ./assets/img/portada.jpg');
+      expect(md).toContain('- ./assets/img/editorial.jpg');
+      expect(md).toContain('./assets/img/frontis.jpg');
+      expect(md).toContain('./assets/img/referencia.jpg');
+      expect(md).toContain('src="./assets/img/crudo.jpg"');
+      expect(md).not.toContain('portada.png');
+      expect(md).not.toContain('editorial.png');
+      expect(md).not.toContain('frontis.png');
+      expect(md).not.toContain('referencia.png');
+      expect(md).not.toContain('crudo.png');
+      const html = await Bun.file(join(dist, 'ejemplo.html')).text();
+      expect(html).toContain('./assets/img/referencia.jpg');
+      expect(html).toContain('./assets/img/crudo.jpg');
     });
   }, 120_000);
 });

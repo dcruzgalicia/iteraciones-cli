@@ -9,7 +9,7 @@ import { htmlSlugFor } from './discover.js';
 import { assembleExportDocument } from './export/assemble.js';
 import { convertToEpub, convertToMarkdown } from './export/runner.js';
 import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
-import { rewriteImagePaths } from './image-processor.js';
+import { rewriteFmImagePaths, rewriteImagePaths } from './image-processor.js';
 import {
   buildTexDistribution,
   type ImagePreprocessResult,
@@ -583,6 +583,9 @@ async function emitCollectionFormats(
       .filter(([src, dst]) => dst !== src)
       .map(([src, dst]): [string, string] => [src, `./assets/img/${basename(dst)}`]),
   );
+  // #2441: el fm de los exports (html/markdown) debe apuntar a assets como el
+  // body; outputs.fm no pasa por rewriteImagePaths y pisaba el contenido.
+  const fmAssets = rewriteFmImagePaths(outputs.fm, relImageMap, docDir);
 
   const creatorLinks = doc.frontmatter.type === 'creator' ? getCreatorLinks(outputs.fm) : [];
   const isCollection = doc.frontmatter.type === 'collection';
@@ -631,7 +634,7 @@ async function emitCollectionFormats(
       rewriteImagePaths(prependLinksMarkdown(base, creatorLinks), relImageMap, docDir),
       outputs.outBase(`${outputs.outSlug}${primaryOutputExtension('markdown')}`),
       exportDoc,
-      outputs.fm,
+      fmAssets,
     );
   }
 }

@@ -145,14 +145,22 @@ const MULTILINE_IMAGE_FIELDS = [
   'colophon',
 ];
 
+const IMAGE_EXT_RE = /\.(png|jpe?g|gif|svg|webp|avif)$/i;
+
 export function scanInlineImages(content: string, docDir: string): string[] {
   const paths: string[] = [];
-  for (const match of content.matchAll(MD_IMAGE_RE)) {
-    const imgPath = match[2];
-    if (!imgPath || isAbsolute(imgPath) || imgPath.startsWith('http')) continue;
-    const abs = resolve(docDir, imgPath);
-    paths.push(abs);
+  const push = (raw: string | undefined): void => {
+    const imgPath = raw?.replace(/^<|>$/g, '');
+    if (!imgPath || isAbsolute(imgPath) || imgPath.startsWith('http') || imgPath.startsWith('data:')) return;
+    paths.push(resolve(docDir, imgPath));
+  };
+  for (const match of content.matchAll(MD_IMAGE_RE)) push(match[2]);
+  // Referencias ![alt][id] con definición [id]: ruta (#2441)
+  for (const match of content.matchAll(/^\[[^\]]+\]:[ \t]+(\S+)/gm)) {
+    if (IMAGE_EXT_RE.test(match[1] ?? '')) push(match[1]);
   }
+  // HTML crudo <img src="..."> (#2441)
+  for (const match of content.matchAll(/<img\b[^>]*\bsrc=["']([^"']+)["']/gi)) push(match[1]);
   return paths;
 }
 
@@ -218,9 +226,39 @@ export function rewriteImagePaths(content: string, imageMap: Map<string, string>
         new RegExp(`^((?:titleImage|publisherImage|startpaper):[ \\t]*)(["']?)${escaped}(["']?[ \\t]*)$`, 'gm'),
         (_m, pre: string, openQuote: string, closeQuote: string) => `${pre}${openQuote}${processed}${closeQuote}`,
       );
+      // Valor exacto de un campo: sola la ruta (escalar sin clave en la misma
+      // línea o ítem de lista `- ruta`) — anclado a la línea entera (#2441).
+      result = result.replace(
+        new RegExp(`^([ \\t]*-[ \\t]+)?(["']?)${escaped}(["']?)[ \\t]*$`, 'm'),
+        (_m, dash = '', openQuote = '', closeQuote = '') => `${dash}${openQuote}${processed}${closeQuote}`,
+      );
+      // Definición de referencia ![alt][id] con [id]: ruta — anclado a la línea (#2441).
+      result = result.replace(
+        new RegExp(`^(\\[[^\\]]+\\]:[ \\t]+)(["']?)${escaped}(["']?)[ \\t]*$`, 'gm'),
+        (_m, pre: string, openQuote: string, closeQuote: string) => `${pre}${openQuote}${processed}${closeQuote}`,
+      );
+      // HTML crudo <img src="ruta"> — anclado al atributo src (#2441).
+      result = result.replace(new RegExp(`(src=["']?)${escaped}(["'])`, 'gi'), (_m, pre: string, closeQuote: string) => `${pre}${processed}${closeQuote}`);
     }
   }
   return result;
+}
+
+/**
+ * #2441: reescribe en el objeto fm los campos de imagen a la ruta de assets
+ * del nivel. outputs.fm es el fm que viaja a los exports (html/markdown) y no
+ * pasa por rewriteImagePaths sobre el contenido, así que conservaba los paths
+ * originales del proyecto aunque la imagen ya viviera en assets/img/.
+ */
+export function rewriteFmImagePaths(fm: Record<string, unknown>, imageMap: Map<string, string>, docDir: string): Record<string, unknown> {
+  if (imageMap.size === 0) return fm;
+  const out: Record<string, unknown> = { ...fm };
+  for (const field of ['titleImage', 'publisherImage', 'startpaper', ...MULTILINE_IMAGE_FIELDS]) {
+    const value = out[field];
+    if (typeof value === 'string') out[field] = rewriteImagePaths(value, imageMap, docDir);
+    else if (Array.isArray(value)) out[field] = value.map((v) => (typeof v === 'string' ? rewriteImagePaths(v, imageMap, docDir) : v));
+  }
+  return out;
 }
 
 interface ProcessTargets {
