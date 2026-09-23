@@ -9,7 +9,16 @@ import { htmlSlugFor } from './discover.js';
 import { assembleExportDocument } from './export/assemble.js';
 import { convertToEpub, convertToMarkdown } from './export/runner.js';
 import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
-import { buildTexDistribution, markdownToLatex, rewriteTexForDist } from './latex-composer.js';
+import { rewriteImagePaths } from './image-processor.js';
+import {
+  buildTexDistribution,
+  type ImagePreprocessResult,
+  markdownToLatex,
+  mergeConfigImages,
+  preprocessDocumentImages,
+  rewriteTexForDist,
+} from './latex-composer.js';
+import { detectPageSize } from './latex-preamble.js';
 import { primaryOutputExtension } from './output-layout.js';
 import { formatLinksFor, parseFileFrontmatter, readMarkdownOrWarn, relativeHref, writeOutput } from './pipeline-io.js';
 import type { ExportContext, FormatWorkSets, RenderContext } from './pipeline-setup.js';
@@ -61,6 +70,7 @@ async function emitLatexAndQueuePdf(
   renderCtx: RenderContext,
   exportCtx: ExportContext,
   sets: FormatWorkSets,
+  images: ImagePreprocessResult,
   authorsBlock = '',
 ): Promise<void> {
   const { ctx, lang, warnedLangs, formatCfg, plan } = renderCtx;
@@ -85,9 +95,7 @@ async function emitLatexAndQueuePdf(
     formatCfg: formatCfg?.pdf,
     biblatexAvailable: exportCtx.biblatexAvailable,
     warnedLangs,
-    pageDimensions: renderCtx.pageDimensions,
-    cropActive: renderCtx.cropActive,
-    pdfxActive: renderCtx.pdfxActive,
+    images,
     cwd: ctx.cwd,
   });
   const texWithAuthors =
@@ -547,6 +555,25 @@ async function emitCollectionFormats(
   const content = outputs.content;
   const { formatCfg } = renderCtx;
 
+  // #2435: las imágenes se preprocesan UNA vez hacia dist/files/assets/img y
+  // todos los formatos las referencian desde ahí. La fusión latex contiene las
+  // mismas imágenes que las variantes html/markdown (los cuerpos son idénticos).
+  const images = await preprocessDocumentImages(
+    collectionBaseContent(collectionEntries, 'latex', content),
+    doc,
+    mergeConfigImages(outputs.fm, formatCfg?.pdf, ctx.siteConfig, ctx.cwd),
+    renderCtx.pageDimensions ?? detectPageSize([]),
+    renderCtx.cropActive,
+    renderCtx.pdfxActive,
+    join(ctx.outputDir, 'assets', 'img'),
+  );
+  const docDir = dirname(doc.filePath);
+  const relImageMap = new Map(
+    [...images.imageMap]
+      .filter(([src, dst]) => dst !== src)
+      .map(([src, dst]): [string, string] => [src, relativeHref(outputs.dir, `assets/img/${basename(dst)}`)]),
+  );
+
   const creatorLinks = doc.frontmatter.type === 'creator' ? getCreatorLinks(outputs.fm) : [];
   const isCollection = doc.frontmatter.type === 'collection';
 
@@ -561,6 +588,7 @@ async function emitCollectionFormats(
       renderCtx,
       exportCtx,
       formatWorkSets,
+      images,
       authorsBlock,
     );
   }
@@ -569,13 +597,16 @@ async function emitCollectionFormats(
 
   if (activeFormats.html && formatWorkSets.htmlPaths.has(doc.relativePath) && doc.frontmatter.type !== 'intervention') {
     const base = collectionBaseContent(collectionEntries, 'html', content);
-    await emitHtmlPage(doc, { ...outputs, content: prependLinksMarkdown(base, creatorLinks) }, renderCtx, exportCtx, discoveryIndex);
+    const htmlContent = rewriteImagePaths(prependLinksMarkdown(base, creatorLinks), relImageMap, docDir);
+    await emitHtmlPage(doc, { ...outputs, content: htmlContent }, renderCtx, exportCtx, discoveryIndex);
   }
 
   if (activeFormats.epub && formatWorkSets.epubPaths.has(doc.relativePath) && doc.frontmatter.type !== 'intervention') {
     const base = collectionBaseContent(collectionEntries, 'html', content);
     await convertToEpub(
-      prependLinksMarkdown(base, creatorLinks),
+      // EPUB se arma con rutas absolutas: pandoc resuelve los medios contra el
+      // cwd del proceso (entrada por stdin, sin --resource-path).
+      rewriteImagePaths(prependLinksMarkdown(base, creatorLinks), images.imageMap, docDir),
       outputs.outBase(`${outputs.outSlug}${primaryOutputExtension('epub')}`),
       exportDoc,
       exportCtx.filters,
@@ -587,7 +618,7 @@ async function emitCollectionFormats(
   if (activeFormats.markdown && formatWorkSets.mdPaths.has(doc.relativePath) && doc.frontmatter.type !== 'intervention') {
     const base = collectionBaseContent(collectionEntries, 'markdown', content);
     await convertToMarkdown(
-      prependLinksMarkdown(base, creatorLinks),
+      rewriteImagePaths(prependLinksMarkdown(base, creatorLinks), relImageMap, docDir),
       outputs.outBase(`${outputs.outSlug}${primaryOutputExtension('markdown')}`),
       exportDoc,
       exportCtx.filters,
