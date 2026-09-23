@@ -35,6 +35,9 @@ export interface EpubFormatConfig {
 
 export interface MarkdownFormatConfig {
   generate?: boolean;
+  // #2437: las collections se exportan fusionadas (type: file) en vez de
+  // re-procesables (type: collection + files[] + body original).
+  merge?: boolean;
 }
 
 export interface FormatConfig {
@@ -75,6 +78,7 @@ export const DEFAULT_EPUB_FORMAT = {
 
 export const DEFAULT_MARKDOWN_FORMAT = {
   generate: false,
+  merge: false,
 } satisfies MarkdownFormatConfig;
 
 export function computeActiveFormats(format: FormatConfig): string[] {
