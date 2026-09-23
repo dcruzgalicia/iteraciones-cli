@@ -555,9 +555,11 @@ async function emitCollectionFormats(
   const content = outputs.content;
   const { formatCfg } = renderCtx;
 
-  // #2435: las imágenes se preprocesan UNA vez hacia dist/files/assets/img y
-  // todos los formatos las referencian desde ahí. La fusión latex contiene las
-  // mismas imágenes que las variantes html/markdown (los cuerpos son idénticos).
+  // #2435: las imágenes se preprocesan UNA vez hacia <outputDir>/<nivel>/assets/img
+  // (cada nivel contiene las imágenes de su nivel: dist/files/assets/img en la raíz,
+  // dist/files/sub/assets/img en subcarpetas) y todos los formatos las referencian
+  // como ./assets/img/<nombre>, idéntico en todos los niveles. La fusión latex
+  // contiene las mismas imágenes que las variantes html/markdown (los cuerpos son idénticos).
   const images = await preprocessDocumentImages(
     collectionBaseContent(collectionEntries, 'latex', content),
     doc,
@@ -565,13 +567,13 @@ async function emitCollectionFormats(
     renderCtx.pageDimensions ?? detectPageSize([]),
     renderCtx.cropActive,
     renderCtx.pdfxActive,
-    join(ctx.outputDir, 'assets', 'img'),
+    outputs.outBase('assets/img'),
   );
   const docDir = dirname(doc.filePath);
   const relImageMap = new Map(
     [...images.imageMap]
       .filter(([src, dst]) => dst !== src)
-      .map(([src, dst]): [string, string] => [src, relativeHref(outputs.dir, `assets/img/${basename(dst)}`)]),
+      .map(([src, dst]): [string, string] => [src, `./assets/img/${basename(dst)}`]),
   );
 
   const creatorLinks = doc.frontmatter.type === 'creator' ? getCreatorLinks(outputs.fm) : [];
