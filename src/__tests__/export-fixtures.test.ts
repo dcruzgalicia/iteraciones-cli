@@ -94,65 +94,27 @@ describe('exporters sobre spies de execPandoc (#2031 PR2)', () => {
     });
   });
 
-  it('convertToMarkdown: standalone, rutas RELATIVAS de bib/csl y escritura del stdout', async () => {
+  it('convertToMarkdown no invoca pandoc: escribe frontmatter + body directo (#2436)', async () => {
     await withTempDir(async (dir) => {
-      const stdoutFixture = '---\ntitle: "Mi título"\nlanguage: es-MX\n---\n\nHola.\n';
-      const { calls, restore } = spyPandoc(stdoutFixture);
+      const { calls, restore } = spyPandoc('');
       try {
         const out = join(dir, 'salida.md');
         const doc: ExportDocument = {
           ...EXPORT_DOC,
-          metadata: {
-            ...EXPORT_DOC.metadata,
-            toc: true,
-            tocDepth: 2,
-            bibliography: join(dir, 'refs.bib'),
-            csl: join(dir, 'estilos.csl'),
-          },
+          metadata: { ...EXPORT_DOC.metadata, toc: true, tocDepth: 2, bibliography: join(dir, 'refs.bib'), csl: join(dir, 'estilos.csl') },
         };
-        // Archivos reales: el CSL debe existir para viajar en la metadata
-        const { writeFile } = await import('node:fs/promises');
-        await writeFile(join(dir, 'refs.bib'), '@book{a, title={T}}\n', 'utf8');
-        await writeFile(join(dir, 'estilos.csl'), '<style/>\n', 'utf8');
-        await convertToMarkdown(BODY, out, doc, NO_FILTERS, dir);
-
-        const call = calls[0];
-        if (call === undefined) throw new Error('execPandoc no fue invocado');
-        expect(call.to).toBe('markdown');
-        const args = call.extraArgs ?? [];
-        expect(args).toContain('--standalone');
-        expect(args).toContain('--metadata=toc:true');
-        expect(args).toContain('--metadata=toc-depth:2');
-        // Portable: relativas al proyecto aunque la fuente sea absoluta (#1882)
-        expect(args).toContain('--metadata=bibliography:refs.bib');
-        expect(args).toContain('--metadata=csl:estilos.csl');
-        // El stdout del writer se escribe tal cual en outputPath
-        expect(readFileSync(out, 'utf8')).toBe(stdoutFixture);
+        await convertToMarkdown(BODY, out, doc, {});
+        const text = readFileSync(out, 'utf8');
+        // Sin roundtrip por pandoc: el body no se transforma (#2436)
+        expect(calls).toHaveLength(0);
+        expect(text).toContain('title: Mi título');
+        expect(text).toContain('language: es-MX');
+        expect(text.endsWith('\n\nHola.\n')).toBe(true);
+        // bibliography/csl no viajan en el markdown exportado (los aporta la config del sitio al re-procesar)
+        expect(text).not.toContain('bibliography:');
+        expect(text).not.toContain('csl:');
+        expect(text).not.toContain(dir);
       } finally {
-        restore();
-      }
-    });
-  });
-
-  it('convertToMarkdown: CSL inexistente advierte y omite la metadata', async () => {
-    await withTempDir(async (dir) => {
-      const stderrSpy = spyOn(process.stderr, 'write');
-      let output = '';
-      const { calls, restore } = spyPandoc('');
-      try {
-        const out = join(dir, 's.md');
-        const doc: ExportDocument = {
-          ...EXPORT_DOC,
-          metadata: { ...EXPORT_DOC.metadata, bibliography: '/p/refs.bib', csl: '/p/no-existe.csl' },
-        };
-        await convertToMarkdown(BODY, out, doc, NO_FILTERS, '/p');
-        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
-        const args = calls[0]?.extraArgs ?? [];
-        expect(output).toContain('archivo CSL no encontrado');
-        expect(args.some((a) => a.startsWith('--metadata=csl:'))).toBe(false);
-        expect(args).toContain('--metadata=bibliography:refs.bib');
-      } finally {
-        stderrSpy.mockRestore();
         restore();
       }
     });

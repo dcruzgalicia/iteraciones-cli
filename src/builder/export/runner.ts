@@ -1,12 +1,14 @@
 import { existsSync } from 'node:fs';
 import { copyFile, mkdir, rename, rm } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import { stringify } from 'yaml';
 import { ExportError, PANDOC_ERROR_CODES } from '../../lib/errors.js';
+import { parseYamlWithPosition, splitFrontmatter } from '../../lib/frontmatter.js';
 import { fmBool, fmString } from '../../lib/frontmatter-fields.js';
 import { execPandoc, MD_READER } from '../../lib/pandoc-runner.js';
 import { exec, ProcessSpawnError, ProcessTimeoutError } from '../../lib/run.js';
 import type { LuaFilterGroup } from '../filter-resolver.js';
-import { citationCompileArgs, citationPortableMetadataArgs, creatorArgs, dateArg, languageArg, titleArg } from '../pandoc-metadata.js';
+import { citationCompileArgs, creatorArgs, dateArg, languageArg, titleArg } from '../pandoc-metadata.js';
 import type { ExportDocument } from './types.js';
 
 export const LATEXMK_AUX_EXTENSIONS = ['.aux', '.bbl', '.bcf', '.blg', '.fls', '.run.xml', '.fdb_latexmk', '.out', '.toc', '.log'];
@@ -43,32 +45,34 @@ export async function convertToEpub(
   await execPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'epub3', outputPath, extraArgs });
 }
 
-export async function convertToMarkdown(
-  content: string,
-  outputPath: string,
-  doc: ExportDocument,
-  filters: LuaFilterGroup,
-  cwd: string,
-  fm: Record<string, unknown> = {},
-): Promise<void> {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * #2436: el markdown de dist debe ser re-procesable, así que NO pasa por
+ * pandoc: el roundtrip md→md desplazaba los headings (+4) y reescribía el
+ * body, haciendo imposible la idempotencia. Se emite el frontmatter del
+ * origen tal cual (solo se completa `language` desde el sitio) y el body
+ * intacto, byte a byte.
+ */
+export async function convertToMarkdown(content: string, outputPath: string, doc: ExportDocument, fm: Record<string, unknown> = {}): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
-  const extraArgs: string[] = [];
-  extraArgs.push('--shift-heading-level-by=4');
-  for (const f of [...filters.semantic, ...filters.user]) extraArgs.push('--lua-filter', f);
 
-  extraArgs.push('--standalone');
-  extraArgs.push(languageArg(fmString(fm.language, doc.metadata.language)));
-  extraArgs.push(...dateArg(doc.metadata.date || undefined));
-  const tocActive = fmBool(fm.toc, doc.metadata.toc);
-  if (tocActive) {
-    extraArgs.push('--metadata=toc:true');
-    if (doc.metadata.tocDepth && doc.metadata.tocDepth > 0) extraArgs.push(`--metadata=toc-depth:${doc.metadata.tocDepth}`);
+  const { yaml, body } = splitFrontmatter(content);
+  const parsed = yaml === undefined ? undefined : parseYamlWithPosition(yaml);
+  const base = isRecord(parsed?.value) ? parsed.value : undefined;
+  if (yaml !== undefined && base === undefined) {
+    // Frontmatter ilegible: preservar el contenido tal cual (información > formato).
+    await Bun.write(outputPath, content);
+    return;
   }
-  extraArgs.push(...citationPortableMetadataArgs(doc.metadata.bibliography, doc.metadata.csl, cwd));
 
-  const stdout = await execPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'markdown', extraArgs });
-  const processed = stdout.replace(/^#{7,}\s+(.+)$/gm, '[]{.subparagraph}$1');
-  await Bun.write(outputPath, processed);
+  const outFm: Record<string, unknown> = { ...base, ...fm };
+  if (outFm.language === undefined) outFm.language = doc.metadata.language;
+  // Si el origen no traía frontmatter, la línea en blanco separa el bloque del body.
+  const separator = yaml === undefined ? '\n' : '';
+  await Bun.write(outputPath, `---\n${stringify(outFm)}---\n${separator}${body}`);
 }
 
 export async function convertToPdf(
