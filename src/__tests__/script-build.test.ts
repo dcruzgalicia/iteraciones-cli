@@ -100,8 +100,11 @@ describe.skipIf(!pandocOk)('build.sh con format.script (#2438)', () => {
 
       const script = await Bun.file(scriptPath).text();
       expect(script.startsWith('#!/bin/bash\nset -e\ncd ')).toBe(true);
-      expect(script).toContain(`cd ${process.cwd()}`);
+      // El .sh se ejecuta desde la raíz del proyecto: ahí resuelven los
+      // comandos de iteraciones (config, plantillas, colecciones).
+      expect(script).toContain(`cd ${dir}`);
 
+      expect(script).toContain('# === Recursos: plantillas y colecciones (iteraciones) ===');
       expect(script).toContain('# === Pandoc: LaTeX ===');
       expect(script).toContain('# === Pandoc: HTML ===');
       expect(script).toContain('# === Pandoc: EPUB ===');
@@ -113,8 +116,9 @@ describe.skipIf(!pandocOk)('build.sh con format.script (#2438)', () => {
 
       // El markdown de dist lo compone TypeScript: el .sh jamás lo pisa.
       expect(script).not.toMatch(/> *[^\n]*dist\/files\/[^\n]*\.md\b/);
-      // Sin lógica: el .sh no vuelve a invocar al CLI.
-      expect(script).not.toMatch(/\biteraciones\s+[a-z]/);
+      // Sin lógica: solo los subcomandos de recursos y post-proceso, nunca un build.
+      expect(script).not.toMatch(/\biteraciones\s+(build|new|init|clean|validate|doctor)\b/);
+      expect(script).toMatch(/^\s*iteraciones (template|post) /m);
       expect(script).not.toContain('iteraciones merge');
     });
   });

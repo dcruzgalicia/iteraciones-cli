@@ -56,6 +56,8 @@ interface Step {
   cwd?: string;
   input?: string;
   inputPath?: string;
+  /** Post-proceso: lee por stdin el paso cuyo stdout ya resolvió `resolveScriptStdout`. */
+  inputFrom?: Step;
   raw?: string;
   ext?: string;
   target?: string;
@@ -66,7 +68,6 @@ interface Step {
 
 interface Capture {
   root: string;
-  processCwd: string;
   steps: Step[];
   seq: number;
 }
@@ -79,9 +80,9 @@ function quote(value: string): string {
   return SHELL_SAFE.test(value) ? value : `'${value.replaceAll("'", "'\\''")}'`;
 }
 
-/** Ruta legible respecto del cwd con que corrió el build; si cae fuera, absoluta. */
-function displayPath(processCwd: string, path: string): string {
-  const rel = relative(processCwd, path);
+/** Ruta legible respecto de la raíz del proyecto (adonde hace `cd` el .sh). */
+function displayPath(root: string, path: string): string {
+  const rel = relative(root, path);
   return rel !== '' && !rel.startsWith('..') ? rel : path;
 }
 
@@ -111,7 +112,7 @@ function push(step: Omit<Step, 'order'>): void {
 }
 
 export function beginScriptCapture(root: string): void {
-  capture = { root, processCwd: process.cwd(), steps: [], seq: 0 };
+  capture = { root, steps: [], seq: 0 };
 }
 
 export function abortScriptCapture(): void {
@@ -159,8 +160,12 @@ export function recordSupportCommand(section: Section, sortKey: string, argv: st
  * Decide adónde apunta el stdout de un paso de pandoc: a `distPath` si el
  * archivo final es byte-idéntico a la salida cruda, o a un intermedio de
  * `.iteraciones/script/` con comentario si iteraciones lo transforma.
+ *
+ * Con `post` (el argv del transformador), además se emite en la fase de
+ * post-proceso: `< intermedio` → `-o dist`. El intermedio se asigna al
+ * renderizar, cuando el paso ya tiene su `out-NNNN.*`.
  */
-export function resolveScriptStdout(raw: string, distPath: string | undefined, final: string): void {
+export function resolveScriptStdout(raw: string, distPath: string | undefined, final: string, post?: string[]): void {
   if (capture === null) return;
   const step = capture.steps.find((s) => s.raw !== undefined && s.raw === raw);
   if (step === undefined) return;
@@ -174,6 +179,7 @@ export function resolveScriptStdout(raw: string, distPath: string | undefined, f
     distPath === undefined
       ? '# la salida final la compone iteraciones; aquí queda la entrada cruda de pandoc'
       : `# ${distPath}: lo compone iteraciones (pasos posteriores a pandoc); la entrada cruda queda aquí`;
+  if (distPath !== undefined && post !== undefined) push({ section: 'post', sortKey: distPath, argv: post, inputFrom: step });
 }
 
 async function cleanGenerated(scriptDir: string): Promise<void> {
@@ -202,7 +208,7 @@ export async function commitScriptCapture(): Promise<void> {
 
   const scriptPath = join(cap.root, 'build.sh');
   const body = [...renderDirs(cap, steps, scriptDir), ...renderSections(cap, steps)];
-  await writeFile(scriptPath, ['#!/bin/bash', 'set -e', `cd ${quote(cap.processCwd)}`, ...body, ''].join('\n'), 'utf8');
+  await writeFile(scriptPath, ['#!/bin/bash', 'set -e', `cd ${quote(cap.root)}`, ...body, ''].join('\n'), 'utf8');
   await chmod(scriptPath, 0o755);
 }
 
@@ -253,7 +259,7 @@ function renderDirs(cap: Capture, steps: Step[], scriptDir: string): string[] {
   dirs.delete(scriptDir);
   dirs.delete('.');
   if (dirs.size === 0) return [];
-  const lines = [...dirs].sort().map((dir) => `mkdir -p ${quote(displayPath(cap.processCwd, dir))}`);
+  const lines = [...dirs].sort().map((dir) => `mkdir -p ${quote(displayPath(cap.root, dir))}`);
   return ['# === Directorios de salida ===', ...lines, ''];
 }
 
@@ -282,8 +288,9 @@ function renderCommand(step: Step, cap: Capture): string {
       .join(' ');
     cmd = `${prefix} ${cmd}`;
   }
-  if (step.cwd !== undefined) cmd = `(cd ${quote(displayPath(cap.processCwd, step.cwd))} && ${cmd})`;
-  if (step.inputPath !== undefined) cmd += ` < ${quote(displayPath(cap.processCwd, step.inputPath))}`;
-  if (step.target !== undefined) cmd += ` > ${quote(displayPath(cap.processCwd, step.target))}`;
+  if (step.cwd !== undefined) cmd = `(cd ${quote(displayPath(cap.root, step.cwd))} && ${cmd})`;
+  const stdin = step.inputFrom?.target ?? step.inputPath;
+  if (stdin !== undefined) cmd += ` < ${quote(displayPath(cap.root, stdin))}`;
+  if (step.target !== undefined) cmd += ` > ${quote(displayPath(cap.root, step.target))}`;
   return cmd;
 }

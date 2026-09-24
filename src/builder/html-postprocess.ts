@@ -11,6 +11,22 @@ export function loadReferencesCardTemplate(): Promise<string> {
   return Bun.file(join(HTML_RESOURCES_DIR, 'card-referencias-block.html')).text();
 }
 
+/**
+ * #2445 — fase de post-proceso HTML: las dos únicas cosas que cambian respecto
+ * a la salida cruda de pandoc (quitale el enlace al índice y colocar la tarjeta
+ * de referencias). El build y `iteraciones post html` llaman a esta misma
+ * función, así que el build.sh reproduce el archivo final byte a byte.
+ */
+export function postProcessHtml(html: string, refsCardTemplate: string): string {
+  const { html: clean, block } = extractReferencesBlock(removeTocReferencesLink(html), refsCardTemplate);
+  if (block === undefined) return clean;
+  if (!clean.includes('<!-- block:referencias -->')) {
+    logWarning('la tarjeta de referencias no está en format.html.blocks; la bibliografía no se inserta en la página', 'html');
+    return clean;
+  }
+  return clean.replace('<!-- block:referencias -->', block);
+}
+
 function stripSyntheticReferencesMarker(html: string, refsIdPos: number, start: number): string {
   let cleaned = html;
   if (refsIdPos >= 0 && start >= 0) {

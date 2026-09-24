@@ -5,6 +5,7 @@ import type { SiteConfig } from '../config/config-schema.js';
 import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { translateSystemError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
+import { recordSupportCommand } from '../lib/script-recorder.js';
 import type { BuildMetadata, WorkSets } from './build-planner.js';
 import { loadFilterGroups } from './filter-resolver.js';
 import { composeHtmlTemplate } from './html-composer.js';
@@ -13,7 +14,7 @@ import { applyPrintQueueDynamics, composeLatexTemplate, detectPageSize } from '.
 import { PDF_WORK_BASE } from './output-layout.js';
 import type { PdfJob } from './pdf-pool.js';
 import { writeIfChanged } from './pipeline-io.js';
-import { loadPreambleFilters } from './preamble-loader.js';
+import { loadPreambleFilters, type PreambleDocType } from './preamble-loader.js';
 import type { resolveBibOptions } from './state-bib.js';
 import type { BuildContext } from './types.js';
 
@@ -42,7 +43,7 @@ export async function resolvePipelineSetup(
   };
 }
 
-async function loadLogoInline(cwd: string, logoRel?: string): Promise<string | undefined> {
+export async function loadLogoInline(cwd: string, logoRel?: string): Promise<string | undefined> {
   const logoSrc = logoRel ? join(cwd, logoRel) : join(import.meta.dir, '../../src/lib/resources/logo.svg');
   try {
     return await Bun.file(logoSrc).text();
@@ -63,6 +64,48 @@ export interface EffectiveTemplates {
   latexCreatorTemplatePath: string;
   latexInterventionTemplatePath: string;
   refsCardTemplate: string;
+}
+
+/** #2445 — las cinco plantillas que pandoc recibe por `--template`. */
+export type TemplateKind = 'html' | 'latex' | 'latex-collection' | 'latex-creator' | 'latex-intervention';
+
+const TEMPLATE_FILES: Record<TemplateKind, string> = {
+  html: 'html.html',
+  latex: 'latex.tex',
+  'latex-collection': 'latex-collection.tex',
+  'latex-creator': 'latex-creator.tex',
+  'latex-intervention': 'latex-intervention.tex',
+};
+
+const TEMPLATE_SCOPES: Record<Exclude<TemplateKind, 'html'>, PreambleDocType> = {
+  latex: 'file',
+  'latex-collection': 'collection',
+  'latex-creator': 'creator',
+  'latex-intervention': 'intervention',
+};
+
+export const TEMPLATE_KINDS = Object.keys(TEMPLATE_FILES) as TemplateKind[];
+export const templatePathFor = (kind: TemplateKind, templatesDir: string): string => join(templatesDir, TEMPLATE_FILES[kind]);
+
+export interface TemplateInput {
+  cwd: string;
+  siteConfig: SiteConfig;
+  bibFiles: string[];
+  effectiveDisabledPreamble: string[];
+  logoInline?: string;
+}
+
+/** Compartida: la usa el build y `iteraciones template`, para byte-idéntico. */
+export async function composeTemplate(kind: TemplateKind, input: TemplateInput): Promise<string> {
+  if (kind === 'html') return composeHtmlTemplate(input.siteConfig, input.logoInline);
+  const filters = await loadPreambleFilters(input.effectiveDisabledPreamble, input.cwd, TEMPLATE_SCOPES[kind]);
+  // Misma cadena que el build: sin estas dos líneas la plantilla no sale igual.
+  const dims = detectPageSize(filters);
+  return composeLatexTemplate({
+    toc: input.siteConfig.toc,
+    bibFiles: input.bibFiles,
+    preambleFilters: applyPrintQueueDynamics(filters, dims),
+  });
 }
 
 export async function writeEffectiveTemplates(
@@ -96,9 +139,14 @@ export async function writeEffectiveTemplates(
   state.latexInterventionTemplatePath = join(templatesDir, 'latex-intervention.tex');
   state.refsCardTemplate = await loadReferencesCardTemplate();
 
-  if (htmlOn) {
-    await writeIfChanged(state.htmlTemplatePath, await composeHtmlTemplate(siteConfig, logoInline));
-  }
+  const tpl: TemplateInput = { cwd: ctx.cwd, siteConfig, bibFiles, effectiveDisabledPreamble, logoInline };
+  const writeTemplate = async (kind: TemplateKind, path: string): Promise<void> => {
+    await writeIfChanged(path, await composeTemplate(kind, tpl));
+    // Recurso de la fase 2: el .sh la puede regenerar sin pandoc ni el build.
+    recordSupportCommand('resources', path, ['iteraciones', 'template', kind, '-o', path]);
+  };
+
+  if (htmlOn) await writeTemplate('html', state.htmlTemplatePath);
   if (plan.generateLatex) {
     const preambleFilters = await loadPreambleFilters(effectiveDisabledPreamble, ctx.cwd, 'file');
     state.biblatexAvailable = preambleFilters.some((f) => f.name === '11-bibliography');
@@ -106,32 +154,22 @@ export async function writeEffectiveTemplates(
     state.cropActive = preambleFilters.some((f) => f.name === '98-crop');
     state.pageDimensions = detectPageSize(preambleFilters);
     applyPrintQueueDynamics(preambleFilters, state.pageDimensions);
-    const templateOpts = {
-      toc: siteConfig.toc,
-      bibFiles,
-    };
-    await writeIfChanged(state.latexTemplatePath, await composeLatexTemplate({ ...templateOpts, preambleFilters }));
+    await writeTemplate('latex', state.latexTemplatePath);
 
     const collectionPreambleFilters = await loadPreambleFilters(effectiveDisabledPreamble, ctx.cwd, 'collection');
     const collectionPageDimensions = detectPageSize(collectionPreambleFilters);
     applyPrintQueueDynamics(collectionPreambleFilters, collectionPageDimensions);
-    await writeIfChanged(
-      state.latexCollectionTemplatePath,
-      await composeLatexTemplate({ ...templateOpts, preambleFilters: collectionPreambleFilters }),
-    );
+    await writeTemplate('latex-collection', state.latexCollectionTemplatePath);
 
     const creatorPreambleFilters = await loadPreambleFilters(effectiveDisabledPreamble, ctx.cwd, 'creator');
     const creatorPageDimensions = detectPageSize(creatorPreambleFilters);
     applyPrintQueueDynamics(creatorPreambleFilters, creatorPageDimensions);
-    await writeIfChanged(state.latexCreatorTemplatePath, await composeLatexTemplate({ ...templateOpts, preambleFilters: creatorPreambleFilters }));
+    await writeTemplate('latex-creator', state.latexCreatorTemplatePath);
 
     const interventionPreambleFilters = await loadPreambleFilters(effectiveDisabledPreamble, ctx.cwd, 'intervention');
     const interventionPageDimensions = detectPageSize(interventionPreambleFilters);
     applyPrintQueueDynamics(interventionPreambleFilters, interventionPageDimensions);
-    await writeIfChanged(
-      state.latexInterventionTemplatePath,
-      await composeLatexTemplate({ ...templateOpts, preambleFilters: interventionPreambleFilters }),
-    );
+    await writeTemplate('latex-intervention', state.latexInterventionTemplatePath);
   }
   return state;
 }

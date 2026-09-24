@@ -1,11 +1,10 @@
 import type { SiteConfig } from '../config/config-schema.js';
 import { fmString } from '../lib/frontmatter-fields.js';
-import { logWarning } from '../lib/logger.js';
 import { type BibOptions, execPandoc, MD_READER } from '../lib/pandoc-runner.js';
 import { resolveScriptStdout } from '../lib/script-recorder.js';
 import { type LuaFilterGroup, loadFilterGroups } from './filter-resolver.js';
 import { buildFormatsArgs, buildFormatsFlag, type HtmlPageVars } from './html-composer.js';
-import { extractReferencesBlock, removeTocReferencesLink } from './html-postprocess.js';
+import { postProcessHtml } from './html-postprocess.js';
 import { citationCompileArgs, languageArg, metadataValue, titleArg } from './pandoc-metadata.js';
 import type { BuildDocument } from './types.js';
 
@@ -80,14 +79,10 @@ export async function htmlPageFromMarkdown(content: string, doc: BuildDocument, 
   extraArgs.push(...citationCompileArgs(bibOptions?.bibliography, bibOptions?.csl));
 
   const html = await execPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'html5', extraArgs });
-  const htmlWithoutTocRefs = removeTocReferencesLink(html);
-  const { html: htmlWithoutRefs, block: referencesBlock } = extractReferencesBlock(htmlWithoutTocRefs, refsCardTemplate);
-  let final = htmlWithoutRefs;
-  if (referencesBlock && htmlWithoutRefs.includes('<!-- block:referencias -->')) {
-    final = htmlWithoutRefs.replace('<!-- block:referencias -->', referencesBlock);
-  } else if (referencesBlock) {
-    logWarning('la tarjeta de referencias no está en format.html.blocks; la bibliografía no se inserta en la página', 'html');
-  }
-  resolveScriptStdout(html, opts.scriptOutputPath, final);
+  const final = postProcessHtml(html, refsCardTemplate);
+  // #2445: si difiere de la salida cruda, el .sh hace `pandoc > crudo` y luego
+  // `iteraciones post html < crudo -o dist`. Si no difiere, pandoc ya escribe dist.
+  const postArgv = final !== html && opts.scriptOutputPath !== undefined ? ['iteraciones', 'post', 'html', '-o', opts.scriptOutputPath] : undefined;
+  resolveScriptStdout(html, opts.scriptOutputPath, final, postArgv);
   return final;
 }
