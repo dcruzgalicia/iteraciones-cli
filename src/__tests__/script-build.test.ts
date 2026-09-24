@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { readdir, readFile, rm, stat } from 'node:fs/promises';
+import { readdir, readFile, realpath, rm, stat } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { build } from '../builder/orchestrator.js';
 import { checkLatexEngine } from '../cli/doctor/system-checks.js';
@@ -30,6 +30,83 @@ if (!magickOk) registerSkip('script-build.test.ts', SKIP_REASONS.magick);
 const latexOk = (await checkLatexEngine()).ok;
 if (!latexOk) registerSkip('script-build.test.ts', SKIP_REASONS.latex);
 
+/** ¿Hay binario en el PATH? (poppler da `pdftotext`, y unzip hace el resto). */
+async function commandOk(argv: string[]): Promise<boolean> {
+  try {
+    await Bun.spawn(argv, { stdout: 'ignore', stderr: 'ignore' }).exited;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const pdftotextOk = await commandOk(['pdftotext', '-v']);
+if (!pdftotextOk) registerSkip('script-build.test.ts', SKIP_REASONS.pdftotext);
+const unzipOk = await commandOk(['unzip', '-v']);
+if (!unzipOk) registerSkip('script-build.test.ts', SKIP_REASONS.unzip);
+
+/**
+ * Texto extraído de un PDF: .pdf y .epub no tienen que ser byte-idénticos
+ * (pandoc y latexmk meten uuid y fechas de creación), solo idénticos en lo que
+ * viene del markdown original.
+ */
+async function pdfText(dir: string, bytes: Buffer): Promise<string> {
+  const tmp = join(dir, `.tmp-${Math.random().toString(36).slice(2)}.pdf`);
+  await Bun.write(tmp, bytes);
+  try {
+    const proc = Bun.spawnSync(['pdftotext', tmp, '-'], { stdout: 'pipe', stderr: 'pipe' });
+    return new TextDecoder().decode(proc.stdout ?? new Uint8Array());
+  } finally {
+    await rm(tmp, { force: true }).catch(() => {});
+  }
+}
+
+/** Entradas del EPUB, sin el OPF ni el NCX (uuid + fecha de modificación). */
+async function epubEntries(dir: string, bytes: Buffer): Promise<Map<string, Uint8Array>> {
+  const tmp = join(dir, `.tmp-${Math.random().toString(36).slice(2)}.epub`);
+  await Bun.write(tmp, bytes);
+  try {
+    const listed = Bun.spawnSync(['unzip', '-Z1', tmp], { stdout: 'pipe', stderr: 'pipe' });
+    const entries = new Map<string, Uint8Array>();
+    for (const entry of new TextDecoder()
+      .decode(listed.stdout ?? new Uint8Array())
+      .split('\n')
+      .filter(Boolean)) {
+      if (entry.endsWith('.opf') || entry.endsWith('.ncx')) continue;
+      const shown = Bun.spawnSync(['unzip', '-p', tmp, entry], { stdout: 'pipe', stderr: 'pipe' });
+      entries.set(entry, shown.stdout ?? new Uint8Array());
+    }
+    return entries;
+  } finally {
+    await rm(tmp, { force: true }).catch(() => {});
+  }
+}
+
+function sameBytes(a: Uint8Array, b: Uint8Array): boolean {
+  return a.length === b.length && Buffer.compare(Buffer.from(a), Buffer.from(b)) === 0;
+}
+
+/**
+ * Una salida de dist, entre la corrida de `iteraciones build --full` y la de
+ * `bash build.sh`. Todo debe ser byte-idéntico salvo pdf (texto) y epub (zip).
+ */
+async function expectSameOutput(dir: string, name: string, before: Buffer, after: Buffer): Promise<void> {
+  if (name.endsWith('.pdf')) {
+    expect(await pdfText(dir, before), `texto distinto en ${name}`).toBe(await pdfText(dir, after));
+    return;
+  }
+  if (name.endsWith('.epub')) {
+    const a = await epubEntries(dir, before);
+    const b = await epubEntries(dir, after);
+    expect([...a.keys()].sort()).toEqual([...b.keys()].sort());
+    for (const [entry, data] of a) {
+      expect(sameBytes(b.get(entry) as Uint8Array, data), `EPUB distinto en ${entry}`).toBe(true);
+    }
+    return;
+  }
+  expect(after.equals(before), `bytes distintos en ${name}`).toBe(true);
+}
+
 /** Todos los archivos de dist con sus bytes, como mapa relativo → contenido. */
 async function snapshot(dir: string): Promise<Map<string, Buffer>> {
   const files = new Map<string, Buffer>();
@@ -48,6 +125,25 @@ async function snapshot(dir: string): Promise<Map<string, Buffer>> {
 function replayBuildScript(dir: string): { code: number; stderr: string } {
   const proc = Bun.spawnSync(['bash', join(dir, 'build.sh')], { cwd: dir, stdout: 'pipe', stderr: 'pipe' });
   return { code: proc.exitCode, stderr: new TextDecoder().decode(proc.stderr ?? new Uint8Array()) };
+}
+
+/**
+ * Comandos del sistema operativo que aparecen en el .sh. El objetivo de #2445
+ * es que no quede ninguno: la preparación y la recogida son subcomandos de
+ * iteraciones. `set`/`cd` son preparación del shell y no se cuentan.
+ */
+function expectSystemCommands(script: string): string[] {
+  const found = new Set<string>();
+  for (const raw of script.split('\n')) {
+    const line = raw.trim();
+    if (line === '' || line.startsWith('#') || line.startsWith('set ') || line.startsWith('cd ') || line.startsWith('(cd ')) continue;
+    // Las líneas se reordenan por sección; el primer token es el comando real.
+    const token = /^[A-Za-z0-9_./-]+/.exec(line.replace(/^(?:[A-Za-z_][A-Za-z0-9_]*=\S+ )+/, ''))?.[0] ?? '';
+    const name = token.split('/').at(-1) ?? '';
+    if (['mkdir', 'cp', 'rm', 'mv', 'ln', 'rmdir'].includes(name)) found.add(name);
+    if (line.includes(' && ')) found.add('&&');
+  }
+  return [...found].sort();
 }
 
 describe('format.script (#2438)', () => {
@@ -100,25 +196,32 @@ describe.skipIf(!pandocOk)('build.sh con format.script (#2438)', () => {
 
       const script = await Bun.file(scriptPath).text();
       expect(script.startsWith('#!/bin/bash\nset -e\ncd ')).toBe(true);
-      // El .sh se ejecuta desde la raíz del proyecto: ahí resuelven los
-      // comandos de iteraciones (config, plantillas, colecciones).
-      expect(script).toContain(`cd ${dir}`);
+      // El .sh se ejecuta desde la raíz del proyecto (en canónico: ahí resuelven
+      // los comandos de iteraciones, y process.cwd() de cada uno es físico).
+      expect(script).toContain(`cd ${await realpath(dir)}`);
 
-      expect(script).toContain('# === Recursos: plantillas y colecciones (iteraciones) ===');
+      // Los directorios los prepara iteraciones; no quedan mkdir/cp/rm/mv.
+      expect(script).toContain('# === Preparación (iteraciones) ===');
+      expect(script).toMatch(/^iteraciones prepare --dir /m);
+      expect(script).toContain('# === Recursos: plantillas, colecciones y assets (iteraciones) ===');
+      expect(script).toContain('# === Salidas de iteraciones (post-proceso y markdown) ===');
       expect(script).toContain('# === Pandoc: LaTeX ===');
       expect(script).toContain('# === Pandoc: HTML ===');
       expect(script).toContain('# === Pandoc: EPUB ===');
+      expect(expectSystemCommands(script).filter((s) => s !== 'cd')).toEqual([]);
 
       // Cada paso es un comando: entrada materializada y salida redirigida.
       expect(script).toContain('.iteraciones/script/in-');
       expect(script).toMatch(/> *[^\n]*dist\/files\/[^\n]*\.tex\b/);
       expect(script).toMatch(/> *[^\n]*dist\/files\/[^\n]*\.html\b/);
 
-      // El markdown de dist lo compone TypeScript: el .sh jamás lo pisa.
+      // El markdown de dist lo escribe `iteraciones markdown`; el .sh jamás
+      // lo pisa con un redirect de pandoc.
       expect(script).not.toMatch(/> *[^\n]*dist\/files\/[^\n]*\.md\b/);
+      expect(script).toMatch(/^\s*iteraciones markdown \S+ -o \S+dist\/files\/\S+\.md$/m);
       // Sin lógica: solo los subcomandos de recursos y post-proceso, nunca un build.
       expect(script).not.toMatch(/\biteraciones\s+(build|new|init|clean|validate|doctor)\b/);
-      expect(script).toMatch(/^\s*iteraciones (template|post) /m);
+      expect(script).toMatch(/^\s*iteraciones (template|post|prepare|assets|markdown) /m);
       expect(script).not.toContain('iteraciones merge');
     });
   });
@@ -290,9 +393,10 @@ describe.skipIf(!pandocOk || !latexOk)('build.sh con PDF (#2438)', () => {
       const script = await Bun.file(join(dir, 'build.sh')).text();
       expect(script).toContain('# === PDF (latexmk) ===');
       expect(script).toMatch(/latexmk [^\n]*-jobname=/);
-      expect(script).toContain('mkdir -p ');
-      expect(script).toContain('rm -f ');
-      expect(script).toMatch(/\smv /);
+      // El slot lo prepara y lo recoge iteraciones: sin mkdir/rm/mv sueltos.
+      expect(script).toMatch(/^\s*iteraciones prepare .*--xmp \S*slot-0$/m);
+      expect(script).toMatch(/^\s*iteraciones pdf collect \S*slot-0 -o \S*dist\/files\/cuidar-se\.pdf$/m);
+      expect(expectSystemCommands(script).filter((s) => s !== 'cd')).toEqual([]);
       // Sin latex en dist, la entrada cruda de pandoc va a un intermedio.
       expect(script).toContain('.iteraciones/script/out-');
 
@@ -309,4 +413,74 @@ describe.skipIf(!pandocOk || !latexOk)('build.sh con PDF (#2438)', () => {
       expect((await Bun.file(pdf).arrayBuffer()).byteLength).toBeGreaterThan(1000);
     });
   }, 180_000);
+});
+
+/**
+ * Contrato de #2445: `iteraciones build --full` y `bash build.sh` producen las
+ * mismas salidas. Todo lo que sale de dist debe ser reproducible con solo los
+ * comandos del .sh (pandoc/ImageMagick/latexmk + subcomandos de iteraciones).
+ *
+ * Salvedad de contenido: .pdf y .epub llevan uuid y fecha de creación, que no
+ * son contenido del markdown; se comparan por texto (pdftotext) y por entradas
+ * del zip (sin OPF/NCX), nunca por bytes.
+ */
+describe.skipIf(!pandocOk || !magickOk || !latexOk || !pdftotextOk || !unzipOk)('equivalencia build --full ≡ bash build.sh (#2445)', () => {
+  it('deja el mismo dist, byte a byte salvo el contenido sustancial de pdf y epub', async () => {
+    await withTempDir(async (dir) => {
+      const config = [
+        'language: es-MX',
+        'format:',
+        '  script: true',
+        '  latex:',
+        '    generate: true',
+        '  pdf:',
+        '    generate: true',
+        '    coverImage: true',
+        '  html:',
+        '    site:',
+        '      title: T',
+        '    generate: true',
+        '  epub:',
+        '    generate: true',
+        '  markdown:',
+        '    generate: true',
+      ].join('\n');
+      await Bun.write(join(dir, 'iteraciones.config.yaml'), `${config}\n`);
+      await Bun.spawnSync(['magick', '-size', '2x2', 'xc:white', join(dir, 'foto.png')]);
+      await Bun.write(
+        join(dir, 'documento.md'),
+        ['---', 'title: Manuscrito', 'creator:', '  - Ana Ruiz', '---', '', '# Capítulo', '', '![foto](foto.png)', '', 'Contenido.'].join('\n'),
+      );
+      await Bun.write(
+        join(dir, 'coleccion.md'),
+        ['---', 'title: Antología', 'type: collection', 'files:', '  - documento.md', '---', '', 'Intro de la antología.'].join('\n'),
+      );
+
+      await build(dir, { full: true });
+
+      const dist = join(dir, 'dist', 'files');
+      const before = await snapshot(dist);
+
+      // dist desaparece: solo los comandos del .sh pueden volver a poblarlo.
+      await rm(dist, { recursive: true, force: true });
+      const { code, stderr } = replayBuildScript(dir);
+      expect(code, stderr).toBe(0);
+
+      const after = await snapshot(dist);
+      expect([...after.keys()].sort()).toEqual([...before.keys()].sort());
+
+      for (const [name, bytes] of before) {
+        const replayed = after.get(name);
+        if (replayed === undefined) throw new Error(`falta ${name}`);
+        await expectSameOutput(dir, name, bytes, replayed);
+      }
+
+      // El .sh del full cubre las cinco fases de #2445, sin comandos del SO.
+      const script = await Bun.file(join(dir, 'build.sh')).text();
+      for (const sub of ['prepare', 'assets', 'markdown', 'cover', 'pdf collect']) {
+        expect(script).toContain(`iteraciones ${sub} `);
+      }
+      expect(expectSystemCommands(script).filter((s) => s !== 'cd')).toEqual([]);
+    });
+  }, 300_000);
 });

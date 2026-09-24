@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it, spyOn } from 'bun:test';
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CommanderError } from 'commander';
@@ -582,7 +582,8 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       expect(parsed.processed).toBe(1);
       expect(parsed.cached).toBe(0);
       expect(parsed.formats).toEqual(['html']);
-      expect(parsed.outputDir).toBe(join(dir, 'dist', 'files'));
+      // la raíz del build es canónica: es la misma ruta que ve process.cwd()
+      expect(parsed.outputDir).toBe(join(await realpath(dir), 'dist', 'files'));
       expect(typeof parsed.durationMs).toBe('number');
       expect(parsed.invalidations).toEqual(['sin caché previa']);
     });

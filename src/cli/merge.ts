@@ -1,18 +1,16 @@
 import { basename, dirname, isAbsolute, join, normalize, relative, sep } from 'node:path';
 import { resolveCollectionFile } from '../builder/collection-files.js';
 import { parseAuthors } from '../builder/discover-frontmatter.js';
+import { printFlags } from '../builder/image-flags.js';
 import { rewriteImagePaths } from '../builder/image-processor.js';
 import { buildLatexPandocContent, type ImagePreprocessResult, mergeConfigImages, preprocessDocumentImages } from '../builder/latex-composer.js';
-import { detectPageSize } from '../builder/latex-preamble.js';
 import { aggregateCollectionCreators } from '../builder/orchestrator.js';
 import { DIST_FILES_DIR } from '../builder/output-layout.js';
 import { type CollectionEntry, collectionBaseContent, readCollectionEntries } from '../builder/pipeline-formats.js';
 import { writeOutput } from '../builder/pipeline-io.js';
-import { loadPreambleFilters, resolveEffectiveDisabledPreamble } from '../builder/preamble-loader.js';
 import type { BuildDocument } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
-import { computeActiveFormats, type FormatKey, resolveDisabledPreambleConfig, toActiveFormats } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
 import { logError, logSuccess } from '../lib/logger.js';
@@ -64,18 +62,6 @@ async function readCollectionSource(cwd: string, input: string) {
   if (ownCreators.length > 0 && fm.collectionCreator === undefined) fm.collectionCreator = ownCreators;
   fm.creator = await aggregateCollectionCreators({ files }, cwd);
   return { inputPath, relativePath, text, fm, files };
-}
-
-/** flags del build que solo cambian los bytes de las imágenes, nunca sus rutas. */
-async function printFlags(siteConfig: SiteConfig, cwd: string) {
-  const active = toActiveFormats(computeActiveFormats(siteConfig.format) as FormatKey[]);
-  if (!active.pdf && !active.latex) return { pageDimensions: detectPageSize([]), cropActive: false, pdfxActive: false };
-  const preamble = await loadPreambleFilters(resolveEffectiveDisabledPreamble(resolveDisabledPreambleConfig(siteConfig)), cwd, 'file');
-  return {
-    pageDimensions: detectPageSize(preamble),
-    cropActive: preamble.some((f) => f.name === '98-crop'),
-    pdfxActive: preamble.some((f) => f.name === '99-pdfx'),
-  };
 }
 
 interface MergeContext {

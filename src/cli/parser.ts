@@ -1,10 +1,20 @@
 import { Command } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
 import { TEMPLATE_KINDS } from '../builder/pipeline-setup.js';
+import { runAssets } from './assets.js';
+import { runCover } from './cover.js';
 import { runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from './dispatcher.js';
+import { runMarkdown } from './markdown.js';
 import { runMerge } from './merge.js';
+import { runCollectPdf } from './pdf.js';
 import { runPost } from './post.js';
+import { runPrepare } from './prepare.js';
 import { runTemplate } from './template.js';
+
+/** Opción repetible: el build acumula valores, el argv del .sh los repite. */
+function collect(value: string, previous: string[]): string[] {
+  return [...previous, value];
+}
 
 function translateCommanderError(message: string): string {
   return message
@@ -157,6 +167,86 @@ Ejemplos:
     )
     .action(async (tipo: string, opts: { output: string; post?: string }) => {
       await runPost(projectRoot(), tipo, opts);
+    });
+
+  program
+    .command('prepare')
+    .description('prepara directorios para los comandos externos y deja la plantilla XMP en su slot de latexmk')
+    .option('--dir <path>', 'directorio a crear (se puede repetir)', collect, [])
+    .option('--xmp <path>', 'slot que recibe la plantilla pdfx.xmp (se puede repetir)', collect, [])
+    .addHelpText(
+      'after',
+      `
+Ejemplos:
+  iteraciones prepare --dir dist/files --dir dist/files/css
+  iteraciones prepare --dir .iteraciones/tmp/pdf/slot-1 --xmp .iteraciones/tmp/pdf/slot-1
+`,
+    )
+    .action(async (opts: { dir: string[]; xmp: string[] }) => {
+      await runPrepare(projectRoot(), opts);
+    });
+
+  program
+    .command('assets')
+    .description('copia al directorio de salida las fuentes del paquete y el logo que referencia el HTML')
+    .requiredOption('-o, --output <path>', 'directorio de salida')
+    .addHelpText(
+      'after',
+      `
+Ejemplos:
+  iteraciones assets -o dist/files
+`,
+    )
+    .action(async (opts: { output: string }) => {
+      await runAssets(projectRoot(), opts);
+    });
+
+  program
+    .command('markdown <path>')
+    .description('escribe el markdown de dist (#2436) con las mismas salidas que usa iteraciones build')
+    .requiredOption('-o, --output <path>', 'ruta del .md de salida')
+    .addHelpText(
+      'after',
+      `
+Para una collection escribe además las copias de sus miembros junto a la salida.
+
+Ejemplos:
+  iteraciones markdown doc.md        -o dist/files/doc-por-autor.md
+  iteraciones markdown coleccion.md  -o dist/files/coleccion.md
+`,
+    )
+    .action(async (path: string, opts: { output: string }) => {
+      await runMarkdown(projectRoot(), path, opts);
+    });
+
+  program
+    .command('cover <png>')
+    .description('mueve la portada que pdftoppm dejó en su nombre final y retira los residuos')
+    .addHelpText(
+      'after',
+      `
+Ejemplos:
+  iteraciones cover dist/files/doc.png
+`,
+    )
+    .action(async (png: string) => {
+      await runCover(projectRoot(), png);
+    });
+
+  const pdf = program.command('pdf').description('operaciones sobre el PDF de trabajo de latexmk');
+  pdf
+    .command('collect <slot>')
+    .description('retira los auxiliares del slot y deja el PDF compilado en su destino')
+    .requiredOption('-o, --output <path>', 'ruta del PDF de salida')
+    .addHelpText(
+      'after',
+      `
+Ejemplos:
+  iteraciones pdf collect .iteraciones/tmp/pdf/slot-1 -o dist/files/doc.pdf
+`,
+    )
+    .action(async (slot: string, opts: { output: string }) => {
+      await runCollectPdf(projectRoot(), slot, opts);
     });
 
   program

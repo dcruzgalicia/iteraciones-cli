@@ -236,25 +236,71 @@ async function readCollectionFiles(doc: BuildDocument, cwd: string): Promise<Col
  * Las imágenes se reescriben con el mismo mapa del cuerpo fusionado: las
  * rutas ./assets/img son válidas desde cualquier .md del nivel.
  */
-async function emitCollectionMemberCopies(
-  doc: BuildDocument,
+export async function emitCollectionMemberCopies(
+  label: string,
   cwd: string,
-  outRoot: string,
+  outputDir: string,
   files: string[],
   relImageMap: Map<string, string>,
   docDir: string,
   skipPath: string,
 ): Promise<void> {
-  const root = resolve(outRoot);
+  const root = resolve(outputDir);
   for (const file of files) {
     const dest = resolve(root, normalize(file));
     if (dest === skipPath || (dest !== root && !dest.startsWith(`${root}${sep}`))) {
-      logWarning(`"${doc.relativePath}": files contiene "${file}", que apunta fuera de la salida; copia de miembro omitida`, 'build');
+      logWarning(`"${label}": files contiene "${file}", que apunta fuera de la salida; copia de miembro omitida`, 'build');
       continue;
     }
     const text = await Bun.file(join(cwd, file)).text();
     await Bun.write(dest, rewriteImagePaths(text, relImageMap, docDir));
   }
+}
+
+/**
+ * #2445 — el markdown de dist (#2436), con el composit compartido entre
+ * `emitCollectionMarkdown` y `iteraciones markdown`: escribe el .md final y,
+ * si la collection no se fusiona, las copias de sus miembros. El build graba
+ * aquí el argv que el .sh vuelve a ejecutar.
+ */
+export async function writeDistMarkdown(p: {
+  cwd: string;
+  /** el .md de origen, relativo a la raíz: es el argv del .sh. */
+  label: string;
+  content: string;
+  outPath: string;
+  outputDir: string;
+  fm: Record<string, unknown>;
+  exportDoc: ExportDocument;
+  relImageMap: Map<string, string>;
+  docDir: string;
+  creatorLinks: { name: string; url: string }[];
+  /** files[] raíz-relativos; ausente cuando no es una collection. */
+  rootFiles?: string[];
+  /** format.markdown.merge efectivo (solo collections). */
+  merge: boolean;
+  entries: CollectionEntry[];
+}): Promise<void> {
+  const { label, outPath, outputDir, rootFiles, merge } = p;
+  const mdFm: Record<string, unknown> = { ...p.fm };
+  if (rootFiles !== undefined) {
+    // Los campos derivados (creator agregado / collectionCreator) se
+    // recalculan en cada build: no viajan al .md exportado.
+    delete mdFm.creator;
+    delete mdFm.collectionCreator;
+    const outDir = dirname(outPath);
+    mdFm.files = rootFiles.map((f) =>
+      relative(outDir, join(outputDir, normalize(f)))
+        .split(sep)
+        .join('/'),
+    );
+  }
+  const base = merge ? collectionBaseContent(p.entries, 'markdown', p.content) : p.content;
+  await convertToMarkdown(rewriteImagePaths(prependLinksMarkdown(base, p.creatorLinks), p.relImageMap, p.docDir), outPath, p.exportDoc, mdFm, merge);
+  if (rootFiles !== undefined && !merge) {
+    await emitCollectionMemberCopies(label, p.cwd, outputDir, rootFiles, p.relImageMap, p.docDir, outPath);
+  }
+  recordSupportCommand('post', outPath, ['iteraciones', 'markdown', label, '-o', outPath]);
 }
 
 function interventionSectionRaw(lineLength = 0.5): string {
@@ -413,7 +459,7 @@ function buildOutputs(
   };
 }
 
-function getCreatorLinks(fm: Record<string, unknown>): { name: string; url: string }[] {
+export function getCreatorLinks(fm: Record<string, unknown>): { name: string; url: string }[] {
   const links = fm.links;
   if (!Array.isArray(links)) return [];
   return links.filter(
@@ -429,7 +475,7 @@ function creatorLinksInlineMd(links: { name: string; url: string }[]): string {
   return links.map((l) => `**${l.name}**: ${l.url}`).join('\n');
 }
 
-function prependLinksMarkdown(content: string, links: { name: string; url: string }[]): string {
+export function prependLinksMarkdown(content: string, links: { name: string; url: string }[]): string {
   if (links.length === 0) return content;
   const { yaml, body } = splitFrontmatter(content);
   const md = creatorLinksInlineMd(links);
@@ -703,29 +749,24 @@ async function emitCollectionMarkdown(
   if (!plan.activeFormats.markdown || !formatWorkSets.mdPaths.has(doc.relativePath) || doc.frontmatter.type === 'intervention') return;
 
   const { relImageMap, docDir, fmAssets } = assets;
-  const content = outputs.content;
   const outPath = outputs.outBase(`${outputs.outSlug}${primaryOutputExtension('markdown')}`);
   const isCollection = doc.frontmatter.type === 'collection';
-  const mergeOut = isCollection && formatCfg?.markdown?.merge === true;
 
-  const mdFm: Record<string, unknown> = { ...fmAssets };
-  if (isCollection) {
-    // Los campos derivados (creator agregado / collectionCreator) se
-    // recalculan en cada build: no viajan al .md exportado.
-    delete mdFm.creator;
-    delete mdFm.collectionCreator;
-    const outDir = dirname(outPath);
-    mdFm.files = (doc.frontmatter.files ?? []).map((f) =>
-      relative(outDir, join(ctx.outputDir, normalize(f)))
-        .split(sep)
-        .join('/'),
-    );
-  }
-  const base = mergeOut ? collectionBaseContent(collectionEntries, 'markdown', content) : content;
-  await convertToMarkdown(rewriteImagePaths(prependLinksMarkdown(base, creatorLinks), relImageMap, docDir), outPath, exportDoc, mdFm, mergeOut);
-  if (isCollection && !mergeOut) {
-    await emitCollectionMemberCopies(doc, ctx.cwd, ctx.outputDir, doc.frontmatter.files ?? [], relImageMap, docDir, outPath);
-  }
+  await writeDistMarkdown({
+    cwd: ctx.cwd,
+    label: doc.relativePath,
+    content: outputs.content,
+    outPath,
+    outputDir: ctx.outputDir,
+    fm: fmAssets,
+    exportDoc,
+    relImageMap,
+    docDir,
+    creatorLinks,
+    rootFiles: isCollection ? (doc.frontmatter.files ?? []) : undefined,
+    merge: isCollection && formatCfg?.markdown?.merge === true,
+    entries: collectionEntries,
+  });
 }
 
 export async function processDocumentFormats(

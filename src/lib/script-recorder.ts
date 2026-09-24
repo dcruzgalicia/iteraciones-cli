@@ -5,10 +5,11 @@ import { dirname, join, relative } from 'node:path';
  * #2438 — grabación de los comandos externos que ejecuta un build.
  *
  * Con `format.script: true` cada build reescribe `build.sh` en la raíz del
- * proyecto con los comandos EXTERNOS que corrieron en esa corrida: pandoc,
- * magick, latexmk y los `mkdir`/`cp`/`rm`/`mv` de soporte de latexmk. El .sh
- * contiene solo comandos: la lógica de iteraciones no se transcribe, se deja
- * como comentario cuando el archivo final de dist la requiere.
+ * proyecto con los comandos que corrieron en esa corrida: pandoc, magick,
+ * latexmk, pdftoppm y los subcomandos de iteraciones que agrupan la preparación,
+ * la recogida de salidas y el markdown de dist. El .sh contiene solo comandos:
+ * la lógica de iteraciones no se transcribe, se deja como comentario cuando el
+ * archivo final de dist la requiere.
  *
  * Reglas:
  * - solo graba quien llama a `beginScriptCapture` (format.script) y solo
@@ -30,17 +31,17 @@ type Section = 'images' | 'resources' | 'latex' | 'html' | 'epub' | 'post' | 'cs
 
 /**
  * Fases del build.sh, en el orden en que deben poder reejecutarse a mano:
- * directorios → recursos (imágenes, plantillas y colecciones) → solo pandoc →
- * post-proceso de iteraciones → CSS → latexmk → portada y validación.
- * Una fase vacía no se emite.
+ * preparación de directorios → recursos (imágenes, plantillas, colecciones y
+ * assets) → solo pandoc → salidas de iteraciones (post-proceso y markdown de
+ * dist) → CSS → latexmk → portada y validación. Una fase vacía no se emite.
  */
 const SECTIONS: ReadonlyArray<{ id: Section; title: string }> = [
   { id: 'images', title: 'Recursos: imágenes (ImageMagick)' },
-  { id: 'resources', title: 'Recursos: plantillas y colecciones (iteraciones)' },
+  { id: 'resources', title: 'Recursos: plantillas, colecciones y assets (iteraciones)' },
   { id: 'latex', title: 'Pandoc: LaTeX' },
   { id: 'html', title: 'Pandoc: HTML' },
   { id: 'epub', title: 'Pandoc: EPUB' },
-  { id: 'post', title: 'Post-proceso (iteraciones)' },
+  { id: 'post', title: 'Salidas de iteraciones (post-proceso y markdown)' },
   { id: 'css', title: 'CSS (Tailwind)' },
   { id: 'pdf', title: 'PDF (latexmk)' },
   { id: 'covers', title: 'Portada (pdftoppm)' },
@@ -82,7 +83,7 @@ function quote(value: string): string {
   return SHELL_SAFE.test(value) ? value : `'${value.replaceAll("'", "'\\''")}'`;
 }
 
-/** Ruta legible respecto de la raíz del proyecto (adonde hace `cd` el .sh). */
+/** Ruta legible respecto de la raíz del proyecto (adónde hace `cd` el .sh). */
 function displayPath(root: string, path: string): string {
   const rel = relative(root, path);
   return rel !== '' && !rel.startsWith('..') ? rel : path;
@@ -146,7 +147,9 @@ export function recordScriptExec(command: string, args: string[], options: Scrip
   else if (command === 'pdftoppm') push({ section: 'covers', sortKey: args.at(-1) ?? '', argv: [command, ...args] });
   else if (command === 'latexmk') {
     const job = args.find((a) => a.startsWith('-jobname='));
-    push({ section: 'pdf', sortKey: job?.slice('-jobname='.length) ?? '', argv: [command, ...args], env: options.env, cwd: options.cwd });
+    // Sin cwd: todos los paths de latexmk van absolutos (-outdir, TEXINPUTS,
+    // PAR_GLOBAL_TEMP y el .tex), así que el .sh no necesita subshell.
+    push({ section: 'pdf', sortKey: job?.slice('-jobname='.length) ?? '', argv: [command, ...args], env: options.env });
   }
 }
 
@@ -259,7 +262,12 @@ async function assignPaths(steps: Step[], scriptDir: string): Promise<void> {
   }
 }
 
-/** Directorios que el .sh escribe: el build los creó antes de cada salida. */
+/** argv de `iteraciones prepare`: lo que los `mkdir`/`cp` hacían sueltos. */
+export function prepareArgv(dirs: string[], xmpDirs: string[]): string[] {
+  return ['iteraciones', 'prepare', ...dirs.flatMap((dir) => ['--dir', dir]), ...xmpDirs.flatMap((dir) => ['--xmp', dir])];
+}
+
+/** Directorios que el .sh escribe: el .sh los prepara antes de cada salida. */
 function renderDirs(cap: Capture, steps: Step[], scriptDir: string): string[] {
   const dirs = new Set<string>();
   for (const step of steps) {
@@ -268,16 +276,20 @@ function renderDirs(cap: Capture, steps: Step[], scriptDir: string): string[] {
     if (step.section === 'images' && last !== undefined) dirs.add(dirname(last));
     // Salidas que viajan por -o/--output (Tailwind, y los comandos de
     // iteraciones): el directorio debe existir aunque no haya redirect.
+    // `iteraciones assets -o` apunta ya a un directorio: no hay quitarle nada.
     const i = step.argv.findIndex((a) => a === '-o' || a === '--output');
     const out = i >= 0 ? step.argv[i + 1] : undefined;
-    if (out !== undefined) dirs.add(dirname(out));
+    if (out !== undefined) dirs.add(step.argv[1] === 'assets' ? out : dirname(out));
   }
   // El propio .iteraciones/script lo crea la generación del build.sh.
   dirs.delete(scriptDir);
   dirs.delete('.');
   if (dirs.size === 0) return [];
-  const lines = [...dirs].sort().map((dir) => `mkdir -p ${quote(displayPath(cap.root, dir))}`);
-  return ['# === Directorios de salida ===', ...lines, ''];
+  const argv = prepareArgv(
+    [...dirs].sort().map((dir) => displayPath(cap.root, dir)),
+    [],
+  );
+  return ['# === Preparación (iteraciones) ===', argv.map(quote).join(' '), ''];
 }
 
 /** Bloques de sección separados en blanco; las secciones vacías no salen. */
