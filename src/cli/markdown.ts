@@ -1,5 +1,6 @@
 import { basename, dirname, join, relative, sep } from 'node:path';
 import { resolveCollectionFile } from '../builder/collection-files.js';
+import { applyCreatorTitle } from '../builder/discover-frontmatter.js';
 import { assembleExportDocument } from '../builder/export/assemble.js';
 import { printFlags } from '../builder/image-flags.js';
 import { rewriteFmImagePaths } from '../builder/image-processor.js';
@@ -28,7 +29,10 @@ function outputRootFor(output: string, dir: string): string {
 function sourceFm(text: string): Record<string, unknown> {
   const { yaml } = splitFrontmatter(text);
   const parsed = yaml === undefined ? undefined : (Bun.YAML.parse(yaml) ?? undefined);
-  return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
+  const fm = typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
+  // mismos campos derivados que aplica el discovery del build (#2445)
+  applyCreatorTitle(fm);
+  return fm;
 }
 
 /** files[] de la collection, resueltos contra la raíz (#2443) como en el build. */
