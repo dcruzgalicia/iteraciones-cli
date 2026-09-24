@@ -105,17 +105,20 @@ Ejemplos:
 
   program
     .command('merge <path>')
-    .description('fusiona los archivos files[] de una collection en un solo markdown (type: file)')
-    .requiredOption('-o, --output <path>', 'ruta del .md fusionado de salida')
+    .description('escribe la entrada exacta de pandoc de una collection en .iteraciones/collections/ (formatos: latex | html | epub | markdown)')
+    .requiredOption('-f, --format <formato>', 'formato de la entrada a generar (latex | html | epub | markdown)')
+    .requiredOption('-o, --output <path>', 'ruta del .md de salida')
     .addHelpText(
       'after',
       `
+Siempre trabaja sobre los archivos originales de files[], nunca sobre dist/.
+
 Ejemplos:
-  iteraciones merge collection.md -o .iteraciones/collection.md   fusiona la collection de origen
-  iteraciones merge dist/collection.md -o dist/collection.md      re-fusiona desde las copias en dist
+  iteraciones merge collection.md -f latex -o .iteraciones/collections/c.latex.md
+  iteraciones merge collection.md -f html   -o .iteraciones/collections/c.html.md
 `,
     )
-    .action(async (path: string, opts: { output: string }) => {
+    .action(async (path: string, opts: { output: string; format: string }) => {
       await runMerge(projectRoot(), path, opts);
     });
 
@@ -140,17 +143,19 @@ Ejemplos:
   program
     .command('post <tipo>')
     .description('aplica el post-proceso de iteraciones a una salida cruda de pandoc que recibe por stdin')
-    .option('-o, --output <path>', 'ruta del archivo de salida')
+    .requiredOption('-o, --output <path>', 'ruta del archivo de salida')
+    .option('--post <path>', 'manifiesto .iteraciones/post/<slug>.json (obligatorio en latex)')
     .addHelpText(
       'after',
       `
-Tipos: html
+Tipos: html | latex
 
 Ejemplos:
   pandoc doc.md --to html5 | iteraciones post html -o dist/doc.html
+  pandoc doc.md --to latex  | iteraciones post latex --post .iteraciones/post/doc.json -o dist/doc.tex
 `,
     )
-    .action(async (tipo: string, opts: { output?: string }) => {
+    .action(async (tipo: string, opts: { output: string; post?: string }) => {
       await runPost(projectRoot(), tipo, opts);
     });
 

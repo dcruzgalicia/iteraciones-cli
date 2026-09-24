@@ -77,7 +77,10 @@ describe('export/runner (convertToMarkdown)', () => {
     await withTempDir(async (dir) => {
       const out = join(dir, 'salida.md');
       const bodySin = '---\ntitle: "Mi título"\n---\n\nHola.\n';
-      await convertToMarkdown(bodySin, out, { ...EXPORT_DOC, metadata: { ...EXPORT_DOC.metadata, creator: [], date: undefined, dateIso: undefined } });
+      await convertToMarkdown(bodySin, out, {
+        ...EXPORT_DOC,
+        metadata: { ...EXPORT_DOC.metadata, creator: [], date: undefined, dateIso: undefined },
+      });
       const content = await Bun.file(out).text();
       expect(content).not.toContain('creator:');
       expect(content).not.toContain('date:');

@@ -16,7 +16,16 @@ import { registerSkip, SKIP_REASONS, withTempDir } from './helpers.js';
 const pandocOk = await getPandocVersion().catch(() => null);
 if (!pandocOk) registerSkip('md-reprocess.test.ts', SKIP_REASONS.pandoc);
 
-const CONFIG = ['language: es-MX', 'format:', '  html:', '    site:', '      title: T', '    generate: true', '  markdown:', '    generate: true'].join('\n');
+const CONFIG = [
+  'language: es-MX',
+  'format:',
+  '  html:',
+  '    site:',
+  '      title: T',
+  '    generate: true',
+  '  markdown:',
+  '    generate: true',
+].join('\n');
 
 describe.skipIf(!pandocOk)('markdown exportado re-procesable (#2436)', () => {
   it('frontmatter completo y re-procesar dist produce exactamente el mismo output', async () => {

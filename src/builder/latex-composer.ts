@@ -13,6 +13,7 @@ import { processDocumentImages, rewriteImagePaths, scanInlineImages, scanTitlePa
 import { babelOptionsForLang, pageNumberCommandFor } from './latex-preamble.js';
 import { creatorArgs, publisherArg, titleArg } from './pandoc-metadata.js';
 import type { BuildDocument } from './types.js';
+import { injectXmpMetadataIntoLatex, type PdfXmpMetadata } from './xmpdata.js';
 
 const TITLE_PAGE_FIELDS = [
   'subtitle',
@@ -62,6 +63,8 @@ async function pdfDate(
 }
 
 interface LatexComposerOptions {
+  /** #2445: ruta de la entrada materializada para build.sh (.iteraciones/collections). */
+  inputTarget?: string;
   filters: LuaFilterGroup;
   bibFiles: string[];
   templatePath: string;
@@ -296,33 +299,47 @@ function buildNormalTitleOverrides(title: string, creator: string[], subtitle: s
   return overrides;
 }
 
-export async function markdownToLatex(
+/**
+ * #2445 — el contenido EXACTO que pandoc recibe por stdin para un .tex.
+ * El build y `iteraciones merge --format latex` pasan por aquí, para que
+ * `.iteraciones/collections/<slug>.latex.md` sea byte-idéntico al stdin.
+ * (Lo que viaja por argv --template/--metadata no cambia el contenido.)
+ */
+export async function buildLatexPandocContent(
   content: string,
   doc: BuildDocument,
-  opts: LatexComposerOptions,
-): Promise<{ tex: string; processedImages: string[] }> {
-  const {
-    filters,
-    bibFiles,
-    templatePath,
-    fm,
-    siteConfig,
-    formatCfg,
-    biblatexAvailable = true,
-    warnedLangs,
-    images,
-    cwd = '',
-  } = opts;
-  const effectiveFm = mergeConfigImages(fm, formatCfg, siteConfig, cwd);
+  opts: Pick<LatexComposerOptions, 'fm' | 'formatCfg' | 'siteConfig' | 'images'>,
+): Promise<string> {
+  const { fm, formatCfg, siteConfig, images } = opts;
+  const imageMap = images?.imageMap ?? new Map<string, string>();
   const interventionOverrides = applyInterventionOverrides(fm, doc.frontmatter.type);
   const title = interventionOverrides?.title ?? resolveStringField(fm, formatCfg, siteConfig, 'title') ?? 'Sin título';
   const creator = interventionOverrides?.creator ?? parseAuthors(resolveMetadataField(fm, formatCfg, siteConfig, 'creator'));
   const subtitle = interventionOverrides?.subtitle ?? resolveStringField(fm, formatCfg, siteConfig, 'subtitle');
   const date = interventionOverrides?.date ?? (await pdfDate(fm, formatCfg, siteConfig, doc));
+  const docDir = dirname(doc.filePath);
 
-  const imageMap = images?.imageMap ?? new Map<string, string>();
-  const processedImages = images?.processedImages ?? [];
-  const finalContent = rewriteImagePaths(content, imageMap, dirname(doc.filePath));
+  const titleOverrides = buildTitlePageOverrides(fm, formatCfg, siteConfig, doc);
+  const interventionTitleOverrides = interventionOverrides
+    ? buildInterventionTitleOverrides(interventionOverrides)
+    : buildNormalTitleOverrides(title, creator, subtitle, date);
+  Object.assign(titleOverrides, interventionTitleOverrides);
+  let pandocContent = prependFrontmatterYaml(rewriteImagePaths(content, imageMap, docDir), titleOverrides, imageMap, docDir);
+
+  if (interventionOverrides && interventionOverrides.extraPages > 0) {
+    pandocContent += `\n\n${'\\null\\newpage\n'.repeat(interventionOverrides.extraPages)}`;
+  }
+  return pandocContent;
+}
+
+export async function markdownToLatex(
+  content: string,
+  doc: BuildDocument,
+  opts: LatexComposerOptions,
+): Promise<{ tex: string; processedImages: string[] }> {
+  const { filters, bibFiles, templatePath, fm, siteConfig, formatCfg, biblatexAvailable = true, warnedLangs, images, cwd = '' } = opts;
+  const effectiveFm = mergeConfigImages(fm, formatCfg, siteConfig, cwd);
+  const interventionOverrides = applyInterventionOverrides(fm, doc.frontmatter.type);
 
   const extraArgs = buildPandocArgs(
     templatePath,
@@ -335,33 +352,23 @@ export async function markdownToLatex(
     formatCfg,
     !!interventionOverrides,
   );
-  await pushCoverImageMetadata(extraArgs, effectiveFm, doc, imageMap);
+  await pushCoverImageMetadata(extraArgs, effectiveFm, doc, images?.imageMap ?? new Map<string, string>());
 
   const courtesyPage = resolveBooleanField(fm, formatCfg, siteConfig, 'courtesyPage') === true;
   if (courtesyPage) extraArgs.push('--metadata=courtesy-page:true');
   if (interventionOverrides?.intervention) extraArgs.push('--metadata=intervention:true');
 
-  const titleOverrides = buildTitlePageOverrides(fm, formatCfg, siteConfig, doc);
-  const interventionTitleOverrides = interventionOverrides
-    ? buildInterventionTitleOverrides(interventionOverrides)
-    : buildNormalTitleOverrides(title, creator, subtitle, date);
-  Object.assign(titleOverrides, interventionTitleOverrides);
-  let pandocContent = prependFrontmatterYaml(finalContent, titleOverrides, imageMap, dirname(doc.filePath));
-
-  if (interventionOverrides && interventionOverrides.extraPages > 0) {
-    pandocContent += `\n\n${'\\null\\newpage\n'.repeat(interventionOverrides.extraPages)}`;
-  }
-
   const tex = await execPandoc({
-    input: pandocContent,
+    input: await buildLatexPandocContent(content, doc, { fm, formatCfg, siteConfig, images }),
     sourcePath: doc.filePath,
     from: MD_READER,
     to: 'latex',
     extraArgs,
     env: { ITERACIONES_MBOX_HELPERS: MBOX_HELPERS_FILTER },
+    inputTarget: opts.inputTarget,
   });
 
-  return { tex, processedImages };
+  return { tex, processedImages: images?.processedImages ?? [] };
 }
 
 export function buildTexDistribution(processedImages: string[], outSlug: string): Map<string, string> {
@@ -392,4 +399,30 @@ export function rewriteTexForDist(tex: string, distribution: Map<string, string>
     result = result.split(abs).join(name);
   }
   return result;
+}
+
+/**
+ * #2445 — todo lo que el .tex de dist lleva y la salida cruda de pandoc no:
+ * bloque de autores, metadatos XMP (PDF/X) y rutas de imagen acomodadas para
+ * compartir directorio con el .tex. El build lo escribe como manifiesto en
+ * `.iteraciones/post/<slug>.json` y `iteraciones post latex` lo repite.
+ */
+export interface LatexPostManifest {
+  authorsBlock?: string;
+  xmp?: PdfXmpMetadata;
+  /** Ruta absoluta de la imagen procesada → nombre con el que vive junto al .tex. */
+  distribution?: Record<string, string>;
+}
+
+export function insertAuthorsBlock(tex: string, authorsBlock: string): string {
+  if (!authorsBlock) return tex;
+  if (tex.includes('\\printbibliography')) return tex.replace('\\printbibliography', `${authorsBlock}\n\n\\printbibliography`);
+  if (tex.includes('\\colophon{')) return tex.replace('\\colophon{', `${authorsBlock}\n\n\\colophon{`);
+  return tex;
+}
+
+export function postProcessLatex(tex: string, manifest: LatexPostManifest): string {
+  const withAuthors = insertAuthorsBlock(tex, manifest.authorsBlock ?? '');
+  const withXmp = manifest.xmp === undefined ? withAuthors : injectXmpMetadataIntoLatex(withAuthors, manifest.xmp);
+  return manifest.distribution === undefined ? withXmp : rewriteTexForDist(withXmp, new Map(Object.entries(manifest.distribution)));
 }

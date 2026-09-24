@@ -1,23 +1,30 @@
-import { dirname, isAbsolute, join, normalize } from 'node:path';
-import { convertToMarkdown } from '../builder/export/runner.js';
-import { buildCollectionSectionsMarkdown, readCollectionEntries } from '../builder/pipeline-formats.js';
-import { loadSiteConfigIfPresent } from '../config/config-loader.js';
-import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
+import { basename, dirname, isAbsolute, join, normalize, relative, sep } from 'node:path';
+import { resolveCollectionFile } from '../builder/collection-files.js';
+import { parseAuthors } from '../builder/discover-frontmatter.js';
+import { rewriteImagePaths } from '../builder/image-processor.js';
+import { buildLatexPandocContent, type ImagePreprocessResult, mergeConfigImages, preprocessDocumentImages } from '../builder/latex-composer.js';
+import { detectPageSize } from '../builder/latex-preamble.js';
+import { aggregateCollectionCreators } from '../builder/orchestrator.js';
+import { DIST_FILES_DIR } from '../builder/output-layout.js';
+import { type CollectionEntry, collectionBaseContent, readCollectionEntries } from '../builder/pipeline-formats.js';
+import { writeOutput } from '../builder/pipeline-io.js';
+import { loadPreambleFilters, resolveEffectiveDisabledPreamble } from '../builder/preamble-loader.js';
+import type { BuildDocument } from '../builder/types.js';
+import { loadSiteConfig } from '../config/config-loader.js';
+import type { SiteConfig } from '../config/config-schema.js';
+import { computeActiveFormats, type FormatKey, resolveDisabledPreambleConfig, toActiveFormats } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
 import { logError, logSuccess } from '../lib/logger.js';
 
-async function readSourceFm(inputPath: string, label: string): Promise<Record<string, unknown>> {
-  let text: string;
-  try {
-    text = await Bun.file(inputPath).text();
-  } catch {
-    throw new BuildError(`no se pudo leer "${label}"`);
-  }
+/** Formatos de entrada de pandoc (más el cuerpo fusionado, que no usa pandoc). */
+const FORMATS = ['latex', 'html', 'epub', 'markdown'] as const;
+
+async function readSourceFm(text: string, label: string): Promise<Record<string, unknown>> {
   const { yaml } = splitFrontmatter(text);
   if (yaml === undefined) return {};
   try {
-    return Bun.YAML.parse(yaml) as Record<string, unknown>;
+    return (Bun.YAML.parse(yaml) ?? {}) as Record<string, unknown>;
   } catch {
     throw new BuildError(`frontmatter inválido en "${label}"`);
   }
@@ -25,40 +32,129 @@ async function readSourceFm(inputPath: string, label: string): Promise<Record<st
 
 function assertCollectionFiles(fm: Record<string, unknown>, label: string): string[] {
   if (fm.type !== 'collection') {
-    throw new BuildError(`"${label}" no es una colección (type: ${typeof fm.type === 'string' ? fm.type : 'sin type'})`);
+    throw new BuildError(`"${label}" no es una collection (type: ${typeof fm.type === 'string' ? fm.type : 'sin type'})`);
   }
   const files = Array.isArray(fm.files) ? fm.files.filter((f): f is string => typeof f === 'string') : [];
   if (files.length === 0) throw new BuildError(`"${label}": la collection no tiene archivos en files`);
   return files;
 }
 
-/**
- * #2437: `iteraciones merge <collection.md> -o <out.md>` fusiona los
- * archivos de files[] en un solo markdown con type: file (sin files[]).
- * Los files se resuelven relativos al .md de entrada (dist reescribe
- * files[] hacia las copias en dist), con la raíz del proyecto como
- * fallback (#2443: collections en subdir con files relativos a la raíz).
- */
-export async function runMerge(cwd: string, input: string, options: { output?: string }): Promise<void> {
+/** La collection original + los campos derivados que arma el build, en el mismo orden. */
+async function readCollectionSource(cwd: string, input: string) {
+  const inputPath = isAbsolute(input) ? normalize(input) : join(cwd, normalize(input));
+  const relativePath = relative(cwd, inputPath).split(sep).join('/');
+  let text: string;
   try {
-    if (options.output === undefined || options.output === '') {
-      throw new BuildError('falta --output (-o): indica la ruta del .md fusionado de salida');
-    }
-    const inputPath = isAbsolute(input) ? normalize(input) : join(cwd, normalize(input));
-    const fm = await readSourceFm(inputPath, input);
-    const files = assertCollectionFiles(fm, input);
-    const entries = await readCollectionEntries(files, input, [dirname(inputPath), cwd]);
+    text = await Bun.file(inputPath).text();
+  } catch {
+    throw new BuildError(`no se pudo leer "${input}"`);
+  }
+
+  const fm = await readSourceFm(text, input);
+  const rawFiles = assertCollectionFiles(fm, input);
+  // files[] resueltos contra la raíz (#2443), collectionCreator propio y
+  // creator agregado de los files — tal como los deja el build.
+  const files: string[] = [];
+  for (const file of rawFiles) {
+    const resolved = await resolveCollectionFile(file, relativePath, cwd);
+    files.push(resolved.ok ? resolved.rootRelative : file);
+  }
+  fm.files = files;
+  const ownCreators = parseAuthors(fm.creator);
+  if (ownCreators.length > 0 && fm.collectionCreator === undefined) fm.collectionCreator = ownCreators;
+  fm.creator = await aggregateCollectionCreators({ files }, cwd);
+  return { inputPath, relativePath, text, fm, files };
+}
+
+/** flags del build que solo cambian los bytes de las imágenes, nunca sus rutas. */
+async function printFlags(siteConfig: SiteConfig, cwd: string) {
+  const active = toActiveFormats(computeActiveFormats(siteConfig.format) as FormatKey[]);
+  if (!active.pdf && !active.latex) return { pageDimensions: detectPageSize([]), cropActive: false, pdfxActive: false };
+  const preamble = await loadPreambleFilters(resolveEffectiveDisabledPreamble(resolveDisabledPreambleConfig(siteConfig)), cwd, 'file');
+  return {
+    pageDimensions: detectPageSize(preamble),
+    cropActive: preamble.some((f) => f.name === '98-crop'),
+    pdfxActive: preamble.some((f) => f.name === '99-pdfx'),
+  };
+}
+
+interface MergeContext {
+  doc: BuildDocument;
+  images: ImagePreprocessResult;
+  relImageMap: Map<string, string>;
+  docDir: string;
+}
+
+/** Reproduce la pasada de imágenes del build hacia `dist/files/<nivel>/assets/img`. */
+async function buildMergeContext(
+  cwd: string,
+  src: Awaited<ReturnType<typeof readCollectionSource>>,
+  entries: CollectionEntry[],
+  siteConfig: SiteConfig,
+): Promise<MergeContext> {
+  const distRoot = join(cwd, DIST_FILES_DIR);
+  const outDir = dirname(src.relativePath) === '.' ? distRoot : join(distRoot, dirname(src.relativePath));
+  const flags = await printFlags(siteConfig, cwd);
+  const doc = { filePath: src.inputPath, relativePath: src.relativePath, frontmatter: src.fm } as unknown as BuildDocument;
+  const images = await preprocessDocumentImages(
+    collectionBaseContent(entries, 'latex', src.text),
+    doc,
+    mergeConfigImages(src.fm, siteConfig.format?.pdf, siteConfig, cwd),
+    flags.pageDimensions,
+    flags.cropActive,
+    flags.pdfxActive,
+    join(outDir, 'assets/img'),
+  );
+  const relImageMap = new Map(
+    [...images.imageMap].filter(([from, dst]) => dst !== from).map(([from, dst]): [string, string] => [from, `./assets/img/${basename(dst)}`]),
+  );
+  return { doc, images, relImageMap, docDir: dirname(src.inputPath) };
+}
+
+async function composeFor(
+  format: string,
+  src: Awaited<ReturnType<typeof readCollectionSource>>,
+  entries: CollectionEntry[],
+  siteConfig: SiteConfig,
+  ctx: MergeContext,
+): Promise<string> {
+  if (format === 'latex') {
+    const pageNumber = (src.fm.pageNumber ?? siteConfig.format?.pdf?.pageNumber ?? siteConfig.pageNumber) as string | undefined;
+    return buildLatexPandocContent(collectionBaseContent(entries, 'latex', src.text, pageNumber), ctx.doc, {
+      fm: src.fm,
+      formatCfg: siteConfig.format?.pdf,
+      siteConfig,
+      images: ctx.images,
+    });
+  }
+  const base = collectionBaseContent(entries, format === 'markdown' ? 'markdown' : 'html', src.text);
+  // EPUB va con rutas absolutas: pandoc resuelve los medios contra el cwd.
+  return rewriteImagePaths(base, format === 'epub' ? ctx.images.imageMap : ctx.relImageMap, ctx.docDir);
+}
+
+/**
+ * #2445 — `iteraciones merge <collection.md> --format <fmt> -o <out>` escribe
+ * `.iteraciones/collections/<slug>.<fmt>.md`: el markdown EXACTO que pandoc
+ * recibe por stdin durante `iteraciones build`. Siempre sobre los archivos
+ * originales de `files[]` (nunca sobre las copias de dist), con los mismos
+ * compositores que usa el build, así que la salida es byte-idéntica.
+ */
+export async function runMerge(cwd: string, input: string, options: { output?: string; format?: string }): Promise<void> {
+  try {
+    const format = options.format;
+    if (format === undefined || format === '') throw new BuildError(`falta --format (-f): esperado ${FORMATS.join(' | ')}`);
+    if (!(FORMATS as readonly string[]).includes(format)) throw new BuildError(`formato desconocido "${format}"; esperado: ${FORMATS.join(' | ')}`);
+    if (options.output === undefined || options.output === '') throw new BuildError('falta --output (-o): indica la ruta de salida');
+
+    const src = await readCollectionSource(cwd, input);
+    const siteConfig = await loadSiteConfig(cwd);
+    const entries = await readCollectionEntries(src.files, src.relativePath, [cwd, join(cwd, dirname(src.relativePath))]);
     if (entries.length === 0) throw new BuildError(`"${input}": los archivos de files no tienen contenido`);
 
-    const output = isAbsolute(options.output) ? normalize(options.output) : join(cwd, options.output);
-    const loaded = await loadSiteConfigIfPresent(cwd);
-    const doc = {
-      filePath: inputPath,
-      relativePath: input,
-      metadata: { title: '', creator: [], language: loaded?.config.language ?? DEFAULT_SITE_CONFIG.language, toc: false },
-    };
-    await convertToMarkdown(buildCollectionSectionsMarkdown(entries), output, doc, fm, true);
-    logSuccess(`${input} → ${options.output}`, 'merge');
+    const ctx = await buildMergeContext(cwd, src, entries, siteConfig);
+    const output = isAbsolute(options.output) ? normalize(options.output) : join(cwd, normalize(options.output));
+    await writeOutput(output, await composeFor(format, src, entries, siteConfig, ctx));
+    logSuccess(`${input} [--format ${format}] → ${options.output}`, 'merge');
   } catch (err) {
     logError(err instanceof Error ? err.message : String(err), 'merge');
     process.exitCode = 1;

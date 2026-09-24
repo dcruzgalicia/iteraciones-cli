@@ -25,6 +25,7 @@ export async function convertToEpub(
   filters: LuaFilterGroup,
   toc?: boolean,
   fm: Record<string, unknown> = {},
+  inputTarget?: string,
 ): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
@@ -43,7 +44,7 @@ export async function convertToEpub(
   extraArgs.push(...creatorArgs(doc.metadata.creator));
   extraArgs.push(...dateArg((doc.metadata.dateIso ?? doc.metadata.date) || undefined));
 
-  await execPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'epub3', outputPath, extraArgs });
+  await execPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'epub3', outputPath, extraArgs, inputTarget });
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

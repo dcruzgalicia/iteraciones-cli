@@ -166,12 +166,16 @@ function collectInvalidations(plan: BuildMetadata, outputDirChanged: boolean): s
   return invalidations;
 }
 
-async function aggregateCollectionCreators(entry: DiscoveryEntry, cwd: string): Promise<void> {
+/**
+ * #2446/#2445: la union de los `creator` de files[] — es el `creator` del que
+ * se compone el YAML de la portada LaTeX, así que la reutiliza `iteraciones merge`.
+ */
+export async function aggregateCollectionCreators(entry: { files?: string[] }, cwd: string): Promise<string[]> {
   const aggregated = new Set<string>();
   const { with: withCreator, without: withoutCreator } = await countCreatorsByFile(entry.files ?? [], cwd);
   for (const c of withCreator) aggregated.add(c);
   addAnonymousFallback(aggregated, withoutCreator, entry.files?.length ?? 0);
-  entry.aggregatedCreator = [...aggregated].sort((a, b) => a.localeCompare(b, 'es'));
+  return [...aggregated].sort((a, b) => a.localeCompare(b, 'es'));
 }
 
 async function countCreatorsByFile(files: string[], cwd: string): Promise<{ with: string[]; without: number }> {
@@ -221,7 +225,7 @@ export async function postProcessCollections(discoveryIndex: Map<string, Discove
     }
     entry.files = resolved;
     if (entry.fm) entry.fm.files = resolved;
-    await aggregateCollectionCreators(entry, cwd);
+    entry.aggregatedCreator = await aggregateCollectionCreators(entry, cwd);
     if (entry.creator.length > 0 && entry.fm?.collectionCreator === undefined) {
       const fm = entry.fm ?? {};
       fm.collectionCreator = entry.creator;

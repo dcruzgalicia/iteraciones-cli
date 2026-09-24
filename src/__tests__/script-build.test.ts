@@ -123,6 +123,50 @@ describe.skipIf(!pandocOk)('build.sh con format.script (#2438)', () => {
     });
   });
 
+  it('las colecciones entran por .iteraciones/collections y el replay sale idéntico', async () => {
+    await withTempDir(async (dir) => {
+      await setup(dir);
+      await Bun.write(
+        join(dir, 'coleccion.md'),
+        ['---', 'title: Antología', 'type: collection', 'files:', '  - documento.md', '---', '', 'Intro de la antología.'].join('\n'),
+      );
+      await build(dir);
+
+      const script = await Bun.file(join(dir, 'build.sh')).text();
+      // la fase de recursos regenera cada entrada que pandoc va a leer por stdin
+      expect(script).toMatch(/^\s*iteraciones merge coleccion\.md --format latex -o /m);
+      expect(script).toMatch(/^\s*iteraciones merge coleccion\.md --format html -o /m);
+      expect(script).toMatch(/< \.iteraciones\/collections\/antologia\.(latex|html)\.md/);
+
+      const dist = join(dir, 'dist', 'files');
+      const before = await snapshot(dist);
+      const entradas = join(dir, '.iteraciones', 'collections');
+      const entradasAntes = await snapshot(entradas);
+
+      // las entradas materiaizadas desaparecen: solo los comandos las vuelven a crear
+      await rm(entradas, { recursive: true, force: true });
+
+      const { code, stderr } = replayBuildScript(dir);
+      expect(code, stderr).toBe(0);
+
+      const after = await snapshot(dist);
+      expect([...after.keys()].sort()).toEqual([...before.keys()].sort());
+      for (const [name, bytes] of before) {
+        // El EPUB lleva un uuid aleatorio: solo puede exigírsele que exista.
+        if (name.endsWith('.epub')) {
+          expect(after.get(name) !== undefined, `${name} no se regeneró`).toBe(true);
+          continue;
+        }
+        expect(after.get(name)?.equals(bytes) === true, `bytes distintos en ${name}`).toBe(true);
+      }
+      const entradasDespues = await snapshot(entradas);
+      expect([...entradasDespues.keys()].sort()).toEqual([...entradasAntes.keys()].sort());
+      for (const [name, bytes] of entradasAntes) {
+        expect(entradasDespues.get(name)?.equals(bytes) === true, `entrada distinta en ${name}`).toBe(true);
+      }
+    });
+  }, 120_000);
+
   it('bash build.sh sale con 0 y deja las salidas byte-idénticas', async () => {
     await withTempDir(async (dir) => {
       await setup(dir);
@@ -176,6 +220,47 @@ describe.skipIf(!pandocOk || !magickOk)('build.sh con imágenes (#2438)', () => 
 
       const dist = join(dir, 'dist', 'files');
       expect(await Bun.file(join(dist, 'assets', 'img', 'foto.jpg')).exists()).toBe(true);
+
+      const before = await snapshot(dist);
+      const { code, stderr } = replayBuildScript(dir);
+      expect(code, stderr).toBe(0);
+
+      const after = await snapshot(dist);
+      expect([...after.keys()].sort()).toEqual([...before.keys()].sort());
+      for (const [name, bytes] of before) {
+        expect(after.get(name)?.equals(bytes) === true, `bytes distintos en ${name}`).toBe(true);
+      }
+    });
+  }, 60_000);
+});
+
+describe.skipIf(!pandocOk || !magickOk)('build.sh con .tex en dist (#2445)', () => {
+  it('el post-proceso latex viaja por manifiesto y el .tex de dist sale idéntico', async () => {
+    await withTempDir(async (dir) => {
+      const config = ['language: es-MX', 'format:', '  script: true', '  latex:', '    generate: true'].join('\n');
+      await Bun.write(join(dir, 'iteraciones.config.yaml'), `${config}\n`);
+      await Bun.spawnSync(['magick', '-size', '2x2', 'xc:white', join(dir, 'foto.png')]);
+      await Bun.write(
+        join(dir, 'ensayo.md'),
+        ['---', 'title: Ensayo', '---', '', '# Capítulo', '', '![foto](foto.png)', '', 'Contenido.'].join('\n'),
+      );
+
+      await build(dir);
+
+      const script = await Bun.file(join(dir, 'build.sh')).text();
+      // la salida cruda de pandoc difiere de la de dist: alguien debe transformarla
+      expect(script).toMatch(/^\s*iteraciones post latex --post \S+\.iteraciones\/post\/ensayo\.json -o \S+ensayo\.tex/m);
+      expect(script).toMatch(/< \.iteraciones\/script\/out-\d+\.tex/);
+
+      // el manifiesto es un artefacto del build: build.sh lo lee, no lo regenera
+      const manifest = JSON.parse(await Bun.file(join(dir, '.iteraciones', 'post', 'ensayo.json')).text());
+      expect(Object.keys(manifest.distribution ?? {})).toHaveLength(1);
+
+      const dist = join(dir, 'dist', 'files');
+      const tex = join(dist, 'ensayo.tex');
+      expect(await Bun.file(tex).exists()).toBe(true);
+      // las imágenes comparten directorio con el .tex, con nombre del slug
+      expect(await Bun.file(join(dist, 'ensayo-foto.jpg')).exists()).toBe(true);
 
       const before = await snapshot(dist);
       const { code, stderr } = replayBuildScript(dir);
