@@ -6,7 +6,7 @@ import { fmStringList, resolveBooleanField, resolveMetadataField, resolveStringF
 import { logWarning } from '../lib/logger.js';
 import { execPandoc, MD_READER } from '../lib/pandoc-runner.js';
 import { isScriptCapture, recordSupportCommand, resolveScriptStdout } from '../lib/script-recorder.js';
-import { htmlSlugFor } from './discover.js';
+import { computeSlug, htmlSlugFor, parseAuthors } from './discover.js';
 import { assembleExportDocument } from './export/assemble.js';
 import { convertToEpub, convertToMarkdown } from './export/runner.js';
 import type { ExportDocument } from './export/types.js';
@@ -284,10 +284,24 @@ export async function writeDistMarkdown(p: {
   const { label, outPath, outputDir, rootFiles, merge } = p;
   const mdFm: Record<string, unknown> = { ...p.fm };
   if (rootFiles !== undefined) {
-    // Los campos derivados (creator agregado / collectionCreator) se
-    // recalculan en cada build: no viajan al .md exportado.
-    delete mdFm.creator;
-    delete mdFm.collectionCreator;
+    // #2446: con merge:false el frontmatter original manda y `files[]` está ahí,
+    // así que la unión de autores se recalcula en cada build y no viaja. Con
+    // merge:true la collection pasa a `type: file`, pierde `files[]` y tanto el
+    // byline como el crédito propio (collectionCreator) son irrecuperables:
+    // ambos viajan.
+    if (!merge) delete mdFm.creator;
+    // #2446: la collection exporta su slug derivado. Sin él, un .md
+    // re-procesado (con merge:true sale como type: file y el byline en creator)
+    // lo recalcula desde `creator` y renombra la salida; el slug manual ya viaja
+    // en el frontmatter. Se deriva aquí para que build y `iteraciones markdown`
+    // escriban exactamente lo mismo.
+    if (mdFm.slug === undefined) {
+      const derived = computeSlug(
+        { title: typeof mdFm.title === 'string' ? mdFm.title : undefined, creator: parseAuthors(mdFm.collectionCreator) },
+        { fallbackPath: label },
+      );
+      if (derived !== undefined) mdFm.slug = derived;
+    }
     const outDir = dirname(outPath);
     mdFm.files = rootFiles.map((f) =>
       relative(outDir, join(outputDir, normalize(f)))

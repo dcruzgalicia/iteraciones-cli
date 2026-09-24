@@ -1,6 +1,5 @@
 import { basename, dirname, isAbsolute, join, normalize, relative, sep } from 'node:path';
 import { resolveCollectionFile } from '../builder/collection-files.js';
-import { parseAuthors } from '../builder/discover-frontmatter.js';
 import { printFlags } from '../builder/image-flags.js';
 import { rewriteImagePaths } from '../builder/image-processor.js';
 import { buildLatexPandocContent, type ImagePreprocessResult, mergeConfigImages, preprocessDocumentImages } from '../builder/latex-composer.js';
@@ -58,8 +57,8 @@ async function readCollectionSource(cwd: string, input: string) {
     files.push(resolved.ok ? resolved.rootRelative : file);
   }
   fm.files = files;
-  const ownCreators = parseAuthors(fm.creator);
-  if (ownCreators.length > 0 && fm.collectionCreator === undefined) fm.collectionCreator = ownCreators;
+  // #2446: collectionCreator viaja tal cual del origen; creator es la unión de
+  // los creator de files[], la misma que imprime build en todos los formatos.
   fm.creator = await aggregateCollectionCreators({ files }, cwd);
   return { inputPath, relativePath, text, fm, files };
 }

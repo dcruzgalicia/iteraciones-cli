@@ -30,12 +30,12 @@ local TITLE_PAGE_FIELDS = {
   'collectionCreatorPrefix',
 }
 
--- subject y publishers aceptan un solo valor o un array (como author): los
--- items se unen con ', '. Pandoc parsea cada item del array como markdown
--- (MetaInlines → lista de inlines) o lo deja como string (MetaString): se
--- aceptan ambos, extrayendo el texto de inlines Str/Space. Si algún item es
--- complejo (markdown con formato), se deja el valor original.
-local LIST_JOIN_FIELDS = { subject = true, publishers = true }
+-- subject, publishers y collectionCreator aceptan un solo valor o un array
+-- (como author): los items se unen con ', '. Pandoc parsea cada item del array
+-- como markdown (MetaInlines → lista de inlines) o lo deja como string
+-- (MetaString): se aceptan ambos, extrayendo el texto de inlines Str/Space. Si
+-- algún item es complejo (markdown con formato), se deja el valor original.
+local LIST_JOIN_FIELDS = { subject = true, publishers = true, collectionCreator = true }
 
 local function append_inline_text(parts, inl)
   if inl.t == 'Str' then

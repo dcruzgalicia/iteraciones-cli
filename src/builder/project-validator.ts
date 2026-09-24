@@ -41,6 +41,7 @@ export const KNOWN_FRONTMATTER_FIELDS = [
   'extratitle',
   'frontispiece',
   'titlehead',
+  'collectionCreator',
   'collectionCreatorPrefix',
   'dedication',
   'uppertitleback',
@@ -122,14 +123,25 @@ function validateSlugField(parsed: Record<string, unknown>): ValidationIssue[] {
 }
 
 function validateCollectionType(parsed: Record<string, unknown>): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  // #2446: `creator` en una collection era ambiguo (crédito propio vs. unión de
+  // files[]); el crédito propio pasa a `collectionCreator` y `creator` queda
+  // reservado al byline, que build calcula a partir de files[].
+  if (parsed.creator !== undefined) {
+    issues.push({
+      severity: 'error',
+      message: 'frontmatter: "type: collection" usa "collectionCreator", no "creator" — renombra el campo',
+    });
+  }
   const files = parsed.files;
   if (files === undefined) {
-    return [{ severity: 'error', message: 'frontmatter: "type: collection" requiere el campo "files"' }];
+    issues.push({ severity: 'error', message: 'frontmatter: "type: collection" requiere el campo "files"' });
+    return issues;
   }
   if (!Array.isArray(files) || !files.every((f) => typeof f === 'string')) {
-    return [{ severity: 'error', message: 'frontmatter: "files" debe ser una lista de textos (strings)' }];
+    issues.push({ severity: 'error', message: 'frontmatter: "files" debe ser una lista de textos (strings)' });
   }
-  return [];
+  return issues;
 }
 
 function validateCreatorType(parsed: Record<string, unknown>): ValidationIssue[] {

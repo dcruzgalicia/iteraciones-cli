@@ -5,6 +5,7 @@ import { assembleExportDocument } from '../builder/export/assemble.js';
 import { printFlags } from '../builder/image-flags.js';
 import { rewriteFmImagePaths } from '../builder/image-processor.js';
 import { mergeConfigImages, preprocessDocumentImages } from '../builder/latex-composer.js';
+import { aggregateCollectionCreators } from '../builder/orchestrator.js';
 import { collectionBaseContent, getCreatorLinks, readCollectionEntries, writeDistMarkdown } from '../builder/pipeline-formats.js';
 import type { BuildDocument } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
@@ -105,6 +106,10 @@ export async function runMarkdown(cwd: string, input: string, options: { output?
     const siteConfig = await loadSiteConfig(cwd);
     const dir = dirname(relativePath);
     const rootFiles = await collectionFiles(cwd, relativePath, fm, input);
+    // #2446: igual que el build, el byline de una collection es la unión de los
+    // creator de files[]; con merge:false writeDistMarkdown lo vuelve a quitar,
+    // porque files[] sigue ahí para recalcularlo.
+    if (fm.type === 'collection') fm.creator = await aggregateCollectionCreators({ files: rootFiles }, cwd);
     const entries = rootFiles.length > 0 ? await readCollectionEntries(rootFiles, relativePath, [cwd, join(cwd, dir)]) : [];
     const { relImageMap, docDir } = await distImageMap(cwd, siteConfig, content, fm, entries, join(dirname(output), 'assets/img'), inputPath);
 

@@ -1,5 +1,6 @@
 import { dirname } from 'node:path';
 import { BuildError } from '../lib/errors.js';
+import { parseAuthors } from './discover-frontmatter.js';
 import type { DiscoveryEntry } from './types.js';
 
 interface SlugResolutionResult {
@@ -38,7 +39,10 @@ function groupBySlugBase(discoveryIndex: Map<string, DiscoveryEntry>, computeSlu
   const groups = new Map<string, string[]>();
   for (const [relPath, entry] of discoveryIndex) {
     if (entry.manualSlug !== undefined) continue;
-    const slugBase = computeSlug({ title: entry.title, creator: entry.creator }, { fallbackPath: relPath });
+    // #2446: en una collection el crédito propio vive en `collectionCreator`
+    // (`creator` es error de build) y de ahí sale también el slug.
+    const creators = entry.type === 'collection' ? parseAuthors(entry.fm?.collectionCreator) : entry.creator;
+    const slugBase = computeSlug({ title: entry.title, creator: creators }, { fallbackPath: relPath });
     const dir = dirname(relPath);
     const key = dir === '.' ? slugBase : `${dir}/${slugBase}`;
     if (!groups.has(key)) groups.set(key, []);
