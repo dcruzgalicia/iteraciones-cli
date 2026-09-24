@@ -122,6 +122,15 @@ export async function computeCssHash(
   return { hash: hasher.digest('hex'), cache };
 }
 
+/**
+ * Los dos ficheros estáticos que el HTML referencia: las fuentes del paquete y
+ * el logo (el de la config, o el por defecto). El build y `iteraciones assets`
+ * pasan por aquí, así que el .sh copia exactamente lo que copió TypeScript.
+ */
+export async function copyStaticAssets(outputDir: string, cwd: string, siteConfig: SiteConfig): Promise<void> {
+  await Promise.all([copyFonts(outputDir), copyLogo(outputDir, cwd, siteConfig)]);
+}
+
 export async function buildAssets(
   outputDir: string,
   cwd: string,
@@ -129,14 +138,14 @@ export async function buildAssets(
   prevCssHash?: string,
   prevCssFileCache?: CssFileCache,
 ): Promise<{ cssHash: string; cssFileCache: CssFileCache }> {
-  const tasks: Promise<void>[] = [copyFonts(outputDir), copyLogo(outputDir, cwd, siteConfig)];
+  await copyStaticAssets(outputDir, cwd, siteConfig);
+  recordSupportCommand('resources', outputDir, ['iteraciones', 'assets', '-o', outputDir]);
   const { hash: cssHash, cache: cssFileCache } = await computeCssHash(outputDir, siteConfig, prevCssFileCache);
   const cssExists = await Bun.file(join(outputDir, 'css', 'styles.css')).exists();
   if (prevCssHash !== cssHash || !cssExists) {
     const accent = siteConfig.format?.html?.site?.color ?? 'lime';
-    tasks.push(compileTailwindCss(outputDir, accent, cwd));
+    await compileTailwindCss(outputDir, accent, cwd);
   }
-  await Promise.all(tasks);
   return { cssHash, cssFileCache };
 }
 

@@ -466,7 +466,7 @@ format:
 **Tipo:** `boolean`
 **Por defecto:** `false`
 
-Cada build reescribe `build.sh` en la raíz del proyecto con los **comandos que corrieron en esa corrida**: `iteraciones template`, `iteraciones merge`, pandoc, `iteraciones post`, ImageMagick, latexmk y los `mkdir`/`rm`/`mv` de soporte. El archivo es ejecutable y contiene solo comandos —sin lógica—, de modo que además de `iteraciones build` se puede reconstruir a mano con pandoc, ImageMagick y latexmk más los comandos de `iteraciones`.
+Cada build reescribe `build.sh` en la raíz del proyecto con los **comandos que corrieron en esa corrida**: `iteraciones prepare`, `iteraciones template`, `iteraciones assets`, `iteraciones merge`, pandoc, `iteraciones markdown`, `iteraciones post`, ImageMagick, latexmk, `iteraciones pdf collect`, `iteraciones cover` y Tailwind. El archivo es ejecutable y contiene solo comandos —sin lógica y sin `mkdir`/`cp`/`rm`/`mv`—, de modo que además de `iteraciones build` se puede reconstruir a mano con pandoc, ImageMagick y latexmk más los subcomandos de `iteraciones`.
 
 ```yaml
 format:
@@ -476,9 +476,10 @@ format:
 Alcance y límites:
 
 - **Solo en builds exitosos.** Si el build falla, el `build.sh` anterior queda intacto.
-- **Fases en orden fijo**: (1) directorios, (2) recursos — imágenes, plantillas y colecciones —, (3) pandoc, uno por archivo, (4) `iteraciones post`, (5) CSS de Tailwind, (6) latexmk, (7) portada PNG y validación PDF/X. Cada línea es reproducible por separado.
+- **Cabecera `cd` a la raíz canónica**: `set -e` y `cd <raíz>` —la misma ruta física que ve `process.cwd()` de cada subcomando, para que las rutas absolutas del build y las del replay casen—. Es el único `cd`; el único subshell es Tailwind, que necesita el cwd para auto-detectar fuentes.
+- **Fases en orden fijo**: (1) directorios —`iteraciones prepare`—, (2) recursos —imágenes, HTML para pandoc, colecciones y assets—, (3) pandoc, uno por archivo, (4) post-proceso y markdown —`iteraciones post`, `iteraciones markdown`—, (5) CSS de Tailwind, (6) latexmk, (7) portada PNG —`iteraciones cover`— y validación PDF/X. Cada línea es reproducible por separado.
 - **Lo que iteraciones transforma se delega a `iteraciones post`.** Cuando el .tex o el .html final difiere de la salida cruda de pandoc (autores, XMP, imágenes, citas, tarjeta de referencias), la salida cruda va a `.iteraciones/script/out-NNNN.*` y el .sh llama a `iteraciones post <tipo>` sobre esa entrada. `post latex` lee además el manifiesto `.iteraciones/post/<slug>.json` —autores, XMP y distribución de imágenes— que solo puede escribir el build, igual que el propio `build.sh`.
-- **No incluye las salidas que solo produce TypeScript**: el markdown de dist (#2436), las copias de miembros de collections, la reescritura de rutas de imagen y el CSS compilado por Tailwind.
+- **`iteraciones build --full` ≡ `bash build.sh`.** Todo lo que sale de `dist` se repite con el .sh: las salidas son byte-idénticas salvo los metadatos de creación de `.pdf` y `.epub` (uuid y fechas, que no son contenido del markdown), que se comparan por texto y por entradas del zip.
 - **Un build incremental solo registra lo que corrió en esa corrida**; si no corrió ningún comando externo, `build.sh` queda con la cabecera sin pasos.
 
 Las entradas que pandoc lee por stdin viven en `.iteraciones/script/in-NNNN.md`; las de collections, una por formato, en `.iteraciones/collections/<slug>.<fmt>.md`, que el propio `iteraciones merge` del `.sh` vuelve a crear. Ambas se regeneran en cada build.

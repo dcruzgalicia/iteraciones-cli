@@ -1,4 +1,4 @@
-import { exists, rm } from 'node:fs/promises';
+import { exists, realpath, rm } from 'node:fs/promises';
 import { cpus } from 'node:os';
 import { basename, dirname, join, normalize } from 'node:path';
 import { loadSiteConfig } from '../config/config-loader.js';
@@ -89,6 +89,10 @@ async function setupBuildEnvironment(cwd: string, siteConfig: SiteConfig, option
 }
 
 export async function build(cwd: string, options: BuildOptions = {}, reporter: BuildReporter = silentReporter): Promise<void> {
+  // Raíz canónica: los subcomandos de build.sh corren en su propio proceso y
+  // process.cwd() resuelve symlinks (/tmp → /private/tmp en macOS). Sin esto
+  // las rutas absolutas del build no casarían con las del replay.
+  const root = await realpath(cwd).catch(() => cwd);
   const pandocVersion = await getPandocVersion();
 
   const startedAt = performance.now();
@@ -96,18 +100,18 @@ export async function build(cwd: string, options: BuildOptions = {}, reporter: B
   let result: BuildSummary | null = null;
   try {
     if (options.verbose) {
-      result = await runBuild(cwd, options, progress, pandocVersion);
+      result = await runBuild(root, options, progress, pandocVersion);
     } else {
       result = await runWithWarningSink(
         (message) => progress.addWarning(message),
-        () => runBuild(cwd, options, progress, pandocVersion),
+        () => runBuild(root, options, progress, pandocVersion),
       );
     }
   } catch (err) {
     abortScriptCapture();
     await progress.fail();
     if (options.full) {
-      const outputDir = options.outputDir ?? join(cwd, DIST_FILES_DIR);
+      const outputDir = options.outputDir ?? join(root, DIST_FILES_DIR);
       await rm(outputDir, { recursive: true, force: true });
     }
     throw err;

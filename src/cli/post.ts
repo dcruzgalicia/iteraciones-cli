@@ -1,9 +1,10 @@
-import { dirname, isAbsolute, join, normalize } from 'node:path';
+import { dirname, join } from 'node:path';
 import { loadReferencesCardTemplate, postProcessHtml } from '../builder/html-postprocess.js';
 import { type LatexPostManifest, postProcessLatex } from '../builder/latex-composer.js';
 import { writeOutput } from '../builder/pipeline-io.js';
 import { BuildError } from '../lib/errors.js';
 import { logError, logSuccess } from '../lib/logger.js';
+import { resolvePath } from '../lib/paths.js';
 
 /** Los post-procesos disponibles; el build graba el mismo argv. */
 export const POST_KINDS = ['html', 'latex'] as const;
@@ -11,10 +12,6 @@ export const POST_KINDS = ['html', 'latex'] as const;
 /** stdin → stdout es el molde de todo `iteraciones post`; el build lo graba así. */
 async function readStdin(): Promise<string> {
   return new Response(Bun.stdin).text();
-}
-
-function resolvePath(cwd: string, path: string): string {
-  return isAbsolute(path) ? normalize(path) : join(cwd, normalize(path));
 }
 
 async function postHtml(raw: string): Promise<string> {

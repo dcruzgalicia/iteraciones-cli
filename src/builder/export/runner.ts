@@ -1,22 +1,20 @@
-import { existsSync } from 'node:fs';
-import { copyFile, mkdir, rename, rm } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { mkdir, rename, rm } from 'node:fs/promises';
+import { basename, dirname, join } from 'node:path';
 import { stringify } from 'yaml';
 import { ExportError, PANDOC_ERROR_CODES } from '../../lib/errors.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../../lib/frontmatter.js';
 import { fmBool, fmString } from '../../lib/frontmatter-fields.js';
 import { execPandoc, MD_READER } from '../../lib/pandoc-runner.js';
 import { exec, ProcessSpawnError, ProcessTimeoutError } from '../../lib/run.js';
-import { recordSupportCommand } from '../../lib/script-recorder.js';
+import { prepareArgv, recordSupportCommand } from '../../lib/script-recorder.js';
 import type { LuaFilterGroup } from '../filter-resolver.js';
 import { citationCompileArgs, creatorArgs, dateArg, languageArg, titleArg } from '../pandoc-metadata.js';
+import { preparePaths, xmpDirsFor } from '../prepare.js';
 import type { ExportDocument } from './types.js';
 
 export const LATEXMK_AUX_EXTENSIONS = ['.aux', '.bbl', '.bcf', '.blg', '.fls', '.run.xml', '.fdb_latexmk', '.out', '.toc', '.log'];
 
 const LATEXMK_TIMEOUT_MS = 600_000;
-
-const XMP_TEMPLATE_RESOURCE = join(import.meta.dir, '../../lib/resources/xmp/pdfx.xmp');
 
 export async function convertToEpub(
   content: string,
@@ -105,16 +103,10 @@ export async function convertToPdf(
   }
 
   const biberCache = biberCacheDir ?? join(pdfDir, 'biber', slug);
-  await mkdir(biberCache, { recursive: true });
-  recordSupportCommand('pdf', slug, ['mkdir', '-p', biberCache]);
+  const xmpDirs = xmpDirsFor([pdfDir]);
+  await preparePaths([biberCache, pdfDir], xmpDirs);
+  recordSupportCommand('pdf', slug, prepareArgv([biberCache, pdfDir], xmpDirs));
   const logPath = join(pdfDir, `${slug}.log`);
-
-  await mkdir(pdfDir, { recursive: true });
-  recordSupportCommand('pdf', slug, ['mkdir', '-p', pdfDir]);
-  if (existsSync(XMP_TEMPLATE_RESOURCE)) {
-    await copyFile(XMP_TEMPLATE_RESOURCE, join(pdfDir, 'pdfx.xmp'));
-    recordSupportCommand('pdf', slug, ['cp', XMP_TEMPLATE_RESOURCE, join(pdfDir, 'pdfx.xmp')]);
-  }
 
   let result: Awaited<ReturnType<typeof exec>>;
   try {
@@ -150,19 +142,33 @@ export async function convertToPdf(
     throw new ExportError(`latexmk falló al generar el PDF: ${detail}`, sourcePath, `Revisa el log completo en: ${logPath}`);
   }
 
+  if (pdfDest) {
+    await collectPdf(pdfDir, pdfDest);
+    recordSupportCommand('pdf', slug, ['iteraciones', 'pdf', 'collect', pdfDir, '-o', pdfDest]);
+  } else {
+    await cleanPdfSlot(pdfDir, slug);
+  }
+}
+
+/** Los auxiliares de latexmk y de la plantilla XMP viven junto al .tex de trabajo. */
+export async function cleanPdfSlot(slotDir: string, job: string): Promise<void> {
   const auxPaths = [
-    ...LATEXMK_AUX_EXTENSIONS.map((ext) => join(pdfDir, `${slug}${ext}`)),
-    join(pdfDir, 'pdfx.xmp'),
-    join(pdfDir, 'pdfx.xmpi'),
-    join(pdfDir, `${slug}.xmpdata`),
+    ...LATEXMK_AUX_EXTENSIONS.map((ext) => join(slotDir, `${job}${ext}`)),
+    join(slotDir, 'pdfx.xmp'),
+    join(slotDir, 'pdfx.xmpi'),
+    join(slotDir, `${job}.xmpdata`),
   ];
   await Promise.all(auxPaths.map((p) => rm(p, { force: true }).catch(() => {})));
-  recordSupportCommand('pdf', slug, ['rm', '-f', ...auxPaths]);
+}
 
-  if (pdfDest) {
-    await mkdir(dirname(pdfDest), { recursive: true });
-    recordSupportCommand('pdf', slug, ['mkdir', '-p', dirname(pdfDest)]);
-    await rename(join(pdfDir, `${slug}.pdf`), pdfDest);
-    recordSupportCommand('pdf', slug, ['mv', join(pdfDir, `${slug}.pdf`), pdfDest]);
-  }
+/**
+ * Retira los auxiliares del slot y deja el PDF de latexmk en dist/. Es el
+ * `rm -f` + `mv` que hacía el build, compartido con `iteraciones pdf collect`:
+ * el slug de trabajo es el nombre del PDF de destino, el mismo con el que
+ * latexmk compiló.
+ */
+export async function collectPdf(slotDir: string, output: string): Promise<void> {
+  await cleanPdfSlot(slotDir, basename(output, '.pdf'));
+  await mkdir(dirname(output), { recursive: true });
+  await rename(join(slotDir, `${basename(output, '.pdf')}.pdf`), output);
 }
