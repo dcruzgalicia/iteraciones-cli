@@ -8,6 +8,7 @@ import { BuildError } from '../lib/errors.js';
 import { GLYPHS, logNotice, logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
 import { exec, mapWithConcurrency } from '../lib/run.js';
+import { recordSupportCommand } from '../lib/script-recorder.js';
 import { hashFileContent } from './state-serialize.js';
 
 const PDFCHECK_BIN_NAME = 'iteraciones-pdfcheck';
@@ -84,6 +85,9 @@ export async function validatePdfX1a(pdfPath: string, binaryPath: string): Promi
       warnings: [],
     };
   }
+  // El binario no pasa por el hook de `exec` (ruta propia): se graba aquí,
+  // solo cuando corrió bien, para que la fase de validación del .sh sea fiel.
+  if (result.exitCode === 0) recordSupportCommand('validate', pdfPath, [binaryPath, pdfPath]);
   try {
     return JSON.parse(result.stdout) as PdfCheckResult;
   } catch {

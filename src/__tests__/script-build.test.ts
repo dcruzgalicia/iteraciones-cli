@@ -167,7 +167,7 @@ describe.skipIf(!pandocOk || !magickOk)('build.sh con imágenes (#2438)', () => 
       await build(dir);
 
       const script = await Bun.file(join(dir, 'build.sh')).text();
-      expect(script).toContain('# === Procesamiento de imágenes (ImageMagick) ===');
+      expect(script).toContain('# === Recursos: imágenes (ImageMagick) ===');
       expect(script).toContain('magick ');
 
       const dist = join(dir, 'dist', 'files');

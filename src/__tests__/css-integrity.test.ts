@@ -29,7 +29,7 @@ describe('compilación de Tailwind sobre dist/files', () => {
       // auto-referenciarse (purga exacta).
       await writeFile(join(dir, 'css', 'styles.css'), '.clase-fantasma{color:red}', 'utf8');
 
-      await compileTailwindCss(dir, 'rose');
+      await compileTailwindCss(dir, 'rose', dir);
 
       const css = await Bun.file(join(dir, 'css', 'styles.css')).text();
       expect(css).toContain('bg-stone-200');
@@ -47,7 +47,7 @@ describe('compilación de Tailwind sobre dist/files', () => {
   it('no incluye clases que no están en ningún HTML de dist/files', async () => {
     await withTempDir(async (dir) => {
       await writeFile(join(dir, 'index.html'), '<p class="text-stone-500">Hola</p>', 'utf8');
-      await compileTailwindCss(dir, 'lime');
+      await compileTailwindCss(dir, 'lime', dir);
       const css = await Bun.file(join(dir, 'css', 'styles.css')).text();
       expect(css).toContain('text-stone-500');
       expect(css).not.toContain('clase-inexistente-en-html');
@@ -56,7 +56,7 @@ describe('compilación de Tailwind sobre dist/files', () => {
 
   it('un acento desconocido produce error de build', async () => {
     await withTempDir(async (dir) => {
-      await expect(compileTailwindCss(dir, 'color-inventado')).rejects.toThrow('acento desconocido');
+      await expect(compileTailwindCss(dir, 'color-inventado', dir)).rejects.toThrow('acento desconocido');
     });
   });
 });

@@ -13,7 +13,13 @@ const HTML_CARDS: Record<HtmlBlockKey, string> = {
   footer: 'card-identity-footer.html',
 };
 
-export async function composeHtmlTemplate(siteConfig: SiteConfig): Promise<string> {
+/**
+ * Compone la plantilla HTML que pandoc recibe por `--template`. Dos piezas de
+ * HTML viajan ya horneadas y no como variables de `argv` (#2445): el logo
+ * (`$logo-block$`) y los `<li>` de formatos (los hrefs sí viajan por argv,
+ * uno corto por formato: `--variable=fmt-epub:./doc.epub`).
+ */
+export async function composeHtmlTemplate(siteConfig: SiteConfig, logoInline?: string): Promise<string> {
   const skeleton = await Bun.file(join(HTML_RESOURCES_DIR, 'skeleton.html')).text();
   const order = siteConfig.format?.html?.blocks ?? [...DEFAULT_HTML_BLOCKS];
   const blocks: string[] = [];
@@ -21,7 +27,10 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig): Promise<strin
     const card = await Bun.file(join(HTML_RESOURCES_DIR, HTML_CARDS[key])).text();
     blocks.push(card);
   }
-  return skeleton.replace('<!-- cards -->', blocks.join('\n'));
+  const logoBlock = logoInline
+    ? `<span class="flex h-10 w-10 shrink-0 items-center justify-center text-accent-500 logo-fill">${logoInline}</span>`
+    : '';
+  return skeleton.replace('<!-- cards -->', blocks.join('\n')).split('$logo-block$').join(logoBlock);
 }
 
 export interface HtmlPageVars {
@@ -33,7 +42,6 @@ export interface HtmlPageVars {
   accent?: string;
   css?: string;
   authorMeta?: string;
-  logoInline?: string;
   docTitle?: string;
   subtitle?: string;
   date?: string;
@@ -50,30 +58,15 @@ export interface FormatsLink {
   description: string;
 }
 
-const FORMAT_ICONS: Record<ExportFormatKey, string> = {
-  pdf: '<svg class="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M10 12h4M10 15h4"/></svg>',
-  epub: '<svg class="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6c-2-1.5-5-2-8-2v14c3 0 6 .5 8 2 2-1.5 5-2 8-2V4c-3 0-6 .5-8 2z"/><path d="M12 6v14"/></svg>',
-  latex:
-    '<svg class="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14"/><path d="M5 4l1.5 2M19 4l-1.5 2"/><path d="M12 4v16"/><path d="M8.5 20h7"/></svg>',
-  markdown:
-    '<svg class="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6h14M5 10h10M5 14h14M5 18h8"/></svg>',
-};
+/**
+ * Marcador de que hay al menos un formato (la plantilla usa `$if(formats)$`);
+ * los hrefs individuales viajan aparte, uno corto por formato (#2445).
+ */
+export function buildFormatsFlag(formats: FormatsLink[]): string | undefined {
+  return formats.length > 0 ? '1' : undefined;
+}
 
-export function buildFormatsItems(formats: FormatsLink[]): string | undefined {
-  if (formats.length === 0) return undefined;
-
-  return formats
-    .map(
-      (f) =>
-        `        <li>\n` +
-        `          <a href="${f.href}" class="flex items-center gap-3 rounded-lg transition-colors duration-200 hover:bg-accent-500/10">\n` +
-        `            <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-accent-500/30 bg-accent-500/10 text-accent-500">${FORMAT_ICONS[f.key]}</span>\n` +
-        `            <div class="flex flex-col">\n` +
-        `              <span class="text-lg font-semibold text-accent-950 dark:text-accent-50">${f.name}</span>\n` +
-        `              <span class="text-sm italic text-accent-600 dark:text-accent-400">${f.description}</span>\n` +
-        `            </div>\n` +
-        `          </a>\n` +
-        `        </li>`,
-    )
-    .join('\n');
+/** `--variable=fmt-pdf:./doc.pdf` — un valor corto por formato, nunca HTML. */
+export function buildFormatsArgs(formats: FormatsLink[]): string[] {
+  return formats.map((f) => `--variable=fmt-${f.key}:${f.href}`);
 }

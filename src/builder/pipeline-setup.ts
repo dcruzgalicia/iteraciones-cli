@@ -72,6 +72,7 @@ export async function writeEffectiveTemplates(
   siteConfig: SiteConfig,
   bibFiles: string[],
   effectiveDisabledPreamble: string[],
+  logoInline?: string,
 ): Promise<EffectiveTemplates> {
   const state: EffectiveTemplates = {
     biblatexAvailable: true,
@@ -96,7 +97,7 @@ export async function writeEffectiveTemplates(
   state.refsCardTemplate = await loadReferencesCardTemplate();
 
   if (htmlOn) {
-    await writeIfChanged(state.htmlTemplatePath, await composeHtmlTemplate(siteConfig));
+    await writeIfChanged(state.htmlTemplatePath, await composeHtmlTemplate(siteConfig, logoInline));
   }
   if (plan.generateLatex) {
     const preambleFilters = await loadPreambleFilters(effectiveDisabledPreamble, ctx.cwd, 'file');
@@ -145,7 +146,6 @@ export interface RenderContext {
   plan: BuildMetadata;
   formatCfg: SiteConfig['format'] | undefined;
   lang: string;
-  logoInline: string | undefined;
   warnedLangs: Set<string>;
   pdfxActive: boolean;
   cropActive: boolean;
@@ -191,7 +191,6 @@ export async function buildPoolContexts(
     plan,
     formatCfg,
     lang: setup.lang,
-    logoInline: setup.logoInline,
     warnedLangs: new Set<string>(),
     pdfxActive: templates.pdfxActive,
     cropActive: templates.cropActive,

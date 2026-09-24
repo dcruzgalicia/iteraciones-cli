@@ -4,7 +4,7 @@ import { logWarning } from '../lib/logger.js';
 import { type BibOptions, execPandoc, MD_READER } from '../lib/pandoc-runner.js';
 import { resolveScriptStdout } from '../lib/script-recorder.js';
 import { type LuaFilterGroup, loadFilterGroups } from './filter-resolver.js';
-import { buildFormatsItems, type HtmlPageVars } from './html-composer.js';
+import { buildFormatsArgs, buildFormatsFlag, type HtmlPageVars } from './html-composer.js';
 import { extractReferencesBlock, removeTocReferencesLink } from './html-postprocess.js';
 import { citationCompileArgs, languageArg, metadataValue, titleArg } from './pandoc-metadata.js';
 import type { BuildDocument } from './types.js';
@@ -51,9 +51,12 @@ function buildHtmlMetadataArgs(
   if (accent) args.push(`--metadata=accent:${accent}`);
   if (css) args.push(`--metadata=css:${css}`);
   if (vars.authorMeta) args.push(`--metadata=author-meta:${vars.authorMeta}`);
-  if (vars.logoInline) args.push(`--variable=logo-inline:${vars.logoInline}`);
-  const formatsItems = buildFormatsItems(vars.formats ?? []);
-  if (formatsItems) args.push(`--variable=formats:${formatsItems}`);
+  const formats = vars.formats ?? [];
+  // El logo y los <li> de formatos viven en la plantilla; el argv solo lleva
+  // un flag y un href corto por formato (#2445: nada de HTML multilínea).
+  const formatsFlag = buildFormatsFlag(formats);
+  if (formatsFlag !== undefined) args.push(`--variable=formats:${formatsFlag}`);
+  args.push(...buildFormatsArgs(formats));
   return args;
 }
 

@@ -114,8 +114,8 @@ describe('composeHtmlTemplate', () => {
     // Contenido distintivo de cada tarjeta (sin marcadores internos)
     expect(pos('Tarjeta identidad')).toBeGreaterThan(-1); // header
     expect(pos('Tarjeta documento')).toBeGreaterThan(pos('Tarjeta identidad')); // contenido
-    expect(pos('$formats$')).toBeGreaterThan(pos('Tarjeta documento')); // formatos (variable)
-    expect(pos('$if(toc)$')).toBeGreaterThan(pos('$formats$')); // indice
+    expect(pos('$if(formats)$')).toBeGreaterThan(pos('Tarjeta documento')); // formatos (marca de flag)
+    expect(pos('$if(toc)$')).toBeGreaterThan(pos('$if(formats)$')); // indice
     expect(pos('$if(has-references)$')).toBeGreaterThan(pos('$if(toc)$')); // referencias
     expect(tpl.lastIndexOf('$if(home-href)$')).toBeGreaterThan(pos('$if(has-references)$')); // footer
   });
@@ -126,10 +126,13 @@ describe('composeHtmlTemplate', () => {
     expect(tpl).toContain('<!-- block:referencias -->');
   });
 
-  it('la tarjeta formatos se inserta por variable de template', async () => {
+  it('la tarjeta formatos vive en la plantilla: un flag y un $if$ por formato', async () => {
     const tpl = await composeHtmlTemplate(DEFAULT_SITE_CONFIG);
     expect(tpl).toContain('$if(formats)$');
-    expect(tpl).toContain('$formats$');
+    // icono, nombre y descripción horneados; el argv solo aporta el href
+    expect(tpl).toContain('$fmt-pdf$');
+    expect(tpl).toContain('$fmt-epub$');
+    expect(tpl).not.toContain('$formats$');
   });
 
   it('respeta overrides de format.html.blocks', async () => {
@@ -141,7 +144,7 @@ describe('composeHtmlTemplate', () => {
       },
     };
     const tpl = await composeHtmlTemplate(siteConfig);
-    expect(tpl.indexOf('$formats$')).toBeGreaterThan(tpl.indexOf('$if(toc)$'));
+    expect(tpl.indexOf('$if(formats)$')).toBeGreaterThan(tpl.indexOf('$if(toc)$'));
   });
 });
 
