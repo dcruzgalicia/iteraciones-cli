@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { discover, resolveDiscoverSlugs } from '../builder/discover.js';
 import { postProcessCollections } from '../builder/orchestrator.js';
+import { validateFrontmatterFields } from '../builder/project-validator.js';
 import { loadStateFile, persistCompletedState, stateUsableForBuild } from '../builder/state-serialize.js';
 
 function makeProject(files: Record<string, string>): string {
@@ -82,9 +83,9 @@ describe('collection creator aggregation', () => {
     }
   });
 
-  it('collection con creator propio: slug usa creator original, author usa aggregationados', async () => {
+  it('collection con collectionCreator: slug usa el crédito propio, author usa aggregationados', async () => {
     const cwd = makeProject({
-      'collection.md': '---\ntitle: Antología\ncreator: Editora Principal\ntype: collection\nfiles:\n  - ./a.md\n  - ./b.md\n---',
+      'collection.md': '---\ntitle: Antología\ncollectionCreator: Editora Principal\ntype: collection\nfiles:\n  - ./a.md\n  - ./b.md\n---',
       'a.md': '---\ntitle: A\ncreator: Autora Alpha\n---\n\nContenido',
       'b.md': '---\ntitle: B\ncreator: Autora Beta\n---\n\nContenido',
     });
@@ -98,21 +99,21 @@ describe('collection creator aggregation', () => {
     }
   });
 
-  it('collection con creator propio inyecta collectionCreator', async () => {
+  it('collection con collectionCreator lo conserva en el frontmatter', async () => {
     const cwd = makeProject({
-      'collection.md': '---\ntitle: Antología\ncreator: Editora Principal\ntype: collection\nfiles:\n  - ./a.md\n---',
+      'collection.md': '---\ntitle: Antología\ncollectionCreator: Editora Principal\ntype: collection\nfiles:\n  - ./a.md\n---',
       'a.md': '---\ntitle: A\n---\n\nContenido',
     });
     try {
       const result = await buildStep(cwd);
       const entry = result.discoveryIndex.get('collection.md');
-      expect(entry?.fm?.collectionCreator).toEqual(['Editora Principal']);
+      expect(entry?.fm?.collectionCreator).toBe('Editora Principal');
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
   });
 
-  it('collection sin creator propio no inyecta collectionCreator', async () => {
+  it('collection sin collectionCreator no lo inventa', async () => {
     const cwd = makeProject({
       'collection.md': '---\ntitle: Antología\ntype: collection\nfiles:\n  - ./a.md\n---',
       'a.md': '---\ntitle: A\ncreator: Autora\n---\n\nContenido',
@@ -128,22 +129,24 @@ describe('collection creator aggregation', () => {
 
   it('titlehead explícito no afecta collectionCreator', async () => {
     const cwd = makeProject({
-      'collection.md': '---\ntitle: Antología\ncreator: Editora Principal\ntitlehead: Custom Titlehead\ntype: collection\nfiles:\n  - ./a.md\n---',
+      'collection.md':
+        '---\ntitle: Antología\ncollectionCreator: Editora Principal\ntitlehead: Custom Titlehead\ntype: collection\nfiles:\n  - ./a.md\n---',
       'a.md': '---\ntitle: A\n---\n\nContenido',
     });
     try {
       const result = await buildStep(cwd);
       const entry = result.discoveryIndex.get('collection.md');
       expect(entry?.fm?.titlehead).toBe('Custom Titlehead');
-      expect(entry?.fm?.collectionCreator).toEqual(['Editora Principal']);
+      expect(entry?.fm?.collectionCreator).toBe('Editora Principal');
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
   });
 
-  it('collection con creator propio en多人数: collectionCreator es creator original, author es aggregationados', async () => {
+  it('collection con varios collectionCreator: slug usa el primero, byline es la unión de files', async () => {
     const cwd = makeProject({
-      'collection.md': '---\ntitle: Antología\ncreator: [Editora Alpha, Editora Beta]\ntype: collection\nfiles:\n  - ./a.md\n  - ./b.md\n---',
+      'collection.md':
+        '---\ntitle: Antología\ncollectionCreator: [Editora Alpha, Editora Beta]\ntype: collection\nfiles:\n  - ./a.md\n  - ./b.md\n---',
       'a.md': '---\ntitle: A\ncreator: Autora Gamma\n---\n\nContenido',
       'b.md': '---\ntitle: B\ncreator: Autora Delta\n---\n\nContenido',
     });
@@ -229,5 +232,30 @@ describe('collection creator aggregation', () => {
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
+  });
+});
+
+describe('collectionCreator (#2446)', () => {
+  it('creator en type: collection es error de build, con el fix en el mensaje', async () => {
+    const cwd = makeProject({
+      'collection.md': '---\ntitle: Antología\ncreator: Editora Principal\ntype: collection\nfiles:\n  - ./a.md\n---',
+      'a.md': '---\ntitle: A\n---\n\nContenido',
+    });
+    try {
+      await expect(buildStep(cwd)).rejects.toThrow('collectionCreator');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('collectionCreator es campo conocido: sin error y sin advertencia', () => {
+    const issues = validateFrontmatterFields({ title: 'Antología', type: 'collection', collectionCreator: ['Editora Principal'], files: ['a.md'] });
+    expect(issues.filter((i) => i.severity === 'error')).toHaveLength(0);
+    expect(issues.filter((i) => i.message.includes('collectionCreator'))).toHaveLength(0);
+  });
+
+  it('creator sigue admitido fuera de las collections', () => {
+    const issues = validateFrontmatterFields({ title: 'Documento', creator: ['Autora'] });
+    expect(issues.filter((i) => i.severity === 'error')).toHaveLength(0);
   });
 });

@@ -635,6 +635,7 @@ describe.skipIf(!pandocOk)('filter latex/07-titlepages (páginas de título inte
         '$if(publisherImage)$\\publishersimage{$publisherImage$}$endif$\n' +
         '$if(startpaper)$\\setstartpaper{$startpaper$}$endif$\n' +
         '$if(colophon)$\\colophon{$colophon$}$endif$\n' +
+        '$if(collectionCreator)$\\collectionCreator{$for(collectionCreator)$\\mbox{$collectionCreator$}$sep$ \\and $endfor$}$endif$\n' +
         '$if(titleImage)$\\titleimage{$titleImage$}$endif$\n' +
         '$body$\n' +
         '\\end{document}\n',
@@ -693,6 +694,12 @@ describe.skipIf(!pandocOk)('filter latex/07-titlepages (páginas de título inte
   it('subject con array de un solo item se une sin coma extra', async () => {
     const tex = await toLatexTitleback('---\ntitle: Prueba\nsubject: [Ensayo]\n---\n\nCuerpo.\n');
     expect(tex).toContain('\\subject{Ensayo}');
+  });
+
+  it('collectionCreator acepta array (como author): no revienta y se une con coma', async () => {
+    const tex = await toLatexTitleback('---\ntitle: Prueba\ncollectionCreator: [Editora A, Editora B]\n---\n\nCuerpo.\n');
+    expect(tex).toContain('\\collectionCreator{');
+    expect(tex).toContain('Editora A, Editora B');
   });
 
   it('titleImage pasa la ruta literal (sin escapar el guion bajo)', async () => {

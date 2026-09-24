@@ -230,11 +230,8 @@ export async function postProcessCollections(discoveryIndex: Map<string, Discove
     entry.files = resolved;
     if (entry.fm) entry.fm.files = resolved;
     entry.aggregatedCreator = await aggregateCollectionCreators(entry, cwd);
-    if (entry.creator.length > 0 && entry.fm?.collectionCreator === undefined) {
-      const fm = entry.fm ?? {};
-      fm.collectionCreator = entry.creator;
-      entry.fm = fm;
-    }
+    // #2446: `collectionCreator` solo puede venir del frontmatter de la
+    // collection: ya no se deriva de `creator` (ese campo es error en collections).
   }
 }
 

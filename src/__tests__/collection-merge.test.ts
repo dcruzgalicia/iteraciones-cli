@@ -196,4 +196,72 @@ describe.skipIf(!pandocOk)('format.markdown.merge y `iteraciones merge` (#2437)'
       process.exitCode = 0;
     });
   }, 300_000);
+
+  it('#2446: collectionCreator viaja al .md en los dos modos, con slug y byline', async () => {
+    await withTempDir(async (dir) => {
+      const collection = [
+        '---',
+        'title: Antología',
+        'collectionCreator: [Editora Principal]',
+        'type: collection',
+        'files:',
+        '  - doc.md',
+        '  - ./other.md',
+        '---',
+        '',
+        'Intro de la colección.',
+        '',
+      ].join('\n');
+      const { runBuild } = await import('../cli/dispatcher.js');
+      const SLUG = 'antologia-por-editora-principal';
+
+      for (const merge of [false, true] as const) {
+        const p = join(dir, merge ? 'verdadero' : 'falso');
+        await mkdir(p, { recursive: true });
+        await Bun.write(join(p, 'iteraciones.config.yaml'), `${config({ merge })}\n`);
+        await Bun.write(join(p, 'antologia.md'), collection);
+        await Bun.write(join(p, 'doc.md'), DOC);
+        await Bun.write(join(p, 'other.md'), OTHER);
+
+        process.exitCode = 0;
+        await runBuild(p);
+        expect(process.exitCode, `build con merge:${merge} debe exit 0`).toBe(0);
+
+        const out = join(p, 'dist', 'files', `${SLUG}.md`);
+        const md = await Bun.file(out).text();
+        const head = md.slice(0, md.indexOf('\n---', 1));
+        expect(head, `merge:${merge} conserva el crédito propio`).toContain('collectionCreator');
+        expect(head, `merge:${merge} exporta el slug derivado de collectionCreator`).toContain(`slug: ${SLUG}`);
+        if (merge) {
+          // sin files[] que recalcular, el byline no es rederivable: viaja
+          expect(head, 'merge:true trae la unión de los creator de files').toContain('\ncreator:');
+          expect(head).toContain('Autora A');
+          expect(head).toContain('Autora B');
+        } else {
+          expect(head, 'merge:false no trae creator: se recalcula de files[]').not.toContain('\ncreator:');
+          expect(head, 'merge:false conserva files[] con los que se recalcula').toContain('\nfiles:');
+        }
+
+        const { runMarkdown } = await import('../cli/markdown.js');
+        await mkdir(join(p, 'cli'), { recursive: true });
+        process.exitCode = 0;
+        await runMarkdown(p, 'antologia.md', { output: `cli/${SLUG}.md` });
+        expect(process.exitCode, `iteraciones markdown con merge:${merge} debe exit 0`).toBe(0);
+        const viaScript = await Bun.file(join(p, 'cli', `${SLUG}.md`)).text();
+        expect(viaScript, `iteraciones markdown con merge:${merge} debe escribir lo mismo que el build`).toBe(md);
+
+        // round-trip: dist como origen → mismo nombre y mismos bytes
+        const rt = join(p, 'reproceso');
+        await cp(join(p, 'dist', 'files'), rt, { recursive: true });
+        await Bun.write(join(rt, 'iteraciones.config.yaml'), `${config({ merge })}\n`);
+        process.exitCode = 0;
+        await runBuild(rt);
+        expect(process.exitCode, `re-proceso con merge:${merge} debe exit 0`).toBe(0);
+        const deVuelta = await Bun.file(join(rt, 'dist', 'files', `${SLUG}.md`)).text();
+        expect(deVuelta, `round-trip con merge:${merge} debe ser idéntico`).toBe(md);
+      }
+
+      process.exitCode = 0;
+    });
+  }, 300_000);
 });
