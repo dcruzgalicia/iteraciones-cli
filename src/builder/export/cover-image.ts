@@ -3,6 +3,7 @@ import { cpus } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { logWarning } from '../../lib/logger.js';
 import { exec, mapWithConcurrency } from '../../lib/run.js';
+import { recordSupportCommand } from '../../lib/script-recorder.js';
 
 const COVER_TIMEOUT_MS = 30_000;
 
@@ -24,6 +25,8 @@ export async function generateCoverImages(entries: CoverImageEntry[]): Promise<v
         return;
       }
       await rename(join(dir, produced), pngPath);
+      // pdftoppm escribe <prefix>-1.png; el nombre final de portada es este mv.
+      recordSupportCommand('covers', prefix, ['mv', join(dir, produced), pngPath]);
       for (const f of await readdir(dir)) {
         if (f.startsWith(basename(prefix))) {
           await rm(join(dir, f), { force: true }).catch(() => {});

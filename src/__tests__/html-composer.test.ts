@@ -1,5 +1,5 @@
 import { describe, expect, it, spyOn } from 'bun:test';
-import { buildFormatsItems, type FormatsLink } from '../builder/html-composer.js';
+import { buildFormatsArgs, buildFormatsFlag, composeHtmlTemplate, type FormatsLink } from '../builder/html-composer.js';
 import { extractReferencesBlock, loadReferencesCardTemplate, removeTocReferencesLink } from '../builder/html-postprocess.js';
 import * as logger from '../lib/logger.js';
 
@@ -119,38 +119,52 @@ describe('removeTocReferencesLink', () => {
   });
 });
 
-describe('buildFormatsItems', () => {
+describe('formatos por argv (#2445: un valor corto por formato, nunca HTML)', () => {
   const formats: FormatsLink[] = [
     { href: './doc.pdf', key: 'pdf', name: 'PDF', description: 'Documento final' },
     { href: './doc.epub', key: 'epub', name: 'EPUB', description: 'Edición adaptable' },
   ];
 
-  it('sin formatos retorna undefined', () => {
-    expect(buildFormatsItems([])).toBeUndefined();
+  it('sin formatos no hay flag', () => {
+    expect(buildFormatsFlag([])).toBeUndefined();
+    expect(buildFormatsArgs([])).toEqual([]);
   });
 
-  it('con un formato genera el enlace con su nombre', () => {
-    const block = buildFormatsItems([formats[0] ?? { href: '', key: 'pdf', name: '', description: '' }]);
-    expect(block).toContain('href="./doc.pdf"');
-    expect(block).toContain('>PDF</span>');
-    expect(block).toContain('Documento final');
+  it('con formatos el flag es un valor corto', () => {
+    expect(buildFormatsFlag(formats)).toBe('1');
   });
 
-  it('con varios formatos los incluye todos', () => {
-    const block = buildFormatsItems(formats);
-    expect(block).toContain('href="./doc.pdf"');
-    expect(block).toContain('href="./doc.epub"');
-    expect(block).toContain('>PDF</span>');
-    expect(block).toContain('>EPUB</span>');
+  it('cada formato aporta exactamente un href corto', () => {
+    expect(buildFormatsArgs(formats)).toEqual(['--variable=fmt-pdf:./doc.pdf', '--variable=fmt-epub:./doc.epub']);
   });
 
-  it('los items no incluyen el wrapper de la tarjeta (vive en el recurso)', async () => {
-    const block = buildFormatsItems(formats);
-    expect(block).not.toContain('break-inside-avoid');
-    expect(block).not.toContain('<section');
-    // El recurso card-formatos.html aporta el wrapper y la variable $formats$
-    const cardResource = await Bun.file('src/lib/resources/html/card-formatos.html').text();
-    expect(cardResource).toContain('break-inside-avoid');
-    expect(cardResource).toContain('$formats$');
+  it('ningún valor de argv lleva HTML ni saltos de línea', () => {
+    for (const arg of buildFormatsArgs(formats)) {
+      expect(arg).not.toContain('<');
+      expect(arg).not.toContain('\n');
+    }
+  });
+
+  it('el markup de formatos vive en la plantilla, con un $if$ por formato', async () => {
+    const template = await composeHtmlTemplate({ format: undefined } as never);
+    expect(template).toContain('$if(fmt-pdf)$');
+    expect(template).toContain('$if(fmt-epub)$');
+    expect(template).toContain('$if(formats)$');
+    // iconos y textos horneados en el recurso, no en el argv
+    expect(template).toContain('>PDF</span>');
+    expect(template).toContain('>EPUB</span>');
+    expect(template).not.toContain('$formats$');
+  });
+
+  it('el logo se hornea en la plantilla (#2445)', async () => {
+    const siteConfig = { format: undefined } as never;
+    const sinLogo = await composeHtmlTemplate(siteConfig);
+    expect(sinLogo).not.toContain('$logo-block$');
+    expect(sinLogo).not.toContain('logo-fill');
+
+    const conLogo = await composeHtmlTemplate(siteConfig, '<svg id="el-logo"></svg>');
+    expect(conLogo).toContain('logo-fill');
+    expect(conLogo).toContain('<svg id="el-logo"></svg>');
+    expect(conLogo).not.toContain('$logo-block$');
   });
 });

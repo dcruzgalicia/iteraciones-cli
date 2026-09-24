@@ -143,7 +143,7 @@ async function emitHtmlPage(
   exportCtx: ExportContext,
   discoveryIndex: Map<string, DiscoveryEntry>,
 ): Promise<void> {
-  const { ctx, plan, formatCfg, lang, logoInline } = renderCtx;
+  const { ctx, plan, formatCfg, lang } = renderCtx;
   const htmlConfig = formatCfg?.html;
   const { dir, outBase, outSlug, slug, fm, content } = outputs;
   const cwd = ctx.cwd;
@@ -162,7 +162,6 @@ async function emitHtmlPage(
       accent: htmlConfig?.site?.color,
       css: ctx.needsCss ? relativeHref(dir, 'css/styles.css') : undefined,
       authorMeta: doc.frontmatter.creator.join(', '),
-      logoInline,
       docTitle: doc.frontmatter.title && doc.frontmatter.title !== 'Sin título' ? doc.frontmatter.title : undefined,
       subtitle: doc.frontmatter.subtitle,
       date: formatHumanDate(doc.frontmatter.date),

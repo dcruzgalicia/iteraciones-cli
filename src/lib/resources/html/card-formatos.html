@@ -3,7 +3,50 @@ $if(formats)$
       <section class="relative [&::before]:pointer-events-none [&::before]:absolute [&::before]:left-2 [&::before]:top-2 [&::before]:h-3 [&::before]:w-3 [&::before]:border-l [&::before]:border-t [&::before]:border-accent-500/30 [&::before]:content-[''] [&::after]:pointer-events-none [&::after]:absolute [&::after]:bottom-2 [&::after]:right-2 [&::after]:h-3 [&::after]:w-3 [&::after]:border-b [&::after]:border-r [&::after]:border-accent-500/30 [&::after]:content-[''] rounded-xl border border-accent-500/25 bg-stone-50/70 dark:bg-stone-900/60 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5">
         <h2 class="inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-12 text-accent-600 dark:text-accent-400">Formatos</h2>
         <ul class="list-none m-0 p-0 space-y-3">
-$formats$
+$if(fmt-pdf)$
+        <li>
+          <a href="$fmt-pdf$" class="flex items-center gap-3 rounded-lg transition-colors duration-200 hover:bg-accent-500/10">
+            <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-accent-500/30 bg-accent-500/10 text-accent-500"><svg class="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M10 12h4M10 15h4"/></svg></span>
+            <div class="flex flex-col">
+              <span class="text-lg font-semibold text-accent-950 dark:text-accent-50">PDF</span>
+              <span class="text-sm italic text-accent-600 dark:text-accent-400">Documento final para lectura e impresión</span>
+            </div>
+          </a>
+        </li>
+$endif$
+$if(fmt-epub)$
+        <li>
+          <a href="$fmt-epub$" class="flex items-center gap-3 rounded-lg transition-colors duration-200 hover:bg-accent-500/10">
+            <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-accent-500/30 bg-accent-500/10 text-accent-500"><svg class="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6c-2-1.5-5-2-8-2v14c3 0 6 .5 8 2 2-1.5 5-2 8-2V4c-3 0-6 .5-8 2z"/><path d="M12 6v14"/></svg></span>
+            <div class="flex flex-col">
+              <span class="text-lg font-semibold text-accent-950 dark:text-accent-50">EPUB</span>
+              <span class="text-sm italic text-accent-600 dark:text-accent-400">Edición adaptable para lectura digital</span>
+            </div>
+          </a>
+        </li>
+$endif$
+$if(fmt-latex)$
+        <li>
+          <a href="$fmt-latex$" class="flex items-center gap-3 rounded-lg transition-colors duration-200 hover:bg-accent-500/10">
+            <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-accent-500/30 bg-accent-500/10 text-accent-500"><svg class="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14"/><path d="M5 4l1.5 2M19 4l-1.5 2"/><path d="M12 4v16"/><path d="M8.5 20h7"/></svg></span>
+            <div class="flex flex-col">
+              <span class="text-lg font-semibold text-accent-950 dark:text-accent-50">LaTeX</span>
+              <span class="text-sm italic text-accent-600 dark:text-accent-400">Archivo fuente para composición tipográfica</span>
+            </div>
+          </a>
+        </li>
+$endif$
+$if(fmt-markdown)$
+        <li>
+          <a href="$fmt-markdown$" class="flex items-center gap-3 rounded-lg transition-colors duration-200 hover:bg-accent-500/10">
+            <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-accent-500/30 bg-accent-500/10 text-accent-500"><svg class="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6h14M5 10h10M5 14h14M5 18h8"/></svg></span>
+            <div class="flex flex-col">
+              <span class="text-lg font-semibold text-accent-950 dark:text-accent-50">Markdown</span>
+              <span class="text-sm italic text-accent-600 dark:text-accent-400">Texto fuente reutilizable y portable</span>
+            </div>
+          </a>
+        </li>
+$endif$
         </ul>
       </section>
     </div>

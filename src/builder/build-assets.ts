@@ -1,5 +1,4 @@
-import { cp, mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { cp, mkdir, stat, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { SiteConfig } from '../config/config-schema.js';
@@ -7,6 +6,7 @@ import { ACCENT_PALETTES, type AccentColor } from '../lib/accent-palettes.js';
 import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 import { mapWithConcurrency } from '../lib/run.js';
+import { recordSupportCommand } from '../lib/script-recorder.js';
 import { cacheHitFor } from './state-hash.js';
 import type { CssFileCache } from './state-serialize.js';
 
@@ -32,20 +32,27 @@ export async function resolveTailwindBin(): Promise<string> {
   throw new BuildError(`no se encontró el binario de Tailwind CSS (@tailwindcss/cli). Verifica que el paquete esté instalado (bun install).`);
 }
 
-export async function compileTailwindCss(outputDir: string, accent: string): Promise<void> {
-  const tempDir = await mkdtemp(join(tmpdir(), 'iteraciones-css-'));
-  const inputPath = join(tempDir, 'input.css');
+/**
+ * Compila el CSS de salida. El `input.css` vive en `.iteraciones/css/` (no en un
+ * temp) para que el `build.sh` pueda repetir exactamente esta fase por separado.
+ */
+export async function compileTailwindCss(outputDir: string, accent: string, projectRoot: string): Promise<void> {
+  const inputDir = join(projectRoot, '.iteraciones', 'css');
+  const inputPath = join(inputDir, 'input.css');
+  const outPath = join(outputDir, 'css', 'styles.css');
   const palette = ACCENT_PALETTES[accent as AccentColor];
   if (palette === undefined) throw new BuildError(`acento desconocido: "${accent}"`);
   const accentTheme = SHADES.map((s) => `  --color-accent-${s}: ${palette[s as keyof typeof palette]};`).join('\n');
   const input = [`@import "${STYLES_SRC}";`, `@source "${outputDir}/**/*.html";`, '@theme {', accentTheme, '}'].join('\n');
 
+  await mkdir(inputDir, { recursive: true });
   await writeFile(inputPath, input, 'utf8');
   await mkdir(join(outputDir, 'css'), { recursive: true });
   try {
     const tailwindBin = await resolveTailwindBin();
-    const proc = Bun.spawn([process.execPath, tailwindBin, '-i', inputPath, '-o', join(outputDir, 'css', 'styles.css'), '--minify'], {
-      cwd: tempDir,
+    const argv = [process.execPath, tailwindBin, '-i', inputPath, '-o', outPath, '--minify'];
+    const proc = Bun.spawn(argv, {
+      cwd: inputDir,
       stdout: 'pipe',
       stderr: 'pipe',
     });
@@ -53,11 +60,12 @@ export async function compileTailwindCss(outputDir: string, accent: string): Pro
     if (exitCode !== 0) {
       throw new BuildError(`Tailwind CSS falló al compilar el CSS:\n${stderr || stdout}`);
     }
+    // Tailwind auto-detecta fuentes desde el cwd: hay que grabarlo, o el .sh
+    // reescanearía el proyecto entero (p. ej. .iteraciones/templates/*.html).
+    recordSupportCommand('css', outputDir, argv, inputDir);
   } catch (err) {
     if (err instanceof BuildError) throw err;
     throw new BuildError(`no se pudo ejecutar Tailwind CSS. Verifica que el paquete esté instalado (bun install).`);
-  } finally {
-    await rm(tempDir, { recursive: true, force: true }).catch(() => {});
   }
 }
 
@@ -126,7 +134,7 @@ export async function buildAssets(
   const cssExists = await Bun.file(join(outputDir, 'css', 'styles.css')).exists();
   if (prevCssHash !== cssHash || !cssExists) {
     const accent = siteConfig.format?.html?.site?.color ?? 'lime';
-    tasks.push(compileTailwindCss(outputDir, accent));
+    tasks.push(compileTailwindCss(outputDir, accent, cwd));
   }
   await Promise.all(tasks);
   return { cssHash, cssFileCache };

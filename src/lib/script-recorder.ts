@@ -26,14 +26,25 @@ import { dirname, join, relative } from 'node:path';
 
 const SCRIPT_DIR = ['.iteraciones', 'script'] as const;
 
-type Section = 'images' | 'latex' | 'html' | 'epub' | 'pdf' | 'other';
+type Section = 'images' | 'resources' | 'latex' | 'html' | 'epub' | 'post' | 'css' | 'pdf' | 'covers' | 'validate' | 'other';
 
+/**
+ * Fases del build.sh, en el orden en que deben poder reejecutarse a mano:
+ * directorios → recursos (imágenes, plantillas y colecciones) → solo pandoc →
+ * post-proceso de iteraciones → CSS → latexmk → portada y validación.
+ * Una fase vacía no se emite.
+ */
 const SECTIONS: ReadonlyArray<{ id: Section; title: string }> = [
-  { id: 'images', title: 'Procesamiento de imágenes (ImageMagick)' },
+  { id: 'images', title: 'Recursos: imágenes (ImageMagick)' },
+  { id: 'resources', title: 'Recursos: plantillas y colecciones (iteraciones)' },
   { id: 'latex', title: 'Pandoc: LaTeX' },
   { id: 'html', title: 'Pandoc: HTML' },
   { id: 'epub', title: 'Pandoc: EPUB' },
+  { id: 'post', title: 'Post-proceso (iteraciones)' },
+  { id: 'css', title: 'CSS (Tailwind)' },
   { id: 'pdf', title: 'PDF (latexmk)' },
+  { id: 'covers', title: 'Portada (pdftoppm)' },
+  { id: 'validate', title: 'Validación PDF/X' },
   { id: 'other', title: 'Otros comandos' },
 ];
 
@@ -122,6 +133,7 @@ export function recordScriptExec(command: string, args: string[], options: Scrip
   if (capture === null || isVersionProbe(args)) return;
   if (command === 'pandoc') recordPandoc(args, options, stdout);
   else if (command === 'magick') push({ section: 'images', sortKey: args.at(-1) ?? '', argv: [command, ...args] });
+  else if (command === 'pdftoppm') push({ section: 'covers', sortKey: args.at(-1) ?? '', argv: [command, ...args] });
   else if (command === 'latexmk') {
     const job = args.find((a) => a.startsWith('-jobname='));
     push({ section: 'pdf', sortKey: job?.slice('-jobname='.length) ?? '', argv: [command, ...args], env: options.env, cwd: options.cwd });
@@ -139,8 +151,8 @@ function recordPandoc(args: string[], options: ScriptExecOptions, stdout: string
 }
 
 /** Ordena dentro de su sección por `sortKey` (estable en corridas concurrentes). */
-export function recordSupportCommand(section: Section, sortKey: string, argv: string[]): void {
-  push({ section, sortKey, argv });
+export function recordSupportCommand(section: Section, sortKey: string, argv: string[], cwd?: string): void {
+  push({ section, sortKey, argv, cwd });
 }
 
 /**
@@ -231,9 +243,15 @@ function renderDirs(cap: Capture, steps: Step[], scriptDir: string): string[] {
     if (step.target !== undefined) dirs.add(dirname(step.target));
     const last = step.argv.at(-1);
     if (step.section === 'images' && last !== undefined) dirs.add(dirname(last));
+    // Salidas que viajan por -o/--output (Tailwind, y los comandos de
+    // iteraciones): el directorio debe existir aunque no haya redirect.
+    const i = step.argv.findIndex((a) => a === '-o' || a === '--output');
+    const out = i >= 0 ? step.argv[i + 1] : undefined;
+    if (out !== undefined) dirs.add(dirname(out));
   }
   // El propio .iteraciones/script lo crea la generación del build.sh.
   dirs.delete(scriptDir);
+  dirs.delete('.');
   if (dirs.size === 0) return [];
   const lines = [...dirs].sort().map((dir) => `mkdir -p ${quote(displayPath(cap.processCwd, dir))}`);
   return ['# === Directorios de salida ===', ...lines, ''];
