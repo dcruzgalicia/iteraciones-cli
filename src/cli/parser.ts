@@ -1,7 +1,10 @@
 import { Command } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
+import { TEMPLATE_KINDS } from '../builder/pipeline-setup.js';
 import { runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from './dispatcher.js';
 import { runMerge } from './merge.js';
+import { runPost } from './post.js';
+import { runTemplate } from './template.js';
 
 function translateCommanderError(message: string): string {
   return message
@@ -114,6 +117,41 @@ Ejemplos:
     )
     .action(async (path: string, opts: { output: string }) => {
       await runMerge(projectRoot(), path, opts);
+    });
+
+  program
+    .command('template <tipo>')
+    .description('escribe una plantilla de .iteraciones/templates (las que pandoc recibe por --template)')
+    .option('-o, --output <path>', 'ruta de la plantilla de salida')
+    .addHelpText(
+      'after',
+      `
+Tipos: ${TEMPLATE_KINDS.join(' | ')}
+
+Ejemplos:
+  iteraciones template html                 regenera .iteraciones/templates/html.html
+  iteraciones template latex -o pl.tex      la misma plantilla en otra ruta
+`,
+    )
+    .action(async (tipo: string, opts: { output?: string }) => {
+      await runTemplate(projectRoot(), tipo, opts);
+    });
+
+  program
+    .command('post <tipo>')
+    .description('aplica el post-proceso de iteraciones a una salida cruda de pandoc que recibe por stdin')
+    .option('-o, --output <path>', 'ruta del archivo de salida')
+    .addHelpText(
+      'after',
+      `
+Tipos: html
+
+Ejemplos:
+  pandoc doc.md --to html5 | iteraciones post html -o dist/doc.html
+`,
+    )
+    .action(async (tipo: string, opts: { output?: string }) => {
+      await runPost(projectRoot(), tipo, opts);
     });
 
   program
