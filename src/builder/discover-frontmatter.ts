@@ -32,6 +32,17 @@ interface NormalizedRecord extends Omit<IngestedFrontmatter, 'fm'> {
   rawTitle: unknown;
 }
 
+/**
+ * Título de un creator: si no trae `title` se usa `name`, escrito en el propio
+ * frontmatter. El discovery del build y `iteraciones markdown` llaman a esta
+ * misma función, para que el `.md` de dist salga idéntico por los dos caminos.
+ */
+export function applyCreatorTitle(record: Record<string, unknown>): void {
+  if (record.type === 'creator' && (typeof record.title !== 'string' || record.title === '') && typeof record.name === 'string') {
+    record.title = record.name;
+  }
+}
+
 function normalizeFrontmatterRecord(record: Record<string, unknown>, relativePath: string, issues: FrontmatterIssue[]): NormalizedRecord {
   for (const issue of validateFrontmatterFields(record)) {
     if (issue.severity === 'error') {
@@ -43,11 +54,8 @@ function normalizeFrontmatterRecord(record: Record<string, unknown>, relativePat
   const type =
     record.type === 'file' || record.type === 'collection' || record.type === 'creator' || record.type === 'intervention' ? record.type : undefined;
   const files = Array.isArray(record.files) && record.files.every((f) => typeof f === 'string') ? (record.files as string[]) : undefined;
-  let rawTitle = record.title;
-  if (type === 'creator' && (typeof rawTitle !== 'string' || rawTitle === '') && typeof record.name === 'string') {
-    rawTitle = record.name;
-    record.title = rawTitle;
-  }
+  applyCreatorTitle(record);
+  const rawTitle = record.title;
   return {
     title: typeof rawTitle === 'string' ? rawTitle : '',
     subtitle: fmTrimmedString(record.subtitle),

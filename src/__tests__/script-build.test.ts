@@ -455,6 +455,9 @@ describe.skipIf(!pandocOk || !magickOk || !latexOk || !pdftotextOk || !unzipOk)(
         join(dir, 'coleccion.md'),
         ['---', 'title: Antología', 'type: collection', 'files:', '  - documento.md', '---', '', 'Intro de la antología.'].join('\n'),
       );
+      // creator sin `title`: el build se lo deriva de `name`, y el .md de dist
+      // debe salir igual por `iteraciones markdown` (#2445).
+      await Bun.write(join(dir, 'creadora.md'), ['---', 'name: Ana Ruiz', 'type: creator', '---', '', 'Bio de la creadora.'].join('\n'));
 
       await build(dir, { full: true });
 
