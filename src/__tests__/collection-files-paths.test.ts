@@ -121,14 +121,14 @@ describe('files[] de collections relativos a la collection (#2443)', () => {
 
   it('iteraciones merge resuelve files relativos a la raíz desde un subdir', async () => {
     await withTempDir(async (dir) => {
+      await writeMd(join(dir, 'iteraciones.config.yaml'), [CONFIG]);
       await writeMd(join(dir, 'sub', 'c.md'), ['---', 'title: Antología', 'type: collection', 'files:', '  - sub/m.md', '---', '', 'Intro.']);
       await writeMd(join(dir, 'sub', 'm.md'), ['---', 'title: Miembro', 'creator: Autora X', '---', '', 'Contenido fusionable.']);
 
       process.exitCode = 0;
-      await runMerge(dir, 'sub/c.md', { output: 'out.md' });
+      await runMerge(dir, 'sub/c.md', { format: 'markdown', output: 'out.md' });
       expect(process.exitCode, 'merge debe poder leer el miembro vía fallback a la raíz').toBe(0);
       const out = await Bun.file(join(dir, 'out.md')).text();
-      expect(out).toContain('type: file');
       expect(out).toContain('## Autora X');
       expect(out).toContain('Contenido fusionable.');
       process.exitCode = 0;

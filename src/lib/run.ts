@@ -14,6 +14,8 @@ interface RunOptions {
   onSpawn?: (pid: number) => void;
   /** #2438: clave estable del documento (su ruta) para ordenar build.sh. */
   scriptKey?: string;
+  /** #2445: ruta donde materializar `input` en build.sh (.iteraciones/collections). */
+  inputTarget?: string;
 }
 
 export class ProcessSpawnError extends Error {

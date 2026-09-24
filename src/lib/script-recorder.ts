@@ -56,6 +56,8 @@ interface Step {
   cwd?: string;
   input?: string;
   inputPath?: string;
+  /** #2445: `input` ya vive en una ruta propia (.iteraciones/collections/...). */
+  inputTarget?: string;
   /** Post-proceso: lee por stdin el paso cuyo stdout ya resolvió `resolveScriptStdout`. */
   inputFrom?: Step;
   raw?: string;
@@ -106,6 +108,11 @@ function pad(n: number): string {
   return String(n).padStart(4, '0');
 }
 
+/** #2445: ¿hay build.sh en curso? Para que los recursos solo se graben ahí. */
+export function isScriptCapture(): boolean {
+  return capture !== null;
+}
+
 function push(step: Omit<Step, 'order'>): void {
   if (capture === null) return;
   capture.steps.push({ ...step, order: capture.seq++ });
@@ -124,6 +131,8 @@ export interface ScriptExecOptions {
   env?: Record<string, string>;
   input?: string;
   scriptKey?: string;
+  /** #2445: ruta donde el build ya deja (o debe dejar) la entrada de pandoc. */
+  inputTarget?: string;
 }
 
 /**
@@ -146,7 +155,7 @@ function recordPandoc(args: string[], options: ScriptExecOptions, stdout: string
   const { section, ext } = formatOf(flagValue(args, '--to') ?? '');
   const output = flagValue(args, '--output');
   const argv = ['pandoc', ...args];
-  const common = { section, argv, env: options.env, cwd: options.cwd, input: options.input };
+  const common = { section, argv, env: options.env, cwd: options.cwd, input: options.input, inputTarget: options.inputTarget };
   if (output !== undefined) push({ ...common, sortKey: output });
   else push({ ...common, sortKey: options.scriptKey ?? options.input ?? '', raw: stdout, ext });
 }
@@ -231,8 +240,16 @@ async function assignPaths(steps: Step[], scriptDir: string): Promise<void> {
   let outSeq = 0;
   for (const step of steps) {
     if (step.input !== undefined) {
-      inSeq += 1;
-      step.inputPath = join(scriptDir, `in-${pad(inSeq)}.md`);
+      // Las colecciones ya tienen su ruta (.iteraciones/collections/<fmt>.md);
+      // los documentos individuales conservan la numeración in-NNNN.md.
+      const own = step.inputTarget;
+      if (own === undefined) {
+        inSeq += 1;
+        step.inputPath = join(scriptDir, `in-${pad(inSeq)}.md`);
+      } else {
+        step.inputPath = own;
+      }
+      await mkdir(dirname(step.inputPath), { recursive: true });
       await writeFile(step.inputPath, step.input, 'utf8');
     }
     if (step.target === undefined && step.intermediate === true) {

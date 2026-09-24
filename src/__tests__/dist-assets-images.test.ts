@@ -25,9 +25,16 @@ if (!magickOk) registerSkip('dist-assets-images.test.ts', SKIP_REASONS.magick);
 describe.skipIf(!pandocOk || !magickOk)('imágenes procesadas en dist (#2435)', () => {
   it('dist contiene assets/img y HTML/markdown referencian assets/img/<nombre>', async () => {
     await withTempDir(async (dir) => {
-      const config = ['language: es-MX', 'format:', '  html:', '    site:', '      title: T', '    generate: true', '  markdown:', '    generate: true'].join(
-        '\n',
-      );
+      const config = [
+        'language: es-MX',
+        'format:',
+        '  html:',
+        '    site:',
+        '      title: T',
+        '    generate: true',
+        '  markdown:',
+        '    generate: true',
+      ].join('\n');
       await Bun.write(join(dir, 'iteraciones.config.yaml'), `${config}\n`);
       await Bun.spawnSync(['magick', '-size', '2x2', 'xc:white', join(dir, 'foto.png')]);
       await Bun.spawnSync(['magick', '-size', '2x2', 'xc:gray', join(dir, 'portada.png')]);

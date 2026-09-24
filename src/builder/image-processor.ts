@@ -238,7 +238,10 @@ export function rewriteImagePaths(content: string, imageMap: Map<string, string>
         (_m, pre: string, openQuote: string, closeQuote: string) => `${pre}${openQuote}${processed}${closeQuote}`,
       );
       // HTML crudo <img src="ruta"> — anclado al atributo src (#2441).
-      result = result.replace(new RegExp(`(src=["']?)${escaped}(["'])`, 'gi'), (_m, pre: string, closeQuote: string) => `${pre}${processed}${closeQuote}`);
+      result = result.replace(
+        new RegExp(`(src=["']?)${escaped}(["'])`, 'gi'),
+        (_m, pre: string, closeQuote: string) => `${pre}${processed}${closeQuote}`,
+      );
     }
   }
   return result;

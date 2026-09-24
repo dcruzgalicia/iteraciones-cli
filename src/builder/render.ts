@@ -10,6 +10,8 @@ import type { BuildDocument } from './types.js';
 
 interface HtmlPageOptions {
   cwd: string;
+  /** #2445: ruta de la entrada materializada en .iteraciones/collections (collections). */
+  inputTarget?: string;
   vars: HtmlPageVars;
   siteConfig: SiteConfig;
   templatePath: string;
@@ -78,7 +80,14 @@ export async function htmlPageFromMarkdown(content: string, doc: BuildDocument, 
   }
   extraArgs.push(...citationCompileArgs(bibOptions?.bibliography, bibOptions?.csl));
 
-  const html = await execPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'html5', extraArgs });
+  const html = await execPandoc({
+    input: content,
+    sourcePath: doc.filePath,
+    from: MD_READER,
+    to: 'html5',
+    extraArgs,
+    inputTarget: opts.inputTarget,
+  });
   const final = postProcessHtml(html, refsCardTemplate);
   // #2445: si difiere de la salida cruda, el .sh hace `pandoc > crudo` y luego
   // `iteraciones post html < crudo -o dist`. Si no difiere, pandoc ya escribe dist.

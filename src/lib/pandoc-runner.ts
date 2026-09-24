@@ -17,6 +17,8 @@ interface PandocOptions {
   input: string;
   sourcePath: string;
   outputPath?: string;
+  /** #2445: ruta de la entrada materializada en build.sh (.iteraciones/collections). */
+  inputTarget?: string;
   bibOptions?: BibOptions;
   extraArgs?: string[];
   env?: Record<string, string>;
@@ -59,7 +61,13 @@ export async function execPandoc(options: PandocOptions): Promise<string> {
   try {
     const projectRoot = dirname(options.sourcePath);
     const env = { ITERACIONES_PROJECT_ROOT: projectRoot, ...options.env };
-    result = await exec('pandoc', args, { input: options.input, timeoutMs: PANDOC_TIMEOUT_MS, env, scriptKey: options.sourcePath });
+    result = await exec('pandoc', args, {
+      input: options.input,
+      timeoutMs: PANDOC_TIMEOUT_MS,
+      env,
+      scriptKey: options.sourcePath,
+      inputTarget: options.inputTarget,
+    });
   } catch (err) {
     if (err instanceof ProcessSpawnError) {
       throw new PandocError(

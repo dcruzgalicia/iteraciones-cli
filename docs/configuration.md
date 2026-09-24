@@ -451,7 +451,7 @@ Habilita la exportación a Markdown procesado (con los filters aplicados).
 
 Define cómo se exporta el Markdown de las collections:
 
-- `false` (por defecto): la salida es **re-procesable**. `dist/<collection>.md` conserva `type: collection`, reescribe `files[]` para apuntar a las copias de los miembros emitidas en dist y mantiene el body original de la collection (sin el contenido fusionado). Con `iteraciones merge` se vuelve a fusionar en cualquier momento.
+- `false` (por defecto): la salida es **re-procesable**. `dist/<collection>.md` conserva `type: collection`, reescribe `files[]` para apuntar a las copias de los miembros emitidas en dist y mantiene el body original de la collection (sin el contenido fusionado). Con `iteraciones merge --format <fmt>` se vuelve a fusionar, cuando se quiera, **siempre sobre los archivos originales de `files[]`**.
 - `true`: la salida es el markdown **fusionado**. `dist/<collection>.md` lleva `type: file`, sin `files[]`, y con el contenido de todos los archivos de `files[]` inline. No es re-procesable.
 
 ```yaml
@@ -466,7 +466,7 @@ format:
 **Tipo:** `boolean`
 **Por defecto:** `false`
 
-Cada build reescribe `build.sh` en la raíz del proyecto con los **comandos externos que corrieron en esa corrida**: pandoc, ImageMagick, latexmk y los `mkdir`/`cp`/`rm`/`mv` de soporte. El archivo es ejecutable y contiene solo comandos —sin lógica—, de modo que además de `iteraciones build` se puede reconstruir a mano con pandoc, ImageMagick y latexmk.
+Cada build reescribe `build.sh` en la raíz del proyecto con los **comandos que corrieron en esa corrida**: `iteraciones template`, `iteraciones merge`, pandoc, `iteraciones post`, ImageMagick, latexmk y los `mkdir`/`rm`/`mv` de soporte. El archivo es ejecutable y contiene solo comandos —sin lógica—, de modo que además de `iteraciones build` se puede reconstruir a mano con pandoc, ImageMagick y latexmk más los comandos de `iteraciones`.
 
 ```yaml
 format:
@@ -476,12 +476,12 @@ format:
 Alcance y límites:
 
 - **Solo en builds exitosos.** Si el build falla, el `build.sh` anterior queda intacto.
-- **Paso a paso y en orden de secciones**: imágenes, pandoc (LaTeX/HTML/EPUB), latexmk. Cada línea es reproducible por separado.
-- **Lo que iteraciones transforma no se escribe sobre dist.** Cuando el .tex o el .html final difiere de la salida cruda de pandoc (autores, XMP, imágenes, citas, tarjeta de referencias), la salida cruda va a `.iteraciones/script/out-NNNN.*` y el .sh lleva un comentario indicando que ese paso final es de iteraciones.
-- **No incluye `iteraciones merge` ni las salidas que solo produce TypeScript**: el markdown de dist (#2436), las copias de miembros de collections, la reescritura de rutas de imagen y el CSS compilado por Tailwind.
+- **Fases en orden fijo**: (1) directorios, (2) recursos — imágenes, plantillas y colecciones —, (3) pandoc, uno por archivo, (4) `iteraciones post`, (5) CSS de Tailwind, (6) latexmk, (7) portada PNG y validación PDF/X. Cada línea es reproducible por separado.
+- **Lo que iteraciones transforma se delega a `iteraciones post`.** Cuando el .tex o el .html final difiere de la salida cruda de pandoc (autores, XMP, imágenes, citas, tarjeta de referencias), la salida cruda va a `.iteraciones/script/out-NNNN.*` y el .sh llama a `iteraciones post <tipo>` sobre esa entrada. `post latex` lee además el manifiesto `.iteraciones/post/<slug>.json` —autores, XMP y distribución de imágenes— que solo puede escribir el build, igual que el propio `build.sh`.
+- **No incluye las salidas que solo produce TypeScript**: el markdown de dist (#2436), las copias de miembros de collections, la reescritura de rutas de imagen y el CSS compilado por Tailwind.
 - **Un build incremental solo registra lo que corrió en esa corrida**; si no corrió ningún comando externo, `build.sh` queda con la cabecera sin pasos.
 
-Los archivos de entrada que pandoc lee por stdin viven en `.iteraciones/script/in-NNNN.md` y se regeneran en cada build.
+Las entradas que pandoc lee por stdin viven en `.iteraciones/script/in-NNNN.md`; las de collections, una por formato, en `.iteraciones/collections/<slug>.<fmt>.md`, que el propio `iteraciones merge` del `.sh` vuelve a crear. Ambas se regeneran en cada build.
 
 ### `disabledFilters`
 

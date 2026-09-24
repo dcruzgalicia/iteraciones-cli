@@ -5,7 +5,7 @@ import { splitFrontmatter } from '../lib/frontmatter.js';
 import { fmStringList, resolveBooleanField, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { execPandoc, MD_READER } from '../lib/pandoc-runner.js';
-import { resolveScriptStdout } from '../lib/script-recorder.js';
+import { isScriptCapture, recordSupportCommand, resolveScriptStdout } from '../lib/script-recorder.js';
 import { htmlSlugFor } from './discover.js';
 import { assembleExportDocument } from './export/assemble.js';
 import { convertToEpub, convertToMarkdown } from './export/runner.js';
@@ -15,6 +15,7 @@ import { rewriteFmImagePaths, rewriteImagePaths } from './image-processor.js';
 import {
   buildTexDistribution,
   type ImagePreprocessResult,
+  insertAuthorsBlock,
   markdownToLatex,
   mergeConfigImages,
   preprocessDocumentImages,
@@ -84,6 +85,7 @@ async function emitLatexAndQueuePdf(
   const { tex: fullTex, processedImages } = await markdownToLatex(outputs.content, doc, {
     filters: exportCtx.filters,
     bibFiles: exportCtx.bibFiles,
+    inputTarget: collectionPandocInput(doc, ctx.cwd, outSlug, 'latex'),
     templatePath:
       doc.frontmatter.type === 'collection'
         ? exportCtx.latexCollectionTemplatePath
@@ -100,15 +102,9 @@ async function emitLatexAndQueuePdf(
     images,
     cwd: ctx.cwd,
   });
-  const texWithAuthors =
-    authorsBlock && fullTex.includes('\\printbibliography')
-      ? fullTex.replace('\\printbibliography', `${authorsBlock}\n\n\\printbibliography`)
-      : authorsBlock && fullTex.includes('\\colophon{')
-        ? fullTex.replace('\\colophon{', `${authorsBlock}\n\n\\colophon{`)
-        : fullTex;
-  const texWithXmp = renderCtx.pdfxActive
-    ? injectXmpMetadataIntoLatex(texWithAuthors, xmpMetadataFor(fm, lang, formatCfg?.pdf, ctx.siteConfig))
-    : texWithAuthors;
+  const xmp = renderCtx.pdfxActive ? xmpMetadataFor(fm, lang, formatCfg?.pdf, ctx.siteConfig) : undefined;
+  const texWithAuthors = insertAuthorsBlock(fullTex, authorsBlock);
+  const texWithXmp = xmp === undefined ? texWithAuthors : injectXmpMetadataIntoLatex(texWithAuthors, xmp);
 
   if (latexOn) {
     const distribution = buildTexDistribution(processedImages, outSlug);
@@ -118,7 +114,15 @@ async function emitLatexAndQueuePdf(
       }),
     );
     const distTex = rewriteTexForDist(texWithXmp, distribution);
-    resolveScriptStdout(fullTex, texDistPath, distTex);
+    // #2445: el .sh no puede recomputar autores/XMP/distribución, así que el
+    // build se los deja escritos en un manifiesto que `iteraciones post latex` lee.
+    let post: string[] | undefined;
+    if (isScriptCapture()) {
+      const manifest = join(ctx.cwd, '.iteraciones', 'post', `${outSlug}.json`);
+      await writeOutput(manifest, `${JSON.stringify({ authorsBlock, xmp, distribution: Object.fromEntries(distribution) }, null, 2)}\n`);
+      post = ['iteraciones', 'post', 'latex', '--post', manifest, '-o', texDistPath];
+    }
+    resolveScriptStdout(fullTex, texDistPath, distTex, post);
     await writeOutput(texDistPath, distTex);
   }
 
@@ -153,6 +157,7 @@ async function emitHtmlPage(
   const htmlPath = outBase(`${outSlug}${primaryOutputExtension('html')}`);
   const html = await htmlPageFromMarkdown(content, doc, {
     cwd,
+    inputTarget: collectionPandocInput(doc, cwd, outSlug, 'html'),
     vars: {
       title: doc.frontmatter.title || slug,
       siteTitle: htmlConfig?.site?.title ?? 'iteraciones',
@@ -562,7 +567,8 @@ async function buildCollectionAuthorsLatex(creatorDocs: CreatorDoc[], sourcePath
   });
 }
 
-function collectionBaseContent(
+/** Fusión de la collection en el formato pedido; la usan el build y `iteraciones merge`. */
+export function collectionBaseContent(
   collectionEntries: {
     creator: string[];
     title: string;
@@ -577,6 +583,19 @@ function collectionBaseContent(
   pageNumber?: string,
 ): string {
   return collectionEntries.length > 0 ? resolveCollectionContent(collectionEntries, format, content, pageNumber) : content;
+}
+
+/**
+ * #2445 — la entrada de pandoc de una collection vive en
+ * `.iteraciones/collections/<slug>.<fmt>.md`, byte-idéntica a su stdin, y se
+ * registra en la fase de recursos del build.sh. Los documentos individuales
+ * siguen viajando por .iteraciones/script/in-NNNN.md.
+ */
+function collectionPandocInput(doc: BuildDocument, cwd: string, outSlug: string, format: 'latex' | 'html' | 'epub'): string | undefined {
+  if (doc.frontmatter.type !== 'collection') return undefined;
+  const path = join(cwd, '.iteraciones', 'collections', `${outSlug}.${format}.md`);
+  recordSupportCommand('resources', path, ['iteraciones', 'merge', doc.relativePath, '--format', format, '-o', path]);
+  return path;
 }
 
 async function emitCollectionFormats(
@@ -653,6 +672,7 @@ async function emitCollectionFormats(
       exportCtx.filters,
       ctx.siteConfig.toc,
       outputs.fm,
+      collectionPandocInput(doc, ctx.cwd, outputs.outSlug, 'epub'),
     );
   }
 

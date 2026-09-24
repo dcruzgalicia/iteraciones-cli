@@ -21,10 +21,11 @@ import { registerSkip, SKIP_REASONS, withTempDir } from './helpers.js';
 const pandocOk = await getPandocVersion().catch(() => null);
 if (!pandocOk) registerSkip('collection-merge.test.ts', SKIP_REASONS.pandoc);
 
-function config(opts: { merge?: boolean; markdown?: boolean } = {}): string {
+function config(opts: { merge?: boolean; markdown?: boolean; script?: boolean } = {}): string {
   return [
     'language: es-MX',
     'format:',
+    ...(opts.script ? ['  script: true'] : []),
     '  html:',
     '    site:',
     '      title: T',
@@ -57,7 +58,7 @@ describe.skipIf(!pandocOk)('format.markdown.merge y `iteraciones merge` (#2437)'
       // === Proyecto con merge:false (default) ===
       const dirFalse = join(dir, 'falso');
       await mkdir(dirFalse, { recursive: true });
-      await Bun.write(join(dirFalse, 'iteraciones.config.yaml'), `${config()}\n`);
+      await Bun.write(join(dirFalse, 'iteraciones.config.yaml'), `${config({ script: true })}\n`);
       await Bun.write(join(dirFalse, 'mi-coleccion.md'), COLECCION);
       await Bun.write(join(dirFalse, 'doc.md'), DOC);
       await Bun.write(join(dirFalse, 'other.md'), OTHER);
@@ -137,37 +138,51 @@ describe.skipIf(!pandocOk)('format.markdown.merge y `iteraciones merge` (#2437)'
       // Diferentes por diseño: una lleva el body original, la otra el fusionado.
       expect(fusionado).not.toBe(coleccion);
 
-      // === `iteraciones merge` ===
+      // === `iteraciones merge` (#2445): la entrada exacta de pandoc ===
       const { runMerge } = await import('../cli/merge.js');
 
+      // rebuild completo: así .iteraciones/collections/ queda con los miembros actuales
+      await runBuild(dirFalse, { full: true });
+
+      // -- byte-idéntica a lo que el build ya le dio a pandoc por stdin
       process.exitCode = 0;
-      await runMerge(dirFalse, 'dist/files/mi-coleccion.md', { output: 'salida/fusion.md' });
+      await runMerge(dirFalse, 'mi-coleccion.md', { format: 'html', output: 'salida/coleccion.html.md' });
+      expect(process.exitCode, 'merge debe exit 0').toBe(0);
+      const generado = await Bun.file(join(dirFalse, 'salida', 'coleccion.html.md')).text();
+      const delBuild = await Bun.file(join(dirFalse, '.iteraciones', 'collections', 'mi-coleccion.html.md')).text();
+      expect(generado, 'merge debe reproducir byte a byte la entrada de pandoc').toBe(delBuild);
+
+      // -- siempre sobre los originales, nunca sobre dist/
+      process.exitCode = 0;
+      await runMerge(dirFalse, 'mi-coleccion.md', { format: 'markdown', output: 'salida/fusion.md' });
       expect(process.exitCode, 'merge sobre una collection debe exit 0').toBe(0);
       const fusion = await Bun.file(join(dirFalse, 'salida', 'fusion.md')).text();
-      expect(fusion).toContain('type: file');
-      expect(fusion).not.toContain('files:');
       expect(fusion).toContain('## Autora A');
-      expect(fusion).toContain('Contenido de other.');
+      expect(fusion).toContain('Contenido de doc.');
+      expect(fusion).toContain('Contenido modificado.');
       expect(fusion).not.toContain('Intro de la colección.');
 
       // determinista: dos ejecuciones → mismos bytes
-      await runMerge(dirFalse, 'dist/files/mi-coleccion.md', { output: 'salida/fusion2.md' });
+      await runMerge(dirFalse, 'mi-coleccion.md', { format: 'markdown', output: 'salida/fusion2.md' });
       const fusion2 = await Bun.file(join(dirFalse, 'salida', 'fusion2.md')).text();
       expect(fusion2).toBe(fusion);
 
-      // sin -o → error de uso
+      // sin --format o sin -o → error de uso
       process.exitCode = 0;
-      await runMerge(dirFalse, 'dist/files/mi-coleccion.md', {});
+      await runMerge(dirFalse, 'mi-coleccion.md', { output: 'salida/sinformato.md' });
+      expect(process.exitCode, 'sin --format debe fallar').toBe(1);
+      process.exitCode = 0;
+      await runMerge(dirFalse, 'mi-coleccion.md', { format: 'html' });
       expect(process.exitCode, 'sin -o debe fallar').toBe(1);
 
       // entrada que no es una collection → error
       process.exitCode = 0;
-      await runMerge(dirFalse, 'dist/files/doc.md', { output: 'salida/nofu.md' });
+      await runMerge(dirFalse, 'dist/files/doc.md', { format: 'markdown', output: 'salida/nofu.md' });
       expect(process.exitCode, 'no-colección debe fallar').toBe(1);
 
       // un .md ya fusionado (merge:true) tampoco es una collection
       process.exitCode = 0;
-      await runMerge(dirTrue, 'dist/files/mi-coleccion.md', { output: 'salida/yafusion.md' });
+      await runMerge(dirTrue, 'dist/files/mi-coleccion.md', { format: 'markdown', output: 'salida/yafusion.md' });
       expect(process.exitCode, 'type: file debe fallar').toBe(1);
 
       // -- al desactivar el markdown se retiran la collection y sus copias
