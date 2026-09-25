@@ -19,7 +19,7 @@ describe('compilación de Tailwind sobre dist/files', () => {
   });
   it('incluye las clases del HTML final y el acento configurado; purga las ausentes', async () => {
     await withTempDir(async (dir) => {
-      await mkdir(join(dir, 'css'), { recursive: true });
+      await mkdir(join(dir, 'assets', 'css'), { recursive: true });
       await writeFile(
         join(dir, 'index.html'),
         '<!DOCTYPE html><html class="bg-stone-200 text-accent-500"><body class="prose grid grid-cols-2">Hola</body></html>',
@@ -27,11 +27,11 @@ describe('compilación de Tailwind sobre dist/files', () => {
       );
       // CSS previo con una clase que ya no está en el HTML: no debe
       // auto-referenciarse (purga exacta).
-      await writeFile(join(dir, 'css', 'styles.css'), '.clase-fantasma{color:red}', 'utf8');
+      await writeFile(join(dir, 'assets', 'css', 'styles.css'), '.clase-fantasma{color:red}', 'utf8');
 
       await compileTailwindCss(dir, 'rose', dir);
 
-      const css = await Bun.file(join(dir, 'css', 'styles.css')).text();
+      const css = await Bun.file(join(dir, 'assets', 'css', 'styles.css')).text();
       expect(css).toContain('bg-stone-200');
       expect(css).toContain('grid-cols-2');
       expect(css).toContain('.prose');
@@ -48,7 +48,7 @@ describe('compilación de Tailwind sobre dist/files', () => {
     await withTempDir(async (dir) => {
       await writeFile(join(dir, 'index.html'), '<p class="text-stone-500">Hola</p>', 'utf8');
       await compileTailwindCss(dir, 'lime', dir);
-      const css = await Bun.file(join(dir, 'css', 'styles.css')).text();
+      const css = await Bun.file(join(dir, 'assets', 'css', 'styles.css')).text();
       expect(css).toContain('text-stone-500');
       expect(css).not.toContain('clase-inexistente-en-html');
     });

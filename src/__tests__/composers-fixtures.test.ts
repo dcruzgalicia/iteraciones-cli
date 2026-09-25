@@ -257,24 +257,28 @@ describe('composers sobre fixtures de pandoc (#2031 PR1)', () => {
   });
 });
 
-describe('distribución LaTeX portátil (#2084)', () => {
-  it('namespacing por slug y sufijo determinista para basenames duplicados', () => {
-    const map = buildTexDistribution(['/a/img/cover.jpg', '/b/img/cover.jpg', '/b/img/back.png'], 'mi-libro');
-    expect(map.get('/a/img/cover.jpg')).toBe('mi-libro-cover.jpg');
-    expect(map.get('/b/img/cover.jpg')).toBe('mi-libro-cover-2.jpg');
-    expect(map.get('/b/img/back.png')).toBe('mi-libro-back.png');
+describe('distribución LaTeX portátil (#2084/#2450)', () => {
+  it('apunta a assets/images y sufija con determinismo los basenames duplicados', () => {
+    // Con magick los nombres ya vienen del preproceso con el prefijo del slug;
+    // el sufijo solo hace falta en el caso sin magick (originales sin copiar).
+    const map = buildTexDistribution(['/a/img/cover.jpg', '/b/img/cover.jpg', '/b/img/back.png']);
+    expect(map.get('/a/img/cover.jpg')).toBe('assets/images/cover.jpg');
+    expect(map.get('/b/img/cover.jpg')).toBe('assets/images/cover-2.jpg');
+    expect(map.get('/b/img/back.png')).toBe('assets/images/back.png');
   });
 
   it('sin procesadas, la distribución es vacía y rewrite no toca el tex', () => {
-    const map = buildTexDistribution([], 'x');
+    const map = buildTexDistribution([]);
     expect(map.size).toBe(0);
     expect(rewriteTexForDist('\\includegraphics{original.jpg}', map)).toBe('\\includegraphics{original.jpg}');
   });
 
-  it('rewrite sustituye las rutas absolutas procesadas por el filename relativo', () => {
-    const abs = '/proy/.iteraciones/processed-images/portada-cmyk.jpg';
-    const map = buildTexDistribution([abs], 'ensayo');
+  it('rewrite sustituye las rutas absolutas procesadas por la ruta dentro de assets/images', () => {
+    const abs = '/proy/dist/files/assets/images/ensayo-portada-cmyk.jpg';
+    const map = buildTexDistribution([abs]);
     const tex = `\\includegraphics{${abs}}\n\\mbox{${abs}}`;
-    expect(rewriteTexForDist(tex, map)).toBe('\\includegraphics{ensayo-portada-cmyk.jpg}\n\\mbox{ensayo-portada-cmyk.jpg}');
+    expect(rewriteTexForDist(tex, map)).toBe(
+      '\\includegraphics{assets/images/ensayo-portada-cmyk.jpg}\n\\mbox{assets/images/ensayo-portada-cmyk.jpg}',
+    );
   });
 });

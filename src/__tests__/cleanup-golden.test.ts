@@ -35,7 +35,7 @@ function expectNoOrphans(tree: string[], allowedDocs: string[], extensions: stri
   }
   // Cero huérfanos: toda ruta del árbol pertenece a un documento permitido,
   // a los assets globales o al índice de navegación
-  const known = new Set<string>(['css/styles.css', 'fonts/OFL.txt', 'index.html']);
+  const known = new Set<string>(['assets/css/styles.css', 'assets/fonts/OFL.txt', 'index.html']);
   for (const path of tree) {
     const belongs = allowedDocs.some((doc) => extensions.some((ext) => path === `${doc}${ext}`));
     const isAsset = [...known].map((k) => k.split('/')[0]).some((root) => root !== undefined && path.startsWith(root));

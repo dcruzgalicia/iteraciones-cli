@@ -60,9 +60,37 @@ El pipeline convierte archivos Markdown en documentos en los formatos configurad
 │  Assets      │  buildAssets()
 │             │  • Compila el CSS con Tailwind escaneando SOLO los HTML
 │             │    finales de dist/files (@source explícito, sin caché)
-│             │  • Copia fuentes y logo a dist/
+│             │  • Escribe css, fuentes y logo dentro de assets/ (#2450)
 └─────────────┘
 ```
+
+### Layout de `dist/files` (#2450)
+
+Todo lo estático vive dentro de un directorio `assets`, **por nivel de salida**:
+
+```
+dist/files/
+├── assets/
+│   ├── css/styles.css      ← Tailwind compilado (solo lo usa HTML)
+│   ├── fonts/              ← fuentes + licencias OFL
+│   ├── logo.svg            ← logo efectivo (el de la config o el por defecto)
+│   └── images/             ← imágenes procesadas de la raíz
+│       ├── <slug>-foto.jpg ← una copia por imagen, prefijada con su slug
+│       └── qr-<hash>.jpg   ← QR del filtro, copiado del caché del proyecto
+├── index.html / index.md / index.tex / index.epub
+└── sub/                    ← nivel anidado: mismo esquema, sin subir con ../
+    ├── assets/images/<slug>-grafico.jpg
+    └── anexo.html / anexo.md / anexo.tex
+```
+
+Reglas que fija el contrato:
+
+- **Una sola copia por imagen**, llamada `<slug>-<base>.jpg` (sufijada `-2`, `-3` si un mismo documento tiene dos orígenes con el mismo basename; el prefijo de slug evita que dos documentos del mismo nivel se pisen). HTML, markdown, EPUB y el `.tex` de dist apuntan al mismo fichero: no queda nada junto a las salidas ni en `assets/img`. El dedupe se hace en el preproceso, no al componer el `.tex`. El prefijo es idempotente (se quita y se vuelve a poner si la imagen ya lo lleva), así que reconstruir a partir de una copia de `dist/files` no lo acumula.
+- **CSS, fuentes y logo** solo los usa el HTML: viven en `assets/` de la raíz. Como son hermanas dentro de `assets/`, el `url(../fonts/…)` del CSS sigue resolviendo.
+- **Referencias homogéneas**: cualquier salida de un nivel apunta a `./assets/images/<nombre>`, igual en la raíz que en una subcarpeta. Sin esto, dist citaba rutas del proyecto fuente y quebraba la portabilidad de `dist/files` y la idempotencia al reprocesar los markdowns exportados como si fueran origen.
+- **El `.tex` de dist no cita rutas absolutas**: lo que apunte bajo la raíz del proyecto (el QR del caché, en concreto) se copia al `assets/images` del nivel y se reescribe; con `bundle: true`, la bibliografía apunta a la réplica que bundle deja en la raíz de `dist/files` (sin bundle se relativa como en #2448). El `.tex` de trabajo (`.iteraciones/tmp/pdf/`) no es export y conserva las rutas absolutas que sí resuelven.
+- **Migración automática**: si la salida existente tiene el layout anterior (`css/`, `fonts/`, `logo.svg` en la raíz, o cualquier `**/assets/img`), `hasLegacyAssetLayout` fuerza `--full` y la salida se reconstruye entera una única vez: los documentos que no se recompilen seguirían apuntando a `assets/img` y a `css/`.
+- **Fuera de alcance**: la portada `<slug>.png` (`format.pdf.coverImage`) se queda junto al PDF.
 
 ---
 
@@ -265,11 +293,11 @@ Cuando `99-pdfx` está **activo** (se eliminó de `disabledPreambleFilters`), el
 | `pipeline-io.ts` | Helpers de I/O del pipeline: lectura de markdown, escritura con directorio padre, hrefs relativos, formatLinks, parseFileFrontmatter (collections). |
 | `pipeline.ts` | Orquestador puro de pools: documentPipeline, runLightFormatsPool, pdfSlotCount. |
 | `pandoc-metadata.ts` | Fuente única de metadatos pandoc: escape de valores, language, title/creator/date, composición de citas (paridad HTML/EPUB, fallo de cites para markdown portable). |
-| `output-layout.ts` | Contrato de rutas y extensiones de salida (DIST_DIR, DIST_FILES_DIR, FORMAT_OUTPUT_EXTENSIONS): pipeline, cleanup y dispatcher lo consumen. Fuente única para cambiar extensiones. |
+| `output-layout.ts` | Contrato de rutas y extensiones de salida (DIST_DIR, DIST_FILES_DIR, FORMAT_OUTPUT_EXTENSIONS, constantes `ASSETS_*` de #2450): pipeline, cleanup y dispatcher lo consumen. Fuente única para cambiar extensiones y el layout de assets. |
 | `render.ts` | Conversión HTML: markdown → html5 con templates y sistema de filters. |
-| `latex-composer.ts` | Composición del .tex completo: markdown → latex con metadatos XMP, distribución portátil y rutas del proyecto relativas al .tex de dist (#2448). |
+| `latex-composer.ts` | Composición del .tex completo: markdown → latex con metadatos XMP, distribución portátil (una copia por imagen en `assets/images`) y localización de las rutas del proyecto en el .tex de dist (#2448/#2450). |
 | `build-planner.ts` | Planificador: metadatos de invalidación, WorkSets con Paths + workDocList derivados, y hash de filters/config/bib/esquema. |
-| `build-assets.ts` | Assets: compila el CSS con Tailwind sobre dist/files (acento del @theme), fonts, logo. |
+| `build-assets.ts` | Assets: compila el CSS con Tailwind sobre dist/files (acento del @theme) y escribe `assets/css`, `assets/fonts` y `assets/logo.svg`. |
 | `bundle-dist.ts` | Réplica (#2448): con `bundle: true` copia a dist/files la config, `preamble*/`, `filters/` y la bibliografía, y retira lo que deja de corresponder (manifiesto en `.iteraciones/bundle.json`). |
 | `latex-preamble.ts` | Constructor del template LaTeX efectivo (una vez por build): preamble filters dinámicos, crop/pdfx según tamaño. |
 | `preamble-loader.ts` | Carga de preamble filters (.tex) con override por proyecto y dependencias. |
@@ -283,11 +311,11 @@ Cuando `99-pdfx` está **activo** (se eliminó de `disabledPreambleFilters`), el
 | `state-hash.ts` | Núcleo content-addressed: cacheHitFor, hashFileCached, hashes de filters, config y SCHEMA_SOURCE_FILES. |
 | `state-bib.ts` | Descubrimiento y hash de bibliografía: resolveBibSources (fuente única), PACKAGED_APA7_CSL. |
 | `state-serialize.ts` | Persistencia y carga de state.json (hashFileContent, persistCompletedState, pdfxCache). |
-| `image-processor.ts` | Preproceso de imágenes a escala de grises 300dpi (ImageMagick, paralelo). |
+| `image-processor.ts` | Preproceso de imágenes a escala de grises 300dpi (ImageMagick, paralelo) y nombre final `<slug>-<base>.jpg` con dedupe (`imageNamerFor`, #2450). |
 | `xmpdata.ts` | Metadatos XMP/Info Dublin Core inyectados en el .tex. |
 | `reporter.ts` | silentReporter: reporter nulo para uso headless de build(). |
 | `types.ts` | BuildDocument, Frontmatter, BuildContext. |
-| `cleanup.ts` | Limpieza de salidas: formatos eliminados, slugs cambiados (fuente única de extensiones: output-layout). |
+| `cleanup.ts` | Limpieza de salidas: formatos eliminados (con los assets de HTML), slugs cambiados y detección del layout de assets anterior (fuente única de extensiones: output-layout). |
 | `slug-resolver.ts` | Resolución de slugs con colisiones y sufijos -dN. |
 | `gitignore.ts` | Reglas de .gitignore del proyecto y exclusión de paths ocultos. |
 | `export/runner.ts` | Primitivas de conversión (convertToPdf, convertToEpub, convertToMarkdown) con paridad de metadatos. |

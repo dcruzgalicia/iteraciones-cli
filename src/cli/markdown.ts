@@ -6,6 +6,7 @@ import { printFlags } from '../builder/image-flags.js';
 import { rewriteFmImagePaths } from '../builder/image-processor.js';
 import { mergeConfigImages, preprocessDocumentImages } from '../builder/latex-composer.js';
 import { aggregateCollectionCreators } from '../builder/orchestrator.js';
+import { ASSETS_IMAGES_DIR } from '../builder/output-layout.js';
 import { collectionBaseContent, getCreatorLinks, readCollectionEntries, writeDistMarkdown } from '../builder/pipeline-formats.js';
 import type { BuildDocument } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
@@ -50,9 +51,10 @@ async function collectionFiles(cwd: string, relativePath: string, fm: Record<str
 }
 
 /**
- * Misma pasada de imágenes del build: da el mapa de rutas de assets/img y deja
- * escritos esos ficheros por si el .sh los necesita a mano. Divergir aquí
+ * Misma pasada de imágenes del build: da el mapa de rutas de assets/images y
+ * deja escritos esos ficheros por si el .sh los necesita a mano. Divergir aquí
  * reescribiría las imágenes con medidas distintas a las de la fase de recursos.
+ * El prefijo del nombre lo decide el outSlug, que el build deriva del `-o`.
  */
 async function distImageMap(
   cwd: string,
@@ -62,6 +64,7 @@ async function distImageMap(
   entries: Awaited<ReturnType<typeof readCollectionEntries>>,
   assetsDir: string,
   inputPath: string,
+  outSlug: string,
 ): Promise<{ relImageMap: Map<string, string>; docDir: string }> {
   const flags = await printFlags(siteConfig, cwd);
   const doc = { filePath: inputPath, relativePath: relative(cwd, inputPath), frontmatter: fm } as unknown as BuildDocument;
@@ -73,9 +76,10 @@ async function distImageMap(
     flags.cropActive,
     flags.pdfxActive,
     assetsDir,
+    outSlug,
   );
   const relImageMap = new Map(
-    [...images.imageMap].filter(([src, dst]) => dst !== src).map(([src, dst]): [string, string] => [src, `./assets/img/${basename(dst)}`]),
+    [...images.imageMap].filter(([src, dst]) => dst !== src).map(([src, dst]): [string, string] => [src, `./${ASSETS_IMAGES_DIR}/${basename(dst)}`]),
   );
   return { relImageMap, docDir: dirname(inputPath) };
 }
@@ -83,7 +87,7 @@ async function distImageMap(
 /**
  * #2445 — `iteraciones markdown <origen> -o <salida>` escribe el markdown de
  * dist (#2436) con el mismo composit que usa `emitCollectionMarkdown`: frontmatter
- * con las imágenes apuntando a assets/img, `files[]` reescrito hacia las copias
+ * con las imágenes apuntando a assets/images, `files[]` reescrito hacia las copias
  * de los miembros y, si `format.markdown.merge` está activo, el cuerpo fusionado
  * con `type: file`. La salida es idéntica a la del build.
  */
@@ -111,7 +115,18 @@ export async function runMarkdown(cwd: string, input: string, options: { output?
     // porque files[] sigue ahí para recalcularlo.
     if (fm.type === 'collection') fm.creator = await aggregateCollectionCreators({ files: rootFiles }, cwd);
     const entries = rootFiles.length > 0 ? await readCollectionEntries(rootFiles, relativePath, [cwd, join(cwd, dir)]) : [];
-    const { relImageMap, docDir } = await distImageMap(cwd, siteConfig, content, fm, entries, join(dirname(output), 'assets/img'), inputPath);
+    // El outSlug del build es el nombre del propio `-o`: con el mismo prefijo,
+    // las imágenes que escribe este comando se llaman igual que las del build.
+    const { relImageMap, docDir } = await distImageMap(
+      cwd,
+      siteConfig,
+      content,
+      fm,
+      entries,
+      join(dirname(output), ASSETS_IMAGES_DIR),
+      inputPath,
+      basename(output, '.md'),
+    );
 
     await writeDistMarkdown({
       cwd,

@@ -1,4 +1,5 @@
-import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
+import { copyFile, mkdir } from 'node:fs/promises';
+import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
@@ -9,8 +10,16 @@ import { parseAuthors } from './discover.js';
 import type { LuaFilterGroup } from './filter-resolver.js';
 import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
 import type { PageDimensions } from './image-processor.js';
-import { processDocumentImages, rewriteImagePaths, scanInlineImages, scanTitlePageFieldImages } from './image-processor.js';
+import {
+  imageNamerFor,
+  processDocumentImages,
+  rewriteImagePaths,
+  scanInlineImages,
+  scanTitlePageFieldImages,
+  uniqueName,
+} from './image-processor.js';
 import { babelOptionsForLang, pageNumberCommandFor } from './latex-preamble.js';
+import { ASSETS_IMAGES_DIR } from './output-layout.js';
 import { creatorArgs, publisherArg, titleArg } from './pandoc-metadata.js';
 import type { BuildDocument } from './types.js';
 import { injectXmpMetadataIntoLatex, type PdfXmpMetadata } from './xmpdata.js';
@@ -90,11 +99,22 @@ export async function preprocessDocumentImages(
   cropActive: boolean,
   pdfxActive: boolean,
   outputDir: string,
+  outSlug: string,
 ): Promise<ImagePreprocessResult> {
   const docDir = dirname(doc.filePath);
   const inlineImages = scanInlineImages(content, docDir);
   const multilineImages = await scanTitlePageFieldImages(fm, docDir, pageDimensions.w);
-  const result = await processDocumentImages(inlineImages, fm, docDir, pageDimensions, cropActive, outputDir, multilineImages, pdfxActive);
+  const result = await processDocumentImages(
+    inlineImages,
+    fm,
+    docDir,
+    pageDimensions,
+    cropActive,
+    outputDir,
+    imageNamerFor(outSlug),
+    multilineImages,
+    pdfxActive,
+  );
   return { imageMap: result.imageMap, processedImages: result.processedFiles };
 }
 
@@ -371,24 +391,18 @@ export async function markdownToLatex(
   return { tex, processedImages: images?.processedImages ?? [] };
 }
 
-export function buildTexDistribution(processedImages: string[], outSlug: string): Map<string, string> {
+/**
+ * #2450 — rutas del .tex de dist hacia `assets/images/`. El nombre de la imagen
+ * lo decide ya el preproceso (`<slug>-<base>.jpg`), así que la copia junto al
+ * .tex que hacía este paso desaparece: html, markdown y .tex comparten el mismo
+ * fichero. El dedupe es una red de seguridad por si dos rutas distintas
+ * parieran el mismo nombre de copia en un nivel.
+ */
+export function buildTexDistribution(processedImages: string[]): Map<string, string> {
   const map = new Map<string, string>();
   const taken = new Set<string>();
   for (const abs of processedImages) {
-    const sep = abs.lastIndexOf('/');
-    const base = sep >= 0 ? abs.slice(sep + 1) : abs;
-    let name = `${outSlug}-${base}`;
-    if (taken.has(name)) {
-      const dot = base.lastIndexOf('.');
-      name = dot > 0 ? `${outSlug}-${base.slice(0, dot)}-2${base.slice(dot)}` : `${outSlug}-${base}-2`;
-      let n = 2;
-      while (taken.has(name)) {
-        n++;
-        name = dot > 0 ? `${outSlug}-${base.slice(0, dot)}-${n}${base.slice(dot)}` : `${outSlug}-${base}-${n}`;
-      }
-    }
-    taken.add(name);
-    map.set(abs, name);
+    map.set(abs, `${ASSETS_IMAGES_DIR}/${uniqueName(basename(abs), taken)}`);
   }
   return map;
 }
@@ -413,19 +427,97 @@ export function relativizeTexForDist(tex: string, texDir: string, projectRoot: s
   return tex.split(`${projectRoot}/`).join(`${rel}/`);
 }
 
+const IMAGE_EXTS = new Set(['.bmp', '.gif', '.jpeg', '.jpg', '.pdf', '.png', '.svg', '.tif', '.tiff', '.webp']);
+
+function isInside(root: string, abs: string): boolean {
+  const rel = relative(root, abs);
+  return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel);
+}
+
+/**
+ * #2450 — a dónde apunta el .tex de dist un fichero que vive bajo la raíz del
+ * proyecto: una imagen se muda al `assets/images` del nivel (y hay que copiarla);
+ * con `bundle: true`, la bibliografía apunta a la copia que bundle replica en la
+ * raíz de la salida. `null` deja el fichero en manos de `relativizeTexForDist`.
+ */
+async function distAssetTarget(
+  abs: string,
+  texDir: string,
+  projectRoot: string,
+  distRoot: string,
+  bundle: boolean,
+): Promise<{ rel: string; copy: boolean } | null> {
+  if (!(await Bun.file(abs).exists())) return null;
+  const ext = extname(abs).toLowerCase();
+  if (IMAGE_EXTS.has(ext)) {
+    const rel = `${ASSETS_IMAGES_DIR}/${basename(abs)}`;
+    return { rel, copy: resolve(texDir, rel) !== resolve(abs) };
+  }
+  if (ext !== '.bib' || !bundle || !isInside(projectRoot, abs)) return null;
+  return {
+    rel: relative(texDir, join(distRoot, relative(projectRoot, abs)))
+      .split(sep)
+      .join('/'),
+    copy: false,
+  };
+}
+
+/**
+ * #2450 — el .tex de dist no apunta fuera de `dist/files`: las imágenes bajo la
+ * raíz del proyecto (el QR que escribe el filtro, en concreto) se copian al
+ * `assets/images` del nivel y se referencian ahí; con `bundle: true` la
+ * bibliografía apunta a la copia que bundle replica en la raíz de la salida.
+ * Lo que siga bajo la raíz sin resolver se relativa como antes (#2448). El .tex
+ * de trabajo no pasa por aquí: conserva las rutas absolutas que sí resuelven.
+ */
+export async function localizeDistAssets(
+  tex: string,
+  opts: { texDir: string; projectRoot: string; distRoot: string; bundle: boolean },
+): Promise<{ tex: string; copies: { src: string; rel: string }[] }> {
+  const { texDir, projectRoot, distRoot, bundle } = opts;
+  const prefix = `${projectRoot}/`;
+  let result = tex;
+  const copies = new Map<string, { src: string; rel: string }>();
+  if (result.includes(prefix)) {
+    const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const tails = new Set([...result.matchAll(new RegExp(`${escaped}([^{}$\\n]+)`, 'g'))].map((m) => m[1] ?? ''));
+    for (const tail of tails) {
+      const abs = `${prefix}${tail}`;
+      const target = await distAssetTarget(abs, texDir, projectRoot, distRoot, bundle);
+      if (target === null) continue;
+      if (target.copy) copies.set(abs, { src: abs, rel: target.rel });
+      result = result.split(abs).join(target.rel);
+    }
+  }
+  return { tex: relativizeTexForDist(result, texDir, projectRoot), copies: [...copies.values()] };
+}
+
 /**
  * #2445 — todo lo que el .tex de dist lleva y la salida cruda de pandoc no:
  * bloque de autores, metadatos XMP (PDF/X) y rutas de imagen acomodadas para
- * compartir directorio con el .tex. El build lo escribe como manifiesto en
- * `.iteraciones/post/<slug>.json` y `iteraciones post latex` lo repite.
+ * que el .tex de dist se mueva con su `assets/`. El build lo escribe como
+ * manifiesto en `.iteraciones/post/<slug>.json` y `iteraciones post latex` lo repite.
  */
 export interface LatexPostManifest {
   authorsBlock?: string;
   xmp?: PdfXmpMetadata;
-  /** Ruta absoluta de la imagen procesada → nombre con el que vive junto al .tex. */
+  /** Ruta absoluta de la imagen procesada → relativa al nivel, dentro de `assets/images`. */
   distribution?: Record<string, string>;
   /** #2448: raíz del proyecto; el .tex de dist escribe sus rutas relativas a sí mismo. */
   projectRoot?: string;
+  /** #2450: raíz de dist y si la réplica lleva la bibliografía (la bib apunta a esa copia). */
+  distRoot?: string;
+  bundle?: boolean;
+}
+
+/** #2450 — copia al nivel del .tex los ficheros que sus rutas relativas piden. */
+export async function copyDistAssets(texDir: string, copies: { src: string; rel: string }[]): Promise<void> {
+  for (const { src, rel } of copies) {
+    const dest = join(texDir, rel);
+    if (resolve(dest) === resolve(src) || !(await Bun.file(src).exists())) continue;
+    await mkdir(dirname(dest), { recursive: true });
+    await copyFile(src, dest);
+  }
 }
 
 export function insertAuthorsBlock(tex: string, authorsBlock: string): string {
@@ -435,10 +527,19 @@ export function insertAuthorsBlock(tex: string, authorsBlock: string): string {
   return tex;
 }
 
-export function postProcessLatex(tex: string, manifest: LatexPostManifest, texDir?: string): string {
+export async function postProcessLatex(tex: string, manifest: LatexPostManifest, texDir?: string): Promise<string> {
   const withAuthors = insertAuthorsBlock(tex, manifest.authorsBlock ?? '');
   const withXmp = manifest.xmp === undefined ? withAuthors : injectXmpMetadataIntoLatex(withAuthors, manifest.xmp);
   const rewritten = manifest.distribution === undefined ? withXmp : rewriteTexForDist(withXmp, new Map(Object.entries(manifest.distribution)));
-  // #2448: rutas bajo la raíz del proyecto, relativas al .tex de dist.
-  return manifest.projectRoot === undefined || texDir === undefined ? rewritten : relativizeTexForDist(rewritten, texDir, manifest.projectRoot);
+  if (manifest.projectRoot === undefined || texDir === undefined) return rewritten;
+  // #2450: lo que quede bajo la raíz (el QR del caché) se muda al assets/images
+  // del nivel y la bibliografía apunta a la copia que bundle puso en dist.
+  const localized = await localizeDistAssets(rewritten, {
+    texDir,
+    projectRoot: manifest.projectRoot,
+    distRoot: manifest.distRoot ?? manifest.projectRoot,
+    bundle: manifest.bundle === true,
+  });
+  await copyDistAssets(texDir, localized.copies);
+  return localized.tex;
 }

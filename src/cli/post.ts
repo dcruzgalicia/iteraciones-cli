@@ -1,6 +1,6 @@
-import { dirname, join } from 'node:path';
+import { dirname } from 'node:path';
 import { loadReferencesCardTemplate, postProcessHtml } from '../builder/html-postprocess.js';
-import { type LatexPostManifest, postProcessLatex } from '../builder/latex-composer.js';
+import { copyDistAssets, type LatexPostManifest, postProcessLatex } from '../builder/latex-composer.js';
 import { writeOutput } from '../builder/pipeline-io.js';
 import { BuildError } from '../lib/errors.js';
 import { logError, logSuccess } from '../lib/logger.js';
@@ -21,8 +21,8 @@ async function postHtml(raw: string): Promise<string> {
 
 /**
  * Autores, XMP y distribución de imágenes: datos que solo el build calcula, así
- * que viajan en `.iteraciones/post/<slug>.json`. Las imágenes terminan
- * compartiendo directorio con el .tex, como en el build.
+ * que viajan en `.iteraciones/post/<slug>.json`. Las imágenes terminan en el
+ * `assets/images` del nivel, como en el build.
  */
 async function postLatex(raw: string, post: string | undefined, cwd: string, output: string): Promise<string> {
   if (post === undefined || post === '') {
@@ -34,10 +34,12 @@ async function postLatex(raw: string, post: string | undefined, cwd: string, out
   } catch {
     throw new BuildError(`no se pudo leer el manifiesto "${post}"`);
   }
-  for (const [abs, name] of Object.entries(manifest.distribution ?? {})) {
-    if (await Bun.file(abs).exists()) await Bun.write(join(dirname(output), name), Bun.file(abs));
-  }
-  return postProcessLatex(raw, manifest, dirname(output));
+  const texDir = dirname(output);
+  await copyDistAssets(
+    texDir,
+    Object.entries(manifest.distribution ?? {}).map(([src, rel]) => ({ src, rel })),
+  );
+  return await postProcessLatex(raw, manifest, texDir);
 }
 
 /**

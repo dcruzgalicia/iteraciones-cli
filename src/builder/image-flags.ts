@@ -6,8 +6,8 @@ import { loadPreambleFilters, resolveEffectiveDisabledPreamble } from './preambl
 /**
  * Los flags del build que solo cambian los bytes de las imágenes, nunca sus
  * rutas: página, recorte y PDF/X. Los necesitan igual `iteraciones merge` e
- * `iteraciones markdown`, para no reescribir los assets/img con medidas
- * distintas a las con las que corrió la fase de imágenes del build.
+ * `iteraciones markdown`, para no reescribir las imágenes de assets/images con
+ * medidas distintas a las con las que corrió la fase de imágenes del build.
  */
 export async function printFlags(siteConfig: SiteConfig, cwd: string) {
   const active = toActiveFormats(computeActiveFormats(siteConfig.format) as FormatKey[]);

@@ -1,11 +1,18 @@
-import { readdir, rm } from 'node:fs/promises';
+import { readdir, rm, stat } from 'node:fs/promises';
 import { basename, dirname, join, normalize, resolve, sep } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import type { FormatKey } from '../config/site-config.js';
 import { resolveBooleanField } from '../lib/frontmatter-fields.js';
 import { htmlSlugFor } from './discover.js';
 import { LATEXMK_AUX_EXTENSIONS } from './export/runner.js';
-import { ALL_OUTPUT_EXTENSIONS, FORMAT_OUTPUT_EXTENSIONS } from './output-layout.js';
+import {
+  ALL_OUTPUT_EXTENSIONS,
+  ASSETS_CSS_FILE,
+  ASSETS_FONTS_DIR,
+  ASSETS_LOGO_FILE,
+  FORMAT_OUTPUT_EXTENSIONS,
+  LEGACY_ASSETS_IMG_DIR,
+} from './output-layout.js';
 import type { BuildContext, BuildDocument, DiscoveryEntry } from './types.js';
 
 async function removeIfExists(path: string): Promise<boolean> {
@@ -78,6 +85,17 @@ async function cleanupBySlug(ctx: BuildContext, entries: Iterable<CleanupEntry>)
   return removed;
 }
 
+/**
+ * #2450 — el css, las fuentes y el logo solo los usa el HTML: con el layout
+ * nuevo viven en `assets/`, y los de la raíz son residuo del anterior. Se retira
+ * el directorio, no el fichero, para no dejar `assets/css/` vacío.
+ */
+async function removeHtmlAssets(outputDir: string): Promise<void> {
+  for (const rel of [dirname(ASSETS_CSS_FILE), ASSETS_FONTS_DIR, ASSETS_LOGO_FILE, 'css', 'fonts', 'logo.svg']) {
+    await rm(join(outputDir, rel), { recursive: true, force: true }).catch(() => {});
+  }
+}
+
 export async function cleanupRemovedFormats(ctx: BuildContext, allDocs: BuildDocument[], removedFormats: string[]): Promise<number> {
   if (removedFormats.length === 0) return 0;
 
@@ -96,12 +114,37 @@ export async function cleanupRemovedFormats(ctx: BuildContext, allDocs: BuildDoc
     }
   }
 
-  if (removedFormats.includes('html')) {
-    await rm(join(ctx.outputDir, 'css'), { recursive: true, force: true }).catch(() => {});
-    await rm(join(ctx.outputDir, 'fonts'), { recursive: true, force: true }).catch(() => {});
-    await rm(join(ctx.outputDir, 'logo.svg'), { force: true }).catch(() => {});
-  }
+  if (removedFormats.includes('html')) await removeHtmlAssets(ctx.outputDir);
   return removed;
+}
+
+/**
+ * #2450 — ¿la salida quedó con el layout anterior de assets (los directorios
+ * `css`, `fonts`, el `logo.svg` en la raíz, o un `assets/img` por nivel)? Los
+ * documentos que este build no recompile siguen apuntando ahí, así que el build
+ * se reconstruye entero antes de escribir nada: un único rebuild tras actualizar.
+ */
+export async function hasLegacyAssetLayout(outputDir: string): Promise<boolean> {
+  // Sin salida todavía no hay nada que migrar (y scan lanzaría ENOENT)
+  if (
+    !(await stat(outputDir)
+      .then((s) => s.isDirectory())
+      .catch(() => false))
+  )
+    return false;
+  for (const rel of ['css', 'fonts', 'logo.svg']) {
+    if (
+      await stat(join(outputDir, rel))
+        .then(() => true)
+        .catch(() => false)
+    ) {
+      return true;
+    }
+  }
+  for await (const entry of new Bun.Glob(`**/${LEGACY_ASSETS_IMG_DIR}`).scan({ cwd: outputDir, onlyFiles: false })) {
+    if (entry !== '') return true;
+  }
+  return false;
 }
 
 export async function cleanupCoverImages(

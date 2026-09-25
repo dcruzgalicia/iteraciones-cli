@@ -7,6 +7,7 @@ import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import { recordSupportCommand } from '../lib/script-recorder.js';
+import { ASSETS_CSS_FILE, ASSETS_FONTS_DIR, ASSETS_LOGO_FILE } from './output-layout.js';
 import { cacheHitFor } from './state-hash.js';
 import type { CssFileCache } from './state-serialize.js';
 
@@ -39,7 +40,7 @@ export async function resolveTailwindBin(): Promise<string> {
 export async function compileTailwindCss(outputDir: string, accent: string, projectRoot: string): Promise<void> {
   const inputDir = join(projectRoot, '.iteraciones', 'css');
   const inputPath = join(inputDir, 'input.css');
-  const outPath = join(outputDir, 'css', 'styles.css');
+  const outPath = join(outputDir, ASSETS_CSS_FILE);
   const palette = ACCENT_PALETTES[accent as AccentColor];
   if (palette === undefined) throw new BuildError(`acento desconocido: "${accent}"`);
   const accentTheme = SHADES.map((s) => `  --color-accent-${s}: ${palette[s as keyof typeof palette]};`).join('\n');
@@ -47,7 +48,7 @@ export async function compileTailwindCss(outputDir: string, accent: string, proj
 
   await mkdir(inputDir, { recursive: true });
   await writeFile(inputPath, input, 'utf8');
-  await mkdir(join(outputDir, 'css'), { recursive: true });
+  await mkdir(dirname(outPath), { recursive: true });
   try {
     const tailwindBin = await resolveTailwindBin();
     const argv = [process.execPath, tailwindBin, '-i', inputPath, '-o', outPath, '--minify'];
@@ -141,7 +142,7 @@ export async function buildAssets(
   await copyStaticAssets(outputDir, cwd, siteConfig);
   recordSupportCommand('resources', outputDir, ['iteraciones', 'assets', '-o', outputDir]);
   const { hash: cssHash, cache: cssFileCache } = await computeCssHash(outputDir, siteConfig, prevCssFileCache);
-  const cssExists = await Bun.file(join(outputDir, 'css', 'styles.css')).exists();
+  const cssExists = await Bun.file(join(outputDir, ASSETS_CSS_FILE)).exists();
   if (prevCssHash !== cssHash || !cssExists) {
     const accent = siteConfig.format?.html?.site?.color ?? 'lime';
     await compileTailwindCss(outputDir, accent, cwd);
@@ -165,7 +166,7 @@ async function copyIfChanged(src: string, dest: string): Promise<void> {
 }
 
 async function copyFonts(outputDir: string): Promise<void> {
-  const target = join(outputDir, 'fonts');
+  const target = join(outputDir, ASSETS_FONTS_DIR);
   let entries: string[];
   try {
     entries = [
@@ -183,9 +184,11 @@ async function copyFonts(outputDir: string): Promise<void> {
 
 async function copyLogo(outputDir: string, cwd: string, siteConfig: SiteConfig): Promise<void> {
   const logo = siteConfig.format?.html?.site?.logo?.trim();
+  // #2450: el logo de dist vive en `assets/` con nombre fijo, venga de donde
+  // venga; el HTML no lo referencia (lo lleva inline), es material de la réplica.
+  const dest = join(outputDir, ASSETS_LOGO_FILE);
   if (!logo) {
     const defaultSrc = join(PKG_ROOT, 'src', 'lib', 'resources', 'logo.svg');
-    const dest = join(outputDir, 'logo.svg');
     try {
       await copyIfChanged(defaultSrc, dest);
     } catch (err) {
@@ -200,7 +203,6 @@ async function copyLogo(outputDir: string, cwd: string, siteConfig: SiteConfig):
     throw new BuildError(`logo: ruta inválida "${logo}" — debe ser relativa al proyecto`);
   }
   const src = join(cwd, logo);
-  const dest = join(outputDir, logo);
   try {
     await copyIfChanged(src, dest);
   } catch (err) {

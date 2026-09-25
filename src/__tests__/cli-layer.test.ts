@@ -1623,7 +1623,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       await initTestProject(dir);
       process.exitCode = 0;
       await runBuild(dir);
-      const cssPath = join(dir, 'dist', 'files', 'css', 'styles.css');
+      const cssPath = join(dir, 'dist', 'files', 'assets', 'css', 'styles.css');
       const css = await Bun.file(cssPath).text();
       // Clases del template presentes y acento por defecto (lime) compilado directo
       expect(css).toContain('prose-xl');
@@ -1811,7 +1811,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       // El botón no es un bloque del masonry (fuera del sistema de bloques)
       expect(html).not.toContain('block:volver');
       // El CSS precompilado incluye la animación scroll-driven
-      const css = await Bun.file(join(dir, 'dist', 'files', 'css', 'styles.css')).text();
+      const css = await Bun.file(join(dir, 'dist', 'files', 'assets', 'css', 'styles.css')).text();
       expect(css).toContain('.scroll-reveal');
       expect(css).toContain('@keyframes scroll-reveal');
       expect(css).toContain('animation-timeline:scroll()');

@@ -14,16 +14,17 @@ import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
 import { rewriteFmImagePaths, rewriteImagePaths } from './image-processor.js';
 import {
   buildTexDistribution,
+  copyDistAssets,
   type ImagePreprocessResult,
   insertAuthorsBlock,
+  localizeDistAssets,
   markdownToLatex,
   mergeConfigImages,
   preprocessDocumentImages,
-  relativizeTexForDist,
   rewriteTexForDist,
 } from './latex-composer.js';
 import { detectPageSize } from './latex-preamble.js';
-import { primaryOutputExtension } from './output-layout.js';
+import { ASSETS_CSS_FILE, ASSETS_IMAGES_DIR, primaryOutputExtension } from './output-layout.js';
 import { formatLinksFor, parseFileFrontmatter, readMarkdownOrWarn, relativeHref, writeOutput } from './pipeline-io.js';
 import type { ExportContext, FormatWorkSets, RenderContext } from './pipeline-setup.js';
 import { htmlPageFromMarkdown } from './render.js';
@@ -108,14 +109,21 @@ async function emitLatexAndQueuePdf(
   const texWithXmp = xmp === undefined ? texWithAuthors : injectXmpMetadataIntoLatex(texWithAuthors, xmp);
 
   if (latexOn) {
-    const distribution = buildTexDistribution(processedImages, outSlug);
-    await Promise.all(
-      [...distribution].map(async ([absSrc, fileName]) => {
-        if (await Bun.file(absSrc).exists()) await Bun.write(outBase(fileName), Bun.file(absSrc));
-      }),
-    );
-    // #2448: rutas bajo la raíz (el QR del caché) quedan relativas al .tex.
-    const distTex = relativizeTexForDist(rewriteTexForDist(texWithXmp, distribution), dirname(texDistPath), ctx.cwd);
+    const texDir = dirname(texDistPath);
+    const distribution = buildTexDistribution(processedImages);
+    // #2450: el preproceso ya escribió la imagen en <nivel>/assets/images, así
+    // que la copia que antes vivía junto al .tex desaparece: el .tex apunta al
+    // mismo fichero que html y markdown (la copia de distribution es no-op, se
+    // queda por si algún día difieren). Lo único que hay que traer es lo que el
+    // .tex cite bajo la raíz del proyecto: el QR del caché.
+    const { tex: localizedTex, copies: rootCopies } = await localizeDistAssets(rewriteTexForDist(texWithXmp, distribution), {
+      texDir,
+      projectRoot: ctx.cwd,
+      distRoot: ctx.outputDir,
+      bundle: ctx.siteConfig.bundle === true,
+    });
+    await copyDistAssets(texDir, [...[...distribution].map(([src, rel]) => ({ src, rel })), ...rootCopies]);
+    const distTex = localizedTex;
     // #2445: el .sh no puede recomputar autores/XMP/distribución, así que el
     // build se los deja escritos en un manifiesto que `iteraciones post latex` lee.
     let post: string[] | undefined;
@@ -123,7 +131,18 @@ async function emitLatexAndQueuePdf(
       const manifest = join(ctx.cwd, '.iteraciones', 'post', `${outSlug}.json`);
       await writeOutput(
         manifest,
-        `${JSON.stringify({ authorsBlock, xmp, distribution: Object.fromEntries(distribution), projectRoot: ctx.cwd }, null, 2)}\n`,
+        `${JSON.stringify(
+          {
+            authorsBlock,
+            xmp,
+            distribution: Object.fromEntries(distribution),
+            projectRoot: ctx.cwd,
+            distRoot: ctx.outputDir,
+            bundle: ctx.siteConfig.bundle === true,
+          },
+          null,
+          2,
+        )}\n`,
       );
       post = ['iteraciones', 'post', 'latex', '--post', manifest, '-o', texDistPath];
     }
@@ -170,7 +189,7 @@ async function emitHtmlPage(
       lang,
       theme: htmlConfig?.site?.theme,
       accent: htmlConfig?.site?.color,
-      css: ctx.needsCss ? relativeHref(dir, 'css/styles.css') : undefined,
+      css: ctx.needsCss ? relativeHref(dir, ASSETS_CSS_FILE) : undefined,
       authorMeta: doc.frontmatter.creator.join(', '),
       docTitle: doc.frontmatter.title && doc.frontmatter.title !== 'Sin título' ? doc.frontmatter.title : undefined,
       subtitle: doc.frontmatter.subtitle,
@@ -239,7 +258,7 @@ async function readCollectionFiles(doc: BuildDocument, cwd: string): Promise<Col
  * #2437: con `format.markdown.merge: false` cada miembro de la collection se
  * copia a dist para que `iteraciones merge` y el re-proceso lean de ahí.
  * Las imágenes se reescriben con el mismo mapa del cuerpo fusionado: las
- * rutas ./assets/img son válidas desde cualquier .md del nivel.
+ * rutas ./assets/images son válidas desde cualquier .md del nivel.
  */
 export async function emitCollectionMemberCopies(
   label: string,
@@ -677,11 +696,12 @@ async function emitCollectionFormats(
   const content = outputs.content;
   const { formatCfg } = renderCtx;
 
-  // #2435: las imágenes se preprocesan UNA vez hacia <outputDir>/<nivel>/assets/img
-  // (cada nivel contiene las imágenes de su nivel: dist/files/assets/img en la raíz,
-  // dist/files/sub/assets/img en subcarpetas) y todos los formatos las referencian
-  // como ./assets/img/<nombre>, idéntico en todos los niveles. La fusión latex
-  // contiene las mismas imágenes que las variantes html/markdown (los cuerpos son idénticos).
+  // #2435/#2450: las imágenes se preprocesan UNA vez hacia
+  // <outputDir>/<nivel>/assets/images con nombre `<slug>-<base>` (un único
+  // fichero por imagen, sin que se pisen documentos del nivel) y todos los
+  // formatos las referencian como ./assets/images/<nombre>, idéntico en todos
+  // los niveles. La fusión latex contiene las mismas imágenes que las variantes
+  // html/markdown (los cuerpos son idénticos).
   const images = await preprocessDocumentImages(
     collectionBaseContent(collectionEntries, 'latex', content),
     doc,
@@ -689,11 +709,12 @@ async function emitCollectionFormats(
     renderCtx.pageDimensions ?? detectPageSize([]),
     renderCtx.cropActive,
     renderCtx.pdfxActive,
-    outputs.outBase('assets/img'),
+    outputs.outBase(ASSETS_IMAGES_DIR),
+    outputs.outSlug,
   );
   const docDir = dirname(doc.filePath);
   const relImageMap = new Map(
-    [...images.imageMap].filter(([src, dst]) => dst !== src).map(([src, dst]): [string, string] => [src, `./assets/img/${basename(dst)}`]),
+    [...images.imageMap].filter(([src, dst]) => dst !== src).map(([src, dst]): [string, string] => [src, `./${ASSETS_IMAGES_DIR}/${basename(dst)}`]),
   );
   // #2441: el fm de los exports (html/markdown) debe apuntar a assets como el
   // body; outputs.fm no pasa por rewriteImagePaths y pisaba el contenido.

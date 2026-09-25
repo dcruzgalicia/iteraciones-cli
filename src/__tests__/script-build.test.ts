@@ -331,7 +331,9 @@ describe.skipIf(!pandocOk || !magickOk)('build.sh con imágenes (#2438)', () => 
       expect(script).toContain('magick ');
 
       const dist = join(dir, 'dist', 'files');
-      expect(await Bun.file(join(dist, 'assets', 'img', 'foto.jpg')).exists()).toBe(true);
+      // #2450: la copia única lleva el prefijo del slug y vive en el assets del nivel
+      expect(await Bun.file(join(dist, 'assets', 'images', 'manuscrito-foto.jpg')).exists()).toBe(true);
+      expect(await Bun.file(join(dist, 'manuscrito-foto.jpg')).exists()).toBe(false);
 
       const before = await snapshot(dist);
       const { code, stderr } = replayBuildScript(dir);
@@ -371,8 +373,11 @@ describe.skipIf(!pandocOk || !magickOk)('build.sh con .tex en dist (#2445)', () 
       const dist = join(dir, 'dist', 'files');
       const tex = join(dist, 'ensayo.tex');
       expect(await Bun.file(tex).exists()).toBe(true);
-      // las imágenes comparten directorio con el .tex, con nombre del slug
-      expect(await Bun.file(join(dist, 'ensayo-foto.jpg')).exists()).toBe(true);
+      // #2450: la imagen procesada vive en el assets/images del nivel, con el
+      // prefijo del slug, y el .tex de dist la referencia desde ahí
+      expect(await Bun.file(join(dist, 'assets', 'images', 'ensayo-foto.jpg')).exists()).toBe(true);
+      expect(await Bun.file(tex).text()).toContain('assets/images/ensayo-foto.jpg');
+      expect(await Bun.file(join(dist, 'ensayo-foto.jpg')).exists()).toBe(false);
 
       const before = await snapshot(dist);
       const { code, stderr } = replayBuildScript(dir);
