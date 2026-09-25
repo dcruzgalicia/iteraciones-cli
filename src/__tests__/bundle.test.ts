@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, spyOn } from 'bun:test';
 import { cp, mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { relativizeTexForDist } from '../builder/latex-composer.js';
+import { dirname, join } from 'node:path';
+import { localizeDistAssets, relativizeTexForDist } from '../builder/latex-composer.js';
 import { build } from '../builder/orchestrator.js';
 import { runValidate } from '../cli/dispatcher.js';
 import { loadSiteConfig } from '../config/config-loader.js';
@@ -123,6 +123,62 @@ describe('relativizeTexForDist (#2448)', () => {
   });
 });
 
+describe('localizeDistAssets (#2450)', () => {
+  it('mueve el QR del caché al assets/images del nivel y deja la copia', async () => {
+    await withTempDir(async (dir) => {
+      const raiz = await realpath(dir);
+      const texDir = join(raiz, 'dist', 'files');
+      const qr = join(raiz, '.iteraciones', 'processed-images', 'qr-abc123.jpg');
+      await mkdir(dirname(qr), { recursive: true });
+      await writeFile(qr, 'jpg', 'utf8');
+
+      const out = await localizeDistAssets(`\\includegraphics{${qr}}`, {
+        texDir,
+        projectRoot: raiz,
+        distRoot: texDir,
+        bundle: false,
+      });
+
+      expect(out.tex).toBe('\\includegraphics{assets/images/qr-abc123.jpg}');
+      expect(out.copies).toEqual([{ src: qr, rel: 'assets/images/qr-abc123.jpg' }]);
+    });
+  });
+
+  it('la bibliografía apunta a la réplica de dist con bundle y se relativa sin él', async () => {
+    await withTempDir(async (dir) => {
+      const raiz = await realpath(dir);
+      const texDir = join(raiz, 'dist', 'files');
+      const bib = join(raiz, 'bibliografia.bib');
+      await writeFile(bib, '@book{ruiz2026, title = {Cuidar}}\n', 'utf8');
+      const tex = `\\addbibresource{${bib}}`;
+
+      const con = await localizeDistAssets(tex, { texDir, projectRoot: raiz, distRoot: texDir, bundle: true });
+      // bundle replica la bibliografía en la raíz de la salida: no hay que copiar nada
+      expect(con.tex).toBe('\\addbibresource{bibliografia.bib}');
+      expect(con.copies).toEqual([]);
+
+      const sin = await localizeDistAssets(tex, { texDir, projectRoot: raiz, distRoot: texDir, bundle: false });
+      expect(sin.tex).toBe('\\addbibresource{../../bibliografia.bib}');
+      expect(sin.copies).toEqual([]);
+    });
+  });
+
+  it('cualquier otra ruta bajo la raíz solo se relativa, sin copia', async () => {
+    await withTempDir(async (dir) => {
+      const raiz = await realpath(dir);
+      const texDir = join(raiz, 'dist', 'files');
+      await mkdir(join(raiz, 'preamble'), { recursive: true });
+      const margen = join(raiz, 'preamble', '04-margins.tex');
+      await writeFile(margen, '% margenes\n', 'utf8');
+
+      const out = await localizeDistAssets(`\\input{${margen}}`, { texDir, projectRoot: raiz, distRoot: texDir, bundle: true });
+
+      expect(out.tex).toBe('\\input{../../preamble/04-margins.tex}');
+      expect(out.copies).toEqual([]);
+    });
+  });
+});
+
 describe.skipIf(!pandocOk)('bundle en el build (#2448)', () => {
   it('replica config, preamble, filters y bibliografía en dist/files', async () => {
     await withTempDir(async (dir) => {
@@ -182,8 +238,8 @@ describe.skipIf(!pandocOk)('bundle en el build (#2448)', () => {
   }, 60_000);
 });
 
-describe.skipIf(!pandocOk || !magickOk)('el .tex de dist no lleva rutas absolutas (#2448)', () => {
-  it('el QR del caché queda relativo al .tex', async () => {
+describe.skipIf(!pandocOk || !magickOk)('el .tex de dist no lleva rutas absolutas (#2448/#2450)', () => {
+  it('el QR se copia a assets/images y el .tex apunta a esa copia', async () => {
     await withTempDir(async (dir) => {
       await setupProject(
         dir,
@@ -192,13 +248,18 @@ describe.skipIf(!pandocOk || !magickOk)('el .tex de dist no lleva rutas absoluta
       );
       await build(dir);
 
-      const tex = await readFile(join(dir, 'dist', 'files', 'ensayo.tex'), 'utf8');
+      const dist = join(dir, 'dist', 'files');
+      const tex = await readFile(join(dist, 'ensayo.tex'), 'utf8');
       const root = await realpath(dir);
-      expect(tex).toContain('.iteraciones/processed-images/');
+      // #2450: el QR no queda en la caché del proyecto, vive en el assets del nivel
+      expect(tex).toMatch(/\{assets\/images\/qr-[0-9a-f]+\.jpg\}/);
+      expect(tex).not.toContain('.iteraciones/processed-images');
+      const qr = (tex.match(/assets\/images\/(qr-[0-9a-f]+\.jpg)/) ?? [])[1];
+      expect(qr).toBeDefined();
+      expect(await Bun.file(join(dist, 'assets', 'images', qr as string)).exists()).toBe(true);
       // ninguna ruta absoluta del proyecto en un export
       expect(tex).not.toContain(root);
       expect(tex).not.toContain(dir);
-      expect(tex).toMatch(/\.\.\/\.\.\/\.iteraciones\/processed-images\/qr-[0-9a-f]+\.jpg/);
     });
   }, 60_000);
 });

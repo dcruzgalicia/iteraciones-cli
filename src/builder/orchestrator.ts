@@ -13,7 +13,7 @@ import { abortScriptCapture, beginScriptCapture, commitScriptCapture } from '../
 import { buildAssets } from './build-assets.js';
 import { type BuildMetadata, computeBuildMetadata, computeWorkSets, type WorkSets } from './build-planner.js';
 import { writeBundle } from './bundle-dist.js';
-import { cleanupCoverImages, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges } from './cleanup.js';
+import { cleanupCoverImages, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges, hasLegacyAssetLayout } from './cleanup.js';
 import { resolveCollectionFile } from './collection-files.js';
 import { buildDocsFromIndex, discover, htmlSlugFor, resolveDiscoverSlugs } from './discover.js';
 import { parseAuthors } from './discover-frontmatter.js';
@@ -94,6 +94,13 @@ export async function build(cwd: string, options: BuildOptions = {}, reporter: B
   // process.cwd() resuelve symlinks (/tmp → /private/tmp en macOS). Sin esto
   // las rutas absolutas del build no casarían con las del replay.
   const root = await realpath(cwd).catch(() => cwd);
+  // #2450 — una salida con el layout anterior de assets no sirve para seguir
+  // construyendo encima: los documentos que no se recompile seguirían apuntando
+  // a `assets/img` y a `css/`. Se reconstruye entero, una vez, tras actualizar.
+  if (!options.full && (await hasLegacyAssetLayout(options.outputDir ?? join(root, DIST_FILES_DIR)))) {
+    options.full = true;
+    reporter.log('layout de assets anterior detectado en la salida (#2450) → se reconstruye la salida completa');
+  }
   const pandocVersion = await getPandocVersion();
 
   const startedAt = performance.now();

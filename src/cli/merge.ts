@@ -4,7 +4,7 @@ import { printFlags } from '../builder/image-flags.js';
 import { rewriteImagePaths } from '../builder/image-processor.js';
 import { buildLatexPandocContent, type ImagePreprocessResult, mergeConfigImages, preprocessDocumentImages } from '../builder/latex-composer.js';
 import { aggregateCollectionCreators } from '../builder/orchestrator.js';
-import { DIST_FILES_DIR } from '../builder/output-layout.js';
+import { ASSETS_IMAGES_DIR, DIST_FILES_DIR } from '../builder/output-layout.js';
 import { type CollectionEntry, collectionBaseContent, readCollectionEntries } from '../builder/pipeline-formats.js';
 import { writeOutput } from '../builder/pipeline-io.js';
 import type { BuildDocument } from '../builder/types.js';
@@ -70,12 +70,13 @@ interface MergeContext {
   docDir: string;
 }
 
-/** Reproduce la pasada de imágenes del build hacia `dist/files/<nivel>/assets/img`. */
+/** Reproduce la pasada de imágenes del build hacia `dist/files/<nivel>/assets/images`. */
 async function buildMergeContext(
   cwd: string,
   src: Awaited<ReturnType<typeof readCollectionSource>>,
   entries: CollectionEntry[],
   siteConfig: SiteConfig,
+  outSlug: string,
 ): Promise<MergeContext> {
   const distRoot = join(cwd, DIST_FILES_DIR);
   const outDir = dirname(src.relativePath) === '.' ? distRoot : join(distRoot, dirname(src.relativePath));
@@ -88,10 +89,13 @@ async function buildMergeContext(
     flags.pageDimensions,
     flags.cropActive,
     flags.pdfxActive,
-    join(outDir, 'assets/img'),
+    join(outDir, ASSETS_IMAGES_DIR),
+    outSlug,
   );
   const relImageMap = new Map(
-    [...images.imageMap].filter(([from, dst]) => dst !== from).map(([from, dst]): [string, string] => [from, `./assets/img/${basename(dst)}`]),
+    [...images.imageMap]
+      .filter(([from, dst]) => dst !== from)
+      .map(([from, dst]): [string, string] => [from, `./${ASSETS_IMAGES_DIR}/${basename(dst)}`]),
   );
   return { doc, images, relImageMap, docDir: dirname(src.inputPath) };
 }
@@ -136,8 +140,13 @@ export async function runMerge(cwd: string, input: string, options: { output?: s
     const entries = await readCollectionEntries(src.files, src.relativePath, [cwd, join(cwd, dirname(src.relativePath))]);
     if (entries.length === 0) throw new BuildError(`"${input}": los archivos de files no tienen contenido`);
 
-    const ctx = await buildMergeContext(cwd, src, entries, siteConfig);
     const output = isAbsolute(options.output) ? normalize(options.output) : join(cwd, normalize(options.output));
+    // El outSlug del build es el stem del `-o` sin la extensión de formato
+    // (`.iteraciones/collections/<slug>.<format>.md`): con el mismo prefijo,
+    // las imágenes que escribe este comando se llaman igual que las del build.
+    const stem = basename(output, '.md');
+    const outSlug = stem.endsWith(`.${format}`) ? stem.slice(0, -(format.length + 1)) : stem;
+    const ctx = await buildMergeContext(cwd, src, entries, siteConfig, outSlug);
     await writeOutput(output, await composeFor(format, src, entries, siteConfig, ctx));
     logSuccess(`${input} [--format ${format}] → ${options.output}`, 'merge');
   } catch (err) {

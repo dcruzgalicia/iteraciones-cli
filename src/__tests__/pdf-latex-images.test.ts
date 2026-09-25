@@ -65,18 +65,23 @@ describe('regresión #2156: el pool PDF compila un tex del work dir con rutas ab
         const pdf = Bun.file(join(dist, 'cuidar-se.pdf'));
         expect(await pdf.exists()).toBe(true);
         expect((await pdf.arrayBuffer()).byteLength).toBeGreaterThan(1000);
-        // Bundle portable intacto (ADR #2084): copia namespaced junto al tex de dist.
-        expect(await Bun.file(join(dist, 'cuidar-se-startpaper.jpg')).exists()).toBe(true);
-        // #2435: la imagen procesada vive además en dist/assets/img (relativo a las salidas).
-        expect(await Bun.file(join(dist, 'assets', 'img', 'startpaper.jpg')).exists()).toBe(true);
+        // Bundle portable (ADR #2084/#2450): una sola copia por imagen, dentro
+        // del assets/images del nivel y con el prefijo del slug del documento.
+        const imagen = join(dist, 'assets', 'images', 'cuidar-se-startpaper.jpg');
+        expect(await Bun.file(imagen).exists()).toBe(true);
+        // El .tex de dist apunta a esa copia (relativa a su nivel) y no deja
+        // nada suelto junto a él.
+        expect(await Bun.file(join(dist, 'cuidar-se.tex')).text()).toContain('assets/images/cuidar-se-startpaper.jpg');
+        expect(await Bun.file(join(dist, 'cuidar-se-startpaper.jpg')).exists()).toBe(false);
 
         // El tex de compilación del pool vive en el área de trabajo y apunta a
-        // la ruta absoluta procesada — NO al nombre namespaced de dist (#2156).
+        // la ruta absoluta procesada — NO a la relativa de dist (#2156).
         const workTexPath = join(dir, '.iteraciones', 'tmp', 'pdf', 'cuidar-se.tex');
         const workTex = await Bun.file(workTexPath).text();
-        expect(workTex).toContain('assets/img/startpaper.jpg');
+        expect(workTex).toContain(imagen);
         expect(workTex).not.toContain('processed-images/');
-        expect(workTex).not.toContain('cuidar-se-startpaper.jpg');
+        // La forma relativa es cosa del .tex de dist, no del de compilación
+        expect(workTex).not.toContain('{assets/images/cuidar-se-startpaper.jpg}');
       });
     },
     120_000,

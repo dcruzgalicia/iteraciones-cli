@@ -45,11 +45,66 @@ function processedName(filePath: string): string {
   return dot > 0 ? name.slice(0, dot) : name;
 }
 
-export async function processImage(inputPath: string, targetWmm: number, targetHmm: number, cover: boolean, outputDir: string): Promise<string> {
+/**
+ * Sufija `-2`, `-3`… hasta que el nombre queda libre dentro de un conjunto.
+ * Lo usan el namer de imágenes (#2450) y la distribución del .tex.
+ */
+export function uniqueName(base: string, taken: Set<string>): string {
+  if (!taken.has(base)) {
+    taken.add(base);
+    return base;
+  }
+  const dot = base.lastIndexOf('.');
+  const stem = dot > 0 ? base.slice(0, dot) : base;
+  const ext = dot > 0 ? base.slice(dot) : '';
+  let n = 2;
+  let name = `${stem}-2${ext}`;
+  while (taken.has(name)) {
+    n++;
+    name = `${stem}-${n}${ext}`;
+  }
+  taken.add(name);
+  return name;
+}
+
+/**
+ * #2450 — nombre final dentro de `<nivel>/assets/images`: `<slug>-<base>.jpg`
+ * (sufijado si el documento tiene dos orígenes con el mismo basename). Un único
+ * fichero por imagen sirve a html, markdown y .tex, y el prefijo de slug evita
+ * que dos documentos del mismo nivel se pisen.
+ *
+ * El prefijo es idempotente: una imagen que ya lo lleva (el caso de reconstruir
+ * a partir de una copia de `dist/files`, cuyo .md ya apunta a
+ * `assets/images/<slug>-<base>.jpg`) se le quita y se vuelve a poner, así que
+ * gen1/gen2/gen3 de la réplica no acumulan prefijos.
+ */
+export function imageNamerFor(outSlug: string): (absPath: string) => string {
+  const prefix = outSlug === '' ? '' : `${outSlug}-`;
+  const taken = new Set<string>();
+  const cache = new Map<string, string>();
+  return (absPath: string): string => {
+    const cached = cache.get(absPath);
+    if (cached !== undefined) return cached;
+    const base = processedName(absPath);
+    const stem = prefix !== '' && base.startsWith(prefix) ? base.slice(prefix.length) : base;
+    const name = uniqueName(`${prefix}${stem}.jpg`, taken);
+    cache.set(absPath, name);
+    return name;
+  };
+}
+
+export async function processImage(
+  inputPath: string,
+  targetWmm: number,
+  targetHmm: number,
+  cover: boolean,
+  outputDir: string,
+  outName?: string,
+): Promise<string> {
   await mkdir(outputDir, { recursive: true });
 
-  const outName = `${processedName(inputPath)}.jpg`;
-  const outPath = join(outputDir, outName);
+  const fileName = outName ?? `${processedName(inputPath)}.jpg`;
+  const outPath = join(outputDir, fileName);
 
   const targetW = mmToPx(targetWmm);
   const targetH = mmToPx(targetHmm);
@@ -251,7 +306,7 @@ export function rewriteImagePaths(content: string, imageMap: Map<string, string>
  * #2441: reescribe en el objeto fm los campos de imagen a la ruta de assets
  * del nivel. outputs.fm es el fm que viaja a los exports (html/markdown) y no
  * pasa por rewriteImagePaths sobre el contenido, así que conservaba los paths
- * originales del proyecto aunque la imagen ya viviera en assets/img/.
+ * originales del proyecto aunque la imagen ya viviera en assets/images/.
  */
 export function rewriteFmImagePaths(fm: Record<string, unknown>, imageMap: Map<string, string>, docDir: string): Record<string, unknown> {
   if (imageMap.size === 0) return fm;
@@ -320,12 +375,13 @@ async function processDedicatedFrontmatterImages(
   docDir: string,
   targets: ProcessTargets,
   outputDir: string,
+  naming: (absPath: string) => string,
   imageMap: Map<string, string>,
   processedFiles: string[],
 ): Promise<void> {
   const tasks = await collectFrontmatterImageTasks(fm, docDir, targets, imageMap);
   await mapWithConcurrency(tasks, magickConcurrency(), async (task) => {
-    const processed = await processImage(task.absPath, task.w, task.h, task.cover, outputDir);
+    const processed = await processImage(task.absPath, task.w, task.h, task.cover, outputDir, naming(task.absPath));
     recordProcessed(imageMap, processedFiles, task.absPath, processed);
   });
 }
@@ -334,6 +390,7 @@ async function processMultilineCoverImages(
   multilineImages: { absPath: string; isSvg: boolean; attrs?: string; widthMm?: number }[],
   targets: ProcessTargets,
   outputDir: string,
+  naming: (absPath: string) => string,
   imageMap: Map<string, string>,
   processedFiles: string[],
 ): Promise<void> {
@@ -348,7 +405,7 @@ async function processMultilineCoverImages(
     tasks.push({ absPath: img.absPath, w: imgTargetW, h: imgTargetH });
   }
   await mapWithConcurrency(tasks, magickConcurrency(), async (task) => {
-    const processed = await processImage(task.absPath, task.w, task.h, false, outputDir);
+    const processed = await processImage(task.absPath, task.w, task.h, false, outputDir, naming(task.absPath));
     recordProcessed(imageMap, processedFiles, task.absPath, processed);
   });
 }
@@ -357,12 +414,13 @@ async function processInlineImages(
   inlineImages: string[],
   targets: ProcessTargets,
   outputDir: string,
+  naming: (absPath: string) => string,
   imageMap: Map<string, string>,
   processedFiles: string[],
 ): Promise<void> {
   const tasks = [...new Set(inlineImages)].filter((absPath) => !imageMap.has(absPath));
   await mapWithConcurrency(tasks, magickConcurrency(), async (absPath) => {
-    const processed = await processImage(absPath, targets.targetW, targets.targetH, false, outputDir);
+    const processed = await processImage(absPath, targets.targetW, targets.targetH, false, outputDir, naming(absPath));
     recordProcessed(imageMap, processedFiles, absPath, processed);
   });
 }
@@ -385,6 +443,7 @@ export async function processDocumentImages(
   pageDims: PageDimensions,
   cropActive: boolean,
   outputDir: string,
+  naming: (absPath: string) => string,
   multilineImages?: { absPath: string; isSvg: boolean; attrs?: string; widthMm?: number }[],
   pdfxActive = false,
   detector: () => Promise<boolean> = detectMagick,
@@ -398,9 +457,9 @@ export async function processDocumentImages(
   const processedFiles: string[] = [];
   const targets = computeProcessTargets(pageDims, cropActive);
 
-  await processDedicatedFrontmatterImages(fm, docDir, targets, outputDir, imageMap, processedFiles);
-  if (multilineImages !== undefined) await processMultilineCoverImages(multilineImages, targets, outputDir, imageMap, processedFiles);
-  await processInlineImages(inlineImages, targets, outputDir, imageMap, processedFiles);
+  await processDedicatedFrontmatterImages(fm, docDir, targets, outputDir, naming, imageMap, processedFiles);
+  if (multilineImages !== undefined) await processMultilineCoverImages(multilineImages, targets, outputDir, naming, imageMap, processedFiles);
+  await processInlineImages(inlineImages, targets, outputDir, naming, imageMap, processedFiles);
 
   return { imageMap, processedFiles };
 }

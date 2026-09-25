@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   computeProcessTargets,
+  imageNamerFor,
   processDocumentImages,
   processImage,
   resetMagickCache,
@@ -141,13 +142,25 @@ describe('correlación magick ausente ↔ PDF/X (#2040)', () => {
         { w: 100, h: 150, textW: 80 },
         false,
         '/tmp/out',
+        imageNamerFor('doc'),
         undefined,
         true,
         async () => false,
       );
       expect(noImages.imageMap.size).toBe(0);
       // Segundo documento: sin segundo warning (memoizado por proceso)
-      await processDocumentImages([], {}, '/tmp', { w: 100, h: 150, textW: 80 }, false, '/tmp/out', undefined, true, async () => false);
+      await processDocumentImages(
+        [],
+        {},
+        '/tmp',
+        { w: 100, h: 150, textW: 80 },
+        false,
+        '/tmp/out',
+        imageNamerFor('doc'),
+        undefined,
+        true,
+        async () => false,
+      );
       const output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
       expect((output.match(/ImageMagick no disponible/g) ?? []).length).toBe(1);
       expect(output).toContain('pueden fallar la certificación PDF/X');
@@ -161,7 +174,18 @@ describe('correlación magick ausente ↔ PDF/X (#2040)', () => {
     resetMagickCache();
     const stderrSpy = spyOn(process.stderr, 'write');
     try {
-      await processDocumentImages([], {}, '/tmp', { w: 100, h: 150, textW: 80 }, false, '/tmp/out', undefined, false, async () => false);
+      await processDocumentImages(
+        [],
+        {},
+        '/tmp',
+        { w: 100, h: 150, textW: 80 },
+        false,
+        '/tmp/out',
+        imageNamerFor('doc'),
+        undefined,
+        false,
+        async () => false,
+      );
       const output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
       expect(output).toContain('ImageMagick no disponible');
       expect(output).not.toContain('certificación PDF/X');
@@ -299,7 +323,7 @@ describe('rewriteImagePaths — reemplazo anclado (#2170)', () => {
 
 describe('rewriteFmImagePaths (#2441)', () => {
   const docDir = '/proyecto/capitulos';
-  const processed = '/proyecto/capitulos/assets/img/img.jpg';
+  const processed = '/proyecto/capitulos/assets/images/img.jpg';
   const map = new Map([['/proyecto/capitulos/img.png', processed]]);
 
   it('reescribe campos de imagen escalar, lista y multilinea; deja intactos los demás', () => {
@@ -321,6 +345,40 @@ describe('rewriteFmImagePaths (#2441)', () => {
   it('sin imágenes en el mapa retorna el fm intacto', () => {
     const fm = { titleImage: 'img.png' };
     expect(rewriteFmImagePaths(fm, new Map(), docDir)).toBe(fm);
+  });
+});
+
+describe('imageNamerFor (#2450)', () => {
+  it('prefija con el slug, sufija las colisiones y memoriza por ruta', () => {
+    const namer = imageNamerFor('ejemplo');
+    expect(namer('/proy/foto.png')).toBe('ejemplo-foto.jpg');
+    // la misma ruta siempre devuelve el mismo nombre: no consume sufijo
+    expect(namer('/proy/foto.png')).toBe('ejemplo-foto.jpg');
+    // otro origen con el mismo basename convive en el mismo nivel
+    expect(namer('/proy/otra/foto.png')).toBe('ejemplo-foto-2.jpg');
+    expect(namer('/proy/tercera/foto.jpeg')).toBe('ejemplo-foto-3.jpg');
+    expect(namer('/proy/foto.png')).toBe('ejemplo-foto.jpg');
+  });
+
+  it('cada documento nombra con su propio prefijo', () => {
+    const uno = imageNamerFor('uno');
+    const dos = imageNamerFor('dos');
+    expect(uno('/proy/foto.png')).toBe('uno-foto.jpg');
+    expect(dos('/proy/foto.png')).toBe('dos-foto.jpg');
+  });
+
+  it('no acumula el prefijo cuando la imagen ya lo lleva (réplica gen2/gen3)', () => {
+    // La fuente ya es la copia nombrada por el build anterior: quitar y volver
+    // a poner el prefijo deja el nombre exactamente igual.
+    expect(imageNamerFor('ejemplo')('/copia/assets/images/ejemplo-foto.jpg')).toBe('ejemplo-foto.jpg');
+    expect(imageNamerFor('ejemplo')('/copia/assets/images/ejemplo-foto-2.jpg')).toBe('ejemplo-foto-2.jpg');
+    expect(imageNamerFor('ejemplo')('/copia3/assets/images/ejemplo-foto.jpg')).toBe('ejemplo-foto.jpg');
+    // y sin prefijo propio, lo añade
+    expect(imageNamerFor('otro')('/copia/assets/images/ejemplo-foto.jpg')).toBe('otro-ejemplo-foto.jpg');
+  });
+
+  it('sin slug no lleva prefijo (salida en la raíz del nivel)', () => {
+    expect(imageNamerFor('')('/proy/portada.png')).toBe('portada.jpg');
   });
 });
 
