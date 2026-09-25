@@ -19,6 +19,7 @@ import {
   markdownToLatex,
   mergeConfigImages,
   preprocessDocumentImages,
+  relativizeTexForDist,
   rewriteTexForDist,
 } from './latex-composer.js';
 import { detectPageSize } from './latex-preamble.js';
@@ -113,13 +114,17 @@ async function emitLatexAndQueuePdf(
         if (await Bun.file(absSrc).exists()) await Bun.write(outBase(fileName), Bun.file(absSrc));
       }),
     );
-    const distTex = rewriteTexForDist(texWithXmp, distribution);
+    // #2448: rutas bajo la raíz (el QR del caché) quedan relativas al .tex.
+    const distTex = relativizeTexForDist(rewriteTexForDist(texWithXmp, distribution), dirname(texDistPath), ctx.cwd);
     // #2445: el .sh no puede recomputar autores/XMP/distribución, así que el
     // build se los deja escritos en un manifiesto que `iteraciones post latex` lee.
     let post: string[] | undefined;
     if (isScriptCapture()) {
       const manifest = join(ctx.cwd, '.iteraciones', 'post', `${outSlug}.json`);
-      await writeOutput(manifest, `${JSON.stringify({ authorsBlock, xmp, distribution: Object.fromEntries(distribution) }, null, 2)}\n`);
+      await writeOutput(
+        manifest,
+        `${JSON.stringify({ authorsBlock, xmp, distribution: Object.fromEntries(distribution), projectRoot: ctx.cwd }, null, 2)}\n`,
+      );
       post = ['iteraciones', 'post', 'latex', '--post', manifest, '-o', texDistPath];
     }
     resolveScriptStdout(fullTex, texDistPath, distTex, post);

@@ -4,7 +4,7 @@ import { dirname, join, relative } from 'node:path';
 /**
  * #2438 — grabación de los comandos externos que ejecuta un build.
  *
- * Con `format.script: true` cada build reescribe `build.sh` en la raíz del
+ * Con `script: true` cada build reescribe `build.sh` en la raíz del
  * proyecto con los comandos que corrieron en esa corrida: pandoc, magick,
  * latexmk, pdftoppm y los subcomandos de iteraciones que agrupan la preparación,
  * la recogida de salidas y el markdown de dist. El .sh contiene solo comandos:
@@ -12,7 +12,7 @@ import { dirname, join, relative } from 'node:path';
  * archivo final de dist la requiere.
  *
  * Reglas:
- * - solo graba quien llama a `beginScriptCapture` (format.script) y solo
+ * - solo graba quien llama a `beginScriptCapture` (script: true) y solo
  *   comandos que terminaron con exit 0;
  * - pandoc sin `--output` (latex/html) alimenta su stdin desde un archivo
  *   materializado en `.iteraciones/script/in-NNNN.md`;
@@ -276,10 +276,11 @@ function renderDirs(cap: Capture, steps: Step[], scriptDir: string): string[] {
     if (step.section === 'images' && last !== undefined) dirs.add(dirname(last));
     // Salidas que viajan por -o/--output (Tailwind, y los comandos de
     // iteraciones): el directorio debe existir aunque no haya redirect.
-    // `iteraciones assets -o` apunta ya a un directorio: no hay quitarle nada.
+    // `iteraciones assets -o` y `iteraciones bundle -o` apuntan ya a un
+    // directorio: no hay quitarle nada.
     const i = step.argv.findIndex((a) => a === '-o' || a === '--output');
     const out = i >= 0 ? step.argv[i + 1] : undefined;
-    if (out !== undefined) dirs.add(step.argv[1] === 'assets' ? out : dirname(out));
+    if (out !== undefined) dirs.add(step.argv[1] === 'assets' || step.argv[1] === 'bundle' ? out : dirname(out));
   }
   // El propio .iteraciones/script lo crea la generación del build.sh.
   dirs.delete(scriptDir);

@@ -37,7 +37,7 @@ async function postLatex(raw: string, post: string | undefined, cwd: string, out
   for (const [abs, name] of Object.entries(manifest.distribution ?? {})) {
     if (await Bun.file(abs).exists()) await Bun.write(join(dirname(output), name), Bun.file(abs));
   }
-  return postProcessLatex(raw, manifest);
+  return postProcessLatex(raw, manifest, dirname(output));
 }
 
 /**

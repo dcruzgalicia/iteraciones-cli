@@ -12,6 +12,7 @@ import {
   looseColonsMessage,
   MISSING_TITLE_WARNING,
   validateConfigFilePaths,
+  validateConfigRules,
   validateFrontmatterFields,
 } from '../builder/project-validator.js';
 import { loadSiteConfig } from '../config/config-loader.js';
@@ -220,7 +221,7 @@ async function collectValidation(cwd: string): Promise<{ summary: ValidationSumm
     const { errors, warnings } = await collectConfigIssues(config);
     configErrors.push(...errors);
     configWarnings.push(...warnings);
-    for (const issue of await validateConfigFilePaths(cwd, config)) {
+    for (const issue of [...validateConfigRules(config), ...(await validateConfigFilePaths(cwd, config))]) {
       if (issue.severity === 'error') {
         configErrors.push({ file: 'iteraciones.config.yaml', message: issue.message });
       } else {

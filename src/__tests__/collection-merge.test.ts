@@ -24,8 +24,8 @@ if (!pandocOk) registerSkip('collection-merge.test.ts', SKIP_REASONS.pandoc);
 function config(opts: { merge?: boolean; markdown?: boolean; script?: boolean } = {}): string {
   return [
     'language: es-MX',
+    ...(opts.script ? ['script: true'] : []),
     'format:',
-    ...(opts.script ? ['  script: true'] : []),
     '  html:',
     '    site:',
     '      title: T',

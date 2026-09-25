@@ -1,4 +1,4 @@
-import { dirname, isAbsolute, resolve } from 'node:path';
+import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
@@ -402,6 +402,18 @@ export function rewriteTexForDist(tex: string, distribution: Map<string, string>
 }
 
 /**
+ * #2448 — ningún export con ruta absoluta: lo que el .tex de dist apunte bajo
+ * la raíz del proyecto (el QR del caché, en concreto) se reescribe relativo al
+ * propio .tex, así que la copia de dist/files lo resuelve igual. El .tex de
+ * trabajo no es export y conserva la ruta absoluta que sí resuelve en la raíz.
+ */
+export function relativizeTexForDist(tex: string, texDir: string, projectRoot: string): string {
+  const rel = relative(texDir, projectRoot).split(sep).join('/');
+  if (rel === '') return tex;
+  return tex.split(`${projectRoot}/`).join(`${rel}/`);
+}
+
+/**
  * #2445 — todo lo que el .tex de dist lleva y la salida cruda de pandoc no:
  * bloque de autores, metadatos XMP (PDF/X) y rutas de imagen acomodadas para
  * compartir directorio con el .tex. El build lo escribe como manifiesto en
@@ -412,6 +424,8 @@ export interface LatexPostManifest {
   xmp?: PdfXmpMetadata;
   /** Ruta absoluta de la imagen procesada → nombre con el que vive junto al .tex. */
   distribution?: Record<string, string>;
+  /** #2448: raíz del proyecto; el .tex de dist escribe sus rutas relativas a sí mismo. */
+  projectRoot?: string;
 }
 
 export function insertAuthorsBlock(tex: string, authorsBlock: string): string {
@@ -421,8 +435,10 @@ export function insertAuthorsBlock(tex: string, authorsBlock: string): string {
   return tex;
 }
 
-export function postProcessLatex(tex: string, manifest: LatexPostManifest): string {
+export function postProcessLatex(tex: string, manifest: LatexPostManifest, texDir?: string): string {
   const withAuthors = insertAuthorsBlock(tex, manifest.authorsBlock ?? '');
   const withXmp = manifest.xmp === undefined ? withAuthors : injectXmpMetadataIntoLatex(withAuthors, manifest.xmp);
-  return manifest.distribution === undefined ? withXmp : rewriteTexForDist(withXmp, new Map(Object.entries(manifest.distribution)));
+  const rewritten = manifest.distribution === undefined ? withXmp : rewriteTexForDist(withXmp, new Map(Object.entries(manifest.distribution)));
+  // #2448: rutas bajo la raíz del proyecto, relativas al .tex de dist.
+  return manifest.projectRoot === undefined || texDir === undefined ? rewritten : relativizeTexForDist(rewritten, texDir, manifest.projectRoot);
 }

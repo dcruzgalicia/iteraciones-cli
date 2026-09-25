@@ -18,7 +18,7 @@ async function removeIfExists(path: string): Promise<boolean> {
   }
 }
 
-async function pruneEmptyDirs(outputDir: string): Promise<void> {
+export async function pruneEmptyDirs(outputDir: string): Promise<void> {
   const dirs: string[] = [];
   const walk = async (rel: string): Promise<void> => {
     for (const entry of await readdir(join(outputDir, rel), { withFileTypes: true }).catch(() => [])) {
