@@ -23,6 +23,12 @@ function preambleProjectDir(docType: PreambleDocType): string {
   return 'preamble';
 }
 
+/** #2448: overrides de preamble en la raíz, uno por tipo; `bundle` los replica. */
+export function projectPreambleDirs(): string[] {
+  const types: PreambleDocType[] = ['file', 'collection', 'creator', 'intervention'];
+  return types.map(preambleProjectDir);
+}
+
 let builtinPreambleNames: string[] | null = null;
 
 export function getBuiltinPreambleFilterNames(): string[] {

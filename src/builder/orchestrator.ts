@@ -12,6 +12,7 @@ import { plural } from '../lib/plural.js';
 import { abortScriptCapture, beginScriptCapture, commitScriptCapture } from '../lib/script-recorder.js';
 import { buildAssets } from './build-assets.js';
 import { type BuildMetadata, computeBuildMetadata, computeWorkSets, type WorkSets } from './build-planner.js';
+import { writeBundle } from './bundle-dist.js';
 import { cleanupCoverImages, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges } from './cleanup.js';
 import { resolveCollectionFile } from './collection-files.js';
 import { buildDocsFromIndex, discover, htmlSlugFor, resolveDiscoverSlugs } from './discover.js';
@@ -21,7 +22,7 @@ import { DIST_FILES_DIR, FORMAT_OUTPUT_EXTENSIONS } from './output-layout.js';
 import { type PdfxCacheHandle, runPdfxOutputValidation } from './pdfx-check.js';
 import { documentPipeline } from './pipeline.js';
 import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, validatePreambleDependencies } from './preamble-loader.js';
-import { validateConfigFilePaths } from './project-validator.js';
+import { validateConfigFilePaths, validateConfigRules } from './project-validator.js';
 
 import type { BuildState } from './state-serialize.js';
 import { loadStateFile, persistCompletedState } from './state-serialize.js';
@@ -127,7 +128,7 @@ async function resolveEffectiveConfig(cwd: string): Promise<{ siteConfig: SiteCo
   validateDisabledFilters(siteConfig.disabledFilters);
   const effectiveDisabledPreamble = resolveEffectiveDisabledPreamble(resolveDisabledPreambleConfig(siteConfig));
   validateDisabledPreambleFilters(effectiveDisabledPreamble);
-  for (const issue of await validateConfigFilePaths(cwd, siteConfig)) {
+  for (const issue of [...validateConfigRules(siteConfig), ...(await validateConfigFilePaths(cwd, siteConfig))]) {
     if (issue.severity === 'error') {
       throw new ConfigError(`iteraciones.config.yaml: ${issue.message}`, join(cwd, 'iteraciones.config.yaml'));
     }
@@ -322,6 +323,8 @@ async function finishBuild(
   if (deps.pendingState) deps.pendingState.pdfxCache = cache.out;
   if (pdfx.summaryLine) deps.progress.addSummaryLine(pdfx.summaryLine);
   const formats = params.empty ? [] : computeActiveFormats(deps.siteConfig.format);
+  // #2448: la réplica va al final, cuando todas las salidas ya están escritas.
+  await writeBundle(deps.cwd, deps.outputDir, deps.siteConfig);
   await deps.progress.finish(
     params.processedCount,
     params.cachedCount,
@@ -464,7 +467,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
   const log = (msg: string) => progress.log(msg);
 
   const { siteConfig, effectiveDisabledPreamble } = await resolveEffectiveConfig(cwd);
-  if (siteConfig.format.script === true) beginScriptCapture(cwd);
+  if (siteConfig.script === true) beginScriptCapture(cwd);
 
   const prevState = options.full ? null : await loadStateFile(cwd);
   const plan = await computeBuildMetadata(cwd, siteConfig, prevState, effectiveDisabledPreamble, pandocVersion);

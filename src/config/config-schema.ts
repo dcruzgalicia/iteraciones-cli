@@ -157,8 +157,6 @@ const FormatSchema = z
     pdf: PdfFormatSchema.optional(),
     epub: EpubFormatSchema.optional(),
     markdown: MarkdownFormatSchema.optional(),
-    // #2438: cada build escribe build.sh con los comandos externos que corrieron.
-    script: z.boolean().optional(),
   })
   .strict();
 
@@ -166,6 +164,10 @@ export const SiteConfigSchema = z
   .object({
     language: z.string().default(DEFAULT_SITE_CONFIG.language),
     toc: z.boolean().default(DEFAULT_SITE_CONFIG.toc),
+    // #2438: cada build escribe build.sh con los comandos externos que corrieron.
+    script: z.boolean().default(DEFAULT_SITE_CONFIG.script),
+    // #2448: dist/files replica el build (config, preamble*, filters, bibliografía).
+    bundle: z.boolean().default(DEFAULT_SITE_CONFIG.bundle),
     format: FormatSchema.optional(),
     bibliography: z.string().optional(),
     csl: z.string().optional(),
@@ -195,7 +197,6 @@ export const SiteConfigSchema = z
       pdf: raw.format?.pdf ?? ({ generate: DEFAULT_PDF_FORMAT.generate } as z.infer<typeof PdfFormatSchema>),
       epub: raw.format?.epub ?? { ...DEFAULT_EPUB_FORMAT },
       markdown: raw.format?.markdown ?? { ...DEFAULT_MARKDOWN_FORMAT },
-      script: raw.format?.script ?? false,
     },
   }));
 

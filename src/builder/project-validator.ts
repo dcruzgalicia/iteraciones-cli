@@ -297,6 +297,22 @@ export function dictumWidthWarningsMessage(warnings: DictumWidthWarning[]): stri
     .join('; ');
 }
 
+/**
+ * #2448: reglas cruzadas de la config que no son rutas. `validate` y `build`
+ * las recorren junto a `validateConfigFilePaths`.
+ */
+export function validateConfigRules(config: SiteConfig): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  // Sin .md exportados, dist/files no puede reconstruirse y bundle no sirve.
+  if (config.bundle === true && config.format?.markdown?.generate !== true) {
+    issues.push({
+      severity: 'error',
+      message: 'bundle: true requiere "format.markdown.generate: true" — actívalo para que dist/files se pueda reconstruir',
+    });
+  }
+  return issues;
+}
+
 export async function validateConfigFilePaths(cwd: string, config: SiteConfig): Promise<ValidationIssue[]> {
   const issues: ValidationIssue[] = [];
   for (const rel of config.luaFilters ?? []) {

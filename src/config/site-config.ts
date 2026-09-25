@@ -46,8 +46,6 @@ export interface FormatConfig {
   epub?: EpubFormatConfig;
   markdown?: MarkdownFormatConfig;
   latex?: LatexFormatConfig;
-  // #2438: si es true, cada build escribe build.sh con los comandos externos.
-  script?: boolean;
 }
 
 export const DEFAULT_HTML_FORMAT = {
@@ -96,6 +94,11 @@ export function computeActiveFormats(format: FormatConfig): string[] {
 export const DEFAULT_SITE_CONFIG = {
   language: 'es-MX',
   toc: false,
+  // #2438: si es true, cada build escribe build.sh con los comandos externos.
+  script: false,
+  // #2448: si es true, dist/files lleva además los insumos para replicar el
+  // build (config, preamble*, filters, bibliografía). Desactivado por defecto.
+  bundle: false,
   disabledFilters: undefined,
   luaFilters: undefined,
   bibliography: undefined,
@@ -107,7 +110,6 @@ export const DEFAULT_SITE_CONFIG = {
     epub: DEFAULT_EPUB_FORMAT,
     markdown: DEFAULT_MARKDOWN_FORMAT,
     latex: DEFAULT_LATEX_FORMAT,
-    script: false,
   },
   title: undefined,
   creator: undefined,

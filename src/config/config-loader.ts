@@ -69,7 +69,12 @@ export async function loadSiteConfigWithPresence(cwd: string): Promise<LoadedSit
           return `en ${path}: ${keys}`;
         })
         .join('; ');
-      throw new ConfigError(`claves desconocidas: ${details}`, configPath);
+      // #2448: format.script sube a la raíz; el error apunta al rename.
+      const movedScript = unknownKeyIssues.some((issue) => issue.path.join('.') === 'format' && issue.keys.includes('script'));
+      throw new ConfigError(
+        `claves desconocidas: ${details}${movedScript ? ' — "format.script" pasó a "script" (nivel superior): renombra la clave' : ''}`,
+        configPath,
+      );
     }
     const details = result.error.issues
       .map((issue) => {

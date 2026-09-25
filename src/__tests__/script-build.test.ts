@@ -8,7 +8,7 @@ import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { registerSkip, SKIP_REASONS, withTempDir } from './helpers.js';
 
 /**
- * #2438 — `format.script: true` hace que cada build escriba `build.sh` en la
+ * #2438 — `script: true` hace que cada build escriba `build.sh` en la
  * raíz del proyecto con los comandos externos que corrieron en esa corrida.
  *
  * Se verifica: (a) el schema sin dependencias de entorno; (b) la estructura del
@@ -146,26 +146,35 @@ function expectSystemCommands(script: string): string[] {
   return [...found].sort();
 }
 
-describe('format.script (#2438)', () => {
+describe('script en la raíz (#2438, #2448)', () => {
   it('por defecto es false y acepta true/false', async () => {
     await withTempDir(async (dir) => {
       await Bun.write(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\n');
-      expect((await loadSiteConfig(dir)).format.script).toBe(false);
+      expect((await loadSiteConfig(dir)).script).toBe(false);
 
+      await Bun.write(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nscript: true\n');
+      expect((await loadSiteConfig(dir)).script).toBe(true);
+
+      await Bun.write(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nscript: false\n');
+      expect((await loadSiteConfig(dir)).script).toBe(false);
+    });
+  });
+
+  // #2448: format.script fue a la raíz; el error dice el rename.
+  it('format.script ya no se acepta y el error apunta al rename', async () => {
+    await withTempDir(async (dir) => {
       await Bun.write(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nformat:\n  script: true\n');
-      expect((await loadSiteConfig(dir)).format.script).toBe(true);
-
-      await Bun.write(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nformat:\n  script: false\n');
-      expect((await loadSiteConfig(dir)).format.script).toBe(false);
+      await expect(loadSiteConfig(dir)).rejects.toThrow('renombra la clave');
+      await expect(loadSiteConfig(dir)).rejects.toThrow('format.script');
     });
   });
 });
 
-describe.skipIf(!pandocOk)('build.sh con format.script (#2438)', () => {
+describe.skipIf(!pandocOk)('build.sh con script (#2438)', () => {
   const CONFIG = [
     'language: es-MX',
+    'script: true',
     'format:',
-    '  script: true',
     '  latex:',
     '    generate: true',
     '  html:',
@@ -302,8 +311,8 @@ describe.skipIf(!pandocOk || !magickOk)('build.sh con imágenes (#2438)', () => 
     await withTempDir(async (dir) => {
       const config = [
         'language: es-MX',
+        'script: true',
         'format:',
-        '  script: true',
         '  html:',
         '    site:',
         '      title: T',
@@ -340,7 +349,7 @@ describe.skipIf(!pandocOk || !magickOk)('build.sh con imágenes (#2438)', () => 
 describe.skipIf(!pandocOk || !magickOk)('build.sh con .tex en dist (#2445)', () => {
   it('el post-proceso latex viaja por manifiesto y el .tex de dist sale idéntico', async () => {
     await withTempDir(async (dir) => {
-      const config = ['language: es-MX', 'format:', '  script: true', '  latex:', '    generate: true'].join('\n');
+      const config = ['language: es-MX', 'script: true', 'format:', '  latex:', '    generate: true'].join('\n');
       await Bun.write(join(dir, 'iteraciones.config.yaml'), `${config}\n`);
       await Bun.spawnSync(['magick', '-size', '2x2', 'xc:white', join(dir, 'foto.png')]);
       await Bun.write(
@@ -381,7 +390,7 @@ describe.skipIf(!pandocOk || !magickOk)('build.sh con .tex en dist (#2445)', () 
 describe.skipIf(!pandocOk || !latexOk)('build.sh con PDF (#2438)', () => {
   it('incluye latexmk con sus pasos de soporte y vuelve a dejar el PDF en dist', async () => {
     await withTempDir(async (dir) => {
-      const config = ['language: es-MX', 'format:', '  script: true', '  pdf:', '    generate: true'].join('\n');
+      const config = ['language: es-MX', 'script: true', 'format:', '  pdf:', '    generate: true'].join('\n');
       await Bun.write(join(dir, 'iteraciones.config.yaml'), `${config}\n`);
       await Bun.write(
         join(dir, 'manuscrito.md'),
@@ -429,8 +438,8 @@ describe.skipIf(!pandocOk || !magickOk || !latexOk || !pdftotextOk || !unzipOk)(
     await withTempDir(async (dir) => {
       const config = [
         'language: es-MX',
+        'script: true',
         'format:',
-        '  script: true',
         '  latex:',
         '    generate: true',
         '  pdf:',

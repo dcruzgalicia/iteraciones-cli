@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
 import { TEMPLATE_KINDS } from '../builder/pipeline-setup.js';
 import { runAssets } from './assets.js';
+import { runBundle } from './bundle.js';
 import { runCover } from './cover.js';
 import { runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from './dispatcher.js';
 import { runMarkdown } from './markdown.js';
@@ -199,6 +200,21 @@ Ejemplos:
     )
     .action(async (opts: { output: string }) => {
       await runAssets(projectRoot(), opts);
+    });
+
+  program
+    .command('bundle')
+    .description('replica en la salida los insumos del proyecto que un rebuild necesita (config, preamble*, filters, bibliografía)')
+    .requiredOption('-o, --output <path>', 'directorio de salida')
+    .addHelpText(
+      'after',
+      `
+Ejemplos:
+  iteraciones bundle -o dist/files
+`,
+    )
+    .action(async (opts: { output: string }) => {
+      await runBundle(projectRoot(), opts);
     });
 
   program

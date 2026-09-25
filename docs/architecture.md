@@ -267,9 +267,10 @@ Cuando `99-pdfx` está **activo** (se eliminó de `disabledPreambleFilters`), el
 | `pandoc-metadata.ts` | Fuente única de metadatos pandoc: escape de valores, language, title/creator/date, composición de citas (paridad HTML/EPUB, fallo de cites para markdown portable). |
 | `output-layout.ts` | Contrato de rutas y extensiones de salida (DIST_DIR, DIST_FILES_DIR, FORMAT_OUTPUT_EXTENSIONS): pipeline, cleanup y dispatcher lo consumen. Fuente única para cambiar extensiones. |
 | `render.ts` | Conversión HTML: markdown → html5 con templates y sistema de filters. |
-| `latex-composer.ts` | Composición del .tex completo: markdown → latex con metadatos XMP y distribución portátil. |
+| `latex-composer.ts` | Composición del .tex completo: markdown → latex con metadatos XMP, distribución portátil y rutas del proyecto relativas al .tex de dist (#2448). |
 | `build-planner.ts` | Planificador: metadatos de invalidación, WorkSets con Paths + workDocList derivados, y hash de filters/config/bib/esquema. |
 | `build-assets.ts` | Assets: compila el CSS con Tailwind sobre dist/files (acento del @theme), fonts, logo. |
+| `bundle-dist.ts` | Réplica (#2448): con `bundle: true` copia a dist/files la config, `preamble*/`, `filters/` y la bibliografía, y retira lo que deja de corresponder (manifiesto en `.iteraciones/bundle.json`). |
 | `latex-preamble.ts` | Constructor del template LaTeX efectivo (una vez por build): preamble filters dinámicos, crop/pdfx según tamaño. |
 | `preamble-loader.ts` | Carga de preamble filters (.tex) con override por proyecto y dependencias. |
 | `html-composer.ts` | Composición del template HTML efectivo (una vez por build). |
