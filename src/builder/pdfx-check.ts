@@ -216,17 +216,47 @@ function mapResultsToFiles(
   return porFile;
 }
 
+/**
+ * #2454 — el alcance del modo parcial viene del pipeline: se deduplica y solo
+ * se queda con lo que realmente existe en la salida (una ruta que ya no está
+ * no es un fallo de esta corrida).
+ */
+function existingInScope(outputDir: string, scope: string[]): string[] {
+  const files = new Set<string>();
+  for (const raw of scope) {
+    const rel = raw.replaceAll('\\', '/');
+    if (rel === '' || rel.startsWith('/') || rel.split('/').includes('..')) continue;
+    if (existsSync(join(outputDir, rel))) files.add(rel);
+  }
+  return [...files].sort();
+}
+
+/**
+ * #2454 — el alcance a validar: en modo parcial, los PDF que escribió la
+ * corrida; en cualquier otro, `dist` entero como hasta ahora.
+ */
+function listPdfsToValidate(outputDir: string, scope?: string[]): string[] {
+  if (scope !== undefined) return existingInScope(outputDir, scope);
+  return [...new Bun.Glob('**/*.pdf').scanSync({ cwd: outputDir, onlyFiles: true })].sort();
+}
+
 export async function runPdfxOutputValidation(
   outputDir: string,
   siteConfig: SiteConfig,
   options: { allowBuild?: boolean } = {},
   effectiveDisabledPreamble?: string[],
   cache?: PdfxCacheHandle,
+  /**
+   * #2454 — rutas (relativas a `outputDir`) de los PDF que escribió esta
+   * corrida. Sin alcance —cualquier build completo— la validación sigue
+   * barriendo `dist` entero, como hasta ahora.
+   */
+  scope?: string[],
 ): Promise<PdfxOutputValidationResult> {
   const disabled = effectiveDisabledPreamble ?? resolveDisabledPreambleConfig(siteConfig);
   if (disabled.includes('99-pdfx')) return { validated: 0, failed: 0, summaryLine: undefined };
   if (!existsSync(outputDir)) return { validated: 0, failed: 0, summaryLine: undefined };
-  const pdfs = [...new Bun.Glob('**/*.pdf').scanSync({ cwd: outputDir, onlyFiles: true })].sort();
+  const pdfs = listPdfsToValidate(outputDir, scope);
   if (pdfs.length === 0) return { validated: 0, failed: 0, summaryLine: undefined };
 
   const binary = await resolveBinary(options);

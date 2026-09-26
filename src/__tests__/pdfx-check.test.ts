@@ -27,6 +27,30 @@ async function writeFakeBinary(dir: string, json: string): Promise<void> {
   await chmod(join(binDir, 'iteraciones-pdfcheck'), 0o755);
 }
 
+/** Binario falso certifica todo lo que no se llame «roto» (rutas por nombre). */
+async function writeSelectiveBinary(dir: string): Promise<void> {
+  const binDir = join(dir, 'cache', 'iteraciones', 'bin');
+  await mkdir(binDir, { recursive: true });
+  await writeFile(
+    join(binDir, 'iteraciones-pdfcheck'),
+    [
+      '#!/bin/sh',
+      'case "$1" in',
+      "  *roto*) cat <<'EOF'",
+      '{"valid": false, "level": "PDF/X-1a:2001", "errors": [{"code":"MissingTrimBox","message":"falta TrimBox","page":0,"object_id":null,"clause":"6.1.1"}], "warnings": []}',
+      'EOF',
+      '    ;;',
+      "  *) cat <<'EOF'",
+      '{"valid": true, "level": "PDF/X-1a:2001", "errors": [], "warnings": []}',
+      'EOF',
+      '    ;;',
+      'esac',
+    ].join('\n'),
+    'utf8',
+  );
+  await chmod(join(binDir, 'iteraciones-pdfcheck'), 0o755);
+}
+
 /** Config un proyecto con 99-pdfx activo (97 y 98 desactivados). */
 async function initPdfxProject(dir: string): Promise<void> {
   await writeFile(
@@ -168,6 +192,85 @@ describe('runPdfxOutputValidation (fase final del build)', () => {
       }
       expect(mensaje).toContain('capitulos/doc.pdf');
       expect(mensaje).toContain('MissingTrimBox');
+    });
+  });
+
+  describe('alcance del modo parcial (#2454)', () => {
+    /** Dos PDFs en la salida: `bueno.pdf` certifica, `roto.pdf` no. */
+    async function writeTwoPdfs(dir: string): Promise<string> {
+      await mkdir(join(dir, 'dist', 'files'), { recursive: true });
+      await writeFile(join(dir, 'dist', 'files', 'bueno.pdf'), '%PDF-1.4 fake', 'utf8');
+      await writeFile(join(dir, 'dist', 'files', 'roto.pdf'), '%PDF-1.4 fake', 'utf8');
+      await writeSelectiveBinary(dir);
+      return join(dir, 'dist', 'files');
+    }
+
+    it('sin alcance sigue barriendo dist entero (cualquier build completo)', async () => {
+      await withTempDir(async (dir) => {
+        useIsolatedManagedBin(dir);
+        await initPdfxProject(dir);
+        const outDir = await writeTwoPdfs(dir);
+        const config = await loadSiteConfig(dir);
+        let mensaje = '';
+        try {
+          await runPdfxOutputValidation(outDir, config, { allowBuild: false });
+          expect.unreachable();
+        } catch (err) {
+          mensaje = err instanceof Error ? err.message : String(err);
+        }
+        expect(mensaje).toContain('1 de 2 PDFs no certifican PDF/X-1a.');
+        expect(mensaje).toContain('roto.pdf');
+      });
+    });
+
+    it('con alcance solo valida los PDF que escribió esta corrida', async () => {
+      await withTempDir(async (dir) => {
+        useIsolatedManagedBin(dir);
+        await initPdfxProject(dir);
+        const outDir = await writeTwoPdfs(dir);
+        const config = await loadSiteConfig(dir);
+
+        // El roto está en la salida, pero fuera del alcance: no lo mira.
+        const result = await runPdfxOutputValidation(outDir, config, { allowBuild: false }, undefined, undefined, ['bueno.pdf']);
+        expect(result.failed).toBe(0);
+        expect(result.summaryLine).toContain('1 PDF certifica PDF/X-1a');
+
+        // Y el alcance sí valida lo que contiene: el roto, dentro, tumba.
+        let mensaje = '';
+        try {
+          await runPdfxOutputValidation(outDir, config, { allowBuild: false }, undefined, undefined, ['roto.pdf']);
+          expect.unreachable();
+        } catch (err) {
+          mensaje = err instanceof Error ? err.message : String(err);
+        }
+        expect(mensaje).toContain('1 de 1 PDFs no certifican PDF/X-1a.');
+        expect(mensaje).toContain('roto.pdf');
+      });
+    });
+
+    it('un alcance vacío no valida nada (corrida sin PDF) y las rutas que se salen de la salida se ignoran', async () => {
+      await withTempDir(async (dir) => {
+        useIsolatedManagedBin(dir);
+        await initPdfxProject(dir);
+        const outDir = await writeTwoPdfs(dir);
+        const config = await loadSiteConfig(dir);
+
+        expect(await runPdfxOutputValidation(outDir, config, { allowBuild: false }, undefined, undefined, [])).toEqual({
+          validated: 0,
+          failed: 0,
+          summaryLine: undefined,
+        });
+
+        // Rutas inexistentes, absolutas o que escapan de la salida: nunca son
+        // un fallo de esta corrida.
+        expect(
+          await runPdfxOutputValidation(outDir, config, { allowBuild: false }, undefined, undefined, [
+            'no-existe.pdf',
+            '../fuera.pdf',
+            '/absoluta.pdf',
+          ]),
+        ).toEqual({ validated: 0, failed: 0, summaryLine: undefined });
+      });
     });
   });
 
