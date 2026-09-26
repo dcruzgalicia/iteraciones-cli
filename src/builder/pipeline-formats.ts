@@ -1,4 +1,4 @@
-import { basename, dirname, join, normalize, relative, resolve, sep } from 'node:path';
+import { basename, dirname, join, normalize, relative, sep } from 'node:path';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
@@ -24,7 +24,7 @@ import {
   rewriteTexForDist,
 } from './latex-composer.js';
 import { detectPageSize } from './latex-preamble.js';
-import { ASSETS_CSS_FILE, ASSETS_IMAGES_DIR, primaryOutputExtension } from './output-layout.js';
+import { ASSETS_CSS_FILE, ASSETS_IMAGES_DIR, docProducesFormat, primaryOutputExtension } from './output-layout.js';
 import { formatLinksFor, parseFileFrontmatter, readMarkdownOrWarn, relativeHref, writeOutput } from './pipeline-io.js';
 import type { ExportContext, FormatWorkSets, RenderContext } from './pipeline-setup.js';
 import { htmlPageFromMarkdown } from './render.js';
@@ -255,40 +255,40 @@ async function readCollectionFiles(doc: BuildDocument, cwd: string): Promise<Col
 }
 
 /**
- * #2437: con `format.markdown.merge: false` cada miembro de la collection se
- * copia a dist para que `iteraciones merge` y el re-proceso lean de ahí.
- * Las imágenes se reescriben con el mismo mapa del cuerpo fusionado: las
- * rutas ./assets/images son válidas desde cualquier .md del nivel.
+ * #2452 — slug de cada miembro de `files[]`: da el nombre que su `.md` tiene en
+ * dist, el mismo que usa su propia emisión standalone. El build lo resuelve con
+ * su discovery y `iteraciones markdown` con `loadSlugIndex`, para que los dos
+ * escriban exactamente el mismo `files[]`.
  */
-export async function emitCollectionMemberCopies(
-  label: string,
-  cwd: string,
-  outputDir: string,
-  files: string[],
-  relImageMap: Map<string, string>,
-  docDir: string,
-  skipPath: string,
-): Promise<void> {
-  const root = resolve(outputDir);
-  for (const file of files) {
-    const dest = resolve(root, normalize(file));
-    if (dest === skipPath || (dest !== root && !dest.startsWith(`${root}${sep}`))) {
-      logWarning(`"${label}": files contiene "${file}", que apunta fuera de la salida; copia de miembro omitida`, 'build');
-      continue;
-    }
-    const text = await Bun.file(join(cwd, file)).text();
-    await Bun.write(dest, rewriteImagePaths(text, relImageMap, docDir));
+export function memberSlugMap(rootFiles: string[], discoveryIndex: Map<string, DiscoveryEntry>): Map<string, string> {
+  const slugs = new Map<string, string>();
+  for (const file of rootFiles) {
+    const slug = discoveryIndex.get(file)?.slug;
+    if (slug !== undefined) slugs.set(file, slug);
   }
+  return slugs;
 }
 
 /**
- * #2445 — el markdown de dist (#2436), con el composit compartido entre
+ * #2452 — ruta de dist del `.md` de un miembro, en su nombre-nuevo
+ * (`htmlSlugFor`): hacia ahí apunta `files[]` y de ahí lo lee el re-proceso.
+ * Sin slug resuelto (el archivo no es un documento del proyecto) se conserva la
+ * ruta de la fuente, como antes de #2452.
+ */
+function memberMarkdownPath(memberSlugs: Map<string, string> | undefined, outputDir: string, file: string): string {
+  const slug = memberSlugs?.get(file);
+  if (slug === undefined) return join(outputDir, normalize(file));
+  return join(outputDir, dirname(file), `${htmlSlugFor(file, slug)}.md`);
+}
+
+/**
+ * #2445/#2452 — el markdown de dist (#2436), con el composit compartido entre
  * `emitCollectionMarkdown` y `iteraciones markdown`: escribe el .md final y,
- * si la collection no se fusiona, las copias de sus miembros. El build graba
- * aquí el argv que el .sh vuelve a ejecutar.
+ * si la collection no se fusiona, reescribe `files[]` hacia el `.md` standalone
+ * de cada miembro (su nombre-nuevo, escrito por el propio miembro). El build
+ * graba aquí el argv que el .sh vuelve a ejecutar.
  */
 export async function writeDistMarkdown(p: {
-  cwd: string;
   /** el .md de origen, relativo a la raíz: es el argv del .sh. */
   label: string;
   content: string;
@@ -301,6 +301,8 @@ export async function writeDistMarkdown(p: {
   creatorLinks: { name: string; url: string }[];
   /** files[] raíz-relativos; ausente cuando no es una collection. */
   rootFiles?: string[];
+  /** slug resuelto de cada miembro (`memberSlugMap`). */
+  memberSlugs?: Map<string, string>;
   /** format.markdown.merge efectivo (solo collections). */
   merge: boolean;
   entries: CollectionEntry[];
@@ -327,17 +329,20 @@ export async function writeDistMarkdown(p: {
       if (derived !== undefined) mdFm.slug = derived;
     }
     const outDir = dirname(outPath);
-    mdFm.files = rootFiles.map((f) =>
-      relative(outDir, join(outputDir, normalize(f)))
+    mdFm.files = rootFiles.map((f) => {
+      if (p.memberSlugs !== undefined && !p.memberSlugs.has(f)) {
+        logWarning(
+          `"${label}": files contiene "${f}", que no forma parte de los documentos del proyecto; files[] conserva su nombre de origen`,
+          'build',
+        );
+      }
+      return relative(outDir, memberMarkdownPath(p.memberSlugs, outputDir, f))
         .split(sep)
-        .join('/'),
-    );
+        .join('/');
+    });
   }
   const base = merge ? collectionBaseContent(p.entries, 'markdown', p.content) : p.content;
   await convertToMarkdown(rewriteImagePaths(prependLinksMarkdown(base, p.creatorLinks), p.relImageMap, p.docDir), outPath, p.exportDoc, mdFm, merge);
-  if (rootFiles !== undefined && !merge) {
-    await emitCollectionMemberCopies(label, p.cwd, outputDir, rootFiles, p.relImageMap, p.docDir, outPath);
-  }
   recordSupportCommand('post', outPath, ['iteraciones', 'markdown', label, '-o', outPath]);
 }
 
@@ -741,13 +746,13 @@ async function emitCollectionFormats(
 
   const exportDoc = assembleExportDocument(doc, renderCtx.lang, exportCtx.globalBibliography, exportCtx.globalCsl, ctx.siteConfig.toc);
 
-  if (activeFormats.html && formatWorkSets.htmlPaths.has(doc.relativePath) && doc.frontmatter.type !== 'intervention') {
+  if (activeFormats.html && formatWorkSets.htmlPaths.has(doc.relativePath) && docProducesFormat(doc.frontmatter.type, 'html')) {
     const base = collectionBaseContent(collectionEntries, 'html', content);
     const htmlContent = rewriteImagePaths(prependLinksMarkdown(base, creatorLinks), relImageMap, docDir);
     await emitHtmlPage(doc, { ...outputs, content: htmlContent }, renderCtx, exportCtx, discoveryIndex);
   }
 
-  if (activeFormats.epub && formatWorkSets.epubPaths.has(doc.relativePath) && doc.frontmatter.type !== 'intervention') {
+  if (activeFormats.epub && formatWorkSets.epubPaths.has(doc.relativePath) && docProducesFormat(doc.frontmatter.type, 'epub')) {
     const base = collectionBaseContent(collectionEntries, 'html', content);
     await convertToEpub(
       // EPUB se arma con rutas absolutas: pandoc resuelve los medios contra el
@@ -762,18 +767,30 @@ async function emitCollectionFormats(
     );
   }
 
-  await emitCollectionMarkdown(doc, outputs, collectionEntries, renderCtx, exportDoc, formatWorkSets, creatorLinks, {
-    relImageMap,
-    docDir,
-    fmAssets,
-  });
+  await emitCollectionMarkdown(
+    doc,
+    outputs,
+    collectionEntries,
+    renderCtx,
+    exportDoc,
+    formatWorkSets,
+    creatorLinks,
+    {
+      relImageMap,
+      docDir,
+      fmAssets,
+    },
+    discoveryIndex,
+  );
 }
 
 /**
- * #2437: export markdown de una collection. Con `format.markdown.merge`
+ * #2452: export markdown de una collection. Con `format.markdown.merge`
  * (mergeOut) emite el contenido fusionado con type: file; sin él, el .md es
- * reprocesable: conserva type: collection, files[] reescrito a las copias de
- * los miembros (emitidas aquí) y el body original de la collection.
+ * reprocesable: conserva type: collection, `files[]` reescrito hacia el `.md`
+ * standalone de cada miembro (nombre-nuevo, escrito por el propio miembro) y
+ * el body original de la collection. Todas las collections emiten markdown,
+ * igual que cualquier otro type.
  */
 async function emitCollectionMarkdown(
   doc: BuildDocument,
@@ -784,16 +801,17 @@ async function emitCollectionMarkdown(
   formatWorkSets: FormatWorkSets,
   creatorLinks: { name: string; url: string }[],
   assets: { relImageMap: Map<string, string>; docDir: string; fmAssets: Record<string, unknown> },
+  discoveryIndex: Map<string, DiscoveryEntry>,
 ): Promise<void> {
   const { ctx, plan, formatCfg } = renderCtx;
-  if (!plan.activeFormats.markdown || !formatWorkSets.mdPaths.has(doc.relativePath) || doc.frontmatter.type === 'intervention') return;
+  if (!plan.activeFormats.markdown || !formatWorkSets.mdPaths.has(doc.relativePath)) return;
 
   const { relImageMap, docDir, fmAssets } = assets;
   const outPath = outputs.outBase(`${outputs.outSlug}${primaryOutputExtension('markdown')}`);
   const isCollection = doc.frontmatter.type === 'collection';
+  const rootFiles = isCollection ? (doc.frontmatter.files ?? []) : undefined;
 
   await writeDistMarkdown({
-    cwd: ctx.cwd,
     label: doc.relativePath,
     content: outputs.content,
     outPath,
@@ -803,7 +821,8 @@ async function emitCollectionMarkdown(
     relImageMap,
     docDir,
     creatorLinks,
-    rootFiles: isCollection ? (doc.frontmatter.files ?? []) : undefined,
+    rootFiles,
+    memberSlugs: rootFiles === undefined ? undefined : memberSlugMap(rootFiles, discoveryIndex),
     merge: isCollection && formatCfg?.markdown?.merge === true,
     entries: collectionEntries,
   });

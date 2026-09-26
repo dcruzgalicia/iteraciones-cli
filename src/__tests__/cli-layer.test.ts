@@ -3073,6 +3073,40 @@ describe('runBuild (smoke PDF real)', () => {
   );
 
   it.skipIf(!latexOk || !pandocOk)(
+    '#2452: un build sin cambios con pdf activo no reencola nada (la portada .png no es salida del build)',
+    async () => {
+      await withTempDir(async (dir) => {
+        await initTestProject(dir);
+        await writeFile(
+          join(dir, 'iteraciones.config.yaml'),
+          'language: es-MX\nformat:\n  html:\n    site:\n      title: Test\n    generate: true\n  pdf:\n    generate: true\n',
+          'utf8',
+        );
+        process.exitCode = 0;
+        await runBuild(dir);
+        expect(process.exitCode).toBe(0);
+        expect(await Bun.file(join(dir, 'dist', 'files', 'test-document.pdf')).exists()).toBe(true);
+        // sin coverImage no hay .png: `iteraciones cover` es quien lo escribe
+        expect(await Bun.file(join(dir, 'dist', 'files', 'test-document.png')).exists()).toBe(false);
+
+        const stdoutSpy = spyOn(process.stdout, 'write');
+        let out = '';
+        try {
+          process.exitCode = 0;
+          await runBuild(dir);
+        } finally {
+          out = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
+          stdoutSpy.mockRestore();
+        }
+        expect(process.exitCode).toBe(0);
+        expect(out, 'el .png que el build nunca escribe no puede dejar el documento incompleto').toContain('(todos reutilizados)');
+        expect(out).not.toContain('documento modificado');
+      });
+    },
+    { timeout: 120_000 },
+  );
+
+  it.skipIf(!latexOk || !pandocOk)(
     'desactivar cover-image elimina las portadas PNG huérfanas',
     async () => {
       await withTempDir(async (dir) => {

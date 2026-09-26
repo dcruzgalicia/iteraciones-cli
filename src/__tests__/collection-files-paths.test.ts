@@ -136,7 +136,7 @@ describe('files[] de collections relativos a la collection (#2443)', () => {
   });
 
   it.skipIf(!pandocOk)(
-    'build: copias, exclusión e idempotencia con rutas anidadas y root-style',
+    '#2452: miembros standalone con nombre-nuevo, files[] hacia su .md e idempotencia',
     async () => {
       await withTempDir(async (dir) => {
         await writeMd(join(dir, 'iteraciones.config.yaml'), [CONFIG]);
@@ -172,32 +172,43 @@ describe('files[] de collections relativos a la collection (#2443)', () => {
         expect(process.exitCode, 'build debe pasar').toBe(0);
 
         const dist = join(dir, 'dist', 'files');
-        // copias de los miembros con la ruta espejo de la fuente
-        expect(existsSync(join(dist, 'raiz.md'))).toBe(true);
-        expect(existsSync(join(dist, 'sub', 'miembro-local.md'))).toBe(true);
-        expect(existsSync(join(dist, 'sub', 'miembro2.md'))).toBe(true);
-        // los miembros no se construyen como standalone
-        expect(existsSync(join(dist, 'raiz.html'))).toBe(false);
-        expect(existsSync(join(dist, 'sub', 'miembro-local.html'))).toBe(false);
-        expect(existsSync(join(dist, 'sub', 'miembro2.html'))).toBe(false);
-        // las collections sí
+        // #2452: cada miembro se construye standalone, con su nombre-nuevo
+        expect(existsSync(join(dist, 'en-la-raiz-por-autora-a.md'))).toBe(true);
+        expect(existsSync(join(dist, 'en-la-raiz-por-autora-a.html'))).toBe(true);
+        expect(existsSync(join(dist, 'sub', 'local-por-autora-c.md'))).toBe(true);
+        expect(existsSync(join(dist, 'sub', 'local-por-autora-c.html'))).toBe(true);
+        expect(existsSync(join(dist, 'sub', 'miembro-2-por-autora-b.md'))).toBe(true);
+        expect(existsSync(join(dist, 'sub', 'miembro-2-por-autora-b.html'))).toBe(true);
+        // y no quedan copias con el nombre de la fuente
+        expect(existsSync(join(dist, 'raiz.md'))).toBe(false);
+        expect(existsSync(join(dist, 'sub', 'miembro-local.md'))).toBe(false);
+        expect(existsSync(join(dist, 'sub', 'miembro2.md'))).toBe(false);
+        // las collections también
         expect(existsSync(join(dist, 'sub', 'coleccion.html'))).toBe(true);
         expect(existsSync(join(dist, 'sub', 'c2.html'))).toBe(true);
 
-        // files[] reescrito relativo al .md de dist con ambos estilos de origen
+        // files[] apunta al .md standalone de cada miembro, relativo al .md de dist
         const coleccionMd = await Bun.file(join(dist, 'sub', 'coleccion.md')).text();
         expect(coleccionMd).toContain('type: collection');
-        expect(coleccionMd).toContain('../raiz.md');
-        expect(coleccionMd).toContain('miembro-local.md');
-        expect(coleccionMd, 'el origen collection-dir no conserva el prefijo root-style').not.toContain('sub/miembro-local.md');
+        expect(coleccionMd).toContain('../en-la-raiz-por-autora-a.md');
+        expect(coleccionMd).toContain('local-por-autora-c.md');
+        expect(coleccionMd, 'el nombre de la fuente ya no aparece en files[]').not.toContain('en-la-raiz.md');
+        expect(coleccionMd, 'el origen collection-dir no conserva el prefijo root-style').not.toContain('sub/local-por-autora-c.md');
         expect(coleccionMd).toContain('Intro de la colección.');
         const c2Md = await Bun.file(join(dist, 'sub', 'c2.md')).text();
-        expect(c2Md).toContain('miembro2.md');
-        expect(c2Md, 'el origen root-style se reescribe relativo al .md de dist').not.toContain('sub/miembro2.md');
+        expect(c2Md).toContain('miembro-2-por-autora-b.md');
+        expect(c2Md, 'el origen root-style se reescribe relativo al .md de dist').not.toContain('sub/miembro-2-por-autora-b.md');
 
         // idempotente: reconstruir sin cambios → mismos bytes
         const antes: Record<string, string> = {};
-        for (const rel of ['raiz.md', 'sub/miembro-local.md', 'sub/miembro2.md', 'sub/coleccion.md', 'sub/c2.md', 'sub/coleccion.html']) {
+        for (const rel of [
+          'en-la-raiz-por-autora-a.md',
+          'sub/local-por-autora-c.md',
+          'sub/miembro-2-por-autora-b.md',
+          'sub/coleccion.md',
+          'sub/c2.md',
+          'sub/coleccion.html',
+        ]) {
           antes[rel] = await Bun.file(join(dist, rel)).text();
         }
         process.exitCode = 0;
@@ -205,7 +216,6 @@ describe('files[] de collections relativos a la collection (#2443)', () => {
         for (const [rel, text] of Object.entries(antes)) {
           expect(await Bun.file(join(dist, rel)).text(), `rebuild debe ser idéntico en ${rel}`).toBe(text);
         }
-        expect(existsSync(join(dist, 'raiz.html'))).toBe(false);
         process.exitCode = 0;
       });
     },
