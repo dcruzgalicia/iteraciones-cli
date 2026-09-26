@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.25.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.24.0...v0.25.0) (2026-09-26)
+
+
+### Features
+
+* **build:** imágenes procesadas en dist/assets/img para todos los formatos ([8a975fc](https://github.com/dcruzgalicia/iteraciones-cli/commit/8a975fc48b663dada18e18c9338dfe6e38e56385))
+* **build:** selección de documentos con build [paths...] y cierre de collections ([2f190fd](https://github.com/dcruzgalicia/iteraciones-cli/commit/2f190fd0bb29710b2672fb8fdb01a7c9a4969252))
+* **build:** unifica los assets de dist en assets/ con una sola copia por imagen ([7e6797f](https://github.com/dcruzgalicia/iteraciones-cli/commit/7e6797f0e94b89aa3d6c9424602a989813f9d933))
+* **config:** bundle replica dist/files y script sale de format ([#2448](https://github.com/dcruzgalicia/iteraciones-cli/issues/2448)) ([23da384](https://github.com/dcruzgalicia/iteraciones-cli/commit/23da3840e395cb6a1919bae5db3b4e34cf7f043b))
+* **config:** format.script genera build.sh con los comandos externos reales ([9ea757a](https://github.com/dcruzgalicia/iteraciones-cli/commit/9ea757ae1cb8a221323fd8e9dcccbe190bbf55e8))
+* **frontmatter:** creator pasa a collectionCreator en type: collection ([#2446](https://github.com/dcruzgalicia/iteraciones-cli/issues/2446)) ([a43e626](https://github.com/dcruzgalicia/iteraciones-cli/commit/a43e626c6916e29bea3394a8c6f7c41902bdd187))
+* **markdown:** export re-procesable con frontmatter completo y body intacto ([52e7c49](https://github.com/dcruzgalicia/iteraciones-cli/commit/52e7c492dad910f03be94f695b8674eba35cb10d))
+* **markdown:** format.markdown.merge reprocesable/fusionado y subcomando merge ([f712991](https://github.com/dcruzgalicia/iteraciones-cli/commit/f7129916368db091eb005a07b712d11e01ad0ec5)), closes [#2437](https://github.com/dcruzgalicia/iteraciones-cli/issues/2437)
+* **script:** build.sh por fases y argv sin HTML multilínea ([9832e73](https://github.com/dcruzgalicia/iteraciones-cli/commit/9832e73dd0acf778e8352ce2a1cf6a073a132020))
+* **script:** build.sh sin mkdir/cp/rm/mv: prepare, assets, markdown, cover y pdf collect ([952af46](https://github.com/dcruzgalicia/iteraciones-cli/commit/952af46b28f400dc90efa02050ee6ccdac66df78))
+* **script:** comandos iteraciones template y post html en build.sh ([b78618e](https://github.com/dcruzgalicia/iteraciones-cli/commit/b78618eb03e283124f9c542444daef03091a1911))
+* **script:** merge --format y post latex cierran la cadena reproducible ([0a6c853](https://github.com/dcruzgalicia/iteraciones-cli/commit/0a6c8532431b545aba68a7b2b00feee0fc5175f8))
+
+
+### Bug Fixes
+
+* **build:** assets/img por nivel de salida para documentos anidados ([25a9cf7](https://github.com/dcruzgalicia/iteraciones-cli/commit/25a9cf77b083f9aa74cf6dc2c42844a3ebe8286b))
+* **collections:** files[] relativo a la collection con fallback a la raíz ([#2443](https://github.com/dcruzgalicia/iteraciones-cli/issues/2443)) ([a348baf](https://github.com/dcruzgalicia/iteraciones-cli/commit/a348baf20d30a4a693966039072a7203b0a8b982))
+* **collections:** miembros de files[] standalone y collections frescas al cambiar un miembro ([01a8c5a](https://github.com/dcruzgalicia/iteraciones-cli/commit/01a8c5af4d122124cc21700729193ad2b2b66095))
+* **images:** reescribe a assets las rutas de imagen del fm y formas no estándar ([918bc20](https://github.com/dcruzgalicia/iteraciones-cli/commit/918bc203a2eb334dcbd028c8d58bbc8f177c0780))
+* **markdown:** iteraciones markdown deriva el title de los creators ([c3e0c51](https://github.com/dcruzgalicia/iteraciones-cli/commit/c3e0c5177e70695484001f8ac4d1d91d40b8fe6a))
+
 ## [0.24.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.23.0...v0.24.0) (2026-09-22)
 
 
