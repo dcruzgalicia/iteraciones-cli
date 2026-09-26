@@ -600,7 +600,8 @@ async function resolveSingleCreatorDoc(relativePath: string, cwd: string, collec
   return { name, body, relativePath, links };
 }
 
-async function resolveCollectionCreatorDocs(
+/** #2453 — el cierre de una collection seleccionada necesita sus creators. */
+export async function resolveCollectionCreatorDocs(
   doc: BuildDocument,
   discoveryIndex: Map<string, DiscoveryEntry>,
   cwd: string,

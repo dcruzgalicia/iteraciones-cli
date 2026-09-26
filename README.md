@@ -148,10 +148,12 @@ iteraciones --project-root /ruta/al/proyecto validate
 
 Construye los documentos a partir de los archivos Markdown.
 
+Con paths posicionales construye solo esos documentos y su cierre: una `type: collection` arrastra sus `files[]` y sus documentos `type: creator`, mientras que un archivo de `files` pedido por su ruta se construye solo a él (nunca sube a la colección). `--full` y los paths son incompatibles, y un path inexistente o fuera de la raíz termina en exit 1.
+
 La salida vive en `dist/files/`: ahí se escriben todos los formatos (`index.html`, `libro.pdf`, …) junto a CSS, fuentes, logo y —con LaTeX activo— el bundle portable `.tex` + imágenes (véase [docs/quickstart.md](docs/quickstart.md)). `iteraciones clean` elimina `dist/` completo; la caché de invalidación vive aparte en `.iteraciones/`.
 
 ```
-iteraciones build [opciones]
+iteraciones build [paths...] [opciones]
 ```
 
 | Opción | Descripción | Por defecto |

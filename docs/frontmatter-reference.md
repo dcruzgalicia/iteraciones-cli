@@ -28,7 +28,7 @@ El pipeline consume los siguientes campos del frontmatter:
 | `slug` | `string` | — | **Slug manual** (opcional): fija la URL del documento en lugar del esquema automático. Formato seguro: solo minúsculas, números y guiones simples (`^[a-z0-9]+(-[a-z0-9]+)*$`). Dos documentos con la misma salida (mismo directorio + slug) son un error de build y de `validate`. |
 | `language` | `string` | `'es-MX'` | Código de idioma BCP 47. Sobreescribe `language` de la configuración para HTML, EPUB y Markdown; **no** altera la configuración de `babel` del PDF. |
 | `type` | `'file' \| 'collection'` | `'file'` | Tipo de documento. `file` es el comportamiento por defecto. `collection` fusiona el contenido de múltiples archivos en uno solo (ver más abajo). |
-| `files` | `string[]` | — | **Requerido para `type: collection`**. Rutas de los archivos a fusionar: se resuelven relativas al directorio de la collection (se admite `../` y cualquier anidamiento) y, si no existen ahí, relativas a la raíz del proyecto (compatibilidad). `validate` y `build` fallan si alguna no existe, mostrando las rutas intentadas. Los archivos listados no se procesan individualmente. |
+| `files` | `string[]` | — | **Requerido para `type: collection`**. Rutas de los archivos a fusionar: se resuelven relativas al directorio de la collection (se admite `../` y cualquier anidamiento) y, si no existen ahí, relativas a la raíz del proyecto (compatibilidad). `validate` y `build` fallan si alguna no existe, mostrando las rutas intentadas. Los archivos listados se construyen además como documentos propios (y `build <path>` los puede seleccionar por separado). |
 | `collectionCreator` | `string \| string[]` | — | **Solo en `type: collection`**: el crédito propio de la editora. Alimenta el slug igual que `creator` (`title-por-collectionCreator`) y se imprime como `\collectionCreator{…}` en la portada LaTeX. El `creator` del documento resultante lo calcula `build`: es la unión de los `creator` de cada archivo de `files` (byline en `\author`, `<meta author>` y `dc:creator`). |
 
 ## Type: collection
@@ -66,6 +66,8 @@ creator:
 ```
 
 El body de `collection.md` puede estar vacío; el contenido viene de los archivos en `files`. Las rutas de `files` son relativas al archivo de la collection (se admite `../`, p. ej. `../capitulo-1.md` desde una collection en un subdir); si no existen ahí, se intentan relativas a la raíz del proyecto. Si `files` está vacío o todos los archivos están vacíos, el build omite la collection con una advertencia.
+
+`build <path>` sobre una collection selecciona además el cierre: sus `files` y los documentos `type: creator` de quienes firman esos archivos. Un archivo de `files` pedido por su ruta se construye solo a él, nunca sube a la colección (puede pertenecer a varias). Una collection dentro de `files` de otra collection es error de build: no hay forma de procesarla, así que hay que quitarla de `files`.
 
 ## Metadatos Dublin Core
 
