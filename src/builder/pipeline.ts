@@ -1,4 +1,4 @@
-import { dirname, join } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 
 import type { SiteConfig } from '../config/config-schema.js';
 import { killInFlightProcesses, mapWithConcurrency } from '../lib/run.js';
@@ -63,7 +63,7 @@ export async function documentPipeline(
   formatCfg: SiteConfig['format'] | undefined,
   discoveryIndex: Map<string, DiscoveryEntry>,
   effectiveDisabledPreamble: string[],
-): Promise<{ processed: Set<string> }> {
+): Promise<{ processed: Set<string>; pdfOutputs: string[] }> {
   const { activeFormats } = plan;
   const pdfOn = activeFormats.pdf;
 
@@ -123,5 +123,10 @@ export async function documentPipeline(
     }
   }
 
-  return { processed };
+  // #2454 — los PDF que escribió ESTA corrida (relativos a la salida). Es el
+  // alcance de la validación PDF/X en modo parcial: sin él, un PDF roto de un
+  // documento que ni siquiera se pidió tumbaría la corrida de otro.
+  const pdfOutputs = pdfConsumer.pdfJobs.map((job) => relative(ctx.outputDir, job.pdfDest).replaceAll('\\', '/'));
+
+  return { processed, pdfOutputs };
 }

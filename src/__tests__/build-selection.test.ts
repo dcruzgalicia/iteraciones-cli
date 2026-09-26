@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it, spyOn } from 'bun:test';
-import { mkdir, readdir, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readdir, writeFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { runBuild } from '../cli/dispatcher.js';
 import { buildProgram } from '../cli/parser.js';
@@ -17,6 +17,9 @@ import { registerSkip, SKIP_REASONS, withTempDir } from './helpers.js';
  * - la colección expande `files[]` + creators y un miembro se queda solo en él;
  * - dos `build <path>` seguidos dejan el mismo resultado;
  * - `--full <path>`, path inexistente y path fuera del proyecto → exit 1.
+ *
+ * #2454 — aislamiento del modo parcial: `state.json`, `build.sh`, la limpieza
+ * de slugs cambiados y la validación PDF/X no se mueven fuera de la selección.
  *
  * Solo el build requiere pandoc; sin él, los bloques quedan skipados (D3).
  */
@@ -40,10 +43,10 @@ const CONFIG = [
  * Proyecto con collection (`index.md` → cap1 + miembro + creator Ana), un
  * documento suelto y un miembro dentro de un subdirectorio.
  */
-async function writeProject(dir: string, opts: { collectionInFiles?: boolean } = {}): Promise<void> {
+async function writeProject(dir: string, opts: { collectionInFiles?: boolean; script?: boolean } = {}): Promise<void> {
   await mkdir(join(dir, 'miembros'), { recursive: true });
   if (opts.collectionInFiles) await mkdir(join(dir, 'sub'), { recursive: true });
-  await writeFile(join(dir, 'iteraciones.config.yaml'), `${CONFIG}\n`);
+  await writeFile(join(dir, 'iteraciones.config.yaml'), opts.script === true ? `${CONFIG}\nscript: true\n` : `${CONFIG}\n`);
   const files = ['cap1.md', 'miembros/mem.md'];
   if (opts.collectionInFiles) files.push('sub/coleccion.md');
   await writeFile(
@@ -288,6 +291,198 @@ describe('build [paths...] — errores y superficie (#2453)', () => {
       await buildProgram().parseAsync(['bun', 'bin.ts', 'build', '--project-root', dir]);
       expect(process.exitCode).toBe(0);
       expect(documentales(await snapshot(dir))).toContain('dist/files/index.html');
+    });
+  });
+});
+
+/** Contenido de un fichero de texto, o `<no existe>` cuando no está. */
+async function text(path: string): Promise<string> {
+  const file = Bun.file(path);
+  return (await file.exists()) ? await file.text() : '<no existe>';
+}
+
+/**
+ * #2454 — aislamiento del modo parcial: state, build.sh, limpiezas y la
+ * validación PDF/X no pueden mover nada que sea del proyecto entero.
+ *
+ * Verificación del issue:
+ * - `state.json` y `build.sh` byte a byte iguales tras un build parcial;
+ * - varios parciales seguidos y después un completo ≡ proyecto intocado;
+ * - un PDF roto ajeno no tumba la corrida de otro documento;
+ * - la limpieza de slugs cambiados queda acotada a la selección.
+ */
+describe('build parcial — aislamiento del modo parcial (#2454)', () => {
+  const STATE = join('.iteraciones', 'state.json');
+  afterEach(resetExitCode);
+
+  it('state.json y build.sh quedan byte a byte iguales tras un build parcial', async () => {
+    await withTempDir(async (dir) => {
+      await writeProject(dir, { script: true });
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+
+      const state = await text(join(dir, STATE));
+      const script = await text(join(dir, 'build.sh'));
+      expect(state).not.toBe('<no existe>');
+      expect(script).not.toBe('<no existe>');
+
+      process.exitCode = 0;
+      await runBuild(dir, { only: ['suelto.md'] });
+      expect(process.exitCode).toBe(0);
+      expect(await text(join(dir, STATE))).toBe(state);
+      expect(await text(join(dir, 'build.sh'))).toBe(script);
+
+      // Otro parcial, otro documento: sigue sin moverse.
+      process.exitCode = 0;
+      await runBuild(dir, { only: ['cap1.md'] });
+      expect(process.exitCode).toBe(0);
+      expect(await text(join(dir, STATE))).toBe(state);
+      expect(await text(join(dir, 'build.sh'))).toBe(script);
+    });
+  });
+
+  it('una edición fuera de la selección no queda «limpia» para el build completo siguiente', async () => {
+    await withTempDir(async (dir) => {
+      await writeProject(dir);
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+
+      await writeFile(join(dir, 'cap1.md'), '---\ntitle: Capítulo Uno\ncreator: Ana García\n---\n\nContenido NUEVO.\n');
+      process.exitCode = 0;
+      await runBuild(dir, { only: ['suelto.md'] });
+      expect(process.exitCode).toBe(0);
+
+      // El parcial no persistió su state, así que cap1.md sigue pendiente y
+      // el build completo la detecta (sin el arreglo: «todos reutilizados» y
+      // dist se queda con el contenido viejo).
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+
+      const html = await text(join(dir, 'dist', 'files', 'capitulo-uno-por-ana-garcia.html'));
+      expect(html).toContain('Contenido NUEVO');
+    });
+  });
+
+  it('varios parciales seguidos no dejan rastro: el completo da lo mismo que en un proyecto intocado', async () => {
+    await withTempDir(async (dir) => {
+      const tocado = join(dir, 'tocado');
+      const intocado = join(dir, 'intocado');
+      await writeProject(tocado);
+      await writeProject(intocado);
+      process.exitCode = 0;
+      await runBuild(tocado);
+      process.exitCode = 0;
+      await runBuild(intocado);
+      expect(process.exitCode).toBe(0);
+
+      const nuevo = '---\ntitle: Capítulo Uno\ncreator: Ana García\n---\n\nContenido NUEVO.\n';
+      await writeFile(join(tocado, 'cap1.md'), nuevo);
+      await writeFile(join(intocado, 'cap1.md'), nuevo);
+
+      process.exitCode = 0;
+      await runBuild(tocado, { only: ['suelto.md'] });
+      process.exitCode = 0;
+      await runBuild(tocado, { only: ['index.md'] });
+
+      process.exitCode = 0;
+      await runBuild(tocado);
+      process.exitCode = 0;
+      await runBuild(intocado);
+      expect(process.exitCode).toBe(0);
+
+      const a = await snapshot(tocado);
+      const b = await snapshot(intocado);
+      expect(documentales(a)).toEqual(documentales(b));
+      for (const path of documentales(a)) expect(a[path]).toBe(b[path]);
+    });
+  });
+
+  it('la limpieza de un slug cambiado no toca documentos fuera de la selección', async () => {
+    await withTempDir(async (dir) => {
+      await writeProject(dir);
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+
+      const salidaVieja = join(dir, 'dist', 'files', 'capitulo-uno-por-ana-garcia.html');
+      expect(await Bun.file(salidaVieja).exists()).toBe(true);
+
+      // El título de cap1.md cambia → su slug también, pero el documento no
+      // está en la selección: el parcial no debe borrar su salida vieja.
+      await writeFile(join(dir, 'cap1.md'), '---\ntitle: Título Nuevo\ncreator: Ana García\n---\n\nContenido.\n');
+      process.exitCode = 0;
+      await runBuild(dir, { only: ['suelto.md'] });
+      expect(process.exitCode).toBe(0);
+      expect(await Bun.file(salidaVieja).exists()).toBe(true);
+
+      // El build completo posterior sí hace la limpieza, sin acotar.
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      expect(await Bun.file(salidaVieja).exists()).toBe(false);
+      expect(await Bun.file(join(dir, 'dist', 'files', 'titulo-nuevo-por-ana-garcia.html')).exists()).toBe(true);
+    });
+  });
+
+  it('un PDF roto ajeno no hace fallar el build parcial (pero sí el completo)', async () => {
+    await withTempDir(async (dir) => {
+      const xdg = process.env.XDG_CACHE_HOME;
+      process.env.XDG_CACHE_HOME = join(dir, 'cache');
+      try {
+        await writeProject(dir);
+        // 99-pdfx activo —sin él la validación se salta entera— pero sin
+        // generar PDF: lo que importa aquí es qué MIRA la validación.
+        await writeFile(
+          join(dir, 'iteraciones.config.yaml'),
+          `${CONFIG}\n  pdf:\n    disabledPreambleFilters:\n      - 97-eso-pic\n      - 98-crop\n`,
+        );
+        process.exitCode = 0;
+        await runBuild(dir);
+        expect(process.exitCode).toBe(0);
+
+        // Binario falso: certifica todo lo que no se llame «roto».
+        const binDir = join(dir, 'cache', 'iteraciones', 'bin');
+        await mkdir(binDir, { recursive: true });
+        await writeFile(
+          join(binDir, 'iteraciones-pdfcheck'),
+          [
+            '#!/bin/sh',
+            'case "$1" in',
+            "  *roto*) cat <<'EOF'",
+            '{"valid": false, "level": "PDF/X-1a:2001", "errors": [{"code":"MissingTrimBox","message":"falta TrimBox","page":0,"object_id":null,"clause":"6.1.1"}], "warnings": []}',
+            'EOF',
+            '    ;;',
+            "  *) cat <<'EOF'",
+            '{"valid": true, "level": "PDF/X-1a:2001", "errors": [], "warnings": []}',
+            'EOF',
+            '    ;;',
+            'esac',
+          ].join('\n'),
+          'utf8',
+        );
+        await chmod(join(binDir, 'iteraciones-pdfcheck'), 0o755);
+
+        // Un PDF ajeno, roto, en la salida: no pertenece a nadie de esta corrida.
+        await writeFile(join(dir, 'dist', 'files', 'roto.pdf'), '%PDF-1.4 fake', 'utf8');
+
+        process.exitCode = 0;
+        await runBuild(dir, { only: ['suelto.md'] });
+        expect(process.exitCode).toBe(0);
+
+        // El build completo barre dist entero y ahí sí lo tumba.
+        const err = await runExpectandoError(() => runBuild(dir));
+        expect(process.exitCode).toBe(1);
+        expect(err).toContain('no certifican PDF/X-1a');
+        expect(err).toContain('roto.pdf');
+      } finally {
+        // Restaurar con `= undefined` dejaría el literal "undefined" en el
+        // entorno y un build posterior crearía `undefined/` en la raíz.
+        if (xdg === undefined) delete process.env.XDG_CACHE_HOME;
+        else process.env.XDG_CACHE_HOME = xdg;
+      }
     });
   });
 });

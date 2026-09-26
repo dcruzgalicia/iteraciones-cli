@@ -380,6 +380,31 @@ async function selectDocs(only: string[], allDocs: BuildDocument[], discoveryInd
   return selected;
 }
 
+/**
+ * #2453/#2454 — el ÚNICO punto de acotado: lo que se calculó sobre el proyecto
+ * entero (documentos, cambios, slugs cambiados) queda reducido a la selección
+ * antes de bajar al resto del build. Aguas abajo —work, limpiezas, caché de
+ * salidas— todo ve la selección, no el proyecto.
+ */
+function restrictToSelection(
+  selection: Set<string>,
+  allDocs: BuildDocument[],
+  discoveredChanges: Set<string>,
+  slugChangedEntries: Map<string, string>,
+): BuildDocument[] {
+  for (const path of [...discoveredChanges]) {
+    if (!selection.has(path)) discoveredChanges.delete(path);
+  }
+  // #2454 — los slugs cambiados solo se limpian si el documento forma parte de
+  // la corrida: borrar sus salidas viejas sin reconstruirlo dejaría su página
+  // fuera de `dist` hasta el siguiente build completo (que corre esta limpieza
+  // sin acotar, sobre el proyecto entero).
+  for (const path of [...slugChangedEntries.keys()]) {
+    if (!selection.has(path)) slugChangedEntries.delete(path);
+  }
+  return allDocs.filter((doc) => selection.has(doc.relativePath));
+}
+
 async function discoverDocuments(
   cwd: string,
   options: BuildOptions,
@@ -433,18 +458,13 @@ async function discoverDocuments(
   // que si cambia un miembro hay que reprocesar también ella (y, transitivamente,
   // las que la contienen); sin esto el build la deja obsoleta.
   expandCollectionChanges(discoveryIndex, discoveredChanges);
-  // #2453: el modo parcial se acota aquí y solo aquí. Aguas abajo (work,
-  // limpiezas, caché de salidas) todo ve la selección, no el proyecto: de paso
-  // se intersectan los cambios detectados para no arrastrar documentos que
-  // nadie pidió.
+  // #2453/#2454: el modo parcial se acota aquí y solo aquí —
+  // `restrictToSelection` recorta documentos, cambios detectados y slugs
+  // cambiados. Aguas abajo (work, limpiezas, caché de salidas) todo ve la
+  // selección, no el proyecto.
   const only = selectionOf(options);
   const selection = only === undefined ? undefined : await selectDocs(only, allDocs, discoveryIndex, cwd);
-  if (selection !== undefined) {
-    allDocs = allDocs.filter((doc) => selection.has(doc.relativePath));
-    for (const path of [...discoveredChanges]) {
-      if (!selection.has(path)) discoveredChanges.delete(path);
-    }
-  }
+  if (selection !== undefined) allDocs = restrictToSelection(selection, allDocs, discoveredChanges, slugChangedEntries);
   if (options.verbose) {
     for (const doc of allDocs) {
       progress.reportFile({ relativePath: doc.relativePath, phase: 'discovery' });
@@ -469,12 +489,26 @@ async function finishBuild(
     cwd: string;
     pendingState: BuildState | null;
     prevPdfxCache: Record<string, string> | undefined;
+    /** #2454 — corrida con selección: no se persiste state ni se reescribe build.sh. */
+    partial: boolean;
   },
-  params: { processedCount: number; cachedCount: number; invalidations: string[]; empty?: boolean },
+  params: {
+    processedCount: number;
+    cachedCount: number;
+    invalidations: string[];
+    empty?: boolean;
+    /** #2454 — PDF que escribió esta corrida (solo los consume el modo parcial). */
+    pdfOutputs?: string[];
+  },
 ): Promise<BuildSummary> {
   if (deps.needsAssets) await deps.runAssets();
   const cache: PdfxCacheHandle = { prev: deps.prevPdfxCache ?? {}, out: {} };
-  const pdfx = await runPdfxOutputValidation(deps.outputDir, deps.siteConfig, { allowBuild: true }, deps.effectiveDisabledPreamble, cache);
+  // #2454 — en modo parcial solo se validan los PDF que escribió esta corrida:
+  // un PDF roto ajeno no puede tumbar la de otro documento. Un alcance vacío
+  // (no hubo PDF) no valida nada, y sin alcance la validación sigue barriendo
+  // `dist` entero, como en cualquier build completo.
+  const pdfxScope = deps.partial ? (params.pdfOutputs ?? []) : undefined;
+  const pdfx = await runPdfxOutputValidation(deps.outputDir, deps.siteConfig, { allowBuild: true }, deps.effectiveDisabledPreamble, cache, pdfxScope);
   if (deps.pendingState) deps.pendingState.pdfxCache = cache.out;
   if (pdfx.summaryLine) deps.progress.addSummaryLine(pdfx.summaryLine);
   const formats = params.empty ? [] : computeActiveFormats(deps.siteConfig.format);
@@ -487,7 +521,13 @@ async function finishBuild(
     params.empty ? undefined : deps.outputDir,
     params.empty ? undefined : params.invalidations,
   );
-  await persistCompletedState(deps.cwd, deps.pendingState);
+  // #2454 — `pendingState` lleva los hashes de TODOS los documentos (discover
+  // los calcula antes del acotado): persistirlo en una corrida parcial marcaría
+  // como limpio un archivo modificado que esta corrida no construyó, y el
+  // siguiente build completo lo saltaría con la salida vieja. El state se
+  // queda byte a byte como estaba; el coste aceptado es que un parcial repite
+  // su trabajo después.
+  if (!deps.partial) await persistCompletedState(deps.cwd, deps.pendingState);
   return {
     processed: params.processedCount,
     cached: params.cachedCount,
@@ -607,13 +647,13 @@ async function pipelinePhases(
   formatCfg: SiteConfig['format'] | undefined,
   invalidations: string[],
   fallbackReason: string | null,
-): Promise<{ processedCount: number; cachedCount: number; invalidations: string[] }> {
+): Promise<{ processedCount: number; cachedCount: number; invalidations: string[]; pdfOutputs: string[] }> {
   progress.planPhases(['discovery', 'render']);
 
   const workDocCount = work.workDocList.length;
 
   progress.startPhase('render', workDocCount);
-  const { processed } = await documentPipeline(progress, ctx, plan, work, formatCfg, discoveryIndex, effectiveDisabledPreamble);
+  const { processed, pdfOutputs } = await documentPipeline(progress, ctx, plan, work, formatCfg, discoveryIndex, effectiveDisabledPreamble);
 
   const totalDocs =
     plan.activeFormats.html || plan.activeFormats.pdf || plan.activeFormats.epub || plan.activeFormats.markdown || plan.activeFormats.latex
@@ -624,14 +664,19 @@ async function pipelinePhases(
   if (invalidations.length === 0 && processedCount > 0) {
     invalidations.push(fallbackReason ?? plural(processedCount, 'documento modificado', 'documentos modificados'));
   }
-  return { processedCount, cachedCount, invalidations };
+  return { processedCount, cachedCount, invalidations, pdfOutputs };
 }
 
 async function runBuild(cwd: string, options: BuildOptions, progress: BuildReporter, pandocVersion: string): Promise<BuildSummary> {
   const log = (msg: string) => progress.log(msg);
+  // #2454 — el modo parcial toca solo la selección: nada de lo que es del
+  // proyecto entero (state, script) se mueve en una corrida parcial.
+  const partial = selectionOf(options) !== undefined;
 
   const { siteConfig, effectiveDisabledPreamble } = await resolveEffectiveConfig(cwd);
-  if (siteConfig.script === true) beginScriptCapture(cwd);
+  // #2454 — `build.sh` es la composición COMPLETA del corpus: grabar en él los
+  // pasos de unos pocos documentos rompería `build --full ≡ bash build.sh`.
+  if (siteConfig.script === true && !partial) beginScriptCapture(cwd);
 
   const prevState = options.full ? null : await loadStateFile(cwd);
   const plan = await computeBuildMetadata(cwd, siteConfig, prevState, effectiveDisabledPreamble, pandocVersion);
@@ -668,6 +713,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
     cwd,
     pendingState,
     prevPdfxCache: prevState?.pdfxCache,
+    partial,
   };
 
   if (allDocs.length === 0) {
