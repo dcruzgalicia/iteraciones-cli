@@ -1,5 +1,6 @@
 import { basename, dirname, join, relative, sep } from 'node:path';
 import { resolveCollectionFile } from '../builder/collection-files.js';
+import { loadSlugIndex } from '../builder/discover.js';
 import { applyCreatorTitle } from '../builder/discover-frontmatter.js';
 import { assembleExportDocument } from '../builder/export/assemble.js';
 import { printFlags } from '../builder/image-flags.js';
@@ -7,7 +8,7 @@ import { rewriteFmImagePaths } from '../builder/image-processor.js';
 import { mergeConfigImages, preprocessDocumentImages } from '../builder/latex-composer.js';
 import { aggregateCollectionCreators } from '../builder/orchestrator.js';
 import { ASSETS_IMAGES_DIR } from '../builder/output-layout.js';
-import { collectionBaseContent, getCreatorLinks, readCollectionEntries, writeDistMarkdown } from '../builder/pipeline-formats.js';
+import { collectionBaseContent, getCreatorLinks, memberSlugMap, readCollectionEntries, writeDistMarkdown } from '../builder/pipeline-formats.js';
 import type { BuildDocument } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
@@ -85,11 +86,11 @@ async function distImageMap(
 }
 
 /**
- * #2445 — `iteraciones markdown <origen> -o <salida>` escribe el markdown de
+ * #2445/#2452 — `iteraciones markdown <origen> -o <salida>` escribe el markdown de
  * dist (#2436) con el mismo composit que usa `emitCollectionMarkdown`: frontmatter
- * con las imágenes apuntando a assets/images, `files[]` reescrito hacia las copias
- * de los miembros y, si `format.markdown.merge` está activo, el cuerpo fusionado
- * con `type: file`. La salida es idéntica a la del build.
+ * con las imágenes apuntando a assets/images, `files[]` reescrito hacia el `.md`
+ * standalone de cada miembro (su nombre-nuevo) y, si `format.markdown.merge` está
+ * activo, el cuerpo fusionado con `type: file`. La salida es idéntica a la del build.
  */
 export async function runMarkdown(cwd: string, input: string, options: { output?: string }): Promise<void> {
   try {
@@ -115,6 +116,11 @@ export async function runMarkdown(cwd: string, input: string, options: { output?
     // porque files[] sigue ahí para recalcularlo.
     if (fm.type === 'collection') fm.creator = await aggregateCollectionCreators({ files: rootFiles }, cwd);
     const entries = rootFiles.length > 0 ? await readCollectionEntries(rootFiles, relativePath, [cwd, join(cwd, dir)]) : [];
+    // #2452: el nombre de dist de cada miembro sale de su slug. El build lo
+    // saca de su discovery; aquí se replican con el mismo código para que los
+    // dos escriban byte a byte el mismo files[] (equivalencia build --full ≡
+    // bash build.sh), colisiones y sufijos `-dN` incluidos.
+    const memberSlugs = rootFiles.length > 0 ? memberSlugMap(rootFiles, await loadSlugIndex(cwd)) : undefined;
     // El outSlug del build es el nombre del propio `-o`: con el mismo prefijo,
     // las imágenes que escribe este comando se llaman igual que las del build.
     const { relImageMap, docDir } = await distImageMap(
@@ -129,7 +135,6 @@ export async function runMarkdown(cwd: string, input: string, options: { output?
     );
 
     await writeDistMarkdown({
-      cwd,
       label: relativePath,
       content,
       outPath: output,
@@ -146,6 +151,7 @@ export async function runMarkdown(cwd: string, input: string, options: { output?
       docDir,
       creatorLinks: fm.type === 'creator' ? getCreatorLinks(fm) : [],
       rootFiles: fm.type === 'collection' ? rootFiles : undefined,
+      memberSlugs,
       merge: fm.type === 'collection' && siteConfig.format?.markdown?.merge === true,
       entries,
     });

@@ -2,7 +2,7 @@ import { cpus } from 'node:os';
 import { basename, join } from 'node:path';
 import slugifyLib from 'slugify';
 import { BuildError } from '../lib/errors.js';
-import { logWarning } from '../lib/logger.js';
+import { logWarning, runWithWarningSink } from '../lib/logger.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import type { DiscoverOptions } from './discover-cache.js';
 import { computePendingState, resolveCacheDecision, statDocument, takeDeletedEntries } from './discover-cache.js';
@@ -10,7 +10,7 @@ import { listMarkdownDocuments } from './discover-files.js';
 import type { FrontmatterIssue } from './discover-frontmatter.js';
 import { parseDocument, throwIfInvalidFrontmatter } from './discover-frontmatter.js';
 import { resolveSlugs } from './slug-resolver.js';
-import type { BuildState } from './state-serialize.js';
+import { type BuildState, loadStateFile } from './state-serialize.js';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
 
 export type { DiscoverMeta, DiscoverOptions } from './discover-cache.js';
@@ -56,6 +56,23 @@ function slugDiacriticWarning(title: string, slug: string): string | undefined {
   return `el slug "${slug}" altera palabras del título "${title}" (ñ→n, ü→u): revísalo o fija uno manual con "slug:" en el frontmatter`;
 }
 
+/** Slug determinista: lanza si no se puede resolver y avisa (una vez) de los diacríticos perdidos. */
+function makeSlugComputer(log: (message: string) => void): SlugComputer {
+  const seen = new Set<string>();
+  return (meta, opts) => {
+    const slug = computeSlug(meta, opts);
+    if (slug === undefined) throw new BuildError(`no se pudo resolver el slug de ${opts.fallbackPath}`);
+    if (meta.title) {
+      const hint = slugDiacriticWarning(meta.title, slug);
+      if (hint && !seen.has(hint)) {
+        seen.add(hint);
+        log(hint);
+      }
+    }
+    return slug;
+  };
+}
+
 export async function discover(cwd: string, options: DiscoverOptions): Promise<DiscoverResultAndPending> {
   const relativePaths = await listMarkdownDocuments(cwd);
 
@@ -65,7 +82,6 @@ export async function discover(cwd: string, options: DiscoverOptions): Promise<D
 
   const currentSet = new Set(relativePaths);
   const changedPaths = new Set<string>();
-  const slugWarningsSeen = new Set<string>();
   const frontmatterIssues: FrontmatterIssue[] = [];
 
   const thisBuildStartedAt = Date.now();
@@ -101,22 +117,57 @@ export async function discover(cwd: string, options: DiscoverOptions): Promise<D
 
   throwIfInvalidFrontmatter(frontmatterIssues);
 
-  const slugComputer = (meta: { title: string; creator: string[] }, opts: { fallbackPath: string; maxCreators?: number }) => {
-    const slug = computeSlug(meta, opts);
-    if (slug === undefined) throw new BuildError(`no se pudo resolver el slug de ${opts.fallbackPath}`);
-    if (meta.title) {
-      const diacriticHint = slugDiacriticWarning(meta.title, slug);
-      if (diacriticHint && !slugWarningsSeen.has(diacriticHint)) {
-        slugWarningsSeen.add(diacriticHint);
-        logWarning(diacriticHint, 'discover');
-      }
-    }
-    return slug;
-  };
+  const slugComputer = makeSlugComputer((message) => logWarning(message, 'discover'));
 
   const pendingState = computePendingState(useCache, prevState, thisBuildStartedAt, discoveryIndex, options, changedPaths.size > 0, touchedCount > 0);
 
   return { relativePaths, changedPaths, discoveryIndex, deletedEntries, slugComputer, pendingState };
+}
+
+/**
+ * #2452 — los slugs de todo el proyecto, sin caché ni estado. `iteraciones
+ * markdown` debe reescribir `files[]` hacia el `.md` de cada miembro con el
+ * mismo nombre que escribe el build (colisiones y sufijos `-dN` incluidos) y
+ * ese subcomando no recibe el discovery: aquí se calculan con el mismo parseo
+ * y el mismo `resolveSlugs`. Los avisos de frontmatter los emite el build —
+ * aquí solo interesan los slugs —, así que se descartan.
+ */
+export async function loadSlugIndex(cwd: string): Promise<Map<string, DiscoveryEntry>> {
+  const relativePaths = await listMarkdownDocuments(cwd);
+  const index = new Map<string, DiscoveryEntry>();
+  const issues: FrontmatterIssue[] = [];
+  const FILE_IO_CONCURRENCY = Math.max(1, cpus().length - 1);
+
+  await runWithWarningSink(
+    () => {},
+    async () => {
+      // Los slugs cacheados del último build cuentan: `resolveSlugs` conserva
+      // los sufijos `-dN` ya asignados y `files[]` debe apuntar a los `.md`
+      // que ese build dejó en dist. Sin state (o ilegible) se recomputa desde
+      // cero, como hace un `build --full`.
+      const prevState = await loadStateFile(cwd);
+      await mapWithConcurrency(relativePaths, FILE_IO_CONCURRENCY, async (relativePath) => {
+        const { mtime, size } = await statDocument(cwd, relativePath);
+        await parseDocument({
+          cwd,
+          relativePath,
+          filePath: join(cwd, relativePath),
+          mtime,
+          size,
+          cachedSlug: prevState?.entries.get(relativePath)?.slug,
+          decisionText: null,
+          decisionHash: undefined,
+          index,
+          issues,
+        });
+      });
+      resolveSlugs(
+        index,
+        makeSlugComputer(() => {}),
+      );
+    },
+  );
+  return index;
 }
 
 export function resolveDiscoverSlugs(

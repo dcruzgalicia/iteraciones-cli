@@ -1,6 +1,6 @@
 import { exists, realpath, rm } from 'node:fs/promises';
 import { cpus } from 'node:os';
-import { basename, dirname, join, normalize } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
 import { type ActiveFormats, computeActiveFormats, type FormatKey, resolveDisabledPreambleConfig } from '../config/site-config.js';
@@ -18,7 +18,7 @@ import { resolveCollectionFile } from './collection-files.js';
 import { buildDocsFromIndex, discover, htmlSlugFor, resolveDiscoverSlugs } from './discover.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import { validateDisabledFilters } from './filter-resolver.js';
-import { DIST_FILES_DIR, FORMAT_OUTPUT_EXTENSIONS } from './output-layout.js';
+import { DIST_FILES_DIR, docProducesFormat, primaryOutputExtension } from './output-layout.js';
 import { type PdfxCacheHandle, runPdfxOutputValidation } from './pdfx-check.js';
 import { documentPipeline } from './pipeline.js';
 import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, validatePreambleDependencies } from './preamble-loader.js';
@@ -243,6 +243,43 @@ export async function postProcessCollections(discoveryIndex: Map<string, Discove
   }
 }
 
+/** Mapa inverso: qué collections tienen cada ruta en su `files[]`. */
+function collectionOwnersByFile(discoveryIndex: Map<string, DiscoveryEntry>): Map<string, string[]> {
+  const owners = new Map<string, string[]>();
+  for (const [path, entry] of discoveryIndex) {
+    if (entry.type !== 'collection' || !entry.files) continue;
+    for (const file of entry.files) {
+      const list = owners.get(file);
+      if (list === undefined) owners.set(file, [path]);
+      else list.push(path);
+    }
+  }
+  return owners;
+}
+
+/**
+ * #2452 — marca como cambiadas las collections que dependen de una ruta
+ * cambiada: sus salidas (html, markdown, latex) componen el contenido de
+ * `files[]`, así que sin esta expansión el build deja la collection obsoleta
+ * cuando cambia un miembro. Es transitiva (una collection puede estar en el
+ * `files[]` de otra) y con guarda de ciclos.
+ */
+function expandCollectionChanges(discoveryIndex: Map<string, DiscoveryEntry>, changed: Set<string>): void {
+  const owners = collectionOwnersByFile(discoveryIndex);
+  const queue = [...changed];
+  const seen = new Set(queue);
+  while (queue.length > 0) {
+    const path = queue.pop();
+    if (path === undefined) break;
+    for (const owner of owners.get(path) ?? []) {
+      if (seen.has(owner)) continue;
+      seen.add(owner);
+      changed.add(owner);
+      queue.push(owner);
+    }
+  }
+}
+
 async function discoverDocuments(
   cwd: string,
   options: BuildOptions,
@@ -286,17 +323,14 @@ async function discoverDocuments(
   for (const path of slugChangedPaths) discoveredChanges.add(path);
 
   await postProcessCollections(discoveryIndex, cwd);
-  const collectionFiles = new Set<string>();
-  for (const entry of discoveryIndex.values()) {
-    if (entry.type === 'collection' && entry.files) {
-      // #2437: normalize para que "./doc.md" excluya igual que "doc.md";
-      // sin eso el miembro se construye como standalone en la ronda 1 y no
-      // en la siguiente, rompiendo la idempotencia.
-      for (const f of entry.files) collectionFiles.add(normalize(f));
-    }
-  }
-  const filteredPaths = relativePaths.filter((p) => !collectionFiles.has(p));
-  const allDocs = buildDocsFromIndex(filteredPaths, discoveryIndex, cwd);
+  // #2452: los miembros de files[] son documentos de primera clase: se
+  // construyen standalone con las mismas reglas que cualquier otro. Nada se
+  // filtra (la exclusión de #2437 era el bug).
+  const allDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
+  // #2452: la salida de una collection incrusta el contenido de sus files[], así
+  // que si cambia un miembro hay que reprocesar también ella (y, transitivamente,
+  // las que la contienen); sin esto el build la deja obsoleta.
+  expandCollectionChanges(discoveryIndex, discoveredChanges);
   if (options.verbose) {
     for (const doc of allDocs) {
       progress.reportFile({ relativePath: doc.relativePath, phase: 'discovery' });
@@ -413,13 +447,21 @@ async function ensureCachedOutputsComplete(allDocs: BuildDocument[], work: WorkS
     markdown: 'markdown',
   };
 
-  const hasMissingOutput = async (slug: string, dir: string): Promise<boolean> => {
+  // #2452: solo se miran los formatos que el documento puede emitir. Una
+  // intervención nunca tendrá .html/.epub: sin este filtro entraría en la cola
+  // en cada build (re-renderizando su latex/pdf) sin que jamás desaparezca
+  // «lo que falta».
+  const producible = (type: string | undefined, fmt: FormatKey): boolean => activeFormats[fmt] === true && docProducesFormat(type, fmt);
+
+  // #2452: solo se mira la salida primaria de cada formato. `pdf` lista
+  // también `.png` — la portada que escribe `iteraciones cover`, no el build —
+  // y exigirla dejaba el documento «incompleto» para siempre: el build lo
+  // reencolaba en cada ejecución sin que nada llegara a faltar.
+  const hasMissingOutput = async (slug: string, dir: string, type: string | undefined): Promise<boolean> => {
     for (const [fmt, active] of formatEntries) {
-      if (!active) continue;
-      const exts = FORMAT_OUTPUT_EXTENSIONS[fmt] ?? [];
-      for (const ext of exts) {
-        if (!(await exists(join(outputDir, dir, `${slug}${ext}`)))) return true;
-      }
+      if (!active || !producible(type, fmt)) continue;
+      const primary = primaryOutputExtension(fmt);
+      if (primary !== '' && !(await exists(join(outputDir, dir, `${slug}${primary}`)))) return true;
     }
     return false;
   };
@@ -428,9 +470,9 @@ async function ensureCachedOutputsComplete(allDocs: BuildDocument[], work: WorkS
     if (inWork.has(doc.relativePath)) continue;
     const slug = htmlSlugFor(doc.relativePath, doc.slug || basename(doc.relativePath, '.md'));
     const dir = dirname(doc.relativePath);
-    if (!(await hasMissingOutput(slug, dir))) continue;
+    if (!(await hasMissingOutput(slug, dir, doc.frontmatter.type))) continue;
     for (const [fmt, active] of formatEntries) {
-      if (!active) continue;
+      if (!active || !producible(doc.frontmatter.type, fmt)) continue;
       const key = fmtToWork[fmt] as keyof typeof work.exportSets;
       work.exportSets[key].push(doc);
       work.workPaths[key]?.add(doc.relativePath);
