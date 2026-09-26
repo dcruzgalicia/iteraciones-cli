@@ -135,10 +135,31 @@ function computeDocsChanged(discoveredChanges: Set<string>, allDocs: BuildDocume
   return docsChanged;
 }
 
-export function computeWorkSets(meta: BuildMetadata, allDocs: BuildDocument[], discoveredChanges: Set<string>, outputDirChanged = false): WorkSets {
+/**
+ * #2453 — en modo parcial la selección manda: lo que venga de fuera se acota y
+ * lo pedido se fuerza. Sin el forzado, `build doc.md` sobre un documento sin
+ * cambios acabaría en «nada que hacer» y el usuario no obtendría nada. Dentro
+ * de `computeDocsChanged` afectaría también al modo completo, así que va aquí.
+ */
+function applySelection(docsChanged: Set<string>, selection: Set<string> | undefined): void {
+  if (selection === undefined) return;
+  for (const path of [...docsChanged]) {
+    if (!selection.has(path)) docsChanged.delete(path);
+  }
+  for (const path of selection) docsChanged.add(path);
+}
+
+export function computeWorkSets(
+  meta: BuildMetadata,
+  allDocs: BuildDocument[],
+  discoveredChanges: Set<string>,
+  outputDirChanged = false,
+  selection?: Set<string>,
+): WorkSets {
   const groups = exportGroupsFor(meta.activeFormats);
 
   const docsChanged = computeDocsChanged(discoveredChanges, allDocs, meta.filtersInvalidated || outputDirChanged);
+  applySelection(docsChanged, selection);
 
   const anyWork =
     docsChanged.size > 0 ||

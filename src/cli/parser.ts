@@ -89,8 +89,8 @@ Documentación:
   const projectRoot = (): string => program.opts().projectRoot ?? process.cwd();
 
   program
-    .command('build')
-    .description('construye los documentos del proyecto a partir de los archivos Markdown')
+    .command('build [paths...]')
+    .description('construye los documentos del proyecto a partir de los archivos Markdown; con paths, solo esos documentos y su cierre')
     .option('--full', 'build completo desde cero: elimina la salida anterior y la caché')
     .option('--output <path>', 'directorio de salida (por defecto: dist/files)')
     .option('--verbose', 'muestra información adicional de progreso')
@@ -101,16 +101,19 @@ Documentación:
 Ejemplos:
   iteraciones build                build incremental (solo archivos modificados)
   iteraciones build --full         build completo desde cero (sin caché)
+  iteraciones build doc.md         construye solo ese documento (una collection arrastra sus files[] y creators)
+  iteraciones build cap1.md suelto.md   varios documentos en la misma corrida
   iteraciones build --verbose      muestra información adicional de progreso
   iteraciones build --json         imprime el resultado como JSON en stdout
 `,
     )
-    .action(async (opts: { full?: boolean; output?: string; verbose?: boolean; json?: boolean }) => {
+    .action(async (paths: string[], opts: { full?: boolean; output?: string; verbose?: boolean; json?: boolean }) => {
       await runBuild(projectRoot(), {
         full: opts.full,
         outputDir: opts.output,
         verbose: opts.verbose,
         json: opts.json,
+        only: paths.length > 0 ? paths : undefined,
       });
     });
 

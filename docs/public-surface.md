@@ -8,7 +8,7 @@ Inventario verificado contra la CLI real (issue #2096, checklist completada en #
 
 | Comando | Flags |
 |---------|-------|
-| `build` | `--full`, `--output <path>`, `--verbose`, `--json` |
+| `build [path...]` | `--full`, `--output <path>`, `--verbose`, `--json` |
 | `init` | — |
 | `validate` | `--json` |
 | `doctor` | `--info`, `--json` |

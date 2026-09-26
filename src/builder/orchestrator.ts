@@ -1,6 +1,6 @@
 import { exists, realpath, rm } from 'node:fs/promises';
 import { cpus } from 'node:os';
-import { basename, dirname, join } from 'node:path';
+import { basename, dirname, isAbsolute, join, normalize, relative } from 'node:path';
 import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
 import { type ActiveFormats, computeActiveFormats, type FormatKey, resolveDisabledPreambleConfig } from '../config/site-config.js';
@@ -21,6 +21,7 @@ import { validateDisabledFilters } from './filter-resolver.js';
 import { DIST_FILES_DIR, docProducesFormat, primaryOutputExtension } from './output-layout.js';
 import { type PdfxCacheHandle, runPdfxOutputValidation } from './pdfx-check.js';
 import { documentPipeline } from './pipeline.js';
+import { resolveCollectionCreatorDocs } from './pipeline-formats.js';
 import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, validatePreambleDependencies } from './preamble-loader.js';
 import { validateConfigFilePaths, validateConfigRules } from './project-validator.js';
 
@@ -60,6 +61,35 @@ export interface BuildOptions {
   full?: boolean;
   verbose?: boolean;
   json?: boolean;
+  /**
+   * #2453 — selección explícita de documentos (paths relativos a la raíz del
+   * proyecto, o absolutos dentro de ella). Ausente o vacío = proyecto entero.
+   */
+  only?: string[];
+}
+
+/** #2453 — `only` ausente o vacío significa build completo, no selección vacía. */
+function selectionOf(options: BuildOptions): string[] | undefined {
+  return options.only !== undefined && options.only.length > 0 ? options.only : undefined;
+}
+
+/**
+ * #2453 — la selección no puede convivir con nada que borre la salida entera:
+ * sin estas dos guards, `build --full doc.md` y una migración de layout (#2450)
+ * reconstruirían el proyecto entero fingiendo que es un build parcial.
+ */
+async function assertSelectionCompatible(options: BuildOptions, root: string): Promise<void> {
+  if (selectionOf(options) === undefined) return;
+  if (options.full) {
+    throw new BuildError(
+      'build --full y los paths seleccionados son incompatibles: --full borra la salida y la caché enteras. Quita --full para construir solo esos documentos.',
+    );
+  }
+  if (await hasLegacyAssetLayout(options.outputDir ?? join(root, DIST_FILES_DIR))) {
+    throw new BuildError(
+      'la salida usa el layout de assets anterior (#2450), que exige reconstruir todo el proyecto: ejecuta `iteraciones build --full` y vuelve a pasar los paths después.',
+    );
+  }
 }
 
 export interface BuildSummary {
@@ -94,6 +124,8 @@ export async function build(cwd: string, options: BuildOptions = {}, reporter: B
   // process.cwd() resuelve symlinks (/tmp → /private/tmp en macOS). Sin esto
   // las rutas absolutas del build no casarían con las del replay.
   const root = await realpath(cwd).catch(() => cwd);
+  // #2453 — la selección no puede convivir con nada que borre la salida entera.
+  await assertSelectionCompatible(options, root);
   // #2450 — una salida con el layout anterior de assets no sirve para seguir
   // construyendo encima: los documentos que no se recompile seguirían apuntando
   // a `assets/img` y a `css/`. Se reconstruye entero, una vez, tras actualizar.
@@ -233,6 +265,14 @@ export async function postProcessCollections(discoveryIndex: Map<string, Discove
     const resolved: string[] = [];
     for (const file of entry.files) {
       const resolution = await resolveCollectionFile(file, relativePath, cwd);
+      // #2453 — una collection dentro del `files[]` de otra: no hay lógica ni
+      // decisión de cómo procesarla, así que el build se para aquí y pide que
+      // la quiten en vez de prometer algo que no sabe entregar.
+      if (resolution.ok && discoveryIndex.get(resolution.rootRelative)?.type === 'collection') {
+        throw new BuildError(
+          `collection "${relativePath}": "${resolution.rootRelative}" está en su files[] y también es una collection; una collection no puede formar parte de otra. Quítalo de files[].`,
+        );
+      }
       resolved.push(resolution.ok ? resolution.rootRelative : file);
     }
     entry.files = resolved;
@@ -280,6 +320,66 @@ function expandCollectionChanges(discoveryIndex: Map<string, DiscoveryEntry>, ch
   }
 }
 
+/**
+ * #2453 — path escrito por el usuario → relativo-de-raíz POSIX. Lo que quede
+ * fuera de la raíz del proyecto no se construye: mejor pararse que escribir
+ * sobre archivos que no son del proyecto.
+ */
+function rootRelativeOf(raw: string, cwd: string): string {
+  const unified = raw.replaceAll('\\', '/');
+  const absolute = isAbsolute(unified) ? unified : join(cwd, unified);
+  const rel = normalize(relative(cwd, absolute)).replaceAll('\\', '/');
+  if (rel === '' || rel === '..' || rel.startsWith('../')) {
+    throw new BuildError(`la ruta de build "${raw}" está fuera del proyecto (raíz del proyecto: "${cwd}")`);
+  }
+  return rel;
+}
+
+/** El documento pedido; si no existe, error con un candidato cuando lo hay. */
+function resolveRequestedDoc(raw: string, cwd: string, docsByPath: Map<string, BuildDocument>): BuildDocument {
+  const path = rootRelativeOf(raw, cwd);
+  const doc = docsByPath.get(path);
+  if (doc !== undefined) return doc;
+  const candidates = [...docsByPath.keys()].filter((p) => basename(p) === basename(path)).sort();
+  const hint = candidates.length > 0 ? ` — ¿quisiste decir "${candidates[0]}"?` : '';
+  throw new BuildError(`no existe el documento "${raw}" en el proyecto${hint}`);
+}
+
+/** Paths que una collection arrastra consigo: sus `files[]` y sus creators. */
+async function collectionClosure(doc: BuildDocument, discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<string[]> {
+  const paths = [...(doc.frontmatter.files ?? [])];
+  const collectionFm = discoveryIndex.get(doc.relativePath)?.fm ?? {};
+  for (const creator of await resolveCollectionCreatorDocs(doc, discoveryIndex, cwd, collectionFm)) {
+    paths.push(creator.relativePath);
+  }
+  return paths;
+}
+
+/**
+ * #2453 — cierra la selección del usuario. Una collection arrastra sus
+ * `files[]` (miembros standalone, #2452) y sus creators; un miembro nunca sube
+ * a la colección, porque puede pertenecer a varias y la expansión hacia arriba
+ * sería ambigua. Cualquier otro documento se queda solo en él.
+ */
+async function selectDocs(only: string[], allDocs: BuildDocument[], discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<Set<string>> {
+  const docsByPath = new Map(allDocs.map((doc) => [doc.relativePath, doc]));
+  const selected = new Set<string>();
+
+  for (const raw of only) {
+    const doc = resolveRequestedDoc(raw, cwd, docsByPath);
+    selected.add(doc.relativePath);
+    if (doc.frontmatter.type !== 'collection') continue;
+    for (const path of await collectionClosure(doc, discoveryIndex, cwd)) {
+      if (docsByPath.has(path)) selected.add(path);
+    }
+  }
+
+  if (selected.size === 0) {
+    throw new BuildError('la selección quedó vacía: ninguna de las rutas pedidas corresponde a un documento del proyecto');
+  }
+  return selected;
+}
+
 async function discoverDocuments(
   cwd: string,
   options: BuildOptions,
@@ -294,6 +394,8 @@ async function discoverDocuments(
   deletedEntries: Map<string, DiscoveryEntry>;
   slugChangedEntries: Map<string, string>;
   pendingState: BuildState | null;
+  /** #2453 — rutas ya normalizadas de la selección; undefined = proyecto entero. */
+  selection: Set<string> | undefined;
 }> {
   progress.startPhase('discovery');
   const {
@@ -326,11 +428,23 @@ async function discoverDocuments(
   // #2452: los miembros de files[] son documentos de primera clase: se
   // construyen standalone con las mismas reglas que cualquier otro. Nada se
   // filtra (la exclusión de #2437 era el bug).
-  const allDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
+  let allDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
   // #2452: la salida de una collection incrusta el contenido de sus files[], así
   // que si cambia un miembro hay que reprocesar también ella (y, transitivamente,
   // las que la contienen); sin esto el build la deja obsoleta.
   expandCollectionChanges(discoveryIndex, discoveredChanges);
+  // #2453: el modo parcial se acota aquí y solo aquí. Aguas abajo (work,
+  // limpiezas, caché de salidas) todo ve la selección, no el proyecto: de paso
+  // se intersectan los cambios detectados para no arrastrar documentos que
+  // nadie pidió.
+  const only = selectionOf(options);
+  const selection = only === undefined ? undefined : await selectDocs(only, allDocs, discoveryIndex, cwd);
+  if (selection !== undefined) {
+    allDocs = allDocs.filter((doc) => selection.has(doc.relativePath));
+    for (const path of [...discoveredChanges]) {
+      if (!selection.has(path)) discoveredChanges.delete(path);
+    }
+  }
   if (options.verbose) {
     for (const doc of allDocs) {
       progress.reportFile({ relativePath: doc.relativePath, phase: 'discovery' });
@@ -341,7 +455,7 @@ async function discoverDocuments(
     const entry = discoveryIndex.get(doc.relativePath);
     doc.slug = entry?.slug ?? basename(doc.relativePath, '.md');
   }
-  return { allDocs, discoveryIndex, discoveredChanges, deletedEntries, slugChangedEntries, pendingState };
+  return { allDocs, discoveryIndex, discoveredChanges, deletedEntries, slugChangedEntries, pendingState, selection };
 }
 
 async function finishBuild(
@@ -427,12 +541,13 @@ function planWork(
   allDocs: BuildDocument[],
   discoveredChanges: Set<string>,
   log: (msg: string) => void,
+  selection?: Set<string>,
 ): { work: ReturnType<typeof computeWorkSets>; invalidations: string[] } {
   const outputDirChanged = prevState !== null && ctx.outputDir !== prevState.outputDir;
   if (outputDirChanged) {
     log('Directorio de salida modificado — reprocesando todos los documentos');
   }
-  const work = computeWorkSets(plan, allDocs, discoveredChanges, outputDirChanged);
+  const work = computeWorkSets(plan, allDocs, discoveredChanges, outputDirChanged, selection);
   return { work, invalidations: collectInvalidations(plan, outputDirChanged) };
 }
 
@@ -524,7 +639,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
 
   const ctx = await prepareEnvironment(cwd, options, siteConfig, plan, progress);
 
-  const { allDocs, discoveryIndex, discoveredChanges, deletedEntries, slugChangedEntries, pendingState } = await discoverDocuments(
+  const { allDocs, discoveryIndex, discoveredChanges, deletedEntries, slugChangedEntries, pendingState, selection } = await discoverDocuments(
     cwd,
     options,
     plan,
@@ -568,7 +683,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
 
   let cleanedFiles = await formatCleanup(ctx, plan, allDocs, siteConfig, discoveryIndex);
 
-  const { work, invalidations } = planWork(plan, ctx, prevState, allDocs, discoveredChanges, log);
+  const { work, invalidations } = planWork(plan, ctx, prevState, allDocs, discoveredChanges, log, selection);
 
   await ensureCachedOutputsComplete(allDocs, work, plan.activeFormats, ctx.outputDir);
 

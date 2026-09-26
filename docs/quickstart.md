@@ -152,6 +152,9 @@ iteraciones build
 # Build completo sin caché
 iteraciones build --full
 
+# Build de documentos concretos (una collection arrastra sus files[] y sus creators)
+iteraciones build index.md cap1.md
+
 # Build con información detallada
 iteraciones build --verbose
 ```
