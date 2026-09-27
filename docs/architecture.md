@@ -64,6 +64,25 @@ El pipeline convierte archivos Markdown en documentos en los formatos configurad
 └─────────────┘
 ```
 
+### Fases y modo parcial (#2453, #2454, #2455)
+
+`iteraciones build <path...>` no es un build más pequeño: es el mismo pipeline con un alcance declarado. El cierre se resuelve en `selectDocs()` — la ruta pedida, más los `files[]` de cualquier `type: collection` pedida, más los documentos `type: creator` de sus miembros; un miembro pedido por su ruta se queda solo en él, y una `type: collection` dentro de los `files[]` de otra es error de build.
+
+El único punto de acotado está en `discoverDocuments()` → `restrictToSelection()`: lo que se calculó sobre el proyecto entero se reduce a la selección antes de bajar, y aguas abajo todo ve la selección:
+
+| Fase o estado | Alcance en una corrida con selección |
+|---------------|--------------------------------------|
+| Discovery | **Proyecto entero**: escanea y hashea todos los documentos (hace falta para resolver el cierre de una colección y para conservar `pendingState` completo) y solo devuelve los seleccionados. |
+| Planificación (`computeWorkSets`) | **Selección**: `applySelection()` fuerza a «modificado» todo lo pedido, así que `processed`/`cached` solo cuentan documentos de ella y una corrida parcial siempre reconstruye lo pedido. |
+| Pipeline por documento | **Selección**: no se escribe nada ajeno a lo pedido ni a su cierre. |
+| Limpiezas (`cleanupDeletedFiles`, `cleanupSlugChanges`) | **Selección**: borrar las salidas de un documento no reconstruido dejaría su página ausente de `dist` hasta el siguiente build completo. |
+| Validación PDF/X | **Los PDF que escribió esta corrida**: un PDF roto ajeno no la tumba. |
+| `state.json` | **No se persiste**: los hashes quedan pendientes hasta el siguiente build completo, que es quien decide con el corpus entero. |
+| `build.sh` (`beginScriptCapture`) | **No se regraba**: es la composición completa del corpus; si lo fuera, `build --full` dejaría de equivaler a `bash build.sh`. |
+| Assets (CSS) | **Proyecto entero**: se compilan barriendo todo `dist/files`. |
+
+Además, `--json` de una corrida con selección incluye `selected`, el cierre resuelto y ordenado (ver contrato más abajo).
+
 ### Layout de `dist/files` (#2450)
 
 Todo lo estático vive dentro de un directorio `assets`, **por nivel de salida**:
@@ -504,7 +523,7 @@ El proyecto expone algunas funciones como API estable para scripting. **Todo lo 
 
 ### `build(cwd, options)` — `src/builder/orchestrator.ts`
 
-Ejecuta el build completo (discovery → pipeline → assets).
+Ejecuta el build (discovery → pipeline → assets). Con `only` acota la selección a esas rutas —el modo parcial, ver «Fases y modo parcial»—; sin él, el proyecto entero.
 
 ```typescript
 import { build } from './src/builder/orchestrator.js';
@@ -520,6 +539,7 @@ Opciones (`BuildOptions`):
 | `full` | `boolean` | Build completo desde cero: elimina salida y caché.
 | `verbose` | `boolean` | Salida verbose del tracker.
 | `json` | `boolean` | Emite el resultado como JSON en stdout (ver contrato abajo).
+| `only` | `string[]` | Rutas relativas a construir: activa el modo parcial (#2453). `undefined` o vacío = proyecto entero.
 
 ### Contrato de `build --json`
 
@@ -536,6 +556,20 @@ Opciones (`BuildOptions`):
 }
 ```
 
+Una corrida con selección (`iteraciones build index.md`) añade `selected`:
+
+```json
+{
+  "processed": 4,
+  "cached": 0,
+  "formats": ["pdf", "html", "epub", "markdown"],
+  "outputDir": "/ruta/al/proyecto/dist/files",
+  "durationMs": 180,
+  "invalidations": [],
+  "selected": ["ana.md", "cap1.md", "index.md", "miembros/mem.md"]
+}
+```
+
 Semántica de los campos:
 
 | Campo | Tipo | Semántica |
@@ -546,6 +580,7 @@ Semántica de los campos:
 | `outputDir` | `string` | Directorio de salida absoluto del proyecto.
 | `durationMs` | `number` | Duración del build en milisegundos (redondeada).
 | `invalidations` | `string[]` | Razones que invalidaron la caché; usa el mismo cálculo que el resumen humano (issue #1930): `filters`, `preamble`, `bibliography`, `format`, `lang`, `config` y `documentos modificados` cuando procede.
+| `selected` | `string[]?` | **Solo en una corrida con selección** (#2455): la selección **resuelta**, es decir el cierre que construyó la CLI (una `type: collection` arrastra sus `files[]` y sus `type: creator`; un miembro pedido por su ruta se queda solo en él), ordenada y deduplicada. No es lo que pidió el usuario —eso ya lo sabe él—, es lo que se construyó de verdad. **El build completo no lleva la clave.** |
 
 Reglas del contrato:
 
@@ -555,6 +590,7 @@ Reglas del contrato:
   { "error": "frontmatter YAML inválido en cap-01.md" }
   ```
 - **Exclusión mutua**: `--json` y `--verbose` son incompatibles (error de uso claro); el JSON es la única salida de stdout y no puede mezclarse con detalle humano.
+- **Clave opcional `selected`**: solo aparece cuando la corrida tuvo selección; las seis claves de siempre no cambian de nombre ni desaparecen jamás (D6: añadir campos es compatible, renombrar/eliminar es breaking).
 - **Builds sin trabajo**: si no hay documentos modificados o el proyecto está vacío, el objeto refleja el estado real (`processed: 0`, `formats` y `outputDir` según corresponda) y el exit code sigue siendo 0.
 
 ### `loadSiteConfig(cwd)` — `src/config/config-loader.ts`

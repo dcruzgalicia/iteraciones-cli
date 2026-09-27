@@ -21,6 +21,9 @@ import { registerSkip, SKIP_REASONS, withTempDir } from './helpers.js';
  * #2454 — aislamiento del modo parcial: `state.json`, `build.sh`, la limpieza
  * de slugs cambiados y la validación PDF/X no se mueven fuera de la selección.
  *
+ * #2455 — superficie de `--json`: seis claves congeladas (D6) y `selected`
+ * solo en una corrida con selección.
+ *
  * Solo el build requiere pandoc; sin él, los bloques quedan skipados (D3).
  */
 const pandocOk = await getPandocVersion().catch(() => null);
@@ -112,6 +115,29 @@ async function runExpectandoError(fn: () => Promise<void>): Promise<string> {
     spy.mockRestore();
   }
   return output;
+}
+
+/**
+ * #2455 — corre `runBuild` con `--json` y devuelve el único objeto que puede
+ * salir por stdout (la salida humana queda suprimida: D6).
+ */
+async function jsonDeBuild(dir: string, options: { only?: string[] } = {}): Promise<Record<string, unknown>> {
+  const spy = spyOn(process.stdout, 'write');
+  let raw = '';
+  try {
+    process.exitCode = 0;
+    await runBuild(dir, { ...options, json: true });
+    expect(process.exitCode).toBe(0);
+  } finally {
+    raw = spy.mock.calls.map((c) => String(c[0])).join('');
+    spy.mockRestore();
+  }
+  const lines = raw
+    .trim()
+    .split('\n')
+    .filter((line) => line.trim() !== '');
+  expect(lines.length).toBe(1);
+  return JSON.parse(lines[0] ?? '') as Record<string, unknown>;
 }
 
 describe('build [paths...] — selección (#2453)', () => {
@@ -483,6 +509,42 @@ describe('build parcial — aislamiento del modo parcial (#2454)', () => {
         if (xdg === undefined) delete process.env.XDG_CACHE_HOME;
         else process.env.XDG_CACHE_HOME = xdg;
       }
+    });
+  });
+});
+
+/**
+ * #2455 — superficie de `build --json`: las seis claves congeladas (D6) no
+ * cambian de nombre ni desaparecen jamás, y `selected` solo existe cuando la
+ * corrida tuvo selección — con el cierre que se construyó, no con lo pedido.
+ */
+describe('build --json — superficie y contrato (#2455)', () => {
+  afterEach(resetExitCode);
+
+  it('añade selected con la selección resuelta y conserva la forma congelada', async () => {
+    await withTempDir(async (dir) => {
+      await writeProject(dir);
+
+      // Pedimos la colección: lo que devuelve NO es ["index.md"], es el
+      // cierre que decidió construir la CLI (files[] + creators).
+      const parcial = await jsonDeBuild(dir, { only: ['index.md'] });
+      expect(Object.keys(parcial).sort()).toEqual(['cached', 'durationMs', 'formats', 'invalidations', 'outputDir', 'processed', 'selected']);
+      expect(parcial.selected).toEqual(['ana.md', 'cap1.md', 'index.md', 'miembros/mem.md']);
+      expect(typeof parcial.processed).toBe('number');
+      expect(typeof parcial.cached).toBe('number');
+      expect(Array.isArray(parcial.formats)).toBe(true);
+      expect(typeof parcial.outputDir).toBe('string');
+      expect(typeof parcial.durationMs).toBe('number');
+      expect(Array.isArray(parcial.invalidations)).toBe(true);
+
+      // Un miembro de files[] pedido por su ruta se queda solo en él.
+      const miembro = await jsonDeBuild(dir, { only: ['miembros/mem.md'] });
+      expect(miembro.selected).toEqual(['miembros/mem.md']);
+
+      // El build completo no añade nada: seis claves, las de siempre.
+      const completo = await jsonDeBuild(dir);
+      expect(Object.keys(completo).sort()).toEqual(['cached', 'durationMs', 'formats', 'invalidations', 'outputDir', 'processed']);
+      expect('selected' in completo).toBe(false);
     });
   });
 });

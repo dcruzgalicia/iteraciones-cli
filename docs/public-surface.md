@@ -22,7 +22,7 @@ Globales: `--version`, `--project-root <path>` (antes o después del subcomando)
 
 - Exit codes: 0 éxito/advertencias no bloqueantes · 1 error (build, validate, doctor con check duro fallido, **PDF/X con 99-pdfx activo** — decisión D2 #2162).
 - `--json`: objeto único en stdout, progreso suprimido. Contrato por comando:
-  - **build**: `{processed, cached, formats, outputDir, invalidations, durationMs}` en éxito; `{error, warnings?}` en fallo.
+  - **build**: `{processed, cached, formats, outputDir, invalidations, durationMs}` en éxito — más `selected?` en una corrida con paths (#2455) —; `{error, warnings?}` en fallo.
   - **validate**: `{ok, documents, errors, warnings}`.
   - **clean**: `{ok, removed: string[], failures: [{dir, error}]}`.
   - **doctor**: `{ok, checks: [{label, ok, detail, warn}]}`; con `--info --json` añade `{config: string[]}`.
@@ -36,6 +36,12 @@ Globales: `--version`, `--project-root <path>` (antes o después del subcomando)
 - **D7**: exit codes congelados (0 éxito, 1 error incluido PDF/X).
 - **D8**: claves de iteraciones.config.yaml congeladas; añadir nueva clave es compatible.
 - **D9**: state.json NO es superficie (formato interno; puede cambiar sin breaking).
+
+## Cambios posteriores a la congelación
+
+Añadidos compatibles con D6 (no rompen consumidores existentes; renombrar o eliminar sigue siendo breaking):
+
+- **`build --json` → `selected?`** (#2455): solo en una corrida con paths (`iteraciones build <path...>`); lleva la selección **resuelta** (el cierre que se construyó: una `type: collection` arrastra sus `files[]` y sus `type: creator`), ordenada y deduplicada. El build completo no lleva la clave. Semántica completa en `docs/architecture.md`.
 
 ---
 
