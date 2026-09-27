@@ -98,6 +98,18 @@ export interface BuildSummary {
   formats: string[];
   outputDir: string;
   invalidations: string[];
+  /**
+   * #2455 — solo en una corrida con selección: la selección **resuelta**, es
+   * decir el cierre que se construyó de verdad (una `type: collection`
+   * arrastra sus `files[]` y sus documentos `type: creator`; un miembro
+   * pedido por su ruta se queda solo en él), ordenada para poder compararla
+   * entre corridas. No es lo que pidió el usuario —eso ya lo sabe él—, es lo
+   * que la CLI decidió construir, que es lo que no se puede adivinar.
+   *
+   * En un build completo la clave **no aparece**: D6 congela las seis de
+   * siempre y añadir campos es lo compatible, pero solo cuando aportan.
+   */
+  selected?: string[];
 }
 
 async function setupBuildEnvironment(cwd: string, siteConfig: SiteConfig, options: BuildOptions): Promise<BuildContext> {
@@ -489,8 +501,8 @@ async function finishBuild(
     cwd: string;
     pendingState: BuildState | null;
     prevPdfxCache: Record<string, string> | undefined;
-    /** #2454 — corrida con selección: no se persiste state ni se reescribe build.sh. */
-    partial: boolean;
+    /** #2453/#2455 — selección resuelta de esta corrida; `undefined` = proyecto entero. */
+    selection: Set<string> | undefined;
   },
   params: {
     processedCount: number;
@@ -501,13 +513,17 @@ async function finishBuild(
     pdfOutputs?: string[];
   },
 ): Promise<BuildSummary> {
+  // #2454/#2455 — una corrida con selección no es un build pequeño: es otra
+  // cosa. De `selection` salen las tres reglas de aislamiento y el alcance
+  // que se devuelve en el resumen.
+  const partial = deps.selection !== undefined;
   if (deps.needsAssets) await deps.runAssets();
   const cache: PdfxCacheHandle = { prev: deps.prevPdfxCache ?? {}, out: {} };
   // #2454 — en modo parcial solo se validan los PDF que escribió esta corrida:
   // un PDF roto ajeno no puede tumbar la de otro documento. Un alcance vacío
   // (no hubo PDF) no valida nada, y sin alcance la validación sigue barriendo
   // `dist` entero, como en cualquier build completo.
-  const pdfxScope = deps.partial ? (params.pdfOutputs ?? []) : undefined;
+  const pdfxScope = partial ? (params.pdfOutputs ?? []) : undefined;
   const pdfx = await runPdfxOutputValidation(deps.outputDir, deps.siteConfig, { allowBuild: true }, deps.effectiveDisabledPreamble, cache, pdfxScope);
   if (deps.pendingState) deps.pendingState.pdfxCache = cache.out;
   if (pdfx.summaryLine) deps.progress.addSummaryLine(pdfx.summaryLine);
@@ -527,14 +543,20 @@ async function finishBuild(
   // siguiente build completo lo saltaría con la salida vieja. El state se
   // queda byte a byte como estaba; el coste aceptado es que un parcial repite
   // su trabajo después.
-  if (!deps.partial) await persistCompletedState(deps.cwd, deps.pendingState);
-  return {
+  if (!partial) await persistCompletedState(deps.cwd, deps.pendingState);
+  const summary: BuildSummary = {
     processed: params.processedCount,
     cached: params.cachedCount,
     formats,
     outputDir: deps.outputDir,
     invalidations: params.empty ? [] : params.invalidations,
   };
+  // #2455 — el alcance de esta corrida, ordenado para poder compararlo entre
+  // corridas. Sin selección la clave no se añade: el build completo se queda
+  // con las seis de siempre (D6: añadir campos es compatible, pero esta
+  // contribución solo existe cuando aporta información).
+  if (deps.selection !== undefined) summary.selected = [...deps.selection].sort();
+  return summary;
 }
 
 async function prepareEnvironment(
@@ -669,8 +691,8 @@ async function pipelinePhases(
 
 async function runBuild(cwd: string, options: BuildOptions, progress: BuildReporter, pandocVersion: string): Promise<BuildSummary> {
   const log = (msg: string) => progress.log(msg);
-  // #2454 — el modo parcial toca solo la selección: nada de lo que es del
-  // proyecto entero (state, script) se mueve en una corrida parcial.
+  // #2454 — este guardia se decide ANTES de discover, cuando el cierre aún no
+  // existe: mismo predicato que el `finishBuild` deriva de `selection` más abajo.
   const partial = selectionOf(options) !== undefined;
 
   const { siteConfig, effectiveDisabledPreamble } = await resolveEffectiveConfig(cwd);
@@ -713,7 +735,7 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
     cwd,
     pendingState,
     prevPdfxCache: prevState?.pdfxCache,
-    partial,
+    selection,
   };
 
   if (allDocs.length === 0) {

@@ -2770,6 +2770,9 @@ describe('huecos transversales (#2032)', () => {
       expect(lines.length).toBe(1);
       const parsed = JSON.parse(lines[0] ?? '') as Record<string, unknown>;
       expect(Object.keys(parsed).sort()).toEqual(['cached', 'durationMs', 'formats', 'invalidations', 'outputDir', 'processed'].sort());
+      // #2455 — sin paths no hay selección, así que el campo nuevo no existe:
+      // el build completo conserva exactamente las claves de siempre (D6).
+      expect('selected' in parsed).toBe(false);
       expect(typeof parsed.processed).toBe('number');
       expect(typeof parsed.cached).toBe('number');
       expect(Array.isArray(parsed.formats)).toBe(true);
