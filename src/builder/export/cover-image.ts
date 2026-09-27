@@ -20,7 +20,8 @@ function coverPrefix(pngPath: string): string {
 /**
  * pdftoppm escribe `<dir>/.cover-<slug>-1.png`; este es el paso al nombre final
  * y la limpieza de lo que quedó al lado. Compartido con `iteraciones cover`,
- * que en el build.sh ocupa el lugar de ese `mv`.
+ * que hace lo mismo a mano; en el build.sh la fase de portada ocupa
+ * directamente el `mv` (#2456), porque el nombre lo decide pdftoppm.
  *
  * Devuelve el fichero que movió, o `undefined` si no había portada pendiente.
  */
@@ -48,7 +49,9 @@ export async function generateCoverImages(entries: CoverImageEntry[]): Promise<v
         logWarning(`pdftoppm no produjo la imagen de portada de "${basename(pdfPath)}"`, 'build');
         return;
       }
-      recordSupportCommand('covers', join(dirname(pngPath), coverPrefix(pngPath)), ['iteraciones', 'cover', pngPath]);
+      // #2456 — la portada es un `mv` puro al nombre final: sin lógica
+      // intermedia en el .sh (`iteraciones cover` sigue existiendo a mano).
+      recordSupportCommand('covers', join(dirname(pngPath), coverPrefix(pngPath)), ['mv', join(dirname(pngPath), produced), pngPath]);
     } catch {
       logWarning(`no se pudo generar la imagen de portada de "${basename(pdfPath)}" (¿pdftoppm instalado?)`, 'build');
     }

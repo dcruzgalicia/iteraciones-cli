@@ -128,9 +128,13 @@ function replayBuildScript(dir: string): { code: number; stderr: string } {
 }
 
 /**
- * Comandos del sistema operativo que aparecen en el .sh. El objetivo de #2445
- * es que no quede ninguno: la preparación y la recogida son subcomandos de
- * iteraciones. `set`/`cd` son preparación del shell y no se cuentan.
+ * Comandos del sistema operativo que aparecen en el .sh. #2445 prohibía todos
+ * porque la preparación y la recogida eran subcomandos de iteraciones. #2456
+ * admite las dos primitivas puras que ya no esconden ninguna decisión —
+ * `mkdir -p` (fase 1: directorios) y `mv` (fase 7: portada)— y sigue marcando
+ * `cp`/`rm`/`ln`/`rmdir` y ` && `: aparecerían al convertir `assets` o
+ * `pdf collect` (otra decisión) o al meter lógica intermedia.
+ * `set`/`cd` son preparación del shell y no se cuentan.
  */
 function expectSystemCommands(script: string): string[] {
   const found = new Set<string>();
@@ -140,11 +144,23 @@ function expectSystemCommands(script: string): string[] {
     // Las líneas se reordenan por sección; el primer token es el comando real.
     const token = /^[A-Za-z0-9_./-]+/.exec(line.replace(/^(?:[A-Za-z_][A-Za-z0-9_]*=\S+ )+/, ''))?.[0] ?? '';
     const name = token.split('/').at(-1) ?? '';
-    if (['mkdir', 'cp', 'rm', 'mv', 'ln', 'rmdir'].includes(name)) found.add(name);
+    if (['cp', 'rm', 'ln', 'rmdir'].includes(name)) found.add(name);
     if (line.includes(' && ')) found.add('&&');
   }
   return [...found].sort();
 }
+
+describe('guard de primitivas del SO (#2445, #2456)', () => {
+  it('admite mkdir/mv (fases 1 y 7) y sigue marcando cp/rm/ln/rmdir y &&', () => {
+    const permitido = ['#!/bin/bash', 'set -e', 'cd /raíz', '# comentario cp rm', 'mkdir -p dist dist/files', 'mv .cover-a-1.png portada.png'].join(
+      '\n',
+    );
+    expect(expectSystemCommands(permitido)).toEqual([]);
+
+    const marcado = ['cp a b', 'rm -f c', 'ln -s d e', 'rmdir f', 'pandoc x && mv y z'].join('\n');
+    expect(expectSystemCommands(marcado)).toEqual(['&&', 'cp', 'ln', 'rm', 'rmdir']);
+  });
+});
 
 describe('script en la raíz (#2438, #2448)', () => {
   it('por defecto es false y acepta true/false', async () => {
@@ -209,9 +225,12 @@ describe.skipIf(!pandocOk)('build.sh con script (#2438)', () => {
       // los comandos de iteraciones, y process.cwd() de cada uno es físico).
       expect(script).toContain(`cd ${await realpath(dir)}`);
 
-      // Los directorios los prepara iteraciones; no quedan mkdir/cp/rm/mv.
-      expect(script).toContain('# === Preparación (iteraciones) ===');
-      expect(script).toMatch(/^iteraciones prepare --dir /m);
+      // Los directorios los prepara el propio .sh con mkdir -p (#2456); sin
+      // lógica intermedia: ni cp/rm ni &&. La fase de latexmk sí pasa por
+      // `iteraciones prepare --xmp` (tiene que copiar la plantilla XMP).
+      expect(script).toContain('# === Preparación (directorios) ===');
+      expect(script).toMatch(/^mkdir -p \S/m);
+      expect(script).not.toContain('iteraciones prepare');
       expect(script).toContain('# === Recursos: plantillas, colecciones y assets (iteraciones) ===');
       expect(script).toContain('# === Salidas de iteraciones (post-proceso y markdown) ===');
       expect(script).toContain('# === Pandoc: LaTeX ===');
@@ -407,7 +426,8 @@ describe.skipIf(!pandocOk || !latexOk)('build.sh con PDF (#2438)', () => {
       const script = await Bun.file(join(dir, 'build.sh')).text();
       expect(script).toContain('# === PDF (latexmk) ===');
       expect(script).toMatch(/latexmk [^\n]*-jobname=/);
-      // El slot lo prepara y lo recoge iteraciones: sin mkdir/rm/mv sueltos.
+      // El slot lo prepara y lo recoge iteraciones: sin cp/rm sueltos. El
+      // único primitivo que admite el .sh es el mkdir de la fase 1 (#2456).
       expect(script).toMatch(/^\s*iteraciones prepare .*--xmp \S*slot-0$/m);
       expect(script).toMatch(/^\s*iteraciones pdf collect \S*slot-0 -o \S*dist\/files\/cuidar-se\.pdf$/m);
       expect(expectSystemCommands(script).filter((s) => s !== 'cd')).toEqual([]);
@@ -492,11 +512,15 @@ describe.skipIf(!pandocOk || !magickOk || !latexOk || !pdftotextOk || !unzipOk)(
         await expectSameOutput(dir, name, bytes, replayed);
       }
 
-      // El .sh del full cubre las cinco fases de #2445, sin comandos del SO.
+      // El .sh del full cubre las cinco fases de #2445: subcomandos donde hay
+      // decisiones, mkdir (fase 1) y mv de portada (fase 7) donde no hay
+      // ninguna (#2456), y ningún otro comando del SO.
       const script = await Bun.file(join(dir, 'build.sh')).text();
-      for (const sub of ['prepare', 'assets', 'markdown', 'cover', 'pdf collect']) {
+      for (const sub of ['prepare', 'assets', 'markdown', 'pdf collect']) {
         expect(script).toContain(`iteraciones ${sub} `);
       }
+      expect(script).toMatch(/^mkdir -p \S/m);
+      expect(script).toMatch(/^mv \S*\.cover-\S+/m);
       expect(expectSystemCommands(script).filter((s) => s !== 'cd')).toEqual([]);
     });
   }, 300_000);

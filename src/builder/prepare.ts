@@ -7,8 +7,10 @@ export const XMP_TEMPLATE_RESOURCE = join(import.meta.dir, '../lib/resources/xmp
 /**
  * Preparación que los comandos externos dan por hecha: los directorios en los
  * que van a escribir y la plantilla XMP del paquete junto al .tex de trabajo.
- * El build y `iteraciones prepare` pasan por aquí, así que el `.sh` prepara
- * exactamente lo mismo que preparó TypeScript.
+ * El build y `iteraciones prepare` pasan por aquí. La fase 1 del `.sh` no pasa
+ * por el subcomando: repite con `mkdir -p` los mismos directorios que ya creó
+ * TypeScript al escribir las salidas (#2456); los slots de latexmk siguen
+ * entrando por `iteraciones prepare`, que además copia la XMP.
  */
 export async function preparePaths(dirs: string[], xmpDirs: string[]): Promise<void> {
   for (const dir of new Set([...dirs, ...xmpDirs])) await mkdir(dir, { recursive: true });
