@@ -30,11 +30,19 @@ type ValidationResult = {
   count: number;
 };
 
-function handleNoFrontmatter(entry: string, body: string, raw: string, warnings: ValidationError[]): void {
+/**
+ * #2463 — archivo sin frontmatter utilizable. Un cuerpo vacío es **error**, no
+ * una advertencia: es el mismo criterio que `readMarkdownOrWarn` en build para
+ * que los dos caminos digan lo mismo. Aquí no hay `type` que eximir (sin
+ * frontmatter no se puede declarar `collection` ni `intervention`).
+ */
+function handleNoFrontmatter(entry: string, body: string, raw: string, errors: ValidationError[], warnings: ValidationError[]): void {
   if (!body.trim()) {
-    warnings.push({
+    errors.push({
       file: entry,
-      message: raw.startsWith('---') ? 'no tiene contenido después del frontmatter; se omite' : 'documento vacío; se omite',
+      message: raw.startsWith('---')
+        ? 'no tiene contenido después del frontmatter; agrega un body para proceder con el build'
+        : 'documento vacío; agrega un body para proceder con el build',
     });
   } else if (/^---\r?\n/.test(raw)) {
     warnings.push({
@@ -98,11 +106,12 @@ async function validateCollectionFiles(cwd: string, entry: string, parsed: Recor
   return failed;
 }
 
-/** Parsea el YAML del frontmatter y valida su contenido (objeto, campos y files[] de collections). */
+/** Parsea el YAML del frontmatter y valida su contenido (objeto, campos, files[] de collections y cuerpo). */
 async function validateParsedYaml(
   cwd: string,
   entry: string,
   yaml: string,
+  body: string,
   slugs: Map<string, string>,
   errors: ValidationError[],
   warnings: ValidationError[],
@@ -119,6 +128,15 @@ async function validateParsedYaml(
   }
   let fmError = validateParsedFrontmatter(entry, result as Record<string, unknown>, slugs, errors, warnings);
   if (await validateCollectionFiles(cwd, entry, result as Record<string, unknown>, errors)) fmError = true;
+  // #2463 — cuerpo vacío: de warning a error, con las MISMAS exenciones que
+  // `readMarkdownOrWarn` en build, porque `collection` e `intervention`
+  // componen su cuerpo de otros archivos y un body vacío es legítimo en ellos.
+  // `!fmError` evita duplicar el reporte cuando el frontmatter ya es inválido.
+  const type = (result as Record<string, unknown>).type;
+  if (!body.trim() && !fmError && type !== 'collection' && type !== 'intervention') {
+    errors.push({ file: entry, message: 'no tiene contenido después del frontmatter; agrega un body para proceder con el build' });
+    fmError = true;
+  }
   return fmError;
 }
 
@@ -154,14 +172,10 @@ async function validateSingleEntry(
     }
   }
   if (!yaml) {
-    handleNoFrontmatter(entry, body, raw, warnings);
+    handleNoFrontmatter(entry, body, raw, errors, warnings);
     return false;
   }
-  const fmError = await validateParsedYaml(cwd, entry, yaml, slugs, errors, warnings);
-  if (!body.trim() && !fmError) {
-    warnings.push({ file: entry, message: 'no tiene contenido después del frontmatter; se omite' });
-  }
-  return fmError;
+  return await validateParsedYaml(cwd, entry, yaml, body, slugs, errors, warnings);
 }
 
 async function validateFrontmatter(cwd: string): Promise<ValidationResult> {

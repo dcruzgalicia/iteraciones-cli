@@ -2,7 +2,6 @@ import { mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { BuildError, translateSystemError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
-import { logWarning } from '../lib/logger.js';
 import type { BuildMetadata } from './build-planner.js';
 import { parseAuthors } from './discover.js';
 import { primaryOutputExtension } from './output-layout.js';
@@ -28,7 +27,17 @@ export async function writeIfChanged(path: string, content: string): Promise<voi
   await writeOutput(path, content);
 }
 
-export async function readMarkdownOrWarn(doc: BuildDocument): Promise<string | null> {
+/**
+ * #2463 — un documento sin cuerpo **no** es algo que se saltea en silencio: es
+ * un error de build con mensaje accionable. Antes el warning dejaba `files[]`
+ * de una collection apuntando a un `.md` que jamás se escribía, y el build
+ * salía con 0.
+ *
+ * Las dos excepciones componen su cuerpo de otros archivos —`collection` con
+ * sus `files[]` e `intervention`—, así que un body vacío es legítimo en ellas.
+ * `validate` aplica exactamente el mismo criterio (los dos caminos coinciden).
+ */
+export async function readMarkdownOrWarn(doc: BuildDocument): Promise<string> {
   let content: string;
   try {
     content = await Bun.file(doc.filePath).text();
@@ -37,13 +46,11 @@ export async function readMarkdownOrWarn(doc: BuildDocument): Promise<string | n
   }
   const { yaml, body } = splitFrontmatter(content);
   if (!body.trim() && doc.frontmatter.type !== 'collection' && doc.frontmatter.type !== 'intervention') {
-    logWarning(
+    throw new BuildError(
       yaml !== undefined
-        ? `"${doc.filePath}" no tiene contenido después del frontmatter; se omite del build`
-        : `"${doc.filePath}" está vacío; se omite del build`,
-      'build',
+        ? `"${doc.filePath}" no tiene contenido después del frontmatter; agrega un body para proceder con el build`
+        : `"${doc.filePath}" está vacío; agrega un body para proceder con el build`,
     );
-    return null;
   }
   return content;
 }

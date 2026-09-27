@@ -839,7 +839,6 @@ export async function processDocumentFormats(
   const { ctx } = renderCtx;
 
   const content = await readMarkdownOrWarn(doc);
-  if (content === null) return;
 
   const entry = discoveryIndex.get(doc.relativePath);
   const slug = doc.slug ?? basename(doc.relativePath, '.md');
