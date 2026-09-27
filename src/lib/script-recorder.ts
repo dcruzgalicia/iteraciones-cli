@@ -6,10 +6,11 @@ import { dirname, join, relative } from 'node:path';
  *
  * Con `script: true` cada build reescribe `build.sh` en la raíz del
  * proyecto con los comandos que corrieron en esa corrida: pandoc, magick,
- * latexmk, pdftoppm y los subcomandos de iteraciones que agrupan la preparación,
- * la recogida de salidas y el markdown de dist. El .sh contiene solo comandos:
- * la lógica de iteraciones no se transcribe, se deja como comentario cuando el
- * archivo final de dist la requiere.
+ * latexmk, pdftoppm, los subcomandos de iteraciones que agrupan la recogida de
+ * salidas y el markdown de dist y, donde no se decide nada, la primitiva de
+ * shell directa —`mkdir -p` de la fase 1 y `mv` de la portada (#2456)—. El .sh
+ * contiene solo comandos: la lógica de iteraciones no se transcribe, se deja
+ * como comentario cuando el archivo final de dist la requiere.
  *
  * Reglas:
  * - solo graba quien llama a `beginScriptCapture` (script: true) y solo
@@ -286,11 +287,11 @@ function renderDirs(cap: Capture, steps: Step[], scriptDir: string): string[] {
   dirs.delete(scriptDir);
   dirs.delete('.');
   if (dirs.size === 0) return [];
-  const argv = prepareArgv(
-    [...dirs].sort().map((dir) => displayPath(cap.root, dir)),
-    [],
-  );
-  return ['# === Preparación (iteraciones) ===', argv.map(quote).join(' '), ''];
+  // #2456 — esta fase no decide nada: `mkdir -p` directo, sin rodeo por
+  // `iteraciones prepare` (que sigue existiendo como subcomando público y es
+  // quien prepara los slots de latexmk, con su XMP, en la fase de PDF).
+  const paths = [...dirs].sort().map((dir) => displayPath(cap.root, dir));
+  return ['# === Preparación (directorios) ===', `mkdir -p ${paths.map(quote).join(' ')}`, ''];
 }
 
 /** Bloques de sección separados en blanco; las secciones vacías no salen. */
