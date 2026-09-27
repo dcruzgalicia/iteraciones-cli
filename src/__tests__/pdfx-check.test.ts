@@ -7,8 +7,20 @@ import * as runLib from '../lib/run.js';
 import { ProcessSpawnError } from '../lib/run.js';
 import { withTempDir } from './helpers.js';
 
-/** Valor original para restaurar el directorio gestionado del binario en tests. */
+/** Valor original (posiblemente ausente) para restaurar la caché del binario. */
 const originalXdgCacheHome = process.env.XDG_CACHE_HOME;
+
+/**
+ * #2467 — restaura `XDG_CACHE_HOME` tal como estaba. Asignarle `undefined` no
+ * borra la variable: la deja con el literal `"undefined"`, `managedBinDir()`
+ * devuelve entonces una ruta RELATIVA y todo lo que gestione el binario acaba
+ * dentro de la raíz del repositorio (`undefined/iteraciones/bin/…`). Mismo
+ * patrón que el `finally` de `build-selection.test.ts`.
+ */
+function restoreXdgCacheHome(saved: string | undefined): void {
+  if (saved === undefined) delete process.env.XDG_CACHE_HOME;
+  else process.env.XDG_CACHE_HOME = saved;
+}
 
 function spyStderr() {
   return spyOn(process.stderr, 'write');
@@ -63,7 +75,7 @@ async function initPdfxProject(dir: string): Promise<void> {
 describe('runPdfxOutputValidation (fase final del build)', () => {
   afterEach(() => {
     process.exitCode = 0;
-    process.env.XDG_CACHE_HOME = originalXdgCacheHome;
+    restoreXdgCacheHome(originalXdgCacheHome);
   });
 
   it('omite la validación cuando 99-pdfx está desactivado en la config', async () => {
@@ -374,5 +386,21 @@ describe('runPdfxOutputValidation (fase final del build)', () => {
       }
       expect(output).toBe('');
     });
+  });
+
+  it('el restore borra XDG_CACHE_HOME cuando no estaba definida (#2467)', () => {
+    const saved = process.env.XDG_CACHE_HOME;
+    try {
+      // Restaurando un snapshot en el que la variable no existía: con la
+      // asignación antigua quedaría el literal "undefined" en el entorno.
+      restoreXdgCacheHome(undefined);
+      expect('XDG_CACHE_HOME' in process.env).toBe(false);
+
+      // Y con la variable definida sí la devuelve tal cual.
+      restoreXdgCacheHome('/tmp/caché-de-prueba');
+      expect(process.env.XDG_CACHE_HOME).toBe('/tmp/caché-de-prueba');
+    } finally {
+      restoreXdgCacheHome(saved);
+    }
   });
 });
