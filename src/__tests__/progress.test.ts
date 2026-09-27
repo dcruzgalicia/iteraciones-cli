@@ -408,6 +408,24 @@ describe('ProgressTracker', () => {
     expect(output).not.toContain('✓ Todo listo.');
   });
 
+  it('la línea «Documentos» del build incremental imprime cada recuento una sola vez (#2465)', async () => {
+    const output = await runTracker(async (tracker) => {
+      tracker.setFormats([{ phase: 'html', active: true }]);
+      tracker.startPhase('discovery', 3);
+      tracker.completePhase(3);
+      tracker.planPhases(['discovery', 'render']);
+      tracker.startPhase('render', 1);
+      tracker.completePhase(1);
+      await tracker.finish(1, 2, ['html']);
+    });
+
+    // Total + detalle: el número lo pone plural(), sin duplicarlo en la línea
+    const resumen = output.split('\n').find((linea) => linea.includes('modificado')) ?? '';
+    expect(resumen).toMatch(/Documentos\s+3 \(1 modificado · 2 reutilizados\)/);
+    expect(resumen).not.toContain('1 1 modificado');
+    expect(resumen).not.toContain('2 2 reutilizados');
+  });
+
   it('las líneas de confirmación se imprimen tras la tabla del resumen (antes de las advertencias)', async () => {
     const output = await runTracker(async (tracker) => {
       tracker.startPhase('discovery', 1);

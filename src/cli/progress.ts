@@ -122,7 +122,9 @@ export class ProgressTracker implements BuildReporter {
     const total = processed + cached;
     let line = `${'Documentos'.padEnd(LABEL_WIDTH)}${total}`;
     if (processed > 0 && cached > 0) {
-      line += ` (${processed} ${plural(processed, 'modificado', 'modificados')} · ${cached} ${plural(cached, 'reutilizado', 'reutilizados')})`;
+      // #2465 — el número lo pone plural(), no se prepende a mano: era el único
+      // de los 12 usos que lo hacía y salía duplicado («1 1 modificado»).
+      line += ` (${plural(processed, 'modificado', 'modificados')} · ${plural(cached, 'reutilizado', 'reutilizados')})`;
     } else if (total > 0 && processed === 0) {
       line += ' (todos reutilizados)';
     } else if (cached === 0 && invalidations?.length === 1) {
