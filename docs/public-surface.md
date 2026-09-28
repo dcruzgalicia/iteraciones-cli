@@ -67,7 +67,7 @@ Los elementos añadidos o modificados durante el ciclo II de revisión integral:
 
 ## Filters
 
-- 18 filters Lua: `semantic/string/01-double-colon`, `semantic/ast/02-double-colon-noindent`, `latex/01…12`, `html/01…05`. Override por proyecto `filters/<grupo>/<nombre>.lua`; desactivación vía `disabled-filters`.
+- 24 filters Lua: `semantic/string/01-double-colon`, `semantic/ast/02…04`, `latex/01…14`, `html/01…06`. Override por proyecto `filters/<grupo>/<nombre>.lua`; desactivación vía `disabled-filters`.
 - 31 preamble filters `.tex` (01-documentclass … cola de imprenta 97-eso-pic / 98-crop / 99-pdfx). Override `preamble/<nombre>.tex`; desactivación vía `disabledPreambleFilters`.
 - Interacción fija: 99-pdfx activo ⇒ 08-hyperref auto-desactivado (aviso visible).
 

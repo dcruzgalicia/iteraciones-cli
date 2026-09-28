@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test';
+import { realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { registerSkip, SKIP_REASONS, withTempDir } from './helpers.js';
@@ -107,7 +108,14 @@ describe.skipIf(!pandocOk || !magickOk)('imágenes procesadas en dist (#2435/#24
       const html = await Bun.file(join(dist, 'ejemplo.html')).text();
       expect(html).toContain('./assets/images/ejemplo-referencia.jpg');
       expect(html).toContain('./assets/images/ejemplo-crudo.jpg');
-      // 5. #2450 — ninguna imagen, fuente ni css queda fuera de un directorio
+      // 5. #2460: el mapa por documento y formato que lee el filtro
+      //    semantic/ast/04-image-paths (una clave por forma de la ruta).
+      const mapaHtml = JSON.parse(await Bun.file(join(dir, '.iteraciones', 'paths', 'manuscrito.md.html.json')).text()) as Record<string, string>;
+      expect(mapaHtml['foto.png']).toBe('./assets/images/ejemplo-foto.jpg');
+      // La clave absoluta usa la raíz canónica (en macOS /var es enlace a /private/var).
+      expect(mapaHtml[`${realpathSync(dir)}/foto.png`]).toBe('./assets/images/ejemplo-foto.jpg');
+      expect(await Bun.file(join(dir, '.iteraciones', 'paths', 'sub', 'anexo.md.html.json')).exists()).toBe(true);
+      // 6. #2450 — ninguna imagen, fuente ni css queda fuera de un directorio
       //    assets, ni en la raíz ni en ningún nivel.
       const fuera: string[] = [];
       for await (const entry of new Bun.Glob('**/*').scan({ cwd: dist, onlyFiles: true })) {

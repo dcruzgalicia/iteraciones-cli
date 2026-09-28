@@ -233,6 +233,7 @@ describe('resolveLuaFilters (resolución de filtros)', () => {
       join(PKG, 'semantic', 'string', '01-double-colon.lua'),
       join(PKG, 'semantic', 'ast', '02-double-colon-noindent.lua'),
       join(PKG, 'semantic', 'ast', '03-qr-url.lua'),
+      join(PKG, 'semantic', 'ast', '04-image-paths.lua'),
     ]);
     expect(f.latex).toEqual(LATEX_PKG);
     expect(f.html).toEqual(
@@ -252,6 +253,7 @@ describe('resolveLuaFilters (resolución de filtros)', () => {
         join(PKG, 'semantic', 'string', '01-double-colon.lua'),
         join(cwd, 'filters', 'semantic', 'ast', '02-double-colon-noindent.lua'),
         join(PKG, 'semantic', 'ast', '03-qr-url.lua'),
+        join(PKG, 'semantic', 'ast', '04-image-paths.lua'),
       ]);
       const expectedLatex = [...LATEX_PKG];
       expectedLatex[1] = join(cwd, 'filters', 'latex', '02-dictum.lua');
@@ -264,6 +266,7 @@ describe('resolveLuaFilters (resolución de filtros)', () => {
           'semantic/string/01-double-colon',
           'semantic/ast/02-double-colon-noindent',
           'semantic/ast/03-qr-url',
+          'semantic/ast/04-image-paths',
           'latex/01-spacer',
           'latex/02-dictum',
           'latex/03-verse',
@@ -293,8 +296,12 @@ describe('resolveLuaFilters (resolución de filtros)', () => {
 
   it('excluye filtros desactivados por nombre completo', async () => {
     const f = await resolveLuaFilters(['semantic/string/01-double-colon']);
-    expect(f.semantic).toEqual([join(PKG, 'semantic', 'ast', '02-double-colon-noindent.lua'), join(PKG, 'semantic', 'ast', '03-qr-url.lua')]);
-    expect(f.resolvedNames.size).toBe(22);
+    expect(f.semantic).toEqual([
+      join(PKG, 'semantic', 'ast', '02-double-colon-noindent.lua'),
+      join(PKG, 'semantic', 'ast', '03-qr-url.lua'),
+      join(PKG, 'semantic', 'ast', '04-image-paths.lua'),
+    ]);
+    expect(f.resolvedNames.size).toBe(23);
     expect(f.resolvedNames.has('semantic/string/01-double-colon')).toBe(false);
   });
 });
