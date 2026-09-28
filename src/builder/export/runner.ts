@@ -99,6 +99,11 @@ export async function convertToMarkdown(
   await Bun.write(outputPath, `---\n${stringify(outFm)}---\n${separator}${body}`);
 }
 
+/**
+ * `noBibtex` (#2419): el proyecto no tiene archivos `.bib`, así que latexmk
+ * pasa `-nobibtex` (equivalente a `$bibtex_use = 0`: «never run bibtex or
+ * biber» según el propio manual). Ahorra la corrida de biber en cada PDF.
+ */
 export async function convertToPdf(
   fullTexPath: string,
   sourcePath: string,
@@ -106,6 +111,7 @@ export async function convertToPdf(
   slug: string,
   biberCacheDir?: string,
   pdfDest?: string,
+  noBibtex = false,
   onSpawn?: (pid: number) => void,
 ): Promise<void> {
   if (!(await Bun.file(fullTexPath).exists())) {
@@ -120,7 +126,8 @@ export async function convertToPdf(
 
   let result: Awaited<ReturnType<typeof exec>>;
   try {
-    result = await exec('latexmk', ['-pdf', '-interaction=nonstopmode', `-outdir=${pdfDir}`, `-jobname=${slug}`, fullTexPath], {
+    const args = ['-pdf', '-interaction=nonstopmode', ...(noBibtex ? ['-nobibtex'] : []), `-outdir=${pdfDir}`, `-jobname=${slug}`, fullTexPath];
+    result = await exec('latexmk', args, {
       timeoutMs: LATEXMK_TIMEOUT_MS,
       cwd: pdfDir,
       env: { PAR_GLOBAL_TEMP: biberCache, TEXINPUTS: `${pdfDir}:` },

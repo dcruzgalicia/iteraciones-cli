@@ -14,7 +14,7 @@ import { applyPrintQueueDynamics, composeLatexTemplate, detectPageSize } from '.
 import { PDF_WORK_BASE } from './output-layout.js';
 import type { PdfJob } from './pdf-pool.js';
 import { writeIfChanged } from './pipeline-io.js';
-import { loadPreambleFilters, type PreambleDocType } from './preamble-loader.js';
+import { disableBibliographyWithoutBibFiles, loadPreambleFilters, type PreambleDocType } from './preamble-loader.js';
 import type { resolveBibOptions } from './state-bib.js';
 import type { BuildContext } from './types.js';
 
@@ -139,7 +139,11 @@ export async function writeEffectiveTemplates(
   state.latexInterventionTemplatePath = join(templatesDir, 'latex-intervention.tex');
   state.refsCardTemplate = await loadReferencesCardTemplate();
 
-  const tpl: TemplateInput = { cwd: ctx.cwd, siteConfig, bibFiles, effectiveDisabledPreamble, logoInline };
+  // #2419: sin archivos `.bib` no hay nada que citar, así que el preamble de
+  // biblatex no se compone. Regla compartida con `iteraciones template` (el .sh
+  // regenera estas mismas plantillas) y con `iteraciones filters`.
+  const disabledPreamble = disableBibliographyWithoutBibFiles(effectiveDisabledPreamble, bibFiles);
+  const tpl: TemplateInput = { cwd: ctx.cwd, siteConfig, bibFiles, effectiveDisabledPreamble: disabledPreamble, logoInline };
   const writeTemplate = async (kind: TemplateKind, path: string): Promise<void> => {
     await writeIfChanged(path, await composeTemplate(kind, tpl));
     // Recurso de la fase 2: el .sh la puede regenerar sin pandoc ni el build.
@@ -148,7 +152,7 @@ export async function writeEffectiveTemplates(
 
   if (htmlOn) await writeTemplate('html', state.htmlTemplatePath);
   if (plan.generateLatex) {
-    const preambleFilters = await loadPreambleFilters(effectiveDisabledPreamble, ctx.cwd, 'file');
+    const preambleFilters = await loadPreambleFilters(disabledPreamble, ctx.cwd, 'file');
     state.biblatexAvailable = preambleFilters.some((f) => f.name === '11-bibliography');
     state.pdfxActive = preambleFilters.some((f) => f.name === '99-pdfx');
     state.cropActive = preambleFilters.some((f) => f.name === '98-crop');
@@ -156,17 +160,17 @@ export async function writeEffectiveTemplates(
     applyPrintQueueDynamics(preambleFilters, state.pageDimensions);
     await writeTemplate('latex', state.latexTemplatePath);
 
-    const collectionPreambleFilters = await loadPreambleFilters(effectiveDisabledPreamble, ctx.cwd, 'collection');
+    const collectionPreambleFilters = await loadPreambleFilters(disabledPreamble, ctx.cwd, 'collection');
     const collectionPageDimensions = detectPageSize(collectionPreambleFilters);
     applyPrintQueueDynamics(collectionPreambleFilters, collectionPageDimensions);
     await writeTemplate('latex-collection', state.latexCollectionTemplatePath);
 
-    const creatorPreambleFilters = await loadPreambleFilters(effectiveDisabledPreamble, ctx.cwd, 'creator');
+    const creatorPreambleFilters = await loadPreambleFilters(disabledPreamble, ctx.cwd, 'creator');
     const creatorPageDimensions = detectPageSize(creatorPreambleFilters);
     applyPrintQueueDynamics(creatorPreambleFilters, creatorPageDimensions);
     await writeTemplate('latex-creator', state.latexCreatorTemplatePath);
 
-    const interventionPreambleFilters = await loadPreambleFilters(effectiveDisabledPreamble, ctx.cwd, 'intervention');
+    const interventionPreambleFilters = await loadPreambleFilters(disabledPreamble, ctx.cwd, 'intervention');
     const interventionPageDimensions = detectPageSize(interventionPreambleFilters);
     applyPrintQueueDynamics(interventionPreambleFilters, interventionPageDimensions);
     await writeTemplate('latex-intervention', state.latexInterventionTemplatePath);

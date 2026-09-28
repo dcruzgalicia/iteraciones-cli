@@ -533,6 +533,8 @@ Lista de preamble filters a desactivar. Los defaults del paquete desactivan `97-
 
 Se puede definir en los tres niveles: `format.pdf.disabledPreambleFilters` o `disabledPreambleFilters` (raíz). Una lista vacía (`[]`) activa todos los preamble filters, incluida la cola de imprenta. **Nota:** no se define en el frontmatter; es una decisión de configuración global por proyecto.
 
+**Sin bibliografía:** si el proyecto no tiene ningún `.bib` (ni `bibliography:` ni auto-descubierto), `11-bibliography` se desactiva solo —no hay nada que citar: la plantilla no carga biblatex y latexmk corre con `-nobibtex`, el equivalente a `$bibtex_use = 0`, así que el build no ejecuta biber. `iteraciones list-filters` lo refleja como `[desactivado]`.
+
 > **Validación PDF/X-1a.** Si activas `99-pdfx` (eliminándolo de la lista), el pipeline genera `PDF/X-1a:2001` estricto (identificación XMP `pdfxid:GTS_PDFXVersion` incluida) y el build valida en su fase final que los PDFs certifican con el binario `iteraciones-pdfcheck` (se compila con cargo si hace falta; `doctor` lo verifica como check opcional). Sin el binario, el build **no falla**: solo advierte que el PDF no se validó. Si algún PDF no certifica, el build **falla** con el detalle por PDF (archivo, código, página): el filter activo es la señal explícita de imprenta; para generar PDF sin certificación, desactiva `99-pdfx`. Ver `docs/architecture.md` → Validación PDF/X-1a del PDF generado.
 
 ```yaml

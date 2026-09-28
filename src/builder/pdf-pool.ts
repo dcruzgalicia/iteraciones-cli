@@ -17,6 +17,8 @@ export interface PdfJob {
   texPath: string;
   pdfDest: string;
   cover: boolean;
+  /** #2419 — el proyecto no tiene `.bib`: latexmk corre con `-nobibtex`. */
+  noBibtex: boolean;
 }
 
 function raceWithTimeout(promises: Promise<void>[], ms: number): Promise<void> {
@@ -48,7 +50,7 @@ async function executePdfJob(
 ): Promise<boolean> {
   const pdfDir = join(pdfWorkBase, job.dir, `slot-${slotIndex}`);
   try {
-    await convertToPdf(job.texPath, job.relativePath, pdfDir, job.slug, join(biberBase, `cache-${slotIndex}`), job.pdfDest, (pid) => {
+    await convertToPdf(job.texPath, job.relativePath, pdfDir, job.slug, join(biberBase, `cache-${slotIndex}`), job.pdfDest, job.noBibtex, (pid) => {
       inFlightPids[slotIndex] = pid;
     });
   } catch (err) {

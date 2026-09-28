@@ -78,6 +78,21 @@ export function resolveEffectiveDisabledPreamble(disabled?: string[]): string[] 
   return effective;
 }
 
+/**
+ * #2419 — sin archivos `.bib` no hay nada que citar: se apaga el snippet
+ * `11-bibliography` (csquotes + biblatex), con lo que la plantilla no carga
+ * biblatex y latexmk no tiene nada que pasarle a biber. Si la lista ya venía
+ * con el nombre, o si no sabemos si hay `.bib` (`bibFiles` desconocido), no se
+ * toca nada.
+ *
+ * La comparten build, `iteraciones template` e `iteraciones filters` para que
+ * las tres digan lo mismo (el .sh regenera las plantillas con `template`).
+ */
+export function disableBibliographyWithoutBibFiles(disabled: string[], bibFiles: string[] | undefined): string[] {
+  if (bibFiles === undefined || bibFiles.length > 0 || disabled.includes('11-bibliography')) return disabled;
+  return [...disabled, '11-bibliography'];
+}
+
 function readPreambleDescription(content: string): string {
   const lines: string[] = [];
   for (const rawLine of content.split('\n')) {

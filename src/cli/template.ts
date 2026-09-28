@@ -1,7 +1,7 @@
 import { isAbsolute, join, normalize } from 'node:path';
 import { writeIfChanged } from '../builder/pipeline-io.js';
 import { composeTemplate, loadLogoInline, TEMPLATE_KINDS, type TemplateKind, templatePathFor } from '../builder/pipeline-setup.js';
-import { resolveEffectiveDisabledPreamble } from '../builder/preamble-loader.js';
+import { disableBibliographyWithoutBibFiles, resolveEffectiveDisabledPreamble } from '../builder/preamble-loader.js';
 import { resolveBibOptions } from '../builder/state-bib.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { resolveDisabledPreambleConfig } from '../config/site-config.js';
@@ -21,11 +21,17 @@ export async function runTemplate(cwd: string, kind: string, options: { output?:
     if (!KINDS.includes(kind)) throw new BuildError(`tipo de plantilla desconocido "${kind}"; esperado: ${KINDS.join(' | ')}`);
     const siteConfig = await loadSiteConfig(cwd);
     const { bibFiles } = await resolveBibOptions(cwd, siteConfig);
+    // #2419 — misma regla que el build: sin `.bib`, sin biblatex. Si no, el .sh
+    // regeneraría aquí una plantilla distinta de la que escribió el build.
+    const effectiveDisabledPreamble = disableBibliographyWithoutBibFiles(
+      resolveEffectiveDisabledPreamble(resolveDisabledPreambleConfig(siteConfig)),
+      bibFiles,
+    );
     const content = await composeTemplate(kind as TemplateKind, {
       cwd,
       siteConfig,
       bibFiles,
-      effectiveDisabledPreamble: resolveEffectiveDisabledPreamble(resolveDisabledPreambleConfig(siteConfig)),
+      effectiveDisabledPreamble,
       logoInline: await loadLogoInline(cwd, siteConfig.format?.html?.site?.logo?.trim()),
     });
     const output =
