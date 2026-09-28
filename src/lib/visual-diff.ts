@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
-import { copyFile, exists, mkdir, readdir, readFile, rename, rm, unlink, writeFile } from 'node:fs/promises';
+import { copyFile, exists, mkdir, readdir, readFile, rm, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { basename, dirname, extname, join } from 'node:path';
+import { basename, dirname, extname, isAbsolute, join, relative } from 'node:path';
 import slugifyLib from 'slugify';
 import { BuildError } from './errors.js';
 import { exec, mapWithConcurrency } from './run.js';
@@ -28,8 +28,11 @@ import { exec, mapWithConcurrency } from './run.js';
  * la contrapartida, cambios de color por canal por debajo del 15 %, no se ven.
  *
  * Artefactos: en PASS no queda nada (cada par se borra al compararlo y el
- * directorio de trabajo se elimina); en FAIL solo quedan los pares con diff y
- * sus imágenes de diferencia, y la ruta se reporta.
+ * directorio de trabajo se elimina); en FAIL solo sobrevive la imagen de
+ * diferencia de cada página afectada, y se escribe en `visual/` junto al
+ * snapshot, con el mismo nombre (`index.pdf` → `index-page-005-diff.png`).
+ * Los renders intermedios (`ref-*`, `gen-*`) y el blur nunca se conservan:
+ * para ver las dos páginas están el snapshot y el PDF de `dist/`.
  */
 
 export interface VisualOptions {
@@ -104,15 +107,64 @@ export function visualSlug(pdfPath: string): string {
   return slug === '' ? 'documento' : slug;
 }
 
-/** Referencia versionable del proyecto: `<raíz>/visual/<slug>.pdf`. */
-export function referencePathFor(cwd: string, slug: string): string {
-  return join(cwd, 'visual', `${slug}.pdf`);
+/**
+ * Snapshot de un PDF: `<raíz>/visual/<ruta relativa al directorio de salida>`,
+ * de modo que `visual/` espeje `dist/files` y dos `index.pdf` de carpetas
+ * distintas no colisionen. Un PDF fuera de la salida (el caso «tengo un PDF
+ * suelto») cae al slug del nombre.
+ */
+export function referencePathFor(cwd: string, pdfPath: string, outputDir: string): string {
+  const rel = relative(outputDir, pdfPath);
+  const insideOutput = rel !== '' && !rel.startsWith('..') && !isAbsolute(rel);
+  return insideOutput ? join(cwd, 'visual', dirname(rel), `${visualSlug(rel)}.pdf`) : join(cwd, 'visual', `${visualSlug(pdfPath)}.pdf`);
+}
+
+/** Nombre de la imagen de diferencia de una página: `index-page-005-diff.png`. */
+export function diffImageName(stem: string, page: number): string {
+  return `${stem}-page-${String(page).padStart(3, '0')}-diff.png`;
+}
+
+/** Dónde viven los diffs de un snapshot: su carpeta y el nombre base. */
+export function diffTargetFor(snapshotPath: string): { dir: string; stem: string } {
+  return { dir: dirname(snapshotPath), stem: basename(snapshotPath, extname(snapshotPath)) };
+}
+
+async function walkFiles(dir: string): Promise<string[]> {
+  const found: string[] = [];
+  const walk = async (current: string): Promise<void> => {
+    const entries = await readdir(current, { withFileTypes: true }).catch(() => []);
+    for (const entry of entries) {
+      const full = join(current, entry.name);
+      if (entry.isDirectory()) await walk(full);
+      else if (entry.isFile()) found.push(full);
+    }
+  };
+  await walk(dir);
+  return found.sort();
+}
+
+/** Todos los PDFs de un árbol, ordenados por ruta. */
+export async function listPdfFiles(dir: string): Promise<string[]> {
+  return (await walkFiles(dir)).filter((file) => extname(file).toLowerCase() === '.pdf');
+}
+
+const DIFF_IMAGE = /-page-\d+-diff\.png$/;
+
+/** Borra los diffs de un snapshot: la carpeta solo refleja la última corrida. */
+export async function clearDiffImages(dir: string, stem?: string): Promise<void> {
+  const files = stem === undefined ? await walkFiles(dir) : (await readdir(dir).catch(() => [])).map((f) => join(dir, f));
+  const pattern = stem === undefined ? DIFF_IMAGE : new RegExp(`^${escapeRegExp(stem)}-page-\\d+-diff\\.png$`);
+  await Promise.all(files.filter((file) => pattern.test(basename(file))).map((file) => forceUnlink(file)));
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 export interface VisualWorkspaces {
-  /** Donde se renderizan las páginas y viven los artefactos de un FAIL. */
+  /** Donde se renderizan las páginas: temporales que no sobreviven a la corrida. */
   workDir: string;
-  /** Caché de PASS: sobrevive al borrado del workDir. */
+  /** Caché de PASS: vive fuera del workDir, que siempre se borra. */
   cachePath: string;
 }
 
@@ -143,7 +195,7 @@ export interface VisualDiffResult {
   referencePages: number;
   generatedPages: number;
   pass: boolean;
-  /** Carpeta que conserva los artefactos de las páginas con diferencias (FAIL). */
+  /** Carpeta donde quedan los diffs de las páginas modificadas (FAIL). */
   diffDir?: string;
   /** El resultado salió de la caché de PASS: no se volvió a renderizar. */
   fromCache?: boolean;
@@ -217,14 +269,21 @@ async function blurPage(source: string, target: string, sigma: number): Promise<
 
 /**
  * Compara dos PNG por píxeles: blur proporcional al dpi + fuzz, y escribe la
- * imagen de diferencia en `diffImage`. Devuelve el % de píxeles distintos.
+ * imagen de diferencia en `diffImage`. Devuelve el % de píxeles distintos. El
+ * blur intermedio vive en `tmpDir` (nunca en la carpeta de artefactos).
  */
-async function comparePngPair(referencePng: string, generatedPng: string, diffImage: string, options: VisualOptions): Promise<number> {
+async function comparePngPair(
+  referencePng: string,
+  generatedPng: string,
+  diffImage: string,
+  options: VisualOptions,
+  tmpDir: string,
+): Promise<number> {
   const size = pngSize(await readFile(referencePng));
   if (size === null) throw new BuildError(`"${referencePng}" no es un PNG válido`);
 
   const sigma = blurSigmaFor(options.dpi);
-  const blurBase = join(dirname(diffImage), `blur-${basename(diffImage)}`);
+  const blurBase = join(tmpDir, `blur-${basename(diffImage)}`);
   const blurredReference = `${blurBase}-a.png`;
   const blurredGenerated = `${blurBase}-b.png`;
   await blurPage(referencePng, blurredReference, sigma);
@@ -256,9 +315,13 @@ export interface CompareVisualInput extends VisualOptions {
   generated: string;
   workDir: string;
   cachePath?: string;
+  /** Carpeta donde se escriben los diffs; por defecto, el propio workDir. */
+  diffDir?: string;
+  /** Nombre base de los diffs (`index` → `index-page-005-diff.png`); por defecto, `documento`. */
+  diffStem?: string;
 }
 
-/** Renderiza los dos PDFs y compara sus páginas; PASS ⇒ sin artefactos. */
+/** Renderiza los dos PDFs y compara sus páginas; los diffs van a `diffDir`. */
 export async function compareVisual(input: CompareVisualInput): Promise<VisualDiffResult> {
   const options: VisualOptions = {
     dpi: input.dpi,
@@ -273,6 +336,9 @@ export async function compareVisual(input: CompareVisualInput): Promise<VisualDi
 
   await rm(input.workDir, { recursive: true, force: true });
   await mkdir(input.workDir, { recursive: true });
+  const diffDir = input.diffDir ?? input.workDir;
+  const diffStem = input.diffStem ?? 'documento';
+  if (diffDir !== input.workDir) await mkdir(diffDir, { recursive: true });
 
   const referencePages = await renderPdf(input.reference, join(input.workDir, 'ref'), options.dpi);
   const generatedPages = await renderPdf(input.generated, join(input.workDir, 'gen'), options.dpi);
@@ -287,14 +353,15 @@ export async function compareVisual(input: CompareVisualInput): Promise<VisualDi
       const generatedPng = generatedPages[index];
       if (referencePng === undefined || generatedPng === undefined) return;
       const page = index + 1;
-      const diffImage = join(input.workDir, `page-${String(page).padStart(3, '0')}-diff.png`);
-      const diffPercent = await comparePngPair(referencePng, generatedPng, diffImage, options);
+      const diffImage = join(diffDir, diffImageName(diffStem, page));
+      const diffPercent = await comparePngPair(referencePng, generatedPng, diffImage, options, input.workDir);
       if (diffPercent <= options.thresholdPercent) {
         await Promise.all([forceUnlink(referencePng), forceUnlink(generatedPng), forceUnlink(diffImage)]);
         return;
       }
-      await rename(referencePng, join(input.workDir, `page-${String(page).padStart(3, '0')}-ref.png`));
-      await rename(generatedPng, join(input.workDir, `page-${String(page).padStart(3, '0')}-gen.png`));
+      // El diff es lo único que se conserva: para ver las dos páginas están el
+      // snapshot y el PDF de dist, así que los renders se retiran aquí.
+      await Promise.all([forceUnlink(referencePng), forceUnlink(generatedPng)]);
       details.push({ page, diffPercent, diffImage });
     },
   );
@@ -316,12 +383,14 @@ export async function compareVisual(input: CompareVisualInput): Promise<VisualDi
     referencePages: referencePages.length,
     generatedPages: generatedPages.length,
     pass,
-    // Solo hay artefactos que conservar si alguna página cambió: con un nº de
-    // páginas distinto el directorio queda vacío y no sirve para inspeccionar.
-    ...(changed > 0 ? { diffDir: input.workDir } : {}),
+    // Solo hay diffs que señalar si alguna página cambió: con un nº de páginas
+    // distinto y nada modificado no hay nada que mirar.
+    ...(changed > 0 ? { diffDir } : {}),
   };
 
-  if (changed === 0) await rm(input.workDir, { recursive: true, force: true });
+  // Los renders viven en el workDir: si los diffs van a otra carpeta (el caso
+  // `visual/`) el directorio de trabajo ya no tiene nada que conservar.
+  if (!(diffDir === input.workDir && changed > 0)) await rm(input.workDir, { recursive: true, force: true });
   if (pass && input.cachePath !== undefined) {
     const entry: CacheEntry = {
       compared,
@@ -336,7 +405,7 @@ export async function compareVisual(input: CompareVisualInput): Promise<VisualDi
   return result;
 }
 
-/** Guarda el PDF generado como referencia versionable del proyecto. */
+/** Guarda el PDF generado como snapshot versionable del proyecto. */
 export async function saveReference(generated: string, storePath: string): Promise<void> {
   await mkdir(dirname(storePath), { recursive: true });
   if (generated !== storePath) await copyFile(generated, storePath);
@@ -349,18 +418,28 @@ export interface VisualReport {
   generatedLabel: string;
 }
 
-/** Resumen de corrida: páginas comparadas, sin cambios, modificadas y sus diffs. */
-export function formatVisualReport(report: VisualReport): string {
-  const { result, options, referenceLabel, generatedLabel } = report;
-  const lines = [
-    `visual: ${generatedLabel} vs ${referenceLabel} · ${options.dpi} dpi · umbral ${options.thresholdPercent} % · fuzz ${options.fuzzPercent} %`,
-    `páginas ${result.compared} · sin cambios ${result.unchanged} · modificadas ${result.changed}`,
-  ];
+/**
+ * Recuento de una comparación: páginas comparadas, sin cambios, modificadas y
+ * la ruta de la imagen de diferencia de cada página afectada. `label` acorta
+ * esas rutas para el resumen de varios PDFs.
+ */
+export function formatVisualSummary(result: VisualDiffResult, label?: (path: string) => string): string[] {
+  const name = label ?? ((path: string) => path);
+  const lines = [`páginas ${result.compared} · sin cambios ${result.unchanged} · modificadas ${result.changed}`];
   if (result.referencePages !== result.generatedPages) {
     lines.push(`páginas distintas: referencia ${result.referencePages} · generado ${result.generatedPages}`);
   }
   for (const detail of result.details) {
-    lines.push(`  pág ${detail.page}  ${detail.diffPercent.toFixed(4)} %  ${detail.diffImage}`);
+    lines.push(`  pág ${detail.page}  ${detail.diffPercent.toFixed(4)} %  ${name(detail.diffImage)}`);
   }
-  return lines.join('\n');
+  return lines;
+}
+
+/** Resumen de una corrida: identificación del par, recuento y diffs. */
+export function formatVisualReport(report: VisualReport, label?: (path: string) => string): string {
+  const { result, options, referenceLabel, generatedLabel } = report;
+  return [
+    `visual: ${generatedLabel} vs ${referenceLabel} · ${options.dpi} dpi · umbral ${options.thresholdPercent} % · fuzz ${options.fuzzPercent} %`,
+    ...formatVisualSummary(result, label),
+  ].join('\n');
 }
