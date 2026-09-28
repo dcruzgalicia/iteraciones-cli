@@ -6,6 +6,14 @@ const PANDOC_TIMEOUT_MS = 120_000;
 
 export const MD_READER = 'markdown+auto_identifiers+mark';
 
+/**
+ * #2460 — el mapa de rutas de imagen viaja por env hacia el filtro
+ * `semantic/ast/04-image-paths` (nunca por argv: crece con las imágenes).
+ */
+export function imagePathsEnv(imagePaths?: string): Record<string, string> {
+  return imagePaths === undefined ? {} : { ITERACIONES_PATHS_JSON: imagePaths };
+}
+
 export interface BibOptions {
   bibliography: string;
   csl?: string;

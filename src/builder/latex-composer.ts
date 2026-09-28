@@ -5,19 +5,12 @@ import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
 import { fmStringList, resolveBooleanField, resolveMetadataField, resolveStringField, trimmedStringValue } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
-import { execPandoc, MD_READER } from '../lib/pandoc-runner.js';
+import { execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
 import { parseAuthors } from './discover.js';
 import type { LuaFilterGroup } from './filter-resolver.js';
 import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
 import type { PageDimensions } from './image-processor.js';
-import {
-  imageNamerFor,
-  processDocumentImages,
-  rewriteImagePaths,
-  scanInlineImages,
-  scanTitlePageFieldImages,
-  uniqueName,
-} from './image-processor.js';
+import { imageNamerFor, processDocumentImages, scanInlineImages, scanTitlePageFieldImages, uniqueName } from './image-processor.js';
 import { babelOptionsForLang, pageNumberCommandFor } from './latex-preamble.js';
 import { ASSETS_IMAGES_DIR } from './output-layout.js';
 import { creatorArgs, publisherArg, titleArg } from './pandoc-metadata.js';
@@ -74,6 +67,8 @@ async function pdfDate(
 interface LatexComposerOptions {
   /** #2445: ruta de la entrada materializada para build.sh (.iteraciones/collections). */
   inputTarget?: string;
+  /** #2460: mapa de rutas de imagen por documento que lee el filtro 04-image-paths (env). */
+  imagePaths?: string;
   filters: LuaFilterGroup;
   bibFiles: string[];
   templatePath: string;
@@ -234,7 +229,7 @@ function yamlScalar(value: string): string {
   return `|\n${body}`;
 }
 
-function prependFrontmatterYaml(content: string, overrides: Record<string, string>, imageMap: Map<string, string>, docDir: string): string {
+function prependFrontmatterYaml(content: string, overrides: Record<string, string>): string {
   const keys = Object.keys(overrides);
   if (keys.length === 0) return content;
   const lines = ['---'];
@@ -244,8 +239,7 @@ function prependFrontmatterYaml(content: string, overrides: Record<string, strin
     lines.push(`${key}: ${yamlScalar(value)}`);
   }
   lines.push('---');
-  let yaml = lines.join('\n');
-  yaml = rewriteImagePaths(yaml, imageMap, docDir);
+  const yaml = lines.join('\n');
   const fmEnd = content.indexOf('\n---\n');
   if (fmEnd >= 0) {
     return `${content.slice(0, fmEnd + 5)}\n${yaml}${content.slice(fmEnd + 5)}`;
@@ -328,23 +322,23 @@ function buildNormalTitleOverrides(title: string, creator: string[], subtitle: s
 export async function buildLatexPandocContent(
   content: string,
   doc: BuildDocument,
-  opts: Pick<LatexComposerOptions, 'fm' | 'formatCfg' | 'siteConfig' | 'images'>,
+  opts: Pick<LatexComposerOptions, 'fm' | 'formatCfg' | 'siteConfig'>,
 ): Promise<string> {
-  const { fm, formatCfg, siteConfig, images } = opts;
-  const imageMap = images?.imageMap ?? new Map<string, string>();
+  const { fm, formatCfg, siteConfig } = opts;
   const interventionOverrides = applyInterventionOverrides(fm, doc.frontmatter.type);
   const title = interventionOverrides?.title ?? resolveStringField(fm, formatCfg, siteConfig, 'title') ?? 'Sin título';
   const creator = interventionOverrides?.creator ?? parseAuthors(resolveMetadataField(fm, formatCfg, siteConfig, 'creator'));
   const subtitle = interventionOverrides?.subtitle ?? resolveStringField(fm, formatCfg, siteConfig, 'subtitle');
   const date = interventionOverrides?.date ?? (await pdfDate(fm, formatCfg, siteConfig, doc));
-  const docDir = dirname(doc.filePath);
 
   const titleOverrides = buildTitlePageOverrides(fm, formatCfg, siteConfig, doc);
   const interventionTitleOverrides = interventionOverrides
     ? buildInterventionTitleOverrides(interventionOverrides)
     : buildNormalTitleOverrides(title, creator, subtitle, date);
   Object.assign(titleOverrides, interventionTitleOverrides);
-  let pandocContent = prependFrontmatterYaml(rewriteImagePaths(content, imageMap, docDir), titleOverrides, imageMap, docDir);
+  // #2460: las rutas de imagen ya no se reescriben sobre el texto crudo; las
+  // reescribe el filtro semantic/ast/04-image-paths sobre el AST que pandoc arma.
+  let pandocContent = prependFrontmatterYaml(content, titleOverrides);
 
   if (interventionOverrides && interventionOverrides.extraPages > 0) {
     pandocContent += `\n\n${'\\null\\newpage\n'.repeat(interventionOverrides.extraPages)}`;
@@ -357,7 +351,7 @@ export async function markdownToLatex(
   doc: BuildDocument,
   opts: LatexComposerOptions,
 ): Promise<{ tex: string; processedImages: string[] }> {
-  const { filters, bibFiles, templatePath, fm, siteConfig, formatCfg, biblatexAvailable = true, warnedLangs, images, cwd = '' } = opts;
+  const { filters, bibFiles, templatePath, fm, siteConfig, formatCfg, biblatexAvailable = true, warnedLangs, images, cwd = '', imagePaths } = opts;
   const effectiveFm = mergeConfigImages(fm, formatCfg, siteConfig, cwd);
   const interventionOverrides = applyInterventionOverrides(fm, doc.frontmatter.type);
 
@@ -379,12 +373,12 @@ export async function markdownToLatex(
   if (interventionOverrides?.intervention) extraArgs.push('--metadata=intervention:true');
 
   const tex = await execPandoc({
-    input: await buildLatexPandocContent(content, doc, { fm, formatCfg, siteConfig, images }),
+    input: await buildLatexPandocContent(content, doc, { fm, formatCfg, siteConfig }),
     sourcePath: doc.filePath,
     from: MD_READER,
     to: 'latex',
     extraArgs,
-    env: { ITERACIONES_MBOX_HELPERS: MBOX_HELPERS_FILTER },
+    env: { ITERACIONES_MBOX_HELPERS: MBOX_HELPERS_FILTER, ...imagePathsEnv(imagePaths) },
     inputTarget: opts.inputTarget,
   });
 

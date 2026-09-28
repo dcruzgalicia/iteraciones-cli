@@ -6,6 +6,7 @@ import { loadFilterGroups } from '../builder/filter-resolver.js';
 import { markdownToLatex } from '../builder/latex-composer.js';
 import type { BuildDocument } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
+import { PandocError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
 import { execPandoc, getPandocVersion } from '../lib/pandoc-runner.js';
 import { registerSkip, SKIP_REASONS } from './helpers.js';
@@ -756,5 +757,85 @@ describe.skipIf(!pandocOk)('filter latex/07-titlepages (páginas de título inte
     expect(tex).toContain('Mare Advertencia');
     expect(tex).toContain('Hoy vamos caminando juntas');
     expect(tex).not.toContain(':::');
+  });
+});
+
+describe.skipIf(!pandocOk)('filtro semantic/ast/04-image-paths (#2460)', () => {
+  const FILTER = join(RESOURCES, 'semantic', 'ast', '04-image-paths.lua');
+  const DOC = [
+    '---',
+    'title: Doc',
+    'titleImage: imgs/portada.png',
+    'lowertitleback: |',
+    '  baja con ![](imgs/baja.png)',
+    '---',
+    '',
+    'Cuerpo ![](imgs/cuerpo.png) y <img src="imgs/crudo.png" alt="x">',
+    '',
+    '![ref][id]',
+    '',
+    '[id]: imgs/ref.png',
+  ].join('\n');
+  const NOMBRES = ['cuerpo', 'portada', 'crudo', 'baja', 'ref'];
+  let dir: string;
+  let mapa: string;
+  const dst = (n: string): string => join(dir, 'assets', `doc-${n}.jpg`);
+
+  beforeAll(() => {
+    dir = mkdtempSync(join(tmpdir(), 'iteraciones-imgpaths-'));
+    mapa = join(dir, 'paths.json');
+    // Las tres claves con las que el AST puede traer cada ruta, como las arma
+    // imagePathsMap (absoluta, relativa y ./relativa).
+    const entries: Record<string, string> = {};
+    for (const n of NOMBRES) {
+      entries[`imgs/${n}.png`] = dst(n);
+      entries[`./imgs/${n}.png`] = dst(n);
+      entries[`${dir}/imgs/${n}.png`] = dst(n);
+    }
+    writeFileSync(mapa, JSON.stringify(entries));
+  });
+
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+
+  function run(to: 'latex' | 'html5' | 'json', paths?: string): Promise<string> {
+    return execPandoc({
+      input: DOC,
+      sourcePath: 'test.md',
+      to,
+      extraArgs: ['--lua-filter', FILTER],
+      env: paths === undefined ? {} : { ITERACIONES_PATHS_JSON: paths },
+    });
+  }
+
+  it('reescribe Image.src (cuerpo y definición de referencia) en el .tex', async () => {
+    const tex = await run('latex', mapa);
+    expect(tex).toContain(dst('cuerpo'));
+    expect(tex).toContain(dst('ref'));
+    expect(tex).not.toContain('imgs/cuerpo.png');
+    expect(tex).not.toContain('imgs/ref.png');
+  });
+
+  it('reescribe el <img src> crudo (llega como RawInline, no como Image)', async () => {
+    const html = await run('html5', mapa);
+    expect(html).toContain(`<img src="${dst('crudo')}"`);
+    expect(html).not.toContain('imgs/crudo.png');
+  });
+
+  it('reescribe las rutas del meta: escalar (titleImage) y multilinea (Image en el bloque)', async () => {
+    const ast = JSON.parse(await run('json', mapa)) as { meta: Record<string, unknown> };
+    expect(JSON.stringify(ast.meta.titleImage)).toContain(dst('portada'));
+    expect(JSON.stringify(ast.meta.lowertitleback)).toContain(dst('baja'));
+  });
+
+  it('sin mapa (env ausente) deja el documento intacto', async () => {
+    const tex = await run('latex');
+    expect(tex).toContain('imgs/cuerpo.png');
+    expect(tex).not.toContain('assets/doc-cuerpo.jpg');
+  });
+
+  it('con el env apuntando a un fichero que no existe falla en vez de emitir rutas viejas', async () => {
+    const error = await run('latex', join(dir, 'falta.json')).catch((err: unknown) => err);
+    expect(error).toBeInstanceOf(PandocError);
+    expect((error as PandocError).stderr).toContain('04-image-paths');
   });
 });

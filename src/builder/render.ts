@@ -1,6 +1,6 @@
 import type { SiteConfig } from '../config/config-schema.js';
 import { fmString } from '../lib/frontmatter-fields.js';
-import { type BibOptions, execPandoc, MD_READER } from '../lib/pandoc-runner.js';
+import { type BibOptions, execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
 import { resolveScriptStdout } from '../lib/script-recorder.js';
 import { type LuaFilterGroup, loadFilterGroups } from './filter-resolver.js';
 import { buildFormatsArgs, buildFormatsFlag, type HtmlPageVars } from './html-composer.js';
@@ -12,6 +12,8 @@ interface HtmlPageOptions {
   cwd: string;
   /** #2445: ruta de la entrada materializada en .iteraciones/collections (collections). */
   inputTarget?: string;
+  /** #2460: mapa de rutas de imagen por documento que lee el filtro 04-image-paths (env). */
+  imagePaths?: string;
   vars: HtmlPageVars;
   siteConfig: SiteConfig;
   templatePath: string;
@@ -86,6 +88,7 @@ export async function htmlPageFromMarkdown(content: string, doc: BuildDocument, 
     from: MD_READER,
     to: 'html5',
     extraArgs,
+    env: imagePathsEnv(opts.imagePaths),
     inputTarget: opts.inputTarget,
   });
   const final = postProcessHtml(html, refsCardTemplate);

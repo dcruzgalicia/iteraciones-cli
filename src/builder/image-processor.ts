@@ -4,6 +4,7 @@ import { basename, isAbsolute, join, relative, resolve } from 'node:path';
 import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 import { exec, mapWithConcurrency, ProcessSpawnError, ProcessTimeoutError } from '../lib/run.js';
+import { ASSETS_IMAGES_DIR } from './output-layout.js';
 
 const MM_TO_PX_300DPI = 300 / 25.4;
 
@@ -300,6 +301,29 @@ export function rewriteImagePaths(content: string, imageMap: Map<string, string>
     }
   }
   return result;
+}
+
+/**
+ * #2460: mapa *origen → assets* que el filtro `semantic/ast/04-image-paths`
+ * lee por fichero (`.iteraciones/paths/<doc>.<formato>.json`), en vez de que
+ * reescribamos el texto crudo antes de pandoc.
+ *
+ * Claves: las tres formas con las que el AST puede traer la ruta (absoluta,
+ * relativa y `./relativa`), las mismas que probaba `rewriteImagePaths`. Valor:
+ * la ruta absoluta del procesado (latex/epub trabajan sobre rutas absolutas,
+ * #2156) o `./assets/images/<nombre>` (html vive junto a sus assets).
+ */
+export function imagePathsMap(imageMap: Map<string, string>, docDir: string, relativize: boolean): Record<string, string> {
+  const paths: Record<string, string> = {};
+  for (const [absoluteOriginal, processed] of imageMap) {
+    if (processed === absoluteOriginal) continue;
+    const value = relativize ? `./${ASSETS_IMAGES_DIR}/${basename(processed)}` : processed;
+    const rel = relative(docDir, absoluteOriginal);
+    for (const key of [absoluteOriginal, rel, `./${rel}`]) {
+      if (key !== '') paths[key] = value;
+    }
+  }
+  return paths;
 }
 
 /**

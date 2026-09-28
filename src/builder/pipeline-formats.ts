@@ -1,4 +1,5 @@
-import { basename, dirname, join, normalize, relative, sep } from 'node:path';
+import { mkdir } from 'node:fs/promises';
+import { basename, dirname, join, normalize, relative, resolve, sep } from 'node:path';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
@@ -11,7 +12,7 @@ import { assembleExportDocument } from './export/assemble.js';
 import { convertToEpub, convertToMarkdown } from './export/runner.js';
 import type { ExportDocument } from './export/types.js';
 import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
-import { rewriteFmImagePaths, rewriteImagePaths } from './image-processor.js';
+import { imagePathsMap, rewriteFmImagePaths, rewriteImagePaths } from './image-processor.js';
 import {
   buildTexDistribution,
   composeLatexFinalOutput,
@@ -68,6 +69,28 @@ function xmpMetadataFor(
   };
 }
 
+/**
+ * #2460 — escribe el mapa de rutas que lee el filtro
+ * `semantic/ast/04-image-paths` y devuelve su ruta para el env de pandoc. Un
+ * fichero por documento y formato: los documentos se procesan en paralelo y
+ * cada formato pide una forma distinta de la ruta (absoluta en latex/epub,
+ * `./assets/images` en html). Vive en `.iteraciones/paths`, de donde lo relee
+ * `bash build.sh`.
+ */
+async function writeImagePaths(
+  doc: BuildDocument,
+  cwd: string,
+  format: 'latex' | 'html' | 'epub',
+  imageMap: Map<string, string>,
+  docDir: string,
+  relativize: boolean,
+): Promise<string> {
+  const path = resolve(cwd, '.iteraciones', 'paths', `${doc.relativePath}.${format}.json`);
+  await mkdir(dirname(path), { recursive: true });
+  await Bun.write(path, `${JSON.stringify(imagePathsMap(imageMap, docDir, relativize))}\n`);
+  return path;
+}
+
 async function emitLatexAndQueuePdf(
   doc: BuildDocument,
   outputs: DocumentOutputs,
@@ -83,10 +106,12 @@ async function emitLatexAndQueuePdf(
   const { dir, outBase, outSlug, fm } = outputs;
   const texDistPath = outBase(`${outSlug}${primaryOutputExtension('latex')}`);
 
+  const imagePaths = await writeImagePaths(doc, ctx.cwd, 'latex', images.imageMap, dirname(doc.filePath), false);
   const { tex: fullTex, processedImages } = await markdownToLatex(outputs.content, doc, {
     filters: exportCtx.filters,
     bibFiles: exportCtx.bibFiles,
     inputTarget: collectionPandocInput(doc, ctx.cwd, outSlug, 'latex'),
+    imagePaths,
     templatePath:
       doc.frontmatter.type === 'collection'
         ? exportCtx.latexCollectionTemplatePath
@@ -158,6 +183,7 @@ async function emitHtmlPage(
   renderCtx: RenderContext,
   exportCtx: ExportContext,
   discoveryIndex: Map<string, DiscoveryEntry>,
+  imagePaths?: string,
 ): Promise<void> {
   const { ctx, plan, formatCfg, lang } = renderCtx;
   const htmlConfig = formatCfg?.html;
@@ -170,6 +196,7 @@ async function emitHtmlPage(
   const html = await htmlPageFromMarkdown(content, doc, {
     cwd,
     inputTarget: collectionPandocInput(doc, cwd, outSlug, 'html'),
+    imagePaths,
     vars: {
       title: doc.frontmatter.title || slug,
       siteTitle: htmlConfig?.site?.title ?? 'iteraciones',
@@ -737,22 +764,27 @@ async function emitCollectionFormats(
 
   if (activeFormats.html && formatWorkSets.htmlPaths.has(doc.relativePath) && docProducesFormat(doc.frontmatter.type, 'html')) {
     const base = collectionBaseContent(collectionEntries, 'html', content);
-    const htmlContent = rewriteImagePaths(prependLinksMarkdown(base, creatorLinks), relImageMap, docDir);
-    await emitHtmlPage(doc, { ...outputs, content: htmlContent }, renderCtx, exportCtx, discoveryIndex);
+    // #2460: las rutas no se reescriben sobre el texto que va a pandoc; el
+    // filtro 04-image-paths las reescribe sobre el AST.
+    const imagePaths = await writeImagePaths(doc, ctx.cwd, 'html', images.imageMap, docDir, true);
+    await emitHtmlPage(doc, { ...outputs, content: prependLinksMarkdown(base, creatorLinks) }, renderCtx, exportCtx, discoveryIndex, imagePaths);
   }
 
   if (activeFormats.epub && formatWorkSets.epubPaths.has(doc.relativePath) && docProducesFormat(doc.frontmatter.type, 'epub')) {
     const base = collectionBaseContent(collectionEntries, 'html', content);
+    const imagePaths = await writeImagePaths(doc, ctx.cwd, 'epub', images.imageMap, docDir, false);
     await convertToEpub(
       // EPUB se arma con rutas absolutas: pandoc resuelve los medios contra el
-      // cwd del proceso (entrada por stdin, sin --resource-path).
-      rewriteImagePaths(prependLinksMarkdown(base, creatorLinks), images.imageMap, docDir),
+      // cwd del proceso (entrada por stdin, sin --resource-path). El mapa
+      // absoluto lo aplica 04-image-paths sobre el AST (#2460).
+      prependLinksMarkdown(base, creatorLinks),
       outputs.outBase(`${outputs.outSlug}${primaryOutputExtension('epub')}`),
       exportDoc,
       exportCtx.filters,
       ctx.siteConfig.toc,
       outputs.fm,
       collectionPandocInput(doc, ctx.cwd, outputs.outSlug, 'epub'),
+      imagePaths,
     );
   }
 

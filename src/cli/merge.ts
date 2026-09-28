@@ -2,7 +2,7 @@ import { basename, dirname, isAbsolute, join, normalize, relative, sep } from 'n
 import { resolveCollectionFile } from '../builder/collection-files.js';
 import { printFlags } from '../builder/image-flags.js';
 import { rewriteImagePaths } from '../builder/image-processor.js';
-import { buildLatexPandocContent, type ImagePreprocessResult, mergeConfigImages, preprocessDocumentImages } from '../builder/latex-composer.js';
+import { buildLatexPandocContent, mergeConfigImages, preprocessDocumentImages } from '../builder/latex-composer.js';
 import { aggregateCollectionCreators } from '../builder/orchestrator.js';
 import { ASSETS_IMAGES_DIR, DIST_FILES_DIR } from '../builder/output-layout.js';
 import { type CollectionEntry, collectionBaseContent, readCollectionEntries } from '../builder/pipeline-formats.js';
@@ -65,7 +65,6 @@ async function readCollectionSource(cwd: string, input: string) {
 
 interface MergeContext {
   doc: BuildDocument;
-  images: ImagePreprocessResult;
   relImageMap: Map<string, string>;
   docDir: string;
 }
@@ -97,7 +96,7 @@ async function buildMergeContext(
       .filter(([from, dst]) => dst !== from)
       .map(([from, dst]): [string, string] => [from, `./${ASSETS_IMAGES_DIR}/${basename(dst)}`]),
   );
-  return { doc, images, relImageMap, docDir: dirname(src.inputPath) };
+  return { doc, relImageMap, docDir: dirname(src.inputPath) };
 }
 
 async function composeFor(
@@ -113,12 +112,12 @@ async function composeFor(
       fm: src.fm,
       formatCfg: siteConfig.format?.pdf,
       siteConfig,
-      images: ctx.images,
     });
   }
   const base = collectionBaseContent(entries, format === 'markdown' ? 'markdown' : 'html', src.text);
-  // EPUB va con rutas absolutas: pandoc resuelve los medios contra el cwd.
-  return rewriteImagePaths(base, format === 'epub' ? ctx.images.imageMap : ctx.relImageMap, ctx.docDir);
+  // #2460: latex/html/epub no reescriben el texto crudo (lo reescribe el filtro
+  // 04-image-paths sobre el AST); el markdown de dist no pasa por pandoc (#2436).
+  return format === 'markdown' ? rewriteImagePaths(base, ctx.relImageMap, ctx.docDir) : base;
 }
 
 /**

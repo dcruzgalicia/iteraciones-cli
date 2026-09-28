@@ -483,7 +483,7 @@ Alcance y límites:
 - **`iteraciones build --full` ≡ `bash build.sh`.** Todo lo que sale de `dist` se repite con el .sh: las salidas son byte-idénticas salvo los metadatos de creación de `.pdf` y `.epub` (uuid y fechas, que no son contenido del markdown), que se comparan por texto y por entradas del zip.
 - **Un build incremental solo registra lo que corrió en esa corrida**; si no corrió ningún comando externo, `build.sh` queda con la cabecera sin pasos.
 
-Las entradas que pandoc lee por stdin viven en `.iteraciones/script/in-NNNN.md`; las de collections, una por formato, en `.iteraciones/collections/<slug>.<fmt>.md`, que el propio `iteraciones merge` del `.sh` vuelve a crear. Ambas se regeneran en cada build.
+Las entradas que pandoc lee por stdin viven en `.iteraciones/script/in-NNNN.md`; las de collections, una por formato, en `.iteraciones/collections/<slug>.<fmt>.md`, que el propio `iteraciones merge` del `.sh` vuelve a crear. Ambas se regeneran en cada build. Los mapas de rutas de imagen que el filtro `semantic/ast/04-image-paths` aplica sobre el AST viajan por env (`ITERACIONES_PATHS_JSON`) en `.iteraciones/paths/<doc>.<fmt>.json` —uno por documento y formato, porque los documentos se procesan en paralelo—; también los escribe solo el build.
 
 ### `bundle`
 

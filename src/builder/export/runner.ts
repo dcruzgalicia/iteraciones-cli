@@ -4,7 +4,7 @@ import { stringify } from 'yaml';
 import { ExportError, PANDOC_ERROR_CODES } from '../../lib/errors.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../../lib/frontmatter.js';
 import { fmBool, fmString } from '../../lib/frontmatter-fields.js';
-import { execPandoc, MD_READER } from '../../lib/pandoc-runner.js';
+import { execPandoc, imagePathsEnv, MD_READER } from '../../lib/pandoc-runner.js';
 import { exec, ProcessSpawnError, ProcessTimeoutError } from '../../lib/run.js';
 import { prepareArgv, recordSupportCommand } from '../../lib/script-recorder.js';
 import type { LuaFilterGroup } from '../filter-resolver.js';
@@ -24,6 +24,7 @@ export async function convertToEpub(
   toc?: boolean,
   fm: Record<string, unknown> = {},
   inputTarget?: string,
+  imagePaths?: string,
 ): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
 
@@ -42,7 +43,16 @@ export async function convertToEpub(
   extraArgs.push(...creatorArgs(doc.metadata.creator));
   extraArgs.push(...dateArg((doc.metadata.dateIso ?? doc.metadata.date) || undefined));
 
-  await execPandoc({ input: content, sourcePath: doc.filePath, from: MD_READER, to: 'epub3', outputPath, extraArgs, inputTarget });
+  await execPandoc({
+    input: content,
+    sourcePath: doc.filePath,
+    from: MD_READER,
+    to: 'epub3',
+    outputPath,
+    extraArgs,
+    inputTarget,
+    env: imagePathsEnv(imagePaths),
+  });
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

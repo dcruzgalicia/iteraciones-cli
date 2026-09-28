@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import {
   computeProcessTargets,
   imageNamerFor,
+  imagePathsMap,
   processDocumentImages,
   processImage,
   resetMagickCache,
@@ -393,6 +394,41 @@ describe('rewriteFmImagePaths (#2441)', () => {
   it('sin imágenes en el mapa retorna el fm intacto', () => {
     const fm = { titleImage: 'img.png' };
     expect(rewriteFmImagePaths(fm, new Map(), docDir)).toBe(fm);
+  });
+});
+
+describe('imagePathsMap (#2460)', () => {
+  const docDir = '/proyecto/capitulos';
+  const procesada = '/salida/files/capitulos/assets/images/cap-img.jpg';
+  const map = new Map<string, string>([
+    ['/proyecto/capitulos/img.png', procesada],
+    ['/proyecto/capitulos/gif.png', '/proyecto/capitulos/gif.png'],
+  ]);
+
+  it('expone las tres formas de la ruta con el valor absoluto (latex/epub)', () => {
+    expect(imagePathsMap(map, docDir, false)).toEqual({
+      '/proyecto/capitulos/img.png': procesada,
+      'img.png': procesada,
+      './img.png': procesada,
+    });
+  });
+
+  it('para html el valor es ./assets/images/<nombre>', () => {
+    expect(imagePathsMap(map, docDir, true)).toEqual({
+      '/proyecto/capitulos/img.png': './assets/images/cap-img.jpg',
+      'img.png': './assets/images/cap-img.jpg',
+      './img.png': './assets/images/cap-img.jpg',
+    });
+  });
+
+  it('omite las imágenes que no se procesaron (dst === origen)', () => {
+    expect(Object.keys(imagePathsMap(map, docDir, false))).not.toContain('gif.png');
+    expect(Object.keys(imagePathsMap(map, docDir, false))).not.toContain('/proyecto/capitulos/gif.png');
+  });
+
+  it('una imagen fuera del directorio del doc usa la forma relativa con ../', () => {
+    const fuera = new Map([['/proyecto/comun/x.png', '/salida/assets/images/cap-x.jpg']]);
+    expect(imagePathsMap(fuera, docDir, false)['../comun/x.png']).toBe('/salida/assets/images/cap-x.jpg');
   });
 });
 
