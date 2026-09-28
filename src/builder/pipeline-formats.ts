@@ -173,6 +173,9 @@ async function emitLatexAndQueuePdf(
       texPath,
       pdfDest: outBase(`${outSlug}${primaryOutputExtension('pdf')}`),
       cover: resolveBooleanField(fm, formatCfg?.pdf, ctx.siteConfig, 'coverImage') === true,
+      // #2419 — sin `.bib` no hay nada que citar: latexmk va con `-nobibtex`
+      // (mismo criterio que apaga 11-bibliography en las plantillas).
+      noBibtex: exportCtx.bibFiles.length === 0,
     });
   }
 }

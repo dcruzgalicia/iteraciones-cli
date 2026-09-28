@@ -12,7 +12,7 @@ function progressStub() {
   } as never;
 }
 
-function job(i: number): PdfJob {
+function job(i: number, noBibtex = false): PdfJob {
   return {
     dir: '.',
     slug: `doc-${i}`,
@@ -20,6 +20,7 @@ function job(i: number): PdfJob {
     texPath: `/tmp/work/doc-${i}.tex`,
     pdfDest: `/tmp/out/doc-${i}.pdf`,
     cover: false,
+    noBibtex,
   };
 }
 
@@ -235,6 +236,27 @@ describe('pdf-pool (consumidor con solape real)', () => {
       spy.mockRestore();
     }
   });
+
+  it('cada job arrastra su noBibtex hasta el runner (#2419)', async () => {
+    const vistos: { slug: string; noBibtex: boolean | undefined }[] = [];
+    const spy = spyOn(runner, 'convertToPdf').mockImplementation(async (_tex, _src, _dir, slug, _biber, _dest, noBibtex) => {
+      vistos.push({ slug, noBibtex });
+    });
+    try {
+      const consumer = createPdfConsumer('/tmp/work', '/tmp/biber', 1, progressStub());
+      consumer.start();
+      consumer.pdfJobs.push(job(1, true), job(2, false));
+      consumer.markProducerDone();
+      await consumer.drain();
+      // El pool no decide nada: pasa tal cual lo que puso pipeline-formats.
+      expect(vistos).toEqual([
+        { slug: 'doc-1', noBibtex: true },
+        { slug: 'doc-2', noBibtex: false },
+      ]);
+    } finally {
+      spy.mockRestore();
+    }
+  });
 });
 
 describe('quiesce tras cancel (#2013)', () => {
@@ -266,6 +288,7 @@ describe('quiesce tras cancel (#2013)', () => {
         texPath: '/tmp/w/slow.tex',
         pdfDest: '/tmp/o/slow.pdf',
         cover: false,
+        noBibtex: false,
       });
       await Bun.sleep(20); // el worker tomó el job y está bloqueado en vuelo
 
@@ -290,7 +313,15 @@ describe('quiesce tras cancel (#2013)', () => {
     try {
       const consumer = createPdfConsumer('/tmp/work', '/tmp/biber', 1, progressStub());
       consumer.start();
-      consumer.pdfJobs.push({ dir: '.', slug: 'zombi', relativePath: 'zombi.md', texPath: '/tmp/w/z.tex', pdfDest: '/tmp/o/z.pdf', cover: false });
+      consumer.pdfJobs.push({
+        dir: '.',
+        slug: 'zombi',
+        relativePath: 'zombi.md',
+        texPath: '/tmp/w/z.tex',
+        pdfDest: '/tmp/o/z.pdf',
+        cover: false,
+        noBibtex: false,
+      });
       await Bun.sleep(20);
       consumer.cancel();
       const t0 = performance.now();
@@ -310,7 +341,7 @@ describe('quiesce tras cancel (#2013)', () => {
       murio = true;
     });
     const spy = spyOn(runner, 'convertToPdf').mockImplementation(
-      (_tex, _src, _dir, _slug, _biber, _dest, onSpawn) =>
+      (_tex, _src, _dir, _slug, _biber, _dest, _noBibtex, onSpawn) =>
         new Promise<void>((resolve) => {
           onSpawn?.(proc.pid);
           void proc.exited.then(() => resolve());

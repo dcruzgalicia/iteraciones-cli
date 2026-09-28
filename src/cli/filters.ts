@@ -1,5 +1,11 @@
 import { getBuiltinLuaFilterInfos, LUA_GROUP_ORDER, validateDisabledFilters } from '../builder/filter-resolver.js';
-import { getBuiltinPreambleFilterInfos, resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters } from '../builder/preamble-loader.js';
+import {
+  disableBibliographyWithoutBibFiles,
+  getBuiltinPreambleFilterInfos,
+  resolveEffectiveDisabledPreamble,
+  validateDisabledPreambleFilters,
+} from '../builder/preamble-loader.js';
+import { resolveBibOptions } from '../builder/state-bib.js';
 import { loadSiteConfigIfPresent } from '../config/config-loader.js';
 import { DEFAULT_SITE_CONFIG, resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { logInfo } from '../lib/logger.js';
@@ -115,7 +121,17 @@ export async function listFilters(cwd: string, options: RunFiltersOptions = {}):
   const stream = options.stream ?? process.stdout;
   const config = (await loadSiteConfigIfPresent(cwd))?.config ?? DEFAULT_SITE_CONFIG;
   validateDisabledFilters(config.disabledFilters);
-  const effectiveDisabledPreamble = resolveEffectiveDisabledPreamble(resolveDisabledPreambleConfig(config));
+  // #2419: el build apaga 11-bibliography cuando no hay `.bib`, y filters tiene
+  // que decir lo mismo. Si la config trae un `bibliography:` roto,
+  // resolveBibOptions lanza: aquí se ignora y se muestra la lista de la config
+  // tal cual (build/validate ya avisan de ese error con un mensaje claro).
+  const bibFiles = await resolveBibOptions(cwd, config)
+    .then((r) => r.bibFiles)
+    .catch(() => undefined);
+  const effectiveDisabledPreamble = disableBibliographyWithoutBibFiles(
+    resolveEffectiveDisabledPreamble(resolveDisabledPreambleConfig(config)),
+    bibFiles,
+  );
   validateDisabledPreambleFilters(effectiveDisabledPreamble);
   const disabled = new Set(config.disabledFilters ?? []);
   const allInfos = sortLuaInfos(await getBuiltinLuaFilterInfos());
