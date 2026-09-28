@@ -493,10 +493,11 @@ export async function localizeDistAssets(
 }
 
 /**
- * #2445 — todo lo que el .tex de dist lleva y la salida cruda de pandoc no:
- * bloque de autores, metadatos XMP (PDF/X) y rutas de imagen acomodadas para
- * que el .tex de dist se mueva con su `assets/`. El build lo escribe como
- * manifiesto en `.iteraciones/post/<slug>.json` y `iteraciones post latex` lo repite.
+ * #2445/#2459 — argumentos de `composeLatexFinalOutput` y, a la vez, lo que el
+ * build serializa en `.iteraciones/post/<slug>.json`: bloque de autores,
+ * metadatos XMP (PDF/X) y rutas de imagen acomodadas para que el .tex de
+ * dist se mueva con su `assets/`. El formato del JSON no cambia: se lee y se
+ * escribe igual que antes.
  */
 export interface LatexPostManifest {
   authorsBlock?: string;
@@ -527,11 +528,24 @@ export function insertAuthorsBlock(tex: string, authorsBlock: string): string {
   return tex;
 }
 
-export async function postProcessLatex(tex: string, manifest: LatexPostManifest, texDir?: string): Promise<string> {
+/**
+ * #2459 — los cinco pasos de acabado del .tex de dist, en un solo sitio: el
+ * build (`pipeline-formats.ts`) y `iteraciones post latex` pasan por aquí, así
+ * que no pueden divergir (la única red antes era el test de equivalencia
+ * `build --full ≡ bash build.sh`). `manifest` es literalmente lo que el build
+ * escribe en `.iteraciones/post/<slug>.json`.
+ */
+export async function composeLatexFinalOutput(tex: string, manifest: LatexPostManifest, texDir?: string): Promise<string> {
   const withAuthors = insertAuthorsBlock(tex, manifest.authorsBlock ?? '');
   const withXmp = manifest.xmp === undefined ? withAuthors : injectXmpMetadataIntoLatex(withAuthors, manifest.xmp);
-  const rewritten = manifest.distribution === undefined ? withXmp : rewriteTexForDist(withXmp, new Map(Object.entries(manifest.distribution)));
-  if (manifest.projectRoot === undefined || texDir === undefined) return rewritten;
+  const distribution = manifest.distribution === undefined ? undefined : Object.entries(manifest.distribution);
+  const distCopies = distribution === undefined ? [] : distribution.map(([src, rel]) => ({ src, rel }));
+  const rewritten = distribution === undefined ? withXmp : rewriteTexForDist(withXmp, new Map(distribution));
+  if (manifest.projectRoot === undefined || texDir === undefined) {
+    // Sin raíz no hay localización, pero la distribución sí vive al nivel del .tex.
+    if (texDir !== undefined) await copyDistAssets(texDir, distCopies);
+    return rewritten;
+  }
   // #2450: lo que quede bajo la raíz (el QR del caché) se muda al assets/images
   // del nivel y la bibliografía apunta a la copia que bundle puso en dist.
   const localized = await localizeDistAssets(rewritten, {
@@ -540,6 +554,8 @@ export async function postProcessLatex(tex: string, manifest: LatexPostManifest,
     distRoot: manifest.distRoot ?? manifest.projectRoot,
     bundle: manifest.bundle === true,
   });
-  await copyDistAssets(texDir, localized.copies);
+  // #2450: el preproceso ya escribió la imagen en <nivel>/assets/images, así
+  // que la copia de distribution es no-op (se queda por si algún día difieren).
+  await copyDistAssets(texDir, [...distCopies, ...localized.copies]);
   return localized.tex;
 }

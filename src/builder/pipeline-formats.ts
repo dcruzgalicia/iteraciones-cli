@@ -14,14 +14,13 @@ import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
 import { rewriteFmImagePaths, rewriteImagePaths } from './image-processor.js';
 import {
   buildTexDistribution,
-  copyDistAssets,
+  composeLatexFinalOutput,
   type ImagePreprocessResult,
   insertAuthorsBlock,
-  localizeDistAssets,
+  type LatexPostManifest,
   markdownToLatex,
   mergeConfigImages,
   preprocessDocumentImages,
-  rewriteTexForDist,
 } from './latex-composer.js';
 import { detectPageSize } from './latex-preamble.js';
 import { ASSETS_CSS_FILE, ASSETS_IMAGES_DIR, docProducesFormat, primaryOutputExtension } from './output-layout.js';
@@ -105,52 +104,41 @@ async function emitLatexAndQueuePdf(
     cwd: ctx.cwd,
   });
   const xmp = renderCtx.pdfxActive ? xmpMetadataFor(fm, lang, formatCfg?.pdf, ctx.siteConfig) : undefined;
-  const texWithAuthors = insertAuthorsBlock(fullTex, authorsBlock);
-  const texWithXmp = xmp === undefined ? texWithAuthors : injectXmpMetadataIntoLatex(texWithAuthors, xmp);
 
   if (latexOn) {
     const texDir = dirname(texDistPath);
     const distribution = buildTexDistribution(processedImages);
-    // #2450: el preproceso ya escribió la imagen en <nivel>/assets/images, así
-    // que la copia que antes vivía junto al .tex desaparece: el .tex apunta al
-    // mismo fichero que html y markdown (la copia de distribution es no-op, se
-    // queda por si algún día difieren). Lo único que hay que traer es lo que el
-    // .tex cite bajo la raíz del proyecto: el QR del caché.
-    const { tex: localizedTex, copies: rootCopies } = await localizeDistAssets(rewriteTexForDist(texWithXmp, distribution), {
-      texDir,
+    // #2459: el manifiesto es la serialización de los argumentos de
+    // `composeLatexFinalOutput`, así que el build y `iteraciones post latex`
+    // pasan por la misma función: ya no se puede añadir un paso en un sitio y
+    // olvidarlo en el otro.
+    const manifest: LatexPostManifest = {
+      authorsBlock,
+      xmp,
+      distribution: Object.fromEntries(distribution),
       projectRoot: ctx.cwd,
       distRoot: ctx.outputDir,
       bundle: ctx.siteConfig.bundle === true,
-    });
-    await copyDistAssets(texDir, [...[...distribution].map(([src, rel]) => ({ src, rel })), ...rootCopies]);
-    const distTex = localizedTex;
+    };
+    const distTex = await composeLatexFinalOutput(fullTex, manifest, texDir);
     // #2445: el .sh no puede recomputar autores/XMP/distribución, así que el
     // build se los deja escritos en un manifiesto que `iteraciones post latex` lee.
     let post: string[] | undefined;
     if (isScriptCapture()) {
-      const manifest = join(ctx.cwd, '.iteraciones', 'post', `${outSlug}.json`);
-      await writeOutput(
-        manifest,
-        `${JSON.stringify(
-          {
-            authorsBlock,
-            xmp,
-            distribution: Object.fromEntries(distribution),
-            projectRoot: ctx.cwd,
-            distRoot: ctx.outputDir,
-            bundle: ctx.siteConfig.bundle === true,
-          },
-          null,
-          2,
-        )}\n`,
-      );
-      post = ['iteraciones', 'post', 'latex', '--post', manifest, '-o', texDistPath];
+      const manifestPath = join(ctx.cwd, '.iteraciones', 'post', `${outSlug}.json`);
+      await writeOutput(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+      post = ['iteraciones', 'post', 'latex', '--post', manifestPath, '-o', texDistPath];
     }
     resolveScriptStdout(fullTex, texDistPath, distTex, post);
     await writeOutput(texDistPath, distTex);
   }
 
   if (pdfOn) {
+    // #2459: el .tex de trabajo no es el de dist: latexmk trabaja con las rutas
+    // absolutas de pandoc, así que solo se lleva el bloque de autores y el XMP
+    // (PDF/X). El acabado de dist entero vive en `composeLatexFinalOutput`.
+    const texWithAuthors = insertAuthorsBlock(fullTex, authorsBlock);
+    const texWithXmp = xmp === undefined ? texWithAuthors : injectXmpMetadataIntoLatex(texWithAuthors, xmp);
     const texPath = join(exportCtx.pdfWorkDir, dir, `${outSlug}${primaryOutputExtension('latex')}`);
     await writeOutput(texPath, texWithXmp);
     sets.pdfJobs.push({
