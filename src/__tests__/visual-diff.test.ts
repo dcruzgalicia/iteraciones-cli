@@ -42,6 +42,15 @@ if (!magickOk) registerSkip('visual-diff.test.ts', SKIP_REASONS.magick);
 
 const toolsOk = pdftoppmOk && magickOk;
 
+/**
+ * `it` con margen: cada comparación real son 4 renders + 12 lanzamientos de
+ * `magick` (~2,5 s), así que un test con tres corridas se pasa de los 5 s por
+ * defecto de `bun test`. 30 s dejan holgura incluso con la máquina cargada.
+ */
+const itTool = (name: string, fn: () => Promise<void>): void => {
+  it(name, fn, { timeout: 30_000 });
+};
+
 type Rect = [number, number, number, number];
 
 /**
@@ -182,7 +191,7 @@ describe('visual-diff: lógica pura (#2479)', () => {
 });
 
 describe.skipIf(!toolsOk)('visual-diff: comparación real (#2479)', () => {
-  it('PDFs idénticos: PASS sin ningún artefacto', async () => {
+  itTool('PDFs idénticos: PASS sin ningún artefacto', async () => {
     await withTempDir(async (dir) => {
       const reference = writePdf(dir, 'a.pdf', [textPage()]);
       const generated = writePdf(dir, 'b.pdf', [textPage()]);
@@ -200,7 +209,7 @@ describe.skipIf(!toolsOk)('visual-diff: comparación real (#2479)', () => {
     });
   });
 
-  it('cambio real de contenido: FAIL con el % de la página y sus tres imágenes', async () => {
+  itTool('cambio real de contenido: FAIL con el % de la página y sus tres imágenes', async () => {
     await withTempDir(async (dir) => {
       const reference = writePdf(dir, 'a.pdf', [textPage()]);
       const generated = writePdf(dir, 'b.pdf', [textPage(0, 5)]);
@@ -221,7 +230,7 @@ describe.skipIf(!toolsOk)('visual-diff: comparación real (#2479)', () => {
     });
   });
 
-  it('desplazamiento subpíxel (0.1 pt): invisible y por debajo del umbral', async () => {
+  itTool('desplazamiento subpíxel (0.1 pt): invisible y por debajo del umbral', async () => {
     await withTempDir(async (dir) => {
       const reference = writePdf(dir, 'a.pdf', [textPage()]);
       const generated = writePdf(dir, 'b.pdf', [textPage(0.1)]);
@@ -235,7 +244,7 @@ describe.skipIf(!toolsOk)('visual-diff: comparación real (#2479)', () => {
     });
   });
 
-  it('número de páginas distinto: FAIL con el motivo y sin artefactos', async () => {
+  itTool('número de páginas distinto: FAIL con el motivo y sin artefactos', async () => {
     await withTempDir(async (dir) => {
       const reference = writePdf(dir, 'a.pdf', [textPage(), textPage()]);
       const generated = writePdf(dir, 'b.pdf', [textPage()]);
@@ -253,7 +262,7 @@ describe.skipIf(!toolsOk)('visual-diff: comparación real (#2479)', () => {
     });
   });
 
-  it('la caché de PASS evita volver a renderizar', async () => {
+  itTool('la caché de PASS evita volver a renderizar', async () => {
     await withTempDir(async (dir) => {
       const reference = writePdf(dir, 'a.pdf', [textPage()]);
       const generated = writePdf(dir, 'b.pdf', [textPage()]);
@@ -277,7 +286,7 @@ describe.skipIf(!toolsOk)('visual-diff: comparación real (#2479)', () => {
     });
   });
 
-  it('con un PDF corrupto, pdftoppm termina con error explicado', async () => {
+  itTool('con un PDF corrupto, pdftoppm termina con error explicado', async () => {
     await withTempDir(async (dir) => {
       const reference = join(dir, 'a.pdf');
       writeFileSync(reference, 'esto no es un PDF', 'utf8');
@@ -362,7 +371,7 @@ describe('test visual: CLI (#2479)', () => {
 });
 
 describe.skipIf(!toolsOk)('test visual: exit codes reales (#2479)', () => {
-  it('PASS → exit 0; con cambio de contenido → exit 1 y el resumen con diff', async () => {
+  itTool('PASS → exit 0; con cambio de contenido → exit 1 y el resumen con diff', async () => {
     await withTempDir(async (dir) => {
       // proyecto: para que los artefactos y la caché queden dentro del temp
       writeFileSync(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\n', 'utf8');
