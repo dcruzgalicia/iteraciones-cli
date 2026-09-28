@@ -40,15 +40,14 @@ function Span(span)
 
   local outDir = project_root .. '/.iteraciones/processed-images'
 
-  local handle = io.popen('echo ' .. url .. ' | bun run ' .. QRCODE_SCRIPT .. ' ' .. outDir)
-  local pngPath = handle:read('*a')
-  handle:close()
-  pngPath = pngPath:gsub('%s+$', '')
-  if pngPath == '' or not pngPath:match('%.png$') then return nil end
-
-  local jpgPath = pngPath:gsub('%.png$', '.jpg')
-  os.execute('magick "' .. pngPath .. '" -density 300 -units PixelsPerInch -quality 100 "' .. jpgPath .. '"')
-  os.execute('rm -f "' .. pngPath .. '" "' .. pngPath:gsub('%.png$', '.svg') .. '"')
+  -- #2457: la URL va por stdin con pandoc.pipe, sin shell y sin quoting. Con
+  -- `io.popen('echo ' .. url .. ' | …')` un `&` en la URL partía la línea y el
+  -- QR desaparecía en silencio. El script cachea por URL y devuelve el .jpg ya
+  -- hecho (si la caché está, sin tocar wasm ni magick).
+  local ok, out = pcall(pandoc.pipe, 'bun', { 'run', QRCODE_SCRIPT, outDir }, url)
+  if not ok or type(out) ~= 'string' then return nil end
+  local jpgPath = out:gsub('%s+$', '')
+  if jpgPath == '' or not jpgPath:match('%.jpg$') then return nil end
 
   local img = pandoc.Image('', jpgPath)
   img.attr = pandoc.Attr('', {}, { { 'width', width } })

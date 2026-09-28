@@ -506,7 +506,7 @@ format:
 
 - **Requiere `format.markdown.generate: true`**: los `.md` exportados son las fuentes de la copia, así que sin ellos `iteraciones validate` e `iteraciones build` fallan con ese fix.
 - El build la sincroniza al final de cada corrida con `iteraciones bundle -o dist/files`, el mismo comando que repite `build.sh`; lo que deja de corresponder se retira en la siguiente corrida (la lista queda en `.iteraciones/bundle.json`).
-- **No copia el QR** ni las imágenes JPEG ya procesadas: el build los regenera. Para que el `.tex` de dist siga resolviendo el QR en la copia, su ruta es relativa al propio `.tex` (`../../.iteraciones/processed-images/qr-<hash>.jpg`).
+- **No copia el QR** ni las imágenes JPEG ya procesadas: el build los regenera (el QR, solo si no está la caché de su URL, `qr-<md5(url)>.jpg`). Para que el `.tex` de dist siga resolviendo el QR en la copia, su ruta es relativa al propio `.tex` (`../../.iteraciones/processed-images/qr-<hash>.jpg`).
 - **No copia `.iteraciones/`** ni `build.sh`: ninguno de los dos es insumo.
 
 Para replicar: copia el **contenido** de `dist/files` a un directorio nuevo (ese directorio pasa a ser la raíz del proyecto) y ahí ejecuta `iteraciones build --full`. Las salidas quedan iguales salvo las imágenes JPEG, que se re-procesan siempre, y los metadatos de creación de `.pdf`/`.epub` (uuid y fechas).
