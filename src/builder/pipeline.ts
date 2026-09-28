@@ -2,6 +2,7 @@ import { dirname, join, relative } from 'node:path';
 
 import type { SiteConfig } from '../config/config-schema.js';
 import { killInFlightProcesses, mapWithConcurrency } from '../lib/run.js';
+import { notePdfSlots } from '../lib/script-recorder.js';
 import type { BuildMetadata, WorkSets } from './build-planner.js';
 import { generateCoverImages } from './export/cover-image.js';
 import { PDF_WORK_BASE } from './output-layout.js';
@@ -80,6 +81,8 @@ export async function documentPipeline(
   );
 
   const maxSlots = pdfOn ? pdfSlotCount(ctx.concurrency) : 0;
+  // #2474 — el .sh numera sus directorios de trabajo con los slots reales.
+  notePdfSlots(maxSlots);
   if (pdfOn) {
     await ensureBiberCaches(ctx.cwd, maxSlots);
   }
