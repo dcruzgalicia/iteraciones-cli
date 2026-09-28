@@ -73,7 +73,16 @@ function buildDefaultConfig(): string {
   ].join('\n');
 }
 
-const DEFAULT_GITIGNORE = ['# Generados por iteraciones (build y caché)', 'dist/', '.iteraciones/', '.DS_Store', ''].join('\n');
+const DEFAULT_GITIGNORE = [
+  '# Generados por iteraciones (build y caché)',
+  'dist/',
+  '.iteraciones/',
+  '.DS_Store',
+  // los snapshots de `test visual` sí van versionados; sus diffs no, y pueden
+  // vivir en subcarpetas porque visual/ espeja dist/files
+  'visual/**/*-page-*-diff.png',
+  '',
+].join('\n');
 
 export async function initProject(cwd: string): Promise<void> {
   const DEFAULT_BIB = [

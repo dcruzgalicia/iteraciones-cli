@@ -12,7 +12,7 @@ import { runCollectPdf } from './pdf.js';
 import { runPost } from './post.js';
 import { runPrepare } from './prepare.js';
 import { runTemplate } from './template.js';
-import { runTestVisual } from './test-visual.js';
+import { runTestVisual, type TestVisualOptions } from './test-visual.js';
 
 /** Opción repetible: el build acumula valores, el argv del .sh los repite. */
 function collect(value: string, previous: string[]): string[] {
@@ -272,10 +272,11 @@ Ejemplos:
 
   const test = program.command('test').description('pruebas sobre salidas ya construidas');
   test
-    .command('visual <pdf>')
-    .description('compara un PDF con una referencia y sale con exit 1 si hay regresión visual (#2479)')
-    .option('--reference <pdf>', 'PDF de referencia para una comparación puntual (no toca la referencia guardada)')
-    .option('--update', 'guarda <pdf> como referencia en visual/<slug>.pdf, sin comparar')
+    .command('visual [pdf...]')
+    .description('compara los PDFs de dist/files con sus snapshots y sale con exit 1 si hay regresión visual (#2479)')
+    .option('--reference <pdf>', 'PDF de referencia para una comparación puntual (no toca los snapshots)')
+    .option('--update', 'guarda como snapshots los PDFs de dist/files (o los dados) en visual/, sin comparar')
+    .option('--output <path>', 'directorio de salida donde están los PDFs (por defecto: dist/files)')
     .option('--dpi <n>', `resolución de render en dpi (por defecto: ${VISUAL_DEFAULTS.dpi})`, String(VISUAL_DEFAULTS.dpi))
     .option(
       '--threshold <pct>',
@@ -288,16 +289,18 @@ Ejemplos:
       `
 Requiere pdftoppm (poppler) y ImageMagick. Compara por página: blur dpi/150 + fuzz ${VISUAL_DEFAULTS.fuzzPercent} %
 sobre PNGs de ${VISUAL_DEFAULTS.dpi} dpi, con umbral de ${VISUAL_DEFAULTS.thresholdPercent} % de píxeles distintos por página.
-Sin proyecto, la referencia vive en <directorio>/visual/<slug>.pdf y el trabajo en el temporal del sistema.
+Los snapshots y sus diffs viven en <raíz>/visual/, espejando dist/files; el trabajo en el temporal del sistema.
 
 Ejemplos:
-  iteraciones test visual dist/files/index.pdf --update   crea la referencia
-  iteraciones test visual dist/files/index.pdf            compara con la referencia
-  iteraciones test visual nuevo.pdf --reference viejo.pdf compara dos PDFs sin tocar la referencia
+  iteraciones test visual --update            guarda los snapshots de dist/files
+  iteraciones test visual                      compara todos los PDFs de dist/files
+  iteraciones test visual dist/files/index.pdf --update  guarda un solo snapshot
+  iteraciones test visual dist/files/index.pdf           compara un solo PDF
+  iteraciones test visual nuevo.pdf --reference viejo.pdf compara dos PDFs sin tocar los snapshots
 `,
     )
-    .action(async (pdf: string, opts: { reference?: string; update?: boolean; dpi: string; threshold: string; fuzz: string }) => {
-      await runTestVisual(projectRoot(), pdf, opts);
+    .action(async (pdfs: string | string[] | undefined, opts: TestVisualOptions) => {
+      await runTestVisual(projectRoot(), pdfs === undefined ? [] : Array.isArray(pdfs) ? pdfs : [pdfs], opts);
     });
 
   program

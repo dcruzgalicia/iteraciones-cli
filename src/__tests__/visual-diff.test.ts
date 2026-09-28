@@ -1,13 +1,18 @@
 import { describe, expect, it, spyOn } from 'bun:test';
-import { existsSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runTestVisual, type TestVisualOptions } from '../cli/test-visual.js';
 import { exec } from '../lib/run.js';
 import {
   blurSigmaFor,
+  clearDiffImages,
   compareVisual,
+  diffImageName,
+  diffTargetFor,
   formatVisualReport,
+  formatVisualSummary,
+  listPdfFiles,
   pngSize,
   referencePathFor,
   resolveVisualOptions,
@@ -117,10 +122,49 @@ describe('visual-diff: lógica pura (#2479)', () => {
     expect(sortPageFiles(['p-100.png', 'p-002.png', 'p-001.png'])).toEqual(['p-001.png', 'p-002.png', 'p-100.png']);
   });
 
-  it('el slug sale del nombre del PDF y la referencia vive en visual/<slug>.pdf', () => {
+  it('el snapshot espeja dist/files, y un PDF suelto cae al slug del nombre', () => {
     expect(visualSlug('/p/dist/files/99-intervention.pdf')).toBe('99-intervention');
     expect(visualSlug('/p/Mi Documento.PDF')).toBe('mi-documento');
-    expect(referencePathFor('/p', '99-intervention')).toBe(join('/p', 'visual', '99-intervention.pdf'));
+    const output = '/p/dist/files';
+    expect(referencePathFor('/p', '/p/dist/files/index.pdf', output)).toBe(join('/p', 'visual', 'index.pdf'));
+    // dos index.pdf de carpetas distintas no colisionan
+    expect(referencePathFor('/p', '/p/dist/files/anexos/index.pdf', output)).toBe(join('/p', 'visual', 'anexos', 'index.pdf'));
+    // fuera del directorio de salida no hay estructura que espejar
+    expect(referencePathFor('/p', '/p/suelto.pdf', output)).toBe(join('/p', 'visual', 'suelto.pdf'));
+    expect(referencePathFor('/p', '/p/otra/Mi Documento.pdf', output)).toBe(join('/p', 'visual', 'mi-documento.pdf'));
+  });
+
+  it('el diff de una página se llama <slug>-page-005-diff.png y vive junto al snapshot', () => {
+    expect(diffImageName('index', 5)).toBe('index-page-005-diff.png');
+    expect(diffImageName('index', 128)).toBe('index-page-128-diff.png');
+    expect(diffTargetFor(join('/p', 'visual', 'anexos', 'index.pdf'))).toEqual({ dir: join('/p', 'visual', 'anexos'), stem: 'index' });
+  });
+
+  it('listPdfFiles recorre el árbol en orden y solo se queda con los PDF', async () => {
+    await withTempDir(async (dir) => {
+      mkdirSync(join(dir, 'sub'), { recursive: true });
+      writeFileSync(join(dir, 'b.pdf'), 'x', 'utf8');
+      writeFileSync(join(dir, 'sub', 'a.pdf'), 'x', 'utf8');
+      writeFileSync(join(dir, 'nota.txt'), 'x', 'utf8');
+
+      expect(await listPdfFiles(dir)).toEqual([join(dir, 'b.pdf'), join(dir, 'sub', 'a.pdf')]);
+      expect(await listPdfFiles(join(dir, 'no-existe'))).toEqual([]);
+    });
+  });
+
+  it('clearDiffImages borra los diffs de un snapshot sin tocar el resto', async () => {
+    await withTempDir(async (dir) => {
+      mkdirSync(dir, { recursive: true });
+      for (const name of ['index-page-005-diff.png', 'index-page-012-diff.png', 'otro-page-001-diff.png', 'index.pdf']) {
+        writeFileSync(join(dir, name), 'x', 'utf8');
+      }
+
+      await clearDiffImages(dir, 'index');
+      expect(readdirSync(dir).sort()).toEqual(['index.pdf', 'otro-page-001-diff.png']);
+
+      await clearDiffImages(dir);
+      expect(readdirSync(dir)).toEqual(['index.pdf']);
+    });
   });
 
   it('el blur mide lo mismo en superficie física: dpi/150 px', () => {
@@ -188,6 +232,22 @@ describe('visual-diff: lógica pura (#2479)', () => {
     });
     expect(paginasDistintas).toContain('páginas distintas: referencia 2 · generado 1');
   });
+
+  it('formatVisualSummary acorta las rutas de los diffs para el resumen de varios PDFs', () => {
+    const summary = formatVisualSummary(
+      {
+        compared: 12,
+        unchanged: 11,
+        changed: 1,
+        details: [{ page: 5, diffPercent: 0.0486, diffImage: '/p/visual/index-page-005-diff.png' }],
+        referencePages: 12,
+        generatedPages: 12,
+        pass: false,
+      },
+      (path) => path.replace('/p/', ''),
+    );
+    expect(summary).toEqual(['páginas 12 · sin cambios 11 · modificadas 1', '  pág 5  0.0486 %  visual/index-page-005-diff.png']);
+  });
 });
 
 describe.skipIf(!toolsOk)('visual-diff: comparación real (#2479)', () => {
@@ -209,7 +269,7 @@ describe.skipIf(!toolsOk)('visual-diff: comparación real (#2479)', () => {
     });
   });
 
-  itTool('cambio real de contenido: FAIL con el % de la página y sus tres imágenes', async () => {
+  itTool('cambio real de contenido: FAIL con el % de la página y su imagen de diferencia', async () => {
     await withTempDir(async (dir) => {
       const reference = writePdf(dir, 'a.pdf', [textPage()]);
       const generated = writePdf(dir, 'b.pdf', [textPage(0, 5)]);
@@ -222,11 +282,37 @@ describe.skipIf(!toolsOk)('visual-diff: comparación real (#2479)', () => {
       expect(result.details[0]?.page).toBe(1);
       expect(result.details[0]?.diffPercent ?? 0).toBeGreaterThan(0.005);
       expect(result.diffDir).toBe(workDir);
-      for (const artifact of ['page-001-ref.png', 'page-001-gen.png', 'page-001-diff.png']) {
-        expect(existsSync(join(workDir, artifact))).toBe(true);
-      }
+      // Solo el diff: ni los renders de las dos páginas (están en los PDFs) ni
+      // los intermedios del blur.
+      expect(existsSync(join(workDir, 'documento-page-001-diff.png'))).toBe(true);
+      expect(existsSync(join(workDir, 'documento-page-001-ref.png'))).toBe(false);
+      expect(existsSync(join(workDir, 'documento-page-001-gen.png'))).toBe(false);
       expect(existsSync(join(workDir, 'ref-1.png'))).toBe(false);
-      expect(existsSync(join(workDir, 'blur-page-001-diff-a.png'))).toBe(false);
+      expect(existsSync(join(workDir, 'blur-documento-page-001-diff-a.png'))).toBe(false);
+    });
+  });
+
+  itTool('los diffs van a diffDir con el nombre del snapshot y el workDir no queda', async () => {
+    await withTempDir(async (dir) => {
+      const visual = join(dir, 'visual', 'anexos');
+      mkdirSync(visual, { recursive: true });
+      const reference = writePdf(visual, 'index.pdf', [textPage()]);
+      const generated = writePdf(dir, 'gen.pdf', [textPage(0, 5)]);
+      const workDir = join(dir, 'work');
+
+      const result = await compareVisual({
+        ...resolveVisualOptions(),
+        reference,
+        generated,
+        workDir,
+        diffDir: visual,
+        diffStem: 'index',
+      });
+
+      expect(result.pass).toBe(false);
+      expect(result.details[0]?.diffImage).toBe(join(visual, 'index-page-001-diff.png'));
+      expect(existsSync(join(visual, 'index-page-001-diff.png'))).toBe(true);
+      expect(existsSync(workDir)).toBe(false);
     });
   });
 
@@ -300,13 +386,13 @@ describe.skipIf(!toolsOk)('visual-diff: comparación real (#2479)', () => {
 });
 
 /** Corre `runTestVisual` capturando la salida y el exit code, sin dejar rastro. */
-async function runCaptured(cwd: string, pdf: string, options: TestVisualOptions = {}) {
+async function runCaptured(cwd: string, pdfs: string | string[], options: TestVisualOptions = {}) {
   const out = spyOn(process.stdout, 'write');
   const err = spyOn(process.stderr, 'write');
   const previousExit = process.exitCode;
   process.exitCode = 0;
   try {
-    await runTestVisual(cwd, pdf, options);
+    await runTestVisual(cwd, typeof pdfs === 'string' ? [pdfs] : pdfs, options);
     return {
       exitCode: process.exitCode ?? 0,
       stdout: out.mock.calls.map((args) => args.map(String).join('')).join(''),
@@ -320,7 +406,7 @@ async function runCaptured(cwd: string, pdf: string, options: TestVisualOptions 
 }
 
 describe('test visual: CLI (#2479)', () => {
-  it('--update guarda el PDF como referencia en visual/<slug>.pdf', async () => {
+  it('--update guarda el PDF como snapshot en visual/<slug>.pdf', async () => {
     await withTempDir(async (dir) => {
       writeFileSync(join(dir, 'mi-doc.pdf'), 'contenido', 'utf8');
 
@@ -332,14 +418,14 @@ describe('test visual: CLI (#2479)', () => {
     });
   });
 
-  it('sin referencia, explica cómo crearla y sale con exit 1', async () => {
+  it('sin snapshot, explica cómo crearlo y sale con exit 1', async () => {
     await withTempDir(async (dir) => {
       writeFileSync(join(dir, 'mi-doc.pdf'), 'contenido', 'utf8');
 
       const { exitCode, stderr } = await runCaptured(dir, 'mi-doc.pdf', {});
 
       expect(exitCode).toBe(1);
-      expect(stderr).toContain('no hay referencia en visual/mi-doc.pdf');
+      expect(stderr).toContain('no hay snapshot en visual/mi-doc.pdf');
       expect(stderr).toContain('--update');
     });
   });
@@ -368,12 +454,100 @@ describe('test visual: CLI (#2479)', () => {
       expect(flag.stderr).toContain('--dpi inválido');
     });
   });
+
+  it('el modo lote guarda snapshots de todos los PDFs de dist/files, espejando carpetas', async () => {
+    await withTempDir(async (dir) => {
+      const output = join(dir, 'dist', 'files');
+      mkdirSync(join(output, 'anexos'), { recursive: true });
+      writeFileSync(join(output, 'index.pdf'), 'uno', 'utf8');
+      writeFileSync(join(output, 'anexos', 'index.pdf'), 'dos', 'utf8');
+      writeFileSync(join(output, 'leeme.txt'), 'no soy un PDF', 'utf8');
+
+      const { exitCode, stdout } = await runCaptured(dir, [], { update: true });
+
+      expect(exitCode).toBe(0);
+      expect(existsSync(join(dir, 'visual', 'index.pdf'))).toBe(true);
+      expect(existsSync(join(dir, 'visual', 'anexos', 'index.pdf'))).toBe(true);
+      expect(existsSync(join(dir, 'visual', 'leeme.pdf'))).toBe(false);
+      expect(stdout).toContain('dist/files/index.pdf → visual/index.pdf');
+      expect(stdout).toContain('dist/files/anexos/index.pdf → visual/anexos/index.pdf');
+    });
+  });
+
+  it('el modo lote sin snapshots pide --update y no compara nada', async () => {
+    await withTempDir(async (dir) => {
+      const output = join(dir, 'dist', 'files');
+      mkdirSync(output, { recursive: true });
+      writeFileSync(join(output, 'index.pdf'), 'uno', 'utf8');
+
+      const { exitCode, stderr } = await runCaptured(dir, [], {});
+
+      expect(exitCode).toBe(1);
+      expect(stderr).toContain('no hay snapshots en visual');
+      expect(stderr).toContain('--update');
+    });
+  });
+
+  it('con snapshots incompletas corta antes de comparar y lista los que faltan', async () => {
+    await withTempDir(async (dir) => {
+      const output = join(dir, 'dist', 'files');
+      mkdirSync(output, { recursive: true });
+      writeFileSync(join(output, 'index.pdf'), 'uno', 'utf8');
+      writeFileSync(join(output, 'libro.pdf'), 'dos', 'utf8');
+      mkdirSync(join(dir, 'visual'), { recursive: true });
+      writeFileSync(join(dir, 'visual', 'index.pdf'), 'uno', 'utf8');
+
+      const { exitCode, stderr } = await runCaptured(dir, [], {});
+
+      expect(exitCode).toBe(1);
+      expect(stderr).toContain('snapshots incompletas');
+      expect(stderr).toContain('visual/libro.pdf');
+      // nada se comparó: no aparece ningún diff
+      expect(readdirSync(join(dir, 'visual'))).toEqual(['index.pdf']);
+    });
+  });
+
+  it('--update retira los snapshots de PDFs que ya no existen y sus diffs', async () => {
+    await withTempDir(async (dir) => {
+      const output = join(dir, 'dist', 'files');
+      mkdirSync(output, { recursive: true });
+      writeFileSync(join(output, 'index.pdf'), 'uno', 'utf8');
+      mkdirSync(join(dir, 'visual'), { recursive: true });
+      writeFileSync(join(dir, 'visual', 'borrado.pdf'), 'viejo', 'utf8');
+      writeFileSync(join(dir, 'visual', 'borrado-page-003-diff.png'), 'x', 'utf8');
+      writeFileSync(join(dir, 'visual', 'index-page-001-diff.png'), 'x', 'utf8');
+
+      const { exitCode, stdout } = await runCaptured(dir, [], { update: true });
+
+      expect(exitCode).toBe(0);
+      expect(existsSync(join(dir, 'visual', 'borrado.pdf'))).toBe(false);
+      expect(stdout).toContain('snapshots sin PDF en dist/files: visual/borrado.pdf');
+      expect(existsSync(join(dir, 'visual', 'index-page-001-diff.png'))).toBe(false);
+      expect(existsSync(join(dir, 'visual', 'index.pdf'))).toBe(true);
+    });
+  });
+
+  it('sin PDFs en dist/files el modo lote lo dice', async () => {
+    await withTempDir(async (dir) => {
+      const { exitCode, stderr } = await runCaptured(dir, [], {});
+      expect(exitCode).toBe(1);
+      expect(stderr).toContain('no hay PDFs en dist/files');
+    });
+  });
+
+  it('--reference exige un PDF explícito: en el modo lote no tiene sentido', async () => {
+    await withTempDir(async (dir) => {
+      const { exitCode, stderr } = await runCaptured(dir, [], { reference: 'viejo.pdf' });
+      expect(exitCode).toBe(1);
+      expect(stderr).toContain('--reference necesita un PDF explícito');
+    });
+  });
 });
 
 describe.skipIf(!toolsOk)('test visual: exit codes reales (#2479)', () => {
   itTool('PASS → exit 0; con cambio de contenido → exit 1 y el resumen con diff', async () => {
     await withTempDir(async (dir) => {
-      // proyecto: para que los artefactos y la caché queden dentro del temp
+      // proyecto: para que los renders y la caché queden dentro del temp
       writeFileSync(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\n', 'utf8');
       const generated = writePdf(dir, 'doc.pdf', [textPage()]);
       await runCaptured(dir, 'doc.pdf', { update: true });
@@ -387,15 +561,53 @@ describe.skipIf(!toolsOk)('test visual: exit codes reales (#2479)', () => {
       const failRun = await runCaptured(dir, 'doc.pdf', {});
       expect(failRun.exitCode).toBe(1);
       expect(failRun.stdout).toContain('páginas 1 · sin cambios 0 · modificadas 1');
-      expect(failRun.stdout).toContain('page-001-diff.png');
-      expect(failRun.stderr).toContain('diferencias visuales');
-      expect(failRun.stderr).toContain('artefactos en');
+      expect(failRun.stdout).toContain('visual/doc-page-001-diff.png');
+      expect(failRun.stderr).toContain('1 de 1 páginas con diferencias visuales');
 
       // y al volver al contenido de la referencia vuelve a pasar
       writeFileSync(generated, makePdf([textPage()]), 'utf8');
       const again = await runCaptured(dir, 'doc.pdf', {});
       expect(again.exitCode).toBe(0);
       expect(again.stdout).toContain('modificadas 0');
+    });
+  });
+});
+
+describe.skipIf(!toolsOk)('test visual: lote real (#2479)', () => {
+  itTool('build → --update → cambio → compara todo y deja los diffs en visual/', async () => {
+    await withTempDir(async (dir) => {
+      writeFileSync(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\n', 'utf8');
+      const output = join(dir, 'dist', 'files');
+      mkdirSync(join(output, 'anexos'), { recursive: true });
+      const generated = writePdf(output, 'index.pdf', [textPage()]);
+      writePdf(join(output, 'anexos'), 'index.pdf', [textPage()]);
+
+      const update = await runCaptured(dir, [], { update: true });
+      expect(update.exitCode).toBe(0);
+      expect(existsSync(join(dir, 'visual', 'index.pdf'))).toBe(true);
+      expect(existsSync(join(dir, 'visual', 'anexos', 'index.pdf'))).toBe(true);
+
+      // un snapshot huérfano solo avisa: no es una regresión del build
+      writeFileSync(join(dir, 'visual', 'huerfano.pdf'), 'sobra', 'utf8');
+      const pass = await runCaptured(dir, [], {});
+      expect(pass.exitCode).toBe(0);
+      expect(pass.stdout).toContain('sin diferencias visuales en 2 PDFs');
+      expect(pass.stderr).toContain('snapshots sin PDF en dist/files: visual/huerfano.pdf');
+
+      // cambia un solo PDF: solo sale su diff y solo el suyo se queda en visual/
+      writeFileSync(generated, makePdf([textPage(0, 5)]), 'utf8');
+      const fail = await runCaptured(dir, [], {});
+      expect(fail.exitCode).toBe(1);
+      expect(fail.stdout).toContain('visual/index-page-001-diff.png');
+      expect(fail.stderr).toContain('1 de 2 PDFs con regresión visual: dist/files/index.pdf');
+      expect(existsSync(join(dir, 'visual', 'index-page-001-diff.png'))).toBe(true);
+      expect(existsSync(join(dir, 'visual', 'anexos', 'index-page-001-diff.png'))).toBe(false);
+
+      // vuelve al contenido original: PASS y el diff viejo se retira
+      writeFileSync(generated, makePdf([textPage()]), 'utf8');
+      const again = await runCaptured(dir, [], {});
+      expect(again.exitCode).toBe(0);
+      expect(existsSync(join(dir, 'visual', 'index-page-001-diff.png'))).toBe(false);
     });
   });
 });
