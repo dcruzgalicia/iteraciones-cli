@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
 import { TEMPLATE_KINDS } from '../builder/pipeline-setup.js';
+import { VISUAL_DEFAULTS } from '../lib/visual-diff.js';
 import { runAssets } from './assets.js';
 import { runBundle } from './bundle.js';
 import { runCover } from './cover.js';
@@ -11,6 +12,7 @@ import { runCollectPdf } from './pdf.js';
 import { runPost } from './post.js';
 import { runPrepare } from './prepare.js';
 import { runTemplate } from './template.js';
+import { runTestVisual } from './test-visual.js';
 
 /** Opción repetible: el build acumula valores, el argv del .sh los repite. */
 function collect(value: string, previous: string[]): string[] {
@@ -266,6 +268,36 @@ Ejemplos:
     )
     .action(async (slot: string, opts: { output: string }) => {
       await runCollectPdf(projectRoot(), slot, opts);
+    });
+
+  const test = program.command('test').description('pruebas sobre salidas ya construidas');
+  test
+    .command('visual <pdf>')
+    .description('compara un PDF con una referencia y sale con exit 1 si hay regresión visual (#2479)')
+    .option('--reference <pdf>', 'PDF de referencia para una comparación puntual (no toca la referencia guardada)')
+    .option('--update', 'guarda <pdf> como referencia en visual/<slug>.pdf, sin comparar')
+    .option('--dpi <n>', `resolución de render en dpi (por defecto: ${VISUAL_DEFAULTS.dpi})`, String(VISUAL_DEFAULTS.dpi))
+    .option(
+      '--threshold <pct>',
+      `máximo de píxeles distintos por página en % (por defecto: ${VISUAL_DEFAULTS.thresholdPercent})`,
+      String(VISUAL_DEFAULTS.thresholdPercent),
+    )
+    .option('--fuzz <pct>', `tolerancia de color por canal en % (por defecto: ${VISUAL_DEFAULTS.fuzzPercent})`, String(VISUAL_DEFAULTS.fuzzPercent))
+    .addHelpText(
+      'after',
+      `
+Requiere pdftoppm (poppler) y ImageMagick. Compara por página: blur dpi/150 + fuzz ${VISUAL_DEFAULTS.fuzzPercent} %
+sobre PNGs de ${VISUAL_DEFAULTS.dpi} dpi, con umbral de ${VISUAL_DEFAULTS.thresholdPercent} % de píxeles distintos por página.
+Sin proyecto, la referencia vive en <directorio>/visual/<slug>.pdf y el trabajo en el temporal del sistema.
+
+Ejemplos:
+  iteraciones test visual dist/files/index.pdf --update   crea la referencia
+  iteraciones test visual dist/files/index.pdf            compara con la referencia
+  iteraciones test visual nuevo.pdf --reference viejo.pdf compara dos PDFs sin tocar la referencia
+`,
+    )
+    .action(async (pdf: string, opts: { reference?: string; update?: boolean; dpi: string; threshold: string; fuzz: string }) => {
+      await runTestVisual(projectRoot(), pdf, opts);
     });
 
   program

@@ -227,6 +227,32 @@ Elimina el directorio de salida (`dist/`) y la caché (`.iteraciones/`).
 iteraciones clean
 ```
 
+### `iteraciones test visual <pdf>`
+
+Compara un PDF con una referencia **por lo que se ve**, no por los bytes: `pdftoppm` renderiza las páginas a PNG (300 dpi por defecto) y `magick compare` cuenta los píxeles distintos de cada una tras un blur de `dpi/150` px y un fuzz del 15 %. Si alguna página pasa del **0.005 %** de píxeles distintos —o si cambia el número de páginas— sale con **exit 1** y deja en `.iteraciones/tmp/visual/<slug>/` el PNG de cada página afectada, su imagen de diferencia y su versión de la referencia. Requiere poppler e ImageMagick, que comprueba `iteraciones doctor`.
+
+La referencia vive en `visual/<slug>.pdf` (el slug es el nombre del PDF) y va versionada en git. Sin proyecto, el render y la caché se hacen en el temporal del sistema.
+
+```
+iteraciones test visual <pdf> [opciones]
+```
+
+| Opción | Descripción | Por defecto |
+|--------|-------------|-------------|
+| `--update` | Guarda `<pdf>` como referencia, sin comparar | — |
+| `--reference <pdf>` | Compara con ese PDF en vez de con la referencia guardada | `visual/<slug>.pdf` |
+| `--dpi <n>` | Resolución de render en dpi | `300` |
+| `--threshold <pct>` | % máximo de píxeles distintos por página | `0.005` |
+| `--fuzz <pct>` | Tolerancia de color por canal en % | `15` |
+
+```bash
+iteraciones test visual dist/files/index.pdf --update   # crea la referencia
+iteraciones test visual dist/files/index.pdf            # compara: exit 1 si hay regresión
+iteraciones test visual nuevo.pdf --reference viejo.pdf # comparación puntual, sin referencia guardada
+```
+
+Solo los PASS quedan en caché (`.iteraciones/tmp/visual/cache.json`): un PDF con diferencias se vuelve a renderizar cada corrida y conserva siempre sus artefactos.
+
 ### `iteraciones help [comando]`
 
 Muestra la ayuda general o la de un comando concreto. Equivale a `--help` (o `-h`):
