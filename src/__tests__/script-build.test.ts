@@ -5,6 +5,14 @@ import { build } from '../builder/orchestrator.js';
 import { checkLatexEngine } from '../cli/doctor/system-checks.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
+import {
+  beginScriptCapture,
+  commitScriptCapture,
+  notePdfSlots,
+  prepareArgv,
+  recordScriptExec,
+  recordSupportCommand,
+} from '../lib/script-recorder.js';
 import { registerSkip, SKIP_REASONS, withTempDir } from './helpers.js';
 
 /**
@@ -159,6 +167,50 @@ describe('guard de primitivas del SO (#2445, #2456)', () => {
 
     const marcado = ['cp a b', 'rm -f c', 'ln -s d e', 'rmdir f', 'pandoc x && mv y z'].join('\n');
     expect(expectSystemCommands(marcado)).toEqual(['&&', 'cp', 'ln', 'rm', 'rmdir']);
+  });
+});
+
+/**
+ * #2474 — el número de `slot-N`/`cache-N` lo decide el pool según qué worker
+ * libre primero: dos corridas idénticas grababan scripts distintos. El .sh es
+ * secuencial, así que se renumera con la posición del job en la fase PDF
+ * módulo los slots de la corrida. Sin pandoc/LaTeX: se graba a mano.
+ */
+describe('slots del .sh numerados de forma estable (#2474)', () => {
+  it('reescribe slot-/cache- con el índice del job y respeta los pasos de un solo job', async () => {
+    await withTempDir(async (dir) => {
+      const root = join(dir, 'proyecto');
+      const slot = (n: number): string => join(root, '.iteraciones', 'tmp', 'pdf', `slot-${n}`);
+      const cache = (n: number): string => join(root, '.iteraciones', 'biber', `cache-${n}`);
+
+      beginScriptCapture(root);
+      notePdfSlots(2);
+      // El pool repartió: el job a cayó en el slot 3 y el b en el 1.
+      for (const [job, poolSlot] of [
+        ['ensayo-a', 3],
+        ['ensayo-b', 1],
+      ] as const) {
+        recordSupportCommand('pdf', job, prepareArgv([cache(poolSlot), slot(poolSlot)], [slot(poolSlot)]));
+        recordScriptExec(
+          'latexmk',
+          ['-pdf', `-outdir=${slot(poolSlot)}`, `-jobname=${job}`, join(root, 'tmp', `${job}.tex`)],
+          { env: { PAR_GLOBAL_TEMP: cache(poolSlot), TEXINPUTS: `${slot(poolSlot)}:` } },
+          '',
+        );
+        recordSupportCommand('pdf', job, ['iteraciones', 'pdf', 'collect', slot(poolSlot), '-o', join(root, 'dist', 'files', `${job}.pdf`)]);
+      }
+      await commitScriptCapture();
+
+      const script = await Bun.file(join(root, 'build.sh')).text();
+      // ordinal 0 → 0 % 2 = 0; ordinal 1 → 1 % 2 = 1; nunca el slot real del pool.
+      expect(script).toMatch(/iteraciones prepare .*--dir \S*cache-0 .*--dir \S*slot-0 .*--xmp \S*slot-0/m);
+      expect(script).toMatch(/-outdir=\S*slot-0 /);
+      expect(script).toMatch(/PAR_GLOBAL_TEMP=\S*cache-0 /);
+      expect(script).toMatch(/TEXINPUTS=\S*slot-0:/);
+      expect(script).toMatch(/pdf collect \S*slot-1 -o \S*dist\/files\/ensayo-b\.pdf/);
+      expect(script).not.toContain('slot-3');
+      expect(script).not.toContain('cache-3');
+    });
   });
 });
 

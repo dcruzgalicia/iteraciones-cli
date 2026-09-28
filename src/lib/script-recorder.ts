@@ -78,6 +78,18 @@ interface Capture {
 
 let capture: Capture | null = null;
 
+/**
+ * #2474 — slots PDF de esta corrida, que el pipeline avisa con `notePdfSlots`.
+ * El número real de `slot-N`/`cache-N` lo decide el pool —depende de qué worker
+ * ganó la carrera—, y con él se renumera el .sh de forma estable.
+ */
+let pdfSlots = 0;
+
+/** El pipeline avisa cuántos slots usa el pool de PDF; el .sh se numera con él. */
+export function notePdfSlots(slots: number): void {
+  pdfSlots = slots;
+}
+
 const SHELL_SAFE = /^[A-Za-z0-9_@%+=:,./-]+$/;
 
 function quote(value: string): string {
@@ -122,10 +134,12 @@ function push(step: Omit<Step, 'order'>): void {
 
 export function beginScriptCapture(root: string): void {
   capture = { root, steps: [], seq: 0 };
+  pdfSlots = 0;
 }
 
 export function abortScriptCapture(): void {
   capture = null;
+  pdfSlots = 0;
 }
 
 export interface ScriptExecOptions {
@@ -212,6 +226,7 @@ export async function commitScriptCapture(): Promise<void> {
   if (cap === null) return;
 
   const steps = [...cap.steps].sort((a, b) => (a.sortKey === b.sortKey ? a.order - b.order : a.sortKey < b.sortKey ? -1 : 1));
+  canonicalizePdfSlots(steps);
   markUnresolvedAsIntermediate(steps);
 
   const scriptDir = join(cap.root, ...SCRIPT_DIR);
@@ -223,6 +238,39 @@ export async function commitScriptCapture(): Promise<void> {
   const body = [...renderDirs(cap, steps, scriptDir), ...renderSections(cap, steps)];
   await writeFile(scriptPath, ['#!/bin/bash', 'set -e', `cd ${quote(cap.root)}`, ...body, ''].join('\n'), 'utf8');
   await chmod(scriptPath, 0o755);
+}
+
+/**
+ * #2474 — el número de `slot-N`/`cache-N` de un job lo asigna el pool según qué
+ * worker ganó la carrera, así que dos corridas idénticas grababan scripts con
+ * números distintos. El .sh es secuencial (los directorios los crea el propio
+ * `iteraciones prepare` del job), así que se reescriben con el índice que le
+ * toca al job en la fase PDF: su posición entre los jobs —el orden por
+ * `sortKey` ya está fijo— módulo los slots de la corrida. Solo cambia el
+ * número; el invariante `worker⇄slot` del runtime no se toca.
+ */
+function canonicalizePdfSlots(steps: Step[]): void {
+  if (pdfSlots < 1) return;
+  let ordinal = -1;
+  let prevKey: string | undefined;
+  for (const step of steps) {
+    if (step.section !== 'pdf') continue;
+    // Los pasos de un job (prepare, latexmk, collect) comparten sortKey.
+    if (step.sortKey !== prevKey) {
+      prevKey = step.sortKey;
+      ordinal += 1;
+    }
+    const canonical = ordinal % pdfSlots;
+    step.argv = step.argv.map((arg) => renumberSlotPath(arg, canonical));
+    if (step.env !== undefined) {
+      step.env = Object.fromEntries(Object.entries(step.env).map(([key, value]) => [key, renumberSlotPath(value, canonical)]));
+    }
+  }
+}
+
+/** `/slot-12` y `/cache-12` de camino → el índice canónico; nunca `slot-1.tex`. */
+function renumberSlotPath(text: string, canonical: number): string {
+  return text.replace(/\/(slot|cache)-\d+(?![.\w])/g, `/$1-${canonical}`);
 }
 
 /**

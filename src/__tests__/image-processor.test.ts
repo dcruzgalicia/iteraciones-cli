@@ -234,6 +234,54 @@ describe('blindaje pipeline magick (#2085, fixes ecba990a/3b7d7a97)', () => {
   });
 });
 
+/**
+ * #2474 — el orden de terminación no decide el orden del manifiesto: la
+ * primera imagen termina DESPUÉS que la segunda y aun así `processedFiles`
+ * respeta el orden del documento (es lo que serializa `distribution`).
+ */
+describe('processedFiles en orden de entrada, no de terminación (#2474)', () => {
+  it('registra al terminar todas las tareas y con el orden del documento', async () => {
+    resetMagickCache();
+    const dir = mkdtempSync(join(tmpdir(), 'iteraciones-orden-2474-'));
+    const alfa = join(dir, 'alfa.png');
+    const beta = join(dir, 'beta.png');
+    writeFileSync(alfa, Buffer.from('89504e47', 'hex'));
+    writeFileSync(beta, Buffer.from('89504e47', 'hex'));
+
+    const realSpawn = Bun.spawn;
+    Bun.spawn = ((argv: string[]) => {
+      const terminaYa = String(argv[1] ?? '').endsWith('beta.png');
+      return {
+        exited: terminaYa ? Promise.resolve(0) : new Promise<number>((resolve) => setTimeout(() => resolve(0), 150)),
+        stdout: new Response('').body,
+        stderr: new Response('').body,
+        pid: 1,
+      } as unknown as ReturnType<typeof realSpawn>;
+    }) as typeof Bun.spawn;
+    try {
+      const result = await processDocumentImages(
+        [alfa, beta],
+        {},
+        dir,
+        { w: 152.4, h: 228.6, textW: 128.6 },
+        false,
+        join(dir, 'assets', 'images'),
+        imageNamerFor('ensayo'),
+        undefined,
+        false,
+        async () => true,
+      );
+      expect(result.processedFiles).toHaveLength(2);
+      expect(result.processedFiles[0]?.endsWith('ensayo-alfa.jpg')).toBe(true);
+      expect(result.processedFiles[1]?.endsWith('ensayo-beta.jpg')).toBe(true);
+    } finally {
+      Bun.spawn = realSpawn;
+      resetMagickCache();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe('computeProcessTargets (parte pura de processDocumentImages, #2132)', () => {
   const pageDims = { w: 152.4, h: 228.6, textW: 128.6 };
 

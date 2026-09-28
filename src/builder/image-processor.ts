@@ -370,6 +370,29 @@ async function collectFrontmatterImageTasks(
   return tasks;
 }
 
+/**
+ * #2474 — procesa con concurrencia, pero registra al terminar TODAS las tareas y
+ * en orden de entrada. `mapWithConcurrency` devuelve los resultados indexados
+ * como los entró, así que el orden de terminación —quién acaba primero— no
+ * decide cómo se serializa la distribución del `.tex` ni el mapa de rutas: dos
+ * corridas idénticas dejan el mismo orden en el manifiesto.
+ */
+async function runImageTasks(
+  tasks: { absPath: string; w: number; h: number; cover: boolean }[],
+  outputDir: string,
+  naming: (absPath: string) => string,
+  imageMap: Map<string, string>,
+  processedFiles: string[],
+): Promise<void> {
+  const processed = await mapWithConcurrency(tasks, magickConcurrency(), (task) =>
+    processImage(task.absPath, task.w, task.h, task.cover, outputDir, naming(task.absPath)),
+  );
+  for (const [index, result] of processed.entries()) {
+    const task = tasks[index];
+    if (task !== undefined && result !== undefined) recordProcessed(imageMap, processedFiles, task.absPath, result);
+  }
+}
+
 async function processDedicatedFrontmatterImages(
   fm: Record<string, unknown>,
   docDir: string,
@@ -380,10 +403,7 @@ async function processDedicatedFrontmatterImages(
   processedFiles: string[],
 ): Promise<void> {
   const tasks = await collectFrontmatterImageTasks(fm, docDir, targets, imageMap);
-  await mapWithConcurrency(tasks, magickConcurrency(), async (task) => {
-    const processed = await processImage(task.absPath, task.w, task.h, task.cover, outputDir, naming(task.absPath));
-    recordProcessed(imageMap, processedFiles, task.absPath, processed);
-  });
+  await runImageTasks(tasks, outputDir, naming, imageMap, processedFiles);
 }
 
 async function processMultilineCoverImages(
@@ -394,7 +414,7 @@ async function processMultilineCoverImages(
   imageMap: Map<string, string>,
   processedFiles: string[],
 ): Promise<void> {
-  const tasks: { absPath: string; w: number; h: number }[] = [];
+  const tasks: { absPath: string; w: number; h: number; cover: boolean }[] = [];
   const seen = new Set<string>();
   for (const img of multilineImages) {
     if (imageMap.has(img.absPath) || seen.has(img.absPath)) continue;
@@ -402,12 +422,9 @@ async function processMultilineCoverImages(
 
     const imgTargetW = img.widthMm ?? targets.targetW;
     const imgTargetH = img.widthMm ? 0 : targets.targetH;
-    tasks.push({ absPath: img.absPath, w: imgTargetW, h: imgTargetH });
+    tasks.push({ absPath: img.absPath, w: imgTargetW, h: imgTargetH, cover: false });
   }
-  await mapWithConcurrency(tasks, magickConcurrency(), async (task) => {
-    const processed = await processImage(task.absPath, task.w, task.h, false, outputDir, naming(task.absPath));
-    recordProcessed(imageMap, processedFiles, task.absPath, processed);
-  });
+  await runImageTasks(tasks, outputDir, naming, imageMap, processedFiles);
 }
 
 async function processInlineImages(
@@ -418,11 +435,10 @@ async function processInlineImages(
   imageMap: Map<string, string>,
   processedFiles: string[],
 ): Promise<void> {
-  const tasks = [...new Set(inlineImages)].filter((absPath) => !imageMap.has(absPath));
-  await mapWithConcurrency(tasks, magickConcurrency(), async (absPath) => {
-    const processed = await processImage(absPath, targets.targetW, targets.targetH, false, outputDir, naming(absPath));
-    recordProcessed(imageMap, processedFiles, absPath, processed);
-  });
+  const tasks = [...new Set(inlineImages)]
+    .filter((absPath) => !imageMap.has(absPath))
+    .map((absPath) => ({ absPath, w: targets.targetW, h: targets.targetH, cover: false }));
+  await runImageTasks(tasks, outputDir, naming, imageMap, processedFiles);
 }
 
 function warnMissingMagick(pdfxActive: boolean): void {
