@@ -42,6 +42,7 @@ Globales: `--version`, `--project-root <path>` (antes o después del subcomando)
 Añadidos compatibles con D6 (no rompen consumidores existentes; renombrar o eliminar sigue siendo breaking):
 
 - **`build --json` → `selected?`** (#2455): solo en una corrida con paths (`iteraciones build <path...>`); lleva la selección **resuelta** (el cierre que se construyó: una `type: collection` arrastra sus `files[]` y sus `type: creator`), ordenada y deduplicada. El build completo no lleva la clave. Semántica completa en `docs/architecture.md`.
+- **`test visual <pdf>`** (#2479): comando nuevo de regresión visual, sin `--json`. Compara un PDF con `visual/<slug>.pdf` página por página —`pdftoppm` a 300 dpi + `magick compare` con blur `dpi/150` px y fuzz 15 %— y sale con exit 1 si alguna página pasa del 0.005 % de píxeles distintos o si cambia el número de páginas. Los mensajes siguen el formato unificado (glifo + contexto `[test]`).
 
 ---
 

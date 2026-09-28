@@ -42,6 +42,7 @@ export const SKIP_REASONS = {
   latex: 'requiere motor LaTeX (latexmk)',
   unzip: 'requiere unzip',
   pdftotext: 'requiere pdftotext (poppler)',
+  pdftoppm: 'requiere pdftoppm (poppler)',
   fixtures: 'requieren fixtures de pandoc para este major',
 } as const;
 

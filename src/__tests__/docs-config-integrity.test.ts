@@ -79,21 +79,30 @@ function collectFlags(options: readonly { long?: string; short?: string }[]): Se
   return flags;
 }
 
+/**
+ * Flags del programa: globales, de cada comando y de sus subcomandos. Un
+ * comando con subcomandos (`pdf collect`, `test visual`) declara sus opciones
+ * en el subcomando: sin bajar un nivel, quedarían sin vigilar.
+ */
+function collectCliFlags(program: Command): Set<string> {
+  const flags = new Set<string>();
+  const helpOption = (program as { _helpOption?: { short?: string; long?: string } })._helpOption;
+  if (helpOption?.long) flags.add(helpOption.long.slice(2));
+  if (helpOption?.short) flags.add(helpOption.short.slice(1));
+  for (const flag of collectFlags(program.options)) flags.add(flag);
+  for (const cmd of [...program.commands, ...program.commands.flatMap((c) => c.commands)]) {
+    for (const flag of collectFlags(cmd.options)) flags.add(flag);
+  }
+  return flags;
+}
+
 describe('integridad docs ↔ CLI (comandos, flags y API)', () => {
   function realCliSurface(): { commands: Set<string>; flags: Set<string> } {
     const program = buildProgram();
     const commands = new Set(program.commands.map((c) => c.name()));
     const helpCommand = (program as { _helpCommand?: Command })._helpCommand;
     if (helpCommand?.name()) commands.add(helpCommand.name());
-    const flags = new Set<string>();
-    const helpOption = (program as { _helpOption?: { short?: string; long?: string } })._helpOption;
-    if (helpOption?.long) flags.add(helpOption.long.slice(2));
-    if (helpOption?.short) flags.add(helpOption.short.slice(1));
-    for (const flag of collectFlags(program.options)) flags.add(flag);
-    for (const cmd of program.commands) {
-      for (const flag of collectFlags(cmd.options)) flags.add(flag);
-    }
-    return { commands, flags };
+    return { commands, flags: collectCliFlags(program) };
   }
 
   it('todo comando y flag documentado en README.md y quickstart.md existe en la CLI', async () => {
