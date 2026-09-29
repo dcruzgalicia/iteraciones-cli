@@ -149,7 +149,7 @@ async function assertSnapshots(cwd: string, targets: string[], outputDir: string
   if (orphans.length > 0) logWarning(`snapshots sin PDF en ${labelPath(cwd, outputDir)}: ${orphans.join(', ')}`, 'visual');
 }
 
-/** Compara un PDF con su snapshot (o con `--reference`) y deja su diff. */
+/** Compara un PDF con su snapshot (o con la 2.ª ruta, su referencia) y deja su diff. */
 async function compareOne(
   cwd: string,
   pdf: string,
