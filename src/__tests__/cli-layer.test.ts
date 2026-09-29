@@ -2728,6 +2728,8 @@ describe('runInit', () => {
       const gitignore = await Bun.file(join(dir, '.gitignore')).text();
       expect(gitignore).toContain('dist/');
       expect(gitignore).toContain('.iteraciones/');
+      // build.sh lo reescribe cada build (#2481)
+      expect(gitignore).toContain('build.sh');
       // los diffs de `visual check` no se versionan; los snapshots sí
       expect(gitignore).toContain('visual/**/*-page-*-diff.png');
     });

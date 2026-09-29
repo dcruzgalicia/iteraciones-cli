@@ -43,7 +43,7 @@ mi-sitio/
   iteraciones.config.yaml       # configuración del proyecto
   index.md                      # documento de inicio (se convierte en index.html)
   bibliography.bib              # archivo de referencias bibliográficas
-  .gitignore                    # con dist/ y .iteraciones/
+  .gitignore                    # con dist/, .iteraciones/ y build.sh
 ```
 
 El primer `build` genera `index.html`: es la página de inicio que enlazan las tarjetas de identidad del resto de los documentos.
