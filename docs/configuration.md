@@ -427,6 +427,8 @@ format:
 
 Orden de los bloques del masonry: **la posición en la lista ES el orden**. Es una lista completa: los bloques que no aparecen no se renderizan (p. ej. omitir `referencias` quita la tarjeta de citas aunque el documento las tenga). Los bloques de tarjetas ausentes por contenido (TOC sin `toc`, referencias sin citas, formatos sin formatos activos) tampoco se renderizan y no alteran el orden del resto.
 
+En `type: collection`, el bloque `contenido` no se renderiza (#2483): sus tarjetas —la de los datos de la collection y una por archivo de `files`— salen en su lugar, en el mismo orden en el que aparecería la de contenido, y cada una es una tarjeta del masonry por sí sola.
+
 ### `format.epub`
 
 #### `format.epub.generate`
@@ -452,7 +454,7 @@ Habilita la exportación a Markdown procesado (con los filters aplicados).
 
 Define cómo se exporta el Markdown de las collections:
 
-- `false` (por defecto): la salida es **re-procesable**. `dist/<collection>.md` conserva `type: collection`, reescribe `files[]` para apuntar al `.md` de cada miembro, que el propio miembro escribe en dist al construirse standalone con su nombre-nuevo (#2452), y mantiene el body original de la collection (sin el contenido fusionado). Con `iteraciones merge --format <fmt>` se vuelve a escribir la entrada exacta de pandoc, cuando se quiera, **siempre sobre los archivos originales de `files[]`** (`html` escribe las tarjetas del #2483; `latex`, `epub` y `markdown`, el contenido fusionado).
+- `false` (por defecto): la salida es **re-procesable**. `dist/<collection>.md` conserva `type: collection`, reescribe `files[]` para apuntar al `.md` de cada miembro, que el propio miembro escribe en dist al construirse standalone con su nombre-nuevo (#2452), y mantiene el body original de la collection (sin el contenido fusionado). Con `iteraciones merge --format <fmt>` se vuelve a escribir la entrada exacta de pandoc, cuando se quiera, **siempre sobre los archivos originales de `files[]`** (`html` escribe las tarjetas de la collection y de cada archivo del #2483; `latex`, `epub` y `markdown`, el contenido fusionado).
 - `true`: la salida es el markdown **fusionado**. `dist/<collection>.md` lleva `type: file`, sin `files[]`, y con el contenido de todos los archivos de `files[]` inline. No es re-procesable.
 
 ```yaml

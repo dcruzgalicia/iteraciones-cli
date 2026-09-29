@@ -33,7 +33,7 @@ El pipeline consume los siguientes campos del frontmatter:
 
 ## Type: collection
 
-Un `type: collection` fusiona el contenido de múltiples archivos en un solo documento de salida. En HTML la página no los fusiona: cada archivo es una tarjeta con su autor y título, su fragmento (el primer párrafo o el primer fenced div completo, a lo más 100 palabras, con `...` si hubo corte) y un enlace a su texto completo (#2483); el EPUB y el PDF siguen recibiendo el contenido entero. El frontmatter del collection (`title`, `collectionCreator`, `subtitle`, etc.) se comporta igual que en `type: file` (se usa como metadata del documento: `\title`, `\author`, etc. en LaTeX; portada en HTML).
+Un `type: collection` fusiona el contenido de múltiples archivos en un solo documento de salida. En HTML la página no los fusiona: la collection tiene su propia tarjeta con sus datos —las creadoras (la unión de las de sus `files`), su `collectionCreator`, el título, el subtítulo y la fecha— y su body propio (el texto que sigue al frontmatter), y debajo, una tarjeta por archivo con su autor y título, su fragmento (el primer párrafo o el primer fenced div completo, a lo más 100 palabras, con `...` si hubo corte) y un enlace a su texto completo. Todas son tarjetas del mismo nivel que el resto de la página (#2483), sin tarjeta de contenido que las contenga; el EPUB y el PDF siguen recibiendo el contenido entero. El frontmatter del collection (`title`, `collectionCreator`, `subtitle`, etc.) se comporta igual que en `type: file` (se usa como metadata del documento: `\title`, `\author`, etc. en LaTeX; tarjeta propia y `<title>`/`<meta author>` en HTML).
 
 `creator` está prohibido en una collection (`validate` y `build` fallan con el fix: renombra `creator:` a `collectionCreator:`). El `creator` del resultado —el byline— no se escribe a mano: build lo calcula como la unión de los `creator` de cada archivo de `files`. El `.md` exportado a `dist` lleva además `slug` (el derivado de `collectionCreator`) para que un re-proceso del propio artefacto no renombre la salida.
 
@@ -45,7 +45,7 @@ Cada archivo en `files` aporta sus propios encabezados estructurales antes de su
 | `title` | `\section{}` | `<h3>` | `###` |
 | `subtitle` | `\subsection{}` | `<h4>` | `####` |
 
-En HTML esos encabezados viajan dentro de la tarjeta del archivo, seguidos de su fragmento y de su enlace al texto completo; el EPUB los recibe con el contenido entero.
+En HTML esos encabezados viajan dentro de la tarjeta del archivo, seguidos de su fragmento y de su enlace al texto completo; el EPUB los recibe con el contenido entero. La tarjeta de la collection es la primera, y lleva sus mismos campos (`creator` con la unión de los `files`, `collectionCreator`, `title`, `subtitle`, `date`) más su body propio.
 
 ### Ejemplo
 

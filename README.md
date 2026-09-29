@@ -65,13 +65,13 @@ Esto también crea un archivo `bibliography.bib` de ejemplo.
 
 ### Collections
 
-Un `type: collection` en el frontmatter fusiona múltiples archivos en un solo documento. En PDF, EPUB y Markdown salen fusionados; en HTML cada archivo es una tarjeta con su fragmento —el primer párrafo o el primer fenced div, a lo más 100 palabras, con `...` si hubo corte— y un enlace a su texto completo:
+Un `type: collection` en el frontmatter fusiona múltiples archivos en un solo documento. En PDF, EPUB y Markdown salen fusionados; en HTML la página se arma con tarjetas: una con los datos de la collection (creadoras, título y su body propio) y una por cada archivo, con su fragmento —el primer párrafo o el primer fenced div, a lo más 100 palabras, con `...` si hubo corte— y un enlace a su texto completo. Todas al mismo nivel que el resto de tarjetas de la página:
 
 ```
 ---
 title: Mi colección
-creator:
-  - Autor Principal
+collectionCreator:
+  - Editora Principal
 type: collection
 files:
   - capitulo-1.md
