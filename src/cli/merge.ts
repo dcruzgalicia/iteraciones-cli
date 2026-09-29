@@ -1,11 +1,18 @@
 import { basename, dirname, isAbsolute, join, normalize, relative, sep } from 'node:path';
 import { resolveCollectionFile } from '../builder/collection-files.js';
+import { loadSlugIndex } from '../builder/discover.js';
 import { printFlags } from '../builder/image-flags.js';
 import { rewriteImagePaths } from '../builder/image-processor.js';
 import { buildLatexPandocContent, mergeConfigImages, preprocessDocumentImages } from '../builder/latex-composer.js';
 import { aggregateCollectionCreators } from '../builder/orchestrator.js';
 import { ASSETS_IMAGES_DIR, DIST_FILES_DIR } from '../builder/output-layout.js';
-import { type CollectionEntry, collectionBaseContent, readCollectionEntries } from '../builder/pipeline-formats.js';
+import {
+  type CollectionEntry,
+  collectionBaseContent,
+  collectionCardsContent,
+  memberHtmlHrefs,
+  readCollectionEntries,
+} from '../builder/pipeline-formats.js';
 import { writeOutput } from '../builder/pipeline-io.js';
 import type { BuildDocument } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
@@ -105,6 +112,7 @@ async function composeFor(
   entries: CollectionEntry[],
   siteConfig: SiteConfig,
   ctx: MergeContext,
+  memberHrefs: Map<string, string>,
 ): Promise<string> {
   if (format === 'latex') {
     const pageNumber = (src.fm.pageNumber ?? siteConfig.format?.pdf?.pageNumber ?? siteConfig.pageNumber) as string | undefined;
@@ -114,6 +122,9 @@ async function composeFor(
       siteConfig,
     });
   }
+  // #2483: la página HTML son tarjetas con enlace (los mismos hrefs que resuelve
+  // el build); el EPUB sigue recibiendo la fusión completa.
+  if (format === 'html') return collectionCardsContent(entries, memberHrefs, src.text);
   const base = collectionBaseContent(entries, format === 'markdown' ? 'markdown' : 'html', src.text);
   // #2460: latex/html/epub no reescriben el texto crudo (lo reescribe el filtro
   // 04-image-paths sobre el AST); el markdown de dist no pasa por pandoc (#2436).
@@ -146,7 +157,10 @@ export async function runMerge(cwd: string, input: string, options: { output?: s
     const stem = basename(output, '.md');
     const outSlug = stem.endsWith(`.${format}`) ? stem.slice(0, -(format.length + 1)) : stem;
     const ctx = await buildMergeContext(cwd, src, entries, siteConfig, outSlug);
-    await writeOutput(output, await composeFor(format, src, entries, siteConfig, ctx));
+    // #2483: los enlaces de las tarjetas HTML salen de los mismos slugs que usa
+    // el discovery del build, así `merge --format html` sigue siendo byte-idéntico.
+    const memberHrefs = format === 'html' ? memberHtmlHrefs(src.relativePath, entries, await loadSlugIndex(cwd)) : new Map<string, string>();
+    await writeOutput(output, await composeFor(format, src, entries, siteConfig, ctx, memberHrefs));
     logSuccess(`${input} [--format ${format}] → ${options.output}`, 'merge');
   } catch (err) {
     logError(err instanceof Error ? err.message : String(err), 'merge');

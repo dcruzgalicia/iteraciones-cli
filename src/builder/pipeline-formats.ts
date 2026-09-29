@@ -7,6 +7,7 @@ import { fmStringList, resolveBooleanField, resolveMetadataField, resolveStringF
 import { logWarning } from '../lib/logger.js';
 import { execPandoc, MD_READER } from '../lib/pandoc-runner.js';
 import { isScriptCapture, recordSupportCommand, resolveScriptStdout } from '../lib/script-recorder.js';
+import { extractFragment } from './collection-fragment.js';
 import { computeSlug, htmlSlugFor, parseAuthors } from './discover.js';
 import { assembleExportDocument } from './export/assemble.js';
 import { convertToEpub, convertToMarkdown } from './export/runner.js';
@@ -227,6 +228,8 @@ async function emitHtmlPage(
 }
 
 export type CollectionEntry = {
+  /** ruta del `.md` de origen, relativa a la raíz del proyecto (#2483). */
+  file: string;
   title: string;
   creator: string[];
   subtitle: string | undefined;
@@ -261,7 +264,10 @@ export async function readCollectionEntries(files: string[], collectionPath: str
       );
     }
     const parsed = parseFileFrontmatter(text);
-    if (parsed.body.trim()) entries.push(parsed);
+    // #2483: la ruta raíz-relativa del miembro viaja en la entrada; es la clave
+    // con la que su tarjeta enlaza a su HTML (slug resuelto del discovery).
+    const rootRelative = file.split(sep).join('/').replace(/^\.\//, '');
+    if (parsed.body.trim()) entries.push({ file: rootRelative, ...parsed });
   }
   return entries;
 }
@@ -436,6 +442,11 @@ function buildCollectionSectionsLatex(
   return parts.join('\n\n');
 }
 
+/**
+ * #2483 — fusión completa con los encabezados de cada miembro: es lo que sigue
+ * recibiendo el EPUB (y `iteraciones merge --format epub`). La página HTML pasa
+ * por `collectionCardsContent`, que enlaza en vez de fusionar.
+ */
 function buildCollectionSectionsHtml(
   entries: {
     creator: string[];
@@ -457,6 +468,59 @@ function buildCollectionSectionsHtml(
     parts.push(e.body.trim());
   }
   return parts.join('\n\n');
+}
+
+/**
+ * #2483 — href de cada miembro hacia su propio HTML, relativo a la página de la
+ * collection. El slug es el del discovery (el mismo que nombra su salida); un
+ * miembro sin slug no tiene HTML conocido y su tarjeta se queda sin enlace.
+ */
+export function memberHtmlHrefs(collectionPath: string, entries: CollectionEntry[], slugIndex: Map<string, DiscoveryEntry>): Map<string, string> {
+  const dir = dirname(collectionPath);
+  const hrefs = new Map<string, string>();
+  for (const e of entries) {
+    const slug = slugIndex.get(e.file)?.slug;
+    if (slug === undefined) continue;
+    const html = join(dirname(e.file), `${htmlSlugFor(e.file, slug)}.html`)
+      .split(sep)
+      .join('/');
+    hrefs.set(e.file, relativeHref(dir, html));
+  }
+  return hrefs;
+}
+
+/**
+ * #2483 — la página HTML de una collection: una tarjeta por miembro, con su
+ * autor y título, su fragmento (primer párrafo o fenced div completo, a lo más
+ * 100 palabras, con `...` si hubo corte) y un enlace a su HTML completo.
+ * El EPUB y el PDF siguen con la fusión completa: solo cambia HTML.
+ */
+export function collectionCardsContent(entries: CollectionEntry[], memberHrefs: Map<string, string>, content: string): string {
+  if (entries.length === 0) return content;
+  return entries.map((e) => collectionCard(e, memberHrefs.get(e.file))).join('\n\n');
+}
+
+/**
+ * #2483 — clases de la tarjeta: la misma tarjeta redondeada que las del resto
+ * del HTML. Van en `class="..."` (y no en `{.clase}`) porque varias llevan
+ * `:` y `/`, que el atributo de un fenced div con punto no admite.
+ */
+const COLLECTION_CARD_CLASSES =
+  'tarjeta-fragmento rounded-xl border border-accent-500/25 bg-stone-50/70 dark:bg-stone-900/60 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 my-8 break-inside-avoid';
+
+function collectionCard(e: CollectionEntry, href: string | undefined): string {
+  const creator = e.creator.length > 0 ? e.creator.join(', ') : 'Anónima';
+  const title = e.title || 'Sin título';
+  const fragment = extractFragment(e.body);
+  // `::::` (4 colons) siempre: el fragmento puede ser él mismo un fenced div y
+  // pandoc cierra el div externo con la primera valla de 4 que encuentre.
+  const card = [`:::: {class="${COLLECTION_CARD_CLASSES}"}`, ''];
+  card.push(`<h2>${creator}</h2>`, '', `<h3>${title}</h3>`);
+  if (e.subtitle) card.push('', `<h4>${e.subtitle}</h4>`);
+  if (fragment !== '') card.push('', fragment);
+  if (href !== undefined) card.push('', `[Leer el texto completo →](${href})`);
+  card.push('', '::::');
+  return card.join('\n');
 }
 
 export function buildCollectionSectionsMarkdown(
@@ -766,7 +830,9 @@ async function emitCollectionFormats(
   const exportDoc = assembleExportDocument(doc, renderCtx.lang, exportCtx.globalBibliography, exportCtx.globalCsl, ctx.siteConfig.toc);
 
   if (activeFormats.html && formatWorkSets.htmlPaths.has(doc.relativePath) && docProducesFormat(doc.frontmatter.type, 'html')) {
-    const base = collectionBaseContent(collectionEntries, 'html', content);
+    // #2483: HTML deja de fusionar los miembros: cada uno es una tarjeta con su
+    // fragmento y un enlace a su propio HTML. El EPUB, más abajo, sigue completo.
+    const base = collectionCardsContent(collectionEntries, memberHtmlHrefs(doc.relativePath, collectionEntries, discoveryIndex), content);
     // #2460: las rutas no se reescriben sobre el texto que va a pandoc; el
     // filtro 04-image-paths las reescribe sobre el AST.
     const imagePaths = await writeImagePaths(doc, ctx.cwd, 'html', images.imageMap, docDir, true);
@@ -774,6 +840,8 @@ async function emitCollectionFormats(
   }
 
   if (activeFormats.epub && formatWorkSets.epubPaths.has(doc.relativePath) && docProducesFormat(doc.frontmatter.type, 'epub')) {
+    // #2483: el EPUB es un libro: sigue recibiendo la fusión completa, no las
+    // tarjetas de HTML (decisión del issue).
     const base = collectionBaseContent(collectionEntries, 'html', content);
     const imagePaths = await writeImagePaths(doc, ctx.cwd, 'epub', images.imageMap, docDir, false);
     await convertToEpub(
