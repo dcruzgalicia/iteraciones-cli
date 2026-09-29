@@ -20,15 +20,15 @@ import {
 } from '../lib/visual-diff.js';
 
 /**
- * #2479 — `iteraciones test visual [pdf...]`: regresión visual de los PDFs.
+ * #2479 — `iteraciones visual check|snapshot`: regresión visual de los PDFs.
  *
- * El flujo es build → `--update` → cambios → build → comparar, y se puede hacer
- * de una vez para todo el proyecto:
- * - `--update` guarda como snapshot los PDFs de `--output` (o los que se le
- *   pasen) en `visual/`, espejando la estructura de la salida, y retira los
+ * El flujo es build → `visual snapshot` → cambios → build → `visual check`, y se
+ * puede hacer de una vez para todo el proyecto:
+ * - `visual snapshot` guarda como snapshot los PDFs de `--output` (o los que se
+ *   le pasen) en `visual/`, espejando la estructura de la salida, y retira los
  *   snapshots y diffs sobrantes;
- * - sin PDFs compara todos los de `--output` contra sus snapshots y se niega a
- *   comparar nada si falta alguno: un parcial esconde la regresión;
+ * - `check` sin PDFs compara todos los de `--output` contra sus snapshots y se
+ *   niega a comparar nada si falta alguno: un parcial esconde la regresión;
  * - con PDFs explícitos compara solo esos, y `--reference` permite sustituir
  *   el snapshot por un PDF cualquiera.
  *
@@ -38,8 +38,9 @@ import {
  * `index-page-005-diff.png`); los renders no se conservan.
  */
 export interface TestVisualOptions {
-  reference?: string;
+  /** Guarda snapshots en vez de comparar: es lo que hace `visual snapshot`. */
   update?: boolean;
+  reference?: string;
   dpi?: string;
   threshold?: string;
   fuzz?: string;
@@ -70,7 +71,7 @@ async function resolveRun(cwd: string, pdfs: string[], options: TestVisualOption
   const visualOptions = resolveVisualOptions(options);
   const explicitReference = options.reference === undefined || options.reference === '' ? undefined : resolvePath(cwd, options.reference);
   if (options.update === true && explicitReference !== undefined) {
-    throw new BuildError('--update y --reference son incompatibles: --update guarda el PDF generado como snapshot');
+    throw new BuildError('snapshot y --reference son incompatibles: guarda los snapshots primero y compara después');
   }
   const batch = pdfs.length === 0;
   if (batch && explicitReference !== undefined) {
@@ -97,15 +98,15 @@ async function updateSnapshots(cwd: string, targets: string[], outputDir: string
   for (const pdf of targets) {
     const snapshot = referencePathFor(cwd, pdf, outputDir);
     if (snapshot === pdf) {
-      logSuccess(`${labelPath(cwd, pdf)} ya es el snapshot`, 'test');
+      logSuccess(`${labelPath(cwd, pdf)} ya es el snapshot`, 'visual');
       continue;
     }
     await saveReference(pdf, snapshot);
-    logSuccess(`${labelPath(cwd, pdf)} → ${labelPath(cwd, snapshot)}`, 'test');
+    logSuccess(`${labelPath(cwd, pdf)} → ${labelPath(cwd, snapshot)}`, 'visual');
   }
   // Un snapshot nuevo no hereda diffs de la corrida anterior.
   await clearDiffImages(store);
-  if (removed.length > 0) logInfo(`snapshots sin PDF en ${labelPath(cwd, outputDir)}: ${removed.join(', ')}`, 'test');
+  if (removed.length > 0) logInfo(`snapshots sin PDF en ${labelPath(cwd, outputDir)}: ${removed.join(', ')}`, 'visual');
 }
 
 /**
@@ -120,7 +121,7 @@ async function assertSnapshots(cwd: string, targets: string[], outputDir: string
   const store = join(cwd, 'visual');
   const snapshots = new Set(await listPdfFiles(store));
   if (batch && snapshots.size === 0) {
-    throw new BuildError(`no hay snapshots en ${labelPath(cwd, store)} · créalos con: iteraciones test visual --update`);
+    throw new BuildError(`no hay snapshots en ${labelPath(cwd, store)} · créalos con: iteraciones visual snapshot`);
   }
 
   const wanted = new Set<string>();
@@ -129,18 +130,18 @@ async function assertSnapshots(cwd: string, targets: string[], outputDir: string
     const snapshot = referencePathFor(cwd, pdf, outputDir);
     if (snapshots.has(snapshot)) wanted.add(snapshot);
     else if (!batch) {
-      throw new BuildError(`no hay snapshot en ${labelPath(cwd, snapshot)} · créalo con: iteraciones test visual ${labelPath(cwd, pdf)} --update`);
+      throw new BuildError(`no hay snapshot en ${labelPath(cwd, snapshot)} · créalo con: iteraciones visual snapshot ${labelPath(cwd, pdf)}`);
     } else missing.push(labelPath(cwd, snapshot));
   }
   if (missing.length > 0) {
-    throw new BuildError(`snapshots incompletas · faltan: ${missing.join(', ')} · ejecuta: iteraciones test visual --update`);
+    throw new BuildError(`snapshots incompletas · faltan: ${missing.join(', ')} · ejecuta: iteraciones visual snapshot`);
   }
 
   // Un snapshot huérfano no rompe la corrida: es material sobrante, no una
-  // regresión del build (y `--update` lo retira).
+  // regresión del build (y `visual snapshot` lo retira).
   if (!batch) return;
   const orphans = [...snapshots].filter((snapshot) => !wanted.has(snapshot)).map((snapshot) => labelPath(cwd, snapshot));
-  if (orphans.length > 0) logWarning(`snapshots sin PDF en ${labelPath(cwd, outputDir)}: ${orphans.join(', ')}`, 'test');
+  if (orphans.length > 0) logWarning(`snapshots sin PDF en ${labelPath(cwd, outputDir)}: ${orphans.join(', ')}`, 'visual');
 }
 
 /** Compara un PDF con su snapshot (o con `--reference`) y deja su diff. */
@@ -210,31 +211,31 @@ function reportAll(cwd: string, outputDir: string, options: VisualOptions, compa
     const { referenceLabel, result } = single.entry;
     logInfo(
       formatVisualReport({ result, options, referenceLabel, generatedLabel: labelPath(cwd, single.pdf) }, (path) => labelPath(cwd, path)),
-      'test',
+      'visual',
     );
     return;
   }
   const head = `visual: ${compared.length} PDFs en ${labelPath(cwd, outputDir)} · ${options.dpi} dpi · umbral ${options.thresholdPercent} %`;
-  logInfo(`${head} · fuzz ${options.fuzzPercent} %`, 'test');
-  for (const { pdf, entry } of compared) logInfo(batchBlock(cwd, pdf, entry.result), 'test');
+  logInfo(`${head} · fuzz ${options.fuzzPercent} %`, 'visual');
+  for (const { pdf, entry } of compared) logInfo(batchBlock(cwd, pdf, entry.result), 'visual');
 }
 
 function reportVerdict(cwd: string, compared: Compared[]): void {
   const failed = compared.filter(({ entry }) => !entry.result.pass);
   if (failed.length > 0) {
     process.exitCode = 1;
-    logError(failureSummary(cwd, compared, failed), 'test');
+    logError(failureSummary(cwd, compared, failed), 'visual');
     return;
   }
   const single = compared.length === 1 ? compared[0] : undefined;
   if (single !== undefined) {
     logSuccess(
       `sin diferencias visuales en ${single.entry.result.compared} páginas${single.entry.result.fromCache === true ? ' · caché' : ''}`,
-      'test',
+      'visual',
     );
     return;
   }
-  logSuccess(`sin diferencias visuales en ${compared.length} PDFs`, 'test');
+  logSuccess(`sin diferencias visuales en ${compared.length} PDFs`, 'visual');
 }
 
 async function compareAll(
@@ -262,7 +263,7 @@ export async function runTestVisual(cwd: string, pdfs: string[], options: TestVi
     if (options.update === true) await updateSnapshots(cwd, run.targets, run.outputDir);
     else await compareAll(cwd, run.targets, run.outputDir, run.visualOptions, run.batch, run.explicitReference);
   } catch (err) {
-    logError(err instanceof Error ? err.message : String(err), 'test');
+    logError(err instanceof Error ? err.message : String(err), 'visual');
     process.exitCode = 1;
   }
 }

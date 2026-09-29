@@ -78,7 +78,7 @@ const DEFAULT_GITIGNORE = [
   'dist/',
   '.iteraciones/',
   '.DS_Store',
-  // los snapshots de `test visual` sí van versionados; sus diffs no, y pueden
+  // los snapshots de `visual` sí van versionados; sus diffs no, y pueden
   // vivir en subcarpetas porque visual/ espeja dist/files
   'visual/**/*-page-*-diff.png',
   '',

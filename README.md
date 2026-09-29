@@ -227,45 +227,54 @@ Elimina el directorio de salida (`dist/`) y la caché (`.iteraciones/`).
 iteraciones clean
 ```
 
-### `iteraciones test visual [pdf...]`
+### `iteraciones visual`
 
-Compara los PDFs de `dist/files` con sus **snapshots** por lo que se ve, no por los bytes: `pdftoppm` renderiza las páginas a PNG (300 dpi por defecto) y `magick compare` cuenta los píxeles distintos de cada una tras un blur de `dpi/150` px y un fuzz del 15 %. Si alguna página pasa del **0.005 %** de píxeles distintos —o si cambia el número de páginas— sale con **exit 1**. Requiere poppler e ImageMagick, que comprueba `iteraciones doctor`.
+Regresión visual de los PDFs del proyecto en dos comandos: `iteraciones visual snapshot` guarda los snapshots y `iteraciones visual check [pdf...]` compara contra ellos y sale con exit 1 si hay regresión.
+
+La comparación mira lo que se ve, no los bytes: `pdftoppm` renderiza las páginas a PNG (300 dpi por defecto) y `magick compare` cuenta los píxeles distintos de cada una tras un blur de `dpi/150` px y un fuzz del 15 %. Si alguna página pasa del **0,005 %** de píxeles distintos —o si cambia el número de páginas—, `check` falla. Requiere poppler e ImageMagick, que comprueba `iteraciones doctor`.
 
 El flujo completo, sin repetir el comando por cada PDF:
 
 ```bash
 iteraciones build
-iteraciones test visual --update   # guarda los snapshots de dist/files
+iteraciones visual snapshot   # guarda los snapshots de dist/files
 # …cambios en el proyecto…
 iteraciones build
-iteraciones test visual            # compara todos: exit 1 si hay regresión
+iteraciones visual check      # compara todos: exit 1 si hay regresión
 ```
 
-Los snapshots viven en `visual/`, que espeja la estructura de `dist/files` (`dist/files/anexos/index.pdf` → `visual/anexos/index.pdf`) y va versionado en git. Ahí mismo, junto a cada snapshot, quedan las imágenes de diferencia de las páginas modificadas (`index-page-005-diff.png`): solo los diffs, porque para ver las dos páginas completas están el snapshot y el PDF de `dist/files`. Los diffs no se versionan (los añade `iteraciones init` al `.gitignore`) y se retiran solos en `--update` y en cada corrida, para que `visual/` siempre refleje la última comparación.
+Los snapshots viven en `visual/`, que espeja la estructura de `dist/files` (`dist/files/anexos/index.pdf` → `visual/anexos/index.pdf`) y va versionado en git. Ahí mismo, junto a cada snapshot, quedan las imágenes de diferencia de las páginas modificadas (`index-page-005-diff.png`): solo los diffs, porque para ver las dos páginas completas están el snapshot y el PDF de `dist/files`. Los diffs no se versionan (los añade `iteraciones init` al `.gitignore`) y se retiran solos en cada `snapshot` y en cada `check`, para que `visual/` siempre refleje la última comparación.
 
-Sin snapshots, o si falta alguno, el modo lote **no compara nada** y dice qué archivo falta; un snapshot de un PDF que ya no existe solo avisa, y `--update` lo retira. Con PDFs explícitos manda cada uno: `test visual <pdf>` compara solo ese.
+En `check`, sin snapshots o si falta alguno, el modo lote **no compara nada** y dice qué archivo falta; un snapshot de un PDF que ya no existe solo avisa, y `snapshot` lo retira. Con PDFs explícitos manda cada uno: `visual check <pdf>` compara solo ese.
 
 Sin proyecto, el render y la caché se hacen en el temporal del sistema.
 
 ```
-iteraciones test visual [pdf...] [opciones]
+iteraciones visual snapshot [pdf...] [--output <path>]
+iteraciones visual check [pdf...] [opciones]
 ```
 
-| Opción | Descripción | Por defecto |
-|--------|-------------|-------------|
-| `--update` | Guarda como snapshots los PDFs de `--output` (o los dados), sin comparar | — |
-| `--reference <pdf>` | Compara con ese PDF en vez de con el snapshot (solo con PDF explícito) | `visual/<ruta>.pdf` |
-| `--output <path>` | Directorio de salida donde están los PDFs del modo lote | `dist/files` |
-| `--dpi <n>` | Resolución de render en dpi | `300` |
-| `--threshold <pct>` | % máximo de píxeles distintos por página | `0.005` |
-| `--fuzz <pct>` | Tolerancia de color por canal en % | `15` |
+| Opción | Comando | Descripción | Por defecto |
+|--------|---------|-------------|-------------|
+| `--output <path>` | ambos | Directorio de salida donde están los PDFs | `dist/files` |
+| `--reference <pdf>` | `check` | Compara con ese PDF en vez de con el snapshot (solo con PDF explícito) | `visual/<ruta>.pdf` |
+| `--dpi <n>` | `check` | Resolución de render en dpi | `300` |
+| `--threshold <pct>` | `check` | % máximo de píxeles distintos por página | `0.005` |
+| `--fuzz <pct>` | `check` | Tolerancia de color por canal en % | `15` |
 
 ```bash
-iteraciones test visual --update                        # snapshots de todos los PDFs
-iteraciones test visual                                 # compara todos: exit 1 si hay regresión
-iteraciones test visual dist/files/index.pdf --update   # guarda un solo snapshot
-iteraciones test visual dist/files/index.pdf            # compara un solo PDF
-iteraciones test visual nuevo.pdf --reference viejo.pdf # comparación puntual, sin snapshots
+iteraciones visual snapshot                      # snapshots de todos los PDFs
+iteraciones visual check                         # compara todos: exit 1 si hay regresión
+iteraciones visual snapshot dist/files/index.pdf # guarda un solo snapshot
+iteraciones visual check dist/files/index.pdf    # compara un solo PDF
+iteraciones visual check nuevo.pdf --reference viejo.pdf  # comparación puntual, sin snapshots
+```
+
+El veredicto de un `check` fallido lista, una por línea, las rutas de las imágenes de diferencia:
+
+```
+✖ [visual] 1 de 2 PDFs con regresión visual · 1 imagen de diferencia:
+  visual/index-page-001-diff.png
 ```
 
 Solo los PASS quedan en caché (`.iteraciones/tmp/visual/cache.json`): un PDF con diferencias se vuelve a renderizar cada corrida y su diff se reescribe siempre.
