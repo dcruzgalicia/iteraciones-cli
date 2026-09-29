@@ -418,11 +418,17 @@ describe('visual check|snapshot: CLI (#2479)', () => {
     expect(subs).toContain('check');
     expect(subs).toContain('snapshot');
 
-    // `--update` dejó de existir: guarda snapshots el subcomando, no un flag
+    // `--update` y `--reference` dejaron de existir: son el subcomando `snapshot`
+    // y la segunda ruta de `check`
     const flags = (visual?.commands ?? []).flatMap((cmd) => cmd.options.map((opt) => opt.long ?? ''));
     expect(flags).not.toContain('--update');
+    expect(flags).not.toContain('--reference');
     expect(flags).toContain('--output');
-    expect(flags).toContain('--reference');
+
+    const check = visual?.commands.find((cmd) => cmd.name() === 'check');
+    expect(check?.registeredArguments.map((arg) => arg.name())).toEqual(['pdf', 'reference']);
+    const snap = visual?.commands.find((cmd) => cmd.name() === 'snapshot');
+    expect(snap?.registeredArguments.map((arg) => arg.name())).toEqual(['pdf']);
   });
 
   it('visual snapshot guarda el PDF en visual/<slug>.pdf', async () => {
@@ -449,14 +455,15 @@ describe('visual check|snapshot: CLI (#2479)', () => {
     });
   });
 
-  it('snapshot y --reference no se pueden combinar', async () => {
+  it('snapshot admite como mucho un PDF', async () => {
     await withTempDir(async (dir) => {
       writeFileSync(join(dir, 'mi-doc.pdf'), 'contenido', 'utf8');
+      writeFileSync(join(dir, 'otro.pdf'), 'contenido', 'utf8');
 
-      const { exitCode, stderr } = await runCaptured(dir, 'mi-doc.pdf', { update: true, reference: 'otro.pdf' });
+      const { exitCode, stderr } = await runCaptured(dir, ['mi-doc.pdf', 'otro.pdf'], { update: true });
 
       expect(exitCode).toBe(1);
-      expect(stderr).toContain('incompatibles');
+      expect(stderr).toContain('snapshot admite como mucho una ruta');
       expect(existsSync(join(dir, 'visual', 'mi-doc.pdf'))).toBe(false);
     });
   });
@@ -554,11 +561,12 @@ describe('visual check|snapshot: CLI (#2479)', () => {
     });
   });
 
-  it('--reference exige un PDF explícito: en el modo lote no tiene sentido', async () => {
+  it('check admite como mucho dos rutas: <pdf> [referencia]', async () => {
     await withTempDir(async (dir) => {
-      const { exitCode, stderr } = await runCaptured(dir, [], { reference: 'viejo.pdf' });
+      const { exitCode, stderr } = await runCaptured(dir, ['a.pdf', 'b.pdf', 'c.pdf'], {});
       expect(exitCode).toBe(1);
-      expect(stderr).toContain('--reference necesita un PDF explícito');
+      expect(stderr).toContain('check admite como mucho dos rutas');
+      expect(stderr).toContain('iteraciones visual check');
     });
   });
 });
@@ -590,6 +598,29 @@ describe.skipIf(!toolsOk)('visual check: exit codes reales (#2479)', () => {
       const again = await runCaptured(dir, 'doc.pdf', {});
       expect(again.exitCode).toBe(0);
       expect(again.stdout).toContain('modificadas 0');
+    });
+  });
+
+  itTool('check con dos rutas compara contra la segunda, sin snapshots', async () => {
+    await withTempDir(async (dir) => {
+      writeFileSync(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\n', 'utf8');
+      writePdf(dir, 'viejo.pdf', [textPage()]);
+      const generated = writePdf(dir, 'doc.pdf', [textPage()]);
+
+      const igual = await runCaptured(dir, ['doc.pdf', 'viejo.pdf'], {});
+      expect(igual.exitCode).toBe(0);
+      expect(igual.stdout).toContain('visual: doc.pdf vs viejo.pdf');
+      expect(existsSync(join(dir, 'visual', 'doc-page-001-diff.png'))).toBe(false);
+
+      writeFileSync(generated, makePdf([textPage(0, 5)]), 'utf8');
+      const distinto = await runCaptured(dir, ['doc.pdf', 'viejo.pdf'], {});
+      expect(distinto.exitCode).toBe(1);
+      expect(distinto.stdout).toContain('visual: doc.pdf vs viejo.pdf');
+      expect(distinto.stdout).toContain('visual/doc-page-001-diff.png');
+      expect(distinto.stderr).toContain('  visual/doc-page-001-diff.png');
+      expect(existsSync(join(dir, 'visual', 'doc-page-001-diff.png'))).toBe(true);
+      // nunca hubo snapshot y no se creó ninguno
+      expect(existsSync(join(dir, 'visual', 'doc.pdf'))).toBe(false);
     });
   });
 });

@@ -23,14 +23,16 @@ import {
  * #2479 — `iteraciones visual check|snapshot`: regresión visual de los PDFs.
  *
  * El flujo es build → `visual snapshot` → cambios → build → `visual check`, y se
- * puede hacer de una vez para todo el proyecto:
- * - `visual snapshot` guarda como snapshot los PDFs de `--output` (o los que se
- *   le pasen) en `visual/`, espejando la estructura de la salida, y retira los
- *   snapshots y diffs sobrantes;
- * - `check` sin PDFs compara todos los de `--output` contra sus snapshots y se
+ * puede hacer de una vez para todo el proyecto. Los operandos son opcionales y
+ * limitados, para que el modo batch quede a un solo comando de distancia:
+ * - `visual snapshot` guarda todo `--output` y `visual snapshot <pdf>` solo ese
+ *   (máximo uno) en `visual/`, espejando la estructura de la salida, y retira
+ *   los snapshots y diffs sobrantes;
+ * - `check` sin rutas compara todos los de `--output` contra sus snapshots y se
  *   niega a comparar nada si falta alguno: un parcial esconde la regresión;
- * - con PDFs explícitos compara solo esos, y `--reference` permite sustituir
- *   el snapshot por un PDF cualquiera.
+ * - `check <pdf>` compara solo ese contra su snapshot y `check <pdf> <referencia>`
+ *   contra el segundo PDF en vez del snapshot —máximo dos rutas—, sin tocar
+ *   `visual/` salvo el diff que nazca de esa comparación.
  *
  * El resumen trae, por PDF, las páginas comparadas, sin cambios y modificadas,
  * el % de píxeles distintos de cada página afectada y la ruta de su imagen de
@@ -40,7 +42,6 @@ import {
 export interface TestVisualOptions {
   /** Guarda snapshots en vez de comparar: es lo que hace `visual snapshot`. */
   update?: boolean;
-  reference?: string;
   dpi?: string;
   threshold?: string;
   fuzz?: string;
@@ -66,22 +67,26 @@ async function assertExists(path: string, article: string): Promise<void> {
   if (!(await exists(path))) throw new BuildError(`no existe ${article} "${path}"`);
 }
 
-/** Comprueba flags y destinos: sin PDFs, el modo lote mira `--output`. */
-async function resolveRun(cwd: string, pdfs: string[], options: TestVisualOptions): Promise<VisualRun> {
+/** Comprueba rutas y destinos: la 2.ª ruta de `check` es la referencia. */
+async function resolveRun(cwd: string, paths: string[], options: TestVisualOptions): Promise<VisualRun> {
   const visualOptions = resolveVisualOptions(options);
-  const explicitReference = options.reference === undefined || options.reference === '' ? undefined : resolvePath(cwd, options.reference);
-  if (options.update === true && explicitReference !== undefined) {
-    throw new BuildError('snapshot y --reference son incompatibles: guarda los snapshots primero y compara después');
-  }
-  const batch = pdfs.length === 0;
-  if (batch && explicitReference !== undefined) {
-    throw new BuildError('--reference necesita un PDF explícito: el modo lote solo compara contra los snapshots de visual/');
+  const snapshotMode = options.update === true;
+  const max = snapshotMode ? 1 : 2;
+  if (paths.length > max) {
+    throw new BuildError(
+      snapshotMode
+        ? `snapshot admite como mucho una ruta: sin rutas hace todo dist/files (recibidas: ${paths.length})`
+        : `check admite como mucho dos rutas: <pdf> [referencia] (recibidas: ${paths.length}) · para varios PDFs usa: iteraciones visual check`,
+    );
   }
 
   const outputDir = resolvePath(cwd, options.output ?? DIST_FILES_DIR);
-  const targets = batch ? await listPdfFiles(outputDir) : pdfs.map((pdf) => resolvePath(cwd, pdf));
+  const [pdf, reference] = paths;
+  const batch = pdf === undefined;
+  const explicitReference = reference === undefined ? undefined : resolvePath(cwd, reference);
+  const targets = batch ? await listPdfFiles(outputDir) : [resolvePath(cwd, pdf)];
   if (batch && targets.length === 0) throw new BuildError(`no hay PDFs en ${labelPath(cwd, outputDir)}`);
-  for (const pdf of targets) await assertExists(pdf, 'el PDF');
+  for (const target of targets) await assertExists(target, 'el PDF');
   return { visualOptions, explicitReference, outputDir, batch, targets };
 }
 
@@ -170,7 +175,7 @@ async function compareOne(
     diffDir: dir,
     diffStem: stem,
   });
-  return { referenceLabel: explicitReference ?? labelPath(cwd, snapshot), result };
+  return { referenceLabel: labelPath(cwd, explicitReference ?? snapshot), result };
 }
 
 /**
@@ -257,9 +262,10 @@ async function compareAll(
   reportVerdict(cwd, compared);
 }
 
-export async function runTestVisual(cwd: string, pdfs: string[], options: TestVisualOptions = {}): Promise<void> {
+/** `paths` es `[pdf]` para `snapshot` y `[pdf] [referencia]` para `check`. */
+export async function runTestVisual(cwd: string, paths: string[], options: TestVisualOptions = {}): Promise<void> {
   try {
-    const run = await resolveRun(cwd, pdfs, options);
+    const run = await resolveRun(cwd, paths, options);
     if (options.update === true) await updateSnapshots(cwd, run.targets, run.outputDir);
     else await compareAll(cwd, run.targets, run.outputDir, run.visualOptions, run.batch, run.explicitReference);
   } catch (err) {
