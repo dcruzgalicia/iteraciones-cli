@@ -10,6 +10,7 @@ import {
   type CollectionEntry,
   collectionBaseContent,
   collectionCardsContent,
+  collectionScanContent,
   memberHtmlHrefs,
   readCollectionEntries,
 } from '../builder/pipeline-formats.js';
@@ -89,7 +90,7 @@ async function buildMergeContext(
   const flags = await printFlags(siteConfig, cwd);
   const doc = { filePath: src.inputPath, relativePath: src.relativePath, frontmatter: src.fm } as unknown as BuildDocument;
   const images = await preprocessDocumentImages(
-    collectionBaseContent(entries, 'latex', src.text),
+    collectionScanContent(entries, src.text),
     doc,
     mergeConfigImages(src.fm, siteConfig.format?.pdf, siteConfig, cwd),
     flags.pageDimensions,
@@ -122,9 +123,10 @@ async function composeFor(
       siteConfig,
     });
   }
-  // #2483: la página HTML son tarjetas con enlace (los mismos hrefs que resuelve
-  // el build); el EPUB sigue recibiendo la fusión completa.
-  if (format === 'html') return collectionCardsContent(entries, memberHrefs, src.text);
+  // #2483: la página HTML son tarjetas (los mismos hrefs que resuelve el build):
+  // una con los datos de la collection y una por file con su enlace. El EPUB
+  // sigue recibiendo la fusión completa.
+  if (format === 'html') return collectionCardsContent(entries, memberHrefs, src.text, src.fm);
   const base = collectionBaseContent(entries, format === 'markdown' ? 'markdown' : 'html', src.text);
   // #2460: latex/html/epub no reescriben el texto crudo (lo reescribe el filtro
   // 04-image-paths sobre el AST); el markdown de dist no pasa por pandoc (#2436).

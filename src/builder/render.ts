@@ -54,6 +54,9 @@ function buildHtmlMetadataArgs(
   if (accent) args.push(`--metadata=accent:${accent}`);
   if (css) args.push(`--metadata=css:${css}`);
   if (vars.authorMeta) args.push(`--metadata=author-meta:${vars.authorMeta}`);
+  // #2483: solo las collections; la plantilla usa `$if(collection)$` para sacar
+  // su body de la tarjeta de contenido y dejarlo al nivel del masonry.
+  if (vars.collection) args.push('--variable=collection:1');
   const formats = vars.formats ?? [];
   // El logo y los <li> de formatos viven en la plantilla; el argv solo lleva
   // un flag y un href corto por formato (#2445: nada de HTML multilínea).

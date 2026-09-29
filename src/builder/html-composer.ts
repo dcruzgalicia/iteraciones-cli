@@ -47,6 +47,8 @@ export interface HtmlPageVars {
   date?: string;
   homeHref?: string;
   formats?: FormatsLink[];
+  /** #2483: la página de una collection salta la tarjeta de contenido. */
+  collection?: boolean;
 }
 
 type ExportFormatKey = 'pdf' | 'epub' | 'latex' | 'markdown';
