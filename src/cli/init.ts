@@ -77,6 +77,9 @@ const DEFAULT_GITIGNORE = [
   '# Generados por iteraciones (build y caché)',
   'dist/',
   '.iteraciones/',
+  // lo reescribe cada build cuando script: true (#2438), así que seguirlo
+  // solo deja ruido en cada corrida
+  'build.sh',
   '.DS_Store',
   // los snapshots de `visual` sí van versionados; sus diffs no, y pueden
   // vivir en subcarpetas porque visual/ espeja dist/files
