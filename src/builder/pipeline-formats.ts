@@ -448,6 +448,10 @@ function buildCollectionSectionsLatex(
  * #2483 — fusión completa con los encabezados de cada miembro: es lo que sigue
  * recibiendo el EPUB (y `iteraciones merge --format epub`). La página HTML pasa
  * por `collectionCardsContent`, que enlaza en vez de fusionar.
+ *
+ * Las interventions se quedan fuera: son un recurso de imprenta y el EPUB es
+ * un libro de lectura, no un impreso (las compone el PDF). El filtro vive en
+ * `resolveCollectionContent`.
  */
 function buildCollectionSectionsHtml(
   entries: {
@@ -492,6 +496,16 @@ export function memberHtmlHrefs(collectionPath: string, entries: CollectionEntry
 }
 
 /**
+ * #2485 — las interventions son un recurso de imprenta (una regla con el nombre
+ * y el título, y sus páginas en blanco): solo entran al PDF y al markdown
+ * exportado. Ni la página HTML ni el EPUB las llevan; el PDF las compone
+ * `buildCollectionEntryLatex` con su propio `interventionSectionRaw`.
+ */
+function printableEntries<T extends { type: string | undefined }>(entries: T[]): T[] {
+  return entries.filter((e) => e.type !== 'intervention');
+}
+
+/**
  * #2483 — la página HTML de una collection: una tarjeta con los datos de la
  * collection (creators, title y su body propio) y una tarjeta por miembro, con
  * su autor y título, su fragmento (primer párrafo o fenced div completo, a lo
@@ -514,7 +528,7 @@ export function collectionCardsContent(
   if (entries.length === 0 && fm === undefined) return content;
   const cards: string[] = [];
   if (fm !== undefined) cards.push(collectionDataCard(fm, splitFrontmatter(content).body));
-  for (const e of entries) cards.push(collectionCard(e, memberHrefs.get(e.file)));
+  for (const e of printableEntries(entries)) cards.push(collectionCard(e, memberHrefs.get(e.file)));
   return cards.join('\n\n');
 }
 
@@ -642,7 +656,12 @@ function resolveCollectionContent(
 ): string {
   if (collectionEntries.length === 0) return fallback;
   if (format === 'latex') return buildCollectionSectionsLatex(collectionEntries, pageNumber);
-  if (format === 'html') return buildCollectionSectionsHtml(collectionEntries);
+  if (format === 'html') {
+    // el EPUB es el único que sigue fusionando: sin las interventions, que son
+    // de imprenta. Si no queda ninguna, el libro lleva el body propio.
+    const printable = printableEntries(collectionEntries);
+    return printable.length === 0 ? fallback : buildCollectionSectionsHtml(printable);
+  }
   return buildCollectionSectionsMarkdown(collectionEntries);
 }
 
@@ -1033,6 +1052,14 @@ export async function processDocumentFormats(
   if (isCollection && collectionEntries.length === 0) {
     logWarning(`"${doc.relativePath}": collection sin contenido en files; se omite del build`, 'build');
     return;
+  }
+  // Las interventions son de imprenta: no salen en la página HTML ni en el
+  // EPUB. Si no queda ningún archivo que sí salga, la collection no tiene nada
+  // que publicar en esos dos formatos.
+  if (isCollection && printableEntries(collectionEntries).length === 0) {
+    throw new BuildError(
+      `"${doc.relativePath}": todos los archivos de files[] son "type: intervention"; una collection necesita al menos un archivo de otro tipo (las interventions solo salen en el PDF y en el markdown exportado)`,
+    );
   }
 
   const outputs = buildOutputs(entry, slug, outSlug, dir, content, ctx.outputDir);
