@@ -27,13 +27,13 @@ El pipeline consume los siguientes campos del frontmatter:
 | `creator` | `string \| string[]` | `[]` | Uno o varios autores. El slug usa `title-por-creator`: **solo el primer autor**; en caso de colisión (dos documentos con el mismo título y autor) se aplica un sufijo `-dN`. **No se admite en `type: collection`** (ver más abajo): usa `collectionCreator`. |
 | `slug` | `string` | — | **Slug manual** (opcional): fija la URL del documento en lugar del esquema automático. Formato seguro: solo minúsculas, números y guiones simples (`^[a-z0-9]+(-[a-z0-9]+)*$`). Dos documentos con la misma salida (mismo directorio + slug) son un error de build y de `validate`. |
 | `language` | `string` | `'es-MX'` | Código de idioma BCP 47. Sobreescribe `language` de la configuración para HTML, EPUB y Markdown; **no** altera la configuración de `babel` del PDF. |
-| `type` | `'file' \| 'collection'` | `'file'` | Tipo de documento. `file` es el comportamiento por defecto. `collection` fusiona el contenido de múltiples archivos en uno solo (ver más abajo). |
+| `type` | `'file' \| 'collection'` | `'file'` | Tipo de documento. `file` es el comportamiento por defecto. `collection` reúne el contenido de múltiples archivos: fusionado en PDF, EPUB y Markdown, y como tarjetas enlazadas en HTML (ver más abajo). |
 | `files` | `string[]` | — | **Requerido para `type: collection`**. Rutas de los archivos a fusionar: se resuelven relativas al directorio de la collection (se admite `../` y cualquier anidamiento) y, si no existen ahí, relativas a la raíz del proyecto (compatibilidad). `validate` y `build` fallan si alguna no existe, mostrando las rutas intentadas. Los archivos listados se construyen además como documentos propios (y `build <path>` los puede seleccionar por separado). |
 | `collectionCreator` | `string \| string[]` | — | **Solo en `type: collection`**: el crédito propio de la editora. Alimenta el slug igual que `creator` (`title-por-collectionCreator`) y se imprime como `\collectionCreator{…}` en la portada LaTeX. El `creator` del documento resultante lo calcula `build`: es la unión de los `creator` de cada archivo de `files` (byline en `\author`, `<meta author>` y `dc:creator`). |
 
 ## Type: collection
 
-Un `type: collection` fusiona el contenido de múltiples archivos en un solo documento de salida. El frontmatter del collection (`title`, `collectionCreator`, `subtitle`, etc.) se comporta igual que en `type: file` (se usa como metadata del documento: `\title`, `\author`, etc. en LaTeX; portada en HTML).
+Un `type: collection` fusiona el contenido de múltiples archivos en un solo documento de salida. En HTML la página no los fusiona: cada archivo es una tarjeta con su autor y título, su fragmento (el primer párrafo o el primer fenced div completo, a lo más 100 palabras, con `...` si hubo corte) y un enlace a su texto completo (#2483); el EPUB y el PDF siguen recibiendo el contenido entero. El frontmatter del collection (`title`, `collectionCreator`, `subtitle`, etc.) se comporta igual que en `type: file` (se usa como metadata del documento: `\title`, `\author`, etc. en LaTeX; portada en HTML).
 
 `creator` está prohibido en una collection (`validate` y `build` fallan con el fix: renombra `creator:` a `collectionCreator:`). El `creator` del resultado —el byline— no se escribe a mano: build lo calcula como la unión de los `creator` de cada archivo de `files`. El `.md` exportado a `dist` lleva además `slug` (el derivado de `collectionCreator`) para que un re-proceso del propio artefacto no renombre la salida.
 
@@ -44,6 +44,8 @@ Cada archivo en `files` aporta sus propios encabezados estructurales antes de su
 | `creator` | `\chapter{}` | `<h2>` | `##` |
 | `title` | `\section{}` | `<h3>` | `###` |
 | `subtitle` | `\subsection{}` | `<h4>` | `####` |
+
+En HTML esos encabezados viajan dentro de la tarjeta del archivo, seguidos de su fragmento y de su enlace al texto completo; el EPUB los recibe con el contenido entero.
 
 ### Ejemplo
 

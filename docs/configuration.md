@@ -452,7 +452,7 @@ Habilita la exportación a Markdown procesado (con los filters aplicados).
 
 Define cómo se exporta el Markdown de las collections:
 
-- `false` (por defecto): la salida es **re-procesable**. `dist/<collection>.md` conserva `type: collection`, reescribe `files[]` para apuntar al `.md` de cada miembro, que el propio miembro escribe en dist al construirse standalone con su nombre-nuevo (#2452), y mantiene el body original de la collection (sin el contenido fusionado). Con `iteraciones merge --format <fmt>` se vuelve a fusionar, cuando se quiera, **siempre sobre los archivos originales de `files[]`**.
+- `false` (por defecto): la salida es **re-procesable**. `dist/<collection>.md` conserva `type: collection`, reescribe `files[]` para apuntar al `.md` de cada miembro, que el propio miembro escribe en dist al construirse standalone con su nombre-nuevo (#2452), y mantiene el body original de la collection (sin el contenido fusionado). Con `iteraciones merge --format <fmt>` se vuelve a escribir la entrada exacta de pandoc, cuando se quiera, **siempre sobre los archivos originales de `files[]`** (`html` escribe las tarjetas del #2483; `latex`, `epub` y `markdown`, el contenido fusionado).
 - `true`: la salida es el markdown **fusionado**. `dist/<collection>.md` lleva `type: file`, sin `files[]`, y con el contenido de todos los archivos de `files[]` inline. No es re-procesable.
 
 ```yaml

@@ -65,7 +65,7 @@ Esto también crea un archivo `bibliography.bib` de ejemplo.
 
 ### Collections
 
-Un `type: collection` en el frontmatter fusiona múltiples archivos en un solo documento:
+Un `type: collection` en el frontmatter fusiona múltiples archivos en un solo documento. En PDF, EPUB y Markdown salen fusionados; en HTML cada archivo es una tarjeta con su fragmento —el primer párrafo o el primer fenced div, a lo más 100 palabras, con `...` si hubo corte— y un enlace a su texto completo:
 
 ```
 ---
@@ -79,7 +79,7 @@ files:
 ---
 ```
 
-Cada archivo en `files` aporta sus encabezados (creator → `\chapter`, title → `\section`, subtitle → `\subsection`). El frontmatter del collection se usa como metadata del documento (portada, título, etc.). Ver [docs/frontmatter-reference.md](docs/frontmatter-reference.md) para detalles.
+Cada archivo en `files` aporta sus encabezados (creator → `\chapter`, title → `\section`, subtitle → `\subsection`; en HTML van dentro de su tarjeta). El frontmatter del collection se usa como metadata del documento (portada, título, etc.). Ver [docs/frontmatter-reference.md](docs/frontmatter-reference.md) para detalles.
 
 ## Configuración (`iteraciones.config.yaml`)
 
