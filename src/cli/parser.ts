@@ -52,11 +52,6 @@ function suggestCommand(name: string, commands: string[]): string | undefined {
   return commands.find((c) => distance(c, name) <= 2);
 }
 
-/** Los operandos `[pdf...]` llegan como string o como array según commander. */
-function pdfArgs(pdfs: string | string[] | undefined): string[] {
-  return pdfs === undefined ? [] : Array.isArray(pdfs) ? pdfs : [pdfs];
-}
-
 export function buildProgram(): Command {
   const program = new Command();
 
@@ -278,9 +273,8 @@ Ejemplos:
   const visual = program.command('visual').description('regresión visual de los PDFs del proyecto (#2479)');
 
   visual
-    .command('check [pdf...]')
-    .description('compara los PDFs de dist/files con sus snapshots y sale con exit 1 si hay regresión visual')
-    .option('--reference <pdf>', 'PDF de referencia para una comparación puntual (no toca los snapshots)')
+    .command('check [pdf] [reference]')
+    .description('compara un PDF contra su snapshot —o contra el segundo PDF— y sale con exit 1 si hay regresión visual')
     .option('--output <path>', 'directorio de salida donde están los PDFs (por defecto: dist/files)')
     .option('--dpi <n>', `resolución de render en dpi (por defecto: ${VISUAL_DEFAULTS.dpi})`, String(VISUAL_DEFAULTS.dpi))
     .option(
@@ -289,41 +283,48 @@ Ejemplos:
       String(VISUAL_DEFAULTS.thresholdPercent),
     )
     .option('--fuzz <pct>', `tolerancia de color por canal en % (por defecto: ${VISUAL_DEFAULTS.fuzzPercent})`, String(VISUAL_DEFAULTS.fuzzPercent))
+    // El límite de rutas lo pone `resolveRun`, con mensaje propio y el apunte del
+    // modo lote; commander solo dibuja el uso `[pdf] [reference]`.
+    .allowExcessArguments(true)
     .addHelpText(
       'after',
       `
 Requiere pdftoppm (poppler) y ImageMagick. Compara por página: blur dpi/150 + fuzz ${VISUAL_DEFAULTS.fuzzPercent} %
 sobre PNGs de ${VISUAL_DEFAULTS.dpi} dpi, con umbral de ${VISUAL_DEFAULTS.thresholdPercent} % de píxeles distintos por página.
-Sin PDFs compara todos los de --output y se niega a comparar si falta algún snapshot; con PDFs, solo esos.
-Los snapshots viven en <raíz>/visual/, espejando dist/files; sus diffs quedan junto a cada uno.
+Con dos rutas la segunda es la referencia y no se tocan los snapshots; con una, se compara contra su
+snapshot en <raíz>/visual/; sin rutas, contra todos los de --output (y se corta si falta alguno).
+Máximo dos rutas: para varios PDFs, este mismo comando sin operandos.
 
 Ejemplos:
-  iteraciones visual check                              compara todos los PDFs de dist/files
-  iteraciones visual check dist/files/index.pdf         compara un solo PDF
-  iteraciones visual check nuevo.pdf --reference viejo.pdf  compara dos PDFs sin tocar los snapshots
+  iteraciones visual check                            compara todos los PDFs de dist/files
+  iteraciones visual check dist/files/index.pdf       compara un solo PDF contra su snapshot
+  iteraciones visual check nuevo.pdf viejo.pdf        compara dos PDFs, sin snapshots de por medio
 `,
     )
-    .action(async (pdfs: string | string[] | undefined, opts: TestVisualOptions) => {
-      await runTestVisual(projectRoot(), pdfArgs(pdfs), opts);
+    .action(async (_pdf: string | undefined, _reference: string | undefined, opts: TestVisualOptions, command: Command) => {
+      await runTestVisual(projectRoot(), command.args, opts);
     });
 
   visual
-    .command('snapshot [pdf...]')
+    .command('snapshot [pdf]')
     .description('guarda los PDFs de dist/files como snapshots en visual/, sin comparar')
     .option('--output <path>', 'directorio de salida donde están los PDFs (por defecto: dist/files)')
+    // El límite de una ruta lo pone `resolveRun`; commander solo dibuja el uso `[pdf]`.
+    .allowExcessArguments(true)
     .addHelpText(
       'after',
       `
 Los snapshots viven en <raíz>/visual/, espejando dist/files, y van versionados en git; los diffs de
 la corrida anterior se retiran. Sin proyecto, el trabajo queda en el temporal del sistema.
+Sin rutas hace todo dist/files; con una, solo ese PDF (máximo una ruta).
 
 Ejemplos:
   iteraciones visual snapshot                       guarda los snapshots de dist/files
   iteraciones visual snapshot dist/files/index.pdf  guarda un solo snapshot
 `,
     )
-    .action(async (pdfs: string | string[] | undefined, opts: { output?: string }) => {
-      await runTestVisual(projectRoot(), pdfArgs(pdfs), { ...opts, update: true });
+    .action(async (_pdf: string | undefined, opts: { output?: string }, command: Command) => {
+      await runTestVisual(projectRoot(), command.args, { ...opts, update: true });
     });
 
   program
