@@ -208,6 +208,54 @@ describe.skipIf(!pandocOk)('format.markdown.merge y `iteraciones merge` (#2437)'
     });
   }, 300_000);
 
+  it('la página HTML de la collection son tarjetas con enlace al texto completo (#2483)', async () => {
+    await withTempDir(async (dir) => {
+      await Bun.write(join(dir, 'iteraciones.config.yaml'), `${config()}\n`);
+      await Bun.write(
+        join(dir, 'coleccion.md'),
+        ['---', 'title: Antología', 'type: collection', 'files:', '  - doc.md', '  - sub/nota.md', '---', '', 'Intro.', ''].join('\n'),
+      );
+      await mkdir(join(dir, 'sub'), { recursive: true });
+      await Bun.write(
+        join(dir, 'doc.md'),
+        [
+          '---',
+          'title: Documento',
+          'creator:',
+          '  - Autora A',
+          '---',
+          '',
+          Array.from({ length: 150 }, (_, i) => `palabra${i + 1}`).join(' '),
+          '',
+          'Último párrafo que no debe aparecer.',
+          '',
+        ].join('\n'),
+      );
+      await Bun.write(
+        join(dir, 'sub', 'nota.md'),
+        ['---', 'title: Nota', 'creator:', '  - Autora B', '---', '', '::: {.advertencia}', 'Texto corto.', ':::', ''].join('\n'),
+      );
+
+      process.exitCode = 0;
+      const { runBuild } = await import('../cli/dispatcher.js');
+      await runBuild(dir);
+
+      const html = await Bun.file(join(dir, 'dist', 'files', 'antologia.html')).text();
+      expect(html.match(/tarjeta-fragmento/g) ?? [], 'una tarjeta por miembro').toHaveLength(2);
+      expect(html).toContain('href="./documento-por-autora-a.html"');
+      expect(html).toContain('href="./sub/nota-por-autora-b.html"');
+      expect(html).toContain('Autora A');
+      expect(html, 'el primer párrafo se recorta a 100 palabras con …').toContain('palabra100 …');
+      expect(html).not.toContain('palabra101');
+      expect(html, 'el resto del cuerpo no se fusiona').not.toContain('Último párrafo que no debe aparecer.');
+      expect(html, 'el fragmento puede ser un fenced div').toContain('Texto corto.');
+      // el miembro sigue teniendo su propio HTML al que apuntan las tarjetas
+      expect(await Bun.file(join(dir, 'dist', 'files', 'documento-por-autora-a.html')).exists()).toBe(true);
+      expect(await Bun.file(join(dir, 'dist', 'files', 'sub', 'nota-por-autora-b.html')).exists()).toBe(true);
+      process.exitCode = 0;
+    });
+  }, 180_000);
+
   it('#2446: collectionCreator viaja al .md en los dos modos, con slug y byline', async () => {
     await withTempDir(async (dir) => {
       const collection = [
