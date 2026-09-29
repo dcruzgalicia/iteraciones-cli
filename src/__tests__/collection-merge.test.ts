@@ -40,6 +40,8 @@ function config(opts: { merge?: boolean; markdown?: boolean; script?: boolean } 
 const COLECCION = [
   '---',
   'title: Mi colección',
+  'subtitle: Con introducción',
+  'date: 2024-05-01',
   'type: collection',
   'files:',
   '  - doc.md',
@@ -213,7 +215,21 @@ describe.skipIf(!pandocOk)('format.markdown.merge y `iteraciones merge` (#2437)'
       await Bun.write(join(dir, 'iteraciones.config.yaml'), `${config()}\n`);
       await Bun.write(
         join(dir, 'coleccion.md'),
-        ['---', 'title: Antología', 'type: collection', 'files:', '  - doc.md', '  - sub/nota.md', '---', '', 'Intro.', ''].join('\n'),
+        [
+          '---',
+          'title: Antología',
+          'subtitle: Siete piezas',
+          'collectionCreator: Editora Principal',
+          'date: 2024-05-01',
+          'type: collection',
+          'files:',
+          '  - doc.md',
+          '  - sub/nota.md',
+          '---',
+          '',
+          'Intro de la antología.',
+          '',
+        ].join('\n'),
       );
       await mkdir(join(dir, 'sub'), { recursive: true });
       await Bun.write(
@@ -240,8 +256,25 @@ describe.skipIf(!pandocOk)('format.markdown.merge y `iteraciones merge` (#2437)'
       const { runBuild } = await import('../cli/dispatcher.js');
       await runBuild(dir);
 
-      const html = await Bun.file(join(dir, 'dist', 'files', 'antologia.html')).text();
+      // con collectionCreator el slug sale de su crédito (#2446)
+      const html = await Bun.file(join(dir, 'dist', 'files', 'antologia-por-editora-principal.html')).text();
+      // -- una tarjeta con los datos de la collection, y una por miembro,
+      //    todas al nivel del masonry (no anidadas en la de contenido)
+      expect(html.match(/tarjeta-coleccion/g) ?? [], 'una tarjeta de datos').toHaveLength(1);
       expect(html.match(/tarjeta-fragmento/g) ?? [], 'una tarjeta por miembro').toHaveLength(2);
+      expect(html, 'ninguna tarjeta dentro de otra: sin el article de la de contenido').not.toContain('<article');
+      expect(html.indexOf('tarjeta-coleccion'), 'la tarjeta de datos va antes que las de los miembros').toBeLessThan(
+        html.indexOf('tarjeta-fragmento'),
+      );
+      expect(html, 'la página de una collection no tiene tarjeta de contenido').not.toMatch(/>\s*Contenido\s*<\/h2>/);
+      expect(html).toMatch(/>\s*Colección\s*<\/h2>/);
+      expect(html, 'la unión de las creadoras de sus files').toContain('Autora A, Autora B');
+      expect(html, 'su crédito propio').toContain('Editora Principal');
+      expect(html).toContain('Antología');
+      expect(html).toContain('Siete piezas');
+      expect(html).toContain('1 de mayo de 2024');
+      expect(html, 'el body propio de la collection sale en su tarjeta').toContain('Intro de la antología.');
+      // -- el enlace y el fragmento de cada miembro
       expect(html).toContain('href="./documento-por-autora-a.html"');
       expect(html).toContain('href="./sub/nota-por-autora-b.html"');
       expect(html).toContain('Autora A');
@@ -252,6 +285,10 @@ describe.skipIf(!pandocOk)('format.markdown.merge y `iteraciones merge` (#2437)'
       // el miembro sigue teniendo su propio HTML al que apuntan las tarjetas
       expect(await Bun.file(join(dir, 'dist', 'files', 'documento-por-autora-a.html')).exists()).toBe(true);
       expect(await Bun.file(join(dir, 'dist', 'files', 'sub', 'nota-por-autora-b.html')).exists()).toBe(true);
+      // -- un documento normal sigue con su tarjeta de contenido
+      const pagina = await Bun.file(join(dir, 'dist', 'files', 'documento-por-autora-a.html')).text();
+      expect(pagina).toMatch(/>\s*Contenido\s*<\/h2>/);
+      expect(pagina).not.toContain('tarjeta-fragmento');
       process.exitCode = 0;
     });
   }, 180_000);
