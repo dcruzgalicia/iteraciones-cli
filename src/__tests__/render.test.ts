@@ -146,6 +146,15 @@ describe('composeHtmlTemplate', () => {
     const tpl = await composeHtmlTemplate(siteConfig);
     expect(tpl.indexOf('$if(formats)$')).toBeGreaterThan(tpl.indexOf('$if(toc)$'));
   });
+
+  it('en una collection el body sale fuera de la tarjeta de contenido (#2483)', async () => {
+    const tpl = await composeHtmlTemplate(DEFAULT_SITE_CONFIG);
+    const rama = tpl.split('$if(collection)$')[1]?.split('$else$') ?? ['', ''];
+    // su data card y las de cada file son tarjetas del masonry, no del article
+    expect(rama[0]).toContain('$body$');
+    expect(rama[0], 'la rama de collection no trae la tarjeta de contenido').not.toContain('<article');
+    expect(rama[1], 'el resto de documentos sigue con su article').toContain('<article');
+  });
 });
 
 describe('memoización de nombres (un escaneo por proceso)', () => {
