@@ -1,3 +1,9 @@
+$if(collection)$
+    <!-- #2483: en una collection no hay tarjeta de contenido. Sus datos (creators,
+         title, y el body propio) y las tarjetas de cada file salen del body, que
+         aquí queda al nivel del masonry, junto a las demás tarjetas. -->
+    $body$
+$else$
     <div class="break-inside-avoid pb-6">
       <!-- Tarjeta documento -->
       <article
@@ -34,3 +40,4 @@
         $body$
       </article>
     </div>
+$endif$

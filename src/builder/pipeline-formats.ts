@@ -3,7 +3,7 @@ import { basename, dirname, join, normalize, relative, resolve, sep } from 'node
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
-import { fmStringList, resolveBooleanField, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
+import { fmStringList, fmTrimmedString, resolveBooleanField, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { execPandoc, MD_READER } from '../lib/pandoc-runner.js';
 import { isScriptCapture, recordSupportCommand, resolveScriptStdout } from '../lib/script-recorder.js';
@@ -215,6 +215,8 @@ async function emitHtmlPage(
       date: formatHumanDate(doc.frontmatter.date),
       homeHref: hasHomePage ? relativeHref(dir, 'index.html') : undefined,
       formats: formats.length > 0 ? formats : undefined,
+      // #2483: la página de una collection no tiene tarjeta de contenido.
+      collection: doc.frontmatter.type === 'collection',
     },
     siteConfig: ctx.siteConfig,
     templatePath: exportCtx.htmlTemplatePath,
@@ -490,23 +492,101 @@ export function memberHtmlHrefs(collectionPath: string, entries: CollectionEntry
 }
 
 /**
- * #2483 — la página HTML de una collection: una tarjeta por miembro, con su
- * autor y título, su fragmento (primer párrafo o fenced div completo, a lo más
- * 100 palabras, con `...` si hubo corte) y un enlace a su HTML completo.
+ * #2483 — la página HTML de una collection: una tarjeta con los datos de la
+ * collection (creators, title y su body propio) y una tarjeta por miembro, con
+ * su autor y título, su fragmento (primer párrafo o fenced div completo, a lo
+ * más 100 palabras, con `...` si hubo corte) y un enlace a su HTML completo.
+ * Todas van en el body, que la plantilla coloca al nivel del masonry
+ * (`$if(collection)$`) y no dentro de la tarjeta de contenido.
  * El EPUB y el PDF siguen con la fusión completa: solo cambia HTML.
+ *
+ * `fm` es el frontmatter de la collection con los campos derivados que deja el
+ * build (`creator`: la unión de los files). Lo pasan el build e
+ * `iteraciones merge` con los mismos valores, para que su entrada sea
+ * byte-idéntica.
  */
-export function collectionCardsContent(entries: CollectionEntry[], memberHrefs: Map<string, string>, content: string): string {
-  if (entries.length === 0) return content;
-  return entries.map((e) => collectionCard(e, memberHrefs.get(e.file))).join('\n\n');
+export function collectionCardsContent(
+  entries: CollectionEntry[],
+  memberHrefs: Map<string, string>,
+  content: string,
+  fm?: Record<string, unknown>,
+): string {
+  if (entries.length === 0 && fm === undefined) return content;
+  const cards: string[] = [];
+  if (fm !== undefined) cards.push(collectionDataCard(fm, splitFrontmatter(content).body));
+  for (const e of entries) cards.push(collectionCard(e, memberHrefs.get(e.file)));
+  return cards.join('\n\n');
 }
 
 /**
- * #2483 — clases de la tarjeta: la misma tarjeta redondeada que las del resto
- * del HTML. Van en `class="..."` (y no en `{.clase}`) porque varias llevan
- * `:` y `/`, que el atributo de un fenced div con punto no admite.
+ * #2483 — contenido que se escanea en busca de imágenes. En una collection su
+ * body propio sale en la tarjeta de la página HTML, así que también entra en el
+ * escaneo (los demás formatos siguen descartándolo).
  */
-const COLLECTION_CARD_CLASSES =
-  'tarjeta-fragmento rounded-xl border border-accent-500/25 bg-stone-50/70 dark:bg-stone-900/60 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 my-8 break-inside-avoid';
+export function collectionScanContent(entries: CollectionEntry[], content: string): string {
+  if (entries.length === 0) return content;
+  const body = splitFrontmatter(content).body;
+  const sections = collectionBaseContent(entries, 'latex', content);
+  return body.trim() === '' ? sections : `${sections}\n\n${body}`;
+}
+
+/** #2483 — contenedor de cada tarjeta del masonry, el mismo de las demás. */
+const MASONRY_WRAPPER = '<div class="break-inside-avoid pb-6">';
+
+/**
+ * #2483 — tipografía del texto de las tarjetas: `prose` más las reglas de
+ * encabezados, citas y tablas de la tarjeta de contenido. Sin ellas, al salir
+ * del `article.prose` el fragmento y el body propio quedarían sin formato.
+ */
+const CARD_TEXT_CLASSES =
+  'prose prose-xl prose-accent dark:prose-invert max-w-none [&_blockquote]:border-accent-500/40 [&_.citation_a]:text-accent-950 dark:[&_.citation_a]:text-accent-50 [&_.citation_a]:underline [&_.citation_a]:underline-offset-4 [&_.citation_a]:decoration-accent-500/60 [&_.citation_a]:transition-colors [&_.citation_a]:duration-200 [&_.citation_a:hover]:decoration-accent-500 [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-accent-500/10 [&_pre]:bg-stone-100 dark:[&_pre]:bg-stone-950/70 [&_h1:not([class])]:text-2xl [&_h1.unnumbered]:text-2xl [&_h2:not([class])]:text-xl [&_h3:not([class])]:text-xl [&_h3:not([class])]:text-accent-700 dark:[&_h3:not([class])]:text-accent-300 [&_h4:not([class])]:text-xl [&_h4:not([class])]:uppercase [&_h4:not([class])]:tracking-wide [&_h5:not([class])]:text-xl [&_h5:not([class])]:italic [&_h6:not([class])]:text-xl [&_h6:not([class])]:italic [&_h6:not([class])]:font-normal [&_table]:border-accent-500/10 [&_th]:border-accent-500/10 [&_td]:border-accent-500/10';
+
+/**
+ * #2483 — clases de la tarjeta de un miembro: la misma tarjeta redondeada que
+ * las del resto del HTML. Van en `class="..."` (y no en `{.clase}`) porque
+ * varias llevan `:` y `/`, que el atributo de un fenced div con punto no admite.
+ */
+const COLLECTION_CARD_CLASSES = `tarjeta-fragmento rounded-xl border border-accent-500/25 bg-stone-50/70 dark:bg-stone-900/60 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 ${CARD_TEXT_CLASSES}`;
+
+/** #2483 — marco de la tarjeta de la collection: el de la tarjeta de contenido. */
+const DATA_CARD_CLASSES = `tarjeta-coleccion relative rounded-2xl border border-accent-500/30 bg-stone-50/90 dark:bg-stone-900/85 p-6 shadow-sm ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 outline outline-1 outline-offset-4 outline-accent-500/10 transition-colors duration-200 hover:border-accent-500/40 [overflow-wrap:anywhere] [&::before]:pointer-events-none [&::before]:absolute [&::before]:left-2 [&::before]:top-2 [&::before]:h-3 [&::before]:w-3 [&::before]:border-l [&::before]:border-t [&::before]:border-accent-500/40 [&::before]:content-[''] [&::after]:pointer-events-none [&::after]:absolute [&::after]:bottom-2 [&::after]:right-2 [&::after]:h-3 [&::after]:w-3 [&::after]:border-b [&::after]:border-r [&::after]:border-accent-500/40 [&::after]:content-[''] ${CARD_TEXT_CLASSES}`;
+
+/** Ficha de la tarjeta de la collection: mismas clases que la de card-contenido.html. */
+const DATA_PILL_CLASSES =
+  'inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-12 text-accent-600 dark:text-accent-400';
+const DATA_AUTHOR_CLASSES = 'mb-4 text-sm font-mono text-accent-950 dark:text-accent-50 [font-variant-caps:small-caps] tracking-widest';
+const DATA_TITLE_CLASSES = 'mb-3 font-bold uppercase tracking-wide text-3xl text-accent-500';
+const DATA_SUBTITLE_CLASSES = 'mb-3 text-base italic text-accent-950 dark:text-accent-50';
+const DATA_DATE_CLASSES = 'text-sm font-mono text-accent-600 dark:text-accent-400';
+
+/**
+ * #2483 — la tarjeta con los datos de la collection: la unión de las creadoras
+ * de sus files, su `collectionCreator`, el título, el subtítulo, la fecha y su
+ * body propio (que hasta ahora no salía en ningún formato). El texto y el
+ * `&` de las clases los escapa pandoc al convertir.
+ */
+function collectionDataCard(fm: Record<string, unknown>, body: string): string {
+  const creators = fmStringList(fm.creator) ?? [];
+  const editors = fmStringList(fm.collectionCreator) ?? [];
+  const title = fmTrimmedString(fm.title);
+  const subtitle = fmTrimmedString(fm.subtitle);
+  const date = formatHumanDate(fmTrimmedString(fm.date));
+  const intro = body.trim();
+  // `:::::` (5 colones): el body propio es markdown libre y puede traer un div
+  // de 4, que con la valla de la tarjeta la cerraría antes de tiempo.
+  const card = [`::::: {class="${DATA_CARD_CLASSES}"}`, ''];
+  card.push(`<h2 class="${DATA_PILL_CLASSES}">Colección</h2>`, '');
+  card.push(`<div class="${intro === '' ? 'mb-0' : 'mb-24'}">`);
+  if (creators.length > 0) card.push(`<p class="${DATA_AUTHOR_CLASSES}">${creators.join(', ')}</p>`);
+  if (title !== undefined && title !== 'Sin título') card.push(`<h1 class="${DATA_TITLE_CLASSES}">${title}</h1>`);
+  for (const editor of editors) card.push(`<p class="${DATA_AUTHOR_CLASSES}">${editor}</p>`);
+  if (subtitle !== undefined) card.push(`<p class="${DATA_SUBTITLE_CLASSES}">${subtitle}</p>`);
+  if (date !== undefined) card.push(`<p class="${DATA_DATE_CLASSES}">${date}</p>`);
+  card.push('</div>');
+  if (intro !== '') card.push('', intro);
+  card.push('', ':::::');
+  return [MASONRY_WRAPPER, '', ...card, '', '</div>'].join('\n');
+}
 
 function collectionCard(e: CollectionEntry, href: string | undefined): string {
   const creator = e.creator.length > 0 ? e.creator.join(', ') : 'Anónima';
@@ -520,7 +600,7 @@ function collectionCard(e: CollectionEntry, href: string | undefined): string {
   if (fragment !== '') card.push('', fragment);
   if (href !== undefined) card.push('', `[Leer el texto completo →](${href})`);
   card.push('', '::::');
-  return card.join('\n');
+  return [MASONRY_WRAPPER, '', ...card, '', '</div>'].join('\n');
 }
 
 export function buildCollectionSectionsMarkdown(
@@ -791,7 +871,7 @@ async function emitCollectionFormats(
   // los niveles. La fusión latex contiene las mismas imágenes que las variantes
   // html/markdown (los cuerpos son idénticos).
   const images = await preprocessDocumentImages(
-    collectionBaseContent(collectionEntries, 'latex', content),
+    collectionScanContent(collectionEntries, content),
     doc,
     mergeConfigImages(outputs.fm, formatCfg?.pdf, ctx.siteConfig, ctx.cwd),
     renderCtx.pageDimensions ?? detectPageSize([]),
@@ -830,9 +910,17 @@ async function emitCollectionFormats(
   const exportDoc = assembleExportDocument(doc, renderCtx.lang, exportCtx.globalBibliography, exportCtx.globalCsl, ctx.siteConfig.toc);
 
   if (activeFormats.html && formatWorkSets.htmlPaths.has(doc.relativePath) && docProducesFormat(doc.frontmatter.type, 'html')) {
-    // #2483: HTML deja de fusionar los miembros: cada uno es una tarjeta con su
-    // fragmento y un enlace a su propio HTML. El EPUB, más abajo, sigue completo.
-    const base = collectionCardsContent(collectionEntries, memberHtmlHrefs(doc.relativePath, collectionEntries, discoveryIndex), content);
+    // #2483: HTML deja de fusionar los miembros: los datos de la collection van
+    // en su propia tarjeta y cada file es una tarjeta con su fragmento y un
+    // enlace a su propio HTML, todas al nivel del masonry. El EPUB, más abajo,
+    // sigue con la fusión completa.
+    const collectionFm = doc.frontmatter.type === 'collection' ? outputs.fm : undefined;
+    const base = collectionCardsContent(
+      collectionEntries,
+      memberHtmlHrefs(doc.relativePath, collectionEntries, discoveryIndex),
+      content,
+      collectionFm,
+    );
     // #2460: las rutas no se reescriben sobre el texto que va a pandoc; el
     // filtro 04-image-paths las reescribe sobre el AST.
     const imagePaths = await writeImagePaths(doc, ctx.cwd, 'html', images.imageMap, docDir, true);
