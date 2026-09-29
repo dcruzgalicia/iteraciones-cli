@@ -81,7 +81,7 @@ function collectFlags(options: readonly { long?: string; short?: string }[]): Se
 
 /**
  * Flags del programa: globales, de cada comando y de sus subcomandos. Un
- * comando con subcomandos (`pdf collect`, `test visual`) declara sus opciones
+ * comando con subcomandos (`pdf collect`, `visual check`) declara sus opciones
  * en el subcomando: sin bajar un nivel, quedarían sin vigilar.
  */
 function collectCliFlags(program: Command): Set<string> {

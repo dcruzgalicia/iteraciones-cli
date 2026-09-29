@@ -2728,7 +2728,7 @@ describe('runInit', () => {
       const gitignore = await Bun.file(join(dir, '.gitignore')).text();
       expect(gitignore).toContain('dist/');
       expect(gitignore).toContain('.iteraciones/');
-      // los diffs de `test visual` no se versionan; los snapshots sí
+      // los diffs de `visual check` no se versionan; los snapshots sí
       expect(gitignore).toContain('visual/**/*-page-*-diff.png');
     });
   });

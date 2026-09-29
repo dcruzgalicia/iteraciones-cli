@@ -2,6 +2,7 @@ import { describe, expect, it, spyOn } from 'bun:test';
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { buildProgram } from '../cli/parser.js';
 import { runTestVisual, type TestVisualOptions } from '../cli/test-visual.js';
 import { exec } from '../lib/run.js';
 import {
@@ -23,7 +24,7 @@ import {
 import { registerSkip, SKIP_REASONS, withTempDir } from './helpers.js';
 
 /**
- * #2479 — regresión visual de PDFs: `iteraciones test visual`.
+ * #2479 — regresión visual de PDFs: `iteraciones visual check|snapshot`.
  *
  * La lógica pura (orden de páginas, dimensiones del PNG, flags, resumen) se
  * verifica sin herramientas. La comparación de verdad necesita pdftoppm
@@ -405,8 +406,26 @@ async function runCaptured(cwd: string, pdfs: string | string[], options: TestVi
   }
 }
 
-describe('test visual: CLI (#2479)', () => {
-  it('--update guarda el PDF como snapshot en visual/<slug>.pdf', async () => {
+describe('visual check|snapshot: CLI (#2479)', () => {
+  it('la CLI expone `visual check` y `visual snapshot` y ya no el grupo `test`', () => {
+    const program = buildProgram();
+    const names = program.commands.map((cmd) => cmd.name());
+    expect(names).toContain('visual');
+    expect(names).not.toContain('test');
+
+    const visual = program.commands.find((cmd) => cmd.name() === 'visual');
+    const subs = visual?.commands.map((cmd) => cmd.name()) ?? [];
+    expect(subs).toContain('check');
+    expect(subs).toContain('snapshot');
+
+    // `--update` dejó de existir: guarda snapshots el subcomando, no un flag
+    const flags = (visual?.commands ?? []).flatMap((cmd) => cmd.options.map((opt) => opt.long ?? ''));
+    expect(flags).not.toContain('--update');
+    expect(flags).toContain('--output');
+    expect(flags).toContain('--reference');
+  });
+
+  it('visual snapshot guarda el PDF en visual/<slug>.pdf', async () => {
     await withTempDir(async (dir) => {
       writeFileSync(join(dir, 'mi-doc.pdf'), 'contenido', 'utf8');
 
@@ -426,11 +445,11 @@ describe('test visual: CLI (#2479)', () => {
 
       expect(exitCode).toBe(1);
       expect(stderr).toContain('no hay snapshot en visual/mi-doc.pdf');
-      expect(stderr).toContain('--update');
+      expect(stderr).toContain('iteraciones visual snapshot');
     });
   });
 
-  it('--update y --reference no se pueden combinar', async () => {
+  it('snapshot y --reference no se pueden combinar', async () => {
     await withTempDir(async (dir) => {
       writeFileSync(join(dir, 'mi-doc.pdf'), 'contenido', 'utf8');
 
@@ -474,7 +493,7 @@ describe('test visual: CLI (#2479)', () => {
     });
   });
 
-  it('el modo lote sin snapshots pide --update y no compara nada', async () => {
+  it('el modo lote sin snapshots pide visual snapshot y no compara nada', async () => {
     await withTempDir(async (dir) => {
       const output = join(dir, 'dist', 'files');
       mkdirSync(output, { recursive: true });
@@ -484,7 +503,7 @@ describe('test visual: CLI (#2479)', () => {
 
       expect(exitCode).toBe(1);
       expect(stderr).toContain('no hay snapshots en visual');
-      expect(stderr).toContain('--update');
+      expect(stderr).toContain('iteraciones visual snapshot');
     });
   });
 
@@ -507,7 +526,7 @@ describe('test visual: CLI (#2479)', () => {
     });
   });
 
-  it('--update retira los snapshots de PDFs que ya no existen y sus diffs', async () => {
+  it('visual snapshot retira los snapshots de PDFs que ya no existen y sus diffs', async () => {
     await withTempDir(async (dir) => {
       const output = join(dir, 'dist', 'files');
       mkdirSync(output, { recursive: true });
@@ -544,7 +563,7 @@ describe('test visual: CLI (#2479)', () => {
   });
 });
 
-describe.skipIf(!toolsOk)('test visual: exit codes reales (#2479)', () => {
+describe.skipIf(!toolsOk)('visual check: exit codes reales (#2479)', () => {
   itTool('PASS → exit 0; con cambio de contenido → exit 1 y el resumen con diff', async () => {
     await withTempDir(async (dir) => {
       // proyecto: para que los renders y la caché queden dentro del temp
@@ -575,8 +594,8 @@ describe.skipIf(!toolsOk)('test visual: exit codes reales (#2479)', () => {
   });
 });
 
-describe.skipIf(!toolsOk)('test visual: lote real (#2479)', () => {
-  itTool('build → --update → cambio → compara todo y deja los diffs en visual/', async () => {
+describe.skipIf(!toolsOk)('visual check: lote real (#2479)', () => {
+  itTool('build → snapshot → cambio → check: compara todo y deja los diffs en visual/', async () => {
     await withTempDir(async (dir) => {
       writeFileSync(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\n', 'utf8');
       const output = join(dir, 'dist', 'files');

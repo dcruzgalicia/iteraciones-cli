@@ -52,6 +52,11 @@ function suggestCommand(name: string, commands: string[]): string | undefined {
   return commands.find((c) => distance(c, name) <= 2);
 }
 
+/** Los operandos `[pdf...]` llegan como string o como array según commander. */
+function pdfArgs(pdfs: string | string[] | undefined): string[] {
+  return pdfs === undefined ? [] : Array.isArray(pdfs) ? pdfs : [pdfs];
+}
+
 export function buildProgram(): Command {
   const program = new Command();
 
@@ -270,12 +275,12 @@ Ejemplos:
       await runCollectPdf(projectRoot(), slot, opts);
     });
 
-  const test = program.command('test').description('pruebas sobre salidas ya construidas');
-  test
-    .command('visual [pdf...]')
-    .description('compara los PDFs de dist/files con sus snapshots y sale con exit 1 si hay regresión visual (#2479)')
+  const visual = program.command('visual').description('regresión visual de los PDFs del proyecto (#2479)');
+
+  visual
+    .command('check [pdf...]')
+    .description('compara los PDFs de dist/files con sus snapshots y sale con exit 1 si hay regresión visual')
     .option('--reference <pdf>', 'PDF de referencia para una comparación puntual (no toca los snapshots)')
-    .option('--update', 'guarda como snapshots los PDFs de dist/files (o los dados) en visual/, sin comparar')
     .option('--output <path>', 'directorio de salida donde están los PDFs (por defecto: dist/files)')
     .option('--dpi <n>', `resolución de render en dpi (por defecto: ${VISUAL_DEFAULTS.dpi})`, String(VISUAL_DEFAULTS.dpi))
     .option(
@@ -289,18 +294,36 @@ Ejemplos:
       `
 Requiere pdftoppm (poppler) y ImageMagick. Compara por página: blur dpi/150 + fuzz ${VISUAL_DEFAULTS.fuzzPercent} %
 sobre PNGs de ${VISUAL_DEFAULTS.dpi} dpi, con umbral de ${VISUAL_DEFAULTS.thresholdPercent} % de píxeles distintos por página.
-Los snapshots y sus diffs viven en <raíz>/visual/, espejando dist/files; el trabajo en el temporal del sistema.
+Sin PDFs compara todos los de --output y se niega a comparar si falta algún snapshot; con PDFs, solo esos.
+Los snapshots viven en <raíz>/visual/, espejando dist/files; sus diffs quedan junto a cada uno.
 
 Ejemplos:
-  iteraciones test visual --update            guarda los snapshots de dist/files
-  iteraciones test visual                      compara todos los PDFs de dist/files
-  iteraciones test visual dist/files/index.pdf --update  guarda un solo snapshot
-  iteraciones test visual dist/files/index.pdf           compara un solo PDF
-  iteraciones test visual nuevo.pdf --reference viejo.pdf compara dos PDFs sin tocar los snapshots
+  iteraciones visual check                              compara todos los PDFs de dist/files
+  iteraciones visual check dist/files/index.pdf         compara un solo PDF
+  iteraciones visual check nuevo.pdf --reference viejo.pdf  compara dos PDFs sin tocar los snapshots
 `,
     )
     .action(async (pdfs: string | string[] | undefined, opts: TestVisualOptions) => {
-      await runTestVisual(projectRoot(), pdfs === undefined ? [] : Array.isArray(pdfs) ? pdfs : [pdfs], opts);
+      await runTestVisual(projectRoot(), pdfArgs(pdfs), opts);
+    });
+
+  visual
+    .command('snapshot [pdf...]')
+    .description('guarda los PDFs de dist/files como snapshots en visual/, sin comparar')
+    .option('--output <path>', 'directorio de salida donde están los PDFs (por defecto: dist/files)')
+    .addHelpText(
+      'after',
+      `
+Los snapshots viven en <raíz>/visual/, espejando dist/files, y van versionados en git; los diffs de
+la corrida anterior se retiran. Sin proyecto, el trabajo queda en el temporal del sistema.
+
+Ejemplos:
+  iteraciones visual snapshot                       guarda los snapshots de dist/files
+  iteraciones visual snapshot dist/files/index.pdf  guarda un solo snapshot
+`,
+    )
+    .action(async (pdfs: string | string[] | undefined, opts: { output?: string }) => {
+      await runTestVisual(projectRoot(), pdfArgs(pdfs), { ...opts, update: true });
     });
 
   program
