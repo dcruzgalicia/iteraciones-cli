@@ -172,14 +172,27 @@ async function compareOne(
   return { referenceLabel: explicitReference ?? labelPath(cwd, snapshot), result };
 }
 
-/** Motivos de un FAIL: páginas modificadas y/o cambio en el nº de páginas. */
-function failureReasons(result: VisualDiffResult): string {
-  const reasons: string[] = [];
-  if (result.changed > 0) reasons.push(`${result.changed} de ${result.compared} páginas con diferencias visuales`);
-  if (result.referencePages !== result.generatedPages) {
-    reasons.push(`el número de páginas cambió: referencia ${result.referencePages} · generado ${result.generatedPages}`);
+/**
+ * Veredicto de un FAIL, línea a línea: manda a mirar las imágenes de
+ * diferencia, no las rutas de los PDF —esas ya están en el bloque de arriba—.
+ * Si no hay diffs, lo único que falló es la paginación y se dice con las dos
+ * cifras; un FAIL sin líneas es imposible (o cambian píxeles o cambian páginas).
+ */
+function failureSummary(cwd: string, compared: Compared[], failed: Compared[]): string {
+  const lines: string[] = [];
+  const diffs = failed.flatMap(({ entry }) => entry.result.details.map((detail) => labelPath(cwd, detail.diffImage)));
+  if (diffs.length > 0) {
+    const images = diffs.length === 1 ? '1 imagen de diferencia' : `${diffs.length} imágenes de diferencia`;
+    lines.push(compared.length > 1 ? `${failed.length} de ${compared.length} PDFs con regresión visual · ${images}:` : `${images}:`);
+    lines.push(...diffs.map((diff) => `  ${diff}`));
   }
-  return reasons.join(' · ');
+  for (const { pdf, entry } of failed) {
+    const { referencePages, generatedPages } = entry.result;
+    if (referencePages !== generatedPages) {
+      lines.push(`el número de páginas cambió en ${labelPath(cwd, pdf)}: referencia ${referencePages} · generado ${generatedPages}`);
+    }
+  }
+  return lines.join('\n');
 }
 
 /** Un PDF ya comparado, con la etiqueta de su snapshot. */
@@ -208,17 +221,12 @@ function reportAll(cwd: string, outputDir: string, options: VisualOptions, compa
 
 function reportVerdict(cwd: string, compared: Compared[]): void {
   const failed = compared.filter(({ entry }) => !entry.result.pass);
-  const single = compared.length === 1 ? compared[0] : undefined;
   if (failed.length > 0) {
     process.exitCode = 1;
-    if (single !== undefined) logError(failureReasons(single.entry.result), 'test');
-    else
-      logError(
-        `${failed.length} de ${compared.length} PDFs con regresión visual: ${failed.map(({ pdf }) => labelPath(cwd, pdf)).join(', ')}`,
-        'test',
-      );
+    logError(failureSummary(cwd, compared, failed), 'test');
     return;
   }
+  const single = compared.length === 1 ? compared[0] : undefined;
   if (single !== undefined) {
     logSuccess(
       `sin diferencias visuales en ${single.entry.result.compared} páginas${single.entry.result.fromCache === true ? ' · caché' : ''}`,

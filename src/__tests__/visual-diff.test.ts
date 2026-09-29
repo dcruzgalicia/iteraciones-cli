@@ -562,7 +562,9 @@ describe.skipIf(!toolsOk)('test visual: exit codes reales (#2479)', () => {
       expect(failRun.exitCode).toBe(1);
       expect(failRun.stdout).toContain('páginas 1 · sin cambios 0 · modificadas 1');
       expect(failRun.stdout).toContain('visual/doc-page-001-diff.png');
-      expect(failRun.stderr).toContain('1 de 1 páginas con diferencias visuales');
+      // el veredicto manda a los diffs, no a los PDFs
+      expect(failRun.stderr).toContain('1 imagen de diferencia:');
+      expect(failRun.stderr).toContain('  visual/doc-page-001-diff.png');
 
       // y al volver al contenido de la referencia vuelve a pasar
       writeFileSync(generated, makePdf([textPage()]), 'utf8');
@@ -599,7 +601,8 @@ describe.skipIf(!toolsOk)('test visual: lote real (#2479)', () => {
       const fail = await runCaptured(dir, [], {});
       expect(fail.exitCode).toBe(1);
       expect(fail.stdout).toContain('visual/index-page-001-diff.png');
-      expect(fail.stderr).toContain('1 de 2 PDFs con regresión visual: dist/files/index.pdf');
+      expect(fail.stderr).toContain('1 de 2 PDFs con regresión visual · 1 imagen de diferencia:');
+      expect(fail.stderr).toContain('  visual/index-page-001-diff.png');
       expect(existsSync(join(dir, 'visual', 'index-page-001-diff.png'))).toBe(true);
       expect(existsSync(join(dir, 'visual', 'anexos', 'index-page-001-diff.png'))).toBe(false);
 
