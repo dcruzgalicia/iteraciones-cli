@@ -79,7 +79,7 @@ files:
 ---
 ```
 
-Cada archivo en `files` aporta sus encabezados (creator → `\chapter`, title → `\section`, subtitle → `\subsection`; en HTML van dentro de su tarjeta). El frontmatter del collection se usa como metadata del documento (portada, título, etc.). Ver [docs/frontmatter-reference.md](docs/frontmatter-reference.md) para detalles.
+Cada archivo en `files` aporta sus encabezados (creator → `\chapter`, title → `\section`, subtitle → `\subsection`; en HTML van dentro de su tarjeta). Un `type: intervention` en `files` es un recurso de imprenta (regla y páginas en blanco): entra en el PDF y en el markdown exportado, pero no en la página HTML ni en el EPUB. El frontmatter del collection se usa como metadata del documento (portada, título, etc.). Ver [docs/frontmatter-reference.md](docs/frontmatter-reference.md) para detalles.
 
 ## Configuración (`iteraciones.config.yaml`)
 

@@ -37,6 +37,8 @@ Un `type: collection` fusiona el contenido de múltiples archivos en un solo doc
 
 `creator` está prohibido en una collection (`validate` y `build` fallan con el fix: renombra `creator:` a `collectionCreator:`). El `creator` del resultado —el byline— no se escribe a mano: build lo calcula como la unión de los `creator` de cada archivo de `files`. El `.md` exportado a `dist` lleva además `slug` (el derivado de `collectionCreator`) para que un re-proceso del propio artefacto no renombre la salida.
 
+Un `type: intervention` en `files` es un recurso de imprenta (una regla con el nombre y el título, más sus páginas en blanco): entra en el PDF y en el markdown exportado, y **no** en la página HTML ni en el EPUB —que son de lectura—. Si todos los archivos de `files` fueran interventions, la collection no tendría nada que publicar en esos dos formatos y `build` falla con un aviso; añade al menos un archivo de otro tipo.
+
 Cada archivo en `files` aporta sus propios encabezados estructurales antes de su contenido:
 
 | Archivo field | LaTeX | HTML/EPUB | Markdown |
