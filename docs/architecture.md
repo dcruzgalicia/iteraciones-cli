@@ -91,7 +91,6 @@ Todo lo estático vive dentro de un directorio `assets`, **por nivel de salida**
 dist/files/
 ├── assets/
 │   ├── css/styles.css      ← Tailwind compilado (solo lo usa HTML)
-│   ├── fonts/              ← fuentes + licencias OFL
 │   ├── logo.svg            ← logo efectivo (el de la config o el por defecto)
 │   └── images/             ← imágenes procesadas de la raíz
 │       ├── <slug>-foto.jpg ← una copia por imagen, prefijada con su slug
@@ -105,7 +104,7 @@ dist/files/
 Reglas que fija el contrato:
 
 - **Una sola copia por imagen**, llamada `<slug>-<base>.jpg` (sufijada `-2`, `-3` si un mismo documento tiene dos orígenes con el mismo basename; el prefijo de slug evita que dos documentos del mismo nivel se pisen). HTML, markdown, EPUB y el `.tex` de dist apuntan al mismo fichero: no queda nada junto a las salidas ni en `assets/img`. El dedupe se hace en el preproceso, no al componer el `.tex`. El prefijo es idempotente (se quita y se vuelve a poner si la imagen ya lo lleva), así que reconstruir a partir de una copia de `dist/files` no lo acumula.
-- **CSS, fuentes y logo** solo los usa el HTML: viven en `assets/` de la raíz. Como son hermanas dentro de `assets/`, el `url(../fonts/…)` del CSS sigue resolviendo.
+- **CSS y logo** solo los usa el HTML: viven en `assets/` de la raíz. Sin fuentes propias (#2487): el sitio se sirve con la sans y la mono del navegador, así que `assets/` ya no lleva `fonts/` (y la limpieza sigue quitándolo de salidas viejas).
 - **Referencias homogéneas**: cualquier salida de un nivel apunta a `./assets/images/<nombre>`, igual en la raíz que en una subcarpeta. Sin esto, dist citaba rutas del proyecto fuente y quebraba la portabilidad de `dist/files` y la idempotencia al reprocesar los markdowns exportados como si fueran origen.
 - **El `.tex` de dist no cita rutas absolutas**: lo que apunte bajo la raíz del proyecto (el QR del caché, en concreto) se copia al `assets/images` del nivel y se reescribe; con `bundle: true`, la bibliografía apunta a la réplica que bundle deja en la raíz de `dist/files` (sin bundle se relativa como en #2448). El `.tex` de trabajo (`.iteraciones/tmp/pdf/`) no es export y conserva las rutas absolutas que sí resuelven.
 - **Migración automática**: si la salida existente tiene el layout anterior (`css/`, `fonts/`, `logo.svg` en la raíz, o cualquier `**/assets/img`), `hasLegacyAssetLayout` fuerza `--full` y la salida se reconstruye entera una única vez: los documentos que no se recompilen seguirían apuntando a `assets/img` y a `css/`.
@@ -169,8 +168,8 @@ Además, existen los **preamble filters** (`src/lib/resources/preamble/*.tex`) q
 | `html/02-verse` | ast | `Div.verse` → `<div class="verse">` |
 | `html/03-center` | ast | `Div.center` → `<div class="center">` |
 | `html/04-flushright` | ast | `Div.flushright` → `<div class="flushright">` |
-| `html/05-spacer` | ast | `Div.spacer` → `<div class="spacer"></div>` |
-| `html/06-subparagraph` | ast | `Header` nivel 3 → `<div class="subparagraph">` |
+| `html/05-spacer` | ast | `Div.spacer` → `<div class="h-[1.5em]"></div>` |
+| `html/06-subparagraph` | ast | `Header` nivel 3 → `<div class="font-bold italic">` |
 | `html/07-titlepage-meta` | ast | campos de portada que LaTeX pasa por markdown → inlines, para que la tarjeta del título no muestre los asteriscos (#2487) |
 
 ### Preamble filters integrados
@@ -318,7 +317,7 @@ Cuando `99-pdfx` está **activo** (se eliminó de `disabledPreambleFilters`), el
 | `render.ts` | Conversión HTML: markdown → html5 con templates y sistema de filters. |
 | `latex-composer.ts` | Composición del .tex completo: markdown → latex con metadatos XMP, distribución portátil (una copia por imagen en `assets/images`) y localización de las rutas del proyecto en el .tex de dist (#2448/#2450). |
 | `build-planner.ts` | Planificador: metadatos de invalidación, WorkSets con Paths + workDocList derivados, y hash de filters/config/bib/esquema. |
-| `build-assets.ts` | Assets: compila el CSS con Tailwind sobre dist/files (acento del @theme) y escribe `assets/css`, `assets/fonts` y `assets/logo.svg`. |
+| `build-assets.ts` | Assets: compila el CSS con Tailwind sobre dist/files (acento del @theme) y escribe `assets/css` y `assets/logo.svg`. |
 | `bundle-dist.ts` | Réplica (#2448): con `bundle: true` copia a dist/files la config, `preamble*/`, `filters/` y la bibliografía, y retira lo que deja de corresponder (manifiesto en `.iteraciones/bundle.json`). |
 | `latex-preamble.ts` | Constructor del template LaTeX efectivo (una vez por build): preamble filters dinámicos, crop/pdfx según tamaño. |
 | `preamble-loader.ts` | Carga de preamble filters (.tex) con override por proyecto y dependencias. |
@@ -395,7 +394,9 @@ Cada documento genera sus formatos con invocaciones directas de pandoc (markdown
 
 El CLI compone los templates HTML y LaTeX efectivos una vez por build (tarjetas ordenadas según `format.html.blocks`; preámbulo con condicionales expuestos por el filtro `internal/flags` vía metadata). Así pandoc genera cada formato directamente desde el markdown original y el único post-procesamiento es la extracción de referencias del HTML (el único bloque que no puede resolver el template: no existe hasta que citeproc lo genera). Esto elimina el ensamblado de bloques y el AST intermedio del flujo anterior, y la verificación de identidad queda a cargo de la suite de tests.
 
-La página HTML es `skeleton.html`: un único `<main>` con la clase `container` de Tailwind (ancho máximo y centrado) y las columnas del masonry —una por defecto, dos desde `lg` y tres desde `2xl`— donde viven todas las tarjetas en este orden: el header, la tarjeta del título (`card-metadata.html`, la otra mitad del bloque `contenido`), los bloques de `format.html.blocks` y el footer. Cada tarjeta lleva su `break-inside-avoid` y su `pb-6`, que es el aire vertical entre tarjetas: en un masonry el `gap` solo separa columnas. La tarjeta del título imprime el chip del type y los campos de la portada del PDF —`titlehead`, `subject`, autor, título, subtítulo, `collectionCreatorPrefix`, `collectionCreator`, fecha y `publishers`— con el orden de su `maketitle`: el autor antes del título en `preamble/` (file, creator) y el título antes en `preamble-collection/`. Es markdown-free, salvo el body propio de una collection, que viaja en el cuerpo de pandoc envuelto en un div `collection-intro` y `postProcessHtml` sube a esa tarjeta (igual que hace con el bloque de referencias). El fondo es papel milimetrado —dos retículas, la fina de 10px y la grande de 50px, en un tono tenue del accent— y viene de la utilidad `bg-paper-grid` de `styles.css`, con los dos tonos en variables que cambia `data-theme`; todas las tarjetas comparten opacidad y llevan rectas las dos esquinas donde se dibuja la punta.
+La hoja de estilos del sitio es `src/lib/resources/styles.css` y es **100% Tailwind**: no define ninguna clase de CSS tradicional (`.algo { … }`). Todo lo que puede expresarse con utilidades se pone como utilidad en el HTML (plantillas o markup generado) y lo genera el escáner de Tailwind sobre `dist/files/**/*.html`; el texto anidado del que no hay control lo formatea el plugin de tipografía con `prose`. Solo quedan cuatro `@utility` para los casos extremos: `bg-paper-grid` (los cuatro gradientes del papel y sus tonos por `data-theme`), `logo-fill` (el SVG que va inline en la tarjeta de identidad), `scroll-reveal` (la animación scroll-driven del botón flotante) y `smallcaps` (la clase que emite pandoc para `[texto]{.smallcaps}`, sin utilidad de Tailwind para `font-variant`). Tampoco hay fuentes propias: `--font-sans` y `--font-mono` no se redefinen, así que el sitio usa la sans y la mono del navegador (#2487).
+
+La página HTML es `skeleton.html`: un único `<main>` con la clase `container` de Tailwind (ancho máximo y centrado) y las columnas del masonry —una por defecto, dos desde `lg` y tres desde `2xl`— donde viven todas las tarjetas en este orden: el header, la tarjeta del título (`card-metadata.html`, la otra mitad del bloque `contenido`), los bloques de `format.html.blocks` y el footer. Cada tarjeta lleva su `break-inside-avoid` y su `pb-6`, que es el aire vertical entre tarjetas: en un masonry el `gap` solo separa columnas. La tarjeta del título imprime el chip del type y los campos de la portada del PDF —`titlehead`, `subject`, autor, título, subtítulo, `collectionCreatorPrefix`, `collectionCreator`, fecha y `publishers`— con el orden de su `maketitle`: el autor antes del título en `preamble/` (file, creator) y el título antes en `preamble-collection/`. Los nombres de las creadoras viajan uno a uno —un `--metadata` por nombre, igual que a LaTeX— y `html/07-titlepage-meta` los envuelve en un span `whitespace-nowrap` y los une con `, `: es el equivalente del `\mbox` de cada creator del PDF, para que la línea se parta entre nombres y nunca dentro de uno. Es markdown-free, salvo el body propio de una collection, que viaja en el cuerpo de pandoc envuelto en un div `collection-intro` y `postProcessHtml` sube a esa tarjeta (igual que hace con el bloque de referencias). El fondo es papel milimetrado —dos retículas, la fina de 10px y la grande de 50px, en un tono tenue del accent— y viene de la utilidad `bg-paper-grid` de `styles.css`, con los dos tonos en variables que cambia `data-theme`; todas las tarjetas comparten opacidad y llevan rectas las dos esquinas donde se dibuja la punta.
 
 ### ¿Por qué el frontmatter fluye como metadata?
 

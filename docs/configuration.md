@@ -429,7 +429,7 @@ Orden de los bloques del masonry: **la posición en la lista ES el orden**. Es u
 
 Todas las tarjetas viven en un único masonry (#2487), con la clase `container` de Tailwind (ancho máximo y centrado) y una columna por defecto, dos desde `lg` y tres desde `2xl`. Su orden es: el `header` (la tarjeta de identidad), la **tarjeta del título**, los bloques de esta lista y el `footer` (la tarjeta de cierre). La tarjeta del título lleva el chip del type y los campos de la portada: `titlehead`, `subject`, autor, título, subtítulo, `collectionCreatorPrefix`, `collectionCreator`, fecha y `publishers`, en el orden que usa el `maketitle` de cada type. El `header` y el `footer` se renderizan siempre en sus marcadores, así que la lista solo reordena las tarjetas del medio.
 
-En `type: collection`, esa tarjeta de contenido no se renderiza (#2483): en su lugar, y al nivel del masonry, sale una tarjeta por archivo de `files` con su chip («Texto» o «Creadora»), su autor y título centrados, su fragmento y su enlace al final, que se estira sobre la tarjeta entera: un click en cualquier punto abre el documento. El body propio de la collection (el texto que sigue al frontmatter) se imprime en su tarjeta de título, bajo sus datos.
+En `type: collection`, esa tarjeta de contenido no se renderiza (#2483): en su lugar, y al nivel del masonry, sale una tarjeta por archivo de `files` con su chip («Texto» o «Creadora»), su autor, su título y su subtítulo centrados, cada nombre de las creadoras en su propio span nowrap, su fragmento y su enlace al final, que se estira sobre la tarjeta entera: un click en cualquier punto abre el documento. El body propio de la collection (el texto que sigue al frontmatter) se imprime en su tarjeta de título, bajo sus datos.
 
 ### `format.epub`
 
