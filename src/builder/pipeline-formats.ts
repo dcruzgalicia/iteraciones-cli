@@ -560,10 +560,10 @@ const CARD_TEXT_CLASSES =
  * las del resto del HTML. Van en `class="..."` (y no en `{.clase}`) porque
  * varias llevan `:` y `/`, que el atributo de un fenced div con punto no admite.
  */
-const COLLECTION_CARD_CLASSES = `tarjeta-fragmento rounded-xl border border-accent-500/25 bg-stone-50/70 dark:bg-stone-900/60 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 ${CARD_TEXT_CLASSES}`;
+const COLLECTION_CARD_CLASSES = `tarjeta-fragmento rounded-tr-xl rounded-bl-xl border border-accent-500/25 bg-stone-50/75 dark:bg-stone-900/65 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 ${CARD_TEXT_CLASSES}`;
 
 /** #2483 — marco de la tarjeta de la collection: el de la tarjeta de contenido. */
-const DATA_CARD_CLASSES = `tarjeta-coleccion relative rounded-2xl border border-accent-500/30 bg-stone-50/90 dark:bg-stone-900/85 p-6 shadow-sm ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 outline outline-1 outline-offset-4 outline-accent-500/10 transition-colors duration-200 hover:border-accent-500/40 [overflow-wrap:anywhere] [&::before]:pointer-events-none [&::before]:absolute [&::before]:left-2 [&::before]:top-2 [&::before]:h-3 [&::before]:w-3 [&::before]:border-l [&::before]:border-t [&::before]:border-accent-500/40 [&::before]:content-[''] [&::after]:pointer-events-none [&::after]:absolute [&::after]:bottom-2 [&::after]:right-2 [&::after]:h-3 [&::after]:w-3 [&::after]:border-b [&::after]:border-r [&::after]:border-accent-500/40 [&::after]:content-[''] ${CARD_TEXT_CLASSES}`;
+const DATA_CARD_CLASSES = `tarjeta-coleccion relative rounded-tr-2xl rounded-bl-2xl border border-accent-500/30 bg-stone-50/75 dark:bg-stone-900/65 p-6 shadow-sm ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 outline outline-1 outline-offset-4 outline-accent-500/10 transition-colors duration-200 hover:border-accent-500/40 [overflow-wrap:anywhere] [&::before]:pointer-events-none [&::before]:absolute [&::before]:left-2 [&::before]:top-2 [&::before]:h-3 [&::before]:w-3 [&::before]:border-l [&::before]:border-t [&::before]:border-accent-500/40 [&::before]:content-[''] [&::after]:pointer-events-none [&::after]:absolute [&::after]:bottom-2 [&::after]:right-2 [&::after]:h-3 [&::after]:w-3 [&::after]:border-b [&::after]:border-r [&::after]:border-accent-500/40 [&::after]:content-[''] ${CARD_TEXT_CLASSES}`;
 
 /** Ficha de la tarjeta de la collection: mismas clases que la de card-contenido.html. */
 const DATA_PILL_CLASSES =
