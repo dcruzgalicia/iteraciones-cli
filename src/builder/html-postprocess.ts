@@ -52,7 +52,7 @@ export function moveCollectionIntro(html: string): string {
     return withoutIntro;
   }
   if (inner === '') return withoutIntro.replace(marker, '');
-  const bloque = `<div class="mx-auto mt-10 max-w-none pt-6 text-left prose prose-xl prose-accent dark:prose-invert">${inner}</div>`;
+  const bloque = `<div class="mx-auto mt-10 max-w-none pt-6 text-left prose prose-xl dark:prose-invert [--tw-prose-links:var(--color-accent-600)] [--tw-prose-invert-links:var(--color-accent-500)]">${inner}</div>`;
   return withoutIntro.replace(marker, () => bloque);
 }
 
