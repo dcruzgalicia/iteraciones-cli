@@ -162,8 +162,9 @@ describe('composeHtmlTemplate', () => {
     expect(masonry, 'ni el header ni el footer son columnas del masonry').not.toContain('Tarjeta identidad');
     expect(tpl.indexOf('Tarjeta identidad (enlaza'), 'el header va antes').toBeLessThan(tpl.indexOf('<main'));
     expect(tpl.indexOf('Tarjeta identidad final'), 'el footer va después').toBeGreaterThan(tpl.indexOf('</main>'));
-    // una columna del masonry de ancho, centrada: la mitad con 2, un tercio con 3
-    expect(tpl).toContain('<div class="mx-auto w-full md:w-1/2 2xl:w-1/3">');
+    // una columna del masonry de ancho, centrada: la mitad con 2, un tercio con 3,
+    // con aire alrededor de la tarjeta (no dentro)
+    expect(tpl).toContain('<div class="mx-auto w-full px-6 sm:px-8 md:w-1/2 2xl:w-1/3">');
     expect(tpl.indexOf('mx-auto w-full')).toBeLessThan(tpl.indexOf('<main'));
   });
 
