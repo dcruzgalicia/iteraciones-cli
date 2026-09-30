@@ -68,11 +68,29 @@
   word-break: break-all;
 }
 
-@utility bg-grid-accent {
+/* Fondo de papel milimetrado: dos retículas, la fina de 2px apenas visible y
+   la grande de 10px más marcada, en un tono tenue del accent. Sin puntos ni
+   degradados. Los dos tonos salen de estas variables, que cambia `data-theme`:
+   en oscuro hace falta un poco más de línea para que se lea. */
+:root {
+  --grid-fine: color-mix(in srgb, var(--color-accent-600) 2.5%, transparent);
+  --grid-bold: color-mix(in srgb, var(--color-accent-600) 8%, transparent);
+}
+
+[data-theme="dark"] {
+  --grid-fine: color-mix(in srgb, var(--color-accent-500) 2.5%, transparent);
+  --grid-bold: color-mix(in srgb, var(--color-accent-500) 10%, transparent);
+}
+
+@utility bg-paper-grid {
   background-image:
-    linear-gradient(color-mix(in srgb, var(--color-accent-400) 3.5%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--color-accent-400) 3.5%, transparent) 1px, transparent 1px);
-  background-size: 48px 48px;
+    linear-gradient(to right, var(--grid-bold) 1px, transparent 1px), linear-gradient(to bottom, var(--grid-bold) 1px, transparent 1px),
+    linear-gradient(to right, var(--grid-fine) 1px, transparent 1px), linear-gradient(to bottom, var(--grid-fine) 1px, transparent 1px);
+  background-size:
+    10px 10px,
+    10px 10px,
+    2px 2px,
+    2px 2px;
 }
 
 @utility bg-surface-dark {
