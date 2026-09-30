@@ -102,9 +102,9 @@ describe('diseño de las tarjetas y del fondo (#2487)', () => {
     expect(skeleton, 'ni el punto de la celda ni el círculo con degradado').not.toContain('radial-gradient');
     const styles = await Bun.file(join(resources, 'styles.css')).text();
     expect(styles).toContain('@utility bg-paper-grid');
-    expect(styles, 'la fina de 2px y la grande de 10px, en variables por tema').toContain('--grid-fine');
+    expect(styles, 'la fina de 10px y la grande de 50px, en variables por tema').toContain('--grid-fine');
+    expect(styles).toContain('50px 50px');
     expect(styles).toContain('10px 10px');
-    expect(styles).toContain('2px 2px');
     expect(styles, 'bg-grid-accent estaba definida y sin uso').not.toContain('bg-grid-accent');
   });
 });

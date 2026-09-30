@@ -68,8 +68,8 @@
   word-break: break-all;
 }
 
-/* Fondo de papel milimetrado: dos retículas, la fina de 2px apenas visible y
-   la grande de 10px más marcada, en un tono tenue del accent. Sin puntos ni
+/* Fondo de papel milimetrado: dos retículas, la fina de 10px apenas visible y
+   la grande de 50px más marcada, en un tono tenue del accent. Sin puntos ni
    degradados. Los dos tonos salen de estas variables, que cambia `data-theme`:
    en oscuro hace falta un poco más de línea para que se lea. */
 :root {
@@ -87,10 +87,10 @@
     linear-gradient(to right, var(--grid-bold) 1px, transparent 1px), linear-gradient(to bottom, var(--grid-bold) 1px, transparent 1px),
     linear-gradient(to right, var(--grid-fine) 1px, transparent 1px), linear-gradient(to bottom, var(--grid-fine) 1px, transparent 1px);
   background-size:
+    50px 50px,
+    50px 50px,
     10px 10px,
-    10px 10px,
-    2px 2px,
-    2px 2px;
+    10px 10px;
 }
 
 @utility bg-surface-dark {
