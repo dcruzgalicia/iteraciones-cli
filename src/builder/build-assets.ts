@@ -5,14 +5,12 @@ import type { SiteConfig } from '../config/config-schema.js';
 import { ACCENT_PALETTES, type AccentColor } from '../lib/accent-palettes.js';
 import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
-import { mapWithConcurrency } from '../lib/run.js';
 import { recordSupportCommand } from '../lib/script-recorder.js';
-import { ASSETS_CSS_FILE, ASSETS_FONTS_DIR, ASSETS_LOGO_FILE } from './output-layout.js';
+import { ASSETS_CSS_FILE, ASSETS_LOGO_FILE } from './output-layout.js';
 import { cacheHitFor } from './state-hash.js';
 import type { CssFileCache } from './state-serialize.js';
 
 const PKG_ROOT = join(import.meta.dir, '../..');
-const FONTS_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'fonts');
 const STYLES_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'styles.css');
 const TAILWIND_BIN_DIRECT = join(PKG_ROOT, 'node_modules', '@tailwindcss', 'cli', 'dist', 'index.mjs');
 
@@ -124,12 +122,14 @@ export async function computeCssHash(
 }
 
 /**
- * Los dos ficheros estáticos que el HTML referencia: las fuentes del paquete y
- * el logo (el de la config, o el por defecto). El build y `iteraciones assets`
- * pasan por aquí, así que el .sh copia exactamente lo que copió TypeScript.
+ * El único fichero estático que el HTML referencia: el logo (el de la config, o
+ * el por defecto). El build y `iteraciones assets` pasan por aquí, así que el
+ * .sh copia exactamente lo que copió TypeScript. #2487: las fuentes del paquete
+ * dejaron de copiarse (el sitio usa las del navegador), pero `assets/fonts` se
+ * sigue limpiando de salidas viejas desde cleanup.ts.
  */
 export async function copyStaticAssets(outputDir: string, cwd: string, siteConfig: SiteConfig): Promise<void> {
-  await Promise.all([copyFonts(outputDir), copyLogo(outputDir, cwd, siteConfig)]);
+  await copyLogo(outputDir, cwd, siteConfig);
 }
 
 export async function buildAssets(
@@ -163,23 +163,6 @@ async function copyIfChanged(src: string, dest: string): Promise<void> {
   }
   await mkdir(dirname(dest), { recursive: true });
   await cp(src, dest, { force: true, preserveTimestamps: true });
-}
-
-async function copyFonts(outputDir: string): Promise<void> {
-  const target = join(outputDir, ASSETS_FONTS_DIR);
-  let entries: string[];
-  try {
-    entries = [
-      ...[...new Bun.Glob('*.ttf').scanSync({ cwd: FONTS_SRC, onlyFiles: true })],
-      ...[...new Bun.Glob('OFL-*.txt').scanSync({ cwd: FONTS_SRC, onlyFiles: true })],
-    ].sort();
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return;
-    throw err;
-  }
-  await mapWithConcurrency(entries, 8, async (entry) => {
-    await copyIfChanged(join(FONTS_SRC, entry), join(target, entry));
-  });
 }
 
 async function copyLogo(outputDir: string, cwd: string, siteConfig: SiteConfig): Promise<void> {
