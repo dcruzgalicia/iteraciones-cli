@@ -1,9 +1,10 @@
 import { mkdir } from 'node:fs/promises';
 import { basename, dirname, join, normalize, relative, resolve, sep } from 'node:path';
+import type { SiteConfig } from '../config/config-schema.js';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
-import { fmStringList, fmTrimmedString, resolveBooleanField, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
+import { fmStringList, resolveBooleanField, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { execPandoc, MD_READER } from '../lib/pandoc-runner.js';
 import { isScriptCapture, recordSupportCommand, resolveScriptStdout } from '../lib/script-recorder.js';
@@ -32,6 +33,31 @@ import { htmlPageFromMarkdown } from './render.js';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
 import type { PdfXmpMetadata } from './xmpdata.js';
 import { injectXmpMetadataIntoLatex } from './xmpdata.js';
+
+/**
+ * #2487 — la banda de metadatos imprime la portada completa del PDF, así que
+ * `subject`, `titlehead` y `publishers` llegan como metadata a pandoc. Se
+ * resuelven con la misma precedencia de tres niveles que LaTeX y, si son lista,
+ * se unen con ", " (como hace el `maketitle`).
+ */
+function htmlMetadataField(
+  fm: Record<string, unknown>,
+  formatCfg: Record<string, unknown> | undefined,
+  siteConfig: SiteConfig,
+  field: string,
+): string | undefined {
+  const resolved = resolveMetadataField(fm, formatCfg, siteConfig, field);
+  if (resolved === undefined) return undefined;
+  const joined = Array.isArray(resolved) ? resolved.join(', ') : String(resolved);
+  return joined || undefined;
+}
+
+/** #2487 — el chip de la banda: el type del documento, con `file` como default. */
+function docChipLabel(type: string | undefined): string {
+  if (type === 'collection') return 'Colección';
+  if (type === 'creator') return 'Creadora';
+  return 'Texto';
+}
 
 interface DocumentOutputs {
   slug: string;
@@ -197,6 +223,7 @@ async function emitHtmlPage(
   const formats = formatLinksFor(plan, dir, outSlug);
   const hasHomePage = discoveryIndex.has('index.md');
   const htmlPath = outBase(`${outSlug}${primaryOutputExtension('html')}`);
+  const isCollection = doc.frontmatter.type === 'collection';
   const html = await htmlPageFromMarkdown(content, doc, {
     cwd,
     inputTarget: collectionPandocInput(doc, cwd, outSlug, 'html'),
@@ -215,8 +242,18 @@ async function emitHtmlPage(
       date: formatHumanDate(doc.frontmatter.date),
       homeHref: hasHomePage ? relativeHref(dir, 'index.html') : undefined,
       formats: formats.length > 0 ? formats : undefined,
+      // #2487: la banda de metadatos imprime la portada completa del PDF, con su
+      // mismo orden por type. Estos campos vivían solo en LaTeX.
+      titlehead: htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'titlehead'),
+      subject: htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'subject'),
+      publishers: htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'publishers'),
+      collectionCreatorPrefix: resolveStringField(fm, htmlConfig, ctx.siteConfig, 'collectionCreatorPrefix'),
+      collectionCreator: parseAuthors(resolveMetadataField(fm, htmlConfig, ctx.siteConfig, 'collectionCreator')).join(', '),
+      docChip: docChipLabel(doc.frontmatter.type),
       // #2483: la página de una collection no tiene tarjeta de contenido.
-      collection: doc.frontmatter.type === 'collection',
+      collection: isCollection,
+      // #2487: su body propio viaja en el cuerpo y el post-proceso lo sube a la banda.
+      hasIntro: isCollection && splitFrontmatter(content).body.trim() !== '',
     },
     siteConfig: ctx.siteConfig,
     templatePath: exportCtx.htmlTemplatePath,
@@ -506,28 +543,20 @@ function printableEntries<T extends { type: string | undefined }>(entries: T[]):
 }
 
 /**
- * #2483 — la página HTML de una collection: una tarjeta con los datos de la
- * collection (creators, title y su body propio) y una tarjeta por miembro, con
- * su autor y título, su fragmento (primer párrafo o fenced div completo, a lo
- * más 100 palabras, con `...` si hubo corte) y un enlace a su HTML completo.
- * Todas van en el body, que la plantilla coloca al nivel del masonry
- * (`$if(collection)$`) y no dentro de la tarjeta de contenido.
- * El EPUB y el PDF siguen con la fusión completa: solo cambia HTML.
- *
- * `fm` es el frontmatter de la collection con los campos derivados que deja el
- * build (`creator`: la unión de los files). Lo pasan el build e
- * `iteraciones merge` con los mismos valores, para que su entrada sea
- * byte-idéntica.
+ * #2483/#2487 — la página HTML de una collection: los datos de la collection
+ * (creators, title, y los campos de portada) los imprime la banda de
+ * metadatos, fuera del masonry, así que aquí solo van el body propio y las
+ * tarjetas de cada miembro, con su autor y título, su fragmento (primer
+ * párrafo o fenced div completo, a lo más 100 palabras, con `...` si hubo
+ * corte) y un enlace a su HTML completo. El body propio viaja en un div
+ * `collection-intro` que `postProcessHtml` sube a la banda (es markdown, no
+ * puede ir por la plantilla). El EPUB y el PDF siguen con la fusión completa.
  */
-export function collectionCardsContent(
-  entries: CollectionEntry[],
-  memberHrefs: Map<string, string>,
-  content: string,
-  fm?: Record<string, unknown>,
-): string {
-  if (entries.length === 0 && fm === undefined) return content;
+export function collectionCardsContent(entries: CollectionEntry[], memberHrefs: Map<string, string>, content: string): string {
+  if (entries.length === 0) return content;
   const cards: string[] = [];
-  if (fm !== undefined) cards.push(collectionDataCard(fm, splitFrontmatter(content).body));
+  const intro = splitFrontmatter(content).body.trim();
+  if (intro !== '') cards.push([':::: {class="collection-intro"}', '', intro, '', '::::'].join('\n'));
   for (const e of printableEntries(entries)) cards.push(collectionCard(e, memberHrefs.get(e.file)));
   return cards.join('\n\n');
 }
@@ -571,46 +600,6 @@ const CARD_CORNERS =
  */
 const COLLECTION_CARD_CLASSES = `tarjeta-fragmento relative rounded-tr-xl rounded-bl-xl border border-accent-500/25 bg-stone-50/75 dark:bg-stone-900/65 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] ${CARD_CORNERS} ${CARD_TEXT_CLASSES}`;
 
-/** #2483 — marco de la tarjeta de la collection: el de la tarjeta de contenido. */
-const DATA_CARD_CLASSES = `tarjeta-coleccion relative rounded-tr-2xl rounded-bl-2xl border border-accent-500/30 bg-stone-50/75 dark:bg-stone-900/65 p-6 shadow-sm ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 transition-colors duration-200 hover:border-accent-500/40 [overflow-wrap:anywhere] [&::before]:pointer-events-none [&::before]:absolute [&::before]:left-2 [&::before]:top-2 [&::before]:h-3 [&::before]:w-3 [&::before]:border-l [&::before]:border-t [&::before]:border-accent-500/40 [&::before]:content-[''] [&::after]:pointer-events-none [&::after]:absolute [&::after]:bottom-2 [&::after]:right-2 [&::after]:h-3 [&::after]:w-3 [&::after]:border-b [&::after]:border-r [&::after]:border-accent-500/40 [&::after]:content-[''] ${CARD_TEXT_CLASSES}`;
-
-/** Ficha de la tarjeta de la collection: mismas clases que la de card-contenido.html. */
-const DATA_PILL_CLASSES =
-  'inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-12 text-accent-600 dark:text-accent-400';
-const DATA_AUTHOR_CLASSES = 'mb-4 text-sm font-mono text-accent-950 dark:text-accent-50 [font-variant-caps:small-caps] tracking-widest';
-const DATA_TITLE_CLASSES = 'mb-3 font-bold uppercase tracking-wide text-3xl text-accent-500';
-const DATA_SUBTITLE_CLASSES = 'mb-3 text-base italic text-accent-950 dark:text-accent-50';
-const DATA_DATE_CLASSES = 'text-sm font-mono text-accent-600 dark:text-accent-400';
-
-/**
- * #2483 — la tarjeta con los datos de la collection: la unión de las creadoras
- * de sus files, su `collectionCreator`, el título, el subtítulo, la fecha y su
- * body propio (que hasta ahora no salía en ningún formato). El texto y el
- * `&` de las clases los escapa pandoc al convertir.
- */
-function collectionDataCard(fm: Record<string, unknown>, body: string): string {
-  const creators = fmStringList(fm.creator) ?? [];
-  const editors = fmStringList(fm.collectionCreator) ?? [];
-  const title = fmTrimmedString(fm.title);
-  const subtitle = fmTrimmedString(fm.subtitle);
-  const date = formatHumanDate(fmTrimmedString(fm.date));
-  const intro = body.trim();
-  // `:::::` (5 colones): el body propio es markdown libre y puede traer un div
-  // de 4, que con la valla de la tarjeta la cerraría antes de tiempo.
-  const card = [`::::: {class="${DATA_CARD_CLASSES}"}`, ''];
-  card.push(`<h2 class="${DATA_PILL_CLASSES}">Colección</h2>`, '');
-  card.push(`<div class="${intro === '' ? 'mb-0' : 'mb-24'}">`);
-  if (creators.length > 0) card.push(`<p class="${DATA_AUTHOR_CLASSES}">${creators.join(', ')}</p>`);
-  if (title !== undefined && title !== 'Sin título') card.push(`<h1 class="${DATA_TITLE_CLASSES}">${title}</h1>`);
-  for (const editor of editors) card.push(`<p class="${DATA_AUTHOR_CLASSES}">${editor}</p>`);
-  if (subtitle !== undefined) card.push(`<p class="${DATA_SUBTITLE_CLASSES}">${subtitle}</p>`);
-  if (date !== undefined) card.push(`<p class="${DATA_DATE_CLASSES}">${date}</p>`);
-  card.push('</div>');
-  if (intro !== '') card.push('', intro);
-  card.push('', ':::::');
-  return [MASONRY_WRAPPER, '', ...card, '', '</div>'].join('\n');
-}
-
 /** Ficha del chip de la tarjeta de un miembro: la de la ficha, con menos aire abajo. */
 const MEMBER_PILL_CLASSES =
   'inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-6 text-accent-600 dark:text-accent-400';
@@ -620,7 +609,15 @@ const MEMBER_PILL_CLASSES =
  * type por defecto (casi ningún `.md` lo declara), así que sin `type:` también
  * sale «Archivo». Las interventions nunca llegan aquí (#2485).
  */
-const MEMBER_TYPE_LABEL: Record<string, string> = { file: 'Archivo', creator: 'Creadora' };
+const MEMBER_TYPE_LABEL: Record<string, string> = { file: 'Texto', creator: 'Creadora' };
+
+/**
+ * #2487 — el enlace al miembro se estira sobre la tarjeta entera (el patrón del
+ * «stretched link»): su `::after` cubre la tarjeta, así que un click en cualquier
+ * punto va al documento, no hace falta buscar el «leer el texto completo». La
+ * tarjeta es `relative` y el pseudo se posiciona contra ella.
+ */
+const LINK_STRETCH_CLASSES = 'after:absolute after:inset-0';
 
 function collectionCard(e: CollectionEntry, href: string | undefined): string {
   const creator = e.creator.length > 0 ? e.creator.join(', ') : 'Anónima';
@@ -634,7 +631,9 @@ function collectionCard(e: CollectionEntry, href: string | undefined): string {
   card.push(`<h2>${creator}</h2>`, '', `<h3>${title}</h3>`);
   if (e.subtitle) card.push('', `<h4>${e.subtitle}</h4>`);
   if (fragment !== '') card.push('', fragment);
-  if (href !== undefined) card.push('', `[Leer el texto completo →](${href})`);
+  if (href !== undefined) {
+    card.push('', `<p class="text-center"><a href="${href}" class="${LINK_STRETCH_CLASSES}">Leer el texto completo →</a></p>`);
+  }
   card.push('', '::::');
   return [MASONRY_WRAPPER, '', ...card, '', '</div>'].join('\n');
 }
@@ -955,13 +954,7 @@ async function emitCollectionFormats(
     // en su propia tarjeta y cada file es una tarjeta con su fragmento y un
     // enlace a su propio HTML, todas al nivel del masonry. El EPUB, más abajo,
     // sigue con la fusión completa.
-    const collectionFm = doc.frontmatter.type === 'collection' ? outputs.fm : undefined;
-    const base = collectionCardsContent(
-      collectionEntries,
-      memberHtmlHrefs(doc.relativePath, collectionEntries, discoveryIndex),
-      content,
-      collectionFm,
-    );
+    const base = collectionCardsContent(collectionEntries, memberHtmlHrefs(doc.relativePath, collectionEntries, discoveryIndex), content);
     // #2460: las rutas no se reescriben sobre el texto que va a pandoc; el
     // filtro 04-image-paths las reescribe sobre el AST.
     const imagePaths = await writeImagePaths(doc, ctx.cwd, 'html', images.imageMap, docDir, true);

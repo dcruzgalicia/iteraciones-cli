@@ -187,6 +187,22 @@
   font-variant: small-caps;
 }
 
+/* #2487 — creator y título de las tarjetas de miembro de una collection
+   (`.tarjeta-fragmento`): centrados, con el título un tamaño más grande que el
+   del creator. Regla CSS directa: las clases `[&_h2:not([class])]:text-center`
+   que llevarían en la tarjeta no se generan desde el scan, porque en el HTML ya
+   renderizado la `&` va escapada (`&amp;`) y el escáner de Tailwind no la
+   reconoce (las de `card-contenido.html` sí salen, porque aquel archivo se
+   escanea con la `&` literal). */
+.tarjeta-fragmento > h2:not([class]),
+.tarjeta-fragmento > h3:not([class]) {
+  text-align: center;
+}
+.tarjeta-fragmento > h3:not([class]) {
+  font-size: var(--text-2xl);
+  line-height: var(--text-2xl--line-height);
+}
+
 /* ### (h3) se convierte en <div class="subparagraph"> via filtro Lua
    (html/06-subparagraph.lua). Estilo similar a \subparagraph en LaTeX
    (KOMA-Script): negrita + itálica. */

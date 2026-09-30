@@ -103,17 +103,25 @@ describe('tarjetas de la página HTML de una collection (#2483)', () => {
 
   it('una tarjeta por miembro: autor, título, fragmento y enlace', () => {
     const html = collectionCardsContent([entry()], hrefs, 'cuerpo de la collection');
-    expect(html).toContain(':::: {class="');
     expect(html).toContain('tarjeta-fragmento');
     expect(html).toContain('<h2>Autora A</h2>');
     expect(html).toContain('<h3>Documento</h3>');
     expect(html).toContain('Contenido de doc.');
-    expect(html).toContain('[Leer el texto completo →](./documento-por-autora-a.html)');
+    expect(html).toContain('Leer el texto completo →');
+  });
+
+  it('#2487: el enlace se estira a la tarjeta entera, y su línea va centrada', () => {
+    const html = collectionCardsContent([entry()], hrefs, '');
+    // el pseudo del enlace cubre la tarjeta (que es `relative`): un click en
+    // cualquier punto va al documento
+    expect(html).toContain('<a href="./documento-por-autora-a.html" class="after:absolute after:inset-0">');
+    expect(html, 'la tarjeta es el contenedor posicionado').toContain('tarjeta-fragmento relative');
+    expect(html, 'y el leer es un párrafo centrado').toContain('<p class="text-center">');
   });
 
   it('cada tarjeta va en el contenedor del masonry, no dentro de otra', () => {
     const html = collectionCardsContent([entry()], hrefs, '');
-    expect(html.startsWith('<div class="break-inside-avoid pb-6">\n\n:::: {class=')).toBe(true);
+    expect(html.startsWith('<div class="break-inside-avoid pb-6">\n\n:::: {class="')).toBe(true);
     expect(html.endsWith('::::\n\n</div>')).toBe(true);
     expect(html.match(/break-inside-avoid pb-6/g) ?? [], 'un contenedor por tarjeta').toHaveLength(1);
   });
@@ -135,35 +143,24 @@ describe('tarjetas de la página HTML de una collection (#2483)', () => {
     expect(collectionCardsContent([], new Map(), 'cuerpo propio')).toBe('cuerpo propio');
   });
 
-  it('la tarjeta de la collection lleva sus datos y su body propio (#2483)', () => {
-    const fm = {
-      title: 'Antología',
-      subtitle: 'Siete piezas',
-      collectionCreator: ['Editora Principal'],
-      creator: ['Autora A', 'Autora B'],
-      date: '2024-05-01',
-    };
-    const html = collectionCardsContent([entry()], hrefs, '---\ntitle: Antología\n---\n\nIntro de la antología.\n', fm);
-    expect(html.startsWith('<div class="break-inside-avoid pb-6">'), 'la ficha va en el nivel del masonry').toBe(true);
-    expect(html).toContain('tarjeta-coleccion');
-    expect(html).toContain('>Colección</h2>');
-    expect(html).toContain('Autora A, Autora B');
-    expect(html).toContain('Editora Principal');
-    expect(html).toContain('<h1 class="mb-3 font-bold uppercase tracking-wide text-3xl text-accent-500">Antología</h1>');
-    expect(html).toContain('Siete piezas');
-    expect(html).toContain('1 de mayo de 2024');
-    expect(html, 'el body propio sale dentro de la tarjeta').toContain('Intro de la antología.');
-    expect(html, 'el frontmatter no viaja dentro de la tarjeta').not.toContain('---');
-    // una tarjeta de datos más una por miembro, cada una en su contenedor
-    expect(html.match(/break-inside-avoid pb-6/g) ?? []).toHaveLength(2);
+  it('el body propio viaja envuelto para que el post-proceso lo suba a la banda (#2487)', () => {
+    const html = collectionCardsContent([entry()], hrefs, '---\ntitle: Antología\n---\n\nIntro de la antología.\n');
+    // los datos de la collection ya no viajan en el cuerpo: los imprime la
+    // banda de metadatos, con los metadatos de pandoc
+    expect(html).not.toContain('tarjeta-coleccion');
+    expect(html).not.toContain('Antología');
+    expect(html, 'el body propio sí, envuelto en su div').toContain(':::: {class="collection-intro"}');
+    expect(html).toContain('Intro de la antología.');
+    expect(html, 'y el frontmatter no viaja').not.toContain('---');
+    // el intro va primero y después, una tarjeta por miembro
+    expect(html.indexOf('collection-intro')).toBeLessThan(html.indexOf('tarjeta-fragmento'));
+    expect(html.match(/break-inside-avoid pb-6/g) ?? []).toHaveLength(1);
   });
 
-  it('la tarjeta de la collection sin body propio ni subtítulo ni fecha', () => {
-    const html = collectionCardsContent([entry()], hrefs, '', { title: 'Antología', creator: ['Autora A'] });
-    expect(html).toContain('Antología');
-    expect(html).toContain('<p class="mb-4 text-sm font-mono');
-    expect(html, 'sin intro, la ficha no deja margen').toContain('<div class="mb-0">');
-    expect(html).not.toContain('mb-24');
+  it('sin body propio no hay nada que subir a la banda', () => {
+    const html = collectionCardsContent([entry()], hrefs, '---\ntitle: Antología\n---\n');
+    expect(html).not.toContain('collection-intro');
+    expect(html).toContain('tarjeta-fragmento');
   });
 
   it('el EPUB sigue recibiendo la fusión completa', () => {

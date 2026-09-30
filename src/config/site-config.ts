@@ -1,4 +1,4 @@
-export const DEFAULT_HTML_BLOCKS = ['header', 'contenido', 'formatos', 'indice', 'referencias', 'footer'] as const;
+export const DEFAULT_HTML_BLOCKS = ['header', 'indice', 'formatos', 'contenido', 'referencias', 'footer'] as const;
 
 export type HtmlBlockKey = (typeof DEFAULT_HTML_BLOCKS)[number];
 

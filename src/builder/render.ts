@@ -25,6 +25,26 @@ interface HtmlPageOptions {
   scriptOutputPath?: string;
 }
 
+/**
+ * #2487 — metadata y variables de la banda de metadatos (fuera del masonry):
+ * los campos de la portada del PDF que hasta ahora solo viajaban a LaTeX, más
+ * el chip del type y el flag del body propio de la collection.
+ */
+function metadataBandArgs(vars: HtmlPageVars): string[] {
+  const args: string[] = [];
+  const meta = (key: string, value: string | undefined): void => {
+    if (value) args.push(`--metadata=${key}:${metadataValue(value)}`);
+  };
+  meta('titlehead', vars.titlehead);
+  meta('subject', vars.subject);
+  meta('publishers', vars.publishers);
+  meta('collection-creator-prefix', vars.collectionCreatorPrefix);
+  meta('collection-creator', vars.collectionCreator);
+  if (vars.docChip) args.push(`--variable=doc-chip:${vars.docChip}`);
+  if (vars.hasIntro) args.push('--variable=has-intro:1');
+  return args;
+}
+
 function buildHtmlMetadataArgs(
   templatePath: string,
   vars: HtmlPageVars,
@@ -54,6 +74,7 @@ function buildHtmlMetadataArgs(
   if (accent) args.push(`--metadata=accent:${accent}`);
   if (css) args.push(`--metadata=css:${css}`);
   if (vars.authorMeta) args.push(`--metadata=author-meta:${vars.authorMeta}`);
+  args.push(...metadataBandArgs(vars));
   // #2483: solo las collections; la plantilla usa `$if(collection)$` para sacar
   // su body de la tarjeta de contenido y dejarlo al nivel del masonry.
   if (vars.collection) args.push('--variable=collection:1');

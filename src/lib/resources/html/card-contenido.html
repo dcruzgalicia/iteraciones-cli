@@ -1,11 +1,14 @@
 $if(collection)$
-    <!-- #2483: en una collection no hay tarjeta de contenido. Sus datos (creators,
-         title, y el body propio) y las tarjetas de cada file salen del body, que
-         aquí queda al nivel del masonry, junto a las demás tarjetas. -->
+    <!-- #2483: en una collection no hay tarjeta de contenido. Sus datos los
+         imprime la banda de metadatos (#2487) y su body propio se sube ahí con
+         el post-proceso; aquí solo quedan las tarjetas de cada file, que salen
+         del body al nivel del masonry, junto a las demás tarjetas. -->
     $body$
 $else$
     <div class="break-inside-avoid pb-6">
       <!-- Tarjeta documento -->
+      <!-- #2487: los metadatos viven en la banda de arriba, así que aquí solo
+           queda el cuerpo del documento. -->
       <article
         class="relative prose prose-xl prose-accent dark:prose-invert max-w-none rounded-tr-2xl rounded-bl-2xl border border-accent-500/30 bg-stone-50/75 dark:bg-stone-900/65 p-6 shadow-sm ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 transition-colors duration-200 hover:border-accent-500/40 [overflow-wrap:anywhere] [&::before]:pointer-events-none [&::before]:absolute [&::before]:left-2 [&::before]:top-2 [&::before]:h-3 [&::before]:w-3 [&::before]:border-l [&::before]:border-t [&::before]:border-accent-500/40 [&::before]:content-[''] [&::after]:pointer-events-none [&::after]:absolute [&::after]:bottom-2 [&::after]:right-2 [&::after]:h-3 [&::after]:w-3 [&::after]:border-b [&::after]:border-r [&::after]:border-accent-500/40 [&::after]:content-['']
         [&_blockquote]:border-accent-500/40
@@ -19,24 +22,6 @@ $else$
         [&_h6:not([class])]:text-xl [&_h6:not([class])]:italic [&_h6:not([class])]:font-normal
         [&_table]:border-accent-500/10 [&_th]:border-accent-500/10 [&_td]:border-accent-500/10"
       >
-        <h2 class="inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-12 text-accent-600 dark:text-accent-400">Contenido</h2>
-
-        <!-- Ficha de identificación del documento -->
-        <div class="mb-24">
-          $if(author-meta)$
-          <p class="mb-4 text-sm font-mono text-accent-950 dark:text-accent-50 [font-variant-caps:small-caps] tracking-widest">$author-meta$</p>
-          $endif$
-          $if(doc-title)$
-          <h1 class="mb-3 font-bold uppercase tracking-wide text-3xl text-accent-500">$doc-title$</h1>
-          $endif$
-          $if(subtitle)$
-          <p class="mb-3 text-base italic text-accent-950 dark:text-accent-50">$subtitle$</p>
-          $endif$
-          $if(date)$
-          <p class="text-sm font-mono text-accent-600 dark:text-accent-400">$date$</p>
-          $endif$
-        </div>
-
         $body$
       </article>
     </div>

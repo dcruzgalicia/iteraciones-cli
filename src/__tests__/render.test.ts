@@ -21,6 +21,10 @@ import * as logger from '../lib/logger.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { registerSkip, SKIP_REASONS } from './helpers.js';
 
+/** el comentario propio de card-metadata.html: ancla única de la tarjeta del
+ * título (el skeleton también la nombra, pero al enumerar las tarjetas) */
+const ANCHOR_BANDA = 'la tarjeta del título: la primera del masonry';
+
 const pandocOk = await getPandocVersion().catch(() => null);
 if (!pandocOk) registerSkip('render.test.ts', SKIP_REASONS.pandoc);
 
@@ -113,10 +117,11 @@ describe('composeHtmlTemplate', () => {
     const pos = (s: string): number => tpl.indexOf(s);
     // Contenido distintivo de cada tarjeta (sin marcadores internos)
     expect(pos('Tarjeta identidad')).toBeGreaterThan(-1); // header
-    expect(pos('Tarjeta documento')).toBeGreaterThan(pos('Tarjeta identidad')); // contenido
-    expect(pos('$if(formats)$')).toBeGreaterThan(pos('Tarjeta documento')); // formatos (marca de flag)
-    expect(pos('$if(toc)$')).toBeGreaterThan(pos('$if(formats)$')); // indice
-    expect(pos('$if(has-references)$')).toBeGreaterThan(pos('$if(toc)$')); // referencias
+    expect(pos(ANCHOR_BANDA)).toBeGreaterThan(pos('Tarjeta identidad')); // título, tras el header
+    expect(pos('$if(toc)$')).toBeGreaterThan(pos(ANCHOR_BANDA)); // indice (marca de flag)
+    expect(pos('$if(formats)$')).toBeGreaterThan(pos('$if(toc)$')); // formatos, tras el índice
+    expect(pos('Tarjeta documento')).toBeGreaterThan(pos('$if(formats)$')); // contenido
+    expect(pos('$if(has-references)$')).toBeGreaterThan(pos('Tarjeta documento')); // referencias
     expect(tpl.lastIndexOf('$if(home-href)$')).toBeGreaterThan(pos('$if(has-references)$')); // footer
   });
 
@@ -149,26 +154,74 @@ describe('composeHtmlTemplate', () => {
 
   it('en una collection el body sale fuera de la tarjeta de contenido (#2483)', async () => {
     const tpl = await composeHtmlTemplate(DEFAULT_SITE_CONFIG);
-    const rama = tpl.split('$if(collection)$')[1]?.split('$else$') ?? ['', ''];
-    // su data card y las de cada file son tarjetas del masonry, no del article
+    // la tarjeta de contenido es la que lleva el comentario del article; su
+    // rama de collection está justo antes
+    const card = tpl.slice(tpl.lastIndexOf('$if(collection)$', tpl.indexOf('<!-- Tarjeta documento -->')));
+    const rama = card.split('$if(collection)$')[1]?.split('$else$') ?? ['', ''];
+    // las tarjetas de cada file son del masonry, no del article
     expect(rama[0]).toContain('$body$');
     expect(rama[0], 'la rama de collection no trae la tarjeta de contenido').not.toContain('<article');
     expect(rama[1], 'el resto de documentos sigue con su article').toContain('<article');
   });
 
-  it('el header y el footer van fuera del masonry, en una columna centrada (#2487)', async () => {
+  it('la banda de metadatos imprime la portada del PDF, con el orden de cada type (#2487)', async () => {
     const tpl = await composeHtmlTemplate(DEFAULT_SITE_CONFIG);
-    const masonry = tpl.slice(tpl.indexOf('<main'), tpl.indexOf('</main>'));
-    expect(masonry, 'ni el header ni el footer son columnas del masonry').not.toContain('Tarjeta identidad');
-    expect(tpl.indexOf('Tarjeta identidad (enlaza'), 'el header va antes').toBeLessThan(tpl.indexOf('<main'));
-    expect(tpl.indexOf('Tarjeta identidad final'), 'el footer va después').toBeGreaterThan(tpl.indexOf('</main>'));
-    // una columna del masonry de ancho, centrada: la mitad con 2, un tercio con 3,
-    // con aire alrededor de la tarjeta (no dentro) y solo desde sm
-    expect(tpl).toContain('<div class="mx-auto w-full sm:px-2 md:w-1/2 2xl:w-1/3">');
-    expect(tpl.indexOf('mx-auto w-full')).toBeLessThan(tpl.indexOf('<main'));
+    // el compositor ya sustituyó los marcadores: la tarjeta va de su comentario
+    // al marcador del body propio de la collection
+    const intro = '<!-- block:intro -->';
+    const banda = tpl.slice(tpl.indexOf(ANCHOR_BANDA), tpl.indexOf(intro) + intro.length);
+    // el chip va delante, y su texto lo pone el type (doc-chip)
+    expect(banda).toContain('$doc-chip$');
+    expect(banda.indexOf('$doc-chip$')).toBeLessThan(banda.indexOf('$author-meta$'));
+    // el marcador del body propio de la collection, que sube el post-proceso
+    expect(banda).toContain('<!-- block:intro -->');
+    const campos = [
+      '$titlehead$',
+      '$subject$',
+      '$author-meta$',
+      '$doc-title$',
+      '$subtitle$',
+      '$collection-creator-prefix$',
+      '$collection-creator$',
+      '$date$',
+      '$publishers$',
+    ];
+    for (const campo of campos) expect(banda, campo).toContain(campo);
+    // collection: título y subtítulo antes que las creadoras (preamble-collection)
+    const [ramaCollection = '', ramaResto = ''] = banda.split('$if(collection)$')[1]?.split('$else$') ?? [];
+    const pos = (texto: string, campo: string): number => texto.indexOf(campo);
+    expect(pos(ramaCollection, '$doc-title$')).toBeLessThan(pos(ramaCollection, '$author-meta$'));
+    expect(pos(ramaCollection, '$subtitle$')).toBeLessThan(pos(ramaCollection, '$author-meta$'));
+    // file y creator: las creadoras antes del título (preamble/)
+    expect(pos(ramaResto, '$author-meta$')).toBeLessThan(pos(ramaResto, '$doc-title$'));
   });
 
-  it('reordenar blocks no mueve el header ni el footer (#2487)', async () => {
+  it('la tarjeta del título es la segunda del masonry (#2487)', async () => {
+    const tpl = await composeHtmlTemplate(DEFAULT_SITE_CONFIG);
+    // un solo main: container + mx-auto (ancho máximo y centrado), una columna
+    // por defecto, dos desde md y tres desde 2xl
+    expect(tpl).toContain('<main class="container mx-auto columns-1 md:columns-2 2xl:columns-3 gap-6');
+    // el título va justo detrás del header, y los dos dentro del masonry
+    expect(tpl.indexOf(ANCHOR_BANDA)).toBeGreaterThan(tpl.indexOf('Tarjeta identidad'));
+    expect(tpl.indexOf(ANCHOR_BANDA)).toBeLessThan(tpl.indexOf('<!-- Tarjeta documento -->'));
+    const masonry = tpl.slice(tpl.indexOf('<main'), tpl.indexOf('</main>'));
+    expect(masonry, 'el título es una tarjeta más del masonry').toContain('$doc-chip$');
+    // y como toda tarjeta del masonry: no se parte entre columnas y deja aire
+    // debajo (en un masonry el `gap` solo separa columnas)
+    expect(tpl).toContain('<div class="break-inside-avoid pb-6">\n    <div class="relative rounded-tr-2xl rounded-bl-2xl');
+  });
+
+  it('el header abre el masonry y el footer lo cierra (#2487)', async () => {
+    const tpl = await composeHtmlTemplate(DEFAULT_SITE_CONFIG);
+    const masonry = tpl.slice(tpl.indexOf('<main'), tpl.indexOf('</main>'));
+    expect(masonry, 'el header es una tarjeta del masonry').toContain('Tarjeta identidad (enlaza');
+    expect(masonry, 'y el footer también').toContain('Tarjeta identidad final');
+    // el header lleva aire debajo (pb-6); el footer, siendo el último, no
+    expect(tpl).toContain('<div class="break-inside-avoid pb-6">\n\n      <!-- Tarjeta identidad (enlaza');
+    expect(tpl).toContain('<div class="break-inside-avoid">\n      <!-- Tarjeta identidad final -->');
+  });
+
+  it('reordenar blocks mueve las tarjetas del medio, no el header ni el footer (#2487)', async () => {
     const siteConfig = {
       ...DEFAULT_SITE_CONFIG,
       format: {
@@ -177,9 +230,13 @@ describe('composeHtmlTemplate', () => {
       },
     };
     const tpl = await composeHtmlTemplate(siteConfig);
-    const masonry = tpl.slice(tpl.indexOf('<main'), tpl.indexOf('</main>'));
-    expect(masonry).not.toContain('Tarjeta identidad');
-    expect(masonry, 'el contenido sí sigue en el masonry, en su orden').toContain('Tarjeta documento');
+    // el header y el footer se quedan en sus marcadores: el primero abre el
+    // masonry y el último lo cierra
+    expect(tpl.indexOf('Tarjeta identidad (enlaza')).toBeLessThan(tpl.indexOf('Tarjeta documento'));
+    expect(tpl.lastIndexOf('Tarjeta identidad final')).toBeGreaterThan(tpl.lastIndexOf('Tarjeta documento'));
+    // las del medio sí siguen el orden configurado: aquí el contenido va antes
+    // que el índice
+    expect(tpl.indexOf('Tarjeta documento')).toBeLessThan(tpl.indexOf('$if(toc)$'));
   });
 });
 
@@ -272,7 +329,9 @@ describe('resolveLuaFilters (resolución de filtros)', () => {
     ]);
     expect(f.latex).toEqual(LATEX_PKG);
     expect(f.html).toEqual(
-      ['01-dictum', '02-verse', '03-center', '04-flushright', '05-spacer', '06-subparagraph'].map((n) => join(PKG, 'html', `${n}.lua`)),
+      ['01-dictum', '02-verse', '03-center', '04-flushright', '05-spacer', '06-subparagraph', '07-titlepage-meta'].map((n) =>
+        join(PKG, 'html', `${n}.lua`),
+      ),
     );
   });
 
@@ -294,7 +353,9 @@ describe('resolveLuaFilters (resolución de filtros)', () => {
       expectedLatex[1] = join(cwd, 'filters', 'latex', '02-dictum.lua');
       expect(f.latex).toEqual(expectedLatex);
       expect(f.html).toEqual(
-        ['01-dictum', '02-verse', '03-center', '04-flushright', '05-spacer', '06-subparagraph'].map((n) => join(PKG, 'html', `${n}.lua`)),
+        ['01-dictum', '02-verse', '03-center', '04-flushright', '05-spacer', '06-subparagraph', '07-titlepage-meta'].map((n) =>
+          join(PKG, 'html', `${n}.lua`),
+        ),
       );
       expect(f.resolvedNames).toEqual(
         new Set([
@@ -322,6 +383,7 @@ describe('resolveLuaFilters (resolución de filtros)', () => {
           'html/04-flushright',
           'html/05-spacer',
           'html/06-subparagraph',
+          'html/07-titlepage-meta',
         ]),
       );
     } finally {
@@ -336,7 +398,7 @@ describe('resolveLuaFilters (resolución de filtros)', () => {
       join(PKG, 'semantic', 'ast', '03-qr-url.lua'),
       join(PKG, 'semantic', 'ast', '04-image-paths.lua'),
     ]);
-    expect(f.resolvedNames.size).toBe(23);
+    expect(f.resolvedNames.size).toBe(24);
     expect(f.resolvedNames.has('semantic/string/01-double-colon')).toBe(false);
   });
 });
