@@ -63,6 +63,17 @@ iteraciones init
 
 Esto también crea un archivo `bibliography.bib` de ejemplo.
 
+### Los cuatro types
+
+Un `.md` es un `file` (el tipo por defecto). Los otros tres se declaran con `type:` en el frontmatter:
+
+- **`file`**: un texto. Se construye en PDF, EPUB, HTML y Markdown.
+- **`collection`**: varios archivos fusionados en un solo documento (ver abajo).
+- **`creator`**: la ficha de una autora o autor. Requiere `name` (o `title`) y admite `links`.
+- **`intervention`**: un recurso de imprenta (una regla con su nombre, su título y sus páginas en blanco). **Solo entra al PDF y al markdown exportado**: no produce HTML ni EPUB, y dentro de una collection se compone con los demás.
+
+El cuadro completo —qué emite cada type, con qué plantilla y con qué campos propios— está en [docs/frontmatter-reference.md](docs/frontmatter-reference.md) § «Los cuatro types».
+
 ### Collections
 
 Un `type: collection` en el frontmatter fusiona múltiples archivos en un solo documento. En PDF, EPUB y Markdown salen fusionados; en HTML la página se arma con tarjetas: una con los datos de la collection (creadoras, título y su body propio) y una por cada archivo, con su fragmento —el primer párrafo o el primer fenced div, a lo más 100 palabras, con `...` si hubo corte— y un enlace a su texto completo. Todas al mismo nivel que el resto de tarjetas de la página:
