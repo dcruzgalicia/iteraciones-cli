@@ -418,18 +418,18 @@ format:
   html:
     blocks:
       - header        # tarjeta identidad inicial
-      - contenido     # tarjeta de contenido
-      - formatos      # tarjeta de formatos generados
       - indice        # tabla de contenidos
+      - formatos      # tarjeta de descargas generadas
+      - contenido     # tarjeta de contenido
       - referencias   # citas bibliográficas
       - footer        # tarjeta identidad final
 ```
 
 Orden de los bloques del masonry: **la posición en la lista ES el orden**. Es una lista completa: los bloques que no aparecen no se renderizan (p. ej. omitir `referencias` quita la tarjeta de citas aunque el documento las tenga). Los bloques de tarjetas ausentes por contenido (TOC sin `toc`, referencias sin citas, formatos sin formatos activos) tampoco se renderizan y no alteran el orden del resto.
 
-En `type: collection`, el bloque `contenido` no se renderiza (#2483): sus tarjetas —la de los datos de la collection y una por archivo de `files`— salen en su lugar, en el mismo orden en el que aparecería la de contenido, y cada una es una tarjeta del masonry por sí sola.
+Todas las tarjetas viven en un único masonry (#2487), con la clase `container` de Tailwind (ancho máximo y centrado) y una columna por defecto, dos desde `md` y tres desde `2xl`. Su orden es: el `header` (la tarjeta de identidad), la **tarjeta del título**, los bloques de esta lista y el `footer` (la tarjeta de cierre). La tarjeta del título lleva el chip del type y los campos de la portada: `titlehead`, `subject`, autor, título, subtítulo, `collectionCreatorPrefix`, `collectionCreator`, fecha y `publishers`, en el orden que usa el `maketitle` de cada type. El `header` y el `footer` se renderizan siempre en sus marcadores, así que la lista solo reordena las tarjetas del medio.
 
-`header` y `footer` no son columnas del masonry: se renderizan fuera de él, en una columna propia centrada del ancho de una columna del contenido (100% con una columna, 50% con dos, 33% con tres) (#2487). La lista `blocks` los sigue incluyendo, pero su posición ya no cambia dónde salen.
+En `type: collection`, esa tarjeta de contenido no se renderiza (#2483): en su lugar, y al nivel del masonry, sale una tarjeta por archivo de `files` con su chip («Texto» o «Creadora»), su autor y título centrados, su fragmento y su enlace al final, que se estira sobre la tarjeta entera: un click en cualquier punto abre el documento. El body propio de la collection (el texto que sigue al frontmatter) se imprime en su tarjeta de título, bajo sus datos.
 
 ### `format.epub`
 
