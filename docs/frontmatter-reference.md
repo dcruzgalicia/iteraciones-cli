@@ -27,9 +27,76 @@ El pipeline consume los siguientes campos del frontmatter:
 | `creator` | `string \| string[]` | `[]` | Uno o varios autores. El slug usa `title-por-creator`: **solo el primer autor**; en caso de colisión (dos documentos con el mismo título y autor) se aplica un sufijo `-dN`. **No se admite en `type: collection`** (ver más abajo): usa `collectionCreator`. |
 | `slug` | `string` | — | **Slug manual** (opcional): fija la URL del documento en lugar del esquema automático. Formato seguro: solo minúsculas, números y guiones simples (`^[a-z0-9]+(-[a-z0-9]+)*$`). Dos documentos con la misma salida (mismo directorio + slug) son un error de build y de `validate`. |
 | `language` | `string` | `'es-MX'` | Código de idioma BCP 47. Sobreescribe `language` de la configuración para HTML, EPUB y Markdown; **no** altera la configuración de `babel` del PDF. |
-| `type` | `'file' \| 'collection'` | `'file'` | Tipo de documento. `file` es el comportamiento por defecto. `collection` reúne el contenido de múltiples archivos: fusionado en PDF, EPUB y Markdown, y como tarjetas enlazadas en HTML (ver más abajo). |
+| `type` | `'file' \| 'collection' \| 'creator' \| 'intervention'` | `'file'` | Tipo de documento (ver «Los cuatro types»): `file` es el comportamiento por defecto; `collection` reúne el contenido de múltiples archivos; `creator` es la ficha de una autora o autor; `intervention` es un recurso de imprenta que solo va al PDF. Cualquier otro valor es error de `validate` y de `build`. |
 | `files` | `string[]` | — | **Requerido para `type: collection`**. Rutas de los archivos a fusionar: se resuelven relativas al directorio de la collection (se admite `../` y cualquier anidamiento) y, si no existen ahí, relativas a la raíz del proyecto (compatibilidad). `validate` y `build` fallan si alguna no existe, mostrando las rutas intentadas. Los archivos listados se construyen además como documentos propios (y `build <path>` los puede seleccionar por separado). |
+| `collectionCreatorPrefix` | `string` | — | **Solo en `type: collection`**: prefijo del crédito propio (`Edición`, `Traducción`…), que se imprime sobre `collectionCreator` en la portada del PDF y en la tarjeta de título del HTML. |
+| `name` | `string` | — | **Solo en `type: creator`**: el nombre de la autora o autor. Es obligatorio (o, en su defecto, `title`); sin `title`, el título del documento se toma de aquí. |
+| `links` | `{ name: string, url: string }[]` | — | **Solo en `type: creator`**: enlaces de la ficha (sitio, ORCID…), que se anteponen como bloque en HTML, EPUB y LaTeX, y en la portada LaTeX de una collection. |
+| `pages` | `integer ≥ 1` | — | **Solo en `type: intervention`**: cuántas páginas en blanco deja la regla. |
+| `lineLength` | `number` (0 < n ≤ 1) | `1` | **Solo en `type: intervention`**: longitud de la regla como fracción de `\textwidth`. |
 | `collectionCreator` | `string \| string[]` | — | **Solo en `type: collection`**: el crédito propio de la editora. Alimenta el slug igual que `creator` (`title-por-collectionCreator`) y se imprime como `\collectionCreator{…}` en la portada LaTeX. El `creator` del documento resultante lo calcula `build`: es la unión de los `creator` de cada archivo de `files` (byline en `\author`, `<meta author>` y `dc:creator`). |
+
+## Los cuatro types
+
+`type` decide qué es el documento, qué formatos emite y qué reglas de validación tiene. `file` es el tipo por defecto: un `.md` sin `type:` es un `file`.
+
+| | `file` | `collection` | `creator` | `intervention` |
+|---|---|---|---|---|
+| Qué es | un texto | varios textos fusionados | la ficha de una autora o autor | un recurso de imprenta |
+| PDF / LaTeX | sí | fusión de `files[]` | sí | **solo este** |
+| EPUB | sí | fusión de `files[]` (sin interventions) | sí | **no** |
+| HTML | sí | tarjetas enlazadas (#2483) | sí | **no** |
+| Markdown | sí | `merge:false` re-procesable / `merge:true` fusionado | sí | solo PDF y markdown (#2485) |
+| Plantilla LaTeX | `latex.tex` | `latex-collection.tex` | `latex-creator.tex` | `latex-intervention.tex` |
+| Preamble | `preamble/` | `preamble-collection/` | `preamble-creator/` | `preamble-intervention/` |
+| Plantilla HTML | `html.html` | `html-collection.html` | `html-creator.html` | — (no genera HTML) |
+| Campos propios | — | `files`, `collectionCreator`, `collectionCreatorPrefix` | `name`, `links` | `pages`, `lineLength` |
+| Validación | — | `files` obligatorio y no vacío | `name` (o `title`) obligatorio | `pages` entero ≥ 1, `lineLength` en (0, 1] |
+
+La última fila del cuadro es la que más se consulta: qué formatos emite. Viene de `docProducesFormat` (`src/builder/output-layout.ts`): todo type emite todo menos la `intervention`, que solo se imprime.
+
+El diseño HTML es **una copia de las tarjetas por type** (#2488), en `src/lib/resources/html/{file,collection,creator}/`: cada type compone con la suya y no hay ninguna rama `$if(type)$` en las tarjetas. Hoy la única diferencia real es el orden de los campos de la tarjeta del título (el de `preamble/` para `file` y `creator`, el de `preamble-collection/` para `collection`) y que en una collection no hay tarjeta de contenido, sino las tarjetas de cada miembro. El skeleton y `styles.css` siguen siendo compartidos.
+
+## Type: file
+
+Es el tipo por defecto y el más simple: un texto con su `title`, su `creator`, su `date` y los campos de portada que quiera. Se construye en los cuatro formatos y cada formato recibe lo suyo: el PDF con su `maketitle` (y sus páginas de título internas), el HTML con la tarjeta de título y la tarjeta del cuerpo, el EPUB y el Markdown con el texto convertido. No tiene campos propios ni reglas propias: los campos de la tabla son válidos tal cual.
+
+## Type: creator
+
+La ficha de una autora o autor. No es un texto con byline, sino una identidad: por eso **requiere `name`** (y si no declaras `title`, el título del documento se toma de `name`). Se construye en PDF, EPUB, HTML y Markdown, con su propia plantilla LaTeX (`latex-creator.tex`) y su propio ámbito de preamble (`preamble-creator/`), donde el nombre va en la portada y el documento no lleva byline.
+
+- `name` (`string`, obligatorio salvo que declares `title`): el nombre.
+- `links` (lista de `{ name, url }`): los enlaces de la ficha. Se anteponen como bloque en HTML, EPUB y LaTeX, y en la portada LaTeX de una collection entran en el bloque de «Autoras y colaboradoras». El validador exige que cada objeto tenga `name` y `url` de tipo texto.
+
+```yaml
+---
+name: Sofía García
+links:
+  - name: Sitio
+    url: https://ejemplo.org
+---
+```
+
+`build <path>` sobre una collection selecciona además los `type: creator` de quienes firman sus archivos, igual que selecciona sus `files`.
+
+## Type: intervention
+
+Un recurso de imprenta: la **regla** horizontal de una página, con su nombre, su título y sus páginas en blanco. Es lo único que no es un texto de lectura:
+
+- No produce HTML ni EPUB, y tampoco página propia (`docProducesFormat` solo lo deja pasar a LaTeX, PDF y Markdown).
+- No exige `title` ni `creator`.
+- Solo admite `pages` (entero ≥ 1) y `lineLength` (0 < n ≤ 1, la longitud de la regla como fracción de `\textwidth`).
+
+Dentro de una collection se compone con la regla, el nombre y el título, más sus páginas en blanco; no cuenta para el byline (#2485). Si **todos** los `files` de una collection son interventions, el build falla: no hay nada que publicar en los formatos de lectura.
+
+```yaml
+---
+title: Regla de imprenta
+type: intervention
+pages: 2
+lineLength: 0.7
+---
+```
 
 ## Type: collection
 
