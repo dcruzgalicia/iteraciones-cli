@@ -1891,9 +1891,9 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       expect(html).toContain('size-12');
       expect(html).toContain('bg-accent-500/15');
       expect(html).toContain('text-accent-600 dark:text-accent-400');
-      // #2487: el main cierra con poco padding (4/6/8) y el aireo de abajo lo pone
+      // #2487: el main abre con poco padding (4/6/8) y el aireo de abajo lo pone
       // la banda del footer, que es la que deja libre el botón flotante
-      expect(html).toContain('lg:px-8 pb-4 sm:pb-6 lg:pb-8');
+      expect(html).toContain('lg:px-8 pt-4 sm:pt-6 lg:pt-8');
       expect(html).toContain('lg:px-8 pt-6 pb-24');
       expect(html).toContain('lg:px-8 pt-8 pb-6');
       // El botón no es un bloque del masonry (fuera del sistema de bloques)
@@ -1923,7 +1923,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       expect(pos('<article')).toBeLessThan(pos('>Formatos</h2>'));
       expect(pos('>Formatos</h2>')).toBeLessThan(pos('id="TOC"'));
       expect(pos('id="TOC"')).toBeLessThan(pos('id="refs-heading"'));
-      expect(pos('id="refs-heading"')).toBeLessThan(html.lastIndexOf('class="break-inside-avoid pb-6"')); // footer
+      expect(pos('id="refs-heading"')).toBeLessThan(html.lastIndexOf('Tarjeta identidad final')); // footer
     });
   });
 
@@ -1958,7 +1958,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       expect(html).not.toContain('refs-heading');
       const pos = (s: string): number => html.indexOf(s);
       expect(pos('Tarjeta identidad')).toBeLessThan(pos('<article'));
-      expect(pos('<article')).toBeLessThan(html.lastIndexOf('class="break-inside-avoid pb-6"'));
+      expect(pos('<article')).toBeLessThan(html.lastIndexOf('Tarjeta identidad final'));
     });
   });
 
