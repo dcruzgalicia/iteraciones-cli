@@ -1893,9 +1893,9 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       expect(html).toContain('bg-accent-500/15');
       expect(html).toContain('text-accent-600 dark:text-accent-400');
       // #2487: un solo main —container + mx-auto para el ancho máximo y el
-      // centrado, una columna por defecto, dos desde md, tres desde 2xl— con su
+      // centrado, una columna por defecto, dos desde lg, tres desde 2xl— con su
       // aire de arriba (8) y el de abajo (24) que deja libre el botón flotante
-      expect(html).toContain('<main class="container mx-auto columns-1 md:columns-2 2xl:columns-3 gap-6 px-4 sm:px-6 lg:px-8 pt-8 pb-24">');
+      expect(html).toContain('<main class="container mx-auto columns-1 lg:columns-2 2xl:columns-3 gap-6 px-4 sm:px-6 lg:px-8 pt-8 pb-24">');
       // El botón no es un bloque del masonry (fuera del sistema de bloques)
       expect(html).not.toContain('block:volver');
       // El CSS precompilado incluye la animación scroll-driven

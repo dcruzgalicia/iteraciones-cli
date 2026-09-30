@@ -199,8 +199,8 @@ describe('composeHtmlTemplate', () => {
   it('la tarjeta del título es la segunda del masonry (#2487)', async () => {
     const tpl = await composeHtmlTemplate(DEFAULT_SITE_CONFIG);
     // un solo main: container + mx-auto (ancho máximo y centrado), una columna
-    // por defecto, dos desde md y tres desde 2xl
-    expect(tpl).toContain('<main class="container mx-auto columns-1 md:columns-2 2xl:columns-3 gap-6');
+    // por defecto, dos desde lg y tres desde 2xl
+    expect(tpl).toContain('<main class="container mx-auto columns-1 lg:columns-2 2xl:columns-3 gap-6');
     // el título va justo detrás del header, y los dos dentro del masonry
     expect(tpl.indexOf(ANCHOR_BANDA)).toBeGreaterThan(tpl.indexOf('Tarjeta identidad'));
     expect(tpl.indexOf(ANCHOR_BANDA)).toBeLessThan(tpl.indexOf('<!-- Tarjeta documento -->'));
