@@ -312,7 +312,7 @@ Cuando `99-pdfx` está **activo** (se eliminó de `disabledPreambleFilters`), el
 | `pipeline-formats.ts` | Procesamiento por documento: emisión por formato (latex/html/epub/md), fusión de collections, frontera pool 1→2, cola de jobs PDF. |
 | `pipeline-io.ts` | Helpers de I/O del pipeline: lectura de markdown, escritura con directorio padre, hrefs relativos, formatLinks, parseFileFrontmatter (collections). |
 | `pipeline.ts` | Orquestador puro de pools: documentPipeline, runLightFormatsPool, pdfSlotCount. |
-| `pandoc-metadata.ts` | Fuente única de metadatos pandoc: escape de valores, language, title/creator/date, composición de citas (paridad HTML/EPUB, fallo de cites para markdown portable). |
+| `pandoc-metadata.ts` | Fuente única de metadatos pandoc: escape de valores, language, title/creator/date, composición de citas (`citationCompileArgs`, paridad HTML/EPUB). El export Markdown no pasa por aquí desde #2436: copia el frontmatter y el body del origen tal cual. |
 | `output-layout.ts` | Contrato de rutas y extensiones de salida (DIST_DIR, DIST_FILES_DIR, FORMAT_OUTPUT_EXTENSIONS, constantes `ASSETS_*` de #2450): pipeline, cleanup y dispatcher lo consumen. Fuente única para cambiar extensiones y el layout de assets. |
 | `render.ts` | Conversión HTML: markdown → html5 con templates y sistema de filters. |
 | `latex-composer.ts` | Composición del .tex completo: markdown → latex con metadatos XMP, distribución portátil (una copia por imagen en `assets/images`) y localización de las rutas del proyecto en el .tex de dist (#2448/#2450). |
@@ -480,7 +480,7 @@ Cambios incompatibles ejecutados en la ventana pre-1.0 (agosto 2026, revisión i
 
 - `format.html.blocks` pasó de objeto con números a **lista ordenada** (hoy `[header, indice, formatos, contenido, referencias, footer]`, con `contenido` después de `indice` y `formatos` desde #2487); la tarjeta de contenido se renombró de `trayectura` a `contenido`.
 - `accent` desconocido y `format.latex` booleano pasaron de tolerancia (warning + fallback) a **errores de validación** en build y validate.
-- El export Markdown usa **rutas relativas** de bibliografía/CSL y no incrusta el CSL del paquete ni `documentclass`.
+- El export Markdown copia el frontmatter y el body del origen sin pasar por pandoc (#2436): no lleva `bibliography:` ni `csl:` —al reprocesarlo salen de la config del sitio, o de `dist/files` con `bundle: true`—, ni el CSL del paquete ni `documentclass`.
 
 Superficie estable (lista congelada; revisada desde el código en el issue #1934):
 
