@@ -12,19 +12,48 @@ export function loadReferencesCardTemplate(): Promise<string> {
 }
 
 /**
- * #2445 — fase de post-proceso HTML: las dos únicas cosas que cambian respecto
- * a la salida cruda de pandoc (quitale el enlace al índice y colocar la tarjeta
- * de referencias). El build y `iteraciones post html` llaman a esta misma
+ * #2445/#2487 — fase de post-proceso HTML: las tres únicas cosas que cambian
+ * respecto a la salida cruda de pandoc (quitarle el enlace al índice, colocar
+ * la tarjeta de referencias y subir el body propio de la collection a su banda
+ * de metadatos). El build y `iteraciones post html` llaman a esta misma
  * función, así que el build.sh reproduce el archivo final byte a byte.
  */
 export function postProcessHtml(html: string, refsCardTemplate: string): string {
-  const { html: clean, block } = extractReferencesBlock(removeTocReferencesLink(html), refsCardTemplate);
+  const withIntro = moveCollectionIntro(removeTocReferencesLink(html));
+  const { html: clean, block } = extractReferencesBlock(withIntro, refsCardTemplate);
   if (block === undefined) return clean;
   if (!clean.includes('<!-- block:referencias -->')) {
     logWarning('la tarjeta de referencias no está en format.html.blocks; la bibliografía no se inserta en la página', 'html');
     return clean;
   }
   return clean.replace('<!-- block:referencias -->', block);
+}
+
+/**
+ * #2487 — el body propio de una collection (su intro) es markdown, así que
+ * `collectionCardsContent` lo emite dentro del cuerpo de pandoc envuelto en un
+ * div `collection-intro`. Aquí se saca de ahí y se coloca en el marcador de la
+ * banda de metadatos, igual que la tarjeta de referencias con su bloque. El
+ * marco del texto (prosa, alineado a la izquierda) lo pone esta misma función,
+ * no la plantilla: así una collection sin intro no deja un div vacío ocupando
+ * sitio en la tarjeta.
+ */
+export function moveCollectionIntro(html: string): string {
+  const marker = '<!-- block:intro -->';
+  const divStart = html.indexOf('<div class="collection-intro"');
+  if (divStart < 0) return html;
+  const end = findBalancedDivEnd(html, divStart, 'el body propio de la collection');
+  if (end === undefined) return html;
+  const innerStart = html.indexOf('>', divStart) + 1;
+  const inner = html.slice(innerStart, end - '</div>'.length).trim();
+  const withoutIntro = html.slice(0, divStart) + html.slice(end);
+  if (!withoutIntro.includes(marker)) {
+    logWarning('la banda de metadatos no está en format.html.blocks; el cuerpo propio de la collection no se inserta en la página', 'html');
+    return withoutIntro;
+  }
+  if (inner === '') return withoutIntro.replace(marker, '');
+  const bloque = `<div class="mx-auto mt-10 max-w-none pt-6 text-left prose prose-xl prose-accent dark:prose-invert">${inner}</div>`;
+  return withoutIntro.replace(marker, () => bloque);
 }
 
 function stripSyntheticReferencesMarker(html: string, refsIdPos: number, start: number): string {
@@ -39,7 +68,7 @@ function stripSyntheticReferencesMarker(html: string, refsIdPos: number, start: 
   return cleaned.replace('<!-- block:referencias -->', '');
 }
 
-function findBalancedDivEnd(html: string, divStart: number): number | undefined {
+function findBalancedDivEnd(html: string, divStart: number, que = 'las referencias'): number | undefined {
   let depth = 0;
   let i = divStart;
   while (i < html.length) {
@@ -56,7 +85,7 @@ function findBalancedDivEnd(html: string, divStart: number): number | undefined 
     }
   }
   if (depth !== 0) {
-    logWarning(`HTML mal balanceado: las referencias no se extrajeron del documento; revisa los filtros Lua propios (div sin cerrar)`, 'html');
+    logWarning(`HTML mal balanceado: ${que} no se extrajeron del documento; revisa los filtros Lua propios (div sin cerrar)`, 'html');
     return undefined;
   }
   return i;

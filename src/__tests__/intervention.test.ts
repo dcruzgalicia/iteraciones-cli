@@ -112,7 +112,7 @@ describe('una intervention dentro de files[]', () => {
   ]);
 
   it('no sale en la página HTML, ni como tarjeta ni como enlace', () => {
-    const html = collectionCardsContent([documento, intervencion], hrefs, '', { title: 'Antología' });
+    const html = collectionCardsContent([documento, intervencion], hrefs, '');
     expect(html).toContain('Contenido de doc.');
     expect(html).not.toContain('regla de imprenta');
     expect(html, 'su HTML propio no existe, así que tampoco puede enlazarse').not.toContain('./regla-de-imprenta.html');
@@ -134,7 +134,7 @@ describe('una intervention dentro de files[]', () => {
 
   it('una collection de solo interventions no se puede construir', () => {
     // la comprobación vive en el build: aquí se comprueba que no queda nada
-    expect(collectionCardsContent([intervencion], hrefs, '---\ntitle: Antología\n---\n\nIntro.\n', { title: 'Antología' })).toContain('Intro.');
+    expect(collectionCardsContent([intervencion], hrefs, '---\ntitle: Antología\n---\n\nIntro.\n')).toContain('Intro.');
   });
 });
 

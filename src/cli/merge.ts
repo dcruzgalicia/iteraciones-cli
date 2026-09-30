@@ -126,7 +126,7 @@ async function composeFor(
   // #2483: la página HTML son tarjetas (los mismos hrefs que resuelve el build):
   // una con los datos de la collection y una por file con su enlace. El EPUB
   // sigue recibiendo la fusión completa.
-  if (format === 'html') return collectionCardsContent(entries, memberHrefs, src.text, src.fm);
+  if (format === 'html') return collectionCardsContent(entries, memberHrefs, src.text);
   const base = collectionBaseContent(entries, format === 'markdown' ? 'markdown' : 'html', src.text);
   // #2460: latex/html/epub no reescriben el texto crudo (lo reescribe el filtro
   // 04-image-paths sobre el AST); el markdown de dist no pasa por pandoc (#2436).

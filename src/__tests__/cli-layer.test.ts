@@ -1868,8 +1868,9 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       await runBuild(dir);
       expect(process.exitCode).toBe(0);
       const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
-      // La tarjeta Formatos va después de la tarjeta de contenido
-      expect(html.indexOf('>Formatos</h2>')).toBeGreaterThan(html.indexOf('<article'));
+      // #2487: la tarjeta Formatos va antes de la de contenido (orden por
+      // defecto), pero siempre fuera de su article
+      expect(html.indexOf('>Descarga</h2>')).toBeLessThan(html.indexOf('<article'));
       // Las referencias viven en su propia tarjeta, fuera del article
       expect(html.indexOf('id="refs-heading"')).toBeGreaterThan(html.indexOf('</article>'));
     });
@@ -1891,11 +1892,10 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       expect(html).toContain('size-12');
       expect(html).toContain('bg-accent-500/15');
       expect(html).toContain('text-accent-600 dark:text-accent-400');
-      // #2487: el main abre con poco padding (4/6/8) y el aireo de abajo lo pone
-      // la banda del footer, que es la que deja libre el botón flotante
-      expect(html).toContain('lg:px-8 pt-4 sm:pt-6 lg:pt-8');
-      expect(html).toContain('lg:px-8 pt-6 pb-24');
-      expect(html).toContain('lg:px-8 pt-8 pb-6');
+      // #2487: un solo main —container + mx-auto para el ancho máximo y el
+      // centrado, una columna por defecto, dos desde md, tres desde 2xl— con su
+      // aire de arriba (8) y el de abajo (24) que deja libre el botón flotante
+      expect(html).toContain('<main class="container mx-auto columns-1 md:columns-2 2xl:columns-3 gap-6 px-4 sm:px-6 lg:px-8 pt-8 pb-24">');
       // El botón no es un bloque del masonry (fuera del sistema de bloques)
       expect(html).not.toContain('block:volver');
       // El CSS precompilado incluye la animación scroll-driven
@@ -1906,7 +1906,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
-  it('el masonry sigue el orden de bloques por defecto (header, contenido, formatos, indice, referencias, footer)', async () => {
+  it('el masonry sigue el orden de bloques por defecto (header, título, indice, formatos, contenido, referencias, footer)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
       await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\ntoc: true\nformat:\n  latex:\n    generate: true\n', 'utf8');
@@ -1919,10 +1919,10 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       const pos = (s: string): number => html.indexOf(s);
       // Contenido distintivo de cada tarjeta (sin marcadores internos)
       expect(pos('Tarjeta identidad')).toBeGreaterThanOrEqual(0); // header
-      expect(pos('Tarjeta identidad')).toBeLessThan(pos('<article')); // contenido
-      expect(pos('<article')).toBeLessThan(pos('>Formatos</h2>'));
-      expect(pos('>Formatos</h2>')).toBeLessThan(pos('id="TOC"'));
-      expect(pos('id="TOC"')).toBeLessThan(pos('id="refs-heading"'));
+      expect(pos('Tarjeta identidad'), 'el título va tras el header').toBeLessThan(pos('>Descarga</h2>'));
+      expect(pos('id="TOC"')).toBeLessThan(pos('>Descarga</h2>'));
+      expect(pos('>Descarga</h2>')).toBeLessThan(pos('<article')); // contenido
+      expect(pos('<article')).toBeLessThan(pos('id="refs-heading"'));
       expect(pos('id="refs-heading"')).toBeLessThan(html.lastIndexOf('Tarjeta identidad final')); // footer
     });
   });
@@ -1941,7 +1941,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       expect(process.exitCode).toBe(0);
       const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
       const pos = (s: string): number => html.indexOf(s);
-      expect(pos('>Formatos</h2>')).toBeGreaterThan(pos('id="TOC"'));
+      expect(pos('>Descarga</h2>')).toBeGreaterThan(pos('id="TOC"'));
       expect(pos('Tarjeta identidad')).toBeLessThan(pos('<article'));
     });
   });
@@ -1953,7 +1953,7 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       await runBuild(dir);
       expect(process.exitCode).toBe(0);
       const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
-      expect(html).not.toContain('>Formatos</h2>');
+      expect(html).not.toContain('>Descarga</h2>');
       expect(html).not.toContain('id="TOC"');
       expect(html).not.toContain('refs-heading');
       const pos = (s: string): number => html.indexOf(s);
@@ -1978,16 +1978,61 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
-  it('el chip del contenido dice Contenido', async () => {
+  it('el chip de la tarjeta de título dice el type: Texto, Colección o Creadora', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
+      await writeFile(join(dir, 'autora.md'), ['---', 'type: creator', 'name: Autora', '---', '', 'Bio.', ''].join('\n'), 'utf8');
+      await writeFile(
+        join(dir, 'coleccion.md'),
+        ['---', 'title: Antología', 'type: collection', 'files:', '  - test.md', '---', '', 'Intro.', ''].join('\n'),
+        'utf8',
+      );
       process.exitCode = 0;
       await runBuild(dir);
       expect(process.exitCode).toBe(0);
-      const html = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
-      expect(html).toContain('>Contenido</h2>');
-      expect(html).not.toContain('>Trayectura</h2>');
-      expect(html).not.toContain('>Trayectoria</h2>');
+      const documento = await Bun.file(join(dir, 'dist', 'files', 'test-document.html')).text();
+      expect(documento, 'un file sin type dice Texto').toMatch(/>\s*Texto\s*<\/h2>/);
+      const collection = await Bun.file(join(dir, 'dist', 'files', 'antologia.html')).text();
+      expect(collection).toMatch(/>\s*Colección\s*<\/h2>/);
+      const creator = await Bun.file(join(dir, 'dist', 'files', 'autora.html')).text();
+      expect(creator).toMatch(/>\s*Creadora\s*<\/h2>/);
+      // el chip «Contenido» ya no existe: la banda nombra cada type por su nombre
+      expect(documento).not.toContain('>Contenido</h2>');
+    });
+  });
+
+  it('los campos de portada de la tarjeta de título se renderizan como markdown (#2487)', async () => {
+    await withTempDir(async (dir) => {
+      await initTestProject(dir);
+      await writeFile(
+        join(dir, 'coleccion.md'),
+        [
+          '---',
+          'title: Antología',
+          'type: collection',
+          "collectionCreatorPrefix: '*Edición*'",
+          "subject: '**Ensayo** y `código`'",
+          'files:',
+          '  - test.md',
+          '---',
+          '',
+          'Intro.',
+          '',
+        ].join('\n'),
+        'utf8',
+      );
+      process.exitCode = 0;
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+      const collection = await Bun.file(join(dir, 'dist', 'files', 'antologia.html')).text();
+      // el markdown de los campos se renderiza, como en la portada del PDF: la
+      // `&` de las clases arbitrarias no llega al CSS compilado, pero aquí lo que
+      // se lee es el HTML que emite el template
+      expect(collection, 'la cursiva del prefijo').toContain('<em>Edición</em>');
+      expect(collection, 'la negrita y el código del asunto').toContain('<strong>Ensayo</strong>');
+      expect(collection).toContain('<code>código</code>');
+      expect(collection, 'y no se ven los asteriscos ni las comillas').not.toContain('*Edición*');
+      expect(collection).not.toContain('**Ensayo**');
     });
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it, spyOn } from 'bun:test';
 import { buildFormatsArgs, buildFormatsFlag, composeHtmlTemplate, type FormatsLink } from '../builder/html-composer.js';
-import { extractReferencesBlock, loadReferencesCardTemplate, removeTocReferencesLink } from '../builder/html-postprocess.js';
+import { extractReferencesBlock, loadReferencesCardTemplate, moveCollectionIntro, removeTocReferencesLink } from '../builder/html-postprocess.js';
 import * as logger from '../lib/logger.js';
 
 /** Wrapper representativo de la tarjeta (la estructura real vive en el recurso). */
@@ -166,5 +166,49 @@ describe('formatos por argv (#2445: un valor corto por formato, nunca HTML)', ()
     expect(conLogo).toContain('logo-fill');
     expect(conLogo).toContain('<svg id="el-logo"></svg>');
     expect(conLogo).not.toContain('$logo-block$');
+  });
+});
+
+describe('moveCollectionIntro (#2487)', () => {
+  const MARCADOR = '<!-- block:intro -->';
+
+  it('sube el body propio de la collection a la banda de metadatos', () => {
+    const html = [
+      '<body><div class="banda">',
+      MARCADOR,
+      '</div><main><div class="collection-intro">',
+      '<p>Intro de la antología.</p>',
+      '<div class="nota"><p>con un div anidado</p></div>',
+      '</div><p>resto</p></main>',
+    ].join('');
+    const out = moveCollectionIntro(html);
+    expect(out).toContain('<p>Intro de la antología.</p>');
+    expect(out, 'con el div anidado entero').toContain('<div class="nota"><p>con un div anidado</p></div>');
+    expect(out, 'y fuera del cuerpo').not.toContain('collection-intro');
+    expect(out, 'el marco del texto lo pone el post-proceso').toContain('text-left prose prose-xl');
+    expect(out.indexOf('Intro de la antología.')).toBeLessThan(out.indexOf('<main>'));
+    expect(out, 'el resto del cuerpo se queda').toContain('<p>resto</p>');
+  });
+
+  it('sin body propio no toca nada', () => {
+    const html = `<body><main><p>Sin intro.</p></main>`;
+    expect(moveCollectionIntro(html)).toBe(html);
+  });
+
+  it('un intro vacío no deja div ni hueco en la banda', () => {
+    const html = ['<body><div class="banda">', MARCADOR, '</div><main><div class="collection-intro">', '   ', '</div></main>'].join('');
+    const out = moveCollectionIntro(html);
+    expect(out).not.toContain('prose');
+    expect(out, 'ni div ni marcador: la banda no deja nada').toBe('<body><div class="banda"></div><main></main>');
+  });
+
+  it('sin el marcador de la banda lo saca igual y avisa (contenido fuera de blocks)', () => {
+    const warn = spyOn(logger, 'logWarning').mockImplementation(() => {});
+    const html = '<main><div class="collection-intro"><p>Intro.</p></div><p>resto</p></main>';
+    const out = moveCollectionIntro(html);
+    expect(out).not.toContain('collection-intro');
+    expect(out).toContain('<p>resto</p>');
+    expect(warn.mock.calls.map((c) => String(c[0])).join('')).toContain('format.html.blocks');
+    warn.mockRestore();
   });
 });

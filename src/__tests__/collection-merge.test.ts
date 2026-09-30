@@ -258,22 +258,29 @@ describe.skipIf(!pandocOk)('format.markdown.merge y `iteraciones merge` (#2437)'
 
       // con collectionCreator el slug sale de su crédito (#2446)
       const html = await Bun.file(join(dir, 'dist', 'files', 'antologia-por-editora-principal.html')).text();
-      // -- una tarjeta con los datos de la collection, y una por miembro,
-      //    todas al nivel del masonry (no anidadas en la de contenido)
-      expect(html.match(/tarjeta-coleccion/g) ?? [], 'una tarjeta de datos').toHaveLength(1);
+      // -- los datos de la collection van en su tarjeta de título, la segunda
+      //    del masonry, y hay una tarjeta por miembro al mismo nivel
       expect(html.match(/tarjeta-fragmento/g) ?? [], 'una tarjeta por miembro').toHaveLength(2);
       expect(html, 'ninguna tarjeta dentro de otra: sin el article de la de contenido').not.toContain('<article');
-      expect(html.indexOf('tarjeta-coleccion'), 'la tarjeta de datos va antes que las de los miembros').toBeLessThan(
-        html.indexOf('tarjeta-fragmento'),
-      );
-      expect(html, 'la página de una collection no tiene tarjeta de contenido').not.toMatch(/>\s*Contenido\s*<\/h2>/);
-      expect(html).toMatch(/>\s*Colección\s*<\/h2>/);
-      expect(html, 'la unión de las creadoras de sus files').toContain('Autora A, Autora B');
-      expect(html, 'su crédito propio').toContain('Editora Principal');
-      expect(html).toContain('Antología');
-      expect(html).toContain('Siete piezas');
-      expect(html).toContain('1 de mayo de 2024');
-      expect(html, 'el body propio de la collection sale en su tarjeta').toContain('Intro de la antología.');
+      expect(html, 'la tarjeta de datos ya no existe').not.toContain('tarjeta-coleccion');
+      // desde el comentario de la tarjeta hasta el marcador de su intro: el
+      // <head> también lleva el título y el author en meta
+      const banda = html.slice(html.indexOf('la tarjeta del título'), html.indexOf('<!-- block:intro -->'));
+      expect(banda, 'la tarjeta lleva el chip y los datos').toMatch(/>\s*Colección\s*<\/h2>/);
+      // el orden es el de la portada del PDF de una collection: título, subtítulo,
+      // creadoras de los files y su crédito propio
+      const orden = ['Antología', 'Siete piezas', 'Autora A, Autora B', 'Editora Principal'].map((t) => banda.indexOf(t));
+      expect(
+        orden.every((i) => i > 0),
+        'los cuatro datos salen en la banda',
+      ).toBe(true);
+      expect(orden, 'y en el orden de preamble-collection').toEqual([...orden].sort((a, b) => a - b));
+      expect(banda).toContain('1 de mayo de 2024');
+      // el body propio de la collection se sube a la tarjeta de título, ya
+      // envuelto en su bloque de texto, y sale del cuerpo de pandoc
+      expect(html).toContain('text-left prose prose-xl');
+      expect(html, 'el body propio de la collection sube a la tarjeta').toContain('Intro de la antología.');
+      expect(html.indexOf('Intro de la antología.'), 'y sale del cuerpo').toBeLessThan(html.indexOf('tarjeta-fragmento'));
       // -- el enlace y el fragmento de cada miembro
       expect(html).toContain('href="./documento-por-autora-a.html"');
       expect(html).toContain('href="./sub/nota-por-autora-b.html"');
@@ -285,9 +292,13 @@ describe.skipIf(!pandocOk)('format.markdown.merge y `iteraciones merge` (#2437)'
       // el miembro sigue teniendo su propio HTML al que apuntan las tarjetas
       expect(await Bun.file(join(dir, 'dist', 'files', 'documento-por-autora-a.html')).exists()).toBe(true);
       expect(await Bun.file(join(dir, 'dist', 'files', 'sub', 'nota-por-autora-b.html')).exists()).toBe(true);
-      // -- un documento normal sigue con su tarjeta de contenido
+      // -- un documento normal: su tarjeta de título lleva el chip y los datos,
+      //    y su tarjeta de contenido solo el cuerpo
       const pagina = await Bun.file(join(dir, 'dist', 'files', 'documento-por-autora-a.html')).text();
-      expect(pagina).toMatch(/>\s*Contenido\s*<\/h2>/);
+      const bandaFile = pagina.slice(pagina.indexOf('la tarjeta del título'), pagina.indexOf('<!-- block:intro -->'));
+      expect(bandaFile).toMatch(/>\s*Texto\s*<\/h2>/);
+      // el orden de preamble/: la creadora antes del título
+      expect(bandaFile.indexOf('Autora A')).toBeLessThan(bandaFile.indexOf('Documento'));
       expect(pagina).not.toContain('tarjeta-fragmento');
       process.exitCode = 0;
     });
