@@ -429,6 +429,8 @@ Orden de los bloques del masonry: **la posición en la lista ES el orden**. Es u
 
 En `type: collection`, el bloque `contenido` no se renderiza (#2483): sus tarjetas —la de los datos de la collection y una por archivo de `files`— salen en su lugar, en el mismo orden en el que aparecería la de contenido, y cada una es una tarjeta del masonry por sí sola.
 
+`header` y `footer` no son columnas del masonry: se renderizan fuera de él, en una columna propia centrada del ancho de una columna del contenido (100% con una columna, 50% con dos, 33% con tres) (#2487). La lista `blocks` los sigue incluyendo, pero su posición ya no cambia dónde salen.
+
 ### `format.epub`
 
 #### `format.epub.generate`

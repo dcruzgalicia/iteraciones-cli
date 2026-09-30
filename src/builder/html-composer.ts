@@ -18,19 +18,33 @@ const HTML_CARDS: Record<HtmlBlockKey, string> = {
  * HTML viajan ya horneadas y no como variables de `argv` (#2445): el logo
  * (`$logo-block$`) y los `<li>` de formatos (los hrefs sí viajan por argv,
  * uno corto por formato: `--variable=fmt-epub:./doc.epub`).
+ *
+ * #2487 — `header` y `footer` no son columnas del masonry: van en su propia
+ * banda, una columna centrada del ancho de una columna del contenido. El orden
+ * de `format.html.blocks` sigue mandando para el resto, pero la posición de
+ * esos dos ya no cambia dónde se renderizan.
  */
 export async function composeHtmlTemplate(siteConfig: SiteConfig, logoInline?: string): Promise<string> {
   const skeleton = await Bun.file(join(HTML_RESOURCES_DIR, 'skeleton.html')).text();
   const order = siteConfig.format?.html?.blocks ?? [...DEFAULT_HTML_BLOCKS];
-  const blocks: string[] = [];
+  const cards: string[] = [];
+  let header = '';
+  let footer = '';
   for (const key of order) {
     const card = await Bun.file(join(HTML_RESOURCES_DIR, HTML_CARDS[key])).text();
-    blocks.push(card);
+    if (key === 'header') header = card;
+    else if (key === 'footer') footer = card;
+    else cards.push(card);
   }
   const logoBlock = logoInline
     ? `<span class="flex h-10 w-10 shrink-0 items-center justify-center text-accent-500 logo-fill">${logoInline}</span>`
     : '';
-  return skeleton.replace('<!-- cards -->', blocks.join('\n')).split('$logo-block$').join(logoBlock);
+  return skeleton
+    .replace('<!-- header -->', () => header)
+    .replace('<!-- footer -->', () => footer)
+    .replace('<!-- cards -->', () => cards.join('\n'))
+    .split('$logo-block$')
+    .join(logoBlock);
 }
 
 export interface HtmlPageVars {

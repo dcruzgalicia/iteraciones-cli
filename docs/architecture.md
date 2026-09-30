@@ -394,6 +394,8 @@ Cada documento genera sus formatos con invocaciones directas de pandoc (markdown
 
 El CLI compone los templates HTML y LaTeX efectivos una vez por build (tarjetas ordenadas según `format.html.blocks`; preámbulo con condicionales expuestos por el filtro `internal/flags` vía metadata). Así pandoc genera cada formato directamente desde el markdown original y el único post-procesamiento es la extracción de referencias del HTML (el único bloque que no puede resolver el template: no existe hasta que citeproc lo genera). Esto elimina el ensamblado de bloques y el AST intermedio del flujo anterior, y la verificación de identidad queda a cargo de la suite de tests.
 
+La página HTML es `skeleton.html` con las tarjetas del proyecto inyectadas en tres bandas (#2487): el header y el footer, **fuera** del masonry y en una columna propia centrada del ancho de una columna del contenido (la mitad con dos columnas, un tercio con tres), y en medio el `<main>` con las columnas. El fondo es papel milimetrado —dos retículas, la fina de 2px y la grande de 10px, en un tono tenue del accent— y viene de la utilidad `bg-paper-grid` de `styles.css`, con los dos tonos en variables que cambia `data-theme`; todas las tarjetas comparten opacidad y llevan rectas las dos esquinas donde se dibuja la punta.
+
 ### ¿Por qué el frontmatter fluye como metadata?
 
 El frontmatter completo se pasa a pandoc como metadata del documento (yaml_metadata_block); el CLI solo complementa con defaults (`fm ?? config`) y transformaciones (fecha humana, author-meta). El contrato de campos efectivos está documentado en `docs/frontmatter-reference.md` y `validate` advierte sobre campos sin efecto.

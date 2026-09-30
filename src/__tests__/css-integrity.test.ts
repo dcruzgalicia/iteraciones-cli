@@ -61,6 +61,54 @@ describe('compilación de Tailwind sobre dist/files', () => {
   });
 });
 
+/**
+ * #2487 — el diseño de las tarjetas y del fondo: una sola opacidad para todas las
+ * tarjetas, la punta dibujada en esquinas rectas, y el fondo como papel
+ * milimetrado (dos retículas, sin puntos ni degradados).
+ */
+describe('diseño de las tarjetas y del fondo (#2487)', () => {
+  const resources = join(import.meta.dir, '..', 'lib', 'resources');
+  const cards = [
+    'card-contenido.html',
+    'card-formatos.html',
+    'card-identity.html',
+    'card-identity-footer.html',
+    'card-indice.html',
+    'card-referencias-block.html',
+  ];
+  const read = (name: string): Promise<string> => Bun.file(join(resources, 'html', name)).text();
+
+  it('todas las tarjetas comparten la misma transparencia', async () => {
+    for (const card of cards) {
+      const html = await read(card);
+      // identity y footer repiten el marco en las dos ramas del $if$(home-href)$
+      expect([...new Set(html.match(/bg-stone-50\/\d+/g) ?? [])], card).toEqual(['bg-stone-50/75']);
+      expect([...new Set(html.match(/bg-stone-900\/\d+/g) ?? [])], card).toEqual(['bg-stone-900/65']);
+    }
+  });
+
+  it('la punta dibujada queda en las esquinas rectas', async () => {
+    for (const card of cards) {
+      const html = await read(card);
+      expect(html, card).toMatch(/rounded-tr-(xl|2xl) rounded-bl-(xl|2xl)/);
+      // nada de radio global: si vuelve, la punta se disuelve en el redondeo
+      expect(html, card).not.toMatch(/\brounded-(xl|2xl)\b/);
+    }
+  });
+
+  it('el fondo es papel milimetrado: dos retículas y ni un punto', async () => {
+    const skeleton = await read('skeleton.html');
+    expect(skeleton).toContain('bg-paper-grid');
+    expect(skeleton, 'ni el punto de la celda ni el círculo con degradado').not.toContain('radial-gradient');
+    const styles = await Bun.file(join(resources, 'styles.css')).text();
+    expect(styles).toContain('@utility bg-paper-grid');
+    expect(styles, 'la fina de 2px y la grande de 10px, en variables por tema').toContain('--grid-fine');
+    expect(styles).toContain('10px 10px');
+    expect(styles).toContain('2px 2px');
+    expect(styles, 'bg-grid-accent estaba definida y sin uso').not.toContain('bg-grid-accent');
+  });
+});
+
 describe('computeCssHash (caché por archivo mtime+size)', () => {
   // Defaults materializados por el schema: tras parse, site es completo (#2072)
   const config = (): SiteConfig => ({
