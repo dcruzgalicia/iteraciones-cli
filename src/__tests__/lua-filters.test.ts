@@ -110,7 +110,7 @@ describe.skipIf(!pandocOk)('filtros Lua html', () => {
   it('convierte :: dentro de una lista a div.spacer (nunca literal)', async () => {
     const html = await toHtml5('- ::\n- texto', SEMANTIC_FILTERS);
     expect(html).not.toContain('>::');
-    expect(html).toContain('<div class="spacer"></div>');
+    expect(html).toContain('<div class="h-[1.5em]"></div>');
   });
 
   it('envuelve Div.center en div', async () => {
@@ -125,7 +125,7 @@ describe.skipIf(!pandocOk)('filtros Lua html', () => {
 
   it('convierte :: (Div.spacer) en div vacío con los filtros semánticos', async () => {
     const html = await toHtml5('texto\n\n::\n\ntexto', SEMANTIC_FILTERS);
-    expect(html).toContain('<div class="spacer"></div>');
+    expect(html).toContain('<div class="h-[1.5em]"></div>');
   });
 
   it('no altera párrafos normales', async () => {

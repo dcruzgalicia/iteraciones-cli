@@ -38,10 +38,25 @@ describe('compilación de Tailwind sobre dist/files', () => {
       // El acento configurado (rose) se compila directamente, sin overrides
       expect(css).toContain('oklch(64.5% .246 16.439)'); // rose-500
       expect(css).not.toContain('clase-fantasma');
-      // El marcador :: (Div.spacer) tiene regla propia: no es una utilidad de
-      // Tailwind, viene del CSS base de entrada.
-      expect(css).toContain('.spacer');
+      // #2487: el CSS de entrada no aporta ninguna clase propia, así que el
+      // marcador :: (que el filtro escribe como utilidad `h-[1.5em]`) solo
+      // aparece si el HTML de la página lo usa
+      expect(css).not.toContain('.spacer');
+      expect(css).not.toContain('.subparagraph');
+      expect(css).not.toContain('.tarjeta-fragmento');
     });
+  });
+
+  it('#2487: styles.css no define ninguna clase de CSS tradicional', async () => {
+    const css = await Bun.file(join(import.meta.dir, '..', 'lib', 'resources', 'styles.css')).text();
+    // lo único que puede traer clases son utilidades @utility (que el
+    // escáner de Tailwind genera desde el HTML) y @keyframes
+    const sinComentarios = css.replace(/\/\*[\s\S]*?\*\//g, '');
+    const selectoresDeClase = sinComentarios.split('\n').filter((linea) => /^\s*\.[a-zA-Z][\w-]*(\s*,\s*\.[a-zA-Z][\w-]*)*\s*\{/.test(linea));
+    expect(selectoresDeClase, 'selectores de clase sueltos en styles.css').toEqual([]);
+    // y las utilidades que quedan son las cuatro de los casos extremos
+    const utilidades = [...sinComentarios.matchAll(/@utility\s+([\w-]+)/g)].map((m) => m[1]);
+    expect(utilidades.sort()).toEqual(['bg-paper-grid', 'logo-fill', 'scroll-reveal', 'smallcaps']);
   });
 
   it('no incluye clases que no están en ningún HTML de dist/files', async () => {

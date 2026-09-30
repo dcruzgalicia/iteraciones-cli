@@ -39,32 +39,31 @@ function capturingReporter(logs: string[]) {
 }
 
 describe('build-assets', () => {
-  it('buildAssets escribe assets/css, assets/fonts y assets/logo.svg en la salida', async () => {
+  it('buildAssets escribe assets/css y assets/logo.svg, y ningún assets/fonts (#2487)', async () => {
     await withTempDir(async (dir) => {
       const outDir = join(dir, 'dist', 'files');
       await buildAssets(outDir, dir, DEFAULT_SITE_CONFIG);
       expect(await Bun.file(join(outDir, 'assets', 'css', 'styles.css')).exists()).toBe(true);
       expect(await Bun.file(join(outDir, 'assets', 'logo.svg')).exists()).toBe(true);
-      const fonts = [...new Bun.Glob('*.ttf').scanSync({ cwd: join(outDir, 'assets', 'fonts') })];
-      expect(fonts.length).toBeGreaterThan(0);
+      // el sitio usa las fuentes del navegador: no se copia ninguna
+      expect(await Bun.file(join(outDir, 'assets', 'fonts')).exists()).toBe(false);
       const css = await Bun.file(join(outDir, 'assets', 'css', 'styles.css')).text();
-      // El CSS final incluye el CSS custom del input (fuentes y animaciones)
-      expect(css).toContain('@font-face');
-      // css y fuentes son hermanos dentro de assets/ → ../fonts sigue resolviendo
-      expect(css).toContain('url(../fonts/');
+      expect(css, 'sin @font-face ni url(../fonts/)').not.toContain('@font-face');
+      expect(css).not.toContain('url(../fonts/');
+      // el resto del CSS custom sigue dentro (las animaciones)
       expect(css).toContain('@keyframes scroll-reveal');
     });
   });
 
-  it('buildAssets copia las licencias OFL de las fuentes junto a los .ttf', async () => {
+  it('el CSS usa las fuentes por defecto del navegador (sin Exo 2 ni Space Mono)', async () => {
     await withTempDir(async (dir) => {
       const outDir = join(dir, 'dist', 'files');
       await buildAssets(outDir, dir, DEFAULT_SITE_CONFIG);
-      const exo2 = await Bun.file(join(outDir, 'assets', 'fonts', 'OFL-Exo2.txt')).text();
-      const spaceMono = await Bun.file(join(outDir, 'assets', 'fonts', 'OFL-SpaceMono.txt')).text();
-      expect(exo2).toContain('Copyright 2013 The Exo 2 Project Authors');
-      expect(exo2).toContain('SIL OPEN FONT LICENSE Version 1.1');
-      expect(spaceMono).toContain('Copyright 2016 The Space Mono Project Authors');
+      const css = await Bun.file(join(outDir, 'assets', 'css', 'styles.css')).text();
+      expect(css, 'la sans del sistema, no la del paquete').toContain('-apple-system');
+      expect(css, 'la mono del sistema').toContain('ui-monospace');
+      expect(css).not.toContain('Exo 2');
+      expect(css).not.toContain('Space Mono');
     });
   });
 
@@ -92,25 +91,13 @@ describe('build-assets', () => {
     });
   });
 
-  it('una segunda llamada no reescribe fuentes ni logo (mtime estable)', async () => {
+  it('una segunda llamada no reescribe el logo (mtime estable)', async () => {
     await withTempDir(async (dir) => {
       const outDir = join(dir, 'dist', 'files');
       await buildAssets(outDir, dir, DEFAULT_SITE_CONFIG);
-      const fonts = [...new Bun.Glob('*.ttf').scanSync({ cwd: join(outDir, 'assets', 'fonts') })].sort();
-      expect(fonts.length).toBeGreaterThan(0);
       const logoStat = await Bun.file(join(outDir, 'assets', 'logo.svg')).stat();
-      const fontMtimes = new Map<string, number>();
-      for (const f of fonts) {
-        fontMtimes.set(f, (await Bun.file(join(outDir, 'assets', 'fonts', f)).stat()).mtimeMs);
-      }
       await Bun.sleep(10);
       await buildAssets(outDir, dir, DEFAULT_SITE_CONFIG);
-      for (const f of fonts) {
-        const s = await Bun.file(join(outDir, 'assets', 'fonts', f)).stat();
-        const prev = fontMtimes.get(f);
-        if (prev === undefined) throw new Error(`sin mtime previo para ${f}`);
-        expect(s.mtimeMs).toBe(prev);
-      }
       const logoStat2 = await Bun.file(join(outDir, 'assets', 'logo.svg')).stat();
       expect(logoStat2.mtimeMs).toBe(logoStat.mtimeMs);
     });
