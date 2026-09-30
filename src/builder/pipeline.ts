@@ -6,7 +6,7 @@ import { notePdfSlots } from '../lib/script-recorder.js';
 import type { BuildMetadata, WorkSets } from './build-planner.js';
 import { generateCoverImages } from './export/cover-image.js';
 import { PDF_WORK_BASE } from './output-layout.js';
-import { createPdfConsumer, type PdfJob } from './pdf-pool.js';
+import { createPdfConsumer } from './pdf-pool.js';
 import { processDocumentFormats } from './pipeline-formats.js';
 import {
   buildPoolContexts,
@@ -31,7 +31,6 @@ interface LightPoolArgs {
   exportCtx: ExportContext;
   formatWorkSets: FormatWorkSets;
   discoveryIndex: Map<string, DiscoveryEntry>;
-  pdfJobs: PdfJob[];
   onFatalError: () => Promise<void>;
 }
 
@@ -101,7 +100,6 @@ export async function documentPipeline(
     exportCtx,
     formatWorkSets,
     discoveryIndex,
-    pdfJobs: pdfConsumer.pdfJobs,
     onFatalError: async () => {
       pdfConsumer.cancel();
       await pdfConsumer.quiesce();
