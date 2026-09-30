@@ -377,4 +377,55 @@ describe.skipIf(!pandocOk)('format.markdown.merge y `iteraciones merge` (#2437)'
       process.exitCode = 0;
     });
   }, 300_000);
+
+  // #2488 — cada type compone con su plantilla: una collection sale con el orden
+  // de campos de preamble-collection/ (título y subtítulo antes que las
+  // creadoras) y un file con el de preamble/ (las creadoras antes del título).
+  it('#2488: la página de cada type sale de su propia plantilla', async () => {
+    await withTempDir(async (dir) => {
+      await Bun.write(join(dir, 'iteraciones.config.yaml'), `${config()}\n`);
+      await Bun.write(
+        join(dir, 'coleccion.md'),
+        ['---', 'title: Antología', 'subtitle: Siete piezas', 'type: collection', 'files:', '  - doc.md', '---', '', 'Intro.', ''].join('\n'),
+      );
+      await Bun.write(join(dir, 'doc.md'), ['---', 'title: Documento', 'creator: Autora A', '---', '', 'Cuerpo.', ''].join('\n'));
+      process.exitCode = 0;
+      const { runBuild } = await import('../cli/dispatcher.js');
+      await runBuild(dir);
+      expect(process.exitCode).toBe(0);
+
+      // el orden se mira dentro de la tarjeta de título, no en la página entera
+      // (el <head> también lleva título y authoring)
+      const tarjetaDe = (html: string, hasta: string): string =>
+        html.slice(html.indexOf('break-inside-avoid pb-6', html.indexOf('>Colección</h2>') - 4000), html.indexOf(hasta));
+      const collection = await Bun.file(join(dir, 'dist', 'files', 'antologia.html')).text();
+      expect(collection, 'el chip de su type').toContain('>Colección</h2>');
+      const tarjetaCollection = tarjetaDe(collection, 'tarjeta-fragmento');
+      const pos = (html: string, campo: string): number => html.indexOf(campo);
+      expect(pos(tarjetaCollection, 'Antología'), 'collection: título antes que las creadoras').toBeLessThan(pos(tarjetaCollection, 'Autora A'));
+      expect(pos(tarjetaCollection, 'Siete piezas'), 'y el subtítulo también').toBeLessThan(pos(tarjetaCollection, 'Autora A'));
+      expect(collection, 'sin la tarjeta de contenido: sus tarjetas de file están al nivel del masonry').toContain('tarjeta-fragmento');
+      expect(collection).not.toContain('<article');
+
+      const file = await Bun.file(join(dir, 'dist', 'files', 'documento-por-autora-a.html')).text();
+      expect(file, 'el chip de su type').toContain('>Texto</h2>');
+      const tarjetaFile = file.slice(file.indexOf('break-inside-avoid pb-6'), file.indexOf('<article'));
+      expect(pos(tarjetaFile, 'Autora A'), 'file: las creadoras antes del título').toBeLessThan(pos(tarjetaFile, 'Documento'));
+      expect(file, 'con su tarjeta de contenido').toContain('<article');
+      expect(file, 'y sin las tarjetas de miembro').not.toContain('tarjeta-fragmento');
+
+      // y el build escribe una plantilla por type, cada una con su diseño
+      const tpl = async (nombre: string): Promise<string> => Bun.file(join(dir, '.iteraciones', 'templates', nombre)).text();
+      const deFile = await tpl('html.html');
+      const deCollection = await tpl('html-collection.html');
+      const deCreator = await tpl('html-creator.html');
+      expect(deFile, 'la de file lleva la tarjeta de contenido').toContain('<article');
+      expect(deCreator, 'la de creator también (por ahora idéntica)').toContain('<article');
+      expect(deCollection, 'la de collection pone su body al nivel del masonry').not.toContain('<article');
+      for (const nombre of ['html.html', 'html-collection.html', 'html-creator.html']) {
+        expect(await tpl(nombre), `${nombre}: sin la rama de collection`).not.toContain('$if(collection)$');
+      }
+      process.exitCode = 0;
+    });
+  }, 300_000);
 });

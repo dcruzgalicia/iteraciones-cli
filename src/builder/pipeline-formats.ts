@@ -223,11 +223,21 @@ async function emitHtmlPage(
   const formats = formatLinksFor(plan, dir, outSlug);
   const hasHomePage = discoveryIndex.has('index.md');
   const htmlPath = outBase(`${outSlug}${primaryOutputExtension('html')}`);
-  const isCollection = doc.frontmatter.type === 'collection';
+  // #2488 — cada type compone con su plantilla y su bloque de referencias: la
+  // misma elección que hace el LaTeX para con latex*.tex
+  const htmlType = doc.frontmatter.type === 'collection' || doc.frontmatter.type === 'creator' ? doc.frontmatter.type : 'file';
   const html = await htmlPageFromMarkdown(content, doc, {
     cwd,
     inputTarget: collectionPandocInput(doc, cwd, outSlug, 'html'),
     imagePaths,
+    templatePath:
+      htmlType === 'collection'
+        ? exportCtx.htmlCollectionTemplatePath
+        : htmlType === 'creator'
+          ? exportCtx.htmlCreatorTemplatePath
+          : exportCtx.htmlTemplatePath,
+    refsCardTemplate: exportCtx.refsCardTemplates[htmlType],
+    docType: htmlType,
     vars: {
       title: doc.frontmatter.title || slug,
       siteTitle: htmlConfig?.site?.title ?? 'iteraciones',
@@ -251,14 +261,8 @@ async function emitHtmlPage(
       collectionCreator: parseAuthors(resolveMetadataField(fm, htmlConfig, ctx.siteConfig, 'collectionCreator')),
       authors: doc.frontmatter.creator,
       docChip: docChipLabel(doc.frontmatter.type),
-      // #2483: la página de una collection no tiene tarjeta de contenido.
-      collection: isCollection,
-      // #2487: su body propio viaja en el cuerpo y el post-proceso lo sube a la banda.
-      hasIntro: isCollection && splitFrontmatter(content).body.trim() !== '',
     },
     siteConfig: ctx.siteConfig,
-    templatePath: exportCtx.htmlTemplatePath,
-    refsCardTemplate: exportCtx.refsCardTemplate,
     fm,
     bibOptions: exportCtx.bibOptions,
     luaFilters: exportCtx.filters,

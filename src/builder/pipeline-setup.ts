@@ -8,7 +8,7 @@ import { logWarning } from '../lib/logger.js';
 import { recordSupportCommand } from '../lib/script-recorder.js';
 import type { BuildMetadata, WorkSets } from './build-planner.js';
 import { loadFilterGroups } from './filter-resolver.js';
-import { composeHtmlTemplate } from './html-composer.js';
+import { composeHtmlTemplate, type HtmlDocType } from './html-composer.js';
 import { loadReferencesCardTemplate } from './html-postprocess.js';
 import { applyPrintQueueDynamics, composeLatexTemplate, detectPageSize } from './latex-preamble.js';
 import { PDF_WORK_BASE } from './output-layout.js';
@@ -58,26 +58,50 @@ export interface EffectiveTemplates {
   pdfxActive: boolean;
   cropActive: boolean;
   pageDimensions: { w: number; h: number; textW: number } | undefined;
+  /** #2488 — la de `file`; las de los otros dos types, con su propio nombre. */
   htmlTemplatePath: string;
+  htmlCollectionTemplatePath: string;
+  htmlCreatorTemplatePath: string;
   latexTemplatePath: string;
   latexCollectionTemplatePath: string;
   latexCreatorTemplatePath: string;
   latexInterventionTemplatePath: string;
-  refsCardTemplate: string;
+  /** #2488 — el bloque de la tarjeta de referencias de cada type. */
+  refsCardTemplates: Record<HtmlDocType, string>;
 }
 
-/** #2445 — las cinco plantillas que pandoc recibe por `--template`. */
-export type TemplateKind = 'html' | 'latex' | 'latex-collection' | 'latex-creator' | 'latex-intervention';
+/**
+ * #2445 — las cinco plantillas que pandoc recibe por `--template`; #2488 — con el
+ * diseño HTML por type son siete: `html` es la de `file`, y cada type con HTML
+ * tiene la suya (`intervention` no genera HTML y por eso no tiene).
+ */
+export type TemplateKind = 'html' | 'html-collection' | 'html-creator' | 'latex' | 'latex-collection' | 'latex-creator' | 'latex-intervention';
 
 const TEMPLATE_FILES: Record<TemplateKind, string> = {
   html: 'html.html',
+  'html-collection': 'html-collection.html',
+  'html-creator': 'html-creator.html',
   latex: 'latex.tex',
   'latex-collection': 'latex-collection.tex',
   'latex-creator': 'latex-creator.tex',
   'latex-intervention': 'latex-intervention.tex',
 };
 
-const TEMPLATE_SCOPES: Record<Exclude<TemplateKind, 'html'>, PreambleDocType> = {
+/** #2488 — el type cuyas tarjetas compone el HTML. `intervention` no genera
+ * HTML (`docProducesFormat`), así que no llega aquí. */
+function htmlDocTypeOf(kind: TemplateKind): HtmlDocType | undefined {
+  if (kind === 'html') return 'file';
+  if (kind === 'html-collection') return 'collection';
+  if (kind === 'html-creator') return 'creator';
+  return undefined;
+}
+
+/** #2488 — de qué type es cada plantilla: el ámbito de preamble de LaTeX y el
+ * type cuyas tarjetas compone el HTML. Por eso ya no es `Exclude<…, 'html'>`. */
+const TEMPLATE_SCOPES: Record<TemplateKind, PreambleDocType> = {
+  html: 'file',
+  'html-collection': 'collection',
+  'html-creator': 'creator',
   latex: 'file',
   'latex-collection': 'collection',
   'latex-creator': 'creator',
@@ -97,8 +121,10 @@ export interface TemplateInput {
 
 /** Compartida: la usa el build y `iteraciones template`, para byte-idéntico. */
 export async function composeTemplate(kind: TemplateKind, input: TemplateInput): Promise<string> {
-  if (kind === 'html') return composeHtmlTemplate(input.siteConfig, input.logoInline);
-  const filters = await loadPreambleFilters(input.effectiveDisabledPreamble, input.cwd, TEMPLATE_SCOPES[kind]);
+  const htmlType = htmlDocTypeOf(kind);
+  if (htmlType !== undefined) return composeHtmlTemplate(input.siteConfig, input.logoInline, htmlType);
+  const scope = TEMPLATE_SCOPES[kind];
+  const filters = await loadPreambleFilters(input.effectiveDisabledPreamble, input.cwd, scope);
   // Misma cadena que el build: sin estas dos líneas la plantilla no sale igual.
   const dims = detectPageSize(filters);
   return composeLatexTemplate({
@@ -123,21 +149,30 @@ export async function writeEffectiveTemplates(
     cropActive: false,
     pageDimensions: undefined,
     htmlTemplatePath: '',
+    htmlCollectionTemplatePath: '',
+    htmlCreatorTemplatePath: '',
     latexTemplatePath: '',
     latexCollectionTemplatePath: '',
     latexCreatorTemplatePath: '',
     latexInterventionTemplatePath: '',
-    refsCardTemplate: '',
+    refsCardTemplates: { file: '', collection: '', creator: '' },
   };
 
   const templatesDir = join(ctx.cwd, '.iteraciones', 'templates');
   await mkdir(templatesDir, { recursive: true });
   state.htmlTemplatePath = join(templatesDir, 'html.html');
+  state.htmlCollectionTemplatePath = join(templatesDir, 'html-collection.html');
+  state.htmlCreatorTemplatePath = join(templatesDir, 'html-creator.html');
   state.latexTemplatePath = join(templatesDir, 'latex.tex');
   state.latexCollectionTemplatePath = join(templatesDir, 'latex-collection.tex');
   state.latexCreatorTemplatePath = join(templatesDir, 'latex-creator.tex');
   state.latexInterventionTemplatePath = join(templatesDir, 'latex-intervention.tex');
-  state.refsCardTemplate = await loadReferencesCardTemplate();
+  // #2488 — el bloque de referencias también es una tarjeta por type
+  state.refsCardTemplates = {
+    file: await loadReferencesCardTemplate('file'),
+    collection: await loadReferencesCardTemplate('collection'),
+    creator: await loadReferencesCardTemplate('creator'),
+  };
 
   // #2419: sin archivos `.bib` no hay nada que citar, así que el preamble de
   // biblatex no se compone. Regla compartida con `iteraciones template` (el .sh
@@ -150,7 +185,11 @@ export async function writeEffectiveTemplates(
     recordSupportCommand('resources', path, ['iteraciones', 'template', kind, '-o', path]);
   };
 
-  if (htmlOn) await writeTemplate('html', state.htmlTemplatePath);
+  if (htmlOn) {
+    await writeTemplate('html', state.htmlTemplatePath);
+    await writeTemplate('html-collection', state.htmlCollectionTemplatePath);
+    await writeTemplate('html-creator', state.htmlCreatorTemplatePath);
+  }
   if (plan.generateLatex) {
     const preambleFilters = await loadPreambleFilters(disabledPreamble, ctx.cwd, 'file');
     state.biblatexAvailable = preambleFilters.some((f) => f.name === '11-bibliography');
@@ -202,12 +241,15 @@ export interface ExportContext {
   globalBibliography: string | undefined;
   globalCsl: string | undefined;
   pdfWorkDir: string;
+  /** #2488 — la de `file`; las de los otros dos types, con su propio nombre. */
   htmlTemplatePath: string;
+  htmlCollectionTemplatePath: string;
+  htmlCreatorTemplatePath: string;
   latexTemplatePath: string;
   latexCollectionTemplatePath: string;
   latexCreatorTemplatePath: string;
   latexInterventionTemplatePath: string;
-  refsCardTemplate: string;
+  refsCardTemplates: Record<HtmlDocType, string>;
 }
 
 export interface FormatWorkSets {
@@ -247,11 +289,13 @@ export async function buildPoolContexts(
     globalCsl: setup.globalCsl,
     pdfWorkDir: join(ctx.cwd, PDF_WORK_BASE),
     htmlTemplatePath: templates.htmlTemplatePath,
+    htmlCollectionTemplatePath: templates.htmlCollectionTemplatePath,
+    htmlCreatorTemplatePath: templates.htmlCreatorTemplatePath,
     latexTemplatePath: templates.latexTemplatePath,
     latexCollectionTemplatePath: templates.latexCollectionTemplatePath,
     latexCreatorTemplatePath: templates.latexCreatorTemplatePath,
     latexInterventionTemplatePath: templates.latexInterventionTemplatePath,
-    refsCardTemplate: templates.refsCardTemplate,
+    refsCardTemplates: templates.refsCardTemplates,
   };
   const formatWorkSets: FormatWorkSets = {
     htmlPaths: work.workPaths.html,

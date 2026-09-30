@@ -3,12 +3,17 @@ import { logWarning } from '../lib/logger.js';
 
 const HTML_RESOURCES_DIR = join(import.meta.dir, '../lib/resources/html');
 
+/** #2488 — el type de la página: cada uno tiene su propia tarjeta de referencias
+ * en `html/<type>/card-referencias-block.html`. */
+export type HtmlPostType = 'file' | 'collection' | 'creator';
+
 export function removeTocReferencesLink(html: string): string {
   return html.replace(/<li>\s*<a href="#refs-heading"[^>]*>.*?<\/a>\s*<\/li>/gs, '');
 }
 
-export function loadReferencesCardTemplate(): Promise<string> {
-  return Bun.file(join(HTML_RESOURCES_DIR, 'card-referencias-block.html')).text();
+/** #2488 — el bloque de la tarjeta de referencias de un type. */
+export function loadReferencesCardTemplate(type: HtmlPostType): Promise<string> {
+  return Bun.file(join(HTML_RESOURCES_DIR, type, 'card-referencias-block.html')).text();
 }
 
 /**

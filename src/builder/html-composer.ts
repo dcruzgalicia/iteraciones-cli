@@ -4,6 +4,23 @@ import { DEFAULT_HTML_BLOCKS, type HtmlBlockKey } from '../config/site-config.js
 
 const HTML_RESOURCES_DIR = join(import.meta.dir, '../lib/resources/html');
 
+/**
+ * #2488 — los types cuyo diseño HTML se compone. `intervention` no genera HTML
+ * (`docProducesFormat`), así que no tiene copia.
+ */
+export type HtmlDocType = 'file' | 'collection' | 'creator';
+
+/** #2488 — de dónde se lee cada tarjeta: `html/<type>/card-<clave>.html`. Las tres
+ * copias son independientes y sin respaldo común: editar una no toca las otras. */
+export function htmlCardsDir(type: HtmlDocType): string {
+  return join(HTML_RESOURCES_DIR, type);
+}
+
+/** #2488 — la tarjeta de título (la otra mitad del bloque `contenido`) de un type. */
+export function htmlMetadataCardPath(type: HtmlDocType): string {
+  return join(htmlCardsDir(type), 'card-metadata.html');
+}
+
 const HTML_CARDS: Record<HtmlBlockKey, string> = {
   header: 'card-identity.html',
   contenido: 'card-contenido.html',
@@ -12,10 +29,6 @@ const HTML_CARDS: Record<HtmlBlockKey, string> = {
   referencias: 'card-referencias.html',
   footer: 'card-identity-footer.html',
 };
-
-/** #2487 — la otra mitad del bloque `contenido`: la tarjeta del título, la
- * primera del masonry tras el header. */
-const HTML_METADATA_CARD = 'card-metadata.html';
 
 /**
  * Compone la plantilla HTML que pandoc recibe por `--template`. Dos piezas de
@@ -29,20 +42,28 @@ const HTML_METADATA_CARD = 'card-metadata.html';
  * del frontmatter) y la del cuerpo. El orden de `format.html.blocks` manda para
  * las tarjetas del medio; el header y el footer se quedan en sus marcadores, al
  * principio y al final.
+ *
+ * #2488 — las tarjetas se leen de `html/<type>/`: una copia independiente por
+ * type. El skeleton y `styles.css` siguen siendo compartidos (el fondo es
+ * global), pero las siete tarjetas de cada type son suyas, y como la copia ya
+ * sabe su type, en ellas no queda ninguna rama `$if(collection)$`: la de
+ * `collection` pone su body al nivel del masonry y las de `file`/`creator`
+ * llevan la tarjeta de contenido.
  */
-export async function composeHtmlTemplate(siteConfig: SiteConfig, logoInline?: string): Promise<string> {
+export async function composeHtmlTemplate(siteConfig: SiteConfig, logoInline?: string, type: HtmlDocType = 'file'): Promise<string> {
   const skeleton = await Bun.file(join(HTML_RESOURCES_DIR, 'skeleton.html')).text();
+  const cardsDir = htmlCardsDir(type);
   const order = siteConfig.format?.html?.blocks ?? [...DEFAULT_HTML_BLOCKS];
   const cards: string[] = [];
   let header = '';
   let metadata = '';
   let footer = '';
   for (const key of order) {
-    const card = await Bun.file(join(HTML_RESOURCES_DIR, HTML_CARDS[key])).text();
+    const card = await Bun.file(join(cardsDir, HTML_CARDS[key])).text();
     if (key === 'header') header = card;
     else if (key === 'footer') footer = card;
     else cards.push(card);
-    if (key === 'contenido') metadata = await Bun.file(join(HTML_RESOURCES_DIR, HTML_METADATA_CARD)).text();
+    if (key === 'contenido') metadata = await Bun.file(htmlMetadataCardPath(type)).text();
   }
   const logoBlock = logoInline
     ? `<span class="flex h-10 w-10 shrink-0 items-center justify-center text-accent-500 logo-fill">${logoInline}</span>`
@@ -70,8 +91,6 @@ export interface HtmlPageVars {
   date?: string;
   homeHref?: string;
   formats?: FormatsLink[];
-  /** #2483: la página de una collection salta la tarjeta de contenido. */
-  collection?: boolean;
   /** #2487: campos de la portada del PDF que solo vivían en LaTeX. */
   titlehead?: string;
   subject?: string;
@@ -79,8 +98,6 @@ export interface HtmlPageVars {
   collectionCreatorPrefix?: string;
   /** #2487: el chip de la banda de metadatos, según el type. */
   docChip?: string;
-  /** #2487: la collection tiene body propio para subir a la banda. */
-  hasIntro?: boolean;
   /** #2487: las creadoras y el crédito propio de la collection, uno por
    * elemento: el filtro los une con ', ' dentro de un span nowrap, como el
    * \mbox de cada creator en LaTeX. */

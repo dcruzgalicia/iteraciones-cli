@@ -81,33 +81,66 @@ describe('compilación de Tailwind sobre dist/files', () => {
  * tarjetas, la punta dibujada en esquinas rectas, y el fondo como papel
  * milimetrado (dos retículas, sin puntos ni degradados).
  */
-describe('diseño de las tarjetas y del fondo (#2487)', () => {
+describe('diseño de las tarjetas y del fondo (#2487, #2488)', () => {
   const resources = join(import.meta.dir, '..', 'lib', 'resources');
+  // #2488: las tarjetas viven en html/<type>/, una copia por type, y las tres
+  // arrancan del mismo diseño, así que las invariantes se comprueban en todas.
+  const types = ['file', 'collection', 'creator'] as const;
   const cards = [
     'card-contenido.html',
+    'card-metadata.html',
     'card-formatos.html',
     'card-identity.html',
     'card-identity-footer.html',
     'card-indice.html',
     'card-referencias-block.html',
+    'card-referencias.html',
   ];
+  /**
+   * Los dos archivos que no son una tarjeta y por eso no llevan marco: el
+   * marcador `card-referencias.html` (el marco lo pone `card-referencias-block`,
+   * que el post-proceso inyecta) y la tarjeta de contenido de una collection,
+   * que pone su body al nivel del masonry (#2483, #2488).
+   */
+  const sinMarco = (type: string, card: string): boolean =>
+    card === 'card-referencias.html' || (type === 'collection' && card === 'card-contenido.html');
   const read = (name: string): Promise<string> => Bun.file(join(resources, 'html', name)).text();
 
+  it('las tres copias tienen las mismas siete tarjetas y ninguna más', async () => {
+    for (const type of types) {
+      const entries = [...new Bun.Glob('*.html').scanSync({ cwd: join(resources, 'html', type) })].sort();
+      expect(entries, type).toEqual([...cards].sort());
+    }
+    // el skeleton es compartido: el fondo y la página no se duplican por type
+    expect(await read('skeleton.html')).toContain('bg-paper-grid');
+    // y el marcador de referencias no lleva marco: lo lleva su bloque
+    expect(await Bun.file(join(resources, 'html', 'file', 'card-referencias.html')).text()).not.toContain('rounded-tr-');
+  });
+
   it('todas las tarjetas comparten la misma transparencia', async () => {
-    for (const card of cards) {
-      const html = await read(card);
-      // identity y footer repiten el marco en las dos ramas del $if$(home-href)$
-      expect([...new Set(html.match(/bg-stone-50\/\d+/g) ?? [])], card).toEqual(['bg-stone-50/75']);
-      expect([...new Set(html.match(/bg-stone-900\/\d+/g) ?? [])], card).toEqual(['bg-stone-900/65']);
+    for (const type of types) {
+      for (const card of cards) {
+        if (sinMarco(type, card)) continue;
+        const html = await Bun.file(join(resources, 'html', type, card)).text();
+        // identity y footer repiten el marco en las dos ramas del $if$(home-href)$
+        expect([...new Set(html.match(/bg-stone-50\/\d+/g) ?? [])], `${type}/${card}`).toEqual(['bg-stone-50/75']);
+        expect([...new Set(html.match(/bg-stone-900\/\d+/g) ?? [])], `${type}/${card}`).toEqual(['bg-stone-900/65']);
+      }
     }
   });
 
   it('la punta dibujada queda en las esquinas rectas', async () => {
-    for (const card of cards) {
-      const html = await read(card);
-      expect(html, card).toMatch(/rounded-tr-(xl|2xl) rounded-bl-(xl|2xl)/);
-      // nada de radio global: si vuelve, la punta se disuelve en el redondeo
-      expect(html, card).not.toMatch(/\brounded-(xl|2xl)\b/);
+    for (const type of types) {
+      for (const card of cards) {
+        const html = await Bun.file(join(resources, 'html', type, card)).text();
+        if (sinMarco(type, card)) {
+          expect(html, `${type}/${card}`).not.toContain('rounded-tr-');
+          continue;
+        }
+        expect(html, `${type}/${card}`).toMatch(/rounded-tr-(xl|2xl) rounded-bl-(xl|2xl)/);
+        // nada de radio global: si vuelve, la punta se disuelve en el redondeo
+        expect(html, `${type}/${card}`).not.toMatch(/\brounded-(xl|2xl)\b/);
+      }
     }
   });
 

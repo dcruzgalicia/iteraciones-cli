@@ -161,6 +161,8 @@ Ejemplos:
     .description('aplica el post-proceso de iteraciones a una salida cruda de pandoc que recibe por stdin')
     .requiredOption('-o, --output <path>', 'ruta del archivo de salida')
     .option('--post <path>', 'manifiesto .iteraciones/post/<slug>.json (obligatorio en latex)')
+    // #2488: en html, el type del documento, para leer su tarjeta de referencias
+    .option('--type <type>', 'type del documento en html: file | collection | creator (por defecto: file)')
     .addHelpText(
       'after',
       `
@@ -171,7 +173,7 @@ Ejemplos:
   pandoc doc.md --to latex  | iteraciones post latex --post .iteraciones/post/doc.json -o dist/doc.tex
 `,
     )
-    .action(async (tipo: string, opts: { output: string; post?: string }) => {
+    .action(async (tipo: string, opts: { output: string; post?: string; type?: string }) => {
       await runPost(projectRoot(), tipo, opts);
     });
 
