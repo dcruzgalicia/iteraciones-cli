@@ -171,6 +171,7 @@ Además, existen los **preamble filters** (`src/lib/resources/preamble/*.tex`) q
 | `html/04-flushright` | ast | `Div.flushright` → `<div class="flushright">` |
 | `html/05-spacer` | ast | `Div.spacer` → `<div class="spacer"></div>` |
 | `html/06-subparagraph` | ast | `Header` nivel 3 → `<div class="subparagraph">` |
+| `html/07-titlepage-meta` | ast | campos de portada que LaTeX pasa por markdown → inlines, para que la tarjeta del título no muestre los asteriscos (#2487) |
 
 ### Preamble filters integrados
 
@@ -394,7 +395,7 @@ Cada documento genera sus formatos con invocaciones directas de pandoc (markdown
 
 El CLI compone los templates HTML y LaTeX efectivos una vez por build (tarjetas ordenadas según `format.html.blocks`; preámbulo con condicionales expuestos por el filtro `internal/flags` vía metadata). Así pandoc genera cada formato directamente desde el markdown original y el único post-procesamiento es la extracción de referencias del HTML (el único bloque que no puede resolver el template: no existe hasta que citeproc lo genera). Esto elimina el ensamblado de bloques y el AST intermedio del flujo anterior, y la verificación de identidad queda a cargo de la suite de tests.
 
-La página HTML es `skeleton.html` con las tarjetas del proyecto inyectadas en tres bandas (#2487): el header y el footer, **fuera** del masonry y en una columna propia centrada del ancho de una columna del contenido (la mitad con dos columnas, un tercio con tres), y en medio el `<main>` con las columnas. El fondo es papel milimetrado —dos retículas, la fina de 2px y la grande de 10px, en un tono tenue del accent— y viene de la utilidad `bg-paper-grid` de `styles.css`, con los dos tonos en variables que cambia `data-theme`; todas las tarjetas comparten opacidad y llevan rectas las dos esquinas donde se dibuja la punta.
+La página HTML es `skeleton.html`: un único `<main>` con la clase `container` de Tailwind (ancho máximo y centrado) y las columnas del masonry —una por defecto, dos desde `md` y tres desde `2xl`— donde viven todas las tarjetas en este orden: el header, la tarjeta del título (`card-metadata.html`, la otra mitad del bloque `contenido`), los bloques de `format.html.blocks` y el footer. Cada tarjeta lleva su `break-inside-avoid` y su `pb-6`, que es el aire vertical entre tarjetas: en un masonry el `gap` solo separa columnas. La tarjeta del título imprime el chip del type y los campos de la portada del PDF —`titlehead`, `subject`, autor, título, subtítulo, `collectionCreatorPrefix`, `collectionCreator`, fecha y `publishers`— con el orden de su `maketitle`: el autor antes del título en `preamble/` (file, creator) y el título antes en `preamble-collection/`. Es markdown-free, salvo el body propio de una collection, que viaja en el cuerpo de pandoc envuelto en un div `collection-intro` y `postProcessHtml` sube a esa tarjeta (igual que hace con el bloque de referencias). El fondo es papel milimetrado —dos retículas, la fina de 10px y la grande de 50px, en un tono tenue del accent— y viene de la utilidad `bg-paper-grid` de `styles.css`, con los dos tonos en variables que cambia `data-theme`; todas las tarjetas comparten opacidad y llevan rectas las dos esquinas donde se dibuja la punta.
 
 ### ¿Por qué el frontmatter fluye como metadata?
 
@@ -461,7 +462,7 @@ Decisión registrada en el issue #1542 (2026-08): **la superficie pública queda
 
 Cambios incompatibles ejecutados en la ventana pre-1.0 (agosto 2026, revisión integral + backlog):
 
-- `format.html.blocks` pasó de objeto con números a **lista ordenada** (`[header, contenido, formatos, indice, referencias, footer]`); la tarjeta de contenido se renombró de `trayectura` a `contenido`.
+- `format.html.blocks` pasó de objeto con números a **lista ordenada** (hoy `[header, indice, formatos, contenido, referencias, footer]`, con `contenido` después de `indice` y `formatos` desde #2487); la tarjeta de contenido se renombró de `trayectura` a `contenido`.
 - `accent` desconocido y `format.latex` booleano pasaron de tolerancia (warning + fallback) a **errores de validación** en build y validate.
 - El export Markdown usa **rutas relativas** de bibliografía/CSL y no incrusta el CSL del paquete ni `documentclass`.
 
