@@ -1,6 +1,3 @@
-import { existsSync } from 'node:fs';
-import { relative } from 'node:path';
-import { logWarning } from '../lib/logger.js';
 import { PACKAGED_APA7_CSL } from './state-bib.js';
 
 export function metadataValue(value: string): string {
@@ -30,14 +27,4 @@ export function publisherArg(publishers: string[]): string[] {
 export function citationCompileArgs(bibliography: string | undefined, csl: string | undefined): string[] {
   if (!bibliography) return [];
   return ['--citeproc', '--bibliography', bibliography, '--csl', csl ?? PACKAGED_APA7_CSL];
-}
-
-export function citationPortableMetadataArgs(bibliography: string | undefined, csl: string | undefined, cwd: string): string[] {
-  const args: string[] = [];
-  if (bibliography) args.push(`--metadata=bibliography:${relative(cwd, bibliography)}`);
-  if (csl) {
-    if (existsSync(csl)) args.push(`--metadata=csl:${relative(cwd, csl)}`);
-    else logWarning(`archivo CSL no encontrado: "${csl}"`, 'export');
-  }
-  return args;
 }
