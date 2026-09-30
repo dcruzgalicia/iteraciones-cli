@@ -77,11 +77,15 @@ export interface HtmlPageVars {
   subject?: string;
   publishers?: string;
   collectionCreatorPrefix?: string;
-  collectionCreator?: string;
   /** #2487: el chip de la banda de metadatos, según el type. */
   docChip?: string;
   /** #2487: la collection tiene body propio para subir a la banda. */
   hasIntro?: boolean;
+  /** #2487: las creadoras y el crédito propio de la collection, uno por
+   * elemento: el filtro los une con ', ' dentro de un span nowrap, como el
+   * \mbox de cada creator en LaTeX. */
+  authors?: string[];
+  collectionCreator?: string[];
 }
 
 type ExportFormatKey = 'pdf' | 'epub' | 'latex' | 'markdown';

@@ -104,8 +104,8 @@ describe('tarjetas de la página HTML de una collection (#2483)', () => {
   it('una tarjeta por miembro: autor, título, fragmento y enlace', () => {
     const html = collectionCardsContent([entry()], hrefs, 'cuerpo de la collection');
     expect(html).toContain('tarjeta-fragmento');
-    expect(html).toContain('<h2>Autora A</h2>');
-    expect(html).toContain('<h3>Documento</h3>');
+    expect(html).toContain('<h2 class="text-center text-xl"><span class="whitespace-nowrap">Autora A</span></h2>');
+    expect(html).toContain('<h3 class="text-center text-2xl text-accent-700 dark:text-accent-300">Documento</h3>');
     expect(html).toContain('Contenido de doc.');
     expect(html).toContain('Leer el texto completo →');
   });

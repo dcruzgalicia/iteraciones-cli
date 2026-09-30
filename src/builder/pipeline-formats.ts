@@ -248,7 +248,8 @@ async function emitHtmlPage(
       subject: htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'subject'),
       publishers: htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'publishers'),
       collectionCreatorPrefix: resolveStringField(fm, htmlConfig, ctx.siteConfig, 'collectionCreatorPrefix'),
-      collectionCreator: parseAuthors(resolveMetadataField(fm, htmlConfig, ctx.siteConfig, 'collectionCreator')).join(', '),
+      collectionCreator: parseAuthors(resolveMetadataField(fm, htmlConfig, ctx.siteConfig, 'collectionCreator')),
+      authors: doc.frontmatter.creator,
       docChip: docChipLabel(doc.frontmatter.type),
       // #2483: la página de una collection no tiene tarjeta de contenido.
       collection: isCollection,
@@ -577,12 +578,14 @@ export function collectionScanContent(entries: CollectionEntry[], content: strin
 const MASONRY_WRAPPER = '<div class="break-inside-avoid pb-6">';
 
 /**
- * #2483 — tipografía del texto de las tarjetas: `prose` más las reglas de
- * encabezados, citas y tablas de la tarjeta de contenido. Sin ellas, al salir
- * del `article.prose` el fragmento y el body propio quedarían sin formato.
+ * #2483 — tipografía del texto de las tarjetas: `prose` y los colores de sus
+ * enlaces, que es lo único que el markup de la tarjeta no puede poner en un
+ * sitio mejor. El texto anidado del que no hay control (el fragmento) lo
+ * formatea el plugin de tipografía; los encabezados de la tarjeta llevan sus
+ * propias clases (#2487), sin reglas de CSS que los cazen.
  */
 const CARD_TEXT_CLASSES =
-  'prose prose-xl prose-accent dark:prose-invert max-w-none [&_blockquote]:border-accent-500/40 [&_.citation_a]:text-accent-950 dark:[&_.citation_a]:text-accent-50 [&_.citation_a]:underline [&_.citation_a]:underline-offset-4 [&_.citation_a]:decoration-accent-500/60 [&_.citation_a]:transition-colors [&_.citation_a]:duration-200 [&_.citation_a:hover]:decoration-accent-500 [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-accent-500/10 [&_pre]:bg-stone-100 dark:[&_pre]:bg-stone-950/70 [&_h1:not([class])]:text-2xl [&_h1.unnumbered]:text-2xl [&_h2:not([class])]:text-xl [&_h3:not([class])]:text-xl [&_h3:not([class])]:text-accent-700 dark:[&_h3:not([class])]:text-accent-300 [&_h4:not([class])]:text-xl [&_h4:not([class])]:uppercase [&_h4:not([class])]:tracking-wide [&_h5:not([class])]:text-xl [&_h5:not([class])]:italic [&_h6:not([class])]:text-xl [&_h6:not([class])]:italic [&_h6:not([class])]:font-normal [&_table]:border-accent-500/10 [&_th]:border-accent-500/10 [&_td]:border-accent-500/10';
+  'prose prose-xl dark:prose-invert max-w-none [--tw-prose-links:var(--color-accent-600)] [--tw-prose-invert-links:var(--color-accent-500)]';
 
 /**
  * #2487 — la punta de las esquinas de una tarjeta: la L de la arriba-izquierda
@@ -620,7 +623,9 @@ const MEMBER_TYPE_LABEL: Record<string, string> = { file: 'Texto', creator: 'Cre
 const LINK_STRETCH_CLASSES = 'after:absolute after:inset-0';
 
 function collectionCard(e: CollectionEntry, href: string | undefined): string {
-  const creator = e.creator.length > 0 ? e.creator.join(', ') : 'Anónima';
+  // #2487 — cada nombre en su span nowrap, como el \mbox de cada creator en
+  // LaTeX: la línea se parte entre nombres y nunca dentro de uno
+  const creator = e.creator.length > 0 ? e.creator.map((n) => `<span class="whitespace-nowrap">${n}</span>`).join(', ') : 'Anónima';
   const title = e.title || 'Sin título';
   const fragment = extractFragment(e.body);
   // `::::` (4 colons) siempre: el fragmento puede ser él mismo un fenced div y
@@ -628,8 +633,12 @@ function collectionCard(e: CollectionEntry, href: string | undefined): string {
   const card = [`:::: {class="${COLLECTION_CARD_CLASSES}"}`, ''];
   const typeLabel = MEMBER_TYPE_LABEL[e.type ?? 'file'];
   if (typeLabel !== undefined) card.push(`<h2 class="${MEMBER_PILL_CLASSES}">${typeLabel}</h2>`, '');
-  card.push(`<h2>${creator}</h2>`, '', `<h3>${title}</h3>`);
-  if (e.subtitle) card.push('', `<h4>${e.subtitle}</h4>`);
+  card.push(
+    `<h2 class="text-center text-xl">${creator}</h2>`,
+    '',
+    `<h3 class="text-center text-2xl text-accent-700 dark:text-accent-300">${title}</h3>`,
+  );
+  if (e.subtitle) card.push('', `<h4 class="text-center text-xl uppercase tracking-wide">${e.subtitle}</h4>`);
   if (fragment !== '') card.push('', fragment);
   if (href !== undefined) {
     card.push('', `<p class="text-center"><a href="${href}" class="${LINK_STRETCH_CLASSES}">Leer el texto completo →</a></p>`);
