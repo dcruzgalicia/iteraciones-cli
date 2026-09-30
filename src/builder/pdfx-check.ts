@@ -172,16 +172,16 @@ function processResult(
   claves: string[],
   i: number,
   cache?: PdfxCacheHandle,
-): { validated: boolean; failed: boolean; falloLines: string[] } {
+): { failed: boolean; falloLines: string[] } {
   const where = (iss: PdfCheckIssue): string => (iss.page !== null && iss.page !== undefined ? ` — página ${iss.page + 1}` : '');
   if (result === undefined) {
-    return { validated: true, failed: false, falloLines: [`${file}: sin resultado del validador`] };
+    return { failed: false, falloLines: [`${file}: sin resultado del validador`] };
   }
   if (!result.valid) {
     const lines = [`${file}: no cumple PDF/X-1a (${plural(result.errors.length, 'fallo', 'fallos')})`];
     for (const e of result.errors) lines.push(`  [${e.code}] ${e.message}${where(e)}`);
     for (const w of result.warnings) lines.push(`  advertencia — [${w.code}] ${w.message}${where(w)}`);
-    return { validated: true, failed: true, falloLines: lines };
+    return { failed: true, falloLines: lines };
   }
   if (cache && result.warnings.length === 0 && claves[i] !== undefined && claves[i] !== '') {
     cache.out[claves[i] ?? ''] = '1';
@@ -189,7 +189,7 @@ function processResult(
   for (const w of result.warnings) {
     logWarning(`${file}: advertencia PDF/X-1a — [${w.code}] ${w.message}${where(w)}`, 'pdfx');
   }
-  return { validated: true, failed: false, falloLines: [] };
+  return { failed: false, falloLines: [] };
 }
 
 function finalizeCache(cache: PdfxCacheHandle, claves: string[]): void {
@@ -275,8 +275,8 @@ export async function runPdfxOutputValidation(
   for (const [i, file] of pdfs.entries()) {
     if (isCached(claves, i, cache)) continue;
     const result = porFile.get(file);
-    const { validated: wasValidated, failed: wasFailed, falloLines } = processResult(file, result, claves, i, cache);
-    if (wasValidated) validated++;
+    const { failed: wasFailed, falloLines } = processResult(file, result, claves, i, cache);
+    validated++;
     if (wasFailed) failed++;
     fallos.push(...falloLines);
   }
