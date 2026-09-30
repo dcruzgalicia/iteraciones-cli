@@ -418,6 +418,21 @@ El tracker del build (`src/cli/progress.ts`) es un renderer propio y síncrono: 
 
 Los nombres de los filters Lua y de los preamble filters se derivan de un glob ordenado de `src/lib/resources/` (el prefijo numérico define el orden): agregar un filter nuevo es crear un archivo, sin tocar código. Las descripciones viven en la primera línea de comentario de cada archivo.
 
+### Los cuatro types, y su ruta por formato (#2486)
+
+`type` es el único eje de variación del pipeline, y hay cuatro: `file`, `collection`, `creator` e `intervention`. El cuadro completo (qué emite cada uno, con qué plantilla y con qué campos propios) está en `frontmatter-reference.md` § «Los cuatro types»; aquí, la parte arquitectónica: **cada type tiene su propia plantilla y su propio ámbito de preamble**, y es lo que hace que el resto del pipeline no tenga ni un `if` por type.
+
+| | Plantilla LaTeX | Ámbito de preamble | Plantilla HTML | Tarjetas HTML |
+|---|---|---|---|---|
+| `file` | `latex.tex` | `preamble/` | `html.html` | `src/lib/resources/html/file/` |
+| `collection` | `latex-collection.tex` | `preamble-collection/` | `html-collection.html` | `src/lib/resources/html/collection/` |
+| `creator` | `latex-creator.tex` | `preamble-creator/` | `html-creator.html` | `src/lib/resources/html/creator/` |
+| `intervention` | `latex-intervention.tex` | `preamble-intervention/` | — (no genera HTML) | — |
+
+- **La ruta de fusión**: solo `collection` tiene una. `pipeline-formats.ts` la resuelve por formato —`collectionBaseContent` para PDF, EPUB y Markdown (fusión entera), `collectionCardsContent` para HTML (una tarjeta por miembro) y `printableEntries` fuera las interventions de los dos formatos de lectura (#2485)—. Los otros tres types pasan por el mismo camino que un `file`.
+- **La elección de plantilla** ocurre una vez, en `pipeline-setup.ts`: `TEMPLATE_KINDS` enumera las siete (cuatro de LaTeX y tres de HTML) y `writeEffectiveTemplates` escribe una por type en `.iteraciones/templates/`. Después cada documento recibe la suya, en `emitHtmlPage` y en `markdownToLatex`, con el mismo criterio: el `type` de su frontmatter, con `file` como valor por defecto. `TEMPLATE_SCOPES` es el único mapa que traduce de plantilla a type, y ahora cubre las siete (antes solo las de LaTeX, porque el HTML no tenía types).
+- **La postcard** (referencias) sigue el mismo camino: `loadReferencesCardTemplate(type)` la lee de la copia del type, y `iteraciones post html --type` la recibe en el replay del `build.sh`.
+
 ### ¿Por qué no hay plugins/tipos de documento/paginación?
 
 El proyecto comenzó con una arquitectura muy ambiciosa (plugins ESM, 8 tipos de documento, paginación, temas, layouts) que fue simplificada drásticamente entre v0.8 y v0.10. La eliminación de ~3000+ líneas de código muerto mejoró la mantenibilidad, velocidad y predictibilidad del pipeline. Ver `CHANGELOG.md` para los detalles de cada release.
