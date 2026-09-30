@@ -21,9 +21,9 @@ import * as logger from '../lib/logger.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { registerSkip, SKIP_REASONS } from './helpers.js';
 
-/** el comentario propio de card-metadata.html: ancla única de la tarjeta del
- * título (el skeleton también la nombra, pero al enumerar las tarjetas) */
-const ANCHOR_BANDA = 'la tarjeta del título: la primera del masonry';
+/** #2488 — ancla de la tarjeta del título en la plantilla compuesta: el chip es lo
+ * único que solo está en ella (las tres copias lo llevan). */
+const ANCHOR_TITULO = '$doc-chip$';
 
 const pandocOk = await getPandocVersion().catch(() => null);
 if (!pandocOk) registerSkip('render.test.ts', SKIP_REASONS.pandoc);
@@ -117,8 +117,8 @@ describe('composeHtmlTemplate', () => {
     const pos = (s: string): number => tpl.indexOf(s);
     // Contenido distintivo de cada tarjeta (sin marcadores internos)
     expect(pos('Tarjeta identidad')).toBeGreaterThan(-1); // header
-    expect(pos(ANCHOR_BANDA)).toBeGreaterThan(pos('Tarjeta identidad')); // título, tras el header
-    expect(pos('$if(toc)$')).toBeGreaterThan(pos(ANCHOR_BANDA)); // indice (marca de flag)
+    expect(pos(ANCHOR_TITULO)).toBeGreaterThan(pos('Tarjeta identidad')); // título, tras el header
+    expect(pos('$if(toc)$')).toBeGreaterThan(pos(ANCHOR_TITULO)); // indice (marca de flag)
     expect(pos('$if(formats)$')).toBeGreaterThan(pos('$if(toc)$')); // formatos, tras el índice
     expect(pos('Tarjeta documento')).toBeGreaterThan(pos('$if(formats)$')); // contenido
     expect(pos('$if(has-references)$')).toBeGreaterThan(pos('Tarjeta documento')); // referencias
@@ -152,24 +152,30 @@ describe('composeHtmlTemplate', () => {
     expect(tpl.indexOf('$if(formats)$')).toBeGreaterThan(tpl.indexOf('$if(toc)$'));
   });
 
-  it('en una collection el body sale fuera de la tarjeta de contenido (#2483)', async () => {
-    const tpl = await composeHtmlTemplate(DEFAULT_SITE_CONFIG);
-    // la tarjeta de contenido es la que lleva el comentario del article; su
-    // rama de collection está justo antes
-    const card = tpl.slice(tpl.lastIndexOf('$if(collection)$', tpl.indexOf('<!-- Tarjeta documento -->')));
-    const rama = card.split('$if(collection)$')[1]?.split('$else$') ?? ['', ''];
-    // las tarjetas de cada file son del masonry, no del article
-    expect(rama[0]).toContain('$body$');
-    expect(rama[0], 'la rama de collection no trae la tarjeta de contenido').not.toContain('<article');
-    expect(rama[1], 'el resto de documentos sigue con su article').toContain('<article');
+  it('#2483, #2488: en una collection el body sale fuera de la tarjeta de contenido, sin ramas', async () => {
+    const collection = await composeHtmlTemplate(DEFAULT_SITE_CONFIG, undefined, 'collection');
+    // la copia de collection pone su body al nivel del masonry
+    expect(collection, 'las tarjetas de cada file son del masonry, no del article').toContain('$body$');
+    expect(collection, 'y no hay article').not.toContain('<article');
+    // file y creator llevan la tarjeta de contenido normal
+    for (const type of ['file', 'creator'] as const) {
+      const tpl = await composeHtmlTemplate(DEFAULT_SITE_CONFIG, undefined, type);
+      expect(tpl, type).toContain('<article');
+      expect(tpl, type).toContain('$body$');
+    }
+    // y en ninguna copia queda la rama de collection que antes los separaba
+    for (const type of ['file', 'collection', 'creator'] as const) {
+      const tpl = await composeHtmlTemplate(DEFAULT_SITE_CONFIG, undefined, type);
+      expect(tpl, `${type}: sin $if(collection)$`).not.toContain('$if(collection)$');
+    }
   });
 
-  it('la banda de metadatos imprime la portada del PDF, con el orden de cada type (#2487)', async () => {
-    const tpl = await composeHtmlTemplate(DEFAULT_SITE_CONFIG);
+  it('la tarjeta del título imprime la portada del PDF, con el orden de cada type (#2487, #2488)', async () => {
+    const tpl = await composeHtmlTemplate(DEFAULT_SITE_CONFIG, undefined, 'collection');
     // el compositor ya sustituyó los marcadores: la tarjeta va de su comentario
     // al marcador del body propio de la collection
     const intro = '<!-- block:intro -->';
-    const banda = tpl.slice(tpl.indexOf(ANCHOR_BANDA), tpl.indexOf(intro) + intro.length);
+    const banda = tpl.slice(tpl.indexOf(ANCHOR_TITULO), tpl.indexOf(intro) + intro.length);
     // el chip va delante, y su texto lo pone el type (doc-chip)
     expect(banda).toContain('$doc-chip$');
     expect(banda.indexOf('$doc-chip$')).toBeLessThan(banda.indexOf('$author-names$'));
@@ -187,13 +193,18 @@ describe('composeHtmlTemplate', () => {
       '$publishers$',
     ];
     for (const campo of campos) expect(banda, campo).toContain(campo);
-    // collection: título y subtítulo antes que las creadoras (preamble-collection)
-    const [ramaCollection = '', ramaResto = ''] = banda.split('$if(collection)$')[1]?.split('$else$') ?? [];
+    // #2488 — el orden lo pone la copia, sin ramas: en una collection el título y
+    // el subtítulo van antes que las creadoras (preamble-collection), y en file y
+    // creator las creadoras van antes del título (preamble/)
     const pos = (texto: string, campo: string): number => texto.indexOf(campo);
-    expect(pos(ramaCollection, '$doc-title$')).toBeLessThan(pos(ramaCollection, '$author-names$'));
-    expect(pos(ramaCollection, '$subtitle$')).toBeLessThan(pos(ramaCollection, '$author-names$'));
-    // file y creator: las creadoras antes del título (preamble/)
-    expect(pos(ramaResto, '$author-names$')).toBeLessThan(pos(ramaResto, '$doc-title$'));
+    expect(pos(banda, '$doc-title$'), 'collection: título antes que las creadoras').toBeLessThan(pos(banda, '$author-names$'));
+    expect(pos(banda, '$subtitle$'), 'y el subtítulo también').toBeLessThan(pos(banda, '$author-names$'));
+    for (const type of ['file', 'creator'] as const) {
+      const otro = await composeHtmlTemplate(DEFAULT_SITE_CONFIG, undefined, type);
+      const tarjeta = otro.slice(otro.indexOf(ANCHOR_TITULO), otro.indexOf('<!-- Tarjeta documento -->'));
+      expect(pos(tarjeta, '$author-names$'), `${type}: creadoras antes del título`).toBeLessThan(pos(tarjeta, '$doc-title$'));
+      expect(pos(tarjeta, '$doc-title$'), `${type}: y el título antes del subtítulo`).toBeLessThan(pos(tarjeta, '$subtitle$'));
+    }
   });
 
   it('la tarjeta del título es la segunda del masonry (#2487)', async () => {
@@ -202,8 +213,8 @@ describe('composeHtmlTemplate', () => {
     // por defecto, dos desde lg y tres desde 2xl
     expect(tpl).toContain('<main class="container mx-auto columns-1 lg:columns-2 2xl:columns-3 gap-6');
     // el título va justo detrás del header, y los dos dentro del masonry
-    expect(tpl.indexOf(ANCHOR_BANDA)).toBeGreaterThan(tpl.indexOf('Tarjeta identidad'));
-    expect(tpl.indexOf(ANCHOR_BANDA)).toBeLessThan(tpl.indexOf('<!-- Tarjeta documento -->'));
+    expect(tpl.indexOf(ANCHOR_TITULO)).toBeGreaterThan(tpl.indexOf('Tarjeta identidad'));
+    expect(tpl.indexOf(ANCHOR_TITULO)).toBeLessThan(tpl.indexOf('<!-- Tarjeta documento -->'));
     const masonry = tpl.slice(tpl.indexOf('<main'), tpl.indexOf('</main>'));
     expect(masonry, 'el título es una tarjeta más del masonry').toContain('$doc-chip$');
     // y como toda tarjeta del masonry: no se parte entre columnas y deja aire

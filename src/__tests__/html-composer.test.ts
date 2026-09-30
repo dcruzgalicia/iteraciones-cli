@@ -77,7 +77,7 @@ describe('extractReferencesBlock', () => {
   });
 
   it('el recurso real compone la tarjeta con el chip del heading (sin clases en TS)', async () => {
-    const cardTemplate = await loadReferencesCardTemplate();
+    const cardTemplate = await loadReferencesCardTemplate('file');
     const html = [
       '<article>',
       '<p>Texto.</p>',

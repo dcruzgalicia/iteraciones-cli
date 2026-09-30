@@ -1,0 +1,36 @@
+    <!-- #2487 — la tarjeta del título de un documento: la primera del masonry
+         tras el header. Lleva su propio marco de tarjeta (el de la que fue la de
+         contenido) y el chip del type delante. El orden de los campos es el de la
+         portada del PDF (preamble/19-maketitle.tex): las creadoras antes del
+         título. #2488 — esta copia es la de `type: file`; la de `creator` vive
+         en html/creator/ y la de `collection` en html/collection/, cada una
+         con su propio diseño. -->
+    <div class="break-inside-avoid pb-6">
+    <div class="relative rounded-tr-2xl rounded-bl-2xl border border-accent-500/30 bg-stone-50/75 dark:bg-stone-900/65 p-6 shadow-sm ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 transition-colors duration-200 hover:border-accent-500/40 [overflow-wrap:anywhere] [&::before]:pointer-events-none [&::before]:absolute [&::before]:left-2 [&::before]:top-2 [&::before]:h-3 [&::before]:w-3 [&::before]:border-l [&::before]:border-t [&::before]:border-accent-500/40 [&::before]:content-[''] [&::after]:pointer-events-none [&::after]:absolute [&::after]:bottom-2 [&::after]:right-2 [&::after]:h-3 [&::after]:w-3 [&::after]:border-b [&::after]:border-r [&::after]:border-accent-500/40 [&::after]:content-[''] text-center">
+      <!-- el chip, como los de las demás tarjetas: su tamaño y a la izquierda -->
+      <div class="text-left">
+        <h2 class="inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-12 text-accent-600 dark:text-accent-400">$doc-chip$</h2>
+      </div>
+      $if(titlehead)$
+      <p class="mb-2 text-sm font-mono text-accent-600 dark:text-accent-400">$titlehead$</p>
+      $endif$
+      $if(subject)$
+      <p class="mb-4 text-base italic text-accent-950 dark:text-accent-50">$subject$</p>
+      $endif$
+      $if(author-names)$
+      <p class="mb-3 text-lg font-bold text-accent-950 dark:text-accent-50">$author-names$</p>
+      $endif$
+      $if(doc-title)$
+      <h1 class="mb-4 font-bold uppercase tracking-wide text-3xl sm:text-4xl text-accent-500">$doc-title$</h1>
+      $endif$
+      $if(subtitle)$
+      <p class="mb-6 text-xl italic text-accent-950 dark:text-accent-50">$subtitle$</p>
+      $endif$
+      $if(date)$
+      <p class="mb-2 text-sm font-mono text-accent-600 dark:text-accent-400">$date$</p>
+      $endif$
+      $if(publishers)$
+      <p class="text-sm italic text-accent-700 dark:text-accent-300">$publishers$</p>
+      $endif$
+    </div>
+    </div>

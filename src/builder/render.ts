@@ -17,7 +17,11 @@ interface HtmlPageOptions {
   vars: HtmlPageVars;
   siteConfig: SiteConfig;
   templatePath: string;
+  /** #2488 — el bloque de la tarjeta de referencias del type del documento. */
   refsCardTemplate: string;
+  /** #2488 — el type, que viaja al argv de `iteraciones post html` (por defecto
+   * `file`, que es el type por defecto de la CLI). */
+  docType?: 'file' | 'collection' | 'creator';
   fm: Record<string, unknown>;
   bibOptions?: BibOptions;
   luaFilters?: LuaFilterGroup;
@@ -46,7 +50,6 @@ function metadataBandArgs(vars: HtmlPageVars): string[] {
   for (const nombre of vars.authors ?? []) args.push(`--metadata=author-names:${metadataValue(nombre)}`);
   for (const nombre of vars.collectionCreator ?? []) args.push(`--metadata=collection-creator-names:${metadataValue(nombre)}`);
   if (vars.docChip) args.push(`--variable=doc-chip:${vars.docChip}`);
-  if (vars.hasIntro) args.push('--variable=has-intro:1');
   return args;
 }
 
@@ -80,9 +83,6 @@ function buildHtmlMetadataArgs(
   if (css) args.push(`--metadata=css:${css}`);
   if (vars.authorMeta) args.push(`--metadata=author-meta:${vars.authorMeta}`);
   args.push(...metadataBandArgs(vars));
-  // #2483: solo las collections; la plantilla usa `$if(collection)$` para sacar
-  // su body de la tarjeta de contenido y dejarlo al nivel del masonry.
-  if (vars.collection) args.push('--variable=collection:1');
   const formats = vars.formats ?? [];
   // El logo y los <li> de formatos viven en la plantilla; el argv solo lleva
   // un flag y un href corto por formato (#2445: nada de HTML multilínea).
@@ -123,7 +123,12 @@ export async function htmlPageFromMarkdown(content: string, doc: BuildDocument, 
   const final = postProcessHtml(html, refsCardTemplate);
   // #2445: si difiere de la salida cruda, el .sh hace `pandoc > crudo` y luego
   // `iteraciones post html < crudo -o dist`. Si no difiere, pandoc ya escribe dist.
-  const postArgv = final !== html && opts.scriptOutputPath !== undefined ? ['iteraciones', 'post', 'html', '-o', opts.scriptOutputPath] : undefined;
+  // #2488 — el type va en el argv: `iteraciones post html` tiene que leer la
+  // tarjeta de referencias de esa copia
+  const postArgv =
+    final !== html && opts.scriptOutputPath !== undefined
+      ? ['iteraciones', 'post', 'html', '--type', opts.docType ?? 'file', '-o', opts.scriptOutputPath]
+      : undefined;
   resolveScriptStdout(html, opts.scriptOutputPath, final, postArgv);
   return final;
 }
