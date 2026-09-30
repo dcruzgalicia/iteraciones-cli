@@ -39,7 +39,12 @@ function metadataBandArgs(vars: HtmlPageVars): string[] {
   meta('subject', vars.subject);
   meta('publishers', vars.publishers);
   meta('collection-creator-prefix', vars.collectionCreatorPrefix);
-  meta('collection-creator', vars.collectionCreator);
+  // Los nombres de las creadoras viajan uno a uno, igual que a LaTeX, donde cada
+  // creator va en su \mbox: el filtro de html/07-titlepage-meta los envuelve en
+  // un span nowrap y los une con ', ', para que la línea se parta entre nombres
+  // y nunca dentro de uno.
+  for (const nombre of vars.authors ?? []) args.push(`--metadata=author-names:${metadataValue(nombre)}`);
+  for (const nombre of vars.collectionCreator ?? []) args.push(`--metadata=collection-creator-names:${metadataValue(nombre)}`);
   if (vars.docChip) args.push(`--variable=doc-chip:${vars.docChip}`);
   if (vars.hasIntro) args.push('--variable=has-intro:1');
   return args;

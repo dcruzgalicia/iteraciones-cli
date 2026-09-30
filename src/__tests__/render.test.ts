@@ -172,17 +172,17 @@ describe('composeHtmlTemplate', () => {
     const banda = tpl.slice(tpl.indexOf(ANCHOR_BANDA), tpl.indexOf(intro) + intro.length);
     // el chip va delante, y su texto lo pone el type (doc-chip)
     expect(banda).toContain('$doc-chip$');
-    expect(banda.indexOf('$doc-chip$')).toBeLessThan(banda.indexOf('$author-meta$'));
+    expect(banda.indexOf('$doc-chip$')).toBeLessThan(banda.indexOf('$author-names$'));
     // el marcador del body propio de la collection, que sube el post-proceso
     expect(banda).toContain('<!-- block:intro -->');
     const campos = [
       '$titlehead$',
       '$subject$',
-      '$author-meta$',
+      '$author-names$',
       '$doc-title$',
       '$subtitle$',
       '$collection-creator-prefix$',
-      '$collection-creator$',
+      '$collection-creator-names$',
       '$date$',
       '$publishers$',
     ];
@@ -190,10 +190,10 @@ describe('composeHtmlTemplate', () => {
     // collection: título y subtítulo antes que las creadoras (preamble-collection)
     const [ramaCollection = '', ramaResto = ''] = banda.split('$if(collection)$')[1]?.split('$else$') ?? [];
     const pos = (texto: string, campo: string): number => texto.indexOf(campo);
-    expect(pos(ramaCollection, '$doc-title$')).toBeLessThan(pos(ramaCollection, '$author-meta$'));
-    expect(pos(ramaCollection, '$subtitle$')).toBeLessThan(pos(ramaCollection, '$author-meta$'));
+    expect(pos(ramaCollection, '$doc-title$')).toBeLessThan(pos(ramaCollection, '$author-names$'));
+    expect(pos(ramaCollection, '$subtitle$')).toBeLessThan(pos(ramaCollection, '$author-names$'));
     // file y creator: las creadoras antes del título (preamble/)
-    expect(pos(ramaResto, '$author-meta$')).toBeLessThan(pos(ramaResto, '$doc-title$'));
+    expect(pos(ramaResto, '$author-names$')).toBeLessThan(pos(ramaResto, '$doc-title$'));
   });
 
   it('la tarjeta del título es la segunda del masonry (#2487)', async () => {

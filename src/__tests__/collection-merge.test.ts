@@ -269,12 +269,18 @@ describe.skipIf(!pandocOk)('format.markdown.merge y `iteraciones merge` (#2437)'
       expect(banda, 'la tarjeta lleva el chip y los datos').toMatch(/>\s*Colección\s*<\/h2>/);
       // el orden es el de la portada del PDF de una collection: título, subtítulo,
       // creadoras de los files y su crédito propio
-      const orden = ['Antología', 'Siete piezas', 'Autora A, Autora B', 'Editora Principal'].map((t) => banda.indexOf(t));
+      const orden = ['Antología', 'Siete piezas', 'Autora A', 'Editora Principal'].map((t) => banda.indexOf(t));
       expect(
         orden.every((i) => i > 0),
         'los cuatro datos salen en la banda',
       ).toBe(true);
       expect(orden, 'y en el orden de preamble-collection').toEqual([...orden].sort((a, b) => a - b));
+      // #2487: cada creadora viaja en su span nowrap (el \mbox de LaTeX) y se
+      // unen con ', ', para que la línea se parta entre nombres y no dentro de uno
+      expect(banda, 'las creadoras de los files, una por span').toContain(
+        '<span class="whitespace-nowrap">Autora A</span>, <span class="whitespace-nowrap">Autora B</span>',
+      );
+      expect(banda, 'y el crédito propio también').toContain('<span class="whitespace-nowrap">Editora Principal</span>');
       expect(banda).toContain('1 de mayo de 2024');
       // el body propio de la collection se sube a la tarjeta de título, ya
       // envuelto en su bloque de texto, y sale del cuerpo de pandoc
