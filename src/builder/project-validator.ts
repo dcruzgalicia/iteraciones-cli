@@ -207,10 +207,32 @@ export function validateFrontmatterFields(parsed: Record<string, unknown>): Vali
   ];
 }
 
+/**
+ * Qué hace una línea de vallas de colones con el div abierto más interno:
+ * `open` si abre uno, `close` si lo cierra, `undefined` si no es una valla (o
+ * si es una suelta que no cierra nada). Las vallas admiten **tres o más**
+ * colones —cuatro son la forma de anidar, y la que usa el builder para las
+ * tarjetas de miembro de una collection—; para cerrar, pandoc exige al menos
+ * tantos colones como en la apertura. Se apila la longitud de cada apertura.
+ * Una valla suelta (sin atributos y sin nada abierto) no abre nada y sigue
+ * contando como `:` suelta.
+ */
+function divFenceAction(trimmed: string, fences: number[]): 'open' | 'close' | undefined {
+  const abre = trimmed.match(/^(:{3,})\s*\{/);
+  if (abre?.[1] !== undefined) {
+    fences.push(abre[1].length);
+    return 'open';
+  }
+  const abierta = fences.length > 0 ? fences[fences.length - 1] : undefined;
+  const cierra = trimmed.match(/^(:{3,})\s*$/);
+  if (abierta === undefined || cierra?.[1] === undefined) return undefined;
+  return cierra[1].length >= abierta ? 'close' : undefined;
+}
+
 export function looseColonLines(body: string, lineOffset = 0): number[] {
   const hits: number[] = [];
+  const fences: number[] = [];
   let inCode = false;
-  let divDepth = 0;
   let lineNum = 0;
   for (const rawLine of body.split('\n')) {
     lineNum++;
@@ -220,12 +242,9 @@ export function looseColonLines(body: string, lineOffset = 0): number[] {
       continue;
     }
     if (inCode) continue;
-    if (/^:::\s*\{/.test(trimmed)) {
-      divDepth++;
-      continue;
-    }
-    if (trimmed === ':::' && divDepth > 0) {
-      divDepth--;
+    const valla = divFenceAction(trimmed, fences);
+    if (valla !== undefined) {
+      if (valla === 'close') fences.pop();
       continue;
     }
     if (trimmed === '::' || trimmed === ':;') continue;
