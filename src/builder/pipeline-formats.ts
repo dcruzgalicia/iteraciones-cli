@@ -556,14 +556,23 @@ const CARD_TEXT_CLASSES =
   'prose prose-xl prose-accent dark:prose-invert max-w-none [&_blockquote]:border-accent-500/40 [&_.citation_a]:text-accent-950 dark:[&_.citation_a]:text-accent-50 [&_.citation_a]:underline [&_.citation_a]:underline-offset-4 [&_.citation_a]:decoration-accent-500/60 [&_.citation_a]:transition-colors [&_.citation_a]:duration-200 [&_.citation_a:hover]:decoration-accent-500 [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-accent-500/10 [&_pre]:bg-stone-100 dark:[&_pre]:bg-stone-950/70 [&_h1:not([class])]:text-2xl [&_h1.unnumbered]:text-2xl [&_h2:not([class])]:text-xl [&_h3:not([class])]:text-xl [&_h3:not([class])]:text-accent-700 dark:[&_h3:not([class])]:text-accent-300 [&_h4:not([class])]:text-xl [&_h4:not([class])]:uppercase [&_h4:not([class])]:tracking-wide [&_h5:not([class])]:text-xl [&_h5:not([class])]:italic [&_h6:not([class])]:text-xl [&_h6:not([class])]:italic [&_h6:not([class])]:font-normal [&_table]:border-accent-500/10 [&_th]:border-accent-500/10 [&_td]:border-accent-500/10';
 
 /**
+ * #2487 — la punta de las esquinas de una tarjeta: la L de la arriba-izquierda
+ * y la de la abajo-derecha, como en el resto de tarjetas del HTML. Va en tono
+ * claro (`/30`), el de las tarjetas ligeras, y la tarjeta de datos de la
+ * collection usa `/40` por ser la tarjeta principal.
+ */
+const CARD_CORNERS =
+  "[&::before]:pointer-events-none [&::before]:absolute [&::before]:left-2 [&::before]:top-2 [&::before]:h-3 [&::before]:w-3 [&::before]:border-l [&::before]:border-t [&::before]:border-accent-500/30 [&::before]:content-[''] [&::after]:pointer-events-none [&::after]:absolute [&::after]:bottom-2 [&::after]:right-2 [&::after]:h-3 [&::after]:w-3 [&::after]:border-b [&::after]:border-r [&::after]:border-accent-500/30 [&::after]:content-['']";
+
+/**
  * #2483 — clases de la tarjeta de un miembro: la misma tarjeta redondeada que
  * las del resto del HTML. Van en `class="..."` (y no en `{.clase}`) porque
  * varias llevan `:` y `/`, que el atributo de un fenced div con punto no admite.
  */
-const COLLECTION_CARD_CLASSES = `tarjeta-fragmento rounded-tr-xl rounded-bl-xl border border-accent-500/25 bg-stone-50/75 dark:bg-stone-900/65 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 ${CARD_TEXT_CLASSES}`;
+const COLLECTION_CARD_CLASSES = `tarjeta-fragmento relative rounded-tr-xl rounded-bl-xl border border-accent-500/25 bg-stone-50/75 dark:bg-stone-900/65 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] ${CARD_CORNERS} ${CARD_TEXT_CLASSES}`;
 
 /** #2483 — marco de la tarjeta de la collection: el de la tarjeta de contenido. */
-const DATA_CARD_CLASSES = `tarjeta-coleccion relative rounded-tr-2xl rounded-bl-2xl border border-accent-500/30 bg-stone-50/75 dark:bg-stone-900/65 p-6 shadow-sm ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 outline outline-1 outline-offset-4 outline-accent-500/10 transition-colors duration-200 hover:border-accent-500/40 [overflow-wrap:anywhere] [&::before]:pointer-events-none [&::before]:absolute [&::before]:left-2 [&::before]:top-2 [&::before]:h-3 [&::before]:w-3 [&::before]:border-l [&::before]:border-t [&::before]:border-accent-500/40 [&::before]:content-[''] [&::after]:pointer-events-none [&::after]:absolute [&::after]:bottom-2 [&::after]:right-2 [&::after]:h-3 [&::after]:w-3 [&::after]:border-b [&::after]:border-r [&::after]:border-accent-500/40 [&::after]:content-[''] ${CARD_TEXT_CLASSES}`;
+const DATA_CARD_CLASSES = `tarjeta-coleccion relative rounded-tr-2xl rounded-bl-2xl border border-accent-500/30 bg-stone-50/75 dark:bg-stone-900/65 p-6 shadow-sm ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 transition-colors duration-200 hover:border-accent-500/40 [overflow-wrap:anywhere] [&::before]:pointer-events-none [&::before]:absolute [&::before]:left-2 [&::before]:top-2 [&::before]:h-3 [&::before]:w-3 [&::before]:border-l [&::before]:border-t [&::before]:border-accent-500/40 [&::before]:content-[''] [&::after]:pointer-events-none [&::after]:absolute [&::after]:bottom-2 [&::after]:right-2 [&::after]:h-3 [&::after]:w-3 [&::after]:border-b [&::after]:border-r [&::after]:border-accent-500/40 [&::after]:content-[''] ${CARD_TEXT_CLASSES}`;
 
 /** Ficha de la tarjeta de la collection: mismas clases que la de card-contenido.html. */
 const DATA_PILL_CLASSES =
@@ -602,6 +611,17 @@ function collectionDataCard(fm: Record<string, unknown>, body: string): string {
   return [MASONRY_WRAPPER, '', ...card, '', '</div>'].join('\n');
 }
 
+/** Ficha del chip de la tarjeta de un miembro: la de la ficha, con menos aire abajo. */
+const MEMBER_PILL_CLASSES =
+  'inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-6 text-accent-600 dark:text-accent-400';
+
+/**
+ * #2487 — el chip de la tarjeta de un miembro dice qué type es. `file` es el
+ * type por defecto (casi ningún `.md` lo declara), así que sin `type:` también
+ * sale «Archivo». Las interventions nunca llegan aquí (#2485).
+ */
+const MEMBER_TYPE_LABEL: Record<string, string> = { file: 'Archivo', creator: 'Creadora' };
+
 function collectionCard(e: CollectionEntry, href: string | undefined): string {
   const creator = e.creator.length > 0 ? e.creator.join(', ') : 'Anónima';
   const title = e.title || 'Sin título';
@@ -609,6 +629,8 @@ function collectionCard(e: CollectionEntry, href: string | undefined): string {
   // `::::` (4 colons) siempre: el fragmento puede ser él mismo un fenced div y
   // pandoc cierra el div externo con la primera valla de 4 que encuentre.
   const card = [`:::: {class="${COLLECTION_CARD_CLASSES}"}`, ''];
+  const typeLabel = MEMBER_TYPE_LABEL[e.type ?? 'file'];
+  if (typeLabel !== undefined) card.push(`<h2 class="${MEMBER_PILL_CLASSES}">${typeLabel}</h2>`, '');
   card.push(`<h2>${creator}</h2>`, '', `<h3>${title}</h3>`);
   if (e.subtitle) card.push('', `<h4>${e.subtitle}</h4>`);
   if (fragment !== '') card.push('', fragment);
