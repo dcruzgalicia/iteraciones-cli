@@ -10,6 +10,31 @@ describe('looseColonLines (vocabulario semántico del cuerpo)', () => {
     expect(looseColonLines(':\n\ntexto\n\n:::\n\n::::\n')).toEqual([1, 5, 7]);
   });
 
+  // #2492 — la valla de un div admite tres o más colones: cuatro es la forma de
+  // anidar, y la que usa el builder para las tarjetas de miembro
+  it('no marca un div anidado de cuatro y tres colones', () => {
+    const body = ['Antes.', '', ':::: {.nota}', '', '::: {.advertencia}', '', 'Texto dentro.', '', ':::', '', '::::', '', 'Después.'].join('\n');
+    expect(looseColonLines(body)).toEqual([]);
+  });
+
+  it('no marca la apertura y el cierre de un div de cuatro colones', () => {
+    expect(looseColonLines(':::: {.nota}\n\nTexto.\n\n::::')).toEqual([]);
+  });
+
+  it('cierra con una valla más larga que la apertura', () => {
+    expect(looseColonLines('::: {.nota}\n\nTexto.\n\n::::')).toEqual([]);
+  });
+
+  it('sigue marcando la valla suelta dentro de un div de cuatro colones', () => {
+    // con tres no cierra un div abierto con cuatro: es texto, y avisa
+    expect(looseColonLines(':::: {.nota}\n\n:::\n')).toEqual([3]);
+  });
+
+  it('sigue marcando la valla suelta sin nada abierto', () => {
+    expect(looseColonLines('texto\n\n::::\n')).toEqual([3]);
+    expect(looseColonLines('texto\n\n:::\n')).toEqual([3]);
+  });
+
   it('no marca "::" espaciador ni ":;" sin indentación', () => {
     const body = 'texto\n\n::\n\ntexto\n\n:;\n\ntexto';
     expect(looseColonLines(body)).toEqual([]);
