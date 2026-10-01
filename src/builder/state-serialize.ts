@@ -1,13 +1,19 @@
 import { mkdir, rename, rm } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { logWarning } from '../lib/logger.js';
-import type { BibFileCache } from './state-bib.js';
-import type { FileCacheEntry, FilterFileCache } from './state-hash.js';
-
-export type { BibFileCache, FilterFileCache };
-
 import type { DiscoveryEntry } from './types.js';
 
+// Estos tres shapes viven aquí y no en sus consumidores: es el módulo al que
+// todos importan, así que declararlos aquí es lo que rompe el ciclo con
+// `state-hash` y `state-bib`, que los usan como valor por defecto.
+export interface FileCacheEntry {
+  mtime: number;
+  size: number;
+  hash: string;
+}
+
+export type FilterFileCache = Record<string, FileCacheEntry>;
+export type BibFileCache = Record<string, FileCacheEntry>;
 export type CssFileCache = Record<string, FileCacheEntry>;
 
 const STATE_PATH = join('.iteraciones', 'state.json');
@@ -21,9 +27,9 @@ export interface BuildState {
   outputDir?: string;
   filtersHash?: string;
   filterFileCache?: FilterFileCache;
-  schemaFileCache?: Record<string, import('./state-hash.js').FileCacheEntry>;
+  schemaFileCache?: Record<string, FileCacheEntry>;
   configHashes?: Record<string, string>;
-  configFileCache?: Record<string, import('./state-hash.js').FileCacheEntry>;
+  configFileCache?: Record<string, FileCacheEntry>;
   bibHash?: string;
   pdfxCache?: Record<string, string>;
   bibFileCache?: BibFileCache;

@@ -1,9 +1,9 @@
 import type { SiteConfig } from '../config/config-schema.js';
 import { type ActiveFormats, computeActiveFormats, toActiveFormats } from '../config/site-config.js';
 import type { BibOptions } from '../lib/pandoc-runner.js';
-import { type BibFileCache, computeBibHash, resolveBibOptions } from './state-bib.js';
-import { computeConfigHashes, computeFiltersHash, type FilterFileCache } from './state-hash.js';
-import type { BuildState } from './state-serialize.js';
+import { computeBibHash, resolveBibOptions } from './state-bib.js';
+import { computeConfigHashes, computeFiltersHash } from './state-hash.js';
+import type { BibFileCache, BuildState, FileCacheEntry, FilterFileCache } from './state-serialize.js';
 import type { BuildDocument } from './types.js';
 
 type WorkFormatKey = 'print' | 'html' | 'epub' | 'markdown';
@@ -13,10 +13,10 @@ export interface BuildMetadata {
   newFormats: string[];
   removedFormats: string[];
   configHashes: Record<string, string>;
-  configFileCache: Record<string, import('./state-hash.js').FileCacheEntry>;
+  configFileCache: Record<string, FileCacheEntry>;
   filtersHash: string;
   filterFileCache: FilterFileCache;
-  schemaFileCache: Record<string, import('./state-hash.js').FileCacheEntry>;
+  schemaFileCache: Record<string, FileCacheEntry>;
   bibHash: string;
   bibFileCache: BibFileCache;
   formatInvalidated: Record<WorkFormatKey, boolean>;

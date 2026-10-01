@@ -3,7 +3,7 @@ import { dirname } from 'node:path';
 import { BuildError, translateSystemError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
 import type { BuildMetadata } from './build-planner.js';
-import { parseAuthors } from './discover.js';
+import { parseAuthors } from './discover-frontmatter.js';
 import { primaryOutputExtension } from './output-layout.js';
 import type { BuildDocument } from './types.js';
 
