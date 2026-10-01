@@ -311,6 +311,56 @@ describe('runPdfxOutputValidation (fase final del build)', () => {
     });
   });
 
+  it('salida no-JSON del binario se reporta como PDFCHECK_OUTPUT (#2499)', async () => {
+    await withTempDir(async (dir) => {
+      useIsolatedManagedBin(dir);
+      await initPdfxProject(dir);
+      await mkdir(join(dir, 'dist', 'files'), { recursive: true });
+      await writeFile(join(dir, 'dist', 'files', 'doc.pdf'), '%PDF-1.4 fake', 'utf8');
+      // El binario corre pero no devuelve JSON: es la rama de parseo, no la de spawn.
+      await writeFakeBinary(dir, 'esto no es json');
+      const config = await loadSiteConfig(dir);
+
+      let thrown: unknown;
+      try {
+        await runPdfxOutputValidation(join(dir, 'dist', 'files'), config, { allowBuild: false });
+      } catch (err) {
+        thrown = err;
+      }
+      expect(thrown).toBeInstanceOf(Error);
+      const message = (thrown as Error).message;
+      expect(message).toContain('no cumple PDF/X-1a');
+      expect(message).toContain('[PDFCHECK_OUTPUT]');
+      expect(message).toContain('salida inesperada del binario');
+    });
+  });
+
+  it('el binario que no arranca se reporta como PDFCHECK_RUN (#2499)', async () => {
+    await withTempDir(async (dir) => {
+      useIsolatedManagedBin(dir);
+      await initPdfxProject(dir);
+      await mkdir(join(dir, 'dist', 'files'), { recursive: true });
+      await writeFile(join(dir, 'dist', 'files', 'doc.pdf'), '%PDF-1.4 fake', 'utf8');
+      await writeFakeBinary(dir, '{"valid": true, "level": "PDF/X-1a:2001", "errors": [], "warnings": []}');
+      const config = await loadSiteConfig(dir);
+
+      // El binario se resuelve, pero exec falla al lanzarlo.
+      const execSpy = spyOn(runLib, 'exec').mockRejectedValue(new ProcessSpawnError('iteraciones-pdfcheck'));
+      let thrown: unknown;
+      try {
+        await runPdfxOutputValidation(join(dir, 'dist', 'files'), config, { allowBuild: false });
+      } catch (err) {
+        thrown = err;
+      } finally {
+        execSpy.mockRestore();
+      }
+      expect(thrown).toBeInstanceOf(Error);
+      const message = (thrown as Error).message;
+      expect(message).toContain('[PDFCHECK_RUN]');
+      expect(message).toContain('iteraciones-pdfcheck');
+    });
+  });
+
   it('caché PDF/X: el segundo build no invoca el validador y hereda la certificación (#2190)', async () => {
     await withTempDir(async (dir) => {
       useIsolatedManagedBin(dir);
