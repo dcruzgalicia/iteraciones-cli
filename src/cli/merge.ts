@@ -2,7 +2,7 @@ import { basename, dirname, join, relative, sep } from 'node:path';
 import { resolveCollectionFile } from '../builder/collection-files.js';
 import { loadSlugIndex } from '../builder/discover.js';
 import { printFlags } from '../builder/image-flags.js';
-import { rewriteImagePaths } from '../builder/image-processor.js';
+import { relImageMapFor, rewriteImagePaths } from '../builder/image-processor.js';
 import { buildLatexPandocContent, mergeConfigImages, preprocessDocumentImages } from '../builder/latex-composer.js';
 import { aggregateCollectionCreators } from '../builder/orchestrator.js';
 import { ASSETS_IMAGES_DIR, DIST_FILES_DIR } from '../builder/output-layout.js';
@@ -72,40 +72,42 @@ async function readCollectionSource(cwd: string, input: string) {
   return { inputPath, relativePath, text, fm, files };
 }
 
-interface MergeContext {
+export interface MergeContext {
   doc: BuildDocument;
   relImageMap: Map<string, string>;
   docDir: string;
 }
 
-/** Reproduce la pasada de imágenes del build hacia `dist/files/<nivel>/assets/images`. */
-async function buildMergeContext(
-  cwd: string,
-  src: Awaited<ReturnType<typeof readCollectionSource>>,
-  entries: CollectionEntry[],
-  siteConfig: SiteConfig,
-  outSlug: string,
-): Promise<MergeContext> {
-  const distRoot = join(cwd, DIST_FILES_DIR);
-  const outDir = dirname(src.relativePath) === '.' ? distRoot : join(distRoot, dirname(src.relativePath));
+/**
+ * Reproduce la pasada de imágenes del build hacia `assets/images`, con las
+ * mismas medidas de página y el mismo recorte. La comparten `iteraciones merge`
+ * y `iteraciones markdown`: los dos reconstruyen el mapa que el build calcula,
+ * y si el formato del href cambia tiene que cambiar en los dos a la vez.
+ */
+export async function buildImagesContext(opts: {
+  cwd: string;
+  siteConfig: SiteConfig;
+  content: string;
+  fm: Record<string, unknown>;
+  filePath: string;
+  relativePath: string;
+  assetsDir: string;
+  outSlug: string;
+}): Promise<MergeContext> {
+  const { cwd, siteConfig, content, fm, filePath, relativePath, assetsDir, outSlug } = opts;
   const flags = await printFlags(siteConfig, cwd);
-  const doc = { filePath: src.inputPath, relativePath: src.relativePath, frontmatter: src.fm } as unknown as BuildDocument;
+  const doc = { filePath, relativePath, frontmatter: fm } as unknown as BuildDocument;
   const images = await preprocessDocumentImages(
-    collectionScanContent(entries, src.text),
+    content,
     doc,
-    mergeConfigImages(src.fm, siteConfig.format?.pdf, siteConfig, cwd),
+    mergeConfigImages(fm, siteConfig.format?.pdf, siteConfig, cwd),
     flags.pageDimensions,
     flags.cropActive,
     flags.pdfxActive,
-    join(outDir, ASSETS_IMAGES_DIR),
+    assetsDir,
     outSlug,
   );
-  const relImageMap = new Map(
-    [...images.imageMap]
-      .filter(([from, dst]) => dst !== from)
-      .map(([from, dst]): [string, string] => [from, `./${ASSETS_IMAGES_DIR}/${basename(dst)}`]),
-  );
-  return { doc, relImageMap, docDir: dirname(src.inputPath) };
+  return { doc, relImageMap: relImageMapFor(images.imageMap), docDir: dirname(filePath) };
 }
 
 async function composeFor(
@@ -159,7 +161,18 @@ export async function runMerge(cwd: string, input: string, options: { output?: s
     // las imágenes que escribe este comando se llaman igual que las del build.
     const stem = basename(output, '.md');
     const outSlug = stem.endsWith(`.${format}`) ? stem.slice(0, -(format.length + 1)) : stem;
-    const ctx = await buildMergeContext(cwd, src, entries, siteConfig, outSlug);
+    const distRoot = join(cwd, DIST_FILES_DIR);
+    const outDir = dirname(src.relativePath) === '.' ? distRoot : join(distRoot, dirname(src.relativePath));
+    const ctx = await buildImagesContext({
+      cwd,
+      siteConfig,
+      content: collectionScanContent(entries, src.text),
+      fm: src.fm,
+      filePath: src.inputPath,
+      relativePath: src.relativePath,
+      assetsDir: join(outDir, ASSETS_IMAGES_DIR),
+      outSlug,
+    });
     // #2483: los enlaces de las tarjetas HTML salen de los mismos slugs que usa
     // el discovery del build, así `merge --format html` sigue siendo byte-idéntico.
     const memberHrefs = format === 'html' ? memberHtmlHrefs(src.relativePath, entries, await loadSlugIndex(cwd)) : new Map<string, string>();

@@ -503,3 +503,15 @@ export async function processDocumentImages(
 
   return { imageMap, processedFiles };
 }
+
+/**
+ * El mapa de imágenes reescrito a rutas de `assets/`. Lo comparten el build,
+ * `iteraciones merge` y `iteraciones markdown`: los tres tienen que escribir
+ * el mismo href, o el markdown que generan no reproduce el HTML del build.
+ * Las entradas sin cambios (src === dst) se descartan.
+ */
+export function relImageMapFor(imageMap: Map<string, string>): Map<string, string> {
+  return new Map(
+    [...imageMap].filter(([src, dst]) => dst !== src).map(([src, dst]): [string, string] => [src, `./${ASSETS_IMAGES_DIR}/${basename(dst)}`]),
+  );
+}

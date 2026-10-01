@@ -3,9 +3,9 @@ import { resolveCollectionFile } from '../builder/collection-files.js';
 import { loadSlugIndex } from '../builder/discover.js';
 import { applyCreatorTitle } from '../builder/discover-frontmatter.js';
 import { assembleExportDocument } from '../builder/export/assemble.js';
-import { printFlags } from '../builder/image-flags.js';
+
 import { rewriteFmImagePaths } from '../builder/image-processor.js';
-import { mergeConfigImages, preprocessDocumentImages } from '../builder/latex-composer.js';
+
 import { aggregateCollectionCreators } from '../builder/orchestrator.js';
 import { ASSETS_IMAGES_DIR } from '../builder/output-layout.js';
 import { collectionBaseContent, getCreatorLinks, memberSlugMap, readCollectionEntries, writeDistMarkdown } from '../builder/pipeline-formats.js';
@@ -16,6 +16,7 @@ import { BuildError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
 import { fail, logSuccess } from '../lib/logger.js';
 import { resolvePath } from '../lib/paths.js';
+import { buildImagesContext } from './merge.js';
 
 /**
  * El nivel del documento dentro del proyecto (`.`, `posts`, `a/b`): la salida
@@ -57,33 +58,6 @@ async function collectionFiles(cwd: string, relativePath: string, fm: Record<str
  * reescribiría las imágenes con medidas distintas a las de la fase de recursos.
  * El prefijo del nombre lo decide el outSlug, que el build deriva del `-o`.
  */
-async function distImageMap(
-  cwd: string,
-  siteConfig: Awaited<ReturnType<typeof loadSiteConfig>>,
-  content: string,
-  fm: Record<string, unknown>,
-  entries: Awaited<ReturnType<typeof readCollectionEntries>>,
-  assetsDir: string,
-  inputPath: string,
-  outSlug: string,
-): Promise<{ relImageMap: Map<string, string>; docDir: string }> {
-  const flags = await printFlags(siteConfig, cwd);
-  const doc = { filePath: inputPath, relativePath: relative(cwd, inputPath), frontmatter: fm } as unknown as BuildDocument;
-  const images = await preprocessDocumentImages(
-    collectionBaseContent(entries, 'latex', content),
-    doc,
-    mergeConfigImages(fm, siteConfig.format?.pdf, siteConfig, cwd),
-    flags.pageDimensions,
-    flags.cropActive,
-    flags.pdfxActive,
-    assetsDir,
-    outSlug,
-  );
-  const relImageMap = new Map(
-    [...images.imageMap].filter(([src, dst]) => dst !== src).map(([src, dst]): [string, string] => [src, `./${ASSETS_IMAGES_DIR}/${basename(dst)}`]),
-  );
-  return { relImageMap, docDir: dirname(inputPath) };
-}
 
 /**
  * #2445/#2452 — `iteraciones markdown <origen> -o <salida>` escribe el markdown de
@@ -123,16 +97,16 @@ export async function runMarkdown(cwd: string, input: string, options: { output?
     const memberSlugs = rootFiles.length > 0 ? memberSlugMap(rootFiles, await loadSlugIndex(cwd)) : undefined;
     // El outSlug del build es el nombre del propio `-o`: con el mismo prefijo,
     // las imágenes que escribe este comando se llaman igual que las del build.
-    const { relImageMap, docDir } = await distImageMap(
+    const { relImageMap, docDir } = await buildImagesContext({
       cwd,
       siteConfig,
-      content,
+      content: collectionBaseContent(entries, 'latex', content),
       fm,
-      entries,
-      join(dirname(output), ASSETS_IMAGES_DIR),
-      inputPath,
-      basename(output, '.md'),
-    );
+      filePath: inputPath,
+      relativePath: relative(cwd, inputPath),
+      assetsDir: join(dirname(output), ASSETS_IMAGES_DIR),
+      outSlug: basename(output, '.md'),
+    });
 
     await writeDistMarkdown({
       label: relativePath,
