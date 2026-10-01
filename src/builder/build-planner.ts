@@ -6,7 +6,9 @@ import { computeConfigHashes, computeFiltersHash } from './state-hash.js';
 import type { BibFileCache, BuildState, FileCacheEntry, FilterFileCache } from './state-serialize.js';
 import type { BuildDocument } from './types.js';
 
-type WorkFormatKey = 'print' | 'html' | 'epub' | 'markdown';
+/** Los cuatro grupos de trabajo, en el orden en que se recorren. El tipo sale de aquí. */
+export const WORK_FORMATS = ['print', 'html', 'epub', 'markdown'] as const;
+type WorkFormatKey = (typeof WORK_FORMATS)[number];
 
 export interface BuildMetadata {
   currentFormats: string[];
@@ -107,18 +109,17 @@ interface ExportGroup {
   enabled: boolean;
 }
 
+const emptyWorkSets = (): Record<WorkFormatKey, BuildDocument[]> =>
+  Object.fromEntries(WORK_FORMATS.map((key) => [key, [] as BuildDocument[]])) as Record<WorkFormatKey, BuildDocument[]>;
+
 function exportGroupsFor(activeFormats: ActiveFormats): ExportGroup[] {
-  return [
-    { key: 'print', enabled: activeFormats.pdf || activeFormats.latex },
-    { key: 'html', enabled: activeFormats.html },
-    { key: 'epub', enabled: activeFormats.epub },
-    { key: 'markdown', enabled: activeFormats.markdown },
-  ];
+  // `print` agrupa PDF y LaTeX: comparten salida, así que uno basta para activarlo.
+  return WORK_FORMATS.map((key) => ({ key, enabled: key === 'print' ? activeFormats.pdf || activeFormats.latex : activeFormats[key] }));
 }
 
 function collectWorkDocs(exportSets: Record<WorkFormatKey, BuildDocument[]>, docsChanged: Set<string>, allDocs: BuildDocument[]): BuildDocument[] {
   const workDocs = new Map<string, BuildDocument>();
-  for (const doc of [...exportSets.print, ...exportSets.html, ...exportSets.epub, ...exportSets.markdown]) {
+  for (const doc of WORK_FORMATS.flatMap((key) => exportSets[key])) {
     workDocs.set(doc.relativePath, doc);
   }
   for (const doc of allDocs) {
@@ -172,18 +173,16 @@ export function computeWorkSets(
     (meta.bibInvalidated &&
       (meta.activeFormats.pdf || meta.activeFormats.latex || meta.activeFormats.html || meta.activeFormats.epub || meta.activeFormats.markdown));
 
-  const exportSets: Record<WorkFormatKey, BuildDocument[]> = { print: [], html: [], epub: [], markdown: [] };
+  const exportSets = emptyWorkSets();
   for (const group of groups) {
     if (!group.enabled) continue;
     exportSets[group.key] = allDocs.filter((d) => docsChanged.has(d.relativePath) || meta.formatInvalidated[group.key] || meta.bibInvalidated);
   }
 
-  const workPaths: Record<WorkFormatKey, Set<string>> = {
-    print: new Set(exportSets.print.map((d) => d.relativePath)),
-    html: new Set(exportSets.html.map((d) => d.relativePath)),
-    epub: new Set(exportSets.epub.map((d) => d.relativePath)),
-    markdown: new Set(exportSets.markdown.map((d) => d.relativePath)),
-  };
+  const workPaths = Object.fromEntries(WORK_FORMATS.map((key) => [key, new Set(exportSets[key].map((d) => d.relativePath))])) as Record<
+    WorkFormatKey,
+    Set<string>
+  >;
   const workDocList = collectWorkDocs(exportSets, docsChanged, allDocs);
 
   return { docsChanged, anyWork, exportSets, workPaths, workDocList };

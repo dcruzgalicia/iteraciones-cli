@@ -44,30 +44,44 @@ function xmpListField(tag: string, values: string[] | undefined): string | null 
   return values && values.length > 0 ? `\\${tag}{${values.map(escapeXmpValue).join('\\sep ')}}` : null;
 }
 
+/**
+ * Los 18 campos del XMP, en el orden en que salen: qué clave de `PdfXmpMetadata`
+ * es, con qué tag XMP se emite y si es escalar o lista. Es la única lista;
+ * `xmpMetadataFor` la recorre para leer el frontmatter y `buildXmpdataContent`
+ * para emitir, así que un campo nuevo es una fila y no dos ediciones.
+ */
+export const XMP_FIELDS: { key: keyof PdfXmpMetadata; tag: string; fm: string | null; kind: 'str' | 'list' }[] = [
+  { key: 'title', tag: 'Title', fm: 'title', kind: 'str' },
+  { key: 'authors', tag: 'Author', fm: 'creator', kind: 'list' },
+  // `lang` lo pasa el pipeline ya resuelto; no sale del frontmatter.
+  { key: 'lang', tag: 'Language', fm: null, kind: 'str' },
+  // XMP declara Subject como escalar: la lista del frontmatter se une antes.
+  { key: 'subject', tag: 'Subject', fm: 'subject', kind: 'str' },
+  { key: 'dateIso', tag: 'Date', fm: 'date', kind: 'str' },
+  { key: 'publishers', tag: 'Publisher', fm: 'publisher', kind: 'list' },
+  { key: 'keywords', tag: 'Keywords', fm: 'keywords', kind: 'list' },
+  { key: 'description', tag: 'Description', fm: 'description', kind: 'str' },
+  { key: 'contributors', tag: 'Contributor', fm: 'contributor', kind: 'list' },
+  { key: 'identifier', tag: 'Identifier', fm: 'identifier', kind: 'str' },
+  { key: 'source', tag: 'Source', fm: 'source', kind: 'str' },
+  { key: 'relations', tag: 'Relation', fm: 'relation', kind: 'list' },
+  { key: 'coverage', tag: 'Coverage', fm: 'coverage', kind: 'str' },
+  { key: 'rights', tag: 'Rights', fm: 'rights', kind: 'str' },
+  { key: 'license', tag: 'License', fm: 'license', kind: 'str' },
+];
+
 export function buildXmpdataContent(meta: PdfXmpMetadata): string {
-  const lines: string[] = [];
-  for (const line of [
-    xmpStringField('Title', meta.title),
-    xmpListField('Author', meta.authors),
-    xmpStringField('Language', meta.lang),
-    xmpStringField('Subject', meta.subject),
-    xmpStringField('Date', meta.dateIso),
-    xmpListField('Publisher', meta.publishers),
-    xmpListField('Keywords', meta.keywords),
-    xmpStringField('Description', meta.description),
-    xmpListField('Contributor', meta.contributors),
-    xmpStringField('Identifier', meta.identifier),
-    xmpStringField('Source', meta.source),
-    xmpListField('Relation', meta.relations),
-    xmpStringField('Coverage', meta.coverage),
-    xmpStringField('Rights', meta.rights),
-    xmpStringField('License', meta.license),
-    meta.doi ? `\\Identifier{doi:${escapeXmpValue(meta.doi)}}` : null,
-    meta.isbn ? `\\Identifier{ISBN:${escapeXmpValue(meta.isbn)}}` : null,
-  ]) {
-    if (line) lines.push(line);
+  const lines: (string | null)[] = [];
+  for (const { key, tag, kind } of XMP_FIELDS) {
+    const value = meta[key];
+    lines.push(kind === 'list' ? xmpListField(tag, value as string[] | undefined) : xmpStringField(tag, value as string | undefined));
   }
-  return lines.length === 0 ? '' : `${lines.join('\n')}\n`;
+  // doi e isbn no son campos del PDF: XMP los declara como identificadores
+  // multiples, asi que salen aparte del recorrido.
+  lines.push(meta.doi ? `\\Identifier{doi:${escapeXmpValue(meta.doi)}}` : null);
+  lines.push(meta.isbn ? `\\Identifier{ISBN:${escapeXmpValue(meta.isbn)}}` : null);
+  const filled = lines.filter((line): line is string => line !== null);
+  return filled.length === 0 ? '' : `${filled.join('\n')}\n`;
 }
 
 const LATEX_ACCENT_MAP: Record<string, string> = {
