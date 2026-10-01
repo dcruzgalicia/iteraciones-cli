@@ -121,17 +121,6 @@ export async function computeCssHash(
   return { hash: hasher.digest('hex'), cache };
 }
 
-/**
- * El único fichero estático que el HTML referencia: el logo (el de la config, o
- * el por defecto). El build y `iteraciones assets` pasan por aquí, así que el
- * .sh copia exactamente lo que copió TypeScript. #2487: las fuentes del paquete
- * dejaron de copiarse (el sitio usa las del navegador), pero `assets/fonts` se
- * sigue limpiando de salidas viejas desde cleanup.ts.
- */
-export async function copyStaticAssets(outputDir: string, cwd: string, siteConfig: SiteConfig): Promise<void> {
-  await copyLogo(outputDir, cwd, siteConfig);
-}
-
 export async function buildAssets(
   outputDir: string,
   cwd: string,
@@ -165,7 +154,14 @@ async function copyIfChanged(src: string, dest: string): Promise<void> {
   await cp(src, dest, { force: true, preserveTimestamps: true });
 }
 
-async function copyLogo(outputDir: string, cwd: string, siteConfig: SiteConfig): Promise<void> {
+/**
+ * El único fichero estático que el HTML referencia: el logo (el de la config, o
+ * el por defecto). El build y `iteraciones assets` pasan por aquí, así que el
+ * .sh copia exactamente lo que copió TypeScript. #2487: las fuentes del paquete
+ * dejaron de copiarse (el sitio usa las del navegador), pero `assets/fonts` se
+ * sigue limpiando de salidas viejas desde cleanup.ts.
+ */
+export async function copyStaticAssets(outputDir: string, cwd: string, siteConfig: SiteConfig): Promise<void> {
   const logo = siteConfig.format?.html?.site?.logo?.trim();
   // #2450: el logo de dist vive en `assets/` con nombre fijo, venga de donde
   // venga; el HTML no lo referencia (lo lleva inline), es material de la réplica.

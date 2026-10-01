@@ -6,6 +6,7 @@ import { BuildError } from '../lib/errors.js';
 import { fmStringList, resolveBooleanField, resolveMetadataField, resolveStringField, trimmedStringValue } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
+import { posix } from '../lib/paths.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import type { LuaFilterGroup } from './filter-resolver.js';
 import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
@@ -416,7 +417,7 @@ export function rewriteTexForDist(tex: string, distribution: Map<string, string>
  * trabajo no es export y conserva la ruta absoluta que sí resuelve en la raíz.
  */
 export function relativizeTexForDist(tex: string, texDir: string, projectRoot: string): string {
-  const rel = relative(texDir, projectRoot).split(sep).join('/');
+  const rel = posix(relative(texDir, projectRoot));
   if (rel === '') return tex;
   return tex.split(`${projectRoot}/`).join(`${rel}/`);
 }
