@@ -55,45 +55,28 @@ export async function readMarkdownOrWarn(doc: BuildDocument): Promise<string> {
   return content;
 }
 
+/** Los cuatro formatos con enlace en la página; el orden fija el de salida. */
+const FORMAT_LINK_META = {
+  pdf: { name: 'PDF', description: 'Documento final para lectura e impresión' },
+  epub: { name: 'EPUB', description: 'Edición adaptable para lectura digital' },
+  latex: { name: 'LaTeX', description: 'Archivo fuente para composición tipográfica' },
+  markdown: { name: 'Markdown', description: 'Texto fuente reutilizable y portable' },
+} as const;
+
+type FormatLinkKey = keyof typeof FORMAT_LINK_META;
+
 export function formatLinksFor(
   plan: BuildMetadata,
   dir: string,
   outSlug: string,
-): { href: string; key: 'pdf' | 'epub' | 'latex' | 'markdown'; name: string; description: string }[] {
-  const formats = [];
-  if (plan.activeFormats.pdf) {
-    formats.push({
-      href: relativeHref(dir, `${outSlug}${primaryOutputExtension('pdf')}`),
-      key: 'pdf' as const,
-      name: 'PDF',
-      description: 'Documento final para lectura e impresión',
-    });
-  }
-  if (plan.activeFormats.epub) {
-    formats.push({
-      href: relativeHref(dir, `${outSlug}${primaryOutputExtension('epub')}`),
-      key: 'epub' as const,
-      name: 'EPUB',
-      description: 'Edición adaptable para lectura digital',
-    });
-  }
-  if (plan.activeFormats.latex) {
-    formats.push({
-      href: relativeHref(dir, `${outSlug}${primaryOutputExtension('latex')}`),
-      key: 'latex' as const,
-      name: 'LaTeX',
-      description: 'Archivo fuente para composición tipográfica',
-    });
-  }
-  if (plan.activeFormats.markdown) {
-    formats.push({
-      href: relativeHref(dir, `${outSlug}${primaryOutputExtension('markdown')}`),
-      key: 'markdown' as const,
-      name: 'Markdown',
-      description: 'Texto fuente reutilizable y portable',
-    });
-  }
-  return formats;
+): { href: string; key: FormatLinkKey; name: string; description: string }[] {
+  return (Object.keys(FORMAT_LINK_META) as FormatLinkKey[])
+    .filter((key) => plan.activeFormats[key])
+    .map((key) => ({
+      href: relativeHref(dir, `${outSlug}${primaryOutputExtension(key)}`),
+      key,
+      ...FORMAT_LINK_META[key],
+    }));
 }
 
 export function parseFileFrontmatter(content: string): {
