@@ -2,13 +2,13 @@ import { mkdir, rename, rm } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { logWarning } from '../lib/logger.js';
 import type { BibFileCache } from './state-bib.js';
-import type { FilterFileCache } from './state-hash.js';
+import type { FileCacheEntry, FilterFileCache } from './state-hash.js';
 
 export type { BibFileCache, FilterFileCache };
 
 import type { DiscoveryEntry } from './types.js';
 
-export type CssFileCache = Record<string, { mtime: number; size: number; hash: string }>;
+export type CssFileCache = Record<string, FileCacheEntry>;
 
 const STATE_PATH = join('.iteraciones', 'state.json');
 

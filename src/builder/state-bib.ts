@@ -3,7 +3,7 @@ import type { SiteConfig } from '../config/config-schema.js';
 import { ConfigError } from '../lib/errors.js';
 import type { BibOptions } from '../lib/pandoc-runner.js';
 import { isIgnoredByRules, isInsideIgnoredDir, loadGitignoreRules } from './gitignore.js';
-import { hashFileCached } from './state-hash.js';
+import { type FileCacheEntry, hashFileCached } from './state-hash.js';
 import { hashString } from './state-serialize.js';
 
 export async function discoverBibFiles(cwd: string, extensions: string[] = ['bib', 'csl']): Promise<string[]> {
@@ -23,13 +23,7 @@ export async function discoverBibFiles(cwd: string, extensions: string[] = ['bib
   return results.sort();
 }
 
-interface BibFileCacheEntry {
-  mtime: number;
-  size: number;
-  hash: string;
-}
-
-export type BibFileCache = Record<string, BibFileCacheEntry>;
+export type BibFileCache = Record<string, FileCacheEntry>;
 
 export const PACKAGED_APA7_CSL = join(import.meta.dir, '../lib/resources/apa-7.csl');
 
