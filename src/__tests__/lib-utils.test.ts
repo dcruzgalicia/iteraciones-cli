@@ -21,7 +21,26 @@ describe('formatHumanDate', () => {
   it('conserva fechas con mes fuera de rango', () => {
     expect(formatHumanDate('2026-13-01')).toBe('2026-13-01');
   });
+
+  it('conserva las fechas que no existen en el calendario (#2507)', () => {
+    // 2026 no es bisiesto: un formateador que normalice devolvería "1 de marzo
+    // de 2026" y el error del frontmatter quedaría escondido. Se devuelve tal cual.
+    expect(formatHumanDate('2026-02-29')).toBe('2026-02-29');
+    expect(formatHumanDate('2026-01-32')).toBe('2026-01-32');
+    expect(formatHumanDate('2026-04-31')).toBe('2026-04-31');
+    // Y un 29 de febrero que sí existe se formatea.
+    expect(formatHumanDate('2024-02-29')).toBe('29 de febrero de 2024');
+  });
+
+  it('no desplaza la fecha por la zona horaria (#2507)', () => {
+    // Con un UTC-8, el instante UTC de medianoche cae el día anterior local.
+    for (const dia of ['2026-01-01', '2026-06-15', '2026-12-31']) {
+      expect(formatHumanDate(dia)).toBe(`${Number(dia.slice(8))} de ${MESES[Number(dia.slice(5, 7)) - 1]} de ${dia.slice(0, 4)}`);
+    }
+  });
 });
+
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
 describe('plural', () => {
   it('singular con 1 y plural por vocal/consonante', () => {
