@@ -65,25 +65,22 @@ interface PdfCheckResult {
   warnings: PdfCheckIssue[];
 }
 
+/** Falla de validación: el binario no corrió, o no devolvió JSON legible. */
+function failure(code: string, message: string): PdfCheckResult {
+  return {
+    valid: false,
+    level: 'PDF/X-1a',
+    errors: [{ code, message, page: null, objectId: null, clause: null }],
+    warnings: [],
+  };
+}
+
 export async function validatePdfX1a(pdfPath: string, binaryPath: string): Promise<PdfCheckResult> {
   let result: Awaited<ReturnType<typeof exec>>;
   try {
     result = await exec(binaryPath, [pdfPath], { timeoutMs: PDFCHECK_TIMEOUT_MS });
   } catch (err) {
-    return {
-      valid: false,
-      level: 'PDF/X-1a',
-      errors: [
-        {
-          code: 'PDFCHECK_RUN',
-          message: err instanceof Error ? err.message : String(err),
-          page: null,
-          objectId: null,
-          clause: null,
-        },
-      ],
-      warnings: [],
-    };
+    return failure('PDFCHECK_RUN', err instanceof Error ? err.message : String(err));
   }
   // El binario no pasa por el hook de `exec` (ruta propia): se graba aquí,
   // solo cuando corrió bien, para que la fase de validación del .sh sea fiel.
@@ -91,20 +88,7 @@ export async function validatePdfX1a(pdfPath: string, binaryPath: string): Promi
   try {
     return JSON.parse(result.stdout) as PdfCheckResult;
   } catch {
-    return {
-      valid: false,
-      level: 'PDF/X-1a',
-      errors: [
-        {
-          code: 'PDFCHECK_OUTPUT',
-          message: `salida inesperada del binario: ${result.stderr.trim() || result.stdout.trim()}`,
-          page: null,
-          objectId: null,
-          clause: null,
-        },
-      ],
-      warnings: [],
-    };
+    return failure('PDFCHECK_OUTPUT', `salida inesperada del binario: ${result.stderr.trim() || result.stdout.trim()}`);
   }
 }
 
@@ -140,7 +124,7 @@ function getBinFingerprint(binary: string): string {
   }
 }
 
-function buildCacheKeys(
+async function buildCacheKeys(
   pdfs: string[],
   outputDir: string,
   binFp: string,
@@ -149,21 +133,16 @@ function buildCacheKeys(
 ): Promise<{ pendientes: string[]; claves: string[]; preValidated: number }> {
   const cacheKeyFor = async (file: string): Promise<string> =>
     `${file}\0${await hashFileContent(join(outputDir, file)).catch(() => 'ilegible')}\0${binFp}\0${disabled.join(',')}`;
+  if (!cache) return { pendientes: [...pdfs], claves: pdfs.map(() => ''), preValidated: 0 };
+
+  const claves = await Promise.all(pdfs.map(cacheKeyFor));
   const pendientes: string[] = [];
-  const claves: string[] = [];
   let preValidated = 0;
-  if (cache) {
-    return (async () => {
-      for (const file of pdfs) {
-        const key = await cacheKeyFor(file);
-        claves.push(key);
-        if (cache.prev[key] === '1') preValidated++;
-        else pendientes.push(file);
-      }
-      return { pendientes, claves, preValidated };
-    })();
+  for (const [i, key] of claves.entries()) {
+    if (cache.prev[key] === '1') preValidated++;
+    else pendientes.push(pdfs[i] as string);
   }
-  return Promise.resolve({ pendientes: [...pdfs], claves: pdfs.map(() => ''), preValidated: 0 });
+  return { pendientes, claves, preValidated };
 }
 
 function processResult(
