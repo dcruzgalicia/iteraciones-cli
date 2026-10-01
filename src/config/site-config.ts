@@ -1,3 +1,5 @@
+import type { SiteConfig } from './config-schema.js';
+
 export const DEFAULT_HTML_BLOCKS = ['header', 'indice', 'formatos', 'contenido', 'referencias', 'footer'] as const;
 
 export type HtmlBlockKey = (typeof DEFAULT_HTML_BLOCKS)[number];
@@ -40,14 +42,6 @@ export interface MarkdownFormatConfig {
   merge?: boolean;
 }
 
-export interface FormatConfig {
-  html?: HtmlFormatConfig;
-  pdf?: PdfFormatConfig;
-  epub?: EpubFormatConfig;
-  markdown?: MarkdownFormatConfig;
-  latex?: LatexFormatConfig;
-}
-
 export const DEFAULT_HTML_FORMAT = {
   site: {
     title: 'iteraciones',
@@ -81,8 +75,13 @@ export const DEFAULT_MARKDOWN_FORMAT = {
   merge: false,
 } satisfies MarkdownFormatConfig;
 
-export function computeActiveFormats(format: FormatConfig): string[] {
-  const formats: string[] = [];
+/**
+ * `Partial` porque la función solo mira `generate === true`: un site config ya
+ * resuelto trae las cinco secciones, pero los fixtures y los callers defensivos
+ * pueden pasar menos. El tipo sale del schema, no de una interfaz espejo.
+ */
+export function computeActiveFormats(format: Partial<SiteConfig['format']>): FormatKey[] {
+  const formats: FormatKey[] = [];
   if (format.latex?.generate === true) formats.push('latex');
   if (format.pdf?.generate === true) formats.push('pdf');
   if (format.html?.generate === true) formats.push('html');
@@ -142,6 +141,7 @@ export function resolveDisabledPreambleConfig(siteConfig: DisabledPreambleConfig
   return siteConfig.disabledPreambleFilters ?? siteConfig.format?.pdf?.disabledPreambleFilters ?? DEFAULT_PDF_FORMAT.disabledPreambleFilters;
 }
 
+/** El record que leen el planificador y las banderas de imagen; el array lo leen otros. */
 export function toActiveFormats(formats: FormatKey[]): ActiveFormats {
   return {
     latex: formats.includes('latex'),
