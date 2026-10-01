@@ -4,14 +4,19 @@ export function todayIso(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
-const MONTHS_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+/** `timeZone: 'UTC'` es lo que evita que una fecha cerca de medianoche salte de día. */
+const HUMAN_DATE = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 
 export function formatHumanDate(iso?: string): string | undefined {
   if (!iso) return iso;
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());
   if (!match) return iso;
-  const [, year, month, day] = match;
-  const monthName = MONTHS_ES[Number(month) - 1];
-  if (!monthName) return iso;
-  return `${Number(day)} de ${monthName} de ${year}`;
+  const [, , month, day] = match;
+  const date = new Date(`${iso.trim()}T00:00:00Z`);
+  // Una fecha que no existe (2026-02-29) saldría desplazada al día siguiente;
+  // se devuelve tal cual para que el error se vea en el frontmatter.
+  if (Number.isNaN(date.getTime()) || date.getUTCMonth() + 1 !== Number(month) || date.getUTCDate() !== Number(day)) {
+    return iso;
+  }
+  return HUMAN_DATE.format(date);
 }
