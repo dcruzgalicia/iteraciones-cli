@@ -15,7 +15,7 @@ import { assembleExportDocument } from './export/assemble.js';
 import { convertToEpub, convertToMarkdown } from './export/runner.js';
 import type { ExportDocument } from './export/types.js';
 import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
-import { imagePathsMap, rewriteFmImagePaths, rewriteImagePaths } from './image-processor.js';
+import { imagePathsMap, relImageMapFor, rewriteFmImagePaths, rewriteImagePaths } from './image-processor.js';
 import {
   buildTexDistribution,
   composeLatexFinalOutput,
@@ -890,9 +890,7 @@ async function emitCollectionFormats(
     outputs.outSlug,
   );
   const docDir = dirname(doc.filePath);
-  const relImageMap = new Map(
-    [...images.imageMap].filter(([src, dst]) => dst !== src).map(([src, dst]): [string, string] => [src, `./${ASSETS_IMAGES_DIR}/${basename(dst)}`]),
-  );
+  const relImageMap = relImageMapFor(images.imageMap);
   // #2441: el fm de los exports (html/markdown) debe apuntar a assets como el
   // body; outputs.fm no pasa por rewriteImagePaths y pisaba el contenido.
   const fmAssets = rewriteFmImagePaths(outputs.fm, relImageMap, docDir);
