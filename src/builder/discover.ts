@@ -13,9 +13,7 @@ import { resolveSlugs } from './slug-resolver.js';
 import { type BuildState, loadStateFile } from './state-serialize.js';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
 
-export type { DiscoverMeta, DiscoverOptions } from './discover-cache.js';
 export type { FrontmatterIssue } from './discover-frontmatter.js';
-export { parseAuthors } from './discover-frontmatter.js';
 
 export type SlugComputer = (meta: { title: string; creator: string[] }, opts: { fallbackPath: string; maxCreators?: number }) => string;
 

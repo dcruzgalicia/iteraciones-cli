@@ -1,8 +1,7 @@
 import { join } from 'node:path';
 import { BuildError } from '../lib/errors.js';
-import type { FileCacheEntry } from './state-hash.js';
 import { cacheHitFor } from './state-hash.js';
-import type { BibFileCache, FilterFileCache } from './state-serialize.js';
+import type { BibFileCache, FileCacheEntry, FilterFileCache } from './state-serialize.js';
 import { hashString, STATE_SCHEMA_VERSION } from './state-serialize.js';
 import type { DiscoveryEntry } from './types.js';
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import { buildDocsFromIndex, computeSlug, htmlSlugFor, parseAuthors } from '../builder/discover.js';
+import { buildDocsFromIndex, computeSlug, htmlSlugFor } from '../builder/discover.js';
+import { parseAuthors } from '../builder/discover-frontmatter.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 
 describe('computeSlug', () => {

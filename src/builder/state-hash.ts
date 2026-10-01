@@ -2,13 +2,7 @@ import { join } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { MD_READER } from '../lib/pandoc-runner.js';
-import { hashString } from './state-serialize.js';
-
-export interface FileCacheEntry {
-  mtime: number;
-  size: number;
-  hash: string;
-}
+import { type FileCacheEntry, type FilterFileCache, hashString } from './state-serialize.js';
 
 export function cacheHitFor(prev: FileCacheEntry | undefined, mtime: number, size: number): string | null {
   if (prev && prev.mtime === mtime && prev.size === size) return prev.hash;
@@ -55,8 +49,6 @@ const HTML_RESOURCE_FILES = [
   'card-referencias.html',
   'card-referencias-block.html',
 ];
-
-export type FilterFileCache = Record<string, FileCacheEntry>;
 
 export const SCHEMA_SOURCE_FILES = [
   '../lib/date.ts', // humanDate: conversión yyyy-mm-dd → fecha legible
