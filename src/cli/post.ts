@@ -52,13 +52,10 @@ async function postLatex(raw: string, post: string | undefined, cwd: string, out
  * de pandoc. El .sh hace `pandoc > crudo` y luego `iteraciones post <tipo>
  * < crudo -o dist`, con el mismo código que usó el build.
  */
-export async function runPost(cwd: string, kind: string, options: { output?: string; post?: string; type?: string }): Promise<void> {
+export async function runPost(cwd: string, kind: string, options: { output: string; post?: string; type?: string }): Promise<void> {
   try {
     if (!(POST_KINDS as readonly string[]).includes(kind)) {
       throw new BuildError(`tipo de post-proceso desconocido "${kind}"; esperado: ${POST_KINDS.join(' | ')}`);
-    }
-    if (options.output === undefined || options.output === '') {
-      throw new BuildError('falta --output (-o): indica la ruta del archivo de salida');
     }
     const output = resolvePath(cwd, options.output);
     const raw = await readStdin();
