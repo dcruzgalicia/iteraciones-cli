@@ -777,21 +777,8 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
     log(`Limpieza de dist: ${plural(cleanedFiles, 'archivo residual eliminado', 'archivos residuales eliminados')}.`);
   }
 
-  if (
-    work.docsChanged.size === 0 &&
-    work.exportSets.print.length === 0 &&
-    work.exportSets.html.length === 0 &&
-    work.exportSets.epub.length === 0 &&
-    work.exportSets.markdown.length === 0
-  ) {
-    log('Ningún documento modificado — sin cambios');
-    return finishBuild(closeDeps, {
-      processedCount: 0,
-      cachedCount: allDocs.length,
-      invalidations,
-    });
-  }
-
+  // Aquí ya no puede volver a cumplirse la condición de "sin cambios": el guard
+  // de arriba exigía además `!work.anyWork`, que es lo que abre los exportSets.
   const fallbackReason = prevState === null ? (options.full ? 'build completo desde cero' : 'sin caché previa') : null;
   return finishBuild(
     closeDeps,
