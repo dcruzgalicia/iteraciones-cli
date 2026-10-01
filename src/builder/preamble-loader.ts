@@ -1,4 +1,6 @@
 import { join } from 'node:path';
+import type { SiteConfig } from '../config/config-schema.js';
+import { resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 
@@ -66,6 +68,16 @@ export async function loadPreambleFilters(disabledList?: string[], cwd?: string,
   }
 
   return result;
+}
+
+/**
+ * La lista efectiva de preámbulos desactivados, con la regla #2419 ya aplicada.
+ * El build la compone en dos pasos (orchestrator da la base, pipeline-setup
+ * aplica la regla del .bib); `iteraciones template` necesita las dos juntas, y
+ * es la segunda copia que hay de esa composición.
+ */
+export function resolveDisabledPreambleForBuild(siteConfig: SiteConfig, bibFiles: string[] | undefined): string[] {
+  return disableBibliographyWithoutBibFiles(resolveEffectiveDisabledPreamble(resolveDisabledPreambleConfig(siteConfig)), bibFiles);
 }
 
 export function resolveEffectiveDisabledPreamble(disabled?: string[]): string[] {
