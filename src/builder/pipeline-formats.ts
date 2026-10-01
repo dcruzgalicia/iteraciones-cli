@@ -428,18 +428,7 @@ function interventionSectionRaw(lineLength = 0.5): string {
 \`\`\``;
 }
 
-function buildCollectionEntryLatex(
-  e: {
-    creator: string[];
-    title: string;
-    subtitle: string | undefined;
-    type: string | undefined;
-    lineLength: number | undefined;
-    pages: number | undefined;
-    body: string;
-  },
-  isHeader: boolean,
-): string[] {
+function buildCollectionEntryLatex(e: CollectionEntry, isHeader: boolean): string[] {
   const parts: string[] = [];
   if (e.type === 'intervention') {
     parts.push(interventionSectionRaw(e.lineLength));
@@ -466,18 +455,7 @@ function buildCollectionEntryLatex(
   return parts;
 }
 
-function buildCollectionSectionsLatex(
-  entries: {
-    creator: string[];
-    title: string;
-    subtitle: string | undefined;
-    type: string | undefined;
-    lineLength: number | undefined;
-    pages: number | undefined;
-    body: string;
-  }[],
-  pageNumber?: string,
-): string {
+function buildCollectionSectionsLatex(entries: CollectionEntry[], pageNumber?: string): string {
   const isHeader = pageNumber?.startsWith('header-') ?? false;
   const parts: string[] = [];
   for (const e of entries) {
@@ -495,27 +473,40 @@ function buildCollectionSectionsLatex(
  * un libro de lectura, no un impreso (las compone el PDF). El filtro vive en
  * `resolveCollectionContent`.
  */
-function buildCollectionSectionsHtml(
-  entries: {
-    creator: string[];
-    title: string;
-    subtitle: string | undefined;
-    type: string | undefined;
-    lineLength: number | undefined;
-    pages: number | undefined;
-    body: string;
-  }[],
-): string {
+/**
+ * Encabezados de cada nivel como par [apertura, cierre]: el markdown no cierra
+ * (el `##` es prefijo), el HTML sí. Un solo recorrido para los dos formatos,
+ * para que los defaults de autor y título no se separen.
+ */
+type Heading = readonly [string, string];
+type Headings = readonly [Heading, Heading, Heading];
+
+const HTML_HEADINGS: Headings = [
+  ['<h2>', '</h2>'],
+  ['<h3>', '</h3>'],
+  ['<h4>', '</h4>'],
+];
+const MARKDOWN_HEADINGS: Headings = [
+  ['## ', ''],
+  ['### ', ''],
+  ['#### ', ''],
+];
+
+function buildCollectionSections(entries: CollectionEntry[], headings: Headings): string {
   const parts: string[] = [];
   for (const e of entries) {
     const creator = e.creator.length > 0 ? e.creator.join(', ') : 'Anónima';
     const title = e.title || 'Sin título';
-    parts.push(`<h2>${creator}</h2>`);
-    parts.push(`<h3>${title}</h3>`);
-    if (e.subtitle) parts.push(`<h4>${e.subtitle}</h4>`);
+    parts.push(`${headings[0][0]}${creator}${headings[0][1]}`);
+    parts.push(`${headings[1][0]}${title}${headings[1][1]}`);
+    if (e.subtitle) parts.push(`${headings[2][0]}${e.subtitle}${headings[2][1]}`);
     parts.push(e.body.trim());
   }
   return parts.join('\n\n');
+}
+
+function buildCollectionSectionsHtml(entries: CollectionEntry[]): string {
+  return buildCollectionSections(entries, HTML_HEADINGS);
 }
 
 /**
@@ -651,39 +642,12 @@ function collectionCard(e: CollectionEntry, href: string | undefined): string {
   return [MASONRY_WRAPPER, '', ...card, '', '</div>'].join('\n');
 }
 
-export function buildCollectionSectionsMarkdown(
-  entries: {
-    creator: string[];
-    title: string;
-    subtitle: string | undefined;
-    type: string | undefined;
-    lineLength: number | undefined;
-    pages: number | undefined;
-    body: string;
-  }[],
-): string {
-  const parts: string[] = [];
-  for (const e of entries) {
-    const creator = e.creator.length > 0 ? e.creator.join(', ') : 'Anónima';
-    const title = e.title || 'Sin título';
-    parts.push(`## ${creator}`);
-    parts.push(`### ${title}`);
-    if (e.subtitle) parts.push(`#### ${e.subtitle}`);
-    parts.push(e.body.trim());
-  }
-  return parts.join('\n\n');
+export function buildCollectionSectionsMarkdown(entries: CollectionEntry[]): string {
+  return buildCollectionSections(entries, MARKDOWN_HEADINGS);
 }
 
 function resolveCollectionContent(
-  collectionEntries: {
-    creator: string[];
-    title: string;
-    subtitle: string | undefined;
-    type: string | undefined;
-    lineLength: number | undefined;
-    pages: number | undefined;
-    body: string;
-  }[],
+  collectionEntries: CollectionEntry[],
   format: 'latex' | 'html' | 'markdown',
   fallback: string,
   pageNumber?: string,
@@ -874,15 +838,7 @@ async function buildCollectionAuthorsLatex(creatorDocs: CreatorDoc[], sourcePath
 
 /** Fusión de la collection en el formato pedido; la usan el build y `iteraciones merge`. */
 export function collectionBaseContent(
-  collectionEntries: {
-    creator: string[];
-    title: string;
-    subtitle: string | undefined;
-    type: string | undefined;
-    lineLength: number | undefined;
-    pages: number | undefined;
-    body: string;
-  }[],
+  collectionEntries: CollectionEntry[],
   format: 'latex' | 'html' | 'markdown',
   content: string,
   pageNumber?: string,
