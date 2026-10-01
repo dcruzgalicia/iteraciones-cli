@@ -248,7 +248,7 @@ async function emitHtmlPage(
       accent: htmlConfig?.site?.color,
       css: ctx.needsCss ? relativeHref(dir, ASSETS_CSS_FILE) : undefined,
       authorMeta: doc.frontmatter.creator.join(', '),
-      docTitle: doc.frontmatter.title && doc.frontmatter.title !== 'Sin título' ? doc.frontmatter.title : undefined,
+      docTitle: doc.frontmatter.title && doc.frontmatter.title !== TITULO_POR_DEFECTO ? doc.frontmatter.title : undefined,
       subtitle: doc.frontmatter.subtitle,
       date: formatHumanDate(doc.frontmatter.date),
       homeHref: hasHomePage ? relativeHref(dir, 'index.html') : undefined,
@@ -271,6 +271,10 @@ async function emitHtmlPage(
   });
   await writeOutput(htmlPath, html);
 }
+
+/** Texto de autor y título con sus defaults; son palabra del usuario, no una decisión local. */
+const AUTORA_POR_DEFECTO = 'Anónima';
+const TITULO_POR_DEFECTO = 'Sin título';
 
 export type CollectionEntry = {
   /** ruta del `.md` de origen, relativa a la raíz del proyecto (#2483). */
@@ -439,8 +443,8 @@ function buildCollectionEntryLatex(e: CollectionEntry, isHeader: boolean): strin
       parts.push('\\thispagestyle{empty}\n\\null\\newpage\n'.repeat(e.pages).trim());
     }
   } else {
-    const creator = e.creator.length > 0 ? e.creator.join(', ') : 'Anónima';
-    const title = e.title || 'Sin título';
+    const creator = e.creator.length > 0 ? e.creator.join(', ') : AUTORA_POR_DEFECTO;
+    const title = e.title || TITULO_POR_DEFECTO;
     parts.push(`\\chapter{${creator}}`);
     if (isHeader) parts.push('\\thispagestyle{empty}');
     if (e.subtitle) {
@@ -496,8 +500,8 @@ const MARKDOWN_HEADINGS: Headings = [
 function buildCollectionSections(entries: CollectionEntry[], headings: Headings): string {
   const parts: string[] = [];
   for (const e of entries) {
-    const creator = e.creator.length > 0 ? e.creator.join(', ') : 'Anónima';
-    const title = e.title || 'Sin título';
+    const creator = e.creator.length > 0 ? e.creator.join(', ') : AUTORA_POR_DEFECTO;
+    const title = e.title || TITULO_POR_DEFECTO;
     parts.push(`${headings[0][0]}${creator}${headings[0][1]}`);
     parts.push(`${headings[1][0]}${title}${headings[1][1]}`);
     if (e.subtitle) parts.push(`${headings[2][0]}${e.subtitle}${headings[2][1]}`);
@@ -621,8 +625,8 @@ const LINK_STRETCH_CLASSES = 'after:absolute after:inset-0';
 function collectionCard(e: CollectionEntry, href: string | undefined): string {
   // #2487 — cada nombre en su span nowrap, como el \mbox de cada creator en
   // LaTeX: la línea se parte entre nombres y nunca dentro de uno
-  const creator = e.creator.length > 0 ? e.creator.map((n) => `<span class="whitespace-nowrap">${n}</span>`).join(', ') : 'Anónima';
-  const title = e.title || 'Sin título';
+  const creator = e.creator.length > 0 ? e.creator.map((n) => `<span class="whitespace-nowrap">${n}</span>`).join(', ') : AUTORA_POR_DEFECTO;
+  const title = e.title || TITULO_POR_DEFECTO;
   const fragment = extractFragment(e.body);
   // `::::` (4 colons) siempre: el fragmento puede ser él mismo un fenced div y
   // pandoc cierra el div externo con la primera valla de 4 que encuentre.

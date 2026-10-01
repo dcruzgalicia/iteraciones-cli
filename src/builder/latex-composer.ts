@@ -211,12 +211,12 @@ function buildTitlePageOverrides(
 function applyInterventionOverrides(
   fm: Record<string, unknown>,
   docType: string | undefined,
-): { title: string; creator: string[]; subtitle: string; date: string; extraPages: number; intervention: boolean } | null {
+): { title: string; creator: string[]; subtitle: string; date: string; extraPages: number } | null {
   if (docType !== 'intervention') return null;
   const lineLength = typeof fm.lineLength === 'number' && fm.lineLength > 0 ? fm.lineLength : 0.5;
   const pages = typeof fm.pages === 'number' && fm.pages > 0 ? fm.pages : 1;
   const rule = `\\rule{${lineLength}\\textwidth}{0.4pt}`;
-  return { title: rule, creator: [rule], subtitle: '', date: '', extraPages: pages, intervention: true };
+  return { title: rule, creator: [rule], subtitle: '', date: '', extraPages: pages };
 }
 
 function yamlScalar(value: string): string {
@@ -370,7 +370,7 @@ export async function markdownToLatex(
 
   const courtesyPage = resolveBooleanField(fm, formatCfg, siteConfig, 'courtesyPage') === true;
   if (courtesyPage) extraArgs.push('--metadata=courtesy-page:true');
-  if (interventionOverrides?.intervention) extraArgs.push('--metadata=intervention:true');
+  if (interventionOverrides) extraArgs.push('--metadata=intervention:true');
 
   const tex = await execPandoc({
     input: await buildLatexPandocContent(content, doc, { fm, formatCfg, siteConfig }),

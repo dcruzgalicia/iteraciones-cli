@@ -194,6 +194,24 @@ async function resolveEffectiveConfig(cwd: string): Promise<{ siteConfig: SiteCo
   return { siteConfig, effectiveDisabledPreamble };
 }
 
+/**
+ * Los flags de invalidación en un solo lugar: `logInvalidations` los escribe y
+ * `collectInvalidations` los acumula. Agregar un formato nuevo es una fila aquí,
+ * no dos ediciones coordinadas en dos funciones.
+ */
+const INVALIDATION_FLAGS: { test: (plan: BuildMetadata) => boolean; log: string; label: string }[] = [
+  { test: (p) => p.filtersInvalidated, log: 'Filters modificados — reprocesando todos los documentos', label: 'filters' },
+  { test: (p) => p.bibInvalidated, log: 'Bibliografía modificada — regenerando las exportaciones', label: 'bibliografía' },
+  { test: (p) => p.formatInvalidated.print, log: 'Configuración PDF/LaTeX modificada — regenerando LaTeX/PDF', label: 'configuración PDF/LaTeX' },
+  { test: (p) => p.formatInvalidated.html, log: 'Configuración HTML modificada — regenerando páginas HTML', label: 'configuración HTML' },
+  { test: (p) => p.formatInvalidated.epub, log: 'Configuración EPUB modificada — regenerando EPUBs', label: 'configuración EPUB' },
+  {
+    test: (p) => p.formatInvalidated.markdown,
+    log: 'Configuración Markdown modificada — regenerando exports Markdown',
+    label: 'configuración Markdown',
+  },
+];
+
 function logInvalidations(plan: BuildMetadata, log: (msg: string) => void): void {
   if (plan.newFormats.length > 0) {
     log(`Nuevos formatos detectados: ${plan.newFormats.join(', ')}. Generando sus salidas para todos los documentos.`);
@@ -201,23 +219,13 @@ function logInvalidations(plan: BuildMetadata, log: (msg: string) => void): void
   if (plan.removedFormats.length > 0) {
     log(`Formatos eliminados: ${plan.removedFormats.join(', ')}. Limpiando archivos de dist.`);
   }
-  if (plan.filtersInvalidated) log('Filters modificados — reprocesando todos los documentos');
-  if (plan.bibInvalidated) log('Bibliografía modificada — regenerando las exportaciones');
-  if (plan.formatInvalidated.print) log('Configuración PDF/LaTeX modificada — regenerando LaTeX/PDF');
-  if (plan.formatInvalidated.html) log('Configuración HTML modificada — regenerando páginas HTML');
-  if (plan.formatInvalidated.epub) log('Configuración EPUB modificada — regenerando EPUBs');
-  if (plan.formatInvalidated.markdown) log('Configuración Markdown modificada — regenerando exports Markdown');
+  for (const flag of INVALIDATION_FLAGS) if (flag.test(plan)) log(flag.log);
 }
 
 function collectInvalidations(plan: BuildMetadata, outputDirChanged: boolean): string[] {
   const invalidations: string[] = [];
   if (outputDirChanged) invalidations.push('directorio de salida');
-  if (plan.filtersInvalidated) invalidations.push('filters');
-  if (plan.bibInvalidated) invalidations.push('bibliografía');
-  if (plan.formatInvalidated.print) invalidations.push('configuración PDF/LaTeX');
-  if (plan.formatInvalidated.html) invalidations.push('configuración HTML');
-  if (plan.formatInvalidated.epub) invalidations.push('configuración EPUB');
-  if (plan.formatInvalidated.markdown) invalidations.push('configuración Markdown');
+  for (const flag of INVALIDATION_FLAGS) if (flag.test(plan)) invalidations.push(flag.label);
   for (const format of plan.newFormats) invalidations.push(`formato nuevo: ${format}`);
   return invalidations;
 }
@@ -715,7 +723,8 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
     progress,
   );
 
-  const needsAssets = plan.activeFormats.html;
+  // ctx.needsCss viene de plan.needsCss, que es activeFormats.html: misma fuente.
+  const needsAssets = ctx.needsCss;
 
   const runAssets = async (): Promise<void> => {
     const { cssHash, cssFileCache } = await buildAssets(ctx.outputDir, ctx.cwd, ctx.siteConfig, prevState?.cssHash, prevState?.cssFileCache);
