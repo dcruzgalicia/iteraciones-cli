@@ -1,4 +1,4 @@
-import { basename, dirname, join, relative, sep } from 'node:path';
+import { basename, dirname, join, relative } from 'node:path';
 import { resolveCollectionFile } from '../builder/collection-files.js';
 import { loadSlugIndex } from '../builder/discover.js';
 import { applyCreatorTitle } from '../builder/discover-frontmatter.js';
@@ -15,7 +15,7 @@ import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
 import { fail, logSuccess } from '../lib/logger.js';
-import { resolvePath } from '../lib/paths.js';
+import { posix, resolvePath } from '../lib/paths.js';
 import { buildImagesContext } from './merge.js';
 
 /**
@@ -72,7 +72,7 @@ export async function runMarkdown(cwd: string, input: string, options: { output?
       throw new BuildError('falta --output (-o): indica la ruta del .md de salida');
     }
     const inputPath = resolvePath(cwd, input);
-    const relativePath = relative(cwd, inputPath).split(sep).join('/');
+    const relativePath = posix(relative(cwd, inputPath));
     let content: string;
     try {
       content = await Bun.file(inputPath).text();

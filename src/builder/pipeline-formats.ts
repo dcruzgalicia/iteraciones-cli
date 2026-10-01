@@ -7,6 +7,7 @@ import { splitFrontmatter } from '../lib/frontmatter.js';
 import { fmStringList, resolveBooleanField, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { execPandoc, MD_READER } from '../lib/pandoc-runner.js';
+import { posix } from '../lib/paths.js';
 import { isScriptCapture, recordSupportCommand, resolveScriptStdout } from '../lib/script-recorder.js';
 import { extractFragment } from './collection-fragment.js';
 import { computeSlug, htmlSlugFor } from './discover.js';
@@ -310,7 +311,7 @@ export async function readCollectionEntries(files: string[], collectionPath: str
     const parsed = parseFileFrontmatter(text);
     // #2483: la ruta raíz-relativa del miembro viaja en la entrada; es la clave
     // con la que su tarjeta enlaza a su HTML (slug resuelto del discovery).
-    const rootRelative = file.split(sep).join('/').replace(/^\.\//, '');
+    const rootRelative = posix(file).replace(/^\.\//, '');
     if (parsed.body.trim()) entries.push({ file: rootRelative, ...parsed });
   }
   return entries;

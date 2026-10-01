@@ -1,4 +1,4 @@
-import { basename, dirname, join, relative, sep } from 'node:path';
+import { basename, dirname, join, relative } from 'node:path';
 import { resolveCollectionFile } from '../builder/collection-files.js';
 import { loadSlugIndex } from '../builder/discover.js';
 import { printFlags } from '../builder/image-flags.js';
@@ -21,7 +21,7 @@ import type { SiteConfig } from '../config/config-schema.js';
 import { BuildError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
 import { fail, logSuccess } from '../lib/logger.js';
-import { resolvePath } from '../lib/paths.js';
+import { posix, resolvePath } from '../lib/paths.js';
 
 /** Formatos de entrada de pandoc (más el cuerpo fusionado, que no usa pandoc). */
 const FORMATS = ['latex', 'html', 'epub', 'markdown'] as const;
@@ -48,7 +48,7 @@ function assertCollectionFiles(fm: Record<string, unknown>, label: string): stri
 /** La collection original + los campos derivados que arma el build, en el mismo orden. */
 async function readCollectionSource(cwd: string, input: string) {
   const inputPath = resolvePath(cwd, input);
-  const relativePath = relative(cwd, inputPath).split(sep).join('/');
+  const relativePath = posix(relative(cwd, inputPath));
   let text: string;
   try {
     text = await Bun.file(inputPath).text();
