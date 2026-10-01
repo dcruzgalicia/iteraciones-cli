@@ -5,7 +5,8 @@ import { join } from 'node:path';
 import { discover, resolveDiscoverSlugs } from '../builder/discover.js';
 import { postProcessCollections } from '../builder/orchestrator.js';
 import { validateFrontmatterFields } from '../builder/project-validator.js';
-import { loadStateFile, persistCompletedState, stateUsableForBuild } from '../builder/state-serialize.js';
+import { loadStateFile, persistCompletedState } from '../builder/state-serialize.js';
+import { stateUsableForBuild } from './helpers.js';
 
 function makeProject(files: Record<string, string>): string {
   const dir = mkdtempSync(join(tmpdir(), 'iteraciones-collection-'));

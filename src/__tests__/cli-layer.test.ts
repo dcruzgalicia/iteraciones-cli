@@ -9,7 +9,7 @@ import { reportBuildError, runBuild, runClean, runDoctor, runFilters, runInit, r
 import { checkLatexEngine, checkReadPermissions, checkWritePermissions } from '../cli/doctor/system-checks.js';
 import { buildProgram } from '../cli/parser.js';
 import { PANDOC_ERROR_CODES, PandocError } from '../lib/errors.js';
-import { logWarning, setLoggerColorEnabled } from '../lib/logger.js';
+import { logWarning } from '../lib/logger.js';
 import * as pandocRunner from '../lib/pandoc-runner.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { ProcessSpawnError } from '../lib/run.js';
@@ -24,7 +24,10 @@ const unzipOk = (await Bun.which('unzip')) !== null;
 
 // La suite aserta strings exactos de la salida: la colorización ANSI se fuerza
 // off aunque el stream sea un TTY (los asserts no dependen del entorno).
-beforeAll(() => setLoggerColorEnabled(false));
+// NO_COLOR es el mecanismo estándar; el logger lo lee directo.
+beforeAll(() => {
+  process.env.NO_COLOR = '1';
+});
 
 // El smoke de PDF real solo corre si el motor LaTeX está disponible.
 const latexOk = (await checkLatexEngine()).ok;

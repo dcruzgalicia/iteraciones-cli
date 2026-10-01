@@ -1,6 +1,7 @@
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { BuildState } from '../builder/state-serialize.js';
 
 /**
  * Crea un proyecto mínimo para tests CLI: un iteraciones.config.yaml
@@ -27,6 +28,20 @@ export async function withTempDir(fn: (dir: string) => Promise<void>): Promise<v
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+}
+
+/**
+ * El `prevState` que un build recibe: solo un state con `completed` sirve.
+ *
+ * #2530: esto vivía en `state-serialize.ts` como export de prod con cero
+ * callers de producción — el orchestrator carga el state tal cual. Los cinco
+ * tests que arman `prevState` lo usaban, así que ahora vive aquí, con sus
+ * únicos callers. **Ojo:** el build real NO aplica este filtro, así que un
+ * test que arma el prevState con esta función está probando un input más
+ * estricto que el que recibe el build.
+ */
+export function stateUsableForBuild(state: BuildState | null): BuildState | null {
+  return state !== null && state.completed === true ? state : null;
 }
 
 // ── Reporting de skips por entorno (#2030) ──────────────────────────────────

@@ -3,7 +3,8 @@ import { mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { discover } from '../builder/discover.js';
-import { loadStateFile, persistCompletedState, stateUsableForBuild } from '../builder/state-serialize.js';
+import { loadStateFile, persistCompletedState } from '../builder/state-serialize.js';
+import { stateUsableForBuild } from './helpers.js';
 
 /**
  * Caché content-addressed de discovery:
