@@ -1,6 +1,6 @@
 import { collectCover } from '../builder/export/cover-image.js';
 import { BuildError } from '../lib/errors.js';
-import { logError, logSuccess } from '../lib/logger.js';
+import { fail, logSuccess } from '../lib/logger.js';
 import { resolvePath } from '../lib/paths.js';
 
 /**
@@ -16,7 +16,6 @@ export async function runCover(cwd: string, png: string): Promise<void> {
     if (produced === undefined) throw new BuildError(`no hay portada de pdftoppm pendiente en "${png}"`);
     logSuccess(`${produced} → ${png}`, 'cover');
   } catch (err) {
-    logError(err instanceof Error ? err.message : String(err), 'cover');
-    process.exitCode = 1;
+    fail('cover', err);
   }
 }

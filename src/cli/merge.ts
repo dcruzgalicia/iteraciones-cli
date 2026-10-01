@@ -20,7 +20,7 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
 import { BuildError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
-import { logError, logSuccess } from '../lib/logger.js';
+import { fail, logSuccess } from '../lib/logger.js';
 
 /** Formatos de entrada de pandoc (más el cuerpo fusionado, que no usa pandoc). */
 const FORMATS = ['latex', 'html', 'epub', 'markdown'] as const;
@@ -165,7 +165,6 @@ export async function runMerge(cwd: string, input: string, options: { output?: s
     await writeOutput(output, await composeFor(format, src, entries, siteConfig, ctx, memberHrefs));
     logSuccess(`${input} [--format ${format}] → ${options.output}`, 'merge');
   } catch (err) {
-    logError(err instanceof Error ? err.message : String(err), 'merge');
-    process.exitCode = 1;
+    fail('merge', err);
   }
 }

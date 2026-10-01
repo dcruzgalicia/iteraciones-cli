@@ -1,5 +1,5 @@
 import { collectPdf } from '../builder/export/runner.js';
-import { logError, logSuccess } from '../lib/logger.js';
+import { fail, logSuccess } from '../lib/logger.js';
 import { resolvePath } from '../lib/paths.js';
 
 /**
@@ -13,7 +13,6 @@ export async function runCollectPdf(cwd: string, slot: string, options: { output
     await collectPdf(resolvePath(cwd, slot), output);
     logSuccess(`${slot} → ${options.output}`, 'pdf');
   } catch (err) {
-    logError(err instanceof Error ? err.message : String(err), 'pdf');
-    process.exitCode = 1;
+    fail('pdf', err);
   }
 }

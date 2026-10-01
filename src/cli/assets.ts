@@ -1,6 +1,6 @@
 import { copyStaticAssets } from '../builder/build-assets.js';
 import { loadSiteConfig } from '../config/config-loader.js';
-import { logError, logSuccess } from '../lib/logger.js';
+import { fail, logSuccess } from '../lib/logger.js';
 import { resolvePath } from '../lib/paths.js';
 
 /**
@@ -15,7 +15,6 @@ export async function runAssets(cwd: string, options: { output: string }): Promi
     await copyStaticAssets(outputDir, cwd, await loadSiteConfig(cwd));
     logSuccess(`fonts + logo → ${options.output}`, 'assets');
   } catch (err) {
-    logError(err instanceof Error ? err.message : String(err), 'assets');
-    process.exitCode = 1;
+    fail('assets', err);
   }
 }
