@@ -16,18 +16,12 @@ export const GLYPHS = {
   skipped: '–',
 } as const;
 
-let colorEnabledOverride: boolean | undefined;
-
-export function setLoggerColorEnabled(enabled: boolean): void {
-  colorEnabledOverride = enabled;
-}
-
 const isTty = (stream: NodeJS.WriteStream): boolean => stream.isTTY === true;
 
 const noColorRequested = (): boolean => process.env.NO_COLOR !== undefined;
 
 function colorize(text: string, color: AnsiColor, stream: NodeJS.WriteStream): string {
-  const colored = isTty(stream) && colorEnabledOverride !== false && !noColorRequested();
+  const colored = isTty(stream) && !noColorRequested();
   return colored ? `${ANSI[color]}${text}${ANSI.reset}` : text;
 }
 

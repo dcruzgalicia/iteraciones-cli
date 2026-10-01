@@ -5,13 +5,13 @@ import { dirname, join } from 'node:path';
 import { discover } from '../builder/discover.js';
 import { postProcessCollections } from '../builder/orchestrator.js';
 import { readCollectionEntries } from '../builder/pipeline-formats.js';
-import { loadStateFile, stateUsableForBuild } from '../builder/state-serialize.js';
+import { loadStateFile } from '../builder/state-serialize.js';
 import { runBuild } from '../cli/dispatcher.js';
 import { runMerge } from '../cli/merge.js';
 import { validateProject } from '../cli/validate.js';
 import { BuildError } from '../lib/errors.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
-import { registerSkip, SKIP_REASONS, withTempDir } from './helpers.js';
+import { registerSkip, SKIP_REASONS, stateUsableForBuild, withTempDir } from './helpers.js';
 
 /**
  * #2443: resolución de files[] de collections.

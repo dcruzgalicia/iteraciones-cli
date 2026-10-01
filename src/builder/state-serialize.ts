@@ -81,10 +81,6 @@ export async function loadStateFile(cwd: string): Promise<BuildState | null> {
   }
 }
 
-export function stateUsableForBuild(state: BuildState | null): BuildState | null {
-  return state !== null && state.completed === true ? state : null;
-}
-
 export async function persistCompletedState(cwd: string, pending: BuildState | null): Promise<void> {
   if (!pending || pending.completed === true) return;
   pending.completed = true;

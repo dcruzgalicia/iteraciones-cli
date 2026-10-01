@@ -3,12 +3,12 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { computeBibHash, discoverBibFiles, resolveBibOptions } from '../builder/state-bib.js';
 import { computeConfigHashes, computeFiltersHash, computeSchemaSourceHash } from '../builder/state-hash.js';
-import { type BuildState, loadStateFile, persistCompletedState, saveStateFile, stateUsableForBuild } from '../builder/state-serialize.js';
+import { type BuildState, loadStateFile, persistCompletedState, saveStateFile } from '../builder/state-serialize.js';
 import type { DiscoveryEntry } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { ConfigError } from '../lib/errors.js';
-import { withTempDir } from './helpers.js';
+import { stateUsableForBuild, withTempDir } from './helpers.js';
 
 function makeState(entries: Record<string, unknown> = {}): BuildState {
   return {

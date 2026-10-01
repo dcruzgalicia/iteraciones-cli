@@ -3,7 +3,6 @@ import { chmod, mkdir, readdir, writeFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { runBuild } from '../cli/dispatcher.js';
 import { buildProgram } from '../cli/parser.js';
-import { setLoggerColorEnabled } from '../lib/logger.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { registerSkip, SKIP_REASONS, withTempDir } from './helpers.js';
 
@@ -29,7 +28,10 @@ import { registerSkip, SKIP_REASONS, withTempDir } from './helpers.js';
 const pandocOk = await getPandocVersion().catch(() => null);
 if (!pandocOk) registerSkip('build-selection.test.ts', SKIP_REASONS.pandoc);
 
-beforeAll(() => setLoggerColorEnabled(false));
+// NO_COLOR es el mecanismo estándar; el logger lo lee directo.
+beforeAll(() => {
+  process.env.NO_COLOR = '1';
+});
 
 const CONFIG = [
   'language: es-MX',
