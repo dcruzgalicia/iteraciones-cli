@@ -2,7 +2,7 @@ import { exists, rm } from 'node:fs/promises';
 import { isAbsolute, join, relative } from 'node:path';
 import { DIST_FILES_DIR } from '../builder/output-layout.js';
 import { BuildError } from '../lib/errors.js';
-import { logError, logInfo, logSuccess, logWarning } from '../lib/logger.js';
+import { fail, logError, logInfo, logSuccess, logWarning } from '../lib/logger.js';
 import { resolvePath } from '../lib/paths.js';
 import type { VisualDiffResult, VisualOptions } from '../lib/visual-diff.js';
 import {
@@ -269,7 +269,6 @@ export async function runTestVisual(cwd: string, paths: string[], options: TestV
     if (options.update === true) await updateSnapshots(cwd, run.targets, run.outputDir);
     else await compareAll(cwd, run.targets, run.outputDir, run.visualOptions, run.batch, run.explicitReference);
   } catch (err) {
-    logError(err instanceof Error ? err.message : String(err), 'visual');
-    process.exitCode = 1;
+    fail('visual', err);
   }
 }

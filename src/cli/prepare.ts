@@ -1,6 +1,6 @@
 import { preparePaths } from '../builder/prepare.js';
 import { BuildError } from '../lib/errors.js';
-import { logError, logSuccess } from '../lib/logger.js';
+import { fail, logSuccess } from '../lib/logger.js';
 import { resolvePath } from '../lib/paths.js';
 
 /**
@@ -16,7 +16,6 @@ export async function runPrepare(cwd: string, options: { dir?: string[]; xmp?: s
     await preparePaths(dirs, xmpDirs);
     logSuccess(`${[...new Set([...dirs, ...xmpDirs])].length} directorio(s) preparado(s)`, 'prepare');
   } catch (err) {
-    logError(err instanceof Error ? err.message : String(err), 'prepare');
-    process.exitCode = 1;
+    fail('prepare', err);
   }
 }

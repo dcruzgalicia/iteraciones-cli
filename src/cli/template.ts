@@ -6,7 +6,7 @@ import { resolveBibOptions } from '../builder/state-bib.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
-import { logError, logSuccess } from '../lib/logger.js';
+import { fail, logSuccess } from '../lib/logger.js';
 
 const KINDS = TEMPLATE_KINDS as readonly string[];
 
@@ -43,7 +43,6 @@ export async function runTemplate(cwd: string, kind: string, options: { output?:
     await writeIfChanged(output, content);
     logSuccess(`${kind} → ${output}`, 'template');
   } catch (err) {
-    logError(err instanceof Error ? err.message : String(err), 'template');
-    process.exitCode = 1;
+    fail('template', err);
   }
 }

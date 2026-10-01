@@ -40,6 +40,16 @@ export function logError(message: string, context?: string): void {
   process.stderr.write(`${colorize(GLYPHS.error, 'red', process.stderr)} ${prefix}${message}\n`);
 }
 
+/**
+ * Cola de los handlers de comando: reporta el error y marca el fallo. No
+ * llama a `process.exit` a propósito — cortaría cualquier flush pendiente de
+ * stdout; el proceso termina solo con el código que aquí se fija.
+ */
+export function fail(context: string, err: unknown): void {
+  logError(err instanceof Error ? err.message : String(err), context);
+  process.exitCode = 1;
+}
+
 let warningSink: ((message: string) => void) | null = null;
 
 export async function runWithWarningSink<T>(sink: (message: string) => void, fn: () => Promise<T>): Promise<T> {
