@@ -33,7 +33,7 @@ import type { ExportContext, FormatWorkSets, RenderContext } from './pipeline-se
 import { htmlPageFromMarkdown } from './render.js';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
 import type { PdfXmpMetadata } from './xmpdata.js';
-import { injectXmpMetadataIntoLatex } from './xmpdata.js';
+import { injectXmpMetadataIntoLatex, XMP_FIELDS } from './xmpdata.js';
 
 /**
  * #2487 — la banda de metadatos imprime la portada completa del PDF, así que
@@ -75,26 +75,21 @@ function xmpMetadataFor(
   formatCfg: Record<string, unknown> | undefined,
   rootCfg: Record<string, unknown>,
 ): PdfXmpMetadata {
-  return {
-    title: resolveStringField(fm, formatCfg, rootCfg, 'title'),
-    authors: fmStringList(resolveMetadataField(fm, formatCfg, rootCfg, 'creator')),
-    lang,
-    dateIso: resolveStringField(fm, formatCfg, rootCfg, 'date'),
-    subject: fmStringList(resolveMetadataField(fm, formatCfg, rootCfg, 'subject'))?.join(', '),
-    publishers: fmStringList(resolveMetadataField(fm, formatCfg, rootCfg, 'publisher')),
-    keywords: fmStringList(resolveMetadataField(fm, formatCfg, rootCfg, 'keywords')),
-    description: resolveStringField(fm, formatCfg, rootCfg, 'description'),
-    contributors: fmStringList(resolveMetadataField(fm, formatCfg, rootCfg, 'contributor')),
-    identifier: resolveStringField(fm, formatCfg, rootCfg, 'identifier'),
-    source: resolveStringField(fm, formatCfg, rootCfg, 'source'),
-    relations: fmStringList(resolveMetadataField(fm, formatCfg, rootCfg, 'relation')),
-    coverage: resolveStringField(fm, formatCfg, rootCfg, 'coverage'),
-    rights: resolveStringField(fm, formatCfg, rootCfg, 'rights'),
-    license: resolveStringField(fm, formatCfg, rootCfg, 'license'),
-    doi: resolveStringField(fm, formatCfg, rootCfg, 'doi'),
-    isbn: resolveStringField(fm, formatCfg, rootCfg, 'isbn'),
-    abstract: resolveStringField(fm, formatCfg, rootCfg, 'abstract'),
-  };
+  const meta: Record<string, unknown> = {};
+  for (const { key, fm: field, kind } of XMP_FIELDS) {
+    if (field === null) {
+      meta[key] = lang;
+    } else if (kind === 'list') {
+      meta[key] = fmStringList(resolveMetadataField(fm, formatCfg, rootCfg, field));
+    } else {
+      meta[key] = resolveStringField(fm, formatCfg, rootCfg, field);
+    }
+  }
+  // `subject` se emite como escalar en XMP; el frontmatter lo admite como lista.
+  meta.subject = fmStringList(resolveMetadataField(fm, formatCfg, rootCfg, 'subject'))?.join(', ');
+  meta.doi = resolveStringField(fm, formatCfg, rootCfg, 'doi');
+  meta.isbn = resolveStringField(fm, formatCfg, rootCfg, 'isbn');
+  return meta as PdfXmpMetadata;
 }
 
 /**
