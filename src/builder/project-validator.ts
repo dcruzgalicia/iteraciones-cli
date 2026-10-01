@@ -267,14 +267,19 @@ export interface DictumWidthWarning {
   value: number;
 }
 
-export function dictumWidthWarnings(body: string, lineOffset = 0): DictumWidthWarning[] {
+/**
+ * Escanea líneas buscando anchos de dictum fuera de rango. `skipFences` salta
+ * las cercas de código: el body de un documento las tiene, el fragmento YAML
+ * que se le pasa ya viene limpio.
+ */
+function scanDictumWidths(text: string, lineOffset: number, skipFences: boolean): DictumWidthWarning[] {
   const hits: DictumWidthWarning[] = [];
   let inCode = false;
   let lineNum = 0;
-  for (const rawLine of body.split('\n')) {
+  for (const rawLine of text.split('\n')) {
     lineNum++;
     const trimmed = rawLine.trimEnd();
-    if (/^(```|~~~)/.test(trimmed)) {
+    if (skipFences && /^(```|~~~)/.test(trimmed)) {
       inCode = !inCode;
       continue;
     }
@@ -290,21 +295,12 @@ export function dictumWidthWarnings(body: string, lineOffset = 0): DictumWidthWa
   return hits;
 }
 
+export function dictumWidthWarnings(body: string, lineOffset = 0): DictumWidthWarning[] {
+  return scanDictumWidths(body, lineOffset, true);
+}
+
 export function dictumWidthWarningsInYaml(yaml: string, lineOffset = 0): DictumWidthWarning[] {
-  const hits: DictumWidthWarning[] = [];
-  let lineNum = 0;
-  for (const rawLine of yaml.split('\n')) {
-    lineNum++;
-    const trimmed = rawLine.trimEnd();
-    const m = DICTUM_WIDTH_RE.exec(trimmed);
-    if (m?.[1]) {
-      const num = Number.parseFloat(m[1]);
-      if (!Number.isNaN(num) && (num < DICTUM_WIDTH_MIN || num > DICTUM_WIDTH_MAX)) {
-        hits.push({ line: lineNum + lineOffset, value: num });
-      }
-    }
-  }
-  return hits;
+  return scanDictumWidths(yaml, lineOffset, false);
 }
 
 export function dictumWidthWarningsMessage(warnings: DictumWidthWarning[]): string {
