@@ -1,4 +1,4 @@
-import { basename, dirname, isAbsolute, join, normalize, relative, sep } from 'node:path';
+import { basename, dirname, join, relative, sep } from 'node:path';
 import { resolveCollectionFile } from '../builder/collection-files.js';
 import { loadSlugIndex } from '../builder/discover.js';
 import { printFlags } from '../builder/image-flags.js';
@@ -21,6 +21,7 @@ import type { SiteConfig } from '../config/config-schema.js';
 import { BuildError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
 import { fail, logSuccess } from '../lib/logger.js';
+import { resolvePath } from '../lib/paths.js';
 
 /** Formatos de entrada de pandoc (más el cuerpo fusionado, que no usa pandoc). */
 const FORMATS = ['latex', 'html', 'epub', 'markdown'] as const;
@@ -46,7 +47,7 @@ function assertCollectionFiles(fm: Record<string, unknown>, label: string): stri
 
 /** La collection original + los campos derivados que arma el build, en el mismo orden. */
 async function readCollectionSource(cwd: string, input: string) {
-  const inputPath = isAbsolute(input) ? normalize(input) : join(cwd, normalize(input));
+  const inputPath = resolvePath(cwd, input);
   const relativePath = relative(cwd, inputPath).split(sep).join('/');
   let text: string;
   try {
@@ -152,7 +153,7 @@ export async function runMerge(cwd: string, input: string, options: { output?: s
     const entries = await readCollectionEntries(src.files, src.relativePath, [cwd, join(cwd, dirname(src.relativePath))]);
     if (entries.length === 0) throw new BuildError(`"${input}": los archivos de files no tienen contenido`);
 
-    const output = isAbsolute(options.output) ? normalize(options.output) : join(cwd, normalize(options.output));
+    const output = resolvePath(cwd, options.output);
     // El outSlug del build es el stem del `-o` sin la extensión de formato
     // (`.iteraciones/collections/<slug>.<format>.md`): con el mismo prefijo,
     // las imágenes que escribe este comando se llaman igual que las del build.

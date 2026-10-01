@@ -8,9 +8,11 @@ import { DIST_DIR, DIST_FILES_DIR } from '../builder/output-layout.js';
 import { loadStateFile } from '../builder/state-serialize.js';
 import { loadSiteConfigIfPresent } from '../config/config-loader.js';
 import { computeActiveFormats, DEFAULT_PDF_FORMAT, resolveDisabledPreambleConfig } from '../config/site-config.js';
+import { todayIso } from '../lib/date.js';
 import { BUILD_ERROR_CODES, BuildError, ConfigError, ConversionError, PANDOC_ERROR_CODES } from '../lib/errors.js';
 import { logError, logInfo, logSuccess } from '../lib/logger.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
+import { resolvePath } from '../lib/paths.js';
 import { ProcessSpawnError } from '../lib/run.js';
 import type { CheckResult } from './doctor/system-checks.js';
 import { collectChecks, doctorEnvironment } from './doctor.js';
@@ -109,7 +111,7 @@ export async function runBuild(cwd: string, options: BuildOptions = {}): Promise
     let output = options.outputDir;
     if (output !== undefined) {
       const projectRoot = normalize(cwd);
-      const resolved = isAbsolute(output) ? normalize(output) : join(projectRoot, output);
+      const resolved = resolvePath(projectRoot, output);
       if (resolved === projectRoot) {
         throw new BuildError(`--output "${output}" es la raíz del proyecto: la salida sobrescribiría los archivos fuente.`);
       }
@@ -263,8 +265,7 @@ export async function runNew(cwd: string, path: string, options: { title?: strin
     const absPath = join(cwd, normalizedPath);
     await mkdir(dirname(absPath), { recursive: true });
 
-    const now = new Date();
-    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const today = todayIso();
     const title = options.title?.trim() || inferTitleFromPath(normalizedPath);
     const content = [
       '---',

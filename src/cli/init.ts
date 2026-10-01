@@ -8,12 +8,8 @@ import {
   DEFAULT_PDF_FORMAT,
   DEFAULT_SITE_CONFIG,
 } from '../config/site-config.js';
+import { todayIso } from '../lib/date.js';
 import { logInfo, logSuccess } from '../lib/logger.js';
-
-function todayIso(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-}
 
 const DEFAULT_INDEX = [
   '---',

@@ -68,21 +68,28 @@ async function emitJsonOutput(
   process.stdout.write(`${JSON.stringify({ filters, preamble })}\n`);
 }
 
-function emitFilterBlock(
+/**
+ * Una fila por filtro. `typeCol` es la columna de tipo: los Lua la llevan
+ * ("lua"), los de preámbulo no la tienen y pasan cadena vacía, así que la
+ * sangría de la descripción se calcula con el ancho de esa columna.
+ */
+function emitBlock(
   stream: NodeJS.WriteStream,
-  allInfos: Awaited<ReturnType<typeof getBuiltinLuaFilterInfos>>,
+  infos: { name: string; description: string }[],
   disabled: Set<string>,
   options: RunFiltersOptions,
   columns: number | undefined,
+  typeCol: string,
 ): void {
-  const nameWidth = Math.max(...allInfos.map((info) => info.name.length));
-  const descWidth = columns === undefined ? undefined : Math.max(10, columns - 2 - nameWidth - 2 - 3 - 2 - 8);
-  for (const info of allInfos) {
+  const nameWidth = Math.max(...infos.map((info) => info.name.length));
+  const descWidth = columns === undefined ? undefined : Math.max(10, columns - 2 - nameWidth - 2 - typeCol.length - 2 - 8);
+  const type = typeCol === '' ? '' : `${typeCol}  `;
+  for (const info of infos) {
     const active = !disabled.has(info.name);
     const status = active ? 'activo' : 'desactivado';
     const full = options.verbose === true ? info.description : shortDescription(info.description);
     const description = descWidth !== undefined && !options.verbose ? truncateWithEllipsis(full, descWidth) : full;
-    stream.write(`  ${info.name.padEnd(nameWidth)}  lua  ${description}  [${status}]\n`);
+    stream.write(`  ${info.name.padEnd(nameWidth)}  ${type}${description}  [${status}]\n`);
   }
 }
 
@@ -99,15 +106,7 @@ async function emitPreambleBlock(
   logInfo('');
   logInfo('Filtros de preámbulo (orden de ejecución):');
   logInfo('');
-  const preambleWidth = Math.max(...preambleInfos.map((info) => info.name.length));
-  const preambleDescWidth = columns === undefined ? undefined : Math.max(10, columns - 2 - preambleWidth - 2 - 2 - 8);
-  for (const info of preambleInfos) {
-    const active = !preambleDisabled.has(info.name);
-    const status = active ? 'activo' : 'desactivado';
-    const full = options.verbose === true ? info.description : shortDescription(info.description);
-    const description = preambleDescWidth !== undefined && !options.verbose ? truncateWithEllipsis(full, preambleDescWidth) : full;
-    stream.write(`  ${info.name.padEnd(preambleWidth)}  ${description}  [${status}]\n`);
-  }
+  emitBlock(stream, preambleInfos, preambleDisabled, options, columns, '');
   logInfo('');
   if (hasPreambleDisabled) {
     logInfo('Para reactivar uno, elimínalo de la lista `disabledPreambleFilters:` en iteraciones.config.yaml.');
@@ -144,7 +143,7 @@ export async function listFilters(cwd: string, options: RunFiltersOptions = {}):
 
   logInfo('Filtros disponibles (orden de ejecución):');
   logInfo('');
-  emitFilterBlock(stream, allInfos, disabled, options, terminalColumns(stream, options.columns));
+  emitBlock(stream, allInfos, disabled, options, terminalColumns(stream, options.columns), 'lua');
   logInfo('');
   if (hasDisabled) {
     logInfo('Para reactivar uno, elimínalo de la lista `disabledFilters:` en iteraciones.config.yaml.');
