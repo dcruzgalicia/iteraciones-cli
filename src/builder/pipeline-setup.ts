@@ -233,23 +233,14 @@ export interface RenderContext {
   pageDimensions: { w: number; h: number; textW: number } | undefined;
 }
 
-export interface ExportContext {
+/** Las nueve rutas y banderas de plantilla vienen de `EffectiveTemplates`. */
+export interface ExportContext extends EffectiveTemplates {
   filters: Awaited<ReturnType<typeof loadFilterGroups>>;
   bibOptions: Awaited<ReturnType<typeof resolveBibOptions>>['bibOptions'];
   bibFiles: string[];
-  biblatexAvailable: boolean;
   globalBibliography: string | undefined;
   globalCsl: string | undefined;
   pdfWorkDir: string;
-  /** #2488 — la de `file`; las de los otros dos types, con su propio nombre. */
-  htmlTemplatePath: string;
-  htmlCollectionTemplatePath: string;
-  htmlCreatorTemplatePath: string;
-  latexTemplatePath: string;
-  latexCollectionTemplatePath: string;
-  latexCreatorTemplatePath: string;
-  latexInterventionTemplatePath: string;
-  refsCardTemplates: Record<HtmlDocType, string>;
 }
 
 export interface FormatWorkSets {
@@ -284,18 +275,10 @@ export async function buildPoolContexts(
     filters,
     bibOptions: setup.bibOptions,
     bibFiles: setup.bibFiles,
-    biblatexAvailable: templates.biblatexAvailable,
     globalBibliography: setup.globalBibliography,
     globalCsl: setup.globalCsl,
     pdfWorkDir: join(ctx.cwd, PDF_WORK_BASE),
-    htmlTemplatePath: templates.htmlTemplatePath,
-    htmlCollectionTemplatePath: templates.htmlCollectionTemplatePath,
-    htmlCreatorTemplatePath: templates.htmlCreatorTemplatePath,
-    latexTemplatePath: templates.latexTemplatePath,
-    latexCollectionTemplatePath: templates.latexCollectionTemplatePath,
-    latexCreatorTemplatePath: templates.latexCreatorTemplatePath,
-    latexInterventionTemplatePath: templates.latexInterventionTemplatePath,
-    refsCardTemplates: templates.refsCardTemplates,
+    ...templates,
   };
   const formatWorkSets: FormatWorkSets = {
     htmlPaths: work.workPaths.html,

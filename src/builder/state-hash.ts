@@ -56,13 +56,7 @@ const HTML_RESOURCE_FILES = [
   'card-referencias-block.html',
 ];
 
-interface FilterFileCacheEntry {
-  mtime: number;
-  size: number;
-  hash: string;
-}
-
-export type FilterFileCache = Record<string, FilterFileCacheEntry>;
+export type FilterFileCache = Record<string, FileCacheEntry>;
 
 export const SCHEMA_SOURCE_FILES = [
   '../lib/date.ts', // humanDate: conversión yyyy-mm-dd → fecha legible
