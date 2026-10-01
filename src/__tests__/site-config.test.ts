@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'bun:test';
-import { computeActiveFormats, type FormatConfig } from '../config/site-config.js';
+import { computeActiveFormats } from '../config/site-config.js';
 
 describe('computeActiveFormats', () => {
-  const empty: FormatConfig = {
+  const empty = {
     latex: { generate: false },
     html: { generate: false },
     pdf: { generate: false },
     epub: { generate: false },
-    markdown: { generate: false },
+    markdown: { generate: false, merge: false },
   };
 
   it('retorna array vacío cuando ningún formato está activo', () => {
@@ -31,11 +31,11 @@ describe('computeActiveFormats', () => {
   });
 
   it('incluye markdown cuando generate: true', () => {
-    expect(computeActiveFormats({ ...empty, markdown: { generate: true } })).toEqual(['markdown']);
+    expect(computeActiveFormats({ ...empty, markdown: { generate: true, merge: false } })).toEqual(['markdown']);
   });
 
   it('incluye múltiples formatos activos simultáneamente', () => {
-    const cfg: FormatConfig = {
+    const cfg = {
       ...empty,
       latex: { generate: true },
       pdf: { generate: true },

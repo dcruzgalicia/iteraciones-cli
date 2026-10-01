@@ -1,5 +1,5 @@
 import type { SiteConfig } from '../config/config-schema.js';
-import { type ActiveFormats, computeActiveFormats, type FormatKey, toActiveFormats } from '../config/site-config.js';
+import { type ActiveFormats, computeActiveFormats, toActiveFormats } from '../config/site-config.js';
 import type { BibOptions } from '../lib/pandoc-runner.js';
 import { type BibFileCache, computeBibHash, resolveBibOptions } from './state-bib.js';
 import { computeConfigHashes, computeFiltersHash, type FilterFileCache } from './state-hash.js';
@@ -44,8 +44,6 @@ export async function computeBuildMetadata(
   effectiveDisabledPreamble?: string[],
   pandocVersion?: string,
 ): Promise<BuildMetadata> {
-  const currentFormats = computeActiveFormats(siteConfig.format);
-
   const bib = await resolveBibOptions(cwd, siteConfig);
   const [configResult, filtersHashResult, bibHashResult] = await Promise.all([
     computeConfigHashes(cwd, siteConfig, prevState?.configFileCache),
@@ -66,6 +64,10 @@ export async function computeBuildMetadata(
   const filtersInvalidated = prevState !== null && prevState.filtersHash !== filtersHash;
   const bibInvalidated = prevState !== null && prevState.bibHash !== bibHashResult.hash;
 
+  // Se ensancha a string[] porque el diff de abajo compara contra
+  // `prevState.activeFormats`, que viene del state.json y es string[].
+  const currentFormats: string[] = computeActiveFormats(siteConfig.format);
+
   let newFormats: string[] = [];
   let removedFormats: string[] = [];
   if (prevState !== null) {
@@ -74,7 +76,7 @@ export async function computeBuildMetadata(
     removedFormats = prevState.activeFormats.filter((f) => !currentFormats.includes(f));
   }
 
-  const activeFormats = toActiveFormats(currentFormats as FormatKey[]);
+  const activeFormats = toActiveFormats(computeActiveFormats(siteConfig.format));
   const generateLatex = activeFormats.pdf || activeFormats.latex;
   const needsCss = activeFormats.html;
 
