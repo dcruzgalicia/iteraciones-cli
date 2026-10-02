@@ -21,8 +21,8 @@ import { looseColonLines } from '../../builder/project-validator.js';
  * genera snippets basura (trampa 2). Para tablas: `Scenario Outline` con
  * `Examples`. Para varias líneas: docstring, como aquí.
  *
- * **El mundo es un objeto compartido mutable.** Un `Given` escribe, un `Then`
- * lee. Por eso vive en `mundo` y no en una variable de módulo, y por eso los
+ * **El world es un objeto compartido mutable.** Un `Given` escribe, un `Then`
+ * lee. Por eso vive en `world` y no en una variable de módulo, y por eso los
  * hooks lo limpian: cucumber NO aísla escenarios como hace `bun test`.
  */
 
@@ -30,28 +30,28 @@ interface VocabularioWorld {
   cuerpo: string;
 }
 
-const mundo: VocabularioWorld = { cuerpo: '' };
+const world: VocabularioWorld = { cuerpo: '' };
 
 Before(() => {
-  mundo.cuerpo = '';
+  world.cuerpo = '';
 });
 
 After(() => {
-  mundo.cuerpo = '';
+  world.cuerpo = '';
 });
 
 Given('un cuerpo:', (cuerpo: string) => {
-  mundo.cuerpo = cuerpo;
+  world.cuerpo = cuerpo;
 });
 
-Then('las líneas reportadas son {string}', (esperado: string) => {
-  // Se parsea lo esperado en vez de comparar strings: en el .feature se puede
+Then('las líneas reportadas son {string}', (expected: string) => {
+  // Se parsea lo expected en vez de comparar strings: en el .feature se puede
   // escribir "[1, 5, 7]" con espacios, que es más legible, sin que eso cambie
   // el resultado. Comparar contra JSON.stringify obligaría a escribirlo sin
   // espacios y el feature quedaría peor de leer a cambio de nada.
-  const esperadoComoLineas: number[] = JSON.parse(esperado);
-  const obtenido = looseColonLines(mundo.cuerpo);
-  if (JSON.stringify(obtenido) !== JSON.stringify(esperadoComoLineas)) {
-    throw new Error(`esperaba ${esperado} y obtuve ${JSON.stringify(obtenido)} para el cuerpo:\n${JSON.stringify(mundo.cuerpo)}`);
+  const expectedLines: number[] = JSON.parse(expected);
+  const actual = looseColonLines(world.cuerpo);
+  if (JSON.stringify(actual) !== JSON.stringify(expectedLines)) {
+    throw new Error(`esperaba ${expected} y obtuve ${JSON.stringify(actual)} para el cuerpo:\n${JSON.stringify(world.cuerpo)}`);
   }
 });

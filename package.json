@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "prepare": "husky",
     "check-tautologias": "bun tools/check-tautologies.ts",
-    "gherkin": "cucumber-js"
+    "gherkin": "cucumber-js",
+    "check-steps": "bun tools/check-steps.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.7",
