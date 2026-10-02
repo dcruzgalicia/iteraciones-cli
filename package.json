@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "prepare": "husky",
     "check-tautologias": "bun tools/check-tautologies.ts",
-    "gherkin": "cucumber-js",
+    "gherkin": "bun tools/gherkin.ts",
     "check-steps": "bun tools/check-steps.ts"
   },
   "devDependencies": {
