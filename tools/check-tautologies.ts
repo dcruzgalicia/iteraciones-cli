@@ -11,22 +11,22 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const RAIZ = join(import.meta.dir, '..', 'src', '__tests__');
+const ROOT = join(import.meta.dir, '..', 'src', '__tests__');
 const LITERAL = /\bexpect\(\s*(?:true|false|-?\d+(?:\.\d+)?|'[^']*'|"[^"]*"|\[\s*\]|\{\s*\})\s*\)\.(?:toBe|toEqual|toStrictEqual)\s*\(/;
 
-const ofensas: string[] = [];
-for (const archivo of readdirSync(RAIZ)) {
-  if (!archivo.endsWith('.ts')) continue;
-  readFileSync(join(RAIZ, archivo), 'utf8')
+const offenses: string[] = [];
+for (const file of readdirSync(ROOT)) {
+  if (!file.endsWith('.ts')) continue;
+  readFileSync(join(ROOT, file), 'utf8')
     .split('\n')
     .forEach((linea, i) => {
-      if (LITERAL.test(linea)) ofensas.push(`${archivo}:${i + 1}  ${linea.trim()}`);
+      if (LITERAL.test(linea)) offenses.push(`${file}:${i + 1}  ${linea.trim()}`);
     });
 }
 
-if (ofensas.length > 0) {
-  console.error(`✖ [tautologias] ${ofensas.length} aserción(es) sobre un literal:\n`);
-  for (const o of ofensas) console.error(`  ${o}`);
+if (offenses.length > 0) {
+  console.error(`✖ [tautologias] ${offenses.length} aserción(es) sobre un literal:\n`);
+  for (const offense of offenses) console.error(`  ${offense}`);
   console.error('\nO se comprueba algo, o el test no existe. Ver #2542.');
   process.exit(1);
 }

@@ -59,7 +59,7 @@ function replayBuildScript(dir: string): { code: number; stderr: string } {
 }
 
 /** #2445/#2456: los únicos comandos del SO que el .sh puede usar. */
-function comandosDelSistema(script: string): string[] {
+function systemCommands(script: string): string[] {
   const found = new Set<string>();
   for (const raw of script.split('\n')) {
     const line = raw.trim();
@@ -80,7 +80,7 @@ interface BuildScriptWorld {
   stderrReplay: string;
 }
 
-const mundo: BuildScriptWorld = {
+const world: BuildScriptWorld = {
   dir: '',
   script: '',
   copiaPrevia: new Map(),
@@ -91,129 +91,129 @@ const mundo: BuildScriptWorld = {
 // Sólo pandoc hace falta: el documento de prueba no tiene imágenes, así que
 // ImageMagick no participa. En el original el `skipIf` de magick cubría otro
 // describe (el de las imágenes procesadas), que este feature no migra.
-const pandocOk = (await getPandocVersion().catch(() => null)) !== null;
+const pandocAvailable = (await getPandocVersion().catch(() => null)) !== null;
 
 Before(async () => {
-  mundo.dir = await mkdtemp(join(tmpdir(), 'iteraciones-gherkin-'));
-  await Bun.write(join(mundo.dir, 'iteraciones.config.yaml'), `${CONFIG}\n`);
-  await Bun.write(join(mundo.dir, 'documento.md'), `${DOC}\n`);
+  world.dir = await mkdtemp(join(tmpdir(), 'iteraciones-gherkin-'));
+  await Bun.write(join(world.dir, 'iteraciones.config.yaml'), `${CONFIG}\n`);
+  await Bun.write(join(world.dir, 'documento.md'), `${DOC}\n`);
 });
 
 After(async () => {
-  await rm(mundo.dir, { recursive: true, force: true });
+  await rm(world.dir, { recursive: true, force: true });
 });
 
 Given('un proyecto de prueba con la clave script activada', () => {
   // El setup real va en Before; este step documenta la precondición del
   // escenario y falla si pandoc no está, en vez de dar un error confuso más abajo.
-  if (!pandocOk) throw new Error('pandoc no está disponible: este feature necesita pandoc real');
+  if (!pandocAvailable) throw new Error('pandoc no está disponible: este feature necesita pandoc real');
 });
 
 When('corro el build', async () => {
-  await build(mundo.dir);
-  mundo.script = await Bun.file(join(mundo.dir, 'build.sh')).text();
+  await build(world.dir);
+  world.script = await Bun.file(join(world.dir, 'build.sh')).text();
 });
 
 Then('build.sh existe y es ejecutable', async () => {
-  const existe = await Bun.file(join(mundo.dir, 'build.sh')).exists();
-  if (!existe) throw new Error('build.sh no se escribió en la raíz del proyecto');
+  const exists = await Bun.file(join(world.dir, 'build.sh')).exists();
+  if (!exists) throw new Error('build.sh no se escribió en la raíz del proyecto');
 });
 
 Then('build.sh empieza con la cabecera de bash y se mueve a la raíz del proyecto', async () => {
-  const canonico = await realpath(mundo.dir);
-  if (!mundo.script.startsWith('#!/bin/bash\nset -e\ncd ')) {
-    throw new Error(`la cabecera no es la esperada. Empieza con: ${JSON.stringify(mundo.script.slice(0, 40))}`);
+  const canonicalRoot = await realpath(world.dir);
+  if (!world.script.startsWith('#!/bin/bash\nset -e\ncd ')) {
+    throw new Error(`la cabecera no es la esperada. Empieza con: ${JSON.stringify(world.script.slice(0, 40))}`);
   }
-  if (!mundo.script.includes(`cd ${canonico}`)) throw new Error(`build.sh no hace cd a la raíz canónica ${canonico}`);
+  if (!world.script.includes(`cd ${canonicalRoot}`)) throw new Error(`build.sh no hace cd a la raíz canónica ${canonicalRoot}`);
 });
 
 Then('build.sh prepara sus directorios con mkdir y no invoca iteraciones prepare', () => {
-  if (!mundo.script.includes('# === Preparación (directorios) ===')) throw new Error('falta la sección de preparación');
-  if (!/^mkdir -p \S/m.test(mundo.script)) throw new Error('no hay ningún mkdir -p');
-  if (mundo.script.includes('iteraciones prepare')) throw new Error('build.sh no debe invocar iteraciones prepare (#2456)');
+  if (!world.script.includes('# === Preparación (directorios) ===')) throw new Error('falta la sección de preparación');
+  if (!/^mkdir -p \S/m.test(world.script)) throw new Error('no hay ningún mkdir -p');
+  if (world.script.includes('iteraciones prepare')) throw new Error('build.sh no debe invocar iteraciones prepare (#2456)');
 });
 
 Then('build.sh tiene una sección por cada formato generado', () => {
-  for (const seccion of [
+  for (const section of [
     '# === Recursos: plantillas, colecciones y assets (iteraciones) ===',
     '# === Salidas de iteraciones (post-proceso y markdown) ===',
     '# === Pandoc: LaTeX ===',
     '# === Pandoc: HTML ===',
     '# === Pandoc: EPUB ===',
   ]) {
-    if (!mundo.script.includes(seccion)) throw new Error(`falta la sección ${seccion}`);
+    if (!world.script.includes(section)) throw new Error(`falta la sección ${section}`);
   }
 });
 
 Then('build.sh no invoca ningún comando de sistema aparte de cd y mkdir', () => {
-  const prohibidos = comandosDelSistema(mundo.script);
-  if (prohibidos.length > 0) throw new Error(`build.sh usa comandos del SO prohibidos: ${prohibidos.join(', ')}`);
+  const forbidden = systemCommands(world.script);
+  if (forbidden.length > 0) throw new Error(`build.sh usa comandos del SO forbidden: ${forbidden.join(', ')}`);
 });
 
 Then('build.sh redirige la salida de cada formato a dist', () => {
-  if (!mundo.script.includes('.iteraciones/script/in-')) throw new Error('falta la materialización de la entrada');
+  if (!world.script.includes('.iteraciones/script/in-')) throw new Error('falta la materialización de la entrada');
   for (const ext of ['tex', 'html']) {
-    if (!new RegExp(`> *[^\\n]*dist/files/[^\\n]*\\.${ext}\\b`).test(mundo.script)) {
+    if (!new RegExp(`> *[^\\n]*dist/files/[^\\n]*\\.${ext}\\b`).test(world.script)) {
       throw new Error(`no hay redirect a dist/files/*.${ext}`);
     }
   }
 });
 
 Then('el markdown de dist lo escribe iteraciones y no un redirect de pandoc', () => {
-  const redirectAMarkdown = /> *[^\n]*dist\/files\/[^\n]*\.md\b/.test(mundo.script);
-  const escribeConIteraciones = /^\s*iteraciones markdown \S+ -o \S+dist\/files\/\S+\.md$/m.test(mundo.script);
-  if (redirectAMarkdown) {
+  const markdownRedirect = /> *[^\n]*dist\/files\/[^\n]*\.md\b/.test(world.script);
+  const writtenByCli = /^\s*iteraciones markdown \S+ -o \S+dist\/files\/\S+\.md$/m.test(world.script);
+  if (markdownRedirect) {
     throw new Error('el .sh no debe escribir el markdown de dist con un redirect de pandoc');
   }
-  if (!escribeConIteraciones) {
+  if (!writtenByCli) {
     throw new Error('falta `iteraciones markdown ... -o dist/files/....md`');
   }
 });
 
 Then('build.sh no invoca los subcomandos de iteraciones que rehacen el trabajo', () => {
-  if (/\biteraciones\s+(build|new|init|clean|validate|doctor)\b/.test(mundo.script)) {
+  if (/\biteraciones\s+(build|new|init|clean|validate|doctor)\b/.test(world.script)) {
     throw new Error('build.sh no debe invocar build/new/init/clean/validate/doctor');
   }
-  if (!/^\s*iteraciones (template|post|prepare|assets|markdown) /m.test(mundo.script)) {
+  if (!/^\s*iteraciones (template|post|prepare|assets|markdown) /m.test(world.script)) {
     throw new Error('falta al menos un subcomando permitido de iteraciones');
   }
-  if (mundo.script.includes('iteraciones merge')) throw new Error('build.sh no debe invocar iteraciones merge');
+  if (world.script.includes('iteraciones merge')) throw new Error('build.sh no debe invocar iteraciones merge');
 });
 
 When('guardo una copia de las salidas de dist', async () => {
-  mundo.copiaPrevia = await snapshot(join(mundo.dir, 'dist', 'files'));
-  if (mundo.copiaPrevia.size < 4) {
-    throw new Error(`esperaba al menos 4 salidas (.tex, .html, .epub, .md) y hay ${mundo.copiaPrevia.size}`);
+  world.copiaPrevia = await snapshot(join(world.dir, 'dist', 'files'));
+  if (world.copiaPrevia.size < 4) {
+    throw new Error(`esperaba al menos 4 salidas (.tex, .html, .epub, .md) y hay ${world.copiaPrevia.size}`);
   }
 });
 
 When('reejecuto build.sh con bash', () => {
-  const { code, stderr } = replayBuildScript(mundo.dir);
-  mundo.codigoReplay = code;
-  mundo.stderrReplay = stderr;
+  const { code, stderr } = replayBuildScript(world.dir);
+  world.codigoReplay = code;
+  world.stderrReplay = stderr;
 });
 
 Then('el código de salida es 0', () => {
-  if (mundo.codigoReplay !== 0) throw new Error(`bash build.sh salió con ${mundo.codigoReplay}\n${mundo.stderrReplay}`);
+  if (world.codigoReplay !== 0) throw new Error(`bash build.sh salió con ${world.codigoReplay}\n${world.stderrReplay}`);
 });
 
 Then('dist tiene los mismos archivos que antes', async () => {
-  const despues = await snapshot(join(mundo.dir, 'dist', 'files'));
-  const antes = [...mundo.copiaPrevia.keys()].sort();
-  const ahora = [...despues.keys()].sort();
-  if (JSON.stringify(antes) !== JSON.stringify(ahora)) {
-    throw new Error(`dist cambió de archivos.\n  antes: ${JSON.stringify(antes)}\n  ahora: ${JSON.stringify(ahora)}`);
+  const rebuilt = await snapshot(join(world.dir, 'dist', 'files'));
+  const start = [...world.copiaPrevia.keys()].sort();
+  const current = [...rebuilt.keys()].sort();
+  if (JSON.stringify(start) !== JSON.stringify(current)) {
+    throw new Error(`dist cambió de archivos.\n  start: ${JSON.stringify(start)}\n  current: ${JSON.stringify(current)}`);
   }
 });
 
 Then('cada archivo es idéntico byte a byte salvo el epub', async () => {
-  const despues = await snapshot(join(mundo.dir, 'dist', 'files'));
-  for (const [name, bytes] of mundo.copiaPrevia) {
+  const rebuilt = await snapshot(join(world.dir, 'dist', 'files'));
+  for (const [name, bytes] of world.copiaPrevia) {
     // El EPUB lleva fecha de compilación: sólo puede exigírsele que exista.
     if (name.endsWith('.epub')) {
-      if (despues.get(name) === undefined) throw new Error(`${name} no se regeneró`);
+      if (rebuilt.get(name) === undefined) throw new Error(`${name} no se regeneró`);
       continue;
     }
-    if (despues.get(name)?.equals(bytes) !== true) throw new Error(`bytes distintos en ${name}`);
+    if (rebuilt.get(name)?.equals(bytes) !== true) throw new Error(`bytes distintos en ${name}`);
   }
 });
