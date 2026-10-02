@@ -1,0 +1,9 @@
+{
+  "name": "mbox-cuenta-las-palabras-de-resaltado-mark-como-grupo",
+  "helper": "toLatex",
+  "markdown": "Primera oración de ejemplo. Y termina con ==texto resaltado con ñ==.",
+  "from": "markdown+mark",
+  "contains": ["\\hl{texto \\mbox{resaltado con ñ}}"],
+  "notContains": [],
+  "normalizeNewlines": true
+}

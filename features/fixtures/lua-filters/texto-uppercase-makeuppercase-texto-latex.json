@@ -1,0 +1,8 @@
+{
+  "name": "texto-uppercase-makeuppercase-texto-latex",
+  "helper": "toLatex",
+  "markdown": "[Texto en mayúsculas]{.uppercase}",
+  "contains": ["\\MakeUppercase{Texto en mayúsculas}"],
+  "notContains": ["uppercase"],
+  "normalizeNewlines": false
+}

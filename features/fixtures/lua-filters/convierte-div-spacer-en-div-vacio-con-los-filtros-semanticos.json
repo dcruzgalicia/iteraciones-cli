@@ -1,0 +1,9 @@
+{
+  "name": "convierte-div-spacer-en-div-vacio-con-los-filtros-semanticos",
+  "helper": "toHtml5",
+  "markdown": "texto\n\n::\n\ntexto",
+  "contains": ["<div class=\"h-[1.5em]\"></div>"],
+  "notContains": [],
+  "normalizeNewlines": false,
+  "extraSemantic": true
+}

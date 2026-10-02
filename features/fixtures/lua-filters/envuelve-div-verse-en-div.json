@@ -1,0 +1,9 @@
+{
+  "name": "envuelve-div-verse-en-div",
+  "helper": "toHtml5",
+  "markdown": "::: {.verse}\nPoema\n:::\n",
+  "contains": ["<div class=\"verse\">", "</div>"],
+  "notContains": [],
+  "normalizeNewlines": false,
+  "extraSemantic": false
+}

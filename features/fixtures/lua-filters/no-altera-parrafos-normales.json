@@ -1,0 +1,9 @@
+{
+  "name": "no-altera-parrafos-normales",
+  "helper": "toHtml5",
+  "markdown": "Párrafo normal",
+  "contains": ["<p>Párrafo normal</p>"],
+  "notContains": ["blockquote", "class=\"spacer\""],
+  "normalizeNewlines": false,
+  "extraSemantic": false
+}

@@ -1,0 +1,9 @@
+{
+  "name": "envuelve-div-center-en-div",
+  "helper": "toHtml5",
+  "markdown": "::: {.center}\nCentrado\n:::\n",
+  "contains": ["<div class=\"center\">"],
+  "notContains": [],
+  "normalizeNewlines": false,
+  "extraSemantic": false
+}

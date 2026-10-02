@@ -1,0 +1,8 @@
+{
+  "name": "dictum-con-autor-de-dos-parrafos-los-separa-con-espacio",
+  "helper": "toLatex",
+  "markdown": "::: {.dictum}\nCita\n\n::: {.author}\nAutor Uno\n\nAutor Dos\n::: \n:::\n",
+  "contains": ["\\dictum[Autor Uno Autor Dos]{", "Cita}"],
+  "notContains": [],
+  "normalizeNewlines": false
+}

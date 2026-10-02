@@ -1,0 +1,9 @@
+{
+  "name": "decoracion-inline-versalitas-mayusculas-subrayado-resaltado-",
+  "helper": "toLatex",
+  "markdown": "[Versalitas]{.smallcaps} [Mayúsculas]{.uppercase} [Subrayado]{.underline} ==Resaltado== ~~Tachado~~",
+  "from": "markdown+mark",
+  "contains": ["\\textsc{Versalitas}", "\\MakeUppercase{Mayúsculas}", "\\ul{Subrayado}", "\\hl{Resaltado}", "\\st{Tachado}"],
+  "notContains": [],
+  "normalizeNewlines": false
+}

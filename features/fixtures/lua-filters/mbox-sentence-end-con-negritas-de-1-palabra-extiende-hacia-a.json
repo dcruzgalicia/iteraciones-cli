@@ -1,0 +1,8 @@
+{
+  "name": "mbox-sentence-end-con-negritas-de-1-palabra-extiende-hacia-a",
+  "helper": "toLatex",
+  "markdown": "Como lo dice **ella**.",
+  "contains": ["\\mbox{lo dice \\textbf{ella}.}"],
+  "notContains": [],
+  "normalizeNewlines": true
+}

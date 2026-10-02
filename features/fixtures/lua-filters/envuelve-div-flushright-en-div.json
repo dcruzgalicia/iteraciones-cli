@@ -1,0 +1,9 @@
+{
+  "name": "envuelve-div-flushright-en-div",
+  "helper": "toHtml5",
+  "markdown": "::: {.flushright}\nDerecha\n:::\n",
+  "contains": ["<div class=\"flushright\">"],
+  "notContains": [],
+  "normalizeNewlines": false,
+  "extraSemantic": false
+}

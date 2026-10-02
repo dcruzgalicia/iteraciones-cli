@@ -1,0 +1,8 @@
+{
+  "name": "convierte-div-dictum-sin-autor",
+  "helper": "toLatex",
+  "markdown": "::: {.dictum}\nCita de prueba\n:::\n",
+  "contains": ["\\dictum{"],
+  "notContains": ["\\vspace*{2\\baselineskip}"],
+  "normalizeNewlines": false
+}

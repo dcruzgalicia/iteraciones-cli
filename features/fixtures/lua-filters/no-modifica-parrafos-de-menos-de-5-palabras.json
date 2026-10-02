@@ -1,0 +1,8 @@
+{
+  "name": "no-modifica-parrafos-de-menos-de-5-palabras",
+  "helper": "toLatex",
+  "markdown": "Hola.",
+  "contains": [],
+  "notContains": ["\\mbox"],
+  "normalizeNewlines": false
+}

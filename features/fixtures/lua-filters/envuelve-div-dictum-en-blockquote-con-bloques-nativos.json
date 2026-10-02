@@ -1,0 +1,9 @@
+{
+  "name": "envuelve-div-dictum-en-blockquote-con-bloques-nativos",
+  "helper": "toHtml5",
+  "markdown": "::: {.dictum}\nCita de prueba\n:::\n",
+  "contains": ["<blockquote class=\"dictum\">", "<p>Cita de prueba</p>", "</blockquote>"],
+  "notContains": [],
+  "normalizeNewlines": false,
+  "extraSemantic": false
+}

@@ -1,0 +1,8 @@
+{
+  "name": "convierte-div-center-y-div-flushright",
+  "helper": "toLatex",
+  "markdown": "::: {.center}\nCentrado\n:::\n\n::: {.flushright}\nDerecha\n:::\n",
+  "contains": ["\\begin{center}", "\\end{center}", "\\begin{flushright}", "\\end{flushright}"],
+  "notContains": [],
+  "normalizeNewlines": false
+}

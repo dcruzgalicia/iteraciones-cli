@@ -1,0 +1,8 @@
+{
+  "name": "convierte-japanese-al-entorno-cjk-con-encoding-min",
+  "helper": "toLatex",
+  "markdown": "::: {.japanese}\n花見は春の風物詩です。\n::: ",
+  "contains": ["\\begin{CJK}{UTF8}{min}", "花見は春の風物詩です。", "\\end{CJK}"],
+  "notContains": [],
+  "normalizeNewlines": false
+}

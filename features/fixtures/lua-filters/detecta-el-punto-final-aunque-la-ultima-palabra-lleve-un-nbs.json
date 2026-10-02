@@ -1,0 +1,8 @@
+{
+  "name": "detecta-el-punto-final-aunque-la-ultima-palabra-lleve-un-nbs",
+  "helper": "toLatex",
+  "markdown": "Primera oración de ejemplo. Segunda oración que libera y que transforma. ",
+  "contains": ["\\mbox{y que transforma.~}"],
+  "notContains": [],
+  "normalizeNewlines": true
+}

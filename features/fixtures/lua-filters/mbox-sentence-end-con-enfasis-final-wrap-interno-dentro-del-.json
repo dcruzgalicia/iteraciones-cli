@@ -1,0 +1,8 @@
+{
+  "name": "mbox-sentence-end-con-enfasis-final-wrap-interno-dentro-del-",
+  "helper": "toLatex",
+  "markdown": "Como ya lo había hecho en el primer libro de Histórikas: *Mi primera vez. Historias de mujeres en carne propia.*",
+  "contains": ["\\emph{Mi primera vez. Historias de mujeres \\mbox{en carne propia.}}"],
+  "notContains": ["\\mbox{de Histórikas"],
+  "normalizeNewlines": true
+}
