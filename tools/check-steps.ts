@@ -184,14 +184,19 @@ for (const feature of byFeature.keys()) {
 const DEFINED = definedSteps.size;
 const USES = stepTexts.length;
 if (DEFINED > 400) {
-  warnings.push(`${DEFINED} steps definedSteps: el budget del issue es ~300. El vocabulario está demasiado fragmentado.`);
+  warnings.push(`${DEFINED} definidos: el budget del issue es ~300. El vocabulario está demasiado fragmentado.`);
 }
 
-// 5. Criterio de aceptación de #2544: un feature con >3 scenarios debe
-//    necesitar menos de 10 steps definedSteps a mano.
+// 5. Criterio de aceptación de #2544: un feature con MÁS DE 3 scenarios debe
+//    necesitar menos de 10 steps definidos a mano.
+//    El `> 3` es literal, como está escrito en el issue. Con exactamente 3
+//    scenarios un contrato denso en aserciones (como `export-fixtures`, que
+//    afirma formato, índice y metadatos) necesita legítimamente más de 10
+//    steps: no es fragmentación, es que hay poco que reutilizar. El escenario
+//    que calibra de verdad el vocabulario es `lua-filters`, con 84 casos.
 for (const [feature, { scenarios, stepTexts: usados }] of byFeature) {
   const distinctSteps = new Set(usados.filter(casa));
-  if (scenarios >= 3 && distinctSteps.size > 10) {
+  if (scenarios > 3 && distinctSteps.size > 10) {
     errors.push(`${feature}: ${distinctSteps.size} steps distintos para ${scenarios} scenarios — el criterio de #2544 es <10 steps con >3 scenarios`);
   }
 }
