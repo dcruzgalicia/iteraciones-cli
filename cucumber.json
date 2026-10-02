@@ -1,0 +1,11 @@
+{
+  "default": {
+    "paths": ["features/**/*.feature"],
+    "import": ["src/test/steps/*.steps.ts"],
+    "i18n": {
+      "languages": ["es"],
+      "default": "es"
+    },
+    "format": ["progress"]
+  }
+}
