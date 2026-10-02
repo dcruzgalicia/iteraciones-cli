@@ -9,18 +9,18 @@ Característica: init, build y validate funcionan de punta a punta
     Dado un directorio vacío
     Cuando inicializo el proyecto
     Entonces el proyecto tiene configuración y documento inicial
-    Cuando compilo el proyecto desde cero
+    Cuando compilo el proyecto entero desde cero
     Entonces dist tiene al menos un HTML
 
   Escenario: El build incremental reutiliza los documentos sin cambios
     Dado un proyecto con el documento inicial de prueba
-    Cuando compilo el proyecto desde cero
+    Cuando compilo el proyecto entero desde cero
     Y recompilo sin tocar nada
     Entonces el HTML no se reescribe
 
   Escenario: Un cambio de configuración invalida el build
     Dado un proyecto con el documento inicial de prueba
-    Cuando compilo el proyecto desde cero
+    Cuando compilo el proyecto entero desde cero
     Y cambio el tema del sitio en la configuración
     Y compilo otra vez
     Entonces el HTML sigue en dist
@@ -29,12 +29,12 @@ Característica: init, build y validate funcionan de punta a punta
     Dado un directorio vacío
     Cuando inicializo el proyecto
     Y creo los capítulos uno y dos
-    Y compilo el proyecto desde cero
+    Y compilo el proyecto entero desde cero
     Entonces dist tiene un HTML para el índice y para cada capítulo
 
   Escenario: Un build fallido preserva el estado del último build completo (#2168)
     Dado un proyecto con el documento inicial de prueba
-    Cuando compilo el proyecto desde cero
+    Cuando compilo el proyecto entero desde cero
     Y apunto la bibliografía a un archivo que no existe
     Y compilo otra vez
     Entonces el build falla
