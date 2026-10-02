@@ -12,6 +12,15 @@ import { SCHEMA_SOURCE_FILES } from '../builder/state-hash.js';
  * o template, comparación contra SCHEMA_SOURCE_FILES + allowlist. Cada módulo
  * de la allowlist debe tener justificación.
  *
+ * #2550: los dos tests estáticos de este archivo se quedan en `bun:test` y NO
+ * migran a Gherkin. El primero verifica que cada entrada de
+ * SCHEMA_SOURCE_FILES exista; el segundo escanea módulos con regex y exige una
+ * justificación escrita por entrada de la allowlist. Los dos tienen el mismo
+ * motivo: el sujeto es el texto del código o la existencia de un fichero, sin
+ * `Cuando` que ejecutar. El segundo además exige un registro de decisión
+ * arquitectónica que no cabe en un `.feature` sin mudarlo a un `Description` o
+ * perderlo.
+ *
  * Si añades un módulo nuevo que afecta salidas: añádelo a SCHEMA_SOURCE_FILES.
  * Si añades un módulo que NO afecta salidas (utility): añádelo a la allowlist
  * con justificación en el comentario.

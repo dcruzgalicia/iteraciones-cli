@@ -12,7 +12,8 @@
     "prepare": "husky",
     "check-tautologias": "bun tools/check-tautologies.ts",
     "gherkin": "bun tools/gherkin.ts",
-    "check-steps": "bun tools/check-steps.ts"
+    "check-steps": "bun tools/check-steps.ts",
+    "check-estaticos": "bun tools/check-estaticos.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.7",

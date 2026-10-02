@@ -8,6 +8,10 @@ export default {
   // `src/test/steps/**` completos, no sólo lo staged: un .feature puede quedar
   // huérfano porque se borró el step que usaba, en un commit que no lo tocó.
   'features/**/*.feature': ['bun run check-steps'],
+  // Un test estático nuevo (sujeto = el texto del código) tiene que declararse en
+  // CONOCIDOS, o el check falla: la lista de los que no migran a Gherkin no crece
+  // en silencio (#2550).
+  'src/__tests__/**/*.test.ts': ['bun run check-estaticos'],
   'src/test/steps/**/*.ts': ['bun run check-steps'],
   '**/*.{ts,js,mjs,cjs,json,jsonc,css}': ['bunx --bun --no-install @biomejs/biome check --write --error-on-warnings'],
 };

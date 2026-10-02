@@ -386,6 +386,26 @@ La tipografía del PDF (papel, márgenes, interlineado, fuente, estilos de secci
 - `Bun.Glob`: globbing nativo sin dependencias.
 - `bun test`: test runner integrado, API compatible con Jest.
 
+### La suite es híbrida: `bun:test` y Gherkin
+
+Los tests de comportamiento viven en **Gherkin** (`features/*.feature` + `src/test/steps/`), que es donde se lee *qué* garantiza el sistema. Los que verifican **el código como texto** siguen en `bun:test`.
+
+Hay **seis tests estáticos** que no migran, en tres archivos:
+
+| Archivo | Casos | Por qué se queda |
+|---|---|---|
+| `config-schema-parity.test.ts` | 0 `it()` | La aserción es `Expect<Schema extends Config ? true : false>`. Ocurre en `tsc --noEmit`, no en runtime. |
+| `builder-isolation.test.ts` | 2 | Leen los `.ts` como texto y escanean imports. El sujeto es el árbol de dependencias. |
+| `schema-guard.test.ts` | 2 | Verifican existencia de ficheros y escanean módulos con regex; la allowlist exige justificación escrita por entrada. |
+
+El principio, para no re-litigarlo:
+
+> **Una aserción es vacía si su valor de verdad no depende del sistema bajo prueba.**
+> Gherkin expresa `Dado estado → Cuando acción → Entonces resultado observable`.
+> Los seis anteriores **no tienen `Cuando`**: su sujeto es el texto del código o la existencia de un fichero.
+
+No son tests malos: son la categoría correcta para un sujeto que es análisis estático, y la categoría se verifica con análisis estático. `bun run check-estaticos` hace que la lista no crezca en la próxima auditoría: falla si aparece un `it()` que no toca ningún módulo ni lee ficheros.
+
 ### ¿Por qué el pipeline usa dos pools de concurrencia?
 
 Cada documento genera sus formatos con invocaciones directas de pandoc (markdown → latex/html5/epub3/markdown) en el **pool 1**, con concurrencia `ctx.concurrency` (CPU − 1, máx. 16). El **pool 2** consume la cola de compilación PDF en paralelo, solapando latexmk con pandoc: el PDF no bloquea al resto de formatos. Cada instancia de latexmk consume ~300-600 MB de RAM, por eso su concurrencia está acotada a un máximo de **4 slots** (`PDF_MAX_SLOTS` en `pipeline.ts`), independiente de la concurrencia general.

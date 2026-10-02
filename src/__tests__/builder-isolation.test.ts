@@ -4,6 +4,16 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { initTestProject, withTempDir } from './helpers.js';
 
+/**
+ * #2550: los dos tests de este bloque se quedan en `bun:test` y NO migran a
+ * Gherkin. Leen los `.ts` como TEXTO y escanean sus imports; el sujeto es el
+ * código fuente, no un comportamiento en runtime. No hay `Cuando` — no hay
+ * acción que ejecutar — y el resultado es una propiedad del árbol de
+ * dependencias, que es análisis estático.
+ *
+ * El resto del archivo sí migra con normalidad: son builds de verdad.
+ */
+
 describe('aislamiento builder↔cli (#2017)', () => {
   it('ningún archivo de src/builder importa de src/cli', async () => {
     const files = await Array.fromAsync(new Bun.Glob('**/*.ts').scan({ cwd: 'src/builder' }));

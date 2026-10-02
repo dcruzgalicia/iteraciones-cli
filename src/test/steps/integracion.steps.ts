@@ -79,7 +79,7 @@ When('creo los capítulos uno y dos', async () => {
   await runNew(world.dir, 'capitulo-2.md', { title: 'Capítulo 2' });
 });
 
-When('compilo el proyecto desde cero', async () => {
+When('compilo el proyecto entero desde cero', async () => {
   process.exitCode = 0;
   await build(world.dir, { full: true });
   // Se guarda DESPUÉS del build bueno: es la referencia que el build fallido no
