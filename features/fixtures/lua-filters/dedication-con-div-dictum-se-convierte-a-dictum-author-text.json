@@ -1,0 +1,9 @@
+{
+  "name": "dedication-con-div-dictum-se-convierte-a-dictum-author-text",
+  "helper": "toLatexTitleback",
+  "markdown": "---\ntitle: Prueba\ndedication: |\n  ::: {.dictum}\n  Texto del dictum.\n\n  ::: {.author}\n  Autor\n  :::\n  :::\n---\n\nCuerpo.\n",
+  "contains": ["\\dictum", "Texto del dictum.", "Autor"],
+  "notContains": [":::"],
+  "needsBib": false,
+  "normalizeNewlines": false
+}

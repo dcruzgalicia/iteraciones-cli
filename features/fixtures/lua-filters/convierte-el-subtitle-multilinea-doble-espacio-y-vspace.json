@@ -1,0 +1,9 @@
+{
+  "name": "convierte-el-subtitle-multilinea-doble-espacio-y-vspace",
+  "helper": "toLatexTitleback",
+  "markdown": "---\ntitle: Prueba\nsubtitle: |\n  Línea uno  \n  Línea dos\n---\n\nCuerpo.\n",
+  "contains": ["\\subtitle{Línea uno\\\\\nLínea dos}"],
+  "notContains": [],
+  "needsBib": false,
+  "normalizeNewlines": false
+}

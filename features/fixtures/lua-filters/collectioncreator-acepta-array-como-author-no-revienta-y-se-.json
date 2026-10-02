@@ -1,0 +1,9 @@
+{
+  "name": "collectioncreator-acepta-array-como-author-no-revienta-y-se-",
+  "helper": "toLatexTitleback",
+  "markdown": "---\ntitle: Prueba\ncollectionCreator: [Editora A, Editora B]\n---\n\nCuerpo.\n",
+  "contains": ["\\collectionCreator{", "Editora A, Editora B"],
+  "notContains": [],
+  "needsBib": false,
+  "normalizeNewlines": false
+}

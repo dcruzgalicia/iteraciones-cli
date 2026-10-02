@@ -1,0 +1,9 @@
+{
+  "name": "sin-metadata-de-pagina-no-inserta-el-comando-aunque-haya-tit",
+  "helper": "toLatexFlags",
+  "markdown": "# Título\n\nPrimer párrafo.",
+  "contains": [],
+  "notContains": ["\\ofoot*{\\pagemark}"],
+  "needsBib": false,
+  "normalizeNewlines": false
+}

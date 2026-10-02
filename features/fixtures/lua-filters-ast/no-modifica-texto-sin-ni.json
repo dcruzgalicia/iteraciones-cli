@@ -1,0 +1,22 @@
+{
+  "name": "no-modifica-texto-sin-ni",
+  "markdown": "texto normal",
+  "expectedBlocks": [
+    {
+      "t": "Para",
+      "c": [
+        {
+          "t": "Str",
+          "c": "texto"
+        },
+        {
+          "t": "Space"
+        },
+        {
+          "t": "Str",
+          "c": "normal"
+        }
+      ]
+    }
+  ]
+}

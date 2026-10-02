@@ -1,0 +1,9 @@
+{
+  "name": "titleimage-pasa-la-ruta-literal-sin-escapar-el-guion-bajo",
+  "helper": "toLatexTitleback",
+  "markdown": "---\ntitle: Prueba\ntitleImage: ./mi_imagen.jpg\n---\n\nCuerpo.\n",
+  "contains": ["\\titleimage{./mi_imagen.jpg}"],
+  "notContains": ["\\_"],
+  "needsBib": false,
+  "normalizeNewlines": false
+}

@@ -1,0 +1,9 @@
+{
+  "name": "subject-con-array-de-un-solo-item-se-une-sin-coma-extra",
+  "helper": "toLatexTitleback",
+  "markdown": "---\ntitle: Prueba\nsubject: [Ensayo]\n---\n\nCuerpo.\n",
+  "contains": ["\\subject{Ensayo}"],
+  "notContains": [],
+  "needsBib": false,
+  "normalizeNewlines": false
+}

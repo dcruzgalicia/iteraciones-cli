@@ -1,0 +1,9 @@
+{
+  "name": "un-dictum-inicial-omite-el-vspace-y-no-aplica-noindent",
+  "helper": "toLatexFlags",
+  "markdown": "::: {.dictum}\nCita\n:::\n\nTexto.",
+  "contains": [],
+  "notContains": ["\\vspace*{2\\baselineskip}", "\\noindent"],
+  "needsBib": false,
+  "normalizeNewlines": false
+}

@@ -1,0 +1,42 @@
+{
+  "name": "convierte-sola-en-una-linea-a-div-spacer",
+  "markdown": "texto antes\n\n::\n\ntexto después",
+  "expectedBlocks": [
+    {
+      "t": "Para",
+      "c": [
+        {
+          "t": "Str",
+          "c": "texto"
+        },
+        {
+          "t": "Space"
+        },
+        {
+          "t": "Str",
+          "c": "antes"
+        }
+      ]
+    },
+    {
+      "t": "Div",
+      "c": [["", ["spacer"], []], []]
+    },
+    {
+      "t": "Para",
+      "c": [
+        {
+          "t": "Str",
+          "c": "texto"
+        },
+        {
+          "t": "Space"
+        },
+        {
+          "t": "Str",
+          "c": "después"
+        }
+      ]
+    }
+  ]
+}

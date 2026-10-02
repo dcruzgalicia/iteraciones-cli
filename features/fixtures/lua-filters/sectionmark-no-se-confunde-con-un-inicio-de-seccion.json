@@ -1,0 +1,9 @@
+{
+  "name": "sectionmark-no-se-confunde-con-un-inicio-de-seccion",
+  "helper": "toLatexFlags",
+  "markdown": "\\sectionmark{Texto}\n\nPárrafo.",
+  "contains": ["\\vspace*{2\\baselineskip}"],
+  "notContains": ["\\tableofcontents"],
+  "needsBib": false,
+  "normalizeNewlines": false
+}

@@ -1,0 +1,20 @@
+{
+  "name": "serializa-campos-simples-sin",
+  "helper": "toLatexTitleback",
+  "markdown": "---\ntitle: Prueba\nsubtitle: \"Subtítulo simple\"\nextratitle: \"Portada extra\"\nfrontispiece: \"Frontispicio\"\ntitlehead: \"Cabecera\"\nsubject: \"Tema\"\ndedication: \"Para alguien\"\nlowertitleback: \"Pie de portada\"\nuppertitleback: \"Texto simple\"\npublishers: \"Editorial\"\ncolophon: \"Datos del colofón\"\n---\n\nCuerpo.\n",
+  "contains": [
+    "\\subtitle{Subtítulo simple}",
+    "\\extratitle{Portada extra}",
+    "\\frontispiece{Frontispicio}",
+    "\\titlehead{Cabecera}",
+    "\\subject{Tema}",
+    "\\dedication{Para alguien}",
+    "\\lowertitleback{Pie de portada}",
+    "\\uppertitleback{Texto simple}",
+    "\\publishers{Editorial}",
+    "\\colophon{Datos del colofón}"
+  ],
+  "notContains": [],
+  "needsBib": false,
+  "normalizeNewlines": false
+}
