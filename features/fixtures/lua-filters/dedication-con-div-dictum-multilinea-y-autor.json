@@ -1,0 +1,9 @@
+{
+  "name": "dedication-con-div-dictum-multilinea-y-autor",
+  "helper": "toLatexTitleback",
+  "markdown": "---\ntitle: Prueba\ndedication: |\n  ::: {.dictum}\n  Hoy vamos caminando juntas.\n\n  Acompañándonos, cuestionándonos,\n\n  porque es suficiente\n\n  de las violencias que hemos vivido,\n\n  ahora necesitamos construir\n\n  historias diferentes\n\n  donde nuestra voz importe.\n\n  Esas historias no contadas\n\n  que hoy vamos a gritar.\n\n  ::: {.author}\n\n  Mare Advertencia\n  :::\n  :::\n---\n\nCuerpo.\n",
+  "contains": ["\\dictum[", "Mare Advertencia", "Hoy vamos caminando juntas"],
+  "notContains": [":::"],
+  "needsBib": false,
+  "normalizeNewlines": false
+}

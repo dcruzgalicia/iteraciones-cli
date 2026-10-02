@@ -1,0 +1,9 @@
+{
+  "name": "startpaper-pasa-la-ruta-literal-sin-escapar-el-guion-bajo",
+  "helper": "toLatexTitleback",
+  "markdown": "---\ntitle: Prueba\nstartpaper: ./interior_guardas.pdf\n---\n\nCuerpo.\n",
+  "contains": ["\\setstartpaper{./interior_guardas.pdf}"],
+  "notContains": ["\\_"],
+  "needsBib": false,
+  "normalizeNewlines": false
+}

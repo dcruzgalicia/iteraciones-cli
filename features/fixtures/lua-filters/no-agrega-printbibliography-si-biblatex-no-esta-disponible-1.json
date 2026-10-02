@@ -1,0 +1,9 @@
+{
+  "name": "no-agrega-printbibliography-si-biblatex-no-esta-disponible-1",
+  "helper": "toLatexFlags",
+  "markdown": "Cita [@key1].",
+  "contains": [],
+  "notContains": ["\\printbibliography"],
+  "needsBib": false,
+  "normalizeNewlines": false
+}

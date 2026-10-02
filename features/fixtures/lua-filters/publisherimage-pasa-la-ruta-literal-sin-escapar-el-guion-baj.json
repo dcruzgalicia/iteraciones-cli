@@ -1,0 +1,9 @@
+{
+  "name": "publisherimage-pasa-la-ruta-literal-sin-escapar-el-guion-baj",
+  "helper": "toLatexTitleback",
+  "markdown": "---\ntitle: Prueba\npublisherImage: ./logo_editorial.png\n---\n\nCuerpo.\n",
+  "contains": ["\\publishersimage{./logo_editorial.png}"],
+  "notContains": ["\\_"],
+  "needsBib": false,
+  "normalizeNewlines": false
+}

@@ -1,0 +1,9 @@
+{
+  "name": "un-rawblock-chapter-cuenta-como-inicio-de-seccion-toc-y-sin-",
+  "helper": "toLatexFlags",
+  "markdown": "\\chapter{Capítulo directo}\n\nTexto.",
+  "contains": ["\\tableofcontents"],
+  "notContains": ["\\vspace*{2\\baselineskip}"],
+  "needsBib": false,
+  "normalizeNewlines": false
+}

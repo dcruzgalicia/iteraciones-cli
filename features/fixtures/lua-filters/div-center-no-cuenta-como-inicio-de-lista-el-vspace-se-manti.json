@@ -1,0 +1,9 @@
+{
+  "name": "div-center-no-cuenta-como-inicio-de-lista-el-vspace-se-manti",
+  "helper": "toLatexFlags",
+  "markdown": "::: {.center}\nCentrado\n:::\n\nTexto.",
+  "contains": ["\\vspace*{2\\baselineskip}"],
+  "notContains": [],
+  "needsBib": false,
+  "normalizeNewlines": false
+}

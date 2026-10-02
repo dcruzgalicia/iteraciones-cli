@@ -1,0 +1,9 @@
+{
+  "name": "no-agrega-printbibliography-sin-nodos-cite-aunque-haya-bibli",
+  "helper": "toLatexFlags",
+  "markdown": "Texto sin citas.",
+  "contains": [],
+  "notContains": ["\\printbibliography"],
+  "needsBib": true,
+  "normalizeNewlines": false
+}

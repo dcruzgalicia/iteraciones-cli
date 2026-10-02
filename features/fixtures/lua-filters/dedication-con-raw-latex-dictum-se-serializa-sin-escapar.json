@@ -1,0 +1,9 @@
+{
+  "name": "dedication-con-raw-latex-dictum-se-serializa-sin-escapar",
+  "helper": "toLatexTitleback",
+  "markdown": "---\ntitle: Prueba\ndedication: |\n  \\dictum[Juan Pérez]{Este es un dictum de prueba}\n---\n\nCuerpo.\n",
+  "contains": ["\\dedication{\\dictum[Juan Pérez]{Este es un dictum de prueba}}"],
+  "notContains": [],
+  "needsBib": false,
+  "normalizeNewlines": false
+}

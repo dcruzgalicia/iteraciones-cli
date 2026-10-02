@@ -1,7 +1,7 @@
-import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
 import { execPandoc } from '../../lib/pandoc-runner.js';
+import { checkExpectations, loadCase, world } from './lua-world.js';
 
 /**
  * #2545 (onda 1) — los casos de `lua-filters` que son tabla pura.
@@ -31,7 +31,6 @@ import { execPandoc } from '../../lib/pandoc-runner.js';
  * pasar en verde probando menos.
  */
 
-const FIXTURES = join(import.meta.dir, '../../../features/fixtures/lua-filters');
 const FILTERS = join(import.meta.dir, '../../lib/resources/filters');
 
 const SEMANTIC_FILTERS = [
@@ -59,35 +58,15 @@ const LATEX_FILTERS = [
 
 const HTML_FILTERS = ['01-dictum', '02-verse', '03-center', '04-flushright', '05-spacer'].map((name) => join(FILTERS, 'html', `${name}.lua`));
 
-interface LuaCase {
-  name: string;
-  helper: 'toLatex' | 'toHtml5';
-  markdown: string;
-  from?: string;
-  contains: string[];
-  notContains: string[];
-  normalizeNewlines: boolean;
-  /** Los casos de HTML que piden además los filtros semánticos. */
-  extraSemantic?: boolean;
-}
-
-interface LuaWorld {
-  testCase: LuaCase;
-  output: string;
-}
-
-const world: LuaWorld = {
-  testCase: { name: '', helper: 'toLatex', markdown: '', contains: [], notContains: [], normalizeNewlines: false },
-  output: '',
-};
-
-Given('el caso {string}', async (name: string) => {
-  const raw = await readFile(join(FIXTURES, `${name}.json`), 'utf8');
-  world.testCase = JSON.parse(raw) as LuaCase;
-});
+// Un `Given` por contexto, no uno genérico: los cuatro Reglas del feature
+// comparten el `Then` pero no la entrada, y un solo `Dado el caso "<caso>"`
+// haría que los 63 escenarios de tabla quedaran ambiguos.
+Given('el caso de LaTeX {string}', loadCase);
+Given('el caso de HTML {string}', loadCase);
 
 When('lo convierto a LaTeX', async () => {
   const testCase = world.testCase;
+  if (testCase === null) throw new Error('no se cargo ningun caso: falta el Given');
   // Los semánticos PRIMERO: son los que convierten `::` y `:;` en Div.spacer.
   // Sin ellos, `01-spacer` y `05-spacer` no tienen nada que hacer y los seis
   // casos del separador salen como markdown crudo.
@@ -103,6 +82,7 @@ When('lo convierto a LaTeX', async () => {
 
 When('lo convierto a HTML', async () => {
   const testCase = world.testCase;
+  if (testCase === null) throw new Error('no se cargo ningun caso: falta el Given');
   // Los semánticos van primero y sólo en los casos que los piden, igual que el
   // segundo argumento de `toHtml5(markdown, extraFilters)` del original.
   const extra = testCase.extraSemantic === true ? SEMANTIC_FILTERS : [];
@@ -115,21 +95,4 @@ When('lo convierto a HTML', async () => {
   });
 });
 
-Then('cumple las expectativas guardadas', () => {
-  // El nombre del caso va en cada error: en un `Esquema del scenario` con 30
-  // filas, cucumber no dice WHICH fila falló.
-  const { contains, notContains, normalizeNewlines, name } = world.testCase;
-  // pandoc envuelve la salida a 72 columnas; algunos casos normalizan los saltos
-  // antes de comparar, igual que el original.
-  const output = normalizeNewlines ? world.output.replace(/\n/g, ' ') : world.output;
-  for (const expected of contains) {
-    if (!output.includes(expected)) {
-      throw new Error(`[${name}] esperaba que la salida contuviera ${JSON.stringify(expected)}`);
-    }
-  }
-  for (const forbidden of notContains) {
-    if (output.includes(forbidden)) {
-      throw new Error(`[${name}] esperaba que la salida NO contuviera ${JSON.stringify(forbidden)}`);
-    }
-  }
-});
+Then('cumple las expectativas guardadas', checkExpectations);

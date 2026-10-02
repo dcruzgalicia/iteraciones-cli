@@ -1,0 +1,10 @@
+{
+  "name": "no-modifica-dentro-de-un-bloque-de-codigo",
+  "markdown": "```\n::\n```",
+  "expectedBlocks": [
+    {
+      "t": "CodeBlock",
+      "c": [["", [], []], "::"]
+    }
+  ]
+}

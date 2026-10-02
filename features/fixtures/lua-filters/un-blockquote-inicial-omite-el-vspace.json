@@ -1,0 +1,9 @@
+{
+  "name": "un-blockquote-inicial-omite-el-vspace",
+  "helper": "toLatexFlags",
+  "markdown": "> Cita\n\nTexto.",
+  "contains": [],
+  "notContains": ["\\vspace*{2\\baselineskip}"],
+  "needsBib": false,
+  "normalizeNewlines": false
+}

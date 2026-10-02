@@ -1,0 +1,9 @@
+{
+  "name": "con-el-primer-bloque-header-toc-presente-sin-vspace-ni-noind",
+  "helper": "toLatexFlags",
+  "markdown": "# Título\n\nPrimer párrafo.",
+  "contains": ["\\tableofcontents"],
+  "notContains": ["\\vspace*{2\\baselineskip}", "\\noindent"],
+  "needsBib": false,
+  "normalizeNewlines": false
+}

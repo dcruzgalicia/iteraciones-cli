@@ -1,0 +1,9 @@
+{
+  "name": "subject-y-publishers-aceptan-array-de-strings-como-author-se",
+  "helper": "toLatexTitleback",
+  "markdown": "---\ntitle: Prueba\nsubject: [Ensayo, Poesía]\npublishers: [Editorial A, Editorial B]\n---\n\nCuerpo.\n",
+  "contains": ["\\subject{Ensayo, Poesía}", "\\publishers{Editorial A, Editorial B}"],
+  "notContains": [],
+  "needsBib": false,
+  "normalizeNewlines": false
+}

@@ -1,0 +1,9 @@
+{
+  "name": "con-el-primer-bloque-para-sin-toc-con-vspace-y-noindent",
+  "helper": "toLatexFlags",
+  "markdown": "Primer párrafo.\n\nSegundo párrafo.",
+  "contains": ["\\vspace*{2\\baselineskip}", "\\noindent Primer párrafo."],
+  "notContains": ["\\tableofcontents"],
+  "needsBib": false,
+  "normalizeNewlines": false
+}

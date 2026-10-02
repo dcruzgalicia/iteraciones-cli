@@ -1,0 +1,29 @@
+{
+  "name": "no-modifica-con-texto-en-la-misma-linea",
+  "markdown": ":: con texto",
+  "expectedBlocks": [
+    {
+      "t": "Para",
+      "c": [
+        {
+          "t": "Str",
+          "c": "::"
+        },
+        {
+          "t": "Space"
+        },
+        {
+          "t": "Str",
+          "c": "con"
+        },
+        {
+          "t": "Space"
+        },
+        {
+          "t": "Str",
+          "c": "texto"
+        }
+      ]
+    }
+  ]
+}

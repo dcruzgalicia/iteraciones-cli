@@ -1,0 +1,9 @@
+{
+  "name": "convierte-el-colophon-multilinea-doble-espacio-y-vspace",
+  "helper": "toLatexTitleback",
+  "markdown": "---\ntitle: Prueba\ncolophon: |\n  Impreso en México  \n  Primera edición\n---\n\nCuerpo.\n",
+  "contains": ["\\colophon{Impreso en México\\\\\nPrimera edición}"],
+  "notContains": [],
+  "needsBib": false,
+  "normalizeNewlines": false
+}

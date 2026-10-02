@@ -1,0 +1,9 @@
+{
+  "name": "con-el-primer-bloque-para-el-comando-de-pagina-no-se-inserta",
+  "helper": "toLatexFlags",
+  "markdown": "Primer párrafo.\n\nSegundo.",
+  "contains": [],
+  "notContains": ["\\ofoot*{\\pagemark}"],
+  "needsBib": false,
+  "normalizeNewlines": false
+}
