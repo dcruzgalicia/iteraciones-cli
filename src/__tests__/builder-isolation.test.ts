@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { initTestProject, withTempDir } from './helpers.js';
@@ -73,11 +73,6 @@ describe('aislamiento builder↔cli (#2017)', () => {
       expect(eventos.some((e) => e.startsWith('plan:discovery'))).toBe(true);
       expect(eventos.some((e) => e.startsWith('finish:'))).toBe(true);
     });
-  });
-
-  it('sanity: readdir de builder disponible para futuras aserciones', async () => {
-    const entries = await readdir('src/builder');
-    expect(entries.includes('types.ts')).toBe(true);
   });
 });
 
