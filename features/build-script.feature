@@ -1,4 +1,5 @@
 # language: es
+@requires-pandoc
 Característica: El build deja un build.sh que se puede reejecutar
   Como quien necesita reproducir un build en otra máquina
   Quiero que el build escriba un build.sh con los comandos externos que corrieron
