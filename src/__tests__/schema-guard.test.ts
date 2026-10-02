@@ -134,6 +134,6 @@ describe('SCHEMA_SOURCE_FILES cobertura', () => {
     if (uncovered.length > 0) {
       throw new Error(`SCHEMA_SOURCE_FILES incompleta (entries: ${SCHEMA_SOURCE_FILES.length}): ${uncovered.join(', ')}`);
     }
-    expect(true).toBe(true); //uite verde si no hay uncovered
+    // El `throw` de arriba es la aserción; aquí no hay nada que comprobar (#2542).
   });
 });

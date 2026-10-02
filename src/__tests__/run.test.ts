@@ -164,10 +164,4 @@ describe('killInFlightProcesses (#2172)', () => {
     // El kill del árbol terminó el proceso: exit ≠ 0 y no espera los 30s
     expect(result.exitCode).not.toBe(0);
   });
-
-  it('el registro queda vacío tras terminar procesos normales', async () => {
-    await exec('echo', ['ok']);
-    await killInFlightProcesses(); // sin en vuelo: no-op
-    expect(true).toBe(true);
-  });
 });
