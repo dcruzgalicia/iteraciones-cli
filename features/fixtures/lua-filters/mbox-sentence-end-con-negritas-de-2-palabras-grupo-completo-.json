@@ -1,0 +1,8 @@
+{
+  "name": "mbox-sentence-end-con-negritas-de-2-palabras-grupo-completo-",
+  "helper": "toLatex",
+  "markdown": "Esto termina en **carne propia**.",
+  "contains": ["\\mbox{en \\textbf{carne propia}.}"],
+  "notContains": [],
+  "normalizeNewlines": true
+}

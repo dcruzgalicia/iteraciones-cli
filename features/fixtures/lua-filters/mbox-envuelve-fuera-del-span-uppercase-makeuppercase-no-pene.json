@@ -1,0 +1,8 @@
+{
+  "name": "mbox-envuelve-fuera-del-span-uppercase-makeuppercase-no-pene",
+  "helper": "toLatex",
+  "markdown": "Primera oración de ejemplo. Y termina con [texto en mayúsculas]{.uppercase}.",
+  "contains": ["\\mbox{termina con \\MakeUppercase{texto en mayúsculas}"],
+  "notContains": ["\\MakeUppercase{texto \\mbox{"],
+  "normalizeNewlines": false
+}

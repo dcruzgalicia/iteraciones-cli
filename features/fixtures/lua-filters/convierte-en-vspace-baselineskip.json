@@ -1,0 +1,8 @@
+{
+  "name": "convierte-en-vspace-baselineskip",
+  "helper": "toLatex",
+  "markdown": "texto\n\n::\n\ntexto",
+  "contains": ["\\vspace{\\baselineskip}"],
+  "notContains": [],
+  "normalizeNewlines": false
+}

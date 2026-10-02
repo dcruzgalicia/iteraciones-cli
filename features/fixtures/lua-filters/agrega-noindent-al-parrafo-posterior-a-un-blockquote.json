@@ -1,0 +1,8 @@
+{
+  "name": "agrega-noindent-al-parrafo-posterior-a-un-blockquote",
+  "helper": "toLatex",
+  "markdown": "> Cita\n\nPárrafo siguiente.\n\nOtro párrafo.\n",
+  "contains": ["\\begin{quote}", "\\end{quote}", "\\noindent Párrafo siguiente."],
+  "notContains": [],
+  "normalizeNewlines": false
+}

@@ -1,0 +1,8 @@
+{
+  "name": "no-agrega-noindent-si-el-quote-no-es-seguido-por-un-parrafo",
+  "helper": "toLatex",
+  "markdown": "> Cita\n\n### Título\n\nContenido.\n",
+  "contains": [],
+  "notContains": ["\\noindent Título"],
+  "normalizeNewlines": false
+}

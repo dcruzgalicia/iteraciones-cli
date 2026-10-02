@@ -1,0 +1,8 @@
+{
+  "name": "convierte-div-dictum-con-autor",
+  "helper": "toLatex",
+  "markdown": "::: {.dictum}\nCita\n\n::: {.author}\nJulio Verne\n::: \n:::\n",
+  "contains": ["\\dictum[Julio Verne]{", "Cita}"],
+  "notContains": [],
+  "normalizeNewlines": false
+}

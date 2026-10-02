@@ -1,0 +1,8 @@
+{
+  "name": "convierte-en-vspace-noindent-al-parrafo-siguiente",
+  "helper": "toLatex",
+  "markdown": "texto\n\n:;\n\ntexto siguiente",
+  "contains": ["\\vspace{\\baselineskip}", "\\noindent texto siguiente"],
+  "notContains": [],
+  "normalizeNewlines": false
+}

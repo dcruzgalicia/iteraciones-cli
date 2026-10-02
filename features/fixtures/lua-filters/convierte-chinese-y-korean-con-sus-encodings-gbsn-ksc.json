@@ -1,0 +1,8 @@
+{
+  "name": "convierte-chinese-y-korean-con-sus-encodings-gbsn-ksc",
+  "helper": "toLatex",
+  "markdown": "::: {.chinese}\n这是中文。\n::: \n\n::: {.korean}\n한국어입니다.\n::: ",
+  "contains": ["\\begin{CJK}{UTF8}{gbsn}", "这是中文。", "\\begin{CJK}{UTF8}{ksc}", "한국어입니다."],
+  "notContains": [],
+  "normalizeNewlines": false
+}

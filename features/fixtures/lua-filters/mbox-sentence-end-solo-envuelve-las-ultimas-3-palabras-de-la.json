@@ -1,0 +1,8 @@
+{
+  "name": "mbox-sentence-end-solo-envuelve-las-ultimas-3-palabras-de-la",
+  "helper": "toLatex",
+  "markdown": "Primera oración de ejemplo. Segunda aquí. Tercera oración de ejemplo final.",
+  "contains": ["\\mbox{de ejemplo final.}"],
+  "notContains": ["\\mbox{ejemplo.}", "\\mbox{aquí.}"],
+  "normalizeNewlines": true
+}

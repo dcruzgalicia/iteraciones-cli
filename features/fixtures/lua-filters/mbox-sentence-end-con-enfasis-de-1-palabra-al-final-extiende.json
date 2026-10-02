@@ -1,0 +1,8 @@
+{
+  "name": "mbox-sentence-end-con-enfasis-de-1-palabra-al-final-extiende",
+  "helper": "toLatex",
+  "markdown": "Como lo dice *ella.*",
+  "contains": ["\\mbox{lo dice \\emph{ella.}}"],
+  "notContains": [],
+  "normalizeNewlines": false
+}

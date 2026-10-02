@@ -1,0 +1,8 @@
+{
+  "name": "mbox-sentence-end-con-negritas-de-4-palabras-wrap-interno-de",
+  "helper": "toLatex",
+  "markdown": "El final termina con **una frase de carne propia**.",
+  "contains": ["\\textbf{una frase \\mbox{de carne propia}}."],
+  "notContains": ["\\mbox{\\textbf{una frase"],
+  "normalizeNewlines": true
+}

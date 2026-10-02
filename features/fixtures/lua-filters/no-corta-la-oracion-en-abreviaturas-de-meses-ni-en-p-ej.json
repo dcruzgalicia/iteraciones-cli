@@ -1,0 +1,8 @@
+{
+  "name": "no-corta-la-oracion-en-abreviaturas-de-meses-ni-en-p-ej",
+  "helper": "toLatex",
+  "markdown": "El 3 de mar. Llegó tarde. Y el 5 de abr. También.",
+  "contains": [],
+  "notContains": ["\\mbox{mar.}", "\\mbox{abr.}", "\\mbox{p.ej.}"],
+  "normalizeNewlines": false
+}

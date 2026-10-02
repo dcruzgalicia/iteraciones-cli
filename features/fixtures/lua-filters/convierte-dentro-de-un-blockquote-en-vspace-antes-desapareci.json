@@ -1,0 +1,8 @@
+{
+  "name": "convierte-dentro-de-un-blockquote-en-vspace-antes-desapareci",
+  "helper": "toLatex",
+  "markdown": "> ::\n>\n> texto",
+  "contains": ["\\begin{quote}", "\\vspace{\\baselineskip}"],
+  "notContains": ["::"],
+  "normalizeNewlines": false
+}
