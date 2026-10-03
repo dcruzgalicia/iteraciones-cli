@@ -232,6 +232,25 @@ Given('que la raíz del proyecto pone el número de página en el pie central', 
 // `.tex` y el escenario probaría otra cosa.
 const PNG_1X1 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 
+Given('que la raíz del proyecto tiene configuración pero ningún documento', () => {
+  raiz();
+  // Sin `test.md`: un proyecto recién inicializado todavía no tiene documentos.
+  escribirEnProyecto(
+    'iteraciones.config.yaml',
+    ['language: es-MX', 'format:', '  html:', '    site:', '      title: Test', '    generate: true'].join('\n'),
+  );
+});
+
+Given('que la raíz del proyecto declara la bibliografía {string}', (relativa: string) => {
+  escribirEnProyecto('iteraciones.config.yaml', `language: es-MX\nbibliography: ${relativa}\n`);
+});
+
+Given('que la bibliografía declara el título {string}', (titulo: string) => {
+  // La clave `ejemplo2024` es la que cita el documento del escenario; sólo
+  // cambia el título, que es lo que el build tiene que volver a renderizar.
+  escribirEnProyecto('refs/libro.bib', `@book{ejemplo2024,\n  title = {${titulo}},\n  author = {Autor},\n  year = {2024},\n}\n`);
+});
+
 Given('que el archivo {string} es un PNG de 1 por 1', (relativa: string) => {
   const ruta = join(raiz(), relativa);
   mkdirSync(dirname(ruta), { recursive: true });
@@ -427,6 +446,15 @@ Then('el error menciona la ruta real de {string}', (relativa: string) => {
   // proyecto en otro directorio necesita saber dónde la buscó el build.
   if (!world.stderr.includes(join(raiz(), relativa))) {
     throw new Error(`el error no menciona la ruta real de ${relativa}: ${JSON.stringify(world.stderr)}`);
+  }
+});
+
+Then('la salida dice que hay {int} formatos activos', (cuantos: number) => {
+  // El separador de la columna es `padEnd`, así que se busca con un regex y no
+  // repitiendo los espacios.
+  const patron = new RegExp(`Formatos activos\\s+${cuantos}`);
+  if (!patron.test(world.stdout)) {
+    throw new Error(`la salida no dice ${cuantos} formatos activos: ${JSON.stringify(world.stdout)}`);
   }
 });
 
