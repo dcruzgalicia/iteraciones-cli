@@ -1,4 +1,6 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, unlinkSync } from 'node:fs';
+import { realpath } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
 import { resolvePdfCheckBinary, validatePdfX1a } from '../../builder/pdfx-check.js';
@@ -81,6 +83,16 @@ Given('que la raíz del proyecto tiene un proyecto con HTML y PDF', () => {
   proyectoConConfig('language: es-MX\nformat:\n  html:\n    site:\n      title: Test\n    generate: true\n  pdf:\n    generate: true\n');
 });
 
+Given('que el título del sitio es {string}', (titulo: string) => {
+  // Lo único que cambia respecto del proyecto de prueba. Suficiente para que el
+  // build tenga una razón de invalidación que reportar.
+  escribirEnProyecto('iteraciones.config.yaml', `language: es-MX\nformat:\n  html:\n    site:\n      title: ${titulo}\n    generate: true\n`);
+});
+
+Given('que borro el archivo {string}', (relativa: string) => {
+  unlinkSync(join(raiz(), relativa));
+});
+
 Given('que el estado del build quedó corrupto', () => {
   // Lo que queda si el proceso muere a mitad de la escritura única del estado.
   escribirEnProyecto('.iteraciones/state.json', '{"startedAt":42,"activeFor');
@@ -92,6 +104,14 @@ When('hago un build del proyecto', async () => {
 
 When('hago un build del proyecto pidiendo JSON', async () => {
   await capture(() => runBuild(world.root, { json: true }));
+});
+
+When('hago un build con la salida {string}', async (salida: string) => {
+  await capture(() => runBuild(world.root, { outputDir: salida }));
+});
+
+When('pido el build en JSON y con detalle', async () => {
+  await capture(() => runBuild(world.root, { json: true, verbose: true }));
 });
 
 When('el build falla con el error {word}', async (clase: string) => {
@@ -130,6 +150,59 @@ Then('el estado del build queda completo y con schemaVersion {int}', async (vers
   }
   if (estado.schemaVersion !== version) {
     throw new Error(`el estado quedó con schemaVersion=${JSON.stringify(estado.schemaVersion)} y debía quedar ${version}`);
+  }
+});
+
+Then('la salida dice que se reprocesó por {string}', (razon: string) => {
+  // La razón va plegada en la línea de documentos, con `padEnd` de por medio.
+  const patron = new RegExp(`Documentos\\s+1 — ${razon.replace(/[()]/g, '\\$&')}`);
+  if (!patron.test(world.stdout)) {
+    throw new Error(`la salida no dice que se reprocesó por ${JSON.stringify(razon)}: ${JSON.stringify(world.stdout)}`);
+  }
+});
+
+Then('el JSON declara la lista {string} con el valor {string}', (clave: string, valor: string) => {
+  const lista = jsonSalida()[clave];
+  if (!Array.isArray(lista) || lista.length !== 1 || lista[0] !== valor) {
+    throw new Error(`${JSON.stringify(clave)} es ${JSON.stringify(lista)} y el contrato dice ${JSON.stringify([valor])}`);
+  }
+});
+
+Then('el JSON declara "outputDir" como la ruta real de la salida', async () => {
+  // La ruta canónica: la misma que ve `process.cwd()` después de resolver
+  // symlinks. Sin eso, comparar rutas en el consumidor falla en macOS, donde
+  // `/tmp` es un symlink a `/private/tmp`.
+  const declarado = String(jsonSalida().outputDir);
+  const esperado = join(await realpath(raiz()), 'dist', 'files');
+  if (declarado !== esperado) {
+    throw new Error(`outputDir es ${JSON.stringify(declarado)} y la ruta real es ${JSON.stringify(esperado)}`);
+  }
+});
+
+Then('el JSON declara {string} diciendo {string}', (clave: string, texto: string) => {
+  const valor = String(jsonSalida()[clave] ?? '');
+  if (!valor.includes(texto)) {
+    throw new Error(`${JSON.stringify(clave)} no dice ${JSON.stringify(texto)}. Dice: ${JSON.stringify(valor)}`);
+  }
+});
+
+Then('el JSON declara al menos {int} aviso que menciona {string}', (minimo: number, texto: string) => {
+  const avisos = jsonSalida().warnings;
+  if (!Array.isArray(avisos)) {
+    throw new Error(`el JSON no declara warnings: ${JSON.stringify(jsonSalida())}`);
+  }
+  const conTexto = avisos.filter((a) => String(a).includes(texto));
+  if (conTexto.length < minimo) {
+    throw new Error(`el JSON declara ${avisos.length} avisos y ${conTexto.length} mencionan ${JSON.stringify(texto)}`);
+  }
+});
+
+Then('el directorio temporal no tiene una carpeta {string}', (carpeta: string) => {
+  // Un `--output` relativo se resuelve contra la raíz del PROYECTO. Si el build
+  // escribiera en el cwd del proceso dejaría archivos donde el usuario no los
+  // busca y donde el siguiente build no los encuentra.
+  if (existsSync(join(tmpdir(), carpeta))) {
+    throw new Error(`el build escribió ${carpeta} en el directorio temporal del sistema`);
   }
 });
 

@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
 import { buildProgram } from '../../cli/parser.js';
-import { capture, world } from './cli-world.steps.js';
+import { capture, tempRoot, world } from './cli-world.steps.js';
 
 /**
  * #2546 (onda 2) — tranche 4 de `cli-layer`: `validate` y `validate --json`.
@@ -30,6 +30,12 @@ import { capture, world } from './cli-world.steps.js';
 
 interface Json {
   [clave: string]: unknown;
+}
+
+/** La raíz del escenario, creándola si el `Given` anterior no la puso. */
+function raiz(): string {
+  if (!world.root) world.root = tempRoot('iteraciones-cli-');
+  return world.root;
 }
 
 /** El `JSON.parse` de `stdout`, con el error apuntando al texto que falló. */
@@ -115,6 +121,7 @@ Given('que la configuración declara la clave {string} con el valor {string}', (
 // "no coincide con ningún filter", el segundo dispara el error de dependencia con
 // 16-toc-styling. Un solo paso armaba la clave equivocada según el escenario.
 Given('que la configuración desactiva un filtro global {string}', (filtro: string) => {
+  raiz();
   escribir(join(world.root, 'iteraciones.config.yaml'), `language: es-MX\nformat:\n  html:\n    generate: true\ndisabledFilters:\n  - ${filtro}\n`);
 });
 
