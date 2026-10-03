@@ -142,6 +142,7 @@ Todas las opciones y sus valores por defecto están en [docs/configuration.md](d
 - [docs/frontmatter-reference.md](docs/frontmatter-reference.md) — campos del frontmatter y páginas de título.
 - [docs/public-surface.md](docs/public-surface.md) — superficie pública congelada pre-1.0 (inventario).
 - [docs/architecture.md](docs/architecture.md) — arquitectura del pipeline, decisiones y contratos.
+- [docs/auditoria-sobre-ingenieria.md](docs/auditoria-sobre-ingenieria.md) — regla permanente sobre `src/lib/resources/` y los candidatos a refactor que la verificación descartó.
 - [docs/quickstart.md](docs/quickstart.md) — primeros pasos.
 
 ## Comandos
