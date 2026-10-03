@@ -331,6 +331,22 @@ Then('el build reutiliza la salida', () => {
   }
 });
 
+Then('el build genera index en todos los formatos', async () => {
+  const formats = ['html', 'pdf', 'tex', 'epub', 'md'];
+  for (const ext of formats) {
+    if (!existsSync(join(raiz(), 'dist', 'files', `index.${ext}`))) {
+      throw new Error(`index.md no generó index.${ext}`);
+    }
+  }
+  // Y NINGUNA salida con el slug derivado del título: antes salían `inicio.pdf`
+  // e `inicio.tex` además de `index.*`, con dos nombres para el mismo documento.
+  for (const ext of ['pdf', 'tex', 'epub', 'md']) {
+    if (existsSync(join(raiz(), 'dist', 'files', `inicio.${ext}`))) {
+      throw new Error(`el build también generó inicio.${ext}: dos nombres para el mismo documento`);
+    }
+  }
+});
+
 Then('el JSON declara que no hay ni un error', () => {
   const salida = jsonSalida();
   const errores = Array.isArray(salida.errors) ? salida.errors : [];
@@ -357,6 +373,15 @@ Then('el error nombra el documento una sola vez', () => {
   if (!world.stderr.includes(prefijo) || !world.stderr.includes('test.md')) {
     throw new Error(`el error no nombra el documento con el prefijo esperado: ${JSON.stringify(world.stderr)}`);
   }
+});
+
+Given('que la raíz del proyecto tiene un proyecto con todos los formatos', () => {
+  raiz();
+  escribirEnProyecto(
+    'iteraciones.config.yaml',
+    'language: es-MX\nformat:\n  latex:\n    generate: true\n  pdf:\n    generate: true\n  html:\n    generate: true\n  epub:\n    generate: true\n  markdown:\n    generate: true\n',
+  );
+  escribirEnProyecto('test.md', '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\nContenido de prueba.\n');
 });
 
 Given('que borro el archivo {string}', (relativa: string) => {
