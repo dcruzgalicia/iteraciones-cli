@@ -1,8 +1,8 @@
 import { spyOn } from 'bun:test';
-import { existsSync, readFileSync, unlinkSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { After, Given, Then, When } from '@cucumber/cucumber';
 import { resolvePdfCheckBinary, validatePdfX1a } from '../../builder/pdfx-check.js';
 import { reportBuildError, runBuild, runValidate } from '../../cli/dispatcher.js';
@@ -227,6 +227,21 @@ Given('que la raíz del proyecto pone el número de página en el pie central', 
   );
 });
 
+// PNG 1x1 válido, en base64. Los escenarios de portada necesitan un archivo que
+// el build pueda leer de verdad: con un texto qualquer falla antes de llegar al
+// `.tex` y el escenario probaría otra cosa.
+const PNG_1X1 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+
+Given('que el archivo {string} es un PNG de 1 por 1', (relativa: string) => {
+  const ruta = join(raiz(), relativa);
+  mkdirSync(dirname(ruta), { recursive: true });
+  writeFileSync(ruta, PNG_1X1);
+});
+
+Given('que la raíz del proyecto declara la portada {string}', (imagen: string) => {
+  escribirEnProyecto('iteraciones.config.yaml', `language: es-MX\ntitleImage: ./${imagen}\nformat:\n  latex:\n    generate: true\n`);
+});
+
 Given('que borro el archivo {string}', (relativa: string) => {
   unlinkSync(join(raiz(), relativa));
 });
@@ -391,6 +406,29 @@ function comprobarTipo(clave: string, tipo: 'número' | 'lista' | 'texto'): void
 Then('el JSON declara {string} como número', (clave: string) => comprobarTipo(clave, 'número'));
 Then('el JSON declara {string} como lista', (clave: string) => comprobarTipo(clave, 'lista'));
 Then('el JSON declara {string} como texto', (clave: string) => comprobarTipo(clave, 'texto'));
+
+Then('el archivo {string} apunta a la imagen {string}', (relativa: string, imagen: string) => {
+  const contenido = readFileSync(join(raiz(), relativa), 'utf8');
+  if (!contenido.includes('\\titleimage{')) {
+    throw new Error(`${relativa} no declara \\titleimage{`);
+  }
+  // Acepta las dos formas: la ruta absoluta original, o la copia procesada
+  // (CMYK) que deja ImageMagick — y esa copia lleva sufijo, así que se compara
+  // por el nombre SIN extensión. Cuál de las dos depende de si el build corrió
+  // ImageMagick, y eso no es parte de la regla.
+  const nombre = imagen.replace(/\.[^.]+$/, '');
+  if (!contenido.includes(join(raiz(), imagen)) && !contenido.includes(nombre)) {
+    throw new Error(`${relativa} no apunta a ${JSON.stringify(imagen)}:\n${contenido.slice(0, 400)}`);
+  }
+});
+
+Then('el error menciona la ruta real de {string}', (relativa: string) => {
+  // El mensaje lleva la ruta ABSOLUTA: un usuario mirando un `--output` o un
+  // proyecto en otro directorio necesita saber dónde la buscó el build.
+  if (!world.stderr.includes(join(raiz(), relativa))) {
+    throw new Error(`el error no menciona la ruta real de ${relativa}: ${JSON.stringify(world.stderr)}`);
+  }
+});
 
 Then('el archivo {string} no contiene {string}', (relativa: string, texto: string) => {
   const contenido = readFileSync(join(raiz(), relativa), 'utf8');
