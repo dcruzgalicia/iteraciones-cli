@@ -2,7 +2,7 @@ import { spyOn } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { After, Given, Then } from '@cucumber/cucumber';
+import { After, Given, setDefaultTimeout, Then } from '@cucumber/cucumber';
 
 /**
  * #2546 (onda 2) — el mundo compartido de los features del CLI.
@@ -30,6 +30,20 @@ import { After, Given, Then } from '@cucumber/cucumber';
  * que sí recibe la excepción la sobreescribe. El `Then` lee un solo lugar y no
  * necesita saber por dónde pasó la salida.
  */
+
+/**
+ * El default de cucumber son 5 s por paso. Los pasos de este bloque compilan un
+ * PDF de verdad cuando el proyecto pide formato PDF: LaTeX se lleva 2-4 s en una
+ * máquina descargada, y el merge-gate corre `bun test`, `gherkin` y `build +
+ * visual check` EN PARALELO, así que con 5 s los escenarios de humo de PDF
+ * expiraban de forma intermitente. El original ya lo sabía: los `it()` de humo
+ * llevaban `{ timeout: 120_000 }`.
+ *
+ * Una línea y no seis: los pasos que compilan están repartidos en tres
+ * archivos, y subir el default no le quita poder de detección — sólo tarda más
+ * en reportar un paso colgado.
+ */
+setDefaultTimeout(120_000);
 
 export const world = {
   stdout: '',
