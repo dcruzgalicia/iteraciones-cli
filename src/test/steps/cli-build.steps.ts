@@ -167,6 +167,25 @@ Given('que espío las invocaciones de pandoc', () => {
 // Las configuraciones que necesitan los escenarios de frontmatter. Cada una es
 // un `Given` con nombre y no un `{string}` con la config entera: el que lee el
 // feature tiene que poder ver de un vistazo qué proyecto se está armando.
+
+Given('que la raíz del proyecto tiene un proyecto en inglés', () => {
+  raiz();
+  escribirEnProyecto('iteraciones.config.yaml', 'language: en\nformat:\n  latex:\n    generate: true\n');
+  escribirEnProyecto('test.md', '---\ntitle: Test Document\n---\n\nContenido de prueba.\n');
+});
+
+Given('que la raíz del proyecto tiene un proyecto en español de México', () => {
+  raiz();
+  escribirEnProyecto('iteraciones.config.yaml', 'language: es-MX\nformat:\n  latex:\n    generate: true\n');
+  escribirEnProyecto('test.md', '---\ntitle: Test Document\n---\n\nContenido de prueba.\n');
+});
+
+Given('que la raíz del proyecto tiene un proyecto con EPUB', () => {
+  raiz();
+  escribirEnProyecto('iteraciones.config.yaml', 'language: es-MX\nformat:\n  epub:\n    generate: true\n');
+  escribirEnProyecto('test.md', '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\nContenido de prueba.\n');
+});
+
 Given('que la raíz del proyecto tiene un proyecto con los tres formatos ligeros', () => {
   raiz();
   escribirEnProyecto(
@@ -446,6 +465,22 @@ Then('el error menciona la ruta real de {string}', (relativa: string) => {
   // proyecto en otro directorio necesita saber dónde la buscó el build.
   if (!world.stderr.includes(join(raiz(), relativa))) {
     throw new Error(`el error no menciona la ruta real de ${relativa}: ${JSON.stringify(world.stderr)}`);
+  }
+});
+
+Then('el EPUB declara la clave {string} con el valor {string}', async (clave: string, valor: string) => {
+  // El `.epub` es un ZIP: hay que desempaquetar `content.opf` y mirar los
+  // `dc:*` de verdad. El nombre del archivo lo genera del slug
+  // título-por-autor, así que se busca con un glob y no se compone.
+  const [epub] = [...new Bun.Glob('dist/files/*.epub').scanSync({ cwd: raiz() })];
+  if (!epub) throw new Error('el build no generó ningún .epub');
+  const proc = Bun.spawn(['unzip', '-p', join(raiz(), epub), 'EPUB/content.opf'], { stdout: 'pipe', stderr: 'pipe' });
+  const [salida, errores, codigo] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+  if (codigo !== 0 || errores !== '') {
+    throw new Error(`unzip falló (código ${codigo}): ${errores}`);
+  }
+  if (!salida.includes(valor)) {
+    throw new Error(`el EPUB no declara ${clave}=${JSON.stringify(valor)}. Va:\n${salida.slice(0, 600)}`);
   }
 });
 
