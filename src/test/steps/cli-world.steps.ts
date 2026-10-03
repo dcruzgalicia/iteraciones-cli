@@ -55,6 +55,19 @@ export const world = {
   ultimoAviso: {} as Record<string, unknown>,
   /** Códigos de salida de una corrida que lanza los dos comandos. */
   salidas: { build: 0, validate: 0 } as { build: number; validate: number },
+  /** El `.tex` que compuso el último paso del preámbulo. */
+  latex: '',
+  /** La ruta de la bibliografía con nombre awkward del escenario activo. */
+  bibliografia: '',
+  /** El idioma que eligió el último `Given`. */
+  idioma: '',
+  /** La disabled list del escenario activo. `undefined` es "sin lista". */
+  desactivados: undefined as string[] | undefined,
+  /** El directorio del proyecto cuando un filtro se reemplaza desde el `.tex` propio. */
+  cwd: '',
+  /** Los dos extremos de una comparación de orden, uno por docstring. */
+  antesDe: '',
+  desdeLinea: -1,
 };
 
 /**
@@ -96,6 +109,17 @@ After(() => {
   // deja un directorio sin permisos lo devuelve antes de terminar.
   if (world.root) rmSync(world.root, { recursive: true, force: true });
   world.root = '';
+  // Los pasos de contrato (idioma, disabled list, LaTeX compuesto) escriben
+  // en el mundo y el hook los vacía junto con la raíz. Sin esto, el escenario
+  // siguiente hereda la disabled list del anterior y se_DEBUGFALLA_ porque un
+  // filtro queda excluido que este escenario no excluyó.
+  world.latex = '';
+  world.bibliografia = '';
+  world.idioma = '';
+  world.desactivados = undefined;
+  world.cwd = '';
+  world.antesDe = '';
+  world.desdeLinea = -1;
 });
 
 Given('que la raíz del proyecto está vacía', () => {

@@ -1,23 +1,9 @@
-import { describe, expect, it, spyOn } from 'bun:test';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { describe, expect, it } from 'bun:test';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import {
-  applyPrintQueueDynamics,
-  babelOptionsForLang,
-  buildCropContent,
-  buildPdfxPagesattr,
-  composeLatexTemplate,
-  detectPageSize,
-} from '../builder/latex-preamble.js';
-import {
-  getBuiltinPreambleFilterInfos,
-  getBuiltinPreambleFilterNames,
-  loadPreambleFilters,
-  resolveEffectiveDisabledPreamble,
-  validateDisabledPreambleFilters,
-  validatePreambleDependencies,
-} from '../builder/preamble-loader.js';
+import { applyPrintQueueDynamics, buildCropContent, buildPdfxPagesattr, composeLatexTemplate, detectPageSize } from '../builder/latex-preamble.js';
+import { loadPreambleFilters } from '../builder/preamble-loader.js';
 import { execPandoc, getPandocVersion } from '../lib/pandoc-runner.js';
 import { registerSkip, SKIP_REASONS } from './helpers.js';
 
@@ -25,46 +11,6 @@ const pandocOk = await getPandocVersion().catch(() => null);
 if (!pandocOk) registerSkip('preamble.test.ts', SKIP_REASONS.pandoc);
 
 describe('preamble-loader', () => {
-  it('lista los preamble filters built-in con descripción', async () => {
-    const infos = await getBuiltinPreambleFilterInfos();
-    const names = getBuiltinPreambleFilterNames();
-    expect(infos).toHaveLength(names.length);
-    expect(infos.map((i) => i.name)).toEqual(names);
-    expect(infos.every((i) => i.description.length > 0)).toBe(true);
-  });
-
-  it('la cola de imprenta (97-eso-pic, 98-crop, 99-pdfx) es siempre la última en el orden derivado', () => {
-    const names = getBuiltinPreambleFilterNames();
-    // La cola de imprenta (fondo, marcas de corte, PDF/X-1a) ocupa
-    // deliberadamente los últimos tres preámbulos, en ese orden: ningún filter
-    // futuro puede quedar después (issue #1952).
-    expect(names.slice(-3)).toEqual(['97-eso-pic', '98-crop', '99-pdfx']);
-    const maxNumeric = names.reduce((max, n) => {
-      const m = n.match(/^(\d+)-/);
-      return m ? Math.max(max, Number(m[1])) : max;
-    }, 0);
-    expect(maxNumeric).toBe(99);
-  });
-
-  it('carga el contenido .tex del paquete para todos los filters', async () => {
-    const filters = await loadPreambleFilters();
-    expect(filters).toHaveLength(getBuiltinPreambleFilterNames().length);
-    const biblio = filters.find((t) => t.name === '18-bibliography-heading');
-    expect(biblio?.content).toContain('\\ifcsname ver@biblatex.sty\\endcsname');
-    expect(biblio?.content).toContain('\\defbibheading{bibintoc}[\\refname]{%');
-    const maketitle = filters.find((t) => t.name === '19-maketitle');
-    expect(maketitle?.content).toContain('\\renewcommand{\\maketitle}{%');
-    // 02-fonts usa newtxtext (versalitas reales; mathptmx las degeneraba)
-    const fonts = filters.find((t) => t.name === '02-fonts');
-    expect(fonts?.content).toContain('\\usepackage{newtxtext}');
-    expect(fonts?.content).not.toContain('\\usepackage{mathptmx}');
-    // 05-language expone el idioma como variable de template (la interpola
-    // pandoc con el metadata babel-lang que pasa el CLI)
-    const language = filters.find((t) => t.name === '05-language');
-    expect(language?.content).toContain('$if(babel-lang)$');
-    expect(language?.content).toContain('\\usepackage[$babel-lang$]{babel}');
-  });
-
   it('el maketitle usa los saltos propios (titlepage@next) y no el setparsizes de KOMA', async () => {
     // Regresión: \\next@tpage/\\next@tdpage ejecutan \\setparsizes{0}{0} que
     // deja \\parindent a 0 de forma global: el body pierde la indentación.
@@ -82,125 +28,13 @@ describe('preamble-loader', () => {
     expect(code).not.toContain('\\next@tpage');
     expect(code).not.toContain('\\next@tdpage');
   });
-
-  it('respeta la disabled list', async () => {
-    const filters = await loadPreambleFilters(['15-hyphenation-rules']);
-    expect(filters.map((t) => t.name)).not.toContain('15-hyphenation-rules');
-    expect(filters).toHaveLength(getBuiltinPreambleFilterNames().length - 1);
-  });
-
-  it('un .tex del proyecto reemplaza al del paquete', async () => {
-    const cwd = mkdtempSync(join(tmpdir(), 'iteraciones-preamble-'));
-    try {
-      mkdirSync(join(cwd, 'preamble'), { recursive: true });
-      writeFileSync(join(cwd, 'preamble', '15-hyphenation-rules.tex'), 'hyphenation{OverridePrueba}\n');
-      const filters = await loadPreambleFilters(undefined, cwd);
-      const hyphen = filters.find((t) => t.name === '15-hyphenation-rules');
-      expect(hyphen?.content).toContain('OverridePrueba');
-      expect(hyphen?.content).not.toContain('Separacion silabica');
-    } finally {
-      rmSync(cwd, { recursive: true, force: true });
-    }
-  });
 });
 
-describe('babelOptionsForLang (contrato lang → babel en el PDF)', () => {
-  it('mapea es-MX a las opciones históricas de español de México', () => {
-    expect(babelOptionsForLang('es-MX', new Set())).toBe('spanish,mexico,es-noshorthands,es-noindentfirst');
-  });
+describe('babelOptionsForLang (contrato lang → babel en el PDF)', () => {});
 
-  it('mapea es a español sin la variante de México', () => {
-    expect(babelOptionsForLang('es', new Set())).toBe('spanish,es-noshorthands,es-noindentfirst');
-  });
+describe('validatePreambleDependencies (dependencias entre filters)', () => {});
 
-  it('mapea en y sus variantes a english', () => {
-    expect(babelOptionsForLang('en', new Set())).toBe('english');
-    expect(babelOptionsForLang('en-US', new Set())).toBe('english');
-  });
-
-  it('resuelve por idioma base las variantes no listadas (fr-CA → french)', () => {
-    expect(babelOptionsForLang('fr-CA', new Set())).toBe('french');
-  });
-
-  it('cae a español con warning único por build para idiomas desconocidos', async () => {
-    const stderrSpy = spyOn(process.stderr, 'write');
-    try {
-      // Mismo registro (mismo build): un solo warning aunque se consulte dos veces
-      const warned = new Set<string>();
-      expect(babelOptionsForLang('xx-YY', warned)).toBe('spanish,es-noshorthands,es-noindentfirst');
-      expect(babelOptionsForLang('xx-YY', warned)).toBe('spanish,es-noshorthands,es-noindentfirst');
-      let output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
-      expect((output.match(/sin opciones babel conocidas/g) ?? []).length).toBe(1);
-      // Registro distinto (segundo build en el mismo proceso): warning de nuevo
-      expect(babelOptionsForLang('xx-YY', new Set())).toBe('spanish,es-noshorthands,es-noindentfirst');
-      output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
-      expect((output.match(/sin opciones babel conocidas/g) ?? []).length).toBe(2);
-    } finally {
-      stderrSpy.mockRestore();
-    }
-  });
-});
-
-describe('validatePreambleDependencies (dependencias entre filters)', () => {
-  it('sin disabled list no produce issues', () => {
-    expect(validatePreambleDependencies(undefined)).toEqual([]);
-    expect(validatePreambleDependencies([])).toEqual([]);
-  });
-
-  it('desactivar 05-language sin 16-toc-styling es un error (renewcaptionname de babel)', () => {
-    const issues = validatePreambleDependencies(['05-language']);
-    expect(issues.some((i) => i.severity === 'error' && i.message.includes('16-toc-styling'))).toBe(true);
-  });
-
-  it('desactivar ambos (05 y 16) no produce el error', () => {
-    const issues = validatePreambleDependencies(['05-language', '16-toc-styling']);
-    expect(issues.some((i) => i.severity === 'error')).toBe(false);
-  });
-
-  it('con 99-pdfx activo y 08-hyperref desactivado no produce issues', () => {
-    // 08-hyperref ya no genera warning aquí porque resolveEffectiveDisabledPreamble lo desactiva
-    const issues = validatePreambleDependencies(['97-eso-pic', '98-crop', '08-hyperref']);
-    expect(issues.some((i) => i.message.includes('99-pdfx'))).toBe(false);
-  });
-});
-
-describe('resolveEffectiveDisabledPreamble (resolución de dependencias)', () => {
-  it('sin disabled list agrega 08-hyperref (99-pdfx activo por defecto)', () => {
-    const effective = resolveEffectiveDisabledPreamble(undefined);
-    expect(effective).toContain('08-hyperref');
-  });
-
-  it('con 99-pdfx desactivado no agrega 08-hyperref', () => {
-    const effective = resolveEffectiveDisabledPreamble(['99-pdfx']);
-    expect(effective).not.toContain('08-hyperref');
-  });
-
-  it('con 08-hyperref ya desactivado no lo duplica', () => {
-    const effective = resolveEffectiveDisabledPreamble(['08-hyperref']);
-    expect(effective.filter((n) => n === '08-hyperref')).toHaveLength(1);
-  });
-
-  it('con ambos 99-pdfx y 08-hyperref desactivados no agrega nada', () => {
-    const effective = resolveEffectiveDisabledPreamble(['99-pdfx', '08-hyperref']);
-    // 08-hyperref ya está en la lista, no se duplica
-    expect(effective.filter((n) => n === '08-hyperref')).toHaveLength(1);
-    expect(effective).toContain('99-pdfx');
-  });
-
-  it('no muta la lista original', () => {
-    const original = ['97-eso-pic', '98-crop'];
-    const effective = resolveEffectiveDisabledPreamble(original);
-    expect(original).toEqual(['97-eso-pic', '98-crop']);
-    expect(effective).not.toBe(original);
-  });
-
-  it('preserva otros filters en la lista', () => {
-    const effective = resolveEffectiveDisabledPreamble(['97-eso-pic', '98-crop']);
-    expect(effective).toContain('97-eso-pic');
-    expect(effective).toContain('98-crop');
-    expect(effective).toContain('08-hyperref');
-  });
-});
+describe('resolveEffectiveDisabledPreamble (resolución de dependencias)', () => {});
 
 describe('composeLatexTemplate', () => {
   const opts = { pageNumber: 'header-right', toc: true, preambleFilters: [], bibFiles: [] };
@@ -352,22 +186,7 @@ describe('composeLatexTemplate', () => {
   });
 });
 
-describe('validateDisabledPreambleFilters', () => {
-  it('no lanza con undefined o lista vacía', () => {
-    expect(() => validateDisabledPreambleFilters(undefined)).not.toThrow();
-    expect(() => validateDisabledPreambleFilters([])).not.toThrow();
-  });
-
-  it('no lanza con nombres válidos', () => {
-    expect(() => validateDisabledPreambleFilters(['15-hyphenation-rules'])).not.toThrow();
-  });
-
-  it('lanza BuildError con un nombre desconocido', () => {
-    expect(() => validateDisabledPreambleFilters(['99-no-existe'])).toThrow(
-      'disabledPreambleFilters: "99-no-existe" no coincide con ningún preamble filter',
-    );
-  });
-});
+describe('validateDisabledPreambleFilters', () => {});
 
 describe('valores de maquetación editorial (issue 1810)', () => {
   it('07-typography: pretolerance 50, tolerance 1000 y hyphenpenalty 50', async () => {
