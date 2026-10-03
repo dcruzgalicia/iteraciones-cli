@@ -26,10 +26,6 @@ import { capture, world } from './cli-world.steps.js';
  * estuviera bien.
  */
 
-Given('que la raíz del proyecto está vacía', async () => {
-  world.root = await mkdtemp(join(tmpdir(), 'iteraciones-cli-new-'));
-});
-
 Given('que la raíz del proyecto tiene una configuración mínima', async () => {
   // #2071: `validate` y `build` exigen `iteraciones.config.yaml`.
   world.root = await mkdtemp(join(tmpdir(), 'iteraciones-cli-new-'));

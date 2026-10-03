@@ -1,5 +1,8 @@
 import { spyOn } from 'bun:test';
-import { After, Then } from '@cucumber/cucumber';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { After, Given, Then } from '@cucumber/cucumber';
 
 /**
  * #2546 (onda 2) — el mundo compartido de los features del CLI.
@@ -34,12 +37,23 @@ export const world = {
   exitCode: 0,
   /** Raíz temporal del escenario. La vacía cada `Given` de proyecto. */
   root: '',
+  /** Lo que dejó el último `Then` que filtró una lista, para el `Then` que viene después. */
+  ultimoAviso: {} as Record<string, unknown>,
 };
 
 /**
  * Corre `fn` con los dos streams espiados y deja el resultado en el mundo.
  * No captura excepciones: quien llama decide qué hacer con ellas.
  */
+/**
+ * Los pasos de proyectoArman su propio temporal con `mkdtemp`: los de
+ * contenido de archivo son SÍNCRONOS (ver la nota de cucumber-js en el doc de
+ * `capture`), y un `mkdtemp` asíncrono los volvería `async`.
+ */
+export function tempRoot(prefijo: string): string {
+  return mkdtempSync(join(tmpdir(), prefijo));
+}
+
 export async function capture(fn: () => Promise<void>): Promise<void> {
   const stdoutSpy = spyOn(process.stdout, 'write').mockImplementation(() => true);
   const stderrSpy = spyOn(process.stderr, 'write').mockImplementation(() => true);
@@ -65,6 +79,10 @@ After(() => {
   world.root = '';
 });
 
+Given('que la raíz del proyecto está vacía', () => {
+  world.root = tempRoot('iteraciones-cli-');
+});
+
 Then('el comando termina con el código de salida {int}', (codigo: number) => {
   if (world.exitCode !== codigo) {
     throw new Error(`esperaba código de salida ${codigo} y hubo ${world.exitCode}. stderr: ${JSON.stringify(world.stderr)}`);
@@ -88,5 +106,21 @@ Then('la salida de error no lleva ningún aviso', () => {
   // nombre de archivo que es perfectamente válido.
   if (world.stderr.includes('⚠')) {
     throw new Error(`la salida lleva un aviso que no debería: ${JSON.stringify(world.stderr)}`);
+  }
+});
+
+Then('la salida dice {string}', (esperado: string) => {
+  if (!world.stdout.includes(esperado)) {
+    throw new Error(`la salida no dice ${JSON.stringify(esperado)}. stdout: ${JSON.stringify(world.stdout)}`);
+  }
+});
+
+Then('el error menciona {string} una sola vez', (texto: string) => {
+  // El nombre del archivo repetido hace que un error parezca dos distintos, y
+  // el usuario va a buscarlos por separado. Cuenta sobre stderr, que es donde
+  // viven los errores del CLI.
+  const veces = world.stderr.split(texto).length - 1;
+  if (veces !== 1) {
+    throw new Error(`esperaba ${JSON.stringify(texto)} una vez en stderr y apareció ${veces}. stderr: ${JSON.stringify(world.stderr)}`);
   }
 });
