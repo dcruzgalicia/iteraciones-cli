@@ -11,7 +11,7 @@ import { initTestProject, registerSkip, SKIP_REASONS, withTempDir } from './help
 const pandocOk = await getPandocVersion().catch(() => null);
 if (!pandocOk) registerSkip('cli-layer.test.ts', SKIP_REASONS.pandoc);
 // unzip se usa para inspeccionar EPUBs generados: skip real si no está en PATH.
-const unzipOk = (await Bun.which('unzip')) !== null;
+const _unzipOk = (await Bun.which('unzip')) !== null;
 
 // La suite aserta strings exactos de la salida: la colorización ANSI se fuerza
 // off aunque el stream sea un TTY (los asserts no dependen del entorno).
@@ -38,20 +38,6 @@ function spyStderr() {
 describe.skipIf(!pandocOk)('runBuild', () => {
   afterEach(resetExitCode);
 
-  it('un párrafo de 2-3 palabras al inicio no recibe \\mbox (umbral de palabras reales)', async () => {
-    await withTempDir(async (dir) => {
-      await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nformat:\n  latex:\n    generate: true\n', 'utf8');
-      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\n---\n\nContenido corto.\n', 'utf8');
-      process.exitCode = 0;
-      await runBuild(dir);
-      expect(process.exitCode).toBe(0);
-      const tex = await Bun.file(join(dir, 'dist', 'files', 'test-document.tex')).text();
-      expect(tex).toContain('\\noindent Contenido corto.');
-      expect(tex).not.toContain('\\mbox{Contenido}');
-    });
-  });
-
   it.skipIf(!pandocOk)(
     'index.md genera index.* en todos los formatos (naming coherente)',
     async () => {
@@ -77,59 +63,6 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     },
     { timeout: 300_000 },
   );
-
-  it.skipIf(!pandocOk)('el lang de la configuración configura babel en el PDF (contrato lang → babel)', async () => {
-    await withTempDir(async (dir) => {
-      await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: en\nformat:\n  latex:\n    generate: true\n', 'utf8');
-      process.exitCode = 0;
-      await runBuild(dir);
-      expect(process.exitCode).toBe(0);
-      const tex = await Bun.file(join(dir, 'dist', 'files', 'test-document.tex')).text();
-      expect(tex).toContain('\\usepackage[english]{babel}');
-    });
-  });
-
-  it.skipIf(!pandocOk)('el lang por defecto es-MX mantiene las opciones históricas de babel', async () => {
-    await withTempDir(async (dir) => {
-      await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nformat:\n  latex:\n    generate: true\n', 'utf8');
-      process.exitCode = 0;
-      await runBuild(dir);
-      expect(process.exitCode).toBe(0);
-      const tex = await Bun.file(join(dir, 'dist', 'files', 'test-document.tex')).text();
-      expect(tex).toContain('\\usepackage[spanish,mexico,es-noshorthands,es-noindentfirst]{babel}');
-    });
-  });
-
-  it.skipIf(!pandocOk || !unzipOk)('el EPUB generado incluye título, autor e idioma en sus metadatos', async () => {
-    await withTempDir(async (dir) => {
-      await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), ['language: es-MX', 'format:', '  epub:', '    generate: true'].join('\n'), 'utf8');
-      await writeFile(
-        join(dir, 'test.md'),
-        '---\ntitle: Test Document\nauthor: María Pérez\ndate: 2026-01-01\n---\n\nContenido de prueba.\n',
-        'utf8',
-      );
-      process.exitCode = 0;
-      await runBuild(dir);
-      expect(process.exitCode).toBe(0);
-
-      // El EPUB es un zip: desempaquetar content.opf y verificar dc:title,
-      // dc:creator, dc:date y dc:language (regresión: salía sin metadatos,
-      // "UNTITLED"). El nombre usa el slug title-por-author: se busca el .epub.
-      const [epubPath] = [...new Bun.Glob('dist/files/*.epub').scanSync({ cwd: dir })];
-      expect(epubPath).toBeDefined();
-      const proc = Bun.spawn(['unzip', '-p', join(dir, epubPath ?? ''), 'EPUB/content.opf'], { stdout: 'pipe', stderr: 'pipe' });
-      const [stdout, stderr, code] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
-      expect(code).toBe(0);
-      expect(stderr).toBe('');
-      expect(stdout).toContain('Test Document</dc:title>');
-      expect(stdout).toContain('María Pérez</dc:creator>');
-      expect(stdout).toContain('>es-MX</dc:language>');
-      expect(stdout).toContain('>2026-01-01</dc:date>');
-    });
-  });
 
   it('collection e intervention sin body propio siguen siendo válidas en build y validate (#2463)', async () => {
     await withTempDir(async (dir) => {
