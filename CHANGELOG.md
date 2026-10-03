@@ -1,5 +1,68 @@
 # Changelog
 
+## [0.25.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.24.0...v0.25.0) (2026-10-03)
+
+
+### Features
+
+* **build:** aislamiento del modo parcial (state, build.sh y PDF/X) ([51c790a](https://github.com/dcruzgalicia/iteraciones-cli/commit/51c790a497e2d5d6e87fcdcb47e6bbf1e571975e))
+* **build:** imágenes procesadas en dist/assets/img para todos los formatos ([8a975fc](https://github.com/dcruzgalicia/iteraciones-cli/commit/8a975fc48b663dada18e18c9338dfe6e38e56385))
+* **build:** selección de documentos con build [paths...] y cierre de collections ([2f190fd](https://github.com/dcruzgalicia/iteraciones-cli/commit/2f190fd0bb29710b2672fb8fdb01a7c9a4969252))
+* **build:** selected en build --json con selección y contrato documentado ([8f021d1](https://github.com/dcruzgalicia/iteraciones-cli/commit/8f021d1acb328a9c82f062b6a9e761ba5a0d87a1))
+* **build:** unifica los assets de dist en assets/ con una sola copia por imagen ([7e6797f](https://github.com/dcruzgalicia/iteraciones-cli/commit/7e6797f0e94b89aa3d6c9424602a989813f9d933))
+* **cli:** la referencia de visual check pasa a la segunda ruta ([a7febd0](https://github.com/dcruzgalicia/iteraciones-cli/commit/a7febd0365d9f26ddc387b56e92571a4c5a93140))
+* **cli:** renombra test visual a visual snapshot y visual check ([f84ae62](https://github.com/dcruzgalicia/iteraciones-cli/commit/f84ae629fb1a78cf4baf8c84f79e18474adfe3cd))
+* **collections:** la ficha de la collection y las tarjetas de sus files salen al masonry ([cc789c3](https://github.com/dcruzgalicia/iteraciones-cli/commit/cc789c39c8a7fb190926db343ab0d9f1782afbba))
+* **collections:** la página HTML se exporta como tarjetas con enlace ([e9824bb](https://github.com/dcruzgalicia/iteraciones-cli/commit/e9824bb50292cd6e2864a804ba58a62fa393282c))
+* **config:** bundle replica dist/files y script sale de format ([#2448](https://github.com/dcruzgalicia/iteraciones-cli/issues/2448)) ([23da384](https://github.com/dcruzgalicia/iteraciones-cli/commit/23da3840e395cb6a1919bae5db3b4e34cf7f043b))
+* **config:** format.script genera build.sh con los comandos externos reales ([9ea757a](https://github.com/dcruzgalicia/iteraciones-cli/commit/9ea757ae1cb8a221323fd8e9dcccbe190bbf55e8))
+* **frontmatter:** creator pasa a collectionCreator en type: collection ([#2446](https://github.com/dcruzgalicia/iteraciones-cli/issues/2446)) ([a43e626](https://github.com/dcruzgalicia/iteraciones-cli/commit/a43e626c6916e29bea3394a8c6f7c41902bdd187))
+* **html:** el fondo es papel milimetrado, sin puntos ni degradados ([5608b54](https://github.com/dcruzgalicia/iteraciones-cli/commit/5608b54bd31fe44ba603d6d2cbbbc537fcc4b16b))
+* **html:** el header y el footer salen del masonry, en una columna centrada ([3bd765c](https://github.com/dcruzgalicia/iteraciones-cli/commit/3bd765c96eafc9d7c51c7930a11a819192d55ad8))
+* **html:** la tarjeta del título y un masonry con todas las tarjetas ([5cc8fad](https://github.com/dcruzgalicia/iteraciones-cli/commit/5cc8fad8e08a74346abd381a26947164e2bbb0e3))
+* **html:** los subtítulos centrados y los nombres de las creadoras sin partir ([c110211](https://github.com/dcruzgalicia/iteraciones-cli/commit/c1102118ef43af8795a4ac685bbffa60a40b54c9))
+* **html:** una copia de las tarjetas por type, sin ramas de collection ([df62ca4](https://github.com/dcruzgalicia/iteraciones-cli/commit/df62ca4c9a8310b842656f1ad10ef16a475531bd))
+* **html:** una sola transparencia en todas las tarjetas y la punta en esquinas rectas ([854fa16](https://github.com/dcruzgalicia/iteraciones-cli/commit/854fa161e906f08ff5a9fabdbf5e5bab94fb4d10))
+* **init:** el .gitignore por defecto incluye build.sh ([31dfbd6](https://github.com/dcruzgalicia/iteraciones-cli/commit/31dfbd6047c1b982f6846d7acceb457597857dda))
+* **markdown:** export re-procesable con frontmatter completo y body intacto ([52e7c49](https://github.com/dcruzgalicia/iteraciones-cli/commit/52e7c492dad910f03be94f695b8674eba35cb10d))
+* **markdown:** format.markdown.merge reprocesable/fusionado y subcomando merge ([f712991](https://github.com/dcruzgalicia/iteraciones-cli/commit/f7129916368db091eb005a07b712d11e01ad0ec5)), closes [#2437](https://github.com/dcruzgalicia/iteraciones-cli/issues/2437)
+* **script:** build.sh por fases y argv sin HTML multilínea ([9832e73](https://github.com/dcruzgalicia/iteraciones-cli/commit/9832e73dd0acf778e8352ce2a1cf6a073a132020))
+* **script:** build.sh sin mkdir/cp/rm/mv: prepare, assets, markdown, cover y pdf collect ([952af46](https://github.com/dcruzgalicia/iteraciones-cli/commit/952af46b28f400dc90efa02050ee6ccdac66df78))
+* **script:** comandos iteraciones template y post html en build.sh ([b78618e](https://github.com/dcruzgalicia/iteraciones-cli/commit/b78618eb03e283124f9c542444daef03091a1911))
+* **script:** merge --format y post latex cierran la cadena reproducible ([0a6c853](https://github.com/dcruzgalicia/iteraciones-cli/commit/0a6c8532431b545aba68a7b2b00feee0fc5175f8))
+* **test:** el veredicto de test visual lista los diffs, no los PDFs ([e8d74b7](https://github.com/dcruzgalicia/iteraciones-cli/commit/e8d74b7abc5852b4a93efcb9cbe3415bc9b3ba42))
+* **test:** regresión visual de PDFs con test visual ([64a63a7](https://github.com/dcruzgalicia/iteraciones-cli/commit/64a63a7e9a24cd515a01932d1683dd4bc98a3be8))
+* **test:** test visual en lote y diffs junto al snapshot ([36732bf](https://github.com/dcruzgalicia/iteraciones-cli/commit/36732bf0958eab782d1f4fda7ad23db2eff8dd0e))
+
+
+### Bug Fixes
+
+* **build:** assets/img por nivel de salida para documentos anidados ([25a9cf7](https://github.com/dcruzgalicia/iteraciones-cli/commit/25a9cf77b083f9aa74cf6dc2c42844a3ebe8286b))
+* **build:** build.sh y manifiestos byte-idénticos entre corridas ([2076b63](https://github.com/dcruzgalicia/iteraciones-cli/commit/2076b63733323e8bd28acad9c369e20d13159a00))
+* **build:** un markdown sin cuerpo es error en build y validate ([3d2160c](https://github.com/dcruzgalicia/iteraciones-cli/commit/3d2160ce730bb4136903641f5132b27f154989f2))
+* **collections:** files[] relativo a la collection con fallback a la raíz ([#2443](https://github.com/dcruzgalicia/iteraciones-cli/issues/2443)) ([a348baf](https://github.com/dcruzgalicia/iteraciones-cli/commit/a348baf20d30a4a693966039072a7203b0a8b982))
+* **collections:** las interventions no entran en el HTML ni en el EPUB ([5beb538](https://github.com/dcruzgalicia/iteraciones-cli/commit/5beb5382bf14524682af634fccb2424f273a2900))
+* **collections:** miembros de files[] standalone y collections frescas al cambiar un miembro ([01a8c5a](https://github.com/dcruzgalicia/iteraciones-cli/commit/01a8c5af4d122124cc21700729193ad2b2b66095))
+* **html:** el bloque del intro conserva el color de los enlaces ([eb6f86e](https://github.com/dcruzgalicia/iteraciones-cli/commit/eb6f86e0fe1d997cf44dd3d6a9d1d2c806291b36))
+* **html:** el main abre con padding y la columna del header/footer solo desde sm ([df0d2ba](https://github.com/dcruzgalicia/iteraciones-cli/commit/df0d2baf1bd7d4fed66bbbf0e8f30a1dd3cdd8c4))
+* **html:** el masonry pasa a dos columnas desde lg, no desde md ([8092e6a](https://github.com/dcruzgalicia/iteraciones-cli/commit/8092e6a87ba47759ca98eff07dc6a528f8364a90))
+* **html:** fuera el pb-6 del wrapper de header y footer ([2db15e2](https://github.com/dcruzgalicia/iteraciones-cli/commit/2db15e25feca1120e7729b243fa11efa36a2c5a0))
+* **html:** la retícula del fondo, cinco veces más amplia ([55f423d](https://github.com/dcruzgalicia/iteraciones-cli/commit/55f423dba527cb87b54f6e978b187f5b395a11fb))
+* **html:** las tarjetas de los files con su chip de type y su punta ([9f94b16](https://github.com/dcruzgalicia/iteraciones-cli/commit/9f94b161b3e8ee9c5e8585bfeadcd6d4d550b2ff))
+* **html:** las tarjetas de los files con su chip de type y su punta ([1d7d584](https://github.com/dcruzgalicia/iteraciones-cli/commit/1d7d584969c461ead395c0fd9b94db2afc0ca672))
+* **html:** menos aire al pie del main y margen alrededor de header y footer ([eb8135b](https://github.com/dcruzgalicia/iteraciones-cli/commit/eb8135b9abb9fb80852f2294d2ccc3d7863f5c80))
+* **images:** reescribe a assets las rutas de imagen del fm y formas no estándar ([918bc20](https://github.com/dcruzgalicia/iteraciones-cli/commit/918bc203a2eb334dcbd028c8d58bbc8f177c0780))
+* **markdown:** iteraciones markdown deriva el title de los creators ([c3e0c51](https://github.com/dcruzgalicia/iteraciones-cli/commit/c3e0c5177e70695484001f8ac4d1d91d40b8fe6a))
+* **progress:** la línea «Documentos» deja de imprimir el recuento dos veces ([363084c](https://github.com/dcruzgalicia/iteraciones-cli/commit/363084c0796042701b747c738cd817b82ecb96c3))
+* **renderer:** qr sin shell y caché por url en qr-gen ([2c789c7](https://github.com/dcruzgalicia/iteraciones-cli/commit/2c789c728af7f92a93d0257c6450e7f08e3d242b))
+* **test:** el restore de XDG_CACHE_HOME borra la variable si no existía ([3d57c57](https://github.com/dcruzgalicia/iteraciones-cli/commit/3d57c579695c8854743de504a57824cde6691d82))
+* **validate:** la valla de un div admite tres o más colones ([accc048](https://github.com/dcruzgalicia/iteraciones-cli/commit/accc048e67b3940743740105626ecbdd04a4104c))
+
+
+### Performance Improvements
+
+* **builder:** omite biber y biblatex cuando el proyecto no tiene .bib ([8de9752](https://github.com/dcruzgalicia/iteraciones-cli/commit/8de97524b171e58ec7ecab8fbe08b1895d6cca8d))
+
 ## [0.24.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.23.0...v0.24.0) (2026-09-22)
 
 
