@@ -1,11 +1,13 @@
+import { spyOn } from 'bun:test';
 import { existsSync, readFileSync, unlinkSync } from 'node:fs';
 import { realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { Given, Then, When } from '@cucumber/cucumber';
+import { After, Given, Then, When } from '@cucumber/cucumber';
 import { resolvePdfCheckBinary, validatePdfX1a } from '../../builder/pdfx-check.js';
-import { reportBuildError, runBuild } from '../../cli/dispatcher.js';
+import { reportBuildError, runBuild, runValidate } from '../../cli/dispatcher.js';
 import { PANDOC_ERROR_CODES, PandocError } from '../../lib/errors.js';
+import * as pandocRunner from '../../lib/pandoc-runner.js';
 import { ProcessSpawnError } from '../../lib/run.js';
 import { capture, escribirEnProyecto, tempRoot, world } from './cli-world.steps.js';
 
@@ -89,6 +91,79 @@ Given('que el título del sitio es {string}', (titulo: string) => {
   escribirEnProyecto('iteraciones.config.yaml', `language: es-MX\nformat:\n  html:\n    site:\n      title: ${titulo}\n    generate: true\n`);
 });
 
+// Espíos de pandoc. Los dos scenarios que los necesitan fallan antes de que
+// el build termine, así que un `After` por escenario es el único lugar donde
+// devolverlos sin ensuciar cada `Given`.
+let espioVersion: { mockRestore: () => void } | undefined;
+let espioExec: { mockRestore: () => void; mock: { calls: unknown[] } } | undefined;
+
+/**
+ * Corre los dos comandos y comprueba que los dos dicen lo mismo.
+ *
+ * Los avisos de `build` salen por stdout (van en el resumen) y los de
+ * `validate` por stderr, así que cada mitad mira su canal. El código de salida
+ * de cada uno queda en `world.salidas` porque después corren los dos y el
+ * global `process.exitCode` sólo recuerda el último.
+ */
+async function buildYValidate(texto: string, veces: number): Promise<void> {
+  const contar = (texto: string, dentro: string): number => dentro.split(texto).length - 1;
+
+  await capture(() => runBuild(world.root));
+  world.salidas.build = world.exitCode;
+  const enBuild = world.stdout + world.stderr;
+  const vecesBuild = contar(texto, enBuild);
+  if (vecesBuild < veces || (veces > 0 && vecesBuild !== veces)) {
+    throw new Error(`build dice ${JSON.stringify(texto)} ${vecesBuild} veces y esperaba ${veces || 'al menos una'}: ${JSON.stringify(enBuild)}`);
+  }
+
+  await capture(() => runValidate(world.root));
+  world.salidas.validate = world.exitCode;
+  const vecesValidate = contar(texto, world.stderr);
+  if (vecesValidate < veces || (veces > 0 && vecesValidate !== veces)) {
+    throw new Error(
+      `validate dice ${JSON.stringify(texto)} ${vecesValidate} veces y esperaba ${veces || 'al menos una'}: ${JSON.stringify(world.stderr)}`,
+    );
+  }
+}
+
+When('build y validate dicen {string}', async (texto: string) => {
+  await buildYValidate(texto, 0);
+});
+
+When('build y validate dicen {string} exactamente una vez', async (texto: string) => {
+  // #2011: un filtro inexistente salía dos veces en build y el usuario contaba
+  // dos avisos donde había uno.
+  await buildYValidate(texto, 1);
+});
+
+Then('el build termina con el código de salida {int}', (codigo: number) => {
+  // El código del ÚLTIMO build del escenario: los pasos `build y validate …`
+  // corren validate al final, así que `el comando termina con…` ya no sirve.
+  if (world.salidas.build !== codigo) {
+    throw new Error(`el build terminó con ${world.salidas.build} y esperaba ${codigo}. stderr: ${JSON.stringify(world.stderr)}`);
+  }
+});
+
+Then('validate termina con el código de salida {int}', (codigo: number) => {
+  if (world.salidas.validate !== codigo) {
+    throw new Error(`validate terminó con ${world.salidas.validate} y esperaba ${codigo}. stderr: ${JSON.stringify(world.stderr)}`);
+  }
+});
+
+Given('que pandoc no está disponible', () => {
+  raiz();
+  espioVersion = spyOn(pandocRunner, 'getPandocVersion').mockRejectedValue(
+    new (class extends Error {
+      sourcePath = '';
+      stderr = '';
+    })('pandoc no está disponible en PATH. Instálalo desde https://pandoc.org/installing.html'),
+  );
+});
+
+Given('que espío las invocaciones de pandoc', () => {
+  espioExec = spyOn(pandocRunner, 'execPandoc');
+});
+
 Given('que borro el archivo {string}', (relativa: string) => {
   unlinkSync(join(raiz(), relativa));
 });
@@ -104,6 +179,15 @@ When('hago un build del proyecto', async () => {
 
 When('hago un build del proyecto pidiendo JSON', async () => {
   await capture(() => runBuild(world.root, { json: true }));
+});
+
+After(() => {
+  // Si un espío queda puesto, el `build` de los escenarios siguientes corre
+  // contra un pandoc que no existe y falla por el motivo equivocado.
+  espioVersion?.mockRestore();
+  espioVersion = undefined;
+  espioExec?.mockRestore();
+  espioExec = undefined;
 });
 
 When('hago un build con la salida {string}', async (salida: string) => {

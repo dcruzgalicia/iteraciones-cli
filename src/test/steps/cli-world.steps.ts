@@ -53,6 +53,8 @@ export const world = {
   root: '',
   /** Lo que dejó el último `Then` que filtró una lista, para el `Then` que viene después. */
   ultimoAviso: {} as Record<string, unknown>,
+  /** Códigos de salida de una corrida que lanza los dos comandos. */
+  salidas: { build: 0, validate: 0 } as { build: number; validate: number },
 };
 
 /**
