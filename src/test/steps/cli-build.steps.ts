@@ -164,6 +164,69 @@ Given('que espío las invocaciones de pandoc', () => {
   espioExec = spyOn(pandocRunner, 'execPandoc');
 });
 
+// Las configuraciones que necesitan los escenarios de frontmatter. Cada una es
+// un `Given` con nombre y no un `{string}` con la config entera: el que lee el
+// feature tiene que poder ver de un vistazo qué proyecto se está armando.
+Given('que la raíz del proyecto tiene un proyecto con los tres formatos ligeros', () => {
+  raiz();
+  escribirEnProyecto(
+    'iteraciones.config.yaml',
+    [
+      'language: es-MX',
+      'format:',
+      '  html:',
+      '    site:',
+      '      title: Test',
+      '    generate: true',
+      '  epub:',
+      '    generate: true',
+      '  markdown:',
+      '    generate: true',
+    ].join('\n'),
+  );
+  escribirEnProyecto('test.md', '---\ntitle: Test Document\n---\n\nContenido de prueba.\n');
+});
+
+Given('que la raíz del proyecto tiene un proyecto con índice', () => {
+  raiz();
+  escribirEnProyecto('iteraciones.config.yaml', 'language: es-MX\ntoc: true\n');
+  escribirEnProyecto('test.md', '---\ntitle: Test Document\n---\n\nContenido de prueba.\n');
+});
+
+// El `.tex` sale de la plantilla sin pasar por latexmk: estos escenarios leen el
+// LaTeX generado, no compilan.
+const LATEX_SIN_PDF = 'language: es-MX\nformat:\n  latex:\n    generate: true\n  pdf:\n    generate: false\n';
+
+Given('que la raíz del proyecto tiene un proyecto con LaTeX y sin PDF', () => {
+  raiz();
+  escribirEnProyecto('iteraciones.config.yaml', LATEX_SIN_PDF);
+  escribirEnProyecto('test.md', '---\ntitle: Test Document\n---\n\nContenido de prueba.\n');
+});
+
+Given('que la raíz del proyecto tiene un proyecto con LaTeX', () => {
+  raiz();
+  escribirEnProyecto('iteraciones.config.yaml', 'language: es-MX\nformat:\n  latex:\n    generate: true\n');
+  escribirEnProyecto('test.md', '---\ntitle: Test Document\n---\n\nContenido de prueba.\n');
+});
+
+Given('que la raíz del proyecto apaga la fecha desde la config', () => {
+  escribirEnProyecto('iteraciones.config.yaml', `${LATEX_SIN_PDF}    showDate: false\n`);
+});
+
+Given('que la raíz del proyecto enciende la fecha desde la raíz', () => {
+  escribirEnProyecto(
+    'iteraciones.config.yaml',
+    `language: es-MX\nshowDate: true\nformat:\n  latex:\n    generate: true\n  pdf:\n    generate: false\n`,
+  );
+});
+
+Given('que la raíz del proyecto pone el número de página en el pie central', () => {
+  escribirEnProyecto(
+    'iteraciones.config.yaml',
+    `language: es-MX\npageNumber: footer-center\nformat:\n  latex:\n    generate: true\n  pdf:\n    generate: false\n`,
+  );
+});
+
 Given('que borro el archivo {string}', (relativa: string) => {
   unlinkSync(join(raiz(), relativa));
 });
@@ -328,6 +391,13 @@ function comprobarTipo(clave: string, tipo: 'número' | 'lista' | 'texto'): void
 Then('el JSON declara {string} como número', (clave: string) => comprobarTipo(clave, 'número'));
 Then('el JSON declara {string} como lista', (clave: string) => comprobarTipo(clave, 'lista'));
 Then('el JSON declara {string} como texto', (clave: string) => comprobarTipo(clave, 'texto'));
+
+Then('el archivo {string} no contiene {string}', (relativa: string, texto: string) => {
+  const contenido = readFileSync(join(raiz(), relativa), 'utf8');
+  if (contenido.includes(texto)) {
+    throw new Error(`${relativa} sí contiene ${JSON.stringify(texto)} y no debería`);
+  }
+});
 
 Then('el archivo {string} lleva la firma {string}', (relativa: string, firma: string) => {
   // Se busca la firma en cualquier posición, no en el byte 0: la firma de PNG
