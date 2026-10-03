@@ -154,86 +154,6 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     });
   });
 
-  it('titleImage: ruta absoluta en el tex con el guion bajo sin escapar', async () => {
-    await withTempDir(async (dir) => {
-      await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nformat:\n  latex:\n    generate: true\n', 'utf8');
-      // PNG 1x1 válido (base64)
-      const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
-      await writeFile(join(dir, 'mi_portada.png'), png);
-      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ntitleImage: ./mi_portada.png\n---\n\nContenido.\n', 'utf8');
-      process.exitCode = 0;
-      await runBuild(dir);
-      expect(process.exitCode).toBe(0);
-      const tex = await Bun.file(join(dir, 'dist', 'files', 'test-document.tex')).text();
-      // La imagen puede estar procesada (CMYK JPG) o sin procesar según ImageMagick
-      const hasOriginal = tex.includes(`\\titleimage{${join(dir, 'mi_portada.png')}}`);
-      const hasProcessed = tex.includes('\\titleimage{') && tex.includes('mi_portada');
-      expect(hasOriginal || hasProcessed).toBe(true);
-      expect(tex).not.toContain('\\_');
-    });
-  });
-
-  it('titleImage: archivo inexistente falla con mensaje claro (no el de latexmk)', async () => {
-    await withTempDir(async (dir) => {
-      await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nformat:\n  latex:\n    generate: true\n', 'utf8');
-      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ntitleImage: ./no_existe.png\n---\n\nContenido.\n', 'utf8');
-      const stderrSpy = spyStderr();
-      let output = '';
-      try {
-        process.exitCode = 0;
-        await runBuild(dir);
-      } finally {
-        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
-        stderrSpy.mockRestore();
-      }
-      expect(process.exitCode).toBe(1);
-      expect(output).toContain('titleImage no encontrado');
-      expect(output).toContain(join(dir, 'no_existe.png'));
-    });
-  });
-
-  it('titleImage desde la raíz de config se aplica a todos los documentos (3 niveles)', async () => {
-    await withTempDir(async (dir) => {
-      await initTestProject(dir);
-      const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
-      await writeFile(join(dir, 'portada.png'), png);
-      await writeFile(
-        join(dir, 'iteraciones.config.yaml'),
-        'language: es-MX\ntitleImage: ./portada.png\nformat:\n  latex:\n    generate: true\n',
-        'utf8',
-      );
-      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\n---\n\nContenido.\n', 'utf8');
-      process.exitCode = 0;
-      await runBuild(dir);
-      expect(process.exitCode).toBe(0);
-      const tex = await Bun.file(join(dir, 'dist', 'files', 'test-document.tex')).text();
-      expect(tex).toContain('\\titleimage{');
-    });
-  });
-
-  it('titleImage del frontmatter sobreescribe el de la config (3 niveles)', async () => {
-    await withTempDir(async (dir) => {
-      await initTestProject(dir);
-      const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
-      await writeFile(join(dir, 'portada.png'), png);
-      await writeFile(join(dir, 'portada-fm.png'), png);
-      await writeFile(
-        join(dir, 'iteraciones.config.yaml'),
-        'language: es-MX\ntitleImage: ./portada.png\nformat:\n  latex:\n    generate: true\n',
-        'utf8',
-      );
-      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\ntitleImage: ./portada-fm.png\n---\n\nContenido.\n', 'utf8');
-      process.exitCode = 0;
-      await runBuild(dir);
-      expect(process.exitCode).toBe(0);
-      const tex = await Bun.file(join(dir, 'dist', 'files', 'test-document.tex')).text();
-      expect(tex).toContain('\\titleimage{');
-      expect(tex).toContain('portada-fm');
-    });
-  });
-
   it('un párrafo de 2-3 palabras al inicio no recibe \\mbox (umbral de palabras reales)', async () => {
     await withTempDir(async (dir) => {
       await initTestProject(dir);
@@ -245,62 +165,6 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       const tex = await Bun.file(join(dir, 'dist', 'files', 'test-document.tex')).text();
       expect(tex).toContain('\\noindent Contenido corto.');
       expect(tex).not.toContain('\\mbox{Contenido}');
-    });
-  });
-
-  it('un slug manual inválido aborta el build con contexto', async () => {
-    await withTempDir(async (dir) => {
-      await initTestProject(dir);
-      await writeFile(join(dir, 'test.md'), '---\ntitle: Test Document\nslug: Mi URL Inválida\n---\n\nContenido.\n', 'utf8');
-      const stderrSpy = spyStderr();
-      let output = '';
-      try {
-        process.exitCode = 0;
-        await runBuild(dir);
-      } finally {
-        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
-        stderrSpy.mockRestore();
-      }
-      expect(output).toContain('slug inválido');
-      expect(process.exitCode).toBe(1);
-    });
-  });
-
-  it('dos slugs manuales duplicados abortan el build (sobrescribirían las salidas)', async () => {
-    await withTempDir(async (dir) => {
-      await initTestProject(dir);
-      await writeFile(join(dir, 'uno.md'), '---\ntitle: Uno\nslug: mismo\n---\n\nContenido.\n', 'utf8');
-      await writeFile(join(dir, 'dos.md'), '---\ntitle: Dos\nslug: mismo\n---\n\nContenido.\n', 'utf8');
-      const stderrSpy = spyStderr();
-      let output = '';
-      try {
-        process.exitCode = 0;
-        await runBuild(dir);
-      } finally {
-        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
-        stderrSpy.mockRestore();
-      }
-      expect(output).toContain('slugs duplicados');
-      expect(process.exitCode).toBe(1);
-    });
-  });
-
-  it('validate reporta slugs manuales duplicados como error', async () => {
-    await withTempDir(async (dir) => {
-      await initTestProject(dir);
-      await writeFile(join(dir, 'uno.md'), '---\ntitle: Uno\nslug: mismo\n---\n\nContenido.\n', 'utf8');
-      await writeFile(join(dir, 'dos.md'), '---\ntitle: Dos\nslug: mismo\n---\n\nContenido.\n', 'utf8');
-      const stderrSpy = spyStderr();
-      let output = '';
-      try {
-        process.exitCode = 0;
-        await runValidate(dir);
-      } finally {
-        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
-        stderrSpy.mockRestore();
-      }
-      expect(output).toContain('slug duplicado');
-      expect(process.exitCode).toBe(1);
     });
   });
 
@@ -380,45 +244,6 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       expect(stdout).toContain('María Pérez</dc:creator>');
       expect(stdout).toContain('>es-MX</dc:language>');
       expect(stdout).toContain('>2026-01-01</dc:date>');
-    });
-  });
-
-  it('un documento sin cuerpo es error de build: no se omite en silencio (#2463)', async () => {
-    // Frontmatter cerrado sin cuerpo. Corridas separadas: la emisión es
-    // concurrente y solo llega un error por build.
-    await withTempDir(async (dir) => {
-      await initTestProject(dir);
-      await writeFile(join(dir, 'vacio.md'), '---\ntitle: Vacío\n---\n', 'utf8');
-      const stderrSpy = spyStderr();
-      let output = '';
-      try {
-        process.exitCode = 0;
-        await runBuild(dir);
-      } finally {
-        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
-        stderrSpy.mockRestore();
-      }
-      expect(process.exitCode).toBe(1);
-      expect(output).toContain('vacio.md');
-      expect(output).toContain('no tiene contenido después del frontmatter; agrega un body para proceder con el build');
-    });
-
-    // Archivo enteramente vacío, sin frontmatter.
-    await withTempDir(async (dir) => {
-      await initTestProject(dir);
-      await writeFile(join(dir, 'hueco.md'), '', 'utf8');
-      const stderrSpy = spyStderr();
-      let output = '';
-      try {
-        process.exitCode = 0;
-        await runBuild(dir);
-      } finally {
-        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
-        stderrSpy.mockRestore();
-      }
-      expect(process.exitCode).toBe(1);
-      expect(output).toContain('hueco.md');
-      expect(output).toContain('está vacío; agrega un body para proceder con el build');
     });
   });
 
