@@ -1,4 +1,3 @@
-import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
@@ -151,6 +150,4 @@ Then('existe el archivo de configuración del proyecto', async () => {
   if (!(await Bun.file(config).exists())) {
     throw new Error(`init no creó ${config}`);
   }
-  await rm(world.root, { recursive: true, force: true });
-  world.root = '';
 });

@@ -56,15 +56,6 @@ function escribir(ruta: string, contenido: string): void {
   writeFileSync(ruta, contenido, 'utf8');
 }
 
-Given('que la raíz del proyecto tiene un proyecto de prueba', async () => {
-  world.root = await mkdtemp(join(tmpdir(), 'iteraciones-cli-validate-'));
-  escribir(
-    join(world.root, 'iteraciones.config.yaml'),
-    ['language: es-MX', 'format:', '  html:', '    site:', '      title: Test', '    generate: true'].join('\n'),
-  );
-  escribir(join(world.root, 'test.md'), '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\nContenido de prueba.\n');
-});
-
 Given('que la raíz del proyecto tiene un documento pero no la configuración', async () => {
   world.root = await mkdtemp(join(tmpdir(), 'iteraciones-cli-validate-'));
   escribir(join(world.root, 'doc.md'), '---\ntitle: Doc\ndate: 2026-01-01\n---\n\nTexto.\n');

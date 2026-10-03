@@ -1,7 +1,7 @@
 import { spyOn } from 'bun:test';
-import { mkdtempSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { After, Given, Then } from '@cucumber/cucumber';
 
 /**
@@ -76,11 +76,34 @@ After(() => {
   world.stdout = '';
   world.stderr = '';
   world.exitCode = 0;
+  // Los steps que crean la raíz no se acordan de limpiar nada. El paso que
+  // deja un directorio sin permisos lo devuelve antes de terminar.
+  if (world.root) rmSync(world.root, { recursive: true, force: true });
   world.root = '';
 });
 
 Given('que la raíz del proyecto está vacía', () => {
   world.root = tempRoot('iteraciones-cli-');
+});
+
+/** Escribe un archivo bajo la raíz del proyecto, creando los directorios. */
+export function escribirEnProyecto(relativa: string, contenido: string): void {
+  mkdirSync(dirname(join(world.root, relativa)), { recursive: true });
+  writeFileSync(join(world.root, relativa), contenido, 'utf8');
+}
+
+/**
+ * El proyecto de referencia: una config mínima de HTML y un documento con
+ * frontmatter. Lo usan `validate`, `clean` y `init` por igual, así que el
+ * `Given` es compartido — y es el mismo helper de `__tests__/helpers.ts`.
+ */
+Given('que la raíz del proyecto tiene un proyecto de prueba', () => {
+  world.root = tempRoot('iteraciones-cli-');
+  escribirEnProyecto(
+    'iteraciones.config.yaml',
+    ['language: es-MX', 'format:', '  html:', '    site:', '      title: Test', '    generate: true'].join('\n'),
+  );
+  escribirEnProyecto('test.md', '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\nContenido de prueba.\n');
 });
 
 Then('el comando termina con el código de salida {int}', (codigo: number) => {
