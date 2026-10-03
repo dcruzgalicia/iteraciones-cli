@@ -50,11 +50,21 @@ const ENGLISH = ['Given', 'When', 'Then', 'And', 'But', 'Feature', 'Scenario', '
  */
 
 function patternToRegExp(texto: string): RegExp {
-  const fuente = texto
-    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    .replace(/\\\{(string|int|float|word)\\\}/g, (_, tipo: string) =>
-      tipo === 'string' ? '"([^"]*)"' : tipo === 'int' ? '(-?\\d+)' : tipo === 'float' ? '(-?[\\d.]+)' : '([^\\s]+)',
-    );
+  const fuente = texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\{(string|int|float|word)\\\}/g, (_, tipo: string) =>
+    tipo === 'string'
+      ? // Cucumber acepta `"…"` y `'…'` para `{string}`
+        // (STRING_REGEXP en defineDefaultParameterTypes.js). Sólo con `"…"`
+        // este checker reportaba como indefinidos los pasos cuyo texto lleva
+        // comillas dobles adentro — justo los que comparan un mensaje de
+        // error, que viene entrecomillado. Los grupos no se leen: el regex
+        // sólo se usa con `.test()`.
+        String.raw`(?:"[^"\\]*(?:\\.[^"\\]*)*"|'[^'\\]*(?:\\.[^'\\]*)*')`
+      : tipo === 'int'
+        ? '(-?\\d+)'
+        : tipo === 'float'
+          ? '(-?[\\d.]+)'
+          : '([^\\s]+)',
+  );
   return new RegExp(`^${fuente}$`);
 }
 
