@@ -1,12 +1,12 @@
-import { spyOn } from 'bun:test';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { After, Given, Then, When } from '@cucumber/cucumber';
+import { Given, Then, When } from '@cucumber/cucumber';
 import { CommanderError } from 'commander';
 import { runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from '../../cli/dispatcher.js';
 import { checkReadPermissions, checkWritePermissions } from '../../cli/doctor/system-checks.js';
 import { buildProgram } from '../../cli/parser.js';
+import { capture, world } from './cli-world.steps.js';
 
 /**
  * #2546 (onda 2) — tranche 2 de `cli-layer`: los mensajes accionables.
@@ -20,31 +20,15 @@ import { buildProgram } from '../../cli/parser.js';
  * Este bloque sí es una tabla: el mismo "corré el CLI y mirá lo que dice", con
  * la entrada variando. 22 casos de golpe y con la misma forma.
  *
- * ## El parser: `parseAsync` a veces lanza y a veces no
+ * El mundo compartido y los `Then` comunes viven en `cli-world.steps.ts`:
+ * `new` los necesita igual y definirlos dos veces daría `ambiguous`.
  *
- * Los errores de commander llegan por dos caminos distintos:
+ * ## Este archivo todavía usa los dos caminos de salida del parser
  *
- * - errores de **uso** (`comando desconocido`, `opción desconocida`) → lanza
- *   `CommanderError` y el texto va por **stderr**;
- * - `--help` y `build --help` → también lanza `CommanderError`, pero el texto va
- *   por **stdout**, porque es ayuda y no un error.
- *
- * Por eso este archivo espía los dos streams y nunca asume cuál va a hablar.
- * El original repetía ese `try/finally` en cada `it`; aquí está una vez.
- *
- * ## Un solo código de salida para el `Then`
- *
- * El original mezclaba dos fuentes: los casos del parser leían el `exitCode`
- * del `CommanderError` capturado, y los del dispatcher leían
- * `process.exitCode`. Son dos cosas distintas y el `Given`/`When` de este
- * archivo no le dice al `Then` de dónde sacarla. Los dos helpers la escriben en
- * el mismo sitio (`world.exitCode`) y el `Then` lee una sola cosa.
+ * El original mezclaba dos helpers (`parseUsageError` y `parseWithStderr`) que
+ * leían el exit code de fuentes distintas. Acá un solo `When`, y el `catch` le
+ * avisa al `capture()` qué código vio.
  */
-
-interface Output {
-  stdout: string;
-  stderr: string;
-}
 
 interface Check {
   ok: boolean;
@@ -52,71 +36,20 @@ interface Check {
   detail?: string;
 }
 
-const world = {
-  output: { stdout: '', stderr: '' } as Output,
-  exitCode: 0,
-  root: '',
+const checks = {
   read: { ok: true, detail: '' } as Check,
   write: { ok: true, detail: '' } as Check,
 };
 
-/** Corre el parser y captura los dos streams y el código de salida. */
-async function parse(argv: string): Promise<void> {
-  const stdoutSpy = spyOn(process.stdout, 'write').mockImplementation(() => true);
-  const stderrSpy = spyOn(process.stderr, 'write').mockImplementation(() => true);
-  world.output = { stdout: '', stderr: '' };
-  world.exitCode = 0;
-  process.exitCode = 0;
-  try {
-    await buildProgram().parseAsync(['bun', 'bin.ts', ...argv.split(' ').filter(Boolean)]);
-    // No todos los rechazos de uso llegan como excepción: la validación de
-    // `--output`, por ejemplo, corre en un hook del programa que sólo escribe
-    // el mensaje y pone `process.exitCode`. Ese camino no lanza nada, así que
-    // hay que leer el global o el exit code se queda en 0.
-    world.exitCode = process.exitCode ?? 0;
-  } catch (err) {
-    // `exitOverride` lanza en los errores de uso y también tras mostrar el help.
-    world.exitCode = err instanceof CommanderError ? err.exitCode : 1;
-  } finally {
-    world.output.stdout = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
-    world.output.stderr = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
-    stdoutSpy.mockRestore();
-    stderrSpy.mockRestore();
-  }
-}
-
-/** Corre un comando del dispatcher contra `world.root` y captura stderr. */
-async function dispatch(command: string): Promise<void> {
-  const stderrSpy = spyOn(process.stderr, 'write').mockImplementation(() => true);
-  world.output = { stdout: '', stderr: '' };
-  try {
-    process.exitCode = 0;
-    const commands: Record<string, (root: string) => Promise<unknown>> = {
-      build: runBuild,
-      validate: runValidate,
-      doctor: runDoctor,
-      new: (root) => runNew(root, 'doc.md'),
-      clean: runClean,
-      'list-filters': runFilters,
-      init: runInit,
-    };
-    const run = commands[command];
-    if (!run) throw new Error(`el escenario pide un comando que el dispatcher no tiene: ${command}`);
-    await run(world.root);
-    world.exitCode = process.exitCode ?? 0;
-  } finally {
-    world.output.stderr = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
-    stderrSpy.mockRestore();
-  }
-}
-
-After(async () => {
-  process.exitCode = 0;
-  world.output = { stdout: '', stderr: '' };
-  world.exitCode = 0;
-  if (world.root) await rm(world.root, { recursive: true, force: true });
-  world.root = '';
-});
+const COMMANDS: Record<string, (root: string) => Promise<unknown>> = {
+  build: runBuild,
+  validate: runValidate,
+  doctor: runDoctor,
+  new: (root) => runNew(root, 'doc.md'),
+  clean: runClean,
+  'list-filters': runFilters,
+  init: runInit,
+};
 
 Given('que la raíz del proyecto no existe', () => {
   // `tmpdir()` + pid + reloj: dos corridas no colisionan y el `After` puede
@@ -125,92 +58,87 @@ Given('que la raíz del proyecto no existe', () => {
 });
 
 When('parseo el argv {string}', async (argv: string) => {
-  await parse(argv);
+  await capture(async () => {
+    try {
+      await buildProgram().parseAsync(['bun', 'bin.ts', ...argv.split(' ').filter(Boolean)]);
+    } catch (err) {
+      // `exitOverride` lanza en los errores de uso y también tras mostrar el
+      // help, en vez de setear el global. El `catch` lo repone para que
+      // `capture()` siga teniendo un solo lugar del que leer el código.
+      process.exitCode = err instanceof CommanderError ? err.exitCode : 1;
+    }
+  });
 });
 
 When('corro {string}', async (comando: string) => {
-  await dispatch(comando);
+  await capture(async () => {
+    const run = COMMANDS[comando];
+    if (!run) throw new Error(`el escenario pide un comando que el dispatcher no tiene: ${comando}`);
+    await run(world.root);
+  });
 });
 
 When('reviso los permisos de lectura y escritura', async () => {
-  world.read = await checkReadPermissions(world.root);
-  world.write = await checkWritePermissions(world.root);
-});
-
-Then('el error dice {string}', (esperado: string) => {
-  if (!world.output.stderr.includes(esperado)) {
-    throw new Error(`el error no dice ${JSON.stringify(esperado)}. stderr: ${JSON.stringify(world.output.stderr)}`);
-  }
-});
-
-Then('el error no dice {string}', (ruido: string) => {
-  if (world.output.stderr.includes(ruido)) {
-    throw new Error(`el error sí dice ${JSON.stringify(ruido)} y no debería: ${JSON.stringify(world.output.stderr)}`);
-  }
+  checks.read = await checkReadPermissions(world.root);
+  checks.write = await checkWritePermissions(world.root);
 });
 
 Then('el error sugiere el comando {string}', (sugerido: string) => {
   const esperado = `(¿Quisiste decir ${sugerido}?)`;
-  if (!world.output.stderr.includes(esperado)) {
-    throw new Error(`el error no sugiere ${JSON.stringify(esperado)}. stderr: ${JSON.stringify(world.output.stderr)}`);
+  if (!world.stderr.includes(esperado)) {
+    throw new Error(`el error no sugiere ${JSON.stringify(esperado)}. stderr: ${JSON.stringify(world.stderr)}`);
   }
 });
 
 Then('el error no muestra un stack trace', () => {
   // `at <anonymous>` es la firma de un stack sin manejar. El mensaje tiene que
   // ser legible por una persona, no por un depurador.
-  if (world.output.stderr.includes('at <anonymous>')) {
-    throw new Error(`el error sí trae un stack trace: ${JSON.stringify(world.output.stderr)}`);
+  if (world.stderr.includes('at <anonymous>')) {
+    throw new Error(`el error sí trae un stack trace: ${JSON.stringify(world.stderr)}`);
   }
 });
 
 Then('el error dice que la ruta no existe', () => {
-  if (!world.output.stderr.includes('no existe')) {
-    throw new Error(`el error no dice que la ruta no existe: ${JSON.stringify(world.output.stderr)}`);
-  }
-});
-
-Then('el comando termina con el código de salida {int}', (codigo: number) => {
-  if (world.exitCode !== codigo) {
-    throw new Error(`esperaba código de salida ${codigo} y hubo ${world.exitCode}. stderr: ${JSON.stringify(world.output.stderr)}`);
+  if (!world.stderr.includes('no existe')) {
+    throw new Error(`el error no dice que la ruta no existe: ${JSON.stringify(world.stderr)}`);
   }
 });
 
 Then('la ayuda contiene {string}', (esperado: string) => {
-  if (!world.output.stdout.includes(esperado)) {
-    throw new Error(`la ayuda no contiene ${JSON.stringify(esperado)}. stdout: ${JSON.stringify(world.output.stdout)}`);
+  if (!world.stdout.includes(esperado)) {
+    throw new Error(`la ayuda no contiene ${JSON.stringify(esperado)}. stdout: ${JSON.stringify(world.stdout)}`);
   }
 });
 
 Then('la ayuda no muestra {string}', (ingles: string) => {
-  if (world.output.stdout.includes(ingles)) {
+  if (world.stdout.includes(ingles)) {
     throw new Error(`la ayuda sí muestra el inglés ${JSON.stringify(ingles)}`);
   }
 });
 
 Then('la ayuda repite {string} una sola vez', (texto: string) => {
-  const veces = world.output.stdout.split(texto).length - 1;
+  const veces = world.stdout.split(texto).length - 1;
   if (veces !== 1) {
     throw new Error(`esperaba ${JSON.stringify(texto)} una vez y apareció ${veces} veces`);
   }
 });
 
 Then('la ayuda empieza con el slogan', () => {
-  if (!world.output.stdout.startsWith('escribir, compartir, re-existir')) {
-    throw new Error(`la ayuda no empieza con el slogan: ${JSON.stringify(world.output.stdout.slice(0, 80))}`);
+  if (!world.stdout.startsWith('escribir, compartir, re-existir')) {
+    throw new Error(`la ayuda no empieza con el slogan: ${JSON.stringify(world.stdout.slice(0, 80))}`);
   }
 });
 
 Then('ambos checks fallan', () => {
-  if (world.read.ok || world.write.ok) {
+  if (checks.read.ok || checks.write.ok) {
     throw new Error('los checks de permisos deberían fallar sobre una raíz inexistente');
   }
 });
 
 Then('ambos detalles dicen que la ruta no existe', () => {
   for (const [nombre, check] of [
-    ['lectura', world.read],
-    ['escritura', world.write],
+    ['lectura', checks.read],
+    ['escritura', checks.write],
   ] as const) {
     if (!(check.detail ?? '').includes('no existe')) {
       throw new Error(`el check de ${nombre} no dice que la ruta no existe: ${JSON.stringify(check.detail)}`);
