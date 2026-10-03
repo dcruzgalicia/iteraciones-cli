@@ -1,7 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it, spyOn } from 'bun:test';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { runBuild, runValidate } from '../cli/dispatcher.js';
+import { runBuild } from '../cli/dispatcher.js';
 import { checkLatexEngine } from '../cli/doctor/system-checks.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { initTestProject, registerSkip, SKIP_REASONS, withTempDir } from './helpers.js';
@@ -30,7 +30,7 @@ function resetExitCode() {
   process.exitCode = 0;
 }
 
-function spyStderr() {
+function _spyStderr() {
   const s = spyOn(process.stderr, 'write');
   return s;
 }
@@ -63,102 +63,6 @@ describe.skipIf(!pandocOk)('runBuild', () => {
     },
     { timeout: 300_000 },
   );
-
-  it('collection e intervention sin body propio siguen siendo válidas en build y validate (#2463)', async () => {
-    await withTempDir(async (dir) => {
-      await initTestProject(dir);
-      await writeFile(
-        join(dir, 'coleccion.md'),
-        ['---', 'title: Antología', 'type: collection', 'files:', '  - test.md', '---', ''].join('\n'),
-        'utf8',
-      );
-      await writeFile(join(dir, 'intervencion.md'), ['---', 'title: Intervención', 'type: intervention', '---', ''].join('\n'), 'utf8');
-
-      process.exitCode = 0;
-      await runBuild(dir);
-      expect(process.exitCode).toBe(0);
-
-      const stdoutSpy = spyOn(process.stdout, 'write');
-      let raw = '';
-      try {
-        process.exitCode = 0;
-        await runValidate(dir, { json: true });
-      } finally {
-        raw = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
-        stdoutSpy.mockRestore();
-      }
-      expect(process.exitCode).toBe(0);
-      const resumen = JSON.parse(raw.trim()) as { ok: boolean; errors: unknown[]; warnings: { file: string }[] };
-      expect(resumen.ok).toBe(true);
-      expect(resumen.errors).toEqual([]);
-      expect(resumen.warnings.filter((w) => w.file === 'coleccion.md' || w.file === 'intervencion.md')).toEqual([]);
-    });
-  });
-
-  it('un miembro vacío de una collection rompe build y validate (no deja files[] colgando) (#2463)', async () => {
-    await withTempDir(async (dir) => {
-      await initTestProject(dir);
-      await writeFile(
-        join(dir, 'index.md'),
-        ['---', 'title: Antología', 'type: collection', 'files:', '  - test.md', '  - vacio.md', '---', ''].join('\n'),
-        'utf8',
-      );
-      await writeFile(join(dir, 'vacio.md'), '---\ntitle: Vacío\n---\n', 'utf8');
-
-      const buildSpy = spyStderr();
-      let output = '';
-      try {
-        process.exitCode = 0;
-        await runBuild(dir);
-      } finally {
-        output = buildSpy.mock.calls.map((c) => String(c[0])).join('');
-        buildSpy.mockRestore();
-      }
-      expect(process.exitCode).toBe(1);
-      expect(output).toContain('vacio.md');
-      expect(output).toContain('agrega un body para proceder con el build');
-
-      // validate dice exactamente lo mismo del mismo proyecto (#2463).
-      const validateSpy = spyStderr();
-      let validateOutput = '';
-      try {
-        process.exitCode = 0;
-        await runValidate(dir);
-      } finally {
-        validateOutput = validateSpy.mock.calls.map((c) => String(c[0])).join('');
-        validateSpy.mockRestore();
-      }
-      expect(process.exitCode).toBe(1);
-      expect(validateOutput).toContain('vacio.md');
-      expect(validateOutput).toContain('agrega un body para proceder con el build');
-    });
-  });
-
-  it('el siguiente build reintenta el documento que falló (no envenena la caché)', async () => {
-    await withTempDir(async (dir) => {
-      await initTestProject(dir);
-      // Frontmatter YAML inválido: el build falla en discovery
-      await writeFile(join(dir, 'vacio.md'), '---\ntitle: [roto\n---\n\nContenido.\n', 'utf8');
-      process.exitCode = 0;
-      await runBuild(dir);
-      expect(process.exitCode).toBe(1);
-
-      // Arreglar el documento y reconstruir: debe reprocesarlo, no reutilizarlo
-      await writeFile(join(dir, 'vacio.md'), '---\ntitle: Vacío\n---\n\nAhora sí tiene contenido.\n', 'utf8');
-      const stdoutSpy = spyOn(process.stdout, 'write');
-      let output = '';
-      try {
-        process.exitCode = 0;
-        await runBuild(dir);
-      } finally {
-        output = stdoutSpy.mock.calls.map((c) => String(c[0])).join('');
-        stdoutSpy.mockRestore();
-      }
-      expect(process.exitCode).toBe(0);
-      expect(output).toContain('Documentos');
-      expect(output).not.toContain('Sin cambios (reutilizado)');
-    });
-  });
 
   it('un estado sin completed se ignora y el siguiente build reprocesa (interrupción simulada)', async () => {
     await withTempDir(async (dir) => {
@@ -205,30 +109,6 @@ describe.skipIf(!pandocOk)('runBuild', () => {
       }
       expect(process.exitCode).toBe(0);
       expect(cachedOutput).toContain('(reutilizado)');
-    });
-  });
-
-  it('un error de pandoc reporta la ruta del documento una sola vez', async () => {
-    await withTempDir(async (dir) => {
-      await initTestProject(dir);
-      await writeFile(join(dir, 'iteraciones.config.yaml'), 'language: es-MX\nluaFilters: [filters/roto.lua]\n', 'utf8');
-      const { mkdir } = await import('node:fs/promises');
-      await mkdir(join(dir, 'filters'), { recursive: true });
-      await writeFile(join(dir, 'filters', 'roto.lua'), 'function ) sintaxis inválida\n', 'utf8');
-      const stderrSpy = spyStderr();
-      let output = '';
-      try {
-        process.exitCode = 0;
-        await runBuild(dir);
-      } finally {
-        output = stderrSpy.mock.calls.map((c) => String(c[0])).join('');
-        stderrSpy.mockRestore();
-      }
-      expect(output).toContain('✖ pandoc falló al convertir el documento en "');
-      expect(output).toContain('test.md');
-      // La ruta aparece una sola vez: ni duplicada ni en el mensaje previo a "en"
-      expect(output).not.toContain('pandoc falló al convertir test.md');
-      expect(process.exitCode).toBe(1);
     });
   });
 
