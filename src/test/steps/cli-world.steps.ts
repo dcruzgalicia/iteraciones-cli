@@ -65,6 +65,14 @@ export const world = {
   desactivados: undefined as string[] | undefined,
   /** El directorio del proyecto cuando un filtro se reemplaza desde el `.tex` propio. */
   cwd: '',
+  /** La configuración que cargó el loader, o `null` si la carga falló. */
+  config: null as unknown,
+  /** El resultado de `loadSiteConfigIfPresent`: `null` si no hay archivo. */
+  configOpcional: undefined as unknown,
+  /** El mensaje del `ConfigError` que tiró la carga, o cadena vacía. */
+  errorConfig: '',
+  /** Las claves que el autor ESCRIBIÓ, no las que el paquete puso por defecto. */
+  presentes: new Set<string>() as ReadonlySet<string>,
   /** Los dos extremos de una comparación de orden, uno por docstring. */
   antesDe: '',
   desdeLinea: -1,
@@ -120,6 +128,10 @@ After(() => {
   world.cwd = '';
   world.antesDe = '';
   world.desdeLinea = -1;
+  world.config = null;
+  world.configOpcional = undefined;
+  world.errorConfig = '';
+  world.presentes = new Set<string>();
 });
 
 Given('que la raíz del proyecto está vacía', () => {
