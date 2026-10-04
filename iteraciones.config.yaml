@@ -1,5 +1,13 @@
 language: es-MX
+toc: true
 format:
-  pdf:
-    disabledPreambleFilters:
-      - 97-eso-pic
+  latex:
+    generate: true
+  html:
+    blocks:
+      - header
+      - contenido
+      - indice
+      - formatos
+      - referencias
+      - footer

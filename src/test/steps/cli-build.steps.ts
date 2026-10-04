@@ -280,6 +280,110 @@ Given('que la raíz del proyecto declara la portada {string}', (imagen: string) 
   escribirEnProyecto('iteraciones.config.yaml', `language: es-MX\ntitleImage: ./${imagen}\nformat:\n  latex:\n    generate: true\n`);
 });
 
+Given('que el build deja el estado sin marcar como completado', () => {
+  // Lo que queda si el proceso muere a mitad de render: `discover` ya
+  // persistió el estado, pero el marcado final nunca ocurrió.
+  const ruta = join(raiz(), '.iteraciones', 'state.json');
+  const estado = JSON.parse(readFileSync(ruta, 'utf8')) as Record<string, unknown>;
+  delete estado.completed;
+  writeFileSync(ruta, JSON.stringify(estado), 'utf8');
+});
+
+Given('que la raíz del proyecto tiene un filtro lua con sintaxis rota', () => {
+  raiz();
+  escribirEnProyecto('iteraciones.config.yaml', 'language: es-MX\nluaFilters: [filters/roto.lua]\n');
+  escribirEnProyecto('filters/roto.lua', 'function ) sintaxis inválida\n');
+});
+
+Then('el JSON no declara avisos sobre {string}', (archivos: string) => {
+  // Varios archivos separados por coma: los contenedores van juntos y tienen
+  // que salir limpios los dos.
+  const lista = Array.isArray(jsonSalida().warnings) ? (jsonSalida().warnings as Record<string, unknown>[]) : [];
+  const delArchivo = lista.filter((a) =>
+    archivos
+      .split(',')
+      .map((s) => s.trim())
+      .includes(String(a.file)),
+  );
+  if (delArchivo.length > 0) {
+    throw new Error(`el JSON declara ${delArchivo.length} avisos sobre ${archivos} y no debería: ${JSON.stringify(lista)}`);
+  }
+});
+
+Then('el build reprocesa los documentos', () => {
+  // La contraparte de "reutilizado": si el build sirve de caché, el arreglo del
+  // autor no se vería nunca y el escenario sería un falso verde.
+  //
+  // Se busca CUALQUIER marca de reutilización, no una en particular: el atajo
+  // de "sin cambios" y el de "todos reutilizados" son dos caminos distintos y
+  // un check que sólo mira uno deja pasar al otro.
+  if (!world.stdout.includes('Documentos')) {
+    throw new Error(`la salida no habla de documentos: ${JSON.stringify(world.stdout)}`);
+  }
+  if (world.stdout.includes('reutilizado')) {
+    throw new Error(`el build sirvió de caché cuando tenía que reprocesar: ${JSON.stringify(world.stdout)}`);
+  }
+});
+
+Then('el build reutiliza la salida', () => {
+  if (!world.stdout.includes('(reutilizado)')) {
+    throw new Error(`la salida no dice que reutilizó: ${JSON.stringify(world.stdout)}`);
+  }
+});
+
+Then('el build genera index en todos los formatos', async () => {
+  const formats = ['html', 'pdf', 'tex', 'epub', 'md'];
+  for (const ext of formats) {
+    if (!existsSync(join(raiz(), 'dist', 'files', `index.${ext}`))) {
+      throw new Error(`index.md no generó index.${ext}`);
+    }
+  }
+  // Y NINGUNA salida con el slug derivado del título: antes salían `inicio.pdf`
+  // e `inicio.tex` además de `index.*`, con dos nombres para el mismo documento.
+  for (const ext of ['pdf', 'tex', 'epub', 'md']) {
+    if (existsSync(join(raiz(), 'dist', 'files', `inicio.${ext}`))) {
+      throw new Error(`el build también generó inicio.${ext}: dos nombres para el mismo documento`);
+    }
+  }
+});
+
+Then('el JSON declara que no hay ni un error', () => {
+  const salida = jsonSalida();
+  const errores = Array.isArray(salida.errors) ? salida.errors : [];
+  if (salida.ok !== true || errores.length > 0) {
+    throw new Error(`el JSON no está limpio: ${JSON.stringify(salida)}`);
+  }
+});
+
+Then('validate dice lo mismo sobre el documento {string}', async (archivo: string) => {
+  // Si sólo `build` detectara el miembro vacío, el autor que usa `validate`
+  // para evitar un build largo no se entera hasta que compila.
+  await capture(() => runValidate(world.root));
+  for (const texto of [archivo, 'agrega un body para proceder con el build']) {
+    if (!world.stderr.includes(texto)) {
+      throw new Error(`validate no dice ${JSON.stringify(texto)}: ${JSON.stringify(world.stderr)}`);
+    }
+  }
+});
+
+Then('el error nombra el documento una sola vez', () => {
+  // El prefijo del wrapper pone el nombre entre comillas; el texto de pandoc lo
+  // repite. Lo que se comprueba es que quede una sola mención.
+  const prefijo = '✖ pandoc falló al convertir el documento en "';
+  if (!world.stderr.includes(prefijo) || !world.stderr.includes('test.md')) {
+    throw new Error(`el error no nombra el documento con el prefijo esperado: ${JSON.stringify(world.stderr)}`);
+  }
+});
+
+Given('que la raíz del proyecto tiene un proyecto con todos los formatos', () => {
+  raiz();
+  escribirEnProyecto(
+    'iteraciones.config.yaml',
+    'language: es-MX\nformat:\n  latex:\n    generate: true\n  pdf:\n    generate: true\n  html:\n    generate: true\n  epub:\n    generate: true\n  markdown:\n    generate: true\n',
+  );
+  escribirEnProyecto('test.md', '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\nContenido de prueba.\n');
+});
+
 Given('que borro el archivo {string}', (relativa: string) => {
   unlinkSync(join(raiz(), relativa));
 });
