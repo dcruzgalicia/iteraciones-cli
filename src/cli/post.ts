@@ -4,6 +4,7 @@ import { composeLatexFinalOutput, type LatexPostManifest } from '../builder/late
 import { writeOutput } from '../builder/pipeline-io.js';
 import { BuildError } from '../lib/errors.js';
 import { fail, logSuccess } from '../lib/logger.js';
+import { minifyHtml } from '../lib/minify.js';
 import { resolvePath } from '../lib/paths.js';
 
 export const POST_KINDS = ['html', 'latex'] as const;
@@ -19,7 +20,7 @@ function postHtmlType(raw: string): PostHtmlType {
 }
 
 async function postHtml(raw: string, type: string): Promise<string> {
-  return postProcessHtml(raw, await loadReferencesCardTemplate(postHtmlType(type)));
+  return minifyHtml(postProcessHtml(raw, await loadReferencesCardTemplate(postHtmlType(type))));
 }
 
 async function postLatex(raw: string, post: string | undefined, cwd: string, output: string): Promise<string> {

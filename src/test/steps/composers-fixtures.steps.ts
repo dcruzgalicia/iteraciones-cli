@@ -6,6 +6,7 @@ import type { LuaFilterGroup } from '../../builder/filter-resolver.js';
 import { buildTexDistribution, markdownToLatex, rewriteTexForDist } from '../../builder/latex-composer.js';
 import { htmlPageFromMarkdown } from '../../builder/render.js';
 import { BuildError } from '../../lib/errors.js';
+import { minifyHtml } from '../../lib/minify.js';
 import * as pandocRunner from '../../lib/pandoc-runner.js';
 
 const NO_FILTERS: LuaFilterGroup = {
@@ -274,9 +275,10 @@ Then('la llamada a pandoc pide HTML5 con el idioma del sitio y citas enlazadas',
   exigeLista(argsOf(), ['--metadata=lang:es-MX', '--metadata=link-citations:true']);
 });
 
-Then('el HTML es el fixture sin post-procesar', () => {
+Then('el HTML es el fixture sin post-procesar', async () => {
   if (world.calls.length !== 1) throw new Error(`esperaba 1 llamada y hubo ${world.calls.length}`);
-  if (world.html !== world.fixtureHtml) throw new Error('el HTML post-procesado difiere del fixture');
+  if (world.html.includes('id="block-referencias"')) throw new Error('quedó el marcador sin sustituir');
+  if (world.html !== (await minifyHtml(world.fixtureHtml))) throw new Error('el HTML post-procesado difiere del fixture minificado');
 });
 
 Then('la primera llamada lleva citeproc, la bibliografía y el estilo APA', () => {
