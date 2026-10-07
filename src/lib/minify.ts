@@ -23,19 +23,6 @@ export async function checkMinify(): Promise<{ label: string; ok: boolean; detai
   };
 }
 
-/**
- * Minifica el HTML con `tdewolff/minify`.
- *
- * Va aquí, dentro de `iteraciones post html`, y no en el compositor: el
- * `.sh` de replay reproduce el build byte a byte, y `post html` es el
- * subcomando que ese `.sh` sí puede invocar.
- *
- * `--html-keep-quotes` cuesta 46 bytes de 15.483 en una página real (0,3%) y
- * evita que los atributos sin combras rompan las aserciones del HTML. El
- * contenido de `<pre>` y `<code>` sale intacto sin ninguna bandera.
- *
- * Degradado, no roto: sin el binario se avisa y se sigue.
- */
 export async function minifyHtml(html: string): Promise<string> {
   if (!(await minifyAvailable())) {
     logWarning('minify no está en PATH; el HTML sale sin minificar. Instálalo con `brew install minify`', 'html');
