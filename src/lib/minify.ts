@@ -5,7 +5,7 @@ import { logWarning } from './logger.js';
 
 const BIN = 'minify';
 
-export async function minifyAvailable(): Promise<boolean> {
+async function minifyAvailable(): Promise<boolean> {
   return Bun.spawn([BIN, '-l'], { stdout: 'ignore', stderr: 'ignore' })
     .exited.then((code) => code === 0)
     .catch(() => false);

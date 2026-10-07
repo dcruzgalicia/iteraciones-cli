@@ -1,19 +1,15 @@
-import { join } from 'node:path';
 import { logWarning } from '../lib/logger.js';
-
-const HTML_RESOURCES_DIR = join(import.meta.dir, '../lib/resources/html');
+import { type HtmlDocType, loadCard } from './html-composer.js';
 
 const REFS = '<div id="block-referencias"></div>';
 const INTRO = '<div id="block-intro"></div>';
-
-export type HtmlPostType = 'file' | 'collection' | 'creator';
 
 export function removeTocReferencesLink(html: string): string {
   return html.replace(/<li>\s*<a href="#refs-heading"[^>]*>.*?<\/a>\s*<\/li>/gs, '');
 }
 
-export function loadReferencesCardTemplate(type: HtmlPostType): Promise<string> {
-  return Bun.file(join(HTML_RESOURCES_DIR, type, 'card-referencias-block.html')).text();
+export function loadReferencesCardTemplate(type: HtmlDocType): Promise<string> {
+  return loadCard(type, 'card-referencias-block.html');
 }
 
 export function postProcessHtml(html: string, refsCardTemplate: string): string {

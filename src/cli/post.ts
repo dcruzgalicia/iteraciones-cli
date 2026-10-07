@@ -1,4 +1,5 @@
 import { dirname } from 'node:path';
+import type { HtmlDocType } from '../builder/html-composer.js';
 import { loadReferencesCardTemplate, postProcessHtml } from '../builder/html-postprocess.js';
 import { composeLatexFinalOutput, type LatexPostManifest } from '../builder/latex-composer.js';
 import { writeOutput } from '../builder/pipeline-io.js';
@@ -13,9 +14,9 @@ async function readStdin(): Promise<string> {
   return new Response(Bun.stdin).text();
 }
 
-export type PostHtmlType = 'file' | 'collection' | 'creator';
+export type PostHtmlType = HtmlDocType;
 
-function postHtmlType(raw: string): PostHtmlType {
+function postHtmlType(raw: string): HtmlDocType {
   return raw === 'collection' || raw === 'creator' ? raw : 'file';
 }
 

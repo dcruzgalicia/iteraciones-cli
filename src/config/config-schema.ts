@@ -109,7 +109,7 @@ const HtmlSiteSchema = z
   })
   .strict();
 
-export const HtmlFormatSchema = z
+const HtmlFormatSchema = z
   .object({
     site: HtmlSiteSchema.optional(),
     generate: z.boolean().default(DEFAULT_HTML_FORMAT.generate),
@@ -117,7 +117,7 @@ export const HtmlFormatSchema = z
   })
   .strict();
 
-export const PdfFormatSchema = z
+const PdfFormatSchema = z
   .object({
     generate: z.boolean().default(DEFAULT_PDF_FORMAT.generate),
     showDate: z.boolean().optional(),
@@ -131,19 +131,19 @@ export const PdfFormatSchema = z
   })
   .strict();
 
-export const LatexFormatSchema = z
+const LatexFormatSchema = z
   .object({
     generate: z.boolean().default(DEFAULT_LATEX_FORMAT.generate),
   })
   .strict();
 
-export const EpubFormatSchema = z
+const EpubFormatSchema = z
   .object({
     generate: z.boolean().default(DEFAULT_EPUB_FORMAT.generate),
   })
   .strict();
 
-export const MarkdownFormatSchema = z
+const MarkdownFormatSchema = z
   .object({
     generate: z.boolean().default(DEFAULT_MARKDOWN_FORMAT.generate),
     merge: z.boolean().default(DEFAULT_MARKDOWN_FORMAT.merge),
