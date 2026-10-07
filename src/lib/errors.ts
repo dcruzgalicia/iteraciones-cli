@@ -8,24 +8,14 @@ export class ConversionError extends Error {
     code?: string,
   ) {
     super(message);
-    this.name = 'ConversionError';
+    this.name = new.target.name;
     this.code = code;
   }
 }
 
-export class PandocError extends ConversionError {
-  constructor(message: string, sourcePath: string, stderr: string, code?: string) {
-    super(message, sourcePath, stderr, code);
-    this.name = 'PandocError';
-  }
-}
+export class PandocError extends ConversionError {}
 
-export class ExportError extends ConversionError {
-  constructor(message: string, sourcePath: string, stderr: string, code?: string) {
-    super(message, sourcePath, stderr, code);
-    this.name = 'ExportError';
-  }
-}
+export class ExportError extends ConversionError {}
 
 export const PANDOC_ERROR_CODES = {
   envMissing: 'env-missing',
