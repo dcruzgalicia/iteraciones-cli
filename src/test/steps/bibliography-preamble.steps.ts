@@ -5,7 +5,7 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import type { BuildMetadata } from '../../builder/build-planner.js';
 import { convertToPdf } from '../../builder/export.js';
 import { writeEffectiveTemplates } from '../../builder/pipeline-setup.js';
-import { disableBibliographyWithoutBibFiles, resolveEffectiveDisabledPreamble } from '../../builder/preamble-loader.js';
+import { disableBibliographyWithoutBibFiles, projectPreambleDirs, resolveEffectiveDisabledPreamble } from '../../builder/preamble-loader.js';
 import type { BuildContext } from '../../builder/types.js';
 import { listFilters } from '../../cli/filters.js';
 import { runTemplate } from '../../cli/template.js';
@@ -127,6 +127,26 @@ Then('la plantilla SÍ lleva el paquete de bibliografía', () => {
 Then('la plantilla NO lleva el paquete de bibliografía', () => {
   if (String(world.texBib).includes('\\usepackage[style=apa]{biblatex}')) {
     throw new Error('la plantilla regenerada sí lleva biblatex');
+  }
+});
+
+When('pregunto la ayuda de los overrides de preámbulo', async () => {
+  const espia = spyOn(process.stdout, 'write').mockImplementation(() => true);
+  try {
+    await listFilters(world.root, {});
+    world.ayudaOverrides = espia.mock.calls.map((c) => String(c[0])).join('');
+  } finally {
+    espia.mockRestore();
+  }
+});
+
+// El loader resuelve overrides en los cuatro directorios por tipo. Si el help solo menciona uno,
+// un usuario pone su override donde no aplica y no ve efecto en las colecciones, sin explicación.
+Then('la ayuda menciona los {int} directorios de override', (cuántos: number) => {
+  const ayuda = String(world.ayudaOverrides ?? '');
+  const mencionados = projectPreambleDirs().filter((dir) => ayuda.includes(dir));
+  if (mencionados.length !== cuántos) {
+    throw new Error(`menciona ${JSON.stringify(mencionados)} de ${cuántos}: ${JSON.stringify(ayuda.slice(-200))}`);
   }
 });
 

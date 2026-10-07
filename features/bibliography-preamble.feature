@@ -68,6 +68,14 @@ Característica: la bibliografía cuando el proyecto no cita nada
       Cuando vuelvo a generar la plantilla LaTeX
       Entonces la plantilla SÍ lleva el paquete de bibliografía
 
+  Regla de negocio: la ayuda de `filters` dice dónde va cada override
+
+    Escenario: La ayuda nombra los cuatro directorios de override de preámbulo
+      Dado que la raíz del proyecto está vacía
+      Y un proyecto de prueba inicializado
+      Cuando pregunto la ayuda de los overrides de preámbulo
+      Entonces la ayuda menciona los 4 directorios de override
+
   Regla de negocio: `filters` muestra el estado que aplica el build
 
     Escenario: El filtro 11-bibliography se muestra inactivo sin .bib
