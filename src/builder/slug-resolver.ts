@@ -94,12 +94,16 @@ function resolveGroup(discoveryIndex: Map<string, DiscoveryEntry>, slugBase: str
   }
 }
 
+export function outputKeyFor(relPath: string, slug: string): string {
+  return `${dirname(relPath)}/${slug}`;
+}
+
 function assertNoOutputCollisions(discoveryIndex: Map<string, DiscoveryEntry>): void {
   const owners = new Map<string, string>();
   const collisions: string[] = [];
   for (const [relPath, entry] of discoveryIndex) {
     if (!entry.slug) continue;
-    const outputKey = `${dirname(relPath)}/${entry.slug}`;
+    const outputKey = outputKeyFor(relPath, entry.slug);
     const owner = owners.get(outputKey);
     if (owner !== undefined) collisions.push(`${owner} y ${relPath} → "${entry.slug}"`);
     else owners.set(outputKey, relPath);
