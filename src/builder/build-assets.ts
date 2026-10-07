@@ -147,32 +147,28 @@ async function copyIfChanged(src: string, dest: string): Promise<void> {
   await cp(src, dest, { force: true, preserveTimestamps: true });
 }
 
+async function copyLogo(src: string, dest: string, missing: string, failedPrefix: string): Promise<void> {
+  try {
+    await copyIfChanged(src, dest);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') logWarning(missing, 'assets');
+    else {
+      throw new BuildError(`${failedPrefix}: ${(err as Error).message}`);
+    }
+  }
+}
+
 export async function copyStaticAssets(outputDir: string, cwd: string, siteConfig: SiteConfig): Promise<void> {
   const logo = siteConfig.format?.html?.site?.logo?.trim();
 
   const dest = join(outputDir, ASSETS_LOGO_FILE);
   if (!logo) {
     const defaultSrc = join(PKG_ROOT, 'src', 'lib', 'resources', 'logo.svg');
-    try {
-      await copyIfChanged(defaultSrc, dest);
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code === 'ENOENT') logWarning(`logo por defecto no encontrado en "${defaultSrc}"`, 'assets');
-      else {
-        throw new BuildError(`No se pudo copiar el logo por defecto: ${(err as Error).message}`);
-      }
-    }
+    await copyLogo(defaultSrc, dest, `logo por defecto no encontrado en "${defaultSrc}"`, 'No se pudo copiar el logo por defecto');
     return;
   }
   if (logo.split('/').includes('..') || logo.startsWith('/')) {
     throw new BuildError(`logo: ruta inválida "${logo}" — debe ser relativa al proyecto`);
   }
-  const src = join(cwd, logo);
-  try {
-    await copyIfChanged(src, dest);
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') logWarning(`logo no encontrado: "${logo}"`, 'assets');
-    else {
-      throw new BuildError(`No se pudo copiar el logo "${logo}": ${(err as Error).message}`);
-    }
-  }
+  await copyLogo(join(cwd, logo), dest, `logo no encontrado: "${logo}"`, `No se pudo copiar el logo "${logo}"`);
 }
