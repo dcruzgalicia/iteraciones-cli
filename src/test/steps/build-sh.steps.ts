@@ -283,9 +283,9 @@ const CHEQUEOS: Record<string, Chequeo> = {
   },
   salidas: ({ script, falla }) => {
     if (!script.includes('.iteraciones/script/in-')) falla('falta la materialización de la entrada');
-    for (const ext of ['tex', 'html']) {
-      if (!new RegExp(`> *[^\\n]*dist/files/[^\\n]*\\.${ext}\\b`).test(script)) falla(`no hay redirect a dist/files/*.${ext}`);
-    }
+    if (!/> *[^\n]*dist\/files\/[^\n]*\.tex\b/.test(script)) falla('no hay redirect a dist/files/*.tex');
+    if (/> *[^\n]*dist\/files\/[^\n]*\.html\b/.test(script)) falla('el HTML no puede salir de un redirect: minify siempre lo cambia');
+    if (!/^\s*iteraciones post html .* -o \S+dist\/files\/\S+\.html\b/m.test(script)) falla('falta `iteraciones post html … -o dist/files/….html`');
   },
   markdown: ({ script, falla }) => {
     if (/> *[^\n]*dist\/files\/[^\n]*\.md\b/.test(script)) falla('no debe escribir el markdown con un redirect de pandoc');

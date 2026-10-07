@@ -3,6 +3,7 @@ import { loadSiteConfigIfPresent } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
 import { DEFAULT_PDF_FORMAT, resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { GLYPHS, logInfo } from '../lib/logger.js';
+import { checkMinify } from '../lib/minify.js';
 import {
   type CheckResult,
   checkBiber,
@@ -37,7 +38,7 @@ function resolveEffectiveDisabled(
 }
 
 export async function collectChecks(cwd: string): Promise<CheckResult[]> {
-  const [loadedOrError, pandoc, read, write] = await Promise.all([
+  const [loadedOrError, pandoc, read, write, minify] = await Promise.all([
     loadSiteConfigIfPresent(cwd).then(
       (loaded) => ({ loaded }),
       (err: unknown) => ({ error: err instanceof Error ? err.message : String(err) }),
@@ -45,6 +46,7 @@ export async function collectChecks(cwd: string): Promise<CheckResult[]> {
     checkPandoc(),
     checkReadPermissions(cwd),
     checkWritePermissions(cwd),
+    checkMinify(),
   ]);
   const configResult = resolveConfigResult(loadedOrError);
   const needsLatex = configResult.siteConfig?.format?.pdf?.generate === true;
@@ -66,6 +68,7 @@ export async function collectChecks(cwd: string): Promise<CheckResult[]> {
   return [
     checkBunVersion(),
     pandoc,
+    minify,
     ...(pdfCheck ? [pdfCheck] : []),
     { label: 'iteraciones.config.yaml', ok: configResult.ok, detail: configResult.detail },
     read,

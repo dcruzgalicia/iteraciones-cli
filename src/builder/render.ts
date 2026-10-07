@@ -1,5 +1,6 @@
 import type { SiteConfig } from '../config/config-schema.js';
 import { fmString } from '../lib/frontmatter-fields.js';
+import { minifyHtml } from '../lib/minify.js';
 import { type BibOptions, execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
 import { resolveScriptStdout } from '../lib/script-recorder.js';
 import { type LuaFilterGroup, loadFilterGroups } from './filter-resolver.js';
@@ -110,7 +111,7 @@ export async function htmlPageFromMarkdown(content: string, doc: BuildDocument, 
     env: imagePathsEnv(opts.imagePaths),
     inputTarget: opts.inputTarget,
   });
-  const final = postProcessHtml(html, refsCardTemplate);
+  const final = await minifyHtml(postProcessHtml(html, refsCardTemplate));
 
   const postArgv =
     final !== html && opts.scriptOutputPath !== undefined
