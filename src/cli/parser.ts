@@ -14,7 +14,6 @@ import { runPrepare } from './prepare.js';
 import { runTemplate } from './template.js';
 import { runTestVisual, type TestVisualOptions } from './test-visual.js';
 
-/** Opción repetible: el build acumula valores, el argv del .sh los repite. */
 function collect(value: string, previous: string[]): string[] {
   return [...previous, value];
 }
@@ -143,7 +142,7 @@ Ejemplos:
     .description('aplica el post-proceso de iteraciones a una salida cruda de pandoc que recibe por stdin')
     .requiredOption('-o, --output <path>', 'ruta del archivo de salida')
     .option('--post <path>', 'manifiesto .iteraciones/post/<slug>.json (obligatorio en latex)')
-    // #2488: en html, el type del documento, para leer su tarjeta de referencias
+
     .option('--type <type>', 'type del documento en html: file | collection | creator (por defecto: file)')
     .addHelpText(
       'after',
@@ -267,8 +266,7 @@ Ejemplos:
       String(VISUAL_DEFAULTS.thresholdPercent),
     )
     .option('--fuzz <pct>', `tolerancia de color por canal en % (por defecto: ${VISUAL_DEFAULTS.fuzzPercent})`, String(VISUAL_DEFAULTS.fuzzPercent))
-    // El límite de rutas lo pone `resolveRun`, con mensaje propio y el apunte del
-    // modo lote; commander solo dibuja el uso `[pdf] [reference]`.
+
     .allowExcessArguments(true)
     .addHelpText(
       'after',
@@ -293,7 +291,7 @@ Ejemplos:
     .command('snapshot [pdf]')
     .description('guarda los PDFs de dist/files como snapshots en visual/, sin comparar')
     .option('--output <path>', 'directorio de salida donde están los PDFs (por defecto: dist/files)')
-    // El límite de una ruta lo pone `resolveRun`; commander solo dibuja el uso `[pdf]`.
+
     .allowExcessArguments(true)
     .addHelpText(
       'after',
@@ -419,13 +417,9 @@ Ejemplos:
       }
       const target = program.commands.find((c) => c.name() === cmdName);
       if (target === undefined) {
-        // commander ya calcula lo más parecido, y el `outputError` de arriba
-        // (translateCommanderError) ya traduce su «(Did you mean …?)».
         try {
           program.parse([cmdName], { from: 'user' });
-        } catch {
-          // commander ya escribió el error y la sugerencia en stderr.
-        }
+        } catch {}
         process.exitCode = 1;
         return;
       }

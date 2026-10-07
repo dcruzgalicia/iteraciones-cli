@@ -68,11 +68,6 @@ async function emitJsonOutput(
   process.stdout.write(`${JSON.stringify({ filters, preamble })}\n`);
 }
 
-/**
- * Una fila por filtro. `typeCol` es la columna de tipo: los Lua la llevan
- * ("lua"), los de preámbulo no la tienen y pasan cadena vacía, así que la
- * sangría de la descripción se calcula con el ancho de esa columna.
- */
 function emitBlock(
   stream: NodeJS.WriteStream,
   infos: { name: string; description: string }[],
@@ -120,10 +115,7 @@ export async function listFilters(cwd: string, options: RunFiltersOptions = {}):
   const stream = options.stream ?? process.stdout;
   const config = (await loadSiteConfigIfPresent(cwd))?.config ?? DEFAULT_SITE_CONFIG;
   validateDisabledFilters(config.disabledFilters);
-  // #2419: el build apaga 11-bibliography cuando no hay `.bib`, y filters tiene
-  // que decir lo mismo. Si la config trae un `bibliography:` roto,
-  // resolveBibOptions lanza: aquí se ignora y se muestra la lista de la config
-  // tal cual (build/validate ya avisan de ese error con un mensaje claro).
+
   const bibFiles = await resolveBibOptions(cwd, config)
     .then((r) => r.bibFiles)
     .catch(() => undefined);

@@ -10,30 +10,24 @@ import type { BuildDocument } from './types.js';
 
 interface HtmlPageOptions {
   cwd: string;
-  /** #2445: ruta de la entrada materializada en .iteraciones/collections (collections). */
+
   inputTarget?: string;
-  /** #2460: mapa de rutas de imagen por documento que lee el filtro 04-image-paths (env). */
+
   imagePaths?: string;
   vars: HtmlPageVars;
   siteConfig: SiteConfig;
   templatePath: string;
-  /** #2488 — el bloque de la tarjeta de referencias del type del documento. */
+
   refsCardTemplate: string;
-  /** #2488 — el type, que viaja al argv de `iteraciones post html` (por defecto
-   * `file`, que es el type por defecto de la CLI). */
+
   docType?: 'file' | 'collection' | 'creator';
   fm: Record<string, unknown>;
   bibOptions?: BibOptions;
   luaFilters?: LuaFilterGroup;
-  /** #2438: ruta final de dist; define adónde apunta el stdout de pandoc en build.sh. */
+
   scriptOutputPath?: string;
 }
 
-/**
- * #2487 — metadata y variables de la banda de metadatos (fuera del masonry):
- * los campos de la portada del PDF que hasta ahora solo viajaban a LaTeX, más
- * el chip del type y el flag del body propio de la collection.
- */
 function metadataBandArgs(vars: HtmlPageVars): string[] {
   const args: string[] = [];
   const meta = (key: string, value: string | undefined): void => {
@@ -43,10 +37,7 @@ function metadataBandArgs(vars: HtmlPageVars): string[] {
   meta('subject', vars.subject);
   meta('publishers', vars.publishers);
   meta('collection-creator-prefix', vars.collectionCreatorPrefix);
-  // Los nombres de las creadoras viajan uno a uno, igual que a LaTeX, donde cada
-  // creator va en su \mbox: el filtro de html/07-titlepage-meta los envuelve en
-  // un span nowrap y los une con ', ', para que la línea se parta entre nombres
-  // y nunca dentro de uno.
+
   for (const nombre of vars.authors ?? []) args.push(`--metadata=author-names:${metadataValue(nombre)}`);
   for (const nombre of vars.collectionCreator ?? []) args.push(`--metadata=collection-creator-names:${metadataValue(nombre)}`);
   if (vars.docChip) args.push(`--variable=doc-chip:${vars.docChip}`);
@@ -84,8 +75,7 @@ function buildHtmlMetadataArgs(
   if (vars.authorMeta) args.push(`--metadata=author-meta:${vars.authorMeta}`);
   args.push(...metadataBandArgs(vars));
   const formats = vars.formats ?? [];
-  // El logo y los <li> de formatos viven en la plantilla; el argv solo lleva
-  // un flag y un href corto por formato (#2445: nada de HTML multilínea).
+
   const formatsFlag = buildFormatsFlag(formats);
   if (formatsFlag !== undefined) args.push(`--variable=formats:${formatsFlag}`);
   args.push(...buildFormatsArgs(formats));
@@ -121,10 +111,7 @@ export async function htmlPageFromMarkdown(content: string, doc: BuildDocument, 
     inputTarget: opts.inputTarget,
   });
   const final = postProcessHtml(html, refsCardTemplate);
-  // #2445: si difiere de la salida cruda, el .sh hace `pandoc > crudo` y luego
-  // `iteraciones post html < crudo -o dist`. Si no difiere, pandoc ya escribe dist.
-  // #2488 — el type va en el argv: `iteraciones post html` tiene que leer la
-  // tarjeta de referencias de esa copia
+
   const postArgv =
     final !== html && opts.scriptOutputPath !== undefined
       ? ['iteraciones', 'post', 'html', '--type', opts.docType ?? 'file', '-o', opts.scriptOutputPath]

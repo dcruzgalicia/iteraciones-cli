@@ -65,7 +65,6 @@ interface PdfCheckResult {
   warnings: PdfCheckIssue[];
 }
 
-/** Falla de validación: el binario no corrió, o no devolvió JSON legible. */
 function failure(code: string, message: string): PdfCheckResult {
   return {
     valid: false,
@@ -82,8 +81,7 @@ export async function validatePdfX1a(pdfPath: string, binaryPath: string): Promi
   } catch (err) {
     return failure('PDFCHECK_RUN', err instanceof Error ? err.message : String(err));
   }
-  // El binario no pasa por el hook de `exec` (ruta propia): se graba aquí,
-  // solo cuando corrió bien, para que la fase de validación del .sh sea fiel.
+
   if (result.exitCode === 0) recordSupportCommand('validate', pdfPath, [binaryPath, pdfPath]);
   try {
     return JSON.parse(result.stdout) as PdfCheckResult;
@@ -195,11 +193,6 @@ function mapResultsToFiles(
   return porFile;
 }
 
-/**
- * #2454 — el alcance del modo parcial viene del pipeline: se deduplica y solo
- * se queda con lo que realmente existe en la salida (una ruta que ya no está
- * no es un fallo de esta corrida).
- */
 function existingInScope(outputDir: string, scope: string[]): string[] {
   const files = new Set<string>();
   for (const raw of scope) {
@@ -210,10 +203,6 @@ function existingInScope(outputDir: string, scope: string[]): string[] {
   return [...files].sort();
 }
 
-/**
- * #2454 — el alcance a validar: en modo parcial, los PDF que escribió la
- * corrida; en cualquier otro, `dist` entero como hasta ahora.
- */
 function listPdfsToValidate(outputDir: string, scope?: string[]): string[] {
   if (scope !== undefined) return existingInScope(outputDir, scope);
   return [...new Bun.Glob('**/*.pdf').scanSync({ cwd: outputDir, onlyFiles: true })].sort();
@@ -225,11 +214,7 @@ export async function runPdfxOutputValidation(
   options: { allowBuild?: boolean } = {},
   effectiveDisabledPreamble?: string[],
   cache?: PdfxCacheHandle,
-  /**
-   * #2454 — rutas (relativas a `outputDir`) de los PDF que escribió esta
-   * corrida. Sin alcance —cualquier build completo— la validación sigue
-   * barriendo `dist` entero, como hasta ahora.
-   */
+
   scope?: string[],
 ): Promise<PdfxOutputValidationResult> {
   const disabled = effectiveDisabledPreamble ?? resolveDisabledPreambleConfig(siteConfig);

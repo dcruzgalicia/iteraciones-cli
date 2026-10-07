@@ -27,16 +27,6 @@ export async function writeIfChanged(path: string, content: string): Promise<voi
   await writeOutput(path, content);
 }
 
-/**
- * #2463 — un documento sin cuerpo **no** es algo que se saltea en silencio: es
- * un error de build con mensaje accionable. Antes el warning dejaba `files[]`
- * de una collection apuntando a un `.md` que jamás se escribía, y el build
- * salía con 0.
- *
- * Las dos excepciones componen su cuerpo de otros archivos —`collection` con
- * sus `files[]` e `intervention`—, así que un body vacío es legítimo en ellas.
- * `validate` aplica exactamente el mismo criterio (los dos caminos coinciden).
- */
 export async function readMarkdownOrWarn(doc: BuildDocument): Promise<string> {
   let content: string;
   try {
@@ -55,7 +45,6 @@ export async function readMarkdownOrWarn(doc: BuildDocument): Promise<string> {
   return content;
 }
 
-/** Los cuatro formatos con enlace en la página; el orden fija el de salida. */
 const FORMAT_LINK_META = {
   pdf: { name: 'PDF', description: 'Documento final para lectura e impresión' },
   epub: { name: 'EPUB', description: 'Edición adaptable para lectura digital' },

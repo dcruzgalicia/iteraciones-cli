@@ -32,11 +32,6 @@ interface NormalizedRecord extends Omit<IngestedFrontmatter, 'fm'> {
   rawTitle: unknown;
 }
 
-/**
- * Título de un creator: si no trae `title` se usa `name`, escrito en el propio
- * frontmatter. El discovery del build y `iteraciones markdown` llaman a esta
- * misma función, para que el `.md` de dist salga idéntico por los dos caminos.
- */
 export function applyCreatorTitle(record: Record<string, unknown>): void {
   if (record.type === 'creator' && (typeof record.title !== 'string' || record.title === '') && typeof record.name === 'string') {
     record.title = record.name;

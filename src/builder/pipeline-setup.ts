@@ -58,17 +58,12 @@ export interface EffectiveTemplates {
   pdfxActive: boolean;
   cropActive: boolean;
   pageDimensions: { w: number; h: number; textW: number } | undefined;
-  /** #2488 — la de `file` es la de `html`; cada type con HTML tiene la suya. */
+
   templates: Record<TemplateKind, string>;
-  /** #2488 — el bloque de la tarjeta de referencias de cada type. */
+
   refsCardTemplates: Record<HtmlDocType, string>;
 }
 
-/**
- * #2445 — las cinco plantillas que pandoc recibe por `--template`; #2488 — con el
- * diseño HTML por type son siete: `html` es la de `file`, y cada type con HTML
- * tiene la suya (`intervention` no genera HTML y por eso no tiene).
- */
 export type TemplateKind = 'html' | 'html-collection' | 'html-creator' | 'latex' | 'latex-collection' | 'latex-creator' | 'latex-intervention';
 
 const TEMPLATE_FILES: Record<TemplateKind, string> = {
@@ -81,8 +76,6 @@ const TEMPLATE_FILES: Record<TemplateKind, string> = {
   'latex-intervention': 'latex-intervention.tex',
 };
 
-/** #2488 — el type cuyas tarjetas compone el HTML. `intervention` no genera
- * HTML (`docProducesFormat`), así que no llega aquí. */
 function htmlDocTypeOf(kind: TemplateKind): HtmlDocType | undefined {
   if (kind === 'html') return 'file';
   if (kind === 'html-collection') return 'collection';
@@ -90,8 +83,6 @@ function htmlDocTypeOf(kind: TemplateKind): HtmlDocType | undefined {
   return undefined;
 }
 
-/** #2488 — de qué type es cada plantilla: el ámbito de preamble de LaTeX y el
- * type cuyas tarjetas compone el HTML. Por eso ya no es `Exclude<…, 'html'>`. */
 const TEMPLATE_SCOPES: Record<TemplateKind, PreambleDocType> = {
   html: 'file',
   'html-collection': 'collection',
@@ -123,13 +114,12 @@ export interface TemplateInput {
   logoInline?: string;
 }
 
-/** Compartida: la usa el build y `iteraciones template`, para byte-idéntico. */
 export async function composeTemplate(kind: TemplateKind, input: TemplateInput): Promise<string> {
   const htmlType = htmlDocTypeOf(kind);
   if (htmlType !== undefined) return composeHtmlTemplate(input.siteConfig, input.logoInline, htmlType);
   const scope = TEMPLATE_SCOPES[kind];
   const filters = await loadPreambleFilters(input.effectiveDisabledPreamble, input.cwd, scope);
-  // Misma cadena que el build: sin estas dos líneas la plantilla no sale igual.
+
   const dims = detectPageSize(filters);
   return composeLatexTemplate({
     toc: input.siteConfig.toc,
@@ -158,22 +148,18 @@ export async function writeEffectiveTemplates(
     refsCardTemplates: { file: '', collection: '', creator: '' },
   };
 
-  // #2488 — el bloque de referencias también es una tarjeta por type
   state.refsCardTemplates = {
     file: await loadReferencesCardTemplate('file'),
     collection: await loadReferencesCardTemplate('collection'),
     creator: await loadReferencesCardTemplate('creator'),
   };
 
-  // #2419: sin archivos `.bib` no hay nada que citar, así que el preamble de
-  // biblatex no se compone. Regla compartida con `iteraciones template` (el .sh
-  // regenera estas mismas plantillas) y con `iteraciones filters`.
   const disabledPreamble = disableBibliographyWithoutBibFiles(effectiveDisabledPreamble, bibFiles);
   const tpl: TemplateInput = { cwd: ctx.cwd, siteConfig, bibFiles, effectiveDisabledPreamble: disabledPreamble, logoInline };
   const writeTemplate = async (kind: TemplateKind): Promise<void> => {
     const path = state.templates[kind];
     await writeIfChanged(path, await composeTemplate(kind, tpl));
-    // Recurso de la fase 2: el .sh la puede regenerar sin pandoc ni el build.
+
     recordSupportCommand('resources', path, ['iteraciones', 'template', kind, '-o', path]);
   };
 
@@ -187,8 +173,7 @@ export async function writeEffectiveTemplates(
       const preambleFilters = await loadPreambleFilters(disabledPreamble, ctx.cwd, TEMPLATE_SCOPES[kind]);
       const pageDimensions = detectPageSize(preambleFilters);
       applyPrintQueueDynamics(preambleFilters, pageDimensions);
-      // Sólo el ámbito `file` describe el documento: las banderas y el tamaño de
-      // página que consume el pipeline son los suyos.
+
       if (TEMPLATE_SCOPES[kind] === 'file') {
         state.biblatexAvailable = preambleFilters.some((f) => f.name === '11-bibliography');
         state.pdfxActive = preambleFilters.some((f) => f.name === '99-pdfx');
@@ -217,7 +202,6 @@ export interface RenderContext {
   pageDimensions: { w: number; h: number; textW: number } | undefined;
 }
 
-/** Las nueve rutas y banderas de plantilla vienen de `EffectiveTemplates`. */
 export interface ExportContext extends EffectiveTemplates {
   filters: Awaited<ReturnType<typeof loadFilterGroups>>;
   bibOptions: Awaited<ReturnType<typeof resolveBibOptions>>['bibOptions'];

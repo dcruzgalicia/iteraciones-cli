@@ -15,12 +15,6 @@ import { citationCompileArgs, creatorArgs, dateArg, languageArg, titleArg } from
 import { preparePaths, xmpDirsFor } from './prepare.js';
 import type { BuildDocument } from './types.js';
 
-/**
- * Los tres pasos de salida del pipeline que invocan herramientas externas y
- * luego mueven ficheros a `dist/`: la conversión a EPUB/markdown, la compilación
- * con latexmk y la portada con pdftoppm. Comparten los tipos de documento de
- * exportación y por eso viven en un módulo.
- */
 export interface ExportMetadata {
   title: string;
   creator: string[];
@@ -114,17 +108,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-/**
- * #2436: el markdown de dist debe ser re-procesable, así que NO pasa por
- * pandoc: el roundtrip md→md desplazaba los headings (+4) y reescribía el
- * body, haciendo imposible la idempotencia. Se emite el frontmatter del
- * origen tal cual (solo se completa `language` desde el sitio) y el body
- * intacto, byte a byte.
- *
- * #2437: con `merge` (collections con format.markdown.merge) la salida deja de
- * ser reprocesable: `type` pasa a `file` y `files[]` se elimina, el body ya
- * viene fusionado.
- */
 export async function convertToMarkdown(
   content: string,
   outputPath: string,
@@ -138,7 +121,6 @@ export async function convertToMarkdown(
   const parsed = yaml === undefined ? undefined : parseYamlWithPosition(yaml);
   const base = isRecord(parsed?.value) ? parsed.value : undefined;
   if (yaml !== undefined && base === undefined) {
-    // Frontmatter ilegible: preservar el contenido tal cual (información > formato).
     await Bun.write(outputPath, content);
     return;
   }
@@ -149,16 +131,11 @@ export async function convertToMarkdown(
     delete outFm.files;
   }
   if (outFm.language === undefined) outFm.language = doc.metadata.language;
-  // Si el origen no traía frontmatter, la línea en blanco separa el bloque del body.
+
   const separator = yaml === undefined ? '\n' : '';
   await Bun.write(outputPath, `---\n${stringify(outFm)}---\n${separator}${body}`);
 }
 
-/**
- * `noBibtex` (#2419): el proyecto no tiene archivos `.bib`, así que latexmk
- * pasa `-nobibtex` (equivalente a `$bibtex_use = 0`: «never run bibtex or
- * biber» según el propio manual). Ahorra la corrida de biber en cada PDF.
- */
 export async function convertToPdf(
   fullTexPath: string,
   sourcePath: string,
@@ -222,7 +199,6 @@ export async function convertToPdf(
   }
 }
 
-/** Los auxiliares de latexmk y de la plantilla XMP viven junto al .tex de trabajo. */
 export async function cleanPdfSlot(slotDir: string, job: string): Promise<void> {
   const auxPaths = [
     ...LATEXMK_AUX_EXTENSIONS.map((ext) => join(slotDir, `${job}${ext}`)),
@@ -233,12 +209,6 @@ export async function cleanPdfSlot(slotDir: string, job: string): Promise<void> 
   await Promise.all(auxPaths.map((p) => rm(p, { force: true }).catch(() => {})));
 }
 
-/**
- * Retira los auxiliares del slot y deja el PDF de latexmk en dist/. Es el
- * `rm -f` + `mv` que hacía el build, compartido con `iteraciones pdf collect`:
- * el slug de trabajo es el nombre del PDF de destino, el mismo con el que
- * latexmk compiló.
- */
 export async function collectPdf(slotDir: string, output: string): Promise<void> {
   await cleanPdfSlot(slotDir, basename(output, '.pdf'));
   await mkdir(dirname(output), { recursive: true });
@@ -252,19 +222,10 @@ interface CoverImageEntry {
   pngPath: string;
 }
 
-/** El nombre de trabajo de pdftoppm, derivado de la portada final. */
 function coverPrefix(pngPath: string): string {
   return `.cover-${basename(pngPath, '.png')}`;
 }
 
-/**
- * pdftoppm escribe `<dir>/.cover-<slug>-1.png`; este es el paso al nombre final
- * y la limpieza de lo que quedó al lado. Compartido con `iteraciones cover`,
- * que hace lo mismo a mano; en el build.sh la fase de portada ocupa
- * directamente el `mv` (#2456), porque el nombre lo decide pdftoppm.
- *
- * Devuelve el fichero que movió, o `undefined` si no había portada pendiente.
- */
 export async function collectCover(pngPath: string): Promise<string | undefined> {
   const dir = dirname(pngPath);
   const prefix = coverPrefix(pngPath);
@@ -289,8 +250,7 @@ export async function generateCoverImages(entries: CoverImageEntry[]): Promise<v
         logWarning(`pdftoppm no produjo la imagen de portada de "${basename(pdfPath)}"`, 'build');
         return;
       }
-      // #2456 — la portada es un `mv` puro al nombre final: sin lógica
-      // intermedia en el .sh (`iteraciones cover` sigue existiendo a mano).
+
       recordSupportCommand('covers', join(dirname(pngPath), coverPrefix(pngPath)), ['mv', join(dirname(pngPath), produced), pngPath]);
     } catch {
       logWarning(`no se pudo generar la imagen de portada de "${basename(pdfPath)}" (¿pdftoppm instalado?)`, 'build');

@@ -3,11 +3,6 @@ import { BuildError } from '../lib/errors.js';
 import { fail, logSuccess } from '../lib/logger.js';
 import { resolvePath } from '../lib/paths.js';
 
-/**
- * #2445 — `iteraciones prepare --dir <d>… [--xmp <d>…]` agrupa lo que antes eran
- * los `mkdir`/`cp` sueltos del build.sh: crea los directorios que los comandos
- * externos asumen existentes y deja la plantilla XMP en el slot de latexmk.
- */
 export async function runPrepare(cwd: string, options: { dir?: string[]; xmp?: string[] }): Promise<void> {
   try {
     const dirs = (options.dir ?? []).map((d) => resolvePath(cwd, d));

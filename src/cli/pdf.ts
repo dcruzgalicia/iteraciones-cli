@@ -2,11 +2,6 @@ import { collectPdf } from '../builder/export.js';
 import { fail, logSuccess } from '../lib/logger.js';
 import { resolvePath } from '../lib/paths.js';
 
-/**
- * #2445 — `iteraciones pdf collect <slot> -o <salida>` agrupa lo que antes eran
- * el `rm -f` de auxiliares y el `mv` del PDF hacia dist/. El slug de trabajo es
- * el nombre del PDF de salida, que es el mismo con el que latexmk compiló.
- */
 export async function runCollectPdf(cwd: string, slot: string, options: { output: string }): Promise<void> {
   try {
     const output = resolvePath(cwd, options.output);

@@ -23,7 +23,6 @@ import { splitFrontmatter } from '../lib/frontmatter.js';
 import { fail, logSuccess } from '../lib/logger.js';
 import { posix, resolvePath } from '../lib/paths.js';
 
-/** Formatos de entrada de pandoc (más el cuerpo fusionado, que no usa pandoc). */
 const FORMATS = ['latex', 'html', 'epub', 'markdown'] as const;
 
 async function readSourceFm(text: string, label: string): Promise<Record<string, unknown>> {
@@ -45,7 +44,6 @@ function assertCollectionFiles(fm: Record<string, unknown>, label: string): stri
   return files;
 }
 
-/** La collection original + los campos derivados que arma el build, en el mismo orden. */
 async function readCollectionSource(cwd: string, input: string) {
   const inputPath = resolvePath(cwd, input);
   const relativePath = posix(relative(cwd, inputPath));
@@ -58,16 +56,14 @@ async function readCollectionSource(cwd: string, input: string) {
 
   const fm = await readSourceFm(text, input);
   const rawFiles = assertCollectionFiles(fm, input);
-  // files[] resueltos contra la raíz (#2443), collectionCreator propio y
-  // creator agregado de los files — tal como los deja el build.
+
   const files: string[] = [];
   for (const file of rawFiles) {
     const resolved = await resolveCollectionFile(file, relativePath, cwd);
     files.push(resolved.ok ? resolved.rootRelative : file);
   }
   fm.files = files;
-  // #2446: collectionCreator viaja tal cual del origen; creator es la unión de
-  // los creator de files[], la misma que imprime build en todos los formatos.
+
   fm.creator = await aggregateCollectionCreators({ files }, cwd);
   return { inputPath, relativePath, text, fm, files };
 }
@@ -78,12 +74,6 @@ export interface MergeContext {
   docDir: string;
 }
 
-/**
- * Reproduce la pasada de imágenes del build hacia `assets/images`, con las
- * mismas medidas de página y el mismo recorte. La comparten `iteraciones merge`
- * y `iteraciones markdown`: los dos reconstruyen el mapa que el build calcula,
- * y si el formato del href cambia tiene que cambiar en los dos a la vez.
- */
 export async function buildImagesContext(opts: {
   cwd: string;
   siteConfig: SiteConfig;
@@ -126,23 +116,13 @@ async function composeFor(
       siteConfig,
     });
   }
-  // #2483: la página HTML son tarjetas (los mismos hrefs que resuelve el build):
-  // una con los datos de la collection y una por file con su enlace. El EPUB
-  // sigue recibiendo la fusión completa.
+
   if (format === 'html') return collectionCardsContent(entries, memberHrefs, src.text);
   const base = collectionBaseContent(entries, format === 'markdown' ? 'markdown' : 'html', src.text);
-  // #2460: latex/html/epub no reescriben el texto crudo (lo reescribe el filtro
-  // 04-image-paths sobre el AST); el markdown de dist no pasa por pandoc (#2436).
+
   return format === 'markdown' ? rewriteImagePaths(base, ctx.relImageMap, ctx.docDir) : base;
 }
 
-/**
- * #2445 — `iteraciones merge <collection.md> --format <fmt> -o <out>` escribe
- * `.iteraciones/collections/<slug>.<fmt>.md`: el markdown EXACTO que pandoc
- * recibe por stdin durante `iteraciones build`. Siempre sobre los archivos
- * originales de `files[]` (nunca sobre las copias de dist), con los mismos
- * compositores que usa el build, así que la salida es byte-idéntica.
- */
 export async function runMerge(cwd: string, input: string, options: { output?: string; format?: string }): Promise<void> {
   try {
     const format = options.format;
@@ -156,9 +136,7 @@ export async function runMerge(cwd: string, input: string, options: { output?: s
     if (entries.length === 0) throw new BuildError(`"${input}": los archivos de files no tienen contenido`);
 
     const output = resolvePath(cwd, options.output);
-    // El outSlug del build es el stem del `-o` sin la extensión de formato
-    // (`.iteraciones/collections/<slug>.<format>.md`): con el mismo prefijo,
-    // las imágenes que escribe este comando se llaman igual que las del build.
+
     const stem = basename(output, '.md');
     const outSlug = stem.endsWith(`.${format}`) ? stem.slice(0, -(format.length + 1)) : stem;
     const distRoot = join(cwd, DIST_FILES_DIR);
@@ -173,8 +151,7 @@ export async function runMerge(cwd: string, input: string, options: { output?: s
       assetsDir: join(outDir, ASSETS_IMAGES_DIR),
       outSlug,
     });
-    // #2483: los enlaces de las tarjetas HTML salen de los mismos slugs que usa
-    // el discovery del build, así `merge --format html` sigue siendo byte-idéntico.
+
     const memberHrefs = format === 'html' ? memberHtmlHrefs(src.relativePath, entries, await loadSlugIndex(cwd)) : new Map<string, string>();
     await writeOutput(output, await composeFor(format, src, entries, siteConfig, ctx, memberHrefs));
     logSuccess(`${input} [--format ${format}] → ${options.output}`, 'merge');

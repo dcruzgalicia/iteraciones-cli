@@ -3,11 +3,6 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import { fail, logSuccess } from '../lib/logger.js';
 import { resolvePath } from '../lib/paths.js';
 
-/**
- * #2448 — `iteraciones bundle -o <dir>` replica en la salida los insumos que un
- * rebuild necesita para repetir el build (config, preamble*, filters, bib).
- * El build lo llama al final; el `build.sh` repite este mismo comando.
- */
 export async function runBundle(cwd: string, options: { output: string }): Promise<void> {
   try {
     const outputDir = resolvePath(cwd, options.output);

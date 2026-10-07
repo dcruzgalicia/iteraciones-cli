@@ -25,7 +25,6 @@ function preambleProjectDir(docType: PreambleDocType): string {
   return 'preamble';
 }
 
-/** #2448: overrides de preamble en la raíz, uno por tipo; `bundle` los replica. */
 export function projectPreambleDirs(): string[] {
   const types: PreambleDocType[] = ['file', 'collection', 'creator', 'intervention'];
   return types.map(preambleProjectDir);
@@ -70,12 +69,6 @@ export async function loadPreambleFilters(disabledList?: string[], cwd?: string,
   return result;
 }
 
-/**
- * La lista efectiva de preámbulos desactivados, con la regla #2419 ya aplicada.
- * El build la compone en dos pasos (orchestrator da la base, pipeline-setup
- * aplica la regla del .bib); `iteraciones template` necesita las dos juntas, y
- * es la segunda copia que hay de esa composición.
- */
 export function resolveDisabledPreambleForBuild(siteConfig: SiteConfig, bibFiles: string[] | undefined): string[] {
   return disableBibliographyWithoutBibFiles(resolveEffectiveDisabledPreamble(resolveDisabledPreambleConfig(siteConfig)), bibFiles);
 }
@@ -90,16 +83,6 @@ export function resolveEffectiveDisabledPreamble(disabled?: string[]): string[] 
   return effective;
 }
 
-/**
- * #2419 — sin archivos `.bib` no hay nada que citar: se apaga el snippet
- * `11-bibliography` (csquotes + biblatex), con lo que la plantilla no carga
- * biblatex y latexmk no tiene nada que pasarle a biber. Si la lista ya venía
- * con el nombre, o si no sabemos si hay `.bib` (`bibFiles` desconocido), no se
- * toca nada.
- *
- * La comparten build, `iteraciones template` e `iteraciones filters` para que
- * las tres digan lo mismo (el .sh regenera las plantillas con `template`).
- */
 export function disableBibliographyWithoutBibFiles(disabled: string[], bibFiles: string[] | undefined): string[] {
   if (bibFiles === undefined || bibFiles.length > 0 || disabled.includes('11-bibliography')) return disabled;
   return [...disabled, '11-bibliography'];

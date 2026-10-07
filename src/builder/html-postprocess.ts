@@ -3,35 +3,19 @@ import { logWarning } from '../lib/logger.js';
 
 const HTML_RESOURCES_DIR = join(import.meta.dir, '../lib/resources/html');
 
-/**
- * Los dos huecos donde el post-proceso mete su contenido. Divs vacíos, no
- * comentarios: un minificador se lleva los comentarios y con ellos se rompe el
- * empalme con `html-composer`. Se sustituye el literal entero —apertura y
- * cierre— porque un `</div>` suelto dentro del masonry es un hueco visible.
- */
 const REFS = '<div id="block-referencias"></div>';
 const INTRO = '<div id="block-intro"></div>';
 
-/** #2488 — el type de la página: cada uno tiene su propia tarjeta de referencias
- * en `html/<type>/card-referencias-block.html`. */
 export type HtmlPostType = 'file' | 'collection' | 'creator';
 
 export function removeTocReferencesLink(html: string): string {
   return html.replace(/<li>\s*<a href="#refs-heading"[^>]*>.*?<\/a>\s*<\/li>/gs, '');
 }
 
-/** #2488 — el bloque de la tarjeta de referencias de un type. */
 export function loadReferencesCardTemplate(type: HtmlPostType): Promise<string> {
   return Bun.file(join(HTML_RESOURCES_DIR, type, 'card-referencias-block.html')).text();
 }
 
-/**
- * #2445/#2487 — fase de post-proceso HTML: las tres únicas cosas que cambian
- * respecto a la salida cruda de pandoc (quitarle el enlace al índice, colocar
- * la tarjeta de referencias y subir el body propio de la collection a su banda
- * de metadatos). El build y `iteraciones post html` llaman a esta misma
- * función, así que el build.sh reproduce el archivo final byte a byte.
- */
 export function postProcessHtml(html: string, refsCardTemplate: string): string {
   const withIntro = moveCollectionIntro(removeTocReferencesLink(html));
   const { html: clean, block } = extractReferencesBlock(withIntro, refsCardTemplate);
@@ -43,15 +27,6 @@ export function postProcessHtml(html: string, refsCardTemplate: string): string 
   return clean.replace(REFS, block);
 }
 
-/**
- * #2487 — el body propio de una collection (su intro) es markdown, así que
- * `collectionCardsContent` lo emite dentro del cuerpo de pandoc envuelto en un
- * div `collection-intro`. Aquí se saca de ahí y se coloca en el marcador de la
- * banda de metadatos, igual que la tarjeta de referencias con su bloque. El
- * marco del texto (prosa, alineado a la izquierda) lo pone esta misma función,
- * no la plantilla: así una collection sin intro no deja un div vacío ocupando
- * sitio en la tarjeta.
- */
 export function moveCollectionIntro(html: string): string {
   const marker = INTRO;
   const divStart = html.indexOf('<div class="collection-intro"');

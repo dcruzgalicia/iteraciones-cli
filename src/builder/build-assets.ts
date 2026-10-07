@@ -32,10 +32,6 @@ export async function resolveTailwindBin(): Promise<string> {
   throw new BuildError(`no se encontró el binario de Tailwind CSS (@tailwindcss/cli). Verifica que el paquete esté instalado (bun install).`);
 }
 
-/**
- * Compila el CSS de salida. El `input.css` vive en `.iteraciones/css/` (no en un
- * temp) para que el `build.sh` pueda repetir exactamente esta fase por separado.
- */
 export async function compileTailwindCss(outputDir: string, accent: string, projectRoot: string): Promise<void> {
   const inputDir = join(projectRoot, '.iteraciones', 'css');
   const inputPath = join(inputDir, 'input.css');
@@ -60,8 +56,7 @@ export async function compileTailwindCss(outputDir: string, accent: string, proj
     if (exitCode !== 0) {
       throw new BuildError(`Tailwind CSS falló al compilar el CSS:\n${stderr || stdout}`);
     }
-    // Tailwind auto-detecta fuentes desde el cwd: hay que grabarlo, o el .sh
-    // reescanearía el proyecto entero (p. ej. .iteraciones/templates/*.html).
+
     recordSupportCommand('css', outputDir, argv, inputDir);
   } catch (err) {
     if (err instanceof BuildError) throw err;
@@ -152,17 +147,9 @@ async function copyIfChanged(src: string, dest: string): Promise<void> {
   await cp(src, dest, { force: true, preserveTimestamps: true });
 }
 
-/**
- * El único fichero estático que el HTML referencia: el logo (el de la config, o
- * el por defecto). El build y `iteraciones assets` pasan por aquí, así que el
- * .sh copia exactamente lo que copió TypeScript. #2487: las fuentes del paquete
- * dejaron de copiarse (el sitio usa las del navegador), pero `assets/fonts` se
- * sigue limpiando de salidas viejas desde cleanup.ts.
- */
 export async function copyStaticAssets(outputDir: string, cwd: string, siteConfig: SiteConfig): Promise<void> {
   const logo = siteConfig.format?.html?.site?.logo?.trim();
-  // #2450: el logo de dist vive en `assets/` con nombre fijo, venga de donde
-  // venga; el HTML no lo referencia (lo lleva inline), es material de la réplica.
+
   const dest = join(outputDir, ASSETS_LOGO_FILE);
   if (!logo) {
     const defaultSrc = join(PKG_ROOT, 'src', 'lib', 'resources', 'logo.svg');

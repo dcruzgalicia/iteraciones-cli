@@ -44,18 +44,12 @@ function xmpListField(tag: string, values: string[] | undefined): string | null 
   return values && values.length > 0 ? `\\${tag}{${values.map(escapeXmpValue).join('\\sep ')}}` : null;
 }
 
-/**
- * Los 18 campos del XMP, en el orden en que salen: qué clave de `PdfXmpMetadata`
- * es, con qué tag XMP se emite y si es escalar o lista. Es la única lista;
- * `xmpMetadataFor` la recorre para leer el frontmatter y `buildXmpdataContent`
- * para emitir, así que un campo nuevo es una fila y no dos ediciones.
- */
 export const XMP_FIELDS: { key: keyof PdfXmpMetadata; tag: string; fm: string | null; kind: 'str' | 'list' }[] = [
   { key: 'title', tag: 'Title', fm: 'title', kind: 'str' },
   { key: 'authors', tag: 'Author', fm: 'creator', kind: 'list' },
-  // `lang` lo pasa el pipeline ya resuelto; no sale del frontmatter.
+
   { key: 'lang', tag: 'Language', fm: null, kind: 'str' },
-  // XMP declara Subject como escalar: la lista del frontmatter se une antes.
+
   { key: 'subject', tag: 'Subject', fm: 'subject', kind: 'str' },
   { key: 'dateIso', tag: 'Date', fm: 'date', kind: 'str' },
   { key: 'publishers', tag: 'Publisher', fm: 'publisher', kind: 'list' },
@@ -76,8 +70,7 @@ export function buildXmpdataContent(meta: PdfXmpMetadata): string {
     const value = meta[key];
     lines.push(kind === 'list' ? xmpListField(tag, value as string[] | undefined) : xmpStringField(tag, value as string | undefined));
   }
-  // doi e isbn no son campos del PDF: XMP los declara como identificadores
-  // multiples, asi que salen aparte del recorrido.
+
   lines.push(meta.doi ? `\\Identifier{doi:${escapeXmpValue(meta.doi)}}` : null);
   lines.push(meta.isbn ? `\\Identifier{ISBN:${escapeXmpValue(meta.isbn)}}` : null);
   const filled = lines.filter((line): line is string => line !== null);

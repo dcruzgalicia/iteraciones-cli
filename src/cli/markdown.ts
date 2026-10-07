@@ -18,11 +18,6 @@ import { fail, logSuccess } from '../lib/logger.js';
 import { posix, resolvePath } from '../lib/paths.js';
 import { buildImagesContext } from './merge.js';
 
-/**
- * El nivel del documento dentro del proyecto (`.`, `posts`, `a/b`): la salida
- * vive en `<outputDir>/<nivel>/<slug>.md`, así que a partir de `-o` se recupera
- * la raíz de dist que hace falta para reescribir files[] y copiar los miembros.
- */
 function outputRootFor(output: string, dir: string): string {
   const outDir = dirname(output);
   const root = dir === '.' ? outDir : outDir.slice(0, outDir.length - dir.length - 1);
@@ -34,12 +29,11 @@ function sourceFm(text: string): Record<string, unknown> {
   const { yaml } = splitFrontmatter(text);
   const parsed = yaml === undefined ? undefined : (Bun.YAML.parse(yaml) ?? undefined);
   const fm = typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
-  // mismos campos derivados que aplica el discovery del build (#2445)
+
   applyCreatorTitle(fm);
   return fm;
 }
 
-/** files[] de la collection, resueltos contra la raíz (#2443) como en el build. */
 async function collectionFiles(cwd: string, relativePath: string, fm: Record<string, unknown>, input: string): Promise<string[]> {
   if (fm.type !== 'collection') return [];
   const raw = Array.isArray(fm.files) ? fm.files.filter((f): f is string => typeof f === 'string') : [];
@@ -52,20 +46,6 @@ async function collectionFiles(cwd: string, relativePath: string, fm: Record<str
   return files;
 }
 
-/**
- * Misma pasada de imágenes del build: da el mapa de rutas de assets/images y
- * deja escritos esos ficheros por si el .sh los necesita a mano. Divergir aquí
- * reescribiría las imágenes con medidas distintas a las de la fase de recursos.
- * El prefijo del nombre lo decide el outSlug, que el build deriva del `-o`.
- */
-
-/**
- * #2445/#2452 — `iteraciones markdown <origen> -o <salida>` escribe el markdown de
- * dist (#2436) con el mismo composit que usa `emitCollectionMarkdown`: frontmatter
- * con las imágenes apuntando a assets/images, `files[]` reescrito hacia el `.md`
- * standalone de cada miembro (su nombre-nuevo) y, si `format.markdown.merge` está
- * activo, el cuerpo fusionado con `type: file`. La salida es idéntica a la del build.
- */
 export async function runMarkdown(cwd: string, input: string, options: { output?: string }): Promise<void> {
   try {
     if (options.output === undefined || options.output === '') {
@@ -85,18 +65,12 @@ export async function runMarkdown(cwd: string, input: string, options: { output?
     const siteConfig = await loadSiteConfig(cwd);
     const dir = dirname(relativePath);
     const rootFiles = await collectionFiles(cwd, relativePath, fm, input);
-    // #2446: igual que el build, el byline de una collection es la unión de los
-    // creator de files[]; con merge:false writeDistMarkdown lo vuelve a quitar,
-    // porque files[] sigue ahí para recalcularlo.
+
     if (fm.type === 'collection') fm.creator = await aggregateCollectionCreators({ files: rootFiles }, cwd);
     const entries = rootFiles.length > 0 ? await readCollectionEntries(rootFiles, relativePath, [cwd, join(cwd, dir)]) : [];
-    // #2452: el nombre de dist de cada miembro sale de su slug. El build lo
-    // saca de su discovery; aquí se replican con el mismo código para que los
-    // dos escriban byte a byte el mismo files[] (equivalencia build --full ≡
-    // bash build.sh), colisiones y sufijos `-dN` incluidos.
+
     const memberSlugs = rootFiles.length > 0 ? memberSlugMap(rootFiles, await loadSlugIndex(cwd)) : undefined;
-    // El outSlug del build es el nombre del propio `-o`: con el mismo prefijo,
-    // las imágenes que escribe este comando se llaman igual que las del build.
+
     const { relImageMap, docDir } = await buildImagesContext({
       cwd,
       siteConfig,

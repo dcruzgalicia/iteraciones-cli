@@ -3,12 +3,6 @@ import { computeActiveFormats, resolveDisabledPreambleConfig, toActiveFormats } 
 import { detectPageSize } from './latex-preamble.js';
 import { loadPreambleFilters, resolveEffectiveDisabledPreamble } from './preamble-loader.js';
 
-/**
- * Los flags del build que solo cambian los bytes de las imágenes, nunca sus
- * rutas: página, recorte y PDF/X. Los necesitan igual `iteraciones merge` e
- * `iteraciones markdown`, para no reescribir las imágenes de assets/images con
- * medidas distintas a las con las que corrió la fase de imágenes del build.
- */
 export async function printFlags(siteConfig: SiteConfig, cwd: string) {
   const active = toActiveFormats(computeActiveFormats(siteConfig.format));
   if (!active.pdf && !active.latex) return { pageDimensions: detectPageSize([]), cropActive: false, pdfxActive: false };

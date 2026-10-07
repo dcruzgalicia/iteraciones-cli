@@ -34,12 +34,6 @@ import type { BuildDocument, DiscoveryEntry } from './types.js';
 import type { PdfXmpMetadata } from './xmpdata.js';
 import { injectXmpMetadataIntoLatex, XMP_FIELDS } from './xmpdata.js';
 
-/**
- * #2487 — la banda de metadatos imprime la portada completa del PDF, así que
- * `subject`, `titlehead` y `publishers` llegan como metadata a pandoc. Se
- * resuelven con la misma precedencia de tres niveles que LaTeX y, si son lista,
- * se unen con ", " (como hace el `maketitle`).
- */
 function htmlMetadataField(
   fm: Record<string, unknown>,
   formatCfg: Record<string, unknown> | undefined,
@@ -52,7 +46,6 @@ function htmlMetadataField(
   return joined || undefined;
 }
 
-/** #2487 — el chip de la banda: el type del documento, con `file` como default. */
 function docChipLabel(type: string | undefined): string {
   if (type === 'collection') return 'Colección';
   if (type === 'creator') return 'Creadora';
@@ -84,21 +77,13 @@ function xmpMetadataFor(
       meta[key] = resolveStringField(fm, formatCfg, rootCfg, field);
     }
   }
-  // `subject` se emite como escalar en XMP; el frontmatter lo admite como lista.
+
   meta.subject = fmStringList(resolveMetadataField(fm, formatCfg, rootCfg, 'subject'))?.join(', ');
   meta.doi = resolveStringField(fm, formatCfg, rootCfg, 'doi');
   meta.isbn = resolveStringField(fm, formatCfg, rootCfg, 'isbn');
   return meta as PdfXmpMetadata;
 }
 
-/**
- * #2460 — escribe el mapa de rutas que lee el filtro
- * `semantic/ast/04-image-paths` y devuelve su ruta para el env de pandoc. Un
- * fichero por documento y formato: los documentos se procesan en paralelo y
- * cada formato pide una forma distinta de la ruta (absoluta en latex/epub,
- * `./assets/images` en html). Vive en `.iteraciones/paths`, de donde lo relee
- * `bash build.sh`.
- */
 async function writeImagePaths(
   doc: BuildDocument,
   cwd: string,
@@ -148,10 +133,7 @@ async function emitLatexAndQueuePdf(
   if (latexOn) {
     const texDir = dirname(texDistPath);
     const distribution = buildTexDistribution(processedImages);
-    // #2459: el manifiesto es la serialización de los argumentos de
-    // `composeLatexFinalOutput`, así que el build y `iteraciones post latex`
-    // pasan por la misma función: ya no se puede añadir un paso en un sitio y
-    // olvidarlo en el otro.
+
     const manifest: LatexPostManifest = {
       authorsBlock,
       xmp,
@@ -161,8 +143,7 @@ async function emitLatexAndQueuePdf(
       bundle: ctx.siteConfig.bundle === true,
     };
     const distTex = await composeLatexFinalOutput(fullTex, manifest, texDir);
-    // #2445: el .sh no puede recomputar autores/XMP/distribución, así que el
-    // build se los deja escritos en un manifiesto que `iteraciones post latex` lee.
+
     let post: string[] | undefined;
     if (isScriptCapture()) {
       const manifestPath = join(ctx.cwd, '.iteraciones', 'post', `${outSlug}.json`);
@@ -174,9 +155,6 @@ async function emitLatexAndQueuePdf(
   }
 
   if (pdfOn) {
-    // #2459: el .tex de trabajo no es el de dist: latexmk trabaja con las rutas
-    // absolutas de pandoc, así que solo se lleva el bloque de autores y el XMP
-    // (PDF/X). El acabado de dist entero vive en `composeLatexFinalOutput`.
     const texWithAuthors = insertAuthorsBlock(fullTex, authorsBlock);
     const texWithXmp = xmp === undefined ? texWithAuthors : injectXmpMetadataIntoLatex(texWithAuthors, xmp);
     const texPath = join(exportCtx.pdfWorkDir, dir, `${outSlug}${primaryOutputExtension('latex')}`);
@@ -188,8 +166,7 @@ async function emitLatexAndQueuePdf(
       texPath,
       pdfDest: outBase(`${outSlug}${primaryOutputExtension('pdf')}`),
       cover: resolveBooleanField(fm, formatCfg?.pdf, ctx.siteConfig, 'coverImage') === true,
-      // #2419 — sin `.bib` no hay nada que citar: latexmk va con `-nobibtex`
-      // (mismo criterio que apaga 11-bibliography en las plantillas).
+
       noBibtex: exportCtx.bibFiles.length === 0,
     });
   }
@@ -211,8 +188,7 @@ async function emitHtmlPage(
   const formats = formatLinksFor(plan, dir, outSlug);
   const hasHomePage = discoveryIndex.has('index.md');
   const htmlPath = outBase(`${outSlug}${primaryOutputExtension('html')}`);
-  // #2488 — cada type compone con su plantilla y su bloque de referencias: la
-  // misma elección que hace el LaTeX para con latex*.tex
+
   const htmlType = doc.frontmatter.type === 'collection' || doc.frontmatter.type === 'creator' ? doc.frontmatter.type : 'file';
   const html = await htmlPageFromMarkdown(content, doc, {
     cwd,
@@ -235,8 +211,7 @@ async function emitHtmlPage(
       date: formatHumanDate(doc.frontmatter.date),
       homeHref: hasHomePage ? relativeHref(dir, 'index.html') : undefined,
       formats: formats.length > 0 ? formats : undefined,
-      // #2487: la banda de metadatos imprime la portada completa del PDF, con su
-      // mismo orden por type. Estos campos vivían solo en LaTeX.
+
       titlehead: htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'titlehead'),
       subject: htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'subject'),
       publishers: htmlMetadataField(fm, htmlConfig, ctx.siteConfig, 'publishers'),
@@ -254,12 +229,10 @@ async function emitHtmlPage(
   await writeOutput(htmlPath, html);
 }
 
-/** Texto de autor y título con sus defaults; son palabra del usuario, no una decisión local. */
 const AUTORA_POR_DEFECTO = 'Anónima';
 const TITULO_POR_DEFECTO = 'Sin título';
 
 export type CollectionEntry = {
-  /** ruta del `.md` de origen, relativa a la raíz del proyecto (#2483). */
   file: string;
   title: string;
   creator: string[];
@@ -270,14 +243,6 @@ export type CollectionEntry = {
   body: string;
 };
 
-/**
- * Lee y parsea los archivos de una collection. Compartido entre el build
- * (#2437) y el subcomando `iteraciones merge`. Cada caller pasa sus bases:
- * el build va con [raíz, dir de la collection] (los files llegan normalizados
- * relativos a la raíz desde postProcessCollections; lo irresoluble cae al dir
- * de la collection y ambas rutas aparecen en el error) y merge con
- * [dir del .md de entrada, raíz] (#2443).
- */
 export async function readCollectionEntries(files: string[], collectionPath: string, bases: string[]): Promise<CollectionEntry[]> {
   const entries: CollectionEntry[] = [];
   for (const file of files) {
@@ -295,8 +260,7 @@ export async function readCollectionEntries(files: string[], collectionPath: str
       );
     }
     const parsed = parseFileFrontmatter(text);
-    // #2483: la ruta raíz-relativa del miembro viaja en la entrada; es la clave
-    // con la que su tarjeta enlaza a su HTML (slug resuelto del discovery).
+
     const rootRelative = posix(file).replace(/^\.\//, '');
     if (parsed.body.trim()) entries.push({ file: rootRelative, ...parsed });
   }
@@ -309,12 +273,6 @@ async function readCollectionFiles(doc: BuildDocument, cwd: string): Promise<Col
   return readCollectionEntries(files, doc.relativePath, [cwd, join(cwd, dirname(doc.relativePath))]);
 }
 
-/**
- * #2452 — slug de cada miembro de `files[]`: da el nombre que su `.md` tiene en
- * dist, el mismo que usa su propia emisión standalone. El build lo resuelve con
- * su discovery y `iteraciones markdown` con `loadSlugIndex`, para que los dos
- * escriban exactamente el mismo `files[]`.
- */
 export function memberSlugMap(rootFiles: string[], discoveryIndex: Map<string, DiscoveryEntry>): Map<string, string> {
   const slugs = new Map<string, string>();
   for (const file of rootFiles) {
@@ -324,27 +282,13 @@ export function memberSlugMap(rootFiles: string[], discoveryIndex: Map<string, D
   return slugs;
 }
 
-/**
- * #2452 — ruta de dist del `.md` de un miembro, en su nombre-nuevo
- * (`htmlSlugFor`): hacia ahí apunta `files[]` y de ahí lo lee el re-proceso.
- * Sin slug resuelto (el archivo no es un documento del proyecto) se conserva la
- * ruta de la fuente, como antes de #2452.
- */
 function memberMarkdownPath(memberSlugs: Map<string, string> | undefined, outputDir: string, file: string): string {
   const slug = memberSlugs?.get(file);
   if (slug === undefined) return join(outputDir, normalize(file));
   return join(outputDir, dirname(file), `${htmlSlugFor(file, slug)}.md`);
 }
 
-/**
- * #2445/#2452 — el markdown de dist (#2436), con el composit compartido entre
- * `emitCollectionMarkdown` y `iteraciones markdown`: escribe el .md final y,
- * si la collection no se fusiona, reescribe `files[]` hacia el `.md` standalone
- * de cada miembro (su nombre-nuevo, escrito por el propio miembro). El build
- * graba aquí el argv que el .sh vuelve a ejecutar.
- */
 export async function writeDistMarkdown(p: {
-  /** el .md de origen, relativo a la raíz: es el argv del .sh. */
   label: string;
   content: string;
   outPath: string;
@@ -354,28 +298,19 @@ export async function writeDistMarkdown(p: {
   relImageMap: Map<string, string>;
   docDir: string;
   creatorLinks: { name: string; url: string }[];
-  /** files[] raíz-relativos; ausente cuando no es una collection. */
+
   rootFiles?: string[];
-  /** slug resuelto de cada miembro (`memberSlugMap`). */
+
   memberSlugs?: Map<string, string>;
-  /** format.markdown.merge efectivo (solo collections). */
+
   merge: boolean;
   entries: CollectionEntry[];
 }): Promise<void> {
   const { label, outPath, outputDir, rootFiles, merge } = p;
   const mdFm: Record<string, unknown> = { ...p.fm };
   if (rootFiles !== undefined) {
-    // #2446: con merge:false el frontmatter original manda y `files[]` está ahí,
-    // así que la unión de autores se recalcula en cada build y no viaja. Con
-    // merge:true la collection pasa a `type: file`, pierde `files[]` y tanto el
-    // byline como el crédito propio (collectionCreator) son irrecuperables:
-    // ambos viajan.
     if (!merge) delete mdFm.creator;
-    // #2446: la collection exporta su slug derivado. Sin él, un .md
-    // re-procesado (con merge:true sale como type: file y el byline en creator)
-    // lo recalcula desde `creator` y renombra la salida; el slug manual ya viaja
-    // en el frontmatter. Se deriva aquí para que build y `iteraciones markdown`
-    // escriban exactamente lo mismo.
+
     if (mdFm.slug === undefined) {
       const derived = computeSlug(
         { title: typeof mdFm.title === 'string' ? mdFm.title : undefined, creator: parseAuthors(mdFm.collectionCreator) },
@@ -451,20 +386,6 @@ function buildCollectionSectionsLatex(entries: CollectionEntry[], pageNumber?: s
   return parts.join('\n\n');
 }
 
-/**
- * #2483 — fusión completa con los encabezados de cada miembro: es lo que sigue
- * recibiendo el EPUB (y `iteraciones merge --format epub`). La página HTML pasa
- * por `collectionCardsContent`, que enlaza en vez de fusionar.
- *
- * Las interventions se quedan fuera: son un recurso de imprenta y el EPUB es
- * un libro de lectura, no un impreso (las compone el PDF). El filtro vive en
- * `resolveCollectionContent`.
- */
-/**
- * Encabezados de cada nivel como par [apertura, cierre]: el markdown no cierra
- * (el `##` es prefijo), el HTML sí. Un solo recorrido para los dos formatos,
- * para que los defaults de autor y título no se separen.
- */
 type Heading = readonly [string, string];
 type Headings = readonly [Heading, Heading, Heading];
 
@@ -496,11 +417,6 @@ function buildCollectionSectionsHtml(entries: CollectionEntry[]): string {
   return buildCollectionSections(entries, HTML_HEADINGS);
 }
 
-/**
- * #2483 — href de cada miembro hacia su propio HTML, relativo a la página de la
- * collection. El slug es el del discovery (el mismo que nombra su salida); un
- * miembro sin slug no tiene HTML conocido y su tarjeta se queda sin enlace.
- */
 export function memberHtmlHrefs(collectionPath: string, entries: CollectionEntry[], slugIndex: Map<string, DiscoveryEntry>): Map<string, string> {
   const dir = dirname(collectionPath);
   const hrefs = new Map<string, string>();
@@ -515,26 +431,10 @@ export function memberHtmlHrefs(collectionPath: string, entries: CollectionEntry
   return hrefs;
 }
 
-/**
- * #2485 — las interventions son un recurso de imprenta (una regla con el nombre
- * y el título, y sus páginas en blanco): solo entran al PDF y al markdown
- * exportado. Ni la página HTML ni el EPUB las llevan; el PDF las compone
- * `buildCollectionEntryLatex` con su propio `interventionSectionRaw`.
- */
 function printableEntries<T extends { type: string | undefined }>(entries: T[]): T[] {
   return entries.filter((e) => e.type !== 'intervention');
 }
 
-/**
- * #2483/#2487 — la página HTML de una collection: los datos de la collection
- * (creators, title, y los campos de portada) los imprime la banda de
- * metadatos, fuera del masonry, así que aquí solo van el body propio y las
- * tarjetas de cada miembro, con su autor y título, su fragmento (primer
- * párrafo o fenced div completo, a lo más 100 palabras, con `...` si hubo
- * corte) y un enlace a su HTML completo. El body propio viaja en un div
- * `collection-intro` que `postProcessHtml` sube a la banda (es markdown, no
- * puede ir por la plantilla). El EPUB y el PDF siguen con la fusión completa.
- */
 export function collectionCardsContent(entries: CollectionEntry[], memberHrefs: Map<string, string>, content: string): string {
   if (entries.length === 0) return content;
   const cards: string[] = [];
@@ -544,11 +444,6 @@ export function collectionCardsContent(entries: CollectionEntry[], memberHrefs: 
   return cards.join('\n\n');
 }
 
-/**
- * #2483 — contenido que se escanea en busca de imágenes. En una collection su
- * body propio sale en la tarjeta de la página HTML, así que también entra en el
- * escaneo (los demás formatos siguen descartándolo).
- */
 export function collectionScanContent(entries: CollectionEntry[], content: string): string {
   if (entries.length === 0) return content;
   const body = splitFrontmatter(content).body;
@@ -556,62 +451,28 @@ export function collectionScanContent(entries: CollectionEntry[], content: strin
   return body.trim() === '' ? sections : `${sections}\n\n${body}`;
 }
 
-/** #2483 — contenedor de cada tarjeta del masonry, el mismo de las demás. */
 const MASONRY_WRAPPER = '<div class="break-inside-avoid pb-6">';
 
-/**
- * #2483 — tipografía del texto de las tarjetas: `prose` y los colores de sus
- * enlaces, que es lo único que el markup de la tarjeta no puede poner en un
- * sitio mejor. El texto anidado del que no hay control (el fragmento) lo
- * formatea el plugin de tipografía; los encabezados de la tarjeta llevan sus
- * propias clases (#2487), sin reglas de CSS que los cazen.
- */
 const CARD_TEXT_CLASSES =
   'prose prose-xl dark:prose-invert max-w-none [--tw-prose-links:var(--color-accent-600)] [--tw-prose-invert-links:var(--color-accent-500)]';
 
-/**
- * #2487 — la punta de las esquinas de una tarjeta: la L de la arriba-izquierda
- * y la de la abajo-derecha, como en el resto de tarjetas del HTML. Va en tono
- * claro (`/30`), el de las tarjetas ligeras, y la tarjeta de datos de la
- * collection usa `/40` por ser la tarjeta principal.
- */
 const CARD_CORNERS =
   "[&::before]:pointer-events-none [&::before]:absolute [&::before]:left-2 [&::before]:top-2 [&::before]:h-3 [&::before]:w-3 [&::before]:border-l [&::before]:border-t [&::before]:border-accent-500/30 [&::before]:content-[''] [&::after]:pointer-events-none [&::after]:absolute [&::after]:bottom-2 [&::after]:right-2 [&::after]:h-3 [&::after]:w-3 [&::after]:border-b [&::after]:border-r [&::after]:border-accent-500/30 [&::after]:content-['']";
 
-/**
- * #2483 — clases de la tarjeta de un miembro: la misma tarjeta redondeada que
- * las del resto del HTML. Van en `class="..."` (y no en `{.clase}`) porque
- * varias llevan `:` y `/`, que el atributo de un fenced div con punto no admite.
- */
 const COLLECTION_CARD_CLASSES = `tarjeta-fragmento relative rounded-tr-xl rounded-bl-xl border border-accent-500/25 bg-stone-50/75 dark:bg-stone-900/65 p-6 ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 [overflow-wrap:anywhere] ${CARD_CORNERS} ${CARD_TEXT_CLASSES}`;
 
-/** Ficha del chip de la tarjeta de un miembro: la de la ficha, con menos aire abajo. */
 const MEMBER_PILL_CLASSES =
   'inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-6 text-accent-600 dark:text-accent-400';
 
-/**
- * #2487 — el chip de la tarjeta de un miembro dice qué type es. `file` es el
- * type por defecto (casi ningún `.md` lo declara), así que sin `type:` también
- * sale «Archivo». Las interventions nunca llegan aquí (#2485).
- */
 const MEMBER_TYPE_LABEL: Record<string, string> = { file: 'Texto', creator: 'Creadora' };
 
-/**
- * #2487 — el enlace al miembro se estira sobre la tarjeta entera (el patrón del
- * «stretched link»): su `::after` cubre la tarjeta, así que un click en cualquier
- * punto va al documento, no hace falta buscar el «leer el texto completo». La
- * tarjeta es `relative` y el pseudo se posiciona contra ella.
- */
 const LINK_STRETCH_CLASSES = 'after:absolute after:inset-0';
 
 function collectionCard(e: CollectionEntry, href: string | undefined): string {
-  // #2487 — cada nombre en su span nowrap, como el \mbox de cada creator en
-  // LaTeX: la línea se parte entre nombres y nunca dentro de uno
   const creator = e.creator.length > 0 ? e.creator.map((n) => `<span class="whitespace-nowrap">${n}</span>`).join(', ') : AUTORA_POR_DEFECTO;
   const title = e.title || TITULO_POR_DEFECTO;
   const fragment = extractFragment(e.body);
-  // `::::` (4 colons) siempre: el fragmento puede ser él mismo un fenced div y
-  // pandoc cierra el div externo con la primera valla de 4 que encuentre.
+
   const card = [`:::: {class="${COLLECTION_CARD_CLASSES}"}`, ''];
   const typeLabel = MEMBER_TYPE_LABEL[e.type ?? 'file'];
   if (typeLabel !== undefined) card.push(`<h2 class="${MEMBER_PILL_CLASSES}">${typeLabel}</h2>`, '');
@@ -642,8 +503,6 @@ function resolveCollectionContent(
   if (collectionEntries.length === 0) return fallback;
   if (format === 'latex') return buildCollectionSectionsLatex(collectionEntries, pageNumber);
   if (format === 'html') {
-    // el EPUB es el único que sigue fusionando: sin las interventions, que son
-    // de imprenta. Si no queda ninguna, el libro lleva el body propio.
     const printable = printableEntries(collectionEntries);
     return printable.length === 0 ? fallback : buildCollectionSectionsHtml(printable);
   }
@@ -688,7 +547,7 @@ export function prependLinksMarkdown(content: string, links: { name: string; url
   if (links.length === 0) return content;
   const { yaml, body } = splitFrontmatter(content);
   const md = creatorLinksInlineMd(links);
-  // #2436: al re-procesar el markdown exportado el bloque ya viaja inline al inicio del body.
+
   if (body.startsWith(md)) return content;
   const prefix = yaml !== undefined ? `---\n${yaml}\n---\n` : '';
   return `${prefix}${md}\n\n${body.trimEnd()}`;
@@ -697,7 +556,7 @@ export function prependLinksMarkdown(content: string, links: { name: string; url
 function prependLinksLatex(content: string, links: { name: string; url: string }[]): string {
   if (links.length === 0) return content;
   const { yaml, body } = splitFrontmatter(content);
-  // #2436: el bloque ya está inline en el body re-procesado; no duplicarlo.
+
   if (body.startsWith(creatorLinksInlineMd(links))) return content;
   const latex = links.map((l) => `\\noindent \\textbf{${l.name}}: ${l.url}`).join('\n\n');
   const prefix = yaml !== undefined ? `---\n${yaml}\n---\n` : '';
@@ -726,9 +585,7 @@ async function collectCreatorNamesFromFiles(files: string[], cwd: string): Promi
       const parsed = Bun.YAML.parse(yaml) as Record<string, unknown>;
       extractCreatorNames(parsed.creator, names);
       extractCreatorNames(parsed.contributor, names);
-    } catch {
-      // skip unparseable files
-    }
+    } catch {}
   }
   return names;
 }
@@ -756,9 +613,7 @@ async function resolveSingleCreatorDoc(relativePath: string, cwd: string, collec
       const parsed = Bun.YAML.parse(yaml) as Record<string, unknown>;
       name = typeof parsed.name === 'string' && parsed.name ? parsed.name : typeof parsed.title === 'string' ? parsed.title : '';
       links = getCreatorLinks(parsed);
-    } catch {
-      // fall through
-    }
+    } catch {}
   }
   if (!body.trim()) {
     throw new BuildError(`collection "${collectionPath}": creator "${name}" debe tener body (contenido después del frontmatter)`);
@@ -766,7 +621,6 @@ async function resolveSingleCreatorDoc(relativePath: string, cwd: string, collec
   return { name, body, relativePath, links };
 }
 
-/** #2453 — el cierre de una collection seleccionada necesita sus creators. */
 export async function resolveCollectionCreatorDocs(
   doc: BuildDocument,
   discoveryIndex: Map<string, DiscoveryEntry>,
@@ -823,7 +677,6 @@ async function buildCollectionAuthorsLatex(creatorDocs: CreatorDoc[], sourcePath
   });
 }
 
-/** Fusión de la collection en el formato pedido; la usan el build y `iteraciones merge`. */
 export function collectionBaseContent(
   collectionEntries: CollectionEntry[],
   format: 'latex' | 'html' | 'markdown',
@@ -833,12 +686,6 @@ export function collectionBaseContent(
   return collectionEntries.length > 0 ? resolveCollectionContent(collectionEntries, format, content, pageNumber) : content;
 }
 
-/**
- * #2445 — la entrada de pandoc de una collection vive en
- * `.iteraciones/collections/<slug>.<fmt>.md`, byte-idéntica a su stdin, y se
- * registra en la fase de recursos del build.sh. Los documentos individuales
- * siguen viajando por .iteraciones/script/in-NNNN.md.
- */
 function collectionPandocInput(doc: BuildDocument, cwd: string, outSlug: string, format: 'latex' | 'html' | 'epub'): string | undefined {
   if (doc.frontmatter.type !== 'collection') return undefined;
   const path = join(cwd, '.iteraciones', 'collections', `${outSlug}.${format}.md`);
@@ -860,12 +707,6 @@ async function emitCollectionFormats(
   const content = outputs.content;
   const { formatCfg } = renderCtx;
 
-  // #2435/#2450: las imágenes se preprocesan UNA vez hacia
-  // <outputDir>/<nivel>/assets/images con nombre `<slug>-<base>` (un único
-  // fichero por imagen, sin que se pisen documentos del nivel) y todos los
-  // formatos las referencian como ./assets/images/<nombre>, idéntico en todos
-  // los niveles. La fusión latex contiene las mismas imágenes que las variantes
-  // html/markdown (los cuerpos son idénticos).
   const images = await preprocessDocumentImages(
     collectionScanContent(collectionEntries, content),
     doc,
@@ -878,8 +719,7 @@ async function emitCollectionFormats(
   );
   const docDir = dirname(doc.filePath);
   const relImageMap = relImageMapFor(images.imageMap);
-  // #2441: el fm de los exports (html/markdown) debe apuntar a assets como el
-  // body; outputs.fm no pasa por rewriteImagePaths y pisaba el contenido.
+
   const fmAssets = rewriteFmImagePaths(outputs.fm, relImageMap, docDir);
 
   const creatorLinks = doc.frontmatter.type === 'creator' ? getCreatorLinks(outputs.fm) : [];
@@ -904,26 +744,16 @@ async function emitCollectionFormats(
   const exportDoc = assembleExportDocument(doc, renderCtx.lang, exportCtx.globalBibliography, exportCtx.globalCsl, ctx.siteConfig.toc);
 
   if (activeFormats.html && formatWorkSets.htmlPaths.has(doc.relativePath) && docProducesFormat(doc.frontmatter.type, 'html')) {
-    // #2483: HTML deja de fusionar los miembros: los datos de la collection van
-    // en su propia tarjeta y cada file es una tarjeta con su fragmento y un
-    // enlace a su propio HTML, todas al nivel del masonry. El EPUB, más abajo,
-    // sigue con la fusión completa.
     const base = collectionCardsContent(collectionEntries, memberHtmlHrefs(doc.relativePath, collectionEntries, discoveryIndex), content);
-    // #2460: las rutas no se reescriben sobre el texto que va a pandoc; el
-    // filtro 04-image-paths las reescribe sobre el AST.
+
     const imagePaths = await writeImagePaths(doc, ctx.cwd, 'html', images.imageMap, docDir, true);
     await emitHtmlPage(doc, { ...outputs, content: prependLinksMarkdown(base, creatorLinks) }, renderCtx, exportCtx, discoveryIndex, imagePaths);
   }
 
   if (activeFormats.epub && formatWorkSets.epubPaths.has(doc.relativePath) && docProducesFormat(doc.frontmatter.type, 'epub')) {
-    // #2483: el EPUB es un libro: sigue recibiendo la fusión completa, no las
-    // tarjetas de HTML (decisión del issue).
     const base = collectionBaseContent(collectionEntries, 'html', content);
     const imagePaths = await writeImagePaths(doc, ctx.cwd, 'epub', images.imageMap, docDir, false);
     await convertToEpub(
-      // EPUB se arma con rutas absolutas: pandoc resuelve los medios contra el
-      // cwd del proceso (entrada por stdin, sin --resource-path). El mapa
-      // absoluto lo aplica 04-image-paths sobre el AST (#2460).
       prependLinksMarkdown(base, creatorLinks),
       outputs.outBase(`${outputs.outSlug}${primaryOutputExtension('epub')}`),
       exportDoc,
@@ -952,14 +782,6 @@ async function emitCollectionFormats(
   );
 }
 
-/**
- * #2452: export markdown de una collection. Con `format.markdown.merge`
- * (mergeOut) emite el contenido fusionado con type: file; sin él, el .md es
- * reprocesable: conserva type: collection, `files[]` reescrito hacia el `.md`
- * standalone de cada miembro (nombre-nuevo, escrito por el propio miembro) y
- * el body original de la collection. Todas las collections emiten markdown,
- * igual que cualquier otro type.
- */
 async function emitCollectionMarkdown(
   doc: BuildDocument,
   outputs: DocumentOutputs,
@@ -1022,9 +844,7 @@ export async function processDocumentFormats(
     logWarning(`"${doc.relativePath}": collection sin contenido en files; se omite del build`, 'build');
     return;
   }
-  // Las interventions son de imprenta: no salen en la página HTML ni en el
-  // EPUB. Si no queda ningún archivo que sí salga, la collection no tiene nada
-  // que publicar en esos dos formatos.
+
   if (isCollection && printableEntries(collectionEntries).length === 0) {
     throw new BuildError(
       `"${doc.relativePath}": todos los archivos de files[] son "type: intervention"; una collection necesita al menos un archivo de otro tipo (las interventions solo salen en el PDF y en el markdown exportado)`,

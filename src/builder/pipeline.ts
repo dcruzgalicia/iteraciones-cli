@@ -80,7 +80,7 @@ export async function documentPipeline(
   );
 
   const maxSlots = pdfOn ? pdfSlotCount(ctx.concurrency) : 0;
-  // #2474 — el .sh numera sus directorios de trabajo con los slots reales.
+
   notePdfSlots(maxSlots);
   if (pdfOn) {
     await ensureBiberCaches(ctx.cwd, maxSlots);
@@ -124,9 +124,6 @@ export async function documentPipeline(
     }
   }
 
-  // #2454 — los PDF que escribió ESTA corrida (relativos a la salida). Es el
-  // alcance de la validación PDF/X en modo parcial: sin él, un PDF roto de un
-  // documento que ni siquiera se pidió tumbaría la corrida de otro.
   const pdfOutputs = pdfConsumer.pdfJobs.map((job) => relative(ctx.outputDir, job.pdfDest).replaceAll('\\', '/'));
 
   return { processed, pdfOutputs };

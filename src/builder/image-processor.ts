@@ -46,10 +46,6 @@ function processedName(filePath: string): string {
   return dot > 0 ? name.slice(0, dot) : name;
 }
 
-/**
- * Sufija `-2`, `-3`… hasta que el nombre queda libre dentro de un conjunto.
- * Lo usan el namer de imágenes (#2450) y la distribución del .tex.
- */
 export function uniqueName(base: string, taken: Set<string>): string {
   if (!taken.has(base)) {
     taken.add(base);
@@ -68,17 +64,6 @@ export function uniqueName(base: string, taken: Set<string>): string {
   return name;
 }
 
-/**
- * #2450 — nombre final dentro de `<nivel>/assets/images`: `<slug>-<base>.jpg`
- * (sufijado si el documento tiene dos orígenes con el mismo basename). Un único
- * fichero por imagen sirve a html, markdown y .tex, y el prefijo de slug evita
- * que dos documentos del mismo nivel se pisen.
- *
- * El prefijo es idempotente: una imagen que ya lo lleva (el caso de reconstruir
- * a partir de una copia de `dist/files`, cuyo .md ya apunta a
- * `assets/images/<slug>-<base>.jpg`) se le quita y se vuelve a poner, así que
- * gen1/gen2/gen3 de la réplica no acumulan prefijos.
- */
 export function imageNamerFor(outSlug: string): (absPath: string) => string {
   const prefix = outSlug === '' ? '' : `${outSlug}-`;
   const taken = new Set<string>();
@@ -211,11 +196,11 @@ export function scanInlineImages(content: string, docDir: string): string[] {
     paths.push(resolve(docDir, imgPath));
   };
   for (const match of content.matchAll(MD_IMAGE_RE)) push(match[2]);
-  // Referencias ![alt][id] con definición [id]: ruta (#2441)
+
   for (const match of content.matchAll(/^\[[^\]]+\]:[ \t]+(\S+)/gm)) {
     if (IMAGE_EXT_RE.test(match[1] ?? '')) push(match[1]);
   }
-  // HTML crudo <img src="..."> (#2441)
+
   for (const match of content.matchAll(/<img\b[^>]*\bsrc=["']([^"']+)["']/gi)) push(match[1]);
   return paths;
 }
@@ -282,18 +267,17 @@ export function rewriteImagePaths(content: string, imageMap: Map<string, string>
         new RegExp(`^((?:titleImage|publisherImage|startpaper):[ \\t]*)(["']?)${escaped}(["']?[ \\t]*)$`, 'gm'),
         (_m, pre: string, openQuote: string, closeQuote: string) => `${pre}${openQuote}${processed}${closeQuote}`,
       );
-      // Valor exacto de un campo: sola la ruta (escalar sin clave en la misma
-      // línea o ítem de lista `- ruta`) — anclado a la línea entera (#2441).
+
       result = result.replace(
         new RegExp(`^([ \\t]*-[ \\t]+)?(["']?)${escaped}(["']?)[ \\t]*$`, 'm'),
         (_m, dash = '', openQuote = '', closeQuote = '') => `${dash}${openQuote}${processed}${closeQuote}`,
       );
-      // Definición de referencia ![alt][id] con [id]: ruta — anclado a la línea (#2441).
+
       result = result.replace(
         new RegExp(`^(\\[[^\\]]+\\]:[ \\t]+)(["']?)${escaped}(["']?)[ \\t]*$`, 'gm'),
         (_m, pre: string, openQuote: string, closeQuote: string) => `${pre}${openQuote}${processed}${closeQuote}`,
       );
-      // HTML crudo <img src="ruta"> — anclado al atributo src (#2441).
+
       result = result.replace(
         new RegExp(`(src=["']?)${escaped}(["'])`, 'gi'),
         (_m, pre: string, closeQuote: string) => `${pre}${processed}${closeQuote}`,
@@ -303,16 +287,6 @@ export function rewriteImagePaths(content: string, imageMap: Map<string, string>
   return result;
 }
 
-/**
- * #2460: mapa *origen → assets* que el filtro `semantic/ast/04-image-paths`
- * lee por fichero (`.iteraciones/paths/<doc>.<formato>.json`), en vez de que
- * reescribamos el texto crudo antes de pandoc.
- *
- * Claves: las tres formas con las que el AST puede traer la ruta (absoluta,
- * relativa y `./relativa`), las mismas que probaba `rewriteImagePaths`. Valor:
- * la ruta absoluta del procesado (latex/epub trabajan sobre rutas absolutas,
- * #2156) o `./assets/images/<nombre>` (html vive junto a sus assets).
- */
 export function imagePathsMap(imageMap: Map<string, string>, docDir: string, relativize: boolean): Record<string, string> {
   const paths: Record<string, string> = {};
   for (const [absoluteOriginal, processed] of imageMap) {
@@ -326,12 +300,6 @@ export function imagePathsMap(imageMap: Map<string, string>, docDir: string, rel
   return paths;
 }
 
-/**
- * #2441: reescribe en el objeto fm los campos de imagen a la ruta de assets
- * del nivel. outputs.fm es el fm que viaja a los exports (html/markdown) y no
- * pasa por rewriteImagePaths sobre el contenido, así que conservaba los paths
- * originales del proyecto aunque la imagen ya viviera en assets/images/.
- */
 export function rewriteFmImagePaths(fm: Record<string, unknown>, imageMap: Map<string, string>, docDir: string): Record<string, unknown> {
   if (imageMap.size === 0) return fm;
   const out: Record<string, unknown> = { ...fm };
@@ -394,13 +362,6 @@ async function collectFrontmatterImageTasks(
   return tasks;
 }
 
-/**
- * #2474 — procesa con concurrencia, pero registra al terminar TODAS las tareas y
- * en orden de entrada. `mapWithConcurrency` devuelve los resultados indexados
- * como los entró, así que el orden de terminación —quién acaba primero— no
- * decide cómo se serializa la distribución del `.tex` ni el mapa de rutas: dos
- * corridas idénticas dejan el mismo orden en el manifiesto.
- */
 async function runImageTasks(
   tasks: { absPath: string; w: number; h: number; cover: boolean }[],
   outputDir: string,
@@ -504,12 +465,6 @@ export async function processDocumentImages(
   return { imageMap, processedFiles };
 }
 
-/**
- * El mapa de imágenes reescrito a rutas de `assets/`. Lo comparten el build,
- * `iteraciones merge` y `iteraciones markdown`: los tres tienen que escribir
- * el mismo href, o el markdown que generan no reproduce el HTML del build.
- * Las entradas sin cambios (src === dst) se descartan.
- */
 export function relImageMapFor(imageMap: Map<string, string>): Map<string, string> {
   return new Map(
     [...imageMap].filter(([src, dst]) => dst !== src).map(([src, dst]): [string, string] => [src, `./${ASSETS_IMAGES_DIR}/${basename(dst)}`]),

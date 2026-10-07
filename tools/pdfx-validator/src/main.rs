@@ -1,15 +1,3 @@
-//! Validador PDF/X-1a para iteraciones-cli.
-//!
-//! Binario auxiliar invocado por la CLI (Bun) para certificar que los PDF
-//! generados con el preamble filter 99-pdfx cumplen **estrictamente**
-//! PDF/X-1a:2001 (ISO 15930-1). Contrato con la CLI:
-//!
-//! - `iteraciones-pdfcheck <archivo.pdf>`: valida el PDF contra PDF/X-1a:2001;
-//!   un PDF es válido SOLO si cumple todo lo requerido por 2001 (no hay
-//!   fallback a :2003). Imprime un informe JSON en stdout y devuelve exit 0
-//!   (válido), 2 (no conforme) o 1 (error).
-//! - `iteraciones-pdfcheck --version`: imprime la versión del binario.
-
 use std::env;
 use std::path::Path;
 use std::process::ExitCode;
@@ -20,15 +8,8 @@ use serde::Serialize;
 
 const BIN_NAME: &str = "iteraciones-pdfcheck";
 
-/// Nivel que obliga el proyecto: estrictamente PDF/X-1a:2001. El paquete LaTeX
-/// `pdfx` puede declarar :2001 o :2003 según su versión, pero este validador
-/// certifica el estándar fijado por el proyecto: 2001 (issue #1964).
 const LEVEL: PdfXLevel = PdfXLevel::X1a2001;
 
-/// Warning codes que la norma PDF/X exige y que se tratan como ERRORES
-/// (issue #1966): la identificación XMP `pdfxid:GTS_PDFXVersion` es un requisito
-/// — si falta (o el XMP es inválido), el PDF no está completo. El resto de
-/// warnings permanecen como advertencias.
 const PROMOTED_WARNING_CODES: &[&str] = &["XmpMetadataInvalid", "MissingXmpIdentification"];
 
 #[derive(Serialize)]
@@ -61,9 +42,7 @@ fn main() -> ExitCode {
     }
     match validate(&args[1]) {
         Ok(report) => {
-            // Resumen legible en stderr (el JSON de stdout es el contrato con la
-            // CLI): muestra TODOS los fallos y advertencias, no solo el primero
-            // (issue #1971). Al usarlo a mano, la salida es completa y accionable.
+
             if report.valid {
                 eprintln!("{}: OK PDF/X-1a:2001", report.file);
             } else {
@@ -91,7 +70,6 @@ fn main() -> ExitCode {
     }
 }
 
-/// Sufijo legible de página para el resumen de stderr (la página es 0-based).
 fn page_suffix(page: Option<usize>) -> String {
     match page {
         Some(p) => format!(" — página {}", p + 1),
@@ -99,8 +77,6 @@ fn page_suffix(page: Option<usize>) -> String {
     }
 }
 
-/// Valida el PDF contra PDF/X-1a:2001 (único nivel). `valid` es true solo si
-/// la validación estricta de 2001 no reporta errores.
 fn validate(path: &str) -> Result<Report, String> {
     let mut doc = PdfDocument::open(Path::new(path)).map_err(|err| format!("no se pudo abrir el PDF: {err}"))?;
 
@@ -115,8 +91,7 @@ fn validate(path: &str) -> Result<Report, String> {
 fn to_report(path: &str, result: &XValidationResult) -> Report {
     let mut errors: Vec<Issue> = result.errors.iter().map(to_issue).collect();
     let warnings: Vec<Issue> = result.warnings.iter().map(to_issue).collect();
-    // Promover a error las deficiencias de identificación; el resto quedan como
-    // warnings. `valid` depende de errors (ver PROMOTED_WARNING_CODES).
+
     let (promoted, remaining) = partition_promoted(warnings);
     errors.extend(promoted);
     Report {
@@ -128,8 +103,6 @@ fn to_report(path: &str, result: &XValidationResult) -> Report {
     }
 }
 
-/// Separa los warnings entre (promovidos a error, advertencias) según
-/// PROMOTED_WARNING_CODES. Función pura, testeada.
 fn partition_promoted(warnings: Vec<Issue>) -> (Vec<Issue>, Vec<Issue>) {
     warnings.into_iter().partition(|w| PROMOTED_WARNING_CODES.contains(&w.code.as_str()))
 }

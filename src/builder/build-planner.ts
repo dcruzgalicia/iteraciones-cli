@@ -6,7 +6,6 @@ import { computeConfigHashes, computeFiltersHash } from './state-hash.js';
 import type { BibFileCache, BuildState, FileCacheEntry, FilterFileCache } from './state-serialize.js';
 import type { BuildDocument } from './types.js';
 
-/** Los cuatro grupos de trabajo, en el orden en que se recorren. El tipo sale de aquí. */
 export const WORK_FORMATS = ['print', 'html', 'epub', 'markdown'] as const;
 type WorkFormatKey = (typeof WORK_FORMATS)[number];
 
@@ -66,8 +65,6 @@ export async function computeBuildMetadata(
   const filtersInvalidated = prevState !== null && prevState.filtersHash !== filtersHash;
   const bibInvalidated = prevState !== null && prevState.bibHash !== bibHashResult.hash;
 
-  // Se ensancha a string[] porque el diff de abajo compara contra
-  // `prevState.activeFormats`, que viene del state.json y es string[].
   const currentFormats: string[] = computeActiveFormats(siteConfig.format);
 
   let newFormats: string[] = [];
@@ -113,7 +110,6 @@ const emptyWorkSets = (): Record<WorkFormatKey, BuildDocument[]> =>
   Object.fromEntries(WORK_FORMATS.map((key) => [key, [] as BuildDocument[]])) as Record<WorkFormatKey, BuildDocument[]>;
 
 function exportGroupsFor(activeFormats: ActiveFormats): ExportGroup[] {
-  // `print` agrupa PDF y LaTeX: comparten salida, así que uno basta para activarlo.
   return WORK_FORMATS.map((key) => ({ key, enabled: key === 'print' ? activeFormats.pdf || activeFormats.latex : activeFormats[key] }));
 }
 
@@ -138,12 +134,6 @@ function computeDocsChanged(discoveredChanges: Set<string>, allDocs: BuildDocume
   return docsChanged;
 }
 
-/**
- * #2453 — en modo parcial la selección manda: lo que venga de fuera se acota y
- * lo pedido se fuerza. Sin el forzado, `build doc.md` sobre un documento sin
- * cambios acabaría en «nada que hacer» y el usuario no obtendría nada. Dentro
- * de `computeDocsChanged` afectaría también al modo completo, así que va aquí.
- */
 function applySelection(docsChanged: Set<string>, selection: Set<string> | undefined): void {
   if (selection === undefined) return;
   for (const path of [...docsChanged]) {
