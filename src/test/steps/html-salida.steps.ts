@@ -183,19 +183,19 @@ Given('que el documento tiene una clase que hay que compilar', () => {
 
 Then('las tarjetas del documento salen en el orden por defecto', () => {
   const archivo = 'test-document.html';
-  enOrden(salida(archivo), archivo, 'Tarjeta identidad, id="TOC", >Descarga</h2>, <article, id="refs-heading", Tarjeta identidad final');
+  enOrden(salida(archivo), archivo, 'id="card-identity", id="TOC", >Descarga</h2>, <article, id="refs-heading", id="card-identity-footer"');
 });
 
 Then('la lista explícita de bloques ES el orden', () => {
   const archivo = 'test-document.html';
-  enOrden(salida(archivo), archivo, 'Tarjeta identidad, <article, id="TOC", >Descarga</h2>');
+  enOrden(salida(archivo), archivo, 'id="card-identity", <article, id="TOC", >Descarga</h2>');
 });
 
 Then('los bloques que no aplican no dejan huecos', () => {
   const archivo = 'test-document.html';
   const html = salida(archivo);
   // El artículo sí queda entre el header y el footer: lo que no hay son huecos.
-  enOrden(html, archivo, 'Tarjeta identidad, <article, Tarjeta identidad final');
+  enOrden(html, archivo, 'id="card-identity", <article, id="card-identity-footer"');
   prohibe(html, archivo, ['>Descarga</h2>', 'id="TOC"', 'refs-heading']);
 });
 
@@ -246,7 +246,7 @@ Then('una cita sin entrada deja el documento sin tarjeta de referencias', () => 
   const html = salida(archivo);
   // Una tarjeta sin contenido es un hueco visible: se va el heading entero, no
   // sólo el bloque de entradas.
-  prohibe(html, archivo, ['<h1 id="refs-heading">', 'block:referencias']);
+  prohibe(html, archivo, ['<h1 id="refs-heading">', 'id="block-referencias"']);
   exige(html, archivo, ['<h5 id="sección">Sección</h5>']);
 });
 

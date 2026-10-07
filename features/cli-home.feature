@@ -51,7 +51,7 @@ Característica: El home y la bibliografía se resuelven antes de publicar
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/test-document.html" no contiene '<a href="./index.html"'
-      Y el archivo "dist/files/test-document.html" contiene "Tarjeta identidad"
+      Y el archivo "dist/files/test-document.html" contiene "id=\"card-identity\""
 
     Escenario: Con index.md la tarjeta identidad enlaza al home
       Dado que la raíz del proyecto tiene un proyecto de prueba

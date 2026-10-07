@@ -3,6 +3,15 @@ import { logWarning } from '../lib/logger.js';
 
 const HTML_RESOURCES_DIR = join(import.meta.dir, '../lib/resources/html');
 
+/**
+ * Los dos huecos donde el post-proceso mete su contenido. Divs vacíos, no
+ * comentarios: un minificador se lleva los comentarios y con ellos se rompe el
+ * empalme con `html-composer`. Se sustituye el literal entero —apertura y
+ * cierre— porque un `</div>` suelto dentro del masonry es un hueco visible.
+ */
+const REFS = '<div id="block-referencias"></div>';
+const INTRO = '<div id="block-intro"></div>';
+
 /** #2488 — el type de la página: cada uno tiene su propia tarjeta de referencias
  * en `html/<type>/card-referencias-block.html`. */
 export type HtmlPostType = 'file' | 'collection' | 'creator';
@@ -27,11 +36,11 @@ export function postProcessHtml(html: string, refsCardTemplate: string): string 
   const withIntro = moveCollectionIntro(removeTocReferencesLink(html));
   const { html: clean, block } = extractReferencesBlock(withIntro, refsCardTemplate);
   if (block === undefined) return clean;
-  if (!clean.includes('<!-- block:referencias -->')) {
+  if (!clean.includes(REFS)) {
     logWarning('la tarjeta de referencias no está en format.html.blocks; la bibliografía no se inserta en la página', 'html');
     return clean;
   }
-  return clean.replace('<!-- block:referencias -->', block);
+  return clean.replace(REFS, block);
 }
 
 /**
@@ -44,7 +53,7 @@ export function postProcessHtml(html: string, refsCardTemplate: string): string 
  * sitio en la tarjeta.
  */
 export function moveCollectionIntro(html: string): string {
-  const marker = '<!-- block:intro -->';
+  const marker = INTRO;
   const divStart = html.indexOf('<div class="collection-intro"');
   if (divStart < 0) return html;
   const end = findBalancedDivEnd(html, divStart, 'el body propio de la collection');
@@ -70,7 +79,7 @@ function stripSyntheticReferencesMarker(html: string, refsIdPos: number, start: 
       if (tagEnd >= 0) cleaned = cleaned.slice(0, start) + cleaned.slice(tagEnd + 1);
     }
   }
-  return cleaned.replace('<!-- block:referencias -->', '');
+  return cleaned.replace(REFS, '');
 }
 
 function findBalancedDivEnd(html: string, divStart: number, que = 'las referencias'): number | undefined {
@@ -104,7 +113,7 @@ export function extractReferencesBlock(html: string, cardTemplate: string): { ht
   const start = refsIdPos >= 0 ? Math.max(html.lastIndexOf('<h1', refsIdPos), html.lastIndexOf('<h5', refsIdPos)) : refsDivPos;
   const divStart = html.indexOf('<div id="refs"', start);
   if (divStart < 0) {
-    if (!html.includes('<!-- block:referencias -->')) return { html };
+    if (!html.includes(REFS)) return { html };
     return { html: stripSyntheticReferencesMarker(html, refsIdPos, start) };
   }
 

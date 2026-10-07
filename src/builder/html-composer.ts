@@ -5,6 +5,19 @@ import { DEFAULT_HTML_BLOCKS, type HtmlBlockKey } from '../config/site-config.js
 const HTML_RESOURCES_DIR = join(import.meta.dir, '../lib/resources/html');
 
 /**
+ * El hueco donde el compositor mete un bloque del skeleton. Es un `div` vacío y
+ * no un comentario: un minificador se lo lleva a los dos, y perder el marcador
+ * rompe el empalme entre el compositor, pandoc y el post-proceso.
+ *
+ * Se reemplaza el literal entero —apertura y cierre— para que no quede un
+ * `</div>` suelto: los slots viven dentro del masonry de CSS `columns`, y un
+ * div vacío ahí es un hueco visible.
+ */
+export function slot(nombre: string): string {
+  return `<div id="slot-${nombre}"></div>`;
+}
+
+/**
  * #2488 — los types cuyo diseño HTML se compone. `intervention` no genera HTML
  * (`docProducesFormat`), así que no tiene copia.
  */
@@ -69,10 +82,10 @@ export async function composeHtmlTemplate(siteConfig: SiteConfig, logoInline?: s
     ? `<span class="flex h-10 w-10 shrink-0 items-center justify-center text-accent-500 logo-fill">${logoInline}</span>`
     : '';
   return skeleton
-    .replace('<!-- header -->', () => header)
-    .replace('<!-- metadata -->', () => metadata)
-    .replace('<!-- footer -->', () => footer)
-    .replace('<!-- cards -->', () => cards.join('\n'))
+    .replace(slot('header'), () => header)
+    .replace(slot('metadata'), () => metadata)
+    .replace(slot('footer'), () => footer)
+    .replace(slot('cards'), () => cards.join('\n'))
     .split('$logo-block$')
     .join(logoBlock);
 }

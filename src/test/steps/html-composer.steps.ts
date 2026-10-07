@@ -22,7 +22,7 @@ import { world } from './cli-world.steps.ts';
 
 /** La tarjeta de referencias con su marcador, como la deja el recurso. */
 const TARJETA = '<div class="wrap"><h2 id="refs-heading" class="chip">Referencias</h2>{{refs-list}}</div>';
-const MARCADOR = '<!-- block:referencias -->';
+const MARCADOR = '<div id="block-referencias"></div>';
 
 Given('que el HTML es:', (html: string) => {
   world.htmlEntrada = html.replace(/<br>/g, '\n');
