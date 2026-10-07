@@ -3,6 +3,7 @@ import { basename, dirname, join, normalize, resolve, sep } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import type { FormatKey } from '../config/site-config.js';
 import { resolveBooleanField } from '../lib/frontmatter-fields.js';
+import { isDir } from '../lib/paths.js';
 import { htmlSlugFor } from './discover.js';
 import { LATEXMK_AUX_EXTENSIONS } from './export.js';
 import {
@@ -127,12 +128,7 @@ export async function cleanupRemovedFormats(ctx: BuildContext, allDocs: BuildDoc
  */
 export async function hasLegacyAssetLayout(outputDir: string): Promise<boolean> {
   // Sin salida todavía no hay nada que migrar (y scan lanzaría ENOENT)
-  if (
-    !(await stat(outputDir)
-      .then((s) => s.isDirectory())
-      .catch(() => false))
-  )
-    return false;
+  if (!(await isDir(outputDir))) return false;
   for (const rel of ['css', 'fonts', 'logo.svg']) {
     if (
       await stat(join(outputDir, rel))

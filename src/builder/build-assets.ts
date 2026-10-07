@@ -5,6 +5,7 @@ import type { SiteConfig } from '../config/config-schema.js';
 import { ACCENT_PALETTES, type AccentColor } from '../lib/accent-palettes.js';
 import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
+import { isDir } from '../lib/paths.js';
 import { recordSupportCommand } from '../lib/script-recorder.js';
 import { ASSETS_CSS_FILE, ASSETS_LOGO_FILE } from './output-layout.js';
 import { cacheHitFor } from './state-hash.js';
@@ -76,10 +77,7 @@ export async function computeCssHash(
   const hasher = new Bun.CryptoHasher('sha256');
   const cache: CssFileCache = {};
   const htmlPaths: string[] = [];
-  const outputIsDir = await Bun.file(outputDir)
-    .stat()
-    .then((s) => s.isDirectory())
-    .catch(() => false);
+  const outputIsDir = await isDir(outputDir);
   if (outputIsDir) {
     for await (const entry of new Bun.Glob('**/*.html').scan({ cwd: outputDir, onlyFiles: true })) {
       htmlPaths.push(entry);
