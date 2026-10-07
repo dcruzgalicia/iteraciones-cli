@@ -28,7 +28,7 @@ import {
 import { detectPageSize } from './latex-preamble.js';
 import { ASSETS_CSS_FILE, ASSETS_IMAGES_DIR, docProducesFormat, primaryOutputExtension } from './output-layout.js';
 import { formatLinksFor, parseFileFrontmatter, readMarkdownOrWarn, relativeHref, writeOutput } from './pipeline-io.js';
-import type { ExportContext, FormatWorkSets, RenderContext } from './pipeline-setup.js';
+import { type ExportContext, type FormatWorkSets, htmlKindFor, latexKindFor, type RenderContext } from './pipeline-setup.js';
 import { htmlPageFromMarkdown } from './render.js';
 import type { BuildDocument, DiscoveryEntry } from './types.js';
 import type { PdfXmpMetadata } from './xmpdata.js';
@@ -134,14 +134,7 @@ async function emitLatexAndQueuePdf(
     bibFiles: exportCtx.bibFiles,
     inputTarget: collectionPandocInput(doc, ctx.cwd, outSlug, 'latex'),
     imagePaths,
-    templatePath:
-      doc.frontmatter.type === 'collection'
-        ? exportCtx.latexCollectionTemplatePath
-        : doc.frontmatter.type === 'creator'
-          ? exportCtx.latexCreatorTemplatePath
-          : doc.frontmatter.type === 'intervention'
-            ? exportCtx.latexInterventionTemplatePath
-            : exportCtx.latexTemplatePath,
+    templatePath: exportCtx.templates[latexKindFor(doc.frontmatter.type)],
     fm,
     siteConfig: ctx.siteConfig,
     formatCfg: formatCfg?.pdf,
@@ -225,12 +218,7 @@ async function emitHtmlPage(
     cwd,
     inputTarget: collectionPandocInput(doc, cwd, outSlug, 'html'),
     imagePaths,
-    templatePath:
-      htmlType === 'collection'
-        ? exportCtx.htmlCollectionTemplatePath
-        : htmlType === 'creator'
-          ? exportCtx.htmlCreatorTemplatePath
-          : exportCtx.htmlTemplatePath,
+    templatePath: exportCtx.templates[htmlKindFor(htmlType)],
     refsCardTemplate: exportCtx.refsCardTemplates[htmlType],
     docType: htmlType,
     vars: {
