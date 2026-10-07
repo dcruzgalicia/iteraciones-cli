@@ -43,37 +43,17 @@ export async function hashFileCached(
 
 const HTML_RESOURCES_DIR = join(import.meta.dir, '../lib/resources/html');
 
-export const SCHEMA_SOURCE_FILES = [
-  '../lib/date.ts',
-  '../lib/minify.ts',
-  './pipeline.ts',
-  './pipeline-formats.ts',
-  './collection-fragment.ts',
-  './collection-files.ts',
-  './render.ts',
-  './html-composer.ts',
-  './html-postprocess.ts',
-  './latex-preamble.ts',
-  './latex-composer.ts',
-  './pandoc-metadata.ts',
-  './xmpdata.ts',
-  './export.ts',
-  './image-processor.ts',
-  './pdfx-check.ts',
-  './prepare.ts',
-  '../config/site-config.ts',
-  '../config/config-schema.ts',
-] as const;
+const SCHEMA_SOURCE_GLOB = '**/*.ts';
 
-async function computeSchemaSourceHash(
-  files: readonly string[],
-  baseDir: string,
-  prevCache?: Record<string, FileCacheEntry>,
-  cacheOut?: Record<string, FileCacheEntry>,
-): Promise<string> {
+function schemaSourceFiles(): string[] {
+  const root = join(import.meta.dir, '..');
+  return [...new Bun.Glob(SCHEMA_SOURCE_GLOB).scanSync({ cwd: root })].filter((file) => !file.startsWith('test/')).sort();
+}
+
+async function computeSchemaSourceHash(prevCache?: Record<string, FileCacheEntry>, cacheOut: Record<string, FileCacheEntry> = {}): Promise<string> {
   const parts: string[] = [];
-  for (const file of files) {
-    const hash = await hashFileCached(join(baseDir, file), file, prevCache, cacheOut ?? {}).catch(() => null);
+  for (const file of schemaSourceFiles()) {
+    const hash = await hashFileCached(join(import.meta.dir, '..', file), file, prevCache, cacheOut);
     parts.push(file, hash ?? '');
   }
   return hashString(parts.join('\0'));
@@ -86,7 +66,7 @@ async function hashSpecFiles(specs: Array<[string, string]>, prevCache: FilterFi
       const files = [...new Bun.Glob(glob).scanSync({ cwd: dir })].sort();
       for (const file of files) {
         const hash = await hashFileCached(join(dir, file), file, prevCache, cache);
-        if (hash === null) throw new Error(`archivo de filters/preamble desaparecido: ${join(dir, file)}`);
+        if (hash === null) throw new Error(`fuente desaparecida a medio del build: ${join(dir, file)}`);
         parts.push(file, hash);
       }
     } catch (err) {
@@ -122,7 +102,7 @@ export async function computeFiltersHash(
   parts.push(JSON.stringify(effectiveDisabledPreamble ?? resolveDisabledPreambleConfig(siteConfig)));
   parts.push(MD_READER);
   if (pandocVersion) parts.push('pandoc', pandocVersion);
-  parts.push('schema', await computeSchemaSourceHash(SCHEMA_SOURCE_FILES, import.meta.dir, schemaPrevCache, schemaCache));
+  parts.push('schema', await computeSchemaSourceHash(schemaPrevCache, schemaCache));
   return { hash: hashString(parts.join('\0')), cache, schemaCache };
 }
 
