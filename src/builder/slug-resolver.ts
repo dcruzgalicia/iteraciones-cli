@@ -3,11 +3,6 @@ import { BuildError } from '../lib/errors.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import type { DiscoveryEntry } from './types.js';
 
-interface SlugResolutionResult {
-  slugChangedEntries: Map<string, string>;
-  changedPaths: string[];
-}
-
 interface SlugChangeAccumulator {
   slugChangedEntries: Map<string, string>;
   changedPaths: string[];
@@ -114,7 +109,7 @@ function assertNoOutputCollisions(discoveryIndex: Map<string, DiscoveryEntry>): 
   }
 }
 
-export function resolveSlugs(discoveryIndex: Map<string, DiscoveryEntry>, computeSlug: SlugComputer): SlugResolutionResult {
+export function resolveSlugs(discoveryIndex: Map<string, DiscoveryEntry>, computeSlug: SlugComputer): SlugChangeAccumulator {
   const acc: SlugChangeAccumulator = { slugChangedEntries: new Map(), changedPaths: [] };
 
   applyManualSlugs(discoveryIndex, acc);
