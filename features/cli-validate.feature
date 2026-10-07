@@ -279,7 +279,7 @@ Característica: validate revisa el proyecto y dice qué corregir
       language: [inválido
       """
       Cuando corro "validate"
-      Y el error dice "✖ [validate] 1 error:"
+      Entonces el error dice "✖ [validate] 1 error:"
       Y el error no dice "error(es)"
       Y el error no dice "se encontraron"
       Y el error no dice "errors:"
@@ -408,5 +408,5 @@ Característica: validate revisa el proyecto y dice qué corregir
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Dado que la configuración desactiva un filtro global "filtro-que-no-existe"
       Cuando valido el proyecto pidiendo JSON
-      Y el JSON declara exactamente 1 aviso que menciona "filtro-que-no-existe"
+      Entonces el JSON declara exactamente 1 aviso que menciona "filtro-que-no-existe"
       Y ese aviso viene del archivo "config"

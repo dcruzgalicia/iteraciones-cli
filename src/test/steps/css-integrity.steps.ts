@@ -5,6 +5,7 @@ import { After, Before, Given, Then, When } from '@cucumber/cucumber';
 import { compileTailwindCss, computeCssHash, resolveTailwindBin } from '../../builder/build-assets.js';
 import type { SiteConfig } from '../../config/config-schema.js';
 import { DEFAULT_SITE_CONFIG } from '../../config/site-config.js';
+import { ACCENT_PALETTES, type AccentColor } from '../../lib/accent-palettes.js';
 
 /**
  * #2545 (onda 1) — integridad del CSS: compilación, diseño de tarjetas y caché.
@@ -135,6 +136,19 @@ Then('el CSS incluye las clases del HTML y el acento configurado', () => {
   for (const clase of ['bg-stone-200', 'grid-cols-2', '.prose']) {
     if (!world.css.includes(clase)) throw new Error(`el CSS no incluye ${clase}`);
   }
+});
+
+/**
+ * El acento es lo único que la config mete en el `@theme` del CSS: once custom
+ * properties `--color-accent-<tono>` con los valores de la paleta. Sin esta
+ * comprobación, el paso anterior se llamaba «y el acento configurado» y sólo
+ * miraba clases del HTML: el acento podía no llegar al CSS sin que nadie se
+ * enterara.
+ */
+Then('el CSS lleva el acento {string}', (accent: string) => {
+  const tono = ACCENT_PALETTES[accent as AccentColor]?.[500];
+  if (tono === undefined) throw new Error(`la paleta ${accent} no existe o no tiene el tono 500`);
+  if (!world.css.includes(tono)) throw new Error(`el CSS no lleva el tono 500 de ${accent} (${tono})`);
 });
 
 Then('el CSS purga lo que el HTML ya no usa y no inventa lo que no menciona', () => {

@@ -2,6 +2,7 @@ import { mkdtemp, readdir, readFile, realpath, rm, stat } from 'node:fs/promises
 import { join, relative } from 'node:path';
 import { After, Before, Given, Then, When } from '@cucumber/cucumber';
 import { build } from '../../builder/orchestrator.js';
+import { systemCommands } from '../helpers.js';
 
 /**
  * #2546 (onda 2) — `build.sh` completo: el E2E de la onda.
@@ -59,20 +60,6 @@ function mismaSalvo(before: Map<string, Buffer>, after: Map<string, Buffer>, sol
     if (!got.equals(bytes)) return `bytes distintos en ${name}`;
   }
   return null;
-}
-
-/** Copiado del guard de #2445/#2456: la lista de prohibidos ES el contrato. */
-function systemCommands(script: string): string[] {
-  const found = new Set<string>();
-  for (const raw of script.split('\n')) {
-    const line = raw.trim();
-    if (line === '' || line.startsWith('#') || line.startsWith('set ') || line.startsWith('cd ') || line.startsWith('(cd ')) continue;
-    const token = /^[A-Za-z0-9_./-]+/.exec(line.replace(/^(?:[A-Za-z_][A-Za-z0-9_]*=\S+ )+/, ''))?.[0] ?? '';
-    const name = token.split('/').at(-1) ?? '';
-    if (['cp', 'rm', 'ln', 'rmdir'].includes(name)) found.add(name);
-    if (line.includes(' && ')) found.add('&&');
-  }
-  return [...found].sort();
 }
 
 const CONFIG_TODOS = [
@@ -198,8 +185,22 @@ Given('un proyecto con un documento y formato PDF', async () => {
   );
 });
 
-Given('un proyecto con todos los formatos, una colección y una creadora', async () => {
+/**
+ * El proyecto completo: frontmatter con autora, una imagen y una collection,
+ * con los cinco formatos activos. `override` cambia una clave de `format.pdf`,
+ * para las variaciones de una opción.
+ */
+async function writeCompleteProject(override?: { clave: string; valor: string }): Promise<void> {
   world.slug = 'documento';
+  // El override REEMPLAZA la clave si ya está: el YAML del loader rechaza las
+  // claves repetidas, así que anexar la segunda vez rompería el build.
+  const pdf = ['    generate: true', '    coverImage: true'];
+  if (override !== undefined) {
+    const i = pdf.findIndex((l) => l.trimStart().startsWith(`${override.clave}:`));
+    const linea = `    ${override.clave}: ${override.valor}`;
+    if (i === -1) pdf.push(linea);
+    else pdf[i] = linea;
+  }
   await writeConfig(
     [
       'language: es-MX',
@@ -208,8 +209,7 @@ Given('un proyecto con todos los formatos, una colección y una creadora', async
       '  latex:',
       '    generate: true',
       '  pdf:',
-      '    generate: true',
-      '    coverImage: true',
+      ...pdf,
       '  html:',
       '    site:',
       '      title: T',
@@ -232,6 +232,19 @@ Given('un proyecto con todos los formatos, una colección y una creadora', async
   // `creator` sin `title`: el build deriva el título del `name`, y el .md de dist
   // debe salir igual por `iteraciones markdown` (#2445).
   await Bun.write(join(world.dir, 'creadora.md'), ['---', 'name: Ana Ruiz', 'type: creator', '---', '', 'Bio de la creadora.'].join('\n'));
+}
+
+Given('un proyecto con todos los formatos, una colección y una creadora', async () => {
+  await writeCompleteProject();
+});
+
+/**
+ * El mismo proyecto con una opción de `format.pdf` cambiada. El valor va como
+ * lo escribe el autor (`true`, `false`, `header-center`), para que la tabla de
+ * `Ejemplos` del feature sea la lista de las variaciones.
+ */
+Given('un proyecto con todos los formatos y {word}: {word}', async (clave: string, valor: string) => {
+  await writeCompleteProject({ clave, valor });
 });
 
 // ── When ─────────────────────────────────────────────────────────────────────
@@ -280,7 +293,7 @@ Then('el script existe y es ejecutable', async () => {
  *
  * ## Por qué un registro y no un switch dentro del step
  *
- * El switch tenía complejidad 114 contra un máximo de 15, y además每次 que el
+ * El switch tenía complejidad 114 contra un máximo de 15, y además cada vez que el
  * build añadiera una fase obligaba a tocar un `case` dentro de un step de
  * 120 líneas. Con un registro, añadir una fila es añadir una función de seis
  * líneas, y el step sólo hace la búsqueda. El fallo de la tabla dice qué fila
@@ -489,4 +502,42 @@ Then('las entradas de las colecciones se reconstruyen idénticas', async () => {
   for (const [name, bytes] of world.collectionsBefore) {
     if (despues.get(name)?.equals(bytes) !== true) throw new Error(`entrada distinta en ${name}`);
   }
+});
+
+// ── La tubería entera, formato por formato ─────────────────────────────────
+//
+// Las salidas del build se nombran por el título del documento más su autora
+// (`manuscrito-por-ana-ruiz.tex`), no por el nombre del archivo, así que estos
+// tres pasos toman la ruta tal cual: el feature los lee y el paso no adivina.
+// `el archivo de dist existe` no sirve aquí porque decide la extensión desde
+// `world.slug` y el proyecto completo produce cinco.
+
+Then('dist tiene el archivo {string}', async (relativa: string) => {
+  const path = join(world.distPath, relativa);
+  if (!(await Bun.file(path).exists())) throw new Error(`dist no tiene ${relativa} (sí hay: ${(await snapshot(world.distPath)).size} archivos)`);
+});
+
+// Un solo paso para los dos sentidos no se puede: `{word}` también casa con
+// «tiene» y el de arriba se volvería ambiguo. Por eso el par es literal.
+const distTiene = async (relativa: string, esperado: boolean): Promise<void> => {
+  const existe = await Bun.file(join(world.distPath, relativa)).exists();
+  if (existe !== esperado) throw new Error(`dist ${existe ? 'sí' : 'no'} tiene ${relativa} y el escenario dice lo contrario`);
+};
+
+Then('dist sí tiene el archivo {string}', async (relativa: string) => {
+  await distTiene(relativa, true);
+});
+
+Then('dist no tiene el archivo {string}', async (relativa: string) => {
+  await distTiene(relativa, false);
+});
+
+Then('el archivo {string} de dist contiene {string}', async (relativa: string, texto: string) => {
+  const contenido = await readFile(join(world.distPath, relativa), 'utf8');
+  if (!contenido.includes(texto)) throw new Error(`${relativa} no contiene ${JSON.stringify(texto)}`);
+});
+
+Then('el archivo {string} de dist pesa más de {int} bytes', async (relativa: string, minimo: number) => {
+  const bytes = (await readFile(join(world.distPath, relativa))).byteLength;
+  if (bytes <= minimo) throw new Error(`${relativa} pesa ${bytes} bytes y debía pesar más de ${minimo}`);
 });

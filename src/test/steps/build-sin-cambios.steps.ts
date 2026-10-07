@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { After, Before, Given, Then, When } from '@cucumber/cucumber';
 import { build } from '../../builder/orchestrator.js';
+import { initTestProject } from '../helpers.js';
 
 /**
  * #2546 (onda 2) — el atajo de "sin cambios" (#2496).
@@ -72,9 +73,8 @@ After(async () => {
   await rm(world.dir, { recursive: true, force: true });
 });
 
-Given('un proyecto de prueba con un documento inicial', async () => {
-  const { initTestProject } = await import('../../__tests__/helpers.js');
-  await initTestProject(world.dir);
+Given('un proyecto de prueba con un documento inicial', () => {
+  initTestProject(world.dir);
 });
 
 Given('un proyecto sin documentos', async () => {

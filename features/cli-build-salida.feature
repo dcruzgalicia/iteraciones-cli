@@ -42,7 +42,7 @@ Característica: El build dice qué hizo y por qué
     Escenario: Con la caché completa el resumen lo dice
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Cuando hago un build del proyecto
-      Y hago un build del proyecto
+      Entonces hago un build del proyecto
       Y la salida dice "(todos reutilizados)"
 
     Escenario: Un cambio de configuración aparece como razón

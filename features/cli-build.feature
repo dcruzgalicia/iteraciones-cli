@@ -33,11 +33,11 @@ Característica: El build falla bien y responde en la misma forma
 
     Escenario: Un error de entorno no manda a validate
       Cuando el build falla con el error pandoc-falta-entorno
-      Y el error no dice "iteraciones validate"
+      Entonces el error no dice "iteraciones validate"
 
     Escenario: Un error que no es de entorno no manda a doctor
       Cuando el build falla con el error otro
-      Y el error no dice "iteraciones doctor"
+      Entonces el error no dice "iteraciones doctor"
 
   Regla de negocio: Un estado a medio escribir no rompe el build siguiente
 

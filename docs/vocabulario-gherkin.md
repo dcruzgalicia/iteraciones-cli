@@ -12,8 +12,12 @@ se decida aquí es lo que decide si acabamos con ~300 steps o con ~2.000.
   claridad.
 - Un vocabulario corto y genérico → los features se leen como documentación.
 
-**El presupuesto: ~300 steps únicos para ~954 casos.** `bun run check-steps`
-falla si el catálogo se pasa.
+**El presupuesto: ~300 steps únicos para ~954 casos.** Con la migración cerrada
+el presupuesto ya no lo vigila un check: es una lectura del catálogo, no una
+puerta. Lo que sí se conserva es el patrón que lo hace alcanzable —**una
+variación es una fila de `Ejemplos`, no un step nuevo**— y por eso el
+vocabulario crece cuando aparece una acción nueva, no cuando aparece un valor
+nuevo de una opción.
 
 ## El dato que decidió el diseño
 
@@ -237,25 +241,27 @@ steps con >3 scenarios. Cumple con holgura, y es el patrón a repetir: un
 `Dado` genérico (el cuerpo) + un `Entonces` del dominio + docstrings para los
 datos.
 
-## El check mecánico
+## El check mecánico (retirado con la migración)
 
-`bun run check-steps` (`tools/check-steps.ts`), en `pre-commit` vía
-lint-staged. Falla si:
+`bun run check-steps` vigilaba el vocabulario durante la migración: steps sin
+definir, steps huérfanos, keywords inglesas, fragmentación y el presupuesto de
+300. **Se eliminó al cerrarse la migración**, junto con `check-tautologias` y
+`check-estaticos`, que existían para lo mismo: sostener a la vez una suite de
+`bun:test` y una de Gherkin.
 
-| Fallo | Por qué importa |
-|---|---|
-| Un step se usa y no existe | Es la **trampa 1 del #2543**: cucumber lo reporta como `undefined` **sin error**, el suite queda verde y no comprueba nada |
-| Un step se define y no se usa | Vocabulario que se diseña y nadie ejerce. El presupuesto de 300 se evapora |
-| Hay keywords inglesas en un `.feature` | El dialecto es `es`; `Feature:`/`Given:` es un descuido |
-| Un feature con ≥3 scenarios necesita >10 steps | El criterio de aceptación del issue, comprobado mecánicamente |
-| El catálogo pasa de 400 steps | El presupuesto del issue |
+Lo que se conserva del check es lo único que cucumber ya hace por su cuenta:
+`cucumber-js --dry-run` parsea los features y reporta los steps sin definir con
+`archivo:línea`. Se puede usar como puerta de una línea cuando haga falta:
 
-Verificado en las dos direcciones: detecta los cuatro fallos y pasa limpio
-sobre el estado actual (`37 invocaciones · 17 definidos · 0 sin definir · 0
-huérfanos`).
+```sh
+bunx --no-install cucumber-js --dry-run --format summary 2>&1 | grep -qE '[0-9]+ undefined' && exit 1
+```
 
-**ponytail:** parsea Gherkin con regex, no con `@cucumber/gherkin` (que ya
-está en `node_modules`). El parser real daría etiquetado de columnas y
-tracking fino de `Y`/`E`; la regex cubre lo que este repo usa hoy. Si un
-`.feature` futuro usa algo que la regex no entiende, el check avisa en vez de
-mentir — y en ese momento se cambia por el parser de verdad.
+(`--dry-run` sale con 0 aunque encuentre steps indefinidos, así que el `grep`
+es lo que convierte la salida en un código de error.)
+
+Los otros tres fallos —steps huérfanos, keywords inglesas, fragmentación— eran
+medidas de la migración, no garantías del producto. Un catálogo con 1.100 steps
+ya no es el problema que era: la regla que lo evita sigue siendo la de arriba,
+las filas de `Ejemplos`.
+

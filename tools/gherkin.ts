@@ -67,7 +67,10 @@ function forcedFromEnv(): Partial<Record<Capability, boolean>> | undefined {
 const available = await detectCapabilities(forcedFromEnv());
 const omitir = evaluate(featureFiles(FEATURES), available);
 
-const args = ['cucumber-js'];
+// `bunx`, no `cucumber-js`: el shim de node_modules/.bin lleva shebang
+// `#!/usr/bin/env node`, así que lanzarlo directo exige node en el PATH aunque
+// todo el repo sea bun. Con `bunx` lo corre el propio bun.
+const args = ['bunx', 'cucumber-js'];
 const filtro = tagFilter(omitir);
 if (filtro !== '') args.push('--tags', filtro);
 for (const arg of process.argv.slice(2)) args.push(arg);

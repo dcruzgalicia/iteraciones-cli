@@ -1,4 +1,4 @@
-import { collectCover } from '../builder/export/cover-image.js';
+import { collectCover } from '../builder/export.js';
 import { BuildError } from '../lib/errors.js';
 import { fail, logSuccess } from '../lib/logger.js';
 import { resolvePath } from '../lib/paths.js';

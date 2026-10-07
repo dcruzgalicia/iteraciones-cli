@@ -4,7 +4,7 @@ import type { SiteConfig } from '../config/config-schema.js';
 import { killInFlightProcesses, mapWithConcurrency } from '../lib/run.js';
 import { notePdfSlots } from '../lib/script-recorder.js';
 import type { BuildMetadata, WorkSets } from './build-planner.js';
-import { generateCoverImages } from './export/cover-image.js';
+import { generateCoverImages } from './export.js';
 import { PDF_WORK_BASE } from './output-layout.js';
 import { createPdfConsumer } from './pdf-pool.js';
 import { processDocumentFormats } from './pipeline-formats.js';

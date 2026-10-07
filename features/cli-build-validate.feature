@@ -149,7 +149,7 @@ Característica: build y validate dicen lo mismo
       bibliography: refs/no-existe.bib
       """
       Cuando hago un build del proyecto
-      Y el comando termina con el código de salida 1
+      Entonces el comando termina con el código de salida 1
       Y build y validate dicen 'bibliography: "refs/no-existe.bib" no encontrado en el proyecto'
 
     Escenario: Una clave desconocida en la configuración
@@ -187,7 +187,7 @@ Característica: build y validate dicen lo mismo
       language: es-MX
       luaFilters: [filters/no-existe.lua]
       """
-      Y build y validate dicen "no encontrado en el proyecto" exactamente una vez
+      Entonces build y validate dicen "no encontrado en el proyecto" exactamente una vez
 
     Escenario: Una fecha que no es ISO
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -201,7 +201,7 @@ Característica: build y validate dicen lo mismo
 
       Contenido.
       """
-      Y build y validate dicen 'date" no usa el formato ISO'
+      Entonces build y validate dicen 'date" no usa el formato ISO'
       Y build y validate dicen "campos de frontmatter ignorados"
       Y el build termina con el código de salida 0
       Y validate termina con el código de salida 0
@@ -220,7 +220,7 @@ Característica: build y validate dicen lo mismo
 
       texto
       """
-      Y build y validate dicen 'línea 7 con ":" suelta'
+      Entonces build y validate dicen 'línea 7 con ":" suelta'
       Y build y validate dicen '"::" (espacio vertical) o ":;" (sin indentación)'
 
     Escenario: Un documento sin título
@@ -233,7 +233,7 @@ Característica: build y validate dicen lo mismo
 
       Contenido.
       """
-      Y build y validate dicen 'no tiene título en el frontmatter; se usará "Sin título"'
+      Entonces build y validate dicen 'no tiene título en el frontmatter; se usará "Sin título"'
 
   Regla de negocio: Sin pandoc el build aborta al principio
 

@@ -156,7 +156,7 @@ Característica: El frontmatter del documento gana sobre la configuración
       Contenido.
       """
       Cuando hago un build del proyecto
-      Y el archivo "dist/files/test-document.tex" contiene "1 de enero de 2026"
+      Entonces el archivo "dist/files/test-document.tex" contiene "1 de enero de 2026"
 
     Escenario: El showDate del frontmatter gana sobre format.pdf.showDate
       Dado que la raíz del proyecto tiene un proyecto con LaTeX y sin PDF
@@ -172,7 +172,7 @@ Característica: El frontmatter del documento gana sobre la configuración
       Contenido.
       """
       Cuando hago un build del proyecto
-      Y el archivo "dist/files/test-document.tex" contiene "1 de enero de 2026"
+      Entonces el archivo "dist/files/test-document.tex" contiene "1 de enero de 2026"
 
   Regla de negocio: El número de página del frontmatter gana
 

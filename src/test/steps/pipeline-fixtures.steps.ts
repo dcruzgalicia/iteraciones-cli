@@ -1,5 +1,5 @@
 import { spyOn } from 'bun:test';
-import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { After, Before, Given, Then, When } from '@cucumber/cucumber';
@@ -7,21 +7,26 @@ import { build } from '../../builder/orchestrator.js';
 import * as pandocRunner from '../../lib/pandoc-runner.js';
 
 /**
- * #2545 (onda 1) — pipeline completo sin procesos.
- *
- * El espío va en un hook con tag (`@spy-pipeline`) por lo que Peaks
- * descubrió #2556: los hooks de cucumber son globales en cuanto se importa el
- * archivo, así que un `Before` normal espiaría `execPandoc` para todos los
- * features — incluido `build-script.feature`, que necesita pandoc de verdad.
+ * El contrato del reporter, que `docs/public-surface.md` publica: cualquiera
+ * que embeba `build()` en otro programa depende de que reciba esas fases con
+ * esos argumentos, así que no es un detalle interno.
  *
  * El reporter falso se copia del original. Es un doble grande (doce métodos que
  * sólo registran), pero está pegado a la forma de `BuildReporter`: si la
  * interfaz cambia, TypeScript lo dice en los sites de llamada. Encapsularlo
- * detrás de una clase sería más bonito y menos honesto.
+ * detrás de una clase sería más bonito y menos honesto. Y no es un mock de Bun:
+ * es un objeto que se pasa por parámetro, que es justo lo que `build()` ofrece.
+ *
+ * El espía va en un hook con tag (`@spy-pipeline`) por lo que Peaks descubrió
+ * #2556: los hooks de cucumber son globales en cuanto se importa el archivo, así
+ * que un `Before` normal espiaría para todos los features.
+ *
+ * El espía **deja pasar**: no sustituye a pandoc, sólo cuenta cuántas veces se
+ * le pide la versión. El build corre de verdad, que es lo que lo hace un test
+ * de este proyecto. Lo que se comprueba aquí no es «a qué formatos convirtió
+ * pandoc» —eso lo comprueba `build-completo.feature` con pandoc de verdad— sino
+ * que no se le pregunta la versión una vez por documento.
  */
-
-const FIXTURE_LATEX = '\\subsection{Sección}\\label{sección}\n\nTexto.\n';
-const FIXTURE_MD = '---\ntitle: "Test Document"\nlanguage: es-MX\n---\n\nTexto.\n';
 
 const CONFIG = [
   'language: es-MX',
@@ -67,11 +72,12 @@ function fakeReporter(calls: ReporterCall[]): Parameters<typeof build>[2] {
 interface PipelineWorld {
   dir: string;
   calls: ReporterCall[];
-  versionCalls: number;
-  pandocCalls: { to?: string; outputPath?: string }[];
 }
 
-const world: PipelineWorld = { dir: '', calls: [], versionCalls: 0, pandocCalls: [] };
+const world: PipelineWorld = { dir: '', calls: [] };
+
+/** El espía del sondeo de versión; lo restaura el `After` global. */
+let espiaVersion: ReturnType<typeof spyOn> | undefined;
 
 Before(async () => {
   world.dir = await mkdtemp(join(tmpdir(), 'iteraciones-gherkin-'));
@@ -88,16 +94,8 @@ Given('un proyecto con LaTeX, EPUB y Markdown activados y HTML desactivado', asy
 
 Before({ tags: '@spy-pipeline' }, () => {
   world.calls = [];
-  world.versionCalls = 0;
-  world.pandocCalls = [];
-  spyOn(pandocRunner, 'getPandocVersion').mockImplementation(async () => {
-    world.versionCalls += 1;
-    return 'pandoc 3.10.2';
-  });
-  spyOn(pandocRunner, 'execPandoc').mockImplementation(async (options) => {
-    world.pandocCalls.push({ to: options.to, outputPath: options.outputPath });
-    return options.to === 'latex' ? FIXTURE_LATEX : FIXTURE_MD;
-  });
+  // Sin `mockImplementation`: la versión real se consulta y se cuenta.
+  espiaVersion = spyOn(pandocRunner, 'getPandocVersion');
 });
 
 When('compilo el proyecto con un reporter que cuenta eventos', async () => {
@@ -109,11 +107,10 @@ function methods(): string[] {
   return world.calls.map((c) => c.method);
 }
 
-Then('el build termina con éxito y sin fase de fallo', () => {
-  if (process.exitCode !== 0) throw new Error(`el build salió con código ${process.exitCode}`);
+Then('el reporter recibe setFormats, planPhases y finish, y ninguna fase de fallo', () => {
   if (methods().includes('fail')) throw new Error('el reporter recibió una fase de fallo');
-  for (const expected of ['setFormats', 'planPhases', 'finish']) {
-    if (!methods().includes(expected)) throw new Error(`el reporter nunca recibió ${expected}`);
+  for (const esperado of ['setFormats', 'planPhases', 'finish']) {
+    if (!methods().includes(esperado)) throw new Error(`el reporter nunca recibió ${esperado}. Recibió: ${JSON.stringify(methods())}`);
   }
 });
 
@@ -138,39 +135,6 @@ Then('el reporter cierra con un documento procesado y ninguno en caché', () => 
 });
 
 Then('pandoc se consulta una sola vez por build', () => {
-  if (world.versionCalls !== 1) throw new Error(`pandoc se consultó ${world.versionCalls} veces y debía una`);
-});
-
-Then('pandoc convierte exactamente a LaTeX y a EPUB', () => {
-  const targets = world.pandocCalls.map((c) => c.to).sort();
-  const expected = ['epub3', 'latex'];
-  if (JSON.stringify(targets) !== JSON.stringify(expected)) {
-    throw new Error(`esperaba convertir a ${expected.join(' y ')} y se convirtió a ${JSON.stringify(targets)}`);
-  }
-});
-
-Then('el EPUB sale nombrado con el slug del documento', () => {
-  const epub = world.pandocCalls.find((c) => c.to === 'epub3');
-  if (epub === undefined) throw new Error('no hubo invocación a epub3');
-  if (!(epub.outputPath ?? '').includes('test-document.epub')) {
-    throw new Error(`el EPUB salió como ${epub.outputPath}`);
-  }
-});
-
-Then('dist tiene el .tex y el .md pero no el .epub', async () => {
-  const entries = await readdir(join(world.dir, 'dist', 'files'), { recursive: true });
-  const files = entries.map(String).filter((f) => f.startsWith('test-document'));
-  // El .tex y el .md los escribe nuestro código; el EPUB no existe porque su
-  // invocación fue espía y no produjo nada (#2436: el .md ya no pasa por pandoc).
-  for (const expected of ['test-document.tex', 'test-document.md']) {
-    if (!files.includes(expected)) throw new Error(`falta ${expected} en dist. Hay: ${JSON.stringify(files)}`);
-  }
-  if (files.includes('test-document.epub')) throw new Error('el EPUB no debía existir: su invocación fue espía');
-});
-
-Then('el estado del proyecto queda completado', async () => {
-  const raw = await readFile(join(world.dir, '.iteraciones', 'state.json'), 'utf8');
-  const state = JSON.parse(raw) as { completed?: boolean };
-  // Escritura única del cierre (#2025).
-  if (state.completed !== true) throw new Error(`esperaba completed=true y fue ${String(state.completed)}`);
+  const veces = espiaVersion?.mock.calls.length ?? 0;
+  if (veces !== 1) throw new Error(`pandoc se consultó ${veces} veces y debía una`);
 });

@@ -4,7 +4,7 @@ import { CAPABILITIES, type Capability, SKIP_REASONS, TAG_PREFIX } from './capab
  * #2549 — el informe de "lo NO verificado en esta máquina".
  *
  * Contrato copiado del de `bun:test` (`formatSkipReport` en
- * `src/__tests__/helpers.ts`), porque la decisión que hay que conservar es
+ * `src/test/helpers.ts`), porque la decisión que hay que conservar es
  * exacta: **la suite nunca falla por entorno ausente, pero toda corrida dice
  * qué no se cubrió.**
  *

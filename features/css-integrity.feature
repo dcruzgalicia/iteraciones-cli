@@ -35,6 +35,52 @@ Característica: El CSS se compila sólo con lo que aparece en el HTML
     Cuando compilo el CSS con acento "color-inventado"
     Entonces la compilación falla diciendo que el acento es desconocido
 
+  Regla de negocio: Cada acento llega al CSS con sus once tonos
+
+    # El acento es la única palanca que la config mete en el `@theme`, y son
+    # veintiséis valores. En prosa serían veintiséis pasos nuevos; en tabla, una
+    # fila por paleta y el mismo step definition.
+
+    # La lista no es decorativa: `KNOWN_ACCENT_COLORS` sale de las claves de
+    # `ACCENT_PALETTES`, así que una paleta nueva sin fila aquí es un valor de
+    # config que nadie sabe si llega al CSS. `build-assets.ts` además hashea la
+    # paleta elegida, así que un valor que no llega también cambia el hash y con
+    # él la caché de todos los builds.
+
+    Esquema del escenario: La paleta elegida es la que se compila
+      Dado un proyecto con un HTML de clases "text-accent-500"
+      Cuando compilo el CSS con acento "<acento>"
+      Entonces el CSS lleva el acento "<acento>"
+
+      Ejemplos:
+        | acento   |
+        | slate    |
+        | gray     |
+        | zinc     |
+        | neutral  |
+        | stone    |
+        | red      |
+        | orange   |
+        | amber    |
+        | yellow   |
+        | lime     |
+        | green    |
+        | emerald  |
+        | teal     |
+        | cyan     |
+        | sky      |
+        | blue     |
+        | indigo   |
+        | violet   |
+        | purple   |
+        | fuchsia  |
+        | pink     |
+        | rose     |
+        | taupe    |
+        | mauve    |
+        | mist     |
+        | olive    |
+
   Regla de negocio: Las tarjetas comparten diseño (#2487, #2488)
     Las tres copias —file, collection y creator— arrancan del mismo diseño, así
     que las invariantes se comprueban en todas. #2488: viven en `html/<type>/`,

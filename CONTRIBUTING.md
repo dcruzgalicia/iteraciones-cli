@@ -20,17 +20,35 @@ Verifica que todo funcione:
 
 ```bash
 bun run typecheck   # tsc --noEmit
-bun test            # suite completa
+bun run gherkin     # suite completa (cucumber)
 bun run src/bin.ts build --project-root /ruta/a/proyecto
 ```
 
-Los hooks de Husky ejecutan Biome (lint-staged) y typecheck automáticamente antes de cada commit; la suite completa de tests (`bun test`) corre en el hook de pre-push, antes de publicar la rama.
+Los hooks de Husky ejecutan Biome (lint-staged) y typecheck automáticamente antes de cada commit; la suite completa de tests (`bun run gherkin`) corre en el hook de pre-push, antes de publicar la rama.
+
+### La salida de la suite
+
+`bun run gherkin` imprime **el resumen y los fallos, nada más**: seis líneas para
+1043 escenarios. El CLI es un orquestador y escribe en la terminal mientras
+compila, así que sin silencio la corrida escupía cientos de `✔ Documentos
+encontrados` y `⚠ [config]` que no son el resultado de nada. El silencio está en
+un hook de cucumber (`src/test/steps/00-higiene-del-mundo.steps.ts`), no en el
+formatter.
+
+Dos cosas siguen visibles: los escenarios que fallan, con su mensaje y su stack,
+y el informe de lo que la máquina no pudo verificar.
+
+Para ver la salida del CLI mientras depuras:
+
+```bash
+ITERACIONES_VERBOSE=1 bun run gherkin
+```
 
 ## Estructura del proyecto
 
 src/
 ├── bin.ts                   # Entry point (#!/usr/bin/env bun)
-├── __tests__/               # Tests unitarios (bun test)
+├── test/                   # Steps y world de Gherkin (cucumber)
 ├── builder/                 # Pipeline de construcción
 │   ├── orchestrator.ts      # Orquestador principal (build())
 │   ├── build-planner.ts     # Planificador: metadatos de invalidación
@@ -143,7 +161,7 @@ docs(config): documenta bloque editorial y export en frontmatter
    git fetch origin
    git rebase origin/main
    bun run typecheck
-   bun test
+   bun run gherkin
    ```
 
 5. **Abre el PR**:
@@ -177,7 +195,7 @@ Las decisiones de arquitectura se validan **en rama y contra contenido real** an
 - **TypeScript:** `verbatimModuleSyntax: true` — usar `import type` para solo tipos. Imports con extensión `.js`.
 - **Nombrado:** archivos en `kebab-case.ts`, funciones en `camelCase`, tipos/interfaces en `PascalCase`. Prefijos: `run*` (handlers de comandos CLI), `exec*` (ejecución de procesos con captura de salida), `check*` (checks de doctor con `CheckResult`), `get*` (lectores simples), `build*` (constructores de contexto) y `resolve*` (path resolvers).
 - **Errores:** Usar `logError()` / `logWarning()` de `src/lib/logger.ts`. No usar `console.error`.
-- **Tests:** `bun test`. Los tests deben ser independientes y no requerir pandoc a menos que sea estrictamente necesario. La suite completa (incluidos `cli-layer` y `lua-filters`) requiere pandoc instalado; sin él, los tests que lo necesitan se marcan como skip y el resto corre.
+- **Tests:** `bun run gherkin` (cucumber; los features están en `features/` y los steps en `src/test/steps/`). Los tests deben ser independientes y no requerir pandoc a menos que sea estrictamente necesario. La suite completa (incluidos `cli-layer` y `lua-filters`) requiere pandoc instalado; sin él, los tests que lo necesitan se marcan como skip y el resto corre.
 - **Linting:** Biome (espacios, `lineWidth: 150`, comillas simples). Se ejecuta automáticamente en pre-commit.
 
 ## Cómo se invalida la caché de outputs
@@ -197,7 +215,7 @@ Implicaciones:
 - Los archivos fuera de `dist/files` (o que no sean `.html`) no aportan clases.
 - Cuando cambies `styles.css`, el template HTML (`src/lib/resources/html/skeleton.html`) o las clases del post-procesamiento de `html-composer.ts`, no hay que regenerar nada: el próximo build lo recoge.
 
-El test `src/__tests__/css-integrity.test.ts` compila el CSS sobre un fixture controlado y verifica clases presentes/ausentes y el acento aplicado.
+El feature `features/css-integrity.feature` compila el CSS sobre un fixture controlado y verifica clases presentes/ausentes y el acento aplicado.
 
 ## Cómo agregar un filter
 
@@ -219,7 +237,7 @@ Para agregar uno:
    - El **nombre completo** es `<capa>/<prioridad>-<nombre>` (ej: `latex/02-dictum`); es el que se usa en `disabled-filters` y se muestra en `iteraciones list-filters`
 2. Escribe la primera línea como comentario `-- descripción corta`: se muestra en `iteraciones list-filters` (la lee `getBuiltinLuaFilterInfos()`)
 3. Implementa las funciones de filtro de pandoc (`Pandoc(doc)`, `Div(div)`, `Para(para)`, etc.) que transforman el AST
-4. Agrega tests en `src/__tests__/lua-filters.test.ts` (los tests que invocan pandoc requieren que esté instalado; los de resolución de nombres no)
+4. Agrega escenarios en `features/filtros-lua.feature` (los tests que invocan pandoc requieren que esté instalado; los de resolución de nombres no)
 
 > La lista de filters se deriva del filesystem (`getBuiltinLuaFilterInfos()` en `src/builder/filter-resolver.ts`): crear el `.lua` es suficiente, no hay que registrar el nombre en ninguna lista. La descripción que muestra `iteraciones list-filters` son las líneas de comentario iniciales del archivo (unidas con espacio, punto 2).
 

@@ -7,7 +7,7 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!src/lib/resources/html", "!src/__tests__/fixtures"]
+    "includes": ["**", "!src/lib/resources/html", "!src/test/fixtures"]
   },
   "formatter": {
     "enabled": true,

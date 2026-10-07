@@ -44,7 +44,7 @@ Característica: new crea el documento e infiere el título
     Escenario: El documento nuevo trae la clave date
       Dado que la raíz del proyecto está vacía
       Cuando creo el documento "posts/mi-articulo"
-      Y el archivo "posts/mi-articulo.md" tiene la clave "date:"
+      Entonces el archivo "posts/mi-articulo.md" tiene la clave "date:"
 
   Regla de negocio: Los ejemplos del lenguaje van en el cuerpo
 
@@ -79,7 +79,7 @@ Característica: new crea el documento e infiere el título
     Esquema del escenario: El título "<rareza>" se escribe como YAML válido
       Dado que la raíz del proyecto está vacía
       Cuando creo el documento "mi-articulo" con el título "<título>"
-      Y el frontmatter de "mi-articulo.md" declara el título "<título>"
+      Entonces el frontmatter de "mi-articulo.md" declara el título "<título>"
 
       Ejemplos:
         | rareza                   | título                            |
@@ -100,7 +100,7 @@ Característica: new crea el documento e infiere el título
     Escenario: El título El "jardín" de las delicias se escribe como YAML válido
       Dado que la raíz del proyecto está vacía
       Cuando creo el documento "mi-articulo" con un título con comillas
-      Y el frontmatter de "mi-articulo.md" declara ese título con comillas
+      Entonces el frontmatter de "mi-articulo.md" declara ese título con comillas
 
   Regla de negocio: Un nombre con acentos no dispara un aviso falso
 
@@ -151,7 +151,7 @@ Característica: new crea el documento e infiere el título
     Esquema del escenario: Un nombre rechazado no deja ningún archivo
       Dado que la raíz del proyecto está vacía
       Cuando creo el documento "<argumento>"
-      Y el archivo "<archivo>" no existe
+      Entonces el archivo "<archivo>" no existe
 
       Ejemplos:
         | argumento  | archivo      |

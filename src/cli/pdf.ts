@@ -1,4 +1,4 @@
-import { collectPdf } from '../builder/export/runner.js';
+import { collectPdf } from '../builder/export.js';
 import { fail, logSuccess } from '../lib/logger.js';
 import { resolvePath } from '../lib/paths.js';
 

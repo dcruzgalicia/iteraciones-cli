@@ -1,5 +1,0 @@
-language: es-MX
-format:
-  pdf:
-    disabledPreambleFilters:
-      - 97-eso-pic
