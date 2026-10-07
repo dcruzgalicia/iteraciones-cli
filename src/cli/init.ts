@@ -37,16 +37,12 @@ const DEFAULT_INDEX = [
   '',
   'Según @ejemplo2024, el uso de citekeys facilita la gestión de referencias.',
   '',
-  '> Consulta docs/ejemplos.md en el repositorio de iteraciones-cli',
-  '> (https://github.com/dcruzgalicia/iteraciones-cli) para ver todos los elementos',
-  '> (verse, ::, listas, código).',
 ].join('\n');
 
 const quote = (value: string): string => JSON.stringify(value);
 
 function buildDefaultConfig(): string {
   return [
-    '# Configuración del proyecto. Consulta docs/configuration.md para ver todas las opciones.',
     `language: ${DEFAULT_SITE_CONFIG.language}`,
     `toc: ${DEFAULT_SITE_CONFIG.toc}`,
     'format:',

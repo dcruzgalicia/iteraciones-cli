@@ -24,10 +24,10 @@ Característica: El argv llega entero hasta el comando
       Y el archivo ".gitignore" contiene "build.sh"
       Y el archivo ".gitignore" contiene "visual/**/*-page-*-diff.png"
 
-    Escenario: El config que genera init es mínimo y remite a la documentación
+    Escenario: El config que genera init es mínimo y válido
       Dado que la raíz del proyecto está vacía
       Cuando parseo el comando "init" sobre la raíz del proyecto
-      Entonces el archivo "iteraciones.config.yaml" contiene "# Configuración del proyecto. Consulta docs/configuration.md"
+      Entonces el archivo "iteraciones.config.yaml" contiene "language: es-MX"
       Y el archivo "iteraciones.config.yaml" contiene "theme: dark"
       Y el archivo "iteraciones.config.yaml" tiene como máximo 25 líneas
       Y el proyecto recién creado pasa validate
