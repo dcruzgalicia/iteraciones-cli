@@ -12,7 +12,7 @@ import { todayIso } from '../lib/date.js';
 import { BUILD_ERROR_CODES, BuildError, ConfigError, ConversionError, PANDOC_ERROR_CODES } from '../lib/errors.js';
 import { logError, logInfo, logSuccess } from '../lib/logger.js';
 import { getPandocVersion } from '../lib/pandoc-runner.js';
-import { resolvePath } from '../lib/paths.js';
+import { isDir, resolvePath } from '../lib/paths.js';
 import { ProcessSpawnError } from '../lib/run.js';
 import type { CheckResult } from './doctor/system-checks.js';
 import { collectChecks, doctorEnvironment } from './doctor.js';
@@ -179,9 +179,7 @@ async function buildProjectInfo(cwd: string): Promise<string[]> {
   const pandocVersion = await getPandocVersion().catch(() => 'no disponible');
   const state = await loadStateFile(cwd);
   const distDir = state?.outputDir ?? join(cwd, DIST_FILES_DIR);
-  const distExists = await stat(distDir)
-    .then((s) => s.isDirectory())
-    .catch(() => false);
+  const distExists = await isDir(distDir);
   const activeFormats = computeActiveFormats(config.format);
   const disabledFilters = config.disabledFilters?.length ? config.disabledFilters.join(', ') : '(ninguno)';
   const userWrotePreambleList = presentKeys.has('format.pdf.disabledPreambleFilters') === true || presentKeys.has('disabledPreambleFilters') === true;

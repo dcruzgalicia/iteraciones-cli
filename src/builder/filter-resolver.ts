@@ -1,6 +1,7 @@
 import { basename, dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { logWarning } from '../lib/logger.js';
+import { isDir } from '../lib/paths.js';
 import { readLeadingComments } from './preamble-loader.js';
 
 const LUA_FILTERS_ROOT = join(import.meta.dir, '../lib/resources/filters');
@@ -124,17 +125,9 @@ interface LuaFilterInfo {
   description: string;
 }
 
-async function dirExists(path: string): Promise<boolean> {
-  try {
-    return (await Bun.file(path).stat()).isDirectory();
-  } catch {
-    return false;
-  }
-}
-
 export async function getBuiltinLuaFilterInfos(): Promise<LuaFilterInfo[]> {
   const infos: LuaFilterInfo[] = [];
-  if (!(await dirExists(LUA_FILTERS_ROOT))) return infos;
+  if (!(await isDir(LUA_FILTERS_ROOT))) return infos;
   const glob = new Bun.Glob('**/*.lua');
   for await (const rel of glob.scan({ cwd: LUA_FILTERS_ROOT, onlyFiles: true })) {
     if (rel.startsWith('internal/') || rel.includes('/shared/')) continue;

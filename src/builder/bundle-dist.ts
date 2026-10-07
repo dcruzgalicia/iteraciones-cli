@@ -1,6 +1,7 @@
-import { cp, mkdir, rm, stat, writeFile } from 'node:fs/promises';
-import { dirname, isAbsolute, join, relative } from 'node:path';
+import { cp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { dirname, join, relative } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
+import { isDir, isInside } from '../lib/paths.js';
 import { recordSupportCommand } from '../lib/script-recorder.js';
 import { pruneEmptyDirs } from './cleanup.js';
 import { projectPreambleDirs } from './preamble-loader.js';
@@ -19,18 +20,6 @@ import { resolveBibOptions } from './state-bib.js';
 const CONFIG_FILE = 'iteraciones.config.yaml';
 const FILTERS_DIR = 'filters';
 const MANIFEST = join('.iteraciones', 'bundle.json');
-
-async function isDir(path: string): Promise<boolean> {
-  return stat(path).then(
-    (s) => s.isDirectory(),
-    () => false,
-  );
-}
-
-function isInside(root: string, abs: string): boolean {
-  const rel = relative(root, abs);
-  return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel);
-}
 
 /** Rutas relativas a la raíz del proyecto que `bundle` replica en la salida. */
 export async function bundleTargets(cwd: string, config: SiteConfig): Promise<string[]> {

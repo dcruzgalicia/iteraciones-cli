@@ -6,7 +6,7 @@ import { BuildError } from '../lib/errors.js';
 import { fmStringList, fmTrimmedString, resolveBooleanField, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
-import { posix } from '../lib/paths.js';
+import { isInside, posix } from '../lib/paths.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import type { LuaFilterGroup } from './filter-resolver.js';
 import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
@@ -423,11 +423,6 @@ export function relativizeTexForDist(tex: string, texDir: string, projectRoot: s
 }
 
 const IMAGE_EXTS = new Set(['.bmp', '.gif', '.jpeg', '.jpg', '.pdf', '.png', '.svg', '.tif', '.tiff', '.webp']);
-
-function isInside(root: string, abs: string): boolean {
-  const rel = relative(root, abs);
-  return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel);
-}
 
 /**
  * #2450 — a dónde apunta el .tex de dist un fichero que vive bajo la raíz del
