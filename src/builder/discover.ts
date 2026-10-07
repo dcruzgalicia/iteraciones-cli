@@ -17,6 +17,8 @@ export type { FrontmatterIssue } from './discover-frontmatter.js';
 
 export type SlugComputer = (meta: { title: string; creator: string[] }, opts: { fallbackPath: string; maxCreators?: number }) => string;
 
+const FILE_IO_CONCURRENCY = Math.max(1, cpus().length - 1);
+
 export type DiscoverResultAndPending = DiscoverResult & { pendingState: BuildState | null };
 
 interface DiscoverResult {
@@ -84,7 +86,6 @@ export async function discover(cwd: string, options: DiscoverOptions): Promise<D
   const thisBuildStartedAt = Date.now();
   let touchedCount = 0;
 
-  const FILE_IO_CONCURRENCY = Math.max(1, cpus().length - 1);
   await mapWithConcurrency(relativePaths, FILE_IO_CONCURRENCY, async (relativePath) => {
     const { mtime, size } = await statDocument(cwd, relativePath);
     const cached = useCache ? discoveryIndex.get(relativePath) : undefined;
@@ -125,7 +126,6 @@ export async function loadSlugIndex(cwd: string): Promise<Map<string, DiscoveryE
   const relativePaths = await listMarkdownDocuments(cwd);
   const index = new Map<string, DiscoveryEntry>();
   const issues: FrontmatterIssue[] = [];
-  const FILE_IO_CONCURRENCY = Math.max(1, cpus().length - 1);
 
   await runWithWarningSink(
     () => {},
