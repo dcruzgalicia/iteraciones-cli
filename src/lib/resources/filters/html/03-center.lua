@@ -1,6 +1,3 @@
--- Convierte Div.center a <div class="center"> (formato HTML).
--- Uso: pandoc --from json --to html5 --lua-filter html/03-center.lua
-
 function Div(div)
   local is_center = false
   for _, c in ipairs(div.classes) do

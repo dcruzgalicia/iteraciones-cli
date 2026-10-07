@@ -1,20 +1,3 @@
--- Convierte los campos de frontmatter multilinea (subtitle, extratitle,
--- frontispiece, titlehead, subject, dedication, uppertitleback,
--- lowertitleback, publishers, colophon) a LaTeX para la portada, las páginas
--- de título internas y el colofón final. subject y publishers aceptan un
--- array de strings (como author): se unen con ', '. Solo corre en la pasada
--- latex (en HTML los campos se ignoran o los serializa el compositor HTML
--- con \n → espacio). titleImage (imagen de portada) no es contenido
--- markdown: la ruta pasa literal como RawInline latex.
---
--- El valor llega como MetaBlocks (frontmatter YAML |: los párrafos ya son
--- bloques markdown) o MetaInlines (string simple). Se serializa con
--- pandoc.write: el doble espacio al final de línea → \\, y un párrafo con
--- solo :: (o :;) → \vspace{\baselineskip} (+ \noindent). El resultado se
--- guarda como MetaInlines(RawInline('latex')): el template lo emite sin
--- re-escape.
--- Uso: pandoc --from markdown --to latex --lua-filter latex/07-titlepages.lua
-
 local TITLE_PAGE_FIELDS = {
   'subtitle',
   'extratitle',
@@ -30,11 +13,6 @@ local TITLE_PAGE_FIELDS = {
   'collectionCreatorPrefix',
 }
 
--- subject, publishers y collectionCreator aceptan un solo valor o un array
--- (como author): los items se unen con ', '. Pandoc parsea cada item del array
--- como markdown (MetaInlines → lista de inlines) o lo deja como string
--- (MetaString): se aceptan ambos, extrayendo el texto de inlines Str/Space. Si
--- algún item es complejo (markdown con formato), se deja el valor original.
 local LIST_JOIN_FIELDS = { subject = true, publishers = true, collectionCreator = true }
 
 local function append_inline_text(parts, inl)
@@ -74,8 +52,6 @@ local BLOCK_TYPES = {
   Figure = true,
 }
 
--- true si el párrafo es exactamente '::' o ':;' (espacio vertical del
--- vocabulario semántico, escrito como línea sola en el frontmatter).
 local function para_is_spacer(para)
   local parts = {}
   for _, inl in ipairs(para.content) do
@@ -89,10 +65,6 @@ local function para_is_spacer(para)
   return joined == '::' or joined == ':;'
 end
 
--- Convierte el valor de metadata a una lista de bloques: MetaBlocks
--- (frontmatter |) tal cual; MetaInlines (string simple) envuelto en Para.
--- Los elementos Image se convierten a RawInline(\includegraphics) para
--- que pandoc.write los serialize correctamente.
 local function image_to_latex(el)
   local path = el.src
   local attrs = ''
@@ -147,8 +119,6 @@ local function meta_to_blocks(meta)
   return blocks
 end
 
--- Convierte Span con clase .mbox a \mbox{...} (RawInline). pandoc.write no
--- conoce esta clase y la descarta; se pre-procesa antes de serializar.
 local function mbox_span_to_rawlatex(span)
   local body = pandoc.write(pandoc.Pandoc({ pandoc.Para(span.content) }), 'latex')
   body = body:gsub('%s+$', '')
@@ -252,10 +222,6 @@ local function textsize_div_to_rawlatex(div)
   return pandoc.RawBlock('latex', '{\\' .. cls .. ' ' .. body .. '}')
 end
 
--- Serializa los bloques a LaTeX: los párrafos "::" se convierten a RawBlock
--- antes de escribir (pandoc.write maneja los escapes, los LineBreak del
--- doble espacio y las comillas). Los Div con clase .dictum se convierten a
--- \dictum[author]{text} de KOMA-Script.
 local function serialize_titleback(blocks)
   local out = {}
   for _, b in ipairs(blocks) do
@@ -333,11 +299,6 @@ local function serialize_titleback(blocks)
   return latex:gsub('%s+$', '')
 end
 
--- titleImage y publisherImage NO son contenido markdown: son rutas de
--- archivo que deben llegar literal a \includegraphics. El writer de pandoc
--- escaparía el guion bajo (mi_imagen.jpg → mi\_imagen.jpg) y rompería la
--- búsqueda del archivo. Acepta MetaString (--metadata del CLI) o inlines
--- Str/Space (frontmatter).
 local RAW_PATH_FIELDS = { 'titleImage', 'publisherImage', 'startpaper' }
 
 local function meta_to_rawpath(meta)

@@ -1,28 +1,3 @@
-% Personaliza \maketitle: 2 baselineskip antes de title/author/date, titulo en
-% mayusculas, y las páginas de título internas (extratitle, uppertitleback,
-% lowertitleback, dedication) definidas en 28-titlepages.tex.
-%
-% Orden de páginas (cada elemento en recto con verso en blanco solo en
-% twoside+openright; en oneside/openany van encadenados sin blanks):
-%   guarda del startpaper (pág 1, solo si startpaper) → courtesy page (solo si
-%   courtepage) → extratitle (pág impar, bloque del 75% del ancho centrado con
-%   \vspace*{7\baselineskip} antes, solo si definido) → frontispiece (pág
-%   par en twoside, siguiente a extratitle o con impar anterior en blanco si
-%   no hay extratitle)
-%   → portada (impar) → titlebacks (reverso de la portada; el \vfill ancla el
-%   lowertitleback al fondo, sin minipage) → dedication (página impar en
-%   twoside, ancho completo justificado, centrado verticalmente) → blank verso
-%   (solo twoside+openright, el contenido siguiente empieza en página impar).
-% \titlepage@next/\titlepage@nextdouble (28-titlepages.tex): \clearpage +
-% \thispagestyle{empty} (+ página impar en twoside), SIN el \setparsizes
-% de \next@tpage (que dejaría \parindent a 0 en todo el documento).
-%
-% KOMA define \subtitle con \newcommand* (no-long): una línea en blanco en el
-% argumento (párrafo del frontmatter |) rompe la compilación con 'Paragraph
-% ended before \subtitle was complete'. Se redefine como long (\renewcommand
-% sin estrella) para permitir subtítulos multilínea con párrafos.
-% titleImage (campo del frontmatter, solo LaTeX/PDF): imagen que sustituye al
-% texto del título en la portada. graphicx NO venía cargado en el preamble.
 \usepackage{graphicx}
 \makeatletter
 \renewcommand{\subtitle}[1]{\gdef\@subtitle{%
@@ -51,16 +26,7 @@
   }%
 }%
 
-% Render de la imagen de portada con ancho MÁXIMO del 80% del textwidth: se
-% mide el ancho natural con un \sbox; si supera el 80% se escala conservando
-% la proporción, si no se muestra a tamaño natural (no se amplía).
 \newsavebox{\titleimagebox}
-% Render de la imagen de portada con ancho MÁXIMO configurable: #1 (opcional,
-% por defecto 0.8\textwidth) es el ancho máximo y #2 la ruta. Se mide el ancho
-% natural con un \sbox; si supera el máximo se escala conservando la
-% proporción, si no se muestra a tamaño natural (no se amplía). La portada usa
-% el default; la página de extratitle pasa [\extratitlewidth] (100% del ancho
-% del bloque).
 \newcommand{\titleimagerender}[2][0.8\textwidth]{%
   \sbox{\titleimagebox}{\includegraphics{#2}}%
   \ifdim\wd\titleimagebox>#1
@@ -70,11 +36,6 @@
   \fi
 }
 
-% Bloques de las páginas de título con la geometría del dictum (21-dictum.tex):
-% list con márgenes dados (#1 izquierdo, #2 derecho) y sin espaciado extra.
-% #3 es el estilo del párrafo (\centering, \raggedright o vacío = justificado):
-% el extratitle centra su texto.
-% Geometría propia para no crear dependencia con 21-dictum.tex.
 \newcommand*{\extratitlewidth}{0.75\textwidth}%
 \newcommand*{\colophonwidth}{0.75\textwidth}%
 \newcommand{\titlepageblock}[4]{%
@@ -94,43 +55,25 @@
   \end{list}%
 }
 
-% Página en blanco de los elementos previos a la portada (guarda del
-% startpaper, courtesy page): emite el recto y, solo en twoside+openright,
-% también el verso en blanco para que el elemento siguiente caiga en página
-% impar. Cada \null evita que la página sea vacía (\clearpage de una página
-% sin contenido no la emite en algunos casos). Sin número: los layers de
-% scrlayer-scrpage están vacíos hasta que el comando de página se define.
-% \titlepageguards: true si las hojas de guarda existen — 30-startpaper.tex
-% la consulta para dibujar el startpaper SOLO sobre la página 1 cuando esta es
-% la hoja en blanco (sin guardas, sin startpaper en ningún caso).
 \newif\iftitlepageguards
 \newif\ifcourtepage
 \newcommand*{\interventionflag}{}
 \newcommand{\titlepage@blankpage}{%
   \thispagestyle{empty}%
   \null\clearpage
-  % twoside+openright: verso en blanco para que el elemento siguiente caiga
-  % en página impar. oneside u openany: sin verso adicional.
   \if@twoside\if@openright
     \thispagestyle{empty}%
     \null\clearpage
   \fi\fi
 }
 \renewcommand{\maketitle}{%
-  % 1. Guarda del startpaper (pág 1) + verso en blanco si twoside+openright:
-  % solo cuando startpaper está definido. \titlepageguards activa el dibujo
-  % de la imagen en 30-startpaper.tex sobre la página 1.
   \ifx\@startpaper\@empty\else
     \titlepageguardstrue
     \titlepage@blankpage
   \fi
-  % 2. Courtesy page (recto) + verso en blanco si twoside+openright:
-  % autónoma, se emite aunque no haya extratitle.
   \ifcourtepage
     \titlepage@blankpage
   \fi
-  % 3. Extratitle (pág impar, bloque del 75% del ancho centrado con
-  % \vspace*{7\baselineskip} antes).
   \ifx\@extratitle\@empty\else
     \vspace*{7\baselineskip}%
     \titlepageblock
@@ -144,9 +87,6 @@
       \titlepage@next
     \fi
   \fi
-  % Frontispicio: página propia antes de la portada. Si extratitle existe,
-  % va en la página siguiente a él (par en twoside); si no, se asegura
-  % página par con \titlepage@lasteven (el impar anterior queda en blanco).
   \ifx\@frontispiece\@empty\else
     \ifx\@extratitle\@empty
       \titlepage@lasteven
@@ -155,8 +95,6 @@
     {\centering\parindent\z@\@frontispiece\par}%
     \titlepage@next
   \fi
-  % Portada (orden KOMA-Script: titlehead, subject, title, subtitle,
-  % author, date, publishers).
   \thispagestyle{empty}%
   \ifx\@titlehead\@empty\else
     {\centering\parindent\z@\@titlehead\par}%
@@ -226,13 +164,9 @@
       {\centering\parindent\z@\@publishers\par}%
     \fi
   \else
-    % publisherImage definido: la imagen sustituye al texto de publishers
-    % (máx. 150pt ≈ 150px a 72dpi, ajustable). Soporta múltiples imágenes.
     \vskip 2\baselineskip
     {\centering\@renderpublishersimages\par}%
   \fi
-  % Titlebacks (reverso de la portada; el \vfill ancla el lowertitleback al
-  % fondo). En ambos modos: twoside (página par) y oneside (página siguiente).
   \@tempswatrue
   \ifx\@uppertitleback\@empty\ifx\@lowertitleback\@empty
     \@tempswafalse
@@ -244,15 +178,11 @@
     {\titlebackformat\@lowertitleback\par}%
     \clearpage
   \fi
-  % Dedication (página impar en twoside, ancho completo justificado,
-  % centrado verticalmente).
   \ifx\@dedication\@empty\else
     \titlepage@nextdouble
     \vspace*{5\baselineskip}%
     {\@dedication\par}%
     \clearpage
-    % Blank verso solo en twoside+openright: el contenido siguiente empieza
-    % en página impar. oneside u openany: sin verso adicional.
     \if@twoside\if@openright
       \thispagestyle{empty}%
       \null\clearpage

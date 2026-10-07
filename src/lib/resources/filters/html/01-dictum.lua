@@ -1,6 +1,3 @@
--- Convierte Div.dictum a <blockquote class="dictum"> (formato HTML).
--- Uso: pandoc --from json --to html5 --lua-filter html/01-dictum.lua
-
 function Div(div)
   local is_dictum = false
   for _, c in ipairs(div.classes) do

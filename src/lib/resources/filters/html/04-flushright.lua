@@ -1,6 +1,3 @@
--- Convierte Div.flushright a <div class="flushright"> (formato HTML).
--- Uso: pandoc --from json --to html5 --lua-filter html/04-flushright.lua
-
 function Div(div)
   local is_flushright = false
   for _, c in ipairs(div.classes) do

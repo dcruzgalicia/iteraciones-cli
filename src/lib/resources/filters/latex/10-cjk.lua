@@ -1,11 +1,3 @@
--- Convierte Div.japanese/.chinese/.korean al entorno CJKutf8 de LaTeX
--- (\begin{CJK}{UTF8}{min|gbsn|ksc}...\end{CJK}). El encoding por clase:
---   .japanese → min (japonés), .chinese → gbsn (chino simplificado),
---   .korean → ksc (coreano). En HTML el texto CJK funciona nativo (UTF-8):
--- el div se ignora y el contenido fluye sin transformación.
--- El paquete se carga en el preamble 27-cjk.tex.
--- Uso: pandoc --from json --to latex --lua-filter latex/09-cjk.lua
-
 local CJK_ENCODINGS = {
   japanese = 'min',
   chinese = 'gbsn',

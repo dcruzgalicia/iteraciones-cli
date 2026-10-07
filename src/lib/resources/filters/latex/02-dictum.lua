@@ -1,9 +1,3 @@
--- Convierte Div.dictum a \dictum[author]{quote} (formato LaTeX), con
--- \noindent al párrafo siguiente si es Para.
--- Soporta atributo width (0.1–1.0) para ancho personalizado.
--- El espaciado lo gestiona el entorno dictum (preamble 21-dictum.tex).
--- Uso: pandoc --from json --to latex --lua-filter latex/02-dictum.lua
-
 local BS = '\1' -- placeholder para el backslash (evita re-escapar \textbackslash{})
 
 local function escape_latex(s)
@@ -37,9 +31,6 @@ local function inlines_to_latex(inlines)
     elseif inl.t == 'Code' then
       table.insert(out, escape_latex(inl.text))
     elseif inl.t == 'Link' or inl.t == 'Quoted' or inl.t == 'Cite' then
-      -- Enlaces, comillas tipográficas y citas en el autor: se renderiza su
-      -- contenido. Antes se descartaban en silencio y el autor desaparecía
-      -- del PDF (en HTML sí aparecía: asimetría entre formatos).
       table.insert(out, inlines_to_latex(inl.content))
     elseif inl.t == 'RawInline' and inl.format == 'latex' then
       table.insert(out, inl.text)
@@ -140,8 +131,6 @@ local function process_dictum(div, width)
   return result
 end
 
--- Solo transforma Divs de nivel superior y recuerda el último bloque para
--- decidir el \noindent del párrafo siguiente.
 function Pandoc(doc)
   local result = {}
   local last_was_dictum = false

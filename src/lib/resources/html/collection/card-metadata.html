@@ -1,13 +1,6 @@
-    <!-- #2488 — la tarjeta del título de una collection: la primera del masonry
-         tras el header, con su propio marco de tarjeta y el chip del type
-         delante. El orden de los campos es el de la portada del PDF de una
-         collection (preamble-collection/19-maketitle.tex): título y subtítulo
-         antes que las creadoras. Va escrito entero, sin reordenar con CSS. El
-         body propio de la collection (su intro) lo sube aquí el post-proceso
-         desde el cuerpo de pandoc, ya envuelto en su bloque de texto (#2483). -->
     <div class="break-inside-avoid pb-6">
     <div class="relative rounded-tr-2xl rounded-bl-2xl border border-accent-500/30 bg-stone-50/75 dark:bg-stone-900/65 p-6 shadow-sm ring-1 ring-inset ring-stone-950/5 dark:ring-white/5 transition-colors duration-200 hover:border-accent-500/40 [overflow-wrap:anywhere] [&::before]:pointer-events-none [&::before]:absolute [&::before]:left-2 [&::before]:top-2 [&::before]:h-3 [&::before]:w-3 [&::before]:border-l [&::before]:border-t [&::before]:border-accent-500/40 [&::before]:content-[''] [&::after]:pointer-events-none [&::after]:absolute [&::after]:bottom-2 [&::after]:right-2 [&::after]:h-3 [&::after]:w-3 [&::after]:border-b [&::after]:border-r [&::after]:border-accent-500/40 [&::after]:content-[''] text-center">
-      <!-- el chip, como los de las demás tarjetas: su tamaño y a la izquierda -->
+
       <div class="text-left">
         <h2 class="inline-block align-top rounded-full border border-accent-500/40 bg-accent-500/15 px-3 py-1 font-normal uppercase tracking-wide text-xs leading-none mt-0 mb-12 text-accent-600 dark:text-accent-400">$doc-chip$</h2>
       </div>
@@ -38,7 +31,7 @@
       $if(publishers)$
       <p class="text-sm italic text-accent-700 dark:text-accent-300">$publishers$</p>
       $endif$
-      <!-- el body propio de la collection entra aquí; el post-proceso lo envuelve -->
+
 <div id="block-intro"></div>
     </div>
     </div>

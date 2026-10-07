@@ -1,6 +1,3 @@
--- Convierte Div.verse a <div class="verse"> (formato HTML).
--- Uso: pandoc --from json --to html5 --lua-filter html/02-verse.lua
-
 function Div(div)
   local is_verse = false
   for _, c in ipairs(div.classes) do

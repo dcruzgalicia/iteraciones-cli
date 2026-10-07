@@ -1,7 +1,3 @@
--- Convierte párrafos con solo ":;" en Div.spacer noindent (semántico).
--- Solo transforma párrafos de nivel superior (no dentro de otros bloques).
--- Uso: pandoc --from markdown --to json --lua-filter semantic/ast/02-double-colon-noindent.lua
-
 function Pandoc(doc)
   local blocks = {}
   for _, block in ipairs(doc.blocks) do

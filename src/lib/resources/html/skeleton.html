@@ -9,12 +9,7 @@
   $if(css)$<link rel="stylesheet" href="$css$">$endif$
 </head>
 <body id="top" class="font-sans antialiased text-xl text-accent-950 dark:text-accent-50 bg-stone-200 dark:bg-stone-950 bg-paper-grid">
-  <!-- #2487: una sola banda —el masonry— con todas las tarjetas, en este orden:
-       el header, la tarjeta del título, los bloques de format.html.blocks y el
-       footer. `container` con `mx-auto` le da el ancho máximo y lo centra; las
-       columnas son una por defecto, dos desde lg y tres desde 2xl. Cada tarjeta
-       lleva su `break-inside-avoid` y su `pb-6`, que es el aire vertical entre
-       tarjetas: en un masonry el `gap` solo separa columnas. -->
+
   <main class="container mx-auto columns-1 lg:columns-2 2xl:columns-3 gap-6 px-4 sm:px-6 lg:px-8 pt-8 pb-24">
 <div id="slot-header"></div>
 <div id="slot-metadata"></div>
@@ -22,8 +17,6 @@
 <div id="slot-footer"></div>
   </main>
 
-  <!-- Botón flotante: aparece al hacer scroll y desaparece al volver al
-       principio (scroll-driven animation, cero JS; ver styles.css). -->
   <a
     href="#top"
     aria-label="Volver al principio"

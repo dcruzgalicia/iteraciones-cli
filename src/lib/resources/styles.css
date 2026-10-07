@@ -4,28 +4,6 @@
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-/* #2487 — hoja de estilos 100% Tailwind: no hay ni una clase de CSS
-   tradicional (`.algo { … }`). Todo lo que se puede se resuelve con utilidades
-   de Tailwind, que el escáner genera desde el HTML de dist/files; las cuatro
-   utilidades de abajo son los casos extremos donde no hay forma de decirlo con
-   una clase:
-
-   - `bg-paper-grid`: cuatro gradientes con los tonos por `data-theme`.
-   - `logo-fill`: regla descendente para el SVG que va inline en la tarjeta.
-   - `scroll-reveal`: la animación scroll-driven del botón flotante (sin JS).
-   - `smallcaps`: la emite pandoc para `[texto]{.smallcaps}` y no hay utilidad
-     para `font-variant: small-caps`.
-
-   El texto anidado del que no hay control (el cuerpo del documento) lo lleva el
-   plugin de tipografía con `prose` y sus modificadores. Y sin fuentes propias:
-   los `--font-sans`/`--font-mono` se dejan fuera del `@theme` a propósito, para
-   que usen los valores por defecto de Tailwind (la sans y la mono del
-   navegador). La tipografía del PDF va en su preamble de LaTeX. */
-
-/* Fondo de papel milimetrado: dos retículas, la fina de 10px apenas visible y
-   la grande de 50px más marcada, en un tono tenue del accent. Sin puntos ni
-   degradados. En oscuro hace falta un poco más de línea para que se lea, así que
-   los dos tonos cambian con `data-theme`. */
 @utility bg-paper-grid {
   --grid-fine: color-mix(in srgb, var(--color-accent-600) 2.5%, transparent);
   --grid-bold: color-mix(in srgb, var(--color-accent-600) 8%, transparent);
@@ -44,8 +22,6 @@
   }
 }
 
-/* El logo va inline en la tarjeta de identidad y se pinta con el color del
-   texto: la utilidad fuerza al SVG a llenar su caja. */
 @utility logo-fill {
   & svg {
     height: 100%;
@@ -54,11 +30,6 @@
   }
 }
 
-/* Botón flotante "volver al principio": aparece al hacer scroll y desaparece
-   al volver al inicio (scroll-driven animation, cero JS). El `supports-…` que
-   lleva en el markup pone opacity/pointer-events base dentro del soporte, para
-   evitar el parpadeo del primer frame (el timeline aún no está computado); sin
-   soporte, el botón queda visible siempre (degradado seguro). */
 @utility scroll-reveal {
   animation: scroll-reveal linear both;
   animation-timeline: scroll();
@@ -79,10 +50,6 @@
   }
 }
 
-/* Versalitas ([texto]{.smallcaps}): la clase la emite pandoc al escribir a
-   HTML y Tailwind no tiene utilidad para font-variant. Las mayúsculas
-   ([texto]{.uppercase}) sí usan la utilidad uppercase, que se genera al
-   escanear el HTML final. */
 @utility smallcaps {
   font-variant: small-caps;
 }

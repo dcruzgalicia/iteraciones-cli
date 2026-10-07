@@ -1,9 +1,3 @@
--- Helpers compartidos del filter latex/06-mbox-sentence-end (detección de
--- oraciones, abreviaturas y conteo de inlines reales). No es un filter: no
--- define handlers de pandoc y no aparece en `iteraciones filters`.
--- El pipeline lo carga con dofile desde 06 (ruta inyectada por env); el
--- require relativo a PANDOC_SCRIPT_FILE falla si el proyecto sobrescribe 06.
-
 local M = {}
 
 local ABBREVIATIONS = {
@@ -13,8 +7,6 @@ local ABBREVIATIONS = {
   ['vs.'] = true, ['aprox.'] = true, ['ed.'] = true, ['trad.'] = true, ['coord.'] = true,
   ['cols.'] = true, ['no.'] = true, ['cap.'] = true, ['art.'] = true, ['sec.'] = true,
   ['fig.'] = true, ['tab.'] = true, ['etc.'] = true,
-  -- Meses y formas comunes del español (sin ellas, el mbox partía la oración
-  -- en posiciones tipográficamente erróneas: "El 3 de mar. Llegó tarde.")
   ['ene.'] = true, ['feb.'] = true, ['mar.'] = true, ['abr.'] = true, ['may.'] = true,
   ['jun.'] = true, ['jul.'] = true, ['ago.'] = true, ['sep.'] = true, ['sept.'] = true,
   ['oct.'] = true, ['nov.'] = true, ['dic.'] = true,
@@ -28,9 +20,6 @@ end
 function M.classify(inl)
   if inl.t == 'Str' then return 'word' end
   if inl.t == 'Space' or inl.t == 'SoftBreak' then return 'space' end
-  -- Span.uppercase como UNA palabra: el mbox debe envolver FUERA del span
-  -- (\mbox{y \MakeUppercase{...}}), porque \MakeUppercase no puede convertir
-  -- texto dentro de un \mbox (\uppercase no penetra cajas).
   if inl.t == 'Span' and inl.classes:find('uppercase', 1, true) then return 'word' end
   if inl.t == 'Emph' or inl.t == 'Strong' or inl.t == 'Underline' or inl.t == 'Superscript' or
      inl.t == 'Subscript' or inl.t == 'SmallCaps' or inl.t == 'Span' or inl.t == 'Link' or inl.t == 'Cite' or
@@ -57,11 +46,6 @@ function M.inline_text(inl)
 end
 
 function M.is_sentence_end_punct(text)
-  -- Recorta espacios y NBSP del final: un Str como "transforma.\160" (espacio
-  -- no separable pegado por pandoc al final de línea) no debe impedir la
-  -- detección del punto final de la oración. \u{00A0} es la representación
-  -- UTF-8 completa del NBSP (C2 A0): \160 solo recortaría el byte A0 y
-  -- dejaría el byte C2 suelto al final.
   local trimmed = text:gsub('[%s\u{00A0}]+$', '')
   if #trimmed == 0 then return false end
   local last = trimmed:sub(-1)
@@ -110,9 +94,6 @@ function M.find_sentence_bounds(inlines)
   return bounds
 end
 
--- Cuenta solo los inlines "reales" (palabras, grupos, espacios): los RawInline
--- (p. ej. el \noindent que inyecta el filtro internal/flags o latex/02-dictum)
--- no son palabras y no deben mover el umbral de 5.
 function M.count_real_inlines(inlines)
   local n = 0
   for _, inl in ipairs(inlines) do
@@ -121,11 +102,6 @@ function M.count_real_inlines(inlines)
   return n
 end
 
--- Palabras reales (Str) dentro de un word-group, en orden de recorrido.
--- Recursivo: los grupos anidados aportan sus palabras. El mbox de la oración
--- final cuenta palabras REALES (un \emph{...} con varias palabras no es una
--- sola palabra), y el wrap interno recorre el mismo orden para insertar el
--- \mbox en las posiciones correctas.
 function M.group_word_count(inl)
   local n = 0
   for _, c in ipairs(inl.content) do
@@ -139,9 +115,6 @@ function M.group_word_count(inl)
   return n
 end
 
--- true si el Str es SOLO puntuación (p. ej. "." tras una comilla de cierre o
--- un grupo: "descansa". o **propia**.). La puntuación suelta no es una
--- palabra para el conteo del mbox: no debe robar la última posición del wrap.
 function M.is_punct_str(text)
   return #text > 0 and text:match('^%p+$') ~= nil
 end
