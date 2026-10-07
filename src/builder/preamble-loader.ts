@@ -3,6 +3,7 @@ import type { SiteConfig } from '../config/config-schema.js';
 import { resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
+import { DESCRIPCIONES_PREAMBLE } from './filter-descriptions.js';
 
 export type PreambleDocType = 'file' | 'collection' | 'creator' | 'intervention';
 
@@ -88,28 +89,8 @@ export function disableBibliographyWithoutBibFiles(disabled: string[], bibFiles:
   return [...disabled, '11-bibliography'];
 }
 
-export function readLeadingComments(content: string, marker: '%' | '--'): string {
-  const lines: string[] = [];
-  for (const rawLine of content.split('\n')) {
-    const line = rawLine.trim();
-    if (line.startsWith(marker)) {
-      const text = line.slice(marker.length).trim();
-      if (text.startsWith('Uso:')) break;
-      lines.push(text);
-    } else if (lines.length > 0) {
-      break;
-    }
-  }
-  return lines.filter(Boolean).join(' ');
-}
-
 export async function getBuiltinPreambleFilterInfos(): Promise<PreambleFilterInfo[]> {
-  const infos: PreambleFilterInfo[] = [];
-  for (const name of getBuiltinPreambleFilterNames()) {
-    const content = await Bun.file(join(PKG_PREAMBLE_DIR, `${name}.tex`)).text();
-    infos.push({ name, description: readLeadingComments(content, '%') });
-  }
-  return infos;
+  return getBuiltinPreambleFilterNames().map((name) => ({ name, description: DESCRIPCIONES_PREAMBLE[name] ?? '' }));
 }
 
 export function validateDisabledPreambleFilters(disabled: string[] | undefined): void {
