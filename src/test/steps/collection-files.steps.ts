@@ -10,31 +10,6 @@ import { runMerge } from '../../cli/merge.js';
 import { validateProject } from '../../cli/validate.js';
 import { escribirEnProyecto, world } from './cli-world.steps.ts';
 
-/**
- * #2580 (onda 2) — cómo se resuelven los `files[]` de una collection (#2443).
- *
- * ## Relativo al `.md` primero, raíz después
- *
- * Un `files: [../prólogo.md]` en `sub/coleccion.md` significa `prólogo.md` en la
- * raíz: la ruta es relativa a la collection. Pero un `files: [sub/miembro.md]`
- * escrito así, en una collection dentro de `sub/`, significaría
- * `sub/sub/miembro.md` — que no existe. Así que se prueban las dos y gana la que
- * está. Es el fallback que hace que los proyectos con la convención antigua
- * sigan funcionando sin editar nada.
- *
- * ## El error lista las rutas que se probaron
- *
- * Sin eso el autor ve `no encontrado "../02-prólogo.md"` y no sabe si debería
- * escribirlo relativo a la collection o a la raíz. Con las dos rutas en el
- * mensaje, la respuesta está en el error.
- *
- * ## `postProcess` es tolerante, la lectura no
- *
- * Normalizar no puede lanzar: el índice se construye para toda la colección, y
- * que un miembro falte no invalida a los demás. Quien lanza es la lectura, que
- * es donde de verdad se necesita el archivo.
- */
-
 const CONFIG = [
   'language: es-MX',
   'format:',
@@ -123,8 +98,6 @@ When('fusiono {string} en markdown', async (coleccion: string) => {
   world.textoMerge = readFileSync(join(world.root, 'out.md'), 'utf8');
 });
 
-// ── Las rutas ──────────────────────────────────────────────────────────────
-
 Then('los files de {string} son {string}', (coleccion: string, esperados: string) => {
   const leidos = (indice().get(coleccion)?.files ?? []).join(', ');
   const queried = esperados
@@ -145,7 +118,6 @@ Then('el frontmatter de {string} también queda normalizado', (coleccion: string
   }
 });
 
-/** El error tiene que decir dónde se buscó, o el autor no puede corregirlo. */
 Then('la lectura falla con un BuildError que lista:', (lista: string) => {
   const mensaje = String(world.errorLectura);
   if (mensaje === '') throw new Error('la lectura no falló y debía');

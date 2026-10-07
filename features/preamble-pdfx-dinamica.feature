@@ -5,14 +5,7 @@ Característica: las boxes del PDF/X-1a y la dinámica de la cola
   Quiero que las cuatro boxes salgan bien y que la cola toque lo que toca
   Para que la certificación valga y el crop no se modifique sin motivo
 
-  # Tramo 23 de la migración. `buildPdfxPagesattr` y
-  # `applyPrintQueueDynamics` de `preamble.test.ts`.
-
   Regla de negocio: Las cuatro boxes del PDF/X-1a
-
-    # Sin crop, las cuatro boxes son el tamaño de la página. Con crop, Media,
-    # Crop y Bleed llevan el sangrado y el TrimBox lleva un offset de 3 mm,
-    # que es lo que la certificación mide.
 
     Escenario: Sin crop, las boxes son la página
       Dado que la raíz del proyecto está vacía
@@ -38,10 +31,6 @@ Característica: las boxes del PDF/X-1a y la dinámica de la cola
       Y las páginas del PDFX traen "/TrimBox ["
 
   Regla de negocio: La dinámica de la cola toca lo que toca
-
-    # `applyPrintQueueDynamics` decide qué filtros se modifican. Si el crop no
-    # está activo, el 98-crop no se toca; si el PDF/X no está activo, el 99-pdfx
-    # no se toca. Y si no hay ninguno, no se modifica nada.
 
     Escenario: Sin crop ni pdfx no se modifica nada
       Dado que la raíz del proyecto está vacía

@@ -5,22 +5,6 @@ import { extractReferencesBlock, moveCollectionIntro, removeTocReferencesLink } 
 import * as logger from '../../lib/logger.js';
 import { world } from './cli-world.steps.ts';
 
-/**
- * #2580 (onda 2) — el post-procesado del HTML.
- *
- * pandoc devuelve el HTML con la tarjeta de referencias dentro del `<article>`
- * y el cuerpo de la colección mezclado con el de sus miembros. El post-proceso
- * lo saca de ahí y lo pone en su sitio, y si el HTML está mal balanceado lo
- * devuelve intacto en vez de dejarlo a medias.
- *
- * ## El HTML va en docstring y no en tabla
- *
- * Son cadenas de varias líneas con comillas y llaves. Una celda de `Examples`
- * no las lleva, y escaparlas a mano es el mismo problema que con el JSON del
- * crop: cada herramienta desescapa distinto. El docstring no escapa nada.
- */
-
-/** La tarjeta de referencias con su marcador, como la deja el recurso. */
 const TARJETA = '<div class="wrap"><h2 id="refs-heading" class="chip">Referencias</h2>{{refs-list}}</div>';
 const MARCADOR = '<div id="block-referencias"></div>';
 
@@ -33,9 +17,6 @@ Given('que el HTML lleva el marcador de referencias', () => {
 });
 
 When('extraigo el bloque de referencias', () => {
-  // `extractReferencesBlock` avisa por su cuenta cuando el HTML no queda
-  // balanceado, así que el espía va aquí: sin él, el paso que comprueba el
-  // aviso lee una cadena vacía y pasa sin comprobar nada.
   const espia = spyOn(logger, 'logWarning').mockImplementation(() => undefined);
   try {
     const resultado = extractReferencesBlock(world.htmlEntrada, TARJETA);
@@ -53,7 +34,6 @@ When('quito el enlace a referencias del índice', () => {
 
 Given('que los formatos son {string}', (lista: string) => {
   world.formatos = JSON.parse(lista) as FormatsLink[];
-  // El `key` del config es un tipo cerrado; el JSON del feature es texto plano.
 });
 
 When('compongo el flag de formatos', () => {
@@ -135,11 +115,6 @@ Then('los argumentos de formatos son {string}', (esperados: string) => {
   }
 });
 
-/**
- * Un `<` en un `--variable` de pandoc rompe el argv: el valor se corta en el
- * primer espacio y el formato sale con el href a medias. Por eso el markup de
- * la tarjeta vive en la plantilla y el argv sólo lleva un valor corto.
- */
 Then('ningún argumento de formatos lleva HTML ni saltos', () => {
   for (const arg of (world.argsFormatos as string[]) ?? []) {
     if (arg.includes('<') || arg.includes('\n')) {

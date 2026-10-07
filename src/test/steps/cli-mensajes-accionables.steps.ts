@@ -7,31 +7,9 @@ import { checkReadPermissions, checkWritePermissions } from '../../cli/doctor/sy
 import { buildProgram } from '../../cli/parser.js';
 import { capture, world } from './cli-world.steps.js';
 
-/**
- * #2546 (onda 2) — tranche 2 de `cli-layer`: los mensajes accionables.
- *
- * ## Por qué este bloque y no `runBuild`
- *
- * `runBuild` es el bloque más grande del archivo (72 casos, 1.644 líneas) y el
- * más caro: cada caso monta un proyecto distinto y comprueba algo distinto,
- * sobre el builder real. No es una tabla y no se reduce sin reescribirlo.
- *
- * Este bloque sí es una tabla: el mismo "corré el CLI y mirá lo que dice", con
- * la entrada variando. 22 casos de golpe y con la misma forma.
- *
- * El mundo compartido y los `Then` comunes viven en `cli-world.steps.ts`:
- * `new` los necesita igual y definirlos dos veces daría `ambiguous`.
- *
- * ## Este archivo todavía usa los dos caminos de salida del parser
- *
- * El original mezclaba dos helpers (`parseUsageError` y `parseWithStderr`) que
- * leían el exit code de fuentes distintas. Acá un solo `When`, y el `catch` le
- * avisa al `capture()` qué código vio.
- */
-
 interface Check {
   ok: boolean;
-  /** `CheckResult.detail` es opcional: un check que pasa a veces no lo trae. */
+
   detail?: string;
 }
 
@@ -51,8 +29,6 @@ const COMMANDS: Record<string, (root: string) => Promise<unknown>> = {
 };
 
 Given('que la raíz del proyecto no existe', () => {
-  // `tmpdir()` + pid + reloj: dos corridas no colisionan y el `After` puede
-  // borrar lo que haga falta sin tener que saber el nombre.
   world.root = join(tmpdir(), `no-existe-${process.pid}-${Date.now()}`);
 });
 
@@ -61,9 +37,6 @@ When('parseo el argv {string}', async (argv: string) => {
     try {
       await buildProgram().parseAsync(['bun', 'bin.ts', ...argv.split(' ').filter(Boolean)]);
     } catch (err) {
-      // `exitOverride` lanza en los errores de uso y también tras mostrar el
-      // help, en vez de setear el global. El `catch` lo repone para que
-      // `capture()` siga teniendo un solo lugar del que leer el código.
       process.exitCode = err instanceof CommanderError ? err.exitCode : 1;
     }
   });
@@ -90,8 +63,6 @@ Then('el error sugiere el comando {string}', (sugerido: string) => {
 });
 
 Then('el error no muestra un stack trace', () => {
-  // `at <anonymous>` es la firma de un stack sin manejar. El mensaje tiene que
-  // ser legible por una persona, no por un depurador.
   if (world.stderr.includes('at <anonymous>')) {
     throw new Error(`el error sí trae un stack trace: ${JSON.stringify(world.stderr)}`);
   }

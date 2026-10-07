@@ -4,14 +4,6 @@ Característica: Los exportadores respetan el contrato de pandoc
   Quiero que pandoc se invoque con los argumentos correctos
   Para que el formato de salida sea el que el proyecto pidió
 
-  # #2031 PR2 — el contrato de argumentos se verifica SIN invocar el binario:
-  # `execPandoc` está espiado y se capturan sus opciones. Los smokes reales de
-  # EPUB y Markdown quedan en `export-runner.test.ts`.
-  #
-  # Este feature es denso en aserciones a propósito: cada paso afirma un
-  # comportamiento (el formato, el índice, los metadatos), no un `expect`. El
-  # escenario que de verdad calibra el catálogo es `lua-filters` (84 casos).
-
   Antecedentes:
     Dado un proyecto de prueba
     Y un documento titulado "Mi título" de la autora "Autora Uno"

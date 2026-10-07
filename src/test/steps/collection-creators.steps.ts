@@ -6,33 +6,7 @@ import { validateFrontmatterFields } from '../../builder/project-validator.js';
 import { loadStateFile, persistCompletedState } from '../../builder/state-serialize.js';
 import { escribirEnProyecto, world } from './cli-world.steps.ts';
 
-/**
- * #2580 (onda 2) — los créditos de una colección.
- *
- * Una colección no tiene autor propio: lo tiene la unión de los autores de sus
- * miembros. Esa unión es el `aggregatedCreator`, y va ordenada alfabéticamente
- * porque el orden de `files[]` no significa nada para el lector.
- *
- * ## `collectionCreator` es el crédito editorial, no el autor
- *
- * Hay dos preguntas distintas: *quién escribió* (los miembros, agregados) y
- * *quién edita* (una casa editorial). El `slug` usa el segundo y la firma del
- * PDF el primero, porque el nombre del archivo lo elige la editora y la
- * firma acredita a quienes escribieron.
- *
- * ## Sin autor se pone "Anónima", no se deja vacío
- *
- * Un documento sin autor tiene que aparecer en la portada igual que los
- * demás. "Anónima" es lo que ve el lector; un hueco en la lista de autores se
- * lee como un bug.
- */
-
-/** Un proyecto temporal con los documentos que el escenario declare. */
 Given('que el proyecto tiene:', (documentos: string) => {
-  // Una tabla de `Ejemplos` es de una línea por celda, así que el `\\n` del
-  // JSON llega como salto real y rompe las cadenas. Se vuelve a escapar antes
-  // de parsear: el JSON del feature lo escribe quien lee el test, no quien
-  // lo ejecuta.
   const tablas = JSON.parse(documentos.replace(/\n/g, '\\n')) as Record<string, string>;
   world.documentosProyecto = tablas;
   for (const [nombre, contenido] of Object.entries(tablas)) {
@@ -48,7 +22,6 @@ When('descubro y post-proceso el proyecto', async () => {
   world.indice = resultado.discoveryIndex;
 });
 
-/** La entrada del índice, que es donde vive el crédito ya agregado. */
 function entrada(ruta: string): Record<string, unknown> {
   const e = (world.indice as Map<string, Record<string, unknown>> | undefined)?.get(ruta);
   if (!e) throw new Error(`el índice no tiene ${ruta}`);
@@ -81,10 +54,6 @@ Then('el collectionCreator de {string} no está', (ruta: string) => {
   }
 });
 
-/**
- * El build completo, no sólo el descubrimiento: el error de #2446 aparece al
- * construir, y es un `BuildError` con el fix en el mensaje.
- */
 When('construyo el proyecto entero', async () => {
   try {
     const resultado = await discover(world.root, {
@@ -107,7 +76,6 @@ Then('la construcción falla diciendo {string}', (texto: string) => {
   }
 });
 
-/** `validateFrontmatterFields` en crudo: qué campos son conocidos. */
 When('valido el frontmatter crudo:', (fm: string) => {
   world.issuesFrontmatter = validateFrontmatterFields(parseYaml(fm));
 });

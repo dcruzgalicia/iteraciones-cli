@@ -4,10 +4,6 @@ Característica: El CSS se compila sólo con lo que aparece en el HTML
   Quiero que el CSS generado contenga exactamente las clases del HTML final
   Para no arrastrar clases de documentos que ya no existen
 
-  # El CSS se compila escaneando SOLO los HTML de `dist/files`: el fixture
-  # controla qué clases deben aparecer (presentes en el HTML) y cuáles no
-  # (ausentes, incluidas las de un CSS previo que no debe auto-referenciarse).
-
   Escenario: El binario del CLI se resuelve por módulos y existe
     Cuando resuelvo el binario de Tailwind
     Entonces apunta a un archivo del paquete @tailwindcss que existe
@@ -36,16 +32,6 @@ Característica: El CSS se compila sólo con lo que aparece en el HTML
     Entonces la compilación falla diciendo que el acento es desconocido
 
   Regla de negocio: Cada acento llega al CSS con sus once tonos
-
-    # El acento es la única palanca que la config mete en el `@theme`, y son
-    # veintiséis valores. En prosa serían veintiséis pasos nuevos; en tabla, una
-    # fila por paleta y el mismo step definition.
-
-    # La lista no es decorativa: `KNOWN_ACCENT_COLORS` sale de las claves de
-    # `ACCENT_PALETTES`, así que una paleta nueva sin fila aquí es un valor de
-    # config que nadie sabe si llega al CSS. `build-assets.ts` además hashea la
-    # paleta elegida, así que un valor que no llega también cambia el hash y con
-    # él la caché de todos los builds.
 
     Esquema del escenario: La paleta elegida es la que se compila
       Dado un proyecto con un HTML de clases "text-accent-500"

@@ -7,41 +7,6 @@ import { computeFiltersHash } from '../../builder/state-hash.js';
 import { DEFAULT_SITE_CONFIG } from '../../config/site-config.js';
 import { escribirEnProyecto, world } from './cli-world.steps.ts';
 
-/**
- * #2580 (onda 2) — las fronteras del builder (#2018, #2022, #2024, #2025).
- *
- * ## Lo que NO se migra, y por qué
- *
- * Siete de los diez casos de este archivo NO migran a Gherkin, por decisión de
- * #2550: leen los `.ts` como TEXTO y escanean sus imports. El sujeto no es un
- * comportamiento en runtime sino una propiedad del árbol de dependencias — que
- * `src/builder` no importe de `src/cli`, que `state-hash` no dependa de un
- * compositor, que el orquestador no mute la config del usuario, que exista una
- * sola escritura de estado. No hay `Cuando`: no hay acción que ejecutar.
- *
- * Encarnarlos en Gherkin obligaría a inventar una acción que no existe para
- * poder afirmar algo que no ocurre. Se quedan en `bun:test` con esta razón
- * escrita al lado.
- *
- * ## Los tres que sí migran
- *
- * Los hashes y el round-trip del build: son funciones que se llaman y se
- * comparan, que es exactamente un `Cuando` y un `Entonces`.
- *
- * ## El hash tiene que ser determinista
- *
- * `computeFiltersHash` participa en la decisión "esto cambió". Si no fuera
- * determinista, dos builds seguidos con el mismo proyecto darían hashes
- * distintos y el build recompilaría siempre sin motivo.
- *
- * ## La versión de pandoc entra en el hash (#2024)
- *
- * El resultado de los filtros depende de la versión de pandoc. Dos máquinas con
- * pandoc distinto producen PDF distintos para el mismo markdown, así que el
- * hash tiene que incluirlas o el `dist` de una máquina daría por bueno lo que
- * otra construyó con otro pandoc.
- */
-
 const config = { ...DEFAULT_SITE_CONFIG, bibliography: 'refs.bib' };
 
 Given('un proyecto con bibliografía y un CSL propio', () => {
@@ -69,7 +34,6 @@ Then('el hash de los filtros es el mismo de antes', () => {
   }
 });
 
-/** El hash se compara contra el que se calculó antes, en el mismo escenario. */
 Given('anoto el hash de los filtros', () => {
   world.hashFiltrosPrevio = (world.hashFiltrosObjeto as { hash: string }).hash;
 });
@@ -87,7 +51,6 @@ Then('la caché del hash de los filtros no está vacía', () => {
   }
 });
 
-/** El CSL empaquetado entra en el hash sólo si el proyecto no trae el suyo. */
 When('calculo el hash de la bibliografía sin CSL', async () => {
   world.hashBibPrevio = (world.hashBibObjeto as { hash: string } | undefined)?.hash;
   const r = await computeBibHash(await resolveBibOptions(world.root, config as never));
@@ -117,8 +80,6 @@ Then('el hash de la bibliografía es distinto del anterior', () => {
   const antes = world.hashBibPrevio as string;
   if (h === antes) throw new Error(`el hash sigue siendo ${h} y debería haber cambiado`);
 });
-
-// ── La escritura única del estado (#2025) ──────────────────────────────────
 
 Given('un proyecto de prueba con un documento', () => {
   escribirEnProyecto('iteraciones.config.yaml', 'language: es-MX\nformat:\n  html:\n    generate: true\n');

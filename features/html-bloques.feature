@@ -6,18 +6,7 @@ Característica: las tarjetas del masonry salen en el orden que el autor espera
   Para que la portada, el índice, la descarga, el contenido y las referencias
   formen una página que se pueda recorrer sin adivinar
 
-  # Tramo 3 de la migración. 4 de los 16 casos que quedaban de `cli-layer`.
-
   Regla de negocio: El orden de las tarjetas
-
-    # El HTML se arma con un sistema de bloques. El orden por defecto es
-    # header, título, índice, formatos, contenido, referencias, footer; una
-    # lista explícita en `format.html.blocks` lo sustituye entero. Los bloques
-    # que no aplican no aparecen: no hay huecos.
-    #
-    # El `article` es el CONTENIDO. Las otras tarjetas van antes o después de
-    # él, nunca dentro: dentro, las columnas del masonry las reparten con el
-    # texto y el documento deja de leerse como un bloque (#1445).
 
     Escenario: El masonry sigue el orden de bloques por defecto
       Dado que la raíz del proyecto tiene un proyecto con índice y una cita

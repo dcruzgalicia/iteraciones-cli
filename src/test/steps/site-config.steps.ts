@@ -2,19 +2,6 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import { computeActiveFormats } from '../../config/site-config.js';
 import { world } from './cli-world.steps.ts';
 
-/**
- * #2580 (onda 2) — qué formatos se generan.
- *
- * ## `generate` es la única palanca, y `merge` no cuenta
- *
- * El PDF se genera a partir del LaTeX, así que `latex.generate: false` apaga el
- * PDF aunque diga `pdf.generate: true`. Por eso `computeActiveFormats` mira
- * `latex` para ambos. Y `markdown.merge` es un matiz del markdown exportado, no
- * un formato por sí solo: un proyecto que sólo quiere fusionar los `.md` no está
- * pidiendo un formato nuevo.
- */
-
-/** Todos apagados: el punto de partida de cada escenario. */
 const APAGADOS = {
   latex: { generate: false },
   html: { generate: false },
@@ -58,7 +45,6 @@ Then('no sale ningún formato', () => {
 });
 
 Then('los formatos que salen son:', (esperado: string) => {
-  // El docstring llega con su indentación y puede traer varias líneas.
   const leidos = [...(world.formatosActivosCalc as string[])].join(', ');
   const queried = esperado
     .split(/[\n,]/)

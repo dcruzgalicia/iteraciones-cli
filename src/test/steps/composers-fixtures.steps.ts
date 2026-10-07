@@ -8,31 +8,6 @@ import { htmlPageFromMarkdown } from '../../builder/render.js';
 import { BuildError } from '../../lib/errors.js';
 import * as pandocRunner from '../../lib/pandoc-runner.js';
 
-/**
- * #2545 (onda 1) — composers sobre fixtures de pandoc.
- *
- * ## El skip silencioso que desaparece aquí
- *
- * El original empezaba cada test con `if (fixtureX === '') return;`. Sin
- * fixtures, los seis tests de composers pasaban **en verde sin ejecutar una
- * sola aserción** — el mismo problema que #2542 encontró en otros archivos. Los
- * fixtures están versionados en `src/test/fixtures/pandoc/`, así que si
- * faltan es un repo roto, no una máquina con menos herramientas: aquí eso debe
- * ser un fallo ruidoso, y por eso `fixturesDir()` lanza en vez de devolver vacío.
- *
- * ## El espío va con tag
- *
- * `Before({ tags: '@spy-composers' })` por lo que #2556 descubrió: los hooks de
- * cucumber son globales en cuanto se importa el archivo, así que uno sin tag
- * espiaría `execPandoc` para todos los features.
- *
- * ## El fixture que devuelve el espío
- *
- * El original re-espiaba por test. Aquí un solo espío devuelve el fixture que el
- * scenario elige con `setFixture`, que es lo que permite que el hook siga siendo
- * uno solo.
- */
-
 const NO_FILTERS: LuaFilterGroup = {
   semantic: [],
   latex: [],
@@ -91,7 +66,6 @@ const world: ComposersWorld = {
   texToRewrite: '',
 };
 
-/** Directorio de fixtures del major más alto disponible. */
 async function fixturesDir(): Promise<string> {
   const base = join(import.meta.dir, '../fixtures/pandoc');
   const versions = (await readdir(base).catch(() => [] as string[])).sort();
@@ -138,13 +112,9 @@ function exigeLista(args: string[], esperado: string[]): void {
   }
 }
 
-// ── Given ────────────────────────────────────────────────────────────────────
-
 Given('el fixture de salida LaTeX de pandoc', () => setFixture('latex'));
 Given('el fixture de salida HTML sin referencias de pandoc', () => setFixture('html'));
 Given('el fixture de salida HTML con referencias de pandoc', () => setFixture('refs'));
-
-// ── When: LaTeX ──────────────────────────────────────────────────────────────
 
 When('convierto el markdown a LaTeX con la bibliografía {string}', async (bibFile: string) => {
   setFixture('latex');
@@ -187,8 +157,6 @@ When('convierto el markdown a LaTeX con una portada que no existe', async () => 
   }
 });
 
-// ── When: HTML ───────────────────────────────────────────────────────────────
-
 function htmlOptions(): Parameters<typeof htmlPageFromMarkdown>[2] {
   return {
     cwd: '/proyecto',
@@ -217,8 +185,6 @@ When('lo convierto de nuevo sin opciones de bibliografía', async () => {
   await htmlPageFromMarkdown('Contenido', DOC as never, htmlOptions());
 });
 
-// ── When: distribución de imágenes ───────────────────────────────────────────
-
 When('distribuyo las imágenes {string}, {string} y {string}', (a: string, b: string, c: string) => {
   world.distribution = buildTexDistribution([a, b, c]);
 });
@@ -232,14 +198,9 @@ When('distribuyo la imagen procesada {string}', (absoluta: string) => {
   world.texToRewrite = `\\includegraphics{${absoluta}}\n\\mbox{${absoluta}}`;
 });
 
-When('reescribo el .tex que la referencia dos veces', () => {
-  // El .tex ya quedó preparado por el step anterior.
-});
-
-// ── Then: LaTeX ──────────────────────────────────────────────────────────────
+When('reescribo el .tex que la referencia dos veces', () => {});
 
 Then('el LaTeX es el fixture y no hay imágenes procesadas', () => {
-  // Passthrough del writer: el compositor no post-procesa el .tex.
   if (world.texResult.tex !== world.fixtureLatex) throw new Error('el .tex emitido no es el fixture');
   const processed = world.texResult.processedImages ?? [];
   if (processed.length !== 0) throw new Error(`esperaba 0 imágenes procesadas y hubo ${processed.length}`);
@@ -257,16 +218,16 @@ Then('la llamada a pandoc lleva el contrato completo de LaTeX', () => {
   if (args[args.indexOf('--template') + 1] !== '/build/template.tex') {
     throw new Error(`la plantilla no es la esperada: ${args[args.indexOf('--template') + 1]}`);
   }
-  // babel por config, no por frontmatter: es-MX ⇒ spanish,mexico,...
+
   exigeLista(args, ['--metadata=babel-lang:spanish,mexico,es-noshorthands,es-noindentfirst', '--metadata=biblatex-available:true']);
-  // El número de página va por defecto en header-right.
+
   exigeLista(args, ['--metadata=page-number-command:\\ohead*{\\pagemark}']);
   const bibCount = args.filter((a) => a === '--bibliography').length;
   if (bibCount !== 1) throw new Error(`esperaba exactamente un --bibliography y hubo ${bibCount}`);
   if (args[args.indexOf('--bibliography') + 1] !== 'refs/biblio.bib') {
     throw new Error(`la bibliografía no es la esperada: ${args[args.indexOf('--bibliography') + 1]}`);
   }
-  // Sin subtitle en el frontmatter no debe viajar un --metadata=subtitle vacío.
+
   if (args.join('\n').includes('--metadata=subtitle:')) throw new Error('viajó un --metadata=subtitle vacío');
 });
 
@@ -293,8 +254,6 @@ Then('pandoc no fue invocado', () => {
   if (world.calls.length !== 0) throw new Error(`pandoc fue invocado ${world.calls.length} veces y no debía`);
 });
 
-// ── Then: HTML ───────────────────────────────────────────────────────────────
-
 Then('el índice ya no enlaza al encabezado de referencias', () => {
   if (world.html.includes('<a href="#refs-heading">')) throw new Error('quedó el ítem del TOC hacia #refs-heading');
 });
@@ -306,7 +265,6 @@ Then('el marcador se sustituye por la tarjeta con la lista extraída', () => {
 });
 
 Then('el encabezado sintético no queda en el artículo', () => {
-  // La tarjeta aporta su propio encabezado, así que el h1 de refs no debe quedar.
   if (world.html.includes('id="refs-heading"')) throw new Error('quedó el h1 sintético de referencias');
 });
 
@@ -332,9 +290,6 @@ Then('la segunda llamada no lleva citeproc', () => {
   if (argsOf(1).includes('--citeproc')) throw new Error('sin bibliografía no debe haber citeproc');
 });
 
-// ── Then: distribución ───────────────────────────────────────────────────────
-
-// Un step con DataTable en vez de uno por fila: tres steps para decir lo mismo.
 Then('la distribución es:', (tabla: { hashes: () => Record<string, string>[] }) => {
   const esperado = tabla.hashes();
   for (const fila of esperado) {

@@ -5,9 +5,6 @@ Característica: Los filtros de usuario se aplican y se condicionan por formato
   Quiero que el build lo aplique y que pueda cambiar según el formato de salida
   Para generar marcado distinto en LaTeX y en HTML con un solo filtro
 
-  # El filtro es un `Div.nota` que devuelve `\fbox{Nota}` en LaTeX y un
-  # `<aside>` en HTML5, y `nil` en cualquier otro formato.
-
   Escenario: Un filtro de usuario se condiciona por FORMAT
     Dado un proyecto con un filtro de usuario que convierte la clase nota
     Cuando convierto el documento con el filtro a LaTeX

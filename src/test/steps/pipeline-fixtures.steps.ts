@@ -6,28 +6,6 @@ import { After, Before, Given, Then, When } from '@cucumber/cucumber';
 import { build } from '../../builder/orchestrator.js';
 import * as pandocRunner from '../../lib/pandoc-runner.js';
 
-/**
- * El contrato del reporter, que `docs/public-surface.md` publica: cualquiera
- * que embeba `build()` en otro programa depende de que reciba esas fases con
- * esos argumentos, así que no es un detalle interno.
- *
- * El reporter falso se copia del original. Es un doble grande (doce métodos que
- * sólo registran), pero está pegado a la forma de `BuildReporter`: si la
- * interfaz cambia, TypeScript lo dice en los sites de llamada. Encapsularlo
- * detrás de una clase sería más bonito y menos honesto. Y no es un mock de Bun:
- * es un objeto que se pasa por parámetro, que es justo lo que `build()` ofrece.
- *
- * El espía va en un hook con tag (`@spy-pipeline`) por lo que Peaks descubrió
- * #2556: los hooks de cucumber son globales en cuanto se importa el archivo, así
- * que un `Before` normal espiaría para todos los features.
- *
- * El espía **deja pasar**: no sustituye a pandoc, sólo cuenta cuántas veces se
- * le pide la versión. El build corre de verdad, que es lo que lo hace un test
- * de este proyecto. Lo que se comprueba aquí no es «a qué formatos convirtió
- * pandoc» —eso lo comprueba `build-completo.feature` con pandoc de verdad— sino
- * que no se le pregunta la versión una vez por documento.
- */
-
 const CONFIG = [
   'language: es-MX',
   'format:',
@@ -76,7 +54,6 @@ interface PipelineWorld {
 
 const world: PipelineWorld = { dir: '', calls: [] };
 
-/** El espía del sondeo de versión; lo restaura el `After` global. */
 let espiaVersion: ReturnType<typeof spyOn> | undefined;
 
 Before(async () => {
@@ -94,7 +71,7 @@ Given('un proyecto con LaTeX, EPUB y Markdown activados y HTML desactivado', asy
 
 Before({ tags: '@spy-pipeline' }, () => {
   world.calls = [];
-  // Sin `mockImplementation`: la versión real se consulta y se cuenta.
+
   espiaVersion = spyOn(pandocRunner, 'getPandocVersion');
 });
 

@@ -4,35 +4,6 @@ import { After, Before, Given, Then, When } from '@cucumber/cucumber';
 import { build } from '../../builder/orchestrator.js';
 import { systemCommands } from '../helpers.js';
 
-/**
- * #2546 (onda 2) — `build.sh` completo: el E2E de la onda.
- *
- * ## Por qué un solo fichero para los siete escenarios
- *
- * Todos comparten el mismo experimento y el mismo vocabulario: compilar, leer el
- * `.sh`, copiar `dist`, **borrar algo** para que no quede ningún artefacto que el
- * `.sh` no sepa rehacer, y reejecutar `bash build.sh`. Con dos juegos de steps
- * (`build-script.steps.ts` y `build-sh-e2e.steps.ts`) los dos primeros
- * escenarios de la onda 1 y los cinco de aquí se pisaban en
- * `reejecuto build.sh con bash` y cucumber reportaba 8 escenarios ambiguos.
- *
- * ## Por qué el contrato del .sh va en tabla
- *
- * El catálogo de #2544 rechaza el step-por-assert, y un `.sh` tiene decenas de
- * detalles por escenario. Con `el script cumple este contrato:` y una tabla de
- * dos columnas, el escenario se lee entero de un vistazo — que es literalmente
- * el criterio de aceptación del issue para estos archivos: "se pueden leer de
- * principio a fin sin abrir un `.ts`".
- *
- * ## La salvedad de PDF y EPUB
- *
- * `.pdf` y `.epub` llevan uuid y fecha de creación, que no son contenido del
- * markdown: byte a byte fallan siempre. El EPUB además lleva un uuid aleatorio,
- * así que aquí sólo se le exige que exista. La comparación por contenido
- * sustancial (`pdftotext`, entradas del zip) es de otro escenario.
- */
-
-/** Todos los archivos de un directorio, como mapa relativo → bytes. */
 async function snapshot(dir: string): Promise<Map<string, Buffer>> {
   const files = new Map<string, Buffer>();
   const walk = async (current: string): Promise<void> => {
@@ -46,7 +17,6 @@ async function snapshot(dir: string): Promise<Map<string, Buffer>> {
   return files;
 }
 
-/** Compara dos snapshots con una salvedad por extensión. */
 function mismaSalvo(before: Map<string, Buffer>, after: Map<string, Buffer>, soloDebeExistir: RegExp): string | null {
   const antes = [...before.keys()].sort();
   const ahora = [...after.keys()].sort();
@@ -129,8 +99,6 @@ function replay(): void {
   world.stderr = new TextDecoder().decode(proc.stderr ?? new Uint8Array());
 }
 
-// ── Given ────────────────────────────────────────────────────────────────────
-
 Given('un proyecto de prueba con la clave script activada', async () => {
   world.slug = 'documento';
   await writeConfig(CONFIG_TODOS);
@@ -185,15 +153,9 @@ Given('un proyecto con un documento y formato PDF', async () => {
   );
 });
 
-/**
- * El proyecto completo: frontmatter con autora, una imagen y una collection,
- * con los cinco formatos activos. `override` cambia una clave de `format.pdf`,
- * para las variaciones de una opción.
- */
 async function writeCompleteProject(override?: { clave: string; valor: string }): Promise<void> {
   world.slug = 'documento';
-  // El override REEMPLAZA la clave si ya está: el YAML del loader rechaza las
-  // claves repetidas, así que anexar la segunda vez rompería el build.
+
   const pdf = ['    generate: true', '    coverImage: true'];
   if (override !== undefined) {
     const i = pdf.findIndex((l) => l.trimStart().startsWith(`${override.clave}:`));
@@ -229,8 +191,7 @@ async function writeCompleteProject(override?: { clave: string; valor: string })
     join(world.dir, 'coleccion.md'),
     ['---', 'title: Antología', 'type: collection', 'files:', '  - documento.md', '---', '', 'Intro de la antología.'].join('\n'),
   );
-  // `creator` sin `title`: el build deriva el título del `name`, y el .md de dist
-  // debe salir igual por `iteraciones markdown` (#2445).
+
   await Bun.write(join(world.dir, 'creadora.md'), ['---', 'name: Ana Ruiz', 'type: creator', '---', '', 'Bio de la creadora.'].join('\n'));
 }
 
@@ -238,16 +199,9 @@ Given('un proyecto con todos los formatos, una colección y una creadora', async
   await writeCompleteProject();
 });
 
-/**
- * El mismo proyecto con una opción de `format.pdf` cambiada. El valor va como
- * lo escribe el autor (`true`, `false`, `header-center`), para que la tabla de
- * `Ejemplos` del feature sea la lista de las variaciones.
- */
 Given('un proyecto con todos los formatos y {word}: {word}', async (clave: string, valor: string) => {
   await writeCompleteProject({ clave, valor });
 });
-
-// ── When ─────────────────────────────────────────────────────────────────────
 
 When('compilo el proyecto y leo el build.sh', async () => {
   await build(world.dir);
@@ -280,33 +234,20 @@ When('reejecuto build.sh con bash', () => {
   replay();
 });
 
-// ── Then: el script ──────────────────────────────────────────────────────────
-
 Then('el script existe y es ejecutable', async () => {
   const path = join(world.dir, 'build.sh');
   if (!(await Bun.file(path).exists())) throw new Error('el build no escribió build.sh en la raíz');
   if ((await stat(path)).mode % 512 === 0) throw new Error('build.sh no es ejecutable');
 });
 
-/**
- * Las comprobaciones del contrato del `.sh`, una por fila de la tabla.
- *
- * ## Por qué un registro y no un switch dentro del step
- *
- * El switch tenía complejidad 114 contra un máximo de 15, y además cada vez que el
- * build añadiera una fase obligaba a tocar un `case` dentro de un step de
- * 120 líneas. Con un registro, añadir una fila es añadir una función de seis
- * líneas, y el step sólo hace la búsqueda. El fallo de la tabla dice qué fila
- * falló y con qué fragmento del `.sh`.
- */
 type Chequeo = (ctx: Contexto) => void | Promise<void>;
 
 interface Contexto {
   script: string;
-  /** Raíz canónica del proyecto: el `.sh` hace `cd` ahí. */
+
   root: string;
   distPath: string;
-  /** Slug del documento del escenario; las copias llevan su prefijo (#2450). */
+
   slug: string;
   dir: string;
   falla: (motivo: string) => never;
@@ -323,8 +264,7 @@ const SECCIONES_FORMATO = [
 const CHEQUEOS: Record<string, Chequeo> = {
   cabecera: ({ script, root, falla }) => {
     if (!script.startsWith('#!/bin/bash\nset -e\ncd ')) falla('la cabecera no es la esperada');
-    // El .sh se ejecuta desde la raíz del proyecto: ahí resuelven los comandos
-    // de iteraciones y `process.cwd()` de cada uno es físico.
+
     if (!script.includes(`cd ${root}`)) falla(`no hace cd a la raíz canónica ${root}`);
   },
   directorios: ({ script, falla }) => {
@@ -348,8 +288,6 @@ const CHEQUEOS: Record<string, Chequeo> = {
     }
   },
   markdown: ({ script, falla }) => {
-    // El markdown de dist lo escribe `iteraciones markdown`, nunca un redirect
-    // de pandoc: el .sh jamás debe pisarlo.
     if (/> *[^\n]*dist\/files\/[^\n]*\.md\b/.test(script)) falla('no debe escribir el markdown con un redirect de pandoc');
     if (!/^\s*iteraciones markdown \S+ -o \S+dist\/files\/\S+\.md$/m.test(script)) falla('falta `iteraciones markdown … -o dist/files/….md`');
   },
@@ -373,7 +311,6 @@ const CHEQUEOS: Record<string, Chequeo> = {
     if (!script.includes('magick ')) falla('no invoca ImageMagick');
   },
   'copia única': async ({ distPath, slug, falla }) => {
-    // #2450: la copia única lleva el prefijo del slug y vive en el assets del nivel.
     if (!(await Bun.file(join(distPath, 'assets', 'images', `${slug}-foto.jpg`)).exists())) {
       falla(`la imagen procesada no está en assets/images como ${slug}-foto.jpg`);
     }
@@ -390,24 +327,19 @@ const CHEQUEOS: Record<string, Chequeo> = {
     }
   },
   'entrada del post-proceso': ({ script, falla }) => {
-    // El post-proceso consume la salida CRUDA de pandoc, que no es la de dist.
     if (!/< \.iteraciones\/script\/out-\d+\.tex/.test(script)) falla('no lee la salida cruda de pandoc como entrada del post-proceso');
   },
   intermedio: ({ script, falla }) => {
-    // Sin LaTeX en dist, la salida cruda va a un intermedio en vez de a dist.
     if (!script.includes('.iteraciones/script/out-')) falla('no escribe la salida cruda de pandoc en un intermedio');
   },
   compilación: ({ script, falla }) => {
     if (!/latexmk [^\n]*-jobname=/.test(script)) falla('no compila con latexmk nombrando el job');
   },
   slots: ({ script, falla }) => {
-    // El slot lo prepara y lo recoge iteraciones: sin cp/rm sueltos (#2456).
     if (!/^\s*iteraciones prepare .*--xmp \S*slot-0$/m.test(script)) falla('falta `iteraciones prepare … --xmp slot-0`');
     if (!/^\s*iteraciones pdf collect \S*slot-0 -o \S*dist\/files\/cuidar-se\.pdf$/m.test(script)) falla('falta `iteraciones pdf collect slot-0 …`');
   },
   'cinco fases': ({ script, falla }) => {
-    // #2445: las cinco fases van por subcomando, con mkdir (fase 1) y mv de
-    // portada (fase 7) donde no hay ninguna decisión (#2456).
     for (const sub of ['prepare', 'assets', 'markdown', 'pdf collect']) {
       if (!script.includes(`iteraciones ${sub} `)) falla(`no invoca \`iteraciones ${sub}\``);
     }
@@ -416,10 +348,6 @@ const CHEQUEOS: Record<string, Chequeo> = {
   },
 };
 
-/**
- * Cada fila de la tabla dice QUÉ se comprueba; el registro dice cómo.
- * Añadir una comprobación al catálogo del issue es añadir una clave aquí.
- */
 Then('el script cumple este contrato:', async (tabla: { hashes: () => Record<string, string>[] }) => {
   const script = world.script;
   const ctx: Contexto = {
@@ -445,7 +373,7 @@ Then('el script cumple este contrato:', async (tabla: { hashes: () => Record<str
 Then('el manifiesto de post-proceso tiene una entrada', async () => {
   const raw = await readFile(join(world.dir, '.iteraciones', 'post', 'ensayo.json'), 'utf8');
   const manifest = JSON.parse(raw) as { distribution?: Record<string, string> };
-  // El manifiesto es un artefacto del build: build.sh lo lee, no lo regenera.
+
   const n = Object.keys(manifest.distribution ?? {}).length;
   if (n !== 1) throw new Error(`esperaba 1 entrada en el manifiesto y hay ${n}`);
 });
@@ -504,21 +432,11 @@ Then('las entradas de las colecciones se reconstruyen idénticas', async () => {
   }
 });
 
-// ── La tubería entera, formato por formato ─────────────────────────────────
-//
-// Las salidas del build se nombran por el título del documento más su autora
-// (`manuscrito-por-ana-ruiz.tex`), no por el nombre del archivo, así que estos
-// tres pasos toman la ruta tal cual: el feature los lee y el paso no adivina.
-// `el archivo de dist existe` no sirve aquí porque decide la extensión desde
-// `world.slug` y el proyecto completo produce cinco.
-
 Then('dist tiene el archivo {string}', async (relativa: string) => {
   const path = join(world.distPath, relativa);
   if (!(await Bun.file(path).exists())) throw new Error(`dist no tiene ${relativa} (sí hay: ${(await snapshot(world.distPath)).size} archivos)`);
 });
 
-// Un solo paso para los dos sentidos no se puede: `{word}` también casa con
-// «tiene» y el de arriba se volvería ambiguo. Por eso el par es literal.
 const distTiene = async (relativa: string, esperado: boolean): Promise<void> => {
   const existe = await Bun.file(join(world.distPath, relativa)).exists();
   if (existe !== esperado) throw new Error(`dist ${existe ? 'sí' : 'no'} tiene ${relativa} y el escenario dice lo contrario`);

@@ -7,30 +7,6 @@ import type { BuildContext, DiscoveryEntry } from '../../builder/types.js';
 import { DEFAULT_SITE_CONFIG } from '../../config/site-config.js';
 import { escribirEnProyecto, world } from './cli-world.steps.ts';
 
-/**
- * #2580 (onda 2) — los assets de la salida y su limpieza.
- *
- * ## El sitio usa las fuentes del navegador (#2487)
- *
- * Ni Exo 2 ni Space Mono: el CSS usa la sans y la mono del sistema. Copiar
- * fuentes al `dist` son cientos de kilobytes por build para una tipografía que
- * el lector ya tiene.
- *
- * ## Reescribir el logo sin necesidad rompe la caché
- *
- * Una segunda llamada a `buildAssets` no toca `logo.svg` si no cambió. Si lo
- * reescribiera, su mtime cambiaría, el hash del CSS y de los assets también, y
- * el siguiente build invalidaría el CSS sin motivo — que es exactamente el
- * bucle que este archivo evita.
- *
- * ## Las tres limpiezas, y qué borra cada una
- *
- * - **documento borrado**: sus salidas y su área de trabajo del PDF;
- * - **slug cambiado**: los artefactos del slug anterior;
- * - **formato que ya no se pide**: las salidas de ese formato y los assets de
- *   HTML, tanto del layout nuevo como del anterior (#2450).
- */
-
 const salida = (): string => join(world.root, 'dist', 'files');
 
 function ctx(): BuildContext {
@@ -43,12 +19,9 @@ function ctx(): BuildContext {
   };
 }
 
-/** La entrada del índice de un documento que ya no está. */
 function entradaBorrada(ruta: string, slug: string): [string, DiscoveryEntry] {
   return [ruta, { title: 'T', creator: [], date: '', mtime: 0, size: 0, hash: '', slug }];
 }
-
-// ── Los assets ─────────────────────────────────────────────────────────────
 
 Given('una salida para los assets', () => {
   mkdirSyncWorld(salida());
@@ -109,9 +82,6 @@ Then('anoto la fecha del logo copiado', () => {
   world.mtimeLogo = statSync(join(salida(), 'assets', 'logo.svg')).mtimeMs;
 });
 
-// ── La limpieza ────────────────────────────────────────────────────────────
-
-/** Los artefactos de un documento que ya no existe. */
 Given('un documento borrado con slug {string} y estos artefactos:', (slug: string, artefactos: string) => {
   world.slugBorrado = slug;
   world.borrados = new Set([`${slug}.md`]);
@@ -130,7 +100,6 @@ When('limpio los documentos borrados', async () => {
   );
 });
 
-/** El slug anterior de un documento. */
 Given('un documento que antes se llamaba {string}', (slug: string) => {
   world.cambioSlug = slug;
   escribirEnProyecto(join('dist', 'files', `${slug}.html`), 'html');
@@ -140,7 +109,6 @@ When('limpio el slug que cambió', async () => {
   await cleanupSlugChanges(ctx(), new Map([['doc.md', world.cambioSlug as string]]));
 });
 
-/** Los formatos que el proyecto ya no pide. */
 Given('una salida con salidas de {string}', (formatos: string) => {
   world.formatosQuitados = formatos
     .split(',')
@@ -168,8 +136,6 @@ When('limpio los formatos que ya no se piden', async () => {
   await cleanupRemovedFormats(ctx(), [{ relativePath: 'doc.md', slug: 'doc' } as never], world.formatosQuitados as string[]);
 });
 
-// ── El layout viejo (#2450) ────────────────────────────────────────────────
-
 Given('una salida con el layout de assets anterior', () => {
   escribirEnProyecto('dist/files/css/styles.css', 'x');
   escribirEnProyecto('dist/files/fonts/x.ttf', 'x');
@@ -193,12 +159,6 @@ Then('la salida NO se detecta como del layout anterior', async () => {
   }
 });
 
-/**
- * Un documento borrado cuyo slug nunca estuvo en el estado: `index.md` sin
- * entrada previa. El slug cae al basename, que es justo lo que hay que
- * comprobar — si la limpieza mirara el slug del índice en vez del nombre del
- * archivo, no borraría nada.
- */
 Given('un documento borrado sin slug conocido y estos artefactos:', (artefactos: string) => {
   world.rutaBorrada = 'index.md';
   world.slugBorrado = 'index';
@@ -209,10 +169,6 @@ Given('un documento borrado sin slug conocido y estos artefactos:', (artefactos:
   }
 });
 
-/**
- * Un assert por step es lo que el catálogo rechaza: una lista de rutas y una
- * lista de "éstas NO" comprueban lo mismo en un solo paso.
- */
 Then('estos archivos ya no están:', (lista: string) => {
   const sobran = lista
     .split('\n')

@@ -8,29 +8,11 @@ import { initProject } from '../../cli/init.js';
 import { validateProject } from '../../cli/validate.js';
 import { initTestProject } from '../helpers.js';
 
-/**
- * #2546 (onda 2) — `integration`: `init`, `build` y `validate` de punta a punta.
- *
- * ## Por qué el estado se guarda y compara, en vez de un `expect`
- *
- * El caso de #2168 es el único que mira el *estado* entre dos builds: el
- * `state.json` del build completo tiene que sobrevivir intacto a un build que
- * falla. Eso no cabe en un `Then` de igualdad sin referenciar el mundo dos
- * veces, así que el `When` guarda la referencia y el `Then` compara.
- *
- * ## El `exitCode` de validate
- *
- * `validateProject` no lanza: fija `process.exitCode`. El original lo guardaba y
- * lo restauraba a mano para no contaminar el resto de la corrida — que es
- * exactamente el problema del world object. Aquí se guarda una vez y lo restaura
- * el `After`, que corre pase lo que pase.
- */
-
 interface IntWorld {
   dir: string;
-  /** Configuración del proyecto bueno, para volver a ella tras romperla (#2168). */
+
   configBefore: string;
-  /** `state.json` del último build completo: debe sobrevivir a un build fallido. */
+
   stateBefore: string;
   htmlMtime: number;
   buildFailed: boolean;
@@ -53,8 +35,6 @@ function distPath(...parts: string[]): string {
   return join(world.dir, 'dist', 'files', ...parts);
 }
 
-// ── Given ────────────────────────────────────────────────────────────────────
-
 Given('un directorio vacío', async () => {
   await mkdir(world.dir, { recursive: true });
 });
@@ -68,8 +48,6 @@ Given('un proyecto con un documento de frontmatter sin cerrar', async () => {
   await writeFile(join(world.dir, 'bad.md'), '---\ntitle: "sin cerrar\n---\n\nContenido.\n', 'utf8');
 });
 
-// ── When ─────────────────────────────────────────────────────────────────────
-
 When('inicializo el proyecto', async () => {
   await initProject(world.dir);
 });
@@ -82,8 +60,7 @@ When('creo los capítulos uno y dos', async () => {
 When('compilo el proyecto entero desde cero', async () => {
   process.exitCode = 0;
   await build(world.dir, { full: true });
-  // Se guarda DESPUÉS del build bueno: es la referencia que el build fallido no
-  // debe tocar. El original lo leía con un `expect` de longitud aquí mismo.
+
   const statePath = join(world.dir, '.iteraciones', 'state.json');
   if (await Bun.file(statePath).exists()) {
     const previo = await readFile(statePath, 'utf8');
@@ -105,12 +82,11 @@ When('cambio el tema del sitio en la configuración', async () => {
 
 When('apunto la bibliografía a un archivo que no existe', async () => {
   world.configBefore = await readFile(join(world.dir, 'iteraciones.config.yaml'), 'utf8');
-  // Error de config previo al discovery: el build falla entero.
+
   await writeFile(join(world.dir, 'iteraciones.config.yaml'), `${world.configBefore}\nbibliography: refs/no-existe.bib\n`);
 });
 
 When('compilo otra vez', async () => {
-  // El build con la bibliografía rota tiene que fallar, no dejar un estado a medias.
   process.exitCode = 0;
   world.buildFailed = false;
   try {
@@ -130,17 +106,11 @@ When('valido el proyecto', async () => {
   process.exitCode = undefined;
   try {
     await validateProject(world.dir);
-  } catch {
-    // validate no lanza por errores de frontmatter: fija exitCode. El catch sólo
-    // cubre un fallo inesperado, que sí sería un error del test.
-  }
+  } catch {}
   world.validateExitCode = process.exitCode;
-  // El `After` lo restaura igual, pero dejarlo en 0 evita que un fallo posterior
-  // lo reporte como error de cucumber.
+
   process.exitCode = 0;
 });
-
-// ── Then ─────────────────────────────────────────────────────────────────────
 
 Then('el proyecto tiene configuración y documento inicial', async () => {
   for (const archivo of ['iteraciones.config.yaml', 'index.md']) {

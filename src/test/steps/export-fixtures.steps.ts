@@ -7,21 +7,6 @@ import { convertToEpub, convertToMarkdown, type ExportDocument } from '../../bui
 import type { LuaFilterGroup } from '../../builder/filter-resolver.js';
 import * as pandocRunner from '../../lib/pandoc-runner.js';
 
-/**
- * #2545 (onda 1) — contrato de argumentos de los exportadores.
- *
- * `execPandoc` está espiado: los scenarios verifican el contrato sin invocar el
- * binario. El espío vive en `world.calls` y **no** se restaura a mano —
- * `00-higiene-del-mundo.steps.ts` lo hace en su `After` con `mock.restore()`.
- * El original usaba `try/finally` + `spy.mockRestore()` en cada test; aquí eso
- * es código repetido que además se olvidaría en el primer scenario nuevo.
- *
- * Cada `Then` afirma un comportamiento, no un `expect`: "recibe el índice y los
- * metadatos" son seis asserts del original en un solo paso. Un step por assert
- * daría 20 pasos y volvería la prosa decorativa, que es justo lo que el
- * catálogo de #2544 rechaza.
- */
-
 type Call = Parameters<typeof pandocRunner.execPandoc>[0];
 
 const NO_FILTERS: LuaFilterGroup = {
@@ -45,21 +30,6 @@ interface ExportWorld {
 
 const world: ExportWorld = { dir: '', outputPath: '', calls: [], baseDoc: {} as ExportDocument };
 
-// ## Por qué el espío va en un hook con tag y no en un `Before` normal
-//
-// Los hooks de cucumber son GLOBALES en cuanto se importa el archivo: no
-// existen hooks por feature. Un `Before` normal aquí espiaba `execPandoc`
-// para TODOS los scenarios, incluidos los de `build-script.feature`, que
-// necesitan pandoc de verdad — y ese feature empezó a fallar con
-// "falta la sección # === Pandoc: LaTeX ===" porque el pandoc real nunca
-// corría.
-//
-// Los tags resuelven el alcance: `@spy-pandoc` en el scenario activa este
-// hook sólo para él. Es una dimensión de tags distinta de `@requires-*`:
-// esta dice "qué espiar", aquella dice "qué hace falta en la máquina".
-//
-// El `Before` global que sí hace falta (crear el temporal) se queda sin
-// tag; el espío, con tag.
 Before(async () => {
   world.dir = await mkdtemp(join(tmpdir(), 'iteraciones-gherkin-'));
   world.calls = [];
@@ -69,12 +39,9 @@ After(async () => {
   await rm(world.dir, { recursive: true, force: true });
 });
 
-// Sólo para los scenarios marcados `@spy-pandoc`.
 Before({ tags: '@spy-pandoc' }, () => {
   world.calls = [];
-  // Sin implementar devuelve vacío y captura las opciones: el mismo contrato
-  // que el `spyPandoc` del original. `00-higiene-del-mundo.steps.ts` lo
-  // restaura en su `After` con `mock.restore()`.
+
   spyOn(pandocRunner, 'execPandoc').mockImplementation(async (options) => {
     world.calls.push(options);
     return '';
@@ -167,7 +134,7 @@ Then('pandoc escribe en {string} leyendo del markdown del proyecto', (format: st
 
 Then('pandoc recibe el índice y los metadatos del documento', () => {
   const args = lastCall().extraArgs;
-  // #2010: el frontmatter manda sobre el `language` de las opciones.
+
   exige(args, '--toc');
   exige(args, '--metadata=language:en');
   exige(args, '--metadata=title:Mi título');
@@ -197,11 +164,11 @@ Then('el Markdown sale con el frontmatter del documento y sin rutas absolutas', 
   const content = await readFile(world.outputPath, 'utf8');
   if (!content.includes('title: Mi título')) throw new Error('falta el título en el frontmatter');
   if (!content.includes('language: es-MX')) throw new Error('falta el idioma en el frontmatter');
-  // Sin roundtrip por pandoc: el body no se transforma (#2436).
+
   if (!content.endsWith('\n\nHola.\n')) {
     throw new Error(`esperaba que el body quedara intacto y terminó en ${JSON.stringify(content.slice(-20))}`);
   }
-  // bibliography y csl los aporta la config del sitio al reprocesar; no viajan.
+
   if (content.includes('bibliography:')) throw new Error('el markdown exportado no debe llevar bibliography');
   if (content.includes('csl:')) throw new Error('el markdown exportado no debe llevar csl');
   if (content.includes(world.dir)) throw new Error(`el markdown exportado filtró la ruta ${world.dir}`);

@@ -5,19 +5,12 @@ Característica: la regresión visual de los PDF
   Quiero guardar una referencia y que cada build me diga si cambió
   Para ver la diferencia, no un "algo no cuadra"
 
-  # Tramo 40 de la migración. 9 de los 21 casos de `visual-diff.test.ts`.
-
-  # La referencia vive en `visual/`, espejando la estructura de `dist/files`.
-  # Todo sale por el exit code, no lanzando: es lo que ve el script que envuelve
-  # al comando, y lo único que puede comprobar sin leer el mensaje.
-
   Regla de negocio: El snapshot va donde el PDF
 
     Escenario: Guardar la referencia la deja junto a su diff
       Dado que la raíz del proyecto está vacía
       Y un PDF llamado "mi-doc.pdf" en la raíz
       Cuando creo el snapshot de "mi-doc.pdf" con "update=true"
-      # El mensaje dice origen → destino: el autor sabe dónde mirar.
       Entonces el visual termina con código 0
       Y el visual dice por stdout "mi-doc.pdf → visual/mi-doc.pdf"
       Y el archivo "visual/mi-doc.pdf" existe en el proyecto
@@ -28,15 +21,11 @@ Característica: la regresión visual de los PDF
       Dado que la raíz del proyecto está vacía
       Y un PDF llamado "mi-doc.pdf" en la raíz
       Cuando comparo "mi-doc.pdf" con ""
-      # El mensaje trae el comando, no sólo el problema.
       Entonces el visual termina con código 1
       Y el visual dice por stderr "no hay snapshot en visual/mi-doc.pdf"
       Y el visual dice por stderr "iteraciones visual snapshot"
 
   Regla de negocio: Las rutas se validan antes de hacer nada
-
-    # Un error de entrada con el directorio ya a medias deja snapshots a medias y
-    # el siguiente build los toma por buenos.
 
     Escenario: Snapshot admite como mucho un PDF
       Dado que la raíz del proyecto está vacía
@@ -47,7 +36,6 @@ Característica: la regresión visual de los PDF
       Y el visual dice por stderr "snapshot admite como mucho una ruta"
       Y el archivo "visual/mi-doc.pdf" NO existe en el proyecto
 
-    # `check <pdf> [referencia]`: tres rutas no tienen sentido.
     Escenario: Check admite como mucho dos rutas
       Dado que la raíz del proyecto está vacía
       Cuando comparo "a.pdf,b.pdf,c.pdf" con ""
@@ -69,9 +57,6 @@ Característica: la regresión visual de los PDF
       Y el visual dice por stderr "--dpi inválido"
 
   Regla de negocio: El modo lote barre `dist/files` y espeja carpetas
-
-    # El snapshot tiene la misma forma que la salida: así un PDF de un anexo
-    # tiene su referencia al lado y no en una lista plana.
 
     Escenario: El lote guarda una referencia por PDF de la salida
       Dado que la raíz del proyecto está vacía
@@ -100,8 +85,6 @@ Característica: la regresión visual de los PDF
       Y el visual dice por stderr "no hay snapshots en visual"
       Y el visual dice por stderr "iteraciones visual snapshot"
 
-    # Comparar con referencias incompletas daría un informe que parece limpio
-    # cuando en realidad faltan PDFs: mejor cortar y dizer cuáles.
     Escenario: Con referencias incompletas corta antes de comparar
       Dado que la raíz del proyecto está vacía
       Y la salida tiene estos archivos:
@@ -115,11 +98,6 @@ Característica: la regresión visual de los PDF
       Y el visual dice por stderr "snapshots incompletas"
       Y el visual dice por stderr "visual/libro.pdf"
       Y en las referencias quedan "index.pdf"
-
-  # --- Tramo 40: `visual snapshot` también limpia ---
-
-  # Una referencia sin PDF es basura que ocupa sitio y confunde: el siguiente
-  # "todo verde" es en realidad un "no miré nada".
 
   Regla de negocio: El snapshot retira lo que ya no existe
 

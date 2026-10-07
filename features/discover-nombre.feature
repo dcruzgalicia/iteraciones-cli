@@ -5,14 +5,7 @@ Característica: el nombre del archivo de salida
   Quiero que el archivo se llame a partir del título y del autor
   Para reconocerlo en mi carpeta de descargas sin abrirlo
 
-  # Tramo 7 de la migración. 21 de los 38 casos de `discover.test.ts`.
-
   Regla de negocio: El nombre del archivo se arma con título y primer autor
-
-    # El nombre es lo primero que el autor ve de su trabajo, y lo que decide
-    # si dos archivos se pisan en una carpeta. Sin acentos, con guiones, y
-    # sólo el primer autor: con tres, el nombre deja de ser legible y la URL
-    # deja de ser estable.
 
     Esquema del escenario: El nombre del archivo sale del título y del autor
       Dado que el documento se titula "<titulo>"
@@ -26,8 +19,6 @@ Característica: el nombre del archivo de salida
         | Mi Artículo | Juan Pérez | mi-articulo-por-juan-perez |
         | Mi Artículo | Sofia García, Juan Pérez, Ana López | mi-articulo-por-sofia-garcia |
 
-    # La normalización no es estética: `Acentos` y `Acentos` tienen que dar el
-    # mismo archivo, o el build produce dos PDFs del mismo documento.
     Esquema del escenario: El nombre normaliza lo que el autor escribió
       Dado que el documento se titula "<titulo>"
       Cuando calculo el nombre del archivo de salida
@@ -40,8 +31,6 @@ Característica: el nombre del archivo de salida
         | Resultados 100%       | resultados-100-por-ciento | el símbolo se lee completo              |
         |   Hola!!!   Mundo...  | hola-mundo             | los signos y los espacios sueltos se van |
 
-    # Un documento sin título se tiene que llamar ALGO. El nombre del archivo
-    # es la última salida: sin ella, el autor no tiene con qué abrir el PDF.
     Esquema del escenario: Sin título, el nombre sale del archivo
       Dado que el documento no tiene título
       Y que el documento viene del archivo "<ruta>"
@@ -59,8 +48,6 @@ Característica: el nombre del archivo de salida
       Dado que el documento se titula ""
       Y que el documento viene del archivo "sub/documento.md"
       Cuando calculo el nombre del archivo de salida
-      # Con el archivo de reserva siempre hay nombre. Un `title: ""` es un
-      # frontmatter mal puesto, no una razón para no generar salida.
       Entonces el nombre de salida es "documento"
 
     Escenario: Sin título ni archivo de reserva no hay nombre
@@ -72,14 +59,9 @@ Característica: el nombre del archivo de salida
       Dado que el documento se titula "Test"
       Y que el documento tiene de autor ""
       Cuando calculo el nombre del archivo de salida
-      # Un sufijo "-por-" sin nombre detrás produce `test-por-`, que no lo
-      # arregla nadie después.
       Entonces el nombre de salida es "test"
 
   Regla de negocio: El index.md de cualquier nivel se llama index
-
-    # Es la URL del home. Un subdirectorio con su propio index produce su
-    # propio home, y llamarlo por su título rompería el enlace del padre.
 
     Esquema del escenario: Un index.md produce el nombre index
       Dado que el archivo del documento es "<ruta>"
@@ -93,8 +75,6 @@ Característica: el nombre del archivo de salida
         | posts/index.md | mi-titulo-por-autor | index |
         | posts/mi-articulo.md | mi-articulo-por-autor | mi-articulo-por-autor |
 
-    # Sin nombre calculado —un documento que el index no conoce— el nombre sale
-    # del archivo. Es la red de seguridad: siempre hay nombre.
     Esquema del escenario: Sin nombre calculado, el del archivo
       Dado que el archivo del documento es "<ruta>"
       Y que no hay nombre calculado
@@ -107,10 +87,6 @@ Característica: el nombre del archivo de salida
         | index.md | index |
 
   Regla de negocio: El autor del frontmatter es una lista, lo venga como venga
-
-    # El `creator` del frontmatter se puede escribir como texto suelto o como
-    # lista, y los dos llegan al index. El que llega con un número en medio
-    # —un YAML mal puesto— no puede hacer que el nombre del archivo reviente.
 
     Esquema del escenario: El autor se separa en una lista
       Dado que el frontmatter declara el autor como:
@@ -127,8 +103,6 @@ Característica: el nombre del archivo de salida
         | ["Sofia García", "Juan Pérez"] | Sofia García, Juan Pérez |
         | ["Sofia", 123, "Juan"] | Sofia, Juan |
 
-    # Un autor ausente o vacío es el caso normal de un documento sin firma, no
-    # un error: el documento se genera igual, sólo que sin credencial.
     Esquema del escenario: Sin autor, la lista está vacía
       Dado que el frontmatter declara el autor como:
       """
@@ -159,9 +133,6 @@ Característica: el nombre del archivo de salida
       Y el documento 2 está en "b.md"
       Y el documento 2 tiene el título "Artículo B"
 
-    # Un archivo que el index no conoce sale con los valores por defecto. El
-    # build no puede dejar un documento sin título: el nombre del archivo y la
-    # portada lo necesitan aunque el autor no escribiera nada.
     Escenario: Un documento sin entrada en el índice trae los valores por defecto
       Dado que la raíz del proyecto está vacía
       Y que el índice tiene una entrada para "x.md"

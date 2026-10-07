@@ -5,17 +5,6 @@ import { After, Before, Given, Then, When } from '@cucumber/cucumber';
 import { PandocError } from '../../lib/errors.js';
 import { execPandoc } from '../../lib/pandoc-runner.js';
 
-/**
- * #2545 (onda 1) — `semantic/ast/04-image-paths` (#2460).
- *
- * ## Por qué el mapa viaja por un fichero
- *
- * `ITERACIONES_PATHS_JSON` y no argv: el mapa crece con el número de imágenes y
- * una lista de rutas en la línea de comandos tiene límites del sistema. El
- * mapa tiene TRES claves por imagen —absoluta, relativa y `./relativa`— porque
- * el AST puede traer cualquiera de las tres según de dónde venga la referencia.
- */
-
 const FILTER = join(import.meta.dir, '../../lib/resources/filters/semantic/ast/04-image-paths.lua');
 
 const DOC = [
@@ -64,10 +53,7 @@ After(async () => {
   await rm(world.dir, { recursive: true, force: true });
 });
 
-Given('un documento con imágenes en el cuerpo, el frontmatter y una referencia', () => {
-  // El documento es fijo en los cinco escenarios; este step sólo declara el
-  // sujeto para que el feature se lea sin conocer la constante.
-});
+Given('un documento con imágenes en el cuerpo, el frontmatter y una referencia', () => {});
 
 Given('el mapa de rutas del preproceso', () => {
   world.failed = undefined;

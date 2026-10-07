@@ -13,36 +13,6 @@ import { DEFAULT_SITE_CONFIG, resolveDisabledPreambleConfig } from '../../config
 import { initTestProject } from '../helpers.js';
 import { escribirEnProyecto, world } from './cli-world.steps.ts';
 
-/**
- * #2580 (onda 2) — la regla `11-bibliography` sin archivos `.bib` (#2419).
- *
- * ## Por qué se apaga el snippet
- *
- * Un proyecto sin un solo `.bib` no cita nada. Con `csquotes` + `biblatex`
- * cargados, LaTeX emite avisos por cada `\cite` vacío y el log se llena de ruido
- * que no es un error. Peor: el autor ve advertencias de bibliografía en un libro
- * que no tiene bibliografía y busca un problema que no existe.
- *
- * ## Sin lista previa no se arriesga nada
- *
- * `bibFiles` llega a `undefined` cuando nadie la calculó todavía. Desactivar el
- * snippet con esa información sería adivinar, y adivinar aquí significa apagar
- * la bibliografía de un libro que sí la tiene. La función prefiere no hacer
- * nada.
- *
- * ## Tres sitios, una sola regla
- *
- * El build, `iteraciones template` y `iteraciones filters` tienen que decir lo
- * mismo, porque el `.sh` regenera las plantillas con `template`: si `template`
- * dijera una cosa y el build otra, el PDF del `.sh` saldría distinto del que dio
- * el build.
- *
- * ## Y `-nobibtex` al compilar
- *
- * Con el snippet apagado, `biblatex` no está, así que `latexmk` no debe buscar
- * el `.bib`: la flag evita un segundo punto de fallo.
- */
-
 const DISABLED = resolveEffectiveDisabledPreamble(resolveDisabledPreambleConfig(DEFAULT_SITE_CONFIG));
 
 function ctx(): BuildContext {
@@ -55,13 +25,10 @@ function ctx(): BuildContext {
   };
 }
 
-/** Compone la plantilla LaTeX como hace el build. */
 async function componerLaTex(bibFiles: string[]): Promise<{ tex: string; biblatex: boolean }> {
   const state = await writeEffectiveTemplates(ctx(), { generateLatex: true } as BuildMetadata, false, DEFAULT_SITE_CONFIG, bibFiles, DISABLED);
   return { tex: readFileSync(state.templates.latex, 'utf8'), biblatex: state.biblatexAvailable };
 }
-
-// ── La regla ───────────────────────────────────────────────────────────────
 
 Given('ningún archivo .bib', () => {
   world.bibFiles = [];
@@ -101,8 +68,6 @@ Then('el resultado son {string}', (esperado: string) => {
   }
 });
 
-// ── El build escribe la plantilla ──────────────────────────────────────────
-
 Given('un proyecto con una bibliografía en {string}', (ruta: string) => {
   escribirEnProyecto(ruta, '@book{ref,\n  title = {T}\n}\n');
 });
@@ -132,8 +97,6 @@ Then('biblatex queda {string}', (estado: string) => {
   const quiero = estado === 'true';
   if (leido !== quiero) throw new Error(`biblatexAvailable es ${String(leido)} y el escenario dice ${estado}`);
 });
-
-// ── `iteraciones template` dice lo mismo que el build ─────────────────────
 
 Given('un proyecto de prueba inicializado', async () => {
   initTestProject(world.root);
@@ -167,8 +130,6 @@ Then('la plantilla NO lleva el paquete de bibliografía', () => {
   }
 });
 
-// ── `iteraciones filters` ──────────────────────────────────────────────────
-
 When('pregunto el estado de 11-bibliography', async () => {
   const espia = spyOn(process.stdout, 'write').mockImplementation(() => true);
   try {
@@ -186,8 +147,6 @@ Then('11-bibliography está {string}', (estado: string) => {
     throw new Error(`11-bibliography está en ${String(world.estadoBib)} y el escenario dice ${estado}`);
   }
 });
-
-// ── El flag de latexmk ────────────────────────────────────────────────────
 
 Given('un latexmk falso que registra sus argumentos', () => {
   const dirBin = join(world.root, 'bin');

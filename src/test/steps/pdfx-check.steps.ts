@@ -8,34 +8,13 @@ import * as runLib from '../../lib/run.js';
 import { ProcessSpawnError } from '../../lib/run.js';
 import { escribirEnProyecto, world } from './cli-world.steps.ts';
 
-/**
- * #2580 (onda 2) — la validación PDF/X de la salida (#1960, #2163, #2454, #2499).
- *
- * El filtro 99-pdfx es la señal de imprenta: si un PDF no certifica, el build
- * falla. Por eso esta fase se comporta al revés que el resto: no es una
- * advertencia, es una puerta.
- *
- * ## Todo lo que el binario necesita se escribe de mentira
- *
- * Compilar el validador real es Rust y cargo. Los escenarios escriben un
- * binario falso que devuelve un JSON fijo, así que lo que se prueba es la
- * lectura del informe: qué cuenta como válido, qué se reporta y cómo.
- *
- * ## `XDG_CACHE_HOME` se aísla siempre
- *
- * Sin aislarla, cada escenario compila el binario de verdad en la caché del
- * usuario. Con `allowBuild` se llega a invocar cargo (#2163).
- */
-
 const CONFIG_PDFX_ACTIVO =
   'language: es-MX\nformat:\n  pdf:\n    generate: true\n    disabledPreambleFilters:\n      - 97-eso-pic\n      - 98-crop\n';
 
-/** La caché del binario va dentro del temporal del escenario: hermético. */
 function aislarCacheBinario(): void {
   process.env.XDG_CACHE_HOME = join(world.root, 'cache');
 }
 
-/** Escribe un binario falso que emite un informe JSON fijo. */
 function binarioQueDice(json: string): void {
   const dir = join(world.root, 'cache', 'iteraciones', 'bin');
   mkdirSync(dir, { recursive: true });
@@ -44,7 +23,6 @@ function binarioQueDice(json: string): void {
   chmodSync(ruta, 0o755);
 }
 
-/** Binario falso que certifica todo menos lo que el path llama «roto». */
 function _binarioSelectivo(): void {
   const dir = join(world.root, 'cache', 'iteraciones', 'bin');
   mkdirSync(dir, { recursive: true });
@@ -69,7 +47,6 @@ function _binarioSelectivo(): void {
   chmodSync(ruta, 0o755);
 }
 
-/** La salida del build: `dist/files`, que es lo que se barre. */
 function salida(): string {
   return join(world.root, 'dist', 'files');
 }
@@ -79,7 +56,6 @@ function cargarConfig(): Promise<Config> {
   return loadSiteConfig(world.root);
 }
 
-/** El `Then` del fallo: si no hay excepción, el escenario está mal. */
 async function esperarFallo(fn: () => Promise<unknown>): Promise<string> {
   try {
     await fn();
@@ -88,8 +64,6 @@ async function esperarFallo(fn: () => Promise<unknown>): Promise<string> {
   }
   throw new Error('no falló y debía: la validación PDF/X es una puerta, no un aviso');
 }
-
-// ── Escenario ──────────────────────────────────────────────────────────────
 
 Given('un proyecto con la certificación PDFX activada', async () => {
   await Promise.resolve();
@@ -110,7 +84,6 @@ Given('un proyecto con la certificación PDFX desactivada', async () => {
   mkdirSync(salida(), { recursive: true });
 });
 
-/** PDF de mentira: al validador falso sólo le importa el nombre. */
 Given('la salida tiene un PDF llamado {string}', (nombre: string) => {
   escribirEnProyecto(join('dist', 'files', nombre), '%PDF-1.4 fake');
 });
@@ -123,16 +96,11 @@ Given('no hay binario de validación compilado', () => {
   aislarCacheBinario();
 });
 
-/** Cargo ausente: `buildPdfCheckBinary` retorna null y la fase se omite. */
 Given('compilar el binario va a fallar', () => {
   spyOn(runLib, 'exec').mockRejectedValue(new ProcessSpawnError('cargo'));
   world.espiaStderr = spyOn(process.stderr, 'write');
 });
 
-/**
- * La validación puede DETENER el build: eso es un resultado legítimo, no un
- * error del escenario. El mensaje se guarda y lo verifica el `Entonces`.
- */
 When('valido los PDF de la salida', async () => {
   world.espiaStderr = spyOn(process.stderr, 'write');
   try {
@@ -165,7 +133,6 @@ Then('stderr anuncia {string}', (texto: string) => {
   if (!salida.includes(texto)) throw new Error(`stderr no dice ${JSON.stringify(texto)}. Dice:\n${salida}`);
 });
 
-/** El orden importa: el aviso tiene que explicar por qué se omite. */
 Then('stderr anuncia {string} antes de {string}', (primero: string, segundo: string) => {
   const salida = (world.espiaStderr as { mock: { calls: unknown[][] } }).mock.calls.map((c) => String(c[0])).join('');
   const a = salida.indexOf(primero);
@@ -186,7 +153,6 @@ Then('la línea de resumen dice {string}', (texto: string) => {
   if (!linea.includes(texto)) throw new Error(`la línea es ${JSON.stringify(linea)} y no dice ${JSON.stringify(texto)}`);
 });
 
-/** Varios motivos separados por `;;`: el mensaje tiene que llevarlos todos. */
 Then('la validación falla diciendo {string}', async (motivos: string) => {
   if (world.mensajePdfx === '') {
     world.mensajePdfx = await esperarFallo(() => runPdfxOutputValidation(salida(), world.configPdfx as Config, { allowBuild: false }));

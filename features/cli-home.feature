@@ -6,21 +6,12 @@ Característica: El home y la bibliografía se resuelven antes de publicar
   Y que cambiar la bibliografía regenere las exportaciones
   Para no publicar un 404 ni una cita vieja
 
-  # 6 de los 31 casos que quedan de `cli-layer`.
-  #
-  # Los dos temas parecen distintos y tienen el mismo origen: el build resuelve
-  # rutas y dependencias ANTES de generar, y si se equivoca el error sale como
-  # un 404 en el navegador o como una cita del año pasado.
-
   Regla de negocio: Un proyecto sin documentos sale bien y avisa
 
     Escenario: Un proyecto con un documento compila
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 0
-
-    # Un proyecto recién inicializado no tiene documentos todavía. Eso no es un
-    # error: el build sale con 0, dice "0 formatos" y avisa.
 
     Escenario: Un proyecto sin documentos avisa sin romper
       Dado que la raíz del proyecto tiene configuración pero ningún documento
@@ -32,19 +23,7 @@ Característica: El home y la bibliografía se resuelven antes de publicar
       Y la salida no dice "✔ Todo listo."
       Y la salida no dice "ejecuta 'iteraciones validate'"
 
-      # Tres detalles en un escenario, y los tres importan:
-      #
-      # - "0 formatos activos" y no "(reutilizado)": no hubo nada que reutilizar,
-      #   y decirlo sería mentir sobre el estado de la caché.
-      # - Sin "✔ Todo listo.": el cierre es neutral cuando hay advertencias.
-      # - Sin la guía de `validate`: el aviso ya propone `iteraciones init`, y
-      #   `validate` respondería "sin errores — 0 documentos", que no ayuda.
-
   Regla de negocio: La tarjeta identidad sólo enlaza si existe el home
-
-    # Una tarjeta de identidad es el `<div>` que lleva el título del sitio. Sin
-    # `index.md` no hay home, y un enlace a `./index.html` sería un 404 en la
-    # primera página del sitio — justo la que más se mira.
 
     Escenario: Sin index.md la tarjeta identidad no es un enlace
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -69,10 +48,6 @@ Característica: El home y la bibliografía se resuelven antes de publicar
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/test-document.html" contiene 'href="./index.html"'
       Y el archivo "dist/files/index.html" existe
-
-    # Desde `posts/articulo.html` el home está un nivel arriba. La ruta
-    # unificada es `./../index.html`: con `./index.html` el enlace buscaría un
-    # home DENTRO de `posts/`, que no existe.
 
     Escenario: Desde un subdirectorio el enlace sube un nivel
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -99,10 +74,6 @@ Característica: El home y la bibliografía se resuelven antes de publicar
       Y el archivo "dist/files/posts/articulo.html" contiene 'href="./../index.html"'
 
   Regla de negocio: La bibliografía es parte del documento que la cita
-
-    # El `.bib` no es un archivo más del proyecto: su contenido va dentro del
-    # HTML final. Si el build no lo mirara al invalidar, cambiar una cita
-    # publicaría el texto viejo con la referencia nueva.
 
     Escenario: Un cambio de bibliografía regenera las exportaciones
       Dado que la raíz del proyecto tiene un proyecto de prueba

@@ -5,32 +5,6 @@ import { loadSiteConfig } from '../../config/config-loader.js';
 import { type FormatKey, toActiveFormats } from '../../config/site-config.js';
 import { escribirEnProyecto, world } from './cli-world.steps.ts';
 
-/**
- * #2580 (onda 2) — qué se recompila y qué no.
- *
- * ## La pregunta del build incremental
- *
- * Un build es caro porque compila. La pregunta es qué documento hay que volver a
- * compilar, y la respuesta tiene que ser **más estrecha que "todo"**: rehacer
- * los tres documentos porque cambió uno es lo que hace que el build incremental
- * no sirva de nada.
- *
- * ## TresTranscriptores de invalidación, tres alcances
- *
- * - **`docsChanged`**: este documento cambió. Se re-renderiza él y se vuelve a
- *   exportar en los formatos activos.
- * - **`filtersInvalidated`**: cambió un filtro de LaTeX. El resultado depende de
- *   los filtros, así que **todos** los documentos se re-renderizan.
- * - **`bibInvalidated`**: cambió la bibliografía. **Nadie** se re-renderiza: las
- *   citas se resuelven en el export, así que basta con re-exportar. Es el
- *   inverso del caso anterior y por eso merece un escenario propio.
- *
- * ## Un formato nuevo no invalida los documentos
- *
- * Pedir PDF en un proyecto que sólo hacía HTML no obliga a re-renderizar el
- * LaTeX de nada: los documentos van al `exportSet` del formato nuevo y punto.
- */
-
 function doc(relativePath: string): BuildDocument {
   return {
     filePath: `/proyecto/${relativePath}`,
@@ -39,7 +13,6 @@ function doc(relativePath: string): BuildDocument {
   };
 }
 
-/** Los metadatos base; el escenario ajusta lo que le importa. */
 function meta(over: Partial<BuildMetadata>): BuildMetadata {
   return {
     currentFormats: ['latex'],
@@ -88,14 +61,6 @@ Given('el formato {string} está activo', (formato: string) => {
   world.formatosActivos = [...new Set([...actuales, formato.trim()])];
 });
 
-/**
- * Un formato que este build pide y el anterior no.
- *
- * Se ACUMULA, no se pisa: un build puede encender PDF y EPUB a la vez, y cada
- * uno va a su propio conjunto de exportación. Con un único `formatoNuevo` el
- * segundo `Dado` borraba al primero y el escenario acababa exercising menos de
- * lo que decía.
- */
 Given('el formato {string} se acaba de pedir', (formato: string) => {
   world.formatoNuevo = [...new Set([...(world.formatoNuevo as string[]), formato.trim()])];
 });
@@ -121,15 +86,7 @@ When('calculo qué hay que recompilar', () => {
   const invalidas = world.invalidaciones as Record<string, boolean>;
   const activos = (world.formatosActivos as string[] | undefined) ?? ['latex'];
   const nuevos = world.formatoNuevo as string[];
-  // Un formato recién pedido invalida SU clave de formato, que es lo que
-  // producción saca del hash de la config (`state-hash.ts:157`): `print` sale
-  // del hash de `format.pdf`, y ese hash incluye `latex.generate`, así que un
-  // LaTeX nuevo también invalida `print`.
-  //
-  // ponytail: el paso no recalcula hashes — modela la relación formato→clave.
-  // Si `computeConfigHashes` mezclara otra clave, este mapeo se queda corto; lo
-  // que no puede es mentir en más de una dirección, porque lo verifica el
-  // escenario de metadata (`nada está invalidated`).
+
   const formatInvalidated = {
     print: nuevos.includes('pdf') || nuevos.includes('latex'),
     html: nuevos.includes('html'),
@@ -146,8 +103,6 @@ When('calculo qué hay que recompilar', () => {
   });
   world.trabajo = computeWorkSets(m, world.docsPlan as BuildDocument[], (world.docsCambiados ?? new Set<string>()) as Set<string>);
 });
-
-// ── Lo que se recompila ────────────────────────────────────────────────────
 
 Then('no hay nada que hacer', () => {
   const t = world.trabajo as { anyWork: boolean };
@@ -168,7 +123,6 @@ Then('los documentos a recompilar son {string}', (esperados: string) => {
 });
 
 Then('el conjunto de export para {word} son {string}', (formato: string, esperados: string) => {
-  // El matcher entrega el texto CON las comillas del Gherkin.
   const clave = formato.replace(/["']/g, '');
   const conjuntos = (world.trabajo as { exportSets: Record<string, BuildDocument[]> }).exportSets;
   const leidos = (conjuntos[clave] ?? [])
@@ -181,17 +135,10 @@ Then('el conjunto de export para {word} son {string}', (formato: string, esperad
   }
 });
 
-// ── La metadata, que viene de la config y del estado anterior ──────────────
-
 Given('un proyecto con la configuración:', (yaml: string) => {
   escribirEnProyecto('iteraciones.config.yaml', `${yaml.replace(/<br>/g, '\n')}\n`);
 });
 
-/**
- * `prevState` es lo que hace que el build sea incremental: sin él no hay con
- * qué comparar y nada se considera invalidado. El estado se declara por sus
- * formatos activos, que es lo único que este escenario necesita observar.
- */
 Given('un build anterior con los formatos {string}', (lista: string) => {
   world.formatosPrevios = lista
     .split(',')

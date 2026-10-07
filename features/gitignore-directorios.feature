@@ -5,15 +5,7 @@ Característica: un directorio ignorado se salta entero
   Quiero que el build no los recorra
   Para no perder el tiempo de build leyendo archivos que no se compilan
 
-  # Tramo 27 de la migración. `isInsideIgnoredDir` de `gitignore.test.ts`.
-  # Feature aparte: su paso dice "la ruta" y con las tablas de reglas en el
-  # mismo feature `check-steps` mezcla las columnas.
-
   Regla de negocio: Un directorio ignorado se salta entero, sin mirar dentro
-
-    # Es la optimización que hace el descubrimiento rápido: si `dist/` está
-    # ignorado, no hay que recorrer sus cientos de archivos para decidir que
-    # ninguno vale. Y el prefijo `.` es la misma idea.
 
     Esquema del escenario: Un directorio ignorado o con punto no se recorre
       Dado que la raíz del proyecto está vacía
@@ -27,8 +19,6 @@ Característica: un directorio ignorado se salta entero
         | docs/node_modules/x.md |
         | a/b/c/dist/x.md |
 
-    # Y una carpeta que sólo empieza por el nombre del directorio ignorado no es
-    # el directorio ignorado.
     Esquema del escenario: Una carpeta normal no está dentro de un directorio ignorado
       Dado que la raíz del proyecto está vacía
       Entonces la ruta "<ruta>" no está dentro de un directorio ignorado

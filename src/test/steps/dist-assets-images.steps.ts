@@ -4,25 +4,6 @@ import { join } from 'node:path';
 import { After, Before, Given, Then, When } from '@cucumber/cucumber';
 import { runBuild } from '../../cli/dispatcher.js';
 
-/**
- * #2546 (onda 2) — `dist-assets-images`: el contrato del directorio `assets`.
- *
- * ## Por qué seis pasos y no veintidós `expect`
- *
- * El original es un `it()` con 22 aserciones numeradas del 1 al 6. El issue
- * pregunta si dividirlo. La respuesta es dividir por COMPORTAMIENTO: seis pasos
- * que se leen como seis reglas —una copia por imagen, los formatos la
- * referencian, el nivel anidado no sube, el markdown cubre las tres formas del
- * frontmatter, el mapa de rutas existe, nada estático queda fuera— y cada uno
- * agrupa las aserciones que lo demuestran.
- *
- * ## La raíz canónica aparece en una clave del mapa
- *
- * La clave absoluta del mapa de #2460 usa la raíz canónica: en macOS `/var` es
- * un enlace a `/private/var`. Comparar contra el `dir` sin canonicalizar daría
- * un falso negativo sólo en macOS, que es donde corremos.
- */
-
 const CONFIG = [
   'language: es-MX',
   'format:',
@@ -34,7 +15,6 @@ const CONFIG = [
   '    generate: true',
 ].join('\n');
 
-/** #2441 — las tres formas del frontmatter: escalar, lista y multilínea. */
 const DOC = [
   '---',
   'title: Ejemplo',
@@ -98,17 +78,13 @@ Given('un proyecto con un manuscrito y un anexo anidado, cada uno con sus imáge
   await Bun.write(join(world.dir, 'iteraciones.config.yaml'), `${CONFIG}\n`);
   for (const [nombre, color] of IMAGENES) await magick(nombre, color);
   await Bun.write(join(world.dir, 'manuscrito.md'), `${DOC}\n`);
-  // Documento anidado: su assets vive en su propio nivel.
+
   await mkdir(join(world.dir, 'sub'), { recursive: true });
   await Bun.write(join(world.dir, 'sub', 'anexo.md'), `${ANEXO}\n`);
   await magick('grafico.png', 'black', join(world.dir, 'sub'));
 });
 
-Given('el frontmatter del manuscrito trae las tres formas de imagen', () => {
-  // El documento ya lo trae en el Given anterior: escalar (`titleImage`),
-  // lista (`publisherImage`) y multilínea (`frontispiece: |`). Este step declara
-  // la precondición para que el feature se lea sin conocer el literal.
-});
+Given('el frontmatter del manuscrito trae las tres formas de imagen', () => {});
 
 When('compilo el proyecto por el CLI', async () => {
   process.exitCode = 0;
@@ -117,8 +93,6 @@ When('compilo el proyecto por el CLI', async () => {
 
 Then('la copia de cada imagen vive en el directorio de imágenes de su nivel', async () => {
   const esperadas = [
-    // Una copia por imagen, en el assets/images de su nivel, con el prefijo del
-    // slug del documento que la procesó.
     [join('assets', 'images', 'ejemplo-foto.jpg'), true],
     [join('assets', 'img', 'foto.jpg'), false],
     ['foto.jpg', false],
@@ -133,7 +107,6 @@ Then('la copia de cada imagen vive en el directorio de imágenes de su nivel', a
 });
 
 Then('el formato exportado la referencia desde ese directorio', async () => {
-  // HTML y markdown la referencian relativa a sus salidas.
   for (const nombre of ['ejemplo.html', 'ejemplo.md']) {
     const content = await readFile(join(world.dist, nombre), 'utf8');
     if (!content.includes('assets/images/ejemplo-foto.jpg')) {
@@ -143,7 +116,6 @@ Then('el formato exportado la referencia desde ese directorio', async () => {
 });
 
 Then('el anexo no sube con dos puntos para llegar a su directorio', async () => {
-  // Su assets vive en SU nivel, y sus salidas la referencian igual que la raíz.
   for (const nombre of ['anexo.html', 'anexo.md']) {
     const content = await readFile(join(world.dist, 'sub', nombre), 'utf8');
     if (!content.includes('./assets/images/anexo-grafico.jpg')) {
@@ -166,7 +138,7 @@ Then('el markdown exportado apunta a assets en todas las formas', async () => {
   ]) {
     if (!md.includes(esperado)) throw new Error(`el markdown exportado no trae ${esperado}`);
   }
-  // Ninguna forma puede dejar una ruta del proyecto fuente colgando.
+
   for (const prohibido of ['portada.png', 'editorial.png', 'frontis.png', 'referencia.png', 'crudo.png']) {
     if (md.includes(prohibido)) throw new Error(`el markdown exportado conserva la ruta del fuente: ${prohibido}`);
   }
@@ -177,9 +149,7 @@ Then('el mapa de rutas por documento y formato existe', async () => {
   const mapa = JSON.parse(await readFile(mapaPath, 'utf8')) as Record<string, string>;
   const destino = './assets/images/ejemplo-foto.jpg';
   if (mapa['foto.png'] !== destino) throw new Error(`la clave relativa del mapa no apunta a ${destino}: ${String(mapa['foto.png'])}`);
-  // La clave ABSOLUTA usa la raíz canónica: en macOS `/var` es un enlace a
-  // `/private/var`, y comparar contra el `dir` sin canonicalizar daría un falso
-  // negativo sólo en macOS.
+
   const canonico = await realpath(world.dir);
   const claveAbsoluta = `${canonico}/foto.png`;
   if (mapa[claveAbsoluta] !== destino) {

@@ -5,30 +5,6 @@ import { runBuild } from '../../cli/dispatcher.js';
 import { initTestProject } from '../helpers.js';
 import { escribirEnProyecto, world } from './cli-world.steps.ts';
 
-/**
- * #2580 (onda 2) — los árboles dorados de `dist` (#2012).
- *
- * ## El bug que estos tests cazan
- *
- * `index.md` se titula "Portada", pero su salida es `index.html`, no
- * `portada.html`. La limpieza usaba el slug del título en vez del slug de salida,
- * así que desactivar un formato dejaba los `index.*` huérfanos: archivos que nadie
- * había pedido, que no enlaza nada y que nadie borra.
- *
- * ## "Cero huérfanos" es la aserción real
- *
- * No basta con comprobar que los archivos esperados están. Hay que comprobar que
- * **todo** lo que hay en el árbol pertenece a un documento permitido, a los
- * assets globales o a un `.svg`. Un archivo que nadie reconoce es un bug aunque
- * nadie haya comprobado que debería estar.
- *
- * ## Un directorio vacío también es residuo
- *
- * Borrar `posts/borrable.md` deja `posts/` vacío. `readdir` recursivo no lo ve,
- * así que el escenario mira si queda alguna ruta bajo `posts/` en vez de mirar
- * si el directorio existe.
- */
-
 const CONFIG_TODO = [
   'language: es-MX',
   'format:',
@@ -48,7 +24,6 @@ const CONFIG_TODO = [
 
 const CONFIG_SOLO_HTML = ['language: es-MX', 'format:', '  html:', '    site:', '      title: T', '    generate: true'].join('\n');
 
-/** El árbol completo de `dist/files`, con rutas relativas y `/`. */
 function arbol(): string[] {
   const archivos: string[] = [];
   const recorrer = (rel: string): void => {
@@ -65,8 +40,6 @@ function arbol(): string[] {
   }
   return archivos.sort();
 }
-
-// ── Escenario ──────────────────────────────────────────────────────────────
 
 Given('un proyecto inicializado con todos los formatos', async () => {
   initTestProject(world.root);
@@ -135,11 +108,6 @@ Then('la salida no deja rutas bajo el prefijo {string}', (prefijo: string) => {
   if (debajo.length > 0) throw new Error(`quedaron rutas bajo ${prefijo}/: ${JSON.stringify(debajo)}`);
 });
 
-/**
- * Cero huérfanos: toda ruta del árbol pertenece a un documento permitido, a los
- * assets globales o a un `.svg`. Un archivo que nadie reconoce es un bug aunque
- * nadie haya comprobado que debería estar.
- */
 Then('la salida sólo contiene lo permitido:', (permitidos: string) => {
   const docs = permitidos
     .split('\n')

@@ -5,13 +5,7 @@ Característica: los defaults del esquema y las vías de carga
   Quiero que el build salga con la maquetación de fábrica
   Para no tener que escribir un config entero para que funcione
 
-  # Tramo 22 de la migración. Los 7 casos que quedaban de `config-loader.test.ts`.
-
   Regla de negocio: Los defaults salen del esquema, no del loader
-
-    # Si el loader materializara sus propios valores, un cambio en `DEFAULT_*`
-    # no llegaría al build y el PDF saldría con la maquetación de la versión
-    # anterior. El loader no tiene constantes: las lee del esquema.
 
     Escenario: Los defaults del esquema son la fuente única
       Dado que la raíz del proyecto está vacía
@@ -22,10 +16,6 @@ Característica: los defaults del esquema y las vías de carga
       Entonces la configuración coincide con los defaults del esquema
 
   Regla de negocio: Las vías de carga dan los mismos defaults
-
-    # Un archivo vacío y un archivo mínimo tienen que producir la misma
-    # maquetación. Si no, el autor que escribe `language: es-MX` obtiene un
-    # PDF distinto del que no escribe nada.
 
     Escenario: Un archivo vacío y uno mínimo dan lo mismo
       Dado que la raíz del proyecto está vacía
@@ -44,10 +34,6 @@ Característica: los defaults del esquema y las vías de carga
 
   Regla de negocio: Una clave ausente no se materializa
 
-    # El loader no rellena con `undefined` ni con `null`: deja la clave fuera.
-    # Los consumidores resuelven el valor efectivo cuando lo necesitan, y así
-    # un default del paquete puede cambiar sin que el config quede desfasado.
-
     Escenario: Sin clave latex, el LaTeX queda apagado
       Dado que la raíz del proyecto está vacía
       Y que el archivo de configuración es:
@@ -55,7 +41,6 @@ Característica: los defaults del esquema y las vías de carga
       language: es-MX
       """
       Cuando cargo la configuración del proyecto
-      # Sin la clave no hay formato que activar: el PDF no se compila.
       Entonces la configuración tiene "format.latex.generate" con el valor "false"
 
     Escenario: Con `format: {}` el HTML queda encendido
@@ -65,8 +50,6 @@ Característica: los defaults del esquema y las vías de carga
       format: {}
       """
       Cuando cargo la configuración del proyecto
-      # El HTML es el formato por defecto: un config que no dice nada tiene
-      # que producir algo que se pueda abrir en el navegador.
       Entonces la configuración tiene "format.html.generate" con el valor "true"
 
     Escenario: El tema por defecto es dark
@@ -98,8 +81,6 @@ Característica: los defaults del esquema y las vías de carga
           generate: true
       """
       Cuando cargo la configuración del proyecto
-      # Sin la clave no hay portada que copiar: el campo queda fuera y el
-      # consumidor resuelve el valor efectivo.
       Entonces la configuración deja "format.pdf.coverImage" sin materializar
 
   Regla de negocio: Una config completa se lee entera

@@ -10,31 +10,8 @@ import {
 } from '../../lib/frontmatter-fields.js';
 import { world } from './cli-world.steps.ts';
 
-/**
- * #2580 (onda 2) — la lectura de los campos del frontmatter.
- *
- * ## Tres niveles, y el primero que habla gana
- *
- * El frontmatter del documento, la sección `format` de la config y la raíz del
- * documento. Un valor presente pero con el tipo equivocado **no** cuenta como
- * "habla": se descarta y se busca más abajo. Si no, un `creator: "Autor"` en
- * donde se espera una lista se colaría al PDF como `[object Object]`.
- *
- * ## Cada lector acepta lo suyo y nada más
- *
- * `fmBool('false', true)` devuelve `true`, no `false`: un string "false" no es
- * un booleano y adivinarlo es la peor de las opciones, porque el autor escribió
- * algo y el build decidió otra cosa.
- */
-
 type Nivel = Record<string, unknown>;
 
-/**
- * Los niveles se declaran como `clave=valor` separados por `;;`, no como JSON:
- * el matcher de `{string}` no captura un objeto con comillas dentro, y un
- * escenario que hay que leer con escapado no es un escenario legible.
- */
-/** Un valor que PARECE otro tipo: el caso que un formateador permisivo convertiría. */
 const COMO = { texto: () => 'true' as const, uno: () => 1 as const };
 
 function nivel(texto: string): Nivel {
@@ -83,16 +60,7 @@ Given('la raíz no tiene nada', () => {
   world.nivelRoot = {};
 });
 
-// ── Lectores ───────────────────────────────────────────────────────────────
-
-/**
- * El valor se declara por su TIPO, no en JSON: una cadena vacía dentro de
- * `{string}` no llega al step, y `JSON.parse` de un docstring con comillas es
- * una fuente de escapes que no aporta nada a la lectura del escenario.
- */
 Given('el valor de campo es la cadena {string}', (valor: string) => {
-  // `(vacía)` es la cadena vacía: `{string}` sí la captura, pero sin un
-  // marcador la línea sería ambigua con el resto del paso.
   world.valorCampo = valor.replace(/["']/g, '') === '(vacía)' ? '' : valor.replace(/["']/g, '');
 });
 
@@ -143,21 +111,11 @@ When('lo leo como lista', () => {
 });
 
 When('lo leo como booleano con el valor por defecto {string}', (defecto: string) => {
-  // El matcher entrega el texto CON las comillas del Gherkin, así que se
-  // comparan sin ellas: si no, `defecto` nunca es 'true' y el valor por
-  // defecto sale siempre `false`, que es justo el caso que se quiere probar.
   const limpio = defecto.replace(/["']/g, '');
   world.leido = fmBool(world.valorCampo as boolean, limpio === 'true');
 });
 
-/**
- * Lo leído se compara como TEXTO, así que `false` y `true` llegan sin comillas
- * y el valor real puede ser un booleano de verdad. Se normaliza por
- * `String(...)`: el escenario compara "qué dice", no "de qué tipo es".
- */
 Then('lo leo como {string}', (esperado: string) => {
-  // `{string}` no captura un booleano, así que los escenarios que comparan
-  // contra `true`/`false` usan la forma sin comillas de más abajo.
   if (String(world.leido) !== esperado) {
     throw new Error(`leí ${JSON.stringify(String(world.leido))} y esperaba ${JSON.stringify(esperado)}`);
   }
@@ -195,8 +153,6 @@ Then('lo leo como la lista {string}', (esperada: string) => {
         );
   if (leida !== querida) throw new Error(`leí ${leida} y esperaba ${querida}`);
 });
-
-// ── Jerarquía ──────────────────────────────────────────────────────────────
 
 Given('el campo {string}', (campo: string) => {
   world.campoResuelto = campo;

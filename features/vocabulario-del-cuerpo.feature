@@ -4,9 +4,6 @@ Característica: El validador marca las colones sueltas del cuerpo
   Quiero que el build me avise de una ":" que se quedó sola en su línea
   Para no publicar una valla mal cerrada
 
-  # #2492 — la valla de un div admite tres o más colones. Cuatro es la forma de
-  # anidar y es la que usa el builder para las tarjetas de miembro, así que ni
-  # cuatro ni tres son una ":" suelta cuando forman un div.
   Escenario: Una línea con un solo dos puntos se reporta
     Dado un cuerpo:
       """
@@ -115,7 +112,7 @@ Característica: El validador marca las colones sueltas del cuerpo
 
       texto
 
-      :; 
+      :;
 
       texto
       """
@@ -126,7 +123,7 @@ Característica: El validador marca las colones sueltas del cuerpo
       """
       texto
 
-      : 
+      :
 
       texto
       """

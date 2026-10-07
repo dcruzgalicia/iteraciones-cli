@@ -2,22 +2,6 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import { extractFragment } from '../../builder/collection-fragment.js';
 import { world } from './cli-world.steps.ts';
 
-/**
- * #2580 (onda 2) — el fragmento que la tarjeta de una colección muestra.
- *
- * La página HTML de una colección muestra el primer párrafo de cada miembro,
- * o su bloque `:::` completo, a lo más 100 palabras. Es la diferencia entre
- * "hay 40 documentos" y "estos son mis documentos": el fragmento es lo único
- * que el autor ve sin abrir nada.
- *
- * ## Por qué casi todo son tablas
- *
- * Trece de los casos son "esto entra, esto sale". Escritos como `it()` son
- * trece casos con el mismo esqueleto; escritos como tabla son una fila cada
- * uno y la regla —qué se salta y qué se corta— se lee de una vez.
- */
-
-/** Genera las palabras numeradas que usan los escenarios de recorte. */
 function palabras(cuantas: number): string {
   return Array.from({ length: cuantas }, (_, i) => `palabra${i + 1}`).join(' ');
 }
@@ -26,7 +10,6 @@ Given('que el documento tiene el cuerpo:', (cuerpo: string) => {
   world.cuerpoDoc = cuerpo.replace(/<br>/g, '\n');
 });
 
-/** Un cuerpo largo, para los escenarios que miran el recorte. */
 Given('que el cuerpo es un párrafo con {int} palabras', (cuantas: number) => {
   world.cuerpoDoc = `Un primer párrafo. ${palabras(cuantas)}`;
 });
@@ -56,10 +39,6 @@ Then('el fragmento es {string}', (esperado: string) => {
   }
 });
 
-/**
- * Las palabras del bloque van en SU línea, no en todo el fragmento: contando
- * el fragmento entero saldrían también la apertura, los puntos y el cierre.
- */
 Then('el fragmento tiene {int} palabras en su línea de contenido', (cuantas: number) => {
   const lineas = world.fragmento.split('\n');
   const leidas = (lineas[1] ?? '').split(/\s+/).length;
@@ -93,7 +72,6 @@ Then('el fragmento no dice {string}', (texto: string) => {
   }
 });
 
-/** Un bloque `:::` recortado: la `...` va DENTRO, antes del cierre. */
 Then('el fragmento cierra el bloque él mismo', () => {
   const lineas = world.fragmento.split('\n');
   if (lineas[0] !== '::: {.nota}') throw new Error(`el bloque no abre con su clase: ${JSON.stringify(lineas[0])}`);
@@ -110,18 +88,9 @@ Then('los puntos suspensivos van antes del cierre del bloque', () => {
 });
 
 import type { CollectionEntry } from '../../builder/pipeline-formats.js';
-/**
- * #2483 — la página HTML de una colección deja de fusionar sus `files[]`: cada
- * miembro es una tarjeta con su autor, su título, su fragmento y un enlace.
- *
- * Estas son las mismas reglas de la primera parte del feature, pero del lado
- * del HTML: el cuerpo propio de la colección sube a la banda de metadatos, el
- * EPUB sigue llevando la fusión entera, y el escaneo de imágenes necesita el
- * cuerpo propio aunque la tarjeta no lo muestre.
- */
+
 import { collectionBaseContent, collectionCardsContent, collectionScanContent, memberHtmlHrefs } from '../../builder/pipeline-formats.js';
 
-/** El miembro de referencia: un documento con autor, título y cuerpo. */
 function miembro(over: Partial<CollectionEntry> = {}): CollectionEntry {
   return {
     file: 'doc.md',
@@ -136,18 +105,12 @@ function miembro(over: Partial<CollectionEntry> = {}): CollectionEntry {
   };
 }
 
-/**
- * El mundo guarda la forma mínima del miembro; `miembro()` rellena el resto.
- * El cast vive aquí para no meter el tipo completo de la colección en el mundo
- * compartido, que lo necesitan los pasos de build y no estos.
- */
 function coleccion(members: Miembro[]): CollectionEntry[] {
   return members.map((m) => miembro(m)) as CollectionEntry[];
 }
 
 type Miembro = { file: string; title: string; creator: string[]; body: string };
 
-/** El índice de slugs que resuelve los enlaces, incluido el que no tiene. */
 function indiceDeSlugs(): Map<string, { title: string; creator: string[]; slug?: string }> {
   return new Map([
     ['doc.md', { title: 'Documento', creator: [], slug: 'documento-por-autora-a' }],
@@ -201,7 +164,6 @@ When('calculo los enlaces al HTML de cada miembro', () => {
   world.enlaces = memberHtmlHrefs(world.rutaColeccion, coleccion(world.miembros), indiceDeSlugs());
 });
 
-/** Las mismas dos mitades que el HTML de la banda: presente y con el valor. */
 Then('el HTML dice {string}', (texto: string) => {
   if (!world.html.includes(texto)) throw new Error(`el HTML no dice ${JSON.stringify(texto)}`);
 });
@@ -239,7 +201,6 @@ Then('el miembro no tiene enlace', () => {
   }
 });
 
-/** Una colección vacía devuelve su cuerpo tal cual, sin envolver. */
 Then('el HTML es {string}', (esperado: string) => {
   if (world.html !== esperado) {
     throw new Error(`el HTML es ${JSON.stringify(world.html)} y debería ser ${JSON.stringify(esperado)}`);
