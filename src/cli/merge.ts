@@ -57,15 +57,25 @@ function assertCollectionFiles(fm: Record<string, unknown>, label: string): stri
   return files;
 }
 
-async function readCollectionSource(cwd: string, input: string) {
+export interface SourceDocument {
+  inputPath: string;
+  relativePath: string;
+  text: string;
+}
+
+export async function readSourceDocument(cwd: string, input: string): Promise<SourceDocument> {
   const inputPath = resolvePath(cwd, input);
-  const relativePath = posix(relative(cwd, inputPath));
   let text: string;
   try {
     text = await Bun.file(inputPath).text();
   } catch {
     throw new BuildError(`no se pudo leer "${input}"`);
   }
+  return { inputPath, relativePath: posix(relative(cwd, inputPath)), text };
+}
+
+async function readCollectionSource(cwd: string, input: string) {
+  const { inputPath, relativePath, text } = await readSourceDocument(cwd, input);
 
   const fm = await readSourceFm(text, input);
   const rawFiles = assertCollectionFiles(fm, input);

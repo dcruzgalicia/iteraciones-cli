@@ -15,8 +15,8 @@ import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
 import { fail, logSuccess } from '../lib/logger.js';
-import { posix, resolvePath } from '../lib/paths.js';
-import { buildImagesContext } from './merge.js';
+import { resolvePath } from '../lib/paths.js';
+import { buildImagesContext, readSourceDocument } from './merge.js';
 
 function outputRootFor(output: string, dir: string): string {
   const outDir = dirname(output);
@@ -51,14 +51,7 @@ export async function runMarkdown(cwd: string, input: string, options: { output?
     if (options.output === undefined || options.output === '') {
       throw new BuildError('falta --output (-o): indica la ruta del .md de salida');
     }
-    const inputPath = resolvePath(cwd, input);
-    const relativePath = posix(relative(cwd, inputPath));
-    let content: string;
-    try {
-      content = await Bun.file(inputPath).text();
-    } catch {
-      throw new BuildError(`no se pudo leer "${input}"`);
-    }
+    const { inputPath, relativePath, text: content } = await readSourceDocument(cwd, input);
 
     const fm = sourceFm(content);
     const output = resolvePath(cwd, options.output);
