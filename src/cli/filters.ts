@@ -2,6 +2,7 @@ import { getBuiltinLuaFilterInfos, LUA_GROUP_ORDER, validateDisabledFilters } fr
 import {
   disableBibliographyWithoutBibFiles,
   getBuiltinPreambleFilterInfos,
+  projectPreambleDirs,
   resolveEffectiveDisabledPreamble,
   validateDisabledPreambleFilters,
 } from '../builder/preamble-loader.js';
@@ -108,7 +109,11 @@ async function emitPreambleBlock(
   } else {
     logInfo('Para desactivar uno, agrégalo a la lista `disabledPreambleFilters:` en iteraciones.config.yaml.');
   }
-  logInfo('Para sobrescribir un filtro de preámbulo, crea `<proyecto>/preamble/<nombre>.tex` con contenido LaTeX.');
+  // Los override se resuelven por tipo, no solo en `preamble/`. Decirlo aquí evita poner el
+  // override donde no aplica y no ver efecto en las colecciones, sin explicación.
+  logInfo(
+    `Para sobrescribir un filtro de preámbulo, crea \`<proyecto>/<dir>/<nombre>.tex\` con contenido LaTeX, donde <dir> es ${projectPreambleDirs().join(', ')} (el de tu tipo de documento).`,
+  );
 }
 
 export async function listFilters(cwd: string, options: RunFiltersOptions = {}): Promise<void> {

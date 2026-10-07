@@ -126,6 +126,7 @@ function nuevoMundo() {
     bibFilesSinCalcular: false,
     texBib: '',
     biblatexDisponible: false,
+    ayudaOverrides: undefined as string | undefined,
     estadoBib: undefined as boolean | undefined,
     argumentosLatexmk: '',
     pathOriginal: undefined as string | undefined,
