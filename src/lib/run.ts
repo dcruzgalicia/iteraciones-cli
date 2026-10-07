@@ -1,3 +1,4 @@
+import { logWarning } from './logger.js';
 import { recordScriptExec } from './script-recorder.js';
 
 export interface RunResult {
@@ -165,7 +166,11 @@ export async function mapWithConcurrency<T, R>(
       cancelStarted = true;
       try {
         await options.onCancel();
-      } catch {}
+      } catch (err) {
+        // El build ya va a fallar por el error original; este es adicional. Tragarlo dejaba
+        // procesos hijos escribiendo en dist/ sin que nada lo dijera.
+        logWarning(`no se pudieron limpiar los procesos en vuelo: ${(err as Error).message}`, 'build');
+      }
     }
   };
 

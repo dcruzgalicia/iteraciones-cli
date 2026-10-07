@@ -254,7 +254,14 @@ export async function readCollectionEntries(files: string[], collectionPath: str
       try {
         text = await Bun.file(candidate).text();
         break;
-      } catch {}
+      } catch (err) {
+        // Solo ENOENT significa "prueba el siguiente candidato". Un EACCES es un problema real
+        // y sayarlo como "no encontrado" culpa a una configuración que puede estar bien.
+        const code = (err as NodeJS.ErrnoException).code;
+        if (code !== 'ENOENT') {
+          throw new BuildError(`collection "${collectionPath}": no se pudo leer "${candidate}": ${(err as Error).message}`);
+        }
+      }
     }
     if (text === undefined) {
       throw new BuildError(
