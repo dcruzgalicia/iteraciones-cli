@@ -11,7 +11,7 @@ import { getPandocVersion } from '../lib/pandoc-runner.js';
 import { plural } from '../lib/plural.js';
 import { abortScriptCapture, beginScriptCapture, commitScriptCapture } from '../lib/script-recorder.js';
 import { buildAssets } from './build-assets.js';
-import { type BuildMetadata, computeBuildMetadata, computeWorkSets, type WorkSets } from './build-planner.js';
+import { type BuildMetadata, computeBuildMetadata, computeWorkSets, FORMAT_TO_WORK, type WorkSets } from './build-planner.js';
 import { writeBundle } from './bundle-dist.js';
 import { cleanupCoverImages, cleanupDeletedFiles, cleanupRemovedFormats, cleanupSlugChanges, hasLegacyAssetLayout } from './cleanup.js';
 import { resolveCollectionFile } from './collection-files.js';
@@ -537,13 +537,6 @@ function planWork(
 async function ensureCachedOutputsComplete(allDocs: BuildDocument[], work: WorkSets, activeFormats: ActiveFormats, outputDir: string): Promise<void> {
   const inWork = new Set(work.workDocList.map((d) => d.relativePath));
   const formatEntries = Object.entries(activeFormats) as [FormatKey, boolean][];
-  const fmtToWork: Record<FormatKey, string> = {
-    pdf: 'print',
-    latex: 'print',
-    html: 'html',
-    epub: 'epub',
-    markdown: 'markdown',
-  };
 
   const producible = (type: string | undefined, fmt: FormatKey): boolean => activeFormats[fmt] === true && docProducesFormat(type, fmt);
 
@@ -563,7 +556,7 @@ async function ensureCachedOutputsComplete(allDocs: BuildDocument[], work: WorkS
     if (!(await hasMissingOutput(slug, dir, doc.frontmatter.type))) continue;
     for (const [fmt, active] of formatEntries) {
       if (!active || !producible(doc.frontmatter.type, fmt)) continue;
-      const key = fmtToWork[fmt] as keyof typeof work.exportSets;
+      const key = FORMAT_TO_WORK[fmt];
       work.exportSets[key].push(doc);
       work.workPaths[key]?.add(doc.relativePath);
     }
