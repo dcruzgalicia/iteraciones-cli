@@ -87,7 +87,8 @@ Característica: las reglas de la regresión visual
       Dado que la raíz del proyecto está vacía
       Y que el proyecto no tiene configuración
       Cuando resuelvo el directorio de trabajo del snapshot "doc"
-      Entonces el directorio de trabajo está en "<temporal>/iteraciones-visual/doc"
+      Entonces el directorio de trabajo queda bajo "<temporal>/iteraciones-visual" y termina en "doc"
+      Y el directorio de trabajo no se comparte con otro proyecto
 
     Escenario: Con proyecto, el directorio de trabajo va dentro
       Dado que la raíz del proyecto está vacía
