@@ -79,7 +79,7 @@ export function imageNamerFor(outSlug: string): (absPath: string) => string {
   };
 }
 
-export async function processImage(
+async function processImage(
   inputPath: string,
   targetWmm: number,
   targetHmm: number,

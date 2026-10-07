@@ -495,7 +495,7 @@ function collectionCard(e: CollectionEntry, href: string | undefined): string {
   return [MASONRY_WRAPPER, '', ...card, '', '</div>'].join('\n');
 }
 
-export function buildCollectionSectionsMarkdown(entries: CollectionEntry[]): string {
+function buildCollectionSectionsMarkdown(entries: CollectionEntry[]): string {
   return buildCollectionSections(entries, MARKDOWN_HEADINGS);
 }
 
@@ -548,7 +548,7 @@ function creatorLinksInlineMd(links: { name: string; url: string }[]): string {
   return links.map((l) => `**${l.name}**: ${l.url}`).join('\n');
 }
 
-export function prependLinksMarkdown(content: string, links: { name: string; url: string }[]): string {
+function prependLinksMarkdown(content: string, links: { name: string; url: string }[]): string {
   if (links.length === 0) return content;
   const { yaml, body } = splitFrontmatter(content);
   const md = creatorLinksInlineMd(links);

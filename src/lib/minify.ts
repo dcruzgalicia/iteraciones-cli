@@ -7,16 +7,12 @@ const BIN = 'minify';
 
 let available: boolean | null = null;
 
-export async function minifyAvailable(): Promise<boolean> {
+async function minifyAvailable(): Promise<boolean> {
   if (available !== null) return available;
   available = await Bun.spawn([BIN, '-l'], { stdout: 'ignore', stderr: 'ignore' })
     .exited.then((code) => code === 0)
     .catch(() => false);
   return available;
-}
-
-export function resetMinifyCache(): void {
-  available = null;
 }
 
 export async function checkMinify(): Promise<{ label: string; ok: boolean; detail?: string; warn: boolean }> {

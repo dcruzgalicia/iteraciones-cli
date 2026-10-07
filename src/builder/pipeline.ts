@@ -21,7 +21,7 @@ import type { BuildContext, BuildReporter, DiscoveryEntry } from './types.js';
 
 const PDF_MAX_SLOTS = 4;
 
-export function pdfSlotCount(concurrency: number): number {
+function pdfSlotCount(concurrency: number): number {
   return Math.max(1, Math.min(concurrency, PDF_MAX_SLOTS));
 }
 

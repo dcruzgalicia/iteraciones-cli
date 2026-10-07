@@ -66,7 +66,7 @@ export const SCHEMA_SOURCE_FILES = [
   '../config/config-schema.ts',
 ] as const;
 
-export async function computeSchemaSourceHash(
+async function computeSchemaSourceHash(
   files: readonly string[],
   baseDir: string,
   prevCache?: Record<string, FileCacheEntry>,

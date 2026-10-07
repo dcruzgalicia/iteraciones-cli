@@ -32,7 +32,3 @@ export function toolVersionLatexmk(): Promise<string> {
 export function toolVersionMinify(): Promise<string> {
   return probe('minify', ['--version']);
 }
-
-export function resetToolVersionCache(): void {
-  memo.clear();
-}
