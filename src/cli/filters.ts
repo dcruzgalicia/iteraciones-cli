@@ -109,8 +109,6 @@ async function emitPreambleBlock(
   } else {
     logInfo('Para desactivar uno, agrégalo a la lista `disabledPreambleFilters:` en iteraciones.config.yaml.');
   }
-  // Los override se resuelven por tipo, no solo en `preamble/`. Decirlo aquí evita poner el
-  // override donde no aplica y no ver efecto en las colecciones, sin explicación.
   logInfo(
     `Para sobrescribir un filtro de preámbulo, crea \`<proyecto>/<dir>/<nombre>.tex\` con contenido LaTeX, donde <dir> es ${projectPreambleDirs().join(', ')} (el de tu tipo de documento).`,
   );

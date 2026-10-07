@@ -5,8 +5,6 @@ import { logWarning } from './logger.js';
 
 const BIN = 'minify';
 
-// ponytail: memoizado como `detectMagick`; antes eran dos spawns por documento y la respuesta
-// no cambia dentro de un build. `resetMinifyCache` lo limpia para los tests.
 let available: boolean | null = null;
 
 export async function minifyAvailable(): Promise<boolean> {
@@ -38,8 +36,6 @@ export async function minifyHtml(html: string): Promise<string> {
     logWarning('minify no está en PATH; el HTML sale sin minificar. Instálalo con `brew install minify`', 'html');
     return html;
   }
-  // ponytail: sin try/finally el temp se quedaba en cada fallo (`code !== 0` hacía return antes del
-  // rm), y como se llama por documento, un `minify` roto acumulaba un temp por página.
   const dir = await mkdtemp(join(tmpdir(), 'iteraciones-minify-'));
   try {
     const input = join(dir, 'in.html');

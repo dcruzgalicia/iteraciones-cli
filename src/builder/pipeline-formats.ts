@@ -146,8 +146,6 @@ async function emitLatexAndQueuePdf(
 
     let post: string[] | undefined;
     if (isScriptCapture()) {
-      // ponytail: mismo criterio que collectionPandocInput — un manifiesto por slug hace que dos
-      // docs homónimos en carpetas distintas compartan el `distribution` y el replay aplique el equivocado.
       const manifestPath = resolve(ctx.cwd, '.iteraciones', 'post', `${doc.relativePath}.json`);
       await writeOutput(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
       post = ['iteraciones', 'post', 'latex', '--post', manifestPath, '-o', texDistPath];
@@ -255,8 +253,6 @@ export async function readCollectionEntries(files: string[], collectionPath: str
         text = await Bun.file(candidate).text();
         break;
       } catch (err) {
-        // Solo ENOENT significa "prueba el siguiente candidato". Un EACCES es un problema real
-        // y sayarlo como "no encontrado" culpa a una configuración que puede estar bien.
         const code = (err as NodeJS.ErrnoException).code;
         if (code !== 'ENOENT') {
           throw new BuildError(`collection "${collectionPath}": no se pudo leer "${candidate}": ${(err as Error).message}`);
@@ -702,9 +698,6 @@ async function collectionPandocInput(
   format: 'latex' | 'html' | 'epub',
 ): Promise<string | undefined> {
   if (doc.frontmatter.type !== 'collection') return undefined;
-  // ponytail: `relativePath` y no `outSlug` — dos docs homónimos en carpetas distintas comparten
-  // slug, y un archivo global por slug hace que uno pise al otro. Mismo criterio que writeImagePaths.
-  // El slug va por --slug porque `merge` lo usaba para nombrar las imágenes procesadas.
   const path = resolve(cwd, '.iteraciones', 'collections', `${doc.relativePath}.${format}.md`);
   recordSupportCommand('resources', path, ['iteraciones', 'merge', doc.relativePath, '--format', format, '--slug', outSlug, '-o', path]);
   return path;

@@ -222,9 +222,6 @@ interface CoverImageEntry {
   pngPath: string;
 }
 
-// ponytail: el discriminador va al final, no como prefijo — `zorro` como prefijo matchea el
-// archivo de `zorro-xy`, y el `rm` lo borraba. pdftoppm numera sus salidas, así que se
-//recognoce por el sufijo exacto.
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -241,7 +238,6 @@ export async function collectCover(pngPath: string): Promise<string | undefined>
   const produced = entries.find((f) => pattern.test(f));
   if (produced === undefined) return undefined;
   await rename(join(dir, produced), pngPath);
-  // Relectura: generateCoverImages corre concurrente y otro job puede haber escrito aqui.
   for (const f of await readdir(dir)) {
     if (pattern.test(f)) await rm(join(dir, f), { force: true }).catch(() => {});
   }

@@ -139,9 +139,6 @@ Then('el directorio de trabajo está en {string}', (esperado: string) => {
   }
 });
 
-// El path exacto ya no importa: lo que importa es que quede bajo el temporal, termine en el slug
-// y que el directorio intermedio separe proyectos (si no, dos proyectos con el mismo slug se
-// borran el workDir mutuamente en `compareVisual`).
 Then('el directorio de trabajo queda bajo {string} y termina en {string}', (base: string, slug: string) => {
   const leido = (world.workspaces as { workDir: string }).workDir;
   const raiz = expande(base);

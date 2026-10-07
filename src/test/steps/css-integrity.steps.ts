@@ -26,7 +26,6 @@ function sinMarco(type: string, card: string): boolean {
   return card === 'card-referencias.html' || (type === 'collection' && card === 'card-contenido.html');
 }
 
-// Resuelve por la misma regla que producción: la tarjeta cae a `file/` si la variante no la trae.
 async function readCard(type: string, card: string): Promise<string> {
   return loadCard(type as HtmlDocType, card);
 }
@@ -169,7 +168,6 @@ Then('la compilación falla diciendo que el acento es desconocido', () => {
   }
 });
 
-// Una variante puede traer sólo los chunks que difieren; el resto cae a `file/`.
 async function tarjetasResueltas(type: string): Promise<string[]> {
   const found: string[] = [];
   for (const card of CARDS) {

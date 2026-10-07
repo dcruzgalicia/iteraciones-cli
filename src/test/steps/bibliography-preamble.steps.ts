@@ -140,8 +140,6 @@ When('pregunto la ayuda de los overrides de preámbulo', async () => {
   }
 });
 
-// El loader resuelve overrides en los cuatro directorios por tipo. Si el help solo menciona uno,
-// un usuario pone su override donde no aplica y no ve efecto en las colecciones, sin explicación.
 Then('la ayuda menciona los {int} directorios de override', (cuántos: number) => {
   const ayuda = String(world.ayudaOverrides ?? '');
   const mencionados = projectPreambleDirs().filter((dir) => ayuda.includes(dir));

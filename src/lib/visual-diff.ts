@@ -78,7 +78,6 @@ export function diffTargetFor(snapshotPath: string): { dir: string; stem: string
   return { dir: dirname(snapshotPath), stem: basename(snapshotPath, extname(snapshotPath)) };
 }
 
-// ponytail: Bun.Glob.scan lanza ENOENT si cwd no existe; el contrato previo era lista vacía.
 async function globFiles(dir: string, pattern: string): Promise<string[]> {
   if (
     !(
@@ -118,9 +117,6 @@ interface VisualWorkspaces {
 }
 
 export async function resolveVisualWorkspaces(cwd: string, slug: string): Promise<VisualWorkspaces> {
-  // ponytail: sin config el base caía a un dir global, así que dos proyectos con el mismo slug
-  // compartían workDir y `compareVisual` hace `rm -rf` sobre él. El hash del cwd separa los
-  // proyectos; el slug sigue siendo legible dentro del directorio resultante.
   const base = (await exists(join(cwd, 'iteraciones.config.yaml')))
     ? join(cwd, '.iteraciones', 'tmp', 'visual')
     : join(tmpdir(), 'iteraciones-visual', createHash('sha256').update(cwd).digest('hex').slice(0, 12));
@@ -176,9 +172,6 @@ async function readCache(path: string): Promise<Record<string, CacheEntry>> {
   }
 }
 
-// ponytail: el read-modify-write va dentro de la cadena de promesas del módulo. Sin esto dos
-// `visual check` concurrentes perdían entradas: los dos leían, los dos escribían, el último gana.
-// ponytail: este archivo es caché, no estado: si la escritura falla, el siguiente build la rehace.
 let cacheWrite = Promise.resolve();
 
 async function writeCache(path: string, key: string, entry: CacheEntry): Promise<void> {
@@ -265,8 +258,6 @@ interface CompareVisualInput extends VisualOptions {
   diffStem?: string;
 }
 
-// El `CacheEntry` es el `VisualDiffResult` sin `details` ni `diffDir`: el diff en disco no se
-// guarda, solo se cuenta. Por eso un acierto de caché devuelve `details: []`.
 async function cacheResult(path: string, key: string, result: VisualDiffResult): Promise<void> {
   const { compared, unchanged, changed, referencePages, generatedPages, pass } = result;
   await writeCache(path, key, { compared, unchanged, changed, referencePages, generatedPages, pass });
@@ -345,8 +336,6 @@ export async function compareVisual(input: CompareVisualInput): Promise<VisualDi
     ...(changed > 0 ? { diffDir } : {}),
   };
 
-  // ponytail: el workDir sobrevive solo cuando hay diffs que ver. Antes, si comparePngPair
-  // lanzaba (BuildError de magick), los PNGs renderizados se quedaban ahí para siempre.
   const keepWorkDir = diffDir === input.workDir && changed > 0;
   try {
     if (pass && input.cachePath !== undefined) await cacheResult(input.cachePath, key, result);
