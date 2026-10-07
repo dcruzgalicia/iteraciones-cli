@@ -1,8 +1,3 @@
--- Convierte Div.spacer en \vspace{\baselineskip} (formato LaTeX).
--- Si el Div tiene la clase noindent (caso :;), agrega \noindent al primer
--- párrafo siguiente (solo si es Para).
--- Uso: pandoc --from json --to latex --lua-filter latex/01-spacer.lua
-
 local function has_class(block, cls)
   if block.t ~= 'Div' then return false end
   for _, c in ipairs(block.classes) do
@@ -11,10 +6,6 @@ local function has_class(block, cls)
   return false
 end
 
--- Los spacers "::" se convierten en cualquier profundidad (items de lista,
--- celdas de tabla, blockquotes): sin este handler, el Div anidado se perdía
--- en silencio. Los spacers con noindent (:;) los gestiona Pandoc() a nivel
--- superior, porque el \noindent necesita el párrafo siguiente (hermano).
 function Div(div)
   if not has_class(div, 'spacer') or has_class(div, 'noindent') then return nil end
   return pandoc.RawBlock('latex', '\\vspace{\\baselineskip}')

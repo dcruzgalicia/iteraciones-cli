@@ -1,8 +1,3 @@
-% Personaliza el indice (TOC): nombre, espaciado, fuentes y lideres
-% \languagename sigue al idioma activo de babel (configuración lang): sin él,
-% un PDF con lang no-español fallaba con 'not defined at language spanish'.
-% \BeforeTOCHead ajusta solo la apariencia del TOC: el subsubsection del cuerpo
-% mantiene sus propios skips (14-sectioning.tex).
 \BeforeTOCHead{\RedeclareSectionCommand[beforeskip=4\baselineskip,afterskip=\baselineskip,afterindent=false]{chapter}}
 \renewcaptionname{\languagename}{\contentsname}{\normalsize\normalfont\bfseries\MakeUppercase{Índice}}
 \renewcommand*{\addparttocentry}[2]{%

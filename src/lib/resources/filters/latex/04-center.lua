@@ -1,6 +1,3 @@
--- Convierte Div.center al entorno \begin{center}...\end{center} (formato LaTeX).
--- Uso: pandoc --from json --to latex --lua-filter latex/04-center.lua
-
 local function has_class(block, cls)
   if block.t ~= 'Div' then return false end
   for _, c in ipairs(block.classes) do

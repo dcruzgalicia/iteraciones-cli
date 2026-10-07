@@ -1,7 +1,3 @@
--- Convierte clases de tamaño LaTeX (\small, \footnotesize, \Large, etc.) en
--- comandos de tamaño raw. Soporta divs bloque (::: {.small}...:::) y spans
--- inline ([texto]{.footnotesize}). Solo LaTeX: en HTML las clases se mantienen
--- para estilizacion CSS.
 local SIZES = {
   tiny = true, scriptsize = true, footnotesize = true, small = true,
   normalsize = true, large = true, Large = true, LARGE = true,

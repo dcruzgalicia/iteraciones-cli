@@ -1,8 +1,3 @@
--- Reescribe en el AST las rutas de imagen que el preproceso movió a assets/images (#2460).
--- El mapa llega por fichero (ITERACIONES_PATHS_JSON), nunca por argv: crece con el número de imágenes.
--- Va después de 03-qr-url (orden del directorio) y, si no hay mapa, no toca nada.
--- Uso: ITERACIONES_PATHS_JSON=.iteraciones/paths/doc.md.latex.json pandoc --from markdown --to latex --lua-filter semantic/ast/04-image-paths.lua
-
 local paths = nil
 
 local function loadPaths()
@@ -29,9 +24,6 @@ local function mapped(src)
   return nil
 end
 
--- Igual que el regex de rewriteImagePaths: `src=` (cualquier caja, como el `i`
--- de su patron) + ruta + comilla de cierre. Los caracteres de patron se escapan
--- porque una ruta puede traer `.`, `(`, `)`…
 local function escapePattern(text)
   return (text:gsub('%p', '%%%0'))
 end
@@ -64,9 +56,6 @@ function RawBlock(element)
   return element
 end
 
---- Texto plano de unos inlines (nil si hay algo que no sea texto): los campos
---- de meta solo se reescriben cuando la ruta ocupa el valor entero, como el
---- anclaje de línea que tenía el regex.
 local function plainText(inlines)
   local parts = {}
   for _, inl in ipairs(inlines) do

@@ -1,15 +1,3 @@
--- Filtro interno de detección estructural (no es un filter de usuario).
--- Lo inyecta el pipeline en las pasadas latex y html; reemplaza la
--- inspección del AST que antes hacía TypeScript (computePreambleFlags,
--- hasCiteNodes, withReferencesHeading) sin pasadas adicionales de pandoc.
---
--- latex: calcula los flags del preámbulo y los expone al template vía
---   metadata ($if(has-toc-entries)$, $if(skip-paragraph-space)$);
---   antepone \noindent al primer párrafo; agrega \printbibliography
---   al final si hay citas y bibliografía.
--- html5: agrega el heading sintético de referencias (necesario para
---   link-citations) y expone has-references para el template.
-
 local SECTION_COMMANDS = {
   subsubsection = true,
   subsection = true,
@@ -24,15 +12,12 @@ local function is_header(b)
   return b.t == 'Header'
 end
 
--- RawBlock LaTeX con un comando de sección (\chapter{...}, \section*{...}, ...)
--- escrito directamente en markdown: tipográficamente inicia una sección.
 local function is_section_raw(b)
   if b.t ~= 'RawBlock' then return false end
   local fmt, text
   if b.c ~= nil then
     fmt, text = b.c[1], b.c[2]
   else
-    -- RawBlock creado por un filtro (pandoc.RawBlock) expone format/text
     fmt, text = b.format, b.text
   end
   if (fmt ~= 'tex' and fmt ~= 'latex') or type(text) ~= 'string' then return false end
@@ -45,7 +30,6 @@ local function is_section_raw(b)
   return c == '[' or c == '{' or c == ' ' or c == '\t'
 end
 
--- BlockQuote nativo o Div.dictum/verse/quote/cjk: abren entorno list.
 local function is_list_opener(b)
   if b.t == 'BlockQuote' then return true end
   if b.t == 'Div' then
@@ -56,22 +40,14 @@ local function is_list_opener(b)
   return false
 end
 
--- Divide el texto de un RawBlock después del PRIMER comando de sección
--- (\part{Uno}\n\chapter{Dos} → "\part{Uno}", "\n\chapter{Dos}").
--- Los RawBlocks consecutivos se fusionan en pandoc, así que varios comandos
--- de sección escritos en líneas seguidas llegan como un solo bloque: el
--- comando de página debe ir entre el primero y el resto. Retorna nil como
--- segunda parte si no hay un segundo comando.
 local function split_first_section_command(text)
   local cmd = text:match('^\\([%a]+)')
   if cmd == nil then return text, nil end
   local i = #cmd + 2 -- posición después de '\comando'
   if text:sub(i, i) == '*' then i = i + 1 end
-  -- saltar espacios entre el comando y su argumento
   while text:sub(i, i) == ' ' or text:sub(i, i) == '\t' do i = i + 1 end
   local open = text:find('{', i)
   if open == nil then return text, nil end
-  -- brace matching: el primer comando termina donde se cierra su brace
   local depth = 0
   for j = open, #text do
     local c = text:sub(j, j)
@@ -92,12 +68,6 @@ local function split_first_section_command(text)
 end
 
 function Pandoc(doc)
-  -- Detección estructural con recorrido COMPLETO del árbol (walk_block):
-  -- las citas y los headings cuentan aunque estén dentro de un Div (p. ej.
-  -- todo el contenido en ::: {.verse}): antes, los headings anidados no
-  -- activaban has-toc-entries y el \\tableofcontents se omitía aunque pandoc
-  -- los listaría en el TOC. El inicio de sección (primer bloque) se evalúa
-  -- aparte, solo a nivel superior.
   local has_cites = false
   local has_toc_entries = false
   local detect = {
@@ -116,8 +86,6 @@ function Pandoc(doc)
   }
   local nb = {}
   for _, b in ipairs(doc.blocks) do
-    -- walk_block no aplica los handlers al bloque raíz: los headers/RawBlock
-    -- top-level se evalúan aquí; los anidados los detecta el walk.
     if is_header(b) or is_section_raw(b) then has_toc_entries = true end
     table.insert(nb, pandoc.walk_block(b, detect))
   end
@@ -130,19 +98,10 @@ function Pandoc(doc)
     local list_start = first ~= nil and is_list_opener(first)
     local skip = section_start or list_start
 
-    -- \noindent al primer párrafo (mismo criterio que skipNoIndent)
     if not skip and first ~= nil and first.t == 'Para' then
       table.insert(first.content, 1, pandoc.RawInline('latex', '\\noindent '))
     end
 
-    -- Numeración de páginas: el CLI pasa el comando configurado como metadata
-    -- (page-number-command, string plano o MetaString). Si el primer bloque del
-    -- body es un title o un list-opener (skip), la numeración se activa DESPUÉS
-    -- de ese bloque (el template la omite): las páginas de la portada/TOC
-    -- previas quedan sin número (layers vacíos) y la del contenido empieza
-    -- numerada. Con un párrafo normal, el template la emite antes del body.
-    -- Intervention: skip page numbering entirely — \pagestyle{empty} persists
-    -- from the preamble; no page-number-command is emitted by the template.
     if not is_intervention then
       local page_cmd = doc.meta['page-number-command']
       local page_cmd_text
@@ -183,11 +142,6 @@ function Pandoc(doc)
       table.insert(doc.blocks, pandoc.RawBlock('latex', '\\printbibliography[heading=bibintoc]'))
     end
   elseif FORMAT == 'html5' then
-    -- Heading sintético que citeproc necesita para enlazar las citas
-    -- (link-citations); el post-procesamiento lo convierte en tarjeta.
-    -- El id es sintético (refs-heading) para no colisionar con un heading
-    -- "Referencias" propio del documento (id referencias): antes, el
-    -- post-procesamiento borraba o duplicaba el del usuario.
     if has_cites and doc.meta.bibliography ~= nil then
       table.insert(doc.blocks, pandoc.Header(1, pandoc.Str('Referencias'), pandoc.Attr('refs-heading', {}, {})))
       doc.meta['has-references'] = pandoc.MetaBool(true)

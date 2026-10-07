@@ -1,9 +1,3 @@
--- Convierte spans/divs con atributo value en \textls{valor}{texto} (microtype).
--- Uso inline: [texto]{.textls value=-20}
--- Uso bloque: ::: {.textls value=-20} párrafo :::
--- Valor: negativo = compresión, positivo = expansión (rango típico -100 a 100).
--- Solo LaTeX: en HTML se ignora.
-
 function Span(el)
   if FORMAT ~= 'latex' then return nil end
   local value = el.attributes['value']

@@ -1,8 +1,3 @@
--- Convierte Div con atributo spacing en \begin{spacing}{valor}...\end{spacing}
--- Requiere el paquete setspace (cargado en 03-spacing.tex).
--- Uso: ::: {spacing=1.1} contenido :::
--- Solo LaTeX: en HTML se ignora.
-
 function Div(el)
   if FORMAT ~= 'latex' then return nil end
   local value = el.attributes['spacing']
