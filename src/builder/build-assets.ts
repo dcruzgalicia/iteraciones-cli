@@ -10,6 +10,7 @@ import { recordSupportCommand } from '../lib/script-recorder.js';
 import { ASSETS_CSS_FILE, ASSETS_LOGO_FILE } from './output-layout.js';
 import { cacheHitFor } from './state-hash.js';
 import type { CssFileCache } from './state-serialize.js';
+import { hashFileContent } from './state-serialize.js';
 
 const PKG_ROOT = join(import.meta.dir, '../..');
 const STYLES_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'styles.css');
@@ -89,8 +90,7 @@ export async function computeCssHash(
     if (hit !== null) {
       contentHash = hit;
     } else {
-      const bytes = new Uint8Array(await Bun.file(join(outputDir, rel)).arrayBuffer());
-      contentHash = Bun.CryptoHasher.hash('sha256', bytes, 'hex');
+      contentHash = await hashFileContent(join(outputDir, rel));
     }
     cache[rel] = { mtime, size, hash: contentHash };
     hasher.update(rel);

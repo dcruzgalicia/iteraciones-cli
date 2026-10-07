@@ -1,8 +1,8 @@
-import { createHash } from 'node:crypto';
 import { copyFile, exists, mkdir, readdir, readFile, rm, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, extname, isAbsolute, join, relative } from 'node:path';
 import slugifyLib from 'slugify';
+import { hashFileContent, hashString } from '../builder/state-serialize.js';
 import { BuildError } from './errors.js';
 import { escapeRegExp } from './paths.js';
 import { exec, mapWithConcurrency } from './run.js';
@@ -116,7 +116,7 @@ interface VisualWorkspaces {
 export async function resolveVisualWorkspaces(cwd: string, slug: string): Promise<VisualWorkspaces> {
   const base = (await exists(join(cwd, 'iteraciones.config.yaml')))
     ? join(cwd, '.iteraciones', 'tmp', 'visual')
-    : join(tmpdir(), 'iteraciones-visual', createHash('sha256').update(cwd).digest('hex').slice(0, 12));
+    : join(tmpdir(), 'iteraciones-visual', hashString(cwd).slice(0, 12));
   return { workDir: join(base, slug), cachePath: join(base, 'cache.json') };
 }
 
@@ -149,15 +149,9 @@ interface CacheEntry {
   pass: boolean;
 }
 
-async function hashFile(path: string): Promise<string> {
-  return createHash('sha256')
-    .update(await readFile(path))
-    .digest('hex');
-}
-
 function cacheKey(hashes: { reference: string; generated: string }, options: VisualOptions): string {
   const basis = `${hashes.reference}:${hashes.generated}:${options.dpi}:${options.fuzzPercent}:${options.thresholdPercent}`;
-  return createHash('sha256').update(basis).digest('hex').slice(0, 32);
+  return hashString(basis).slice(0, 32);
 }
 
 async function readCache(path: string): Promise<Record<string, CacheEntry>> {
@@ -297,7 +291,7 @@ export async function compareVisual(input: CompareVisualInput): Promise<VisualDi
     thresholdPercent: input.thresholdPercent,
     fuzzPercent: input.fuzzPercent,
   };
-  const key = cacheKey({ reference: await hashFile(input.reference), generated: await hashFile(input.generated) }, options);
+  const key = cacheKey({ reference: await hashFileContent(input.reference), generated: await hashFileContent(input.generated) }, options);
   const cached = input.cachePath === undefined ? undefined : (await readCache(input.cachePath))[key];
   if (cached !== undefined) return { ...cached, details: [], fromCache: true };
 
