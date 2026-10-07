@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { After, Given, Then, When } from '@cucumber/cucumber';
 import { runBuild, runDoctor, runFilters } from '../../cli/dispatcher.js';
 import * as runModule from '../../lib/run.js';
-import { capture, escribirEnProyecto, tempRoot, world } from './cli-world.steps.js';
+import { capture, escribirEnProyecto, jsonSalida, raiz, world } from './cli-world.steps.js';
 
 /**
  * #2546 (onda 2) — tranche 6 de `cli-layer`: `doctor`, `doctor --info` y `list-filters`.
@@ -36,26 +36,12 @@ let espioExec: { mockRestore: () => void } | undefined;
  * configuración inválida"— y no con una raíz vacía, así que escribir sin
  * comprobar deja `join(undefined, …)`.
  */
-function raiz(): string {
-  if (!world.root) world.root = tempRoot('iteraciones-cli-');
-  return world.root;
-}
-
 /** Config con un filtro de preámbulo desactivado por el usuario. */
 function configConFiltroDesactivado(filtro: string): string {
   return `language: es-MX\nformat:\n  pdf:\n    disabledPreambleFilters:\n      - ${filtro}\n`;
 }
 
 /** El `JSON.parse` de `stdout`, como el de `validate --json`. */
-function jsonSalida(): Record<string, unknown> {
-  const crudo = world.stdout.trim();
-  try {
-    return JSON.parse(crudo) as Record<string, unknown>;
-  } catch (err) {
-    throw new Error(`stdout no es JSON válido: ${(err as Error).message}\nva:\n${crudo}`);
-  }
-}
-
 function lista(clave: string): Record<string, unknown>[] {
   const valor = jsonSalida()[clave];
   if (!Array.isArray(valor)) {

@@ -5,7 +5,7 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import { build } from '../../builder/orchestrator.js';
 import { runBuild, runClean, runValidate } from '../../cli/dispatcher.js';
 import { buildProgram } from '../../cli/parser.js';
-import { capture, tempRoot, world } from './cli-world.steps.js';
+import { capture, jsonSalida, tempRoot, world } from './cli-world.steps.js';
 
 /**
  * #2546 (onda 2) — tranche 5 de `cli-layer`: el wiring por argv, `clean` e `init`.
@@ -56,16 +56,6 @@ function escribir(relativa: string, contenido: string): void {
 
 function mkdir(relativa: string): void {
   mkdirSync(ruta(relativa), { recursive: true });
-}
-
-/** El `JSON.parse` de `stdout`. Mismo contrato que el de `validate --json`. */
-function jsonSalida(): Record<string, unknown> {
-  const crudo = world.stdout.trim();
-  try {
-    return JSON.parse(crudo) as Record<string, unknown>;
-  } catch (err) {
-    throw new Error(`stdout no es JSON válido: ${(err as Error).message}\nva:\n${crudo}`);
-  }
 }
 
 Given('que la raíz del proyecto no existe todavía', () => {

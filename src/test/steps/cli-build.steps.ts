@@ -9,7 +9,7 @@ import { reportBuildError, runBuild, runValidate } from '../../cli/dispatcher.js
 import { PANDOC_ERROR_CODES, PandocError } from '../../lib/errors.js';
 import * as pandocRunner from '../../lib/pandoc-runner.js';
 import { ProcessSpawnError } from '../../lib/run.js';
-import { capture, escribirEnProyecto, sinColor, tempRoot, world } from './cli-world.steps.js';
+import { capture, escribirEnProyecto, jsonSalida, raiz, sinColor, world } from './cli-world.steps.js';
 
 /**
  * #2546 (onda 2) — tranche 7 de `cli-layer`: errores de build, estado y humo de PDF.
@@ -34,11 +34,6 @@ import { capture, escribirEnProyecto, sinColor, tempRoot, world } from './cli-wo
  * falta el binario en el PATH o en la caché del usuario.
  */
 
-function raiz(): string {
-  if (!world.root) world.root = tempRoot('iteraciones-cli-');
-  return world.root;
-}
-
 /**
  * El proyecto con la configuración dada. El documento va siempre: un build sin
  * documentos no compila nada y no hay PDF que mirar, así que el escenario
@@ -51,15 +46,6 @@ function proyectoConConfig(config: string): void {
 }
 
 const PDF = 'language: es-MX\nformat:\n  pdf:\n    generate: true\n';
-
-function jsonSalida(): Record<string, unknown> {
-  const crudo = world.stdout.trim();
-  try {
-    return JSON.parse(crudo) as Record<string, unknown>;
-  } catch (err) {
-    throw new Error(`stdout no es JSON válido: ${(err as Error).message}\nva:\n${crudo}`);
-  }
-}
 
 Given('que la raíz del proyecto tiene un proyecto con PDF y con índice', () => {
   proyectoConConfig('language: es-MX\ntoc: true\nformat:\n  pdf:\n    generate: true\n');

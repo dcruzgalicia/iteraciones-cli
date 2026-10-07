@@ -355,6 +355,22 @@ export function tempRoot(prefijo: string): string {
   return mkdtempSync(join(tmpdir(), prefijo));
 }
 
+/** La raíz del escenario, creándola si el `Given` anterior no la puso. */
+export function raiz(): string {
+  if (!world.root) world.root = tempRoot('iteraciones-cli-');
+  return world.root;
+}
+
+/** El `JSON.parse` de `stdout`, con el error apuntando al texto que falló. */
+export function jsonSalida(): Record<string, unknown> {
+  const crudo = world.stdout.trim();
+  try {
+    return JSON.parse(crudo) as Record<string, unknown>;
+  } catch (err) {
+    throw new Error(`stdout no es JSON válido: ${(err as Error).message}\nva:\n${crudo}`);
+  }
+}
+
 /**
  * Corre `fn` con los dos streams espiados y deja el resultado en el mundo.
  * No captura excepciones: quien llama decide qué hacer con ellas.
