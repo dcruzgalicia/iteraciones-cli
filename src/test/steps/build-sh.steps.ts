@@ -322,7 +322,7 @@ const CHEQUEOS: Record<string, Chequeo> = {
     if (await Bun.file(join(distPath, `${slug}-foto.jpg`)).exists()) falla('la imagen no debe quedarse en la raíz');
   },
   'post-proceso': ({ script, falla }) => {
-    if (!/^\s*iteraciones post latex --post \S+\.iteraciones\/post\/ensayo\.json -o \S+ensayo\.tex/m.test(script)) {
+    if (!/^\s*iteraciones post latex --post \S+\.iteraciones\/post\/ensayo\.md\.json -o \S+ensayo\.tex/m.test(script)) {
       falla('no encadena el post-proceso LaTeX con el manifiesto');
     }
   },
@@ -371,7 +371,7 @@ Then('el script cumple este contrato:', async (tabla: { hashes: () => Record<str
 });
 
 Then('el manifiesto de post-proceso tiene una entrada', async () => {
-  const raw = await readFile(join(world.dir, '.iteraciones', 'post', 'ensayo.json'), 'utf8');
+  const raw = await readFile(join(world.dir, '.iteraciones', 'post', 'ensayo.md.json'), 'utf8');
   const manifest = JSON.parse(raw) as { distribution?: Record<string, string> };
 
   const n = Object.keys(manifest.distribution ?? {}).length;

@@ -104,6 +104,7 @@ Ejemplos:
     .description('escribe la entrada exacta de pandoc de una collection en .iteraciones/collections/ (formatos: latex | html | epub | markdown)')
     .requiredOption('-f, --format <formato>', 'formato de la entrada a generar (latex | html | epub | markdown)')
     .requiredOption('-o, --output <path>', 'ruta del .md de salida')
+    .option('--slug <slug>', 'slug de salida para nombrar las imágenes procesadas (por defecto se infiere del nombre de -o)')
     .addHelpText(
       'after',
       `
@@ -114,7 +115,7 @@ Ejemplos:
   iteraciones merge collection.md -f html   -o .iteraciones/collections/c.html.md
 `,
     )
-    .action(async (path: string, opts: { output: string; format: string }) => {
+    .action(async (path: string, opts: { output: string; format: string; slug?: string }) => {
       await runMerge(projectRoot(), path, opts);
     });
 
