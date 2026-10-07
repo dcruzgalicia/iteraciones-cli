@@ -62,8 +62,7 @@ export const SCHEMA_SOURCE_FILES = [
   './latex-composer.ts', // composición del .tex completo: markdown → latex
   './pandoc-metadata.ts', // metadatos pandoc: escape, language, title/creator/date, citas
   './xmpdata.ts', // inyección de metadatos XMP/Info en el .tex
-  './export/runner.ts', // markdownExport: metadatos y rutas del export Markdown
-  './export/assemble.ts', // markdownExport: ensamblado de ExportDocument
+  './export.ts', // markdownExport: metadatos, rutas y ensamblado de ExportDocument
 ] as const;
 
 export async function computeSchemaSourceHash(
