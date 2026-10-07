@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
 import { killProcessTree } from '../lib/run.js';
-import { convertToPdf } from './export/runner.js';
+import { convertToPdf } from './export.js';
 import type { BuildReporter } from './types.js';
 
 const QUIESCE_TIMEOUT_MS = 30_000;

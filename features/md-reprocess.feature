@@ -20,3 +20,22 @@ Característica: El markdown exportado a dist se puede re-procesar
     Y la creativa lleva su enlace en el frontmatter y una vez en el cuerpo
     Cuando uso dist como proyecto origen y compilo de nuevo
     Entonces todas las salidas son idénticas a la primera pasada
+
+  Regla de negocio: `merge` es la única palanca que pierde información
+
+    # Sin `merge`, el `.md` de una collection vuelve a ser fuente: conserva su
+    # `type` y su `files[]`, y por eso se puede reprocesar. Con `merge`, el body
+    # ya viene fusionado, `type` pasa a `file` y `files[]` desaparece — la salida
+    # deja de ser re-procesable a propósito (#2437). Que el cambio sea visible en
+    # el archivo es lo que separa «fusionar» de «borrar la estructura».
+
+    Esquema del escenario: Merge decide si la salida conserva su estructura
+      Dado un proyecto con salida en HTML y Markdown
+      Y una colección con merge <merge>
+      Cuando compilo el proyecto
+      Entonces el markdown de la colección <efecto>
+
+      Ejemplos:
+        | merge | efecto                           |
+        | false | conserva type y files            |
+        | true  | ya viene fusionado               |

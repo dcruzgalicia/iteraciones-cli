@@ -79,7 +79,7 @@ Característica: El CLI habla en español y dice qué hacer
 
     Escenario: El help raíz no duplica la descripción de los comandos
       Cuando parseo el argv "--help"
-      Y la ayuda repite "Construye documentos HTML" una sola vez
+      Entonces la ayuda repite "Construye documentos HTML" una sola vez
       Y la ayuda empieza con el slogan
 
   Regla de negocio: El comando help muestra la ayuda de un comando

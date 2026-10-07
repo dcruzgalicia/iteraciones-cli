@@ -31,7 +31,7 @@ Característica: El argv llega entero hasta el comando
     Escenario: El .gitignore de init cubre lo que el build genera
       Dado que la raíz del proyecto está vacía
       Cuando parseo el comando "init" sobre la raíz del proyecto
-      Y el archivo ".gitignore" contiene "dist/"
+      Entonces el archivo ".gitignore" contiene "dist/"
       Y el archivo ".gitignore" contiene ".iteraciones/"
       Y el archivo ".gitignore" contiene "build.sh"
       Y el archivo ".gitignore" contiene "visual/**/*-page-*-diff.png"
@@ -43,7 +43,7 @@ Característica: El argv llega entero hasta el comando
     Escenario: El config que genera init es mínimo y remite a la documentación
       Dado que la raíz del proyecto está vacía
       Cuando parseo el comando "init" sobre la raíz del proyecto
-      Y el archivo "iteraciones.config.yaml" contiene "# Configuración del proyecto. Consulta docs/configuration.md"
+      Entonces el archivo "iteraciones.config.yaml" contiene "# Configuración del proyecto. Consulta docs/configuration.md"
       Y el archivo "iteraciones.config.yaml" contiene "theme: dark"
       Y el archivo "iteraciones.config.yaml" tiene como máximo 25 líneas
       Y el proyecto recién creado pasa validate
@@ -59,7 +59,7 @@ Característica: El argv llega entero hasta el comando
     Escenario: El config de init deja los defaults en el código
       Dado que la raíz del proyecto está vacía
       Cuando parseo el comando "init" sobre la raíz del proyecto
-      Y el config del proyecto no declara "blocks"
+      Entonces el config del proyecto no declara "blocks"
 
   Regla de negocio: init no pisa lo que ya está
 
@@ -160,7 +160,7 @@ Característica: El argv llega entero hasta el comando
     Escenario: clean por argv con --json
       Dado que la raíz del proyecto está vacía
       Cuando parseo el comando "clean --json" sobre la raíz del proyecto
-      Y el JSON declara la clave "ok" con el valor verdadero
+      Entonces el JSON declara la clave "ok" con el valor verdadero
 
     # Un directorio sin permisos no se puede borrar. El mensaje tiene que decir
     # *qué* no se pudo eliminar, o el usuario busca un problema de disco.

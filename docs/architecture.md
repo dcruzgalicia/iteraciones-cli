@@ -14,7 +14,7 @@ iteraciones-cli es un static site generator (SSG) orientado a publicación edito
 | Conversión | [Pandoc](https://pandoc.org) | Transformación entre formatos de documento |
 | CSS | [Tailwind CSS v4](https://tailwindcss.com) | Estilos del HTML generado |
 | PDF | latexmk + pdflatex + biber | Compilación LaTeX a PDF |
-| Tests | bun test | Framework de tests integrado |
+| Tests | bun run gherkin | cucumber: scenarios en `features/`, steps en `src/test/steps/` |
 
 ---
 
@@ -384,27 +384,19 @@ La tipografía del PDF (papel, márgenes, interlineado, fuente, estilos de secci
 - `Bun.file()` / `Bun.write()`: API moderna para I/O de archivos.
 - `Bun.spawn()`: invocación de procesos con pipes.
 - `Bun.Glob`: globbing nativo sin dependencias.
-- `bun test`: test runner integrado, API compatible con Jest.
+- `bun run gherkin`: la suite es Gherkin. No hay tests de `bun:test`: la migración se cerró y el andamiaje que la acompañaba se eliminó con ella.
 
-### La suite es híbrida: `bun:test` y Gherkin
+### El sujeto también puede ser el texto
 
-Los tests de comportamiento viven en **Gherkin** (`features/*.feature` + `src/test/steps/`), que es donde se lee *qué* garantiza el sistema. Los que verifican **el código como texto** siguen en `bun:test`.
-
-Hay **seis tests estáticos** que no migran, en tres archivos:
-
-| Archivo | Casos | Por qué se queda |
-|---|---|---|
-| `config-schema-parity.test.ts` | 0 `it()` | La aserción es `Expect<Schema extends Config ? true : false>`. Ocurre en `tsc --noEmit`, no en runtime. |
-| `builder-isolation.test.ts` | 2 | Leen los `.ts` como texto y escanean imports. El sujeto es el árbol de dependencias. |
-| `schema-guard.test.ts` | 2 | Verifican existencia de ficheros y escanean módulos con regex; la allowlist exige justificación escrita por entrada. |
+Los tests de comportamiento viven en **Gherkin** (`features/*.feature` + `src/test/steps/`), que es donde se lee *qué* garantiza el sistema. Los que verifican **el código como texto** también son escenarios, no archivos aparte: su sujeto es el árbol de dependencias (`builder-isolation.feature`) o la paridad entre la documentación y el código (`docs-paridad.feature`). La aserción de tipos entre el schema y `Config` no es un test: ocurre en `tsc --noEmit`.
 
 El principio, para no re-litigarlo:
 
 > **Una aserción es vacía si su valor de verdad no depende del sistema bajo prueba.**
 > Gherkin expresa `Dado estado → Cuando acción → Entonces resultado observable`.
-> Los seis anteriores **no tienen `Cuando`**: su sujeto es el texto del código o la existencia de un fichero.
+> Los estáticos **no tienen `Cuando`**: su sujeto es el texto del código o la existencia de un fichero.
 
-No son tests malos: son la categoría correcta para un sujeto que es análisis estático, y la categoría se verifica con análisis estático. `bun run check-estaticos` hace que la lista no crezca en la próxima auditoría: falla si aparece un `it()` que no toca ningún módulo ni lee ficheros.
+No son escenarios malos: son la categoría correcta para un sujeto que es análisis estático, y la categoría se verifica con análisis estático.
 
 ### ¿Por qué el pipeline usa dos pools de concurrencia?
 
@@ -490,7 +482,7 @@ Soporte (`src/builder/gitignore.ts`):
 - `parseGitignore` conserva la forma pública de las reglas (`pattern`, `negated`, `anchored`, `dirOnly`) y `isIgnoredByRules` consulta el matcher de la librería, que implementa la semántica completa de git (última regla gana, negación, anclajes, `**`, escapes, precedencia de directorios excluidos).
 - La sustitución (issue #1928) se validó con la suite de paridad contra `git check-ignore`: 10 casos del alcance soportado con 0 divergencias tanto del matcher propio como de `ignore`; en casos extendidos del estándar (escape `\#`, negación de directorio anclado) el matcher propio divergía en 2 casos y la librería en 0.
 
-Límites conocidos (aceptados): sin reglas heredadas de `.gitignore` superiores (solo raíz del proyecto), y la librería no distingue archivos de directorios (no hace stat: un patrón `dir/` no ignora el directorio en sí cuando aparece como segmento no final de un path; discovery solo verifica archivos `.md` existentes, así que no afecta al descubrimiento real). La suite de paridad (`src/__tests__/gitignore-parity.test.ts`) compara `isIgnoredByRules` contra `git check-ignore` y lista las divergencias conocidas en `KNOWN_DIVERGENCES`: solo una divergencia nueva falla. Es el único mecanismo de exclusión de contenido; no se ampliará su alcance.
+Límites conocidos (aceptados): sin reglas heredadas de `.gitignore` superiores (solo raíz del proyecto), y la librería no distingue archivos de directorios (no hace stat: un patrón `dir/` no ignora el directorio en sí cuando aparece como segmento no final de un path; discovery solo verifica archivos `.md` existentes, así que no afecta al descubrimiento real). La suite de paridad (`features/gitignore-paridad.feature`) compara `isIgnoredByRules` contra `git check-ignore` de verdad y declara en `DIVERGENCIAS_CONOCIDAS` (en `src/test/steps/gitignore.steps.ts`) los límites que no se van a arreglar: solo una divergencia nueva falla. Requiere `@requires-git`; sin git la suite se omite y el informe de omitidos lo dice. Es el único mecanismo de exclusión de contenido; no se ampliará su alcance.
 
 ### Congelación de la superficie pública (pre-1.0)
 

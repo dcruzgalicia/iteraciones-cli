@@ -34,24 +34,6 @@ function translateCommanderError(message: string): string {
     .join('\n');
 }
 
-function suggestCommand(name: string, commands: string[]): string | undefined {
-  const prefix = name.slice(0, 3);
-  const byPrefix = commands.find((c) => c.startsWith(prefix));
-  if (byPrefix !== undefined) return byPrefix;
-  const distance = (a: string, b: string): number => {
-    let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
-    for (let i = 1; i <= a.length; i++) {
-      const curr: number[] = [i];
-      for (let j = 1; j <= b.length; j++) {
-        curr[j] = Math.min((prev[j] ?? 0) + 1, (curr[j - 1] ?? 0) + 1, (prev[j - 1] ?? 0) + (a[i - 1] === b[j - 1] ? 0 : 1));
-      }
-      prev = curr;
-    }
-    return prev[b.length] ?? a.length + b.length;
-  };
-  return commands.find((c) => distance(c, name) <= 2);
-}
-
 export function buildProgram(): Command {
   const program = new Command();
 
@@ -437,11 +419,13 @@ Ejemplos:
       }
       const target = program.commands.find((c) => c.name() === cmdName);
       if (target === undefined) {
-        const suggestion = suggestCommand(
-          cmdName,
-          program.commands.map((c) => c.name()).filter((n) => n !== 'help'),
-        );
-        process.stderr.write(`error: comando desconocido '${cmdName}'${suggestion ? `\n(¿Quisiste decir ${suggestion}?)` : ''}\n`);
+        // commander ya calcula lo más parecido, y el `outputError` de arriba
+        // (translateCommanderError) ya traduce su «(Did you mean …?)».
+        try {
+          program.parse([cmdName], { from: 'user' });
+        } catch {
+          // commander ya escribió el error y la sugerencia en stderr.
+        }
         process.exitCode = 1;
         return;
       }

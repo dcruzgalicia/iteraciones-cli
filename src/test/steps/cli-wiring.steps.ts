@@ -171,6 +171,12 @@ Then('el archivo {string} quedó con este contenido', (relativa: string, conteni
   }
 });
 
+Then('el directorio {string} existe', (relativa: string) => {
+  if (!existsSync(ruta(relativa))) {
+    throw new Error(`${relativa} no existe en ${world.root}`);
+  }
+});
+
 Then('el directorio {string} no existe', (relativa: string) => {
   if (existsSync(ruta(relativa))) {
     throw new Error(`${relativa} no debería existir en ${world.root}`);

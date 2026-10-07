@@ -8,3 +8,5 @@ AGENTS.md
 tools/pdfx-validator/target/
 # Borradores locales de bodies de issues/PRs (nunca se versionan).
 .gh-issue-bodies/
+# Salida del CLI corriendo en la raíz del repo (iteraciones markdown).
+salida*.md

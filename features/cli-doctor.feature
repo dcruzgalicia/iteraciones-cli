@@ -25,7 +25,7 @@ Característica: doctor y list-filters cuentan qué le falta al proyecto
     Escenario: Un proyecto con PDF sí verifica el motor LaTeX
       Dado que la raíz del proyecto tiene un proyecto con PDF
       Cuando corro "doctor"
-      Y la salida dice "pdflatex disponible"
+      Entonces la salida dice "pdflatex disponible"
 
     # #2082: un proyecto HTML-only que ofrece `iteraciones-pdfcheck`,
     # `ImageMagick` o `biber` hace que el usuario instale tres herramientas
@@ -35,7 +35,7 @@ Característica: doctor y list-filters cuentan qué le falta al proyecto
     Escenario: Un proyecto de HTML no lista los checks de PDF
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Cuando corro "doctor"
-      Y la salida no dice "iteraciones-pdfcheck"
+      Entonces la salida no dice "iteraciones-pdfcheck"
       Y la salida no dice "ImageMagick"
       Y la salida no dice "biber"
 
@@ -46,7 +46,7 @@ Característica: doctor y list-filters cuentan qué le falta al proyecto
     Escenario: El check de biber depende de que haya bibliografía
       Dado que la raíz del proyecto tiene un proyecto con PDF
       Cuando corro "doctor"
-      Y la salida no dice "biber disponible"
+      Entonces la salida no dice "biber disponible"
       Dado que el proyecto tiene el archivo "refs.bib"
       Y corro "doctor"
       Y la salida dice "biber disponible"
@@ -57,12 +57,12 @@ Característica: doctor y list-filters cuentan qué le falta al proyecto
     Escenario: El check de certificación depende de 99-pdfx
       Dado que la raíz del proyecto tiene un proyecto con PDF
       Cuando corro "doctor"
-      Y la salida no dice "iteraciones-pdfcheck"
+      Entonces la salida no dice "iteraciones-pdfcheck"
 
     Escenario: Con 99-pdfx activo aparece el check de certificación
       Dado que la raíz del proyecto tiene un proyecto con 99-pdfx activo
       Cuando corro "doctor"
-      Y la salida dice "iteraciones-pdfcheck"
+      Entonces la salida dice "iteraciones-pdfcheck"
 
   Regla de negocio: Un check opcional que falla avisa pero no rompe
 
@@ -83,16 +83,23 @@ Característica: doctor y list-filters cuentan qué le falta al proyecto
     Escenario: Los checks que pasan salen con ✔
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Cuando corro "doctor"
-      Y la salida dice "✔ iteraciones.config.yaml"
+      Entonces la salida dice "✔ iteraciones.config.yaml"
       Y la salida dice "✔ permisos de lectura en cwd"
 
     # Un `\x1b` que se cuela en la salida rompe el parseo de `doctor --json` en
     # un watcher, y en una terminal ensucia la lista.
+    #
+    # El escenario va con `NO_COLOR` porque el contrato es sobre la salida que
+    # leen las máquinas (el `--json`, el pipe del watcher): en un terminal el
+    # color es lo esperado y afirmarlo sería afirmar lo contrario de lo que
+    # importa. Con el color apagado, cualquier escape que quede es uno hardcodeado
+    # en el render de los checks — que es exactamente la regresión.
 
     Escenario: La salida de doctor no lleva códigos ANSI
       Dado que la raíz del proyecto tiene un proyecto de prueba
+      Y el entorno pide no usar color
       Cuando corro "doctor"
-      Y la salida no lleva códigos ANSI
+      Entonces la salida no lleva códigos ANSI
 
     Escenario: Una configuración inválida se marca con ✖ y el detalle
       Dado que la raíz del proyecto tiene una configuración inválida
@@ -135,7 +142,7 @@ Característica: doctor y list-filters cuentan qué le falta al proyecto
     Escenario: --info distingue lo que desactivaste de los defaults
       Dado que la raíz del proyecto tiene un proyecto con 19-maketitle desactivado
       Cuando pido la información de "doctor"
-      Y la línea de "filters de preámbulo desactivados (config):" dice "19-maketitle"
+      Entonces la línea de "filters de preámbulo desactivados (config):" dice "19-maketitle"
       Y la línea de "filters de preámbulo desactivados (defaults del paquete):" dice "97-eso-pic, 98-crop, 99-pdfx"
 
     # Escribir un default en el YAML es una decisión del usuario, aunque el
@@ -145,13 +152,13 @@ Característica: doctor y list-filters cuentan qué le falta al proyecto
     Escenario: Un default escrito en el YAML cuenta como config
       Dado que la raíz del proyecto tiene un proyecto con 97-eso-pic desactivado
       Cuando pido la información de "doctor"
-      Y la línea de "filters de preámbulo desactivados (config):" dice "97-eso-pic"
+      Entonces la línea de "filters de preámbulo desactivados (config):" dice "97-eso-pic"
       Y la línea de "filters de preámbulo desactivados (config):" no dice "(ninguno)"
 
     Escenario: Sin desactivaciones propias la línea de config dice (ninguno)
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Cuando pido la información de "doctor"
-      Y la línea de "filters de preámbulo desactivados (config):" dice "(ninguno)"
+      Entonces la línea de "filters de preámbulo desactivados (config):" dice "(ninguno)"
       Y las dos líneas de filtros de preámbulo están alineadas
 
     # #2192: antes cada línea del bloque llevaba su propio prefijo `[doctor]`.
@@ -161,7 +168,7 @@ Característica: doctor y list-filters cuentan qué le falta al proyecto
     Escenario: El bloque de información lleva un único prefijo
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Cuando pido la información de "doctor"
-      Y la línea del encabezado de la configuración lleva el prefijo "[doctor]"
+      Entonces la línea del encabezado de la configuración lleva el prefijo "[doctor]"
       Y ninguna línea de la configuración lleva el prefijo "[doctor]"
 
   Regla de negocio: list-filters alcanza sin configuración

@@ -1,0 +1,299 @@
+import { mkdir, readdir, rename, rm } from 'node:fs/promises';
+import { cpus } from 'node:os';
+import { basename, dirname, join } from 'node:path';
+import { stringify } from 'yaml';
+import { formatHumanDate } from '../lib/date.js';
+import { ExportError, PANDOC_ERROR_CODES } from '../lib/errors.js';
+import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
+import { fmBool, fmString } from '../lib/frontmatter-fields.js';
+import { logWarning } from '../lib/logger.js';
+import { execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
+import { exec, mapWithConcurrency, ProcessSpawnError, ProcessTimeoutError } from '../lib/run.js';
+import { prepareArgv, recordSupportCommand } from '../lib/script-recorder.js';
+import type { LuaFilterGroup } from './filter-resolver.js';
+import { citationCompileArgs, creatorArgs, dateArg, languageArg, titleArg } from './pandoc-metadata.js';
+import { preparePaths, xmpDirsFor } from './prepare.js';
+import type { BuildDocument } from './types.js';
+
+/**
+ * Los tres pasos de salida del pipeline que invocan herramientas externas y
+ * luego mueven ficheros a `dist/`: la conversión a EPUB/markdown, la compilación
+ * con latexmk y la portada con pdftoppm. Comparten los tipos de documento de
+ * exportación y por eso viven en un módulo.
+ */
+export interface ExportMetadata {
+  title: string;
+  creator: string[];
+  date?: string;
+  dateIso?: string;
+  language: string;
+  bibliography?: string;
+  csl?: string;
+  toc: boolean;
+  tocDepth?: number;
+}
+
+export interface ExportDocument {
+  filePath: string;
+  relativePath: string;
+  metadata: ExportMetadata;
+  slug?: string;
+}
+
+export function assembleExportDocument(
+  doc: BuildDocument,
+  language: string,
+  globalBibliography?: string,
+  globalCsl?: string,
+  toc?: boolean,
+): ExportDocument {
+  const metadata: ExportMetadata = {
+    title: doc.frontmatter.title || 'Sin título',
+    creator: doc.frontmatter.creator,
+    date: formatHumanDate(doc.frontmatter.date) ?? undefined,
+    dateIso: doc.frontmatter.date,
+    language,
+    bibliography: globalBibliography,
+    csl: globalCsl,
+    toc: toc ?? false,
+    tocDepth: 1,
+  };
+
+  return {
+    filePath: doc.filePath,
+    relativePath: doc.relativePath,
+    metadata,
+    slug: doc.slug,
+  };
+}
+
+export const LATEXMK_AUX_EXTENSIONS = ['.aux', '.bbl', '.bcf', '.blg', '.fls', '.run.xml', '.fdb_latexmk', '.out', '.toc', '.log'];
+
+const LATEXMK_TIMEOUT_MS = 600_000;
+
+export async function convertToEpub(
+  content: string,
+  outputPath: string,
+  doc: ExportDocument,
+  filters: LuaFilterGroup,
+  toc?: boolean,
+  fm: Record<string, unknown> = {},
+  inputTarget?: string,
+  imagePaths?: string,
+): Promise<void> {
+  await mkdir(dirname(outputPath), { recursive: true });
+
+  const extraArgs: string[] = [];
+  extraArgs.push('--shift-heading-level-by=4');
+  for (const f of [...filters.semantic, ...filters.user]) extraArgs.push('--lua-filter', f);
+  extraArgs.push(...citationCompileArgs(doc.metadata.bibliography, doc.metadata.csl));
+  const tocActive = fmBool(fm.toc, toc ?? false);
+  if (tocActive) {
+    extraArgs.push('--toc');
+    extraArgs.push('--toc-depth=6');
+  }
+
+  extraArgs.push(languageArg(fmString(fm.language, doc.metadata.language)));
+  extraArgs.push(titleArg(doc.metadata.title));
+  extraArgs.push(...creatorArgs(doc.metadata.creator));
+  extraArgs.push(...dateArg((doc.metadata.dateIso ?? doc.metadata.date) || undefined));
+
+  await execPandoc({
+    input: content,
+    sourcePath: doc.filePath,
+    from: MD_READER,
+    to: 'epub3',
+    outputPath,
+    extraArgs,
+    inputTarget,
+    env: imagePathsEnv(imagePaths),
+  });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * #2436: el markdown de dist debe ser re-procesable, así que NO pasa por
+ * pandoc: el roundtrip md→md desplazaba los headings (+4) y reescribía el
+ * body, haciendo imposible la idempotencia. Se emite el frontmatter del
+ * origen tal cual (solo se completa `language` desde el sitio) y el body
+ * intacto, byte a byte.
+ *
+ * #2437: con `merge` (collections con format.markdown.merge) la salida deja de
+ * ser reprocesable: `type` pasa a `file` y `files[]` se elimina, el body ya
+ * viene fusionado.
+ */
+export async function convertToMarkdown(
+  content: string,
+  outputPath: string,
+  doc: ExportDocument,
+  fm: Record<string, unknown> = {},
+  merge = false,
+): Promise<void> {
+  await mkdir(dirname(outputPath), { recursive: true });
+
+  const { yaml, body } = splitFrontmatter(content);
+  const parsed = yaml === undefined ? undefined : parseYamlWithPosition(yaml);
+  const base = isRecord(parsed?.value) ? parsed.value : undefined;
+  if (yaml !== undefined && base === undefined) {
+    // Frontmatter ilegible: preservar el contenido tal cual (información > formato).
+    await Bun.write(outputPath, content);
+    return;
+  }
+
+  const outFm: Record<string, unknown> = { ...base, ...fm };
+  if (merge) {
+    outFm.type = 'file';
+    delete outFm.files;
+  }
+  if (outFm.language === undefined) outFm.language = doc.metadata.language;
+  // Si el origen no traía frontmatter, la línea en blanco separa el bloque del body.
+  const separator = yaml === undefined ? '\n' : '';
+  await Bun.write(outputPath, `---\n${stringify(outFm)}---\n${separator}${body}`);
+}
+
+/**
+ * `noBibtex` (#2419): el proyecto no tiene archivos `.bib`, así que latexmk
+ * pasa `-nobibtex` (equivalente a `$bibtex_use = 0`: «never run bibtex or
+ * biber» según el propio manual). Ahorra la corrida de biber en cada PDF.
+ */
+export async function convertToPdf(
+  fullTexPath: string,
+  sourcePath: string,
+  pdfDir: string,
+  slug: string,
+  biberCacheDir?: string,
+  pdfDest?: string,
+  noBibtex = false,
+  onSpawn?: (pid: number) => void,
+): Promise<void> {
+  if (!(await Bun.file(fullTexPath).exists())) {
+    throw new ExportError('no se encontró el archivo .tex generado', sourcePath, '');
+  }
+
+  const biberCache = biberCacheDir ?? join(pdfDir, 'biber', slug);
+  const xmpDirs = xmpDirsFor([pdfDir]);
+  await preparePaths([biberCache, pdfDir], xmpDirs);
+  recordSupportCommand('pdf', slug, prepareArgv([biberCache, pdfDir], xmpDirs));
+  const logPath = join(pdfDir, `${slug}.log`);
+
+  let result: Awaited<ReturnType<typeof exec>>;
+  try {
+    const args = ['-pdf', '-interaction=nonstopmode', ...(noBibtex ? ['-nobibtex'] : []), `-outdir=${pdfDir}`, `-jobname=${slug}`, fullTexPath];
+    result = await exec('latexmk', args, {
+      timeoutMs: LATEXMK_TIMEOUT_MS,
+      cwd: pdfDir,
+      env: { PAR_GLOBAL_TEMP: biberCache, TEXINPUTS: `${pdfDir}:` },
+      onSpawn,
+    });
+  } catch (err) {
+    if (err instanceof ProcessSpawnError) {
+      throw new ExportError(
+        'latexmk no está disponible en PATH. Instala MacTeX full: https://tug.org/mactex/',
+        sourcePath,
+        '',
+        PANDOC_ERROR_CODES.envMissing,
+      );
+    }
+    if (err instanceof ProcessTimeoutError) {
+      throw new ExportError(
+        `latexmk no terminó en ${LATEXMK_TIMEOUT_MS / 60000} minutos y fue terminado. Revisa el log en: ${logPath}`,
+        sourcePath,
+        '',
+      );
+    }
+    throw err;
+  }
+
+  if (result.exitCode !== 0) {
+    const log = `${result.stdout}\n${result.stderr}`;
+    const m = log.match(/^! .*$/m);
+    const detail = m ? m[0] : `exit ${result.exitCode}`;
+    throw new ExportError(`latexmk falló al generar el PDF: ${detail}`, sourcePath, `Revisa el log completo en: ${logPath}`);
+  }
+
+  if (pdfDest) {
+    await collectPdf(pdfDir, pdfDest);
+    recordSupportCommand('pdf', slug, ['iteraciones', 'pdf', 'collect', pdfDir, '-o', pdfDest]);
+  } else {
+    await cleanPdfSlot(pdfDir, slug);
+  }
+}
+
+/** Los auxiliares de latexmk y de la plantilla XMP viven junto al .tex de trabajo. */
+export async function cleanPdfSlot(slotDir: string, job: string): Promise<void> {
+  const auxPaths = [
+    ...LATEXMK_AUX_EXTENSIONS.map((ext) => join(slotDir, `${job}${ext}`)),
+    join(slotDir, 'pdfx.xmp'),
+    join(slotDir, 'pdfx.xmpi'),
+    join(slotDir, `${job}.xmpdata`),
+  ];
+  await Promise.all(auxPaths.map((p) => rm(p, { force: true }).catch(() => {})));
+}
+
+/**
+ * Retira los auxiliares del slot y deja el PDF de latexmk en dist/. Es el
+ * `rm -f` + `mv` que hacía el build, compartido con `iteraciones pdf collect`:
+ * el slug de trabajo es el nombre del PDF de destino, el mismo con el que
+ * latexmk compiló.
+ */
+export async function collectPdf(slotDir: string, output: string): Promise<void> {
+  await cleanPdfSlot(slotDir, basename(output, '.pdf'));
+  await mkdir(dirname(output), { recursive: true });
+  await rename(join(slotDir, `${basename(output, '.pdf')}.pdf`), output);
+}
+
+const COVER_TIMEOUT_MS = 30_000;
+
+interface CoverImageEntry {
+  pdfPath: string;
+  pngPath: string;
+}
+
+/** El nombre de trabajo de pdftoppm, derivado de la portada final. */
+function coverPrefix(pngPath: string): string {
+  return `.cover-${basename(pngPath, '.png')}`;
+}
+
+/**
+ * pdftoppm escribe `<dir>/.cover-<slug>-1.png`; este es el paso al nombre final
+ * y la limpieza de lo que quedó al lado. Compartido con `iteraciones cover`,
+ * que hace lo mismo a mano; en el build.sh la fase de portada ocupa
+ * directamente el `mv` (#2456), porque el nombre lo decide pdftoppm.
+ *
+ * Devuelve el fichero que movió, o `undefined` si no había portada pendiente.
+ */
+export async function collectCover(pngPath: string): Promise<string | undefined> {
+  const dir = dirname(pngPath);
+  const prefix = coverPrefix(pngPath);
+  const produced = (await readdir(dir)).find((f) => f.startsWith(prefix));
+  if (produced === undefined) return undefined;
+  await rename(join(dir, produced), pngPath);
+  for (const f of await readdir(dir)) {
+    if (f.startsWith(prefix)) await rm(join(dir, f), { force: true }).catch(() => {});
+  }
+  return produced;
+}
+
+export async function generateCoverImages(entries: CoverImageEntry[]): Promise<void> {
+  await mapWithConcurrency(entries, Math.min(4, Math.max(1, cpus().length)), async ({ pdfPath, pngPath }) => {
+    try {
+      await mkdir(dirname(pngPath), { recursive: true });
+      await exec('pdftoppm', ['-png', '-f', '1', '-l', '1', pdfPath, join(dirname(pngPath), coverPrefix(pngPath))], {
+        timeoutMs: COVER_TIMEOUT_MS,
+      });
+      const produced = await collectCover(pngPath);
+      if (produced === undefined) {
+        logWarning(`pdftoppm no produjo la imagen de portada de "${basename(pdfPath)}"`, 'build');
+        return;
+      }
+      // #2456 — la portada es un `mv` puro al nombre final: sin lógica
+      // intermedia en el .sh (`iteraciones cover` sigue existiendo a mano).
+      recordSupportCommand('covers', join(dirname(pngPath), coverPrefix(pngPath)), ['mv', join(dirname(pngPath), produced), pngPath]);
+    } catch {
+      logWarning(`no se pudo generar la imagen de portada de "${basename(pdfPath)}" (¿pdftoppm instalado?)`, 'build');
+    }
+  });
+}

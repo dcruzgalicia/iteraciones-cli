@@ -3,8 +3,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { After, Before, Given, Then, When } from '@cucumber/cucumber';
-import { convertToEpub, convertToMarkdown } from '../../builder/export/runner.js';
-import type { ExportDocument } from '../../builder/export/types.js';
+import { convertToEpub, convertToMarkdown, type ExportDocument } from '../../builder/export.js';
 import type { LuaFilterGroup } from '../../builder/filter-resolver.js';
 import * as pandocRunner from '../../lib/pandoc-runner.js';
 

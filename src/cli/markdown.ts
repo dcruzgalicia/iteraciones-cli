@@ -2,7 +2,7 @@ import { basename, dirname, join, relative } from 'node:path';
 import { resolveCollectionFile } from '../builder/collection-files.js';
 import { loadSlugIndex } from '../builder/discover.js';
 import { applyCreatorTitle } from '../builder/discover-frontmatter.js';
-import { assembleExportDocument } from '../builder/export/assemble.js';
+import { assembleExportDocument } from '../builder/export.js';
 
 import { rewriteFmImagePaths } from '../builder/image-processor.js';
 

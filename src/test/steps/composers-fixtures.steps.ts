@@ -16,7 +16,7 @@ import * as pandocRunner from '../../lib/pandoc-runner.js';
  * El original empezaba cada test con `if (fixtureX === '') return;`. Sin
  * fixtures, los seis tests de composers pasaban **en verde sin ejecutar una
  * sola aserción** — el mismo problema que #2542 encontró en otros archivos. Los
- * fixtures están versionados en `src/__tests__/fixtures/pandoc/`, así que si
+ * fixtures están versionados en `src/test/fixtures/pandoc/`, así que si
  * faltan es un repo roto, no una máquina con menos herramientas: aquí eso debe
  * ser un fallo ruidoso, y por eso `fixturesDir()` lanza en vez de devolver vacío.
  *
@@ -93,7 +93,7 @@ const world: ComposersWorld = {
 
 /** Directorio de fixtures del major más alto disponible. */
 async function fixturesDir(): Promise<string> {
-  const base = join(import.meta.dir, '../../__tests__/fixtures/pandoc');
+  const base = join(import.meta.dir, '../fixtures/pandoc');
   const versions = (await readdir(base).catch(() => [] as string[])).sort();
   const latest = versions.at(-1);
   if (latest === undefined) {

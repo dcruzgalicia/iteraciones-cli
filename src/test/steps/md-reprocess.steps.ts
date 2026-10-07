@@ -86,6 +86,26 @@ Given('una creativa con un enlace en su frontmatter', async () => {
   await Bun.write(join(world.dir, 'creativa.md'), `${CREATIVA}\n`);
 });
 
+/**
+ * Una collection con `format.markdown.merge` en el valor que le pase el
+ * escenario, más el miembro que lista en `files[]`: sin el archivo del miembro
+ * en disco el build no resuelve la collection y no hay nada que exportar.
+ */
+Given('una colección con merge {word}', async (merge: string) => {
+  const conMerge = [...CONFIG.split('\n'), `    merge: ${merge}`].join('\n');
+  await Bun.write(join(world.dir, 'iteraciones.config.yaml'), `${conMerge}\n`);
+  await Bun.write(
+    join(world.dir, 'libro.md'),
+    ['---', 'title: Libro', 'type: collection', 'files:', '  - ensayo.md', '---', '', 'Intro del libro.'].join('\n'),
+  );
+  await Bun.write(
+    join(world.dir, 'ensayo.md'),
+    ['---', 'title: Ensayo', 'creator:', '  - Autora A', 'date: 2026-08-08', 'slug: ensayo', '---', '', '# Capítulo', '', 'Texto del capítulo.'].join(
+      '\n',
+    ),
+  );
+});
+
 When('compilo el proyecto', async () => {
   process.exitCode = 0;
   await runBuild(world.dir);
@@ -96,6 +116,27 @@ Then('el markdown exportado lleva el frontmatter completo', async () => {
   for (const expected of ['title: Ensayo', 'subtitle: Subtítulo', '- Autora A', 'date: 2026-08-08', 'slug: ensayo', 'language: es-MX']) {
     if (!exported.includes(expected)) throw new Error(`falta "${expected}" en el frontmatter exportado:\n${exported.slice(0, 400)}`);
   }
+});
+
+/** Sin `merge` la salida vuelve a ser fuente: conserva su `type` y sus `files[]`. */
+Then('el markdown de la colección conserva type y files', async () => {
+  const exported = await readFile(join(await distFiles(world.dir), 'libro.md'), 'utf8');
+  for (const esperado of ['type: collection', '- ensayo.md']) {
+    if (!exported.includes(esperado)) throw new Error(`el .md de la colección perdió "${esperado}":\n${exported.slice(0, 300)}`);
+  }
+});
+
+/**
+ * Con `merge` el body ya viene fusionado, así que la salida **deja** de ser
+ * reprocesable: `type` pasa a `file` y `files[]` desaparece porque sus miembros
+ * ya están dentro. Es la única palanca del markdown que pierde información, y
+ * por eso tiene que verse explícita en el `.md` de salida.
+ */
+Then('el markdown de la colección ya viene fusionado', async () => {
+  const exported = await readFile(join(await distFiles(world.dir), 'libro.md'), 'utf8');
+  if (exported.includes('type: collection')) throw new Error('con merge el .md no debería conservar type: collection');
+  if (exported.includes('ensayo.md')) throw new Error('con merge el .md no debería conservar files[]');
+  if (!exported.includes('type: file')) throw new Error(`con merge el .md debería declarar type: file:\n${exported.slice(0, 300)}`);
 });
 
 Then('el markdown exportado conserva el heading sin desplazar', async () => {

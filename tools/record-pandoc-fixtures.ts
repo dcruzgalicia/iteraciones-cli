@@ -1,7 +1,7 @@
 /**
  * Regenera los fixtures de salida de pandoc para el major ACTUAL
  * (issue #2031): ejecuta pandoc real sobre sample.md y escribe sample.latex /
- * sample.html en src/__tests__/fixtures/pandoc/<major>/. Requiere pandoc.
+ * sample.html en src/test/fixtures/pandoc/<major>/. Requiere pandoc.
  *
  * Uso: bun tools/record-pandoc-fixtures.ts
  */
@@ -12,7 +12,7 @@ import { execPandoc, getPandocVersion } from '../src/lib/pandoc-runner.js';
 const version = await getPandocVersion();
 const major = version.match(/pandoc (\d+)\./)?.[1];
 if (!major) throw new Error(`no se pudo parsear la versión: ${version}`);
-const dir = join(import.meta.dir, '../src/__tests__/fixtures/pandoc', major);
+const dir = join(import.meta.dir, '../src/test/fixtures/pandoc', major);
 await mkdir(dir, { recursive: true });
 
 const samplePath = join(dir, 'sample.md');

@@ -11,6 +11,7 @@ import {
   recordScriptExec,
   recordSupportCommand,
 } from '../../lib/script-recorder.js';
+import { systemCommands } from '../helpers.js';
 
 /**
  * #2546 (onda 2) — la clave `script`: guard de primitivas, slots estables y la
@@ -23,21 +24,6 @@ import {
  * REGLA ("el .sh no puede usar cp/rm/ln/rmdir ni &&"), no una función: el Gherkin
  * puede leer esa regla sin abrir el .ts.
  */
-
-/** Copiado literal del original: la lista de prohibidos es el contrato (#2445/#2456). */
-function systemCommands(script: string): string[] {
-  const found = new Set<string>();
-  for (const raw of script.split('\n')) {
-    const line = raw.trim();
-    if (line === '' || line.startsWith('#') || line.startsWith('set ') || line.startsWith('cd ') || line.startsWith('(cd ')) continue;
-    // Las líneas se reordenan por sección; el primer token es el comando real.
-    const token = /^[A-Za-z0-9_./-]+/.exec(line.replace(/^(?:[A-Za-z_][A-Za-z0-9_]*=\S+ )+/, ''))?.[0] ?? '';
-    const name = token.split('/').at(-1) ?? '';
-    if (['cp', 'rm', 'ln', 'rmdir'].includes(name)) found.add(name);
-    if (line.includes(' && ')) found.add('&&');
-  }
-  return [...found].sort();
-}
 
 const PERMITIDO = ['#!/bin/bash', 'set -e', 'cd /raíz', '# comentario cp rm', 'mkdir -p dist dist/files', 'mv .cover-a-1.png portada.png'].join('\n');
 

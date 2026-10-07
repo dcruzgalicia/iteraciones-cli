@@ -6,7 +6,7 @@ import { getPandocVersion } from '../../lib/pandoc-runner.js';
  *
  * Los detectores NO son nuevos: se reusan los de producción (`checkMagick`,
  * `checkLatexEngine`, `checkPdfToPpm`) y `getPandocVersion`,
- * que es lo que ya usan los `describe.skipIf` de la suite en `src/__tests__`.
+ * que es lo que usaba la suite de `bun:test` con `describe.skipIf`.
  * Duplicarlos haría que el doctor dijera una cosa y el gating otra, y la
  * cobertura se perdería en silencio justo cuando el entorno está roto — que es
  * cuando más importa.
@@ -27,6 +27,10 @@ export const SKIP_REASONS = {
   unzip: 'requiere unzip',
   pdftotext: 'requiere pdftotext (poppler)',
   pdftoppm: 'requiere pdftoppm (poppler)',
+  // La paridad con `git check-ignore` necesita un git de verdad contra el que
+  // comparar. Sin él, esa suite no se puede correr y no hay substitute que
+  // sirva: reimplementar git sería el doble que se está tratando de evitar.
+  git: 'requiere git',
 } as const;
 
 export type Capability = keyof typeof SKIP_REASONS;
@@ -57,6 +61,7 @@ const DETECTORS: Record<Capability, Detector> = {
   unzip: () => existe('unzip', ['-v']),
   pdftotext: () => existe('pdftotext', ['-v']),
   pdftoppm: async () => (await checkPdfToPpm()).ok,
+  git: () => existe('git', ['--version']),
 };
 
 export async function detectCapabilities(forced?: Partial<Record<Capability, boolean>>): Promise<Record<Capability, boolean>> {

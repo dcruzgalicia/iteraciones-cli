@@ -2,11 +2,11 @@ import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { After, Before, Given, Then, When } from '@cucumber/cucumber';
-import { initTestProject } from '../../__tests__/helpers.js';
 import { build } from '../../builder/orchestrator.js';
 import { runNew } from '../../cli/dispatcher.js';
 import { initProject } from '../../cli/init.js';
 import { validateProject } from '../../cli/validate.js';
+import { initTestProject } from '../helpers.js';
 
 /**
  * #2546 (onda 2) — `integration`: `init`, `build` y `validate` de punta a punta.
@@ -60,11 +60,11 @@ Given('un directorio vacío', async () => {
 });
 
 Given('un proyecto con el documento inicial de prueba', async () => {
-  await initTestProject(world.dir);
+  initTestProject(world.dir);
 });
 
 Given('un proyecto con un documento de frontmatter sin cerrar', async () => {
-  await initTestProject(world.dir);
+  initTestProject(world.dir);
   await writeFile(join(world.dir, 'bad.md'), '---\ntitle: "sin cerrar\n---\n\nContenido.\n', 'utf8');
 });
 

@@ -4,7 +4,7 @@ import type { SiteConfig } from '../config/config-schema.js';
 import type { FormatKey } from '../config/site-config.js';
 import { resolveBooleanField } from '../lib/frontmatter-fields.js';
 import { htmlSlugFor } from './discover.js';
-import { LATEXMK_AUX_EXTENSIONS } from './export/runner.js';
+import { LATEXMK_AUX_EXTENSIONS } from './export.js';
 import {
   ALL_OUTPUT_EXTENSIONS,
   ASSETS_CSS_FILE,
