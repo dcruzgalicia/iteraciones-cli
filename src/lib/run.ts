@@ -33,11 +33,6 @@ export class ProcessTimeoutError extends Error {
   }
 }
 
-// ponytail: `ps -ax -o pid=,ppid=` y no `pgrep -P`. pgrep viene de procps, que no está en una
-// imagen mínima; sin él el BFS no descubría nada y el timeout solo mataba la raíz, dejando
-// pdflatex y biber vivos. Ojo: `ps -o pid= -ppid` NO existe en el ps de BSD (macOS) — `-ppid`
-// solo funciona en procps, que es justo lo que se quiere evitar. `-ax -o pid=,ppid=` funciona
-// en BSD y en Linux, y el filtro se hace aquí.
 const PS_ARGS = ['-ax', '-o', 'pid=,ppid='];
 
 async function childPids(pid: number): Promise<number[]> {
@@ -50,7 +45,6 @@ async function childPids(pid: number): Promise<number[]> {
       const found: number[] = [];
       for (const line of stdout.split('\n')) {
         const [child, parent] = line.trim().split(/\s+/);
-        // El segundo campo es el padre: el orden es pid, ppid.
         if (Number.parseInt(parent ?? '', 10) === pid) {
           const n = Number.parseInt(child ?? '', 10);
           if (Number.isInteger(n) && n > 0) found.push(n);
@@ -58,8 +52,6 @@ async function childPids(pid: number): Promise<number[]> {
       }
       return found;
     } finally {
-      // Antes el timer sobrevivía si `.text()` lanzaba, y el SIGKILL diferido le caía a un pid
-      // que la UTI ya había reciclado.
       clearTimeout(timer);
     }
   } catch {
@@ -192,8 +184,6 @@ export async function mapWithConcurrency<T, R>(
       try {
         await options.onCancel();
       } catch (err) {
-        // El build ya va a fallar por el error original; este es adicional. Tragarlo dejaba
-        // procesos hijos escribiendo en dist/ sin que nada lo dijera.
         logWarning(`no se pudieron limpiar los procesos en vuelo: ${(err as Error).message}`, 'build');
       }
     }

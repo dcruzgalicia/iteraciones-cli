@@ -10,8 +10,6 @@ export function slot(nombre: string): string {
 
 export type HtmlDocType = 'file' | 'collection' | 'creator';
 
-// Una tarjeta ausente en la variante cae a `file/`. No hay merge: la variante es una copia
-// completa del solo chunk que difiere. Sube el techo solo si una variante necesita 3+ overrides.
 export async function loadCard(type: HtmlDocType, name: string): Promise<string> {
   const own = Bun.file(join(HTML_RESOURCES_DIR, type, name));
   return (await own.exists()) ? own.text() : Bun.file(join(HTML_RESOURCES_DIR, 'file', name)).text();
@@ -26,9 +24,6 @@ const HTML_CARDS: Record<HtmlBlockKey, string> = {
   footer: 'card-identity-footer.html',
 };
 
-// Todo `.html` del paquete, por path relativo. Es lo que hay que hashear para invalidar el
-// caché: una variante puede traer solo su override y el resto vive en `file/`, así que una
-// lista por tipo se desincroniza en silencio. Un glob no puede quedar viejo.
 export function htmlResourceFiles(): string[] {
   return [...new Bun.Glob('**/*.html').scanSync({ cwd: HTML_RESOURCES_DIR, onlyFiles: true })].sort();
 }

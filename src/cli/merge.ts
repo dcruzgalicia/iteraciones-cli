@@ -137,9 +137,6 @@ export async function runMerge(cwd: string, input: string, options: { output?: s
 
     const output = resolvePath(cwd, options.output);
 
-    // ponytail: el nombre de -o ya no es una fuente fiable del slug (lleva la ruta relativa para
-    // no colisionar entre carpetas), así que `build` lo pasa explícito por --slug. El fallback
-    // se queda para el uso manual de la CLI.
     const stem = basename(output, '.md');
     const outSlug = options.slug ?? (stem.endsWith(`.${format}`) ? stem.slice(0, -(format.length + 1)) : stem);
     const distRoot = join(cwd, DIST_FILES_DIR);

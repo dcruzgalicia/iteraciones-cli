@@ -52,8 +52,6 @@ export const SCHEMA_SOURCE_FILES = [
   './collection-files.ts',
   './render.ts',
   './html-composer.ts',
-  // El peor de los que faltaban: lleva las clases Tailwind del wrapper de colección. Sin él,
-  // cambiar una hacía que el HTML no se regenerara y el CSS tampoco se recompilara.
   './html-postprocess.ts',
   './latex-preamble.ts',
   './latex-composer.ts',
@@ -114,8 +112,6 @@ export async function computeFiltersHash(
     [join(import.meta.dir, '../lib/resources/filters'), '**/*.lua'],
     [join(import.meta.dir, '../lib/resources/preamble'), '*.tex'],
     [join(cwd, 'filters'), '**/*.lua'],
-    // Los cuatro directorios que `preambleProjectDir` lee. Hardcodear solo `preamble` dejaba los
-    // overrides por tipo fuera del hash: se aplicaban una vez y nunca más, en silencio.
     ...projectPreambleDirs().map((dir): [string, string] => [join(cwd, dir), '*.tex']),
   ];
   parts.push(...(await hashSpecFiles(specs, prevCache, cache)));
@@ -158,8 +154,6 @@ export async function computeConfigHashes(
   const logo = logoPath ? await resourceHash(join(cwd, logoPath), 'html-res:logo', prevFileCache, fileCacheOut) : '';
   const toc = String(siteConfig.toc ?? false);
   const lang = String(siteConfig.language ?? '');
-  // La salida depende de binarios externos, no solo de fuentes: instalar, quitar o actualizar
-  // `minify` cambia los bytes de todas las páginas sin que ningún archivo del proyecto cambie.
   const [magick, pdftoppm, latexmk, minify] = await Promise.all([
     toolVersionMagick(),
     toolVersionPdfToPpm(),

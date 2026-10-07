@@ -25,10 +25,6 @@ export async function resolveCacheDecision(
   if (cached === undefined || cached.mtime === undefined || cached.size === undefined || cached.hash === undefined) {
     return { process: true, text: null };
   }
-  // ponytail: mtime+size NO es prueba de contenido. `rsync -a`, `tar -x` y `git worktree`
-  // preservan el mtime, así que un cambio de frontmatter de la MISMA longitud (una fecha, un
-  // nombre de autor) pasaba el hit sin leerse y la salida quedaba vieja. Se verifica el hash
-  // siempre: el archivo se lee una vez por build y ya se leía en el camino lento.
   if (size !== cached.size) {
     return { process: true, text: null };
   }
