@@ -57,6 +57,7 @@ export async function loadStateFile(cwd: string): Promise<BuildState | null> {
     const parsed = JSON.parse(raw) as Partial<BuildState>;
     if (typeof parsed.startedAt !== 'number') return null;
     if (parsed.schemaVersion !== STATE_SCHEMA_VERSION) return null;
+    if (parsed.completed !== true) return null;
     return {
       schemaVersion: parsed.schemaVersion,
       startedAt: parsed.startedAt,
