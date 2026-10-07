@@ -123,7 +123,7 @@ async function composeFor(
   return format === 'markdown' ? rewriteImagePaths(base, ctx.relImageMap, ctx.docDir) : base;
 }
 
-export async function runMerge(cwd: string, input: string, options: { output?: string; format?: string }): Promise<void> {
+export async function runMerge(cwd: string, input: string, options: { output?: string; format?: string; slug?: string }): Promise<void> {
   try {
     const format = options.format;
     if (format === undefined || format === '') throw new BuildError(`falta --format (-f): esperado ${FORMATS.join(' | ')}`);
@@ -137,8 +137,11 @@ export async function runMerge(cwd: string, input: string, options: { output?: s
 
     const output = resolvePath(cwd, options.output);
 
+    // ponytail: el nombre de -o ya no es una fuente fiable del slug (lleva la ruta relativa para
+    // no colisionar entre carpetas), así que `build` lo pasa explícito por --slug. El fallback
+    // se queda para el uso manual de la CLI.
     const stem = basename(output, '.md');
-    const outSlug = stem.endsWith(`.${format}`) ? stem.slice(0, -(format.length + 1)) : stem;
+    const outSlug = options.slug ?? (stem.endsWith(`.${format}`) ? stem.slice(0, -(format.length + 1)) : stem);
     const distRoot = join(cwd, DIST_FILES_DIR);
     const outDir = dirname(src.relativePath) === '.' ? distRoot : join(distRoot, dirname(src.relativePath));
     const ctx = await buildImagesContext({

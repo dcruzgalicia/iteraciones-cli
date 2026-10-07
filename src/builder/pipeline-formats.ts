@@ -117,7 +117,7 @@ async function emitLatexAndQueuePdf(
   const { tex: fullTex, processedImages } = await markdownToLatex(outputs.content, doc, {
     filters: exportCtx.filters,
     bibFiles: exportCtx.bibFiles,
-    inputTarget: collectionPandocInput(doc, ctx.cwd, outSlug, 'latex'),
+    inputTarget: await collectionPandocInput(doc, ctx.cwd, outSlug, 'latex'),
     imagePaths,
     templatePath: exportCtx.templates[latexKindFor(doc.frontmatter.type)],
     fm,
@@ -146,7 +146,9 @@ async function emitLatexAndQueuePdf(
 
     let post: string[] | undefined;
     if (isScriptCapture()) {
-      const manifestPath = join(ctx.cwd, '.iteraciones', 'post', `${outSlug}.json`);
+      // ponytail: mismo criterio que collectionPandocInput — un manifiesto por slug hace que dos
+      // docs homónimos en carpetas distintas compartan el `distribution` y el replay aplique el equivocado.
+      const manifestPath = resolve(ctx.cwd, '.iteraciones', 'post', `${doc.relativePath}.json`);
       await writeOutput(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
       post = ['iteraciones', 'post', 'latex', '--post', manifestPath, '-o', texDistPath];
     }
@@ -192,7 +194,7 @@ async function emitHtmlPage(
   const htmlType = doc.frontmatter.type === 'collection' || doc.frontmatter.type === 'creator' ? doc.frontmatter.type : 'file';
   const html = await htmlPageFromMarkdown(content, doc, {
     cwd,
-    inputTarget: collectionPandocInput(doc, cwd, outSlug, 'html'),
+    inputTarget: await collectionPandocInput(doc, cwd, outSlug, 'html'),
     imagePaths,
     templatePath: exportCtx.templates[htmlKindFor(htmlType)],
     refsCardTemplate: exportCtx.refsCardTemplates[htmlType],
@@ -686,10 +688,18 @@ export function collectionBaseContent(
   return collectionEntries.length > 0 ? resolveCollectionContent(collectionEntries, format, content, pageNumber) : content;
 }
 
-function collectionPandocInput(doc: BuildDocument, cwd: string, outSlug: string, format: 'latex' | 'html' | 'epub'): string | undefined {
+async function collectionPandocInput(
+  doc: BuildDocument,
+  cwd: string,
+  outSlug: string,
+  format: 'latex' | 'html' | 'epub',
+): Promise<string | undefined> {
   if (doc.frontmatter.type !== 'collection') return undefined;
-  const path = join(cwd, '.iteraciones', 'collections', `${outSlug}.${format}.md`);
-  recordSupportCommand('resources', path, ['iteraciones', 'merge', doc.relativePath, '--format', format, '-o', path]);
+  // ponytail: `relativePath` y no `outSlug` — dos docs homónimos en carpetas distintas comparten
+  // slug, y un archivo global por slug hace que uno pise al otro. Mismo criterio que writeImagePaths.
+  // El slug va por --slug porque `merge` lo usaba para nombrar las imágenes procesadas.
+  const path = resolve(cwd, '.iteraciones', 'collections', `${doc.relativePath}.${format}.md`);
+  recordSupportCommand('resources', path, ['iteraciones', 'merge', doc.relativePath, '--format', format, '--slug', outSlug, '-o', path]);
   return path;
 }
 
@@ -760,7 +770,7 @@ async function emitCollectionFormats(
       exportCtx.filters,
       ctx.siteConfig.toc,
       outputs.fm,
-      collectionPandocInput(doc, ctx.cwd, outputs.outSlug, 'epub'),
+      await collectionPandocInput(doc, ctx.cwd, outputs.outSlug, 'epub'),
       imagePaths,
     );
   }
