@@ -1,7 +1,3 @@
-export function trimmedStringValue(raw: unknown): string | undefined {
-  return typeof raw === 'string' && raw.trim() !== '' ? raw.trim() : undefined;
-}
-
 export function fmString(value: unknown, fallback: string): string {
   return typeof value === 'string' && value ? value : fallback;
 }

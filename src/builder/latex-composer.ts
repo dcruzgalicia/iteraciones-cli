@@ -3,7 +3,7 @@ import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } 
 import type { SiteConfig } from '../config/config-schema.js';
 import { formatHumanDate } from '../lib/date.js';
 import { BuildError } from '../lib/errors.js';
-import { fmStringList, resolveBooleanField, resolveMetadataField, resolveStringField, trimmedStringValue } from '../lib/frontmatter-fields.js';
+import { fmStringList, fmTrimmedString, resolveBooleanField, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
 import { posix } from '../lib/paths.js';
@@ -158,7 +158,7 @@ async function pushCoverImageMetadata(
   imageMap: Map<string, string>,
 ): Promise<void> {
   for (const field of ['titleImage', 'startpaper']) {
-    const value = trimmedStringValue(fm[field]);
+    const value = fmTrimmedString(fm[field]);
     if (value) await resolveAndPushImage(extraArgs, field, value, doc, imageMap);
   }
 
