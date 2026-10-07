@@ -4,6 +4,7 @@ import { TEMPLATE_KINDS } from '../builder/pipeline-setup.js';
 import { VISUAL_DEFAULTS } from '../lib/visual-diff.js';
 import { runAssets } from './assets.js';
 import { runBundle } from './bundle.js';
+import { configHelp } from './config-help.js';
 import { runCover } from './cover.js';
 import { runBuild, runClean, runDoctor, runFilters, runInit, runNew, runValidate } from './dispatcher.js';
 import { runMarkdown } from './markdown.js';
@@ -58,10 +59,8 @@ Primeros pasos:
     `
 Entorno:
   NO_COLOR                  desactiva los colores (la salida no interactiva nunca los emite)
-
-Documentación:
-  docs/configuration.md     todas las opciones de iteraciones.config.yaml
-  docs/ejemplos.md          elementos del lenguaje Markdown soportados
+${configHelp()}
+Markdown: pandoc más los filtros del paquete. "iteraciones list-filters" dice qué hace cada uno.
 `,
   );
   program.option('--project-root <path>', 'directorio raíz del proyecto (por defecto: directorio actual)');

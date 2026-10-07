@@ -56,8 +56,8 @@ Característica: El CLI habla en español y dice qué hacer
       Y la ayuda contiene "iteraciones init"
       Y la ayuda contiene "iteraciones new posts/doc.md"
       Y la ayuda contiene "iteraciones build"
-      Y la ayuda contiene "docs/configuration.md"
-      Y la ayuda contiene "docs/ejemplos.md"
+      Y la ayuda contiene "iteraciones.config.yaml"
+      Y la ayuda contiene "format.html.site.theme"
       Y la ayuda contiene "list-filters"
 
     Escenario: El help raíz no duplica la descripción de los comandos
