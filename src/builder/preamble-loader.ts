@@ -105,12 +105,14 @@ export function disableBibliographyWithoutBibFiles(disabled: string[], bibFiles:
   return [...disabled, '11-bibliography'];
 }
 
-function readPreambleDescription(content: string): string {
+export function readLeadingComments(content: string, marker: '%' | '--'): string {
   const lines: string[] = [];
   for (const rawLine of content.split('\n')) {
     const line = rawLine.trim();
-    if (line.startsWith('%')) {
-      lines.push(line.replace(/^%\s*/, '').trim());
+    if (line.startsWith(marker)) {
+      const text = line.slice(marker.length).trim();
+      if (text.startsWith('Uso:')) break;
+      lines.push(text);
     } else if (lines.length > 0) {
       break;
     }
@@ -122,7 +124,7 @@ export async function getBuiltinPreambleFilterInfos(): Promise<PreambleFilterInf
   const infos: PreambleFilterInfo[] = [];
   for (const name of getBuiltinPreambleFilterNames()) {
     const content = await Bun.file(join(PKG_PREAMBLE_DIR, `${name}.tex`)).text();
-    infos.push({ name, description: readPreambleDescription(content) });
+    infos.push({ name, description: readLeadingComments(content, '%') });
   }
   return infos;
 }
