@@ -1,9 +1,9 @@
 import { basename, dirname, join, relative } from 'node:path';
 import { resolveCollectionFile } from '../builder/collection-files.js';
 import { loadSlugIndex } from '../builder/discover.js';
-import { printFlags } from '../builder/image-flags.js';
 import { relImageMapFor, rewriteImagePaths } from '../builder/image-processor.js';
 import { buildLatexPandocContent, mergeConfigImages, preprocessDocumentImages } from '../builder/latex-composer.js';
+import { detectPageSize } from '../builder/latex-preamble.js';
 import { aggregateCollectionCreators } from '../builder/orchestrator.js';
 import { ASSETS_IMAGES_DIR, DIST_FILES_DIR } from '../builder/output-layout.js';
 import {
@@ -15,15 +15,28 @@ import {
   readCollectionEntries,
 } from '../builder/pipeline-formats.js';
 import { writeOutput } from '../builder/pipeline-io.js';
+import { loadPreambleFilters, resolveEffectiveDisabledPreamble } from '../builder/preamble-loader.js';
 import type { BuildDocument } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
+import { computeActiveFormats, resolveDisabledPreambleConfig, toActiveFormats } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
 import { fail, logSuccess } from '../lib/logger.js';
 import { posix, resolvePath } from '../lib/paths.js';
 
 const FORMATS = ['latex', 'html', 'epub', 'markdown'] as const;
+
+async function printFlags(siteConfig: SiteConfig, cwd: string) {
+  const active = toActiveFormats(computeActiveFormats(siteConfig.format));
+  if (!active.pdf && !active.latex) return { pageDimensions: detectPageSize([]), cropActive: false, pdfxActive: false };
+  const preamble = await loadPreambleFilters(resolveEffectiveDisabledPreamble(resolveDisabledPreambleConfig(siteConfig)), cwd, 'file');
+  return {
+    pageDimensions: detectPageSize(preamble),
+    cropActive: preamble.some((f) => f.name === '98-crop'),
+    pdfxActive: preamble.some((f) => f.name === '99-pdfx'),
+  };
+}
 
 async function readSourceFm(text: string, label: string): Promise<Record<string, unknown>> {
   const { yaml } = splitFrontmatter(text);
