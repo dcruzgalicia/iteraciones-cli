@@ -12,7 +12,7 @@ import { escapeRegExp } from '../lib/paths.js';
 import { exec, mapWithConcurrency, ProcessSpawnError, ProcessTimeoutError } from '../lib/run.js';
 import { prepareArgv, recordSupportCommand } from '../lib/script-recorder.js';
 import type { LuaFilterGroup } from './filter-resolver.js';
-import { citationCompileArgs, creatorArgs, dateArg, languageArg, titleArg } from './pandoc-metadata.js';
+import { citationCompileArgs, metadataArgs } from './pandoc-metadata.js';
 import { preparePaths, xmpDirsFor } from './prepare.js';
 import type { BuildDocument } from './types.js';
 
@@ -88,10 +88,14 @@ export async function convertToEpub(
     extraArgs.push('--toc-depth=6');
   }
 
-  extraArgs.push(languageArg(fmString(fm.language, doc.metadata.language)));
-  extraArgs.push(titleArg(doc.metadata.title));
-  extraArgs.push(...creatorArgs(doc.metadata.creator));
-  extraArgs.push(...dateArg((doc.metadata.dateIso ?? doc.metadata.date) || undefined));
+  extraArgs.push(
+    ...metadataArgs([
+      { key: 'language', value: fmString(fm.language, doc.metadata.language) },
+      { key: 'title', value: doc.metadata.title },
+      { key: 'creator', value: doc.metadata.creator },
+      { key: 'date', value: (doc.metadata.dateIso ?? doc.metadata.date) || undefined },
+    ]),
+  );
 
   await execPandoc({
     input: content,
