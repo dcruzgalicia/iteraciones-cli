@@ -1,6 +1,7 @@
 import { basename, dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { logWarning } from '../lib/logger.js';
+import { readLeadingComments } from './preamble-loader.js';
 
 const LUA_FILTERS_ROOT = join(import.meta.dir, '../lib/resources/filters');
 
@@ -140,22 +141,7 @@ export async function getBuiltinLuaFilterInfos(): Promise<LuaFilterInfo[]> {
     const group = dirname(rel);
     const full = `${group}/${basename(rel, '.lua')}`;
     const content = await Bun.file(join(LUA_FILTERS_ROOT, rel)).text();
-    infos.push({ name: full, description: readLuaDescription(content) });
+    infos.push({ name: full, description: readLeadingComments(content, '--') });
   }
   return infos.sort((a, b) => a.name.localeCompare(b.name));
-}
-
-function readLuaDescription(content: string): string {
-  const lines: string[] = [];
-  for (const rawLine of content.split('\n')) {
-    const line = rawLine.trim();
-    if (line.startsWith('--')) {
-      const text = line.replace(/^--\s*/, '').trim();
-      if (text.startsWith('Uso:')) break;
-      lines.push(text);
-    } else if (lines.length > 0) {
-      break;
-    }
-  }
-  return lines.join(' ');
 }
