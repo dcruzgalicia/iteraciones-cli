@@ -1,13 +1,27 @@
 import type { SiteConfig } from '../config/config-schema.js';
-import { type ActiveFormats, computeActiveFormats, toActiveFormats } from '../config/site-config.js';
+import { type ActiveFormats, computeActiveFormats, type FormatKey, toActiveFormats } from '../config/site-config.js';
 import type { BibOptions } from '../lib/pandoc-runner.js';
 import { computeBibHash, resolveBibOptions } from './state-bib.js';
 import { computeConfigHashes, computeFiltersHash } from './state-hash.js';
 import type { BibFileCache, BuildState, FileCacheEntry, FilterFileCache } from './state-serialize.js';
 import type { BuildDocument } from './types.js';
 
-export const WORK_FORMATS = ['print', 'html', 'epub', 'markdown'] as const;
-type WorkFormatKey = (typeof WORK_FORMATS)[number];
+export const WORK_FORMAT_SOURCES = {
+  print: ['pdf', 'latex'],
+  html: ['html'],
+  epub: ['epub'],
+  markdown: ['markdown'],
+} as const satisfies Record<string, readonly FormatKey[]>;
+
+export type WorkFormatKey = keyof typeof WORK_FORMAT_SOURCES;
+
+const WORK_FORMATS = Object.keys(WORK_FORMAT_SOURCES) as WorkFormatKey[];
+
+export const FORMAT_TO_WORK = Object.fromEntries(
+  (Object.entries(WORK_FORMAT_SOURCES) as [WorkFormatKey, readonly FormatKey[]][]).flatMap(([work, formats]) =>
+    formats.map((format) => [format, work]),
+  ),
+) as Record<FormatKey, WorkFormatKey>;
 
 export interface BuildMetadata {
   currentFormats: string[];
@@ -110,7 +124,7 @@ const emptyWorkSets = (): Record<WorkFormatKey, BuildDocument[]> =>
   Object.fromEntries(WORK_FORMATS.map((key) => [key, [] as BuildDocument[]])) as Record<WorkFormatKey, BuildDocument[]>;
 
 function exportGroupsFor(activeFormats: ActiveFormats): ExportGroup[] {
-  return WORK_FORMATS.map((key) => ({ key, enabled: key === 'print' ? activeFormats.pdf || activeFormats.latex : activeFormats[key] }));
+  return WORK_FORMATS.map((key) => ({ key, enabled: WORK_FORMAT_SOURCES[key].some((fmt) => activeFormats[fmt]) }));
 }
 
 function collectWorkDocs(exportSets: Record<WorkFormatKey, BuildDocument[]>, docsChanged: Set<string>, allDocs: BuildDocument[]): BuildDocument[] {
