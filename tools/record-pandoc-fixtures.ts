@@ -1,10 +1,3 @@
-/**
- * Regenera los fixtures de salida de pandoc para el major ACTUAL
- * (issue #2031): ejecuta pandoc real sobre sample.md y escribe sample.latex /
- * sample.html en src/test/fixtures/pandoc/<major>/. Requiere pandoc.
- *
- * Uso: bun tools/record-pandoc-fixtures.ts
- */
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { execPandoc, getPandocVersion } from '../src/lib/pandoc-runner.js';

@@ -17,7 +17,7 @@ export interface PdfJob {
   texPath: string;
   pdfDest: string;
   cover: boolean;
-  /** #2419 — el proyecto no tiene `.bib`: latexmk corre con `-nobibtex`. */
+
   noBibtex: boolean;
 }
 

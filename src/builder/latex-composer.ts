@@ -66,9 +66,8 @@ async function pdfDate(
 }
 
 interface LatexComposerOptions {
-  /** #2445: ruta de la entrada materializada para build.sh (.iteraciones/collections). */
   inputTarget?: string;
-  /** #2460: mapa de rutas de imagen por documento que lee el filtro 04-image-paths (env). */
+
   imagePaths?: string;
   filters: LuaFilterGroup;
   bibFiles: string[];
@@ -314,12 +313,6 @@ function buildNormalTitleOverrides(title: string, creator: string[], subtitle: s
   return overrides;
 }
 
-/**
- * #2445 — el contenido EXACTO que pandoc recibe por stdin para un .tex.
- * El build y `iteraciones merge --format latex` pasan por aquí, para que
- * `.iteraciones/collections/<slug>.latex.md` sea byte-idéntico al stdin.
- * (Lo que viaja por argv --template/--metadata no cambia el contenido.)
- */
 export async function buildLatexPandocContent(
   content: string,
   doc: BuildDocument,
@@ -337,8 +330,7 @@ export async function buildLatexPandocContent(
     ? buildInterventionTitleOverrides(interventionOverrides)
     : buildNormalTitleOverrides(title, creator, subtitle, date);
   Object.assign(titleOverrides, interventionTitleOverrides);
-  // #2460: las rutas de imagen ya no se reescriben sobre el texto crudo; las
-  // reescribe el filtro semantic/ast/04-image-paths sobre el AST que pandoc arma.
+
   let pandocContent = prependFrontmatterYaml(content, titleOverrides);
 
   if (interventionOverrides && interventionOverrides.extraPages > 0) {
@@ -386,13 +378,6 @@ export async function markdownToLatex(
   return { tex, processedImages: images?.processedImages ?? [] };
 }
 
-/**
- * #2450 — rutas del .tex de dist hacia `assets/images/`. El nombre de la imagen
- * lo decide ya el preproceso (`<slug>-<base>.jpg`), así que la copia junto al
- * .tex que hacía este paso desaparece: html, markdown y .tex comparten el mismo
- * fichero. El dedupe es una red de seguridad por si dos rutas distintas
- * parieran el mismo nombre de copia en un nivel.
- */
 export function buildTexDistribution(processedImages: string[]): Map<string, string> {
   const map = new Map<string, string>();
   const taken = new Set<string>();
@@ -410,12 +395,6 @@ export function rewriteTexForDist(tex: string, distribution: Map<string, string>
   return result;
 }
 
-/**
- * #2448 — ningún export con ruta absoluta: lo que el .tex de dist apunte bajo
- * la raíz del proyecto (el QR del caché, en concreto) se reescribe relativo al
- * propio .tex, así que la copia de dist/files lo resuelve igual. El .tex de
- * trabajo no es export y conserva la ruta absoluta que sí resuelve en la raíz.
- */
 export function relativizeTexForDist(tex: string, texDir: string, projectRoot: string): string {
   const rel = posix(relative(texDir, projectRoot));
   if (rel === '') return tex;
@@ -424,12 +403,6 @@ export function relativizeTexForDist(tex: string, texDir: string, projectRoot: s
 
 const IMAGE_EXTS = new Set(['.bmp', '.gif', '.jpeg', '.jpg', '.pdf', '.png', '.svg', '.tif', '.tiff', '.webp']);
 
-/**
- * #2450 — a dónde apunta el .tex de dist un fichero que vive bajo la raíz del
- * proyecto: una imagen se muda al `assets/images` del nivel (y hay que copiarla);
- * con `bundle: true`, la bibliografía apunta a la copia que bundle replica en la
- * raíz de la salida. `null` deja el fichero en manos de `relativizeTexForDist`.
- */
 async function distAssetTarget(
   abs: string,
   texDir: string,
@@ -452,14 +425,6 @@ async function distAssetTarget(
   };
 }
 
-/**
- * #2450 — el .tex de dist no apunta fuera de `dist/files`: las imágenes bajo la
- * raíz del proyecto (el QR que escribe el filtro, en concreto) se copian al
- * `assets/images` del nivel y se referencian ahí; con `bundle: true` la
- * bibliografía apunta a la copia que bundle replica en la raíz de la salida.
- * Lo que siga bajo la raíz sin resolver se relativa como antes (#2448). El .tex
- * de trabajo no pasa por aquí: conserva las rutas absolutas que sí resuelven.
- */
 export async function localizeDistAssets(
   tex: string,
   opts: { texDir: string; projectRoot: string; distRoot: string; bundle: boolean },
@@ -482,26 +447,18 @@ export async function localizeDistAssets(
   return { tex: relativizeTexForDist(result, texDir, projectRoot), copies: [...copies.values()] };
 }
 
-/**
- * #2445/#2459 — argumentos de `composeLatexFinalOutput` y, a la vez, lo que el
- * build serializa en `.iteraciones/post/<slug>.json`: bloque de autores,
- * metadatos XMP (PDF/X) y rutas de imagen acomodadas para que el .tex de
- * dist se mueva con su `assets/`. El formato del JSON no cambia: se lee y se
- * escribe igual que antes.
- */
 export interface LatexPostManifest {
   authorsBlock?: string;
   xmp?: PdfXmpMetadata;
-  /** Ruta absoluta de la imagen procesada → relativa al nivel, dentro de `assets/images`. */
+
   distribution?: Record<string, string>;
-  /** #2448: raíz del proyecto; el .tex de dist escribe sus rutas relativas a sí mismo. */
+
   projectRoot?: string;
-  /** #2450: raíz de dist y si la réplica lleva la bibliografía (la bib apunta a esa copia). */
+
   distRoot?: string;
   bundle?: boolean;
 }
 
-/** #2450 — copia al nivel del .tex los ficheros que sus rutas relativas piden. */
 export async function copyDistAssets(texDir: string, copies: { src: string; rel: string }[]): Promise<void> {
   for (const { src, rel } of copies) {
     const dest = join(texDir, rel);
@@ -518,13 +475,6 @@ export function insertAuthorsBlock(tex: string, authorsBlock: string): string {
   return tex;
 }
 
-/**
- * #2459 — los cinco pasos de acabado del .tex de dist, en un solo sitio: el
- * build (`pipeline-formats.ts`) y `iteraciones post latex` pasan por aquí, así
- * que no pueden divergir (la única red antes era el test de equivalencia
- * `build --full ≡ bash build.sh`). `manifest` es literalmente lo que el build
- * escribe en `.iteraciones/post/<slug>.json`.
- */
 export async function composeLatexFinalOutput(tex: string, manifest: LatexPostManifest, texDir?: string): Promise<string> {
   const withAuthors = insertAuthorsBlock(tex, manifest.authorsBlock ?? '');
   const withXmp = manifest.xmp === undefined ? withAuthors : injectXmpMetadataIntoLatex(withAuthors, manifest.xmp);
@@ -532,20 +482,17 @@ export async function composeLatexFinalOutput(tex: string, manifest: LatexPostMa
   const distCopies = distribution === undefined ? [] : distribution.map(([src, rel]) => ({ src, rel }));
   const rewritten = distribution === undefined ? withXmp : rewriteTexForDist(withXmp, new Map(distribution));
   if (manifest.projectRoot === undefined || texDir === undefined) {
-    // Sin raíz no hay localización, pero la distribución sí vive al nivel del .tex.
     if (texDir !== undefined) await copyDistAssets(texDir, distCopies);
     return rewritten;
   }
-  // #2450: lo que quede bajo la raíz (el QR del caché) se muda al assets/images
-  // del nivel y la bibliografía apunta a la copia que bundle puso en dist.
+
   const localized = await localizeDistAssets(rewritten, {
     texDir,
     projectRoot: manifest.projectRoot,
     distRoot: manifest.distRoot ?? manifest.projectRoot,
     bundle: manifest.bundle === true,
   });
-  // #2450: el preproceso ya escribió la imagen en <nivel>/assets/images, así
-  // que la copia de distribution es no-op (se queda por si algún día difieren).
+
   await copyDistAssets(texDir, [...distCopies, ...localized.copies]);
   return localized.tex;
 }

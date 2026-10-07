@@ -1,41 +1,10 @@
 import { chmod, mkdir, readdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
 
-/**
- * #2438 — grabación de los comandos externos que ejecuta un build.
- *
- * Con `script: true` cada build reescribe `build.sh` en la raíz del
- * proyecto con los comandos que corrieron en esa corrida: pandoc, magick,
- * latexmk, pdftoppm, los subcomandos de iteraciones que agrupan la recogida de
- * salidas y el markdown de dist y, donde no se decide nada, la primitiva de
- * shell directa —`mkdir -p` de la fase 1 y `mv` de la portada (#2456)—. El .sh
- * contiene solo comandos: la lógica de iteraciones no se transcribe, se deja
- * como comentario cuando el archivo final de dist la requiere.
- *
- * Reglas:
- * - solo graba quien llama a `beginScriptCapture` (script: true) y solo
- *   comandos que terminaron con exit 0;
- * - pandoc sin `--output` (latex/html) alimenta su stdin desde un archivo
- *   materializado en `.iteraciones/script/in-NNNN.md`;
- * - el destino de ese stdout lo decide `resolveScriptStdout`: a `dist/...` si
- *   el byte final es idéntico a la salida cruda, a
- *   `.iteraciones/script/out-NNNN.*` con comentario si iteraciones lo
- *   transforma. El .sh nunca escribe por encima de un archivo que compone
- *   iteraciones;
- * - `commitScriptCapture` corre solo si el build terminó bien; si falla,
- *   `abortScriptCapture` deja el build.sh anterior intacto.
- */
-
 const SCRIPT_DIR = ['.iteraciones', 'script'] as const;
 
 type Section = 'images' | 'resources' | 'latex' | 'html' | 'epub' | 'post' | 'css' | 'pdf' | 'covers' | 'validate' | 'other';
 
-/**
- * Fases del build.sh, en el orden en que deben poder reejecutarse a mano:
- * preparación de directorios → recursos (imágenes, plantillas, colecciones y
- * assets) → solo pandoc → salidas de iteraciones (post-proceso y markdown de
- * dist) → CSS → latexmk → portada y validación. Una fase vacía no se emite.
- */
 const SECTIONS: ReadonlyArray<{ id: Section; title: string }> = [
   { id: 'images', title: 'Recursos: imágenes (ImageMagick)' },
   { id: 'resources', title: 'Recursos: plantillas, colecciones y assets (iteraciones)' },
@@ -58,9 +27,9 @@ interface Step {
   cwd?: string;
   input?: string;
   inputPath?: string;
-  /** #2445: `input` ya vive en una ruta propia (.iteraciones/collections/...). */
+
   inputTarget?: string;
-  /** Post-proceso: lee por stdin el paso cuyo stdout ya resolvió `resolveScriptStdout`. */
+
   inputFrom?: Step;
   raw?: string;
   ext?: string;
@@ -78,14 +47,8 @@ interface Capture {
 
 let capture: Capture | null = null;
 
-/**
- * #2474 — slots PDF de esta corrida, que el pipeline avisa con `notePdfSlots`.
- * El número real de `slot-N`/`cache-N` lo decide el pool —depende de qué worker
- * ganó la carrera—, y con él se renumera el .sh de forma estable.
- */
 let pdfSlots = 0;
 
-/** El pipeline avisa cuántos slots usa el pool de PDF; el .sh se numera con él. */
 export function notePdfSlots(slots: number): void {
   pdfSlots = slots;
 }
@@ -96,7 +59,6 @@ function quote(value: string): string {
   return SHELL_SAFE.test(value) ? value : `'${value.replaceAll("'", "'\\''")}'`;
 }
 
-/** Ruta legible respecto de la raíz del proyecto (adónde hace `cd` el .sh). */
 function displayPath(root: string, path: string): string {
   const rel = relative(root, path);
   return rel !== '' && !rel.startsWith('..') ? rel : path;
@@ -122,7 +84,6 @@ function pad(n: number): string {
   return String(n).padStart(4, '0');
 }
 
-/** #2445: ¿hay build.sh en curso? Para que los recursos solo se graben ahí. */
 export function isScriptCapture(): boolean {
   return capture !== null;
 }
@@ -147,14 +108,10 @@ export interface ScriptExecOptions {
   env?: Record<string, string>;
   input?: string;
   scriptKey?: string;
-  /** #2445: ruta donde el build ya deja (o debe dejar) la entrada de pandoc. */
+
   inputTarget?: string;
 }
 
-/**
- * Registra un comando externo terminado con éxito (hook único desde `exec`).
- * Los comandos que no producen artefactos (versiones, validadores) se ignoran.
- */
 export function recordScriptExec(command: string, args: string[], options: ScriptExecOptions, stdout: string): void {
   if (capture === null || isVersionProbe(args)) return;
   if (command === 'pandoc') recordPandoc(args, options, stdout);
@@ -162,13 +119,11 @@ export function recordScriptExec(command: string, args: string[], options: Scrip
   else if (command === 'pdftoppm') push({ section: 'covers', sortKey: args.at(-1) ?? '', argv: [command, ...args] });
   else if (command === 'latexmk') {
     const job = args.find((a) => a.startsWith('-jobname='));
-    // Sin cwd: todos los paths de latexmk van absolutos (-outdir, TEXINPUTS,
-    // PAR_GLOBAL_TEMP y el .tex), así que el .sh no necesita subshell.
+
     push({ section: 'pdf', sortKey: job?.slice('-jobname='.length) ?? '', argv: [command, ...args], env: options.env });
   }
 }
 
-/** pandoc con `--output` ya trae su destino en argv; sin él, el stdout se resuelve después. */
 function recordPandoc(args: string[], options: ScriptExecOptions, stdout: string): void {
   const { section, ext } = formatOf(flagValue(args, '--to') ?? '');
   const output = flagValue(args, '--output');
@@ -178,20 +133,10 @@ function recordPandoc(args: string[], options: ScriptExecOptions, stdout: string
   else push({ ...common, sortKey: options.scriptKey ?? options.input ?? '', raw: stdout, ext });
 }
 
-/** Ordena dentro de su sección por `sortKey` (estable en corridas concurrentes). */
 export function recordSupportCommand(section: Section, sortKey: string, argv: string[], cwd?: string): void {
   push({ section, sortKey, argv, cwd });
 }
 
-/**
- * Decide adónde apunta el stdout de un paso de pandoc: a `distPath` si el
- * archivo final es byte-idéntico a la salida cruda, o a un intermedio de
- * `.iteraciones/script/` con comentario si iteraciones lo transforma.
- *
- * Con `post` (el argv del transformador), además se emite en la fase de
- * post-proceso: `< intermedio` → `-o dist`. El intermedio se asigna al
- * renderizar, cuando el paso ya tiene su `out-NNNN.*`.
- */
 export function resolveScriptStdout(raw: string, distPath: string | undefined, final: string, post?: string[]): void {
   if (capture === null) return;
   const step = capture.steps.find((s) => s.raw !== undefined && s.raw === raw);
@@ -219,7 +164,6 @@ async function cleanGenerated(scriptDir: string): Promise<void> {
   await Promise.all(entries.filter((n) => /^(in|out)-\d+\./.test(n)).map((n) => rm(join(scriptDir, n), { force: true })));
 }
 
-/** Escribe `build.sh` (ejecutable) con los pasos de esta corrida. */
 export async function commitScriptCapture(): Promise<void> {
   const cap = capture;
   capture = null;
@@ -240,22 +184,13 @@ export async function commitScriptCapture(): Promise<void> {
   await chmod(scriptPath, 0o755);
 }
 
-/**
- * #2474 — el número de `slot-N`/`cache-N` de un job lo asigna el pool según qué
- * worker ganó la carrera, así que dos corridas idénticas grababan scripts con
- * números distintos. El .sh es secuencial (los directorios los crea el propio
- * `iteraciones prepare` del job), así que se reescriben con el índice que le
- * toca al job en la fase PDF: su posición entre los jobs —el orden por
- * `sortKey` ya está fijo— módulo los slots de la corrida. Solo cambia el
- * número; el invariante `worker⇄slot` del runtime no se toca.
- */
 function canonicalizePdfSlots(steps: Step[]): void {
   if (pdfSlots < 1) return;
   let ordinal = -1;
   let prevKey: string | undefined;
   for (const step of steps) {
     if (step.section !== 'pdf') continue;
-    // Los pasos de un job (prepare, latexmk, collect) comparten sortKey.
+
     if (step.sortKey !== prevKey) {
       prevKey = step.sortKey;
       ordinal += 1;
@@ -268,15 +203,10 @@ function canonicalizePdfSlots(steps: Step[]): void {
   }
 }
 
-/** `/slot-12` y `/cache-12` de camino → el índice canónico; nunca `slot-1.tex`. */
 function renumberSlotPath(text: string, canonical: number): string {
   return text.replace(/\/(slot|cache)-\d+(?![.\w])/g, `/$1-${canonical}`);
 }
 
-/**
- * Un stdout que nadie resolvió (no tenía archivo final en dist) va a un
- * intermedio: el .sh nunca escribe por encima de lo que compone iteraciones.
- */
 function markUnresolvedAsIntermediate(steps: Step[]): void {
   for (const step of steps) {
     if (step.raw === undefined) continue;
@@ -286,14 +216,11 @@ function markUnresolvedAsIntermediate(steps: Step[]): void {
   }
 }
 
-/** Numeración de entradas e intermedios, en orden ya establecido → determinista. */
 async function assignPaths(steps: Step[], scriptDir: string): Promise<void> {
   let inSeq = 0;
   let outSeq = 0;
   for (const step of steps) {
     if (step.input !== undefined) {
-      // Las colecciones ya tienen su ruta (.iteraciones/collections/<fmt>.md);
-      // los documentos individuales conservan la numeración in-NNNN.md.
       const own = step.inputTarget;
       if (own === undefined) {
         inSeq += 1;
@@ -311,38 +238,30 @@ async function assignPaths(steps: Step[], scriptDir: string): Promise<void> {
   }
 }
 
-/** argv de `iteraciones prepare`: lo que los `mkdir`/`cp` hacían sueltos. */
 export function prepareArgv(dirs: string[], xmpDirs: string[]): string[] {
   return ['iteraciones', 'prepare', ...dirs.flatMap((dir) => ['--dir', dir]), ...xmpDirs.flatMap((dir) => ['--xmp', dir])];
 }
 
-/** Directorios que el .sh escribe: el .sh los prepara antes de cada salida. */
 function renderDirs(cap: Capture, steps: Step[], scriptDir: string): string[] {
   const dirs = new Set<string>();
   for (const step of steps) {
     if (step.target !== undefined) dirs.add(dirname(step.target));
     const last = step.argv.at(-1);
     if (step.section === 'images' && last !== undefined) dirs.add(dirname(last));
-    // Salidas que viajan por -o/--output (Tailwind, y los comandos de
-    // iteraciones): el directorio debe existir aunque no haya redirect.
-    // `iteraciones assets -o` y `iteraciones bundle -o` apuntan ya a un
-    // directorio: no hay quitarle nada.
+
     const i = step.argv.findIndex((a) => a === '-o' || a === '--output');
     const out = i >= 0 ? step.argv[i + 1] : undefined;
     if (out !== undefined) dirs.add(step.argv[1] === 'assets' || step.argv[1] === 'bundle' ? out : dirname(out));
   }
-  // El propio .iteraciones/script lo crea la generación del build.sh.
+
   dirs.delete(scriptDir);
   dirs.delete('.');
   if (dirs.size === 0) return [];
-  // #2456 — esta fase no decide nada: `mkdir -p` directo, sin rodeo por
-  // `iteraciones prepare` (que sigue existiendo como subcomando público y es
-  // quien prepara los slots de latexmk, con su XMP, en la fase de PDF).
+
   const paths = [...dirs].sort().map((dir) => displayPath(cap.root, dir));
   return ['# === Preparación (directorios) ===', `mkdir -p ${paths.map(quote).join(' ')}`, ''];
 }
 
-/** Bloques de sección separados en blanco; las secciones vacías no salen. */
 function renderSections(cap: Capture, steps: Step[]): string[] {
   const blocks: string[] = [];
   for (const { id, title } of SECTIONS) {
@@ -358,7 +277,6 @@ function renderSections(cap: Capture, steps: Step[]): string[] {
   return blocks;
 }
 
-/** Una línea del .sh: env, subshell de cwd, entrada por stdin y salida redirigida. */
 function renderCommand(step: Step, cap: Capture): string {
   let cmd = step.argv.map(quote).join(' ');
   if (step.env !== undefined) {

@@ -61,23 +61,14 @@ export interface BuildOptions {
   full?: boolean;
   verbose?: boolean;
   json?: boolean;
-  /**
-   * #2453 — selección explícita de documentos (paths relativos a la raíz del
-   * proyecto, o absolutos dentro de ella). Ausente o vacío = proyecto entero.
-   */
+
   only?: string[];
 }
 
-/** #2453 — `only` ausente o vacío significa build completo, no selección vacía. */
 function selectionOf(options: BuildOptions): string[] | undefined {
   return options.only !== undefined && options.only.length > 0 ? options.only : undefined;
 }
 
-/**
- * #2453 — la selección no puede convivir con nada que borre la salida entera:
- * sin estas dos guards, `build --full doc.md` y una migración de layout (#2450)
- * reconstruirían el proyecto entero fingiendo que es un build parcial.
- */
 async function assertSelectionCompatible(options: BuildOptions, root: string): Promise<void> {
   if (selectionOf(options) === undefined) return;
   if (options.full) {
@@ -98,17 +89,7 @@ export interface BuildSummary {
   formats: string[];
   outputDir: string;
   invalidations: string[];
-  /**
-   * #2455 — solo en una corrida con selección: la selección **resuelta**, es
-   * decir el cierre que se construyó de verdad (una `type: collection`
-   * arrastra sus `files[]` y sus documentos `type: creator`; un miembro
-   * pedido por su ruta se queda solo en él), ordenada para poder compararla
-   * entre corridas. No es lo que pidió el usuario —eso ya lo sabe él—, es lo
-   * que la CLI decidió construir, que es lo que no se puede adivinar.
-   *
-   * En un build completo la clave **no aparece**: D6 congela las seis de
-   * siempre y añadir campos es lo compatible, pero solo cuando aportan.
-   */
+
   selected?: string[];
 }
 
@@ -132,15 +113,10 @@ async function setupBuildEnvironment(cwd: string, siteConfig: SiteConfig, option
 }
 
 export async function build(cwd: string, options: BuildOptions = {}, reporter: BuildReporter = silentReporter): Promise<void> {
-  // Raíz canónica: los subcomandos de build.sh corren en su propio proceso y
-  // process.cwd() resuelve symlinks (/tmp → /private/tmp en macOS). Sin esto
-  // las rutas absolutas del build no casarían con las del replay.
   const root = await realpath(cwd).catch(() => cwd);
-  // #2453 — la selección no puede convivir con nada que borre la salida entera.
+
   await assertSelectionCompatible(options, root);
-  // #2450 — una salida con el layout anterior de assets no sirve para seguir
-  // construyendo encima: los documentos que no se recompile seguirían apuntando
-  // a `assets/img` y a `css/`. Se reconstruye entero, una vez, tras actualizar.
+
   if (!options.full && (await hasLegacyAssetLayout(options.outputDir ?? join(root, DIST_FILES_DIR)))) {
     options.full = true;
     reporter.log('layout de assets anterior detectado en la salida (#2450) → se reconstruye la salida completa');
@@ -194,11 +170,6 @@ async function resolveEffectiveConfig(cwd: string): Promise<{ siteConfig: SiteCo
   return { siteConfig, effectiveDisabledPreamble };
 }
 
-/**
- * Los flags de invalidación en un solo lugar: `logInvalidations` los escribe y
- * `collectInvalidations` los acumula. Agregar un formato nuevo es una fila aquí,
- * no dos ediciones coordinadas en dos funciones.
- */
 const INVALIDATION_FLAGS: { test: (plan: BuildMetadata) => boolean; log: string; label: string }[] = [
   { test: (p) => p.filtersInvalidated, log: 'Filters modificados — reprocesando todos los documentos', label: 'filters' },
   { test: (p) => p.bibInvalidated, log: 'Bibliografía modificada — regenerando las exportaciones', label: 'bibliografía' },
@@ -230,10 +201,6 @@ function collectInvalidations(plan: BuildMetadata, outputDirChanged: boolean): s
   return invalidations;
 }
 
-/**
- * #2446/#2445: la union de los `creator` de files[] — es el `creator` del que
- * se compone el YAML de la portada LaTeX, así que la reutiliza `iteraciones merge`.
- */
 export async function aggregateCollectionCreators(entry: { files?: string[] }, cwd: string): Promise<string[]> {
   const aggregated = new Set<string>();
   const { with: withCreator, without: withoutCreator } = await countCreatorsByFile(entry.files ?? [], cwd);
@@ -278,16 +245,11 @@ function addAnonymousFallback(aggregated: Set<string>, filesWithoutCreator: numb
 export async function postProcessCollections(discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<void> {
   for (const [relativePath, entry] of discoveryIndex) {
     if (entry.type !== 'collection' || !entry.files) continue;
-    // #2443: resolver y normalizar files[] UNA vez (relativo a la collection
-    // primero, raíz como fallback); aguas abajo todo consume rutas relativas
-    // a la raíz. Lo que no resuelve queda como está: el error (con las rutas
-    // intentadas) lo emiten readCollectionEntries (build) y validate.
+
     const resolved: string[] = [];
     for (const file of entry.files) {
       const resolution = await resolveCollectionFile(file, relativePath, cwd);
-      // #2453 — una collection dentro del `files[]` de otra: no hay lógica ni
-      // decisión de cómo procesarla, así que el build se para aquí y pide que
-      // la quiten en vez de prometer algo que no sabe entregar.
+
       if (resolution.ok && discoveryIndex.get(resolution.rootRelative)?.type === 'collection') {
         throw new BuildError(
           `collection "${relativePath}": "${resolution.rootRelative}" está en su files[] y también es una collection; una collection no puede formar parte de otra. Quítalo de files[].`,
@@ -298,12 +260,9 @@ export async function postProcessCollections(discoveryIndex: Map<string, Discove
     entry.files = resolved;
     if (entry.fm) entry.fm.files = resolved;
     entry.aggregatedCreator = await aggregateCollectionCreators(entry, cwd);
-    // #2446: `collectionCreator` solo puede venir del frontmatter de la
-    // collection: ya no se deriva de `creator` (ese campo es error en collections).
   }
 }
 
-/** Mapa inverso: qué collections tienen cada ruta en su `files[]`. */
 function collectionOwnersByFile(discoveryIndex: Map<string, DiscoveryEntry>): Map<string, string[]> {
   const owners = new Map<string, string[]>();
   for (const [path, entry] of discoveryIndex) {
@@ -317,13 +276,6 @@ function collectionOwnersByFile(discoveryIndex: Map<string, DiscoveryEntry>): Ma
   return owners;
 }
 
-/**
- * #2452 — marca como cambiadas las collections que dependen de una ruta
- * cambiada: sus salidas (html, markdown, latex) componen el contenido de
- * `files[]`, así que sin esta expansión el build deja la collection obsoleta
- * cuando cambia un miembro. Es transitiva (una collection puede estar en el
- * `files[]` de otra) y con guarda de ciclos.
- */
 function expandCollectionChanges(discoveryIndex: Map<string, DiscoveryEntry>, changed: Set<string>): void {
   const owners = collectionOwnersByFile(discoveryIndex);
   const queue = [...changed];
@@ -340,11 +292,6 @@ function expandCollectionChanges(discoveryIndex: Map<string, DiscoveryEntry>, ch
   }
 }
 
-/**
- * #2453 — path escrito por el usuario → relativo-de-raíz POSIX. Lo que quede
- * fuera de la raíz del proyecto no se construye: mejor pararse que escribir
- * sobre archivos que no son del proyecto.
- */
 function rootRelativeOf(raw: string, cwd: string): string {
   const unified = raw.replaceAll('\\', '/');
   const absolute = isAbsolute(unified) ? unified : join(cwd, unified);
@@ -355,7 +302,6 @@ function rootRelativeOf(raw: string, cwd: string): string {
   return rel;
 }
 
-/** El documento pedido; si no existe, error con un candidato cuando lo hay. */
 function resolveRequestedDoc(raw: string, cwd: string, docsByPath: Map<string, BuildDocument>): BuildDocument {
   const path = rootRelativeOf(raw, cwd);
   const doc = docsByPath.get(path);
@@ -365,7 +311,6 @@ function resolveRequestedDoc(raw: string, cwd: string, docsByPath: Map<string, B
   throw new BuildError(`no existe el documento "${raw}" en el proyecto${hint}`);
 }
 
-/** Paths que una collection arrastra consigo: sus `files[]` y sus creators. */
 async function collectionClosure(doc: BuildDocument, discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<string[]> {
   const paths = [...(doc.frontmatter.files ?? [])];
   const collectionFm = discoveryIndex.get(doc.relativePath)?.fm ?? {};
@@ -375,12 +320,6 @@ async function collectionClosure(doc: BuildDocument, discoveryIndex: Map<string,
   return paths;
 }
 
-/**
- * #2453 — cierra la selección del usuario. Una collection arrastra sus
- * `files[]` (miembros standalone, #2452) y sus creators; un miembro nunca sube
- * a la colección, porque puede pertenecer a varias y la expansión hacia arriba
- * sería ambigua. Cualquier otro documento se queda solo en él.
- */
 async function selectDocs(only: string[], allDocs: BuildDocument[], discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<Set<string>> {
   const docsByPath = new Map(allDocs.map((doc) => [doc.relativePath, doc]));
   const selected = new Set<string>();
@@ -400,12 +339,6 @@ async function selectDocs(only: string[], allDocs: BuildDocument[], discoveryInd
   return selected;
 }
 
-/**
- * #2453/#2454 — el ÚNICO punto de acotado: lo que se calculó sobre el proyecto
- * entero (documentos, cambios, slugs cambiados) queda reducido a la selección
- * antes de bajar al resto del build. Aguas abajo —work, limpiezas, caché de
- * salidas— todo ve la selección, no el proyecto.
- */
 function restrictToSelection(
   selection: Set<string>,
   allDocs: BuildDocument[],
@@ -415,10 +348,7 @@ function restrictToSelection(
   for (const path of [...discoveredChanges]) {
     if (!selection.has(path)) discoveredChanges.delete(path);
   }
-  // #2454 — los slugs cambiados solo se limpian si el documento forma parte de
-  // la corrida: borrar sus salidas viejas sin reconstruirlo dejaría su página
-  // fuera de `dist` hasta el siguiente build completo (que corre esta limpieza
-  // sin acotar, sobre el proyecto entero).
+
   for (const path of [...slugChangedEntries.keys()]) {
     if (!selection.has(path)) slugChangedEntries.delete(path);
   }
@@ -439,7 +369,7 @@ async function discoverDocuments(
   deletedEntries: Map<string, DiscoveryEntry>;
   slugChangedEntries: Map<string, string>;
   pendingState: BuildState | null;
-  /** #2453 — rutas ya normalizadas de la selección; undefined = proyecto entero. */
+
   selection: Set<string> | undefined;
 }> {
   progress.startPhase('discovery');
@@ -470,18 +400,11 @@ async function discoverDocuments(
   for (const path of slugChangedPaths) discoveredChanges.add(path);
 
   await postProcessCollections(discoveryIndex, cwd);
-  // #2452: los miembros de files[] son documentos de primera clase: se
-  // construyen standalone con las mismas reglas que cualquier otro. Nada se
-  // filtra (la exclusión de #2437 era el bug).
+
   let allDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
-  // #2452: la salida de una collection incrusta el contenido de sus files[], así
-  // que si cambia un miembro hay que reprocesar también ella (y, transitivamente,
-  // las que la contienen); sin esto el build la deja obsoleta.
+
   expandCollectionChanges(discoveryIndex, discoveredChanges);
-  // #2453/#2454: el modo parcial se acota aquí y solo aquí —
-  // `restrictToSelection` recorta documentos, cambios detectados y slugs
-  // cambiados. Aguas abajo (work, limpiezas, caché de salidas) todo ve la
-  // selección, no el proyecto.
+
   const only = selectionOf(options);
   const selection = only === undefined ? undefined : await selectDocs(only, allDocs, discoveryIndex, cwd);
   if (selection !== undefined) allDocs = restrictToSelection(selection, allDocs, discoveredChanges, slugChangedEntries);
@@ -509,7 +432,7 @@ async function finishBuild(
     cwd: string;
     pendingState: BuildState | null;
     prevPdfxCache: Record<string, string> | undefined;
-    /** #2453/#2455 — selección resuelta de esta corrida; `undefined` = proyecto entero. */
+
     selection: Set<string> | undefined;
   },
   params: {
@@ -517,26 +440,20 @@ async function finishBuild(
     cachedCount: number;
     invalidations: string[];
     empty?: boolean;
-    /** #2454 — PDF que escribió esta corrida (solo los consume el modo parcial). */
+
     pdfOutputs?: string[];
   },
 ): Promise<BuildSummary> {
-  // #2454/#2455 — una corrida con selección no es un build pequeño: es otra
-  // cosa. De `selection` salen las tres reglas de aislamiento y el alcance
-  // que se devuelve en el resumen.
   const partial = deps.selection !== undefined;
   if (deps.needsAssets) await deps.runAssets();
   const cache: PdfxCacheHandle = { prev: deps.prevPdfxCache ?? {}, out: {} };
-  // #2454 — en modo parcial solo se validan los PDF que escribió esta corrida:
-  // un PDF roto ajeno no puede tumbar la de otro documento. Un alcance vacío
-  // (no hubo PDF) no valida nada, y sin alcance la validación sigue barriendo
-  // `dist` entero, como en cualquier build completo.
+
   const pdfxScope = partial ? (params.pdfOutputs ?? []) : undefined;
   const pdfx = await runPdfxOutputValidation(deps.outputDir, deps.siteConfig, { allowBuild: true }, deps.effectiveDisabledPreamble, cache, pdfxScope);
   if (deps.pendingState) deps.pendingState.pdfxCache = cache.out;
   if (pdfx.summaryLine) deps.progress.addSummaryLine(pdfx.summaryLine);
   const formats = params.empty ? [] : computeActiveFormats(deps.siteConfig.format);
-  // #2448: la réplica va al final, cuando todas las salidas ya están escritas.
+
   await writeBundle(deps.cwd, deps.outputDir, deps.siteConfig);
   await deps.progress.finish(
     params.processedCount,
@@ -545,12 +462,7 @@ async function finishBuild(
     params.empty ? undefined : deps.outputDir,
     params.empty ? undefined : params.invalidations,
   );
-  // #2454 — `pendingState` lleva los hashes de TODOS los documentos (discover
-  // los calcula antes del acotado): persistirlo en una corrida parcial marcaría
-  // como limpio un archivo modificado que esta corrida no construyó, y el
-  // siguiente build completo lo saltaría con la salida vieja. El state se
-  // queda byte a byte como estaba; el coste aceptado es que un parcial repite
-  // su trabajo después.
+
   if (!partial) await persistCompletedState(deps.cwd, deps.pendingState);
   const summary: BuildSummary = {
     processed: params.processedCount,
@@ -559,10 +471,7 @@ async function finishBuild(
     outputDir: deps.outputDir,
     invalidations: params.empty ? [] : params.invalidations,
   };
-  // #2455 — el alcance de esta corrida, ordenado para poder compararlo entre
-  // corridas. Sin selección la clave no se añade: el build completo se queda
-  // con las seis de siempre (D6: añadir campos es compatible, pero esta
-  // contribución solo existe cuando aporta información).
+
   if (deps.selection !== undefined) summary.selected = [...deps.selection].sort();
   return summary;
 }
@@ -632,16 +541,8 @@ async function ensureCachedOutputsComplete(allDocs: BuildDocument[], work: WorkS
     markdown: 'markdown',
   };
 
-  // #2452: solo se miran los formatos que el documento puede emitir. Una
-  // intervención nunca tendrá .html/.epub: sin este filtro entraría en la cola
-  // en cada build (re-renderizando su latex/pdf) sin que jamás desaparezca
-  // «lo que falta».
   const producible = (type: string | undefined, fmt: FormatKey): boolean => activeFormats[fmt] === true && docProducesFormat(type, fmt);
 
-  // #2452: solo se mira la salida primaria de cada formato. `pdf` lista
-  // también `.png` — la portada que escribe `iteraciones cover`, no el build —
-  // y exigirla dejaba el documento «incompleto» para siempre: el build lo
-  // reencolaba en cada ejecución sin que nada llegara a faltar.
   const hasMissingOutput = async (slug: string, dir: string, type: string | undefined): Promise<boolean> => {
     for (const [fmt, active] of formatEntries) {
       if (!active || !producible(type, fmt)) continue;
@@ -699,13 +600,11 @@ async function pipelinePhases(
 
 async function runBuild(cwd: string, options: BuildOptions, progress: BuildReporter, pandocVersion: string): Promise<BuildSummary> {
   const log = (msg: string) => progress.log(msg);
-  // #2454 — este guardia se decide ANTES de discover, cuando el cierre aún no
-  // existe: mismo predicato que el `finishBuild` deriva de `selection` más abajo.
+
   const partial = selectionOf(options) !== undefined;
 
   const { siteConfig, effectiveDisabledPreamble } = await resolveEffectiveConfig(cwd);
-  // #2454 — `build.sh` es la composición COMPLETA del corpus: grabar en él los
-  // pasos de unos pocos documentos rompería `build --full ≡ bash build.sh`.
+
   if (siteConfig.script === true && !partial) beginScriptCapture(cwd);
 
   const prevState = options.full ? null : await loadStateFile(cwd);
@@ -723,7 +622,6 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
     progress,
   );
 
-  // ctx.needsCss viene de plan.needsCss, que es activeFormats.html: misma fuente.
   const needsAssets = ctx.needsCss;
 
   const runAssets = async (): Promise<void> => {
@@ -786,8 +684,6 @@ async function runBuild(cwd: string, options: BuildOptions, progress: BuildRepor
     log(`Limpieza de dist: ${plural(cleanedFiles, 'archivo residual eliminado', 'archivos residuales eliminados')}.`);
   }
 
-  // Aquí ya no puede volver a cumplirse la condición de "sin cambios": el guard
-  // de arriba exigía además `!work.anyWork`, que es lo que abre los exportSets.
   const fallbackReason = prevState === null ? (options.full ? 'build completo desde cero' : 'sin caché previa') : null;
   return finishBuild(
     closeDeps,

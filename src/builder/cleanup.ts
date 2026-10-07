@@ -86,11 +86,6 @@ async function cleanupBySlug(ctx: BuildContext, entries: Iterable<CleanupEntry>)
   return removed;
 }
 
-/**
- * #2450 — el css, las fuentes y el logo solo los usa el HTML: con el layout
- * nuevo viven en `assets/`, y los de la raíz son residuo del anterior. Se retira
- * el directorio, no el fichero, para no dejar `assets/css/` vacío.
- */
 async function removeHtmlAssets(outputDir: string): Promise<void> {
   for (const rel of [dirname(ASSETS_CSS_FILE), ASSETS_FONTS_DIR, ASSETS_LOGO_FILE, 'css', 'fonts', 'logo.svg']) {
     await rm(join(outputDir, rel), { recursive: true, force: true }).catch(() => {});
@@ -105,9 +100,7 @@ export async function cleanupRemovedFormats(ctx: BuildContext, allDocs: BuildDoc
   const root = resolve(ctx.outputDir);
   for (const doc of allDocs) {
     removed += await removeOutputFiles(ctx.outputDir, dirname(doc.relativePath), htmlSlugFor(doc.relativePath, doc.slug), extensions);
-    // #2452: los miembros ya no tienen copia con el nombre de su fuente, pero
-    // una salida heredada de antes del cambio puede seguir ahí: con el
-    // markdown desactivado se retira también.
+
     if (removedFormats.includes('markdown') && doc.frontmatter.type === 'collection') {
       for (const f of doc.frontmatter.files ?? []) {
         const dest = resolve(root, normalize(f));
@@ -120,14 +113,7 @@ export async function cleanupRemovedFormats(ctx: BuildContext, allDocs: BuildDoc
   return removed;
 }
 
-/**
- * #2450 — ¿la salida quedó con el layout anterior de assets (los directorios
- * `css`, `fonts`, el `logo.svg` en la raíz, o un `assets/img` por nivel)? Los
- * documentos que este build no recompile siguen apuntando ahí, así que el build
- * se reconstruye entero antes de escribir nada: un único rebuild tras actualizar.
- */
 export async function hasLegacyAssetLayout(outputDir: string): Promise<boolean> {
-  // Sin salida todavía no hay nada que migrar (y scan lanzaría ENOENT)
   if (!(await isDir(outputDir))) return false;
   for (const rel of ['css', 'fonts', 'logo.svg']) {
     if (
@@ -167,9 +153,7 @@ export async function cleanupDeletedFiles(
   deletedEntries: Map<string, DiscoveryEntry>,
 ): Promise<number> {
   const allDocPathsSet = new Set(allDocs.map((d) => d.relativePath));
-  // #2452: la limpieza es solo para un `.md` cuya fuente desapareció
-  // (deletedEntries): los miembros de una collection ya están en allDocs, y un
-  // miembro modificado no debe confundirse con un borrado.
+
   const deletedMdPaths = [...changedPaths].filter((p) => p.endsWith('.md') && !allDocPathsSet.has(p) && deletedEntries.has(p));
   if (deletedMdPaths.length === 0) return 0;
 

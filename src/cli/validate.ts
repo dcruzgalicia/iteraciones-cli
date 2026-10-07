@@ -30,12 +30,6 @@ type ValidationResult = {
   count: number;
 };
 
-/**
- * #2463 — archivo sin frontmatter utilizable. Un cuerpo vacío es **error**, no
- * una advertencia: es el mismo criterio que `readMarkdownOrWarn` en build para
- * que los dos caminos digan lo mismo. Aquí no hay `type` que eximir (sin
- * frontmatter no se puede declarar `collection` ni `intervention`).
- */
 function handleNoFrontmatter(entry: string, body: string, raw: string, errors: ValidationError[], warnings: ValidationError[]): void {
   if (!body.trim()) {
     errors.push({
@@ -87,16 +81,11 @@ function validateParsedFrontmatter(
   return fmError;
 }
 
-/**
- * #2443: `files[]` de una collection debe existir; se resuelve con la misma
- * regla que el build (relativo a la collection, fallback a la raíz) y el
- * error lista las rutas intentadas.
- */
 async function validateCollectionFiles(cwd: string, entry: string, parsed: Record<string, unknown>, errors: ValidationError[]): Promise<boolean> {
   if (parsed.type !== 'collection' || !Array.isArray(parsed.files)) return false;
   let failed = false;
   for (const file of parsed.files) {
-    if (typeof file !== 'string') continue; // la forma la cubre validateFrontmatterFields
+    if (typeof file !== 'string') continue;
     const resolution = await resolveCollectionFile(file, entry, cwd);
     if (!resolution.ok) {
       failed = true;
@@ -106,7 +95,6 @@ async function validateCollectionFiles(cwd: string, entry: string, parsed: Recor
   return failed;
 }
 
-/** Parsea el YAML del frontmatter y valida su contenido (objeto, campos, files[] de collections y cuerpo). */
 async function validateParsedYaml(
   cwd: string,
   entry: string,
@@ -128,10 +116,7 @@ async function validateParsedYaml(
   }
   let fmError = validateParsedFrontmatter(entry, result as Record<string, unknown>, slugs, errors, warnings);
   if (await validateCollectionFiles(cwd, entry, result as Record<string, unknown>, errors)) fmError = true;
-  // #2463 — cuerpo vacío: de warning a error, con las MISMAS exenciones que
-  // `readMarkdownOrWarn` en build, porque `collection` e `intervention`
-  // componen su cuerpo de otros archivos y un body vacío es legítimo en ellos.
-  // `!fmError` evita duplicar el reporte cuando el frontmatter ya es inválido.
+
   const type = (result as Record<string, unknown>).type;
   if (!body.trim() && !fmError && type !== 'collection' && type !== 'intervention') {
     errors.push({ file: entry, message: 'no tiene contenido después del frontmatter; agrega un body para proceder con el build' });

@@ -12,9 +12,9 @@ interface RunOptions {
   input?: string;
   env?: Record<string, string>;
   onSpawn?: (pid: number) => void;
-  /** #2438: clave estable del documento (su ruta) para ordenar build.sh. */
+
   scriptKey?: string;
-  /** #2445: ruta donde materializar `input` en build.sh (.iteraciones/collections). */
+
   inputTarget?: string;
 }
 
@@ -178,7 +178,7 @@ export async function mapWithConcurrency<T, R>(
         results[index] = await fn(item);
       } catch (err) {
         await firstFailure(err);
-        return; // el worker sale; el error se propaga una vez al final
+        return;
       }
     }
   }

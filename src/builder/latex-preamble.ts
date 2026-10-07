@@ -73,7 +73,6 @@ export function buildPdfxPagesattr(widthMm: number, heightMm: number, cropActive
   const w = boxW.toFixed(7);
   const h = boxH.toFixed(7);
 
-  // Sin crop los cuatro boxes coinciden; con crop el TrimBox se sangra 3 mm.
   const off = (3 * MM_TO_PT).toFixed(6);
   const trim = cropActive ? `${off} ${off} ${(boxW - 3 * MM_TO_PT).toFixed(6)} ${(boxH - 3 * MM_TO_PT).toFixed(6)}` : `0 0 ${w} ${h}`;
 

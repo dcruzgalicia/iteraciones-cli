@@ -3,9 +3,6 @@ import { dirname, join } from 'node:path';
 import { logWarning } from '../lib/logger.js';
 import type { DiscoveryEntry } from './types.js';
 
-// Estos tres shapes viven aquí y no en sus consumidores: es el módulo al que
-// todos importan, así que declararlos aquí es lo que rompe el ciclo con
-// `state-hash` y `state-bib`, que los usan como valor por defecto.
 export interface FileCacheEntry {
   mtime: number;
   size: number;

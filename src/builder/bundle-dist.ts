@@ -7,21 +7,10 @@ import { pruneEmptyDirs } from './cleanup.js';
 import { projectPreambleDirs } from './preamble-loader.js';
 import { resolveBibOptions } from './state-bib.js';
 
-/**
- * #2448 — `bundle: true` replica en `dist/files` los insumos de los que dependen
- * las salidas, para que una copia de esa carpeta vuelva a construir el mismo
- * build: la config (sin ella no arranca), los overrides de preamble y de
- * filtros, y la bibliografía. Van con su ruta relativa a la raíz.
- *
- * La lista de lo copiado vive en `.iteraciones/bundle.json` para retirar en la
- * siguiente corrida lo que dejó de corresponder (o todo, si se apaga). El build
- * la sincroniza al final; `build.sh` repite el mismo `iteraciones bundle`.
- */
 const CONFIG_FILE = 'iteraciones.config.yaml';
 const FILTERS_DIR = 'filters';
 const MANIFEST = join('.iteraciones', 'bundle.json');
 
-/** Rutas relativas a la raíz del proyecto que `bundle` replica en la salida. */
 export async function bundleTargets(cwd: string, config: SiteConfig): Promise<string[]> {
   const rels: string[] = [];
   if (await Bun.file(join(cwd, CONFIG_FILE)).exists()) rels.push(CONFIG_FILE);
@@ -55,7 +44,6 @@ async function writeManifest(cwd: string, rels: string[]): Promise<void> {
   await writeFile(path, `${JSON.stringify(rels, null, 2)}\n`, 'utf8');
 }
 
-/** Copia (o retira) en `outputDir` lo que la config pide replicar. */
 export async function writeBundle(cwd: string, outputDir: string, config: SiteConfig): Promise<string[]> {
   const prev = await readManifest(cwd);
   const next = config.bundle === true ? await bundleTargets(cwd, config) : [];
@@ -75,7 +63,7 @@ export async function writeBundle(cwd: string, outputDir: string, config: SiteCo
   }
   if (removed) await pruneEmptyDirs(outputDir);
   await writeManifest(cwd, next);
-  // El .sh repite la misma sincronía, pero solo si hay algo que sincronizar.
+
   if (prev.length > 0 || next.length > 0) {
     recordSupportCommand('resources', outputDir, ['iteraciones', 'bundle', '-o', outputDir]);
   }

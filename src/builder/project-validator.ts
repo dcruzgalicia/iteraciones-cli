@@ -124,9 +124,7 @@ function validateSlugField(parsed: Record<string, unknown>): ValidationIssue[] {
 
 function validateCollectionType(parsed: Record<string, unknown>): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
-  // #2446: `creator` en una collection era ambiguo (crédito propio vs. unión de
-  // files[]); el crédito propio pasa a `collectionCreator` y `creator` queda
-  // reservado al byline, que build calcula a partir de files[].
+
   if (parsed.creator !== undefined) {
     issues.push({
       severity: 'error',
@@ -207,16 +205,6 @@ export function validateFrontmatterFields(parsed: Record<string, unknown>): Vali
   ];
 }
 
-/**
- * Qué hace una línea de vallas de colones con el div abierto más interno:
- * `open` si abre uno, `close` si lo cierra, `undefined` si no es una valla (o
- * si es una suelta que no cierra nada). Las vallas admiten **tres o más**
- * colones —cuatro son la forma de anidar, y la que usa el builder para las
- * tarjetas de miembro de una collection—; para cerrar, pandoc exige al menos
- * tantos colones como en la apertura. Se apila la longitud de cada apertura.
- * Una valla suelta (sin atributos y sin nada abierto) no abre nada y sigue
- * contando como `:` suelta.
- */
 function divFenceAction(trimmed: string, fences: number[]): 'open' | 'close' | undefined {
   const abre = trimmed.match(/^(:{3,})\s*\{/);
   if (abre?.[1] !== undefined) {
@@ -267,11 +255,6 @@ export interface DictumWidthWarning {
   value: number;
 }
 
-/**
- * Escanea líneas buscando anchos de dictum fuera de rango. `skipFences` salta
- * las cercas de código: el body de un documento las tiene, el fragmento YAML
- * que se le pasa ya viene limpio.
- */
 function scanDictumWidths(text: string, lineOffset: number, skipFences: boolean): DictumWidthWarning[] {
   const hits: DictumWidthWarning[] = [];
   let inCode = false;
@@ -312,13 +295,9 @@ export function dictumWidthWarningsMessage(warnings: DictumWidthWarning[]): stri
     .join('; ');
 }
 
-/**
- * #2448: reglas cruzadas de la config que no son rutas. `validate` y `build`
- * las recorren junto a `validateConfigFilePaths`.
- */
 export function validateConfigRules(config: SiteConfig): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
-  // Sin .md exportados, dist/files no puede reconstruirse y bundle no sirve.
+
   if (config.bundle === true && config.format?.markdown?.generate !== true) {
     issues.push({
       severity: 'error',

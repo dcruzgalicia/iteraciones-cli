@@ -1,10 +1,3 @@
-/**
- * Demo headless de la API programática (issue #2017): consume `build()` con
- * un reporter propio de ~30 líneas, sin UI ni tracker. El builder emite
- * eventos; este reporter decide cómo presentarlos (aquí: texto plano).
- *
- * Uso: bun tools/headless-demo.ts /ruta/al/proyecto
- */
 import { build } from '../src/builder/orchestrator.js';
 import type { BuildReporter } from '../src/builder/types.js';
 

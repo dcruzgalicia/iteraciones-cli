@@ -19,28 +19,7 @@ import {
   visualSlug,
 } from '../lib/visual-diff.js';
 
-/**
- * #2479 — `iteraciones visual check|snapshot`: regresión visual de los PDFs.
- *
- * El flujo es build → `visual snapshot` → cambios → build → `visual check`, y se
- * puede hacer de una vez para todo el proyecto. Los operandos son opcionales y
- * limitados, para que el modo batch quede a un solo comando de distancia:
- * - `visual snapshot` guarda todo `--output` y `visual snapshot <pdf>` solo ese
- *   (máximo uno) en `visual/`, espejando la estructura de la salida, y retira
- *   los snapshots y diffs sobrantes;
- * - `check` sin rutas compara todos los de `--output` contra sus snapshots y se
- *   niega a comparar nada si falta alguno: un parcial esconde la regresión;
- * - `check <pdf>` compara solo ese contra su snapshot y `check <pdf> <referencia>`
- *   contra el segundo PDF en vez del snapshot —máximo dos rutas—, sin tocar
- *   `visual/` salvo el diff que nazca de esa comparación.
- *
- * El resumen trae, por PDF, las páginas comparadas, sin cambios y modificadas,
- * el % de píxeles distintos de cada página afectada y la ruta de su imagen de
- * diferencia, que vive en `visual/` junto al snapshot (`index.pdf` →
- * `index-page-005-diff.png`); los renders no se conservan.
- */
 export interface TestVisualOptions {
-  /** Guarda snapshots en vez de comparar: es lo que hace `visual snapshot`. */
   update?: boolean;
   dpi?: string;
   threshold?: string;
@@ -48,7 +27,6 @@ export interface TestVisualOptions {
   output?: string;
 }
 
-/** Todo lo que hay que resolver antes de guardar o comparar. */
 interface VisualRun {
   visualOptions: VisualOptions;
   explicitReference?: string;
@@ -57,7 +35,6 @@ interface VisualRun {
   targets: string[];
 }
 
-/** Ruta etiqueta: relativa a la raíz cuando vive dentro, absoluta si se sale. */
 function labelPath(cwd: string, path: string): string {
   const rel = relative(cwd, path);
   return rel === '' || rel.startsWith('..') || isAbsolute(rel) ? path : rel;
@@ -67,7 +44,6 @@ async function assertExists(path: string, article: string): Promise<void> {
   if (!(await exists(path))) throw new BuildError(`no existe ${article} "${path}"`);
 }
 
-/** Comprueba rutas y destinos: la 2.ª ruta de `check` es la referencia. */
 async function resolveRun(cwd: string, paths: string[], options: TestVisualOptions): Promise<VisualRun> {
   const visualOptions = resolveVisualOptions(options);
   const snapshotMode = options.update === true;
@@ -90,7 +66,6 @@ async function resolveRun(cwd: string, paths: string[], options: TestVisualOptio
   return { visualOptions, explicitReference, outputDir, batch, targets };
 }
 
-/** Guarda los snapshots de `targets` y retira los de PDFs que ya no existen. */
 async function updateSnapshots(cwd: string, targets: string[], outputDir: string): Promise<void> {
   const store = join(cwd, 'visual');
   const wanted = new Set(targets.map((pdf) => referencePathFor(cwd, pdf, outputDir)));
@@ -109,15 +84,11 @@ async function updateSnapshots(cwd: string, targets: string[], outputDir: string
     await saveReference(pdf, snapshot);
     logSuccess(`${labelPath(cwd, pdf)} → ${labelPath(cwd, snapshot)}`, 'visual');
   }
-  // Un snapshot nuevo no hereda diffs de la corrida anterior.
+
   await clearDiffImages(store);
   if (removed.length > 0) logInfo(`snapshots sin PDF en ${labelPath(cwd, outputDir)}: ${removed.join(', ')}`, 'visual');
 }
 
-/**
- * Sin snapshot no hay comparación posible: se corta antes de renderizar nada,
- * porque un resultado parcial esconde la regresión de los PDFs que sí entraron.
- */
 async function assertSnapshots(cwd: string, targets: string[], outputDir: string, batch: boolean, explicitReference?: string): Promise<void> {
   if (explicitReference !== undefined) {
     await assertExists(explicitReference, 'el PDF de referencia');
@@ -142,14 +113,11 @@ async function assertSnapshots(cwd: string, targets: string[], outputDir: string
     throw new BuildError(`snapshots incompletas · faltan: ${missing.join(', ')} · ejecuta: iteraciones visual snapshot`);
   }
 
-  // Un snapshot huérfano no rompe la corrida: es material sobrante, no una
-  // regresión del build (y `visual snapshot` lo retira).
   if (!batch) return;
   const orphans = [...snapshots].filter((snapshot) => !wanted.has(snapshot)).map((snapshot) => labelPath(cwd, snapshot));
   if (orphans.length > 0) logWarning(`snapshots sin PDF en ${labelPath(cwd, outputDir)}: ${orphans.join(', ')}`, 'visual');
 }
 
-/** Compara un PDF con su snapshot (o con la 2.ª ruta, su referencia) y deja su diff. */
 async function compareOne(
   cwd: string,
   pdf: string,
@@ -163,8 +131,7 @@ async function compareOne(
   }
   const { workDir, cachePath } = await resolveVisualWorkspaces(cwd, visualSlug(pdf));
   const { dir, stem } = diffTargetFor(snapshot);
-  // Lo que se ve en `visual/` es la última corrida: los diffs viejos se van
-  // antes de comparar, también cuando la caché devuelve el PASS sin render.
+
   await clearDiffImages(dir, stem);
   const result = await compareVisual({
     ...visualOptions,
@@ -178,12 +145,6 @@ async function compareOne(
   return { referenceLabel: labelPath(cwd, explicitReference ?? snapshot), result };
 }
 
-/**
- * Veredicto de un FAIL, línea a línea: manda a mirar las imágenes de
- * diferencia, no las rutas de los PDF —esas ya están en el bloque de arriba—.
- * Si no hay diffs, lo único que falló es la paginación y se dice con las dos
- * cifras; un FAIL sin líneas es imposible (o cambian píxeles o cambian páginas).
- */
 function failureSummary(cwd: string, compared: Compared[], failed: Compared[]): string {
   const lines: string[] = [];
   const diffs = failed.flatMap(({ entry }) => entry.result.details.map((detail) => labelPath(cwd, detail.diffImage)));
@@ -201,10 +162,8 @@ function failureSummary(cwd: string, compared: Compared[], failed: Compared[]): 
   return lines.join('\n');
 }
 
-/** Un PDF ya comparado, con la etiqueta de su snapshot. */
 type Compared = { pdf: string; entry: { referenceLabel: string; result: VisualDiffResult } };
 
-/** Líneas de un PDF dentro del resumen de varios: recuento y diffs. */
 function batchBlock(cwd: string, pdf: string, result: VisualDiffResult): string {
   const [first = '', ...rest] = formatVisualSummary(result, (path) => labelPath(cwd, path));
   return [`${labelPath(cwd, pdf)} · ${first}`, ...rest].join('\n');
@@ -262,7 +221,6 @@ async function compareAll(
   reportVerdict(cwd, compared);
 }
 
-/** `paths` es `[pdf]` para `snapshot` y `[pdf] [referencia]` para `check`. */
 export async function runTestVisual(cwd: string, paths: string[], options: TestVisualOptions = {}): Promise<void> {
   try {
     const run = await resolveRun(cwd, paths, options);

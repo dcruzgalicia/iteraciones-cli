@@ -54,7 +54,6 @@ function slugDiacriticWarning(title: string, slug: string): string | undefined {
   return `el slug "${slug}" altera palabras del título "${title}" (ñ→n, ü→u): revísalo o fija uno manual con "slug:" en el frontmatter`;
 }
 
-/** Slug determinista: lanza si no se puede resolver y avisa (una vez) de los diacríticos perdidos. */
 function makeSlugComputer(log: (message: string) => void): SlugComputer {
   const seen = new Set<string>();
   return (meta, opts) => {
@@ -122,14 +121,6 @@ export async function discover(cwd: string, options: DiscoverOptions): Promise<D
   return { relativePaths, changedPaths, discoveryIndex, deletedEntries, slugComputer, pendingState };
 }
 
-/**
- * #2452 — los slugs de todo el proyecto, sin caché ni estado. `iteraciones
- * markdown` debe reescribir `files[]` hacia el `.md` de cada miembro con el
- * mismo nombre que escribe el build (colisiones y sufijos `-dN` incluidos) y
- * ese subcomando no recibe el discovery: aquí se calculan con el mismo parseo
- * y el mismo `resolveSlugs`. Los avisos de frontmatter los emite el build —
- * aquí solo interesan los slugs —, así que se descartan.
- */
 export async function loadSlugIndex(cwd: string): Promise<Map<string, DiscoveryEntry>> {
   const relativePaths = await listMarkdownDocuments(cwd);
   const index = new Map<string, DiscoveryEntry>();
@@ -139,10 +130,6 @@ export async function loadSlugIndex(cwd: string): Promise<Map<string, DiscoveryE
   await runWithWarningSink(
     () => {},
     async () => {
-      // Los slugs cacheados del último build cuentan: `resolveSlugs` conserva
-      // los sufijos `-dN` ya asignados y `files[]` debe apuntar a los `.md`
-      // que ese build dejó en dist. Sin state (o ilegible) se recomputa desde
-      // cero, como hace un `build --full`.
       const prevState = await loadStateFile(cwd);
       await mapWithConcurrency(relativePaths, FILE_IO_CONCURRENCY, async (relativePath) => {
         const { mtime, size } = await statDocument(cwd, relativePath);

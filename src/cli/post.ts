@@ -6,16 +6,12 @@ import { BuildError } from '../lib/errors.js';
 import { fail, logSuccess } from '../lib/logger.js';
 import { resolvePath } from '../lib/paths.js';
 
-/** Los post-procesos disponibles; el build graba el mismo argv. */
 export const POST_KINDS = ['html', 'latex'] as const;
 
-/** stdin → stdout es el molde de todo `iteraciones post`; el build lo graba así. */
 async function readStdin(): Promise<string> {
   return new Response(Bun.stdin).text();
 }
 
-/** #2488 — el type de la página: la tarjeta de referencias es una por type. El
- * build lo graba en el argv que reproduce este post-proceso. */
 export type PostHtmlType = 'file' | 'collection' | 'creator';
 
 function postHtmlType(raw: string): PostHtmlType {
@@ -23,16 +19,9 @@ function postHtmlType(raw: string): PostHtmlType {
 }
 
 async function postHtml(raw: string, type: string): Promise<string> {
-  // misma tarjeta de referencias que el build, leída del paquete
   return postProcessHtml(raw, await loadReferencesCardTemplate(postHtmlType(type)));
 }
 
-/**
- * Autores, XMP y distribución de imágenes: datos que solo el build calcula, así
- * que viajan en `.iteraciones/post/<slug>.json`. Las imágenes terminan en el
- * `assets/images` del nivel, como en el build: el acabado entero lo hace
- * `composeLatexFinalOutput`, la misma función por la que pasa el build (#2459).
- */
 async function postLatex(raw: string, post: string | undefined, cwd: string, output: string): Promise<string> {
   if (post === undefined || post === '') {
     throw new BuildError('falta --post: ruta del manifiesto .iteraciones/post/<slug>.json');
@@ -47,11 +36,6 @@ async function postLatex(raw: string, post: string | undefined, cwd: string, out
   return await composeLatexFinalOutput(raw, manifest, texDir);
 }
 
-/**
- * #2445 — fase de post-proceso: aplica solo lo que difiere de la salida cruda
- * de pandoc. El .sh hace `pandoc > crudo` y luego `iteraciones post <tipo>
- * < crudo -o dist`, con el mismo código que usó el build.
- */
 export async function runPost(cwd: string, kind: string, options: { output: string; post?: string; type?: string }): Promise<void> {
   try {
     if (!(POST_KINDS as readonly string[]).includes(kind)) {
