@@ -228,7 +228,16 @@ async function countCreatorsByFile(files: string[], cwd: string): Promise<{ with
       } else {
         without++;
       }
-    } catch {}
+    } catch (err) {
+      // Antes el catch era mudo: un frontmatter inválido no contaba ni con ni sin creator, pero
+      // sí sumaba al total, y `addAnonymousFallback` perdía el plural. `build` falla con este
+      // mismo archivo, `merge` no: avisar aquí evita el `\section{Sin título}` silencioso.
+      // Un archivo que no existe NO es "sin creator": no cuenta para nada, o un `files` con una
+      // ruta mal escrita añadía "Anónima" al crédito de una colección con autores reales.
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') continue;
+      logWarning(`no se pudo leer el frontmatter de "${file}" para contar creadores: ${(err as Error).message}`, 'merge');
+      without++;
+    }
   }
   return { with: withCreator, without };
 }
