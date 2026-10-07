@@ -1,13 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-/**
- * Crea un proyecto mínimo para tests CLI: un iteraciones.config.yaml
- * y un documento Markdown con frontmatter.
- *
- * Sincrónico a propósito: los pasos de contenido de archivo de cucumber tienen
- * que ser sincrónicos, y un `writeFile` asíncrono los volvería `async`.
- */
 export function initTestProject(dir: string): void {
   writeFileSync(
     join(dir, 'iteraciones.config.yaml'),
@@ -17,12 +10,6 @@ export function initTestProject(dir: string): void {
   writeFileSync(join(dir, 'test.md'), '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\nContenido de prueba.\n', 'utf8');
 }
 
-/**
- * Las primitivas y operadores que un `build.sh` no debe usar.
- *
- * Compartido: `build-sh` y `script-de-build` comparan el script grabado contra
- * la misma lista, y el criterio tiene que ser el mismo en los dos features.
- */
 export function systemCommands(script: string): string[] {
   const found = new Set<string>();
   for (const raw of script.split('\n')) {

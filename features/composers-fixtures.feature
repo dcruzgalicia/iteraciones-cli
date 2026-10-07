@@ -4,15 +4,6 @@ Característica: Los composers definen el contrato de argumentos sobre fixtures
   Quiero ver exactamente qué argumentos y en qué orden salen hacia pandoc
   Para poder cambiar el compositor sin miedo de romper la conversión
 
-  # #2031 PR1 — se verifica NUESTRA lógica (contrato de argumentos, orden de
-  # filters, post-procesado) sin invocar el binario, usando fixtures de la salida
-  # real de pandoc. Se regeneran con
-  # `bun tools/record-pandoc-fixtures.ts` tras actualizar pandoc.
-  #
-  # Nota sobre el original: cada test empezaba con `if (fixture === '') return`,
-  # así que sin fixtures pasaban **en verde sin comprobar nada**. Aquí no hay
-  # esa salida: si falta un fixture, el scenario falla.
-
   @spy-composers
   Escenario: LaTeX pasa a pandoc el contrato completo de argumentos (#2031)
     Dado el fixture de salida LaTeX de pandoc

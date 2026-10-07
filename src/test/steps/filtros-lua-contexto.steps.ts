@@ -6,31 +6,10 @@ import { execPandoc } from '../../lib/pandoc-runner.js';
 import { setFlagsContext } from './filtros-lua-flags.steps.js';
 import { loadCase, world as luaWorld } from './lua-world.js';
 
-/**
- * #2545 (onda 1) — contextos con template propio: `internal/flags` y
- * `latex/07-titlepages`.
- *
- * ## Por qué estos necesitan más que el helper `execPandoc`
- *
- * Los filtros de `flags` y de `titlepages` leen condicionales del TEMPLATE
- * (`$if(has-toc-entries)$…$endif$`) y `flags` además necesita un `.bib` real
- * para decidir si inserta `\printbibliography`. Por eso se arma un template y
- * una bibliografía en un directorio temporal, igual que el `beforeAll` del
- * original — pero por escenario, porque cucumber no da try/finally.
- *
- * ## El caso del `.bib`
- *
- * `flags.lua` sólo emite `\printbibliography` si hay citas **y** bibliografía
- * efectiva. El fixture marca `needsBib` y el step añade `--biblatex
- * --bibliography <path>`; sin ese flag la mitad de los casos comprobaría otra
- * cosa.
- */
-
 const FILTERS = join(import.meta.dir, '../../lib/resources/filters');
 const FLAGS = join(FILTERS, 'internal', 'flags.lua');
 const TITLEPAGES = join(FILTERS, 'latex', '07-titlepages.lua');
 
-/** El template que el `beforeAll` del original escribía para `flags`. */
 const FLAGS_TEMPLATE = [
   '\\documentclass{article}',
   '$if(has-toc-entries)$\\tableofcontents$endif$',
@@ -42,14 +21,6 @@ const FLAGS_TEMPLATE = [
 
 const BIB = '@book{key1, author = {García, Lucía}, title = {Libro}, year = {2024}}\n';
 
-/**
- * El directorio temporal con el template y el `.bib`. Es lo que el `beforeAll`
- * del original montaba una vez por bloque; aquí se hace una vez por corrida y
- * `After` lo borra, porque cucumber no da try/finally por escenario.
- *
- * OJO: esto NO es el `world` de los casos — ése vive en `lua-world.ts`. Aquí sólo
- * viven las rutas de los archivos de apoyo.
- */
 interface ContextWorld {
   dir: string;
   flagsTemplate: string;
@@ -64,10 +35,7 @@ Before(async () => {
   world.flagsTemplate = join(world.dir, 'flags.tex');
   await writeFile(world.flagsTemplate, FLAGS_TEMPLATE);
   world.titlebackTemplate = join(world.dir, 'titleback.tex');
-  // El template de titlepages tiene que declarar UNA CONDICIONAL POR CAMPO: es
-  // justamente ahí donde el filtro deposita el valor serializado, así que un
-  // template simplificado hace que el filtro convierta bien y la salida salga
-  // vacía. Va copiado literal del original.
+
   await writeFile(
     world.titlebackTemplate,
     [
@@ -93,7 +61,7 @@ Before(async () => {
   );
   world.bib = join(world.dir, 'refs.bib');
   await writeFile(world.bib, BIB);
-  // Los steps de los casos con nombre necesitan las mismas rutas.
+
   setFlagsContext(world.flagsTemplate, world.bib);
 });
 

@@ -5,13 +5,7 @@ Característica: index.md se llama index en todos los formatos
   Quiero que `index.md` produzca `index.html` y no `inicio.html`
   Para que la URL del home no dependa de cómo titulé el documento
 
-  # Tramo 2 de la migración. 1 de los 17 casos que quedaban de `cli-layer`.
-
   Regla de negocio: El home se llama index en todos los formatos
-
-    # Un `index.md` cuyo título es "Inicio" tiene dos nombres posibles: `index`
-    # y `inicio`. Con los dos, el documento aparece dos veces en la salida y el
-    # usuario no sabe cuál es el bueno.
 
     @requires-pandoc
     @requires-latex

@@ -5,17 +5,7 @@ Característica: el CSS y los assets que deja un build
   Quiero un CSS que sólo tenga las clases que el HTML usa y ningún asset huérfano
   Para no subir a producción medio megabyte de estilos que no se pintan
 
-  # Tramo 3 de la migración. 3 de los 16 casos que quedaban de `cli-layer`.
-
   Regla de negocio: El CSS se compila sobre los HTML finales
-
-    # El escaneo que decide qué clases se compilan lee SÓLO los HTML finales de
-    # `dist/files`. Si leyera cualquier `.md` —el de un cambio en
-    # `.iteraciones/changes`, o uno suelto en `dist/`— las clases que nadie usa
-    # acabarían en el CSS de producción.
-    #
-    # Lo que no se escanea, no se copia: sin HTML no hay fuentes ni licencias,
-    # porque son assets del HTML.
 
     Escenario: El CSS se compila sobre los HTML finales, no sobre markdown suelto
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -39,11 +29,6 @@ Característica: el CSS y los assets que deja un build
       Y sin HTML activo no se copian las fuentes
 
   Regla de negocio: El tema elegido viaja al esqueleto del HTML
-
-    # `format.html.site.theme` no se resuelve en el CSS: viaja como metadata a
-    # pandoc y el esqueleto lo deja en el `data-theme` del `<html>`, que es lo
-    # que leen las variables de color. Sin él, la página sale en claro con el
-    # tema oscuro puesto.
 
     Esquema del escenario: Cada tema deja su data-theme en la página
       Dado que la raíz del proyecto tiene el tema <tema>

@@ -2,21 +2,8 @@ import { join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
 import { execPandoc } from '../../lib/pandoc-runner.js';
 
-/**
- * #2545 (onda 1) — los casos de `internal/flags` que no son una tabla.
- *
- * Cada uno hace DOS conversiones o compara POSICIONES en la salida, así que no
- * caben en un `Ejemplos`: el `Examples` sostiene un caso por fila, y aquí hace
- * falta ver la misma operación con y sin una condición en la misma corrida.
- *
- * El patrón "con X / sin X" es el que más se repite en esta suite y por eso
- * tiene steps con nombre en vez de un parámetro: escribir "con bibliografía" y
- * "sin bibliografía" como dos `When` se lee mejor que un booleano.
- */
-
 const FLAGS = join(import.meta.dir, '../../lib/resources/filters/internal/flags.lua');
 
-/** El directorio con el template y el `.bib` los monta el Before del contexto. */
 let flagsTemplate = '';
 let bib = '';
 
@@ -52,8 +39,6 @@ Given('un cuerpo sin citas', () => {
 });
 
 Given('un cuerpo con una cita a una clave que no existe', () => {
-  // El nodo Cite existe aunque la clave no resuelva: por eso el heading sale
-  // igual. Lo que decide el filtro es la presencia del nodo, no la resolución.
   world.markdown = 'Cita rota [@no-existe-key].';
 });
 

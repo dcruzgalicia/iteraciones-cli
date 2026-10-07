@@ -6,16 +6,7 @@ Característica: El CLI habla en español y dice qué hacer
   qué corregir
   Para no tener que ir a buscar el manual a mitad de un build
 
-  # 22 de los 172 casos de `cli-layer`. El bloque `runBuild` (72 casos, 1.644
-  # líneas) queda aparte: cada caso monta un proyecto distinto y comprueba algo
-  # distinto, no es una tabla.
-
   Regla de negocio: El parser informa los errores de uso en español
-
-    # El parser de commander traducía medio dozenaje de errores al español a
-    # mano, uno por uno. El conjunto se documenta aquí como tabla: si mañana
-    # alguien mete un mensaje nuevo en inglés, esta tabla no lo detecta, pero sí
-    # deja por escrito qué es lo que tiene que traducir.
 
     Esquema del escenario: Un error de uso se informa con su mensaje
       Cuando parseo el argv "<argv>"
@@ -30,9 +21,6 @@ Característica: El CLI habla en español y dice qué hacer
         | doctor --fix            | error: opción desconocida '--fix'                           |
 
   Regla de negocio: Un comando mal escrito sugiere el correcto
-
-    # Sin esta regla, el mensaje "comando desconocido" deja al usuario
-    # buscando. Commander calcula la cercanía y el CLI la muestra.
 
     Escenario: Sugiere el comando más cercano
       Cuando parseo el argv "bui"
@@ -72,11 +60,6 @@ Característica: El CLI habla en español y dice qué hacer
       Y la ayuda contiene "docs/ejemplos.md"
       Y la ayuda contiene "list-filters"
 
-    # El help raíz va precedido de un bloque escrito a mano ANTES de que
-    # commander imprima su tabla. Dos fallos que ya dieron: la descripción de
-    # `build` aparecía dos veces (bloque propio + `.description()` de commander),
-    # y el bloque empezaba con una línea en blanco.
-
     Escenario: El help raíz no duplica la descripción de los comandos
       Cuando parseo el argv "--help"
       Entonces la ayuda repite "Construye documentos HTML" una sola vez
@@ -103,10 +86,6 @@ Característica: El CLI habla en español y dice qué hacer
       Y el comando termina con el código de salida 1
 
   Regla de negocio: Una raíz inexistente da un mensaje accionable
-
-    # Esto no es un `ENOENT` pelado. El usuario escribió mal el `--project-root`
-    # y necesita saber eso, no leer el error interno de Node. La regla dice
-    # "no existe" — accionable — y además tapa el detalle crudo.
 
     Esquema del escenario: "<comando>" falla cuando la raíz no existe
       Dado que la raíz del proyecto no existe
@@ -135,10 +114,6 @@ Característica: El CLI habla en español y dice qué hacer
 
   Regla de negocio: Los checks de doctor distinguen inexistencia de EACCES
 
-    # EACCES e inexistencia son fallos distintos: un `checkReadPermissions` que
-    # devuelve `sin permisos` sobre una ruta inexistente empuja al usuario a
-    # `chmod` una carpeta que no existe.
-
     Escenario: Los checks de permisos reportan inexistencia
       Dado que la raíz del proyecto no existe
       Cuando reviso los permisos de lectura y escritura
@@ -146,9 +121,6 @@ Característica: El CLI habla en español y dice qué hacer
       Y ambos detalles dicen que la ruta no existe
 
   Regla de negocio: init crea la raíz en lugar de fallar
-
-    # El único comando que NO falla: `init` sobre una ruta que no existe es
-    # exactamente su caso de uso.
 
     Escenario: init crea un proyecto en una raíz inexistente
       Dado que la raíz del proyecto no existe

@@ -7,23 +7,6 @@ import { DEFAULT_SITE_CONFIG } from '../../config/site-config.js';
 import * as logger from '../../lib/logger.js';
 import { world } from './cli-world.steps.ts';
 
-/**
- * #2580 (onda 2) — la plantilla HTML y el vocabulario de filtros.
- *
- * `composeHtmlTemplate` devuelve un TEMPLATE de pandoc: HTML con `$if(...)$`
- * alrededor de cada bloque condicional. El compositor no decide qué bloques
- * se imprimen —eso lo dice el flag— pero sí decide dónde van y qué HTML hay
- * dentro de cada uno. Por eso los pasos hablan de "la tarjeta del título" y
- * no de `html-composer.ts`.
- *
- * ## Los nombres de las tarjetas son el ancla
- *
- * `Tarjeta identidad`, `Tarjeta documento` y `$doc-chip$` son comentarios que
- * el compositor deja en la plantilla. Son el ancla estable: el texto de la
- * tarjeta cambia con cada ajuste de estilo, el comentario no.
- */
-
-/** El tipo de documento cuya plantilla se compone. */
 type TipoDoc = 'file' | 'collection' | 'creator';
 
 function configConBloques(bloques: string[]): Parameters<typeof composeHtmlTemplate>[0] {
@@ -40,11 +23,6 @@ Given('que la plantilla HTML se compone para {string}', async (tipo: string) => 
   world.plantilla = await composeHtmlTemplate(DEFAULT_SITE_CONFIG, undefined, tipo as TipoDoc);
 });
 
-/**
- * Los bloques llegan separados por comas y no en un docstring: un paso con
- * docstring y sin tipo de parámetro no lo encuentra cucumber en un `When` que
- * abre el escenario, y la lista de cuatro palabras cabe en una celda.
- */
 Given('que compongo la plantilla HTML con los bloques {string}', async (bloques: string) => {
   const lista = bloques
     .split(',')
@@ -53,7 +31,6 @@ Given('que compongo la plantilla HTML con los bloques {string}', async (bloques:
   world.plantilla = await composeHtmlTemplate(configConBloques(lista));
 });
 
-/** `<br>` es el salto de línea de una celda de `Examples` y de un `{string}`. */
 function celdas(texto: string): string {
   return texto.replace(/<br>/g, '\n').replace(/\\n/g, '\n');
 }
@@ -70,7 +47,6 @@ Then('la plantilla no dice {string}', (texto: string) => {
   }
 });
 
-/** El orden de la plantilla: cada ancla después de la anterior. */
 Then('la plantilla ordena {string}', (cadena: string) => {
   let anterior = -1;
   for (const texto of cadena.split(',').map((t) => t.trim())) {
@@ -80,18 +56,12 @@ Then('la plantilla ordena {string}', (cadena: string) => {
   }
 });
 
-/** Una tarjeta vive dentro del `<main>`, o no es una tarjeta del masonry. */
 Then('el masonry trae {string}', (texto: string) => {
   const inicio = world.plantilla.indexOf('<main');
   const bloque = world.plantilla.slice(inicio, world.plantilla.indexOf('</main>', inicio));
   if (!bloque.includes(texto)) throw new Error(`el masonry no trae ${JSON.stringify(texto)}`);
 });
 
-/**
- * Los nombres de los filtros del paquete se memoizan por proceso: dos
- * llamadas seguidas devuelven la MISMA referencia, que es lo que prueba que
- * el escaneo del filesystem ocurrió una vez.
- */
 Then('los nombres de los filtros del paquete se memoizan', () => {
   const a = getBuiltinFilterNames();
   const b = getBuiltinFilterNames();
@@ -156,15 +126,6 @@ Then('el aviso dice {string}', (motivo: string) => {
   }
 });
 
-/**
- * #2580 (onda 2) — la resolución de filtros Lua por capa.
- *
- * Los filtros del paquete viven en subdirectorios (`semantic/`, `latex/`,
- * `html/`, `internal/`) y el proyecto puede sobrescribir cualquiera con un
- * archivo del mismo nombre en `filters/`. El orden importa: es el orden en que
- * pandoc los ejecuta, y un filtro que transforma el árbol antes que otro
- * cambia el resultado.
- */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadFilterGroups, resolveLuaFilters, resolveUserLuaFilters } from '../../builder/filter-resolver.js';
@@ -216,7 +177,6 @@ Then('la capa {string} tiene {int} filtros', (capa: string, cuantos: number) => 
   }
 });
 
-/** La ruta del filtro, comparada por su final: la raíz del paquete cambia. */
 Then('el filtro {int} de la capa {string} acaba en {string}', (cual: number, capa: string, sufijo: string) => {
   const lista = capaDe(capa);
   const ruta = lista[cual - 1] ?? '';
@@ -225,12 +185,10 @@ Then('el filtro {int} de la capa {string} acaba en {string}', (cual: number, cap
   }
 });
 
-/** El conjunto de nombres que el resolver anotó, para distinguir "desactivado" de "activo". */
 function nombresResueltos(): Set<string> | undefined {
   return (world.capas as { resolvedNames?: Set<string> }).resolvedNames;
 }
 
-/** El grupo resuelto por `resolveLuaFilters`, con su lista por capa. */
 function capaDe(capa: string): string[] {
   return (world.capas as unknown as Record<string, string[]>)[capa] ?? [];
 }

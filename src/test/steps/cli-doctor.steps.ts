@@ -6,42 +6,14 @@ import { runBuild, runDoctor, runFilters } from '../../cli/dispatcher.js';
 import * as runModule from '../../lib/run.js';
 import { capture, escribirEnProyecto, jsonSalida, raiz, world } from './cli-world.steps.js';
 
-/**
- * #2546 (onda 2) — tranche 6 de `cli-layer`: `doctor`, `doctor --info` y `list-filters`.
- *
- * ## El `Before` de este archivo es un solo caso: `pdftoppm`
- *
- * Un check opcional que falla tiene que verse fallando. La forma de verlo es
- * hacer que el binario no exista, y la única forma deEso es engañar al módulo
- * que lo busca. El espío vive en un `Given` y se devuelve en el `After`, como
- * cualquier otro estado global.
- *
- * ## `escribirEnProyecto` y no un helper propio
- *
- * Los pasos que arman proyectos escriben archivos en la raíz del mundo
- * compartido. La lista de configuraciones que necesita este bloque es corta y
- * cada una tiene un nombre: "proyecto de prueba", "proyecto con PDF",
- * "proyecto con 99-pdfx activo". Un helper por nombre es más legible que un
- * `Given` con un `{string}` que el que lee tiene que ir a buscar.
- */
-
 const PREAMBLE_PDF = 'language: es-MX\nformat:\n  pdf:\n    generate: true\n';
 
-/** El espío de `run.exec` del escenario que finge que `pdftoppm` no existe. */
 let espioExec: { mockRestore: () => void } | undefined;
 
-/**
- * La raíz del escenario, creándola si el `Given` anterior no la puso. Varios de
- * estos escenarios arrancan con la configuración —"dado que la raíz tiene una
- * configuración inválida"— y no con una raíz vacía, así que escribir sin
- * comprobar deja `join(undefined, …)`.
- */
-/** Config con un filtro de preámbulo desactivado por el usuario. */
 function configConFiltroDesactivado(filtro: string): string {
   return `language: es-MX\nformat:\n  pdf:\n    disabledPreambleFilters:\n      - ${filtro}\n`;
 }
 
-/** El `JSON.parse` de `stdout`, como el de `validate --json`. */
 function lista(clave: string): Record<string, unknown>[] {
   const valor = jsonSalida()[clave];
   if (!Array.isArray(valor)) {
@@ -51,9 +23,6 @@ function lista(clave: string): Record<string, unknown>[] {
 }
 
 After(() => {
-  // Devuelve el espío de `exec` aunque el escenario haya fallado antes de
-  // terminar: si queda puesto, los `doctor` de los escenarios siguientes corren
-  // contra un binario que no existe y fallan por el motivo equivocado.
   espioExec?.mockRestore();
   espioExec = undefined;
 });
@@ -65,8 +34,7 @@ Given('que la raíz del proyecto tiene un proyecto con PDF', () => {
 
 Given('que la raíz del proyecto tiene un proyecto con 99-pdfx activo', () => {
   raiz();
-  // `disabledPreambleFilters: []` deja los tres defaults activos, 99-pdfx
-  // incluido: sin él el PDF no lleva los boxes y no hay nada que certificar.
+
   escribirEnProyecto('iteraciones.config.yaml', `${PREAMBLE_PDF}    disabledPreambleFilters: []\n`);
 });
 
@@ -132,8 +100,6 @@ Then('la salida lleva una elipsis', () => {
 });
 
 Then('la salida lista {string} como activa con su primera oración', (filtro: string) => {
-  // `latex/02-dictum  lua  Convierte …  [activo]`: el nombre, el tipo, la
-  // primera oración de la descripción y el estado.
   const patron = new RegExp(`${filtro.replace(/[/]/g, '\\/')} {2,}\\w+ {2}Convierte[^\\n]*\\.[^\\n]*\\[activo\\]`);
   if (!patron.test(world.stdout)) {
     throw new Error(`la salida no lista ${filtro} con su primera oración y la marca de activo:\n${world.stdout.slice(0, 600)}`);
@@ -161,9 +127,6 @@ Then('la línea de {string} no dice {string}', (etiqueta: string, valor: string)
 });
 
 Then('las dos líneas de filtros de preámbulo están alineadas', () => {
-  // La columna de valores la fija la etiqueta más larga. Si el padding se
-  // calcula por etiqueta y no sobre el conjunto, las dos columnas se descuadran
-  // y las dos listas dejan de leerse como columnas.
   const config = world.stdout.split('\n').find((l) => l.includes('filters de preámbulo desactivados (config):'));
   const defaults = world.stdout.split('\n').find((l) => l.includes('filters de preámbulo desactivados (defaults del paquete):'));
   if (config === undefined || defaults === undefined) {
@@ -185,8 +148,6 @@ Then('la línea del encabezado de la configuración lleva el prefijo {string}', 
 });
 
 Then('ninguna línea de la configuración lleva el prefijo {string}', (prefijo: string) => {
-  // #2192: un prefijo por línea hace que el bloque se lea como veinte mensajes
-  // distintos en vez de uno.
   const lineas = world.stdout.split('\n').filter((l) => l.includes('language:') || l.includes('toc:'));
   if (lineas.length < 2) {
     throw new Error(`esperaba al menos 2 líneas de configuración y hay ${lineas.length}`);

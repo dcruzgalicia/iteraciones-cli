@@ -14,24 +14,6 @@ import {
 } from '../../builder/image-processor.js';
 import { world } from './cli-world.steps.ts';
 
-/**
- * #2580 (onda 2) — el reemplazo de rutas de imagen en el markdown.
- *
- * El build procesa cada imagen a un formato de imprenta y deja el resultado
- * en `.iteraciones/processed-images/`. El markdown del autor, el frontmatter
- * y el HTML generado apuntan a la ruta nueva, y **sólo** a la nueva.
- *
- * ## Por qué el reemplazo está anclado (#2170)
- *
- * El nombre viejo sigue apareciendo en cuatro sitios que NO son el objetivo de
- * una imagen: una colisión de substring (`img.png.bak`), el texto suelto
- * entre comillas, el código en línea con el nombre dentro, y una clave del
- * frontmatter que se llama distinto. Un `replace` global los reescribe
- * todos y rompe documentos que no tocaron. Por eso hay pasos que comparan lo
- * que **no** debe cambiar tanto como lo que sí.
- */
-
-/** El directorio del documento del escenario y la ruta ya procesada. */
 const DIR_DOC = '/proyecto/capitulos';
 const PROCESADA = '/proyecto/capitulos/.iteraciones/processed-images/img.jpg';
 
@@ -43,18 +25,15 @@ Given('que el mapa de imágenes está vacío', () => {
   world.mapaImagenes = new Map();
 });
 
-/** Una imagen que NO se procesó: el build la deja donde está. */
 Given('que hay una imagen que no se procesó', () => {
   world.mapaImagenes = new Map([[`${DIR_DOC}/img.png`, PROCESADA]]);
   world.imagenSinProcesar = `${DIR_DOC}/gif.png`;
 });
 
-/** El caso donde lo único que hay es la imagen sin procesar. */
 Given('que sólo hay una imagen que no se procesó', () => {
   world.mapaImagenes = new Map([[`${DIR_DOC}/gif.png`, `${DIR_DOC}/gif.png`]]);
 });
 
-/** Una imagen fuera del directorio del documento, para la forma con `../`. */
 Given('que hay una imagen procesada fuera del directorio del documento', () => {
   world.mapaImagenes = new Map([['/proyecto/comun/x.png', '/salida/assets/images/cap-x.jpg']]);
 });
@@ -117,14 +96,6 @@ Then('las imágenes en línea son {string}', (esperadas: string) => {
   }
 });
 
-/**
- * El escaneo de los campos de portada: qué imágenes del frontmatter hay que
- * procesar para las páginas de título internas.
- *
- * Sólo los campos MULTILÍNEA llevan imágenes. `subject` y `publishers` son
- * texto que se renderiza en la portada y no se rasteriza, así que una imagen
- * ahí no se descarga ni se procesa.
- */
 Given('que el frontmatter declara el campo {string} con:', (campo: string, valor: string) => {
   const multilinea = valor.replace(/<br>/g, '\n').trim();
   world.camposPortada = { ...world.camposPortada, [campo]: multilinea.startsWith('[') ? JSON.parse(multilinea) : multilinea };
@@ -133,7 +104,7 @@ Given('que el frontmatter declara el campo {string} con:', (campo: string, valor
 Given('que el proyecto tiene la imagen {string}', (ruta: string) => {
   const destino = `${world.root}/${ruta}`;
   mkdirSync(dirname(destino), { recursive: true });
-  // Cuatro bytes de cabecera JPEG: suficiente para que el escaneo lo reconozca.
+
   writeFileSync(destino, Buffer.from([0xff, 0xd8, 0xff, 0xe0]));
 });
 
@@ -158,10 +129,6 @@ Then('la imagen {int} de portada no es SVG', (cual: number) => {
   if (world.portada[cual - 1]?.isSvg) throw new Error(`la imagen ${cual} es SVG y no debía`);
 });
 
-/**
- * Sin ImageMagick el build no convierte nada, y el autor tiene que saberlo
- * una vez —no una por documento— porque el aviso sale en medio de la compilación.
- */
 When('proceso un documento sin ImageMagick', async () => {
   resetMagickCache();
   const espia = spyOn(process.stderr, 'write').mockImplementation(() => true);
@@ -217,11 +184,6 @@ Then('el aviso de ImageMagick aparece {int} vez', (veces: number) => {
   }
 });
 
-/**
- * El paso no lleva "PDF/X" en el nombre: con barra y slash dentro del texto del
- * paso se lee como dos segmentos. Lo que se
- * comprueba es la certificación.
- */
 Then('el aviso menciona la certificación', () => {
   if (!world.stderr.includes('pueden fallar la certificación PDF/X')) {
     throw new Error(`el aviso no menciona la certificación: ${JSON.stringify(world.stderr)}`);
@@ -234,11 +196,6 @@ Then('el aviso no menciona la certificación', () => {
   }
 });
 
-/**
- * Las cajas de destino. El `startpaper` va a página completa SIEMPRE, aunque
- * la caja de texto sea más pequeña (#1975): recortarla dejaría el fondo de
- * la portada con un borde de papel alrededor.
- */
 Given('que la página es de {int} por {int} con {int} de texto', (w: number, h: number, textW: number) => {
   world.pagina = { w, h, textW };
 });
@@ -255,7 +212,6 @@ Given('que el aviso de ImageMagick se da por inactivo', () => {
   world.pdfxActivo = false;
 });
 
-/** La caja como `WxH`, que es como la nombra el autor al mirarla en el build. */
 Then('la caja de destino cabe {string}', (medida: string) => {
   const [w, h] = medida.split('x').map(Number);
   const t = world.cajas as { targetW: number; targetH: number };

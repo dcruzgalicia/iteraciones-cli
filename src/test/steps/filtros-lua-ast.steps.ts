@@ -3,22 +3,6 @@ import { join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
 import { execPandoc } from '../../lib/pandoc-runner.js';
 
-/**
- * #2545 (onda 1) — el grupo del AST en JSON.
- *
- * Son los únicos escenarios de la suite que comparan la ESTRUCTURA de pandoc en
- * vez de su salida. Por eso el esperado completo va en un fixture por caso y no
- * en una tabla: un AST de quince líneas dentro de una celda es ilegible, y aquí
- * además hace falta compararlo entero, no buscar una cadena.
- *
- * ## El esperado sale del literal original, nunca de la salida real
- *
- * Generar el fixture corriendo pandoc y guardando lo que salió sería circular:
- * el test compararía la salida contra sí misma y siempre pasaría. Los fixtures
- * los extrajo `extract-lua3` del literal del `it()`, que es lo que el autor
- * escribió.
- */
-
 const FILTERS = join(import.meta.dir, '../../lib/resources/filters');
 const FIXTURES = join(import.meta.dir, '../../../features/fixtures/lua-filters-ast');
 const SEMANTIC_FILTERS = [
@@ -26,7 +10,6 @@ const SEMANTIC_FILTERS = [
   join(FILTERS, 'semantic', 'ast', '02-double-colon-noindent.lua'),
 ];
 
-/** Cuerpos de los escenarios con nombre: el markdown va explícito en el feature. */
 interface AstFixture {
   markdown: string;
   expectedBlocks: unknown;
@@ -50,7 +33,6 @@ interface Block {
 }
 
 interface AstWorld {
-  /** Nombre del fixture pedido por el Given, para los mensajes de error. */
   caseName: string;
   markdown: string;
   blocks: Block[];
@@ -130,7 +112,7 @@ Then('hay dos Divs de tipo spacer', () => {
 Then('la lista tiene un primer item que es un Div spacer', () => {
   const list = world.blocks[0];
   if (list?.t !== 'BulletList') throw new Error(`esperaba una BulletList y el primer bloque es ${String(list?.t)}`);
-  // pandoc 3.x: `c` es la lista de items, y cada item es una lista de bloques.
+
   const item = (list.c as unknown[][])[0]?.[0] as Block | undefined;
   if (item?.t !== 'Div') throw new Error(`esperaba un Div como primer item y fue ${String(item?.t)}`);
   const classes = ((item.c as unknown[][])[0]?.[1] ?? []) as string[];

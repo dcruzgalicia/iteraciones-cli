@@ -5,14 +5,6 @@ Característica: El nombre de la salida y la portada se validan antes de compila
   Quiero que el build me diga qué nombre o qué imagen no sirven
   Para arreglarlo antes de que exista una URL que depois no existe
 
-  # 9 de los 39 casos que quedan de `cli-layer`: 3 de `slug`, 4 de `titleImage` y
-  # 2 de documento sin cuerpo.
-  #
-  # Los tres son el mismo negocio: el build separa el nombre del archivo y la
-  # imagen que va a la portada, y **falla antes de compilar** si alguno no sirve.
-  # La alternativa —compilar y dejar que latexmk se queje— produce un error de
-  # LaTeX que no dice qué archivo del proyecto está mal.
-
   Regla de negocio: El slug tiene que ser un nombre válido y único
 
     Escenario: Un slug con espacios y mayúsculas aborta el build
@@ -29,9 +21,6 @@ Característica: El nombre de la salida y la portada se validan antes de compila
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 1
       Y el error dice "slug inválido"
-
-    # Dos documentos con el mismo slug NO es "el segundo pisa al primero": es un
-    # documento que desaparece. El build aborta.
 
     Escenario: Dos documentos con el mismo slug abortan el build
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -56,10 +45,6 @@ Característica: El nombre de la salida y la portada se validan antes de compila
       Cuando hago un build del proyecto
       Entonces el comando termina con el código de salida 1
       Y el error dice "slugs duplicados"
-
-    # `validate` dice "slug duplicado" (singular) y el build "slugs duplicados":
-    # el feature lo deja escrito. Son dos mensajes de dos capas distintas, no uno
-    # mal escrito.
 
     Escenario: validate también reporta los slugs duplicados
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -87,10 +72,6 @@ Característica: El nombre de la salida y la portada se validan antes de compila
 
   Regla de negocio: La portada tiene que existir y su ruta tiene que ser LaTeX-safe
 
-    # El nombre de archivo puede llevar guion bajo — `mi_portada.png` — y LaTeX
-    # lo lee como un subíndice. Sin escapar, el `\titleimage{..._...}` falla al
-    # compilar con un error que no menciona el archivo del proyecto.
-
     Escenario: Una portada con guion bajo se escapa en el .tex
       Dado que la raíz del proyecto tiene un proyecto con LaTeX
       Dado que el archivo "mi_portada.png" es un PNG de 1 por 1
@@ -107,10 +88,6 @@ Característica: El nombre de la salida y la portada se validan antes de compila
       Entonces el comando termina con el código de salida 0
       Y el archivo "dist/files/test-document.tex" apunta a la imagen "mi_portada.png"
       Y el archivo "dist/files/test-document.tex" no contiene "\_"
-
-      # "apunta a la imagen" acepta las dos formas: la ruta absoluta original, o
-      # la copia procesada (CMYK) que deja ImageMagick. Cuál de las dos depende
-      # de si el build corrió ImageMagick, y eso no es parte de la regla.
 
     Escenario: Una portada inexistente falla con el nombre del archivo
       Dado que la raíz del proyecto tiene un proyecto con LaTeX
@@ -164,11 +141,6 @@ Característica: El nombre de la salida y la portada se validan antes de compila
       Y el archivo "dist/files/test-document.tex" contiene "portada-fm"
 
   Regla de negocio: Un documento sin cuerpo es un error
-
-    # #2463: el build soltaba estos documentos en silencio. El resultado era un
-    # sitio con un artículo menos y ningún error — la peor forma de perder un
-    # documento. Y el frontmatter vacío es un caso distinto del archivo vacío:
-    # dos mensajes distintos porque son dos errores distintos.
 
     Escenario: Un frontmatter sin cuerpo no se omite en silencio
       Dado que la raíz del proyecto tiene un proyecto de prueba

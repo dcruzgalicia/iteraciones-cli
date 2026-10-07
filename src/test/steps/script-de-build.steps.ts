@@ -13,18 +13,6 @@ import {
 } from '../../lib/script-recorder.js';
 import { systemCommands } from '../helpers.js';
 
-/**
- * #2546 (onda 2) — la clave `script`: guard de primitivas, slots estables y la
- * ubicación de la clave en la configuración.
- *
- * ## El guard de primitivas va aquí y no en elRecorder
- *
- * `expectSystemCommands` estaba en el archivo de test porque el `prepareArgv` que
- * genera el .sh no está expuesto. Va en el step porque lo que se prueba es una
- * REGLA ("el .sh no puede usar cp/rm/ln/rmdir ni &&"), no una función: el Gherkin
- * puede leer esa regla sin abrir el .ts.
- */
-
 const PERMITIDO = ['#!/bin/bash', 'set -e', 'cd /raíz', '# comentario cp rm', 'mkdir -p dist dist/files', 'mv .cover-a-1.png portada.png'].join('\n');
 
 const MARCADO = ['cp a b', 'rm -f c', 'ln -s d e', 'rmdir f', 'pandoc x && mv y z'].join('\n');
@@ -53,8 +41,6 @@ After(async () => {
   await rm(world.dir, { recursive: true, force: true });
 });
 
-// ── Guard de primitivas ──────────────────────────────────────────────────────
-
 Given('un script que sólo usa mkdir y mv', () => {
   world.script = PERMITIDO;
 });
@@ -78,8 +64,6 @@ Then('el guard de primitivas encuentra las cinco', () => {
   }
 });
 
-// ── Slots estables (#2474) ──────────────────────────────────────────────────
-
 Given('un proyecto con dos jobs repartidos en slots del pool 3 y 1', () => {
   world.script = '';
 });
@@ -91,7 +75,7 @@ When('grabo la captura del script', async () => {
 
   beginScriptCapture(root);
   notePdfSlots(2);
-  // El pool repartió: el job a cayó en el slot 3 y el b en el 1.
+
   for (const [job, poolSlot] of [
     ['ensayo-a', 3],
     ['ensayo-b', 1],
@@ -121,13 +105,11 @@ Then('el script numera los slots desde el job cero y no usa el slot real del poo
   for (const [re, que] of espera) {
     if (!re.test(s)) throw new Error(`falta ${que}.\nscript:\n${s.slice(0, 600)}`);
   }
-  // El ordinal del job, no el slot del pool: por eso el 3 no puede aparecer.
+
   for (const prohibido of ['slot-3', 'cache-3']) {
     if (s.includes(prohibido)) throw new Error(`el script conserva ${prohibido}, que es el slot real del pool y no el índice del job`);
   }
 });
-
-// ── La clave script en la configuración (#2448) ──────────────────────────────
 
 Given('un proyecto con la configuración', async () => {
   await Bun.write(join(world.dir, 'iteraciones.config.yaml'), CONFIG_SIN_SCRIPT);
@@ -148,7 +130,7 @@ When('leo la configuración del proyecto', async () => {
 
 Then('la clave script es falsa', async () => {
   if (world.scriptValue !== false) throw new Error(`esperaba script=false y obtuve ${String(world.scriptValue)}`);
-  // Los otros dos valores: la clave acepta true y false explícitos.
+
   for (const [config, esperado] of [
     [CONFIG_SCRIPT_TRUE, true],
     [CONFIG_SCRIPT_FALSE, false],
@@ -163,8 +145,7 @@ Then('la lectura falla diciendo que hay que renombrar la clave', () => {
   if (!world.configError.includes('renombra la clave')) {
     throw new Error(`esperaba un error de rename y obtuve: ${world.configError || '(no hubo error)'}`);
   }
-  // El mensaje tiene que NOMBRAR la clave antigua, si no el usuario no sabe
-  // qué escribir.
+
   if (!world.configError.includes('format.script')) {
     throw new Error(`el error no nombra "format.script": ${world.configError}`);
   }

@@ -9,19 +9,6 @@ import { loadSiteConfig } from '../../config/config-loader.js';
 import { splitFrontmatter } from '../../lib/frontmatter.js';
 import { execPandoc } from '../../lib/pandoc-runner.js';
 
-/**
- * #2545 (onda 1) — `filtros Lua de usuario`.
- *
- * Estos dos escenarios necesitan un PROYECTO, no un markdown suelto: el filtro
- * vive en `<proyecto>/filters/nota.lua` y el segundo escenario además lo declara
- * en `iteraciones.config.yaml` para que lo cargue el pipeline.
- *
- * El original montaba el proyecto en el cuerpo de cada test con `try/finally`.
- * Aquí lo hace un `Before` por corrida y lo borra el `After`, porque cucumber no
- * da try/finally por escenario y duplicar el andamiaje en dos steps lo haría
- * peor.
- */
-
 const USER_FILTER = [
   '-- Convierte Div.nota según el formato de salida',
   'function Div(div)',
@@ -41,7 +28,6 @@ const TEMPLATE = '\\documentclass{article}\n\\begin{document}\n$body$\n\\end{doc
 
 const RESOURCES = join(import.meta.dir, '../../lib/resources/filters');
 
-/** Los filtros de la capa LaTeX del paquete, en el orden que usaba el original. */
 const PKG_LATEX_FILTERS = [
   '01-spacer',
   '02-dictum',
@@ -87,9 +73,6 @@ Given('un proyecto con un filtro de usuario que convierte la clase nota', () => 
 });
 
 Given('un proyecto con una copia del filtro de mbox como override', async () => {
-  // Copia del filtro del paquete como override del proyecto. Sin la ruta del
-  // helper inyectada por env, el `require` relativo a `PANDOC_SCRIPT_FILE`
-  // apuntaría al proyecto y la pasada fallaría (#2460).
   await mkdir(join(world.dir, 'filters', 'latex'), { recursive: true });
   const pkg06 = await Bun.file(join(RESOURCES, 'latex', '06-mbox-sentence-end.lua')).text();
   world.mboxOverride = join(world.dir, 'filters', 'latex', '06-mbox-sentence-end.lua');

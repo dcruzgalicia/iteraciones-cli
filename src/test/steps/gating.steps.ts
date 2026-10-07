@@ -18,19 +18,6 @@ function scenariosDe(doc: ReturnType<typeof parse>) {
   return salida;
 }
 
-/**
- * Un `Escenario` sin ningún paso de comprobación no comprueba nada: pasa en
- * verde para siempre.
- *
- * El parsing lo hace `@cucumber/gherkin`, que ya está instalado como dependencia
- * de `@cucumber/cucumber`: docstrings, tablas y scenarios anidados en `Regla de
- * negocio` salen del AST, no de expresiones regulares propias.
- *
- * Lo único que hay que resolver a mano es la herencia de `Y`/`E`, que el parser
- * deja tal cual: muchos features encadenan la aserción con `Y` después de un
- * `Cuando` (`Cuando exporto…` / `Y el markdown declara:`), así que un `Entonces`
- * que venga con `keywordType: 'Conjunction'` cuenta como comprobación.
- */
 Then('ningún escenario se queda sin comprobar', () => {
   const sinComprobar: string[] = [];
   for (const archivo of readdirSync(join(RAIZ, 'features'))) {

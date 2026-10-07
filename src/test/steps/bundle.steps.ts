@@ -6,30 +6,6 @@ import { build } from '../../builder/orchestrator.js';
 import { loadSiteConfig } from '../../config/config-loader.js';
 import { escribirEnProyecto, world } from './cli-world.steps.ts';
 
-/**
- * #2580 (onda 2) — `bundle: true` (#2448) y las rutas del `.tex` (#2450).
- *
- * ## Qué promete `bundle`
- *
- * Que una **copia de `dist/files`** vuelva a construir el mismo build. Sin
- * bundle, esa copia es inservible: el `.tex` apunta a `/proyecto/preamble/…` y
- * en la copia esa ruta no existe. Bundle replica en la salida los cuatro insumos
- * de los que dependen las salidas —config, `preamble`, `filters` y
- * bibliografía— para que la copia se sostenga sola.
- *
- * ## El `.tex` de `dist` no puede llevar rutas absolutas
- *
- * Un PDF con `\includegraphics{/home/david/proyecto/.iteraciones/…}` no se
- * puede compilar en la máquina del impresor. Bundle no arregla eso: lo
- * relativiza.
- *
- * ## El manifiesto vive en la caché, no en `dist`
- *
- * `.iteraciones/bundle.json` dice qué se copió para poder retirarlo después.
- * Si viviera en `dist`, la copia de `dist/files` se traería el manifiesto de
- * otro proyecto y `bundle: false` no sabría qué borrar.
- */
-
 const REPLICADOS = ['iteraciones.config.yaml', 'preamble/04-margins.tex', 'filters/mi-filtro.lua', 'bibliography.bib'];
 
 const DOC = ['---', 'title: Ensayo', '---', '', '## Capítulo', '', 'Contenido.'].join('\n');
@@ -53,7 +29,6 @@ function configCon(lines: string[], bundle = true): string {
   ].join('\n');
 }
 
-/** El proyecto con los cuatro insumos que bundle debe replicar. */
 Given('un proyecto con los cuatro insumos', () => {
   escribirEnProyecto('iteraciones.config.yaml', `${configCon([])}\n`);
   escribirEnProyecto('ensayo.md', `${DOC}\n`);
@@ -67,12 +42,10 @@ Given('un proyecto con bundle {string}', (estado: string) => {
 });
 
 Given('el proyecto tiene un QR en el ensayo', () => {
-  // Sin LaTeX no hay `.tex` que revisar, así que este proyecto lo pide.
   escribirEnProyecto('iteraciones.config.yaml', `${configCon(['  latex:', '    generate: true'])}\n`);
   escribirEnProyecto('ensayo.md', `${DOC.replace('Contenido.', '[https://historikas.com]{.qr width="15mm"}')}\n`);
 });
 
-/** Apagar bundle no borra las salidas: sólo deja de replicar. */
 Given('el proyecto apaga bundle', () => {
   escribirEnProyecto('iteraciones.config.yaml', `${configCon([], false)}\n`);
 });
@@ -85,8 +58,6 @@ When('construyo el proyecto con bundle', async () => {
   try {
     await build(world.root);
   } catch (e) {
-    // El LaTeX puede faltar en la máquina; el error se comprueba en otro
-    // escenario y aquí no debe enmascarar la aserción del .tex.
     world.errorBuild = e instanceof Error ? e.message : String(e);
   }
 });
@@ -175,9 +146,6 @@ Then('el .tex no lleva ninguna ruta absoluta', () => {
   }
 });
 
-// ── Las rutas, en crudo ────────────────────────────────────────────────────
-
-/** `relativizeTexForDist` es puro: la raíz del proyecto y la del `.tex`. */
 When('relativizo {string} para la salida {string}', (ruta: string, dirTex: string) => {
   world.raizProyecto = '/proy';
   world.texRelativizado = relativizeTexForDist(
@@ -193,7 +161,6 @@ Then('queda {string}', (esperado: string) => {
   }
 });
 
-/** `localizeDistAssets`: decide si la ruta se relativiza o además se copia. */
 Given('un proyecto con la bibliografía', () => {
   escribirEnProyecto('bibliografia.bib', '@book{ruiz2026, title = {Cuidar}}\n');
 });

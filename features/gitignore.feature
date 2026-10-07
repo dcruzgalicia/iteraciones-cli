@@ -5,14 +5,6 @@ Característica: las reglas de `.gitignore` deciding qué se compila
   Quiero que `.gitignore` decida qué documentos se compilan
   Para no subir a la imprenta mis notas ni el directorio de compilación
 
-  # Tramo 27 de la migración. 11 de los 17 casos de `gitignore.test.ts`.
-  # Los que discover sobre un proyecto real se quedan.
-
-  # Estas reglas son las de git, no unas propias: si el proyecto ya trae un
-  # `.gitignore`, el autor espera que el build lo entienda igual que git. Por
-  # eso los wildcards, la negación y el anclaje se comportan como en git, y los
-  # tests los fijan con la semántica de git.
-
   Regla de negocio: Los wildcards funcionan como en git
 
     Esquema del escenario: Un patrón con wildcards

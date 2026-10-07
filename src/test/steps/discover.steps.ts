@@ -5,30 +5,6 @@ import type { DiscoveryEntry } from '../../builder/types.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../../lib/frontmatter.js';
 import { world } from './cli-world.steps.ts';
 
-/**
- * #2580 (onda 2) — el descubrimiento: cómo se llama y de dónde sale cada cosa.
- *
- * Los 38 casos de `discover.test.ts` son cuatro tablas: un título y sus
- * autores producen un nombre; una ruta produce un nombre de HTML; un autor
- * produce una lista; un archivo produce YAML y cuerpo. Casi ningún caso es
- * único, y por eso aquí hay pasos genéricos y features con `Examples`.
- *
- * ## El nombre del archivo es comportamiento, no un detalle
- *
- * `computeSlug` decide qué se llama `mi-articulo-por-sofia-garcia.pdf`. Que el
- * título se normalice sin acentos y que el autor se recorte al primero son
- * reglas que el autor ve en el nombre del PDF que descarga. Por eso los pasos
- * hablan de "el nombre de salida" y no de la función que lo calcula.
- *
- * ## El frontmatter devuelve el cuerpo con el salto que tenía
- *
- * `splitFrontmatter` devuelve `body` con el `\n` inicial que separa el cierre
- * del YAML. Eso no es un detalle: si el cuerpo volviera limpio, el primer
- * párrafo del autor pegaría al preámbulo y el PDF saldría con la sangría
- * corrida. Los `Examples` llevan el salto a propósito.
- */
-
-/** El frontmatter del documento del escenario, tal como lo escribió el autor. */
 function frontmatter(): { title?: string; creator?: string[] } {
   const fm: { title?: string; creator?: string[] } = {};
   if (world.titulo !== null) fm.title = world.titulo;
@@ -49,15 +25,7 @@ Given('que el documento tiene de autor {string}', (autores: string) => {
   world.creadores = autores.split(',').map((a) => a.trim());
 });
 
-/**
- * El `creator` del frontmatter puede venir como string suelto, como lista, o
- * no venir. Los tres llegan desde `parseAuthors`, y los tres escriben lo
- * mismo en el index, así que el `Given` los acepta igual.
- */
 Given('que el frontmatter declara el autor como:', (declarado: string) => {
-  // El `creator` llega como texto suelto o como lista YAML, y un docstring no
-  // distingue uno de otro. Se parsea como JSON y, si no es JSON, se toma tal
-  // cual: las dos formas escriben lo mismo en el index.
   const texto = declarado.trim();
   try {
     world.autorDeclarado = texto === '' ? undefined : JSON.parse(texto);
@@ -86,15 +54,6 @@ Given('que no hay nombre calculado', () => {
   world.nombrePrevio = undefined;
 });
 
-/**
- * El archivo del escenario, con los saltos que pida.
- *
- * Las tablas de `Ejemplos` son de una línea por celda, y un frontmatter son
- * tres. `<br>` es el salto de línea dentro de una celda: se traduce a `
-`
- * aquí. La alternativa —un escenario con docstring por fila— duplica el
- * escenario ocho veces y la tabla de causas deja de poder leerse de un tirón.
- */
 Given('que el archivo tiene este texto:', (texto: string) => {
   world.texto = texto.replace(/<br>/g, '\n').replace(/\\r\\n/g, '\r\n');
 });
@@ -115,8 +74,6 @@ When('calculo el nombre del HTML', () => {
 });
 
 When('construyo los documentos desde el índice', () => {
-  // Sin entradas: el build tiene que construir el documento igual, con lo que
-  // el index no sabe. Un archivo sin index no es un archivo que se salta.
   const index = new Map<string, DiscoveryEntry>();
   world.documentos = buildDocsFromIndex(world.rutasIndex, index, world.raizRaiz || '/proyecto');
 });
@@ -136,9 +93,7 @@ Given('que la raíz del proyecto es {string}', (raiz: string) => {
 When('construyo los documentos desde el índice:', (indice: string) => {
   const entradas = JSON.parse(indice) as Record<string, { title?: string; creator?: string[] }>;
   const index = new Map(Object.entries(entradas)) as Map<string, DiscoveryEntry>;
-  // `world.rutasIndex` manda: es lo que dice qué archivos existen, y las
-  // entradas del JSON sólo qué se sabe de ellos. Así un archivo sin entrada se
-  // construye igual, con los valores por defecto.
+
   const paths = world.rutasIndex.length > 0 ? world.rutasIndex : Object.keys(entradas);
   world.documentos = buildDocsFromIndex(paths, index, world.raizRaiz || '/proyecto');
 });
@@ -178,7 +133,6 @@ Then('la lista de autores está vacía', () => {
   }
 });
 
-/** `<br>` es el salto de línea de una celda de `Ejemplos`. Ver el `Given` de arriba. */
 const sinCeldas = (celda: string): string => celda.replace(/<br>/g, '\n').replace(/\\r\\n/g, '\r\n');
 
 Then('el cuerpo separado es:', (esperado: string) => {
@@ -257,11 +211,6 @@ Then('el error del YAML dice {string}', (motivo: string) => {
   }
 });
 
-/**
- * El error tiene que caber en una línea. La librería de YAML mete su snippet y
- * su caret en varias, y el logger del CLI lo imprime dentro de una línea de
- * bullet: el resto se corta o se pierde.
- */
 Then('el error del YAML cabe en una sola línea', () => {
   const error = world.parseo.error;
   if (error === undefined) throw new Error('el YAML no falló y debía');
@@ -269,19 +218,11 @@ Then('el error del YAML cabe en una sola línea', () => {
   if (!/\(línea \d+, columna \d+\)$/.test(error)) {
     throw new Error(`el error no termina con línea y columna: ${JSON.stringify(error)}`);
   }
-  // La posición de la librería no se duplica: "at line" es un resto del parser.
+
   if (error.includes('at line')) throw new Error(`el error repite la posición: ${JSON.stringify(error)}`);
 });
 
-/** Escapar el cuerpo en una tabla de `Examples` es ilegible; va en docstring. */
-/**
- * Las mismas dos aserciones en forma `{string}` para las tablas de `Examples`,
- * donde no cabe un docstring. Dos formas y no una porque cucumber no las
- * mezcla: el docstring llega como argumento y el `{string}` como texto.
- */
 Then('el YAML separado es {string}', (esperado: string) => {
-  // `sin YAML` es el centinela de la tabla para "este archivo no tenía
-  // frontmatter"; el resto se compara como texto, que es lo que se ve.
   const quiere = sinCeldas(esperado);
   if (quiere === 'sin YAML') {
     if (world.yaml !== undefined) throw new Error(`el archivo no tiene frontmatter y salió ${JSON.stringify(world.yaml)}`);

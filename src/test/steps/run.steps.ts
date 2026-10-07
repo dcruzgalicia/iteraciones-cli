@@ -2,42 +2,13 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import { exec, killInFlightProcesses, mapWithConcurrency, ProcessTimeoutError } from '../../lib/run.js';
 import { world } from './cli-world.steps.ts';
 
-/**
- * #2580 (onda 2) — el concurrente y los timeouts del CLI.
- *
- * `mapWithConcurrency` es la base de todo lo que corre en paralelo: el pool de
- * PDF, la validación, las imágenes. Un fallo de contrato aquí no se ve en un
- * documento mal hecho, se ve en un build que se cuelga o que procesa de más.
- *
- * ## El orden de los resultados es parte del contrato
- *
- * Los resultados salen en el orden de la entrada aunque el trabajo termine
- * desordenado. El consumidor los indexa por posición, así que un resultado
- * desordenado mete el documento A donde va el B — y nada falla, que es peor.
- *
- * ## Un fallo aborta, y abortar se avisa una vez
- *
- * Cuando un item falla no tiene sentido seguir: el build va a salir con error
- * igual. Pero las tareas en vuelo no se pueden cancelar, así que se dejan
- * terminar; lo que no se hace es *encolar* más. `onCancel` se invoca una sola
- * vez, aunque fallen varios items (#2172), porque es el gancho que suelta un
- * semáforo: llamarlo N veces deja el semáforo en N−1 y cuelga lo que venga.
- *
- * ## El timeout mata el árbol entero, no el proceso (#2014)
- *
- * Matar sólo el proceso directo deja a los hijos escribiendo sobre los mismos
- * ficheros del temporal. El mensaje dice que también se llevaron a los hijos,
- * porque el autor tiene que saber que puede limpiar sin fear.
- */
-
-/** El trabajo simulado: cuenta concurrencia y anota qué se procesó. */
 async function trabajo(n: number): Promise<number> {
   world.concurrentesRun = (world.concurrentesRun as number) + 1;
   world.maxConcurrentesRun = Math.max(world.maxConcurrentesRun as number, world.concurrentesRun as number);
   await new Promise((r) => setTimeout(r, 10));
   world.concurrentesRun = (world.concurrentesRun as number) - 1;
   (world.procesadosRun as number[]).push(n);
-  // El escenario duplica el valor: da algo que comparar más allá de "no falló".
+
   return n * 2;
 }
 
@@ -97,7 +68,6 @@ When('los proceso con concurrencia {int}', async (limite: number) => {
   }
 });
 
-/** El límite inválido no es un entero, así que no cabe en el mismo `When`. */
 When('los proceso con el límite {float}', async (limite: number) => {
   world.erroresRun = '';
   try {
@@ -129,11 +99,6 @@ Then('se procesaron los items {string}', (esperados: string) => {
   }
 });
 
-/**
- * El contrato del abort es "menos que todos", no "exactamente estos": qué
- * hermanos llegaron a empezar depende del scheduling. Lo que no puede pasar es
- * que se encolase todo lo pendiente.
- */
 Then('no se procesaron todos los items', () => {
   const procesados = world.procesadosRun as number[];
   const total = world.itemsRun as number[];
@@ -165,8 +130,6 @@ Then('se invocó onCancel {int} veces', (cuantas: number) => {
     throw new Error(`onCancel se invocó ${world.cancelesRun} veces y el escenario dice ${cuantas}`);
   }
 });
-
-// ── Timeouts ───────────────────────────────────────────────────────────────
 
 When('corro {string} sin timeout', async (comando: string) => {
   world.errorProceso = '';
@@ -201,11 +164,6 @@ Then('el error dice que se llevaron también a sus hijos', () => {
   }
 });
 
-/**
- * El apagado ordenado: `exec()` registra el proceso y `killInFlightProcesses()`
- * lo mata. Sin esto un Ctrl-C deja procesos vivos y el autor ve el fallo de una
- * compilación que ya no controla.
- */
 When('arranco un proceso largo y lo mato en vuelo', async () => {
   const pendiente = exec('sleep', ['30'], { timeoutMs: 25_000 });
   await new Promise((r) => setTimeout(r, 100));
@@ -219,7 +177,7 @@ When('arranco un proceso largo y lo mato en vuelo', async () => {
 });
 
 Then('el proceso en vuelo terminó por el apagado', () => {
-  if (world.errorProceso !== '') return; // el kill lo mató: eso es el resultado
+  if (world.errorProceso !== '') return;
   const codigo = (world.resultadoProceso as { exitCode: number }).exitCode;
   if (codigo === 0) throw new Error('el proceso salió con 0: el apagado no lo alcanzó');
 });

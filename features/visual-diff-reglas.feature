@@ -5,14 +5,7 @@ Característica: las reglas de la regresión visual
   Quiero saber si eso movió algo en la página
   Para no tener que abrir los ochenta PDF a mano
 
-  # Tramo 18 de la migración. 10 de los 22 casos de `visual-diff.test.ts`.
-  # Los que necesitan pdftoppm y la CLI se quedan.
-
   Regla de negocio: Las páginas se ordenan por número, no por texto
-
-    # pdftoppm nombra las páginas `p-1.png`, `p-2.png`, `p-10.png`. Ordenarlas
-    # como texto pondría la 10 antes que la 2, y la comparación leería la
-    # página 2 contra la 10 y daría PASS con 88 páginas mal leídas.
 
     Esquema del escenario: El orden de las páginas es numérico
       Cuando ordeno las páginas "<archivos>"
@@ -25,26 +18,16 @@ Característica: las reglas de la regresión visual
 
   Regla de negocio: El diff de una página se llama con su número, y vive junto al snapshot
 
-    # El nombre lleva el número de página con tres dígitos porque el resumen
-    # los ordena en una columna y sin rellenar la alineación se rompe.
-
     Escenario: El nombre del diff lleva la página y su relleno
       Dado que la raíz del proyecto está vacía
       Entonces el nombre del diff de la página 5 es "index-page-005-diff.png"
       Y el nombre del diff de la página 128 es "index-page-128-diff.png"
 
-    # El diff va en el mismo directorio que el snapshot, no en uno común: con
-    # cuarenta PDF, un directorio común obliga a abrirlo para saber de quién
-    # es cada imagen.
     Escenario: El diff de un PDF de un subdirectorio va a su lado
       Dado que la raíz del proyecto está vacía
       Entonces el diff de "PROYECTO/visual/anexos/index.pdf" va junto a su snapshot
 
   Regla de negocio: El snapshot espeja `dist/files`
-
-    # Dos `index.pdf` de carpetas distintas no pueden compartir snapshot. La
-    # estructura se espeja; un PDF suelto fuera de `dist/files` no tiene
-    # estructura que espejar y cae al slug del nombre.
 
     Esquema del escenario: El nombre del snapshot
       Dado que la raíz del proyecto está vacía
@@ -68,10 +51,6 @@ Característica: las reglas de la regresión visual
 
   Regla de negocio: El desenfoque mide lo mismo en superficie física
 
-    # Un desenfoque en píxeles mide cosas distintas a 150 y a 600 dpi. La
-    # sigma se escala con el dpi para que un mismo cambio tipográfico se vea
-    # igual en los dos.
-
     Esquema del escenario: La sigma del desenfoque sigue al dpi
       Dado que la raíz del proyecto está vacía
       Entonces el desenfoque a 150 dpi es 1
@@ -80,15 +59,10 @@ Característica: las reglas de la regresión visual
 
   Regla de negocio: Los defaults son los que hacen comparables dos snapshots
 
-    # Si cambian entre builds, todo da FAIL y el autor cree que rompió el
-    # diseño. 300 dpi es lo que alcanza para ver una kerning mal puesta.
-
     Escenario: Los valores por defecto
       Dado que la raíz del proyecto está vacía
       Entonces los valores por defecto son dpi 300, umbral "0.005" y fuzz 15
 
-    # Un flag mal escrito se rechaza con el nombre del flag, no con un error
-    # genérico: el autor necesita saber cuál de los tres escribió mal.
     Esquema del escenario: Un flag inválido se rechaza nombrándolo
       Dado que la raíz del proyecto está vacía
       Cuando resuelvo las opciones visuales con "<flags>"
@@ -109,9 +83,6 @@ Característica: las reglas de la regresión visual
 
   Regla de negocio: El directorio de trabajo vive dentro del proyecto cuando lo hay
 
-    # En un temporal del sistema el build no puede limpiarlo, y entre dos
-    # builds se acumulan archivos que nadie sabe de qué son.
-
     Escenario: Sin proyecto, el directorio de trabajo va al temporal
       Dado que la raíz del proyecto está vacía
       Y que el proyecto no tiene configuración
@@ -127,14 +98,10 @@ Característica: las reglas de la regresión visual
 
   Regla de negocio: Sólo se comparan PDF, y sólo se borran los diffs de un snapshot
 
-    # `dist/files` también tiene markdown y HTML. Compararlos daría FAIL por
-    # un cambio de texto que no es del PDF.
-
     Escenario: Al listar sólo se quedan los PDF
       Dado que la raíz del proyecto está vacía
       Y que el directorio de salida tiene "b.pdf, sub/a.pdf, nota.txt"
       Cuando listo los PDF de la salida
-      # El orden es el del árbol, para que dos corridas comparen en el mismo orden.
       Entonces los PDF son "b.pdf, sub/a.pdf"
 
     Escenario: Un directorio que no existe no da PDF
@@ -142,8 +109,6 @@ Característica: las reglas de la regresión visual
       Cuando listo los PDF de la salida
       Entonces los PDF son ""
 
-    # Borrar los diffs de un snapshot no toca los del otro: si se llevaran
-    # todos, comparar un segundo PDF borraría la evidencia del primero.
     Escenario: Borrar los diffs de un snapshot no toca los demás
       Dado que la raíz del proyecto está vacía
       Y que el directorio de salida tiene "index-page-005-diff.png, index-page-012-diff.png, otro-page-001-diff.png, index.pdf"
@@ -162,24 +127,18 @@ Característica: las reglas de la regresión visual
       Dado que la raíz del proyecto está vacía
       Y que comparé 88 páginas con 85 sin cambios y 3 modificadas
       Cuando armo el informe visual
-      # El encabezado lleva los cuatro números con los que se comparó: sin
-      # ellos un FAIL no se puede reproducir.
       Entonces el informe dice "dist/files/index.pdf vs visual/index.pdf · 300 dpi · umbral 0.005 % · fuzz 15 %"
       Y el informe dice "páginas 88 · sin cambios 85 · modificadas 3"
       Y el informe dice "0.4213 %"
       Y el informe dice "page-003-diff.png"
       Y el informe dice "page-017-diff.png"
 
-    # Un número de páginas distinto no es un FAIL de contenido: es otra cosa,
-    # y decirlo evita que el autor busque un cambio de texto que no hay.
     Escenario: El informe avisa cuando las páginas no coinciden
       Dado que la raíz del proyecto está vacía
       Y que comparé contra una referencia con 2 páginas y generé 1
       Cuando armo el informe visual
       Entonces el informe dice "páginas distintas: referencia 2 · generado 1"
 
-    # El resumen es de varios PDF, así que las rutas se acortan: la línea se
-    # lee de un vistazo en una terminal estrecha.
     Escenario: El resumen acorta las rutas de los diffs
       Dado que la raíz del proyecto está vacía
       Y que comparé 12 páginas con 11 sin cambios y 1 modificadas
@@ -189,11 +148,6 @@ Característica: las reglas de la regresión visual
 
   Regla de negocio: El tamaño sale de la cabecera IHDR, y si no hay PNG no hay tamaño
 
-    # El alto y el ancho del PNG son los dos `uint32` que siguen al tipo de
-    # bloque en la cabecera IHDR. Se leen en big-endian porque así los escribe
-    # la especificación. Un buffer corto no es un PNG con tamaño cero: es un
-    # PNG que no se puede leer.
-
     Escenario: El tamaño se lee del IHDR
       Dado que la raíz del proyecto está vacía
       Y que tengo un PNG de 2480 por 3508
@@ -202,8 +156,6 @@ Característica: las reglas de la regresión visual
     Esquema del escenario: Un buffer que no es un PNG no tiene tamaño
       Dado que la raíz del proyecto está vacía
       Y que tengo algo que no es un PNG de <bytes> bytes
-      # Diez bytes no llegan ni a la cabecera; sesenta y cuatro son los que
-      # tendría un PNG real, pero con la firma cambiada.
       Entonces el PNG no tiene tamaño legible
 
       Ejemplos:

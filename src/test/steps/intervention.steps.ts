@@ -7,16 +7,6 @@ import { loadPreambleFilters } from '../../builder/preamble-loader.js';
 import { validateFrontmatterFields } from '../../builder/project-validator.js';
 import { escribirEnProyecto, world } from './cli-world.steps.ts';
 
-/**
- * #2580 (onda 2) — el tipo `intervention`.
- *
- * Una intervention es un recurso de imprenta: una regla con nombre y título,
- * más sus páginas en blanco. No es un documento con contenido, así que su
- * frontmatter es distinto: `pages` (entero positivo) y `lineLength` (decimal
- * entre 0 y 1), y ni título ni autor.
- */
-
-/** Valida un frontmatter y deja sólo los errores. */
 When('valido el frontmatter:', (fm: string) => {
   const errores = validateFrontmatterFields(JSON.parse(fm) as Record<string, unknown>);
   world.erroresFm = errores.filter((i) => i.severity === 'error');
@@ -62,18 +52,8 @@ When('cargo también los preámbulos de file', async () => {
   world.nombresPreambuloFile = filtros.map((f) => f.name);
 });
 
-/**
- * #2485 — una intervention es un recurso de imprenta: el PDF y el markdown
- * exportado la conservan, pero ni la página HTML ni el EPUB la llevan.
- *
- * No es un descuido de la plantilla: es la regla. La intervention es una regla
- * de imprenta con nombre y título más sus páginas en blanco, y eso no es un
- * capítulo que el lector pueda seguir.
- */
-
 type Entrada = Parameters<typeof collectionBaseContent>[0][number];
 
-/** Un documento y la intervention que lo acompaña, con sus hrefs. */
 function pareja(): Entrada[] {
   const documento: Entrada = {
     file: 'doc.md',
@@ -129,7 +109,6 @@ Then('el cuerpo no incluye {string}', (texto: string) => {
   }
 });
 
-/** El build entero, con su config y su colección reales. */
 Given('un proyecto con una colección que incluye una intervention', () => {
   escribirEnProyecto(
     'iteraciones.config.yaml',

@@ -5,19 +5,7 @@ Característica: El argv llega entero hasta el comando
   Quiero que lo que escribo después del binario llegue al comando correcto
   Para no tener que saber qué función llama por dentro
 
-  # 22 de los 172 casos de `cli-layer`: los 11 del wiring por `parseAsync`, los
-  # 5 de `runClean` y los 6 de `runInit`.
-  #
-  # El riesgo de este bloque es otro: los tests del dispatcher llaman
-  # `runBuild(dir, { full: true })` directo. Nadie prueba que `iteraciones build
-  # --full` llegue a `runBuild` con `{ full: true }`. Acá va por argv de verdad.
-
   Regla de negocio: init deja un proyecto listo para compilar
-
-    # Los tres archivos son el mínimo para que `build` ande. El `.gitignore` es
-    # la cuarta cosa que importa: sin él, cada build deja `dist/` y
-    # `.iteraciones/` sin trackear y el primer `git status` del usuario es un
-    # muro de archivos.
 
     Escenario: init crea los archivos de un proyecto
       Dado que la raíz del proyecto está vacía
@@ -36,10 +24,6 @@ Característica: El argv llega entero hasta el comando
       Y el archivo ".gitignore" contiene "build.sh"
       Y el archivo ".gitignore" contiene "visual/**/*-page-*-diff.png"
 
-      # `build.sh` se reescribe en cada build (#2481), así que ignorarlo tiene
-      # que ser decisión del usuario y no del repo. Los snapshots de `visual
-      # check` sí se versionan; los diffs no: son imágenes del fallo.
-
     Escenario: El config que genera init es mínimo y remite a la documentación
       Dado que la raíz del proyecto está vacía
       Cuando parseo el comando "init" sobre la raíz del proyecto
@@ -48,13 +32,6 @@ Característica: El argv llega entero hasta el comando
       Y el archivo "iteraciones.config.yaml" tiene como máximo 25 líneas
       Y el proyecto recién creado pasa validate
       Y la salida de error no lleva ningún error
-
-      # Un config generado que no pasa `validate` es un config que el propio CLI
-      # no acepta: el usuario lo copia tal cual y falla en el primer build.
-
-    # Los defaults viven en el código, no en el archivo. Un `blocks` escrito acá
-    # se volvería la configuración del proyecto para siempre y dejaría de
-    # actualizarse con el CLI.
 
     Escenario: El config de init deja los defaults en el código
       Dado que la raíz del proyecto está vacía
@@ -84,10 +61,6 @@ Característica: El argv llega entero hasta el comando
 
   Regla de negocio: init crea la raíz que no existe
 
-    # #2180: `init` sobre una ruta que no existe es exactamente su caso de uso,
-    # así que es el único comando que no puede fallar por eso. Y el proyecto
-    # creado tiene que compilar, no sólo existir.
-
     Escenario: init crea el directorio y el proyecto compila
       Dado que la raíz del proyecto no existe todavía
       Cuando parseo el comando "init" sobre la raíz del proyecto
@@ -99,10 +72,6 @@ Característica: El argv llega entero hasta el comando
       Y el directorio "dist/files" tiene al menos 1 archivo .html
 
   Regla de negocio: new con --title por argv
-
-    # El título no viaja en el path sino en una flag. Si el wiring no la pasa,
-    # `new` lo infiere del nombre del archivo y el documento sale con otro
-    # título — sin ningún error.
 
     Escenario: El título explícito por argv gana sobre el nombre del archivo
       Dado que la raíz del proyecto está vacía
@@ -123,10 +92,6 @@ Característica: El argv llega entero hasta el comando
         | carpeta        |
         | dist           |
         | .iteraciones   |
-
-    # #2183: el build con `--output out` deja la salida en `out/`, no en
-    # `dist/`. Si `clean` mirara sólo `dist/`, el directorio de siempre
-    # sobreviviría al clean y el usuario lo encontraría intacto después.
 
     Escenario: clean borra la salida que declara el estado del build
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -155,15 +120,10 @@ Característica: El argv llega entero hasta el comando
       Y el JSON declara la clave "ok" con el valor verdadero
       Y el JSON declara la lista "removed" vacía
 
-    # El `--json` del argv, no el de la función: el flag tiene que llegar.
-
     Escenario: clean por argv con --json
       Dado que la raíz del proyecto está vacía
       Cuando parseo el comando "clean --json" sobre la raíz del proyecto
       Entonces el JSON declara la clave "ok" con el valor verdadero
-
-    # Un directorio sin permisos no se puede borrar. El mensaje tiene que decir
-    # *qué* no se pudo eliminar, o el usuario busca un problema de disco.
 
     Escenario: clean con un directorio sin permisos
       Dado que la raíz del proyecto tiene un proyecto de prueba
@@ -205,10 +165,6 @@ Característica: El argv llega entero hasta el comando
       Cuando construyo el proyecto en limpio y con detalle
       Entonces el comando termina con el código de salida 0
       Y la salida dice "--full: se eliminaron la caché y la salida anterior"
-
-    # Sin `--full`, un build que falla después de escribir parte de la salida
-    # deja `dist/` con archivos viejos mezclados con los nuevos. Peor: deja
-    # archivos viejos y el usuario cree que son el resultado de este build.
 
     Escenario: Un build fallido en limpio no deja salida parcial
       Dado que la raíz del proyecto tiene un proyecto de prueba

@@ -7,13 +7,7 @@ Característica: la configuración del proyecto
   Para no tener que descubrir los valores de memoria ni ver un error por una
   clave que el esquema ya no tiene
 
-  # Tramo 5 de la migración. 32 de los 49 casos de `config-loader.test.ts`.
-
   Regla de negocio: Lo que el autor escribió se lee tal cual
-
-    # Catorce claves, un solo paso: `la configuración tiene "ruta" con valor`.
-    # Un paso por clave serían catorce pasos que hay que tocar cada vez que el
-    # esquema cambia, y el esquema aquí se lee entero en esta tabla.
 
     Esquema del escenario: Una clave del archivo llega a la configuración
       Dado que el archivo de configuración es:
@@ -45,10 +39,6 @@ Característica: la configuración del proyecto
 
   Regla de negocio: Una clave ausente no se materializa
 
-    # El loader no rellena con `undefined` ni con `null`: deja la clave fuera.
-    # Los consumidores resuelven el valor efectivo cuando lo necesitan, y así
-    # un default del paquete puede cambiar sin que el config quede desfasado.
-
     Escenario: Una lista vacía de filtros desactivados se lee como lista vacía
       Dado que el archivo de configuración es:
       """
@@ -73,10 +63,6 @@ Característica: la configuración del proyecto
       Y la configuración tiene "toc" con el valor "false"
 
   Regla de negocio: Un config que no existe se dice, no se rellena
-
-    # #2071. Sin archivo, el CLI no sabe qué formatos pidió el autor y compila
-    # los de fábrica sin avisar. El error dice las dos cosas que el autor
-    # necesita: qué correr y qué pasa con un archivo vacío.
 
     Escenario: Sin archivo de configuración el build se para
       Dado que el proyecto no tiene archivo de configuración
@@ -128,9 +114,6 @@ Característica: la configuración del proyecto
 
   Regla de negocio: El autor ve los errores de tipo en español y todos juntos
 
-    # Un error por ejecución es un viaje por build por cada tecla mal puesta.
-    # Y un mensaje en inglés del parser de YAML no le dice al autor qué escribir.
-
     Escenario: Un YAML con sintaxis rota se explica en español
       Dado que el archivo de configuración es:
       """
@@ -141,9 +124,6 @@ Característica: la configuración del proyecto
        language: es-MX
       """
       Cuando cargo la configuración del proyecto
-      # El mensaje es del parser, no del validador: todavía no sabe qué clave se
-      # todavía no sabe qué clave se rompió, así que explica la forma en vez de
-      # señalar la línea.
       Entonces la carga falla con "indentación inconsistente"
 
     Escenario: Todos los errores de tipo salen en una sola ejecución
@@ -158,18 +138,11 @@ Característica: la configuración del proyecto
           pageNumber: medio
       """
       Cuando cargo la configuración del proyecto
-      # Tres claves malas, un solo viaje: el regex es con `s` porque el
-      # mensaje las trae en este orden y en varias líneas.
       Entonces la carga falla con "language: se esperaba string, se recibió 123"
       Y la carga falla con "format.html.site.theme"
       Y la carga falla con "format.pdf.pageNumber"
 
   Regla de negocio: Una clave que el esquema ya no tiene es un error
-
-    # Sin este error, `mathptmx: true` se ignoraría en silencio y el autor
-    # creería que su Times New Roman está pasando. `build` y `validate` dan
-    # el mismo error por contrato: no puede ser que uno acepte lo que el otro
-    # rechaza.
 
     Escenario: Una clave de PDF que ya no existe es un error
       Dado que el archivo de configuración es:
@@ -205,8 +178,6 @@ Característica: la configuración del proyecto
             color: color-inventado
       """
       Cuando cargo la configuración del proyecto
-      # Un accent inventado que cae a lime produce un PDF con la paleta de otro
-      # proyecto. Mejor un error que diga "accent".
       Entonces la carga falla con "valor no válido"
 
     Escenario: Un bloque de HTML que no existe es un error accionable
@@ -229,8 +200,6 @@ Característica: la configuración del proyecto
             formatos: 4
       """
       Cuando cargo la configuración del proyecto
-      # El error dice qué escribir ahora. Un "se esperaba una lista" a secas
-      # deja al autor adivinando entre las dos sintaxis.
       Entonces la carga falla con "debe ser una lista de bloques"
 
     Escenario: El booleano antiguo `latex: true` es un error de tipo
@@ -240,15 +209,9 @@ Característica: la configuración del proyecto
         latex: true
       """
       Cuando cargo la configuración del proyecto
-      # Sin fallback. Si aceptáramos la forma antigua, un config viejo
-      # aceptaría el formato viejo y con él la maquetación vieja.
       Entonces la carga falla con "format.latex: se esperaba object, se recibió true"
 
   Regla de negocio: El conjunto de presencia separa lo escrito de lo puesto
-
-    # `doctor --info` resta los defaults del paquete para decirte qué
-    # configuraste tú. Si una clave escrita con el mismo valor que el default
-    # no estuviera en el conjunto, la sustracción te la quitaría.
 
     Escenario: Una clave escrita con el valor del default sí cuenta como escrita
       Dado que el archivo de configuración es:
@@ -283,8 +246,6 @@ Característica: la configuración del proyecto
           showDate: true
       """
       Cuando cargo la configuración con el conjunto de presencia
-      # El padre también cuenta: un consumidor que quiera mirar un subárbol necesita
-      # saber que el autorescrito `format` aunque no haya escrito `format.algo`.
       Entonces la clave "language" está en el conjunto de presencia
       Y la clave "format" está en el conjunto de presencia
       Y la clave "format.pdf" está en el conjunto de presencia

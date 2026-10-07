@@ -5,10 +5,6 @@ Característica: El filtro de rutas de imagen reescribe lo que el preproceso mov
   Quiero que el .tex y el HTML apunten a la copia
   Para que el PDF no se rompa al compilar en otra máquina
 
-  # #2460 — el mapa de rutas viaja por `ITERACIONES_PATHS_JSON`, nunca por argv:
-  # crece con el número de imágenes. El mapa tiene las TRES claves con las que el
-  # AST puede traer cada ruta (absoluta, relativa y `./relativa`).
-
   Escenario: Reescribe Image.src en el cuerpo y en la definición de referencia
     Dado un documento con imágenes en el cuerpo, el frontmatter y una referencia
     Y el mapa de rutas del preproceso

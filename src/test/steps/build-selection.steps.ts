@@ -5,21 +5,6 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import { runBuild } from '../../cli/dispatcher.js';
 import { escribirEnProyecto, world } from './cli-world.steps.ts';
 
-/**
- * #2453 — `iteraciones build [paths...]`.
- *
- * Un build parcial tiene que producir EXACTAMENTE lo mismo que un build completo
- * para esos documentos. No "casi lo mismo": byte a byte, porque un PDF que se
- * ve igual y pesa distinto es un PDF que la imprenta rechaza.
- *
- * ## Por qué byte a byte y no "contiene"
- *
- * La prueba fuerte es que el archivo salga idéntico, no que contenga el texto
- * esperado. Un `toContain` pasa con un PDF a medio generar; una comparación de
- * hashes no.
- */
-
-/** Hash de cada archivo de `dist`, por ruta relativa. */
 function mapaDeDist(raiz: string): Record<string, string> {
   const salida: Record<string, string> = {};
   const base = join(raiz, 'dist');
@@ -35,9 +20,7 @@ function mapaDeDist(raiz: string): Record<string, string> {
       if (statSync(completa).isFile()) {
         salida[archivo] = readFileSync(completa).toString('base64');
       }
-    } catch {
-      // El archivo cambió mientras se leía; se ignora como hace el build.
-    }
+    } catch {}
   }
   return salida;
 }
@@ -53,18 +36,11 @@ Given('que guardo la referencia del dist', () => {
   world.distReferencia = mapaDeDist(world.root);
 });
 
-/**
- * Borra `dist` y el estado para que el build siguiente rehaga todo. Sin esto
- * el segundo build usa la caché y el escenario no compara dos construcciones
- * sino una construcción y su copia.
- */
 Given('que borro el estado del build', () => {
   rmSync(join(world.root, '.iteraciones'), { recursive: true, force: true });
   rmSync(join(world.root, 'dist'), { recursive: true, force: true });
 });
 
-// #2453 — la selección va en `only`, que es la opción del orquestador que
-// lleva los paths que pidió el usuario.
 When('hago un build completo', async () => {
   await runBuild(world.root);
 });
@@ -93,12 +69,6 @@ Then('los documentos no seleccionados no cambian', () => {
   }
 });
 
-/**
- * El proyecto de la selección: una collection con dos miembros, una creadora y
- * un documento suelto. La collection es la que hace interesante la selección,
- * porque compilar `index.md` significa compilar también lo que tiene en
- * `files[]`, y compilar un miembro NO compila la collection.
- */
 const CONFIG_SELECCION = [
   'language: es-MX',
   'format:',
@@ -110,7 +80,6 @@ const CONFIG_SELECCION = [
   '    generate: true',
 ].join('\n');
 
-/** Las salidas de documento (html y markdown), sin assets. */
 function documentales(): string[] {
   const salida: string[] = [];
   const base = join(world.root, 'dist', 'files');
@@ -156,7 +125,6 @@ Given('un proyecto con una collection y sus miembros', () => {
   escribirEnProyecto('suelto.md', '---\ntitle: Suelto\ncreator: Bruno Díaz\n---\n\nSuelto.\n');
 });
 
-/** Una collection dentro de `files[]` de otra: no se puede construir (#2453). */
 Given('un proyecto con una collection dentro de files[] de otra', () => {
   mkdirSync(join(world.root, 'miembros'), { recursive: true });
   mkdirSync(join(world.root, 'sub'), { recursive: true });
@@ -185,7 +153,6 @@ Given('un proyecto con una collection dentro de files[] de otra', () => {
   escribirEnProyecto('sub/coleccion.md', '---\ntype: collection\nfiles:\n  - ../suelto.md\n---\n');
 });
 
-/** Todo build que puede fallar se mide por su `exitCode` y su stderr. */
 async function buildMidiendo(opciones: Parameters<typeof runBuild>[1]): Promise<{ codigo: number; stderr: string }> {
   const espia = spyOn(process.stderr, 'write');
   let stderr = '';
@@ -194,7 +161,6 @@ async function buildMidiendo(opciones: Parameters<typeof runBuild>[1]): Promise<
   try {
     await runBuild(world.root, opciones);
   } catch {
-    // El dispatcher reporta y fija el código de salida; no propaga.
   } finally {
     stderr = espia.mock.calls.map((c) => String(c[0])).join('');
     espia.mockRestore();
@@ -216,7 +182,6 @@ When('hago un build completo con {string} esperando error', async (opcion: strin
   world.stderrBuild = r.stderr;
 });
 
-/** Para el caso de "el error no deja `dist` a medias" hace falta un estado previo. */
 Given('que ya hice un build completo con éxito', async () => {
   const r = await buildMidiendo({});
   if (r.codigo !== 0) throw new Error(`el build de referencia falló: ${r.stderr}`);
@@ -246,7 +211,6 @@ Then('las salidas de documento son:', (esperadas: string) => {
   }
 });
 
-/** La lista congelada de `selected`, sólo en corridas con selección (#2455). */
 When('hago un build de los paths indicados en JSON', async () => {
   const espia = spyOn(process.stdout, 'write');
   let crudo = '';

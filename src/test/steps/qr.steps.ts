@@ -4,31 +4,6 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import { execPandoc } from '../../lib/pandoc-runner.js';
 import { world } from './cli-world.steps.ts';
 
-/**
- * #2580 (onda 2) — la URL del QR ya no pasa por el shell (#2457).
- *
- * ## La regresión: `&` partía la línea y el QR desaparecía
- *
- * Antes la URL se interpolaba en `io.popen('echo ' .. url …)`. Un `&` —que es lo
- * normal en cualquier URL con más de un parámetro— partía la línea de shell y el
- * QR se iba en silencio. Sin imagen, sin error, sin aviso: el LaTeXVYcompilaba y
- * el QR no salía.
- *
- * ## Y el `;` era inyección de comandos
- *
- * La URL venía del frontmatter, o sea de quien escribe el documento. Con
- * `[https://x.com/a;touch /tmp/pwned.txt]` el `;` cierra el comando y el
- * segundo se ejecuta. Por eso la URL va por stdin a `pandoc.pipe`, nunca por el
- * shell, y este escenario lo comprueba dejando un marcador que, si se ejecutara
- * algo, existiría.
- *
- * ## La caché es por URL, no por documento
- *
- * El nombre es `qr-<md5(url)>.jpg`: el mismo QR en dos documentos se genera una
- * vez. Y si ya está, no se regenera — si se regenerara, se perdería el
- * `sentinel` del escenario, que es justo lo que se comprueba.
- */
-
 const FILTER = join(import.meta.dir, '..', '..', 'lib', 'resources', 'filters', 'semantic', 'ast', '03-qr-url.lua');
 
 const procesados = (): string[] => {
@@ -39,7 +14,6 @@ const procesados = (): string[] => {
   }
 };
 
-/** Renderiza el markdown con el filtro de QR, como lo hace el build. */
 async function render(md: string): Promise<string> {
   return execPandoc({
     input: md,
@@ -54,8 +28,6 @@ Given('un QR cuya URL lleva &', () => {
 });
 
 Given('un QR cuya URL lleva un punto y coma', () => {
-  // La URL lleva un comando detrás del `;`: si llegara al shell, el marcador
-  // aparecería. Se construye aquí porque el texto del paso no admite `;`.
   world.marcadorPwned = join(world.root, 'pwned.txt');
   world.qrMarkdown = `[https://x.com/a;touch ${world.marcadorPwned}]{.qr width="15mm"}\n`;
 });
@@ -94,7 +66,6 @@ Then('el LaTeX apunta al JPG generado', () => {
   }
 });
 
-/** Si se regenerara, el sentinel se pisaría. */
 Then('el sentinel sigue intacto', () => {
   if (readFileSync(world.rutaJpgQr as string, 'utf8') !== 'SENTINEL') {
     throw new Error('el QR se regeneró: la caché por URL no está funcionando');

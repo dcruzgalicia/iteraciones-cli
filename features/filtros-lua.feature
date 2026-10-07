@@ -5,16 +5,6 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
   Quiero saber exactamente qué produce cada construcción
   Para poder confiar en que el markdown de entrada llega como escribo
 
-  # Todos los escenarios invocan **pandoc real**: no hay fixtures de salida ni
-  # espíos. Por eso el feature va detrás de `@requires-pandoc` y el informe de
-  # omitidos dice cuántos escenarios no corrieron en una máquina sin pandoc.
-  #
-  # Los datos de cada caso viven en `features/fixtures/lua-filters/<caso>.json`
-  # en vez de en una tabla `Examples`: el markdown de entrada tiene saltos de
-  # línea y las expectativas son cadenas de LaTeX con barras invertidas, y una
-  # celda de tabla con eso dentro es ilegible (#2545). El nombre del caso es lo
-  # único que va en la tabla, que es justo lo que se puede leer de un vistazo.
-
   Regla de negocio: Filtros Lua de LaTeX
     El markdown entra por el lector estándar de pandoc salvo que el caso pida `markdown+mark`.
 
@@ -56,7 +46,6 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | no-modifica-parrafos-de-menos-de-5-palabras |
         | texto-uppercase-makeuppercase-texto-latex |
 
-
   Regla de negocio: Filtros Lua de HTML
     Cada Div con clase se envuelve en su elemento; el `::` se convierte en un div de altura fija.
 
@@ -74,7 +63,6 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | envuelve-div-flushright-en-div |
         | envuelve-div-verse-en-div |
         | no-altera-parrafos-normales |
-
 
   Regla de negocio: El filtro internal/flags detecta el tipo del primer bloque
     El filtro decide si el documento "empieza con contenido": un Header o un
@@ -100,7 +88,6 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | un-blockquote-inicial-omite-el-vspace |
         | un-dictum-inicial-omite-el-vspace-y-no-aplica-noindent |
         | un-rawblock-chapter-cuenta-como-inicio-de-seccion-toc-y-sin- |
-
 
   Regla de negocio: latex/07-titlepages convierte los campos internos en páginas
     Los campos de frontmatter multilínea alimentan las páginas de título internas.

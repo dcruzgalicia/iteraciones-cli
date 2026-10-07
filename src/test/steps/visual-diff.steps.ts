@@ -21,22 +21,6 @@ import {
 } from '../../lib/visual-diff.js';
 import { escribirEnProyecto, world } from './cli-world.steps.ts';
 
-/**
- * #2580 (onda 2) — la regresión visual de PDFs.
- *
- * Comparar dos PDF píxel a píxel es la única forma de saber si un cambio de
- * una línea movió algo en la página. Estas reglas son las que la hacen
- * creíble: qué se compara, en qué orden, dónde vive el diff y cuándo NO hay
- * diferencia.
- *
- * ## El orden de las páginas es numérico, no alfabético
- *
- * pdftoppm nombra las páginas `p-1.png`, `p-2.png`, `p-10.png`. Ordenarlas
- * como texto pondría la 10 antes que la 2, y la comparación compararía la
- * página 2 contra la 10 y daría un PASS con 88 páginas mal leídas.
- */
-
-/** Un PNG con su cabecera IHDR, como el que escribe pdftoppm. */
 function pngDe(ancho: number, alto: number, bytes = 24): Uint8Array {
   const buffer = new Uint8Array(bytes);
   buffer.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -76,11 +60,6 @@ Then('el orden es {string}', (esperado: string) => {
   if (leido !== esperado) throw new Error(`el orden es ${JSON.stringify(leido)} y debería ser ${JSON.stringify(esperado)}`);
 });
 
-/**
- * El slug es lo que da nombre al snapshot y al diff. Un PDF suelto fuera de
- * `dist/files` no tiene estructura que espejar, así que cae al slug del
- * nombre.
- */
 Then('el slug de {string} es {string}', (ruta: string, esperado: string) => {
   const leido = visualSlug(expande(ruta));
   if (leido !== esperado) throw new Error(`el slug es ${JSON.stringify(leido)} y debería ser ${JSON.stringify(esperado)}`);
@@ -146,9 +125,7 @@ Given('que el proyecto tiene configuración', () => {
   writeFileSync(join(world.root, 'iteraciones.config.yaml'), 'language: es-MX\n', 'utf8');
 });
 
-Given('que el proyecto no tiene configuración', () => {
-  // No escribe nada: la ausencia es lo que se está probando.
-});
+Given('que el proyecto no tiene configuración', () => {});
 
 When('resuelvo el directorio de trabajo del snapshot {string}', async (slug: string) => {
   world.workspaces = await resolveVisualWorkspaces(world.root, slug);
@@ -166,10 +143,6 @@ Then('el caché del visual está en {string}', (esperado: string) => {
   if (leido !== expande(esperado)) throw new Error(`está en ${JSON.stringify(leido)} y debería estar en ${JSON.stringify(esperado)}`);
 });
 
-/**
- * Los defaults son los que hacen comparables dos snapshots: si cambian entre
- * builds, todo da FAIL y el autor cree que rompió el diseño.
- */
 Then('los valores por defecto son dpi {int}, umbral {string} y fuzz {int}', (dpi: number, umbral: string, fuzz: number) => {
   const o = resolveVisualOptions();
   if (o.dpi !== dpi || o.thresholdPercent !== Number(umbral) || o.fuzzPercent !== fuzz) {
@@ -207,7 +180,6 @@ Then('las opciones visuales fallan diciendo {string}', (motivo: string) => {
   }
 });
 
-/** El informe que el CLI imprime al final de una comparación con cambios. */
 Given('que comparé {int} páginas con {int} sin cambios y {int} modificadas', (comparadas: number, iguales: number, cambiadas: number) => {
   world.comparacion = {
     compared: comparadas,
@@ -272,12 +244,6 @@ Then('el resumen dice {string}', (texto: string) => {
   }
 });
 
-/**
- * La raíz del proyecto cambia en cada escenario, y los valores esperados de
- * las tablas la traen escrita. `<proyecto>` y `<temporal>` seexpanden aquí en
- * vez de en cada paso: una tabla con la ruta absoluta del temporal del
- * sistema no se lee.
- */
 function expande(ruta: string): string {
   return ruta
     .replace(/PROYECTO/g, world.root)
@@ -285,17 +251,6 @@ function expande(ruta: string): string {
     .replace(/<temporal>/g, tmpdir());
 }
 
-/**
- * #2479 — la superficie de la CLI de `visual`.
- *
- * ## Todo sale por el exit code, no por lanzar
- *
- * `runTestVisual` reporta y fija `process.exitCode`. Por eso estos pasos miden
- * el código y leen stdout/stderr: es lo que el script que envuelve al comando
- * ve, y lo único que puede comprobar sin leer el mensaje.
- */
-
-/** Corre `runTestVisual` capturando salida y exit code, sin dejar rastro. */
 async function correrVisual(pdfs: string[], opciones: TestVisualOptions): Promise<void> {
   const salida = spyOn(process.stdout, 'write');
   const error = spyOn(process.stderr, 'write');
@@ -323,7 +278,6 @@ Given('un PDF llamado {string} en la raíz', (nombre: string) => {
   escribirEnProyecto(nombre, 'contenido');
 });
 
-/** `dist/files` con la estructura de carpetas que espeja el snapshot. */
 Given('la salida tiene estos archivos:', (tabla: string) => {
   for (const linea of tabla.split('\n')) {
     const limpia = linea.trim();
@@ -331,7 +285,6 @@ Given('la salida tiene estos archivos:', (tabla: string) => {
   }
 });
 
-/** La lista de este paso va con `;;` porque los nombres llevan punto. */
 Given('el directorio de snapshots tiene {string}', (lista: string) => {
   for (const nombre of lista
     .split(';;')
@@ -341,7 +294,6 @@ Given('el directorio de snapshots tiene {string}', (lista: string) => {
   }
 });
 
-/** Sin rutas es el modo lote: barre `dist/files` entero. */
 When('creo el snapshot de {string} con {string}', async (pdfs: string, flags: string) => {
   await correrVisual(comoLista(pdfs), { ...opcionesVisuales(flags), update: true });
 });
@@ -350,7 +302,6 @@ When('comparo {string} con {string}', async (pdfs: string, flags: string) => {
   await correrVisual(comoLista(pdfs), opcionesVisuales(flags));
 });
 
-/** Los flags del escenario se declaran como texto: `dpi=0`. */
 function opcionesVisuales(flags: string): TestVisualOptions {
   const salida: Record<string, unknown> = {};
   for (const par of flags
@@ -389,7 +340,6 @@ Then('el archivo {string} NO existe en el proyecto', (relativa: string) => {
   if (existsSync(join(world.root, relativa))) throw new Error(`existe ${relativa} y no debía`);
 });
 
-/** Lo que queda DENTRO de `visual/`: es el directorio de las referencias. */
 Then('en las referencias quedan {string}', (esperados: string) => {
   const leidos = readdirSync(join(world.root, 'visual')).sort().join(', ');
   const queried = esperados.trim();

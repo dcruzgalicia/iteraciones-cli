@@ -6,18 +6,7 @@ Característica: el post-proceso del HTML y los formatos del argv
   colección arriba del todo
   Para no encontrar las referencias al final de un artículo de cuarenta páginas
 
-  # Tramo 24 de la migración. 16 de los 19 casos de `html-composer.test.ts`.
-
-  # El HTML va en docstring y no en tabla: son cadenas de varias líneas con
-  # comillas y llaves, y escaparlas a mano es el mismo problema que con el JSON
-  # del crop.
-
   Regla de negocio: El bloque de referencias sale del article con su cierre balanceado
-
-    # Los `div` de una entrada de bibliografía se anidan (`csl-left-margin`,
-    # `csl-right-inline`), así que el primer `</div>` no cierra el bloque. El
-    # extractor lleva la cuenta de profundidad: sin ella se llevaría medio
-    # artículo en la tarjeta.
 
     Escenario: El bloque sale entero con los divs anidados
       Dado que la raíz del proyecto está vacía
@@ -30,8 +19,6 @@ Característica: el post-proceso del HTML y los formatos del argv
       Y el post-proceso quita "refs-heading"
       Y el bloque de referencias se extrajo
 
-    # Sin cierre balanceado no se extrae nada y el HTML vuelve intacto: medio
-    # bloque en la tarjeta es peor que ninguno.
     Escenario: Un bloque sin cerrar no se extrae y el HTML vuelve intacto
       Dado que la raíz del proyecto está vacía
       Y que el HTML es:
@@ -42,8 +29,6 @@ Característica: el post-proceso del HTML y los formatos del argv
       Entonces el bloque de referencias no se extrajo
       Y el post-proceso no tocó el HTML
 
-    # #2080: HTML mal balanceado avisa. Sin el aviso, el autor ve una página a
-    # medias y no sabe si el fallo es suyo o del build.
     Escenario: El HTML mal balanceado avisa y devuelve la entrada intacta
       Dado que la raíz del proyecto está vacía
       Y que el HTML es:
@@ -55,8 +40,6 @@ Característica: el post-proceso del HTML y los formatos del argv
       Y el post-proceso no tocó el HTML
       Y el post-proceso avisa que "HTML mal balanceado"
 
-    # El marcador sin `div#refs` es un caso aparte: se quita el heading
-    # sintético y el marcador, pero no hay bloque que sacar.
     Escenario: El marcador sin referencias se quita igual
       Dado que la raíz del proyecto está vacía
       Y que el HTML es:
@@ -69,8 +52,6 @@ Característica: el post-proceso del HTML y los formatos del argv
       Y el post-proceso quita "refs-heading"
       Y el post-proceso deja "<article></article>"
 
-    # El heading propio del autor tiene `id="referencias"`, no `refs-heading`.
-    # Tocarlo sería quitarle su propio índice.
     Escenario: Un heading propio del documento nunca se toca
       Dado que la raíz del proyecto está vacía
       Y que el HTML es:
@@ -114,10 +95,6 @@ Característica: el post-proceso del HTML y los formatos del argv
 
   Regla de negocio: El argv lleva un valor corto por formato, nunca HTML
 
-    # #2445. Un `<` en un `--variable` de pandoc rompe el argv: el valor se
-    # corta en el primer espacio y el formato sale con el href a medias. El
-    # markup de la tarjeta vive en la plantilla; el argv sólo lleva el href.
-
     Escenario: Sin formatos no hay flag
       Dado que la raíz del proyecto está vacía
       Y que los formatos son "[]"
@@ -140,10 +117,6 @@ Característica: el post-proceso del HTML y los formatos del argv
       Y ningún argumento de formatos lleva HTML ni saltos
 
   Regla de negocio: El body propio de la colección sube a la banda
-
-    # #2487. Los datos de la colección ya no viajan en el cuerpo fusionado: la
-    # banda de metadatos los imprime con los de pandoc. El intro sube con su
-    # div anidado entero, y el marco del texto lo pone el post-proceso.
 
     Escenario: El intro sube entero y antes del main
       Dado que la raíz del proyecto está vacía
@@ -168,7 +141,6 @@ Característica: el post-proceso del HTML y los formatos del argv
       Cuando subo el body propio a la banda
       Entonces el post-proceso no tocó el HTML
 
-    # Un intro vacío no puede dejar un div: el autor vería un hueco en la banda.
     Escenario: Un intro vacío no deja div ni hueco
       Dado que la raíz del proyecto está vacía
       Y que el HTML es:
@@ -179,8 +151,6 @@ Característica: el post-proceso del HTML y los formatos del argv
       Entonces el HTML no dice "prose"
       Y el post-proceso deja "<body><div class=\"banda\"></div><main></main>"
 
-    # Sin el marcador de la banda el intro se saca igual, y avisa: el autor
-    # puso el intro fuera de `format.html.blocks` y no lo sabe.
     Escenario: Sin el marcador de la banda el intro se saca y avisa
       Dado que la raíz del proyecto está vacía
       Y que el HTML es:

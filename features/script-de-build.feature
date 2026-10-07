@@ -4,12 +4,6 @@ Característica: La clave script produce un build.sh portable y numerado de form
   Quiero que el build escriba un .sh con rutas relativas al proyecto y pasos numerados
   Para poder reejecutarlo sin que dependa de rutas absolutas de esta máquina
 
-  # #2438 — la clave `script: true` hace que cada build escriba `build.sh` en la
-  # raíz. #2448 movió `format.script` a la raíz. #2445/#2456 admiten `mkdir` y
-  # `mv` y prohíben `cp`/`rm`/`ln`/`rmdir` y `&&`. #2474 renumera `slot-N` y
-  # `cache-N` con la posición del job, porque dos corridas idénticas grababan
-  # scripts distintos.
-
   Regla de negocio: El .sh sólo usa las primitivas que puede ( #2445, #2456)
     Escenario: Admite mkdir y mv, y sigue marcando cp, rm, ln, rmdir y &&
       Dado un script que sólo usa mkdir y mv
@@ -34,17 +28,6 @@ Característica: La clave script produce un build.sh portable y numerado de form
       Cuando leo la configuración del proyecto
       Entonces la lectura falla diciendo que hay que renombrar la clave
 
-  # ── E2E: el .sh tiene que poder rehacer dist sin el CLI ─────────────────────
-  #
-  # Los cinco escenarios comparten la misma forma: compilar, copiar dist a un
-  # lado, BORRAR algo (dist entero, o las entradas materializadas de las
-  # colecciones) para que no quede nada que no sepa rehacer el .sh, y reejecutar
-  # `bash build.sh`.
-  #
-  # Las afirmaciones sobre el .sh van en TABLAS, no en un step por aserción: el
-  # catálogo de #2544 rechaza el step-por-assert, y un .sh tiene decenas de
-  # detalles por escenario. Con la tabla el escenario se lee entero de un vistazo,
-  # que es el criterio de aceptación del issue para estos dos archivos.
   @requires-pandoc
   Regla de negocio: El .sh declara una sección por fase y usa subcomandos donde hay decisiones
     Escenario: El build.sh se escribe, es ejecutable y sólo contiene comandos

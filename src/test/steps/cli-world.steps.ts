@@ -7,99 +7,50 @@ import ignore from 'ignore';
 import type { ProgressTracker } from '../../cli/progress.js';
 import { initTestProject } from '../helpers.js';
 
-/**
- * #2546 (onda 2) — el mundo compartido de los features del CLI.
- *
- * `parser`, `--project-root` y `new` hacen todos lo mismo: correr algo que
- * escribe en la terminal y mirar qué salió. Por eso el mundo y el `Then` están
- * aquí y no en cada step file — el mismo motivo que dejó `lua-world.ts` en la
- * onda 1: si cada archivo declarara su propio `world`, el `Then` quedaría
- * definido dos veces y cucumber reportaría `ambiguous`.
- *
- * ## Por qué `capture()` espía los dos streams
- *
- * Los errores de uso de commander van a **stderr**, pero `--help` también sale
- * por `CommanderError` y escribe en **stdout**, porque es ayuda y no un error.
- * Un helper que sólo espiara uno de los dos se rompería al halfway de la
- * migración, y el fallo se presentaría como "el CLI no imprimió nada".
- *
- * ## El código de salida tiene dos fuentes y este archivo las une
- *
- * - camino 1: un error de uso lanza `CommanderError` con su `exitCode`;
- * - camino 2: la validación de `--output` no lanza nada — corre en un hook del
- *   programa, escribe el mensaje y pone `process.exitCode`.
- *
- * Por eso `capture()` mira `process.exitCode` después del `await`, y el `When`
- * que sí recibe la excepción la sobreescribe. El `Then` lee un solo lugar y no
- * necesita saber por dónde pasó la salida.
- */
-
-/**
- * El default de cucumber son 5 s por paso. Los pasos de este bloque compilan un
- * PDF de verdad cuando el proyecto pide formato PDF: LaTeX se lleva 2-4 s en una
- * máquina descargada, y el merge-gate corre `bun test`, `gherkin` y `build +
- * visual check` EN PARALELO, así que con 5 s los escenarios de humo de PDF
- * expiraban de forma intermitente. El original ya lo sabía: los `it()` de humo
- * llevaban `{ timeout: 120_000 }`.
- *
- * Una línea y no seis: los pasos que compilan están repartidos en tres
- * archivos, y subir el default no le quita poder de detección — sólo tarda más
- * en reportar un paso colgado.
- */
 setDefaultTimeout(120_000);
 
-/**
- * El mundo entero del escenario, en un solo sitio.
- *
- * Es una fábrica y no un `const` suelto porque el `After` lo restaura entero con
- * `Object.assign`, y cada llamada devuelve los `Set`/`Map` nuevos: compartir los
- * del literal dejaría dentro los cambios del escenario anterior.
- *
- * La lista vivía una vez aquí y el hook la repetía a mano, que es como se le
- * colaron 29 campos. Añadir un campo es añadirlo en un sitio.
- */
 function nuevoMundo() {
   return {
     stdout: '',
     stderr: '',
     exitCode: 0,
-    /** Raíz temporal del escenario. La vacía cada `Given` de proyecto. */
+
     root: '',
-    /** Códigos de salida de una corrida que lanza los dos comandos. */
+
     salidas: { build: 0, validate: 0 } as { build: number; validate: number },
-    /** Lo que dejó el último `Then` que filtró una lista, para el `Then` que viene después. */
+
     ultimoAviso: {} as Record<string, unknown>,
-    /** El `.tex` que compuso el último paso del preámbulo. */
+
     latex: '',
-    /** La ruta de la bibliografía con nombre awkward del escenario activo. */
+
     bibliografia: '',
-    /** El idioma que eligió el último `Given`. */
+
     idioma: '',
-    /** La disabled list del escenario activo. `undefined` es "sin lista". */
+
     desactivados: undefined as string[] | undefined,
-    /** El directorio del proyecto cuando un filtro se reemplaza desde el `.tex` propio. */
+
     cwd: '',
-    /** La configuración que cargó el loader, o `null` si la carga falló. */
+
     config: null as unknown,
-    /** El resultado de `loadSiteConfigIfPresent`: `null` si no hay archivo. */
+
     configOpcional: undefined as unknown,
     configs: {} as Record<string, unknown>,
-    /** El mensaje del `ConfigError` que tiró la carga, o cadena vacía. */
+
     errorConfig: '',
-    /** Las claves que el autor ESCRIBIÓ, no las que el paquete puso por defecto. */
+
     presentes: new Set<string>() as ReadonlySet<string>,
-    /** El frontmatter del documento del escenario de descubrimiento. */
+
     titulo: null as string | null,
     creadores: [] as string[],
-    /** El `creator` tal como lo escribió el autor: string, lista o nada. */
+
     autorDeclarado: undefined as unknown,
-    /** La ruta que se usa como base cuando el documento no tiene título. */
+
     fallback: undefined as string | undefined,
-    /** Cuántos autores caben en el nombre cuando el autor lo sube. */
+
     maxCreadores: undefined as number | undefined,
     rutaArchivo: '',
     nombrePrevio: undefined as string | undefined,
-    /** El nombre que calculated el último paso, sea de salida o de HTML. */
+
     nombre: undefined as string | undefined,
     listaAutores: [] as string[],
     texto: '',
@@ -251,9 +202,9 @@ function nuevoMundo() {
 
     indice: new Map<string, unknown>() as Map<string, unknown>,
     reglasGitignore: ignore() as ReturnType<typeof import('ignore')>,
-    /** Las rutas que la paridad consulta a los dos motores. */
+
     rutasGitignore: [] as string[],
-    /** El `.gitignore` tal como lo escribió el autor, antes de parsearlo. */
+
     reglasTexto: '',
     rutasDescubiertas: [] as string[],
     errorConstruccion: '',
@@ -306,7 +257,7 @@ function nuevoMundo() {
     formatosPrevios: [] as string[],
     invalidaciones: {} as Record<string, boolean>,
     docsCambiados: new Set<string>() as Set<string>,
-    /** Los formatos que este build pide y el anterior no: se acumulan, no se pisan. */
+
     formatoNuevo: [] as string[],
     trabajo: undefined as unknown,
     metadata: undefined as unknown,
@@ -331,7 +282,7 @@ function nuevoMundo() {
     rutasIndex: [] as string[],
     parseo: {} as { value?: unknown; error?: string },
     documentos: [] as { relativePath: string; filePath: string; frontmatter: { title?: string; creator?: string[]; date?: string } }[],
-    /** Los dos extremos de una comparación de orden, uno por docstring. */
+
     antesDe: '',
     desdeLinea: -1,
   };
@@ -339,29 +290,17 @@ function nuevoMundo() {
 
 export type World = ReturnType<typeof nuevoMundo>;
 
-/**
- * El mundo del escenario activo. El `After` lo devuelve al estado inicial; por
- * eso los 61 archivos de steps importan ESTE objeto y no una copia: si cada uno
- * guardara el suyo, el `Then` compartido quedaría ambiguous.
- */
 export const world: World = nuevoMundo();
 
-/**
- * Los pasos de proyecto arman su propio temporal con `mkdtemp`: los de
- * contenido de archivo son SÍNCRONOS (ver la nota de cucumber-js en el doc de
- * `capture`), y un `mkdtemp` asíncrono los volvería `async`.
- */
 export function tempRoot(prefijo: string): string {
   return mkdtempSync(join(tmpdir(), prefijo));
 }
 
-/** La raíz del escenario, creándola si el `Given` anterior no la puso. */
 export function raiz(): string {
   if (!world.root) world.root = tempRoot('iteraciones-cli-');
   return world.root;
 }
 
-/** El `JSON.parse` de `stdout`, con el error apuntando al texto que falló. */
 export function jsonSalida(): Record<string, unknown> {
   const crudo = world.stdout.trim();
   try {
@@ -371,10 +310,6 @@ export function jsonSalida(): Record<string, unknown> {
   }
 }
 
-/**
- * Corre `fn` con los dos streams espiados y deja el resultado en el mundo.
- * No captura excepciones: quien llama decide qué hacer con ellas.
- */
 export async function capture(fn: () => Promise<void>): Promise<void> {
   const stdoutSpy = spyOn(process.stdout, 'write').mockImplementation(() => true);
   const stderrSpy = spyOn(process.stderr, 'write').mockImplementation(() => true);
@@ -393,13 +328,8 @@ export async function capture(fn: () => Promise<void>): Promise<void> {
 }
 
 After(() => {
-  // Los steps que crean la raíz no se acordan de limpiar nada. El paso que
-  // deja un directorio sin permisos lo devuelve antes de terminar.
   if (world.root) rmSync(world.root, { recursive: true, force: true });
-  // El mundo entero, de una vez. El hook anterior listaba los ~250 campos a
-  // mano: se le colaban 29 (el escenario siguiente heredaba `xmp`,
-  // `slugBorrado`, `estadoAntes`…) y repetía 26 líneas. `nuevoMundo()` es la
-  // única copia de la lista.
+
   Object.assign(world, nuevoMundo());
 });
 
@@ -407,17 +337,11 @@ Given('que la raíz del proyecto está vacía', () => {
   world.root = tempRoot('iteraciones-cli-');
 });
 
-/** Escribe un archivo bajo la raíz del proyecto, creando los directorios. */
 export function escribirEnProyecto(relativa: string, contenido: string): void {
   mkdirSync(dirname(join(world.root, relativa)), { recursive: true });
   writeFileSync(join(world.root, relativa), contenido, 'utf8');
 }
 
-/**
- * El proyecto de referencia: una config mínima de HTML y un documento con
- * frontmatter. Lo usan `validate`, `clean` y `init` por igual, así que el
- * `Given` es compartido — y es el helper de `test/helpers.ts`, no una copia.
- */
 Given('que la raíz del proyecto tiene un proyecto de prueba', () => {
   world.root = tempRoot('iteraciones-cli-');
   initTestProject(world.root);
@@ -444,8 +368,6 @@ Then('el error no dice {string}', (ruido: string) => {
 });
 
 Then('la salida de error no lleva ningún aviso', () => {
-  // Un `⚠` acá sería un aviso que el CLI se está dando a sí mismo sobre un
-  // nombre de archivo que es perfectamente válido.
   if (world.stderr.includes('⚠')) {
     throw new Error(`la salida lleva un aviso que no debería: ${JSON.stringify(world.stderr)}`);
   }
@@ -458,31 +380,14 @@ Then('la salida dice {string}', (esperado: string) => {
 });
 
 Then('el error menciona {string} una sola vez', (texto: string) => {
-  // El nombre del archivo repetido hace que un error parezca dos distintos, y
-  // el usuario va a buscarlos por separado. Cuenta sobre stderr, que es donde
-  // viven los errores del CLI.
   const veces = world.stderr.split(texto).length - 1;
   if (veces !== 1) {
     throw new Error(`esperaba ${JSON.stringify(texto)} una vez en stderr y apareció ${veces}. stderr: ${JSON.stringify(world.stderr)}`);
   }
 });
 
-/**
- * Sin los códigos ANSI.
- *
- * El logger colorea `✖` y `[build]` por separado, así que en un terminal el
- * texto plano `"✖ [build] --output"` NO aparece: lo que sale es
- * `\x1b[31m✖\x1b[0m \x1b[2m[build]\x1b[0m--output`. Un `includes` sobre la cadena
- * con color falla en terminal y pasa por tubería, que es la forma más difícil de
- * depurar que existe: el test es verde en CI y rojo en la máquina del autor.
- *
- * Por eso las aserciones comparan el TEXTO, nunca la decoración del terminal.
- */
 const ESC = String.fromCharCode(27);
 
-/** La regex se construye a partir del código de carácter: biome rechaza un
- * control character en el literal, y escribirlo crudo además lo vuelve
- * invisible en el diff. */
 const ANSI = new RegExp(`${ESC}\\[[0-9;]*m`, 'g');
 
 export function sinColor(texto: string): string {

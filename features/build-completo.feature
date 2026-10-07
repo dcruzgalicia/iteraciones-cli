@@ -9,16 +9,6 @@ Característica: la tubería entera produce una salida por formato
   Quiero que un solo build recorra todos los pasos y deje cada salida
   Para no tener que acordarme de qué herramientas se ejecutan ni en qué orden
 
-  # El `.sh` prueba que el build es **reproducible**; este feature prueba que lo
-  # que se reproduce es lo **correcto**. No es lo mismo: un replay fiel de un
-  # pandoc mal armado también sale idéntico, y el dist estaría igual de roto.
-  #
-  # Por eso aquí no se mira el script: se mira lo que el build deja en `dist`.
-  # El proyecto es el de `script-de-build` — frontmatter con autora, una imagen
-  # y una collection, con los cinco formatos activos. Las salidas se nombran
-  # por el título del documento más su autora (`manuscrito-por-ana-ruiz.tex`),
-  # no por el nombre del archivo.
-
   Regla de negocio: Cada formato deja su salida en dist
 
     Esquema del escenario: La salida del formato está en dist
@@ -79,9 +69,6 @@ Característica: la tubería entera produce una salida por formato
 
   Regla de negocio: Cada opción del PDF cambia sólo lo que le corresponde
 
-    # Una opción, una fila. El resto de la tubería no se mueve: por eso el
-    # `generate` de los otros formatos sigue produciendo sus salidas y lo
-    # único que aparece o desaparece es la portada.
     Esquema del escenario: La portada depende de coverImage
       Dado un proyecto con todos los formatos y coverImage: <valor>
       Cuando compilo el proyecto desde cero
@@ -95,10 +82,6 @@ Característica: la tubería entera produce una salida por formato
 
   Regla de negocio: La tubería entera se puede repetir a mano
 
-    # Ésta es la tesis del proyecto: los mismos comandos, en el mismo orden,
-    # sobre un árbol limpio. Si el `.sh` dejara un `.aux` o un intermedio que el
-    # replay no sabe rehacer, el dist saldría incompleto aunque las comparaciones
-    # dieran igual.
     Escenario: bash build.sh reconstruye el mismo dist desde cero
       Dado un proyecto con todos los formatos, una colección y una creadora
       Cuando compilo el proyecto desde cero

@@ -5,10 +5,6 @@ Característica: El filtro semántico convierte los separadores en bloques con s
   Quiero que el build los convierta en un bloque con nombre
   Para que la composición sepa dónde va el espacio vertical
 
-  # Estos escenarios comparan el AST COMPLETO de pandoc, no su salida. Es el
-  # único punto de la suite donde se inspecciona la estructura, y por eso
-  # merecen steps con nombre en vez de una tabla de `toContain`.
-
   Regla de negocio: Los separadores sueltos producen Div.spacer
     El esperado completo vive en `features/fixtures/lua-filters-ast/<caso>.json`.
 

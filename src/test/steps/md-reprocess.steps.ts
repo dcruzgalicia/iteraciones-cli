@@ -4,15 +4,6 @@ import { join } from 'node:path';
 import { After, Before, Given, Then, When } from '@cucumber/cucumber';
 import { runBuild } from '../../cli/dispatcher.js';
 
-/**
- * #2545 (onda 1) — el markdown exportado a dist debe ser re-procesable.
- *
- * El build es el subject, no una función suelta: se llama a `runBuild` sobre un
- * directorio real y se comparan las dos pasadas byte a byte. Es el escenario que
- * Justifica que exista el feature — leer "compilo dos veces y comparo" dice más
- * que una cadena de asserts sobre `exported`.
- */
-
 const CONFIG = [
   'language: es-MX',
   'format:',
@@ -40,8 +31,6 @@ const FUENTE = [
   '',
 ].join('\n');
 
-// `type: creator` lleva links: se prependen inline en el body exportado, con
-// guard para no duplicarlos al re-procesar.
 const CREATIVA = [
   '---',
   'title: Creativa',
@@ -86,11 +75,6 @@ Given('una creativa con un enlace en su frontmatter', async () => {
   await Bun.write(join(world.dir, 'creativa.md'), `${CREATIVA}\n`);
 });
 
-/**
- * Una collection con `format.markdown.merge` en el valor que le pase el
- * escenario, más el miembro que lista en `files[]`: sin el archivo del miembro
- * en disco el build no resuelve la collection y no hay nada que exportar.
- */
 Given('una colección con merge {word}', async (merge: string) => {
   const conMerge = [...CONFIG.split('\n'), `    merge: ${merge}`].join('\n');
   await Bun.write(join(world.dir, 'iteraciones.config.yaml'), `${conMerge}\n`);
@@ -118,7 +102,6 @@ Then('el markdown exportado lleva el frontmatter completo', async () => {
   }
 });
 
-/** Sin `merge` la salida vuelve a ser fuente: conserva su `type` y sus `files[]`. */
 Then('el markdown de la colección conserva type y files', async () => {
   const exported = await readFile(join(await distFiles(world.dir), 'libro.md'), 'utf8');
   for (const esperado of ['type: collection', '- ensayo.md']) {
@@ -126,12 +109,6 @@ Then('el markdown de la colección conserva type y files', async () => {
   }
 });
 
-/**
- * Con `merge` el body ya viene fusionado, así que la salida **deja** de ser
- * reprocesable: `type` pasa a `file` y `files[]` desaparece porque sus miembros
- * ya están dentro. Es la única palanca del markdown que pierde información, y
- * por eso tiene que verse explícita en el `.md` de salida.
- */
 Then('el markdown de la colección ya viene fusionado', async () => {
   const exported = await readFile(join(await distFiles(world.dir), 'libro.md'), 'utf8');
   if (exported.includes('type: collection')) throw new Error('con merge el .md no debería conservar type: collection');
@@ -141,7 +118,7 @@ Then('el markdown de la colección ya viene fusionado', async () => {
 
 Then('el markdown exportado conserva el heading sin desplazar', async () => {
   const exported = await readFile(join(await distFiles(world.dir), 'ensayo.md'), 'utf8');
-  // El shift +4 de pandoc destruía los headings en cada ciclo (#2436).
+
   if (!exported.includes('\n# Capítulo')) throw new Error('el heading no conservó su nivel');
   if (exported.includes('#####')) throw new Error('el heading llegó desplazado por el shift de pandoc');
 });
@@ -149,7 +126,7 @@ Then('el markdown exportado conserva el heading sin desplazar', async () => {
 Then('la creativa lleva su enlace en el frontmatter y una vez en el cuerpo', async () => {
   const creative = await readFile(join(await distFiles(world.dir), 'creativa.md'), 'utf8');
   if (!creative.includes('type: creator')) throw new Error('falta type: creator');
-  // frontmatter + cuerpo = 2 apariciones. Una tercera sería el bug de duplicar.
+
   const count = creative.split('https://ejemplo.com').length - 1;
   if (count !== 2) throw new Error(`esperaba 2 apariciones del enlace (frontmatter + cuerpo) y hubo ${count}`);
 });

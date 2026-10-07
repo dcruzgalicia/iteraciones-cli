@@ -4,32 +4,6 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import { convertToMarkdown } from '../../builder/export.js';
 import { world } from './cli-world.steps.ts';
 
-/**
- * #2580 (onda 2) — el markdown exportado (#2436).
- *
- * ## El export tiene que ser re-procesable
- *
- * El markdown que sale de `dist/files` es un documento que el pipeline puede
- * volver a procesar. Si el frontmatter no sobrevive tal cual, la segunda pasada
- * produce algo distinto y el archivo cambia en cada build sin que nadie lo haya
- * tocado.
- *
- * ## La fecha va en crudo, no humanizada
- *
- * El frontmatter de origen trae `date: 2026-08-08`. El export lo escribe igual:
- * humanizarlo aquí rompía la idempotencia del re-proceso, porque al releer
- * "8 de agosto de 2026" el build ya no reconocía la fecha ISO.
- *
- * ## Ni `documentclass`, ni rutas absolutas, ni bib/csl
- *
- * El `.md` exportado no es LaTeX: no lleva `\documentclass`. No lleva rutas
- * absolutas porque el archivo va a otra máquina. Y no lleva `bibliography:` ni
- * `csl:` porque al re-procesarlo esos valores vienen de la configuración del
- * sitio, no del documento: meterlos aquí los congelaría con la ruta del proyecto
- * original.
- */
-
-/** Markdown de origen con frontmatter. */
 const BODY = '---\ntitle: "Mi título"\ncreator: [Autor Uno, Autor Dos]\ndate: 2026-08-08\n---\n\nHola.\n';
 
 const META = {
@@ -124,7 +98,6 @@ Then('el markdown no lleva la ruta del proyecto', () => {
   }
 });
 
-/** La idempotencia del re-proceso: la segunda pasada da el mismo archivo. */
 Then('el markdown es byte-idéntico a su fuente', () => {
   if (world.exportLeido !== world.exportOriginal) {
     throw new Error('re-procesar el export cambió el archivo: el build no sería idempotente');

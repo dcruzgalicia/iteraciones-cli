@@ -5,11 +5,6 @@ Característica: El markdown exportado a dist se puede re-procesar
   Quiero que dist se pueda reprocesar sin perder nada
   Para que un ciclo de build no degrade el documento en cada pasada
 
-  # #2436 — el markdown exportado a dist debe llevar frontmatter completo
-  # (title, subtitle, creator, date, slug, language) para que el build lo
-  # reconstruya igual, y su body sin transformación de pandoc. Este feature
-  # usa pandoc de verdad.
-
   Escenario: Re-procesar dist produce exactamente la misma salida (#2436)
     Dado un proyecto con salida en HTML y Markdown
     Y un documento "ensayo" con título, subtítulo, autora, fecha y slug
@@ -22,12 +17,6 @@ Característica: El markdown exportado a dist se puede re-procesar
     Entonces todas las salidas son idénticas a la primera pasada
 
   Regla de negocio: `merge` es la única palanca que pierde información
-
-    # Sin `merge`, el `.md` de una collection vuelve a ser fuente: conserva su
-    # `type` y su `files[]`, y por eso se puede reprocesar. Con `merge`, el body
-    # ya viene fusionado, `type` pasa a `file` y `files[]` desaparece — la salida
-    # deja de ser re-procesable a propósito (#2437). Que el cambio sea visible en
-    # el archivo es lo que separa «fusionar» de «borrar la estructura».
 
     Esquema del escenario: Merge decide si la salida conserva su estructura
       Dado un proyecto con salida en HTML y Markdown
