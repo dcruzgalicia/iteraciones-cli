@@ -2,7 +2,7 @@ import { basename, dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { logWarning } from '../lib/logger.js';
 import { isDir } from '../lib/paths.js';
-import { readLeadingComments } from './preamble-loader.js';
+import { DESCRIPCIONES_LUA } from './filter-descriptions.js';
 
 const LUA_FILTERS_ROOT = join(import.meta.dir, '../lib/resources/filters');
 
@@ -133,8 +133,7 @@ export async function getBuiltinLuaFilterInfos(): Promise<LuaFilterInfo[]> {
     if (rel.startsWith('internal/') || rel.includes('/shared/')) continue;
     const group = dirname(rel);
     const full = `${group}/${basename(rel, '.lua')}`;
-    const content = await Bun.file(join(LUA_FILTERS_ROOT, rel)).text();
-    infos.push({ name: full, description: readLeadingComments(content, '--') });
+    infos.push({ name: full, description: DESCRIPCIONES_LUA[full] ?? '' });
   }
   return infos.sort((a, b) => a.name.localeCompare(b.name));
 }
