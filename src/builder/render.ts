@@ -6,7 +6,7 @@ import { resolveScriptStdout } from '../lib/script-recorder.js';
 import { type LuaFilterGroup, loadFilterGroups } from './filter-resolver.js';
 import { buildFormatsArgs, buildFormatsFlag, type HtmlPageVars } from './html-composer.js';
 import { postProcessHtml } from './html-postprocess.js';
-import { citationCompileArgs, languageArg, metadataValue, titleArg } from './pandoc-metadata.js';
+import { citationCompileArgs, metadataArgs } from './pandoc-metadata.js';
 import type { BuildDocument } from './types.js';
 
 interface HtmlPageOptions {
@@ -30,17 +30,14 @@ interface HtmlPageOptions {
 }
 
 function metadataBandArgs(vars: HtmlPageVars): string[] {
-  const args: string[] = [];
-  const meta = (key: string, value: string | undefined): void => {
-    if (value) args.push(`--metadata=${key}:${metadataValue(value)}`);
-  };
-  meta('titlehead', vars.titlehead);
-  meta('subject', vars.subject);
-  meta('publishers', vars.publishers);
-  meta('collection-creator-prefix', vars.collectionCreatorPrefix);
-
-  for (const nombre of vars.authors ?? []) args.push(`--metadata=author-names:${metadataValue(nombre)}`);
-  for (const nombre of vars.collectionCreator ?? []) args.push(`--metadata=collection-creator-names:${metadataValue(nombre)}`);
+  const args = metadataArgs([
+    { key: 'titlehead', value: vars.titlehead },
+    { key: 'subject', value: vars.subject },
+    { key: 'publishers', value: vars.publishers },
+    { key: 'collection-creator-prefix', value: vars.collectionCreatorPrefix },
+    { key: 'author-names', value: vars.authors },
+    { key: 'collection-creator-names', value: vars.collectionCreator },
+  ]);
   if (vars.docChip) args.push(`--variable=doc-chip:${vars.docChip}`);
   return args;
 }
@@ -59,21 +56,27 @@ function buildHtmlMetadataArgs(
   const args = [
     '--template',
     templatePath,
-    titleArg(vars.title),
-    `--metadata=site-title:${metadataValue(siteTitle)}`,
-    languageArg(lang, 'lang'),
+    ...metadataArgs([
+      { key: 'title', value: vars.title },
+      { key: 'site-title', value: siteTitle },
+      { key: 'lang', value: lang },
+    ]),
     '--metadata=link-citations:true',
   ];
   if (tocActive) args.push('--toc');
-  if (tagline) args.push(`--metadata=tagline:${metadataValue(tagline)}`);
-  if (vars.docTitle) args.push(`--metadata=doc-title:${metadataValue(vars.docTitle)}`);
-  if (vars.subtitle) args.push(`--metadata=subtitle:${metadataValue(vars.subtitle)}`);
-  if (vars.date) args.push(`--metadata=date:${metadataValue(vars.date)}`);
-  if (vars.homeHref) args.push(`--metadata=home-href:${vars.homeHref}`);
-  if (theme) args.push(`--metadata=theme:${theme}`);
-  if (accent) args.push(`--metadata=accent:${accent}`);
-  if (css) args.push(`--metadata=css:${css}`);
-  if (vars.authorMeta) args.push(`--metadata=author-meta:${vars.authorMeta}`);
+  args.push(
+    ...metadataArgs([
+      { key: 'tagline', value: tagline },
+      { key: 'doc-title', value: vars.docTitle },
+      { key: 'subtitle', value: vars.subtitle },
+      { key: 'date', value: vars.date },
+      { key: 'home-href', value: vars.homeHref },
+      { key: 'theme', value: theme },
+      { key: 'accent', value: accent },
+      { key: 'css', value: css },
+      { key: 'author-meta', value: vars.authorMeta },
+    ]),
+  );
   args.push(...metadataBandArgs(vars));
   const formats = vars.formats ?? [];
 

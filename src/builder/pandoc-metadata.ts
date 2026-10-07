@@ -1,27 +1,20 @@
 import { PACKAGED_APA7_CSL } from './state-bib.js';
 
-export function metadataValue(value: string): string {
-  return value.replace(/\n/g, ' ');
+export interface MetadataEntry {
+  key: string;
+  value: string | string[] | undefined;
 }
 
-export function titleArg(title: string): string {
-  return `--metadata=title:${metadataValue(title)}`;
-}
-
-export function languageArg(language: string, key: 'language' | 'lang' = 'language'): string {
-  return `--metadata=${key}:${language}`;
-}
-
-export function creatorArgs(creator: string[]): string[] {
-  return creator.map((c) => `--metadata=creator:${metadataValue(c)}`);
-}
-
-export function dateArg(date: string | undefined): string[] {
-  return date !== undefined ? [`--metadata=date:${metadataValue(date)}`] : [];
-}
-
-export function publisherArg(publishers: string[]): string[] {
-  return publishers.map((p) => `--metadata=publishers:${metadataValue(p)}`);
+export function metadataArgs(entries: MetadataEntry[]): string[] {
+  const args: string[] = [];
+  for (const { key, value } of entries) {
+    if (!value) continue;
+    const values = Array.isArray(value) ? value : [value];
+    for (const item of values) {
+      args.push(`--metadata=${key}:${item.replace(/\n/g, ' ')}`);
+    }
+  }
+  return args;
 }
 
 export function citationCompileArgs(bibliography: string | undefined, csl: string | undefined): string[] {

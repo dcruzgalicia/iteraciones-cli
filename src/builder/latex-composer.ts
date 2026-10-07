@@ -14,7 +14,7 @@ import type { PageDimensions } from './image-processor.js';
 import { imageNamerFor, processDocumentImages, scanInlineImages, scanTitlePageFieldImages, uniqueName } from './image-processor.js';
 import { babelOptionsForLang, pageNumberCommandFor } from './latex-preamble.js';
 import { ASSETS_IMAGES_DIR } from './output-layout.js';
-import { creatorArgs, publisherArg, titleArg } from './pandoc-metadata.js';
+import { metadataArgs } from './pandoc-metadata.js';
 import type { BuildDocument } from './types.js';
 import { injectXmpMetadataIntoLatex, type PdfXmpMetadata } from './xmpdata.js';
 
@@ -278,15 +278,16 @@ function buildPandocArgs(
     }
   }
   if (!isIntervention) {
-    const title = resolveStringField(fm, formatCfg, siteConfig, 'title') ?? 'Sin título';
-    extraArgs.push(titleArg(title));
-    const creator = parseAuthors(resolveMetadataField(fm, formatCfg, siteConfig, 'creator'));
-    extraArgs.push(...creatorArgs(creator));
+    extraArgs.push(
+      ...metadataArgs([
+        { key: 'title', value: resolveStringField(fm, formatCfg, siteConfig, 'title') ?? 'Sin título' },
+        { key: 'creator', value: parseAuthors(resolveMetadataField(fm, formatCfg, siteConfig, 'creator')) },
+      ]),
+    );
     const subtitle = resolveStringField(fm, formatCfg, siteConfig, 'subtitle');
     if (subtitle) extraArgs.push(`--metadata=subtitle:${subtitle}`);
   }
-  const publishers = fmStringList(resolveMetadataField(fm, formatCfg, siteConfig, 'publisher'));
-  if (publishers) extraArgs.push(...publisherArg(publishers));
+  extraArgs.push(...metadataArgs([{ key: 'publishers', value: fmStringList(resolveMetadataField(fm, formatCfg, siteConfig, 'publisher')) }]));
   return extraArgs;
 }
 
