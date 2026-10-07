@@ -8,6 +8,10 @@ export function posix(path: string): string {
   return path.split(sep).join('/');
 }
 
+export function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export function isInside(root: string, abs: string): boolean {
   const rel = relative(root, abs);
   return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel);

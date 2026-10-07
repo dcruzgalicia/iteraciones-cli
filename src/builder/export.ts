@@ -8,6 +8,7 @@ import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 import { fmBool, fmString } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
+import { escapeRegExp } from '../lib/paths.js';
 import { exec, mapWithConcurrency, ProcessSpawnError, ProcessTimeoutError } from '../lib/run.js';
 import { prepareArgv, recordSupportCommand } from '../lib/script-recorder.js';
 import type { LuaFilterGroup } from './filter-resolver.js';
@@ -220,10 +221,6 @@ const COVER_TIMEOUT_MS = 30_000;
 interface CoverImageEntry {
   pdfPath: string;
   pngPath: string;
-}
-
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function coverPrefix(pngPath: string): string {
