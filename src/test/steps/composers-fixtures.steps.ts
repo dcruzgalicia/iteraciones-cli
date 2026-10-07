@@ -302,7 +302,7 @@ Then('el índice ya no enlaza al encabezado de referencias', () => {
 Then('el marcador se sustituye por la tarjeta con la lista extraída', () => {
   if (!world.html.includes('<section class="refs-card">')) throw new Error('no se insertó la tarjeta de referencias');
   if (!world.html.includes('csl-entry')) throw new Error('la tarjeta no trae la lista de entradas');
-  if (world.html.includes('<!-- block:referencias -->')) throw new Error('quedó el marcador del bloque de referencias');
+  if (world.html.includes('<div id="block-referencias">')) throw new Error('quedó el marcador del bloque de referencias');
 });
 
 Then('el encabezado sintético no queda en el artículo', () => {

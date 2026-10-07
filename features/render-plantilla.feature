@@ -19,7 +19,7 @@ Característica: la plantilla HTML que se entrega a pandoc
 
     Escenario: Cada tarjeta va detrás de la anterior
       Dado que la plantilla HTML se compone para "file"
-      Entonces la plantilla ordena "Tarjeta identidad, $doc-chip$, $if(toc)$, $if(formats)$, Tarjeta documento, $if(has-references)$"
+      Entonces la plantilla ordena "$doc-chip$, $if(toc)$, $if(formats)$, $if(has-references)$"
       Y la plantilla dice "$if(home-href)$"
 
     # El bloque de referencias entero va detrás de un `$if$`: sin el flag, el
@@ -27,7 +27,7 @@ Característica: la plantilla HTML que se entrega a pandoc
     Escenario: La tarjeta de referencias es condicional
       Dado que la plantilla HTML se compone para "file"
       Entonces la plantilla dice "$if(has-references)$"
-      Y la plantilla dice "<!-- block:referencias -->"
+      Y la plantilla dice "<div id=\"block-referencias\"></div>"
 
     # La tarjeta de formatos no se arma en el argv: icono, nombre y
     # descripción van horneados en la plantilla y el argv sólo aporta el href.
@@ -52,8 +52,8 @@ Característica: la plantilla HTML que se entrega a pandoc
       Dado que compongo la plantilla HTML con los bloques "contenido, footer, header, indice"
       # El contenido va antes que el índice porque así se configuró; el header
       # sigue delante de todo y el footer detrás de todo.
-      Entonces la plantilla ordena "Tarjeta identidad (enlaza, Tarjeta documento, Tarjeta identidad final"
-      Y la plantilla ordena "Tarjeta documento, $if(toc)$"
+      Entonces la plantilla ordena "id=\"card-identity\", id=\"card-document\", id=\"card-identity-footer\""
+      Y la plantilla ordena "id=\"card-document\", $if(toc)$"
 
   Regla de negocio: El masonry envuelve todas las tarjetas menos el cuerpo
 
@@ -87,9 +87,9 @@ Característica: la plantilla HTML que se entrega a pandoc
 
     Escenario: Header y footer son tarjetas del masonry
       Dado que la plantilla HTML se compone para "file"
-      Entonces el masonry trae "Tarjeta identidad (enlaza"
-      Y el masonry trae "Tarjeta identidad final"
+      Entonces el masonry trae "id=\"card-identity\""
+      Y el masonry trae "id=\"card-identity-footer\""
       Y el masonry trae "$doc-chip$"
       Y la plantilla dice "<main class=\"container mx-auto columns-1 lg:columns-2 2xl:columns-3 gap-6"
-      Y la plantilla dice "<div class=\"break-inside-avoid pb-6\">\n\n      <!-- Tarjeta identidad (enlaza"
-      Y la plantilla dice "<div class=\"break-inside-avoid\">\n      <!-- Tarjeta identidad final -->"
+      Y la plantilla dice "<div id=\"card-identity\" class=\"break-inside-avoid pb-6\">"
+      Y la plantilla dice "<div id=\"card-identity-footer\" class=\"break-inside-avoid\">"

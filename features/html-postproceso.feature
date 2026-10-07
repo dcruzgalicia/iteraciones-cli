@@ -149,7 +149,7 @@ Característica: el post-proceso del HTML y los formatos del argv
       Dado que la raíz del proyecto está vacía
       Y que el HTML es:
       """
-      <body><div class="banda"><!-- block:intro --></div><main><div class="collection-intro"><p>Intro de la antología.</p><div class="nota"><p>con un div anidado</p></div></div><p>resto</p></main>
+      <body><div class="banda"><div id="block-intro"></div></div><main><div class="collection-intro"><p>Intro de la antología.</p><div class="nota"><p>con un div anidado</p></div></div><p>resto</p></main>
       """
       Cuando subo el body propio a la banda
       Entonces el post-proceso deja "<p>Intro de la antología.</p>"
@@ -173,7 +173,7 @@ Característica: el post-proceso del HTML y los formatos del argv
       Dado que la raíz del proyecto está vacía
       Y que el HTML es:
       """
-      <body><div class="banda"><!-- block:intro --></div><main><div class="collection-intro">   </div></main>
+      <body><div class="banda"><div id="block-intro"></div></div><main><div class="collection-intro">   </div></main>
       """
       Cuando subo el body propio a la banda
       Entonces el HTML no dice "prose"
