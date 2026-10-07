@@ -459,7 +459,7 @@ export interface LatexPostManifest {
   bundle?: boolean;
 }
 
-export async function copyDistAssets(texDir: string, copies: { src: string; rel: string }[]): Promise<void> {
+async function copyDistAssets(texDir: string, copies: { src: string; rel: string }[]): Promise<void> {
   for (const { src, rel } of copies) {
     const dest = join(texDir, rel);
     if (resolve(dest) === resolve(src) || !(await Bun.file(src).exists())) continue;

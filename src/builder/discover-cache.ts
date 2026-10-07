@@ -72,7 +72,7 @@ export interface DiscoverOptions {
   meta?: DiscoverMeta;
 }
 
-export function stateHasChanged(
+function stateHasChanged(
   useCache: boolean,
   prevState: import('./state-serialize.js').BuildState | null,
   options: DiscoverOptions,

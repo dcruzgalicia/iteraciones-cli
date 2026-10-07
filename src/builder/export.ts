@@ -199,7 +199,7 @@ export async function convertToPdf(
   }
 }
 
-export async function cleanPdfSlot(slotDir: string, job: string): Promise<void> {
+async function cleanPdfSlot(slotDir: string, job: string): Promise<void> {
   const auxPaths = [
     ...LATEXMK_AUX_EXTENSIONS.map((ext) => join(slotDir, `${job}${ext}`)),
     join(slotDir, 'pdfx.xmp'),

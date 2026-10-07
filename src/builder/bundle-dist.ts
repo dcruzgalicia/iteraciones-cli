@@ -11,7 +11,7 @@ const CONFIG_FILE = 'iteraciones.config.yaml';
 const FILTERS_DIR = 'filters';
 const MANIFEST = join('.iteraciones', 'bundle.json');
 
-export async function bundleTargets(cwd: string, config: SiteConfig): Promise<string[]> {
+async function bundleTargets(cwd: string, config: SiteConfig): Promise<string[]> {
   const rels: string[] = [];
   if (await Bun.file(join(cwd, CONFIG_FILE)).exists()) rels.push(CONFIG_FILE);
   for (const dir of projectPreambleDirs()) {
