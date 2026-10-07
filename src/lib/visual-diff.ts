@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, extname, isAbsolute, join, relative } from 'node:path';
 import slugifyLib from 'slugify';
 import { BuildError } from './errors.js';
+import { escapeRegExp } from './paths.js';
 import { exec, mapWithConcurrency } from './run.js';
 
 export interface VisualOptions {
@@ -104,10 +105,6 @@ export async function clearDiffImages(dir: string, stem?: string): Promise<void>
   const files = stem === undefined ? await globFiles(dir, '**/*-page-*-diff.png') : (await readdir(dir).catch(() => [])).map((f) => join(dir, f));
   const pattern = stem === undefined ? DIFF_IMAGE : new RegExp(`^${escapeRegExp(stem)}-page-\\d+-diff\\.png$`);
   await Promise.all(files.filter((file) => pattern.test(basename(file))).map((file) => forceUnlink(file)));
-}
-
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 interface VisualWorkspaces {

@@ -6,7 +6,7 @@ import { BuildError } from '../lib/errors.js';
 import { fmStringList, fmTrimmedString, resolveBooleanField, resolveMetadataField, resolveStringField } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
-import { isInside, posix } from '../lib/paths.js';
+import { escapeRegExp, isInside, posix } from '../lib/paths.js';
 import { parseAuthors } from './discover-frontmatter.js';
 import type { LuaFilterGroup } from './filter-resolver.js';
 import { MBOX_HELPERS_FILTER } from './filter-resolver.js';
@@ -434,7 +434,7 @@ export async function localizeDistAssets(
   let result = tex;
   const copies = new Map<string, { src: string; rel: string }>();
   if (result.includes(prefix)) {
-    const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const escaped = escapeRegExp(prefix);
     const tails = new Set([...result.matchAll(new RegExp(`${escaped}([^{}$\\n]+)`, 'g'))].map((m) => m[1] ?? ''));
     for (const tail of tails) {
       const abs = `${prefix}${tail}`;

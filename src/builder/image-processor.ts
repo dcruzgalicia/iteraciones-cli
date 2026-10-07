@@ -3,6 +3,7 @@ import { cpus } from 'node:os';
 import { basename, isAbsolute, join, relative, resolve } from 'node:path';
 import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
+import { escapeRegExp } from '../lib/paths.js';
 import { exec, mapWithConcurrency, ProcessSpawnError, ProcessTimeoutError } from '../lib/run.js';
 import { ASSETS_IMAGES_DIR } from './output-layout.js';
 
@@ -261,7 +262,7 @@ export function rewriteImagePaths(content: string, imageMap: Map<string, string>
     const candidates = [rel, `./${rel}`, absoluteOriginal];
     for (const candidate of candidates) {
       if (candidate === '') continue;
-      const escaped = candidate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const escaped = escapeRegExp(candidate);
       result = result.replace(new RegExp(`\\]\\(${escaped}\\)`, 'g'), () => `](${processed})`);
       result = result.replace(
         new RegExp(`^((?:titleImage|publisherImage|startpaper):[ \\t]*)(["']?)${escaped}(["']?[ \\t]*)$`, 'gm'),
