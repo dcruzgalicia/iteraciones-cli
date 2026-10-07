@@ -10,12 +10,11 @@ export function slot(nombre: string): string {
 
 export type HtmlDocType = 'file' | 'collection' | 'creator';
 
-export function htmlCardsDir(type: HtmlDocType): string {
-  return join(HTML_RESOURCES_DIR, type);
-}
-
-export function htmlMetadataCardPath(type: HtmlDocType): string {
-  return join(htmlCardsDir(type), 'card-metadata.html');
+// Una tarjeta ausente en la variante cae a `file/`. No hay merge: la variante es una copia
+// completa del solo chunk que difiere. Sube el techo solo si una variante necesita 3+ overrides.
+export async function loadCard(type: HtmlDocType, name: string): Promise<string> {
+  const own = Bun.file(join(HTML_RESOURCES_DIR, type, name));
+  return (await own.exists()) ? own.text() : Bun.file(join(HTML_RESOURCES_DIR, 'file', name)).text();
 }
 
 const HTML_CARDS: Record<HtmlBlockKey, string> = {
@@ -29,18 +28,17 @@ const HTML_CARDS: Record<HtmlBlockKey, string> = {
 
 export async function composeHtmlTemplate(siteConfig: SiteConfig, logoInline?: string, type: HtmlDocType = 'file'): Promise<string> {
   const skeleton = await Bun.file(join(HTML_RESOURCES_DIR, 'skeleton.html')).text();
-  const cardsDir = htmlCardsDir(type);
   const order = siteConfig.format?.html?.blocks ?? [...DEFAULT_HTML_BLOCKS];
   const cards: string[] = [];
   let header = '';
   let metadata = '';
   let footer = '';
   for (const key of order) {
-    const card = await Bun.file(join(cardsDir, HTML_CARDS[key])).text();
+    const card = await loadCard(type, HTML_CARDS[key]);
     if (key === 'header') header = card;
     else if (key === 'footer') footer = card;
     else cards.push(card);
-    if (key === 'contenido') metadata = await Bun.file(htmlMetadataCardPath(type)).text();
+    if (key === 'contenido') metadata = await loadCard(type, 'card-metadata.html');
   }
   const logoBlock = logoInline
     ? `<span class="flex h-10 w-10 shrink-0 items-center justify-center text-accent-500 logo-fill">${logoInline}</span>`

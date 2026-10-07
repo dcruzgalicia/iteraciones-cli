@@ -61,8 +61,11 @@ export async function loadPreambleFilters(disabledList?: string[], cwd?: string,
   for (const name of getBuiltinPreambleFilterNames()) {
     if (excluded.has(name)) continue;
     const projectPath = join(cwd ?? '', projectDir, `${name}.tex`);
-    const pkgPath = join(pkgDir, `${name}.tex`);
-    const path = cwd && (await Bun.file(projectPath).exists()) ? projectPath : pkgPath;
+    const variantPath = join(pkgDir, `${name}.tex`);
+    const basePath = join(PKG_PREAMBLE_DIR, `${name}.tex`);
+    // ponytail: sin merge — una variante es una copia completa del chunk. Si la base cambia,
+    // hay que replicarlo a mano en la variante; usa un diff-patch solo si aparecen 3+ variantes grandes.
+    const path = cwd && (await Bun.file(projectPath).exists()) ? projectPath : (await Bun.file(variantPath).exists()) ? variantPath : basePath;
     const content = await Bun.file(path).text();
     result.push({ name, content });
   }

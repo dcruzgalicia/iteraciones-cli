@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { After, Before, Given, Then, When } from '@cucumber/cucumber';
 import { compileTailwindCss, computeCssHash, resolveTailwindBin } from '../../builder/build-assets.js';
+import { type HtmlDocType, loadCard } from '../../builder/html-composer.js';
 import type { SiteConfig } from '../../config/config-schema.js';
 import { DEFAULT_SITE_CONFIG } from '../../config/site-config.js';
 import { ACCENT_PALETTES, type AccentColor } from '../../lib/accent-palettes.js';
@@ -25,8 +26,9 @@ function sinMarco(type: string, card: string): boolean {
   return card === 'card-referencias.html' || (type === 'collection' && card === 'card-contenido.html');
 }
 
+// Resuelve por la misma regla que producción: la tarjeta cae a `file/` si la variante no la trae.
 async function readCard(type: string, card: string): Promise<string> {
-  return readFile(join(RESOURCES, 'html', type, card), 'utf8');
+  return loadCard(type as HtmlDocType, card);
 }
 
 function siteConfig(): SiteConfig {
@@ -167,21 +169,31 @@ Then('la compilación falla diciendo que el acento es desconocido', () => {
   }
 });
 
+// Una variante puede traer sólo los chunks que difieren; el resto cae a `file/`.
+async function tarjetasResueltas(type: string): Promise<string[]> {
+  const found: string[] = [];
+  for (const card of CARDS) {
+    found.push((await loadCard(type as HtmlDocType, card)).length > 0 ? card : '');
+  }
+  return found.filter(Boolean).sort();
+}
+
 When('reviso las copias de las tarjetas de {string}, {string} y {string}', async (a: string, b: string, c: string) => {
-  const types = [a, b, c];
-  for (const type of types) {
-    const entries = [...new Bun.Glob('*.html').scanSync({ cwd: join(RESOURCES, 'html', type) })].sort();
-    const esperado = [...CARDS].sort();
-    if (JSON.stringify(entries) !== JSON.stringify(esperado)) {
-      throw new Error(`${type} no tiene las tarjetas esperadas.\n  esperadas: ${JSON.stringify(esperado)}\n  reales:    ${JSON.stringify(entries)}`);
+  const esperado = [...CARDS].sort();
+  for (const type of [a, b, c]) {
+    const resueltas = await tarjetasResueltas(type);
+    if (JSON.stringify(resueltas) !== JSON.stringify(esperado)) {
+      throw new Error(
+        `${type} no resuelve las tarjetas esperadas.\n  esperadas: ${JSON.stringify(esperado)}\n  reales:    ${JSON.stringify(resueltas)}`,
+      );
     }
   }
 });
 
-Then('las tres tienen exactamente las mismas tarjetas', () => {
+Then('las tres tienen exactamente las mismas tarjetas', async () => {
   for (const type of TYPES) {
-    const entries = [...new Bun.Glob('*.html').scanSync({ cwd: join(RESOURCES, 'html', type) })];
-    if (entries.length !== CARDS.length) throw new Error(`${type} tiene ${entries.length} tarjetas y no ${CARDS.length}`);
+    const resueltas = await tarjetasResueltas(type);
+    if (resueltas.length !== CARDS.length) throw new Error(`${type} resuelve ${resueltas.length} tarjetas y no ${CARDS.length}`);
   }
 });
 

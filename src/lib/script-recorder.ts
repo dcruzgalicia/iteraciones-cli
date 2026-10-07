@@ -103,7 +103,7 @@ export function abortScriptCapture(): void {
   pdfSlots = 0;
 }
 
-export interface ScriptExecOptions {
+interface ScriptExecOptions {
   cwd?: string;
   env?: Record<string, string>;
   input?: string;

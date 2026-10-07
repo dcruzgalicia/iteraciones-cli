@@ -138,7 +138,7 @@ async function awaitProcess(command: string, proc: ReturnType<typeof Bun.spawn>,
   return { stdout, stderr, exitCode };
 }
 
-export interface MapConcurrencyOptions {
+interface MapConcurrencyOptions {
   onCancel?: () => Promise<void> | void;
 }
 

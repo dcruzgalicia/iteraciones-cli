@@ -78,28 +78,31 @@ export function diffTargetFor(snapshotPath: string): { dir: string; stem: string
   return { dir: dirname(snapshotPath), stem: basename(snapshotPath, extname(snapshotPath)) };
 }
 
-async function walkFiles(dir: string): Promise<string[]> {
+// ponytail: Bun.Glob.scan lanza ENOENT si cwd no existe; el contrato previo era lista vacía.
+async function globFiles(dir: string, pattern: string): Promise<string[]> {
+  if (
+    !(
+      await Bun.file(dir)
+        .stat()
+        .catch(() => null)
+    )?.isDirectory()
+  )
+    return [];
   const found: string[] = [];
-  const walk = async (current: string): Promise<void> => {
-    const entries = await readdir(current, { withFileTypes: true }).catch(() => []);
-    for (const entry of entries) {
-      const full = join(current, entry.name);
-      if (entry.isDirectory()) await walk(full);
-      else if (entry.isFile()) found.push(full);
-    }
-  };
-  await walk(dir);
+  for await (const rel of new Bun.Glob(pattern).scan({ cwd: dir, onlyFiles: true })) {
+    found.push(join(dir, rel));
+  }
   return found.sort();
 }
 
 export async function listPdfFiles(dir: string): Promise<string[]> {
-  return (await walkFiles(dir)).filter((file) => extname(file).toLowerCase() === '.pdf');
+  return globFiles(dir, '**/*.pdf');
 }
 
 const DIFF_IMAGE = /-page-\d+-diff\.png$/;
 
 export async function clearDiffImages(dir: string, stem?: string): Promise<void> {
-  const files = stem === undefined ? await walkFiles(dir) : (await readdir(dir).catch(() => [])).map((f) => join(dir, f));
+  const files = stem === undefined ? await globFiles(dir, '**/*-page-*-diff.png') : (await readdir(dir).catch(() => [])).map((f) => join(dir, f));
   const pattern = stem === undefined ? DIFF_IMAGE : new RegExp(`^${escapeRegExp(stem)}-page-\\d+-diff\\.png$`);
   await Promise.all(files.filter((file) => pattern.test(basename(file))).map((file) => forceUnlink(file)));
 }
@@ -108,7 +111,7 @@ function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-export interface VisualWorkspaces {
+interface VisualWorkspaces {
   workDir: string;
 
   cachePath: string;
@@ -121,7 +124,7 @@ export async function resolveVisualWorkspaces(cwd: string, slug: string): Promis
   return { workDir: join(base, slug), cachePath: join(base, 'cache.json') };
 }
 
-export interface PageDiff {
+interface PageDiff {
   page: number;
   diffPercent: number;
   diffImage: string;
@@ -240,7 +243,7 @@ async function comparePngPair(
   return (100 * differing) / (size.width * size.height);
 }
 
-export interface CompareVisualInput extends VisualOptions {
+interface CompareVisualInput extends VisualOptions {
   reference: string;
   generated: string;
   workDir: string;
@@ -334,7 +337,7 @@ export async function saveReference(generated: string, storePath: string): Promi
   if (generated !== storePath) await copyFile(generated, storePath);
 }
 
-export interface VisualReport {
+interface VisualReport {
   result: VisualDiffResult;
   options: VisualOptions;
   referenceLabel: string;
