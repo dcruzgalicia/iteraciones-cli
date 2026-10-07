@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { dirname, join, relative } from 'node:path';
+import { join, relative } from 'node:path';
 import { resolveCollectionFile } from '../builder/collection-files.js';
 import { listMarkdownDocuments } from '../builder/discover-files.js';
 import { validateDisabledFilters } from '../builder/filter-resolver.js';
@@ -15,6 +15,7 @@ import {
   validateConfigRules,
   validateFrontmatterFields,
 } from '../builder/project-validator.js';
+import { outputKeyFor } from '../builder/slug-resolver.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { ConfigError, translateSystemError } from '../lib/errors.js';
@@ -66,7 +67,7 @@ function validateParsedFrontmatter(
   }
   const slug = typeof parsed.slug === 'string' ? parsed.slug.trim() : undefined;
   if (slug) {
-    const outputKey = `${dirname(entry)}/${slug}`;
+    const outputKey = outputKeyFor(entry, slug);
     const owner = slugs.get(outputKey);
     if (owner !== undefined) {
       fmError = true;
