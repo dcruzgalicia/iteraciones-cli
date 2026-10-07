@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
 import { buildProgram } from '../../cli/parser.js';
-import { capture, tempRoot, world } from './cli-world.steps.js';
+import { capture, jsonSalida, raiz, world } from './cli-world.steps.js';
 
 /**
  * #2546 (onda 2) — tranche 4 de `cli-layer`: `validate` y `validate --json`.
@@ -27,26 +27,6 @@ import { capture, tempRoot, world } from './cli-world.steps.js';
  * "están bien" van por stdout. Los pasos de este archivo por eso miran los dos:
  * `la salida dice` para el resumen y `el error dice` para los problemas.
  */
-
-interface Json {
-  [clave: string]: unknown;
-}
-
-/** La raíz del escenario, creándola si el `Given` anterior no la puso. */
-function raiz(): string {
-  if (!world.root) world.root = tempRoot('iteraciones-cli-');
-  return world.root;
-}
-
-/** El `JSON.parse` de `stdout`, con el error apuntando al texto que falló. */
-function jsonSalida(): Json {
-  const crudo = world.stdout.trim();
-  try {
-    return JSON.parse(crudo) as Json;
-  } catch (err) {
-    throw new Error(`stdout no es JSON válido: ${(err as Error).message}\nva:\n${crudo}`);
-  }
-}
 
 /** Los elementos de una clave del JSON, como lista de objetos. */
 function lista(clave: string): Record<string, unknown>[] {
