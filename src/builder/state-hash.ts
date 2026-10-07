@@ -59,7 +59,6 @@ export const SCHEMA_SOURCE_FILES = [
   './xmpdata.ts',
   './export.ts',
   './image-processor.ts',
-  './image-flags.ts',
   './pdfx-check.ts',
   './prepare.ts',
   '../config/site-config.ts',
