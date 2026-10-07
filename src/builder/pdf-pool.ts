@@ -21,21 +21,20 @@ export interface PdfJob {
   noBibtex: boolean;
 }
 
-function raceWithTimeout(promises: Promise<void>[], ms: number): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('pdf-pool: workers vivos tras cancel()')), ms);
-    void Promise.allSettled(promises)
-      .then(() => resolve())
-      .finally(() => clearTimeout(timer));
-  });
-}
-
 async function waitForWorkers(promises: Promise<void>[], timeoutMs: number): Promise<boolean> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    await raceWithTimeout(promises, timeoutMs);
+    await Promise.race([
+      Promise.allSettled(promises),
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error('pdf-pool: workers vivos tras cancel()')), timeoutMs);
+      }),
+    ]);
     return true;
   } catch {
     return false;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
