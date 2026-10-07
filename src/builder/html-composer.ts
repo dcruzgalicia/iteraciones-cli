@@ -26,6 +26,13 @@ const HTML_CARDS: Record<HtmlBlockKey, string> = {
   footer: 'card-identity-footer.html',
 };
 
+// Todo `.html` del paquete, por path relativo. Es lo que hay que hashear para invalidar el
+// caché: una variante puede traer solo su override y el resto vive en `file/`, así que una
+// lista por tipo se desincroniza en silencio. Un glob no puede quedar viejo.
+export function htmlResourceFiles(): string[] {
+  return [...new Bun.Glob('**/*.html').scanSync({ cwd: HTML_RESOURCES_DIR, onlyFiles: true })].sort();
+}
+
 export async function composeHtmlTemplate(siteConfig: SiteConfig, logoInline?: string, type: HtmlDocType = 'file'): Promise<string> {
   const skeleton = await Bun.file(join(HTML_RESOURCES_DIR, 'skeleton.html')).text();
   const order = siteConfig.format?.html?.blocks ?? [...DEFAULT_HTML_BLOCKS];
