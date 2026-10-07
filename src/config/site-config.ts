@@ -110,22 +110,6 @@ export const DEFAULT_SITE_CONFIG = {
     markdown: DEFAULT_MARKDOWN_FORMAT,
     latex: DEFAULT_LATEX_FORMAT,
   },
-  title: undefined,
-  creator: undefined,
-  subject: undefined,
-  description: undefined,
-  publisher: undefined,
-  contributor: undefined,
-  date: undefined,
-  identifier: undefined,
-  source: undefined,
-  relation: undefined,
-  coverage: undefined,
-  rights: undefined,
-  license: undefined,
-  doi: undefined,
-  isbn: undefined,
-  abstract: undefined,
 };
 
 export type FormatKey = 'latex' | 'pdf' | 'html' | 'epub' | 'markdown';
