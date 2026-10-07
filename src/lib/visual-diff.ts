@@ -118,9 +118,12 @@ interface VisualWorkspaces {
 }
 
 export async function resolveVisualWorkspaces(cwd: string, slug: string): Promise<VisualWorkspaces> {
+  // ponytail: sin config el base caía a un dir global, así que dos proyectos con el mismo slug
+  // compartían workDir y `compareVisual` hace `rm -rf` sobre él. El hash del cwd separa los
+  // proyectos; el slug sigue siendo legible dentro del directorio resultante.
   const base = (await exists(join(cwd, 'iteraciones.config.yaml')))
     ? join(cwd, '.iteraciones', 'tmp', 'visual')
-    : join(tmpdir(), 'iteraciones-visual');
+    : join(tmpdir(), 'iteraciones-visual', createHash('sha256').update(cwd).digest('hex').slice(0, 12));
   return { workDir: join(base, slug), cachePath: join(base, 'cache.json') };
 }
 
@@ -173,14 +176,22 @@ async function readCache(path: string): Promise<Record<string, CacheEntry>> {
   }
 }
 
+// ponytail: el read-modify-write va dentro de la cadena de promesas del módulo. Sin esto dos
+// `visual check` concurrentes perdían entradas: los dos leían, los dos escribían, el último gana.
+// ponytail: este archivo es caché, no estado: si la escritura falla, el siguiente build la rehace.
+let cacheWrite = Promise.resolve();
+
 async function writeCache(path: string, key: string, entry: CacheEntry): Promise<void> {
-  try {
-    const current = await readCache(path);
-    current[key] = entry;
-    const trimmed = Object.fromEntries(Object.entries(current).slice(-50));
-    await mkdir(dirname(path), { recursive: true });
-    await writeFile(path, `${JSON.stringify(trimmed, null, 2)}\n`, 'utf8');
-  } catch {}
+  cacheWrite = cacheWrite.then(async () => {
+    try {
+      const current = await readCache(path);
+      current[key] = entry;
+      const trimmed = Object.fromEntries(Object.entries(current).slice(-50));
+      await mkdir(dirname(path), { recursive: true });
+      await writeFile(path, `${JSON.stringify(trimmed, null, 2)}\n`, 'utf8');
+    } catch {}
+  });
+  return cacheWrite;
 }
 
 async function forceUnlink(path: string): Promise<void> {
@@ -254,6 +265,44 @@ interface CompareVisualInput extends VisualOptions {
   diffStem?: string;
 }
 
+// El `CacheEntry` es el `VisualDiffResult` sin `details` ni `diffDir`: el diff en disco no se
+// guarda, solo se cuenta. Por eso un acierto de caché devuelve `details: []`.
+async function cacheResult(path: string, key: string, result: VisualDiffResult): Promise<void> {
+  const { compared, unchanged, changed, referencePages, generatedPages, pass } = result;
+  await writeCache(path, key, { compared, unchanged, changed, referencePages, generatedPages, pass });
+}
+
+async function comparePages(args: {
+  referencePages: string[];
+  generatedPages: string[];
+  compared: number;
+  diffDir: string;
+  diffStem: string;
+  options: VisualOptions;
+  workDir: string;
+}): Promise<PageDiff[]> {
+  const details: PageDiff[] = [];
+  await mapWithConcurrency(
+    Array.from({ length: args.compared }, (_, index) => index),
+    4,
+    async (index) => {
+      const referencePng = args.referencePages[index];
+      const generatedPng = args.generatedPages[index];
+      if (referencePng === undefined || generatedPng === undefined) return;
+      const page = index + 1;
+      const diffImage = join(args.diffDir, diffImageName(args.diffStem, page));
+      const diffPercent = await comparePngPair(referencePng, generatedPng, diffImage, args.options, args.workDir);
+      if (diffPercent <= args.options.thresholdPercent) {
+        await Promise.all([forceUnlink(referencePng), forceUnlink(generatedPng), forceUnlink(diffImage)]);
+        return;
+      }
+      await Promise.all([forceUnlink(referencePng), forceUnlink(generatedPng)]);
+      details.push({ page, diffPercent, diffImage });
+    },
+  );
+  return details;
+}
+
 export async function compareVisual(input: CompareVisualInput): Promise<VisualDiffResult> {
   const options: VisualOptions = {
     dpi: input.dpi,
@@ -261,41 +310,19 @@ export async function compareVisual(input: CompareVisualInput): Promise<VisualDi
     fuzzPercent: input.fuzzPercent,
   };
   const key = cacheKey({ reference: await hashFile(input.reference), generated: await hashFile(input.generated) }, options);
-  if (input.cachePath !== undefined) {
-    const cached = (await readCache(input.cachePath))[key];
-    if (cached !== undefined) return { ...cached, details: [], fromCache: true };
-  }
+  const cached = input.cachePath === undefined ? undefined : (await readCache(input.cachePath))[key];
+  if (cached !== undefined) return { ...cached, details: [], fromCache: true };
 
-  await rm(input.workDir, { recursive: true, force: true });
-  await mkdir(input.workDir, { recursive: true });
   const diffDir = input.diffDir ?? input.workDir;
   const diffStem = input.diffStem ?? 'documento';
-  if (diffDir !== input.workDir) await mkdir(diffDir, { recursive: true });
+  await mkdir(diffDir, { recursive: true });
+  await rm(input.workDir, { recursive: true, force: true });
+  await mkdir(input.workDir, { recursive: true });
 
   const referencePages = await renderPdf(input.reference, join(input.workDir, 'ref'), options.dpi);
   const generatedPages = await renderPdf(input.generated, join(input.workDir, 'gen'), options.dpi);
   const compared = Math.min(referencePages.length, generatedPages.length);
-  const details: PageDiff[] = [];
-
-  await mapWithConcurrency(
-    Array.from({ length: compared }, (_, index) => index),
-    4,
-    async (index) => {
-      const referencePng = referencePages[index];
-      const generatedPng = generatedPages[index];
-      if (referencePng === undefined || generatedPng === undefined) return;
-      const page = index + 1;
-      const diffImage = join(diffDir, diffImageName(diffStem, page));
-      const diffPercent = await comparePngPair(referencePng, generatedPng, diffImage, options, input.workDir);
-      if (diffPercent <= options.thresholdPercent) {
-        await Promise.all([forceUnlink(referencePng), forceUnlink(generatedPng), forceUnlink(diffImage)]);
-        return;
-      }
-
-      await Promise.all([forceUnlink(referencePng), forceUnlink(generatedPng)]);
-      details.push({ page, diffPercent, diffImage });
-    },
-  );
+  const details = await comparePages({ referencePages, generatedPages, compared, diffDir, diffStem, options, workDir: input.workDir });
 
   for (const entry of await readdir(input.workDir)) {
     if (/^(ref|gen)-\d+\.png$/.test(entry)) await forceUnlink(join(input.workDir, entry));
@@ -304,30 +331,27 @@ export async function compareVisual(input: CompareVisualInput): Promise<VisualDi
   details.sort((a, b) => a.page - b.page);
   const changed = details.length;
   const unchanged = compared - changed;
-  const pass = changed === 0 && referencePages.length === generatedPages.length;
+  const referenceCount = referencePages.length;
+  const pass = changed === 0 && referenceCount === generatedPages.length;
   const result: VisualDiffResult = {
     compared,
     unchanged,
     changed,
     details,
-    referencePages: referencePages.length,
+    referencePages: referenceCount,
     generatedPages: generatedPages.length,
     pass,
 
     ...(changed > 0 ? { diffDir } : {}),
   };
 
-  if (!(diffDir === input.workDir && changed > 0)) await rm(input.workDir, { recursive: true, force: true });
-  if (pass && input.cachePath !== undefined) {
-    const entry: CacheEntry = {
-      compared,
-      unchanged,
-      changed,
-      referencePages: referencePages.length,
-      generatedPages: generatedPages.length,
-      pass,
-    };
-    await writeCache(input.cachePath, key, entry);
+  // ponytail: el workDir sobrevive solo cuando hay diffs que ver. Antes, si comparePngPair
+  // lanzaba (BuildError de magick), los PNGs renderizados se quedaban ahí para siempre.
+  const keepWorkDir = diffDir === input.workDir && changed > 0;
+  try {
+    if (pass && input.cachePath !== undefined) await cacheResult(input.cachePath, key, result);
+  } finally {
+    if (!keepWorkDir) await rm(input.workDir, { recursive: true, force: true });
   }
   return result;
 }

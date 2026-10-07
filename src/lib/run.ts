@@ -33,21 +33,41 @@ export class ProcessTimeoutError extends Error {
   }
 }
 
+// ponytail: `ps -ax -o pid=,ppid=` y no `pgrep -P`. pgrep viene de procps, que no está en una
+// imagen mínima; sin él el BFS no descubría nada y el timeout solo mataba la raíz, dejando
+// pdflatex y biber vivos. Ojo: `ps -o pid= -ppid` NO existe en el ps de BSD (macOS) — `-ppid`
+// solo funciona en procps, que es justo lo que se quiere evitar. `-ax -o pid=,ppid=` funciona
+// en BSD y en Linux, y el filtro se hace aquí.
+const PS_ARGS = ['-ax', '-o', 'pid=,ppid='];
+
 async function childPids(pid: number): Promise<number[]> {
   try {
-    const proc = Bun.spawn(['pgrep', '-P', String(pid)], { stdout: 'pipe', stderr: 'ignore' });
+    const proc = Bun.spawn(['ps', ...PS_ARGS], { stdout: 'pipe', stderr: 'ignore' });
     const timer = setTimeout(() => proc.kill(), 2_000);
-    const stdout = await new Response(proc.stdout).text();
-    clearTimeout(timer);
-    await proc.exited;
-    return stdout
-      .split('\n')
-      .map((line) => Number.parseInt(line.trim(), 10))
-      .filter((n) => Number.isInteger(n));
+    try {
+      const stdout = await new Response(proc.stdout).text();
+      await proc.exited;
+      const found: number[] = [];
+      for (const line of stdout.split('\n')) {
+        const [child, parent] = line.trim().split(/\s+/);
+        // El segundo campo es el padre: el orden es pid, ppid.
+        if (Number.parseInt(parent ?? '', 10) === pid) {
+          const n = Number.parseInt(child ?? '', 10);
+          if (Number.isInteger(n) && n > 0) found.push(n);
+        }
+      }
+      return found;
+    } finally {
+      // Antes el timer sobrevivía si `.text()` lanzaba, y el SIGKILL diferido le caía a un pid
+      // que la UTI ya había reciclado.
+      clearTimeout(timer);
+    }
   } catch {
     return [];
   }
 }
+
+let warnedNoPs = false;
 
 export async function killProcessTree(rootPid: number): Promise<void> {
   const order: number[] = [];
@@ -58,7 +78,12 @@ export async function killProcessTree(rootPid: number): Promise<void> {
     if (pid === undefined || seen.has(pid)) continue;
     seen.add(pid);
     order.push(pid);
-    queue.push(...(await childPids(pid)));
+    const children = await childPids(pid);
+    if (children.length === 0 && !warnedNoPs && !(await Bun.which('ps'))) {
+      warnedNoPs = true;
+      logWarning('no hay forma de descubrir los procesos hijos: el timeout matará solo el proceso raíz', 'build');
+    }
+    queue.push(...children);
   }
   for (const pid of order.reverse()) {
     try {

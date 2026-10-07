@@ -1,7 +1,8 @@
 import { spyOn } from 'bun:test';
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
 import { runTestVisual, type TestVisualOptions } from '../../cli/test-visual.js';
 import {
@@ -136,6 +137,25 @@ Then('el directorio de trabajo está en {string}', (esperado: string) => {
   if (leido !== expande(esperado)) {
     throw new Error(`está en ${JSON.stringify(leido)} y debería estar en ${JSON.stringify(esperado)}`);
   }
+});
+
+// El path exacto ya no importa: lo que importa es que quede bajo el temporal, termine en el slug
+// y que el directorio intermedio separe proyectos (si no, dos proyectos con el mismo slug se
+// borran el workDir mutuamente en `compareVisual`).
+Then('el directorio de trabajo queda bajo {string} y termina en {string}', (base: string, slug: string) => {
+  const leido = (world.workspaces as { workDir: string }).workDir;
+  const raiz = expande(base);
+  if (!leido.startsWith(raiz)) throw new Error(`${JSON.stringify(leido)} no está bajo ${JSON.stringify(raiz)}`);
+  if (basename(leido) !== slug) throw new Error(`${JSON.stringify(leido)} no termina en ${JSON.stringify(slug)}`);
+  if (dirname(leido) === raiz) throw new Error(`el directorio intermedio no separa proyectos: ${JSON.stringify(leido)}`);
+});
+
+Then('el directorio de trabajo no se comparte con otro proyecto', async () => {
+  const otro = await mkdtemp(join(tmpdir(), 'iteraciones-otro-'));
+  const a = await resolveVisualWorkspaces(world.root, 'doc');
+  const b = await resolveVisualWorkspaces(otro, 'doc');
+  if (a.workDir === b.workDir) throw new Error(`dos proyectos comparten ${JSON.stringify(a.workDir)}`);
+  await rm(otro, { recursive: true, force: true });
 });
 
 Then('el caché del visual está en {string}', (esperado: string) => {
