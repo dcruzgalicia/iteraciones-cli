@@ -105,21 +105,18 @@ Característica: Un build a medias no envenena la caché ni pierde documentos
     # render deja el estado sin marcar, así que **no es caché válida**: el
     # siguiente build rehace todo aunque no haya cambiado nada.
 
-    # PENDIENTE DE DECISIÓN DEL PRODUCTO — el test original tenía una aserción
-    # vacía. `un estado sin completar se ignora…` buscaba que la salida NO
-    # contuviera 'Sin cambios (reutilizado)', una cadena que el orchestrator
-    # nunca emite: la comprobación pasaba se usara o no la caché. La que sí
-    # importa —`finalState.completed === true`— es la que falla acá.
-    #
-    # Lo que el build hace hoy, medido: con el estado sin `completed` y el
-    # documento cambiado, el segundo build dice `(todos reutilizados)`. O sea
-    # que el estado incompleto SÍ se está tomando como caché válida.
-    #
-    # No se escribe el escenario hasta saber si eso es un bug del producto o
-    # la intención. Va en el control (#2580) como decisión abierta.
-    #
-    # Escenario: Un estado sin completar no sirve de caché
-    #   …
+    # El cuerpo del documento es idéntico en los dos builds: el estado sin
+    # completar tiene que invalidar la caché por sí mismo. Si lo que invalidara
+    # fuera el hash del documento, el scenario pasaría con la guarda quitada —
+    # que es exactamente lo que hacía la aserción que se descartó.
+
+    Escenario: Un estado sin completar no sirve de caché
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Cuando hago un build del proyecto
+      Dado que el build deja el estado sin marcar como completado
+      Y hago un build del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y el build reprocesa los documentos
 
     # Y una vez reescrito bien, el camino normal vuelve: el tercer build sí
     # reutiliza. Si el segundo hubiera dejado el estado otra vez sin marcar,
