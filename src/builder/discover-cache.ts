@@ -1,6 +1,5 @@
 import { join } from 'node:path';
 import { BuildError } from '../lib/errors.js';
-import { cacheHitFor } from './state-hash.js';
 import type { BibFileCache, FileCacheEntry, FilterFileCache } from './state-serialize.js';
 import { hashString, STATE_SCHEMA_VERSION } from './state-serialize.js';
 import type { DiscoveryEntry } from './types.js';
@@ -26,18 +25,21 @@ export async function resolveCacheDecision(
   if (cached === undefined || cached.mtime === undefined || cached.size === undefined || cached.hash === undefined) {
     return { process: true, text: null };
   }
-  if (cacheHitFor({ mtime: cached.mtime, size: cached.size, hash: cached.hash }, mtime, size) !== null) {
-    return { process: false };
-  }
+  // ponytail: mtime+size NO es prueba de contenido. `rsync -a`, `tar -x` y `git worktree`
+  // preservan el mtime, así que un cambio de frontmatter de la MISMA longitud (una fecha, un
+  // nombre de autor) pasaba el hit sin leerse y la salida quedaba vieja. Se verifica el hash
+  // siempre: el archivo se lee una vez por build y ya se leía en el camino lento.
   if (size !== cached.size) {
     return { process: true, text: null };
   }
   const text = await Bun.file(filePath).text();
-  if (hashString(text) === cached.hash) {
+  const hash = hashString(text);
+  if (hash === cached.hash) {
+    const touched = mtime !== cached.mtime;
     cached.mtime = mtime;
-    return { process: false, touched: true };
+    return { process: false, touched };
   }
-  return { process: true, text, hash: hashString(text) };
+  return { process: true, text, hash };
 }
 
 export async function statDocument(cwd: string, relativePath: string): Promise<{ mtime: number; size: number }> {

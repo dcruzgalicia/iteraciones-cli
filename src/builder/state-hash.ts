@@ -2,6 +2,9 @@ import { join } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
 import { resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { MD_READER } from '../lib/pandoc-runner.js';
+import { toolVersionLatexmk, toolVersionMagick, toolVersionMinify, toolVersionPdfToPpm } from '../lib/tool-version.js';
+import { htmlResourceFiles } from './html-composer.js';
+import { projectPreambleDirs } from './preamble-loader.js';
 import { type FileCacheEntry, type FilterFileCache, hashString } from './state-serialize.js';
 
 export function cacheHitFor(prev: FileCacheEntry | undefined, mtime: number, size: number): string | null {
@@ -39,30 +42,30 @@ export async function hashFileCached(
 }
 
 const HTML_RESOURCES_DIR = join(import.meta.dir, '../lib/resources/html');
-const HTML_RESOURCE_FILES = [
-  'skeleton.html',
-  'card-identity.html',
-  'card-identity-footer.html',
-  'card-contenido.html',
-  'card-indice.html',
-  'card-formatos.html',
-  'card-referencias.html',
-  'card-referencias-block.html',
-];
 
 export const SCHEMA_SOURCE_FILES = [
   '../lib/date.ts',
+  '../lib/minify.ts',
   './pipeline.ts',
   './pipeline-formats.ts',
   './collection-fragment.ts',
   './collection-files.ts',
   './render.ts',
   './html-composer.ts',
+  // El peor de los que faltaban: lleva las clases Tailwind del wrapper de colección. Sin él,
+  // cambiar una hacía que el HTML no se regenerara y el CSS tampoco se recompilara.
+  './html-postprocess.ts',
   './latex-preamble.ts',
   './latex-composer.ts',
   './pandoc-metadata.ts',
   './xmpdata.ts',
   './export.ts',
+  './image-processor.ts',
+  './image-flags.ts',
+  './pdfx-check.ts',
+  './prepare.ts',
+  '../config/site-config.ts',
+  '../config/config-schema.ts',
 ] as const;
 
 export async function computeSchemaSourceHash(
@@ -111,7 +114,9 @@ export async function computeFiltersHash(
     [join(import.meta.dir, '../lib/resources/filters'), '**/*.lua'],
     [join(import.meta.dir, '../lib/resources/preamble'), '*.tex'],
     [join(cwd, 'filters'), '**/*.lua'],
-    [join(cwd, 'preamble'), '*.tex'],
+    // Los cuatro directorios que `preambleProjectDir` lee. Hardcodear solo `preamble` dejaba los
+    // overrides por tipo fuera del hash: se aplicaban una vez y nunca más, en silencio.
+    ...projectPreambleDirs().map((dir): [string, string] => [join(cwd, dir), '*.tex']),
   ];
   parts.push(...(await hashSpecFiles(specs, prevCache, cache)));
   for (const rel of siteConfig.luaFilters ?? []) {
@@ -147,14 +152,22 @@ export async function computeConfigHashes(
 ): Promise<{ hashes: Record<string, string>; cache: Record<string, FileCacheEntry> }> {
   const fmt = siteConfig.format;
   const htmlResources = (
-    await Promise.all(HTML_RESOURCE_FILES.map((f) => resourceHash(join(HTML_RESOURCES_DIR, f), `html-res:${f}`, prevFileCache, fileCacheOut)))
+    await Promise.all(htmlResourceFiles().map((rel) => resourceHash(join(HTML_RESOURCES_DIR, rel), `html-res:${rel}`, prevFileCache, fileCacheOut)))
   ).join('\n');
   const logoPath = fmt?.html?.site?.logo?.trim();
   const logo = logoPath ? await resourceHash(join(cwd, logoPath), 'html-res:logo', prevFileCache, fileCacheOut) : '';
   const toc = String(siteConfig.toc ?? false);
   const lang = String(siteConfig.language ?? '');
+  // La salida depende de binarios externos, no solo de fuentes: instalar, quitar o actualizar
+  // `minify` cambia los bytes de todas las páginas sin que ningún archivo del proyecto cambie.
+  const [magick, pdftoppm, latexmk, minify] = await Promise.all([
+    toolVersionMagick(),
+    toolVersionPdfToPpm(),
+    toolVersionLatexmk(),
+    toolVersionMinify(),
+  ]);
   const hashes = {
-    pdf: computeFormatHash(JSON.stringify(fmt?.pdf ?? {}), [String(fmt?.latex?.generate ?? false), toc, lang]),
+    pdf: computeFormatHash(JSON.stringify(fmt?.pdf ?? {}), [String(fmt?.latex?.generate ?? false), toc, lang, latexmk, pdftoppm]),
     html: computeFormatHash(JSON.stringify(fmt?.html ?? {}), [
       htmlResources,
       logo,
@@ -164,6 +177,8 @@ export async function computeConfigHashes(
       String(fmt?.epub?.generate ?? false),
       String(fmt?.markdown?.generate ?? false),
       lang,
+      minify,
+      magick,
     ]),
     epub: computeFormatHash(JSON.stringify(fmt?.epub ?? {}), [toc, lang]),
     markdown: computeFormatHash(JSON.stringify(fmt?.markdown ?? {}), [lang]),
