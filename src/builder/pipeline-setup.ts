@@ -58,14 +58,8 @@ export interface EffectiveTemplates {
   pdfxActive: boolean;
   cropActive: boolean;
   pageDimensions: { w: number; h: number; textW: number } | undefined;
-  /** #2488 — la de `file`; las de los otros dos types, con su propio nombre. */
-  htmlTemplatePath: string;
-  htmlCollectionTemplatePath: string;
-  htmlCreatorTemplatePath: string;
-  latexTemplatePath: string;
-  latexCollectionTemplatePath: string;
-  latexCreatorTemplatePath: string;
-  latexInterventionTemplatePath: string;
+  /** #2488 — la de `file` es la de `html`; cada type con HTML tiene la suya. */
+  templates: Record<TemplateKind, string>;
   /** #2488 — el bloque de la tarjeta de referencias de cada type. */
   refsCardTemplates: Record<HtmlDocType, string>;
 }
@@ -111,6 +105,16 @@ const TEMPLATE_SCOPES: Record<TemplateKind, PreambleDocType> = {
 export const TEMPLATE_KINDS = Object.keys(TEMPLATE_FILES) as TemplateKind[];
 export const templatePathFor = (kind: TemplateKind, templatesDir: string): string => join(templatesDir, TEMPLATE_FILES[kind]);
 
+const PREAMBLE_TEMPLATE_KINDS = ['latex', 'latex-collection', 'latex-creator', 'latex-intervention'] as const satisfies readonly TemplateKind[];
+
+export function latexKindFor(type: PreambleDocType | undefined): TemplateKind {
+  return type === undefined || type === 'file' ? 'latex' : `latex-${type}`;
+}
+
+export function htmlKindFor(type: HtmlDocType): TemplateKind {
+  return type === 'file' ? 'html' : `html-${type}`;
+}
+
 export interface TemplateInput {
   cwd: string;
   siteConfig: SiteConfig;
@@ -143,30 +147,17 @@ export async function writeEffectiveTemplates(
   effectiveDisabledPreamble: string[],
   logoInline?: string,
 ): Promise<EffectiveTemplates> {
+  const templatesDir = join(ctx.cwd, '.iteraciones', 'templates');
+  await mkdir(templatesDir, { recursive: true });
   const state: EffectiveTemplates = {
     biblatexAvailable: true,
     pdfxActive: false,
     cropActive: false,
     pageDimensions: undefined,
-    htmlTemplatePath: '',
-    htmlCollectionTemplatePath: '',
-    htmlCreatorTemplatePath: '',
-    latexTemplatePath: '',
-    latexCollectionTemplatePath: '',
-    latexCreatorTemplatePath: '',
-    latexInterventionTemplatePath: '',
+    templates: Object.fromEntries(TEMPLATE_KINDS.map((kind) => [kind, templatePathFor(kind, templatesDir)])) as Record<TemplateKind, string>,
     refsCardTemplates: { file: '', collection: '', creator: '' },
   };
 
-  const templatesDir = join(ctx.cwd, '.iteraciones', 'templates');
-  await mkdir(templatesDir, { recursive: true });
-  state.htmlTemplatePath = join(templatesDir, 'html.html');
-  state.htmlCollectionTemplatePath = join(templatesDir, 'html-collection.html');
-  state.htmlCreatorTemplatePath = join(templatesDir, 'html-creator.html');
-  state.latexTemplatePath = join(templatesDir, 'latex.tex');
-  state.latexCollectionTemplatePath = join(templatesDir, 'latex-collection.tex');
-  state.latexCreatorTemplatePath = join(templatesDir, 'latex-creator.tex');
-  state.latexInterventionTemplatePath = join(templatesDir, 'latex-intervention.tex');
   // #2488 — el bloque de referencias también es una tarjeta por type
   state.refsCardTemplates = {
     file: await loadReferencesCardTemplate('file'),
@@ -179,40 +170,33 @@ export async function writeEffectiveTemplates(
   // regenera estas mismas plantillas) y con `iteraciones filters`.
   const disabledPreamble = disableBibliographyWithoutBibFiles(effectiveDisabledPreamble, bibFiles);
   const tpl: TemplateInput = { cwd: ctx.cwd, siteConfig, bibFiles, effectiveDisabledPreamble: disabledPreamble, logoInline };
-  const writeTemplate = async (kind: TemplateKind, path: string): Promise<void> => {
+  const writeTemplate = async (kind: TemplateKind): Promise<void> => {
+    const path = state.templates[kind];
     await writeIfChanged(path, await composeTemplate(kind, tpl));
     // Recurso de la fase 2: el .sh la puede regenerar sin pandoc ni el build.
     recordSupportCommand('resources', path, ['iteraciones', 'template', kind, '-o', path]);
   };
 
   if (htmlOn) {
-    await writeTemplate('html', state.htmlTemplatePath);
-    await writeTemplate('html-collection', state.htmlCollectionTemplatePath);
-    await writeTemplate('html-creator', state.htmlCreatorTemplatePath);
+    await writeTemplate('html');
+    await writeTemplate('html-collection');
+    await writeTemplate('html-creator');
   }
   if (plan.generateLatex) {
-    const preambleFilters = await loadPreambleFilters(disabledPreamble, ctx.cwd, 'file');
-    state.biblatexAvailable = preambleFilters.some((f) => f.name === '11-bibliography');
-    state.pdfxActive = preambleFilters.some((f) => f.name === '99-pdfx');
-    state.cropActive = preambleFilters.some((f) => f.name === '98-crop');
-    state.pageDimensions = detectPageSize(preambleFilters);
-    applyPrintQueueDynamics(preambleFilters, state.pageDimensions);
-    await writeTemplate('latex', state.latexTemplatePath);
-
-    const collectionPreambleFilters = await loadPreambleFilters(disabledPreamble, ctx.cwd, 'collection');
-    const collectionPageDimensions = detectPageSize(collectionPreambleFilters);
-    applyPrintQueueDynamics(collectionPreambleFilters, collectionPageDimensions);
-    await writeTemplate('latex-collection', state.latexCollectionTemplatePath);
-
-    const creatorPreambleFilters = await loadPreambleFilters(disabledPreamble, ctx.cwd, 'creator');
-    const creatorPageDimensions = detectPageSize(creatorPreambleFilters);
-    applyPrintQueueDynamics(creatorPreambleFilters, creatorPageDimensions);
-    await writeTemplate('latex-creator', state.latexCreatorTemplatePath);
-
-    const interventionPreambleFilters = await loadPreambleFilters(disabledPreamble, ctx.cwd, 'intervention');
-    const interventionPageDimensions = detectPageSize(interventionPreambleFilters);
-    applyPrintQueueDynamics(interventionPreambleFilters, interventionPageDimensions);
-    await writeTemplate('latex-intervention', state.latexInterventionTemplatePath);
+    for (const kind of PREAMBLE_TEMPLATE_KINDS) {
+      const preambleFilters = await loadPreambleFilters(disabledPreamble, ctx.cwd, TEMPLATE_SCOPES[kind]);
+      const pageDimensions = detectPageSize(preambleFilters);
+      applyPrintQueueDynamics(preambleFilters, pageDimensions);
+      // Sólo el ámbito `file` describe el documento: las banderas y el tamaño de
+      // página que consume el pipeline son los suyos.
+      if (TEMPLATE_SCOPES[kind] === 'file') {
+        state.biblatexAvailable = preambleFilters.some((f) => f.name === '11-bibliography');
+        state.pdfxActive = preambleFilters.some((f) => f.name === '99-pdfx');
+        state.cropActive = preambleFilters.some((f) => f.name === '98-crop');
+        state.pageDimensions = pageDimensions;
+      }
+      await writeTemplate(kind);
+    }
   }
   return state;
 }

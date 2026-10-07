@@ -58,7 +58,7 @@ function ctx(): BuildContext {
 /** Compone la plantilla LaTeX como hace el build. */
 async function componerLaTex(bibFiles: string[]): Promise<{ tex: string; biblatex: boolean }> {
   const state = await writeEffectiveTemplates(ctx(), { generateLatex: true } as BuildMetadata, false, DEFAULT_SITE_CONFIG, bibFiles, DISABLED);
-  return { tex: readFileSync(state.latexTemplatePath, 'utf8'), biblatex: state.biblatexAvailable };
+  return { tex: readFileSync(state.templates.latex, 'utf8'), biblatex: state.biblatexAvailable };
 }
 
 // ── La regla ───────────────────────────────────────────────────────────────
