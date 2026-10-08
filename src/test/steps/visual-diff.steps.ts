@@ -1,13 +1,15 @@
 import { spyOn } from 'bun:test';
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
 import { runTestVisual, type TestVisualOptions } from '../../cli/test-visual.js';
+import { exec } from '../../lib/run.js';
 import {
   blurSigmaFor,
   clearDiffImages,
+  compareVisual,
   diffImageName,
   diffTargetFor,
   formatVisualReport,
@@ -290,6 +292,47 @@ const comoLista = (pdfs: string): string[] =>
     .split(',')
     .map((p) => p.trim())
     .filter(Boolean);
+
+Given('un PDF de una página {string} con un rectángulo de ancho {int}', async (nombre: string, ancho: number) => {
+  const pdf = join(world.root, nombre);
+  mkdirSync(join(pdf, '..'), { recursive: true });
+  const png = `${pdf}.png`;
+  const create = await exec('magick', ['-size', '200x120', 'xc:white', '-fill', 'black', '-draw', `rectangle 20,40 ${20 + ancho},70`, png]);
+  if (create.exitCode !== 0) throw new Error(`magick no pudo crear ${png}: ${create.stderr.trim()}`);
+  const toPdf = await exec('magick', [png, pdf]);
+  if (toPdf.exitCode !== 0) throw new Error(`magick no pudo convertir ${png} a PDF: ${toPdf.stderr.trim()}`);
+  rmSync(png, { force: true });
+});
+
+When('comparo los PDF de verdad contra su referencia', async () => {
+  const ref = join(world.root, 'visual', 'ref.pdf');
+  const gen = join(world.root, 'visual', 'gen.pdf');
+  world.comparacion = await compareVisual({
+    dpi: 150,
+    thresholdPercent: 0.005,
+    fuzzPercent: 15,
+    reference: ref,
+    generated: gen,
+    workDir: join(world.root, '.iteraciones', 'tmp', 'visual', 'prueba'),
+    diffDir: join(world.root, 'visual'),
+    diffStem: 'ref',
+  });
+});
+
+Then('el diff de la página {int} tiene diferencias en {string}', async (pagina: number, color: string) => {
+  const detalles = (world.comparacion as { details: { page: number; diffImage: string }[] }).details;
+  const detalle = detalles.find((d) => d.page === pagina);
+  if (detalle === undefined) throw new Error(`no hay diff de la página ${pagina}; hay: ${JSON.stringify(detalles.map((d) => d.page))}`);
+  const histo = await exec('magick', [detalle.diffImage, '-format', '%c', 'histogram:info:-']);
+  const pixeles = histo.stdout
+    .split('\n')
+    .filter((line) => line.includes(color))
+    .map((line) => Number(line.trim().split(':')[0]))
+    .reduce((suma, n) => suma + (Number.isFinite(n) ? n : 0), 0);
+  if (pixeles === 0) {
+    throw new Error(`el diff no tiene píxeles ${JSON.stringify(color)}; colores: ${histo.stdout.trim().split('\n').slice(0, 5).join(' | ')}`);
+  }
+});
 
 Given('un PDF llamado {string} en la raíz', (nombre: string) => {
   escribirEnProyecto(nombre, 'contenido');

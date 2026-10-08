@@ -17,6 +17,8 @@ export interface VisualOptions {
 
 export const VISUAL_DEFAULTS: VisualOptions = { dpi: 300, thresholdPercent: 0.005, fuzzPercent: 15 };
 
+export const DIFF_HIGHLIGHT = '#ff0000';
+
 function parseOption(raw: string | undefined, fallback: number, flag: string, valid: (n: number) => boolean, hint: string): number {
   if (raw === undefined || raw === '') return fallback;
   const value = Number(raw);
@@ -194,7 +196,7 @@ async function renderPdf(pdf: string, prefix: string, dpi: number): Promise<stri
 }
 
 async function blurPage(source: string, target: string, sigma: number): Promise<void> {
-  const blur = await exec('magick', [source, '-blur', `0x${sigma}`, target]);
+  const blur = await exec('magick', [source, '-blur', `0x${sigma}`, '-define', 'png:color-type=2', target]);
   if (blur.exitCode !== 0) {
     throw new BuildError(`magick no pudo difuminar "${source}": ${blur.stderr.trim().split('\n').pop() ?? 'error desconocido'}`);
   }
@@ -223,6 +225,8 @@ async function comparePngPair(
     'AE',
     '-fuzz',
     `${options.fuzzPercent}%`,
+    '-highlight-color',
+    DIFF_HIGHLIGHT,
     blurredReference,
     blurredGenerated,
     diffImage,

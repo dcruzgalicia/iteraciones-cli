@@ -147,6 +147,15 @@ Característica: las reglas de la regresión visual
       Entonces el resumen dice "páginas 12 · sin cambios 11 · modificadas 1"
       Y el resumen dice "  pág 5  0.0486 %  visual/index-page-005-diff.png"
 
+  Regla de negocio: Las diferencias del diff se marcan en rojo
+
+    Escenario: El diff pinta las páginas que cambiaron en rojo
+      Dado que la raíz del proyecto está vacía
+      Y un PDF de una página "visual/ref.pdf" con un rectángulo de ancho 80
+      Y un PDF de una página "visual/gen.pdf" con un rectángulo de ancho 120
+      Cuando comparo los PDF de verdad contra su referencia
+      Entonces el diff de la página 1 tiene diferencias en "255,0,0"
+
   Regla de negocio: El tamaño sale de la cabecera IHDR, y si no hay PNG no hay tamaño
 
     Escenario: El tamaño se lee del IHDR
