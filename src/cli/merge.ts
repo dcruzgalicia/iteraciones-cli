@@ -21,7 +21,7 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
 import { computeActiveFormats, resolveDisabledPreambleConfig, toActiveFormats } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
-import { splitFrontmatter } from '../lib/frontmatter.js';
+import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 import { fail, logSuccess } from '../lib/logger.js';
 import { posix, resolvePath } from '../lib/paths.js';
 
@@ -41,11 +41,9 @@ async function printFlags(siteConfig: SiteConfig, cwd: string) {
 async function readSourceFm(text: string, label: string): Promise<Record<string, unknown>> {
   const { yaml } = splitFrontmatter(text);
   if (yaml === undefined) return {};
-  try {
-    return (Bun.YAML.parse(yaml) ?? {}) as Record<string, unknown>;
-  } catch {
-    throw new BuildError(`frontmatter inválido en "${label}"`);
-  }
+  const { value, error } = parseYamlWithPosition(yaml);
+  if (error) throw new BuildError(`frontmatter inválido en "${label}": ${error}`);
+  return (value ?? {}) as Record<string, unknown>;
 }
 
 function assertCollectionFiles(fm: Record<string, unknown>, label: string): string[] {

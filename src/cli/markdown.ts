@@ -13,7 +13,7 @@ import type { BuildDocument } from '../builder/types.js';
 import { loadSiteConfig } from '../config/config-loader.js';
 import { DEFAULT_SITE_CONFIG } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
-import { splitFrontmatter } from '../lib/frontmatter.js';
+import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 import { fail, logSuccess } from '../lib/logger.js';
 import { resolvePath } from '../lib/paths.js';
 import { buildImagesContext, readSourceDocument } from './merge.js';
@@ -25,9 +25,12 @@ function outputRootFor(output: string, dir: string): string {
   return root;
 }
 
-function sourceFm(text: string): Record<string, unknown> {
+function sourceFm(text: string, label: string): Record<string, unknown> {
   const { yaml } = splitFrontmatter(text);
-  const parsed = yaml === undefined ? undefined : (Bun.YAML.parse(yaml) ?? undefined);
+  if (yaml === undefined) return {};
+  const { value, error } = parseYamlWithPosition(yaml);
+  if (error) throw new BuildError(`frontmatter inválido en "${label}": ${error}`);
+  const parsed = value;
   const fm = typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
 
   applyCreatorTitle(fm);
@@ -53,7 +56,7 @@ export async function runMarkdown(cwd: string, input: string, options: { output?
     }
     const { inputPath, relativePath, text: content } = await readSourceDocument(cwd, input);
 
-    const fm = sourceFm(content);
+    const fm = sourceFm(content, input);
     const output = resolvePath(cwd, options.output);
     const siteConfig = await loadSiteConfig(cwd);
     const dir = dirname(relativePath);
