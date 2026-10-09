@@ -20,6 +20,7 @@ import {
   sortPageFiles,
   visualSlug,
 } from '../../lib/visual-diff.js';
+import { pdfDeUnaPagina } from '../helpers/pdf.ts';
 import { escribirEnProyecto, world } from './cli-world.steps.ts';
 
 function pngDe(ancho: number, alto: number, bytes = 24): Uint8Array {
@@ -77,10 +78,14 @@ Then('el nombre del diff de la página {int} es {string}', (pagina: number, espe
   if (leido !== esperado) throw new Error(`es ${JSON.stringify(leido)} y debería ser ${JSON.stringify(esperado)}`);
 });
 
-Then('el diff de {string} va junto a su snapshot', (pdf: string) => {
-  const { dir, stem } = diffTargetFor(expande(pdf));
-  if (!dir.endsWith('visual/anexos') || stem !== 'index') {
-    throw new Error(`va a ${JSON.stringify({ dir, stem })} y debería ir junto al snapshot`);
+Then('el diff de {string} se llama {string} y va a {string}', (snapshot: string, esperado: string, directorio: string) => {
+  const { dir, stem } = diffTargetFor(world.root, expande(snapshot));
+  const relativo = dir.replace(`${world.root}/`, '');
+  if (relativo !== directorio) {
+    throw new Error(`el diff va a ${JSON.stringify(relativo)} y debería ir a ${JSON.stringify(directorio)}`);
+  }
+  if (stem !== esperado) {
+    throw new Error(`el diff se llama ${JSON.stringify(stem)} y debería llamarse ${JSON.stringify(esperado)}`);
   }
 });
 
@@ -203,8 +208,8 @@ Given('que comparé {int} páginas con {int} sin cambios y {int} modificadas', (
     unchanged: iguales,
     changed: cambiadas,
     details: [
-      { page: 3, diffPercent: 0.4213, diffImage: '/tmp/v/doc/page-003-diff.png' },
-      { page: 17, diffPercent: 1.9001, diffImage: '/tmp/v/doc/page-017-diff.png' },
+      { page: 3, diffPercent: 0.4213, diffImage: '/tmp/v/doc/page-003--diff.png' },
+      { page: 17, diffPercent: 1.9001, diffImage: '/tmp/v/doc/page-017--diff.png' },
     ],
     referencePages: comparadas,
     generatedPages: comparadas,
@@ -228,7 +233,7 @@ Given('que comparé contra una referencia con {int} páginas y generé {int}', (
 When('armo el informe visual', () => {
   world.informe = formatVisualReport({
     result: world.comparacion as Parameters<typeof formatVisualReport>[0]['result'],
-    options: { dpi: 300, thresholdPercent: 0.005, fuzzPercent: 15 },
+    options: { dpi: 300, thresholdPercent: 0, fuzzPercent: 0 },
     referenceLabel: 'visual/index.pdf',
     generatedLabel: 'dist/files/index.pdf',
   });
@@ -298,7 +303,13 @@ Given('un PDF llamado {string} en la raíz', (nombre: string) => {
 Given('la salida tiene estos archivos:', (tabla: string) => {
   for (const linea of tabla.split('\n')) {
     const limpia = linea.trim();
-    if (limpia) escribirEnProyecto(join('dist', 'files', limpia), limpia.endsWith('.pdf') ? 'contenido' : 'no soy un PDF');
+    if (!limpia) continue;
+    if (limpia.endsWith('.pdf')) {
+      escribirEnProyecto(join('dist', 'files', limpia), '');
+      writeFileSync(join(world.root, 'dist', 'files', limpia), pdfDeUnaPagina(limpia));
+    } else {
+      escribirEnProyecto(join('dist', 'files', limpia), 'no soy un PDF');
+    }
   }
 });
 
@@ -307,8 +318,33 @@ Given('el directorio de snapshots tiene {string}', (lista: string) => {
     .split(';;')
     .map((n) => n.trim())
     .filter(Boolean)) {
-    escribirEnProyecto(join('visual', nombre), 'x');
+    if (nombre.endsWith('.pdf')) {
+      escribirEnProyecto(join('visual', nombre), '');
+      writeFileSync(join(world.root, 'visual', nombre), pdfDeUnaPagina(nombre));
+    } else {
+      escribirEnProyecto(join('visual', nombre), 'x');
+    }
   }
+});
+
+Given('el directorio de diffs tiene {string}', (lista: string) => {
+  for (const nombre of lista
+    .split(';;')
+    .map((n) => n.trim())
+    .filter(Boolean)) {
+    escribirEnProyecto(join('diff', nombre), 'x');
+  }
+});
+
+Then('el visual no dice por stdout {string}', (texto: string) => {
+  if (world.stdout.includes(texto)) {
+    throw new Error(`stdout sí dice ${JSON.stringify(texto)} y no debería: ${JSON.stringify(world.stdout)}`);
+  }
+});
+
+Given('que el proyecto tiene el PDF {string} con el texto {string}', (nombre: string, texto: string) => {
+  escribirEnProyecto(nombre, '');
+  writeFileSync(join(world.root, nombre), pdfDeUnaPagina(texto));
 });
 
 When('creo el snapshot de {string} con {string}', async (pdfs: string, flags: string) => {

@@ -258,7 +258,7 @@ Ejemplos:
 
   visual
     .command('check [pdf] [reference]')
-    .description('compara un PDF contra su snapshot —o contra el segundo PDF— y sale con exit 1 si hay regresión visual')
+    .description('compara los snapshots de <raíz>/visual contra el último build, o dos PDFs entre sí, y sale con exit 1 si hay regresión visual')
     .option('--output <path>', 'directorio de salida donde están los PDFs (por defecto: dist/files)')
     .option('--dpi <n>', `resolución de render en dpi (por defecto: ${VISUAL_DEFAULTS.dpi})`, String(VISUAL_DEFAULTS.dpi))
     .option(
@@ -272,16 +272,19 @@ Ejemplos:
     .addHelpText(
       'after',
       `
-Requiere pdftoppm (poppler) y ImageMagick. Compara por página: blur dpi/150 + fuzz ${VISUAL_DEFAULTS.fuzzPercent} %
-sobre PNGs de ${VISUAL_DEFAULTS.dpi} dpi, con umbral de ${VISUAL_DEFAULTS.thresholdPercent} % de píxeles distintos por página.
-Con dos rutas la segunda es la referencia y no se tocan los snapshots; con una, se compara contra su
-snapshot en <raíz>/visual/; sin rutas, contra todos los de --output (y se corta si falta alguno).
-Máximo dos rutas: para varios PDFs, este mismo comando sin operandos.
+Requiere pdftoppm (poppler) y ImageMagick. Compara por página: blur dpi/150 sobre PNGs de ${VISUAL_DEFAULTS.dpi} dpi,
+con fuzz ${VISUAL_DEFAULTS.fuzzPercent} % de tolerancia de color y umbral de ${VISUAL_DEFAULTS.thresholdPercent} % de píxeles distintos.
+Los defaults son 0 porque la comparación es visual: LaTeX rinde la misma página aunque el PDF cambie de bytes.
+
+Sin rutas compara cada PDF de --output contra su snapshot en <raíz>/visual/, y avisa de lo que no encaja:
+un PDF sin snapshot es un agregado y un snapshot sin PDF es una eliminación; ninguno de los dos detiene, se revisan.
+Con dos rutas compara pdf contra referencia y no toca los snapshots. Una sola ruta es error: no dice contra qué comparar.
+Los diffs se escriben en <raíz>/diff/ con el camino aplanado (anexos/index.pdf → anexos--index--page-001--diff.png).
 
 Ejemplos:
-  iteraciones visual check                            compara todos los PDFs de dist/files
-  iteraciones visual check dist/files/index.pdf       compara un solo PDF contra su snapshot
+  iteraciones visual check                            compara visual/ contra el build
   iteraciones visual check nuevo.pdf viejo.pdf        compara dos PDFs, sin snapshots de por medio
+  iteraciones visual check dist/files/x.pdf visual/x.pdf   un documento, escrito entero
 `,
     )
     .action(async (_pdf: string | undefined, _reference: string | undefined, opts: TestVisualOptions, command: Command) => {
@@ -298,7 +301,8 @@ Ejemplos:
       'after',
       `
 Los snapshots viven en <raíz>/visual/, espejando dist/files, y van versionados en git; los diffs de
-la corrida anterior se retiran. Sin proyecto, el trabajo queda en el temporal del sistema.
+la corrida anterior se retiran de <raíz>/diff/, que no se versiona. Sin proyecto, el trabajo queda
+en el temporal del sistema.
 Sin rutas hace todo dist/files; con una, solo ese PDF (máximo una ruta).
 
 Ejemplos:

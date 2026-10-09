@@ -73,7 +73,8 @@ const DEFAULT_GITIGNORE = [
   'build.sh',
   '.DS_Store',
 
-  'visual/**/*-page-*-diff.png',
+  '# diffs de la regresión visual: se regeneran con iteraciones visual check',
+  'diff/',
   '',
 ].join('\n');
 

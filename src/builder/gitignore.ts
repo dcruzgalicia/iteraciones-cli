@@ -19,7 +19,7 @@ export async function loadGitignoreRules(cwd: string): Promise<ignore.Ignore> {
   }
 }
 
-const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', '.iteraciones']);
+const IGNORED_DIRS = new Set(['node_modules', '.git', 'dist', '.iteraciones', 'diff']);
 
 export function isInsideIgnoredDir(relPath: string): boolean {
   return relPath.split('/').some((segment) => IGNORED_DIRS.has(segment));
