@@ -1,23 +1,26 @@
 import { spyOn } from 'bun:test';
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { Given, Then, When } from '@cucumber/cucumber';
-import { runTestVisual, type TestVisualOptions } from '../../cli/test-visual.js';
+import { runSnapshots, type SnapshotsMode, type SnapshotsOptions } from '../../cli/snapshots.js';
 import {
-  blurSigmaFor,
   clearDiffImages,
+  clearSnapshotImages,
+  DPI,
   diffImageName,
-  diffTargetFor,
+  FUZZ_PERCENT,
   formatVisualReport,
   formatVisualSummary,
   listPdfFiles,
+  listSnapshotImages,
   pngSize,
-  referencePathFor,
-  resolveVisualOptions,
   resolveVisualWorkspaces,
+  snapshotImageName,
+  snapshotStemFor,
   sortPageFiles,
+  THRESHOLD_PERCENT,
   visualSlug,
 } from '../../lib/visual-diff.js';
 import { pdfDeUnaPagina } from '../helpers/pdf.ts';
@@ -31,6 +34,15 @@ function pngDe(ancho: number, alto: number, bytes = 24): Uint8Array {
   view.setUint32(20, alto, false);
   return buffer;
 }
+
+function expande(ruta: string): string {
+  return ruta
+    .replace(/PROYECTO/g, world.root)
+    .replace(/<proyecto>/g, world.root)
+    .replace(/<temporal>/g, tmpdir());
+}
+
+const salidaDir = (): string => join(world.root, 'dist', 'files');
 
 Given('que tengo un PNG de {int} por {int}', (ancho: number, alto: number) => {
   world.png = pngDe(ancho, alto);
@@ -67,26 +79,14 @@ Then('el slug de {string} es {string}', (ruta: string, esperado: string) => {
   if (leido !== esperado) throw new Error(`el slug es ${JSON.stringify(leido)} y debería ser ${JSON.stringify(esperado)}`);
 });
 
-Then('el snapshot de {string} vive en {string}', (pdf: string, esperado: string) => {
-  const leido = referencePathFor(world.root, expande(pdf), `${world.root}/dist/files`);
-  const relativo = leido.replace(`${world.root}/`, '');
-  if (relativo !== esperado) throw new Error(`vive en ${JSON.stringify(relativo)} y debería vivir en ${JSON.stringify(esperado)}`);
-});
-
-Then('el nombre del diff de la página {int} es {string}', (pagina: number, esperado: string) => {
-  const leido = diffImageName('index', pagina);
+Then('el nombre de la página {int} de {word} es {string}', (pagina: number, clase: string, esperado: string) => {
+  const leido = clase === 'snap' ? snapshotImageName('index', pagina) : diffImageName('index', pagina);
   if (leido !== esperado) throw new Error(`es ${JSON.stringify(leido)} y debería ser ${JSON.stringify(esperado)}`);
 });
 
-Then('el diff de {string} se llama {string} y va a {string}', (snapshot: string, esperado: string, directorio: string) => {
-  const { dir, stem } = diffTargetFor(world.root, expande(snapshot));
-  const relativo = dir.replace(`${world.root}/`, '');
-  if (relativo !== directorio) {
-    throw new Error(`el diff va a ${JSON.stringify(relativo)} y debería ir a ${JSON.stringify(directorio)}`);
-  }
-  if (stem !== esperado) {
-    throw new Error(`el diff se llama ${JSON.stringify(stem)} y debería llamarse ${JSON.stringify(esperado)}`);
-  }
+Then('el prefijo del snapshot de {string} es {string}', (pdf: string, esperado: string) => {
+  const leido = snapshotStemFor(expande(pdf), salidaDir());
+  if (leido !== esperado) throw new Error(`el prefijo es ${JSON.stringify(leido)} y debería ser ${JSON.stringify(esperado)}`);
 });
 
 Given('que el directorio de salida tiene {string}', (archivos: string) => {
@@ -111,8 +111,26 @@ Then('los PDF son {string}', (esperados: string) => {
   }
 });
 
+When('listo los snapshots guardados', async () => {
+  const porStem = await listSnapshotImages(join(world.root, 'snapshots'));
+  world.snapshotsGuardados = Object.fromEntries([...porStem].map(([stem, files]) => [stem, files.map((f) => basename(f))]));
+});
+
+Then('los snapshots guardados son {string}', (esperados: string) => {
+  const leido = Object.entries(world.snapshotsGuardados as Record<string, string[]>)
+    .map(([stem, files]) => `${stem}: ${files.join(', ')}`)
+    .join(' · ');
+  if (leido !== esperados) {
+    throw new Error(`son ${JSON.stringify(leido)} y deberían ser ${JSON.stringify(esperados)}`);
+  }
+});
+
 When('borro los diffs del snapshot {string}', async (slug: string) => {
   await clearDiffImages(world.root, slug === 'todos' ? undefined : slug);
+});
+
+When('borro los snapshots del prefijo {string}', async (slug: string) => {
+  await clearSnapshotImages(join(world.root, 'snapshots'), slug === 'todos' ? undefined : slug);
 });
 
 Then('en el directorio quedan {string}', (esperados: string) => {
@@ -120,11 +138,6 @@ Then('en el directorio quedan {string}', (esperados: string) => {
   if (leidos !== esperados) {
     throw new Error(`quedan ${JSON.stringify(leidos)} y deberían quedar ${JSON.stringify(esperados)}`);
   }
-});
-
-Then('el desenfoque a {int} dpi es {int}', (dpi: number, sigma: number) => {
-  const leido = blurSigmaFor(dpi);
-  if (leido !== sigma) throw new Error(`el desenfoque es ${leido} y debería ser ${sigma}`);
 });
 
 Given('que el proyecto tiene configuración', () => {
@@ -160,45 +173,14 @@ Then('el directorio de trabajo no se comparte con otro proyecto', async () => {
   await rm(otro, { recursive: true, force: true });
 });
 
-Then('el caché del visual está en {string}', (esperado: string) => {
+Then('el caché de los snapshots está en {string}', (esperado: string) => {
   const leido = (world.workspaces as { cachePath?: string }).cachePath ?? 'ninguno';
   if (leido !== expande(esperado)) throw new Error(`está en ${JSON.stringify(leido)} y debería estar en ${JSON.stringify(esperado)}`);
 });
 
-Then('los valores por defecto son dpi {int}, umbral {string} y fuzz {int}', (dpi: number, umbral: string, fuzz: number) => {
-  const o = resolveVisualOptions();
-  if (o.dpi !== dpi || o.thresholdPercent !== Number(umbral) || o.fuzzPercent !== fuzz) {
-    throw new Error(`son ${JSON.stringify(o)} y deberían ser los del escenario`);
-  }
-});
-
-When('resuelvo las opciones visuales con {string}', (flags: string) => {
-  const dado = Object.fromEntries(
-    flags.split(',').map((par) => {
-      const [k, v] = par.split('=');
-      return [k?.trim() ?? '', v ?? ''];
-    }),
-  ) as Record<string, string>;
-  try {
-    world.opcionesVisuales = resolveVisualOptions(dado);
-    world.errorVisual = '';
-  } catch (e) {
-    world.errorVisual = (e as Error).message;
-    world.opcionesVisuales = null;
-  }
-});
-
-Then('las opciones son dpi {int}, umbral {string} y fuzz {int}', (dpi: number, umbral: string, fuzz: number) => {
-  const o = world.opcionesVisuales as { dpi: number; thresholdPercent: number; fuzzPercent: number } | null;
-  if (o?.dpi !== dpi || o.thresholdPercent !== Number(umbral) || o.fuzzPercent !== fuzz) {
-    throw new Error(`son ${JSON.stringify(o)} y deberían ser las del escenario`);
-  }
-});
-
-Then('las opciones visuales fallan diciendo {string}', (motivo: string) => {
-  if (!world.errorVisual) throw new Error('no falló y debía');
-  if (!world.errorVisual.includes(motivo)) {
-    throw new Error(`no dice ${JSON.stringify(motivo)}. Dijo: ${world.errorVisual}`);
+Then('la comparación es dpi {int}, umbral {int} y fuzz {int}', (dpi: number, umbral: number, fuzz: number) => {
+  if (DPI !== dpi || THRESHOLD_PERCENT !== umbral || FUZZ_PERCENT !== fuzz) {
+    throw new Error(`es dpi ${DPI}, umbral ${THRESHOLD_PERCENT}, fuzz ${FUZZ_PERCENT} y el escenario dice otra cosa`);
   }
 });
 
@@ -233,8 +215,7 @@ Given('que comparé contra una referencia con {int} páginas y generé {int}', (
 When('armo el informe visual', () => {
   world.informe = formatVisualReport({
     result: world.comparacion as Parameters<typeof formatVisualReport>[0]['result'],
-    options: { dpi: 300, thresholdPercent: 0, fuzzPercent: 0 },
-    referenceLabel: 'visual/index.pdf',
+    referenceLabel: 'snapshots/index',
     generatedLabel: 'dist/files/index.pdf',
   });
 });
@@ -245,7 +226,7 @@ When('armo el resumen visual', () => {
       compared: 12,
       unchanged: 11,
       changed: 1,
-      details: [{ page: 5, diffPercent: 0.0486, diffImage: '/p/visual/index-page-005-diff.png' }],
+      details: [{ page: 5, diffPercent: 0.0486, diffImage: '/p/diff/index--page-005--diff.png' }],
       referencePages: 12,
       generatedPages: 12,
       pass: false,
@@ -266,20 +247,13 @@ Then('el resumen dice {string}', (texto: string) => {
   }
 });
 
-function expande(ruta: string): string {
-  return ruta
-    .replace(/PROYECTO/g, world.root)
-    .replace(/<proyecto>/g, world.root)
-    .replace(/<temporal>/g, tmpdir());
-}
-
-async function correrVisual(pdfs: string[], opciones: TestVisualOptions): Promise<void> {
+async function correr(pdfs: string[], mode: SnapshotsMode, options: SnapshotsOptions = {}): Promise<void> {
   const salida = spyOn(process.stdout, 'write');
   const error = spyOn(process.stderr, 'write');
   const previo = process.exitCode;
   process.exitCode = 0;
   try {
-    await runTestVisual(world.root, pdfs, opciones);
+    await runSnapshots(world.root, pdfs, mode, options);
     world.codigoVisual = process.exitCode ?? 0;
     world.stdoutVisual = salida.mock.calls.map((a) => a.map(String).join('')).join('');
     world.stderrVisual = error.mock.calls.map((a) => a.map(String).join('')).join('');
@@ -296,21 +270,22 @@ const comoLista = (pdfs: string): string[] =>
     .map((p) => p.trim())
     .filter(Boolean);
 
-Given('un PDF llamado {string} en la raíz', (nombre: string) => {
-  escribirEnProyecto(nombre, 'contenido');
+Given('un PDF llamado {string} en la raíz con el texto {string}', (nombre: string, texto: string) => {
+  escribirEnProyecto(nombre, '');
+  writeFileSync(join(world.root, nombre), pdfDeUnaPagina(texto));
 });
 
 Given('la salida tiene estos archivos:', (tabla: string) => {
   for (const linea of tabla.split('\n')) {
     const limpia = linea.trim();
     if (!limpia) continue;
-    if (limpia.endsWith('.pdf')) {
-      escribirEnProyecto(join('dist', 'files', limpia), '');
-      writeFileSync(join(world.root, 'dist', 'files', limpia), pdfDeUnaPagina(limpia));
-    } else {
-      escribirEnProyecto(join('dist', 'files', limpia), 'no soy un PDF');
-    }
+    escribirEnProyecto(join('dist', 'files', limpia), '');
+    writeFileSync(join(world.root, 'dist', 'files', limpia), pdfDeUnaPagina(limpia));
   }
+});
+
+When('quito el PDF {string} de la salida', (nombre: string) => {
+  rmSync(join(world.root, 'dist', 'files', nombre));
 });
 
 Given('el directorio de snapshots tiene {string}', (lista: string) => {
@@ -318,12 +293,7 @@ Given('el directorio de snapshots tiene {string}', (lista: string) => {
     .split(';;')
     .map((n) => n.trim())
     .filter(Boolean)) {
-    if (nombre.endsWith('.pdf')) {
-      escribirEnProyecto(join('visual', nombre), '');
-      writeFileSync(join(world.root, 'visual', nombre), pdfDeUnaPagina(nombre));
-    } else {
-      escribirEnProyecto(join('visual', nombre), 'x');
-    }
+    escribirEnProyecto(join('snapshots', nombre), 'no soy un PNG');
   }
 });
 
@@ -336,51 +306,31 @@ Given('el directorio de diffs tiene {string}', (lista: string) => {
   }
 });
 
-Then('el visual no dice por stdout {string}', (texto: string) => {
-  if (world.stdout.includes(texto)) {
-    throw new Error(`stdout sí dice ${JSON.stringify(texto)} y no debería: ${JSON.stringify(world.stdout)}`);
-  }
+When('guardo los snapshots de {string}', async (pdfs: string) => {
+  await correr(comoLista(pdfs), 'save');
 });
 
-Given('que el proyecto tiene el PDF {string} con el texto {string}', (nombre: string, texto: string) => {
-  escribirEnProyecto(nombre, '');
-  writeFileSync(join(world.root, nombre), pdfDeUnaPagina(texto));
+When('comparo {string}', async (pdfs: string) => {
+  await correr(comoLista(pdfs), 'check');
 });
 
-When('creo el snapshot de {string} con {string}', async (pdfs: string, flags: string) => {
-  await correrVisual(comoLista(pdfs), { ...opcionesVisuales(flags), update: true });
-});
-
-When('comparo {string} con {string}', async (pdfs: string, flags: string) => {
-  await correrVisual(comoLista(pdfs), opcionesVisuales(flags));
-});
-
-function opcionesVisuales(flags: string): TestVisualOptions {
-  const salida: Record<string, unknown> = {};
-  for (const par of flags
-    .split(';;')
-    .map((f) => f.trim())
-    .filter(Boolean)) {
-    const [clave, valor] = par.split('=');
-    if (!clave) continue;
-    if (clave === 'update') salida.update = valor !== 'false';
-    else salida[clave] = valor;
-  }
-  return salida as TestVisualOptions;
-}
-
-Then('el visual termina con código {int}', (codigo: number) => {
+Then('el snapshots termina con código {int}', (codigo: number) => {
   if (world.codigoVisual !== codigo) {
     throw new Error(`el código es ${world.codigoVisual} y el escenario dice ${codigo}`);
   }
 });
 
-Then('el visual dice por stdout {string}', (texto: string) => {
+Then('el snapshots no dice por stdout {string}', (texto: string) => {
+  const salida = String(world.stdoutVisual);
+  if (salida.includes(texto)) throw new Error(`stdout sí dice ${JSON.stringify(texto)} y no debería:\n${salida}`);
+});
+
+Then('el snapshots dice por stdout {string}', (texto: string) => {
   const salida = String(world.stdoutVisual);
   if (!salida.includes(texto)) throw new Error(`stdout no dice ${JSON.stringify(texto)}:\n${salida}`);
 });
 
-Then('el visual dice por stderr {string}', (texto: string) => {
+Then('el snapshots dice por stderr {string}', (texto: string) => {
   const salida = String(world.stderrVisual);
   if (!salida.includes(texto)) throw new Error(`stderr no dice ${JSON.stringify(texto)}:\n${salida}`);
 });
@@ -393,10 +343,9 @@ Then('el archivo {string} NO existe en el proyecto', (relativa: string) => {
   if (existsSync(join(world.root, relativa))) throw new Error(`existe ${relativa} y no debía`);
 });
 
-Then('en las referencias quedan {string}', (esperados: string) => {
-  const leidos = readdirSync(join(world.root, 'visual')).sort().join(', ');
-  const queried = esperados.trim();
-  if (leidos !== queried) {
-    throw new Error(`quedan ${JSON.stringify(leidos)} y deberían quedar ${JSON.stringify(queried)}`);
+Then('en snapshots quedan {string}', (esperados: string) => {
+  const leidos = readdirSync(join(world.root, 'snapshots')).sort().join(', ');
+  if (leidos !== esperados) {
+    throw new Error(`quedan ${JSON.stringify(leidos)} y deberían quedar ${JSON.stringify(esperados)}`);
   }
 });

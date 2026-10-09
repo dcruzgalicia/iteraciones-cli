@@ -7,40 +7,9 @@ import { BuildError } from './errors.js';
 import { escapeRegExp } from './paths.js';
 import { exec, mapWithConcurrency } from './run.js';
 
-export interface VisualOptions {
-  dpi: number;
-
-  thresholdPercent: number;
-
-  fuzzPercent: number;
-}
-
-export const VISUAL_DEFAULTS: VisualOptions = { dpi: 300, thresholdPercent: 0, fuzzPercent: 0 };
-
-function parseOption(raw: string | undefined, fallback: number, flag: string, valid: (n: number) => boolean, hint: string): number {
-  if (raw === undefined || raw === '') return fallback;
-  const value = Number(raw);
-  if (!Number.isFinite(value) || !valid(value)) throw new BuildError(`${flag} inválido: "${raw}" (se espera ${hint})`);
-  return value;
-}
-
-export function resolveVisualOptions(raw: { dpi?: string; threshold?: string; fuzz?: string } = {}): VisualOptions {
-  return {
-    dpi: parseOption(raw.dpi, VISUAL_DEFAULTS.dpi, '--dpi', (n) => Number.isInteger(n) && n >= 1, 'un entero >= 1'),
-    thresholdPercent: parseOption(
-      raw.threshold,
-      VISUAL_DEFAULTS.thresholdPercent,
-      '--threshold',
-      (n) => n >= 0 && n <= 100,
-      'un valor entre 0 y 100',
-    ),
-    fuzzPercent: parseOption(raw.fuzz, VISUAL_DEFAULTS.fuzzPercent, '--fuzz', (n) => n >= 0 && n <= 100, 'un valor entre 0 y 100'),
-  };
-}
-
-export function blurSigmaFor(dpi: number): number {
-  return dpi / 150;
-}
+export const DPI = 300;
+export const FUZZ_PERCENT = 0;
+export const THRESHOLD_PERCENT = 0;
 
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] as const;
 
@@ -60,31 +29,21 @@ export function sortPageFiles(files: string[]): string[] {
   return [...files].sort((a, b) => pageNumberOf(a) - pageNumberOf(b));
 }
 
-export const VISUAL_DIR = 'visual';
+export const SNAPSHOTS_DIR = 'snapshots';
 export const DIFF_DIR = 'diff';
+const DIFF_IMAGE = /--page-\d+--diff\.png$/;
+const SNAPSHOT_IMAGE = /--page-\d+\.png$/;
 
 export function visualSlug(pdfPath: string): string {
   const slug = slugifyLib(basename(pdfPath, extname(pdfPath)), { lower: true, strict: true });
   return slug === '' ? 'documento' : slug;
 }
 
-export function referencePathFor(cwd: string, pdfPath: string, outputDir: string): string {
+/** El prefijo aplanado bajo el que viven las páginas de este PDF en snapshots/ y diff/. */
+export function snapshotStemFor(pdfPath: string, outputDir: string): string {
   const rel = relative(outputDir, pdfPath);
   const insideOutput = rel !== '' && !rel.startsWith('..') && !isAbsolute(rel);
-  return insideOutput ? join(cwd, VISUAL_DIR, dirname(rel), `${visualSlug(rel)}.pdf`) : join(cwd, VISUAL_DIR, `${visualSlug(pdfPath)}.pdf`);
-}
-
-export function diffImageName(stem: string, page: number): string {
-  return `${stem}--page-${String(page).padStart(3, '0')}--diff.png`;
-}
-
-export function diffTargetFor(cwd: string, snapshotPath: string): { dir: string; stem: string } {
-  const rel = relative(join(cwd, VISUAL_DIR), snapshotPath);
-  const dentro = rel !== '' && !rel.startsWith('..') && !isAbsolute(rel);
-  return {
-    dir: join(cwd, DIFF_DIR),
-    stem: dentro ? aplanar(rel) : visualSlug(snapshotPath),
-  };
+  return insideOutput ? aplanar(rel) : visualSlug(pdfPath);
 }
 
 function aplanar(rel: string): string {
@@ -93,6 +52,18 @@ function aplanar(rel: string): string {
     .split(/[\\/]/)
     .map((segmento) => segmento.replace(/-{2,}/g, '-'))
     .join('--');
+}
+
+export function snapshotImageName(stem: string, page: number): string {
+  return `${stem}--page-${String(page).padStart(3, '0')}.png`;
+}
+
+export function diffImageName(stem: string, page: number): string {
+  return `${stem}--page-${String(page).padStart(3, '0')}--diff.png`;
+}
+
+function stemOf(file: string): string {
+  return file.replace(SNAPSHOT_IMAGE, '');
 }
 
 async function globFiles(dir: string, pattern: string): Promise<string[]> {
@@ -115,12 +86,30 @@ export async function listPdfFiles(dir: string): Promise<string[]> {
   return globFiles(dir, '**/*.pdf');
 }
 
-const DIFF_IMAGE = /--page-\d+--diff\.png$/;
-
 export async function clearDiffImages(dir: string, stem?: string): Promise<void> {
   const files = stem === undefined ? await globFiles(dir, '**/*--page-*-diff.png') : (await readdir(dir).catch(() => [])).map((f) => join(dir, f));
   const pattern = stem === undefined ? DIFF_IMAGE : new RegExp(`^${escapeRegExp(stem)}--page-\\d+--diff\\.png$`);
   await Promise.all(files.filter((file) => pattern.test(basename(file))).map((file) => forceUnlink(file)));
+}
+
+export async function clearSnapshotImages(dir: string, stem?: string): Promise<void> {
+  const files = stem === undefined ? await globFiles(dir, '**/*--page-*.png') : (await readdir(dir).catch(() => [])).map((f) => join(dir, f));
+  const pattern = stem === undefined ? SNAPSHOT_IMAGE : new RegExp(`^${escapeRegExp(stem)}--page-\\d+\\.png$`);
+  await Promise.all(files.filter((file) => pattern.test(basename(file))).map((file) => forceUnlink(file)));
+}
+
+/** Prefijo aplanado → sus páginas, ordenadas. Es la línea base completa de un documento. */
+export async function listSnapshotImages(dir: string): Promise<Map<string, string[]>> {
+  const porStem = new Map<string, string[]>();
+  for (const file of await globFiles(dir, '**/*--page-*.png')) {
+    const base = basename(file);
+    if (!SNAPSHOT_IMAGE.test(base)) continue;
+    const stem = stemOf(base);
+    const paginas = porStem.get(stem);
+    if (paginas === undefined) porStem.set(stem, [file]);
+    else paginas.push(file);
+  }
+  return new Map([...porStem].map(([stem, files]) => [stem, sortPageFiles(files)]));
 }
 
 interface VisualWorkspaces {
@@ -131,8 +120,8 @@ interface VisualWorkspaces {
 
 export async function resolveVisualWorkspaces(cwd: string, slug: string): Promise<VisualWorkspaces> {
   const base = (await exists(join(cwd, 'iteraciones.config.yaml')))
-    ? join(cwd, '.iteraciones', 'tmp', 'visual')
-    : join(tmpdir(), 'iteraciones-visual', hashString(cwd).slice(0, 12));
+    ? join(cwd, '.iteraciones', 'tmp', 'snapshots')
+    : join(tmpdir(), 'iteraciones-snapshots', hashString(cwd).slice(0, 12));
   return { workDir: join(base, slug), cachePath: join(base, 'cache.json') };
 }
 
@@ -165,9 +154,8 @@ interface CacheEntry {
   pass: boolean;
 }
 
-function cacheKey(hashes: { reference: string; generated: string }, options: VisualOptions): string {
-  const basis = `${hashes.reference}:${hashes.generated}:${options.dpi}:${options.fuzzPercent}:${options.thresholdPercent}`;
-  return hashString(basis).slice(0, 32);
+function cacheKey(hashes: { reference: string; generated: string }): string {
+  return hashString(`${hashes.reference}:${hashes.generated}:${DPI}:${FUZZ_PERCENT}:${THRESHOLD_PERCENT}`).slice(0, 32);
 }
 
 async function readCache(path: string): Promise<Record<string, CacheEntry>> {
@@ -198,9 +186,10 @@ async function forceUnlink(path: string): Promise<void> {
   await unlink(path).catch(() => {});
 }
 
-async function renderPdf(pdf: string, prefix: string, dpi: number): Promise<string[]> {
+export async function renderPdfPages(pdf: string, prefix: string): Promise<string[]> {
   const dir = dirname(prefix);
-  const result = await exec('pdftoppm', ['-r', String(dpi), '-png', pdf, prefix]);
+  await mkdir(dir, { recursive: true });
+  const result = await exec('pdftoppm', ['-r', String(DPI), '-png', pdf, prefix]);
   if (result.exitCode !== 0) {
     throw new BuildError(`pdftoppm no pudo renderizar "${pdf}": ${result.stderr.trim().split('\n').pop() ?? 'error desconocido'}`);
   }
@@ -209,44 +198,14 @@ async function renderPdf(pdf: string, prefix: string, dpi: number): Promise<stri
   return sortPageFiles(pages);
 }
 
-async function blurPage(source: string, target: string, sigma: number): Promise<void> {
-  const blur = await exec('magick', [source, '-blur', `0x${sigma}`, target]);
-  if (blur.exitCode !== 0) {
-    throw new BuildError(`magick no pudo difuminar "${source}": ${blur.stderr.trim().split('\n').pop() ?? 'error desconocido'}`);
-  }
-}
-
-async function comparePngPair(
-  referencePng: string,
-  generatedPng: string,
-  diffImage: string,
-  options: VisualOptions,
-  tmpDir: string,
-): Promise<number> {
+async function comparePngPair(referencePng: string, generatedPng: string, diffImage: string): Promise<number> {
   const size = pngSize(await readFile(referencePng));
   if (size === null) throw new BuildError(`"${referencePng}" no es un PNG válido`);
 
-  const sigma = blurSigmaFor(options.dpi);
-  const blurBase = join(tmpDir, `blur-${basename(diffImage)}`);
-  const blurredReference = `${blurBase}-a.png`;
-  const blurredGenerated = `${blurBase}-b.png`;
-  await blurPage(referencePng, blurredReference, sigma);
-  await blurPage(generatedPng, blurredGenerated, sigma);
-
-  const compare = await exec('magick', [
-    'compare',
-    '-metric',
-    'AE',
-    '-fuzz',
-    `${options.fuzzPercent}%`,
-    blurredReference,
-    blurredGenerated,
-    diffImage,
-  ]);
+  const compare = await exec('magick', ['compare', '-metric', 'AE', '-fuzz', `${FUZZ_PERCENT}%`, referencePng, generatedPng, diffImage]);
   if (compare.exitCode > 1) {
     throw new BuildError(`magick compare falló: ${compare.stderr.trim().split('\n').pop() ?? 'error desconocido'}`);
   }
-  await Promise.all([forceUnlink(blurredReference), forceUnlink(blurredGenerated)]);
 
   const metricLine = (compare.stderr.trim() !== '' ? compare.stderr : compare.stdout).trim().split('\n').pop() ?? '';
   const differing = Number.parseFloat(metricLine);
@@ -254,8 +213,9 @@ async function comparePngPair(
   return (100 * differing) / (size.width * size.height);
 }
 
-interface CompareVisualInput extends VisualOptions {
-  reference: string;
+interface CompareVisualInput {
+  referencePngs?: string[];
+  referencePdf?: string;
   generated: string;
   workDir: string;
   cachePath?: string;
@@ -276,8 +236,6 @@ async function comparePages(args: {
   compared: number;
   diffDir: string;
   diffStem: string;
-  options: VisualOptions;
-  workDir: string;
 }): Promise<PageDiff[]> {
   const details: PageDiff[] = [];
   await mapWithConcurrency(
@@ -289,25 +247,31 @@ async function comparePages(args: {
       if (referencePng === undefined || generatedPng === undefined) return;
       const page = index + 1;
       const diffImage = join(args.diffDir, diffImageName(args.diffStem, page));
-      const diffPercent = await comparePngPair(referencePng, generatedPng, diffImage, args.options, args.workDir);
-      if (diffPercent <= args.options.thresholdPercent) {
-        await Promise.all([forceUnlink(referencePng), forceUnlink(generatedPng), forceUnlink(diffImage)]);
+      const diffPercent = await comparePngPair(referencePng, generatedPng, diffImage);
+      if (diffPercent <= THRESHOLD_PERCENT) {
+        await Promise.all([forceUnlink(generatedPng), forceUnlink(diffImage)]);
         return;
       }
-      await Promise.all([forceUnlink(referencePng), forceUnlink(generatedPng)]);
+      await Promise.all([forceUnlink(generatedPng)]);
       details.push({ page, diffPercent, diffImage });
     },
   );
   return details;
 }
 
+async function hashFiles(paths: string[]): Promise<string> {
+  const parts: string[] = [];
+  for (const path of paths) parts.push(path, await hashFileContent(path));
+  return hashString(parts.join('\0'));
+}
+
 export async function compareVisual(input: CompareVisualInput): Promise<VisualDiffResult> {
-  const options: VisualOptions = {
-    dpi: input.dpi,
-    thresholdPercent: input.thresholdPercent,
-    fuzzPercent: input.fuzzPercent,
-  };
-  const key = cacheKey({ reference: await hashFileContent(input.reference), generated: await hashFileContent(input.generated) }, options);
+  if (input.referencePngs === undefined && input.referencePdf === undefined) {
+    throw new BuildError('compareVisual necesita la referencia como imágenes o como PDF');
+  }
+  const referenceHash =
+    input.referencePngs === undefined ? await hashFileContent(input.referencePdf as string) : await hashFiles(input.referencePngs);
+  const key = cacheKey({ reference: referenceHash, generated: await hashFileContent(input.generated) });
   const cached = input.cachePath === undefined ? undefined : (await readCache(input.cachePath))[key];
   if (cached !== undefined) return { ...cached, details: [], fromCache: true };
 
@@ -317,14 +281,10 @@ export async function compareVisual(input: CompareVisualInput): Promise<VisualDi
   await rm(input.workDir, { recursive: true, force: true });
   await mkdir(input.workDir, { recursive: true });
 
-  const referencePages = await renderPdf(input.reference, join(input.workDir, 'ref'), options.dpi);
-  const generatedPages = await renderPdf(input.generated, join(input.workDir, 'gen'), options.dpi);
+  const referencePages = input.referencePngs ?? (await renderPdfPages(input.referencePdf as string, join(input.workDir, 'ref')));
+  const generatedPages = await renderPdfPages(input.generated, join(input.workDir, 'gen'));
   const compared = Math.min(referencePages.length, generatedPages.length);
-  const details = await comparePages({ referencePages, generatedPages, compared, diffDir, diffStem, options, workDir: input.workDir });
-
-  for (const entry of await readdir(input.workDir)) {
-    if (/^(ref|gen)-\d+\.png$/.test(entry)) await forceUnlink(join(input.workDir, entry));
-  }
+  const details = await comparePages({ referencePages, generatedPages, compared, diffDir, diffStem });
 
   details.sort((a, b) => a.page - b.page);
   const changed = details.length;
@@ -352,14 +312,15 @@ export async function compareVisual(input: CompareVisualInput): Promise<VisualDi
   return result;
 }
 
-export async function saveReference(generated: string, storePath: string): Promise<void> {
-  await mkdir(dirname(storePath), { recursive: true });
-  if (generated !== storePath) await copyFile(generated, storePath);
+export async function savePageImages(rendered: string[], destDir: string, stem: string): Promise<void> {
+  await mkdir(destDir, { recursive: true });
+  for (const [index, png] of rendered.entries()) {
+    await copyFile(png, join(destDir, snapshotImageName(stem, index + 1)));
+  }
 }
 
 interface VisualReport {
   result: VisualDiffResult;
-  options: VisualOptions;
   referenceLabel: string;
   generatedLabel: string;
 }
@@ -377,9 +338,9 @@ export function formatVisualSummary(result: VisualDiffResult, label?: (path: str
 }
 
 export function formatVisualReport(report: VisualReport, label?: (path: string) => string): string {
-  const { result, options, referenceLabel, generatedLabel } = report;
+  const { result, referenceLabel, generatedLabel } = report;
   return [
-    `visual: ${generatedLabel} vs ${referenceLabel} · ${options.dpi} dpi · umbral ${options.thresholdPercent} % · fuzz ${options.fuzzPercent} %`,
+    `visual: ${generatedLabel} vs ${referenceLabel} · ${DPI} dpi · umbral ${THRESHOLD_PERCENT} % · fuzz ${FUZZ_PERCENT} %`,
     ...formatVisualSummary(result, label),
   ].join('\n');
 }

@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import packageJson from '../../package.json' with { type: 'json' };
 import { TEMPLATE_KINDS } from '../builder/pipeline-setup.js';
-import { VISUAL_DEFAULTS } from '../lib/visual-diff.js';
+import { DPI, FUZZ_PERCENT, THRESHOLD_PERCENT } from '../lib/visual-diff.js';
 import { runAssets } from './assets.js';
 import { runBundle } from './bundle.js';
 import { configHelp } from './config-help.js';
@@ -13,8 +13,8 @@ import { runCollectPdf } from './pdf.js';
 import { runPost } from './post.js';
 import { runPrepare } from './prepare.js';
 import { runPreview } from './preview.js';
+import { runSnapshots, type SnapshotsOptions } from './snapshots.js';
 import { runTemplate } from './template.js';
-import { runTestVisual, type TestVisualOptions } from './test-visual.js';
 
 function collect(value: string, previous: string[]): string[] {
   return [...previous, value];
@@ -254,64 +254,62 @@ Ejemplos:
       await runCollectPdf(projectRoot(), slot, opts);
     });
 
-  const visual = program.command('visual').description('regresión visual de los PDFs del proyecto (#2479)');
+  const snapshots = program
+    .command('snapshots')
+    .description('línea base de regresión visual: imágenes de cada página para comparar contra el build (#2479)');
 
-  visual
+  snapshots
     .command('check [pdf] [reference]')
-    .description('compara los snapshots de <raíz>/visual contra el último build, o dos PDFs entre sí, y sale con exit 1 si hay regresión visual')
+    .description('compara los snapshots de <raíz>/snapshots contra el último build, o dos PDFs entre sí, y sale con exit 1 si hay regresión visual')
     .option('--output <path>', 'directorio de salida donde están los PDFs (por defecto: dist/files)')
-    .option('--dpi <n>', `resolución de render en dpi (por defecto: ${VISUAL_DEFAULTS.dpi})`, String(VISUAL_DEFAULTS.dpi))
-    .option(
-      '--threshold <pct>',
-      `máximo de píxeles distintos por página en % (por defecto: ${VISUAL_DEFAULTS.thresholdPercent})`,
-      String(VISUAL_DEFAULTS.thresholdPercent),
-    )
-    .option('--fuzz <pct>', `tolerancia de color por canal en % (por defecto: ${VISUAL_DEFAULTS.fuzzPercent})`, String(VISUAL_DEFAULTS.fuzzPercent))
 
     .allowExcessArguments(true)
     .addHelpText(
       'after',
       `
-Requiere pdftoppm (poppler) y ImageMagick. Compara por página: blur dpi/150 sobre PNGs de ${VISUAL_DEFAULTS.dpi} dpi,
-con fuzz ${VISUAL_DEFAULTS.fuzzPercent} % de tolerancia de color y umbral de ${VISUAL_DEFAULTS.thresholdPercent} % de píxeles distintos.
-Los defaults son 0 porque la comparación es visual: LaTeX rinde la misma página aunque el PDF cambie de bytes.
+Requiere pdftoppm (poppler) y ImageMagick. Compara página por página sobre PNGs de ${DPI} dpi, con
+fuzz ${FUZZ_PERCENT} % y umbral ${THRESHOLD_PERCENT} % de píxeles distintos: la comparación es visual y
+LaTeX rinde la misma página aunque el PDF cambie de bytes, así que un píxel de diferencia es un cambio.
 
-Sin rutas compara cada PDF de --output contra su snapshot en <raíz>/visual/, y avisa de lo que no encaja:
-un PDF sin snapshot es un agregado y un snapshot sin PDF es una eliminación; ninguno de los dos detiene, se revisan.
-Con dos rutas compara pdf contra referencia y no toca los snapshots. Una sola ruta es error: no dice contra qué comparar.
-Los diffs se escriben en <raíz>/diff/ con el camino aplanado (anexos/index.pdf → anexos--index--page-001--diff.png).
+Sin rutas compara cada PDF de --output contra sus páginas en <raíz>/snapshots/, y avisa de lo que no
+encaja: un PDF sin snapshot es un agregado y un snapshot sin PDF es una eliminación; ninguno de los
+dos detiene, se revisan. Con dos rutas compara pdf contra referencia y no toca los snapshots. Una sola
+ruta es error: no dice contra qué comparar. Los diffs se escriben en <raíz>/diff/, que no se versiona.
 
 Ejemplos:
-  iteraciones visual check                            compara visual/ contra el build
-  iteraciones visual check nuevo.pdf viejo.pdf        compara dos PDFs, sin snapshots de por medio
-  iteraciones visual check dist/files/x.pdf visual/x.pdf   un documento, escrito entero
+  iteraciones snapshots check                             compara snapshots/ contra el build
+  iteraciones snapshots check nuevo.pdf viejo.pdf         compara dos PDFs, sin snapshots de por medio
 `,
     )
-    .action(async (_pdf: string | undefined, _reference: string | undefined, opts: TestVisualOptions, command: Command) => {
-      await runTestVisual(projectRoot(), command.args, opts);
+    .action(async (_pdf: string | undefined, _reference: string | undefined, opts: SnapshotsOptions, command: Command) => {
+      await runSnapshots(projectRoot(), command.args, 'check', opts);
     });
 
-  visual
-    .command('snapshot [pdf]')
-    .description('guarda los PDFs de dist/files como snapshots en visual/, sin comparar')
+  snapshots
+    .command('save [pdf]')
+    .description('guarda las páginas de cada PDF de la salida como línea base en snapshots/')
     .option('--output <path>', 'directorio de salida donde están los PDFs (por defecto: dist/files)')
 
     .allowExcessArguments(true)
     .addHelpText(
       'after',
       `
-Los snapshots viven en <raíz>/visual/, espejando dist/files, y van versionados en git; los diffs de
-la corrida anterior se retiran de <raíz>/diff/, que no se versiona. Sin proyecto, el trabajo queda
-en el temporal del sistema.
-Sin rutas hace todo dist/files; con una, solo ese PDF (máximo una ruta).
+Las páginas se renderizan a ${DPI} dpi sin difuminar y se guardan en <raíz>/snapshots/ con el camino
+aplanado (anexos/index.pdf → anexos--index--page-001.png), y van versionadas en git: son la línea base.
+Con una ruta sólo se guarda ese documento y los demás snapshots no se tocan. Sin ruta, la línea base
+completa avanza: los snapshots de documentos que ya no están en la salida se retiran, y con ellos los
+diffs de <raíz>/diff/, que tampoco se versionan.
+
+No hay build incremental aquí: para saltarse un documento habría que guardar aparte qué había en el
+último save, y ese registro puede quedar desfasado sin avisar.
 
 Ejemplos:
-  iteraciones visual snapshot                       guarda los snapshots de dist/files
-  iteraciones visual snapshot dist/files/index.pdf  guarda un solo snapshot
+  iteraciones snapshots save                        guarda la línea base de todo dist/files
+  iteraciones snapshots save dist/files/index.pdf   guarda las páginas de un solo documento
 `,
     )
-    .action(async (_pdf: string | undefined, opts: { output?: string }, command: Command) => {
-      await runTestVisual(projectRoot(), command.args, { ...opts, update: true });
+    .action(async (_pdf: string | undefined, opts: SnapshotsOptions, command: Command) => {
+      await runSnapshots(projectRoot(), command.args, 'save', opts);
     });
 
   program

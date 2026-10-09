@@ -1,5 +1,5 @@
 # language: es
-Característica: las reglas de la regresión visual
+Característica: las reglas de los snapshots
 
   Como quien cambia una coma en el frontmatter
   Quiero saber si eso movió algo en la página
@@ -16,27 +16,35 @@ Característica: las reglas de la regresión visual
         | p-10.png, p-2.png, p-1.png | p-1.png, p-2.png, p-10.png |
         | p-100.png, p-002.png, p-001.png | p-001.png, p-002.png, p-100.png |
 
-  Regla de negocio: El diff de una página se llama con su número y vive en `diff/`, aplanado
+  Regla de negocio: Los nombres llevan la página con su relleno
 
-    Escenario: El nombre del diff lleva la página y su relleno
+    Esquema del escenario: El nombre de un snapshot y el de su diff
       Dado que la raíz del proyecto está vacía
-      Entonces el nombre del diff de la página 5 es "index--page-005--diff.png"
-      Y el nombre del diff de la página 128 es "index--page-128--diff.png"
-
-    Esquema del escenario: El camino del snapshot se aplana con --
-      Dado que la raíz del proyecto está vacía
-      Entonces el diff de "<snapshot>" se llama "<esperado>" y va a "diff"
+      Entonces el nombre de la página <pagina> de <clase> es "<esperado>"
 
       Ejemplos:
-        | snapshot                          | esperado           |
-        | PROYECTO/visual/index.pdf          | index              |
-        | PROYECTO/visual/anexos/index.pdf   | anexos--index      |
-        | PROYECTO/visual/a/b/c/libro.pdf    | a--b--c--libro     |
-        | PROYECTO/visual/libro/parte-2.pdf | libro--parte-2     |
-        | PROYECTO/visual/a--b/libro.pdf     | a-b--libro         |
-        | PROYECTO/cuaderno.pdf              | cuaderno           |
+        | pagina | clase | esperado |
+        | 5      | snap  | index--page-005.png |
+        | 128    | snap  | index--page-128.png |
+        | 5      | diff  | index--page-005--diff.png |
+        | 1      | diff  | index--page-001--diff.png |
 
-  Regla de negocio: El snapshot espeja `dist/files`
+  Regla de negocio: El camino del snapshot se aplana con --
+
+    Esquema del escenario: El prefijo que recibe cada PDF
+      Dado que la raíz del proyecto está vacía
+      Entonces el prefijo del snapshot de "<pdf>" es "<esperado>"
+
+      Ejemplos:
+        | pdf | esperado |
+        | PROYECTO/dist/files/index.pdf | index |
+        | PROYECTO/dist/files/anexos/index.pdf | anexos--index |
+        | PROYECTO/dist/files/a/b/c/libro.pdf | a--b--c--libro |
+        | PROYECTO/dist/files/libro/parte-2.pdf | libro--parte-2 |
+        | PROYECTO/dist/files/a--b/libro.pdf | a-b--libro |
+        | PROYECTO/suelto.pdf | suelto |
+
+  Regla de negocio: El prefijo sale del slug del archivo suelto
 
     Esquema del escenario: El nombre del snapshot
       Dado que la raíz del proyecto está vacía
@@ -47,48 +55,11 @@ Característica: las reglas de la regresión visual
         | PROYECTO/dist/files/99-intervention.pdf | 99-intervention |
         | PROYECTO/Mi Documento.PDF | mi-documento |
 
-    Esquema del escenario: La ruta del snapshot dentro del proyecto
+  Regla de negocio: La comparación es estricta y no se configura
+
+    Escenario: dpi, umbral y fuzz son fijos
       Dado que la raíz del proyecto está vacía
-      Entonces el snapshot de "<pdf>" vive en "<esperado>"
-
-      Ejemplos:
-        | pdf | esperado |
-        | PROYECTO/dist/files/index.pdf | visual/index.pdf |
-        | PROYECTO/dist/files/anexos/index.pdf | visual/anexos/index.pdf |
-        | PROYECTO/suelto.pdf | visual/suelto.pdf |
-        | PROYECTO/otra/Mi Documento.pdf | visual/mi-documento.pdf |
-
-  Regla de negocio: El desenfoque mide lo mismo en superficie física
-
-    Esquema del escenario: La sigma del desenfoque sigue al dpi
-      Dado que la raíz del proyecto está vacía
-      Entonces el desenfoque a 150 dpi es 1
-      Y el desenfoque a 300 dpi es 2
-      Y el desenfoque a 600 dpi es 4
-
-  Regla de negocio: Los defaults son estrictos porque la comparación es visual
-
-    Escenario: Los valores por defecto
-      Dado que la raíz del proyecto está vacía
-      Entonces los valores por defecto son dpi 300, umbral "0" y fuzz 0
-
-    Esquema del escenario: Un flag inválido se rechaza nombrándolo
-      Dado que la raíz del proyecto está vacía
-      Cuando resuelvo las opciones visuales con "<flags>"
-      Entonces las opciones visuales fallan diciendo "<motivo>"
-
-      Ejemplos:
-        | flags | motivo |
-        | dpi=0 | --dpi inválido |
-        | dpi=300.5 | --dpi inválido |
-        | dpi=rapido | --dpi inválido |
-        | threshold=-1 | --threshold inválido |
-        | fuzz=101 | --fuzz inválido |
-
-    Escenario: Flags válidos se aplican
-      Dado que la raíz del proyecto está vacía
-      Cuando resuelvo las opciones visuales con "dpi=150, threshold=0.1, fuzz=5"
-      Entonces las opciones son dpi 150, umbral "0.1" y fuzz 5
+      Entonces la comparación es dpi 300, umbral 0 y fuzz 0
 
   Regla de negocio: El directorio de trabajo vive dentro del proyecto cuando lo hay
 
@@ -96,17 +67,17 @@ Característica: las reglas de la regresión visual
       Dado que la raíz del proyecto está vacía
       Y que el proyecto no tiene configuración
       Cuando resuelvo el directorio de trabajo del snapshot "doc"
-      Entonces el directorio de trabajo queda bajo "<temporal>/iteraciones-visual" y termina en "doc"
+      Entonces el directorio de trabajo queda bajo "<temporal>/iteraciones-snapshots" y termina en "doc"
       Y el directorio de trabajo no se comparte con otro proyecto
 
     Escenario: Con proyecto, el directorio de trabajo va dentro
       Dado que la raíz del proyecto está vacía
       Y que el proyecto tiene configuración
       Cuando resuelvo el directorio de trabajo del snapshot "doc"
-      Entonces el directorio de trabajo está en "PROYECTO/.iteraciones/tmp/visual/doc"
-      Y el caché del visual está en "PROYECTO/.iteraciones/tmp/visual/cache.json"
+      Entonces el directorio de trabajo está en "PROYECTO/.iteraciones/tmp/snapshots/doc"
+      Y el caché de los snapshots está en "PROYECTO/.iteraciones/tmp/snapshots/cache.json"
 
-  Regla de negocio: Sólo se comparan PDF, y sólo se borran los diffs de un snapshot
+  Regla de negocio: Sólo se comparan PDF, y sólo se borran lo de un prefijo
 
     Escenario: Al listar sólo se quedan los PDF
       Dado que la raíz del proyecto está vacía
@@ -119,17 +90,23 @@ Característica: las reglas de la regresión visual
       Cuando listo los PDF de la salida
       Entonces los PDF son ""
 
-    Escenario: Borrar los diffs de un snapshot no toca los demás
+    Escenario: Borrar los diffs de un prefijo no toca los demás
       Dado que la raíz del proyecto está vacía
       Y que el directorio de salida tiene "index--page-005--diff.png, index--page-012--diff.png, otro--page-001--diff.png, index.pdf"
       Cuando borro los diffs del snapshot "index"
       Entonces en el directorio quedan "index.pdf, otro--page-001--diff.png"
 
-    Escenario: Borrar los diffs de todos deja el snapshot
+    Escenario: Borrar los diffs de todos deja lo demás
       Dado que la raíz del proyecto está vacía
       Y que el directorio de salida tiene "index--page-005--diff.png, index.pdf"
       Cuando borro los diffs del snapshot "todos"
       Entonces en el directorio quedan "index.pdf"
+
+    Escenario: Guardar de nuevo el mismo prefijo retira las páginas viejas
+      Dado que la raíz del proyecto está vacía
+      Y que el directorio de salida tiene "index--page-001.png, index--page-002.png, otro--page-001.png"
+      Cuando borro los snapshots del prefijo "index"
+      Entonces en el directorio quedan "index--page-001.png, index--page-002.png, otro--page-001.png"
 
   Regla de negocio: El informe dice qué se comparó, con qué y dónde está el diff
 
@@ -137,7 +114,7 @@ Característica: las reglas de la regresión visual
       Dado que la raíz del proyecto está vacía
       Y que comparé 88 páginas con 85 sin cambios y 3 modificadas
       Cuando armo el informe visual
-      Entonces el informe dice "dist/files/index.pdf vs visual/index.pdf · 300 dpi · umbral 0 % · fuzz 0 %"
+      Entonces el informe dice "dist/files/index.pdf vs snapshots/index · 300 dpi · umbral 0 % · fuzz 0 %"
       Y el informe dice "páginas 88 · sin cambios 85 · modificadas 3"
       Y el informe dice "0.4213 %"
       Y el informe dice "page-003--diff.png"
@@ -154,7 +131,7 @@ Característica: las reglas de la regresión visual
       Y que comparé 12 páginas con 11 sin cambios y 1 modificadas
       Cuando armo el resumen visual
       Entonces el resumen dice "páginas 12 · sin cambios 11 · modificadas 1"
-      Y el resumen dice "  pág 5  0.0486 %  visual/index-page-005-diff.png"
+      Y el resumen dice "  pág 5  0.0486 %  diff/index--page-005--diff.png"
 
   Regla de negocio: El tamaño sale de la cabecera IHDR, y si no hay PNG no hay tamaño
 

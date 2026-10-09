@@ -99,7 +99,6 @@ function nuevoMundo() {
     ordenadas: [] as string[],
     pdfs: [] as string[],
     workspaces: {} as unknown,
-    opcionesVisuales: null as unknown,
     errorVisual: '',
     comparacion: {} as unknown,
     informe: '',
@@ -291,6 +290,7 @@ function nuevoMundo() {
     entradasPreview: [] as string[],
     snapshotPrevio: undefined as Snapshot | undefined,
     snapshotNuevo: undefined as Snapshot | undefined,
+    snapshotsGuardados: {} as Record<string, string[]>,
     previewListo: undefined as unknown,
   };
 }
