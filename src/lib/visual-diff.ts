@@ -12,7 +12,7 @@ export const FUZZ_PERCENT = 0;
 export const THRESHOLD_PERCENT = 0;
 
 export const REMOVED_TINT = '#C0392B';
-export const REMOVED_BLEND = '45';
+export const REMOVED_BLEND = '22';
 export const ADDED_TINT = '#2E8B57';
 export const ADDED_BLEND = '66';
 
