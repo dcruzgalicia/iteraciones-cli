@@ -189,6 +189,21 @@ Característica: los snapshots de la regresión visual
       Entonces el snapshots termina con código 1
       Y el snapshots dice por stderr "no hay PDFs en dist/files"
 
+  Regla de negocio: El diff dice qué se fue y qué llegó, sobre el fantasma gris
+
+    Escenario: Lo que se borra va en verde y lo que llega en rosa pálido
+      Dado que la raíz del proyecto está vacía
+      Y la salida tiene estos archivos:
+      """
+      index.pdf
+      """
+      Cuando guardo los snapshots de ""
+      Y un PDF llamado "dist/files/index.pdf" en la raíz con el texto "hola"
+      Y comparo ""
+      Entonces el snapshots termina con código 1
+      Y el diff marca lo borrado en verde y lo agregado en rosa pálido
+      Y el diff deja el resto en el fantasma gris
+
   Regla de negocio: El par explícito compara y no toca los snapshots
 
     Escenario: Dos rutas iguales no dejan diff
