@@ -469,10 +469,14 @@ async function copyDistAssets(texDir: string, copies: { src: string; rel: string
   }
 }
 
+const AUTHORS_BLOCK_ANCHORS = ['\\printbibliography', '\\colophon{', '\\end{document}'];
+
 export function insertAuthorsBlock(tex: string, authorsBlock: string): string {
   if (!authorsBlock) return tex;
-  if (tex.includes('\\printbibliography')) return tex.replace('\\printbibliography', `${authorsBlock}\n\n\\printbibliography`);
-  if (tex.includes('\\colophon{')) return tex.replace('\\colophon{', `${authorsBlock}\n\n\\colophon{`);
+  for (const anchor of AUTHORS_BLOCK_ANCHORS) {
+    if (tex.includes(anchor)) return tex.replace(anchor, `${authorsBlock}\n\n${anchor}`);
+  }
+  logWarning('el bloque de autoras no se insertó: el LaTeX no tiene \\printbibliography, \\colophon{ ni \\end{document}', 'latex');
   return tex;
 }
 
