@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { After, Given, setDefaultTimeout, Then } from '@cucumber/cucumber';
 import ignore from 'ignore';
+import type { Snapshot } from '../../cli/preview.js';
 import type { ProgressTracker } from '../../cli/progress.js';
 import { initTestProject } from '../helpers.js';
 
@@ -286,6 +287,11 @@ function nuevoMundo() {
 
     antesDe: '',
     desdeLinea: -1,
+
+    entradasPreview: [] as string[],
+    snapshotPrevio: undefined as Snapshot | undefined,
+    snapshotNuevo: undefined as Snapshot | undefined,
+    previewListo: undefined as unknown,
   };
 }
 
