@@ -626,24 +626,37 @@ async function resolveSingleCreatorDoc(relativePath: string, cwd: string, collec
   return { name, body, relativePath, links };
 }
 
-export async function resolveCollectionCreatorDocs(
-  doc: BuildDocument,
+export async function collectionCreatorDocPaths(
+  files: string[] | undefined,
+  collectionFm: Record<string, unknown>,
   discoveryIndex: Map<string, DiscoveryEntry>,
   cwd: string,
-  collectionFm: Record<string, unknown>,
-): Promise<CreatorDoc[]> {
-  const files = doc.frontmatter.files;
+): Promise<string[]> {
   if (!files || files.length === 0) return [];
 
   const creatorNames = await collectCreatorNamesFromFiles(files, cwd);
   extractCreatorNames(collectionFm.contributor, creatorNames);
   if (creatorNames.size === 0) return [];
 
-  const result: CreatorDoc[] = [];
+  const paths: string[] = [];
   for (const [relativePath, entry] of discoveryIndex.entries()) {
     if (entry.type !== 'creator') continue;
     const name = (entry.fm?.name ?? entry.fm?.title ?? '') as string;
     if (!name || !creatorNames.has(name)) continue;
+    paths.push(relativePath);
+  }
+  return paths;
+}
+
+export async function resolveCollectionCreatorDocs(
+  doc: BuildDocument,
+  discoveryIndex: Map<string, DiscoveryEntry>,
+  cwd: string,
+  collectionFm: Record<string, unknown>,
+): Promise<CreatorDoc[]> {
+  const paths = await collectionCreatorDocPaths(doc.frontmatter.files, collectionFm, discoveryIndex, cwd);
+  const result: CreatorDoc[] = [];
+  for (const relativePath of paths) {
     result.push(await resolveSingleCreatorDoc(relativePath, cwd, doc.relativePath));
   }
 

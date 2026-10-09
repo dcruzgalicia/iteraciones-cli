@@ -10,6 +10,7 @@ export interface DiscoveryEntry {
   manualSlug?: string;
   type?: 'file' | 'collection' | 'creator' | 'intervention';
   files?: string[];
+  creatorDocs?: string[];
   fm?: Record<string, unknown>;
   mtime?: number;
   size?: number;
