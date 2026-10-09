@@ -11,9 +11,9 @@ export const DPI = 300;
 export const FUZZ_PERCENT = 0;
 export const THRESHOLD_PERCENT = 0;
 
-export const REMOVED_TINT = '#2E8B57';
+export const REMOVED_TINT = '#C0392B';
 export const REMOVED_BLEND = '45';
-export const ADDED_TINT = '#C0392B';
+export const ADDED_TINT = '#2E8B57';
 export const ADDED_BLEND = '15';
 
 const GHOST_LIFT = '0.2';

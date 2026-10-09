@@ -201,7 +201,7 @@ Característica: los snapshots de la regresión visual
       Y un PDF llamado "dist/files/index.pdf" en la raíz con el texto "hola"
       Y comparo ""
       Entonces el snapshots termina con código 1
-      Y el diff marca lo borrado en verde y lo agregado en rosa pálido
+      Y el diff marca lo borrado en rojo y lo agregado en verde pálido
       Y el diff deja el resto en el fantasma gris
 
   Regla de negocio: El par explícito compara y no toca los snapshots
