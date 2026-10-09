@@ -15,7 +15,7 @@ export interface VisualOptions {
   fuzzPercent: number;
 }
 
-export const VISUAL_DEFAULTS: VisualOptions = { dpi: 300, thresholdPercent: 0.005, fuzzPercent: 15 };
+export const VISUAL_DEFAULTS: VisualOptions = { dpi: 300, thresholdPercent: 0, fuzzPercent: 0 };
 
 function parseOption(raw: string | undefined, fallback: number, flag: string, valid: (n: number) => boolean, hint: string): number {
   if (raw === undefined || raw === '') return fallback;
@@ -60,6 +60,9 @@ export function sortPageFiles(files: string[]): string[] {
   return [...files].sort((a, b) => pageNumberOf(a) - pageNumberOf(b));
 }
 
+export const VISUAL_DIR = 'visual';
+export const DIFF_DIR = 'diff';
+
 export function visualSlug(pdfPath: string): string {
   const slug = slugifyLib(basename(pdfPath, extname(pdfPath)), { lower: true, strict: true });
   return slug === '' ? 'documento' : slug;
@@ -68,15 +71,28 @@ export function visualSlug(pdfPath: string): string {
 export function referencePathFor(cwd: string, pdfPath: string, outputDir: string): string {
   const rel = relative(outputDir, pdfPath);
   const insideOutput = rel !== '' && !rel.startsWith('..') && !isAbsolute(rel);
-  return insideOutput ? join(cwd, 'visual', dirname(rel), `${visualSlug(rel)}.pdf`) : join(cwd, 'visual', `${visualSlug(pdfPath)}.pdf`);
+  return insideOutput ? join(cwd, VISUAL_DIR, dirname(rel), `${visualSlug(rel)}.pdf`) : join(cwd, VISUAL_DIR, `${visualSlug(pdfPath)}.pdf`);
 }
 
 export function diffImageName(stem: string, page: number): string {
-  return `${stem}-page-${String(page).padStart(3, '0')}-diff.png`;
+  return `${stem}--page-${String(page).padStart(3, '0')}--diff.png`;
 }
 
-export function diffTargetFor(snapshotPath: string): { dir: string; stem: string } {
-  return { dir: dirname(snapshotPath), stem: basename(snapshotPath, extname(snapshotPath)) };
+export function diffTargetFor(cwd: string, snapshotPath: string): { dir: string; stem: string } {
+  const rel = relative(join(cwd, VISUAL_DIR), snapshotPath);
+  const dentro = rel !== '' && !rel.startsWith('..') && !isAbsolute(rel);
+  return {
+    dir: join(cwd, DIFF_DIR),
+    stem: dentro ? aplanar(rel) : visualSlug(snapshotPath),
+  };
+}
+
+function aplanar(rel: string): string {
+  const sinExt = rel.slice(0, rel.length - extname(rel).length);
+  return sinExt
+    .split(/[\\/]/)
+    .map((segmento) => segmento.replace(/-{2,}/g, '-'))
+    .join('--');
 }
 
 async function globFiles(dir: string, pattern: string): Promise<string[]> {
@@ -99,11 +115,11 @@ export async function listPdfFiles(dir: string): Promise<string[]> {
   return globFiles(dir, '**/*.pdf');
 }
 
-const DIFF_IMAGE = /-page-\d+-diff\.png$/;
+const DIFF_IMAGE = /--page-\d+--diff\.png$/;
 
 export async function clearDiffImages(dir: string, stem?: string): Promise<void> {
-  const files = stem === undefined ? await globFiles(dir, '**/*-page-*-diff.png') : (await readdir(dir).catch(() => [])).map((f) => join(dir, f));
-  const pattern = stem === undefined ? DIFF_IMAGE : new RegExp(`^${escapeRegExp(stem)}-page-\\d+-diff\\.png$`);
+  const files = stem === undefined ? await globFiles(dir, '**/*--page-*-diff.png') : (await readdir(dir).catch(() => [])).map((f) => join(dir, f));
+  const pattern = stem === undefined ? DIFF_IMAGE : new RegExp(`^${escapeRegExp(stem)}--page-\\d+--diff\\.png$`);
   await Promise.all(files.filter((file) => pattern.test(basename(file))).map((file) => forceUnlink(file)));
 }
 

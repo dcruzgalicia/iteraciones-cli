@@ -22,7 +22,7 @@ Característica: El argv llega entero hasta el comando
       Entonces el archivo ".gitignore" contiene "dist/"
       Y el archivo ".gitignore" contiene ".iteraciones/"
       Y el archivo ".gitignore" contiene "build.sh"
-      Y el archivo ".gitignore" contiene "visual/**/*-page-*-diff.png"
+      Y el archivo ".gitignore" contiene "diff/"
 
     Escenario: El config que genera init es mínimo y válido
       Dado que la raíz del proyecto está vacía

@@ -16,16 +16,25 @@ Característica: las reglas de la regresión visual
         | p-10.png, p-2.png, p-1.png | p-1.png, p-2.png, p-10.png |
         | p-100.png, p-002.png, p-001.png | p-001.png, p-002.png, p-100.png |
 
-  Regla de negocio: El diff de una página se llama con su número, y vive junto al snapshot
+  Regla de negocio: El diff de una página se llama con su número y vive en `diff/`, aplanado
 
     Escenario: El nombre del diff lleva la página y su relleno
       Dado que la raíz del proyecto está vacía
-      Entonces el nombre del diff de la página 5 es "index-page-005-diff.png"
-      Y el nombre del diff de la página 128 es "index-page-128-diff.png"
+      Entonces el nombre del diff de la página 5 es "index--page-005--diff.png"
+      Y el nombre del diff de la página 128 es "index--page-128--diff.png"
 
-    Escenario: El diff de un PDF de un subdirectorio va a su lado
+    Esquema del escenario: El camino del snapshot se aplana con --
       Dado que la raíz del proyecto está vacía
-      Entonces el diff de "PROYECTO/visual/anexos/index.pdf" va junto a su snapshot
+      Entonces el diff de "<snapshot>" se llama "<esperado>" y va a "diff"
+
+      Ejemplos:
+        | snapshot                          | esperado           |
+        | PROYECTO/visual/index.pdf          | index              |
+        | PROYECTO/visual/anexos/index.pdf   | anexos--index      |
+        | PROYECTO/visual/a/b/c/libro.pdf    | a--b--c--libro     |
+        | PROYECTO/visual/libro/parte-2.pdf | libro--parte-2     |
+        | PROYECTO/visual/a--b/libro.pdf     | a-b--libro         |
+        | PROYECTO/cuaderno.pdf              | cuaderno           |
 
   Regla de negocio: El snapshot espeja `dist/files`
 
@@ -57,11 +66,11 @@ Característica: las reglas de la regresión visual
       Y el desenfoque a 300 dpi es 2
       Y el desenfoque a 600 dpi es 4
 
-  Regla de negocio: Los defaults son los que hacen comparables dos snapshots
+  Regla de negocio: Los defaults son estrictos porque la comparación es visual
 
     Escenario: Los valores por defecto
       Dado que la raíz del proyecto está vacía
-      Entonces los valores por defecto son dpi 300, umbral "0.005" y fuzz 15
+      Entonces los valores por defecto son dpi 300, umbral "0" y fuzz 0
 
     Esquema del escenario: Un flag inválido se rechaza nombrándolo
       Dado que la raíz del proyecto está vacía
@@ -112,13 +121,13 @@ Característica: las reglas de la regresión visual
 
     Escenario: Borrar los diffs de un snapshot no toca los demás
       Dado que la raíz del proyecto está vacía
-      Y que el directorio de salida tiene "index-page-005-diff.png, index-page-012-diff.png, otro-page-001-diff.png, index.pdf"
+      Y que el directorio de salida tiene "index--page-005--diff.png, index--page-012--diff.png, otro--page-001--diff.png, index.pdf"
       Cuando borro los diffs del snapshot "index"
-      Entonces en el directorio quedan "index.pdf, otro-page-001-diff.png"
+      Entonces en el directorio quedan "index.pdf, otro--page-001--diff.png"
 
     Escenario: Borrar los diffs de todos deja el snapshot
       Dado que la raíz del proyecto está vacía
-      Y que el directorio de salida tiene "index-page-005-diff.png, index.pdf"
+      Y que el directorio de salida tiene "index--page-005--diff.png, index.pdf"
       Cuando borro los diffs del snapshot "todos"
       Entonces en el directorio quedan "index.pdf"
 
@@ -128,11 +137,11 @@ Característica: las reglas de la regresión visual
       Dado que la raíz del proyecto está vacía
       Y que comparé 88 páginas con 85 sin cambios y 3 modificadas
       Cuando armo el informe visual
-      Entonces el informe dice "dist/files/index.pdf vs visual/index.pdf · 300 dpi · umbral 0.005 % · fuzz 15 %"
+      Entonces el informe dice "dist/files/index.pdf vs visual/index.pdf · 300 dpi · umbral 0 % · fuzz 0 %"
       Y el informe dice "páginas 88 · sin cambios 85 · modificadas 3"
       Y el informe dice "0.4213 %"
-      Y el informe dice "page-003-diff.png"
-      Y el informe dice "page-017-diff.png"
+      Y el informe dice "page-003--diff.png"
+      Y el informe dice "page-017--diff.png"
 
     Escenario: El informe avisa cuando las páginas no coinciden
       Dado que la raíz del proyecto está vacía

@@ -4,10 +4,12 @@ import { DIST_FILES_DIR } from '../builder/output-layout.js';
 import { BuildError } from '../lib/errors.js';
 import { fail, logError, logInfo, logSuccess, logWarning } from '../lib/logger.js';
 import { resolvePath } from '../lib/paths.js';
+import { plural } from '../lib/plural.js';
 import type { VisualDiffResult, VisualOptions } from '../lib/visual-diff.js';
 import {
   clearDiffImages,
   compareVisual,
+  DIFF_DIR,
   diffTargetFor,
   formatVisualReport,
   formatVisualSummary,
@@ -16,6 +18,7 @@ import {
   resolveVisualOptions,
   resolveVisualWorkspaces,
   saveReference,
+  VISUAL_DIR,
   visualSlug,
 } from '../lib/visual-diff.js';
 
@@ -52,7 +55,12 @@ async function resolveRun(cwd: string, paths: string[], options: TestVisualOptio
     throw new BuildError(
       snapshotMode
         ? `snapshot admite como mucho una ruta: sin rutas hace todo dist/files (recibidas: ${paths.length})`
-        : `check admite como mucho dos rutas: <pdf> [referencia] (recibidas: ${paths.length}) · para varios PDFs usa: iteraciones visual check`,
+        : `check admite como mucho dos rutas: <pdf> <referencia> (recibidas: ${paths.length}) · para varios PDFs usa: iteraciones visual check`,
+    );
+  }
+  if (!snapshotMode && paths.length === 1) {
+    throw new BuildError(
+      `check necesita dos rutas: el PDF y contra qué compararlo · "${labelPath(cwd, paths[0] as string)}" a secas no dice contra qué snapshot va.\nPara un documento usa: iteraciones visual check (sin rutas, compara ${VISUAL_DIR} contra la salida)\nPara un par: iteraciones visual check <pdf> <referencia>`,
     );
   }
 
@@ -67,7 +75,7 @@ async function resolveRun(cwd: string, paths: string[], options: TestVisualOptio
 }
 
 async function updateSnapshots(cwd: string, targets: string[], outputDir: string): Promise<void> {
-  const store = join(cwd, 'visual');
+  const store = join(cwd, VISUAL_DIR);
   const wanted = new Set(targets.map((pdf) => referencePathFor(cwd, pdf, outputDir)));
   const removed: string[] = [];
   for (const snapshot of await listPdfFiles(store)) {
@@ -85,37 +93,45 @@ async function updateSnapshots(cwd: string, targets: string[], outputDir: string
     logSuccess(`${labelPath(cwd, pdf)} → ${labelPath(cwd, snapshot)}`, 'visual');
   }
 
-  await clearDiffImages(store);
+  await clearDiffImages(join(cwd, DIFF_DIR));
   if (removed.length > 0) logInfo(`snapshots sin PDF en ${labelPath(cwd, outputDir)}: ${removed.join(', ')}`, 'visual');
 }
 
-async function assertSnapshots(cwd: string, targets: string[], outputDir: string, batch: boolean, explicitReference?: string): Promise<void> {
+async function seleccionaComparables(
+  cwd: string,
+  targets: string[],
+  outputDir: string,
+  batch: boolean,
+  explicitReference?: string,
+): Promise<string[]> {
   if (explicitReference !== undefined) {
     await assertExists(explicitReference, 'el PDF de referencia');
-    return;
+    return targets;
   }
-  const store = join(cwd, 'visual');
+  const store = join(cwd, VISUAL_DIR);
   const snapshots = new Set(await listPdfFiles(store));
-  if (batch && snapshots.size === 0) {
-    throw new BuildError(`no hay snapshots en ${labelPath(cwd, store)} · créalos con: iteraciones visual snapshot`);
-  }
 
   const wanted = new Set<string>();
-  const missing: string[] = [];
+  const agregados: string[] = [];
   for (const pdf of targets) {
     const snapshot = referencePathFor(cwd, pdf, outputDir);
     if (snapshots.has(snapshot)) wanted.add(snapshot);
-    else if (!batch) {
-      throw new BuildError(`no hay snapshot en ${labelPath(cwd, snapshot)} · créalo con: iteraciones visual snapshot ${labelPath(cwd, pdf)}`);
-    } else missing.push(labelPath(cwd, snapshot));
-  }
-  if (missing.length > 0) {
-    throw new BuildError(`snapshots incompletas · faltan: ${missing.join(', ')} · ejecuta: iteraciones visual snapshot`);
+    else agregados.push(labelPath(cwd, pdf));
   }
 
-  if (!batch) return;
-  const orphans = [...snapshots].filter((snapshot) => !wanted.has(snapshot)).map((snapshot) => labelPath(cwd, snapshot));
-  if (orphans.length > 0) logWarning(`snapshots sin PDF en ${labelPath(cwd, outputDir)}: ${orphans.join(', ')}`, 'visual');
+  const borrados = batch ? [...snapshots].filter((snapshot) => !wanted.has(snapshot)).map((snapshot) => labelPath(cwd, snapshot)) : [];
+
+  if (agregados.length > 0) {
+    logInfo(`${plural(agregados.length, 'PDF agregado')} sin snapshot, sin comparación: ${agregados.join(', ')}`, 'visual');
+  }
+  if (borrados.length > 0) {
+    logWarning(`${plural(borrados.length, 'snapshot eliminado')} del build: revisa que sea a propósito · ${borrados.join(', ')}`, 'visual');
+  }
+  if (batch && snapshots.size === 0) {
+    logInfo('no hay snapshots todavía: nada tiene contra qué compararse · crea la línea base con: iteraciones visual snapshot', 'visual');
+  }
+
+  return targets.filter((pdf) => wanted.has(referencePathFor(cwd, pdf, outputDir)));
 }
 
 async function compareOne(
@@ -130,7 +146,7 @@ async function compareOne(
     throw new BuildError('el PDF y la referencia son el mismo archivo: no hay nada que comparar');
   }
   const { workDir, cachePath } = await resolveVisualWorkspaces(cwd, visualSlug(pdf));
-  const { dir, stem } = diffTargetFor(snapshot);
+  const { dir, stem } = diffTargetFor(cwd, snapshot);
 
   await clearDiffImages(dir, stem);
   const result = await compareVisual({
@@ -210,12 +226,14 @@ async function compareAll(
   batch: boolean,
   explicitReference?: string,
 ): Promise<void> {
-  await assertSnapshots(cwd, targets, outputDir, batch, explicitReference);
+  const comparables = await seleccionaComparables(cwd, targets, outputDir, batch, explicitReference);
 
   const compared: Compared[] = [];
-  for (const pdf of targets) {
+  for (const pdf of comparables) {
     compared.push({ pdf, entry: await compareOne(cwd, pdf, outputDir, visualOptions, explicitReference) });
   }
+
+  if (compared.length === 0) return;
 
   reportAll(cwd, outputDir, visualOptions, compared);
   reportVerdict(cwd, compared);

@@ -15,15 +15,16 @@ Característica: la regresión visual de los PDF
       Y el visual dice por stdout "mi-doc.pdf → visual/mi-doc.pdf"
       Y el archivo "visual/mi-doc.pdf" existe en el proyecto
 
-  Regla de negocio: Sin referencia no hay comparación, y se dice cómo crearla
+  Regla de negocio: Lo que no encaja se avisa, no se corta
 
-    Escenario: Un PDF sin snapshot explica cómo hacerlo
+    Escenario: Una sola ruta es error: no dice contra qué comparar
       Dado que la raíz del proyecto está vacía
       Y un PDF llamado "mi-doc.pdf" en la raíz
       Cuando comparo "mi-doc.pdf" con ""
       Entonces el visual termina con código 1
-      Y el visual dice por stderr "no hay snapshot en visual/mi-doc.pdf"
-      Y el visual dice por stderr "iteraciones visual snapshot"
+      Y el visual dice por stderr "check necesita dos rutas"
+      Y el visual dice por stderr "iteraciones visual check"
+      Y el visual dice por stderr "iteraciones visual check <pdf> <referencia>"
 
   Regla de negocio: Las rutas se validan antes de hacer nada
 
@@ -74,18 +75,18 @@ Característica: la regresión visual de los PDF
       Y el archivo "visual/anexos/index.pdf" existe en el proyecto
       Y el archivo "visual/leeme.pdf" NO existe en el proyecto
 
-    Escenario: El lote sin referencias pide crearlas
+    Escenario: Sin ningún snapshot todo es agregado y recomienda la línea base
       Dado que la raíz del proyecto está vacía
       Y la salida tiene estos archivos:
       """
       index.pdf
       """
       Cuando comparo "" con ""
-      Entonces el visual termina con código 1
-      Y el visual dice por stderr "no hay snapshots en visual"
-      Y el visual dice por stderr "iteraciones visual snapshot"
+      Entonces el visual termina con código 0
+      Y el visual dice por stdout "1 PDF agregado sin snapshot"
+      Y el visual dice por stdout "iteraciones visual snapshot"
 
-    Escenario: Con referencias incompletas corta antes de comparar
+    Escenario: Un PDF sin snapshot no detiene el lote
       Dado que la raíz del proyecto está vacía
       Y la salida tiene estos archivos:
       """
@@ -94,10 +95,90 @@ Característica: la regresión visual de los PDF
       """
       Y el directorio de snapshots tiene "index.pdf"
       Cuando comparo "" con ""
+      Entonces el visual termina con código 0
+      Y el visual dice por stdout "1 PDF agregado sin snapshot"
+      Y el visual dice por stdout "dist/files/libro.pdf"
+      Y el visual no dice por stdout "sin diferencias visuales"
+
+    Escenario: Un snapshot sin PDF avisa que se eliminó del build
+      Dado que la raíz del proyecto está vacía
+      Y la salida tiene estos archivos:
+      """
+      index.pdf
+      """
+      Y el directorio de snapshots tiene "index.pdf ;; borrado.pdf"
+      Cuando comparo "" con ""
+      Entonces el visual termina con código 0
+      Y el visual dice por stderr "1 snapshot eliminado del build"
+      Y el visual dice por stderr "visual/borrado.pdf"
+
+    Escenario: Agregados y borrados juntos en el mismo lote
+      Dado que la raíz del proyecto está vacía
+      Y la salida tiene estos archivos:
+      """
+      index.pdf
+      nuevo.pdf
+      """
+      Y el directorio de snapshots tiene "index.pdf ;; viejo.pdf"
+      Cuando comparo "" con ""
+      Entonces el visual termina con código 0
+      Y el visual dice por stdout "1 PDF agregado sin snapshot"
+      Y el visual dice por stdout "dist/files/nuevo.pdf"
+      Y el visual dice por stderr "1 snapshot eliminado del build"
+      Y el visual dice por stderr "visual/viejo.pdf"
+
+  Regla de negocio: El diff vive en `diff/`, con el camino aplanado
+
+    Escenario: Una salida anidada produce un diff aplanado en diff/
+      Dado que la raíz del proyecto está vacía
+      Y la salida tiene estos archivos:
+      """
+      anexos/index.pdf
+      """
+      Y que el proyecto tiene el PDF "viejo.pdf" con el texto "distinto"
+      Cuando comparo "dist/files/anexos/index.pdf,viejo.pdf" con ""
       Entonces el visual termina con código 1
-      Y el visual dice por stderr "snapshots incompletas"
-      Y el visual dice por stderr "visual/libro.pdf"
-      Y en las referencias quedan "index.pdf"
+      Y el archivo "diff/anexos--index--page-001--diff.png" existe en el proyecto
+      Y el archivo "visual/anexos--index--page-001--diff.png" NO existe en el proyecto
+
+    Escenario: El snapshot retira los diffs de diff/ y no toca visual/
+      Dado que la raíz del proyecto está vacía
+      Y la salida tiene estos archivos:
+      """
+      index.pdf
+      """
+      Y el directorio de diffs tiene "index--page-001--diff.png ;; viejo--page-001--diff.png"
+      Cuando creo el snapshot de "" con "update=true"
+      Entonces el visual termina con código 0
+      Y el archivo "diff/index--page-001--diff.png" NO existe en el proyecto
+      Y el archivo "diff/viejo--page-001--diff.png" NO existe en el proyecto
+      Y el archivo "visual/index.pdf" existe en el proyecto
+
+  Regla de negocio: El par explícito compara y no toca los snapshots
+
+    Escenario: Dos rutas iguales no dejan diff
+      Dado que la raíz del proyecto está vacía
+      Y la salida tiene estos archivos:
+      """
+      index.pdf
+      """
+      Y que el proyecto tiene el PDF "viejo.pdf" con el texto "index.pdf"
+      Cuando comparo "dist/files/index.pdf,viejo.pdf" con ""
+      Entonces el visual termina con código 0
+      Y el visual dice por stdout "dist/files/index.pdf vs viejo.pdf"
+      Y el archivo "diff/index--page-001--diff.png" NO existe en el proyecto
+
+    Escenario: Dos rutas distintas dejan el diff y salen con código 1
+      Dado que la raíz del proyecto está vacía
+      Y la salida tiene estos archivos:
+      """
+      index.pdf
+      """
+      Y que el proyecto tiene el PDF "otro.pdf" con el texto "distinto"
+      Cuando comparo "dist/files/index.pdf,otro.pdf" con ""
+      Entonces el visual termina con código 1
+      Y el visual dice por stdout "páginas 1 · sin cambios 0 · modificadas 1"
+      Y el archivo "diff/index--page-001--diff.png" existe en el proyecto
 
   Regla de negocio: El snapshot retira lo que ya no existe
 
@@ -107,12 +188,14 @@ Característica: la regresión visual de los PDF
       """
       index.pdf
       """
-      Y el directorio de snapshots tiene "borrado.pdf ;; borrado-page-003-diff.png ;; index-page-001-diff.png"
+      Y el directorio de snapshots tiene "borrado.pdf ;; borrado--page-003--diff.png"
+      Y el directorio de diffs tiene "index--page-001--diff.png"
       Cuando creo el snapshot de "" con "update=true"
       Entonces el visual termina con código 0
       Y el visual dice por stdout "snapshots sin PDF en dist/files: visual/borrado.pdf"
       Y el archivo "visual/borrado.pdf" NO existe en el proyecto
-      Y el archivo "visual/index-page-001-diff.png" NO existe en el proyecto
+      Y el archivo "diff/borrado--page-003--diff.png" NO existe en el proyecto
+      Y el archivo "diff/index--page-001--diff.png" NO existe en el proyecto
       Y el archivo "visual/index.pdf" existe en el proyecto
 
     Escenario: Sin PDF en la salida el lote lo dice
