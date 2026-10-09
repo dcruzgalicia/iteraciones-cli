@@ -7,8 +7,6 @@ import { loadSiteConfigIfPresent } from '../config/config-loader.js';
 import { logInfo } from '../lib/logger.js';
 import { runBuild } from './dispatcher.js';
 
-// ponytail: O(n) mtimes cada 200 ms, como el watcher de polling de quarto (~5 ms / 200 archivos).
-// fs.watch tiene eventos perdidos y no sobrevive a los editores que salvan con rename atómico.
 const POLL_MS = 200;
 
 const LOCK_PATH = join('.iteraciones', 'preview.lock');
@@ -17,20 +15,13 @@ export const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeou
 
 export type Snapshot = Map<string, number>;
 
-/**
- * Los archivos cuyo cambio obliga a reconstruir. La lista explícita es lo que evita el loop
- * infinito de rebuilds: dist/ nunca está en ella, así que no hay lista de ignorados que mantener.
- */
 export async function previewInputs(cwd: string): Promise<string[]> {
   const entradas: string[] = [join(cwd, 'iteraciones.config.yaml'), ...(await listMarkdownDocuments(cwd)).map((rel) => join(cwd, rel))];
 
-  // si la config está rota no hay bibliografía que descubrir, pero el build va a reportar el error:
-  // el preview no debe morir por eso
   const loaded = await loadSiteConfigIfPresent(cwd).catch(() => null);
   if (loaded) entradas.push(...(await resolveBibOptions(cwd, loaded.config).catch(() => ({ bibFiles: [] }))).bibFiles);
 
   for (const [dir, glob] of projectFilterSpecs(cwd)) {
-    // los directorios de filters y preámbulo son opcionales: si no existen, no hay nada que vigilar
     try {
       for await (const file of new Bun.Glob(glob).scan({ cwd: dir })) entradas.push(join(dir, file));
     } catch (err) {
@@ -55,11 +46,6 @@ export async function takeSnapshot(entradas: string[]): Promise<Snapshot> {
   return snap;
 }
 
-/**
- * Los archivos que cambiaron o desaparecieron desde el snapshot anterior.
- * Se recorre la unión de ambas listas: un archivo borrado ya no está en `actual`, y sin la unión
- * su salida pasaría desapercibida (mtime 0 contra el valor previo).
- */
 export function changedSince(previo: Snapshot, actual: Snapshot): string[] {
   return [...new Set([...previo.keys(), ...actual.keys()])].filter((ruta) => previo.get(ruta) !== actual.get(ruta));
 }
@@ -77,7 +63,6 @@ export interface PreviewLock {
   release: () => Promise<void>;
 }
 
-/** Un preview por proyecto: el pid anterior recibe SIGTERM y el lock se borra al salir. */
 export async function acquirePreviewLock(cwd: string, onNotice?: (msg: string) => void): Promise<PreviewLock> {
   const lockfile = join(cwd, LOCK_PATH);
   const previo = await Bun.file(lockfile)
@@ -111,8 +96,6 @@ export async function runPreview(cwd: string, options: PreviewOptions = {}): Pro
   const pollMs = options.pollMs ?? POLL_MS;
   const build = { only: options.only, verbose: options.verbose };
 
-  // el handler se registra antes del primer await: si la señal llega mientras se toma el
-  // snapshot inicial, sin esto se pierde y el preview no se puede parar
   let snapshot = new Map<string, number>();
   let corriendo = false;
   let pendiente = false;
@@ -125,7 +108,6 @@ export async function runPreview(cwd: string, options: PreviewOptions = {}): Pro
 
   const lock = await acquirePreviewLock(cwd, (msg) => logInfo(msg, 'preview'));
 
-  // un flag en vez de la PromiseQueue de quarto: hay un solo productor de builds
   const ciclo = async (): Promise<void> => {
     if (corriendo) {
       pendiente = true;
@@ -135,7 +117,7 @@ export async function runPreview(cwd: string, options: PreviewOptions = {}): Pro
     try {
       do {
         pendiente = false;
-        process.exitCode = 0; // runBuild deja exitCode=1 si falla; en preview envenena la salida final
+        process.exitCode = 0;
         await runBuild(cwd, build);
       } while (pendiente && seguir);
     } finally {
