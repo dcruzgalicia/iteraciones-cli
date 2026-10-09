@@ -7,6 +7,8 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import { runSnapshots, type SnapshotsMode, type SnapshotsOptions } from '../../cli/snapshots.js';
 import { exec } from '../../lib/run.js';
 import {
+  ADDED_BLEND,
+  ADDED_TINT,
   clearDiffImages,
   clearSnapshotImages,
   DPI,
@@ -17,6 +19,8 @@ import {
   listPdfFiles,
   listSnapshotImages,
   pngSize,
+  REMOVED_BLEND,
+  REMOVED_TINT,
   resolveVisualWorkspaces,
   snapshotImageName,
   snapshotStemFor,
@@ -360,24 +364,28 @@ async function pixelesDelDiff(): Promise<Color[]> {
   return colores;
 }
 
-const esVerde = (c: Color): boolean => c.g > c.r + 20 && c.g > c.b + 20 && c.b > c.r;
-const esRosa = (c: Color): boolean => c.r > c.g + 8 && c.r > c.b + 8;
 const esGris = (c: Color): boolean => c.r === c.g && c.g === c.b;
+const esRetirado = (c: Color): boolean => !esGris(c) && c.r > c.g;
+const esAgregado = (c: Color): boolean => !esGris(c) && c.g > c.r;
 
-Then('el diff marca lo borrado en verde y lo agregado en rosa pálido', async () => {
+function fantasmaDe(lista: Color[], tint: string, blend: string): number {
+  const peso = Number.parseInt(blend, 10) / 100;
+  const rojoDelTinte = Number.parseInt(tint.slice(1, 3), 16);
+  const suma = lista.reduce((acc, c) => acc + c.count * ((c.r - rojoDelTinte * peso) / (1 - peso)), 0);
+  return suma / lista.reduce((acc, c) => acc + c.count, 0);
+}
+
+Then('el diff marca lo borrado en rojo y lo agregado en verde pálido', async () => {
   const pixeles = await pixelesDelDiff();
-  const verdes = pixeles.filter(esVerde);
-  const rosas = pixeles.filter(esRosa);
-  if (verdes.length === 0) throw new Error('no hay ni un píxel verde: lo que se fue del texto no se está marcando');
-  if (rosas.length === 0) throw new Error('no hay ni un píxel rosa: lo que llegó al texto no se está marcando');
-  const rojos = pixeles.filter((c) => c.r - c.g > 40);
-  if (rojos.length > 0) {
-    throw new Error(`hay ${rojos.reduce((a, c) => a + c.count, 0)} píxeles de rojo fuerte (R-G>40): el diff volvió al rojo de siempre`);
-  }
-  const tono = (lista: Color[]): number => lista.reduce((a, c) => a + c.count * c.r, 0) / lista.reduce((a, c) => a + c.count, 0);
-  if (tono(verdes) >= tono(rosas)) {
+  const retirados = pixeles.filter(esRetirado);
+  const agregados = pixeles.filter(esAgregado);
+  if (retirados.length === 0) throw new Error('no hay ni un píxel rojo: lo que se fue del texto no se está marcando');
+  if (agregados.length === 0) throw new Error('no hay ni un píxel verde: lo que llegó al texto no se está marcando');
+  const fondoRetirado = fantasmaDe(retirados, REMOVED_TINT, REMOVED_BLEND);
+  const fondoAgregado = fantasmaDe(agregados, ADDED_TINT, ADDED_BLEND);
+  if (fondoRetirado >= fondoAgregado) {
     throw new Error(
-      `el verde se apoya en un fondo de R=${tono(verdes).toFixed(0)} y el rosa en R=${tono(rosas).toFixed(0)}: el verde tiene que caer donde la original tenía tinta (fondo oscuro) y el rosa donde había papel (fondo claro). Están intercambiados.`,
+      `lo borrado se apoya en un fantasma de ${fondoRetirado.toFixed(0)} y lo agregado en ${fondoAgregado.toFixed(0)}: lo borrado tiene que caer donde la original tenía tinta y lo agregado donde había papel. Están intercambiados.`,
     );
   }
 });
@@ -385,10 +393,9 @@ Then('el diff marca lo borrado en verde y lo agregado en rosa pálido', async ()
 Then('el diff deja el resto en el fantasma gris', async () => {
   const pixeles = await pixelesDelDiff();
   const conColor = pixeles.filter((c) => !esGris(c)).reduce((a, c) => a + c.count, 0);
-  const enVerde = pixeles.filter(esVerde).reduce((a, c) => a + c.count, 0);
-  const enRosa = pixeles.filter(esRosa).reduce((a, c) => a + c.count, 0);
-  if (conColor > (enVerde + enRosa) * 1.15) {
-    throw new Error(`${conColor} píxeles con color y lo que cambiaron son ${enVerde + enRosa}: se está tiñendo de más`);
+  const teñidos = pixeles.filter((c) => esRetirado(c) || esAgregado(c)).reduce((a, c) => a + c.count, 0);
+  if (conColor > teñidos) {
+    throw new Error(`${conColor} píxeles con color y sólo ${teñidos} se pueden explicar por los dos tintes: hay un tercer color`);
   }
   const grises = pixeles.filter(esGris).map((c) => c.r);
   const min = Math.min(...grises);
