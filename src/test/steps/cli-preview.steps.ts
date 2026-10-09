@@ -75,7 +75,6 @@ Given('que el snapshot previo está vacío', () => {
 });
 
 When('tomo un snapshot nuevo de las entradas de preview', async () => {
-  // el preview vuelve a resolver las entradas en cada poll: un archivo nuevo entra en la lista
   world.entradasPreview = await previewInputs(world.root);
   world.snapshotNuevo = await takeSnapshot(world.entradasPreview);
 });
@@ -106,7 +105,6 @@ Then('los cambios detectados son {string}', (esperados: string) => {
   }
 });
 
-/** Igual que capture() de cli-world, pero acumula mientras corre: preview no termina hasta que lo paramos. */
 function capturarVivo(fn: () => Promise<void>): Promise<void> {
   world.stdout = '';
   world.stderr = '';
@@ -189,7 +187,6 @@ When('cambio algo mientras el build corre', async () => {
   await previewVigila();
   const buildsAntes = cuenta('Todo listo.');
   escribirEnProyecto('test.md', '---\ntitle: Test Document\ndate: 2026-01-01\n---\n\nUno.\n');
-  // apenas el poll lo ve, el build arranca: el segundo cambio cae en vuelo
   await esperarA(() => stdoutLimpio().includes('cambio: test.md'));
   escribirEnProyecto('otro.md', '---\ntitle: Otro\ndate: 2026-01-02\n---\n\nDos.\n');
   await esperarA(() => cuenta('Todo listo.') > buildsAntes + 1);
