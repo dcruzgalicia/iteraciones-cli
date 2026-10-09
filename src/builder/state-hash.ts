@@ -76,6 +76,15 @@ async function hashSpecFiles(specs: Array<[string, string]>, prevCache: FilterFi
   return parts;
 }
 
+const PACKAGE_SPECS: Array<[string, string]> = [
+  [join(import.meta.dir, '../lib/resources/filters'), '**/*.lua'],
+  [join(import.meta.dir, '../lib/resources/preamble'), '*.tex'],
+];
+
+export function projectFilterSpecs(cwd: string): Array<[string, string]> {
+  return [[join(cwd, 'filters'), '**/*.lua'], ...projectPreambleDirs().map((dir): [string, string] => [join(cwd, dir), '*.tex'])];
+}
+
 export async function computeFiltersHash(
   cwd: string,
   siteConfig: SiteConfig,
@@ -87,12 +96,7 @@ export async function computeFiltersHash(
   const parts: string[] = [];
   const cache: FilterFileCache = {};
   const schemaCache: Record<string, FileCacheEntry> = {};
-  const specs: Array<[string, string]> = [
-    [join(import.meta.dir, '../lib/resources/filters'), '**/*.lua'],
-    [join(import.meta.dir, '../lib/resources/preamble'), '*.tex'],
-    [join(cwd, 'filters'), '**/*.lua'],
-    ...projectPreambleDirs().map((dir): [string, string] => [join(cwd, dir), '*.tex']),
-  ];
+  const specs: Array<[string, string]> = [...PACKAGE_SPECS, ...projectFilterSpecs(cwd)];
   parts.push(...(await hashSpecFiles(specs, prevCache, cache)));
   for (const rel of siteConfig.luaFilters ?? []) {
     const content = (await hashFileCached(join(cwd, rel), rel, prevCache, cache)) ?? '';

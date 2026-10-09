@@ -12,6 +12,7 @@ import { runMerge } from './merge.js';
 import { runCollectPdf } from './pdf.js';
 import { runPost } from './post.js';
 import { runPrepare } from './prepare.js';
+import { runPreview } from './preview.js';
 import { runTemplate } from './template.js';
 import { runTestVisual, type TestVisualOptions } from './test-visual.js';
 
@@ -337,6 +338,27 @@ Ejemplos:
     )
     .action(async (opts: { json?: boolean }) => {
       await runValidate(projectRoot(), { json: opts.json });
+    });
+
+  program
+    .command('preview [paths...]')
+    .description('construye el proyecto y vuelve a construirlo con cada cambio; Ctrl+C para salir')
+    .option('--verbose', 'muestra información adicional de progreso')
+    .addHelpText(
+      'after',
+      `
+No levanta servidor: el build escribe los PDF en la salida y tu visor los muestra.
+Un cambio durante un build no se pierde: el build siguiente lo recoge.
+Acepta los mismos paths que build.
+
+Ejemplos:
+  iteraciones preview                 construye y reconstruye el proyecto entero
+  iteraciones preview posts/x.md      reconstruye solo ese documento
+  iteraciones preview --verbose       muestra el detalle de cada build
+`,
+    )
+    .action(async (paths: string[], opts: { verbose?: boolean }) => {
+      await runPreview(projectRoot(), { verbose: opts.verbose, only: paths.length > 0 ? paths : undefined });
     });
 
   program
