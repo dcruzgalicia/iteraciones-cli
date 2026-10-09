@@ -14,7 +14,7 @@ export const THRESHOLD_PERCENT = 0;
 export const REMOVED_TINT = '#C0392B';
 export const REMOVED_BLEND = '45';
 export const ADDED_TINT = '#2E8B57';
-export const ADDED_BLEND = '15';
+export const ADDED_BLEND = '25';
 
 const GHOST_LIFT = '0.2';
 const GHOST_OFFSET = '52428';
