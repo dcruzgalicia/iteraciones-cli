@@ -11,6 +11,14 @@ export const DPI = 300;
 export const FUZZ_PERCENT = 0;
 export const THRESHOLD_PERCENT = 0;
 
+export const REMOVED_TINT = '#2E8B57';
+export const REMOVED_BLEND = '45';
+export const ADDED_TINT = '#C0392B';
+export const ADDED_BLEND = '15';
+
+const GHOST_LIFT = '0.2';
+const GHOST_OFFSET = '52428';
+
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] as const;
 
 export function pngSize(bytes: Uint8Array): { width: number; height: number } | null {
@@ -198,11 +206,39 @@ export async function renderPdfPages(pdf: string, prefix: string): Promise<strin
   return sortPageFiles(pages);
 }
 
-async function comparePngPair(referencePng: string, generatedPng: string, diffImage: string): Promise<number> {
-  const size = pngSize(await readFile(referencePng));
-  if (size === null) throw new BuildError(`"${referencePng}" no es un PNG válido`);
+interface PngPair {
+  referencePng: string;
+  generatedPng: string;
+  diffImage: string;
+  scratch: string;
+}
 
-  const compare = await exec('magick', ['compare', '-metric', 'AE', '-fuzz', `${FUZZ_PERCENT}%`, referencePng, generatedPng, diffImage]);
+async function magick(args: string[]): Promise<void> {
+  const result = await exec('magick', args);
+  if (result.exitCode !== 0) {
+    throw new BuildError(`magick falló pintando el diff: ${result.stderr.trim().split('\n').pop() ?? 'error desconocido'}`);
+  }
+}
+
+async function paintDiffImage(args: PngPair): Promise<void> {
+  await mkdir(args.scratch, { recursive: true });
+  const at = (name: string): string => join(args.scratch, name);
+  await magick([args.referencePng, args.generatedPng, '-compose', 'Minus', '-composite', '-threshold', '1', at('borrado.miff')]);
+  await magick([args.generatedPng, args.referencePng, '-compose', 'Minus', '-composite', '-threshold', '1', at('agregado.miff')]);
+  await magick([args.referencePng, '-evaluate', 'Multiply', GHOST_LIFT, '-evaluate', 'Add', GHOST_OFFSET, at('base.miff')]);
+  await magick([at('base.miff'), '-fill', REMOVED_TINT, '-colorize', REMOVED_BLEND, at('verde.miff')]);
+  await magick([at('base.miff'), '-fill', ADDED_TINT, '-colorize', ADDED_BLEND, at('rosa.miff')]);
+  await magick([at('verde.miff'), at('borrado.miff'), '-alpha', 'off', '-compose', 'CopyOpacity', '-composite', at('capa-verde.miff')]);
+  await magick([at('rosa.miff'), at('agregado.miff'), '-alpha', 'off', '-compose', 'CopyOpacity', '-composite', at('capa-rosa.miff')]);
+  await magick([at('base.miff'), at('capa-rosa.miff'), '-compose', 'Over', '-composite', at('mitad.miff')]);
+  await magick([at('mitad.miff'), at('capa-verde.miff'), '-compose', 'Over', '-composite', args.diffImage]);
+}
+
+async function comparePngPair(args: PngPair): Promise<number> {
+  const size = pngSize(await readFile(args.referencePng));
+  if (size === null) throw new BuildError(`"${args.referencePng}" no es un PNG válido`);
+
+  const compare = await exec('magick', ['compare', '-metric', 'AE', '-fuzz', `${FUZZ_PERCENT}%`, args.referencePng, args.generatedPng, 'null:']);
   if (compare.exitCode > 1) {
     throw new BuildError(`magick compare falló: ${compare.stderr.trim().split('\n').pop() ?? 'error desconocido'}`);
   }
@@ -210,7 +246,9 @@ async function comparePngPair(referencePng: string, generatedPng: string, diffIm
   const metricLine = (compare.stderr.trim() !== '' ? compare.stderr : compare.stdout).trim().split('\n').pop() ?? '';
   const differing = Number.parseFloat(metricLine);
   if (!Number.isFinite(differing)) throw new BuildError(`no se pudo leer la métrica de magick compare: "${metricLine}"`);
-  return (100 * differing) / (size.width * size.height);
+  const diffPercent = (100 * differing) / (size.width * size.height);
+  if (diffPercent > THRESHOLD_PERCENT) await paintDiffImage(args);
+  return diffPercent;
 }
 
 interface CompareVisualInput {
@@ -236,6 +274,7 @@ async function comparePages(args: {
   compared: number;
   diffDir: string;
   diffStem: string;
+  workDir: string;
 }): Promise<PageDiff[]> {
   const details: PageDiff[] = [];
   await mapWithConcurrency(
@@ -247,13 +286,14 @@ async function comparePages(args: {
       if (referencePng === undefined || generatedPng === undefined) return;
       const page = index + 1;
       const diffImage = join(args.diffDir, diffImageName(args.diffStem, page));
-      const diffPercent = await comparePngPair(referencePng, generatedPng, diffImage);
-      if (diffPercent <= THRESHOLD_PERCENT) {
-        await Promise.all([forceUnlink(generatedPng), forceUnlink(diffImage)]);
-        return;
-      }
-      await Promise.all([forceUnlink(generatedPng)]);
-      details.push({ page, diffPercent, diffImage });
+      const diffPercent = await comparePngPair({
+        referencePng,
+        generatedPng,
+        diffImage,
+        scratch: join(args.workDir, `diff-${page}`),
+      });
+      await forceUnlink(generatedPng);
+      if (diffPercent > THRESHOLD_PERCENT) details.push({ page, diffPercent, diffImage });
     },
   );
   return details;
@@ -284,7 +324,7 @@ export async function compareVisual(input: CompareVisualInput): Promise<VisualDi
   const referencePages = input.referencePngs ?? (await renderPdfPages(input.referencePdf as string, join(input.workDir, 'ref')));
   const generatedPages = await renderPdfPages(input.generated, join(input.workDir, 'gen'));
   const compared = Math.min(referencePages.length, generatedPages.length);
-  const details = await comparePages({ referencePages, generatedPages, compared, diffDir, diffStem });
+  const details = await comparePages({ referencePages, generatedPages, compared, diffDir, diffStem, workDir: input.workDir });
 
   details.sort((a, b) => a.page - b.page);
   const changed = details.length;
