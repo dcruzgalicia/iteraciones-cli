@@ -21,7 +21,7 @@ import { validateDisabledFilters } from './filter-resolver.js';
 import { DIST_FILES_DIR, docProducesFormat, primaryOutputExtension } from './output-layout.js';
 import { type PdfxCacheHandle, runPdfxOutputValidation } from './pdfx-check.js';
 import { documentPipeline } from './pipeline.js';
-import { resolveCollectionCreatorDocs } from './pipeline-formats.js';
+import { collectionCreatorDocPaths, resolveCollectionCreatorDocs } from './pipeline-formats.js';
 import { resolveEffectiveDisabledPreamble, validateDisabledPreambleFilters, validatePreambleDependencies } from './preamble-loader.js';
 import { validateConfigFilePaths, validateConfigRules } from './project-validator.js';
 
@@ -246,28 +246,49 @@ function addAnonymousFallback(aggregated: Set<string>, filesWithoutCreator: numb
   }
 }
 
-export async function postProcessCollections(discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<void> {
+async function resolveCollectionFiles(
+  files: string[],
+  relativePath: string,
+  discoveryIndex: Map<string, DiscoveryEntry>,
+  cwd: string,
+): Promise<string[]> {
+  const resolved: string[] = [];
+  for (const file of files) {
+    const resolution = await resolveCollectionFile(file, relativePath, cwd);
+    if (resolution.ok && discoveryIndex.get(resolution.rootRelative)?.type === 'collection') {
+      throw new BuildError(
+        `collection "${relativePath}": "${resolution.rootRelative}" está en su files[] y también es una collection; una collection no puede formar parte de otra. Quítalo de files[].`,
+      );
+    }
+    resolved.push(resolution.ok ? resolution.rootRelative : file);
+  }
+  return resolved;
+}
+
+export async function postProcessCollections(discoveryIndex: Map<string, DiscoveryEntry>, cwd: string): Promise<Map<string, string[]>> {
+  const creatorOwners = new Map<string, string[]>();
+
   for (const [relativePath, entry] of discoveryIndex) {
     if (entry.type !== 'collection' || !entry.files) continue;
 
-    const resolved: string[] = [];
-    for (const file of entry.files) {
-      const resolution = await resolveCollectionFile(file, relativePath, cwd);
-
-      if (resolution.ok && discoveryIndex.get(resolution.rootRelative)?.type === 'collection') {
-        throw new BuildError(
-          `collection "${relativePath}": "${resolution.rootRelative}" está en su files[] y también es una collection; una collection no puede formar parte de otra. Quítalo de files[].`,
-        );
-      }
-      resolved.push(resolution.ok ? resolution.rootRelative : file);
-    }
+    const resolved = await resolveCollectionFiles(entry.files, relativePath, discoveryIndex, cwd);
     entry.files = resolved;
     if (entry.fm) entry.fm.files = resolved;
     entry.aggregatedCreator = await aggregateCollectionCreators(entry, cwd);
+
+    const previos = entry.creatorDocs ?? [];
+    entry.creatorDocs = await collectionCreatorDocPaths(resolved, entry.fm ?? {}, discoveryIndex, cwd);
+    for (const creatorDoc of new Set([...previos, ...entry.creatorDocs])) {
+      const list = creatorOwners.get(creatorDoc);
+      if (list === undefined) creatorOwners.set(creatorDoc, [relativePath]);
+      else list.push(relativePath);
+    }
   }
+
+  return creatorOwners;
 }
 
-function collectionOwnersByFile(discoveryIndex: Map<string, DiscoveryEntry>): Map<string, string[]> {
+function collectionOwnersByFile(discoveryIndex: Map<string, DiscoveryEntry>, creatorOwners: Map<string, string[]>): Map<string, string[]> {
   const owners = new Map<string, string[]>();
   for (const [path, entry] of discoveryIndex) {
     if (entry.type !== 'collection' || !entry.files) continue;
@@ -277,11 +298,16 @@ function collectionOwnersByFile(discoveryIndex: Map<string, DiscoveryEntry>): Ma
       else list.push(path);
     }
   }
+  for (const [creatorDoc, collections] of creatorOwners) {
+    const list = owners.get(creatorDoc);
+    if (list === undefined) owners.set(creatorDoc, [...collections]);
+    else list.push(...collections);
+  }
   return owners;
 }
 
-function expandCollectionChanges(discoveryIndex: Map<string, DiscoveryEntry>, changed: Set<string>): void {
-  const owners = collectionOwnersByFile(discoveryIndex);
+function expandCollectionChanges(discoveryIndex: Map<string, DiscoveryEntry>, changed: Set<string>, creatorOwners: Map<string, string[]>): void {
+  const owners = collectionOwnersByFile(discoveryIndex, creatorOwners);
   const queue = [...changed];
   const seen = new Set(queue);
   while (queue.length > 0) {
@@ -403,11 +429,11 @@ async function discoverDocuments(
   const { slugChangedEntries, changedPaths: slugChangedPaths } = resolveDiscoverSlugs(discoveryIndex, slugComputer);
   for (const path of slugChangedPaths) discoveredChanges.add(path);
 
-  await postProcessCollections(discoveryIndex, cwd);
+  const creatorOwners = await postProcessCollections(discoveryIndex, cwd);
 
   let allDocs = buildDocsFromIndex(relativePaths, discoveryIndex, cwd);
 
-  expandCollectionChanges(discoveryIndex, discoveredChanges);
+  expandCollectionChanges(discoveryIndex, discoveredChanges, creatorOwners);
 
   const only = selectionOf(options);
   const selection = only === undefined ? undefined : await selectDocs(only, allDocs, discoveryIndex, cwd);
