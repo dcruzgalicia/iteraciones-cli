@@ -1,0 +1,9 @@
+{
+  "name": "mbox-words-runt-2-engloba-las-ultimas-2-palabras",
+  "helper": "toLatex",
+  "markdown": "::: {runt=2}\n\nUno dos tres cuatro cinco seis.\n\n:::\n",
+  "contains": ["\\mbox{cinco seis.}"],
+  "notContains": ["\\mbox{cuatro cinco seis.}"],
+  "normalizeNewlines": true,
+  "filters": ["15-mbox-words"]
+}

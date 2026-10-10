@@ -35,6 +35,8 @@ export const DESCRIPCIONES_LUA: Record<string, string> = {
     'Convierte Div con atributo spacing en \\begin{spacing}{valor}...\\end{spacing} Requiere el paquete setspace (cargado en 03-spacing.tex).',
   'latex/14-textls':
     'Convierte spans/divs con atributo value en \\textls{valor}{texto} (microtype). Uso inline: [texto]{.textls value=-20} Uso bloque: ::: {.textls value=-20} párrafo ::: Valor: negativo = compresión, positivo = expansión (rango típico -100 a 100). Solo LaTeX: en HTML se ignora.',
+  'latex/15-mbox-words':
+    'Pide a mano el \\mbox{} que hasta ahora se aplicaba solo, con dos atributos en el div. ::: {runt=3} ::: envuelve en \\mbox{} las últimas 3 palabras del párrafo, para que la última línea no quede con una sola palabra (un runt); si el párrafo tiene N palabras o menos de las pedidas, no hace nada, porque ya es corto. ::: {nohyph="Kant Heidegger"} ::: envuelve cada aparición de esas palabras en el párrafo; la puntuación que va pegada se queda fuera del mbox, y entra dentro de los grupos de énfasis. Los dos atributos se pueden poner a la vez. Solo LaTeX: en HTML los atributos salen como data-runt / data-nohyph y no hacen nada, porque son decisiones de una caja de texto fija.',
   'semantic/ast/02-double-colon-noindent':
     'Convierte párrafos con solo ":;" en Div.spacer noindent (semántico). Solo transforma párrafos de nivel superior (no dentro de otros bloques).',
   'semantic/ast/03-qr-url':

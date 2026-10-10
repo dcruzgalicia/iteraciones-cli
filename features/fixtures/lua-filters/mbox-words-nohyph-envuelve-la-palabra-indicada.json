@@ -1,0 +1,9 @@
+{
+  "name": "mbox-words-nohyph-envuelve-la-palabra-indicada",
+  "helper": "toLatex",
+  "markdown": "::: {nohyph=\"Kant\"}\n\nFilosofia de Kant y de otros.\n\n:::\n",
+  "contains": ["\\mbox{Kant}"],
+  "notContains": ["\\mbox{y}"],
+  "normalizeNewlines": true,
+  "filters": ["15-mbox-words"]
+}

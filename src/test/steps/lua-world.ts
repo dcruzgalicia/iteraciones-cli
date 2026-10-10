@@ -14,6 +14,8 @@ export interface LuaCase {
 
   extraSemantic?: boolean;
 
+  filters?: string[];
+
   needsBib?: boolean;
 }
 
