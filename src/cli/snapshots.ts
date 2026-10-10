@@ -151,7 +151,6 @@ async function compareOne(
 
   const guardados = await listSnapshotImages(store);
   const { workDir, cachePath } = await resolveVisualWorkspaces(cwd, visualSlug(pdf));
-  await clearDiffImages(diffDir, stem);
 
   const result = await compareVisual({
     referencePngs: explicitReference === undefined ? guardados.get(stem) : undefined,
@@ -220,6 +219,7 @@ function reportVerdict(cwd: string, compared: Compared[]): void {
 }
 
 async function checkAll(cwd: string, run: SnapshotRun): Promise<void> {
+  await clearDiffImages(join(cwd, DIFF_DIR));
   const comparables = await seleccionaComparables(cwd, run.targets, run.outputDir, run.batch, run.explicitReference);
 
   const compared: Compared[] = [];
