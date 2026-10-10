@@ -187,6 +187,36 @@ Given('que el proyecto reemplaza el filtro {string} con su propio .tex', (nombre
   writeFileSync(join(world.cwd, 'preamble', `${nombre}.tex`), 'hyphenation{OverridePrueba}\n');
 });
 
+Given('que el proyecto pone su propio .tex de {string} en {string}', (nombre: string, directorio: string) => {
+  if (world.proyectoPreamble === '') world.proyectoPreamble = mkdtempSync(join(tmpdir(), 'iteraciones-preamble-'));
+  mkdirSync(join(world.proyectoPreamble, directorio), { recursive: true });
+  writeFileSync(join(world.proyectoPreamble, directorio, `${nombre}.tex`), 'OverrideDelProyecto\n');
+});
+
+Then('el filtro {string} del type {string} trae el contenido del proyecto', async (nombre: string, docType: string) => {
+  const filtros: PreambleFilter[] = await loadPreambleFilters(
+    world.desactivados,
+    world.proyectoPreamble,
+    docType as Parameters<typeof loadPreambleFilters>[2],
+  );
+  const mio = filtros.find((f) => f.name === nombre);
+  if (!mio?.content.includes('OverrideDelProyecto')) {
+    throw new Error(`el .tex del proyecto no llegó al filtro ${nombre} del type ${docType}: ${mio?.content.slice(0, 120)}`);
+  }
+});
+
+Then('el filtro {string} del type {string} NO trae el contenido del proyecto', async (nombre: string, docType: string) => {
+  const filtros: PreambleFilter[] = await loadPreambleFilters(
+    world.desactivados,
+    world.proyectoPreamble,
+    docType as Parameters<typeof loadPreambleFilters>[2],
+  );
+  const mio = filtros.find((f) => f.name === nombre);
+  if (mio?.content.includes('OverrideDelProyecto')) {
+    throw new Error(`el .tex del proyecto llegó al filtro ${nombre} del type ${docType} y no debía: ${mio.content.slice(0, 120)}`);
+  }
+});
+
 Then('el filtro {string} trae el contenido del proyecto', async (nombre: string) => {
   const filtros: PreambleFilter[] = await loadPreambleFilters(world.desactivados, world.cwd);
   const mio = filtros.find((f) => f.name === nombre);

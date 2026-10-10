@@ -31,6 +31,7 @@ function nuevoMundo() {
     desactivados: undefined as string[] | undefined,
 
     cwd: '',
+    proyectoPreamble: '',
 
     config: null as unknown,
 
