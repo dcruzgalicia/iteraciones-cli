@@ -1,0 +1,9 @@
+{
+  "name": "mbox-words-nohyph-una-palabra-que-no-esta-no-rompe-nada",
+  "helper": "toLatex",
+  "markdown": "::: {nohyph=\"Pellicer Couturier\"}\n\nNada de esto aparece abajo.\n\n:::\n",
+  "contains": ["Nada de esto aparece abajo."],
+  "notContains": ["\\mbox"],
+  "normalizeNewlines": true,
+  "filters": ["15-mbox-words"]
+}

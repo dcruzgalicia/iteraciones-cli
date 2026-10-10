@@ -1,0 +1,9 @@
+{
+  "name": "mbox-words-nohyph-envuelve-varias-palabras-en-el-mismo-parrafo",
+  "helper": "toLatex",
+  "markdown": "::: {nohyph=\"Kant Heidegger\"}\n\nFilosofia de Kant y de Heidegger, comparados.\n\n:::\n",
+  "contains": ["\\mbox{Kant}", "\\mbox{Heidegger}"],
+  "notContains": ["\\mbox{y}"],
+  "normalizeNewlines": true,
+  "filters": ["15-mbox-words"]
+}

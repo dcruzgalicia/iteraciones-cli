@@ -1,0 +1,9 @@
+{
+  "name": "mbox-words-nohyph-deja-la-puntuacion-fuera-del-mbox",
+  "helper": "toLatex",
+  "markdown": "::: {nohyph=\"Heidegger\"}\n\nObra de Heidegger, comparada.\n\n:::\n",
+  "contains": ["\\mbox{Heidegger}, comparada"],
+  "notContains": ["\\mbox{Heidegger,}"],
+  "normalizeNewlines": true,
+  "filters": ["15-mbox-words"]
+}

@@ -1,0 +1,9 @@
+{
+  "name": "mbox-words-runt-no-toca-un-parrafo-con-tantas-palabras-como-pide",
+  "helper": "toLatex",
+  "markdown": "::: {runt=5}\n\nCuatro palabras.\n\n:::\n",
+  "contains": ["Cuatro palabras."],
+  "notContains": ["\\mbox"],
+  "normalizeNewlines": true,
+  "filters": ["15-mbox-words"]
+}

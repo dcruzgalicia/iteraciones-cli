@@ -21,6 +21,7 @@ const LATEX_FILTERS = [
   '10-cjk',
   '07-titlepages',
   '11-uppercase',
+  '15-mbox-words',
 ].map((name) => join(FILTERS, 'latex', `${name}.lua`));
 
 const HTML_FILTERS = ['01-dictum', '02-verse', '03-center', '04-flushright', '05-spacer'].map((name) => join(FILTERS, 'html', `${name}.lua`));
@@ -32,7 +33,8 @@ When('lo convierto a LaTeX', async () => {
   const testCase = world.testCase;
   if (testCase === null) throw new Error('no se cargo ningun caso: falta el Given');
 
-  const extraArgs = [...SEMANTIC_FILTERS, ...LATEX_FILTERS].flatMap((f) => ['--lua-filter', f]);
+  const latex = testCase.filters ? testCase.filters.map((name) => join(FILTERS, 'latex', `${name}.lua`)) : LATEX_FILTERS;
+  const extraArgs = [...SEMANTIC_FILTERS, ...latex].flatMap((f) => ['--lua-filter', f]);
   world.output = await execPandoc({
     input: testCase.markdown,
     sourcePath: 'test.md',

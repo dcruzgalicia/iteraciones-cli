@@ -1,0 +1,9 @@
+{
+  "name": "mbox-words-runt-con-enfis-al-final-envuelve-dentro-del-grupo",
+  "helper": "toLatex",
+  "markdown": "::: {runt=2}\n\nSegundo parrafo con *enfatisAlFinal* para probar el grupo.\n\n:::\n",
+  "contains": ["\\emph{enfatisAlFinal} para probar \\mbox{el grupo.}"],
+  "notContains": ["\\mbox{*enfatisAlFinal}"],
+  "normalizeNewlines": true,
+  "filters": ["15-mbox-words"]
+}
