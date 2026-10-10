@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.26.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.25.0...v0.26.0) (2026-10-10)
+
+
+### Features
+
+* **cli:** iteraciones preview construye en loop al detectar cambios ([0213457](https://github.com/dcruzgalicia/iteraciones-cli/commit/021345783c44f0ffce7a22a7cf7dd341b2b34133)), closes [#2631](https://github.com/dcruzgalicia/iteraciones-cli/issues/2631)
+* **snapshots:** el diff marca en verde lo que se fue y en rosa lo que llegó ([8bfc56d](https://github.com/dcruzgalicia/iteraciones-cli/commit/8bfc56d15968268b2cfbd83b3d5918abf942983a)), closes [#2642](https://github.com/dcruzgalicia/iteraciones-cli/issues/2642)
+* **snapshots:** la línea base son imágenes de página y visual pasa a snapshots ([4f67db3](https://github.com/dcruzgalicia/iteraciones-cli/commit/4f67db322d8d30722bf0db876426918a9e26e921)), closes [#2640](https://github.com/dcruzgalicia/iteraciones-cli/issues/2640)
+* **visual:** check compara los dos directorios y los diffs van aparte ([3057481](https://github.com/dcruzgalicia/iteraciones-cli/commit/305748128ea8c2c1ee37700fa1fa32201b54d055)), closes [#2638](https://github.com/dcruzgalicia/iteraciones-cli/issues/2638)
+
+
+### Bug Fixes
+
+* **collections:** editar un type: creator no reconstruye la collection ([e2ea529](https://github.com/dcruzgalicia/iteraciones-cli/commit/e2ea52997665f881c3aaa077e3955597e7d2a774)), closes [#2634](https://github.com/dcruzgalicia/iteraciones-cli/issues/2634)
+* **latex:** el bloque de autoras se pierde si el proyecto no cita nada ([37cd5b2](https://github.com/dcruzgalicia/iteraciones-cli/commit/37cd5b2b13c8cae87f2ced76e4023156ab58f743)), closes [#2635](https://github.com/dcruzgalicia/iteraciones-cli/issues/2635)
+* **preamble:** el .tex genérico del proyecto sirve para todos los types ([3c6c83c](https://github.com/dcruzgalicia/iteraciones-cli/commit/3c6c83c351e0a5a26e2245c8074ab4658de65f45)), closes [#2646](https://github.com/dcruzgalicia/iteraciones-cli/issues/2646)
+* **snapshots:** cada check arranca con diff/ limpio ([712ff41](https://github.com/dcruzgalicia/iteraciones-cli/commit/712ff411b0a40164c8da1cb12942a96da5277fa4)), closes [#2644](https://github.com/dcruzgalicia/iteraciones-cli/issues/2644)
+* **snapshots:** el rojo de lo que se va baja a la mitad ([c1436eb](https://github.com/dcruzgalicia/iteraciones-cli/commit/c1436eb24d87bc7fe3cbd2c318bd2e11587b0d68))
+* **snapshots:** el verde iguala la intensidad del rojo ([f41f948](https://github.com/dcruzgalicia/iteraciones-cli/commit/f41f948b5743599d9a3487b2ae5e4c9618f1a836))
+* **snapshots:** intensidades finales del diff, rojo 30 y verde 60 ([f867a13](https://github.com/dcruzgalicia/iteraciones-cli/commit/f867a139d8c1c4f2c7f7938ff14ce29045da69f0))
+* **snapshots:** más presencia en el verde de lo que llega ([9845557](https://github.com/dcruzgalicia/iteraciones-cli/commit/9845557276bea60e185675c927d836686dbe7448))
+* **snapshots:** se dice por qué un archivo no es un PDF válido ([a6bcdc7](https://github.com/dcruzgalicia/iteraciones-cli/commit/a6bcdc78fdedc6d3d236d8fcc0f6c07edfab5ad9))
+
 ## [0.25.0](https://github.com/dcruzgalicia/iteraciones-cli/compare/v0.24.0...v0.25.0) (2026-10-08)
 
 
