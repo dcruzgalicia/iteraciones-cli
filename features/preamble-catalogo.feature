@@ -29,3 +29,28 @@ Característica: los filtros de preámbulo que trae el paquete
     Escenario: Un .tex propio sustituye al del paquete
       Dado que el proyecto reemplaza el filtro "15-hyphenation-rules" con su propio .tex
       Entonces el filtro "15-hyphenation-rules" trae el contenido del proyecto
+
+  Regla de negocio: Un .tex del proyecto sirve para todos los types
+
+    Esquema del escenario: El .tex propio gana cuando el type no tiene variante en el paquete
+      Dado que el proyecto pone su propio .tex de "<filtro>" en "<directorio>"
+      Entonces el filtro "<filtro>" del type "<type>" trae el contenido del proyecto
+
+      Ejemplos:
+        | filtro               | directorio | type         |
+        | 09-tables            | preamble   | collection   |
+        | 09-tables            | preamble   | creator      |
+        | 09-tables            | preamble   | intervention |
+        | 20-alignment         | preamble   | collection   |
+        | 14-sectioning        | preamble   | creator      |
+        | 15-hyphenation-rules | preamble   | intervention |
+
+    Escenario: El type con variante propia en el paquete sigue mandando sobre el .tex genérico del proyecto
+      Dado que el proyecto pone su propio .tex de "16-toc-styling" en "preamble"
+      Entonces el filtro "16-toc-styling" del type "collection" NO trae el contenido del proyecto
+      Y el filtro "16-toc-styling" del type "file" trae el contenido del proyecto
+
+    Escenario: Un .tex del type en el proyecto gana al .tex genérico del proyecto
+      Dado que el proyecto pone su propio .tex de "20-alignment" en "preamble"
+      Y que el proyecto pone su propio .tex de "20-alignment" en "preamble-collection"
+      Entonces el filtro "20-alignment" del type "collection" trae el contenido del proyecto

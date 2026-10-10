@@ -8,6 +8,7 @@ import { DESCRIPCIONES_PREAMBLE } from './filter-descriptions.js';
 export type PreambleDocType = 'file' | 'collection' | 'creator' | 'intervention';
 
 const PKG_PREAMBLE_DIR = join(import.meta.dir, '../lib/resources/preamble');
+const PROJECT_PREAMBLE_DIR = 'preamble';
 const PKG_PREAMBLE_COLLECTION_DIR = join(import.meta.dir, '../lib/resources/preamble-collection');
 const PKG_PREAMBLE_CREATOR_DIR = join(import.meta.dir, '../lib/resources/preamble-creator');
 const PKG_PREAMBLE_INTERVENTION_DIR = join(import.meta.dir, '../lib/resources/preamble-intervention');
@@ -23,7 +24,7 @@ function preambleProjectDir(docType: PreambleDocType): string {
   if (docType === 'collection') return 'preamble-collection';
   if (docType === 'creator') return 'preamble-creator';
   if (docType === 'intervention') return 'preamble-intervention';
-  return 'preamble';
+  return PROJECT_PREAMBLE_DIR;
 }
 
 export function projectPreambleDirs(): string[] {
@@ -52,6 +53,13 @@ interface PreambleFilterInfo {
   description: string;
 }
 
+async function primeraQueExista(candidatas: string[]): Promise<string | undefined> {
+  for (const path of candidatas) {
+    if (await Bun.file(path).exists()) return path;
+  }
+  return undefined;
+}
+
 export async function loadPreambleFilters(disabledList?: string[], cwd?: string, docType: PreambleDocType = 'file'): Promise<PreambleFilter[]> {
   const excluded = new Set(disabledList ?? []);
   const result: PreambleFilter[] = [];
@@ -60,11 +68,15 @@ export async function loadPreambleFilters(disabledList?: string[], cwd?: string,
 
   for (const name of getBuiltinPreambleFilterNames()) {
     if (excluded.has(name)) continue;
-    const projectPath = join(cwd ?? '', projectDir, `${name}.tex`);
-    const variantPath = join(pkgDir, `${name}.tex`);
-    const basePath = join(PKG_PREAMBLE_DIR, `${name}.tex`);
-    const path = cwd && (await Bun.file(projectPath).exists()) ? projectPath : (await Bun.file(variantPath).exists()) ? variantPath : basePath;
-    const content = await Bun.file(path).text();
+    const delPaqueteBase = join(PKG_PREAMBLE_DIR, `${name}.tex`);
+    const candidatas = [
+      ...(cwd === undefined ? [] : [join(cwd, projectDir, `${name}.tex`)]),
+      join(pkgDir, `${name}.tex`),
+      ...(cwd === undefined ? [] : [join(cwd, PROJECT_PREAMBLE_DIR, `${name}.tex`)]),
+      delPaqueteBase,
+    ];
+    const elegida = (await primeraQueExista(candidatas)) ?? delPaqueteBase;
+    const content = await Bun.file(elegida).text();
     result.push({ name, content });
   }
 
