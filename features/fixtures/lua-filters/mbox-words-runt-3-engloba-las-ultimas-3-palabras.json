@@ -1,0 +1,9 @@
+{
+  "name": "mbox-words-runt-3-engloba-las-ultimas-3-palabras",
+  "helper": "toLatex",
+  "markdown": "::: {runt=3}\n\nTexto del parrafo que no quiero que quede con una sola palabra al final.\n\n:::\n",
+  "contains": ["\\mbox{palabra al final.}"],
+  "notContains": ["\\mbox{una sola palabra}"],
+  "normalizeNewlines": true,
+  "filters": ["15-mbox-words"]
+}

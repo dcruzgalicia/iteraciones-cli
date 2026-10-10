@@ -1,0 +1,9 @@
+{
+  "name": "mbox-words-nohyph-dentro-del-enfis-al-que-se-apunta",
+  "helper": "toLatex",
+  "markdown": "::: {nohyph=\"Kant\"}\n\nTambien *Kant* en cursiva.\n\n:::\n",
+  "contains": ["\\emph{\\mbox{Kant}}"],
+  "notContains": ["\\mbox{*Kant*}"],
+  "normalizeNewlines": true,
+  "filters": ["15-mbox-words"]
+}
