@@ -276,3 +276,43 @@ Característica: los snapshots de la regresión visual
       Cuando guardo los snapshots de "nadie.pdf"
       Entonces el snapshots termina con código 1
       Y el snapshots dice por stderr "no existe el PDF"
+
+  Regla de negocio: Lo que no es PDF se dice, y se dice por qué
+
+    Escenario: Un a que no es PDF se dice que no lo es
+      Dado que la raíz del proyecto está vacía
+      Y un archivo que no es PDF llamado "mi-doc.pdf"
+      Y un PDF llamado "viejo.pdf" en la raíz con el texto "viejo"
+      Cuando comparo "mi-doc.pdf,viejo.pdf"
+      Entonces el snapshots termina con código 1
+      Y el snapshots dice por stderr "no es un PDF"
+      Y el snapshots dice por stderr "mi-doc.pdf"
+      Y el snapshots dice por stderr "%PDF-"
+      Y el archivo "diff" NO existe en el proyecto
+
+    Escenario: Un b que no es PDF se dice que no lo es
+      Dado que la raíz del proyecto está vacía
+      Y un PDF llamado "nuevo.pdf" en la raíz con el texto "nuevo"
+      Y un archivo que no es PDF llamado "viejo.pdf"
+      Cuando comparo "nuevo.pdf,viejo.pdf"
+      Entonces el snapshots termina con código 1
+      Y el snapshots dice por stderr "no es un PDF"
+      Y el snapshots dice por stderr "viejo.pdf"
+      Y el archivo "diff" NO existe en el proyecto
+
+    Escenario: Un PDF que parece PDF pero no se puede leer se dice de otra forma
+      Dado que la raíz del proyecto está vacía
+      Y un PDF que no se puede renderizar llamado "roto.pdf"
+      Y un PDF llamado "viejo.pdf" en la raíz con el texto "viejo"
+      Cuando comparo "roto.pdf,viejo.pdf"
+      Entonces el snapshots termina con código 1
+      Y el snapshots dice por stderr "parece un PDF pero pdftoppm no pudo renderizarlo"
+      Y el snapshots dice por stderr "roto.pdf"
+
+    Escenario: Save también avisa de un archivo que no es PDF
+      Dado que la raíz del proyecto está vacía
+      Y un archivo que no es PDF llamado "mi-doc.pdf"
+      Cuando guardo los snapshots de "mi-doc.pdf"
+      Entonces el snapshots termina con código 1
+      Y el snapshots dice por stderr "no es un PDF"
+      Y el archivo "snapshots" NO existe en el proyecto

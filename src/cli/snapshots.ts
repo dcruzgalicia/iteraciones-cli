@@ -1,4 +1,4 @@
-import { exists, rm } from 'node:fs/promises';
+import { exists, open, rm } from 'node:fs/promises';
 import { isAbsolute, join, relative } from 'node:path';
 import { DIST_FILES_DIR } from '../builder/output-layout.js';
 import { BuildError } from '../lib/errors.js';
@@ -43,8 +43,18 @@ function labelPath(cwd: string, path: string): string {
   return rel === '' || rel.startsWith('..') || isAbsolute(rel) ? path : rel;
 }
 
-async function assertExists(path: string, article: string): Promise<void> {
-  if (!(await exists(path))) throw new BuildError(`no existe ${article} "${path}"`);
+async function assertEsPdf(path: string): Promise<void> {
+  if (!(await exists(path))) throw new BuildError(`no existe el PDF "${path}"`);
+  const archivo = await open(path, 'r');
+  try {
+    const cabecera = Buffer.alloc(1024);
+    await archivo.read(cabecera, 0, 1024, 0);
+    if (!cabecera.includes('%PDF-')) {
+      throw new BuildError(`"${path}" no es un PDF: su contenido no empieza por %PDF-`);
+    }
+  } finally {
+    await archivo.close();
+  }
 }
 
 async function resolveRun(cwd: string, paths: string[], mode: SnapshotsMode, options: SnapshotsOptions): Promise<SnapshotRun> {
@@ -69,7 +79,8 @@ async function resolveRun(cwd: string, paths: string[], mode: SnapshotsMode, opt
   const explicitReference = reference === undefined ? undefined : resolvePath(cwd, reference);
   const targets = batch ? await listPdfFiles(outputDir) : [resolvePath(cwd, pdf)];
   if (batch && targets.length === 0) throw new BuildError(`no hay PDFs en ${labelPath(cwd, outputDir)}`);
-  for (const target of targets) await assertExists(target, 'el PDF');
+  for (const target of targets) await assertEsPdf(target);
+  if (explicitReference !== undefined) await assertEsPdf(explicitReference);
   return { outputDir, batch, targets, explicitReference };
 }
 
@@ -108,10 +119,7 @@ async function seleccionaComparables(
   batch: boolean,
   explicitReference?: string,
 ): Promise<string[]> {
-  if (explicitReference !== undefined) {
-    await assertExists(explicitReference, 'el PDF de referencia');
-    return targets;
-  }
+  if (explicitReference !== undefined) return targets;
   const store = join(cwd, SNAPSHOTS_DIR);
   const guardados = await listSnapshotImages(store);
 

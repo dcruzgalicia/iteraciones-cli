@@ -280,6 +280,15 @@ Given('un PDF llamado {string} en la raíz con el texto {string}', (nombre: stri
   writeFileSync(join(world.root, nombre), pdfDeUnaPagina(texto));
 });
 
+Given('un archivo que no es PDF llamado {string}', (nombre: string) => {
+  escribirEnProyecto(nombre, 'esto no es un PDF, es texto plano');
+});
+
+Given('un PDF que no se puede renderizar llamado {string}', (nombre: string) => {
+  escribirEnProyecto(nombre, '');
+  writeFileSync(join(world.root, nombre), '%PDF-1.4\nla cabecera está pero el cuerpo no\n');
+});
+
 Given('la salida tiene estos archivos:', (tabla: string) => {
   for (const linea of tabla.split('\n')) {
     const limpia = linea.trim();

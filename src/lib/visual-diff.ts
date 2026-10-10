@@ -199,7 +199,9 @@ export async function renderPdfPages(pdf: string, prefix: string): Promise<strin
   await mkdir(dir, { recursive: true });
   const result = await exec('pdftoppm', ['-r', String(DPI), '-png', pdf, prefix]);
   if (result.exitCode !== 0) {
-    throw new BuildError(`pdftoppm no pudo renderizar "${pdf}": ${result.stderr.trim().split('\n').pop() ?? 'error desconocido'}`);
+    throw new BuildError(
+      `"${pdf}" parece un PDF pero pdftoppm no pudo renderizarlo: ${result.stderr.trim().split('\n').pop() ?? 'error desconocido'}`,
+    );
   }
   const stem = basename(prefix);
   const pages = (await readdir(dir)).filter((f) => f.startsWith(`${stem}-`) && f.endsWith('.png')).map((f) => join(dir, f));
