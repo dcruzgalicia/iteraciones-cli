@@ -370,6 +370,11 @@ const esAgregado = (c: Color): boolean => !esGris(c) && c.g > c.r;
 
 function fantasmaDe(lista: Color[], tint: string, blend: string): number {
   const peso = Number.parseInt(blend, 10) / 100;
+  if (peso >= 1) {
+    throw new Error(
+      `la mezcla del tinte ${tint} está al ${blend} %: a partir de 100 el fantasma deja de aportar, el color queda plano y además ya no se puede recuperar para comprobar dónde cayó cada tinta`,
+    );
+  }
   const rojoDelTinte = Number.parseInt(tint.slice(1, 3), 16);
   const suma = lista.reduce((acc, c) => acc + c.count * ((c.r - rojoDelTinte * peso) / (1 - peso)), 0);
   return suma / lista.reduce((acc, c) => acc + c.count, 0);
