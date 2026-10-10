@@ -204,6 +204,28 @@ Característica: los snapshots de la regresión visual
       Y el diff marca lo borrado en rojo y lo agregado en verde pálido
       Y el diff deja el resto en el fantasma gris
 
+  Regla de negocio: Cada check arranca con diff/ limpio
+
+    Escenario: Un diff de otra corrida no sobrevive al check
+      Dado que la raíz del proyecto está vacía
+      Y la salida tiene estos archivos:
+      """
+      index.pdf
+      """
+      Y el directorio de diffs tiene "ajeno--page-001--diff.png ;; index--page-004--diff.png"
+      Cuando comparo ""
+      Entonces el snapshots termina con código 0
+      Y el archivo "diff/ajeno--page-001--diff.png" NO existe en el proyecto
+      Y el archivo "diff/index--page-004--diff.png" NO existe en el proyecto
+
+    Escenario: El diff del par se llama como el archivo de a, no por su ruta
+      Dado que la raíz del proyecto está vacía
+      Y un PDF llamado "dir1/dir2/file1.pdf" en la raíz con el texto "nuevo"
+      Y un PDF llamado "dir1/dir3/file2.pdf" en la raíz con el texto "viejo"
+      Cuando comparo "dir1/dir2/file1.pdf,dir1/dir3/file2.pdf"
+      Entonces el snapshots termina con código 1
+      Y el archivo "diff/file1--page-001--diff.png" existe en el proyecto
+
   Regla de negocio: El par explícito compara y no toca los snapshots
 
     Escenario: Dos rutas iguales no dejan diff
