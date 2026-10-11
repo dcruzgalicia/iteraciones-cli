@@ -288,6 +288,9 @@ function nuevoMundo() {
     antesDe: '',
     desdeLinea: -1,
 
+    textoPdftotext: '',
+    incidencias: [] as string[],
+
     entradasPreview: [] as string[],
     snapshotPrevio: undefined as Snapshot | undefined,
     snapshotNuevo: undefined as Snapshot | undefined,
