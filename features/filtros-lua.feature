@@ -23,6 +23,7 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | convierte-div-dictum-con-autor |
         | convierte-div-dictum-sin-autor |
         | convierte-div-verse-sin-vspace-externo |
+        | verse-en-tex-solo-separte-la-linea-con-dos-espacios |
         | convierte-en-vspace-baselineskip |
         | convierte-en-vspace-noindent-al-parrafo-siguiente |
         | convierte-japanese-al-entorno-cjk-con-encoding-min |
@@ -72,6 +73,7 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | envuelve-div-dictum-en-blockquote-con-bloques-nativos |
         | envuelve-div-flushright-en-div |
         | envuelve-div-verse-en-div |
+        | verse-solo-separte-la-linea-con-dos-espacios |
         | no-altera-parrafos-normales |
 
   Regla de negocio: El filtro internal/flags detecta el tipo del primer bloque
