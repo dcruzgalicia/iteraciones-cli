@@ -15,6 +15,7 @@ import { runPrepare } from './prepare.js';
 import { runPreview } from './preview.js';
 import { runSnapshots, type SnapshotsOptions } from './snapshots.js';
 import { runTemplate } from './template.js';
+import { runTypography } from './typography.js';
 
 function collect(value: string, previous: string[]): string[] {
   return [...previous, value];
@@ -310,6 +311,35 @@ Ejemplos:
     )
     .action(async (_pdf: string | undefined, opts: SnapshotsOptions, command: Command) => {
       await runSnapshots(projectRoot(), command.args, 'save', opts);
+    });
+
+  program
+    .command('typography [paths...]')
+    .description('detecta en los PDF líneas de una sola palabra y pares de líneas consecutivas terminadas en puntuación')
+    .option('--output <path>', 'directorio de salida donde están los PDFs (por defecto: dist/files)')
+    .option('--json', 'imprime el resultado como JSON en stdout (consumo programático)')
+    .addHelpText(
+      'after',
+      `
+Lee cada PDF con pdftotext -layout (poppler) y no lo modifica: sólo reporta. Sin rutas revisa
+todos los PDF de --output. Sale con código 1 si encuentra alguna incidencia, para servir de puerta
+en CI.
+
+Reglas:
+  single-word-line          una línea no vacía con exactamente una palabra
+  consecutive-punctuation   dos líneas seguidas que ambas terminan en un signo de puntuación
+
+El número de línea reinicia en cada página. Una línea vacía y el final de página cortan la
+consecutividad: la última línea de una página nunca se compara con la primera de la siguiente.
+
+Ejemplos:
+  iteraciones typography                            revisa los PDF de dist/files
+  iteraciones typography dist/files/libro.pdf       revisa uno
+  iteraciones typography --json                     imprime el resultado como JSON
+`,
+    )
+    .action(async (paths: string[], opts: { output?: string; json?: boolean }) => {
+      await runTypography(projectRoot(), paths, opts);
     });
 
   program
