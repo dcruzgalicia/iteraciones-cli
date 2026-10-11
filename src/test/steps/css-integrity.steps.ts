@@ -145,12 +145,26 @@ Then('no tiene selectores de clase sueltos', () => {
   }
 });
 
-Then('sus únicas utilidades son las cuatro de los casos extremos', () => {
+Then('sus únicas utilidades son las seis que tienen caso atrás', () => {
   const sinComentarios = world.css.replace(/\/\*[\s\S]*?\*\//g, '');
   const utilities = [...sinComentarios.matchAll(/@utility\s+([\w-]+)/g)].map((m) => m[1] ?? '').sort();
-  const expected = ['bg-paper-grid', 'logo-fill', 'scroll-reveal', 'smallcaps'];
+  const expected = ['bg-paper-grid', 'dictum', 'logo-fill', 'scroll-reveal', 'smallcaps', 'verse'];
   if (JSON.stringify(utilities) !== JSON.stringify(expected)) {
     throw new Error(`esperaba ${JSON.stringify(expected)} y hay ${JSON.stringify(utilities)}`);
+  }
+});
+
+Given('un proyecto cuyo HTML trae {string}', async (cuerpo: string) => {
+  resetProject();
+  await mkdir(join(world.dir, 'assets', 'css'), { recursive: true });
+  await writeFile(join(world.dir, 'index.html'), `<!DOCTYPE html><html><body>${cuerpo}</body></html>`, 'utf8');
+});
+
+Then('el CSS da a {string} la propiedad {string}', (selector: string, propiedad: string) => {
+  const bloque = new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\{([^}]*)\\}`).exec(world.css);
+  if (bloque === null) throw new Error(`el CSS no tiene ninguna regla para ${selector}`);
+  if (!(bloque[1] ?? '').includes(propiedad)) {
+    throw new Error(`la regla ${selector} no declara ${propiedad}. Dice:\n${bloque[1]}`);
   }
 });
 

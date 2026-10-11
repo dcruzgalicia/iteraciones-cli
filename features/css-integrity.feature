@@ -18,7 +18,16 @@ Característica: El CSS se compila sólo con lo que aparece en el HTML
   Escenario: styles.css no define ninguna clase de CSS tradicional (#2487)
     Cuando leo el styles.css del proyecto
     Entonces no tiene selectores de clase sueltos
-    Y sus únicas utilidades son las cuatro de los casos extremos
+    Y sus únicas utilidades son las seis que tienen caso atrás
+
+  Regla de negocio: Los bloques de LaTeX que también salen en el sitio (#2649)
+
+    Escenario: El epígrafe y el verso se estilan de verdad, no salen como un bloque pelado
+      Dado un proyecto cuyo HTML trae "<blockquote class=\"dictum\"><p>Cita</p><div class=\"author\"><p>Fulano</p></div></blockquote><div class=\"verse\"><p>uno<br />dos</p></div>"
+      Cuando compilo el CSS con acento "lime"
+      Entonces el CSS da a ".dictum" la propiedad "max-width"
+      Y el CSS da a ".dictum .author" la propiedad "font-style"
+      Y el CSS da a ".verse" la propiedad "text-align"
 
   Escenario: Sólo entran las clases que el HTML usa
     Dado un proyecto con un HTML de clases "text-stone-500"
