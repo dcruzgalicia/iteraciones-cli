@@ -25,6 +25,14 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | convierte-div-verse-sin-vspace-externo |
         | verse-en-tex-solo-separte-la-linea-con-dos-espacios |
         | convierte-en-vspace-baselineskip |
+        | div-shrink-aprieta-las-letras |
+        | div-stretch-separa-las-letras |
+        | span-shrink-y-span-stretch |
+        | la-forma-antigua-textls-value-ya-no-transforma |
+        | el-bug-value-en-clase-cualquiera-ya-no-dispara |
+        | shrink-con-signo-no-emite-doble-guion |
+        | shrink-y-stretch-con-decimales |
+        | shrink-no-numerico-no-transforma |
         | convierte-en-vspace-noindent-al-parrafo-siguiente |
         | convierte-japanese-al-entorno-cjk-con-encoding-min |
         | decoracion-inline-versalitas-mayusculas-subrayado-resaltado- |
@@ -123,6 +131,9 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | publisherimage-pasa-la-ruta-literal-sin-escapar-el-guion-baj |
         | serializa-campos-simples-sin |
         | sin-campos-de-titulo-internas-nada-cambia |
+        | titleback-shrink-aprieta-las-letras |
+        | titleback-stretch-separa-las-letras |
+        | titleback-la-forma-antigua-ya-no-transforma |
         | startpaper-pasa-la-ruta-literal-sin-escapar-el-guion-bajo |
         | subject-con-array-de-un-solo-item-se-une-sin-coma-extra |
         | subject-y-publishers-aceptan-array-de-strings-como-author-se |

@@ -1,0 +1,9 @@
+{
+  "name": "div-shrink-aprieta-las-letras",
+  "helper": "toLatex",
+  "markdown": "::: {shrink=20}\napretado\n:::  \n",
+  "contains": ["\\textls[-20]{apretado}"],
+  "notContains": ["\\textls[20]"],
+  "normalizeNewlines": false,
+  "filters": ["14-textls"]
+}

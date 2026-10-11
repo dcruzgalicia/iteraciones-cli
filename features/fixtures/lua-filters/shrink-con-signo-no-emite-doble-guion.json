@@ -1,0 +1,9 @@
+{
+  "name": "shrink-con-signo-no-emite-doble-guion",
+  "helper": "toLatex",
+  "markdown": "::: {shrink=-20}\nraro\n:::  \n",
+  "contains": ["\\textls[20]{raro}"],
+  "notContains": ["--20"],
+  "normalizeNewlines": false,
+  "filters": ["14-textls"]
+}
