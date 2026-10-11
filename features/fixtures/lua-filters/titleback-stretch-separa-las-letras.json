@@ -1,0 +1,9 @@
+{
+  "name": "titleback-stretch-separa-las-letras",
+  "helper": "toLatexTitleback",
+  "markdown": "---\ntitle: Prueba\nlowertitleback: |\n  ::: {stretch=30}\n  contraportada\n  :::\n---\n\nCuerpo.\n",
+  "contains": ["\\textls[30]{contraportada}"],
+  "notContains": ["\\textls[-30]"],
+  "needsBib": false,
+  "normalizeNewlines": false
+}

@@ -1,0 +1,9 @@
+{
+  "name": "shrink-y-stretch-con-decimales",
+  "helper": "toLatex",
+  "markdown": "::: {shrink=20.5}\nfrac\n:::  \n",
+  "contains": ["\\textls[-20.5]{frac}"],
+  "notContains": [],
+  "normalizeNewlines": false,
+  "filters": ["14-textls"]
+}

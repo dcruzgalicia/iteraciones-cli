@@ -1,0 +1,9 @@
+{
+  "name": "span-shrink-y-span-stretch",
+  "helper": "toLatex",
+  "markdown": "antes [aprieta]{shrink=5} en medio [separa]{stretch=8} despues\n",
+  "contains": ["\\textls[-5]{aprieta}", "\\textls[8]{separa}"],
+  "notContains": [],
+  "normalizeNewlines": false,
+  "filters": ["14-textls"]
+}

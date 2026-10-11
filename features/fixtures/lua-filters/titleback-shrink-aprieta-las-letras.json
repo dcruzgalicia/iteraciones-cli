@@ -1,0 +1,9 @@
+{
+  "name": "titleback-shrink-aprieta-las-letras",
+  "helper": "toLatexTitleback",
+  "markdown": "---\ntitle: Prueba\nlowertitleback: |\n  ::: {shrink=20}\n  contraportada\n  :::\n---\n\nCuerpo.\n",
+  "contains": ["\\textls[-20]{contraportada}"],
+  "notContains": ["\\textls[20]"],
+  "needsBib": false,
+  "normalizeNewlines": false
+}
