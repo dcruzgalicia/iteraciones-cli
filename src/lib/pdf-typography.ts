@@ -1,5 +1,5 @@
 import { BuildError } from './errors.js';
-import { exec } from './run.js';
+import { exec, ProcessSpawnError, type RunResult } from './run.js';
 
 export const TYPOGRAPHY_RULES = ['single-word-line', 'consecutive-punctuation'] as const;
 
@@ -33,8 +33,11 @@ const PAGE_BREAK = '\f';
  */
 export function splitPages(stdout: string): string[][] {
   const trozos = stdout.split(PAGE_BREAK);
-  trozos.pop();
-  return trozos.map((pagina) => {
+  // pdftotext cierra el documento con su propio \f, así que el último trozo es siempre
+  // el que queda vacío. Si no lo estuviera, significaría que la salida no viene de
+  // pdftotext y mejor no tirar una página entera sin avisar.
+  const paginas = trozos.at(-1) === '' ? trozos.slice(0, -1) : trozos;
+  return paginas.map((pagina) => {
     const lineas = pagina.split('\n');
     if (lineas.at(-1) === '') lineas.pop();
     return lineas;
@@ -94,7 +97,15 @@ export function analyzeText(stdout: string): TypographyIncidence[] {
 }
 
 export async function analyzePdf(pdfPath: string): Promise<TypographyIncidence[]> {
-  const result = await exec('pdftotext', ['-layout', pdfPath, '-']);
+  let result: RunResult;
+  try {
+    result = await exec('pdftotext', ['-layout', pdfPath, '-']);
+  } catch (err) {
+    if (err instanceof ProcessSpawnError) {
+      throw new BuildError(`typography necesita pdftotext, que no está en PATH. Instala poppler (por ejemplo: brew install poppler).`);
+    }
+    throw err;
+  }
   if (result.exitCode !== 0) {
     const motivo = result.stderr.trim().split('\n').pop() ?? 'error desconocido';
     throw new BuildError(`pdftotext no pudo leer "${pdfPath}": ${motivo}`);

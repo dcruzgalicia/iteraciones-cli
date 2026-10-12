@@ -61,6 +61,15 @@ Given('que pdftoppm no está disponible', async () => {
   espioExec = espia;
 });
 
+Given('que pdftotext no está disponible', async () => {
+  const real = runModule.exec;
+  const espia = spyOn(runModule, 'exec').mockImplementation(async (cmd: string, args: string[], opciones?: Parameters<typeof runModule.exec>[2]) => {
+    if (cmd === 'pdftotext') throw new runModule.ProcessSpawnError('pdftotext no encontrado');
+    return real(cmd, args, opciones);
+  });
+  espioExec = espia;
+});
+
 When('pido la información de "doctor"', async () => {
   await capture(() => runDoctor(world.root, { info: true }));
 });

@@ -99,19 +99,27 @@ export async function checkWritePermissions(cwd: string): Promise<CheckResult> {
   }
 }
 
-export async function checkPdfToPpm(): Promise<CheckResult> {
+async function checkPoppler(binary: string, para: string): Promise<CheckResult> {
   try {
-    const result = await exec('pdftoppm', ['-v']);
-    const version = `${result.stdout}\n${result.stderr}`.split('\n')[0]?.trim() ?? 'pdftoppm';
-    return { label: 'pdftoppm disponible', ok: true, detail: version, warn: true };
+    const result = await exec(binary, ['-v']);
+    const version = `${result.stdout}\n${result.stderr}`.split('\n')[0]?.trim() ?? binary;
+    return { label: `${binary} disponible`, ok: true, detail: `${version} (para ${para})`, warn: true };
   } catch {
     return {
-      label: 'pdftoppm disponible',
+      label: `${binary} disponible`,
       ok: false,
-      detail: 'pdftoppm no encontrado en PATH. Instala poppler (por ejemplo: brew install poppler)',
+      detail: `${binary} no encontrado en PATH. Instala poppler (por ejemplo: brew install poppler)`,
       warn: true,
     };
   }
+}
+
+export async function checkPdfToPpm(): Promise<CheckResult> {
+  return checkPoppler('pdftoppm', 'las vistas previas del PDF');
+}
+
+export async function checkPdfToText(): Promise<CheckResult> {
+  return checkPoppler('pdftotext', 'iteraciones typography');
 }
 
 export async function checkPdfCheck(): Promise<CheckResult> {

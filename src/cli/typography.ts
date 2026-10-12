@@ -5,6 +5,7 @@ import { fail, logError, logInfo, logSuccess } from '../lib/logger.js';
 import { resolvePath } from '../lib/paths.js';
 import { analyzePdf, type TypographyIncidence } from '../lib/pdf-typography.js';
 import { plural } from '../lib/plural.js';
+import { mapWithConcurrency } from '../lib/run.js';
 import { listPdfFiles } from '../lib/visual-diff.js';
 
 export interface TypographyOptions {
@@ -31,8 +32,10 @@ export async function runTypography(cwd: string, paths: string[], options: Typog
     const targets = paths.length > 0 ? paths.map((path) => resolvePath(cwd, path)) : await listPdfFiles(outputDir);
     if (targets.length === 0) throw new BuildError(`no hay PDFs en ${etiqueta(cwd, outputDir)}`);
 
-    const files: { pdf: string; incidences: TypographyIncidence[] }[] = [];
-    for (const pdf of targets) files.push({ pdf, incidences: await analyzePdf(pdf) });
+    const files = await mapWithConcurrency(targets, 4, async (pdf) => ({
+      pdf,
+      incidences: await analyzePdf(pdf),
+    }));
     const total = files.reduce((sum, file) => sum + file.incidences.length, 0);
 
     if (options.json) {

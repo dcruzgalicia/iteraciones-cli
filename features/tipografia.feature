@@ -259,6 +259,19 @@ Característica: el analizador tipográfico de los PDF
         single-word-line ;; pág 3 ;; línea 1 ;; Adios
         """
 
+    Escenario: Una salida sin el salto final no pierde la última página
+      Dado que pdftotext devuelve una salida sin el salto final:
+        """
+        Primera pagina con dos palabras.
+        \f
+        Adios
+        """
+      Cuando escaneo el texto de pdftotext
+      Entonces las incidencias son:
+        """
+        single-word-line ;; pág 2 ;; línea 1 ;; Adios
+        """
+
   Regla de negocio: Las reglas corren sobre el PDF de verdad
 
     Escenario: Un PDF sin incidencias sale limpio
@@ -311,7 +324,7 @@ Característica: el analizador tipográfico de los PDF
         """
       Cuando corro el binario sin pdftotext en el PATH para "typography limpio.pdf"
       Entonces el comando termina con el código de salida 1
-      Y el error dice "No se encontró el comando"
+      Y el error dice "Instala poppler"
 
   Regla de negocio: El informe dice la regla, la página, la línea y el texto
 

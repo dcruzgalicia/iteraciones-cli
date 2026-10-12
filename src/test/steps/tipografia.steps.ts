@@ -36,6 +36,10 @@ Given('que pdftotext devuelve:', (texto: string) => {
   world.textoPdftotext = salidaPdftotext(texto);
 });
 
+Given('que pdftotext devuelve una salida sin el salto final:', (texto: string) => {
+  world.textoPdftotext = texto.replace(/\\f\n?/g, '\f');
+});
+
 When('escaneo el texto de pdftotext', () => {
   world.incidencias = analyzeText(world.textoPdftotext).map(describe);
 });
