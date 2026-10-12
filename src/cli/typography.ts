@@ -70,7 +70,7 @@ function formatea(incidencia: TypographyIncidence): string {
 export async function runTypography(cwd: string, args: string[], options: TypographyOptions = {}): Promise<void> {
   try {
     const rango = options.pages === undefined ? {} : interpretaPaginas(options.pages);
-    const porcentajeCorta = options.minLineWidth === undefined ? 50 : interpretaPorcentaje(options.minLineWidth, '--min-line-width');
+    const porcentajeCorta = options.minLineWidth === undefined ? 75 : interpretaPorcentaje(options.minLineWidth, '--min-line-width');
     const outputDir = resolvePath(cwd, options.output ?? DIST_FILES_DIR);
     const targets = args.length > 0 ? args.map((path) => resolvePath(cwd, path)) : await listPdfFiles(outputDir);
     if (targets.length === 0) throw new BuildError(`no hay PDFs en ${etiqueta(cwd, outputDir)}`);
