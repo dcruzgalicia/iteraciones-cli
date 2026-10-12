@@ -32,7 +32,7 @@ export const DESCRIPCIONES_LUA: Record<string, string> = {
   'latex/12-mbox':
     'Convierte el span [texto]{.mbox} a \\mbox{texto} (solo LaTeX: evita que pandoc rompa el grupo de palabras entre lineas). En HTML el span conserva la clase mbox para estilizacion CSS.',
   'latex/13-spacing':
-    'Convierte Div con atributo spacing en \\begin{spacing}{valor}...\\end{spacing} Requiere el paquete setspace (cargado en 03-spacing.tex).',
+    'Multiplica el interlineado de un bloque con setspace: ::: {line-height=1.5} sale \\begin{spacing}{1.5}…\\end{spacing}. El 1.5 no lleva unidad, es un factor sobre la base, igual que line-height en CSS. Valores cero, negativos o no numéricos se ignoran y el bloque sale normal. Antes era ::: {spacing=1.5}, que se confundía con los metadatos del documento porque es un atributo sin clase. Requiere el paquete setspace (cargado en 03-spacing.tex). Solo LaTeX: en HTML el atributo sale como data-line-height y no hace nada.',
   'latex/14-textls':
     'Espacia las letras de un span o div con microtype, con dos atributos que ya dicen qué hacen. ::: {shrink=20} o [texto]{shrink=20} aprieta las letras (sale \\textls[-20]); ::: {stretch=30} o [texto]{stretch=30} las separa (sale \\textls[30]). La cantidad va siempre en positivo, porque el nombre ya dice para qué lado. Antes era ::: {.textls value=-20}, con el signo decidiendo y sin avisar si te equivocabas. Solo LaTeX: en HTML el atributo sale como data-shrink / data-stretch y no hace nada, porque es una medida en unidades de la fuente.',
   'latex/15-mbox-words':

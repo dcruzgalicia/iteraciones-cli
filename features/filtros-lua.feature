@@ -33,6 +33,12 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | shrink-con-signo-no-emite-doble-guion |
         | shrink-y-stretch-con-decimales |
         | shrink-no-numerico-no-transforma |
+        | div-line-height-multiplica-el-interlineado |
+        | div-line-height-la-forma-vieja-spacing-ya-no-transforma |
+        | div-line-height-no-numerico-no-transforma |
+        | div-line-height-cero-no-transforma |
+        | div-line-height-negativo-no-transforma |
+        | div-line-height-con-decimales |
         | convierte-en-vspace-noindent-al-parrafo-siguiente |
         | convierte-japanese-al-entorno-cjk-con-encoding-min |
         | decoracion-inline-versalitas-mayusculas-subrayado-resaltado- |
@@ -82,6 +88,8 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | envuelve-div-flushright-en-div |
         | envuelve-div-verse-en-div |
         | verse-solo-separte-la-linea-con-dos-espacios |
+        | html-line-height-sale-como-dato-y-no-hace-nada |
+        | html-la-forma-vieja-spacing-tampoco-hacia-nada |
         | no-altera-parrafos-normales |
 
   Regla de negocio: El filtro internal/flags detecta el tipo del primer bloque
@@ -134,6 +142,9 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | titleback-shrink-aprieta-las-letras |
         | titleback-stretch-separa-las-letras |
         | titleback-la-forma-antigua-ya-no-transforma |
+        | titleback-line-height-multiplica-el-interlineado |
+        | titleback-line-height-la-forma-vieja-ya-no-transforma |
+        | titleback-line-height-no-numerico-no-transforma |
         | startpaper-pasa-la-ruta-literal-sin-escapar-el-guion-bajo |
         | subject-con-array-de-un-solo-item-se-une-sin-coma-extra |
         | subject-y-publishers-aceptan-array-de-strings-como-author-se |

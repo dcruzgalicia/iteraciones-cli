@@ -1,0 +1,9 @@
+{
+  "name": "div-line-height-con-decimales",
+  "helper": "toLatex",
+  "markdown": "::: {line-height=1.25}\ntexto\n:::  \n",
+  "contains": ["\\begin{spacing}{1.25}"],
+  "notContains": [],
+  "normalizeNewlines": false,
+  "filters": ["13-spacing"]
+}
