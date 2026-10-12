@@ -13,6 +13,42 @@ export interface TypographyOptions {
   json?: boolean;
 }
 
+/** Rango de páginas del PDF, 1 como en el PDF y ambos extremos incluidos. */
+export interface RangoPaginas {
+  desde?: number;
+  hasta?: number;
+}
+
+const SOLO_NUMERO = /^\d+$/;
+
+/**
+ * Separa rutas y rango. Un argumento que sea sólo dígitos es una página, todo lo demás es
+ * ruta: un archivo llamado libro.pdf nunca se confunde con un folio, y un rango suelto
+ * (typography 80) revisa desde la 80 en todos los PDF de --output.
+ */
+export function separaRango(args: string[]): { paths: string[]; rango: RangoPaginas } {
+  const paths: string[] = [];
+  const numeros: string[] = [];
+  for (const arg of args) {
+    if (SOLO_NUMERO.test(arg)) numeros.push(arg);
+    else paths.push(arg);
+  }
+  if (numeros.length > 2) {
+    throw new BuildError(`el rango acepta como mucho dos números (desde y hasta) y llegaron ${numeros.length}: ${numeros.join(' ')}`);
+  }
+  const desde = numeros[0] === undefined ? undefined : Number(numeros[0]);
+  const hasta = numeros[1] === undefined ? undefined : Number(numeros[1]);
+  if (desde === 1 && hasta === undefined) {
+    // "typography libro.pdf 1" no recorta nada; es más probable un fallo de dedo que una intención.
+    throw new BuildError('la página 1 es la primera: para revisar todo el PDF, quita el rango');
+  }
+  if (desde !== undefined && desde < 1) throw new BuildError(`la página ${desde} no existe: las páginas empiezan en 1`);
+  if (desde !== undefined && hasta !== undefined && hasta < desde) {
+    throw new BuildError(`el rango ${desde}-${hasta} va al revés: la página final no puede ser anterior a la inicial`);
+  }
+  return { paths, rango: { desde, hasta } };
+}
+
 function etiqueta(cwd: string, path: string): string {
   const rel = relative(cwd, path);
   return rel === '' || rel.startsWith('..') || isAbsolute(rel) ? path : rel;
@@ -26,15 +62,17 @@ function formatea(incidencia: TypographyIncidence): string {
   return `  pág ${incidencia.page}  línea ${incidencia.line}  ${incidencia.type}  ${texto}`;
 }
 
-export async function runTypography(cwd: string, paths: string[], options: TypographyOptions = {}): Promise<void> {
+export async function runTypography(cwd: string, args: string[], options: TypographyOptions = {}): Promise<void> {
   try {
+    const { paths, rango } = separaRango(args);
     const outputDir = resolvePath(cwd, options.output ?? DIST_FILES_DIR);
     const targets = paths.length > 0 ? paths.map((path) => resolvePath(cwd, path)) : await listPdfFiles(outputDir);
     if (targets.length === 0) throw new BuildError(`no hay PDFs en ${etiqueta(cwd, outputDir)}`);
 
+    const desde = rango.desde ?? 1;
     const files = await mapWithConcurrency(targets, 4, async (pdf) => ({
       pdf,
-      incidences: await analyzePdf(pdf),
+      incidences: await analyzePdf(pdf, desde, rango.hasta),
     }));
     const total = files.reduce((sum, file) => sum + file.incidences.length, 0);
 
