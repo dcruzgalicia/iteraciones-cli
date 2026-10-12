@@ -121,8 +121,37 @@ function endsWithPunctuation(line: string): boolean {
   return last !== undefined && TERMINALS.has(last);
 }
 
-export function consecutivePunctuationPairs(pages: string[][]): ConsecutivePunctuation[] {
-  const pairs: ConsecutivePunctuation[] = [];
+/**
+ * El ancho de referencia del texto: la mediana del ancho de sus líneas. Va mediana y no promedio
+ * porque el promedio lo bajan justamente las líneas cortas que queremos descartar, y entonces la
+ * regla se anula sola: con líneas de 28, 8 y 12 caracteres el promedio da 16.3 y una línea de 8
+ * queda por debajo del 50%, que es justo lo contrario de lo que se busca.
+ *
+ * pdftotext con -layout no rellena con espacios, así que el ancho es el de la línea tal cual.
+ */
+export function anchoDeReferencia(pages: string[][]): number {
+  const anchos: number[] = [];
+  for (const pagina of pages) {
+    for (const linea of pagina) {
+      const ancho = linea.trimEnd().length;
+      if (ancho > 0) anchos.push(ancho);
+    }
+  }
+  if (anchos.length === 0) return 0;
+  anchos.sort((a, b) => a - b);
+  const medio = Math.floor(anchos.length / 2);
+  if (anchos.length % 2 === 1) return anchos[medio] as number;
+  return ((anchos[medio - 1] as number) + (anchos[medio] as number)) / 2;
+}
+
+/**
+ * Una línea muy corta no se cuenta como par aunque termine en puntuación: el final de un
+ * párrafo corto («a sí mismas.») pegado al principio del siguiente es composición normal, no un
+ * problema. Se considera corta la que se queda por debajo del porcentaje dado del ancho.
+ */
+export function consecutivePunctuationPairs(pages: string[][], porcentajeCorta = 50): ConsecutivePunctuation[] {
+  const pares: ConsecutivePunctuation[] = [];
+  const limite = (anchoDeReferencia(pages) * porcentajeCorta) / 100;
   for (const [indicePagina, lineas] of pages.entries()) {
     for (let indice = 1; indice < lineas.length; indice++) {
       const text = lineas[indice];
@@ -132,7 +161,8 @@ export function consecutivePunctuationPairs(pages: string[][]): ConsecutivePunct
       // línea vacía sale solo. Y como el recorrido es por página, el final de una nunca se
       // compara con el principio de la siguiente.
       if (!endsWithPunctuation(previousText) || !endsWithPunctuation(text)) continue;
-      pairs.push({
+      if (text.trimEnd().length < limite || previousText.trimEnd().length < limite) continue;
+      pares.push({
         type: 'consecutive-punctuation',
         page: indicePagina + 1,
         line: indice + 1,
@@ -142,13 +172,13 @@ export function consecutivePunctuationPairs(pages: string[][]): ConsecutivePunct
       });
     }
   }
-  return pairs;
+  return pares;
 }
 
 /** Orden: primero las líneas de una sola palabra, después los pares de puntuación. */
-export function analyzeText(stdout: string, primeraPagina = 1): TypographyIncidence[] {
+export function analyzeText(stdout: string, primeraPagina = 1, porcentajeCorta = 50): TypographyIncidence[] {
   const pages = splitPages(stdout);
-  const incidences = [...singleWordLines(pages), ...consecutivePunctuationPairs(pages)];
+  const incidences = [...singleWordLines(pages), ...consecutivePunctuationPairs(pages, porcentajeCorta)];
   if (primeraPagina === 1) return incidences;
   // pdftotext con -f devuelve sólo las páginas pedidas y las numera desde 1, así que hay que
   // volver a la numeración real del PDF. Se reporta la página del PDF y no el folio impreso,
@@ -157,7 +187,7 @@ export function analyzeText(stdout: string, primeraPagina = 1): TypographyIncide
   return incidences.map((incidencia) => ({ ...incidencia, page: incidencia.page + desplazamiento }));
 }
 
-export async function analyzePdf(pdfPath: string, desde = 1, hasta?: number): Promise<TypographyIncidence[]> {
+export async function analyzePdf(pdfPath: string, desde = 1, hasta?: number, porcentajeCorta = 50): Promise<TypographyIncidence[]> {
   const recorte = [...(desde === 1 ? [] : ['-f', String(desde)]), ...(hasta === undefined ? [] : ['-l', String(hasta)])];
   let result: RunResult;
   try {
@@ -172,5 +202,5 @@ export async function analyzePdf(pdfPath: string, desde = 1, hasta?: number): Pr
     const motivo = result.stderr.trim().split('\n').pop() ?? 'error desconocido';
     throw new BuildError(`pdftotext no pudo leer "${pdfPath}": ${motivo}`);
   }
-  return analyzeText(result.stdout, desde);
+  return analyzeText(result.stdout, desde, porcentajeCorta);
 }
