@@ -56,6 +56,14 @@ Característica: doctor y list-filters cuentan qué le falta al proyecto
       Y la salida dice "⚠ pdftoppm disponible"
       Y la salida dice "Instala poppler"
 
+    Escenario: pdftotext ausente se avisa con cómo instalarlo
+      Dado que pdftotext no está disponible
+      Dado que la raíz del proyecto tiene un proyecto con PDF
+      Cuando corro "doctor"
+      Entonces el comando termina con el código de salida 0
+      Y la salida dice "⚠ pdftotext disponible"
+      Y la salida dice "Instala poppler"
+
   Regla de negocio: Cada check se renderiza con su marca y sin escapes
 
     Escenario: Los checks que pasan salen con ✔

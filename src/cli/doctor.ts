@@ -13,6 +13,7 @@ import {
   checkPandoc,
   checkPdfCheck,
   checkPdfToPpm,
+  checkPdfToText,
   checkReadPermissions,
   checkWritePermissions,
 } from './doctor/system-checks.js';
@@ -52,9 +53,9 @@ export async function collectChecks(cwd: string): Promise<CheckResult[]> {
   const needsLatex = configResult.siteConfig?.format?.pdf?.generate === true;
   const effectiveDisabled = resolveEffectiveDisabled(loadedOrError, configResult.siteConfig);
   const needsPdfx = needsLatex && !effectiveDisabled.includes('99-pdfx');
-  const [latex, pdfToPpm, magick] = needsLatex
-    ? await Promise.all([checkLatexEngine(), checkPdfToPpm(), checkMagick()])
-    : [undefined, undefined, undefined];
+  const [latex, pdfToPpm, pdfToText, magick] = needsLatex
+    ? await Promise.all([checkLatexEngine(), checkPdfToPpm(), checkPdfToText(), checkMagick()])
+    : [undefined, undefined, undefined, undefined];
   const pdfCheck = needsPdfx ? await checkPdfCheck() : undefined;
   const bibDiscovered =
     configResult.siteConfig?.bibliography === undefined
@@ -75,6 +76,7 @@ export async function collectChecks(cwd: string): Promise<CheckResult[]> {
     write,
     ...(latex ? [latex] : []),
     ...(pdfToPpm ? [pdfToPpm] : []),
+    ...(pdfToText ? [pdfToText] : []),
     ...(magick ? [magick] : []),
     ...(biber ? [biber] : []),
   ];
