@@ -119,6 +119,31 @@ Característica: el analizador tipográfico de los PDF
         consecutive-punctuation ;; pág 1 ;; líneas 1-2 ;; 1: termina en punto. ;; 2: termina en coma,
         """
 
+    Escenario: Los puntos sueltos de \ldots cuentan como un punto
+      Dado que pdftotext devuelve:
+        """
+        uno dos,
+        tres . . .
+        cuatro . . .
+        \f
+        """
+      Cuando escaneo el texto de pdftotext
+      Entonces las incidencias son:
+        """
+        consecutive-punctuation ;; pág 1 ;; líneas 1-2 ;; 1: uno dos, ;; 2: tres . . .
+        consecutive-punctuation ;; pág 1 ;; líneas 2-3 ;; 2: tres . . . ;; 3: cuatro . . .
+        """
+
+    Escenario: Los puntos sueltos no arman par con una línea que no termina en signo
+      Dado que pdftotext devuelve:
+        """
+        uno dos
+        tres . . .
+        \f
+        """
+      Cuando escaneo el texto de pdftotext
+      Entonces no hay incidencias
+
     Escenario: Una línea que no termina en puntuación rompe el par
       Dado que pdftotext devuelve:
         """
