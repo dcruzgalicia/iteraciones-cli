@@ -335,7 +335,13 @@ consecutividad: la última línea de una página nunca se compara con la primera
 Ejemplos:
   iteraciones typography                            revisa los PDF de dist/files
   iteraciones typography dist/files/libro.pdf       revisa uno
+  iteraciones typography dist/files/libro.pdf 3     desde la página 3 hasta el final
+  iteraciones typography dist/files/libro.pdf 3 80  sólo las páginas 3 a 80
   iteraciones typography --json                     imprime el resultado como JSON
+
+Un argumento que sea sólo dígitos es una página y los demás son rutas; los dos números son
+inclusivos. El informe da siempre la página del PDF, no el folio impreso, que puede venir en
+romanos o empezar en otro punto. El folio sí se usa para no reportarlo como línea de una palabra.
 `,
     )
     .action(async (paths: string[], opts: { output?: string; json?: boolean }) => {

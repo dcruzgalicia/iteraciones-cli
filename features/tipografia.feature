@@ -484,6 +484,105 @@ Característica: el analizador tipográfico de los PDF
       Entonces el comando termina con el código de salida 1
       Y el error dice "no hay PDFs en dist/files"
 
+  Regla de negocio: Un rango de páginas recorta el PDF y no renumera el informe
+
+    Escenario: Desde una página, el informe sigue dando la página del PDF
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Una linea con varias palabras
+        \f
+        Otra linea con varias palabras
+        \f
+        Adios
+        \f
+        Ultima linea con palabras
+        \f
+        """
+      Cuando parseo el comando "typography 3 dist/files/libro.pdf" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y la salida dice "pág 3  línea 1  single-word-line"
+
+    Escenario: El rango incluye las dos puntas
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Una linea con varias palabras
+        \f
+        Adios
+        \f
+        Bien
+        \f
+        Otra linea con palabras
+        \f
+        Final
+        \f
+        """
+      Cuando parseo el comando "typography dist/files/libro.pdf 2 3" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y la salida dice "2 incidencias"
+      Y la salida dice "pág 2  línea 1  single-word-line  Adios"
+      Y la salida dice "pág 3  línea 1  single-word-line  Bien"
+
+    Escenario: Un rango al revés lo dice
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Una linea con varias palabras
+        \f
+        """
+      Cuando parseo el comando "typography dist/files/libro.pdf 4 2" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y el error dice "el rango 4-2 va al revés"
+
+    Escenario: La página 1 sola se toma por un dedo
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Una linea con varias palabras
+        \f
+        """
+      Cuando parseo el comando "typography dist/files/libro.pdf 1" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y el error dice "la página 1 es la primera"
+
+    Escenario: Tres números no son un rango
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Una linea con varias palabras
+        \f
+        """
+      Cuando parseo el comando "typography dist/files/libro.pdf 1 2 3" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y el error dice "como mucho dos números"
+
+    Escenario: Un rango que se sale del PDF lo dice pdftotext
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Una linea con varias palabras
+        \f
+        """
+      Cuando parseo el comando "typography dist/files/libro.pdf 40 60" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y el error dice "Wrong page range given"
+
+    Escenario: Un rango sin ruta revisa todos los PDF de la salida
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Una linea con varias palabras
+        \f
+        Otra linea con palabras
+        \f
+        Adios
+        \f
+        """
+      Cuando parseo el comando "typography 3" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y la salida dice "pág 3  línea 1  single-word-line"
+
     Escenario: Un PDF que no existe lo dice
       Dado que la raíz del proyecto está vacía
       Cuando parseo el comando "typography no-existe.pdf" sobre la raíz del proyecto

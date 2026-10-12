@@ -146,15 +146,22 @@ export function consecutivePunctuationPairs(pages: string[][]): ConsecutivePunct
 }
 
 /** Orden: primero las líneas de una sola palabra, después los pares de puntuación. */
-export function analyzeText(stdout: string): TypographyIncidence[] {
+export function analyzeText(stdout: string, primeraPagina = 1): TypographyIncidence[] {
   const pages = splitPages(stdout);
-  return [...singleWordLines(pages), ...consecutivePunctuationPairs(pages)];
+  const incidences = [...singleWordLines(pages), ...consecutivePunctuationPairs(pages)];
+  if (primeraPagina === 1) return incidences;
+  // pdftotext con -f devuelve sólo las páginas pedidas y las numera desde 1, así que hay que
+  // volver a la numeración real del PDF. Se reporta la página del PDF y no el folio impreso,
+  // que puede venir en romanos o empezar en otro punto.
+  const desplazamiento = primeraPagina - 1;
+  return incidences.map((incidencia) => ({ ...incidencia, page: incidencia.page + desplazamiento }));
 }
 
-export async function analyzePdf(pdfPath: string): Promise<TypographyIncidence[]> {
+export async function analyzePdf(pdfPath: string, desde = 1, hasta?: number): Promise<TypographyIncidence[]> {
+  const recorte = [...(desde === 1 ? [] : ['-f', String(desde)]), ...(hasta === undefined ? [] : ['-l', String(hasta)])];
   let result: RunResult;
   try {
-    result = await exec('pdftotext', ['-layout', pdfPath, '-']);
+    result = await exec('pdftotext', [...recorte, '-layout', pdfPath, '-']);
   } catch (err) {
     if (err instanceof ProcessSpawnError) {
       throw new BuildError(`typography necesita pdftotext, que no está en PATH. Instala poppler (por ejemplo: brew install poppler).`);
@@ -165,5 +172,5 @@ export async function analyzePdf(pdfPath: string): Promise<TypographyIncidence[]
     const motivo = result.stderr.trim().split('\n').pop() ?? 'error desconocido';
     throw new BuildError(`pdftotext no pudo leer "${pdfPath}": ${motivo}`);
   }
-  return analyzeText(result.stdout);
+  return analyzeText(result.stdout, desde);
 }
