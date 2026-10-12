@@ -1,0 +1,9 @@
+{
+  "name": "runt-no-cuenta-el-punto-final-separado",
+  "helper": "toLatex",
+  "markdown": "::: {runt=2}\nCon *El llamado* obtuve una mencion honorifica en el XXXIX Premio\nNacional de Cuento Fantastico y de [Ciencia Ficción (2023)]{.foo}.\n:::  \n",
+  "contains": ["\\mbox{Ficción (2023)}"],
+  "notContains": ["\\mbox{(2023).}", "Ciencia Ficción \\mbox{"],
+  "normalizeNewlines": false,
+  "filters": ["15-mbox-words"]
+}
