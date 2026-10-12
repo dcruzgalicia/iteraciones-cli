@@ -44,6 +44,13 @@ When('escaneo el texto de pdftotext', () => {
   world.incidencias = analyzeText(world.textoPdftotext).map(describe);
 });
 
+// Los escenarios que comprueban qué signos disparan la regla usan líneas de dos palabras,
+// donde el ancho de referencia es el de esas mismas líneas; sin apagar el filtro de ancho
+// se medirían contra sí mismas y no probarían nada.
+When('escaneo el texto de pdftotext sin el filtro de línea corta', () => {
+  world.incidencias = analyzeText(world.textoPdftotext, 1, 0).map(describe);
+});
+
 Given('el PDF {string} con estas páginas:', (nombre: string, texto: string) => {
   escribirEnProyecto(nombre, '');
   // El PDF de las fixtures no lleva codificación de fuente: el texto va en ASCII.
@@ -51,16 +58,24 @@ Given('el PDF {string} con estas páginas:', (nombre: string, texto: string) => 
 });
 
 When('escaneo el PDF {string}', async (nombre: string) => {
+  await escaneaPdf(nombre, 75);
+});
+
+When('escaneo el PDF {string} sin el filtro de línea corta', async (nombre: string) => {
+  await escaneaPdf(nombre, 0);
+});
+
+async function escaneaPdf(nombre: string, porcentajeCorta: number): Promise<void> {
   world.incidencias = [];
   world.errMensaje = '';
   world.errClase = '';
   try {
-    world.incidencias = (await analyzePdf(join(world.root, nombre))).map(describe);
+    world.incidencias = (await analyzePdf(join(world.root, nombre), 1, undefined, porcentajeCorta)).map(describe);
   } catch (err) {
     world.errMensaje = err instanceof Error ? err.message : String(err);
     world.errClase = err instanceof Error ? err.constructor.name : typeof err;
   }
-});
+}
 
 When('corro el binario sin pdftotext en el PATH para {string}', async (argumentos: string) => {
   const proc = Bun.spawn([process.execPath, 'src/bin.ts', ...argumentos.split(' ').filter(Boolean), '--project-root', world.root], {

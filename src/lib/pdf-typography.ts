@@ -122,10 +122,35 @@ function endsWithPunctuation(line: string): boolean {
 }
 
 /**
- * El ancho de referencia del texto: la mediana del ancho de sus líneas. Va mediana y no promedio
- * porque el promedio lo bajan justamente las líneas cortas que queremos descartar, y entonces la
- * regla se anula sola: con líneas de 28, 8 y 12 caracteres el promedio da 16.3 y una línea de 8
- * queda por debajo del 50%, que es justo lo contrario de lo que se busca.
+ * La moda del ancho, es decir el valor que más se repite. En texto justificado es la medida:
+ * casi todas las líneas de un párrafo llegan al borde, así que el ancho de columna es el más
+ * común y las últimas líneas del párrafo son las raras.
+ *
+ * Sólo cuenta si algún ancho se repite. Si todos son distintos no hay moda de verdad, y
+ * quedarse con el mayor sería medir la línea más larga del documento (una tabla, una URL sin
+ * cortes) y reventar el umbral.
+ */
+function modaDe(anchos: number[]): number | undefined {
+  const cuenta = new Map<number, number>();
+  for (const ancho of anchos) cuenta.set(ancho, (cuenta.get(ancho) ?? 0) + 1);
+  let masFrecuente: number | undefined;
+  let maxVeces = 1;
+  for (const [ancho, veces] of cuenta) {
+    if (veces < 2) continue;
+    if (veces > maxVeces || (veces === maxVeces && (masFrecuente === undefined || ancho > masFrecuente))) {
+      masFrecuente = ancho;
+      maxVeces = veces;
+    }
+  }
+  return masFrecuente;
+}
+
+/**
+ * El ancho de referencia del texto: el mayor entre el promedio, la mediana y la moda. Se coge el
+ * mayor porque lo que se quiere es la medida del documento, no una medida central: el promedio y
+ * la mediana los bajan las líneas cortas que se quieren descartar, y con sólo la mediana se perdían
+ * los pares de líneas largas. Con líneas de 28, 8 y 12 el promedio da 16.3 (umbral 8.17, y una
+ * línea de 8 queda fuera: al revés de lo que se busca) y la mediana da 12 (umbral 6, y se conserva).
  *
  * pdftotext con -layout no rellena con espacios, así que el ancho es el de la línea tal cual.
  */
@@ -138,10 +163,17 @@ export function anchoDeReferencia(pages: string[][]): number {
     }
   }
   if (anchos.length === 0) return 0;
-  anchos.sort((a, b) => a - b);
-  const medio = Math.floor(anchos.length / 2);
-  if (anchos.length % 2 === 1) return anchos[medio] as number;
-  return ((anchos[medio - 1] as number) + (anchos[medio] as number)) / 2;
+
+  let total = 0;
+  for (const ancho of anchos) total += ancho;
+  const promedio = total / anchos.length;
+
+  const ordenados = [...anchos].sort((a, b) => a - b);
+  const medio = Math.floor(ordenados.length / 2);
+  const mediana = ordenados.length % 2 === 1 ? (ordenados[medio] as number) : ((ordenados[medio - 1] as number) + (ordenados[medio] as number)) / 2;
+
+  const moda = modaDe(anchos);
+  return Math.max(promedio, mediana, moda ?? 0);
 }
 
 /**
@@ -149,7 +181,7 @@ export function anchoDeReferencia(pages: string[][]): number {
  * párrafo corto («a sí mismas.») pegado al principio del siguiente es composición normal, no un
  * problema. Se considera corta la que se queda por debajo del porcentaje dado del ancho.
  */
-export function consecutivePunctuationPairs(pages: string[][], porcentajeCorta = 50): ConsecutivePunctuation[] {
+export function consecutivePunctuationPairs(pages: string[][], porcentajeCorta = 75): ConsecutivePunctuation[] {
   const pares: ConsecutivePunctuation[] = [];
   const limite = (anchoDeReferencia(pages) * porcentajeCorta) / 100;
   for (const [indicePagina, lineas] of pages.entries()) {
@@ -176,7 +208,7 @@ export function consecutivePunctuationPairs(pages: string[][], porcentajeCorta =
 }
 
 /** Orden: primero las líneas de una sola palabra, después los pares de puntuación. */
-export function analyzeText(stdout: string, primeraPagina = 1, porcentajeCorta = 50): TypographyIncidence[] {
+export function analyzeText(stdout: string, primeraPagina = 1, porcentajeCorta = 75): TypographyIncidence[] {
   const pages = splitPages(stdout);
   const incidences = [...singleWordLines(pages), ...consecutivePunctuationPairs(pages, porcentajeCorta)];
   if (primeraPagina === 1) return incidences;
@@ -187,7 +219,7 @@ export function analyzeText(stdout: string, primeraPagina = 1, porcentajeCorta =
   return incidences.map((incidencia) => ({ ...incidencia, page: incidencia.page + desplazamiento }));
 }
 
-export async function analyzePdf(pdfPath: string, desde = 1, hasta?: number, porcentajeCorta = 50): Promise<TypographyIncidence[]> {
+export async function analyzePdf(pdfPath: string, desde = 1, hasta?: number, porcentajeCorta = 75): Promise<TypographyIncidence[]> {
   const recorte = [...(desde === 1 ? [] : ['-f', String(desde)]), ...(hasta === undefined ? [] : ['-l', String(hasta)])];
   let result: RunResult;
   try {
