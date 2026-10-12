@@ -317,6 +317,11 @@ Ejemplos:
     .command('typography [paths...]')
     .description('detecta en los PDF líneas de una sola palabra y pares de líneas consecutivas terminadas en puntuación')
     .option('--output <path>', 'directorio de salida donde están los PDFs (por defecto: dist/files)')
+    .option('--pages <rango>', 'sólo esas páginas del PDF: 3 o 3-80 (las dos puntas dentro)')
+    .option(
+      '--min-line-width <porcentaje>',
+      'porcentaje del ancho medio del documento por debajo del cual una línea se considera corta (por defecto: 50)',
+    )
     .option('--json', 'imprime el resultado como JSON en stdout (consumo programático)')
     .addHelpText(
       'after',
@@ -333,15 +338,15 @@ El número de línea reinicia en cada página. Una línea vacía y el final de p
 consecutividad: la última línea de una página nunca se compara con la primera de la siguiente.
 
 Ejemplos:
-  iteraciones typography                            revisa los PDF de dist/files
-  iteraciones typography dist/files/libro.pdf       revisa uno
-  iteraciones typography dist/files/libro.pdf 3     desde la página 3 hasta el final
-  iteraciones typography dist/files/libro.pdf 3 80  sólo las páginas 3 a 80
-  iteraciones typography --json                     imprime el resultado como JSON
+  iteraciones typography                                revisa los PDF de dist/files
+  iteraciones typography dist/files/libro.pdf           revisa uno
+  iteraciones typography dist/files/libro.pdf --pages 3 desde la 3 hasta el final
+  iteraciones typography --pages 3-80                   sólo esas páginas
+  iteraciones typography --min-line-width 75            corta la línea corta al 75% del ancho
+  iteraciones typography --json                         imprime el resultado como JSON
 
-Un argumento que sea sólo dígitos es una página y los demás son rutas; los dos números son
-inclusivos. El informe da siempre la página del PDF, no el folio impreso, que puede venir en
-romanos o empezar en otro punto. El folio sí se usa para no reportarlo como línea de una palabra.
+El informe da siempre la página del PDF, no el folio impreso, que puede venir en romanos o
+empezar en otro punto. El folio sí se usa, para no reportarlo como línea de una palabra.
 `,
     )
     .action(async (paths: string[], opts: { output?: string; json?: boolean }) => {

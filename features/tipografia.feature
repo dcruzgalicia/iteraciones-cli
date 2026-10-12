@@ -484,6 +484,106 @@ Característica: el analizador tipográfico de los PDF
       Entonces el comando termina con el código de salida 1
       Y el error dice "no hay PDFs en dist/files"
 
+  Regla de negocio: Una línea muy corta no cuenta como par
+
+    Escenario: Un final de parrafo corto pegado al principio del siguiente no es hallazgo
+      Dado que pdftotext devuelve:
+        """
+        Esta linea es larga y no termina en puntuacion para(setear) la referencia
+        Esta linea es larga y no termina en puntuacion para(setear) la referencia
+        Esta linea es larga y no termina en puntuacion para(setear) la referencia
+        a si mismas.
+        Esta linea es larga y termina en puntuacion.
+        \f
+        """
+      Cuando escaneo el texto de pdftotext
+      Entonces no hay incidencias
+
+    Escenario: Da igual cual de las dos sea la corta
+      Dado que pdftotext devuelve:
+        """
+        Esta linea es larga y no termina en puntuacion para(setear) la referencia
+        Esta linea es larga y no termina en puntuacion para(setear) la referencia
+        Esta linea es larga y no termina en puntuacion para(setear) la referencia
+        Esta linea es larga y termina en puntuacion.
+        a si mismas.
+        \f
+        """
+      Cuando escaneo el texto de pdftotext
+      Entonces no hay incidencias
+
+    Escenario: Dos lineas largas seguidas que terminan en puntuacion si son hallazgo
+      Dado que pdftotext devuelve:
+        """
+        Esta linea es larga y no termina en puntuacion para(setear) la referencia
+        Esta linea es larga y no termina en puntuacion para(setear) la referencia
+        Esta linea es larga y no termina en puntuacion para(setear) la referencia
+        Esta linea es larga y termina en puntuacion.
+        Esta linea es larga y termina en puntuacion.
+        \f
+        """
+      Cuando escaneo el texto de pdftotext
+      Entonces las incidencias son:
+        """
+        consecutive-punctuation ;; pág 1 ;; líneas 4-5 ;; 4: Esta linea es larga y termina en puntuacion. ;; 5: Esta linea es larga y termina en puntuacion.
+        """
+
+  Regla de negocio: El umbral de línea corta se puede mover
+
+    Escenario: Con el umbral por defecto una línea de longitud media sí cuenta
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Esta linea es larga y no termina en puntuacion para(setear) la referencia
+        Esta linea es larga y no termina en puntuacion para(setear) la referencia
+        Esta linea es larga y no termina en puntuacion para(setear) la referencia
+        Esta linea es de longitud media y termina en puntuacion.
+        Esta linea es de longitud media y termina en puntuacion.
+        \f
+        """
+      Cuando parseo el comando "typography dist/files/libro.pdf" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y la salida dice "pág 1  líneas 4-5  consecutive-punctuation"
+
+    Escenario: Con el umbral al 90 la misma línea se considera corta
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Esta linea es larga y no termina en puntuacion para(setear) la referencia
+        Esta linea es larga y no termina en puntuacion para(setear) la referencia
+        Esta linea es larga y no termina en puntuacion para(setear) la referencia
+        Esta linea es de longitud media y termina en puntuacion.
+        Esta linea es de longitud media y termina en puntuacion.
+        \f
+        """
+      Cuando parseo el comando "typography dist/files/libro.pdf --min-line-width 90" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y la salida dice "sin incidencias en 1 PDF"
+
+    Escenario: Con el umbral a 0 la regla se apaga
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Una linea con muchas palabras aqui.
+        a si mismas.
+        Otra linea con muchas palabras tambien.
+        \f
+        """
+      Cuando parseo el comando "typography dist/files/libro.pdf --min-line-width 0" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y la salida dice "pág 1  líneas 2-3  consecutive-punctuation"
+
+    Escenario: Un porcentaje que no es un porcentaje lo dice
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Una linea con muchas palabras aqui
+        \f
+        """
+      Cuando parseo el comando "typography dist/files/libro.pdf --min-line-width 120" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y el error dice "no es un porcentaje entero entre 0 y 100"
+
   Regla de negocio: Un rango de páginas recorta el PDF y no renumera el informe
 
     Escenario: Desde una página, el informe sigue dando la página del PDF
@@ -499,7 +599,7 @@ Característica: el analizador tipográfico de los PDF
         Ultima linea con palabras
         \f
         """
-      Cuando parseo el comando "typography 3 dist/files/libro.pdf" sobre la raíz del proyecto
+      Cuando parseo el comando "typography --pages 3 dist/files/libro.pdf" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
       Y la salida dice "pág 3  línea 1  single-word-line"
 
@@ -518,7 +618,7 @@ Característica: el analizador tipográfico de los PDF
         Final
         \f
         """
-      Cuando parseo el comando "typography dist/files/libro.pdf 2 3" sobre la raíz del proyecto
+      Cuando parseo el comando "typography --pages 2-3 dist/files/libro.pdf" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
       Y la salida dice "2 incidencias"
       Y la salida dice "pág 2  línea 1  single-word-line  Adios"
@@ -531,7 +631,7 @@ Característica: el analizador tipográfico de los PDF
         Una linea con varias palabras
         \f
         """
-      Cuando parseo el comando "typography dist/files/libro.pdf 4 2" sobre la raíz del proyecto
+      Cuando parseo el comando "typography --pages 4-2 dist/files/libro.pdf" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
       Y el error dice "el rango 4-2 va al revés"
 
@@ -542,9 +642,9 @@ Característica: el analizador tipográfico de los PDF
         Una linea con varias palabras
         \f
         """
-      Cuando parseo el comando "typography dist/files/libro.pdf 1" sobre la raíz del proyecto
+      Cuando parseo el comando "typography --pages 1 dist/files/libro.pdf" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
-      Y el error dice "la página 1 es la primera"
+      Y el error dice "--pages 1 no recorta nada"
 
     Escenario: Tres números no son un rango
       Dado que la raíz del proyecto está vacía
@@ -553,9 +653,9 @@ Característica: el analizador tipográfico de los PDF
         Una linea con varias palabras
         \f
         """
-      Cuando parseo el comando "typography dist/files/libro.pdf 1 2 3" sobre la raíz del proyecto
+      Cuando parseo el comando "typography --pages 1-2-3 dist/files/libro.pdf" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
-      Y el error dice "como mucho dos números"
+      Y el error dice "no se entiende"
 
     Escenario: Un rango que se sale del PDF lo dice pdftotext
       Dado que la raíz del proyecto está vacía
@@ -564,7 +664,7 @@ Característica: el analizador tipográfico de los PDF
         Una linea con varias palabras
         \f
         """
-      Cuando parseo el comando "typography dist/files/libro.pdf 40 60" sobre la raíz del proyecto
+      Cuando parseo el comando "typography --pages 40-60 dist/files/libro.pdf" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
       Y el error dice "Wrong page range given"
 
@@ -579,7 +679,7 @@ Característica: el analizador tipográfico de los PDF
         Adios
         \f
         """
-      Cuando parseo el comando "typography 3" sobre la raíz del proyecto
+      Cuando parseo el comando "typography --pages 3" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
       Y la salida dice "pág 3  línea 1  single-word-line"
 
