@@ -39,6 +39,9 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | div-line-height-cero-no-transforma |
         | div-line-height-negativo-no-transforma |
         | div-line-height-con-decimales |
+        | la-forma-vieja-center-ya-no-alinea-en-tex |
+        | la-forma-vieja-flushright-ya-no-alinea-en-tex |
+        | text-center-y-text-end-juntos |
         | convierte-en-vspace-noindent-al-parrafo-siguiente |
         | convierte-japanese-al-entorno-cjk-con-encoding-min |
         | decoracion-inline-versalitas-mayusculas-subrayado-resaltado- |
@@ -83,11 +86,13 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | caso |
         | convierte-dentro-de-una-lista-a-div-spacer-nunca-literal |
         | convierte-div-spacer-en-div-vacio-con-los-filtros-semanticos |
-        | envuelve-div-center-en-div |
         | envuelve-div-dictum-en-blockquote-con-bloques-nativos |
-        | envuelve-div-flushright-en-div |
         | envuelve-div-verse-en-div |
         | verse-solo-separte-la-linea-con-dos-espacios |
+        | html-div-text-end-lo-emite-pandoc-solo |
+        | html-div-text-center-lo-emite-pandoc-solo |
+        | html-la-forma-vieja-center-sale-clase-dead |
+        | html-la-forma-vieja-flushright-sale-clase-dead |
         | html-line-height-sale-como-dato-y-no-hace-nada |
         | html-la-forma-vieja-spacing-tampoco-hacia-nada |
         | no-altera-parrafos-normales |

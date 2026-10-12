@@ -9,7 +9,7 @@ end
 function Pandoc(doc)
   local blocks = {}
   for _, block in ipairs(doc.blocks) do
-    if has_class(block, 'flushright') then
+    if has_class(block, 'text-end') then
       table.insert(blocks, pandoc.RawBlock('latex', '\\begin{flushright}'))
       for _, b in ipairs(block.content) do
         table.insert(blocks, b)

@@ -1,7 +1,7 @@
 {
   "name": "headings-dentro-de-un-div-activan-el-toc-recorrido-completo-",
   "helper": "toLatexFlags",
-  "markdown": "::: {.center}\n# Título anidado\n\nTexto.\n::: ",
+  "markdown": "::: {.text-center}\n# Título anidado\n\nTexto.\n::: ",
   "contains": ["\\tableofcontents", "\\vspace*{2\\baselineskip}"],
   "notContains": [],
   "needsBib": false,

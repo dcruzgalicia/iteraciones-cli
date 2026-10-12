@@ -1,7 +1,7 @@
 {
-  "name": "envuelve-div-center-en-div",
+  "name": "html-la-forma-vieja-center-sale-clase-dead",
   "helper": "toHtml5",
-  "markdown": "::: {.center}\nCentrado\n:::\n",
+  "markdown": "::: {.center}\nCentrado\n:::  \n",
   "contains": ["<div class=\"center\">"],
   "notContains": [],
   "normalizeNewlines": false,

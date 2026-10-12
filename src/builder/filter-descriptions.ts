@@ -1,8 +1,6 @@
 export const DESCRIPCIONES_LUA: Record<string, string> = {
   'html/01-dictum': 'Convierte Div.dictum a <blockquote class="dictum"> (formato HTML).',
   'html/02-verse': 'Convierte Div.verse a <div class="verse"> (formato HTML).',
-  'html/03-center': 'Convierte Div.center a <div class="center"> (formato HTML).',
-  'html/04-flushright': 'Convierte Div.flushright a <div class="flushright"> (formato HTML).',
   'html/05-spacer':
     'Convierte Div.spacer a un <div> con la utilidad de Tailwind `h-[1.5em]` (formato HTML): el separador vertical del marcador :: mide ~1.5em, el interlineado del tamaño base. Es una utilidad y no una clase de CSS propia porque el escáner de Tailwind la genera desde el HTML (#2487). La clase noindent se ignora (la sangría de párrafo es LaTeX-only).',
   'html/06-subparagraph':
@@ -15,8 +13,10 @@ export const DESCRIPCIONES_LUA: Record<string, string> = {
     'Convierte Div.dictum a \\dictum[author]{quote} (formato LaTeX), con \\noindent al párrafo siguiente si es Para. Soporta atributo width (0.1–1.0) para ancho personalizado. El espaciado lo gestiona el entorno dictum (preamble 21-dictum.tex).',
   'latex/03-verse':
     'Convierte Div.verse al entorno \\begin{verse}...\\end{verse} (formato LaTeX), con \\noindent al párrafo siguiente si es Para. El espaciado vertical lo gestiona el entorno verse (preamble 22-verse.tex).',
-  'latex/04-center': 'Convierte Div.center al entorno \\begin{center}...\\end{center} (formato LaTeX).',
-  'latex/05-flushright': 'Convierte Div.flushright al entorno \\begin{flushright}...\\end{flushright} (formato LaTeX).',
+  'latex/04-center':
+    'Convierte Div.text-center al entorno \\begin{center}…\\end{center} (formato LaTeX). En HTML no hace falta filtro: pandoc ya emite <div class="text-center"> y Tailwind compila esa clase a text-align:center. Antes era Div.center, un nombre de LaTeX que en el sitio no significaba nada. El entorno center lo redefine 20-alignment.tex para quitarle el espacio vertical extra.',
+  'latex/05-flushright':
+    'Convierte Div.text-end al entorno \\begin{flushright}…\\end{flushright} (formato LaTeX). En HTML no hace falta filtro: pandoc ya emite <div class="text-end"> y Tailwind lo compila a text-align:end. Antes era Div.flushright, nombre de LaTeX muerto en el sitio. text-end es lógico, como el \\raggedleft de LaTeX: respeta la dirección de escritura, al contrario que text-right.',
   'latex/06-mbox-sentence-end':
     'Envuelve en \\mbox{} las últimas 3 palabras de la oración final del párrafo (únicas palabras que reciben mbox: sin mbox por oración no final ni de inicio de oración). Solo dentro de bloques Para. El conteo usa palabras REALES: un grupo de énfasis (\\emph{...}) aporta sus palabras internas individualmente. Regla del wrap (últimas 3): A. sin énfasis      → \\mbox{ejemplo final.} B. dentro del grupo → \\emph{...en \\mbox{carne propia.}} (wrap interno) C. toca el inicio   → en \\mbox{\\emph{carne propia.}} (grupo completo) D. grupo de 1       → \\mbox{dice \\emph{ella.}} (extiende hacia atrás) Exclusión: []{.no-mbox} en el párrafo omite el mbox automático.',
   'latex/07-titlepages':
