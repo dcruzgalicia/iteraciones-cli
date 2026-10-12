@@ -1,0 +1,9 @@
+{
+  "name": "la-forma-vieja-center-ya-no-alinea-en-tex",
+  "helper": "toLatex",
+  "markdown": "::: {.center}\nCentrado\n:::  \n",
+  "contains": ["Centrado"],
+  "notContains": ["\\begin{center}"],
+  "normalizeNewlines": false,
+  "filters": ["04-center"]
+}

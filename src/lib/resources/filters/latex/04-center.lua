@@ -9,7 +9,7 @@ end
 function Pandoc(doc)
   local blocks = {}
   for _, block in ipairs(doc.blocks) do
-    if has_class(block, 'center') then
+    if has_class(block, 'text-center') then
       table.insert(blocks, pandoc.RawBlock('latex', '\\begin{center}'))
       for _, b in ipairs(block.content) do
         table.insert(blocks, b)

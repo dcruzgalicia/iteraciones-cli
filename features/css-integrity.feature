@@ -29,6 +29,12 @@ Característica: El CSS se compila sólo con lo que aparece en el HTML
       Y el CSS da a ".dictum .author" la propiedad "font-style"
       Y el CSS da a ".verse" la propiedad "text-align"
 
+    Escenario: Alinear a la derecha o al centro ya funciona en el sitio (#2652)
+      Dado un proyecto cuyo HTML trae "<div class=\"text-end\"><p>Derecha</p></div><div class=\"text-center\"><p>Centro</p></div>"
+      Cuando compilo el CSS con acento "lime"
+      Entonces el CSS da a ".text-end" la propiedad "text-align:end"
+      Y el CSS da a ".text-center" la propiedad "text-align:center"
+
   Escenario: Sólo entran las clases que el HTML usa
     Dado un proyecto con un HTML de clases "text-stone-500"
     Cuando compilo el CSS con acento "lime"

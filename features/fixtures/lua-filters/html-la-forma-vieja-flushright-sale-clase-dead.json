@@ -1,7 +1,7 @@
 {
-  "name": "envuelve-div-flushright-en-div",
+  "name": "html-la-forma-vieja-flushright-sale-clase-dead",
   "helper": "toHtml5",
-  "markdown": "::: {.flushright}\nDerecha\n:::\n",
+  "markdown": "::: {.flushright}\nDerecha\n:::  \n",
   "contains": ["<div class=\"flushright\">"],
   "notContains": [],
   "normalizeNewlines": false,

@@ -1,0 +1,9 @@
+{
+  "name": "la-forma-vieja-flushright-ya-no-alinea-en-tex",
+  "helper": "toLatex",
+  "markdown": "::: {.flushright}\nDerecha\n:::  \n",
+  "contains": ["Derecha"],
+  "notContains": ["\\begin{flushright}"],
+  "normalizeNewlines": false,
+  "filters": ["05-flushright"]
+}
