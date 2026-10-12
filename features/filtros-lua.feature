@@ -42,6 +42,10 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | la-forma-vieja-center-ya-no-alinea-en-tex |
         | la-forma-vieja-flushright-ya-no-alinea-en-tex |
         | text-center-y-text-end-juntos |
+        | span-text-nowrap-cierra-la-caja |
+        | span-text-nowrap-con-hyphens-none-igual |
+        | la-forma-vieja-mbox-ya-no-cierra-la-caja |
+        | text-nowrap-con-acentos-y-comas |
         | convierte-en-vspace-noindent-al-parrafo-siguiente |
         | convierte-japanese-al-entorno-cjk-con-encoding-min |
         | decoracion-inline-versalitas-mayusculas-subrayado-resaltado- |
@@ -93,6 +97,9 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | html-div-text-center-lo-emite-pandoc-solo |
         | html-la-forma-vieja-center-sale-clase-dead |
         | html-la-forma-vieja-flushright-sale-clase-dead |
+        | html-span-text-nowrap-lleva-la-clase-que-tailwind-reconoce |
+        | html-span-text-nowrap-con-hyphens-none |
+        | html-la-forma-vieja-mbox-sale-clase-dead |
         | html-line-height-sale-como-dato-y-no-hace-nada |
         | html-la-forma-vieja-spacing-tampoco-hacia-nada |
         | no-altera-parrafos-normales |

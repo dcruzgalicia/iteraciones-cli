@@ -1,0 +1,9 @@
+{
+  "name": "html-span-text-nowrap-con-hyphens-none",
+  "helper": "toHtml5",
+  "markdown": "texto [Ana Ruiz]{.text-nowrap .hyphens-none} aqui\n",
+  "contains": ["text-nowrap", "hyphens-none"],
+  "notContains": [],
+  "normalizeNewlines": false,
+  "extraSemantic": false
+}

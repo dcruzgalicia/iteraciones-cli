@@ -35,6 +35,12 @@ Característica: El CSS se compila sólo con lo que aparece en el HTML
       Entonces el CSS da a ".text-end" la propiedad "text-align:end"
       Y el CSS da a ".text-center" la propiedad "text-align:center"
 
+    Escenario: La caja de un nombre propio ya no se parte en el sitio (#2653)
+      Dado un proyecto cuyo HTML trae "<p>texto <span class=\"text-nowrap\">Ana Ruiz</span> <span class=\"text-nowrap hyphens-none\">María José</span> aqui</p>"
+      Cuando compilo el CSS con acento "lime"
+      Entonces el CSS da a ".text-nowrap" la propiedad "text-wrap:nowrap"
+      Y el CSS da a ".hyphens-none" la propiedad "hyphens:none"
+
   Escenario: Sólo entran las clases que el HTML usa
     Dado un proyecto con un HTML de clases "text-stone-500"
     Cuando compilo el CSS con acento "lime"

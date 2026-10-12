@@ -1,0 +1,9 @@
+{
+  "name": "html-span-text-nowrap-lleva-la-clase-que-tailwind-reconoce",
+  "helper": "toHtml5",
+  "markdown": "texto [Ana Ruiz]{.text-nowrap} aqui\n",
+  "contains": ["<span class=\"text-nowrap\">Ana Ruiz</span>"],
+  "notContains": [],
+  "normalizeNewlines": false,
+  "extraSemantic": false
+}

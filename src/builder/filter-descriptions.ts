@@ -30,7 +30,7 @@ export const DESCRIPCIONES_LUA: Record<string, string> = {
   'latex/11-uppercase':
     'Convierte el span [texto]{.uppercase} a \\MakeUppercase{texto} (solo LaTeX: el writer de pandoc ignora la clase y la deja como {texto}). En HTML el span conserva la clase uppercase y Tailwind la estiliza (text-transform).',
   'latex/12-mbox':
-    'Convierte el span [texto]{.mbox} a \\mbox{texto} (solo LaTeX: evita que pandoc rompa el grupo de palabras entre lineas). En HTML el span conserva la clase mbox para estilizacion CSS.',
+    'Convierte el span [texto]{.text-nowrap} a \\mbox{texto}: una caja que no se parte entre líneas, para nombres propios o títulos que no queremos ver partidos. Antes era {.mbox}, un nombre de LaTeX que en el sitio no hacía nada. En HTML no hace falta filtro: pandoc emite <span class="text-nowrap"> y Tailwind lo compila a text-wrap:nowrap. Para el equivalente exacto de \\mbox, que además impide que el navegador corte dentro de la palabra, añade .hyphens-none: [texto]{.text-nowrap .hyphens-none}.',
   'latex/13-spacing':
     'Multiplica el interlineado de un bloque con setspace: ::: {line-height=1.5} sale \\begin{spacing}{1.5}…\\end{spacing}. El 1.5 no lleva unidad, es un factor sobre la base, igual que line-height en CSS. Valores cero, negativos o no numéricos se ignoran y el bloque sale normal. Antes era ::: {spacing=1.5}, que se confundía con los metadatos del documento porque es un atributo sin clase. Requiere el paquete setspace (cargado en 03-spacing.tex). Solo LaTeX: en HTML el atributo sale como data-line-height y no hace nada.',
   'latex/14-textls':

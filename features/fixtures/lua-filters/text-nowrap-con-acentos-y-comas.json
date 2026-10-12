@@ -1,0 +1,9 @@
+{
+  "name": "text-nowrap-con-acentos-y-comas",
+  "helper": "toLatex",
+  "markdown": "texto [María José Álvarez]{.text-nowrap} aqui\n",
+  "contains": ["\\mbox{María José Álvarez}"],
+  "notContains": [],
+  "normalizeNewlines": false,
+  "filters": ["12-mbox"]
+}
