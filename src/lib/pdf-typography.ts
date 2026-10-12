@@ -49,11 +49,66 @@ function words(line: string): string[] {
   return line.trim().split(/\s+/).filter(Boolean);
 }
 
+/** Sólo dígitos: el folio que pone el CLI y el que pone casi cualquier clase es arábigo. */
+const SOLO_DIGITOS = /^\d+$/;
+
+interface Folio {
+  line: number;
+  valor: number;
+}
+
+/** Los bordes con texto de una página: la primera y la última línea no vacía. */
+function bordes(lineas: string[]): number[] {
+  const conTexto = lineas.flatMap((linea, indice) => (linea.trim() === '' ? [] : [indice]));
+  if (conTexto.length === 0) return [];
+  return conTexto[0] === conTexto.at(-1) ? [conTexto[0] as number] : [conTexto[0] as number, conTexto.at(-1) as number];
+}
+
+/**
+ * Las líneas de una página que podrían ser un folio: un número solo, al principio o al final.
+ * El folio va en el header o en el footer según la configuración, y pdftotext lo devuelve como
+ * una línea más, así que sin esto cada página reporta un single-word-line que no es del texto.
+ */
+function foliosDe(lineas: string[]): Folio[] {
+  const hallados: Folio[] = [];
+  for (const indice of bordes(lineas)) {
+    const texto = (lineas[indice] as string).trim();
+    if (!SOLO_DIGITOS.test(texto)) continue;
+    hallados.push({ line: indice + 1, valor: Number(texto) });
+  }
+  return hallados;
+}
+
+/**
+ * Descarta los folios, pero sólo si el documento se los está numerando: hace falta que salgan en
+ * al menos dos páginas y que el número vaya subiendo de uno en uno. Sin esa corroboración, un
+ * título como «1984» al principio de una página se quedaría sin reportar, y eso sí es un hallazgo.
+ */
+function foliosConfirmados(pages: string[][]): Set<string> {
+  const candidatos = pages.flatMap((lineas, indice) => {
+    const hallados = foliosDe(lineas);
+    // Una página con dos números en los bordes tiene folio doble: raro, y no hay forma de
+    // saber cuál de los dos es el bueno, así que esa página no cuenta como candidata.
+    if (hallados.length !== 1) return [];
+    return [{ pagina: indice + 1, folio: hallados[0] as Folio }];
+  });
+  if (candidatos.length < 2) return new Set();
+  for (const [indice, candidato] of candidatos.entries()) {
+    if (indice === 0) continue;
+    const anterior = (candidatos[indice - 1] as { folio: Folio }).folio.valor;
+    if ((candidato.folio.valor as number) !== anterior + 1) return new Set();
+  }
+  return new Set(candidatos.map((c) => `${c.pagina}:${(c.folio as Folio).line}`));
+}
+
 export function singleWordLines(pages: string[][]): SingleWordLine[] {
+  const folios = foliosConfirmados(pages);
   const hits: SingleWordLine[] = [];
   for (const [indicePagina, lineas] of pages.entries()) {
     for (const [indice, text] of lineas.entries()) {
-      if (words(text).length === 1) hits.push({ type: 'single-word-line', page: indicePagina + 1, line: indice + 1, text });
+      if (words(text).length !== 1) continue;
+      if (folios.has(`${indicePagina + 1}:${indice + 1}`)) continue;
+      hits.push({ type: 'single-word-line', page: indicePagina + 1, line: indice + 1, text });
     }
   }
   return hits;

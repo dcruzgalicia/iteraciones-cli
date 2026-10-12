@@ -24,6 +24,128 @@ Característica: el analizador tipográfico de los PDF
         single-word-line ;; pág 1 ;; línea 2 ;; Hola
         """
 
+  Regla de negocio: El folio del PDF no es un problema del texto
+
+    Escenario: El folio en el footer no se reporta en ninguna página
+      Dado que pdftotext devuelve:
+        """
+        texto de la pagina uno con palabras
+        \f
+        texto de la pagina dos con palabras
+        2
+        \f
+        texto de la pagina tres con palabras
+        3
+        \f
+        texto de la pagina cuatro con palabras
+        4
+        \f
+        """
+      Cuando escaneo el texto de pdftotext
+      Entonces no hay incidencias
+
+    Escenario: El folio en el header tampoco se reporta
+      Dado que pdftotext devuelve:
+        """
+        2
+        texto de la pagina dos con palabras
+        \f
+        3
+        texto de la pagina tres con palabras
+        \f
+        4
+        texto de la pagina cuatro con palabras
+        \f
+        """
+      Cuando escaneo el texto de pdftotext
+      Entonces no hay incidencias
+
+    Escenario: Una página sin foliar no impide descartar los folios de las otras
+      Dado que pdftotext devuelve:
+        """
+        Portada
+        \f
+        texto de la pagina dos con palabras
+        2
+        \f
+        texto de la pagina tres con palabras
+        3
+        \f
+        """
+      Cuando escaneo el texto de pdftotext
+      Entonces las incidencias son:
+        """
+        single-word-line ;; pág 1 ;; línea 1 ;; Portada
+        """
+
+    Escenario: Un número suelto en una sola página no se da por folio
+      Dado que pdftotext devuelve:
+        """
+        1984
+        texto de la pagina con palabras
+        \f
+        texto de la otra pagina con palabras
+        \f
+        """
+      Cuando escaneo el texto de pdftotext
+      Entonces las incidencias son:
+        """
+        single-word-line ;; pág 1 ;; línea 1 ;; 1984
+        """
+
+    Escenario: Números que no suben de uno en uno no son un folio
+      Dado que pdftotext devuelve:
+        """
+        texto de la pagina uno con palabras
+        7
+        \f
+        texto de la pagina dos con palabras
+        19
+        \f
+        texto de la pagina tres con palabras
+        \f
+        """
+      Cuando escaneo el texto de pdftotext
+      Entonces las incidencias son:
+        """
+        single-word-line ;; pág 1 ;; línea 2 ;; 7
+        single-word-line ;; pág 2 ;; línea 2 ;; 19
+        """
+
+    Escenario: Una línea de una palabra en el medio de la página sigue siendo incidencia
+      Dado que pdftotext devuelve:
+        """
+        2
+        texto de la pagina con palabras
+        Adios
+        texto que sigue con palabras
+        \f
+        3
+        texto de la otra pagina con palabras
+        \f
+        """
+      Cuando escaneo el texto de pdftotext
+      Entonces las incidencias son:
+        """
+        single-word-line ;; pág 1 ;; línea 3 ;; Adios
+        """
+
+    Escenario: Una línea con texto y número no es un folio
+      Dado que pdftotext devuelve:
+        """
+        texto de la pagina uno con palabras
+        Capitulo 1
+        \f
+        texto de la pagina dos con palabras
+        Capitulo 2
+        \f
+        texto de la pagina tres con palabras
+        Capitulo 3
+        \f
+        """
+      Cuando escaneo el texto de pdftotext
+      Entonces no hay incidencias
+
     Escenario: Una línea con varias palabras no lo es
       Dado que pdftotext devuelve:
         """
