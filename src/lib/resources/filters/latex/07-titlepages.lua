@@ -285,8 +285,8 @@ local function serialize_titleback(blocks)
       local body = pandoc.write(pandoc.Pandoc(preprocessed), 'latex')
       body = body:gsub('%s+$', '')
       table.insert(out, pandoc.RawBlock('latex', '\\textls[' .. textls_value(b) .. ']{' .. body .. '}'))
-    elseif b.t == 'Div' and b.attributes and b.attributes['spacing'] then
-      local value = b.attributes['spacing']
+    elseif b.t == 'Div' and b.attributes and b.attributes['line-height'] then
+      local value = b.attributes['line-height']
       local num = tonumber(value)
       if num and num > 0 then
         local preprocessed = preprocess_div_content(b.content)

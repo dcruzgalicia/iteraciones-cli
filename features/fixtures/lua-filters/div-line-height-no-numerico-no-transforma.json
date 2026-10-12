@@ -1,0 +1,9 @@
+{
+  "name": "div-line-height-no-numerico-no-transforma",
+  "helper": "toLatex",
+  "markdown": "::: {line-height=abc}\ntexto normal\n:::  \n",
+  "contains": ["texto normal"],
+  "notContains": ["\\begin{spacing}"],
+  "normalizeNewlines": false,
+  "filters": ["13-spacing"]
+}

@@ -1,6 +1,6 @@
 function Div(el)
   if FORMAT ~= 'latex' then return nil end
-  local value = el.attributes['spacing']
+  local value = el.attributes['line-height']
   if not value then return nil end
   local num = tonumber(value)
   if not num or num <= 0 then return nil end
