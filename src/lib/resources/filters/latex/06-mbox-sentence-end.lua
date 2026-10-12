@@ -45,13 +45,10 @@ local function expand_units(inlines, from_idx, to_idx)
   local trailing_punct = nil
   for i = from_idx, to_idx - 1 do
     local c = mbox.classify(inlines[i])
-    if c == 'word' then
-      local text = inlines[i].text
-      if text ~= nil and mbox.is_punct_str(text) then
-        trailing_punct = i
-      else
-        table.insert(units, { idx = i, inner = nil })
-      end
+    if c == 'punct' then
+      trailing_punct = i
+    elseif c == 'word' then
+      table.insert(units, { idx = i, inner = nil })
     elseif c == 'word-group' then
       local total = mbox.group_word_count(inlines[i])
       for k = 1, total do

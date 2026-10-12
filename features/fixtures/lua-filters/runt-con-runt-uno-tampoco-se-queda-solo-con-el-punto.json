@@ -1,0 +1,9 @@
+{
+  "name": "runt-con-runt-uno-tampoco-se-queda-solo-con-el-punto",
+  "helper": "toLatex",
+  "markdown": "::: {runt=1}\ntexto de prueba con [Ficción]{.foo}.\n:::  \n",
+  "contains": ["\\mbox{Ficción}"],
+  "notContains": ["\\mbox{.}", "Ficción\\mbox{."],
+  "normalizeNewlines": false,
+  "filters": ["15-mbox-words"]
+}

@@ -18,7 +18,10 @@ function M.trim(s)
 end
 
 function M.classify(inl)
-  if inl.t == 'Str' then return 'word' end
+  if inl.t == 'Str' then
+    if M.is_punct_str(inl.text) then return 'punct' end
+    return 'word'
+  end
   if inl.t == 'Space' or inl.t == 'SoftBreak' then return 'space' end
   if inl.t == 'Span' and inl.classes:find('uppercase', 1, true) then return 'word' end
   if inl.t == 'Emph' or inl.t == 'Strong' or inl.t == 'Underline' or inl.t == 'Superscript' or
