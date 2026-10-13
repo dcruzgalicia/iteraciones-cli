@@ -174,26 +174,6 @@ Característica: validate revisa el proyecto y dice qué corregir
       Entonces el comando termina con el código de salida 0
       Y el error dice "frontmatter sin cerrar"
 
-    Escenario: Una ":" suelta en el cuerpo
-      Dado que la raíz del proyecto tiene un proyecto de prueba
-      Dado que el archivo "suelta.md" tiene este contenido
-      """
-      ---
-      title: "Ok"
-      ---
-
-      texto
-
-      :
-
-      texto
-      """
-      Cuando corro "validate"
-      Entonces el comando termina con el código de salida 0
-      Y el error dice "suelta.md"
-      Y el error dice 'línea 7 con ":" suelta'
-      Y el error dice '"::" (espacio vertical) o ":;" (sin indentación)'
-
   Regla de negocio: El vocabulario correcto cierra en silencio
 
     Escenario: El vocabulario de pandoc no avisa

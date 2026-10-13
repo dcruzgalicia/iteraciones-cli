@@ -29,7 +29,7 @@ const TEMPLATE = '\\documentclass{article}\n\\begin{document}\n$body$\n\\end{doc
 const RESOURCES = join(import.meta.dir, '../../lib/resources/filters');
 
 const PKG_LATEX_FILTERS = [
-  '01-spacer',
+  '01-br',
   '02-dictum',
   '03-verse',
   '04-center',
@@ -41,10 +41,7 @@ const PKG_LATEX_FILTERS = [
   '11-uppercase',
 ].map((name) => join(RESOURCES, 'latex', `${name}.lua`));
 
-const SEMANTIC_FILTERS = [
-  join(RESOURCES, 'semantic', 'string', '01-double-colon.lua'),
-  join(RESOURCES, 'semantic', 'ast', '02-double-colon-noindent.lua'),
-];
+const SEMANTIC_FILTERS: string[] = [];
 
 interface UserWorld {
   dir: string;

@@ -1,0 +1,9 @@
+{
+  "name": "titleback-br-salta-en-lowertitleback",
+  "helper": "toLatexTitleback",
+  "markdown": "---\ntitle: Prueba\nlowertitleback: |\n  ::: {br=1}\n  :::\n\n  texto de contraportada\n---\n\nCuerpo.\n",
+  "contains": ["\\vspace{\\baselineskip}", "texto de contraportada"],
+  "notContains": [],
+  "needsBib": false,
+  "normalizeNewlines": false
+}

@@ -1,14 +1,14 @@
 export const DESCRIPCIONES_LUA: Record<string, string> = {
   'html/01-dictum': 'Convierte Div.dictum a <blockquote class="dictum"> (formato HTML).',
   'html/02-verse': 'Convierte Div.verse a <div class="verse"> (formato HTML).',
-  'html/05-spacer':
-    'Convierte Div.spacer a un <div> con la utilidad de Tailwind `h-[1.5em]` (formato HTML): el separador vertical del marcador :: mide ~1.5em, el interlineado del tamaño base. Es una utilidad y no una clase de CSS propia porque el escáner de Tailwind la genera desde el HTML (#2487). La clase noindent se ignora (la sangría de párrafo es LaTeX-only).',
+  'html/05-br':
+    'Convierte Div con atributo br=N en N saltos de línea (formato HTML): cada uno sale como un <br/>, sin <p>. Valores cero, negativos o no numéricos se ignoran y el div pasa de largo. {br=1.5} se trunca a 1 (math.floor), igual que los demás atributos numéricos.',
   'html/06-subparagraph':
     'Convierte ### (h3) en un <div> con las utilidades de Tailwind del \\subparagraph de LaTeX (KOMA-Script: negrita + itálica) antes de que pandoc intente generar un h7 (que no existe en HTML). Son utilidades y no una clase de CSS propia porque el escáner de Tailwind las genera desde el HTML (#2487). Los h1 y h2 se manejan con --shift-heading-level-by=4.',
   'html/07-titlepage-meta':
     "#2487 — los campos de la portada que LaTeX pasa por markdown (los mismos que lista latex/07-titlepages.lua) llegan aquí como texto plano en --metadata: el template los emite tal cual, así que un `collectionCreatorPrefix: *Edición*` salía con los asteriscos en vez de en cursiva. Este filtro los vuelve a leer como markdown y deja el resultado como inlines, que el template ya emite formateado. Los que no son markdown (title, creator, date) no se tocan. De los nombres de las creadoras hay un campo aparte (`author-names`, `collection-creator-names`), que llega como lista porque se pasa un --metadata por nombre. Cada uno va en un span `whitespace-nowrap` y se unen con ', ': es el equivalente del \\mbox de cada creator en LaTeX, para que la línea se parta entre nombres y nunca dentro de uno.",
-  'latex/01-spacer':
-    'Convierte Div.spacer en \\vspace{\\baselineskip} (formato LaTeX). Si el Div tiene la clase noindent (caso :;), agrega \\noindent al primer párrafo siguiente (solo si es Para).',
+  'latex/01-br':
+    'Convierte Div con atributo br=N en N × \\vspace{\\baselineskip} (formato LaTeX) y añade \\noindent al primer párrafo siguiente (solo si es Para); si el siguiente bloque es un Div, la bandera se descarta y su párrafo interior sale con sangría normal. Valores cero, negativos o no numéricos se ignoran y el div pasa de largo; {br=1.5} se trunca a 1.',
   'latex/02-dictum':
     'Convierte Div.dictum a \\dictum[author]{quote} (formato LaTeX), con \\noindent al párrafo siguiente si es Para. Soporta atributo width (0.1–1.0) para ancho personalizado. El espaciado lo gestiona el entorno dictum (preamble 21-dictum.tex).',
   'latex/03-verse':
@@ -37,14 +37,10 @@ export const DESCRIPCIONES_LUA: Record<string, string> = {
     'Espacia las letras de un div con microtype, con dos atributos que ya dicen qué hacen. ::: {shrink=20} aprieta las letras (sale \\textls[-20]); ::: {stretch=30} las separa (sale \\textls[30]). La cantidad va siempre en positivo, porque el nombre ya dice para qué lado. Antes era ::: {.textls value=-20}, con el signo decidiendo y sin avisar si te equivocabas. Solo LaTeX: en HTML el atributo sale como data-shrink / data-stretch y no hace nada, porque es una medida en unidades de la fuente.',
   'latex/15-mbox-words':
     'Pide a mano el \\mbox{} que hasta ahora se aplicaba solo, con dos atributos en el div. ::: {runt=3} ::: envuelve en \\mbox{} las últimas 3 palabras del párrafo, para que la última línea no quede con una sola palabra (un runt); si el párrafo tiene N palabras o menos de las pedidas, no hace nada, porque ya es corto. ::: {nohyph="Kant Heidegger"} ::: envuelve cada aparición de esas palabras en el párrafo; la puntuación que va pegada se queda fuera del mbox, y entra dentro de los grupos de énfasis. Los dos atributos se pueden poner a la vez. Solo LaTeX: en HTML los atributos salen como data-runt / data-nohyph y no hacen nada, porque son decisiones de una caja de texto fija.',
-  'semantic/ast/02-double-colon-noindent':
-    'Convierte párrafos con solo ":;" en Div.spacer noindent (semántico). Solo transforma párrafos de nivel superior (no dentro de otros bloques).',
   'semantic/ast/03-qr-url':
     'Genera código QR como imagen JPG 300dpi a partir de ::: {qr=Xcm}…:::. Imagen generada en .iteraciones/processed-images/ del proyecto (content-addressed por hash MD5). Requiere: zxing-wasm (bun add zxing-wasm) y ImageMagick (magick).',
   'semantic/ast/04-image-paths':
     'Reescribe en el AST las rutas de imagen que el preproceso movió a assets/images (#2460). El mapa llega por fichero (ITERACIONES_PATHS_JSON), nunca por argv: crece con el número de imágenes. Va después de 03-qr-url (orden del directorio) y, si no hay mapa, no toca nada.',
-  'semantic/string/01-double-colon':
-    'Convierte líneas con solo "::" en Div.spacer (semántico, sin formato específico). El marcador es una línea cuyo único contenido es :: (pandoc normaliza los espacios trailing en el AST, así que ":: " es equivalente a "::").',
 };
 
 export const DESCRIPCIONES_PREAMBLE: Record<string, string> = {

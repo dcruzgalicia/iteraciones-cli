@@ -26,6 +26,12 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | convierte-div-verse-sin-vspace-externo |
         | verse-en-tex-solo-separte-la-linea-con-dos-espacios |
         | convierte-en-vspace-baselineskip |
+        | br-3-salta-tres-baselineskip-en-latex |
+        | br-cero-no-salta-en-latex |
+        | br-negativo-no-salta-en-latex |
+        | br-no-numerico-no-salta-en-latex |
+        | br-1.5-se-trunca-a-uno-en-latex |
+        | br-con-contenido-lo-conserva-en-latex |
         | div-shrink-aprieta-las-letras |
         | div-stretch-separa-las-letras |
         | la-forma-antigua-textls-value-ya-no-transforma |
@@ -98,8 +104,12 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
 
       Ejemplos:
         | caso |
-        | convierte-dentro-de-una-lista-a-div-spacer-nunca-literal |
-        | convierte-div-spacer-en-div-vacio-con-los-filtros-semanticos |
+        | br-dentro-de-una-lista-no-sale-literal-en-html |
+        | br-1-sale-como-br-en-html |
+        | br-3-salta-tres-br-en-html |
+        | br-no-numerico-no-salta-en-html |
+        | br-1.5-se-trunca-a-uno-en-html |
+        | br-con-contenido-lo-conserva-en-html |
         | envuelve-div-dictum-en-blockquote-con-bloques-nativos |
         | envuelve-div-verse-en-div |
         | verse-solo-separte-la-linea-con-dos-espacios |
@@ -157,6 +167,9 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | collectioncreator-acepta-array-como-author-no-revienta-y-se- |
         | convierte-el-colophon-multilinea-doble-espacio-y-vspace |
         | convierte-el-frontmatter-multilinea-doble-espacio-y-vspace |
+        | titleback-br-salta-en-lowertitleback |
+        | titleback-br-con-contenido-lo-conserva |
+        | titleback-br-dentro-de-un-div-se-aplica |
         | convierte-el-subtitle-multilinea-doble-espacio-y-vspace |
         | dedication-con-div-dictum-multilinea-y-autor |
         | dedication-con-div-dictum-se-convierte-a-dictum-author-text |

@@ -1,0 +1,8 @@
+{
+  "name": "br-con-contenido-lo-conserva-en-latex",
+  "helper": "toLatex",
+  "markdown": "texto\n\n::: {br=2}\nTEXTO SE CONSERVA ENTERO\n:::\n",
+  "contains": ["\\vspace{\\baselineskip}\n\n\\vspace{\\baselineskip}", "\\noindent TEXTO", "SE CONSERVA ENTERO"],
+  "notContains": [],
+  "normalizeNewlines": false
+}

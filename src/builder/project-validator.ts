@@ -205,47 +205,6 @@ export function validateFrontmatterFields(parsed: Record<string, unknown>): Vali
   ];
 }
 
-function divFenceAction(trimmed: string, fences: number[]): 'open' | 'close' | undefined {
-  const abre = trimmed.match(/^(:{3,})\s*\{/);
-  if (abre?.[1] !== undefined) {
-    fences.push(abre[1].length);
-    return 'open';
-  }
-  const abierta = fences.length > 0 ? fences[fences.length - 1] : undefined;
-  const cierra = trimmed.match(/^(:{3,})\s*$/);
-  if (abierta === undefined || cierra?.[1] === undefined) return undefined;
-  return cierra[1].length >= abierta ? 'close' : undefined;
-}
-
-export function looseColonLines(body: string, lineOffset = 0): number[] {
-  const hits: number[] = [];
-  const fences: number[] = [];
-  let inCode = false;
-  let lineNum = 0;
-  for (const rawLine of body.split('\n')) {
-    lineNum++;
-    const trimmed = rawLine.trimEnd();
-    if (/^(```|~~~)/.test(trimmed)) {
-      inCode = !inCode;
-      continue;
-    }
-    if (inCode) continue;
-    const valla = divFenceAction(trimmed, fences);
-    if (valla !== undefined) {
-      if (valla === 'close') fences.pop();
-      continue;
-    }
-    if (trimmed === '::' || trimmed === ':;') continue;
-    if (/^:+$/.test(trimmed)) hits.push(lineNum + lineOffset);
-  }
-  return hits;
-}
-
-export function looseColonsMessage(lines: number[]): string {
-  const where = lines.length === 1 ? `línea ${lines[0]}` : `líneas ${lines.join(', ')}`;
-  return `${where} con ":" suelta: ¿querías escribir "::" (espacio vertical) o ":;" (sin indentación)?`;
-}
-
 const DICTUM_WIDTH_RE = /^:::\s*\{[^}]*\.dictum[^}]*\bwidth\s*=\s*([0-9]*\.?[0-9]+)/;
 const DICTUM_WIDTH_MIN = 0.1;
 const DICTUM_WIDTH_MAX = 1.0;

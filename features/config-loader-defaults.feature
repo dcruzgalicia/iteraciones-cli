@@ -110,7 +110,7 @@ Característica: los defaults del esquema y las vías de carga
           generate: false
       toc: true
       disabledFilters:
-        - semantic/string/01-double-colon
+        - semantic/ast/03-qr-url
       """
       Cuando cargo la configuración del proyecto
       Entonces la configuración tiene "format.html.site.title" con el valor "Mi Sitio"
@@ -126,4 +126,4 @@ Característica: los defaults del esquema y las vías de carga
       Y la configuración tiene "format.html.site.color" con el valor "rose"
       Y la configuración tiene "format.epub.generate" con el valor "true"
       Y la configuración tiene "format.markdown.generate" con el valor "false"
-      Y la configuración tiene "disabledFilters" con el valor "semantic/string/01-double-colon"
+      Y la configuración tiene "disabledFilters" con el valor "semantic/ast/03-qr-url"

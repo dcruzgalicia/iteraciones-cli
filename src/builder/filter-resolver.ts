@@ -11,7 +11,6 @@ const FLAGS_FILTER = join(LUA_FILTERS_ROOT, 'internal', 'flags.lua');
 export const MBOX_HELPERS_FILTER = join(LUA_FILTERS_ROOT, 'latex', 'shared', 'mbox-helpers.lua');
 
 const LUA_GROUPS: Array<{ dir: string; target: 'semantic' | 'latex' | 'html' }> = [
-  { dir: 'semantic/string', target: 'semantic' },
   { dir: 'semantic/ast', target: 'semantic' },
   { dir: 'latex', target: 'latex' },
   { dir: 'html', target: 'html' },

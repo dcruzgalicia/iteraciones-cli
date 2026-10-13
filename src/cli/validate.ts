@@ -8,8 +8,6 @@ import {
   dictumWidthWarnings,
   dictumWidthWarningsInYaml,
   dictumWidthWarningsMessage,
-  looseColonLines,
-  looseColonsMessage,
   MISSING_TITLE_WARNING,
   validateConfigFilePaths,
   validateConfigRules,
@@ -143,10 +141,6 @@ async function validateSingleEntry(
   }
   const { yaml, body } = splitFrontmatter(raw);
   const lineOffset = raw.slice(0, raw.length - body.length).split('\n').length - 1;
-  const looseColons = looseColonLines(body, lineOffset);
-  if (looseColons.length > 0) {
-    warnings.push({ file: entry, message: looseColonsMessage(looseColons) });
-  }
   const dictumWidths = dictumWidthWarnings(body, lineOffset);
   if (dictumWidths.length > 0) {
     warnings.push({ file: entry, message: dictumWidthWarningsMessage(dictumWidths) });
