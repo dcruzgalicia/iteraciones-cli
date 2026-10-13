@@ -43,7 +43,7 @@ Given('un proyecto con bundle {string}', (estado: string) => {
 
 Given('el proyecto tiene un QR en el ensayo', () => {
   escribirEnProyecto('iteraciones.config.yaml', `${configCon(['  latex:', '    generate: true'])}\n`);
-  escribirEnProyecto('ensayo.md', `${DOC.replace('Contenido.', '[https://historikas.com]{.qr width="15mm"}')}\n`);
+  escribirEnProyecto('ensayo.md', `${DOC.replace('Contenido.', '::: {qr=15mm}\nhttps://historikas.com\n:::')}\n`);
 });
 
 Given('el proyecto apaga bundle', () => {

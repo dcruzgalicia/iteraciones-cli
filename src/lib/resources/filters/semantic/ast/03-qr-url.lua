@@ -8,18 +8,18 @@ end
 local FILTER_DIR = script_path()
 local QRCODE_SCRIPT = FILTER_DIR and (FILTER_DIR .. '/../../../../qr-gen.ts') or nil
 
-function Span(span)
-  local has_qr = false
-  for _, c in ipairs(span.classes) do
-    if c == 'qr' then
-      has_qr = true
-      break
-    end
+function Div(div)
+  local qr_value = div.attributes.qr
+  if qr_value == nil then return nil end
+
+  local para = nil
+  for _, b in ipairs(div.content) do
+    if b.t == 'Para' then para = b; break end
   end
-  if not has_qr then return nil end
+  if not para then return nil end
 
   local url = ''
-  for _, inl in ipairs(span.content) do
+  for _, inl in ipairs(para.content) do
     if inl.t == 'Str' then
       url = url .. inl.text
     elseif inl.t == 'Space' then
@@ -28,7 +28,12 @@ function Span(span)
   end
   if url == '' then return nil end
 
-  local width = span.attributes.width or '3cm'
+  local width = nil
+  if qr_value == '' then
+    width = '3cm'
+  elseif qr_value:match('^[%d.]+[a-z]+$') then
+    width = qr_value
+  end
 
   local project_root = os.getenv('ITERACIONES_PROJECT_ROOT')
   if not project_root or project_root == '' then return nil end
@@ -41,6 +46,6 @@ function Span(span)
   if jpgPath == '' or not jpgPath:match('%.jpg$') then return nil end
 
   local img = pandoc.Image('', jpgPath)
-  img.attr = pandoc.Attr('', {}, { { 'width', width } })
-  return img
+  img.attr = pandoc.Attr('', {}, width and { { 'width', width } } or {})
+  return pandoc.Para({ img })
 end

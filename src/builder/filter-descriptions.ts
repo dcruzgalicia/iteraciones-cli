@@ -40,7 +40,7 @@ export const DESCRIPCIONES_LUA: Record<string, string> = {
   'semantic/ast/02-double-colon-noindent':
     'Convierte párrafos con solo ":;" en Div.spacer noindent (semántico). Solo transforma párrafos de nivel superior (no dentro de otros bloques).',
   'semantic/ast/03-qr-url':
-    'Genera código QR como imagen JPG 300dpi a partir de [url]{.qr width="Xcm"}. Imagen generada en .iteraciones/processed-images/ del proyecto (content-addressed por hash MD5). Requiere: zxing-wasm (bun add zxing-wasm) y ImageMagick (magick).',
+    'Genera código QR como imagen JPG 300dpi a partir de ::: {qr=Xcm}…:::. Imagen generada en .iteraciones/processed-images/ del proyecto (content-addressed por hash MD5). Requiere: zxing-wasm (bun add zxing-wasm) y ImageMagick (magick).',
   'semantic/ast/04-image-paths':
     'Reescribe en el AST las rutas de imagen que el preproceso movió a assets/images (#2460). El mapa llega por fichero (ITERACIONES_PATHS_JSON), nunca por argv: crece con el número de imágenes. Va después de 03-qr-url (orden del directorio) y, si no hay mapa, no toca nada.',
   'semantic/string/01-double-colon':
