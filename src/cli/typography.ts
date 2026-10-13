@@ -67,7 +67,6 @@ export function interpretaReglas(spec: string): string[] {
   return pedidas;
 }
 
-/** Entero del 1 en adelante, para --min-lines y --min-letters. */
 export function interpretaEntero(valor: string, opcion: string, minimo: number): number {
   const numero = Number(valor);
   if (!Number.isInteger(numero) || numero < minimo) {
@@ -110,7 +109,6 @@ function formatea(incidencia: TypographyIncidence): string {
   return `  pág ${incidencia.page}  ${rango}  ${incidencia.type}\n${cuerpo}`;
 }
 
-/** Los flags del comando traducidos a las opciones del analizador, con sus valores por defecto. */
 function opcionesDeAnalisis(options: TypographyOptions): OpcionesAnalisis {
   const rango = options.pages === undefined ? {} : interpretaPaginas(options.pages);
   return {

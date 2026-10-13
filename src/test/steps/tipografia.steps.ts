@@ -51,9 +51,6 @@ When('escaneo el texto de pdftotext', () => {
 // Los escenarios que comprueban qué signos disparan la regla usan líneas de dos palabras,
 // donde el ancho de referencia es el de esas mismas líneas; sin apagar el filtro de ancho
 // se medirían contra sí mismas y no probarían nada.
-// Los escenarios que comprueban qué signos o letras disparan la regla usan líneas de dos
-// palabras, así que con la ventana por defecto de tres no habría nada que ver. Se les fija
-// ventana 2 y una letra, que es la pregunta que están haciendo, no la del tamaño de la ventana.
 When('escaneo el texto de pdftotext sin el filtro de línea corta', () => {
   world.incidencias = analyzeText(world.textoPdftotext, { porcentajeCorta: 0, lineasMinimas: 2, letrasMinimas: 1 }).map(describe);
 });
@@ -65,9 +62,6 @@ When('escaneo el texto de pdftotext buscando {string} sin el filtro de línea co
     .map(describe);
 });
 
-// Los escenarios que prueban qué signos o letras disparan la regla piden una sola y usan líneas
-// de dos palabras, así que con la ventana por defecto de tres no habría nada que ver. Se les fija
-// ventana 2 y una letra, que es la pregunta que están haciendo, no la del tamaño de la ventana.
 When('escaneo el texto de pdftotext con {int} lineas y {int} letras', (lineas: number, letras: number) => {
   world.incidencias = analyzeText(world.textoPdftotext, {
     porcentajeCorta: 0,
