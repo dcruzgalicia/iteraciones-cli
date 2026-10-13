@@ -324,6 +324,8 @@ Ejemplos:
     )
     .option('--json', 'imprime el resultado como JSON en stdout (consumo programático)')
     .option('--rules <lista>', 'sólo esas reglas, separadas por coma (por defecto: todas)')
+    .option('--min-lines <n>', 'líneas consecutivas que tienen que coincidir (por defecto: 3, mínimo 2)')
+    .option('--min-letters <n>', 'caracteres del borde que se comparan (por defecto: 2, mínimo 1)')
     .addHelpText(
       'after',
       `
@@ -333,12 +335,15 @@ en CI.
 
 Reglas:
   single-word-line          una línea no vacía con exactamente una palabra
-  consecutive-punctuation   dos líneas seguidas que ambas terminan en un signo de puntuación
-  repeated-first-letter     dos líneas seguidas que empiezan con la misma letra
-  repeated-last-letter      dos líneas seguidas que terminan con la misma letra
+  consecutive-punctuation   varias líneas seguidas que todas terminan en un signo de puntuación
+  repeated-first-letter     varias líneas seguidas que empiezan por los mismos caracteres
+  repeated-last-letter      varias líneas seguidas que terminan por los mismos caracteres
 
 El número de línea reinicia en cada página. Una línea vacía y el final de página cortan la
 consecutividad: la última línea de una página nunca se compara con la primera de la siguiente.
+Y una tirada cuenta una vez: seis renglones seguidos que cumplen salen como un hallazgo, no como
+cuatro ventanas solapadas. Cuando la tirada es más larga que la ventana que se enseña, el informe
+dice cuántas había en total.
 
 Ejemplos:
   iteraciones typography                                revisa los PDF de dist/files
@@ -346,6 +351,7 @@ Ejemplos:
   iteraciones typography dist/files/libro.pdf --pages 3 desde la 3 hasta el final
   iteraciones typography --pages 3-80                   sólo esas páginas
   iteraciones typography --min-line-width 75            corta la línea corta al 75% del ancho
+  iteraciones typography --min-lines 2 --min-letters 1   el comportamiento anterior, más hallazgos
   iteraciones typography --rules single-word-line            sólo las líneas de una sola palabra
   iteraciones typography --rules repeated-first-letter,repeated-last-letter   sólo las letras
   iteraciones typography --json                         imprime el resultado como JSON

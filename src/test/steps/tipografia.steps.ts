@@ -18,13 +18,14 @@ function salidaPdftotext(texto: string): string {
 }
 
 function describe(incidencia: TypographyIncidence): string {
-  if (incidencia.type === 'consecutive-punctuation') {
-    return `consecutive-punctuation ;; pág ${incidencia.page} ;; líneas ${incidencia.previousLine}-${incidencia.line} ;; ${incidencia.previousLine}: ${incidencia.previousText.trim()} ;; ${incidencia.line}: ${incidencia.text.trim()}`;
+  if (incidencia.type === 'single-word-line') {
+    return `single-word-line ;; pág ${incidencia.page} ;; línea ${incidencia.line} ;; ${incidencia.text.trim()}`;
   }
-  if (incidencia.type === 'repeated-first-letter' || incidencia.type === 'repeated-last-letter') {
-    return `${incidencia.type} ;; pág ${incidencia.page} ;; líneas ${incidencia.previousLine}-${incidencia.line} ;; ${incidencia.letter} ;; ${incidencia.previousLine}: ${incidencia.previousText.trim()} ;; ${incidencia.line}: ${incidencia.text.trim()}`;
-  }
-  return `single-word-line ;; pág ${incidencia.page} ;; línea ${incidencia.line} ;; ${incidencia.text.trim()}`;
+  const numeros = incidencia.lineas.map((l) => l.line);
+  const rango = `líneas ${numeros[0]}-${numeros.at(-1)}${incidencia.total > incidencia.lineas.length ? ` de ${incidencia.total}` : ''}`;
+  const cuerpo = incidencia.lineas.map((l) => `${l.line}: ${l.text.trim()}`).join(' || ');
+  const letra = incidencia.type === 'consecutive-punctuation' ? '' : ` ;; ${incidencia.letter}`;
+  return `${incidencia.type} ;; pág ${incidencia.page} ;; ${rango}${letra} ;; ${cuerpo}`;
 }
 
 function renglones(texto: string): string {
@@ -50,23 +51,34 @@ When('escaneo el texto de pdftotext', () => {
 // Los escenarios que comprueban qué signos disparan la regla usan líneas de dos palabras,
 // donde el ancho de referencia es el de esas mismas líneas; sin apagar el filtro de ancho
 // se medirían contra sí mismas y no probarían nada.
+// Los escenarios que comprueban qué signos o letras disparan la regla usan líneas de dos
+// palabras, así que con la ventana por defecto de tres no habría nada que ver. Se les fija
+// ventana 2 y una letra, que es la pregunta que están haciendo, no la del tamaño de la ventana.
 When('escaneo el texto de pdftotext sin el filtro de línea corta', () => {
-  world.incidencias = analyzeText(world.textoPdftotext, 1, 0).map(describe);
+  world.incidencias = analyzeText(world.textoPdftotext, { porcentajeCorta: 0, lineasMinimas: 2, letrasMinimas: 1 }).map(describe);
 });
 
 When('escaneo el texto de pdftotext buscando {string} sin el filtro de línea corta', (reglas: string) => {
   const pedidas = reglas.split(',').map((r) => r.trim());
-  world.incidencias = analyzeText(world.textoPdftotext, 1, 0)
+  world.incidencias = analyzeText(world.textoPdftotext, { porcentajeCorta: 0, lineasMinimas: 2, letrasMinimas: 1 })
     .filter((incidencia) => pedidas.includes(incidencia.type))
     .map(describe);
 });
 
-// Los escenarios que prueban una sola regla piden esa regla. Sus fixtures son de dos líneas y
-// sus últimas letras coinciden por casualidad («…dos palabras / …tiene dos»), así que si se
-// pidieran todas aparecerían hallazgos de otra regla que no es la que se está probando.
+// Los escenarios que prueban qué signos o letras disparan la regla piden una sola y usan líneas
+// de dos palabras, así que con la ventana por defecto de tres no habría nada que ver. Se les fija
+// ventana 2 y una letra, que es la pregunta que están haciendo, no la del tamaño de la ventana.
+When('escaneo el texto de pdftotext con {int} lineas y {int} letras', (lineas: number, letras: number) => {
+  world.incidencias = analyzeText(world.textoPdftotext, {
+    porcentajeCorta: 0,
+    lineasMinimas: lineas,
+    letrasMinimas: letras,
+  }).map(describe);
+});
+
 When('escaneo el texto de pdftotext buscando {string}', (reglas: string) => {
   const pedidas = reglas.split(',').map((r) => r.trim());
-  world.incidencias = analyzeText(world.textoPdftotext)
+  world.incidencias = analyzeText(world.textoPdftotext, { lineasMinimas: 2, letrasMinimas: 1 })
     .filter((incidencia) => pedidas.includes(incidencia.type))
     .map(describe);
 });
@@ -95,7 +107,11 @@ async function escaneaPdf(nombre: string, porcentajeCorta: number, reglas?: stri
   world.errMensaje = '';
   world.errClase = '';
   try {
-    const halladas = await analyzePdf(join(world.root, nombre), 1, undefined, porcentajeCorta);
+    const halladas = await analyzePdf(join(world.root, nombre), {
+      porcentajeCorta,
+      lineasMinimas: 2,
+      letrasMinimas: 1,
+    });
     world.incidencias = (reglas ? halladas.filter((i) => reglas.includes(i.type)) : halladas).map(describe);
   } catch (err) {
     world.errMensaje = err instanceof Error ? err.message : String(err);
