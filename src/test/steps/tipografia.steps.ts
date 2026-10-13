@@ -21,6 +21,9 @@ function describe(incidencia: TypographyIncidence): string {
   if (incidencia.type === 'consecutive-punctuation') {
     return `consecutive-punctuation ;; pág ${incidencia.page} ;; líneas ${incidencia.previousLine}-${incidencia.line} ;; ${incidencia.previousLine}: ${incidencia.previousText.trim()} ;; ${incidencia.line}: ${incidencia.text.trim()}`;
   }
+  if (incidencia.type === 'repeated-first-letter' || incidencia.type === 'repeated-last-letter') {
+    return `${incidencia.type} ;; pág ${incidencia.page} ;; líneas ${incidencia.previousLine}-${incidencia.line} ;; ${incidencia.letter} ;; ${incidencia.previousLine}: ${incidencia.previousText.trim()} ;; ${incidencia.line}: ${incidencia.text.trim()}`;
+  }
   return `single-word-line ;; pág ${incidencia.page} ;; línea ${incidencia.line} ;; ${incidencia.text.trim()}`;
 }
 
@@ -51,6 +54,23 @@ When('escaneo el texto de pdftotext sin el filtro de línea corta', () => {
   world.incidencias = analyzeText(world.textoPdftotext, 1, 0).map(describe);
 });
 
+When('escaneo el texto de pdftotext buscando {string} sin el filtro de línea corta', (reglas: string) => {
+  const pedidas = reglas.split(',').map((r) => r.trim());
+  world.incidencias = analyzeText(world.textoPdftotext, 1, 0)
+    .filter((incidencia) => pedidas.includes(incidencia.type))
+    .map(describe);
+});
+
+// Los escenarios que prueban una sola regla piden esa regla. Sus fixtures son de dos líneas y
+// sus últimas letras coinciden por casualidad («…dos palabras / …tiene dos»), así que si se
+// pidieran todas aparecerían hallazgos de otra regla que no es la que se está probando.
+When('escaneo el texto de pdftotext buscando {string}', (reglas: string) => {
+  const pedidas = reglas.split(',').map((r) => r.trim());
+  world.incidencias = analyzeText(world.textoPdftotext)
+    .filter((incidencia) => pedidas.includes(incidencia.type))
+    .map(describe);
+});
+
 Given('el PDF {string} con estas páginas:', (nombre: string, texto: string) => {
   escribirEnProyecto(nombre, '');
   // El PDF de las fixtures no lleva codificación de fuente: el texto va en ASCII.
@@ -65,12 +85,18 @@ When('escaneo el PDF {string} sin el filtro de línea corta', async (nombre: str
   await escaneaPdf(nombre, 0);
 });
 
-async function escaneaPdf(nombre: string, porcentajeCorta: number): Promise<void> {
+When('escaneo el PDF {string} buscando {string}', async (nombre: string, reglas: string) => {
+  const pedidas = reglas.split(',').map((r) => r.trim());
+  await escaneaPdf(nombre, 0, pedidas);
+});
+
+async function escaneaPdf(nombre: string, porcentajeCorta: number, reglas?: string[]): Promise<void> {
   world.incidencias = [];
   world.errMensaje = '';
   world.errClase = '';
   try {
-    world.incidencias = (await analyzePdf(join(world.root, nombre), 1, undefined, porcentajeCorta)).map(describe);
+    const halladas = await analyzePdf(join(world.root, nombre), 1, undefined, porcentajeCorta);
+    world.incidencias = (reglas ? halladas.filter((i) => reglas.includes(i.type)) : halladas).map(describe);
   } catch (err) {
     world.errMensaje = err instanceof Error ? err.message : String(err);
     world.errClase = err instanceof Error ? err.constructor.name : typeof err;

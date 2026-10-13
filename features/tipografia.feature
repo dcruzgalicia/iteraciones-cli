@@ -18,7 +18,7 @@ Característica: el analizador tipográfico de los PDF
         Hola
         \f
         """
-      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Cuando escaneo el texto de pdftotext buscando "single-word-line"
       Entonces las incidencias son:
         """
         single-word-line ;; pág 1 ;; línea 2 ;; Hola
@@ -138,7 +138,7 @@ Característica: el analizador tipográfico de los PDF
         7
         \f
         """
-      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Cuando escaneo el texto de pdftotext buscando "single-word-line"
       Entonces no hay incidencias
 
     Escenario: Una línea de una palabra en el medio de la página sigue siendo incidencia
@@ -148,6 +148,7 @@ Característica: el analizador tipográfico de los PDF
         texto de la pagina con palabras
         Adios
         texto que sigue con palabras
+        y una ultima linea cualquiera
         \f
         3
         texto de la otra pagina con palabras
@@ -156,7 +157,7 @@ Característica: el analizador tipográfico de los PDF
         texto de la tercera pagina con palabras
         \f
         """
-      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Cuando escaneo el texto de pdftotext buscando "single-word-line"
       Entonces las incidencias son:
         """
         single-word-line ;; pág 1 ;; línea 3 ;; Adios
@@ -175,17 +176,17 @@ Característica: el analizador tipográfico de los PDF
         Capitulo 3
         \f
         """
-      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Cuando escaneo el texto de pdftotext buscando "single-word-line"
       Entonces no hay incidencias
 
     Escenario: Una línea con varias palabras no lo es
       Dado que pdftotext devuelve:
         """
         Una línea con dos palabras
-        Otra que también tiene dos
+        Otra que también tiene tres
         \f
         """
-      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Cuando escaneo el texto de pdftotext buscando "single-word-line"
       Entonces no hay incidencias
 
     Escenario: Los espacios no cuentan como palabras
@@ -195,7 +196,7 @@ Característica: el analizador tipográfico de los PDF
         Hola    mundo   otra vez
         \f
         """
-      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Cuando escaneo el texto de pdftotext buscando "single-word-line"
       Entonces las incidencias son:
         """
         single-word-line ;; pág 1 ;; línea 1 ;; Hola
@@ -209,7 +210,7 @@ Característica: el analizador tipográfico de los PDF
         Otra linea con dos palabras
         \f
         """
-      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Cuando escaneo el texto de pdftotext buscando "single-word-line"
       Entonces no hay incidencias
 
     Escenario: La palabra más larga del documento también cuenta
@@ -218,7 +219,7 @@ Característica: el analizador tipográfico de los PDF
         Antidisestablishmentarianism
         \f
         """
-      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Cuando escaneo el texto de pdftotext buscando "single-word-line"
       Entonces las incidencias son:
         """
         single-word-line ;; pág 1 ;; línea 1 ;; Antidisestablishmentarianism
@@ -233,7 +234,7 @@ Característica: el analizador tipográfico de los PDF
         tres cuatro<signo>
         \f
         """
-      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Cuando escaneo el texto de pdftotext buscando "consecutive-punctuation" sin el filtro de línea corta
       Entonces las incidencias son:
         """
         consecutive-punctuation ;; pág 1 ;; líneas 1-2 ;; 1: uno dos<signo> ;; 2: tres cuatro<signo>
@@ -267,7 +268,7 @@ Característica: el analizador tipográfico de los PDF
         termina en coma,
         \f
         """
-      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Cuando escaneo el texto de pdftotext buscando "consecutive-punctuation" sin el filtro de línea corta
       Entonces las incidencias son:
         """
         consecutive-punctuation ;; pág 1 ;; líneas 1-2 ;; 1: termina en punto. ;; 2: termina en coma,
@@ -281,7 +282,7 @@ Característica: el analizador tipográfico de los PDF
         cuatro . . .
         \f
         """
-      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Cuando escaneo el texto de pdftotext buscando "consecutive-punctuation" sin el filtro de línea corta
       Entonces las incidencias son:
         """
         consecutive-punctuation ;; pág 1 ;; líneas 1-2 ;; 1: uno dos, ;; 2: tres . . .
@@ -295,7 +296,7 @@ Característica: el analizador tipográfico de los PDF
         tres . . .
         \f
         """
-      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Cuando escaneo el texto de pdftotext buscando "consecutive-punctuation" sin el filtro de línea corta
       Entonces no hay incidencias
 
     Escenario: Una línea que no termina en puntuación rompe el par
@@ -306,7 +307,7 @@ Característica: el analizador tipográfico de los PDF
         cinco seis.
         \f
         """
-      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Cuando escaneo el texto de pdftotext buscando "consecutive-punctuation" sin el filtro de línea corta
       Entonces no hay incidencias
 
     Escenario: Una línea vacía rompe el par
@@ -317,7 +318,7 @@ Característica: el analizador tipográfico de los PDF
         tres cuatro.
         \f
         """
-      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Cuando escaneo el texto de pdftotext buscando "consecutive-punctuation" sin el filtro de línea corta
       Entonces no hay incidencias
 
     Escenario: Tres líneas seguidas dan dos pares
@@ -328,7 +329,7 @@ Característica: el analizador tipográfico de los PDF
         cinco seis.
         \f
         """
-      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Cuando escaneo el texto de pdftotext buscando "consecutive-punctuation" sin el filtro de línea corta
       Entonces las incidencias son:
         """
         consecutive-punctuation ;; pág 1 ;; líneas 1-2 ;; 1: uno dos. ;; 2: tres cuatro.
@@ -344,7 +345,7 @@ Característica: el analizador tipográfico de los PDF
         Tres.
         \f
         """
-      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Cuando escaneo el texto de pdftotext buscando "single-word-line,consecutive-punctuation" sin el filtro de línea corta
       Entonces las incidencias son:
         """
         single-word-line ;; pág 1 ;; línea 2 ;; Tres.
@@ -361,7 +362,7 @@ Característica: el analizador tipográfico de los PDF
         tres cuatro.
         \f
         """
-      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Cuando escaneo el texto de pdftotext buscando "consecutive-punctuation"
       Entonces no hay incidencias
 
     Escenario: El número de línea reinicia en cada página
@@ -373,7 +374,7 @@ Característica: el analizador tipográfico de los PDF
         Adios
         \f
         """
-      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Cuando escaneo el texto de pdftotext buscando "single-word-line,consecutive-punctuation" sin el filtro de línea corta
       Entonces las incidencias son:
         """
         single-word-line ;; pág 1 ;; línea 1 ;; Hola
@@ -390,7 +391,7 @@ Característica: el analizador tipográfico de los PDF
         tres cuatro.
         \f
         """
-      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Cuando escaneo el texto de pdftotext buscando "single-word-line,consecutive-punctuation" sin el filtro de línea corta
       Entonces las incidencias son:
         """
         single-word-line ;; pág 1 ;; línea 1 ;; Hola
@@ -406,7 +407,7 @@ Característica: el analizador tipográfico de los PDF
         Adios
         \f
         """
-      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Cuando escaneo el texto de pdftotext buscando "single-word-line"
       Entonces las incidencias son:
         """
         single-word-line ;; pág 1 ;; línea 1 ;; Hola
@@ -420,7 +421,7 @@ Característica: el analizador tipográfico de los PDF
         \f
         Adios
         """
-      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Cuando escaneo el texto de pdftotext buscando "single-word-line"
       Entonces las incidencias son:
         """
         single-word-line ;; pág 2 ;; línea 1 ;; Adios
@@ -432,8 +433,8 @@ Característica: el analizador tipográfico de los PDF
       Dado que la raíz del proyecto está vacía
       Y el PDF "limpio.pdf" con estas páginas:
         """
-        Una linea con varias palabras
-        Otra linea con varias palabras
+        Una linea con muchas palabras
+        Otra linea con bastante texto
         \f
         """
       Cuando escaneo el PDF "limpio.pdf"
@@ -451,7 +452,7 @@ Característica: el analizador tipográfico de los PDF
         tres cuatro.
         \f
         """
-      Cuando escaneo el PDF "libro.pdf" sin el filtro de línea corta
+      Cuando escaneo el PDF "libro.pdf" buscando "single-word-line,consecutive-punctuation"
       Entonces las incidencias son:
         """
         single-word-line ;; pág 1 ;; línea 2 ;; Hola
@@ -486,7 +487,7 @@ Característica: el analizador tipográfico de los PDF
       Dado que la raíz del proyecto está vacía
       Y el PDF "dist/files/libro.pdf" con estas páginas:
         """
-        Una linea con varias palabras
+        Texto normal de la pagina
         uno dos.
         tres cuatro.
         \f
@@ -502,8 +503,8 @@ Característica: el analizador tipográfico de los PDF
       Dado que la raíz del proyecto está vacía
       Y el PDF "dist/files/libro.pdf" con estas páginas:
         """
-        Una linea con varias palabras
-        Otra linea con varias palabras
+        Una linea con muchas palabras
+        Otra linea con bastante texto
         \f
         """
       Cuando parseo el comando "typography" sobre la raíz del proyecto
@@ -515,6 +516,90 @@ Característica: el analizador tipográfico de los PDF
       Cuando parseo el comando "typography" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
       Y el error dice "no hay PDFs en dist/files"
+
+  Regla de negocio: Dos líneas seguidas con la misma letra
+
+    Escenario: Dos líneas que empiezan con la misma letra
+      Dado que pdftotext devuelve:
+        """
+        sobrevivido en este sistema
+        sobrevivido en este mundo
+        \f
+        """
+      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Entonces las incidencias son:
+        """
+        repeated-first-letter ;; pág 1 ;; líneas 1-2 ;; s ;; 1: sobrevivido en este sistema ;; 2: sobrevivido en este mundo
+        """
+
+    Escenario: Dos líneas que terminan con la misma letra
+      Dado que pdftotext devuelve:
+        """
+        una linea que acaba en esa
+        otra linea que acaba en esta
+        \f
+        """
+      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Entonces las incidencias son:
+        """
+        repeated-last-letter ;; pág 1 ;; líneas 1-2 ;; a ;; 1: una linea que acaba en esa ;; 2: otra linea que acaba en esta
+        """
+
+    Escenario: Las mayúsculas y los acentos no hacen diferencia
+      Dado que pdftotext devuelve:
+        """
+        Jardín pequeña
+        jardín grande
+        \f
+        """
+      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Entonces las incidencias son:
+        """
+        repeated-first-letter ;; pág 1 ;; líneas 1-2 ;; j ;; 1: Jardín pequeña ;; 2: jardín grande
+        """
+
+    Escenario: Letras distintas no son hallazgo
+      Dado que pdftotext devuelve:
+        """
+        una linea que empieza por aqui
+        otra que empieza por alla
+        \f
+        """
+      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Entonces no hay incidencias
+
+    Escenario: Lo que no es letra se salta
+      Dado que pdftotext devuelve:
+        """
+        © De la edición, María de los Ángeles
+        Diseño y formación editorial
+        \f
+        """
+      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Entonces no hay incidencias
+
+    Escenario: Una línea de puros números no tiene letra
+      Dado que pdftotext devuelve:
+        """
+        una linea normal que empieza por aqui
+        1984
+        \f
+        """
+      Cuando escaneo el texto de pdftotext buscando "repeated-first-letter,repeated-last-letter"
+      Entonces no hay incidencias
+
+    Escenario: La última línea de una página no se junta con la primera de la otra
+      Dado que pdftotext devuelve:
+        """
+        zeta del uno
+        beta del uno
+        \f
+        beta del dos
+        alfa del dos
+        \f
+        """
+      Cuando escaneo el texto de pdftotext buscando "repeated-first-letter"
+      Entonces no hay incidencias
 
   Regla de negocio: Una línea muy corta no cuenta como par
 
@@ -528,7 +613,7 @@ Característica: el analizador tipográfico de los PDF
         Esta linea es larga y termina en puntuacion.
         \f
         """
-      Cuando escaneo el texto de pdftotext
+      Cuando escaneo el texto de pdftotext buscando "consecutive-punctuation"
       Entonces no hay incidencias
 
     Escenario: Da igual cual de las dos sea la corta
@@ -541,7 +626,7 @@ Característica: el analizador tipográfico de los PDF
         a si mismas.
         \f
         """
-      Cuando escaneo el texto de pdftotext
+      Cuando escaneo el texto de pdftotext buscando "consecutive-punctuation"
       Entonces no hay incidencias
 
     Escenario: Dos lineas largas seguidas que terminan en puntuacion si son hallazgo
@@ -554,7 +639,7 @@ Característica: el analizador tipográfico de los PDF
         Esta es una linea de referencia del documento para(setear) la medid.
         \f
         """
-      Cuando escaneo el texto de pdftotext
+      Cuando escaneo el texto de pdftotext buscando "consecutive-punctuation"
       Entonces las incidencias son:
         """
         consecutive-punctuation ;; pág 1 ;; líneas 4-5 ;; 4: Esta es una linea de referencia del documento para(setear) la medid. ;; 5: Esta es una linea de referencia del documento para(setear) la medid.
@@ -578,7 +663,7 @@ Característica: el analizador tipográfico de los PDF
         Esta es una linea de referencia bastante larga para el documento Est.
         \f
         """
-      Cuando escaneo el texto de pdftotext
+      Cuando escaneo el texto de pdftotext buscando "consecutive-punctuation"
       Entonces no hay incidencias
 
     Escenario: La moda manda cuando la mediana se queda corta
@@ -600,7 +685,7 @@ Característica: el analizador tipográfico de los PDF
         Esta es una linea de referencia bastante larga para el documento Est.
         \f
         """
-      Cuando escaneo el texto de pdftotext
+      Cuando escaneo el texto de pdftotext buscando "consecutive-punctuation"
       Entonces no hay incidencias
 
     Escenario: Una linea desmedida no manda si ningun ancho se repite
@@ -614,7 +699,7 @@ Característica: el analizador tipográfico de los PDF
         palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra
         \f
         """
-      Cuando escaneo el texto de pdftotext
+      Cuando escaneo el texto de pdftotext buscando "consecutive-punctuation"
       Entonces las incidencias son:
         """
         consecutive-punctuation ;; pág 1 ;; líneas 4-5 ;; 4: palabra palabra palabra palabra palabra palabra palabra palabra palab. ;; 5: palabra palabra palabra palabra palabra palabra palabra palabra palabra pa.
@@ -642,11 +727,11 @@ Característica: el analizador tipográfico de los PDF
       Y el PDF "dist/files/libro.pdf" con estas páginas:
         """
         Esta es una linea de referencia del documento para(setear) la medida
-        Esta es una linea de referencia del documento para(setear) la medida
-        Esta es una linea de referencia del documento para(setear) la medida
-        Esta es una linea de referencia del documento para(setear) la medida
+        Zeta es una linea de referencia del documento para(setear) el borde
+        Media es una linea de referencia del documento para(setear) un texto
+        Nueva es una linea de referencia del documento para(setear) el lugar
         Esta linea es mas corta que la de arriba y se queda al.
-        Esta linea es mas corta que la de arriba y se queda al.
+        Zybra linea es mas corta que la de arriba y se queda a.
         \f
         """
       Cuando parseo el comando "typography dist/files/libro.pdf" sobre la raíz del proyecto
@@ -658,11 +743,11 @@ Característica: el analizador tipográfico de los PDF
       Y el PDF "dist/files/libro.pdf" con estas páginas:
         """
         Esta es una linea de referencia del documento para(setear) la medida
-        Esta es una linea de referencia del documento para(setear) la medida
-        Esta es una linea de referencia del documento para(setear) la medida
-        Esta es una linea de referencia del documento para(setear) la medida
+        Zeta es una linea de referencia del documento para(setear) el borde
+        Media es una linea de referencia del documento para(setear) un texto
+        Nueva es una linea de referencia del documento para(setear) el lugar
         Esta linea es mas corta que la de arriba y se queda al.
-        Esta linea es mas corta que la de arriba y se queda al.
+        Zybra linea es mas corta que la de arriba y se queda a.
         \f
         """
       Cuando parseo el comando "typography dist/files/libro.pdf --min-line-width 75" sobre la raíz del proyecto
@@ -673,11 +758,12 @@ Característica: el analizador tipográfico de los PDF
       Dado que la raíz del proyecto está vacía
       Y el PDF "dist/files/libro.pdf" con estas páginas:
         """
-        Esta linea es larga y no termina en puntuacion para(setear) la referencia
-        Esta linea es larga y no termina en puntuacion para(setear) la referencia
-        Esta linea es larga y no termina en puntuacion para(setear) la referencia
-        Esta linea es de longitud media y termina en puntuacion.
-        Esta linea es de longitud media y termina en puntuacion.
+        Esta es una linea de referencia del documento para(setear) su medida
+        Zeta es una linea de referencia del documento para(setear) el borde
+        Media es una linea de referencia del documento para(setear) el texto
+        Nueva es una linea de referencia del documento para(setear) su lugar
+        Alfa tiene una longitud media y si termina en puntuacion.
+        Beta tiene una longitud media y tambien cierra con puntuacion.
         \f
         """
       Cuando parseo el comando "typography dist/files/libro.pdf --min-line-width 90" sobre la raíz del proyecto
@@ -817,7 +903,7 @@ Característica: el analizador tipográfico de los PDF
       Dado que la raíz del proyecto está vacía
       Y el PDF "dist/files/libro.pdf" con estas páginas:
         """
-        Una linea con varias palabras
+        Texto normal de la pagina
         uno dos.
         tres cuatro.
         \f
@@ -833,8 +919,8 @@ Característica: el analizador tipográfico de los PDF
       Dado que la raíz del proyecto está vacía
       Y el PDF "dist/files/libro.pdf" con estas páginas:
         """
-        Una linea con varias palabras
-        Otra linea con varias palabras
+        Una linea con muchas palabras
+        Otra linea con bastante texto
         \f
         """
       Cuando parseo el comando "typography --json --min-line-width 0" sobre la raíz del proyecto

@@ -333,6 +333,8 @@ en CI.
 Reglas:
   single-word-line          una línea no vacía con exactamente una palabra
   consecutive-punctuation   dos líneas seguidas que ambas terminan en un signo de puntuación
+  repeated-first-letter     dos líneas seguidas que empiezan con la misma letra
+  repeated-last-letter      dos líneas seguidas que terminan con la misma letra
 
 El número de línea reinicia en cada página. Una línea vacía y el final de página cortan la
 consecutividad: la última línea de una página nunca se compara con la primera de la siguiente.
