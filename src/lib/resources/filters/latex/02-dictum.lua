@@ -117,14 +117,12 @@ local function process_dictum(div, width)
       table.insert(result, block)
     else
       if is_first then
-        table.insert(result, block)
         table.insert(result, pandoc.RawBlock('latex', opening))
-      elseif is_last then
-        table.insert(result, block)
+      end
+      table.insert(result, block)
+      if is_last then
         table.insert(result, pandoc.RawBlock('latex', closing))
         table.insert(result, pandoc.RawBlock('latex', width_arg))
-      else
-        table.insert(result, block)
       end
     end
   end
