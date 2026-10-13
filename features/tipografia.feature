@@ -794,6 +794,77 @@ Característica: el analizador tipográfico de los PDF
       Entonces el comando termina con el código de salida 1
       Y el error dice "no es un porcentaje entero entre 0 y 100"
 
+  Regla de negocio: Se puede pedir sólo algunas reglas
+
+    Escenario: Una sola regla deja el informe con esa regla y nada más
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Una linea normal con varias palabras
+        Hola
+        uno dos.
+        tres cuatro.
+        \f
+        """
+      Cuando parseo el comando "typography --rules single-word-line dist/files/libro.pdf" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y la salida dice "1 incidencia"
+      Y la salida dice "single-word-line"
+
+    Escenario: Varias reglas separadas por coma
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Una linea normal con varias palabras
+        Hola
+        uno dos.
+        tres cuatro.
+        \f
+        """
+      Cuando parseo el comando "typography --rules single-word-line,consecutive-punctuation --min-line-width 0 dist/files/libro.pdf" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y la salida dice "2 incidencias"
+      Y la salida dice "consecutive-punctuation"
+
+    Escenario: Una regla que no existe dice cuáles hay
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Una linea normal con varias palabras
+        \f
+        """
+      Cuando parseo el comando "typography --rules mbox dist/files/libro.pdf" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y el error dice "no existe la regla \"mbox\""
+      Y el error dice "single-word-line, consecutive-punctuation, repeated-first-letter, repeated-last-letter"
+
+    Escenario: Una lista sin reglas lo dice
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Una linea normal con varias palabras
+        \f
+        """
+      Cuando parseo el comando "typography --rules , dist/files/libro.pdf" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y el error dice "no trae ninguna regla"
+
+    Escenario: Pedir una sola regla de letras deja fuera las otras
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Zeta es una linea normal con palabras
+        Zorro tiene otra linea con palabras
+        otra linea normal con palabras
+        uno dos.
+        tres cuatro.
+        \f
+        """
+      Cuando parseo el comando "typography --rules repeated-first-letter --min-line-width 0 dist/files/libro.pdf" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y la salida dice "1 incidencia"
+      Y la salida dice "repeated-first-letter"
+
   Regla de negocio: Un rango de páginas recorta el PDF y no renumera el informe
 
     Escenario: Desde una página, el informe sigue dando la página del PDF
