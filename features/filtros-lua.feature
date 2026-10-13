@@ -27,7 +27,6 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | convierte-en-vspace-baselineskip |
         | div-shrink-aprieta-las-letras |
         | div-stretch-separa-las-letras |
-        | span-shrink-y-span-stretch |
         | la-forma-antigua-textls-value-ya-no-transforma |
         | el-bug-value-en-clase-cualquiera-ya-no-dispara |
         | shrink-con-signo-no-emite-doble-guion |

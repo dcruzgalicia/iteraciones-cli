@@ -14,15 +14,6 @@ local function valor(el)
   return nil
 end
 
-function Span(el)
-  if FORMAT ~= 'latex' then return nil end
-  local v = valor(el)
-  if not v then return nil end
-  local body = pandoc.write(pandoc.Pandoc({ pandoc.Para(el.content) }), 'latex')
-  body = body:gsub('%s+$', '')
-  return pandoc.RawInline('latex', '\\textls[' .. v .. ']{' .. body .. '}')
-end
-
 function Div(el)
   if FORMAT ~= 'latex' then return nil end
   local v = valor(el)
