@@ -1,7 +1,7 @@
 import { BuildError } from './errors.js';
 import { exec, ProcessSpawnError, type RunResult } from './run.js';
 
-export const TYPOGRAPHY_RULES = ['single-word-line', 'consecutive-punctuation'] as const;
+export const TYPOGRAPHY_RULES = ['single-word-line', 'consecutive-punctuation', 'repeated-first-letter', 'repeated-last-letter'] as const;
 
 export type TypographyRule = (typeof TYPOGRAPHY_RULES)[number];
 
@@ -21,7 +21,14 @@ export interface ConsecutivePunctuation extends Incidence {
   previousText: string;
 }
 
-export type TypographyIncidence = SingleWordLine | ConsecutivePunctuation;
+export interface RepeatedLetter extends Incidence {
+  type: 'repeated-first-letter' | 'repeated-last-letter';
+  letter: string;
+  previousLine: number;
+  previousText: string;
+}
+
+export type TypographyIncidence = SingleWordLine | ConsecutivePunctuation | RepeatedLetter;
 
 /** pdftotext separa las páginas con un \f pegado al inicio de la primera línea de la siguiente. */
 const PAGE_BREAK = '\f';
@@ -187,6 +194,86 @@ export function anchoDeReferencia(pages: string[][]): number {
   return Math.max(promedio, mediana, moda ?? 0);
 }
 
+/** Un par de líneas consecutivas de la misma página. Todas las reglas de par salen de aquí. */
+export function paresConsecutivos(pages: string[][]): { page: number; line: number; text: string; previousLine: number; previousText: string }[] {
+  const pares: { page: number; line: number; text: string; previousLine: number; previousText: string }[] = [];
+  for (const [indicePagina, lineas] of pages.entries()) {
+    // Una línea sin caracteres no blancos nunca termina en puntuación ni tiene letra, así que el
+    // corte por línea vacía sale solo. Y como el recorrido es por página, el final de una nunca
+    // se compara con el principio de la siguiente.
+    for (let indice = 1; indice < lineas.length; indice++) {
+      const text = lineas[indice];
+      const previousText = lineas[indice - 1];
+      if (text === undefined || previousText === undefined) continue;
+      pares.push({
+        page: indicePagina + 1,
+        line: indice + 1,
+        text,
+        previousLine: indice,
+        previousText,
+      });
+    }
+  }
+  return pares;
+}
+
+/** Sin acentos y en minúscula: «Jardín» y «jardín» empiezan igual para quien lee. */
+function sinAcentos(texto: string): string {
+  return texto
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+/**
+ * La letra con la que empieza la línea, o nada si no empieza por una letra. Es estricto: un
+ * © o una comilla delante hacen que la línea no empiece por letra, porque así se lee.
+ */
+function letraInicial(linea: string): string | undefined {
+  const primera = sinAcentos(linea).trimStart().at(0);
+  return primera !== undefined && /[a-z]/.test(primera) ? primera : undefined;
+}
+
+/**
+ * La letra con la que termina la línea, o nada si no termina por una letra. También estricto, y
+ * por el mismo motivo: una línea que acaba en coma no termina en letra sino en puntuación, y ya
+ * la cubre consecutive-punctuation. Sin esto, «…Rojas, / …Editores,» salía como letra repetida
+ * siendo las dos terminan en puntuación.
+ */
+function letraFinal(linea: string): string | undefined {
+  const ultima = sinAcentos(linea).trimEnd().at(-1);
+  return ultima !== undefined && /[a-z]/.test(ultima) ? ultima : undefined;
+}
+
+/**
+ * Dos líneas consecutivas que empiezan o terminan con la misma letra. Salen al leer: «sobrevivido
+ * en este sistema / sobrevivido en este mundo» se lee como una falta.
+ *
+ * Ojo con el final en español: se midió en un libro real y el 89% de los casos son 'a', 's', 'o'
+ * y 'e', que es donde termina cualquier palabra. Ahí el aviso aparece en cada pareja de renglones
+ * y no significa nada; las que sí señalan algo son las raras ('r', 'n').
+ */
+export function repeatedLetterPairs(pages: string[][], posicion: 'first' | 'last'): RepeatedLetter[] {
+  const de = posicion === 'first' ? letraInicial : letraFinal;
+  const tipo = posicion === 'first' ? 'repeated-first-letter' : 'repeated-last-letter';
+  const hallados: RepeatedLetter[] = [];
+  for (const par of paresConsecutivos(pages)) {
+    const anterior = de(par.previousText);
+    const actual = de(par.text);
+    if (anterior === undefined || actual === undefined || anterior !== actual) continue;
+    hallados.push({
+      type: tipo,
+      page: par.page,
+      line: par.line,
+      text: par.text,
+      letter: actual,
+      previousLine: par.previousLine,
+      previousText: par.previousText,
+    });
+  }
+  return hallados;
+}
+
 /**
  * Una línea muy corta no se cuenta como par aunque termine en puntuación: el final de un
  * párrafo corto («a sí mismas.») pegado al principio del siguiente es composición normal, no un
@@ -218,10 +305,15 @@ export function consecutivePunctuationPairs(pages: string[][], porcentajeCorta =
   return pares;
 }
 
-/** Orden: primero las líneas de una sola palabra, después los pares de puntuación. */
+/** Orden: primero las líneas de una sola palabra, luego los pares y las letras repetidas. */
 export function analyzeText(stdout: string, primeraPagina = 1, porcentajeCorta = 100): TypographyIncidence[] {
   const pages = splitPages(stdout);
-  const incidences = [...singleWordLines(pages), ...consecutivePunctuationPairs(pages, porcentajeCorta)];
+  const incidences = [
+    ...singleWordLines(pages),
+    ...consecutivePunctuationPairs(pages, porcentajeCorta),
+    ...repeatedLetterPairs(pages, 'first'),
+    ...repeatedLetterPairs(pages, 'last'),
+  ];
   if (primeraPagina === 1) return incidences;
   // pdftotext con -f devuelve sólo las páginas pedidas y las numera desde 1, así que hay que
   // volver a la numeración real del PDF. Se reporta la página del PDF y no el folio impreso,

@@ -64,6 +64,10 @@ function formatea(incidencia: TypographyIncidence): string {
   if (incidencia.type === 'consecutive-punctuation') {
     return `  pág ${incidencia.page}  líneas ${incidencia.previousLine}-${incidencia.line}  ${incidencia.type}\n         ${incidencia.previousLine}  ${incidencia.previousText.trimEnd()}\n         ${incidencia.line}  ${texto}`;
   }
+  if (incidencia.type === 'repeated-first-letter' || incidencia.type === 'repeated-last-letter') {
+    const donde = incidencia.type === 'repeated-first-letter' ? 'empiezan' : 'terminan';
+    return `  pág ${incidencia.page}  líneas ${incidencia.previousLine}-${incidencia.line}  ${incidencia.type}\n         ${incidencia.previousLine}  ${incidencia.previousText.trimEnd()}\n         ${incidencia.line}  ${texto}\n         las dos ${donde} por ${JSON.stringify(incidencia.letter).replace(/"/g, "'")}`;
+  }
   return `  pág ${incidencia.page}  línea ${incidencia.line}  ${incidencia.type}  ${texto}`;
 }
 
