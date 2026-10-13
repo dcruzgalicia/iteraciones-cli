@@ -71,6 +71,9 @@ Característica: el analizador tipográfico de los PDF
         texto de la pagina tres con palabras
         3
         \f
+        texto de la pagina cuatro con palabras
+        4
+        \f
         """
       Cuando escaneo el texto de pdftotext sin el filtro de línea corta
       Entonces las incidencias son:
@@ -112,6 +115,32 @@ Característica: el analizador tipográfico de los PDF
         single-word-line ;; pág 2 ;; línea 2 ;; 19
         """
 
+    Escenario: Una página en blanco no tumbaba el resto de los folios
+      Dado que pdftotext devuelve:
+        """
+        texto de la pagina uno con palabras
+        1
+        \f
+        texto de la pagina dos con palabras
+        2
+        \f
+        texto de la pagina tres con palabras
+        3
+        \f
+        texto de la pagina cuatro con palabras
+        4
+        \f
+        \f
+        texto de la pagina seis con palabras
+        6
+        \f
+        texto de la pagina siete con palabras
+        7
+        \f
+        """
+      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Entonces no hay incidencias
+
     Escenario: Una línea de una palabra en el medio de la página sigue siendo incidencia
       Dado que pdftotext devuelve:
         """
@@ -122,6 +151,9 @@ Característica: el analizador tipográfico de los PDF
         \f
         3
         texto de la otra pagina con palabras
+        \f
+        4
+        texto de la tercera pagina con palabras
         \f
         """
       Cuando escaneo el texto de pdftotext sin el filtro de línea corta

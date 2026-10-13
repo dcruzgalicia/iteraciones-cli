@@ -80,25 +80,36 @@ function foliosDe(lineas: string[]): Folio[] {
 }
 
 /**
- * Descarta los folios, pero sólo si el documento se los está numerando: hace falta que salgan en
- * al menos dos páginas y que el número vaya subiendo de uno en uno. Sin esa corroboración, un
- * título como «1984» al principio de una página se quedaría sin reportar, y eso sí es un hallazgo.
+ * Descarta los folios, pero sólo si el documento se los está numerando. La señal es el desfase:
+ * el folio tiene que estar a la misma distancia de la página del PDF en todas las páginas, y gana
+ * el desfase que se repita más.
+ *
+ * Se probó exigir que el número suba de uno en uno y no sirve: en un libro real hay páginas en
+ * blanco, y en blanco no hay folio, así que la secuencia salta de 13 a 15 y un solo hueco tumbaba
+ * las 88 páginas. El desfase constante aguanta los huecos.
+ *
+ * También es lo que protege de callar un título como «1984»: en la página 3 el desfase sería 1981
+ * y no encaja con el del resto, así que se sigue reportando.
  */
+const MIN_FOLIOS_CONFIRMADOS = 2;
+
 function foliosConfirmados(pages: string[][]): Set<string> {
-  const candidatos = pages.flatMap((lineas, indice) => {
-    const hallados = foliosDe(lineas);
-    // Una página con dos números en los bordes tiene folio doble: raro, y no hay forma de
-    // saber cuál de los dos es el bueno, así que esa página no cuenta como candidata.
-    if (hallados.length !== 1) return [];
-    return [{ pagina: indice + 1, folio: hallados[0] as Folio }];
-  });
-  if (candidatos.length < 2) return new Set();
-  for (const [indice, candidato] of candidatos.entries()) {
-    if (indice === 0) continue;
-    const anterior = (candidatos[indice - 1] as { folio: Folio }).folio.valor;
-    if ((candidato.folio.valor as number) !== anterior + 1) return new Set();
+  const porDesfase = new Map<number, string[]>();
+  for (const [indicePagina, lineas] of pages.entries()) {
+    for (const folio of foliosDe(lineas)) {
+      const desfase = folio.valor - (indicePagina + 1);
+      const clave = `${indicePagina + 1}:${folio.line}`;
+      const lista = porDesfase.get(desfase);
+      if (lista === undefined) porDesfase.set(desfase, [clave]);
+      else lista.push(clave);
+    }
   }
-  return new Set(candidatos.map((c) => `${c.pagina}:${(c.folio as Folio).line}`));
+  let mejor: string[] = [];
+  for (const lista of porDesfase.values()) {
+    if (lista.length > mejor.length) mejor = lista;
+  }
+  if (mejor.length < MIN_FOLIOS_CONFIRMADOS) return new Set();
+  return new Set(mejor);
 }
 
 export function singleWordLines(pages: string[][]): SingleWordLine[] {
