@@ -323,6 +323,7 @@ Ejemplos:
       'porcentaje del ancho medio del documento por debajo del cual una línea se considera corta (por defecto: 100)',
     )
     .option('--json', 'imprime el resultado como JSON en stdout (consumo programático)')
+    .option('--rules <lista>', 'sólo esas reglas, separadas por coma (por defecto: todas)')
     .addHelpText(
       'after',
       `
@@ -345,6 +346,8 @@ Ejemplos:
   iteraciones typography dist/files/libro.pdf --pages 3 desde la 3 hasta el final
   iteraciones typography --pages 3-80                   sólo esas páginas
   iteraciones typography --min-line-width 75            corta la línea corta al 75% del ancho
+  iteraciones typography --rules single-word-line            sólo las líneas de una sola palabra
+  iteraciones typography --rules repeated-first-letter,repeated-last-letter   sólo las letras
   iteraciones typography --json                         imprime el resultado como JSON
 
 El informe da siempre la página del PDF, no el folio impreso, que puede venir en romanos o

@@ -3,7 +3,7 @@ import { DIST_FILES_DIR } from '../builder/output-layout.js';
 import { BuildError } from '../lib/errors.js';
 import { fail, logError, logInfo, logSuccess } from '../lib/logger.js';
 import { resolvePath } from '../lib/paths.js';
-import { analyzePdf, type TypographyIncidence } from '../lib/pdf-typography.js';
+import { analyzePdf, TODAS_LAS_REGLAS, type TypographyIncidence } from '../lib/pdf-typography.js';
 import { plural } from '../lib/plural.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import { listPdfFiles } from '../lib/visual-diff.js';
@@ -13,6 +13,7 @@ export interface TypographyOptions {
   json?: boolean;
   pages?: string;
   minLineWidth?: string;
+  rules?: string;
 }
 
 /** Rango de páginas del PDF, 1 como en el PDF y ambos extremos incluidos. */
@@ -45,6 +46,25 @@ export function interpretaPaginas(spec: string): RangoPaginas {
   return { desde, hasta };
 }
 
+/**
+ * Interpreta --rules: una o varias separadas por coma. Sin la opción entran todas, que es lo que
+ * se quiere por defecto; con ella el informe sale corto a propósito.
+ */
+export function interpretaReglas(spec: string): string[] {
+  const pedidas = spec
+    .split(',')
+    .map((r) => r.trim())
+    .filter(Boolean);
+  if (pedidas.length === 0) {
+    throw new BuildError(`--rules "${spec}" no trae ninguna regla: escoge entre ${TODAS_LAS_REGLAS.join(', ')}`);
+  }
+  const desconocidas = pedidas.filter((regla) => !TODAS_LAS_REGLAS.includes(regla as never));
+  if (desconocidas.length > 0) {
+    throw new BuildError(`no existe la regla ${desconocidas.map((r) => `"${r}"`).join(', ')}. Las que hay son: ${TODAS_LAS_REGLAS.join(', ')}`);
+  }
+  return pedidas;
+}
+
 /** Porcentaje del ancho medio por debajo del cual una línea se considera corta. */
 export function interpretaPorcentaje(valor: string, opcion: string): number {
   const numero = Number(valor);
@@ -75,6 +95,7 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
   try {
     const rango = options.pages === undefined ? {} : interpretaPaginas(options.pages);
     const porcentajeCorta = options.minLineWidth === undefined ? 100 : interpretaPorcentaje(options.minLineWidth, '--min-line-width');
+    const reglas = options.rules === undefined ? TODAS_LAS_REGLAS : interpretaReglas(options.rules);
     const outputDir = resolvePath(cwd, options.output ?? DIST_FILES_DIR);
     const targets = args.length > 0 ? args.map((path) => resolvePath(cwd, path)) : await listPdfFiles(outputDir);
     if (targets.length === 0) throw new BuildError(`no hay PDFs en ${etiqueta(cwd, outputDir)}`);
@@ -82,7 +103,7 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
     const desde = rango.desde ?? 1;
     const files = await mapWithConcurrency(targets, 4, async (pdf) => ({
       pdf,
-      incidences: await analyzePdf(pdf, desde, rango.hasta, porcentajeCorta),
+      incidences: await analyzePdf(pdf, desde, rango.hasta, porcentajeCorta, reglas),
     }));
     const total = files.reduce((sum, file) => sum + file.incidences.length, 0);
 

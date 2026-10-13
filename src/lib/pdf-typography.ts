@@ -305,14 +305,23 @@ export function consecutivePunctuationPairs(pages: string[][], porcentajeCorta =
   return pares;
 }
 
+/** Todas las reglas, para cuando no se pide ninguna en concreto. */
+export const TODAS_LAS_REGLAS: readonly TypographyRule[] = TYPOGRAPHY_RULES;
+
 /** Orden: primero las líneas de una sola palabra, luego los pares y las letras repetidas. */
-export function analyzeText(stdout: string, primeraPagina = 1, porcentajeCorta = 100): TypographyIncidence[] {
+export function analyzeText(
+  stdout: string,
+  primeraPagina = 1,
+  porcentajeCorta = 100,
+  reglas: readonly string[] = TODAS_LAS_REGLAS,
+): TypographyIncidence[] {
   const pages = splitPages(stdout);
+  const pedidas = new Set(reglas);
   const incidences = [
-    ...singleWordLines(pages),
-    ...consecutivePunctuationPairs(pages, porcentajeCorta),
-    ...repeatedLetterPairs(pages, 'first'),
-    ...repeatedLetterPairs(pages, 'last'),
+    ...(pedidas.has('single-word-line') ? singleWordLines(pages) : []),
+    ...(pedidas.has('consecutive-punctuation') ? consecutivePunctuationPairs(pages, porcentajeCorta) : []),
+    ...(pedidas.has('repeated-first-letter') ? repeatedLetterPairs(pages, 'first') : []),
+    ...(pedidas.has('repeated-last-letter') ? repeatedLetterPairs(pages, 'last') : []),
   ];
   if (primeraPagina === 1) return incidences;
   // pdftotext con -f devuelve sólo las páginas pedidas y las numera desde 1, así que hay que
@@ -322,7 +331,13 @@ export function analyzeText(stdout: string, primeraPagina = 1, porcentajeCorta =
   return incidences.map((incidencia) => ({ ...incidencia, page: incidencia.page + desplazamiento }));
 }
 
-export async function analyzePdf(pdfPath: string, desde = 1, hasta?: number, porcentajeCorta = 100): Promise<TypographyIncidence[]> {
+export async function analyzePdf(
+  pdfPath: string,
+  desde = 1,
+  hasta?: number,
+  porcentajeCorta = 100,
+  reglas: readonly string[] = TODAS_LAS_REGLAS,
+): Promise<TypographyIncidence[]> {
   const recorte = [...(desde === 1 ? [] : ['-f', String(desde)]), ...(hasta === undefined ? [] : ['-l', String(hasta)])];
   let result: RunResult;
   try {
@@ -337,5 +352,5 @@ export async function analyzePdf(pdfPath: string, desde = 1, hasta?: number, por
     const motivo = result.stderr.trim().split('\n').pop() ?? 'error desconocido';
     throw new BuildError(`pdftotext no pudo leer "${pdfPath}": ${motivo}`);
   }
-  return analyzeText(result.stdout, desde, porcentajeCorta);
+  return analyzeText(result.stdout, desde, porcentajeCorta, reglas);
 }
