@@ -30,6 +30,7 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | br-cero-no-salta-en-latex |
         | br-negativo-no-salta-en-latex |
         | br-no-numerico-no-salta-en-latex |
+        | indent-8-en-latex-sale-sangrado-sin-noindent |
         | br-1.5-se-trunca-a-uno-en-latex |
         | br-con-contenido-lo-conserva-en-latex |
         | div-shrink-aprieta-las-letras |
@@ -110,6 +111,7 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | br-no-numerico-no-salta-en-html |
         | br-1.5-se-trunca-a-uno-en-html |
         | br-con-contenido-lo-conserva-en-html |
+        | indent-8-sale-como-clase-en-html |
         | envuelve-div-dictum-en-blockquote-con-bloques-nativos |
         | envuelve-div-verse-en-div |
         | verse-solo-separte-la-linea-con-dos-espacios |
