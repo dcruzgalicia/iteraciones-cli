@@ -29,7 +29,6 @@ export interface TypographyOptions {
   fix?: boolean;
 }
 
-/** Rango de páginas del PDF, 1 como en el PDF y ambos extremos incluidos. */
 export interface RangoPaginas {
   desde?: number;
   hasta?: number;
@@ -37,11 +36,6 @@ export interface RangoPaginas {
 
 const RANGO_PAGINAS = /^(\d+)(?:\s*-\s*(\d+))?$/;
 
-/**
- * Interpreta --pages: 3 o 3-80, con las dos puntas dentro. Va como flag y no como argumento
- * suelto para no tener que adivinar si un número es una página o el nombre de un archivo,
- * que es justo la ambigüedad que este CLI no quiere.
- */
 export function interpretaPaginas(spec: string): RangoPaginas {
   const encontrado = RANGO_PAGINAS.exec(spec.trim());
   if (encontrado === null) {
@@ -59,10 +53,6 @@ export function interpretaPaginas(spec: string): RangoPaginas {
   return { desde, hasta };
 }
 
-/**
- * Interpreta --rules: una o varias separadas por coma. Sin la opción entran todas, que es lo que
- * se quiere por defecto; con ella el informe sale corto a propósito.
- */
 export function interpretaReglas(spec: string): string[] {
   const pedidas = spec
     .split(',')
@@ -86,7 +76,6 @@ export function interpretaEntero(valor: string, opcion: string, minimo: number):
   return numero;
 }
 
-/** Porcentaje del ancho medio por debajo del cual una línea se considera corta. */
 export function interpretaPorcentaje(valor: string, opcion: string): number {
   const numero = Number(valor);
   if (!Number.isInteger(numero) || numero < 0 || numero > 100) {

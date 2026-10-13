@@ -7,11 +7,6 @@ import { escribirEnProyecto, jsonSalida, world } from './cli-world.steps.ts';
 
 const RAIZ = join(import.meta.dir, '..', '..', '..');
 
-/**
- * Un docstring con líneas "\f" se convierte en la salida que arma pdftotext: cada página cierra
- * con su salto de línea, el \f va pegado a la línea que abre la siguiente, y hay un \f final que
- * cierra el documento. Armarla aquí (y no en el escenario) deja el fixture con la forma real.
- */
 function salidaPdftotext(texto: string): string {
   const paginas = texto.split(/\\f\n?/).map((pagina) => pagina.trimEnd());
   return `${paginas.map((pagina) => (pagina === '' ? '' : `${pagina}\n`)).join('\f')}\f`;
@@ -48,9 +43,6 @@ When('escaneo el texto de pdftotext', () => {
   world.incidencias = analyzeText(world.textoPdftotext).map(describe);
 });
 
-// Los escenarios que comprueban qué signos disparan la regla usan líneas de dos palabras,
-// donde el ancho de referencia es el de esas mismas líneas; sin apagar el filtro de ancho
-// se medirían contra sí mismas y no probarían nada.
 When('escaneo el texto de pdftotext sin el filtro de línea corta', () => {
   world.incidencias = analyzeText(world.textoPdftotext, { porcentajeCorta: 0, lineasMinimas: 2, letrasMinimas: 1 }).map(describe);
 });
@@ -79,7 +71,6 @@ When('escaneo el texto de pdftotext buscando {string}', (reglas: string) => {
 
 Given('el PDF {string} con estas páginas:', (nombre: string, texto: string) => {
   escribirEnProyecto(nombre, '');
-  // El PDF de las fixtures no lleva codificación de fuente: el texto va en ASCII.
   writeFileSync(join(world.root, nombre), pdfDePaginas(splitPages(salidaPdftotext(texto))));
 });
 

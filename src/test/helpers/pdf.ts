@@ -1,9 +1,5 @@
 const PDF_STRING_ESCAPE = /[()\\]/g;
 
-/**
- * Un PDF de las páginas dadas, una línea de texto por posición: pdftotext devuelve las líneas
- * en el mismo orden en que se dibujaron, así el fixture manda sobre la salida.
- */
 export function pdfDePaginas(paginas: string[][]): Uint8Array {
   const total = paginas.length;
   const objetos: string[] = [
