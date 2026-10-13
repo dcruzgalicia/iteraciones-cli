@@ -1,0 +1,8 @@
+{
+  "name": "br-3-salta-tres-br-en-html",
+  "helper": "toHtml5",
+  "markdown": "texto\n\n::: {br=3}\n:::\n\ntexto\n",
+  "contains": ["<br/>\n<br/>\n<br/>"],
+  "notContains": [],
+  "normalizeNewlines": false
+}

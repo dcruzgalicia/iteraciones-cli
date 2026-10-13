@@ -164,23 +164,6 @@ Característica: build y validate dicen lo mismo
       Y el build termina con el código de salida 0
       Y validate termina con el código de salida 0
 
-    Escenario: Una ":" suelta en el cuerpo
-      Dado que la raíz del proyecto tiene un proyecto de prueba
-      Dado que el archivo "suelta.md" tiene este contenido
-      """
-      ---
-      title: Ok
-      ---
-
-      texto
-
-      :
-
-      texto
-      """
-      Entonces build y validate dicen 'línea 7 con ":" suelta'
-      Y build y validate dicen '"::" (espacio vertical) o ":;" (sin indentación)'
-
     Escenario: Un documento sin título
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Dado que el archivo "sin-titulo.md" tiene este contenido

@@ -1,0 +1,8 @@
+{
+  "name": "br-cero-no-salta-en-latex",
+  "helper": "toLatex",
+  "markdown": "texto\n\n::: {br=0}\n:::\n\ntexto\n",
+  "contains": [],
+  "notContains": ["\\vspace"],
+  "normalizeNewlines": false
+}

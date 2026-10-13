@@ -7,8 +7,6 @@ import {
   dictumWidthWarnings,
   dictumWidthWarningsInYaml,
   dictumWidthWarningsMessage,
-  looseColonLines,
-  looseColonsMessage,
   MISSING_TITLE_WARNING,
   validateFrontmatterFields,
 } from './project-validator.js';
@@ -102,10 +100,6 @@ function parseFrontmatter(relativePath: string, text: string, issues: Frontmatte
   }
 
   const lineOffset = text.slice(0, text.length - body.length).split('\n').length - 1;
-  const looseColons = looseColonLines(body, lineOffset);
-  if (looseColons.length > 0) {
-    logWarning(`${relativePath}: ${looseColonsMessage(looseColons)}`, 'discover');
-  }
   warnDictumWidth(relativePath, body, yaml, lineOffset);
 
   const title = normalized?.title ?? '';
