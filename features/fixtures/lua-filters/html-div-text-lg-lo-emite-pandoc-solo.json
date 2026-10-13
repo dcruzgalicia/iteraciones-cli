@@ -1,0 +1,9 @@
+{
+  "name": "html-div-text-lg-lo-emite-pandoc-solo",
+  "helper": "toHtml5",
+  "markdown": "::: {.text-lg}\nTitular grande\n:::\n",
+  "contains": ["<div class=\"text-lg\">"],
+  "notContains": [],
+  "normalizeNewlines": false,
+  "extraSemantic": false
+}

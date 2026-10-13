@@ -41,6 +41,12 @@ Característica: El CSS se compila sólo con lo que aparece en el HTML
       Entonces el CSS da a ".text-nowrap" la propiedad "text-wrap:nowrap"
       Y el CSS da a ".hyphens-none" la propiedad "hyphens:none"
 
+    Escenario: Los tamaños de letra ya escalan en el sitio (#2655)
+      Dado un proyecto cuyo HTML trae "<p>texto <span class=\"text-sm\">chico</span> aqui</p><div class=\"text-4xl\">Grito</div>"
+      Cuando compilo el CSS con acento "lime"
+      Entonces el CSS da a ".text-sm" la propiedad "font-size:var(--text-sm)"
+      Y el CSS da a ".text-4xl" la propiedad "font-size:var(--text-4xl)"
+
   Escenario: Sólo entran las clases que el HTML usa
     Dado un proyecto con un HTML de clases "text-stone-500"
     Cuando compilo el CSS con acento "lime"

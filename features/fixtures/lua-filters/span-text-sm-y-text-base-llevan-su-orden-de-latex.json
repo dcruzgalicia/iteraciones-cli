@@ -1,0 +1,9 @@
+{
+  "name": "span-text-sm-y-text-base-llevan-su-orden-de-latex",
+  "helper": "toLatex",
+  "markdown": "texto [chico]{.text-sm} y [normal]{.text-base} aqui\n",
+  "contains": ["{\\small chico}", "{\\normalsize normal}"],
+  "notContains": [],
+  "normalizeNewlines": false,
+  "filters": ["08-textsize"]
+}

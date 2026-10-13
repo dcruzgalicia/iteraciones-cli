@@ -1,0 +1,9 @@
+{
+  "name": "titleback-text-xs-cambia-el-tamano-igual-que-en-el-cuerpo",
+  "helper": "toLatexTitleback",
+  "markdown": "---\ntitle: Prueba\nlowertitleback: |\n  ::: {.text-xs}\n  contraportada\n  :::\n---\n\nCuerpo.\n",
+  "contains": ["{\\footnotesize contraportada}"],
+  "notContains": [],
+  "needsBib": false,
+  "normalizeNewlines": false
+}

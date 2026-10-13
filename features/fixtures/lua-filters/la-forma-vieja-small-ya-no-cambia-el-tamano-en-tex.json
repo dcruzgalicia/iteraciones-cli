@@ -1,0 +1,9 @@
+{
+  "name": "la-forma-vieja-small-ya-no-cambia-el-tamano-en-tex",
+  "helper": "toLatex",
+  "markdown": "::: {.small}\nTitular\n:::\n\n::: {.Huge}\nGrito\n:::\n\ntexto [chico]{.footnotesize} aqui\n",
+  "contains": ["Titular", "Grito"],
+  "notContains": ["\\small", "\\Huge", "\\footnotesize"],
+  "normalizeNewlines": false,
+  "filters": ["08-textsize"]
+}
