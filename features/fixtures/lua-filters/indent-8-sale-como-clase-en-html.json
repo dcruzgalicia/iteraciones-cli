@@ -1,0 +1,8 @@
+{
+  "name": "indent-8-sale-como-clase-en-html",
+  "helper": "toHtml5",
+  "markdown": "::: {.indent-8}\ndos\n:::\n",
+  "contains": ["class=\"indent-8\""],
+  "notContains": [],
+  "normalizeNewlines": false
+}
