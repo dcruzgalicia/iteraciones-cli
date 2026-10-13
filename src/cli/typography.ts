@@ -3,7 +3,7 @@ import { DIST_FILES_DIR } from '../builder/output-layout.js';
 import { BuildError } from '../lib/errors.js';
 import { fail, logError, logInfo, logSuccess } from '../lib/logger.js';
 import { resolvePath } from '../lib/paths.js';
-import { analyzePdf, TODAS_LAS_REGLAS, type TypographyIncidence } from '../lib/pdf-typography.js';
+import { analyzePdf, type OpcionesAnalisis, TODAS_LAS_REGLAS, type TypographyIncidence } from '../lib/pdf-typography.js';
 import { plural } from '../lib/plural.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import { listPdfFiles } from '../lib/visual-diff.js';
@@ -14,6 +14,8 @@ export interface TypographyOptions {
   pages?: string;
   minLineWidth?: string;
   rules?: string;
+  minLines?: string;
+  minLetters?: string;
 }
 
 /** Rango de páginas del PDF, 1 como en el PDF y ambos extremos incluidos. */
@@ -65,6 +67,15 @@ export function interpretaReglas(spec: string): string[] {
   return pedidas;
 }
 
+/** Entero del 1 en adelante, para --min-lines y --min-letters. */
+export function interpretaEntero(valor: string, opcion: string, minimo: number): number {
+  const numero = Number(valor);
+  if (!Number.isInteger(numero) || numero < minimo) {
+    throw new BuildError(`${opcion} "${valor}" no es un entero de ${minimo} en adelante`);
+  }
+  return numero;
+}
+
 /** Porcentaje del ancho medio por debajo del cual una línea se considera corta. */
 export function interpretaPorcentaje(valor: string, opcion: string): number {
   const numero = Number(valor);
@@ -81,29 +92,47 @@ function etiqueta(cwd: string, path: string): string {
 
 function formatea(incidencia: TypographyIncidence): string {
   const texto = incidencia.text.trimEnd();
-  if (incidencia.type === 'consecutive-punctuation') {
-    return `  pág ${incidencia.page}  líneas ${incidencia.previousLine}-${incidencia.line}  ${incidencia.type}\n         ${incidencia.previousLine}  ${incidencia.previousText.trimEnd()}\n         ${incidencia.line}  ${texto}`;
+  if (incidencia.type === 'single-word-line') {
+    return `  pág ${incidencia.page}  línea ${incidencia.line}  ${incidencia.type}  ${texto}`;
   }
+  const lineas = incidencia.lineas;
+  const numeros = lineas.map((l) => l.line);
+  const rango =
+    numeros.length < 2
+      ? `línea ${numeros[0]}`
+      : `líneas ${numeros[0]}-${numeros.at(-1)}${incidencia.total > lineas.length ? ` de ${incidencia.total}` : ''}`;
+  const cuerpo = lineas.map((l) => `         ${l.line}  ${l.text.trimEnd()}`).join('\n');
   if (incidencia.type === 'repeated-first-letter' || incidencia.type === 'repeated-last-letter') {
     const donde = incidencia.type === 'repeated-first-letter' ? 'empiezan' : 'terminan';
-    return `  pág ${incidencia.page}  líneas ${incidencia.previousLine}-${incidencia.line}  ${incidencia.type}\n         ${incidencia.previousLine}  ${incidencia.previousText.trimEnd()}\n         ${incidencia.line}  ${texto}\n         las dos ${donde} por ${JSON.stringify(incidencia.letter).replace(/"/g, "'")}`;
+    const letras = JSON.stringify(incidencia.letter).replace(/"/g, "'");
+    return `  pág ${incidencia.page}  ${rango}  ${incidencia.type}\n${cuerpo}\n         las ${numeros.length} ${donde} por ${letras}`;
   }
-  return `  pág ${incidencia.page}  línea ${incidencia.line}  ${incidencia.type}  ${texto}`;
+  return `  pág ${incidencia.page}  ${rango}  ${incidencia.type}\n${cuerpo}`;
+}
+
+/** Los flags del comando traducidos a las opciones del analizador, con sus valores por defecto. */
+function opcionesDeAnalisis(options: TypographyOptions): OpcionesAnalisis {
+  const rango = options.pages === undefined ? {} : interpretaPaginas(options.pages);
+  return {
+    primeraPagina: rango.desde ?? 1,
+    ultimaPagina: rango.hasta,
+    porcentajeCorta: options.minLineWidth === undefined ? 100 : interpretaPorcentaje(options.minLineWidth, '--min-line-width'),
+    reglas: options.rules === undefined ? TODAS_LAS_REGLAS : interpretaReglas(options.rules),
+    lineasMinimas: options.minLines === undefined ? 3 : interpretaEntero(options.minLines, '--min-lines', 2),
+    letrasMinimas: options.minLetters === undefined ? 2 : interpretaEntero(options.minLetters, '--min-letters', 1),
+  };
 }
 
 export async function runTypography(cwd: string, args: string[], options: TypographyOptions = {}): Promise<void> {
   try {
-    const rango = options.pages === undefined ? {} : interpretaPaginas(options.pages);
-    const porcentajeCorta = options.minLineWidth === undefined ? 100 : interpretaPorcentaje(options.minLineWidth, '--min-line-width');
-    const reglas = options.rules === undefined ? TODAS_LAS_REGLAS : interpretaReglas(options.rules);
+    const analisis = opcionesDeAnalisis(options);
     const outputDir = resolvePath(cwd, options.output ?? DIST_FILES_DIR);
     const targets = args.length > 0 ? args.map((path) => resolvePath(cwd, path)) : await listPdfFiles(outputDir);
     if (targets.length === 0) throw new BuildError(`no hay PDFs en ${etiqueta(cwd, outputDir)}`);
 
-    const desde = rango.desde ?? 1;
     const files = await mapWithConcurrency(targets, 4, async (pdf) => ({
       pdf,
-      incidences: await analyzePdf(pdf, desde, rango.hasta, porcentajeCorta, reglas),
+      incidences: await analyzePdf(pdf, analisis),
     }));
     const total = files.reduce((sum, file) => sum + file.incidences.length, 0);
 

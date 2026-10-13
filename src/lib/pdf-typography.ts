@@ -17,15 +17,15 @@ export interface SingleWordLine extends Incidence {
 
 export interface ConsecutivePunctuation extends Incidence {
   type: 'consecutive-punctuation';
-  previousLine: number;
-  previousText: string;
+  lineas: LineaCoincidencia[];
+  total: number;
 }
 
 export interface RepeatedLetter extends Incidence {
   type: 'repeated-first-letter' | 'repeated-last-letter';
   letter: string;
-  previousLine: number;
-  previousText: string;
+  lineas: LineaCoincidencia[];
+  total: number;
 }
 
 export type TypographyIncidence = SingleWordLine | ConsecutivePunctuation | RepeatedLetter;
@@ -194,27 +194,54 @@ export function anchoDeReferencia(pages: string[][]): number {
   return Math.max(promedio, mediana, moda ?? 0);
 }
 
-/** Un par de líneas consecutivas de la misma página. Todas las reglas de par salen de aquí. */
-export function paresConsecutivos(pages: string[][]): { page: number; line: number; text: string; previousLine: number; previousText: string }[] {
-  const pares: { page: number; line: number; text: string; previousLine: number; previousText: string }[] = [];
-  for (const [indicePagina, lineas] of pages.entries()) {
-    // Una línea sin caracteres no blancos nunca termina en puntuación ni tiene letra, así que el
-    // corte por línea vacía sale solo. Y como el recorrido es por página, el final de una nunca
-    // se compara con el principio de la siguiente.
-    for (let indice = 1; indice < lineas.length; indice++) {
-      const text = lineas[indice];
-      const previousText = lineas[indice - 1];
-      if (text === undefined || previousText === undefined) continue;
-      pares.push({
-        page: indicePagina + 1,
-        line: indice + 1,
-        text,
-        previousLine: indice,
-        previousText,
-      });
+export interface LineaCoincidencia {
+  line: number;
+  text: string;
+}
+
+/**
+ * Una coincidencia: varias líneas seguidas de la misma página que comparten una característica.
+ * `lineas` lleva las primeras de la tirada y `total` cuántas había, por si la tirada es más larga
+ * que la ventana que se informa.
+ */
+export interface Coincidencia {
+  page: number;
+  lineas: LineaCoincidencia[];
+  total: number;
+}
+
+/**
+ * Las tiradas de `lineas` consecutivas que comparten clave, una por tirada. `clave` devuelve lo que
+ * la línea aporta a la comparación, y undefined si no participa: una línea sin puntuación terminal,
+ * sin letra en el borde, o más corta que el ancho mínimo, corta ahí la tirada.
+ *
+ * Contar una vez por tirada y no una por ventana es lo que evita que un problema de seis renglones
+ * salga cuatro veces solapado.
+ */
+export function tiradasCoincidentes(pages: string[][], lineas: number, clave: (linea: string) => string | undefined): Coincidencia[] {
+  const encontradas: Coincidencia[] = [];
+  for (const [indicePagina, lineasPagina] of pages.entries()) {
+    let inicio = 0;
+    while (inicio < lineasPagina.length) {
+      const actual = clave(lineasPagina[inicio] as string);
+      if (actual === undefined) {
+        inicio += 1;
+        continue;
+      }
+      let fin = inicio + 1;
+      while (fin < lineasPagina.length && clave(lineasPagina[fin] as string) === actual) fin += 1;
+      const largo = fin - inicio;
+      if (largo >= lineas) {
+        encontradas.push({
+          page: indicePagina + 1,
+          lineas: lineasPagina.slice(inicio, inicio + lineas).map((text, k) => ({ line: inicio + k + 1, text })),
+          total: largo,
+        });
+      }
+      inicio = fin;
     }
   }
-  return pares;
+  return encontradas;
 }
 
 /** Sin acentos y en minúscula: «Jardín» y «jardín» empiezan igual para quien lee. */
@@ -229,9 +256,9 @@ function sinAcentos(texto: string): string {
  * La letra con la que empieza la línea, o nada si no empieza por una letra. Es estricto: un
  * © o una comilla delante hacen que la línea no empiece por letra, porque así se lee.
  */
-function letraInicial(linea: string): string | undefined {
-  const primera = sinAcentos(linea).trimStart().at(0);
-  return primera !== undefined && /[a-z]/.test(primera) ? primera : undefined;
+function letraInicial(linea: string, cuantas: number): string | undefined {
+  const inicio = sinAcentos(linea).trimStart().slice(0, cuantas);
+  return inicio.length === cuantas && /^[a-z]+$/.test(inicio) ? inicio : undefined;
 }
 
 /**
@@ -240,90 +267,87 @@ function letraInicial(linea: string): string | undefined {
  * la cubre consecutive-punctuation. Sin esto, «…Rojas, / …Editores,» salía como letra repetida
  * siendo las dos terminan en puntuación.
  */
-function letraFinal(linea: string): string | undefined {
-  const ultima = sinAcentos(linea).trimEnd().at(-1);
-  return ultima !== undefined && /[a-z]/.test(ultima) ? ultima : undefined;
+function letraFinal(linea: string, cuantas: number): string | undefined {
+  const t = sinAcentos(linea).trimEnd();
+  const fin = t.slice(-cuantas);
+  return fin.length === cuantas && /^[a-z]+$/.test(fin) ? fin : undefined;
 }
 
 /**
- * Dos líneas consecutivas que empiezan o terminan con la misma letra. Salen al leer: «sobrevivido
- * en este sistema / sobrevivido en este mundo» se lee como una falta.
+ * Varias líneas seguidas que empiezan o terminan por los mismos caracteres. Salen al leer:
+ * «sobrevivido en este sistema / sobrevivido en este mundo» se lee como una falta.
  *
  * Ojo con el final en español: se midió en un libro real y el 89% de los casos son 'a', 's', 'o'
  * y 'e', que es donde termina cualquier palabra. Ahí el aviso aparece en cada pareja de renglones
  * y no significa nada; las que sí señalan algo son las raras ('r', 'n').
  */
-export function repeatedLetterPairs(pages: string[][], posicion: 'first' | 'last'): RepeatedLetter[] {
-  const de = posicion === 'first' ? letraInicial : letraFinal;
+export function repeatedLetterRuns(pages: string[][], posicion: 'first' | 'last', lineas: number, letras: number, anchoMinimo = 0): RepeatedLetter[] {
+  const de = (linea: string): string | undefined => (posicion === 'first' ? letraInicial(linea, letras) : letraFinal(linea, letras));
+  const conAncho = (linea: string): string | undefined => (linea.trimEnd().length >= anchoMinimo ? de(linea) : undefined);
   const tipo = posicion === 'first' ? 'repeated-first-letter' : 'repeated-last-letter';
   const hallados: RepeatedLetter[] = [];
-  for (const par of paresConsecutivos(pages)) {
-    const anterior = de(par.previousText);
-    const actual = de(par.text);
-    if (anterior === undefined || actual === undefined || anterior !== actual) continue;
+  for (const tirada of tiradasCoincidentes(pages, lineas, conAncho)) {
+    const primera = tirada.lineas[0] as LineaCoincidencia;
     hallados.push({
       type: tipo,
-      page: par.page,
-      line: par.line,
-      text: par.text,
-      letter: actual,
-      previousLine: par.previousLine,
-      previousText: par.previousText,
+      page: tirada.page,
+      line: primera.line,
+      text: primera.text,
+      letter: conAncho(primera.text) ?? '',
+      lineas: tirada.lineas,
+      total: tirada.total,
     });
   }
   return hallados;
 }
 
 /**
- * Una línea muy corta no se cuenta como par aunque termine en puntuación: el final de un
+ * Una línea muy corta no cuenta aunque termine en puntuación: el final de un
  * párrafo corto («a sí mismas.») pegado al principio del siguiente es composición normal, no un
  * problema. Se considera corta la que se queda por debajo del porcentaje dado del ancho.
  */
-export function consecutivePunctuationPairs(pages: string[][], porcentajeCorta = 100): ConsecutivePunctuation[] {
-  const pares: ConsecutivePunctuation[] = [];
-  const limite = (anchoDeReferencia(pages) * porcentajeCorta) / 100;
-  for (const [indicePagina, lineas] of pages.entries()) {
-    for (let indice = 1; indice < lineas.length; indice++) {
-      const text = lineas[indice];
-      const previousText = lineas[indice - 1];
-      if (text === undefined || previousText === undefined) continue;
-      // Una línea sin caracteres no blancos nunca termina en puntuación, así que el corte por
-      // línea vacía sale solo. Y como el recorrido es por página, el final de una nunca se
-      // compara con el principio de la siguiente.
-      if (!endsWithPunctuation(previousText) || !endsWithPunctuation(text)) continue;
-      if (text.trimEnd().length < limite || previousText.trimEnd().length < limite) continue;
-      pares.push({
-        type: 'consecutive-punctuation',
-        page: indicePagina + 1,
-        line: indice + 1,
-        text,
-        previousLine: indice,
-        previousText,
-      });
-    }
+export function consecutivePunctuationRuns(pages: string[][], lineas: number, anchoMinimo: number): ConsecutivePunctuation[] {
+  const clave = (linea: string): string | undefined => (linea.trimEnd().length >= anchoMinimo && endsWithPunctuation(linea) ? 'p' : undefined);
+  const hallados: ConsecutivePunctuation[] = [];
+  for (const tirada of tiradasCoincidentes(pages, lineas, clave)) {
+    const primera = tirada.lineas[0] as LineaCoincidencia;
+    hallados.push({
+      type: 'consecutive-punctuation',
+      page: tirada.page,
+      line: primera.line,
+      text: primera.text,
+      lineas: tirada.lineas,
+      total: tirada.total,
+    });
   }
-  return pares;
+  return hallados;
 }
 
 /** Todas las reglas, para cuando no se pide ninguna en concreto. */
 export const TODAS_LAS_REGLAS: readonly TypographyRule[] = TYPOGRAPHY_RULES;
 
-/** Orden: primero las líneas de una sola palabra, luego los pares y las letras repetidas. */
-export function analyzeText(
-  stdout: string,
-  primeraPagina = 1,
-  porcentajeCorta = 100,
-  reglas: readonly string[] = TODAS_LAS_REGLAS,
-): TypographyIncidence[] {
+/** Orden: primero las líneas de una sola palabra, luego la puntuación y las letras repetidas. */
+export interface OpcionesAnalisis {
+  primeraPagina?: number;
+  ultimaPagina?: number;
+  porcentajeCorta?: number;
+  reglas?: readonly string[];
+  lineasMinimas?: number;
+  letrasMinimas?: number;
+}
+
+export function analyzeText(stdout: string, opciones: OpcionesAnalisis = {}): TypographyIncidence[] {
+  const { primeraPagina = 1, porcentajeCorta = 100, lineasMinimas = 3, letrasMinimas = 2 } = opciones;
+  const pedidas = new Set(opciones.reglas ?? TODAS_LAS_REGLAS);
   const pages = splitPages(stdout);
-  const pedidas = new Set(reglas);
+  const ancho = (anchoDeReferencia(pages) * porcentajeCorta) / 100;
   const incidences = [
     ...(pedidas.has('single-word-line') ? singleWordLines(pages) : []),
-    ...(pedidas.has('consecutive-punctuation') ? consecutivePunctuationPairs(pages, porcentajeCorta) : []),
-    ...(pedidas.has('repeated-first-letter') ? repeatedLetterPairs(pages, 'first') : []),
-    ...(pedidas.has('repeated-last-letter') ? repeatedLetterPairs(pages, 'last') : []),
+    ...(pedidas.has('consecutive-punctuation') ? consecutivePunctuationRuns(pages, lineasMinimas, ancho) : []),
+    ...(pedidas.has('repeated-first-letter') ? repeatedLetterRuns(pages, 'first', lineasMinimas, letrasMinimas, ancho) : []),
+    ...(pedidas.has('repeated-last-letter') ? repeatedLetterRuns(pages, 'last', lineasMinimas, letrasMinimas, ancho) : []),
   ];
-  if (primeraPagina === 1) return incidences;
+
   // pdftotext con -f devuelve sólo las páginas pedidas y las numera desde 1, así que hay que
   // volver a la numeración real del PDF. Se reporta la página del PDF y no el folio impreso,
   // que puede venir en romanos o empezar en otro punto.
@@ -331,13 +355,9 @@ export function analyzeText(
   return incidences.map((incidencia) => ({ ...incidencia, page: incidencia.page + desplazamiento }));
 }
 
-export async function analyzePdf(
-  pdfPath: string,
-  desde = 1,
-  hasta?: number,
-  porcentajeCorta = 100,
-  reglas: readonly string[] = TODAS_LAS_REGLAS,
-): Promise<TypographyIncidence[]> {
+export async function analyzePdf(pdfPath: string, opciones: OpcionesAnalisis = {}): Promise<TypographyIncidence[]> {
+  const desde = opciones.primeraPagina ?? 1;
+  const hasta = opciones.ultimaPagina;
   const recorte = [...(desde === 1 ? [] : ['-f', String(desde)]), ...(hasta === undefined ? [] : ['-l', String(hasta)])];
   let result: RunResult;
   try {
@@ -352,5 +372,5 @@ export async function analyzePdf(
     const motivo = result.stderr.trim().split('\n').pop() ?? 'error desconocido';
     throw new BuildError(`pdftotext no pudo leer "${pdfPath}": ${motivo}`);
   }
-  return analyzeText(result.stdout, desde, porcentajeCorta, reglas);
+  return analyzeText(result.stdout, opciones);
 }
