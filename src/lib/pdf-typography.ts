@@ -192,7 +192,7 @@ export function anchoDeReferencia(pages: string[][]): number {
  * párrafo corto («a sí mismas.») pegado al principio del siguiente es composición normal, no un
  * problema. Se considera corta la que se queda por debajo del porcentaje dado del ancho.
  */
-export function consecutivePunctuationPairs(pages: string[][], porcentajeCorta = 75): ConsecutivePunctuation[] {
+export function consecutivePunctuationPairs(pages: string[][], porcentajeCorta = 100): ConsecutivePunctuation[] {
   const pares: ConsecutivePunctuation[] = [];
   const limite = (anchoDeReferencia(pages) * porcentajeCorta) / 100;
   for (const [indicePagina, lineas] of pages.entries()) {
@@ -219,7 +219,7 @@ export function consecutivePunctuationPairs(pages: string[][], porcentajeCorta =
 }
 
 /** Orden: primero las líneas de una sola palabra, después los pares de puntuación. */
-export function analyzeText(stdout: string, primeraPagina = 1, porcentajeCorta = 75): TypographyIncidence[] {
+export function analyzeText(stdout: string, primeraPagina = 1, porcentajeCorta = 100): TypographyIncidence[] {
   const pages = splitPages(stdout);
   const incidences = [...singleWordLines(pages), ...consecutivePunctuationPairs(pages, porcentajeCorta)];
   if (primeraPagina === 1) return incidences;
@@ -230,7 +230,7 @@ export function analyzeText(stdout: string, primeraPagina = 1, porcentajeCorta =
   return incidences.map((incidencia) => ({ ...incidencia, page: incidencia.page + desplazamiento }));
 }
 
-export async function analyzePdf(pdfPath: string, desde = 1, hasta?: number, porcentajeCorta = 75): Promise<TypographyIncidence[]> {
+export async function analyzePdf(pdfPath: string, desde = 1, hasta?: number, porcentajeCorta = 100): Promise<TypographyIncidence[]> {
   const recorte = [...(desde === 1 ? [] : ['-f', String(desde)]), ...(hasta === undefined ? [] : ['-l', String(hasta)])];
   let result: RunResult;
   try {

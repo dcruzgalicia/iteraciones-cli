@@ -547,17 +547,17 @@ Característica: el analizador tipográfico de los PDF
     Escenario: Dos lineas largas seguidas que terminan en puntuacion si son hallazgo
       Dado que pdftotext devuelve:
         """
-        Esta linea es larga y no termina en puntuacion para(setear) la referencia
-        Esta linea es larga y no termina en puntuacion para(setear) la referencia
-        Esta linea es larga y no termina en puntuacion para(setear) la referencia
-        Esta linea es larga y termina en puntuacion para(setear) la referencia.
-        Esta linea es larga y termina en puntuacion para(setear) la referencia.
+        Esta es una linea de referencia del documento para(setear) la medida
+        Esta es una linea de referencia del documento para(setear) la medida
+        Esta es una linea de referencia del documento para(setear) la medida
+        Esta es una linea de referencia del documento para(setear) la medid.
+        Esta es una linea de referencia del documento para(setear) la medid.
         \f
         """
       Cuando escaneo el texto de pdftotext
       Entonces las incidencias son:
         """
-        consecutive-punctuation ;; pág 1 ;; líneas 4-5 ;; 4: Esta linea es larga y termina en puntuacion para(setear) la referencia. ;; 5: Esta linea es larga y termina en puntuacion para(setear) la referencia.
+        consecutive-punctuation ;; pág 1 ;; líneas 4-5 ;; 4: Esta es una linea de referencia del documento para(setear) la medid. ;; 5: Esta es una linea de referencia del documento para(setear) la medid.
         """
 
     Escenario: El maximo de media y mediana deja fuera lo que la media dejaria dentro
@@ -609,33 +609,65 @@ Característica: el analizador tipográfico de los PDF
         palabra pa
         palabra palabra pala
         palabra palabra palabra palabr
-        palabra palabra palabra palabra palabra palabra pa.
-        palabra palabra palabra palabra palabra palabra palabra pala.
+        palabra palabra palabra palabra palabra palabra palabra palabra palab.
+        palabra palabra palabra palabra palabra palabra palabra palabra palabra pa.
         palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra palabra
         \f
         """
       Cuando escaneo el texto de pdftotext
       Entonces las incidencias son:
         """
-        consecutive-punctuation ;; pág 1 ;; líneas 4-5 ;; 4: palabra palabra palabra palabra palabra palabra pa. ;; 5: palabra palabra palabra palabra palabra palabra palabra pala.
+        consecutive-punctuation ;; pág 1 ;; líneas 4-5 ;; 4: palabra palabra palabra palabra palabra palabra palabra palabra palab. ;; 5: palabra palabra palabra palabra palabra palabra palabra palabra palabra pa.
         """
 
   Regla de negocio: El umbral de línea corta se puede mover
 
-    Escenario: Con el umbral por defecto una línea de longitud media sí cuenta
+    Escenario: Por defecto sólo cuenta una línea que llega al ancho
       Dado que la raíz del proyecto está vacía
       Y el PDF "dist/files/libro.pdf" con estas páginas:
         """
-        Esta linea es larga y no termina en puntuacion para(setear) la referencia
-        Esta linea es larga y no termina en puntuacion para(setear) la referencia
-        Esta linea es larga y no termina en puntuacion para(setear) la referencia
-        Esta linea es de longitud media y termina en puntuacion.
-        Esta linea es de longitud media y termina en puntuacion.
+        Esta es una linea de referencia del documento para(setear) la medida
+        Esta es una linea de referencia del documento para(setear) la medida
+        Esta es una linea de referencia del documento para(setear) la medida
+        Esta es una linea de referencia del documento para(setear) la medid.
+        Esta es una linea de referencia del documento para(setear) la medid.
         \f
         """
       Cuando parseo el comando "typography dist/files/libro.pdf" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
       Y la salida dice "pág 1  líneas 4-5  consecutive-punctuation"
+
+    Escenario: Por defecto no sale una línea algo más corta que el ancho
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Esta es una linea de referencia del documento para(setear) la medida
+        Esta es una linea de referencia del documento para(setear) la medida
+        Esta es una linea de referencia del documento para(setear) la medida
+        Esta es una linea de referencia del documento para(setear) la medida
+        Esta linea es mas corta que la de arriba y se queda al.
+        Esta linea es mas corta que la de arriba y se queda al.
+        \f
+        """
+      Cuando parseo el comando "typography dist/files/libro.pdf" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y la salida dice "sin incidencias en 1 PDF"
+
+    Escenario: Bajando el umbral esa misma línea sí sale
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Esta es una linea de referencia del documento para(setear) la medida
+        Esta es una linea de referencia del documento para(setear) la medida
+        Esta es una linea de referencia del documento para(setear) la medida
+        Esta es una linea de referencia del documento para(setear) la medida
+        Esta linea es mas corta que la de arriba y se queda al.
+        Esta linea es mas corta que la de arriba y se queda al.
+        \f
+        """
+      Cuando parseo el comando "typography dist/files/libro.pdf --min-line-width 75" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y la salida dice "pág 1  líneas 5-6  consecutive-punctuation"
 
     Escenario: Con el umbral al 90 la misma línea se considera corta
       Dado que la raíz del proyecto está vacía

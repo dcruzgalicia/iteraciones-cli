@@ -320,7 +320,7 @@ Ejemplos:
     .option('--pages <rango>', 'sólo esas páginas del PDF: 3 o 3-80 (las dos puntas dentro)')
     .option(
       '--min-line-width <porcentaje>',
-      'porcentaje del ancho medio del documento por debajo del cual una línea se considera corta (por defecto: 75)',
+      'porcentaje del ancho medio del documento por debajo del cual una línea se considera corta (por defecto: 100)',
     )
     .option('--json', 'imprime el resultado como JSON en stdout (consumo programático)')
     .addHelpText(
