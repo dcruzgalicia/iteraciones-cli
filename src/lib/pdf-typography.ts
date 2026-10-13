@@ -30,19 +30,10 @@ export interface RepeatedLetter extends Incidence {
 
 export type TypographyIncidence = SingleWordLine | ConsecutivePunctuation | RepeatedLetter;
 
-/** pdftotext separa las páginas con un \f pegado al inicio de la primera línea de la siguiente. */
 const PAGE_BREAK = '\f';
 
-/**
- * Trocea la salida de pdftotext en páginas y líneas. El \f va pegado a la línea que abre la
- * página siguiente (no después de un \n), así que se parte por \f y no por \n; el \f final
- * deja un trozo vacío de más y una página en blanco deja un trozo vacío en medio.
- */
 export function splitPages(stdout: string): string[][] {
   const trozos = stdout.split(PAGE_BREAK);
-  // pdftotext cierra el documento con su propio \f, así que el último trozo es siempre
-  // el que queda vacío. Si no lo estuviera, significaría que la salida no viene de
-  // pdftotext y mejor no tirar una página entera sin avisar.
   const paginas = trozos.at(-1) === '' ? trozos.slice(0, -1) : trozos;
   return paginas.map((pagina) => {
     const lineas = pagina.split('\n');
@@ -51,12 +42,10 @@ export function splitPages(stdout: string): string[][] {
   });
 }
 
-/** Una palabra es una secuencia de caracteres no blancos; con -layout casi toda línea trae espacio al final. */
 function words(line: string): string[] {
   return line.trim().split(/\s+/).filter(Boolean);
 }
 
-/** Sólo dígitos: el folio que pone el CLI y el que pone casi cualquier clase es arábigo. */
 const SOLO_DIGITOS = /^\d+$/;
 
 interface Folio {
@@ -64,18 +53,12 @@ interface Folio {
   valor: number;
 }
 
-/** Los bordes con texto de una página: la primera y la última línea no vacía. */
 function bordes(lineas: string[]): number[] {
   const conTexto = lineas.flatMap((linea, indice) => (linea.trim() === '' ? [] : [indice]));
   if (conTexto.length === 0) return [];
   return conTexto[0] === conTexto.at(-1) ? [conTexto[0] as number] : [conTexto[0] as number, conTexto.at(-1) as number];
 }
 
-/**
- * Las líneas de una página que podrían ser un folio: un número solo, al principio o al final.
- * El folio va en el header o en el footer según la configuración, y pdftotext lo devuelve como
- * una línea más, así que sin esto cada página reporta un single-word-line que no es del texto.
- */
 function foliosDe(lineas: string[]): Folio[] {
   const hallados: Folio[] = [];
   for (const indice of bordes(lineas)) {
@@ -86,18 +69,6 @@ function foliosDe(lineas: string[]): Folio[] {
   return hallados;
 }
 
-/**
- * Descarta los folios, pero sólo si el documento se los está numerando. La señal es el desfase:
- * el folio tiene que estar a la misma distancia de la página del PDF en todas las páginas, y gana
- * el desfase que se repita más.
- *
- * Se probó exigir que el número suba de uno en uno y no sirve: en un libro real hay páginas en
- * blanco, y en blanco no hay folio, así que la secuencia salta de 13 a 15 y un solo hueco tumbaba
- * las 88 páginas. El desfase constante aguanta los huecos.
- *
- * También es lo que protege de callar un título como «1984»: en la página 3 el desfase sería 1981
- * y no encaja con el del resto, así que se sigue reportando.
- */
 const MIN_FOLIOS_CONFIRMADOS = 2;
 
 function foliosConfirmados(pages: string[][]): Set<string> {
@@ -139,15 +110,6 @@ function endsWithPunctuation(line: string): boolean {
   return last !== undefined && TERMINALS.has(last);
 }
 
-/**
- * La moda del ancho, es decir el valor que más se repite. En texto justificado es la medida:
- * casi todas las líneas de un párrafo llegan al borde, así que el ancho de columna es el más
- * común y las últimas líneas del párrafo son las raras.
- *
- * Sólo cuenta si algún ancho se repite. Si todos son distintos no hay moda de verdad, y
- * quedarse con el mayor sería medir la línea más larga del documento (una tabla, una URL sin
- * cortes) y reventar el umbral.
- */
 function modaDe(anchos: number[]): number | undefined {
   const cuenta = new Map<number, number>();
   for (const ancho of anchos) cuenta.set(ancho, (cuenta.get(ancho) ?? 0) + 1);
@@ -163,15 +125,6 @@ function modaDe(anchos: number[]): number | undefined {
   return masFrecuente;
 }
 
-/**
- * El ancho de referencia del texto: el mayor entre el promedio, la mediana y la moda. Se coge el
- * mayor porque lo que se quiere es la medida del documento, no una medida central: el promedio y
- * la mediana los bajan las líneas cortas que se quieren descartar, y con sólo la mediana se perdían
- * los pares de líneas largas. Con líneas de 28, 8 y 12 el promedio da 16.3 (umbral 8.17, y una
- * línea de 8 queda fuera: al revés de lo que se busca) y la mediana da 12 (umbral 6, y se conserva).
- *
- * pdftotext con -layout no rellena con espacios, así que el ancho es el de la línea tal cual.
- */
 export function anchoDeReferencia(pages: string[][]): number {
   const anchos: number[] = [];
   for (const pagina of pages) {
@@ -231,7 +184,6 @@ export function tiradasCoincidentes(pages: string[][], lineas: number, clave: (l
   return encontradas;
 }
 
-/** Sin acentos y en minúscula: «Jardín» y «jardín» empiezan igual para quien lee. */
 function sinAcentos(texto: string): string {
   return texto
     .normalize('NFD')
@@ -239,21 +191,11 @@ function sinAcentos(texto: string): string {
     .toLowerCase();
 }
 
-/**
- * La letra con la que empieza la línea, o nada si no empieza por una letra. Es estricto: un
- * © o una comilla delante hacen que la línea no empiece por letra, porque así se lee.
- */
 function letraInicial(linea: string, cuantas: number): string | undefined {
   const inicio = sinAcentos(linea).trimStart().slice(0, cuantas);
   return inicio.length === cuantas && /^[a-z]+$/.test(inicio) ? inicio : undefined;
 }
 
-/**
- * La letra con la que termina la línea, o nada si no termina por una letra. También estricto, y
- * por el mismo motivo: una línea que acaba en coma no termina en letra sino en puntuación, y ya
- * la cubre consecutive-punctuation. Sin esto, «…Rojas, / …Editores,» salía como letra repetida
- * siendo las dos terminan en puntuación.
- */
 function letraFinal(linea: string, cuantas: number): string | undefined {
   const t = sinAcentos(linea).trimEnd();
   const fin = t.slice(-cuantas);
@@ -297,7 +239,6 @@ export function consecutivePunctuationRuns(pages: string[][], lineas: number, an
   return hallados;
 }
 
-/** Todas las reglas, para cuando no se pide ninguna en concreto. */
 export const TODAS_LAS_REGLAS: readonly TypographyRule[] = TYPOGRAPHY_RULES;
 
 export interface OpcionesAnalisis {
@@ -321,9 +262,6 @@ export function analyzeText(stdout: string, opciones: OpcionesAnalisis = {}): Ty
     ...(pedidas.has('repeated-last-letter') ? repeatedLetterRuns(pages, 'last', lineasMinimas, letrasMinimas, ancho) : []),
   ];
 
-  // pdftotext con -f devuelve sólo las páginas pedidas y las numera desde 1, así que hay que
-  // volver a la numeración real del PDF. Se reporta la página del PDF y no el folio impreso,
-  // que puede venir en romanos o empezar en otro punto.
   const desplazamiento = primeraPagina - 1;
   return incidences.map((incidencia) => ({ ...incidencia, page: incidencia.page + desplazamiento }));
 }

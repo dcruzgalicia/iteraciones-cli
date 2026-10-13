@@ -47,7 +47,6 @@ export function visualSlug(pdfPath: string): string {
   return slug === '' ? 'documento' : slug;
 }
 
-/** El prefijo aplanado bajo el que viven las páginas de este PDF en snapshots/ y diff/. */
 export function snapshotStemFor(pdfPath: string, outputDir: string): string {
   const rel = relative(outputDir, pdfPath);
   const insideOutput = rel !== '' && !rel.startsWith('..') && !isAbsolute(rel);
@@ -106,7 +105,6 @@ export async function clearSnapshotImages(dir: string, stem?: string): Promise<v
   await Promise.all(files.filter((file) => pattern.test(basename(file))).map((file) => forceUnlink(file)));
 }
 
-/** Prefijo aplanado → sus páginas, ordenadas. Es la línea base completa de un documento. */
 export async function listSnapshotImages(dir: string): Promise<Map<string, string[]>> {
   const porStem = new Map<string, string[]>();
   for (const file of await globFiles(dir, '**/*--page-*.png')) {
