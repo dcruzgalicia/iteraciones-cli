@@ -199,25 +199,12 @@ export interface LineaCoincidencia {
   text: string;
 }
 
-/**
- * Una coincidencia: varias líneas seguidas de la misma página que comparten una característica.
- * `lineas` lleva las primeras de la tirada y `total` cuántas había, por si la tirada es más larga
- * que la ventana que se informa.
- */
 export interface Coincidencia {
   page: number;
   lineas: LineaCoincidencia[];
   total: number;
 }
 
-/**
- * Las tiradas de `lineas` consecutivas que comparten clave, una por tirada. `clave` devuelve lo que
- * la línea aporta a la comparación, y undefined si no participa: una línea sin puntuación terminal,
- * sin letra en el borde, o más corta que el ancho mínimo, corta ahí la tirada.
- *
- * Contar una vez por tirada y no una por ventana es lo que evita que un problema de seis renglones
- * salga cuatro veces solapado.
- */
 export function tiradasCoincidentes(pages: string[][], lineas: number, clave: (linea: string) => string | undefined): Coincidencia[] {
   const encontradas: Coincidencia[] = [];
   for (const [indicePagina, lineasPagina] of pages.entries()) {
@@ -273,14 +260,6 @@ function letraFinal(linea: string, cuantas: number): string | undefined {
   return fin.length === cuantas && /^[a-z]+$/.test(fin) ? fin : undefined;
 }
 
-/**
- * Varias líneas seguidas que empiezan o terminan por los mismos caracteres. Salen al leer:
- * «sobrevivido en este sistema / sobrevivido en este mundo» se lee como una falta.
- *
- * Ojo con el final en español: se midió en un libro real y el 89% de los casos son 'a', 's', 'o'
- * y 'e', que es donde termina cualquier palabra. Ahí el aviso aparece en cada pareja de renglones
- * y no significa nada; las que sí señalan algo son las raras ('r', 'n').
- */
 export function repeatedLetterRuns(pages: string[][], posicion: 'first' | 'last', lineas: number, letras: number, anchoMinimo = 0): RepeatedLetter[] {
   const de = (linea: string): string | undefined => (posicion === 'first' ? letraInicial(linea, letras) : letraFinal(linea, letras));
   const conAncho = (linea: string): string | undefined => (linea.trimEnd().length >= anchoMinimo ? de(linea) : undefined);
@@ -301,11 +280,6 @@ export function repeatedLetterRuns(pages: string[][], posicion: 'first' | 'last'
   return hallados;
 }
 
-/**
- * Una línea muy corta no cuenta aunque termine en puntuación: el final de un
- * párrafo corto («a sí mismas.») pegado al principio del siguiente es composición normal, no un
- * problema. Se considera corta la que se queda por debajo del porcentaje dado del ancho.
- */
 export function consecutivePunctuationRuns(pages: string[][], lineas: number, anchoMinimo: number): ConsecutivePunctuation[] {
   const clave = (linea: string): string | undefined => (linea.trimEnd().length >= anchoMinimo && endsWithPunctuation(linea) ? 'p' : undefined);
   const hallados: ConsecutivePunctuation[] = [];
@@ -326,7 +300,6 @@ export function consecutivePunctuationRuns(pages: string[][], lineas: number, an
 /** Todas las reglas, para cuando no se pide ninguna en concreto. */
 export const TODAS_LAS_REGLAS: readonly TypographyRule[] = TYPOGRAPHY_RULES;
 
-/** Orden: primero las líneas de una sola palabra, luego la puntuación y las letras repetidas. */
 export interface OpcionesAnalisis {
   primeraPagina?: number;
   ultimaPagina?: number;
