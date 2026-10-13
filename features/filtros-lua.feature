@@ -56,20 +56,9 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | convierte-en-vspace-noindent-al-parrafo-siguiente |
         | convierte-japanese-al-entorno-cjk-con-encoding-min |
         | decoracion-inline-versalitas-mayusculas-subrayado-resaltado- |
-        | detecta-el-punto-final-aunque-la-ultima-palabra-lleve-un-nbs |
         | dictum-con-autor-de-dos-parrafos-los-separa-con-espacio |
         | dictum-con-autor-enlazado-conserva-el-autor-antes-desapareci |
         | dictum-con-autor-entre-comillas-tipograficas-conserva-el-aut |
-        | mbox-cuenta-las-palabras-de-resaltado-mark-como-grupo |
-        | mbox-envuelve-fuera-del-span-uppercase-makeuppercase-no-pene |
-        | mbox-sentence-end-con-comillas-tipograficas-wrap-interno-den |
-        | mbox-sentence-end-con-enfasis-de-1-palabra-al-final-extiende |
-        | mbox-sentence-end-con-enfasis-de-2-palabras-al-final-el-mbox |
-        | mbox-sentence-end-con-enfasis-final-wrap-interno-dentro-del- |
-        | mbox-sentence-end-con-negritas-de-1-palabra-extiende-hacia-a |
-        | mbox-sentence-end-con-negritas-de-2-palabras-grupo-completo- |
-        | mbox-sentence-end-con-negritas-de-4-palabras-wrap-interno-de |
-        | mbox-sentence-end-solo-envuelve-las-ultimas-3-palabras-de-la |
         | mbox-words-nohyph-deja-la-puntuacion-fuera-del-mbox |
         | mbox-words-nohyph-dentro-del-enfis-al-que-se-apunta |
         | mbox-words-nohyph-envuelve-la-palabra-indicada |

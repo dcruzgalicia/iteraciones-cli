@@ -13,7 +13,6 @@ const LATEX_FILTERS = [
   '03-verse',
   '04-center',
   '05-flushright',
-  '06-mbox-sentence-end',
   '09-quote-noindent',
   '10-cjk',
   '07-titlepages',
