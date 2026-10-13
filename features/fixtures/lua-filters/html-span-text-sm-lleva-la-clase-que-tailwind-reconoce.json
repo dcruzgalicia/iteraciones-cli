@@ -1,0 +1,9 @@
+{
+  "name": "html-span-text-sm-lleva-la-clase-que-tailwind-reconoce",
+  "helper": "toHtml5",
+  "markdown": "texto [chico]{.text-sm} aqui\n",
+  "contains": ["<span class=\"text-sm\">chico</span>"],
+  "notContains": [],
+  "normalizeNewlines": false,
+  "extraSemantic": false
+}

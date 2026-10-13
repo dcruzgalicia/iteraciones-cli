@@ -83,6 +83,10 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | no-corta-la-oracion-en-abreviaturas-de-meses-ni-en-p-ej |
         | no-modifica-parrafos-de-menos-de-5-palabras |
         | texto-uppercase-makeuppercase-texto-latex |
+        | los-ocho-pasos-de-la-escala-salen-todos-en-tex |
+        | div-text-lg-cambia-el-tamano-en-tex |
+        | span-text-sm-y-text-base-llevan-su-orden-de-latex |
+        | la-forma-vieja-small-ya-no-cambia-el-tamano-en-tex |
 
   Regla de negocio: Filtros Lua de HTML
     Cada Div con clase se envuelve en su elemento; el `::` se convierte en un div de altura fija.
@@ -108,6 +112,9 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | html-la-forma-vieja-mbox-sale-clase-dead |
         | html-line-height-sale-como-dato-y-no-hace-nada |
         | html-la-forma-vieja-spacing-tampoco-hacia-nada |
+        | html-div-text-lg-lo-emite-pandoc-solo |
+        | html-span-text-sm-lleva-la-clase-que-tailwind-reconoce |
+        | html-la-forma-vieja-small-sale-clase-dead |
         | no-altera-parrafos-normales |
 
   Regla de negocio: El filtro internal/flags detecta el tipo del primer bloque
@@ -159,6 +166,7 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | sin-campos-de-titulo-internas-nada-cambia |
         | titleback-shrink-aprieta-las-letras |
         | titleback-stretch-separa-las-letras |
+        | titleback-text-xs-cambia-el-tamano-igual-que-en-el-cuerpo |
         | titleback-la-forma-antigua-ya-no-transforma |
         | titleback-line-height-multiplica-el-interlineado |
         | titleback-line-height-la-forma-vieja-ya-no-transforma |

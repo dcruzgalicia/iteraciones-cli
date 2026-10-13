@@ -132,9 +132,14 @@ local function uppercase_span_to_rawlatex(span)
 end
 
 local TEXTSIZE_CLASSES = {
-  tiny = true, scriptsize = true, footnotesize = true, small = true,
-  normalsize = true, large = true, Large = true, LARGE = true,
-  huge = true, Huge = true,
+  ['text-xs'] = 'footnotesize',
+  ['text-sm'] = 'small',
+  ['text-base'] = 'normalsize',
+  ['text-lg'] = 'large',
+  ['text-xl'] = 'Large',
+  ['text-2xl'] = 'LARGE',
+  ['text-4xl'] = 'huge',
+  ['text-6xl'] = 'Huge',
 }
 
 local function textls_value(el)
@@ -153,18 +158,18 @@ local function textls_value(el)
   return nil
 end
 
-local function textsize_class(el)
+local function textsize_cmd(el)
   for _, c in ipairs(el.classes) do
-    if TEXTSIZE_CLASSES[c] then return c end
+    if TEXTSIZE_CLASSES[c] then return TEXTSIZE_CLASSES[c] end
   end
   return nil
 end
 
 local function textsize_span_to_rawlatex(span)
-  local cls = textsize_class(span)
+  local cmd = textsize_cmd(span)
   local body = pandoc.write(pandoc.Pandoc({ pandoc.Para(span.content) }), 'latex')
   body = body:gsub('%s+$', '')
-  return pandoc.RawInline('latex', '{\\' .. cls .. ' ' .. body .. '}')
+  return pandoc.RawInline('latex', '{\\' .. cmd .. ' ' .. body .. '}')
 end
 
 local function walk_inlines(inls)
@@ -174,7 +179,7 @@ local function walk_inlines(inls)
       table.insert(out, mbox_span_to_rawlatex(el))
     elseif el.t == 'Span' and el.classes:find('uppercase', 1, true) then
       table.insert(out, uppercase_span_to_rawlatex(el))
-    elseif el.t == 'Span' and textsize_class(el) then
+    elseif el.t == 'Span' and textsize_cmd(el) then
       table.insert(out, textsize_span_to_rawlatex(el))
     else
       table.insert(out, el)
@@ -202,12 +207,12 @@ local function preprocess_div_content(blocks)
     if b.content and (b.t == 'Para' or b.t == 'Plain') then
       local cloned = pandoc[b.t](walk_inlines(b.content))
       table.insert(out, cloned)
-    elseif b.t == 'Div' and b.classes and textsize_class(b) then
-      local cls = textsize_class(b)
+    elseif b.t == 'Div' and b.classes and textsize_cmd(b) then
+      local cmd = textsize_cmd(b)
       local inner = preprocess_div_content(b.content)
       local body = pandoc.write(pandoc.Pandoc(inner), 'latex')
       body = body:gsub('%s+$', '')
-      table.insert(out, pandoc.RawBlock('latex', '{\\' .. cls .. ' ' .. body .. '}'))
+      table.insert(out, pandoc.RawBlock('latex', '{\\' .. cmd .. ' ' .. body .. '}'))
     elseif b.t == 'Div' and textls_value(b) then
       local inner = preprocess_div_content(b.content)
       local body = pandoc.write(pandoc.Pandoc(inner), 'latex')
@@ -226,11 +231,11 @@ local function preprocess_div_content(blocks)
 end
 
 local function textsize_div_to_rawlatex(div)
-  local cls = textsize_class(div)
+  local cmd = textsize_cmd(div)
   local preprocessed = preprocess_div_content(div.content)
   local body = pandoc.write(pandoc.Pandoc(preprocessed), 'latex')
   body = body:gsub('%s+$', '')
-  return pandoc.RawBlock('latex', '{\\' .. cls .. ' ' .. body .. '}')
+  return pandoc.RawBlock('latex', '{\\' .. cmd .. ' ' .. body .. '}')
 end
 
 local function serialize_titleback(blocks)
@@ -278,7 +283,7 @@ local function serialize_titleback(blocks)
       end
       cmd = cmd .. '{' .. text_latex .. '}{' .. (width or '') .. '}'
       table.insert(out, pandoc.RawBlock('latex', cmd))
-    elseif b.t == 'Div' and b.classes and textsize_class(b) then
+    elseif b.t == 'Div' and b.classes and textsize_cmd(b) then
       table.insert(out, textsize_div_to_rawlatex(b))
     elseif b.t == 'Div' and textls_value(b) then
       local preprocessed = preprocess_div_content(b.content)
