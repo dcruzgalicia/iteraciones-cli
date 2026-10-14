@@ -1,9 +1,17 @@
+import { readFileSync } from 'node:fs';
 import { isAbsolute, relative } from 'node:path';
 import { DIST_FILES_DIR } from '../builder/output-layout.js';
 import { BuildError } from '../lib/errors.js';
 import { fail, logError, logInfo, logSuccess } from '../lib/logger.js';
 import { resolvePath } from '../lib/paths.js';
-import { analyzePdf, type OpcionesAnalisis, TODAS_LAS_REGLAS, type TypographyIncidence } from '../lib/pdf-typography.js';
+import {
+  analyzePdf,
+  filtraExcepciones,
+  type OpcionesAnalisis,
+  parseaExcepciones,
+  TODAS_LAS_REGLAS,
+  type TypographyIncidence,
+} from '../lib/pdf-typography.js';
 import { plural } from '../lib/plural.js';
 import { mapWithConcurrency } from '../lib/run.js';
 import { listPdfFiles } from '../lib/visual-diff.js';
@@ -16,6 +24,7 @@ export interface TypographyOptions {
   rules?: string;
   minLines?: string;
   minLetters?: string;
+  exceptions?: string;
 }
 
 /** Rango de páginas del PDF, 1 como en el PDF y ambos extremos incluidos. */
@@ -121,6 +130,21 @@ function opcionesDeAnalisis(options: TypographyOptions): OpcionesAnalisis {
   };
 }
 
+function cargarExcepciones(cwd: string, options: TypographyOptions): ReturnType<typeof parseaExcepciones> {
+  const ruta = resolvePath(cwd, options.exceptions ?? '.typography-exceptions');
+  let contenido: string | undefined;
+  try {
+    contenido = readFileSync(ruta, 'utf8');
+  } catch (err) {
+    const codigo = (err as NodeJS.ErrnoException).code;
+    if (codigo !== 'ENOENT') throw err;
+    if (options.exceptions !== undefined) {
+      throw new BuildError(`no existe el archivo de excepciones ${etiqueta(cwd, ruta)}`);
+    }
+  }
+  return contenido === undefined ? [] : parseaExcepciones(contenido);
+}
+
 export async function runTypography(cwd: string, args: string[], options: TypographyOptions = {}): Promise<void> {
   try {
     const analisis = opcionesDeAnalisis(options);
@@ -128,9 +152,11 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
     const targets = args.length > 0 ? args.map((path) => resolvePath(cwd, path)) : await listPdfFiles(outputDir);
     if (targets.length === 0) throw new BuildError(`no hay PDFs en ${etiqueta(cwd, outputDir)}`);
 
+    const excepciones = cargarExcepciones(cwd, options);
+
     const files = await mapWithConcurrency(targets, 4, async (pdf) => ({
       pdf,
-      incidences: await analyzePdf(pdf, analisis),
+      incidences: filtraExcepciones(await analyzePdf(pdf, analisis), etiqueta(cwd, pdf), excepciones),
     }));
     const total = files.reduce((sum, file) => sum + file.incidences.length, 0);
 

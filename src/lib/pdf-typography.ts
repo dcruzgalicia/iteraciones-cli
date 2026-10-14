@@ -300,6 +300,129 @@ export function consecutivePunctuationRuns(pages: string[][], lineas: number, an
 /** Todas las reglas, para cuando no se pide ninguna en concreto. */
 export const TODAS_LAS_REGLAS: readonly TypographyRule[] = TYPOGRAPHY_RULES;
 
+export interface ExcepcionTipografia {
+  file: string;
+  page: number;
+  type: string;
+  startLine: number;
+  endLine: number;
+  total: number;
+  lines: Array<{ line: number; text: string }>;
+}
+
+/**
+ * Lee un archivo de excepciones en texto plano. Un bloque empieza con una línea sin indentar
+ * (la ruta del PDF) y sigue con las líneas indentadas del caso tal como lo imprime el informe.
+ * Los bloques se separan por una línea en blanco.
+ */
+export function parseaExcepciones(texto: string): ExcepcionTipografia[] {
+  const bloques: Array<{ file: string; lines: string[] }> = [];
+  let archivo = '';
+  let lineas: string[] = [];
+
+  const vaciar = (): void => {
+    if (lineas.length === 0) return;
+    bloques.push({ file: archivo, lines: lineas });
+    lineas = [];
+  };
+
+  for (const linea of texto.split('\n')) {
+    if (linea.trim() === '') {
+      vaciar();
+      continue;
+    }
+    if (/^\S/.test(linea)) {
+      vaciar();
+      archivo = linea.trim();
+      continue;
+    }
+    lineas.push(linea);
+  }
+  vaciar();
+
+  const excepciones: ExcepcionTipografia[] = [];
+  for (const bloque of bloques) {
+    const excepcion = parseaBloqueExcepcion(bloque.file, bloque.lines);
+    if (excepcion) excepciones.push(excepcion);
+  }
+  return excepciones;
+}
+
+function parseaBloqueExcepcion(archivo: string, lines: string[]): ExcepcionTipografia | undefined {
+  if (!archivo || lines.length === 0) return undefined;
+  const unica = parseaExcepcionUnica(lines[0] ?? '', archivo);
+  if (unica) return unica;
+  return parseaExcepcionDeBloque(lines, archivo);
+}
+
+function parseaExcepcionUnica(linea: string, archivo: string): ExcepcionTipografia | undefined {
+  const m = /^\s*pág\s+(\d+)\s+línea\s+(\d+)\s{2,}(\S+)\s{2,}(.*)$/.exec(linea);
+  if (!m) return undefined;
+  const page = Number(m[1] ?? 0);
+  const line = Number(m[2] ?? 0);
+  return {
+    file: archivo,
+    page,
+    type: m[3] ?? '',
+    startLine: line,
+    endLine: line,
+    total: 1,
+    lines: [{ line, text: (m[4] ?? '').trimEnd() }],
+  };
+}
+
+function parseaExcepcionDeBloque(lines: string[], archivo: string): ExcepcionTipografia | undefined {
+  const m = /^\s*pág\s+(\d+)\s+líneas\s+(\d+)-(\d+)(?:\s+de\s+(\d+))?\s{2,}(\S+)\s*$/.exec(lines[0] ?? '');
+  if (!m) return undefined;
+  const incidenceLines: Array<{ line: number; text: string }> = [];
+  for (const linea of lines.slice(1)) {
+    const item = /^\s*(\d+) {2}(.*)$/.exec(linea);
+    if (!item) return undefined;
+    incidenceLines.push({ line: Number(item[1] ?? 0), text: (item[2] ?? '').trimEnd() });
+  }
+  if (incidenceLines.length === 0) return undefined;
+  const total = m[4] === undefined ? incidenceLines.length : Number(m[4]);
+  const startLine = Number(m[2] ?? 0);
+  const endLine = Number(m[3] ?? 0);
+  return {
+    file: archivo,
+    page: Number(m[1] ?? 0),
+    type: m[5] ?? '',
+    startLine,
+    endLine,
+    total,
+    lines: incidenceLines,
+  };
+}
+
+/** Quita de una lista de incidencias las que coincidan exactamente con una excepción. */
+export function filtraExcepciones<T extends TypographyIncidence>(
+  incidencias: readonly T[],
+  archivo: string,
+  excepciones: readonly ExcepcionTipografia[],
+): T[] {
+  return incidencias.filter((incidencia) => !excepcionCoincide(archivo, incidencia, excepciones));
+}
+
+function excepcionCoincide(archivo: string, incidencia: TypographyIncidence, excepciones: readonly ExcepcionTipografia[]): boolean {
+  return excepciones.some((excepcion) => {
+    if (excepcion.file !== archivo || excepcion.type !== incidencia.type || excepcion.page !== incidencia.page) {
+      return false;
+    }
+    if (incidencia.type === 'single-word-line') {
+      return excepcion.lines.length === 1 && excepcion.lines[0]?.line === incidencia.line && excepcion.lines[0]?.text === incidencia.text.trimEnd();
+    }
+    return (
+      excepcion.startLine === incidencia.line &&
+      excepcion.total === incidencia.total &&
+      excepcion.lines.length === incidencia.lineas.length &&
+      excepcion.lines.every(
+        (linea, index) => linea.line === incidencia.lineas[index]?.line && linea.text === (incidencia.lineas[index]?.text ?? '').trimEnd(),
+      )
+    );
+  });
+}
+
 export interface OpcionesAnalisis {
   primeraPagina?: number;
   ultimaPagina?: number;
