@@ -56,4 +56,15 @@ dist/files/b.pdf
     const filtradas = filtraExcepciones(incidencias, 'dist/files/a.pdf', excepciones);
     expect(filtradas).toHaveLength(1);
   });
+  test('acepta la cabecera tal como la imprime el informe', () => {
+    const texto = `dist/files/a.pdf · 2 incidencias
+  pág 2  líneas 4-6  consecutive-punctuation
+         4  una
+         5  dos
+         6  tres
+`;
+    const excepciones = parseaExcepciones(texto);
+    expect(excepciones).toHaveLength(1);
+    expect(excepciones[0]?.file).toBe('dist/files/a.pdf');
+  });
 });
