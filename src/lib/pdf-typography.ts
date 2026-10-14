@@ -341,6 +341,9 @@ export function parseaExcepciones(texto: string): ExcepcionTipografia[] {
       archivo = normalizaCabeceraArchivo(linea.trim());
       continue;
     }
+    if (/^\s*pág\s+\d+\s+(línea|líneas)\b/.test(linea)) {
+      vaciar();
+    }
     lineas.push(linea);
   }
   vaciar();
