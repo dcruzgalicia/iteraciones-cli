@@ -315,6 +315,11 @@ export interface ExcepcionTipografia {
  * (la ruta del PDF) y sigue con las líneas indentadas del caso tal como lo imprime el informe.
  * Los bloques se separan por una línea en blanco.
  */
+function normalizaCabeceraArchivo(titulo: string): string {
+  const m = /^(.*?)\s+·\s+\d+\s+incidencias?\s*$/i.exec(titulo.trim());
+  return (m?.[1] ?? titulo).trim();
+}
+
 export function parseaExcepciones(texto: string): ExcepcionTipografia[] {
   const bloques: Array<{ file: string; lines: string[] }> = [];
   let archivo = '';
@@ -333,7 +338,7 @@ export function parseaExcepciones(texto: string): ExcepcionTipografia[] {
     }
     if (/^\S/.test(linea)) {
       vaciar();
-      archivo = linea.trim();
+      archivo = normalizaCabeceraArchivo(linea.trim());
       continue;
     }
     lineas.push(linea);
