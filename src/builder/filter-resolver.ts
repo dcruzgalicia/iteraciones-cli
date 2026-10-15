@@ -76,6 +76,12 @@ export async function resolveLuaFilters(disabledList?: string[], cwd?: string): 
       result.resolvedNames.add(full);
     }
   }
+
+  const stripPath = join(LUA_FILTERS_ROOT, 'internal', 'strip-typographic.lua');
+  if (!excluded.has('semantic/internal/strip-typographic')) {
+    result.semantic.push(stripPath);
+    result.resolvedNames.add('semantic/internal/strip-typographic');
+  }
   return result;
 }
 
