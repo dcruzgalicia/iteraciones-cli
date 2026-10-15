@@ -299,6 +299,7 @@ function estaEnFrontmatter(content: string, pos: number): boolean {
   return pos < m[0].length;
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: algoritmo de hidridacion
 function objetivosParaIncidencia(inc: TypographyIncidence): string[] {
   if (inc.type === 'single-word-line') return [inc.text.trim() as string];
   const lineas = inc.lineas;
@@ -306,9 +307,16 @@ function objetivosParaIncidencia(inc: TypographyIncidence): string[] {
   const objetivos: string[] = [];
   for (let i = 0; i < lineas.length - 1; i++) {
     const a = (lineas[i] as { text: string }).text.trimEnd();
-    const anterior = a.match(/(\S+)$/)?.[1] ?? a.trim();
-    const siguiente = ((lineas[i + 1] as { text: string }).text.trim().match(/^\S+/) || [''])[0];
-    if (anterior.length >= 3 && siguiente.length >= 1) objetivos.push(`${anterior} ${siguiente}`);
+    const antRaw = (a.match(/(\S+)$/) || ['', a.trim()])[1] as string;
+    const sigRaw = ((lineas[i + 1] as { text: string }).text.trim().match(/^\S+/) || [''])[0] as string;
+    const nextTokens = (lineas[i + 1] as { text: string }).text.trim().split(/\s+/u).filter(Boolean);
+    let token = antRaw;
+    let siguiente = sigRaw;
+    if (antRaw.endsWith('-') && sigRaw.length > 0 && nextTokens.length > 0) {
+      token = antRaw.slice(0, -1) + nextTokens[0];
+      siguiente = nextTokens.length > 1 ? (nextTokens[1] as string) : (nextTokens[0] as string);
+    }
+    if (token.length >= 3 && siguiente.length >= 1) objetivos.push(`${token} ${siguiente}`);
   }
   const ultima = ((lineas[lineas.length - 1] as { text: string })?.text ?? '').trim();
   if (ultima.length >= 8) objetivos.push(ultima);
@@ -478,37 +486,7 @@ async function arreglaTypografia(
       let candidatos = [...contenido.keys()];
       const frasesUtiles = resuelveCandidatoFuentes(candidatos, contenidoNormalizado, frases);
       if (frasesUtiles.length === 0) {
-        // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: fallback global de candidatos
-        const global = await (async () => {
-          const found: string[] = [];
-          const norm = new Map<string, string>();
-          const raw = new Map<string, string>();
-          const gg = new Bun.Glob('**/*.md');
-          for await (const rel of gg.scan({ cwd, onlyFiles: true })) {
-            const parts = rel.split('/');
-            if (parts.some((p) => p === 'node_modules' || p === '.iteraciones' || p === 'dist' || p.startsWith('.'))) continue;
-            const abs = join(cwd, rel);
-            if (contenido.has(abs)) continue;
-            try {
-              const txt = await Bun.file(abs).text();
-              const normalized = normalizaParaBusqueda(txt);
-              raw.set(abs, txt);
-              norm.set(abs, normalized);
-              if (norm.get(abs)?.includes(frases[0] ?? '')) found.push(abs);
-            } catch {
-              // ignorar
-            }
-          }
-          for (const [k, v] of raw) {
-            if (!contenido.has(k)) {
-              contenido.set(k, v);
-              contenidoNormalizado.set(k, norm.get(k) ?? '');
-            }
-          }
-          return found;
-        })();
         candidatos = resuelveCandidatoFuentes([...contenido.keys()], contenidoNormalizado, frases);
-        if (candidatos.length === 0) candidatos = global.slice(0, 1);
       } else {
         candidatos = frasesUtiles;
       }
