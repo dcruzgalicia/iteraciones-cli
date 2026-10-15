@@ -305,6 +305,14 @@ function objetivosParaIncidencia(inc: TypographyIncidence): string[] {
   const lineas = inc.lineas;
   if (lineas.length < 2) return [(lineas[lineas.length - 1] ? (lineas[lineas.length - 1] as { text: string }).text : '').trim()];
   const objetivos: string[] = [];
+  const objetivoRegex = /(\S+[.,;:!?…»’”])\s+(\S+)/gu;
+  for (const linea of lineas) {
+    for (const m of [...(linea.text || '').matchAll(objetivoRegex)]) {
+      const anterior = m[1];
+      const siguiente = m[2];
+      if (anterior && siguiente) objetivos.push(`${anterior} ${siguiente}`);
+    }
+  }
   for (let i = 0; i < lineas.length - 1; i++) {
     const a = (lineas[i] as { text: string }).text.trimEnd();
     const antRaw = (a.match(/(\S+)$/) || ['', a.trim()])[1] as string;
