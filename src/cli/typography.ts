@@ -147,6 +147,7 @@ function cargarExcepciones(cwd: string, options: TypographyOptions): ReturnType<
   return contenido === undefined ? [] : parseaExcepciones(contenido);
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: flujo de informe y --fix
 export async function runTypography(cwd: string, args: string[], options: TypographyOptions = {}): Promise<void> {
   try {
     const analisis = opcionesDeAnalisis(options);
@@ -155,8 +156,26 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
     if (targets.length === 0) throw new BuildError(`no hay PDFs en ${etiqueta(cwd, outputDir)}`);
 
     if (options.fix) {
-      const { corregidos, sinAplicar } = await arreglaTypografia(cwd, targets, analisis);
-      logInfo(`${corregidos} hallazgos corregidos, ${sinAplicar} sin aplicar`, 'typography');
+      const { sinAplicar, porPdf } = await arreglaTypografia(cwd, targets, analisis);
+      const total = [...porPdf.values()].reduce((suma, item) => suma + item.incidences.length, 0);
+      if (total === 0) {
+        logSuccess(`sin incidencias en ${plural(targets.length, 'PDF')}`, 'typography');
+        return;
+      }
+      const lineas: string[] = [];
+      for (const pdf of targets) {
+        const resultado = porPdf.get(pdf);
+        if (!resultado || resultado.incidences.length === 0) continue;
+        lineas.push(`${etiqueta(cwd, pdf)} · ${plural(resultado.incidences.length, 'incidencia')}`);
+        lineas.push(
+          ...resultado.incidences.map((incidencia) => {
+            const partes = formatea(incidencia).split('\n');
+            if (resultado.fixed.has(incidencia)) partes[0] = `${partes[0]}  corregido`;
+            return partes.join('\n');
+          }),
+        );
+      }
+      logInfo(lineas.join('\n'), 'typography');
       if (sinAplicar > 0) process.exitCode = 1;
       return;
     }
@@ -377,20 +396,27 @@ function resuelveCandidatoFuentes(rutas: string[], contenidoNormalizado: Map<str
   return candidatos;
 }
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: heurística de fix por incidencia
-async function arreglaTypografia(cwd: string, targets: string[], analisis: OpcionesAnalisis): Promise<{ corregidos: number; sinAplicar: number }> {
+async function arreglaTypografia(
+  cwd: string,
+  targets: string[],
+  analisis: OpcionesAnalisis,
+): Promise<{ corregidos: number; sinAplicar: number; porPdf: Map<string, { incidences: TypographyIncidence[]; fixed: Set<TypographyIncidence> }> }> {
   await aseguraGitLimpio(cwd);
 
   let corregidos = 0;
   let sinAplicar = 0;
+  const porPdf = new Map<string, { incidences: TypographyIncidence[]; fixed: Set<TypographyIncidence> }>();
 
   for (const pdf of targets) {
     const incidences = await analyzePdf(pdf, analisis);
     if (incidences.length === 0) continue;
 
+    porPdf.set(pdf, { incidences, fixed: new Set() });
+    const saltados: TypographyIncidence[] = [];
     const fuentes = await candidatosDeFuente(cwd, pdf);
     if (fuentes.length === 0) {
+      saltados.push(...incidences);
       sinAplicar += incidences.length;
-      logInfo(`${etiqueta(cwd, pdf)}: no se encontró markdown fuente`, 'typography');
       continue;
     }
 
@@ -405,8 +431,6 @@ async function arreglaTypografia(cwd: string, targets: string[], analisis: Opcio
         // se ignora una fuente ilegible
       }
     }
-
-    const saltados: TypographyIncidence[] = [];
 
     for (const inc of incidences) {
       const objetivo = textoObjetivo(inc);
@@ -457,7 +481,6 @@ async function arreglaTypografia(cwd: string, targets: string[], analisis: Opcio
       if (candidatos.length !== 1) {
         saltados.push(inc);
         sinAplicar++;
-        logInfo(formatea(inc), 'typography');
         continue;
       }
 
@@ -482,22 +505,12 @@ async function arreglaTypografia(cwd: string, targets: string[], analisis: Opcio
       if (nuevo === undefined || nuevo === actual) {
         saltados.push(inc);
         sinAplicar++;
-        logInfo(formatea(inc), 'typography');
         continue;
       }
 
       contenido.set(ruta, nuevo);
       corregidos++;
-      logInfo(`corregido: ${relative(cwd, ruta)} ← "${objetivo.slice(0, 40)}${objetivo.length > 40 ? '…' : ''}"`, 'typography');
-    }
-
-    if (saltados.length > 0) {
-      if (corregidos === 0 && saltados.length === incidences.length) {
-        const lineas = [`${etiqueta(cwd, pdf)} · ${plural(saltados.length, 'incidencia')}`, ...saltados.map(formatea)];
-        logInfo(lineas.join('\n'), 'typography');
-      } else {
-        for (const inc of saltados) logInfo(formatea(inc), 'typography');
-      }
+      porPdf.get(pdf)?.fixed.add(inc);
     }
 
     for (const [ruta, texto] of contenido) {
@@ -507,5 +520,5 @@ async function arreglaTypografia(cwd: string, targets: string[], analisis: Opcio
     }
   }
 
-  return { corregidos, sinAplicar };
+  return { corregidos, sinAplicar, porPdf };
 }
