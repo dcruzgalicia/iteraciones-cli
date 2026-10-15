@@ -375,20 +375,32 @@ function parseaExcepcionUnica(linea: string, archivo: string): ExcepcionTipograf
     startLine: line,
     endLine: line,
     total: 1,
-    lines: [{ line, text: (m[4] ?? '').trimEnd() }],
+    lines: [{ line, text: (m[4] ?? '').trim() }],
   };
+}
+
+function esResumenDeInforme(linea: string): boolean {
+  return /^\s*las\s+\d+/.test(linea);
+}
+
+function parseaLineasDeExcepcion(lineas: string[]): Array<{ line: number; text: string }> | undefined {
+  const resultado: Array<{ line: number; text: string }> = [];
+  for (const linea of lineas) {
+    const item = /^\s*(\d+) {2}(.*)$/.exec(linea);
+    if (!item) {
+      if (esResumenDeInforme(linea)) continue;
+      return undefined;
+    }
+    resultado.push({ line: Number(item[1] ?? 0), text: (item[2] ?? '').trimEnd() });
+  }
+  return resultado;
 }
 
 function parseaExcepcionDeBloque(lines: string[], archivo: string): ExcepcionTipografia | undefined {
   const m = /^\s*pág\s+(\d+)\s+líneas\s+(\d+)-(\d+)(?:\s+de\s+(\d+))?\s{2,}(\S+)\s*$/.exec(lines[0] ?? '');
   if (!m) return undefined;
-  const incidenceLines: Array<{ line: number; text: string }> = [];
-  for (const linea of lines.slice(1)) {
-    const item = /^\s*(\d+) {2}(.*)$/.exec(linea);
-    if (!item) return undefined;
-    incidenceLines.push({ line: Number(item[1] ?? 0), text: (item[2] ?? '').trimEnd() });
-  }
-  if (incidenceLines.length === 0) return undefined;
+  const incidenceLines = parseaLineasDeExcepcion(lines.slice(1));
+  if (incidenceLines === undefined || incidenceLines.length === 0) return undefined;
   const total = m[4] === undefined ? incidenceLines.length : Number(m[4]);
   const startLine = Number(m[2] ?? 0);
   const endLine = Number(m[3] ?? 0);
@@ -418,7 +430,7 @@ function excepcionCoincide(archivo: string, incidencia: TypographyIncidence, exc
       return false;
     }
     if (incidencia.type === 'single-word-line') {
-      return excepcion.lines.length === 1 && excepcion.lines[0]?.line === incidencia.line && excepcion.lines[0]?.text === incidencia.text.trimEnd();
+      return excepcion.lines.length === 1 && excepcion.lines[0]?.line === incidencia.line && excepcion.lines[0]?.text === incidencia.text.trim();
     }
     return (
       excepcion.startLine === incidencia.line &&
