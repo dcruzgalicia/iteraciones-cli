@@ -5,5 +5,5 @@
   "contains": ["\\mbox{María José Álvarez}"],
   "notContains": [],
   "normalizeNewlines": false,
-  "filters": ["12-mbox"]
+  "filters": ["12-text-nowrap"]
 }

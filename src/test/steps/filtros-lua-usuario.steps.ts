@@ -34,7 +34,7 @@ const PKG_LATEX_FILTERS = [
   '03-verse',
   '04-center',
   '05-flushright',
-  '06-mbox-sentence-end',
+  '06-sentence-end',
   '09-quote-noindent',
   '10-cjk',
   '07-titlepages',
@@ -71,8 +71,8 @@ Given('un proyecto con un filtro de usuario que convierte la clase nota', () => 
 
 Given('un proyecto con una copia del filtro de mbox como override', async () => {
   await mkdir(join(world.dir, 'filters', 'latex'), { recursive: true });
-  const pkg06 = await Bun.file(join(RESOURCES, 'latex', '06-mbox-sentence-end.lua')).text();
-  world.mboxOverride = join(world.dir, 'filters', 'latex', '06-mbox-sentence-end.lua');
+  const pkg06 = await Bun.file(join(RESOURCES, 'latex', '06-sentence-end.lua')).text();
+  world.mboxOverride = join(world.dir, 'filters', 'latex', '06-sentence-end.lua');
   await writeFile(world.mboxOverride, pkg06);
 });
 
@@ -82,7 +82,7 @@ Given('el filtro declarado en la configuración del proyecto', async () => {
 });
 
 When('convierto el documento con el override y los helpers del paquete por env', async () => {
-  const sinEl06 = PKG_LATEX_FILTERS.filter((f) => !f.endsWith('06-mbox-sentence-end.lua'));
+  const sinEl06 = PKG_LATEX_FILTERS.filter((f) => !f.endsWith('06-sentence-end.lua'));
   const filters = [...SEMANTIC_FILTERS, world.mboxOverride, ...sinEl06];
   world.latex = await execPandoc({
     input: 'Primera oración de ejemplo. Segunda oración aquí.',

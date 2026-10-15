@@ -46,11 +46,12 @@ function builtinNamesForGroup(dir: string): string[] {
         file.replace(/\.lua$/, ''),
       );
       if (groupDir === 'latex') {
-        // textls envuelve el bloque en RawBlock: si va antes que mbox-words, se lleva por delante
-        // los Div internos con runt= y estos dejan de aplicarse.
+        // shrink/stretch envuelven el bloque en RawBlock: si van antes que runt, se llevan por delante
+        // los Div internos con runt= y este deja de aplicarse.
+        const textls = new Set(['14-shrink', '15-stretch']);
         names.sort((a, b) => {
-          if (a === '15-mbox-words' && b === '14-textls') return -1;
-          if (a === '14-textls' && b === '15-mbox-words') return 1;
+          if (a === '16-runt' && textls.has(b)) return -1;
+          if (textls.has(a) && b === '16-runt') return 1;
           return a.localeCompare(b);
         });
       } else {

@@ -5,5 +5,5 @@
   "contains": ["\\textls[20]{raro}"],
   "notContains": ["--20"],
   "normalizeNewlines": false,
-  "filters": ["14-textls"]
+  "filters": ["14-shrink"]
 }

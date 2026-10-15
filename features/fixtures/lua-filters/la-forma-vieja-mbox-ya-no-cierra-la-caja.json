@@ -5,5 +5,5 @@
   "contains": ["Ana Ruiz"],
   "notContains": ["\\mbox"],
   "normalizeNewlines": false,
-  "filters": ["12-mbox"]
+  "filters": ["12-text-nowrap"]
 }
