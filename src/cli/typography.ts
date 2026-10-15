@@ -293,16 +293,25 @@ function indicesDe(haystack: string, aguja: string): number[] {
   return idxs;
 }
 
-function textoObjetivo(incidencia: TypographyIncidence): string {
-  if (incidencia.type === 'single-word-line') return incidencia.text.trim();
-  const ultima = incidencia.lineas.length > 0 ? incidencia.lineas[incidencia.lineas.length - 1] : undefined;
-  return (ultima?.text ?? '').trim();
-}
-
 function estaEnFrontmatter(content: string, pos: number): boolean {
   const m = /^---[ \t]*\r?\n[\s\S]*?\r?\n---[ \t]*\r?\n?/.exec(content);
   if (!m) return false;
   return pos < m[0].length;
+}
+
+function objetivosParaIncidencia(inc: TypographyIncidence): string[] {
+  if (inc.type === 'single-word-line') return [inc.text.trim() as string];
+  const lineas = inc.lineas;
+  if (lineas.length < 2) return [(lineas[lineas.length - 1] ? (lineas[lineas.length - 1] as { text: string }).text : '').trim()];
+  const objetivos: string[] = [];
+  for (let i = 0; i < lineas.length - 1; i++) {
+    const anterior = (lineas[i] as { text: string }).text.trimEnd();
+    const siguiente = ((lineas[i + 1] as { text: string }).text.trim().match(/^\S+/) || [''])[0];
+    if (anterior.length >= 8 && siguiente.length >= 1) objetivos.push(`${anterior} ${siguiente}`);
+  }
+  const ultima = ((lineas[lineas.length - 1] as { text: string })?.text ?? '').trim();
+  if (ultima.length >= 8) objetivos.push(ultima);
+  return (objetivos.length > 0 ? objetivos : [ultima]).filter(Boolean);
 }
 
 function profundidadFenced(content: string, pos: number): number {
@@ -456,10 +465,12 @@ async function arreglaTypografia(
     }
 
     for (const inc of incidences) {
-      const objetivo = textoObjetivo(inc);
+      const objetivos = objetivosParaIncidencia(inc);
+      const objetivo = objetivos[0] ?? '';
       if (!objetivo) {
         saltados.push(inc);
         sinAplicar++;
+        noEncontradas++;
         continue;
       }
       const frases = cadenasDeBusqueda(inc);
@@ -515,16 +526,28 @@ async function arreglaTypografia(
         sinAplicar++;
         continue;
       }
+      if (process.env.TYPO_DEBUG === '1') {
+        console.error(
+          `DEBUG page ${inc.page} ruta=${ruta} candidates=${candidatos.length} exact=${indicesDe(actual, objetivo).length} needle=${JSON.stringify(objetivo)}`,
+        );
+      }
 
       let nuevo: string | undefined;
       if (inc.type === 'single-word-line') {
-        nuevo = envuelveParrafoUnitario(actual, objetivo);
-      } else if (inc.type === 'consecutive-punctuation' || inc.type === 'repeated-last-letter') {
-        nuevo = remplazaEspacioPosterior(actual, objetivo);
-      } else if (inc.type === 'repeated-first-letter') {
-        nuevo = remplazaEspacioAnterior(actual, objetivo);
+        for (const cand of objetivos) {
+          nuevo = envuelveParrafoUnitario(actual, cand);
+          if (nuevo !== undefined && nuevo !== actual) break;
+        }
       } else {
         nuevo = undefined;
+        for (const cand of objetivos) {
+          if (inc.type === 'consecutive-punctuation' || inc.type === 'repeated-last-letter') {
+            nuevo = remplazaEspacioPosterior(actual, cand);
+          } else if (inc.type === 'repeated-first-letter') {
+            nuevo = remplazaEspacioAnterior(actual, cand);
+          }
+          if (nuevo !== undefined && nuevo !== actual) break;
+        }
       }
 
       if (nuevo === undefined || nuevo === actual) {
