@@ -42,9 +42,21 @@ function builtinNamesForGroup(dir: string): string[] {
   if (builtinNamesCache === null) {
     builtinNamesCache = {};
     for (const { dir: groupDir } of LUA_GROUPS) {
-      builtinNamesCache[groupDir] = [...new Bun.Glob('*.lua').scanSync({ cwd: join(LUA_FILTERS_ROOT, groupDir), onlyFiles: true })]
-        .sort()
-        .map((file) => file.replace(/\.lua$/, ''));
+      const names = [...new Bun.Glob('*.lua').scanSync({ cwd: join(LUA_FILTERS_ROOT, groupDir), onlyFiles: true })].map((file) =>
+        file.replace(/\.lua$/, ''),
+      );
+      if (groupDir === 'latex') {
+        // textls envuelve el bloque en RawBlock: si va antes que mbox-words, se lleva por delante
+        // los Div internos con runt=/nohyph= y estos dejan de aplicarse.
+        names.sort((a, b) => {
+          if (a === '15-mbox-words' && b === '14-textls') return -1;
+          if (a === '14-textls' && b === '15-mbox-words') return 1;
+          return a.localeCompare(b);
+        });
+      } else {
+        names.sort();
+      }
+      builtinNamesCache[groupDir] = names;
     }
   }
   return builtinNamesCache[dir] ?? [];
