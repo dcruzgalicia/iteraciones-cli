@@ -167,6 +167,7 @@ local function process_blocks(blocks)
 end
 
 function Pandoc(doc)
+  if FORMAT ~= 'latex' then return doc end
   process_blocks(doc.blocks)
   return doc
 end
