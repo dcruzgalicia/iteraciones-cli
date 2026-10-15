@@ -268,6 +268,12 @@ function textoObjetivo(incidencia: TypographyIncidence): string {
   return (ultima?.text ?? '').trim();
 }
 
+function estaEnFrontmatter(content: string, pos: number): boolean {
+  const m = /^---[ \t]*\r?\n[\s\S]*?\r?\n---[ \t]*\r?\n?/.exec(content);
+  if (!m) return false;
+  return pos < m[0].length;
+}
+
 function profundidadFenced(content: string, pos: number): number {
   let dentro = false;
   for (const linea of content.slice(0, Math.max(0, pos)).split('\n')) {
@@ -280,7 +286,7 @@ function remplazaEspacioPosterior(content: string, needle: string): string | und
   const idxs = indicesDe(content, needle);
   if (idxs.length !== 1) return undefined;
   const i = idxs[0] as number;
-  if (profundidadFenced(content, i) > 0) return undefined;
+  if (profundidadFenced(content, i) > 0 || estaEnFrontmatter(content, i)) return undefined;
   let j = i + needle.length;
   while (j < content.length && /\s/.test(content[j] ?? '')) j++;
   const ws = content.slice(i + needle.length, j);
@@ -292,7 +298,7 @@ function remplazaEspacioAnterior(content: string, needle: string): string | unde
   const idxs = indicesDe(content, needle);
   if (idxs.length !== 1) return undefined;
   const i = idxs[0] as number;
-  if (profundidadFenced(content, i) > 0) return undefined;
+  if (profundidadFenced(content, i) > 0 || estaEnFrontmatter(content, i)) return undefined;
   if (i === 0) return undefined;
   let j = i - 1;
   while (j >= 0 && /\s/.test(content[j] ?? '')) j--;
@@ -310,7 +316,7 @@ function envuelveParrafoUnitario(content: string, word: string): string | undefi
   if (matches.length !== 1) return undefined;
   const idx = matches[0] as number;
   const offsetBloque = content.indexOf(bloques[idx] as string);
-  if (offsetBloque < 0 || profundidadFenced(content, offsetBloque) > 0) return undefined;
+  if (offsetBloque < 0 || profundidadFenced(content, offsetBloque) > 0 || estaEnFrontmatter(content, offsetBloque)) return undefined;
   if (bloques[idx]?.trim().startsWith(':::')) return undefined; // ya envuelto o bloque no puro
   bloques[idx] = `::: {runt=2}\n${word}\n:::`;
   return bloques.join('\n\n');
