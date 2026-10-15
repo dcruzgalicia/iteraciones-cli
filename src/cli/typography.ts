@@ -305,9 +305,10 @@ function objetivosParaIncidencia(inc: TypographyIncidence): string[] {
   if (lineas.length < 2) return [(lineas[lineas.length - 1] ? (lineas[lineas.length - 1] as { text: string }).text : '').trim()];
   const objetivos: string[] = [];
   for (let i = 0; i < lineas.length - 1; i++) {
-    const anterior = (lineas[i] as { text: string }).text.trimEnd();
+    const a = (lineas[i] as { text: string }).text.trimEnd();
+    const anterior = a.match(/(\S+)$/)?.[1] ?? a.trim();
     const siguiente = ((lineas[i + 1] as { text: string }).text.trim().match(/^\S+/) || [''])[0];
-    if (anterior.length >= 8 && siguiente.length >= 1) objetivos.push(`${anterior} ${siguiente}`);
+    if (anterior.length >= 3 && siguiente.length >= 1) objetivos.push(`${anterior} ${siguiente}`);
   }
   const ultima = ((lineas[lineas.length - 1] as { text: string })?.text ?? '').trim();
   if (ultima.length >= 8) objetivos.push(ultima);
@@ -525,6 +526,13 @@ async function arreglaTypografia(
       if (actual === undefined) {
         sinAplicar++;
         continue;
+      }
+      if (process.env.TYPO_DEBUG === '1') {
+        for (const cand of objetivos) {
+          console.error(
+            `DEBUG page ${inc.page} cand=${JSON.stringify(cand)} count=${(actual.match(new RegExp(cand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length}`,
+          );
+        }
       }
       if (process.env.TYPO_DEBUG === '1') {
         console.error(
