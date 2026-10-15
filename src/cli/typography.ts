@@ -496,6 +496,7 @@ async function arreglaTypografia(
         sinAplicar++;
         if (candidatos.length === 0) noEncontradas++;
         else multiples++;
+
         continue;
       }
 
