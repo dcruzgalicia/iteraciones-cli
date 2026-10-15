@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
-import { isAbsolute, relative } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative } from 'node:path';
 import { DIST_FILES_DIR } from '../builder/output-layout.js';
 import { BuildError } from '../lib/errors.js';
+import { splitFrontmatter } from '../lib/frontmatter.js';
 import { fail, logError, logInfo, logSuccess } from '../lib/logger.js';
 import { resolvePath } from '../lib/paths.js';
 import {
@@ -13,7 +14,7 @@ import {
   type TypographyIncidence,
 } from '../lib/pdf-typography.js';
 import { plural } from '../lib/plural.js';
-import { mapWithConcurrency } from '../lib/run.js';
+import { exec, mapWithConcurrency, type RunResult } from '../lib/run.js';
 import { listPdfFiles } from '../lib/visual-diff.js';
 
 export interface TypographyOptions {
@@ -25,6 +26,7 @@ export interface TypographyOptions {
   minLines?: string;
   minLetters?: string;
   exceptions?: string;
+  fix?: boolean;
 }
 
 /** Rango de páginas del PDF, 1 como en el PDF y ambos extremos incluidos. */
@@ -152,6 +154,13 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
     const targets = args.length > 0 ? args.map((path) => resolvePath(cwd, path)) : await listPdfFiles(outputDir);
     if (targets.length === 0) throw new BuildError(`no hay PDFs en ${etiqueta(cwd, outputDir)}`);
 
+    if (options.fix) {
+      const { corregidos, sinAplicar } = await arreglaTypografia(cwd, targets, analisis);
+      logInfo(`${corregidos} hallazgos corregidos, ${sinAplicar} sin aplicar`, 'typography');
+      if (sinAplicar > 0) process.exitCode = 1;
+      return;
+    }
+
     const excepciones = cargarExcepciones(cwd, options);
 
     const files = await mapWithConcurrency(targets, 4, async (pdf) => ({
@@ -187,4 +196,237 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
   } catch (err) {
     fail('typography', err);
   }
+}
+
+async function aseguraGitLimpio(cwd: string): Promise<void> {
+  let rev: RunResult;
+  try {
+    rev = await exec('git', ['rev-parse', '--is-inside-work-tree'], { cwd });
+  } catch {
+    throw new BuildError('typography --fix requiere un repositorio git');
+  }
+  if (rev.exitCode !== 0) throw new BuildError('typography --fix requiere un repositorio git');
+  const st = await exec('git', ['status', '--porcelain'], { cwd });
+  if (st.exitCode !== 0 || st.stdout.trim() !== '') {
+    throw new BuildError('typography --fix es destructivo: requiere un árbol git limpio (sin cambios)');
+  }
+}
+
+async function candidatosDeFuente(cwd: string, pdfPath: string): Promise<string[]> {
+  const stem = basename(pdfPath, '.pdf');
+  const out = new Set<string>();
+  const directo = join(cwd, `${stem}.md`);
+  if (await Bun.file(directo).exists()) out.add(directo);
+
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: lectura de collection frontmatter
+  const agregarFiles = async (ruta: string): Promise<void> => {
+    try {
+      const { yaml } = splitFrontmatter(await Bun.file(ruta).text());
+      if (!yaml) return;
+      const parsed = Bun.YAML.parse(yaml) as Record<string, unknown> | null;
+      const files = parsed && Array.isArray(parsed.files) ? parsed.files.filter((x): x is string => typeof x === 'string') : [];
+      const base = dirname(ruta);
+      for (const f of files) {
+        for (const c of [join(base, f), join(cwd, f)]) {
+          if (await Bun.file(c).exists()) out.add(c);
+        }
+      }
+    } catch {
+      // mejor saltarse un frontmatter roto que abortar
+    }
+  };
+
+  if (await Bun.file(directo).exists()) await agregarFiles(directo);
+
+  if (out.size === 0) {
+    const glob = new Bun.Glob('**/*.md');
+    for await (const rel of glob.scan({ cwd, onlyFiles: true })) {
+      const parts = rel.split('/');
+      if (parts.some((p) => p === 'node_modules' || p === '.iteraciones' || p === 'dist' || p.startsWith('.'))) continue;
+      const abs = join(cwd, rel);
+      if (await Bun.file(abs).exists()) out.add(abs);
+    }
+  }
+  return [...out];
+}
+
+function indicesDe(haystack: string, aguja: string): number[] {
+  const idxs: number[] = [];
+  let from = 0;
+  let at = haystack.indexOf(aguja, from);
+  while (at !== -1) {
+    idxs.push(at);
+    from = at + aguja.length;
+    at = haystack.indexOf(aguja, from);
+  }
+  return idxs;
+}
+
+function esteTextoEstaAntes(content: string, textos: string[]): boolean {
+  let pos = 0;
+  for (const t of textos) {
+    const i = content.indexOf(t, pos);
+    if (i < 0) return false;
+    pos = i + t.length;
+  }
+  return true;
+}
+
+function textoObjetivo(incidencia: TypographyIncidence): string {
+  if (incidencia.type === 'single-word-line') return incidencia.text.trim();
+  const ultima = incidencia.lineas.length > 0 ? incidencia.lineas[incidencia.lineas.length - 1] : undefined;
+  return (ultima?.text ?? '').trim();
+}
+
+function textosContexto(incidencia: TypographyIncidence): string[] {
+  if (incidencia.type === 'single-word-line') return [incidencia.text.trim()];
+  return incidencia.lineas.map((l) => l.text.trim());
+}
+
+function remplazaEspacioPosterior(content: string, needle: string): string | undefined {
+  const idxs = indicesDe(content, needle);
+  if (idxs.length !== 1) return undefined;
+  const i = idxs[0] as number;
+  let j = i + needle.length;
+  while (j < content.length && /\s/.test(content[j] ?? '')) j++;
+  const ws = content.slice(i + needle.length, j);
+  if (ws === '') return undefined; // ya está unido o no hay espacio que cambiar
+  return `${content.slice(0, i + needle.length)}&nbsp;${content.slice(j)}`;
+}
+
+function remplazaEspacioAnterior(content: string, needle: string): string | undefined {
+  const idxs = indicesDe(content, needle);
+  if (idxs.length !== 1) return undefined;
+  const i = idxs[0] as number;
+  if (i === 0) return undefined;
+  let j = i - 1;
+  while (j >= 0 && /\s/.test(content[j] ?? '')) j--;
+  const inicioWs = j + 1;
+  if (inicioWs >= i) return undefined; // no hay espacio que cambiar
+  return `${content.slice(0, inicioWs)}&nbsp;${content.slice(i)}`;
+}
+
+function envuelveParrafoUnitario(content: string, word: string): string | undefined {
+  const bloques = content.split(/\n\s*\n/);
+  const matches: number[] = [];
+  for (let k = 0; k < bloques.length; k++) {
+    if (bloques[k]?.trim() === word) matches.push(k);
+  }
+  if (matches.length !== 1) return undefined;
+  const idx = matches[0] as number;
+  if (bloques[idx]?.trim().startsWith(':::')) return undefined; // ya envuelto o bloque no puro
+  bloques[idx] = `::: {runt=2}\n${word}\n:::`;
+  return bloques.join('\n\n');
+}
+
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: heurística de fix por incidencia
+async function arreglaTypografia(cwd: string, targets: string[], analisis: OpcionesAnalisis): Promise<{ corregidos: number; sinAplicar: number }> {
+  await aseguraGitLimpio(cwd);
+
+  let corregidos = 0;
+  let sinAplicar = 0;
+
+  for (const pdf of targets) {
+    const incidences = await analyzePdf(pdf, analisis);
+    if (incidences.length === 0) continue;
+
+    const fuentes = await candidatosDeFuente(cwd, pdf);
+    if (fuentes.length === 0) {
+      sinAplicar += incidences.length;
+      logInfo(`${etiqueta(cwd, pdf)}: no se encontró markdown fuente`, 'typography');
+      continue;
+    }
+
+    const contenido = new Map<string, string>();
+    for (const f of fuentes) {
+      try {
+        contenido.set(f, await Bun.file(f).text());
+      } catch {
+        // se ignora una fuente ilegible
+      }
+    }
+
+    for (const inc of incidences) {
+      const objetivo = textoObjetivo(inc);
+      if (!objetivo) {
+        sinAplicar++;
+        continue;
+      }
+      const contextos = textosContexto(inc);
+
+      let candidatos = [...contenido.keys()].filter((ruta) => contenido.get(ruta)?.includes(objetivo) ?? false);
+      if (candidatos.length === 0 && contenido.size > 0) {
+        // último intento sobre todos los markdown del proyecto
+        const glob = new Bun.Glob('**/*.md');
+        for await (const rel of glob.scan({ cwd, onlyFiles: true })) {
+          const parts = rel.split('/');
+          if (parts.some((p) => p === 'node_modules' || p === '.iteraciones' || p === 'dist' || p.startsWith('.'))) continue;
+          const abs = join(cwd, rel);
+          if (contenido.has(abs)) continue;
+          try {
+            const txt = await Bun.file(abs).text();
+            if (txt.includes(objetivo)) {
+              contenido.set(abs, txt);
+              candidatos.push(abs);
+            }
+          } catch {
+            // ignorar
+          }
+        }
+      }
+
+      if (candidatos.length > 1) {
+        const desambiguados = candidatos.filter((ruta) => esteTextoEstaAntes(contenido.get(ruta) ?? '', contextos));
+        if (desambiguados.length === 1) candidatos = desambiguados;
+      }
+
+      if (candidatos.length !== 1) {
+        sinAplicar++;
+        logInfo(
+          `${etiqueta(cwd, pdf)} pág ${inc.page}: no se pudo localizar con seguridad "${objetivo.slice(0, 60)}..." (${candidatos.length} candidatas)`,
+          'typography',
+        );
+        continue;
+      }
+
+      const ruta = candidatos[0] as string;
+      const actual = contenido.get(ruta);
+      if (actual === undefined) {
+        sinAplicar++;
+        continue;
+      }
+
+      let nuevo: string | undefined;
+      if (inc.type === 'single-word-line') {
+        nuevo = envuelveParrafoUnitario(actual, objetivo);
+      } else if (inc.type === 'consecutive-punctuation' || inc.type === 'repeated-last-letter') {
+        nuevo = remplazaEspacioPosterior(actual, objetivo);
+      } else if (inc.type === 'repeated-first-letter') {
+        nuevo = remplazaEspacioAnterior(actual, objetivo);
+      } else {
+        nuevo = undefined;
+      }
+
+      if (nuevo === undefined || nuevo === actual) {
+        sinAplicar++;
+        logInfo(
+          `${etiqueta(cwd, pdf)} pág ${inc.page}: sin coincidencia exacta o ya corregido para "${objetivo.slice(0, 60)}${objetivo.length > 60 ? '…' : ''}"`,
+          'typography',
+        );
+        continue;
+      }
+
+      contenido.set(ruta, nuevo);
+      corregidos++;
+      logInfo(`corregido: ${relative(cwd, ruta)} ← "${objetivo.slice(0, 40)}${objetivo.length > 40 ? '…' : ''}"`, 'typography');
+    }
+
+    for (const [ruta, texto] of contenido) {
+      if (texto !== (await Bun.file(ruta).text())) {
+        await Bun.write(ruta, texto);
+      }
+    }
+  }
+
+  return { corregidos, sinAplicar };
 }
