@@ -5,5 +5,5 @@
   "contains": ["{palabra}"],
   "notContains": ["\\textls"],
   "normalizeNewlines": false,
-  "filters": ["14-textls"]
+  "filters": ["14-shrink"]
 }

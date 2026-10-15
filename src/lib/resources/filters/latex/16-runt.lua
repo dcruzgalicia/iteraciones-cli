@@ -95,9 +95,7 @@ end
 local function procesar_bloques(bloques, cuantas)
   for i, bloque in ipairs(bloques) do
     if bloque.t == 'Para' then
-      local inlines = bloque.content
-      if cuantas > 0 then inlines = aplicar_runt(inlines, cuantas) end
-      bloque.content = inlines
+      if cuantas > 0 then bloque.content = aplicar_runt(bloque.content, cuantas) end
     elseif bloque.t == 'Div' or bloque.t == 'BlockQuote' then
       procesar_bloques(bloque.content, cuantas)
     end

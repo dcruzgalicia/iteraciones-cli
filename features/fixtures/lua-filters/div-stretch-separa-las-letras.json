@@ -5,5 +5,5 @@
   "contains": ["\\textls[30]{separado}"],
   "notContains": ["\\textls[-30]"],
   "normalizeNewlines": false,
-  "filters": ["14-textls"]
+  "filters": ["15-stretch"]
 }

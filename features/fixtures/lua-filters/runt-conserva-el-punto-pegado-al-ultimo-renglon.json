@@ -5,5 +5,5 @@
   "contains": ["\\mbox{aqui.}"],
   "notContains": [],
   "normalizeNewlines": false,
-  "filters": ["15-mbox-words"]
+  "filters": ["16-runt"]
 }

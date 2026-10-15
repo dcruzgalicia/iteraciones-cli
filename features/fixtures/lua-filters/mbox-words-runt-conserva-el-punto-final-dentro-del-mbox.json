@@ -5,5 +5,5 @@
   "contains": ["\\mbox{aqui.}"],
   "notContains": ["\\mbox{Frase corta que acaba}"],
   "normalizeNewlines": true,
-  "filters": ["15-mbox-words"]
+  "filters": ["16-runt"]
 }

@@ -5,5 +5,5 @@
   "contains": ["\\mbox{palabra al final.}"],
   "notContains": ["\\mbox{una sola palabra}"],
   "normalizeNewlines": true,
-  "filters": ["15-mbox-words"]
+  "filters": ["16-runt"]
 }
