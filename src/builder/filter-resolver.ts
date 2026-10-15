@@ -47,7 +47,7 @@ function builtinNamesForGroup(dir: string): string[] {
       );
       if (groupDir === 'latex') {
         // textls envuelve el bloque en RawBlock: si va antes que mbox-words, se lleva por delante
-        // los Div internos con runt=/nohyph= y estos dejan de aplicarse.
+        // los Div internos con runt= y estos dejan de aplicarse.
         names.sort((a, b) => {
           if (a === '15-mbox-words' && b === '14-textls') return -1;
           if (a === '14-textls' && b === '15-mbox-words') return 1;

@@ -92,47 +92,14 @@ local function aplicar_runt(inlines, cuantas)
   return envolver_rango(inlines, lista[#lista - cuantas + 1], lista[#lista])
 end
 
-local function envolver_palabras(inlines, objetivo)
-  local salida = {}
-  for _, c in ipairs(inlines) do
-    local cls = mbox.classify(c)
-    if cls == 'word' and c.text ~= nil then
-      local nucleo, cola = c.text:match('^(.-)(%p*)$')
-      if nucleo == objetivo then
-        table.insert(salida, abrir())
-        table.insert(salida, pandoc.Str(nucleo))
-        table.insert(salida, cerrar())
-        if cola ~= '' then table.insert(salida, pandoc.Str(cola)) end
-      else
-        table.insert(salida, c)
-      end
-    elseif cls == 'word-group' then
-      c.content = envolver_palabras(c.content, objetivo)
-      table.insert(salida, c)
-    else
-      table.insert(salida, c)
-    end
-  end
-  return salida
-end
-
-local function aplicar_nohyph(inlines, lista)
-  local salida = inlines
-  for _, palabra in ipairs(lista) do
-    if palabra ~= '' then salida = envolver_palabras(salida, palabra) end
-  end
-  return salida
-end
-
-local function procesar_bloques(bloques, cuantas, palabras)
+local function procesar_bloques(bloques, cuantas)
   for i, bloque in ipairs(bloques) do
     if bloque.t == 'Para' then
       local inlines = bloque.content
       if cuantas > 0 then inlines = aplicar_runt(inlines, cuantas) end
-      if palabras then inlines = aplicar_nohyph(inlines, palabras) end
       bloque.content = inlines
     elseif bloque.t == 'Div' or bloque.t == 'BlockQuote' then
-      procesar_bloques(bloque.content, cuantas, palabras)
+      procesar_bloques(bloque.content, cuantas)
     end
   end
   return bloques
@@ -141,15 +108,7 @@ end
 function Div(el)
   if FORMAT ~= 'latex' then return nil end
   local cuantas = tonumber(el.attributes['runt']) or 0
-  local palabras
-  if el.attributes['nohyph'] then
-    palabras = {}
-    for palabra in el.attributes['nohyph']:gmatch('%S+') do
-      table.insert(palabras, palabra)
-    end
-    if #palabras == 0 then palabras = nil end
-  end
-  if cuantas <= 0 and palabras == nil then return nil end
-  el.content = procesar_bloques(el.content, cuantas, palabras)
+  if cuantas <= 0 then return nil end
+  el.content = procesar_bloques(el.content, cuantas)
   return el
 end

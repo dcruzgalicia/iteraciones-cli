@@ -70,11 +70,7 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | mbox-sentence-end-con-negritas-de-2-palabras-grupo-completo- |
         | mbox-sentence-end-con-negritas-de-4-palabras-wrap-interno-de |
         | mbox-sentence-end-solo-envuelve-las-ultimas-3-palabras-de-la |
-        | mbox-words-nohyph-deja-la-puntuacion-fuera-del-mbox |
-        | mbox-words-nohyph-dentro-del-enfis-al-que-se-apunta |
-        | mbox-words-nohyph-envuelve-la-palabra-indicada |
-        | mbox-words-nohyph-envuelve-varias-palabras-en-el-mismo-parrafo |
-        | mbox-words-nohyph-una-palabra-que-no-esta-no-rompe-nada |
+        | mbox-words-nohyph-ya-no-se-aplica |
         | mbox-words-runt-2-engloba-las-ultimas-2-palabras |
         | mbox-words-runt-3-engloba-las-ultimas-3-palabras |
         | mbox-words-runt-con-enfis-al-final-envuelve-dentro-del-grupo |
