@@ -283,10 +283,19 @@ function textosContexto(incidencia: TypographyIncidence): string[] {
   return incidencia.lineas.map((l) => l.text.trim());
 }
 
+function profundidadFenced(content: string, pos: number): number {
+  let dentro = false;
+  for (const linea of content.slice(0, Math.max(0, pos)).split('\n')) {
+    if (/^:{3,}/.test(linea)) dentro = !dentro;
+  }
+  return dentro ? 1 : 0;
+}
+
 function remplazaEspacioPosterior(content: string, needle: string): string | undefined {
   const idxs = indicesDe(content, needle);
   if (idxs.length !== 1) return undefined;
   const i = idxs[0] as number;
+  if (profundidadFenced(content, i) > 0) return undefined;
   let j = i + needle.length;
   while (j < content.length && /\s/.test(content[j] ?? '')) j++;
   const ws = content.slice(i + needle.length, j);
@@ -298,6 +307,7 @@ function remplazaEspacioAnterior(content: string, needle: string): string | unde
   const idxs = indicesDe(content, needle);
   if (idxs.length !== 1) return undefined;
   const i = idxs[0] as number;
+  if (profundidadFenced(content, i) > 0) return undefined;
   if (i === 0) return undefined;
   let j = i - 1;
   while (j >= 0 && /\s/.test(content[j] ?? '')) j--;
@@ -314,6 +324,8 @@ function envuelveParrafoUnitario(content: string, word: string): string | undefi
   }
   if (matches.length !== 1) return undefined;
   const idx = matches[0] as number;
+  const offsetBloque = content.indexOf(bloques[idx] as string);
+  if (offsetBloque < 0 || profundidadFenced(content, offsetBloque) > 0) return undefined;
   if (bloques[idx]?.trim().startsWith(':::')) return undefined; // ya envuelto o bloque no puro
   bloques[idx] = `::: {runt=2}\n${word}\n:::`;
   return bloques.join('\n\n');
