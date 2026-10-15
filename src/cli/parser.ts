@@ -326,6 +326,7 @@ Ejemplos:
     .option('--rules <lista>', 'sólo esas reglas, separadas por coma (por defecto: todas)')
     .option('--min-lines <n>', 'líneas consecutivas que tienen que coincidir (por defecto: 3, mínimo 2)')
     .option('--min-letters <n>', 'caracteres del borde que se comparan (por defecto: 2, mínimo 1)')
+    .option('--fix', 'corrige los hallazgos aplicando cambios mínimos a los Markdown de origen (requiere git limpio)')
     .option('--exceptions <path>', 'archivo de excepciones de texto (por defecto: .typography-exceptions), ignoran casos exactos')
     .addHelpText(
       'after',
@@ -361,7 +362,7 @@ El informe da siempre la página del PDF, no el folio impreso, que puede venir e
 empezar en otro punto. El folio sí se usa, para no reportarlo como línea de una palabra.
 `,
     )
-    .action(async (paths: string[], opts: { output?: string; json?: boolean; exceptions?: string }) => {
+    .action(async (paths: string[], opts: { output?: string; json?: boolean; exceptions?: string; fix?: boolean }) => {
       await runTypography(projectRoot(), paths, opts);
     });
 
