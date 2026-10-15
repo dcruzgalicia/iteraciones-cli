@@ -156,7 +156,7 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
     if (targets.length === 0) throw new BuildError(`no hay PDFs en ${etiqueta(cwd, outputDir)}`);
 
     if (options.fix) {
-      const { sinAplicar, porPdf } = await arreglaTypografia(cwd, targets, analisis);
+      const { corregidos, sinAplicar, noEncontradas, multiples, exactMiss, porPdf } = await arreglaTypografia(cwd, targets, analisis);
       const total = [...porPdf.values()].reduce((suma, item) => suma + item.incidences.length, 0);
       if (total === 0) {
         logSuccess(`sin incidencias en ${plural(targets.length, 'PDF')}`, 'typography');
@@ -176,6 +176,18 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
         );
       }
       logInfo(lineas.join('\n'), 'typography');
+      const partes = [`${corregidos} corregidas de ${total}`];
+      const sinCorregir = sinAplicar;
+      if (sinCorregir > 0) {
+        partes.push(`${sinCorregir} sin corregir`);
+        const detalle = [
+          noEncontradas > 0 ? `${noEncontradas} no encontradas` : '',
+          multiples > 0 ? `${multiples} con múltiples coincidencias` : '',
+          exactMiss > 0 ? `${exactMiss} sin coincidencia exacta` : '',
+        ].filter(Boolean);
+        if (detalle.length > 0) partes.push(`(${detalle.join(', ')})`);
+      }
+      logInfo(partes.join(' · '), 'typography');
       if (sinAplicar > 0) process.exitCode = 1;
       return;
     }
@@ -400,11 +412,21 @@ async function arreglaTypografia(
   cwd: string,
   targets: string[],
   analisis: OpcionesAnalisis,
-): Promise<{ corregidos: number; sinAplicar: number; porPdf: Map<string, { incidences: TypographyIncidence[]; fixed: Set<TypographyIncidence> }> }> {
+): Promise<{
+  corregidos: number;
+  sinAplicar: number;
+  noEncontradas: number;
+  multiples: number;
+  exactMiss: number;
+  porPdf: Map<string, { incidences: TypographyIncidence[]; fixed: Set<TypographyIncidence> }>;
+}> {
   await aseguraGitLimpio(cwd);
 
   let corregidos = 0;
   let sinAplicar = 0;
+  let noEncontradas = 0;
+  let multiples = 0;
+  let exactMiss = 0;
   const porPdf = new Map<string, { incidences: TypographyIncidence[]; fixed: Set<TypographyIncidence> }>();
 
   for (const pdf of targets) {
@@ -417,6 +439,7 @@ async function arreglaTypografia(
     if (fuentes.length === 0) {
       saltados.push(...incidences);
       sinAplicar += incidences.length;
+      noEncontradas += incidences.length;
       continue;
     }
 
@@ -481,6 +504,8 @@ async function arreglaTypografia(
       if (candidatos.length !== 1) {
         saltados.push(inc);
         sinAplicar++;
+        if (candidatos.length === 0) noEncontradas++;
+        else multiples++;
         continue;
       }
 
@@ -505,6 +530,7 @@ async function arreglaTypografia(
       if (nuevo === undefined || nuevo === actual) {
         saltados.push(inc);
         sinAplicar++;
+        exactMiss++;
         continue;
       }
 
@@ -520,5 +546,5 @@ async function arreglaTypografia(
     }
   }
 
-  return { corregidos, sinAplicar, porPdf };
+  return { corregidos, sinAplicar, noEncontradas, multiples, exactMiss, porPdf };
 }
