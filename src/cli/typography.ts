@@ -262,25 +262,10 @@ function indicesDe(haystack: string, aguja: string): number[] {
   return idxs;
 }
 
-function esteTextoEstaAntes(content: string, textos: string[]): boolean {
-  let pos = 0;
-  for (const t of textos) {
-    const i = content.indexOf(t, pos);
-    if (i < 0) return false;
-    pos = i + t.length;
-  }
-  return true;
-}
-
 function textoObjetivo(incidencia: TypographyIncidence): string {
   if (incidencia.type === 'single-word-line') return incidencia.text.trim();
   const ultima = incidencia.lineas.length > 0 ? incidencia.lineas[incidencia.lineas.length - 1] : undefined;
   return (ultima?.text ?? '').trim();
-}
-
-function textosContexto(incidencia: TypographyIncidence): string[] {
-  if (incidencia.type === 'single-word-line') return [incidencia.text.trim()];
-  return incidencia.lineas.map((l) => l.text.trim());
 }
 
 function profundidadFenced(content: string, pos: number): number {
@@ -331,6 +316,60 @@ function envuelveParrafoUnitario(content: string, word: string): string | undefi
   return bloques.join('\n\n');
 }
 
+function normalizaParaBusqueda(texto: string): string {
+  return texto
+    .replace(/:::[^\n]*/g, ' ')
+    .replace(/[*_`]+/g, '')
+    .replace(/\[[^\]]*\]\([^)]*\)/g, (m) => m.match(/^\[([^\]]*)\]/)?.[1] ?? '')
+    .replace(/-\s*\n\s*/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function ngramasBusqueda(texto: string): string[] {
+  const palabras = texto.split(/\s+/).filter(Boolean);
+  const fiesta = new Set<string>();
+  for (let tam = 6; tam >= 3; tam--) {
+    for (let i = 0; i + tam <= palabras.length; i++) {
+      const frase = palabras.slice(i, i + tam).join(' ');
+      if (frase.length >= 12) fiesta.add(frase);
+    }
+  }
+  if (palabras.length >= 3) {
+    fiesta.add(palabras.slice(Math.max(0, palabras.length - 4), palabras.length).join(' '));
+    fiesta.add(palabras.slice(0, Math.min(palabras.length, 4)).join(' '));
+  }
+  return [...fiesta];
+}
+
+function cadenasDeBusqueda(inc: TypographyIncidence): string[] {
+  if (inc.type === 'single-word-line') {
+    return [normalizaParaBusqueda(inc.text)].filter((f) => f.length >= 4);
+  }
+  const lineas = inc.lineas.map((l) => normalizaParaBusqueda(l.text));
+  const unidas = lineas.join(' ');
+  const fiesta = new Set<string>();
+  const objetivo = normalizaParaBusqueda(inc.lineas[inc.lineas.length - 1]?.text ?? '');
+  if (objetivo.length >= 6) fiesta.add(objetivo);
+  if (inc.type === 'repeated-first-letter') {
+    const primero = normalizaParaBusqueda(inc.lineas[0]?.text ?? '');
+    if (primero.length >= 6) fiesta.add(primero);
+  }
+  for (const n of ngramasBusqueda(unidas)) fiesta.add(n);
+  return [...fiesta].sort((a, b) => b.length - a.length);
+}
+
+function resuelveCandidatoFuentes(rutas: string[], contenidoNormalizado: Map<string, string>, frases: string[]): string[] {
+  let candidatos = [...rutas];
+  for (const frase of frases) {
+    if (candidatos.length === 0 || frase.length < 6) continue;
+    const siguientes = candidatos.filter((r) => contenidoNormalizado.get(r)?.includes(frase) ?? false);
+    if (siguientes.length === 1) return siguientes;
+    if (siguientes.length > 0 && siguientes.length < candidatos.length) candidatos = siguientes;
+  }
+  return candidatos;
+}
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: heurística de fix por incidencia
 async function arreglaTypografia(cwd: string, targets: string[], analisis: OpcionesAnalisis): Promise<{ corregidos: number; sinAplicar: number }> {
   await aseguraGitLimpio(cwd);
@@ -350,54 +389,69 @@ async function arreglaTypografia(cwd: string, targets: string[], analisis: Opcio
     }
 
     const contenido = new Map<string, string>();
+    const contenidoNormalizado = new Map<string, string>();
     for (const f of fuentes) {
       try {
-        contenido.set(f, await Bun.file(f).text());
+        const txt = await Bun.file(f).text();
+        contenido.set(f, txt);
+        contenidoNormalizado.set(f, normalizaParaBusqueda(txt));
       } catch {
         // se ignora una fuente ilegible
       }
     }
 
+    const saltados: TypographyIncidence[] = [];
+
     for (const inc of incidences) {
       const objetivo = textoObjetivo(inc);
       if (!objetivo) {
+        saltados.push(inc);
         sinAplicar++;
         continue;
       }
-      const contextos = textosContexto(inc);
-
-      let candidatos = [...contenido.keys()].filter((ruta) => contenido.get(ruta)?.includes(objetivo) ?? false);
-      if (candidatos.length === 0 && contenido.size > 0) {
-        // último intento sobre todos los markdown del proyecto
-        const glob = new Bun.Glob('**/*.md');
-        for await (const rel of glob.scan({ cwd, onlyFiles: true })) {
-          const parts = rel.split('/');
-          if (parts.some((p) => p === 'node_modules' || p === '.iteraciones' || p === 'dist' || p.startsWith('.'))) continue;
-          const abs = join(cwd, rel);
-          if (contenido.has(abs)) continue;
-          try {
-            const txt = await Bun.file(abs).text();
-            if (txt.includes(objetivo)) {
-              contenido.set(abs, txt);
-              candidatos.push(abs);
+      const frases = cadenasDeBusqueda(inc);
+      let candidatos = [...contenido.keys()];
+      const frasesUtiles = resuelveCandidatoFuentes(candidatos, contenidoNormalizado, frases);
+      if (frasesUtiles.length === 0) {
+        // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: fallback global de candidatos
+        const global = await (async () => {
+          const found: string[] = [];
+          const norm = new Map<string, string>();
+          const raw = new Map<string, string>();
+          const gg = new Bun.Glob('**/*.md');
+          for await (const rel of gg.scan({ cwd, onlyFiles: true })) {
+            const parts = rel.split('/');
+            if (parts.some((p) => p === 'node_modules' || p === '.iteraciones' || p === 'dist' || p.startsWith('.'))) continue;
+            const abs = join(cwd, rel);
+            if (contenido.has(abs)) continue;
+            try {
+              const txt = await Bun.file(abs).text();
+              const normalized = normalizaParaBusqueda(txt);
+              raw.set(abs, txt);
+              norm.set(abs, normalized);
+              if (norm.get(abs)?.includes(frases[0] ?? '')) found.push(abs);
+            } catch {
+              // ignorar
             }
-          } catch {
-            // ignorar
           }
-        }
-      }
-
-      if (candidatos.length > 1) {
-        const desambiguados = candidatos.filter((ruta) => esteTextoEstaAntes(contenido.get(ruta) ?? '', contextos));
-        if (desambiguados.length === 1) candidatos = desambiguados;
+          for (const [k, v] of raw) {
+            if (!contenido.has(k)) {
+              contenido.set(k, v);
+              contenidoNormalizado.set(k, norm.get(k) ?? '');
+            }
+          }
+          return found;
+        })();
+        candidatos = resuelveCandidatoFuentes([...contenido.keys()], contenidoNormalizado, frases);
+        if (candidatos.length === 0) candidatos = global.slice(0, 1);
+      } else {
+        candidatos = frasesUtiles;
       }
 
       if (candidatos.length !== 1) {
+        saltados.push(inc);
         sinAplicar++;
-        logInfo(
-          `${etiqueta(cwd, pdf)} pág ${inc.page}: no se pudo localizar con seguridad "${objetivo.slice(0, 60)}..." (${candidatos.length} candidatas)`,
-          'typography',
-        );
+        logInfo(formatea(inc), 'typography');
         continue;
       }
 
@@ -420,17 +474,24 @@ async function arreglaTypografia(cwd: string, targets: string[], analisis: Opcio
       }
 
       if (nuevo === undefined || nuevo === actual) {
+        saltados.push(inc);
         sinAplicar++;
-        logInfo(
-          `${etiqueta(cwd, pdf)} pág ${inc.page}: sin coincidencia exacta o ya corregido para "${objetivo.slice(0, 60)}${objetivo.length > 60 ? '…' : ''}"`,
-          'typography',
-        );
+        logInfo(formatea(inc), 'typography');
         continue;
       }
 
       contenido.set(ruta, nuevo);
       corregidos++;
       logInfo(`corregido: ${relative(cwd, ruta)} ← "${objetivo.slice(0, 40)}${objetivo.length > 40 ? '…' : ''}"`, 'typography');
+    }
+
+    if (saltados.length > 0) {
+      if (corregidos === 0 && saltados.length === incidences.length) {
+        const lineas = [`${etiqueta(cwd, pdf)} · ${plural(saltados.length, 'incidencia')}`, ...saltados.map(formatea)];
+        logInfo(lineas.join('\n'), 'typography');
+      } else {
+        for (const inc of saltados) logInfo(formatea(inc), 'typography');
+      }
     }
 
     for (const [ruta, texto] of contenido) {
