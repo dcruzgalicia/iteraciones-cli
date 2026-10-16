@@ -179,4 +179,25 @@ describe('objetivosParaIncidencia', () => {
       'Como una historia mal contada que ya no&nbsp;encajaba. Y otra que ya no sigue.\n',
     );
   });
+
+  test('repeated-first-letter pega antes de la primera palabra de la línea siguiente', () => {
+    const inc: TypographyIncidence = {
+      type: 'repeated-first-letter',
+      page: 22,
+      line: 27,
+      text: 'cicio más joven, por no haberme hecho chequeos médicos',
+      letter: 'c',
+      lineas: [
+        { line: 27, text: 'cicio más joven, por no haberme hecho chequeos médicos' },
+        { line: 28, text: 'cada año, por no haberme terminado los tratamientos para' },
+      ],
+      total: 2,
+    };
+    const objetivos = objetivosParaIncidencia(inc);
+    expect(objetivos[0]).toBe('cada año, por no haberme terminado los tratamientos para');
+    const md = 'por no haberme hecho chequeos médicos cada año, por no haberme terminado los tratamientos para la artritis.\n';
+    expect(remplazaEspacioAnterior(md, objetivos[0] as string)).toBe(
+      'por no haberme hecho chequeos médicos&nbsp;cada año, por no haberme terminado los tratamientos para la artritis.\n',
+    );
+  });
 });
