@@ -1,5 +1,13 @@
 import { describe, expect, test } from 'bun:test';
-import { envuelveParrafoContenedor, esTituloDeSeccion, normalizaParaBusqueda, tienePalabraSuelta } from '../cli/typography.ts';
+import {
+  envuelveParrafoContenedor,
+  esTituloDeSeccion,
+  normalizaParaBusqueda,
+  remplazaEspacioAnterior,
+  remplazaEspacioPosterior,
+  tienePalabraSuelta,
+  yaAplicado,
+} from '../cli/typography.ts';
 import type { SingleWordLine, TypographyIncidence } from '../lib/pdf-typography.ts';
 
 const incidencia = (text: string, extra: Partial<SingleWordLine> = {}): TypographyIncidence => ({
@@ -8,6 +16,16 @@ const incidencia = (text: string, extra: Partial<SingleWordLine> = {}): Typograp
   line: 1,
   text,
   ...extra,
+});
+
+const corrida = (text: string, type: 'repeated-last-letter' | 'repeated-first-letter' = 'repeated-last-letter'): TypographyIncidence => ({
+  type,
+  page: 1,
+  line: 1,
+  text,
+  letter: 'a',
+  lineas: [{ line: 1, text }],
+  total: 1,
 });
 
 describe('normalizaParaBusqueda', () => {
@@ -63,5 +81,36 @@ describe('esTituloDeSeccion', () => {
     expect(esTituloDeSeccion('---\ntitle: Otra cosa\n---\n\n# Nota\n', incidencia('Nota'))).toBe(true);
     expect(esTituloDeSeccion('---\ntitle: Otra cosa\n---\n\n# Nota\n', incidencia('nota.'))).toBe(false);
     expect(esTituloDeSeccion('---\ntitle: Otra cosa\n---\n\nuna nota final.\n', incidencia('nota'))).toBe(false);
+  });
+});
+
+describe('espacios pegados con &nbsp;', () => {
+  test('aplican dentro de un bloque runt', () => {
+    const md = '::: {runt=2}\nse necesita; escritora desde niña\n:::\n';
+    expect(remplazaEspacioPosterior(md, 'necesita; escritora')).toBe('::: {runt=2}\nse necesita; escritora&nbsp;desde niña\n:::\n');
+    expect(remplazaEspacioAnterior('::: {runt=2}\nllega este;\n:::\n', 'este;')).toBe('::: {runt=2}\nllega&nbsp;este;\n:::\n');
+  });
+
+  test('igualan las comillas tipográficas del PDF con las rectas del markdown', () => {
+    expect(remplazaEspacioPosterior('te dije "hola mundo" alto\n', '“hola mundo”')).toBe('te dije "hola mundo"&nbsp;alto\n');
+  });
+
+  test('aplican dentro de un escalar de bloque del frontmatter, no en el resto del YAML', () => {
+    expect(remplazaEspacioPosterior('---\ncolophon: |\n  texto brindar un enlace\n---\n', 'texto brindar')).toBe(
+      '---\ncolophon: |\n  texto brindar&nbsp;un enlace\n---\n',
+    );
+    expect(remplazaEspacioPosterior('---\ntitle: se necesita; escritora\n---\n', 'necesita; escritora')).toBeUndefined();
+  });
+
+  test('no tocan el contenido de un bloque qr', () => {
+    expect(remplazaEspacioPosterior('::: {qr=15mm}\nhttps://x.com/a b\n:::\n', 'https://x.com/a')).toBeUndefined();
+  });
+
+  test('no cruzan un corte de párrafo ni se repiten en una segunda pasada', () => {
+    expect(remplazaEspacioPosterior('fin de párrafo\n\nsiguiente párrafo\n', 'fin de párrafo')).toBeUndefined();
+    const ya = '::: {runt=2}\nse necesita; escritora&nbsp;desde niña\n:::\n';
+    expect(yaAplicado(ya, 'necesita; escritora', corrida('se necesita'))).toBe(true);
+    expect(yaAplicado('::: {runt=2}\nse necesita; escritora desde niña\n:::\n', 'necesita; escritora', corrida('se necesita'))).toBe(false);
+    expect(yaAplicado('::: {runt=2}\nllega&nbsp;este;\n:::\n', 'este;', corrida('este;', 'repeated-first-letter'))).toBe(true);
   });
 });
