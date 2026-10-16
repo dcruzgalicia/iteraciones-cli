@@ -373,7 +373,9 @@ function envuelveParrafoContenedor(content: string, inc: TypographyIncidence): s
   const word = inc.text.trim();
   const wordNorm = normalizaParaBusqueda(word);
   const prev = (inc as unknown as { prev?: string }).prev;
-  const bloques = content.split(/\n\s*\n/);
+  const { body } = splitFrontmatter(content);
+  const prefijo = content.slice(0, content.length - body.length);
+  const bloques = body.split(/\n\s*\n/);
   const matches: number[] = [];
   for (let k = 0; k < bloques.length; k++) {
     const bloqueNorm = normalizaParaBusqueda(bloques[k] ?? '');
@@ -392,11 +394,11 @@ function envuelveParrafoContenedor(content: string, inc: TypographyIncidence): s
   }
   if (idx < 0) return undefined;
   const bloqueTexto = (bloques[idx] as string).trim();
-  const offsetBloque = content.indexOf(bloques[idx] as string);
-  if (offsetBloque < 0 || profundidadFenced(content, offsetBloque) > 0 || estaEnFrontmatter(content, offsetBloque)) return undefined;
+  const offsetBloque = body.indexOf(bloques[idx] as string);
+  if (offsetBloque < 0 || profundidadFenced(body, offsetBloque) > 0) return undefined;
   if (bloqueTexto.startsWith(':::')) return undefined;
   bloques[idx] = `::: {runt=2}\n${bloqueTexto}\n:::`;
-  return bloques.join('\n\n');
+  return prefijo + bloques.join('\n\n');
 }
 
 function profundidadFenced(content: string, pos: number): number {
@@ -432,7 +434,7 @@ function remplazaEspacioAnterior(content: string, needle: string): string | unde
   return `${content.slice(0, inicioWs)}&nbsp;${content.slice(i)}`;
 }
 
-function normalizaParaBusqueda(texto: string): string {
+export function normalizaParaBusqueda(texto: string): string {
   return texto
     .replace(/:::[^\n]*/g, ' ')
     .replace(/[*_`]+/g, '')
