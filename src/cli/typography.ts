@@ -525,10 +525,29 @@ async function arreglaTypografia(
       const frases = cadenasDeBusqueda(inc);
       let candidatos = [...contenido.keys()];
       const frasesUtiles = resuelveCandidatoFuentes(candidatos, contenidoNormalizado, frases);
-      if (frasesUtiles.length === 0) {
-        candidatos = resuelveCandidatoFuentes([...contenido.keys()], contenidoNormalizado, frases);
-      } else {
-        candidatos = frasesUtiles;
+      candidatos = frasesUtiles;
+      // Si la collection no deja un único archivo, integrar cualquier markdown del proyecto.
+      if (candidatos.length !== 1) {
+        const glob = new Bun.Glob('**/*.md');
+        const faltantes: string[] = [];
+        for await (const rel of glob.scan({ cwd, onlyFiles: true })) {
+          const parts = rel.split('/');
+          if (parts.some((p) => p === 'node_modules' || p === '.iteraciones' || p === 'dist' || p.startsWith('.'))) continue;
+          const abs = join(cwd, rel);
+          if (contenido.has(abs)) continue;
+          try {
+            const txt = await Bun.file(abs).text();
+            contenido.set(abs, txt);
+            contenidoNormalizado.set(abs, normalizaParaBusqueda(txt));
+            faltantes.push(abs);
+          } catch {
+            // ignorar
+          }
+        }
+        if (faltantes.length > 0) {
+          const amplio = resuelveCandidatoFuentes([...contenido.keys()], contenidoNormalizado, frases);
+          if (amplio.length > 0) candidatos = amplio;
+        }
       }
 
       if (candidatos.length !== 1) {
