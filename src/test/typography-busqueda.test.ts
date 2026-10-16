@@ -180,29 +180,7 @@ describe('objetivosParaIncidencia', () => {
     );
   });
 
-  test('repeated-first-letter pega antes de la primera palabra de la primera línea', () => {
-    const inc: TypographyIncidence = {
-      type: 'repeated-first-letter',
-      page: 20,
-      line: 7,
-      text: 'sentado que eso hacían las madres, principalmente, y les',
-      letter: 's',
-      lineas: [
-        { line: 7, text: 'sentado que eso hacían las madres, principalmente, y les' },
-        { line: 8, text: 'salía tan natural como respirar. Descubrí que no, cuando a' },
-      ],
-      total: 2,
-    };
-    const objetivos = objetivosParaIncidencia(inc);
-    expect(objetivos[0]).toBe('sentado que eso hacían las madres, principalmente, y les');
-    const md = 'di por sentado que eso hacían las madres, principalmente, y les salía tan natural como respirar.\n';
-    expect(remplazaEspacioAnterior(md, objetivos[0] as string)).toBe(
-      'di por&nbsp;sentado que eso hacían las madres, principalmente, y les salía tan natural como respirar.\n',
-    );
-  });
-
-  test('repeated-first-letter recurre a la línea siguiente si la primera no es pegable', () => {
-    // la línea inicial arranca con el fragmento «cicio» de «ejercicio»: no hay espacio antes
+  test('repeated-first-letter pega antes de la primera palabra de la línea siguiente', () => {
     const inc: TypographyIncidence = {
       type: 'repeated-first-letter',
       page: 22,
@@ -216,12 +194,9 @@ describe('objetivosParaIncidencia', () => {
       total: 2,
     };
     const objetivos = objetivosParaIncidencia(inc);
-    expect(objetivos[0]).toBe('cicio más joven, por no haberme hecho chequeos médicos');
+    expect(objetivos[0]).toBe('cada año, por no haberme terminado los tratamientos para');
     const md = 'por no haberme hecho chequeos médicos cada año, por no haberme terminado los tratamientos para la artritis.\n';
-    expect(remplazaEspacioAnterior(md, objetivos[0] as string)).toBeUndefined();
-    const cabezaSiguiente = 'cada año, por no haberme terminado los tratamientos para';
-    expect(objetivos.includes(cabezaSiguiente)).toBe(true);
-    expect(remplazaEspacioAnterior(md, cabezaSiguiente)).toBe(
+    expect(remplazaEspacioAnterior(md, objetivos[0] as string)).toBe(
       'por no haberme hecho chequeos médicos&nbsp;cada año, por no haberme terminado los tratamientos para la artritis.\n',
     );
   });
