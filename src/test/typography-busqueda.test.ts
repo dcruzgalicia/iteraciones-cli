@@ -19,16 +19,6 @@ const incidencia = (text: string, extra: Partial<SingleWordLine> = {}): Typograp
   ...extra,
 });
 
-const corrida = (text: string, type: 'repeated-last-letter' | 'repeated-first-letter' = 'repeated-last-letter'): TypographyIncidence => ({
-  type,
-  page: 1,
-  line: 1,
-  text,
-  letter: 'a',
-  lineas: [{ line: 1, text }],
-  total: 1,
-});
-
 describe('normalizaParaBusqueda', () => {
   test('quita divs en línea conservando el texto visible', () => {
     expect(normalizaParaBusqueda('lo vivimos [en carne propia]{.no-mbox}.')).toBe('lo vivimos en carne propia.');
@@ -110,9 +100,9 @@ describe('espacios pegados con &nbsp;', () => {
   test('no cruzan un corte de párrafo ni se repiten en una segunda pasada', () => {
     expect(remplazaEspacioPosterior('fin de párrafo\n\nsiguiente párrafo\n', 'fin de párrafo')).toBeUndefined();
     const ya = '::: {runt=2}\nse necesita; escritora&nbsp;desde niña\n:::\n';
-    expect(yaAplicado(ya, 'necesita; escritora', corrida('se necesita'))).toBe(true);
-    expect(yaAplicado('::: {runt=2}\nse necesita; escritora desde niña\n:::\n', 'necesita; escritora', corrida('se necesita'))).toBe(false);
-    expect(yaAplicado('::: {runt=2}\nllega&nbsp;este;\n:::\n', 'este;', corrida('este;', 'repeated-first-letter'))).toBe(true);
+    expect(yaAplicado(ya, 'necesita; escritora', true)).toBe(true);
+    expect(yaAplicado('::: {runt=2}\nse necesita; escritora desde niña\n:::\n', 'necesita; escritora', true)).toBe(false);
+    expect(yaAplicado('::: {runt=2}\nllega&nbsp;este;\n:::\n', 'este;', false)).toBe(true);
   });
 
   test('la aguja cruza un corte de línea del markdown, nunca una línea en blanco', () => {
@@ -120,7 +110,7 @@ describe('espacios pegados con &nbsp;', () => {
     expect(remplazaEspacioPosterior(md, 'no he terminado el')).toBe(
       'a veces regreso a la compu. Como hoy, pues no he\nterminado el&nbsp;último capítulo de la tesis.\n',
     );
-    expect(yaAplicado('pues no he\nterminado el&nbsp;último capítulo', 'no he terminado el', corrida('no he terminado el'))).toBe(true);
+    expect(yaAplicado('pues no he\nterminado el&nbsp;último capítulo', 'no he terminado el', true)).toBe(true);
     expect(remplazaEspacioPosterior('fin\n\nel resto\n', 'fin el')).toBeUndefined();
     expect(remplazaEspacioAnterior('fin\n\nel resto\n', 'el resto')).toBeUndefined();
   });
@@ -132,7 +122,7 @@ describe('espacios pegados con &nbsp;', () => {
     expect(remplazaEspacioPosterior('pues no he terminado&nbsp;el último capítulo\n', 'no he terminado el')).toBe(
       'pues no he terminado&nbsp;el&nbsp;último capítulo\n',
     );
-    expect(yaAplicado('pues no he terminado\u00a0el&nbsp;último capítulo', 'no he terminado el', corrida('no he terminado el'))).toBe(true);
+    expect(yaAplicado('pues no he terminado\u00a0el&nbsp;último capítulo', 'no he terminado el', true)).toBe(true);
   });
 
   test('no pega contra una línea que abre o cierra bloque', () => {
@@ -167,9 +157,9 @@ describe('objetivosParaIncidencia', () => {
       total: 2,
     };
     const objetivos = objetivosParaIncidencia(inc);
-    expect(objetivos[0]).toBe('Mi mamá no fue una mujer muy cariñosa, no se permitía');
+    expect(objetivos[0]?.aguja).toBe('Mi mamá no fue una mujer muy cariñosa, no se permitía');
     const md = 'Mi mamá no fue una mujer muy cariñosa, no se permitía las caricias, las palabras tiernas o melosas.\n';
-    expect(remplazaEspacioPosterior(md, objetivos[0] as string)).toBe(
+    expect(remplazaEspacioPosterior(md, objetivos[0]?.aguja as string)).toBe(
       'Mi mamá no fue una mujer muy cariñosa, no se permitía&nbsp;las caricias, las palabras tiernas o melosas.\n',
     );
   });
@@ -188,7 +178,7 @@ describe('objetivosParaIncidencia', () => {
       total: 3,
     };
     const objetivos = objetivosParaIncidencia(inc);
-    expect(objetivos[0]?.endsWith('mal contada que ya no')).toBe(true);
+    expect(objetivos[0]?.aguja.endsWith('mal contada que ya no')).toBe(true);
     const md = 'Como una historia mal contada que ya no encajaba. Y otra que ya no sigue.\n';
     expect(remplazaEspacioPosterior(md, 'ya no')).toBeUndefined();
     expect(remplazaEspacioPosterior(md, 'mal contada que ya no')).toBe(
@@ -210,9 +200,9 @@ describe('objetivosParaIncidencia', () => {
       total: 2,
     };
     const objetivos = objetivosParaIncidencia(inc);
-    expect(objetivos[0]).toBe('cada año, por no haberme terminado los tratamientos para');
+    expect(objetivos[0]?.aguja).toBe('cada año, por no haberme terminado los tratamientos para');
     const md = 'por no haberme hecho chequeos médicos cada año, por no haberme terminado los tratamientos para la artritis.\n';
-    expect(remplazaEspacioAnterior(md, objetivos[0] as string)).toBe(
+    expect(remplazaEspacioAnterior(md, objetivos[0]?.aguja as string)).toBe(
       'por no haberme hecho chequeos médicos&nbsp;cada año, por no haberme terminado los tratamientos para la artritis.\n',
     );
   });
@@ -231,11 +221,37 @@ describe('objetivosParaIncidencia', () => {
       total: 2,
     };
     const objetivos = objetivosParaIncidencia(inc);
-    expect(objetivos[0]).toBe('salía tan natural como respirar. Descubrí que no, cuando a');
+    expect(objetivos[0]?.aguja).toBe('salía tan natural como respirar. Descubrí que no, cuando a');
     const md =
       'di por sentado que eso hacían las madres, principalmente, y les salía tan natural como respirar. Descubrí que no, cuando a mi papá y a mí nos tocó cuidarnos entre nosotros.\n';
-    expect(remplazaEspacioAnterior(md, objetivos[0] as string)).toBe(
+    expect(remplazaEspacioAnterior(md, objetivos[0]?.aguja as string)).toBe(
       'di por sentado que eso hacían las madres, principalmente, y les&nbsp;salía tan natural como respirar. Descubrí que no, cuando a mi papá y a mí nos tocó cuidarnos entre nosotros.\n',
+    );
+  });
+
+  test('si la unión no se puede pegar, el &nbsp; va al final de la segunda línea', () => {
+    // pág 40: la unión es «so-»/«la» (palabra cortada sin guion en el markdown) y «sola» ya trae
+    // pegado su espacio: el pegado se hace al final de la segunda línea, después de «hasta»
+    const inc: TypographyIncidence = {
+      type: 'repeated-first-letter',
+      page: 40,
+      line: 15,
+      text: 'las noches en los primeros meses), mientras manejaba, so-',
+      letter: 'l',
+      lineas: [
+        { line: 15, text: 'las noches en los primeros meses), mientras manejaba, so-' },
+        { line: 16, text: 'la en mi casa, en la casa de mi pareja, con mi mamá; hasta' },
+      ],
+      total: 3,
+    };
+    const objetivos = objetivosParaIncidencia(inc);
+    const md =
+      'casi todas las noches en los primeros&nbsp;meses), mientras manejaba, sola&nbsp;en mi casa, en la casa de mi pareja, con mi mamá; hasta lloré&nbsp;con una consultante.\n';
+    expect(remplazaEspacioAnterior(md, objetivos[0]?.aguja as string)).toBeUndefined();
+    const cierre = objetivos.find((o) => o.posterior && o.aguja.endsWith('hasta'));
+    expect(cierre?.aguja).toBe('la en mi casa, en la casa de mi pareja, con mi mamá; hasta');
+    expect(remplazaEspacioPosterior(md, cierre?.aguja as string)).toBe(
+      'casi todas las noches en los primeros&nbsp;meses), mientras manejaba, sola&nbsp;en mi casa, en la casa de mi pareja, con mi mamá; hasta&nbsp;lloré&nbsp;con una consultante.\n',
     );
   });
 });
