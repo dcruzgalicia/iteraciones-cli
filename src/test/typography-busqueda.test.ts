@@ -134,6 +134,22 @@ describe('espacios pegados con &nbsp;', () => {
     );
     expect(yaAplicado('pues no he terminado\u00a0el&nbsp;último capítulo', 'no he terminado el', corrida('no he terminado el'))).toBe(true);
   });
+
+  test('no pega contra una línea que abre o cierra bloque', () => {
+    // el marcador del div no se une con su cuerpo (kenia-lara.md, pág 25)
+    const div = '::: {runt=2}\nMi trabajo parte de la observación de lo cotidiano.\n:::\n';
+    expect(remplazaEspacioAnterior(div, 'Mi trabajo parte de la observación')).toBeUndefined();
+    // la clave de un escalar de bloque no se une con su primera línea
+    expect(remplazaEspacioAnterior('titleback: |\n  Texto de la contraportada que sigue.\n', 'Texto de la contraportada')).toBeUndefined();
+    // ni una viñeta con su texto
+    expect(remplazaEspacioAnterior('Antes venía esto.\n- Cuidarme como prioridad\n', 'Cuidarme como')).toBeUndefined();
+    // pegar después tampoco: el cierre del div, la regla o la clave siguiente lo unirían a lo anterior
+    expect(remplazaEspacioPosterior('Termina el cuerpo.\n:::\n', 'Termina el cuerpo')).toBeUndefined();
+    expect(remplazaEspacioPosterior('Fin del bloque\n---\n', 'Fin del bloque')).toBeUndefined();
+    expect(remplazaEspacioPosterior('  Contraportada\nuppertitleback: |\n', 'Contraportada')).toBeUndefined();
+    // dentro del escalar sí se pega: la línea anterior es texto
+    expect(remplazaEspacioAnterior('titleback: |\n  Línea uno\n  Línea dos\n', 'Línea dos')).toBe('titleback: |\n  Línea uno&nbsp;Línea dos\n');
+  });
 });
 
 describe('objetivosParaIncidencia', () => {
@@ -198,6 +214,28 @@ describe('objetivosParaIncidencia', () => {
     const md = 'por no haberme hecho chequeos médicos cada año, por no haberme terminado los tratamientos para la artritis.\n';
     expect(remplazaEspacioAnterior(md, objetivos[0] as string)).toBe(
       'por no haberme hecho chequeos médicos&nbsp;cada año, por no haberme terminado los tratamientos para la artritis.\n',
+    );
+  });
+
+  test('repeated-first-letter hace lo mismo que last-letter: pega al final de la primera línea', () => {
+    const inc: TypographyIncidence = {
+      type: 'repeated-first-letter',
+      page: 20,
+      line: 7,
+      text: 'sentado que eso hacían las madres, principalmente, y les',
+      letter: 's',
+      lineas: [
+        { line: 7, text: 'sentado que eso hacían las madres, principalmente, y les' },
+        { line: 8, text: 'salía tan natural como respirar. Descubrí que no, cuando a' },
+      ],
+      total: 2,
+    };
+    const objetivos = objetivosParaIncidencia(inc);
+    expect(objetivos[0]).toBe('salía tan natural como respirar. Descubrí que no, cuando a');
+    const md =
+      'di por sentado que eso hacían las madres, principalmente, y les salía tan natural como respirar. Descubrí que no, cuando a mi papá y a mí nos tocó cuidarnos entre nosotros.\n';
+    expect(remplazaEspacioAnterior(md, objetivos[0] as string)).toBe(
+      'di por sentado que eso hacían las madres, principalmente, y les&nbsp;salía tan natural como respirar. Descubrí que no, cuando a mi papá y a mí nos tocó cuidarnos entre nosotros.\n',
     );
   });
 });
