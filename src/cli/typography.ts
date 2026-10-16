@@ -370,6 +370,35 @@ function posicionProtegida(content: string, pos: number): boolean {
   return estaEnFrontmatter(content, pos) && !estaEnBloqueYaml(content, pos);
 }
 
+/** Texto de la línea que termina en `pos` (sin su salto). */
+function lineaPrevia(content: string, pos: number): string {
+  return content.slice(content.lastIndexOf('\n', pos - 1) + 1, pos);
+}
+
+/** Texto de la línea que empieza en `pos` (sin su salto). */
+function lineaSiguiente(content: string, pos: number): string {
+  const fin = content.indexOf('\n', pos);
+  return content.slice(pos, fin === -1 ? content.length : fin);
+}
+
+// Líneas que no son texto de párrafo: fence de div, regla, título, lista, cita.
+const LINEA_DE_BLOQUE = /^(?:-{3,}|\.{3,}|:::|#{1,6}\s|[-*+]|\d{1,3}[.)]|>)/;
+// Clave del frontmatter (incluye la cabecera de un escalar de bloque, `titleback: |`).
+const LINEA_DE_YAML = /^[\w-]+:/;
+
+/**
+ * ¿Unir con `&nbsp;` aquí juntaría bloques distintos? Con salto de línea de por medio no se puede
+ * pegar contra una línea que abre o cierra bloque (uniría `::: {runt=2}` con el cuerpo del div, un
+ * escalar de bloque con su clave, un título con el párrafo siguiente); sin salto, solo contra una
+ * viñeta suelta.
+ */
+function cruzaBloque(lineaIzq: string, ws: string, lineaDer: string): boolean {
+  const izq = lineaIzq.trim();
+  const der = lineaDer.trim();
+  if (!ws.includes('\n')) return /^(?:[-*+]|\d{1,3}[.)])$/.test(izq);
+  return LINEA_DE_BLOQUE.test(izq) || /[|>]$/.test(izq) || LINEA_DE_BLOQUE.test(der) || LINEA_DE_YAML.test(der);
+}
+
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: algoritmo de hidridacion
 export function objetivosParaIncidencia(inc: TypographyIncidence): string[] {
   if (inc.type === 'single-word-line') return [inc.text.trim() as string];
@@ -627,6 +656,7 @@ export function remplazaEspacioPosterior(content: string, needle: string): strin
   const ws = content.slice(fin, j);
   // ya está unido, o el espacio cruza un corte de párrafo/bloque y no debe tocarse
   if (ws === '' || /\n[ \t]*\n/.test(ws)) return undefined;
+  if (cruzaBloque(lineaPrevia(content, fin), ws, lineaSiguiente(content, j))) return undefined;
   return `${content.slice(0, fin)}&nbsp;${content.slice(j)}`;
 }
 
@@ -642,6 +672,7 @@ export function remplazaEspacioAnterior(content: string, needle: string): string
   const inicioWs = j + 1;
   // no hay espacio que cambiar, o el espacio cruza un corte de párrafo/bloque
   if (inicioWs >= inicio || /\n[ \t]*\n/.test(content.slice(inicioWs, inicio))) return undefined;
+  if (cruzaBloque(lineaPrevia(content, inicioWs), content.slice(inicioWs, inicio), lineaSiguiente(content, inicio))) return undefined;
   return `${content.slice(0, inicioWs)}&nbsp;${content.slice(inicio)}`;
 }
 
