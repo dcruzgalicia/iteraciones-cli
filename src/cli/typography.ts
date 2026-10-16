@@ -249,22 +249,60 @@ async function candidatosDeFuente(cwd: string, pdfPath: string): Promise<string[
   const directo = join(cwd, `${stem}.md`);
   if (await Bun.file(directo).exists()) out.add(directo);
 
+  const slugDe = (nombre: string): string =>
+    nombre
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^\w\s-]/g, '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '-');
+  const recolectaNombres = (valor: unknown, nombres: Set<string>): void => {
+    if (Array.isArray(valor)) {
+      for (const x of valor) if (typeof x === 'string') nombres.add(x);
+    } else if (typeof valor === 'string') {
+      nombres.add(valor);
+    }
+  };
+  const agregaCreators = async (nombres: Set<string>): Promise<void> => {
+    for (const nombre of nombres) {
+      const slug = slugDe(nombre);
+      const candidato = slug ? join(cwd, `${slug}.md`) : '';
+      if (candidato && (await Bun.file(candidato).exists())) out.add(candidato);
+    }
+  };
+
   // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: lectura de collection frontmatter
   const agregarFiles = async (ruta: string): Promise<void> => {
+    const nombres = new Set<string>();
     try {
       const { yaml } = splitFrontmatter(await Bun.file(ruta).text());
       if (!yaml) return;
       const parsed = Bun.YAML.parse(yaml) as Record<string, unknown> | null;
-      const files = parsed && Array.isArray(parsed.files) ? parsed.files.filter((x): x is string => typeof x === 'string') : [];
+      if (!parsed) return;
+      for (const campo of ['contributor', 'contributors', 'collectionCreator', 'creator']) {
+        recolectaNombres(parsed[campo], nombres);
+      }
+      const files = Array.isArray(parsed.files) ? parsed.files.filter((x): x is string => typeof x === 'string') : [];
       const base = dirname(ruta);
       for (const f of files) {
+        let archivo = '';
         for (const c of [join(base, f), join(cwd, f)]) {
-          if (await Bun.file(c).exists()) out.add(c);
+          if (await Bun.file(c).exists()) {
+            archivo = c;
+            break;
+          }
         }
+        if (!archivo) continue;
+        out.add(archivo);
+        const { yaml: yamlArchivo } = splitFrontmatter(await Bun.file(archivo).text());
+        const parsedArchivo = yamlArchivo ? (Bun.YAML.parse(yamlArchivo) as Record<string, unknown> | null) : null;
+        recolectaNombres(parsedArchivo?.creator, nombres);
       }
     } catch {
       // mejor saltarse un frontmatter roto que abortar
     }
+    await agregaCreators(nombres);
   };
 
   if (await Bun.file(directo).exists()) await agregarFiles(directo);
@@ -333,12 +371,12 @@ function objetivosParaIncidencia(inc: TypographyIncidence): string[] {
 
 function envuelveParrafoContenedor(content: string, inc: TypographyIncidence): string | undefined {
   const word = inc.text.trim();
-  const wordNorm = word.toLowerCase().replace(/\s+/g, ' ');
+  const wordNorm = normalizaParaBusqueda(word);
   const prev = (inc as unknown as { prev?: string }).prev;
   const bloques = content.split(/\n\s*\n/);
   const matches: number[] = [];
   for (let k = 0; k < bloques.length; k++) {
-    const bloqueNorm = (bloques[k] ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const bloqueNorm = normalizaParaBusqueda(bloques[k] ?? '');
     if (bloqueNorm.includes(wordNorm)) matches.push(k);
   }
   let idx = -1;
@@ -347,7 +385,7 @@ function envuelveParrafoContenedor(content: string, inc: TypographyIncidence): s
     const prevWords = normalizaParaBusqueda(prev).split(/\s+/).filter(Boolean);
     const marca = (prevWords.length >= 2 ? prevWords.slice(-2) : prevWords).join(' ').toLowerCase();
     const seleccionados = matches.filter((k) => {
-      const bloqueNorm = (bloques[k] ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+      const bloqueNorm = normalizaParaBusqueda(bloques[k] ?? '');
       return marca.length > 0 && bloqueNorm.includes(marca);
     });
     if (seleccionados.length === 1) idx = seleccionados[0] as number;
@@ -398,7 +436,9 @@ function normalizaParaBusqueda(texto: string): string {
   return texto
     .replace(/:::[^\n]*/g, ' ')
     .replace(/[*_`]+/g, '')
+    .replace(/\[([^\]]*)\]\{[^}]*\}/g, '$1')
     .replace(/\[[^\]]*\]\([^)]*\)/g, (m) => m.match(/^\[([^\]]*)\]/)?.[1] ?? '')
+    .replace(/\{[^}]*\}/g, '')
     .replace(/-\s*\n\s*/g, '')
     .replace(/\s+/g, ' ')
     .trim()
@@ -523,32 +563,7 @@ async function arreglaTypografia(
         continue;
       }
       const frases = cadenasDeBusqueda(inc);
-      let candidatos = [...contenido.keys()];
-      const frasesUtiles = resuelveCandidatoFuentes(candidatos, contenidoNormalizado, frases);
-      candidatos = frasesUtiles;
-      // Si la collection no deja un único archivo, integrar cualquier markdown del proyecto.
-      if (candidatos.length !== 1) {
-        const glob = new Bun.Glob('**/*.md');
-        const faltantes: string[] = [];
-        for await (const rel of glob.scan({ cwd, onlyFiles: true })) {
-          const parts = rel.split('/');
-          if (parts.some((p) => p === 'node_modules' || p === '.iteraciones' || p === 'dist' || p.startsWith('.'))) continue;
-          const abs = join(cwd, rel);
-          if (contenido.has(abs)) continue;
-          try {
-            const txt = await Bun.file(abs).text();
-            contenido.set(abs, txt);
-            contenidoNormalizado.set(abs, normalizaParaBusqueda(txt));
-            faltantes.push(abs);
-          } catch {
-            // ignorar
-          }
-        }
-        if (faltantes.length > 0) {
-          const amplio = resuelveCandidatoFuentes([...contenido.keys()], contenidoNormalizado, frases);
-          if (amplio.length > 0) candidatos = amplio;
-        }
-      }
+      const candidatos = resuelveCandidatoFuentes([...contenido.keys()], contenidoNormalizado, frases);
 
       if (candidatos.length !== 1) {
         saltados.push(inc);
