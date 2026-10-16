@@ -156,7 +156,12 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
     if (targets.length === 0) throw new BuildError(`no hay PDFs en ${etiqueta(cwd, outputDir)}`);
 
     if (options.fix) {
-      const { corregidos, sinAplicar, noEncontradas, multiples, exactMiss, porPdf } = await arreglaTypografia(cwd, targets, analisis, options);
+      const { corregidos, sinAplicar, noEncontradas, multiples, noAplica, exactMiss, porPdf } = await arreglaTypografia(
+        cwd,
+        targets,
+        analisis,
+        options,
+      );
       const total = [...porPdf.values()].reduce((suma, item) => suma + item.incidences.length, 0);
       if (total === 0) {
         logSuccess(`sin incidencias en ${plural(targets.length, 'PDF')}`, 'typography');
@@ -170,7 +175,8 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
         lineas.push(
           ...resultado.incidences.map((incidencia) => {
             const partes = formatea(incidencia).split('\n');
-            if (resultado.fixed.has(incidencia)) partes[0] = `${partes[0]}  corregido`;
+            const motivo = resultado.estado.get(incidencia);
+            if (motivo) partes[0] = `${partes[0]}  ${motivo}`;
             return partes.join('\n');
           }),
         );
@@ -183,6 +189,7 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
         const detalle = [
           noEncontradas > 0 ? `${noEncontradas} no encontradas` : '',
           multiples > 0 ? `${multiples} con múltiples coincidencias` : '',
+          noAplica > 0 ? `${noAplica} no aplica (títulos de sección)` : '',
           exactMiss > 0 ? `${exactMiss} sin coincidencia exacta` : '',
         ].filter(Boolean);
         if (detalle.length > 0) partes.push(`(${detalle.join(', ')})`);
@@ -508,8 +515,13 @@ function envuelveEnTitleFrontmatter(content: string, inc: TypographyIncidence): 
   return fm.replace(yaml, () => nuevoYaml) + body;
 }
 
-/** ¿La palabra aparece como unidad suelta (valor o párrafo completo) en el archivo? */
-function tienePalabraSuelta(contenido: string, wordNorm: string): boolean {
+/** Quita la marca de encabezado (`#`, `##`, …) para comparar el título como palabra suelta. */
+function sinMarcaDeTitulo(texto: string): string {
+  return texto.replace(/^\s*#{1,6}\s+/, '');
+}
+
+/** ¿La palabra aparece como unidad suelta (valor, encabezado o párrafo completo) en el archivo? */
+export function tienePalabraSuelta(contenido: string, wordNorm: string): boolean {
   const { yaml, body } = splitFrontmatter(contenido);
   if (yaml) {
     for (const linea of yaml.split('\n')) {
@@ -519,7 +531,24 @@ function tienePalabraSuelta(contenido: string, wordNorm: string): boolean {
     }
   }
   for (const bloque of body.split(/\n\s*\n/)) {
-    if (normalizaParaBusqueda(bloque) === wordNorm) return true;
+    if (normalizaParaBusqueda(sinMarcaDeTitulo(bloque)) === wordNorm) return true;
+  }
+  return false;
+}
+
+/**
+ * ¿La incidencia corresponde a un encabezado (`# Título`) del markdown? Los títulos de sección no
+ * se envuelven con `runt`, así que la corrección no aplica.
+ */
+export function esTituloDeSeccion(content: string, inc: TypographyIncidence): boolean {
+  if (inc.type !== 'single-word-line') return false;
+  const wordNorm = normalizaParaBusqueda(inc.text.trim());
+  if (/[.,;:!?…]$/.test(wordNorm)) return false;
+  const { body } = splitFrontmatter(content);
+  for (const bloque of body.split(/\n\s*\n/)) {
+    const primera = bloque.trimStart().split('\n')[0] ?? '';
+    const m = /^#{1,6}[ \t]+(.+)$/.exec(primera);
+    if (m && normalizaParaBusqueda(m[1] as string) === wordNorm) return true;
   }
   return false;
 }
@@ -625,6 +654,9 @@ function resuelveCandidatoFuentes(rutas: string[], contenidoNormalizado: Map<str
   }
   return candidatos;
 }
+
+export type MotivoIncidencia = 'corregido' | 'no aplica' | 'múltiples coincidencias' | 'no encontrado' | 'sin coincidencia exacta';
+
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: heurística de fix por incidencia
 async function arreglaTypografia(
   cwd: string,
@@ -636,8 +668,9 @@ async function arreglaTypografia(
   sinAplicar: number;
   noEncontradas: number;
   multiples: number;
+  noAplica: number;
   exactMiss: number;
-  porPdf: Map<string, { incidences: TypographyIncidence[]; fixed: Set<TypographyIncidence> }>;
+  porPdf: Map<string, { incidences: TypographyIncidence[]; estado: Map<TypographyIncidence, MotivoIncidencia> }>;
 }> {
   await aseguraGitLimpio(cwd);
 
@@ -645,8 +678,9 @@ async function arreglaTypografia(
   let sinAplicar = 0;
   let noEncontradas = 0;
   let multiples = 0;
+  let noAplica = 0;
   let exactMiss = 0;
-  const porPdf = new Map<string, { incidences: TypographyIncidence[]; fixed: Set<TypographyIncidence> }>();
+  const porPdf = new Map<string, { incidences: TypographyIncidence[]; estado: Map<TypographyIncidence, MotivoIncidencia> }>();
 
   for (const pdf of targets) {
     const incidences = filtraExcepciones(
@@ -656,11 +690,11 @@ async function arreglaTypografia(
     ) as TypographyIncidence[];
     if (incidences.length === 0) continue;
 
-    porPdf.set(pdf, { incidences, fixed: new Set() });
-    const saltados: TypographyIncidence[] = [];
+    const estado = new Map<TypographyIncidence, MotivoIncidencia>();
+    porPdf.set(pdf, { incidences, estado });
     const fuentes = await candidatosDeFuente(cwd, pdf);
     if (fuentes.length === 0) {
-      saltados.push(...incidences);
+      for (const inc of incidences) estado.set(inc, 'no encontrado');
       sinAplicar += incidences.length;
       noEncontradas += incidences.length;
       continue;
@@ -682,7 +716,7 @@ async function arreglaTypografia(
       const objetivos = objetivosParaIncidencia(inc);
       const objetivo = objetivos[0] ?? '';
       if (!objetivo) {
-        saltados.push(inc);
+        estado.set(inc, 'no encontrado');
         sinAplicar++;
         noEncontradas++;
         continue;
@@ -696,9 +730,12 @@ async function arreglaTypografia(
       }
 
       if (candidatos.length !== 1) {
-        saltados.push(inc);
+        const aguja = normalizaParaBusqueda(inc.text);
+        const algunaFuente =
+          inc.type === 'single-word-line' && aguja !== '' && candidatos.some((r) => (contenidoNormalizado.get(r) ?? '').includes(aguja));
+        estado.set(inc, candidatos.length === 0 || !algunaFuente ? 'no encontrado' : 'múltiples coincidencias');
         sinAplicar++;
-        if (candidatos.length === 0) noEncontradas++;
+        if (candidatos.length === 0 || !algunaFuente) noEncontradas++;
         else multiples++;
 
         continue;
@@ -707,7 +744,9 @@ async function arreglaTypografia(
       const ruta = candidatos[0] as string;
       const actual = contenido.get(ruta);
       if (actual === undefined) {
+        estado.set(inc, 'sin coincidencia exacta');
         sinAplicar++;
+        exactMiss++;
         continue;
       }
 
@@ -727,7 +766,13 @@ async function arreglaTypografia(
       }
 
       if (nuevo === undefined || nuevo === actual) {
-        saltados.push(inc);
+        if (esTituloDeSeccion(actual, inc)) {
+          estado.set(inc, 'no aplica');
+          sinAplicar++;
+          noAplica++;
+          continue;
+        }
+        estado.set(inc, 'sin coincidencia exacta');
         sinAplicar++;
         exactMiss++;
         continue;
@@ -735,7 +780,7 @@ async function arreglaTypografia(
 
       contenido.set(ruta, nuevo);
       corregidos++;
-      porPdf.get(pdf)?.fixed.add(inc);
+      estado.set(inc, 'corregido');
     }
 
     for (const [ruta, texto] of contenido) {
@@ -745,5 +790,5 @@ async function arreglaTypografia(
     }
   }
 
-  return { corregidos, sinAplicar, noEncontradas, multiples, exactMiss, porPdf };
+  return { corregidos, sinAplicar, noEncontradas, multiples, noAplica, exactMiss, porPdf };
 }

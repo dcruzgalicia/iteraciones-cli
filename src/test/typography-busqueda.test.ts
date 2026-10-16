@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { envuelveParrafoContenedor, normalizaParaBusqueda } from '../cli/typography.ts';
+import { envuelveParrafoContenedor, esTituloDeSeccion, normalizaParaBusqueda, tienePalabraSuelta } from '../cli/typography.ts';
 import type { SingleWordLine, TypographyIncidence } from '../lib/pdf-typography.ts';
 
 const incidencia = (text: string, extra: Partial<SingleWordLine> = {}): TypographyIncidence => ({
@@ -48,5 +48,20 @@ describe('envuelveParrafoContenedor', () => {
     expect(envuelveParrafoContenedor(md, incidencia('palabra.'))).toBe(
       '---\ntitle: Otra cosa\n---\n::: {runt=2}\nUn párrafo que termina en\npalabra.\n:::',
     );
+  });
+});
+
+describe('tienePalabraSuelta', () => {
+  test('reconoce encabezados como palabra suelta y no coincidencias dentro de prosa', () => {
+    expect(tienePalabraSuelta('---\ntitle: Otra cosa\n---\n\n# Nota\n', 'nota')).toBe(true);
+    expect(tienePalabraSuelta('---\ntitle: Otra cosa\n---\n\nuna nota final.\n', 'nota')).toBe(false);
+  });
+});
+
+describe('esTituloDeSeccion', () => {
+  test('detecta el encabezado que coincide con la incidencia', () => {
+    expect(esTituloDeSeccion('---\ntitle: Otra cosa\n---\n\n# Nota\n', incidencia('Nota'))).toBe(true);
+    expect(esTituloDeSeccion('---\ntitle: Otra cosa\n---\n\n# Nota\n', incidencia('nota.'))).toBe(false);
+    expect(esTituloDeSeccion('---\ntitle: Otra cosa\n---\n\nuna nota final.\n', incidencia('nota'))).toBe(false);
   });
 });
