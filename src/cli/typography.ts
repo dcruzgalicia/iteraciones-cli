@@ -369,11 +369,24 @@ function posicionProtegida(content: string, pos: number): boolean {
 }
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: algoritmo de hidridacion
-function objetivosParaIncidencia(inc: TypographyIncidence): string[] {
+export function objetivosParaIncidencia(inc: TypographyIncidence): string[] {
   if (inc.type === 'single-word-line') return [inc.text.trim() as string];
   const lineas = inc.lineas;
-  if (lineas.length < 2) return [(lineas[lineas.length - 1] ? (lineas[lineas.length - 1] as { text: string }).text : '').trim()];
+  const textoDe = (i: number): string => (lineas[i] as { text: string } | undefined)?.text.trim() ?? '';
+  const tokens = (texto: string): string[] => texto.split(/\s+/u).filter(Boolean);
+  if (lineas.length < 2) return [textoDe(lineas.length - 1)];
   const objetivos: string[] = [];
+  // El &nbsp; se pega justo en la unión de dos líneas: la aguja termina en la última palabra de
+  // la primera línea, para que el espacio que sigue sea el del corte. La unión más cercana al
+  // final de la corrida va primero: es la que rompe la repetición sin mover el resto.
+  for (let i = lineas.length - 2; i >= 0; i--) {
+    const finIzq = tokens(textoDe(i));
+    const ultima = finIzq[finIzq.length - 1] ?? '';
+    if (!ultima) continue;
+    const previa = finIzq[finIzq.length - 2] ?? '';
+    if (previa) objetivos.push(`${previa} ${ultima}`);
+    objetivos.push(ultima);
+  }
   const objetivoRegex = /(\S+[.,;:!?…»’”])\s+(\S+)/gu;
   for (const linea of lineas) {
     for (const m of [...(linea.text || '').matchAll(objetivoRegex)]) {
@@ -395,7 +408,7 @@ function objetivosParaIncidencia(inc: TypographyIncidence): string[] {
     }
     if (token.length >= 3 && siguiente.length >= 1) objetivos.push(`${token} ${siguiente}`);
   }
-  const ultima = ((lineas[lineas.length - 1] as { text: string })?.text ?? '').trim();
+  const ultima = textoDe(lineas.length - 1);
   if (ultima.length >= 8) objetivos.push(ultima);
   return (objetivos.length > 0 ? objetivos : [ultima]).filter(Boolean);
 }

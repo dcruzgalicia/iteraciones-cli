@@ -3,6 +3,7 @@ import {
   envuelveParrafoContenedor,
   esTituloDeSeccion,
   normalizaParaBusqueda,
+  objetivosParaIncidencia,
   remplazaEspacioAnterior,
   remplazaEspacioPosterior,
   tienePalabraSuelta,
@@ -112,5 +113,27 @@ describe('espacios pegados con &nbsp;', () => {
     expect(yaAplicado(ya, 'necesita; escritora', corrida('se necesita'))).toBe(true);
     expect(yaAplicado('::: {runt=2}\nse necesita; escritora desde niña\n:::\n', 'necesita; escritora', corrida('se necesita'))).toBe(false);
     expect(yaAplicado('::: {runt=2}\nllega&nbsp;este;\n:::\n', 'este;', corrida('este;', 'repeated-first-letter'))).toBe(true);
+  });
+});
+
+describe('objetivosParaIncidencia', () => {
+  test('el primer objetivo pega el &nbsp; en la unión de las líneas, no a media línea', () => {
+    const inc: TypographyIncidence = {
+      type: 'repeated-last-letter',
+      page: 19,
+      line: 14,
+      text: 'Mi mamá no fue una mujer muy cariñosa, no se permitía',
+      letter: 'a',
+      lineas: [
+        { line: 14, text: '  Mi mamá no fue una mujer muy cariñosa, no se permitía' },
+        { line: 15, text: 'las caricias, las palabras tiernas o melosas. Al contrario, era' },
+      ],
+      total: 2,
+    };
+    const objetivos = objetivosParaIncidencia(inc);
+    expect(objetivos[0]).toBe('se permitía');
+    expect(remplazaEspacioPosterior('cariñosa, no se permitía las caricias.\n', objetivos[0] as string)).toBe(
+      'cariñosa, no se permitía&nbsp;las caricias.\n',
+    );
   });
 });
