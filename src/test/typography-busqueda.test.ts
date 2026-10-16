@@ -131,9 +131,31 @@ describe('objetivosParaIncidencia', () => {
       total: 2,
     };
     const objetivos = objetivosParaIncidencia(inc);
-    expect(objetivos[0]).toBe('se permitía');
+    expect(objetivos[0]).toBe('no se permitía');
     expect(remplazaEspacioPosterior('cariñosa, no se permitía las caricias.\n', objetivos[0] as string)).toBe(
       'cariñosa, no se permitía&nbsp;las caricias.\n',
+    );
+  });
+
+  test('alarga la aguja de la unión cuando la corta es ambigua', () => {
+    const inc: TypographyIncidence = {
+      type: 'repeated-last-letter',
+      page: 41,
+      line: 1,
+      text: 'atenta, y fue muy reconfortante el acurrucamiento de los',
+      letter: 's',
+      lineas: [
+        { line: 1, text: 'atenta, y fue muy reconfortante el acurrucamiento de los' },
+        { line: 2, text: 'gatos y los perros. Ahora agradezco su compañía desde los' },
+      ],
+      total: 3,
+    };
+    const objetivos = objetivosParaIncidencia(inc);
+    expect(objetivos.slice(0, 3)).toEqual(['acurrucamiento de los', 'de los', 'los']);
+    const md = 'Hablo de los gatos, y fue muy reconfortante el acurrucamiento de los gatos y los perros.\n';
+    expect(remplazaEspacioPosterior(md, 'de los')).toBeUndefined();
+    expect(remplazaEspacioPosterior(md, objetivos[0] as string)).toBe(
+      'Hablo de los gatos, y fue muy reconfortante el acurrucamiento de los&nbsp;gatos y los perros.\n',
     );
   });
 });

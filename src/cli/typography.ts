@@ -383,9 +383,11 @@ export function objetivosParaIncidencia(inc: TypographyIncidence): string[] {
     const finIzq = tokens(textoDe(i));
     const ultima = finIzq[finIzq.length - 1] ?? '';
     if (!ultima) continue;
-    const previa = finIzq[finIzq.length - 2] ?? '';
-    if (previa) objetivos.push(`${previa} ${ultima}`);
-    objetivos.push(ultima);
+    // Varias longitudes para la misma unión: el espacio pegado es el mismo (el del corte), la
+    // aguja más larga solo sirve para desambiguar («de los» aparece dos veces y se descarta).
+    for (const cuantas of [3, 2, 1]) {
+      if (finIzq.length >= cuantas) objetivos.push(finIzq.slice(finIzq.length - cuantas).join(' '));
+    }
   }
   const objetivoRegex = /(\S+[.,;:!?…»’”])\s+(\S+)/gu;
   for (const linea of lineas) {
