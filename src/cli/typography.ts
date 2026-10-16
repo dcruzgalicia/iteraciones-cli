@@ -326,14 +326,21 @@ async function candidatosDeFuente(cwd: string, pdfPath: string): Promise<string[
   return [...out];
 }
 
+/** El PDF dibuja «“ ” ‘ ’» donde el markdown trae «"» o «'»; igualarlas conserva las posiciones. */
+function sinComillasTipograficas(texto: string): string {
+  return texto.replace(/[“”„‟«»]/g, '"').replace(/[‘’‚]/g, "'");
+}
+
 function indicesDe(haystack: string, aguja: string): number[] {
+  const texto = sinComillasTipograficas(haystack);
+  const busca = sinComillasTipograficas(aguja);
   const idxs: number[] = [];
   let from = 0;
-  let at = haystack.indexOf(aguja, from);
+  let at = texto.indexOf(busca, from);
   while (at !== -1) {
     idxs.push(at);
-    from = at + aguja.length;
-    at = haystack.indexOf(aguja, from);
+    from = at + busca.length;
+    at = texto.indexOf(busca, from);
   }
   return idxs;
 }
@@ -342,6 +349,23 @@ function estaEnFrontmatter(content: string, pos: number): boolean {
   const m = /^---[ \t]*\r?\n[\s\S]*?\r?\n---[ \t]*\r?\n?/.exec(content);
   if (!m) return false;
   return pos < m[0].length;
+}
+
+/** ¿La posición cae dentro de un escalar de bloque del frontmatter (`clave: |`)? Su contenido es markdown. */
+function estaEnBloqueYaml(content: string, pos: number): boolean {
+  const m = /^---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*\r?\n?/.exec(content);
+  const yaml = m?.[1];
+  if (!m || !yaml) return false;
+  const inicio = m.index + m[0].indexOf(yaml);
+  if (pos < inicio || pos >= inicio + yaml.length) return false;
+  const linea = content.slice(inicio, pos).split('\n').length - 1;
+  return lineasDeBloquesYaml(yaml)[linea] ?? false;
+}
+
+/** ¿La posición no debe editarse? Fuera de un bloque `qr` y del YAML que no es un escalar de bloque. */
+function posicionProtegida(content: string, pos: number): boolean {
+  if (dentroDeQr(content, pos)) return true;
+  return estaEnFrontmatter(content, pos) && !estaEnBloqueYaml(content, pos);
 }
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: algoritmo de hidridacion
@@ -561,33 +585,59 @@ function profundidadFenced(content: string, pos: number): number {
   return dentro ? 1 : 0;
 }
 
-function remplazaEspacioPosterior(content: string, needle: string): string | undefined {
+/** ¿La posición cae dentro de un bloque `::: {qr=…}`? Su contenido (una URL) no debe tocarse. */
+function dentroDeQr(content: string, pos: number): boolean {
+  let dentro = false;
+  let esQr = false;
+  for (const linea of content.slice(0, Math.max(0, pos)).split('\n')) {
+    if (!/^:{3,}/.test(linea)) continue;
+    dentro = !dentro;
+    esQr = dentro && /\bqr[ \t]*=/.test(linea);
+  }
+  return dentro && esQr;
+}
+
+/** Une con `&nbsp;` el espacio posterior a `needle`. Sí aplica dentro de un `::: {runt=2}`. */
+export function remplazaEspacioPosterior(content: string, needle: string): string | undefined {
   const idxs = indicesDe(content, needle);
   if (idxs.length !== 1) return undefined;
   const i = idxs[0] as number;
-  if (profundidadFenced(content, i) > 0 || estaEnFrontmatter(content, i)) return undefined;
+  if (posicionProtegida(content, i)) return undefined;
   let j = i + needle.length;
   while (j < content.length && /\s/.test(content[j] ?? '')) j++;
   const ws = content.slice(i + needle.length, j);
-  if (ws === '') return undefined; // ya está unido o no hay espacio que cambiar
+  // ya está unido, o el espacio cruza un corte de párrafo/bloque y no debe tocarse
+  if (ws === '' || /\n[ \t]*\n/.test(ws)) return undefined;
   return `${content.slice(0, i + needle.length)}&nbsp;${content.slice(j)}`;
 }
 
-function remplazaEspacioAnterior(content: string, needle: string): string | undefined {
+/** Une con `&nbsp;` el espacio anterior a `needle`. Sí aplica dentro de un `::: {runt=2}`. */
+export function remplazaEspacioAnterior(content: string, needle: string): string | undefined {
   const idxs = indicesDe(content, needle);
   if (idxs.length !== 1) return undefined;
   const i = idxs[0] as number;
-  if (profundidadFenced(content, i) > 0 || estaEnFrontmatter(content, i)) return undefined;
+  if (posicionProtegida(content, i)) return undefined;
   if (i === 0) return undefined;
   let j = i - 1;
   while (j >= 0 && /\s/.test(content[j] ?? '')) j--;
   const inicioWs = j + 1;
-  if (inicioWs >= i) return undefined; // no hay espacio que cambiar
+  // no hay espacio que cambiar, o el espacio cruza un corte de párrafo/bloque
+  if (inicioWs >= i || /\n[ \t]*\n/.test(content.slice(inicioWs, i))) return undefined;
   return `${content.slice(0, inicioWs)}&nbsp;${content.slice(i)}`;
 }
 
+/** ¿El espacio de `needle` ya quedó pegado con `&nbsp;` en una pasada anterior? */
+export function yaAplicado(content: string, needle: string, inc: TypographyIncidence): boolean {
+  const idxs = indicesDe(content, needle);
+  if (idxs.length !== 1) return false;
+  const i = idxs[0] as number;
+  return inc.type === 'repeated-first-letter'
+    ? content.slice(Math.max(0, i - 6), i) === '&nbsp;'
+    : content.slice(i + needle.length, i + needle.length + 6) === '&nbsp;';
+}
+
 export function normalizaParaBusqueda(texto: string): string {
-  return texto
+  return sinComillasTipograficas(texto)
     .replace(/:::[^\n]*/g, ' ')
     .replace(/[*_`]+/g, '')
     .replace(/\[([^\]]*)\]\{[^}]*\}/g, '$1')
@@ -756,6 +806,7 @@ async function arreglaTypografia(
       } else {
         nuevo = undefined;
         for (const cand of objetivos) {
+          if (yaAplicado(actual, cand, inc)) break; // ya se pegó en una pasada anterior
           if (inc.type === 'consecutive-punctuation' || inc.type === 'repeated-last-letter') {
             nuevo = remplazaEspacioPosterior(actual, cand);
           } else if (inc.type === 'repeated-first-letter') {
