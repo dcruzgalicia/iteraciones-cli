@@ -369,7 +369,12 @@ function objetivosParaIncidencia(inc: TypographyIncidence): string[] {
   return (objetivos.length > 0 ? objetivos : [ultima]).filter(Boolean);
 }
 
-function envuelveParrafoContenedor(content: string, inc: TypographyIncidence): string | undefined {
+export function envuelveParrafoContenedor(content: string, inc: TypographyIncidence): string | undefined {
+  return envuelveEnCuerpo(content, inc) ?? envuelveEnBloquesFrontmatter(content, inc) ?? envuelveEnTitleFrontmatter(content, inc);
+}
+
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: desambigua el párrafo contenedor en el cuerpo
+function envuelveEnCuerpo(content: string, inc: TypographyIncidence): string | undefined {
   const word = inc.text.trim();
   const wordNorm = normalizaParaBusqueda(word);
   const prev = (inc as unknown as { prev?: string }).prev;
@@ -396,9 +401,127 @@ function envuelveParrafoContenedor(content: string, inc: TypographyIncidence): s
   const bloqueTexto = (bloques[idx] as string).trim();
   const offsetBloque = body.indexOf(bloques[idx] as string);
   if (offsetBloque < 0 || profundidadFenced(body, offsetBloque) > 0) return undefined;
-  if (bloqueTexto.startsWith(':::')) return undefined;
+  if (bloqueTexto.startsWith(':::') || /^#{1,6}\s/.test(bloqueTexto)) return undefined;
   bloques[idx] = `::: {runt=2}\n${bloqueTexto}\n:::`;
   return prefijo + bloques.join('\n\n');
+}
+
+/** Marca las líneas del frontmatter que pertenecen a un escalar de bloque (`clave: |`). */
+function lineasDeBloquesYaml(yaml: string): boolean[] {
+  const lineas = yaml.split('\n');
+  const dentro = lineas.map(() => false);
+  let activo = false;
+  let indentClave = 0;
+  for (let i = 0; i < lineas.length; i++) {
+    const linea = lineas[i] as string;
+    const texto = linea.trim();
+    const indent = linea.length - linea.trimStart().length;
+    if (activo) {
+      if (texto !== '' && indent <= indentClave) activo = false;
+      else {
+        dentro[i] = true;
+        continue;
+      }
+    }
+    if (/^[^\s#][^:]*:[ \t]*[|>][-+0-9]*[ \t]*$/.test(linea)) {
+      activo = true;
+      indentClave = indent;
+    }
+  }
+  return dentro;
+}
+
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: párrafos dentro de titleback, colophon, etc.
+function envuelveEnBloquesFrontmatter(content: string, inc: TypographyIncidence): string | undefined {
+  const wordNorm = normalizaParaBusqueda(inc.text.trim());
+  const { yaml, body } = splitFrontmatter(content);
+  if (!yaml) return undefined;
+  const lineas = yaml.split('\n');
+  const dentro = lineasDeBloquesYaml(yaml);
+  const esFence = (linea: string): boolean => linea.trim().startsWith(':::');
+  const noVacia = (i: number): boolean => (lineas[i] as string).trim() !== '';
+  const anteriorNoVacia = (i: number): number => {
+    let j = i - 1;
+    while (j >= 0 && !noVacia(j)) j--;
+    return j;
+  };
+  const siguienteNoVacia = (i: number): number => {
+    let j = i + 1;
+    while (j < lineas.length && !noVacia(j)) j++;
+    return j;
+  };
+  const yaEnvuelto = (ini: number): boolean => {
+    const ant = anteriorNoVacia(ini);
+    const sig = siguienteNoVacia(ini);
+    return ant >= 0 && sig < lineas.length && (lineas[ant] as string).includes('runt') && (lineas[sig] as string).trim() === ':::';
+  };
+  const dentroDeQr = (ini: number): boolean => {
+    const ant = anteriorNoVacia(ini);
+    return ant >= 0 && /^:::.*\bqr[ \t]*=/.test((lineas[ant] as string).trim());
+  };
+  const matches: { ini: number; fin: number; envuelto: boolean }[] = [];
+  for (let i = 0; i < lineas.length; i++) {
+    if (!dentro[i] || esFence(lineas[i] as string)) continue;
+    if (!normalizaParaBusqueda(lineas[i] as string).includes(wordNorm)) continue;
+    let ini = i;
+    while (ini - 1 >= 0 && dentro[ini - 1] && noVacia(ini - 1) && !esFence(lineas[ini - 1] as string)) ini--;
+    let fin = i;
+    while (fin + 1 < lineas.length && dentro[fin + 1] && noVacia(fin + 1) && !esFence(lineas[fin + 1] as string)) fin++;
+    if (dentroDeQr(ini)) continue;
+    if (matches.some((m) => m.ini === ini)) continue;
+    matches.push({ ini, fin, envuelto: yaEnvuelto(ini) });
+  }
+  if (matches.length === 0) return undefined;
+  const prevNorm = normalizaParaBusqueda((inc as { prev?: string }).prev ?? '');
+  const nextNorm = normalizaParaBusqueda((inc as { next?: string }).next ?? '');
+  const normLinea = (i: number): string => (i >= 0 && i < lineas.length ? normalizaParaBusqueda(lineas[i] as string) : '');
+  const conContexto = matches.filter((m) => {
+    const ant = normLinea(anteriorNoVacia(m.ini));
+    const sig = normLinea(siguienteNoVacia(m.fin));
+    return (prevNorm !== '' && ant === prevNorm) || (nextNorm !== '' && sig === nextNorm);
+  });
+  const elegido = (conContexto.length === 1 ? conContexto[0] : matches[0]) as { ini: number; fin: number; envuelto: boolean };
+  if (elegido.envuelto) return undefined;
+  const { ini, fin } = elegido;
+  const indent = (lineas[ini] as string).match(/^[ \t]*/)?.[0] ?? '';
+  const nuevas = [...lineas.slice(0, ini), `${indent}::: {runt=2}`, ...lineas.slice(ini, fin + 1), `${indent}:::`, ...lineas.slice(fin + 1)];
+  const nuevoYaml = nuevas.join('\n');
+  const fm = content.slice(0, content.length - body.length);
+  return fm.replace(yaml, () => nuevoYaml) + body;
+}
+
+function envuelveEnTitleFrontmatter(content: string, inc: TypographyIncidence): string | undefined {
+  const wordNorm = normalizaParaBusqueda(inc.text.trim());
+  const { yaml, body } = splitFrontmatter(content);
+  if (!yaml) return undefined;
+  // si ya hay una ocurrencia suelta en un bloque del frontmatter, el título no es el objetivo
+  if (yaml.split('\n').some((linea) => normalizaParaBusqueda(linea) === wordNorm)) return undefined;
+  const m = /^title:[ \t]*(.+)$/m.exec(yaml);
+  if (!m) return undefined;
+  let valor = (m[1] as string).trim();
+  if ((valor.startsWith('"') && valor.endsWith('"')) || (valor.startsWith("'") && valor.endsWith("'"))) {
+    valor = valor.slice(1, -1);
+  }
+  if (valor.includes(':::') || normalizaParaBusqueda(valor) !== wordNorm) return undefined;
+  const nuevoYaml = yaml.replace(m[0], () => `title: |\n  ::: {runt=2}\n  ${valor}\n  :::`);
+  const fm = content.slice(0, content.length - body.length);
+  return fm.replace(yaml, () => nuevoYaml) + body;
+}
+
+/** ¿La palabra aparece como unidad suelta (valor o párrafo completo) en el archivo? */
+function tienePalabraSuelta(contenido: string, wordNorm: string): boolean {
+  const { yaml, body } = splitFrontmatter(contenido);
+  if (yaml) {
+    for (const linea of yaml.split('\n')) {
+      if (normalizaParaBusqueda(linea) === wordNorm) return true;
+      const m = /^\s*[^:]+:[ \t]*(.+)$/.exec(linea);
+      if (m && normalizaParaBusqueda(m[1] as string) === wordNorm) return true;
+    }
+  }
+  for (const bloque of body.split(/\n\s*\n/)) {
+    if (normalizaParaBusqueda(bloque) === wordNorm) return true;
+  }
+  return false;
 }
 
 function profundidadFenced(content: string, pos: number): number {
@@ -565,7 +688,12 @@ async function arreglaTypografia(
         continue;
       }
       const frases = cadenasDeBusqueda(inc);
-      const candidatos = resuelveCandidatoFuentes([...contenido.keys()], contenidoNormalizado, frases);
+      let candidatos = resuelveCandidatoFuentes([...contenido.keys()], contenidoNormalizado, frases);
+      if (candidatos.length > 1 && inc.type === 'single-word-line') {
+        const palabra = normalizaParaBusqueda(inc.text);
+        const sueltos = candidatos.filter((r) => tienePalabraSuelta(contenido.get(r) ?? '', palabra));
+        if (sueltos.length === 1) candidatos = sueltos;
+      }
 
       if (candidatos.length !== 1) {
         saltados.push(inc);
