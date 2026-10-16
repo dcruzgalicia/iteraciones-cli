@@ -379,16 +379,22 @@ export function objetivosParaIncidencia(inc: TypographyIncidence): string[] {
   if (lineas.length < 2) return [textoDe(lineas.length - 1)];
   const objetivos: string[] = [];
   // El &nbsp; se pega justo en la unión de dos líneas. En repeated-first-letter se pega ANTES de la
-  // aguja, así que la aguja empieza en la primera palabra de la línea siguiente (el corte); en los
+  // aguja, así que la aguja empieza en la primera palabra de la línea: primero la de la línea
+  // inicial del hallazgo (cambia su arranque) y luego las de las siguientes (si aquella arranca
+  // con un fragmento de palabra cortada o con un párrafo, ahí no hay espacio que pegar). En los
   // demás se pega después, y la aguja termina en la última palabra de la línea. Se prueban todas
-  // las longitudes hacia el corte: todas comparten el mismo espacio pegado, la más larga es la que
+  // las longitudes hacia la unión: todas comparten el mismo espacio pegado, la más larga es la que
   // mejor desambigua («ya no» aparece seis veces y se descarta; «mal contada que ya no», no).
-  const palabrasDe = (i: number): string[] => tokens(textoDe(i));
   const antes = inc.type === 'repeated-first-letter';
-  const pares = Array.from({ length: lineas.length - 1 }, (_, i) => i);
-  if (!antes) pares.reverse();
-  for (const i of pares) {
-    const palabras = palabrasDe(antes ? i + 1 : i);
+  const palabrasDe = (i: number): string[] => tokens(textoDe(i));
+  const orden: number[] = [];
+  if (antes) {
+    for (let i = 0; i < lineas.length; i++) orden.push(i);
+  } else {
+    for (let i = lineas.length - 2; i >= 0; i--) orden.push(i);
+  }
+  for (const i of orden) {
+    const palabras = palabrasDe(i);
     for (let cuantas = palabras.length; cuantas >= 1; cuantas--) {
       objetivos.push((antes ? palabras.slice(0, cuantas) : palabras.slice(-cuantas)).join(' '));
     }
