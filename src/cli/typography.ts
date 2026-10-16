@@ -546,21 +546,6 @@ async function arreglaTypografia(
         sinAplicar++;
         continue;
       }
-      if (process.env.TYPO_DEBUG === '1' && inc.type === 'single-word-line') {
-        console.error(`DBG p${inc.page} l${inc.line} cand=${candidatos.length} ruta=${ruta.split('/').pop()}`);
-      }
-      if (process.env.TYPO_DEBUG === '1') {
-        for (const cand of objetivos) {
-          console.error(
-            `DEBUG page ${inc.page} cand=${JSON.stringify(cand)} count=${(actual.match(new RegExp(cand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length}`,
-          );
-        }
-      }
-      if (process.env.TYPO_DEBUG === '1') {
-        console.error(
-          `DEBUG page ${inc.page} ruta=${ruta} candidates=${candidatos.length} exact=${indicesDe(actual, objetivo).length} needle=${JSON.stringify(objetivo)}`,
-        );
-      }
 
       let nuevo: string | undefined;
       if (inc.type === 'single-word-line') {
