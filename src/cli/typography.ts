@@ -156,7 +156,7 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
     if (targets.length === 0) throw new BuildError(`no hay PDFs en ${etiqueta(cwd, outputDir)}`);
 
     if (options.fix) {
-      const { corregidos, sinAplicar, noEncontradas, multiples, noAplica, exactMiss, porPdf } = await arreglaTypografia(
+      const { corregidos, sinAplicar, noEncontradas, multiples, noAplica, sinAccion, exactMiss, porPdf } = await arreglaTypografia(
         cwd,
         targets,
         analisis,
@@ -190,6 +190,7 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
           noEncontradas > 0 ? `${noEncontradas} no encontradas` : '',
           multiples > 0 ? `${multiples} con múltiples coincidencias` : '',
           noAplica > 0 ? `${noAplica} no aplica (títulos de sección)` : '',
+          sinAccion > 0 ? `${sinAccion} sin acción` : '',
           exactMiss > 0 ? `${exactMiss} sin coincidencia exacta` : '',
         ].filter(Boolean);
         if (detalle.length > 0) partes.push(`(${detalle.join(', ')})`);
@@ -399,35 +400,52 @@ function cruzaBloque(lineaIzq: string, ws: string, lineaDer: string): boolean {
   return LINEA_DE_BLOQUE.test(izq) || /[|>]$/.test(izq) || LINEA_DE_BLOQUE.test(der) || LINEA_DE_YAML.test(der);
 }
 
+/** Dónde se pega un objetivo: `posterior` pega después de la aguja, si no, antes. */
+export type ObjetivoTypography = { aguja: string; posterior: boolean };
+
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: algoritmo de hidridacion
-export function objetivosParaIncidencia(inc: TypographyIncidence): string[] {
-  if (inc.type === 'single-word-line') return [inc.text.trim() as string];
+export function objetivosParaIncidencia(inc: TypographyIncidence): ObjetivoTypography[] {
+  if (inc.type === 'single-word-line') return [{ aguja: inc.text.trim() as string, posterior: false }];
   const lineas = inc.lineas;
   const textoDe = (i: number): string => (lineas[i] as { text: string } | undefined)?.text.trim() ?? '';
   const tokens = (texto: string): string[] => texto.split(/\s+/u).filter(Boolean);
-  if (lineas.length < 2) return [textoDe(lineas.length - 1)];
-  const objetivos: string[] = [];
+  const antes = inc.type === 'repeated-first-letter';
+  if (lineas.length < 2) return [{ aguja: textoDe(lineas.length - 1), posterior: !antes }];
+  const objetivos: ObjetivoTypography[] = [];
+  const agrega = (aguja: string, posterior = !antes): void => {
+    objetivos.push({ aguja, posterior });
+  };
   // El &nbsp; se pega justo en la unión de dos líneas. En repeated-first-letter se pega ANTES de la
   // aguja, así que la aguja empieza en la primera palabra de la línea siguiente (el corte); en los
   // demás se pega después, y la aguja termina en la última palabra de la línea. Se prueban todas
   // las longitudes hacia el corte: todas comparten el mismo espacio pegado, la más larga es la que
   // mejor desambigua («ya no» aparece seis veces y se descarta; «mal contada que ya no», no).
   const palabrasDe = (i: number): string[] => tokens(textoDe(i));
-  const antes = inc.type === 'repeated-first-letter';
   const pares = Array.from({ length: lineas.length - 1 }, (_, i) => i);
   if (!antes) pares.reverse();
   for (const i of pares) {
     const palabras = palabrasDe(antes ? i + 1 : i);
     for (let cuantas = palabras.length; cuantas >= 1; cuantas--) {
-      objetivos.push((antes ? palabras.slice(0, cuantas) : palabras.slice(-cuantas)).join(' '));
+      agrega((antes ? palabras.slice(0, cuantas) : palabras.slice(-cuantas)).join(' '));
     }
   }
+  // Si esa unión no se puede pegar (la línea arranca con el fragmento de una palabra cortada o ya
+  // trae pegado su espacio), el &nbsp; va al final de la segunda línea: también queda en una unión
+  // de líneas y rompe la repetición, como pidió la revisión de pág 40 («hasta&nbsp;lloré»).
+  const palabrasUltima = palabrasDe(lineas.length - 1);
+  for (let cuantas = palabrasUltima.length; cuantas >= 1; cuantas--) {
+    agrega(palabrasUltima.slice(-cuantas).join(' '), true);
+  }
+  // Respaldo a media línea, ya solo si ninguna de las dos uniones se pudo pegar: refluir el
+  // párrafo es lo único que puede mover el corte cuando la unión es una palabra cortada con guion
+  // o un cambio de párrafo. Se prueba cada par «palabra, siguiente» de las líneas mostradas y la
+  // costura del par (uniendo el fragmento guionado).
   const objetivoRegex = /(\S+[.,;:!?…»’”])\s+(\S+)/gu;
   for (const linea of lineas) {
     for (const m of [...(linea.text || '').matchAll(objetivoRegex)]) {
       const anterior = m[1];
       const siguiente = m[2];
-      if (anterior && siguiente) objetivos.push(`${anterior} ${siguiente}`);
+      if (anterior && siguiente) agrega(`${anterior} ${siguiente}`);
     }
   }
   for (let i = 0; i < lineas.length - 1; i++) {
@@ -441,11 +459,11 @@ export function objetivosParaIncidencia(inc: TypographyIncidence): string[] {
       token = antRaw.slice(0, -1) + nextTokens[0];
       siguiente = nextTokens.length > 1 ? (nextTokens[1] as string) : (nextTokens[0] as string);
     }
-    if (token.length >= 3 && siguiente.length >= 1) objetivos.push(`${token} ${siguiente}`);
+    if (token.length >= 3 && siguiente.length >= 1) agrega(`${token} ${siguiente}`);
   }
   const ultima = textoDe(lineas.length - 1);
-  if (ultima.length >= 8) objetivos.push(ultima);
-  return (objetivos.length > 0 ? objetivos : [ultima]).filter(Boolean);
+  if (ultima.length >= 8) agrega(ultima);
+  return (objetivos.length > 0 ? objetivos : [{ aguja: ultima, posterior: !antes }]).filter((o) => o.aguja);
 }
 
 export function envuelveParrafoContenedor(content: string, inc: TypographyIncidence): string | undefined {
@@ -677,14 +695,14 @@ export function remplazaEspacioAnterior(content: string, needle: string): string
 }
 
 /** ¿El espacio de `needle` ya quedó pegado con `&nbsp;` en una pasada anterior? */
-export function yaAplicado(content: string, needle: string, inc: TypographyIncidence): boolean {
+/** ¿El `&nbsp;` de esta incidencia ya está puesto? (`posterior`: se pega después de la aguja). */
+export function yaAplicado(content: string, needle: string, posterior: boolean): boolean {
   const idxs = indicesDe(content, needle);
   if (idxs.length !== 1) return false;
   const { inicio, fin } = idxs[0] as { inicio: number; fin: number };
-  const antes = inc.type === 'repeated-first-letter';
-  const pegote = antes ? content.slice(Math.max(0, inicio - 6), inicio) : content.slice(fin, fin + 6);
+  const pegote = posterior ? content.slice(fin, fin + 6) : content.slice(Math.max(0, inicio - 6), inicio);
   // el markdown puede traer el espacio ya pegado con el carácter duro, no solo con la entidad
-  const crudo = antes ? content[inicio - 1] : content[fin];
+  const crudo = posterior ? content[fin] : content[inicio - 1];
   return pegote === '&nbsp;' || crudo === '\u00a0';
 }
 
@@ -757,7 +775,7 @@ function resuelveCandidatoFuentes(rutas: string[], contenidoNormalizado: Map<str
   return candidatos;
 }
 
-export type MotivoIncidencia = 'corregido' | 'no aplica' | 'múltiples coincidencias' | 'no encontrado' | 'sin coincidencia exacta';
+export type MotivoIncidencia = 'corregido' | 'no aplica' | 'múltiples coincidencias' | 'no encontrado' | 'sin acción' | 'sin coincidencia exacta';
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: heurística de fix por incidencia
 async function arreglaTypografia(
@@ -771,6 +789,7 @@ async function arreglaTypografia(
   noEncontradas: number;
   multiples: number;
   noAplica: number;
+  sinAccion: number;
   exactMiss: number;
   porPdf: Map<string, { incidences: TypographyIncidence[]; estado: Map<TypographyIncidence, MotivoIncidencia> }>;
 }> {
@@ -781,6 +800,7 @@ async function arreglaTypografia(
   let noEncontradas = 0;
   let multiples = 0;
   let noAplica = 0;
+  let sinAccion = 0;
   let exactMiss = 0;
   const porPdf = new Map<string, { incidences: TypographyIncidence[]; estado: Map<TypographyIncidence, MotivoIncidencia> }>();
 
@@ -853,17 +873,17 @@ async function arreglaTypografia(
       }
 
       let nuevo: string | undefined;
+      let yaEnLaUnion = false; // el &nbsp; ya estaba puesto en la unión o al final de la segunda línea
       if (inc.type === 'single-word-line') {
         nuevo = envuelveParrafoContenedor(actual, inc);
       } else {
         nuevo = undefined;
-        for (const cand of objetivos) {
-          if (yaAplicado(actual, cand, inc)) break; // ya se pegó en una pasada anterior
-          if (inc.type === 'consecutive-punctuation' || inc.type === 'repeated-last-letter') {
-            nuevo = remplazaEspacioPosterior(actual, cand);
-          } else if (inc.type === 'repeated-first-letter') {
-            nuevo = remplazaEspacioAnterior(actual, cand);
+        for (const objetivo of objetivos) {
+          if (yaAplicado(actual, objetivo.aguja, objetivo.posterior)) {
+            yaEnLaUnion = true; // no hay nada que hacer: el espacio ya está pegado
+            break;
           }
+          nuevo = objetivo.posterior ? remplazaEspacioPosterior(actual, objetivo.aguja) : remplazaEspacioAnterior(actual, objetivo.aguja);
           if (nuevo !== undefined && nuevo !== actual) break;
         }
       }
@@ -873,6 +893,12 @@ async function arreglaTypografia(
           estado.set(inc, 'no aplica');
           sinAplicar++;
           noAplica++;
+          continue;
+        }
+        if (yaEnLaUnion) {
+          estado.set(inc, 'sin acción');
+          sinAplicar++;
+          sinAccion++;
           continue;
         }
         estado.set(inc, 'sin coincidencia exacta');
@@ -893,5 +919,5 @@ async function arreglaTypografia(
     }
   }
 
-  return { corregidos, sinAplicar, noEncontradas, multiples, noAplica, exactMiss, porPdf };
+  return { corregidos, sinAplicar, noEncontradas, multiples, noAplica, sinAccion, exactMiss, porPdf };
 }
