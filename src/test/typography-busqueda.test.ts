@@ -114,6 +114,26 @@ describe('espacios pegados con &nbsp;', () => {
     expect(yaAplicado('::: {runt=2}\nse necesita; escritora desde niña\n:::\n', 'necesita; escritora', corrida('se necesita'))).toBe(false);
     expect(yaAplicado('::: {runt=2}\nllega&nbsp;este;\n:::\n', 'este;', corrida('este;', 'repeated-first-letter'))).toBe(true);
   });
+
+  test('la aguja cruza un corte de línea del markdown, nunca una línea en blanco', () => {
+    const md = 'a veces regreso a la compu. Como hoy, pues no he\nterminado el último capítulo de la tesis.\n';
+    expect(remplazaEspacioPosterior(md, 'no he terminado el')).toBe(
+      'a veces regreso a la compu. Como hoy, pues no he\nterminado el&nbsp;último capítulo de la tesis.\n',
+    );
+    expect(yaAplicado('pues no he\nterminado el&nbsp;último capítulo', 'no he terminado el', corrida('no he terminado el'))).toBe(true);
+    expect(remplazaEspacioPosterior('fin\n\nel resto\n', 'fin el')).toBeUndefined();
+    expect(remplazaEspacioAnterior('fin\n\nel resto\n', 'el resto')).toBeUndefined();
+  });
+
+  test('la aguja también cruza un espacio ya pegado en la fuente', () => {
+    expect(remplazaEspacioPosterior('pues no he terminado\u00a0el último capítulo\n', 'no he terminado el')).toBe(
+      'pues no he terminado\u00a0el&nbsp;último capítulo\n',
+    );
+    expect(remplazaEspacioPosterior('pues no he terminado&nbsp;el último capítulo\n', 'no he terminado el')).toBe(
+      'pues no he terminado&nbsp;el&nbsp;último capítulo\n',
+    );
+    expect(yaAplicado('pues no he terminado\u00a0el&nbsp;último capítulo', 'no he terminado el', corrida('no he terminado el'))).toBe(true);
+  });
 });
 
 describe('objetivosParaIncidencia', () => {
@@ -131,31 +151,32 @@ describe('objetivosParaIncidencia', () => {
       total: 2,
     };
     const objetivos = objetivosParaIncidencia(inc);
-    expect(objetivos[0]).toBe('no se permitía');
-    expect(remplazaEspacioPosterior('cariñosa, no se permitía las caricias.\n', objetivos[0] as string)).toBe(
-      'cariñosa, no se permitía&nbsp;las caricias.\n',
+    expect(objetivos[0]).toBe('Mi mamá no fue una mujer muy cariñosa, no se permitía');
+    const md = 'Mi mamá no fue una mujer muy cariñosa, no se permitía las caricias, las palabras tiernas o melosas.\n';
+    expect(remplazaEspacioPosterior(md, objetivos[0] as string)).toBe(
+      'Mi mamá no fue una mujer muy cariñosa, no se permitía&nbsp;las caricias, las palabras tiernas o melosas.\n',
     );
   });
 
-  test('alarga la aguja de la unión cuando la corta es ambigua', () => {
+  test('alarga la aguja de la unión cuando las cortas son ambiguas', () => {
     const inc: TypographyIncidence = {
       type: 'repeated-last-letter',
-      page: 41,
-      line: 1,
-      text: 'atenta, y fue muy reconfortante el acurrucamiento de los',
-      letter: 's',
+      page: 44,
+      line: 2,
+      text: 'en el cuerpo. Como una historia mal contada que ya no',
+      letter: 'o',
       lineas: [
-        { line: 1, text: 'atenta, y fue muy reconfortante el acurrucamiento de los' },
-        { line: 2, text: 'gatos y los perros. Ahora agradezco su compañía desde los' },
+        { line: 2, text: 'en el cuerpo. Como una historia mal contada que ya no' },
+        { line: 3, text: 'encajaba. Como una sensación persistente de que algo no' },
       ],
       total: 3,
     };
     const objetivos = objetivosParaIncidencia(inc);
-    expect(objetivos.slice(0, 3)).toEqual(['acurrucamiento de los', 'de los', 'los']);
-    const md = 'Hablo de los gatos, y fue muy reconfortante el acurrucamiento de los gatos y los perros.\n';
-    expect(remplazaEspacioPosterior(md, 'de los')).toBeUndefined();
-    expect(remplazaEspacioPosterior(md, objetivos[0] as string)).toBe(
-      'Hablo de los gatos, y fue muy reconfortante el acurrucamiento de los&nbsp;gatos y los perros.\n',
+    expect(objetivos[0]?.endsWith('mal contada que ya no')).toBe(true);
+    const md = 'Como una historia mal contada que ya no encajaba. Y otra que ya no sigue.\n';
+    expect(remplazaEspacioPosterior(md, 'ya no')).toBeUndefined();
+    expect(remplazaEspacioPosterior(md, 'mal contada que ya no')).toBe(
+      'Como una historia mal contada que ya no&nbsp;encajaba. Y otra que ya no sigue.\n',
     );
   });
 });

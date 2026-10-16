@@ -331,16 +331,18 @@ function sinComillasTipograficas(texto: string): string {
   return texto.replace(/[“”„‟«»]/g, '"').replace(/[‘’‚]/g, "'");
 }
 
-function indicesDe(haystack: string, aguja: string): number[] {
+/** Posiciones de una frase: entre palabras acepta un corte de línea del markdown o un espacio ya pegado, nunca una línea en blanco. */
+function indicesDe(haystack: string, aguja: string): Array<{ inicio: number; fin: number }> {
   const texto = sinComillasTipograficas(haystack);
-  const busca = sinComillasTipograficas(aguja);
-  const idxs: number[] = [];
-  let from = 0;
-  let at = texto.indexOf(busca, from);
-  while (at !== -1) {
-    idxs.push(at);
-    from = at + busca.length;
-    at = texto.indexOf(busca, from);
+  const palabras = sinComillasTipograficas(aguja)
+    .split(/\s+/u)
+    .filter(Boolean)
+    .map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  if (palabras.length === 0) return [];
+  const patron = palabras.join('(?:[\\p{Zs}\\t]*\\r?\\n[\\p{Zs}\\t]*|[\\p{Zs}\\t]+|&nbsp;)');
+  const idxs: Array<{ inicio: number; fin: number }> = [];
+  for (const m of texto.matchAll(new RegExp(patron, 'gu'))) {
+    if (m.index !== undefined) idxs.push({ inicio: m.index, fin: m.index + m[0].length });
   }
   return idxs;
 }
@@ -381,12 +383,12 @@ export function objetivosParaIncidencia(inc: TypographyIncidence): string[] {
   // final de la corrida va primero: es la que rompe la repetición sin mover el resto.
   for (let i = lineas.length - 2; i >= 0; i--) {
     const finIzq = tokens(textoDe(i));
-    const ultima = finIzq[finIzq.length - 1] ?? '';
-    if (!ultima) continue;
-    // Varias longitudes para la misma unión: el espacio pegado es el mismo (el del corte), la
-    // aguja más larga solo sirve para desambiguar («de los» aparece dos veces y se descarta).
-    for (const cuantas of [3, 2, 1]) {
-      if (finIzq.length >= cuantas) objetivos.push(finIzq.slice(finIzq.length - cuantas).join(' '));
+    if (finIzq.length === 0) continue;
+    // Todas las longitudes terminan en la última palabra de la línea, así que el espacio que se
+    // pega es el mismo (el del corte); la más larga es la que mejor desambigua: «ya no» aparece
+    // seis veces y se descarta, «mal contada que ya no» no.
+    for (let cuantas = finIzq.length; cuantas >= 1; cuantas--) {
+      objetivos.push(finIzq.slice(finIzq.length - cuantas).join(' '));
     }
   }
   const objetivoRegex = /(\S+[.,;:!?…»’”])\s+(\S+)/gu;
@@ -616,39 +618,41 @@ function dentroDeQr(content: string, pos: number): boolean {
 export function remplazaEspacioPosterior(content: string, needle: string): string | undefined {
   const idxs = indicesDe(content, needle);
   if (idxs.length !== 1) return undefined;
-  const i = idxs[0] as number;
-  if (posicionProtegida(content, i)) return undefined;
-  let j = i + needle.length;
+  const { inicio, fin } = idxs[0] as { inicio: number; fin: number };
+  if (posicionProtegida(content, inicio)) return undefined;
+  let j = fin;
   while (j < content.length && /\s/.test(content[j] ?? '')) j++;
-  const ws = content.slice(i + needle.length, j);
+  const ws = content.slice(fin, j);
   // ya está unido, o el espacio cruza un corte de párrafo/bloque y no debe tocarse
   if (ws === '' || /\n[ \t]*\n/.test(ws)) return undefined;
-  return `${content.slice(0, i + needle.length)}&nbsp;${content.slice(j)}`;
+  return `${content.slice(0, fin)}&nbsp;${content.slice(j)}`;
 }
 
 /** Une con `&nbsp;` el espacio anterior a `needle`. Sí aplica dentro de un `::: {runt=2}`. */
 export function remplazaEspacioAnterior(content: string, needle: string): string | undefined {
   const idxs = indicesDe(content, needle);
   if (idxs.length !== 1) return undefined;
-  const i = idxs[0] as number;
-  if (posicionProtegida(content, i)) return undefined;
-  if (i === 0) return undefined;
-  let j = i - 1;
+  const { inicio } = idxs[0] as { inicio: number; fin: number };
+  if (posicionProtegida(content, inicio)) return undefined;
+  if (inicio === 0) return undefined;
+  let j = inicio - 1;
   while (j >= 0 && /\s/.test(content[j] ?? '')) j--;
   const inicioWs = j + 1;
   // no hay espacio que cambiar, o el espacio cruza un corte de párrafo/bloque
-  if (inicioWs >= i || /\n[ \t]*\n/.test(content.slice(inicioWs, i))) return undefined;
-  return `${content.slice(0, inicioWs)}&nbsp;${content.slice(i)}`;
+  if (inicioWs >= inicio || /\n[ \t]*\n/.test(content.slice(inicioWs, inicio))) return undefined;
+  return `${content.slice(0, inicioWs)}&nbsp;${content.slice(inicio)}`;
 }
 
 /** ¿El espacio de `needle` ya quedó pegado con `&nbsp;` en una pasada anterior? */
 export function yaAplicado(content: string, needle: string, inc: TypographyIncidence): boolean {
   const idxs = indicesDe(content, needle);
   if (idxs.length !== 1) return false;
-  const i = idxs[0] as number;
-  return inc.type === 'repeated-first-letter'
-    ? content.slice(Math.max(0, i - 6), i) === '&nbsp;'
-    : content.slice(i + needle.length, i + needle.length + 6) === '&nbsp;';
+  const { inicio, fin } = idxs[0] as { inicio: number; fin: number };
+  const antes = inc.type === 'repeated-first-letter';
+  const pegote = antes ? content.slice(Math.max(0, inicio - 6), inicio) : content.slice(fin, fin + 6);
+  // el markdown puede traer el espacio ya pegado con el carácter duro, no solo con la entidad
+  const crudo = antes ? content[inicio - 1] : content[fin];
+  return pegote === '&nbsp;' || crudo === '\u00a0';
 }
 
 export function normalizaParaBusqueda(texto: string): string {
