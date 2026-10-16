@@ -331,6 +331,25 @@ function objetivosParaIncidencia(inc: TypographyIncidence): string[] {
   return (objetivos.length > 0 ? objetivos : [ultima]).filter(Boolean);
 }
 
+function envuelveParrafoContenedor(content: string, word: string): string | undefined {
+  const bloques = content.split(/\n\s*\n/);
+  const wordNorm = word.trim().toLowerCase().replace(/\s+/g, ' ');
+  const matches: number[] = [];
+  for (let k = 0; k < bloques.length; k++) {
+    const bloque = (bloques[k] ?? '').trim();
+    const bloqueNorm = bloque.toLowerCase().replace(/\s+/g, ' ');
+    if (bloqueNorm === wordNorm || bloqueNorm.endsWith(wordNorm)) matches.push(k);
+  }
+  if (matches.length !== 1) return undefined;
+  const idx = matches[0] as number;
+  const bloqueTexto = (bloques[idx] as string).trim();
+  const offsetBloque = content.indexOf(bloques[idx] as string);
+  if (offsetBloque < 0 || profundidadFenced(content, offsetBloque) > 0 || estaEnFrontmatter(content, offsetBloque)) return undefined;
+  if (bloqueTexto.startsWith(':::')) return undefined;
+  bloques[idx] = `::: {runt=2}\n${bloqueTexto}\n:::`;
+  return bloques.join('\n\n');
+}
+
 function profundidadFenced(content: string, pos: number): number {
   let dentro = false;
   for (const linea of content.slice(0, Math.max(0, pos)).split('\n')) {
@@ -364,21 +383,6 @@ function remplazaEspacioAnterior(content: string, needle: string): string | unde
   return `${content.slice(0, inicioWs)}&nbsp;${content.slice(i)}`;
 }
 
-function envuelveParrafoUnitario(content: string, word: string): string | undefined {
-  const bloques = content.split(/\n\s*\n/);
-  const matches: number[] = [];
-  for (let k = 0; k < bloques.length; k++) {
-    if (bloques[k]?.trim() === word) matches.push(k);
-  }
-  if (matches.length !== 1) return undefined;
-  const idx = matches[0] as number;
-  const offsetBloque = content.indexOf(bloques[idx] as string);
-  if (offsetBloque < 0 || profundidadFenced(content, offsetBloque) > 0 || estaEnFrontmatter(content, offsetBloque)) return undefined;
-  if (bloques[idx]?.trim().startsWith(':::')) return undefined; // ya envuelto o bloque no puro
-  bloques[idx] = `::: {runt=2}\n${word}\n:::`;
-  return bloques.join('\n\n');
-}
-
 function normalizaParaBusqueda(texto: string): string {
   return texto
     .replace(/:::[^\n]*/g, ' ')
@@ -406,9 +410,21 @@ function ngramasBusqueda(texto: string): string[] {
   return [...fiesta];
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: construye candidatos a partir del contexto
 function cadenasDeBusqueda(inc: TypographyIncidence): string[] {
   if (inc.type === 'single-word-line') {
-    return [normalizaParaBusqueda(inc.text)].filter((f) => f.length >= 4);
+    const fiesta = new Set<string>();
+    const palabra = normalizaParaBusqueda(inc.text);
+    if (palabra.length >= 4) fiesta.add(palabra);
+    if (inc.prev) {
+      const prev = normalizaParaBusqueda(inc.prev);
+      if (prev.length >= 6) fiesta.add(`${prev} ${palabra}`.trim());
+      const prevPalabras = prev.split(/\s+/).filter(Boolean);
+      if (prevPalabras.length >= 1) fiesta.add(`${prevPalabras.slice(-1)[0]} ${palabra}`.trim());
+      if (prevPalabras.length >= 3) fiesta.add(`${prevPalabras.slice(-3).join(' ')} ${palabra}`.trim());
+    }
+    if (fiesta.size === 0) fiesta.add(palabra);
+    return [...fiesta].sort((a, b) => b.length - a.length);
   }
   const lineas = inc.lineas.map((l) => normalizaParaBusqueda(l.text));
   const unidas = lineas.join(' ');
@@ -534,10 +550,7 @@ async function arreglaTypografia(
 
       let nuevo: string | undefined;
       if (inc.type === 'single-word-line') {
-        for (const cand of objetivos) {
-          nuevo = envuelveParrafoUnitario(actual, cand);
-          if (nuevo !== undefined && nuevo !== actual) break;
-        }
+        nuevo = envuelveParrafoContenedor(actual, inc.text.trim());
       } else {
         nuevo = undefined;
         for (const cand of objetivos) {

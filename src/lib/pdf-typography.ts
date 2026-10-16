@@ -13,6 +13,7 @@ interface Incidence {
 
 export interface SingleWordLine extends Incidence {
   type: 'single-word-line';
+  prev?: string;
 }
 
 export interface ConsecutivePunctuation extends Incidence {
@@ -126,7 +127,8 @@ export function singleWordLines(pages: string[][]): SingleWordLine[] {
     for (const [indice, text] of lineas.entries()) {
       if (words(text).length !== 1) continue;
       if (folios.has(`${indicePagina + 1}:${indice + 1}`)) continue;
-      hits.push({ type: 'single-word-line', page: indicePagina + 1, line: indice + 1, text });
+      const prev = indice > 0 ? (lineas[indice - 1] as string).trim() : undefined;
+      hits.push({ type: 'single-word-line', page: indicePagina + 1, line: indice + 1, text, prev });
     }
   }
   return hits;
