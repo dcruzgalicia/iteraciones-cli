@@ -156,7 +156,7 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
     if (targets.length === 0) throw new BuildError(`no hay PDFs en ${etiqueta(cwd, outputDir)}`);
 
     if (options.fix) {
-      const { corregidos, sinAplicar, noEncontradas, multiples, exactMiss, porPdf } = await arreglaTypografia(cwd, targets, analisis);
+      const { corregidos, sinAplicar, noEncontradas, multiples, exactMiss, porPdf } = await arreglaTypografia(cwd, targets, analisis, options);
       const total = [...porPdf.values()].reduce((suma, item) => suma + item.incidences.length, 0);
       if (total === 0) {
         logSuccess(`sin incidencias en ${plural(targets.length, 'PDF')}`, 'typography');
@@ -438,6 +438,7 @@ async function arreglaTypografia(
   cwd: string,
   targets: string[],
   analisis: OpcionesAnalisis,
+  options: TypographyOptions = {},
 ): Promise<{
   corregidos: number;
   sinAplicar: number;
@@ -456,7 +457,11 @@ async function arreglaTypografia(
   const porPdf = new Map<string, { incidences: TypographyIncidence[]; fixed: Set<TypographyIncidence> }>();
 
   for (const pdf of targets) {
-    const incidences = await analyzePdf(pdf, analisis);
+    const incidences = filtraExcepciones(
+      await analyzePdf(pdf, analisis),
+      etiqueta(cwd, pdf),
+      cargarExcepciones(cwd, options),
+    ) as TypographyIncidence[];
     if (incidences.length === 0) continue;
 
     porPdf.set(pdf, { incidences, fixed: new Set() });
