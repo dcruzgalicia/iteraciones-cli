@@ -331,17 +331,28 @@ function objetivosParaIncidencia(inc: TypographyIncidence): string[] {
   return (objetivos.length > 0 ? objetivos : [ultima]).filter(Boolean);
 }
 
-function envuelveParrafoContenedor(content: string, word: string): string | undefined {
+function envuelveParrafoContenedor(content: string, inc: TypographyIncidence): string | undefined {
+  const word = inc.text.trim();
+  const wordNorm = word.toLowerCase().replace(/\s+/g, ' ');
+  const prev = (inc as unknown as { prev?: string }).prev;
   const bloques = content.split(/\n\s*\n/);
-  const wordNorm = word.trim().toLowerCase().replace(/\s+/g, ' ');
   const matches: number[] = [];
   for (let k = 0; k < bloques.length; k++) {
-    const bloque = (bloques[k] ?? '').trim();
-    const bloqueNorm = bloque.toLowerCase().replace(/\s+/g, ' ');
-    if (bloqueNorm === wordNorm || bloqueNorm.endsWith(wordNorm)) matches.push(k);
+    const bloqueNorm = (bloques[k] ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+    if (bloqueNorm.includes(wordNorm)) matches.push(k);
   }
-  if (matches.length !== 1) return undefined;
-  const idx = matches[0] as number;
+  let idx = -1;
+  if (matches.length === 1) idx = matches[0] as number;
+  if (matches.length > 1 && prev) {
+    const prevWords = normalizaParaBusqueda(prev).split(/\s+/).filter(Boolean);
+    const marca = (prevWords.length >= 2 ? prevWords.slice(-2) : prevWords).join(' ').toLowerCase();
+    const seleccionados = matches.filter((k) => {
+      const bloqueNorm = (bloques[k] ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+      return marca.length > 0 && bloqueNorm.includes(marca);
+    });
+    if (seleccionados.length === 1) idx = seleccionados[0] as number;
+  }
+  if (idx < 0) return undefined;
   const bloqueTexto = (bloques[idx] as string).trim();
   const offsetBloque = content.indexOf(bloques[idx] as string);
   if (offsetBloque < 0 || profundidadFenced(content, offsetBloque) > 0 || estaEnFrontmatter(content, offsetBloque)) return undefined;
@@ -535,6 +546,9 @@ async function arreglaTypografia(
         sinAplicar++;
         continue;
       }
+      if (process.env.TYPO_DEBUG === '1' && inc.type === 'single-word-line') {
+        console.error(`DBG p${inc.page} l${inc.line} cand=${candidatos.length} ruta=${ruta.split('/').pop()}`);
+      }
       if (process.env.TYPO_DEBUG === '1') {
         for (const cand of objetivos) {
           console.error(
@@ -550,7 +564,7 @@ async function arreglaTypografia(
 
       let nuevo: string | undefined;
       if (inc.type === 'single-word-line') {
-        nuevo = envuelveParrafoContenedor(actual, inc.text.trim());
+        nuevo = envuelveParrafoContenedor(actual, inc);
       } else {
         nuevo = undefined;
         for (const cand of objetivos) {
