@@ -1,4 +1,4 @@
-local BS = '\1' -- placeholder para el backslash (evita re-escapar \textbackslash{})
+local BS = '\1'
 
 local function escape_latex(s)
   s = s:gsub('\\', BS)

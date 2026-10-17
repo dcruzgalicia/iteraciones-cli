@@ -61,10 +61,6 @@ local function br_count(div)
   return n
 end
 
--- Convierte un Div {br=N} en sus bloques: N vspaces mas su contenido, que no
--- se tira (un fenced div puede llevar texto y los otros atributos de bloque
--- si lo conservan). El primer parrafo del contenido recibe el \noindent del
--- salto; si el primer bloque no es un parrafo, la bandera se descarta (#2670).
 local function br_div_blocks(div)
   local n = br_count(div)
   if not n then return nil end
@@ -275,8 +271,6 @@ local function serialize_titleback(blocks)
       for _, nb in ipairs(br_blocks) do
         table.insert(out, nb)
       end
-      -- El div vacio no tiene a quien ponerle el noindent: lo recibe el
-      -- bloque siguiente, igual que en el cuerpo.
       pending_noindent = next(b.content) == nil
     else
       if pending_noindent and b.t == 'Para' then

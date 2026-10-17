@@ -26,6 +26,18 @@
       }
     }
   },
+  "overrides": [
+    {
+      "includes": ["src/cli/typography.ts"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noExcessiveCognitiveComplexity": "off"
+          }
+        }
+      }
+    }
+  ],
   "javascript": {
     "formatter": {
       "quoteStyle": "single"

@@ -127,18 +127,13 @@ describe('espacios pegados con &nbsp;', () => {
   });
 
   test('no pega contra una línea que abre o cierra bloque', () => {
-    // el marcador del div no se une con su cuerpo (kenia-lara.md, pág 25)
     const div = '::: {runt=2}\nMi trabajo parte de la observación de lo cotidiano.\n:::\n';
     expect(remplazaEspacioAnterior(div, 'Mi trabajo parte de la observación')).toBeUndefined();
-    // la clave de un escalar de bloque no se une con su primera línea
     expect(remplazaEspacioAnterior('titleback: |\n  Texto de la contraportada que sigue.\n', 'Texto de la contraportada')).toBeUndefined();
-    // ni una viñeta con su texto
     expect(remplazaEspacioAnterior('Antes venía esto.\n- Cuidarme como prioridad\n', 'Cuidarme como')).toBeUndefined();
-    // pegar después tampoco: el cierre del div, la regla o la clave siguiente lo unirían a lo anterior
     expect(remplazaEspacioPosterior('Termina el cuerpo.\n:::\n', 'Termina el cuerpo')).toBeUndefined();
     expect(remplazaEspacioPosterior('Fin del bloque\n---\n', 'Fin del bloque')).toBeUndefined();
     expect(remplazaEspacioPosterior('  Contraportada\nuppertitleback: |\n', 'Contraportada')).toBeUndefined();
-    // dentro del escalar sí se pega: la línea anterior es texto
     expect(remplazaEspacioAnterior('titleback: |\n  Línea uno\n  Línea dos\n', 'Línea dos')).toBe('titleback: |\n  Línea uno&nbsp;Línea dos\n');
   });
 });
@@ -231,8 +226,6 @@ describe('objetivosParaIncidencia', () => {
   });
 
   test('si la unión no se puede pegar, el &nbsp; va al final de la segunda línea', () => {
-    // pág 40: la unión es «so-»/«la» (palabra cortada sin guion en el markdown) y «sola» ya trae
-    // pegado su espacio: el pegado se hace al final de la segunda línea, después de «hasta»
     const inc: TypographyIncidence = {
       type: 'repeated-first-letter',
       page: 40,
@@ -249,7 +242,6 @@ describe('objetivosParaIncidencia', () => {
     const md =
       'casi todas las noches en los primeros&nbsp;meses), mientras manejaba, sola&nbsp;en mi casa, en la casa de mi pareja, con mi mamá; hasta lloré&nbsp;con una consultante.\n';
     expect(remplazaEspacioAnterior(md, objetivos[0]?.aguja as string)).toBeUndefined();
-    // la palabra completa de la unión («sola») ya trae pegado su espacio: ese objetivo se salta
     const cortada = objetivos.find((o) => o.aguja.endsWith('sola'));
     expect(cortada?.aguja).toBe('las noches en los primeros meses), mientras manejaba, sola');
     expect(cortada?.posterior).toBe(true);
@@ -262,8 +254,6 @@ describe('objetivosParaIncidencia', () => {
   });
 
   test('con la palabra cortada aún sin nbsp, el &nbsp; va tras la palabra completa', () => {
-    // pág 48: la unión es «su-»/«pone» y «supone» no trae nada pegado: se pega después de ella,
-    // que es el final de la primera línea, no al final de la segunda
     const inc: TypographyIncidence = {
       type: 'repeated-first-letter',
       page: 48,
@@ -297,15 +287,11 @@ describe('objetivosParaIncidencia', () => {
     const conLetra: TypographyIncidence = { ...base, type: 'repeated-last-letter', letter: 'a', lineas };
     expect(objetivosParaIncidencia(conPuntuacion)).toEqual(objetivosParaIncidencia(conLetra));
     const objetivos = objetivosParaIncidencia(conPuntuacion);
-    // dónde: primero la unión, que es el final de la primera línea
     expect(objetivos[0]).toEqual({ aguja: 'convertí en una adulta y me hice cargo de mí misma.', posterior: true });
-    // la unión no se puede pegar (es un corte de párrafo): sigue el cierre de la segunda línea
     const cierre = objetivos.findIndex((o) => o.aguja === 'Mi mamá no fue una mujer muy cariñosa, no se permi-');
     expect(cierre).toBeGreaterThan(0);
-    // nunca se pega a media línea
     expect(objetivos.map((o) => o.aguja)).not.toContain('cariñosa, no');
     expect(objetivos.map((o) => o.aguja)).not.toContain('misma. Mi');
-    // si la segunda línea termina en palabra cortada, se completa con la línea siguiente
     const conCorte: TypographyIncidence = { ...conPuntuacion, continuacion: 'tía las caricias, las palabras tiernas o melosas.' };
     const completada = objetivosParaIncidencia(conCorte).find((o) => o.aguja.endsWith('no se permitía'));
     expect(completada?.posterior).toBe(true);

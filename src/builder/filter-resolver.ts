@@ -46,8 +46,6 @@ function builtinNamesForGroup(dir: string): string[] {
         file.replace(/\.lua$/, ''),
       );
       if (groupDir === 'latex') {
-        // shrink/stretch envuelven el bloque en RawBlock: si van antes que runt, se llevan por delante
-        // los Div internos con runt= y este deja de aplicarse.
         const textls = new Set(['14-shrink', '15-stretch']);
         names.sort((a, b) => {
           if (a === '16-runt' && textls.has(b)) return -1;
