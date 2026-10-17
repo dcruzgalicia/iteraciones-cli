@@ -156,7 +156,7 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
     if (targets.length === 0) throw new BuildError(`no hay PDFs en ${etiqueta(cwd, outputDir)}`);
 
     if (options.fix) {
-      const { corregidos, sinAplicar, noEncontradas, multiples, noAplica, sinAccion, exactMiss, porPdf } = await arreglaTypografia(
+      const { corregidos, sinAplicar, noEncontradas, multiples, noAplica, sinAccion, sinUnion, exactMiss, porPdf } = await arreglaTypografia(
         cwd,
         targets,
         analisis,
@@ -191,6 +191,7 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
           multiples > 0 ? `${multiples} con múltiples coincidencias` : '',
           noAplica > 0 ? `${noAplica} no aplica (títulos de sección)` : '',
           sinAccion > 0 ? `${sinAccion} sin acción` : '',
+          sinUnion > 0 ? `${sinUnion} sin unión pegable` : '',
           exactMiss > 0 ? `${exactMiss} sin coincidencia exacta` : '',
         ].filter(Boolean);
         if (detalle.length > 0) partes.push(`(${detalle.join(', ')})`);
@@ -329,18 +330,66 @@ function sinComillasTipograficas(texto: string): string {
   return texto.replace(/[“”„‟«»]/g, '"').replace(/[‘’‚]/g, "'");
 }
 
+/** Ligaduras que el PDF dibuja como un solo carácter y el markdown trae sueltas. */
+const LIGADURAS_PDF: Record<string, string> = {
+  '\u0132': 'IJ',
+  '\u0133': 'ij',
+  '\uFB00': 'ff',
+  '\uFB01': 'fi',
+  '\uFB02': 'fl',
+  '\uFB03': 'ffi',
+  '\uFB04': 'ffl',
+  '\uFB05': 'ft',
+  '\uFB06': 'st',
+};
+
+const CARACTERES_PDF = /[\u0132\u0133\u2026\uFB00-\uFB06]|\.(?:[ \t]*\.){2,}/gu;
+
+/**
+ * Iguala lo que el PDF dibuja distinto del markdown: ligaduras («hĳa» por «hija») y puntos
+ * suspensivos («. . .» por «...» o «…»). Devuelve el texto igualado y el mapa de cada uno de sus
+ * índices a la posición original, porque las posiciones se usan para insertar el `&nbsp;`.
+ */
+function igualaCaracteresPdf(texto: string): { texto: string; mapa: number[] } {
+  if (!/[\u0132\u0133\u2026\uFB00-\uFB06]|\.(?:[ \t]*\.){2,}/u.test(texto)) return { texto, mapa: [] };
+  const partes: string[] = [];
+  const mapa: number[] = [];
+  const empuja = (trocito: string, desde: number, hasta: number): void => {
+    for (let k = 0; k < trocito.length; k++) {
+      partes.push(trocito[k] as string);
+      mapa.push(k === trocito.length - 1 ? hasta - 1 : desde);
+    }
+  };
+  let anterior = 0;
+  for (const m of texto.matchAll(CARACTERES_PDF)) {
+    const i = m.index as number;
+    for (let k = anterior; k < i; k++) {
+      partes.push(texto[k] as string);
+      mapa.push(k);
+    }
+    empuja(LIGADURAS_PDF[m[0]] ?? '...', i, i + m[0].length);
+    anterior = i + m[0].length;
+  }
+  for (let k = anterior; k < texto.length; k++) {
+    partes.push(texto[k] as string);
+    mapa.push(k);
+  }
+  return { texto: partes.join(''), mapa };
+}
+
 /** Posiciones de una frase: entre palabras acepta un corte de línea del markdown o un espacio ya pegado, nunca una línea en blanco. */
 function indicesDe(haystack: string, aguja: string): Array<{ inicio: number; fin: number }> {
-  const texto = sinComillasTipograficas(haystack);
-  const palabras = sinComillasTipograficas(aguja)
-    .split(/\s+/u)
+  const { texto, mapa } = igualaCaracteresPdf(sinComillasTipograficas(haystack));
+  const palabras = igualaCaracteresPdf(sinComillasTipograficas(aguja))
+    .texto.split(/\s+/u)
     .filter(Boolean)
     .map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   if (palabras.length === 0) return [];
   const patron = palabras.join('(?:[\\p{Zs}\\t]*\\r?\\n[\\p{Zs}\\t]*|[\\p{Zs}\\t]+|&nbsp;)');
   const idxs: Array<{ inicio: number; fin: number }> = [];
+  const aOriginal = (indice: number): number => (mapa.length === 0 ? indice : (mapa[indice] ?? indice));
   for (const m of texto.matchAll(new RegExp(patron, 'gu'))) {
-    if (m.index !== undefined) idxs.push({ inicio: m.index, fin: m.index + m[0].length });
+    if (m.index !== undefined) idxs.push({ inicio: aOriginal(m.index), fin: aOriginal(m.index + m[0].length - 1) + 1 });
   }
   return idxs;
 }
@@ -707,9 +756,14 @@ export function yaAplicado(content: string, needle: string, posterior: boolean):
   return pegote === '&nbsp;' || crudo === '\u00a0';
 }
 
+/** ¿La aguja existe aunque su espacio no se pueda pegar (corte de párrafo, bloque, posición protegida)? */
+function agujaEncontrada(content: string, aguja: string): boolean {
+  return indicesDe(content, aguja).length === 1;
+}
+
 export function normalizaParaBusqueda(texto: string): string {
-  return sinComillasTipograficas(texto)
-    .replace(/:::[^\n]*/g, ' ')
+  return igualaCaracteresPdf(sinComillasTipograficas(texto))
+    .texto.replace(/:::[^\n]*/g, ' ')
     .replace(/[*_`]+/g, '')
     .replace(/\[([^\]]*)\]\{[^}]*\}/g, '$1')
     .replace(/\[[^\]]*\]\([^)]*\)/g, (m) => m.match(/^\[([^\]]*)\]/)?.[1] ?? '')
@@ -776,7 +830,14 @@ function resuelveCandidatoFuentes(rutas: string[], contenidoNormalizado: Map<str
   return candidatos;
 }
 
-export type MotivoIncidencia = 'corregido' | 'no aplica' | 'múltiples coincidencias' | 'no encontrado' | 'sin acción' | 'sin coincidencia exacta';
+export type MotivoIncidencia =
+  | 'corregido'
+  | 'no aplica'
+  | 'múltiples coincidencias'
+  | 'no encontrado'
+  | 'sin acción'
+  | 'sin unión pegable'
+  | 'sin coincidencia exacta';
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: heurística de fix por incidencia
 async function arreglaTypografia(
@@ -791,6 +852,7 @@ async function arreglaTypografia(
   multiples: number;
   noAplica: number;
   sinAccion: number;
+  sinUnion: number;
   exactMiss: number;
   porPdf: Map<string, { incidences: TypographyIncidence[]; estado: Map<TypographyIncidence, MotivoIncidencia> }>;
 }> {
@@ -802,6 +864,7 @@ async function arreglaTypografia(
   let multiples = 0;
   let noAplica = 0;
   let sinAccion = 0;
+  let sinUnion = 0;
   let exactMiss = 0;
   const porPdf = new Map<string, { incidences: TypographyIncidence[]; estado: Map<TypographyIncidence, MotivoIncidencia> }>();
 
@@ -875,6 +938,7 @@ async function arreglaTypografia(
 
       let nuevo: string | undefined;
       let yaPegado = false; // el &nbsp; ya estaba puesto en la unión o al final de la segunda línea
+      let unionRechazada = false; // la aguja existe, pero su espacio no se puede pegar (párrafo, bloque)
       if (inc.type === 'single-word-line') {
         nuevo = envuelveParrafoContenedor(actual, inc);
       } else {
@@ -886,6 +950,7 @@ async function arreglaTypografia(
           }
           nuevo = objetivo.posterior ? remplazaEspacioPosterior(actual, objetivo.aguja) : remplazaEspacioAnterior(actual, objetivo.aguja);
           if (nuevo !== undefined && nuevo !== actual) break;
+          if (nuevo === undefined && agujaEncontrada(actual, objetivo.aguja)) unionRechazada = true;
         }
       }
 
@@ -900,6 +965,12 @@ async function arreglaTypografia(
           estado.set(inc, 'sin acción');
           sinAplicar++;
           sinAccion++;
+          continue;
+        }
+        if (unionRechazada) {
+          estado.set(inc, 'sin unión pegable');
+          sinAplicar++;
+          sinUnion++;
           continue;
         }
         estado.set(inc, 'sin coincidencia exacta');
@@ -920,5 +991,5 @@ async function arreglaTypografia(
     }
   }
 
-  return { corregidos, sinAplicar, noEncontradas, multiples, noAplica, sinAccion, exactMiss, porPdf };
+  return { corregidos, sinAplicar, noEncontradas, multiples, noAplica, sinAccion, sinUnion, exactMiss, porPdf };
 }
