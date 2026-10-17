@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'bun:test';
 import {
-  enOrdenDeCorreccion,
   envuelveParrafoContenedor,
   esTituloDeSeccion,
   normalizaParaBusqueda,
@@ -11,6 +10,7 @@ import {
   yaAplicado,
 } from '../cli/typography.ts';
 import type { SingleWordLine, TypographyIncidence } from '../lib/pdf-typography.ts';
+import { analyzeText } from '../lib/pdf-typography.ts';
 
 const incidencia = (text: string, extra: Partial<SingleWordLine> = {}): TypographyIncidence => ({
   type: 'single-word-line',
@@ -250,7 +250,7 @@ describe('objetivosParaIncidencia', () => {
       'casi todas las noches en los primeros&nbsp;meses), mientras manejaba, sola&nbsp;en mi casa, en la casa de mi pareja, con mi mamá; hasta lloré&nbsp;con una consultante.\n';
     expect(remplazaEspacioAnterior(md, objetivos[0]?.aguja as string)).toBeUndefined();
     // la palabra completa de la unión («sola») ya trae pegado su espacio: ese objetivo se salta
-    const cortada = objetivos.find((o) => o.opcional);
+    const cortada = objetivos.find((o) => o.aguja.endsWith('sola'));
     expect(cortada?.aguja).toBe('las noches en los primeros meses), mientras manejaba, sola');
     expect(cortada?.posterior).toBe(true);
     expect(yaAplicado(md, cortada?.aguja as string, true)).toBe(true);
@@ -277,7 +277,7 @@ describe('objetivosParaIncidencia', () => {
       total: 2,
     };
     const objetivos = objetivosParaIncidencia(inc);
-    const cortada = objetivos.find((o) => o.opcional);
+    const cortada = objetivos.find((o) => o.aguja.endsWith('supone'));
     expect(cortada?.aguja).toBe('Porque también se derrumbó mi otra casa, donde se supone');
     expect(cortada?.posterior).toBe(true);
     const md = 'Porque también se derrumbó mi otra casa, donde se supone que iba a respirar. Y aunque llevaba mucho tiempo en él.\n';
@@ -287,7 +287,7 @@ describe('objetivosParaIncidencia', () => {
     );
   });
 
-  test('consecutive-punctuation pone el &nbsp; donde last-letter: unión, segunda línea y respaldo al final', () => {
+  test('consecutive-punctuation pone el &nbsp; donde last-letter: unión, palabra cortada y segunda línea', () => {
     const base = { page: 19, line: 13, text: 'convertí en una adulta y me hice cargo de mí misma.', total: 3 };
     const lineas = [
       { line: 13, text: base.text },
@@ -302,27 +302,20 @@ describe('objetivosParaIncidencia', () => {
     // la unión no se puede pegar (es un corte de párrafo): sigue el cierre de la segunda línea
     const cierre = objetivos.findIndex((o) => o.aguja === 'Mi mamá no fue una mujer muy cariñosa, no se permi-');
     expect(cierre).toBeGreaterThan(0);
-    // y solo después el respaldo a media línea, que no es unión de líneas
-    const media = objetivos.findIndex((o) => o.aguja === 'cariñosa, no');
-    expect(media).toBeGreaterThan(cierre);
+    // nunca se pega a media línea
+    expect(objetivos.map((o) => o.aguja)).not.toContain('cariñosa, no');
+    expect(objetivos.map((o) => o.aguja)).not.toContain('misma. Mi');
+    // si la segunda línea termina en palabra cortada, se completa con la línea siguiente
+    const conCorte: TypographyIncidence = { ...conPuntuacion, continuacion: 'tía las caricias, las palabras tiernas o melosas.' };
+    const completada = objetivosParaIncidencia(conCorte).find((o) => o.aguja.endsWith('no se permitía'));
+    expect(completada?.posterior).toBe(true);
   });
 });
 
-describe('enOrdenDeCorreccion', () => {
-  test('corrige primero los divs, luego last-letter, puntuación y al final first-letter', () => {
-    const incidencias: TypographyIncidence[] = [
-      { type: 'repeated-first-letter', letter: 'a', lineas: [], total: 0, page: 1, line: 1, text: 'x' },
-      { type: 'consecutive-punctuation', lineas: [], total: 0, page: 1, line: 2, text: 'x' },
-      { type: 'single-word-line', page: 1, line: 3, text: 'x' },
-      { type: 'repeated-last-letter', letter: 'a', lineas: [], total: 0, page: 1, line: 4, text: 'x' },
-      { type: 'repeated-first-letter', letter: 'a', lineas: [], total: 0, page: 2, line: 1, text: 'x' },
-    ];
-    expect(enOrdenDeCorreccion(incidencias).map((i) => [i.type, i.page, i.line])).toEqual([
-      ['single-word-line', 1, 3],
-      ['repeated-last-letter', 1, 4],
-      ['consecutive-punctuation', 1, 2],
-      ['repeated-first-letter', 1, 1],
-      ['repeated-first-letter', 2, 1],
-    ]);
+describe('analyzeText', () => {
+  test('ordena el informe igual que las correcciones: last-letter, puntuación y first-letter', () => {
+    const lineas = ['Ana teje bufandas', 'Beto come pan,', 'Beto corta cedros,', 'Carla canta coplas', 'Carlos corta cebras'];
+    const tipos = analyzeText(lineas.join('\n'), { lineasMinimas: 2, letrasMinimas: 1, porcentajeCorta: 1 }).map((i) => i.type);
+    expect(tipos).toEqual(['repeated-last-letter', 'consecutive-punctuation', 'repeated-first-letter', 'repeated-first-letter']);
   });
 });
