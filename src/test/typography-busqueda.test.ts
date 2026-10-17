@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  enOrdenDeCorreccion,
   envuelveParrafoContenedor,
   esTituloDeSeccion,
   normalizaParaBusqueda,
@@ -284,5 +285,44 @@ describe('objetivosParaIncidencia', () => {
     expect(remplazaEspacioPosterior(md, cortada?.aguja as string)).toBe(
       'Porque también se derrumbó mi otra casa, donde se supone&nbsp;que iba a respirar. Y aunque llevaba mucho tiempo en él.\n',
     );
+  });
+
+  test('consecutive-punctuation pone el &nbsp; donde last-letter: unión, segunda línea y respaldo al final', () => {
+    const base = { page: 19, line: 13, text: 'convertí en una adulta y me hice cargo de mí misma.', total: 3 };
+    const lineas = [
+      { line: 13, text: base.text },
+      { line: 14, text: '   Mi mamá no fue una mujer muy cariñosa, no se permi-' },
+    ];
+    const conPuntuacion: TypographyIncidence = { ...base, type: 'consecutive-punctuation', lineas };
+    const conLetra: TypographyIncidence = { ...base, type: 'repeated-last-letter', letter: 'a', lineas };
+    expect(objetivosParaIncidencia(conPuntuacion)).toEqual(objetivosParaIncidencia(conLetra));
+    const objetivos = objetivosParaIncidencia(conPuntuacion);
+    // dónde: primero la unión, que es el final de la primera línea
+    expect(objetivos[0]).toEqual({ aguja: 'convertí en una adulta y me hice cargo de mí misma.', posterior: true });
+    // la unión no se puede pegar (es un corte de párrafo): sigue el cierre de la segunda línea
+    const cierre = objetivos.findIndex((o) => o.aguja === 'Mi mamá no fue una mujer muy cariñosa, no se permi-');
+    expect(cierre).toBeGreaterThan(0);
+    // y solo después el respaldo a media línea, que no es unión de líneas
+    const media = objetivos.findIndex((o) => o.aguja === 'cariñosa, no');
+    expect(media).toBeGreaterThan(cierre);
+  });
+});
+
+describe('enOrdenDeCorreccion', () => {
+  test('corrige primero los divs, luego last-letter, puntuación y al final first-letter', () => {
+    const incidencias: TypographyIncidence[] = [
+      { type: 'repeated-first-letter', letter: 'a', lineas: [], total: 0, page: 1, line: 1, text: 'x' },
+      { type: 'consecutive-punctuation', lineas: [], total: 0, page: 1, line: 2, text: 'x' },
+      { type: 'single-word-line', page: 1, line: 3, text: 'x' },
+      { type: 'repeated-last-letter', letter: 'a', lineas: [], total: 0, page: 1, line: 4, text: 'x' },
+      { type: 'repeated-first-letter', letter: 'a', lineas: [], total: 0, page: 2, line: 1, text: 'x' },
+    ];
+    expect(enOrdenDeCorreccion(incidencias).map((i) => [i.type, i.page, i.line])).toEqual([
+      ['single-word-line', 1, 3],
+      ['repeated-last-letter', 1, 4],
+      ['consecutive-punctuation', 1, 2],
+      ['repeated-first-letter', 1, 1],
+      ['repeated-first-letter', 2, 1],
+    ]);
   });
 });

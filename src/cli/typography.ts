@@ -12,6 +12,7 @@ import {
   parseaExcepciones,
   TODAS_LAS_REGLAS,
   type TypographyIncidence,
+  type TypographyRule,
 } from '../lib/pdf-typography.js';
 import { plural } from '../lib/plural.js';
 import { exec, mapWithConcurrency, type RunResult } from '../lib/run.js';
@@ -237,7 +238,8 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
   }
 }
 
-async function aseguraGitLimpio(cwd: string): Promise<void> {
+/** `--fix` necesita un repositorio git, no un árbol limpio: los cambios se suman a los que ya haya. */
+async function aseguraGit(cwd: string): Promise<void> {
   let rev: RunResult;
   try {
     rev = await exec('git', ['rev-parse', '--is-inside-work-tree'], { cwd });
@@ -245,10 +247,6 @@ async function aseguraGitLimpio(cwd: string): Promise<void> {
     throw new BuildError('typography --fix requiere un repositorio git');
   }
   if (rev.exitCode !== 0) throw new BuildError('typography --fix requiere un repositorio git');
-  const st = await exec('git', ['status', '--porcelain'], { cwd });
-  if (st.exitCode !== 0 || st.stdout.trim() !== '') {
-    throw new BuildError('typography --fix es destructivo: requiere un árbol git limpio (sin cambios)');
-  }
 }
 
 async function candidatosDeFuente(cwd: string, pdfPath: string): Promise<string[]> {
@@ -795,6 +793,23 @@ function resuelveCandidatoFuentes(rutas: string[], contenidoNormalizado: Map<str
 
 export type MotivoIncidencia = 'corregido' | 'no aplica' | 'múltiples coincidencias' | 'no encontrado' | 'sin acción' | 'sin coincidencia exacta';
 
+/**
+ * Orden en que se aplican las correcciones cuando hay más de una regla activa: los divs de
+ * single-word-line van primero y repeated-first-letter al final, porque cada pegado mueve el corte
+ * de línea y así las reglas que vienen después ya leen el texto con los cambios anteriores.
+ */
+const ORDEN_DE_CORRECCION: Record<TypographyRule, number> = {
+  'single-word-line': 0,
+  'repeated-last-letter': 1,
+  'consecutive-punctuation': 2,
+  'repeated-first-letter': 3,
+};
+
+/** Ordena las incidencias en el orden en que conviene corregirlas (estable dentro de cada regla). */
+export function enOrdenDeCorreccion(incidencias: TypographyIncidence[]): TypographyIncidence[] {
+  return [...incidencias].sort((a, b) => ORDEN_DE_CORRECCION[a.type] - ORDEN_DE_CORRECCION[b.type]);
+}
+
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: heurística de fix por incidencia
 async function arreglaTypografia(
   cwd: string,
@@ -811,7 +826,7 @@ async function arreglaTypografia(
   exactMiss: number;
   porPdf: Map<string, { incidences: TypographyIncidence[]; estado: Map<TypographyIncidence, MotivoIncidencia> }>;
 }> {
-  await aseguraGitLimpio(cwd);
+  await aseguraGit(cwd);
 
   let corregidos = 0;
   let sinAplicar = 0;
@@ -823,11 +838,9 @@ async function arreglaTypografia(
   const porPdf = new Map<string, { incidences: TypographyIncidence[]; estado: Map<TypographyIncidence, MotivoIncidencia> }>();
 
   for (const pdf of targets) {
-    const incidences = filtraExcepciones(
-      await analyzePdf(pdf, analisis),
-      etiqueta(cwd, pdf),
-      cargarExcepciones(cwd, options),
-    ) as TypographyIncidence[];
+    const incidences = enOrdenDeCorreccion(
+      filtraExcepciones(await analyzePdf(pdf, analisis), etiqueta(cwd, pdf), cargarExcepciones(cwd, options)) as TypographyIncidence[],
+    );
     if (incidences.length === 0) continue;
 
     const estado = new Map<TypographyIncidence, MotivoIncidencia>();
