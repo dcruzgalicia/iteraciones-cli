@@ -21,6 +21,8 @@ export interface ConsecutivePunctuation extends Incidence {
   type: 'consecutive-punctuation';
   lineas: LineaCoincidencia[];
   total: number;
+  /** La línea que sigue a las mostradas: con ella se completa la palabra cortada al final. */
+  continuacion?: string;
 }
 
 export interface RepeatedLetter extends Incidence {
@@ -28,6 +30,8 @@ export interface RepeatedLetter extends Incidence {
   letter: string;
   lineas: LineaCoincidencia[];
   total: number;
+  /** La línea que sigue a las mostradas: con ella se completa la palabra cortada al final. */
+  continuacion?: string;
 }
 
 export type TypographyIncidence = SingleWordLine | ConsecutivePunctuation | RepeatedLetter;
@@ -207,6 +211,7 @@ export interface Coincidencia {
   page: number;
   lineas: LineaCoincidencia[];
   total: number;
+  continuacion?: string;
 }
 
 export function tiradasCoincidentes(pages: string[][], lineas: number, clave: (linea: string) => string | undefined): Coincidencia[] {
@@ -227,6 +232,7 @@ export function tiradasCoincidentes(pages: string[][], lineas: number, clave: (l
           page: indicePagina + 1,
           lineas: lineasPagina.slice(inicio, inicio + lineas).map((text, k) => ({ line: inicio + k + 1, text })),
           total: largo,
+          continuacion: lineasPagina[inicio + lineas],
         });
       }
       inicio = fin;
@@ -279,6 +285,7 @@ export function repeatedLetterRuns(pages: string[][], posicion: 'first' | 'last'
       letter: conAncho(primera.text) ?? '',
       lineas: tirada.lineas,
       total: tirada.total,
+      continuacion: tirada.continuacion,
     });
   }
   return hallados;
@@ -296,6 +303,7 @@ export function consecutivePunctuationRuns(pages: string[][], lineas: number, an
       text: primera.text,
       lineas: tirada.lineas,
       total: tirada.total,
+      continuacion: tirada.continuacion,
     });
   }
   return hallados;
@@ -461,11 +469,13 @@ export function analyzeText(stdout: string, opciones: OpcionesAnalisis = {}): Ty
   const pedidas = new Set(opciones.reglas ?? TODAS_LAS_REGLAS);
   const pages = splitPages(stdout);
   const ancho = (anchoDeReferencia(pages) * porcentajeCorta) / 100;
+  // El orden es el mismo del informe y de las correcciones: primero los divs, después last-letter,
+  // puntuación y al final first-letter.
   const incidences = [
     ...(pedidas.has('single-word-line') ? singleWordLines(pages) : []),
+    ...(pedidas.has('repeated-last-letter') ? repeatedLetterRuns(pages, 'last', lineasMinimas, letrasMinimas, ancho) : []),
     ...(pedidas.has('consecutive-punctuation') ? consecutivePunctuationRuns(pages, lineasMinimas, ancho) : []),
     ...(pedidas.has('repeated-first-letter') ? repeatedLetterRuns(pages, 'first', lineasMinimas, letrasMinimas, ancho) : []),
-    ...(pedidas.has('repeated-last-letter') ? repeatedLetterRuns(pages, 'last', lineasMinimas, letrasMinimas, ancho) : []),
   ];
 
   // pdftotext con -f devuelve sólo las páginas pedidas y las numera desde 1, así que hay que

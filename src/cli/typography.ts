@@ -12,7 +12,6 @@ import {
   parseaExcepciones,
   TODAS_LAS_REGLAS,
   type TypographyIncidence,
-  type TypographyRule,
 } from '../lib/pdf-typography.js';
 import { plural } from '../lib/plural.js';
 import { exec, mapWithConcurrency, type RunResult } from '../lib/run.js';
@@ -399,11 +398,11 @@ function cruzaBloque(lineaIzq: string, ws: string, lineaDer: string): boolean {
 }
 
 /**
- * Dónde se pega un objetivo: `posterior` pega después de la aguja, si no, antes. `opcional` marca
- * los objetivos que no cierran la incidencia si su espacio ya está pegado: cuando la unión es una
- * palabra cortada con nbsp detrás, el hueco se busca al final de la segunda línea.
+ * Dónde se pega un objetivo: `posterior` pega después de la aguja, si no, antes. Si el espacio de un
+ * objetivo ya está pegado, se salta y se prueba el siguiente: la corrección pasa al final de la
+ * segunda línea, y si tampoco se puede, la incidencia se reporta «sin acción».
  */
-export type ObjetivoTypography = { aguja: string; posterior: boolean; opcional?: boolean };
+export type ObjetivoTypography = { aguja: string; posterior: boolean };
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: algoritmo de hidridacion
 export function objetivosParaIncidencia(inc: TypographyIncidence): ObjetivoTypography[] {
@@ -442,7 +441,7 @@ export function objetivosParaIncidencia(inc: TypographyIncidence): ObjetivoTypog
     if (!ultimaA.endsWith('-') || primeraB === '') continue;
     const completa = ultimaA.slice(0, -1) + primeraB;
     for (let desde = 0; desde < palabrasA.length; desde++) {
-      objetivos.push({ aguja: [...palabrasA.slice(desde, -1), completa].join(' '), posterior: true, opcional: true });
+      objetivos.push({ aguja: [...palabrasA.slice(desde, -1), completa].join(' '), posterior: true });
     }
   }
   // Si esa unión no se puede pegar (la línea arranca con el fragmento de una palabra cortada o ya
@@ -452,30 +451,16 @@ export function objetivosParaIncidencia(inc: TypographyIncidence): ObjetivoTypog
   for (let cuantas = palabrasUltima.length; cuantas >= 1; cuantas--) {
     agrega(palabrasUltima.slice(-cuantas).join(' '), true);
   }
-  // Respaldo a media línea, ya solo si ninguna de las dos uniones se pudo pegar: refluir el
-  // párrafo es lo único que puede mover el corte cuando la unión es una palabra cortada con guion
-  // o un cambio de párrafo. Se prueba cada par «palabra, siguiente» de las líneas mostradas y la
-  // costura del par (uniendo el fragmento guionado).
-  const objetivoRegex = /(\S+[.,;:!?…»’”])\s+(\S+)/gu;
-  for (const linea of lineas) {
-    for (const m of [...(linea.text || '').matchAll(objetivoRegex)]) {
-      const anterior = m[1];
-      const siguiente = m[2];
-      if (anterior && siguiente) agrega(`${anterior} ${siguiente}`);
+  // La segunda línea también puede terminar en una palabra cortada («…no se permi-»): se completa
+  // con la primera palabra de la línea siguiente y el &nbsp; va justo después, que es el final de la
+  // segunda línea. Si ese espacio ya está pegado, no queda nada más que probar.
+  const ultimaPalabra = palabrasUltima[palabrasUltima.length - 1] ?? '';
+  const primeraSiguiente = tokens(inc.continuacion ?? '')[0] ?? '';
+  if (ultimaPalabra.endsWith('-') && primeraSiguiente !== '') {
+    const completa = ultimaPalabra.slice(0, -1) + primeraSiguiente;
+    for (let desde = 0; desde < palabrasUltima.length; desde++) {
+      agrega([...palabrasUltima.slice(desde, -1), completa].join(' '), true);
     }
-  }
-  for (let i = 0; i < lineas.length - 1; i++) {
-    const a = (lineas[i] as { text: string }).text.trimEnd();
-    const antRaw = (a.match(/(\S+)$/) || ['', a.trim()])[1] as string;
-    const sigRaw = ((lineas[i + 1] as { text: string }).text.trim().match(/^\S+/) || [''])[0] as string;
-    const nextTokens = (lineas[i + 1] as { text: string }).text.trim().split(/\s+/u).filter(Boolean);
-    let token = antRaw;
-    let siguiente = sigRaw;
-    if (antRaw.endsWith('-') && sigRaw.length > 0 && nextTokens.length > 0) {
-      token = antRaw.slice(0, -1) + nextTokens[0];
-      siguiente = nextTokens.length > 1 ? (nextTokens[1] as string) : (nextTokens[0] as string);
-    }
-    if (token.length >= 3 && siguiente.length >= 1) agrega(`${token} ${siguiente}`);
   }
   const ultima = textoDe(lineas.length - 1);
   if (ultima.length >= 8) agrega(ultima);
@@ -793,23 +778,6 @@ function resuelveCandidatoFuentes(rutas: string[], contenidoNormalizado: Map<str
 
 export type MotivoIncidencia = 'corregido' | 'no aplica' | 'múltiples coincidencias' | 'no encontrado' | 'sin acción' | 'sin coincidencia exacta';
 
-/**
- * Orden en que se aplican las correcciones cuando hay más de una regla activa: los divs de
- * single-word-line van primero y repeated-first-letter al final, porque cada pegado mueve el corte
- * de línea y así las reglas que vienen después ya leen el texto con los cambios anteriores.
- */
-const ORDEN_DE_CORRECCION: Record<TypographyRule, number> = {
-  'single-word-line': 0,
-  'repeated-last-letter': 1,
-  'consecutive-punctuation': 2,
-  'repeated-first-letter': 3,
-};
-
-/** Ordena las incidencias en el orden en que conviene corregirlas (estable dentro de cada regla). */
-export function enOrdenDeCorreccion(incidencias: TypographyIncidence[]): TypographyIncidence[] {
-  return [...incidencias].sort((a, b) => ORDEN_DE_CORRECCION[a.type] - ORDEN_DE_CORRECCION[b.type]);
-}
-
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: heurística de fix por incidencia
 async function arreglaTypografia(
   cwd: string,
@@ -838,9 +806,11 @@ async function arreglaTypografia(
   const porPdf = new Map<string, { incidences: TypographyIncidence[]; estado: Map<TypographyIncidence, MotivoIncidencia> }>();
 
   for (const pdf of targets) {
-    const incidences = enOrdenDeCorreccion(
-      filtraExcepciones(await analyzePdf(pdf, analisis), etiqueta(cwd, pdf), cargarExcepciones(cwd, options)) as TypographyIncidence[],
-    );
+    const incidences = filtraExcepciones(
+      await analyzePdf(pdf, analisis),
+      etiqueta(cwd, pdf),
+      cargarExcepciones(cwd, options),
+    ) as TypographyIncidence[];
     if (incidences.length === 0) continue;
 
     const estado = new Map<TypographyIncidence, MotivoIncidencia>();
@@ -904,16 +874,15 @@ async function arreglaTypografia(
       }
 
       let nuevo: string | undefined;
-      let yaEnLaUnion = false; // el &nbsp; ya estaba puesto en la unión o al final de la segunda línea
+      let yaPegado = false; // el &nbsp; ya estaba puesto en la unión o al final de la segunda línea
       if (inc.type === 'single-word-line') {
         nuevo = envuelveParrafoContenedor(actual, inc);
       } else {
         nuevo = undefined;
         for (const objetivo of objetivos) {
           if (yaAplicado(actual, objetivo.aguja, objetivo.posterior)) {
-            if (objetivo.opcional) continue; // aquí ya hay nbsp: probar el final de la segunda línea
-            yaEnLaUnion = true; // no hay nada que hacer: el espacio ya está pegado
-            break;
+            yaPegado = true; // aquí ya hay nbsp: probar el final de la segunda línea
+            continue;
           }
           nuevo = objetivo.posterior ? remplazaEspacioPosterior(actual, objetivo.aguja) : remplazaEspacioAnterior(actual, objetivo.aguja);
           if (nuevo !== undefined && nuevo !== actual) break;
@@ -927,7 +896,7 @@ async function arreglaTypografia(
           noAplica++;
           continue;
         }
-        if (yaEnLaUnion) {
+        if (yaPegado) {
           estado.set(inc, 'sin acción');
           sinAplicar++;
           sinAccion++;
