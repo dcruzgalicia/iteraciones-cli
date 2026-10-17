@@ -24,7 +24,7 @@ Característica: Los exportadores respetan el contrato de pandoc
     Y la segunda lleva citeproc
 
   @spy-pandoc
-  Escenario: El Markdown no pasa por pandoc (#2436)
+  Escenario: El Markdown pasa por pandoc para quitar la tipografía PDF-only (#2686)
     Cuando convierto el documento a Markdown con índice y bibliografía local
-    Entonces pandoc no recibe ninguna llamada
+    Entonces pandoc recibe una llamada para quitar la tipografía PDF-only
     Y el Markdown sale con el frontmatter del documento y sin rutas absolutas

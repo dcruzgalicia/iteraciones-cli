@@ -10,6 +10,8 @@ const FLAGS_FILTER = join(LUA_FILTERS_ROOT, 'internal', 'flags.lua');
 
 export const MBOX_HELPERS_FILTER = join(LUA_FILTERS_ROOT, 'latex', 'shared', 'mbox-helpers.lua');
 
+export const STRIP_TYPOGRAPHIC_FILTER = join(LUA_FILTERS_ROOT, 'internal', 'strip-typographic.lua');
+
 const LUA_GROUPS: Array<{ dir: string; target: 'semantic' | 'latex' | 'html' }> = [
   { dir: 'semantic/ast', target: 'semantic' },
   { dir: 'latex', target: 'latex' },
@@ -76,11 +78,6 @@ export async function resolveLuaFilters(disabledList?: string[], cwd?: string): 
     }
   }
 
-  const stripPath = join(LUA_FILTERS_ROOT, 'internal', 'strip-typographic.lua');
-  if (!excluded.has('semantic/internal/strip-typographic')) {
-    result.semantic.push(stripPath);
-    result.resolvedNames.add('semantic/internal/strip-typographic');
-  }
   return result;
 }
 
