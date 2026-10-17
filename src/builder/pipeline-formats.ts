@@ -553,7 +553,7 @@ function prependLinksMarkdown(content: string, links: { name: string; url: strin
   const { yaml, body } = splitFrontmatter(content);
   const md = creatorLinksInlineMd(links);
 
-  if (body.startsWith(md)) return content;
+  if (body.trimStart().startsWith(md)) return content;
   const prefix = yaml !== undefined ? `---\n${yaml}\n---\n` : '';
   return `${prefix}${md}\n\n${body.trimEnd()}`;
 }
@@ -562,7 +562,7 @@ function prependLinksLatex(content: string, links: { name: string; url: string }
   if (links.length === 0) return content;
   const { yaml, body } = splitFrontmatter(content);
 
-  if (body.startsWith(creatorLinksInlineMd(links))) return content;
+  if (body.trimStart().startsWith(creatorLinksInlineMd(links))) return content;
   const latex = links.map((l) => `\\noindent \\textbf{${l.name}}: ${l.url}`).join('\n\n');
   const prefix = yaml !== undefined ? `---\n${yaml}\n---\n` : '';
   return `${prefix}${latex}\n\n\\vspace*{2\\baselineskip}\n\n\\noindent ${body.trimEnd()}`;
