@@ -43,7 +43,7 @@ end
 local function split_first_section_command(text)
   local cmd = text:match('^\\([%a]+)')
   if cmd == nil then return text, nil end
-  local i = #cmd + 2 -- posición después de '\comando'
+  local i = #cmd + 2
   if text:sub(i, i) == '*' then i = i + 1 end
   while text:sub(i, i) == ' ' or text:sub(i, i) == '\t' do i = i + 1 end
   local open = text:find('{', i)

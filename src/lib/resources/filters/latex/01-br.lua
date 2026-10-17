@@ -15,8 +15,6 @@ local function transform_blocks(blocks)
   local out = {}
   local pending_noindent = false
 
-  -- Recorre primero los contenedores anidados para que {br=N} funcione
-  -- dentro de listas, blockquotes y divs sin handler especial.
   local function recurse(block)
     if block.t == 'Div' and block.content then
       block.content = transform_blocks(block.content)
@@ -37,9 +35,6 @@ local function transform_blocks(blocks)
         table.insert(out, pandoc.RawBlock('latex', '\\vspace{\\baselineskip}'))
       end
       pending_noindent = true
-      -- El contenido del div se conserva: un fenced div puede llevar texto y
-      -- tirarlo seria perderlo. El primer parrafo de ese contenido es el que
-      -- recibe el noindent del salto.
       for _, child in ipairs(block.content or {}) do
         if pending_noindent and child.t == 'Para' then
           table.insert(child.content, 1, pandoc.RawInline('latex', '\\noindent '))

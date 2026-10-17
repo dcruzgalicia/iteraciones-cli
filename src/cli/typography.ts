@@ -136,7 +136,6 @@ function cargarExcepciones(cwd: string, options: TypographyOptions): ReturnType<
   return contenido === undefined ? [] : parseaExcepciones(contenido);
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: flujo de informe y --fix
 export async function runTypography(cwd: string, args: string[], options: TypographyOptions = {}): Promise<void> {
   try {
     const analisis = opcionesDeAnalisis(options);
@@ -227,7 +226,6 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
   }
 }
 
-/** `--fix` necesita un repositorio git, no un árbol limpio: los cambios se suman a los que ya haya. */
 async function aseguraGit(cwd: string): Promise<void> {
   let rev: RunResult;
   try {
@@ -267,7 +265,6 @@ async function candidatosDeFuente(cwd: string, pdfPath: string): Promise<string[
     }
   };
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: lectura de collection frontmatter
   const agregarFiles = async (ruta: string): Promise<void> => {
     const nombres = new Set<string>();
     try {
@@ -294,9 +291,7 @@ async function candidatosDeFuente(cwd: string, pdfPath: string): Promise<string[
         const parsedArchivo = yamlArchivo ? (Bun.YAML.parse(yamlArchivo) as Record<string, unknown> | null) : null;
         recolectaNombres(parsedArchivo?.creator, nombres);
       }
-    } catch {
-      // mejor saltarse un frontmatter roto que abortar
-    }
+    } catch {}
     await agregaCreators(nombres);
   };
 
@@ -314,12 +309,10 @@ async function candidatosDeFuente(cwd: string, pdfPath: string): Promise<string[
   return [...out];
 }
 
-/** El PDF dibuja «“ ” ‘ ’» donde el markdown trae «"» o «'»; igualarlas conserva las posiciones. */
 function sinComillasTipograficas(texto: string): string {
   return texto.replace(/[“”„‟«»]/g, '"').replace(/[‘’‚]/g, "'");
 }
 
-/** Ligaduras que el PDF dibuja como un solo carácter y el markdown trae sueltas. */
 const LIGADURAS_PDF: Record<string, string> = {
   '\u0132': 'IJ',
   '\u0133': 'ij',
@@ -334,11 +327,6 @@ const LIGADURAS_PDF: Record<string, string> = {
 
 const CARACTERES_PDF = /[\u0132\u0133\u2026\uFB00-\uFB06]|\.(?:[ \t]*\.){2,}/gu;
 
-/**
- * Iguala lo que el PDF dibuja distinto del markdown: ligaduras («hĳa» por «hija») y puntos
- * suspensivos («. . .» por «...» o «…»). Devuelve el texto igualado y el mapa de cada uno de sus
- * índices a la posición original, porque las posiciones se usan para insertar el `&nbsp;`.
- */
 function igualaCaracteresPdf(texto: string): { texto: string; mapa: number[] } {
   if (!/[\u0132\u0133\u2026\uFB00-\uFB06]|\.(?:[ \t]*\.){2,}/u.test(texto)) return { texto, mapa: [] };
   const partes: string[] = [];
@@ -366,7 +354,6 @@ function igualaCaracteresPdf(texto: string): { texto: string; mapa: number[] } {
   return { texto: partes.join(''), mapa };
 }
 
-/** Posiciones de una frase: entre palabras acepta un corte de línea del markdown o un espacio ya pegado, nunca una línea en blanco. */
 function indicesDe(haystack: string, aguja: string): Array<{ inicio: number; fin: number }> {
   const { texto, mapa } = igualaCaracteresPdf(sinComillasTipograficas(haystack));
   const palabras = igualaCaracteresPdf(sinComillasTipograficas(aguja))
@@ -389,7 +376,6 @@ function estaEnFrontmatter(content: string, pos: number): boolean {
   return pos < m[0].length;
 }
 
-/** ¿La posición cae dentro de un escalar de bloque del frontmatter (`clave: |`)? Su contenido es markdown. */
 function estaEnBloqueYaml(content: string, pos: number): boolean {
   const m = /^---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*\r?\n?/.exec(content);
   const yaml = m?.[1];
@@ -400,34 +386,23 @@ function estaEnBloqueYaml(content: string, pos: number): boolean {
   return lineasDeBloquesYaml(yaml)[linea] ?? false;
 }
 
-/** ¿La posición no debe editarse? Fuera de un bloque `qr` y del YAML que no es un escalar de bloque. */
 function posicionProtegida(content: string, pos: number): boolean {
   if (dentroDeQr(content, pos)) return true;
   return estaEnFrontmatter(content, pos) && !estaEnBloqueYaml(content, pos);
 }
 
-/** Texto de la línea que termina en `pos` (sin su salto). */
 function lineaPrevia(content: string, pos: number): string {
   return content.slice(content.lastIndexOf('\n', pos - 1) + 1, pos);
 }
 
-/** Texto de la línea que empieza en `pos` (sin su salto). */
 function lineaSiguiente(content: string, pos: number): string {
   const fin = content.indexOf('\n', pos);
   return content.slice(pos, fin === -1 ? content.length : fin);
 }
 
-// Líneas que no son texto de párrafo: fence de div, regla, título, lista, cita.
 const LINEA_DE_BLOQUE = /^(?:-{3,}|\.{3,}|:::|#{1,6}\s|[-*+]|\d{1,3}[.)]|>)/;
-// Clave del frontmatter (incluye la cabecera de un escalar de bloque, `titleback: |`).
 const LINEA_DE_YAML = /^[\w-]+:/;
 
-/**
- * ¿Unir con `&nbsp;` aquí juntaría bloques distintos? Con salto de línea de por medio no se puede
- * pegar contra una línea que abre o cierra bloque (uniría `::: {runt=2}` con el cuerpo del div, un
- * escalar de bloque con su clave, un título con el párrafo siguiente); sin salto, solo contra una
- * viñeta suelta.
- */
 function cruzaBloque(lineaIzq: string, ws: string, lineaDer: string): boolean {
   const izq = lineaIzq.trim();
   const der = lineaDer.trim();
@@ -435,14 +410,8 @@ function cruzaBloque(lineaIzq: string, ws: string, lineaDer: string): boolean {
   return LINEA_DE_BLOQUE.test(izq) || /[|>]$/.test(izq) || LINEA_DE_BLOQUE.test(der) || LINEA_DE_YAML.test(der);
 }
 
-/**
- * Dónde se pega un objetivo: `posterior` pega después de la aguja, si no, antes. Si el espacio de un
- * objetivo ya está pegado, se salta y se prueba el siguiente: la corrección pasa al final de la
- * segunda línea, y si tampoco se puede, la incidencia se reporta «sin acción».
- */
 export type ObjetivoTypography = { aguja: string; posterior: boolean };
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: algoritmo de hidridacion
 export function objetivosParaIncidencia(inc: TypographyIncidence): ObjetivoTypography[] {
   if (inc.type === 'single-word-line') return [{ aguja: inc.text.trim() as string, posterior: false }];
   const lineas = inc.lineas;
@@ -454,11 +423,6 @@ export function objetivosParaIncidencia(inc: TypographyIncidence): ObjetivoTypog
   const agrega = (aguja: string, posterior = !antes): void => {
     objetivos.push({ aguja, posterior });
   };
-  // El &nbsp; se pega justo en la unión de dos líneas. En repeated-first-letter se pega ANTES de la
-  // aguja, así que la aguja empieza en la primera palabra de la línea siguiente (el corte); en los
-  // demás se pega después, y la aguja termina en la última palabra de la línea. Se prueban todas
-  // las longitudes hacia el corte: todas comparten el mismo espacio pegado, la más larga es la que
-  // mejor desambigua («ya no» aparece seis veces y se descarta; «mal contada que ya no», no).
   const palabrasDe = (i: number): string[] => tokens(textoDe(i));
   const pares = Array.from({ length: lineas.length - 1 }, (_, i) => i);
   if (!antes) pares.reverse();
@@ -468,10 +432,6 @@ export function objetivosParaIncidencia(inc: TypographyIncidence): ObjetivoTypog
       agrega((antes ? palabras.slice(0, cuantas) : palabras.slice(-cuantas)).join(' '));
     }
   }
-  // Si la unión es una palabra cortada por el PDF («su-» / «pone»), la palabra completa suele no
-  // tener nada pegado: el &nbsp; va justo después de ella («supone&nbsp;que»), que es el final de la
-  // primera línea. Si ya trae pegado su espacio, este objetivo no aplica y se sigue con el final de
-  // la segunda línea (pág 40, que ya traía «sola&nbsp;en mi casa»).
   for (let i = 0; i < lineas.length - 1; i++) {
     const palabrasA = palabrasDe(i);
     const primeraB = palabrasDe(i + 1)[0] ?? '';
@@ -482,16 +442,10 @@ export function objetivosParaIncidencia(inc: TypographyIncidence): ObjetivoTypog
       objetivos.push({ aguja: [...palabrasA.slice(desde, -1), completa].join(' '), posterior: true });
     }
   }
-  // Si esa unión no se puede pegar (la línea arranca con el fragmento de una palabra cortada o ya
-  // trae pegado su espacio), el &nbsp; va al final de la segunda línea: también queda en una unión
-  // de líneas y rompe la repetición, como pidió la revisión de pág 40 («hasta&nbsp;lloré»).
   const palabrasUltima = palabrasDe(lineas.length - 1);
   for (let cuantas = palabrasUltima.length; cuantas >= 1; cuantas--) {
     agrega(palabrasUltima.slice(-cuantas).join(' '), true);
   }
-  // La segunda línea también puede terminar en una palabra cortada («…no se permi-»): se completa
-  // con la primera palabra de la línea siguiente y el &nbsp; va justo después, que es el final de la
-  // segunda línea. Si ese espacio ya está pegado, no queda nada más que probar.
   const ultimaPalabra = palabrasUltima[palabrasUltima.length - 1] ?? '';
   const primeraSiguiente = tokens(inc.continuacion ?? '')[0] ?? '';
   if (ultimaPalabra.endsWith('-') && primeraSiguiente !== '') {
@@ -509,7 +463,6 @@ export function envuelveParrafoContenedor(content: string, inc: TypographyIncide
   return envuelveEnCuerpo(content, inc) ?? envuelveEnBloquesFrontmatter(content, inc) ?? envuelveEnTitleFrontmatter(content, inc);
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: desambigua el párrafo contenedor en el cuerpo
 function envuelveEnCuerpo(content: string, inc: TypographyIncidence): string | undefined {
   const word = inc.text.trim();
   const wordNorm = normalizaParaBusqueda(word);
@@ -542,7 +495,6 @@ function envuelveEnCuerpo(content: string, inc: TypographyIncidence): string | u
   return prefijo + bloques.join('\n\n');
 }
 
-/** Marca las líneas del frontmatter que pertenecen a un escalar de bloque (`clave: |`). */
 function lineasDeBloquesYaml(yaml: string): boolean[] {
   const lineas = yaml.split('\n');
   const dentro = lineas.map(() => false);
@@ -567,7 +519,6 @@ function lineasDeBloquesYaml(yaml: string): boolean[] {
   return dentro;
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: párrafos dentro de titleback, colophon, etc.
 function envuelveEnBloquesFrontmatter(content: string, inc: TypographyIncidence): string | undefined {
   const wordNorm = normalizaParaBusqueda(inc.text.trim());
   const { yaml, body } = splitFrontmatter(content);
@@ -630,7 +581,6 @@ function envuelveEnTitleFrontmatter(content: string, inc: TypographyIncidence): 
   const wordNorm = normalizaParaBusqueda(inc.text.trim());
   const { yaml, body } = splitFrontmatter(content);
   if (!yaml) return undefined;
-  // si ya hay una ocurrencia suelta en un bloque del frontmatter, el título no es el objetivo
   if (yaml.split('\n').some((linea) => normalizaParaBusqueda(linea) === wordNorm)) return undefined;
   const m = /^title:[ \t]*(.+)$/m.exec(yaml);
   if (!m) return undefined;
@@ -644,12 +594,10 @@ function envuelveEnTitleFrontmatter(content: string, inc: TypographyIncidence): 
   return fm.replace(yaml, () => nuevoYaml) + body;
 }
 
-/** Quita la marca de encabezado (`#`, `##`, …) para comparar el título como palabra suelta. */
 function sinMarcaDeTitulo(texto: string): string {
   return texto.replace(/^\s*#{1,6}\s+/, '');
 }
 
-/** ¿La palabra aparece como unidad suelta (valor, encabezado o párrafo completo) en el archivo? */
 export function tienePalabraSuelta(contenido: string, wordNorm: string): boolean {
   const { yaml, body } = splitFrontmatter(contenido);
   if (yaml) {
@@ -665,10 +613,6 @@ export function tienePalabraSuelta(contenido: string, wordNorm: string): boolean
   return false;
 }
 
-/**
- * ¿La incidencia corresponde a un encabezado (`# Título`) del markdown? Los títulos de sección no
- * se envuelven con `runt`, así que la corrección no aplica.
- */
 export function esTituloDeSeccion(content: string, inc: TypographyIncidence): boolean {
   if (inc.type !== 'single-word-line') return false;
   const wordNorm = normalizaParaBusqueda(inc.text.trim());
@@ -690,7 +634,6 @@ function profundidadFenced(content: string, pos: number): number {
   return dentro ? 1 : 0;
 }
 
-/** ¿La posición cae dentro de un bloque `::: {qr=…}`? Su contenido (una URL) no debe tocarse. */
 function dentroDeQr(content: string, pos: number): boolean {
   let dentro = false;
   let esQr = false;
@@ -702,7 +645,6 @@ function dentroDeQr(content: string, pos: number): boolean {
   return dentro && esQr;
 }
 
-/** Une con `&nbsp;` el espacio posterior a `needle`. Sí aplica dentro de un `::: {runt=2}`. */
 export function remplazaEspacioPosterior(content: string, needle: string): string | undefined {
   const idxs = indicesDe(content, needle);
   if (idxs.length !== 1) return undefined;
@@ -711,13 +653,11 @@ export function remplazaEspacioPosterior(content: string, needle: string): strin
   let j = fin;
   while (j < content.length && /\s/.test(content[j] ?? '')) j++;
   const ws = content.slice(fin, j);
-  // ya está unido, o el espacio cruza un corte de párrafo/bloque y no debe tocarse
   if (ws === '' || /\n[ \t]*\n/.test(ws)) return undefined;
   if (cruzaBloque(lineaPrevia(content, fin), ws, lineaSiguiente(content, j))) return undefined;
   return `${content.slice(0, fin)}&nbsp;${content.slice(j)}`;
 }
 
-/** Une con `&nbsp;` el espacio anterior a `needle`. Sí aplica dentro de un `::: {runt=2}`. */
 export function remplazaEspacioAnterior(content: string, needle: string): string | undefined {
   const idxs = indicesDe(content, needle);
   if (idxs.length !== 1) return undefined;
@@ -727,25 +667,20 @@ export function remplazaEspacioAnterior(content: string, needle: string): string
   let j = inicio - 1;
   while (j >= 0 && /\s/.test(content[j] ?? '')) j--;
   const inicioWs = j + 1;
-  // no hay espacio que cambiar, o el espacio cruza un corte de párrafo/bloque
   if (inicioWs >= inicio || /\n[ \t]*\n/.test(content.slice(inicioWs, inicio))) return undefined;
   if (cruzaBloque(lineaPrevia(content, inicioWs), content.slice(inicioWs, inicio), lineaSiguiente(content, inicio))) return undefined;
   return `${content.slice(0, inicioWs)}&nbsp;${content.slice(inicio)}`;
 }
 
-/** ¿El espacio de `needle` ya quedó pegado con `&nbsp;` en una pasada anterior? */
-/** ¿El `&nbsp;` de esta incidencia ya está puesto? (`posterior`: se pega después de la aguja). */
 export function yaAplicado(content: string, needle: string, posterior: boolean): boolean {
   const idxs = indicesDe(content, needle);
   if (idxs.length !== 1) return false;
   const { inicio, fin } = idxs[0] as { inicio: number; fin: number };
   const pegote = posterior ? content.slice(fin, fin + 6) : content.slice(Math.max(0, inicio - 6), inicio);
-  // el markdown puede traer el espacio ya pegado con el carácter duro, no solo con la entidad
   const crudo = posterior ? content[fin] : content[inicio - 1];
   return pegote === '&nbsp;' || crudo === '\u00a0';
 }
 
-/** ¿La aguja existe aunque su espacio no se pueda pegar (corte de párrafo, bloque, posición protegida)? */
 function agujaEncontrada(content: string, aguja: string): boolean {
   return indicesDe(content, aguja).length === 1;
 }
@@ -779,7 +714,6 @@ function ngramasBusqueda(texto: string): string[] {
   return [...fiesta];
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: construye candidatos a partir del contexto
 function cadenasDeBusqueda(inc: TypographyIncidence): string[] {
   if (inc.type === 'single-word-line') {
     const fiesta = new Set<string>();
@@ -828,7 +762,6 @@ export type MotivoIncidencia =
   | 'sin unión pegable'
   | 'sin coincidencia exacta';
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: heurística de fix por incidencia
 async function arreglaTypografia(
   cwd: string,
   targets: string[],
@@ -882,9 +815,7 @@ async function arreglaTypografia(
         const txt = await Bun.file(f).text();
         contenido.set(f, txt);
         contenidoNormalizado.set(f, normalizaParaBusqueda(txt));
-      } catch {
-        // se ignora una fuente ilegible
-      }
+      } catch {}
     }
 
     for (const inc of incidences) {
@@ -926,15 +857,15 @@ async function arreglaTypografia(
       }
 
       let nuevo: string | undefined;
-      let yaPegado = false; // el &nbsp; ya estaba puesto en la unión o al final de la segunda línea
-      let unionRechazada = false; // la aguja existe, pero su espacio no se puede pegar (párrafo, bloque)
+      let yaPegado = false;
+      let unionRechazada = false;
       if (inc.type === 'single-word-line') {
         nuevo = envuelveParrafoContenedor(actual, inc);
       } else {
         nuevo = undefined;
         for (const objetivo of objetivos) {
           if (yaAplicado(actual, objetivo.aguja, objetivo.posterior)) {
-            yaPegado = true; // aquí ya hay nbsp: probar el final de la segunda línea
+            yaPegado = true;
             continue;
           }
           nuevo = objetivo.posterior ? remplazaEspacioPosterior(actual, objetivo.aguja) : remplazaEspacioAnterior(actual, objetivo.aguja);

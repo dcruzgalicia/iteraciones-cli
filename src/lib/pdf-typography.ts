@@ -21,7 +21,6 @@ export interface ConsecutivePunctuation extends Incidence {
   type: 'consecutive-punctuation';
   lineas: LineaCoincidencia[];
   total: number;
-  /** La línea que sigue a las mostradas: con ella se completa la palabra cortada al final. */
   continuacion?: string;
 }
 
@@ -30,7 +29,6 @@ export interface RepeatedLetter extends Incidence {
   letter: string;
   lineas: LineaCoincidencia[];
   total: number;
-  /** La línea que sigue a las mostradas: con ella se completa la palabra cortada al final. */
   continuacion?: string;
 }
 
@@ -263,11 +261,6 @@ export interface ExcepcionTipografia {
   lines: Array<{ line: number; text: string }>;
 }
 
-/**
- * Lee un archivo de excepciones en texto plano. Un bloque empieza con una línea sin indentar
- * (la ruta del PDF) y sigue con las líneas indentadas del caso tal como lo imprime el informe.
- * Los bloques se separan por una línea en blanco.
- */
 function normalizaCabeceraArchivo(titulo: string): string {
   const m = /^(.*?)\s+·\s+\d+\s+incidencias?\s*$/i.exec(titulo.trim());
   return (m?.[1] ?? titulo).trim();
@@ -368,7 +361,6 @@ function parseaExcepcionDeBloque(lines: string[], archivo: string): ExcepcionTip
   };
 }
 
-/** Quita de una lista de incidencias las que coincidan exactamente con una excepción. */
 export function filtraExcepciones<T extends TypographyIncidence>(
   incidencias: readonly T[],
   archivo: string,
@@ -410,8 +402,6 @@ export function analyzeText(stdout: string, opciones: OpcionesAnalisis = {}): Ty
   const pedidas = new Set(opciones.reglas ?? TODAS_LAS_REGLAS);
   const pages = splitPages(stdout);
   const ancho = (anchoDeReferencia(pages) * porcentajeCorta) / 100;
-  // El orden es el mismo del informe y de las correcciones: primero los divs, después last-letter,
-  // puntuación y al final first-letter.
   const incidences = [
     ...(pedidas.has('single-word-line') ? singleWordLines(pages) : []),
     ...(pedidas.has('repeated-last-letter') ? repeatedLetterRuns(pages, 'last', lineasMinimas, letrasMinimas, ancho) : []),
