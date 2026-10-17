@@ -9,12 +9,9 @@ import { fmBool, fmString } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
 import { escapeRegExp } from '../lib/paths.js';
-
-const STRIP_TYPOGRAPHIC_FILTER = join(import.meta.dir, '../lib/resources/filters/internal/strip-typographic.lua');
-
 import { exec, mapWithConcurrency, ProcessSpawnError, ProcessTimeoutError } from '../lib/run.js';
 import { prepareArgv, recordSupportCommand } from '../lib/script-recorder.js';
-import type { LuaFilterGroup } from './filter-resolver.js';
+import { type LuaFilterGroup, STRIP_TYPOGRAPHIC_FILTER } from './filter-resolver.js';
 import { citationCompileArgs, metadataArgs } from './pandoc-metadata.js';
 import { preparePaths, xmpDirsFor } from './prepare.js';
 import type { BuildDocument } from './types.js';
@@ -83,7 +80,7 @@ export async function convertToEpub(
 
   const extraArgs: string[] = [];
   extraArgs.push('--shift-heading-level-by=4');
-  for (const f of [...filters.semantic, ...filters.user]) extraArgs.push('--lua-filter', f);
+  for (const f of [...filters.semantic, STRIP_TYPOGRAPHIC_FILTER, ...filters.user]) extraArgs.push('--lua-filter', f);
   extraArgs.push(...citationCompileArgs(doc.metadata.bibliography, doc.metadata.csl));
   const tocActive = fmBool(fm.toc, toc ?? false);
   if (tocActive) {
@@ -140,7 +137,6 @@ export async function convertToMarkdown(
   }
   if (outFm.language === undefined) outFm.language = doc.metadata.language;
 
-  const separator = yaml === undefined ? '\n' : '';
   const normalizedBody =
     body.trim() === ''
       ? body
@@ -151,7 +147,7 @@ export async function convertToMarkdown(
           to: 'markdown',
           extraArgs: ['--lua-filter', STRIP_TYPOGRAPHIC_FILTER],
         });
-  await Bun.write(outputPath, `---\n${stringify(outFm)}---\n${separator}${normalizedBody}`);
+  await Bun.write(outputPath, `---\n${stringify(outFm)}---\n\n${normalizedBody}`);
 }
 
 export async function convertToPdf(

@@ -44,7 +44,7 @@ Before({ tags: '@spy-pandoc' }, () => {
 
   spyOn(pandocRunner, 'execPandoc').mockImplementation(async (options) => {
     world.calls.push(options);
-    return '';
+    return options.input;
   });
 });
 
@@ -156,8 +156,14 @@ Then('la segunda lleva citeproc', () => {
   exige(call(1).extraArgs, '--citeproc');
 });
 
-Then('pandoc no recibe ninguna llamada', () => {
-  if (world.calls.length !== 0) throw new Error(`pandoc fue invocado ${world.calls.length} veces y no debía`);
+Then('pandoc recibe una llamada para quitar la tipografía PDF-only', () => {
+  if (world.calls.length !== 1) throw new Error(`esperaba 1 llamada y hubo ${world.calls.length}`);
+  const found = lastCall();
+  if (found.to !== 'markdown') throw new Error(`esperaba el formato "markdown" y fue "${found.to}"`);
+  if (found.outputPath !== undefined) throw new Error(`la llamada no debía escribir un archivo y escribió en ${found.outputPath}`);
+  if (!(found.extraArgs ?? []).some((arg) => arg.endsWith('internal/strip-typographic.lua'))) {
+    throw new Error(`la llamada no lleva el filtro que quita la tipografía: ${JSON.stringify(found.extraArgs)}`);
+  }
 });
 
 Then('el Markdown sale con el frontmatter del documento y sin rutas absolutas', async () => {
