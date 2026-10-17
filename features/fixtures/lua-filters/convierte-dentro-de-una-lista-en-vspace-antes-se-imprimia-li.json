@@ -1,7 +1,7 @@
 {
   "name": "convierte-dentro-de-una-lista-en-vspace-antes-se-imprimia-li",
   "helper": "toLatex",
-  "markdown": "- ::\n- texto",
+  "markdown": "- ::: {br=1}\n  :::\n- texto",
   "contains": ["\\vspace{\\baselineskip}"],
   "notContains": ["::"],
   "normalizeNewlines": false

@@ -24,12 +24,12 @@ async function render(md: string): Promise<string> {
 }
 
 Given('un QR cuya URL lleva &', () => {
-  world.qrMarkdown = '[https://x.com/a?b=1&c=2]{.qr width="15mm"}\n';
+  world.qrMarkdown = '::: {qr=15mm}\nhttps://x.com/a?b=1&c=2\n:::\n';
 });
 
 Given('un QR cuya URL lleva un punto y coma', () => {
   world.marcadorPwned = join(world.root, 'pwned.txt');
-  world.qrMarkdown = `[https://x.com/a;touch ${world.marcadorPwned}]{.qr width="15mm"}\n`;
+  world.qrMarkdown = `::: {qr=15mm}\nhttps://x.com/a;touch ${world.marcadorPwned}\n:::\n`;
 });
 
 When('renderizo el documento', async () => {

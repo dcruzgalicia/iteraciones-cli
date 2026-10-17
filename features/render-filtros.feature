@@ -24,7 +24,8 @@ Característica: los nombres de los filtros del paquete
         | nombre | esperado |
         | 02-dictum | latex/02-dictum |
         | 01-dictum | html/01-dictum |
-        | 05-spacer | html/05-spacer |
+        | 01-br | latex/01-br |
+        | 05-br | html/05-br |
 
     Esquema del escenario: Un nombre sin coincidencia no sugiere nada
       Dado que pregunto por el filtro "<nombre>"
@@ -44,7 +45,7 @@ Característica: los nombres de los filtros del paquete
       Entonces no hay ningún aviso
 
     Escenario: Los nombres completos válidos no avisan
-      Dado que los filtros lua desactivados son '["latex/02-dictum", "semantic/string/01-double-colon"]'
+      Dado que los filtros lua desactivados son '["latex/02-dictum", "semantic/ast/03-qr-url"]'
       Cuando valido los filtros desactivados
       Entonces no hay ningún aviso
 

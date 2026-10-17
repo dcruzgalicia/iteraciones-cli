@@ -1,14 +1,14 @@
 export const DESCRIPCIONES_LUA: Record<string, string> = {
   'html/01-dictum': 'Convierte Div.dictum a <blockquote class="dictum"> (formato HTML).',
   'html/02-verse': 'Convierte Div.verse a <div class="verse"> (formato HTML).',
-  'html/05-spacer':
-    'Convierte Div.spacer a un <div> con la utilidad de Tailwind `h-[1.5em]` (formato HTML): el separador vertical del marcador :: mide ~1.5em, el interlineado del tamaño base. Es una utilidad y no una clase de CSS propia porque el escáner de Tailwind la genera desde el HTML (#2487). La clase noindent se ignora (la sangría de párrafo es LaTeX-only).',
+  'html/05-br':
+    'Convierte Div con atributo br=N en N saltos de línea (formato HTML): cada uno sale como un <br/>, sin <p>. Valores cero, negativos o no numéricos se ignoran y el div pasa de largo. {br=1.5} se trunca a 1 (math.floor), igual que los demás atributos numéricos.',
   'html/06-subparagraph':
     'Convierte ### (h3) en un <div> con las utilidades de Tailwind del \\subparagraph de LaTeX (KOMA-Script: negrita + itálica) antes de que pandoc intente generar un h7 (que no existe en HTML). Son utilidades y no una clase de CSS propia porque el escáner de Tailwind las genera desde el HTML (#2487). Los h1 y h2 se manejan con --shift-heading-level-by=4.',
   'html/07-titlepage-meta':
     "#2487 — los campos de la portada que LaTeX pasa por markdown (los mismos que lista latex/07-titlepages.lua) llegan aquí como texto plano en --metadata: el template los emite tal cual, así que un `collectionCreatorPrefix: *Edición*` salía con los asteriscos en vez de en cursiva. Este filtro los vuelve a leer como markdown y deja el resultado como inlines, que el template ya emite formateado. Los que no son markdown (title, creator, date) no se tocan. De los nombres de las creadoras hay un campo aparte (`author-names`, `collection-creator-names`), que llega como lista porque se pasa un --metadata por nombre. Cada uno va en un span `whitespace-nowrap` y se unen con ', ': es el equivalente del \\mbox de cada creator en LaTeX, para que la línea se parta entre nombres y nunca dentro de uno.",
-  'latex/01-spacer':
-    'Convierte Div.spacer en \\vspace{\\baselineskip} (formato LaTeX). Si el Div tiene la clase noindent (caso :;), agrega \\noindent al primer párrafo siguiente (solo si es Para).',
+  'latex/01-br':
+    'Convierte Div con atributo br=N en N × \\vspace{\\baselineskip} (formato LaTeX) y añade \\noindent al primer párrafo siguiente (solo si es Para); si el siguiente bloque es un Div, la bandera se descarta y su párrafo interior sale con sangría normal. Valores cero, negativos o no numéricos se ignoran y el div pasa de largo; {br=1.5} se trunca a 1. La clase .indent-N no hace nada en LaTeX (#2670): la sangría la da el \\parindent activo, y como la bandera de noindent se descarta en un Div el párrafo de dentro ya la lleva.',
   'latex/02-dictum':
     'Convierte Div.dictum a \\dictum[author]{quote} (formato LaTeX), con \\noindent al párrafo siguiente si es Para. Soporta atributo width (0.1–1.0) para ancho personalizado. El espaciado lo gestiona el entorno dictum (preamble 21-dictum.tex).',
   'latex/03-verse':
@@ -17,7 +17,7 @@ export const DESCRIPCIONES_LUA: Record<string, string> = {
     'Convierte Div.text-center al entorno \\begin{center}…\\end{center} (formato LaTeX). En HTML no hace falta filtro: pandoc ya emite <div class="text-center"> y Tailwind compila esa clase a text-align:center. Antes era Div.center, un nombre de LaTeX que en el sitio no significaba nada. El entorno center lo redefine 20-alignment.tex para quitarle el espacio vertical extra.',
   'latex/05-flushright':
     'Convierte Div.text-end al entorno \\begin{flushright}…\\end{flushright} (formato LaTeX). En HTML no hace falta filtro: pandoc ya emite <div class="text-end"> y Tailwind lo compila a text-align:end. Antes era Div.flushright, nombre de LaTeX muerto en el sitio. text-end es lógico, como el \\raggedleft de LaTeX: respeta la dirección de escritura, al contrario que text-right.',
-  'latex/06-mbox-sentence-end':
+  'latex/06-sentence-end':
     'Envuelve en \\mbox{} las últimas 3 palabras de la oración final del párrafo (únicas palabras que reciben mbox: sin mbox por oración no final ni de inicio de oración). Solo dentro de bloques Para. El conteo usa palabras REALES: un grupo de énfasis (\\emph{...}) aporta sus palabras internas individualmente. Regla del wrap (últimas 3): A. sin énfasis      → \\mbox{ejemplo final.} B. dentro del grupo → \\emph{...en \\mbox{carne propia.}} (wrap interno) C. toca el inicio   → en \\mbox{\\emph{carne propia.}} (grupo completo) D. grupo de 1       → \\mbox{dice \\emph{ella.}} (extiende hacia atrás) Exclusión: []{.no-mbox} en el párrafo omite el mbox automático.',
   'latex/07-titlepages':
     "Convierte los campos de frontmatter multilinea (subtitle, extratitle, frontispiece, titlehead, subject, dedication, uppertitleback, lowertitleback, publishers, colophon) a LaTeX para la portada, las páginas de título internas y el colofón final. subject y publishers aceptan un array de strings (como author): se unen con ', '. Solo corre en la pasada latex (en HTML los campos se ignoran o los serializa el compositor HTML con \\n → espacio). titleImage (imagen de portada) no es contenido markdown: la ruta pasa literal como RawInline latex. El valor llega como MetaBlocks (frontmatter YAML |: los párrafos ya son bloques markdown) o MetaInlines (string simple). Se serializa con pandoc.write: el doble espacio al final de línea → \\\\, y un párrafo con solo :: (o :;) → \\vspace{\\baselineskip} (+ \\noindent). El resultado se guarda como MetaInlines(RawInline('latex')): el template lo emite sin re-escape.",
@@ -29,22 +29,20 @@ export const DESCRIPCIONES_LUA: Record<string, string> = {
     'Convierte Div.japanese/.chinese/.korean al entorno CJKutf8 de LaTeX (\\begin{CJK}{UTF8}{min|gbsn|ksc}...\\end{CJK}). El encoding por clase: .japanese → min (japonés), .chinese → gbsn (chino simplificado), .korean → ksc (coreano). En HTML el texto CJK funciona nativo (UTF-8): el div se ignora y el contenido fluye sin transformación. El paquete se carga en el preamble 27-cjk.tex.',
   'latex/11-uppercase':
     'Convierte el span [texto]{.uppercase} a \\MakeUppercase{texto} (solo LaTeX: el writer de pandoc ignora la clase y la deja como {texto}). En HTML el span conserva la clase uppercase y Tailwind la estiliza (text-transform).',
-  'latex/12-mbox':
+  'latex/12-text-nowrap':
     'Convierte el span [texto]{.text-nowrap} a \\mbox{texto}: una caja que no se parte entre líneas, para nombres propios o títulos que no queremos ver partidos. Antes era {.mbox}, un nombre de LaTeX que en el sitio no hacía nada. En HTML no hace falta filtro: pandoc emite <span class="text-nowrap"> y Tailwind lo compila a text-wrap:nowrap. Para el equivalente exacto de \\mbox, que además impide que el navegador corte dentro de la palabra, añade .hyphens-none: [texto]{.text-nowrap .hyphens-none}.',
   'latex/13-spacing':
     'Multiplica el interlineado de un bloque con setspace: ::: {line-height=1.5} sale \\begin{spacing}{1.5}…\\end{spacing}. El 1.5 no lleva unidad, es un factor sobre la base, igual que line-height en CSS. Valores cero, negativos o no numéricos se ignoran y el bloque sale normal. Antes era ::: {spacing=1.5}, que se confundía con los metadatos del documento porque es un atributo sin clase. Requiere el paquete setspace (cargado en 03-spacing.tex). Solo LaTeX: en HTML el atributo sale como data-line-height y no hace nada.',
-  'latex/14-textls':
-    'Espacia las letras de un span o div con microtype, con dos atributos que ya dicen qué hacen. ::: {shrink=20} o [texto]{shrink=20} aprieta las letras (sale \\textls[-20]); ::: {stretch=30} o [texto]{stretch=30} las separa (sale \\textls[30]). La cantidad va siempre en positivo, porque el nombre ya dice para qué lado. Antes era ::: {.textls value=-20}, con el signo decidiendo y sin avisar si te equivocabas. Solo LaTeX: en HTML el atributo sale como data-shrink / data-stretch y no hace nada, porque es una medida en unidades de la fuente.',
-  'latex/15-mbox-words':
-    'Pide a mano el \\mbox{} que hasta ahora se aplicaba solo, con dos atributos en el div. ::: {runt=3} ::: envuelve en \\mbox{} las últimas 3 palabras del párrafo, para que la última línea no quede con una sola palabra (un runt); si el párrafo tiene N palabras o menos de las pedidas, no hace nada, porque ya es corto. ::: {nohyph="Kant Heidegger"} ::: envuelve cada aparición de esas palabras en el párrafo; la puntuación que va pegada se queda fuera del mbox, y entra dentro de los grupos de énfasis. Los dos atributos se pueden poner a la vez. Solo LaTeX: en HTML los atributos salen como data-runt / data-nohyph y no hacen nada, porque son decisiones de una caja de texto fija.',
-  'semantic/ast/02-double-colon-noindent':
-    'Convierte párrafos con solo ":;" en Div.spacer noindent (semántico). Solo transforma párrafos de nivel superior (no dentro de otros bloques).',
+  'latex/14-shrink':
+    'Aprieta las letras de un bloque con microtype: ::: {shrink=20} sale \\textls[-20]. La cantidad va siempre en positivo, porque el nombre ya dice para qué lado. Antes era ::: {.textls value=-20}, con el signo decidiendo y sin avisar si te equivocabas. Solo LaTeX: en HTML el atributo sale como data-shrink y no hace nada, porque es una medida en unidades de la fuente.',
+  'latex/15-stretch':
+    'Separa las letras de un bloque con microtype: ::: {stretch=30} sale \\textls[30]. La cantidad va siempre en positivo, porque el nombre ya dice para qué lado. Antes era ::: {.textls value=30}, con el signo decidiendo y sin avisar si te equivocabas. Solo LaTeX: en HTML el atributo sale como data-stretch y no hace nada, porque es una medida en unidades de la fuente.',
+  'latex/16-runt':
+    'Pide a mano el \\mbox{} que hasta ahora se aplicaba solo, con el atributo runt del div: ::: {runt=3} ::: envuelve en \\mbox{} las últimas 3 palabras del párrafo. Si el párrafo tiene N palabras o menos de las pedidas, no hace nada, porque ya es corto. Para envolver palabras concretas, usa [texto]{.text-nowrap} (latex/12-text-nowrap). Antes era latex/15-mbox-words. Solo LaTeX: en HTML el atributo sale como data-runt y no hace nada, porque es una decisión de una caja de texto fija.',
   'semantic/ast/03-qr-url':
-    'Genera código QR como imagen JPG 300dpi a partir de [url]{.qr width="Xcm"}. Imagen generada en .iteraciones/processed-images/ del proyecto (content-addressed por hash MD5). Requiere: zxing-wasm (bun add zxing-wasm) y ImageMagick (magick).',
+    'Genera código QR como imagen JPG 300dpi a partir de ::: {qr=Xcm}…:::. Imagen generada en .iteraciones/processed-images/ del proyecto (content-addressed por hash MD5). Requiere: zxing-wasm (bun add zxing-wasm) y ImageMagick (magick).',
   'semantic/ast/04-image-paths':
     'Reescribe en el AST las rutas de imagen que el preproceso movió a assets/images (#2460). El mapa llega por fichero (ITERACIONES_PATHS_JSON), nunca por argv: crece con el número de imágenes. Va después de 03-qr-url (orden del directorio) y, si no hay mapa, no toca nada.',
-  'semantic/string/01-double-colon':
-    'Convierte líneas con solo "::" en Div.spacer (semántico, sin formato específico). El marcador es una línea cuyo único contenido es :: (pandoc normaliza los espacios trailing en el AST, así que ":: " es equivalente a "::").',
 };
 
 export const DESCRIPCIONES_PREAMBLE: Record<string, string> = {

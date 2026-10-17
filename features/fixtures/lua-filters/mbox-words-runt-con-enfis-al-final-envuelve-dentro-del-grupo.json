@@ -5,5 +5,5 @@
   "contains": ["\\emph{enfatisAlFinal} para probar \\mbox{el grupo.}"],
   "notContains": ["\\mbox{*enfatisAlFinal}"],
   "normalizeNewlines": true,
-  "filters": ["15-mbox-words"]
+  "filters": ["16-runt"]
 }

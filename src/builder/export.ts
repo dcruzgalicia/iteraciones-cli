@@ -9,6 +9,9 @@ import { fmBool, fmString } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { execPandoc, imagePathsEnv, MD_READER } from '../lib/pandoc-runner.js';
 import { escapeRegExp } from '../lib/paths.js';
+
+const STRIP_TYPOGRAPHIC_FILTER = join(import.meta.dir, '../lib/resources/filters/internal/strip-typographic.lua');
+
 import { exec, mapWithConcurrency, ProcessSpawnError, ProcessTimeoutError } from '../lib/run.js';
 import { prepareArgv, recordSupportCommand } from '../lib/script-recorder.js';
 import type { LuaFilterGroup } from './filter-resolver.js';
@@ -138,7 +141,17 @@ export async function convertToMarkdown(
   if (outFm.language === undefined) outFm.language = doc.metadata.language;
 
   const separator = yaml === undefined ? '\n' : '';
-  await Bun.write(outputPath, `---\n${stringify(outFm)}---\n${separator}${body}`);
+  const normalizedBody =
+    body.trim() === ''
+      ? body
+      : await execPandoc({
+          input: body,
+          sourcePath: doc.filePath,
+          from: MD_READER,
+          to: 'markdown',
+          extraArgs: ['--lua-filter', STRIP_TYPOGRAPHIC_FILTER],
+        });
+  await Bun.write(outputPath, `---\n${stringify(outFm)}---\n${separator}${normalizedBody}`);
 }
 
 export async function convertToPdf(

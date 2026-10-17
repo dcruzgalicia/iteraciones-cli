@@ -1,0 +1,9 @@
+{
+  "name": "titleback-br-con-contenido-lo-conserva",
+  "helper": "toLatexTitleback",
+  "markdown": "---\ntitle: Prueba\nlowertitleback: |\n  ::: {br=2}\n  ESTE TEXTO SE CONSERVA\n  :::\n---\n\nCuerpo.\n",
+  "contains": ["ESTE TEXTO SE CONSERVA", "\\vspace{\\baselineskip}"],
+  "notContains": [],
+  "needsBib": false,
+  "normalizeNewlines": false
+}

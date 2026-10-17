@@ -5,5 +5,5 @@
   "contains": ["\\mbox{cinco seis.}"],
   "notContains": ["\\mbox{cuatro cinco seis.}"],
   "normalizeNewlines": true,
-  "filters": ["15-mbox-words"]
+  "filters": ["16-runt"]
 }

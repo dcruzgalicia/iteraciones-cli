@@ -11,7 +11,6 @@ const FLAGS_FILTER = join(LUA_FILTERS_ROOT, 'internal', 'flags.lua');
 export const MBOX_HELPERS_FILTER = join(LUA_FILTERS_ROOT, 'latex', 'shared', 'mbox-helpers.lua');
 
 const LUA_GROUPS: Array<{ dir: string; target: 'semantic' | 'latex' | 'html' }> = [
-  { dir: 'semantic/string', target: 'semantic' },
   { dir: 'semantic/ast', target: 'semantic' },
   { dir: 'latex', target: 'latex' },
   { dir: 'html', target: 'html' },
@@ -43,9 +42,22 @@ function builtinNamesForGroup(dir: string): string[] {
   if (builtinNamesCache === null) {
     builtinNamesCache = {};
     for (const { dir: groupDir } of LUA_GROUPS) {
-      builtinNamesCache[groupDir] = [...new Bun.Glob('*.lua').scanSync({ cwd: join(LUA_FILTERS_ROOT, groupDir), onlyFiles: true })]
-        .sort()
-        .map((file) => file.replace(/\.lua$/, ''));
+      const names = [...new Bun.Glob('*.lua').scanSync({ cwd: join(LUA_FILTERS_ROOT, groupDir), onlyFiles: true })].map((file) =>
+        file.replace(/\.lua$/, ''),
+      );
+      if (groupDir === 'latex') {
+        // shrink/stretch envuelven el bloque en RawBlock: si van antes que runt, se llevan por delante
+        // los Div internos con runt= y este deja de aplicarse.
+        const textls = new Set(['14-shrink', '15-stretch']);
+        names.sort((a, b) => {
+          if (a === '16-runt' && textls.has(b)) return -1;
+          if (textls.has(a) && b === '16-runt') return 1;
+          return a.localeCompare(b);
+        });
+      } else {
+        names.sort();
+      }
+      builtinNamesCache[groupDir] = names;
     }
   }
   return builtinNamesCache[dir] ?? [];
@@ -64,6 +76,12 @@ export async function resolveLuaFilters(disabledList?: string[], cwd?: string): 
       result[target].push(path);
       result.resolvedNames.add(full);
     }
+  }
+
+  const stripPath = join(LUA_FILTERS_ROOT, 'internal', 'strip-typographic.lua');
+  if (!excluded.has('semantic/internal/strip-typographic')) {
+    result.semantic.push(stripPath);
+    result.resolvedNames.add('semantic/internal/strip-typographic');
   }
   return result;
 }

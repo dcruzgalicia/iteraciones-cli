@@ -1,9 +1,0 @@
-{
-  "name": "convierte-dentro-de-una-lista-a-div-spacer-nunca-literal",
-  "helper": "toHtml5",
-  "markdown": "- ::\n- texto",
-  "contains": ["<div class=\"h-[1.5em]\"></div>"],
-  "notContains": [">::"],
-  "normalizeNewlines": false,
-  "extraSemantic": true
-}

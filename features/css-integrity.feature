@@ -47,6 +47,11 @@ Característica: El CSS se compila sólo con lo que aparece en el HTML
       Entonces el CSS da a ".text-sm" la propiedad "font-size:var(--text-sm)"
       Y el CSS da a ".text-4xl" la propiedad "font-size:var(--text-4xl)"
 
+    Escenario: El párrafo con sangría se sangra de verdad en el sitio (#2670)
+      Dado un proyecto cuyo HTML trae "<div class=\"indent-8\"><p>Sangrado</p></div>"
+      Cuando compilo el CSS con acento "lime"
+      Entonces el CSS da a ".indent-8" la propiedad "text-indent:calc(var(--spacing) * 8)"
+
   Escenario: Sólo entran las clases que el HTML usa
     Dado un proyecto con un HTML de clases "text-stone-500"
     Cuando compilo el CSS con acento "lime"

@@ -1,0 +1,8 @@
+{
+  "name": "dictum-con-lista-emite-el-macro-antes-del-bloque",
+  "helper": "toLatex",
+  "markdown": "::: {.dictum}\n- primer item\n- segundo item\n:::\n",
+  "contains": ["\\dictum{\n\n\\begin{itemize}", "\\end{itemize}\n\n}\n\n{0.5}"],
+  "notContains": ["\\end{itemize}\n\n\\dictum{"],
+  "normalizeNewlines": false
+}

@@ -11,29 +11,28 @@ Característica: los filtros Lua del paquete, por capa
       Dado que la raíz del proyecto está vacía
       Y que la disabled list de filtros es '[]'
       Cuando resuelvo los filtros del paquete por capa
-      Entonces la capa "semantic" tiene 4 filtros
-      Y el filtro 1 de la capa "semantic" acaba en "semantic/string/01-double-colon.lua"
-      Y el filtro 2 de la capa "semantic" acaba en "semantic/ast/02-double-colon-noindent.lua"
-      Y el filtro 4 de la capa "semantic" acaba en "semantic/ast/04-image-paths.lua"
+      Entonces la capa "semantic" tiene 2 filtros
+      Y el filtro 1 de la capa "semantic" acaba en "semantic/ast/03-qr-url.lua"
+      Y el filtro 2 de la capa "semantic" acaba en "semantic/ast/04-image-paths.lua"
 
     Escenario: Un filtro desactivado desaparece de la lista y de los nombres
       Dado que la raíz del proyecto está vacía
-      Y que la disabled list de filtros es '["semantic/string/01-double-colon"]'
+      Y que la disabled list de filtros es '["semantic/ast/03-qr-url"]'
       Cuando resuelvo los filtros del paquete por capa
-      Entonces la capa "semantic" tiene 3 filtros
-      Y la capa "semantic" no trae "semantic/string/01-double-colon.lua"
-      Y el nombre "semantic/string/01-double-colon" no quedó resuelto
+      Entonces la capa "semantic" tiene 1 filtros
+      Y la capa "semantic" no trae "semantic/ast/03-qr-url.lua"
+      Y el nombre "semantic/ast/03-qr-url" no quedó resuelto
 
   Regla de negocio: El archivo del proyecto gana sobre el del paquete
 
     Escenario: Un .lua del proyecto sustituye al del paquete, en su sitio
       Dado que la raíz del proyecto está vacía
-      Y que el proyecto sobrescribe el filtro "filters/semantic/ast/02-double-colon-noindent.lua"
+      Y que el proyecto sobrescribe el filtro "filters/semantic/ast/03-qr-url.lua"
       Y que la disabled list de filtros es '[]'
       Cuando resuelvo los filtros del paquete por capa
-      Entonces la capa "semantic" tiene 4 filtros
-      Y el filtro 2 de la capa "semantic" es el del proyecto
-      Y el filtro 1 de la capa "semantic" acaba en "semantic/string/01-double-colon.lua"
+      Entonces la capa "semantic" tiene 2 filtros
+      Y el filtro 1 de la capa "semantic" es el del proyecto
+      Y el filtro 2 de la capa "semantic" acaba en "semantic/ast/04-image-paths.lua"
 
     Escenario: El grupo del build usa el mismo override
       Dado que la raíz del proyecto está vacía

@@ -22,12 +22,19 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | convierte-div-center-y-div-flushright |
         | convierte-div-dictum-con-autor |
         | convierte-div-dictum-sin-autor |
+        | dictum-con-lista-emite-el-macro-antes-del-bloque |
         | convierte-div-verse-sin-vspace-externo |
         | verse-en-tex-solo-separte-la-linea-con-dos-espacios |
         | convierte-en-vspace-baselineskip |
+        | br-3-salta-tres-baselineskip-en-latex |
+        | br-cero-no-salta-en-latex |
+        | br-negativo-no-salta-en-latex |
+        | br-no-numerico-no-salta-en-latex |
+        | indent-8-en-latex-sale-sangrado-sin-noindent |
+        | br-1.5-se-trunca-a-uno-en-latex |
+        | br-con-contenido-lo-conserva-en-latex |
         | div-shrink-aprieta-las-letras |
         | div-stretch-separa-las-letras |
-        | span-shrink-y-span-stretch |
         | la-forma-antigua-textls-value-ya-no-transforma |
         | el-bug-value-en-clase-cualquiera-ya-no-dispara |
         | shrink-con-signo-no-emite-doble-guion |
@@ -63,11 +70,7 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | mbox-sentence-end-con-negritas-de-2-palabras-grupo-completo- |
         | mbox-sentence-end-con-negritas-de-4-palabras-wrap-interno-de |
         | mbox-sentence-end-solo-envuelve-las-ultimas-3-palabras-de-la |
-        | mbox-words-nohyph-deja-la-puntuacion-fuera-del-mbox |
-        | mbox-words-nohyph-dentro-del-enfis-al-que-se-apunta |
-        | mbox-words-nohyph-envuelve-la-palabra-indicada |
-        | mbox-words-nohyph-envuelve-varias-palabras-en-el-mismo-parrafo |
-        | mbox-words-nohyph-una-palabra-que-no-esta-no-rompe-nada |
+        | mbox-words-nohyph-ya-no-se-aplica |
         | mbox-words-runt-2-engloba-las-ultimas-2-palabras |
         | mbox-words-runt-3-engloba-las-ultimas-3-palabras |
         | mbox-words-runt-con-enfis-al-final-envuelve-dentro-del-grupo |
@@ -98,8 +101,13 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
 
       Ejemplos:
         | caso |
-        | convierte-dentro-de-una-lista-a-div-spacer-nunca-literal |
-        | convierte-div-spacer-en-div-vacio-con-los-filtros-semanticos |
+        | br-dentro-de-una-lista-no-sale-literal-en-html |
+        | br-1-sale-como-br-en-html |
+        | br-3-salta-tres-br-en-html |
+        | br-no-numerico-no-salta-en-html |
+        | br-1.5-se-trunca-a-uno-en-html |
+        | br-con-contenido-lo-conserva-en-html |
+        | indent-8-sale-como-clase-en-html |
         | envuelve-div-dictum-en-blockquote-con-bloques-nativos |
         | envuelve-div-verse-en-div |
         | verse-solo-separte-la-linea-con-dos-espacios |
@@ -157,6 +165,9 @@ Característica: Los filtros Lua del proyecto definen el contrato del markdown
         | collectioncreator-acepta-array-como-author-no-revienta-y-se- |
         | convierte-el-colophon-multilinea-doble-espacio-y-vspace |
         | convierte-el-frontmatter-multilinea-doble-espacio-y-vspace |
+        | titleback-br-salta-en-lowertitleback |
+        | titleback-br-con-contenido-lo-conserva |
+        | titleback-br-dentro-de-un-div-se-aplica |
         | convierte-el-subtitle-multilinea-doble-espacio-y-vspace |
         | dedication-con-div-dictum-multilinea-y-autor |
         | dedication-con-div-dictum-se-convierte-a-dictum-author-text |

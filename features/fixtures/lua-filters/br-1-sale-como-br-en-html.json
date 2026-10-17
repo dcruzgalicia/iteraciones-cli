@@ -1,0 +1,9 @@
+{
+  "name": "br-1-sale-como-br-en-html",
+  "helper": "toHtml5",
+  "markdown": "texto\n\n::: {br=1}\n:::\n\ntexto",
+  "contains": ["<br/>"],
+  "notContains": [],
+  "normalizeNewlines": false,
+  "extraSemantic": true
+}
