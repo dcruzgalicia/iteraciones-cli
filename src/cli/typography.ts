@@ -400,8 +400,12 @@ function cruzaBloque(lineaIzq: string, ws: string, lineaDer: string): boolean {
   return LINEA_DE_BLOQUE.test(izq) || /[|>]$/.test(izq) || LINEA_DE_BLOQUE.test(der) || LINEA_DE_YAML.test(der);
 }
 
-/** Dónde se pega un objetivo: `posterior` pega después de la aguja, si no, antes. */
-export type ObjetivoTypography = { aguja: string; posterior: boolean };
+/**
+ * Dónde se pega un objetivo: `posterior` pega después de la aguja, si no, antes. `opcional` marca
+ * los objetivos que no cierran la incidencia si su espacio ya está pegado: cuando la unión es una
+ * palabra cortada con nbsp detrás, el hueco se busca al final de la segunda línea.
+ */
+export type ObjetivoTypography = { aguja: string; posterior: boolean; opcional?: boolean };
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: algoritmo de hidridacion
 export function objetivosParaIncidencia(inc: TypographyIncidence): ObjetivoTypography[] {
@@ -427,6 +431,20 @@ export function objetivosParaIncidencia(inc: TypographyIncidence): ObjetivoTypog
     const palabras = palabrasDe(antes ? i + 1 : i);
     for (let cuantas = palabras.length; cuantas >= 1; cuantas--) {
       agrega((antes ? palabras.slice(0, cuantas) : palabras.slice(-cuantas)).join(' '));
+    }
+  }
+  // Si la unión es una palabra cortada por el PDF («su-» / «pone»), la palabra completa suele no
+  // tener nada pegado: el &nbsp; va justo después de ella («supone&nbsp;que»), que es el final de la
+  // primera línea. Si ya trae pegado su espacio, este objetivo no aplica y se sigue con el final de
+  // la segunda línea (pág 40, que ya traía «sola&nbsp;en mi casa»).
+  for (let i = 0; i < lineas.length - 1; i++) {
+    const palabrasA = palabrasDe(i);
+    const primeraB = palabrasDe(i + 1)[0] ?? '';
+    const ultimaA = palabrasA[palabrasA.length - 1] ?? '';
+    if (!ultimaA.endsWith('-') || primeraB === '') continue;
+    const completa = ultimaA.slice(0, -1) + primeraB;
+    for (let desde = 0; desde < palabrasA.length; desde++) {
+      objetivos.push({ aguja: [...palabrasA.slice(desde, -1), completa].join(' '), posterior: true, opcional: true });
     }
   }
   // Si esa unión no se puede pegar (la línea arranca con el fragmento de una palabra cortada o ya
@@ -880,6 +898,7 @@ async function arreglaTypografia(
         nuevo = undefined;
         for (const objetivo of objetivos) {
           if (yaAplicado(actual, objetivo.aguja, objetivo.posterior)) {
+            if (objetivo.opcional) continue; // aquí ya hay nbsp: probar el final de la segunda línea
             yaEnLaUnion = true; // no hay nada que hacer: el espacio ya está pegado
             break;
           }

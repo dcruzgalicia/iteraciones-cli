@@ -248,10 +248,41 @@ describe('objetivosParaIncidencia', () => {
     const md =
       'casi todas las noches en los primeros&nbsp;meses), mientras manejaba, sola&nbsp;en mi casa, en la casa de mi pareja, con mi mamá; hasta lloré&nbsp;con una consultante.\n';
     expect(remplazaEspacioAnterior(md, objetivos[0]?.aguja as string)).toBeUndefined();
+    // la palabra completa de la unión («sola») ya trae pegado su espacio: ese objetivo se salta
+    const cortada = objetivos.find((o) => o.opcional);
+    expect(cortada?.aguja).toBe('las noches en los primeros meses), mientras manejaba, sola');
+    expect(cortada?.posterior).toBe(true);
+    expect(yaAplicado(md, cortada?.aguja as string, true)).toBe(true);
     const cierre = objetivos.find((o) => o.posterior && o.aguja.endsWith('hasta'));
     expect(cierre?.aguja).toBe('la en mi casa, en la casa de mi pareja, con mi mamá; hasta');
     expect(remplazaEspacioPosterior(md, cierre?.aguja as string)).toBe(
       'casi todas las noches en los primeros&nbsp;meses), mientras manejaba, sola&nbsp;en mi casa, en la casa de mi pareja, con mi mamá; hasta&nbsp;lloré&nbsp;con una consultante.\n',
+    );
+  });
+
+  test('con la palabra cortada aún sin nbsp, el &nbsp; va tras la palabra completa', () => {
+    // pág 48: la unión es «su-»/«pone» y «supone» no trae nada pegado: se pega después de ella,
+    // que es el final de la primera línea, no al final de la segunda
+    const inc: TypographyIncidence = {
+      type: 'repeated-first-letter',
+      page: 48,
+      line: 10,
+      text: 'Porque también se derrumbó mi otra casa, donde se su-',
+      letter: 'p',
+      lineas: [
+        { line: 10, text: 'Porque también se derrumbó mi otra casa, donde se su-' },
+        { line: 11, text: 'pone que iba a respirar. Y aunque llevaba mucho tiempo en' },
+      ],
+      total: 2,
+    };
+    const objetivos = objetivosParaIncidencia(inc);
+    const cortada = objetivos.find((o) => o.opcional);
+    expect(cortada?.aguja).toBe('Porque también se derrumbó mi otra casa, donde se supone');
+    expect(cortada?.posterior).toBe(true);
+    const md = 'Porque también se derrumbó mi otra casa, donde se supone que iba a respirar. Y aunque llevaba mucho tiempo en él.\n';
+    expect(yaAplicado(md, cortada?.aguja as string, true)).toBe(false);
+    expect(remplazaEspacioPosterior(md, cortada?.aguja as string)).toBe(
+      'Porque también se derrumbó mi otra casa, donde se supone&nbsp;que iba a respirar. Y aunque llevaba mucho tiempo en él.\n',
     );
   });
 });
