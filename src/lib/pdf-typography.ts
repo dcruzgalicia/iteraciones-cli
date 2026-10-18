@@ -1,4 +1,5 @@
 import { BuildError } from './errors.js';
+import { plural } from './plural.js';
 import { exec, ProcessSpawnError, type RunResult } from './run.js';
 
 export const TYPOGRAPHY_RULES = ['single-word-line', 'consecutive-punctuation', 'repeated-first-letter', 'repeated-last-letter'] as const;
@@ -76,22 +77,24 @@ function foliosDe(lineas: string[]): Folio[] {
 const MIN_FOLIOS_CONFIRMADOS = 2;
 
 function foliosConfirmados(pages: string[][]): Set<string> {
+  const confirmados = new Set<string>();
   const porDesfase = new Map<number, string[]>();
   for (const [indicePagina, lineas] of pages.entries()) {
+    const pagina = indicePagina + 1;
     for (const folio of foliosDe(lineas)) {
-      const desfase = folio.valor - (indicePagina + 1);
-      const clave = `${indicePagina + 1}:${folio.line}`;
+      const clave = `${pagina}:${folio.line}`;
+      if (folio.valor === pagina) confirmados.add(clave);
+      const desfase = folio.valor - pagina;
       const lista = porDesfase.get(desfase);
       if (lista === undefined) porDesfase.set(desfase, [clave]);
       else lista.push(clave);
     }
   }
-  let mejor: string[] = [];
   for (const lista of porDesfase.values()) {
-    if (lista.length > mejor.length) mejor = lista;
+    if (lista.length < MIN_FOLIOS_CONFIRMADOS) continue;
+    for (const clave of lista) confirmados.add(clave);
   }
-  if (mejor.length < MIN_FOLIOS_CONFIRMADOS) return new Set();
-  return new Set(mejor);
+  return confirmados;
 }
 
 export function singleWordLines(pages: string[][]): SingleWordLine[] {
@@ -398,7 +401,7 @@ export interface OpcionesAnalisis {
 }
 
 export function analyzeText(stdout: string, opciones: OpcionesAnalisis = {}): TypographyIncidence[] {
-  const { primeraPagina = 1, porcentajeCorta = 100, lineasMinimas = 3, letrasMinimas = 2 } = opciones;
+  const { primeraPagina = 1, ultimaPagina, porcentajeCorta = 75, lineasMinimas = 3, letrasMinimas = 2 } = opciones;
   const pedidas = new Set(opciones.reglas ?? TODAS_LAS_REGLAS);
   const pages = splitPages(stdout);
   const ancho = (anchoDeReferencia(pages) * porcentajeCorta) / 100;
@@ -409,17 +412,14 @@ export function analyzeText(stdout: string, opciones: OpcionesAnalisis = {}): Ty
     ...(pedidas.has('repeated-first-letter') ? repeatedLetterRuns(pages, 'first', lineasMinimas, letrasMinimas, ancho) : []),
   ];
 
-  const desplazamiento = primeraPagina - 1;
-  return incidences.map((incidencia) => ({ ...incidencia, page: incidencia.page + desplazamiento }));
+  const hasta = ultimaPagina ?? pages.length;
+  return incidences.filter((incidencia) => incidencia.page >= primeraPagina && incidencia.page <= hasta);
 }
 
 export async function analyzePdf(pdfPath: string, opciones: OpcionesAnalisis = {}): Promise<TypographyIncidence[]> {
-  const desde = opciones.primeraPagina ?? 1;
-  const hasta = opciones.ultimaPagina;
-  const recorte = [...(desde === 1 ? [] : ['-f', String(desde)]), ...(hasta === undefined ? [] : ['-l', String(hasta)])];
   let result: RunResult;
   try {
-    result = await exec('pdftotext', [...recorte, '-layout', pdfPath, '-']);
+    result = await exec('pdftotext', ['-layout', pdfPath, '-']);
   } catch (err) {
     if (err instanceof ProcessSpawnError) {
       throw new BuildError(`typography necesita pdftotext, que no está en PATH. Instala poppler (por ejemplo: brew install poppler).`);
@@ -429,6 +429,15 @@ export async function analyzePdf(pdfPath: string, opciones: OpcionesAnalisis = {
   if (result.exitCode !== 0) {
     const motivo = result.stderr.trim().split('\n').pop() ?? 'error desconocido';
     throw new BuildError(`pdftotext no pudo leer "${pdfPath}": ${motivo}`);
+  }
+  const desde = opciones.primeraPagina;
+  if (desde !== undefined) {
+    const total = splitPages(result.stdout).length;
+    if (desde > total) {
+      const pedido =
+        opciones.ultimaPagina === undefined || opciones.ultimaPagina === desde ? `la página ${desde}` : `el rango ${desde}-${opciones.ultimaPagina}`;
+      throw new BuildError(`${pedido} se sale del PDF "${pdfPath}": el documento tiene ${plural(total, 'página')}`);
+    }
   }
   return analyzeText(result.stdout, opciones);
 }

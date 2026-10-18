@@ -96,6 +96,39 @@ Característica: el analizador tipográfico de los PDF
         single-word-line ;; pág 1 ;; línea 1 ;; 1984
         """
 
+    Escenario: Un folio solo que coincide con su página tampoco se reporta
+      Dado que pdftotext devuelve:
+        """
+        texto de la pagina uno con palabras
+        \f
+        texto de la pagina dos con palabras
+        2
+        \f
+        texto de la pagina tres con palabras
+        \f
+        """
+      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Entonces no hay incidencias
+
+    Escenario: Con numeración que reinicia no se reporta ningún folio
+      Dado que pdftotext devuelve:
+        """
+        texto de la pagina uno con palabras
+        1
+        \f
+        texto de la pagina dos con palabras
+        2
+        \f
+        texto de la pagina tres con palabras
+        1
+        \f
+        texto de la pagina cuatro con palabras
+        2
+        \f
+        """
+      Cuando escaneo el texto de pdftotext sin el filtro de línea corta
+      Entonces no hay incidencias
+
     Escenario: Números que no suben de uno en uno no son un folio
       Dado que pdftotext devuelve:
         """
@@ -762,7 +795,7 @@ Característica: el analizador tipográfico de los PDF
       Entonces el comando termina con el código de salida 1
       Y la salida dice "pág 1  líneas 4-5  consecutive-punctuation"
 
-    Escenario: Por defecto no sale una línea algo más corta que el ancho
+    Escenario: Con el umbral por defecto (75) esa línea algo corta también sale
       Dado que la raíz del proyecto está vacía
       Y el PDF "dist/files/libro.pdf" con estas páginas:
         """
@@ -775,10 +808,10 @@ Característica: el analizador tipográfico de los PDF
         \f
         """
       Cuando parseo el comando "typography --rules consecutive-punctuation --min-lines 2 --min-letters 1 dist/files/libro.pdf" sobre la raíz del proyecto
-      Entonces el comando termina con el código de salida 0
-      Y la salida dice "sin incidencias en 1 PDF"
+      Entonces el comando termina con el código de salida 1
+      Y la salida dice "pág 1  líneas 5-6  consecutive-punctuation"
 
-    Escenario: Bajando el umbral esa misma línea sí sale
+    Escenario: Con el umbral al 100 esa misma línea se considera corta
       Dado que la raíz del proyecto está vacía
       Y el PDF "dist/files/libro.pdf" con estas páginas:
         """
@@ -790,9 +823,9 @@ Característica: el analizador tipográfico de los PDF
         Zybra linea es mas corta que la de arriba y se queda a.
         \f
         """
-      Cuando parseo el comando "typography --min-lines 2 --min-letters 1 dist/files/libro.pdf --min-line-width 75" sobre la raíz del proyecto
-      Entonces el comando termina con el código de salida 1
-      Y la salida dice "pág 1  líneas 5-6  consecutive-punctuation"
+      Cuando parseo el comando "typography --min-lines 2 --min-letters 1 dist/files/libro.pdf --min-line-width 100" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y la salida dice "sin incidencias en 1 PDF"
 
     Escenario: Con el umbral al 90 la misma línea se considera corta
       Dado que la raíz del proyecto está vacía
@@ -1088,9 +1121,9 @@ Característica: el analizador tipográfico de los PDF
       Y la salida dice "1 incidencia"
       Y la salida dice "repeated-first-letter"
 
-  Regla de negocio: Un rango de páginas recorta el PDF y no renumera el informe
+  Regla de negocio: Un rango de páginas limita el informe y no renumera
 
-    Escenario: Desde una página, el informe sigue dando la página del PDF
+    Escenario: Una página sola, el informe sigue dando la página del PDF
       Dado que la raíz del proyecto está vacía
       Y el PDF "dist/files/libro.pdf" con estas páginas:
         """
@@ -1139,16 +1172,40 @@ Característica: el analizador tipográfico de los PDF
       Entonces el comando termina con el código de salida 1
       Y el error dice "el rango 4-2 va al revés"
 
-    Escenario: La página 1 sola se toma por un dedo
+    Escenario: Una página sola sólo revisa esa página
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Una linea con varias palabras
+        \f
+        Adios
+        \f
+        """
+      Cuando parseo el comando "typography --pages 1 dist/files/libro.pdf" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y la salida dice "sin incidencias en 1 PDF"
+
+    Escenario: Un rango de una sola página no es un rango
       Dado que la raíz del proyecto está vacía
       Y el PDF "dist/files/libro.pdf" con estas páginas:
         """
         Una linea con varias palabras
         \f
         """
-      Cuando parseo el comando "typography --pages 1 dist/files/libro.pdf" sobre la raíz del proyecto
+      Cuando parseo el comando "typography --pages 11-11 dist/files/libro.pdf" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
-      Y el error dice "--pages 1 no recorta nada"
+      Y el error dice "el rango 11-11 no es un rango"
+
+    Escenario: Un rango sin la página final lo dice
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Una linea con varias palabras
+        \f
+        """
+      Cuando parseo el comando "typography --pages 11- dist/files/libro.pdf" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y el error dice "no tiene página final"
 
     Escenario: Tres números no son un rango
       Dado que la raíz del proyecto está vacía
@@ -1161,16 +1218,26 @@ Característica: el analizador tipográfico de los PDF
       Entonces el comando termina con el código de salida 1
       Y el error dice "no se entiende"
 
-    Escenario: Un rango que se sale del PDF lo dice pdftotext
+    Escenario: Un rango que se sale del PDF lo dice
       Dado que la raíz del proyecto está vacía
       Y el PDF "dist/files/libro.pdf" con estas páginas:
         """
         Una linea con varias palabras
-        \f
         """
       Cuando parseo el comando "typography --pages 40-60 dist/files/libro.pdf" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
-      Y el error dice "Wrong page range given"
+      Y el error dice "el rango 40-60 se sale del PDF"
+      Y el error dice "el documento tiene 1 página"
+
+    Escenario: Una página que se sale del PDF lo dice
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Una linea con varias palabras
+        """
+      Cuando parseo el comando "typography --pages 40 dist/files/libro.pdf" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y el error dice "la página 40 se sale del PDF"
 
     Escenario: Un rango sin ruta revisa todos los PDF de la salida
       Dado que la raíz del proyecto está vacía
@@ -1186,6 +1253,37 @@ Característica: el analizador tipográfico de los PDF
       Cuando parseo el comando "typography --pages 3" sobre la raíz del proyecto
       Entonces el comando termina con el código de salida 1
       Y la salida dice "pág 3  línea 1  single-word-line"
+
+    Escenario: Una página sola tampoco reporta su folio
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        texto de la pagina uno con palabras
+        \f
+        texto de la pagina dos con palabras
+        2
+        \f
+        texto de la pagina tres con palabras
+        \f
+        """
+      Cuando parseo el comando "typography --pages 2 dist/files/libro.pdf" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y la salida dice "sin incidencias en 1 PDF"
+
+    Escenario: El ancho de referencia es el del documento, no el del rango
+      Dado que la raíz del proyecto está vacía
+      Y el PDF "dist/files/libro.pdf" con estas páginas:
+        """
+        Los libros se componen con lineas de texto largo
+        Los libros se componen con lineas de texto largo
+        \f
+        otra linea corta que cierra.
+        otra linea corta que cierra.
+        \f
+        """
+      Cuando parseo el comando "typography --rules consecutive-punctuation --min-lines 2 --pages 2 dist/files/libro.pdf" sobre la raíz del proyecto
+      Entonces el comando termina con el código de salida 0
+      Y la salida dice "sin incidencias en 1 PDF"
 
     Escenario: Un PDF que no existe lo dice
       Dado que la raíz del proyecto está vacía

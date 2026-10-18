@@ -30,25 +30,29 @@ export interface TypographyOptions {
 }
 
 export interface RangoPaginas {
-  desde?: number;
-  hasta?: number;
+  desde: number;
+  hasta: number;
 }
 
 const RANGO_PAGINAS = /^(\d+)(?:\s*-\s*(\d+))?$/;
 
 export function interpretaPaginas(spec: string): RangoPaginas {
-  const encontrado = RANGO_PAGINAS.exec(spec.trim());
+  const limpio = spec.trim();
+  const encontrado = RANGO_PAGINAS.exec(limpio);
   if (encontrado === null) {
-    throw new BuildError(`--pages "${spec}" no se entiende: escribe 3 para empezar en la 3, o 3-80 para un rango`);
+    if (/^\d+\s*-\s*$/.test(limpio)) {
+      throw new BuildError(`--pages "${spec}" no tiene página final: escribe 11 para una sola página, o 11-20 para un rango`);
+    }
+    throw new BuildError(`--pages "${spec}" no se entiende: escribe 3 para una sola página, o 3-80 para un rango (las dos puntas dentro)`);
   }
   const desde = Number(encontrado[1]);
-  const hasta = encontrado[2] === undefined ? undefined : Number(encontrado[2]);
+  const hasta = encontrado[2] === undefined ? desde : Number(encontrado[2]);
   if (desde < 1) throw new BuildError(`la página ${desde} no existe: las páginas empiezan en 1`);
-  if (desde === 1 && hasta === undefined) {
-    throw new BuildError('--pages 1 no recorta nada: para revisar todo el PDF, quita la opción');
-  }
-  if (hasta !== undefined && hasta < desde) {
+  if (hasta < desde) {
     throw new BuildError(`el rango ${desde}-${hasta} va al revés: la página final no puede ser anterior a la inicial`);
+  }
+  if (hasta === desde && encontrado[2] !== undefined) {
+    throw new BuildError(`el rango ${desde}-${hasta} no es un rango: para una sola página escribe ${desde}`);
   }
   return { desde, hasta };
 }
@@ -110,11 +114,11 @@ function formatea(incidencia: TypographyIncidence): string {
 }
 
 function opcionesDeAnalisis(options: TypographyOptions): OpcionesAnalisis {
-  const rango = options.pages === undefined ? {} : interpretaPaginas(options.pages);
+  const rango = options.pages === undefined ? undefined : interpretaPaginas(options.pages);
   return {
-    primeraPagina: rango.desde ?? 1,
-    ultimaPagina: rango.hasta,
-    porcentajeCorta: options.minLineWidth === undefined ? 100 : interpretaPorcentaje(options.minLineWidth, '--min-line-width'),
+    primeraPagina: rango?.desde,
+    ultimaPagina: rango?.hasta,
+    porcentajeCorta: options.minLineWidth === undefined ? 75 : interpretaPorcentaje(options.minLineWidth, '--min-line-width'),
     reglas: options.rules === undefined ? TODAS_LAS_REGLAS : interpretaReglas(options.rules),
     lineasMinimas: options.minLines === undefined ? 3 : interpretaEntero(options.minLines, '--min-lines', 2),
     letrasMinimas: options.minLetters === undefined ? 2 : interpretaEntero(options.minLetters, '--min-letters', 1),

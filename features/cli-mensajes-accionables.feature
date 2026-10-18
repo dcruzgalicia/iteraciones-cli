@@ -19,6 +19,7 @@ Característica: El CLI habla en español y dice qué hacer
         | validate --project-root | error: falta el argumento de la opción '--project-root <path>' |
         | new                     | error: falta el argumento requerido 'path'                  |
         | doctor --fix            | error: opción desconocida '--fix'                           |
+        | typography --pages      | error: falta el argumento de la opción '--pages <rango>'   |
 
   Regla de negocio: Un comando mal escrito sugiere el correcto
 
