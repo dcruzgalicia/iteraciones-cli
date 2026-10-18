@@ -134,18 +134,3 @@ Then('el primer error dice {string}', (texto: string) => {
     throw new Error(`el primer error no dice ${JSON.stringify(texto)}. Dice: ${JSON.stringify(mensaje)}`);
   }
 });
-
-Then('el JSON declara exactamente {int} aviso que menciona {string}', (cuantos: number, texto: string) => {
-  const avisos = lista('warnings').filter((a) => String(a.message ?? '').includes(texto));
-
-  if (avisos.length !== cuantos) {
-    throw new Error(`el JSON declara ${avisos.length} avisos que mencionan ${JSON.stringify(texto)} y esperaba ${cuantos}: ${world.stdout}`);
-  }
-  world.ultimoAviso = avisos[0] ?? {};
-});
-
-Then('ese aviso viene del archivo {string}', (archivo: string) => {
-  if (world.ultimoAviso?.file !== archivo) {
-    throw new Error(`el aviso viene de ${JSON.stringify(world.ultimoAviso?.file)} y esperaba ${JSON.stringify(archivo)}`);
-  }
-});

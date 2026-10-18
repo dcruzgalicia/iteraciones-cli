@@ -152,7 +152,7 @@ export async function build(cwd: string, options: BuildOptions = {}, reporter: B
 
 async function resolveEffectiveConfig(cwd: string): Promise<{ siteConfig: SiteConfig; effectiveDisabledPreamble: string[] }> {
   const siteConfig = await loadSiteConfig(cwd);
-  validateDisabledFilters(siteConfig.disabledFilters);
+  validateDisabledFilters(siteConfig.disabledFilters, join(cwd, 'iteraciones.config.yaml'));
   const effectiveDisabledPreamble = resolveEffectiveDisabledPreamble(resolveDisabledPreambleConfig(siteConfig));
   validateDisabledPreambleFilters(effectiveDisabledPreamble);
   for (const issue of [...validateConfigRules(siteConfig), ...(await validateConfigFilePaths(cwd, siteConfig))]) {

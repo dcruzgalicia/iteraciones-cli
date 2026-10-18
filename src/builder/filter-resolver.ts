@@ -1,6 +1,6 @@
 import { basename, dirname, join } from 'node:path';
 import type { SiteConfig } from '../config/config-schema.js';
-import { logWarning } from '../lib/logger.js';
+import { ConfigError } from '../lib/errors.js';
 import { isDir } from '../lib/paths.js';
 import { DESCRIPCIONES_LUA } from './filter-descriptions.js';
 
@@ -100,17 +100,16 @@ export function suggestFilterName(name: string): string | undefined {
   return getBuiltinFilterNames().find((n) => n.endsWith(`/${name}`));
 }
 
-export function validateDisabledFilters(disabled: string[] | undefined): void {
+export function validateDisabledFilters(disabled: string[] | undefined, configPath: string): void {
   if (!disabled || disabled.length === 0) return;
+  const desconocidos: string[] = [];
   for (const name of disabled) {
     if (getBuiltinFilterNames().includes(name)) continue;
     const suggestion = suggestFilterName(name);
-    logWarning(
-      suggestion
-        ? `disabledFilters: "${name}" no existe; ¿quisiste decir "${suggestion}"?`
-        : `disabledFilters: "${name}" no coincide con ningún filter`,
-      'config',
-    );
+    desconocidos.push(suggestion ? `"${name}" no existe; ¿quisiste decir "${suggestion}"?` : `"${name}" no coincide con ningún filter`);
+  }
+  if (desconocidos.length > 0) {
+    throw new ConfigError(`disabledFilters: ${desconocidos.join('; ')}`, configPath);
   }
 }
 
