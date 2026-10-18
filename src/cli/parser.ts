@@ -317,10 +317,10 @@ Ejemplos:
     .command('typography [paths...]')
     .description('detecta en los PDF líneas de una sola palabra y pares de líneas consecutivas terminadas en puntuación')
     .option('--output <path>', 'directorio de salida donde están los PDFs (por defecto: dist/files)')
-    .option('--pages <rango>', 'sólo esas páginas del PDF: 3 o 3-80 (las dos puntas dentro)')
+    .option('--pages <rango>', 'sólo esas páginas del PDF: 3 (esa sola) o 3-80 (el rango, las dos puntas dentro)')
     .option(
       '--min-line-width <porcentaje>',
-      'porcentaje del ancho medio del documento por debajo del cual una línea se considera corta (por defecto: 100)',
+      'porcentaje del ancho medio del documento por debajo del cual una línea se considera corta (por defecto: 75)',
     )
     .option('--json', 'imprime el resultado como JSON en stdout (consumo programático)')
     .option('--rules <lista>', 'sólo esas reglas, separadas por coma (por defecto: todas)')
@@ -350,9 +350,9 @@ dice cuántas había en total.
 Ejemplos:
   iteraciones typography                                revisa los PDF de dist/files
   iteraciones typography dist/files/libro.pdf           revisa uno
-  iteraciones typography dist/files/libro.pdf --pages 3 desde la 3 hasta el final
+  iteraciones typography dist/files/libro.pdf --pages 3 sólo la página 3
   iteraciones typography --pages 3-80                   sólo esas páginas
-  iteraciones typography --min-line-width 75            corta la línea corta al 75% del ancho
+  iteraciones typography --min-line-width 90            sube el umbral: sólo cuentan las líneas largas
   iteraciones typography --min-lines 2 --min-letters 1   el comportamiento anterior, más hallazgos
   iteraciones typography --rules single-word-line            sólo las líneas de una sola palabra
   iteraciones typography --rules repeated-first-letter,repeated-last-letter   sólo las letras
