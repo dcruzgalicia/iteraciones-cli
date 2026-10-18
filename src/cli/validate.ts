@@ -18,7 +18,7 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import { resolveDisabledPreambleConfig } from '../config/site-config.js';
 import { ConfigError, translateSystemError } from '../lib/errors.js';
 import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
-import { logError, logInfo, logWarning, runWithWarningSink } from '../lib/logger.js';
+import { logError, logInfo, logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
 
 type ValidationError = { file: string; message: string };
@@ -177,20 +177,12 @@ export interface ValidationSummary {
 }
 
 async function collectConfigIssues(
+  cwd: string,
   config: Awaited<ReturnType<typeof loadSiteConfig>>,
 ): Promise<{ errors: ValidationError[]; warnings: ValidationError[] }> {
   const errors: ValidationError[] = [];
   const warnings: ValidationError[] = [];
-  const strayFilterWarnings: string[] = [];
-  await runWithWarningSink(
-    (msg) => strayFilterWarnings.push(msg),
-    async () => {
-      validateDisabledFilters(config.disabledFilters);
-    },
-  );
-  for (const raw of strayFilterWarnings) {
-    warnings.push({ file: 'config', message: raw.replace(/^[^\]]*\]\s*/, '') });
-  }
+  validateDisabledFilters(config.disabledFilters, join(cwd, 'iteraciones.config.yaml'));
   const effectiveDisabledPreamble = resolveEffectiveDisabledPreamble(resolveDisabledPreambleConfig(config));
   validateDisabledPreambleFilters(effectiveDisabledPreamble);
   for (const issue of validatePreambleDependencies(effectiveDisabledPreamble)) {
@@ -212,7 +204,7 @@ async function collectValidation(cwd: string): Promise<{ summary: ValidationSumm
     const config = await loadSiteConfig(cwd);
     disabledFiltersCount = config.disabledFilters?.length ?? 0;
     luaFiltersCount = config.luaFilters?.length ?? 0;
-    const { errors, warnings } = await collectConfigIssues(config);
+    const { errors, warnings } = await collectConfigIssues(cwd, config);
     configErrors.push(...errors);
     configWarnings.push(...warnings);
     for (const issue of [...validateConfigRules(config), ...(await validateConfigFilePaths(cwd, config))]) {

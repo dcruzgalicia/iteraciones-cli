@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { getBuiltinLuaFilterInfos, LUA_GROUP_ORDER, validateDisabledFilters } from '../builder/filter-resolver.js';
 import {
   disableBibliographyWithoutBibFiles,
@@ -117,7 +118,7 @@ async function emitPreambleBlock(
 export async function listFilters(cwd: string, options: RunFiltersOptions = {}): Promise<void> {
   const stream = options.stream ?? process.stdout;
   const config = (await loadSiteConfigIfPresent(cwd))?.config ?? DEFAULT_SITE_CONFIG;
-  validateDisabledFilters(config.disabledFilters);
+  validateDisabledFilters(config.disabledFilters, join(cwd, 'iteraciones.config.yaml'));
 
   const bibFiles = await resolveBibOptions(cwd, config)
     .then((r) => r.bibFiles)

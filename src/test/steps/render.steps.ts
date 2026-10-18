@@ -105,12 +105,11 @@ Given('que la disabled list de filtros es {string}', (lista: string) => {
 });
 
 When('valido los filtros desactivados', () => {
-  const espia = spyOn(logger, 'logWarning').mockImplementation(() => undefined);
   try {
-    validateDisabledFilters(world.desactivadosFiltros);
-    world.avisosFiltros = espia.mock.calls.map((c) => String(c[0]));
-  } finally {
-    espia.mockRestore();
+    validateDisabledFilters(world.desactivadosFiltros, join(world.root, 'iteraciones.config.yaml'));
+    world.errorFiltros = undefined;
+  } catch (err) {
+    world.errorFiltros = err instanceof Error ? err.message : String(err);
   }
 });
 
@@ -120,9 +119,15 @@ Then('no hay ningún aviso', () => {
   }
 });
 
-Then('el aviso dice {string}', (motivo: string) => {
-  if (!world.avisosFiltros.some((a) => a.includes(motivo))) {
-    throw new Error(`ningún aviso dice ${JSON.stringify(motivo)}. Hubo: ${JSON.stringify(world.avisosFiltros)}`);
+Then('no hay ningún error de filtros', () => {
+  if (world.errorFiltros !== undefined) {
+    throw new Error(`hubo error: ${JSON.stringify(world.errorFiltros)}`);
+  }
+});
+
+Then('el error de filtros dice {string}', (motivo: string) => {
+  if (!world.errorFiltros?.includes(motivo)) {
+    throw new Error(`el error no dice ${JSON.stringify(motivo)}. Dice: ${JSON.stringify(world.errorFiltros)}`);
   }
 });
 

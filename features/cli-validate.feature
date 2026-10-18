@@ -313,9 +313,12 @@ Característica: validate revisa el proyecto y dice qué corregir
       Y el primer error es del archivo "bad.md"
       Y el primer error dice "frontmatter YAML inválido"
 
-    Escenario: Un filtro desactivado que no existe aparece una sola vez
+    Escenario: Un filtro desactivado que no existe es un error
       Dado que la raíz del proyecto tiene un proyecto de prueba
       Dado que la configuración desactiva un filtro global "filtro-que-no-existe"
       Cuando valido el proyecto pidiendo JSON
-      Entonces el JSON declara exactamente 1 aviso que menciona "filtro-que-no-existe"
-      Y ese aviso viene del archivo "config"
+      Entonces el comando termina con el código de salida 1
+      Y el JSON declara la clave "ok" con el valor falso
+      Y el JSON declara al menos 1 error
+      Y el primer error es del archivo "iteraciones.config.yaml"
+      Y el primer error dice 'disabledFilters: "filtro-que-no-existe" no coincide con ningún filter'

@@ -37,24 +37,24 @@ Característica: los nombres de los filtros del paquete
         | no-existe |
         | spacer |
 
-  Regla de negocio: Un filtro desactivado que no existe avisa, y dice cuál escribir
+  Regla de negocio: Un filtro desactivado que no existe es un error, y dice cuál escribir
 
-    Escenario: Una lista vacía no avisa
+    Escenario: Una lista vacía no es error
       Dado que los filtros lua desactivados son "ninguno"
       Cuando valido los filtros desactivados
-      Entonces no hay ningún aviso
+      Entonces no hay ningún error de filtros
 
-    Escenario: Los nombres completos válidos no avisan
+    Escenario: Los nombres completos válidos no son error
       Dado que los filtros lua desactivados son '["latex/02-dictum", "semantic/ast/03-qr-url"]'
       Cuando valido los filtros desactivados
-      Entonces no hay ningún aviso
+      Entonces no hay ningún error de filtros
 
-    Escenario: Un nombre viejo avisa con la sugerencia
+    Escenario: Un nombre viejo falla con la sugerencia
       Dado que los filtros lua desactivados son '["02-dictum"]'
       Cuando valido los filtros desactivados
-      Entonces el aviso dice 'no existe; ¿quisiste decir "latex/02-dictum"?'
+      Entonces el error de filtros dice 'no existe; ¿quisiste decir "latex/02-dictum"?'
 
-    Escenario: Un nombre inexistente avisa sin sugerencia
+    Escenario: Un nombre inexistente falla sin sugerencia
       Dado que los filtros lua desactivados son '["foo/bar"]'
       Cuando valido los filtros desactivados
-      Entonces el aviso dice "no coincide con ningún filter"
+      Entonces el error de filtros dice "no coincide con ningún filter"

@@ -72,7 +72,14 @@ Característica: El build dice qué hizo y por qué
 
     Escenario: Un build roto en --json conserva los avisos previos
       Dado que la raíz del proyecto tiene un proyecto de prueba
-      Dado que la configuración desactiva un filtro global "filtro-inexistente"
+      Dado que el archivo "sin-titulo.md" tiene este contenido
+      """
+      ---
+      date: 2026-01-01
+      ---
+
+      Contenido.
+      """
       Dado que el archivo "roto.md" tiene este contenido
       """
       ---
@@ -84,7 +91,7 @@ Característica: El build dice qué hizo y por qué
       Cuando hago un build del proyecto pidiendo JSON
       Entonces el comando termina con el código de salida 1
       Y el JSON declara "error" diciendo "frontmatter YAML inválido"
-      Y el JSON declara al menos 1 aviso que menciona "filtro-inexistente"
+      Y el JSON declara al menos 1 aviso que menciona "no tiene título"
 
     Escenario: --json y --verbose no se pueden pedir juntos
       Dado que la raíz del proyecto tiene un proyecto de prueba

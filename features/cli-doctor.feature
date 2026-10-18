@@ -143,6 +143,19 @@ Característica: doctor y list-filters cuentan qué le falta al proyecto
       Cuando corro "list-filters"
       Entonces el comando termina con el código de salida 0
 
+  Regla de negocio: list-filters falla cuando el filtro desactivado no existe
+
+    Escenario: Un nombre desactivado que no existe
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Dado que el archivo "iteraciones.config.yaml" tiene este contenido
+      """
+      language: es-MX
+      disabledFilters: [latex/99-no-existe]
+      """
+      Cuando corro "list-filters"
+      Entonces el comando termina con el código de salida 1
+      Y el error dice 'disabledFilters: "latex/99-no-existe" no coincide con ningún filter'
+
   Regla de negocio: list-filters muestra una línea por filtro
 
     Escenario: Por defecto cada filtro sale con su primera oración

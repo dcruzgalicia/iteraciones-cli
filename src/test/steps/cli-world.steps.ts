@@ -20,8 +20,6 @@ function nuevoMundo() {
 
     salidas: { build: 0, validate: 0 } as { build: number; validate: number },
 
-    ultimoAviso: {} as Record<string, unknown>,
-
     latex: '',
 
     bibliografia: '',
@@ -92,6 +90,7 @@ function nuevoMundo() {
     sugerencia: undefined as string | undefined,
     desactivadosFiltros: undefined as string[] | undefined,
     avisosFiltros: [] as string[],
+    errorFiltros: undefined as string | undefined,
     capas: {} as unknown,
     grupos: {} as unknown,
     usuarios: [] as string[],

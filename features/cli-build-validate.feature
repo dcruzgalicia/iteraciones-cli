@@ -127,6 +127,20 @@ Característica: build y validate dicen lo mismo
       Y el error dice "claves desconocidas"
       Y el error dice "clave-inventada"
 
+    Escenario: Un filtro desactivado que no existe
+      Dado que la raíz del proyecto tiene un proyecto de prueba
+      Dado que el archivo "iteraciones.config.yaml" tiene este contenido
+      """
+      language: es-MX
+      disabledFilters: [latex/99-no-existe]
+      """
+      Cuando hago un build del proyecto
+      Entonces el comando termina con el código de salida 1
+      Y el error dice '✖ [config] disabledFilters: "latex/99-no-existe" no coincide con ningún filter'
+      Cuando corro "validate"
+      Entonces el comando termina con el código de salida 1
+      Y el error dice 'disabledFilters: "latex/99-no-existe" no coincide con ningún filter'
+
   Regla de negocio: build sin configuración sugiere init
 
     Escenario: Un proyecto con documentos pero sin configuración
