@@ -49,7 +49,6 @@ function buildHtmlMetadataArgs(
   siteTitle: string,
   tagline: string,
   theme: string,
-  accent: string,
   css: string,
   tocActive: boolean,
 ): string[] {
@@ -72,7 +71,6 @@ function buildHtmlMetadataArgs(
       { key: 'date', value: vars.date },
       { key: 'home-href', value: vars.homeHref },
       { key: 'theme', value: theme },
-      { key: 'accent', value: accent },
       { key: 'css', value: css },
       { key: 'author-meta', value: vars.authorMeta },
     ]),
@@ -93,11 +91,10 @@ export async function htmlPageFromMarkdown(content: string, doc: BuildDocument, 
   const siteTitle = fmString(fm['site-title'], vars.siteTitle);
   const tagline = fmString(fm.tagline, vars.tagline ?? '');
   const theme = fmString(fm.theme, vars.theme ?? '');
-  const accent = fmString(fm.accent, vars.accent ?? '');
   const css = fmString(fm.css, vars.css ?? '');
   const tocActive = typeof fm.toc === 'boolean' ? fm.toc : siteConfig.toc;
 
-  const extraArgs = buildHtmlMetadataArgs(templatePath, vars, lang, siteTitle, tagline, theme, accent, css, tocActive);
+  const extraArgs = buildHtmlMetadataArgs(templatePath, vars, lang, siteTitle, tagline, theme, css, tocActive);
   extraArgs.push('--shift-heading-level-by=4');
   if (tocActive) extraArgs.push('--toc-depth=6');
   for (const filter of [...filters.semantic, STRIP_TYPOGRAPHIC_FILTER, ...filters.user, ...filters.flags, ...filters.html]) {

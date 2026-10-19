@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { EMPTY_PROJECT_WARNING_CODES } from '../builder/orchestrator.js';
+import { EMPTY_PROJECT_WARNING_CODE } from '../builder/orchestrator.js';
 import type { BuildReporter, RenderFileReport } from '../builder/types.js';
 import { GLYPHS } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
@@ -16,10 +16,10 @@ export class ProgressTracker implements BuildReporter {
   private state: TrackerState;
   private renderer: TrackerRenderer;
 
-  constructor(options: { renderer?: 'default' | 'verbose' | 'test'; stream?: NodeJS.WriteStream; tty?: boolean } = {}) {
+  constructor(options: { renderer?: 'default' | 'verbose'; stream?: NodeJS.WriteStream } = {}) {
     this.verbose = options.renderer === 'verbose';
     this.stream = options.stream ?? process.stdout;
-    this.tty = options.tty ?? (options.renderer === 'default' && this.stream.isTTY === true);
+    this.tty = options.renderer === 'default' && this.stream.isTTY === true;
     this.state = new TrackerState();
     this.renderer = new TrackerRenderer(this.stream, this.tty);
     this.t0 = performance.now();
@@ -133,7 +133,7 @@ export class ProgressTracker implements BuildReporter {
 
   private writeWarnings(): void {
     if (this.state.warnings.length === 0) return;
-    const suggestsValidate = this.state.warnings.some((w) => !w.includes(EMPTY_PROJECT_WARNING_CODES.noDocs));
+    const suggestsValidate = this.state.warnings.some((w) => !w.includes(EMPTY_PROJECT_WARNING_CODE));
     this.stream.write(
       `\n${GLYPHS.warning} Build completado con ${plural(this.state.warnings.length, 'advertencia')}${suggestsValidate ? `. Ejecuta 'iteraciones validate' para más detalle.` : '.'}\n`,
     );

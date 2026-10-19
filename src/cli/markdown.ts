@@ -89,7 +89,6 @@ export async function runMarkdown(cwd: string, input: string, options: { output?
         siteConfig.language ?? DEFAULT_SITE_CONFIG.language,
         undefined,
         undefined,
-        siteConfig.toc,
       ),
       relImageMap,
       docDir,

@@ -13,7 +13,7 @@ import { exec, mapWithConcurrency, ProcessSpawnError, ProcessTimeoutError } from
 import { prepareArgv, recordSupportCommand } from '../lib/script-recorder.js';
 import { type LuaFilterGroup, STRIP_TYPOGRAPHIC_FILTER } from './filter-resolver.js';
 import { citationCompileArgs, metadataArgs } from './pandoc-metadata.js';
-import { preparePaths, xmpDirsFor } from './prepare.js';
+import { preparePaths } from './prepare.js';
 import type { BuildDocument } from './types.js';
 
 export interface ExportMetadata {
@@ -24,24 +24,15 @@ export interface ExportMetadata {
   language: string;
   bibliography?: string;
   csl?: string;
-  toc: boolean;
-  tocDepth?: number;
 }
 
 export interface ExportDocument {
   filePath: string;
   relativePath: string;
   metadata: ExportMetadata;
-  slug?: string;
 }
 
-export function assembleExportDocument(
-  doc: BuildDocument,
-  language: string,
-  globalBibliography?: string,
-  globalCsl?: string,
-  toc?: boolean,
-): ExportDocument {
+export function assembleExportDocument(doc: BuildDocument, language: string, globalBibliography?: string, globalCsl?: string): ExportDocument {
   const metadata: ExportMetadata = {
     title: doc.frontmatter.title || 'Sin título',
     creator: doc.frontmatter.creator,
@@ -50,15 +41,12 @@ export function assembleExportDocument(
     language,
     bibliography: globalBibliography,
     csl: globalCsl,
-    toc: toc ?? false,
-    tocDepth: 1,
   };
 
   return {
     filePath: doc.filePath,
     relativePath: doc.relativePath,
     metadata,
-    slug: doc.slug,
   };
 }
 
@@ -165,7 +153,7 @@ export async function convertToPdf(
   }
 
   const biberCache = biberCacheDir ?? join(pdfDir, 'biber', slug);
-  const xmpDirs = xmpDirsFor([pdfDir]);
+  const xmpDirs = [pdfDir];
   await preparePaths([biberCache, pdfDir], xmpDirs);
   recordSupportCommand('pdf', slug, prepareArgv([biberCache, pdfDir], xmpDirs));
   const logPath = join(pdfDir, `${slug}.log`);

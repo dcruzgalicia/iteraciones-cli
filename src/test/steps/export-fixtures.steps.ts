@@ -62,7 +62,6 @@ Given('un documento titulado {string} de la autora {string}', (title: string, cr
       date: '8 de agosto de 2026',
       dateIso: '2026-08-08',
       language: 'es-MX',
-      toc: false,
     },
   };
 });
@@ -91,8 +90,6 @@ When('convierto el documento a Markdown con índice y bibliografía local', asyn
     ...world.baseDoc,
     metadata: {
       ...world.baseDoc.metadata,
-      toc: true,
-      tocDepth: 2,
       bibliography: join(world.dir, 'refs.bib'),
       csl: join(world.dir, 'estilos.csl'),
     },

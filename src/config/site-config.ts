@@ -58,11 +58,7 @@ export const DEFAULT_LATEX_FORMAT = {
 
 export const DEFAULT_PDF_FORMAT = {
   generate: false,
-  showDate: false,
-  pageNumber: 'header-right' as const,
   disabledPreambleFilters: ['97-eso-pic', '98-crop', '99-pdfx'],
-  coverImage: false,
-  courtesyPage: false,
 } satisfies PdfFormatConfig;
 
 export const DEFAULT_EPUB_FORMAT = {
@@ -91,11 +87,6 @@ export const DEFAULT_SITE_CONFIG = {
   script: false,
 
   bundle: false,
-  disabledFilters: undefined,
-  luaFilters: undefined,
-  bibliography: undefined,
-  csl: undefined,
-  courtesyPage: false,
   format: {
     html: DEFAULT_HTML_FORMAT,
     pdf: DEFAULT_PDF_FORMAT,
