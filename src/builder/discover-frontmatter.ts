@@ -1,5 +1,5 @@
 import { BUILD_ERROR_CODES, BuildError, formatUserError, translateSystemError } from '../lib/errors.js';
-import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
+import { applyCreatorTitle, parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
 import { fmStringList, fmTrimmedString } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { plural } from '../lib/plural.js';
@@ -28,12 +28,6 @@ export interface IngestedFrontmatter {
 
 interface NormalizedRecord extends Omit<IngestedFrontmatter, 'fm'> {
   rawTitle: unknown;
-}
-
-export function applyCreatorTitle(record: Record<string, unknown>): void {
-  if (record.type === 'creator' && (typeof record.title !== 'string' || record.title === '') && typeof record.name === 'string') {
-    record.title = record.name;
-  }
 }
 
 function normalizeFrontmatterRecord(record: Record<string, unknown>, relativePath: string, issues: FrontmatterIssue[]): NormalizedRecord {

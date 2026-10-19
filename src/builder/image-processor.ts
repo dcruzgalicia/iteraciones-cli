@@ -2,6 +2,7 @@ import { mkdir } from 'node:fs/promises';
 import { cpus } from 'node:os';
 import { basename, isAbsolute, join, relative, resolve } from 'node:path';
 import { BuildError } from '../lib/errors.js';
+import { fmStringList } from '../lib/frontmatter-fields.js';
 import { logWarning } from '../lib/logger.js';
 import { escapeRegExp } from '../lib/paths.js';
 import { exec, mapWithConcurrency, ProcessSpawnError, ProcessTimeoutError } from '../lib/run.js';
@@ -337,12 +338,6 @@ function magickConcurrency(): number {
   return Math.min(4, Math.max(1, cpus().length));
 }
 
-function resolveFmStringArray(raw: unknown): string[] {
-  if (Array.isArray(raw)) return raw.filter((v): v is string => typeof v === 'string');
-  if (typeof raw === 'string' && raw.trim()) return [raw.trim()];
-  return [];
-}
-
 async function collectFrontmatterImageTasks(
   fm: Record<string, unknown>,
   docDir: string,
@@ -354,7 +349,7 @@ async function collectFrontmatterImageTasks(
     const cover = field === 'startpaper';
     const w = cover ? targets.startpaperW : targets.targetW;
     const h = cover ? targets.startpaperH : targets.targetH;
-    for (const value of resolveFmStringArray(fm[field])) {
+    for (const value of fmStringList(fm[field]) ?? []) {
       const absPath = isAbsolute(value) ? value : resolve(docDir, value);
       if (!(await Bun.file(absPath).exists()) || imageMap.has(absPath)) continue;
       tasks.push({ absPath, w, h, cover });
@@ -377,19 +372,6 @@ async function runImageTasks(
     const task = tasks[index];
     if (task !== undefined && result !== undefined) recordProcessed(imageMap, processedFiles, task.absPath, result);
   }
-}
-
-async function processDedicatedFrontmatterImages(
-  fm: Record<string, unknown>,
-  docDir: string,
-  targets: ProcessTargets,
-  outputDir: string,
-  naming: (absPath: string) => string,
-  imageMap: Map<string, string>,
-  processedFiles: string[],
-): Promise<void> {
-  const tasks = await collectFrontmatterImageTasks(fm, docDir, targets, imageMap);
-  await runImageTasks(tasks, outputDir, naming, imageMap, processedFiles);
 }
 
 async function processMultilineCoverImages(
@@ -459,7 +441,7 @@ export async function processDocumentImages(
   const processedFiles: string[] = [];
   const targets = computeProcessTargets(pageDims, cropActive);
 
-  await processDedicatedFrontmatterImages(fm, docDir, targets, outputDir, naming, imageMap, processedFiles);
+  await runImageTasks(await collectFrontmatterImageTasks(fm, docDir, targets, imageMap), outputDir, naming, imageMap, processedFiles);
   if (multilineImages !== undefined) await processMultilineCoverImages(multilineImages, targets, outputDir, naming, imageMap, processedFiles);
   await processInlineImages(inlineImages, targets, outputDir, naming, imageMap, processedFiles);
 

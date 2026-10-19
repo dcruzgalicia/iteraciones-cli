@@ -4,43 +4,6 @@ export const DEFAULT_HTML_BLOCKS = ['header', 'indice', 'formatos', 'contenido',
 
 export type HtmlBlockKey = (typeof DEFAULT_HTML_BLOCKS)[number];
 
-interface HtmlSiteConfig {
-  title?: string;
-  description?: string;
-  logo?: string;
-  theme?: string;
-  color?: string;
-}
-
-export interface HtmlFormatConfig {
-  site?: HtmlSiteConfig;
-  generate?: boolean;
-  blocks?: HtmlBlockKey[];
-}
-
-export interface PdfFormatConfig {
-  generate?: boolean;
-  showDate?: boolean;
-  pageNumber?: string;
-  disabledPreambleFilters?: string[];
-  coverImage?: boolean;
-  courtesyPage?: boolean;
-}
-
-export interface LatexFormatConfig {
-  generate?: boolean;
-}
-
-export interface EpubFormatConfig {
-  generate?: boolean;
-}
-
-export interface MarkdownFormatConfig {
-  generate?: boolean;
-
-  merge?: boolean;
-}
-
 export const DEFAULT_HTML_FORMAT = {
   site: {
     title: 'iteraciones',
@@ -50,25 +13,25 @@ export const DEFAULT_HTML_FORMAT = {
     color: 'lime' as const,
   },
   generate: true,
-} satisfies HtmlFormatConfig;
+};
 
 export const DEFAULT_LATEX_FORMAT = {
   generate: false,
-} satisfies LatexFormatConfig;
+};
 
 export const DEFAULT_PDF_FORMAT = {
   generate: false,
   disabledPreambleFilters: ['97-eso-pic', '98-crop', '99-pdfx'],
-} satisfies PdfFormatConfig;
+};
 
 export const DEFAULT_EPUB_FORMAT = {
   generate: false,
-} satisfies EpubFormatConfig;
+};
 
 export const DEFAULT_MARKDOWN_FORMAT = {
   generate: false,
   merge: false,
-} satisfies MarkdownFormatConfig;
+};
 
 export function computeActiveFormats(format: Partial<SiteConfig['format']>): FormatKey[] {
   const formats: FormatKey[] = [];
@@ -100,12 +63,10 @@ export type FormatKey = 'latex' | 'pdf' | 'html' | 'epub' | 'markdown';
 
 export type ActiveFormats = Record<FormatKey, boolean>;
 
-export interface DisabledPreambleConfigSource {
+export function resolveDisabledPreambleConfig(siteConfig: {
   disabledPreambleFilters?: string[];
   format?: { pdf?: { disabledPreambleFilters?: string[] } };
-}
-
-export function resolveDisabledPreambleConfig(siteConfig: DisabledPreambleConfigSource): string[] {
+}): string[] {
   return siteConfig.disabledPreambleFilters ?? siteConfig.format?.pdf?.disabledPreambleFilters ?? DEFAULT_PDF_FORMAT.disabledPreambleFilters;
 }
 

@@ -21,7 +21,7 @@ import { loadSiteConfig } from '../config/config-loader.js';
 import type { SiteConfig } from '../config/config-schema.js';
 import { computeActiveFormats, resolveDisabledPreambleConfig, toActiveFormats } from '../config/site-config.js';
 import { BuildError } from '../lib/errors.js';
-import { parseYamlWithPosition, splitFrontmatter } from '../lib/frontmatter.js';
+import { readFrontmatter } from '../lib/frontmatter.js';
 import { fail, logSuccess } from '../lib/logger.js';
 import { posix } from '../lib/paths.js';
 
@@ -36,14 +36,6 @@ async function printFlags(siteConfig: SiteConfig, cwd: string) {
     cropActive: preamble.some((f) => f.name === '98-crop'),
     pdfxActive: preamble.some((f) => f.name === '99-pdfx'),
   };
-}
-
-async function readSourceFm(text: string, label: string): Promise<Record<string, unknown>> {
-  const { yaml } = splitFrontmatter(text);
-  if (yaml === undefined) return {};
-  const { value, error } = parseYamlWithPosition(yaml);
-  if (error) throw new BuildError(`frontmatter inválido en "${label}": ${error}`);
-  return (value ?? {}) as Record<string, unknown>;
 }
 
 function assertCollectionFiles(fm: Record<string, unknown>, label: string): string[] {
@@ -75,7 +67,7 @@ export async function readSourceDocument(cwd: string, input: string): Promise<So
 async function readCollectionSource(cwd: string, input: string) {
   const { inputPath, relativePath, text } = await readSourceDocument(cwd, input);
 
-  const fm = await readSourceFm(text, input);
+  const fm = readFrontmatter(text, input);
   const rawFiles = assertCollectionFiles(fm, input);
 
   const files: string[] = [];

@@ -95,17 +95,14 @@ const HtmlBlocksSchema = z
 
 const HtmlSiteSchema = z
   .object({
-    title: z.string().default(DEFAULT_HTML_FORMAT.site?.title ?? 'iteraciones'),
-    description: z.string().default(DEFAULT_HTML_FORMAT.site?.description ?? 'escribir, compartir, re-existir'),
-    logo: z.string().default(DEFAULT_HTML_FORMAT.site?.logo ?? ''),
-    theme: z
-      .enum(['light', 'dark'])
-      .optional()
-      .default(DEFAULT_HTML_FORMAT.site?.theme ?? 'dark'),
+    title: z.string().default(DEFAULT_HTML_FORMAT.site.title),
+    description: z.string().default(DEFAULT_HTML_FORMAT.site.description),
+    logo: z.string().default(DEFAULT_HTML_FORMAT.site.logo),
+    theme: z.enum(['light', 'dark']).optional().default(DEFAULT_HTML_FORMAT.site.theme),
     color: z
       .enum(KNOWN_ACCENT_COLORS as [AccentColor, ...AccentColor[]])
       .optional()
-      .default(DEFAULT_HTML_FORMAT.site?.color ?? 'lime'),
+      .default(DEFAULT_HTML_FORMAT.site.color),
   })
   .strict();
 

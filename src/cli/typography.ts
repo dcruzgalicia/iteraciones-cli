@@ -1,9 +1,10 @@
 import { readFileSync } from 'node:fs';
-import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { DIST_FILES_DIR } from '../builder/output-layout.js';
 import { BuildError } from '../lib/errors.js';
 import { splitFrontmatter } from '../lib/frontmatter.js';
 import { fail, logError, logInfo, logSuccess } from '../lib/logger.js';
+import { relativeLabel } from '../lib/paths.js';
 import { analyzePdf, type OpcionesAnalisis, parseaExcepciones, TODAS_LAS_REGLAS, type TypographyIncidence } from '../lib/pdf-typography.js';
 import { plural } from '../lib/plural.js';
 import { exec, mapWithConcurrency, type RunResult } from '../lib/run.js';
@@ -80,11 +81,6 @@ export function interpretaPorcentaje(valor: string, opcion: string): number {
   return numero;
 }
 
-function etiqueta(cwd: string, path: string): string {
-  const rel = relative(cwd, path);
-  return rel === '' || rel.startsWith('..') || isAbsolute(rel) ? path : rel;
-}
-
 function formatea(incidencia: TypographyIncidence): string {
   const texto = incidencia.text.trimEnd();
   if (incidencia.type === 'single-word-line') {
@@ -126,7 +122,7 @@ function cargarExcepciones(cwd: string, options: TypographyOptions): ReturnType<
     const codigo = (err as NodeJS.ErrnoException).code;
     if (codigo !== 'ENOENT') throw err;
     if (options.exceptions !== undefined) {
-      throw new BuildError(`no existe el archivo de excepciones ${etiqueta(cwd, ruta)}`);
+      throw new BuildError(`no existe el archivo de excepciones ${relativeLabel(cwd, ruta)}`);
     }
   }
   return contenido === undefined ? [] : parseaExcepciones(contenido);
@@ -137,7 +133,7 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
     const analisis = opcionesDeAnalisis(options);
     const outputDir = resolve(cwd, options.output ?? DIST_FILES_DIR);
     const targets = args.length > 0 ? args.map((path) => resolve(cwd, path)) : await listPdfFiles(outputDir);
-    if (targets.length === 0) throw new BuildError(`no hay PDFs en ${etiqueta(cwd, outputDir)}`);
+    if (targets.length === 0) throw new BuildError(`no hay PDFs en ${relativeLabel(cwd, outputDir)}`);
 
     if (options.fix) {
       const { corregidos, sinAplicar, noEncontradas, multiples, noAplica, sinAccion, sinUnion, exactMiss, porPdf } = await arreglaTypografia(
@@ -155,7 +151,7 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
       for (const pdf of targets) {
         const resultado = porPdf.get(pdf);
         if (!resultado || resultado.incidences.length === 0) continue;
-        lineas.push(`${etiqueta(cwd, pdf)} · ${plural(resultado.incidences.length, 'incidencia')}`);
+        lineas.push(`${relativeLabel(cwd, pdf)} · ${plural(resultado.incidences.length, 'incidencia')}`);
         lineas.push(
           ...resultado.incidences.map((incidencia) => {
             const partes = formatea(incidencia).split('\n');
@@ -189,7 +185,7 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
 
     const files = await mapWithConcurrency(targets, 4, async (pdf) => ({
       pdf,
-      incidences: await analyzePdf(pdf, { ...analisis, excepciones, archivo: etiqueta(cwd, pdf) }),
+      incidences: await analyzePdf(pdf, { ...analisis, excepciones, archivo: relativeLabel(cwd, pdf) }),
     }));
     const total = files.reduce((sum, file) => sum + file.incidences.length, 0);
 
@@ -197,7 +193,7 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
       process.stdout.write(
         `${JSON.stringify({
           ok: total === 0,
-          files: files.map((file) => ({ pdf: etiqueta(cwd, file.pdf), incidences: file.incidences })),
+          files: files.map((file) => ({ pdf: relativeLabel(cwd, file.pdf), incidences: file.incidences })),
         })}\n`,
       );
       if (total > 0) process.exitCode = 1;
@@ -211,7 +207,7 @@ export async function runTypography(cwd: string, args: string[], options: Typogr
     const lineas: string[] = [];
     for (const { pdf, incidences } of files) {
       if (incidences.length === 0) continue;
-      lineas.push(`${etiqueta(cwd, pdf)} · ${plural(incidences.length, 'incidencia')}`);
+      lineas.push(`${relativeLabel(cwd, pdf)} · ${plural(incidences.length, 'incidencia')}`);
       lineas.push(...incidences.map(formatea));
     }
     logInfo(lineas.join('\n'), 'typography');
@@ -788,7 +784,7 @@ async function arreglaTypografia(
 
   const excepciones = cargarExcepciones(cwd, options);
   for (const pdf of targets) {
-    const incidences = await analyzePdf(pdf, { ...analisis, excepciones, archivo: etiqueta(cwd, pdf) });
+    const incidences = await analyzePdf(pdf, { ...analisis, excepciones, archivo: relativeLabel(cwd, pdf) });
     if (incidences.length === 0) continue;
 
     const estado = new Map<TypographyIncidence, MotivoIncidencia>();

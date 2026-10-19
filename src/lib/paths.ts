@@ -4,6 +4,11 @@ export function posix(path: string): string {
   return path.split(sep).join('/');
 }
 
+export function relativeLabel(root: string, path: string): string {
+  const rel = relative(root, path);
+  return rel === '' || rel.startsWith('..') || isAbsolute(rel) ? path : rel;
+}
+
 export function escapeRegExp(text: string): string {
   return RegExp.escape(text);
 }

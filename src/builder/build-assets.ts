@@ -8,9 +8,8 @@ import { logWarning } from '../lib/logger.js';
 import { isDir } from '../lib/paths.js';
 import { recordSupportCommand } from '../lib/script-recorder.js';
 import { ASSETS_CSS_FILE, ASSETS_LOGO_FILE } from './output-layout.js';
-import { cacheHitFor } from './state-hash.js';
+import { hashGlobbedFiles } from './state-hash.js';
 import type { CssFileCache } from './state-serialize.js';
-import { hashFileContent } from './state-serialize.js';
 
 const PKG_ROOT = join(import.meta.dir, '../..');
 const STYLES_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'styles.css');
@@ -70,29 +69,8 @@ export async function computeCssHash(
 ): Promise<{ hash: string; cache: CssFileCache }> {
   const hasher = new Bun.CryptoHasher('sha256');
   const cache: CssFileCache = {};
-  const htmlPaths: string[] = [];
-  const outputIsDir = await isDir(outputDir);
-  if (outputIsDir) {
-    for await (const entry of new Bun.Glob('**/*.html').scan({ cwd: outputDir, onlyFiles: true })) {
-      htmlPaths.push(entry);
-    }
-  }
-  htmlPaths.sort();
-  for (const rel of htmlPaths) {
-    const st = await Bun.file(join(outputDir, rel)).stat();
-    const mtime = Math.round(st.mtimeMs);
-    const size = st.size;
-    const prev = prevCache?.[rel];
-    let contentHash: string;
-    const hit = cacheHitFor(prev, mtime, size);
-    if (hit !== null) {
-      contentHash = hit;
-    } else {
-      contentHash = await hashFileContent(join(outputDir, rel));
-    }
-    cache[rel] = { mtime, size, hash: contentHash };
-    hasher.update(rel);
-    hasher.update(contentHash);
+  if (await isDir(outputDir)) {
+    for (const part of await hashGlobbedFiles(outputDir, '**/*.html', prevCache, cache)) hasher.update(part);
   }
   const stylesSrc = await Bun.file(STYLES_SRC).text();
   hasher.update(stylesSrc);
