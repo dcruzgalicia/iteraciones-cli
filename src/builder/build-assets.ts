@@ -2,7 +2,7 @@ import { cp, mkdir, stat, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { SiteConfig } from '../config/config-schema.js';
-import { ACCENT_PALETTES, type AccentColor } from '../lib/accent-palettes.js';
+import { ACCENT_COLORS, ACCENT_SHADES, type AccentColor } from '../lib/accent-palettes.js';
 import { BuildError } from '../lib/errors.js';
 import { logWarning } from '../lib/logger.js';
 import { isDir } from '../lib/paths.js';
@@ -13,8 +13,6 @@ import type { CssFileCache } from './state-serialize.js';
 
 const PKG_ROOT = join(import.meta.dir, '../..');
 const STYLES_SRC = join(PKG_ROOT, 'src', 'lib', 'resources', 'styles.css');
-
-const SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
 
 export async function resolveTailwindBin(): Promise<string> {
   try {
@@ -34,9 +32,8 @@ export async function compileTailwindCss(outputDir: string, accent: string, proj
   const inputDir = join(projectRoot, '.iteraciones', 'css');
   const inputPath = join(inputDir, 'input.css');
   const outPath = join(outputDir, ASSETS_CSS_FILE);
-  const palette = ACCENT_PALETTES[accent as AccentColor];
-  if (palette === undefined) throw new BuildError(`acento desconocido: "${accent}"`);
-  const accentTheme = SHADES.map((s) => `  --color-accent-${s}: ${palette[s as keyof typeof palette]};`).join('\n');
+  if (!ACCENT_COLORS.includes(accent as AccentColor)) throw new BuildError(`acento desconocido: "${accent}"`);
+  const accentTheme = ACCENT_SHADES.map((s) => `  --color-accent-${s}: var(--color-${accent}-${s});`).join('\n');
   const input = [`@import "${STYLES_SRC}";`, `@source "${outputDir}/**/*.html";`, '@theme {', accentTheme, '}'].join('\n');
 
   await mkdir(inputDir, { recursive: true });
@@ -75,7 +72,7 @@ export async function computeCssHash(
   const stylesSrc = await Bun.file(STYLES_SRC).text();
   hasher.update(stylesSrc);
   const accent = siteConfig.format?.html?.site?.color ?? 'lime';
-  hasher.update(JSON.stringify(ACCENT_PALETTES[accent as AccentColor] ?? {}));
+  hasher.update(accent);
   const tailwindBin = await resolveTailwindBin().catch(() => '');
   if (tailwindBin) {
     const binStat = await Bun.file(tailwindBin)
